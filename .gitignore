@@ -1,0 +1,8 @@
+*.log
+.DS_Store
+node_modules
+dist
+src/gitignored
+.env.local
+.idea
+roadmap.md
