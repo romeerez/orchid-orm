@@ -11,10 +11,17 @@ export const toSql = (model: PostgresModel<any>): string => {
   const { query, table } = model
   const quotedAs = q(table)
 
-  if (query.select) {
-    sql.push(...query.select.map((column) =>
-      qc(quotedAs, column)
-    ))
+  if (query?.select || query?.selectRaw) {
+    const select: string[] = []
+    if (query.select) {
+      select.push(...query.select.map((column) =>
+        qc(quotedAs, column)
+      ))
+    }
+    if (query.selectRaw) {
+      select.push(...query.selectRaw)
+    }
+    sql.push(select.join(', '))
   } else {
     sql.push('*')
   }

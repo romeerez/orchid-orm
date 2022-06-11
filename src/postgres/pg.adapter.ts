@@ -15,6 +15,19 @@ export const Pg = (config: PoolConfig): SqlAdapter => {
         client.release();
       }
     },
+    async arrays<R extends any[] = any[]>(
+      query: string
+    ): Promise<{ rows: R[] }> {
+      const client = await pool.connect();
+      try {
+        return await client.query<R>({
+          text: query,
+          rowMode: 'array',
+        });
+      } finally {
+        client.release();
+      }
+    },
     destroy() {
       return pool.end();
     },
