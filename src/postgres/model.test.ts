@@ -38,8 +38,18 @@ describe('postgres model', () => {
   describe('select', () => {
     it('should return selected columns', async () => {
       const expected = await testDb.adapter.query('SELECT name FROM sample').then(res => res.rows)
-      const received = await testDb.model.select('name')
+      const received = await testDb.model.select('name').all()
       expect(received).toEqual(expected)
+    })
+  })
+
+  describe('selectRaw', () => {
+    it('should select with raw sql', async () => {
+      const res = await testDb.model
+        .selectRaw('1 as one')
+        .asType()<{ one: number }>()
+
+      expect(res).toEqual([{ one: 1 }])
     })
   })
 })

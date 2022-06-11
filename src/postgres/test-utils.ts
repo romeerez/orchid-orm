@@ -18,7 +18,11 @@ export class SampleModel extends model({
     id: t.serial(),
     name: t.string(),
   })
-}) {}
+}) {
+  customMethod() {
+    return 123
+  }
+}
 
 export const testDb = createPg({
   model: SampleModel

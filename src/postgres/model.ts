@@ -55,29 +55,25 @@ type Result<T extends Base> = T['result'] extends AllColumns ? T['type'] : T['re
 
 type MutateResult<
   T extends Base,
-  R
+  R,
+  S = T['result'] extends AllColumns ? R : T & R
 > = Omit<T, 'result' | 'then'> & {
-  result: R
+  result: S
   then: T['then'] extends Then<void>
     ? T['then']
     : T['then'] extends Then<Result<T>[]>
-      ? Then<R[]>
+      ? Then<S[]>
       : T['then'] extends Then<Result<T>>
-        ? Then<R>
+        ? Then<S>
         : T['then']
 }
 
 type Select<
   T extends Base,
   K extends keyof T['type']
-> = MutateResult<
-  T,
-  T['result'] extends AllColumns
-    ? Pick<T['type'], K>
-    : T['result'] & Pick<T['type'], K>
->
+> = MutateResult<T, Pick<T['type'], K>>
 
-type Base = Omit<PostgresModel, 'then'> & { then: any }
+type Base = Omit<PostgresModel, 'result' | 'then'> & { result: any, then: any }
 
 type AllColumns = { __all: true }
 
@@ -159,6 +155,10 @@ export class PostgresModel<S extends t.TakShape = any, O = t.TakObject<S>['outpu
     return toSql(this)
   }
 
+  asType<T extends Base>(this: T): <S>() => MutateResult<T, S> {
+    return <S>() => this as unknown as MutateResult<T, S>
+  }
+
   select<T extends Base, K extends (keyof T['type'])[]>(this: T, ...columns: K): Select<T, K[number]> {
     return this.clone()._select(...columns)
   }
@@ -235,7 +235,6 @@ export const model = <S extends t.TakShape>({
   return class extends PostgresModel<S> {
     table = table
     schema = schemaObject
-    columns = Object.keys(shape) as unknown as (keyof S)[]
   }
 }
 
