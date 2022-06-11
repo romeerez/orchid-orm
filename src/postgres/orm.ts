@@ -1,11 +1,12 @@
 import { SqlAdapter } from '../sql/sql.types';
-import { PostgresModelConstructors } from './postgres.model';
+import { PostgresModelConstructors } from './model';
 
 export type PostgresAdapter = SqlAdapter
 
 type PostgresORM<T extends PostgresModelConstructors> = {
   [K in keyof T]: InstanceType<T[K]>;
 } & {
+  adapter: PostgresAdapter;
   destroy(): Promise<void>;
 };
 
@@ -15,6 +16,7 @@ export const PostgresOrm = (adapter: PostgresAdapter) => <
   repos: T
 ): PostgresORM<T> => {
   const result = {
+    adapter,
     destroy: () => adapter.destroy(),
   } as PostgresORM<T>;
 

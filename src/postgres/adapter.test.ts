@@ -1,4 +1,4 @@
-import { createPg, SampleModel } from './utils';
+import { createPg, SampleModel } from './test-utils';
 
 describe('adapter', () => {
   it('should run query and close connection by calling .destroy()', async () => {

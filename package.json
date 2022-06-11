@@ -13,11 +13,18 @@
   "scripts": {
     "start": "tsdx watch",
     "build": "tsdx build",
-    "test": "tsdx test --setupFiles dotenv/config",
+    "test": "jest",
     "lint": "tsdx lint",
     "prepare": "tsdx build",
     "size": "size-limit",
     "analyze": "size-limit --why"
+  },
+  "jest": {
+    "globalSetup": "./jest.setup.ts",
+    "setupFiles": ["dotenv/config"],
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    }
   },
   "peerDependencies": {},
   "husky": {
@@ -47,6 +54,8 @@
     "size-limit": "^7.0.8",
     "tsdx": "^0.14.1",
     "tslib": "^2.3.1",
-    "typescript": "^4.5.5"
+    "typescript": "^4.5.5",
+    "ts-jest": "^28.0.4",
+    "jest": "^28.1.1"
   }
 }

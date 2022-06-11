@@ -1,16 +1,26 @@
-import { createPg } from './utils';
-import { belongsTo, hasOne } from '../src/postgres/postgres.relations';
-import { PostgresModel } from '../src/postgres/postgres.model';
+import { createPg } from './test-utils';
+import { belongsTo, hasOne } from './relations';
+import { model } from './model';
 
 describe('relations', () => {
   it('should attach one repo to another without circular problems', () => {
-    class User extends PostgresModel<{ id: number }> {
+    class User extends model({
+      table: 'user',
+      schema: (t) => ({
+        id: t.serial()
+      })
+    }) {
       relations = {
         profile: hasOne(() => Profile),
       };
     }
 
-    class Profile extends PostgresModel<{ id: number }> {
+    class Profile extends model({
+      table: 'profile',
+      schema: (t) => ({
+        id: t.serial()
+      })
+    }) {
       relations = {
         user: belongsTo(() => User),
       };
