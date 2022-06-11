@@ -30,14 +30,16 @@ describe('postgres model', () => {
   describe('await model', () => {
     it('should return promise to load records', async () => {
       const expected = await testDb.adapter.query('SELECT * FROM sample').then(res => res.rows)
-      expect(await testDb.model).toEqual(expected)
+      const received = await testDb.model.all()
+      expect(received).toEqual(expected)
     })
   })
 
   describe('select', () => {
     it('should return selected columns', async () => {
       const expected = await testDb.adapter.query('SELECT name FROM sample').then(res => res.rows)
-      expect(await testDb.model.select('name')).toEqual(expected)
+      const received = await testDb.model.select('name')
+      expect(received).toEqual(expected)
     })
   })
 })

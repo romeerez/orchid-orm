@@ -16,200 +16,231 @@ type Then<T> = (
   reject?: (error: any) => any,
 ) => Promise<T | never>
 
-type ThenAll<T extends PostgresModel<any>> = Omit<T, 'then'> & { then: Then<T['result'][]> }
+type ThenAll<T extends Base> = Omit<T, 'then'> & { then: Then<Result<T>[]> }
 
 const thenAll: Then<any[]> = function (resolve, reject) {
   return this.adapter.query(this.toSql())
     .then(result => result.rows).then(resolve, reject)
 }
 
-type ThenOne<T extends PostgresModel<any>> = Omit<T, 'then'> & { then: Then<T['result']> }
+type ThenOne<T extends Base> = Omit<T, 'then'> & { then: Then<Result<T>> }
 
 const thenOne: Then<any> = function (resolve, reject) {
   return this.adapter.query(this.toSql())
     .then(result => result.rows[0]).then(resolve, reject)
 }
 
-type ThenRows<T extends PostgresModel<any>> = Omit<T, 'then'> & { then: Then<T['result'][keyof T['result']][]> }
+type ThenRows<T extends Base> = Omit<T, 'then'> & { then: Then<Result<T>[keyof Result<T>][][]> }
 
 const thenRows: Then<any[][]> = function (resolve, reject) {
   return this.adapter.arrays(this.toSql())
     .then(result => result.rows).then(resolve, reject)
 }
 
-type ThenValue<T extends PostgresModel<any>, V> = Omit<T, 'then'> & { then: Then<V> }
+type ThenValue<T extends Base, V> = Omit<T, 'then'> & { then: Then<V> }
 
 const thenValue: Then<any> = function (resolve, reject) {
   return this.adapter.arrays(this.toSql())
     .then(result => result.rows[0]?.[0]).then(resolve, reject)
 }
 
-type ThenVoid<T extends PostgresModel<any>> = Omit<T, 'then'> & { then: Then<void> }
+type ThenVoid<T extends Base> = Omit<T, 'then'> & { then: Then<void> }
 
 const thenVoid: Then<void> = function (resolve, reject) {
   return this.adapter.query(this.toSql())
     .then(resolve as any, reject)
 }
 
-export class PostgresModel<Shape extends t.TakShape = t.TakShape, T = t.TakObject<Shape>['output']> {
+type Result<T extends Base> = T['result'] extends AllColumns ? T['type'] : T['result']
+
+type MutateResult<
+  T extends Base,
+  R
+> = Omit<T, 'result' | 'then'> & {
+  result: R
+  then: T['then'] extends Then<void>
+    ? T['then']
+    : T['then'] extends Then<Result<T>[]>
+      ? Then<R[]>
+      : T['then'] extends Then<Result<T>>
+        ? Then<R>
+        : T['then']
+}
+
+type Select<
+  T extends Base,
+  K extends keyof T['type']
+> = MutateResult<
+  T,
+  T['result'] extends AllColumns
+    ? Pick<T['type'], K>
+    : T['result'] & Pick<T['type'], K>
+>
+
+type Base = Omit<PostgresModel, 'then'> & { then: any }
+
+type AllColumns = { __all: true }
+
+export class PostgresModel<S extends t.TakShape = any, O = t.TakObject<S>['output']> {
   constructor(public adapter: PostgresAdapter) {
   }
 
-  type!: T
-  result!: T
+  type!: O
+  result!: AllColumns
   table!: string
-  schema!: t.TakObject<Shape>
+  schema!: t.TakObject<S>
   query?: QueryData
 
   aggregateSql = aggregateSql
 
-  then = thenAll
+  then = thenAll as Then<O[]>
 
-  all(): ThenAll<this> {
+  all<T extends Base>(this: T): ThenAll<T> {
     return this.then === thenAll ? this : this.clone()._all()
   }
 
-  _all(): ThenAll<this> {
+  _all<T extends Base>(this: T): ThenAll<T> {
     this.then = thenAll
     return this
   }
 
-  take(): ThenOne<this> {
-    return this.then === thenOne ? this as unknown as ThenOne<this> : this.clone()._take()
+  take<T extends Base>(this: T): ThenOne<T> {
+    return this.then === thenOne ? this : this.clone()._take()
   }
 
-  _take(): ThenOne<this> {
+  _take<T extends Base>(this: T): ThenOne<T> {
     this.then = thenOne
-    return this as unknown as ThenOne<this>
+    return this
   }
 
-  rows(): ThenRows<this> {
-    return this.then === thenRows ? this as unknown as ThenRows<this> : this.clone()._rows()
+  rows<T extends Base>(this: T): ThenRows<T> {
+    return this.then === thenRows ? this as unknown as ThenRows<T> : this.clone()._rows()
   }
 
-  _rows(): ThenRows<this> {
+  _rows<T extends Base>(this: T): ThenRows<T> {
     this.then = thenRows
-    return this as unknown as ThenRows<this>
+    return this as unknown as ThenRows<T>
   }
 
-  value<V>(): ThenValue<this, V> {
-    return this.then === thenValue ? this as unknown as ThenValue<this, V> : this.clone()._value<V>()
+  value<T extends Base, V>(this: T): ThenValue<T, V> {
+    return this.then === thenValue ? this as unknown as ThenValue<T, V> : this.clone()._value<T, V>()
   }
 
-  _value<V>(): ThenValue<this, V> {
+  _value<T extends Base, V>(this: T): ThenValue<T, V> {
     this.then = thenValue
-    return this as unknown as ThenValue<this, V>
+    return this as unknown as ThenValue<T, V>
   }
 
-  exec(): ThenVoid<this> {
-    return this.then === thenVoid as Then<unknown> ? this as unknown as ThenVoid<this> : this.clone()._exec()
+  exec<T extends Base>(this: T): ThenVoid<T> {
+    return this.then === thenVoid ? this : this.clone()._exec()
   }
 
-  _exec(): ThenVoid<this> {
-    (this as unknown as ThenVoid<this>).then = thenVoid
-    return this as unknown as ThenVoid<this>
+  _exec<T extends Base>(this: T): ThenVoid<T> {
+    this.then = thenVoid
+    return this
   }
 
-  toQuery(): this & { query: QueryData } {
-    if (this.query) return this as this & { query: QueryData }
+  toQuery<T extends Base>(this: T): T & { query: QueryData } {
+    if (this.query) return this as T & { query: QueryData }
     const q = this.clone()
     q.query = {}
-    return q as this & { query: QueryData }
+    return q as T & { query: QueryData }
   }
 
-  clone(): this {
+  clone<T extends Base>(this: T): T {
     const cloned = new (this.constructor as PostgresModelConstructor)(this.adapter)
     cloned.table = this.table
     cloned.schema = this.schema
-    return cloned as this
+    cloned.then = this.then
+    return cloned as T
   }
 
   toSql(): string {
     return toSql(this)
   }
 
-  select(...columns: (keyof Shape)[]) {
+  select<T extends Base, K extends (keyof T['type'])[]>(this: T, ...columns: K): Select<T, K[number]> {
     return this.clone()._select(...columns)
   }
 
-  _select(...columns: (keyof Shape)[]) {
+  _select<T extends Base, K extends (keyof T['type'])[]>(this: T, ...columns: K): Select<T, K[number]> {
     const q = this.toQuery()
     if (!q.query.select) q.query.select = columns as string[]
     else q.query.select.push(...columns as string[])
-    return q
+    return q as unknown as Select<T, K[number]>
   }
 
-  selectRaw(...args: string[]) {
+  selectRaw<T extends Base>(this: T, ...args: string[]): T {
     return this.clone()._selectRaw(...args)
   }
 
-  _selectRaw(...args: string[]) {
+  _selectRaw<T extends Base>(this: T, ...args: string[]): T {
     const q = this.toQuery()
     if (!q.query.selectRaw) q.query.selectRaw = args
     else q.query.selectRaw.push(...args)
     return q
   }
 
-  count(args?: string, options?: AggregateOptions) {
+  count<T extends Base>(this: T, args?: string, options?: AggregateOptions) {
     return this.clone()._count(args, options)
   }
 
-  _count(args = '*', options?: AggregateOptions) {
-    return this._selectRaw(this.aggregateSql('count', args, options))._value()
+  _count<T extends Base>(this: T, args = '*', options?: AggregateOptions) {
+    return this._selectRaw(this.aggregateSql('count', args, options))._value<T, number>()
   }
 
-  avg(args: string, options?: AggregateOptions) {
+  avg<T extends Base>(this: T, args: string, options?: AggregateOptions) {
     return this.clone()._avg(args, options)
   }
 
-  _avg(args: string, options?: AggregateOptions) {
-    return this._selectRaw(this.aggregateSql('avg', args, options))._value()
+  _avg<T extends Base>(this: T, args: string, options?: AggregateOptions) {
+    return this._selectRaw(this.aggregateSql('avg', args, options))._value<T, number>()
   }
 
-  min(args: string, options?: AggregateOptions) {
+  min<T extends Base>(this: T, args: string, options?: AggregateOptions) {
     return this.clone()._min(args, options)
   }
 
-  _min(args: string, options?: AggregateOptions) {
-    return this._selectRaw(this.aggregateSql('min', args, options))._value()
+  _min<T extends Base>(this: T, args: string, options?: AggregateOptions) {
+    return this._selectRaw(this.aggregateSql('min', args, options))._value<T, number>()
   }
 
-  max(args: string, options?: AggregateOptions) {
+  max<T extends Base>(this: T, args: string, options?: AggregateOptions) {
     return this.clone()._max(args, options)
   }
 
-  _max(args: string, options?: AggregateOptions) {
-    return this._selectRaw(this.aggregateSql('max', args, options))._value()
+  _max<T extends Base>(this: T, args: string, options?: AggregateOptions) {
+    return this._selectRaw(this.aggregateSql('max', args, options))._value<T, number>()
   }
 
-  sum(args: string, options?: AggregateOptions) {
+  sum<T extends Base>(this: T, args: string, options?: AggregateOptions) {
     return this.clone()._sum(args, options)
   }
 
-  _sum(args: string, options?: AggregateOptions) {
-    return this._selectRaw(this.aggregateSql('sum', args, options))._value()
+  _sum<T extends Base>(this: T, args: string, options?: AggregateOptions) {
+    return this._selectRaw(this.aggregateSql('sum', args, options))._value<T, number>()
   }
 }
 
-export const model = <Shape extends t.TakShape>({
-                                                  table,
+export const model = <S extends t.TakShape>({
+  table,
   schema,
 }: {
   table: string
-  schema(t: DataTypes): Shape,
-}): { new (adapter: PostgresAdapter): PostgresModel<Shape> } => {
+  schema(t: DataTypes): S,
+}): { new (adapter: PostgresAdapter): PostgresModel<S> } => {
   const shape = schema(dataTypes)
   const schemaObject = t.object(shape)
 
-  return class extends PostgresModel<Shape> {
+  return class extends PostgresModel<S> {
     table = table
     schema = schemaObject
-    columns = Object.keys(shape) as unknown as (keyof Shape)[]
+    columns = Object.keys(shape) as unknown as (keyof S)[]
   }
 }
 
 export type PostgresModelConstructor = {
-  new (adapter: PostgresAdapter): PostgresModel<any>;
+  new (adapter: PostgresAdapter): PostgresModel;
 
   relations?: RelationThunks;
 }
