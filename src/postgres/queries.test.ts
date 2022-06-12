@@ -174,11 +174,13 @@ describe('postgres queries', () => {
     })
   })
 
-  // describe('find', () => {
-  //   it('searches one by primary key', async () => {
-  //     expect(await model.find(1).toSql()).toBe(`SELECT "sample".* FROM "sample" WHERE "sample"."id" = 1 LIMIT 1`)
-  //   })
-  // })
+  describe('find', () => {
+    it('searches one by primary key', () => {
+      expect(model.find(1).toSql()).toBe(
+        `SELECT "sample".* FROM "sample" WHERE "sample"."id" = 1 LIMIT 1`
+      )
+    })
+  })
 })
 
 // describe('wrap', () => {

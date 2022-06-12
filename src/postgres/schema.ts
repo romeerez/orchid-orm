@@ -42,6 +42,7 @@ export type ColumnsShape = Record<string, UnknownType & ColumnMethods>
 type SchemaMethods = typeof schemaMethods
 
 export type GetPrimaryKeys<Shape extends ColumnsShape> = UnionToArray<{ [K in keyof Shape]: Shape[K] extends { isPrimaryKey: true } ? K : never }[keyof Shape]>
+export type GetPrimaryTypes<Shape extends ColumnsShape> = UnionToArray<{ [K in keyof Shape]: Shape[K] extends { isPrimaryKey: true } ? Shape[K]['output'] : never }[keyof Shape]>
 
 const schemaMethods = {
   getPrimaryKeys<T extends t.TakObject<ColumnsShape>>(

@@ -1,6 +1,14 @@
 import { PostgresAdapter } from './orm';
 import { RelationThunks } from './relations';
-import { ColumnsShape, dataTypes, DataTypes, GetPrimaryKeys, TableSchema, tableSchema } from './schema';
+import {
+  ColumnsShape,
+  dataTypes,
+  DataTypes,
+  GetPrimaryKeys,
+  GetPrimaryTypes,
+  TableSchema,
+  tableSchema,
+} from './schema';
 import { toSql } from './toSql';
 import { AggregateOptions, aggregateSql } from './aggregate';
 
@@ -245,6 +253,18 @@ export class PostgresModel<S extends ColumnsShape = any> {
     if (!q.query.or) q.query.or = ors
     else q.query.or.push(...ors)
     return q
+  }
+
+  find<T extends Base>(this: T, ...args: GetPrimaryTypes<S>): ThenOne<T> {
+    return (this.clone()._find as any)(...args as unknown[])
+  }
+
+  _find<T extends Base>(this: T, ...args: GetPrimaryTypes<S>): ThenOne<T> {
+    const conditions: Record<string, unknown> = {}
+    this.primaryKeys.forEach((key, i) => {
+      conditions[key] = (args as unknown[])[i]
+    })
+    return this._where(conditions)._take()
   }
 
   count<T extends Base>(this: T, args?: string, options?: AggregateOptions) {
