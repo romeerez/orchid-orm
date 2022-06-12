@@ -18,6 +18,8 @@ export type QueryData = {
   take?: true
   select?: string[]
   selectRaw?: string[]
+  distinct?: string[]
+  distinctRaw?: string[]
   and?: ConditionItem[]
   or?: ConditionItem[][]
   as?: string
@@ -225,6 +227,22 @@ export class PostgresModel<S extends ColumnsShape = any> {
 
   _selectRaw<T extends Base>(this: T, ...args: string[]): T {
     return pushQueryArray(this, 'selectRaw', args)
+  }
+
+  distinct<T extends Base>(this: T, ...columns: (keyof T['type'])[]): T {
+    return this.clone()._distinct(...columns)
+  }
+
+  _distinct<T extends Base>(this: T, ...columns: (keyof T['type'])[]): T {
+    return pushQueryArray(this, 'distinct', columns as string[])
+  }
+
+  distinctRaw<T extends Base>(this: T, ...args: string[]): T {
+    return this.clone()._distinctRaw(...args)
+  }
+
+  _distinctRaw<T extends Base>(this: T, ...args: string[]): T {
+    return pushQueryArray(this, 'distinctRaw', args)
   }
 
   where<T extends Base>(this: T, ...args: WhereArg<S>[]): T {

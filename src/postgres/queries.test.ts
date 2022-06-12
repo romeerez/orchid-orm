@@ -114,6 +114,26 @@ describe('postgres queries', () => {
     })
   })
 
+  describe('distinct and distinctRaw', () => {
+    it('add distinct', () => {
+      const q = model.all()
+      expect(q.distinct().toSql()).toBe(
+        'SELECT DISTINCT "sample".* FROM "sample"'
+      )
+      expect(q.distinct('id', 'name').toSql()).toBe(line(`
+        SELECT DISTINCT ON ("sample"."id", "sample"."name") "sample".*
+        FROM "sample"
+      `))
+      expect(q.distinctRaw('raw').toSql()).toBe(line(`
+        SELECT DISTINCT ON (raw) "sample".* FROM "sample"
+      `))
+      expect(q.distinct('id').distinctRaw('lalala').toSql()).toBe(line(`
+        SELECT DISTINCT ON ("sample"."id", lalala) "sample".* FROM "sample"
+      `))
+      expect(q.toSql()).not.toContain('DISTINCT')
+    })
+  })
+
   describe('where', () => {
     let [and, _and] = [model.and, model._and]
     beforeEach(() => {
@@ -246,39 +266,6 @@ describe('postgres queries', () => {
     })
   })
 })
-// describe('distinct and distinctRaw', () => {
-//   it('add distinct', async () => {
-//     const q = model.all()
-//     expect(await q.distinct().toSql()).toBe(
-//       'SELECT DISTINCT "sample".* FROM "sample"'
-//     )
-//     expect(await q.distinct('id', 'name').toSql()).toBe(line(`
-//       SELECT DISTINCT ON ("sample"."id", "sample"."name") "sample".*
-//       FROM "sample"
-//     `))
-//     expect(await q.distinctRaw('raw').toSql()).toBe(line(`
-//       SELECT DISTINCT ON (raw) "sample".*
-//       FROM "sample"
-//     `))
-//     expect(await q.distinct('one').distinctRaw('two').toSql()).toBe(line(`
-//       SELECT DISTINCT ON ("sample"."one", two) "sample".*
-//       FROM "sample"
-//     `))
-//     expect(await q.toSql()).not.toContain('DISTINCT')
-//   })
-//
-//   it('has modifier', async () => {
-//     const q = model.all()
-//     q._distinct()
-//     expect(await q.toSql()).toContain('DISTINCT')
-//     q._distinct(false)
-//     expect(await q.toSql()).not.toContain('DISTINCT')
-//     q._distinctRaw()
-//     expect(await q.toSql()).toContain('DISTINCT')
-//     q._distinctRaw(false)
-//     expect(await q.toSql()).not.toContain('DISTINCT')
-//   })
-// })
 //
 // describe('select and selectRaw', () => {
 //   it('selects', async () => {

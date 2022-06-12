@@ -14,6 +14,21 @@ export const toSql = (model: PostgresModel<any>): string => {
   const { query = EMPTY_OBJECT } = model
   const quotedAs = q(query.as || model.table)
 
+  if (query.distinct || query.distinctRaw) {
+    sql.push('DISTINCT')
+
+    if (query.distinct?.length || query.distinctRaw?.length) {
+      const columns: string[] = []
+      query.distinct?.forEach(column => {
+        columns.push(qc(quotedAs, column))
+      })
+      if (query.distinctRaw) {
+        columns.push(...query.distinctRaw)
+      }
+      sql.push(`ON (${columns.join(', ')})`)
+    }
+  }
+
   if (query.select || query.selectRaw) {
     const select: string[] = []
     if (query.select) {
