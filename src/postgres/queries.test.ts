@@ -182,6 +182,15 @@ describe('postgres queries', () => {
     })
   })
 
+  describe('findBy', () => {
+    it('like where but with take', async () => {
+      const q = model.all()
+      expect(q.findBy({ name: 's' }).toSql()).toBe(
+        `SELECT "sample".* FROM "sample" WHERE "sample"."name" = 's' LIMIT 1`
+      )
+    })
+  })
+
   describe('as', () => {
     it('sets table alias', async () => {
       const q = model.all()
@@ -203,15 +212,15 @@ describe('postgres queries', () => {
 
 // describe('wrap', () => {
 //   it('wraps query with another', async () => {
-//     const q = User.select('innerQuery')
-//     expect(await q.wrap(User.select('outerQuery')).toSql()).toBe(
+//     const q = model.select('innerQuery')
+//     expect(await q.wrap(model.select('outerQuery')).toSql()).toBe(
 //       'SELECT "t"."outerQuery" FROM (SELECT "sample"."innerQuery" FROM "sample") "t"'
 //     )
 //   })
 //
 //   it('accept `as` parameter', async () => {
-//     const q = User.select('innerQuery')
-//     expect(await q.wrap(User.select('outerQuery'), 'wrapped').toSql()).toBe(
+//     const q = model.select('innerQuery')
+//     expect(await q.wrap(model.select('outerQuery'), 'wrapped').toSql()).toBe(
 //       'SELECT "wrapped"."outerQuery" FROM (SELECT "sample"."innerQuery" FROM "sample") "wrapped"'
 //     )
 //   })
@@ -219,7 +228,7 @@ describe('postgres queries', () => {
 //
 // describe('json', () => {
 //   it('wraps a query with json functions', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     expect(await q.json().toSql()).toBe(line(`
 //       SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS json
 //       FROM (
@@ -230,7 +239,7 @@ describe('postgres queries', () => {
 //   })
 //
 //   it('supports `take`', async () => {
-//     expect(await User.take().json().toSql()).toBe(line(`
+//     expect(await model.take().json().toSql()).toBe(line(`
 //       SELECT COALESCE(row_to_json("t".*), '{}') AS json
 //       FROM (
 //         SELECT "sample".* FROM "sample" LIMIT 1
@@ -241,7 +250,7 @@ describe('postgres queries', () => {
 //
 // describe('distinct and distinctRaw', () => {
 //   it('add distinct', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     expect(await q.distinct().toSql()).toBe(
 //       'SELECT DISTINCT "sample".* FROM "sample"'
 //     )
@@ -261,7 +270,7 @@ describe('postgres queries', () => {
 //   })
 //
 //   it('has modifier', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     q._distinct()
 //     expect(await q.toSql()).toContain('DISTINCT')
 //     q._distinct(false)
@@ -275,14 +284,14 @@ describe('postgres queries', () => {
 //
 // describe('select and selectRaw', () => {
 //   it('selects', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     expect(await q.select('id', 'name').toSql()).toBe(line(`
 //       SELECT "sample"."id", "sample"."name" FROM "sample"
 //     `))
 //     expect(await q.select({firstName: 'name'}).toSql()).toBe(line(`
 //       SELECT "sample"."name" AS "firstName" FROM "sample"
 //     `))
-//     expect(await q.select({subquery: User.all()}).toSql()).toBe(line(`
+//     expect(await q.select({subquery: model.all()}).toSql()).toBe(line(`
 //       SELECT
 //           (
 //             SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS json
@@ -299,7 +308,7 @@ describe('postgres queries', () => {
 //   })
 //
 //   it('has modifier', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     q._select('id')
 //     expect(await q.toSql()).toBe(line(`
 //       SELECT "sample"."id" FROM "sample"
@@ -307,27 +316,9 @@ describe('postgres queries', () => {
 //   })
 // })
 //
-// describe('findBy', () => {
-//   it('like where but with take', async () => {
-//     const q = User.all()
-//     expect(await q.findBy({a: 1}).toSql()).toBe(
-//       'SELECT "sample".* FROM "sample" WHERE "sample"."a" = 1 LIMIT 1'
-//     )
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
-//   })
-//
-//   it('has modifier', async () => {
-//     const q = User.all()
-//     q._findBy({a: 1})
-//     expect(await q.toSql()).toBe(
-//       'SELECT "sample".* FROM "sample" WHERE "sample"."a" = 1 LIMIT 1'
-//     )
-//   })
-// })
-//
 // describe('group', () => {
 //   it('adds GROUP BY', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     expect(await q.group('id', 'name').toSql()).toBe(line(`
 //       SELECT "sample".* FROM "sample"
 //       GROUP BY "sample"."id", "sample"."name"
@@ -340,7 +331,7 @@ describe('postgres queries', () => {
 //   })
 //
 //   it('has modifier', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     q._group('id')
 //     expect(await q.toSql()).toBe(line(`
 //       SELECT "sample".* FROM "sample"
@@ -356,7 +347,7 @@ describe('postgres queries', () => {
 //
 // describe('having', () => {
 //   it('adds HAVING', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     expect(await q.having('sum(rating) > 30', 'count(id) > 5').toSql()).toBe(line(`
 //       SELECT "sample".* FROM "sample"
 //       HAVING sum(rating) > 30, count(id) > 5
@@ -365,7 +356,7 @@ describe('postgres queries', () => {
 //   })
 //
 //   it('has modifier', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     q._having('sum(rating) > 30', 'count(id) > 5')
 //     expect(await q.toSql()).toBe(line(`
 //       SELECT "sample".* FROM "sample"
@@ -376,7 +367,7 @@ describe('postgres queries', () => {
 //
 // describe('window', () => {
 //   it('adds WINDOW', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     expect(await q.window({w: 'PARTITION BY depname ORDER BY salary DESC'}).toSql()).toBe(line(`
 //       SELECT "sample".* FROM "sample"
 //       WINDOW w AS (PARTITION BY depname ORDER BY salary DESC)
@@ -385,7 +376,7 @@ describe('postgres queries', () => {
 //   })
 //
 //   it('has modifier', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     q._window({w: 'PARTITION BY depname ORDER BY salary DESC'})
 //     expect(await q.toSql()).toBe(line(`
 //       SELECT "sample".* FROM "sample"
@@ -398,7 +389,7 @@ describe('postgres queries', () => {
 //   const upper = what.toUpperCase()
 //   describe(what, () => {
 //     it(`adds ${what}`, async () => {
-//       const q = User.all() as any
+//       const q = model.all() as any
 //       let query = q.select('id')
 //       query = query[what].call(query, Chat.select('id'), 'SELECT 1')
 //       query = query[what + 'All'].call(query, 'SELECT 2')
@@ -419,7 +410,7 @@ describe('postgres queries', () => {
 //     })
 //
 //     it('has modifier', async () => {
-//       const q = User.select('id') as any
+//       const q = model.select('id') as any
 //       q[`_${what}`].call(q, 'SELECT 1')
 //       expect(await q.toSql()).toBe(line(`
 //         SELECT "sample"."id" FROM "sample"
@@ -440,7 +431,7 @@ describe('postgres queries', () => {
 //
 // describe('order', () => {
 //   it(`defines order`, async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     expect(
 //       await q.order('id', {name: 'desc', something: 'asc nulls first'}, {a: {b: 'asc'}}).toSql()
 //     ).toBe(line(`
@@ -459,7 +450,7 @@ describe('postgres queries', () => {
 //   })
 //
 //   it('has modifier', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     q._order('id')
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample" ORDER BY "sample"."id"')
 //   })
@@ -467,13 +458,13 @@ describe('postgres queries', () => {
 //
 // describe('limit', () => {
 //   it('sets limit', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     expect(await q.limit(5).toSql()).toBe('SELECT "sample".* FROM "sample" LIMIT 5')
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
 //   })
 //
 //   it('has modifier', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     q._limit(5)
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample" LIMIT 5')
 //   })
@@ -481,13 +472,13 @@ describe('postgres queries', () => {
 //
 // describe('offset', () => {
 //   it('sets offset', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     expect(await q.offset(5).toSql()).toBe('SELECT "sample".* FROM "sample" OFFSET 5')
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
 //   })
 //
 //   it('has modifier', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     q._offset(5)
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample" OFFSET 5')
 //   })
@@ -495,13 +486,13 @@ describe('postgres queries', () => {
 //
 // describe('for', () => {
 //   it('sets for', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     expect(await q.for('some sql').toSql()).toBe('SELECT "sample".* FROM "sample" FOR some sql')
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
 //   })
 //
 //   it('has modifier', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     q._for('some sql')
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample" FOR some sql')
 //   })
@@ -509,7 +500,7 @@ describe('postgres queries', () => {
 //
 // describe('join', () => {
 //   it('sets join', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     expect(await q.join('table', 'as', 'on').toSql()).toBe(line(`
 //       SELECT "sample".* FROM "sample"
 //       JOIN "table" AS "as" ON on
@@ -522,7 +513,7 @@ describe('postgres queries', () => {
 //   })
 //
 //   it('has modifier', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     q._join('table', 'as', 'on')
 //     expect(await q.toSql()).toBe(line(`
 //       SELECT "sample".* FROM "sample"
@@ -533,13 +524,13 @@ describe('postgres queries', () => {
 //
 // describe('exists', () => {
 //   it('selects 1', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     expect(await q.exists().toSql()).toBe('SELECT 1 FROM "sample"')
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
 //   })
 //
 //   it('has modifier', async () => {
-//     const q = User.all()
+//     const q = model.all()
 //     q._exists()
 //     expect(await q.toSql()).toBe('SELECT 1 FROM "sample"')
 //   })

@@ -284,6 +284,14 @@ export class PostgresModel<S extends ColumnsShape = any> {
     return this._where(conditions)._take()
   }
 
+  findBy<T extends Base>(this: T, ...args: WhereArg<S>[]): ThenOne<T> {
+    return this.clone()._findBy(...args)
+  }
+
+  _findBy<T extends Base>(this: T, ...args: WhereArg<S>[]): ThenOne<T> {
+    return this._where(...args).take()
+  }
+
   as<T extends Base>(this: T, as: string): T {
     return this.clone()._as(as)
   }
