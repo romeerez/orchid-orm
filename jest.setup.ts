@@ -8,16 +8,17 @@ module.exports = async () => {
     CREATE TABLE IF NOT EXISTS sample
     (
       id serial PRIMARY KEY,
-      name TEXT
+      name TEXT NOT NULL,
+      description TEXT
     )
   `)
 
   const samplesQuery = await db.query('SELECT 1 FROM sample')
   if (samplesQuery.rows.length === 0) {
     await db.query(`
-      INSERT INTO sample(id, name)
-      VALUES (1, 'first'),
-             (2, 'second')
+      INSERT INTO sample(id, name, description)
+      VALUES (1, 'first', 'description'),
+             (2, 'second', NULL)
     `)
   }
 

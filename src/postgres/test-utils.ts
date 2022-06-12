@@ -17,6 +17,7 @@ export class SampleModel extends model({
   schema: (t) => ({
     id: t.serial().primaryKey(),
     name: t.string(),
+    description: t.string().nullable(),
   })
 }) {
   customMethod() {
@@ -33,3 +34,9 @@ export type AssertEqual<T, Expected> = [T] extends [Expected]
     ? true
     : false
   : false;
+
+export const line = (s: string) =>
+  s.trim()
+    .replace(/\s+/g, ' ')
+    .replace(/\( /g, '(')
+    .replace(/ \)/g, ')')

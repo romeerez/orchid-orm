@@ -4,10 +4,14 @@ import { ColumnsShape, dataTypes, DataTypes, GetPrimaryKeys, TableSchema, tableS
 import { toSql } from './toSql';
 import { AggregateOptions, aggregateSql } from './aggregate';
 
+type ConditionItem = ([key: string, op: string, value: any] | PostgresModel)
+
 export type QueryData = {
   take?: true
   select?: string[]
   selectRaw?: string[]
+  and?: ConditionItem[]
+  or?: ConditionItem[][]
 }
 
 type Then<T> = (
@@ -75,9 +79,11 @@ type Select<
 
 type Base = Omit<PostgresModel, 'result' | 'then'> & { result: any, then: any }
 
-type Output<Shape extends ColumnsShape> = TableSchema<Shape>['output']
+type Output<S extends ColumnsShape> = TableSchema<S>['output']
 
 type AllColumns = { __all: true }
+
+type WhereArg<S extends ColumnsShape> = Partial<Output<S>> | PostgresModel<S>
 
 export class PostgresModel<S extends ColumnsShape = any> {
   constructor(public adapter: PostgresAdapter) {
@@ -187,6 +193,57 @@ export class PostgresModel<S extends ColumnsShape = any> {
     const q = this.toQuery()
     if (!q.query.selectRaw) q.query.selectRaw = args
     else q.query.selectRaw.push(...args)
+    return q
+  }
+
+  where<T extends Base>(this: T, ...args: WhereArg<S>[]): T {
+    return this.and(...args)
+  }
+
+  _where<T extends Base>(this: T, ...args: WhereArg<S>[]): T {
+    return this._and(...args)
+  }
+
+  and<T extends Base>(this: T, ...args: WhereArg<S>[]): T {
+    return this.clone()._and(...args)
+  }
+
+  _and<T extends Base>(this: T, ...args: WhereArg<S>[]): T {
+    const q = this.toQuery()
+    const arr: ConditionItem[] = []
+    args.forEach(arg => {
+      if (arg instanceof PostgresModel) {
+        arr.push(arg)
+      } else {
+        Object.entries(arg).forEach(([key, value]) =>
+          arr.push([key, value === null ? 'IS' : '=', value])
+        )
+      }
+    })
+    if (!q.query.and) q.query.and = arr
+    else q.query.and.push(...arr)
+    return q
+  }
+
+  or<T extends Base>(this: T, ...args: WhereArg<S>[]): T {
+    return this.clone()._or(...args)
+  }
+
+  _or<T extends Base>(this: T, ...args: WhereArg<S>[]): T {
+    const q = this.toQuery()
+    const ors = args.map(arg => {
+      const arr: ConditionItem[] = []
+      if (arg instanceof PostgresModel) {
+        arr.push(arg)
+      } else {
+        Object.entries(arg).forEach(([key, value]) =>
+          arr.push([key, value === null ? 'IS' : '=', value])
+        )
+      }
+      return arr
+    })
+    if (!q.query.or) q.query.or = ors
+    else q.query.or.push(...ors)
     return q
   }
 

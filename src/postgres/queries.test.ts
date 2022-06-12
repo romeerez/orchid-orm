@@ -1,4 +1,4 @@
-import { testDb } from './test-utils';
+import { line, testDb } from './test-utils';
 
 const { adapter, model } = testDb
 
@@ -114,86 +114,65 @@ describe('postgres queries', () => {
     })
   })
 
-// describe('where', () => {
-//   let [and, _and] = [User.and, User._and]
-//   beforeEach(() => {
-//     User.and = jest.fn()
-//     User._and = jest.fn()
-//   })
-//   afterAll(() => {
-//     User.and = and
-//     User._and = _and
-//   })
-//
-//   it('is alias to and', () => {
-//     const q = User.all()
-//     q.where()
-//     expect(q.and).toBeCalled()
-//   })
-//
-//   it('has modifier', () => {
-//     const q = User.all()
-//     q._where()
-//     expect(q._and).toBeCalled()
-//   })
-// })
-//
-// describe('and', () => {
-//   it('joins where conditions with and', async () => {
-//     const q = User.all()
-//     expect(await q.and({column: null}).toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample" WHERE "sample"."column" IS NULL
-//     `))
-//     expect(await q.and({a: 1}).toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample" WHERE "sample"."a" = 1
-//     `))
-//     expect(await q.and({a: {b: 1}}).toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample" WHERE "a"."b" = 1
-//     `))
-//     expect(await q.and({a: 1}, q.where({b: 2}).or({c: 3, d: 4})).toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
-//       WHERE "sample"."a" = 1 AND (
-//         "sample"."b" = 2 OR "sample"."c" = 3 AND "sample"."d" = 4
-//       )
-//     `))
-//   })
-//
-//   it('has modifier', async () => {
-//     const q = User.all()
-//     q._and('q')
-//     expect(await q.toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample" WHERE q
-//     `))
-//   })
-// })
-//
-// describe('or', () => {
-//   it('joins conditions with or', async () => {
-//     const q = User.all()
-//     expect(await q.or('a', 'b').toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
-//       WHERE a OR b
-//     `))
-//     expect(await q.or({a: 1}, {a: 2}).toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
-//       WHERE "sample"."a" = 1 OR "sample"."a" = 2
-//     `))
-//     expect(await q.or({a: 1}, q.where({b: 2}).or({c: 3})).toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
-//       WHERE "sample"."a" = 1 OR ("sample"."b" = 2 OR "sample"."c" = 3)
-//     `))
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
-//   })
-//
-//   it('has modifier', async () => {
-//     const q = User.all()
-//     q._or('a', 'b')
-//     expect(await q.toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
-//       WHERE a OR b
-//     `))
-//   })
-// })
+  describe('where', () => {
+    let [and, _and] = [model.and, model._and]
+    beforeEach(() => {
+      model.and = jest.fn()
+      model._and = jest.fn()
+    })
+    afterAll(() => {
+      model.and = and
+      model._and = _and
+    })
+
+    it('is alias to and', () => {
+      const q = model.all()
+      q.where({})
+      expect(q.and).toBeCalled()
+    })
+
+    it('has modifier', () => {
+      const q = model.all()
+      q._where({})
+      expect(q._and).toBeCalled()
+    })
+  })
+
+  describe('and', () => {
+    it('joins where conditions with and', () => {
+      const q = model.all()
+      expect(q.and({ description: null }).toSql()).toBe(line(`
+        SELECT "sample".* FROM "sample" WHERE "sample"."description" IS NULL
+      `))
+      expect(q.and({ id: 1 }).toSql()).toBe(line(`
+        SELECT "sample".* FROM "sample" WHERE "sample"."id" = 1
+      `))
+      // TODO: condition for related table
+      // expect(q.and({ a: { b: 1 }}).toSql()).toBe(line(`
+      //   SELECT "sample".* FROM "sample" WHERE "a"."b" = 1
+      // `))
+      expect(q.and({ id: 1 }, q.where({ id: 2 }).or({ id: 3, name: 'n' })).toSql()).toBe(line(`
+        SELECT "sample".* FROM "sample"
+        WHERE "sample"."id" = 1 AND (
+          "sample"."id" = 2 OR "sample"."id" = 3 AND "sample"."name" = 'n'
+        )
+      `))
+    })
+  })
+
+  describe('or', () => {
+    it('joins conditions with or', async () => {
+      const q = model.all()
+      expect(q.or({ id: 1 }, { name: 'ko' }).toSql()).toBe(line(`
+        SELECT "sample".* FROM "sample"
+        WHERE "sample"."id" = 1 OR "sample"."name" = 'ko'
+      `))
+      expect(q.or({ id: 1 }, model.where({ id: 2 }).and({ name: 'n' })).toSql()).toBe(line(`
+        SELECT "sample".* FROM "sample"
+        WHERE "sample"."id" = 1 OR ("sample"."id" = 2 AND "sample"."name" = 'n')
+      `))
+    })
+  })
 
   // describe('find', () => {
   //   it('searches one by primary key', async () => {

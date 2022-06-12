@@ -7,7 +7,7 @@ const columnMethods = {
   isPrimaryKey: false,
   primaryKey<T extends UnknownType>(this: T): T & { isPrimaryKey: true } {
     return Object.assign(this, { isPrimaryKey: true as true })
-  }
+  },
 }
 
 type Column<T extends UnknownType, D extends string> = T & ColumnMethods & {
