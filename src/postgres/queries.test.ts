@@ -224,30 +224,28 @@ describe('postgres queries', () => {
       )
     })
   })
+
+  describe('json', () => {
+    it('wraps a query with json functions', () => {
+      const q = model.all()
+      expect(q.json().toSql()).toBe(line(`
+        SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS json
+        FROM (
+          SELECT "sample".* FROM "sample"
+        ) AS "t"
+      `))
+    })
+
+    it('supports `take`', () => {
+      expect(model.take().json().toSql()).toBe(line(`
+        SELECT COALESCE(row_to_json("t".*), '{}') AS json
+        FROM (
+          SELECT "sample".* FROM "sample" LIMIT 1
+        ) AS "t"
+      `))
+    })
+  })
 })
-//
-// describe('json', () => {
-//   it('wraps a query with json functions', async () => {
-//     const q = model.all()
-//     expect(await q.json().toSql()).toBe(line(`
-//       SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS json
-//       FROM (
-//         SELECT "sample".* FROM "sample"
-//       ) "t"
-//     `))
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
-//   })
-//
-//   it('supports `take`', async () => {
-//     expect(await model.take().json().toSql()).toBe(line(`
-//       SELECT COALESCE(row_to_json("t".*), '{}') AS json
-//       FROM (
-//         SELECT "sample".* FROM "sample" LIMIT 1
-//       ) "t"
-//     `))
-//   })
-// })
-//
 // describe('distinct and distinctRaw', () => {
 //   it('add distinct', async () => {
 //     const q = model.all()

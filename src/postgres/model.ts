@@ -316,6 +316,18 @@ export class PostgresModel<S extends ColumnsShape = any> {
     return query._as(as)._from(`(${this.toSql()})`)
   }
 
+  json<T extends Base>(this: T): ThenValue<T, string> {
+    return this.clone()._json()
+  }
+
+  _json<T extends Base>(this: T): ThenValue<T, string> {
+    return this._wrap(this.selectRaw(
+      this.query?.take
+        ? `COALESCE(row_to_json("t".*), '{}') AS json`
+        : `COALESCE(json_agg(row_to_json("t".*)), '[]') AS json`
+    ))._value()
+  }
+
   count<T extends Base>(this: T, args?: string, options?: AggregateOptions) {
     return this.clone()._count(args, options)
   }
