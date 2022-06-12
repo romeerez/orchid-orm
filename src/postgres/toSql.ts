@@ -1,17 +1,19 @@
-import { PostgresModel } from './model';
+import { PostgresModel, QueryData } from './model';
 
 // quote table or column
 const q = (sql: string) => `"${sql}"`
 // quote column with table or as
 const qc = (quotedAs: string, column: string) => `${quotedAs}.${q(column)}`
 
+const EMPTY_OBJECT = {} as QueryData
+
 export const toSql = (model: PostgresModel<any>): string => {
   const sql: string[] = ['SELECT']
 
-  const { query, table } = model
+  const { query = EMPTY_OBJECT, table } = model
   const quotedAs = q(table)
 
-  if (query?.select || query?.selectRaw) {
+  if (query.select || query.selectRaw) {
     const select: string[] = []
     if (query.select) {
       select.push(...query.select.map((column) =>
@@ -23,10 +25,14 @@ export const toSql = (model: PostgresModel<any>): string => {
     }
     sql.push(select.join(', '))
   } else {
-    sql.push('*')
+    sql.push(`${quotedAs}.*`)
   }
 
   sql.push('FROM', q(table))
+
+  if (query.take) {
+    sql.push('LIMIT 1')
+  }
 
   return sql.join(' ')
 }

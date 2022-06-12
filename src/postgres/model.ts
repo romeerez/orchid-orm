@@ -1,11 +1,11 @@
 import { PostgresAdapter } from './orm';
 import { RelationThunks } from './relations';
-import { t } from 'tak'
-import { dataTypes, DataTypes } from './schema';
+import { ColumnsShape, dataTypes, DataTypes, GetPrimaryKeys, TableSchema, tableSchema } from './schema';
 import { toSql } from './toSql';
 import { AggregateOptions, aggregateSql } from './aggregate';
 
-type QueryData = {
+export type QueryData = {
+  take?: true
   select?: string[]
   selectRaw?: string[]
 }
@@ -48,7 +48,7 @@ type ThenVoid<T extends Base> = Omit<T, 'then'> & { then: Then<void> }
 
 const thenVoid: Then<void> = function (resolve, reject) {
   return this.adapter.query(this.toSql())
-    .then(resolve as any, reject)
+    .then(() => resolve?.(), reject)
 }
 
 type Result<T extends Base> = T['result'] extends AllColumns ? T['type'] : T['result']
@@ -75,21 +75,24 @@ type Select<
 
 type Base = Omit<PostgresModel, 'result' | 'then'> & { result: any, then: any }
 
+type Output<Shape extends ColumnsShape> = TableSchema<Shape>['output']
+
 type AllColumns = { __all: true }
 
-export class PostgresModel<S extends t.TakShape = any, O = t.TakObject<S>['output']> {
+export class PostgresModel<S extends ColumnsShape = any> {
   constructor(public adapter: PostgresAdapter) {
   }
 
-  type!: O
+  type!: Output<S>
   result!: AllColumns
   table!: string
-  schema!: t.TakObject<S>
+  schema!: TableSchema<S>
+  primaryKeys!: GetPrimaryKeys<S>
   query?: QueryData
 
   aggregateSql = aggregateSql
 
-  then = thenAll as Then<O[]>
+  then = thenAll as Then<Output<S>[]>
 
   all<T extends Base>(this: T): ThenAll<T> {
     return this.then === thenAll ? this : this.clone()._all()
@@ -97,6 +100,7 @@ export class PostgresModel<S extends t.TakShape = any, O = t.TakObject<S>['outpu
 
   _all<T extends Base>(this: T): ThenAll<T> {
     this.then = thenAll
+    if (this.query) delete this.query.take
     return this
   }
 
@@ -106,6 +110,8 @@ export class PostgresModel<S extends t.TakShape = any, O = t.TakObject<S>['outpu
 
   _take<T extends Base>(this: T): ThenOne<T> {
     this.then = thenOne
+    if (!this.query) this.query = { take: true }
+    else this.query.take = true
     return this
   }
 
@@ -115,6 +121,7 @@ export class PostgresModel<S extends t.TakShape = any, O = t.TakObject<S>['outpu
 
   _rows<T extends Base>(this: T): ThenRows<T> {
     this.then = thenRows
+    if (this.query) delete this.query.take
     return this as unknown as ThenRows<T>
   }
 
@@ -124,6 +131,7 @@ export class PostgresModel<S extends t.TakShape = any, O = t.TakObject<S>['outpu
 
   _value<T extends Base, V>(this: T): ThenValue<T, V> {
     this.then = thenValue
+    if (this.query) delete this.query.take
     return this as unknown as ThenValue<T, V>
   }
 
@@ -133,13 +141,13 @@ export class PostgresModel<S extends t.TakShape = any, O = t.TakObject<S>['outpu
 
   _exec<T extends Base>(this: T): ThenVoid<T> {
     this.then = thenVoid
+    if (this.query) delete this.query.take
     return this
   }
 
   toQuery<T extends Base>(this: T): T & { query: QueryData } {
     if (this.query) return this as T & { query: QueryData }
     const q = this.clone()
-    q.query = {}
     return q as T & { query: QueryData }
   }
 
@@ -148,6 +156,7 @@ export class PostgresModel<S extends t.TakShape = any, O = t.TakObject<S>['outpu
     cloned.table = this.table
     cloned.schema = this.schema
     cloned.then = this.then
+    cloned.query = { ...this.query }
     return cloned as T
   }
 
@@ -222,7 +231,7 @@ export class PostgresModel<S extends t.TakShape = any, O = t.TakObject<S>['outpu
   }
 }
 
-export const model = <S extends t.TakShape>({
+export const model = <S extends ColumnsShape>({
   table,
   schema,
 }: {
@@ -230,11 +239,12 @@ export const model = <S extends t.TakShape>({
   schema(t: DataTypes): S,
 }): { new (adapter: PostgresAdapter): PostgresModel<S> } => {
   const shape = schema(dataTypes)
-  const schemaObject = t.object(shape)
+  const schemaObject = tableSchema(shape)
 
   return class extends PostgresModel<S> {
     table = table
     schema = schemaObject
+    primaryKeys = schemaObject.getPrimaryKeys()
   }
 }
 

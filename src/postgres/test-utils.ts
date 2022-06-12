@@ -15,7 +15,7 @@ export const createPg = PostgresOrm(Pg(pgConfig));
 export class SampleModel extends model({
   table: 'sample',
   schema: (t) => ({
-    id: t.serial(),
+    id: t.serial().primaryKey(),
     name: t.string(),
   })
 }) {
