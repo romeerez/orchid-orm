@@ -11,8 +11,8 @@ const EMPTY_OBJECT = {} as QueryData
 export const toSql = (model: PostgresModel<any>): string => {
   const sql: string[] = ['SELECT']
 
-  const { query = EMPTY_OBJECT, table } = model
-  const quotedAs = q(table)
+  const { query = EMPTY_OBJECT } = model
+  const quotedAs = q(query.as || model.table)
 
   if (query.select || query.selectRaw) {
     const select: string[] = []
@@ -29,7 +29,8 @@ export const toSql = (model: PostgresModel<any>): string => {
     sql.push(`${quotedAs}.*`)
   }
 
-  sql.push('FROM', q(table))
+  sql.push('FROM', query.from || q(model.table))
+  if (query.as) sql.push('AS', quotedAs)
 
   const whereConditions = whereConditionsToSql(query, quotedAs)
   if (whereConditions.length) sql.push('WHERE', whereConditions)

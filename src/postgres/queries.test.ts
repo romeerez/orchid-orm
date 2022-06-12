@@ -181,6 +181,24 @@ describe('postgres queries', () => {
       )
     })
   })
+
+  describe('as', () => {
+    it('sets table alias', async () => {
+      const q = model.all()
+      expect(q.select('id').as('as').toSql()).toBe(
+        'SELECT "as"."id" FROM "sample" AS "as"'
+      )
+    })
+  })
+
+  describe('from', () => {
+    it('changes from', async () => {
+      const q = model.all()
+      expect(q.as('t').from('otherTable').toSql()).toBe(line(`
+        SELECT "t".* FROM otherTable AS "t"
+      `))
+    })
+  })
 })
 
 // describe('wrap', () => {
@@ -218,16 +236,6 @@ describe('postgres queries', () => {
 //         SELECT "sample".* FROM "sample" LIMIT 1
 //       ) "t"
 //     `))
-//   })
-// })
-//
-// describe('as', () => {
-//   it('sets table alias', async () => {
-//     const q = User.all()
-//     expect(await q.select('id').as('as').toSql()).toBe(
-//       'SELECT "as"."id" FROM "sample" "as"'
-//     )
-//     expect(await q.toSql()).not.toContain('as')
 //   })
 // })
 //
@@ -295,24 +303,6 @@ describe('postgres queries', () => {
 //     q._select('id')
 //     expect(await q.toSql()).toBe(line(`
 //       SELECT "sample"."id" FROM "sample"
-//     `))
-//   })
-// })
-//
-// describe('from', () => {
-//   it('changes from', async () => {
-//     const q = User.all()
-//     expect(await q.as('t').from('otherTable').toSql()).toBe(line(`
-//       SELECT "t".* FROM otherTable "t"
-//     `))
-//     expect(await q.toSql()).toContain('sample')
-//   })
-//
-//   it('has modifier', async () => {
-//     const q = User.all()
-//     q._as('t')._from('otherTable')
-//     expect(await q.toSql()).toBe(line(`
-//       SELECT "t".* FROM otherTable "t"
 //     `))
 //   })
 // })

@@ -20,6 +20,25 @@ export type QueryData = {
   selectRaw?: string[]
   and?: ConditionItem[]
   or?: ConditionItem[][]
+  as?: string
+  from?: string
+}
+
+const removeFromQuery = (q: { query?: QueryData }, key: keyof QueryData) => {
+  if (q.query) delete q.query[key]
+}
+
+const setQueryValue = <T extends Base, K extends keyof QueryData>(q: T, key: K, value: QueryData[K]): T => {
+  if (!q.query) q.query = { [key]: value }
+  else q.query[key] = value
+  return q
+}
+
+const pushQueryArray = <T extends Base, K extends keyof QueryData>(q: T, key: K, value: QueryData[K]): T => {
+  if (!q.query) q.query = { [key]: value }
+  else if (!q.query[key]) q.query[key] = value
+  else (q.query[key] as unknown[]).push(...(value as unknown[]))
+  return q
 }
 
 type Then<T> = (
@@ -114,7 +133,7 @@ export class PostgresModel<S extends ColumnsShape = any> {
 
   _all<T extends Base>(this: T): ThenAll<T> {
     this.then = thenAll
-    if (this.query) delete this.query.take
+    removeFromQuery(this, 'take')
     return this
   }
 
@@ -124,8 +143,7 @@ export class PostgresModel<S extends ColumnsShape = any> {
 
   _take<T extends Base>(this: T): ThenOne<T> {
     this.then = thenOne
-    if (!this.query) this.query = { take: true }
-    else this.query.take = true
+    setQueryValue(this, 'take', true)
     return this
   }
 
@@ -135,7 +153,7 @@ export class PostgresModel<S extends ColumnsShape = any> {
 
   _rows<T extends Base>(this: T): ThenRows<T> {
     this.then = thenRows
-    if (this.query) delete this.query.take
+    removeFromQuery(this, 'take')
     return this as unknown as ThenRows<T>
   }
 
@@ -145,7 +163,7 @@ export class PostgresModel<S extends ColumnsShape = any> {
 
   _value<T extends Base, V>(this: T): ThenValue<T, V> {
     this.then = thenValue
-    if (this.query) delete this.query.take
+    removeFromQuery(this, 'take')
     return this as unknown as ThenValue<T, V>
   }
 
@@ -155,7 +173,7 @@ export class PostgresModel<S extends ColumnsShape = any> {
 
   _exec<T extends Base>(this: T): ThenVoid<T> {
     this.then = thenVoid
-    if (this.query) delete this.query.take
+    removeFromQuery(this, 'take')
     return this
   }
 
@@ -170,7 +188,18 @@ export class PostgresModel<S extends ColumnsShape = any> {
     cloned.table = this.table
     cloned.schema = this.schema
     cloned.then = this.then
-    cloned.query = { ...this.query }
+    cloned.query = {}
+    if (this.query) {
+      for (const key in this.query) {
+        const value = this.query[key as keyof QueryData]
+        if (Array.isArray(value)) {
+          (cloned.query as Record<string, unknown>)[key] = [...value]
+        } else {
+          (cloned.query as Record<string, unknown>)[key] = value
+        }
+      }
+    }
+
     return cloned as T
   }
 
@@ -187,10 +216,7 @@ export class PostgresModel<S extends ColumnsShape = any> {
   }
 
   _select<T extends Base, K extends (keyof T['type'])[]>(this: T, ...columns: K): Select<T, K[number]> {
-    const q = this.toQuery()
-    if (!q.query.select) q.query.select = columns as string[]
-    else q.query.select.push(...columns as string[])
-    return q as unknown as Select<T, K[number]>
+    return pushQueryArray(this, 'select', columns as string[])
   }
 
   selectRaw<T extends Base>(this: T, ...args: string[]): T {
@@ -198,10 +224,7 @@ export class PostgresModel<S extends ColumnsShape = any> {
   }
 
   _selectRaw<T extends Base>(this: T, ...args: string[]): T {
-    const q = this.toQuery()
-    if (!q.query.selectRaw) q.query.selectRaw = args
-    else q.query.selectRaw.push(...args)
-    return q
+    return pushQueryArray(this, 'selectRaw', args)
   }
 
   where<T extends Base>(this: T, ...args: WhereArg<S>[]): T {
@@ -217,20 +240,17 @@ export class PostgresModel<S extends ColumnsShape = any> {
   }
 
   _and<T extends Base>(this: T, ...args: WhereArg<S>[]): T {
-    const q = this.toQuery()
-    const arr: ConditionItem[] = []
+    const and: ConditionItem[] = []
     args.forEach(arg => {
       if (arg instanceof PostgresModel) {
-        arr.push(arg)
+        and.push(arg)
       } else {
         Object.entries(arg).forEach(([key, value]) =>
-          arr.push([key, value === null ? 'IS' : '=', value])
+          and.push([key, value === null ? 'IS' : '=', value])
         )
       }
     })
-    if (!q.query.and) q.query.and = arr
-    else q.query.and.push(...arr)
-    return q
+    return pushQueryArray(this, 'and', and)
   }
 
   or<T extends Base>(this: T, ...args: WhereArg<S>[]): T {
@@ -238,8 +258,7 @@ export class PostgresModel<S extends ColumnsShape = any> {
   }
 
   _or<T extends Base>(this: T, ...args: WhereArg<S>[]): T {
-    const q = this.toQuery()
-    const ors = args.map(arg => {
+    const or = args.map(arg => {
       const arr: ConditionItem[] = []
       if (arg instanceof PostgresModel) {
         arr.push(arg)
@@ -250,9 +269,7 @@ export class PostgresModel<S extends ColumnsShape = any> {
       }
       return arr
     })
-    if (!q.query.or) q.query.or = ors
-    else q.query.or.push(...ors)
-    return q
+    return pushQueryArray(this, 'or', or)
   }
 
   find<T extends Base>(this: T, ...args: GetPrimaryTypes<S>): ThenOne<T> {
@@ -265,6 +282,22 @@ export class PostgresModel<S extends ColumnsShape = any> {
       conditions[key] = (args as unknown[])[i]
     })
     return this._where(conditions)._take()
+  }
+
+  as<T extends Base>(this: T, as: string): T {
+    return this.clone()._as(as)
+  }
+
+  _as<T extends Base>(this: T, as: string): T {
+    return setQueryValue(this, 'as', as)
+  }
+
+  from<T extends Base>(this: T, from: string): T {
+    return this.clone()._from(from)
+  }
+
+  _from<T extends Base>(this: T, from: string): T {
+    return setQueryValue(this, 'from', from)
   }
 
   count<T extends Base>(this: T, args?: string, options?: AggregateOptions) {
