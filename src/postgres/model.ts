@@ -308,6 +308,14 @@ export class PostgresModel<S extends ColumnsShape = any> {
     return setQueryValue(this, 'from', from)
   }
 
+  wrap<T extends Base, Q extends Base>(this: T, query: Q, as = 't'): Q {
+    return this.clone()._wrap(query.clone(), as)
+  }
+
+  _wrap<T extends Base, Q extends Base>(this: T, query: Q, as = 't'): Q {
+    return query._as(as)._from(`(${this.toSql()})`)
+  }
+
   count<T extends Base>(this: T, args?: string, options?: AggregateOptions) {
     return this.clone()._count(args, options)
   }

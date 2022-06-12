@@ -208,23 +208,23 @@ describe('postgres queries', () => {
       `))
     })
   })
-})
 
-// describe('wrap', () => {
-//   it('wraps query with another', async () => {
-//     const q = model.select('innerQuery')
-//     expect(await q.wrap(model.select('outerQuery')).toSql()).toBe(
-//       'SELECT "t"."outerQuery" FROM (SELECT "sample"."innerQuery" FROM "sample") "t"'
-//     )
-//   })
-//
-//   it('accept `as` parameter', async () => {
-//     const q = model.select('innerQuery')
-//     expect(await q.wrap(model.select('outerQuery'), 'wrapped').toSql()).toBe(
-//       'SELECT "wrapped"."outerQuery" FROM (SELECT "sample"."innerQuery" FROM "sample") "wrapped"'
-//     )
-//   })
-// })
+  describe('wrap', () => {
+    it('wraps query with another', () => {
+      const q = model.select('name')
+      expect(q.wrap(model.select('name')).toSql()).toBe(
+        'SELECT "t"."name" FROM (SELECT "sample"."name" FROM "sample") AS "t"'
+      )
+    })
+
+    it('accept `as` parameter', () => {
+      const q = model.select('name')
+      expect(q.wrap(model.select('name'), 'wrapped').toSql()).toBe(
+        'SELECT "wrapped"."name" FROM (SELECT "sample"."name" FROM "sample") AS "wrapped"'
+      )
+    })
+  })
+})
 //
 // describe('json', () => {
 //   it('wraps a query with json functions', async () => {
