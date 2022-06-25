@@ -32,9 +32,20 @@ export const toSql = (model: PostgresModel<any>): string => {
   if (query.select || query.selectRaw) {
     const select: string[] = []
     if (query.select) {
-      select.push(...query.select.map((column) =>
-        qc(quotedAs, column)
-      ))
+      query.select.forEach((column) => {
+        if (typeof column === 'string') {
+          select.push(qc(quotedAs, column))
+        } else {
+          for (const as in column) {
+            const value = column[as]
+            if (typeof value === 'string') {
+              select.push(`${qc(quotedAs, value)} AS ${q(as)}`)
+            } else {
+              select.push(`(${value.json().toSql()}) AS ${q(as)}`)
+            }
+          }
+        }
+      })
     }
     if (query.selectRaw) {
       select.push(...query.selectRaw)
@@ -49,6 +60,19 @@ export const toSql = (model: PostgresModel<any>): string => {
 
   const whereConditions = whereConditionsToSql(query, quotedAs)
   if (whereConditions.length) sql.push('WHERE', whereConditions)
+
+  if (query.group || query.groupRaw) {
+    const group: string[] = []
+    if (query.group) {
+      group.push(...query.group.map((column) =>
+        qc(quotedAs, column)
+      ))
+    }
+    if (query.groupRaw) {
+      group.push(...query.groupRaw)
+    }
+    sql.push(`GROUP BY ${group.join(', ')}`)
+  }
 
   if (query.take) {
     sql.push('LIMIT 1')
@@ -69,7 +93,11 @@ const whereConditionsToSql = (query: QueryData, quotedAs: string): string => {
         const sql = whereConditionsToSql(item.query || EMPTY_OBJECT, q(item.table))
         if (sql.length) ands.push(`(${sql})`)
       } else {
-        ands.push(`${qc(quotedAs, item[0])} ${item[1]} ${quote(item[2])}`)
+        if (typeof item[1] === 'string') {
+          ands.push(`${qc(quotedAs, item[0])} ${item[1]} ${quote(item[2])}`)
+        } else {
+          ands.push(item[1](qc(quotedAs, item[0]), item[2]))
+        }
       }
     })
     ors.push(ands.join(' AND '))

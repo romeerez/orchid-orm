@@ -41,51 +41,51 @@ describe('aggregate', () => {
 })
 
 describe('count', () => {
-  it('makes count query', async () => {
-    expect(await testDb.model.count().toSql()).toBe('SELECT count(*) FROM "sample"')
+  it('makes count query', () => {
+    expect(testDb.model.count().toSql()).toBe('SELECT count(*) FROM "sample"')
   })
 
-  it('has modifier', async () => {
-    expect(await testDb.model._count().toSql()).toBe('SELECT count(*) FROM "sample"')
+  it('has modifier', () => {
+    expect(testDb.model._count().toSql()).toBe('SELECT count(*) FROM "sample"')
   })
 })
 
 describe('avg', () => {
-  it('makes avg query', async () => {
-    expect(await testDb.model.avg('age').toSql()).toBe('SELECT avg(age) FROM "sample"')
+  it('makes avg query', () => {
+    expect(testDb.model.avg('age').toSql()).toBe('SELECT avg(age) FROM "sample"')
   })
 
-  it('has modifier', async () => {
-    expect(await testDb.model._avg('age').toSql()).toBe('SELECT avg(age) FROM "sample"')
+  it('has modifier', () => {
+    expect(testDb.model._avg('age').toSql()).toBe('SELECT avg(age) FROM "sample"')
   })
 })
 
 describe('min', () => {
-  it('makes min query', async () => {
-    expect(await testDb.model.min('age').toSql()).toBe('SELECT min(age) FROM "sample"')
+  it('makes min query', () => {
+    expect(testDb.model.min('age').toSql()).toBe('SELECT min(age) FROM "sample"')
   })
 
-  it('has modifier', async () => {
-    expect(await testDb.model._min('age').toSql()).toBe('SELECT min(age) FROM "sample"')
+  it('has modifier', () => {
+    expect(testDb.model._min('age').toSql()).toBe('SELECT min(age) FROM "sample"')
   })
 })
 
 describe('max', () => {
-  it('makes max query', async () => {
-    expect(await testDb.model.max('age').toSql()).toBe('SELECT max(age) FROM "sample"')
+  it('makes max query', () => {
+    expect(testDb.model.max('age').toSql()).toBe('SELECT max(age) FROM "sample"')
   })
 
-  it('has modifier', async () => {
-    expect(await testDb.model._max('age').toSql()).toBe('SELECT max(age) FROM "sample"')
+  it('has modifier', () => {
+    expect(testDb.model._max('age').toSql()).toBe('SELECT max(age) FROM "sample"')
   })
 })
 
 describe('sum', () => {
-  it('makes sum query', async () => {
-    expect(await testDb.model.sum('age').toSql()).toBe('SELECT sum(age) FROM "sample"')
+  it('makes sum query', () => {
+    expect(testDb.model.sum('age').toSql()).toBe('SELECT sum(age) FROM "sample"')
   })
 
-  it('has modifier', async () => {
-    expect(await testDb.model._sum('age').toSql()).toBe('SELECT sum(age) FROM "sample"')
+  it('has modifier', () => {
+    expect(testDb.model._sum('age').toSql()).toBe('SELECT sum(age) FROM "sample"')
   })
 })

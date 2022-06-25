@@ -13,7 +13,7 @@ describe('postgres model', () => {
 
   describe('.schema', () => {
     it('should contain schema of columns', () => {
-      expect(Object.keys(testDb.model.schema.shape)).toEqual(['id', 'name'])
+      expect(Object.keys(testDb.model.schema.shape)).toEqual(['id', 'name', 'description'])
     })
   })
 

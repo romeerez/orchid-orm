@@ -28,8 +28,8 @@ describe('postgres queries', () => {
   })
 
   describe('toSql', () => {
-    it('generates sql', async () => {
-      expect(await model.toSql()).toBe(`SELECT "sample".* FROM "sample"`)
+    it('generates sql', () => {
+      expect(model.toSql()).toBe(`SELECT "sample".* FROM "sample"`)
     })
   })
 
@@ -94,23 +94,55 @@ describe('postgres queries', () => {
     })
   })
 
-
   describe('select', () => {
-    it('should return selected columns', async () => {
-      const expected = await adapter.query('SELECT name FROM sample').then(res => res.rows)
-      const received = await model.select('name').all()
-      expect(received).toEqual(expected)
+    it('selects columns', async () => {
+      const q = model.all()
+      expect(q.select('id', 'name').toSql()).toBe(line(`
+        SELECT "sample"."id", "sample"."name" FROM "sample"
+      `))
+      expect(q.toSql()).toBe(line(`
+        SELECT "sample".* FROM "sample"
+      `))
+    })
+
+    it('can select subquery', async () => {
+      const q = model.all()
+      expect(q.selectSubQuery({ subquery: model.all() }).toSql()).toBe(line(`
+        SELECT
+          (
+            SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS json
+            FROM (SELECT "sample".* FROM "sample") AS "t"
+          ) AS "subquery"
+        FROM "sample"
+      `))
+      expect(q.toSql()).toBe(line(`
+        SELECT "sample".* FROM "sample"
+      `))
+    })
+  })
+
+  describe('selectAs', () => {
+    it('selects columns with aliases', async () => {
+      const q = model.all()
+      expect(q.selectAs({ aliasedId: 'id', aliasedName: 'name' }).toSql()).toBe(line(`
+        SELECT "sample"."id" AS "aliasedId", "sample"."name" AS "aliasedName"
+        FROM "sample"
+      `))
+      expect(q.toSql()).toBe(line(`
+        SELECT "sample".* FROM "sample"
+      `))
     })
   })
 
   describe('selectRaw', () => {
-    it('should select with raw sql', async () => {
-      const res = await model
-        .selectRaw('1 as one')
-        .asType()<{ one: number }>()
-        .take()
-
-      expect(res).toEqual({ one: 1 })
+    it('selects raw sql', () => {
+      const q = model.all()
+      expect(q.selectRaw('raw').toSql()).toBe(line(`
+        SELECT raw FROM "sample"
+      `))
+      expect(q.toSql()).toBe(line(`
+        SELECT "sample".* FROM "sample"
+      `))
     })
   })
 
@@ -181,7 +213,7 @@ describe('postgres queries', () => {
   })
 
   describe('or', () => {
-    it('joins conditions with or', async () => {
+    it('joins conditions with or', () => {
       const q = model.all()
       expect(q.or({ id: 1 }, { name: 'ko' }).toSql()).toBe(line(`
         SELECT "sample".* FROM "sample"
@@ -203,7 +235,7 @@ describe('postgres queries', () => {
   })
 
   describe('findBy', () => {
-    it('like where but with take', async () => {
+    it('like where but with take', () => {
       const q = model.all()
       expect(q.findBy({ name: 's' }).toSql()).toBe(
         `SELECT "sample".* FROM "sample" WHERE "sample"."name" = 's' LIMIT 1`
@@ -212,7 +244,7 @@ describe('postgres queries', () => {
   })
 
   describe('as', () => {
-    it('sets table alias', async () => {
+    it('sets table alias', () => {
       const q = model.all()
       expect(q.select('id').as('as').toSql()).toBe(
         'SELECT "as"."id" FROM "sample" AS "as"'
@@ -221,7 +253,7 @@ describe('postgres queries', () => {
   })
 
   describe('from', () => {
-    it('changes from', async () => {
+    it('changes from', () => {
       const q = model.all()
       expect(q.as('t').from('otherTable').toSql()).toBe(line(`
         SELECT "t".* FROM otherTable AS "t"
@@ -266,72 +298,24 @@ describe('postgres queries', () => {
     })
   })
 })
-//
-// describe('select and selectRaw', () => {
-//   it('selects', async () => {
-//     const q = model.all()
-//     expect(await q.select('id', 'name').toSql()).toBe(line(`
-//       SELECT "sample"."id", "sample"."name" FROM "sample"
-//     `))
-//     expect(await q.select({firstName: 'name'}).toSql()).toBe(line(`
-//       SELECT "sample"."name" AS "firstName" FROM "sample"
-//     `))
-//     expect(await q.select({subquery: model.all()}).toSql()).toBe(line(`
-//       SELECT
-//           (
-//             SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS json
-//             FROM (SELECT "sample".* FROM "sample") "t"
-//           ) AS "subquery"
-//       FROM "sample"
-//     `))
-//     expect(await q.selectRaw('raw').toSql()).toBe(line(`
-//       SELECT raw FROM "sample"
-//     `))
-//     expect(await q.toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
-//     `))
-//   })
-//
-//   it('has modifier', async () => {
-//     const q = model.all()
-//     q._select('id')
-//     expect(await q.toSql()).toBe(line(`
-//       SELECT "sample"."id" FROM "sample"
-//     `))
-//   })
-// })
-//
-// describe('group', () => {
-//   it('adds GROUP BY', async () => {
-//     const q = model.all()
-//     expect(await q.group('id', 'name').toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
-//       GROUP BY "sample"."id", "sample"."name"
-//     `))
-//     expect(await q.groupRaw('id', 'name').toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
-//       GROUP BY id, name
-//     `))
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
-//   })
-//
-//   it('has modifier', async () => {
-//     const q = model.all()
-//     q._group('id')
-//     expect(await q.toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
-//       GROUP BY "sample"."id"
-//     `))
-//     q._groupRaw('name')
-//     expect(await q.toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
-//       GROUP BY "sample"."id", name
-//     `))
-//   })
-// })
-//
+
+describe('group', () => {
+  it('adds GROUP BY', () => {
+    const q = model.all()
+    expect(q.group('id', 'name').toSql()).toBe(line(`
+      SELECT "sample".* FROM "sample"
+      GROUP BY "sample"."id", "sample"."name"
+    `))
+    expect(q.groupRaw('id', 'name').toSql()).toBe(line(`
+      SELECT "sample".* FROM "sample"
+      GROUP BY id, name
+    `))
+    expect(q.toSql()).toBe('SELECT "sample".* FROM "sample"')
+  })
+})
+
 // describe('having', () => {
-//   it('adds HAVING', async () => {
+//   it('adds HAVING', () => {
 //     const q = model.all()
 //     expect(await q.having('sum(rating) > 30', 'count(id) > 5').toSql()).toBe(line(`
 //       SELECT "sample".* FROM "sample"
@@ -340,7 +324,7 @@ describe('postgres queries', () => {
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
 //   })
 //
-//   it('has modifier', async () => {
+//   it('has modifier', () => {
 //     const q = model.all()
 //     q._having('sum(rating) > 30', 'count(id) > 5')
 //     expect(await q.toSql()).toBe(line(`
@@ -351,7 +335,7 @@ describe('postgres queries', () => {
 // })
 //
 // describe('window', () => {
-//   it('adds WINDOW', async () => {
+//   it('adds WINDOW', () => {
 //     const q = model.all()
 //     expect(await q.window({w: 'PARTITION BY depname ORDER BY salary DESC'}).toSql()).toBe(line(`
 //       SELECT "sample".* FROM "sample"
@@ -360,7 +344,7 @@ describe('postgres queries', () => {
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
 //   })
 //
-//   it('has modifier', async () => {
+//   it('has modifier', () => {
 //     const q = model.all()
 //     q._window({w: 'PARTITION BY depname ORDER BY salary DESC'})
 //     expect(await q.toSql()).toBe(line(`
@@ -373,7 +357,7 @@ describe('postgres queries', () => {
 // ['union', 'intersect', 'except'].forEach(what => {
 //   const upper = what.toUpperCase()
 //   describe(what, () => {
-//     it(`adds ${what}`, async () => {
+//     it(`adds ${what}`, () => {
 //       const q = model.all() as any
 //       let query = q.select('id')
 //       query = query[what].call(query, Chat.select('id'), 'SELECT 1')
@@ -394,7 +378,7 @@ describe('postgres queries', () => {
 //       expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
 //     })
 //
-//     it('has modifier', async () => {
+//     it('has modifier', () => {
 //       const q = model.select('id') as any
 //       q[`_${what}`].call(q, 'SELECT 1')
 //       expect(await q.toSql()).toBe(line(`
@@ -415,7 +399,7 @@ describe('postgres queries', () => {
 // })
 //
 // describe('order', () => {
-//   it(`defines order`, async () => {
+//   it(`defines order`, () => {
 //     const q = model.all()
 //     expect(
 //       await q.order('id', {name: 'desc', something: 'asc nulls first'}, {a: {b: 'asc'}}).toSql()
@@ -434,7 +418,7 @@ describe('postgres queries', () => {
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
 //   })
 //
-//   it('has modifier', async () => {
+//   it('has modifier', () => {
 //     const q = model.all()
 //     q._order('id')
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample" ORDER BY "sample"."id"')
@@ -442,13 +426,13 @@ describe('postgres queries', () => {
 // })
 //
 // describe('limit', () => {
-//   it('sets limit', async () => {
+//   it('sets limit', () => {
 //     const q = model.all()
 //     expect(await q.limit(5).toSql()).toBe('SELECT "sample".* FROM "sample" LIMIT 5')
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
 //   })
 //
-//   it('has modifier', async () => {
+//   it('has modifier', () => {
 //     const q = model.all()
 //     q._limit(5)
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample" LIMIT 5')
@@ -456,13 +440,13 @@ describe('postgres queries', () => {
 // })
 //
 // describe('offset', () => {
-//   it('sets offset', async () => {
+//   it('sets offset', () => {
 //     const q = model.all()
 //     expect(await q.offset(5).toSql()).toBe('SELECT "sample".* FROM "sample" OFFSET 5')
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
 //   })
 //
-//   it('has modifier', async () => {
+//   it('has modifier', () => {
 //     const q = model.all()
 //     q._offset(5)
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample" OFFSET 5')
@@ -470,13 +454,13 @@ describe('postgres queries', () => {
 // })
 //
 // describe('for', () => {
-//   it('sets for', async () => {
+//   it('sets for', () => {
 //     const q = model.all()
 //     expect(await q.for('some sql').toSql()).toBe('SELECT "sample".* FROM "sample" FOR some sql')
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
 //   })
 //
-//   it('has modifier', async () => {
+//   it('has modifier', () => {
 //     const q = model.all()
 //     q._for('some sql')
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample" FOR some sql')
@@ -484,7 +468,7 @@ describe('postgres queries', () => {
 // })
 //
 // describe('join', () => {
-//   it('sets join', async () => {
+//   it('sets join', () => {
 //     const q = model.all()
 //     expect(await q.join('table', 'as', 'on').toSql()).toBe(line(`
 //       SELECT "sample".* FROM "sample"
@@ -497,7 +481,7 @@ describe('postgres queries', () => {
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
 //   })
 //
-//   it('has modifier', async () => {
+//   it('has modifier', () => {
 //     const q = model.all()
 //     q._join('table', 'as', 'on')
 //     expect(await q.toSql()).toBe(line(`
@@ -508,13 +492,13 @@ describe('postgres queries', () => {
 // })
 //
 // describe('exists', () => {
-//   it('selects 1', async () => {
+//   it('selects 1', () => {
 //     const q = model.all()
 //     expect(await q.exists().toSql()).toBe('SELECT 1 FROM "sample"')
 //     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
 //   })
 //
-//   it('has modifier', async () => {
+//   it('has modifier', () => {
 //     const q = model.all()
 //     q._exists()
 //     expect(await q.toSql()).toBe('SELECT 1 FROM "sample"')
@@ -522,7 +506,7 @@ describe('postgres queries', () => {
 // })
 //
 // describe('model with hidden column', () => {
-//   it('selects by default all columns except hidden', async () => {
+//   it('selects by default all columns except hidden', () => {
 //     class ModelInterface {
 //       id: number
 //       name: string
