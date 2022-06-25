@@ -1,5 +1,6 @@
 import { t } from 'tak'
-import { Operators } from './operators';
+import { Operators } from './queryBuilder/operators';
+import { UnionToArray } from './utils'
 
 type UnknownType = t.TakType<unknown>
 

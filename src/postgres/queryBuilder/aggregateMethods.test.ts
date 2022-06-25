@@ -1,4 +1,4 @@
-import { testDb } from './test-utils';
+import { testDb } from '../test-utils';
 
 describe('aggregate', () => {
   it('return sql for aggregate function', () => {

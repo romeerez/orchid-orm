@@ -14,6 +14,19 @@ type PopUnion<U> = UnionToOvlds<U> extends (a: infer A) => void ? A : never;
 
 type IsUnion<T> = [T] extends [UnionToIntersection<T>] ? false : true;
 
-type UnionToArray<T, A extends unknown[] = []> = IsUnion<T> extends true
+export type UnionToArray<T, A extends unknown[] = []> = IsUnion<T> extends true
   ? UnionToArray<Exclude<T, PopUnion<T>>, [PopUnion<T>, ...A]>
   : [T, ...A];
+
+export function applyMixins(derivedCtor: any, constructors: any[]) {
+  constructors.forEach((baseCtor) => {
+    Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {
+      Object.defineProperty(
+        derivedCtor.prototype,
+        name,
+        Object.getOwnPropertyDescriptor(baseCtor.prototype, name) ||
+        Object.create(null)
+      );
+    });
+  });
+}

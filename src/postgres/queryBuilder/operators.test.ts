@@ -1,4 +1,4 @@
-import { line, testDb } from './test-utils';
+import { line, testDb } from '../test-utils';
 
 const { model } = testDb
 

@@ -1,4 +1,4 @@
-import { line, testDb } from './test-utils';
+import { line, testDb } from '../test-utils';
 
 const { adapter, model } = testDb
 
@@ -34,7 +34,7 @@ describe('postgres queries', () => {
   })
 
   describe('.all', () => {
-    it('should return the same model', () => {
+    it.only('should return the same model', () => {
       expect(model.all()).toBe(model)
     })
 
@@ -178,15 +178,13 @@ describe('postgres queries', () => {
     })
 
     it('is alias to and', () => {
-      const q = model.all()
-      q.where({})
-      expect(q.and).toBeCalled()
+      model.where({})
+      expect(model.and).toBeCalled()
     })
 
     it('has modifier', () => {
-      const q = model.all()
-      q._where({})
-      expect(q._and).toBeCalled()
+      model._where({})
+      expect(model._and).toBeCalled()
     })
   })
 

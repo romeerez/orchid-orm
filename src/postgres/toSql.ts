@@ -1,5 +1,6 @@
-import { PostgresModel, QueryData } from './model';
-import { quote } from './quote';
+import { PostgresModel } from './model';
+import { quote } from './queryBuilder/quote';
+import { QueryData } from './queryBuilder/queryMethods';
 
 // quote table or column
 const q = (sql: string) => `"${sql}"`
