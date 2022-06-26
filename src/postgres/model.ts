@@ -8,11 +8,15 @@ import {
   TableSchema,
   tableSchema,
 } from './schema';
-import { QueryData, QueryMethods } from './queryBuilder/queryMethods';
+import { QueryMethods } from './queryBuilder/queryMethods';
 import { applyMixins } from './utils';
 import { AggregateMethods } from './queryBuilder/aggregateMethods';
+import { QueryData } from './queryBuilder/toSql';
 
-export type Base = Omit<PostgresModel, 'result' | 'then'> & { result: any, then: any }
+export type Base = Omit<PostgresModel, 'result' | 'then'> & {
+  result: any
+  then: any
+}
 
 export type Output<S extends ColumnsShape> = TableSchema<S>['output']
 
@@ -29,7 +33,7 @@ export class PostgresModel<S extends ColumnsShape = any, Table extends string = 
   table!: Table
   schema!: TableSchema<S>
   primaryKeys!: GetPrimaryKeys<S>
-  query?: QueryData
+  query?: QueryData<any>
   returnType!: 'all'
 }
 

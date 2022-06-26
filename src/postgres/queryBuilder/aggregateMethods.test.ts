@@ -1,91 +1,89 @@
 import { testDb } from '../test-utils';
 
 describe('aggregate', () => {
-  it('return sql for aggregate function', () => {
-    expect(testDb.model.aggregateSql('count', '*')).toBe('count(*)')
+  describe('aggregate options', () => {
+    test('without options', () => {
+      expect(testDb.model.count('*').toSql())
+        .toBe('SELECT count(*) FROM "sample"')
+    })
+
+    test('distinct', () => {
+      expect(testDb.model.count('name', { distinct: true }).toSql())
+        .toBe('SELECT count(DISTINCT "sample"."name") FROM "sample"')
+    })
+
+    test('order', () => {
+      expect(testDb.model.count('name', { order: '"sample"."name" DESC' }).toSql())
+        .toBe('SELECT count("sample"."name" ORDER BY "sample"."name" DESC) FROM "sample"')
+    })
+
+    test('filter', () => {
+      expect(testDb.model.count('name', { filter: 'name IS NOT NULL' }).toSql())
+        .toBe('SELECT count("sample"."name") FILTER (WHERE name IS NOT NULL) FROM "sample"')
+    })
+
+    test('all options', () => {
+      expect(testDb.model.count('name', {
+        distinct: true,
+        order: 'name DESC',
+        filter: 'name IS NOT NULL'
+      }).toSql())
+        .toBe('SELECT count(DISTINCT "sample"."name" ORDER BY name DESC) FILTER (WHERE name IS NOT NULL) FROM "sample"')
+    })
+
+    test('withinGroup', () => {
+      expect(testDb.model.count('name', {
+        distinct: true,
+        order: 'name DESC',
+        filter: 'name IS NOT NULL',
+        withinGroup: true
+      }).toSql())
+        .toBe('SELECT count("sample"."name") WITHIN GROUP (ORDER BY name DESC) FILTER (WHERE name IS NOT NULL) FROM "sample"')
+    })
   })
 
-  it('has distinct option', () => {
-    expect(testDb.model.aggregateSql('count', 'name', {distinct: true}))
-      .toBe('count(DISTINCT name)')
+  describe.each`
+    method        | functionName
+    ${'count'}    | ${'count'}
+    ${'avg'}      | ${'avg'}
+    ${'min'}      | ${'min'}
+    ${'max'}      | ${'max'}
+    ${'sum'}      | ${'sum'}
+    ${'arrayAgg'} | ${'array_agg'}
+    ${'bitAnd'}   | ${'bit_and'}
+    ${'bitOr'}    | ${'bit_or'}
+    ${'boolAnd'}  | ${'bool_and'}
+    ${'boolOr'}   | ${'bool_or'}
+    ${'every'}    | ${'every'}
+    ${'jsonAgg'}  | ${'json_agg'}
+    ${'jsonbAgg'} | ${'jsonb_agg'}
+    ${'xmlAgg'}   | ${'xmlagg'}
+  `('$method', ({ method, functionName }) => {
+    it(`makes ${method} query`, () => {
+      expect(testDb.model[method as 'count']('name').toSql()).toBe(`SELECT ${functionName}("sample"."name") FROM "sample"`)
+    })
+
+    it('has modifier', () => {
+      expect(testDb.model[`_${method}` as `_count`]('name').toSql()).toBe(`SELECT ${functionName}("sample"."name") FROM "sample"`)
+    })
   })
 
-  it('has order option', () => {
-    expect(testDb.model.aggregateSql('count', 'name', {order: 'name DESC'}))
-      .toBe('count(name ORDER BY name DESC)')
+  describe.each`
+    method         | functionName
+    ${'jsonObjectAgg'}  | ${'json_object_agg'}
+    ${'jsonbObjectAgg'} | ${'jsonb_object_agg'}
+  `('$method', ({ method, functionName }) => {
+    it(`makes ${method} query`, () => {
+      expect(testDb.model[method as 'jsonObjectAgg']({
+        alias: 'name',
+      }).toSql()).toBe(`SELECT ${functionName}('alias', "sample"."name") FROM "sample"`)
+    })
   })
 
-  it('has filter option', () => {
-    expect(testDb.model.aggregateSql('count', 'name', {filter: 'name IS NOT NULL'}))
-      .toBe('count(name) FILTER (WHERE name IS NOT NULL)')
-  })
-
-  it('gives appropriate sql with all options', () => {
-    expect(testDb.model.aggregateSql('count', 'name', {
-      distinct: true,
-      order: 'name DESC',
-      filter: 'name IS NOT NULL'
-    }))
-      .toBe('count(DISTINCT name ORDER BY name DESC) FILTER (WHERE name IS NOT NULL)')
-  })
-
-  it('gives appropriate sql with all options WITHIN GROUP mode', () => {
-    expect(testDb.model.aggregateSql('count', 'name', {
-      distinct: true,
-      order: 'name DESC',
-      filter: 'name IS NOT NULL',
-      withinGroup: true
-    }))
-      .toBe('count(name) WITHIN GROUP (ORDER BY name DESC) FILTER (WHERE name IS NOT NULL)')
-  })
-})
-
-describe('count', () => {
-  it('makes count query', () => {
-    expect(testDb.model.count().toSql()).toBe('SELECT count(*) FROM "sample"')
-  })
-
-  it('has modifier', () => {
-    expect(testDb.model._count().toSql()).toBe('SELECT count(*) FROM "sample"')
-  })
-})
-
-describe('avg', () => {
-  it('makes avg query', () => {
-    expect(testDb.model.avg('age').toSql()).toBe('SELECT avg(age) FROM "sample"')
-  })
-
-  it('has modifier', () => {
-    expect(testDb.model._avg('age').toSql()).toBe('SELECT avg(age) FROM "sample"')
-  })
-})
-
-describe('min', () => {
-  it('makes min query', () => {
-    expect(testDb.model.min('age').toSql()).toBe('SELECT min(age) FROM "sample"')
-  })
-
-  it('has modifier', () => {
-    expect(testDb.model._min('age').toSql()).toBe('SELECT min(age) FROM "sample"')
-  })
-})
-
-describe('max', () => {
-  it('makes max query', () => {
-    expect(testDb.model.max('age').toSql()).toBe('SELECT max(age) FROM "sample"')
-  })
-
-  it('has modifier', () => {
-    expect(testDb.model._max('age').toSql()).toBe('SELECT max(age) FROM "sample"')
-  })
-})
-
-describe('sum', () => {
-  it('makes sum query', () => {
-    expect(testDb.model.sum('age').toSql()).toBe('SELECT sum(age) FROM "sample"')
-  })
-
-  it('has modifier', () => {
-    expect(testDb.model._sum('age').toSql()).toBe('SELECT sum(age) FROM "sample"')
+  describe('stringAgg', () => {
+    it('makes stringAgg query', () => {
+      expect(testDb.model.stringAgg('name', ' & ').toSql())
+        .toBe(`SELECT string_agg("sample"."name", ' & ') FROM "sample"`)
+    })
   })
 })

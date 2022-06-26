@@ -34,7 +34,7 @@ describe('postgres queries', () => {
   })
 
   describe('.all', () => {
-    it.only('should return the same model', () => {
+    it('should return the same model', () => {
       expect(model.all()).toBe(model)
     })
 

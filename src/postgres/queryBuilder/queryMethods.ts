@@ -1,50 +1,31 @@
 import { ColumnsShape, GetPrimaryTypes } from '../schema';
 import { AllColumns, Base, Output, PostgresModel, PostgresModelConstructor } from '../model';
-import { toSql } from '../toSql';
+import { ConditionItem, QueryData, toSql } from './toSql';
 
-type ConditionItem =
-  | [key: string, op: string, value: any]
-  | [key: string, op: (key: string, value: unknown) => string, value: any]
-  | PostgresModel
-
-export type QueryData = {
-  take?: true
-  select?: (string | Record<string, string | Base>)[]
-  selectRaw?: string[]
-  distinct?: string[]
-  distinctRaw?: string[]
-  and?: ConditionItem[]
-  or?: ConditionItem[][]
-  as?: string
-  from?: string
-  group?: string[]
-  groupRaw?: string[]
+type QueryDataArrays<T extends Base> = {
+  [K in keyof QueryData<T>]: QueryData<T>[K] extends Array<any> ? QueryData<T>[K] : never
 }
 
-type QueryDataArrays = {
-  [K in keyof QueryData]: QueryData[K] extends Array<any> ? QueryData[K] : never
-}
-
-const removeFromQuery = (q: { query?: QueryData }, key: keyof QueryData) => {
+export const removeFromQuery = <T extends Base>(q: { query?: QueryData<T> }, key: keyof QueryData<T>) => {
   if (q.query) delete q.query[key]
 }
 
-const setQueryValue = <T extends Base, K extends keyof QueryData>(self: T, key: K, value: QueryData[K]): T => {
+export const setQueryValue = <T extends Base, K extends keyof QueryData<T>>(self: T, key: K, value: QueryData<T>[K]): T => {
   const q = self.toQuery()
   q.query[key] = value
   return q
 }
 
-const pushQueryArray = <T extends Base, K extends keyof QueryData>(self: T, key: K, value: QueryData[K]): T => {
+export const pushQueryArray = <T extends Base, K extends keyof QueryData<T>>(self: T, key: K, value: QueryData<T>[K]): T => {
   const q = self.toQuery()
   if (!q.query[key]) q.query[key] = value
   else (q.query[key] as unknown[]).push(...(value as unknown[]))
   return q
 }
 
-const pushQueryValue = <T extends Base, K extends keyof QueryDataArrays>(self: T, key: K, value: QueryDataArrays[K][number]): T => {
+export const pushQueryValue = <T extends Base, K extends keyof QueryDataArrays<T>>(self: T, key: K, value: QueryDataArrays<T>[K][number]): T => {
   const q = self.toQuery()
-  if (!q.query[key]) q.query[key] = [value] as QueryData[K]
+  if (!q.query[key]) q.query[key] = [value] as QueryData<T>[K]
   else (q.query[key] as unknown[]).push(value)
   return q
 }
@@ -199,10 +180,10 @@ export class QueryMethods<S extends ColumnsShape = any> {
     return q
   }
 
-  toQuery<T extends Base>(this: T): T & { query: QueryData } {
-    if (this.query) return this as T & { query: QueryData }
+  toQuery<T extends Base>(this: T): T & { query: QueryData<T> } {
+    if (this.query) return this as T & { query: QueryData<T> }
     const q = this.clone()
-    return q as T & { query: QueryData }
+    return q as T & { query: QueryData<T> }
   }
 
   clone<T extends Base>(this: T): T {
@@ -213,7 +194,7 @@ export class QueryMethods<S extends ColumnsShape = any> {
     cloned.query = {}
     if (this.query) {
       for (const key in this.query) {
-        const value = this.query[key as keyof QueryData]
+        const value = this.query[key as keyof QueryData<T>]
         if (Array.isArray(value)) {
           (cloned.query as Record<string, unknown>)[key] = [...value]
         } else {
@@ -246,7 +227,7 @@ export class QueryMethods<S extends ColumnsShape = any> {
   }
 
   _selectAs<T extends Base, S extends Record<string, keyof T['type']>>(this: T, select: S): Query<T, { [K in keyof S]: T['type'][S[K]] }> {
-    return pushQueryValue(this, 'select', select)
+    return pushQueryValue(this, 'select', { selectAs: select })
   }
 
   selectSubQuery<T extends Base, S extends Record<string, Base>>(this: T, subQueries: S): Query<T, { [K in keyof S]: Result<S[K]> }> {
@@ -254,7 +235,7 @@ export class QueryMethods<S extends ColumnsShape = any> {
   }
 
   _selectSubQuery<T extends Base, S extends Record<string, Base>>(this: T, subQueries: S): Query<T, { [K in keyof S]: Result<S[K]> }> {
-    return pushQueryValue(this, 'select', subQueries)
+    return pushQueryValue(this, 'select', { selectAs: subQueries })
   }
 
   selectRaw<T extends Base>(this: T, ...args: string[]): T {
@@ -262,7 +243,7 @@ export class QueryMethods<S extends ColumnsShape = any> {
   }
 
   _selectRaw<T extends Base>(this: T, ...args: string[]): T {
-    return pushQueryArray(this, 'selectRaw', args)
+    return pushQueryArray(this, 'select', args.map(arg => ({ raw: arg })))
   }
 
   distinct<T extends Base>(this: T, ...columns: (keyof T['type'])[]): T {
