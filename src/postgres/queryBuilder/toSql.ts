@@ -1,6 +1,6 @@
-import { Base, PostgresModel } from '../model';
+import { Query, PostgresModel, Output } from '../model';
 import { quote } from './quote';
-import { Expression, RawExpression } from './common';
+import { Expression, getRaw, isRaw, RawExpression } from './common';
 import { ColumnsShape } from '../schema';
 import { Aggregate1ArgumentTypes } from './aggregateMethods';
 import { Operator } from './operators';
@@ -10,30 +10,28 @@ const q = (sql: string) => `"${sql}"`
 // quote column with table or as
 export const qc = (quotedAs: string, column: string) => `${quotedAs}.${q(column)}`
 
-export type QueryData<T extends Base> = {
+export type QueryData<T extends Query> = {
   take?: true
   select?: SelectItem<T>[]
-  distinct?: string[]
-  distinctRaw?: string[]
-  and?: ConditionItem[]
-  or?: ConditionItem[][]
+  distinct?: Expression<T>[]
+  and?: WhereItem<T>[]
+  or?: WhereItem<T>[][]
   as?: string
-  from?: string
-  group?: string[]
-  groupRaw?: string[]
+  from?: string | RawExpression
+  group?: (keyof T['type'] | RawExpression)[]
   having?: HavingArg<T>[]
 }
 
-export type SelectItem<T extends Base> =
-  | Expression<T>
+export type SelectItem<T extends Query> =
+  | keyof T['type']
   | Aggregate<T>
-  | { selectAs: Record<string, Expression<T> | Base> }
-  | { raw: string }
+  | { selectAs: Record<string, Expression<T> | Query> }
 
-export type ConditionItem =
-  | [key: string, op: string, value: any]
-  | [key: string, op: (key: string, value: unknown) => string, value: any]
-  | PostgresModel
+export type WhereItem<T extends Query> =
+  | Partial<Output<T['shape']>>
+  | { [K in keyof T['shape']]?: ColumnOperators<T['shape'], K> | RawExpression }
+  | Query
+  | RawExpression
 
 export type AggregateOptions = {
   distinct?: boolean
@@ -44,7 +42,7 @@ export type AggregateOptions = {
 
 const aggregateOptionNames: (keyof AggregateOptions)[] = ['distinct', 'order', 'filter', 'withinGroup']
 
-export type Aggregate<T extends Base> = {
+export type Aggregate<T extends Query> = {
   function: string,
   arg: Expression<T> | { __keyValues: Record<string, Expression<T>> } | { __withDelimiter: [Expression<T>, string] }
   options: AggregateOptions
@@ -53,33 +51,30 @@ export type Aggregate<T extends Base> = {
 export type ColumnOperators<S extends ColumnsShape, Column extends keyof S> =
   { [O in keyof S[Column]['operators']]?: S[Column]['operators'][O]['type'] }
 
-export type HavingArg<T extends Base> = {
+export type HavingArg<T extends Query> = {
   [Agg in keyof Aggregate1ArgumentTypes<T>]?: {
     [Column in Exclude<Aggregate1ArgumentTypes<T>[Agg], RawExpression>]?:
     | T['type'][Column]
     | ColumnOperators<T['shape'], Column> & AggregateOptions
   }
-}
+} | RawExpression
 
 const EMPTY_OBJECT = {}
 
-export const toSql = <T extends Base>(model: T): string => {
+export const toSql = <T extends Query>(model: T): string => {
   const sql: string[] = ['SELECT']
 
   const query = (model.query || EMPTY_OBJECT) as QueryData<T>
   const quotedAs = q(query.as || model.table)
 
-  if (query.distinct || query.distinctRaw) {
+  if (query.distinct) {
     sql.push('DISTINCT')
 
-    if (query.distinct?.length || query.distinctRaw?.length) {
+    if (query.distinct.length) {
       const columns: string[] = []
-      query.distinct?.forEach(column => {
-        columns.push(qc(quotedAs, column))
+      query.distinct?.forEach((item) => {
+        columns.push(expressionToSql(quotedAs, item))
       })
-      if (query.distinctRaw) {
-        columns.push(...query.distinctRaw)
-      }
       sql.push(`ON (${columns.join(', ')})`)
     }
   }
@@ -90,17 +85,19 @@ export const toSql = <T extends Base>(model: T): string => {
       query.select.forEach((item) => {
         if (typeof item === 'object') {
           if ('selectAs' in item) {
-            const obj = item.selectAs as Record<string, Expression<T> | Base>
+            const obj = item.selectAs as Record<string, Expression<T> | Query>
             for (const as in obj) {
               const value = obj[as]
-              if (typeof value === 'string') {
-                select.push(`${qc(quotedAs, value)} AS ${q(as)}`)
+              if (typeof value === 'object') {
+                if (isRaw(value)) {
+                  select.push(`${getRaw(value)} AS ${q(as)}`)
+                } else {
+                  select.push(`(${(value as Query).json().toSql()}) AS ${q(as)}`)
+                }
               } else {
-                select.push(`(${(value as Base).json().toSql()}) AS ${q(as)}`)
+                select.push(`${qc(quotedAs, value as string)} AS ${q(as)}`)
               }
             }
-          } else if ('raw' in item) {
-            select.push(item.raw)
           } else {
             select.push(aggregateToSql(quotedAs, item))
           }
@@ -114,30 +111,35 @@ export const toSql = <T extends Base>(model: T): string => {
     sql.push(`${quotedAs}.*`)
   }
 
-  sql.push('FROM', query.from || q(model.table))
+  sql.push(
+    'FROM',
+    query.from
+      ? typeof query.from === 'object' ? getRaw(query.from) : q(query.from)
+      : q(model.table)
+  )
   if (query.as) sql.push('AS', quotedAs)
 
-  const whereConditions = whereConditionsToSql(query, quotedAs)
+  const whereConditions = whereConditionsToSql(model, query, quotedAs)
   if (whereConditions.length) sql.push('WHERE', whereConditions)
 
-  if (query.group || query.groupRaw) {
-    const group: string[] = []
-    if (query.group) {
-      group.push(...query.group.map((column) =>
-        qc(quotedAs, column)
-      ))
-    }
-    if (query.groupRaw) {
-      group.push(...query.groupRaw)
-    }
+  if (query.group) {
+    const group = query.group.map((item) =>
+      typeof item === 'object' && isRaw(item)
+        ? getRaw(item)
+        : qc(quotedAs, item as string)
+    )
     sql.push(`GROUP BY ${group.join(', ')}`)
   }
 
   if (query.having) {
     const having: string[] = []
     query.having.forEach((item) => {
+      if (isRaw(item)) {
+        having.push(getRaw(item))
+        return
+      }
       for (const key in item) {
-        const columns = item[key as keyof HavingArg<T>]
+        const columns = item[key as keyof Exclude<HavingArg<T>, RawExpression>]
         for (const column in columns) {
           const valueOrOptions = columns[column as keyof typeof columns]
           if (typeof valueOrOptions === 'object' && valueOrOptions !== null && valueOrOptions !== undefined) {
@@ -175,11 +177,11 @@ export const toSql = <T extends Base>(model: T): string => {
   return sql.join(' ')
 }
 
-const expressionToSql = <T extends Base>(quotedAs: string, expr: Expression<T>) => {
-  return typeof expr === 'object' ? expr.raw : qc(quotedAs, expr as string)
+const expressionToSql = <T extends Query>(quotedAs: string, expr: Expression<T>) => {
+  return typeof expr === 'object' && isRaw(expr) ? getRaw(expr) : qc(quotedAs, expr as string)
 }
 
-const aggregateToSql = <T extends Base>(quotedAs: string, item: Aggregate<T>) => {
+const aggregateToSql = <T extends Query>(quotedAs: string, item: Aggregate<T>) => {
   const sql: string[] = [`${item.function}(`]
 
   const options = item.options || EMPTY_OBJECT
@@ -214,22 +216,43 @@ const aggregateToSql = <T extends Base>(quotedAs: string, item: Aggregate<T>) =>
   return sql.join('')
 }
 
-const whereConditionsToSql = <T extends Base>(query: QueryData<T>, quotedAs: string): string => {
+const whereConditionsToSql = <T extends Query>(model: Query, query: QueryData<T>, quotedAs: string): string => {
   const or = query.and && query.or ? [query.and, ...query.or] : query.and ? [query.and] : query.or
   if (!(or?.length)) return ''
 
   const ors: string[] = []
   or.forEach((and) => {
     const ands: string[] = []
-    and.forEach(item => {
+    and.forEach((item) => {
       if (item instanceof PostgresModel) {
-        const sql = whereConditionsToSql(item.query || EMPTY_OBJECT, q(item.table))
+        const sql = whereConditionsToSql(item, item.query || EMPTY_OBJECT, q(item.table))
         if (sql.length) ands.push(`(${sql})`)
       } else {
-        if (typeof item[1] === 'string') {
-          ands.push(`${qc(quotedAs, item[0])} ${item[1]} ${quote(item[2])}`)
-        } else {
-          ands.push(item[1](qc(quotedAs, item[0]), item[2]))
+        for (const key in item) {
+          const value = item[key as keyof typeof item] as object
+          if (typeof value === 'object' && value !== null && value !== undefined) {
+            if (isRaw(value)) {
+              ands.push(`${qc(quotedAs, key)} = ${getRaw(value)}`)
+            } else {
+              const column = model.schema.shape[key]
+              if (!column) {
+                // TODO: custom error classes
+                throw new Error(`Unknown column ${key} provided to condition`)
+              }
+
+              for (const op in value) {
+                const operator = column.operators[op]
+                if (!operator) {
+                  // TODO: custom error classes
+                  throw new Error(`Unknown operator ${op} provided to condition`)
+                }
+
+                ands.push(operator(qc(quotedAs, key), value[op as keyof typeof value]))
+              }
+            }
+          } else {
+            ands.push(`${qc(quotedAs, key)} ${value === null ? 'IS' : '='} ${quote(value)}`)
+          }
         }
       }
     })

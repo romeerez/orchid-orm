@@ -1,4 +1,5 @@
-import { testDb } from '../test-utils';
+import { expectQueryNotMutated, testDb } from '../test-utils';
+import { raw } from './common';
 
 const { model } = testDb
 
@@ -61,12 +62,22 @@ describe('aggregate', () => {
     ${'jsonbAgg'} | ${'jsonb_agg'}
     ${'xmlAgg'}   | ${'xmlagg'}
   `('$method', ({ method, functionName }) => {
-    it(`makes ${method} query`, () => {
-      expect(model[method as 'count']('name').toSql()).toBe(`SELECT ${functionName}("sample"."name") FROM "sample"`)
+    it(`should perform ${method} query for a column`, () => {
+      const q = model.all()
+      const expectedSql = `SELECT ${functionName}("sample"."name") FROM "sample"`
+      expect(q[method as 'count']('name').toSql()).toBe(expectedSql)
+      expectQueryNotMutated(q)
+
+      q[`_${method}` as `_count`]('name')
+      expect(q.toSql()).toBe(expectedSql)
     })
 
-    it('has modifier', () => {
-      expect(model[`_${method}` as `_count`]('name').toSql()).toBe(`SELECT ${functionName}("sample"."name") FROM "sample"`)
+    it('should support raw sql parameter', () => {
+      const q = model.all()
+      expect(q[method as 'count'](raw('SQL')).toSql()).toBe(
+        `SELECT ${functionName}(SQL) FROM "sample"`
+      )
+      expectQueryNotMutated(q)
     })
   })
 
@@ -75,17 +86,45 @@ describe('aggregate', () => {
     ${'jsonObjectAgg'}  | ${'json_object_agg'}
     ${'jsonbObjectAgg'} | ${'jsonb_object_agg'}
   `('$method', ({ method, functionName }) => {
-    it(`makes ${method} query`, () => {
-      expect(model[method as 'jsonObjectAgg']({
-        alias: 'name',
-      }).toSql()).toBe(`SELECT ${functionName}('alias', "sample"."name") FROM "sample"`)
+    it(`should perform ${method} query for a column`, () => {
+      const q = model.all()
+      const expectedSql = `SELECT ${functionName}('alias', "sample"."name") FROM "sample"`
+      expect(q[method as 'jsonObjectAgg']({ alias: 'name' }).toSql()).toBe(expectedSql)
+      expectQueryNotMutated(q)
+
+      q[`_${method}` as '_jsonObjectAgg']({ alias: 'name' })
+      expect(q.toSql()).toBe(expectedSql)
+    })
+
+    it('should support raw sql parameter', () => {
+      const q = model.all()
+      expect(q[method as 'jsonObjectAgg']({
+        alias: raw('SQL')
+      }).toSql()).toBe(
+        `SELECT ${functionName}('alias', SQL) FROM "sample"`
+      )
+      expectQueryNotMutated(q)
     })
   })
 
   describe('stringAgg', () => {
     it('makes stringAgg query', () => {
-      expect(model.stringAgg('name', ' & ').toSql())
-        .toBe(`SELECT string_agg("sample"."name", ' & ') FROM "sample"`)
+      const q = model.all()
+      const expectedSql = `SELECT string_agg("sample"."name", ' & ') FROM "sample"`
+      expect(q.stringAgg('name', ' & ').toSql())
+        .toBe(expectedSql)
+      expectQueryNotMutated(q)
+
+      q._stringAgg('name', ' & ')
+      expect(q.toSql()).toBe(expectedSql)
+    })
+
+    it('should support raw sql parameter', async () => {
+      const q = model.all()
+      expect(q.stringAgg(raw('pum'), ' & ').toSql()).toBe(
+        `SELECT string_agg(pum, ' & ') FROM "sample"`
+      )
+      expectQueryNotMutated(q)
     })
   })
 })

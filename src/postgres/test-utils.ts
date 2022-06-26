@@ -1,6 +1,6 @@
 import { PostgresOrm } from './orm';
 import { Pg } from './pg.adapter';
-import { model } from './model';
+import { model, Query } from './model';
 
 export const pgConfig = {
   host: process.env.POSTGRES_HOST as string,
@@ -40,3 +40,7 @@ export const line = (s: string) =>
     .replace(/\s+/g, ' ')
     .replace(/\( /g, '(')
     .replace(/ \)/g, ')')
+
+export const expectQueryNotMutated = (q: Query) => {
+  expect(q.toSql()).toBe(`SELECT "${q.table}".* FROM "${q.table}"`)
+}

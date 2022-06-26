@@ -1,6 +1,7 @@
 import { t } from 'tak'
 import { Operators } from './queryBuilder/operators';
-import { UnionToArray } from './utils'
+import { UnionToIntersection } from './utils';
+import { RawExpression } from './queryBuilder/common';
 
 type UnknownType = t.TakType<unknown>
 
@@ -53,8 +54,35 @@ export type ColumnsShape = Record<string, UnknownType & ColumnMethods<any, any>>
 
 type SchemaMethods = typeof schemaMethods
 
-export type GetPrimaryKeys<Shape extends ColumnsShape> = UnionToArray<{ [K in keyof Shape]: Shape[K] extends { isPrimaryKey: true } ? K : never }[keyof Shape]>
-export type GetPrimaryTypes<Shape extends ColumnsShape> = UnionToArray<{ [K in keyof Shape]: Shape[K] extends { isPrimaryKey: true } ? Shape[K]['output'] : never }[keyof Shape]>
+// Converts union to overloaded function
+type UnionToOvlds<S, U> = UnionToIntersection<
+  U extends keyof S ? (f: U) => void : never
+  >;
+
+type PopUnion<S extends ColumnsShape, U extends keyof S> = UnionToOvlds<S, U> extends (a: infer A extends keyof S) => void ? A : never;
+
+type IsUnion<T> = [T] extends [UnionToIntersection<T>] ? false : true;
+
+export type UnionToArray<S extends ColumnsShape, T extends keyof S, A extends [...(keyof S)[]] = []> = IsUnion<T> extends true
+  ? UnionToArray<S, Exclude<T, PopUnion<S, T>>, [PopUnion<S, T>, ...A]>
+  : [T, ...A];
+
+export type GetPrimaryKeys<S extends ColumnsShape> = UnionToArray<S, { [K in keyof S]: S[K] extends { isPrimaryKey: true } ? K : never }[keyof S]>
+export type GetPrimaryTypes<S extends ColumnsShape, Keys extends [...(keyof S | string)[]]> = GetTypesFromKeys<S, Keys>
+
+type GetTypesFromKeys<S extends ColumnsShape, T extends [...(keyof S)[]]> =
+  T extends [infer Head extends keyof S, ...infer Tail extends [...(keyof S)[]]]
+    ? [GetTypeFromKey<S, Head>, ...GetTypesFromKeys<S, Tail>]
+    : [];
+
+type GetTypeFromKey<S extends ColumnsShape, T extends keyof S> = S[T]['output']
+
+export type GetTypesOrRaw<T extends [...unknown[]]> =
+  T extends [infer Head, ...infer Tail]
+    ? [GetTypeOrRaw<Head>, ...GetTypesOrRaw<Tail>]
+    : [];
+
+type GetTypeOrRaw<T> = T | RawExpression
 
 const schemaMethods = {
   getPrimaryKeys<T extends t.TakObject<ColumnsShape>>(

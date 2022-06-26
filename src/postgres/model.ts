@@ -3,8 +3,7 @@ import { RelationThunks } from './relations';
 import {
   ColumnsShape,
   dataTypes,
-  DataTypes,
-  GetPrimaryKeys,
+  DataTypes, GetPrimaryKeys, GetPrimaryTypes,
   TableSchema,
   tableSchema,
 } from './schema';
@@ -13,19 +12,19 @@ import { applyMixins } from './utils';
 import { AggregateMethods } from './queryBuilder/aggregateMethods';
 import { QueryData } from './queryBuilder/toSql';
 
-export type Base = Omit<PostgresModel, 'result' | 'then'> & {
-  result: any
-  then: any
-}
-
 export type Output<S extends ColumnsShape> = TableSchema<S>['output']
 
 export type AllColumns = { __all: true }
 
-export interface PostgresModel<S extends ColumnsShape = any, Table extends string = any>
+export interface Query extends PostgresModel<ColumnsShape, string> {
+  result: any
+  then: any
+}
+
+export interface PostgresModel<S extends ColumnsShape, Table extends string>
   extends QueryMethods<S>, AggregateMethods {}
 
-export class PostgresModel<S extends ColumnsShape = any, Table extends string = any> {
+export class PostgresModel<S extends ColumnsShape, Table extends string> {
   constructor(public adapter: PostgresAdapter) {}
 
   shape!: S
@@ -33,7 +32,8 @@ export class PostgresModel<S extends ColumnsShape = any, Table extends string = 
   result!: AllColumns
   table!: Table
   schema!: TableSchema<S>
-  primaryKeys!: GetPrimaryKeys<S>
+  primaryKeys!: any[]
+  primaryTypes!: any[]
   query?: QueryData<any>
   returnType!: 'all'
 }
@@ -47,19 +47,20 @@ export const model = <S extends ColumnsShape, Table extends string>({
 }: {
   table: Table
   schema(t: DataTypes): S,
-}): { new (adapter: PostgresAdapter): PostgresModel<S, Table> } => {
+}) => {
   const shape = schema(dataTypes)
   const schemaObject = tableSchema(shape)
 
   return class extends PostgresModel<S, Table> {
     table = table
     schema = schemaObject
-    primaryKeys = schemaObject.getPrimaryKeys()
+    primaryKeys = schemaObject.getPrimaryKeys() as GetPrimaryKeys<S>
+    primaryTypes!: GetPrimaryTypes<S, GetPrimaryKeys<S>>
   }
 }
 
 export type PostgresModelConstructor = {
-  new (adapter: PostgresAdapter): PostgresModel;
+  new (adapter: PostgresAdapter): Query;
 
   relations?: RelationThunks;
 }

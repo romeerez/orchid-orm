@@ -1,5 +1,7 @@
+export type ValueOf<T extends object> = T[keyof T]
+
 // credits goes to https://stackoverflow.com/a/50375286
-type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
+export type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
     k: infer I
   ) => void
   ? I
@@ -8,7 +10,7 @@ type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
 // Converts union to overloaded function
 type UnionToOvlds<U> = UnionToIntersection<
   U extends any ? (f: U) => void : never
-  >;
+>;
 
 type PopUnion<U> = UnionToOvlds<U> extends (a: infer A) => void ? A : never;
 
