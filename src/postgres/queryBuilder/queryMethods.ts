@@ -1,6 +1,6 @@
 import { ColumnsShape, GetPrimaryTypes } from '../schema';
 import { AllColumns, Base, Output, PostgresModel, PostgresModelConstructor } from '../model';
-import { ConditionItem, QueryData, toSql } from './toSql';
+import { ColumnOperators, ConditionItem, HavingArg, QueryData, toSql } from './toSql';
 
 type QueryDataArrays<T extends Base> = {
   [K in keyof QueryData<T>]: QueryData<T>[K] extends Array<any> ? QueryData<T>[K] : never
@@ -88,9 +88,12 @@ const thenVoid: Then<Base, void> = function (resolve, reject) {
 
 type SubQuery = Base
 
+type WhereArgWithOperator<S extends ColumnsShape> =
+  { [K in keyof S]?: ColumnOperators<S, K> }
+
 type WhereArg<S extends ColumnsShape, Result = Output<S>> =
   | Partial<Result>
-  | { [K in keyof S]?: { [O in keyof S[K]['operators']]?: S[K]['operators'][O]['type'] } }
+  | WhereArgWithOperator<S>
   | SubQuery
 
 const pushWhereArg = <S extends ColumnsShape, Result = Output<S>>(self: Base, arr: ConditionItem[], arg: WhereArg<S, Result>) => {
@@ -126,7 +129,7 @@ export class QueryMethods<S extends ColumnsShape = any> {
   then!: Then<Base, Output<S>[]>
 
   all<T extends Base>(this: T): QueryReturns<T, 'all'> {
-    return this.then === thenAll ? this : this.clone()._all()
+    return this.then === thenAll ? this.toQuery() : this.clone()._all()
   }
 
   _all<T extends Base>(this: T): QueryReturns<T, 'all'> {
@@ -343,6 +346,14 @@ export class QueryMethods<S extends ColumnsShape = any> {
 
   _groupRaw<T extends Base>(this: T, ...sql: string[]): T {
     return pushQueryArray(this, 'groupRaw', sql)
+  }
+
+  having<T extends Base>(this: T, arg: HavingArg<T>): T {
+    return this.clone()._having(arg)
+  }
+
+  _having<T extends Base>(this: T, arg: HavingArg<T>): T {
+    return pushQueryValue(this, 'having', arg)
   }
 
   wrap<T extends Base, Q extends Base>(this: T, query: Q, as = 't'): Q {

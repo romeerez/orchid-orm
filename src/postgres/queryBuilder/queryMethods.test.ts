@@ -1,8 +1,9 @@
 import { line, testDb } from '../test-utils';
+import { HavingArg } from './toSql';
 
 const { adapter, model } = testDb
 
-describe('postgres queries', () => {
+describe('queryMethods', () => {
   afterAll(() => testDb.destroy())
 
   describe('.clone', () => {
@@ -34,8 +35,9 @@ describe('postgres queries', () => {
   })
 
   describe('.all', () => {
-    it('should return the same model', () => {
-      expect(model.all()).toBe(model)
+    it('should return the same query if already all', () => {
+      const q = model.all()
+      expect(q.all()).toBe(q)
     })
 
     it('should remove `take` from query if it is set', () => {
@@ -295,43 +297,63 @@ describe('postgres queries', () => {
       `))
     })
   })
-})
 
-describe('group', () => {
-  it('adds GROUP BY', () => {
-    const q = model.all()
-    expect(q.group('id', 'name').toSql()).toBe(line(`
-      SELECT "sample".* FROM "sample"
-      GROUP BY "sample"."id", "sample"."name"
-    `))
-    expect(q.groupRaw('id', 'name').toSql()).toBe(line(`
-      SELECT "sample".* FROM "sample"
-      GROUP BY id, name
-    `))
-    expect(q.toSql()).toBe('SELECT "sample".* FROM "sample"')
+  describe('group', () => {
+    it('adds GROUP BY', () => {
+      const q = model.all()
+      expect(q.group('id', 'name').toSql()).toBe(line(`
+        SELECT "sample".* FROM "sample"
+        GROUP BY "sample"."id", "sample"."name"
+      `))
+      expect(q.groupRaw('id', 'name').toSql()).toBe(line(`
+        SELECT "sample".* FROM "sample"
+        GROUP BY id, name
+      `))
+      expect(q.toSql()).toBe('SELECT "sample".* FROM "sample"')
+    })
   })
 })
 
-// describe('having', () => {
-//   it('adds HAVING', () => {
-//     const q = model.all()
-//     expect(await q.having('sum(rating) > 30', 'count(id) > 5').toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
-//       HAVING sum(rating) > 30, count(id) > 5
-//     `))
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
-//   })
-//
-//   it('has modifier', () => {
-//     const q = model.all()
-//     q._having('sum(rating) > 30', 'count(id) > 5')
-//     expect(await q.toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
-//       HAVING sum(rating) > 30, count(id) > 5
-//     `))
-//   })
-// })
-//
+describe('having', () => {
+  it('adds HAVING', () => {
+    const q = model.all()
+
+    const arg: HavingArg<typeof model> = {
+      sum: {
+        id: {
+          gt: 5,
+          lt: 20,
+          distinct: true,
+          order: 'order',
+          filter: 'filter',
+          withinGroup: true
+        }
+      },
+      count: {
+        id: 5
+      }
+    }
+
+    const expectedSql = `
+      SELECT "sample".*
+      FROM "sample"
+      HAVING
+        sum("sample"."id")
+          WITHIN GROUP (ORDER BY order)
+          FILTER (WHERE filter) > 5,
+        sum("sample"."id") WITHIN GROUP (ORDER BY order)
+          FILTER (WHERE filter) < 20,
+        count("sample"."id") = 5
+    `
+
+    expect(q.having(arg).toSql()).toBe(line(expectedSql))
+    expect(q.toSql()).toBe('SELECT "sample".* FROM "sample"')
+
+    q._having(arg)
+    expect(q.toSql()).toBe(line(expectedSql))
+  })
+})
+
 // describe('window', () => {
 //   it('adds WINDOW', () => {
 //     const q = model.all()

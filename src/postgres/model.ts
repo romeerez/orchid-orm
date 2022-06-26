@@ -28,6 +28,7 @@ export interface PostgresModel<S extends ColumnsShape = any, Table extends strin
 export class PostgresModel<S extends ColumnsShape = any, Table extends string = any> {
   constructor(public adapter: PostgresAdapter) {}
 
+  shape!: S
   type!: Output<S>
   result!: AllColumns
   table!: Table

@@ -1,6 +1,9 @@
 import { Base, PostgresModel } from '../model';
 import { quote } from './quote';
-import { Expression } from './common';
+import { Expression, RawExpression } from './common';
+import { ColumnsShape } from '../schema';
+import { Aggregate1ArgumentTypes } from './aggregateMethods';
+import { Operator } from './operators';
 
 // quote table or column
 const q = (sql: string) => `"${sql}"`
@@ -18,6 +21,7 @@ export type QueryData<T extends Base> = {
   from?: string
   group?: string[]
   groupRaw?: string[]
+  having?: HavingArg<T>[]
 }
 
 export type SelectItem<T extends Base> =
@@ -38,10 +42,23 @@ export type AggregateOptions = {
   withinGroup?: boolean
 }
 
+const aggregateOptionNames: (keyof AggregateOptions)[] = ['distinct', 'order', 'filter', 'withinGroup']
+
 export type Aggregate<T extends Base> = {
   function: string,
   arg: Expression<T> | { __keyValues: Record<string, Expression<T>> } | { __withDelimiter: [Expression<T>, string] }
   options: AggregateOptions
+}
+
+export type ColumnOperators<S extends ColumnsShape, Column extends keyof S> =
+  { [O in keyof S[Column]['operators']]?: S[Column]['operators'][O]['type'] }
+
+export type HavingArg<T extends Base> = {
+  [Agg in keyof Aggregate1ArgumentTypes<T>]?: {
+    [Column in Exclude<Aggregate1ArgumentTypes<T>[Agg], RawExpression>]?:
+    | T['type'][Column]
+    | ColumnOperators<T['shape'], Column> & AggregateOptions
+  }
 }
 
 const EMPTY_OBJECT = {}
@@ -85,38 +102,7 @@ export const toSql = <T extends Base>(model: T): string => {
           } else if ('raw' in item) {
             select.push(item.raw)
           } else {
-            const sql: string[] = [`${item.function}(`]
-
-            const options = item.options || EMPTY_OBJECT
-
-            if (options.distinct && !options.withinGroup) sql.push('DISTINCT ')
-
-            if (typeof item.arg === 'object') {
-              if ('__keyValues' in item.arg) {
-                const args: string[] = []
-                for (const key in item.arg.__keyValues) {
-                  args.push(`${quote(key)}, ${expressionToSql(quotedAs, item.arg.__keyValues[key])}`)
-                }
-                sql.push(args.join(', '))
-              } else if ('__withDelimiter' in item.arg) {
-                sql.push(`${expressionToSql(quotedAs, item.arg.__withDelimiter[0])}, ${quote(item.arg.__withDelimiter[1])}`)
-              } else {
-                sql.push(expressionToSql(quotedAs, item.arg))
-              }
-            } else {
-              sql.push(expressionToSql(quotedAs, item.arg))
-            }
-
-            if (options.withinGroup) sql.push(') WITHIN GROUP (')
-            else if (options.order) sql.push(' ')
-
-            if (options.order) sql.push(`ORDER BY ${options.order}`)
-
-            sql.push(')')
-
-            if (options.filter) sql.push(` FILTER (WHERE ${options.filter})`)
-
-            select.push(sql.join(''))
+            select.push(aggregateToSql(quotedAs, item))
           }
         } else {
           select.push(qc(quotedAs, item as string))
@@ -147,6 +133,41 @@ export const toSql = <T extends Base>(model: T): string => {
     sql.push(`GROUP BY ${group.join(', ')}`)
   }
 
+  if (query.having) {
+    const having: string[] = []
+    query.having.forEach((item) => {
+      for (const key in item) {
+        const columns = item[key as keyof HavingArg<T>]
+        for (const column in columns) {
+          const valueOrOptions = columns[column as keyof typeof columns]
+          if (typeof valueOrOptions === 'object' && valueOrOptions !== null && valueOrOptions !== undefined) {
+            for (const op in valueOrOptions) {
+              if (!aggregateOptionNames.includes(op as keyof AggregateOptions)) {
+                const operator = model.schema.shape[column].operators[op] as Operator<any>
+                if (!operator) {
+                  // TODO: custom error classes
+                  throw new Error(`Unknown operator ${op} provided to condition`)
+                }
+                having.push(operator(aggregateToSql(quotedAs, {
+                  function: key,
+                  arg: column,
+                  options: valueOrOptions as AggregateOptions
+                }), valueOrOptions[op]))
+              }
+            }
+          } else {
+            having.push(`${aggregateToSql(quotedAs, {
+              function: key,
+              arg: column,
+              options: EMPTY_OBJECT
+            })} = ${quote(valueOrOptions)}`)
+          }
+        }
+      }
+    })
+    sql.push(`HAVING ${having.join(', ')}`)
+  }
+
   if (query.take) {
     sql.push('LIMIT 1')
   }
@@ -156,6 +177,41 @@ export const toSql = <T extends Base>(model: T): string => {
 
 const expressionToSql = <T extends Base>(quotedAs: string, expr: Expression<T>) => {
   return typeof expr === 'object' ? expr.raw : qc(quotedAs, expr as string)
+}
+
+const aggregateToSql = <T extends Base>(quotedAs: string, item: Aggregate<T>) => {
+  const sql: string[] = [`${item.function}(`]
+
+  const options = item.options || EMPTY_OBJECT
+
+  if (options.distinct && !options.withinGroup) sql.push('DISTINCT ')
+
+  if (typeof item.arg === 'object') {
+    if ('__keyValues' in item.arg) {
+      const args: string[] = []
+      for (const key in item.arg.__keyValues) {
+        args.push(`${quote(key)}, ${expressionToSql(quotedAs, item.arg.__keyValues[key])}`)
+      }
+      sql.push(args.join(', '))
+    } else if ('__withDelimiter' in item.arg) {
+      sql.push(`${expressionToSql(quotedAs, item.arg.__withDelimiter[0])}, ${quote(item.arg.__withDelimiter[1])}`)
+    } else {
+      sql.push(expressionToSql(quotedAs, item.arg))
+    }
+  } else {
+    sql.push(expressionToSql(quotedAs, item.arg))
+  }
+
+  if (options.withinGroup) sql.push(') WITHIN GROUP (')
+  else if (options.order) sql.push(' ')
+
+  if (options.order) sql.push(`ORDER BY ${options.order}`)
+
+  sql.push(')')
+
+  if (options.filter) sql.push(` FILTER (WHERE ${options.filter})`)
+
+  return sql.join('')
 }
 
 const whereConditionsToSql = <T extends Base>(query: QueryData<T>, quotedAs: string): string => {
