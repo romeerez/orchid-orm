@@ -3,6 +3,6 @@
 node_modules
 dist
 src/gitignored
-.env.local
+.env
 .idea
 roadmap.md
