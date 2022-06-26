@@ -1,29 +1,31 @@
 import { testDb } from '../test-utils';
 
+const { model } = testDb
+
 describe('aggregate', () => {
   describe('aggregate options', () => {
     test('without options', () => {
-      expect(testDb.model.count('*').toSql())
+      expect(model.count('*').toSql())
         .toBe('SELECT count(*) FROM "sample"')
     })
 
     test('distinct', () => {
-      expect(testDb.model.count('name', { distinct: true }).toSql())
+      expect(model.count('name', { distinct: true }).toSql())
         .toBe('SELECT count(DISTINCT "sample"."name") FROM "sample"')
     })
 
     test('order', () => {
-      expect(testDb.model.count('name', { order: '"sample"."name" DESC' }).toSql())
+      expect(model.count('name', { order: '"sample"."name" DESC' }).toSql())
         .toBe('SELECT count("sample"."name" ORDER BY "sample"."name" DESC) FROM "sample"')
     })
 
     test('filter', () => {
-      expect(testDb.model.count('name', { filter: 'name IS NOT NULL' }).toSql())
+      expect(model.count('name', { filter: 'name IS NOT NULL' }).toSql())
         .toBe('SELECT count("sample"."name") FILTER (WHERE name IS NOT NULL) FROM "sample"')
     })
 
     test('all options', () => {
-      expect(testDb.model.count('name', {
+      expect(model.count('name', {
         distinct: true,
         order: 'name DESC',
         filter: 'name IS NOT NULL'
@@ -32,7 +34,7 @@ describe('aggregate', () => {
     })
 
     test('withinGroup', () => {
-      expect(testDb.model.count('name', {
+      expect(model.count('name', {
         distinct: true,
         order: 'name DESC',
         filter: 'name IS NOT NULL',
@@ -60,11 +62,11 @@ describe('aggregate', () => {
     ${'xmlAgg'}   | ${'xmlagg'}
   `('$method', ({ method, functionName }) => {
     it(`makes ${method} query`, () => {
-      expect(testDb.model[method as 'count']('name').toSql()).toBe(`SELECT ${functionName}("sample"."name") FROM "sample"`)
+      expect(model[method as 'count']('name').toSql()).toBe(`SELECT ${functionName}("sample"."name") FROM "sample"`)
     })
 
     it('has modifier', () => {
-      expect(testDb.model[`_${method}` as `_count`]('name').toSql()).toBe(`SELECT ${functionName}("sample"."name") FROM "sample"`)
+      expect(model[`_${method}` as `_count`]('name').toSql()).toBe(`SELECT ${functionName}("sample"."name") FROM "sample"`)
     })
   })
 
@@ -74,7 +76,7 @@ describe('aggregate', () => {
     ${'jsonbObjectAgg'} | ${'jsonb_object_agg'}
   `('$method', ({ method, functionName }) => {
     it(`makes ${method} query`, () => {
-      expect(testDb.model[method as 'jsonObjectAgg']({
+      expect(model[method as 'jsonObjectAgg']({
         alias: 'name',
       }).toSql()).toBe(`SELECT ${functionName}('alias', "sample"."name") FROM "sample"`)
     })
@@ -82,7 +84,7 @@ describe('aggregate', () => {
 
   describe('stringAgg', () => {
     it('makes stringAgg query', () => {
-      expect(testDb.model.stringAgg('name', ' & ').toSql())
+      expect(model.stringAgg('name', ' & ').toSql())
         .toBe(`SELECT string_agg("sample"."name", ' & ') FROM "sample"`)
     })
   })

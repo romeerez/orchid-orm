@@ -40,13 +40,13 @@ type Query<
   > = Omit<T, 'result' | 'then'> & {
   result: Res
   then: RT extends 'all'
-    ? Then<Res[]>
+    ? Then<T, Res[]>
     : RT extends 'one' | 'value'
-      ? Then<Res>
+      ? Then<T, Res>
       : RT extends 'rows'
-        ? Then<Res[keyof Res]>
+        ? Then<T, Res[keyof Res]>
         : RT extends 'void'
-          ? Then<void>
+          ? Then<T, void>
           : never
 }
 
@@ -55,33 +55,33 @@ type Result<T extends Base> = T['result'] extends AllColumns ? T['type'] : T['re
 type QueryReturns<T extends Base, R extends ReturnType> =
   Query<T, T['result'], R>
 
-type Then<T> = (
-  this: PostgresModel,
-  resolve?: (value: T) => any,
+type Then<T extends Base, Res> = (
+  this: T,
+  resolve?: (value: Res) => any,
   reject?: (error: any) => any,
-) => Promise<T | never>
+) => Promise<Res | never>
 
-const thenAll: Then<any[]> = function (resolve, reject) {
+const thenAll: Then<Base, any[]> = function (resolve, reject) {
   return this.adapter.query(this.toSql())
     .then(result => result.rows).then(resolve, reject)
 }
 
-const thenOne: Then<any> = function (resolve, reject) {
+const thenOne: Then<Base, any> = function (resolve, reject) {
   return this.adapter.query(this.toSql())
     .then(result => result.rows[0]).then(resolve, reject)
 }
 
-const thenRows: Then<any[][]> = function (resolve, reject) {
+const thenRows: Then<Base, any[][]> = function (resolve, reject) {
   return this.adapter.arrays(this.toSql())
     .then(result => result.rows).then(resolve, reject)
 }
 
-const thenValue: Then<any> = function (resolve, reject) {
+const thenValue: Then<Base, any> = function (resolve, reject) {
   return this.adapter.arrays(this.toSql())
     .then(result => result.rows[0]?.[0]).then(resolve, reject)
 }
 
-const thenVoid: Then<void> = function (resolve, reject) {
+const thenVoid: Then<Base, void> = function (resolve, reject) {
   return this.adapter.query(this.toSql())
     .then(() => resolve?.(), reject)
 }
@@ -123,7 +123,7 @@ const pushWhereArg = <S extends ColumnsShape, Result = Output<S>>(self: Base, ar
 }
 
 export class QueryMethods<S extends ColumnsShape = any> {
-  then!: Then<Output<S>[]>
+  then!: Then<Base, Output<S>[]>
 
   all<T extends Base>(this: T): QueryReturns<T, 'all'> {
     return this.then === thenAll ? this : this.clone()._all()
