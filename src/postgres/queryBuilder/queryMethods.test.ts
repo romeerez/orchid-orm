@@ -571,6 +571,14 @@ describe('for', () => {
   })
 })
 
+describe('exists', () => {
+  it('selects 1', () => {
+    const q = User.all()
+    expect(q.exists().toSql()).toBe('SELECT 1 AS "exists" FROM "user"')
+    expectQueryNotMutated(q)
+  })
+})
+
 // describe('join', () => {
 //   it('sets join', () => {
 //     const q = User.all()
@@ -592,20 +600,6 @@ describe('for', () => {
 //       SELECT "user".* FROM "user"
 //       JOIN "table" AS "as" ON on
 //     `))
-//   })
-// })
-//
-// describe('exists', () => {
-//   it('selects 1', () => {
-//     const q = User.all()
-//     expect(await q.exists().toSql()).toBe('SELECT 1 FROM "user"')
-//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
-//   })
-//
-//   it('has modifier', () => {
-//     const q = User.all()
-//     q._exists()
-//     expect(await q.toSql()).toBe('SELECT 1 FROM "user"')
 //   })
 // })
 //

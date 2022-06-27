@@ -36,10 +36,9 @@ export type QueryReturnType = 'all' | 'one' | 'rows' | 'value' | 'void'
 
 export type SetQuery<
   T extends Query = any,
-  ResultArg = T['result'],
+  Result = T['result'],
   ReturnType extends QueryReturnType = T['returnType'],
   Windows extends PropertyKey[] = T['windows'],
-  Result = T['result'] extends AllColumns ? ResultArg : Spread<[T['result'], ResultArg]>
 > = Omit<T, 'result' | 'returnType' | 'then' | 'windows'> & {
   result: Result
   returnType: ReturnType
@@ -48,7 +47,7 @@ export type SetQuery<
     : ReturnType extends 'one'
       ? Then<T, Result>
       : ReturnType extends 'value'
-        ? Then<T, ResultArg>
+        ? Then<T, Result>
         : ReturnType extends 'rows'
           ? Then<T, Result[keyof Result]>
           : ReturnType extends 'void'
@@ -56,6 +55,9 @@ export type SetQuery<
             : never
   windows: Windows
 }
+
+export type AddQuerySelect<T extends Query, ResultArg> =
+  SetQuery<T, T['result'] extends AllColumns ? ResultArg : Spread<[T['result'], ResultArg]>>
 
 export type SetQueryReturns<T extends Query, R extends QueryReturnType> =
   SetQuery<T, T['result'], R>
@@ -192,11 +194,11 @@ export class QueryMethods<S extends ColumnsShape> {
     return <S>() => this as unknown as SetQuery<T, S>
   }
 
-  select<T extends Query, K extends (keyof T['type'])[]>(this: T, ...columns: K): SetQuery<T, Pick<T['type'], K[number]>> {
+  select<T extends Query, K extends (keyof T['type'])[]>(this: T, ...columns: K): AddQuerySelect<T, Pick<T['type'], K[number]>> {
     return this.clone()._select(...columns)
   }
 
-  _select<T extends Query, K extends (keyof T['type'])[]>(this: T, ...columns: K): SetQuery<T, Pick<T['type'], K[number]>> {
+  _select<T extends Query, K extends (keyof T['type'])[]>(this: T, ...columns: K): AddQuerySelect<T, Pick<T['type'], K[number]>> {
     return pushQueryArray(this, 'select', columns)
   }
 
@@ -204,7 +206,7 @@ export class QueryMethods<S extends ColumnsShape> {
     return this.clone()._selectAs(select)
   }
 
-  _selectAs<T extends Query, S extends Record<string, (keyof T['type']) | Query | RawExpression<any>>>(this: T, select: S): SetQuery<T, { [K in keyof S]: S[K] extends keyof T['type'] ? T['type'][S[K]] : S[K] extends RawExpression<infer Type> ? Type : S[K] extends Query ? Result<S[K]> : never }> {
+  _selectAs<T extends Query, S extends Record<string, (keyof T['type']) | Query | RawExpression<any>>>(this: T, select: S): AddQuerySelect<T, { [K in keyof S]: S[K] extends keyof T['type'] ? T['type'][S[K]] : S[K] extends RawExpression<infer Type> ? Type : S[K] extends Query ? Result<S[K]> : never }> {
     return pushQueryValue(this, 'select', { selectAs: select })
   }
 
@@ -404,6 +406,15 @@ export class QueryMethods<S extends ColumnsShape> {
 
   _for<T extends Query>(this: T, ...args: RawExpression[]): T {
     return pushQueryArray(this, 'for', args)
+  }
+
+  exists<T extends Query>(this: T): SetQueryReturnsValue<T, { exists: 1 }> {
+    return this.clone()._exists()
+  }
+
+  _exists<T extends Query>(this: T): SetQueryReturnsValue<T, { exists: 1 }> {
+    const q = setQueryValue(this, 'select', [{ selectAs: { exists: raw('1') } }])
+    return q._value<T, { exists: 1 }>()
   }
 }
 

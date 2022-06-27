@@ -7,7 +7,7 @@ import {
   StringExpression,
 } from './common';
 import { AggregateArg, AggregateOptions } from './toSql';
-import { SetQuery, pushQueryValue, SetQueryReturnsValue } from './queryMethods';
+import { AddQuerySelect, pushQueryValue, SetQueryReturnsValue } from './queryMethods';
 
 const allColumns = raw('*')
 
@@ -47,7 +47,7 @@ export const aggregate1FunctionNames = {
   xmlAgg: 'xmlagg',
 } as const
 
-type SelectAgg<T extends Query, Func extends string, As extends string | undefined, Value> = SetQuery<T, Record<As extends undefined ? Func : As, Value>>
+type SelectAgg<T extends Query, Func extends string, As extends string | undefined, Value> = AddQuerySelect<T, Record<As extends undefined ? Func : As, Value>>
 
 type AT1<T extends Query> = Aggregate1ArgumentTypes<T>
 
