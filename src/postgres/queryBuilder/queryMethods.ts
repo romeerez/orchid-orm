@@ -1,6 +1,6 @@
 import { ColumnsShape, GetTypesOrRaw } from '../schema';
 import { AllColumns, Query, Output, PostgresModelConstructor } from '../model';
-import { HavingArg, QueryData, toSql, UnionArg, WhereItem, WindowArg } from './toSql';
+import { HavingArg, OrderBy, QueryData, toSql, UnionArg, WhereItem, WindowArg } from './toSql';
 import { Expression, raw, RawExpression } from './common';
 import { Spread, UnionToArray } from '../utils';
 
@@ -372,6 +372,14 @@ export class QueryMethods<S extends ColumnsShape> {
 
   _exceptAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
     return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'EXCEPT ALL' })))
+  }
+
+  order<T extends Query>(this: T, ...args: OrderBy<T>[]): T {
+    return this.clone()._order(...args)
+  }
+
+  _order<T extends Query>(this: T, ...args: OrderBy<T>[]): T {
+    return pushQueryArray(this, 'order', args)
   }
 }
 

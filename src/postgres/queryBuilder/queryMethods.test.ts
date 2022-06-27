@@ -389,7 +389,7 @@ describe('having', () => {
           gt: 5,
           lt: 20,
           distinct: true,
-          orderBy: 'name ASC',
+          order: 'name ASC',
           filter: 'id < 20',
           withinGroup: true
         }
@@ -443,7 +443,7 @@ describe('window', () => {
       q.window({
         w: {
           partitionBy: 'id',
-          orderBy: {
+          order: {
             id: 'DESC'
           }
         }
@@ -519,33 +519,34 @@ describe('window', () => {
   })
 })
 
-// describe('order', () => {
-//   it(`defines order`, () => {
-//     const q = User.all()
-//     expect(
-//       await q.order('id', {name: 'desc', something: 'asc nulls first'}, {a: {b: 'asc'}}).toSql()
-//     ).toBe(line(`
-//       SELECT "user".* FROM "user"
-//       ORDER BY
-//         "user"."id",
-//         "user"."name" desc,
-//         "user"."something" asc nulls first,
-//         "a"."b" asc
-//     `))
-//     expect(await q.orderRaw('raw').toSql()).toBe(line(`
-//       SELECT "user".* FROM "user"
-//       ORDER BY raw
-//     `))
-//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
-//   })
-//
-//   it('has modifier', () => {
-//     const q = User.all()
-//     q._order('id')
-//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user" ORDER BY "user"."id"')
-//   })
-// })
-//
+describe('order', () => {
+  it('adds order conditions', () => {
+    const q = User.all()
+    expect(
+      q.order({ id: 'ASC', name: 'DESC' }).toSql()
+    ).toBe(line(`
+      SELECT "user".* FROM "user"
+      ORDER BY "user"."id" ASC, "user"."name" DESC
+    `))
+    expect(
+      q.order({ id: { dir: 'ASC', nulls: 'FIRST' }, name: { dir: 'DESC', nulls: 'LAST' } }).toSql()
+    ).toBe(line(`
+      SELECT "user".* FROM "user"
+      ORDER BY "user"."id" ASC NULLS FIRST, "user"."name" DESC NULLS LAST
+    `))
+    expectQueryNotMutated(q)
+  })
+
+  it('adds order with raw sql', () => {
+    const q = User.all()
+    expect(q.order(raw('id ASC NULLS FIRST')).toSql()).toBe(line(`
+      SELECT "user".* FROM "user"
+      ORDER BY id ASC NULLS FIRST
+    `))
+    expectQueryNotMutated(q)
+  })
+})
+
 // describe('limit', () => {
 //   it('sets limit', () => {
 //     const q = User.all()

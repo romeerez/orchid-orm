@@ -22,6 +22,7 @@ export type QueryData<T extends Query> = {
   having?: HavingArg<T>[]
   window?: WindowArg<T>[]
   union?: { arg: UnionArg<T>, kind: UnionKind }[]
+  order?: OrderBy<T>[]
 }
 
 export type SelectItem<T extends Query> =
@@ -38,7 +39,7 @@ export type WhereItem<T extends Query> =
 export type AggregateOptions<T extends Query, As extends string | undefined = any> = {
   as?: As
   distinct?: boolean
-  orderBy?: string
+  order?: string
   filter?: string
   withinGroup?: boolean
   over?: T['windows'][number] | WindowDeclaration<T>
@@ -46,9 +47,9 @@ export type AggregateOptions<T extends Query, As extends string | undefined = an
 
 export type SortDir = 'ASC' | 'DESC'
 
-export type OrderBy<T extends Query> = { [K in keyof T['type']]?: SortDir | { dir: SortDir, nulls: 'FIRST' | 'LAST' } }
+export type OrderBy<T extends Query> = { [K in keyof T['type']]?: SortDir | { dir: SortDir, nulls: 'FIRST' | 'LAST' } } | RawExpression
 
-const aggregateOptionNames: (keyof AggregateOptions<Query>)[] = ['distinct', 'orderBy', 'filter', 'withinGroup']
+const aggregateOptionNames: (keyof AggregateOptions<Query>)[] = ['distinct', 'order', 'filter', 'withinGroup']
 
 export type AggregateArg<T extends Query> = Expression<T> | Record<string, Expression<T>> | [Expression<T>, string]
 
@@ -73,7 +74,7 @@ export type WindowArg<T extends Query> = Record<string, WindowDeclaration<T> | R
 
 export type WindowDeclaration<T extends Query> = {
   partitionBy?: Expression<T>
-  orderBy?: OrderBy<T>
+  order?: OrderBy<T>
 }
 
 export type UnionArg<T extends Query> = (Omit<Query, 'result'> & { result: T['result'] }) | RawExpression
@@ -207,6 +208,12 @@ export const toSql = <T extends Query>(model: T): string => {
     })
   }
 
+  if (query.order) {
+    sql.push(`ORDER BY ${query.order.map((item) =>
+      orderByToSql(quotedAs, item)
+    ).join(', ')}`)
+  }
+
   if (query.take) {
     sql.push('LIMIT 1')
   }
@@ -242,9 +249,9 @@ const aggregateToSql = <T extends Query>(quotedAs: string, item: Aggregate<T>) =
   }
 
   if (options.withinGroup) sql.push(') WITHIN GROUP (')
-  else if (options.orderBy) sql.push(' ')
+  else if (options.order) sql.push(' ')
 
-  if (options.orderBy) sql.push(`ORDER BY ${options.orderBy}`)
+  if (options.order) sql.push(`ORDER BY ${options.order}`)
 
   sql.push(')')
 
@@ -314,8 +321,8 @@ const windowToSql = <T extends Query>(quotedAs: string, window: T['windows'][num
       if (window.partitionBy) {
         sql.push(`PARTITION BY ${expressionToSql(quotedAs, window.partitionBy)}`)
       }
-      if (window.orderBy) {
-        sql.push(`ORDER BY ${orderByToSql(quotedAs, window.orderBy)}`)
+      if (window.order) {
+        sql.push(`ORDER BY ${orderByToSql(quotedAs, window.order)}`)
       }
       return `(${sql.join(' ')})`
     }
@@ -324,10 +331,14 @@ const windowToSql = <T extends Query>(quotedAs: string, window: T['windows'][num
   }
 }
 
-const orderByToSql = (quotedAs: string, orderBy: OrderBy<Query>) => {
+const orderByToSql = (quotedAs: string, order: OrderBy<Query>) => {
+  if (isRaw(order)) {
+    return getRaw(order)
+  }
+
   const sql: string[] = []
-  for (const key in orderBy) {
-    const value = orderBy[key]
+  for (const key in order) {
+    const value = order[key]
     if (typeof value === 'string') {
       sql.push(`${qc(quotedAs, key)} ${value}`)
     } else if (value) {

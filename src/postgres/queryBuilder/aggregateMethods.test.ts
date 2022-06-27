@@ -17,7 +17,7 @@ describe('aggregate', () => {
     })
 
     test('order', () => {
-      expect(User.count('name', { orderBy: '"user"."name" DESC' }).toSql())
+      expect(User.count('name', { order: '"user"."name" DESC' }).toSql())
         .toBe('SELECT count("user"."name" ORDER BY "user"."name" DESC) FROM "user"')
     })
 
@@ -31,7 +31,7 @@ describe('aggregate', () => {
         User.count('name', {
           over: {
             partitionBy: 'id',
-            orderBy: {
+            order: {
               id: 'DESC'
             }
           }
@@ -45,11 +45,11 @@ describe('aggregate', () => {
     test('all options', () => {
       expect(User.count('name', {
         distinct: true,
-        orderBy: 'name DESC',
+        order: 'name DESC',
         filter: 'name IS NOT NULL',
         over: {
           partitionBy: 'id',
-          orderBy: {
+          order: {
             id: 'DESC'
           }
         }
@@ -68,7 +68,7 @@ describe('aggregate', () => {
     test('withinGroup', () => {
       expect(User.count('name', {
         distinct: true,
-        orderBy: 'name DESC',
+        order: 'name DESC',
         filter: 'name IS NOT NULL',
         withinGroup: true
       }).toSql())
