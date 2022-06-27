@@ -1,4 +1,6 @@
-import { testDb } from './test-utils';
+import { testDb } from './test-utils/test-db';
+
+const User = testDb.user
 
 describe('postgres model', () => {
   afterAll(() => {
@@ -7,26 +9,26 @@ describe('postgres model', () => {
 
   describe('.table', () => {
     it('should contain table name', () => {
-      expect(testDb.model.table).toBe('sample')
+      expect(User.table).toBe('user')
     })
   })
 
   describe('.schema', () => {
     it('should contain schema of columns', () => {
-      expect(Object.keys(testDb.model.schema.shape)).toEqual(['id', 'name', 'description'])
+      expect(Object.keys(User.schema.shape)).toEqual(['id', 'name', 'password', 'picture', 'createdAt', 'updatedAt'])
     })
   })
 
   describe('.primaryKeys', () => {
     it('should return array of primary keys', () => {
-      expect(testDb.model.primaryKeys).toEqual(['id'])
+      expect(User.primaryKeys).toEqual(['id'])
     })
   })
 
   describe('await model', () => {
     it('should return promise to load records', async () => {
-      const expected = await testDb.adapter.query('SELECT * FROM sample').then(res => res.rows)
-      const received = await testDb.model.all()
+      const expected = await testDb.adapter.query('SELECT * FROM "user"').then(res => res.rows)
+      const received = await User.all()
       expect(received).toEqual(expected)
     })
   })

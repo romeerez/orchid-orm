@@ -17,11 +17,14 @@
     "lint": "tsdx lint",
     "prepare": "tsdx build",
     "size": "size-limit",
-    "analyze": "size-limit --why"
+    "analyze": "size-limit --why",
+    "db": "rake-db"
   },
   "jest": {
     "globalSetup": "./jest.setup.ts",
-    "setupFiles": ["dotenv/config"],
+    "setupFiles": [
+      "dotenv/config"
+    ],
     "transform": {
       "^.+\\.ts$": "ts-jest"
     }
@@ -50,12 +53,14 @@
     "@types/pg": "^8.6.4",
     "dotenv": "^16.0.0",
     "husky": "^7.0.4",
+    "jest": "^28.1.1",
     "pg": "^8.7.3",
+    "rake-db": "^1.3.1",
     "size-limit": "^7.0.8",
+    "ts-jest": "^28.0.4",
+    "ts-node": "^10.8.1",
     "tsdx": "^0.14.1",
     "tslib": "^2.3.1",
-    "typescript": "^4.7.3",
-    "ts-jest": "^28.0.4",
-    "jest": "^28.1.1"
+    "typescript": "^4.7.3"
   }
 }

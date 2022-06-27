@@ -1,6 +1,6 @@
 import 'dotenv/config'
-import { pgConfig } from './src/postgres/test-utils';
 import { Pg } from './src/postgres/pg.adapter';
+import { pgConfig } from './src/postgres/test-utils/test-db';
 
 module.exports = async () => {
   const db = Pg(pgConfig)

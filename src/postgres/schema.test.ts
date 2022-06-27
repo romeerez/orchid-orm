@@ -1,5 +1,5 @@
 import { dataTypes, tableSchema } from './schema';
-import { AssertEqual } from './test-utils';
+import { AssertEqual } from './test-utils/test-utils';
 
 describe('postgres dataTypes', () => {
   describe('column types', () => {

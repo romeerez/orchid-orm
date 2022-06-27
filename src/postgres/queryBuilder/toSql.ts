@@ -167,7 +167,7 @@ export const toSql = <T extends Query>(model: T): string => {
         }
       }
     })
-    sql.push(`HAVING ${having.join(', ')}`)
+    sql.push(`HAVING ${having.join(' AND ')}`)
   }
 
   if (query.take) {

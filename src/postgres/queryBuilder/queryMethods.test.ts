@@ -1,107 +1,107 @@
-import { expectQueryNotMutated, line, testDb } from '../test-utils';
+import { expectQueryNotMutated, line} from '../test-utils/test-utils';
 import { HavingArg } from './toSql';
 import { raw } from './common';
+import { testDb } from '../test-utils/test-db';
 
-const { adapter, model } = testDb
+const { adapter, user: User } = testDb
 
 describe('queryMethods', () => {
   afterAll(() => testDb.destroy())
 
   describe('.clone', () => {
     it('should return new object with the same data structures', () => {
-      const cloned = model.clone()
-      expect(cloned).not.toBe(model)
+      const cloned = User.clone()
+      expect(cloned).not.toBe(User)
       expect(cloned.adapter).toBe(adapter)
-      expect(cloned.table).toBe(model.table)
-      expect(cloned.schema).toBe(model.schema)
+      expect(cloned.table).toBe(User.table)
+      expect(cloned.schema).toBe(User.schema)
     })
   })
 
   describe('toQuery', () => {
     it('should return the same object if query is present', () => {
-      const q = model.clone()
+      const q = User.clone()
       q.query = {}
       expect(q.toQuery()).toBe(q)
     })
 
-    it('should return new object if it is a model', () => {
-      expect(model.toQuery()).not.toBe(model)
+    it('should return new object if it is a User', () => {
+      expect(User.toQuery()).not.toBe(User)
     })
   })
 
   describe('toSql', () => {
     it('generates sql', () => {
-      expect(model.toSql()).toBe(`SELECT "sample".* FROM "sample"`)
+      expect(User.toSql()).toBe(`SELECT "user".* FROM "user"`)
     })
   })
 
   describe('.all', () => {
     it('should return the same query if already all', () => {
-      const q = model.all()
+      const q = User.all()
       expect(q.all()).toBe(q)
     })
 
     it('should remove `take` from query if it is set', () => {
-      const q = model.take()
+      const q = User.take()
       expect(q.query?.take).toBe(true)
       expect(q.all().query?.take).toBe(undefined)
     })
 
     it('should produce correct sql', () => {
-      expect(model.all().toSql()).toBe(`SELECT "sample".* FROM "sample"`)
+      expect(User.all().toSql()).toBe(`SELECT "user".* FROM "user"`)
     })
   })
 
   describe('take', () => {
     it('limits to one and returns only one', async () => {
-      const q = model.all()
+      const q = User.all()
       expect(q.take().toSql()).toContain('LIMIT 1')
       expect(q.toSql()).not.toContain('LIMIT 1')
-      const expected = await adapter.query('SELECT * FROM sample LIMIT 1').then(res => res.rows[0])
+      const expected = await adapter.query('SELECT * FROM "user" LIMIT 1').then(res => res.rows[0])
       expect(await q.take()).toEqual(expected)
     })
   })
 
   describe('rows', () => {
     it('returns array of rows', async () => {
-      const { rows: expected } = await adapter.arrays('SELECT * FROM sample')
-      const received = await model.rows()
+      const { rows: expected } = await adapter.arrays('SELECT * FROM "user"')
+      const received = await User.rows()
       expect(received).toEqual(expected)
     })
 
     it('removes `take` from query data', () => {
-      expect(model.take().rows().query?.take).toBe(undefined)
+      expect(User.take().rows().query?.take).toBe(undefined)
     })
   })
 
   describe('value', () => {
     it('returns a first value', async () => {
-      const { rows: [[expected]] } = await adapter.arrays('SELECT * FROM sample LIMIT 1')
-      const received = await model.value()
-      expect(received).toEqual(expected)
+      const received = await User.from(raw(`(VALUES ('one')) "user"(a)`)).value()
+      expect(received).toBe('one')
     })
 
     it('removes `take` from query data', () => {
-      expect(model.take().value().query?.take).toBe(undefined)
+      expect(User.take().value().query?.take).toBe(undefined)
     })
   })
 
   describe('exec', () => {
     it('returns nothing', async () => {
-      const received = await model.exec()
+      const received = await User.exec()
       expect(received).toEqual(undefined)
     })
 
     it('removes `take` from query data', () => {
-      expect(model.take().exec().query?.take).toBe(undefined)
+      expect(User.take().exec().query?.take).toBe(undefined)
     })
   })
 
   describe('select', () => {
     it('selects columns', () => {
-      const q = model.all()
+      const q = User.all()
       expect(q.select('id', 'name').toSql()).toBe(line(`
-        SELECT "sample"."id", "sample"."name" FROM "sample"
+        SELECT "user"."id", "user"."name" FROM "user"
       `))
       expectQueryNotMutated(q)
     })
@@ -109,31 +109,31 @@ describe('queryMethods', () => {
 
   describe('selectAs', () => {
     it('selects columns with aliases', async () => {
-      const q = model.all()
+      const q = User.all()
       expect(q.selectAs({ aliasedId: 'id', aliasedName: 'name' }).toSql()).toBe(line(`
-        SELECT "sample"."id" AS "aliasedId", "sample"."name" AS "aliasedName"
-        FROM "sample"
+        SELECT "user"."id" AS "aliasedId", "user"."name" AS "aliasedName"
+        FROM "user"
       `))
       expectQueryNotMutated(q)
     })
 
     it('can select raw', () => {
-      const q = model.all()
+      const q = User.all()
       expect(q.selectAs({ one: raw('1') }).toSql()).toBe(line(`
-        SELECT 1 AS "one" FROM "sample"
+        SELECT 1 AS "one" FROM "user"
       `))
       expectQueryNotMutated(q)
     })
 
     it('can select subquery', () => {
-      const q = model.all()
-      expect(q.selectAs({ subquery: model.all() }).toSql()).toBe(line(`
+      const q = User.all()
+      expect(q.selectAs({ subquery: User.all() }).toSql()).toBe(line(`
         SELECT
           (
             SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
-            FROM (SELECT "sample".* FROM "sample") AS "t"
+            FROM (SELECT "user".* FROM "user") AS "t"
           ) AS "subquery"
-        FROM "sample"
+        FROM "user"
       `))
       expectQueryNotMutated(q)
     })
@@ -141,79 +141,79 @@ describe('queryMethods', () => {
 
   describe('distinct', () => {
     it('add distinct without specifying columns', () => {
-      const q = model.all()
+      const q = User.all()
       expect(q.distinct().toSql()).toBe(
-        'SELECT DISTINCT "sample".* FROM "sample"'
+        'SELECT DISTINCT "user".* FROM "user"'
       )
       expectQueryNotMutated(q)
     })
 
     it('add distinct on columns', () => {
-      const q = model.all()
+      const q = User.all()
       expect(q.distinct('id', 'name').toSql()).toBe(line(`
-        SELECT DISTINCT ON ("sample"."id", "sample"."name") "sample".*
-        FROM "sample"
+        SELECT DISTINCT ON ("user"."id", "user"."name") "user".*
+        FROM "user"
       `))
       expectQueryNotMutated(q)
     })
 
     it('add distinct on raw sql', () => {
-      const q = model.all()
-      expect(q.distinct(raw('raw')).toSql()).toBe(line(`
-        SELECT DISTINCT ON (raw) "sample".* FROM "sample"
+      const q = User.all()
+      expect(q.distinct(raw('"user".id')).toSql()).toBe(line(`
+        SELECT DISTINCT ON ("user".id) "user".* FROM "user"
       `))
       expectQueryNotMutated(q)
     })
   })
 
   describe('and', () => {
-    let [where, _where] = [model.where, model._where]
+    let [where, _where] = [User.where, User._where]
     beforeEach(() => {
-      model.where = jest.fn()
-      model._where = jest.fn()
+      User.where = jest.fn()
+      User._where = jest.fn()
     })
     afterAll(() => {
-      model.where = where
-      model._where = _where
+      User.where = where
+      User._where = _where
     })
 
     it('is alias for where', () => {
-      model.and({})
-      expect(model.where).toBeCalled()
+      User.and({})
+      expect(User.where).toBeCalled()
     })
 
     it('has modifier', () => {
-      model._and({})
-      expect(model._where).toBeCalled()
+      User._and({})
+      expect(User._where).toBeCalled()
     })
   })
 
   describe('where', () => {
     it('specifies where conditions', () => {
-      const q = model.all()
-      expect(q.where({ description: null }).toSql()).toBe(line(`
-        SELECT "sample".* FROM "sample" WHERE "sample"."description" IS NULL
+      const q = User.all()
+      expect(q.where({ picture: null }).toSql()).toBe(line(`
+        SELECT "user".* FROM "user" WHERE "user"."picture" IS NULL
       `))
       expect(q.where({ id: 1 }).toSql()).toBe(line(`
-        SELECT "sample".* FROM "sample" WHERE "sample"."id" = 1
+        SELECT "user".* FROM "user" WHERE "user"."id" = 1
       `))
       // TODO: condition for related table
       // expect(q.where({ a: { b: 1 }}).toSql()).toBe(line(`
-      //   SELECT "sample".* FROM "sample" WHERE "a"."b" = 1
+      //   SELECT "user".* FROM "user" WHERE "a"."b" = 1
       // `))
       expect(q.where({ id: 1 }, q.where({ id: 2 }).or({ id: 3, name: 'n' })).toSql()).toBe(line(`
-        SELECT "sample".* FROM "sample"
-        WHERE "sample"."id" = 1 AND (
-          "sample"."id" = 2 OR "sample"."id" = 3 AND "sample"."name" = 'n'
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 AND (
+          "user"."id" = 2 OR "user"."id" = 3 AND "user"."name" = 'n'
         )
       `))
       expectQueryNotMutated(q)
     })
 
     it('should accept raw sql', () => {
-      const q = model.all()
-      expect(q.where({ id: raw('SQL') }).toSql()).toBe(line(`
-        SELECT "sample".* FROM "sample" WHERE "sample"."id" = SQL
+      const q = User.all()
+      expect(q.where({ id: raw('1 + 2') }).toSql()).toBe(line(`
+        SELECT "user".* FROM "user" WHERE "user"."id" = 1 + 2
       `))
       expectQueryNotMutated(q)
     })
@@ -221,23 +221,23 @@ describe('queryMethods', () => {
 
   describe('or', () => {
     it('joins conditions with or', () => {
-      const q = model.all()
+      const q = User.all()
       expect(q.or({ id: 1 }, { name: 'ko' }).toSql()).toBe(line(`
-        SELECT "sample".* FROM "sample"
-        WHERE "sample"."id" = 1 OR "sample"."name" = 'ko'
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR "user"."name" = 'ko'
       `))
-      expect(q.or({ id: 1 }, model.where({ id: 2 }).and({ name: 'n' })).toSql()).toBe(line(`
-        SELECT "sample".* FROM "sample"
-        WHERE "sample"."id" = 1 OR ("sample"."id" = 2 AND "sample"."name" = 'n')
+      expect(q.or({ id: 1 }, User.where({ id: 2 }).and({ name: 'n' })).toSql()).toBe(line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR ("user"."id" = 2 AND "user"."name" = 'n')
       `))
       expectQueryNotMutated(q)
     })
 
     it('should accept raw sql', () => {
-      const q = model.all()
-      expect(q.or({ id: raw('SQL 1') }, { name: raw('SQL 2') }).toSql()).toBe(line(`
-        SELECT "sample".* FROM "sample"
-        WHERE "sample"."id" = SQL 1 OR "sample"."name" = SQL 2
+      const q = User.all()
+      expect(q.or({ id: raw('1 + 2') }, { name: raw('2 + 3') }).toSql()).toBe(line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 + 2 OR "user"."name" = 2 + 3
       `))
       expectQueryNotMutated(q)
     })
@@ -245,20 +245,20 @@ describe('queryMethods', () => {
 
   describe('find', () => {
     it('searches one by primary key', () => {
-      const q = model.all()
+      const q = User.all()
       expect(q.find(1).toSql()).toBe(line(`
-          SELECT "sample".* FROM "sample"
-          WHERE "sample"."id" = 1
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = 1
           LIMIT 1
       `))
       expectQueryNotMutated(q)
     })
 
     it('should accept raw sql', () => {
-      const q = model.all()
-      expect(q.find(raw('SQL')).toSql()).toBe(line(`
-        SELECT "sample".* FROM "sample"
-        WHERE "sample"."id" = SQL
+      const q = User.all()
+      expect(q.find(raw('1 + 2')).toSql()).toBe(line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 + 2
         LIMIT 1
       `))
       expectQueryNotMutated(q)
@@ -267,17 +267,17 @@ describe('queryMethods', () => {
 
   describe('findBy', () => {
     it('like where but with take', () => {
-      const q = model.all()
+      const q = User.all()
       expect(q.findBy({ name: 's' }).toSql()).toBe(
-        `SELECT "sample".* FROM "sample" WHERE "sample"."name" = 's' LIMIT 1`
+        `SELECT "user".* FROM "user" WHERE "user"."name" = 's' LIMIT 1`
       )
       expectQueryNotMutated(q)
     })
 
     it('should accept raw', () => {
-      const q = model.all()
-      expect(q.findBy({ name: raw('SQL') }).toSql()).toBe(
-        `SELECT "sample".* FROM "sample" WHERE "sample"."name" = SQL LIMIT 1`
+      const q = User.all()
+      expect(q.findBy({ name: raw(`'string'`) }).toSql()).toBe(
+        `SELECT "user".* FROM "user" WHERE "user"."name" = 'string' LIMIT 1`
       )
       expectQueryNotMutated(q)
     })
@@ -285,9 +285,9 @@ describe('queryMethods', () => {
 
   describe('as', () => {
     it('sets table alias', () => {
-      const q = model.all()
+      const q = User.all()
       expect(q.select('id').as('as').toSql()).toBe(
-        'SELECT "as"."id" FROM "sample" AS "as"'
+        'SELECT "as"."id" FROM "user" AS "as"'
       )
       expectQueryNotMutated(q)
     })
@@ -295,17 +295,17 @@ describe('queryMethods', () => {
 
   describe('from', () => {
     it('changes from', () => {
-      const q = model.all()
-      expect(q.as('t').from('otherTable').toSql()).toBe(line(`
-        SELECT "t".* FROM "otherTable" AS "t"
+      const q = User.all()
+      expect(q.as('t').from('profile').toSql()).toBe(line(`
+        SELECT "t".* FROM "profile" AS "t"
       `))
       expectQueryNotMutated(q)
     })
 
     it('should accept raw', () => {
-      const q = model.all()
-      expect(q.as('t').from(raw('otherTable')).toSql()).toBe(line(`
-        SELECT "t".* FROM otherTable AS "t"
+      const q = User.all()
+      expect(q.as('t').from(raw('profile')).toSql()).toBe(line(`
+        SELECT "t".* FROM profile AS "t"
       `))
       expectQueryNotMutated(q)
     })
@@ -313,17 +313,17 @@ describe('queryMethods', () => {
 
   describe('wrap', () => {
     it('wraps query with another', () => {
-      const q = model.all()
-      expect(q.select('name').wrap(model.select('name')).toSql()).toBe(
-        'SELECT "t"."name" FROM (SELECT "sample"."name" FROM "sample") AS "t"'
+      const q = User.all()
+      expect(q.select('name').wrap(User.select('name')).toSql()).toBe(
+        'SELECT "t"."name" FROM (SELECT "user"."name" FROM "user") AS "t"'
       )
       expectQueryNotMutated(q)
     })
 
     it('accept `as` parameter', () => {
-      const q = model.all()
-      expect(q.select('name').wrap(model.select('name'), 'wrapped').toSql()).toBe(
-        'SELECT "wrapped"."name" FROM (SELECT "sample"."name" FROM "sample") AS "wrapped"'
+      const q = User.all()
+      expect(q.select('name').wrap(User.select('name'), 'wrapped').toSql()).toBe(
+        'SELECT "wrapped"."name" FROM (SELECT "user"."name" FROM "user") AS "wrapped"'
       )
       expectQueryNotMutated(q)
     })
@@ -331,22 +331,22 @@ describe('queryMethods', () => {
 
   describe('json', () => {
     it('wraps a query with json functions', () => {
-      const q = model.all()
+      const q = User.all()
       expect(q.json().toSql()).toBe(line(`
         SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
         FROM (
-          SELECT "sample".* FROM "sample"
+          SELECT "user".* FROM "user"
         ) AS "t"
       `))
       expectQueryNotMutated(q)
     })
 
     it('supports `take`', () => {
-      const q = model.all()
+      const q = User.all()
       expect(q.take().json().toSql()).toBe(line(`
         SELECT COALESCE(row_to_json("t".*), '{}') AS "json"
         FROM (
-          SELECT "sample".* FROM "sample" LIMIT 1
+          SELECT "user".* FROM "user" LIMIT 1
         ) AS "t"
       `))
       expectQueryNotMutated(q)
@@ -355,18 +355,18 @@ describe('queryMethods', () => {
 
   describe('group', () => {
     it('groups by columns', () => {
-      const q = model.all()
+      const q = User.all()
       expect(q.group('id', 'name').toSql()).toBe(line(`
-        SELECT "sample".* FROM "sample"
-        GROUP BY "sample"."id", "sample"."name"
+        SELECT "user".* FROM "user"
+        GROUP BY "user"."id", "user"."name"
       `))
       expectQueryNotMutated(q)
     })
 
     it('groups by raw sql', () => {
-      const q = model.all()
+      const q = User.all()
       const expectedSql = line(`
-        SELECT "sample".* FROM "sample"
+        SELECT "user".* FROM "user"
         GROUP BY id, name
       `)
       expect(q.group(raw('id'), raw('name')).toSql()).toBe(expectedSql)
@@ -380,16 +380,17 @@ describe('queryMethods', () => {
 
 describe('having', () => {
   it('adds having conditions from nested structure argument', () => {
-    const q = model.all()
+    const q = User.all()
 
-    const arg: HavingArg<typeof model> = {
+    // TODO: improve order and filter for TS
+    const arg: HavingArg<typeof User> = {
       sum: {
         id: {
           gt: 5,
           lt: 20,
           distinct: true,
-          order: 'order',
-          filter: 'filter',
+          order: 'name ASC',
+          filter: 'id < 20',
           withinGroup: true
         }
       },
@@ -399,15 +400,15 @@ describe('having', () => {
     }
 
     const expectedSql = `
-      SELECT "sample".*
-      FROM "sample"
-      HAVING
-        sum("sample"."id")
-          WITHIN GROUP (ORDER BY order)
-          FILTER (WHERE filter) > 5,
-        sum("sample"."id") WITHIN GROUP (ORDER BY order)
-          FILTER (WHERE filter) < 20,
-        count("sample"."id") = 5
+      SELECT "user".*
+      FROM "user"
+      HAVING sum("user"."id")
+          WITHIN GROUP (ORDER BY name ASC)
+          FILTER (WHERE id < 20) > 5
+        AND sum("user"."id")
+          WITHIN GROUP (ORDER BY name ASC)
+          FILTER (WHERE id < 20) < 20
+        AND count("user"."id") = 5
     `
 
     expect(q.having(arg).toSql()).toBe(line(expectedSql))
@@ -418,37 +419,37 @@ describe('having', () => {
   })
 
   it('adds having condition with raw sql', () => {
-    const q = model.all()
+    const q = User.all()
 
     const expectedSql = `
-      SELECT "sample".*
-      FROM "sample"
-      HAVING SQL 1, SQL 2
+      SELECT "user".*
+      FROM "user"
+      HAVING count(*) = 1 AND sum(id) = 2
     `
 
-    expect(q.having(raw('SQL 1'), raw('SQL 2')).toSql()).toBe(line(expectedSql))
+    expect(q.having(raw('count(*) = 1'), raw('sum(id) = 2')).toSql()).toBe(line(expectedSql))
     expectQueryNotMutated(q)
 
-    q._having(raw('SQL 1'), raw('SQL 2'))
+    q._having(raw('count(*) = 1'), raw('sum(id) = 2'))
     expect(q.toSql()).toBe(line(expectedSql))
   })
 })
 
 // describe('window', () => {
 //   it('adds WINDOW', () => {
-//     const q = model.all()
+//     const q = User.all()
 //     expect(await q.window({w: 'PARTITION BY depname ORDER BY salary DESC'}).toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
+//       SELECT "user".* FROM "user"
 //       WINDOW w AS (PARTITION BY depname ORDER BY salary DESC)
 //     `))
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
+//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
 //   })
 //
 //   it('has modifier', () => {
-//     const q = model.all()
+//     const q = User.all()
 //     q._window({w: 'PARTITION BY depname ORDER BY salary DESC'})
 //     expect(await q.toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
+//       SELECT "user".* FROM "user"
 //       WINDOW w AS (PARTITION BY depname ORDER BY salary DESC)
 //     `))
 //   })
@@ -458,7 +459,7 @@ describe('having', () => {
 //   const upper = what.toUpperCase()
 //   describe(what, () => {
 //     it(`adds ${what}`, () => {
-//       const q = model.all() as any
+//       const q = User.all() as any
 //       let query = q.select('id')
 //       query = query[what].call(query, Chat.select('id'), 'SELECT 1')
 //       query = query[what + 'All'].call(query, 'SELECT 2')
@@ -466,7 +467,7 @@ describe('having', () => {
 //
 //       expect(await query.toSql()).toBe(line(`
 //         SELECT "t"."id" FROM (
-//           SELECT "sample"."id" FROM "sample"
+//           SELECT "user"."id" FROM "user"
 //           ${upper}
 //           SELECT 1
 //           ${upper}
@@ -475,20 +476,20 @@ describe('having', () => {
 //           SELECT 2
 //         ) "t"
 //       `))
-//       expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
+//       expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
 //     })
 //
 //     it('has modifier', () => {
-//       const q = model.select('id') as any
+//       const q = User.select('id') as any
 //       q[`_${what}`].call(q, 'SELECT 1')
 //       expect(await q.toSql()).toBe(line(`
-//         SELECT "sample"."id" FROM "sample"
+//         SELECT "user"."id" FROM "user"
 //         ${upper}
 //         SELECT 1
 //       `))
 //       q[`_${what}All`].call(q, 'SELECT 2')
 //       expect(await q.toSql()).toBe(line(`
-//         SELECT "sample"."id" FROM "sample"
+//         SELECT "user"."id" FROM "user"
 //         ${upper}
 //         SELECT 1
 //         ${upper} ALL
@@ -500,92 +501,92 @@ describe('having', () => {
 //
 // describe('order', () => {
 //   it(`defines order`, () => {
-//     const q = model.all()
+//     const q = User.all()
 //     expect(
 //       await q.order('id', {name: 'desc', something: 'asc nulls first'}, {a: {b: 'asc'}}).toSql()
 //     ).toBe(line(`
-//       SELECT "sample".* FROM "sample"
+//       SELECT "user".* FROM "user"
 //       ORDER BY
-//         "sample"."id",
-//         "sample"."name" desc,
-//         "sample"."something" asc nulls first,
+//         "user"."id",
+//         "user"."name" desc,
+//         "user"."something" asc nulls first,
 //         "a"."b" asc
 //     `))
 //     expect(await q.orderRaw('raw').toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
+//       SELECT "user".* FROM "user"
 //       ORDER BY raw
 //     `))
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
+//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
 //   })
 //
 //   it('has modifier', () => {
-//     const q = model.all()
+//     const q = User.all()
 //     q._order('id')
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample" ORDER BY "sample"."id"')
+//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user" ORDER BY "user"."id"')
 //   })
 // })
 //
 // describe('limit', () => {
 //   it('sets limit', () => {
-//     const q = model.all()
-//     expect(await q.limit(5).toSql()).toBe('SELECT "sample".* FROM "sample" LIMIT 5')
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
+//     const q = User.all()
+//     expect(await q.limit(5).toSql()).toBe('SELECT "user".* FROM "user" LIMIT 5')
+//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
 //   })
 //
 //   it('has modifier', () => {
-//     const q = model.all()
+//     const q = User.all()
 //     q._limit(5)
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample" LIMIT 5')
+//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user" LIMIT 5')
 //   })
 // })
 //
 // describe('offset', () => {
 //   it('sets offset', () => {
-//     const q = model.all()
-//     expect(await q.offset(5).toSql()).toBe('SELECT "sample".* FROM "sample" OFFSET 5')
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
+//     const q = User.all()
+//     expect(await q.offset(5).toSql()).toBe('SELECT "user".* FROM "user" OFFSET 5')
+//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
 //   })
 //
 //   it('has modifier', () => {
-//     const q = model.all()
+//     const q = User.all()
 //     q._offset(5)
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample" OFFSET 5')
+//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user" OFFSET 5')
 //   })
 // })
 //
 // describe('for', () => {
 //   it('sets for', () => {
-//     const q = model.all()
-//     expect(await q.for('some sql').toSql()).toBe('SELECT "sample".* FROM "sample" FOR some sql')
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
+//     const q = User.all()
+//     expect(await q.for('some sql').toSql()).toBe('SELECT "user".* FROM "user" FOR some sql')
+//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
 //   })
 //
 //   it('has modifier', () => {
-//     const q = model.all()
+//     const q = User.all()
 //     q._for('some sql')
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample" FOR some sql')
+//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user" FOR some sql')
 //   })
 // })
 //
 // describe('join', () => {
 //   it('sets join', () => {
-//     const q = model.all()
+//     const q = User.all()
 //     expect(await q.join('table', 'as', 'on').toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
+//       SELECT "user".* FROM "user"
 //       JOIN "table" AS "as" ON on
 //     `))
 //     expect(await q.join(Message.where('a').or('b').as('as')).toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
+//       SELECT "user".* FROM "user"
 //       JOIN "messages" AS "as" ON a OR b
 //     `))
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
+//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
 //   })
 //
 //   it('has modifier', () => {
-//     const q = model.all()
+//     const q = User.all()
 //     q._join('table', 'as', 'on')
 //     expect(await q.toSql()).toBe(line(`
-//       SELECT "sample".* FROM "sample"
+//       SELECT "user".* FROM "user"
 //       JOIN "table" AS "as" ON on
 //     `))
 //   })
@@ -593,15 +594,15 @@ describe('having', () => {
 //
 // describe('exists', () => {
 //   it('selects 1', () => {
-//     const q = model.all()
-//     expect(await q.exists().toSql()).toBe('SELECT 1 FROM "sample"')
-//     expect(await q.toSql()).toBe('SELECT "sample".* FROM "sample"')
+//     const q = User.all()
+//     expect(await q.exists().toSql()).toBe('SELECT 1 FROM "user"')
+//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
 //   })
 //
 //   it('has modifier', () => {
-//     const q = model.all()
+//     const q = User.all()
 //     q._exists()
-//     expect(await q.toSql()).toBe('SELECT 1 FROM "sample"')
+//     expect(await q.toSql()).toBe('SELECT 1 FROM "user"')
 //   })
 // })
 //

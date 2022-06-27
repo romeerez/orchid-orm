@@ -1,6 +1,6 @@
-import { createPg } from './test-utils';
 import { belongsTo, hasOne } from './relations';
 import { model } from './model';
+import { createPg } from './test-utils/test-db';
 
 describe('relations', () => {
   it('should attach one repo to another without circular problems', () => {
