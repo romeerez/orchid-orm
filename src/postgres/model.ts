@@ -7,7 +7,7 @@ import {
   TableSchema,
   tableSchema,
 } from './schema';
-import { QueryMethods } from './queryBuilder/queryMethods';
+import { QueryMethods, QueryReturnType } from './queryBuilder/queryMethods';
 import { applyMixins } from './utils';
 import { AggregateMethods } from './queryBuilder/aggregateMethods';
 import { QueryData } from './queryBuilder/toSql';
@@ -18,6 +18,7 @@ export type AllColumns = { __all: true }
 
 export interface Query extends PostgresModel<ColumnsShape, string> {
   result: any
+  returnType: QueryReturnType
   then: any
 }
 
@@ -27,6 +28,8 @@ export interface PostgresModel<S extends ColumnsShape, Table extends string>
 export class PostgresModel<S extends ColumnsShape, Table extends string> {
   constructor(public adapter: PostgresAdapter) {}
 
+  returnType: QueryReturnType = 'all'
+
   shape!: S
   type!: Output<S>
   result!: AllColumns
@@ -35,7 +38,6 @@ export class PostgresModel<S extends ColumnsShape, Table extends string> {
   primaryKeys!: any[]
   primaryTypes!: any[]
   query?: QueryData<any>
-  returnType!: 'all'
 }
 
 applyMixins(PostgresModel, [QueryMethods, AggregateMethods])

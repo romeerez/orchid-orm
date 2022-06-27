@@ -9,7 +9,7 @@ describe('queryMethods', () => {
   afterAll(() => testDb.destroy())
 
   describe('.clone', () => {
-    it('should return new object with the same data structures', () => {
+    it('should return new object with the same data structures', async () => {
       const cloned = User.clone()
       expect(cloned).not.toBe(User)
       expect(cloned.adapter).toBe(adapter)

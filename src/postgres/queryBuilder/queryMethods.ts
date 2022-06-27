@@ -2,6 +2,7 @@ import { ColumnsShape, GetTypesOrRaw } from '../schema';
 import { AllColumns, Query, Output, PostgresModelConstructor } from '../model';
 import { HavingArg, QueryData, toSql, WhereItem } from './toSql';
 import { Expression, raw, RawExpression } from './common';
+import { Spread } from '../utils';
 
 type QueryDataArrays<T extends Query> = {
   [K in keyof QueryData<T>]: QueryData<T>[K] extends Array<any> ? QueryData<T>[K] : never
@@ -31,15 +32,16 @@ export const pushQueryValue = <T extends Query, K extends keyof QueryDataArrays<
   return q
 }
 
-type ReturnType = 'all' | 'one' | 'rows' | 'value' | 'void'
+export type QueryReturnType = 'all' | 'one' | 'rows' | 'value' | 'void'
 
 export type MutateQuery<
   T extends Query = any,
   R extends unknown = T['result'],
-  RT extends ReturnType = T['returnType'],
-  Res = Result<Omit<T, 'result'> & { result: R }>
-> = Omit<T, 'result' | 'then'> & {
-  result: RT extends 'value' ? R : Res
+  RT extends QueryReturnType = T['returnType'],
+  Res = T['result'] extends AllColumns ? R : Spread<[T['result'], R]>
+> = Omit<T, 'result' | 'returnType' | 'then'> & {
+  result: Res
+  returnType: RT
   then: RT extends 'all'
     ? Then<T, Res[]>
     : RT extends 'one'
@@ -55,7 +57,7 @@ export type MutateQuery<
 
 type Result<T extends Query> = T['result'] extends AllColumns ? T['type'] : T['result']
 
-type QueryReturns<T extends Query, R extends ReturnType> =
+type QueryReturns<T extends Query, R extends QueryReturnType> =
   MutateQuery<T, T['result'], R>
 
 type Then<T extends Query, Res> = (
@@ -93,25 +95,25 @@ export class QueryMethods<S extends ColumnsShape> {
   then!: Then<Query, Output<S>[]>
 
   all<T extends Query>(this: T): QueryReturns<T, 'all'> {
-    return this.then === thenAll ? this.toQuery() : this.clone()._all()
+    return this.then === thenAll ? this.toQuery() as unknown as QueryReturns<T, 'all'> : this.clone()._all()
   }
 
   _all<T extends Query>(this: T): QueryReturns<T, 'all'> {
     const q = this.toQuery()
     q.then = thenAll
     removeFromQuery(q, 'take')
-    return q
+    return q as unknown as QueryReturns<T, 'all'>
   }
 
   take<T extends Query>(this: T): QueryReturns<T, 'one'> {
-    return this.then === thenOne ? this : this.clone()._take()
+    return this.then === thenOne ? this as unknown as QueryReturns<T, 'one'> : this.clone()._take()
   }
 
   _take<T extends Query>(this: T): QueryReturns<T, 'one'> {
     const q = this.toQuery()
     q.then = thenOne
     setQueryValue(q, 'take', true)
-    return q
+    return q as unknown as QueryReturns<T, 'one'>
   }
 
   rows<T extends Query>(this: T): QueryReturns<T, 'rows'> {
@@ -137,14 +139,14 @@ export class QueryMethods<S extends ColumnsShape> {
   }
 
   exec<T extends Query>(this: T): QueryReturns<T, 'void'> {
-    return this.then === thenVoid ? this : this.clone()._exec()
+    return this.then === thenVoid ? this as unknown as QueryReturns<T, 'void'> : this.clone()._exec()
   }
 
   _exec<T extends Query>(this: T): QueryReturns<T, 'void'> {
     const q = this.toQuery()
     q.then = thenVoid
     removeFromQuery(q, 'take')
-    return q
+    return q as unknown as QueryReturns<T, 'void'>
   }
 
   toQuery<T extends Query>(this: T): T & { query: QueryData<T> } {
@@ -189,7 +191,7 @@ export class QueryMethods<S extends ColumnsShape> {
     return pushQueryArray(this, 'select', columns)
   }
 
-  selectAs<T extends Query, S extends Record<string, (keyof T['type']) | Query | RawExpression<any>>>(this: T, select: S): MutateQuery<T, { [K in keyof S]: S[K] extends keyof T['type'] ? T['type'][S[K]] : S[K] extends RawExpression<infer Type> ? Type : S[K] extends Query ? Result<S[K]> : never }> {
+  selectAs<T extends Query, S extends Record<string, (keyof T['type']) | Query | RawExpression<any>>>(this: T, select: S) {
     return this.clone()._selectAs(select)
   }
 
