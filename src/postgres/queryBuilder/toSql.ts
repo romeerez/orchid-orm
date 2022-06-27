@@ -23,6 +23,9 @@ export type QueryData<T extends Query> = {
   window?: WindowArg<T>[]
   union?: { arg: UnionArg<T>, kind: UnionKind }[]
   order?: OrderBy<T>[]
+  limit?: number
+  offset?: number
+  for?: RawExpression[]
 }
 
 export type SelectItem<T extends Query> =
@@ -214,8 +217,17 @@ export const toSql = <T extends Query>(model: T): string => {
     ).join(', ')}`)
   }
 
-  if (query.take) {
-    sql.push('LIMIT 1')
+  const limit = query.take ? 1 : query.limit
+  if (limit) {
+    sql.push(`LIMIT ${limit}`)
+  }
+
+  if (query.offset) {
+    sql.push(`OFFSET ${query.offset}`)
+  }
+
+  if (query.for) {
+    sql.push(`FOR ${query.for.map(getRaw).join(', ')}`)
   }
 
   return sql.join(' ')

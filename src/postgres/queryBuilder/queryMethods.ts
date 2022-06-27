@@ -331,7 +331,7 @@ export class QueryMethods<S extends ColumnsShape> {
   }
 
   _union<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'UNION' })))
+    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'UNION' as const })))
   }
 
   unionAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
@@ -339,7 +339,7 @@ export class QueryMethods<S extends ColumnsShape> {
   }
 
   _unionAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'UNION ALL' })))
+    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'UNION ALL' as const })))
   }
 
   intersect<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
@@ -347,7 +347,7 @@ export class QueryMethods<S extends ColumnsShape> {
   }
 
   _intersect<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'INTERSECT' })))
+    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'INTERSECT' as const })))
   }
 
   intersectAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
@@ -355,7 +355,7 @@ export class QueryMethods<S extends ColumnsShape> {
   }
 
   _intersectAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'INTERSECT ALL' })))
+    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'INTERSECT ALL' as const })))
   }
 
   except<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
@@ -363,7 +363,7 @@ export class QueryMethods<S extends ColumnsShape> {
   }
 
   _except<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'EXCEPT' })))
+    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'EXCEPT' as const })))
   }
 
   exceptAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
@@ -371,7 +371,7 @@ export class QueryMethods<S extends ColumnsShape> {
   }
 
   _exceptAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'EXCEPT ALL' })))
+    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'EXCEPT ALL' as const })))
   }
 
   order<T extends Query>(this: T, ...args: OrderBy<T>[]): T {
@@ -380,6 +380,30 @@ export class QueryMethods<S extends ColumnsShape> {
 
   _order<T extends Query>(this: T, ...args: OrderBy<T>[]): T {
     return pushQueryArray(this, 'order', args)
+  }
+
+  limit<T extends Query>(this: T, arg: number): T {
+    return this.clone()._limit(arg)
+  }
+
+  _limit<T extends Query>(this: T, arg: number): T {
+    return setQueryValue(this, 'limit', arg)
+  }
+
+  offset<T extends Query>(this: T, arg: number): T {
+    return this.clone()._offset(arg)
+  }
+
+  _offset<T extends Query>(this: T, arg: number): T {
+    return setQueryValue(this, 'offset', arg)
+  }
+
+  for<T extends Query>(this: T, ...args: RawExpression[]): T {
+    return this.clone()._for(...args)
+  }
+
+  _for<T extends Query>(this: T, ...args: RawExpression[]): T {
+    return pushQueryArray(this, 'for', args)
   }
 }
 

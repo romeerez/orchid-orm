@@ -547,48 +547,30 @@ describe('order', () => {
   })
 })
 
-// describe('limit', () => {
-//   it('sets limit', () => {
-//     const q = User.all()
-//     expect(await q.limit(5).toSql()).toBe('SELECT "user".* FROM "user" LIMIT 5')
-//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
-//   })
-//
-//   it('has modifier', () => {
-//     const q = User.all()
-//     q._limit(5)
-//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user" LIMIT 5')
-//   })
-// })
-//
-// describe('offset', () => {
-//   it('sets offset', () => {
-//     const q = User.all()
-//     expect(await q.offset(5).toSql()).toBe('SELECT "user".* FROM "user" OFFSET 5')
-//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
-//   })
-//
-//   it('has modifier', () => {
-//     const q = User.all()
-//     q._offset(5)
-//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user" OFFSET 5')
-//   })
-// })
-//
-// describe('for', () => {
-//   it('sets for', () => {
-//     const q = User.all()
-//     expect(await q.for('some sql').toSql()).toBe('SELECT "user".* FROM "user" FOR some sql')
-//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
-//   })
-//
-//   it('has modifier', () => {
-//     const q = User.all()
-//     q._for('some sql')
-//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user" FOR some sql')
-//   })
-// })
-//
+describe('limit', () => {
+  it('sets limit', () => {
+    const q = User.all()
+    expect(q.limit(5).toSql()).toBe('SELECT "user".* FROM "user" LIMIT 5')
+    expectQueryNotMutated(q)
+  })
+})
+
+describe('offset', () => {
+  it('sets offset', () => {
+    const q = User.all()
+    expect(q.offset(5).toSql()).toBe('SELECT "user".* FROM "user" OFFSET 5')
+    expectQueryNotMutated(q)
+  })
+})
+
+describe('for', () => {
+  it('sets for', () => {
+    const q = User.all()
+    expect(q.for(raw('UPDATE OF chat')).toSql()).toBe('SELECT "user".* FROM "user" FOR UPDATE OF chat')
+    expectQueryNotMutated(q)
+  })
+})
+
 // describe('join', () => {
 //   it('sets join', () => {
 //     const q = User.all()
