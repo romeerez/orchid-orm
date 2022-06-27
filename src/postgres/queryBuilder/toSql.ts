@@ -21,6 +21,7 @@ export type QueryData<T extends Query> = {
   group?: (keyof T['type'] | RawExpression)[]
   having?: HavingArg<T>[]
   window?: WindowArg<T>[]
+  union?: { arg: UnionArg<T>, kind: UnionKind }[]
 }
 
 export type SelectItem<T extends Query> =
@@ -74,6 +75,10 @@ export type WindowDeclaration<T extends Query> = {
   partitionBy?: Expression<T>
   orderBy?: OrderBy<T>
 }
+
+export type UnionArg<T extends Query> = (Omit<Query, 'result'> & { result: T['result'] }) | RawExpression
+
+type UnionKind = 'UNION' | 'UNION ALL' | 'INTERSECT' | 'INTERSECT ALL' | 'EXCEPT' | 'EXCEPT ALL'
 
 const EMPTY_OBJECT = {}
 
@@ -196,6 +201,12 @@ export const toSql = <T extends Query>(model: T): string => {
     sql.push(`WINDOW ${window.join(', ')}`)
   }
 
+  if (query.union) {
+    query.union.forEach((item) => {
+      sql.push(`${item.kind} ${isRaw(item.arg) ? getRaw(item.arg) : item.arg.toSql()}`)
+    })
+  }
+
   if (query.take) {
     sql.push('LIMIT 1')
   }
@@ -248,25 +259,6 @@ const aggregateToSql = <T extends Query>(quotedAs: string, item: Aggregate<T>) =
   return sql.join('')
 }
 
-const windowToSql = <T extends Query>(quotedAs: string, window: T['windows'][number] | WindowDeclaration<T> | RawExpression) => {
-  if (typeof window === 'object') {
-    if (isRaw(window)) {
-      return `(${getRaw(window)})`
-    } else {
-      const sql: string[] = []
-      if (window.partitionBy) {
-        sql.push(`PARTITION BY ${expressionToSql(quotedAs, window.partitionBy)}`)
-      }
-      if (window.orderBy) {
-        sql.push(`ORDER BY ${orderByToSql(quotedAs, window.orderBy)}`)
-      }
-      return `(${sql.join(' ')})`
-    }
-  } else {
-    return q(window as string)
-  }
-}
-
 const whereConditionsToSql = <T extends Query>(model: T, query: QueryData<T>, quotedAs: string): string => {
   const or = query.and && query.or ? [query.and, ...query.or] : query.and ? [query.and] : query.or
   if (!(or?.length)) return ''
@@ -311,6 +303,25 @@ const whereConditionsToSql = <T extends Query>(model: T, query: QueryData<T>, qu
   })
 
   return ors.join(' OR ')
+}
+
+const windowToSql = <T extends Query>(quotedAs: string, window: T['windows'][number] | WindowDeclaration<T> | RawExpression) => {
+  if (typeof window === 'object') {
+    if (isRaw(window)) {
+      return `(${getRaw(window)})`
+    } else {
+      const sql: string[] = []
+      if (window.partitionBy) {
+        sql.push(`PARTITION BY ${expressionToSql(quotedAs, window.partitionBy)}`)
+      }
+      if (window.orderBy) {
+        sql.push(`ORDER BY ${orderByToSql(quotedAs, window.orderBy)}`)
+      }
+      return `(${sql.join(' ')})`
+    }
+  } else {
+    return q(window as string)
+  }
 }
 
 const orderByToSql = (quotedAs: string, orderBy: OrderBy<Query>) => {

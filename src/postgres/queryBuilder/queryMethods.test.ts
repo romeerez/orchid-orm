@@ -3,7 +3,7 @@ import { HavingArg } from './toSql';
 import { raw } from './common';
 import { testDb } from '../test-utils/test-db';
 
-const { adapter, user: User } = testDb
+const { adapter, user: User, chat: Chat } = testDb
 
 describe('queryMethods', () => {
   afterAll(() => testDb.destroy())
@@ -474,50 +474,51 @@ describe('window', () => {
   })
 });
 
-// ['union', 'intersect', 'except'].forEach(what => {
-//   const upper = what.toUpperCase()
-//   describe(what, () => {
-//     it(`adds ${what}`, () => {
-//       const q = User.all() as any
-//       let query = q.select('id')
-//       query = query[what].call(query, Chat.select('id'), 'SELECT 1')
-//       query = query[what + 'All'].call(query, 'SELECT 2')
-//       query = query.wrap(Chat.select('id'))
-//
-//       expect(await query.toSql()).toBe(line(`
-//         SELECT "t"."id" FROM (
-//           SELECT "user"."id" FROM "user"
-//           ${upper}
-//           SELECT 1
-//           ${upper}
-//           SELECT "chats"."id" FROM "chats"
-//           ${upper} ALL
-//           SELECT 2
-//         ) "t"
-//       `))
-//       expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
-//     })
-//
-//     it('has modifier', () => {
-//       const q = User.select('id') as any
-//       q[`_${what}`].call(q, 'SELECT 1')
-//       expect(await q.toSql()).toBe(line(`
-//         SELECT "user"."id" FROM "user"
-//         ${upper}
-//         SELECT 1
-//       `))
-//       q[`_${what}All`].call(q, 'SELECT 2')
-//       expect(await q.toSql()).toBe(line(`
-//         SELECT "user"."id" FROM "user"
-//         ${upper}
-//         SELECT 1
-//         ${upper} ALL
-//         SELECT 2
-//       `))
-//     })
-//   })
-// })
-//
+['union', 'intersect', 'except'].forEach(what => {
+  const upper = what.toUpperCase()
+  describe(what, () => {
+    it(`adds ${what}`, () => {
+      const q = User.all() as any
+      let query = q.select('id')
+      query = query[what](Chat.select('id'), raw('SELECT 1'))
+      query = query[what + 'All'](raw('SELECT 2'))
+      query = query.wrap(User.select('id'))
+
+      expect(query.toSql()).toBe(line(`
+        SELECT "t"."id" FROM (
+          SELECT "user"."id" FROM "user"
+          ${upper}
+          SELECT "chat"."id" FROM "chat"
+          ${upper}
+          SELECT 1
+          ${upper} ALL
+          SELECT 2
+        ) AS "t"
+      `))
+
+      expectQueryNotMutated(q)
+    })
+
+    it('has modifier', () => {
+      const q = User.select('id') as any
+      q[`_${what}`](raw('SELECT 1'))
+      expect(q.toSql()).toBe(line(`
+        SELECT "user"."id" FROM "user"
+        ${upper}
+        SELECT 1
+      `))
+      q[`_${what}All`](raw('SELECT 2'))
+      expect(q.toSql()).toBe(line(`
+        SELECT "user"."id" FROM "user"
+        ${upper}
+        SELECT 1
+        ${upper} ALL
+        SELECT 2
+      `))
+    })
+  })
+})
+
 // describe('order', () => {
 //   it(`defines order`, () => {
 //     const q = User.all()

@@ -1,6 +1,6 @@
 import { ColumnsShape, GetTypesOrRaw } from '../schema';
 import { AllColumns, Query, Output, PostgresModelConstructor } from '../model';
-import { HavingArg, QueryData, toSql, WhereItem, WindowArg } from './toSql';
+import { HavingArg, QueryData, toSql, UnionArg, WhereItem, WindowArg } from './toSql';
 import { Expression, raw, RawExpression } from './common';
 import { Spread, UnionToArray } from '../utils';
 
@@ -324,6 +324,54 @@ export class QueryMethods<S extends ColumnsShape> {
     )
 
     return q._value<typeof q, string>() as unknown as SetQueryReturnsValue<T, string>
+  }
+
+  union<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
+    return this._union(...args)
+  }
+
+  _union<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
+    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'UNION' })))
+  }
+
+  unionAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
+    return this._unionAll(...args)
+  }
+
+  _unionAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
+    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'UNION ALL' })))
+  }
+
+  intersect<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
+    return this._intersect(...args)
+  }
+
+  _intersect<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
+    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'INTERSECT' })))
+  }
+
+  intersectAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
+    return this._intersectAll(...args)
+  }
+
+  _intersectAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
+    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'INTERSECT ALL' })))
+  }
+
+  except<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
+    return this._except(...args)
+  }
+
+  _except<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
+    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'EXCEPT' })))
+  }
+
+  exceptAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
+    return this._exceptAll(...args)
+  }
+
+  _exceptAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
+    return pushQueryArray(this, 'union', args.map((arg) => ({ arg, kind: 'EXCEPT ALL' })))
   }
 }
 
