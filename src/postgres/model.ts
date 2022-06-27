@@ -11,6 +11,7 @@ import { QueryMethods, QueryReturnType } from './queryBuilder/queryMethods';
 import { applyMixins } from './utils';
 import { AggregateMethods } from './queryBuilder/aggregateMethods';
 import { QueryData } from './queryBuilder/toSql';
+import { SqlAdapter } from '../sql/sql.types';
 
 export type Output<S extends ColumnsShape> = TableSchema<S>['output']
 
@@ -37,6 +38,7 @@ export class PostgresModel<S extends ColumnsShape, Table extends string> {
   schema!: TableSchema<S>
   primaryKeys!: any[]
   primaryTypes!: any[]
+  windows!: PropertyKey[]
   query?: QueryData<any>
 }
 
@@ -49,7 +51,12 @@ export const model = <S extends ColumnsShape, Table extends string>({
 }: {
   table: Table
   schema(t: DataTypes): S,
-}) => {
+}): (
+  new (adapter: SqlAdapter) => Omit<PostgresModel<S, Table>, 'primaryKeys' | 'primaryTypes'> & {
+    primaryKeys: GetPrimaryKeys<S>
+    primaryTypes: GetPrimaryTypes<S, GetPrimaryKeys<S>>
+  }
+) => {
   const shape = schema(dataTypes)
   const schemaObject = tableSchema(shape)
 

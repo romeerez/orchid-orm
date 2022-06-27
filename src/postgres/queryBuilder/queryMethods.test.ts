@@ -435,26 +435,26 @@ describe('having', () => {
   })
 })
 
-// describe('window', () => {
-//   it('adds WINDOW', () => {
-//     const q = User.all()
-//     expect(await q.window({w: 'PARTITION BY depname ORDER BY salary DESC'}).toSql()).toBe(line(`
-//       SELECT "user".* FROM "user"
-//       WINDOW w AS (PARTITION BY depname ORDER BY salary DESC)
-//     `))
-//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
-//   })
-//
-//   it('has modifier', () => {
-//     const q = User.all()
-//     q._window({w: 'PARTITION BY depname ORDER BY salary DESC'})
-//     expect(await q.toSql()).toBe(line(`
-//       SELECT "user".* FROM "user"
-//       WINDOW w AS (PARTITION BY depname ORDER BY salary DESC)
-//     `))
-//   })
-// });
-//
+describe('window', () => {
+  it.skip('add window which can be used in `over`', () => {
+    const q = User.all()
+
+    const windowSql = 'PARTITION BY id ORDER BY name DESC'
+
+    expect(
+      q.window({ w: raw(windowSql) })
+        // .selectAvg('id', {
+        //   over: 'w'
+        // })
+        .toSql()
+    ).toBe(line(`
+      SELECT avg("user"."id") OVER w FROM "user"
+      WINDOW w AS (PARTITION BY id ORDER BY name DESC)
+    `))
+    expectQueryNotMutated(q)
+  })
+});
+
 // ['union', 'intersect', 'except'].forEach(what => {
 //   const upper = what.toUpperCase()
 //   describe(what, () => {

@@ -6,14 +6,10 @@ import {
   NumberExpression, raw,
   StringExpression,
 } from './common';
-import { Aggregate, AggregateOptions } from './toSql';
-import { MutateQuery, pushQueryValue } from './queryMethods';
+import { AggregateArg, AggregateOptions } from './toSql';
+import { SetQuery, pushQueryValue, SetQueryReturnsValue } from './queryMethods';
 
 const allColumns = raw('*')
-
-const selectAggregate = <T extends Query>(self: T, functionName: string, arg: Aggregate<T>['arg'], options?: AggregateOptions) => {
-  return pushQueryValue(self, 'select', { function: functionName, arg, options })
-}
 
 // 1 in the name means only methods which takes 1 argument are listed here
 // only such one argument methods are available in .having method
@@ -34,7 +30,7 @@ export type Aggregate1ArgumentTypes<T extends Query, R = unknown> = {
   xmlAgg: Expression<T, R>
 }
 
-export const aggregate1FunctionNames: Record<keyof Aggregate1ArgumentTypes<Query, unknown>, string> = {
+export const aggregate1FunctionNames = {
   count: 'count',
   avg: 'avg',
   min: 'min',
@@ -49,143 +45,307 @@ export const aggregate1FunctionNames: Record<keyof Aggregate1ArgumentTypes<Query
   jsonAgg: 'json_agg',
   jsonbAgg: 'jsonb_agg',
   xmlAgg: 'xmlagg',
-}
+} as const
+
+type SelectAgg<T extends Query, Func extends string, As extends string | undefined, Value> = SetQuery<T, Record<As extends undefined ? Func : As, Value>>
+
+type AT1<T extends Query> = Aggregate1ArgumentTypes<T>
 
 export class AggregateMethods {
-  count<T extends Query, R>(this: T, arg?: Aggregate1ArgumentTypes<T, R>['count'] | '*', options?: AggregateOptions) {
+  selectAgg<T extends Query, Func extends string, As extends string | undefined, Value>(this: T, functionName: Func, arg: AggregateArg<T>, options?: AggregateOptions<As>): SelectAgg<T, Func, As, Value> {
+    return this.clone()._selectAgg(functionName, arg, options) as SelectAgg<T, Func, As, Value>
+  }
+
+  _selectAgg<T extends Query, Func extends string, As extends string | undefined, Value>(this: T, functionName: Func, arg: AggregateArg<T>, options?: AggregateOptions<As>): SelectAgg<T, Func, As, Value> {
+    return pushQueryValue(this, 'select', { function: functionName, arg, options })
+  }
+
+  count<T extends Query>(this: T, arg?: AT1<T>['count'] | '*', options?: AggregateOptions): SetQueryReturnsValue<T, number> {
     return this.clone()._count(arg, options)
   }
 
-  _count<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['count'] | '*' = '*', options?: AggregateOptions) {
-    return selectAggregate(this, aggregate1FunctionNames.count, arg === '*' ? allColumns : arg, options)._value<T, number>()
+  _count<T extends Query>(this: T, arg: AT1<T>['count'] | '*' = '*', options?: AggregateOptions): SetQueryReturnsValue<T, number> {
+    const q = this._selectCount(arg, options)
+    return (q as T)._value<T, number>()
   }
 
-  avg<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['avg'], options?: AggregateOptions) {
+  selectCount<T extends Query, As extends string | undefined = undefined>(this: T, arg: AT1<T>['count'] | '*', options?: AggregateOptions<As>): SelectAgg<T, 'count', As, number> {
+    return this.clone()._selectCount(arg, options)
+  }
+
+  _selectCount<T extends Query, As extends string | undefined = undefined>(this: T, arg: AT1<T>['count'] | '*', options?: AggregateOptions<As>): SelectAgg<T, 'count', As, number> {
+    return this._selectAgg(aggregate1FunctionNames.count, arg === '*' ? allColumns : arg, options)
+  }
+
+  avg<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['avg'], options?: AggregateOptions): SetQueryReturnsValue<T, number> {
     return this.clone()._avg(arg, options)
   }
 
-  _avg<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['avg'], options?: AggregateOptions) {
-    return selectAggregate(this, aggregate1FunctionNames.avg, arg, options)._value<T, number>()
+  _avg<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['avg'], options?: AggregateOptions): SetQueryReturnsValue<T, number> {
+    const q = this._selectAvg(arg, options)
+    return (q as T)._value<T, number>()
   }
 
-  min<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['min'], options?: AggregateOptions) {
+  selectAvg<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'avg', As, number> {
+    return this.clone()._selectAvg(arg, options)
+  }
+
+  _selectAvg<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'avg', As, number> {
+    return this._selectAgg(aggregate1FunctionNames.avg, arg, options)
+  }
+
+  min<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['min'], options?: AggregateOptions): SetQueryReturnsValue<T, number> {
     return this.clone()._min(arg, options)
   }
 
-  _min<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['min'], options?: AggregateOptions) {
-    return selectAggregate(this, aggregate1FunctionNames.min, arg, options)._value<T, number>()
+  _min<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['min'], options?: AggregateOptions): SetQueryReturnsValue<T, number> {
+    const q = this._selectMin(arg, options)
+    return (q as T)._value<T, number>()
   }
 
-  max<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['max'], options?: AggregateOptions) {
+  selectMin<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'min', As, number> {
+    return this.clone()._selectMin(arg, options)
+  }
+
+  _selectMin<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'min', As, number> {
+    return this._selectAgg(aggregate1FunctionNames.min, arg, options)
+  }
+
+  max<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['max'], options?: AggregateOptions): SetQueryReturnsValue<T, number> {
     return this.clone()._max(arg, options)
   }
 
-  _max<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['max'], options?: AggregateOptions) {
-    return selectAggregate(this, aggregate1FunctionNames.max, arg, options)._value<T, number>()
+  _max<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['max'], options?: AggregateOptions): SetQueryReturnsValue<T, number> {
+    const q = this._selectMax(arg, options)
+    return (q as T)._value<T, number>()
   }
 
-  sum<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['sum'], options?: AggregateOptions) {
+  selectMax<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'max', As, number> {
+    return this.clone()._selectMax(arg, options)
+  }
+
+  _selectMax<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'max', As, number> {
+    return this._selectAgg(aggregate1FunctionNames.max, arg, options)
+  }
+
+  sum<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['sum'], options?: AggregateOptions): SetQueryReturnsValue<T, number> {
     return this.clone()._sum(arg, options)
   }
 
-  _sum<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['sum'], options?: AggregateOptions) {
-    return selectAggregate(this, aggregate1FunctionNames.sum, arg, options)._value<T, number>()
+  _sum<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['sum'], options?: AggregateOptions): SetQueryReturnsValue<T, number> {
+    const q = this._selectSum(arg, options)
+    return (q as T)._value<T, number>()
   }
 
-  arrayAgg<T extends Query, R, Expr extends Aggregate1ArgumentTypes<T, R>['arrayAgg']>(this: T, arg: Expr, options?: AggregateOptions) {
+  selectSum<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'sum', As, number> {
+    return this.clone()._selectSum(arg, options)
+  }
+
+  _selectSum<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'sum', As, number> {
+    return this._selectAgg(aggregate1FunctionNames.sum, arg, options)
+  }
+
+  arrayAgg<T extends Query, Expr extends Aggregate1ArgumentTypes<T>['arrayAgg']>(this: T, arg: Expr, options?: AggregateOptions): SetQueryReturnsValue<T, ExpressionOutput<T, Expr>[]> {
     return this.clone()._arrayAgg(arg, options)
   }
 
-  _arrayAgg<T extends Query, Expr extends Aggregate1ArgumentTypes<T, any>['arrayAgg']>(this: T, arg: Expr, options?: AggregateOptions): MutateQuery<T, ExpressionOutput<T, Expr>[], 'value'> {
-    return selectAggregate(this, aggregate1FunctionNames.arrayAgg, arg, options)
-      ._value<T, ExpressionOutput<T, Expr>[]>()
+  _arrayAgg<T extends Query, Expr extends Aggregate1ArgumentTypes<T>['arrayAgg']>(this: T, arg: Expr, options?: AggregateOptions): SetQueryReturnsValue<T, ExpressionOutput<T, Expr>[]> {
+    const q = this._selectArrayAgg(arg, options)
+    return (q as T)._value<T, ExpressionOutput<T, Expr>[]>()
   }
 
-  bitAnd<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['bitAnd'], options?: AggregateOptions) {
+  selectArrayAgg<T extends Query, Expr extends Aggregate1ArgumentTypes<T>['arrayAgg'], As extends string | undefined = undefined>(this: T, arg: Expr, options?: AggregateOptions<As>): SelectAgg<T, 'array_agg', As, ExpressionOutput<T, Expr>[]> {
+    return this.clone()._selectArrayAgg(arg, options)
+  }
+
+  _selectArrayAgg<T extends Query, Expr extends Aggregate1ArgumentTypes<T>['arrayAgg'], As extends string | undefined = undefined>(this: T, arg: Expr, options?: AggregateOptions<As>): SelectAgg<T, 'array_agg', As, ExpressionOutput<T, Expr>[]> {
+    return this._selectAgg<T, 'array_agg', As, ExpressionOutput<T, Expr>[]>(aggregate1FunctionNames.arrayAgg, arg, options)
+  }
+
+  bitAnd<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['bitAnd'], options?: AggregateOptions): SetQueryReturnsValue<T, number> {
     return this.clone()._bitAnd(arg, options)
   }
 
-  _bitAnd<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['bitAnd'], options?: AggregateOptions) {
-    return selectAggregate(this, aggregate1FunctionNames.bitAnd, arg, options)._value<T, number>()
+  _bitAnd<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['bitAnd'], options?: AggregateOptions): SetQueryReturnsValue<T, number> {
+    const q = this._selectBitAnd(arg, options)
+    return (q as T)._value<T, number>()
   }
 
-  bitOr<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['bitOr'], options?: AggregateOptions) {
+  selectBitAnd<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'bit_and', As, number> {
+    return this.clone()._selectBitAnd(arg, options)
+  }
+
+  _selectBitAnd<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'bit_and', As, number> {
+    return this._selectAgg(aggregate1FunctionNames.bitAnd, arg, options)
+  }
+
+  bitOr<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['bitOr'], options?: AggregateOptions): SetQueryReturnsValue<T, number> {
     return this.clone()._bitOr(arg, options)
   }
 
-  _bitOr<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['bitOr'], options?: AggregateOptions) {
-    return selectAggregate(this, aggregate1FunctionNames.bitOr, arg, options)._value<T, number>()
+  _bitOr<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['bitOr'], options?: AggregateOptions): SetQueryReturnsValue<T, number> {
+    const q = this._selectBitOr(arg, options)
+    return (q as T)._value<T, number>()
   }
 
-  boolAnd<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['boolAnd'], options?: AggregateOptions) {
+  selectBitOr<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'bit_or', As, number> {
+    return this.clone()._selectBitOr(arg, options)
+  }
+
+  _selectBitOr<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'bit_or', As, number> {
+    return this._selectAgg(aggregate1FunctionNames.bitOr, arg, options)
+  }
+
+  boolAnd<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['boolAnd'], options?: AggregateOptions): SetQueryReturnsValue<T, boolean> {
     return this.clone()._boolAnd(arg, options)
   }
 
-  _boolAnd<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['boolAnd'], options?: AggregateOptions) {
-    return selectAggregate(this, aggregate1FunctionNames.boolAnd, arg, options)._value<T, boolean>()
+  _boolAnd<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['boolAnd'], options?: AggregateOptions): SetQueryReturnsValue<T, boolean> {
+    const q = this._selectBoolAnd(arg, options)
+    return (q as T)._value<T, boolean>()
   }
 
-  boolOr<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['boolOr'], options?: AggregateOptions) {
+  selectBoolAnd<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'bool_and', As, boolean> {
+    return this.clone()._selectBoolAnd(arg, options)
+  }
+
+  _selectBoolAnd<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'bool_and', As, boolean> {
+    return this._selectAgg(aggregate1FunctionNames.boolAnd, arg, options)
+  }
+
+  boolOr<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['boolOr'], options?: AggregateOptions): SetQueryReturnsValue<T, boolean> {
     return this.clone()._boolOr(arg, options)
   }
 
-  _boolOr<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['boolOr'], options?: AggregateOptions) {
-    return selectAggregate(this, aggregate1FunctionNames.boolOr, arg, options)._value<T, boolean>()
+  _boolOr<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['boolOr'], options?: AggregateOptions): SetQueryReturnsValue<T, boolean> {
+    const q = this._selectBoolOr(arg, options)
+    return (q as T)._value<T, boolean>()
   }
 
-  every<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['every'], options?: AggregateOptions) {
+  selectBoolOr<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'bool_or', As, boolean> {
+    return this.clone()._selectBoolOr(arg, options)
+  }
+
+  _selectBoolOr<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'bool_or', As, boolean> {
+    return this._selectAgg(aggregate1FunctionNames.boolOr, arg, options)
+  }
+
+  every<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['every'], options?: AggregateOptions): SetQueryReturnsValue<T, boolean> {
     return this.clone()._every(arg, options)
   }
 
-  _every<T extends Query, R>(this: T, arg: Aggregate1ArgumentTypes<T, R>['every'], options?: AggregateOptions) {
-    return selectAggregate(this, aggregate1FunctionNames.every, arg, options)._value<T, boolean>()
+  _every<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['every'], options?: AggregateOptions): SetQueryReturnsValue<T, boolean> {
+    const q = this._selectEvery(arg, options)
+    return (q as T)._value<T, boolean>()
   }
 
-  jsonAgg<T extends Query, R, Expr extends Aggregate1ArgumentTypes<T, R>['jsonAgg']>(this: T, arg: Expr, options?: AggregateOptions) {
+  selectEvery<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'every', As, boolean> {
+    return this.clone()._selectEvery(arg, options)
+  }
+
+  _selectEvery<T extends Query, As extends string | undefined = undefined>(this: T, arg: Expression<T>, options?: AggregateOptions<As>): SelectAgg<T, 'every', As, boolean> {
+    return this._selectAgg(aggregate1FunctionNames.every, arg, options)
+  }
+
+  jsonAgg<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['jsonAgg'], options?: AggregateOptions): SetQueryReturnsValue<T, string> {
     return this.clone()._jsonAgg(arg, options)
   }
 
-  _jsonAgg<T extends Query, R, Expr extends Aggregate1ArgumentTypes<T, R>['jsonAgg']>(this: T, arg: Expr, options?: AggregateOptions) {
-    return selectAggregate(this, aggregate1FunctionNames.jsonAgg, arg, options)._value<T, string>()
+  _jsonAgg<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['jsonAgg'], options?: AggregateOptions): SetQueryReturnsValue<T, string> {
+    const q = this._selectJsonAgg(arg, options)
+    return (q as T)._value<T, string>()
   }
 
-  jsonbAgg<T extends Query, R, Expr extends Aggregate1ArgumentTypes<T, R>['jsonbAgg']>(this: T, arg: Expr, options?: AggregateOptions) {
+  selectJsonAgg<T extends Query, As extends string | undefined = undefined>(this: T, arg: Aggregate1ArgumentTypes<T>['jsonAgg'], options?: AggregateOptions<As>): SelectAgg<T, 'json_agg', As, string> {
+    return this.clone()._selectJsonAgg(arg, options)
+  }
+
+  _selectJsonAgg<T extends Query, As extends string | undefined = undefined>(this: T, arg: Aggregate1ArgumentTypes<T>['jsonAgg'], options?: AggregateOptions<As>): SelectAgg<T, 'json_agg', As, string> {
+    return this._selectAgg(aggregate1FunctionNames.jsonAgg, arg, options)
+  }
+
+  jsonbAgg<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['jsonbAgg'], options?: AggregateOptions): SetQueryReturnsValue<T, string> {
     return this.clone()._jsonbAgg(arg, options)
   }
 
-  _jsonbAgg<T extends Query, R, Expr extends Aggregate1ArgumentTypes<T, R>['jsonbAgg']>(this: T, arg: Expr, options?: AggregateOptions) {
-    return selectAggregate(this, aggregate1FunctionNames.jsonbAgg, arg, options)._value<T, string>()
+  _jsonbAgg<T extends Query>(this: T, arg: Aggregate1ArgumentTypes<T>['jsonbAgg'], options?: AggregateOptions): SetQueryReturnsValue<T, string> {
+    const q = this._selectJsonbAgg(arg, options)
+    return (q as T)._value<T, string>()
   }
 
-  xmlAgg<T extends Query, R, Expr extends Aggregate1ArgumentTypes<T, R>['xmlAgg']>(this: T, arg: Expr, options?: AggregateOptions) {
+  selectJsonbAgg<T extends Query, As extends string | undefined = undefined>(this: T, arg: Aggregate1ArgumentTypes<T>['jsonbAgg'], options?: AggregateOptions<As>): SelectAgg<T, 'jsonb_agg', As, string> {
+    return this.clone()._selectJsonbAgg(arg, options)
+  }
+
+  _selectJsonbAgg<T extends Query, As extends string | undefined = undefined>(this: T, arg: Aggregate1ArgumentTypes<T>['jsonbAgg'], options?: AggregateOptions<As>): SelectAgg<T, 'jsonb_agg', As, string> {
+    return this._selectAgg(aggregate1FunctionNames.jsonbAgg, arg, options)
+  }
+
+  xmlAgg<T extends Query, Expr extends Aggregate1ArgumentTypes<T>['xmlAgg']>(this: T, arg: Expr, options?: AggregateOptions): SetQueryReturnsValue<T, string> {
     return this.clone()._xmlAgg(arg, options)
   }
 
-  _xmlAgg<T extends Query, R, Expr extends Aggregate1ArgumentTypes<T, R>['xmlAgg']>(this: T, arg: Expr, options?: AggregateOptions) {
-    return selectAggregate(this, aggregate1FunctionNames.xmlAgg, arg, options)._value<T, string>()
+  _xmlAgg<T extends Query, Expr extends Aggregate1ArgumentTypes<T>['xmlAgg']>(this: T, arg: Expr, options?: AggregateOptions): SetQueryReturnsValue<T, string> {
+    const q = this._selectXmlAgg(arg, options)
+    return (q as T)._value<T, string>()
   }
 
-  jsonObjectAgg<T extends Query, R, Obj extends Record<string, Expression<T, R>>>(this: T, obj: Obj, options?: AggregateOptions) {
+  selectXmlAgg<T extends Query, As extends string | undefined = undefined>(this: T, arg: Aggregate1ArgumentTypes<T>['xmlAgg'], options?: AggregateOptions<As>): SelectAgg<T, 'xmlagg', As, string> {
+    return this.clone()._selectXmlAgg(arg, options)
+  }
+
+  _selectXmlAgg<T extends Query, As extends string | undefined = undefined>(this: T, arg: Aggregate1ArgumentTypes<T>['xmlAgg'], options?: AggregateOptions<As>): SelectAgg<T, 'xmlagg', As, string> {
+    return this._selectAgg(aggregate1FunctionNames.xmlAgg, arg, options)
+  }
+
+  jsonObjectAgg<T extends Query, Obj extends Record<string, Expression<T>>>(this: T, obj: Obj, options?: AggregateOptions): SetQueryReturnsValue<T, string> {
     return this.clone()._jsonObjectAgg(obj, options)
   }
 
-  _jsonObjectAgg<T extends Query, R, Obj extends Record<string, Expression<T, R>>>(this: T, obj: Obj, options?: AggregateOptions) {
-    return selectAggregate(this, 'json_object_agg', { __keyValues: obj }, options)._value<T, string>()
+  _jsonObjectAgg<T extends Query, Obj extends Record<string, Expression<T>>>(this: T, obj: Obj, options?: AggregateOptions): SetQueryReturnsValue<T, string> {
+    const q = this._selectJsonObjectAgg(obj, options)
+    return (q as T)._value<T, string>()
   }
 
-  jsonbObjectAgg<T extends Query, R, Obj extends Record<string, Expression<T, R>>>(this: T, obj: Obj, options?: AggregateOptions) {
+  selectJsonObjectAgg<T extends Query, Obj extends Record<string, Expression<T>>, As extends string | undefined = undefined>(this: T, obj: Obj, options?: AggregateOptions<As>): SelectAgg<T, 'json_object_agg', As, string> {
+    return this.clone()._selectJsonObjectAgg(obj, options)
+  }
+
+  _selectJsonObjectAgg<T extends Query, Obj extends Record<string, Expression<T>>, As extends string | undefined = undefined>(this: T, obj: Obj, options?: AggregateOptions<As>): SelectAgg<T, 'json_object_agg', As, string> {
+    return this._selectAgg('json_object_agg', obj, options)
+  }
+
+  jsonbObjectAgg<T extends Query, Obj extends Record<string, Expression<T>>>(this: T, obj: Obj, options?: AggregateOptions): SetQueryReturnsValue<T, string> {
     return this.clone()._jsonbObjectAgg(obj, options)
   }
 
-  _jsonbObjectAgg<T extends Query, R, Obj extends Record<string, Expression<T, R>>>(this: T, obj: Obj, options?: AggregateOptions) {
-    return selectAggregate(this, 'jsonb_object_agg', { __keyValues: obj }, options)._value<T, string>()
+  _jsonbObjectAgg<T extends Query, Obj extends Record<string, Expression<T>>>(this: T, obj: Obj, options?: AggregateOptions): SetQueryReturnsValue<T, string> {
+    const q = this._selectJsonbObjectAgg(obj, options)
+    return (q as T)._value<T, string>()
   }
 
-  stringAgg<T extends Query, R>(this: T, arg: StringExpression<T, R>, delimiter: string, options?: AggregateOptions) {
+  selectJsonbObjectAgg<T extends Query, Obj extends Record<string, Expression<T>>, As extends string | undefined = undefined>(this: T, obj: Obj, options?: AggregateOptions<As>): SelectAgg<T, 'jsonb_object_agg', As, string> {
+    return this.clone()._selectJsonbObjectAgg(obj, options)
+  }
+
+  _selectJsonbObjectAgg<T extends Query, Obj extends Record<string, Expression<T>>, As extends string | undefined = undefined>(this: T, obj: Obj, options?: AggregateOptions<As>): SelectAgg<T, 'jsonb_object_agg', As, string> {
+    return this._selectAgg('jsonb_object_agg', obj, options)
+  }
+
+  stringAgg<T extends Query>(this: T, arg: StringExpression<T>, delimiter: string, options?: AggregateOptions): SetQueryReturnsValue<T, string> {
     return this.clone()._stringAgg(arg, delimiter, options)
   }
 
-  _stringAgg<T extends Query, R>(this: T, arg: StringExpression<T, R>, delimiter: string, options?: AggregateOptions) {
-    return selectAggregate(this, 'string_agg', { __withDelimiter: [arg, delimiter] }, options)._value<T, string>()
+  _stringAgg<T extends Query>(this: T, arg: StringExpression<T>, delimiter: string, options?: AggregateOptions): SetQueryReturnsValue<T, string> {
+    const q = this._selectStringAgg(arg, delimiter, options)
+    return (q as T)._value<T, string>()
+  }
+
+  selectStringAgg<T extends Query, As extends string | undefined = undefined>(this: T, arg: StringExpression<T>, delimiter: string, options?: AggregateOptions<As>): SelectAgg<T, 'string_agg', As, string> {
+    return this.clone()._selectStringAgg(arg, delimiter, options)
+  }
+
+  _selectStringAgg<T extends Query, As extends string | undefined = undefined>(this: T, arg: StringExpression<T>, delimiter: string, options?: AggregateOptions<As>): SelectAgg<T, 'string_agg', As, string> {
+    return this._selectAgg('string_agg', [arg, delimiter], options)
   }
 }

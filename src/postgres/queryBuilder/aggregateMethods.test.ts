@@ -75,8 +75,27 @@ describe('aggregate', () => {
 
     it('should support raw sql parameter', () => {
       const q = User.all()
-      expect(q[method as 'count'](raw('SQL')).toSql()).toBe(
-        `SELECT ${functionName}(SQL) FROM "user"`
+      expect(q[method as 'count'](raw('name')).toSql()).toBe(
+        `SELECT ${functionName}(name) FROM "user"`
+      )
+      expectQueryNotMutated(q)
+    })
+
+    const selectMethod = `select${method[0].toUpperCase()}${method.slice(1)}`
+    it(`.${selectMethod} should select aggregated value`, () => {
+      const q = User.all()
+      const expectedSql = `SELECT ${functionName}("user"."name") AS "name" FROM "user"`
+      expect(q[selectMethod as 'selectCount']('name', { as: 'name' }).toSql()).toBe(
+        expectedSql
+      )
+      expectQueryNotMutated(q)
+    })
+
+    it(`.${selectMethod} supports raw sql`, () => {
+      const q = User.all()
+      const expectedSql = `SELECT ${functionName}(name) AS "name" FROM "user"`
+      expect(q[selectMethod as 'selectCount'](raw('name'), { as: 'name' }).toSql()).toBe(
+        expectedSql
       )
       expectQueryNotMutated(q)
     })
@@ -100,9 +119,28 @@ describe('aggregate', () => {
     it('should support raw sql parameter', () => {
       const q = User.all()
       expect(q[method as 'jsonObjectAgg']({
-        alias: raw('SQL')
+        alias: raw('name')
       }).toSql()).toBe(
-        `SELECT ${functionName}('alias', SQL) FROM "user"`
+        `SELECT ${functionName}('alias', name) FROM "user"`
+      )
+      expectQueryNotMutated(q)
+    })
+
+    const selectMethod = `select${method[0].toUpperCase()}${method.slice(1)}`
+    it(`.${selectMethod} should select aggregated value`, () => {
+      const q = User.all()
+      const expectedSql = `SELECT ${functionName}('alias', "user"."name") AS "name" FROM "user"`
+      expect(q[selectMethod as 'jsonObjectAgg']({ alias: 'name' }, { as: 'name' }).toSql()).toBe(
+        expectedSql
+      )
+      expectQueryNotMutated(q)
+    })
+
+    it(`.${selectMethod} supports raw sql`, () => {
+      const q = User.all()
+      const expectedSql = `SELECT ${functionName}('alias', name) AS "name" FROM "user"`
+      expect(q[selectMethod as 'jsonObjectAgg']({ alias: raw('name') }, { as: 'name' }).toSql()).toBe(
+        expectedSql
       )
       expectQueryNotMutated(q)
     })
@@ -122,8 +160,26 @@ describe('aggregate', () => {
 
     it('should support raw sql parameter', async () => {
       const q = User.all()
-      expect(q.stringAgg(raw('pum'), ' & ').toSql()).toBe(
-        `SELECT string_agg(pum, ' & ') FROM "user"`
+      expect(q.stringAgg(raw('name'), ' & ').toSql()).toBe(
+        `SELECT string_agg(name, ' & ') FROM "user"`
+      )
+      expectQueryNotMutated(q)
+    })
+
+    it(`.stringAgg should select aggregated value`, () => {
+      const q = User.all()
+      const expectedSql = `SELECT string_agg("user"."name", ' & ') AS "name" FROM "user"`
+      expect(q.stringAgg('name', ' & ', { as: 'name' }).toSql()).toBe(
+        expectedSql
+      )
+      expectQueryNotMutated(q)
+    })
+
+    it(`.stringAgg supports raw sql`, () => {
+      const q = User.all()
+      const expectedSql = `SELECT string_agg(name, ' & ') AS "name" FROM "user"`
+      expect(q.stringAgg(raw('name'), ' & ', { as: 'name' }).toSql()).toBe(
+        expectedSql
       )
       expectQueryNotMutated(q)
     })

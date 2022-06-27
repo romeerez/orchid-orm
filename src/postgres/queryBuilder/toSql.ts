@@ -20,6 +20,7 @@ export type QueryData<T extends Query> = {
   from?: string | RawExpression
   group?: (keyof T['type'] | RawExpression)[]
   having?: HavingArg<T>[]
+  window?: WindowArg
 }
 
 export type SelectItem<T extends Query> =
@@ -33,7 +34,8 @@ export type WhereItem<T extends Query> =
   | Query
   | RawExpression
 
-export type AggregateOptions = {
+export type AggregateOptions<As extends string | undefined = any> = {
+  as?: As
   distinct?: boolean
   order?: string
   filter?: string
@@ -42,9 +44,11 @@ export type AggregateOptions = {
 
 const aggregateOptionNames: (keyof AggregateOptions)[] = ['distinct', 'order', 'filter', 'withinGroup']
 
+export type AggregateArg<T extends Query> = Expression<T> | Record<string, Expression<T>> | [Expression<T>, string]
+
 export type Aggregate<T extends Query> = {
   function: string,
-  arg: Expression<T> | { __keyValues: Record<string, Expression<T>> } | { __withDelimiter: [Expression<T>, string] }
+  arg: AggregateArg<T>
   options: AggregateOptions
 }
 
@@ -58,6 +62,8 @@ export type HavingArg<T extends Query> = {
     | ColumnOperators<T['shape'], Column> & AggregateOptions
   }
 } | RawExpression
+
+export type WindowArg = Record<string, RawExpression>
 
 const EMPTY_OBJECT = {}
 
@@ -189,16 +195,16 @@ const aggregateToSql = <T extends Query>(quotedAs: string, item: Aggregate<T>) =
   if (options.distinct && !options.withinGroup) sql.push('DISTINCT ')
 
   if (typeof item.arg === 'object') {
-    if ('__keyValues' in item.arg) {
+    if (Array.isArray(item.arg)) {
+      sql.push(`${expressionToSql(quotedAs, item.arg[0])}, ${quote(item.arg[1])}`)
+    } else if (isRaw(item.arg)) {
+      sql.push(expressionToSql(quotedAs, item.arg))
+    } else {
       const args: string[] = []
-      for (const key in item.arg.__keyValues) {
-        args.push(`${quote(key)}, ${expressionToSql(quotedAs, item.arg.__keyValues[key])}`)
+      for (const key in item.arg) {
+        args.push(`${quote(key)}, ${expressionToSql(quotedAs, item.arg[key as keyof typeof item.arg] as unknown as Expression<T>)}`)
       }
       sql.push(args.join(', '))
-    } else if ('__withDelimiter' in item.arg) {
-      sql.push(`${expressionToSql(quotedAs, item.arg.__withDelimiter[0])}, ${quote(item.arg.__withDelimiter[1])}`)
-    } else {
-      sql.push(expressionToSql(quotedAs, item.arg))
     }
   } else {
     sql.push(expressionToSql(quotedAs, item.arg))
@@ -210,6 +216,8 @@ const aggregateToSql = <T extends Query>(quotedAs: string, item: Aggregate<T>) =
   if (options.order) sql.push(`ORDER BY ${options.order}`)
 
   sql.push(')')
+
+  if (options.as) sql.push(` AS ${q(options.as)}`)
 
   if (options.filter) sql.push(` FILTER (WHERE ${options.filter})`)
 
