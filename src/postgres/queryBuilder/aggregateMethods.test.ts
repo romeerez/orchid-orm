@@ -1,4 +1,4 @@
-import { expectQueryNotMutated} from '../test-utils/test-utils';
+import { expectQueryNotMutated, line } from '../test-utils/test-utils';
 import { raw } from './common';
 import { testDb } from '../test-utils/test-db';
 
@@ -17,7 +17,7 @@ describe('aggregate', () => {
     })
 
     test('order', () => {
-      expect(User.count('name', { order: '"user"."name" DESC' }).toSql())
+      expect(User.count('name', { orderBy: '"user"."name" DESC' }).toSql())
         .toBe('SELECT count("user"."name" ORDER BY "user"."name" DESC) FROM "user"')
     })
 
@@ -26,19 +26,49 @@ describe('aggregate', () => {
         .toBe('SELECT count("user"."name") FILTER (WHERE name IS NOT NULL) FROM "user"')
     })
 
+    test('over', () => {
+      expect(
+        User.count('name', {
+          over: {
+            partitionBy: 'id',
+            orderBy: {
+              id: 'DESC'
+            }
+          }
+        }).toSql()
+      ).toBe(line(`
+        SELECT count("user"."name") OVER (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
+        FROM "user"
+      `))
+    })
+
     test('all options', () => {
       expect(User.count('name', {
         distinct: true,
-        order: 'name DESC',
-        filter: 'name IS NOT NULL'
-      }).toSql())
-        .toBe('SELECT count(DISTINCT "user"."name" ORDER BY name DESC) FILTER (WHERE name IS NOT NULL) FROM "user"')
+        orderBy: 'name DESC',
+        filter: 'name IS NOT NULL',
+        over: {
+          partitionBy: 'id',
+          orderBy: {
+            id: 'DESC'
+          }
+        }
+      }).toSql()).toBe(line(`
+        SELECT
+          count(DISTINCT "user"."name" ORDER BY name DESC)
+            FILTER (WHERE name IS NOT NULL)
+            OVER (
+              PARTITION BY "user"."id"
+              ORDER BY "user"."id" DESC
+            )
+        FROM "user"
+      `))
     })
 
     test('withinGroup', () => {
       expect(User.count('name', {
         distinct: true,
-        order: 'name DESC',
+        orderBy: 'name DESC',
         filter: 'name IS NOT NULL',
         withinGroup: true
       }).toSql())

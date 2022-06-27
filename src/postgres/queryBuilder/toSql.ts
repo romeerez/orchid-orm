@@ -20,7 +20,7 @@ export type QueryData<T extends Query> = {
   from?: string | RawExpression
   group?: (keyof T['type'] | RawExpression)[]
   having?: HavingArg<T>[]
-  window?: WindowArg
+  window?: WindowArg<T>[]
 }
 
 export type SelectItem<T extends Query> =
@@ -34,22 +34,27 @@ export type WhereItem<T extends Query> =
   | Query
   | RawExpression
 
-export type AggregateOptions<As extends string | undefined = any> = {
+export type AggregateOptions<T extends Query, As extends string | undefined = any> = {
   as?: As
   distinct?: boolean
-  order?: string
+  orderBy?: string
   filter?: string
   withinGroup?: boolean
+  over?: T['windows'][number] | WindowDeclaration<T>
 }
 
-const aggregateOptionNames: (keyof AggregateOptions)[] = ['distinct', 'order', 'filter', 'withinGroup']
+export type SortDir = 'ASC' | 'DESC'
+
+export type OrderBy<T extends Query> = { [K in keyof T['type']]?: SortDir | { dir: SortDir, nulls: 'FIRST' | 'LAST' } }
+
+const aggregateOptionNames: (keyof AggregateOptions<Query>)[] = ['distinct', 'orderBy', 'filter', 'withinGroup']
 
 export type AggregateArg<T extends Query> = Expression<T> | Record<string, Expression<T>> | [Expression<T>, string]
 
 export type Aggregate<T extends Query> = {
   function: string,
   arg: AggregateArg<T>
-  options: AggregateOptions
+  options: AggregateOptions<T>
 }
 
 export type ColumnOperators<S extends ColumnsShape, Column extends keyof S> =
@@ -59,11 +64,16 @@ export type HavingArg<T extends Query> = {
   [Agg in keyof Aggregate1ArgumentTypes<T>]?: {
     [Column in Exclude<Aggregate1ArgumentTypes<T>[Agg], RawExpression>]?:
     | T['type'][Column]
-    | ColumnOperators<T['shape'], Column> & AggregateOptions
+    | ColumnOperators<T['shape'], Column> & AggregateOptions<T>
   }
 } | RawExpression
 
-export type WindowArg = Record<string, RawExpression>
+export type WindowArg<T extends Query> = Record<string, WindowDeclaration<T> | RawExpression>
+
+export type WindowDeclaration<T extends Query> = {
+  partitionBy?: Expression<T>
+  orderBy?: OrderBy<T>
+}
 
 const EMPTY_OBJECT = {}
 
@@ -150,7 +160,7 @@ export const toSql = <T extends Query>(model: T): string => {
           const valueOrOptions = columns[column as keyof typeof columns]
           if (typeof valueOrOptions === 'object' && valueOrOptions !== null && valueOrOptions !== undefined) {
             for (const op in valueOrOptions) {
-              if (!aggregateOptionNames.includes(op as keyof AggregateOptions)) {
+              if (!aggregateOptionNames.includes(op as keyof AggregateOptions<T>)) {
                 const operator = model.schema.shape[column].operators[op] as Operator<any>
                 if (!operator) {
                   // TODO: custom error classes
@@ -159,7 +169,7 @@ export const toSql = <T extends Query>(model: T): string => {
                 having.push(operator(aggregateToSql(quotedAs, {
                   function: key,
                   arg: column,
-                  options: valueOrOptions as AggregateOptions
+                  options: valueOrOptions as AggregateOptions<T>
                 }), valueOrOptions[op]))
               }
             }
@@ -174,6 +184,16 @@ export const toSql = <T extends Query>(model: T): string => {
       }
     })
     sql.push(`HAVING ${having.join(' AND ')}`)
+  }
+
+  if (query.window) {
+    const window: string[] = []
+    query.window.forEach((item) => {
+      for (const key in item) {
+        window.push(`${q(key)} AS ${windowToSql(quotedAs, item[key])}`)
+      }
+    })
+    sql.push(`WINDOW ${window.join(', ')}`)
   }
 
   if (query.take) {
@@ -211,9 +231,9 @@ const aggregateToSql = <T extends Query>(quotedAs: string, item: Aggregate<T>) =
   }
 
   if (options.withinGroup) sql.push(') WITHIN GROUP (')
-  else if (options.order) sql.push(' ')
+  else if (options.orderBy) sql.push(' ')
 
-  if (options.order) sql.push(`ORDER BY ${options.order}`)
+  if (options.orderBy) sql.push(`ORDER BY ${options.orderBy}`)
 
   sql.push(')')
 
@@ -221,10 +241,33 @@ const aggregateToSql = <T extends Query>(quotedAs: string, item: Aggregate<T>) =
 
   if (options.filter) sql.push(` FILTER (WHERE ${options.filter})`)
 
+  if (options.over) {
+    sql.push(` OVER ${windowToSql(quotedAs, options.over)}`)
+  }
+
   return sql.join('')
 }
 
-const whereConditionsToSql = <T extends Query>(model: Query, query: QueryData<T>, quotedAs: string): string => {
+const windowToSql = <T extends Query>(quotedAs: string, window: T['windows'][number] | WindowDeclaration<T> | RawExpression) => {
+  if (typeof window === 'object') {
+    if (isRaw(window)) {
+      return `(${getRaw(window)})`
+    } else {
+      const sql: string[] = []
+      if (window.partitionBy) {
+        sql.push(`PARTITION BY ${expressionToSql(quotedAs, window.partitionBy)}`)
+      }
+      if (window.orderBy) {
+        sql.push(`ORDER BY ${orderByToSql(quotedAs, window.orderBy)}`)
+      }
+      return `(${sql.join(' ')})`
+    }
+  } else {
+    return q(window as string)
+  }
+}
+
+const whereConditionsToSql = <T extends Query>(model: T, query: QueryData<T>, quotedAs: string): string => {
   const or = query.and && query.or ? [query.and, ...query.or] : query.and ? [query.and] : query.or
   if (!(or?.length)) return ''
 
@@ -268,4 +311,17 @@ const whereConditionsToSql = <T extends Query>(model: Query, query: QueryData<T>
   })
 
   return ors.join(' OR ')
+}
+
+const orderByToSql = (quotedAs: string, orderBy: OrderBy<Query>) => {
+  const sql: string[] = []
+  for (const key in orderBy) {
+    const value = orderBy[key]
+    if (typeof value === 'string') {
+      sql.push(`${qc(quotedAs, key)} ${value}`)
+    } else if (value) {
+      sql.push(`${qc(quotedAs, key)} ${value.dir} NULLS ${value.nulls}`)
+    }
+  }
+  return sql.join(', ')
 }

@@ -292,11 +292,11 @@ export class QueryMethods<S extends ColumnsShape> {
     return pushQueryArray(this, 'having', args)
   }
 
-  window<T extends Query, W extends WindowArg>(this: T, arg: W): SetQueryWindows<T, UnionToArray<keyof W>> {
+  window<T extends Query, W extends WindowArg<T>>(this: T, arg: W): SetQueryWindows<T, UnionToArray<keyof W>> {
     return this.clone()._window(arg)
   }
 
-  _window<T extends Query, W extends WindowArg>(this: T, arg: W): SetQueryWindows<T, UnionToArray<keyof W>> {
+  _window<T extends Query, W extends WindowArg<T>>(this: T, arg: W): SetQueryWindows<T, UnionToArray<keyof W>> {
     return pushQueryValue(this, 'window', arg) as unknown as SetQueryWindows<T, UnionToArray<keyof W>>
   }
 

@@ -389,7 +389,7 @@ describe('having', () => {
           gt: 5,
           lt: 20,
           distinct: true,
-          order: 'name ASC',
+          orderBy: 'name ASC',
           filter: 'id < 20',
           withinGroup: true
         }
@@ -436,20 +436,39 @@ describe('having', () => {
 })
 
 describe('window', () => {
-  it.skip('add window which can be used in `over`', () => {
+  it('add window which can be used in `over`', () => {
+    const q = User.all()
+
+    expect(
+      q.window({
+        w: {
+          partitionBy: 'id',
+          orderBy: {
+            id: 'DESC'
+          }
+        }
+      }).selectAvg('id', {
+        over: 'w'
+      }).toSql()
+    ).toBe(line(`
+      SELECT avg("user"."id") OVER "w" FROM "user"
+      WINDOW "w" AS (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
+    `))
+    expectQueryNotMutated(q)
+  })
+
+  it('adds window with raw sql', () => {
     const q = User.all()
 
     const windowSql = 'PARTITION BY id ORDER BY name DESC'
-
     expect(
       q.window({ w: raw(windowSql) })
-        // .selectAvg('id', {
-        //   over: 'w'
-        // })
-        .toSql()
+        .selectAvg('id', {
+          over: 'w'
+        }).toSql()
     ).toBe(line(`
-      SELECT avg("user"."id") OVER w FROM "user"
-      WINDOW w AS (PARTITION BY id ORDER BY name DESC)
+      SELECT avg("user"."id") OVER "w" FROM "user"
+      WINDOW "w" AS (PARTITION BY id ORDER BY name DESC)
     `))
     expectQueryNotMutated(q)
   })
