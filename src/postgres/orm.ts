@@ -1,7 +1,7 @@
 import { SqlAdapter } from '../sql/sql.types';
 import { PostgresModelConstructors } from './model';
 
-export type PostgresAdapter = SqlAdapter
+export type PostgresAdapter = SqlAdapter;
 
 type PostgresORM<T extends PostgresModelConstructors> = {
   [K in keyof T]: InstanceType<T[K]>;
@@ -10,22 +10,21 @@ type PostgresORM<T extends PostgresModelConstructors> = {
   destroy(): Promise<void>;
 };
 
-export const PostgresOrm = (adapter: PostgresAdapter) => <
-  T extends PostgresModelConstructors
->(
-  repos: T
-): PostgresORM<T> => {
-  const result = {
-    adapter,
-    destroy: () => adapter.destroy(),
-  } as PostgresORM<T>;
+export const PostgresOrm =
+  (adapter: PostgresAdapter) =>
+  <T extends PostgresModelConstructors>(repos: T): PostgresORM<T> => {
+    const result = {
+      adapter,
+      destroy: () => adapter.destroy(),
+    } as PostgresORM<T>;
 
-  for (const key in repos) {
-    if (key === 'destroy') {
-      throw new Error('Please choose another key for repo');
+    for (const key in repos) {
+      if (key === 'destroy') {
+        throw new Error('Please choose another key for repo');
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      result[key] = new repos[key](adapter) as any;
     }
-    result[key] = new repos[key](adapter) as any;
-  }
 
-  return result;
-};
+    return result;
+  };

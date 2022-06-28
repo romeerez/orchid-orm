@@ -9,7 +9,7 @@ export class User extends model({
     picture: t.text().nullable(),
     createdAt: t.timestamp(),
     updatedAt: t.timestamp(),
-  })
+  }),
 }) {}
 
 export class Profile extends model({
@@ -20,7 +20,7 @@ export class Profile extends model({
     bio: t.text().nullable(),
     createdAt: t.timestamp(),
     updatedAt: t.timestamp(),
-  })
+  }),
 }) {}
 
 export class Chat extends model({
@@ -53,5 +53,5 @@ export class Message extends model({
     text: t.text(),
     createdAt: t.timestamp(),
     updatedAt: t.timestamp(),
-  })
+  }),
 }) {}

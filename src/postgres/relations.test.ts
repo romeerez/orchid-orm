@@ -7,8 +7,8 @@ describe('relations', () => {
     class User extends model({
       table: 'user',
       schema: (t) => ({
-        id: t.serial()
-      })
+        id: t.serial(),
+      }),
     }) {
       relations = {
         profile: hasOne(() => Profile),
@@ -18,8 +18,8 @@ describe('relations', () => {
     class Profile extends model({
       table: 'profile',
       schema: (t) => ({
-        id: t.serial()
-      })
+        id: t.serial(),
+      }),
     }) {
       relations = {
         user: belongsTo(() => User),

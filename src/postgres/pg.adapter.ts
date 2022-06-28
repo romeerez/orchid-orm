@@ -5,8 +5,9 @@ export const Pg = (config: PoolConfig): SqlAdapter => {
   const pool = new Pool(config);
 
   return {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async query<T extends QueryResultRow = any>(
-      query: string
+      query: string,
     ): Promise<{ rows: T[] }> {
       const client = await pool.connect();
       try {
@@ -15,8 +16,9 @@ export const Pg = (config: PoolConfig): SqlAdapter => {
         client.release();
       }
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async arrays<R extends any[] = any[]>(
-      query: string
+      query: string,
     ): Promise<{ rows: R[] }> {
       const client = await pool.connect();
       try {

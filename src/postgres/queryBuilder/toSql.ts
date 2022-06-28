@@ -6,414 +6,520 @@ import { Aggregate1ArgumentTypes } from './aggregateMethods';
 import { Operator } from './operators';
 
 // quote table or column
-const q = (sql: string) => `"${sql}"`
+const q = (sql: string) => `"${sql}"`;
 // quote column with table or as
-const qc = (quotedAs: string, column: string) => `${quotedAs}.${q(column)}`
+const qc = (quotedAs: string, column: string) => `${quotedAs}.${q(column)}`;
 
 const quoteFullColumn = (fullColumn: string) => {
-  const [table, column] = fullColumn.split('.')
-  return `${q(table)}.${q(column)}`
-}
+  const [table, column] = fullColumn.split('.');
+  return `${q(table)}.${q(column)}`;
+};
 
 export type QueryData<T extends Query> = {
-  take?: true
-  select?: SelectItem<T>[]
-  distinct?: Expression<T>[]
-  from?: string | RawExpression
-  join?: JoinArg<T, Query>[]
-  and?: WhereItem<T>[]
-  or?: WhereItem<T>[][]
-  as?: string
-  group?: (keyof T['type'] | RawExpression)[]
-  having?: HavingArg<T>[]
-  window?: WindowArg<T>[]
-  union?: { arg: UnionArg<T>, kind: UnionKind }[]
-  order?: OrderBy<T>[]
-  limit?: number
-  offset?: number
-  for?: RawExpression[]
-}
+  take?: true;
+  select?: SelectItem<T>[];
+  distinct?: Expression<T>[];
+  from?: string | RawExpression;
+  join?: JoinArg<T, Query>[];
+  and?: WhereItem<T>[];
+  or?: WhereItem<T>[][];
+  as?: string;
+  group?: (keyof T['type'] | RawExpression)[];
+  having?: HavingArg<T>[];
+  window?: WindowArg<T>[];
+  union?: { arg: UnionArg<T>; kind: UnionKind }[];
+  order?: OrderBy<T>[];
+  limit?: number;
+  offset?: number;
+  for?: RawExpression[];
+};
 
 export type SelectItem<T extends Query> =
   | keyof T['type']
   | Aggregate<T>
-  | { selectAs: Record<string, Expression<T> | Query> }
+  | { selectAs: Record<string, Expression<T> | Query> };
 
 export type JoinArg<T extends Query, J extends Query> =
   | [J, keyof J['type'], string, keyof T['type']]
   | [J, RawExpression]
-  | [J, Query]
+  | [J, Query];
 
 export type WhereItem<T extends Query> =
   | Partial<Output<T['shape']>>
   | { [K in keyof T['shape']]?: ColumnOperators<T['shape'], K> | RawExpression }
   | Query
   | RawExpression
-  | [leftFullColumn: string, op: string, rightFullColumn: string]
+  | [leftFullColumn: string, op: string, rightFullColumn: string];
 
-export type AggregateOptions<T extends Query, As extends string | undefined = any> = {
-  as?: As
-  distinct?: boolean
-  order?: string
-  filter?: string
-  withinGroup?: boolean
-  over?: T['windows'][number] | WindowDeclaration<T>
-}
+export type AggregateOptions<
+  T extends Query,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  As extends string | undefined = any,
+> = {
+  as?: As;
+  distinct?: boolean;
+  order?: string;
+  filter?: string;
+  withinGroup?: boolean;
+  over?: T['windows'][number] | WindowDeclaration<T>;
+};
 
-export type SortDir = 'ASC' | 'DESC'
+export type SortDir = 'ASC' | 'DESC';
 
-export type OrderBy<T extends Query> = { [K in keyof T['type']]?: SortDir | { dir: SortDir, nulls: 'FIRST' | 'LAST' } } | RawExpression
+export type OrderBy<T extends Query> =
+  | {
+      [K in keyof T['type']]?:
+        | SortDir
+        | { dir: SortDir; nulls: 'FIRST' | 'LAST' };
+    }
+  | RawExpression;
 
-const aggregateOptionNames: (keyof AggregateOptions<Query>)[] = ['distinct', 'order', 'filter', 'withinGroup']
+const aggregateOptionNames: (keyof AggregateOptions<Query>)[] = [
+  'distinct',
+  'order',
+  'filter',
+  'withinGroup',
+];
 
-export type AggregateArg<T extends Query> = Expression<T> | Record<string, Expression<T>> | [Expression<T>, string]
+export type AggregateArg<T extends Query> =
+  | Expression<T>
+  | Record<string, Expression<T>>
+  | [Expression<T>, string];
 
 export type Aggregate<T extends Query> = {
-  function: string,
-  arg: AggregateArg<T>
-  options: AggregateOptions<T>
-}
+  function: string;
+  arg: AggregateArg<T>;
+  options: AggregateOptions<T>;
+};
 
-export type ColumnOperators<S extends ColumnsShape, Column extends keyof S> =
-  { [O in keyof S[Column]['operators']]?: S[Column]['operators'][O]['type'] }
+export type ColumnOperators<S extends ColumnsShape, Column extends keyof S> = {
+  [O in keyof S[Column]['operators']]?: S[Column]['operators'][O]['type'];
+};
 
-export type HavingArg<T extends Query> = {
-  [Agg in keyof Aggregate1ArgumentTypes<T>]?: {
-    [Column in Exclude<Aggregate1ArgumentTypes<T>[Agg], RawExpression>]?:
-    | T['type'][Column]
-    | ColumnOperators<T['shape'], Column> & AggregateOptions<T>
-  }
-} | RawExpression
+export type HavingArg<T extends Query> =
+  | {
+      [Agg in keyof Aggregate1ArgumentTypes<T>]?: {
+        [Column in Exclude<Aggregate1ArgumentTypes<T>[Agg], RawExpression>]?:
+          | T['type'][Column]
+          | (ColumnOperators<T['shape'], Column> & AggregateOptions<T>);
+      };
+    }
+  | RawExpression;
 
-export type WindowArg<T extends Query> = Record<string, WindowDeclaration<T> | RawExpression>
+export type WindowArg<T extends Query> = Record<
+  string,
+  WindowDeclaration<T> | RawExpression
+>;
 
 export type WindowDeclaration<T extends Query> = {
-  partitionBy?: Expression<T>
-  order?: OrderBy<T>
-}
+  partitionBy?: Expression<T>;
+  order?: OrderBy<T>;
+};
 
-export type UnionArg<T extends Query> = (Omit<Query, 'result'> & { result: T['result'] }) | RawExpression
+export type UnionArg<T extends Query> =
+  | (Omit<Query, 'result'> & { result: T['result'] })
+  | RawExpression;
 
-type UnionKind = 'UNION' | 'UNION ALL' | 'INTERSECT' | 'INTERSECT ALL' | 'EXCEPT' | 'EXCEPT ALL'
+type UnionKind =
+  | 'UNION'
+  | 'UNION ALL'
+  | 'INTERSECT'
+  | 'INTERSECT ALL'
+  | 'EXCEPT'
+  | 'EXCEPT ALL';
 
-const EMPTY_OBJECT = {}
+const EMPTY_OBJECT = {};
 
 export const toSql = <T extends Query>(model: T): string => {
-  const sql: string[] = ['SELECT']
+  const sql: string[] = ['SELECT'];
 
-  const query = (model.query || EMPTY_OBJECT) as QueryData<T>
-  const quotedAs = q(query.as || model.table)
+  const query = (model.query || EMPTY_OBJECT) as QueryData<T>;
+  const quotedAs = q(query.as || model.table);
 
   if (query.distinct) {
-    sql.push('DISTINCT')
+    sql.push('DISTINCT');
 
     if (query.distinct.length) {
-      const columns: string[] = []
+      const columns: string[] = [];
       query.distinct?.forEach((item) => {
-        columns.push(expressionToSql(quotedAs, item))
-      })
-      sql.push(`ON (${columns.join(', ')})`)
+        columns.push(expressionToSql(quotedAs, item));
+      });
+      sql.push(`ON (${columns.join(', ')})`);
     }
   }
 
   if (query.select) {
-    const select: string[] = []
+    const select: string[] = [];
     if (query.select) {
       query.select.forEach((item) => {
         if (typeof item === 'object') {
           if ('selectAs' in item) {
-            const obj = item.selectAs as Record<string, Expression<T> | Query>
+            const obj = item.selectAs as Record<string, Expression<T> | Query>;
             for (const as in obj) {
-              const value = obj[as]
+              const value = obj[as];
               if (typeof value === 'object') {
                 if (isRaw(value)) {
-                  select.push(`${getRaw(value)} AS ${q(as)}`)
+                  select.push(`${getRaw(value)} AS ${q(as)}`);
                 } else {
-                  select.push(`(${(value as Query).json().toSql()}) AS ${q(as)}`)
+                  select.push(
+                    `(${(value as Query).json().toSql()}) AS ${q(as)}`,
+                  );
                 }
               } else {
-                select.push(`${qc(quotedAs, value as string)} AS ${q(as)}`)
+                select.push(`${qc(quotedAs, value as string)} AS ${q(as)}`);
               }
             }
           } else {
-            select.push(aggregateToSql(quotedAs, item))
+            select.push(aggregateToSql(quotedAs, item));
           }
         } else {
-          select.push(qc(quotedAs, item as string))
+          select.push(qc(quotedAs, item as string));
         }
-      })
+      });
     }
-    sql.push(select.join(', '))
+    sql.push(select.join(', '));
   } else {
-    sql.push(`${quotedAs}.*`)
+    sql.push(`${quotedAs}.*`);
   }
 
   sql.push(
     'FROM',
     query.from
-      ? typeof query.from === 'object' ? getRaw(query.from) : q(query.from)
-      : q(model.table)
-  )
-  if (query.as) sql.push('AS', quotedAs)
+      ? typeof query.from === 'object'
+        ? getRaw(query.from)
+        : q(query.from)
+      : q(model.table),
+  );
+  if (query.as) sql.push('AS', quotedAs);
 
   if (query.join) {
     query.join.forEach((item) => {
-      const [join] = item
-      sql.push(`JOIN ${q(join.table)}`)
+      const [join] = item;
+      sql.push(`JOIN ${q(join.table)}`);
 
-      let joinAs: string
+      let joinAs: string;
       if (join.query?.as) {
-        joinAs = q(join.query.as)
-        sql.push(`AS ${joinAs}`)
+        joinAs = q(join.query.as);
+        sql.push(`AS ${joinAs}`);
       } else {
-        joinAs = q(join.table)
+        joinAs = q(join.table);
       }
 
       if (item.length === 2) {
-        const [, arg] = item
+        const [, arg] = item;
         if (isRaw(arg)) {
-          sql.push(`ON ${getRaw(arg)}`)
-          return
+          sql.push(`ON ${getRaw(arg)}`);
+          return;
         }
 
         if (arg.query) {
-          const onConditions = whereConditionsToSql(join, arg.query, joinAs)
-          if (onConditions.length) sql.push('ON', onConditions)
+          const onConditions = whereConditionsToSql(join, arg.query, joinAs);
+          if (onConditions.length) sql.push('ON', onConditions);
         }
-        return
+        return;
       }
 
-      const [, leftColumn, op, rightColumn] = item
-      sql.push(`ON ${qc(joinAs, leftColumn)} ${op} ${qc(quotedAs, rightColumn as string)}`)
-    })
+      const [, leftColumn, op, rightColumn] = item;
+      sql.push(
+        `ON ${qc(joinAs, leftColumn)} ${op} ${qc(
+          quotedAs,
+          rightColumn as string,
+        )}`,
+      );
+    });
   }
 
-  const whereConditions = whereConditionsToSql(model, query, quotedAs)
-  if (whereConditions.length) sql.push('WHERE', whereConditions)
+  const whereConditions = whereConditionsToSql(model, query, quotedAs);
+  if (whereConditions.length) sql.push('WHERE', whereConditions);
 
   if (query.group) {
     const group = query.group.map((item) =>
       typeof item === 'object' && isRaw(item)
         ? getRaw(item)
-        : qc(quotedAs, item as string)
-    )
-    sql.push(`GROUP BY ${group.join(', ')}`)
+        : qc(quotedAs, item as string),
+    );
+    sql.push(`GROUP BY ${group.join(', ')}`);
   }
 
   if (query.having) {
-    const having: string[] = []
+    const having: string[] = [];
     query.having.forEach((item) => {
       if (isRaw(item)) {
-        having.push(getRaw(item))
-        return
+        having.push(getRaw(item));
+        return;
       }
       for (const key in item) {
-        const columns = item[key as keyof Exclude<HavingArg<T>, RawExpression>]
+        const columns = item[key as keyof Exclude<HavingArg<T>, RawExpression>];
         for (const column in columns) {
-          const valueOrOptions = columns[column as keyof typeof columns]
-          if (typeof valueOrOptions === 'object' && valueOrOptions !== null && valueOrOptions !== undefined) {
+          const valueOrOptions = columns[column as keyof typeof columns];
+          if (
+            typeof valueOrOptions === 'object' &&
+            valueOrOptions !== null &&
+            valueOrOptions !== undefined
+          ) {
             for (const op in valueOrOptions) {
-              if (!aggregateOptionNames.includes(op as keyof AggregateOptions<T>)) {
-                const operator = model.schema.shape[column].operators[op] as Operator<any>
+              if (
+                !aggregateOptionNames.includes(op as keyof AggregateOptions<T>)
+              ) {
+                const operator = model.schema.shape[column].operators[
+                  op
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ] as Operator<any>;
                 if (!operator) {
                   // TODO: custom error classes
-                  throw new Error(`Unknown operator ${op} provided to condition`)
+                  throw new Error(
+                    `Unknown operator ${op} provided to condition`,
+                  );
                 }
-                having.push(operator(aggregateToSql(quotedAs, {
-                  function: key,
-                  arg: column,
-                  options: valueOrOptions as AggregateOptions<T>
-                }), valueOrOptions[op]))
+                having.push(
+                  operator(
+                    aggregateToSql(quotedAs, {
+                      function: key,
+                      arg: column,
+                      options: valueOrOptions as AggregateOptions<T>,
+                    }),
+                    valueOrOptions[op],
+                  ),
+                );
               }
             }
           } else {
-            having.push(`${aggregateToSql(quotedAs, {
-              function: key,
-              arg: column,
-              options: EMPTY_OBJECT
-            })} = ${quote(valueOrOptions)}`)
+            having.push(
+              `${aggregateToSql(quotedAs, {
+                function: key,
+                arg: column,
+                options: EMPTY_OBJECT,
+              })} = ${quote(valueOrOptions)}`,
+            );
           }
         }
       }
-    })
-    sql.push(`HAVING ${having.join(' AND ')}`)
+    });
+    sql.push(`HAVING ${having.join(' AND ')}`);
   }
 
   if (query.window) {
-    const window: string[] = []
+    const window: string[] = [];
     query.window.forEach((item) => {
       for (const key in item) {
-        window.push(`${q(key)} AS ${windowToSql(quotedAs, item[key])}`)
+        window.push(`${q(key)} AS ${windowToSql(quotedAs, item[key])}`);
       }
-    })
-    sql.push(`WINDOW ${window.join(', ')}`)
+    });
+    sql.push(`WINDOW ${window.join(', ')}`);
   }
 
   if (query.union) {
     query.union.forEach((item) => {
-      sql.push(`${item.kind} ${isRaw(item.arg) ? getRaw(item.arg) : item.arg.toSql()}`)
-    })
+      sql.push(
+        `${item.kind} ${isRaw(item.arg) ? getRaw(item.arg) : item.arg.toSql()}`,
+      );
+    });
   }
 
   if (query.order) {
-    sql.push(`ORDER BY ${query.order.map((item) =>
-      orderByToSql(quotedAs, item)
-    ).join(', ')}`)
+    sql.push(
+      `ORDER BY ${query.order
+        .map((item) => orderByToSql(quotedAs, item))
+        .join(', ')}`,
+    );
   }
 
-  const limit = query.take ? 1 : query.limit
+  const limit = query.take ? 1 : query.limit;
   if (limit) {
-    sql.push(`LIMIT ${limit}`)
+    sql.push(`LIMIT ${limit}`);
   }
 
   if (query.offset) {
-    sql.push(`OFFSET ${query.offset}`)
+    sql.push(`OFFSET ${query.offset}`);
   }
 
   if (query.for) {
-    sql.push(`FOR ${query.for.map(getRaw).join(', ')}`)
+    sql.push(`FOR ${query.for.map(getRaw).join(', ')}`);
   }
 
-  return sql.join(' ')
-}
+  return sql.join(' ');
+};
 
-const expressionToSql = <T extends Query>(quotedAs: string, expr: Expression<T>) => {
-  return typeof expr === 'object' && isRaw(expr) ? getRaw(expr) : qc(quotedAs, expr as string)
-}
+const expressionToSql = <T extends Query>(
+  quotedAs: string,
+  expr: Expression<T>,
+) => {
+  return typeof expr === 'object' && isRaw(expr)
+    ? getRaw(expr)
+    : qc(quotedAs, expr as string);
+};
 
-const aggregateToSql = <T extends Query>(quotedAs: string, item: Aggregate<T>) => {
-  const sql: string[] = [`${item.function}(`]
+const aggregateToSql = <T extends Query>(
+  quotedAs: string,
+  item: Aggregate<T>,
+) => {
+  const sql: string[] = [`${item.function}(`];
 
-  const options = item.options || EMPTY_OBJECT
+  const options = item.options || EMPTY_OBJECT;
 
-  if (options.distinct && !options.withinGroup) sql.push('DISTINCT ')
+  if (options.distinct && !options.withinGroup) sql.push('DISTINCT ');
 
   if (typeof item.arg === 'object') {
     if (Array.isArray(item.arg)) {
-      sql.push(`${expressionToSql(quotedAs, item.arg[0])}, ${quote(item.arg[1])}`)
+      sql.push(
+        `${expressionToSql(quotedAs, item.arg[0])}, ${quote(item.arg[1])}`,
+      );
     } else if (isRaw(item.arg)) {
-      sql.push(expressionToSql(quotedAs, item.arg))
+      sql.push(expressionToSql(quotedAs, item.arg));
     } else {
-      const args: string[] = []
+      const args: string[] = [];
       for (const key in item.arg) {
-        args.push(`${quote(key)}, ${expressionToSql(quotedAs, item.arg[key as keyof typeof item.arg] as unknown as Expression<T>)}`)
+        args.push(
+          `${quote(key)}, ${expressionToSql(
+            quotedAs,
+            item.arg[key as keyof typeof item.arg] as unknown as Expression<T>,
+          )}`,
+        );
       }
-      sql.push(args.join(', '))
+      sql.push(args.join(', '));
     }
   } else {
-    sql.push(expressionToSql(quotedAs, item.arg))
+    sql.push(expressionToSql(quotedAs, item.arg));
   }
 
-  if (options.withinGroup) sql.push(') WITHIN GROUP (')
-  else if (options.order) sql.push(' ')
+  if (options.withinGroup) sql.push(') WITHIN GROUP (');
+  else if (options.order) sql.push(' ');
 
-  if (options.order) sql.push(`ORDER BY ${options.order}`)
+  if (options.order) sql.push(`ORDER BY ${options.order}`);
 
-  sql.push(')')
+  sql.push(')');
 
-  if (options.as) sql.push(` AS ${q(options.as)}`)
+  if (options.as) sql.push(` AS ${q(options.as)}`);
 
-  if (options.filter) sql.push(` FILTER (WHERE ${options.filter})`)
+  if (options.filter) sql.push(` FILTER (WHERE ${options.filter})`);
 
   if (options.over) {
-    sql.push(` OVER ${windowToSql(quotedAs, options.over)}`)
+    sql.push(` OVER ${windowToSql(quotedAs, options.over)}`);
   }
 
-  return sql.join('')
-}
+  return sql.join('');
+};
 
-const whereConditionsToSql = <T extends Query>(model: T, query: QueryData<T>, quotedAs: string): string => {
-  const or = query.and && query.or ? [query.and, ...query.or] : query.and ? [query.and] : query.or
-  if (!(or?.length)) return ''
+const whereConditionsToSql = <T extends Query>(
+  model: T,
+  query: QueryData<T>,
+  quotedAs: string,
+): string => {
+  const or =
+    query.and && query.or
+      ? [query.and, ...query.or]
+      : query.and
+      ? [query.and]
+      : query.or;
+  if (!or?.length) return '';
 
-  const ors: string[] = []
+  const ors: string[] = [];
   or.forEach((and) => {
-    const ands: string[] = []
+    const ands: string[] = [];
     and.forEach((item) => {
       if (item instanceof PostgresModel) {
-        const sql = whereConditionsToSql(item, item.query || EMPTY_OBJECT, q(item.table))
-        if (sql.length) ands.push(`(${sql})`)
-        return
+        const sql = whereConditionsToSql(
+          item,
+          item.query || EMPTY_OBJECT,
+          q(item.table),
+        );
+        if (sql.length) ands.push(`(${sql})`);
+        return;
       }
 
       if (isRaw(item)) {
-        ands.push(`(${getRaw(item)})`)
-        return
+        ands.push(`(${getRaw(item)})`);
+        return;
       }
 
       if (Array.isArray(item)) {
-        const leftColumn = quoteFullColumn(item[0])
-        const rightColumn = quoteFullColumn(item[2])
-        const op = item[1]
-        ands.push(`${leftColumn} ${op} ${rightColumn}`)
-        return
+        const leftColumn = quoteFullColumn(item[0]);
+        const rightColumn = quoteFullColumn(item[2]);
+        const op = item[1];
+        ands.push(`${leftColumn} ${op} ${rightColumn}`);
+        return;
       }
 
       for (const key in item) {
-        const value = item[key as keyof typeof item] as object
-        if (typeof value === 'object' && value !== null && value !== undefined) {
+        const value = item[key as keyof typeof item] as object;
+        if (
+          typeof value === 'object' &&
+          value !== null &&
+          value !== undefined
+        ) {
           if (isRaw(value)) {
-            ands.push(`${qc(quotedAs, key)} = ${getRaw(value)}`)
+            ands.push(`${qc(quotedAs, key)} = ${getRaw(value)}`);
           } else {
-            const column = model.schema.shape[key]
+            const column = model.schema.shape[key];
             if (!column) {
               // TODO: custom error classes
-              throw new Error(`Unknown column ${key} provided to condition`)
+              throw new Error(`Unknown column ${key} provided to condition`);
             }
 
             for (const op in value) {
-              const operator = column.operators[op]
+              const operator = column.operators[op];
               if (!operator) {
                 // TODO: custom error classes
-                throw new Error(`Unknown operator ${op} provided to condition`)
+                throw new Error(`Unknown operator ${op} provided to condition`);
               }
 
-              ands.push(operator(qc(quotedAs, key), value[op as keyof typeof value]))
+              ands.push(
+                operator(qc(quotedAs, key), value[op as keyof typeof value]),
+              );
             }
           }
         } else {
-          ands.push(`${qc(quotedAs, key)} ${value === null ? 'IS' : '='} ${quote(value)}`)
+          ands.push(
+            `${qc(quotedAs, key)} ${value === null ? 'IS' : '='} ${quote(
+              value,
+            )}`,
+          );
         }
       }
-    })
-    ors.push(ands.join(' AND '))
-  })
+    });
+    ors.push(ands.join(' AND '));
+  });
 
-  return ors.join(' OR ')
-}
+  return ors.join(' OR ');
+};
 
-const windowToSql = <T extends Query>(quotedAs: string, window: T['windows'][number] | WindowDeclaration<T> | RawExpression) => {
+const windowToSql = <T extends Query>(
+  quotedAs: string,
+  window: T['windows'][number] | WindowDeclaration<T> | RawExpression,
+) => {
   if (typeof window === 'object') {
     if (isRaw(window)) {
-      return `(${getRaw(window)})`
+      return `(${getRaw(window)})`;
     } else {
-      const sql: string[] = []
+      const sql: string[] = [];
       if (window.partitionBy) {
-        sql.push(`PARTITION BY ${expressionToSql(quotedAs, window.partitionBy)}`)
+        sql.push(
+          `PARTITION BY ${expressionToSql(quotedAs, window.partitionBy)}`,
+        );
       }
       if (window.order) {
-        sql.push(`ORDER BY ${orderByToSql(quotedAs, window.order)}`)
+        sql.push(`ORDER BY ${orderByToSql(quotedAs, window.order)}`);
       }
-      return `(${sql.join(' ')})`
+      return `(${sql.join(' ')})`;
     }
   } else {
-    return q(window as string)
+    return q(window as string);
   }
-}
+};
 
 const orderByToSql = (quotedAs: string, order: OrderBy<Query>) => {
   if (isRaw(order)) {
-    return getRaw(order)
+    return getRaw(order);
   }
 
-  const sql: string[] = []
+  const sql: string[] = [];
   for (const key in order) {
-    const value = order[key]
+    const value = order[key];
     if (typeof value === 'string') {
-      sql.push(`${qc(quotedAs, key)} ${value}`)
+      sql.push(`${qc(quotedAs, key)} ${value}`);
     } else if (value) {
-      sql.push(`${qc(quotedAs, key)} ${value.dir} NULLS ${value.nulls}`)
+      sql.push(`${qc(quotedAs, key)} ${value.dir} NULLS ${value.nulls}`);
     }
   }
-  return sql.join(', ')
-}
+  return sql.join(', ');
+};
