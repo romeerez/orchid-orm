@@ -1,7 +1,8 @@
 import { expectQueryNotMutated, line} from '../test-utils/test-utils';
 import { HavingArg } from './toSql';
 import { raw } from './common';
-import { testDb } from '../test-utils/test-db';
+import { createPg, testDb } from '../test-utils/test-db';
+import { model } from '../model';
 
 const { adapter, user: User, chat: Chat, message: Message } = testDb
 
@@ -621,21 +622,33 @@ describe('join', () => {
   })
 })
 
-// describe('model with hidden column', () => {
-//   it('selects by default all columns except hidden', () => {
-//     class ModelInterface {
-//       id: number
-//       name: string
-//
-//       @porm.hidden
-//       password: string
-//     }
-//
-//     const Model = model('table', ModelInterface)
-//
-//     Model.columnNames = jest.fn(() => ['id', 'name', 'password']) as any
-//
-//     const q = Model.all()
-//     expect(await q.toSql()).toBe('SELECT "table"."id", "table"."name" FROM "table"')
-//   })
-// })
+describe('model with hidden column', () => {
+  it('selects by default all columns except hidden', () => {
+    class User extends model({
+      table: 'user',
+      schema: (t) => ({
+        id: t.serial().primaryKey(),
+        name: t.text(),
+        password: t.text().hidden(),
+        picture: t.text().nullable(),
+        createdAt: t.timestamp(),
+        updatedAt: t.timestamp(),
+      })
+    }) {}
+
+    const db = createPg({
+      user: User,
+    });
+
+    const q = db.user.all()
+    expect(q.toSql()).toBe(line(`
+      SELECT
+        "user"."id",
+        "user"."name",
+        "user"."picture",
+        "user"."createdAt",
+        "user"."updatedAt"
+      FROM "user"
+    `))
+  })
+})

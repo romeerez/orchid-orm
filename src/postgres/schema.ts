@@ -9,14 +9,20 @@ type ColumnMethods<D extends string, Ops extends Operators> = {
   dataType: D,
   operators: Ops,
   isPrimaryKey: boolean
+  isHidden: boolean
   primaryKey<T extends UnknownType>(this: T): T & { isPrimaryKey: true }
+  hidden<T extends UnknownType>(this: T): T & { isHidden: true }
 }
 
 const columnMethods: Omit<ColumnMethods<any, any>, 'dataType' | 'operators'> = {
   isPrimaryKey: false,
+  isHidden: false,
   primaryKey<T extends UnknownType>(this: T): T & { isPrimaryKey: true } {
     return Object.assign(this, { isPrimaryKey: true as true })
   },
+  hidden<T extends UnknownType>(this: T): T & { isHidden: true } {
+    return Object.assign(this, { isHidden: true as true })
+  }
 }
 
 type Column<T extends UnknownType, D extends string, Ops extends Operators> =

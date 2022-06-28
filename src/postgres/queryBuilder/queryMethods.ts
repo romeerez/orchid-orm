@@ -43,24 +43,27 @@ export type SetQuery<
   TableAlias extends string = T['tableAlias'],
   JoinedTables extends JoinedTablesBase = T['joinedTables'],
   Windows extends PropertyKey[] = T['windows'],
+  R = FinalizeQueryResult<T, Result>
 > = Omit<T, 'result' | 'returnType' | 'tableAlias' | 'joinedTables' | 'then' | 'windows'> & {
   result: Result
   returnType: ReturnType
   tableAlias: TableAlias
   joinedTables: JoinedTables
   then: ReturnType extends 'all'
-    ? Then<T, Result[]>
+    ? Then<R[]>
     : ReturnType extends 'one'
-      ? Then<T, Result>
+      ? Then<R>
       : ReturnType extends 'value'
-        ? Then<T, Result>
+        ? Then<R>
         : ReturnType extends 'rows'
-          ? Then<T, Result[keyof Result]>
+          ? Then<R[keyof R]>
           : ReturnType extends 'void'
-            ? Then<T, void>
+            ? Then<void>
             : never
   windows: Windows
 }
+
+export type FinalizeQueryResult<T extends Query, Result> = Result extends AllColumns ? Output<Pick<T['shape'], T['defaultSelectColumns'][number]>> :Result
 
 export type AddQuerySelect<T extends Query, ResultArg> =
   SetQuery<T, T['result'] extends AllColumns ? ResultArg : Spread<[T['result'], ResultArg]>>
@@ -85,33 +88,33 @@ export type SetQueryWindows<T extends Query, W extends PropertyKey[]> =
 
 type Result<T extends Query> = T['result'] extends AllColumns ? T['type'] : T['result']
 
-type Then<T extends Query, Res> = (
+type Then<Res> = <T extends Query>(
   this: T,
   resolve?: (value: Res) => any,
   reject?: (error: any) => any,
 ) => Promise<Res | never>
 
-const thenAll: Then<Query, any[]> = function (resolve, reject) {
+const thenAll: Then<any[]> = function (resolve, reject) {
   return this.adapter.query(this.toSql())
     .then(result => result.rows).then(resolve, reject)
 }
 
-const thenOne: Then<Query, any> = function (resolve, reject) {
+const thenOne: Then<any> = function (resolve, reject) {
   return this.adapter.query(this.toSql())
     .then(result => result.rows[0]).then(resolve, reject)
 }
 
-const thenRows: Then<Query, any[][]> = function (resolve, reject) {
+const thenRows: Then<any[][]> = function (resolve, reject) {
   return this.adapter.arrays(this.toSql())
     .then(result => result.rows).then(resolve, reject)
 }
 
-const thenValue: Then<Query, any> = function (resolve, reject) {
+const thenValue: Then<any> = function (resolve, reject) {
   return this.adapter.arrays(this.toSql())
     .then(result => result.rows[0]?.[0]).then(resolve, reject)
 }
 
-const thenVoid: Then<Query, void> = function (resolve, reject) {
+const thenVoid: Then<void> = function (resolve, reject) {
   return this.adapter.query(this.toSql())
     .then(() => resolve?.(), reject)
 }
@@ -163,7 +166,7 @@ const joinCallbackMethods: JoinCallbackMethods<Query> = {
 }
 
 export class QueryMethods<S extends ColumnsShape> {
-  then!: Then<Query, Output<S>[]>
+  then!: Then<Output<S>[]>
   windows!: PropertyKey[]
 
   all<T extends Query>(this: T): SetQueryReturns<T, 'all'> {
