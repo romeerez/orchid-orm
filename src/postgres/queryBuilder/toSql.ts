@@ -8,16 +8,22 @@ import { Operator } from './operators';
 // quote table or column
 const q = (sql: string) => `"${sql}"`
 // quote column with table or as
-export const qc = (quotedAs: string, column: string) => `${quotedAs}.${q(column)}`
+const qc = (quotedAs: string, column: string) => `${quotedAs}.${q(column)}`
+
+const quoteFullColumn = (fullColumn: string) => {
+  const [table, column] = fullColumn.split('.')
+  return `${q(table)}.${q(column)}`
+}
 
 export type QueryData<T extends Query> = {
   take?: true
   select?: SelectItem<T>[]
   distinct?: Expression<T>[]
+  from?: string | RawExpression
+  join?: JoinArg<T, Query>[]
   and?: WhereItem<T>[]
   or?: WhereItem<T>[][]
   as?: string
-  from?: string | RawExpression
   group?: (keyof T['type'] | RawExpression)[]
   having?: HavingArg<T>[]
   window?: WindowArg<T>[]
@@ -33,11 +39,17 @@ export type SelectItem<T extends Query> =
   | Aggregate<T>
   | { selectAs: Record<string, Expression<T> | Query> }
 
+export type JoinArg<T extends Query, J extends Query> =
+  | [J, keyof J['type'], string, keyof T['type']]
+  | [J, RawExpression]
+  | [J, Query]
+
 export type WhereItem<T extends Query> =
   | Partial<Output<T['shape']>>
   | { [K in keyof T['shape']]?: ColumnOperators<T['shape'], K> | RawExpression }
   | Query
   | RawExpression
+  | [leftFullColumn: string, op: string, rightFullColumn: string]
 
 export type AggregateOptions<T extends Query, As extends string | undefined = any> = {
   as?: As
@@ -143,6 +155,38 @@ export const toSql = <T extends Query>(model: T): string => {
       : q(model.table)
   )
   if (query.as) sql.push('AS', quotedAs)
+
+  if (query.join) {
+    query.join.forEach((item) => {
+      const [join] = item
+      sql.push(`JOIN ${q(join.table)}`)
+
+      let joinAs: string
+      if (join.query?.as) {
+        joinAs = q(join.query.as)
+        sql.push(`AS ${joinAs}`)
+      } else {
+        joinAs = q(join.table)
+      }
+
+      if (item.length === 2) {
+        const [, arg] = item
+        if (isRaw(arg)) {
+          sql.push(`ON ${getRaw(arg)}`)
+          return
+        }
+
+        if (arg.query) {
+          const onConditions = whereConditionsToSql(join, arg.query, joinAs)
+          if (onConditions.length) sql.push('ON', onConditions)
+        }
+        return
+      }
+
+      const [, leftColumn, op, rightColumn] = item
+      sql.push(`ON ${qc(joinAs, leftColumn)} ${op} ${qc(quotedAs, rightColumn as string)}`)
+    })
+  }
 
   const whereConditions = whereConditionsToSql(model, query, quotedAs)
   if (whereConditions.length) sql.push('WHERE', whereConditions)
@@ -289,32 +333,46 @@ const whereConditionsToSql = <T extends Query>(model: T, query: QueryData<T>, qu
       if (item instanceof PostgresModel) {
         const sql = whereConditionsToSql(item, item.query || EMPTY_OBJECT, q(item.table))
         if (sql.length) ands.push(`(${sql})`)
-      } else {
-        for (const key in item) {
-          const value = item[key as keyof typeof item] as object
-          if (typeof value === 'object' && value !== null && value !== undefined) {
-            if (isRaw(value)) {
-              ands.push(`${qc(quotedAs, key)} = ${getRaw(value)}`)
-            } else {
-              const column = model.schema.shape[key]
-              if (!column) {
-                // TODO: custom error classes
-                throw new Error(`Unknown column ${key} provided to condition`)
-              }
+        return
+      }
 
-              for (const op in value) {
-                const operator = column.operators[op]
-                if (!operator) {
-                  // TODO: custom error classes
-                  throw new Error(`Unknown operator ${op} provided to condition`)
-                }
+      if (isRaw(item)) {
+        ands.push(`(${getRaw(item)})`)
+        return
+      }
 
-                ands.push(operator(qc(quotedAs, key), value[op as keyof typeof value]))
-              }
-            }
+      if (Array.isArray(item)) {
+        const leftColumn = quoteFullColumn(item[0])
+        const rightColumn = quoteFullColumn(item[2])
+        const op = item[1]
+        ands.push(`${leftColumn} ${op} ${rightColumn}`)
+        return
+      }
+
+      for (const key in item) {
+        const value = item[key as keyof typeof item] as object
+        if (typeof value === 'object' && value !== null && value !== undefined) {
+          if (isRaw(value)) {
+            ands.push(`${qc(quotedAs, key)} = ${getRaw(value)}`)
           } else {
-            ands.push(`${qc(quotedAs, key)} ${value === null ? 'IS' : '='} ${quote(value)}`)
+            const column = model.schema.shape[key]
+            if (!column) {
+              // TODO: custom error classes
+              throw new Error(`Unknown column ${key} provided to condition`)
+            }
+
+            for (const op in value) {
+              const operator = column.operators[op]
+              if (!operator) {
+                // TODO: custom error classes
+                throw new Error(`Unknown operator ${op} provided to condition`)
+              }
+
+              ands.push(operator(qc(quotedAs, key), value[op as keyof typeof value]))
+            }
           }
+        } else {
+          ands.push(`${qc(quotedAs, key)} ${value === null ? 'IS' : '='} ${quote(value)}`)
         }
       }
     })

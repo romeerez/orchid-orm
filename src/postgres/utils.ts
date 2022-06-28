@@ -39,6 +39,9 @@ type SpreadTwo<L, R> = Id<
 export type Spread<A extends readonly [...any]> = A extends [infer L, ...infer R] ?
   SpreadTwo<L, Spread<R>> : unknown
 
+export type CoalesceString<Left extends string | undefined, Right extends string> =
+  Left extends undefined ? Right : Left
+
 export function applyMixins(derivedCtor: any, constructors: any[]) {
   constructors.forEach((baseCtor) => {
     Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {

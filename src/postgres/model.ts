@@ -21,6 +21,8 @@ export interface Query extends PostgresModel<ColumnsShape, string> {
   result: any
   returnType: QueryReturnType
   then: any
+  tableAlias: any
+  joinedTables: any
 }
 
 export interface PostgresModel<S extends ColumnsShape, Table extends string>
@@ -31,15 +33,17 @@ export class PostgresModel<S extends ColumnsShape, Table extends string> {
 
   returnType: QueryReturnType = 'all'
 
+  query?: QueryData<any>
   shape!: S
   type!: Output<S>
   result!: AllColumns
   table!: Table
+  tableAlias!: undefined
   schema!: TableSchema<S>
   primaryKeys!: any[]
   primaryTypes!: any[]
   windows!: PropertyKey[]
-  query?: QueryData<any>
+  joinedTables!: {}
 }
 
 applyMixins(PostgresModel, [QueryMethods, AggregateMethods])

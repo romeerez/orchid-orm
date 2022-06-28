@@ -2,7 +2,7 @@ import { ColumnsShape, GetTypesOrRaw } from '../schema';
 import { AllColumns, Query, Output, PostgresModelConstructor } from '../model';
 import { HavingArg, OrderBy, QueryData, toSql, UnionArg, WhereItem, WindowArg } from './toSql';
 import { Expression, raw, RawExpression } from './common';
-import { Spread, UnionToArray } from '../utils';
+import { CoalesceString, Spread, UnionToArray } from '../utils';
 
 type QueryDataArrays<T extends Query> = {
   [K in keyof QueryData<T>]: QueryData<T>[K] extends Array<any> ? QueryData<T>[K] : never
@@ -34,14 +34,20 @@ export const pushQueryValue = <T extends Query, K extends keyof QueryDataArrays<
 
 export type QueryReturnType = 'all' | 'one' | 'rows' | 'value' | 'void'
 
+export type JoinedTablesBase = Record<string, ColumnsShape>
+
 export type SetQuery<
   T extends Query = any,
   Result = T['result'],
   ReturnType extends QueryReturnType = T['returnType'],
+  TableAlias extends string = T['tableAlias'],
+  JoinedTables extends JoinedTablesBase = T['joinedTables'],
   Windows extends PropertyKey[] = T['windows'],
-> = Omit<T, 'result' | 'returnType' | 'then' | 'windows'> & {
+> = Omit<T, 'result' | 'returnType' | 'tableAlias' | 'joinedTables' | 'then' | 'windows'> & {
   result: Result
   returnType: ReturnType
+  tableAlias: TableAlias
+  joinedTables: JoinedTables
   then: ReturnType extends 'all'
     ? Then<T, Result[]>
     : ReturnType extends 'one'
@@ -65,8 +71,17 @@ export type SetQueryReturns<T extends Query, R extends QueryReturnType> =
 export type SetQueryReturnsValue<T extends Query, R> =
   SetQuery<T, R, 'value'>
 
+export type SetQueryTableAlias<T extends Query, TableAlias extends string> =
+  SetQuery<T, T['result'], T['returnType'], TableAlias>
+
+export type SetQueryJoinedTables<T extends Query, JoinedTables extends JoinedTablesBase> =
+  SetQuery<T, T['result'], T['returnType'], T['tableAlias'], JoinedTables>
+
+export type AddQueryJoinedTable<T extends Query, J extends Query> =
+  SetQueryJoinedTables<T, Spread<[T['joinedTables'], Record<J['tableAlias'] extends undefined ? J['table'] : J['tableAlias'], J['shape']>]>>
+
 export type SetQueryWindows<T extends Query, W extends PropertyKey[]> =
-  SetQuery<T, T['result'], T['returnType'], W>
+  SetQuery<T, T['result'], T['returnType'], T['tableAlias'], T['joinedTables'], W>
 
 type Result<T extends Query> = T['result'] extends AllColumns ? T['type'] : T['result']
 
@@ -99,6 +114,52 @@ const thenValue: Then<Query, any> = function (resolve, reject) {
 const thenVoid: Then<Query, void> = function (resolve, reject) {
   return this.adapter.query(this.toSql())
     .then(() => resolve?.(), reject)
+}
+
+type FullTableAndJoinedColumns<T extends Query> =
+  | `${CoalesceString<T['tableAlias'], T['table']>}.${Exclude<keyof T['type'], symbol>}`
+  | {
+    [Table in keyof T['joinedTables']]:
+      Table extends symbol ? never : `${Exclude<Table, symbol>}.${Exclude<keyof T['joinedTables'][Table], symbol>}`
+  }[keyof T['joinedTables']]
+
+type JoinCallback<T extends Query, J extends Query> = (q: JoinCallbackQuery<T, J>) => Query
+type JoinCallbackQuery<T extends Query, J extends Query> = AddQueryJoinedTable<J, T> & JoinCallbackMethods<T>
+type JoinCallbackMethods<J extends Query> = {
+  on: On<J>
+  _on: On<J>
+  onOr: On<J>
+  _onOr: On<J>
+}
+
+type On<J extends Query> = <T extends Query & JoinCallbackMethods<J>>(
+  this: T,
+  leftColumn: FullTableAndJoinedColumns<T>,
+  op: string,
+  rightColumn: FullTableAndJoinedColumns<T>,
+) => T
+
+const on: On<Query> = function (leftColumn, op, rightColumn) {
+  return this._on(leftColumn, op, rightColumn)
+}
+
+const _on: On<Query> = function(leftColumn, op, rightColumn) {
+  return pushQueryValue(this, 'and', [leftColumn, op, rightColumn])
+}
+
+const onOr: On<Query> = function (leftColumn, op, rightColumn) {
+  return this._on(leftColumn, op, rightColumn)
+}
+
+const _onOr: On<Query> = function (leftColumn, op, rightColumn) {
+  return pushQueryArray(this, 'or', [[leftColumn, op, rightColumn]])
+}
+
+const joinCallbackMethods: JoinCallbackMethods<Query> = {
+  on,
+  _on,
+  onOr,
+  _onOr,
 }
 
 export class QueryMethods<S extends ColumnsShape> {
@@ -262,12 +323,12 @@ export class QueryMethods<S extends ColumnsShape> {
     return this._where(...args).take()
   }
 
-  as<T extends Query>(this: T, as: string): T {
-    return this.clone()._as(as)
+  as<T extends Query, TableAlias extends string>(this: T, tableAlias: TableAlias): SetQueryTableAlias<T, TableAlias> {
+    return this.clone()._as(tableAlias)
   }
 
-  _as<T extends Query>(this: T, as: string): T {
-    return setQueryValue(this, 'as', as)
+  _as<T extends Query, TableAlias extends string>(this: T, tableAlias: TableAlias): SetQueryTableAlias<T, TableAlias> {
+    return setQueryValue(this, 'as', tableAlias) as SetQueryTableAlias<T, TableAlias>
   }
 
   from<T extends Query>(this: T, from: string | RawExpression): T {
@@ -302,12 +363,12 @@ export class QueryMethods<S extends ColumnsShape> {
     return pushQueryValue(this, 'window', arg) as unknown as SetQueryWindows<T, UnionToArray<keyof W>>
   }
 
-  wrap<T extends Query, Q extends Query>(this: T, query: Q, as = 't'): Q {
+  wrap<T extends Query, Q extends Query, TableAlias extends string = 't'>(this: T, query: Q, as?: TableAlias): SetQueryTableAlias<Q, TableAlias> {
     return this.clone()._wrap(query.clone(), as)
   }
 
-  _wrap<T extends Query, Q extends Query>(this: T, query: Q, as = 't'): Q {
-    return query._as(as)._from(raw(`(${this.toSql()})`))
+  _wrap<T extends Query, Q extends Query, TableAlias extends string = 't'>(this: T, query: Q, as?: TableAlias): SetQueryTableAlias<Q, TableAlias> {
+    return query._as(as || 't')._from(raw(`(${this.toSql()})`)) as SetQueryTableAlias<Q, TableAlias>
   }
 
   json<T extends Query>(this: T): SetQueryReturnsValue<T, string> {
@@ -415,6 +476,39 @@ export class QueryMethods<S extends ColumnsShape> {
   _exists<T extends Query>(this: T): SetQueryReturnsValue<T, { exists: 1 }> {
     const q = setQueryValue(this, 'select', [{ selectAs: { exists: raw('1') } }])
     return q._value<T, { exists: 1 }>()
+  }
+
+  join<T extends Query, J extends Query>(
+    this: T, model: J, ...args:
+      | [leftColumn: keyof J['type'], op: string, rightColumn: keyof T['type']]
+      | [JoinCallback<T, J>]
+      | [RawExpression]
+  ): AddQueryJoinedTable<T, J> {
+    return this.clone()._join(model, ...args)
+  }
+
+  _join<T extends Query, J extends Query>(
+    this: T, model: J, ...args:
+      | [leftColumn: keyof J['type'], op: string, rightColumn: keyof T['type']]
+      | [JoinCallback<T, J>]
+      | [RawExpression]
+  ): AddQueryJoinedTable<T, J> {
+    const [first] = args
+    if (typeof first === 'function') {
+      const q = model.clone()
+      const clone = q.clone
+      q.clone = function <T extends Query>(this: T): T {
+        const cloned = clone.call(q)
+        Object.assign(cloned, joinCallbackMethods)
+        return cloned as T
+      }
+      Object.assign(q, joinCallbackMethods)
+
+      const resultQuery = first(q as unknown as JoinCallbackQuery<T, J>)
+      return pushQueryValue(this, 'join', [model, resultQuery])
+    } else {
+      return pushQueryValue(this, 'join', [model, ...args])
+    }
   }
 }
 

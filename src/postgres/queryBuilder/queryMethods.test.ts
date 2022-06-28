@@ -3,7 +3,7 @@ import { HavingArg } from './toSql';
 import { raw } from './common';
 import { testDb } from '../test-utils/test-db';
 
-const { adapter, user: User, chat: Chat } = testDb
+const { adapter, user: User, chat: Chat, message: Message } = testDb
 
 describe('queryMethods', () => {
   afterAll(() => testDb.destroy())
@@ -579,30 +579,48 @@ describe('exists', () => {
   })
 })
 
-// describe('join', () => {
-//   it('sets join', () => {
-//     const q = User.all()
-//     expect(await q.join('table', 'as', 'on').toSql()).toBe(line(`
-//       SELECT "user".* FROM "user"
-//       JOIN "table" AS "as" ON on
-//     `))
-//     expect(await q.join(Message.where('a').or('b').as('as')).toSql()).toBe(line(`
-//       SELECT "user".* FROM "user"
-//       JOIN "messages" AS "as" ON a OR b
-//     `))
-//     expect(await q.toSql()).toBe('SELECT "user".* FROM "user"')
-//   })
-//
-//   it('has modifier', () => {
-//     const q = User.all()
-//     q._join('table', 'as', 'on')
-//     expect(await q.toSql()).toBe(line(`
-//       SELECT "user".* FROM "user"
-//       JOIN "table" AS "as" ON on
-//     `))
-//   })
-// })
-//
+describe('join', () => {
+  it('can accept left column, op and right column', () => {
+    const q = User.all()
+    expect(q.join(Message, 'authorId', '=', 'id').toSql()).toBe(line(`
+      SELECT "user".* FROM "user"
+      JOIN "message" ON "message"."authorId" = "user"."id"
+    `))
+    expect(q.join(Message.as('as'), 'authorId', '=', 'id').toSql()).toBe(line(`
+      SELECT "user".* FROM "user"
+      JOIN "message" AS "as" ON "as"."authorId" = "user"."id"
+    `))
+    expectQueryNotMutated(q)
+  })
+
+  it('can accept raw sql', () => {
+    const q = User.all()
+    expect(q.join(Message, raw('"authorId" = "user".id')).toSql()).toBe(line(`
+      SELECT "user".* FROM "user"
+      JOIN "message" ON "authorId" = "user".id
+    `))
+    expect(q.join(Message.as('as'), raw('"authorId" = "user".id')).toSql()).toBe(line(`
+      SELECT "user".* FROM "user"
+      JOIN "message" AS "as" ON "authorId" = "user".id
+    `))
+    expectQueryNotMutated(q)
+  })
+
+  it('can accept callback to specify custom conditions', () => {
+    const q = User.all()
+    expect(q.join(Message, (q) => {
+      return q.on('message.authorId', '=', 'user.id')
+        .onOr('message.text', '=', 'user.name')
+    }).toSql()).toBe(line(`
+      SELECT "user".* FROM "user"
+      JOIN "message"
+        ON "message"."authorId" = "user"."id"
+       AND "message"."text" = "user"."name"
+    `))
+    expectQueryNotMutated(q)
+  })
+})
+
 // describe('model with hidden column', () => {
 //   it('selects by default all columns except hidden', () => {
 //     class ModelInterface {
