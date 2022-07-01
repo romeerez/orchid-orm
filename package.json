@@ -30,7 +30,6 @@
       "^.+\\.ts$": "ts-jest"
     }
   },
-  "peerDependencies": {},
   "husky": {
     "hooks": {
       "pre-commit": "tsdx lint"
@@ -51,6 +50,8 @@
   ],
   "devDependencies": {
     "@size-limit/preset-small-lib": "^7.0.8",
+    "@types/jest": "^28.1.3",
+    "@types/node": "^18.0.0",
     "@types/pg": "^8.6.4",
     "@typescript-eslint/eslint-plugin": "^5.30.0",
     "@typescript-eslint/parser": "^5.30.0",
@@ -58,12 +59,15 @@
     "eslint": "^8.18.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.1.0",
+    "fishery": "^2.2.2",
     "husky": "^7.0.4",
     "jest": "^28.1.1",
     "pg": "^8.7.3",
+    "pg-transactional-tests": "^1.0.2",
     "prettier": "^2.7.1",
     "rake-db": "^1.3.1",
     "size-limit": "^7.0.8",
+    "tak": "file:../types-lib-experiment",
     "ts-jest": "^28.0.4",
     "ts-node": "^10.8.1",
     "tsdx": "^0.14.1",

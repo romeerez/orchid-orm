@@ -1,10 +1,10 @@
-import { testDb } from './test-utils/test-db';
+import { db } from './test-utils/test-db';
 
-const User = testDb.user;
+const User = db.user;
 
 describe('postgres model', () => {
   afterAll(() => {
-    testDb.destroy();
+    db.destroy();
   });
 
   describe('.table', () => {
@@ -34,7 +34,7 @@ describe('postgres model', () => {
 
   describe('await model', () => {
     it('should return promise to load records', async () => {
-      const expected = await testDb.adapter
+      const expected = await db.adapter
         .query('SELECT * FROM "user"')
         .then((res) => res.rows);
       const received = await User.all();

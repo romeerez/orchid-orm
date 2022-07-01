@@ -1,5 +1,5 @@
-import { ColumnsShape, GetTypesOrRaw } from '../schema';
-import { AllColumns, Query, Output, PostgresModelConstructor } from '../model';
+import type { ColumnsShape, GetTypesOrRaw } from '../schema';
+import type { AllColumns, Query, Output } from '../model';
 import {
   HavingArg,
   OrderBy,
@@ -70,7 +70,7 @@ export type SetQuery<
   T extends Query = any,
   Result = T['result'],
   ReturnType extends QueryReturnType = T['returnType'],
-  TableAlias extends string = T['tableAlias'],
+  TableAlias extends string | undefined = T['tableAlias'],
   JoinedTables extends JoinedTablesBase = T['joinedTables'],
   Windows extends PropertyKey[] = T['windows'],
   R = FinalizeQueryResult<T, Result>,
@@ -115,10 +115,15 @@ export type SetQueryReturns<
 
 export type SetQueryReturnsValue<T extends Query, R> = SetQuery<T, R, 'value'>;
 
+// export type SetQueryTableAlias<
+//   T extends Query,
+//   TableAlias extends string,
+// > = SetQuery<T, T['result'], T['returnType'], TableAlias>;
+
 export type SetQueryTableAlias<
   T extends Query,
   TableAlias extends string,
-> = SetQuery<T, T['result'], T['returnType'], TableAlias>;
+> = Omit<T, 'tableAlias'> & { tableAlias: TableAlias };
 
 export type SetQueryJoinedTables<
   T extends Query,
@@ -134,7 +139,7 @@ export type AddQueryJoinedTable<
     [
       T['joinedTables'],
       Record<
-        J['tableAlias'] extends undefined ? J['table'] : J['tableAlias'],
+        J['tableAlias'] extends string ? J['tableAlias'] : J['table'],
         J['shape']
       >,
     ]
@@ -157,7 +162,7 @@ type Result<T extends Query> = T['result'] extends AllColumns
   ? T['type']
   : T['result'];
 
-type Then<Res> = <T extends Query>(
+export type Then<Res> = <T extends Query>(
   this: T,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   resolve?: (value: Res) => any,
@@ -201,7 +206,7 @@ const thenVoid: Then<void> = function (resolve, reject) {
   return this.adapter.query(this.toSql()).then(() => resolve?.(), reject);
 };
 
-type FullTableAndJoinedColumns<T extends Query> =
+export type FullTableAndJoinedColumns<T extends Query> =
   | `${CoalesceString<T['tableAlias'], T['table']>}.${Exclude<
       keyof T['type'],
       symbol
@@ -215,14 +220,12 @@ type FullTableAndJoinedColumns<T extends Query> =
           >}`;
     }[keyof T['joinedTables']];
 
-type JoinCallback<T extends Query, J extends Query> = (
-  q: JoinCallbackQuery<T, J>,
-) => Query;
 type JoinCallbackQuery<T extends Query, J extends Query> = AddQueryJoinedTable<
   J,
   T
 > &
   JoinCallbackMethods<T>;
+
 type JoinCallbackMethods<J extends Query> = {
   on: On<J>;
   _on: On<J>;
@@ -260,9 +263,26 @@ const joinCallbackMethods: JoinCallbackMethods<Query> = {
   _onOr,
 };
 
-export class QueryMethods<S extends ColumnsShape> {
-  then!: Then<Output<S>[]>;
+export type JoinArg<
+  T extends Query,
+  Q extends Query,
+  Rel extends keyof T['relations'] | undefined,
+> =
+  | [relation: Rel]
+  | [
+      query: Q,
+      leftColumn: keyof Q['type'],
+      op: string,
+      rightColumn: keyof T['type'],
+    ]
+  | [query: Q, raw: RawExpression]
+  | [query: Q, on: (q: JoinCallbackQuery<T, Q>) => Query];
+
+export class QueryMethods {
+  // then!: Then<Output<S>[]>;
+  then!: Then<any>;
   windows!: PropertyKey[];
+  private __model?: Query;
 
   all<T extends Query>(this: T): SetQueryReturns<T, 'all'> {
     return this.then === thenAll
@@ -335,14 +355,19 @@ export class QueryMethods<S extends ColumnsShape> {
     return q as T & { query: QueryData<T> };
   }
 
-  clone<T extends Query>(this: T): T {
-    const cloned = new (this.constructor as PostgresModelConstructor)(
-      this.adapter,
-    );
-    cloned.table = this.table;
-    cloned.schema = this.schema;
+  clone<T extends Query>(this: T): T & { query: QueryData<T> } {
+    if (!this.__model) {
+      const cloned = Object.create(this);
+      cloned.__model = this;
+      cloned.query = {};
+      return cloned;
+    }
+
+    const cloned = Object.create(this.__model);
+
     cloned.then = this.then;
     cloned.query = {};
+
     if (this.query) {
       for (const key in this.query) {
         const value = this.query[key as keyof QueryData<T>];
@@ -354,7 +379,7 @@ export class QueryMethods<S extends ColumnsShape> {
       }
     }
 
-    return cloned as T;
+    return cloned as unknown as T & { query: QueryData<T> };
   }
 
   toSql(this: Query): string {
@@ -383,8 +408,22 @@ export class QueryMethods<S extends ColumnsShape> {
     T extends Query,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     S extends Record<string, keyof T['type'] | Query | RawExpression<any>>,
-  >(this: T, select: S) {
-    return this.clone()._selectAs(select);
+  >(
+    this: T,
+    select: S,
+  ): AddQuerySelect<
+    T,
+    {
+      [K in keyof S]: S[K] extends keyof T['type']
+        ? T['type'][S[K]]
+        : S[K] extends RawExpression<infer Type>
+        ? Type
+        : S[K] extends Query
+        ? Result<S[K]>
+        : never;
+    }
+  > {
+    return this.clone()._selectAs(select) as any;
   }
 
   _selectAs<
@@ -489,10 +528,11 @@ export class QueryMethods<S extends ColumnsShape> {
     this: T,
     tableAlias: TableAlias,
   ): SetQueryTableAlias<T, TableAlias> {
-    return setQueryValue(this, 'as', tableAlias) as SetQueryTableAlias<
-      T,
-      TableAlias
-    >;
+    return setQueryValue(
+      this,
+      'as',
+      tableAlias,
+    ) as unknown as SetQueryTableAlias<T, TableAlias>;
   }
 
   from<T extends Query>(this: T, from: string | RawExpression): T {
@@ -696,40 +736,48 @@ export class QueryMethods<S extends ColumnsShape> {
     return q._value<T, { exists: 1 }>();
   }
 
-  join<T extends Query, J extends Query>(
+  join<
+    T extends Query,
+    Q extends Query,
+    Rel extends keyof T['relations'] | undefined = undefined,
+  >(
     this: T,
-    model: J,
-    ...args:
-      | [leftColumn: keyof J['type'], op: string, rightColumn: keyof T['type']]
-      | [JoinCallback<T, J>]
-      | [RawExpression]
-  ): AddQueryJoinedTable<T, J> {
-    return this.clone()._join(model, ...args);
+    ...args: JoinArg<T, Q, Rel>
+  ): AddQueryJoinedTable<
+    T,
+    Rel extends keyof T['relations'] ? T['relations'][Rel]['query'] : Q
+  > {
+    return this.clone()._join(...args) as any;
   }
 
-  _join<T extends Query, J extends Query>(
+  _join<
+    T extends Query,
+    Q extends Query,
+    Rel extends keyof T['relations'] | undefined = undefined,
+  >(
     this: T,
-    model: J,
-    ...args:
-      | [leftColumn: keyof J['type'], op: string, rightColumn: keyof T['type']]
-      | [JoinCallback<T, J>]
-      | [RawExpression]
-  ): AddQueryJoinedTable<T, J> {
-    const [first] = args;
-    if (typeof first === 'function') {
+    ...args: JoinArg<T, Q, Rel>
+  ): AddQueryJoinedTable<
+    T,
+    Rel extends keyof T['relations'] ? T['relations'][Rel]['query'] : Q
+  > {
+    if (typeof args[0] === 'object' && typeof args[1] === 'function') {
+      const [model, arg] = args;
       const q = model.clone();
       const clone = q.clone;
-      q.clone = function <T extends Query>(this: T): T {
+      q.clone = function <T extends Query>(
+        this: T,
+      ): T & { query: QueryData<T> } {
         const cloned = clone.call(q);
         Object.assign(cloned, joinCallbackMethods);
-        return cloned as T;
+        return cloned as T & { query: QueryData<T> };
       };
       Object.assign(q, joinCallbackMethods);
 
-      const resultQuery = first(q as unknown as JoinCallbackQuery<T, J>);
+      const resultQuery = arg(q as unknown as JoinCallbackQuery<T, Q>);
       return pushQueryValue(this, 'join', [model, resultQuery]);
     } else {
-      return pushQueryValue(this, 'join', [model, ...args]);
+      return pushQueryValue(this, 'join', args);
     }
   }
 }

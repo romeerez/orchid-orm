@@ -1,13 +1,13 @@
 import { expectQueryNotMutated, line } from '../test-utils/test-utils';
 import { HavingArg } from './toSql';
 import { raw } from './common';
-import { createPg, testDb } from '../test-utils/test-db';
+import { createPg, db } from '../test-utils/test-db';
 import { model } from '../model';
 
-const { adapter, user: User, chat: Chat, message: Message } = testDb;
+const { adapter, user: User, chat: Chat, message: Message } = db;
 
 describe('queryMethods', () => {
-  afterAll(() => testDb.destroy());
+  afterAll(() => db.destroy());
 
   describe('.clone', () => {
     it('should return new object with the same data structures', async () => {

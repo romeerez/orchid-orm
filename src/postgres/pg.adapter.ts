@@ -1,7 +1,7 @@
 import { Pool, PoolConfig, QueryResultRow } from 'pg';
-import { SqlAdapter } from '../sql/sql.types';
+import { PostgresAdapter } from './orm';
 
-export const Pg = (config: PoolConfig): SqlAdapter => {
+export const Pg = (config: PoolConfig): PostgresAdapter => {
   const pool = new Pool(config);
 
   return {

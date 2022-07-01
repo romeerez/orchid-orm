@@ -1,4 +1,12 @@
 import { Query } from '../model';
+import { dbClient } from './test-db';
+import { quote } from '../queryBuilder/quote';
+import {
+  patchPgForTransactions,
+  rollbackTransaction,
+  startTransaction,
+  unpatchPgForTransactions,
+} from 'pg-transactional-tests';
 
 export type AssertEqual<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]
@@ -11,4 +19,39 @@ export const line = (s: string) =>
 
 export const expectQueryNotMutated = (q: Query) => {
   expect(q.toSql()).toBe(`SELECT "${q.table}".* FROM "${q.table}"`);
+};
+
+export const insert = async <
+  T extends Record<string, unknown> & { id: number },
+>(
+  table: string,
+  record: T,
+): Promise<T> => {
+  const columns = Object.keys(record);
+  const result = await dbClient.query<{ id: number }>(
+    `INSERT INTO "${table}"(${columns
+      .map((column) => `"${column}"`)
+      .join(', ')}) VALUES (${columns
+      .map((column) => quote(record[column]))
+      .join(', ')}) RETURNING "id"`,
+  );
+
+  record.id = result.rows[0].id;
+  return record;
+};
+
+export const useTestDatabase = () => {
+  beforeAll(() => {
+    patchPgForTransactions();
+  });
+  beforeEach(async () => {
+    await startTransaction(dbClient);
+  });
+  afterEach(async () => {
+    await rollbackTransaction(dbClient);
+  });
+  afterAll(async () => {
+    unpatchPgForTransactions();
+    await dbClient.end();
+  });
 };

@@ -1,6 +1,7 @@
 import { model } from '../model';
 
-export class User extends model({
+export type User = UserModel['type'];
+export class UserModel extends model({
   table: 'user',
   schema: (t) => ({
     id: t.serial().primaryKey(),
@@ -12,7 +13,8 @@ export class User extends model({
   }),
 }) {}
 
-export class Profile extends model({
+export type Profile = ProfileModel['type'];
+export class ProfileModel extends model({
   table: 'profile',
   schema: (t) => ({
     id: t.serial().primaryKey(),
@@ -21,9 +23,12 @@ export class Profile extends model({
     createdAt: t.timestamp(),
     updatedAt: t.timestamp(),
   }),
-}) {}
+}) {
+  user = this.belongsTo(() => UserModel);
+}
 
-export class Chat extends model({
+export type Chat = ChatModel['type'];
+export class ChatModel extends model({
   table: 'chat',
   schema: (t) => ({
     id: t.serial().primaryKey(),
@@ -33,7 +38,8 @@ export class Chat extends model({
   }),
 }) {}
 
-export class ChatUser extends model({
+export type ChatUser = ChatUserModel['type'];
+export class ChatUserModel extends model({
   table: 'chatUser',
   schema: (t) => ({
     id: t.serial().primaryKey(),
@@ -44,7 +50,8 @@ export class ChatUser extends model({
   }),
 }) {}
 
-export class Message extends model({
+export type Message = MessageModel['type'];
+export class MessageModel extends model({
   table: 'message',
   schema: (t) => ({
     id: t.serial().primaryKey(),

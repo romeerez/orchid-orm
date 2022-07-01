@@ -1,26 +1,31 @@
-import { Query, PostgresModel, Output } from '../model';
+import { Query, Output } from '../model';
 import { quote } from './quote';
 import { Expression, getRaw, isRaw, RawExpression } from './common';
 import { ColumnsShape } from '../schema';
 import { Aggregate1ArgumentTypes } from './aggregateMethods';
 import { Operator } from './operators';
+import type { Relation } from '../relations/relations';
 
 // quote table or column
 const q = (sql: string) => `"${sql}"`;
 // quote column with table or as
 const qc = (quotedAs: string, column: string) => `${quotedAs}.${q(column)}`;
 
-const quoteFullColumn = (fullColumn: string) => {
-  const [table, column] = fullColumn.split('.');
-  return `${q(table)}.${q(column)}`;
+const quoteFullColumn = (quotedAs: string, fullColumn: string) => {
+  const index = fullColumn.indexOf('.');
+  if (index === -1) {
+    return `${quotedAs}.${q(fullColumn)}`;
+  } else {
+    return `${q(fullColumn.slice(0, index))}.${q(fullColumn.slice(index + 1))}`;
+  }
 };
 
-export type QueryData<T extends Query> = {
+export type QueryData<T extends Query = Query> = {
   take?: true;
   select?: SelectItem<T>[];
   distinct?: Expression<T>[];
   from?: string | RawExpression;
-  join?: JoinArg<T, Query>[];
+  join?: JoinItem<T, Query, keyof T['relations']>[];
   and?: WhereItem<T>[];
   or?: WhereItem<T>[][];
   as?: string;
@@ -39,10 +44,20 @@ export type SelectItem<T extends Query> =
   | Aggregate<T>
   | { selectAs: Record<string, Expression<T> | Query> };
 
-export type JoinArg<T extends Query, J extends Query> =
-  | [J, keyof J['type'], string, keyof T['type']]
-  | [J, RawExpression]
-  | [J, Query];
+export type JoinItem<
+  T extends Query,
+  Q extends Query,
+  Rel extends keyof T['relations'],
+> =
+  | [relation: Rel]
+  | [
+      query: Q,
+      leftColumn: keyof Q['type'],
+      op: string,
+      rightColumn: keyof T['type'],
+    ]
+  | [query: Q, raw: RawExpression]
+  | [query: Q, on: Query];
 
 export type WhereItem<T extends Query> =
   | Partial<Output<T['shape']>>
@@ -194,7 +209,29 @@ export const toSql = <T extends Query>(model: T): string => {
 
   if (query.join) {
     query.join.forEach((item) => {
-      const [join] = item;
+      const [first] = item;
+      if (typeof first !== 'object') {
+        const { key, query, joinQuery } = model.relations[first] as Relation;
+
+        sql.push(`JOIN ${q(query.table)}`);
+
+        const as = query.query?.as || key;
+        if (as !== query.table) {
+          sql.push(`AS ${q(as as string)}`);
+        }
+
+        const onConditions = whereConditionsToSql(
+          query,
+          joinQuery.query,
+          quotedAs,
+          q(as as string),
+        );
+        if (onConditions.length) sql.push('ON', onConditions);
+
+        return;
+      }
+
+      const join = first;
       sql.push(`JOIN ${q(join.table)}`);
 
       let joinAs: string;
@@ -217,15 +254,15 @@ export const toSql = <T extends Query>(model: T): string => {
           if (onConditions.length) sql.push('ON', onConditions);
         }
         return;
+      } else if (item.length === 4) {
+        const [, leftColumn, op, rightColumn] = item;
+        sql.push(
+          `ON ${qc(joinAs, leftColumn)} ${op} ${qc(
+            quotedAs,
+            rightColumn as string,
+          )}`,
+        );
       }
-
-      const [, leftColumn, op, rightColumn] = item;
-      sql.push(
-        `ON ${qc(joinAs, leftColumn)} ${op} ${qc(
-          quotedAs,
-          rightColumn as string,
-        )}`,
-      );
     });
   }
 
@@ -404,6 +441,7 @@ const whereConditionsToSql = <T extends Query>(
   model: T,
   query: QueryData<T>,
   quotedAs: string,
+  otherTableQuotedAs: string = quotedAs,
 ): string => {
   const or =
     query.and && query.or
@@ -417,11 +455,12 @@ const whereConditionsToSql = <T extends Query>(
   or.forEach((and) => {
     const ands: string[] = [];
     and.forEach((item) => {
-      if (item instanceof PostgresModel) {
+      if ('prototype' in item) {
+        const query = item as Query;
         const sql = whereConditionsToSql(
-          item,
-          item.query || EMPTY_OBJECT,
-          q(item.table),
+          query,
+          query.query || EMPTY_OBJECT,
+          q(query.table),
         );
         if (sql.length) ands.push(`(${sql})`);
         return;
@@ -433,15 +472,15 @@ const whereConditionsToSql = <T extends Query>(
       }
 
       if (Array.isArray(item)) {
-        const leftColumn = quoteFullColumn(item[0]);
-        const rightColumn = quoteFullColumn(item[2]);
+        const leftColumn = quoteFullColumn(quotedAs, item[0]);
+        const rightColumn = quoteFullColumn(otherTableQuotedAs, item[2]);
         const op = item[1];
         ands.push(`${leftColumn} ${op} ${rightColumn}`);
         return;
       }
 
       for (const key in item) {
-        const value = item[key as keyof typeof item] as object;
+        const value = (item as Record<string, object>)[key];
         if (
           typeof value === 'object' &&
           value !== null &&

@@ -54,8 +54,8 @@ export const dataTypes = {
   smallint: () => column(t.number(), 'smallint', Operators.number),
   smallserial: () => column(t.number(), 'smallserial', Operators.number),
   time: () => column(t.number(), 'time', Operators.time),
-  timestamp: () => column(t.number(), 'timestamp', Operators.number),
-  timestamptz: () => column(t.number(), 'timestamptz', Operators.number),
+  timestamp: () => column(t.date(), 'timestamp', Operators.date),
+  timestamptz: () => column(t.date(), 'timestamptz', Operators.date),
   binary: () => column(t.string(), 'binary', Operators.any),
   serial: () => column(t.number(), 'serial', Operators.number),
 };
@@ -94,6 +94,7 @@ export type GetPrimaryKeys<S extends ColumnsShape> = UnionToArray<
   S,
   { [K in keyof S]: S[K] extends { isPrimaryKey: true } ? K : never }[keyof S]
 >;
+
 export type GetPrimaryTypes<
   S extends ColumnsShape,
   Keys extends [...(keyof S | string)[]],
