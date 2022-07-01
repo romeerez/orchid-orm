@@ -1,5 +1,5 @@
-import { createPg } from './test-utils/test-db';
-import { UserModel } from './test-utils/test-models';
+import { createPg } from '../common/test-utils/test-db';
+import { UserModel } from '../common/test-utils/test-models';
 
 describe('adapter', () => {
   it('should run query and close connection by calling .destroy()', async () => {

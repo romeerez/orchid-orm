@@ -1,5 +1,17 @@
-import { Pool, PoolConfig, QueryResultRow } from 'pg';
-import { PostgresAdapter } from './orm';
+import { Pool, PoolConfig } from 'pg';
+
+export interface QueryResultRow {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [column: string]: any;
+}
+
+export type PostgresAdapter = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  query<T extends QueryResultRow = any>(query: string): Promise<{ rows: T[] }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  arrays<R extends any[] = any[]>(query: string): Promise<{ rows: R[] }>;
+  destroy(): Promise<void>;
+};
 
 export const Pg = (config: PoolConfig): PostgresAdapter => {
   const pool = new Pool(config);

@@ -1,5 +1,3 @@
-import type { ColumnsShape, GetTypesOrRaw } from '../schema';
-import type { AllColumns, Query, Output } from '../model';
 import {
   HavingArg,
   OrderBy,
@@ -10,7 +8,8 @@ import {
   WindowArg,
 } from './toSql';
 import { Expression, raw, RawExpression } from './common';
-import { CoalesceString, Spread, UnionToArray } from '../utils';
+import { AllColumns, ColumnsShape, Output, Query } from './query';
+import { CoalesceString, GetTypesOrRaw, Spread, UnionToArray } from './utils';
 
 type QueryDataArrays<T extends Query> = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -356,14 +355,14 @@ export class QueryMethods {
   }
 
   clone<T extends Query>(this: T): T & { query: QueryData<T> } {
-    if (!this.__model) {
-      const cloned = Object.create(this);
+    let cloned;
+    if (this.__model) {
+      cloned = Object.create(this.__model);
+      cloned.__model = this.__model;
+    } else {
+      cloned = Object.create(this);
       cloned.__model = this;
-      cloned.query = {};
-      return cloned;
     }
-
-    const cloned = Object.create(this.__model);
 
     cloned.then = this.then;
     cloned.query = {};

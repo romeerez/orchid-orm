@@ -1,4 +1,3 @@
-import { Query } from '../model';
 import {
   BooleanExpression,
   Expression,
@@ -13,6 +12,7 @@ import {
   pushQueryValue,
   SetQueryReturnsValue,
 } from './queryMethods';
+import { Query } from './query';
 
 const allColumns = raw('*');
 

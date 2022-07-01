@@ -1,5 +1,7 @@
 import { dataTypes, tableSchema } from './schema';
-import { AssertEqual } from './test-utils/test-utils';
+import { AssertEqual, line } from '../common/test-utils/test-utils';
+import { model } from './model';
+import { createPg } from '../common/test-utils/test-db';
 
 describe('postgres dataTypes', () => {
   describe('column types', () => {
@@ -122,5 +124,38 @@ describe('postgres dataTypes', () => {
         expect(schema.getPrimaryKeys()).toEqual(['a', 'b']);
       });
     });
+  });
+});
+
+describe('model with hidden column', () => {
+  it('selects by default all columns except hidden', () => {
+    class User extends model({
+      table: 'user',
+      schema: (t) => ({
+        id: t.serial().primaryKey(),
+        name: t.text(),
+        password: t.text().hidden(),
+        picture: t.text().nullable(),
+        createdAt: t.timestamp(),
+        updatedAt: t.timestamp(),
+      }),
+    }) {}
+
+    const db = createPg({
+      user: User,
+    });
+
+    const q = db.user.all();
+    expect(q.toSql()).toBe(
+      line(`
+      SELECT
+        "user"."id",
+        "user"."name",
+        "user"."picture",
+        "user"."createdAt",
+        "user"."updatedAt"
+      FROM "user"
+    `),
+    );
   });
 });

@@ -1,6 +1,6 @@
-import { expectQueryNotMutated, line } from '../test-utils/test-utils';
+import { expectQueryNotMutated, line } from '../common/test-utils/test-utils';
 import { raw } from './common';
-import { db } from '../test-utils/test-db';
+import { db } from '../common/test-utils/test-db';
 
 const User = db.user;
 

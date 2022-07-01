@@ -1,3 +1,14 @@
+import { RawExpression } from './common';
+
+export type GetTypesOrRaw<T extends [...unknown[]]> = T extends [
+  infer Head,
+  ...infer Tail,
+]
+  ? [GetTypeOrRaw<Head>, ...GetTypesOrRaw<Tail>]
+  : [];
+
+export type GetTypeOrRaw<T> = T | RawExpression;
+
 export type ValueOf<T extends object> = T[keyof T];
 
 // credits goes to https://stackoverflow.com/a/50375286

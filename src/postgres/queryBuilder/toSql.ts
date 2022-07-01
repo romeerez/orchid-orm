@@ -1,10 +1,8 @@
-import { Query, Output } from '../model';
 import { quote } from './quote';
 import { Expression, getRaw, isRaw, RawExpression } from './common';
-import { ColumnsShape } from '../schema';
 import { Aggregate1ArgumentTypes } from './aggregateMethods';
 import { Operator } from './operators';
-import type { Relation } from '../relations/relations';
+import { ColumnsShape, Output, Query } from './query';
 
 // quote table or column
 const q = (sql: string) => `"${sql}"`;
@@ -25,7 +23,7 @@ export type QueryData<T extends Query = Query> = {
   select?: SelectItem<T>[];
   distinct?: Expression<T>[];
   from?: string | RawExpression;
-  join?: JoinItem<T, Query, keyof T['relations']>[];
+  join?: JoinItem[];
   and?: WhereItem<T>[];
   or?: WhereItem<T>[][];
   as?: string;
@@ -44,20 +42,11 @@ export type SelectItem<T extends Query> =
   | Aggregate<T>
   | { selectAs: Record<string, Expression<T> | Query> };
 
-export type JoinItem<
-  T extends Query,
-  Q extends Query,
-  Rel extends keyof T['relations'],
-> =
-  | [relation: Rel]
-  | [
-      query: Q,
-      leftColumn: keyof Q['type'],
-      op: string,
-      rightColumn: keyof T['type'],
-    ]
-  | [query: Q, raw: RawExpression]
-  | [query: Q, on: Query];
+export type JoinItem =
+  | [relation: string]
+  | [query: Query, leftColumn: string, op: string, rightColumn: string]
+  | [query: Query, raw: RawExpression]
+  | [query: Query, on: Query];
 
 export type WhereItem<T extends Query> =
   | Partial<Output<T['shape']>>
@@ -211,7 +200,7 @@ export const toSql = <T extends Query>(model: T): string => {
     query.join.forEach((item) => {
       const [first] = item;
       if (typeof first !== 'object') {
-        const { key, query, joinQuery } = model.relations[first] as Relation;
+        const { key, query, joinQuery } = model.relations[first];
 
         sql.push(`JOIN ${q(query.table)}`);
 
@@ -298,7 +287,7 @@ export const toSql = <T extends Query>(model: T): string => {
               if (
                 !aggregateOptionNames.includes(op as keyof AggregateOptions<T>)
               ) {
-                const operator = model.schema.shape[column].operators[
+                const operator = model.shape[column].operators[
                   op
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 ] as Operator<any>;
@@ -455,7 +444,7 @@ const whereConditionsToSql = <T extends Query>(
   or.forEach((and) => {
     const ands: string[] = [];
     and.forEach((item) => {
-      if ('prototype' in item) {
+      if ('prototype' in item || '__model' in item) {
         const query = item as Query;
         const sql = whereConditionsToSql(
           query,
@@ -489,7 +478,7 @@ const whereConditionsToSql = <T extends Query>(
           if (isRaw(value)) {
             ands.push(`${qc(quotedAs, key)} = ${getRaw(value)}`);
           } else {
-            const column = model.schema.shape[key];
+            const column = model.shape[key];
             if (!column) {
               // TODO: custom error classes
               throw new Error(`Unknown column ${key} provided to condition`);

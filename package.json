@@ -22,9 +22,12 @@
     "lint:fix": "eslint \"src/**/*.ts\" --fix"
   },
   "jest": {
-    "globalSetup": "./jest.setup.ts",
+    "globalSetup": "./jest-global-setup.ts",
     "setupFiles": [
       "dotenv/config"
+    ],
+    "setupFilesAfterEnv": [
+      "./jest-setup.ts"
     ],
     "transform": {
       "^.+\\.ts$": "ts-jest"

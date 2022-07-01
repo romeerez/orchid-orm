@@ -1,7 +1,6 @@
 import { t } from 'tak';
-import { Operators } from './queryBuilder/operators';
-import { UnionToIntersection } from './utils';
-import { RawExpression } from './queryBuilder/common';
+import { Operators } from '../queryBuilder/operators';
+import { UnionToIntersection } from '../queryBuilder/utils';
 
 type UnknownType = t.TakType<unknown>;
 
@@ -111,15 +110,6 @@ type GetTypesFromKeys<
   : [];
 
 type GetTypeFromKey<S extends ColumnsShape, T extends keyof S> = S[T]['output'];
-
-export type GetTypesOrRaw<T extends [...unknown[]]> = T extends [
-  infer Head,
-  ...infer Tail,
-]
-  ? [GetTypeOrRaw<Head>, ...GetTypesOrRaw<Tail>]
-  : [];
-
-type GetTypeOrRaw<T> = T | RawExpression;
 
 const schemaMethods = {
   getPrimaryKeys<T extends t.TakObject<ColumnsShape>>(

@@ -1,5 +1,5 @@
-import { line } from '../test-utils/test-utils';
-import { db } from '../test-utils/test-db';
+import { line } from '../common/test-utils/test-utils';
+import { db } from '../common/test-utils/test-db';
 
 const User = db.user;
 

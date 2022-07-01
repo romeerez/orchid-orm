@@ -1,4 +1,4 @@
-import { Query } from '../model';
+import { Query } from './query';
 
 export type RawExpression<R = unknown> = { __raw: string; __type: R };
 

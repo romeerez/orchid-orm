@@ -1,4 +1,4 @@
-import { db } from './test-utils/test-db';
+import { db } from '../common/test-utils/test-db';
 
 const User = db.user;
 

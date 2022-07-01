@@ -1,8 +1,7 @@
-import { expectQueryNotMutated, line } from '../test-utils/test-utils';
+import { expectQueryNotMutated, line } from '../common/test-utils/test-utils';
 import { HavingArg } from './toSql';
 import { raw } from './common';
-import { createPg, db } from '../test-utils/test-db';
-import { model } from '../model';
+import { db } from '../common/test-utils/test-db';
 
 const { adapter, user: User, chat: Chat, message: Message } = db;
 
@@ -216,10 +215,6 @@ describe('queryMethods', () => {
         SELECT "user".* FROM "user" WHERE "user"."id" = 1
       `),
       );
-      // TODO: condition for related table
-      // expect(q.where({ a: { b: 1 }}).toSql()).toBe(line(`
-      //   SELECT "user".* FROM "user" WHERE "a"."b" = 1
-      // `))
       expect(
         q.where({ id: 1 }, q.where({ id: 2 }).or({ id: 3, name: 'n' })).toSql(),
       ).toBe(
@@ -716,38 +711,5 @@ describe('join', () => {
     `),
     );
     expectQueryNotMutated(q);
-  });
-});
-
-describe('model with hidden column', () => {
-  it('selects by default all columns except hidden', () => {
-    class User extends model({
-      table: 'user',
-      schema: (t) => ({
-        id: t.serial().primaryKey(),
-        name: t.text(),
-        password: t.text().hidden(),
-        picture: t.text().nullable(),
-        createdAt: t.timestamp(),
-        updatedAt: t.timestamp(),
-      }),
-    }) {}
-
-    const db = createPg({
-      user: User,
-    });
-
-    const q = db.user.all();
-    expect(q.toSql()).toBe(
-      line(`
-      SELECT
-        "user"."id",
-        "user"."name",
-        "user"."picture",
-        "user"."createdAt",
-        "user"."updatedAt"
-      FROM "user"
-    `),
-    );
   });
 });

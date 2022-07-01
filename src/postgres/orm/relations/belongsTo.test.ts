@@ -1,7 +1,7 @@
-import { db as db } from '../test-utils/test-db';
-import { line, useTestDatabase } from '../test-utils/test-utils';
-import { userFactory } from '../test-utils/user.factory';
-import { profileFactory } from '../test-utils/profile.factory';
+import { db as db } from '../../common/test-utils/test-db';
+import { line, useTestDatabase } from '../../common/test-utils/test-utils';
+import { userFactory } from '../../common/test-utils/user.factory';
+import { profileFactory } from '../../common/test-utils/profile.factory';
 
 describe('belongsTo', () => {
   useTestDatabase();

@@ -1,27 +1,12 @@
-import {
-  PostgresModelConstructor,
-  PostgresModelConstructors,
-  Query,
-} from './model';
+import { PostgresModelConstructor, PostgresModelConstructors } from './model';
 import {
   MapRelationMethods,
   ModelOrQuery,
   Relations,
 } from './relations/relations';
 import { BelongsTo } from './relations/belongsTo';
-
-export interface QueryResultRow {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [column: string]: any;
-}
-
-export type PostgresAdapter = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  query<T extends QueryResultRow = any>(query: string): Promise<{ rows: T[] }>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  arrays<R extends any[] = any[]>(query: string): Promise<{ rows: R[] }>;
-  destroy(): Promise<void>;
-};
+import { Query } from '../queryBuilder/query';
+import { PostgresAdapter } from '../queryBuilder/adapter';
 
 type PostgresORM<T extends PostgresModelConstructors> = {
   [K in keyof T]: MapRelationMethods<InstanceType<T[K]>>;
@@ -47,7 +32,7 @@ export const PostgresOrm =
     }
 
     for (const key in models) {
-      const model = result[key] as MapRelationMethods<Query>;
+      const model = result[key] as unknown as MapRelationMethods<Query>;
       model.relations = {} as Relations<Query>;
 
       for (const prop in model) {
@@ -63,7 +48,7 @@ export const PostgresOrm =
               : (modelOrQuery as Query);
 
           if (item instanceof BelongsTo) {
-            item.applyToModel(model, query, prop);
+            item.applyToModel(model as unknown as Query, query, prop);
           }
         }
       }
@@ -78,7 +63,7 @@ const modelToQuery = (
 ): Query => {
   for (const key in result) {
     if (result[key] instanceof model) {
-      return result[key];
+      return result[key] as unknown as Query;
     }
   }
   throw new Error(`Cannot find model for ${model.name}`);

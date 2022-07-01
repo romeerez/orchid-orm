@@ -1,6 +1,6 @@
 import { ClientConfig, Client } from 'pg';
-import { PostgresOrm } from '../orm';
-import { Pg } from '../pg.adapter';
+import { PostgresOrm } from '../../orm/orm';
+import { Pg } from '../../queryBuilder/adapter';
 import {
   ChatModel,
   ChatUserModel,

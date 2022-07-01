@@ -1,12 +1,13 @@
-import { PostgresModelConstructor, Query } from '../model';
-import { SetQueryReturns } from '../queryBuilder/queryMethods';
+import { PostgresModelConstructor } from '../model';
+import { SetQueryReturns } from '../../queryBuilder/queryMethods';
 import { BelongsTo } from './belongsTo';
-import { QueryData } from '../queryBuilder/toSql';
+import { QueryData } from '../../queryBuilder/toSql';
+import { Query } from '../../queryBuilder/query';
 
 export type ModelOrQuery = PostgresModelConstructor | Query;
 
 export type ModelOrQueryToQuery<T extends ModelOrQuery> =
-  T extends PostgresModelConstructor ? MapRelationMethods<InstanceType<T>> : T;
+  T extends PostgresModelConstructor ? InstanceType<T> : T;
 
 export type RelationType = 'belongsTo';
 
@@ -47,9 +48,17 @@ export type MapRelationMethods<T extends Query> = Omit<
   relations: Relations<T>;
 };
 
-export type Relations<T extends Query> = {
-  [K in keyof T]: T[K] extends RelationThunk ? Relation<K, T[K]> : never;
-};
+export type Relations<
+  T extends Query,
+  R = {
+    [K in keyof T]: T[K] extends RelationThunk ? Relation<K, T[K]> : never;
+  },
+> = Pick<
+  R,
+  {
+    [K in keyof R]: R[K] extends Relation ? K : never;
+  }[keyof R]
+>;
 
 export class RelationMethods {
   belongsTo<
