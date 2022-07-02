@@ -1,7 +1,7 @@
 import { expectQueryNotMutated, line } from '../common/test-utils/test-utils';
-import { HavingArg } from './toSql';
 import { raw } from './common';
 import { db } from '../common/test-utils/test-db';
+import { HavingArg } from './sql/types';
 
 const { adapter, user: User, chat: Chat, message: Message } = db;
 

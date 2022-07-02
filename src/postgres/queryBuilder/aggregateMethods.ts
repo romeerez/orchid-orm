@@ -6,19 +6,19 @@ import {
   raw,
   StringExpression,
 } from './common';
-import { AggregateArg, AggregateOptions } from './toSql';
 import {
   AddQuerySelect,
   pushQueryValue,
   SetQueryReturnsValue,
 } from './queryMethods';
 import { Query } from './query';
+import { AggregateArg, AggregateOptions } from './sql/types';
 
 const allColumns = raw('*');
 
 // 1 in the name means only methods which takes 1 argument are listed here
 // only such one argument methods are available in .having method
-export type Aggregate1ArgumentTypes<T extends Query, R = unknown> = {
+export type Aggregate1ArgumentTypes<T extends Query = Query, R = unknown> = {
   count: Expression<T, R>;
   avg: NumberExpression<T, R>;
   min: Expression<T, R>;

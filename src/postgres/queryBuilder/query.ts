@@ -1,8 +1,8 @@
 import { QueryMethods, QueryReturnType } from './queryMethods';
 import { AggregateMethods } from './aggregateMethods';
-import { QueryData } from './toSql';
 import { PostgresAdapter } from './adapter';
 import { Operators } from './operators';
+import { QueryData } from './sql/types';
 
 export type ColumnsShape = Record<
   string,

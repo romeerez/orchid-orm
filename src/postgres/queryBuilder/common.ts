@@ -2,7 +2,7 @@ import { Query } from './query';
 
 export type RawExpression<R = unknown> = { __raw: string; __type: R };
 
-export type Expression<T extends Query, R = unknown> =
+export type Expression<T extends Query = Query, R = unknown> =
   | keyof T['type']
   | RawExpression<R>;
 
