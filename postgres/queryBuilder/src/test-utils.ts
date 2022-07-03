@@ -1,6 +1,13 @@
 import { Query } from './query';
 import { Adapter } from './adapter';
 import { dbConstructor } from './db';
+import {
+  patchPgForTransactions,
+  rollbackTransaction,
+  startTransaction,
+  unpatchPgForTransactions,
+} from 'pg-transactional-tests';
+import { dbClient } from '../../orm/src/test-utils/test-db';
 
 export const adapter = Adapter({ connectionString: process.env.DATABASE_URL });
 
@@ -51,3 +58,19 @@ export type AssertEqual<T, Expected> = [T] extends [Expected]
     ? true
     : false
   : false;
+
+export const useTestDatabase = () => {
+  beforeAll(() => {
+    patchPgForTransactions();
+  });
+  beforeEach(async () => {
+    await startTransaction(dbClient);
+  });
+  afterEach(async () => {
+    await rollbackTransaction(dbClient);
+  });
+  afterAll(async () => {
+    unpatchPgForTransactions();
+    await dbClient.end();
+  });
+};

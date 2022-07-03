@@ -25,9 +25,9 @@ export const toSql = (model: Query): string => {
   sql.push(
     'FROM',
     query.from
-      ? typeof query.from === 'object'
+      ? isRaw(query.from)
         ? getRaw(query.from)
-        : q(query.from)
+        : `(${query.from.toSql()})`
       : q(model.table),
   );
 

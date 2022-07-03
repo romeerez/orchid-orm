@@ -3,17 +3,17 @@ import { HavingArg, QueryData } from './sql/types';
 import {
   line,
   expectQueryNotMutated,
-  db,
   adapter,
   User,
   Profile,
   Chat,
   Message,
   AssertEqual,
+  useTestDatabase,
 } from './test-utils';
 
 describe('queryMethods', () => {
-  afterAll(() => db.destroy());
+  useTestDatabase();
 
   describe('.clone', () => {
     it('should return new object with the same data structures', async () => {
@@ -93,7 +93,8 @@ describe('queryMethods', () => {
   describe('value', () => {
     it('returns a first value', async () => {
       const received = await User.from(
-        raw(`(VALUES ('one')) "user"(a)`),
+        raw(`(VALUES ('one')) "user"(one)`),
+        false,
       ).value();
       expect(received).toBe('one');
     });
@@ -494,17 +495,7 @@ describe('queryMethods', () => {
   });
 
   describe('from', () => {
-    it('changes from', () => {
-      const q = User.all();
-      expect(q.as('t').from('profile').toSql()).toBe(
-        line(`
-        SELECT "t".* FROM "profile" AS "t"
-      `),
-      );
-      expectQueryNotMutated(q);
-    });
-
-    it('should accept raw', () => {
+    it('should accept raw parameter', () => {
       const q = User.all();
       expect(q.as('t').from(raw('profile')).toSql()).toBe(
         line(`
@@ -513,12 +504,10 @@ describe('queryMethods', () => {
       );
       expectQueryNotMutated(q);
     });
-  });
 
-  describe('wrap', () => {
-    it('wraps query with another', () => {
+    it('should accept query parameter', () => {
       const q = User.all();
-      expect(q.select('name').wrap(User.select('name')).toSql()).toBe(
+      expect(q.select('name').from(User.select('name')).toSql()).toBe(
         'SELECT "t"."name" FROM (SELECT "user"."name" FROM "user") AS "t"',
       );
       expectQueryNotMutated(q);
@@ -527,7 +516,7 @@ describe('queryMethods', () => {
     it('accept `as` parameter', () => {
       const q = User.all();
       expect(
-        q.select('name').wrap(User.select('name'), 'wrapped').toSql(),
+        q.select('name').from(User.select('name'), 'wrapped').toSql(),
       ).toBe(
         'SELECT "wrapped"."name" FROM (SELECT "user"."name" FROM "user") AS "wrapped"',
       );
@@ -540,11 +529,11 @@ describe('queryMethods', () => {
       const q = User.all();
       expect(q.json().toSql()).toBe(
         line(`
-        SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
-        FROM (
-          SELECT "user".* FROM "user"
-        ) AS "t"
-      `),
+          SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+          FROM (
+            SELECT "user".* FROM "user"
+          ) AS "t"
+        `),
       );
       expectQueryNotMutated(q);
     });
@@ -708,9 +697,8 @@ describe('window', () => {
       query = query[
         (what + 'All') as 'unionAll' | 'intersectAll' | 'exceptAll'
       ](raw('SELECT 2'));
-      query = query.wrap(User.select('id'));
 
-      expect(query.toSql()).toBe(
+      expect(User.select('id').from(query).toSql()).toBe(
         line(`
         SELECT "t"."id" FROM (
           SELECT "user"."id" FROM "user"

@@ -509,12 +509,37 @@ export class QueryMethods {
     ) as unknown as SetQueryTableAlias<T, TableAlias>;
   }
 
-  from<T extends Query>(this: T, from: string | RawExpression): T {
-    return this.clone()._from(from);
+  from<
+    T extends Query,
+    Args extends [queryOrRaw: Query | RawExpression, as?: string | false],
+  >(
+    this: T,
+    ...args: Args
+  ): SetQueryTableAlias<
+    Args[0] extends Query ? Args[0] : T,
+    Args[1] extends string ? Args[1] : 't'
+  > {
+    return this.clone()._from(...args);
   }
 
-  _from<T extends Query>(this: T, from: string | RawExpression): T {
-    return setQueryValue(this, 'from', from);
+  _from<
+    T extends Query,
+    Args extends [queryOrRaw: Query | RawExpression, as?: string | false],
+  >(
+    this: T,
+    ...args: Args
+  ): SetQueryTableAlias<
+    Args[0] extends Query ? Args[0] : T,
+    Args[1] extends string ? Args[1] : 't'
+  > {
+    return setQueryValue(
+      args[1] === false ? this : this._as(args[1] || 't'),
+      'from',
+      args[0],
+    ) as unknown as SetQueryTableAlias<
+      Args[0] extends Query ? Args[0] : T,
+      Args[1] extends string ? Args[1] : 't'
+    >;
   }
 
   group<T extends Query>(
@@ -556,38 +581,20 @@ export class QueryMethods {
     >;
   }
 
-  wrap<T extends Query, Q extends Query, TableAlias extends string = 't'>(
-    this: T,
-    query: Q,
-    as?: TableAlias,
-  ): SetQueryTableAlias<Q, TableAlias> {
-    return this.clone()._wrap(query.clone(), as);
-  }
-
-  _wrap<T extends Query, Q extends Query, TableAlias extends string = 't'>(
-    this: T,
-    query: Q,
-    as?: TableAlias,
-  ): SetQueryTableAlias<Q, TableAlias> {
-    return query
-      ._as(as || 't')
-      ._from(raw(`(${this.toSql()})`)) as SetQueryTableAlias<Q, TableAlias>;
-  }
-
   json<T extends Query>(this: T): SetQueryReturnsValue<T, string> {
     return this.clone()._json();
   }
 
   _json<T extends Query>(this: T): SetQueryReturnsValue<T, string> {
-    const q = this._wrap(
-      this.selectAs({
-        json: raw(
-          this.query?.take
-            ? `COALESCE(row_to_json("t".*), '{}')`
-            : `COALESCE(json_agg(row_to_json("t".*)), '[]')`,
-        ),
-      }),
-    );
+    const innerSql = `(${this.toSql()})`;
+
+    const q = this._selectAs({
+      json: raw(
+        this.query?.take
+          ? `COALESCE(row_to_json("t".*), '{}')`
+          : `COALESCE(json_agg(row_to_json("t".*)), '[]')`,
+      ),
+    }).from(raw(innerSql));
 
     return q._value<typeof q, string>() as unknown as SetQueryReturnsValue<
       T,
