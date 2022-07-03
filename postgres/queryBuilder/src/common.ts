@@ -1,5 +1,18 @@
 import { Query } from './query';
 
+export type Column<T extends Query> =
+  | keyof T['type']
+  | `${AliasOrTable<T>}.${StringKeysOfType<T>}`;
+
+export type AliasOrTable<T extends Query> = T['tableAlias'] extends string
+  ? T['tableAlias']
+  : T['table'];
+
+export type StringKeysOfType<T extends Query> = Exclude<
+  keyof T['type'],
+  symbol | number
+>;
+
 export type RawExpression<R = unknown> = { __raw: string; __type: R };
 
 export type Expression<T extends Query = Query, R = unknown> =

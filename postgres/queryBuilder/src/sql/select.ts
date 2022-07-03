@@ -1,7 +1,7 @@
 import { QueryData } from './types';
 import { Expression, getRaw, isRaw } from '../common';
 import { Query } from '../query';
-import { q, qc } from './common';
+import { q, qc, quoteFullColumn } from './common';
 import { aggregateToSql } from './aggregate';
 
 export const pushSelectSql = (
@@ -32,7 +32,7 @@ export const pushSelectSql = (
             list.push(aggregateToSql(quotedAs, item));
           }
         } else {
-          list.push(qc(quotedAs, item as string));
+          list.push(quoteFullColumn(quotedAs, item));
         }
       });
     }

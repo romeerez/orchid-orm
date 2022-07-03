@@ -1,7 +1,12 @@
 import { toSql } from './sql/toSql';
-import { Expression, raw, RawExpression } from './common';
+import { Column, Expression, raw, RawExpression } from './common';
 import { AllColumns, Query } from './query';
-import { CoalesceString, GetTypesOrRaw, Spread, UnionToArray } from './utils';
+import {
+  CoalesceString,
+  GetTypesOrRaw,
+  Spread,
+  PropertyKeyUnionToArray,
+} from './utils';
 import {
   HavingArg,
   OrderBy,
@@ -390,17 +395,18 @@ export class QueryMethods {
     return <S>() => this as unknown as SetQuery<T, S>;
   }
 
-  select<T extends Query, K extends (keyof T['type'])[]>(
+  select<T extends Query, K extends Column<T>[]>(
     this: T,
     ...columns: K
   ): AddQuerySelect<T, Pick<T['type'], K[number]>> {
     return this.clone()._select(...columns);
   }
 
-  _select<T extends Query, K extends (keyof T['type'])[]>(
+  _select<T extends Query, K extends Column<T>[]>(
     this: T,
     ...columns: K
   ): AddQuerySelect<T, Pick<T['type'], K[number]>> {
+    if (!columns.length) return this;
     return pushQueryArray(this, 'select', columns);
   }
 
@@ -568,17 +574,17 @@ export class QueryMethods {
   window<T extends Query, W extends WindowArg<T>>(
     this: T,
     arg: W,
-  ): SetQueryWindows<T, UnionToArray<keyof W>> {
+  ): SetQueryWindows<T, PropertyKeyUnionToArray<keyof W>> {
     return this.clone()._window(arg);
   }
 
   _window<T extends Query, W extends WindowArg<T>>(
     this: T,
     arg: W,
-  ): SetQueryWindows<T, UnionToArray<keyof W>> {
+  ): SetQueryWindows<T, PropertyKeyUnionToArray<keyof W>> {
     return pushQueryValue(this, 'window', arg) as unknown as SetQueryWindows<
       T,
-      UnionToArray<keyof W>
+      PropertyKeyUnionToArray<keyof W>
     >;
   }
 

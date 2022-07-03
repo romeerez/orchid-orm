@@ -114,12 +114,37 @@ describe('queryMethods', () => {
   });
 
   describe('select', () => {
-    it('selects columns', () => {
+    it('should have no effect if no columns provided', () => {
+      const q = User.all();
+      expect(q.select().toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+        `),
+      );
+      expect(q.select('id').select().toSql()).toBe(
+        line(`
+          SELECT "user"."id" FROM "user"
+        `),
+      );
+      expectQueryNotMutated(q);
+    });
+
+    it('should select provided columns', () => {
       const q = User.all();
       expect(q.select('id', 'name').toSql()).toBe(
         line(`
-        SELECT "user"."id", "user"."name" FROM "user"
-      `),
+          SELECT "user"."id", "user"."name" FROM "user"
+        `),
+      );
+      expectQueryNotMutated(q);
+    });
+
+    it('should support table.column', () => {
+      const q = User.all();
+      expect(q.select('user.id', 'user.name').toSql()).toBe(
+        line(`
+          SELECT "user"."id", "user"."name" FROM "user"
+        `),
       );
       expectQueryNotMutated(q);
     });

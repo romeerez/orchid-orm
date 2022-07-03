@@ -24,7 +24,7 @@ type UnionToOvlds<U> = UnionToIntersection<
   U extends any ? (f: U) => void : never
 >;
 
-type PopUnion<U> = UnionToOvlds<U> extends (
+type PopPropertyKeyUnion<U> = UnionToOvlds<U> extends (
   a: infer A extends PropertyKey,
 ) => void
   ? A
@@ -32,11 +32,14 @@ type PopUnion<U> = UnionToOvlds<U> extends (
 
 type IsUnion<T> = [T] extends [UnionToIntersection<T>] ? false : true;
 
-export type UnionToArray<
+export type PropertyKeyUnionToArray<
   T,
   A extends PropertyKey[] = [],
 > = IsUnion<T> extends true
-  ? UnionToArray<Exclude<T, PopUnion<T>>, [PopUnion<T>, ...A]>
+  ? PropertyKeyUnionToArray<
+      Exclude<T, PopPropertyKeyUnion<T>>,
+      [PopPropertyKeyUnion<T>, ...A]
+    >
   : [T, ...A];
 
 type OptionalPropertyNames<T> = {
