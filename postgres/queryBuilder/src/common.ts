@@ -2,7 +2,14 @@ import { Query } from './query';
 
 export type Column<T extends Query> =
   | keyof T['type']
-  | `${AliasOrTable<T>}.${StringKeysOfType<T>}`;
+  | `${AliasOrTable<T>}.${StringKeysOfType<T>}`
+  | {
+      [Table in keyof T['joinedTables']]: Table extends string
+        ? T['joinedTables'][Table] extends Query
+          ? `${Table}.${StringKeysOfType<T['joinedTables'][Table]>}`
+          : never
+        : never;
+    }[keyof T['joinedTables']];
 
 export type AliasOrTable<T extends Query> = T['tableAlias'] extends string
   ? T['tableAlias']

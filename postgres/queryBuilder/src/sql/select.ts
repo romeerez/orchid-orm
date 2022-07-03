@@ -1,7 +1,7 @@
 import { QueryData } from './types';
 import { Expression, getRaw, isRaw } from '../common';
 import { Query } from '../query';
-import { q, qc, quoteFullColumn } from './common';
+import { q, quoteFullColumn } from './common';
 import { aggregateToSql } from './aggregate';
 
 export const pushSelectSql = (
@@ -25,7 +25,7 @@ export const pushSelectSql = (
                   list.push(`(${(value as Query).json().toSql()}) AS ${q(as)}`);
                 }
               } else {
-                list.push(`${qc(quotedAs, value as string)} AS ${q(as)}`);
+                list.push(`${quoteFullColumn(quotedAs, value)} AS ${q(as)}`);
               }
             }
           } else {

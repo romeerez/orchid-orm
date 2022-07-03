@@ -1,12 +1,7 @@
 import { toSql } from './sql/toSql';
-import { Column, Expression, raw, RawExpression } from './common';
+import { AliasOrTable, Column, Expression, raw, RawExpression } from './common';
 import { AllColumns, Query } from './query';
-import {
-  CoalesceString,
-  GetTypesOrRaw,
-  Spread,
-  PropertyKeyUnionToArray,
-} from './utils';
+import { GetTypesOrRaw, Spread, PropertyKeyUnionToArray } from './utils';
 import {
   HavingArg,
   OrderBy,
@@ -15,7 +10,7 @@ import {
   WhereItem,
   WindowArg,
 } from './sql/types';
-import { ColumnsShape, Output } from './schema';
+import { Output } from './schema';
 
 type QueryDataArrays<T extends Query> = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,7 +63,7 @@ export const pushQueryValue = <
 
 export type QueryReturnType = 'all' | 'one' | 'rows' | 'value' | 'void';
 
-export type JoinedTablesBase = Record<string, ColumnsShape>;
+export type JoinedTablesBase = Record<string, Query>;
 
 export type SetQuery<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -133,22 +128,14 @@ export type SetQueryTableAlias<
 export type SetQueryJoinedTables<
   T extends Query,
   JoinedTables extends JoinedTablesBase,
-> = SetQuery<T, T['result'], T['returnType'], T['tableAlias'], JoinedTables>;
+> = Omit<T, 'joinedTables'> & { joinedTables: JoinedTables };
 
 export type AddQueryJoinedTable<
   T extends Query,
   J extends Query,
 > = SetQueryJoinedTables<
   T,
-  Spread<
-    [
-      T['joinedTables'],
-      Record<
-        J['tableAlias'] extends string ? J['tableAlias'] : J['table'],
-        J['shape']
-      >,
-    ]
-  >
+  Spread<[T['joinedTables'], Record<AliasOrTable<J>, J>]>
 >;
 
 export type SetQueryWindows<
@@ -211,20 +198,6 @@ const thenVoid: Then<void> = function (resolve, reject) {
   return this.adapter.query(this.toSql()).then(() => resolve?.(), reject);
 };
 
-export type FullTableAndJoinedColumns<T extends Query> =
-  | `${CoalesceString<T['tableAlias'], T['table']>}.${Exclude<
-      keyof T['type'],
-      symbol
-    >}`
-  | {
-      [Table in keyof T['joinedTables']]: Table extends symbol
-        ? never
-        : `${Exclude<Table, symbol>}.${Exclude<
-            keyof T['joinedTables'][Table],
-            symbol
-          >}`;
-    }[keyof T['joinedTables']];
-
 type JoinCallbackQuery<T extends Query, J extends Query> = AddQueryJoinedTable<
   J,
   T
@@ -240,9 +213,9 @@ type JoinCallbackMethods<J extends Query> = {
 
 type On<J extends Query> = <T extends Query & JoinCallbackMethods<J>>(
   this: T,
-  leftColumn: FullTableAndJoinedColumns<T>,
+  leftColumn: Column<T>,
   op: string,
-  rightColumn: FullTableAndJoinedColumns<T>,
+  rightColumn: Column<T>,
 ) => T;
 
 const on: On<Query> = function (leftColumn, op, rightColumn) {
@@ -274,12 +247,7 @@ export type JoinArg<
   Rel extends keyof T['relations'] | undefined,
 > =
   | [relation: Rel]
-  | [
-      query: Q,
-      leftColumn: keyof Q['type'],
-      op: string,
-      rightColumn: keyof T['type'],
-    ]
+  | [query: Q, leftColumn: Column<Q>, op: string, rightColumn: Column<T>]
   | [query: Q, raw: RawExpression]
   | [query: Q, on: (q: JoinCallbackQuery<T, Q>) => Query];
 
@@ -413,7 +381,7 @@ export class QueryMethods {
   selectAs<
     T extends Query,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    S extends Record<string, keyof T['type'] | Query | RawExpression<any>>,
+    S extends Record<string, Column<T> | Query | RawExpression<any>>,
   >(
     this: T,
     select: S,
@@ -781,9 +749,9 @@ export class QueryMethods {
       Object.assign(q, joinCallbackMethods);
 
       const resultQuery = arg(q as unknown as JoinCallbackQuery<T, Q>);
-      return pushQueryValue(this, 'join', [model, resultQuery]);
+      return pushQueryValue(this, 'join', [model, resultQuery]) as any;
     } else {
-      return pushQueryValue(this, 'join', args);
+      return pushQueryValue(this, 'join', args) as any;
     }
   }
 }

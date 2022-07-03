@@ -21,7 +21,7 @@ export type Query = QueryMethods &
     then: any;
     table: string;
     tableAlias: string | undefined;
-    joinedTables: any;
+    joinedTables: Record<never, never>;
     windows: PropertyKey[];
     primaryKeys: any[];
     primaryTypes: any[];

@@ -15,6 +15,14 @@ export const User = db('user', (t) => ({
   updatedAt: t.timestamp(),
 }));
 
+export const Profile = db('profile', (t) => ({
+  id: t.serial().primaryKey(),
+  userId: t.integer(),
+  bio: t.text().nullable(),
+  createdAt: t.timestamp(),
+  updatedAt: t.timestamp(),
+}));
+
 export const Chat = db('chat', (t) => ({
   id: t.serial().primaryKey(),
   title: t.text(),

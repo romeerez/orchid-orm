@@ -34,7 +34,7 @@ export interface Db<
   primaryKeys: GetPrimaryKeys<Shape>[];
   primaryTypes: GetPrimaryTypes<Shape, GetPrimaryKeys<Shape>>;
   windows: PropertyKey[];
-  joinedTables: Record<string, never>;
+  joinedTables: Record<never, never>;
   relations: Record<
     string,
     {

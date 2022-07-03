@@ -1,4 +1,4 @@
-import { q, qc } from './common';
+import { q, quoteFullColumn } from './common';
 import { getRaw, isRaw } from '../common';
 import { QueryData } from './types';
 import { Query } from '../query';
@@ -59,7 +59,7 @@ export const pushJoinSql = (
     } else if (item.length === 4) {
       const [, leftColumn, op, rightColumn] = item;
       sql.push(
-        `ON ${qc(joinAs, leftColumn)} ${op} ${qc(
+        `ON ${quoteFullColumn(joinAs, leftColumn)} ${op} ${quoteFullColumn(
           quotedAs,
           rightColumn as string,
         )}`,
