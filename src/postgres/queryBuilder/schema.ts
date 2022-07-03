@@ -1,6 +1,6 @@
 import { t } from 'tak';
-import { Operators } from '../queryBuilder/operators';
-import { UnionToIntersection } from '../queryBuilder/utils';
+import { Operators } from './operators';
+import { UnionToIntersection } from './utils';
 
 type UnknownType = t.TakType<unknown>;
 
@@ -64,6 +64,10 @@ export type ColumnsShape = Record<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   UnknownType & ColumnMethods<any, any>
 >;
+
+export type Output<S extends ColumnsShape> = {
+  [K in keyof S]: S[K]['output'];
+};
 
 type SchemaMethods = typeof schemaMethods;
 

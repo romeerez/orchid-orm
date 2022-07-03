@@ -1,7 +1,5 @@
 import { dataTypes, tableSchema } from './schema';
-import { AssertEqual, line } from '../common/test-utils/test-utils';
-import { model } from './model';
-import { createPg } from '../common/test-utils/test-db';
+import { line, AssertEqual, db } from './test-utils';
 
 describe('postgres dataTypes', () => {
   describe('column types', () => {
@@ -129,23 +127,16 @@ describe('postgres dataTypes', () => {
 
 describe('model with hidden column', () => {
   it('selects by default all columns except hidden', () => {
-    class User extends model({
-      table: 'user',
-      schema: (t) => ({
-        id: t.serial().primaryKey(),
-        name: t.text(),
-        password: t.text().hidden(),
-        picture: t.text().nullable(),
-        createdAt: t.timestamp(),
-        updatedAt: t.timestamp(),
-      }),
-    }) {}
+    const User = db('user', (t) => ({
+      id: t.serial().primaryKey(),
+      name: t.text(),
+      password: t.text().hidden(),
+      picture: t.text().nullable(),
+      createdAt: t.timestamp(),
+      updatedAt: t.timestamp(),
+    }));
 
-    const db = createPg({
-      user: User,
-    });
-
-    const q = db.user.all();
+    const q = User.all();
     expect(q.toSql()).toBe(
       line(`
       SELECT

@@ -1,6 +1,7 @@
-import { ColumnsShape, Output, Query } from '../query';
+import { Query } from '../query';
 import { Expression, RawExpression } from '../common';
 import { Aggregate1ArgumentTypes } from '../aggregateMethods';
+import { ColumnsShape, Output } from '../schema';
 
 export type QueryData<T extends Query = Query> = {
   take?: true;

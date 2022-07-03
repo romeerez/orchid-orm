@@ -1,4 +1,4 @@
-import { model } from '../../orm/model';
+import { model } from '../model';
 
 export type User = UserModel['type'];
 export class UserModel extends model({

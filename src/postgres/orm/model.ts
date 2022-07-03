@@ -4,19 +4,15 @@ import {
   DataTypes,
   GetPrimaryKeys,
   GetPrimaryTypes,
+  Output,
   TableSchema,
   tableSchema,
-} from './schema';
+} from '../queryBuilder/schema';
 import { QueryMethods, QueryReturnType } from '../queryBuilder/queryMethods';
 import { AggregateMethods } from '../queryBuilder/aggregateMethods';
-import { QueryData } from '../queryBuilder/toSql';
+import { QueryData } from '../queryBuilder/sql/types';
 import { RelationMethods } from './relations/relations';
-import {
-  AllColumns,
-  DefaultSelectColumns,
-  Output,
-  Query,
-} from '../queryBuilder/query';
+import { AllColumns, DefaultSelectColumns, Query } from '../queryBuilder/query';
 import { PostgresAdapter } from '../queryBuilder/adapter';
 import { applyMixins } from '../queryBuilder/utils';
 

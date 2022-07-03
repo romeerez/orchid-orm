@@ -1,6 +1,6 @@
 import { ClientConfig, Client } from 'pg';
-import { PostgresOrm } from '../../orm/orm';
-import { Pg } from '../../queryBuilder/adapter';
+import { PostgresOrm } from '../orm';
+import { Adapter } from '../../queryBuilder/adapter';
 import {
   ChatModel,
   ChatUserModel,
@@ -15,7 +15,7 @@ export const pgConfig: ClientConfig = {
 
 export const dbClient = new Client(pgConfig);
 
-export const createPg = PostgresOrm(Pg(pgConfig));
+export const createPg = PostgresOrm(Adapter(pgConfig));
 
 export const db = createPg({
   user: UserModel,

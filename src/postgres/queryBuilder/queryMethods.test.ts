@@ -1,9 +1,14 @@
-import { expectQueryNotMutated, line } from '../common/test-utils/test-utils';
 import { raw } from './common';
-import { db } from '../common/test-utils/test-db';
 import { HavingArg } from './sql/types';
-
-const { adapter, user: User, chat: Chat, message: Message } = db;
+import {
+  line,
+  expectQueryNotMutated,
+  db,
+  adapter,
+  User,
+  Chat,
+  Message,
+} from './test-utils';
 
 describe('queryMethods', () => {
   afterAll(() => db.destroy());
@@ -14,7 +19,7 @@ describe('queryMethods', () => {
       expect(cloned).not.toBe(User);
       expect(cloned.adapter).toBe(adapter);
       expect(cloned.table).toBe(User.table);
-      expect(cloned.schema).toBe(User.schema);
+      expect(cloned.shape).toBe(User.shape);
     });
   });
 

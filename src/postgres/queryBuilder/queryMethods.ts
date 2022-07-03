@@ -1,6 +1,6 @@
 import { toSql } from './sql/toSql';
 import { Expression, raw, RawExpression } from './common';
-import { AllColumns, ColumnsShape, Output, Query } from './query';
+import { AllColumns, Query } from './query';
 import { CoalesceString, GetTypesOrRaw, Spread, UnionToArray } from './utils';
 import {
   HavingArg,
@@ -10,6 +10,7 @@ import {
   WhereItem,
   WindowArg,
 } from './sql/types';
+import { ColumnsShape, Output } from './schema';
 
 type QueryDataArrays<T extends Query> = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

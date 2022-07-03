@@ -1,7 +1,4 @@
-import { line } from '../common/test-utils/test-utils';
-import { db } from '../common/test-utils/test-db';
-
-const User = db.user;
+import { line, User } from './test-utils';
 
 describe('operators', () => {
   test('equals', () => {

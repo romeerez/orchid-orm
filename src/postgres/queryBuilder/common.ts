@@ -7,9 +7,11 @@ export type Expression<T extends Query = Query, R = unknown> =
   | RawExpression<R>;
 
 export type ExpressionOfType<T extends Query, R, Type> =
-  | {
-      [K in keyof T['type']]: T['type'][K] extends Type ? K : never;
-    }[keyof T['type']]
+  | (T['type'] extends Record<string, unknown>
+      ? string
+      : {
+          [K in keyof T['type']]: T['type'][K] extends Type ? K : never;
+        }[keyof T['type']])
   | RawExpression<R>;
 
 export type NumberExpression<T extends Query, R = unknown> = ExpressionOfType<

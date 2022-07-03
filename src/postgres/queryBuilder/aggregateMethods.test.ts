@@ -1,8 +1,5 @@
-import { expectQueryNotMutated, line } from '../common/test-utils/test-utils';
+import { User, expectQueryNotMutated, line } from './test-utils';
 import { raw } from './common';
-import { db } from '../common/test-utils/test-db';
-
-const User = db.user;
 
 describe('aggregate', () => {
   describe('aggregate options', () => {

@@ -13,7 +13,7 @@ export type PostgresAdapter = {
   destroy(): Promise<void>;
 };
 
-export const Pg = (config: PoolConfig): PostgresAdapter => {
+export const Adapter = (config: PoolConfig): PostgresAdapter => {
   const pool = new Pool(config);
 
   return {

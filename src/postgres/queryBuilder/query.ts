@@ -1,17 +1,8 @@
 import { QueryMethods, QueryReturnType } from './queryMethods';
 import { AggregateMethods } from './aggregateMethods';
 import { PostgresAdapter } from './adapter';
-import { Operators } from './operators';
 import { QueryData } from './sql/types';
-
-export type ColumnsShape = Record<
-  string,
-  { isHidden: boolean; operators: Operators; output: unknown }
->;
-
-export type Output<S extends ColumnsShape> = {
-  [K in keyof S]: S[K]['output'];
-};
+import { ColumnsShape } from './schema';
 
 export type AllColumns = { __all: true };
 
