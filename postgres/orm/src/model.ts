@@ -7,14 +7,21 @@ import {
   Output,
   TableSchema,
   tableSchema,
-} from '../queryBuilder/schema';
-import { QueryMethods, QueryReturnType } from '../queryBuilder/queryMethods';
-import { AggregateMethods } from '../queryBuilder/aggregateMethods';
-import { QueryData } from '../queryBuilder/sql/types';
+} from '../../queryBuilder/src/schema';
+import {
+  QueryMethods,
+  QueryReturnType,
+} from '../../queryBuilder/src/queryMethods';
+import { AggregateMethods } from '../../queryBuilder/src/aggregateMethods';
+import { QueryData } from '../../queryBuilder/src/sql/types';
 import { RelationMethods } from './relations/relations';
-import { AllColumns, DefaultSelectColumns, Query } from '../queryBuilder/query';
-import { PostgresAdapter } from '../queryBuilder/adapter';
-import { applyMixins } from '../queryBuilder/utils';
+import {
+  AllColumns,
+  DefaultSelectColumns,
+  Query,
+} from '../../queryBuilder/src/query';
+import { PostgresAdapter } from '../../queryBuilder/src/adapter';
+import { applyMixins } from '../../queryBuilder/src/utils';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export interface PostgresModel<S extends ColumnsShape, Table extends string>

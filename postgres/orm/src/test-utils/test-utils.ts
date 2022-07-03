@@ -1,12 +1,12 @@
 import { dbClient } from './test-db';
-import { quote } from '../../queryBuilder/quote';
+import { quote } from '../../../queryBuilder/src/quote';
 import {
   patchPgForTransactions,
   rollbackTransaction,
   startTransaction,
   unpatchPgForTransactions,
 } from 'pg-transactional-tests';
-import { Query } from '../../queryBuilder/query';
+import { Query } from '../../../queryBuilder/src/query';
 
 export type AssertEqual<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]

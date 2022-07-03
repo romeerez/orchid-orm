@@ -1,5 +1,5 @@
 import { raw } from './common';
-import { HavingArg } from './sql/types';
+import { HavingArg, QueryData } from './sql/types';
 import {
   line,
   expectQueryNotMutated,
@@ -8,6 +8,7 @@ import {
   User,
   Chat,
   Message,
+  AssertEqual,
 } from './test-utils';
 
 describe('queryMethods', () => {
@@ -20,6 +21,12 @@ describe('queryMethods', () => {
       expect(cloned.adapter).toBe(adapter);
       expect(cloned.table).toBe(User.table);
       expect(cloned.shape).toBe(User.shape);
+
+      const eq: AssertEqual<
+        typeof User & { query: QueryData<typeof User> },
+        typeof cloned
+      > = true;
+      expect(eq).toBe(true);
     });
   });
 
