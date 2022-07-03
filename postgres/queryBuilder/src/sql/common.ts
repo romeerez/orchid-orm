@@ -25,5 +25,5 @@ export const expressionToSql = <T extends Query>(
 ) => {
   return typeof expr === 'object' && isRaw(expr)
     ? getRaw(expr)
-    : qc(quotedAs, expr as string);
+    : quoteFullColumn(quotedAs, expr as string);
 };

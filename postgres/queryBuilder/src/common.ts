@@ -23,7 +23,7 @@ export type StringKeysOfType<T extends Query> = Exclude<
 export type RawExpression<R = unknown> = { __raw: string; __type: R };
 
 export type Expression<T extends Query = Query, R = unknown> =
-  | keyof T['type']
+  | Column<T>
   | RawExpression<R>;
 
 export type ExpressionOfType<T extends Query, R, Type> =

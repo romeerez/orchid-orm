@@ -275,24 +275,69 @@ describe('queryMethods', () => {
   });
 
   describe('distinct', () => {
-    it('add distinct without specifying columns', () => {
+    it('should add distinct without specifying columns', () => {
       const q = User.all();
       expect(q.distinct().toSql()).toBe('SELECT DISTINCT "user".* FROM "user"');
       expectQueryNotMutated(q);
     });
 
-    it('add distinct on columns', () => {
+    it('should add distinct on columns', () => {
       const q = User.all();
       expect(q.distinct('id', 'name').toSql()).toBe(
         line(`
-        SELECT DISTINCT ON ("user"."id", "user"."name") "user".*
-        FROM "user"
-      `),
+          SELECT DISTINCT ON ("user"."id", "user"."name") "user".*
+          FROM "user"
+        `),
       );
       expectQueryNotMutated(q);
     });
 
-    it('add distinct on raw sql', () => {
+    it('should add distinct on table.column', () => {
+      const q = User.all();
+      expect(q.distinct('user.id', 'user.name').toSql()).toBe(
+        line(`
+          SELECT DISTINCT ON ("user"."id", "user"."name") "user".*
+          FROM "user"
+        `),
+      );
+      expectQueryNotMutated(q);
+    });
+
+    it('should add distinct on joined columns', () => {
+      const q = User.all();
+      expect(
+        q
+          .join(Profile, 'profile.userId', '=', 'user.id')
+          .distinct('user.id', 'profile.userId')
+          .toSql(),
+      ).toBe(
+        line(`
+          SELECT DISTINCT ON ("user"."id", "profile"."userId") "user".*
+          FROM "user"
+          JOIN "profile" ON "profile"."userId" = "user"."id"
+        `),
+      );
+      expectQueryNotMutated(q);
+    });
+
+    it('should add distinct on joined columns with alias', () => {
+      const q = User.all();
+      expect(
+        q
+          .join(Profile.as('p'), 'p.userId', '=', 'user.id')
+          .distinct('user.id', 'p.userId')
+          .toSql(),
+      ).toBe(
+        line(`
+          SELECT DISTINCT ON ("user"."id", "p"."userId") "user".*
+          FROM "user"
+          JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+        `),
+      );
+      expectQueryNotMutated(q);
+    });
+
+    it('should add distinct on raw sql', () => {
       const q = User.all();
       expect(q.distinct(raw('"user".id')).toSql()).toBe(
         line(`
