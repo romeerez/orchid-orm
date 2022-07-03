@@ -27,7 +27,9 @@ export const toSql = (model: Query): string => {
     query.from
       ? isRaw(query.from)
         ? getRaw(query.from)
-        : `(${query.from.toSql()})`
+        : query.from.query
+        ? `(${query.from.toSql()})`
+        : q(query.from.table)
       : q(model.table),
   );
 

@@ -522,6 +522,14 @@ describe('queryMethods', () => {
       );
       expectQueryNotMutated(q);
     });
+
+    it('should not insert sub query if provided query is simple', () => {
+      const q = User.all();
+      expect(q.select('name').from(User).toSql()).toBe(
+        'SELECT "t"."name" FROM "user" AS "t"',
+      );
+      expectQueryNotMutated(q);
+    });
   });
 
   describe('json', () => {
