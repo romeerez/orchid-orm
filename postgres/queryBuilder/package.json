@@ -6,10 +6,9 @@
   "typings": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
-    "build": "rimraf ./dist/ && tsc"
+    "build": "rimraf ./dist/ && tsc --project tsconfig.build.json"
   },
   "jest": {
-    "globalSetup": "../../jest-global-setup.ts",
     "setupFiles": [
       "dotenv/config"
     ],
@@ -23,6 +22,9 @@
   "keywords": ["postgres", "query-builder"],
   "author": "Roman Kushyn",
   "license": "ISC",
+  "dependencies": {
+    "zod": "> 3.1"
+  },
   "devDependencies": {
     "@types/jest": "^28.1.2",
     "@types/node": "^18.0.1",
@@ -34,7 +36,6 @@
     "rimraf": "^3.0.2",
     "ts-jest": "^28.0.5",
     "tslib": "^2.4.0",
-    "typescript": "^4.7.4",
-    "tak": "file:../../../types-lib-experiment"
+    "typescript": "^4.7.4"
   }
 }

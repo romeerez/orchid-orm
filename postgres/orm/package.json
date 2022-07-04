@@ -6,10 +6,9 @@
   "typings": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
-    "build": "rimraf ./dist/ && tsc"
+    "build": "rimraf ./dist/ && tsc --project tsconfig.build.json"
   },
   "jest": {
-    "globalSetup": "../../jest-global-setup.ts",
     "setupFiles": [
       "dotenv/config"
     ],
@@ -23,8 +22,10 @@
   "keywords": ["postgres", "orm"],
   "author": "Roman Kushyn",
   "license": "ISC",
+  "dependencies": {
+    "pqb": "workspace:*"
+  },
   "devDependencies": {
-    "pqb": "workspace:*",
     "@types/jest": "^28.1.2",
     "@types/node": "^18.0.1",
     "@types/pg": "^8.6.5",
@@ -36,7 +37,6 @@
     "ts-jest": "^28.0.5",
     "tslib": "^2.4.0",
     "typescript": "^4.7.4",
-    "fishery": "^2.2.2",
-    "tak": "file:../../../types-lib-experiment"
+    "fishery": "^2.2.2"
   }
 }

@@ -7,9 +7,11 @@ import {
   startTransaction,
   unpatchPgForTransactions,
 } from 'pg-transactional-tests';
-import { Client } from 'pg'
+import { Client } from 'pg';
 
-export const dbClient = new Client({ connectionString: process.env.DATABASE_URL });
+export const dbClient = new Client({
+  connectionString: process.env.DATABASE_URL,
+});
 
 export const adapter = Adapter({ connectionString: process.env.DATABASE_URL });
 

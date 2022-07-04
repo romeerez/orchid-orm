@@ -1,37 +1,48 @@
-import { t } from 'tak';
+import { z, ZodTypeAny, ZodObject, ZodNullable, nullable } from 'zod';
 import { Operators } from './operators';
 import { UnionToIntersection } from './utils';
 
-type UnknownType = t.TakType<unknown>;
-
-type ColumnMethods<D extends string, Ops extends Operators> = {
+export type ColumnMethods<D extends string, Ops extends Operators> = {
   dataType: D;
   operators: Ops;
   isPrimaryKey: boolean;
   isHidden: boolean;
-  primaryKey<T extends UnknownType>(this: T): T & { isPrimaryKey: true };
-  hidden<T extends UnknownType>(this: T): T & { isHidden: true };
+  primaryKey<T extends ZodTypeAny & ColumnMethods<any, any>>(
+    this: T,
+  ): T & { isPrimaryKey: true };
+  hidden<T extends ZodTypeAny & ColumnMethods<any, any>>(
+    this: T,
+  ): T & { isHidden: true };
+  nullable<T extends ZodTypeAny & ColumnMethods<any, any>>(
+    this: T,
+  ): ZodNullable<T> & ColumnMethods<T['dataType'], T['operators']>;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const columnMethods: Omit<ColumnMethods<any, any>, 'dataType' | 'operators'> = {
   isPrimaryKey: false,
   isHidden: false,
-  primaryKey<T extends UnknownType>(this: T): T & { isPrimaryKey: true } {
+  primaryKey<T extends ZodTypeAny>(this: T): T & { isPrimaryKey: true } {
     return Object.assign(this, { isPrimaryKey: true as const });
   },
-  hidden<T extends UnknownType>(this: T): T & { isHidden: true } {
+  hidden<T extends ZodTypeAny>(this: T): T & { isHidden: true } {
     return Object.assign(this, { isHidden: true as const });
+  },
+  nullable<T extends ZodTypeAny & ColumnMethods<any, any>>(this: T) {
+    return Object.assign(nullable(this), columnMethods, {
+      dataType: this.dataType,
+      operators: this.operators,
+    });
   },
 };
 
 type Column<
-  T extends UnknownType,
+  T extends ZodTypeAny,
   D extends string,
   Ops extends Operators,
-> = T & ColumnMethods<D, Ops>;
+> = Omit<T, 'nullable'> & ColumnMethods<D, Ops>;
 
-const column = <T extends UnknownType, D extends string, Ops extends Operators>(
+const column = <T extends ZodTypeAny, D extends string, Ops extends Operators>(
   type: T,
   dataType: D,
   operators: Ops,
@@ -41,32 +52,32 @@ const column = <T extends UnknownType, D extends string, Ops extends Operators>(
 
 export type DataTypes = typeof dataTypes;
 export const dataTypes = {
-  bigint: () => column(t.bigint(), 'bigint', Operators.number),
-  bigserial: () => column(t.bigint(), 'bigserial', Operators.number),
-  boolean: () => column(t.boolean(), 'boolean', Operators.boolean),
-  date: () => column(t.date(), 'date', Operators.date),
-  decimal: () => column(t.number(), 'decimal', Operators.number),
-  float: () => column(t.number(), 'float', Operators.number),
-  integer: () => column(t.number(), 'integer', Operators.number),
-  text: () => column(t.string(), 'text', Operators.text),
-  string: () => column(t.string(), 'text', Operators.text),
-  smallint: () => column(t.number(), 'smallint', Operators.number),
-  smallserial: () => column(t.number(), 'smallserial', Operators.number),
-  time: () => column(t.number(), 'time', Operators.time),
-  timestamp: () => column(t.date(), 'timestamp', Operators.date),
-  timestamptz: () => column(t.date(), 'timestamptz', Operators.date),
-  binary: () => column(t.string(), 'binary', Operators.any),
-  serial: () => column(t.number(), 'serial', Operators.number),
+  bigint: () => column(z.bigint(), 'bigint', Operators.number),
+  bigserial: () => column(z.bigint(), 'bigserial', Operators.number),
+  boolean: () => column(z.boolean(), 'boolean', Operators.boolean),
+  date: () => column(z.date(), 'date', Operators.date),
+  decimal: () => column(z.number(), 'decimal', Operators.number),
+  float: () => column(z.number(), 'float', Operators.number),
+  integer: () => column(z.number(), 'integer', Operators.number),
+  text: () => column(z.string(), 'text', Operators.text),
+  string: () => column(z.string(), 'text', Operators.text),
+  smallint: () => column(z.number(), 'smallint', Operators.number),
+  smallserial: () => column(z.number(), 'smallserial', Operators.number),
+  time: () => column(z.number(), 'time', Operators.time),
+  timestamp: () => column(z.date(), 'timestamp', Operators.date),
+  timestamptz: () => column(z.date(), 'timestamptz', Operators.date),
+  binary: () => column(z.string(), 'binary', Operators.any),
+  serial: () => column(z.number(), 'serial', Operators.number),
 };
 
 export type ColumnsShape = Record<
   string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  UnknownType & ColumnMethods<any, any>
+  ZodTypeAny & ColumnMethods<any, any>
 >;
 
 export type Output<S extends ColumnsShape> = {
-  [K in keyof S]: S[K]['output'];
+  [K in keyof S]: z.infer<S[K]>;
 };
 
 type SchemaMethods = typeof schemaMethods;
@@ -113,10 +124,10 @@ type GetTypesFromKeys<
   ? [GetTypeFromKey<S, Head>, ...GetTypesFromKeys<S, Tail>]
   : [];
 
-type GetTypeFromKey<S extends ColumnsShape, T extends keyof S> = S[T]['output'];
+type GetTypeFromKey<S extends ColumnsShape, T extends keyof S> = z.infer<S[T]>;
 
 const schemaMethods = {
-  getPrimaryKeys<T extends t.TakObject<ColumnsShape>>(
+  getPrimaryKeys<T extends ZodObject<ColumnsShape>>(
     this: T,
   ): GetPrimaryKeys<T['shape']> {
     return (
@@ -130,11 +141,11 @@ const schemaMethods = {
   },
 };
 
-export type TableSchema<Shape extends ColumnsShape> = t.TakObject<Shape> &
+export type TableSchema<Shape extends ColumnsShape> = ZodObject<Shape> &
   SchemaMethods;
 
 export const tableSchema = <Shape extends ColumnsShape>(
   shape: Shape,
 ): TableSchema<Shape> => {
-  return Object.assign(t.object(shape), schemaMethods);
+  return Object.assign(z.object(shape), schemaMethods);
 };
