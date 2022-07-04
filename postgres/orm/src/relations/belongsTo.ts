@@ -1,6 +1,5 @@
 import { RelationThunk } from './relations';
-import { Query } from '../../../queryBuilder/src/query';
-import { pushQueryValue } from '../../../queryBuilder/src/queryDataUtils';
+import { Query, pushQueryValue } from 'pqb';
 
 export class BelongsTo<
   T extends Query,

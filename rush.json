@@ -1,0 +1,59 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/rush.schema.json",
+  "rushVersion": "5.75.0",
+  "pnpmVersion": "7.4.1",
+  "pnpmOptions": {
+    "pnpmStore": "global",
+    "strictPeerDependencies": false,
+    "resolutionStrategy": "fewer-dependencies",
+    "preventManualShrinkwrapChanges": false,
+    "useWorkspaces": true
+  },
+  "nodeSupportedVersionRange": ">=12.13.0",
+  "suppressNodeLtsWarning": true,
+  "ensureConsistentVersions": false,
+  "projectFolderMinDepth": 1,
+  "projectFolderMaxDepth": 2,
+  "allowMostlyStandardPackageNames": false,
+  "repository": {
+    // "url": "https://github.com/microsoft/rush-example",
+    "defaultBranch": "main",
+    "defaultRemote": "origin"
+  },
+  "eventHooks": {
+    "preRushInstall": [
+      // "common/scripts/pre-rush-install.js"
+    ],
+    "postRushInstall": [],
+    "preRushBuild": [],
+    "postRushBuild": []
+  },
+  "variants": [],
+  "telemetryEnabled": false,
+  "hotfixChangeEnabled": false,
+  // "allowedProjectTags": [ "apps", "Web", "tools" ],
+  "projects": [
+    {
+      "packageName": "porm",
+      "projectFolder": "postgres/orm",
+      "shouldPublish": false,
+      "tags": ["orm"]
+    },
+    {
+      "packageName": "pqb",
+      "projectFolder": "postgres/queryBuilder",
+      "shouldPublish": false,
+      "tags": ["query-builder"]
+    }
+//     {
+//       "packageName": "porm",
+//       "projectFolder": "postgres/orm",
+//       // "cyclicDependencyProjects": [],
+//       // "skipRushCheck": false,
+//       "shouldPublish": false,
+//       // "publishFolder": "temp/publish",
+//       // "versionPolicyName": "",
+//       "tags": ["postgres", "orm"]
+//     }
+  ]
+}

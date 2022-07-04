@@ -2,24 +2,20 @@ import {
   ColumnsShape,
   dataTypes,
   DataTypes,
-  GetPrimaryKeys,
-  GetPrimaryTypes,
   Output,
   TableSchema,
   tableSchema,
-} from '../../queryBuilder/src/schema';
-import { QueryMethods } from '../../queryBuilder/src/queryMethods';
-import { AggregateMethods } from '../../queryBuilder/src/aggregateMethods';
-import { QueryData } from '../../queryBuilder/src/sql/types';
-import { RelationMethods } from './relations/relations';
-import {
+  QueryMethods,
+  AggregateMethods,
+  QueryData,
   AllColumns,
   DefaultSelectColumns,
   Query,
   QueryReturnType,
-} from '../../queryBuilder/src/query';
-import { PostgresAdapter } from '../../queryBuilder/src/adapter';
-import { applyMixins } from '../../queryBuilder/src/utils';
+  PostgresAdapter,
+  applyMixins,
+} from 'pqb';
+import { RelationMethods } from './relations/relations';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export interface PostgresModel<S extends ColumnsShape, Table extends string>
@@ -39,8 +35,8 @@ export interface PostgresModel<S extends ColumnsShape, Table extends string>
   table: Table;
   tableAlias: undefined;
   schema: TableSchema<S>;
-  primaryKeys: GetPrimaryKeys<S>[];
-  primaryTypes: GetPrimaryTypes<S, GetPrimaryKeys<S>>;
+  primaryKeys: string[];
+  primaryTypes: unknown[];
   windows: PropertyKey[];
   withData: Query['withData'];
   joinedTables: Query['joinedTables'];

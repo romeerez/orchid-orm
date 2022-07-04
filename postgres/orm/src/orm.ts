@@ -5,8 +5,7 @@ import {
   Relations,
 } from './relations/relations';
 import { BelongsTo } from './relations/belongsTo';
-import { Query } from '../../queryBuilder/src/query';
-import { PostgresAdapter } from '../../queryBuilder/src/adapter';
+import { Query, PostgresAdapter } from 'pqb';
 
 type PostgresORM<T extends PostgresModelConstructors> = {
   [K in keyof T]: MapRelationMethods<InstanceType<T[K]>>;

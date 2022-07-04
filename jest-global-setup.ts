@@ -1,9 +1,9 @@
 import 'dotenv/config';
-import { Pg } from './src/postgres/queryBuilder/adapter';
-import { pgConfig } from './src/postgres/common/test-utils/test-db';
+import { Adapter } from './postgres/queryBuilder/src/adapter';
+import { pgConfig } from './postgres/orm/src/test-utils/test-db';
 
 module.exports = async () => {
-  const db = Pg(pgConfig);
+  const db = Adapter(pgConfig);
   await db.query(`
     CREATE TABLE IF NOT EXISTS sample
     (

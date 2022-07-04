@@ -1,0 +1,42 @@
+{
+  "name": "porm",
+  "version": "1.0.0",
+  "description": "Postgres ORM",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "scripts": {
+    "test": "jest",
+    "build": "rimraf ./dist/ && tsc"
+  },
+  "jest": {
+    "globalSetup": "../../jest-global-setup.ts",
+    "setupFiles": [
+      "dotenv/config"
+    ],
+    "setupFilesAfterEnv": [
+      "../../jest-setup.ts"
+    ],
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    }
+  },
+  "keywords": ["postgres", "orm"],
+  "author": "Roman Kushyn",
+  "license": "ISC",
+  "devDependencies": {
+    "pqb": "workspace:*",
+    "@types/jest": "^28.1.2",
+    "@types/node": "^18.0.1",
+    "@types/pg": "^8.6.5",
+    "dotenv": "^16.0.1",
+    "jest": "^28.1.2",
+    "pg": "^8.7.3",
+    "pg-transactional-tests": "^1.0.3",
+    "rimraf": "^3.0.2",
+    "ts-jest": "^28.0.5",
+    "tslib": "^2.4.0",
+    "typescript": "^4.7.4",
+    "fishery": "^2.2.2",
+    "tak": "file:../../../types-lib-experiment"
+  }
+}

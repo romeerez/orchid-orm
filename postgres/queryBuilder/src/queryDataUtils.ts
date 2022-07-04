@@ -1,7 +1,7 @@
 import { Query } from './query';
 import { QueryData } from './sql/types';
 
-type QueryDataArrays<T extends Query> = {
+export type QueryDataArrays<T extends Query> = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [K in keyof QueryData<T>]: QueryData<T>[K] extends Array<any>
     ? QueryData<T>[K]
