@@ -8,10 +8,7 @@ import {
   TableSchema,
   tableSchema,
 } from '../../queryBuilder/src/schema';
-import {
-  QueryMethods,
-  QueryReturnType,
-} from '../../queryBuilder/src/queryMethods';
+import { QueryMethods } from '../../queryBuilder/src/queryMethods';
 import { AggregateMethods } from '../../queryBuilder/src/aggregateMethods';
 import { QueryData } from '../../queryBuilder/src/sql/types';
 import { RelationMethods } from './relations/relations';
@@ -19,6 +16,7 @@ import {
   AllColumns,
   DefaultSelectColumns,
   Query,
+  QueryReturnType,
 } from '../../queryBuilder/src/query';
 import { PostgresAdapter } from '../../queryBuilder/src/adapter';
 import { applyMixins } from '../../queryBuilder/src/utils';

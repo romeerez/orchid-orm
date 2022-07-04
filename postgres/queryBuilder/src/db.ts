@@ -1,5 +1,10 @@
-import { AllColumns, DefaultSelectColumns, Query } from './query';
-import { QueryMethods, QueryReturnType } from './queryMethods';
+import {
+  AllColumns,
+  DefaultSelectColumns,
+  Query,
+  QueryReturnType,
+} from './query';
+import { QueryMethods } from './queryMethods';
 import { AggregateMethods } from './aggregateMethods';
 import { QueryData } from './sql/types';
 import { PostgresAdapter } from './adapter';

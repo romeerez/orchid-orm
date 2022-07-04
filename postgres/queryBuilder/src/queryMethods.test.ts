@@ -587,7 +587,7 @@ describe('queryMethods', () => {
     });
 
     describe('query parameter', () => {
-      describe.only('shape provided explicitly', () => {
+      describe('shape provided explicitly', () => {
         it('should add `with` statement', () => {
           const q = User.all();
 

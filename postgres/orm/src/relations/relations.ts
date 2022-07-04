@@ -1,8 +1,7 @@
 import { PostgresModelConstructor } from '../model';
-import { SetQueryReturns } from '../../../queryBuilder/src/queryMethods';
 import { BelongsTo } from './belongsTo';
 import { QueryData } from '../../../queryBuilder/src/sql/types';
-import { Query } from '../../../queryBuilder/src/query';
+import { Query, SetQueryReturns } from '../../../queryBuilder/src/query';
 
 export type ModelOrQuery = PostgresModelConstructor | Query;
 

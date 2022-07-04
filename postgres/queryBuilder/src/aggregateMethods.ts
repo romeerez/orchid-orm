@@ -6,13 +6,9 @@ import {
   raw,
   StringExpression,
 } from './common';
-import {
-  AddQuerySelect,
-  pushQueryValue,
-  SetQueryReturnsValue,
-} from './queryMethods';
-import { Query } from './query';
+import { AddQuerySelect, Query, SetQueryReturnsValue } from './query';
 import { AggregateArg, AggregateOptions } from './sql/types';
+import { pushQueryValue } from './queryDataUtils';
 
 const allColumns = raw('*');
 
