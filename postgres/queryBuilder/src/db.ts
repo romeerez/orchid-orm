@@ -34,6 +34,7 @@ export interface Db<
   primaryKeys: GetPrimaryKeys<Shape>[];
   primaryTypes: GetPrimaryTypes<Shape, GetPrimaryKeys<Shape>>;
   windows: PropertyKey[];
+  withData: Query['withData'];
   joinedTables: Query['joinedTables'];
   relations: Record<
     string,

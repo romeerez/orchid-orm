@@ -5,9 +5,10 @@ import { ColumnsShape, Output } from '../schema';
 
 export type QueryData<T extends Query = Query> = {
   take?: true;
+  with?: [string, false | string[], Query | RawExpression][];
   select?: SelectItem<T>[];
   distinct?: Expression<T>[];
-  from?: Query | RawExpression;
+  from?: string | Query | RawExpression;
   join?: JoinItem[];
   and?: WhereItem<T>[];
   or?: WhereItem<T>[][];

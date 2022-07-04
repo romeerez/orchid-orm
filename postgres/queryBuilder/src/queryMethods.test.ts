@@ -11,6 +11,7 @@ import {
   AssertEqual,
   useTestDatabase,
 } from './test-utils';
+import { ColumnsShape, DataTypes, dataTypes } from './schema';
 
 describe('queryMethods', () => {
   useTestDatabase();
@@ -94,7 +95,6 @@ describe('queryMethods', () => {
     it('returns a first value', async () => {
       const received = await User.from(
         raw(`(VALUES ('one')) "user"(one)`),
-        false,
       ).value();
       expect(received).toBe('one');
     });
@@ -508,7 +508,7 @@ describe('queryMethods', () => {
     it('should accept query parameter', () => {
       const q = User.all();
       expect(q.select('name').from(User.select('name')).toSql()).toBe(
-        'SELECT "t"."name" FROM (SELECT "user"."name" FROM "user") AS "t"',
+        'SELECT "user"."name" FROM (SELECT "user"."name" FROM "user") AS "user"',
       );
       expectQueryNotMutated(q);
     });
@@ -523,10 +523,130 @@ describe('queryMethods', () => {
       expectQueryNotMutated(q);
     });
 
-    it('should not insert sub query if provided query is simple', () => {
+    it('should not insert sub query and alias if provided query is simple', () => {
       const q = User.all();
       expect(q.select('name').from(User).toSql()).toBe(
-        'SELECT "t"."name" FROM "user" AS "t"',
+        'SELECT "user"."name" FROM "user"',
+      );
+      expectQueryNotMutated(q);
+    });
+  });
+
+  describe('with', () => {
+    const columnShapes: (ColumnsShape | ((t: DataTypes) => ColumnsShape))[] = [
+      { one: dataTypes.integer(), two: dataTypes.text() },
+      (t: DataTypes) => ({ one: t.integer(), two: t.text() }),
+    ];
+
+    describe('raw parameter', () => {
+      it('should add `with` statement with raw parameter', () => {
+        const q = User.all();
+
+        columnShapes.forEach((shape) => {
+          expect(
+            q
+              .with('withAlias', shape, raw(`(VALUES (1, 'two')) t(one, two)`))
+              .from('withAlias')
+              .toSql(),
+          ).toBe(
+            line(`
+              WITH "withAlias" (
+                (VALUES (1, 'two')) t(one, two)
+              )
+              SELECT "withAlias".*
+              FROM "withAlias"
+            `),
+          );
+        });
+
+        expectQueryNotMutated(q);
+      });
+
+      it('should list columns if second argument is `true`', () => {
+        const q = User.all();
+
+        columnShapes.forEach((shape) => {
+          expect(
+            q
+              .with('withAlias', true, shape, raw(`VALUES (1, 'two')`))
+              .from('withAlias')
+              .toSql(),
+          ).toBe(
+            line(`
+              WITH "withAlias"("one", "two") (
+                VALUES (1, 'two')
+              )
+              SELECT "withAlias".*
+              FROM "withAlias"
+            `),
+          );
+        });
+
+        expectQueryNotMutated(q);
+      });
+    });
+
+    describe('query parameter', () => {
+      describe.only('shape provided explicitly', () => {
+        it('should add `with` statement', () => {
+          const q = User.all();
+
+          columnShapes.forEach((shape) => {
+            expect(
+              q.with('withAlias', shape, User.all()).from('withAlias').toSql(),
+            ).toBe(
+              line(`
+              WITH "withAlias" (
+                SELECT "user".* FROM "user"
+              )
+              SELECT "withAlias".*
+              FROM "withAlias"
+            `),
+            );
+          });
+
+          expectQueryNotMutated(q);
+        });
+
+        it('should list columns if second argument is `true`', () => {
+          const q = User.all();
+
+          columnShapes.forEach((shape) => {
+            expect(
+              q
+                .with('withAlias', true, shape, User.all())
+                .from('withAlias')
+                .toSql(),
+            ).toBe(
+              line(`
+              WITH "withAlias"("one", "two") (
+                SELECT "user".* FROM "user"
+              )
+              SELECT "withAlias".*
+              FROM "withAlias"
+            `),
+            );
+          });
+
+          expectQueryNotMutated(q);
+        });
+      });
+    });
+  });
+
+  describe('wrap', () => {
+    it('should wrap query with another', () => {
+      const q = User.all();
+      expect(q.select('id').wrap(User.select('id')).toSql()).toBe(
+        'SELECT "t"."id" FROM (SELECT "user"."id" FROM "user") AS "t"',
+      );
+      expectQueryNotMutated(q);
+    });
+
+    it('should accept `as` parameter', () => {
+      const q = User.all();
+      expect(q.select('id').wrap(User.select('id'), 'wrapped').toSql()).toBe(
+        'SELECT "wrapped"."id" FROM (SELECT "user"."id" FROM "user") AS "wrapped"',
       );
       expectQueryNotMutated(q);
     });
@@ -550,11 +670,11 @@ describe('queryMethods', () => {
       const q = User.all();
       expect(q.take().json().toSql()).toBe(
         line(`
-        SELECT COALESCE(row_to_json("t".*), '{}') AS "json"
-        FROM (
-          SELECT "user".* FROM "user" LIMIT 1
-        ) AS "t"
-      `),
+          SELECT COALESCE(row_to_json("t".*), '{}') AS "json"
+          FROM (
+            SELECT "user".* FROM "user" LIMIT 1
+          ) AS "t"
+        `),
       );
       expectQueryNotMutated(q);
     });
@@ -705,8 +825,9 @@ describe('window', () => {
       query = query[
         (what + 'All') as 'unionAll' | 'intersectAll' | 'exceptAll'
       ](raw('SELECT 2'));
+      query = query.wrap(User.select('id'));
 
-      expect(User.select('id').from(query).toSql()).toBe(
+      expect(query.toSql()).toBe(
         line(`
         SELECT "t"."id" FROM (
           SELECT "user"."id" FROM "user"

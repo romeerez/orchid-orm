@@ -9,11 +9,19 @@ import { orderByToSql } from './orderBy';
 import { pushJoinSql } from './join';
 import { whereToSql } from './where';
 import { pushHavingSql } from './having';
+import { pushWithSql } from './with';
 
 export const toSql = (model: Query): string => {
-  const sql: string[] = ['SELECT'];
-
   const query = (model.query || EMPTY_OBJECT) as QueryData;
+
+  const sql: string[] = [];
+
+  if (query.with) {
+    pushWithSql(sql, query.with);
+  }
+
+  sql.push('SELECT');
+
   const quotedAs = q(query.as || model.table);
 
   if (query.distinct) {
@@ -22,18 +30,21 @@ export const toSql = (model: Query): string => {
 
   pushSelectSql(sql, quotedAs, query.select);
 
-  sql.push(
-    'FROM',
-    query.from
+  const from = query.from
+    ? typeof query.from === 'object'
       ? isRaw(query.from)
         ? getRaw(query.from)
         : query.from.query
         ? `(${query.from.toSql()})`
         : q(query.from.table)
-      : q(model.table),
-  );
+      : q(query.from)
+    : q(model.table);
 
-  if (query.as) sql.push('AS', quotedAs);
+  sql.push('FROM', from);
+
+  if (query.as && quotedAs !== from) {
+    sql.push('AS', quotedAs);
+  }
 
   if (query.join) {
     pushJoinSql(sql, model, quotedAs, query.join);

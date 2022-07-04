@@ -44,6 +44,7 @@ export interface PostgresModel<S extends ColumnsShape, Table extends string>
   primaryKeys: GetPrimaryKeys<S>[];
   primaryTypes: GetPrimaryTypes<S, GetPrimaryKeys<S>>;
   windows: PropertyKey[];
+  withData: Query['withData'];
   joinedTables: Query['joinedTables'];
   relations: Record<
     string,

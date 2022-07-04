@@ -1,5 +1,12 @@
 import { toSql } from './sql/toSql';
-import { AliasOrTable, Column, Expression, raw, RawExpression } from './common';
+import {
+  AliasOrTable,
+  Column,
+  Expression,
+  isRaw,
+  raw,
+  RawExpression,
+} from './common';
 import { AllColumns, Query } from './query';
 import { GetTypesOrRaw, Spread, PropertyKeyUnionToArray } from './utils';
 import {
@@ -10,7 +17,7 @@ import {
   WhereItem,
   WindowArg,
 } from './sql/types';
-import { Output } from './schema';
+import { ColumnsShape, dataTypes, DataTypes, Output } from './schema';
 
 type QueryDataArrays<T extends Query> = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -65,6 +72,8 @@ export type QueryReturnType = 'all' | 'one' | 'rows' | 'value' | 'void';
 
 export type JoinedTablesBase = Record<string, Query>;
 
+export type WithBase = Pick<Query, 'table' | 'type' | 'shape'>;
+
 export type SetQuery<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   T extends Query = any,
@@ -115,11 +124,6 @@ export type SetQueryReturns<
 
 export type SetQueryReturnsValue<T extends Query, R> = SetQuery<T, R, 'value'>;
 
-// export type SetQueryTableAlias<
-//   T extends Query,
-//   TableAlias extends string,
-// > = SetQuery<T, T['result'], T['returnType'], TableAlias>;
-
 export type SetQueryTableAlias<
   T extends Query,
   TableAlias extends string,
@@ -136,6 +140,16 @@ export type AddQueryJoinedTable<
 > = SetQueryJoinedTables<
   T,
   Spread<[T['joinedTables'], Record<AliasOrTable<J>, J>]>
+>;
+
+export type SetQueryWith<
+  T extends Query,
+  WithData extends Record<string, WithBase>,
+> = Omit<T, 'withData'> & { withData: WithData };
+
+export type AddQueryWith<T extends Query, With extends WithBase> = SetQueryWith<
+  T,
+  Spread<[T['withData'], { [K in With['table']]: With }]>
 >;
 
 export type SetQueryWindows<
@@ -511,35 +525,147 @@ export class QueryMethods {
 
   from<
     T extends Query,
-    Args extends [queryOrRaw: Query | RawExpression, as?: string | false],
+    Args extends [
+      arg:
+        | Query
+        | RawExpression
+        | Exclude<keyof T['withData'], symbol | number>,
+      as?: string,
+    ],
   >(
     this: T,
     ...args: Args
-  ): SetQueryTableAlias<
-    Args[0] extends Query ? Args[0] : T,
-    Args[1] extends string ? Args[1] : 't'
-  > {
+  ): Args[1] extends string
+    ? SetQueryTableAlias<T, Args[1]>
+    : Args[0] extends string
+    ? SetQueryTableAlias<T, Args[0]>
+    : Args[0] extends Query
+    ? SetQueryTableAlias<T, AliasOrTable<Args[0]>>
+    : T {
     return this.clone()._from(...args);
   }
 
   _from<
     T extends Query,
-    Args extends [queryOrRaw: Query | RawExpression, as?: string | false],
+    Args extends [
+      arg:
+        | Query
+        | RawExpression
+        | Exclude<keyof T['withData'], symbol | number>,
+      as?: string,
+    ],
   >(
     this: T,
     ...args: Args
-  ): SetQueryTableAlias<
-    Args[0] extends Query ? Args[0] : T,
-    Args[1] extends string ? Args[1] : 't'
-  > {
+  ): Args[1] extends string
+    ? SetQueryTableAlias<T, Args[1]>
+    : Args[0] extends string
+    ? SetQueryTableAlias<T, Args[0]>
+    : Args[0] extends Query
+    ? SetQueryTableAlias<T, AliasOrTable<Args[0]>>
+    : T {
+    let as: string | undefined;
+    if (typeof args[1] === 'string') {
+      as = args[1];
+    } else if (typeof args[0] === 'string') {
+      as = args[0];
+    } else if (!isRaw(args[0] as RawExpression)) {
+      as = (args[0] as Query).query?.as || (args[0] as Query).table;
+    }
+
     return setQueryValue(
-      args[1] === false ? this : this._as(args[1] || 't'),
+      as ? this._as(as) : this,
       'from',
       args[0],
-    ) as unknown as SetQueryTableAlias<
-      Args[0] extends Query ? Args[0] : T,
-      Args[1] extends string ? Args[1] : 't'
-    >;
+    ) as unknown as Args[1] extends string
+      ? SetQueryTableAlias<T, Args[1]>
+      : Args[0] extends string
+      ? SetQueryTableAlias<T, Args[0]>
+      : Args[0] extends Query
+      ? SetQueryTableAlias<T, AliasOrTable<Args[0]>>
+      : T;
+  }
+
+  with<
+    T extends Query,
+    Args extends
+      | [
+          string,
+          ColumnsShape | ((t: DataTypes) => ColumnsShape),
+          Query | RawExpression,
+        ]
+      | [
+          string,
+          true,
+          ColumnsShape | ((t: DataTypes) => ColumnsShape),
+          Query | RawExpression,
+        ],
+    Shape extends ColumnsShape = Args[1] extends ColumnsShape
+      ? Args[1]
+      : Args[2] extends ColumnsShape
+      ? Args[2]
+      : Args[1] extends (t: DataTypes) => ColumnsShape
+      ? ReturnType<Args[1]>
+      : Args[2] extends (t: DataTypes) => ColumnsShape
+      ? ReturnType<Args[2]>
+      : never,
+  >(
+    this: T,
+    ...args: Args
+  ): AddQueryWith<
+    T,
+    {
+      table: Args[0];
+      shape: Shape;
+      type: Output<Shape>;
+    }
+  > {
+    return this.clone()._with<T, Args, Shape>(...args);
+  }
+
+  _with<
+    T extends Query,
+    Args extends
+      | [
+          string,
+          ColumnsShape | ((t: DataTypes) => ColumnsShape),
+          Query | RawExpression,
+        ]
+      | [
+          string,
+          true,
+          ColumnsShape | ((t: DataTypes) => ColumnsShape),
+          Query | RawExpression,
+        ],
+    Shape extends ColumnsShape = Args[1] extends ColumnsShape
+      ? Args[1]
+      : Args[2] extends ColumnsShape
+      ? Args[2]
+      : Args[1] extends (t: DataTypes) => ColumnsShape
+      ? ReturnType<Args[1]>
+      : Args[2] extends (t: DataTypes) => ColumnsShape
+      ? ReturnType<Args[2]>
+      : never,
+  >(
+    this: T,
+    ...args: Args
+  ): AddQueryWith<
+    T,
+    {
+      table: Args[0];
+      shape: Shape;
+      type: Output<Shape>;
+    }
+  > {
+    return pushQueryValue(this, 'with', [
+      args[0],
+      args[1] === true
+        ? Object.keys(
+            typeof args[2] === 'object' ? args[2] : args[2](dataTypes),
+          )
+        : false,
+      args.length === 3 ? args[2] : args[3],
+    ]) as any;
   }
 
   group<T extends Query>(
@@ -581,20 +707,38 @@ export class QueryMethods {
     >;
   }
 
+  wrap<T extends Query, Q extends Query, As extends string = 't'>(
+    this: T,
+    query: Q,
+    as?: As,
+  ): SetQueryTableAlias<Q, As> {
+    return this.clone()._wrap(query, as);
+  }
+
+  _wrap<T extends Query, Q extends Query, As extends string = 't'>(
+    this: T,
+    query: Q,
+    as?: As,
+  ): SetQueryTableAlias<Q, As> {
+    return query
+      ._as(as ?? 't')
+      ._from(raw(`(${this.toSql()})`)) as unknown as SetQueryTableAlias<Q, As>;
+  }
+
   json<T extends Query>(this: T): SetQueryReturnsValue<T, string> {
     return this.clone()._json();
   }
 
   _json<T extends Query>(this: T): SetQueryReturnsValue<T, string> {
-    const innerSql = `(${this.toSql()})`;
-
-    const q = this._selectAs({
-      json: raw(
-        this.query?.take
-          ? `COALESCE(row_to_json("t".*), '{}')`
-          : `COALESCE(json_agg(row_to_json("t".*)), '[]')`,
-      ),
-    }).from(raw(innerSql));
+    const q = this._wrap(
+      this.selectAs({
+        json: raw(
+          this.query?.take
+            ? `COALESCE(row_to_json("t".*), '{}')`
+            : `COALESCE(json_agg(row_to_json("t".*)), '[]')`,
+        ),
+      }),
+    );
 
     return q._value<typeof q, string>() as unknown as SetQueryReturnsValue<
       T,
