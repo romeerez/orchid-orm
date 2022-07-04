@@ -23,7 +23,8 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
-    "pqb": "workspace:*"
+    "pqb": "workspace:*",
+    "zod": "> 3.1"
   },
   "devDependencies": {
     "@types/jest": "^28.1.2",
