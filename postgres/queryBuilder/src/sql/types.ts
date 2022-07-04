@@ -9,6 +9,7 @@ export type QueryData<T extends Query = Query> = {
   select?: SelectItem<T>[];
   distinct?: Expression<T>[];
   from?: string | Query | RawExpression;
+  fromOnly?: boolean;
   join?: JoinItem[];
   and?: WhereItem<T>[];
   or?: WhereItem<T>[][];

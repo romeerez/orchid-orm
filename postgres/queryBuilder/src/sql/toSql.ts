@@ -40,7 +40,9 @@ export const toSql = (model: Query): string => {
       : q(query.from)
     : q(model.table);
 
-  sql.push('FROM', from);
+  sql.push('FROM');
+  if (query.fromOnly) sql.push('ONLY');
+  sql.push(from);
 
   if (query.as && quotedAs !== from) {
     sql.push('AS', quotedAs);

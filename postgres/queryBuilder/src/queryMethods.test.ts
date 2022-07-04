@@ -518,7 +518,10 @@ describe('queryMethods', () => {
       expect(
         q.select('name').from(User.select('name'), 'wrapped').toSql(),
       ).toBe(
-        'SELECT "wrapped"."name" FROM (SELECT "user"."name" FROM "user") AS "wrapped"',
+        line(`
+          SELECT "wrapped"."name"
+          FROM (SELECT "user"."name" FROM "user") AS "wrapped"
+        `),
       );
       expectQueryNotMutated(q);
     });
@@ -529,6 +532,13 @@ describe('queryMethods', () => {
         'SELECT "user"."name" FROM "user"',
       );
       expectQueryNotMutated(q);
+    });
+
+    it('should add ONLY keyword when `only` parameter is provided', () => {
+      const q = User.all();
+      expect(q.select('id').from(User, { only: true }).toSql()).toBe(
+        'SELECT "user"."id" FROM ONLY "user"',
+      );
     });
   });
 

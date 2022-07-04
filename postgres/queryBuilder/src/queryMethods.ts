@@ -72,8 +72,8 @@ type SelectAsResult<T extends Query, S extends SelectAsArg<T>> = AddQuerySelect<
 >;
 
 type FromArgs<T extends Query> = [
-  arg: Query | RawExpression | Exclude<keyof T['withData'], symbol | number>,
-  as?: string,
+  first: Query | RawExpression | Exclude<keyof T['withData'], symbol | number>,
+  second?: string | { as?: string; only?: boolean },
 ];
 
 type FromResult<
@@ -81,6 +81,8 @@ type FromResult<
   Args extends FromArgs<T>,
 > = Args[1] extends string
   ? SetQueryTableAlias<T, Args[1]>
+  : Args[1] extends { as: string }
+  ? SetQueryTableAlias<T, Args[1]['as']>
   : Args[0] extends string
   ? SetQueryTableAlias<T, Args[0]>
   : Args[0] extends Query
@@ -430,10 +432,16 @@ export class QueryMethods {
     let as: string | undefined;
     if (typeof args[1] === 'string') {
       as = args[1];
+    } else if (typeof args[1] === 'object' && args[1].as) {
+      as = args[1].as;
     } else if (typeof args[0] === 'string') {
       as = args[0];
     } else if (!isRaw(args[0] as RawExpression)) {
       as = (args[0] as Query).query?.as || (args[0] as Query).table;
+    }
+
+    if (typeof args[1] === 'object' && 'only' in args[1]) {
+      setQueryValue(this, 'fromOnly', args[1].only);
     }
 
     return setQueryValue(
