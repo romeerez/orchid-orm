@@ -1,4 +1,9 @@
-import { DefaultSelectColumns, Query, QueryReturnType } from './query';
+import {
+  DefaultSelectColumns,
+  Query,
+  QueryReturnType,
+  QueryWithTable,
+} from './query';
 import { QueryMethods } from './queryMethods';
 import { AggregateMethods } from './aggregateMethods';
 import { QueryData } from './sql';
@@ -16,17 +21,25 @@ import { applyMixins } from './utils';
 import { StringKey } from './common';
 
 export interface Db<
-  Table extends string,
-  Shape extends ColumnsShape = ColumnsShape,
+  Table extends string | undefined = undefined,
+  Shape extends ColumnsShape = Record<string, never>,
 > extends QueryMethods,
     AggregateMethods {
-  new (adapter: PostgresAdapter): this;
+  new (
+    adapter: PostgresAdapter,
+    queryBuilder: Db,
+    table?: Table,
+    shape?: Shape,
+  ): this;
 
+  adapter: PostgresAdapter;
+  queryBuilder: Db;
+  table: Table;
+  shape: Shape;
+  type: Output<Shape>;
   returnType: QueryReturnType;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   query?: QueryData<any>;
-  shape: Shape;
-  type: Output<Shape>;
   columns: (keyof Output<Shape>)[];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
   result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
@@ -34,7 +47,6 @@ export interface Db<
   selectable: Shape & {
     [K in keyof Shape as `${Table}.${StringKey<K>}`]: Shape[K];
   };
-  table: Table;
   tableAlias: undefined;
   primaryKeys: GetPrimaryKeys<Shape>[];
   primaryTypes: GetPrimaryTypes<Shape, GetPrimaryKeys<Shape>>;
@@ -46,18 +58,23 @@ export interface Db<
     {
       key: string;
       type: string;
-      query: Query;
+      query: QueryWithTable;
       options: Record<string, unknown>;
       joinQuery: Query & { query: QueryData };
     }
   >;
 }
 
-export class Db<Table extends string, Shape extends ColumnsShape> {
+export class Db<
+  Table extends string | undefined = undefined,
+  Shape extends ColumnsShape = Record<string, never>,
+> implements Query
+{
   constructor(
     public adapter: PostgresAdapter,
-    public table: Table,
-    public shape: Shape,
+    public queryBuilder: Db,
+    public table: Table = undefined as Table,
+    public shape: Shape = {} as Shape,
   ) {
     const schemaObject = tableSchema(shape);
     const columns = Object.keys(shape) as unknown as (keyof Output<Shape>)[];
@@ -93,14 +110,32 @@ export class Db<Table extends string, Shape extends ColumnsShape> {
 applyMixins(Db, [QueryMethods, AggregateMethods]);
 Db.prototype.constructor = Db;
 
-export const dbConstructor = (adapter: PostgresAdapter) => {
+type DbResult = Db & {
+  <Table extends string, Shape extends ColumnsShape>(
+    table: Table,
+    shape: ((t: DataTypes) => Shape) | Shape,
+  ): Db<Table, Shape>;
+
+  adapter: PostgresAdapter;
+  destroy: PostgresAdapter['destroy'];
+};
+
+export const createDb = (adapter: PostgresAdapter): DbResult => {
+  const qb = new Db(adapter, undefined as unknown as Db);
+  qb.queryBuilder = qb;
+
   return Object.assign(
-    <Table extends string, Shape extends ColumnsShape = ColumnsShape>(
+    <Table extends string, Shape extends ColumnsShape>(
       table: Table,
-      shape: (t: DataTypes) => Shape = () => ({} as Shape),
+      shape: ((t: DataTypes) => Shape) | Shape,
     ): Db<Table, Shape> => {
-      return new Db<Table, Shape>(adapter, table, shape(dataTypes));
+      return new Db<Table, Shape>(
+        adapter,
+        qb,
+        table as Table,
+        typeof shape === 'function' ? shape(dataTypes) : shape,
+      );
     },
-    { adapter, destroy: () => adapter.destroy() },
-  );
+    { ...qb, ...Db.prototype, adapter, destroy: () => adapter.destroy() },
+  ) as DbResult;
 };

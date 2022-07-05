@@ -1,17 +1,11 @@
-import {
-  AliasOrTable,
-  ColumnExpression,
-  Expression,
-  isRaw,
-  raw,
-  RawExpression,
-} from './common';
+import { AliasOrTable, Expression, isRaw, raw, RawExpression } from './common';
 import {
   AddQueryJoinedTable,
   AddQuerySelect,
   AddQueryWith,
   Query,
   QueryWithData,
+  Selectable,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
   SetQueryReturnsRows,
@@ -151,9 +145,9 @@ type JoinCallbackMethods<J extends Query> = {
 
 type On<J extends Query> = <T extends Query & JoinCallbackMethods<J>>(
   this: T,
-  leftColumn: ColumnExpression<T>,
+  leftColumn: keyof T['selectable'],
   op: string,
-  rightColumn: ColumnExpression<T>,
+  rightColumn: keyof T['selectable'],
 ) => T;
 
 const on: On<Query> = function (leftColumn, op, rightColumn) {
@@ -187,9 +181,9 @@ type JoinArg<
   | [relation: Rel]
   | [
       query: Q,
-      leftColumn: ColumnExpression<Q>,
+      leftColumn: Selectable<Q>,
       op: string,
-      rightColumn: ColumnExpression<T>,
+      rightColumn: Selectable<T>,
     ]
   | [query: Q, raw: RawExpression]
   | [query: Q, on: (q: JoinCallbackQuery<T, Q>) => Query];
@@ -418,7 +412,10 @@ export class QueryMethods {
     this: T,
     tableAlias: TableAlias,
   ): SetQueryTableAlias<T, TableAlias> {
-    return this.clone()._as(tableAlias);
+    return this.clone()._as(tableAlias) as unknown as SetQueryTableAlias<
+      T,
+      TableAlias
+    >;
   }
 
   _as<T extends Query, TableAlias extends string>(
@@ -436,7 +433,7 @@ export class QueryMethods {
     this: T,
     ...args: Args
   ): FromResult<T, Args> {
-    return this.clone()._from(...args);
+    return this.clone()._from(...args) as FromResult<T, Args>;
   }
 
   _from<T extends Query, Args extends FromArgs<T>>(
@@ -491,16 +488,16 @@ export class QueryMethods {
 
   group<T extends Query>(
     this: T,
-    ...columns: (keyof T['type'] | RawExpression)[]
+    ...columns: (Selectable<T> | RawExpression)[]
   ): T {
     return this.clone()._group(...columns);
   }
 
   _group<T extends Query>(
     this: T,
-    ...columns: (keyof T['type'] | RawExpression)[]
+    ...columns: (Selectable<T> | RawExpression)[]
   ): T {
-    return pushQueryArray(this, 'group', columns as string[]);
+    return pushQueryArray(this, 'group', columns);
   }
 
   having<T extends Query>(this: T, ...args: HavingArg<T>[]): T {

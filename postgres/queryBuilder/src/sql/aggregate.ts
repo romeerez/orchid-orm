@@ -6,8 +6,8 @@ import { Expression, isRaw } from '../common';
 import { windowToSql } from './window';
 
 export const aggregateToSql = <T extends Query>(
-  quotedAs: string,
   item: Aggregate<T>,
+  quotedAs?: string,
 ) => {
   const sql: string[] = [`${item.function}(`];
 
@@ -18,24 +18,24 @@ export const aggregateToSql = <T extends Query>(
   if (typeof item.arg === 'object') {
     if (Array.isArray(item.arg)) {
       sql.push(
-        `${expressionToSql(quotedAs, item.arg[0])}, ${quote(item.arg[1])}`,
+        `${expressionToSql(item.arg[0], quotedAs)}, ${quote(item.arg[1])}`,
       );
     } else if (isRaw(item.arg)) {
-      sql.push(expressionToSql(quotedAs, item.arg));
+      sql.push(expressionToSql(item.arg, quotedAs));
     } else {
       const args: string[] = [];
       for (const key in item.arg) {
         args.push(
           `${quote(key)}, ${expressionToSql(
-            quotedAs,
             item.arg[key as keyof typeof item.arg] as unknown as Expression<T>,
+            quotedAs,
           )}`,
         );
       }
       sql.push(args.join(', '));
     }
   } else {
-    sql.push(expressionToSql(quotedAs, item.arg));
+    sql.push(expressionToSql(item.arg, quotedAs));
   }
 
   if (options.withinGroup) sql.push(') WITHIN GROUP (');
@@ -50,7 +50,7 @@ export const aggregateToSql = <T extends Query>(
   if (options.filter) sql.push(` FILTER (WHERE ${options.filter})`);
 
   if (options.over) {
-    sql.push(` OVER ${windowToSql(quotedAs, options.over)}`);
+    sql.push(` OVER ${windowToSql(options.over, quotedAs)}`);
   }
 
   return sql.join('');

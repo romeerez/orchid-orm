@@ -5,7 +5,7 @@ import {
   Relations,
 } from './relations/relations';
 import { BelongsTo } from './relations/belongsTo';
-import { Query, PostgresAdapter } from 'pqb';
+import { Query, PostgresAdapter, QueryWithTable } from 'pqb';
 
 type PostgresORM<T extends PostgresModelConstructors> = {
   [K in keyof T]: MapRelationMethods<InstanceType<T[K]>>;
@@ -44,7 +44,7 @@ export const PostgresOrm =
                   result as PostgresORM<PostgresModelConstructors>,
                   modelOrQuery,
                 )
-              : (modelOrQuery as Query);
+              : (modelOrQuery as QueryWithTable);
 
           if (item instanceof BelongsTo) {
             item.applyToModel(model as unknown as Query, query, prop);
@@ -59,10 +59,10 @@ export const PostgresOrm =
 const modelToQuery = (
   result: PostgresORM<PostgresModelConstructors>,
   model: PostgresModelConstructor,
-): Query => {
+): QueryWithTable => {
   for (const key in result) {
     if (result[key] instanceof model) {
-      return result[key] as unknown as Query;
+      return result[key] as unknown as QueryWithTable;
     }
   }
   throw new Error(`Cannot find model for ${model.name}`);

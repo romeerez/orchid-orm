@@ -5,8 +5,8 @@ import { expressionToSql, q } from './common';
 import { orderByToSql } from './orderBy';
 
 export const windowToSql = <T extends Query>(
-  quotedAs: string,
   window: T['windows'][number] | WindowDeclaration<T> | RawExpression,
+  quotedAs?: string,
 ) => {
   if (typeof window === 'object') {
     if (isRaw(window)) {
@@ -15,11 +15,11 @@ export const windowToSql = <T extends Query>(
       const sql: string[] = [];
       if (window.partitionBy) {
         sql.push(
-          `PARTITION BY ${expressionToSql(quotedAs, window.partitionBy)}`,
+          `PARTITION BY ${expressionToSql(window.partitionBy, quotedAs)}`,
         );
       }
       if (window.order) {
-        sql.push(`ORDER BY ${orderByToSql(quotedAs, window.order)}`);
+        sql.push(`ORDER BY ${orderByToSql(window.order, quotedAs)}`);
       }
       return `(${sql.join(' ')})`;
     }

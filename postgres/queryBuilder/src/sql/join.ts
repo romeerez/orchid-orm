@@ -7,8 +7,8 @@ import { whereToSql } from './where';
 export const pushJoinSql = (
   sql: string[],
   model: Query,
-  quotedAs: string,
   join: Exclude<QueryData['join'], undefined>,
+  quotedAs?: string,
 ) => {
   join.forEach((item) => {
     const [first] = item;
@@ -59,9 +59,9 @@ export const pushJoinSql = (
     } else if (item.length === 4) {
       const [, leftColumn, op, rightColumn] = item;
       sql.push(
-        `ON ${quoteFullColumn(joinAs, leftColumn)} ${op} ${quoteFullColumn(
-          quotedAs,
+        `ON ${quoteFullColumn(leftColumn, joinAs)} ${op} ${quoteFullColumn(
           rightColumn as string,
+          quotedAs,
         )}`,
       );
     }

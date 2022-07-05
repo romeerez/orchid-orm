@@ -22,34 +22,43 @@ export const toSql = (model: Query): string => {
 
   sql.push('SELECT');
 
-  const quotedAs = q(query.as || model.table);
+  const quotedAs = model.table && q(query.as || model.table);
 
   if (query.distinct) {
-    pushDistinctSql(sql, quotedAs, query.distinct);
+    pushDistinctSql(sql, query.distinct, quotedAs);
   }
 
-  pushSelectSql(sql, quotedAs, query.select);
+  pushSelectSql(sql, query.select, quotedAs);
 
-  const from = query.from
-    ? typeof query.from === 'object'
-      ? isRaw(query.from)
-        ? getRaw(query.from)
-        : query.from.query
-        ? `(${query.from.toSql()})`
-        : q(query.from.table)
-      : q(query.from)
-    : q(model.table);
+  if (query.from || model.table) {
+    let from: string;
+    if (query.from) {
+      if (typeof query.from === 'object') {
+        if (isRaw(query.from)) {
+          from = getRaw(query.from);
+        } else if (query.from.query || !query.from.table) {
+          from = `(${query.from.toSql()})`;
+        } else {
+          from = q(query.from.table);
+        }
+      } else {
+        from = q(query.from);
+      }
+    } else {
+      from = q(model.table as string);
+    }
 
-  sql.push('FROM');
-  if (query.fromOnly) sql.push('ONLY');
-  sql.push(from);
+    sql.push('FROM');
+    if (query.fromOnly) sql.push('ONLY');
+    sql.push(from);
 
-  if (query.as && quotedAs !== from) {
-    sql.push('AS', quotedAs);
+    if (query.as && quotedAs !== from) {
+      sql.push('AS', quotedAs as string);
+    }
   }
 
   if (query.join) {
-    pushJoinSql(sql, model, quotedAs, query.join);
+    pushJoinSql(sql, model, query.join, quotedAs);
   }
 
   const whereConditions = whereToSql(model, query, quotedAs);
@@ -59,20 +68,20 @@ export const toSql = (model: Query): string => {
     const group = query.group.map((item) =>
       typeof item === 'object' && isRaw(item)
         ? getRaw(item)
-        : qc(quotedAs, item as string),
+        : qc(item as string, quotedAs),
     );
     sql.push(`GROUP BY ${group.join(', ')}`);
   }
 
   if (query.having) {
-    pushHavingSql(sql, model, quotedAs, query.having);
+    pushHavingSql(sql, model, query.having, quotedAs);
   }
 
   if (query.window) {
     const window: string[] = [];
     query.window.forEach((item) => {
       for (const key in item) {
-        window.push(`${q(key)} AS ${windowToSql(quotedAs, item[key])}`);
+        window.push(`${q(key)} AS ${windowToSql(item[key], quotedAs)}`);
       }
     });
     sql.push(`WINDOW ${window.join(', ')}`);
@@ -89,7 +98,7 @@ export const toSql = (model: Query): string => {
   if (query.order) {
     sql.push(
       `ORDER BY ${query.order
-        .map((item) => orderByToSql(quotedAs, item))
+        .map((item) => orderByToSql(item, quotedAs))
         .join(', ')}`,
     );
   }

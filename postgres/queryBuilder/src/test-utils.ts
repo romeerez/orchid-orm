@@ -1,6 +1,6 @@
 import { Query } from './query';
 import { Adapter } from './adapter';
-import { dbConstructor } from './db';
+import { createDb } from './db';
 import {
   patchPgForTransactions,
   rollbackTransaction,
@@ -15,7 +15,7 @@ export const dbClient = new Client({
 
 export const adapter = Adapter({ connectionString: process.env.DATABASE_URL });
 
-export const db = dbConstructor(adapter);
+export const db = createDb(adapter);
 
 export const User = db('user', (t) => ({
   id: t.serial().primaryKey(),

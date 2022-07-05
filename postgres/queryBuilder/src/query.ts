@@ -6,16 +6,53 @@ import { Column, ColumnsShape, Output } from './schema';
 import { Spread } from './utils';
 import { AliasOrTable, StringKey } from './common';
 import { Then } from './thenMethods';
+import { Db } from './db';
+
+export type Query = QueryMethods &
+  AggregateMethods & {
+    adapter: PostgresAdapter;
+    queryBuilder: Db;
+    table?: string;
+    shape: ColumnsShape;
+    type: unknown;
+    query?: QueryData<any>;
+    result: ColumnsShape;
+    hasSelect: boolean;
+    selectable: ColumnsShape;
+    returnType: QueryReturnType;
+    then: any;
+    tableAlias: string | undefined;
+    withData: Record<never, never>;
+    joinedTables: Record<never, never>;
+    windows: PropertyKey[];
+    primaryKeys: any[];
+    primaryTypes: any[];
+    defaultSelectColumns: string[];
+    relations: Record<
+      string,
+      {
+        key: string;
+        type: string;
+        query: QueryWithTable;
+        options: Record<string, unknown>;
+        joinQuery: Query & { query: QueryData };
+      }
+    >;
+  };
+
+export type Selectable<T extends Query> = StringKey<keyof T['selectable']>;
+
+export type QueryWithTable = Query & { table: string };
 
 export type DefaultSelectColumns<S extends ColumnsShape> = {
   [K in keyof S]: S[K]['isHidden'] extends true ? never : K;
-}[keyof S][];
+}[StringKey<keyof S>][];
 
 export type QueryReturnType = 'all' | 'one' | 'rows' | 'value' | 'void';
 
 export type JoinedTablesBase = Record<string, Query>;
 
-export type WithBase = Pick<Query, 'table' | 'type' | 'shape'>;
+export type WithBase = { table: string; shape: ColumnsShape };
 
 export type SetQuery<
   T extends Query = Query,
@@ -78,7 +115,17 @@ export type QueryWithData<T extends Query> = T & { query: QueryData<T> };
 export type SetQueryTableAlias<
   T extends Query,
   TableAlias extends string,
-> = Omit<T, 'tableAlias'> & { tableAlias: TableAlias };
+> = Omit<T, 'tableAlias' | 'selectable'> & {
+  tableAlias: TableAlias;
+  selectable: Omit<
+    T['selectable'],
+    `${AliasOrTable<T>}.${StringKey<keyof T['shape']>}`
+  > & {
+    [K in keyof T['shape'] as `${TableAlias}.${StringKey<
+      keyof T['shape']
+    >}`]: T['shape'][K];
+  };
+};
 
 export type SetQueryJoinedTables<
   T extends Query,
@@ -121,34 +168,3 @@ export type SetQueryWindows<
   T['joinedTables'],
   W
 >;
-
-export type Query = QueryMethods &
-  AggregateMethods & {
-    adapter: PostgresAdapter;
-    query?: QueryData<any>;
-    shape: ColumnsShape;
-    type: Record<string, unknown>;
-    result: ColumnsShape;
-    hasSelect: boolean;
-    selectable: ColumnsShape;
-    returnType: QueryReturnType;
-    then: any;
-    table: string;
-    tableAlias: string | undefined;
-    withData: Record<never, never>;
-    joinedTables: Record<never, never>;
-    windows: PropertyKey[];
-    primaryKeys: any[];
-    primaryTypes: any[];
-    defaultSelectColumns: string[];
-    relations: Record<
-      string,
-      {
-        key: string;
-        type: string;
-        query: Query;
-        options: Record<string, unknown>;
-        joinQuery: Query & { query: QueryData };
-      }
-    >;
-  };

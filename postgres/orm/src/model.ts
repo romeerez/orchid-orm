@@ -14,6 +14,7 @@ import {
   PostgresAdapter,
   applyMixins,
   StringKey,
+  Db,
 } from 'pqb';
 import { RelationMethods } from './relations/relations';
 
@@ -24,6 +25,7 @@ export interface PostgresModel<Shape extends ColumnsShape, Table extends string>
     RelationMethods {
   new (adapter: PostgresAdapter): this;
 
+  queryBuilder: Db;
   returnType: QueryReturnType;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   query?: QueryData<any>;
@@ -44,16 +46,7 @@ export interface PostgresModel<Shape extends ColumnsShape, Table extends string>
   windows: PropertyKey[];
   withData: Query['withData'];
   joinedTables: Query['joinedTables'];
-  relations: Record<
-    string,
-    {
-      key: string;
-      type: string;
-      query: Query;
-      options: Record<string, unknown>;
-      joinQuery: Query & { query: QueryData };
-    }
-  >;
+  relations: Query['relations'];
 }
 
 export class PostgresModel<Shape extends ColumnsShape, Table extends string> {

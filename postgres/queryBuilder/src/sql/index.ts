@@ -1,2 +1,2 @@
-export * from './toSql'
-export * from './types'
+export * from './toSql';
+export * from './types';

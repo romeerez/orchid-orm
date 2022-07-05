@@ -16,8 +16,8 @@ const aggregateOptionNames: (keyof AggregateOptions)[] = [
 export const pushHavingSql = <T extends Query>(
   sql: string[],
   model: T,
-  quotedAs: string,
   having: Exclude<QueryData<T>['having'], undefined>,
+  quotedAs?: string,
 ) => {
   const list: string[] = [];
   having.forEach((item) => {
@@ -48,11 +48,14 @@ export const pushHavingSql = <T extends Query>(
               }
               list.push(
                 operator(
-                  aggregateToSql(quotedAs, {
-                    function: key,
-                    arg: column,
-                    options: valueOrOptions as AggregateOptions<T>,
-                  }),
+                  aggregateToSql(
+                    {
+                      function: key,
+                      arg: column,
+                      options: valueOrOptions as AggregateOptions<T>,
+                    },
+                    quotedAs,
+                  ),
                   valueOrOptions[op],
                 ),
               );
@@ -60,11 +63,14 @@ export const pushHavingSql = <T extends Query>(
           }
         } else {
           list.push(
-            `${aggregateToSql(quotedAs, {
-              function: key,
-              arg: column,
-              options: EMPTY_OBJECT,
-            })} = ${quote(valueOrOptions)}`,
+            `${aggregateToSql(
+              {
+                function: key,
+                arg: column,
+                options: EMPTY_OBJECT,
+              },
+              quotedAs,
+            )} = ${quote(valueOrOptions)}`,
           );
         }
       }

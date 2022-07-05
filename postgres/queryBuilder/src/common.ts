@@ -1,24 +1,13 @@
-import { Query } from './query';
+import { Query, Selectable } from './query';
 import { Column } from './schema';
-
-export type ColumnExpression<T extends Query> =
-  | keyof T['type']
-  | `${AliasOrTable<T>}.${StringKeysOfType<T>}`
-  | {
-      [Table in keyof T['joinedTables']]: Table extends string
-        ? T['joinedTables'][Table] extends Query
-          ? `${Table}.${StringKeysOfType<T['joinedTables'][Table]>}`
-          : never
-        : never;
-    }[keyof T['joinedTables']];
 
 export type AliasOrTable<T extends Query> = T['tableAlias'] extends string
   ? T['tableAlias']
-  : T['table'];
+  : T['table'] extends string
+  ? T['table']
+  : never;
 
 export type StringKey<K extends PropertyKey> = Exclude<K, symbol | number>;
-
-export type StringKeysOfType<T extends Query> = StringKey<keyof T['type']>;
 
 export type RawExpression<C extends Column = Column> = {
   __raw: string;
@@ -30,11 +19,11 @@ export type Expression<T extends Query = Query, C extends Column = Column> =
   | RawExpression<C>;
 
 export type ExpressionOfType<T extends Query, C extends Column, Type> =
-  | (T['type'] extends Record<string, unknown>
-      ? string
-      : {
-          [K in keyof T['type']]: T['type'][K] extends Type ? K : never;
-        }[keyof T['type']])
+  | {
+      [K in keyof T['selectable']]: T['selectable'][K]['_output'] extends Type
+        ? K
+        : never;
+    }[Selectable<T>]
   | RawExpression<C>;
 
 export type NumberExpression<

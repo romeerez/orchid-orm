@@ -7,8 +7,8 @@ import { quote } from '../quote';
 export const whereToSql = (
   model: Query,
   query: QueryData,
-  quotedAs: string,
-  otherTableQuotedAs: string = quotedAs,
+  quotedAs?: string,
+  otherTableQuotedAs?: string,
 ): string => {
   const or =
     query.and && query.or
@@ -27,7 +27,7 @@ export const whereToSql = (
         const sql = whereToSql(
           query,
           query.query || EMPTY_OBJECT,
-          q(query.table),
+          query.table && q(query.table),
         );
         if (sql.length) ands.push(`(${sql})`);
         return;
@@ -39,8 +39,8 @@ export const whereToSql = (
       }
 
       if (Array.isArray(item)) {
-        const leftColumn = quoteFullColumn(quotedAs, item[0]);
-        const rightColumn = quoteFullColumn(otherTableQuotedAs, item[2]);
+        const leftColumn = quoteFullColumn(item[0], quotedAs);
+        const rightColumn = quoteFullColumn(item[2], otherTableQuotedAs);
         const op = item[1];
         ands.push(`${leftColumn} ${op} ${rightColumn}`);
         return;
@@ -54,7 +54,7 @@ export const whereToSql = (
           value !== undefined
         ) {
           if (isRaw(value)) {
-            ands.push(`${qc(quotedAs, key)} = ${getRaw(value)}`);
+            ands.push(`${qc(key, quotedAs)} = ${getRaw(value)}`);
           } else {
             const column = model.shape[key];
             if (!column) {
@@ -70,13 +70,13 @@ export const whereToSql = (
               }
 
               ands.push(
-                operator(qc(quotedAs, key), value[op as keyof typeof value]),
+                operator(qc(key, quotedAs), value[op as keyof typeof value]),
               );
             }
           }
         } else {
           ands.push(
-            `${qc(quotedAs, key)} ${value === null ? 'IS' : '='} ${quote(
+            `${qc(key, quotedAs)} ${value === null ? 'IS' : '='} ${quote(
               value,
             )}`,
           );

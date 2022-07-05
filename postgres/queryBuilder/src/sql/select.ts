@@ -6,8 +6,8 @@ import { aggregateToSql } from './aggregate';
 
 export const pushSelectSql = (
   sql: string[],
-  quotedAs: string,
   select: QueryData['select'],
+  quotedAs?: string,
 ) => {
   if (select) {
     const list: string[] = [];
@@ -25,14 +25,14 @@ export const pushSelectSql = (
                   list.push(`(${(value as Query).json().toSql()}) AS ${q(as)}`);
                 }
               } else {
-                list.push(`${quoteFullColumn(quotedAs, value)} AS ${q(as)}`);
+                list.push(`${quoteFullColumn(value, quotedAs)} AS ${q(as)}`);
               }
             }
           } else {
-            list.push(aggregateToSql(quotedAs, item));
+            list.push(aggregateToSql(item, quotedAs));
           }
         } else {
-          list.push(quoteFullColumn(quotedAs, item));
+          list.push(quoteFullColumn(item, quotedAs));
         }
       });
     }

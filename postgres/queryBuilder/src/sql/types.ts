@@ -1,4 +1,4 @@
-import { Query } from '../query';
+import { Query, QueryWithTable, Selectable } from '../query';
 import { Expression, RawExpression } from '../common';
 import { Aggregate1ArgumentTypes } from '../aggregateMethods';
 import { ColumnsShape, Output } from '../schema';
@@ -14,7 +14,7 @@ export type QueryData<T extends Query = Query> = {
   and?: WhereItem<T>[];
   or?: WhereItem<T>[][];
   as?: string;
-  group?: (keyof T['type'] | RawExpression)[];
+  group?: (Selectable<T> | RawExpression)[];
   having?: HavingArg<T>[];
   window?: WindowArg<T>[];
   union?: { arg: UnionArg<T>; kind: UnionKind }[];
@@ -31,9 +31,9 @@ export type SelectItem<T extends Query> =
 
 export type JoinItem =
   | [relation: string]
-  | [query: Query, leftColumn: string, op: string, rightColumn: string]
-  | [query: Query, raw: RawExpression]
-  | [query: Query, on: Query];
+  | [query: QueryWithTable, leftColumn: string, op: string, rightColumn: string]
+  | [query: QueryWithTable, raw: RawExpression]
+  | [query: QueryWithTable, on: Query];
 
 export type WhereItem<T extends Query> =
   | Partial<Output<T['shape']>>
@@ -59,7 +59,7 @@ export type SortDir = 'ASC' | 'DESC';
 
 export type OrderBy<T extends Query> =
   | {
-      [K in keyof T['type']]?:
+      [K in Selectable<T>]?:
         | SortDir
         | { dir: SortDir; nulls: 'FIRST' | 'LAST' };
     }
