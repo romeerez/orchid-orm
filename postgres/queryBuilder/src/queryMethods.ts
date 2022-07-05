@@ -1,7 +1,6 @@
-import { toSql } from './sql/toSql';
 import {
   AliasOrTable,
-  Column,
+  ColumnExpression,
   Expression,
   isRaw,
   raw,
@@ -11,10 +10,8 @@ import {
   AddQueryJoinedTable,
   AddQuerySelect,
   AddQueryWith,
-  FinalizeQueryResult,
   Query,
   QueryWithData,
-  SetQuery,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
   SetQueryReturnsRows,
@@ -25,14 +22,24 @@ import {
 } from './query';
 import { GetTypesOrRaw, PropertyKeyUnionToArray } from './utils';
 import {
+  toSql,
   HavingArg,
   OrderBy,
   QueryData,
   UnionArg,
   WhereItem,
   WindowArg,
-} from './sql/types';
-import { ColumnsShape, dataTypes, DataTypes, Output } from './schema';
+} from './sql';
+import {
+  Column,
+  ColumnsObject,
+  ColumnsShape,
+  dataTypes,
+  DataTypes,
+  NumberColumn,
+  Output,
+  StringColumn,
+} from './schema';
 import {
   pushQueryArray,
   pushQueryValue,
@@ -48,25 +55,25 @@ import {
   thenVoid,
 } from './thenMethods';
 
-type SelectResult<T extends Query, K extends Column<T>[]> = AddQuerySelect<
-  T,
-  Pick<T['type'], K[number]>
->;
+type SelectResult<
+  T extends Query,
+  K extends (keyof T['selectable'])[],
+> = AddQuerySelect<T, Pick<T['selectable'], K[number]>>;
 
 type SelectAsArg<T extends Query> = Record<
   string,
-  Column<T> | Query | RawExpression
+  keyof T['selectable'] | Query | RawExpression
 >;
 
 type SelectAsResult<T extends Query, S extends SelectAsArg<T>> = AddQuerySelect<
   T,
   {
-    [K in keyof S]: S[K] extends keyof T['type']
-      ? T['type'][S[K]]
-      : S[K] extends RawExpression<infer Type>
-      ? Type
+    [K in keyof S]: S[K] extends keyof T['selectable']
+      ? T['selectable'][S[K]]
+      : S[K] extends RawExpression<infer Column>
+      ? Column
       : S[K] extends Query
-      ? FinalizeQueryResult<S[K]>
+      ? ColumnsObject<S[K]['result']>
       : never;
   }
 >;
@@ -145,9 +152,9 @@ type JoinCallbackMethods<J extends Query> = {
 
 type On<J extends Query> = <T extends Query & JoinCallbackMethods<J>>(
   this: T,
-  leftColumn: Column<T>,
+  leftColumn: ColumnExpression<T>,
   op: string,
-  rightColumn: Column<T>,
+  rightColumn: ColumnExpression<T>,
 ) => T;
 
 const on: On<Query> = function (leftColumn, op, rightColumn) {
@@ -179,7 +186,12 @@ type JoinArg<
   Rel extends keyof T['relations'] | undefined,
 > =
   | [relation: Rel]
-  | [query: Q, leftColumn: Column<Q>, op: string, rightColumn: Column<T>]
+  | [
+      query: Q,
+      leftColumn: ColumnExpression<Q>,
+      op: string,
+      rightColumn: ColumnExpression<T>,
+    ]
   | [query: Q, raw: RawExpression]
   | [query: Q, on: (q: JoinCallbackQuery<T, Q>) => Query];
 
@@ -236,13 +248,17 @@ export class QueryMethods {
     return q as unknown as SetQueryReturnsRows<T>;
   }
 
-  value<T extends Query, V>(this: T): SetQueryReturnsValue<T, V> {
+  value<T extends Query, V extends Column>(
+    this: T,
+  ): SetQueryReturnsValue<T, V> {
     return this.then === thenValue
       ? (this as unknown as SetQueryReturnsValue<T, V>)
       : this.clone()._value<T, V>();
   }
 
-  _value<T extends Query, V>(this: T): SetQueryReturnsValue<T, V> {
+  _value<T extends Query, V extends Column>(
+    this: T,
+  ): SetQueryReturnsValue<T, V> {
     const q = this.toQuery();
     q.then = thenValue;
     removeFromQuery(q, 'take');
@@ -299,37 +315,36 @@ export class QueryMethods {
     return toSql(this);
   }
 
-  asType<T extends Query>(this: T): <S>() => SetQuery<T, S> {
-    return <S>() => this as unknown as SetQuery<T, S>;
-  }
-
-  select<T extends Query, K extends Column<T>[]>(
+  select<T extends Query, K extends (keyof T['selectable'])[]>(
     this: T,
     ...columns: K
   ): SelectResult<T, K> {
     return this.clone()._select(...columns);
   }
 
-  _select<T extends Query, K extends Column<T>[]>(
+  _select<T extends Query, K extends (keyof T['selectable'])[]>(
     this: T,
     ...columns: K
   ): SelectResult<T, K> {
-    if (!columns.length) return this;
-    return pushQueryArray(this, 'select', columns);
+    return (columns.length
+      ? pushQueryArray(this, 'select', columns)
+      : this) as unknown as SelectResult<T, K>;
   }
 
   selectAs<T extends Query, S extends SelectAsArg<T>>(
     this: T,
     select: S,
   ): SelectAsResult<T, S> {
-    return this.clone()._selectAs(select) as any;
+    return this.clone()._selectAs(select) as unknown as SelectAsResult<T, S>;
   }
 
   _selectAs<T extends Query, S extends SelectAsArg<T>>(
     this: T,
     select: S,
   ): SelectAsResult<T, S> {
-    return pushQueryValue(this, 'select', { selectAs: select });
+    return pushQueryValue(this, 'select', {
+      selectAs: select,
+    }) as unknown as SelectAsResult<T, S>;
   }
 
   distinct<T extends Query>(this: T, ...columns: Expression<T>[]): T {
@@ -529,11 +544,11 @@ export class QueryMethods {
       ._from(raw(`(${this.toSql()})`)) as unknown as SetQueryTableAlias<Q, As>;
   }
 
-  json<T extends Query>(this: T): SetQueryReturnsValue<T, string> {
+  json<T extends Query>(this: T): SetQueryReturnsValue<T, StringColumn> {
     return this.clone()._json();
   }
 
-  _json<T extends Query>(this: T): SetQueryReturnsValue<T, string> {
+  _json<T extends Query>(this: T): SetQueryReturnsValue<T, StringColumn> {
     const q = this._wrap(
       this.selectAs({
         json: raw(
@@ -542,12 +557,9 @@ export class QueryMethods {
             : `COALESCE(json_agg(row_to_json("t".*)), '[]')`,
         ),
       }),
-    );
+    ) as unknown as T;
 
-    return q._value<typeof q, string>() as unknown as SetQueryReturnsValue<
-      T,
-      string
-    >;
+    return q._value<T, StringColumn>();
   }
 
   union<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
@@ -654,15 +666,15 @@ export class QueryMethods {
     return pushQueryArray(this, 'for', args);
   }
 
-  exists<T extends Query>(this: T): SetQueryReturnsValue<T, { exists: 1 }> {
+  exists<T extends Query>(this: T): SetQueryReturnsValue<T, NumberColumn> {
     return this.clone()._exists();
   }
 
-  _exists<T extends Query>(this: T): SetQueryReturnsValue<T, { exists: 1 }> {
+  _exists<T extends Query>(this: T): SetQueryReturnsValue<T, NumberColumn> {
     const q = setQueryValue(this, 'select', [
       { selectAs: { exists: raw('1') } },
     ]);
-    return q._value<T, { exists: 1 }>();
+    return q._value<T, NumberColumn>();
   }
 
   join<

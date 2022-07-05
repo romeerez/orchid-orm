@@ -5,7 +5,7 @@
     "gitignored"
   ],
   "compilerOptions": {
-    "module": "ESNext",
+    "module": "commonjs",
     "lib": ["esnext"],
     "importHelpers": true,
     // output .d.ts declaration files for consumers

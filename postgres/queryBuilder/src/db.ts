@@ -1,12 +1,7 @@
-import {
-  AllColumns,
-  DefaultSelectColumns,
-  Query,
-  QueryReturnType,
-} from './query';
+import { DefaultSelectColumns, Query, QueryReturnType } from './query';
 import { QueryMethods } from './queryMethods';
 import { AggregateMethods } from './aggregateMethods';
-import { QueryData } from './sql/types';
+import { QueryData } from './sql';
 import { PostgresAdapter } from './adapter';
 import {
   ColumnsShape,
@@ -18,6 +13,7 @@ import {
   tableSchema,
 } from './schema';
 import { applyMixins } from './utils';
+import { StringKey } from './common';
 
 export interface Db<
   Table extends string,
@@ -33,7 +29,11 @@ export interface Db<
   type: Output<Shape>;
   columns: (keyof Output<Shape>)[];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
-  result: AllColumns;
+  result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
+  hasSelect: false;
+  selectable: Shape & {
+    [K in keyof Shape as `${Table}.${StringKey<K>}`]: Shape[K];
+  };
   table: Table;
   tableAlias: undefined;
   primaryKeys: GetPrimaryKeys<Shape>[];

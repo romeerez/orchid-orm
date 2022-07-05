@@ -25,9 +25,9 @@ export type QueryData<T extends Query = Query> = {
 };
 
 export type SelectItem<T extends Query> =
-  | keyof T['type']
+  | keyof T['selectable']
   | Aggregate<T>
-  | { selectAs: Record<string, Expression<T> | Query> };
+  | { selectAs: Record<string, keyof T['selectable'] | Query | RawExpression> };
 
 export type JoinItem =
   | [relation: string]
@@ -84,8 +84,8 @@ export type HavingArg<T extends Query = Query> =
   | {
       [Agg in keyof Aggregate1ArgumentTypes<T>]?: {
         [Column in Exclude<Aggregate1ArgumentTypes<T>[Agg], RawExpression>]?:
-          | T['type'][Column]
-          | (ColumnOperators<T['shape'], Column> & AggregateOptions<T>);
+          | T['selectable'][Column]['_output']
+          | (ColumnOperators<T['selectable'], Column> & AggregateOptions<T>);
       };
     }
   | RawExpression;

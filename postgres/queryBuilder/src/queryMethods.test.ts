@@ -1,5 +1,5 @@
 import { raw } from './common';
-import { HavingArg, QueryData } from './sql/types';
+import { HavingArg, QueryData } from './sql';
 import {
   line,
   expectQueryNotMutated,
@@ -34,21 +34,43 @@ describe('queryMethods', () => {
 
   describe('toQuery', () => {
     it('should return the same object if query is present', () => {
-      const q = User.clone();
-      q.query = {};
-      expect(q.toQuery()).toBe(q);
+      const a = User.clone();
+      a.query = {};
+      const b = a.toQuery();
+      expect(a).toBe(b);
+
+      const eq: AssertEqual<typeof a, typeof b> = true;
+      expect(eq).toBe(true);
     });
 
-    it('should return new object if it is a User', () => {
-      expect(User.toQuery()).not.toBe(User);
+    it('should return new object if it is a model', () => {
+      const q = User.toQuery();
+      expect(q).not.toBe(User);
+
+      const eq: AssertEqual<
+        typeof q,
+        typeof User & { query: QueryData<typeof User> }
+      > = true;
+      expect(eq).toBe(true);
     });
   });
 
   describe('toSql', () => {
     it('generates sql', () => {
-      expect(User.toSql()).toBe(`SELECT "user".* FROM "user"`);
+      const sql = User.toSql();
+      expect(sql).toBe(`SELECT "user".* FROM "user"`);
+
+      const eq: AssertEqual<typeof sql, string> = true;
+      expect(eq).toBe(true);
     });
   });
+
+  // describe('result', () => {
+  //   it('should have the same type as model shape', () => {
+  //     const eq: AssertEqual<typeof User.result, typeof User.shape> = true;
+  //     expect(eq).toBe(true);
+  //   });
+  // });
 
   describe('.all', () => {
     it('should return the same query if already all', () => {

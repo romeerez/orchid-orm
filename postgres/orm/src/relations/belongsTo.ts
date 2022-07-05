@@ -17,7 +17,7 @@ export class BelongsTo<
     const primaryKey = this.options?.primaryKey || target.primaryKeys[0];
     const foreignKey = this.options?.foreignKey || `${query.table}Id`;
 
-    target[key as keyof Query] = (
+    (target as unknown as Record<string, unknown>)[key] = (
       params: Record<Options['foreignKey'], Q['type'][Options['primaryKey']]>,
     ) => {
       return query.findBy({
