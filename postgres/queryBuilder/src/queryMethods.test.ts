@@ -565,12 +565,13 @@ describe('queryMethods', () => {
   });
 
   describe('with', () => {
-    const columnShapes: (ColumnsShape | ((t: DataTypes) => ColumnsShape))[] = [
-      { one: dataTypes.integer(), two: dataTypes.text() },
-      (t: DataTypes) => ({ one: t.integer(), two: t.text() }),
-    ];
-
     describe('raw parameter', () => {
+      const columnShapes: (ColumnsShape | ((t: DataTypes) => ColumnsShape))[] =
+        [
+          { one: dataTypes.integer(), two: dataTypes.text() },
+          (t: DataTypes) => ({ one: t.integer(), two: t.text() }),
+        ];
+
       it('should add `with` statement with raw parameter', () => {
         const q = User.all();
 
@@ -619,49 +620,20 @@ describe('queryMethods', () => {
     });
 
     describe('query parameter', () => {
-      describe('shape provided explicitly', () => {
-        it('should add `with` statement', () => {
-          const q = User.all();
+      it('should add `with` statement', () => {
+        const q = User.all();
 
-          columnShapes.forEach((shape) => {
-            expect(
-              q.with('withAlias', shape, User.all()).from('withAlias').toSql(),
-            ).toBe(
-              line(`
+        expect(q.with('withAlias', User.all()).from('withAlias').toSql()).toBe(
+          line(`
               WITH "withAlias" (
                 SELECT "user".* FROM "user"
               )
               SELECT "withAlias".*
               FROM "withAlias"
             `),
-            );
-          });
+        );
 
-          expectQueryNotMutated(q);
-        });
-
-        it('should list columns if second argument is `true`', () => {
-          const q = User.all();
-
-          columnShapes.forEach((shape) => {
-            expect(
-              q
-                .with('withAlias', true, shape, User.all())
-                .from('withAlias')
-                .toSql(),
-            ).toBe(
-              line(`
-              WITH "withAlias"("one", "two") (
-                SELECT "user".* FROM "user"
-              )
-              SELECT "withAlias".*
-              FROM "withAlias"
-            `),
-            );
-          });
-
-          expectQueryNotMutated(q);
-        });
+        expectQueryNotMutated(q);
       });
     });
   });

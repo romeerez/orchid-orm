@@ -97,19 +97,18 @@ type FromResult<
   : T;
 
 type WithArgs =
-  | [
-      string,
-      ColumnsShape | ((t: DataTypes) => ColumnsShape),
-      Query | RawExpression,
-    ]
+  | [string, ColumnsShape | ((t: DataTypes) => ColumnsShape), RawExpression]
   | [
       string,
       true,
       ColumnsShape | ((t: DataTypes) => ColumnsShape),
-      Query | RawExpression,
-    ];
+      RawExpression,
+    ]
+  | [string, Query];
 
-type WithShape<Args extends WithArgs> = Args[1] extends ColumnsShape
+type WithShape<Args extends WithArgs> = Args[1] extends Query
+  ? Args[1]['result']
+  : Args[1] extends ColumnsShape
   ? Args[1]
   : Args[2] extends ColumnsShape
   ? Args[2]
@@ -486,7 +485,7 @@ export class QueryMethods {
             typeof args[2] === 'object' ? args[2] : args[2](dataTypes),
           )
         : false,
-      args.length === 3 ? args[2] : args[3],
+      args[args.length - 1],
     ]) as unknown as WithResult<T, Args, Shape>;
   }
 
