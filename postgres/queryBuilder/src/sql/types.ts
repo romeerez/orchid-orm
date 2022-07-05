@@ -2,10 +2,15 @@ import { Query, QueryWithTable, Selectable } from '../query';
 import { Expression, RawExpression } from '../common';
 import { Aggregate1ArgumentTypes } from '../aggregateMethods';
 import { ColumnsShape, Output } from '../schema';
+import { Db } from '../db';
 
 export type QueryData<T extends Query = Query> = {
   take?: true;
-  with?: [string, false | string[], Query | RawExpression][];
+  with?: [
+    string,
+    false | string[],
+    Query | RawExpression | ((qb: Db) => Query),
+  ][];
   select?: SelectItem<T>[];
   distinct?: Expression<T>[];
   from?: string | Query | RawExpression;

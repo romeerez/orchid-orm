@@ -48,6 +48,7 @@ import {
   thenValue,
   thenVoid,
 } from './thenMethods';
+import { Db } from './db';
 
 type SelectResult<
   T extends Query,
@@ -91,23 +92,24 @@ type FromResult<
   : T;
 
 type WithArgs =
-  | [string, ColumnsShape | ((t: DataTypes) => ColumnsShape), RawExpression]
+  | [string, ColumnsShape, RawExpression]
   | [
       string,
-      true,
+      boolean,
       ColumnsShape | ((t: DataTypes) => ColumnsShape),
       RawExpression,
     ]
-  | [string, Query];
+  | [string, Query]
+  | [string, (qb: Db) => Query];
 
 type WithShape<Args extends WithArgs> = Args[1] extends Query
   ? Args[1]['result']
+  : Args[1] extends (qb: Db) => Query
+  ? ReturnType<Args[1]>['result']
   : Args[1] extends ColumnsShape
   ? Args[1]
   : Args[2] extends ColumnsShape
   ? Args[2]
-  : Args[1] extends (t: DataTypes) => ColumnsShape
-  ? ReturnType<Args[1]>
   : Args[2] extends (t: DataTypes) => ColumnsShape
   ? ReturnType<Args[2]>
   : never;

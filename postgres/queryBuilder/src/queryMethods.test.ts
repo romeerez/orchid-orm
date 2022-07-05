@@ -11,7 +11,7 @@ import {
   AssertEqual,
   useTestDatabase,
 } from './test-utils';
-import { ColumnsShape, DataTypes, dataTypes } from './schema';
+import { DataTypes, dataTypes, NumberColumn } from './schema';
 
 describe('queryMethods', () => {
   useTestDatabase();
@@ -566,31 +566,33 @@ describe('queryMethods', () => {
 
   describe('with', () => {
     describe('raw parameter', () => {
-      const columnShapes: (ColumnsShape | ((t: DataTypes) => ColumnsShape))[] =
-        [
-          { one: dataTypes.integer(), two: dataTypes.text() },
-          (t: DataTypes) => ({ one: t.integer(), two: t.text() }),
-        ];
+      const columnShape = { one: dataTypes.integer(), two: dataTypes.text() };
+      const columnShapeFn = (t: DataTypes) => ({
+        one: t.integer(),
+        two: t.text(),
+      });
 
       it('should add `with` statement with raw parameter', () => {
         const q = User.all();
 
-        columnShapes.forEach((shape) => {
-          expect(
-            q
-              .with('withAlias', shape, raw(`(VALUES (1, 'two')) t(one, two)`))
-              .from('withAlias')
-              .toSql(),
-          ).toBe(
-            line(`
-              WITH "withAlias" (
-                (VALUES (1, 'two')) t(one, two)
-              )
-              SELECT "withAlias".*
-              FROM "withAlias"
-            `),
-          );
-        });
+        expect(
+          q
+            .with(
+              'withAlias',
+              columnShape,
+              raw(`(VALUES (1, 'two')) t(one, two)`),
+            )
+            .from('withAlias')
+            .toSql(),
+        ).toBe(
+          line(`
+            WITH "withAlias" (
+              (VALUES (1, 'two')) t(one, two)
+            )
+            SELECT "withAlias".*
+            FROM "withAlias"
+          `),
+        );
 
         expectQueryNotMutated(q);
       });
@@ -598,7 +600,7 @@ describe('queryMethods', () => {
       it('should list columns if second argument is `true`', () => {
         const q = User.all();
 
-        columnShapes.forEach((shape) => {
+        [columnShape, columnShapeFn].forEach((shape) => {
           expect(
             q
               .with('withAlias', true, shape, raw(`VALUES (1, 'two')`))
@@ -625,12 +627,37 @@ describe('queryMethods', () => {
 
         expect(q.with('withAlias', User.all()).from('withAlias').toSql()).toBe(
           line(`
-              WITH "withAlias" (
-                SELECT "user".* FROM "user"
-              )
-              SELECT "withAlias".*
-              FROM "withAlias"
-            `),
+            WITH "withAlias" (
+              SELECT "user".* FROM "user"
+            )
+            SELECT "withAlias".*
+            FROM "withAlias"
+          `),
+        );
+
+        expectQueryNotMutated(q);
+      });
+    });
+
+    describe('callback for query builder parameter', () => {
+      it('should add `with` statement', () => {
+        const q = User.all();
+
+        expect(
+          q
+            .with('withAlias', (qb) =>
+              qb.selectAs({ one: raw<NumberColumn>('1') }),
+            )
+            .from('withAlias')
+            .toSql(),
+        ).toBe(
+          line(`
+            WITH "withAlias" (
+              SELECT 1 AS "one"
+            )
+            SELECT "withAlias".*
+            FROM "withAlias"
+          `),
         );
 
         expectQueryNotMutated(q);

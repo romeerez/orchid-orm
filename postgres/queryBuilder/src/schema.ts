@@ -8,31 +8,42 @@ import {
   ZodString,
   ZodBoolean,
   ZodArray,
+  ZodUnion,
+  ZodIntersection,
+  intersection,
+  union,
 } from 'zod';
 import { Operators } from './operators';
 import { UnionToIntersection } from './utils';
 
-export type ColumnMethods<D extends string, Ops extends Operators> = {
+export type ColumnMethods<
+  D extends string = string,
+  Ops extends Operators = Operators,
+> = {
   dataType: D;
   operators: Ops;
   isPrimaryKey: boolean;
   isHidden: boolean;
-  primaryKey<T extends ZodTypeAny & ColumnMethods<any, any>>(
-    this: T,
-  ): T & { isPrimaryKey: true };
-  hidden<T extends ZodTypeAny & ColumnMethods<any, any>>(
-    this: T,
-  ): T & { isHidden: true };
-  nullable<T extends ZodTypeAny & ColumnMethods<any, any>>(
+  primaryKey<T extends Column>(this: T): T & { isPrimaryKey: true };
+  hidden<T extends Column>(this: T): T & { isHidden: true };
+  nullable<T extends Column>(
     this: T,
   ): ZodNullable<T> & ColumnMethods<T['dataType'], T['operators']>;
+  or<T extends Column, U extends ZodTypeAny>(
+    this: T,
+    type: U,
+  ): ZodUnion<[T, U]> & ColumnMethods<T['dataType'], T['operators']>;
+  and<T extends Column, U extends ZodTypeAny>(
+    this: T,
+    type: U,
+  ): ZodIntersection<T, U> & ColumnMethods<T['dataType'], T['operators']>;
 };
 
 export type Column<
   T extends ZodTypeAny = ZodTypeAny,
   D extends string = string,
   Ops extends Operators = Operators,
-> = Omit<T, 'nullable'> & ColumnMethods<D, Ops>;
+> = Omit<T, 'nullable' | 'or' | 'and'> & ColumnMethods<D, Ops>;
 
 export type ColumnsShape = Record<string, Column>;
 
@@ -66,17 +77,29 @@ export type BooleanColumn = Column<
 const columnMethods: Omit<ColumnMethods<any, any>, 'dataType' | 'operators'> = {
   isPrimaryKey: false,
   isHidden: false,
-  primaryKey<T extends ZodTypeAny>(this: T): T & { isPrimaryKey: true } {
+  primaryKey<T extends Column>(this: T): T & { isPrimaryKey: true } {
     return Object.assign(this, { isPrimaryKey: true as const });
   },
-  hidden<T extends ZodTypeAny>(this: T): T & { isHidden: true } {
+  hidden<T extends Column>(this: T): T & { isHidden: true } {
     return Object.assign(this, { isHidden: true as const });
   },
-  nullable<T extends ZodTypeAny & ColumnMethods<any, any>>(this: T) {
+  nullable<T extends Column>(this: T) {
     return Object.assign(nullable(this), columnMethods, {
       dataType: this.dataType,
       operators: this.operators,
-    });
+    }) as ZodNullable<T> & ColumnMethods<T['dataType'], T['operators']>;
+  },
+  or<T extends Column, U extends ZodTypeAny>(this: T, type: U) {
+    return Object.assign(union([this, type]), columnMethods, {
+      dataType: this.dataType,
+      operators: this.operators,
+    }) as ZodUnion<[T, U]> & ColumnMethods<T['dataType'], T['operators']>;
+  },
+  and<T extends Column, U extends ZodTypeAny>(this: T, type: U) {
+    return Object.assign(intersection(this, type), columnMethods, {
+      dataType: this.dataType,
+      operators: this.operators,
+    }) as ZodIntersection<T, U> & ColumnMethods<T['dataType'], T['operators']>;
   },
 };
 

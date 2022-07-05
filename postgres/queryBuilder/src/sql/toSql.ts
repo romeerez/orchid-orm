@@ -17,7 +17,7 @@ export const toSql = (model: Query): string => {
   const sql: string[] = [];
 
   if (query.with) {
-    pushWithSql(sql, query.with);
+    pushWithSql(model, sql, query.with);
   }
 
   sql.push('SELECT');
