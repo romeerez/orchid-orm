@@ -35,13 +35,13 @@
   "projects": [
     {
       "packageName": "porm",
-      "projectFolder": "postgres/orm",
+      "projectFolder": "packages/porm",
       "shouldPublish": false,
       "tags": ["orm"]
     },
     {
       "packageName": "pqb",
-      "projectFolder": "postgres/queryBuilder",
+      "projectFolder": "packages/pqb",
       "shouldPublish": false,
       "tags": ["query-builder"]
     }
