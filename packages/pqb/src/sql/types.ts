@@ -6,6 +6,7 @@ import { ColumnsShape, Output } from '../schema';
 export type QueryData<T extends Query = Query> = {
   take?: true;
   with?: WithItem[];
+  schema?: string;
   select?: SelectItem<T>[];
   distinct?: Expression<T>[];
   from?: string | Query | RawExpression;

@@ -20,6 +20,10 @@ import {
 import { applyMixins } from './utils';
 import { StringKey } from './common';
 
+export type DbTableOptions = {
+  schema?: string;
+};
+
 export interface Db<
   Table extends string | undefined = undefined,
   Shape extends ColumnsShape = Record<string, never>,
@@ -30,6 +34,7 @@ export interface Db<
     queryBuilder: Db,
     table?: Table,
     shape?: Shape,
+    options?: DbTableOptions,
   ): this;
 
   adapter: PostgresAdapter;
@@ -38,8 +43,7 @@ export interface Db<
   shape: Shape;
   type: Output<Shape>;
   returnType: QueryReturnType;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  query?: QueryData<any>;
+  query?: QueryData;
   columns: (keyof Output<Shape>)[];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
   result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
@@ -75,7 +79,12 @@ export class Db<
     public queryBuilder: Db,
     public table: Table = undefined as Table,
     public shape: Shape = {} as Shape,
+    options?: DbTableOptions,
   ) {
+    if (options?.schema) {
+      this.query = { schema: options.schema };
+    }
+
     const schemaObject = tableSchema(shape);
     const columns = Object.keys(shape) as unknown as (keyof Output<Shape>)[];
     const { toSql } = this;
@@ -114,6 +123,7 @@ type DbResult = Db & {
   <Table extends string, Shape extends ColumnsShape>(
     table: Table,
     shape: ((t: DataTypes) => Shape) | Shape,
+    options?: DbTableOptions,
   ): Db<Table, Shape>;
 
   adapter: PostgresAdapter;
@@ -128,12 +138,14 @@ export const createDb = (adapter: PostgresAdapter): DbResult => {
     <Table extends string, Shape extends ColumnsShape>(
       table: Table,
       shape: ((t: DataTypes) => Shape) | Shape,
+      options?: DbTableOptions,
     ): Db<Table, Shape> => {
       return new Db<Table, Shape>(
         adapter,
         qb,
         table as Table,
         typeof shape === 'function' ? shape(dataTypes) : shape,
+        options,
       );
     },
     { ...qb, ...Db.prototype, adapter, destroy: () => adapter.destroy() },

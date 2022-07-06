@@ -10,6 +10,7 @@ import {
   Message,
   AssertEqual,
   useTestDatabase,
+  db,
 } from './test-utils';
 import { dataTypes, NumberColumn } from './schema';
 
@@ -691,6 +692,46 @@ describe('queryMethods', () => {
 
         expectQueryNotMutated(q);
       });
+    });
+  });
+
+  describe('withSchema', () => {
+    it('prefixes table with schema', () => {
+      const Country = db(
+        'country',
+        (t) => ({
+          id: t.serial().primaryKey(),
+          name: t.text(),
+        }),
+        {
+          schema: 'geo',
+        },
+      );
+
+      const City = db('city', (t) => ({
+        id: t.serial().primaryKey(),
+        name: t.text(),
+        countryId: t.integer(),
+      }));
+
+      const q = City.all();
+
+      expect(
+        q
+          .join(Country, 'country.id', '=', 'city.countryId')
+          .select('name')
+          .selectAs({ countryName: 'country.name' })
+          .withSchema('geo')
+          .toSql(),
+      ).toBe(
+        line(`
+          SELECT "city"."name", "country"."name" AS "countryName"
+          FROM "geo"."city"
+          JOIN "geo"."country" ON "country"."id" = "city"."countryId"
+        `),
+      );
+
+      expectQueryNotMutated(q);
     });
   });
 

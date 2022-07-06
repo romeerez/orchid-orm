@@ -517,6 +517,14 @@ export class QueryMethods {
     ]) as unknown as WithResult<T, Args, Shape>;
   }
 
+  withSchema<T extends Query>(this: T, schema: string): T {
+    return this.clone()._withSchema(schema);
+  }
+
+  _withSchema<T extends Query>(this: T, schema: string): T {
+    return setQueryValue(this, 'schema', schema);
+  }
+
   group<T extends Query>(
     this: T,
     ...columns: (Selectable<T> | RawExpression)[]

@@ -1,4 +1,4 @@
-import { q, quoteFullColumn } from './common';
+import { q, quoteFullColumn, quoteSchemaAndTable } from './common';
 import { getRaw, isRaw } from '../common';
 import { QueryData } from './types';
 import { Query } from '../query';
@@ -15,7 +15,7 @@ export const pushJoinSql = (
     if (typeof first !== 'object') {
       const { key, query, joinQuery } = model.relations[first];
 
-      sql.push(`JOIN ${q(query.table)}`);
+      sql.push(`JOIN ${quoteSchemaAndTable(query.query?.schema, query.table)}`);
 
       const as = query.query?.as || key;
       if (as !== query.table) {
@@ -34,7 +34,9 @@ export const pushJoinSql = (
     }
 
     const joinTarget = first;
-    sql.push(`JOIN ${q(joinTarget.table)}`);
+    sql.push(
+      `JOIN ${quoteSchemaAndTable(joinTarget.query?.schema, joinTarget.table)}`,
+    );
 
     let joinAs: string;
     if (joinTarget.query?.as) {

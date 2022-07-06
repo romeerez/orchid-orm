@@ -27,3 +27,10 @@ export const expressionToSql = <T extends Query>(
     ? getRaw(expr)
     : quoteFullColumn(expr as string, quotedAs);
 };
+
+export const quoteSchemaAndTable = (
+  schema: string | undefined,
+  table: string,
+) => {
+  return schema ? `${q(schema)}.${q(table)}` : q(table);
+};

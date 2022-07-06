@@ -15,7 +15,7 @@ export type Query = QueryMethods &
     table?: string;
     shape: ColumnsShape;
     type: unknown;
-    query?: QueryData<any>;
+    query?: QueryData;
     result: ColumnsShape;
     hasSelect: boolean;
     selectable: ColumnsShape;

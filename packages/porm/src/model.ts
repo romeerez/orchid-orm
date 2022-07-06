@@ -15,6 +15,7 @@ import {
   applyMixins,
   StringKey,
   Db,
+  DbTableOptions,
 } from 'pqb';
 import { RelationMethods } from './relations/relations';
 
@@ -61,6 +62,7 @@ PostgresModel.prototype.constructor = PostgresModel;
 type ModelParams<Shape extends ColumnsShape, Table extends string> = {
   table: Table;
   schema(t: DataTypes): Shape;
+  options?: DbTableOptions;
 };
 
 type ModelResult<Shape extends ColumnsShape, Table extends string> = {
@@ -70,6 +72,7 @@ type ModelResult<Shape extends ColumnsShape, Table extends string> = {
 export const model = <Shape extends ColumnsShape, Table extends string>({
   table,
   schema,
+  options,
 }: ModelParams<Shape, Table>): ModelResult<Shape, Table> => {
   const shape = schema(dataTypes);
   const schemaObject = tableSchema(shape);
@@ -92,6 +95,8 @@ export const model = <Shape extends ColumnsShape, Table extends string>({
     columns = columns;
     defaultSelectColumns =
       defaultSelectColumns as unknown as DefaultSelectColumns<Shape>;
+
+    query = options?.schema ? { schema: options.schema } : undefined;
 
     toSql = defaultSelect
       ? function <T extends Query>(this: T): string {

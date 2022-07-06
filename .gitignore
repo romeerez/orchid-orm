@@ -1,6 +1,7 @@
 .idea
 gitignored
 roadmap.md
+.env
 
 # Logs
 *.log

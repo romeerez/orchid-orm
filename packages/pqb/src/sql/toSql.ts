@@ -10,6 +10,7 @@ import { pushJoinSql } from './join';
 import { whereToSql } from './where';
 import { pushHavingSql } from './having';
 import { pushWithSql } from './with';
+import { pushFromAndAs } from './fromAndAs';
 
 export const toSql = (model: Query): string => {
   const query = (model.query || EMPTY_OBJECT) as QueryData;
@@ -30,32 +31,7 @@ export const toSql = (model: Query): string => {
 
   pushSelectSql(sql, query.select, quotedAs);
 
-  if (query.from || model.table) {
-    let from: string;
-    if (query.from) {
-      if (typeof query.from === 'object') {
-        if (isRaw(query.from)) {
-          from = getRaw(query.from);
-        } else if (query.from.query || !query.from.table) {
-          from = `(${query.from.toSql()})`;
-        } else {
-          from = q(query.from.table);
-        }
-      } else {
-        from = q(query.from);
-      }
-    } else {
-      from = q(model.table as string);
-    }
-
-    sql.push('FROM');
-    if (query.fromOnly) sql.push('ONLY');
-    sql.push(from);
-
-    if (query.as && quotedAs !== from) {
-      sql.push('AS', quotedAs as string);
-    }
-  }
+  pushFromAndAs(sql, model, query, quotedAs);
 
   if (query.join) {
     pushJoinSql(sql, model, query.join, quotedAs);
