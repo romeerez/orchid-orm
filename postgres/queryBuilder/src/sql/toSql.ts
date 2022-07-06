@@ -1,6 +1,6 @@
-import { getRaw, isRaw } from '../common';
+import { EMPTY_OBJECT, getRaw, isRaw } from '../common';
 import { Query } from '../query';
-import { EMPTY_OBJECT, q, qc } from './common';
+import { q, qc } from './common';
 import { QueryData } from './types';
 import { pushDistinctSql } from './distinct';
 import { pushSelectSql } from './select';
@@ -17,7 +17,7 @@ export const toSql = (model: Query): string => {
   const sql: string[] = [];
 
   if (query.with) {
-    pushWithSql(model, sql, query.with);
+    pushWithSql(sql, query.with);
   }
 
   sql.push('SELECT');

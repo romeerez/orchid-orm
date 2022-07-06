@@ -1,7 +1,7 @@
 import { Query } from '../query';
 import { QueryData } from './types';
-import { EMPTY_OBJECT, q, qc, quoteFullColumn } from './common';
-import { getRaw, isRaw } from '../common';
+import { q, qc, quoteFullColumn } from './common';
+import { EMPTY_OBJECT, getRaw, isRaw } from '../common';
 import { quote } from '../quote';
 
 export const whereToSql = (

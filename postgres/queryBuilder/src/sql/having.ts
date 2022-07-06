@@ -1,8 +1,7 @@
 import { AggregateOptions, HavingArg, QueryData } from './types';
-import { getRaw, isRaw, RawExpression } from '../common';
+import { EMPTY_OBJECT, getRaw, isRaw, RawExpression } from '../common';
 import { Operator } from '../operators';
 import { aggregateToSql } from './aggregate';
-import { EMPTY_OBJECT } from './common';
 import { quote } from '../quote';
 import { Query } from '../query';
 

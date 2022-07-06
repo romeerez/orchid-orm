@@ -2,15 +2,10 @@ import { Query, QueryWithTable, Selectable } from '../query';
 import { Expression, RawExpression } from '../common';
 import { Aggregate1ArgumentTypes } from '../aggregateMethods';
 import { ColumnsShape, Output } from '../schema';
-import { Db } from '../db';
 
 export type QueryData<T extends Query = Query> = {
   take?: true;
-  with?: [
-    string,
-    false | string[],
-    Query | RawExpression | ((qb: Db) => Query),
-  ][];
+  with?: WithItem[];
   select?: SelectItem<T>[];
   distinct?: Expression<T>[];
   from?: string | Query | RawExpression;
@@ -27,6 +22,19 @@ export type QueryData<T extends Query = Query> = {
   limit?: number;
   offset?: number;
   for?: RawExpression[];
+};
+
+export type WithItem = [
+  as: string,
+  options: WithOptions,
+  query: Query | RawExpression,
+];
+
+export type WithOptions = {
+  columns?: string[];
+  recursive?: true;
+  materialized?: true;
+  notMaterialized?: true;
 };
 
 export type SelectItem<T extends Query> =

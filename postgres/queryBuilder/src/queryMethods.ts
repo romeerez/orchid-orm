@@ -1,4 +1,11 @@
-import { AliasOrTable, Expression, isRaw, raw, RawExpression } from './common';
+import {
+  AliasOrTable,
+  EMPTY_OBJECT,
+  Expression,
+  isRaw,
+  raw,
+  RawExpression,
+} from './common';
 import {
   AddQueryJoinedTable,
   AddQuerySelect,
@@ -23,12 +30,12 @@ import {
   UnionArg,
   WhereItem,
   WindowArg,
+  WithOptions,
 } from './sql';
 import {
   Column,
   ColumnsObject,
   ColumnsShape,
-  dataTypes,
   DataTypes,
   NumberColumn,
   Output,
@@ -91,21 +98,24 @@ type FromResult<
   ? SetQueryTableAlias<T, AliasOrTable<Args[0]>>
   : T;
 
+type WithArgsOptions = Omit<WithOptions, 'columns'> & {
+  columns?: boolean | string[];
+};
+
 type WithArgs =
   | [string, ColumnsShape, RawExpression]
-  | [
-      string,
-      boolean,
-      ColumnsShape | ((t: DataTypes) => ColumnsShape),
-      RawExpression,
-    ]
-  | [string, Query]
-  | [string, (qb: Db) => Query];
+  | [string, WithArgsOptions, ColumnsShape, RawExpression]
+  | [string, Query | ((qb: Db) => Query)]
+  | [string, WithArgsOptions, Query | ((qb: Db) => Query)];
 
 type WithShape<Args extends WithArgs> = Args[1] extends Query
   ? Args[1]['result']
   : Args[1] extends (qb: Db) => Query
   ? ReturnType<Args[1]>['result']
+  : Args[2] extends Query
+  ? Args[2]['result']
+  : Args[2] extends (qb: Db) => Query
+  ? ReturnType<Args[2]>['result']
   : Args[1] extends ColumnsShape
   ? Args[1]
   : Args[2] extends ColumnsShape
@@ -477,14 +487,33 @@ export class QueryMethods {
     Args extends WithArgs,
     Shape extends ColumnsShape = WithShape<Args>,
   >(this: T, ...args: Args): WithResult<T, Args, Shape> {
+    let options =
+      (args.length === 3 && !isRaw(args[2])) || args.length === 4
+        ? (args[1] as WithArgsOptions | WithOptions)
+        : undefined;
+
+    const last = args[args.length - 1] as
+      | Query
+      | ((qb: Db) => Query)
+      | RawExpression;
+
+    const query = typeof last === 'function' ? last(this.queryBuilder) : last;
+
+    if (options?.columns === true) {
+      options = {
+        ...options,
+        columns: Object.keys(
+          args.length === 4
+            ? (args[2] as ColumnsShape)
+            : (query as Query).shape,
+        ),
+      };
+    }
+
     return pushQueryValue(this, 'with', [
       args[0],
-      args[1] === true
-        ? Object.keys(
-            typeof args[2] === 'object' ? args[2] : args[2](dataTypes),
-          )
-        : false,
-      args[args.length - 1],
+      options || EMPTY_OBJECT,
+      query,
     ]) as unknown as WithResult<T, Args, Shape>;
   }
 

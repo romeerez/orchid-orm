@@ -19,8 +19,6 @@ export const quoteFullColumn = (fullColumn: string, quotedAs?: string) => {
   }
 };
 
-export const EMPTY_OBJECT = {};
-
 export const expressionToSql = <T extends Query>(
   expr: Expression<T>,
   quotedAs?: string,

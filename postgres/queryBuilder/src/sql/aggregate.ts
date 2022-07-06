@@ -1,8 +1,8 @@
 import { Query } from '../query';
 import { Aggregate } from './types';
-import { EMPTY_OBJECT, expressionToSql, q } from './common';
+import { expressionToSql, q } from './common';
 import { quote } from '../quote';
-import { Expression, isRaw } from '../common';
+import { EMPTY_OBJECT, Expression, isRaw } from '../common';
 import { windowToSql } from './window';
 
 export const aggregateToSql = <T extends Query>(

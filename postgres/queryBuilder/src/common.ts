@@ -58,3 +58,5 @@ export const raw = <C extends Column = Column>(sql: string) =>
 export const isRaw = (obj: object): obj is RawExpression => '__raw' in obj;
 
 export const getRaw = (raw: RawExpression) => raw.__raw;
+
+export const EMPTY_OBJECT = {};
