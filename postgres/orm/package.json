@@ -16,7 +16,7 @@
       "../../jest-setup.ts"
     ],
     "transform": {
-      "^.+\\.ts$": "ts-jest"
+      "^.+\\.ts$": "@swc/jest"
     }
   },
   "keywords": ["postgres", "orm"],
@@ -27,6 +27,8 @@
     "zod": "> 3.1"
   },
   "devDependencies": {
+    "@swc/core": "^1.2.210",
+    "@swc/jest": "^0.2.21",
     "@types/jest": "^28.1.2",
     "@types/node": "^18.0.1",
     "@types/pg": "^8.6.5",
@@ -35,7 +37,6 @@
     "pg": "^8.7.3",
     "pg-transactional-tests": "^1.0.3",
     "rimraf": "^3.0.2",
-    "ts-jest": "^28.0.5",
     "tslib": "^2.4.0",
     "typescript": "^4.7.4",
     "fishery": "^2.2.2"
