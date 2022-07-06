@@ -44,16 +44,12 @@
       "projectFolder": "packages/pqb",
       "shouldPublish": false,
       "tags": ["query-builder"]
+    },
+    {
+      "packageName": "docs",
+      "projectFolder": "packages/docs",
+      "shouldPublish": false,
+      "tags": ["docs"]
     }
-//     {
-//       "packageName": "porm",
-//       "projectFolder": "postgres/orm",
-//       // "cyclicDependencyProjects": [],
-//       // "skipRushCheck": false,
-//       "shouldPublish": false,
-//       // "publishFolder": "temp/publish",
-//       // "versionPolicyName": "",
-//       "tags": ["postgres", "orm"]
-//     }
   ]
 }
