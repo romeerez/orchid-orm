@@ -1,7 +1,10 @@
 :root {
   --vp-c-font-family-base: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   --vp-c-brand: #b469ff;
+  --vp-c-brand-dark: #b469ff;
+  --vp-button-brand-bg: #b469ff;
   --vp-button-brand-border: #9a5ef4;
   --vp-button-brand-hover-bg: #a55af1;
   --vp-button-brand-hover-border: #8f53ea;
+  --vp-button-brand-active-border: #5345da;
 }

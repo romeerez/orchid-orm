@@ -19,7 +19,7 @@
     <div class='buttons'>
       <VPButton
         text="Get Started"
-        href="/get-started"
+        href="/guide/"
       />
       <VPButton
         theme="alt"
