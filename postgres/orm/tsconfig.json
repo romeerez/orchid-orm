@@ -1,12 +1,12 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["./src"],
+  "include": ["./src", "jest-setup.ts"],
   "compilerOptions": {
     "outDir": "./dist",
     "noEmit": false,
     "baseUrl": ".",
     "paths": {
-      "zod": ["node_modules/zod/"]
+      "pqb": ["../queryBuilder/src"]
     }
   }
 }

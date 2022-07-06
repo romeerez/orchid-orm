@@ -13,7 +13,8 @@
       "dotenv/config"
     ],
     "setupFilesAfterEnv": [
-      "../../jest-setup.ts"
+      "../../jest-setup.ts",
+      "./jest-setup.ts"
     ],
     "transform": {
       "^.+\\.ts$": "@swc/jest"
