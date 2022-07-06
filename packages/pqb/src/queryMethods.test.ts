@@ -597,101 +597,104 @@ describe('queryMethods', () => {
       `);
     };
 
-    describe('raw parameter', () => {
-      const columnShape = { one: dataTypes.integer(), two: dataTypes.text() };
+    const columnShape = { one: dataTypes.integer(), two: dataTypes.text() };
 
-      it('should add `with` statement with raw parameter', () => {
-        const q = User.all();
+    it('accepts raw parameter preceded by columns shape', () => {
+      const q = User.all();
 
-        options.forEach((options) => {
-          const args: Parameters<typeof q.with> = [
-            'withAlias',
-            columnShape,
-            raw(`(VALUES (1, 'two')) t(one, two)`),
-          ];
+      options.forEach((options) => {
+        const args: Parameters<typeof q.with> = [
+          'withAlias',
+          columnShape,
+          raw(`(VALUES (1, 'two')) t(one, two)`),
+        ];
 
-          if (options) {
-            (args as unknown[]).splice(1, 0, options);
-          }
+        if (options) {
+          (args as unknown[]).splice(1, 0, options);
+        }
 
-          expect(
-            q
-              .with(...args)
-              .from('withAlias')
-              .toSql(),
-          ).toBe(
-            getExpectedWithSql(
-              `(VALUES (1, 'two')) t(one, two)`,
-              ['one', 'two'],
-              options,
-            ),
-          );
-        });
-
-        expectQueryNotMutated(q);
+        expect(
+          q
+            .with(...args)
+            .from('withAlias')
+            .toSql(),
+        ).toBe(
+          getExpectedWithSql(
+            `(VALUES (1, 'two')) t(one, two)`,
+            ['one', 'two'],
+            options,
+          ),
+        );
       });
+
+      expectQueryNotMutated(q);
     });
 
-    describe('query parameter', () => {
-      it('should add `with` statement', () => {
-        const q = User.all();
+    it('accepts query', () => {
+      const q = User.all();
 
-        options.forEach((options) => {
-          const args: Parameters<typeof q.with> = ['withAlias', User.all()];
+      options.forEach((options) => {
+        const args: Parameters<typeof q.with> = ['withAlias', User.all()];
 
-          if (options) {
-            (args as unknown[]).splice(1, 0, options);
-          }
+        if (options) {
+          (args as unknown[]).splice(1, 0, options);
+        }
 
-          expect(
-            q
-              .with(...args)
-              .from('withAlias')
-              .toSql(),
-          ).toBe(
-            getExpectedWithSql(
-              'SELECT "user".* FROM "user"',
-              Object.keys(User.shape),
-              options,
-            ),
-          );
-        });
-
-        expectQueryNotMutated(q);
+        expect(
+          q
+            .with(...args)
+            .from('withAlias')
+            .toSql(),
+        ).toBe(
+          getExpectedWithSql(
+            'SELECT "user".* FROM "user"',
+            Object.keys(User.shape),
+            options,
+          ),
+        );
       });
+
+      expectQueryNotMutated(q);
     });
 
-    describe('callback for query builder parameter', () => {
-      it('should add `with` statement', () => {
-        const q = User.all();
+    it('accepts callback for query builder', () => {
+      const q = User.all();
 
-        options.forEach((options) => {
-          const args: Parameters<typeof q.with> = [
-            'withAlias',
-            (qb) => qb.selectAs({ one: raw<NumberColumn>('1') }),
-          ];
+      options.forEach((options) => {
+        const args: Parameters<typeof q.with> = [
+          'withAlias',
+          (qb) => qb.selectAs({ one: raw<NumberColumn>('1') }),
+        ];
 
-          if (options) {
-            (args as unknown[]).splice(1, 0, options);
-          }
+        if (options) {
+          (args as unknown[]).splice(1, 0, options);
+        }
 
-          expect(
-            q
-              .with(...args)
-              .from('withAlias')
-              .toSql(),
-          ).toBe(
-            getExpectedWithSql(
-              `SELECT 1 AS "one"`,
-              // columns: true will produce empty columns list because there is no way to get it from query builder result
-              [],
-              options,
-            ),
-          );
-        });
-
-        expectQueryNotMutated(q);
+        expect(
+          q
+            .with(...args)
+            .from('withAlias')
+            .toSql(),
+        ).toBe(
+          getExpectedWithSql(
+            `SELECT 1 AS "one"`,
+            // columns: true will produce empty columns list because there is no way to get it from query builder result
+            [],
+            options,
+          ),
+        );
       });
+
+      expectQueryNotMutated(q);
+    });
+
+    it('can be referenced in join', () => {
+      const q = User.all();
+
+      // type Rel = keyof typeof q.relations;
+      expect(q.with('withAlias', User.all()).join('wthAlias'));
+
+      expectQueryNotMutated(q);
     });
   });
 

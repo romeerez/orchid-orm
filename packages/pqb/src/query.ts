@@ -30,13 +30,14 @@ export type Query = QueryMethods &
     defaultSelectColumns: string[];
     relations: Record<
       string,
-      {
-        key: string;
-        type: string;
-        query: QueryWithTable;
-        options: Record<string, unknown>;
-        joinQuery: Query & { query: QueryData };
-      }
+      | {
+          key: string;
+          type: string;
+          query: QueryWithTable;
+          options: Record<string, unknown>;
+          joinQuery: Query & { query: QueryData };
+        }
+      | undefined
     >;
   };
 

@@ -1,12 +1,6 @@
 import { PostgresModelConstructor } from '../model';
 import { BelongsTo } from './belongsTo';
-import {
-  QueryData,
-  Query,
-  SetQueryReturns,
-  QueryWithTable,
-  Selectable,
-} from 'pqb';
+import { QueryData, Query, SetQueryReturns, QueryWithTable } from 'pqb';
 
 export type ModelOrQuery = PostgresModelConstructor | QueryWithTable;
 
@@ -42,7 +36,7 @@ export type MapRelationMethods<T extends Query> = Omit<
       ? (
           params: Record<
             Options['foreignKey'],
-            Q['selectable'][Options['primaryKey']]
+            Q['shape'][Options['primaryKey']]['_output']
           >,
         ) => SetQueryReturns<Q, 'one'>
       : T[K];
@@ -69,12 +63,12 @@ export class RelationMethods {
     T extends Query,
     F extends ModelOrQuery,
     Q extends QueryWithTable,
-    PK extends Selectable<Q>,
-    FK extends Selectable<T>,
+    PK extends keyof Q['shape'],
+    FK extends keyof T['shape'],
   >(
     this: T,
     fn: () => F,
-    options?: {
+    options: {
       primaryKey: PK;
       foreignKey: FK;
     },

@@ -1,9 +1,4 @@
-import {
-  DefaultSelectColumns,
-  Query,
-  QueryReturnType,
-  QueryWithTable,
-} from './query';
+import { DefaultSelectColumns, Query, QueryReturnType } from './query';
 import { QueryMethods } from './queryMethods';
 import { AggregateMethods } from './aggregateMethods';
 import { QueryData } from './sql';
@@ -57,16 +52,7 @@ export interface Db<
   windows: PropertyKey[];
   withData: Query['withData'];
   joinedTables: Query['joinedTables'];
-  relations: Record<
-    string,
-    {
-      key: string;
-      type: string;
-      query: QueryWithTable;
-      options: Record<string, unknown>;
-      joinQuery: Query & { query: QueryData };
-    }
-  >;
+  relations: Query['relations'];
 }
 
 export class Db<

@@ -1,4 +1,4 @@
-import { db as db } from '../test-utils/test-db';
+import { db } from '../test-utils/test-db';
 import { line, useTestDatabase } from '../test-utils/test-utils';
 import { userFactory } from '../test-utils/user.factory';
 import { profileFactory } from '../test-utils/profile.factory';

@@ -1,12 +1,12 @@
 import { RelationThunk } from './relations';
-import { Query, pushQueryValue, Selectable, QueryWithTable } from 'pqb';
+import { Query, pushQueryValue, QueryWithTable } from 'pqb';
 
 export class BelongsTo<
   T extends Query,
   Q extends QueryWithTable,
   Options extends {
-    primaryKey: Selectable<Q>;
-    foreignKey: Selectable<T>;
+    primaryKey: keyof Q['shape'];
+    foreignKey: keyof T['shape'];
   },
 > implements RelationThunk<'belongsTo', Q, Options>
 {
@@ -18,13 +18,10 @@ export class BelongsTo<
     const foreignKey = this.options?.foreignKey || `${query.table}Id`;
 
     (target as unknown as Record<string, unknown>)[key] = (
-      params: Record<
-        Options['foreignKey'],
-        Q['selectable'][Options['primaryKey']]
-      >,
+      params: Record<typeof foreignKey, unknown>,
     ) => {
       return query.findBy({
-        [primaryKey]: params[foreignKey as keyof typeof params],
+        [primaryKey]: params[foreignKey],
       });
     };
 

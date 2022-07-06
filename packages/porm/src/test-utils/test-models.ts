@@ -24,7 +24,10 @@ export class ProfileModel extends model({
     updatedAt: t.timestamp(),
   }),
 }) {
-  user = this.belongsTo(() => UserModel);
+  user = this.belongsTo(() => UserModel, {
+    primaryKey: 'id',
+    foreignKey: 'userId',
+  });
 }
 
 export type Chat = ChatModel['type'];
