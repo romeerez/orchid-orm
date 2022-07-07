@@ -689,7 +689,7 @@ describe('queryMethods', () => {
       expectQueryNotMutated(q);
     });
 
-    it('can be referenced in join', () => {
+    it('can be referenced in .join', () => {
       const q = User.all();
 
       const received1 = q
@@ -728,6 +728,23 @@ describe('queryMethods', () => {
       expect(received2).toBe(expected);
       expect(received3).toBe(expected);
       expect(received4).toBe(expected);
+
+      expectQueryNotMutated(q);
+    });
+
+    it('can be used in .from', () => {
+      const q = User.all();
+
+      expect(
+        q.with('withAlias', User.all()).from('withAlias').select('id').toSql(),
+      ).toBe(
+        line(`
+          WITH "withAlias" AS (
+            SELECT "user".* FROM "user"
+          )
+          SELECT "withAlias"."id" FROM "withAlias"
+        `),
+      );
 
       expectQueryNotMutated(q);
     });
