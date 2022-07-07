@@ -22,22 +22,21 @@ export type Query = QueryMethods &
     returnType: QueryReturnType;
     then: any;
     tableAlias: string | undefined;
-    withData: Record<never, never>;
+    withData: Record<never, WithDataItem>;
     joinedTables: Record<never, never>;
     windows: PropertyKey[];
     primaryKeys: any[];
     primaryTypes: any[];
     defaultSelectColumns: string[];
     relations: Record<
-      string,
-      | {
-          key: string;
-          type: string;
-          query: QueryWithTable;
-          options: Record<string, unknown>;
-          joinQuery: Query & { query: QueryData };
-        }
-      | undefined
+      never,
+      {
+        key: string;
+        type: string;
+        query: QueryWithTable;
+        options: Record<string, unknown>;
+        joinQuery: QueryWithData<Query>;
+      }
     >;
   };
 
@@ -53,7 +52,7 @@ export type QueryReturnType = 'all' | 'one' | 'rows' | 'value' | 'void';
 
 export type JoinedTablesBase = Record<string, Query>;
 
-export type WithBase = { table: string; shape: ColumnsShape };
+export type WithDataItem = { table: string; shape: ColumnsShape };
 
 export type SetQuery<
   T extends Query = Query,
@@ -139,7 +138,7 @@ export type SetQueryJoinedTables<
 
 export type AddQueryJoinedTable<
   T extends Query,
-  J extends Query,
+  J extends Pick<Query, 'result' | 'tableAlias' | 'table'>,
 > = SetQueryJoinedTables<
   T,
   T['selectable'] & {
@@ -150,13 +149,13 @@ export type AddQueryJoinedTable<
 
 export type SetQueryWith<
   T extends Query,
-  WithData extends Record<string, WithBase>,
+  WithData extends Record<string, WithDataItem>,
 > = Omit<T, 'withData'> & { withData: WithData };
 
-export type AddQueryWith<T extends Query, With extends WithBase> = SetQueryWith<
-  T,
-  Spread<[T['withData'], { [K in With['table']]: With }]>
->;
+export type AddQueryWith<
+  T extends Query,
+  With extends WithDataItem,
+> = SetQueryWith<T, Spread<[T['withData'], { [K in With['table']]: With }]>>;
 
 export type SetQueryWindows<
   T extends Query,

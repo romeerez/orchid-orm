@@ -97,6 +97,8 @@ export class Db<
           return toSql.call(q);
         }
       : toSql;
+
+    this.relations = {};
   }
 
   returnType: QueryReturnType = 'all';

@@ -33,9 +33,7 @@ export const toSql = (model: Query): string => {
 
   pushFromAndAs(sql, model, query, quotedAs);
 
-  if (query.join) {
-    pushJoinSql(sql, model, query.join, quotedAs);
-  }
+  pushJoinSql(sql, model, query, quotedAs);
 
   const whereConditions = whereToSql(model, query, quotedAs);
   if (whereConditions.length) sql.push('WHERE', whereConditions);

@@ -28,7 +28,7 @@ export class BelongsTo<
     const joinQuery = query.clone();
     pushQueryValue(joinQuery, 'and', [foreignKey, '=', primaryKey]);
 
-    target.relations[key] = {
+    (target.relations as Record<string, unknown>)[key] = {
       key,
       type: this.type,
       query,

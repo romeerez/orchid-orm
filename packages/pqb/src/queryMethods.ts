@@ -5,6 +5,7 @@ import {
   isRaw,
   raw,
   RawExpression,
+  StringKey,
 } from './common';
 import {
   AddQueryJoinedTable,
@@ -20,6 +21,7 @@ import {
   SetQueryReturnsVoid,
   SetQueryTableAlias,
   SetQueryWindows,
+  WithDataItem,
 } from './query';
 import { GetTypesOrRaw, PropertyKeyUnionToArray } from './utils';
 import {
@@ -45,6 +47,7 @@ import {
   pushQueryArray,
   pushQueryValue,
   removeFromQuery,
+  setQueryObjectValue,
   setQueryValue,
 } from './queryDataUtils';
 import {
@@ -142,72 +145,160 @@ type WindowResult<T extends Query, W extends WindowArg<T>> = SetQueryWindows<
   PropertyKeyUnionToArray<keyof W>
 >;
 
-type JoinCallbackQuery<T extends Query, J extends Query> = AddQueryJoinedTable<
-  J,
-  T
-> &
-  JoinCallbackMethods<T>;
+type PickQueryForSelect<T extends Query = Query> = Pick<
+  T,
+  'table' | 'tableAlias' | 'selectable'
+>;
 
-type JoinCallbackMethods<J extends Query> = {
-  on: On<J>;
-  _on: On<J>;
-  onOr: On<J>;
-  _onOr: On<J>;
+export type JoinQuery<
+  T extends Query = Query,
+  J extends PickQueryForSelect = PickQueryForSelect,
+> = {
+  query?: QueryData;
+  table: T['table'];
+  tableAlias: T['tableAlias'];
+  selectable: T['selectable'] & J['selectable'];
+} & JoinQueryMethods<T, J>;
+
+type JoinQueryMethods<T extends Query, J extends PickQueryForSelect> = {
+  toQuery<Q extends JoinQuery<T, J>>(this: Q): Q & { query: QueryData };
+  clone<Q extends JoinQuery<T, J>>(this: Q): Q & { query: QueryData };
+  on: On<T, J>;
+  _on: On<T, J>;
+  onOr: On<T, J>;
+  _onOr: On<T, J>;
 };
 
-type On<J extends Query> = <T extends Query & JoinCallbackMethods<J>>(
-  this: T,
-  leftColumn: keyof T['selectable'],
+type On<
+  T extends Query = Query,
+  J extends PickQueryForSelect = PickQueryForSelect,
+> = <Q extends JoinQuery<T, J>>(
+  this: Q,
+  leftColumn: keyof Q['selectable'],
   op: string,
-  rightColumn: keyof T['selectable'],
-) => T;
+  rightColumn: keyof Q['selectable'],
+) => Q;
 
-const on: On<Query> = function (leftColumn, op, rightColumn) {
-  return this._on(leftColumn, op, rightColumn);
+const on: On = function (leftColumn, op, rightColumn) {
+  return this.clone()._on(leftColumn, op, rightColumn);
 };
 
-const _on: On<Query> = function (leftColumn, op, rightColumn) {
+const _on: On = function (leftColumn, op, rightColumn) {
   return pushQueryValue(this, 'and', [leftColumn, op, rightColumn]);
 };
 
-const onOr: On<Query> = function (leftColumn, op, rightColumn) {
-  return this._on(leftColumn, op, rightColumn);
+const onOr: On = function (leftColumn, op, rightColumn) {
+  return this.clone()._on(leftColumn, op, rightColumn);
 };
 
-const _onOr: On<Query> = function (leftColumn, op, rightColumn) {
-  return pushQueryArray(this, 'or', [[leftColumn, op, rightColumn]]);
+const _onOr: On = function (leftColumn, op, rightColumn) {
+  return pushQueryValue(this, 'or', [[leftColumn, op, rightColumn]]);
 };
 
-const joinCallbackMethods: JoinCallbackMethods<Query> = {
+const joinQueryMethods: JoinQueryMethods<Query, PickQueryForSelect> = {
+  toQuery<Q extends JoinQuery>(this: Q) {
+    return (this.query ? this : this.clone()) as Q & { query: QueryData };
+  },
+  clone() {
+    return { ...this, query: getClonedQueryData(this.query) };
+  },
   on,
   _on,
   onOr,
   _onOr,
 };
 
-type JoinArg<
+type JoinArgs<
   T extends Query,
-  Q extends Query,
-  Rel extends keyof T['relations'] | undefined,
+  Q extends Query = Query,
+  W extends keyof T['withData'] = keyof T['withData'],
+  QW extends Query | keyof T['withData'] = Query | keyof T['withData'],
 > =
-  | [relation: Rel]
+  | [relation: keyof T['relations']]
   | [
       query: Q,
       leftColumn: Selectable<Q>,
       op: string,
       rightColumn: Selectable<T>,
     ]
+  | [
+      withAlias: W,
+      leftColumn: T['withData'][W] extends WithDataItem
+        ?
+            | StringKey<keyof T['withData'][W]['shape']>
+            | `${T['withData'][W]['table']}.${StringKey<
+                keyof T['withData'][W]['shape']
+              >}`
+        : never,
+      op: string,
+      rightColumn: Selectable<T>,
+    ]
   | [query: Q, raw: RawExpression]
-  | [query: Q, on: (q: JoinCallbackQuery<T, Q>) => Query];
+  | [withAlias: W, raw: RawExpression]
+  | [
+      query: QW,
+      on: (
+        q: JoinQuery<
+          T,
+          QW extends keyof T['withData']
+            ? T['withData'][QW] extends WithDataItem
+              ? {
+                  table: T['withData'][QW]['table'];
+                  tableAlias: undefined;
+                  shape: T['withData'][QW]['shape'];
+                  selectable: {
+                    [K in keyof T['withData'][QW]['shape'] as `${T['withData'][QW]['table']}.${StringKey<K>}`]: T['withData'][QW]['shape'][K];
+                  };
+                }
+              : never
+            : QW extends Query
+            ? QW
+            : never
+        >,
+      ) => JoinQuery,
+    ];
 
 type JoinResult<
   T extends Query,
-  Q extends Query,
-  Rel extends keyof T['relations'] | undefined,
+  Args extends JoinArgs<T>,
+  A extends Query | keyof T['relations'] = Args[0],
 > = AddQueryJoinedTable<
   T,
-  Rel extends keyof T['relations'] ? T['relations'][Rel]['query'] : Q
+  A extends Query
+    ? A
+    : A extends keyof T['relations']
+    ? T['relations'][A] extends { query: Query }
+      ? T['relations'][A]['query']
+      : never
+    : A extends keyof T['withData']
+    ? T['withData'][A] extends WithDataItem
+      ? {
+          table: T['withData'][A]['table'];
+          tableAlias: undefined;
+          result: T['withData'][A]['shape'];
+        }
+      : never
+    : never
 >;
+
+const getClonedQueryData = <T extends Query>(
+  query?: QueryData<T>,
+): QueryData<T> => {
+  const cloned = {} as QueryData<T>;
+
+  if (query) {
+    for (const key in query) {
+      const value = query[key as keyof QueryData];
+      if (Array.isArray(value)) {
+        (cloned as Record<string, unknown>)[key] = [...value];
+      } else {
+        (cloned as Record<string, unknown>)[key] = value;
+      }
+    }
+  }
+
+  return cloned;
+};
 
 export class QueryMethods {
   then!: Then<unknown>;
@@ -300,18 +391,7 @@ export class QueryMethods {
     }
 
     cloned.then = this.then;
-    cloned.query = {};
-
-    if (this.query) {
-      for (const key in this.query) {
-        const value = this.query[key as keyof QueryData<T>];
-        if (Array.isArray(value)) {
-          (cloned.query as Record<string, unknown>)[key] = [...value];
-        } else {
-          (cloned.query as Record<string, unknown>)[key] = value;
-        }
-      }
-    }
+    cloned.query = getClonedQueryData<Query>(this.query);
 
     return cloned as unknown as QueryWithData<T>;
   }
@@ -499,22 +579,24 @@ export class QueryMethods {
 
     const query = typeof last === 'function' ? last(this.queryBuilder) : last;
 
+    const shape =
+      args.length === 4 ? (args[2] as ColumnsShape) : (query as Query).shape;
+
     if (options?.columns === true) {
       options = {
         ...options,
-        columns: Object.keys(
-          args.length === 4
-            ? (args[2] as ColumnsShape)
-            : (query as Query).shape,
-        ),
+        columns: Object.keys(shape),
       };
     }
 
-    return pushQueryValue(this, 'with', [
+    pushQueryValue(this, 'with', [args[0], options || EMPTY_OBJECT, query]);
+
+    return setQueryObjectValue(
+      this,
+      'withShapes',
       args[0],
-      options || EMPTY_OBJECT,
-      query,
-    ]) as unknown as WithResult<T, Args, Shape>;
+      shape,
+    ) as unknown as WithResult<T, Args, Shape>;
   }
 
   withSchema<T extends Query>(this: T, schema: string): T {
@@ -712,40 +794,36 @@ export class QueryMethods {
     return q._value<T, NumberColumn>();
   }
 
-  join<
-    T extends Query,
-    Q extends Query,
-    Rel extends keyof T['relations'] | undefined = undefined,
-  >(this: T, ...args: JoinArg<T, Q, Rel>): JoinResult<T, Q, Rel> {
-    return this.clone()._join(...args);
+  join<T extends Query, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): JoinResult<T, Args> {
+    return (this.clone() as T)._join(...args) as unknown as JoinResult<T, Args>;
   }
 
-  _join<
-    T extends Query,
-    Q extends Query,
-    Rel extends keyof T['relations'] | undefined = undefined,
-  >(this: T, ...args: JoinArg<T, Q, Rel>): JoinResult<T, Q, Rel> {
-    if (typeof args[0] === 'object' && typeof args[1] === 'function') {
-      const [model, arg] = args;
-      const q = model.clone();
-      const clone = q.clone;
-      q.clone = function <T extends Query>(this: T): QueryWithData<T> {
-        const cloned = clone.call(q);
-        Object.assign(cloned, joinCallbackMethods);
-        return cloned as QueryWithData<T>;
-      };
-      Object.assign(q, joinCallbackMethods);
+  _join<T extends Query, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): JoinResult<T, Args> {
+    if (typeof args[1] === 'function') {
+      const [modelOrWith, fn] = args;
 
-      const resultQuery = arg(q as unknown as JoinCallbackQuery<T, Q>);
+      const resultQuery = fn({
+        table: this.table,
+        tableAlias: this.query?.as,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        selectable: undefined as any,
+        ...joinQueryMethods,
+      });
+
       return pushQueryValue(this, 'join', [
-        model,
+        modelOrWith,
         resultQuery,
-      ]) as unknown as JoinResult<T, Q, Rel>;
+      ]) as unknown as JoinResult<T, Args>;
     } else {
       return pushQueryValue(this, 'join', args) as unknown as JoinResult<
         T,
-        Q,
-        Rel
+        Args
       >;
     }
   }

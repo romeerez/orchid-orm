@@ -1,11 +1,12 @@
 import { Query, Selectable } from './query';
 import { Column } from './schema';
 
-export type AliasOrTable<T extends Query> = T['tableAlias'] extends string
-  ? T['tableAlias']
-  : T['table'] extends string
-  ? T['table']
-  : never;
+export type AliasOrTable<T extends Pick<Query, 'tableAlias' | 'table'>> =
+  T['tableAlias'] extends string
+    ? T['tableAlias']
+    : T['table'] extends string
+    ? T['table']
+    : never;
 
 export type StringKey<K extends PropertyKey> = Exclude<K, symbol | number>;
 

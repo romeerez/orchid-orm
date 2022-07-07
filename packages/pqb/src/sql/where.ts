@@ -5,7 +5,7 @@ import { EMPTY_OBJECT, getRaw, isRaw } from '../common';
 import { quote } from '../quote';
 
 export const whereToSql = (
-  model: Query,
+  model: Pick<Query, 'shape'>,
   query: QueryData,
   quotedAs?: string,
   otherTableQuotedAs?: string,

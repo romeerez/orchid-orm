@@ -2,10 +2,12 @@ import { Query, QueryWithTable, Selectable } from '../query';
 import { Expression, RawExpression } from '../common';
 import { Aggregate1ArgumentTypes } from '../aggregateMethods';
 import { ColumnsShape, Output } from '../schema';
+import { JoinQuery } from '../queryMethods';
 
 export type QueryData<T extends Query = Query> = {
   take?: true;
   with?: WithItem[];
+  withShapes?: Record<string, ColumnsShape>;
   schema?: string;
   select?: SelectItem<T>[];
   distinct?: Expression<T>[];
@@ -45,9 +47,16 @@ export type SelectItem<T extends Query> =
 
 export type JoinItem =
   | [relation: string]
-  | [query: QueryWithTable, leftColumn: string, op: string, rightColumn: string]
-  | [query: QueryWithTable, raw: RawExpression]
-  | [query: QueryWithTable, on: Query];
+  | [
+      withOrQuery: string | QueryWithTable,
+      leftColumn: string,
+      op: string,
+      rightColumn: string,
+    ]
+  | [
+      withOrQuery: string | QueryWithTable,
+      rawOrJoinQuery: RawExpression | JoinQuery,
+    ];
 
 export type WhereItem<T extends Query> =
   | Partial<Output<T['shape']>>

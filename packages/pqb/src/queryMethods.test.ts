@@ -169,6 +169,7 @@ describe('queryMethods', () => {
 
     it('should select joined columns', () => {
       const q = User.all();
+
       expect(
         q
           .join(Profile, 'profile.userId', '=', 'user.id')
@@ -691,8 +692,42 @@ describe('queryMethods', () => {
     it('can be referenced in join', () => {
       const q = User.all();
 
-      // type Rel = keyof typeof q.relations;
-      expect(q.with('withAlias', User.all()).join('wthAlias'));
+      const received1 = q
+        .with('withAlias', User.all())
+        .join('withAlias', 'id', '=', 'user.id')
+        .select('withAlias.id')
+        .toSql();
+
+      const received2 = q
+        .with('withAlias', User.all())
+        .join('withAlias', 'withAlias.id', '=', 'user.id')
+        .select('withAlias.id')
+        .toSql();
+
+      const received3 = q
+        .with('withAlias', User.all())
+        .join('withAlias', raw(`"withAlias"."id" = "user"."id"`))
+        .select('withAlias.id')
+        .toSql();
+
+      const received4 = q
+        .with('withAlias', User.all())
+        .join('withAlias', (qb) => qb.on('withAlias.id', '=', 'user.id'))
+        .select('withAlias.id')
+        .toSql();
+
+      const expected = line(`
+        WITH "withAlias" AS (
+          SELECT "user".* FROM "user"
+        )
+        SELECT "withAlias"."id" FROM "user"
+        JOIN "withAlias" ON "withAlias"."id" = "user"."id"
+      `);
+
+      expect(received1).toBe(expected);
+      expect(received2).toBe(expected);
+      expect(received3).toBe(expected);
+      expect(received4).toBe(expected);
 
       expectQueryNotMutated(q);
     });
