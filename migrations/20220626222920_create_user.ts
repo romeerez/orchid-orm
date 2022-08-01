@@ -5,6 +5,7 @@ export const change = (db: Migration) => {
     t.text('name').required();
     t.text('password').required();
     t.text('picture');
+    t.jsonb('data');
     t.timestamps();
   });
 };

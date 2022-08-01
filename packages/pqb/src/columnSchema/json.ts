@@ -42,10 +42,9 @@ const jsonTypes = {
   union,
 };
 
-export class JSONColumn<Type extends JSONTypeAny> extends ColumnType<
-  Type['type'],
-  typeof Operators.json
-> {
+export class JSONColumn<
+  Type extends JSONTypeAny = JSONTypeAny,
+> extends ColumnType<Type['type'], typeof Operators.json> {
   dataType = 'jsonb' as const;
   operators = Operators.json;
   data: { schema: Type };

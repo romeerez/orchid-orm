@@ -1,8 +1,53 @@
-import { QueryData } from './types';
+import { JsonItem, QueryData } from './types';
 import { Expression, getRaw, isRaw } from '../common';
 import { Query } from '../query';
 import { q, quoteFullColumn } from './common';
 import { aggregateToSql } from './aggregate';
+import { quote } from '../quote';
+
+const jsonColumnOrMethodToSql = (
+  column: string | JsonItem,
+  quotedAs?: string,
+) => {
+  return typeof column === 'string'
+    ? quoteFullColumn(column, quotedAs)
+    : jsonToSql(column, quotedAs);
+};
+
+const jsonToSql = (item: JsonItem, quotedAs?: string): string => {
+  const json = item.__json;
+  if (json[0] === 'pathQuery') {
+    const [, , , column, path, options] = json;
+    return `jsonb_path_query(${jsonColumnOrMethodToSql(
+      column,
+      quotedAs,
+    )}, ${quote(path)}${options?.vars ? `, ${quote(options.vars)}` : ''}${
+      options?.silent ? ', true' : ''
+    })`;
+  } else if (json[0] === 'set') {
+    const [, , , column, path, value, options] = json;
+    return `jsonb_set(${jsonColumnOrMethodToSql(
+      column,
+      quotedAs,
+    )}, '{${path.join(', ')}}', ${quote(JSON.stringify(value))}${
+      options?.createIfMissing ? ', true' : ''
+    })`;
+  } else if (json[0] === 'insert') {
+    const [, , , column, path, value, options] = json;
+    return `jsonb_insert(${jsonColumnOrMethodToSql(
+      column,
+      quotedAs,
+    )}, '{${path.join(', ')}}', ${quote(JSON.stringify(value))}${
+      options?.insertAfter ? ', true' : ''
+    })`;
+  } else if (json[0] === 'remove') {
+    const [, , , column, path] = json;
+    return `${jsonColumnOrMethodToSql(column, quotedAs)} #- '{${path.join(
+      ', ',
+    )}}'`;
+  }
+  return '';
+};
 
 export const pushSelectSql = (
   sql: string[],
@@ -27,6 +72,8 @@ export const pushSelectSql = (
               list.push(`${quoteFullColumn(value, quotedAs)} AS ${q(as)}`);
             }
           }
+        } else if ('__json' in item) {
+          list.push(`${jsonToSql(item, quotedAs)} AS ${q(item.__json[1])}`);
         } else {
           list.push(aggregateToSql(item, quotedAs));
         }

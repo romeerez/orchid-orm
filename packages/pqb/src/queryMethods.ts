@@ -59,6 +59,7 @@ import {
   StringColumn,
 } from './columnSchema';
 import { SelectMethods } from './selectMethods';
+import { JsonMethods } from './jsonMethods';
 
 type FromArgs<T extends Query> = [
   first: Query | RawExpression | Exclude<keyof T['withData'], symbol | number>,
@@ -280,7 +281,7 @@ const getClonedQueryData = <T extends Query>(
   return cloned;
 };
 
-export interface QueryMethods extends SelectMethods {
+export interface QueryMethods extends SelectMethods, JsonMethods {
   then: Then<unknown>;
 }
 
@@ -819,4 +820,4 @@ export class QueryMethods {
 
 QueryMethods.prototype.then = thenAll;
 
-applyMixins(QueryMethods, [SelectMethods]);
+applyMixins(QueryMethods, [SelectMethods, JsonMethods]);

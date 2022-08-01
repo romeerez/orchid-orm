@@ -7,7 +7,7 @@ import {
 } from '../query';
 import { Expression, RawExpression } from '../common';
 import { Aggregate1ArgumentTypes } from '../aggregateMethods';
-import { ColumnsShape, ColumnShapeOutput } from '../columnSchema';
+import { ColumnsShape, ColumnShapeOutput, ColumnType } from '../columnSchema';
 import { JoinQuery } from '../queryMethods';
 
 export type QueryData<T extends Query = Query> = {
@@ -48,10 +48,58 @@ export type WithOptions = {
   notMaterialized?: true;
 };
 
+export type JsonItem<
+  As extends string = string,
+  Type extends ColumnType = ColumnType,
+> = {
+  __json:
+    | [
+        kind: 'set',
+        as: As,
+        type: Type,
+        column: string | JsonItem,
+        path: Array<string | number>,
+        value: unknown,
+        options?: {
+          createIfMissing?: boolean;
+        },
+      ]
+    | [
+        kind: 'insert',
+        as: As,
+        type: Type,
+        column: string | JsonItem,
+        path: Array<string | number>,
+        value: unknown,
+        options?: {
+          insertAfter?: boolean;
+        },
+      ]
+    | [
+        kind: 'remove',
+        as: As,
+        type: Type,
+        column: string | JsonItem,
+        path: Array<string | number>,
+      ]
+    | [
+        kind: 'pathQuery',
+        as: As,
+        type: Type,
+        column: string | JsonItem,
+        path: string,
+        options?: {
+          vars?: string;
+          silent?: boolean;
+        },
+      ];
+};
+
 export type SelectItem<T extends Query> =
   | keyof T['selectable']
   | Aggregate<T>
-  | { selectAs: Record<string, keyof T['selectable'] | Query | RawExpression> };
+  | { selectAs: Record<string, keyof T['selectable'] | Query | RawExpression> }
+  | JsonItem;
 
 export type JoinItem =
   | [relation: string]

@@ -23,6 +23,14 @@ export const User = db('user', (t) => ({
   name: t.text(),
   password: t.text(),
   picture: t.text().nullable(),
+  data: t
+    .json((j) =>
+      j.object({
+        name: j.string(),
+        tags: j.string().array(),
+      }),
+    )
+    .nullable(),
   createdAt: t.timestamp().parse((input) => new Date(input)),
   updatedAt: t.timestamp().parse((input) => new Date(input)),
 }));
