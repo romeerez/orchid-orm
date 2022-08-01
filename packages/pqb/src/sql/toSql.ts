@@ -11,19 +11,26 @@ import { whereToSql } from './where';
 import { pushHavingSql } from './having';
 import { pushWithSql } from './with';
 import { pushFromAndAs } from './fromAndAs';
+import { pushInsertSql } from './insert';
 
 export const toSql = (model: Query): string => {
   const query = (model.query || EMPTY_OBJECT) as QueryData;
 
   const sql: string[] = [];
+  const quotedAs = model.table && q(query.as || model.table);
 
   if (query.with) {
     pushWithSql(sql, query.with);
   }
 
-  sql.push('SELECT');
+  if (query.insert) {
+    if (!quotedAs) throw new Error('Table is missing for insert');
 
-  const quotedAs = model.table && q(query.as || model.table);
+    pushInsertSql(sql, quotedAs, query.insert);
+    return sql.join(' ');
+  }
+
+  sql.push('SELECT');
 
   if (query.distinct) {
     pushDistinctSql(sql, query.distinct, quotedAs);

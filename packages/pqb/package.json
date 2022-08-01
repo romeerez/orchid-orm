@@ -12,6 +12,7 @@
     "setupFiles": [
       "dotenv/config"
     ],
+    "globalSetup": "../../jest-global-setup.ts",
     "setupFilesAfterEnv": [
       "../../jest-setup.ts"
     ],

@@ -33,6 +33,7 @@ import { Join } from './join';
 import { With } from './with';
 import { Union } from './union';
 import { Json } from './json';
+import { Insert } from './insert';
 
 type WindowResult<T extends Query, W extends WindowArg<T>> = SetQueryWindows<
   T,
@@ -46,7 +47,8 @@ export interface QueryMethods
     Join,
     With,
     Union,
-    Json {
+    Json,
+    Insert {
   then: Then<unknown>;
 }
 
@@ -346,4 +348,13 @@ export class QueryMethods {
 
 QueryMethods.prototype.then = thenAll;
 
-applyMixins(QueryMethods, [Aggregate, Select, From, Join, With, Union, Json]);
+applyMixins(QueryMethods, [
+  Aggregate,
+  Select,
+  From,
+  Join,
+  With,
+  Union,
+  Json,
+  Insert,
+]);

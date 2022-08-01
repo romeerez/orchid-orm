@@ -66,6 +66,21 @@ export const expectQueryNotMutated = (q: Query) => {
   expect(q.toSql()).toBe(`SELECT "${q.table}".* FROM "${q.table}"`);
 };
 
+export const expectMatchObjectWithTimestamps = (
+  actual: { createdAt: Date; updatedAt: Date },
+  expected: { createdAt: Date; updatedAt: Date },
+) => {
+  expect({
+    ...actual,
+    createdAt: actual.createdAt.toISOString(),
+    updatedAt: actual.updatedAt.toISOString(),
+  }).toMatchObject({
+    ...expected,
+    createdAt: expected.createdAt.toISOString(),
+    updatedAt: expected.updatedAt.toISOString(),
+  });
+};
+
 export type AssertEqual<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]
     ? true

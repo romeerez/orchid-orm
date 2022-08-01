@@ -1,7 +1,6 @@
 export * from './columnSchema';
 export * from './sql';
 export * from './adapter';
-export * from './queryMethods/aggregate';
 export * from './common';
 export * from './db';
 export * from './operators';
