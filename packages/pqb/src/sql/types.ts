@@ -6,9 +6,9 @@ import {
   SelectableBase,
 } from '../query';
 import { Expression, RawExpression } from '../common';
-import { Aggregate1ArgumentTypes } from '../aggregateMethods';
+import { Aggregate1ArgumentTypes } from '../queryMethods/aggregate';
 import { ColumnsShape, ColumnShapeOutput, ColumnType } from '../columnSchema';
-import { JoinQuery } from '../queryMethods';
+import { JoinQuery } from '../queryMethods/queryMethods';
 
 export type QueryData<T extends Query = Query> = {
   take?: true;

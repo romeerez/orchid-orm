@@ -1,5 +1,5 @@
-import { Chat, expectQueryNotMutated, line, User } from './test-utils';
-import { raw } from './common';
+import { Chat, expectQueryNotMutated, line, User } from '../test-utils';
+import { raw } from '../common';
 
 ['union', 'intersect', 'except'].forEach((what) => {
   const upper = what.toUpperCase();

@@ -1,5 +1,5 @@
-import { expectQueryNotMutated, line, User } from './test-utils';
-import { raw } from './common';
+import { expectQueryNotMutated, line, User } from '../test-utils';
+import { raw } from '../common';
 
 describe('from', () => {
   it('should accept raw parameter', () => {

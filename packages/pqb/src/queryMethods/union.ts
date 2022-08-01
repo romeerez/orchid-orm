@@ -1,8 +1,8 @@
-import { Query } from './query';
-import { UnionArg } from './sql';
-import { pushQueryArray } from './queryDataUtils';
+import { Query } from '../query';
+import { UnionArg } from '../sql';
+import { pushQueryArray } from '../queryDataUtils';
 
-export class UnionMethods {
+export class Union {
   union<T extends Query>(this: T, args: UnionArg<T>[], wrap?: boolean): T {
     return this._union(args, wrap);
   }

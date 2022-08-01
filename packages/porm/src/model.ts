@@ -4,7 +4,6 @@ import {
   ColumnTypes,
   TableSchema,
   QueryMethods,
-  AggregateMethods,
   QueryData,
   DefaultSelectColumns,
   Query,
@@ -24,7 +23,6 @@ export interface PostgresModel<
   Shape extends ColumnsShape = any,
   Table extends string = string,
 > extends QueryMethods,
-    AggregateMethods,
     RelationMethods {
   new (adapter: PostgresAdapter): this;
 
@@ -59,7 +57,7 @@ export class PostgresModel<Shape extends ColumnsShape, Table extends string> {
   returnType: QueryReturnType = 'all';
 }
 
-applyMixins(PostgresModel, [QueryMethods, AggregateMethods, RelationMethods]);
+applyMixins(PostgresModel, [QueryMethods, RelationMethods]);
 PostgresModel.prototype.constructor = PostgresModel;
 
 type ModelParams<Shape extends ColumnsShape, Table extends string> = {

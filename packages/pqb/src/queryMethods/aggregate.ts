@@ -5,18 +5,18 @@ import {
   NumberExpression,
   raw,
   StringExpression,
-} from './common';
-import { AddQuerySelect, Query, SetQueryReturnsValue } from './query';
-import { AggregateArg, AggregateOptions } from './sql';
-import { pushQueryValue } from './queryDataUtils';
+} from '../common';
+import { AddQuerySelect, Query, SetQueryReturnsValue } from '../query';
+import { AggregateArg, AggregateOptions } from '../sql';
+import { pushQueryValue } from '../queryDataUtils';
 import {
   BooleanColumn,
   ColumnType,
   ArrayColumn,
   NumberColumn,
   StringColumn,
-} from './columnSchema';
-import { CoalesceString } from './utils';
+} from '../columnSchema';
+import { CoalesceString } from '../utils';
 
 const allColumns = raw('*');
 
@@ -68,7 +68,7 @@ type SelectAgg<
 
 type AT1<T extends Query> = Aggregate1ArgumentTypes<T>;
 
-export class AggregateMethods {
+export class Aggregate {
   selectAgg<
     T extends Query,
     Func extends string,

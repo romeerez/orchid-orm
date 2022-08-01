@@ -1,5 +1,4 @@
-import { QueryMethods } from './queryMethods';
-import { AggregateMethods } from './aggregateMethods';
+import { QueryMethods } from './queryMethods/queryMethods';
 import { PostgresAdapter } from './adapter';
 import { QueryData } from './sql';
 import {
@@ -10,7 +9,7 @@ import {
 } from './columnSchema';
 import { Spread } from './utils';
 import { AliasOrTable, StringKey } from './common';
-import { Then } from './thenMethods';
+import { Then } from './queryMethods/then';
 import { Db } from './db';
 
 export type ColumnParser = (input: unknown) => unknown;
@@ -18,45 +17,41 @@ export type ColumnsParsers = Record<string, ColumnParser>;
 
 export type SelectableBase = Record<string, { as: string; column: ColumnType }>;
 
-export type Query = QueryMethods &
-  AggregateMethods & {
-    adapter: PostgresAdapter;
-    queryBuilder: Db;
-    table?: string;
-    shape: ColumnsShape;
-    schema: Omit<TableSchema<ColumnsShape>, 'primaryKeys' | 'primaryTypes'> & {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      primaryKeys: any[];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      primaryTypes: any[];
-    };
-    type: unknown;
-    query?: QueryData;
-    result: ColumnsShape;
-    hasSelect: boolean;
-    selectable: SelectableBase;
-    returnType: QueryReturnType;
-    then: any;
-    tableAlias: string | undefined;
-    withData: Record<never, WithDataItem>;
-    joinedTables: Record<
-      string,
-      Pick<Query, 'result' | 'tableAlias' | 'table'>
-    >;
-    windows: PropertyKey[];
-    defaultSelectColumns: string[];
-    columnsParsers?: ColumnsParsers;
-    relations: Record<
-      never,
-      {
-        key: string;
-        type: string;
-        query: QueryWithTable;
-        options: Record<string, unknown>;
-        joinQuery: QueryWithData<Query>;
-      }
-    >;
+export type Query = QueryMethods & {
+  adapter: PostgresAdapter;
+  queryBuilder: Db;
+  table?: string;
+  shape: ColumnsShape;
+  schema: Omit<TableSchema<ColumnsShape>, 'primaryKeys' | 'primaryTypes'> & {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    primaryKeys: any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    primaryTypes: any[];
   };
+  type: unknown;
+  query?: QueryData;
+  result: ColumnsShape;
+  hasSelect: boolean;
+  selectable: SelectableBase;
+  returnType: QueryReturnType;
+  then: any;
+  tableAlias: string | undefined;
+  withData: Record<never, WithDataItem>;
+  joinedTables: Record<string, Pick<Query, 'result' | 'tableAlias' | 'table'>>;
+  windows: PropertyKey[];
+  defaultSelectColumns: string[];
+  columnsParsers?: ColumnsParsers;
+  relations: Record<
+    never,
+    {
+      key: string;
+      type: string;
+      query: QueryWithTable;
+      options: Record<string, unknown>;
+      joinQuery: QueryWithData<Query>;
+    }
+  >;
+};
 
 export type Selectable<T extends Query> = StringKey<keyof T['selectable']>;
 

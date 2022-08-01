@@ -1,13 +1,13 @@
-import { AddQuerySelect, ColumnParser, Query } from './query';
+import { AddQuerySelect, ColumnParser, Query } from '../query';
 import {
   ArrayOfColumnsObjects,
   ColumnsObject,
   ColumnType,
-} from './columnSchema';
-import { getQueryParsers, isRaw, RawExpression } from './common';
-import { pushQueryArray, pushQueryValue } from './queryDataUtils';
-import { parseRecord } from './thenMethods';
-import { QueryData } from './sql';
+} from '../columnSchema';
+import { getQueryParsers, isRaw, RawExpression } from '../common';
+import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
+import { parseRecord } from './then';
+import { QueryData } from '../sql';
 
 type SelectResult<
   T extends Query,
@@ -48,7 +48,7 @@ const addParser = (query: QueryData, key: string, parser: ColumnParser) => {
   else query.parsers = { [key]: parser };
 };
 
-export class SelectMethods {
+export class Select {
   select<T extends Query, K extends (keyof T['selectable'])[]>(
     this: T,
     ...columns: K

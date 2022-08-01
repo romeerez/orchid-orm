@@ -1,9 +1,9 @@
-import { WithOptions } from './sql';
-import { ColumnShapeOutput, ColumnsShape, ColumnTypes } from './columnSchema';
-import { EMPTY_OBJECT, isRaw, RawExpression } from './common';
-import { AddQueryWith, Query } from './query';
-import { Db } from './db';
-import { pushQueryValue, setQueryObjectValue } from './queryDataUtils';
+import { WithOptions } from '../sql';
+import { ColumnShapeOutput, ColumnsShape, ColumnTypes } from '../columnSchema';
+import { EMPTY_OBJECT, isRaw, RawExpression } from '../common';
+import { AddQueryWith, Query } from '../query';
+import { Db } from '../db';
+import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
 
 type WithArgsOptions = Omit<WithOptions, 'columns'> & {
   columns?: boolean | string[];
@@ -44,7 +44,7 @@ type WithResult<
   }
 >;
 
-export class WithMethod {
+export class With {
   with<
     T extends Query,
     Args extends WithArgs,

@@ -1,5 +1,5 @@
-import { ColumnsParsers, Query } from './query';
-import { getQueryParsers } from './common';
+import { ColumnsParsers, Query } from '../query';
+import { getQueryParsers } from '../common';
 
 export type Then<Res> = <T extends Query>(
   this: T,

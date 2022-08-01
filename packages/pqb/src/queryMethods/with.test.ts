@@ -1,7 +1,7 @@
-import { WithOptions } from './sql';
-import { expectQueryNotMutated, line, User } from './test-utils';
-import { columnTypes, NumberColumn } from './columnSchema';
-import { raw } from './common';
+import { WithOptions } from '../sql';
+import { expectQueryNotMutated, line, User } from '../test-utils';
+import { columnTypes, NumberColumn } from '../columnSchema';
+import { raw } from '../common';
 
 describe('with', () => {
   const options: (

@@ -1,8 +1,8 @@
-import { AddQuerySelect, Query } from './query';
-import { pushQueryValue } from './queryDataUtils';
-import { ColumnType, JSONColumn } from './columnSchema';
-import { JsonItem } from './sql';
-import { StringKey } from './common';
+import { AddQuerySelect, Query, SetQueryReturnsValue } from '../query';
+import { pushQueryValue } from '../queryDataUtils';
+import { ColumnType, JSONColumn, StringColumn } from '../columnSchema';
+import { JsonItem } from '../sql';
+import { raw, StringKey } from '../common';
 
 type JsonColumnName<T extends Query> = StringKey<
   {
@@ -36,7 +36,25 @@ type JsonPathQueryResult<
     }
   >;
 
-export class JsonMethods {
+export class Json {
+  json<T extends Query>(this: T): SetQueryReturnsValue<T, StringColumn> {
+    return this.clone()._json();
+  }
+
+  _json<T extends Query>(this: T): SetQueryReturnsValue<T, StringColumn> {
+    const q = this._wrap(
+      this.selectAs({
+        json: raw(
+          this.query?.take
+            ? `COALESCE(row_to_json("t".*), '{}')`
+            : `COALESCE(json_agg(row_to_json("t".*)), '[]')`,
+        ),
+      }),
+    ) as unknown as T;
+
+    return q._value<T, StringColumn>();
+  }
+
   jsonSet<
     T extends Query,
     Column extends ColumnOrJsonMethod<T>,

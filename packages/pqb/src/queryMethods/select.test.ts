@@ -5,9 +5,9 @@ import {
   Profile,
   User,
   useTestDatabase,
-} from './test-utils';
-import { raw, rawColumn } from './common';
-import { DateColumn } from './columnSchema';
+} from '../test-utils';
+import { raw, rawColumn } from '../common';
+import { DateColumn } from '../columnSchema';
 
 const insertUserAndProfile = async () => {
   const now = new Date();

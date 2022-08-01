@@ -1,4 +1,6 @@
 import { RawExpression } from './common';
+import { Query } from './query';
+import { QueryData } from './sql';
 
 export type GetTypesOrRaw<T extends [...unknown[]]> = T extends [
   infer Head,
@@ -89,4 +91,23 @@ export function applyMixins(derivedCtor: any, constructors: any[]) {
 
 export const joinTruthy = (...strings: (string | false | undefined)[]) => {
   return strings.filter((string) => string).join('');
+};
+
+export const getClonedQueryData = <T extends Query>(
+  query?: QueryData<T>,
+): QueryData<T> => {
+  const cloned = {} as QueryData<T>;
+
+  if (query) {
+    for (const key in query) {
+      const value = query[key as keyof QueryData];
+      if (Array.isArray(value)) {
+        (cloned as Record<string, unknown>)[key] = [...value];
+      } else {
+        (cloned as Record<string, unknown>)[key] = value;
+      }
+    }
+  }
+
+  return cloned;
 };

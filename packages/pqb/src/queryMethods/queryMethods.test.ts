@@ -1,17 +1,16 @@
-import { raw } from './common';
-import { HavingArg, QueryData } from './sql';
+import { raw } from '../common';
+import { HavingArg, QueryData } from '../sql';
 import {
   line,
   expectQueryNotMutated,
   adapter,
   User,
   Profile,
-  Message,
   AssertEqual,
   useTestDatabase,
   db,
   insert,
-} from './test-utils';
+} from '../test-utils';
 
 describe('queryMethods', () => {
   useTestDatabase();
@@ -422,34 +421,6 @@ describe('queryMethods', () => {
     });
   });
 
-  describe('json', () => {
-    it('wraps a query with json functions', () => {
-      const q = User.all();
-      expect(q.json().toSql()).toBe(
-        line(`
-          SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
-          FROM (
-            SELECT "user".* FROM "user"
-          ) AS "t"
-        `),
-      );
-      expectQueryNotMutated(q);
-    });
-
-    it('supports `take`', () => {
-      const q = User.all();
-      expect(q.take().json().toSql()).toBe(
-        line(`
-          SELECT COALESCE(row_to_json("t".*), '{}') AS "json"
-          FROM (
-            SELECT "user".* FROM "user" LIMIT 1
-          ) AS "t"
-        `),
-      );
-      expectQueryNotMutated(q);
-    });
-  });
-
   describe('group', () => {
     it('groups by columns', () => {
       const q = User.all();
@@ -651,65 +622,6 @@ describe('exists', () => {
   it('selects 1', () => {
     const q = User.all();
     expect(q.exists().toSql()).toBe('SELECT 1 AS "exists" FROM "user"');
-    expectQueryNotMutated(q);
-  });
-});
-
-describe('join', () => {
-  it('can accept left column, op and right column', () => {
-    const q = User.all();
-    expect(q.join(Message, 'authorId', '=', 'id').toSql()).toBe(
-      line(`
-      SELECT "user".* FROM "user"
-      JOIN "message" ON "message"."authorId" = "user"."id"
-    `),
-    );
-    expect(q.join(Message.as('as'), 'authorId', '=', 'id').toSql()).toBe(
-      line(`
-      SELECT "user".* FROM "user"
-      JOIN "message" AS "as" ON "as"."authorId" = "user"."id"
-    `),
-    );
-    expectQueryNotMutated(q);
-  });
-
-  it('can accept raw sql', () => {
-    const q = User.all();
-    expect(q.join(Message, raw('"authorId" = "user".id')).toSql()).toBe(
-      line(`
-      SELECT "user".* FROM "user"
-      JOIN "message" ON "authorId" = "user".id
-    `),
-    );
-    expect(
-      q.join(Message.as('as'), raw('"authorId" = "user".id')).toSql(),
-    ).toBe(
-      line(`
-      SELECT "user".* FROM "user"
-      JOIN "message" AS "as" ON "authorId" = "user".id
-    `),
-    );
-    expectQueryNotMutated(q);
-  });
-
-  it('can accept callback to specify custom conditions', () => {
-    const q = User.all();
-    expect(
-      q
-        .join(Message, (q) => {
-          return q
-            .on('message.authorId', '=', 'user.id')
-            .onOr('message.text', '=', 'user.name');
-        })
-        .toSql(),
-    ).toBe(
-      line(`
-        SELECT "user".* FROM "user"
-        JOIN "message"
-          ON "message"."authorId" = "user"."id"
-         AND "message"."text" = "user"."name"
-      `),
-    );
     expectQueryNotMutated(q);
   });
 });

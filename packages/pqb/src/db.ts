@@ -4,8 +4,7 @@ import {
   Query,
   QueryReturnType,
 } from './query';
-import { QueryMethods } from './queryMethods';
-import { AggregateMethods } from './aggregateMethods';
+import { QueryMethods } from './queryMethods/queryMethods';
 import { QueryData } from './sql';
 import { PostgresAdapter } from './adapter';
 import {
@@ -25,8 +24,7 @@ export type DbTableOptions = {
 export interface Db<
   Table extends string | undefined = undefined,
   Shape extends ColumnsShape = Record<string, never>,
-> extends QueryMethods,
-    AggregateMethods {
+> extends QueryMethods {
   new (
     adapter: PostgresAdapter,
     queryBuilder: Db,
@@ -122,7 +120,7 @@ export class Db<
   returnType: QueryReturnType = 'all';
 }
 
-applyMixins(Db, [QueryMethods, AggregateMethods]);
+applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
 
 type DbResult = Db & {

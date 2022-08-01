@@ -1,5 +1,5 @@
-import { User, expectQueryNotMutated, line } from './test-utils';
-import { raw } from './common';
+import { User, expectQueryNotMutated, line } from '../test-utils';
+import { raw } from '../common';
 
 describe('aggregate', () => {
   describe('aggregate options', () => {

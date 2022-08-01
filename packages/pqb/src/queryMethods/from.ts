@@ -1,6 +1,6 @@
-import { Query, SetQueryTableAlias } from './query';
-import { AliasOrTable, isRaw, RawExpression } from './common';
-import { setQueryValue } from './queryDataUtils';
+import { Query, SetQueryTableAlias } from '../query';
+import { AliasOrTable, isRaw, RawExpression } from '../common';
+import { setQueryValue } from '../queryDataUtils';
 
 type FromArgs<T extends Query> = [
   first: Query | RawExpression | Exclude<keyof T['withData'], symbol | number>,
@@ -20,7 +20,7 @@ type FromResult<
   ? SetQueryTableAlias<T, AliasOrTable<Args[0]>>
   : T;
 
-export class FromMethod {
+export class From {
   from<T extends Query, Args extends FromArgs<T>>(
     this: T,
     ...args: Args
