@@ -27,7 +27,7 @@ export type QueryData<T extends Query = Query> = {
   group?: (Selectable<T> | RawExpression)[];
   having?: HavingArg<T>[];
   window?: WindowArg<T>[];
-  union?: { arg: UnionArg<T>; kind: UnionKind }[];
+  union?: { arg: UnionArg<T>; kind: UnionKind; wrap?: boolean }[];
   order?: OrderBy<T>[];
   limit?: number;
   offset?: number;
@@ -189,6 +189,7 @@ export type WindowDeclaration<T extends Query = Query> = {
 export type UnionArg<T extends Query> =
   | (Omit<Query, 'result'> & { result: T['result'] })
   | RawExpression;
+
 type UnionKind =
   | 'UNION'
   | 'UNION ALL'

@@ -20,7 +20,6 @@ import {
   HavingArg,
   OrderBy,
   QueryData,
-  UnionArg,
   WhereItem,
   WindowArg,
 } from './sql';
@@ -48,6 +47,7 @@ import {
 import { SelectMethods } from './selectMethods';
 import { FromMethod } from './fromMethod';
 import { WithMethod } from './withMethod';
+import { UnionMethods } from './unionMethods';
 import { JsonMethods } from './jsonMethods';
 
 type WindowResult<T extends Query, W extends WindowArg<T>> = SetQueryWindows<
@@ -217,6 +217,7 @@ export interface QueryMethods
   extends SelectMethods,
     FromMethod,
     WithMethod,
+    UnionMethods,
     JsonMethods {
   then: Then<unknown>;
 }
@@ -489,78 +490,6 @@ export class QueryMethods {
     return q._value<T, StringColumn>();
   }
 
-  union<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return this._union(...args);
-  }
-
-  _union<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return pushQueryArray(
-      this,
-      'union',
-      args.map((arg) => ({ arg, kind: 'UNION' as const })),
-    );
-  }
-
-  unionAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return this._unionAll(...args);
-  }
-
-  _unionAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return pushQueryArray(
-      this,
-      'union',
-      args.map((arg) => ({ arg, kind: 'UNION ALL' as const })),
-    );
-  }
-
-  intersect<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return this._intersect(...args);
-  }
-
-  _intersect<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return pushQueryArray(
-      this,
-      'union',
-      args.map((arg) => ({ arg, kind: 'INTERSECT' as const })),
-    );
-  }
-
-  intersectAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return this._intersectAll(...args);
-  }
-
-  _intersectAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return pushQueryArray(
-      this,
-      'union',
-      args.map((arg) => ({ arg, kind: 'INTERSECT ALL' as const })),
-    );
-  }
-
-  except<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return this._except(...args);
-  }
-
-  _except<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return pushQueryArray(
-      this,
-      'union',
-      args.map((arg) => ({ arg, kind: 'EXCEPT' as const })),
-    );
-  }
-
-  exceptAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return this._exceptAll(...args);
-  }
-
-  _exceptAll<T extends Query>(this: T, ...args: UnionArg<T>[]): T {
-    return pushQueryArray(
-      this,
-      'union',
-      args.map((arg) => ({ arg, kind: 'EXCEPT ALL' as const })),
-    );
-  }
-
   order<T extends Query>(this: T, ...args: OrderBy<T>[]): T {
     return this.clone()._order(...args);
   }
@@ -678,4 +607,10 @@ export class QueryMethods {
 
 QueryMethods.prototype.then = thenAll;
 
-applyMixins(QueryMethods, [SelectMethods, FromMethod, WithMethod, JsonMethods]);
+applyMixins(QueryMethods, [
+  SelectMethods,
+  FromMethod,
+  WithMethod,
+  UnionMethods,
+  JsonMethods,
+]);

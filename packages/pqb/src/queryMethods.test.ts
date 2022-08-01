@@ -6,7 +6,6 @@ import {
   adapter,
   User,
   Profile,
-  Chat,
   Message,
   AssertEqual,
   useTestDatabase,
@@ -582,61 +581,6 @@ describe('window', () => {
     `),
     );
     expectQueryNotMutated(q);
-  });
-});
-
-['union', 'intersect', 'except'].forEach((what) => {
-  const upper = what.toUpperCase();
-  describe(what, () => {
-    it(`adds ${what}`, () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const q = User.all() as any;
-      let query = q.select('id');
-      query = query[what](Chat.select('id'), raw('SELECT 1'));
-      query = query[
-        (what + 'All') as 'unionAll' | 'intersectAll' | 'exceptAll'
-      ](raw('SELECT 2'));
-      query = query.wrap(User.select('id'));
-
-      expect(query.toSql()).toBe(
-        line(`
-        SELECT "t"."id" FROM (
-          SELECT "user"."id" FROM "user"
-          ${upper}
-          SELECT "chat"."id" FROM "chat"
-          ${upper}
-          SELECT 1
-          ${upper} ALL
-          SELECT 2
-        ) AS "t"
-      `),
-      );
-
-      expectQueryNotMutated(q);
-    });
-
-    it('has modifier', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const q = User.select('id') as any;
-      q[`_${what}`](raw('SELECT 1'));
-      expect(q.toSql()).toBe(
-        line(`
-          SELECT "user"."id" FROM "user"
-          ${upper}
-          SELECT 1
-        `),
-      );
-      q[`_${what}All`](raw('SELECT 2'));
-      expect(q.toSql()).toBe(
-        line(`
-        SELECT "user"."id" FROM "user"
-        ${upper}
-        SELECT 1
-        ${upper} ALL
-        SELECT 2
-      `),
-      );
-    });
   });
 });
 

@@ -63,9 +63,8 @@ export const toSql = (model: Query): string => {
 
   if (query.union) {
     query.union.forEach((item) => {
-      sql.push(
-        `${item.kind} ${isRaw(item.arg) ? getRaw(item.arg) : item.arg.toSql()}`,
-      );
+      const itemSql = isRaw(item.arg) ? getRaw(item.arg) : item.arg.toSql();
+      sql.push(`${item.kind} ${item.wrap ? `(${itemSql})` : itemSql}`);
     });
   }
 
