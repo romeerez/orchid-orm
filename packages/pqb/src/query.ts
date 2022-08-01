@@ -2,11 +2,21 @@ import { QueryMethods } from './queryMethods';
 import { AggregateMethods } from './aggregateMethods';
 import { PostgresAdapter } from './adapter';
 import { QueryData } from './sql';
-import { Column, ColumnsShape, Output } from './schema';
+import {
+  ColumnType,
+  ColumnsShape,
+  ColumnShapeOutput,
+  TableSchema,
+} from './columnSchema';
 import { Spread } from './utils';
 import { AliasOrTable, StringKey } from './common';
 import { Then } from './thenMethods';
 import { Db } from './db';
+
+export type ColumnParser = (input: unknown) => unknown;
+export type ColumnsParsers = Record<string, ColumnParser>;
+
+export type SelectableBase = Record<string, { as: string; column: ColumnType }>;
 
 export type Query = QueryMethods &
   AggregateMethods & {
@@ -14,20 +24,28 @@ export type Query = QueryMethods &
     queryBuilder: Db;
     table?: string;
     shape: ColumnsShape;
+    schema: Omit<TableSchema<ColumnsShape>, 'primaryKeys' | 'primaryTypes'> & {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      primaryKeys: any[];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      primaryTypes: any[];
+    };
     type: unknown;
     query?: QueryData;
     result: ColumnsShape;
     hasSelect: boolean;
-    selectable: ColumnsShape;
+    selectable: SelectableBase;
     returnType: QueryReturnType;
     then: any;
     tableAlias: string | undefined;
     withData: Record<never, WithDataItem>;
-    joinedTables: Record<never, never>;
+    joinedTables: Record<
+      string,
+      Pick<Query, 'result' | 'tableAlias' | 'table'>
+    >;
     windows: PropertyKey[];
-    primaryKeys: any[];
-    primaryTypes: any[];
     defaultSelectColumns: string[];
+    columnsParsers?: ColumnsParsers;
     relations: Record<
       never,
       {
@@ -50,7 +68,10 @@ export type DefaultSelectColumns<S extends ColumnsShape> = {
 
 export type QueryReturnType = 'all' | 'one' | 'rows' | 'value' | 'void';
 
-export type JoinedTablesBase = Record<string, Query>;
+export type JoinedTablesBase = Record<
+  string,
+  Pick<Query, 'result' | 'tableAlias' | 'table'>
+>;
 
 export type WithDataItem = { table: string; shape: ColumnsShape };
 
@@ -61,7 +82,7 @@ export type SetQuery<
   TableAlias extends string | undefined = T['tableAlias'],
   JoinedTables extends JoinedTablesBase = T['joinedTables'],
   Windows extends PropertyKey[] = T['windows'],
-  R = Output<Result>,
+  R = ColumnShapeOutput<Result>,
 > = Omit<
   T,
   'result' | 'returnType' | 'tableAlias' | 'joinedTables' | 'then' | 'windows'
@@ -77,7 +98,7 @@ export type SetQuery<
     : ReturnType extends 'value'
     ? Then<R>
     : ReturnType extends 'rows'
-    ? Then<R[keyof R]>
+    ? Then<R[keyof R][][]>
     : ReturnType extends 'void'
     ? Then<void>
     : never;
@@ -87,8 +108,8 @@ export type SetQuery<
 export type AddQuerySelect<
   T extends Query,
   Result extends ColumnsShape,
-> = T['hasSelect'] extends true
-  ? SetQuery<Omit<T, 'hasSelect'> & { hasSelect: false }, Result>
+> = T['hasSelect'] extends false
+  ? SetQuery<Omit<T, 'hasSelect'> & { hasSelect: true }, Result>
   : SetQuery<T, Spread<[T['result'], Result]>>;
 
 export type SetQueryReturns<
@@ -102,11 +123,14 @@ export type SetQueryReturnsOne<T extends Query> = SetQueryReturns<T, 'one'>;
 
 export type SetQueryReturnsRows<T extends Query> = SetQueryReturns<T, 'rows'>;
 
-export type SetQueryReturnsValue<T extends Query, C extends Column> = SetQuery<
+export type SetQueryReturnsValue<T extends Query, C extends ColumnType> = Omit<
   T,
-  { value: C },
-  'value'
->;
+  'result' | 'returnType' | 'then'
+> & {
+  result: { value: C };
+  returnType: 'value';
+  then: Then<C['type']>;
+};
 
 export type SetQueryReturnsVoid<T extends Query> = SetQueryReturns<T, 'void'>;
 
@@ -121,15 +145,16 @@ export type SetQueryTableAlias<
     T['selectable'],
     `${AliasOrTable<T>}.${StringKey<keyof T['shape']>}`
   > & {
-    [K in keyof T['shape'] as `${TableAlias}.${StringKey<
-      keyof T['shape']
-    >}`]: T['shape'][K];
+    [K in keyof T['shape'] as `${TableAlias}.${StringKey<keyof T['shape']>}`]: {
+      as: K;
+      column: T['shape'][K];
+    };
   };
 };
 
 export type SetQueryJoinedTables<
   T extends Query,
-  Selectable extends ColumnsShape,
+  Selectable extends Record<string, { as: string; column: ColumnType }>,
   JoinedTables extends JoinedTablesBase,
 > = Omit<T, 'selectable' | 'joinedTables'> & {
   selectable: Selectable;
@@ -142,9 +167,14 @@ export type AddQueryJoinedTable<
 > = SetQueryJoinedTables<
   T,
   T['selectable'] & {
-    [K in keyof J['result'] as `${AliasOrTable<J>}.${StringKey<K>}`]: J['result'][K];
+    [K in keyof J['result'] as `${AliasOrTable<J>}.${StringKey<K>}`]: {
+      as: K;
+      column: J['result'][K];
+    };
   },
-  Spread<[T['joinedTables'], Record<AliasOrTable<J>, J>]>
+  string extends keyof T['joinedTables']
+    ? Record<AliasOrTable<J>, J>
+    : Spread<[T['joinedTables'], Record<AliasOrTable<J>, J>]>
 >;
 
 export type SetQueryWith<

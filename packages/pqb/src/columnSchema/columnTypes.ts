@@ -47,9 +47,11 @@ import { EnumColumn } from './enum';
 import { JSONColumn, JSONTextColumn, JSONTypes } from './json';
 import { JSONTypeAny } from './json/typeBase';
 import { ArrayColumn } from './array';
-import { ColumnType } from './base';
+import { ColumnType } from './columnType';
 
-export const types = {
+export type ColumnTypes = typeof columnTypes;
+
+export const columnTypes = {
   smallint: () => new SmallIntColumn(),
   integer: () => new IntegerColumn(),
   bigint: () => new BigIntColumn(),

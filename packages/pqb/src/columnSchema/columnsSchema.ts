@@ -1,14 +1,33 @@
-import { ColumnType } from './base';
+import { ColumnOutput, ColumnType } from './columnType';
 import { Operators } from '../operators';
 import { UnionToIntersection } from '../utils';
 
 export type ColumnsShape = Record<string, ColumnType>;
+
+export type ColumnShapeOutput<Shape extends ColumnsShape> = {
+  [K in keyof Shape]: ColumnOutput<Shape[K]>;
+};
 
 export class ColumnsObject<Shape extends ColumnsShape> extends ColumnType<
   { [K in keyof Shape]: Shape[K]['type'] },
   typeof Operators.any
 > {
   dataType = 'object';
+  operators = Operators.any;
+
+  constructor(public shape: Shape) {
+    super();
+  }
+}
+
+export class ArrayOfColumnsObjects<
+  Shape extends ColumnsShape,
+> extends ColumnType<
+  { [K in keyof Shape]: Shape[K]['type'] }[],
+  typeof Operators.any
+> {
+  dataType = 'array';
+  operators = Operators.any;
 
   constructor(public shape: Shape) {
     super();
@@ -63,7 +82,7 @@ type GetTypesFromKeys<
 type GetTypeFromKey<S extends ColumnsShape, T extends keyof S> = S[T]['type'];
 
 export class TableSchema<Shape extends ColumnsShape> {
-  primaryKeys: GetPrimaryKeys<Shape>;
+  primaryKeys: string extends keyof Shape ? string[] : GetPrimaryKeys<Shape>;
   primaryTypes!: GetPrimaryTypes<Shape>;
 
   constructor(public shape: Shape) {

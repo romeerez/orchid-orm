@@ -1,9 +1,5 @@
-import { PostgresModelConstructor, PostgresModelConstructors } from './model';
-import {
-  MapRelationMethods,
-  ModelOrQuery,
-  Relations,
-} from './relations/relations';
+import { ModelClass, PostgresModelConstructors } from './model';
+import { MapRelationMethods, Relations } from './relations/relations';
 import { BelongsTo } from './relations/belongsTo';
 import { Query, PostgresAdapter, QueryWithTable } from 'pqb';
 
@@ -37,7 +33,7 @@ export const PostgresOrm =
       for (const prop in model) {
         const item = model[prop as keyof typeof model];
         if (item instanceof BelongsTo) {
-          const modelOrQuery = item.fn() as ModelOrQuery;
+          const modelOrQuery = item.fn() as ModelClass;
           const query =
             typeof modelOrQuery === 'function'
               ? modelToQuery(
@@ -58,7 +54,7 @@ export const PostgresOrm =
 
 const modelToQuery = (
   result: PostgresORM<PostgresModelConstructors>,
-  model: PostgresModelConstructor,
+  model: ModelClass,
 ): QueryWithTable => {
   for (const key in result) {
     if (result[key] instanceof model) {

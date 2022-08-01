@@ -35,13 +35,19 @@ export abstract class ColumnType<
     return this as T & { isNullable: true };
   }
 
-  encode<T extends ColumnType, Input>(fn: (input: Input) => T['type']) {
+  encode<T extends ColumnType, Input>(
+    this: T,
+    fn: (input: Input) => unknown,
+  ): Omit<T, 'inputType'> & { inputType: Input } {
     const self = this as unknown as Omit<T, 'inputType'> & { inputType: Input };
     self.encodeFn = fn;
     return self;
   }
 
-  parse<T extends ColumnType, Output>(fn: (input: T['type']) => Output) {
+  parse<T extends ColumnType, Output>(
+    this: T,
+    fn: (input: T['type']) => Output,
+  ): Omit<T, 'type'> & { type: Output } {
     this.parseFn = fn;
     return this as unknown as Omit<T, 'type'> & { type: Output };
   }

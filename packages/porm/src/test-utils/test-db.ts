@@ -1,4 +1,4 @@
-import { ClientConfig, Client } from 'pg';
+import { Client } from 'pg';
 import { PostgresOrm } from '../orm';
 import { Adapter } from 'pqb';
 import {
@@ -9,7 +9,7 @@ import {
   UserModel,
 } from './test-models';
 
-export const pgConfig: ClientConfig = {
+export const pgConfig = {
   connectionString: process.env.DATABASE_URL,
 };
 

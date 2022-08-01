@@ -1,3 +1,4 @@
+export * from './columnSchema';
 export * from './sql';
 export * from './adapter';
 export * from './aggregateMethods';
@@ -7,7 +8,6 @@ export * from './operators';
 export * from './query';
 export * from './queryMethods';
 export * from './quote';
-export * from './schema';
 export * from './utils';
 export * from './queryDataUtils';
 export * from './thenMethods';

@@ -1,4 +1,4 @@
-import { ColumnType } from './base';
+import { ColumnType } from './columnType';
 import { Operators } from '../operators';
 
 export class ArrayColumn<Item extends ColumnType> extends ColumnType<
@@ -6,6 +6,7 @@ export class ArrayColumn<Item extends ColumnType> extends ColumnType<
   typeof Operators.array
 > {
   dataType = 'array' as const;
+  operators = Operators.array;
   data: { item: Item };
 
   constructor(item: Item) {

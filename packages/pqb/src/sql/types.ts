@@ -1,7 +1,13 @@
-import { Query, QueryWithTable, Selectable } from '../query';
+import {
+  ColumnsParsers,
+  Query,
+  QueryWithTable,
+  Selectable,
+  SelectableBase,
+} from '../query';
 import { Expression, RawExpression } from '../common';
 import { Aggregate1ArgumentTypes } from '../aggregateMethods';
-import { ColumnsShape, Output } from '../schema';
+import { ColumnsShape, ColumnShapeOutput } from '../columnSchema';
 import { JoinQuery } from '../queryMethods';
 
 export type QueryData<T extends Query = Query> = {
@@ -14,6 +20,7 @@ export type QueryData<T extends Query = Query> = {
   from?: string | Query | RawExpression;
   fromOnly?: boolean;
   join?: JoinItem[];
+  joinedParsers?: Record<string, ColumnsParsers>;
   and?: WhereItem<T>[];
   or?: WhereItem<T>[][];
   as?: string;
@@ -25,6 +32,7 @@ export type QueryData<T extends Query = Query> = {
   limit?: number;
   offset?: number;
   for?: RawExpression[];
+  parsers?: ColumnsParsers;
 };
 
 export type WithItem = [
@@ -59,8 +67,12 @@ export type JoinItem =
     ];
 
 export type WhereItem<T extends Query> =
-  | Partial<Output<T['shape']>>
-  | { [K in keyof T['shape']]?: ColumnOperators<T['shape'], K> | RawExpression }
+  | Partial<ColumnShapeOutput<T['shape']>>
+  | {
+      [K in keyof T['selectable']]?:
+        | ColumnOperators<T['selectable'], K>
+        | RawExpression;
+    }
   | Query
   | RawExpression
   | [leftFullColumn: string, op: string, rightFullColumn: string];
@@ -99,15 +111,18 @@ export type Aggregate<T extends Query = Query> = {
   options: AggregateOptions<T>;
 };
 
-export type ColumnOperators<S extends ColumnsShape, Column extends keyof S> = {
-  [O in keyof S[Column]['operators']]?: S[Column]['operators'][O]['type'];
+export type ColumnOperators<
+  S extends SelectableBase,
+  Column extends keyof S,
+> = {
+  [O in keyof S[Column]['column']['operators']]?: S[Column]['column']['operators'][O]['type'];
 };
 
 export type HavingArg<T extends Query = Query> =
   | {
       [Agg in keyof Aggregate1ArgumentTypes<T>]?: {
         [Column in Exclude<Aggregate1ArgumentTypes<T>[Agg], RawExpression>]?:
-          | T['selectable'][Column]['_output']
+          | T['selectable'][Column]['column']['type']
           | (ColumnOperators<T['selectable'], Column> & AggregateOptions<T>);
       };
     }

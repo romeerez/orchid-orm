@@ -1,21 +1,16 @@
-import { PostgresModelConstructor } from '../model';
 import { BelongsTo } from './belongsTo';
-import { QueryData, Query, SetQueryReturns, QueryWithTable } from 'pqb';
-
-export type ModelOrQuery = PostgresModelConstructor | QueryWithTable;
-
-export type ModelOrQueryToQuery<T extends ModelOrQuery> =
-  T extends PostgresModelConstructor ? InstanceType<T> : T;
+import { QueryData, Query, SetQueryReturns } from 'pqb';
+import { ModelClass, PostgresModel } from '../model';
 
 export type RelationType = 'belongsTo';
 
 export type RelationThunk<
   Type extends RelationType = RelationType,
-  Q extends ModelOrQuery = ModelOrQuery,
+  RelatedModel extends ModelClass = ModelClass,
   Options extends Record<string, unknown> = Record<string, unknown>,
 > = {
   type: Type;
-  fn: () => Q;
+  fn: () => RelatedModel;
   options: Options;
 };
 
@@ -25,20 +20,22 @@ export type Relation<
 > = {
   key: Key;
   type: T['type'];
-  query: ModelOrQueryToQuery<ReturnType<T['fn']>>;
+  model: PostgresModel;
   options: T['options'];
   joinQuery: Query & { query: QueryData };
 };
 
 export type MapRelationMethods<T extends Query> = Omit<
   {
-    [K in keyof T]: T[K] extends BelongsTo<Query, infer Q, infer Options>
+    [K in keyof T]: T[K] extends BelongsTo
       ? (
           params: Record<
-            Options['foreignKey'],
-            Q['shape'][Options['primaryKey']]['_output']
+            T[K]['options']['foreignKey'],
+            InstanceType<
+              ReturnType<T[K]['fn']>
+            >['shape'][T[K]['options']['primaryKey']]['type']
           >,
-        ) => SetQueryReturns<Q, 'one'>
+        ) => SetQueryReturns<InstanceType<ReturnType<T[K]['fn']>>, 'one'>
       : T[K];
   },
   'relations'
@@ -60,25 +57,18 @@ export type Relations<
 
 export class RelationMethods {
   belongsTo<
-    T extends Query,
-    F extends ModelOrQuery,
-    Q extends QueryWithTable,
-    PK extends keyof Q['shape'],
-    FK extends keyof T['shape'],
+    This extends PostgresModel,
+    RelatedModel extends ModelClass,
+    PK extends keyof InstanceType<RelatedModel>['shape'],
+    FK extends keyof This['shape'],
   >(
-    this: T,
-    fn: () => F,
+    this: This,
+    fn: () => RelatedModel,
     options: {
       primaryKey: PK;
       foreignKey: FK;
     },
-  ): BelongsTo<T, Q, { primaryKey: PK; foreignKey: FK }> {
-    return new BelongsTo(
-      // it's necessary to convert model to query here
-      // otherwise, TS cannot pick the type of model
-      fn as unknown as () => Q,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      options!,
-    );
+  ): BelongsTo<This, RelatedModel, { primaryKey: PK; foreignKey: FK }> {
+    return new BelongsTo(fn, options);
   }
 }

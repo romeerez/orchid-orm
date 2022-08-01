@@ -11,11 +11,11 @@ import { AggregateArg, AggregateOptions } from './sql';
 import { pushQueryValue } from './queryDataUtils';
 import {
   BooleanColumn,
-  Column,
-  ColumnsArray,
+  ColumnType,
+  ArrayColumn,
   NumberColumn,
   StringColumn,
-} from './schema';
+} from './columnSchema';
 import { CoalesceString } from './utils';
 
 const allColumns = raw('*');
@@ -24,7 +24,7 @@ const allColumns = raw('*');
 // only such one argument methods are available in .having method
 export type Aggregate1ArgumentTypes<
   T extends Query = Query,
-  C extends Column = Column,
+  C extends ColumnType = ColumnType,
 > = {
   count: Expression<T, C>;
   avg: NumberExpression<T, C>;
@@ -63,7 +63,7 @@ type SelectAgg<
   T extends Query,
   Func extends string,
   As extends string | undefined,
-  Value extends Column,
+  Value extends ColumnType,
 > = AddQuerySelect<T, Record<CoalesceString<As, Func>, Value>>;
 
 type AT1<T extends Query> = Aggregate1ArgumentTypes<T>;
@@ -73,7 +73,7 @@ export class AggregateMethods {
     T extends Query,
     Func extends string,
     As extends string | undefined,
-    Value extends Column,
+    Value extends ColumnType,
   >(
     this: T,
     functionName: Func,
@@ -92,7 +92,7 @@ export class AggregateMethods {
     T extends Query,
     Func extends string,
     As extends string | undefined,
-    Value extends Column,
+    Value extends ColumnType,
   >(
     this: T,
     functionName: Func,
@@ -282,7 +282,7 @@ export class AggregateMethods {
     this: T,
     arg: Expr,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, ColumnsArray<ExpressionOutput<T, Expr>>> {
+  ): SetQueryReturnsValue<T, ArrayColumn<ExpressionOutput<T, Expr>>> {
     return this.clone()._arrayAgg(arg, options);
   }
 
@@ -293,9 +293,9 @@ export class AggregateMethods {
     this: T,
     arg: Expr,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, ColumnsArray<ExpressionOutput<T, Expr>>> {
+  ): SetQueryReturnsValue<T, ArrayColumn<ExpressionOutput<T, Expr>>> {
     const q = this._selectArrayAgg(arg, options) as unknown as T;
-    return q._value<T, ColumnsArray<ExpressionOutput<T, Expr>>>();
+    return q._value<T, ArrayColumn<ExpressionOutput<T, Expr>>>();
   }
 
   selectArrayAgg<
@@ -306,7 +306,7 @@ export class AggregateMethods {
     this: T,
     arg: Expr,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'array_agg', As, ColumnsArray<ExpressionOutput<T, Expr>>> {
+  ): SelectAgg<T, 'array_agg', As, ArrayColumn<ExpressionOutput<T, Expr>>> {
     return this.clone()._selectArrayAgg(arg, options);
   }
 
@@ -318,12 +318,12 @@ export class AggregateMethods {
     this: T,
     arg: Expr,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'array_agg', As, ColumnsArray<ExpressionOutput<T, Expr>>> {
+  ): SelectAgg<T, 'array_agg', As, ArrayColumn<ExpressionOutput<T, Expr>>> {
     return this._selectAgg<
       T,
       'array_agg',
       As,
-      ColumnsArray<ExpressionOutput<T, Expr>>
+      ArrayColumn<ExpressionOutput<T, Expr>>
     >(aggregate1FunctionNames.arrayAgg, arg, options);
   }
 

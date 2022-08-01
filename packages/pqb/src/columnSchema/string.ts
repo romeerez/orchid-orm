@@ -1,4 +1,4 @@
-import { ColumnType } from './base';
+import { ColumnType } from './columnType';
 import { Operators } from '../operators';
 import { joinTruthy } from '../utils';
 import { NumberBaseColumn } from './number';
@@ -17,6 +17,8 @@ export interface BaseStringData {
   trim?: boolean;
 }
 
+export type StringColumn = ColumnType<string>;
+
 export type TextColumnData = BaseStringData;
 
 type TextMethods = typeof textMethods;
@@ -31,6 +33,7 @@ export abstract class TextBaseColumn extends ColumnType<
   typeof Operators.text
 > {
   data = {} as TextColumnData;
+  operators = Operators.text;
 }
 
 assignMethodsToClass(TextBaseColumn, textMethods);
@@ -71,6 +74,7 @@ export class CharColumn<
 // text	variable unlimited length
 export class TextColumn extends ColumnType<string> {
   dataType = 'text' as const;
+  operators = Operators.text;
 }
 
 // To store binary strings
@@ -81,37 +85,44 @@ export class ByteaColumn extends NumberBaseColumn<string> {
 // point	16 bytes	Point on a plane	(x,y)
 export class PointColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'point' as const;
+  operators = Operators.text;
 }
 
 // line	32 bytes	Infinite line	{A,B,C}
 export class LineColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'point' as const;
+  operators = Operators.text;
 }
 
 // lseg	32 bytes	Finite line segment	((x1,y1),(x2,y2))
 export class LsegColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'point' as const;
+  operators = Operators.text;
 }
 
 // box	32 bytes	Rectangular box	((x1,y1),(x2,y2))
 export class BoxColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'point' as const;
+  operators = Operators.text;
 }
 
 // path	16+16n bytes	Closed path (similar to polygon)	((x1,y1),...)
 // path	16+16n bytes	Open path	[(x1,y1),...]
 export class PathColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'point' as const;
+  operators = Operators.text;
 }
 
 // polygon	40+16n bytes	Polygon (similar to closed path)	((x1,y1),...)
 export class PolygonColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'point' as const;
+  operators = Operators.text;
 }
 
 // circle	24 bytes	Circle	<(x,y),r> (center point and radius)
 export class CircleColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'point' as const;
+  operators = Operators.text;
 }
 
 export class MoneyColumn extends NumberBaseColumn<string> {
@@ -121,21 +132,25 @@ export class MoneyColumn extends NumberBaseColumn<string> {
 // cidr	7 or 19 bytes	IPv4 and IPv6 networks
 export class CidrColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'cidr' as const;
+  operators = Operators.text;
 }
 
 // inet	7 or 19 bytes	IPv4 and IPv6 hosts and networks
 export class InetColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'inet' as const;
+  operators = Operators.text;
 }
 
 // macaddr	6 bytes	MAC addresses
 export class MacAddrColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'macaddr' as const;
+  operators = Operators.text;
 }
 
 // macaddr8	8 bytes	MAC addresses (EUI-64 format)
 export class MacAddr8Column extends ColumnType<string, typeof Operators.text> {
   dataType = 'macaddr8' as const;
+  operators = Operators.text;
 }
 
 // Bit strings are strings of 1's and 0's.
@@ -145,6 +160,7 @@ export class BitColumn<
   Length extends number | undefined = undefined,
 > extends ColumnType<string, typeof Operators.text> {
   dataType = 'bit' as const;
+  operators = Operators.text;
   data: { length: Length };
 
   constructor(length?: Length) {
@@ -165,6 +181,7 @@ export class BitVaryingColumn<
   Length extends number | undefined = undefined,
 > extends ColumnType<string, typeof Operators.text> {
   dataType = 'bit varying' as const;
+  operators = Operators.text;
   data: { length: Length };
 
   constructor(length?: Length) {
@@ -184,18 +201,22 @@ export class BitVaryingColumn<
 // A tsvector value is a sorted list of distinct lexemes
 export class TsVectorColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'tsvector' as const;
+  operators = Operators.text;
 }
 
 // A tsquery value stores lexemes that are to be searched for
 export class TsQueryColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'tsquery' as const;
+  operators = Operators.text;
 }
 
 // A tsquery value stores lexemes that are to be searched for
 export class UUIDColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'uuid' as const;
+  operators = Operators.text;
 }
 
 export class XMLColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'uuid' as const;
+  operators = Operators.text;
 }

@@ -1,4 +1,4 @@
-import { ColumnType } from './base';
+import { ColumnType } from './columnType';
 import { Operators } from '../operators';
 
 export class BooleanColumn extends ColumnType<
@@ -6,4 +6,5 @@ export class BooleanColumn extends ColumnType<
   typeof Operators.boolean
 > {
   dataType = 'boolean' as const;
+  operators = Operators.boolean;
 }

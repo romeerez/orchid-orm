@@ -19,7 +19,7 @@ export type UnionToIntersection<U> =
     : never;
 
 // Converts union to overloaded function
-type UnionToOvlds<U> = UnionToIntersection<
+export type UnionToOvlds<U> = UnionToIntersection<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   U extends any ? (f: U) => void : never
 >;
@@ -86,3 +86,7 @@ export function applyMixins(derivedCtor: any, constructors: any[]) {
     });
   });
 }
+
+export const joinTruthy = (...strings: (string | false | undefined)[]) => {
+  return strings.filter((string) => string).join('');
+};

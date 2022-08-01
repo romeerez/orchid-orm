@@ -28,7 +28,7 @@ describe('postgres model', () => {
 
   describe('.primaryKeys', () => {
     it('should return array of primary keys', () => {
-      expect(User.primaryKeys).toEqual(['id']);
+      expect(User.schema.primaryKeys).toEqual(['id']);
     });
   });
 

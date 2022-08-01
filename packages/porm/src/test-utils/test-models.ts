@@ -1,4 +1,10 @@
 import { model } from '../model';
+import { columnTypes } from 'pqb';
+
+const timestampAsDate = columnTypes
+  .timestamp()
+  .parse((input) => new Date(input))
+  .encode((date: Date) => date.toISOString());
 
 export type User = UserModel['type'];
 export class UserModel extends model({
@@ -8,8 +14,8 @@ export class UserModel extends model({
     name: t.text(),
     password: t.text(),
     picture: t.text().nullable(),
-    createdAt: t.timestamp(),
-    updatedAt: t.timestamp(),
+    createdAt: timestampAsDate,
+    updatedAt: timestampAsDate,
   }),
 }) {}
 
@@ -20,8 +26,8 @@ export class ProfileModel extends model({
     id: t.serial().primaryKey(),
     userId: t.integer(),
     bio: t.text().nullable(),
-    createdAt: t.timestamp(),
-    updatedAt: t.timestamp(),
+    createdAt: timestampAsDate,
+    updatedAt: timestampAsDate,
   }),
 }) {
   user = this.belongsTo(() => UserModel, {
@@ -36,8 +42,8 @@ export class ChatModel extends model({
   schema: (t) => ({
     id: t.serial().primaryKey(),
     title: t.text(),
-    createdAt: t.timestamp(),
-    updatedAt: t.timestamp(),
+    createdAt: timestampAsDate,
+    updatedAt: timestampAsDate,
   }),
 }) {}
 
@@ -48,8 +54,8 @@ export class ChatUserModel extends model({
     id: t.serial().primaryKey(),
     chatId: t.integer(),
     userId: t.integer(),
-    createdAt: t.timestamp(),
-    updatedAt: t.timestamp(),
+    createdAt: timestampAsDate,
+    updatedAt: timestampAsDate,
   }),
 }) {}
 
@@ -61,7 +67,7 @@ export class MessageModel extends model({
     chatId: t.integer(),
     authorId: t.integer(),
     text: t.text(),
-    createdAt: t.timestamp(),
-    updatedAt: t.timestamp(),
+    createdAt: timestampAsDate,
+    updatedAt: timestampAsDate,
   }),
 }) {}

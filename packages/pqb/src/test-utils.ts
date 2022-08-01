@@ -8,6 +8,7 @@ import {
   unpatchPgForTransactions,
 } from 'pg-transactional-tests';
 import { Client } from 'pg';
+import { quote } from './quote';
 
 export const dbClient = new Client({
   connectionString: process.env.DATABASE_URL,
@@ -22,16 +23,16 @@ export const User = db('user', (t) => ({
   name: t.text(),
   password: t.text(),
   picture: t.text().nullable(),
-  createdAt: t.timestamp(),
-  updatedAt: t.timestamp(),
+  createdAt: t.timestamp().parse((input) => new Date(input)),
+  updatedAt: t.timestamp().parse((input) => new Date(input)),
 }));
 
 export const Profile = db('profile', (t) => ({
   id: t.serial().primaryKey(),
   userId: t.integer(),
   bio: t.text().nullable(),
-  createdAt: t.timestamp(),
-  updatedAt: t.timestamp(),
+  // createdAt: t.timestamp(),
+  // updatedAt: t.timestamp(),
 }));
 
 export const Chat = db('chat', (t) => ({
@@ -62,6 +63,25 @@ export type AssertEqual<T, Expected> = [T] extends [Expected]
     ? true
     : false
   : false;
+
+export const insert = async <
+  T extends Record<string, unknown> & { id: number },
+>(
+  table: string,
+  record: T,
+): Promise<T> => {
+  const columns = Object.keys(record);
+  const result = await dbClient.query<{ id: number }>(
+    `INSERT INTO "${table}"(${columns
+      .map((column) => `"${column}"`)
+      .join(', ')}) VALUES (${columns
+      .map((column) => quote(record[column]))
+      .join(', ')}) RETURNING "id"`,
+  );
+
+  record.id = result.rows[0].id;
+  return record;
+};
 
 export const useTestDatabase = () => {
   beforeAll(() => {

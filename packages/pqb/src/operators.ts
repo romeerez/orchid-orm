@@ -103,4 +103,10 @@ export const Operators = {
   date: numeric<Date>(),
   time: numeric<Date>(),
   text: text<string>(),
+  // TODO: json operators
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  json: base<any>(),
+  // TODO: array operators
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  array: base<any>(),
 };

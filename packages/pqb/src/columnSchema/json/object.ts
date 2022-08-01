@@ -3,7 +3,7 @@ import { JSONOptional, optional } from './optional';
 
 export type JSONObjectShape = Record<string, JSONTypeAny>;
 
-type UnknownKeysParam = 'passthrough' | 'strict' | 'strip';
+export type UnknownKeysParam = 'passthrough' | 'strict' | 'strip';
 
 type FullyPartial<T extends JSONObjectShape> = {
   [K in keyof T]: JSONOptional<T[K]>;

@@ -1,5 +1,5 @@
 import { Operators } from '../operators';
-import { ColumnType } from './base';
+import { ColumnType } from './columnType';
 import { joinTruthy } from '../utils';
 import { assignMethodsToClass } from './utils';
 import { numberTypeMethods } from './commonMethods';
@@ -11,6 +11,8 @@ export interface BaseNumberData {
   gte?: number;
   multipleOf?: number;
 }
+
+export type NumberColumn = ColumnType<number>;
 
 export type NumberColumnData = BaseNumberData;
 
@@ -26,6 +28,7 @@ export abstract class NumberBaseColumn<Type> extends ColumnType<
   typeof Operators.number
 > {
   data = {} as NumberColumnData;
+  operators = Operators.number;
 }
 
 assignMethodsToClass(NumberBaseColumn, numberMethods);

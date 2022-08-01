@@ -3,7 +3,7 @@ import { getRaw, isRaw } from '../common';
 import { QueryData } from './types';
 import { Query, QueryWithData, QueryWithTable } from '../query';
 import { whereToSql } from './where';
-import { ColumnsShape } from '../schema';
+import { ColumnsShape } from '../columnSchema';
 
 export const pushJoinSql = (
   sql: string[],

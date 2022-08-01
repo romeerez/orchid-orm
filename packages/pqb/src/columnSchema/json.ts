@@ -1,4 +1,4 @@
-import { ColumnType } from './base';
+import { ColumnType } from './columnType';
 import { Operators } from '../operators';
 import { scalarTypes } from './json/scalarTypes';
 import { array } from './json/array';
@@ -47,6 +47,7 @@ export class JSONColumn<Type extends JSONTypeAny> extends ColumnType<
   typeof Operators.json
 > {
   dataType = 'jsonb' as const;
+  operators = Operators.json;
   data: { schema: Type };
 
   constructor(schemaOrFn: Type | ((j: JSONTypes) => Type)) {
@@ -60,4 +61,5 @@ export class JSONColumn<Type extends JSONTypeAny> extends ColumnType<
 
 export class JSONTextColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'json' as const;
+  operators = Operators.text;
 }

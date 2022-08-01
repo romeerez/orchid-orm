@@ -1,20 +1,24 @@
 import { RelationThunk } from './relations';
 import { Query, pushQueryValue, QueryWithTable } from 'pqb';
+import { ModelClass, PostgresModel } from '../model';
 
 export class BelongsTo<
-  T extends Query,
-  Q extends QueryWithTable,
+  This extends PostgresModel = PostgresModel,
+  RelatedModel extends ModelClass = ModelClass,
   Options extends {
-    primaryKey: keyof Q['shape'];
-    foreignKey: keyof T['shape'];
+    primaryKey: keyof InstanceType<RelatedModel>['shape'];
+    foreignKey: keyof This['shape'];
+  } = {
+    primaryKey: string;
+    foreignKey: string;
   },
-> implements RelationThunk<'belongsTo', Q, Options>
+> implements RelationThunk<'belongsTo', RelatedModel, Options>
 {
   type = 'belongsTo' as const;
-  constructor(public fn: () => Q, public options: Options) {}
+  constructor(public fn: () => RelatedModel, public options: Options) {}
 
   applyToModel(target: Query, query: QueryWithTable, key: string) {
-    const primaryKey = this.options?.primaryKey || target.primaryKeys[0];
+    const primaryKey = this.options?.primaryKey || target.schema.primaryKeys[0];
     const foreignKey = this.options?.foreignKey || `${query.table}Id`;
 
     (target as unknown as Record<string, unknown>)[key] = (

@@ -1,5 +1,5 @@
 import { Query, Selectable } from './query';
-import { Column } from './schema';
+import { ColumnOutput, ColumnType } from './columnSchema';
 
 export type AliasOrTable<T extends Pick<Query, 'tableAlias' | 'table'>> =
   T['tableAlias'] extends string
@@ -10,18 +10,21 @@ export type AliasOrTable<T extends Pick<Query, 'tableAlias' | 'table'>> =
 
 export type StringKey<K extends PropertyKey> = Exclude<K, symbol | number>;
 
-export type RawExpression<C extends Column = Column> = {
+export type RawExpression<C extends ColumnType = ColumnType> = {
   __raw: string;
-  __type: C;
+  __column: C;
 };
 
-export type Expression<T extends Query = Query, C extends Column = Column> =
-  | keyof T['selectable']
-  | RawExpression<C>;
+export type Expression<
+  T extends Query = Query,
+  C extends ColumnType = ColumnType,
+> = keyof T['selectable'] | RawExpression<C>;
 
-export type ExpressionOfType<T extends Query, C extends Column, Type> =
+export type ExpressionOfType<T extends Query, C extends ColumnType, Type> =
   | {
-      [K in keyof T['selectable']]: T['selectable'][K]['_output'] extends Type
+      [K in keyof T['selectable']]: ColumnOutput<
+        T['selectable'][K]['column']
+      > extends Type
         ? K
         : never;
     }[Selectable<T>]
@@ -29,30 +32,36 @@ export type ExpressionOfType<T extends Query, C extends Column, Type> =
 
 export type NumberExpression<
   T extends Query,
-  C extends Column = Column,
+  C extends ColumnType = ColumnType,
 > = ExpressionOfType<T, C, number>;
 
 export type StringExpression<
   T extends Query,
-  C extends Column = Column,
+  C extends ColumnType = ColumnType,
 > = ExpressionOfType<T, C, string>;
 
 export type BooleanExpression<
   T extends Query,
-  C extends Column = Column,
+  C extends ColumnType = ColumnType,
 > = ExpressionOfType<T, C, boolean>;
 
 export type ExpressionOutput<
   T extends Query,
   Expr extends Expression<T>,
 > = Expr extends keyof T['selectable']
-  ? T['selectable'][Expr]
-  : Expr extends RawExpression<infer Column>
-  ? Column
+  ? T['selectable'][Expr]['column']
+  : Expr extends RawExpression<infer ColumnType>
+  ? ColumnType
   : never;
 
-export const raw = <C extends Column = Column>(sql: string) =>
+export const raw = <C extends ColumnType>(sql: string) =>
   ({
+    __raw: sql,
+  } as RawExpression<C>);
+
+export const rawColumn = <C extends ColumnType>(column: C, sql: string) =>
+  ({
+    __column: column,
     __raw: sql,
   } as RawExpression<C>);
 
@@ -61,3 +70,7 @@ export const isRaw = (obj: object): obj is RawExpression => '__raw' in obj;
 export const getRaw = (raw: RawExpression) => raw.__raw;
 
 export const EMPTY_OBJECT = {};
+
+export const getQueryParsers = (q: Query) => {
+  return q.query?.select ? q.query.parsers : q.columnsParsers;
+};

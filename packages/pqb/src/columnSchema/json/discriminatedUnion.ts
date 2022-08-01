@@ -1,7 +1,6 @@
 import { constructType, JSONType, Primitive } from './typeBase';
-import { JSONObject, JSONObjectShape } from './object';
+import { JSONObject } from './object';
 import { JSONLiteral } from './literal';
-import { JSONOptional } from './optional';
 
 export interface JSONDiscriminatedUnion<
   Discriminator extends string,
@@ -9,24 +8,29 @@ export interface JSONDiscriminatedUnion<
 > extends JSONType<Options[number]['type'], 'discriminatedUnion'> {
   discriminator: Discriminator;
   options: OptionsMap<Discriminator, Options>;
-  deepPartial(): JSONDiscriminatedUnion<
-    Discriminator,
-    {
-      [Index in keyof Options]: Options[Index] extends JSONObject<JSONObjectShape>
-        ? JSONObject<
-            Record<Discriminator, Options[Index]['shape'][Discriminator]> & {
-              [K in keyof Options[Index]['shape']]: JSONOptional<
-                Options[Index]['shape'][K]
-              >;
-            },
-            Options[Index]['unknownKeys'],
-            Options[Index]['catchAllType']
-          >
-        : Options[Index];
-    } & {
-      length: Options['length'];
-    }
-  >;
+  // TODO: gave up on deepPartial type
+  // deepPartial(): JSONDiscriminatedUnion<
+  //   Discriminator,
+  //   {
+  //     [Index in keyof Options]: {
+  //       [K in keyof Options[Index]['shape']]: K extends Discriminator
+  //         ? Options[Index]['shape'][K]
+  //         : JSONOptional<Options[Index]['shape'][K]>;
+  //     } extends JSONObject<Record<Discriminator, JSONLiteral<Primitive>>>
+  //       ? JSONObject<
+  //           {
+  //             [K in keyof Options[Index]['shape']]: K extends Discriminator
+  //               ? Options[Index]['shape'][K]
+  //               : JSONOptional<Options[Index]['shape'][K]>;
+  //           },
+  //           Options[Index]['unknownKeys'],
+  //           Options[Index]['catchAllType']
+  //         >
+  //       : Options[Index];
+  //   } & {
+  //     length: Options['length'];
+  //   }
+  // >;
 }
 
 type JSONDiscriminatedObject<Discriminator extends string> = JSONObject<

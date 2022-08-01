@@ -11,8 +11,9 @@ import {
   AssertEqual,
   useTestDatabase,
   db,
+  insert,
 } from './test-utils';
-import { dataTypes, NumberColumn } from './schema';
+import { columnTypes, NumberColumn } from './columnSchema';
 
 describe('queryMethods', () => {
   useTestDatabase();
@@ -85,13 +86,28 @@ describe('queryMethods', () => {
 
   describe('take', () => {
     it('limits to one and returns only one', async () => {
+      const now = new Date();
+      await insert('user', {
+        id: 1,
+        name: 'name',
+        password: 'password',
+        picture: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+
       const q = User.all();
       expect(q.take().toSql()).toContain('LIMIT 1');
       expect(q.toSql()).not.toContain('LIMIT 1');
+
       const expected = await adapter
         .query('SELECT * FROM "user" LIMIT 1')
         .then((res) => res.rows[0]);
-      expect(await q.take()).toEqual(expected);
+      expect(await q.take()).toEqual({
+        ...expected,
+        createdAt: new Date(expected.createdAt),
+        updatedAt: new Date(expected.updatedAt),
+      });
     });
   });
 
@@ -598,7 +614,7 @@ describe('queryMethods', () => {
       `);
     };
 
-    const columnShape = { one: dataTypes.integer(), two: dataTypes.text() };
+    const columnShape = { one: columnTypes.integer(), two: columnTypes.text() };
 
     it('accepts raw parameter preceded by columns shape', () => {
       const q = User.all();
@@ -1145,11 +1161,11 @@ describe('join', () => {
         .toSql(),
     ).toBe(
       line(`
-      SELECT "user".* FROM "user"
-      JOIN "message"
-        ON "message"."authorId" = "user"."id"
-       AND "message"."text" = "user"."name"
-    `),
+        SELECT "user".* FROM "user"
+        JOIN "message"
+          ON "message"."authorId" = "user"."id"
+         AND "message"."text" = "user"."name"
+      `),
     );
     expectQueryNotMutated(q);
   });

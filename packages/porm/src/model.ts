@@ -1,10 +1,8 @@
 import {
   ColumnsShape,
-  dataTypes,
-  DataTypes,
-  Output,
+  columnTypes,
+  ColumnTypes,
   TableSchema,
-  tableSchema,
   QueryMethods,
   AggregateMethods,
   QueryData,
@@ -16,34 +14,39 @@ import {
   StringKey,
   Db,
   DbTableOptions,
+  ColumnShapeOutput,
+  ColumnsParsers,
 } from 'pqb';
 import { RelationMethods } from './relations/relations';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export interface PostgresModel<Shape extends ColumnsShape, Table extends string>
-  extends QueryMethods,
+export interface PostgresModel<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Shape extends ColumnsShape = any,
+  Table extends string = string,
+> extends QueryMethods,
     AggregateMethods,
     RelationMethods {
   new (adapter: PostgresAdapter): this;
 
   queryBuilder: Db;
-  returnType: QueryReturnType;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  query?: QueryData<any>;
   shape: Shape;
-  type: Output<Shape>;
-  columns: (keyof Output<Shape>)[];
+  schema: TableSchema<Shape>;
+  type: ColumnShapeOutput<Shape>;
+  returnType: QueryReturnType;
+  query?: QueryData;
+  columns: (keyof ColumnShapeOutput<Shape>)[];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
+  columnsParsers?: ColumnsParsers;
   result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
   hasSelect: false;
-  selectable: Shape & {
-    [K in keyof Shape as `${Table}.${StringKey<K>}`]: Shape[K];
+  selectable: { [K in keyof Shape]: { as: K; column: Shape[K] } } & {
+    [K in keyof Shape as `${Table}.${StringKey<K>}`]: {
+      as: K;
+      column: Shape[K];
+    };
   };
   table: Table;
   tableAlias: undefined;
-  schema: TableSchema<Shape>;
-  primaryKeys: string[];
-  primaryTypes: unknown[];
   windows: PropertyKey[];
   withData: Query['withData'];
   joinedTables: Query['joinedTables'];
@@ -61,22 +64,28 @@ PostgresModel.prototype.constructor = PostgresModel;
 
 type ModelParams<Shape extends ColumnsShape, Table extends string> = {
   table: Table;
-  schema(t: DataTypes): Shape;
+  schema(t: ColumnTypes): Shape;
   options?: DbTableOptions;
 };
 
-type ModelResult<Shape extends ColumnsShape, Table extends string> = {
-  new (adapter: PostgresAdapter): InstanceType<PostgresModel<Shape, Table>>;
+export type ModelClass<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Shape extends ColumnsShape = any,
+  Table extends string = string,
+> = {
+  new (adapter: PostgresAdapter): PostgresModel<Shape, Table>;
 };
 
 export const model = <Shape extends ColumnsShape, Table extends string>({
   table,
-  schema,
+  schema: schemaFn,
   options,
-}: ModelParams<Shape, Table>): ModelResult<Shape, Table> => {
-  const shape = schema(dataTypes);
-  const schemaObject = tableSchema(shape);
-  const columns = Object.keys(shape) as unknown as (keyof Output<Shape>)[];
+}: ModelParams<Shape, Table>): ModelClass<Shape, Table> => {
+  const shape = schemaFn(columnTypes);
+  const schema = new TableSchema(shape);
+  const columns = Object.keys(
+    shape,
+  ) as unknown as (keyof ColumnShapeOutput<Shape>)[];
   const defaultSelectColumns = columns.filter(
     (column) => !shape[column as keyof typeof shape].isHidden,
   );
@@ -85,16 +94,27 @@ export const model = <Shape extends ColumnsShape, Table extends string>({
       ? undefined
       : defaultSelectColumns;
 
+  const columnsParsers: ColumnsParsers = {};
+  let hasParsers = false;
+  for (const key in shape) {
+    const column = shape[key];
+    if (column.parseFn) {
+      hasParsers = true;
+      columnsParsers[key] = column.parseFn;
+    }
+  }
+
   const { toSql } = PostgresModel.prototype;
 
   return class extends PostgresModel<Shape, Table> {
     table = table;
     shape = shape;
-    schema = schemaObject;
-    primaryKeys = schemaObject.getPrimaryKeys() as any;
+    schema = schema;
     columns = columns;
     defaultSelectColumns =
       defaultSelectColumns as unknown as DefaultSelectColumns<Shape>;
+
+    columnsParsers = hasParsers ? columnsParsers : undefined;
 
     query = options?.schema ? { schema: options.schema } : undefined;
 
@@ -112,11 +132,4 @@ export const model = <Shape extends ColumnsShape, Table extends string>({
   };
 };
 
-export type PostgresModelConstructor = new (
-  adapter: PostgresAdapter,
-) => InstanceType<PostgresModel<any, any>>;
-
-export type PostgresModelConstructors = Record<
-  string,
-  PostgresModelConstructor
->;
+export type PostgresModelConstructors = Record<string, ModelClass>;

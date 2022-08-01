@@ -1,17 +1,20 @@
-import { DefaultSelectColumns, Query, QueryReturnType } from './query';
+import {
+  ColumnsParsers,
+  DefaultSelectColumns,
+  Query,
+  QueryReturnType,
+} from './query';
 import { QueryMethods } from './queryMethods';
 import { AggregateMethods } from './aggregateMethods';
 import { QueryData } from './sql';
 import { PostgresAdapter } from './adapter';
 import {
   ColumnsShape,
-  dataTypes,
-  DataTypes,
-  GetPrimaryKeys,
-  GetPrimaryTypes,
-  Output,
-  tableSchema,
-} from './schema';
+  columnTypes,
+  ColumnTypes,
+  ColumnShapeOutput,
+  TableSchema,
+} from './columnSchema';
 import { applyMixins } from './utils';
 import { StringKey } from './common';
 
@@ -36,19 +39,22 @@ export interface Db<
   queryBuilder: Db;
   table: Table;
   shape: Shape;
-  type: Output<Shape>;
+  schema: TableSchema<Shape>;
+  type: ColumnShapeOutput<Shape>;
   returnType: QueryReturnType;
   query?: QueryData;
-  columns: (keyof Output<Shape>)[];
+  columns: (keyof ColumnShapeOutput<Shape>)[];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
+  columnsParsers?: ColumnsParsers;
   result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
   hasSelect: false;
-  selectable: Shape & {
-    [K in keyof Shape as `${Table}.${StringKey<K>}`]: Shape[K];
+  selectable: { [K in keyof Shape]: { as: K; column: Shape[K] } } & {
+    [K in keyof Shape as `${Table}.${StringKey<K>}`]: {
+      as: K;
+      column: Shape[K];
+    };
   };
   tableAlias: undefined;
-  primaryKeys: GetPrimaryKeys<Shape>[];
-  primaryTypes: GetPrimaryTypes<Shape, GetPrimaryKeys<Shape>>;
   windows: PropertyKey[];
   withData: Query['withData'];
   joinedTables: Query['joinedTables'];
@@ -71,12 +77,13 @@ export class Db<
       this.query = { schema: options.schema };
     }
 
-    const schemaObject = tableSchema(shape);
-    const columns = Object.keys(shape) as unknown as (keyof Output<Shape>)[];
+    this.schema = new TableSchema(shape);
+    const columns = Object.keys(
+      shape,
+    ) as unknown as (keyof ColumnShapeOutput<Shape>)[];
     const { toSql } = this;
 
-    this.primaryKeys = schemaObject.getPrimaryKeys() as GetPrimaryKeys<Shape>[];
-    this.columns = columns as (keyof Output<Shape>)[];
+    this.columns = columns as (keyof ColumnShapeOutput<Shape>)[];
     this.defaultSelectColumns = columns.filter(
       (column) => !shape[column as keyof typeof shape].isHidden,
     ) as DefaultSelectColumns<Shape>;
@@ -85,6 +92,17 @@ export class Db<
       this.defaultSelectColumns.length === columns.length
         ? undefined
         : this.defaultSelectColumns;
+
+    const columnsParsers: ColumnsParsers = {};
+    let hasParsers = false;
+    for (const key in shape) {
+      const column = shape[key];
+      if (column.parseFn) {
+        hasParsers = true;
+        columnsParsers[key] = column.parseFn;
+      }
+    }
+    this.columnsParsers = hasParsers ? columnsParsers : undefined;
 
     this.toSql = defaultSelect
       ? function <T extends Query>(this: T): string {
@@ -110,7 +128,7 @@ Db.prototype.constructor = Db;
 type DbResult = Db & {
   <Table extends string, Shape extends ColumnsShape>(
     table: Table,
-    shape: ((t: DataTypes) => Shape) | Shape,
+    shape: ((t: ColumnTypes) => Shape) | Shape,
     options?: DbTableOptions,
   ): Db<Table, Shape>;
 
@@ -125,14 +143,14 @@ export const createDb = (adapter: PostgresAdapter): DbResult => {
   return Object.assign(
     <Table extends string, Shape extends ColumnsShape>(
       table: Table,
-      shape: ((t: DataTypes) => Shape) | Shape,
+      shape: ((t: ColumnTypes) => Shape) | Shape,
       options?: DbTableOptions,
     ): Db<Table, Shape> => {
       return new Db<Table, Shape>(
         adapter,
         qb,
         table as Table,
-        typeof shape === 'function' ? shape(dataTypes) : shape,
+        typeof shape === 'function' ? shape(columnTypes) : shape,
         options,
       );
     },

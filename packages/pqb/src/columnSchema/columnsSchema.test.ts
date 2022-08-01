@@ -1,152 +1,32 @@
-import { dataTypes, tableSchema } from './schema';
-import { line, AssertEqual, db } from './test-utils';
+import { AssertEqual } from '../test-utils';
+import { TableSchema } from './columnsSchema';
+import { columnTypes } from './columnTypes';
 
-describe('postgres dataTypes', () => {
-  describe('column types', () => {
-    describe('bigint', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.bigint().dataType).toBe('bigint');
-      });
-    });
-
-    describe('bigserial', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.bigserial().dataType).toBe('bigserial');
-      });
-    });
-
-    describe('boolean', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.boolean().dataType).toBe('boolean');
-      });
-    });
-
-    describe('date', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.date().dataType).toBe('date');
-      });
-    });
-
-    describe('decimal', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.decimal().dataType).toBe('decimal');
-      });
-    });
-
-    describe('float', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.float().dataType).toBe('float');
-      });
-    });
-
-    describe('integer', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.integer().dataType).toBe('integer');
-      });
-    });
-
-    describe('text', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.text().dataType).toBe('text');
-      });
-    });
-
-    describe('string', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.string().dataType).toBe('text');
-      });
-    });
-
-    describe('smallint', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.smallint().dataType).toBe('smallint');
-      });
-    });
-
-    describe('smallserial', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.smallserial().dataType).toBe('smallserial');
-      });
-    });
-
-    describe('time', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.time().dataType).toBe('time');
-      });
-    });
-
-    describe('timestamp', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.timestamp().dataType).toBe('timestamp');
-      });
-    });
-
-    describe('timestamptz', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.timestamptz().dataType).toBe('timestamptz');
-      });
-    });
-
-    describe('binary', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.binary().dataType).toBe('binary');
-      });
-    });
-
-    describe('serial', () => {
-      it('should have correct data type', () => {
-        expect(dataTypes.serial().dataType).toBe('serial');
-      });
-    });
-  });
-
-  describe('primaryKey', () => {
-    it('should mark column as a primary key', () => {
-      expect(dataTypes.serial().isPrimaryKey).toBe(false);
-      expect(dataTypes.serial().primaryKey().isPrimaryKey).toBe(true);
-    });
-  });
-
+describe('columnsSchema', () => {
   describe('schema methods', () => {
-    describe('.getPrimaryKeys', () => {
-      it('should return primary key names', () => {
-        const schema = tableSchema({
-          a: dataTypes.integer().primaryKey(),
-          b: dataTypes.float().primaryKey(),
-          c: dataTypes.string(),
-        });
+    const createSchema = () => {
+      return new TableSchema({
+        a: columnTypes.integer().primaryKey(),
+        b: columnTypes.decimal().primaryKey(),
+        c: columnTypes.text(),
+      });
+    };
 
-        const keys = schema.getPrimaryKeys();
-        const eq: AssertEqual<typeof keys, ['a', 'b']> = true;
+    describe('.primaryKeys', () => {
+      it('should be array of primary key names', () => {
+        const schema = createSchema();
+        const eq: AssertEqual<typeof schema.primaryKeys, ['a', 'b']> = true;
         expect(eq).toBe(true);
-        expect(schema.getPrimaryKeys()).toEqual(['a', 'b']);
+        expect(schema.primaryKeys).toEqual(['a', 'b']);
       });
     });
-  });
-});
 
-describe('model with hidden column', () => {
-  it('selects by default all columns except hidden', () => {
-    const User = db('user', (t) => ({
-      id: t.serial().primaryKey(),
-      name: t.text(),
-      password: t.text().hidden(),
-      picture: t.text().nullable(),
-      createdAt: t.timestamp(),
-      updatedAt: t.timestamp(),
-    }));
-
-    const q = User.all();
-    expect(q.toSql()).toBe(
-      line(`
-      SELECT
-        "user"."id",
-        "user"."name",
-        "user"."picture",
-        "user"."createdAt",
-        "user"."updatedAt"
-      FROM "user"
-    `),
-    );
+    describe('.primaryTypes', () => {
+      const schema = createSchema();
+      const eq: AssertEqual<typeof schema.primaryTypes, [number, number]> =
+        true;
+      expect(eq).toBe(true);
+      expect(schema.primaryTypes).toEqual(undefined);
+    });
   });
 });

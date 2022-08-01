@@ -2,6 +2,7 @@ import {
   AliasOrTable,
   EMPTY_OBJECT,
   Expression,
+  getQueryParsers,
   isRaw,
   raw,
   RawExpression,
@@ -11,6 +12,8 @@ import {
   AddQueryJoinedTable,
   AddQuerySelect,
   AddQueryWith,
+  ColumnParser,
+  ColumnsParsers,
   Query,
   QueryWithData,
   Selectable,
@@ -35,15 +38,6 @@ import {
   WithOptions,
 } from './sql';
 import {
-  Column,
-  ColumnsObject,
-  ColumnsShape,
-  DataTypes,
-  NumberColumn,
-  Output,
-  StringColumn,
-} from './schema';
-import {
   pushQueryArray,
   pushQueryValue,
   removeFromQuery,
@@ -51,6 +45,7 @@ import {
   setQueryValue,
 } from './queryDataUtils';
 import {
+  parseRecord,
   Then,
   thenAll,
   thenOne,
@@ -59,11 +54,30 @@ import {
   thenVoid,
 } from './thenMethods';
 import { Db } from './db';
+import {
+  ArrayOfColumnsObjects,
+  ColumnShapeOutput,
+  ColumnsObject,
+  ColumnsShape,
+  ColumnType,
+  ColumnTypes,
+  NumberColumn,
+  StringColumn,
+} from './columnSchema';
 
 type SelectResult<
   T extends Query,
   K extends (keyof T['selectable'])[],
-> = AddQuerySelect<T, Pick<T['selectable'], K[number]>>;
+  S extends Record<string, { as: string; column: ColumnType }> = Pick<
+    T['selectable'],
+    K[number]
+  >,
+> = AddQuerySelect<
+  T,
+  {
+    [K in keyof S as S[K]['as']]: S[K]['column'];
+  }
+>;
 
 type SelectAsArg<T extends Query> = Record<
   string,
@@ -74,11 +88,13 @@ type SelectAsResult<T extends Query, S extends SelectAsArg<T>> = AddQuerySelect<
   T,
   {
     [K in keyof S]: S[K] extends keyof T['selectable']
-      ? T['selectable'][S[K]]
-      : S[K] extends RawExpression<infer Column>
-      ? Column
+      ? T['selectable'][S[K]]['column']
+      : S[K] extends RawExpression
+      ? S[K]['__column']
       : S[K] extends Query
-      ? ColumnsObject<S[K]['result']>
+      ? S[K]['returnType'] extends 'all'
+        ? ArrayOfColumnsObjects<S[K]['result']>
+        : ColumnsObject<S[K]['result']>
       : never;
   }
 >;
@@ -123,7 +139,7 @@ type WithShape<Args extends WithArgs> = Args[1] extends Query
   ? Args[1]
   : Args[2] extends ColumnsShape
   ? Args[2]
-  : Args[2] extends (t: DataTypes) => ColumnsShape
+  : Args[2] extends (t: ColumnTypes) => ColumnsShape
   ? ReturnType<Args[2]>
   : never;
 
@@ -136,7 +152,7 @@ type WithResult<
   {
     table: Args[0];
     shape: Shape;
-    type: Output<Shape>;
+    type: ColumnShapeOutput<Shape>;
   }
 >;
 
@@ -247,7 +263,10 @@ type JoinArgs<
                   tableAlias: undefined;
                   shape: T['withData'][QW]['shape'];
                   selectable: {
-                    [K in keyof T['withData'][QW]['shape'] as `${T['withData'][QW]['table']}.${StringKey<K>}`]: T['withData'][QW]['shape'][K];
+                    [K in keyof T['withData'][QW]['shape'] as `${T['withData'][QW]['table']}.${StringKey<K>}`]: {
+                      as: StringKey<K>;
+                      column: T['withData'][QW]['shape'][K];
+                    };
                   };
                 }
               : never
@@ -300,6 +319,11 @@ const getClonedQueryData = <T extends Query>(
   return cloned;
 };
 
+const addParser = (query: QueryData, key: string, parser: ColumnParser) => {
+  if (query.parsers) query.parsers[key] = parser;
+  else query.parsers = { [key]: parser };
+};
+
 export class QueryMethods {
   then!: Then<unknown>;
   windows!: PropertyKey[];
@@ -344,7 +368,7 @@ export class QueryMethods {
     return q as unknown as SetQueryReturnsRows<T>;
   }
 
-  value<T extends Query, V extends Column>(
+  value<T extends Query, V extends ColumnType>(
     this: T,
   ): SetQueryReturnsValue<T, V> {
     return this.then === thenValue
@@ -352,7 +376,7 @@ export class QueryMethods {
       : this.clone()._value<T, V>();
   }
 
-  _value<T extends Query, V extends Column>(
+  _value<T extends Query, V extends ColumnType>(
     this: T,
   ): SetQueryReturnsValue<T, V> {
     const q = this.toQuery();
@@ -404,16 +428,42 @@ export class QueryMethods {
     this: T,
     ...columns: K
   ): SelectResult<T, K> {
-    return this.clone()._select(...columns);
+    return this.clone()._select(...columns) as unknown as SelectResult<T, K>;
   }
 
   _select<T extends Query, K extends (keyof T['selectable'])[]>(
     this: T,
     ...columns: K
   ): SelectResult<T, K> {
-    return (columns.length
-      ? pushQueryArray(this, 'select', columns)
-      : this) as unknown as SelectResult<T, K>;
+    const q = this.toQuery();
+    if (!columns.length) {
+      return this as unknown as SelectResult<T, K>;
+    }
+
+    const as = q.query.as || q.table;
+    columns.forEach((item) => {
+      const index = (item as string).indexOf('.');
+      if (index !== -1) {
+        const table = (item as string).slice(0, index);
+        const column = (item as string).slice(index + 1);
+
+        if (table === as) {
+          const parser = q.columnsParsers?.[column];
+          if (parser) addParser(q.query, column, parser);
+        } else {
+          const parser = q.query.joinedParsers?.[table]?.[column];
+          if (parser) addParser(q.query, column, parser);
+        }
+      } else {
+        const parser = q.columnsParsers?.[item as string];
+        if (parser) addParser(q.query, item as string, parser);
+      }
+    });
+
+    return pushQueryArray(q, 'select', columns) as unknown as SelectResult<
+      T,
+      K
+    >;
   }
 
   selectAs<T extends Query, S extends SelectAsArg<T>>(
@@ -427,7 +477,48 @@ export class QueryMethods {
     this: T,
     select: S,
   ): SelectAsResult<T, S> {
-    return pushQueryValue(this, 'select', {
+    const q = this.toQuery();
+    const as = q.query.as || q.table;
+    for (const key in select) {
+      const item = select[key];
+
+      if (typeof item === 'object') {
+        if (isRaw(item)) {
+          const parser = item.__column?.parseFn;
+          if (parser) addParser(q.query, key, parser);
+        } else {
+          const parsers = getQueryParsers(item);
+          if (parsers) {
+            if (item.query?.take) {
+              addParser(q.query, key, (item) => parseRecord(parsers, item));
+            } else {
+              addParser(q.query, key, (items) =>
+                (items as unknown[]).map((item) => parseRecord(parsers, item)),
+              );
+            }
+          }
+        }
+      } else {
+        const index = (item as string).indexOf('.');
+        if (index !== -1) {
+          const table = (item as string).slice(0, index);
+          const column = (item as string).slice(index + 1);
+
+          if (table === as) {
+            const parser = q.columnsParsers?.[column];
+            if (parser) addParser(q.query, key, parser);
+          } else {
+            const parser = q.query.joinedParsers?.[table]?.[column];
+            if (parser) addParser(q.query, key, parser);
+          }
+        } else {
+          const parser = q.columnsParsers?.[item as string];
+          if (parser) addParser(q.query, key, parser);
+        }
+      }
+    }
+
+    return pushQueryValue(q, 'select', {
       selectAs: select,
     }) as unknown as SelectAsResult<T, S>;
   }
@@ -470,18 +561,18 @@ export class QueryMethods {
 
   find<T extends Query>(
     this: T,
-    ...args: GetTypesOrRaw<T['primaryTypes']>
+    ...args: GetTypesOrRaw<T['schema']['primaryTypes']>
   ): SetQueryReturnsOne<T> {
     return this.clone()._find(...args);
   }
 
   _find<T extends Query>(
     this: T,
-    ...args: GetTypesOrRaw<T['primaryTypes']>
+    ...args: GetTypesOrRaw<T['schema']['primaryTypes']>
   ): SetQueryReturnsOne<T> {
-    const conditions: Partial<Output<T['shape']>> = {};
-    this.primaryKeys.forEach((key: string, i: number) => {
-      conditions[key as keyof Output<T['shape']>] = args[i];
+    const conditions: Partial<ColumnShapeOutput<T['shape']>> = {};
+    this.schema.primaryKeys.forEach((key: string, i: number) => {
+      conditions[key as keyof ColumnShapeOutput<T['shape']>] = args[i];
     });
     return this._where(conditions)._take();
   }
@@ -805,6 +896,43 @@ export class QueryMethods {
     this: T,
     ...args: Args
   ): JoinResult<T, Args> {
+    const first = args[0];
+    let joinKey: string | undefined;
+    let parsers: ColumnsParsers | undefined;
+
+    if (typeof first === 'object') {
+      const as = first.tableAlias || first.table;
+      if (as) {
+        joinKey = as;
+        parsers = first.query?.parsers || first.columnsParsers;
+      }
+    } else {
+      joinKey = first as string;
+
+      const relation = (this.relations as Record<string, { query: Query }>)[
+        joinKey
+      ];
+      if (relation) {
+        parsers =
+          relation.query.query?.parsers || relation.query.columnsParsers;
+      } else {
+        const shape = this.query?.withShapes?.[first as string];
+        if (shape) {
+          parsers = {};
+          for (const key in shape) {
+            const parser = shape[key].parseFn;
+            if (parser) {
+              parsers[key] = parser;
+            }
+          }
+        }
+      }
+    }
+
+    if (joinKey && parsers) {
+      setQueryObjectValue(this, 'joinedParsers', joinKey, parsers);
+    }
+
     if (typeof args[1] === 'function') {
       const [modelOrWith, fn] = args;
 
