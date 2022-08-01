@@ -123,7 +123,8 @@ describe('column base', () => {
       it('should parse all columns', async () => {
         expect((await User.all())[0].createdAt instanceof Date).toBe(true);
         expect((await User.take()).createdAt instanceof Date).toBe(true);
-        expect((await User.rows())[0][4] instanceof Date).toBe(true);
+        const idx = Object.keys(User.shape).indexOf('createdAt');
+        expect((await User.rows())[0][idx] instanceof Date).toBe(true);
       });
     });
   });
