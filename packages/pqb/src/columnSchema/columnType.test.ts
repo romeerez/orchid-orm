@@ -1,9 +1,13 @@
 import { ColumnType } from './columnType';
 import { Operators } from '../operators';
-import { AssertEqual, db, insert, line, useTestDatabase } from '../test-utils';
-import { User, Profile } from '../test-utils';
-import { rawColumn } from '../common';
-import { DateColumn } from './dateTime';
+import {
+  AssertEqual,
+  db,
+  insert,
+  line,
+  User,
+  useTestDatabase,
+} from '../test-utils';
 
 describe('column base', () => {
   useTestDatabase();
@@ -104,14 +108,6 @@ describe('column base', () => {
           createdAt: now,
           updatedAt: now,
         });
-
-        await insert('profile', {
-          id: 1,
-          userId: 1,
-          bio: 'text',
-          createdAt: now,
-          updatedAt: now,
-        });
       });
 
       it('should return column data as returned from db if not set', async () => {
@@ -128,120 +124,6 @@ describe('column base', () => {
         expect((await User.all())[0].createdAt instanceof Date).toBe(true);
         expect((await User.take()).createdAt instanceof Date).toBe(true);
         expect((await User.rows())[0][4] instanceof Date).toBe(true);
-      });
-
-      describe('.select', () => {
-        it('should parse columns of the table', async () => {
-          const q = User.select('createdAt');
-
-          expect((await q.all())[0].createdAt instanceof Date).toBe(true);
-          expect((await q.take()).createdAt instanceof Date).toBe(true);
-          expect((await q.rows())[0][0] instanceof Date).toBe(true);
-          expect((await q.value()) instanceof Date).toBe(true);
-        });
-
-        it('should parse columns of the table, selected by column name and table name', async () => {
-          const q = User.select('user.createdAt');
-
-          expect((await q.all())[0].createdAt instanceof Date).toBe(true);
-          expect((await q.take()).createdAt instanceof Date).toBe(true);
-          expect((await q.rows())[0][0] instanceof Date).toBe(true);
-          expect((await q.value()) instanceof Date).toBe(true);
-        });
-
-        it('should parse columns of joined table', async () => {
-          const q = Profile.join(User, 'user.id', '=', 'profile.id').select(
-            'user.createdAt',
-          );
-
-          expect((await q.all())[0].createdAt instanceof Date).toBe(true);
-          expect((await q.take()).createdAt instanceof Date).toBe(true);
-          expect((await q.rows())[0][0] instanceof Date).toBe(true);
-          expect((await q.value()) instanceof Date).toBe(true);
-        });
-      });
-
-      describe('.selectAs', () => {
-        it('should parse columns of the table', async () => {
-          const q = User.selectAs({
-            date: 'createdAt',
-          });
-
-          expect((await q.all())[0].date instanceof Date).toBe(true);
-          expect((await q.take()).date instanceof Date).toBe(true);
-          expect((await q.rows())[0][0] instanceof Date).toBe(true);
-          expect((await q.value()) instanceof Date).toBe(true);
-        });
-
-        it('should parse columns of the table, selected by column name and table name', async () => {
-          const q = User.selectAs({
-            date: 'user.createdAt',
-          });
-
-          expect((await q.all())[0].date instanceof Date).toBe(true);
-          expect((await q.take()).date instanceof Date).toBe(true);
-          expect((await q.rows())[0][0] instanceof Date).toBe(true);
-          expect((await q.value()) instanceof Date).toBe(true);
-        });
-
-        it('should parse columns of joined table', async () => {
-          const q = Profile.join(User, 'user.id', '=', 'profile.id').selectAs({
-            date: 'user.createdAt',
-          });
-
-          expect((await q.all())[0].date instanceof Date).toBe(true);
-          expect((await q.take()).date instanceof Date).toBe(true);
-          expect((await q.rows())[0][0] instanceof Date).toBe(true);
-          expect((await q.value()) instanceof Date).toBe(true);
-        });
-
-        it('should parse subquery array columns', async () => {
-          const q = User.selectAs({
-            users: User.all(),
-          });
-
-          expect((await q.all())[0].users[0].createdAt instanceof Date).toBe(
-            true,
-          );
-          expect((await q.take()).users[0].createdAt instanceof Date).toBe(
-            true,
-          );
-          expect((await q.rows())[0][0][0].createdAt instanceof Date).toBe(
-            true,
-          );
-          const value = await q.value();
-          expect(
-            (value as { createdAt: Date }[])[0].createdAt instanceof Date,
-          ).toBe(true);
-        });
-
-        it('should parse subquery item columns', async () => {
-          const q = User.selectAs({
-            user: User.take(),
-          });
-
-          expect((await q.all())[0].user.createdAt instanceof Date).toBe(true);
-          expect((await q.take()).user.createdAt instanceof Date).toBe(true);
-          expect((await q.rows())[0][0].createdAt instanceof Date).toBe(true);
-          const value = await q.value();
-          expect((value as { createdAt: Date }).createdAt instanceof Date).toBe(
-            true,
-          );
-        });
-
-        it('should parse raw column', async () => {
-          const q = User.selectAs({
-            date: rawColumn(
-              new DateColumn().parse((input) => new Date(input)),
-              '"createdAt"',
-            ),
-          });
-
-          expect((await q.all())[0].date instanceof Date).toBe(true);
-          expect((await q.take()).date instanceof Date).toBe(true);
-          expect((await q.rows())[0][0] instanceof Date).toBe(true);
-          expect((await q.value()) instanceof Date).toBe(true);
-        });
       });
     });
   });
