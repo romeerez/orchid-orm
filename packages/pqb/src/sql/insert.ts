@@ -14,7 +14,7 @@ export const pushInsertSql = (
 ) => {
   const isMany = Array.isArray(data);
   let columns: string[];
-  let values: string[][];
+  let values: string;
   if (isMany) {
     const columnsMap: Record<string, true> = {};
     data.forEach((item) => {
@@ -25,20 +25,25 @@ export const pushInsertSql = (
 
     const keys = Object.keys(columnsMap);
     columns = keys.map((key) => q(key));
-    values = Array(data.length);
+    const arr: string[][] = Array(data.length);
     (data as Record<string, unknown>[]).forEach((item, i) => {
-      values[i] = keys.map((key) =>
-        key in item ? quote(item[key]) : 'DEFAULT',
-      );
+      arr[i] = keys.map((key) => (key in item ? quote(item[key]) : 'DEFAULT'));
     });
+    values = `${arr.map((row) => `(${row.join(', ')})`).join(', ')}`;
+  } else if (
+    'values' in data &&
+    typeof data.values === 'object' &&
+    data.values &&
+    isRaw(data.values)
+  ) {
+    columns = (data.columns as string[]).map((column) => q(column));
+    values = getRaw(data.values);
   } else {
     columns = Object.keys(data).map(q);
-    values = [Object.values(data).map(quote)];
+    values = `(${Object.values(data).map(quote).join(', ')})`;
   }
 
-  sql.push(`INSERT INTO ${quotedAs}(${columns.join(', ')}) VALUES`);
-
-  sql.push(`${values.map((row) => `(${row.join(', ')})`).join(', ')}`);
+  sql.push(`INSERT INTO ${quotedAs}(${columns.join(', ')}) VALUES ${values}`);
 
   const { onConflict } = query;
   if (onConflict) {
@@ -89,10 +94,21 @@ export const pushInsertSql = (
   }
 
   pushWhereSql(sql, model, query, quotedAs);
+  pushReturningSql(sql, quotedAs, returning);
+};
 
+export const pushReturningSql = (
+  sql: string[],
+  quotedAs: string,
+  returning?: string[] | '*',
+) => {
   if (returning?.length) {
     sql.push(
-      `RETURNING ${returning.map((column) => qc(column, quotedAs)).join(', ')}`,
+      `RETURNING ${
+        returning === '*'
+          ? '*'
+          : returning.map((column) => qc(column, quotedAs)).join(', ')
+      }`,
     );
   }
 };

@@ -34,7 +34,13 @@ export type QueryData<T extends Query = Query> = {
   for?: RawExpression[];
   parsers?: ColumnsParsers;
   insert?: {
-    data: Record<string, unknown> | Record<string, unknown>[];
+    data:
+      | Record<string, unknown>
+      | Record<string, unknown>[]
+      | {
+          columns: string[];
+          values: RawExpression;
+        };
     returning?: string[];
   };
   onConflict?:
@@ -47,6 +53,10 @@ export type QueryData<T extends Query = Query> = {
         expr?: OnConflictItem;
         update?: string | string[] | Record<string, unknown> | RawExpression;
       };
+  update?: {
+    data: Record<string, unknown> | RawExpression;
+    returning?: string[] | '*';
+  };
 };
 
 export type WithItem = [

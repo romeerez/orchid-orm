@@ -21,6 +21,26 @@ describe('insert', () => {
     updatedAt: now,
   };
 
+  it('should insert with raw sql and list of columns', () => {
+    const q = User.all();
+
+    const query = q.insert({
+      columns: ['name', 'password'],
+      values: raw('raw sql'),
+    });
+    expect(query.toSql()).toBe(
+      line(`
+        INSERT INTO "user"("name", "password")
+        VALUES raw sql
+      `),
+    );
+
+    const isVoid: AssertEqual<Awaited<typeof query>, void> = true;
+    expect(isVoid).toBe(true);
+
+    expectQueryNotMutated(q);
+  });
+
   it('should insert one record, returning void', async () => {
     const q = User.all();
 
@@ -59,6 +79,29 @@ describe('insert', () => {
       typeof result,
       { id: number; name: string; createdAt: Date; updatedAt: Date }
     > = true;
+    expect(eq).toBe(true);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...other } = data;
+    expectMatchObjectWithTimestamps(result, other);
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should insert one record, returning all columns', async () => {
+    const q = User.all();
+
+    const query = q.insert(data, '*');
+    expect(query.toSql()).toBe(
+      line(`
+        INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
+        VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
+        RETURNING *
+      `),
+    );
+
+    const result = await query;
+    const eq: AssertEqual<typeof result, typeof User['type']> = true;
     expect(eq).toBe(true);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -130,6 +173,45 @@ describe('insert', () => {
       typeof result,
       { id: number; name: string; createdAt: Date; updatedAt: Date }[]
     > = true;
+    expect(eq).toBe(true);
+
+    const inserted = await User.all();
+    inserted.forEach((item, i) => {
+      expectMatchObjectWithTimestamps(item, arr[i]);
+    });
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should insert many records, returning all columns', async () => {
+    const q = User.all();
+
+    const arr = [
+      {
+        ...data,
+        picture: null,
+      },
+      data,
+    ];
+
+    const query = q.insert(arr, '*');
+
+    expect(query.toSql()).toBe(
+      line(`
+        INSERT INTO "user"("name", "password", "createdAt", "updatedAt", "picture")
+        VALUES
+          ('name', 'password', ${quote(now)}, ${quote(now)}, NULL),
+          ('name', 'password', ${quote(now)}, ${quote(now)}, DEFAULT)
+        RETURNING *
+      `),
+    );
+
+    const result = await query;
+    result.forEach((item, i) => {
+      expectMatchObjectWithTimestamps(item, arr[i]);
+    });
+
+    const eq: AssertEqual<typeof result, typeof User['type'][]> = true;
     expect(eq).toBe(true);
 
     const inserted = await User.all();

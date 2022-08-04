@@ -20,19 +20,34 @@ type InsertData<T extends Query> = Omit<T['type'], OptionalKeys<T>> & {
   [K in OptionalKeys<T>]?: T['shape'][K]['type'];
 };
 
-type InsertReturning<T extends Query> = (keyof T['shape'])[];
+type InsertReturning<T extends Query> = (keyof T['shape'])[] | '*';
 
 type InsertArgs<T extends Query> = [
-  data: InsertData<T> | InsertData<T>[],
+  data:
+    | InsertData<T>
+    | InsertData<T>[]
+    | {
+        columns: string[];
+        values: RawExpression;
+      },
   returning?: InsertReturning<T>,
 ];
 
 type InsertResult<
   T extends Query,
   Args extends InsertArgs<T>,
-> = Args[1] extends (keyof T['shape'])[]
-  ? Args[0] extends Array<unknown>
-    ? SetQueryReturnsAll<AddQuerySelect<T, Pick<T['shape'], Args[1][number]>>>
+> = Args[1] extends InsertReturning<T>
+  ? Args[0] extends
+      | Array<unknown>
+      | {
+          columns: string[];
+          values: RawExpression;
+        }
+    ? Args[1] extends '*'
+      ? SetQueryReturnsAll<AddQuerySelect<T, T['shape']>>
+      : SetQueryReturnsAll<AddQuerySelect<T, Pick<T['shape'], Args[1][number]>>>
+    : Args[1] extends '*'
+    ? SetQueryReturnsOne<AddQuerySelect<T, T['shape']>>
     : SetQueryReturnsOne<AddQuerySelect<T, Pick<T['shape'], Args[1][number]>>>
   : SetQueryReturnsVoid<T>;
 
@@ -54,10 +69,14 @@ export class Insert {
     ...args: Args
   ): InsertResult<T, Args> {
     const [data, returning] = args;
-    return setQueryValue(this._take(), 'insert', {
-      data,
-      returning: returning as string[] | undefined,
-    }) as unknown as InsertResult<T, Args>;
+    return setQueryValue(
+      Array.isArray(data) ? this._all() : this._take(),
+      'insert',
+      {
+        data,
+        returning: returning as string[] | undefined,
+      },
+    ) as unknown as InsertResult<T, Args>;
   }
 
   onConflict<T extends Query, Arg extends OnConflictArg<T>>(

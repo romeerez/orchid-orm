@@ -12,6 +12,7 @@ import { pushHavingSql } from './having';
 import { pushWithSql } from './with';
 import { pushFromAndAs } from './fromAndAs';
 import { pushInsertSql } from './insert';
+import { pushUpdateSql } from './update';
 
 export const toSql = (model: Query): string => {
   const query = (model.query || EMPTY_OBJECT) as QueryData;
@@ -27,6 +28,13 @@ export const toSql = (model: Query): string => {
     if (!quotedAs) throw new Error('Table is missing for insert');
 
     pushInsertSql(sql, model, query, quotedAs, query.insert);
+    return sql.join(' ');
+  }
+
+  if (query.update) {
+    if (!quotedAs) throw new Error('Table is missing for insert');
+
+    pushUpdateSql(sql, model, query, quotedAs, query.update);
     return sql.join(' ');
   }
 
