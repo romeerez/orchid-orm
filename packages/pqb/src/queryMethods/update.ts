@@ -7,9 +7,9 @@ import {
 import { setQueryValue } from '../queryDataUtils';
 import { RawExpression } from '../common';
 
-type UpdateData<T extends Query> = Partial<{
-  [K in keyof T['shape']]: T['shape']['type'];
-}>;
+type UpdateData<T extends Query> = {
+  [K in keyof T['type']]?: T['type'][K] | RawExpression;
+};
 
 type UpdateReturning<T extends Query> = (keyof T['shape'])[] | '*';
 

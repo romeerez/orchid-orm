@@ -22,13 +22,15 @@ export const pushUpdateSql = (
 
     for (const key in data) {
       const value = data[key];
-      set.push(
-        `${q(key)} = ${
-          value && typeof value === 'object' && isRaw(value)
-            ? getRaw(value)
-            : quote(value)
-        }`,
-      );
+      if (value !== undefined) {
+        set.push(
+          `${q(key)} = ${
+            value && typeof value === 'object' && isRaw(value)
+              ? getRaw(value)
+              : quote(value)
+          }`,
+        );
+      }
     }
 
     sql.push(set.join(', '));

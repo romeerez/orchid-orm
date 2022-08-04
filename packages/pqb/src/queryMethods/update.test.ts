@@ -129,4 +129,45 @@ describe('update', () => {
 
     expectQueryNotMutated(q);
   });
+
+  it('should ignore undefined values, and should not ignore null', () => {
+    const q = User.all();
+
+    const query = q.update({
+      name: 'new name',
+      password: undefined,
+      data: null,
+    });
+    expect(query.toSql()).toBe(
+      line(`
+        UPDATE "user"
+        SET "name" = 'new name',
+            "data" = NULL
+      `),
+    );
+
+    const eq: AssertEqual<Awaited<typeof query>, void> = true;
+    expect(eq).toBe(true);
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should support raw sql as a value', () => {
+    const q = User.all();
+
+    const query = q.update({
+      name: raw('raw sql'),
+    });
+    expect(query.toSql()).toBe(
+      line(`
+        UPDATE "user"
+        SET "name" = raw sql
+      `),
+    );
+
+    const eq: AssertEqual<Awaited<typeof query>, void> = true;
+    expect(eq).toBe(true);
+
+    expectQueryNotMutated(q);
+  });
 });
