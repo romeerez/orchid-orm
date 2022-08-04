@@ -45,7 +45,7 @@ export type QueryData<T extends Query = Query> = {
     | {
         type: 'merge';
         expr?: OnConflictItem;
-        update?: string | string[] | Record<string, unknown>;
+        update?: string | string[] | Record<string, unknown> | RawExpression;
       };
 };
 

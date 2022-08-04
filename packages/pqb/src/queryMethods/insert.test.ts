@@ -159,6 +159,29 @@ describe('insert', () => {
       expectQueryNotMutated(q);
     });
 
+    it('should accept where condition', () => {
+      const q = User.all();
+
+      const query = q
+        .insert(data, ['id'])
+        .onConflict('name')
+        .ignore()
+        .where({ name: 'where name' });
+
+      expect(query.toSql()).toBe(
+        line(`
+            INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
+            VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
+            ON CONFLICT ("name")
+            DO NOTHING
+            WHERE "user"."name" = 'where name'
+            RETURNING "user"."id"
+          `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
     describe('ignore', () => {
       it('should set `ON CONFLICT` to all columns if no arguments provided', () => {
         const q = User.all();
@@ -214,7 +237,7 @@ describe('insert', () => {
           line(`
             INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
             VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
-            ON CONFLICT (raw query) DO NOTHING
+            ON CONFLICT raw query DO NOTHING
           `),
         );
 
@@ -301,23 +324,20 @@ describe('insert', () => {
         expectQueryNotMutated(q);
       });
 
-      it('should accept where condition', () => {
+      it('should accept raw sql', () => {
         const q = User.all();
 
         const query = q
-          .insert(data, ['id'])
-          .onConflict('name')
-          .merge({ name: 'new name' })
-          .where({ name: 'where name' });
+          .insert(data)
+          .onConflict(raw('on conflict raw'))
+          .merge(raw('merge raw'));
 
         expect(query.toSql()).toBe(
           line(`
             INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
             VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
-            ON CONFLICT ("name")
-            DO UPDATE SET "name" = 'new name'
-            WHERE "user"."name" = 'where name'
-            RETURNING "user"."id"
+            ON CONFLICT on conflict raw
+            DO UPDATE SET merge raw
           `),
         );
 

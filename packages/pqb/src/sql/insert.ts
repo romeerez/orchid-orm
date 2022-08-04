@@ -1,7 +1,7 @@
 import { QueryData } from './types';
 import { q, qc } from './common';
 import { quote } from '../quote';
-import { getRaw } from '../common';
+import { getRaw, isRaw } from '../common';
 import { pushWhereSql } from './where';
 import { Query } from '../query';
 
@@ -50,7 +50,7 @@ export const pushInsertSql = (
       } else if (Array.isArray(onConflict.expr)) {
         sql.push(`(${onConflict.expr.map(q).join(', ')})`);
       } else {
-        sql.push(`(${getRaw(onConflict.expr)})`);
+        sql.push(getRaw(onConflict.expr));
       }
     } else {
       sql.push(`(${columns.join(', ')})`);
@@ -59,25 +59,32 @@ export const pushInsertSql = (
     if (onConflict.type === 'ignore') {
       sql.push('DO NOTHING');
     } else if (onConflict.type === 'merge') {
-      let set: string[];
+      let set: string;
 
       const { update } = onConflict;
       if (update) {
         if (typeof update === 'string') {
-          set = [`${q(update)} = excluded.${q(update)}`];
+          set = `${q(update)} = excluded.${q(update)}`;
         } else if (Array.isArray(update)) {
-          set = update.map((column) => `${q(column)} = excluded.${q(column)}`);
+          set = update
+            .map((column) => `${q(column)} = excluded.${q(column)}`)
+            .join(', ');
+        } else if (isRaw(update)) {
+          set = getRaw(update);
         } else {
-          set = [];
+          const arr: string[] = [];
           for (const key in update) {
-            set.push(`${q(key)} = ${quote(update[key])}`);
+            arr.push(`${q(key)} = ${quote(update[key])}`);
           }
+          set = arr.join(', ');
         }
       } else {
-        set = columns.map((column) => `${column} = excluded.${column}`);
+        set = columns
+          .map((column) => `${column} = excluded.${column}`)
+          .join(', ');
       }
 
-      sql.push('DO UPDATE SET', set.join(', '));
+      sql.push('DO UPDATE SET', set);
     }
   }
 

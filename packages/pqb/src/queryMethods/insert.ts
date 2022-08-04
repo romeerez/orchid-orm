@@ -91,7 +91,11 @@ export class OnConflictQueryBuilder<
   }
 
   merge(
-    update?: keyof T['shape'] | (keyof T['shape'])[] | Partial<T['type']>,
+    update?:
+      | keyof T['shape']
+      | (keyof T['shape'])[]
+      | Partial<T['type']>
+      | RawExpression,
   ): T {
     const q = this.query.toQuery();
     setQueryValue(q, 'onConflict', {
