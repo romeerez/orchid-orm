@@ -7,7 +7,7 @@ import { pushSelectSql } from './select';
 import { windowToSql } from './window';
 import { orderByToSql } from './orderBy';
 import { pushJoinSql } from './join';
-import { whereToSql } from './where';
+import { pushWhereSql } from './where';
 import { pushHavingSql } from './having';
 import { pushWithSql } from './with';
 import { pushFromAndAs } from './fromAndAs';
@@ -26,7 +26,7 @@ export const toSql = (model: Query): string => {
   if (query.insert) {
     if (!quotedAs) throw new Error('Table is missing for insert');
 
-    pushInsertSql(sql, quotedAs, query.insert);
+    pushInsertSql(sql, model, query, quotedAs, query.insert);
     return sql.join(' ');
   }
 
@@ -42,8 +42,7 @@ export const toSql = (model: Query): string => {
 
   pushJoinSql(sql, model, query, quotedAs);
 
-  const whereConditions = whereToSql(model, query, quotedAs);
-  if (whereConditions.length) sql.push('WHERE', whereConditions);
+  pushWhereSql(sql, model, query, quotedAs);
 
   if (query.group) {
     const group = query.group.map((item) =>

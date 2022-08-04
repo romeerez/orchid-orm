@@ -4,6 +4,22 @@ import { q, qc, quoteFullColumn } from './common';
 import { EMPTY_OBJECT, getRaw, isRaw } from '../common';
 import { quote } from '../quote';
 
+export const pushWhereSql = (
+  sql: string[],
+  model: Pick<Query, 'shape'>,
+  query: QueryData,
+  quotedAs?: string,
+  otherTableQuotedAs?: string,
+) => {
+  const whereConditions = whereToSql(
+    model,
+    query,
+    quotedAs,
+    otherTableQuotedAs,
+  );
+  if (whereConditions.length) sql.push('WHERE', whereConditions);
+};
+
 export const whereToSql = (
   model: Pick<Query, 'shape'>,
   query: QueryData,

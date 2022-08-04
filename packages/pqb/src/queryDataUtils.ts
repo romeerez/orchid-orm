@@ -24,7 +24,7 @@ export const removeFromQuery = <T extends Query>(
 export const setQueryValue = <T extends Query, K extends keyof QueryData<T>>(
   self: T,
   key: K,
-  value: QueryData<T>[K],
+  value: unknown,
 ): T => {
   const q = self.toQuery();
   (q.query as Record<string, unknown>)[key] = value;

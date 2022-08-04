@@ -37,6 +37,16 @@ export type QueryData<T extends Query = Query> = {
     data: Record<string, unknown> | Record<string, unknown>[];
     returning?: string[];
   };
+  onConflict?:
+    | {
+        type: 'ignore';
+        expr?: OnConflictItem;
+      }
+    | {
+        type: 'merge';
+        expr?: OnConflictItem;
+        update?: string | string[] | Record<string, unknown>;
+      };
 };
 
 export type WithItem = [
@@ -201,3 +211,5 @@ type UnionKind =
   | 'INTERSECT ALL'
   | 'EXCEPT'
   | 'EXCEPT ALL';
+
+type OnConflictItem = string | string[] | RawExpression;
