@@ -57,6 +57,9 @@ export type QueryData<T extends Query = Query> = {
     data: Record<string, unknown> | RawExpression;
     returning?: string[] | '*';
   };
+  delete?: {
+    returning?: string[] | '*';
+  };
 };
 
 export type WithItem = [

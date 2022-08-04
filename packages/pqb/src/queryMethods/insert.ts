@@ -8,6 +8,8 @@ import {
 import { setQueryValue } from '../queryDataUtils';
 import { RawExpression } from '../common';
 
+export type ReturningArg<T extends Query> = (keyof T['shape'])[] | '*';
+
 type OptionalKeys<T extends Query> = {
   [K in keyof T['shape']]: T['shape'][K]['isPrimaryKey'] extends true
     ? K
@@ -20,8 +22,6 @@ type InsertData<T extends Query> = Omit<T['type'], OptionalKeys<T>> & {
   [K in OptionalKeys<T>]?: T['shape'][K]['type'];
 };
 
-type InsertReturning<T extends Query> = (keyof T['shape'])[] | '*';
-
 type InsertArgs<T extends Query> = [
   data:
     | InsertData<T>
@@ -30,13 +30,13 @@ type InsertArgs<T extends Query> = [
         columns: string[];
         values: RawExpression;
       },
-  returning?: InsertReturning<T>,
+  returning?: ReturningArg<T>,
 ];
 
 type InsertResult<
   T extends Query,
   Args extends InsertArgs<T>,
-> = Args[1] extends InsertReturning<T>
+> = Args[1] extends ReturningArg<T>
   ? Args[0] extends
       | Array<unknown>
       | {

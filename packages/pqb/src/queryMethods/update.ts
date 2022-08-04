@@ -6,22 +6,21 @@ import {
 } from '../query';
 import { setQueryValue } from '../queryDataUtils';
 import { RawExpression } from '../common';
+import { ReturningArg } from './insert';
 
 type UpdateData<T extends Query> = {
   [K in keyof T['type']]?: T['type'][K] | RawExpression;
 };
 
-type UpdateReturning<T extends Query> = (keyof T['shape'])[] | '*';
-
 type UpdateArgs<T extends Query> = [
   data: UpdateData<T> | RawExpression,
-  returning?: UpdateReturning<T>,
+  returning?: ReturningArg<T>,
 ];
 
 type UpdateResult<
   T extends Query,
   Args extends UpdateArgs<T>,
-> = Args[1] extends UpdateReturning<T>
+> = Args[1] extends ReturningArg<T>
   ? Args[1] extends '*'
     ? SetQueryReturnsAll<AddQuerySelect<T, T['shape']>>
     : SetQueryReturnsAll<AddQuerySelect<T, Pick<T['shape'], Args[1][number]>>>
@@ -43,7 +42,7 @@ export class Update {
     const [data, returning] = args;
     return setQueryValue(this._all(), 'update', {
       data,
-      returning: returning as string[] | undefined,
+      returning: returning as string[] | '*' | undefined,
     }) as unknown as UpdateResult<T, Args>;
   }
 }

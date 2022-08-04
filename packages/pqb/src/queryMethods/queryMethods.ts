@@ -35,6 +35,7 @@ import { Union } from './union';
 import { Json } from './json';
 import { Insert } from './insert';
 import { Update } from './update';
+import { Delete } from './delete';
 
 type WindowResult<T extends Query, W extends WindowArg<T>> = SetQueryWindows<
   T,
@@ -50,7 +51,8 @@ export interface QueryMethods
     Union,
     Json,
     Insert,
-    Update {
+    Update,
+    Delete {
   then: Then<unknown>;
 }
 
@@ -360,4 +362,5 @@ applyMixins(QueryMethods, [
   Json,
   Insert,
   Update,
+  Delete,
 ]);
