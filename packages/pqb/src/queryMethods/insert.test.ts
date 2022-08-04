@@ -301,7 +301,7 @@ describe('insert', () => {
         expectQueryNotMutated(q);
       });
 
-      it.only('should accept where condition', () => {
+      it('should accept where condition', () => {
         const q = User.all();
 
         const query = q
