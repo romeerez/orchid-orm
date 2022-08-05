@@ -7,6 +7,11 @@ describe('aggregate', () => {
       expect(User.count('*').toSql()).toBe('SELECT count(*) FROM "user"');
     });
 
+    test('as', () => {
+      const q = User.count('*', { as: 'a' });
+      expect(q.toSql()).toBe('SELECT count(*) AS "a" FROM "user"');
+    });
+
     test('distinct', () => {
       expect(User.count('name', { distinct: true }).toSql()).toBe(
         'SELECT count(DISTINCT "user"."name") FROM "user"',
@@ -46,6 +51,7 @@ describe('aggregate', () => {
     test('all options', () => {
       expect(
         User.count('name', {
+          as: 'a',
           distinct: true,
           order: 'name DESC',
           filter: 'name IS NOT NULL',
@@ -58,15 +64,15 @@ describe('aggregate', () => {
         }).toSql(),
       ).toBe(
         line(`
-        SELECT
-          count(DISTINCT "user"."name" ORDER BY name DESC)
-            FILTER (WHERE name IS NOT NULL)
-            OVER (
-              PARTITION BY "user"."id"
-              ORDER BY "user"."id" DESC
-            )
-        FROM "user"
-      `),
+          SELECT
+            count(DISTINCT "user"."name" ORDER BY name DESC)
+              FILTER (WHERE name IS NOT NULL)
+              OVER (
+                PARTITION BY "user"."id"
+                ORDER BY "user"."id" DESC
+              ) AS "a"
+          FROM "user"
+        `),
       );
     });
 

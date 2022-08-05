@@ -45,13 +45,13 @@ export const aggregateToSql = <T extends Query>(
 
   sql.push(')');
 
-  if (options.as) sql.push(` AS ${q(options.as)}`);
-
   if (options.filter) sql.push(` FILTER (WHERE ${options.filter})`);
 
   if (options.over) {
     sql.push(` OVER ${windowToSql(options.over, quotedAs)}`);
   }
+
+  if (options.as) sql.push(` AS ${q(options.as)}`);
 
   return sql.join('');
 };
