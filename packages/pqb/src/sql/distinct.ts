@@ -1,9 +1,9 @@
-import { QueryData } from './types';
+import { SelectQueryData } from './types';
 import { expressionToSql } from './common';
 
 export const pushDistinctSql = (
   sql: string[],
-  distinct: Exclude<QueryData['distinct'], undefined>,
+  distinct: Exclude<SelectQueryData['distinct'], undefined>,
   quotedAs?: string,
 ) => {
   sql.push('DISTINCT');

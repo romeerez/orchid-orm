@@ -5,13 +5,14 @@ import {
   Profile,
   User,
 } from '../test-utils';
+import { DeleteQueryData } from '../sql';
 
 describe('delete', () => {
   it('should be aliased as `del`', () => {
     const a = User.delete();
     const b = User.del();
-    expect(a.query?.delete).toBeTruthy();
-    expect(a.query?.delete).toEqual(b.query?.delete);
+    expect((a.query as DeleteQueryData).type).toBeTruthy();
+    expect(a.query).toEqual(b.query);
   });
 
   it('should delete records, returning void', () => {

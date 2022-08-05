@@ -1,4 +1,4 @@
-import { JsonItem, QueryData } from './types';
+import { JsonItem, SelectQueryData } from './types';
 import { Expression, getRaw, isRaw } from '../common';
 import { Query } from '../query';
 import { q, quoteFullColumn } from './common';
@@ -51,7 +51,7 @@ const jsonToSql = (item: JsonItem, quotedAs?: string): string => {
 
 export const pushSelectSql = (
   sql: string[],
-  select: QueryData['select'],
+  select: SelectQueryData['select'],
   quotedAs?: string,
 ) => {
   if (select) {

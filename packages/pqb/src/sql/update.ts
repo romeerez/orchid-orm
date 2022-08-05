@@ -1,5 +1,5 @@
 import { Query } from '../query';
-import { QueryData } from './types';
+import { UpdateQueryData } from './types';
 import { q } from './common';
 import { getRaw, isRaw } from '../common';
 import { quote } from '../quote';
@@ -9,10 +9,11 @@ import { pushWhereSql } from './where';
 export const pushUpdateSql = (
   sql: string[],
   model: Pick<Query, 'shape'>,
-  query: QueryData,
+  query: UpdateQueryData,
   quotedAs: string,
-  { data, returning }: Exclude<QueryData['update'], undefined>,
 ) => {
+  const { data, returning } = query;
+
   sql.push(`UPDATE ${quotedAs} SET`);
 
   if (isRaw(data)) {

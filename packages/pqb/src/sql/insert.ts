@@ -1,4 +1,4 @@
-import { QueryData } from './types';
+import { InsertQueryData } from './types';
 import { q, qc } from './common';
 import { quote } from '../quote';
 import { getRaw, isRaw } from '../common';
@@ -8,10 +8,11 @@ import { Query } from '../query';
 export const pushInsertSql = (
   sql: string[],
   model: Pick<Query, 'shape'>,
-  query: QueryData,
+  query: InsertQueryData,
   quotedAs: string,
-  { data, returning }: Exclude<QueryData['insert'], undefined>,
 ) => {
+  const { data, returning, onConflict } = query;
+
   const isMany = Array.isArray(data);
   let columns: string[];
   let values: string;
@@ -45,7 +46,6 @@ export const pushInsertSql = (
 
   sql.push(`INSERT INTO ${quotedAs}(${columns.join(', ')}) VALUES ${values}`);
 
-  const { onConflict } = query;
   if (onConflict) {
     sql.push('ON CONFLICT');
 

@@ -1,12 +1,12 @@
 import { getRaw, isRaw } from '../common';
 import { quoteSchemaAndTable } from './common';
 import { Query } from '../query';
-import { QueryData } from './types';
+import { SelectQueryData } from './types';
 
 export const pushFromAndAs = (
   sql: string[],
   model: Query,
-  query: QueryData,
+  query: SelectQueryData,
   quotedAs?: string,
 ) => {
   if (!query.from && !model.table) return;
@@ -22,7 +22,7 @@ export const pushFromAndAs = (
   }
 };
 
-const getFrom = (model: Query, query: QueryData) => {
+const getFrom = (model: Query, query: SelectQueryData) => {
   if (query.from) {
     if (typeof query.from === 'object') {
       if (isRaw(query.from)) {

@@ -1,4 +1,4 @@
-import { AggregateOptions, HavingArg, QueryData } from './types';
+import { AggregateOptions, HavingArg, SelectQueryData } from './types';
 import { EMPTY_OBJECT, getRaw, isRaw, RawExpression } from '../common';
 import { Operator } from '../operators';
 import { aggregateToSql } from './aggregate';
@@ -15,7 +15,7 @@ const aggregateOptionNames: (keyof AggregateOptions)[] = [
 export const pushHavingSql = <T extends Query>(
   sql: string[],
   model: T,
-  having: Exclude<QueryData<T>['having'], undefined>,
+  having: Exclude<SelectQueryData<T>['having'], undefined>,
   quotedAs?: string,
 ) => {
   const list: string[] = [];

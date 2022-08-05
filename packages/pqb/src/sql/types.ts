@@ -10,21 +10,24 @@ import { Aggregate1ArgumentTypes } from '../queryMethods/aggregate';
 import { ColumnsShape, ColumnShapeOutput, ColumnType } from '../columnSchema';
 import { JoinQuery } from '../queryMethods/join';
 
-export type QueryData<T extends Query = Query> = {
+export type CommonQueryData<T extends Query = Query> = {
   take?: true;
   with?: WithItem[];
   withShapes?: Record<string, ColumnsShape>;
   schema?: string;
+  as?: string;
+  and?: WhereItem<T>[];
+  or?: WhereItem<T>[][];
+  parsers?: ColumnsParsers;
+};
+
+export type SelectQueryData<T extends Query = Query> = CommonQueryData<T> & {
   select?: SelectItem<T>[];
   distinct?: Expression<T>[];
   from?: string | Query | RawExpression;
   fromOnly?: boolean;
-  using?: JoinItem[];
   join?: JoinItem[];
   joinedParsers?: Record<string, ColumnsParsers>;
-  and?: WhereItem<T>[];
-  or?: WhereItem<T>[][];
-  as?: string;
   group?: (Selectable<T> | RawExpression)[];
   having?: HavingArg<T>[];
   window?: WindowArg<T>[];
@@ -37,17 +40,21 @@ export type QueryData<T extends Query = Query> = {
     tableNames: string[] | RawExpression;
     mode?: 'NO WAIT' | 'SKIP LOCKED';
   };
-  parsers?: ColumnsParsers;
-  insert?: {
-    data:
-      | Record<string, unknown>
-      | Record<string, unknown>[]
-      | {
-          columns: string[];
-          values: RawExpression;
-        };
-    returning?: string[];
-  };
+};
+
+export type InsertQueryData<T extends Query = Query> = CommonQueryData<T> & {
+  type: 'insert';
+  data:
+    | Record<string, unknown>
+    | Record<string, unknown>[]
+    | {
+        columns: string[];
+        values: RawExpression;
+      };
+  returning?: string[];
+  using?: JoinItem[];
+  join?: JoinItem[];
+  joinedParsers?: Record<string, ColumnsParsers>;
   onConflict?:
     | {
         type: 'ignore';
@@ -58,14 +65,26 @@ export type QueryData<T extends Query = Query> = {
         expr?: OnConflictItem;
         update?: string | string[] | Record<string, unknown> | RawExpression;
       };
-  update?: {
-    data: Record<string, unknown> | RawExpression;
-    returning?: string[] | '*';
-  };
-  delete?: {
-    returning?: string[] | '*';
-  };
 };
+
+export type UpdateQueryData<T extends Query = Query> = CommonQueryData<T> & {
+  type: 'update';
+  data: Record<string, unknown> | RawExpression;
+  returning?: string[] | '*';
+};
+
+export type DeleteQueryData<T extends Query = Query> = CommonQueryData<T> & {
+  type: 'delete';
+  returning?: string[] | '*';
+  join?: JoinItem[];
+  joinedParsers?: Record<string, ColumnsParsers>;
+};
+
+export type QueryData<T extends Query = Query> =
+  | SelectQueryData<T>
+  | InsertQueryData<T>
+  | UpdateQueryData<T>
+  | DeleteQueryData<T>;
 
 export type WithItem = [
   as: string,

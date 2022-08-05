@@ -5,7 +5,7 @@ import {
   SetQueryReturnsOne,
   SetQueryReturnsVoid,
 } from '../query';
-import { setQueryValue } from '../queryDataUtils';
+import { assignQueryValues, setQueryValue } from '../queryDataUtils';
 import { RawExpression } from '../common';
 
 export type ReturningArg<T extends Query> = (keyof T['shape'])[] | '*';
@@ -69,14 +69,13 @@ export class Insert {
     ...args: Args
   ): InsertResult<T, Args> {
     const [data, returning] = args;
-    return setQueryValue(
-      Array.isArray(data) ? this._all() : this._take(),
-      'insert',
-      {
-        data,
-        returning: returning as string[] | undefined,
-      },
-    ) as unknown as InsertResult<T, Args>;
+    const q = Array.isArray(data) ? this._all() : this._take();
+    assignQueryValues(q, {
+      type: 'insert',
+      data,
+      returning,
+    });
+    return q as unknown as InsertResult<T, Args>;
   }
 
   onConflict<T extends Query, Arg extends OnConflictArg<T>>(

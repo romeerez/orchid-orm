@@ -7,7 +7,7 @@ import {
 import { getQueryParsers, isRaw, RawExpression } from '../common';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { parseRecord } from './then';
-import { QueryData } from '../sql';
+import { QueryData, SelectQueryData } from '../sql';
 
 type SelectResult<
   T extends Query,
@@ -76,7 +76,9 @@ export class Select {
           const parser = q.columnsParsers?.[column];
           if (parser) addParser(q.query, column, parser);
         } else {
-          const parser = q.query.joinedParsers?.[table]?.[column];
+          const parser = (q.query as SelectQueryData).joinedParsers?.[table]?.[
+            column
+          ];
           if (parser) addParser(q.query, column, parser);
         }
       } else {
@@ -133,7 +135,9 @@ export class Select {
             const parser = q.columnsParsers?.[column];
             if (parser) addParser(q.query, key, parser);
           } else {
-            const parser = q.query.joinedParsers?.[table]?.[column];
+            const parser = (q.query as SelectQueryData).joinedParsers?.[
+              table
+            ]?.[column];
             if (parser) addParser(q.query, key, parser);
           }
         } else {

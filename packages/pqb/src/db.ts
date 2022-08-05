@@ -5,7 +5,7 @@ import {
   QueryReturnType,
 } from './query';
 import { QueryMethods } from './queryMethods/queryMethods';
-import { QueryData } from './sql';
+import { QueryData, SelectQueryData } from './sql';
 import { PostgresAdapter } from './adapter';
 import {
   ColumnsShape,
@@ -107,8 +107,9 @@ export class Db<
           const q = (this.query ? this : this.toQuery()) as T & {
             query: QueryData<T>;
           };
-          if (!q.query.select) {
-            q.query.select = defaultSelect as string[];
+          const query = q.query as SelectQueryData;
+          if (!query.select) {
+            query.select = defaultSelect as string[];
           }
           return toSql.call(q);
         }

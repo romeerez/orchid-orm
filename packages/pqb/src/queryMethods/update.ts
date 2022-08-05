@@ -4,7 +4,7 @@ import {
   SetQueryReturnsAll,
   SetQueryReturnsVoid,
 } from '../query';
-import { setQueryValue } from '../queryDataUtils';
+import { assignQueryValues } from '../queryDataUtils';
 import { RawExpression } from '../common';
 import { ReturningArg } from './insert';
 
@@ -40,9 +40,10 @@ export class Update {
     ...args: Args
   ): UpdateResult<T, Args> {
     const [data, returning] = args;
-    return setQueryValue(this._all(), 'update', {
+    return assignQueryValues(this, {
+      type: 'update',
       data,
-      returning: returning as string[] | '*' | undefined,
+      returning,
     }) as unknown as UpdateResult<T, Args>;
   }
 }

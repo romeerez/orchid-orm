@@ -25,25 +25,29 @@ export const toSql = (model: Query): string => {
     pushWithSql(sql, query.with);
   }
 
-  if (query.insert) {
-    if (!quotedAs) throw new Error('Table is missing for insert');
+  if ('type' in query) {
+    if (query.type === 'insert') {
+      if (!quotedAs) throw new Error('Table is missing for insert');
 
-    pushInsertSql(sql, model, query, quotedAs, query.insert);
-    return sql.join(' ');
-  }
+      pushInsertSql(sql, model, query, quotedAs);
+      return sql.join(' ');
+    }
 
-  if (query.update) {
-    if (!quotedAs) throw new Error('Table is missing for update');
+    if (query.type === 'update') {
+      if (!quotedAs) throw new Error('Table is missing for update');
 
-    pushUpdateSql(sql, model, query, quotedAs, query.update);
-    return sql.join(' ');
-  }
+      pushUpdateSql(sql, model, query, quotedAs);
+      return sql.join(' ');
+    }
 
-  if (query.delete) {
-    if (!quotedAs) throw new Error('Table is missing for delete');
+    if (query.type === 'delete') {
+      if (!quotedAs) throw new Error('Table is missing for delete');
 
-    pushDeleteSql(sql, model, query, quotedAs, query.delete);
-    return sql.join(' ');
+      pushDeleteSql(sql, model, query, quotedAs);
+      return sql.join(' ');
+    }
+
+    return '';
   }
 
   sql.push('SELECT');

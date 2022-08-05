@@ -72,5 +72,5 @@ export const getRaw = (raw: RawExpression) => raw.__raw;
 export const EMPTY_OBJECT = {};
 
 export const getQueryParsers = (q: Query) => {
-  return q.query?.select ? q.query.parsers : q.columnsParsers;
+  return q.query?.parsers ? q.query.parsers : q.columnsParsers;
 };

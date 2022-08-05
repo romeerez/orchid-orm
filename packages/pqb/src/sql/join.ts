@@ -1,6 +1,12 @@
 import { q, quoteFullColumn, quoteSchemaAndTable } from './common';
 import { getRaw, isRaw } from '../common';
-import { JoinItem, QueryData } from './types';
+import {
+  DeleteQueryData,
+  InsertQueryData,
+  JoinItem,
+  QueryData,
+  SelectQueryData,
+} from './types';
 import { Query, QueryWithData, QueryWithTable } from '../query';
 import { whereToSql } from './where';
 import { ColumnsShape } from '../columnSchema';
@@ -106,7 +112,7 @@ export const processJoinItem = (
 export const pushJoinSql = (
   sql: string[],
   model: Query,
-  query: QueryData,
+  query: SelectQueryData | InsertQueryData | DeleteQueryData,
   quotedAs?: string,
 ) => {
   query.join?.forEach((item) => {

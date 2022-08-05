@@ -1,7 +1,7 @@
 import { Query } from '../query';
 import { RawExpression } from '../common';
 import { setQueryValue } from '../queryDataUtils';
-import { QueryData } from '../sql';
+import { SelectQueryData } from '../sql';
 
 type ForQueryBuilder<Q extends Query> = Q & {
   noWait<T extends ForQueryBuilder<Q>>(this: T): T;
@@ -12,7 +12,7 @@ type ForQueryBuilder<Q extends Query> = Q & {
 
 const forQueryBuilder = <T extends Query>(
   q: T,
-  type: Exclude<QueryData['for'], undefined>['type'],
+  type: Exclude<SelectQueryData['for'], undefined>['type'],
   tableNames?: string[] | RawExpression,
 ) => {
   setQueryValue(q, 'for', { type, tableNames });
@@ -21,14 +21,16 @@ const forQueryBuilder = <T extends Query>(
       return this.clone()._noWait();
     },
     _noWait<T extends ForQueryBuilder<Query>>(this: T): T {
-      if (this.query?.for) this.query.for.mode = 'NO WAIT';
+      const q = this.query as SelectQueryData | undefined;
+      if (q?.for) q.for.mode = 'NO WAIT';
       return this;
     },
     skipLocked<T extends ForQueryBuilder<Query>>(this: T): T {
       return this.clone()._skipLocked();
     },
     _skipLocked<T extends ForQueryBuilder<Query>>(this: T): T {
-      if (this.query?.for) this.query.for.mode = 'SKIP LOCKED';
+      const q = this.query as SelectQueryData | undefined;
+      if (q?.for) q.for.mode = 'SKIP LOCKED';
       return this;
     },
   });

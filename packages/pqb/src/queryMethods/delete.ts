@@ -5,7 +5,7 @@ import {
   SetQueryReturnsVoid,
 } from '../query';
 import { ReturningArg } from './insert';
-import { setQueryValue } from '../queryDataUtils';
+import { assignQueryValues } from '../queryDataUtils';
 
 type DeleteResult<
   T extends Query,
@@ -33,8 +33,10 @@ const _del = <
   self: T,
   returning?: Returning,
 ): DeleteResult<T, Returning> => {
-  return setQueryValue(returning ? self._all() : self._exec(), 'delete', {
-    returning: returning as string[] | '*' | undefined,
+  const q = returning ? self._all() : self._exec();
+  return assignQueryValues(q, {
+    type: 'delete',
+    returning: returning,
   }) as unknown as DeleteResult<T, Returning>;
 };
 

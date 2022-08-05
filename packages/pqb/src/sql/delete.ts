@@ -1,5 +1,5 @@
 import { Query } from '../query';
-import { QueryData } from './types';
+import { DeleteQueryData } from './types';
 import { pushWhereSql } from './where';
 import { pushReturningSql } from './insert';
 import { processJoinItem } from './join';
@@ -7,9 +7,8 @@ import { processJoinItem } from './join';
 export const pushDeleteSql = (
   sql: string[],
   model: Query,
-  query: QueryData,
+  query: DeleteQueryData,
   quotedAs: string,
-  { returning }: Exclude<QueryData['delete'], undefined>,
 ) => {
   sql.push(`DELETE FROM ${quotedAs}`);
 
@@ -37,5 +36,5 @@ export const pushDeleteSql = (
     }
   }
 
-  pushReturningSql(sql, quotedAs, returning);
+  pushReturningSql(sql, quotedAs, query.returning);
 };
