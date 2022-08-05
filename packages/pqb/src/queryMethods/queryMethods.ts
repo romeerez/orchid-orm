@@ -36,6 +36,7 @@ import { Json } from './json';
 import { Insert } from './insert';
 import { Update } from './update';
 import { Delete } from './delete';
+import { Transaction } from './transaction';
 
 type WindowResult<T extends Query, W extends WindowArg<T>> = SetQueryWindows<
   T,
@@ -52,7 +53,8 @@ export interface QueryMethods
     Json,
     Insert,
     Update,
-    Delete {
+    Delete,
+    Transaction {
   then: Then<unknown>;
 }
 
@@ -330,12 +332,57 @@ export class QueryMethods {
     return setQueryValue(this, 'offset', arg);
   }
 
-  for<T extends Query>(this: T, ...args: RawExpression[]): T {
-    return this.clone()._for(...args);
+  forUpdate<T extends Query>(
+    this: T,
+    tableNames?: string[] | RawExpression,
+  ): T {
+    return this.clone()._forUpdate(tableNames);
   }
 
-  _for<T extends Query>(this: T, ...args: RawExpression[]): T {
-    return pushQueryArray(this, 'for', args);
+  _forUpdate<T extends Query>(
+    this: T,
+    tableNames?: string[] | RawExpression,
+  ): T {
+    return setQueryValue(this, 'for', { type: 'UPDATE', tableNames });
+  }
+
+  forNoKeyUpdate<T extends Query>(
+    this: T,
+    tableNames?: string[] | RawExpression,
+  ): T {
+    return this.clone()._forNoKeyUpdate(tableNames);
+  }
+
+  _forNoKeyUpdate<T extends Query>(
+    this: T,
+    tableNames?: string[] | RawExpression,
+  ): T {
+    return setQueryValue(this, 'for', { type: 'NO KEY UPDATE', tableNames });
+  }
+
+  forShare<T extends Query>(this: T, tableNames?: string[] | RawExpression): T {
+    return this.clone()._forShare(tableNames);
+  }
+
+  _forShare<T extends Query>(
+    this: T,
+    tableNames?: string[] | RawExpression,
+  ): T {
+    return setQueryValue(this, 'for', { type: 'SHARE', tableNames });
+  }
+
+  forKeyShare<T extends Query>(
+    this: T,
+    tableNames?: string[] | RawExpression,
+  ): T {
+    return this.clone()._forKeyShare(tableNames);
+  }
+
+  _forKeyShare<T extends Query>(
+    this: T,
+    tableNames?: string[] | RawExpression,
+  ): T {
+    return setQueryValue(this, 'for', { type: 'KEY SHARE', tableNames });
   }
 
   exists<T extends Query>(this: T): SetQueryReturnsValue<T, NumberColumn> {
@@ -363,4 +410,5 @@ applyMixins(QueryMethods, [
   Insert,
   Update,
   Delete,
+  Transaction,
 ]);

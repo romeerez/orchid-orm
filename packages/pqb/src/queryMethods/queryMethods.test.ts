@@ -609,12 +609,36 @@ describe('offset', () => {
 });
 
 describe('for', () => {
-  it('sets for', () => {
-    const q = User.all();
-    expect(q.for(raw('UPDATE OF chat')).toSql()).toBe(
-      'SELECT "user".* FROM "user" FOR UPDATE OF chat',
-    );
-    expectQueryNotMutated(q);
+  describe.each`
+    method              | sql
+    ${'forUpdate'}      | ${'UPDATE'}
+    ${'forNoKeyUpdate'} | ${'NO KEY UPDATE'}
+    ${'forShare'}       | ${'SHARE'}
+    ${'forKeyShare'}    | ${'KEY SHARE'}
+  `('$method', ({ method, sql }) => {
+    it(`should set FOR ${sql} expression`, () => {
+      const q = User.all();
+      expect(q[method as 'forUpdate']().toSql()).toBe(
+        `SELECT "user".* FROM "user" FOR ${sql}`,
+      );
+      expectQueryNotMutated(q);
+    });
+
+    it('should accept tables', () => {
+      const q = User.all();
+      expect(q[method as 'forUpdate'](['a', 'b']).toSql()).toBe(
+        `SELECT "user".* FROM "user" FOR ${sql} OF "a", "b"`,
+      );
+      expectQueryNotMutated(q);
+    });
+
+    it('should accept raw sql', () => {
+      const q = User.all();
+      expect(q[method as 'forUpdate'](raw('raw sql')).toSql()).toBe(
+        `SELECT "user".* FROM "user" FOR ${sql} OF raw sql`,
+      );
+      expectQueryNotMutated(q);
+    });
   });
 });
 

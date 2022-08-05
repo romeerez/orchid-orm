@@ -19,6 +19,7 @@ export type QueryData<T extends Query = Query> = {
   distinct?: Expression<T>[];
   from?: string | Query | RawExpression;
   fromOnly?: boolean;
+  using?: JoinItem[];
   join?: JoinItem[];
   joinedParsers?: Record<string, ColumnsParsers>;
   and?: WhereItem<T>[];
@@ -31,7 +32,10 @@ export type QueryData<T extends Query = Query> = {
   order?: OrderBy<T>[];
   limit?: number;
   offset?: number;
-  for?: RawExpression[];
+  for?: {
+    type: 'UPDATE' | 'NO KEY UPDATE' | 'SHARE' | 'KEY SHARE';
+    tableNames: string[] | RawExpression;
+  };
   parsers?: ColumnsParsers;
   insert?: {
     data:

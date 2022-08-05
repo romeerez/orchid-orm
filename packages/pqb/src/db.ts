@@ -138,7 +138,7 @@ export const createDb = (adapter: PostgresAdapter): DbResult => {
   const qb = new Db(adapter, undefined as unknown as Db);
   qb.queryBuilder = qb;
 
-  return Object.assign(
+  const db = Object.assign(
     <Table extends string, Shape extends ColumnsShape>(
       table: Table,
       shape: ((t: ColumnTypes) => Shape) | Shape,
@@ -152,6 +152,14 @@ export const createDb = (adapter: PostgresAdapter): DbResult => {
         options,
       );
     },
-    { ...qb, ...Db.prototype, adapter, destroy: () => adapter.destroy() },
-  ) as DbResult;
+    qb,
+    { adapter, destroy: () => adapter.destroy() },
+  );
+
+  Object.getOwnPropertyNames(Db.prototype).forEach((name) => {
+    (db as unknown as Record<string, unknown>)[name] =
+      Db.prototype[name as keyof typeof Db.prototype];
+  });
+
+  return db;
 };

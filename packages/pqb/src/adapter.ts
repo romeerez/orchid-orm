@@ -1,4 +1,4 @@
-import { Pool, PoolConfig, types } from 'pg';
+import { Pool, PoolClient, PoolConfig, types } from 'pg';
 
 export interface QueryResultRow {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,6 +18,9 @@ export type PostgresAdapter = {
     query: string,
     types?: TypeParsers,
   ): Promise<{ rows: R[]; fields: { name: string }[] }>;
+  transaction<Result>(
+    cb: (adapter: PostgresAdapter) => Promise<Result>,
+  ): Promise<Result>;
   destroy(): Promise<void>;
 };
 
@@ -53,34 +56,37 @@ export const Adapter = ({
     ): Promise<{ rows: T[] }> {
       const client = await pool.connect();
       try {
-        return await client.query<T>({
-          text: query,
-          types: types && {
-            getTypeParser(id) {
-              return types[id] || returnArg;
-            },
-          },
-        });
+        return await performQuery<T>(client, query, types);
       } finally {
         client.release();
       }
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async arrays<R extends any[] = any[]>(
+    async arrays<T extends any[] = any[]>(
       query: string,
       types: TypeParsers = configTypes,
-    ): Promise<{ rows: R[]; fields: { name: string }[] }> {
+    ): Promise<{ rows: T[]; fields: { name: string }[] }> {
       const client = await pool.connect();
       try {
-        return await client.query<R>({
-          text: query,
-          rowMode: 'array',
-          types: types && {
-            getTypeParser(id) {
-              return types[id] || returnArg;
-            },
-          },
-        });
+        return await performQueryArrays<T>(client, query, types);
+      } finally {
+        client.release();
+      }
+    },
+    transaction: async <Result>(
+      cb: (adapter: PostgresAdapter) => Promise<Result>,
+    ) => {
+      const client = await pool.connect();
+      try {
+        await performQuery(client, 'BEGIN', configTypes);
+        const result = await cb(
+          new TransactionAdapter(pool, client, configTypes),
+        );
+        await performQuery(client, 'COMMIT', configTypes);
+        return result;
+      } catch (err) {
+        await performQuery(client, 'ROLLBACK', configTypes);
+        throw err;
       } finally {
         client.release();
       }
@@ -90,3 +96,69 @@ export const Adapter = ({
     },
   };
 };
+
+const performQuery = <T extends QueryResultRow>(
+  client: PoolClient,
+  query: string,
+  types: TypeParsers,
+) => {
+  return client.query<T>({
+    text: query,
+    types: types && {
+      getTypeParser(id) {
+        return types[id] || returnArg;
+      },
+    },
+  });
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const performQueryArrays = <T extends any[] = any[]>(
+  client: PoolClient,
+  query: string,
+  types: TypeParsers,
+) => {
+  return client.query<T>({
+    text: query,
+    rowMode: 'array',
+    types: types && {
+      getTypeParser(id) {
+        return types[id] || returnArg;
+      },
+    },
+  });
+};
+
+class TransactionAdapter implements PostgresAdapter {
+  constructor(
+    public pool: Pool,
+    public client: PoolClient,
+    public types: TypeParsers,
+  ) {}
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async query<T extends QueryResultRow = any>(
+    query: string,
+    types: TypeParsers = this.types,
+  ): Promise<{ rows: T[] }> {
+    return await performQuery<T>(this.client, query, types);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async arrays<T extends any[] = any[]>(
+    query: string,
+    types: TypeParsers = this.types,
+  ): Promise<{ rows: T[]; fields: { name: string }[] }> {
+    return await performQueryArrays<T>(this.client, query, types);
+  }
+
+  async transaction<Result>(
+    cb: (adapter: PostgresAdapter) => Promise<Result>,
+  ): Promise<Result> {
+    return await cb(this);
+  }
+
+  destroy() {
+    return this.pool.end();
+  }
+}

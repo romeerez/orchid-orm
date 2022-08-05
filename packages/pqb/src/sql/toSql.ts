@@ -108,7 +108,15 @@ export const toSql = (model: Query): string => {
   }
 
   if (query.for) {
-    sql.push(`FOR ${query.for.map(getRaw).join(', ')}`);
+    sql.push('FOR', query.for.type);
+    const { tableNames } = query.for;
+    if (tableNames) {
+      if (isRaw(tableNames)) {
+        sql.push('OF', getRaw(tableNames));
+      } else {
+        sql.push('OF', tableNames.map(q).join(', '));
+      }
+    }
   }
 
   return sql.join(' ');
