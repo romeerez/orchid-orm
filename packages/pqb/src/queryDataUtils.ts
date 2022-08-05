@@ -16,15 +16,6 @@ export const setQueryValue = <T extends Query>(
   return q;
 };
 
-export const assignQueryValues = <T extends Query>(
-  self: T,
-  values: Record<string, unknown>,
-): T => {
-  const q = self.toQuery();
-  Object.assign(q.query, values);
-  return q;
-};
-
 export const pushQueryArray = <T extends Query>(
   self: T,
   key: string,

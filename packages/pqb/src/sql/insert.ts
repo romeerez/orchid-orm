@@ -100,15 +100,18 @@ export const pushInsertSql = (
 export const pushReturningSql = (
   sql: string[],
   quotedAs: string,
-  returning?: string[] | '*',
+  returning?: (string[] | '*')[],
 ) => {
-  if (returning?.length) {
-    sql.push(
-      `RETURNING ${
-        returning === '*'
-          ? '*'
-          : returning.map((column) => qc(column, quotedAs)).join(', ')
-      }`,
+  const items: string[] = [];
+  returning?.forEach((item) => {
+    items.push(
+      item === '*'
+        ? '*'
+        : item.map((column) => qc(column, quotedAs)).join(', '),
     );
+  });
+
+  if (items?.length) {
+    sql.push(`RETURNING ${items.join(', ')}`);
   }
 };

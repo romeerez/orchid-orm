@@ -51,7 +51,7 @@ export type InsertQueryData<T extends Query = Query> = CommonQueryData<T> & {
         columns: string[];
         values: RawExpression;
       };
-  returning?: string[];
+  returning?: (string[] | '*')[];
   using?: JoinItem[];
   join?: JoinItem[];
   joinedParsers?: Record<string, ColumnsParsers>;
@@ -69,13 +69,16 @@ export type InsertQueryData<T extends Query = Query> = CommonQueryData<T> & {
 
 export type UpdateQueryData<T extends Query = Query> = CommonQueryData<T> & {
   type: 'update';
-  data: Record<string, unknown> | RawExpression;
-  returning?: string[] | '*';
+  data: (
+    | Record<string, RawExpression | { op: string; arg: unknown } | unknown>
+    | RawExpression
+  )[];
+  returning?: (string[] | '*')[];
 };
 
 export type DeleteQueryData<T extends Query = Query> = CommonQueryData<T> & {
   type: 'delete';
-  returning?: string[] | '*';
+  returning?: (string[] | '*')[];
   join?: JoinItem[];
   joinedParsers?: Record<string, ColumnsParsers>;
 };

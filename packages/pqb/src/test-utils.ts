@@ -31,6 +31,7 @@ export const User = db('user', (t) => ({
       }),
     )
     .nullable(),
+  age: t.integer().nullable(),
   createdAt: t.timestamp().parse((input) => new Date(input)),
   updatedAt: t.timestamp().parse((input) => new Date(input)),
 }));

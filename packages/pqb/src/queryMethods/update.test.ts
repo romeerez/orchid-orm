@@ -170,4 +170,100 @@ describe('update', () => {
 
     expectQueryNotMutated(q);
   });
+
+  describe('increment', () => {
+    it('should increment column by 1', () => {
+      const q = User.all();
+
+      const query = q.increment('age');
+      expect(query.toSql()).toBe(
+        line(`
+          UPDATE "user"
+          SET "age" = "age" + 1
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should increment column by provided amount', () => {
+      const q = User.all();
+
+      const query = q.increment({ age: 3 });
+      expect(query.toSql()).toBe(
+        line(`
+          UPDATE "user"
+          SET "age" = "age" + 3
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should support returning', () => {
+      const q = User.all();
+
+      const query = q.increment({ age: 3 }, ['id']);
+      expect(query.toSql()).toBe(
+        line(`
+          UPDATE "user"
+          SET "age" = "age" + 3
+          RETURNING "user"."id"
+        `),
+      );
+
+      const eq: AssertEqual<Awaited<typeof query>, { id: number }[]> = true;
+      expect(eq).toBe(true);
+
+      expectQueryNotMutated(q);
+    });
+  });
+
+  describe('decrement', () => {
+    it('should decrement column by 1', () => {
+      const q = User.all();
+
+      const query = q.decrement('age');
+      expect(query.toSql()).toBe(
+        line(`
+          UPDATE "user"
+          SET "age" = "age" - 1
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should decrement column by provided amount', () => {
+      const q = User.all();
+
+      const query = q.decrement({ age: 3 });
+      expect(query.toSql()).toBe(
+        line(`
+          UPDATE "user"
+          SET "age" = "age" - 3
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should support returning', () => {
+      const q = User.all();
+
+      const query = q.decrement({ age: 3 }, ['id']);
+      expect(query.toSql()).toBe(
+        line(`
+          UPDATE "user"
+          SET "age" = "age" - 3
+          RETURNING "user"."id"
+        `),
+      );
+
+      const eq: AssertEqual<Awaited<typeof query>, { id: number }[]> = true;
+      expect(eq).toBe(true);
+
+      expectQueryNotMutated(q);
+    });
+  });
 });
