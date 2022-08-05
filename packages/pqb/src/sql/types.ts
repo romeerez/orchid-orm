@@ -35,6 +35,7 @@ export type QueryData<T extends Query = Query> = {
   for?: {
     type: 'UPDATE' | 'NO KEY UPDATE' | 'SHARE' | 'KEY SHARE';
     tableNames: string[] | RawExpression;
+    mode?: 'NO WAIT' | 'SKIP LOCKED';
   };
   parsers?: ColumnsParsers;
   insert?: {

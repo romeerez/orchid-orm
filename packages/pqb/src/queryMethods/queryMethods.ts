@@ -37,6 +37,7 @@ import { Insert } from './insert';
 import { Update } from './update';
 import { Delete } from './delete';
 import { Transaction } from './transaction';
+import { For } from './for';
 
 type WindowResult<T extends Query, W extends WindowArg<T>> = SetQueryWindows<
   T,
@@ -54,7 +55,8 @@ export interface QueryMethods
     Insert,
     Update,
     Delete,
-    Transaction {
+    Transaction,
+    For {
   then: Then<unknown>;
 }
 
@@ -138,16 +140,11 @@ export class QueryMethods {
   }
 
   clone<T extends Query>(this: T): QueryWithData<T> {
-    let cloned;
-    if (this.__model) {
-      cloned = Object.create(this.__model);
-      cloned.__model = this.__model;
-    } else {
-      cloned = Object.create(this);
+    const cloned = Object.create(this);
+    if (!this.__model) {
       cloned.__model = this;
     }
 
-    cloned.then = this.then;
     cloned.query = getClonedQueryData<Query>(this.query);
 
     return cloned as unknown as QueryWithData<T>;
@@ -332,59 +329,6 @@ export class QueryMethods {
     return setQueryValue(this, 'offset', arg);
   }
 
-  forUpdate<T extends Query>(
-    this: T,
-    tableNames?: string[] | RawExpression,
-  ): T {
-    return this.clone()._forUpdate(tableNames);
-  }
-
-  _forUpdate<T extends Query>(
-    this: T,
-    tableNames?: string[] | RawExpression,
-  ): T {
-    return setQueryValue(this, 'for', { type: 'UPDATE', tableNames });
-  }
-
-  forNoKeyUpdate<T extends Query>(
-    this: T,
-    tableNames?: string[] | RawExpression,
-  ): T {
-    return this.clone()._forNoKeyUpdate(tableNames);
-  }
-
-  _forNoKeyUpdate<T extends Query>(
-    this: T,
-    tableNames?: string[] | RawExpression,
-  ): T {
-    return setQueryValue(this, 'for', { type: 'NO KEY UPDATE', tableNames });
-  }
-
-  forShare<T extends Query>(this: T, tableNames?: string[] | RawExpression): T {
-    return this.clone()._forShare(tableNames);
-  }
-
-  _forShare<T extends Query>(
-    this: T,
-    tableNames?: string[] | RawExpression,
-  ): T {
-    return setQueryValue(this, 'for', { type: 'SHARE', tableNames });
-  }
-
-  forKeyShare<T extends Query>(
-    this: T,
-    tableNames?: string[] | RawExpression,
-  ): T {
-    return this.clone()._forKeyShare(tableNames);
-  }
-
-  _forKeyShare<T extends Query>(
-    this: T,
-    tableNames?: string[] | RawExpression,
-  ): T {
-    return setQueryValue(this, 'for', { type: 'KEY SHARE', tableNames });
-  }
-
   exists<T extends Query>(this: T): SetQueryReturnsValue<T, NumberColumn> {
     return this.clone()._exists();
   }
@@ -411,4 +355,5 @@ applyMixins(QueryMethods, [
   Update,
   Delete,
   Transaction,
+  For,
 ]);

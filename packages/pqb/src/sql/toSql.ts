@@ -117,6 +117,7 @@ export const toSql = (model: Query): string => {
         sql.push('OF', tableNames.map(q).join(', '));
       }
     }
+    if (query.for.mode) sql.push(query.for.mode);
   }
 
   return sql.join(' ');
