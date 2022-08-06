@@ -77,7 +77,7 @@ describe('operators', () => {
     expect(User.where({ name: { contains: 'ko' } }).toSql()).toBe(
       line(`
       SELECT "user".* FROM "user"
-      WHERE "user"."name" LIKE '%ko%'
+      WHERE "user"."name" LIKE '%' || 'ko' || '%'
     `),
     );
   });
@@ -86,7 +86,7 @@ describe('operators', () => {
     expect(User.where({ name: { containsInsensitive: 'ko' } }).toSql()).toBe(
       line(`
       SELECT "user".* FROM "user"
-      WHERE "user"."name" ILIKE '%ko%'
+      WHERE "user"."name" ILIKE '%' || 'ko' || '%'
     `),
     );
   });
@@ -95,7 +95,7 @@ describe('operators', () => {
     expect(User.where({ name: { startsWith: 'ko' } }).toSql()).toBe(
       line(`
       SELECT "user".* FROM "user"
-      WHERE "user"."name" LIKE 'ko%'
+      WHERE "user"."name" LIKE 'ko' || '%'
     `),
     );
   });
@@ -104,7 +104,7 @@ describe('operators', () => {
     expect(User.where({ name: { startsWithInsensitive: 'ko' } }).toSql()).toBe(
       line(`
       SELECT "user".* FROM "user"
-      WHERE "user"."name" ILIKE 'ko%'
+      WHERE "user"."name" ILIKE 'ko' || '%'
     `),
     );
   });
@@ -113,7 +113,7 @@ describe('operators', () => {
     expect(User.where({ name: { endsWith: 'ko' } }).toSql()).toBe(
       line(`
       SELECT "user".* FROM "user"
-      WHERE "user"."name" LIKE '%ko'
+      WHERE "user"."name" LIKE '%' || 'ko'
     `),
     );
   });
@@ -122,7 +122,7 @@ describe('operators', () => {
     expect(User.where({ name: { endsWithInsensitive: 'ko' } }).toSql()).toBe(
       line(`
       SELECT "user".* FROM "user"
-      WHERE "user"."name" ILIKE '%ko'
+      WHERE "user"."name" ILIKE '%' || 'ko'
     `),
     );
   });

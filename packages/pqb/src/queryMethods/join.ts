@@ -49,7 +49,7 @@ const on: On = function (leftColumn, op, rightColumn) {
 };
 
 const _on: On = function (leftColumn, op, rightColumn) {
-  return pushQueryValue(this, 'and', [leftColumn, op, rightColumn]);
+  return pushQueryValue(this, 'and', { on: [leftColumn, op, rightColumn] });
 };
 
 const onOr: On = function (leftColumn, op, rightColumn) {
@@ -57,7 +57,7 @@ const onOr: On = function (leftColumn, op, rightColumn) {
 };
 
 const _onOr: On = function (leftColumn, op, rightColumn) {
-  return pushQueryValue(this, 'or', [[leftColumn, op, rightColumn]]);
+  return pushQueryValue(this, 'or', [{ on: [leftColumn, op, rightColumn] }]);
 };
 
 const joinQueryMethods: JoinQueryMethods<Query, PickQueryForSelect> = {

@@ -7,7 +7,7 @@ import {
 } from '../query';
 import { Expression, RawExpression } from '../common';
 import { Aggregate1ArgumentTypes } from '../queryMethods/aggregate';
-import { ColumnsShape, ColumnShapeOutput, ColumnType } from '../columnSchema';
+import { ColumnsShape, ColumnType } from '../columnSchema';
 import { JoinQuery } from '../queryMethods/join';
 
 export type CommonQueryData<T extends Query = Query> = {
@@ -16,8 +16,8 @@ export type CommonQueryData<T extends Query = Query> = {
   withShapes?: Record<string, ColumnsShape>;
   schema?: string;
   as?: string;
-  and?: WhereItem<T>[];
-  or?: WhereItem<T>[][];
+  and?: { item: WhereItem<T>; not?: boolean }[];
+  or?: { item: WhereItem<T>; not?: boolean }[][];
   parsers?: ColumnsParsers;
 };
 
@@ -184,7 +184,7 @@ export type JoinItem =
     ];
 
 export type WhereItem<T extends Query> =
-  | Partial<ColumnShapeOutput<T['shape']>>
+  | Partial<T['type']>
   | {
       [K in keyof T['selectable']]?:
         | ColumnOperators<T['selectable'], K>
@@ -192,7 +192,13 @@ export type WhereItem<T extends Query> =
     }
   | Query
   | RawExpression
-  | [leftFullColumn: string, op: string, rightFullColumn: string];
+  | {
+      on: [
+        leftFullColumn: keyof T['selectable'],
+        op: string,
+        rightFullColumn: keyof T['selectable'],
+      ];
+    };
 
 export type AggregateOptions<
   T extends Query = Query,
@@ -232,7 +238,10 @@ export type ColumnOperators<
   S extends SelectableBase,
   Column extends keyof S,
 > = {
-  [O in keyof S[Column]['column']['operators']]?: S[Column]['column']['operators'][O]['type'];
+  [O in keyof S[Column]['column']['operators']]?:
+    | S[Column]['column']['operators'][O]['type']
+    | Query
+    | RawExpression;
 };
 
 export type HavingArg<T extends Query = Query> =

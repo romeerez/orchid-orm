@@ -48,6 +48,7 @@ import { Delete } from './delete';
 import { Transaction } from './transaction';
 import { For } from './for';
 import { ColumnInfoMethods } from './columnInfo';
+import { Where } from './where';
 
 type WindowResult<T extends Query, W extends WindowArg<T>> = SetQueryWindows<
   T,
@@ -67,7 +68,8 @@ export interface QueryMethods
     Delete,
     Transaction,
     For,
-    ColumnInfoMethods {
+    ColumnInfoMethods,
+    Where {
   then: Then<unknown>;
 }
 
@@ -192,34 +194,6 @@ export class QueryMethods {
 
   _distinct<T extends Query>(this: T, ...columns: Expression<T>[]): T {
     return pushQueryArray(this, 'distinct', columns as string[]);
-  }
-
-  and<T extends Query>(this: T, ...args: WhereItem<T>[]): T {
-    return this.where(...args);
-  }
-
-  _and<T extends Query>(this: T, ...args: WhereItem<T>[]): T {
-    return this._where(...args);
-  }
-
-  where<T extends Query>(this: T, ...args: WhereItem<T>[]): T {
-    return this.clone()._where(...args);
-  }
-
-  _where<T extends Query>(this: T, ...args: WhereItem<T>[]): T {
-    return pushQueryArray(this, 'and', args);
-  }
-
-  or<T extends Query>(this: T, ...args: WhereItem<T>[]): T {
-    return this.clone()._or(...args);
-  }
-
-  _or<T extends Query>(this: T, ...args: WhereItem<T>[]): T {
-    return pushQueryArray(
-      this,
-      'or',
-      args.map((arg) => [arg]),
-    );
   }
 
   find<T extends Query>(
@@ -410,4 +384,5 @@ applyMixins(QueryMethods, [
   Transaction,
   For,
   ColumnInfoMethods,
+  Where,
 ]);

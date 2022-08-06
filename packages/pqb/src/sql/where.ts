@@ -37,7 +37,9 @@ export const whereToSql = (
   const ors: string[] = [];
   or.forEach((and) => {
     const ands: string[] = [];
-    and.forEach((item) => {
+    and.forEach(({ item, not }) => {
+      const prefix = not ? 'NOT ' : '';
+
       if ('prototype' in item || '__model' in item) {
         const query = item as Query;
         const sql = whereToSql(
@@ -45,20 +47,20 @@ export const whereToSql = (
           query.query || EMPTY_OBJECT,
           query.table && q(query.table),
         );
-        if (sql.length) ands.push(`(${sql})`);
+        if (sql.length) ands.push(`${prefix}(${sql})`);
         return;
       }
 
       if (isRaw(item)) {
-        ands.push(`(${getRaw(item)})`);
+        ands.push(`${prefix}(${getRaw(item)})`);
         return;
       }
 
-      if (Array.isArray(item)) {
-        const leftColumn = quoteFullColumn(item[0], quotedAs);
-        const rightColumn = quoteFullColumn(item[2], otherTableQuotedAs);
-        const op = item[1];
-        ands.push(`${leftColumn} ${op} ${rightColumn}`);
+      if ('on' in item && Array.isArray(item.on)) {
+        const leftColumn = quoteFullColumn(item.on[0], quotedAs);
+        const rightColumn = quoteFullColumn(item.on[2], otherTableQuotedAs);
+        const op = item.on[1];
+        ands.push(`${prefix}${leftColumn} ${op} ${rightColumn}`);
         return;
       }
 
@@ -70,7 +72,7 @@ export const whereToSql = (
           value !== undefined
         ) {
           if (isRaw(value)) {
-            ands.push(`${qc(key, quotedAs)} = ${getRaw(value)}`);
+            ands.push(`${prefix}${qc(key, quotedAs)} = ${getRaw(value)}`);
           } else {
             const column = model.shape[key];
             if (!column) {
@@ -86,15 +88,20 @@ export const whereToSql = (
               }
 
               ands.push(
-                operator(qc(key, quotedAs), value[op as keyof typeof value]),
+                `${prefix}${operator(
+                  qc(key, quotedAs),
+                  processOperatorArg(
+                    value[op as keyof typeof value] as unknown,
+                  ),
+                )}`,
               );
             }
           }
         } else {
           ands.push(
-            `${qc(key, quotedAs)} ${value === null ? 'IS' : '='} ${quote(
-              value,
-            )}`,
+            `${prefix}${qc(key, quotedAs)} ${
+              value === null ? 'IS' : '='
+            } ${quote(value)}`,
           );
         }
       }
@@ -103,4 +110,22 @@ export const whereToSql = (
   });
 
   return ors.join(' OR ');
+};
+
+const processOperatorArg = (arg: unknown): string => {
+  if (arg && typeof arg === 'object') {
+    if (Array.isArray(arg)) {
+      return `(${arg.map(quote).join(', ')})`;
+    }
+
+    if ('toSql' in arg) {
+      return `(${(arg as Query).toSql()})`;
+    }
+
+    if (isRaw(arg)) {
+      return getRaw(arg);
+    }
+  }
+
+  return quote(arg);
 };

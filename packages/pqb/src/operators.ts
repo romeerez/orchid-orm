@@ -1,73 +1,35 @@
-import { quote } from './quote';
+type Fn = (key: string, value: string) => string;
 
-type Fn<T> = (key: string, value: T) => string;
-
-export type Operator<T> = Fn<T> & { type: T };
+export type Operator<T> = Fn & { type: T };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Operators = Record<string, Operator<any>>;
 
-export const createOperator = <T>(fn: Fn<T>) => {
+export const createOperator = <T>(fn: Fn) => {
   return Object.assign(fn, { type: undefined as unknown as T });
 };
 
 const all = {
-  equals: <T>() =>
-    createOperator((key: string, value: T) => {
-      return `${key} = ${quote(value)}`;
-    }),
-  not: <T>() =>
-    createOperator((key: string, value: T) => {
-      return `${key} <> ${quote(value)}`;
-    }),
-  in: <T>() =>
-    createOperator((key: string, value: T[]) => {
-      return `${key} IN (${value.map(quote).join(', ')})`;
-    }),
-  notIn: <T>() =>
-    createOperator((key: string, value: T[]) => {
-      return `${key} NOT IN (${value.map(quote).join(', ')})`;
-    }),
-  lt: <T>() =>
-    createOperator((key: string, value: T) => {
-      return `${key} < ${quote(value)}`;
-    }),
-  lte: <T>() =>
-    createOperator((key: string, value: T) => {
-      return `${key} <= ${quote(value)}`;
-    }),
-  gt: <T>() =>
-    createOperator((key: string, value: T) => {
-      return `${key} > ${quote(value)}`;
-    }),
-  gte: <T>() =>
-    createOperator((key: string, value: T) => {
-      return `${key} >= ${quote(value)}`;
-    }),
+  equals: <T>() => createOperator<T>((key, value) => `${key} = ${value}`),
+  not: <T>() => createOperator<T>((key, value) => `${key} <> ${value}`),
+  in: <T>() => createOperator<T[]>((key, value) => `${key} IN ${value}`),
+  notIn: <T>() => createOperator<T[]>((key, value) => `${key} NOT IN ${value}`),
+  lt: <T>() => createOperator<T>((key, value) => `${key} < ${value}`),
+  lte: <T>() => createOperator<T>((key, value) => `${key} <= ${value}`),
+  gt: <T>() => createOperator<T>((key, value) => `${key} > ${value}`),
+  gte: <T>() => createOperator<T>((key, value) => `${key} >= ${value}`),
   contains: <T>() =>
-    createOperator((key: string, value: T) => {
-      return `${key} LIKE ${quote(`%${value}%`)}`;
-    }),
+    createOperator<T>((key, value) => `${key} LIKE '%' || ${value} || '%'`),
   containsInsensitive: <T>() =>
-    createOperator((key: string, value: T) => {
-      return `${key} ILIKE ${quote(`%${value}%`)}`;
-    }),
+    createOperator<T>((key, value) => `${key} ILIKE '%' || ${value} || '%'`),
   startsWith: <T>() =>
-    createOperator((key: string, value: T) => {
-      return `${key} LIKE ${quote(`${value}%`)}`;
-    }),
+    createOperator<T>((key, value) => `${key} LIKE ${value} || '%'`),
   startsWithInsensitive: <T>() =>
-    createOperator((key: string, value: T) => {
-      return `${key} ILIKE ${quote(`${value}%`)}`;
-    }),
+    createOperator<T>((key, value) => `${key} ILIKE ${value} || '%'`),
   endsWith: <T>() =>
-    createOperator((key: string, value: T) => {
-      return `${key} LIKE ${quote(`%${value}`)}`;
-    }),
+    createOperator<T>((key, value) => `${key} LIKE '%' || ${value}`),
   endsWithInsensitive: <T>() =>
-    createOperator((key: string, value: T) => {
-      return `${key} ILIKE ${quote(`%${value}`)}`;
-    }),
+    createOperator<T>((key, value) => `${key} ILIKE '%' || ${value}`),
 };
 
 const base = <T>() => ({
