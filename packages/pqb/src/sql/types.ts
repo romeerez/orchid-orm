@@ -198,6 +198,12 @@ export type WhereItem<T extends Query> =
         op: string,
         rightFullColumn: keyof T['selectable'],
       ];
+    }
+  | {
+      in: {
+        columns: (keyof T['shape'])[];
+        values: unknown[][] | Query | RawExpression;
+      };
     };
 
 export type AggregateOptions<

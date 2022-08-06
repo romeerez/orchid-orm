@@ -85,30 +85,98 @@ export class Where {
     );
   }
 
-  whereIn<T extends Query, Column extends keyof T['shape']>(
+  whereIn<
+    T extends Query,
+    Column extends
+      | keyof T['shape']
+      | [keyof T['shape'], ...(keyof T['shape'])[]],
+  >(
     this: T,
     column: Column,
-    values: T['shape'][Column]['type'][],
+    values: Column extends keyof T['shape']
+      ? T['shape'][Column]['type'][] | Query | RawExpression
+      :
+          | ({
+              [I in keyof Column]: Column[I] extends keyof T['shape']
+                ? T['shape'][Column[I]]['type']
+                : never;
+            } & {
+              length: Column extends { length: number }
+                ? Column['length']
+                : never;
+            })[]
+          | Query
+          | RawExpression,
   ): T;
   whereIn<T extends Query>(
     this: T,
-    arg: { [K in keyof T['shape']]?: T['shape'][K]['type'][] },
+    arg: {
+      [K in keyof T['shape']]?: T['shape'][K]['type'][] | Query | RawExpression;
+    },
   ): T;
-  whereIn<T extends Query>(this: T, arg: unknown, values?: unknown[]): T {
-    return this.clone()._whereIn(arg as keyof T['shape'], values as unknown[]);
+  whereIn<T extends Query>(
+    this: T,
+    arg: unknown | unknown[],
+    values?: unknown[] | unknown[][] | Query | RawExpression,
+  ): T {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.clone()._whereIn(arg as any, values as any);
   }
 
-  _whereIn<T extends Query, Column extends keyof T['shape']>(
+  _whereIn<
+    T extends Query,
+    Column extends
+      | keyof T['shape']
+      | [keyof T['shape'], ...(keyof T['shape'])[]],
+  >(
     this: T,
     column: Column,
-    values: T['shape'][Column]['type'][],
+    values: Column extends keyof T['shape']
+      ? T['shape'][Column]['type'][] | Query | RawExpression
+      :
+          | ({
+              [I in keyof Column]: Column[I] extends keyof T['shape']
+                ? T['shape'][Column[I]]['type']
+                : never;
+            } & {
+              length: Column extends { length: number }
+                ? Column['length']
+                : never;
+            })[]
+          | Query
+          | RawExpression,
   ): T;
   _whereIn<T extends Query>(
     this: T,
-    arg: { [K in keyof T['shape']]?: T['shape'][K]['type'][] },
+    arg: {
+      [K in keyof T['shape']]?: T['shape'][K]['type'][] | Query | RawExpression;
+    },
   ): T;
-  _whereIn<T extends Query>(this: T, arg: unknown, values?: unknown[]): T {
+  _whereIn<T extends Query, Columns extends (keyof T['shape'])[]>(
+    this: T,
+    columns: Columns,
+    values:
+      | ({ [I in keyof Columns]: T['shape'][Columns[I]]['type'] } & {
+          length: Columns['length'];
+        })
+      | Query
+      | RawExpression,
+  ): T;
+  _whereIn<T extends Query>(
+    this: T,
+    arg: unknown,
+    values?: unknown[] | unknown[][] | Query | RawExpression,
+  ): T {
     if (values) {
+      if (Array.isArray(arg)) {
+        return this._where({
+          in: {
+            columns: arg,
+            values,
+          },
+        });
+      }
+
       return this._where({
         [arg as string]: { in: values },
       } as unknown as WhereArg<T>);

@@ -1,7 +1,7 @@
 import { Query } from '../query';
 import { QueryData } from './types';
 import { q, qc, quoteFullColumn } from './common';
-import { EMPTY_OBJECT, getRaw, isRaw } from '../common';
+import { EMPTY_OBJECT, getRaw, isRaw, RawExpression } from '../common';
 import { quote } from '../quote';
 
 export const pushWhereSql = (
@@ -61,6 +61,27 @@ export const whereToSql = (
         const rightColumn = quoteFullColumn(item.on[2], otherTableQuotedAs);
         const op = item.on[1];
         ands.push(`${prefix}${leftColumn} ${op} ${rightColumn}`);
+        return;
+      }
+
+      if ('in' in item && typeof item.in === 'object') {
+        const arg = item.in as {
+          columns: string[];
+          values: unknown[][] | Query | RawExpression;
+        };
+        ands.push(
+          `${prefix}(${arg.columns
+            .map((column) => quoteFullColumn(column, quotedAs))
+            .join(', ')}) IN ${
+            Array.isArray(arg.values)
+              ? `(${arg.values
+                  .map((arr) => `(${arr.map(quote).join(', ')})`)
+                  .join(', ')})`
+              : isRaw(arg.values)
+              ? getRaw(arg.values)
+              : `(${arg.values.toSql()})`
+          }`,
+        );
         return;
       }
 

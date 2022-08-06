@@ -327,4 +327,101 @@ describe('whereIn', () => {
 
     expectQueryNotMutated(q);
   });
+
+  it('should handle raw query', () => {
+    const q = User.all();
+
+    expect(q.whereIn('id', raw('(1, 2, 3)')).toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" IN (1, 2, 3)
+      `),
+    );
+
+    expect(
+      q.whereIn({ id: raw('(1, 2, 3)'), name: raw(`('a', 'b', 'c')`) }).toSql(),
+    ).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" IN (1, 2, 3)
+          AND "user"."name" IN ('a', 'b', 'c')
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle sub query', () => {
+    const q = User.all();
+
+    expect(q.whereIn('id', User.select('id')).toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" IN (SELECT "user"."id" FROM "user")
+      `),
+    );
+
+    expect(
+      q.whereIn({ id: User.select('id'), name: User.select('name') }).toSql(),
+    ).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" IN (SELECT "user"."id" FROM "user")
+          AND "user"."name" IN (SELECT "user"."name" FROM "user")
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  describe('tuple', () => {
+    it('should handle values', () => {
+      const q = User.all();
+
+      const query = q.whereIn(
+        ['id', 'name'],
+        [
+          [1, 'a'],
+          [2, 'b'],
+        ],
+      );
+      expect(query.toSql()).toBe(
+        line(`
+        SELECT "user".* FROM "user"
+        WHERE ("user"."id", "user"."name") IN ((1, 'a'), (2, 'b'))
+      `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle raw query', () => {
+      const q = User.all();
+
+      const query = q.whereIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`));
+      expect(query.toSql()).toBe(
+        line(`
+        SELECT "user".* FROM "user"
+        WHERE ("user"."id", "user"."name") IN ((1, 'a'), (2, 'b'))
+      `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle sub query', () => {
+      const q = User.all();
+
+      const query = q.whereIn(['id', 'name'], User.select('id', 'name'));
+      expect(query.toSql()).toBe(
+        line(`
+        SELECT "user".* FROM "user"
+        WHERE ("user"."id", "user"."name")
+           IN (SELECT "user"."id", "user"."name" FROM "user")
+      `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+  });
 });
