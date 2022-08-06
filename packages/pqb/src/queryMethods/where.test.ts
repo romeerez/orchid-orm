@@ -425,3 +425,149 @@ describe('whereIn', () => {
     });
   });
 });
+
+describe('orWhereIn', () => {
+  it('should handle (column, array)', () => {
+    const q = User.all();
+
+    const query = q.where({ id: 1 }).orWhereIn('id', [1, 2, 3]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR "user"."id" IN (1, 2, 3)
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle object of columns and arrays', () => {
+    const q = User.all();
+
+    const query = q
+      .where({ id: 1 })
+      .orWhereIn({ id: [1, 2, 3], name: ['a', 'b', 'c'] });
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1
+          OR "user"."id" IN (1, 2, 3) AND "user"."name" IN ('a', 'b', 'c')
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle raw query', () => {
+    const q = User.all();
+
+    expect(q.where({ id: 1 }).orWhereIn('id', raw('(1, 2, 3)')).toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR "user"."id" IN (1, 2, 3)
+      `),
+    );
+
+    expect(
+      q
+        .where({ id: 1 })
+        .orWhereIn({ id: raw('(1, 2, 3)'), name: raw(`('a', 'b', 'c')`) })
+        .toSql(),
+    ).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1
+           OR "user"."id" IN (1, 2, 3)
+          AND "user"."name" IN ('a', 'b', 'c')
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle sub query', () => {
+    const q = User.all();
+
+    expect(q.where({ id: 1 }).orWhereIn('id', User.select('id')).toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1
+           OR "user"."id" IN (SELECT "user"."id" FROM "user")
+      `),
+    );
+
+    expect(
+      q
+        .where({ id: 1 })
+        .orWhereIn({ id: User.select('id'), name: User.select('name') })
+        .toSql(),
+    ).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1
+           OR "user"."id" IN (SELECT "user"."id" FROM "user")
+          AND "user"."name" IN (SELECT "user"."name" FROM "user")
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  describe('tuple', () => {
+    it('should handle values', () => {
+      const q = User.all();
+
+      const query = q.where({ id: 1 }).orWhereIn(
+        ['id', 'name'],
+        [
+          [1, 'a'],
+          [2, 'b'],
+        ],
+      );
+      expect(query.toSql()).toBe(
+        line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1
+           OR ("user"."id", "user"."name") IN ((1, 'a'), (2, 'b'))
+      `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle raw query', () => {
+      const q = User.all();
+
+      const query = q
+        .where({ id: 1 })
+        .orWhereIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`));
+      expect(query.toSql()).toBe(
+        line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1
+           OR ("user"."id", "user"."name") IN ((1, 'a'), (2, 'b'))
+      `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle sub query', () => {
+      const q = User.all();
+
+      const query = q
+        .where({ id: 1 })
+        .orWhereIn(['id', 'name'], User.select('id', 'name'));
+      expect(query.toSql()).toBe(
+        line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1
+           OR ("user"."id", "user"."name")
+           IN (SELECT "user"."id", "user"."name" FROM "user")
+      `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+  });
+});
