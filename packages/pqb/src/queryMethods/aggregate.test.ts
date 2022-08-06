@@ -30,22 +30,42 @@ describe('aggregate', () => {
       );
     });
 
-    test('over', () => {
-      expect(
-        User.count('name', {
-          over: {
-            partitionBy: 'id',
-            order: {
-              id: 'DESC',
+    describe('over', () => {
+      test('with column partitionBy', () => {
+        expect(
+          User.count('name', {
+            over: {
+              partitionBy: 'id',
+              order: {
+                id: 'DESC',
+              },
             },
-          },
-        }).toSql(),
-      ).toBe(
-        line(`
-          SELECT count("user"."name") OVER (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
-          FROM "user"
-        `),
-      );
+          }).toSql(),
+        ).toBe(
+          line(`
+            SELECT count("user"."name") OVER (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
+            FROM "user"
+          `),
+        );
+      });
+
+      test('with columns array partitionBy', () => {
+        expect(
+          User.count('name', {
+            over: {
+              partitionBy: ['id', 'name'],
+              order: {
+                id: 'DESC',
+              },
+            },
+          }).toSql(),
+        ).toBe(
+          line(`
+            SELECT count("user"."name") OVER (PARTITION BY "user"."id", "user"."name" ORDER BY "user"."id" DESC)
+            FROM "user"
+          `),
+        );
+      });
     });
 
     test('all options', () => {
