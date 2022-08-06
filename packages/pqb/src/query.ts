@@ -2,15 +2,16 @@ import { QueryMethods } from './queryMethods/queryMethods';
 import { PostgresAdapter } from './adapter';
 import { QueryData } from './sql';
 import {
-  ColumnType,
-  ColumnsShape,
   ColumnShapeOutput,
+  ColumnsShape,
+  ColumnType,
   TableSchema,
 } from './columnSchema';
 import { Spread } from './utils';
 import { AliasOrTable, RawExpression, StringKey } from './common';
 import { Then } from './queryMethods/then';
 import { Db } from './db';
+import { ColumnInfo } from './queryMethods/columnInfo';
 
 export type ColumnParser = (input: unknown) => unknown;
 export type ColumnsParsers = Record<string, ColumnParser>;
@@ -142,6 +143,18 @@ export type SetQueryReturnsValue<T extends Query, C extends ColumnType> = Omit<
 };
 
 export type SetQueryReturnsVoid<T extends Query> = SetQueryReturns<T, 'void'>;
+
+export type SetQueryReturnsColumnInfo<
+  T extends Query,
+  Column extends keyof T['shape'] | undefined,
+  Result = Column extends keyof T['shape']
+    ? ColumnInfo
+    : Record<keyof T['shape'], ColumnInfo>,
+> = Omit<T, 'result' | 'returnType' | 'then'> & {
+  result: { value: ColumnType<Result> };
+  returnType: 'value';
+  then: Then<Result>;
+};
 
 export type QueryWithData<T extends Query> = T & { query: QueryData<T> };
 

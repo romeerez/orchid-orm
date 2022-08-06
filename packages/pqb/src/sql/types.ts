@@ -89,12 +89,19 @@ export type TruncateQueryData<T extends Query = Query> = CommonQueryData<T> & {
   cascade?: boolean;
 };
 
+export type ColumnInfoQueryData<T extends Query = Query> =
+  CommonQueryData<T> & {
+    type: 'columnInfo';
+    column?: string;
+  };
+
 export type QueryData<T extends Query = Query> =
   | SelectQueryData<T>
   | InsertQueryData<T>
   | UpdateQueryData<T>
   | DeleteQueryData<T>
-  | TruncateQueryData<T>;
+  | TruncateQueryData<T>
+  | ColumnInfoQueryData<T>;
 
 export type WithItem = [
   as: string,

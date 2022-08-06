@@ -47,6 +47,7 @@ import { Update } from './update';
 import { Delete } from './delete';
 import { Transaction } from './transaction';
 import { For } from './for';
+import { ColumnInfoMethods } from './columnInfo';
 
 type WindowResult<T extends Query, W extends WindowArg<T>> = SetQueryWindows<
   T,
@@ -65,7 +66,8 @@ export interface QueryMethods
     Update,
     Delete,
     Transaction,
-    For {
+    For,
+    ColumnInfoMethods {
   then: Then<unknown>;
 }
 
@@ -407,4 +409,5 @@ applyMixins(QueryMethods, [
   Delete,
   Transaction,
   For,
+  ColumnInfoMethods,
 ]);
