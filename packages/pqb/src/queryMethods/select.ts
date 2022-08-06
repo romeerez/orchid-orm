@@ -1,4 +1,4 @@
-import { AddQuerySelect, ColumnParser, Query } from '../query';
+import { AddQuerySelect, ColumnParser, Query, QueryWithData } from '../query';
 import {
   ArrayOfColumnsObjects,
   ColumnsObject,
@@ -42,6 +42,50 @@ type SelectAsResult<T extends Query, S extends SelectAsArg<T>> = AddQuerySelect<
       : never;
   }
 >;
+
+export const addParserForSelectItem = <T extends Query>(
+  q: QueryWithData<T>,
+  as: string | undefined,
+  key: string,
+  item: keyof T['selectable'] | Query | RawExpression,
+) => {
+  if (typeof item === 'object') {
+    if (isRaw(item)) {
+      const parser = item.__column?.parseFn;
+      if (parser) addParser(q.query, key, parser);
+    } else {
+      const parsers = getQueryParsers(item);
+      if (parsers) {
+        if (item.query?.take) {
+          addParser(q.query, key, (item) => parseRecord(parsers, item));
+        } else {
+          addParser(q.query, key, (items) =>
+            (items as unknown[]).map((item) => parseRecord(parsers, item)),
+          );
+        }
+      }
+    }
+  } else {
+    const index = (item as string).indexOf('.');
+    if (index !== -1) {
+      const table = (item as string).slice(0, index);
+      const column = (item as string).slice(index + 1);
+
+      if (table === as) {
+        const parser = q.columnsParsers?.[column];
+        if (parser) addParser(q.query, key, parser);
+      } else {
+        const parser = (q.query as SelectQueryData).joinedParsers?.[table]?.[
+          column
+        ];
+        if (parser) addParser(q.query, key, parser);
+      }
+    } else {
+      const parser = q.columnsParsers?.[item as string];
+      if (parser) addParser(q.query, key, parser);
+    }
+  }
+};
 
 const addParser = (query: QueryData, key: string, parser: ColumnParser) => {
   if (query.parsers) query.parsers[key] = parser;
@@ -107,44 +151,7 @@ export class Select {
     const q = this.toQuery();
     const as = q.query.as || q.table;
     for (const key in select) {
-      const item = select[key];
-
-      if (typeof item === 'object') {
-        if (isRaw(item)) {
-          const parser = item.__column?.parseFn;
-          if (parser) addParser(q.query, key, parser);
-        } else {
-          const parsers = getQueryParsers(item);
-          if (parsers) {
-            if (item.query?.take) {
-              addParser(q.query, key, (item) => parseRecord(parsers, item));
-            } else {
-              addParser(q.query, key, (items) =>
-                (items as unknown[]).map((item) => parseRecord(parsers, item)),
-              );
-            }
-          }
-        }
-      } else {
-        const index = (item as string).indexOf('.');
-        if (index !== -1) {
-          const table = (item as string).slice(0, index);
-          const column = (item as string).slice(index + 1);
-
-          if (table === as) {
-            const parser = q.columnsParsers?.[column];
-            if (parser) addParser(q.query, key, parser);
-          } else {
-            const parser = (q.query as SelectQueryData).joinedParsers?.[
-              table
-            ]?.[column];
-            if (parser) addParser(q.query, key, parser);
-          }
-        } else {
-          const parser = q.columnsParsers?.[item as string];
-          if (parser) addParser(q.query, key, parser);
-        }
-      }
+      addParserForSelectItem(q, as, key, select[key]);
     }
 
     return pushQueryValue(q, 'select', {

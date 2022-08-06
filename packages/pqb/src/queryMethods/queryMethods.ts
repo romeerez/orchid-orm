@@ -5,6 +5,7 @@ import {
   Selectable,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
+  SetQueryReturnsPluck,
   SetQueryReturnsRows,
   SetQueryReturnsValue,
   SetQueryReturnsVoid,
@@ -24,10 +25,18 @@ import {
   removeFromQuery,
   setQueryValue,
 } from '../queryDataUtils';
-import { Then, thenAll, thenOne, thenRows, thenValue, thenVoid } from './then';
+import {
+  Then,
+  thenAll,
+  thenOne,
+  thenPluck,
+  thenRows,
+  thenValue,
+  thenVoid,
+} from './then';
 import { ColumnShapeOutput, ColumnType, NumberColumn } from '../columnSchema';
 import { Aggregate } from './aggregate';
-import { Select } from './select';
+import { addParserForSelectItem, Select } from './select';
 import { From } from './from';
 import { Join } from './join';
 import { With } from './with';
@@ -101,6 +110,27 @@ export class QueryMethods {
     q.then = thenRows;
     removeFromQuery(q, 'take');
     return q as unknown as SetQueryReturnsRows<T>;
+  }
+
+  pluck<T extends Query, S extends keyof T['selectable'] | RawExpression>(
+    this: T,
+    select: S,
+  ): SetQueryReturnsPluck<T, S> {
+    return this.then === thenPluck
+      ? (this as unknown as SetQueryReturnsPluck<T, S>)
+      : this.clone()._pluck(select);
+  }
+
+  _pluck<T extends Query, S extends keyof T['selectable'] | RawExpression>(
+    this: T,
+    select: S,
+  ): SetQueryReturnsPluck<T, S> {
+    const q = this.toQuery();
+    q.then = thenPluck;
+    removeFromQuery(q, 'take');
+    setQueryValue(q, 'select', [select]);
+    addParserForSelectItem(q, q.query.as || q.table, 'pluck', select);
+    return q as unknown as SetQueryReturnsPluck<T, S>;
   }
 
   value<T extends Query, V extends ColumnType>(

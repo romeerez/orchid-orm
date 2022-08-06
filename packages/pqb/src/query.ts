@@ -8,7 +8,7 @@ import {
   TableSchema,
 } from './columnSchema';
 import { Spread } from './utils';
-import { AliasOrTable, StringKey } from './common';
+import { AliasOrTable, RawExpression, StringKey } from './common';
 import { Then } from './queryMethods/then';
 import { Db } from './db';
 
@@ -117,6 +117,20 @@ export type SetQueryReturnsAll<T extends Query> = SetQueryReturns<T, 'all'>;
 export type SetQueryReturnsOne<T extends Query> = SetQueryReturns<T, 'one'>;
 
 export type SetQueryReturnsRows<T extends Query> = SetQueryReturns<T, 'rows'>;
+
+export type SetQueryReturnsPluck<
+  T extends Query,
+  S extends keyof T['selectable'] | RawExpression,
+  C extends ColumnType = S extends keyof T['selectable']
+    ? T['selectable'][S]['column']
+    : S extends RawExpression
+    ? S['__column']
+    : never,
+> = Omit<T, 'result' | 'returnType' | 'then'> & {
+  result: { pluck: C };
+  returnType: 'pluck';
+  then: Then<C['type'][]>;
+};
 
 export type SetQueryReturnsValue<T extends Query, C extends ColumnType> = Omit<
   T,

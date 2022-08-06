@@ -46,6 +46,19 @@ export const thenRows: Then<unknown[][]> = function (resolve, reject) {
     .then(resolve, reject);
 };
 
+export const thenPluck: Then<unknown[]> = function (resolve, reject) {
+  return this.adapter
+    .arrays(this.toSql())
+    .then((result) => {
+      const parsers = getQueryParsers(this);
+      if (parsers?.pluck) {
+        return result.rows.map((row) => parsers.pluck(row[0]));
+      }
+      return result.rows.map((row) => row[0]);
+    })
+    .then(resolve, reject);
+};
+
 export const thenValue: Then<unknown> = function (resolve, reject) {
   return this.adapter
     .arrays(this.toSql())

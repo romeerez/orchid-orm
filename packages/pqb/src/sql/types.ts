@@ -160,7 +160,8 @@ export type SelectItem<T extends Query> =
   | keyof T['selectable']
   | Aggregate<T>
   | { selectAs: Record<string, keyof T['selectable'] | Query | RawExpression> }
-  | JsonItem;
+  | JsonItem
+  | RawExpression;
 
 export type JoinItem =
   | [relation: string]

@@ -11,6 +11,7 @@ import {
   db,
   insert,
 } from '../test-utils';
+import { NumberColumn } from '../columnSchema';
 
 describe('queryMethods', () => {
   useTestDatabase();
@@ -119,6 +120,38 @@ describe('queryMethods', () => {
       expect((User.take().rows().query as SelectQueryData)?.take).toBe(
         undefined,
       );
+    });
+  });
+
+  describe('pluck', () => {
+    const now = new Date();
+
+    beforeEach(async () => {
+      for (let i = 0; i < 3; i++) {
+        await insert('user', {
+          id: i + 1,
+          name: 'name',
+          password: 'password',
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    });
+
+    it('should return array of column values, properly parsed', async () => {
+      const result = await User.pluck('createdAt');
+      expect(result).toEqual([now, now, now]);
+
+      const eq: AssertEqual<typeof result, Date[]> = true;
+      expect(eq).toBe(true);
+    });
+
+    it('should support raw expression', async () => {
+      const result = await User.pluck(raw<NumberColumn>('123'));
+      expect(result).toEqual([123, 123, 123]);
+
+      const eq: AssertEqual<typeof result, number[]> = true;
+      expect(eq).toBe(true);
     });
   });
 

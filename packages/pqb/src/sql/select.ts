@@ -74,6 +74,8 @@ export const pushSelectSql = (
           }
         } else if ('__json' in item) {
           list.push(`${jsonToSql(item, quotedAs)} AS ${q(item.__json[1])}`);
+        } else if (isRaw(item)) {
+          list.push(getRaw(item));
         } else {
           list.push(aggregateToSql(item, quotedAs));
         }
