@@ -65,23 +65,12 @@ export const whereToSql = (
       }
 
       if ('in' in item && typeof item.in === 'object') {
-        const arg = item.in as {
-          columns: string[];
-          values: unknown[][] | Query | RawExpression;
-        };
-        ands.push(
-          `${prefix}(${arg.columns
-            .map((column) => quoteFullColumn(column, quotedAs))
-            .join(', ')}) IN ${
-            Array.isArray(arg.values)
-              ? `(${arg.values
-                  .map((arr) => `(${arr.map(quote).join(', ')})`)
-                  .join(', ')})`
-              : isRaw(arg.values)
-              ? getRaw(arg.values)
-              : `(${arg.values.toSql()})`
-          }`,
-        );
+        pushIn(ands, prefix, quotedAs, item.in, 'IN');
+        return;
+      }
+
+      if ('notIn' in item && typeof item.notIn === 'object') {
+        pushIn(ands, prefix, quotedAs, item.notIn, 'NOT IN');
         return;
       }
 
@@ -149,4 +138,30 @@ const processOperatorArg = (arg: unknown): string => {
   }
 
   return quote(arg);
+};
+
+const pushIn = (
+  ands: string[],
+  prefix: string,
+  quotedAs: string | undefined,
+  input: unknown,
+  op: 'IN' | 'NOT IN',
+) => {
+  const arg = input as {
+    columns: string[];
+    values: unknown[][] | Query | RawExpression;
+  };
+  ands.push(
+    `${prefix}(${arg.columns
+      .map((column) => quoteFullColumn(column, quotedAs))
+      .join(', ')}) ${op} ${
+      Array.isArray(arg.values)
+        ? `(${arg.values
+            .map((arr) => `(${arr.map(quote).join(', ')})`)
+            .join(', ')})`
+        : isRaw(arg.values)
+        ? getRaw(arg.values)
+        : `(${arg.values.toSql()})`
+    }`,
+  );
 };

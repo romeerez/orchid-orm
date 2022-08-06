@@ -571,3 +571,285 @@ describe('orWhereIn', () => {
     });
   });
 });
+
+describe('whereNotIn', () => {
+  it('should handle (column, array)', () => {
+    const q = User.all();
+
+    const query = q.whereNotIn('id', [1, 2, 3]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" NOT IN (1, 2, 3)
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle object of columns and arrays', () => {
+    const q = User.all();
+
+    const query = q.whereNotIn({ id: [1, 2, 3], name: ['a', 'b', 'c'] });
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" NOT IN (1, 2, 3)
+          AND "user"."name" NOT IN ('a', 'b', 'c')
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle raw query', () => {
+    const q = User.all();
+
+    expect(q.whereNotIn('id', raw('(1, 2, 3)')).toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" NOT IN (1, 2, 3)
+      `),
+    );
+
+    expect(
+      q
+        .whereNotIn({ id: raw('(1, 2, 3)'), name: raw(`('a', 'b', 'c')`) })
+        .toSql(),
+    ).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" NOT IN (1, 2, 3)
+          AND "user"."name" NOT IN ('a', 'b', 'c')
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle sub query', () => {
+    const q = User.all();
+
+    expect(q.whereNotIn('id', User.select('id')).toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" NOT IN (SELECT "user"."id" FROM "user")
+      `),
+    );
+
+    expect(
+      q
+        .whereNotIn({ id: User.select('id'), name: User.select('name') })
+        .toSql(),
+    ).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" NOT IN (SELECT "user"."id" FROM "user")
+          AND "user"."name" NOT IN (SELECT "user"."name" FROM "user")
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  describe('tuple', () => {
+    it('should handle values', () => {
+      const q = User.all();
+
+      const query = q.whereNotIn(
+        ['id', 'name'],
+        [
+          [1, 'a'],
+          [2, 'b'],
+        ],
+      );
+      expect(query.toSql()).toBe(
+        line(`
+        SELECT "user".* FROM "user"
+        WHERE ("user"."id", "user"."name") NOT IN ((1, 'a'), (2, 'b'))
+      `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle raw query', () => {
+      const q = User.all();
+
+      const query = q.whereNotIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`));
+      expect(query.toSql()).toBe(
+        line(`
+        SELECT "user".* FROM "user"
+        WHERE ("user"."id", "user"."name") NOT IN ((1, 'a'), (2, 'b'))
+      `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle sub query', () => {
+      const q = User.all();
+
+      const query = q.whereNotIn(['id', 'name'], User.select('id', 'name'));
+      expect(query.toSql()).toBe(
+        line(`
+        SELECT "user".* FROM "user"
+        WHERE ("user"."id", "user"."name")
+           NOT IN (SELECT "user"."id", "user"."name" FROM "user")
+      `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+  });
+});
+
+describe('orWhereNotIn', () => {
+  it('should handle (column, array)', () => {
+    const q = User.all();
+
+    const query = q.where({ id: 1 }).orWhereNotIn('id', [1, 2, 3]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR "user"."id" NOT IN (1, 2, 3)
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle object of columns and arrays', () => {
+    const q = User.all();
+
+    const query = q
+      .where({ id: 1 })
+      .orWhereNotIn({ id: [1, 2, 3], name: ['a', 'b', 'c'] });
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1
+          OR "user"."id" NOT IN (1, 2, 3) AND "user"."name" NOT IN ('a', 'b', 'c')
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle raw query', () => {
+    const q = User.all();
+
+    expect(
+      q.where({ id: 1 }).orWhereNotIn('id', raw('(1, 2, 3)')).toSql(),
+    ).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR "user"."id" NOT IN (1, 2, 3)
+      `),
+    );
+
+    expect(
+      q
+        .where({ id: 1 })
+        .orWhereNotIn({ id: raw('(1, 2, 3)'), name: raw(`('a', 'b', 'c')`) })
+        .toSql(),
+    ).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1
+           OR "user"."id" NOT IN (1, 2, 3)
+          AND "user"."name" NOT IN ('a', 'b', 'c')
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle sub query', () => {
+    const q = User.all();
+
+    expect(
+      q.where({ id: 1 }).orWhereNotIn('id', User.select('id')).toSql(),
+    ).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1
+           OR "user"."id" NOT IN (SELECT "user"."id" FROM "user")
+      `),
+    );
+
+    expect(
+      q
+        .where({ id: 1 })
+        .orWhereNotIn({ id: User.select('id'), name: User.select('name') })
+        .toSql(),
+    ).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1
+           OR "user"."id" NOT IN (SELECT "user"."id" FROM "user")
+          AND "user"."name" NOT IN (SELECT "user"."name" FROM "user")
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  describe('tuple', () => {
+    it('should handle values', () => {
+      const q = User.all();
+
+      const query = q.where({ id: 1 }).orWhereNotIn(
+        ['id', 'name'],
+        [
+          [1, 'a'],
+          [2, 'b'],
+        ],
+      );
+      expect(query.toSql()).toBe(
+        line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1
+           OR ("user"."id", "user"."name") NOT IN ((1, 'a'), (2, 'b'))
+      `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle raw query', () => {
+      const q = User.all();
+
+      const query = q
+        .where({ id: 1 })
+        .orWhereNotIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`));
+      expect(query.toSql()).toBe(
+        line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1
+           OR ("user"."id", "user"."name") NOT IN ((1, 'a'), (2, 'b'))
+      `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle sub query', () => {
+      const q = User.all();
+
+      const query = q
+        .where({ id: 1 })
+        .orWhereNotIn(['id', 'name'], User.select('id', 'name'));
+      expect(query.toSql()).toBe(
+        line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1
+           OR ("user"."id", "user"."name")
+           NOT IN (SELECT "user"."id", "user"."name" FROM "user")
+      `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+  });
+});

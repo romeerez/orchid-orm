@@ -204,6 +204,12 @@ export type WhereItem<T extends Query> =
         columns: (keyof T['shape'])[];
         values: unknown[][] | Query | RawExpression;
       };
+    }
+  | {
+      notIn: {
+        columns: (keyof T['shape'])[];
+        values: unknown[][] | Query | RawExpression;
+      };
     };
 
 export type AggregateOptions<
