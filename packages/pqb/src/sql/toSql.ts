@@ -14,11 +14,19 @@ import { pushFromAndAs } from './fromAndAs';
 import { pushInsertSql } from './insert';
 import { pushUpdateSql } from './update';
 import { pushDeleteSql } from './delete';
+import { pushTruncateSql } from './truncate';
 
 export const toSql = (model: Query): string => {
   const query = (model.query || EMPTY_OBJECT) as QueryData;
 
   const sql: string[] = [];
+  if ('type' in query && query.type === 'truncate') {
+    if (!model.table) throw new Error('Table is missing for truncate');
+
+    pushTruncateSql(sql, model.table, query);
+    return sql.join(' ');
+  }
+
   const quotedAs = model.table && q(query.as || model.table);
 
   if (query.with) {

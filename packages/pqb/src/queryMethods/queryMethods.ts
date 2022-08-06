@@ -339,6 +339,27 @@ export class QueryMethods {
     ]);
     return q._value<T, NumberColumn>();
   }
+
+  truncate<T extends Query>(
+    this: T,
+    options?: { restartIdentity?: boolean; cascade?: boolean },
+  ): SetQueryReturnsVoid<T> {
+    return this.clone()._truncate(options);
+  }
+
+  _truncate<T extends Query>(
+    this: T,
+    options?: { restartIdentity?: boolean; cascade?: boolean },
+  ): SetQueryReturnsVoid<T> {
+    setQueryValue(this, 'type', 'truncate');
+    if (options?.restartIdentity) {
+      setQueryValue(this, 'restartIdentity', true);
+    }
+    if (options?.cascade) {
+      setQueryValue(this, 'cascade', true);
+    }
+    return this._exec();
+  }
 }
 
 QueryMethods.prototype.then = thenAll;

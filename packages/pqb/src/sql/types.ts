@@ -83,11 +83,18 @@ export type DeleteQueryData<T extends Query = Query> = CommonQueryData<T> & {
   joinedParsers?: Record<string, ColumnsParsers>;
 };
 
+export type TruncateQueryData<T extends Query = Query> = CommonQueryData<T> & {
+  type: 'truncate';
+  restartIdentity?: boolean;
+  cascade?: boolean;
+};
+
 export type QueryData<T extends Query = Query> =
   | SelectQueryData<T>
   | InsertQueryData<T>
   | UpdateQueryData<T>
-  | DeleteQueryData<T>;
+  | DeleteQueryData<T>
+  | TruncateQueryData<T>;
 
 export type WithItem = [
   as: string,

@@ -1,5 +1,5 @@
 import { raw } from '../common';
-import { HavingArg, QueryData } from '../sql';
+import { HavingArg, QueryData, SelectQueryData } from '../sql';
 import {
   line,
   expectQueryNotMutated,
@@ -72,8 +72,8 @@ describe('queryMethods', () => {
 
     it('should remove `take` from query if it is set', () => {
       const q = User.take();
-      expect(q.query?.take).toBe(true);
-      expect(q.all().query?.take).toBe(undefined);
+      expect((q.query as SelectQueryData)?.take).toBe(true);
+      expect((q.all().query as SelectQueryData)?.take).toBe(undefined);
     });
 
     it('should produce correct sql', () => {
@@ -116,7 +116,9 @@ describe('queryMethods', () => {
     });
 
     it('removes `take` from query data', () => {
-      expect(User.take().rows().query?.take).toBe(undefined);
+      expect((User.take().rows().query as SelectQueryData)?.take).toBe(
+        undefined,
+      );
     });
   });
 
@@ -129,7 +131,9 @@ describe('queryMethods', () => {
     });
 
     it('removes `take` from query data', () => {
-      expect(User.take().value().query?.take).toBe(undefined);
+      expect((User.take().value().query as SelectQueryData)?.take).toBe(
+        undefined,
+      );
     });
   });
 
@@ -140,7 +144,9 @@ describe('queryMethods', () => {
     });
 
     it('removes `take` from query data', () => {
-      expect(User.take().exec().query?.take).toBe(undefined);
+      expect((User.take().exec().query as SelectQueryData)?.take).toBe(
+        undefined,
+      );
     });
   });
 
@@ -612,6 +618,22 @@ describe('exists', () => {
   it('selects 1', () => {
     const q = User.all();
     expect(q.exists().toSql()).toBe('SELECT 1 AS "exists" FROM "user"');
+    expectQueryNotMutated(q);
+  });
+});
+
+describe('truncate', () => {
+  it('should truncate table', () => {
+    const q = User.all();
+    expect(q.truncate().toSql()).toBe('TRUNCATE "user"');
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle restart identity and cascade options', () => {
+    const q = User.all();
+    expect(q.truncate({ restartIdentity: true, cascade: true }).toSql()).toBe(
+      'TRUNCATE "user" RESTART IDENTITY CASCADE',
+    );
     expectQueryNotMutated(q);
   });
 });
