@@ -15,7 +15,13 @@ export const windowToSql = <T extends Query>(
       const sql: string[] = [];
       if (window.partitionBy) {
         sql.push(
-          `PARTITION BY ${expressionToSql(window.partitionBy, quotedAs)}`,
+          `PARTITION BY ${
+            Array.isArray(window.partitionBy)
+              ? window.partitionBy.map((partitionBy) =>
+                  expressionToSql(partitionBy, quotedAs),
+                )
+              : expressionToSql(window.partitionBy, quotedAs)
+          }`,
         );
       }
       if (window.order) {

@@ -42,9 +42,9 @@ describe('aggregate', () => {
         }).toSql(),
       ).toBe(
         line(`
-        SELECT count("user"."name") OVER (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
-        FROM "user"
-      `),
+          SELECT count("user"."name") OVER (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
+          FROM "user"
+        `),
       );
     });
 
@@ -233,6 +233,37 @@ describe('aggregate', () => {
         expectedSql,
       );
       expectQueryNotMutated(q);
+    });
+  });
+
+  describe.each`
+    method           | functionName
+    ${'rowNumber'}   | ${'row_number'}
+    ${'rank'}        | ${'rank'}
+    ${'denseRank'}   | ${'dense_rank'}
+    ${'percentRank'} | ${'percent_rank'}
+    ${'cumeDust'}    | ${'cume_dust'}
+  `('$method', ({ method, functionName }) => {
+    it(`should perform ${method} query`, () => {
+      const q = User.all();
+      const expectedSql = line(
+        `SELECT ${functionName}() OVER (PARTITION BY "user"."name" ORDER BY "user"."createdAt" DESC) AS "as" FROM "user"`,
+      );
+      expect(
+        q[method as 'rank']({
+          as: 'as',
+          partitionBy: 'name',
+          order: { createdAt: 'DESC' },
+        }).toSql(),
+      ).toBe(expectedSql);
+      expectQueryNotMutated(q);
+
+      q[`_${method}` as '_rank']({
+        as: 'as',
+        partitionBy: 'name',
+        order: { createdAt: 'DESC' },
+      });
+      expect(q.toSql()).toBe(expectedSql);
     });
   });
 });

@@ -34,7 +34,7 @@ export const aggregateToSql = <T extends Query>(
       }
       sql.push(args.join(', '));
     }
-  } else {
+  } else if (item.arg) {
     sql.push(expressionToSql(item.arg, quotedAs));
   }
 

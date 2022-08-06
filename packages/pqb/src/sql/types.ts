@@ -217,7 +217,7 @@ export type AggregateArg<T extends Query> =
 
 export type Aggregate<T extends Query = Query> = {
   function: string;
-  arg: AggregateArg<T>;
+  arg?: AggregateArg<T>;
   options: AggregateOptions<T>;
 };
 
@@ -244,7 +244,7 @@ export type WindowArg<T extends Query> = Record<
 >;
 
 export type WindowDeclaration<T extends Query = Query> = {
-  partitionBy?: Expression<T>;
+  partitionBy?: Expression<T> | Expression<T>[];
   order?: OrderBy<T>;
 };
 
