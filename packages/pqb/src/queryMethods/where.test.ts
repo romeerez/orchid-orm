@@ -853,3 +853,67 @@ describe('orWhereNotIn', () => {
     });
   });
 });
+
+describe('whereNull', () => {
+  it('should add where null condition', () => {
+    const q = User.all();
+
+    const query = q.whereNull('id');
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" IS NULL
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});
+
+describe('orWhereNull', () => {
+  it('should add where null condition', () => {
+    const q = User.all();
+
+    const query = q.where({ id: 1 }).orWhereNull('id');
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR "user"."id" IS NULL
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});
+
+describe('whereNotNull', () => {
+  it('should add where null condition', () => {
+    const q = User.all();
+
+    const query = q.whereNotNull('id');
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE NOT "user"."id" IS NULL
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});
+
+describe('orWhereNotNull', () => {
+  it('should add where null condition', () => {
+    const q = User.all();
+
+    const query = q.where({ id: 1 }).orWhereNotNull('id');
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR NOT "user"."id" IS NULL
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});

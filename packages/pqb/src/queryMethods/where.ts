@@ -257,4 +257,32 @@ export class Where {
   ): T {
     return applyWhereIn(this, '_or', arg, values, true);
   }
+
+  whereNull<T extends Query>(this: T, column: keyof T['shape']): T {
+    return this.clone()._whereNull(column);
+  }
+  _whereNull<T extends Query>(this: T, column: keyof T['shape']): T {
+    return this._where({ [column]: null } as unknown as WhereArg<T>);
+  }
+
+  orWhereNull<T extends Query>(this: T, column: keyof T['shape']): T {
+    return this.clone()._orWhereNull(column);
+  }
+  _orWhereNull<T extends Query>(this: T, column: keyof T['shape']): T {
+    return this._or({ [column]: null } as unknown as WhereArg<T>);
+  }
+
+  whereNotNull<T extends Query>(this: T, column: keyof T['shape']): T {
+    return this.clone()._whereNotNull(column);
+  }
+  _whereNotNull<T extends Query>(this: T, column: keyof T['shape']): T {
+    return this._whereNot({ [column]: null } as unknown as WhereArg<T>);
+  }
+
+  orWhereNotNull<T extends Query>(this: T, column: keyof T['shape']): T {
+    return this.clone()._orWhereNotNull(column);
+  }
+  _orWhereNotNull<T extends Query>(this: T, column: keyof T['shape']): T {
+    return this._orNot({ [column]: null } as unknown as WhereArg<T>);
+  }
 }
