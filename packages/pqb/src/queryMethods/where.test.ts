@@ -297,3 +297,34 @@ describe('orNot', () => {
     expectQueryNotMutated(q);
   });
 });
+
+describe('whereIn', () => {
+  it('should handle (column, array)', () => {
+    const q = User.all();
+
+    const query = q.whereIn('id', [1, 2, 3]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" IN (1, 2, 3)
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle object of columns and arrays', () => {
+    const q = User.all();
+
+    const query = q.whereIn({ id: [1, 2, 3], name: ['a', 'b', 'c'] });
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" IN (1, 2, 3)
+          AND "user"."name" IN ('a', 'b', 'c')
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});

@@ -3,7 +3,7 @@ import { ColumnOperators } from '../sql';
 import { pushQueryArray } from '../queryDataUtils';
 import { RawExpression } from '../common';
 
-export type WhereArg<T extends Query> =
+type WhereArg<T extends Query> =
   | Partial<T['type']>
   | {
       [K in keyof T['selectable']]?:
@@ -83,5 +83,42 @@ export class Where {
       'or',
       args.map((item) => [{ item, not: true }]),
     );
+  }
+
+  whereIn<T extends Query, Column extends keyof T['shape']>(
+    this: T,
+    column: Column,
+    values: T['shape'][Column]['type'][],
+  ): T;
+  whereIn<T extends Query>(
+    this: T,
+    arg: { [K in keyof T['shape']]?: T['shape'][K]['type'][] },
+  ): T;
+  whereIn<T extends Query>(this: T, arg: unknown, values?: unknown[]): T {
+    return this.clone()._whereIn(arg as keyof T['shape'], values as unknown[]);
+  }
+
+  _whereIn<T extends Query, Column extends keyof T['shape']>(
+    this: T,
+    column: Column,
+    values: T['shape'][Column]['type'][],
+  ): T;
+  _whereIn<T extends Query>(
+    this: T,
+    arg: { [K in keyof T['shape']]?: T['shape'][K]['type'][] },
+  ): T;
+  _whereIn<T extends Query>(this: T, arg: unknown, values?: unknown[]): T {
+    if (values) {
+      return this._where({
+        [arg as string]: { in: values },
+      } as unknown as WhereArg<T>);
+    }
+
+    const obj: Record<string, { in: unknown[] }> = {};
+    for (const key in arg as Record<string, unknown[]>) {
+      obj[key] = { in: (arg as Record<string, unknown[]>)[key] };
+    }
+
+    return this._where(obj as unknown as WhereArg<T>);
   }
 }
