@@ -328,4 +328,96 @@ export class Where {
   _orWhereNotExists<T extends Query>(this: T, query: Query | RawExpression): T {
     return this._orNot({ type: 'exists', query });
   }
+
+  whereBetween<T extends Query, C extends keyof T['shape']>(
+    this: T,
+    column: C,
+    values: [
+      T['shape'][C]['type'] | Query | RawExpression,
+      T['shape'][C]['type'] | Query | RawExpression,
+    ],
+  ): T {
+    return this.clone()._whereBetween(column, values);
+  }
+  _whereBetween<T extends Query, C extends keyof T['shape']>(
+    this: T,
+    column: C,
+    values: [
+      T['shape'][C]['type'] | Query | RawExpression,
+      T['shape'][C]['type'] | Query | RawExpression,
+    ],
+  ): T {
+    return this._where({
+      [column]: { between: values },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereBetween<T extends Query, C extends keyof T['shape']>(
+    this: T,
+    column: C,
+    values: [
+      T['shape'][C]['type'] | Query | RawExpression,
+      T['shape'][C]['type'] | Query | RawExpression,
+    ],
+  ): T {
+    return this.clone()._orWhereBetween(column, values);
+  }
+  _orWhereBetween<T extends Query, C extends keyof T['shape']>(
+    this: T,
+    column: C,
+    values: [
+      T['shape'][C]['type'] | Query | RawExpression,
+      T['shape'][C]['type'] | Query | RawExpression,
+    ],
+  ): T {
+    return this._or({
+      [column]: { between: values },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereNotBetween<T extends Query, C extends keyof T['shape']>(
+    this: T,
+    column: C,
+    values: [
+      T['shape'][C]['type'] | Query | RawExpression,
+      T['shape'][C]['type'] | Query | RawExpression,
+    ],
+  ): T {
+    return this.clone()._whereNotBetween(column, values);
+  }
+  _whereNotBetween<T extends Query, C extends keyof T['shape']>(
+    this: T,
+    column: C,
+    values: [
+      T['shape'][C]['type'] | Query | RawExpression,
+      T['shape'][C]['type'] | Query | RawExpression,
+    ],
+  ): T {
+    return this._whereNot({
+      [column]: { between: values },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereNotBetween<T extends Query, C extends keyof T['shape']>(
+    this: T,
+    column: C,
+    values: [
+      T['shape'][C]['type'] | Query | RawExpression,
+      T['shape'][C]['type'] | Query | RawExpression,
+    ],
+  ): T {
+    return this.clone()._orWhereNotBetween(column, values);
+  }
+  _orWhereNotBetween<T extends Query, C extends keyof T['shape']>(
+    this: T,
+    column: C,
+    values: [
+      T['shape'][C]['type'] | Query | RawExpression,
+      T['shape'][C]['type'] | Query | RawExpression,
+    ],
+  ): T {
+    return this._orNot({
+      [column]: { between: values },
+    } as unknown as WhereArg<T>);
+  }
 }

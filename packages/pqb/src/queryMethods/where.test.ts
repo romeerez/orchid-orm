@@ -1021,3 +1021,207 @@ describe('orWhereNotExists', () => {
     expectQueryNotMutated(q);
   });
 });
+
+describe('whereBetween', () => {
+  it('should handle values', () => {
+    const q = User.all();
+
+    const query = q.whereBetween('id', [1, 10]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" BETWEEN 1 AND 10
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle sub query', () => {
+    const q = User.all();
+
+    const query = q.whereBetween('id', [
+      User.select('id').take(),
+      User.select('id').take(),
+    ]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id"
+        BETWEEN (SELECT "user"."id" FROM "user" LIMIT 1)
+            AND (SELECT "user"."id" FROM "user" LIMIT 1)
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle raw query', () => {
+    const q = User.all();
+
+    const query = q.whereBetween('id', [raw('1'), raw('10')]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" BETWEEN 1 AND 10
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});
+
+describe('orWhereBetween', () => {
+  it('should handle values', () => {
+    const q = User.all();
+
+    const query = q.where({ id: 1 }).orWhereBetween('id', [1, 10]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR "user"."id" BETWEEN 1 AND 10
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle sub query', () => {
+    const q = User.all();
+
+    const query = q
+      .where({ id: 1 })
+      .orWhereBetween('id', [
+        User.select('id').take(),
+        User.select('id').take(),
+      ]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR "user"."id"
+        BETWEEN (SELECT "user"."id" FROM "user" LIMIT 1)
+            AND (SELECT "user"."id" FROM "user" LIMIT 1)
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle raw query', () => {
+    const q = User.all();
+
+    const query = q
+      .where({ id: 1 })
+      .orWhereBetween('id', [raw('1'), raw('10')]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR "user"."id" BETWEEN 1 AND 10
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});
+
+describe('whereNotBetween', () => {
+  it('should handle values', () => {
+    const q = User.all();
+
+    const query = q.whereNotBetween('id', [1, 10]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE NOT "user"."id" BETWEEN 1 AND 10
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle sub query', () => {
+    const q = User.all();
+
+    const query = q.whereNotBetween('id', [
+      User.select('id').take(),
+      User.select('id').take(),
+    ]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE NOT "user"."id"
+        BETWEEN (SELECT "user"."id" FROM "user" LIMIT 1)
+           AND (SELECT "user"."id" FROM "user" LIMIT 1)
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle raw query', () => {
+    const q = User.all();
+
+    const query = q.whereNotBetween('id', [raw('1'), raw('10')]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE NOT "user"."id" BETWEEN 1 AND 10
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});
+
+describe('orWhereNotBetween', () => {
+  it('should handle values', () => {
+    const q = User.all();
+
+    const query = q.where({ id: 1 }).orWhereNotBetween('id', [1, 10]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR NOT "user"."id" BETWEEN 1 AND 10
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle sub query', () => {
+    const q = User.all();
+
+    const query = q
+      .where({ id: 1 })
+      .orWhereNotBetween('id', [
+        User.select('id').take(),
+        User.select('id').take(),
+      ]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR NOT "user"."id"
+        BETWEEN (SELECT "user"."id" FROM "user" LIMIT 1)
+            AND (SELECT "user"."id" FROM "user" LIMIT 1)
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle raw query', () => {
+    const q = User.all();
+
+    const query = q
+      .where({ id: 1 })
+      .orWhereNotBetween('id', [raw('1'), raw('10')]);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR NOT "user"."id" BETWEEN 1 AND 10
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});
