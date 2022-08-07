@@ -2,6 +2,7 @@ import { Query, SetQueryReturnsOne } from '../query';
 import { ColumnOperators, WhereItem } from '../sql';
 import { pushQueryArray } from '../queryDataUtils';
 import { RawExpression } from '../common';
+import { JSONColumn } from '../columnSchema';
 
 type WhereArg<T extends Query> =
   | Partial<T['type']>
@@ -80,6 +81,10 @@ const applyWhereIn = <T extends Query>(
 
 type TextColumnName<T extends Query> = {
   [K in keyof T['shape']]: T['shape'][K]['type'] extends string ? K : never;
+}[keyof T['shape']];
+
+type JsonColumnName<T extends Query> = {
+  [K in keyof T['shape']]: T['shape'][K] extends JSONColumn ? K : never;
 }[keyof T['shape']];
 
 export class Where {
@@ -829,6 +834,176 @@ export class Where {
   ): T {
     return this._orNot({
       [column]: { endsWithInsensitive: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereJsonPath<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: [path: string, op: string, value: unknown | Query | RawExpression],
+  ): T {
+    return this.clone()._whereJsonPath(column, value);
+  }
+  _whereJsonPath<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: [path: string, op: string, value: unknown | Query | RawExpression],
+  ): T {
+    return this._where({
+      [column]: { jsonPath: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereJsonPath<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: [path: string, op: string, value: unknown | Query | RawExpression],
+  ): T {
+    return this.clone()._orWhereJsonPath(column, value);
+  }
+  _orWhereJsonPath<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: [path: string, op: string, value: unknown | Query | RawExpression],
+  ): T {
+    return this._or({
+      [column]: { jsonPath: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereJsonSupersetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this.clone()._whereJsonSupersetOf(column, value);
+  }
+  _whereJsonSupersetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this._where({
+      [column]: { jsonSupersetOf: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereJsonSupersetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereJsonSupersetOf(column, value);
+  }
+  _orWhereJsonSupersetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this._or({
+      [column]: { jsonSupersetOf: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereNotJsonSupersetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this.clone()._whereNotJsonSupersetOf(column, value);
+  }
+  _whereNotJsonSupersetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this._whereNot({
+      [column]: { jsonSupersetOf: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereNotJsonSupersetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereNotJsonSupersetOf(column, value);
+  }
+  _orWhereNotJsonSupersetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this._orNot({
+      [column]: { jsonSupersetOf: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereJsonSubsetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this.clone()._whereJsonSubsetOf(column, value);
+  }
+  _whereJsonSubsetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this._where({
+      [column]: { jsonSubsetOf: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereJsonSubsetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereJsonSubsetOf(column, value);
+  }
+  _orWhereJsonSubsetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this._or({
+      [column]: { jsonSubsetOf: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereNotJsonSubsetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this.clone()._whereNotJsonSubsetOf(column, value);
+  }
+  _whereNotJsonSubsetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this._whereNot({
+      [column]: { jsonSubsetOf: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereNotJsonSubsetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereNotJsonSubsetOf(column, value);
+  }
+  _orWhereNotJsonSubsetOf<T extends Query, C extends JsonColumnName<T>>(
+    this: T,
+    column: C,
+    value: unknown | Query | RawExpression,
+  ): T {
+    return this._orNot({
+      [column]: { jsonSubsetOf: value },
     } as unknown as WhereArg<T>);
   }
 }

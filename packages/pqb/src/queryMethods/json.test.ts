@@ -305,9 +305,9 @@ describe('json methods', () => {
         );
         expect(query.toSql()).toBe(
           line(`
-          SELECT jsonb_path_query("user"."data", '$.name') AS "name"
-          FROM "user"
-        `),
+            SELECT jsonb_path_query("user"."data", '$.name') AS "name"
+            FROM "user"
+          `),
         );
 
         const result = await query.take();
@@ -334,9 +334,9 @@ describe('json methods', () => {
         );
         expect(query.toSql()).toBe(
           line(`
-          SELECT jsonb_path_query("user"."data", '$.name', 'vars', true) AS "name"
-          FROM "user"
-        `),
+            SELECT jsonb_path_query("user"."data", '$.name', 'vars', true) AS "name"
+            FROM "user"
+          `),
         );
 
         expectQueryNotMutated(q);
@@ -353,13 +353,13 @@ describe('json methods', () => {
         );
         expect(query.toSql()).toBe(
           line(`
-          SELECT 
-            jsonb_path_query(
-              jsonb_set("user"."data", '{tags}', '["tag"]'),
-              '$.tags'
-            ) AS "tags"
-          FROM "user"
-        `),
+            SELECT 
+              jsonb_path_query(
+                jsonb_set("user"."data", '{tags}', '["tag"]'),
+                '$.tags'
+              ) AS "tags"
+            FROM "user"
+          `),
         );
 
         const result = await query.take();

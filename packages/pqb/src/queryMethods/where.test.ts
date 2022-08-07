@@ -1438,3 +1438,260 @@ describe.each`
     });
   });
 });
+
+describe('whereJsonPath', () => {
+  it('should handle value', () => {
+    const q = User.all();
+
+    const query = q.whereJsonPath('data', ['$.name', '=', 'name']);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE jsonb_path_query_first("user"."data", '$.name') #>> '{}' = 'name'
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle sub query', () => {
+    expect(
+      User.whereJsonPath('data', [
+        '$.name',
+        '=',
+        User.select('name').take(),
+      ]).toSql(),
+    ).toBe(
+      line(`
+          SELECT "user".* FROM "user"
+          WHERE jsonb_path_query_first("user"."data", '$.name') #>> '{}' = (
+            SELECT "user"."name" FROM "user" LIMIT 1
+          )
+        `),
+    );
+  });
+
+  it('should handle raw query', () => {
+    expect(
+      User.whereJsonPath('data', ['$.name', '=', raw("'name'")]).toSql(),
+    ).toBe(
+      line(`
+          SELECT "user".* FROM "user"
+          WHERE jsonb_path_query_first("user"."data", '$.name') #>> '{}' = 'name'
+        `),
+    );
+  });
+});
+
+describe('orWhereJsonPath', () => {
+  it('should handle value', () => {
+    const q = User.all();
+
+    const query = q
+      .where({ id: 1 })
+      .orWhereJsonPath('data', ['$.name', '=', 'name']);
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1
+           OR jsonb_path_query_first("user"."data", '$.name') #>> '{}' = 'name'
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle sub query', () => {
+    expect(
+      User.where({ id: 1 })
+        .orWhereJsonPath('data', ['$.name', '=', User.select('name').take()])
+        .toSql(),
+    ).toBe(
+      line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = 1
+             OR jsonb_path_query_first("user"."data", '$.name') #>> '{}' = (
+              SELECT "user"."name" FROM "user" LIMIT 1
+            )
+        `),
+    );
+  });
+
+  it('should handle raw query', () => {
+    expect(
+      User.where({ id: 1 })
+        .orWhereJsonPath('data', ['$.name', '=', raw("'name'")])
+        .toSql(),
+    ).toBe(
+      line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = 1
+             OR jsonb_path_query_first("user"."data", '$.name') #>> '{}' = 'name'
+        `),
+    );
+  });
+});
+
+describe.each`
+  method              | sql
+  ${'jsonSupersetOf'} | ${'@>'}
+  ${'jsonSubsetOf'}   | ${'<@'}
+`('$method', ({ method, sql }) => {
+  const whereMethod = `where${method[0].toUpperCase()}${method.slice(
+    1,
+  )}` as 'whereJsonSupersetOf';
+
+  describe(whereMethod, () => {
+    it('should handle value', () => {
+      expect(User[whereMethod]('data', { a: 'b' }).toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."data" ${sql} '{"a":"b"}'
+        `),
+      );
+    });
+
+    it('should handle sub query', () => {
+      expect(
+        User[whereMethod]('data', User.select('data').take()).toSql(),
+      ).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT 1)
+        `),
+      );
+    });
+
+    it('should handle raw query', () => {
+      expect(User[whereMethod]('data', raw(`'{"a":"b"}'`)).toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."data" ${sql} '{"a":"b"}'
+        `),
+      );
+    });
+  });
+
+  const orWhereMethod = `orWhere${method[0].toUpperCase()}${method.slice(
+    1,
+  )}` as 'orWhereJsonSupersetOf';
+
+  describe(orWhereMethod, () => {
+    it('should handle value', () => {
+      expect(
+        User.where({ id: 1 })[orWhereMethod]('data', { a: 'b' }).toSql(),
+      ).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = 1 OR "user"."data" ${sql} '{"a":"b"}'
+        `),
+      );
+    });
+
+    it('should handle sub query', () => {
+      expect(
+        User.where({ id: 1 })
+          [orWhereMethod]('data', User.select('data').take())
+          .toSql(),
+      ).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = 1
+             OR "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT 1)
+        `),
+      );
+    });
+
+    it('should handle raw query', () => {
+      expect(
+        User.where({ id: 1 })
+          [orWhereMethod]('data', raw(`'{"a":"b"}'`))
+          .toSql(),
+      ).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = 1 OR "user"."data" ${sql} '{"a":"b"}'
+        `),
+      );
+    });
+  });
+
+  const whereNotMethod = `whereNot${method[0].toUpperCase()}${method.slice(
+    1,
+  )}` as 'whereNotJsonSupersetOf';
+
+  describe(whereNotMethod, () => {
+    it('should handle value', () => {
+      expect(User[whereNotMethod]('data', { a: 'b' }).toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE NOT "user"."data" ${sql} '{"a":"b"}'
+        `),
+      );
+    });
+
+    it('should handle sub query', () => {
+      expect(
+        User[whereNotMethod]('data', User.select('data').take()).toSql(),
+      ).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE NOT "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT 1)
+        `),
+      );
+    });
+
+    it('should handle raw query', () => {
+      expect(User[whereNotMethod]('data', raw(`'{"a":"b"}'`)).toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE NOT "user"."data" ${sql} '{"a":"b"}'
+        `),
+      );
+    });
+  });
+
+  const orWhereNotMethod = `orWhereNot${method[0].toUpperCase()}${method.slice(
+    1,
+  )}` as 'orWhereNotJsonSupersetOf';
+
+  describe(orWhereNotMethod, () => {
+    it('should handle value', () => {
+      expect(
+        User.where({ id: 1 })[orWhereNotMethod]('data', { a: 'b' }).toSql(),
+      ).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = 1 OR NOT "user"."data" ${sql} '{"a":"b"}'
+        `),
+      );
+    });
+
+    it('should handle sub query', () => {
+      expect(
+        User.where({ id: 1 })
+          [orWhereNotMethod]('data', User.select('data').take())
+          .toSql(),
+      ).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = 1
+             OR NOT "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT 1)
+        `),
+      );
+    });
+
+    it('should handle raw query', () => {
+      expect(
+        User.where({ id: 1 })
+          [orWhereNotMethod]('data', raw(`'{"a":"b"}'`))
+          .toSql(),
+      ).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = 1 OR NOT "user"."data" ${sql} '{"a":"b"}'
+        `),
+      );
+    });
+  });
+});

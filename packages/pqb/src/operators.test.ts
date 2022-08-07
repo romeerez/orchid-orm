@@ -482,4 +482,86 @@ describe('operators', () => {
       );
     });
   });
+
+  describe('jsonPath', () => {
+    it('should handle value', () => {
+      expect(
+        User.where({ data: { jsonPath: ['$.name', '=', 'name'] } }).toSql(),
+      ).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE jsonb_path_query_first("user"."data", '$.name') #>> '{}' = 'name'
+        `),
+      );
+    });
+
+    it('should handle sub query', () => {
+      expect(
+        User.where({
+          data: { jsonPath: ['$.name', '=', User.select('name').take()] },
+        }).toSql(),
+      ).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE jsonb_path_query_first("user"."data", '$.name') #>> '{}' = (
+            SELECT "user"."name" FROM "user" LIMIT 1
+          )
+        `),
+      );
+    });
+
+    it('should handle raw query', () => {
+      expect(
+        User.where({
+          data: { jsonPath: ['$.name', '=', raw("'name'")] },
+        }).toSql(),
+      ).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE jsonb_path_query_first("user"."data", '$.name') #>> '{}' = 'name'
+        `),
+      );
+    });
+  });
+
+  describe.each`
+    method              | sql
+    ${'jsonSupersetOf'} | ${'@>'}
+    ${'jsonSubsetOf'}   | ${'<@'}
+  `('$method', ({ method, sql }) => {
+    it('should handle value', () => {
+      expect(User.where({ data: { [method]: { a: 'b' } } }).toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."data" ${sql} '{"a":"b"}'
+        `),
+      );
+    });
+
+    it('should handle sub query', () => {
+      expect(
+        User.where({
+          data: { [method]: User.select('data').take() },
+        }).toSql(),
+      ).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT 1)
+        `),
+      );
+    });
+
+    it('should handle raw query', () => {
+      expect(
+        User.where({
+          data: { [method]: raw(`'{"a":"b"}'`) },
+        }).toSql(),
+      ).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."data" ${sql} '{"a":"b"}'
+        `),
+      );
+    });
+  });
 });

@@ -13,9 +13,9 @@ export const createOperator = <T>(fn: Fn<T>) => {
   return Object.assign(fn, { type: undefined as unknown as T });
 };
 
-const quoteValue = (arg: unknown): string => {
+const quoteValue = (arg: unknown, jsonArray?: boolean): string => {
   if (arg && typeof arg === 'object') {
-    if (Array.isArray(arg)) {
+    if (!jsonArray && Array.isArray(arg)) {
       return `(${arg.map(quote).join(', ')})`;
     }
 
@@ -93,6 +93,23 @@ const all = {
       (key, [from, to]) =>
         `${key} BETWEEN ${quoteValue(from)} AND ${quoteValue(to)}`,
     ),
+  jsonPath: <T>() =>
+    createOperator<
+      [path: string, op: string, value: T | Query | RawExpression]
+    >(
+      (key, [path, op, value]) =>
+        `jsonb_path_query_first(${key}, ${quote(
+          path,
+        )}) #>> '{}' ${op} ${quoteValue(value, true)}`,
+    ),
+  jsonSupersetOf: <T>() =>
+    createOperator<T | Query | RawExpression>(
+      (key, value) => `${key} @> ${quoteValue(value, true)}`,
+    ),
+  jsonSubsetOf: <T>() =>
+    createOperator<T | Query | RawExpression>(
+      (key, value) => `${key} <@ ${quoteValue(value, true)}`,
+    ),
 };
 
 const base = <T>() => ({
@@ -121,6 +138,13 @@ const text = <T>() => ({
   endsWithInsensitive: all.endsWithInsensitive<T>(),
 });
 
+const json = <T>() => ({
+  ...base<T>(),
+  jsonPath: all.jsonPath<T>(),
+  jsonSupersetOf: all.jsonSupersetOf<T>(),
+  jsonSubsetOf: all.jsonSubsetOf<T>(),
+});
+
 export const Operators = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   any: base<any>(),
@@ -129,9 +153,7 @@ export const Operators = {
   date: numeric<Date>(),
   time: numeric<Date>(),
   text: text<string>(),
-  // TODO: json operators
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  json: base<any>(),
+  json: json<unknown>(),
   // TODO: array operators
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   array: base<any>(),
