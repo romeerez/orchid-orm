@@ -1225,3 +1225,216 @@ describe('orWhereNotBetween', () => {
     expectQueryNotMutated(q);
   });
 });
+
+describe.each`
+  method                     | sql
+  ${'contains'}              | ${'LIKE'}
+  ${'containsInsensitive'}   | ${'ILIKE'}
+  ${'startsWith'}            | ${'LIKE'}
+  ${'startsWithInsensitive'} | ${'ILIKE'}
+  ${'endsWith'}              | ${'LIKE'}
+  ${'endsWithInsensitive'}   | ${'ILIKE'}
+`('$method', ({ method, sql }) => {
+  const whereMethod = `where${method[0].toUpperCase()}${method.slice(
+    1,
+  )}` as 'whereContains';
+
+  const prepend =
+    method.startsWith('contains') || method.startsWith('ends') ? "'%' || " : '';
+  const append =
+    method.startsWith('contains') || method.startsWith('starts')
+      ? " || '%'"
+      : '';
+
+  describe(whereMethod, () => {
+    it('should handle value', () => {
+      const q = User.all();
+
+      const query = q[whereMethod]('name', 'ko');
+      expect(query.toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."name" ${sql} ${prepend}'ko'${append}
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle sub query', () => {
+      const q = User.all();
+
+      const query = q[whereMethod]('name', User.select('name').take());
+      expect(query.toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."name" ${sql} ${prepend}(SELECT "user"."name" FROM "user" LIMIT 1)${append}
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle raw query', () => {
+      const q = User.all();
+
+      const query = q[whereMethod]('name', raw("'ko'"));
+      expect(query.toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."name" ${sql} ${prepend}'ko'${append}
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+  });
+
+  const orWhereMethod = `orWhere${method[0].toUpperCase()}${method.slice(
+    1,
+  )}` as 'orWhereContains';
+
+  describe(orWhereMethod, () => {
+    it('should handle value', () => {
+      const q = User.all();
+
+      const query = q.where({ id: 1 })[orWhereMethod]('name', 'ko');
+      expect(query.toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = 1 OR "user"."name" ${sql} ${prepend}'ko'${append}
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle sub query', () => {
+      const q = User.all();
+
+      const query = q
+        .where({ id: 1 })
+        [orWhereMethod]('name', User.select('name').take());
+      expect(query.toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = 1 OR "user"."name" ${sql} ${prepend}(SELECT "user"."name" FROM "user" LIMIT 1)${append}
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle raw query', () => {
+      const q = User.all();
+
+      const query = q.where({ id: 1 })[orWhereMethod]('name', raw("'ko'"));
+      expect(query.toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = 1 OR "user"."name" ${sql} ${prepend}'ko'${append}
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+  });
+
+  const whereNotMethod = `whereNot${method[0].toUpperCase()}${method.slice(
+    1,
+  )}` as 'orWhereContains';
+
+  describe(whereNotMethod, () => {
+    it('should handle value', () => {
+      const q = User.all();
+
+      const query = q[whereNotMethod]('name', 'ko');
+      expect(query.toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE NOT "user"."name" ${sql} ${prepend}'ko'${append}
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle sub query', () => {
+      const q = User.all();
+
+      const query = q[whereNotMethod]('name', User.select('name').take());
+      expect(query.toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE NOT "user"."name" ${sql} ${prepend}(SELECT "user"."name" FROM "user" LIMIT 1)${append}
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle raw query', () => {
+      const q = User.all();
+
+      const query = q[whereNotMethod]('name', raw("'ko'"));
+      expect(query.toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE NOT "user"."name" ${sql} ${prepend}'ko'${append}
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+  });
+
+  const orWhereNotMethod = `orWhereNot${method[0].toUpperCase()}${method.slice(
+    1,
+  )}` as 'orWhereNotContains';
+
+  describe(orWhereNotMethod, () => {
+    it('should handle value', () => {
+      const q = User.all();
+
+      const query = q.where({ id: 1 })[orWhereNotMethod]('name', 'ko');
+      expect(query.toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = 1 OR NOT "user"."name" ${sql} ${prepend}'ko'${append}
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle sub query', () => {
+      const q = User.all();
+
+      const query = q
+        .where({ id: 1 })
+        [orWhereNotMethod]('name', User.select('name').take());
+      expect(query.toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = 1 OR NOT "user"."name" ${sql} ${prepend}(SELECT "user"."name" FROM "user" LIMIT 1)${append}
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle raw query', () => {
+      const q = User.all();
+
+      const query = q.where({ id: 1 })[orWhereNotMethod]('name', raw("'ko'"));
+      expect(query.toSql()).toBe(
+        line(`
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = 1 OR NOT "user"."name" ${sql} ${prepend}'ko'${append}
+        `),
+      );
+
+      expectQueryNotMutated(q);
+    });
+  });
+});

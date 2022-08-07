@@ -78,6 +78,10 @@ const applyWhereIn = <T extends Query>(
   return q[method](obj as unknown as WhereArg<T>);
 };
 
+type TextColumnName<T extends Query> = {
+  [K in keyof T['shape']]: T['shape'][K]['type'] extends string ? K : never;
+}[keyof T['shape']];
+
 export class Where {
   where<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
     return this.clone()._where(...args);
@@ -418,6 +422,413 @@ export class Where {
   ): T {
     return this._orNot({
       [column]: { between: values },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereContains<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._whereContains(column, value);
+  }
+  _whereContains<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._where({
+      [column]: { contains: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereContains<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereContains(column, value);
+  }
+  _orWhereContains<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._or({
+      [column]: { contains: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereNotContains<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._whereNotContains(column, value);
+  }
+  _whereNotContains<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._whereNot({
+      [column]: { contains: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereNotContains<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereNotContains(column, value);
+  }
+  _orWhereNotContains<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._orNot({
+      [column]: { contains: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereContainsInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._whereContainsInsensitive(column, value);
+  }
+  _whereContainsInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._where({
+      [column]: { containsInsensitive: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereContainsInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereContainsInsensitive(column, value);
+  }
+  _orWhereContainsInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._or({
+      [column]: { containsInsensitive: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereNotContainsInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._whereNotContainsInsensitive(column, value);
+  }
+  _whereNotContainsInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._whereNot({
+      [column]: { containsInsensitive: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereNotContainsInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereNotContainsInsensitive(column, value);
+  }
+  _orWhereNotContainsInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._orNot({
+      [column]: { containsInsensitive: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereStartsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._whereStartsWith(column, value);
+  }
+  _whereStartsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._where({
+      [column]: { startsWith: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereStartsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereStartsWith(column, value);
+  }
+  _orWhereStartsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._or({
+      [column]: { startsWith: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereNotStartsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._whereNotStartsWith(column, value);
+  }
+  _whereNotStartsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._whereNot({
+      [column]: { startsWith: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereNotStartsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereNotStartsWith(column, value);
+  }
+  _orWhereNotStartsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._orNot({
+      [column]: { startsWith: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereStartsWithInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._whereStartsWithInsensitive(column, value);
+  }
+  _whereStartsWithInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._where({
+      [column]: { startsWithInsensitive: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereStartsWithInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereStartsWithInsensitive(column, value);
+  }
+  _orWhereStartsWithInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._or({
+      [column]: { startsWithInsensitive: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereNotStartsWithInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._whereNotStartsWithInsensitive(column, value);
+  }
+  _whereNotStartsWithInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._whereNot({
+      [column]: { startsWithInsensitive: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereNotStartsWithInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereNotStartsWithInsensitive(column, value);
+  }
+  _orWhereNotStartsWithInsensitive<
+    T extends Query,
+    C extends TextColumnName<T>,
+  >(this: T, column: C, value: string | Query | RawExpression): T {
+    return this._orNot({
+      [column]: { startsWithInsensitive: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereEndsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._whereEndsWith(column, value);
+  }
+  _whereEndsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._where({
+      [column]: { endsWith: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereEndsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereEndsWith(column, value);
+  }
+  _orWhereEndsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._or({
+      [column]: { endsWith: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereNotEndsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._whereNotEndsWith(column, value);
+  }
+  _whereNotEndsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._whereNot({
+      [column]: { endsWith: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereNotEndsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereNotEndsWith(column, value);
+  }
+  _orWhereNotEndsWith<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._orNot({
+      [column]: { endsWith: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereEndsWithInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._whereEndsWithInsensitive(column, value);
+  }
+  _whereEndsWithInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._where({
+      [column]: { endsWithInsensitive: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereEndsWithInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereEndsWithInsensitive(column, value);
+  }
+  _orWhereEndsWithInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._or({
+      [column]: { endsWithInsensitive: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  whereNotEndsWithInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._whereNotEndsWithInsensitive(column, value);
+  }
+  _whereNotEndsWithInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._whereNot({
+      [column]: { endsWithInsensitive: value },
+    } as unknown as WhereArg<T>);
+  }
+
+  orWhereNotEndsWithInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this.clone()._orWhereNotEndsWithInsensitive(column, value);
+  }
+  _orWhereNotEndsWithInsensitive<T extends Query, C extends TextColumnName<T>>(
+    this: T,
+    column: C,
+    value: string | Query | RawExpression,
+  ): T {
+    return this._orNot({
+      [column]: { endsWithInsensitive: value },
     } as unknown as WhereArg<T>);
   }
 }
