@@ -50,7 +50,7 @@ const on: On = function (leftColumn, op, rightColumn) {
 
 const _on: On = function (leftColumn, op, rightColumn) {
   return pushQueryValue(this, 'and', {
-    item: { on: [leftColumn, op, rightColumn] },
+    item: { type: 'on', on: [leftColumn, op, rightColumn] },
   });
 };
 
@@ -60,7 +60,7 @@ const onOr: On = function (leftColumn, op, rightColumn) {
 
 const _onOr: On = function (leftColumn, op, rightColumn) {
   return pushQueryValue(this, 'or', [
-    { item: { on: [leftColumn, op, rightColumn] } },
+    { item: { type: 'on', on: [leftColumn, op, rightColumn] } },
   ]);
 };
 

@@ -283,24 +283,6 @@ describe('queryMethods', () => {
     });
   });
 
-  describe('findBy', () => {
-    it('like where but with take', () => {
-      const q = User.all();
-      expect(q.findBy({ name: 's' }).toSql()).toBe(
-        `SELECT "user".* FROM "user" WHERE "user"."name" = 's' LIMIT 1`,
-      );
-      expectQueryNotMutated(q);
-    });
-
-    it('should accept raw', () => {
-      const q = User.all();
-      expect(q.findBy({ name: raw(`'string'`) }).toSql()).toBe(
-        `SELECT "user".* FROM "user" WHERE "user"."name" = 'string' LIMIT 1`,
-      );
-      expectQueryNotMutated(q);
-    });
-  });
-
   describe('as', () => {
     it('sets table alias', () => {
       const q = User.all();

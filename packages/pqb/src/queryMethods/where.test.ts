@@ -71,24 +71,6 @@ describe('where', () => {
     expectQueryNotMutated(q);
   });
 
-  it('should handle { on: [leftColumn, operator, rightColumn] }', () => {
-    const q = User.all();
-    expect(
-      q
-        .join(Message, 'authorId', '=', 'id')
-        .where({ on: ['id', '=', 'message.authorId'] })
-        .toSql(),
-    ).toBe(
-      line(`
-        SELECT "user".*
-        FROM "user"
-        JOIN "message" ON "message"."authorId" = "user"."id"
-        WHERE "user"."id" = "message"."authorId"
-      `),
-    );
-    expectQueryNotMutated(q);
-  });
-
   it('should handle condition with operator', () => {
     const q = User.all();
     expect(q.where({ age: { gt: 20 } }).toSql()).toBe(
@@ -132,6 +114,24 @@ describe('where', () => {
   });
 });
 
+describe('findBy', () => {
+  it('like where but with take', () => {
+    const q = User.all();
+    expect(q.findBy({ name: 's' }).toSql()).toBe(
+      `SELECT "user".* FROM "user" WHERE "user"."name" = 's' LIMIT 1`,
+    );
+    expectQueryNotMutated(q);
+  });
+
+  it('should accept raw', () => {
+    const q = User.all();
+    expect(q.findBy({ name: raw(`'string'`) }).toSql()).toBe(
+      `SELECT "user".* FROM "user" WHERE "user"."name" = 'string' LIMIT 1`,
+    );
+    expectQueryNotMutated(q);
+  });
+});
+
 describe('whereNot', () => {
   it('should handle null value', () => {
     const q = User.all();
@@ -157,24 +157,6 @@ describe('whereNot', () => {
         WHERE NOT "user"."id" = 1 AND NOT (
           "user"."id" = 2 OR "user"."id" = 3 AND "user"."name" = 'n'
         )
-      `),
-    );
-    expectQueryNotMutated(q);
-  });
-
-  it('should handle { on: [leftColumn, operator, rightColumn] }', () => {
-    const q = User.all();
-    expect(
-      q
-        .join(Message, 'authorId', '=', 'id')
-        .whereNot({ on: ['id', '=', 'message.authorId'] })
-        .toSql(),
-    ).toBe(
-      line(`
-        SELECT "user".*
-        FROM "user"
-        JOIN "message" ON "message"."authorId" = "user"."id"
-        WHERE NOT "user"."id" = "message"."authorId"
       `),
     );
     expectQueryNotMutated(q);

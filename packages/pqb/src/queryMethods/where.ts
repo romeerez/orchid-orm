@@ -1,5 +1,5 @@
-import { Query } from '../query';
-import { ColumnOperators } from '../sql';
+import { Query, SetQueryReturnsOne } from '../query';
+import { ColumnOperators, WhereItem } from '../sql';
 import { pushQueryArray } from '../queryDataUtils';
 import { RawExpression } from '../common';
 
@@ -11,14 +11,7 @@ type WhereArg<T extends Query> =
         | RawExpression;
     }
   | Query
-  | RawExpression
-  | {
-      on: [
-        leftFullColumn: keyof T['selectable'],
-        op: string,
-        rightFullColumn: keyof T['selectable'],
-      ];
-    };
+  | RawExpression;
 
 type WhereInColumn<T extends Query> =
   | keyof T['shape']
@@ -44,6 +37,16 @@ type WhereInArg<T extends Query> = {
   [K in keyof T['shape']]?: T['shape'][K]['type'][] | Query | RawExpression;
 };
 
+const serializeWhereItem = (item: WhereArg<Query>): WhereItem => {
+  if ('type' in item && typeof item.type === 'string') {
+    return item as unknown as WhereItem;
+  }
+  return {
+    type: 'object',
+    data: item,
+  };
+};
+
 const applyWhereIn = <T extends Query>(
   q: T,
   method: '_where' | '_or',
@@ -56,12 +59,10 @@ const applyWhereIn = <T extends Query>(
   if (values) {
     if (Array.isArray(arg)) {
       return q[method]({
-        [op]: {
-          columns: arg,
-          values,
-        },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any);
+        type: op,
+        columns: arg,
+        values,
+      });
     }
 
     return q[method]({
@@ -86,8 +87,22 @@ export class Where {
     return pushQueryArray(
       this,
       'and',
-      args.map((item) => ({ item })),
+      args.map((item) => ({ item: serializeWhereItem(item) })),
     );
+  }
+
+  findBy<T extends Query>(
+    this: T,
+    ...args: WhereArg<T>[]
+  ): SetQueryReturnsOne<T> {
+    return this.clone()._findBy(...args);
+  }
+
+  _findBy<T extends Query>(
+    this: T,
+    ...args: WhereArg<T>[]
+  ): SetQueryReturnsOne<T> {
+    return this._where(...args).take();
   }
 
   whereNot<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
@@ -98,7 +113,7 @@ export class Where {
     return pushQueryArray(
       this,
       'and',
-      args.map((item) => ({ item, not: true })),
+      args.map((item) => ({ item: serializeWhereItem(item), not: true })),
     );
   }
 
@@ -126,7 +141,7 @@ export class Where {
     return pushQueryArray(
       this,
       'or',
-      args.map((item) => [{ item }]),
+      args.map((item) => [{ item: serializeWhereItem(item) }]),
     );
   }
 
@@ -138,7 +153,7 @@ export class Where {
     return pushQueryArray(
       this,
       'or',
-      args.map((item) => [{ item, not: true }]),
+      args.map((item) => [{ item: serializeWhereItem(item), not: true }]),
     );
   }
 

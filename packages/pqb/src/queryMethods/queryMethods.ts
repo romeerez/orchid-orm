@@ -18,7 +18,7 @@ import {
   GetTypesOrRaw,
   PropertyKeyUnionToArray,
 } from '../utils';
-import { HavingArg, OrderBy, toSql, WhereItem, WindowArg } from '../sql';
+import { HavingArg, OrderBy, toSql, WindowArg } from '../sql';
 import {
   pushQueryArray,
   pushQueryValue,
@@ -212,20 +212,6 @@ export class QueryMethods {
       conditions[key as keyof ColumnShapeOutput<T['shape']>] = args[i];
     });
     return this._where(conditions)._take();
-  }
-
-  findBy<T extends Query>(
-    this: T,
-    ...args: WhereItem<T>[]
-  ): SetQueryReturnsOne<T> {
-    return this.clone()._findBy(...args);
-  }
-
-  _findBy<T extends Query>(
-    this: T,
-    ...args: WhereItem<T>[]
-  ): SetQueryReturnsOne<T> {
-    return this._where(...args).take();
   }
 
   as<T extends Query, TableAlias extends string>(

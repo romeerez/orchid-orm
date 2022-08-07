@@ -10,18 +10,18 @@ import { Aggregate1ArgumentTypes } from '../queryMethods/aggregate';
 import { ColumnsShape, ColumnType } from '../columnSchema';
 import { JoinQuery } from '../queryMethods/join';
 
-export type CommonQueryData<T extends Query = Query> = {
+export type CommonQueryData = {
   take?: true;
   with?: WithItem[];
   withShapes?: Record<string, ColumnsShape>;
   schema?: string;
   as?: string;
-  and?: { item: WhereItem<T>; not?: boolean }[];
-  or?: { item: WhereItem<T>; not?: boolean }[][];
+  and?: { item: WhereItem; not?: boolean }[];
+  or?: { item: WhereItem; not?: boolean }[][];
   parsers?: ColumnsParsers;
 };
 
-export type SelectQueryData<T extends Query = Query> = CommonQueryData<T> & {
+export type SelectQueryData<T extends Query = Query> = CommonQueryData & {
   select?: SelectItem<T>[];
   distinct?: Expression<T>[];
   from?: string | Query | RawExpression;
@@ -42,7 +42,7 @@ export type SelectQueryData<T extends Query = Query> = CommonQueryData<T> & {
   };
 };
 
-export type InsertQueryData<T extends Query = Query> = CommonQueryData<T> & {
+export type InsertQueryData = CommonQueryData & {
   type: 'insert';
   data:
     | Record<string, unknown>
@@ -67,7 +67,7 @@ export type InsertQueryData<T extends Query = Query> = CommonQueryData<T> & {
       };
 };
 
-export type UpdateQueryData<T extends Query = Query> = CommonQueryData<T> & {
+export type UpdateQueryData = CommonQueryData & {
   type: 'update';
   data: (
     | Record<string, RawExpression | { op: string; arg: unknown } | unknown>
@@ -76,32 +76,31 @@ export type UpdateQueryData<T extends Query = Query> = CommonQueryData<T> & {
   returning?: (string[] | '*')[];
 };
 
-export type DeleteQueryData<T extends Query = Query> = CommonQueryData<T> & {
+export type DeleteQueryData = CommonQueryData & {
   type: 'delete';
   returning?: (string[] | '*')[];
   join?: JoinItem[];
   joinedParsers?: Record<string, ColumnsParsers>;
 };
 
-export type TruncateQueryData<T extends Query = Query> = CommonQueryData<T> & {
+export type TruncateQueryData = CommonQueryData & {
   type: 'truncate';
   restartIdentity?: boolean;
   cascade?: boolean;
 };
 
-export type ColumnInfoQueryData<T extends Query = Query> =
-  CommonQueryData<T> & {
-    type: 'columnInfo';
-    column?: string;
-  };
+export type ColumnInfoQueryData = CommonQueryData & {
+  type: 'columnInfo';
+  column?: string;
+};
 
 export type QueryData<T extends Query = Query> =
   | SelectQueryData<T>
-  | InsertQueryData<T>
-  | UpdateQueryData<T>
-  | DeleteQueryData<T>
-  | TruncateQueryData<T>
-  | ColumnInfoQueryData<T>;
+  | InsertQueryData
+  | UpdateQueryData
+  | DeleteQueryData
+  | TruncateQueryData
+  | ColumnInfoQueryData;
 
 export type WithItem = [
   as: string,
@@ -183,33 +182,32 @@ export type JoinItem =
       rawOrJoinQuery: RawExpression | JoinQuery,
     ];
 
-export type WhereItem<T extends Query> =
-  | Partial<T['type']>
+export type WhereItem =
   | {
-      [K in keyof T['selectable']]?:
-        | ColumnOperators<T['selectable'], K>
+      type: 'object';
+      data:
+        | Record<
+            string,
+            | unknown
+            | Record<string, unknown | Query | RawExpression>
+            | RawExpression
+          >
+        | Query
         | RawExpression;
     }
-  | Query
-  | RawExpression
   | {
-      on: [
-        leftFullColumn: keyof T['selectable'],
-        op: string,
-        rightFullColumn: keyof T['selectable'],
-      ];
+      type: 'on';
+      on: [leftFullColumn: string, op: string, rightFullColumn: string];
     }
   | {
-      in: {
-        columns: (keyof T['shape'])[];
-        values: unknown[][] | Query | RawExpression;
-      };
+      type: 'in';
+      columns: string[];
+      values: unknown[][] | Query | RawExpression;
     }
   | {
-      notIn: {
-        columns: (keyof T['shape'])[];
-        values: unknown[][] | Query | RawExpression;
-      };
+      type: 'notIn';
+      columns: string[];
+      values: unknown[][] | Query | RawExpression;
     };
 
 export type AggregateOptions<

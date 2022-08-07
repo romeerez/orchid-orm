@@ -3,6 +3,7 @@ import { QueryData } from './types';
 import { q, qc, quoteFullColumn } from './common';
 import { EMPTY_OBJECT, getRaw, isRaw, RawExpression } from '../common';
 import { quote } from '../quote';
+import { pushOperatorSql } from './operator';
 
 export const pushWhereSql = (
   sql: string[],
@@ -40,23 +41,72 @@ export const whereToSql = (
     and.forEach(({ item, not }) => {
       const prefix = not ? 'NOT ' : '';
 
-      if ('prototype' in item || '__model' in item) {
-        const query = item as Query;
-        const sql = whereToSql(
-          query,
-          query.query || EMPTY_OBJECT,
-          query.table && q(query.table),
-        );
-        if (sql.length) ands.push(`${prefix}(${sql})`);
+      if (item.type === 'object') {
+        const { data } = item;
+
+        if ('prototype' in data || '__model' in data) {
+          const query = data as Query;
+          const sql = whereToSql(
+            query,
+            query.query || EMPTY_OBJECT,
+            query.table && q(query.table),
+          );
+          if (sql.length) ands.push(`${prefix}(${sql})`);
+          return;
+        }
+
+        if (isRaw(data)) {
+          ands.push(`${prefix}(${getRaw(data)})`);
+          return;
+        }
+
+        for (const key in data) {
+          const value = (data as Record<string, object>)[key];
+          if (
+            typeof value === 'object' &&
+            value !== null &&
+            value !== undefined
+          ) {
+            if (isRaw(value)) {
+              ands.push(`${prefix}${qc(key, quotedAs)} = ${getRaw(value)}`);
+            } else {
+              const column = model.shape[key];
+              if (!column) {
+                // TODO: custom error classes
+                throw new Error(`Unknown column ${key} provided to condition`);
+              }
+
+              for (const op in value) {
+                const operator = column.operators[op];
+                if (!operator) {
+                  // TODO: custom error classes
+                  throw new Error(
+                    `Unknown operator ${op} provided to condition`,
+                  );
+                }
+
+                pushOperatorSql(
+                  ands,
+                  prefix,
+                  operator,
+                  qc(key, quotedAs),
+                  value,
+                  op,
+                );
+              }
+            }
+          } else {
+            ands.push(
+              `${prefix}${qc(key, quotedAs)} ${
+                value === null ? 'IS' : '='
+              } ${quote(value)}`,
+            );
+          }
+        }
         return;
       }
 
-      if (isRaw(item)) {
-        ands.push(`${prefix}(${getRaw(item)})`);
-        return;
-      }
-
-      if ('on' in item && Array.isArray(item.on)) {
+      if (item.type === 'on') {
         const leftColumn = quoteFullColumn(item.on[0], quotedAs);
         const rightColumn = quoteFullColumn(item.on[2], otherTableQuotedAs);
         const op = item.on[1];
@@ -64,56 +114,14 @@ export const whereToSql = (
         return;
       }
 
-      if ('in' in item && typeof item.in === 'object') {
-        pushIn(ands, prefix, quotedAs, item.in, 'IN');
+      if (item.type === 'in') {
+        pushIn(ands, prefix, quotedAs, item, 'IN');
         return;
       }
 
-      if ('notIn' in item && typeof item.notIn === 'object') {
-        pushIn(ands, prefix, quotedAs, item.notIn, 'NOT IN');
+      if (item.type === 'notIn') {
+        pushIn(ands, prefix, quotedAs, item, 'NOT IN');
         return;
-      }
-
-      for (const key in item) {
-        const value = (item as Record<string, object>)[key];
-        if (
-          typeof value === 'object' &&
-          value !== null &&
-          value !== undefined
-        ) {
-          if (isRaw(value)) {
-            ands.push(`${prefix}${qc(key, quotedAs)} = ${getRaw(value)}`);
-          } else {
-            const column = model.shape[key];
-            if (!column) {
-              // TODO: custom error classes
-              throw new Error(`Unknown column ${key} provided to condition`);
-            }
-
-            for (const op in value) {
-              const operator = column.operators[op];
-              if (!operator) {
-                // TODO: custom error classes
-                throw new Error(`Unknown operator ${op} provided to condition`);
-              }
-
-              ands.push(
-                `${prefix}${operator(
-                  qc(key, quotedAs),
-                  processOperatorArg(
-                    value[op as keyof typeof value] as unknown,
-                  ),
-                )}`,
-              );
-            }
-          }
-        } else {
-          ands.push(
-            `${prefix}${qc(key, quotedAs)} ${
-              value === null ? 'IS' : '='
-            } ${quote(value)}`,
-          );
-        }
       }
     });
     ors.push(ands.join(' AND '));
@@ -122,35 +130,16 @@ export const whereToSql = (
   return ors.join(' OR ');
 };
 
-const processOperatorArg = (arg: unknown): string => {
-  if (arg && typeof arg === 'object') {
-    if (Array.isArray(arg)) {
-      return `(${arg.map(quote).join(', ')})`;
-    }
-
-    if ('toSql' in arg) {
-      return `(${(arg as Query).toSql()})`;
-    }
-
-    if (isRaw(arg)) {
-      return getRaw(arg);
-    }
-  }
-
-  return quote(arg);
-};
-
 const pushIn = (
   ands: string[],
   prefix: string,
   quotedAs: string | undefined,
-  input: unknown,
-  op: 'IN' | 'NOT IN',
-) => {
-  const arg = input as {
+  arg: {
     columns: string[];
     values: unknown[][] | Query | RawExpression;
-  };
+  },
+  op: 'IN' | 'NOT IN',
+) => {
   ands.push(
     `${prefix}(${arg.columns
       .map((column) => quoteFullColumn(column, quotedAs))

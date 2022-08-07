@@ -4,6 +4,7 @@ import { Operator } from '../operators';
 import { aggregateToSql } from './aggregate';
 import { quote } from '../quote';
 import { Query } from '../query';
+import { pushOperatorSql } from './operator';
 
 const aggregateOptionNames: (keyof AggregateOptions)[] = [
   'distinct',
@@ -18,10 +19,10 @@ export const pushHavingSql = <T extends Query>(
   having: Exclude<SelectQueryData<T>['having'], undefined>,
   quotedAs?: string,
 ) => {
-  const list: string[] = [];
+  const ands: string[] = [];
   having.forEach((item) => {
     if (isRaw(item)) {
-      list.push(getRaw(item));
+      ands.push(getRaw(item));
       return;
     }
     for (const key in item) {
@@ -45,23 +46,28 @@ export const pushHavingSql = <T extends Query>(
                 // TODO: custom error classes
                 throw new Error(`Unknown operator ${op} provided to condition`);
               }
-              list.push(
-                operator(
-                  aggregateToSql(
-                    {
-                      function: key,
-                      arg: column,
-                      options: valueOrOptions as AggregateOptions<T>,
-                    },
-                    quotedAs,
-                  ),
-                  valueOrOptions[op],
-                ),
+
+              const expression = aggregateToSql(
+                {
+                  function: key,
+                  arg: column,
+                  options: valueOrOptions as AggregateOptions<T>,
+                },
+                quotedAs,
+              );
+
+              pushOperatorSql(
+                ands,
+                '',
+                operator,
+                expression,
+                valueOrOptions as object,
+                op,
               );
             }
           }
         } else {
-          list.push(
+          ands.push(
             `${aggregateToSql(
               {
                 function: key,
@@ -75,5 +81,5 @@ export const pushHavingSql = <T extends Query>(
       }
     }
   });
-  sql.push(`HAVING ${list.join(' AND ')}`);
+  sql.push(`HAVING ${ands.join(' AND ')}`);
 };
