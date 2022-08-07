@@ -18,6 +18,12 @@ export type ColumnsParsers = Record<string, ColumnParser>;
 
 export type SelectableBase = Record<string, { as: string; column: ColumnType }>;
 
+export type QueryBase = {
+  query?: QueryData;
+  toQuery(): { query: QueryData };
+  selectable: SelectableBase;
+};
+
 export type Query = QueryMethods & {
   adapter: PostgresAdapter;
   queryBuilder: Db;

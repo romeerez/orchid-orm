@@ -53,8 +53,8 @@ export const processJoinItem = (
       const onConditions = whereToSql(
         query,
         joinQuery.query,
-        quotedAs,
         q(as as string),
+        quotedAs,
       );
       const conditions = onConditions ? onConditions : undefined;
 
@@ -70,7 +70,12 @@ export const processJoinItem = (
         conditions = getObjectOrRawConditions(arg.data, quotedAs, target);
       } else if (arg.query.query) {
         const shape = query.withShapes?.[first] as ColumnsShape;
-        const onConditions = whereToSql({ shape }, arg.query.query, target);
+        const onConditions = whereToSql(
+          { shape },
+          arg.query.query,
+          target,
+          quotedAs,
+        );
         if (onConditions) conditions = onConditions;
       }
     } else if (args.length >= 3) {
@@ -102,7 +107,12 @@ export const processJoinItem = (
     if (arg.type === 'objectOrRaw') {
       conditions = getObjectOrRawConditions(arg.data, quotedAs, joinAs);
     } else if (arg.query.query) {
-      const onConditions = whereToSql(joinTarget, arg.query.query, joinAs);
+      const onConditions = whereToSql(
+        joinTarget,
+        arg.query.query,
+        joinAs,
+        quotedAs,
+      );
       if (onConditions) conditions = onConditions;
     }
   } else if (args.length >= 3) {

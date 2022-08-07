@@ -9,88 +9,16 @@ import { QueryData } from '../sql';
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
 import { RawExpression, StringKey } from '../common';
 import { getClonedQueryData } from '../utils';
-
-type PickQueryForSelect<T extends Query = Query> = Pick<
-  T,
-  'table' | 'tableAlias' | 'selectable'
->;
-
-export type JoinQuery<
-  T extends Query = Query,
-  J extends PickQueryForSelect = PickQueryForSelect,
-> = {
-  query?: QueryData;
-  table: T['table'];
-  tableAlias: T['tableAlias'];
-  selectable: T['selectable'] & J['selectable'];
-} & JoinQueryMethods<T, J>;
-
-type JoinQueryMethods<T extends Query, J extends PickQueryForSelect> = {
-  toQuery<Q extends JoinQuery<T, J>>(this: Q): Q & { query: QueryData };
-  clone<Q extends JoinQuery<T, J>>(this: Q): Q & { query: QueryData };
-  on: On<T, J>;
-  _on: On<T, J>;
-  onOr: On<T, J>;
-  _onOr: On<T, J>;
-};
-
-type On<
-  T extends Query = Query,
-  J extends PickQueryForSelect = PickQueryForSelect,
-> = <Q extends JoinQuery<T, J>>(
-  this: Q,
-  leftColumn: keyof Q['selectable'],
-  ...rest:
-    | [op: string, rightColumn: keyof Q['selectable']]
-    | [rightColumn: keyof Q['selectable']]
-) => Q;
-
-const on: On = function (leftColumn, ...rest) {
-  return this.clone()._on(leftColumn, ...rest);
-};
-
-const _on: On = function (leftColumn, ...rest) {
-  return pushQueryValue(this, 'and', {
-    item: {
-      type: 'on',
-      on:
-        rest.length === 1
-          ? [leftColumn, rest[0]]
-          : [leftColumn, rest[0], rest[1]],
-    },
-  });
-};
-
-const onOr: On = function (leftColumn, ...rest) {
-  return this.clone()._on(leftColumn, ...rest);
-};
-
-const _onOr: On = function (leftColumn, ...rest) {
-  return pushQueryValue(this, 'or', [
-    {
-      item: {
-        type: 'on',
-        on:
-          rest.length === 1
-            ? [leftColumn, rest[0]]
-            : [leftColumn, rest[0], rest[1]],
-      },
-    },
-  ]);
-};
-
-const joinQueryMethods: JoinQueryMethods<Query, PickQueryForSelect> = {
-  toQuery<Q extends JoinQuery>(this: Q) {
-    return (this.query ? this : this.clone()) as Q & { query: QueryData };
-  },
-  clone() {
-    return { ...this, query: getClonedQueryData(this.query) };
-  },
-  on,
-  _on,
-  onOr,
-  _onOr,
-};
+import {
+  addOr,
+  addOrNot,
+  addWhere,
+  addWhereNot,
+  applyIn,
+  WhereBetweenValues,
+  WhereInColumn,
+  WhereInValues,
+} from './where';
 
 type WithSelectable<
   T extends Query,
@@ -147,7 +75,7 @@ type JoinArgs<
   | [
       query: QW,
       on: (
-        q: JoinQuery<
+        q: OnQueryBuilder<
           T,
           QW extends keyof T['withData']
             ? T['withData'][QW] extends WithDataItem
@@ -167,7 +95,7 @@ type JoinArgs<
             ? QW
             : never
         >,
-      ) => JoinQuery,
+      ) => OnQueryBuilder,
     ];
 
 type JoinResult<
@@ -243,13 +171,7 @@ const _join = <T extends Query, Args extends JoinArgs<T>>(
   if (typeof args[1] === 'function') {
     const [modelOrWith, fn] = args;
 
-    const resultQuery = fn({
-      table: q.table,
-      tableAlias: q.query?.as,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      selectable: undefined as any,
-      ...joinQueryMethods,
-    });
+    const resultQuery = fn(new OnQueryBuilder(q.table, q.query?.as));
 
     return pushQueryValue(q, 'join', {
       type,
@@ -365,5 +287,392 @@ export class Join {
     ...args: Args
   ): JoinResult<T, Args> {
     return _join(this, 'FULL OUTER JOIN', args);
+  }
+}
+
+type PickQueryForSelect<T extends Query = Query> = Pick<
+  T,
+  'table' | 'tableAlias' | 'selectable'
+>;
+
+type OnArgs<Q extends OnQueryBuilder> =
+  | [leftColumn: keyof Q['selectable'], rightColumn: keyof Q['selectable']]
+  | [
+      leftColumn: keyof Q['selectable'],
+      op: string,
+      rightColumn: keyof Q['selectable'],
+    ];
+
+class OnQueryBuilder<
+  T extends Query = Query,
+  J extends PickQueryForSelect = PickQueryForSelect,
+> {
+  query?: QueryData;
+  selectable!: T['selectable'] & J['selectable'];
+  private __model?: this;
+
+  constructor(public table: T['table'], public tableAlias: T['tableAlias']) {}
+
+  toQuery<Q extends this>(this: Q): Q & { query: QueryData } {
+    return (this.query ? this : this.clone()) as Q & { query: QueryData };
+  }
+
+  clone<Q extends this>(this: Q): Q & { query: QueryData } {
+    const cloned = Object.create(this);
+    if (!this.__model) {
+      cloned.__model = this;
+    }
+
+    cloned.query = getClonedQueryData<Query>(this.query);
+
+    return cloned as unknown as Q & { query: QueryData };
+  }
+
+  on<Q extends this>(this: Q, ...args: OnArgs<Q>): Q {
+    return this.clone()._on(...args);
+  }
+
+  _on<Q extends this>(this: Q, ...args: OnArgs<Q>): Q {
+    return pushQueryValue(this, 'and', {
+      item: {
+        type: 'on',
+        on: args,
+      },
+    });
+  }
+
+  orOn<Q extends this>(this: Q, ...args: OnArgs<Q>): Q {
+    return this.clone()._orOn(...args);
+  }
+
+  _orOn<Q extends this>(this: Q, ...args: OnArgs<Q>): Q {
+    return pushQueryValue(this, 'or', [
+      {
+        item: {
+          type: 'on',
+          on: args,
+        },
+      },
+    ]);
+  }
+
+  onIn<Q extends this, Column extends WhereInColumn<Q>>(
+    this: Q,
+    columns: Column,
+    values: WhereInValues<Q, Column>,
+  ): Q {
+    return this.clone()._onIn(columns, values);
+  }
+
+  _onIn<Q extends this, Column extends WhereInColumn<Q>>(
+    this: Q,
+    columns: Column,
+    values: WhereInValues<Q, Column>,
+  ): Q {
+    return applyIn(this, true, columns, values);
+  }
+
+  orOnIn<Q extends this, Column extends WhereInColumn<Q>>(
+    this: Q,
+    columns: Column,
+    values: WhereInValues<Q, Column>,
+  ): Q {
+    return this.clone()._orOnIn(columns, values);
+  }
+
+  _orOnIn<Q extends this, Column extends WhereInColumn<Q>>(
+    this: Q,
+    columns: Column,
+    values: WhereInValues<Q, Column>,
+  ): Q {
+    return applyIn(this, false, columns, values);
+  }
+
+  onNotIn<Q extends this, Column extends WhereInColumn<Q>>(
+    this: Q,
+    columns: Column,
+    values: WhereInValues<Q, Column>,
+  ): Q {
+    return this.clone()._onNotIn(columns, values);
+  }
+
+  _onNotIn<Q extends this, Column extends WhereInColumn<Q>>(
+    this: Q,
+    columns: Column,
+    values: WhereInValues<Q, Column>,
+  ): Q {
+    return applyIn(this, true, columns, values, true);
+  }
+
+  orOnNotIn<Q extends this, Column extends WhereInColumn<Q>>(
+    this: Q,
+    columns: Column,
+    values: WhereInValues<Q, Column>,
+  ): Q {
+    return this.clone()._orOnNotIn(columns, values);
+  }
+
+  _orOnNotIn<Q extends this, Column extends WhereInColumn<Q>>(
+    this: Q,
+    columns: Column,
+    values: WhereInValues<Q, Column>,
+  ): Q {
+    return applyIn(this, false, columns, values, true);
+  }
+
+  onNull<Q extends this>(this: Q, column: keyof Q['selectable']): Q {
+    return this.clone()._onNull(column);
+  }
+
+  _onNull<Q extends this>(this: Q, column: keyof Q['selectable']): Q {
+    return addWhere(this, [{ [column]: null }]);
+  }
+
+  orOnNull<Q extends this>(this: Q, column: keyof Q['selectable']): Q {
+    return this.clone()._orOnNull(column);
+  }
+
+  _orOnNull<Q extends this>(this: Q, column: keyof Q['selectable']): Q {
+    return addOr(this, [{ [column]: null }]);
+  }
+
+  onNotNull<Q extends this>(this: Q, column: keyof Q['selectable']): Q {
+    return this.clone()._onNotNull(column);
+  }
+
+  _onNotNull<Q extends this>(this: Q, column: keyof Q['selectable']): Q {
+    return addWhereNot(this, [{ [column]: null }]);
+  }
+
+  orOnNotNull<Q extends this>(this: Q, column: keyof Q['selectable']): Q {
+    return this.clone()._orOnNotNull(column);
+  }
+
+  _orOnNotNull<Q extends this>(this: Q, column: keyof Q['selectable']): Q {
+    return addOrNot(this, [{ [column]: null }]);
+  }
+
+  onExists<Q extends this>(this: Q, query: Query | RawExpression): Q {
+    return this.clone()._onExists(query);
+  }
+
+  _onExists<Q extends this>(this: Q, query: Query | RawExpression): Q {
+    return addWhere(this, [{ type: 'exists', query }]);
+  }
+
+  orOnExists<Q extends this>(this: Q, query: Query | RawExpression): Q {
+    return this.clone()._orOnExists(query);
+  }
+
+  _orOnExists<Q extends this>(this: Q, query: Query | RawExpression): Q {
+    return addOr(this, [{ type: 'exists', query }]);
+  }
+
+  onNotExists<Q extends this>(this: Q, query: Query | RawExpression): Q {
+    return this.clone()._onNotExists(query);
+  }
+
+  _onNotExists<Q extends this>(this: Q, query: Query | RawExpression): Q {
+    return addWhereNot(this, [{ type: 'exists', query }]);
+  }
+
+  orOnNotExists<Q extends this>(this: Q, query: Query | RawExpression): Q {
+    return this.clone()._orOnNotExists(query);
+  }
+
+  _orOnNotExists<Q extends this>(this: Q, query: Query | RawExpression): Q {
+    return addOrNot(this, [{ type: 'exists', query }]);
+  }
+
+  onBetween<Q extends this, C extends keyof Q['selectable']>(
+    this: Q,
+    column: C,
+    values: WhereBetweenValues<Q, C>,
+  ): Q {
+    return this.clone()._onBetween(column, values);
+  }
+
+  _onBetween<Q extends this, C extends keyof Q['selectable']>(
+    this: Q,
+    column: C,
+    values: WhereBetweenValues<Q, C>,
+  ): Q {
+    return addWhere(this, [{ [column]: { between: values } }]);
+  }
+
+  orOnBetween<Q extends this, C extends keyof Q['selectable']>(
+    this: Q,
+    column: C,
+    values: WhereBetweenValues<Q, C>,
+  ): Q {
+    return this.clone()._orOnBetween(column, values);
+  }
+
+  _orOnBetween<Q extends this, C extends keyof Q['selectable']>(
+    this: Q,
+    column: C,
+    values: WhereBetweenValues<Q, C>,
+  ): Q {
+    return addOr(this, [{ [column]: { between: values } }]);
+  }
+
+  onNotBetween<Q extends this, C extends keyof Q['selectable']>(
+    this: Q,
+    column: C,
+    values: WhereBetweenValues<Q, C>,
+  ): Q {
+    return this.clone()._onNotBetween(column, values);
+  }
+
+  _onNotBetween<Q extends this, C extends keyof Q['selectable']>(
+    this: Q,
+    column: C,
+    values: WhereBetweenValues<Q, C>,
+  ): Q {
+    return addWhereNot(this, [{ [column]: { between: values } }]);
+  }
+
+  orOnNotBetween<Q extends this, C extends keyof Q['selectable']>(
+    this: Q,
+    column: C,
+    values: WhereBetweenValues<Q, C>,
+  ): Q {
+    return this.clone()._orOnNotBetween(column, values);
+  }
+
+  _orOnNotBetween<Q extends this, C extends keyof Q['selectable']>(
+    this: Q,
+    column: C,
+    values: WhereBetweenValues<Q, C>,
+  ): Q {
+    return addOrNot(this, [{ [column]: { between: values } }]);
+  }
+
+  onJsonPathEquals<
+    Q extends this,
+    LeftColumn extends keyof Q['selectable'],
+    RightColumn extends keyof Q['selectable'],
+  >(
+    this: Q,
+    ...args: [
+      leftColumn: LeftColumn,
+      leftPath: string,
+      rightColumn: RightColumn,
+      rightPath: string,
+    ]
+  ): Q {
+    return this.clone()._onJsonPathEquals(...args);
+  }
+
+  _onJsonPathEquals<
+    Q extends this,
+    LeftColumn extends keyof Q['selectable'],
+    RightColumn extends keyof Q['selectable'],
+  >(
+    this: Q,
+    ...args: [
+      leftColumn: LeftColumn,
+      leftPath: string,
+      rightColumn: RightColumn,
+      rightPath: string,
+    ]
+  ): Q {
+    return addWhere(this, [{ type: 'onJsonPathEquals', data: args }]);
+  }
+
+  orOnJsonPathEquals<
+    Q extends this,
+    LeftColumn extends keyof Q['selectable'],
+    RightColumn extends keyof Q['selectable'],
+  >(
+    this: Q,
+    ...args: [
+      leftColumn: LeftColumn,
+      leftPath: string,
+      rightColumn: RightColumn,
+      rightPath: string,
+    ]
+  ): Q {
+    return this.clone()._orOnJsonPathEquals(...args);
+  }
+
+  _orOnJsonPathEquals<
+    Q extends this,
+    LeftColumn extends keyof Q['selectable'],
+    RightColumn extends keyof Q['selectable'],
+  >(
+    this: Q,
+    ...args: [
+      leftColumn: LeftColumn,
+      leftPath: string,
+      rightColumn: RightColumn,
+      rightPath: string,
+    ]
+  ): Q {
+    return addOr(this, [{ type: 'onJsonPathEquals', data: args }]);
+  }
+
+  onNotJsonPathEquals<
+    Q extends this,
+    LeftColumn extends keyof Q['selectable'],
+    RightColumn extends keyof Q['selectable'],
+  >(
+    this: Q,
+    ...args: [
+      leftColumn: LeftColumn,
+      leftPath: string,
+      rightColumn: RightColumn,
+      rightPath: string,
+    ]
+  ): Q {
+    return this.clone()._onNotJsonPathEquals(...args);
+  }
+
+  _onNotJsonPathEquals<
+    Q extends this,
+    LeftColumn extends keyof Q['selectable'],
+    RightColumn extends keyof Q['selectable'],
+  >(
+    this: Q,
+    ...args: [
+      leftColumn: LeftColumn,
+      leftPath: string,
+      rightColumn: RightColumn,
+      rightPath: string,
+    ]
+  ): Q {
+    return addWhereNot(this, [{ type: 'onJsonPathEquals', data: args }]);
+  }
+
+  orOnNotJsonPathEquals<
+    Q extends this,
+    LeftColumn extends keyof Q['selectable'],
+    RightColumn extends keyof Q['selectable'],
+  >(
+    this: Q,
+    ...args: [
+      leftColumn: LeftColumn,
+      leftPath: string,
+      rightColumn: RightColumn,
+      rightPath: string,
+    ]
+  ): Q {
+    return this.clone()._orOnNotJsonPathEquals(...args);
+  }
+
+  _orOnNotJsonPathEquals<
+    Q extends this,
+    LeftColumn extends keyof Q['selectable'],
+    RightColumn extends keyof Q['selectable'],
+  >(
+    this: Q,
+    ...args: [
+      leftColumn: LeftColumn,
+      leftPath: string,
+      rightColumn: RightColumn,
+      rightPath: string,
+    ]
+  ): Q {
+    return addOrNot(this, [{ type: 'onJsonPathEquals', data: args }]);
   }
 }

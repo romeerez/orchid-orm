@@ -131,14 +131,27 @@ export const whereToSql = (
         if (isRaw(item.query)) {
           querySql = getRaw(item.query);
         } else {
-          if (!item.query.query) item.query.query = {};
-          const query = item.query.query as SelectQueryData;
+          const q = item.query.clone();
+          const query = q.query as SelectQueryData;
           query.select = [raw('1')];
           query.limit = 1;
-          querySql = item.query.toSql();
+          querySql = q.toSql();
         }
 
         ands.push(`${prefix}EXISTS (${querySql})`);
+      }
+
+      if (item.type === 'onJsonPathEquals') {
+        const leftColumn = quoteFullColumn(item.data[0], quotedAs);
+        const leftPath = item.data[1];
+        const rightColumn = quoteFullColumn(item.data[2], otherTableQuotedAs);
+        const rightPath = item.data[3];
+        ands.push(
+          `${prefix}jsonb_path_query_first(${leftColumn}, ${quote(
+            leftPath,
+          )}) = jsonb_path_query_first(${rightColumn}, ${quote(rightPath)})`,
+        );
+        return;
       }
     });
     ors.push(ands.join(' AND '));

@@ -16,7 +16,9 @@ export const setQueryValue = <T extends Query>(
   return q;
 };
 
-export const pushQueryArray = <T extends Query>(
+export const pushQueryArray = <
+  T extends { query?: QueryData; toQuery(): { query: QueryData } },
+>(
   self: T,
   key: string,
   value: unknown,
@@ -28,7 +30,7 @@ export const pushQueryArray = <T extends Query>(
     (q.query[key as keyof typeof q.query] as unknown[]).push(
       ...(value as unknown[]),
     );
-  return q;
+  return q as T;
 };
 
 export const pushQueryValue = <

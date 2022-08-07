@@ -8,7 +8,6 @@ import {
 import { Expression, RawExpression } from '../common';
 import { Aggregate1ArgumentTypes } from '../queryMethods/aggregate';
 import { ColumnsShape, ColumnType } from '../columnSchema';
-import { JoinQuery } from '../queryMethods/join';
 
 export type CommonQueryData = {
   take?: true;
@@ -180,7 +179,10 @@ export type JoinItem = {
               type: 'objectOrRaw';
               data: Record<string, string | RawExpression> | RawExpression;
             }
-          | { type: 'query'; query: JoinQuery },
+          | {
+              type: 'query';
+              query: { query?: QueryData };
+            },
       ]
     | [
         withOrQuery: string | QueryWithTable,
@@ -209,12 +211,6 @@ export type WhereItem =
         | RawExpression;
     }
   | {
-      type: 'on';
-      on:
-        | [leftFullColumn: string, rightFullColumn: string]
-        | [leftFullColumn: string, op: string, rightFullColumn: string];
-    }
-  | {
       type: 'in';
       columns: string[];
       values: unknown[][] | Query | RawExpression;
@@ -227,6 +223,21 @@ export type WhereItem =
   | {
       type: 'exists';
       query: Query | RawExpression;
+    }
+  | {
+      type: 'on';
+      on:
+        | [leftFullColumn: string, rightFullColumn: string]
+        | [leftFullColumn: string, op: string, rightFullColumn: string];
+    }
+  | {
+      type: 'onJsonPathEquals';
+      data: [
+        leftColumn: string,
+        leftPath: string,
+        rightColumn: string,
+        rightPath: string,
+      ];
     };
 
 export type AggregateOptions<

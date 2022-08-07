@@ -1,6 +1,6 @@
-import { Query, SetQueryReturnsOne } from '../query';
+import { Query, QueryBase, SetQueryReturnsOne } from '../query';
 import { ColumnOperators, WhereItem } from '../sql';
-import { pushQueryArray } from '../queryDataUtils';
+import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { RawExpression } from '../common';
 import { JSONColumn } from '../columnSchema';
 
@@ -14,19 +14,19 @@ type WhereArg<T extends Query> =
   | Query
   | RawExpression;
 
-type WhereInColumn<T extends Query> =
-  | keyof T['shape']
-  | [keyof T['shape'], ...(keyof T['shape'])[]];
+export type WhereInColumn<T extends Pick<Query, 'selectable'>> =
+  | keyof T['selectable']
+  | [keyof T['selectable'], ...(keyof T['selectable'])[]];
 
-type WhereInValues<
-  T extends Query,
+export type WhereInValues<
+  T extends Pick<Query, 'selectable'>,
   Column extends WhereInColumn<T>,
-> = Column extends keyof T['shape']
-  ? T['shape'][Column]['type'][] | Query | RawExpression
+> = Column extends keyof T['selectable']
+  ? T['selectable'][Column]['column']['type'][] | Query | RawExpression
   :
       | ({
-          [I in keyof Column]: Column[I] extends keyof T['shape']
-            ? T['shape'][Column[I]]['type']
+          [I in keyof Column]: Column[I] extends keyof T['selectable']
+            ? T['selectable'][Column[I]]['column']['type']
             : never;
         } & {
           length: Column extends { length: number } ? Column['length'] : never;
@@ -35,7 +35,10 @@ type WhereInValues<
       | RawExpression;
 
 type WhereInArg<T extends Query> = {
-  [K in keyof T['shape']]?: T['shape'][K]['type'][] | Query | RawExpression;
+  [K in keyof T['selectable']]?:
+    | T['selectable'][K]['column']['type'][]
+    | Query
+    | RawExpression;
 };
 
 const serializeWhereItem = (item: WhereArg<Query>): WhereItem => {
@@ -48,44 +51,112 @@ const serializeWhereItem = (item: WhereArg<Query>): WhereItem => {
   };
 };
 
-const applyWhereIn = <T extends Query>(
+export const applyIn = <T extends QueryBase>(
   q: T,
-  method: '_where' | '_or',
+  and: boolean,
   arg: unknown,
   values: unknown[] | unknown[][] | Query | RawExpression | undefined,
   not?: boolean,
-) => {
+): T => {
   const op = not ? 'notIn' : 'in';
+  let item;
 
   if (values) {
     if (Array.isArray(arg)) {
-      return q[method]({
+      item = {
         type: op,
         columns: arg,
         values,
-      });
+      };
+    } else {
+      item = {
+        type: 'object',
+        data: { [arg as string]: { [op]: values } },
+      };
     }
-
-    return q[method]({
-      [arg as string]: { [op]: values },
-    } as unknown as WhereArg<T>);
+  } else {
+    const obj: Record<string, { in: unknown[] }> = {};
+    for (const key in arg as Record<string, unknown[]>) {
+      obj[key] = { [op as 'in']: (arg as Record<string, unknown[]>)[key] };
+    }
+    item = {
+      type: 'object',
+      data: obj,
+    };
   }
 
-  const obj: Record<string, { in: unknown[] }> = {};
-  for (const key in arg as Record<string, unknown[]>) {
-    obj[key] = { [op as 'in']: (arg as Record<string, unknown[]>)[key] };
+  if (and) {
+    pushQueryValue(q, 'and', { item });
+  } else {
+    pushQueryValue(q, 'or', [{ item }]);
   }
 
-  return q[method](obj as unknown as WhereArg<T>);
+  return q;
+};
+
+export const addWhere = <T extends QueryBase>(
+  q: T,
+  args: WhereArg<Query>[],
+): T => {
+  return pushQueryArray(
+    q,
+    'and',
+    args.map((item) => ({ item: serializeWhereItem(item) })),
+  );
+};
+
+export const addWhereNot = <T extends QueryBase>(
+  q: T,
+  args: WhereArg<Query>[],
+): T => {
+  return pushQueryArray(
+    q,
+    'and',
+    args.map((item) => ({ item: serializeWhereItem(item), not: true })),
+  );
+};
+
+export const addOr = <T extends QueryBase>(
+  q: T,
+  args: WhereArg<Query>[],
+): T => {
+  return pushQueryArray(
+    q,
+    'or',
+    args.map((item) => [{ item: serializeWhereItem(item) }]),
+  );
+};
+
+export const addOrNot = <T extends QueryBase>(
+  q: T,
+  args: WhereArg<Query>[],
+): T => {
+  return pushQueryArray(
+    q,
+    'or',
+    args.map((item) => [{ item: serializeWhereItem(item), not: true }]),
+  );
 };
 
 type TextColumnName<T extends Query> = {
-  [K in keyof T['shape']]: T['shape'][K]['type'] extends string ? K : never;
-}[keyof T['shape']];
+  [K in keyof T['selectable']]: T['selectable'][K]['column']['type'] extends string
+    ? K
+    : never;
+}[keyof T['selectable']];
 
-type JsonColumnName<T extends Query> = {
-  [K in keyof T['shape']]: T['shape'][K] extends JSONColumn ? K : never;
-}[keyof T['shape']];
+export type JsonColumnName<T extends QueryBase> = {
+  [K in keyof T['selectable']]: T['selectable'][K]['column'] extends JSONColumn
+    ? K
+    : never;
+}[keyof T['selectable']];
+
+export type WhereBetweenValues<
+  T extends QueryBase,
+  C extends keyof T['selectable'],
+> = [
+  T['selectable'][C]['column']['type'] | Query | RawExpression,
+  T['selectable'][C]['column']['type'] | Query | RawExpression,
+];
 
 export class Where {
   where<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
@@ -93,11 +164,7 @@ export class Where {
   }
 
   _where<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
-    return pushQueryArray(
-      this,
-      'and',
-      args.map((item) => ({ item: serializeWhereItem(item) })),
-    );
+    return addWhere(this, args);
   }
 
   findBy<T extends Query>(
@@ -111,7 +178,7 @@ export class Where {
     this: T,
     ...args: WhereArg<T>[]
   ): SetQueryReturnsOne<T> {
-    return this._where(...args).take();
+    return addWhere(this, args).take();
   }
 
   whereNot<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
@@ -119,11 +186,7 @@ export class Where {
   }
 
   _whereNot<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
-    return pushQueryArray(
-      this,
-      'and',
-      args.map((item) => ({ item: serializeWhereItem(item), not: true })),
-    );
+    return addWhereNot(this, args);
   }
 
   and<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
@@ -147,11 +210,7 @@ export class Where {
   }
 
   _or<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
-    return pushQueryArray(
-      this,
-      'or',
-      args.map((item) => [{ item: serializeWhereItem(item) }]),
-    );
+    return addOr(this, args);
   }
 
   orNot<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
@@ -159,11 +218,7 @@ export class Where {
   }
 
   _orNot<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
-    return pushQueryArray(
-      this,
-      'or',
-      args.map((item) => [{ item: serializeWhereItem(item), not: true }]),
-    );
+    return addOrNot(this, args);
   }
 
   whereIn<T extends Query, Column extends WhereInColumn<T>>(
@@ -192,7 +247,7 @@ export class Where {
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | RawExpression,
   ): T {
-    return applyWhereIn(this, '_where', arg, values);
+    return applyIn(this, true, arg, values);
   }
 
   orWhereIn<T extends Query, Column extends WhereInColumn<T>>(
@@ -221,7 +276,7 @@ export class Where {
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | RawExpression,
   ): T {
-    return applyWhereIn(this, '_or', arg, values);
+    return applyIn(this, false, arg, values);
   }
 
   whereNotIn<T extends Query, Column extends WhereInColumn<T>>(
@@ -250,7 +305,7 @@ export class Where {
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | RawExpression,
   ): T {
-    return applyWhereIn(this, '_where', arg, values, true);
+    return applyIn(this, true, arg, values, true);
   }
 
   orWhereNotIn<T extends Query, Column extends WhereInColumn<T>>(
@@ -279,34 +334,34 @@ export class Where {
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | RawExpression,
   ): T {
-    return applyWhereIn(this, '_or', arg, values, true);
+    return applyIn(this, false, arg, values, true);
   }
 
-  whereNull<T extends Query>(this: T, column: keyof T['shape']): T {
+  whereNull<T extends Query>(this: T, column: keyof T['selectable']): T {
     return this.clone()._whereNull(column);
   }
-  _whereNull<T extends Query>(this: T, column: keyof T['shape']): T {
+  _whereNull<T extends Query>(this: T, column: keyof T['selectable']): T {
     return this._where({ [column]: null } as unknown as WhereArg<T>);
   }
 
-  orWhereNull<T extends Query>(this: T, column: keyof T['shape']): T {
+  orWhereNull<T extends Query>(this: T, column: keyof T['selectable']): T {
     return this.clone()._orWhereNull(column);
   }
-  _orWhereNull<T extends Query>(this: T, column: keyof T['shape']): T {
+  _orWhereNull<T extends Query>(this: T, column: keyof T['selectable']): T {
     return this._or({ [column]: null } as unknown as WhereArg<T>);
   }
 
-  whereNotNull<T extends Query>(this: T, column: keyof T['shape']): T {
+  whereNotNull<T extends Query>(this: T, column: keyof T['selectable']): T {
     return this.clone()._whereNotNull(column);
   }
-  _whereNotNull<T extends Query>(this: T, column: keyof T['shape']): T {
+  _whereNotNull<T extends Query>(this: T, column: keyof T['selectable']): T {
     return this._whereNot({ [column]: null } as unknown as WhereArg<T>);
   }
 
-  orWhereNotNull<T extends Query>(this: T, column: keyof T['shape']): T {
+  orWhereNotNull<T extends Query>(this: T, column: keyof T['selectable']): T {
     return this.clone()._orWhereNotNull(column);
   }
-  _orWhereNotNull<T extends Query>(this: T, column: keyof T['shape']): T {
+  _orWhereNotNull<T extends Query>(this: T, column: keyof T['selectable']): T {
     return this._orNot({ [column]: null } as unknown as WhereArg<T>);
   }
 
@@ -338,92 +393,68 @@ export class Where {
     return this._orNot({ type: 'exists', query });
   }
 
-  whereBetween<T extends Query, C extends keyof T['shape']>(
+  whereBetween<T extends Query, C extends keyof T['selectable']>(
     this: T,
     column: C,
-    values: [
-      T['shape'][C]['type'] | Query | RawExpression,
-      T['shape'][C]['type'] | Query | RawExpression,
-    ],
+    values: WhereBetweenValues<T, C>,
   ): T {
     return this.clone()._whereBetween(column, values);
   }
-  _whereBetween<T extends Query, C extends keyof T['shape']>(
+  _whereBetween<T extends Query, C extends keyof T['selectable']>(
     this: T,
     column: C,
-    values: [
-      T['shape'][C]['type'] | Query | RawExpression,
-      T['shape'][C]['type'] | Query | RawExpression,
-    ],
+    values: WhereBetweenValues<T, C>,
   ): T {
     return this._where({
       [column]: { between: values },
     } as unknown as WhereArg<T>);
   }
 
-  orWhereBetween<T extends Query, C extends keyof T['shape']>(
+  orWhereBetween<T extends Query, C extends keyof T['selectable']>(
     this: T,
     column: C,
-    values: [
-      T['shape'][C]['type'] | Query | RawExpression,
-      T['shape'][C]['type'] | Query | RawExpression,
-    ],
+    values: WhereBetweenValues<T, C>,
   ): T {
     return this.clone()._orWhereBetween(column, values);
   }
-  _orWhereBetween<T extends Query, C extends keyof T['shape']>(
+  _orWhereBetween<T extends Query, C extends keyof T['selectable']>(
     this: T,
     column: C,
-    values: [
-      T['shape'][C]['type'] | Query | RawExpression,
-      T['shape'][C]['type'] | Query | RawExpression,
-    ],
+    values: WhereBetweenValues<T, C>,
   ): T {
     return this._or({
       [column]: { between: values },
     } as unknown as WhereArg<T>);
   }
 
-  whereNotBetween<T extends Query, C extends keyof T['shape']>(
+  whereNotBetween<T extends Query, C extends keyof T['selectable']>(
     this: T,
     column: C,
-    values: [
-      T['shape'][C]['type'] | Query | RawExpression,
-      T['shape'][C]['type'] | Query | RawExpression,
-    ],
+    values: WhereBetweenValues<T, C>,
   ): T {
     return this.clone()._whereNotBetween(column, values);
   }
-  _whereNotBetween<T extends Query, C extends keyof T['shape']>(
+  _whereNotBetween<T extends Query, C extends keyof T['selectable']>(
     this: T,
     column: C,
-    values: [
-      T['shape'][C]['type'] | Query | RawExpression,
-      T['shape'][C]['type'] | Query | RawExpression,
-    ],
+    values: WhereBetweenValues<T, C>,
   ): T {
     return this._whereNot({
       [column]: { between: values },
     } as unknown as WhereArg<T>);
   }
 
-  orWhereNotBetween<T extends Query, C extends keyof T['shape']>(
+  orWhereNotBetween<T extends Query, C extends keyof T['selectable']>(
     this: T,
     column: C,
-    values: [
-      T['shape'][C]['type'] | Query | RawExpression,
-      T['shape'][C]['type'] | Query | RawExpression,
-    ],
+    values: WhereBetweenValues<T, C>,
   ): T {
     return this.clone()._orWhereNotBetween(column, values);
   }
-  _orWhereNotBetween<T extends Query, C extends keyof T['shape']>(
+  _orWhereNotBetween<T extends Query, C extends keyof T['selectable']>(
     this: T,
     column: C,
-    values: [
-      T['shape'][C]['type'] | Query | RawExpression,
-      T['shape'][C]['type'] | Query | RawExpression,
-    ],
+    values: WhereBetweenValues<T, C>,
   ): T {
     return this._orNot({
       [column]: { between: values },

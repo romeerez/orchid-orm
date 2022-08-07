@@ -158,29 +158,188 @@ describe.each`
     expectQueryNotMutated(q);
   });
 
-  it('should accept callback to specify custom conditions', () => {
-    const q = User.all();
+  it('should accept callback to specify custom conditions', () => {});
+});
 
-    const expectedSql = line(`
+test('on, .orOn', () => {
+  const q = User.all();
+
+  const expectedSql = line(`
       SELECT "user".* FROM "user"
-      ${sql} "message"
+      JOIN "message"
         ON "message"."authorId" = "user"."id"
-       AND "message"."text" = "user"."name"
+        OR "message"."text" = "user"."name"
     `);
 
-    expect(
-      q[join](Message, (q) =>
-        q.on('message.authorId', 'user.id').onOr('message.text', 'user.name'),
-      ).toSql(),
-    ).toBe(expectedSql);
+  expect(
+    q
+      .join(Message, (q) =>
+        q.on('message.authorId', 'user.id').orOn('message.text', 'user.name'),
+      )
+      .toSql(),
+  ).toBe(expectedSql);
 
-    expect(
-      q[join](Message, (q) =>
+  expect(
+    q
+      .join(Message, (q) =>
         q
           .on('message.authorId', '=', 'user.id')
-          .onOr('message.text', '=', 'user.name'),
-      ).toSql(),
-    ).toBe(expectedSql);
+          .orOn('message.text', '=', 'user.name'),
+      )
+      .toSql(),
+  ).toBe(expectedSql);
+
+  expectQueryNotMutated(q);
+});
+
+describe.each`
+  method         | sql         | or
+  ${'onIn'}      | ${'IN'}     | ${false}
+  ${'orOnIn'}    | ${'IN'}     | ${true}
+  ${'onNotIn'}   | ${'NOT IN'} | ${false}
+  ${'orOnNotIn'} | ${'NOT IN'} | ${true}
+`('$method', ({ method, sql, or }) => {
+  const onMethod = method as 'onIn';
+  const orSql = or ? `"message"."authorId" = "user"."id" OR ` : '';
+
+  it('should handle values', () => {
+    const q = User.all();
+
+    const query = q.join(Message, (q) =>
+      (or ? q.on('authorId', 'id') : q)[onMethod](
+        ['id', 'text'],
+        [
+          [1, 'a'],
+          [2, 'b'],
+        ],
+      ),
+    );
+    expect(query.toSql()).toBe(
+      line(`
+      SELECT "user".* FROM "user"
+      JOIN "message"
+        ON ${orSql}("message"."id", "message"."text") ${sql} ((1, 'a'), (2, 'b'))
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});
+
+describe.each`
+  method           | not      | or
+  ${'onNull'}      | ${false} | ${false}
+  ${'orOnNull'}    | ${false} | ${true}
+  ${'onNotNull'}   | ${true}  | ${false}
+  ${'orOnNotNull'} | ${true}  | ${true}
+`('$method', ({ method, not, or }) => {
+  const onMethod = method as 'onNull';
+  const orSql = or ? `"message"."authorId" = "user"."id" OR ` : '';
+  const notSql = not ? 'NOT ' : '';
+
+  it('should handle values', () => {
+    const q = User.all();
+
+    const query = q.join(Message, (q) =>
+      (or ? q.on('authorId', 'id') : q)[onMethod]('text'),
+    );
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        JOIN "message" ON ${orSql}${notSql}"message"."text" IS NULL
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});
+
+describe.each`
+  method             | not      | or
+  ${'onExists'}      | ${false} | ${false}
+  ${'orOnExists'}    | ${false} | ${true}
+  ${'onNotExists'}   | ${true}  | ${false}
+  ${'orOnNotExists'} | ${true}  | ${true}
+`('$method', ({ method, not, or }) => {
+  const onMethod = method as 'onExists';
+  const orSql = or ? `"message"."authorId" = "user"."id" OR ` : '';
+  const notSql = not ? 'NOT ' : '';
+
+  it('should handle values', () => {
+    const q = User.all();
+
+    const query = q.join(Message, (q) =>
+      (or ? q.on('authorId', 'id') : q)[onMethod](User),
+    );
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        JOIN "message" ON ${orSql}${notSql}EXISTS (SELECT 1 FROM "user" LIMIT 1)
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});
+
+describe.each`
+  method              | not      | or
+  ${'onBetween'}      | ${false} | ${false}
+  ${'orOnBetween'}    | ${false} | ${true}
+  ${'onNotBetween'}   | ${true}  | ${false}
+  ${'orOnNotBetween'} | ${true}  | ${true}
+`('$method', ({ method, not, or }) => {
+  const onMethod = method as 'onBetween';
+  const orSql = or ? `"message"."authorId" = "user"."id" OR ` : '';
+  const notSql = not ? 'NOT ' : '';
+
+  it('should handle values', () => {
+    const q = User.all();
+
+    const query = q.join(Message, (q) =>
+      (or ? q.on('authorId', 'id') : q)[onMethod]('id', [1, 10]),
+    );
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        JOIN "message" ON ${orSql}${notSql}"message"."id" BETWEEN 1 AND 10
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});
+
+describe.each`
+  method                     | not      | or
+  ${'onJsonPathEquals'}      | ${false} | ${false}
+  ${'orOnJsonPathEquals'}    | ${false} | ${true}
+  ${'onNotJsonPathEquals'}   | ${true}  | ${false}
+  ${'orOnNotJsonPathEquals'} | ${true}  | ${true}
+`('$method', ({ method, not, or }) => {
+  const onMethod = method as 'onJsonPathEquals';
+  const orSql = or ? `"message"."authorId" = "user"."id" OR ` : '';
+  const notSql = not ? 'NOT ' : '';
+
+  it('should handle values', () => {
+    const q = User.all();
+
+    const query = q.join(Message, (q) =>
+      (or ? q.on('authorId', 'id') : q)[onMethod](
+        'meta',
+        '$.leftKey',
+        'data',
+        '$.rightKey',
+      ),
+    );
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        JOIN "message" ON ${orSql}${notSql}
+          jsonb_path_query_first("message"."meta", '$.leftKey') = 
+          jsonb_path_query_first("user"."data", '$.rightKey')
+      `),
+    );
 
     expectQueryNotMutated(q);
   });
