@@ -40,27 +40,42 @@ type On<
 > = <Q extends JoinQuery<T, J>>(
   this: Q,
   leftColumn: keyof Q['selectable'],
-  op: string,
-  rightColumn: keyof Q['selectable'],
+  ...rest:
+    | [op: string, rightColumn: keyof Q['selectable']]
+    | [rightColumn: keyof Q['selectable']]
 ) => Q;
 
-const on: On = function (leftColumn, op, rightColumn) {
-  return this.clone()._on(leftColumn, op, rightColumn);
+const on: On = function (leftColumn, ...rest) {
+  return this.clone()._on(leftColumn, ...rest);
 };
 
-const _on: On = function (leftColumn, op, rightColumn) {
+const _on: On = function (leftColumn, ...rest) {
   return pushQueryValue(this, 'and', {
-    item: { type: 'on', on: [leftColumn, op, rightColumn] },
+    item: {
+      type: 'on',
+      on:
+        rest.length === 1
+          ? [leftColumn, rest[0]]
+          : [leftColumn, rest[0], rest[1]],
+    },
   });
 };
 
-const onOr: On = function (leftColumn, op, rightColumn) {
-  return this.clone()._on(leftColumn, op, rightColumn);
+const onOr: On = function (leftColumn, ...rest) {
+  return this.clone()._on(leftColumn, ...rest);
 };
 
-const _onOr: On = function (leftColumn, op, rightColumn) {
+const _onOr: On = function (leftColumn, ...rest) {
   return pushQueryValue(this, 'or', [
-    { item: { type: 'on', on: [leftColumn, op, rightColumn] } },
+    {
+      item: {
+        type: 'on',
+        on:
+          rest.length === 1
+            ? [leftColumn, rest[0]]
+            : [leftColumn, rest[0], rest[1]],
+      },
+    },
   ]);
 };
 
@@ -77,6 +92,17 @@ const joinQueryMethods: JoinQueryMethods<Query, PickQueryForSelect> = {
   _onOr,
 };
 
+type WithSelectable<
+  T extends Query,
+  W extends keyof T['withData'],
+> = T['withData'][W] extends WithDataItem
+  ?
+      | StringKey<keyof T['withData'][W]['shape']>
+      | `${T['withData'][W]['table']}.${StringKey<
+          keyof T['withData'][W]['shape']
+        >}`
+  : never;
+
 type JoinArgs<
   T extends Query,
   Q extends Query = Query,
@@ -86,24 +112,38 @@ type JoinArgs<
   | [relation: keyof T['relations']]
   | [
       query: Q,
-      leftColumn: Selectable<Q>,
-      op: string,
-      rightColumn: Selectable<T>,
+      conditions:
+        | Record<Selectable<Q>, Selectable<T> | RawExpression>
+        | RawExpression,
     ]
   | [
       withAlias: W,
-      leftColumn: T['withData'][W] extends WithDataItem
-        ?
-            | StringKey<keyof T['withData'][W]['shape']>
-            | `${T['withData'][W]['table']}.${StringKey<
-                keyof T['withData'][W]['shape']
-              >}`
-        : never,
-      op: string,
-      rightColumn: Selectable<T>,
+      conditions:
+        | Record<WithSelectable<T, W>, Selectable<T> | RawExpression>
+        | RawExpression,
     ]
-  | [query: Q, raw: RawExpression]
-  | [withAlias: W, raw: RawExpression]
+  | [
+      query: Q,
+      leftColumn: Selectable<Q> | RawExpression,
+      rightColumn: Selectable<T> | RawExpression,
+    ]
+  | [
+      withAlias: W,
+      leftColumn: WithSelectable<T, W> | RawExpression,
+      rightColumn: Selectable<T> | RawExpression,
+    ]
+  | [
+      query: Q,
+      leftColumn: Selectable<Q> | RawExpression,
+      op: string,
+      rightColumn: Selectable<T> | RawExpression,
+    ]
+  | [
+      withAlias: W,
+      leftColumn: WithSelectable<T, W> | RawExpression,
+      op: string,
+      rightColumn: Selectable<T> | RawExpression,
+    ]
   | [
       query: QW,
       on: (
@@ -153,75 +193,177 @@ type JoinResult<
     : never
 >;
 
+const join = <T extends Query, Args extends JoinArgs<T>>(
+  q: T,
+  type: string,
+  args: Args,
+): JoinResult<T, Args> => {
+  return _join(q.clone() as T, type, args) as unknown as JoinResult<T, Args>;
+};
+
+const _join = <T extends Query, Args extends JoinArgs<T>>(
+  q: T,
+  type: string,
+  args: Args,
+): JoinResult<T, Args> => {
+  const first = args[0];
+  let joinKey: string | undefined;
+  let parsers: ColumnsParsers | undefined;
+
+  if (typeof first === 'object') {
+    const as = first.tableAlias || first.table;
+    if (as) {
+      joinKey = as;
+      parsers = first.query?.parsers || first.columnsParsers;
+    }
+  } else {
+    joinKey = first as string;
+
+    const relation = (q.relations as Record<string, { query: Query }>)[joinKey];
+    if (relation) {
+      parsers = relation.query.query?.parsers || relation.query.columnsParsers;
+    } else {
+      const shape = q.query?.withShapes?.[first as string];
+      if (shape) {
+        parsers = {};
+        for (const key in shape) {
+          const parser = shape[key].parseFn;
+          if (parser) {
+            parsers[key] = parser;
+          }
+        }
+      }
+    }
+  }
+
+  if (joinKey && parsers) {
+    setQueryObjectValue(q, 'joinedParsers', joinKey, parsers);
+  }
+
+  if (typeof args[1] === 'function') {
+    const [modelOrWith, fn] = args;
+
+    const resultQuery = fn({
+      table: q.table,
+      tableAlias: q.query?.as,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      selectable: undefined as any,
+      ...joinQueryMethods,
+    });
+
+    return pushQueryValue(q, 'join', {
+      type,
+      args: [modelOrWith, { type: 'query', query: resultQuery }],
+    }) as unknown as JoinResult<T, Args>;
+  } else {
+    const items =
+      args.length === 2
+        ? [args[0], { type: 'objectOrRaw', data: args[1] }]
+        : args;
+
+    return pushQueryValue(q, 'join', {
+      type,
+      args: items,
+    }) as unknown as JoinResult<T, Args>;
+  }
+};
+
 export class Join {
   join<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
   ): JoinResult<T, Args> {
-    return (this.clone() as T)._join(...args) as unknown as JoinResult<T, Args>;
+    return join(this, 'JOIN', args);
   }
 
   _join<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
   ): JoinResult<T, Args> {
-    const first = args[0];
-    let joinKey: string | undefined;
-    let parsers: ColumnsParsers | undefined;
+    return _join(this, 'JOIN', args);
+  }
 
-    if (typeof first === 'object') {
-      const as = first.tableAlias || first.table;
-      if (as) {
-        joinKey = as;
-        parsers = first.query?.parsers || first.columnsParsers;
-      }
-    } else {
-      joinKey = first as string;
+  innerJoin<T extends Query, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): JoinResult<T, Args> {
+    return join(this, 'INNER JOIN', args);
+  }
 
-      const relation = (this.relations as Record<string, { query: Query }>)[
-        joinKey
-      ];
-      if (relation) {
-        parsers =
-          relation.query.query?.parsers || relation.query.columnsParsers;
-      } else {
-        const shape = this.query?.withShapes?.[first as string];
-        if (shape) {
-          parsers = {};
-          for (const key in shape) {
-            const parser = shape[key].parseFn;
-            if (parser) {
-              parsers[key] = parser;
-            }
-          }
-        }
-      }
-    }
+  _innerJoin<T extends Query, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): JoinResult<T, Args> {
+    return _join(this, 'INNER JOIN', args);
+  }
 
-    if (joinKey && parsers) {
-      setQueryObjectValue(this, 'joinedParsers', joinKey, parsers);
-    }
+  leftJoin<T extends Query, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): JoinResult<T, Args> {
+    return join(this, 'LEFT JOIN', args);
+  }
 
-    if (typeof args[1] === 'function') {
-      const [modelOrWith, fn] = args;
+  _leftJoin<T extends Query, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): JoinResult<T, Args> {
+    return _join(this, 'LEFT JOIN', args);
+  }
 
-      const resultQuery = fn({
-        table: this.table,
-        tableAlias: this.query?.as,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        selectable: undefined as any,
-        ...joinQueryMethods,
-      });
+  leftOuterJoin<T extends Query, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): JoinResult<T, Args> {
+    return join(this, 'LEFT OUTER JOIN', args);
+  }
 
-      return pushQueryValue(this, 'join', [
-        modelOrWith,
-        resultQuery,
-      ]) as unknown as JoinResult<T, Args>;
-    } else {
-      return pushQueryValue(this, 'join', args) as unknown as JoinResult<
-        T,
-        Args
-      >;
-    }
+  _leftOuterJoin<T extends Query, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): JoinResult<T, Args> {
+    return _join(this, 'LEFT OUTER JOIN', args);
+  }
+
+  rightJoin<T extends Query, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): JoinResult<T, Args> {
+    return join(this, 'RIGHT JOIN', args);
+  }
+
+  _rightJoin<T extends Query, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): JoinResult<T, Args> {
+    return _join(this, 'RIGHT JOIN', args);
+  }
+
+  rightOuterJoin<T extends Query, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): JoinResult<T, Args> {
+    return join(this, 'RIGHT OUTER JOIN', args);
+  }
+
+  _rightOuterJoin<T extends Query, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): JoinResult<T, Args> {
+    return _join(this, 'RIGHT OUTER JOIN', args);
+  }
+
+  fullOuterJoin<T extends Query, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): JoinResult<T, Args> {
+    return join(this, 'FULL OUTER JOIN', args);
+  }
+
+  _fullOuterJoin<T extends Query, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): JoinResult<T, Args> {
+    return _join(this, 'FULL OUTER JOIN', args);
   }
 }

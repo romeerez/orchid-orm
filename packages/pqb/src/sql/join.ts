@@ -1,5 +1,5 @@
 import { q, quoteFullColumn, quoteSchemaAndTable } from './common';
-import { getRaw, isRaw } from '../common';
+import { getRaw, isRaw, RawExpression } from '../common';
 import {
   DeleteQueryData,
   InsertQueryData,
@@ -11,13 +11,26 @@ import { Query, QueryWithData, QueryWithTable } from '../query';
 import { whereToSql } from './where';
 import { ColumnsShape } from '../columnSchema';
 
+type ItemOf3Or4Length =
+  | [
+      _: unknown,
+      leftColumn: string | RawExpression,
+      rightColumn: string | RawExpression,
+    ]
+  | [
+      _: unknown,
+      leftColumn: string | RawExpression,
+      op: string,
+      rightColumn?: string | RawExpression,
+    ];
+
 export const processJoinItem = (
   model: Query,
   query: QueryData,
-  item: JoinItem,
+  { args }: JoinItem,
   quotedAs?: string,
 ): { target: string; conditions?: string } => {
-  const [first] = item;
+  const [first] = args;
   if (typeof first === 'string') {
     if (first in model.relations) {
       const { key, query, joinQuery } = (
@@ -51,27 +64,21 @@ export const processJoinItem = (
     const target = q(first);
     let conditions: string | undefined;
 
-    if (item.length === 2) {
-      const arg = item[1];
-      if (isRaw(arg)) {
-        conditions = getRaw(arg);
-      } else if (arg.query) {
+    if (args.length === 2) {
+      const [, arg] = args;
+      if (arg.type === 'objectOrRaw') {
+        conditions = getObjectOrRawConditions(arg.data, quotedAs, target);
+      } else if (arg.query.query) {
         const shape = query.withShapes?.[first] as ColumnsShape;
-        const onConditions = whereToSql({ shape }, arg.query, target);
+        const onConditions = whereToSql({ shape }, arg.query.query, target);
         if (onConditions) conditions = onConditions;
       }
-    } else if (item.length === 4) {
-      const [, leftColumn, op, rightColumn] = item as [
-        unknown,
-        string,
-        string,
-        string,
-      ];
-
-      conditions = `${quoteFullColumn(
-        leftColumn,
+    } else if (args.length >= 3) {
+      conditions = getConditionsFor3Or4LengthItem(
         target,
-      )} ${op} ${quoteFullColumn(rightColumn as string, quotedAs)}`;
+        quotedAs,
+        args as ItemOf3Or4Length,
+      );
     }
 
     return { target, conditions };
@@ -90,23 +97,68 @@ export const processJoinItem = (
 
   let conditions: string | undefined;
 
-  if (item.length === 2) {
-    const [, arg] = item;
-    if (isRaw(arg)) {
-      conditions = getRaw(arg);
-    } else if (arg.query) {
-      const onConditions = whereToSql(joinTarget, arg.query, joinAs);
+  if (args.length === 2) {
+    const [, arg] = args;
+    if (arg.type === 'objectOrRaw') {
+      conditions = getObjectOrRawConditions(arg.data, quotedAs, joinAs);
+    } else if (arg.query.query) {
+      const onConditions = whereToSql(joinTarget, arg.query.query, joinAs);
       if (onConditions) conditions = onConditions;
     }
-  } else if (item.length === 4) {
-    const [, leftColumn, op, rightColumn] = item;
-    conditions = `${quoteFullColumn(
-      leftColumn,
+  } else if (args.length >= 3) {
+    conditions = getConditionsFor3Or4LengthItem(
       joinAs,
-    )} ${op} ${quoteFullColumn(rightColumn as string, quotedAs)}`;
+      quotedAs,
+      args as ItemOf3Or4Length,
+    );
   }
 
   return { target, conditions };
+};
+
+const getConditionsFor3Or4LengthItem = (
+  target: string,
+  quotedAs: string | undefined,
+  args: ItemOf3Or4Length,
+) => {
+  const [, leftColumn, opOrRightColumn, maybeRightColumn] = args;
+
+  const op = maybeRightColumn ? opOrRightColumn : '=';
+  const rightColumn = maybeRightColumn ? maybeRightColumn : opOrRightColumn;
+
+  return `${
+    typeof leftColumn === 'string'
+      ? quoteFullColumn(leftColumn, target)
+      : getRaw(leftColumn)
+  } ${op} ${
+    typeof rightColumn === 'string'
+      ? quoteFullColumn(rightColumn, quotedAs)
+      : getRaw(rightColumn)
+  }`;
+};
+
+const getObjectOrRawConditions = (
+  data: Record<string, string | RawExpression> | RawExpression,
+  quotedAs: string | undefined,
+  joinAs: string | undefined,
+) => {
+  if (isRaw(data)) {
+    return getRaw(data);
+  } else {
+    const pairs: string[] = [];
+    for (const key in data) {
+      const value = data[key];
+
+      pairs.push(
+        `${quoteFullColumn(key, joinAs)} = ${
+          typeof value === 'string'
+            ? quoteFullColumn(value, quotedAs)
+            : getRaw(value)
+        }`,
+      );
+    }
+    return pairs.join(', ');
+  }
 };
 
 export const pushJoinSql = (
@@ -123,7 +175,7 @@ export const pushJoinSql = (
       quotedAs,
     );
 
-    sql.push('JOIN', target);
+    sql.push(item.type, target);
     if (conditions) sql.push('ON', conditions);
   });
 };

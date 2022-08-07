@@ -169,18 +169,31 @@ export type SelectItem<T extends Query> =
   | JsonItem
   | RawExpression;
 
-export type JoinItem =
-  | [relation: string]
-  | [
-      withOrQuery: string | QueryWithTable,
-      leftColumn: string,
-      op: string,
-      rightColumn: string,
-    ]
-  | [
-      withOrQuery: string | QueryWithTable,
-      rawOrJoinQuery: RawExpression | JoinQuery,
-    ];
+export type JoinItem = {
+  type: string;
+  args:
+    | [relation: string]
+    | [
+        withOrQuery: string | QueryWithTable,
+        objectOrRawOrJoinQuery:
+          | {
+              type: 'objectOrRaw';
+              data: Record<string, string | RawExpression> | RawExpression;
+            }
+          | { type: 'query'; query: JoinQuery },
+      ]
+    | [
+        withOrQuery: string | QueryWithTable,
+        leftColumn: string | RawExpression,
+        rightColumn: string | RawExpression,
+      ]
+    | [
+        withOrQuery: string | QueryWithTable,
+        leftColumn: string | RawExpression,
+        op: string,
+        rightColumn: string | RawExpression,
+      ];
+};
 
 export type WhereItem =
   | {
@@ -197,7 +210,9 @@ export type WhereItem =
     }
   | {
       type: 'on';
-      on: [leftFullColumn: string, op: string, rightFullColumn: string];
+      on:
+        | [leftFullColumn: string, rightFullColumn: string]
+        | [leftFullColumn: string, op: string, rightFullColumn: string];
     }
   | {
       type: 'in';

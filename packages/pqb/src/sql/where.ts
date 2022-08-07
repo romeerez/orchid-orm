@@ -108,8 +108,10 @@ export const whereToSql = (
 
       if (item.type === 'on') {
         const leftColumn = quoteFullColumn(item.on[0], quotedAs);
-        const rightColumn = quoteFullColumn(item.on[2], otherTableQuotedAs);
-        const op = item.on[1];
+        const [op, rightColumn] =
+          item.on.length === 2
+            ? ['=', quoteFullColumn(item.on[1], otherTableQuotedAs)]
+            : [item.on[1], quoteFullColumn(item.on[2], otherTableQuotedAs)];
         ands.push(`${prefix}${leftColumn} ${op} ${rightColumn}`);
         return;
       }
