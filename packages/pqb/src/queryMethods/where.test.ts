@@ -1,4 +1,4 @@
-import { expectQueryNotMutated, line, Message, User } from '../test-utils';
+import { expectQueryNotMutated, line, User } from '../test-utils';
 import { raw } from '../common';
 
 describe('and', () => {
@@ -893,6 +893,128 @@ describe('orWhereNotNull', () => {
       line(`
         SELECT "user".* FROM "user"
         WHERE "user"."id" = 1 OR NOT "user"."id" IS NULL
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});
+
+describe('whereExists', () => {
+  it('should handle sub query', () => {
+    const q = User.all();
+
+    const query = q.whereExists(User.all());
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE EXISTS (SELECT 1 FROM "user" LIMIT 1)
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle raw query', () => {
+    const q = User.all();
+
+    const query = q.whereExists(raw(`SELECT 1 FROM "user"`));
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE EXISTS (SELECT 1 FROM "user")
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});
+
+describe('orWhereExists', () => {
+  it('should handle sub query', () => {
+    const q = User.all();
+
+    const query = q.where({ id: 1 }).orWhereExists(User.all());
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR EXISTS (SELECT 1 FROM "user" LIMIT 1)
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle raw query', () => {
+    const q = User.all();
+
+    const query = q.where({ id: 1 }).orWhereExists(raw(`SELECT 1 FROM "user"`));
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR EXISTS (SELECT 1 FROM "user")
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});
+
+describe('whereNotExists', () => {
+  it('should handle sub query', () => {
+    const q = User.all();
+
+    const query = q.whereNotExists(User.all());
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE NOT EXISTS (SELECT 1 FROM "user" LIMIT 1)
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle raw query', () => {
+    const q = User.all();
+
+    const query = q.whereNotExists(raw(`SELECT 1 FROM "user"`));
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE NOT EXISTS (SELECT 1 FROM "user")
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+});
+
+describe('orWhereNotExists', () => {
+  it('should handle sub query', () => {
+    const q = User.all();
+
+    const query = q.where({ id: 1 }).orWhereNotExists(User.all());
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR NOT EXISTS (SELECT 1 FROM "user" LIMIT 1)
+      `),
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle raw query', () => {
+    const q = User.all();
+
+    const query = q
+      .where({ id: 1 })
+      .orWhereNotExists(raw(`SELECT 1 FROM "user"`));
+    expect(query.toSql()).toBe(
+      line(`
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = 1 OR NOT EXISTS (SELECT 1 FROM "user")
       `),
     );
 

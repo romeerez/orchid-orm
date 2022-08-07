@@ -1,7 +1,7 @@
 import { Query } from '../query';
-import { QueryData } from './types';
+import { QueryData, SelectQueryData } from './types';
 import { q, qc, quoteFullColumn } from './common';
-import { EMPTY_OBJECT, getRaw, isRaw, RawExpression } from '../common';
+import { EMPTY_OBJECT, getRaw, isRaw, raw, RawExpression } from '../common';
 import { quote } from '../quote';
 import { pushOperatorSql } from './operator';
 
@@ -122,6 +122,21 @@ export const whereToSql = (
       if (item.type === 'notIn') {
         pushIn(ands, prefix, quotedAs, item, 'NOT IN');
         return;
+      }
+
+      if (item.type === 'exists') {
+        let querySql: string;
+        if (isRaw(item.query)) {
+          querySql = getRaw(item.query);
+        } else {
+          if (!item.query.query) item.query.query = {};
+          const query = item.query.query as SelectQueryData;
+          query.select = [raw('1')];
+          query.limit = 1;
+          querySql = item.query.toSql();
+        }
+
+        ands.push(`${prefix}EXISTS (${querySql})`);
       }
     });
     ors.push(ands.join(' AND '));

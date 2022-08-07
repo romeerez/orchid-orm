@@ -300,4 +300,32 @@ export class Where {
   _orWhereNotNull<T extends Query>(this: T, column: keyof T['shape']): T {
     return this._orNot({ [column]: null } as unknown as WhereArg<T>);
   }
+
+  whereExists<T extends Query>(this: T, query: Query | RawExpression): T {
+    return this.clone()._whereExists(query);
+  }
+  _whereExists<T extends Query>(this: T, query: Query | RawExpression): T {
+    return this._where({ type: 'exists', query });
+  }
+
+  orWhereExists<T extends Query>(this: T, query: Query | RawExpression): T {
+    return this.clone()._orWhereExists(query);
+  }
+  _orWhereExists<T extends Query>(this: T, query: Query | RawExpression): T {
+    return this._or({ type: 'exists', query });
+  }
+
+  whereNotExists<T extends Query>(this: T, query: Query | RawExpression): T {
+    return this.clone()._whereNotExists(query);
+  }
+  _whereNotExists<T extends Query>(this: T, query: Query | RawExpression): T {
+    return this._whereNot({ type: 'exists', query });
+  }
+
+  orWhereNotExists<T extends Query>(this: T, query: Query | RawExpression): T {
+    return this.clone()._orWhereNotExists(query);
+  }
+  _orWhereNotExists<T extends Query>(this: T, query: Query | RawExpression): T {
+    return this._orNot({ type: 'exists', query });
+  }
 }

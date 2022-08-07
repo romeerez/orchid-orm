@@ -208,6 +208,10 @@ export type WhereItem =
       type: 'notIn';
       columns: string[];
       values: unknown[][] | Query | RawExpression;
+    }
+  | {
+      type: 'exists';
+      query: Query | RawExpression;
     };
 
 export type AggregateOptions<
