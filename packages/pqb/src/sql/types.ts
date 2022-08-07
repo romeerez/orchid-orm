@@ -252,10 +252,7 @@ export type ColumnOperators<
   S extends SelectableBase,
   Column extends keyof S,
 > = {
-  [O in keyof S[Column]['column']['operators']]?:
-    | S[Column]['column']['operators'][O]['type']
-    | Query
-    | RawExpression;
+  [O in keyof S[Column]['column']['operators']]?: S[Column]['column']['operators'][O]['type'];
 };
 
 export type HavingArg<T extends Query = Query> =

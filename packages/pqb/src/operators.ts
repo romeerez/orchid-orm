@@ -1,35 +1,98 @@
-type Fn = (key: string, value: string) => string;
+import { Query } from './query';
+import { getRaw, isRaw, RawExpression } from './common';
+import { quote } from './quote';
 
-export type Operator<T> = Fn & { type: T };
+type Fn<T> = (key: string, value: T) => string;
+
+export type Operator<T> = Fn<T> & { type: T };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Operators = Record<string, Operator<any>>;
 
-export const createOperator = <T>(fn: Fn) => {
+export const createOperator = <T>(fn: Fn<T>) => {
   return Object.assign(fn, { type: undefined as unknown as T });
 };
 
+const quoteValue = (arg: unknown): string => {
+  if (arg && typeof arg === 'object') {
+    if (Array.isArray(arg)) {
+      return `(${arg.map(quote).join(', ')})`;
+    }
+
+    if ('toSql' in arg) {
+      return `(${(arg as Query).toSql()})`;
+    }
+
+    if (isRaw(arg)) {
+      return getRaw(arg);
+    }
+  }
+
+  return quote(arg);
+};
+
 const all = {
-  equals: <T>() => createOperator<T>((key, value) => `${key} = ${value}`),
-  not: <T>() => createOperator<T>((key, value) => `${key} <> ${value}`),
-  in: <T>() => createOperator<T[]>((key, value) => `${key} IN ${value}`),
-  notIn: <T>() => createOperator<T[]>((key, value) => `${key} NOT IN ${value}`),
-  lt: <T>() => createOperator<T>((key, value) => `${key} < ${value}`),
-  lte: <T>() => createOperator<T>((key, value) => `${key} <= ${value}`),
-  gt: <T>() => createOperator<T>((key, value) => `${key} > ${value}`),
-  gte: <T>() => createOperator<T>((key, value) => `${key} >= ${value}`),
+  equals: <T>() =>
+    createOperator<T | Query | RawExpression>(
+      (key, value) => `${key} = ${quoteValue(value)}`,
+    ),
+  not: <T>() =>
+    createOperator<T | Query | RawExpression>(
+      (key, value) => `${key} <> ${quoteValue(value)}`,
+    ),
+  in: <T>() =>
+    createOperator<T[] | Query | RawExpression>(
+      (key, value) => `${key} IN ${quoteValue(value)}`,
+    ),
+  notIn: <T>() =>
+    createOperator<T[] | Query | RawExpression>(
+      (key, value) => `${key} NOT IN ${quoteValue(value)}`,
+    ),
+  lt: <T>() =>
+    createOperator<T | Query | RawExpression>(
+      (key, value) => `${key} < ${quoteValue(value)}`,
+    ),
+  lte: <T>() =>
+    createOperator<T | Query | RawExpression>(
+      (key, value) => `${key} <= ${quoteValue(value)}`,
+    ),
+  gt: <T>() =>
+    createOperator<T | Query | RawExpression>(
+      (key, value) => `${key} > ${quoteValue(value)}`,
+    ),
+  gte: <T>() =>
+    createOperator<T | Query | RawExpression>(
+      (key, value) => `${key} >= ${quoteValue(value)}`,
+    ),
   contains: <T>() =>
-    createOperator<T>((key, value) => `${key} LIKE '%' || ${value} || '%'`),
+    createOperator<T | Query | RawExpression>(
+      (key, value) => `${key} LIKE '%' || ${quoteValue(value)} || '%'`,
+    ),
   containsInsensitive: <T>() =>
-    createOperator<T>((key, value) => `${key} ILIKE '%' || ${value} || '%'`),
+    createOperator<T | Query | RawExpression>(
+      (key, value) => `${key} ILIKE '%' || ${quoteValue(value)} || '%'`,
+    ),
   startsWith: <T>() =>
-    createOperator<T>((key, value) => `${key} LIKE ${value} || '%'`),
+    createOperator<T | Query | RawExpression>(
+      (key, value) => `${key} LIKE ${quoteValue(value)} || '%'`,
+    ),
   startsWithInsensitive: <T>() =>
-    createOperator<T>((key, value) => `${key} ILIKE ${value} || '%'`),
+    createOperator<T | Query | RawExpression>(
+      (key, value) => `${key} ILIKE ${quoteValue(value)} || '%'`,
+    ),
   endsWith: <T>() =>
-    createOperator<T>((key, value) => `${key} LIKE '%' || ${value}`),
+    createOperator<T | Query | RawExpression>(
+      (key, value) => `${key} LIKE '%' || ${quoteValue(value)}`,
+    ),
   endsWithInsensitive: <T>() =>
-    createOperator<T>((key, value) => `${key} ILIKE '%' || ${value}`),
+    createOperator<T | Query | RawExpression>(
+      (key, value) => `${key} ILIKE '%' || ${quoteValue(value)}`,
+    ),
+  between: <T>() =>
+    createOperator<[T | Query | RawExpression, T | Query | RawExpression]>(
+      (key, [from, to]) =>
+        `${key} BETWEEN ${quoteValue(from)} AND ${quoteValue(to)}`,
+    ),
 };
 
 const base = <T>() => ({
@@ -45,6 +108,7 @@ const numeric = <T>() => ({
   lte: all.lte<T>(),
   gt: all.gt<T>(),
   gte: all.gte<T>(),
+  between: all.between<T>(),
 });
 
 const text = <T>() => ({
