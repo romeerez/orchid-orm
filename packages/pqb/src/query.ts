@@ -41,6 +41,7 @@ export type Query = QueryMethods & {
   hasSelect: boolean;
   selectable: SelectableBase;
   returnType: QueryReturnType;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   then: any;
   tableAlias: string | undefined;
   withData: Record<never, WithDataItem>;
@@ -77,47 +78,45 @@ export type JoinedTablesBase = Record<
 
 export type WithDataItem = { table: string; shape: ColumnsShape };
 
-export type SetQuery<
-  T extends Query = Query,
-  Result extends ColumnsShape = T['result'],
-  ReturnType extends QueryReturnType = T['returnType'],
-  TableAlias extends string | undefined = T['tableAlias'],
-  JoinedTables extends JoinedTablesBase = T['joinedTables'],
-  Windows extends PropertyKey[] = T['windows'],
-  R = ColumnShapeOutput<Result>,
-> = Omit<
-  T,
-  'result' | 'returnType' | 'tableAlias' | 'joinedTables' | 'then' | 'windows'
-> & {
-  result: Result;
-  returnType: ReturnType;
-  tableAlias: TableAlias;
-  joinedTables: JoinedTables;
-  then: ReturnType extends 'all'
-    ? Then<R[]>
-    : ReturnType extends 'one'
-    ? Then<R>
-    : ReturnType extends 'value'
-    ? Then<R>
-    : ReturnType extends 'rows'
-    ? Then<R[keyof R][][]>
-    : ReturnType extends 'void'
-    ? Then<void>
-    : never;
-  windows: Windows;
-};
+type QueryThen<
+  ReturnType extends QueryReturnType,
+  Result extends ColumnsShape,
+> = ReturnType extends 'all'
+  ? Then<ColumnShapeOutput<Result>[]>
+  : ReturnType extends 'one'
+  ? Then<ColumnShapeOutput<Result>>
+  : ReturnType extends 'value'
+  ? Result extends { value: ColumnType }
+    ? Then<Result['value']['type']>
+    : never
+  : ReturnType extends 'rows'
+  ? Then<ColumnShapeOutput<Result>[keyof Result][][]>
+  : ReturnType extends 'pluck'
+  ? Result extends { pluck: ColumnType }
+    ? Then<Result['pluck']['type'][]>
+    : never
+  : ReturnType extends 'void'
+  ? Then<void>
+  : never;
 
 export type AddQuerySelect<
   T extends Query,
   Result extends ColumnsShape,
 > = T['hasSelect'] extends false
-  ? SetQuery<Omit<T, 'hasSelect'> & { hasSelect: true }, Result>
-  : SetQuery<T, Spread<[T['result'], Result]>>;
+  ? Omit<T, 'hasSelect' | 'result' | 'then'> & {
+      hasSelect: true;
+      result: Result;
+      then: QueryThen<T['returnType'], Result>;
+    }
+  : Omit<T, 'result' | 'then'> & {
+      result: Spread<[T['result'], Result]>;
+      then: QueryThen<T['returnType'], Spread<[T['result'], Result]>>;
+    };
 
-export type SetQueryReturns<
-  T extends Query,
-  R extends QueryReturnType,
-> = SetQuery<T, T['result'], R>;
+export type SetQueryReturns<T extends Query, R extends QueryReturnType> = Omit<
+  T,
+  'returnType' | 'then'
+> & { returnType: R; then: QueryThen<R, T['result']> };
 
 export type SetQueryReturnsAll<T extends Query> = SetQueryReturns<T, 'all'>;
 
@@ -215,14 +214,7 @@ export type AddQueryWith<
   With extends WithDataItem,
 > = SetQueryWith<T, Spread<[T['withData'], { [K in With['table']]: With }]>>;
 
-export type SetQueryWindows<
-  T extends Query,
-  W extends PropertyKey[],
-> = SetQuery<
+export type SetQueryWindows<T extends Query, W extends PropertyKey[]> = Omit<
   T,
-  T['result'],
-  T['returnType'],
-  T['tableAlias'],
-  T['joinedTables'],
-  W
->;
+  'windows'
+> & { windows: W };

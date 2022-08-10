@@ -1,9 +1,4 @@
-import {
-  ColumnsParsers,
-  DefaultSelectColumns,
-  Query,
-  QueryReturnType,
-} from './query';
+import { ColumnsParsers, DefaultSelectColumns, Query } from './query';
 import { QueryMethods } from './queryMethods/queryMethods';
 import { QueryData, SelectQueryData } from './sql';
 import { PostgresAdapter } from './adapter';
@@ -39,7 +34,7 @@ export interface Db<
   shape: Shape;
   schema: TableSchema<Shape>;
   type: ColumnShapeOutput<Shape>;
-  returnType: QueryReturnType;
+  returnType: 'all';
   query?: QueryData;
   columns: (keyof ColumnShapeOutput<Shape>)[];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
@@ -118,7 +113,7 @@ export class Db<
     this.relations = {};
   }
 
-  returnType: QueryReturnType = 'all';
+  returnType = 'all' as const;
 }
 
 applyMixins(Db, [QueryMethods]);
