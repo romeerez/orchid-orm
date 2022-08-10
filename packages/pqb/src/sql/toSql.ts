@@ -5,7 +5,6 @@ import { QueryData } from './types';
 import { pushDistinctSql } from './distinct';
 import { pushSelectSql } from './select';
 import { windowToSql } from './window';
-import { orderByToSql } from './orderBy';
 import { pushJoinSql } from './join';
 import { pushWhereSql } from './where';
 import { pushHavingSql } from './having';
@@ -16,6 +15,7 @@ import { pushUpdateSql } from './update';
 import { pushDeleteSql } from './delete';
 import { pushTruncateSql } from './truncate';
 import { pushColumnInfoSql } from './columnInfo';
+import { pushOrderBySql } from './orderBy';
 
 export const toSql = (model: Query): string => {
   const query = (model.query || EMPTY_OBJECT) as QueryData;
@@ -74,7 +74,7 @@ export const toSql = (model: Query): string => {
     pushDistinctSql(sql, query.distinct, quotedAs);
   }
 
-  pushSelectSql(sql, query.select, quotedAs);
+  pushSelectSql(sql, model, query.select, quotedAs);
 
   pushFromAndAs(sql, model, query, quotedAs);
 
@@ -91,9 +91,7 @@ export const toSql = (model: Query): string => {
     sql.push(`GROUP BY ${group.join(', ')}`);
   }
 
-  if (query.having) {
-    pushHavingSql(sql, model, query.having, quotedAs);
-  }
+  pushHavingSql(sql, model, query, quotedAs);
 
   if (query.window) {
     const window: string[] = [];
@@ -112,13 +110,7 @@ export const toSql = (model: Query): string => {
     });
   }
 
-  if (query.order) {
-    sql.push(
-      `ORDER BY ${query.order
-        .map((item) => orderByToSql(item, quotedAs))
-        .join(', ')}`,
-    );
-  }
+  if (query.order) pushOrderBySql(sql, quotedAs, query.order);
 
   const limit = query.take ? 1 : query.limit;
   if (limit) {

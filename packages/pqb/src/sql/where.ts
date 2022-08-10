@@ -8,7 +8,7 @@ import { pushOperatorSql } from './operator';
 export const pushWhereSql = (
   sql: string[],
   model: Pick<Query, 'shape'>,
-  query: QueryData,
+  query: Pick<QueryData, 'and' | 'or'>,
   quotedAs?: string,
   otherTableQuotedAs?: string,
 ) => {
@@ -23,7 +23,7 @@ export const pushWhereSql = (
 
 export const whereToSql = (
   model: Pick<Query, 'shape'>,
-  query: QueryData,
+  query: Pick<QueryData, 'and' | 'or'>,
   quotedAs?: string,
   otherTableQuotedAs?: string,
 ): string => {
@@ -154,6 +154,7 @@ export const whereToSql = (
         return;
       }
     });
+
     ors.push(ands.join(' AND '));
   });
 

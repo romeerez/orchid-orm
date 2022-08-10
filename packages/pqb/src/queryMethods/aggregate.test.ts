@@ -19,14 +19,16 @@ describe('aggregate', () => {
     });
 
     test('order', () => {
-      expect(User.count('name', { order: '"user"."name" DESC' }).toSql()).toBe(
+      expect(User.count('name', { order: { name: 'DESC' } }).toSql()).toBe(
         'SELECT count("user"."name" ORDER BY "user"."name" DESC) FROM "user"',
       );
     });
 
     test('filter', () => {
-      expect(User.count('name', { filter: 'name IS NOT NULL' }).toSql()).toBe(
-        'SELECT count("user"."name") FILTER (WHERE name IS NOT NULL) FROM "user"',
+      expect(
+        User.count('name', { filter: { age: { not: null } } }).toSql(),
+      ).toBe(
+        'SELECT count("user"."name") FILTER (WHERE "user"."age" IS NOT NULL) FROM "user"',
       );
     });
 
@@ -73,8 +75,8 @@ describe('aggregate', () => {
         User.count('name', {
           as: 'a',
           distinct: true,
-          order: 'name DESC',
-          filter: 'name IS NOT NULL',
+          order: { name: 'DESC' },
+          filter: { age: { not: null } },
           over: {
             partitionBy: 'id',
             order: {
@@ -85,8 +87,8 @@ describe('aggregate', () => {
       ).toBe(
         line(`
           SELECT
-            count(DISTINCT "user"."name" ORDER BY name DESC)
-              FILTER (WHERE name IS NOT NULL)
+            count(DISTINCT "user"."name" ORDER BY "user"."name" DESC)
+              FILTER (WHERE "user"."age" IS NOT NULL)
               OVER (
                 PARTITION BY "user"."id"
                 ORDER BY "user"."id" DESC
@@ -100,12 +102,16 @@ describe('aggregate', () => {
       expect(
         User.count('name', {
           distinct: true,
-          order: 'name DESC',
-          filter: 'name IS NOT NULL',
+          order: { name: 'DESC' },
+          filter: { age: { not: null } },
           withinGroup: true,
         }).toSql(),
       ).toBe(
-        'SELECT count("user"."name") WITHIN GROUP (ORDER BY name DESC) FILTER (WHERE name IS NOT NULL) FROM "user"',
+        line(`
+          SELECT count("user"."name")
+          WITHIN GROUP (ORDER BY "user"."name" DESC)
+          FILTER (WHERE "user"."age" IS NOT NULL) FROM "user"
+        `),
       );
     });
   });

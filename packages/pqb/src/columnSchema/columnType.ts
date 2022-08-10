@@ -1,7 +1,16 @@
-import { Operators } from '../operators';
+import { Operator, Operators } from '../operators';
 import { EmptyObject } from './utils';
 
 export type ColumnOutput<T extends ColumnType> = T['type'];
+
+type Nullable<T extends ColumnType> = Omit<T, 'type' | 'operators'> & {
+  type: T['type'] | null;
+  isNullable: true;
+  operators: Omit<T['operators'], 'equals' | 'not'> & {
+    equals: Operator<T['type'] | null>;
+    not: Operator<T['type'] | null>;
+  };
+};
 
 export abstract class ColumnType<
   Type = unknown,
@@ -28,11 +37,9 @@ export abstract class ColumnType<
     return Object.assign(this, { isHidden: true as const });
   }
 
-  nullable<T extends ColumnType>(
-    this: T,
-  ): Omit<T, 'type'> & { type: T['type'] | null; isNullable: true } {
+  nullable<T extends ColumnType>(this: T): Nullable<T> {
     this.isNullable = true;
-    return this as T & { isNullable: true };
+    return this as unknown as Nullable<T>;
   }
 
   encode<T extends ColumnType, Input>(

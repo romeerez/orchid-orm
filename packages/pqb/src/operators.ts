@@ -33,12 +33,12 @@ const quoteValue = (arg: unknown, jsonArray?: boolean): string => {
 
 const all = {
   equals: <T>() =>
-    createOperator<T | Query | RawExpression>(
-      (key, value) => `${key} = ${quoteValue(value)}`,
+    createOperator<T | Query | RawExpression>((key, value) =>
+      value === null ? `${key} IS NULL` : `${key} = ${quoteValue(value)}`,
     ),
   not: <T>() =>
-    createOperator<T | Query | RawExpression>(
-      (key, value) => `${key} <> ${quoteValue(value)}`,
+    createOperator<T | Query | RawExpression>((key, value) =>
+      value === null ? `${key} IS NOT NULL` : `${key} <> ${quoteValue(value)}`,
     ),
   in: <T>() =>
     createOperator<T[] | Query | RawExpression>(

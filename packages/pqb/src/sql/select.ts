@@ -51,6 +51,7 @@ const jsonToSql = (item: JsonItem, quotedAs?: string): string => {
 
 export const pushSelectSql = (
   sql: string[],
+  model: Pick<Query, 'shape'>,
   select: SelectQueryData['select'],
   quotedAs?: string,
 ) => {
@@ -77,7 +78,7 @@ export const pushSelectSql = (
         } else if (isRaw(item)) {
           list.push(getRaw(item));
         } else {
-          list.push(aggregateToSql(item, quotedAs));
+          list.push(aggregateToSql(model, item, quotedAs));
         }
       } else {
         list.push(quoteFullColumn(item, quotedAs));

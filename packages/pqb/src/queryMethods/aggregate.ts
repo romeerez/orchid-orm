@@ -7,7 +7,6 @@ import {
   StringExpression,
 } from '../common';
 import { AddQuerySelect, Query, SetQueryReturnsValue } from '../query';
-import { AggregateArg, AggregateOptions, WindowDeclaration } from '../sql';
 import { pushQueryValue } from '../queryDataUtils';
 import {
   BooleanColumn,
@@ -18,8 +17,29 @@ import {
   IntegerColumn,
 } from '../columnSchema';
 import { CoalesceString } from '../utils';
+import { OrderArg, WindowDeclaration } from './queryMethods';
+import { serializeWhereItem, WhereArg } from './where';
 
 const allColumns = raw('*');
+
+export type AggregateArg<T extends Query> =
+  | Expression<T>
+  | Record<string, Expression<T>>
+  | [Expression<T>, string];
+
+export type AggregateOptions<
+  T extends Query = Query,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  As extends string | undefined = any,
+> = {
+  as?: As;
+  distinct?: boolean;
+  order?: OrderArg<T> | OrderArg<T>[];
+  filter?: WhereArg<T>;
+  filterOr?: WhereArg<T>[];
+  withinGroup?: boolean;
+  over?: T['windows'][number] | WindowDeclaration<T>;
+};
 
 // 1 in the name means only methods which takes 1 argument are listed here
 // only such one argument methods are available in .having method
@@ -128,7 +148,20 @@ export class Aggregate {
     return pushQueryValue(this, 'select', {
       function: functionName,
       arg,
-      options,
+      options: {
+        ...options,
+        order: options?.order
+          ? Array.isArray(options.order)
+            ? options.order
+            : [options.order]
+          : undefined,
+        filter: options?.filter
+          ? serializeWhereItem(options.filter)
+          : undefined,
+        filterOr: options?.filterOr
+          ? options.filterOr.map(serializeWhereItem)
+          : undefined,
+      },
     }) as unknown as SelectAgg<T, Func, As, Value>;
   }
 
@@ -333,7 +366,12 @@ export class Aggregate {
     arg: Expr,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'array_agg', As, ArrayColumn<ExpressionOutput<T, Expr>>> {
-    return this.clone()._selectArrayAgg(arg, options);
+    return this.clone()._selectArrayAgg(arg, options) as unknown as SelectAgg<
+      T,
+      'array_agg',
+      As,
+      ArrayColumn<ExpressionOutput<T, Expr>>
+    >;
   }
 
   _selectArrayAgg<

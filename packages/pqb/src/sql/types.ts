@@ -6,7 +6,6 @@ import {
   SelectableBase,
 } from '../query';
 import { Expression, RawExpression } from '../common';
-import { Aggregate1ArgumentTypes } from '../queryMethods/aggregate';
 import { ColumnsShape, ColumnType } from '../columnSchema';
 
 export type CommonQueryData = {
@@ -28,10 +27,11 @@ export type SelectQueryData<T extends Query = Query> = CommonQueryData & {
   join?: JoinItem[];
   joinedParsers?: Record<string, ColumnsParsers>;
   group?: (Selectable<T> | RawExpression)[];
-  having?: HavingArg<T>[];
-  window?: WindowArg<T>[];
+  having?: HavingItem[];
+  havingOr?: HavingItem[][];
+  window?: WindowItem[];
   union?: { arg: UnionArg<T>; kind: UnionKind; wrap?: boolean }[];
-  order?: OrderBy<T>[];
+  order?: OrderItem[];
   limit?: number;
   offset?: number;
   for?: {
@@ -163,7 +163,7 @@ export type JsonItem<
 
 export type SelectItem<T extends Query> =
   | keyof T['selectable']
-  | Aggregate<T>
+  | AggregateItem
   | { selectAs: Record<string, keyof T['selectable'] | Query | RawExpression> }
   | JsonItem
   | RawExpression;
@@ -240,65 +240,55 @@ export type WhereItem =
       ];
     };
 
-export type AggregateOptions<
-  T extends Query = Query,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  As extends string | undefined = any,
-> = {
-  as?: As;
+export type AggregateItemOptions = {
+  as?: string;
   distinct?: boolean;
-  order?: string;
-  filter?: string;
+  order?: OrderItem[];
+  filter?: WhereItem;
+  filterOr?: WhereItem[];
   withinGroup?: boolean;
-  over?: T['windows'][number] | WindowDeclaration<T>;
+  over?: string;
+  window?: WindowItem;
 };
 
 export type SortDir = 'ASC' | 'DESC';
 
-export type OrderBy<T extends Query> =
-  | {
-      [K in Selectable<T>]?:
-        | SortDir
-        | { dir: SortDir; nulls: 'FIRST' | 'LAST' };
-    }
+export type OrderItem =
+  | Record<string, SortDir | { dir: SortDir; nulls: 'FIRST' | 'LAST' }>
   | RawExpression;
 
-export type AggregateArg<T extends Query> =
-  | Expression<T>
-  | Record<string, Expression<T>>
-  | [Expression<T>, string];
+export type AggregateItemArg =
+  | Expression
+  | Record<string, Expression>
+  | [Expression, string];
 
-export type Aggregate<T extends Query = Query> = {
+export type AggregateItem = {
   function: string;
-  arg?: AggregateArg<T>;
-  options: AggregateOptions<T>;
+  arg?: AggregateItemArg;
+  options: AggregateItemOptions;
 };
 
 export type ColumnOperators<
   S extends SelectableBase,
   Column extends keyof S,
 > = {
-  [O in keyof S[Column]['column']['operators']]?: S[Column]['column']['operators'][O]['type'];
+  [O in keyof S[Column]['column']['operators']]?:
+    | S[Column]['column']['operators'][O]['type'];
 };
 
-export type HavingArg<T extends Query = Query> =
-  | {
-      [Agg in keyof Aggregate1ArgumentTypes<T>]?: {
-        [Column in Exclude<Aggregate1ArgumentTypes<T>[Agg], RawExpression>]?:
-          | T['selectable'][Column]['column']['type']
-          | (ColumnOperators<T['selectable'], Column> & AggregateOptions<T>);
-      };
-    }
+type HavingItemObject = Record<string, unknown>;
+
+export type HavingItem =
+  | Record<string, HavingItemObject>
+  | { count?: number | HavingItemObject }
+  | Query
   | RawExpression;
 
-export type WindowArg<T extends Query> = Record<
-  string,
-  WindowDeclaration<T> | RawExpression
->;
+export type WindowItem = Record<string, WindowDeclaration | RawExpression>;
 
-export type WindowDeclaration<T extends Query = Query> = {
-  partitionBy?: Expression<T> | Expression<T>[];
-  order?: OrderBy<T>;
+export type WindowDeclaration = {
+  partitionBy?: Expression | Expression[];
+  order?: OrderItem;
 };
 
 export type UnionArg<T extends Query> =

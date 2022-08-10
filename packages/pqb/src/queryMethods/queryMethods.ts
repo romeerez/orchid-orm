@@ -18,7 +18,7 @@ import {
   GetTypesOrRaw,
   PropertyKeyUnionToArray,
 } from '../utils';
-import { HavingArg, OrderBy, toSql, WindowArg } from '../sql';
+import { SortDir, toSql } from '../sql';
 import {
   pushQueryArray,
   pushQueryValue,
@@ -50,11 +50,30 @@ import { For } from './for';
 import { ColumnInfoMethods } from './columnInfo';
 import { Where } from './where';
 import { Clear } from './clear';
+import { Having } from './having';
+
+export type WindowArg<T extends Query> = Record<
+  string,
+  WindowDeclaration<T> | RawExpression
+>;
+
+export type WindowDeclaration<T extends Query = Query> = {
+  partitionBy?: Expression<T> | Expression<T>[];
+  order?: OrderArg<T>;
+};
 
 type WindowResult<T extends Query, W extends WindowArg<T>> = SetQueryWindows<
   T,
   PropertyKeyUnionToArray<keyof W>
 >;
+
+export type OrderArg<T extends Query> =
+  | {
+      [K in Selectable<T>]?:
+        | SortDir
+        | { dir: SortDir; nulls: 'FIRST' | 'LAST' };
+    }
+  | RawExpression;
 
 export interface QueryMethods
   extends Aggregate,
@@ -71,7 +90,8 @@ export interface QueryMethods
     For,
     ColumnInfoMethods,
     Where,
-    Clear {
+    Clear,
+    Having {
   then: Then<unknown>;
 }
 
@@ -259,14 +279,6 @@ export class QueryMethods {
     return pushQueryArray(this, 'group', columns);
   }
 
-  having<T extends Query>(this: T, ...args: HavingArg<T>[]): T {
-    return this.clone()._having(...args);
-  }
-
-  _having<T extends Query>(this: T, ...args: HavingArg<T>[]): T {
-    return pushQueryArray(this, 'having', args);
-  }
-
   window<T extends Query, W extends WindowArg<T>>(
     this: T,
     arg: W,
@@ -299,11 +311,11 @@ export class QueryMethods {
       ._from(raw(`(${this.toSql()})`)) as unknown as SetQueryTableAlias<Q, As>;
   }
 
-  order<T extends Query>(this: T, ...args: OrderBy<T>[]): T {
+  order<T extends Query>(this: T, ...args: OrderArg<T>[]): T {
     return this.clone()._order(...args);
   }
 
-  _order<T extends Query>(this: T, ...args: OrderBy<T>[]): T {
+  _order<T extends Query>(this: T, ...args: OrderArg<T>[]): T {
     return pushQueryArray(this, 'order', args);
   }
 
@@ -374,4 +386,5 @@ applyMixins(QueryMethods, [
   ColumnInfoMethods,
   Where,
   Clear,
+  Having,
 ]);

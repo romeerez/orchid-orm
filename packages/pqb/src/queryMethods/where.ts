@@ -2,9 +2,8 @@ import { Query, QueryBase, SetQueryReturnsOne } from '../query';
 import { ColumnOperators, WhereItem } from '../sql';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { RawExpression } from '../common';
-import { JSONColumn } from '../columnSchema';
 
-type WhereArg<T extends Query> =
+export type WhereArg<T extends Query> =
   | Partial<T['type']>
   | {
       [K in keyof T['selectable']]?:
@@ -41,7 +40,7 @@ type WhereInArg<T extends Query> = {
     | RawExpression;
 };
 
-const serializeWhereItem = (item: WhereArg<Query>): WhereItem => {
+export const serializeWhereItem = (item: WhereArg<Query>): WhereItem => {
   if ('type' in item && typeof item.type === 'string') {
     return item as unknown as WhereItem;
   }
@@ -145,7 +144,7 @@ type TextColumnName<T extends Query> = {
 }[keyof T['selectable']];
 
 export type JsonColumnName<T extends QueryBase> = {
-  [K in keyof T['selectable']]: T['selectable'][K]['column'] extends JSONColumn
+  [K in keyof T['selectable']]: T['selectable'][K]['column']['dataType'] extends 'jsonb'
     ? K
     : never;
 }[keyof T['selectable']];

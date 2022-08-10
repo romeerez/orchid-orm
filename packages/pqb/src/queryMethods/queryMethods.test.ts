@@ -1,5 +1,5 @@
 import { raw } from '../common';
-import { HavingArg, QueryData, SelectQueryData } from '../sql';
+import { QueryData, SelectQueryData } from '../sql';
 import {
   line,
   expectQueryNotMutated,
@@ -375,65 +375,6 @@ describe('queryMethods', () => {
       q._group(raw('id'), raw('name'));
       expect(q.toSql()).toBe(expectedSql);
     });
-  });
-});
-
-describe('having', () => {
-  it('adds having conditions from nested structure argument', () => {
-    const q = User.all();
-
-    // TODO: improve order and filter for TS
-    const arg: HavingArg<typeof User> = {
-      sum: {
-        id: {
-          gt: 5,
-          lt: 20,
-          distinct: true,
-          order: 'name ASC',
-          filter: 'id < 20',
-          withinGroup: true,
-        },
-      },
-      count: {
-        id: 5,
-      },
-    };
-
-    const expectedSql = `
-      SELECT "user".*
-      FROM "user"
-      HAVING sum("user"."id")
-          WITHIN GROUP (ORDER BY name ASC)
-          FILTER (WHERE id < 20) > 5
-        AND sum("user"."id")
-          WITHIN GROUP (ORDER BY name ASC)
-          FILTER (WHERE id < 20) < 20
-        AND count("user"."id") = 5
-    `;
-
-    expect(q.having(arg).toSql()).toBe(line(expectedSql));
-    expectQueryNotMutated(q);
-
-    q._having(arg);
-    expect(q.toSql()).toBe(line(expectedSql));
-  });
-
-  it('adds having condition with raw sql', () => {
-    const q = User.all();
-
-    const expectedSql = `
-      SELECT "user".*
-      FROM "user"
-      HAVING count(*) = 1 AND sum(id) = 2
-    `;
-
-    expect(q.having(raw('count(*) = 1'), raw('sum(id) = 2')).toSql()).toBe(
-      line(expectedSql),
-    );
-    expectQueryNotMutated(q);
-
-    q._having(raw('count(*) = 1'), raw('sum(id) = 2'));
-    expect(q.toSql()).toBe(line(expectedSql));
   });
 });
 
