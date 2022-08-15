@@ -27,6 +27,7 @@ type ItemOf3Or4Length =
 export const processJoinItem = (
   model: Query,
   query: QueryData,
+  values: unknown[],
   { args }: JoinItem,
   quotedAs?: string,
 ): { target: string; conditions?: string } => {
@@ -53,6 +54,7 @@ export const processJoinItem = (
       const onConditions = whereToSql(
         query,
         joinQuery.query,
+        values,
         q(as as string),
         quotedAs,
       );
@@ -67,12 +69,18 @@ export const processJoinItem = (
     if (args.length === 2) {
       const [, arg] = args;
       if (arg.type === 'objectOrRaw') {
-        conditions = getObjectOrRawConditions(arg.data, quotedAs, target);
+        conditions = getObjectOrRawConditions(
+          arg.data,
+          values,
+          quotedAs,
+          target,
+        );
       } else if (arg.query.query) {
         const shape = query.withShapes?.[first] as ColumnsShape;
         const onConditions = whereToSql(
           { shape },
           arg.query.query,
+          values,
           target,
           quotedAs,
         );
@@ -81,6 +89,7 @@ export const processJoinItem = (
     } else if (args.length >= 3) {
       conditions = getConditionsFor3Or4LengthItem(
         target,
+        values,
         quotedAs,
         args as ItemOf3Or4Length,
       );
@@ -105,11 +114,12 @@ export const processJoinItem = (
   if (args.length === 2) {
     const [, arg] = args;
     if (arg.type === 'objectOrRaw') {
-      conditions = getObjectOrRawConditions(arg.data, quotedAs, joinAs);
+      conditions = getObjectOrRawConditions(arg.data, values, quotedAs, joinAs);
     } else if (arg.query.query) {
       const onConditions = whereToSql(
         joinTarget,
         arg.query.query,
+        values,
         joinAs,
         quotedAs,
       );
@@ -118,6 +128,7 @@ export const processJoinItem = (
   } else if (args.length >= 3) {
     conditions = getConditionsFor3Or4LengthItem(
       joinAs,
+      values,
       quotedAs,
       args as ItemOf3Or4Length,
     );
@@ -128,9 +139,10 @@ export const processJoinItem = (
 
 const getConditionsFor3Or4LengthItem = (
   target: string,
+  values: unknown[],
   quotedAs: string | undefined,
   args: ItemOf3Or4Length,
-) => {
+): string => {
   const [, leftColumn, opOrRightColumn, maybeRightColumn] = args;
 
   const op = maybeRightColumn ? opOrRightColumn : '=';
@@ -139,21 +151,22 @@ const getConditionsFor3Or4LengthItem = (
   return `${
     typeof leftColumn === 'string'
       ? quoteFullColumn(leftColumn, target)
-      : getRaw(leftColumn)
+      : getRaw(leftColumn, values)
   } ${op} ${
     typeof rightColumn === 'string'
       ? quoteFullColumn(rightColumn, quotedAs)
-      : getRaw(rightColumn)
+      : getRaw(rightColumn, values)
   }`;
 };
 
 const getObjectOrRawConditions = (
   data: Record<string, string | RawExpression> | RawExpression,
+  values: unknown[],
   quotedAs: string | undefined,
   joinAs: string | undefined,
-) => {
+): string => {
   if (isRaw(data)) {
-    return getRaw(data);
+    return getRaw(data, values);
   } else {
     const pairs: string[] = [];
     for (const key in data) {
@@ -163,10 +176,11 @@ const getObjectOrRawConditions = (
         `${quoteFullColumn(key, joinAs)} = ${
           typeof value === 'string'
             ? quoteFullColumn(value, quotedAs)
-            : getRaw(value)
+            : getRaw(value, values)
         }`,
       );
     }
+
     return pairs.join(', ');
   }
 };
@@ -175,12 +189,14 @@ export const pushJoinSql = (
   sql: string[],
   model: Query,
   query: SelectQueryData | InsertQueryData | DeleteQueryData,
+  values: unknown[],
   quotedAs?: string,
 ) => {
   query.join?.forEach((item) => {
     const { target, conditions } = processJoinItem(
       model,
       query,
+      values,
       item,
       quotedAs,
     );

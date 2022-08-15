@@ -1,7 +1,7 @@
 import {
   AssertEqual,
   expectQueryNotMutated,
-  line,
+  expectSql,
   Profile,
   User,
 } from '../test-utils';
@@ -19,11 +19,7 @@ describe('delete', () => {
     const q = User.all();
 
     const query = q.delete();
-    expect(query.toSql()).toBe(
-      line(`
-        DELETE FROM "user"
-      `),
-    );
+    expectSql(query.toSql(), 'DELETE FROM "user"');
 
     const eq: AssertEqual<Awaited<typeof query>, void> = true;
     expect(eq).toBe(true);
@@ -35,12 +31,7 @@ describe('delete', () => {
     const q = User.all();
 
     const query = q.delete('*');
-    expect(query.toSql()).toBe(
-      line(`
-        DELETE FROM "user"
-        RETURNING *
-      `),
-    );
+    expectSql(query.toSql(), `DELETE FROM "user" RETURNING *`);
 
     const eq: AssertEqual<Awaited<typeof query>, typeof User['type'][]> = true;
     expect(eq).toBe(true);
@@ -52,11 +43,9 @@ describe('delete', () => {
     const q = User.all();
 
     const query = q.delete(['id', 'name']);
-    expect(query.toSql()).toBe(
-      line(`
-        DELETE FROM "user"
-        RETURNING "user"."id", "user"."name"
-      `),
+    expectSql(
+      query.toSql(),
+      `DELETE FROM "user" RETURNING "user"."id", "user"."name"`,
     );
 
     const eq: AssertEqual<
@@ -76,13 +65,15 @@ describe('delete', () => {
       .where({ id: 1 })
       .join(Profile, 'userId', '=', 'id');
 
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         DELETE FROM "user"
         USING "profile"
-        WHERE "user"."id" = 1 AND "profile"."userId" = "user"."id"
+        WHERE "user"."id" = $1 AND "profile"."userId" = "user"."id"
         RETURNING *
-      `),
+      `,
+      [1],
     );
 
     const eq: AssertEqual<Awaited<typeof query>, typeof User['type'][]> = true;

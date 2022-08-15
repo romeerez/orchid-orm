@@ -1,8 +1,8 @@
 import {
   AssertEqual,
   expectQueryNotMutated,
+  expectSql,
   insert,
-  line,
   User,
   useTestDatabase,
 } from '../test-utils';
@@ -14,26 +14,29 @@ describe('json methods', () => {
   describe('json', () => {
     it('wraps a query with json functions', () => {
       const q = User.all();
-      expect(q.json().toSql()).toBe(
-        line(`
+      expectSql(
+        q.json().toSql(),
+        `
           SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
           FROM (
             SELECT "user".* FROM "user"
           ) AS "t"
-        `),
+        `,
       );
       expectQueryNotMutated(q);
     });
 
     it('supports `take`', () => {
       const q = User.all();
-      expect(q.take().json().toSql()).toBe(
-        line(`
+      expectSql(
+        q.take().json().toSql(),
+        `
           SELECT COALESCE(row_to_json("t".*), '{}') AS "json"
           FROM (
-            SELECT "user".* FROM "user" LIMIT 1
+            SELECT "user".* FROM "user" LIMIT $1
           ) AS "t"
-        `),
+        `,
+        [1],
       );
       expectQueryNotMutated(q);
     });
@@ -58,11 +61,13 @@ describe('json methods', () => {
         const q = User.all();
 
         const query = q.jsonSet('data', ['name'], 'new value');
-        expect(query.toSql()).toBe(
-          line(`
-          SELECT jsonb_set("user"."data", '{name}', '"new value"') AS "data"
-          FROM "user"
-        `),
+        expectSql(
+          query.toSql(),
+          `
+            SELECT jsonb_set("user"."data", '{name}', $1) AS "data"
+            FROM "user"
+          `,
+          ['"new value"'],
         );
 
         const result = await query.take();
@@ -84,11 +89,13 @@ describe('json methods', () => {
           as: 'alias',
           createIfMissing: true,
         });
-        expect(query.toSql()).toBe(
-          line(`
-          SELECT jsonb_set("user"."data", '{name}', '"new value"', true) AS "alias"
-          FROM "user"
-        `),
+        expectSql(
+          query.toSql(),
+          `
+            SELECT jsonb_set("user"."data", '{name}', $1, true) AS "alias"
+            FROM "user"
+          `,
+          ['"new value"'],
         );
 
         const result = await query.take();
@@ -111,14 +118,16 @@ describe('json methods', () => {
           ['name'],
           'new value',
         );
-        expect(query.toSql()).toBe(
-          line(`
-          SELECT jsonb_set(
-            jsonb_insert("user"."data", '{tags, 0}', '"two"'),
-            '{name}', '"new value"'
-          ) AS "data"
-          FROM "user"
-        `),
+        expectSql(
+          query.toSql(),
+          `
+            SELECT jsonb_set(
+              jsonb_insert("user"."data", '{tags, 0}', $1),
+              '{name}', $2
+            ) AS "data"
+            FROM "user"
+          `,
+          ['"two"', '"new value"'],
         );
 
         const result = await query.take();
@@ -142,11 +151,13 @@ describe('json methods', () => {
         const q = User.all();
 
         const query = q.jsonInsert('data', ['tags', 0], 'two');
-        expect(query.toSql()).toBe(
-          line(`
-          SELECT jsonb_insert("user"."data", '{tags, 0}', '"two"') AS "data"
-          FROM "user"
-        `),
+        expectSql(
+          query.toSql(),
+          `
+            SELECT jsonb_insert("user"."data", '{tags, 0}', $1) AS "data"
+            FROM "user"
+          `,
+          ['"two"'],
         );
 
         const result = await query.take();
@@ -168,11 +179,13 @@ describe('json methods', () => {
           as: 'alias',
           insertAfter: true,
         });
-        expect(query.toSql()).toBe(
-          line(`
-          SELECT jsonb_insert("user"."data", '{tags, 0}', '"two"', true) AS "alias"
-          FROM "user"
-        `),
+        expectSql(
+          query.toSql(),
+          `
+            SELECT jsonb_insert("user"."data", '{tags, 0}', $1, true) AS "alias"
+            FROM "user"
+          `,
+          ['"two"'],
         );
 
         const result = await query.take();
@@ -195,14 +208,16 @@ describe('json methods', () => {
           ['tags', 0],
           'tag',
         );
-        expect(query.toSql()).toBe(
-          line(`
-          SELECT jsonb_insert(
-            jsonb_set("user"."data", '{tags}', '[]'),
-            '{tags, 0}', '"tag"'
-          ) AS "data"
-          FROM "user"
-        `),
+        expectSql(
+          query.toSql(),
+          `
+            SELECT jsonb_insert(
+              jsonb_set("user"."data", '{tags}', $1),
+              '{tags, 0}', $2
+            ) AS "data"
+            FROM "user"
+          `,
+          ['[]', '"tag"'],
         );
 
         const result = await query.take();
@@ -223,11 +238,12 @@ describe('json methods', () => {
         const q = User.all();
 
         const query = q.jsonRemove('data', ['tags', 0]);
-        expect(query.toSql()).toBe(
-          line(`
-          SELECT "user"."data" #- '{tags, 0}' AS "data"
-          FROM "user"
-        `),
+        expectSql(
+          query.toSql(),
+          `
+            SELECT "user"."data" #- '{tags, 0}' AS "data"
+            FROM "user"
+          `,
         );
 
         const result = await query.take();
@@ -246,11 +262,12 @@ describe('json methods', () => {
         const q = User.all();
 
         const query = q.jsonRemove('data', ['tags', 0], { as: 'alias' });
-        expect(query.toSql()).toBe(
-          line(`
-          SELECT "user"."data" #- '{tags, 0}' AS "alias"
-          FROM "user"
-        `),
+        expectSql(
+          query.toSql(),
+          `
+            SELECT "user"."data" #- '{tags, 0}' AS "alias"
+            FROM "user"
+          `,
         );
 
         const result = await query.take();
@@ -272,12 +289,14 @@ describe('json methods', () => {
           'tags',
           0,
         ]);
-        expect(query.toSql()).toBe(
-          line(`
-          SELECT 
-            jsonb_set("user"."data", '{tags}', '["tag"]') #- '{tags, 0}' AS "data"
-          FROM "user"
-        `),
+        expectSql(
+          query.toSql(),
+          `
+            SELECT 
+              jsonb_set("user"."data", '{tags}', $1) #- '{tags, 0}' AS "data"
+            FROM "user"
+          `,
+          ['["tag"]'],
         );
 
         const result = await query.take();
@@ -303,11 +322,13 @@ describe('json methods', () => {
           '$.name',
           'name',
         );
-        expect(query.toSql()).toBe(
-          line(`
-            SELECT jsonb_path_query("user"."data", '$.name') AS "name"
+        expectSql(
+          query.toSql(),
+          `
+            SELECT jsonb_path_query("user"."data", $1) AS "name"
             FROM "user"
-          `),
+          `,
+          ['$.name'],
         );
 
         const result = await query.take();
@@ -332,11 +353,13 @@ describe('json methods', () => {
             silent: true,
           },
         );
-        expect(query.toSql()).toBe(
-          line(`
-            SELECT jsonb_path_query("user"."data", '$.name', 'vars', true) AS "name"
+        expectSql(
+          query.toSql(),
+          `
+            SELECT jsonb_path_query("user"."data", $1, $2, true) AS "name"
             FROM "user"
-          `),
+          `,
+          ['$.name', 'vars'],
         );
 
         expectQueryNotMutated(q);
@@ -351,15 +374,17 @@ describe('json methods', () => {
           '$.tags',
           'tags',
         );
-        expect(query.toSql()).toBe(
-          line(`
+        expectSql(
+          query.toSql(),
+          `
             SELECT 
               jsonb_path_query(
-                jsonb_set("user"."data", '{tags}', '["tag"]'),
-                '$.tags'
+                jsonb_set("user"."data", '{tags}', $1),
+                $2
               ) AS "tags"
             FROM "user"
-          `),
+          `,
+          ['["tag"]', '$.tags'],
         );
 
         const result = await query.take();

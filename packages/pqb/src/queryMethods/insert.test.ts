@@ -2,11 +2,10 @@ import {
   AssertEqual,
   expectMatchObjectWithTimestamps,
   expectQueryNotMutated,
-  line,
+  expectSql,
   User,
   useTestDatabase,
 } from '../test-utils';
-import { quote } from '../quote';
 import { raw } from '../common';
 import { OnConflictQueryBuilder } from './insert';
 
@@ -28,11 +27,12 @@ describe('insert', () => {
       columns: ['name', 'password'],
       values: raw('raw sql'),
     });
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         INSERT INTO "user"("name", "password")
         VALUES raw sql
-      `),
+      `,
     );
 
     const isVoid: AssertEqual<Awaited<typeof query>, void> = true;
@@ -45,11 +45,13 @@ describe('insert', () => {
     const q = User.all();
 
     const query = q.insert(data);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
-        VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
-      `),
+        VALUES ($1, $2, $3, $4)
+      `,
+      ['name', 'password', now, now],
     );
 
     const result = await query;
@@ -66,12 +68,14 @@ describe('insert', () => {
     const q = User.all();
 
     const query = q.insert(data, ['id', 'name', 'createdAt', 'updatedAt']);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
-        VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
+        VALUES ($1, $2, $3, $4)
         RETURNING "user"."id", "user"."name", "user"."createdAt", "user"."updatedAt"
-      `),
+      `,
+      ['name', 'password', now, now],
     );
 
     const result = await query;
@@ -92,12 +96,14 @@ describe('insert', () => {
     const q = User.all();
 
     const query = q.insert(data, '*');
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
-        VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
+        VALUES ($1, $2, $3, $4)
         RETURNING *
-      `),
+      `,
+      ['name', 'password', now, now],
     );
 
     const result = await query;
@@ -124,13 +130,15 @@ describe('insert', () => {
 
     const query = q.insert(arr);
 
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         INSERT INTO "user"("name", "password", "createdAt", "updatedAt", "picture")
         VALUES
-          ('name', 'password', ${quote(now)}, ${quote(now)}, NULL),
-          ('name', 'password', ${quote(now)}, ${quote(now)}, DEFAULT)
-      `),
+          ($1, $2, $3, $4, $5),
+          ($6, $7, $8, $9, DEFAULT)
+      `,
+      ['name', 'password', now, now, null, 'name', 'password', now, now],
     );
 
     const result = await query;
@@ -158,14 +166,16 @@ describe('insert', () => {
 
     const query = q.insert(arr, ['id', 'name', 'createdAt', 'updatedAt']);
 
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         INSERT INTO "user"("name", "password", "createdAt", "updatedAt", "picture")
         VALUES
-          ('name', 'password', ${quote(now)}, ${quote(now)}, NULL),
-          ('name', 'password', ${quote(now)}, ${quote(now)}, DEFAULT)
+          ($1, $2, $3, $4, $5),
+          ($6, $7, $8, $9, DEFAULT)
         RETURNING "user"."id", "user"."name", "user"."createdAt", "user"."updatedAt"
-      `),
+      `,
+      ['name', 'password', now, now, null, 'name', 'password', now, now],
     );
 
     const result = await query;
@@ -196,14 +206,16 @@ describe('insert', () => {
 
     const query = q.insert(arr, '*');
 
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         INSERT INTO "user"("name", "password", "createdAt", "updatedAt", "picture")
         VALUES
-          ('name', 'password', ${quote(now)}, ${quote(now)}, NULL),
-          ('name', 'password', ${quote(now)}, ${quote(now)}, DEFAULT)
+          ($1, $2, $3, $4, $5),
+          ($6, $7, $8, $9, DEFAULT)
         RETURNING *
-      `),
+      `,
+      ['name', 'password', now, now, null, 'name', 'password', now, now],
     );
 
     const result = await query;
@@ -250,15 +262,17 @@ describe('insert', () => {
         .ignore()
         .where({ name: 'where name' });
 
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
             INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
-            VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT ("name")
             DO NOTHING
-            WHERE "user"."name" = 'where name'
+            WHERE "user"."name" = $5
             RETURNING "user"."id"
-          `),
+          `,
+        ['name', 'password', now, now, 'where name'],
       );
 
       expectQueryNotMutated(q);
@@ -269,13 +283,15 @@ describe('insert', () => {
         const q = User.all();
 
         const query = q.insert(data).onConflict().ignore();
-        expect(query.toSql()).toBe(
-          line(`
+        expectSql(
+          query.toSql(),
+          `
             INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
-            VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT ("name", "password", "createdAt", "updatedAt")
             DO NOTHING
-          `),
+          `,
+          ['name', 'password', now, now],
         );
 
         expectQueryNotMutated(q);
@@ -285,12 +301,14 @@ describe('insert', () => {
         const q = User.all();
 
         const query = q.insert(data).onConflict('id').ignore();
-        expect(query.toSql()).toBe(
-          line(`
+        expectSql(
+          query.toSql(),
+          `
             INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
-            VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT ("id") DO NOTHING
-          `),
+          `,
+          ['name', 'password', now, now],
         );
 
         expectQueryNotMutated(q);
@@ -300,12 +318,14 @@ describe('insert', () => {
         const q = User.all();
 
         const query = q.insert(data).onConflict(['id', 'name']).ignore();
-        expect(query.toSql()).toBe(
-          line(`
+        expectSql(
+          query.toSql(),
+          `
             INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
-            VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT ("id", "name") DO NOTHING
-          `),
+          `,
+          ['name', 'password', now, now],
         );
 
         expectQueryNotMutated(q);
@@ -315,12 +335,14 @@ describe('insert', () => {
         const q = User.all();
 
         const query = q.insert(data).onConflict(raw('raw query')).ignore();
-        expect(query.toSql()).toBe(
-          line(`
+        expectSql(
+          query.toSql(),
+          `
             INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
-            VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT raw query DO NOTHING
-          `),
+          `,
+          ['name', 'password', now, now],
         );
 
         expectQueryNotMutated(q);
@@ -332,17 +354,19 @@ describe('insert', () => {
         const q = User.all();
 
         const query = q.insert(data).onConflict().merge();
-        expect(query.toSql()).toBe(
-          line(`
+        expectSql(
+          query.toSql(),
+          `
             INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
-            VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT ("name", "password", "createdAt", "updatedAt")
             DO UPDATE SET
               "name" = excluded."name",
               "password" = excluded."password",
               "createdAt" = excluded."createdAt",
               "updatedAt" = excluded."updatedAt"
-          `),
+          `,
+          ['name', 'password', now, now],
         );
 
         expectQueryNotMutated(q);
@@ -352,13 +376,15 @@ describe('insert', () => {
         const q = User.all();
 
         const query = q.insert(data).onConflict('name').merge('name');
-        expect(query.toSql()).toBe(
-          line(`
+        expectSql(
+          query.toSql(),
+          `
             INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
-            VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT ("name")
             DO UPDATE SET "name" = excluded."name"
-          `),
+          `,
+          ['name', 'password', now, now],
         );
 
         expectQueryNotMutated(q);
@@ -372,15 +398,17 @@ describe('insert', () => {
           .onConflict(['name', 'password'])
           .merge(['name', 'password']);
 
-        expect(query.toSql()).toBe(
-          line(`
+        expectSql(
+          query.toSql(),
+          `
             INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
-            VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT ("name", "password")
             DO UPDATE SET
               "name" = excluded."name",
               "password" = excluded."password"
-          `),
+          `,
+          ['name', 'password', now, now],
         );
 
         expectQueryNotMutated(q);
@@ -394,13 +422,15 @@ describe('insert', () => {
           .onConflict('name')
           .merge({ name: 'new name' });
 
-        expect(query.toSql()).toBe(
-          line(`
+        expectSql(
+          query.toSql(),
+          `
             INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
-            VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT ("name")
-            DO UPDATE SET "name" = 'new name'
-          `),
+            DO UPDATE SET "name" = $5
+          `,
+          ['name', 'password', now, now, 'new name'],
         );
 
         expectQueryNotMutated(q);
@@ -414,13 +444,15 @@ describe('insert', () => {
           .onConflict(raw('on conflict raw'))
           .merge(raw('merge raw'));
 
-        expect(query.toSql()).toBe(
-          line(`
+        expectSql(
+          query.toSql(),
+          `
             INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
-            VALUES ('name', 'password', ${quote(now)}, ${quote(now)})
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT on conflict raw
             DO UPDATE SET merge raw
-          `),
+          `,
+          ['name', 'password', now, now],
         );
 
         expectQueryNotMutated(q);

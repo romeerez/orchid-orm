@@ -1,4 +1,4 @@
-import { expectQueryNotMutated, line, User } from '../test-utils';
+import { expectQueryNotMutated, expectSql, User } from '../test-utils';
 import { raw } from '../common';
 
 describe('and', () => {
@@ -48,67 +48,74 @@ describe('andNot', () => {
 describe('where', () => {
   it('should handle null value', () => {
     const q = User.all();
-    expect(q.where({ id: 1, picture: null }).toSql()).toBe(
-      line(`
-        SELECT "user".* FROM "user" WHERE "user"."id" = 1 AND "user"."picture" IS NULL
-      `),
+    expectSql(
+      q.where({ id: 1, picture: null }).toSql(),
+      `
+        SELECT "user".* FROM "user" WHERE "user"."id" = $1 AND "user"."picture" IS NULL
+      `,
+      [1],
     );
     expectQueryNotMutated(q);
   });
 
   it('should accept sub query', () => {
     const q = User.all();
-    expect(
+    expectSql(
       q.where({ id: 1 }, q.where({ id: 2 }).or({ id: 3, name: 'n' })).toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 AND (
-          "user"."id" = 2 OR "user"."id" = 3 AND "user"."name" = 'n'
+        WHERE "user"."id" = $1 AND (
+          "user"."id" = $2 OR "user"."id" = $3 AND "user"."name" = $4
         )
-      `),
+      `,
+      [1, 2, 3, 'n'],
     );
     expectQueryNotMutated(q);
   });
 
   it('should handle condition with operator', () => {
     const q = User.all();
-    expect(q.where({ age: { gt: 20 } }).toSql()).toBe(
-      line(`
-        SELECT "user".* FROM "user" WHERE "user"."age" > 20
-      `),
+    expectSql(
+      q.where({ age: { gt: 20 } }).toSql(),
+      `
+        SELECT "user".* FROM "user" WHERE "user"."age" > $1
+      `,
+      [20],
     );
     expectQueryNotMutated(q);
   });
 
   it('should handle condition with operator and sub query', () => {
     const q = User.all();
-    expect(q.where({ id: { in: User.select('id') } }).toSql()).toBe(
-      line(`
+    expectSql(
+      q.where({ id: { in: User.select('id') } }).toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE "user"."id" IN (SELECT "user"."id" FROM "user")
-      `),
+      `,
     );
     expectQueryNotMutated(q);
   });
 
   it('should handle condition with operator and raw', () => {
     const q = User.all();
-    expect(q.where({ id: { in: raw('(1, 2, 3)') } }).toSql()).toBe(
-      line(`
+    expectSql(
+      q.where({ id: { in: raw('(1, 2, 3)') } }).toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE "user"."id" IN (1, 2, 3)
-      `),
+      `,
     );
     expectQueryNotMutated(q);
   });
 
   it('should accept raw sql', () => {
     const q = User.all();
-    expect(q.where({ id: raw('1 + 2') }).toSql()).toBe(
-      line(`
+    expectSql(
+      q.where({ id: raw('1 + 2') }).toSql(),
+      `
         SELECT "user".* FROM "user" WHERE "user"."id" = 1 + 2
-      `),
+      `,
     );
     expectQueryNotMutated(q);
   });
@@ -117,16 +124,20 @@ describe('where', () => {
 describe('findBy', () => {
   it('like where but with take', () => {
     const q = User.all();
-    expect(q.findBy({ name: 's' }).toSql()).toBe(
-      `SELECT "user".* FROM "user" WHERE "user"."name" = 's' LIMIT 1`,
+    expectSql(
+      q.findBy({ name: 's' }).toSql(),
+      `SELECT "user".* FROM "user" WHERE "user"."name" = $1 LIMIT $2`,
+      ['s', 1],
     );
     expectQueryNotMutated(q);
   });
 
   it('should accept raw', () => {
     const q = User.all();
-    expect(q.findBy({ name: raw(`'string'`) }).toSql()).toBe(
-      `SELECT "user".* FROM "user" WHERE "user"."name" = 'string' LIMIT 1`,
+    expectSql(
+      q.findBy({ name: raw(`'string'`) }).toSql(),
+      `SELECT "user".* FROM "user" WHERE "user"."name" = 'string' LIMIT $1`,
+      [1],
     );
     expectQueryNotMutated(q);
   });
@@ -135,72 +146,79 @@ describe('findBy', () => {
 describe('whereNot', () => {
   it('should handle null value', () => {
     const q = User.all();
-    expect(q.whereNot({ id: 1, picture: null }).toSql()).toBe(
-      line(`
+    expectSql(
+      q.whereNot({ id: 1, picture: null }).toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE NOT "user"."id" = 1
+        WHERE NOT "user"."id" = $1
           AND NOT "user"."picture" IS NULL
-      `),
+      `,
+      [1],
     );
     expectQueryNotMutated(q);
   });
 
   it('should accept sub query', () => {
     const q = User.all();
-    expect(
+    expectSql(
       q
         .whereNot({ id: 1 }, q.where({ id: 2 }).or({ id: 3, name: 'n' }))
         .toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
-        WHERE NOT "user"."id" = 1 AND NOT (
-          "user"."id" = 2 OR "user"."id" = 3 AND "user"."name" = 'n'
+        WHERE NOT "user"."id" = $1 AND NOT (
+          "user"."id" = $2 OR "user"."id" = $3 AND "user"."name" = $4
         )
-      `),
+      `,
+      [1, 2, 3, 'n'],
     );
     expectQueryNotMutated(q);
   });
 
   it('should handle condition with operator', () => {
     const q = User.all();
-    expect(q.whereNot({ age: { gt: 20 } }).toSql()).toBe(
-      line(`
+    expectSql(
+      q.whereNot({ age: { gt: 20 } }).toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE NOT "user"."age" > 20
-      `),
+        WHERE NOT "user"."age" > $1
+      `,
+      [20],
     );
     expectQueryNotMutated(q);
   });
 
   it('should handle condition with operator and sub query', () => {
     const q = User.all();
-    expect(q.whereNot({ id: { in: User.select('id') } }).toSql()).toBe(
-      line(`
+    expectSql(
+      q.whereNot({ id: { in: User.select('id') } }).toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE NOT "user"."id" IN (SELECT "user"."id" FROM "user")
-      `),
+      `,
     );
     expectQueryNotMutated(q);
   });
 
   it('should handle condition with operator and raw', () => {
     const q = User.all();
-    expect(q.whereNot({ id: { in: raw('(1, 2, 3)') } }).toSql()).toBe(
-      line(`
+    expectSql(
+      q.whereNot({ id: { in: raw('(1, 2, 3)') } }).toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE NOT "user"."id" IN (1, 2, 3)
-      `),
+      `,
     );
     expectQueryNotMutated(q);
   });
 
   it('should accept raw sql', () => {
     const q = User.all();
-    expect(q.whereNot({ id: raw('1 + 2') }).toSql()).toBe(
-      line(`
+    expectSql(
+      q.whereNot({ id: raw('1 + 2') }).toSql(),
+      `
         SELECT "user".* FROM "user" WHERE NOT "user"."id" = 1 + 2
-      `),
+      `,
     );
     expectQueryNotMutated(q);
   });
@@ -209,35 +227,38 @@ describe('whereNot', () => {
 describe('or', () => {
   it('should join conditions with or', () => {
     const q = User.all();
-    expect(q.or({ id: 1 }, { name: 'ko' }).toSql()).toBe(
-      line(`
+    expectSql(
+      q.or({ id: 1 }, { name: 'ko' }).toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR "user"."name" = 'ko'
-      `),
+        WHERE "user"."id" = $1 OR "user"."name" = $2
+      `,
+      [1, 'ko'],
     );
     expectQueryNotMutated(q);
   });
 
   it('should handle sub queries', () => {
     const q = User.all();
-    expect(
+    expectSql(
       q.or({ id: 1 }, User.where({ id: 2 }).and({ name: 'n' })).toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR ("user"."id" = 2 AND "user"."name" = 'n')
-      `),
+        WHERE "user"."id" = $1 OR ("user"."id" = $2 AND "user"."name" = $3)
+      `,
+      [1, 2, 'n'],
     );
     expectQueryNotMutated(q);
   });
 
   it('should accept raw sql', () => {
     const q = User.all();
-    expect(q.or({ id: raw('1 + 2') }, { name: raw('2 + 3') }).toSql()).toBe(
-      line(`
+    expectSql(
+      q.or({ id: raw('1 + 2') }, { name: raw('2 + 3') }).toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE "user"."id" = 1 + 2 OR "user"."name" = 2 + 3
-      `),
+      `,
     );
     expectQueryNotMutated(q);
   });
@@ -246,35 +267,38 @@ describe('or', () => {
 describe('orNot', () => {
   it('should join conditions with or', () => {
     const q = User.all();
-    expect(q.orNot({ id: 1 }, { name: 'ko' }).toSql()).toBe(
-      line(`
+    expectSql(
+      q.orNot({ id: 1 }, { name: 'ko' }).toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE NOT "user"."id" = 1 OR NOT "user"."name" = 'ko'
-      `),
+        WHERE NOT "user"."id" = $1 OR NOT "user"."name" = $2
+      `,
+      [1, 'ko'],
     );
     expectQueryNotMutated(q);
   });
 
   it('should handle sub queries', () => {
     const q = User.all();
-    expect(
+    expectSql(
       q.orNot({ id: 1 }, User.where({ id: 2 }).and({ name: 'n' })).toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
-        WHERE NOT "user"."id" = 1 OR NOT ("user"."id" = 2 AND "user"."name" = 'n')
-      `),
+        WHERE NOT "user"."id" = $1 OR NOT ("user"."id" = $2 AND "user"."name" = $3)
+      `,
+      [1, 2, 'n'],
     );
     expectQueryNotMutated(q);
   });
 
   it('should accept raw sql', () => {
     const q = User.all();
-    expect(q.orNot({ id: raw('1 + 2') }, { name: raw('2 + 3') }).toSql()).toBe(
-      line(`
+    expectSql(
+      q.orNot({ id: raw('1 + 2') }, { name: raw('2 + 3') }).toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE NOT "user"."id" = 1 + 2 OR NOT "user"."name" = 2 + 3
-      `),
+      `,
     );
     expectQueryNotMutated(q);
   });
@@ -285,11 +309,13 @@ describe('whereIn', () => {
     const q = User.all();
 
     const query = q.whereIn('id', [1, 2, 3]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" IN (1, 2, 3)
-      `),
+        WHERE "user"."id" IN ($1, $2, $3)
+      `,
+      [1, 2, 3],
     );
 
     expectQueryNotMutated(q);
@@ -299,12 +325,14 @@ describe('whereIn', () => {
     const q = User.all();
 
     const query = q.whereIn({ id: [1, 2, 3], name: ['a', 'b', 'c'] });
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" IN (1, 2, 3)
-          AND "user"."name" IN ('a', 'b', 'c')
-      `),
+        WHERE "user"."id" IN ($1, $2, $3)
+          AND "user"."name" IN ($4, $5, $6)
+      `,
+      [1, 2, 3, 'a', 'b', 'c'],
     );
 
     expectQueryNotMutated(q);
@@ -313,21 +341,21 @@ describe('whereIn', () => {
   it('should handle raw query', () => {
     const q = User.all();
 
-    expect(q.whereIn('id', raw('(1, 2, 3)')).toSql()).toBe(
-      line(`
+    expectSql(
+      q.whereIn('id', raw('(1, 2, 3)')).toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE "user"."id" IN (1, 2, 3)
-      `),
+      `,
     );
 
-    expect(
+    expectSql(
       q.whereIn({ id: raw('(1, 2, 3)'), name: raw(`('a', 'b', 'c')`) }).toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
         WHERE "user"."id" IN (1, 2, 3)
           AND "user"."name" IN ('a', 'b', 'c')
-      `),
+      `,
     );
 
     expectQueryNotMutated(q);
@@ -336,21 +364,21 @@ describe('whereIn', () => {
   it('should handle sub query', () => {
     const q = User.all();
 
-    expect(q.whereIn('id', User.select('id')).toSql()).toBe(
-      line(`
+    expectSql(
+      q.whereIn('id', User.select('id')).toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE "user"."id" IN (SELECT "user"."id" FROM "user")
-      `),
+      `,
     );
 
-    expect(
+    expectSql(
       q.whereIn({ id: User.select('id'), name: User.select('name') }).toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
         WHERE "user"."id" IN (SELECT "user"."id" FROM "user")
           AND "user"."name" IN (SELECT "user"."name" FROM "user")
-      `),
+      `,
     );
 
     expectQueryNotMutated(q);
@@ -367,11 +395,13 @@ describe('whereIn', () => {
           [2, 'b'],
         ],
       );
-      expect(query.toSql()).toBe(
-        line(`
-        SELECT "user".* FROM "user"
-        WHERE ("user"."id", "user"."name") IN ((1, 'a'), (2, 'b'))
-      `),
+      expectSql(
+        query.toSql(),
+        `
+          SELECT "user".* FROM "user"
+          WHERE ("user"."id", "user"."name") IN (($1, $2), ($3, $4))
+        `,
+        [1, 'a', 2, 'b'],
       );
 
       expectQueryNotMutated(q);
@@ -381,11 +411,12 @@ describe('whereIn', () => {
       const q = User.all();
 
       const query = q.whereIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`));
-      expect(query.toSql()).toBe(
-        line(`
-        SELECT "user".* FROM "user"
-        WHERE ("user"."id", "user"."name") IN ((1, 'a'), (2, 'b'))
-      `),
+      expectSql(
+        query.toSql(),
+        `
+          SELECT "user".* FROM "user"
+          WHERE ("user"."id", "user"."name") IN ((1, 'a'), (2, 'b'))
+        `,
       );
 
       expectQueryNotMutated(q);
@@ -395,12 +426,13 @@ describe('whereIn', () => {
       const q = User.all();
 
       const query = q.whereIn(['id', 'name'], User.select('id', 'name'));
-      expect(query.toSql()).toBe(
-        line(`
-        SELECT "user".* FROM "user"
-        WHERE ("user"."id", "user"."name")
-           IN (SELECT "user"."id", "user"."name" FROM "user")
-      `),
+      expectSql(
+        query.toSql(),
+        `
+          SELECT "user".* FROM "user"
+          WHERE ("user"."id", "user"."name")
+             IN (SELECT "user"."id", "user"."name" FROM "user")
+        `,
       );
 
       expectQueryNotMutated(q);
@@ -413,11 +445,13 @@ describe('orWhereIn', () => {
     const q = User.all();
 
     const query = q.where({ id: 1 }).orWhereIn('id', [1, 2, 3]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR "user"."id" IN (1, 2, 3)
-      `),
+        WHERE "user"."id" = $1 OR "user"."id" IN ($2, $3, $4)
+      `,
+      [1, 1, 2, 3],
     );
 
     expectQueryNotMutated(q);
@@ -429,12 +463,14 @@ describe('orWhereIn', () => {
     const query = q
       .where({ id: 1 })
       .orWhereIn({ id: [1, 2, 3], name: ['a', 'b', 'c'] });
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1
-          OR "user"."id" IN (1, 2, 3) AND "user"."name" IN ('a', 'b', 'c')
-      `),
+        WHERE "user"."id" = $1
+          OR "user"."id" IN ($2, $3, $4) AND "user"."name" IN ($5, $6, $7)
+      `,
+      [1, 1, 2, 3, 'a', 'b', 'c'],
     );
 
     expectQueryNotMutated(q);
@@ -443,25 +479,27 @@ describe('orWhereIn', () => {
   it('should handle raw query', () => {
     const q = User.all();
 
-    expect(q.where({ id: 1 }).orWhereIn('id', raw('(1, 2, 3)')).toSql()).toBe(
-      line(`
+    expectSql(
+      q.where({ id: 1 }).orWhereIn('id', raw('(1, 2, 3)')).toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR "user"."id" IN (1, 2, 3)
-      `),
+        WHERE "user"."id" = $1 OR "user"."id" IN (1, 2, 3)
+      `,
+      [1],
     );
 
-    expect(
+    expectSql(
       q
         .where({ id: 1 })
         .orWhereIn({ id: raw('(1, 2, 3)'), name: raw(`('a', 'b', 'c')`) })
         .toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1
+        WHERE "user"."id" = $1
            OR "user"."id" IN (1, 2, 3)
           AND "user"."name" IN ('a', 'b', 'c')
-      `),
+      `,
+      [1],
     );
 
     expectQueryNotMutated(q);
@@ -470,26 +508,28 @@ describe('orWhereIn', () => {
   it('should handle sub query', () => {
     const q = User.all();
 
-    expect(q.where({ id: 1 }).orWhereIn('id', User.select('id')).toSql()).toBe(
-      line(`
+    expectSql(
+      q.where({ id: 1 }).orWhereIn('id', User.select('id')).toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1
+        WHERE "user"."id" = $1
            OR "user"."id" IN (SELECT "user"."id" FROM "user")
-      `),
+      `,
+      [1],
     );
 
-    expect(
+    expectSql(
       q
         .where({ id: 1 })
         .orWhereIn({ id: User.select('id'), name: User.select('name') })
         .toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1
+        WHERE "user"."id" = $1
            OR "user"."id" IN (SELECT "user"."id" FROM "user")
           AND "user"."name" IN (SELECT "user"."name" FROM "user")
-      `),
+      `,
+      [1],
     );
 
     expectQueryNotMutated(q);
@@ -506,12 +546,14 @@ describe('orWhereIn', () => {
           [2, 'b'],
         ],
       );
-      expect(query.toSql()).toBe(
-        line(`
-        SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1
-           OR ("user"."id", "user"."name") IN ((1, 'a'), (2, 'b'))
-      `),
+      expectSql(
+        query.toSql(),
+        `
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = $1
+             OR ("user"."id", "user"."name") IN (($2, $3), ($4, $5))
+        `,
+        [1, 1, 'a', 2, 'b'],
       );
 
       expectQueryNotMutated(q);
@@ -523,12 +565,14 @@ describe('orWhereIn', () => {
       const query = q
         .where({ id: 1 })
         .orWhereIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`));
-      expect(query.toSql()).toBe(
-        line(`
-        SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1
-           OR ("user"."id", "user"."name") IN ((1, 'a'), (2, 'b'))
-      `),
+      expectSql(
+        query.toSql(),
+        `
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = $1
+             OR ("user"."id", "user"."name") IN ((1, 'a'), (2, 'b'))
+        `,
+        [1],
       );
 
       expectQueryNotMutated(q);
@@ -540,13 +584,15 @@ describe('orWhereIn', () => {
       const query = q
         .where({ id: 1 })
         .orWhereIn(['id', 'name'], User.select('id', 'name'));
-      expect(query.toSql()).toBe(
-        line(`
-        SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1
-           OR ("user"."id", "user"."name")
-           IN (SELECT "user"."id", "user"."name" FROM "user")
-      `),
+      expectSql(
+        query.toSql(),
+        `
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = $1
+             OR ("user"."id", "user"."name")
+             IN (SELECT "user"."id", "user"."name" FROM "user")
+        `,
+        [1],
       );
 
       expectQueryNotMutated(q);
@@ -559,11 +605,13 @@ describe('whereNotIn', () => {
     const q = User.all();
 
     const query = q.whereNotIn('id', [1, 2, 3]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" NOT IN (1, 2, 3)
-      `),
+        WHERE "user"."id" NOT IN ($1, $2, $3)
+      `,
+      [1, 2, 3],
     );
 
     expectQueryNotMutated(q);
@@ -573,12 +621,14 @@ describe('whereNotIn', () => {
     const q = User.all();
 
     const query = q.whereNotIn({ id: [1, 2, 3], name: ['a', 'b', 'c'] });
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" NOT IN (1, 2, 3)
-          AND "user"."name" NOT IN ('a', 'b', 'c')
-      `),
+        WHERE "user"."id" NOT IN ($1, $2, $3)
+          AND "user"."name" NOT IN ($4, $5, $6)
+      `,
+      [1, 2, 3, 'a', 'b', 'c'],
     );
 
     expectQueryNotMutated(q);
@@ -587,23 +637,23 @@ describe('whereNotIn', () => {
   it('should handle raw query', () => {
     const q = User.all();
 
-    expect(q.whereNotIn('id', raw('(1, 2, 3)')).toSql()).toBe(
-      line(`
+    expectSql(
+      q.whereNotIn('id', raw('(1, 2, 3)')).toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE "user"."id" NOT IN (1, 2, 3)
-      `),
+      `,
     );
 
-    expect(
+    expectSql(
       q
         .whereNotIn({ id: raw('(1, 2, 3)'), name: raw(`('a', 'b', 'c')`) })
         .toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
         WHERE "user"."id" NOT IN (1, 2, 3)
           AND "user"."name" NOT IN ('a', 'b', 'c')
-      `),
+      `,
     );
 
     expectQueryNotMutated(q);
@@ -612,23 +662,23 @@ describe('whereNotIn', () => {
   it('should handle sub query', () => {
     const q = User.all();
 
-    expect(q.whereNotIn('id', User.select('id')).toSql()).toBe(
-      line(`
+    expectSql(
+      q.whereNotIn('id', User.select('id')).toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE "user"."id" NOT IN (SELECT "user"."id" FROM "user")
-      `),
+      `,
     );
 
-    expect(
+    expectSql(
       q
         .whereNotIn({ id: User.select('id'), name: User.select('name') })
         .toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
         WHERE "user"."id" NOT IN (SELECT "user"."id" FROM "user")
           AND "user"."name" NOT IN (SELECT "user"."name" FROM "user")
-      `),
+      `,
     );
 
     expectQueryNotMutated(q);
@@ -645,11 +695,13 @@ describe('whereNotIn', () => {
           [2, 'b'],
         ],
       );
-      expect(query.toSql()).toBe(
-        line(`
-        SELECT "user".* FROM "user"
-        WHERE ("user"."id", "user"."name") NOT IN ((1, 'a'), (2, 'b'))
-      `),
+      expectSql(
+        query.toSql(),
+        `
+          SELECT "user".* FROM "user"
+          WHERE ("user"."id", "user"."name") NOT IN (($1, $2), ($3, $4))
+        `,
+        [1, 'a', 2, 'b'],
       );
 
       expectQueryNotMutated(q);
@@ -659,11 +711,12 @@ describe('whereNotIn', () => {
       const q = User.all();
 
       const query = q.whereNotIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`));
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
         SELECT "user".* FROM "user"
         WHERE ("user"."id", "user"."name") NOT IN ((1, 'a'), (2, 'b'))
-      `),
+      `,
       );
 
       expectQueryNotMutated(q);
@@ -673,12 +726,13 @@ describe('whereNotIn', () => {
       const q = User.all();
 
       const query = q.whereNotIn(['id', 'name'], User.select('id', 'name'));
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
         SELECT "user".* FROM "user"
         WHERE ("user"."id", "user"."name")
            NOT IN (SELECT "user"."id", "user"."name" FROM "user")
-      `),
+      `,
       );
 
       expectQueryNotMutated(q);
@@ -691,11 +745,13 @@ describe('orWhereNotIn', () => {
     const q = User.all();
 
     const query = q.where({ id: 1 }).orWhereNotIn('id', [1, 2, 3]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR "user"."id" NOT IN (1, 2, 3)
-      `),
+        WHERE "user"."id" = $1 OR "user"."id" NOT IN ($2, $3, $4)
+      `,
+      [1, 1, 2, 3],
     );
 
     expectQueryNotMutated(q);
@@ -707,12 +763,14 @@ describe('orWhereNotIn', () => {
     const query = q
       .where({ id: 1 })
       .orWhereNotIn({ id: [1, 2, 3], name: ['a', 'b', 'c'] });
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1
-          OR "user"."id" NOT IN (1, 2, 3) AND "user"."name" NOT IN ('a', 'b', 'c')
-      `),
+        WHERE "user"."id" = $1
+          OR "user"."id" NOT IN ($2, $3, $4) AND "user"."name" NOT IN ($5, $6, $7)
+      `,
+      [1, 1, 2, 3, 'a', 'b', 'c'],
     );
 
     expectQueryNotMutated(q);
@@ -721,27 +779,27 @@ describe('orWhereNotIn', () => {
   it('should handle raw query', () => {
     const q = User.all();
 
-    expect(
+    expectSql(
       q.where({ id: 1 }).orWhereNotIn('id', raw('(1, 2, 3)')).toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR "user"."id" NOT IN (1, 2, 3)
-      `),
+        WHERE "user"."id" = $1 OR "user"."id" NOT IN (1, 2, 3)
+      `,
+      [1],
     );
 
-    expect(
+    expectSql(
       q
         .where({ id: 1 })
         .orWhereNotIn({ id: raw('(1, 2, 3)'), name: raw(`('a', 'b', 'c')`) })
         .toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1
+        WHERE "user"."id" = $1
            OR "user"."id" NOT IN (1, 2, 3)
           AND "user"."name" NOT IN ('a', 'b', 'c')
-      `),
+      `,
+      [1],
     );
 
     expectQueryNotMutated(q);
@@ -750,28 +808,28 @@ describe('orWhereNotIn', () => {
   it('should handle sub query', () => {
     const q = User.all();
 
-    expect(
+    expectSql(
       q.where({ id: 1 }).orWhereNotIn('id', User.select('id')).toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1
+        WHERE "user"."id" = $1
            OR "user"."id" NOT IN (SELECT "user"."id" FROM "user")
-      `),
+      `,
+      [1],
     );
 
-    expect(
+    expectSql(
       q
         .where({ id: 1 })
         .orWhereNotIn({ id: User.select('id'), name: User.select('name') })
         .toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1
+        WHERE "user"."id" = $1
            OR "user"."id" NOT IN (SELECT "user"."id" FROM "user")
           AND "user"."name" NOT IN (SELECT "user"."name" FROM "user")
-      `),
+      `,
+      [1],
     );
 
     expectQueryNotMutated(q);
@@ -788,12 +846,14 @@ describe('orWhereNotIn', () => {
           [2, 'b'],
         ],
       );
-      expect(query.toSql()).toBe(
-        line(`
-        SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1
-           OR ("user"."id", "user"."name") NOT IN ((1, 'a'), (2, 'b'))
-      `),
+      expectSql(
+        query.toSql(),
+        `
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = $1
+             OR ("user"."id", "user"."name") NOT IN (($2, $3), ($4, $5))
+        `,
+        [1, 1, 'a', 2, 'b'],
       );
 
       expectQueryNotMutated(q);
@@ -805,12 +865,14 @@ describe('orWhereNotIn', () => {
       const query = q
         .where({ id: 1 })
         .orWhereNotIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`));
-      expect(query.toSql()).toBe(
-        line(`
-        SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1
-           OR ("user"."id", "user"."name") NOT IN ((1, 'a'), (2, 'b'))
-      `),
+      expectSql(
+        query.toSql(),
+        `
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = $1
+             OR ("user"."id", "user"."name") NOT IN ((1, 'a'), (2, 'b'))
+        `,
+        [1],
       );
 
       expectQueryNotMutated(q);
@@ -822,13 +884,15 @@ describe('orWhereNotIn', () => {
       const query = q
         .where({ id: 1 })
         .orWhereNotIn(['id', 'name'], User.select('id', 'name'));
-      expect(query.toSql()).toBe(
-        line(`
-        SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1
-           OR ("user"."id", "user"."name")
-           NOT IN (SELECT "user"."id", "user"."name" FROM "user")
-      `),
+      expectSql(
+        query.toSql(),
+        `
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = $1
+             OR ("user"."id", "user"."name")
+             NOT IN (SELECT "user"."id", "user"."name" FROM "user")
+        `,
+        [1],
       );
 
       expectQueryNotMutated(q);
@@ -841,11 +905,12 @@ describe('whereNull', () => {
     const q = User.all();
 
     const query = q.whereNull('id');
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE "user"."id" IS NULL
-      `),
+      `,
     );
 
     expectQueryNotMutated(q);
@@ -857,11 +922,13 @@ describe('orWhereNull', () => {
     const q = User.all();
 
     const query = q.where({ id: 1 }).orWhereNull('id');
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR "user"."id" IS NULL
-      `),
+        WHERE "user"."id" = $1 OR "user"."id" IS NULL
+      `,
+      [1],
     );
 
     expectQueryNotMutated(q);
@@ -873,11 +940,12 @@ describe('whereNotNull', () => {
     const q = User.all();
 
     const query = q.whereNotNull('id');
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE NOT "user"."id" IS NULL
-      `),
+      `,
     );
 
     expectQueryNotMutated(q);
@@ -889,11 +957,13 @@ describe('orWhereNotNull', () => {
     const q = User.all();
 
     const query = q.where({ id: 1 }).orWhereNotNull('id');
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR NOT "user"."id" IS NULL
-      `),
+        WHERE "user"."id" = $1 OR NOT "user"."id" IS NULL
+      `,
+      [1],
     );
 
     expectQueryNotMutated(q);
@@ -905,11 +975,13 @@ describe('whereExists', () => {
     const q = User.all();
 
     const query = q.whereExists(User.all());
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE EXISTS (SELECT 1 FROM "user" LIMIT 1)
-      `),
+        WHERE EXISTS (SELECT 1 FROM "user" LIMIT $1)
+      `,
+      [1],
     );
 
     expectQueryNotMutated(q);
@@ -919,11 +991,12 @@ describe('whereExists', () => {
     const q = User.all();
 
     const query = q.whereExists(raw(`SELECT 1 FROM "user"`));
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE EXISTS (SELECT 1 FROM "user")
-      `),
+      `,
     );
 
     expectQueryNotMutated(q);
@@ -935,11 +1008,13 @@ describe('orWhereExists', () => {
     const q = User.all();
 
     const query = q.where({ id: 1 }).orWhereExists(User.all());
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR EXISTS (SELECT 1 FROM "user" LIMIT 1)
-      `),
+        WHERE "user"."id" = $1 OR EXISTS (SELECT 1 FROM "user" LIMIT $2)
+      `,
+      [1, 1],
     );
 
     expectQueryNotMutated(q);
@@ -949,11 +1024,13 @@ describe('orWhereExists', () => {
     const q = User.all();
 
     const query = q.where({ id: 1 }).orWhereExists(raw(`SELECT 1 FROM "user"`));
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR EXISTS (SELECT 1 FROM "user")
-      `),
+        WHERE "user"."id" = $1 OR EXISTS (SELECT 1 FROM "user")
+      `,
+      [1],
     );
 
     expectQueryNotMutated(q);
@@ -965,11 +1042,13 @@ describe('whereNotExists', () => {
     const q = User.all();
 
     const query = q.whereNotExists(User.all());
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE NOT EXISTS (SELECT 1 FROM "user" LIMIT 1)
-      `),
+        WHERE NOT EXISTS (SELECT 1 FROM "user" LIMIT $1)
+      `,
+      [1],
     );
 
     expectQueryNotMutated(q);
@@ -979,11 +1058,12 @@ describe('whereNotExists', () => {
     const q = User.all();
 
     const query = q.whereNotExists(raw(`SELECT 1 FROM "user"`));
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE NOT EXISTS (SELECT 1 FROM "user")
-      `),
+      `,
     );
 
     expectQueryNotMutated(q);
@@ -995,11 +1075,13 @@ describe('orWhereNotExists', () => {
     const q = User.all();
 
     const query = q.where({ id: 1 }).orWhereNotExists(User.all());
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR NOT EXISTS (SELECT 1 FROM "user" LIMIT 1)
-      `),
+        WHERE "user"."id" = $1 OR NOT EXISTS (SELECT 1 FROM "user" LIMIT $2)
+      `,
+      [1, 1],
     );
 
     expectQueryNotMutated(q);
@@ -1011,11 +1093,13 @@ describe('orWhereNotExists', () => {
     const query = q
       .where({ id: 1 })
       .orWhereNotExists(raw(`SELECT 1 FROM "user"`));
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR NOT EXISTS (SELECT 1 FROM "user")
-      `),
+        WHERE "user"."id" = $1 OR NOT EXISTS (SELECT 1 FROM "user")
+      `,
+      [1],
     );
 
     expectQueryNotMutated(q);
@@ -1027,11 +1111,13 @@ describe('whereBetween', () => {
     const q = User.all();
 
     const query = q.whereBetween('id', [1, 10]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" BETWEEN 1 AND 10
-      `),
+        WHERE "user"."id" BETWEEN $1 AND $2
+      `,
+      [1, 10],
     );
 
     expectQueryNotMutated(q);
@@ -1044,13 +1130,15 @@ describe('whereBetween', () => {
       User.select('id').take(),
       User.select('id').take(),
     ]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE "user"."id"
-        BETWEEN (SELECT "user"."id" FROM "user" LIMIT 1)
-            AND (SELECT "user"."id" FROM "user" LIMIT 1)
-      `),
+        BETWEEN (SELECT "user"."id" FROM "user" LIMIT $1)
+            AND (SELECT "user"."id" FROM "user" LIMIT $2)
+      `,
+      [1, 1],
     );
 
     expectQueryNotMutated(q);
@@ -1060,11 +1148,12 @@ describe('whereBetween', () => {
     const q = User.all();
 
     const query = q.whereBetween('id', [raw('1'), raw('10')]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE "user"."id" BETWEEN 1 AND 10
-      `),
+      `,
     );
 
     expectQueryNotMutated(q);
@@ -1076,11 +1165,13 @@ describe('orWhereBetween', () => {
     const q = User.all();
 
     const query = q.where({ id: 1 }).orWhereBetween('id', [1, 10]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR "user"."id" BETWEEN 1 AND 10
-      `),
+        WHERE "user"."id" = $1 OR "user"."id" BETWEEN $2 AND $3
+      `,
+      [1, 1, 10],
     );
 
     expectQueryNotMutated(q);
@@ -1095,13 +1186,15 @@ describe('orWhereBetween', () => {
         User.select('id').take(),
         User.select('id').take(),
       ]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR "user"."id"
-        BETWEEN (SELECT "user"."id" FROM "user" LIMIT 1)
-            AND (SELECT "user"."id" FROM "user" LIMIT 1)
-      `),
+        WHERE "user"."id" = $1 OR "user"."id"
+        BETWEEN (SELECT "user"."id" FROM "user" LIMIT $2)
+            AND (SELECT "user"."id" FROM "user" LIMIT $3)
+      `,
+      [1, 1, 1],
     );
 
     expectQueryNotMutated(q);
@@ -1113,11 +1206,13 @@ describe('orWhereBetween', () => {
     const query = q
       .where({ id: 1 })
       .orWhereBetween('id', [raw('1'), raw('10')]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR "user"."id" BETWEEN 1 AND 10
-      `),
+        WHERE "user"."id" = $1 OR "user"."id" BETWEEN 1 AND 10
+      `,
+      [1],
     );
 
     expectQueryNotMutated(q);
@@ -1129,11 +1224,13 @@ describe('whereNotBetween', () => {
     const q = User.all();
 
     const query = q.whereNotBetween('id', [1, 10]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE NOT "user"."id" BETWEEN 1 AND 10
-      `),
+        WHERE NOT "user"."id" BETWEEN $1 AND $2
+      `,
+      [1, 10],
     );
 
     expectQueryNotMutated(q);
@@ -1146,13 +1243,15 @@ describe('whereNotBetween', () => {
       User.select('id').take(),
       User.select('id').take(),
     ]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE NOT "user"."id"
-        BETWEEN (SELECT "user"."id" FROM "user" LIMIT 1)
-           AND (SELECT "user"."id" FROM "user" LIMIT 1)
-      `),
+        BETWEEN (SELECT "user"."id" FROM "user" LIMIT $1)
+           AND (SELECT "user"."id" FROM "user" LIMIT $2)
+      `,
+      [1, 1],
     );
 
     expectQueryNotMutated(q);
@@ -1162,11 +1261,12 @@ describe('whereNotBetween', () => {
     const q = User.all();
 
     const query = q.whereNotBetween('id', [raw('1'), raw('10')]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
         WHERE NOT "user"."id" BETWEEN 1 AND 10
-      `),
+      `,
     );
 
     expectQueryNotMutated(q);
@@ -1178,11 +1278,13 @@ describe('orWhereNotBetween', () => {
     const q = User.all();
 
     const query = q.where({ id: 1 }).orWhereNotBetween('id', [1, 10]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR NOT "user"."id" BETWEEN 1 AND 10
-      `),
+        WHERE "user"."id" = $1 OR NOT "user"."id" BETWEEN $2 AND $3
+      `,
+      [1, 1, 10],
     );
 
     expectQueryNotMutated(q);
@@ -1197,13 +1299,15 @@ describe('orWhereNotBetween', () => {
         User.select('id').take(),
         User.select('id').take(),
       ]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR NOT "user"."id"
-        BETWEEN (SELECT "user"."id" FROM "user" LIMIT 1)
-            AND (SELECT "user"."id" FROM "user" LIMIT 1)
-      `),
+        WHERE "user"."id" = $1 OR NOT "user"."id"
+        BETWEEN (SELECT "user"."id" FROM "user" LIMIT $2)
+            AND (SELECT "user"."id" FROM "user" LIMIT $3)
+      `,
+      [1, 1, 1],
     );
 
     expectQueryNotMutated(q);
@@ -1215,11 +1319,13 @@ describe('orWhereNotBetween', () => {
     const query = q
       .where({ id: 1 })
       .orWhereNotBetween('id', [raw('1'), raw('10')]);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 OR NOT "user"."id" BETWEEN 1 AND 10
-      `),
+        WHERE "user"."id" = $1 OR NOT "user"."id" BETWEEN 1 AND 10
+      `,
+      [1],
     );
 
     expectQueryNotMutated(q);
@@ -1251,11 +1357,13 @@ describe.each`
       const q = User.all();
 
       const query = q[whereMethod]('name', 'ko');
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."name" ${sql} ${prepend}'ko'${append}
-        `),
+          WHERE "user"."name" ${sql} ${prepend}$1${append}
+        `,
+        ['ko'],
       );
 
       expectQueryNotMutated(q);
@@ -1265,11 +1373,13 @@ describe.each`
       const q = User.all();
 
       const query = q[whereMethod]('name', User.select('name').take());
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."name" ${sql} ${prepend}(SELECT "user"."name" FROM "user" LIMIT 1)${append}
-        `),
+          WHERE "user"."name" ${sql} ${prepend}(SELECT "user"."name" FROM "user" LIMIT $1)${append}
+        `,
+        [1],
       );
 
       expectQueryNotMutated(q);
@@ -1279,11 +1389,12 @@ describe.each`
       const q = User.all();
 
       const query = q[whereMethod]('name', raw("'ko'"));
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           SELECT "user".* FROM "user"
           WHERE "user"."name" ${sql} ${prepend}'ko'${append}
-        `),
+        `,
       );
 
       expectQueryNotMutated(q);
@@ -1299,11 +1410,13 @@ describe.each`
       const q = User.all();
 
       const query = q.where({ id: 1 })[orWhereMethod]('name', 'ko');
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."id" = 1 OR "user"."name" ${sql} ${prepend}'ko'${append}
-        `),
+          WHERE "user"."id" = $1 OR "user"."name" ${sql} ${prepend}$2${append}
+        `,
+        [1, 'ko'],
       );
 
       expectQueryNotMutated(q);
@@ -1315,11 +1428,13 @@ describe.each`
       const query = q
         .where({ id: 1 })
         [orWhereMethod]('name', User.select('name').take());
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."id" = 1 OR "user"."name" ${sql} ${prepend}(SELECT "user"."name" FROM "user" LIMIT 1)${append}
-        `),
+          WHERE "user"."id" = $1 OR "user"."name" ${sql} ${prepend}(SELECT "user"."name" FROM "user" LIMIT $2)${append}
+        `,
+        [1, 1],
       );
 
       expectQueryNotMutated(q);
@@ -1329,11 +1444,13 @@ describe.each`
       const q = User.all();
 
       const query = q.where({ id: 1 })[orWhereMethod]('name', raw("'ko'"));
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."id" = 1 OR "user"."name" ${sql} ${prepend}'ko'${append}
-        `),
+          WHERE "user"."id" = $1 OR "user"."name" ${sql} ${prepend}'ko'${append}
+        `,
+        [1],
       );
 
       expectQueryNotMutated(q);
@@ -1349,11 +1466,13 @@ describe.each`
       const q = User.all();
 
       const query = q[whereNotMethod]('name', 'ko');
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           SELECT "user".* FROM "user"
-          WHERE NOT "user"."name" ${sql} ${prepend}'ko'${append}
-        `),
+          WHERE NOT "user"."name" ${sql} ${prepend}$1${append}
+        `,
+        ['ko'],
       );
 
       expectQueryNotMutated(q);
@@ -1363,11 +1482,13 @@ describe.each`
       const q = User.all();
 
       const query = q[whereNotMethod]('name', User.select('name').take());
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           SELECT "user".* FROM "user"
-          WHERE NOT "user"."name" ${sql} ${prepend}(SELECT "user"."name" FROM "user" LIMIT 1)${append}
-        `),
+          WHERE NOT "user"."name" ${sql} ${prepend}(SELECT "user"."name" FROM "user" LIMIT $1)${append}
+        `,
+        [1],
       );
 
       expectQueryNotMutated(q);
@@ -1377,11 +1498,12 @@ describe.each`
       const q = User.all();
 
       const query = q[whereNotMethod]('name', raw("'ko'"));
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           SELECT "user".* FROM "user"
           WHERE NOT "user"."name" ${sql} ${prepend}'ko'${append}
-        `),
+        `,
       );
 
       expectQueryNotMutated(q);
@@ -1397,11 +1519,13 @@ describe.each`
       const q = User.all();
 
       const query = q.where({ id: 1 })[orWhereNotMethod]('name', 'ko');
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."id" = 1 OR NOT "user"."name" ${sql} ${prepend}'ko'${append}
-        `),
+          WHERE "user"."id" = $1 OR NOT "user"."name" ${sql} ${prepend}$2${append}
+        `,
+        [1, 'ko'],
       );
 
       expectQueryNotMutated(q);
@@ -1413,11 +1537,13 @@ describe.each`
       const query = q
         .where({ id: 1 })
         [orWhereNotMethod]('name', User.select('name').take());
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."id" = 1 OR NOT "user"."name" ${sql} ${prepend}(SELECT "user"."name" FROM "user" LIMIT 1)${append}
-        `),
+          WHERE "user"."id" = $1 OR NOT "user"."name" ${sql} ${prepend}(SELECT "user"."name" FROM "user" LIMIT $2)${append}
+        `,
+        [1, 1],
       );
 
       expectQueryNotMutated(q);
@@ -1427,11 +1553,13 @@ describe.each`
       const q = User.all();
 
       const query = q.where({ id: 1 })[orWhereNotMethod]('name', raw("'ko'"));
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."id" = 1 OR NOT "user"."name" ${sql} ${prepend}'ko'${append}
-        `),
+          WHERE "user"."id" = $1 OR NOT "user"."name" ${sql} ${prepend}'ko'${append}
+        `,
+        [1],
       );
 
       expectQueryNotMutated(q);
@@ -1444,41 +1572,42 @@ describe('whereJsonPath', () => {
     const q = User.all();
 
     const query = q.whereJsonPath('data', ['$.name', '=', 'name']);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE jsonb_path_query_first("user"."data", '$.name') #>> '{}' = 'name'
-      `),
+        WHERE jsonb_path_query_first("user"."data", '$.name') #>> '{}' = $1
+      `,
+      ['name'],
     );
 
     expectQueryNotMutated(q);
   });
 
   it('should handle sub query', () => {
-    expect(
+    expectSql(
       User.whereJsonPath('data', [
         '$.name',
         '=',
         User.select('name').take(),
       ]).toSql(),
-    ).toBe(
-      line(`
+      `
           SELECT "user".* FROM "user"
           WHERE jsonb_path_query_first("user"."data", '$.name') #>> '{}' = (
-            SELECT "user"."name" FROM "user" LIMIT 1
+            SELECT "user"."name" FROM "user" LIMIT $1
           )
-        `),
+        `,
+      [1],
     );
   });
 
   it('should handle raw query', () => {
-    expect(
+    expectSql(
       User.whereJsonPath('data', ['$.name', '=', raw("'name'")]).toSql(),
-    ).toBe(
-      line(`
+      `
           SELECT "user".* FROM "user"
           WHERE jsonb_path_query_first("user"."data", '$.name') #>> '{}' = 'name'
-        `),
+        `,
     );
   });
 });
@@ -1490,44 +1619,46 @@ describe('orWhereJsonPath', () => {
     const query = q
       .where({ id: 1 })
       .orWhereJsonPath('data', ['$.name', '=', 'name']);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1
-           OR jsonb_path_query_first("user"."data", '$.name') #>> '{}' = 'name'
-      `),
+        WHERE "user"."id" = $1
+           OR jsonb_path_query_first("user"."data", '$.name') #>> '{}' = $2
+      `,
+      [1, 'name'],
     );
 
     expectQueryNotMutated(q);
   });
 
   it('should handle sub query', () => {
-    expect(
+    expectSql(
       User.where({ id: 1 })
         .orWhereJsonPath('data', ['$.name', '=', User.select('name').take()])
         .toSql(),
-    ).toBe(
-      line(`
+      `
           SELECT "user".* FROM "user"
-          WHERE "user"."id" = 1
+          WHERE "user"."id" = $1
              OR jsonb_path_query_first("user"."data", '$.name') #>> '{}' = (
-              SELECT "user"."name" FROM "user" LIMIT 1
+              SELECT "user"."name" FROM "user" LIMIT $2
             )
-        `),
+        `,
+      [1, 1],
     );
   });
 
   it('should handle raw query', () => {
-    expect(
+    expectSql(
       User.where({ id: 1 })
         .orWhereJsonPath('data', ['$.name', '=', raw("'name'")])
         .toSql(),
-    ).toBe(
-      line(`
+      `
           SELECT "user".* FROM "user"
-          WHERE "user"."id" = 1
+          WHERE "user"."id" = $1
              OR jsonb_path_query_first("user"."data", '$.name') #>> '{}' = 'name'
-        `),
+        `,
+      [1],
     );
   });
 });
@@ -1543,31 +1674,34 @@ describe.each`
 
   describe(whereMethod, () => {
     it('should handle value', () => {
-      expect(User[whereMethod]('data', { a: 'b' }).toSql()).toBe(
-        line(`
+      expectSql(
+        User[whereMethod]('data', { a: 'b' }).toSql(),
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."data" ${sql} '{"a":"b"}'
-        `),
+          WHERE "user"."data" ${sql} $1
+        `,
+        [{ a: 'b' }],
       );
     });
 
     it('should handle sub query', () => {
-      expect(
+      expectSql(
         User[whereMethod]('data', User.select('data').take()).toSql(),
-      ).toBe(
-        line(`
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT 1)
-        `),
+          WHERE "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT $1)
+        `,
+        [1],
       );
     });
 
     it('should handle raw query', () => {
-      expect(User[whereMethod]('data', raw(`'{"a":"b"}'`)).toSql()).toBe(
-        line(`
+      expectSql(
+        User[whereMethod]('data', raw(`'{"a":"b"}'`)).toSql(),
+        `
           SELECT "user".* FROM "user"
           WHERE "user"."data" ${sql} '{"a":"b"}'
-        `),
+        `,
       );
     });
   });
@@ -1578,40 +1712,40 @@ describe.each`
 
   describe(orWhereMethod, () => {
     it('should handle value', () => {
-      expect(
+      expectSql(
         User.where({ id: 1 })[orWhereMethod]('data', { a: 'b' }).toSql(),
-      ).toBe(
-        line(`
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."id" = 1 OR "user"."data" ${sql} '{"a":"b"}'
-        `),
+          WHERE "user"."id" = $1 OR "user"."data" ${sql} $2
+        `,
+        [1, { a: 'b' }],
       );
     });
 
     it('should handle sub query', () => {
-      expect(
+      expectSql(
         User.where({ id: 1 })
           [orWhereMethod]('data', User.select('data').take())
           .toSql(),
-      ).toBe(
-        line(`
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."id" = 1
-             OR "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT 1)
-        `),
+          WHERE "user"."id" = $1
+             OR "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT $2)
+        `,
+        [1, 1],
       );
     });
 
     it('should handle raw query', () => {
-      expect(
+      expectSql(
         User.where({ id: 1 })
           [orWhereMethod]('data', raw(`'{"a":"b"}'`))
           .toSql(),
-      ).toBe(
-        line(`
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."id" = 1 OR "user"."data" ${sql} '{"a":"b"}'
-        `),
+          WHERE "user"."id" = $1 OR "user"."data" ${sql} '{"a":"b"}'
+        `,
+        [1],
       );
     });
   });
@@ -1622,31 +1756,34 @@ describe.each`
 
   describe(whereNotMethod, () => {
     it('should handle value', () => {
-      expect(User[whereNotMethod]('data', { a: 'b' }).toSql()).toBe(
-        line(`
+      expectSql(
+        User[whereNotMethod]('data', { a: 'b' }).toSql(),
+        `
           SELECT "user".* FROM "user"
-          WHERE NOT "user"."data" ${sql} '{"a":"b"}'
-        `),
+          WHERE NOT "user"."data" ${sql} $1
+        `,
+        [{ a: 'b' }],
       );
     });
 
     it('should handle sub query', () => {
-      expect(
+      expectSql(
         User[whereNotMethod]('data', User.select('data').take()).toSql(),
-      ).toBe(
-        line(`
+        `
           SELECT "user".* FROM "user"
-          WHERE NOT "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT 1)
-        `),
+          WHERE NOT "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT $1)
+        `,
+        [1],
       );
     });
 
     it('should handle raw query', () => {
-      expect(User[whereNotMethod]('data', raw(`'{"a":"b"}'`)).toSql()).toBe(
-        line(`
+      expectSql(
+        User[whereNotMethod]('data', raw(`'{"a":"b"}'`)).toSql(),
+        `
           SELECT "user".* FROM "user"
           WHERE NOT "user"."data" ${sql} '{"a":"b"}'
-        `),
+        `,
       );
     });
   });
@@ -1657,40 +1794,40 @@ describe.each`
 
   describe(orWhereNotMethod, () => {
     it('should handle value', () => {
-      expect(
+      expectSql(
         User.where({ id: 1 })[orWhereNotMethod]('data', { a: 'b' }).toSql(),
-      ).toBe(
-        line(`
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."id" = 1 OR NOT "user"."data" ${sql} '{"a":"b"}'
-        `),
+          WHERE "user"."id" = $1 OR NOT "user"."data" ${sql} $2
+        `,
+        [1, { a: 'b' }],
       );
     });
 
     it('should handle sub query', () => {
-      expect(
+      expectSql(
         User.where({ id: 1 })
           [orWhereNotMethod]('data', User.select('data').take())
           .toSql(),
-      ).toBe(
-        line(`
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."id" = 1
-             OR NOT "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT 1)
-        `),
+          WHERE "user"."id" = $1
+             OR NOT "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT $2)
+        `,
+        [1, 1],
       );
     });
 
     it('should handle raw query', () => {
-      expect(
+      expectSql(
         User.where({ id: 1 })
           [orWhereNotMethod]('data', raw(`'{"a":"b"}'`))
           .toSql(),
-      ).toBe(
-        line(`
+        `
           SELECT "user".* FROM "user"
-          WHERE "user"."id" = 1 OR NOT "user"."data" ${sql} '{"a":"b"}'
-        `),
+          WHERE "user"."id" = $1 OR NOT "user"."data" ${sql} '{"a":"b"}'
+        `,
+        [1],
       );
     });
   });

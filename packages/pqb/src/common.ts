@@ -12,6 +12,7 @@ export type StringKey<K extends PropertyKey> = Exclude<K, symbol | number>;
 
 export type RawExpression<C extends ColumnType = ColumnType> = {
   __raw: string;
+  __values: unknown[];
   __column: C;
 };
 
@@ -54,20 +55,29 @@ export type ExpressionOutput<
   ? ColumnType
   : never;
 
-export const raw = <C extends ColumnType>(sql: string) =>
+export const raw = <C extends ColumnType>(sql: string, ...values: unknown[]) =>
   ({
     __raw: sql,
+    __values: values,
   } as RawExpression<C>);
 
-export const rawColumn = <C extends ColumnType>(column: C, sql: string) =>
+export const rawColumn = <C extends ColumnType>(
+  column: C,
+  sql: string,
+  ...values: unknown[]
+) =>
   ({
     __column: column,
     __raw: sql,
+    __values: values,
   } as RawExpression<C>);
 
 export const isRaw = (obj: object): obj is RawExpression => '__raw' in obj;
 
-export const getRaw = (raw: RawExpression) => raw.__raw;
+export const getRaw = (raw: RawExpression, values: unknown[]) => {
+  values.push(...raw.__values);
+  return raw.__raw;
+};
 
 export const EMPTY_OBJECT = {};
 

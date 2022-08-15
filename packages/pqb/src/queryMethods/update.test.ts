@@ -2,7 +2,7 @@ import {
   AssertEqual,
   expectMatchObjectWithTimestamps,
   expectQueryNotMutated,
-  line,
+  expectSql,
   User,
   useTestDatabase,
 } from '../test-utils';
@@ -23,11 +23,12 @@ describe('update', () => {
     const q = User.all();
 
     const query = q.update(raw('raw sql'));
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         UPDATE "user"
         SET raw sql
-      `),
+      `,
     );
 
     const eq: AssertEqual<Awaited<typeof query>, void> = true;
@@ -47,13 +48,15 @@ describe('update', () => {
     };
 
     const query = q.where({ id }).update(update);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         UPDATE "user"
-        SET "name" = 'new name',
-            "password" = 'new password'
-        WHERE "user"."id" = ${id}
-      `),
+        SET "name" = $1,
+            "password" = $2
+        WHERE "user"."id" = $3
+      `,
+      [update.name, update.password, id],
     );
 
     const result = await query;
@@ -77,14 +80,16 @@ describe('update', () => {
     };
 
     const query = q.where({ id }).update(update, ['id', 'name']);
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         UPDATE "user"
-        SET "name" = 'new name',
-            "password" = 'new password'
-        WHERE "user"."id" = ${id}
+        SET "name" = $1,
+            "password" = $2
+        WHERE "user"."id" = $3
         RETURNING "user"."id", "user"."name"
-      `),
+      `,
+      [update.name, update.password, id],
     );
 
     const result = await query;
@@ -108,14 +113,16 @@ describe('update', () => {
     };
 
     const query = q.where({ id }).update(update, '*');
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         UPDATE "user"
-        SET "name" = 'new name',
-            "password" = 'new password'
-        WHERE "user"."id" = ${id}
+        SET "name" = $1,
+            "password" = $2
+        WHERE "user"."id" = $3
         RETURNING *
-      `),
+      `,
+      [update.name, update.password, id],
     );
 
     const result = await query;
@@ -138,12 +145,14 @@ describe('update', () => {
       password: undefined,
       data: null,
     });
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         UPDATE "user"
-        SET "name" = 'new name',
-            "data" = NULL
-      `),
+        SET "name" = $1,
+            "data" = $2
+      `,
+      ['new name', null],
     );
 
     const eq: AssertEqual<Awaited<typeof query>, void> = true;
@@ -158,11 +167,12 @@ describe('update', () => {
     const query = q.update({
       name: raw('raw sql'),
     });
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         UPDATE "user"
         SET "name" = raw sql
-      `),
+      `,
     );
 
     const eq: AssertEqual<Awaited<typeof query>, void> = true;
@@ -176,11 +186,13 @@ describe('update', () => {
       const q = User.all();
 
       const query = q.increment('age');
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           UPDATE "user"
-          SET "age" = "age" + 1
-        `),
+          SET "age" = "age" + $1
+        `,
+        [1],
       );
 
       expectQueryNotMutated(q);
@@ -190,11 +202,13 @@ describe('update', () => {
       const q = User.all();
 
       const query = q.increment({ age: 3 });
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           UPDATE "user"
-          SET "age" = "age" + 3
-        `),
+          SET "age" = "age" + $1
+        `,
+        [3],
       );
 
       expectQueryNotMutated(q);
@@ -204,12 +218,14 @@ describe('update', () => {
       const q = User.all();
 
       const query = q.increment({ age: 3 }, ['id']);
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           UPDATE "user"
-          SET "age" = "age" + 3
+          SET "age" = "age" + $1
           RETURNING "user"."id"
-        `),
+        `,
+        [3],
       );
 
       const eq: AssertEqual<Awaited<typeof query>, { id: number }[]> = true;
@@ -224,11 +240,13 @@ describe('update', () => {
       const q = User.all();
 
       const query = q.decrement('age');
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           UPDATE "user"
-          SET "age" = "age" - 1
-        `),
+          SET "age" = "age" - $1
+        `,
+        [1],
       );
 
       expectQueryNotMutated(q);
@@ -238,11 +256,13 @@ describe('update', () => {
       const q = User.all();
 
       const query = q.decrement({ age: 3 });
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           UPDATE "user"
-          SET "age" = "age" - 3
-        `),
+          SET "age" = "age" - $1
+        `,
+        [3],
       );
 
       expectQueryNotMutated(q);
@@ -252,12 +272,14 @@ describe('update', () => {
       const q = User.all();
 
       const query = q.decrement({ age: 3 }, ['id']);
-      expect(query.toSql()).toBe(
-        line(`
+      expectSql(
+        query.toSql(),
+        `
           UPDATE "user"
-          SET "age" = "age" - 3
+          SET "age" = "age" - $1
           RETURNING "user"."id"
-        `),
+        `,
+        [3],
       );
 
       const eq: AssertEqual<Awaited<typeof query>, { id: number }[]> = true;

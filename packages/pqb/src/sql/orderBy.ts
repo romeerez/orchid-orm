@@ -4,17 +4,24 @@ import { qc } from './common';
 
 export const pushOrderBySql = (
   sql: string[],
+  values: unknown[],
   quotedAs: string | undefined,
   order: Exclude<SelectQueryData['order'], undefined>,
 ) => {
   sql.push(
-    `ORDER BY ${order.map((item) => orderByToSql(item, quotedAs)).join(', ')}`,
+    `ORDER BY ${order
+      .map((item) => orderByToSql(item, values, quotedAs))
+      .join(', ')}`,
   );
 };
 
-export const orderByToSql = (order: OrderItem, quotedAs?: string) => {
+export const orderByToSql = (
+  order: OrderItem,
+  values: unknown[],
+  quotedAs?: string,
+) => {
   if (isRaw(order)) {
-    return getRaw(order);
+    return getRaw(order, values);
   }
 
   const sql: string[] = [];

@@ -1,5 +1,5 @@
 import { WithOptions } from '../sql';
-import { expectQueryNotMutated, line, User } from '../test-utils';
+import { expectQueryNotMutated, expectSql, User } from '../test-utils';
 import { columnTypes, NumberColumn } from '../columnSchema';
 import { raw } from '../common';
 
@@ -21,7 +21,7 @@ describe('with', () => {
     columns: string[],
     opts: typeof options[number],
   ) => {
-    return line(`
+    return `
         WITH${opts?.recursive ? ' RECURSIVE' : ''} "withAlias"${
       opts?.columns
         ? `(${(opts.columns === true ? columns : opts.columns)
@@ -39,7 +39,7 @@ describe('with', () => {
         )
         SELECT "withAlias".*
         FROM "withAlias"
-      `);
+      `;
   };
 
   const columnShape = { one: columnTypes.integer(), two: columnTypes.text() };
@@ -58,12 +58,11 @@ describe('with', () => {
         (args as unknown[]).splice(1, 0, options);
       }
 
-      expect(
+      expectSql(
         q
           .with(...args)
           .from('withAlias')
           .toSql(),
-      ).toBe(
         getExpectedWithSql(
           `(VALUES (1, 'two')) t(one, two)`,
           ['one', 'two'],
@@ -85,12 +84,11 @@ describe('with', () => {
         (args as unknown[]).splice(1, 0, options);
       }
 
-      expect(
+      expectSql(
         q
           .with(...args)
           .from('withAlias')
           .toSql(),
-      ).toBe(
         getExpectedWithSql(
           'SELECT "user".* FROM "user"',
           Object.keys(User.shape),
@@ -115,12 +113,11 @@ describe('with', () => {
         (args as unknown[]).splice(1, 0, options);
       }
 
-      expect(
+      expectSql(
         q
           .with(...args)
           .from('withAlias')
           .toSql(),
-      ).toBe(
         getExpectedWithSql(
           `SELECT 1 AS "one"`,
           // columns: true will produce empty columns list because there is no way to get it from query builder result
@@ -160,18 +157,18 @@ describe('with', () => {
       .select('withAlias.id')
       .toSql();
 
-    const expected = line(`
-        WITH "withAlias" AS (
-          SELECT "user".* FROM "user"
-        )
-        SELECT "withAlias"."id" FROM "user"
-        JOIN "withAlias" ON "withAlias"."id" = "user"."id"
-      `);
+    const expected = `
+      WITH "withAlias" AS (
+        SELECT "user".* FROM "user"
+      )
+      SELECT "withAlias"."id" FROM "user"
+      JOIN "withAlias" ON "withAlias"."id" = "user"."id"
+    `;
 
-    expect(received1).toBe(expected);
-    expect(received2).toBe(expected);
-    expect(received3).toBe(expected);
-    expect(received4).toBe(expected);
+    expectSql(received1, expected);
+    expectSql(received2, expected);
+    expectSql(received3, expected);
+    expectSql(received4, expected);
 
     expectQueryNotMutated(q);
   });
@@ -179,15 +176,14 @@ describe('with', () => {
   it('can be used in .from', () => {
     const q = User.all();
 
-    expect(
+    expectSql(
       q.with('withAlias', User.all()).from('withAlias').select('id').toSql(),
-    ).toBe(
-      line(`
-          WITH "withAlias" AS (
-            SELECT "user".* FROM "user"
-          )
-          SELECT "withAlias"."id" FROM "withAlias"
-        `),
+      `
+        WITH "withAlias" AS (
+          SELECT "user".* FROM "user"
+        )
+        SELECT "withAlias"."id" FROM "withAlias"
+      `,
     );
 
     expectQueryNotMutated(q);

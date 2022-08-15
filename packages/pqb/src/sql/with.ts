@@ -4,10 +4,19 @@ import { isRaw, getRaw } from '../common';
 
 export const pushWithSql = (
   sql: string[],
+  values: unknown[],
   withData: Exclude<QueryData['with'], undefined>,
 ) => {
   withData.forEach((withItem) => {
     const [name, options, query] = withItem;
+
+    let inner: string;
+    if (isRaw(query)) {
+      inner = getRaw(query, values);
+    } else {
+      inner = query.toSql(values).text;
+    }
+
     sql.push(
       `WITH ${options.recursive ? 'RECURSIVE ' : ''}${q(name)}${
         options.columns ? `(${options.columns.map(q).join(', ')})` : ''
@@ -17,7 +26,7 @@ export const pushWithSql = (
           : options.notMaterialized
           ? 'NOT MATERIALIZED '
           : ''
-      }(${isRaw(query) ? getRaw(query) : query.toSql()})`,
+      }(${inner})`,
     );
   });
 };

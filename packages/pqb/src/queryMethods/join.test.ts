@@ -1,4 +1,4 @@
-import { expectQueryNotMutated, line, Message, User } from '../test-utils';
+import { expectQueryNotMutated, expectSql, Message, User } from '../test-utils';
 import { raw } from '../common';
 
 describe.each`
@@ -15,145 +15,147 @@ describe.each`
 
   it('should accept left column and right column', () => {
     const q = User.all();
-    expect(q[join](Message, 'authorId', 'id').toSql()).toBe(
-      line(`
+    expectSql(
+      q[join](Message, 'authorId', 'id').toSql(),
+      `
         SELECT "user".* FROM "user"
         ${sql} "message" ON "message"."authorId" = "user"."id"
-      `),
+      `,
     );
-    expect(q[join](Message.as('as'), 'authorId', 'id').toSql()).toBe(
-      line(`
+    expectSql(
+      q[join](Message.as('as'), 'authorId', 'id').toSql(),
+      `
         SELECT "user".* FROM "user"
         ${sql} "message" AS "as" ON "as"."authorId" = "user"."id"
-      `),
+      `,
     );
     expectQueryNotMutated(q);
   });
 
   it('should accept left column, op and right column', () => {
     const q = User.all();
-    expect(q[join](Message, 'authorId', '=', 'id').toSql()).toBe(
-      line(`
+    expectSql(
+      q[join](Message, 'authorId', '=', 'id').toSql(),
+      `
         SELECT "user".* FROM "user"
         ${sql} "message" ON "message"."authorId" = "user"."id"
-      `),
+      `,
     );
-    expect(q[join](Message.as('as'), 'authorId', '=', 'id').toSql()).toBe(
-      line(`
+    expectSql(
+      q[join](Message.as('as'), 'authorId', '=', 'id').toSql(),
+      `
         SELECT "user".* FROM "user"
         ${sql} "message" AS "as" ON "as"."authorId" = "user"."id"
-      `),
+      `,
     );
     expectQueryNotMutated(q);
   });
 
   it('should accept raw and raw', () => {
     const q = User.all();
-    expect(
+    expectSql(
       q[join](Message, raw('"message"."authorId"'), raw('"user"."id"')).toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
         ${sql} "message" ON "message"."authorId" = "user"."id"
-      `),
+      `,
     );
-    expect(
+    expectSql(
       q[join](
         Message.as('as'),
         raw('"as"."authorId"'),
         raw('"user"."id"'),
       ).toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
         ${sql} "message" AS "as" ON "as"."authorId" = "user"."id"
-      `),
+      `,
     );
     expectQueryNotMutated(q);
   });
 
   it('should accept raw, op and raw', () => {
     const q = User.all();
-    expect(
+    expectSql(
       q[join](
         Message,
         raw('"message"."authorId"'),
         '=',
         raw('"user"."id"'),
       ).toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
         ${sql} "message" ON "message"."authorId" = "user"."id"
-      `),
+      `,
     );
-    expect(
+    expectSql(
       q[join](
         Message.as('as'),
         raw('"as"."authorId"'),
         '=',
         raw('"user"."id"'),
       ).toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
         ${sql} "message" AS "as" ON "as"."authorId" = "user"."id"
-      `),
+      `,
     );
     expectQueryNotMutated(q);
   });
 
   it('should accept object of columns', () => {
     const q = User.all();
-    expect(q[join](Message, { authorId: 'id' }).toSql()).toBe(
-      line(`
+    expectSql(
+      q[join](Message, { authorId: 'id' }).toSql(),
+      `
         SELECT "user".* FROM "user"
         ${sql} "message" ON "message"."authorId" = "user"."id"
-      `),
+      `,
     );
-    expect(q[join](Message.as('as'), { authorId: 'id' }).toSql()).toBe(
-      line(`
+    expectSql(
+      q[join](Message.as('as'), { authorId: 'id' }).toSql(),
+      `
         SELECT "user".* FROM "user"
         ${sql} "message" AS "as" ON "as"."authorId" = "user"."id"
-      `),
+      `,
     );
     expectQueryNotMutated(q);
   });
 
   it('should accept object of columns with raw value', () => {
     const q = User.all();
-    expect(q[join](Message, { authorId: raw('"user"."id"') }).toSql()).toBe(
-      line(`
+    expectSql(
+      q[join](Message, { authorId: raw('"user"."id"') }).toSql(),
+      `
         SELECT "user".* FROM "user"
         ${sql} "message" ON "message"."authorId" = "user"."id"
-      `),
+      `,
     );
-    expect(
+    expectSql(
       q[join](Message.as('as'), { authorId: raw('"user"."id"') }).toSql(),
-    ).toBe(
-      line(`
+      `
         SELECT "user".* FROM "user"
         ${sql} "message" AS "as" ON "as"."authorId" = "user"."id"
-      `),
+      `,
     );
     expectQueryNotMutated(q);
   });
 
   it('should accept raw sql', () => {
     const q = User.all();
-    expect(q[join](Message, raw('"authorId" = "user".id')).toSql()).toBe(
-      line(`
+    expectSql(
+      q[join](Message, raw('"authorId" = "user".id')).toSql(),
+      `
       SELECT "user".* FROM "user"
       ${sql} "message" ON "authorId" = "user".id
-    `),
+    `,
     );
-    expect(
+    expectSql(
       q[join](Message.as('as'), raw('"authorId" = "user".id')).toSql(),
-    ).toBe(
-      line(`
+      `
       SELECT "user".* FROM "user"
       ${sql} "message" AS "as" ON "authorId" = "user".id
-    `),
+    `,
     );
     expectQueryNotMutated(q);
   });
@@ -164,22 +166,23 @@ describe.each`
 test('on, .orOn', () => {
   const q = User.all();
 
-  const expectedSql = line(`
-      SELECT "user".* FROM "user"
-      JOIN "message"
-        ON "message"."authorId" = "user"."id"
-        OR "message"."text" = "user"."name"
-    `);
+  const expectedSql = `
+    SELECT "user".* FROM "user"
+    JOIN "message"
+      ON "message"."authorId" = "user"."id"
+      OR "message"."text" = "user"."name"
+  `;
 
-  expect(
+  expectSql(
     q
       .join(Message, (q) =>
         q.on('message.authorId', 'user.id').orOn('message.text', 'user.name'),
       )
       .toSql(),
-  ).toBe(expectedSql);
+    expectedSql,
+  );
 
-  expect(
+  expectSql(
     q
       .join(Message, (q) =>
         q
@@ -187,7 +190,8 @@ test('on, .orOn', () => {
           .orOn('message.text', '=', 'user.name'),
       )
       .toSql(),
-  ).toBe(expectedSql);
+    expectedSql,
+  );
 
   expectQueryNotMutated(q);
 });
@@ -214,12 +218,14 @@ describe.each`
         ],
       ),
     );
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
       SELECT "user".* FROM "user"
       JOIN "message"
-        ON ${orSql}("message"."id", "message"."text") ${sql} ((1, 'a'), (2, 'b'))
-      `),
+        ON ${orSql}("message"."id", "message"."text") ${sql} (($1, $2), ($3, $4))
+      `,
+      [1, 'a', 2, 'b'],
     );
 
     expectQueryNotMutated(q);
@@ -243,11 +249,12 @@ describe.each`
     const query = q.join(Message, (q) =>
       (or ? q.on('authorId', 'id') : q)[onMethod]('text'),
     );
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
         JOIN "message" ON ${orSql}${notSql}"message"."text" IS NULL
-      `),
+      `,
     );
 
     expectQueryNotMutated(q);
@@ -271,11 +278,13 @@ describe.each`
     const query = q.join(Message, (q) =>
       (or ? q.on('authorId', 'id') : q)[onMethod](User),
     );
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        JOIN "message" ON ${orSql}${notSql}EXISTS (SELECT 1 FROM "user" LIMIT 1)
-      `),
+        JOIN "message" ON ${orSql}${notSql}EXISTS (SELECT 1 FROM "user" LIMIT $1)
+      `,
+      [1],
     );
 
     expectQueryNotMutated(q);
@@ -299,11 +308,13 @@ describe.each`
     const query = q.join(Message, (q) =>
       (or ? q.on('authorId', 'id') : q)[onMethod]('id', [1, 10]),
     );
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
-        JOIN "message" ON ${orSql}${notSql}"message"."id" BETWEEN 1 AND 10
-      `),
+        JOIN "message" ON ${orSql}${notSql}"message"."id" BETWEEN $1 AND $2
+      `,
+      [1, 10],
     );
 
     expectQueryNotMutated(q);
@@ -332,13 +343,15 @@ describe.each`
         '$.rightKey',
       ),
     );
-    expect(query.toSql()).toBe(
-      line(`
+    expectSql(
+      query.toSql(),
+      `
         SELECT "user".* FROM "user"
         JOIN "message" ON ${orSql}${notSql}
-          jsonb_path_query_first("message"."meta", '$.leftKey') = 
-          jsonb_path_query_first("user"."data", '$.rightKey')
-      `),
+          jsonb_path_query_first("message"."meta", $1) = 
+          jsonb_path_query_first("user"."data", $2)
+      `,
+      ['$.leftKey', '$.rightKey'],
     );
 
     expectQueryNotMutated(q);

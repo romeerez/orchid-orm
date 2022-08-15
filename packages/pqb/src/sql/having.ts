@@ -2,10 +2,8 @@ import { AggregateItemOptions, HavingItem, SelectQueryData } from './types';
 import { EMPTY_OBJECT, getRaw, isRaw, RawExpression } from '../common';
 import { Operator } from '../operators';
 import { aggregateToSql } from './aggregate';
-import { quote } from '../quote';
 import { Query } from '../query';
-import { pushOperatorSql } from './operator';
-import { q } from './common';
+import { addValue, q } from './common';
 
 const aggregateOptionNames: (keyof AggregateItemOptions)[] = [
   'distinct',
@@ -19,17 +17,19 @@ export const pushHavingSql = <T extends Query>(
   sql: string[],
   model: Pick<Query, 'shape'>,
   query: SelectQueryData<T>,
+  values: unknown[],
   quotedAs?: string,
 ) => {
-  const conditions = havingToSql(model, query, quotedAs);
+  const conditions = havingToSql(model, query, values, quotedAs);
   if (conditions.length) sql.push('HAVING', conditions);
 };
 
 export const havingToSql = <T extends Query>(
   model: Pick<Query, 'shape'>,
   query: SelectQueryData<T>,
+  values: unknown[],
   quotedAs?: string,
-) => {
+): string => {
   const or =
     query.having && query.havingOr
       ? [query.having, ...query.havingOr]
@@ -47,6 +47,7 @@ export const havingToSql = <T extends Query>(
         const sql = havingToSql(
           query,
           query.query || EMPTY_OBJECT,
+          values,
           query.table && q(query.table),
         );
         if (sql.length) ands.push(`(${sql})`);
@@ -54,7 +55,7 @@ export const havingToSql = <T extends Query>(
       }
 
       if (isRaw(item)) {
-        ands.push(getRaw(item));
+        ands.push(getRaw(item, values));
         return;
       }
 
@@ -87,6 +88,7 @@ export const havingToSql = <T extends Query>(
 
                   const expression = aggregateToSql(
                     model,
+                    values,
                     {
                       function: key,
                       arg: column,
@@ -95,13 +97,12 @@ export const havingToSql = <T extends Query>(
                     quotedAs,
                   );
 
-                  pushOperatorSql(
-                    ands,
-                    '',
-                    operator,
-                    expression,
-                    valueOrOptions as object,
-                    op,
+                  ands.push(
+                    operator(
+                      expression,
+                      valueOrOptions[op as keyof typeof valueOrOptions],
+                      values,
+                    ),
                   );
                 }
               }
@@ -109,13 +110,14 @@ export const havingToSql = <T extends Query>(
               ands.push(
                 `${aggregateToSql(
                   model,
+                  values,
                   {
                     function: key,
                     arg: column,
                     options: EMPTY_OBJECT,
                   },
                   quotedAs,
-                )} = ${quote(valueOrOptions)}`,
+                )} = ${addValue(values, valueOrOptions)}`,
               );
             }
           }

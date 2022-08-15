@@ -3,8 +3,8 @@ import { Operators } from '../operators';
 import {
   AssertEqual,
   db,
+  expectSql,
   insert,
-  line,
   User,
   useTestDatabase,
 } from '../test-utils';
@@ -39,13 +39,14 @@ describe('column base', () => {
       }));
 
       const q = User.all();
-      expect(q.toSql()).toBe(
-        line(`
+      expectSql(
+        q.toSql(),
+        `
           SELECT
             "user"."id",
             "user"."name"
           FROM "user"
-        `),
+        `,
       );
     });
 
@@ -57,14 +58,15 @@ describe('column base', () => {
       }));
 
       const q = User.select('id', 'name', 'password');
-      expect(q.toSql()).toBe(
-        line(`
+      expectSql(
+        q.toSql(),
+        `
           SELECT
             "user"."id",
             "user"."name",
             "user"."password"
           FROM "user"
-        `),
+        `,
       );
     });
   });

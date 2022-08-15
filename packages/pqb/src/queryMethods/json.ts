@@ -1,12 +1,14 @@
 import { AddQuerySelect, Query, SetQueryReturnsValue } from '../query';
 import { pushQueryValue } from '../queryDataUtils';
-import { ColumnType, JSONColumn, StringColumn } from '../columnSchema';
+import { ColumnType, StringColumn } from '../columnSchema';
 import { JsonItem } from '../sql';
 import { raw, StringKey } from '../common';
 
 type JsonColumnName<T extends Query> = StringKey<
   {
-    [K in keyof T['shape']]: T['shape'][K] extends JSONColumn ? K : never;
+    [K in keyof T['shape']]: T['shape'][K]['dataType'] extends 'jsonb'
+      ? K
+      : never;
   }[keyof T['shape']]
 >;
 

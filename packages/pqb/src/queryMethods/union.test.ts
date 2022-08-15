@@ -1,4 +1,4 @@
-import { Chat, expectQueryNotMutated, line, User } from '../test-utils';
+import { Chat, expectQueryNotMutated, expectSql, User } from '../test-utils';
 import { raw } from '../common';
 
 ['union', 'intersect', 'except'].forEach((what) => {
@@ -14,18 +14,19 @@ import { raw } from '../common';
 
       const wrapped = query.wrap(User.select('id'));
 
-      expect(wrapped.toSql()).toBe(
-        line(`
-        SELECT "t"."id" FROM (
-          SELECT "user"."id" FROM "user"
-          ${upper}
-          SELECT "chat"."id" FROM "chat"
-          ${upper}
-          SELECT 1
-          ${upper} ALL
-          (SELECT 2)
-        ) AS "t"
-      `),
+      expectSql(
+        wrapped.toSql(),
+        `
+          SELECT "t"."id" FROM (
+            SELECT "user"."id" FROM "user"
+            ${upper}
+            SELECT "chat"."id" FROM "chat"
+            ${upper}
+            SELECT 1
+            ${upper} ALL
+            (SELECT 2)
+          ) AS "t"
+        `,
       );
 
       expectQueryNotMutated(q);
@@ -34,22 +35,24 @@ import { raw } from '../common';
     it('has modifier', () => {
       const q = User.select('id');
       q[`_${what}` as '_union']([raw('SELECT 1')]);
-      expect(q.toSql()).toBe(
-        line(`
+      expectSql(
+        q.toSql(),
+        `
           SELECT "user"."id" FROM "user"
           ${upper}
           SELECT 1
-        `),
+        `,
       );
       q[`_${what}All` as '_unionAll']([raw('SELECT 2')], true);
-      expect(q.toSql()).toBe(
-        line(`
+      expectSql(
+        q.toSql(),
+        `
         SELECT "user"."id" FROM "user"
         ${upper}
         SELECT 1
         ${upper} ALL
         (SELECT 2)
-      `),
+      `,
       );
     });
   });

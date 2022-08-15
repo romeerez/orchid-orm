@@ -1,14 +1,14 @@
-import { expectQueryNotMutated, line, User } from '../test-utils';
+import { expectQueryNotMutated, expectSql, User } from '../test-utils';
 
 describe('columnInfo', () => {
   it('should return all columns info', async () => {
     const q = User.all();
 
     const query = q.columnInfo();
-    expect(query.toSql()).toBe(
-      line(
-        `SELECT * FROM information_schema.columns WHERE table_name = 'user' AND table_catalog = current_database() AND table_schema = current_schema()`,
-      ),
+    expectSql(
+      query.toSql(),
+      `SELECT * FROM information_schema.columns WHERE table_name = $1 AND table_catalog = current_database() AND table_schema = current_schema()`,
+      ['user'],
     );
 
     const result = await query;
@@ -26,10 +26,10 @@ describe('columnInfo', () => {
     const q = User.all();
 
     const query = q.columnInfo('name');
-    expect(query.toSql()).toBe(
-      line(
-        `SELECT * FROM information_schema.columns WHERE table_name = 'user' AND table_catalog = current_database() AND table_schema = current_schema() AND column_name = 'name'`,
-      ),
+    expectSql(
+      query.toSql(),
+      `SELECT * FROM information_schema.columns WHERE table_name = $1 AND table_catalog = current_database() AND table_schema = current_schema() AND column_name = $2`,
+      ['user', 'name'],
     );
 
     const result = await query;

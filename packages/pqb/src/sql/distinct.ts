@@ -3,6 +3,7 @@ import { expressionToSql } from './common';
 
 export const pushDistinctSql = (
   sql: string[],
+  values: unknown[],
   distinct: Exclude<SelectQueryData['distinct'], undefined>,
   quotedAs?: string,
 ) => {
@@ -11,7 +12,7 @@ export const pushDistinctSql = (
   if (distinct.length) {
     const columns: string[] = [];
     distinct?.forEach((item) => {
-      columns.push(expressionToSql(item, quotedAs));
+      columns.push(expressionToSql(item, values, quotedAs));
     });
     sql.push(`ON (${columns.join(', ')})`);
   }

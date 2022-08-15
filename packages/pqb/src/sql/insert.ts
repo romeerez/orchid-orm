@@ -1,12 +1,12 @@
 import { InsertQueryData } from './types';
-import { q, qc } from './common';
-import { quote } from '../quote';
+import { addValue, q, qc } from './common';
 import { getRaw, isRaw } from '../common';
 import { pushWhereSql } from './where';
 import { Query } from '../query';
 
 export const pushInsertSql = (
   sql: string[],
+  values: unknown[],
   model: Pick<Query, 'shape'>,
   query: InsertQueryData,
   quotedAs: string,
@@ -15,7 +15,7 @@ export const pushInsertSql = (
 
   const isMany = Array.isArray(data);
   let columns: string[];
-  let values: string;
+  let insertValues: string;
   if (isMany) {
     const columnsMap: Record<string, true> = {};
     data.forEach((item) => {
@@ -28,9 +28,11 @@ export const pushInsertSql = (
     columns = keys.map((key) => q(key));
     const arr: string[][] = Array(data.length);
     (data as Record<string, unknown>[]).forEach((item, i) => {
-      arr[i] = keys.map((key) => (key in item ? quote(item[key]) : 'DEFAULT'));
+      arr[i] = keys.map((key) =>
+        key in item ? addValue(values, item[key]) : 'DEFAULT',
+      );
     });
-    values = `${arr.map((row) => `(${row.join(', ')})`).join(', ')}`;
+    insertValues = `${arr.map((row) => `(${row.join(', ')})`).join(', ')}`;
   } else if (
     'values' in data &&
     typeof data.values === 'object' &&
@@ -38,13 +40,17 @@ export const pushInsertSql = (
     isRaw(data.values)
   ) {
     columns = (data.columns as string[]).map((column) => q(column));
-    values = getRaw(data.values);
+    insertValues = getRaw(data.values, values);
   } else {
     columns = Object.keys(data).map(q);
-    values = `(${Object.values(data).map(quote).join(', ')})`;
+    insertValues = `(${Object.values(data)
+      .map((value) => addValue(values, value))
+      .join(', ')})`;
   }
 
-  sql.push(`INSERT INTO ${quotedAs}(${columns.join(', ')}) VALUES ${values}`);
+  sql.push(
+    `INSERT INTO ${quotedAs}(${columns.join(', ')}) VALUES ${insertValues}`,
+  );
 
   if (onConflict) {
     sql.push('ON CONFLICT');
@@ -55,7 +61,7 @@ export const pushInsertSql = (
       } else if (Array.isArray(onConflict.expr)) {
         sql.push(`(${onConflict.expr.map(q).join(', ')})`);
       } else {
-        sql.push(getRaw(onConflict.expr));
+        sql.push(getRaw(onConflict.expr, values));
       }
     } else {
       sql.push(`(${columns.join(', ')})`);
@@ -75,11 +81,11 @@ export const pushInsertSql = (
             .map((column) => `${q(column)} = excluded.${q(column)}`)
             .join(', ');
         } else if (isRaw(update)) {
-          set = getRaw(update);
+          set = getRaw(update, values);
         } else {
           const arr: string[] = [];
           for (const key in update) {
-            arr.push(`${q(key)} = ${quote(update[key])}`);
+            arr.push(`${q(key)} = ${addValue(values, update[key])}`);
           }
           set = arr.join(', ');
         }
@@ -93,7 +99,7 @@ export const pushInsertSql = (
     }
   }
 
-  pushWhereSql(sql, model, query, quotedAs);
+  pushWhereSql(sql, model, query, values, quotedAs);
   pushReturningSql(sql, quotedAs, returning);
 };
 

@@ -1,40 +1,41 @@
-import { User, expectQueryNotMutated, line } from '../test-utils';
+import { User, expectQueryNotMutated, expectSql } from '../test-utils';
 import { raw } from '../common';
 
 describe('aggregate', () => {
   describe('aggregate options', () => {
     test('without options', () => {
-      expect(User.count('*').toSql()).toBe('SELECT count(*) FROM "user"');
+      expectSql(User.count('*').toSql(), 'SELECT count(*) FROM "user"');
     });
 
     test('as', () => {
       const q = User.count('*', { as: 'a' });
-      expect(q.toSql()).toBe('SELECT count(*) AS "a" FROM "user"');
+      expectSql(q.toSql(), 'SELECT count(*) AS "a" FROM "user"');
     });
 
     test('distinct', () => {
-      expect(User.count('name', { distinct: true }).toSql()).toBe(
+      expectSql(
+        User.count('name', { distinct: true }).toSql(),
         'SELECT count(DISTINCT "user"."name") FROM "user"',
       );
     });
 
     test('order', () => {
-      expect(User.count('name', { order: { name: 'DESC' } }).toSql()).toBe(
+      expectSql(
+        User.count('name', { order: { name: 'DESC' } }).toSql(),
         'SELECT count("user"."name" ORDER BY "user"."name" DESC) FROM "user"',
       );
     });
 
     test('filter', () => {
-      expect(
+      expectSql(
         User.count('name', { filter: { age: { not: null } } }).toSql(),
-      ).toBe(
         'SELECT count("user"."name") FILTER (WHERE "user"."age" IS NOT NULL) FROM "user"',
       );
     });
 
     describe('over', () => {
       test('with column partitionBy', () => {
-        expect(
+        expectSql(
           User.count('name', {
             over: {
               partitionBy: 'id',
@@ -43,16 +44,15 @@ describe('aggregate', () => {
               },
             },
           }).toSql(),
-        ).toBe(
-          line(`
+          `
             SELECT count("user"."name") OVER (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
             FROM "user"
-          `),
+          `,
         );
       });
 
       test('with columns array partitionBy', () => {
-        expect(
+        expectSql(
           User.count('name', {
             over: {
               partitionBy: ['id', 'name'],
@@ -61,17 +61,16 @@ describe('aggregate', () => {
               },
             },
           }).toSql(),
-        ).toBe(
-          line(`
+          `
             SELECT count("user"."name") OVER (PARTITION BY "user"."id", "user"."name" ORDER BY "user"."id" DESC)
             FROM "user"
-          `),
+          `,
         );
       });
     });
 
     test('all options', () => {
-      expect(
+      expectSql(
         User.count('name', {
           as: 'a',
           distinct: true,
@@ -84,8 +83,7 @@ describe('aggregate', () => {
             },
           },
         }).toSql(),
-      ).toBe(
-        line(`
+        `
           SELECT
             count(DISTINCT "user"."name" ORDER BY "user"."name" DESC)
               FILTER (WHERE "user"."age" IS NOT NULL)
@@ -94,24 +92,23 @@ describe('aggregate', () => {
                 ORDER BY "user"."id" DESC
               ) AS "a"
           FROM "user"
-        `),
+        `,
       );
     });
 
     test('withinGroup', () => {
-      expect(
+      expectSql(
         User.count('name', {
           distinct: true,
           order: { name: 'DESC' },
           filter: { age: { not: null } },
           withinGroup: true,
         }).toSql(),
-      ).toBe(
-        line(`
+        `
           SELECT count("user"."name")
           WITHIN GROUP (ORDER BY "user"."name" DESC)
           FILTER (WHERE "user"."age" IS NOT NULL) FROM "user"
-        `),
+        `,
       );
     });
   });
@@ -136,16 +133,17 @@ describe('aggregate', () => {
     it(`should perform ${method} query for a column`, () => {
       const q = User.all();
       const expectedSql = `SELECT ${functionName}("user"."name") FROM "user"`;
-      expect(q[method as 'count']('name').toSql()).toBe(expectedSql);
+      expectSql(q[method as 'count']('name').toSql(), expectedSql);
       expectQueryNotMutated(q);
 
       q[`_${method}` as `_count`]('name');
-      expect(q.toSql()).toBe(expectedSql);
+      expectSql(q.toSql(), expectedSql);
     });
 
     it('should support raw sql parameter', () => {
       const q = User.all();
-      expect(q[method as 'count'](raw('name')).toSql()).toBe(
+      expectSql(
+        q[method as 'count'](raw('name')).toSql(),
         `SELECT ${functionName}(name) FROM "user"`,
       );
       expectQueryNotMutated(q);
@@ -155,18 +153,20 @@ describe('aggregate', () => {
     it(`.${selectMethod} should select aggregated value`, () => {
       const q = User.all();
       const expectedSql = `SELECT ${functionName}("user"."name") AS "name" FROM "user"`;
-      expect(
+      expectSql(
         q[selectMethod as 'selectCount']('name', { as: 'name' }).toSql(),
-      ).toBe(expectedSql);
+        expectedSql,
+      );
       expectQueryNotMutated(q);
     });
 
     it(`.${selectMethod} supports raw sql`, () => {
       const q = User.all();
       const expectedSql = `SELECT ${functionName}(name) AS "name" FROM "user"`;
-      expect(
+      expectSql(
         q[selectMethod as 'selectCount'](raw('name'), { as: 'name' }).toSql(),
-      ).toBe(expectedSql);
+        expectedSql,
+      );
       expectQueryNotMutated(q);
     });
   });
@@ -178,48 +178,56 @@ describe('aggregate', () => {
   `('$method', ({ method, functionName }) => {
     it(`should perform ${method} query for a column`, () => {
       const q = User.all();
-      const expectedSql = `SELECT ${functionName}('alias', "user"."name") FROM "user"`;
-      expect(q[method as 'jsonObjectAgg']({ alias: 'name' }).toSql()).toBe(
+      const expectedSql = `SELECT ${functionName}($1, "user"."name") FROM "user"`;
+      expectSql(
+        q[method as 'jsonObjectAgg']({ alias: 'name' }).toSql(),
         expectedSql,
+        ['alias'],
       );
       expectQueryNotMutated(q);
 
       q[`_${method}` as '_jsonObjectAgg']({ alias: 'name' });
-      expect(q.toSql()).toBe(expectedSql);
+      expectSql(q.toSql(), expectedSql, ['alias']);
     });
 
     it('should support raw sql parameter', () => {
       const q = User.all();
-      expect(
+      expectSql(
         q[method as 'jsonObjectAgg']({
           alias: raw('name'),
         }).toSql(),
-      ).toBe(`SELECT ${functionName}('alias', name) FROM "user"`);
+        `SELECT ${functionName}($1, name) FROM "user"`,
+        ['alias'],
+      );
       expectQueryNotMutated(q);
     });
 
     const selectMethod = `select${method[0].toUpperCase()}${method.slice(1)}`;
     it(`.${selectMethod} should select aggregated value`, () => {
       const q = User.all();
-      const expectedSql = `SELECT ${functionName}('alias', "user"."name") AS "name" FROM "user"`;
-      expect(
+      const expectedSql = `SELECT ${functionName}($1, "user"."name") AS "name" FROM "user"`;
+      expectSql(
         q[selectMethod as 'jsonObjectAgg'](
           { alias: 'name' },
           { as: 'name' },
         ).toSql(),
-      ).toBe(expectedSql);
+        expectedSql,
+        ['alias'],
+      );
       expectQueryNotMutated(q);
     });
 
     it(`.${selectMethod} supports raw sql`, () => {
       const q = User.all();
-      const expectedSql = `SELECT ${functionName}('alias', name) AS "name" FROM "user"`;
-      expect(
+      const expectedSql = `SELECT ${functionName}($1, name) AS "name" FROM "user"`;
+      expectSql(
         q[selectMethod as 'jsonObjectAgg'](
           { alias: raw('name') },
           { as: 'name' },
         ).toSql(),
-      ).toBe(expectedSql);
+        expectedSql,
+        ['alias'],
+      );
       expectQueryNotMutated(q);
     });
   });
@@ -227,36 +235,42 @@ describe('aggregate', () => {
   describe('stringAgg', () => {
     it('makes stringAgg query', () => {
       const q = User.all();
-      const expectedSql = `SELECT string_agg("user"."name", ' & ') FROM "user"`;
-      expect(q.stringAgg('name', ' & ').toSql()).toBe(expectedSql);
+      const expectedSql = `SELECT string_agg("user"."name", $1) FROM "user"`;
+      expectSql(q.stringAgg('name', ' & ').toSql(), expectedSql, [' & ']);
       expectQueryNotMutated(q);
 
       q._stringAgg('name', ' & ');
-      expect(q.toSql()).toBe(expectedSql);
+      expectSql(q.toSql(), expectedSql, [' & ']);
     });
 
     it('should support raw sql parameter', async () => {
       const q = User.all();
-      expect(q.stringAgg(raw('name'), ' & ').toSql()).toBe(
-        `SELECT string_agg(name, ' & ') FROM "user"`,
+      expectSql(
+        q.stringAgg(raw('name'), ' & ').toSql(),
+        `SELECT string_agg(name, $1) FROM "user"`,
+        [' & '],
       );
       expectQueryNotMutated(q);
     });
 
     it(`.stringAgg should select aggregated value`, () => {
       const q = User.all();
-      const expectedSql = `SELECT string_agg("user"."name", ' & ') AS "name" FROM "user"`;
-      expect(q.stringAgg('name', ' & ', { as: 'name' }).toSql()).toBe(
+      const expectedSql = `SELECT string_agg("user"."name", $1) AS "name" FROM "user"`;
+      expectSql(
+        q.stringAgg('name', ' & ', { as: 'name' }).toSql(),
         expectedSql,
+        [' & '],
       );
       expectQueryNotMutated(q);
     });
 
     it(`.stringAgg supports raw sql`, () => {
       const q = User.all();
-      const expectedSql = `SELECT string_agg(name, ' & ') AS "name" FROM "user"`;
-      expect(q.stringAgg(raw('name'), ' & ', { as: 'name' }).toSql()).toBe(
+      const expectedSql = `SELECT string_agg(name, $1) AS "name" FROM "user"`;
+      expectSql(
+        q.stringAgg(raw('name'), ' & ', { as: 'name' }).toSql(),
         expectedSql,
+        [' & '],
       );
       expectQueryNotMutated(q);
     });
@@ -272,16 +286,15 @@ describe('aggregate', () => {
   `('$method', ({ method, functionName }) => {
     it(`should perform ${method} query`, () => {
       const q = User.all();
-      const expectedSql = line(
-        `SELECT ${functionName}() OVER (PARTITION BY "user"."name" ORDER BY "user"."createdAt" DESC) AS "as" FROM "user"`,
-      );
-      expect(
+      const expectedSql = `SELECT ${functionName}() OVER (PARTITION BY "user"."name" ORDER BY "user"."createdAt" DESC) AS "as" FROM "user"`;
+      expectSql(
         q[method as 'rank']({
           as: 'as',
           partitionBy: 'name',
           order: { createdAt: 'DESC' },
         }).toSql(),
-      ).toBe(expectedSql);
+        expectedSql,
+      );
       expectQueryNotMutated(q);
 
       q[`_${method}` as '_rank']({
@@ -289,7 +302,7 @@ describe('aggregate', () => {
         partitionBy: 'name',
         order: { createdAt: 'DESC' },
       });
-      expect(q.toSql()).toBe(expectedSql);
+      expectSql(q.toSql(), expectedSql);
     });
   });
 });

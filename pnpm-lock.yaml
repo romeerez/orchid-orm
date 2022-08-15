@@ -19,6 +19,7 @@ specifiers:
   jest: ^28.1.1
   pg: ^8.7.3
   pg-transactional-tests: ^1.0.2
+  postgres: ^3.2.4
   prettier: ^2.7.1
   rake-db: ^1.3.3
   regenerator-runtime: ^0.13.9
@@ -47,6 +48,7 @@ devDependencies:
   jest: 28.1.2_jbmz3vlfopghb5mdasddsdxfzq
   pg: 8.7.3
   pg-transactional-tests: 1.0.2_pg@8.7.3
+  postgres: 3.2.4
   prettier: 2.7.1
   rake-db: 1.3.3_mu66ohdiwyrigyorzidgf4bsdu
   regenerator-runtime: 0.13.9
@@ -3204,6 +3206,10 @@ packages:
     engines: {node: '>=0.10.0'}
     dependencies:
       xtend: 4.0.2
+    dev: true
+
+  /postgres/3.2.4:
+    resolution: {integrity: sha512-iscysD+ZlM4A9zj0RS2zo3f4Us4yuov94Yx+p3dE1rEARaBHC8R3/gRq40KEnWp1lxjuFq9EjuAenIUsPaTaDA==}
     dev: true
 
   /prelude-ls/1.2.1:

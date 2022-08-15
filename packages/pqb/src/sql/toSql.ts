@@ -1,7 +1,7 @@
 import { EMPTY_OBJECT, getRaw, isRaw } from '../common';
 import { Query } from '../query';
-import { q, qc } from './common';
-import { QueryData } from './types';
+import { addValue, q, qc } from './common';
+import { QueryData, Sql } from './types';
 import { pushDistinctSql } from './distinct';
 import { pushSelectSql } from './select';
 import { windowToSql } from './window';
@@ -17,87 +17,88 @@ import { pushTruncateSql } from './truncate';
 import { pushColumnInfoSql } from './columnInfo';
 import { pushOrderBySql } from './orderBy';
 
-export const toSql = (model: Query): string => {
+export const toSql = (model: Query, values: unknown[] = []): Sql => {
   const query = (model.query || EMPTY_OBJECT) as QueryData;
 
   const sql: string[] = [];
+
   if ('type' in query) {
     if (query.type === 'truncate') {
       if (!model.table) throw new Error('Table is missing for truncate');
 
       pushTruncateSql(sql, model.table, query);
-      return sql.join(' ');
+      return { text: sql.join(' '), values };
     }
 
     if (query.type === 'columnInfo') {
       if (!model.table) throw new Error('Table is missing for truncate');
 
-      pushColumnInfoSql(sql, model.table, query);
-      return sql.join(' ');
+      pushColumnInfoSql(sql, values, model.table, query);
+      return { text: sql.join(' '), values };
     }
   }
 
   const quotedAs = model.table && q(query.as || model.table);
 
   if (query.with) {
-    pushWithSql(sql, query.with);
+    pushWithSql(sql, values, query.with);
   }
 
   if ('type' in query) {
     if (query.type === 'insert') {
       if (!quotedAs) throw new Error('Table is missing for insert');
 
-      pushInsertSql(sql, model, query, quotedAs);
-      return sql.join(' ');
+      pushInsertSql(sql, values, model, query, quotedAs);
+      return { text: sql.join(' '), values };
     }
 
     if (query.type === 'update') {
       if (!quotedAs) throw new Error('Table is missing for update');
 
-      pushUpdateSql(sql, model, query, quotedAs);
-      return sql.join(' ');
+      pushUpdateSql(sql, values, model, query, quotedAs);
+      return { text: sql.join(' '), values };
     }
 
     if (query.type === 'delete') {
       if (!quotedAs) throw new Error('Table is missing for delete');
 
-      pushDeleteSql(sql, model, query, quotedAs);
-      return sql.join(' ');
+      pushDeleteSql(sql, values, model, query, quotedAs);
+      return { text: sql.join(' '), values };
     }
 
-    return '';
+    return { text: '', values };
   }
 
   sql.push('SELECT');
 
   if (query.distinct) {
-    pushDistinctSql(sql, query.distinct, quotedAs);
+    pushDistinctSql(sql, values, query.distinct, quotedAs);
   }
 
-  pushSelectSql(sql, model, query.select, quotedAs);
+  pushSelectSql(sql, model, query.select, values, quotedAs);
 
-  pushFromAndAs(sql, model, query, quotedAs);
+  pushFromAndAs(sql, model, query, values, quotedAs);
 
-  pushJoinSql(sql, model, query, quotedAs);
+  pushJoinSql(sql, model, query, values, quotedAs);
 
-  pushWhereSql(sql, model, query, quotedAs);
+  pushWhereSql(sql, model, query, values, quotedAs);
 
   if (query.group) {
     const group = query.group.map((item) =>
       typeof item === 'object' && isRaw(item)
-        ? getRaw(item)
+        ? getRaw(item, values)
         : qc(item as string, quotedAs),
     );
     sql.push(`GROUP BY ${group.join(', ')}`);
   }
 
-  pushHavingSql(sql, model, query, quotedAs);
+  pushHavingSql(sql, model, query, values, quotedAs);
 
   if (query.window) {
     const window: string[] = [];
     query.window.forEach((item) => {
       for (const key in item) {
-        window.push(`${q(key)} AS ${windowToSql(item[key], quotedAs)}`);
+        window.push(`${q(key)} AS ${windowToSql(item[key], values, quotedAs)}`);
       }
     });
     sql.push(`WINDOW ${window.join(', ')}`);
@@ -105,20 +106,26 @@ export const toSql = (model: Query): string => {
 
   if (query.union) {
     query.union.forEach((item) => {
-      const itemSql = isRaw(item.arg) ? getRaw(item.arg) : item.arg.toSql();
+      let itemSql: string;
+      if (isRaw(item.arg)) {
+        itemSql = getRaw(item.arg, values);
+      } else {
+        const argSql = item.arg.toSql(values);
+        itemSql = argSql.text;
+      }
       sql.push(`${item.kind} ${item.wrap ? `(${itemSql})` : itemSql}`);
     });
   }
 
-  if (query.order) pushOrderBySql(sql, quotedAs, query.order);
+  if (query.order) pushOrderBySql(sql, values, quotedAs, query.order);
 
   const limit = query.take ? 1 : query.limit;
   if (limit) {
-    sql.push(`LIMIT ${limit}`);
+    sql.push(`LIMIT ${addValue(values, limit)}`);
   }
 
   if (query.offset) {
-    sql.push(`OFFSET ${query.offset}`);
+    sql.push(`OFFSET ${addValue(values, query.offset)}`);
   }
 
   if (query.for) {
@@ -126,7 +133,7 @@ export const toSql = (model: Query): string => {
     const { tableNames } = query.for;
     if (tableNames) {
       if (isRaw(tableNames)) {
-        sql.push('OF', getRaw(tableNames));
+        sql.push('OF', getRaw(tableNames, values));
       } else {
         sql.push('OF', tableNames.map(q).join(', '));
       }
@@ -134,5 +141,5 @@ export const toSql = (model: Query): string => {
     if (query.for.mode) sql.push(query.for.mode);
   }
 
-  return sql.join(' ');
+  return { text: sql.join(' '), values };
 };

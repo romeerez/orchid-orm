@@ -18,7 +18,7 @@ import {
   GetTypesOrRaw,
   PropertyKeyUnionToArray,
 } from '../utils';
-import { SortDir, toSql } from '../sql';
+import { SortDir, Sql, toSql } from '../sql';
 import {
   pushQueryArray,
   pushQueryValue,
@@ -206,8 +206,8 @@ export class QueryMethods {
     return cloned as unknown as QueryWithData<T>;
   }
 
-  toSql(this: Query): string {
-    return toSql(this);
+  toSql(this: Query, values?: unknown[]): Sql {
+    return toSql(this, values);
   }
 
   distinct<T extends Query>(this: T, ...columns: Expression<T>[]): T {
@@ -306,9 +306,13 @@ export class QueryMethods {
     query: Q,
     as?: As,
   ): SetQueryTableAlias<Q, As> {
+    const sql = this.toSql();
+
     return query
       ._as(as ?? 't')
-      ._from(raw(`(${this.toSql()})`)) as unknown as SetQueryTableAlias<Q, As>;
+      ._from(
+        raw(`(${sql.text})`, ...sql.values),
+      ) as unknown as SetQueryTableAlias<Q, As>;
   }
 
   order<T extends Query>(this: T, ...args: OrderArg<T>[]): T {

@@ -5,12 +5,13 @@ import { expressionToSql, q } from './common';
 import { orderByToSql } from './orderBy';
 
 export const windowToSql = <T extends Query>(
-  window: T['windows'][number] | WindowDeclaration<T> | RawExpression,
+  window: T['windows'][number] | WindowDeclaration | RawExpression,
+  values: unknown[],
   quotedAs?: string,
 ) => {
   if (typeof window === 'object') {
     if (isRaw(window)) {
-      return `(${getRaw(window)})`;
+      return `(${getRaw(window, values)})`;
     } else {
       const sql: string[] = [];
       if (window.partitionBy) {
@@ -18,14 +19,16 @@ export const windowToSql = <T extends Query>(
           `PARTITION BY ${
             Array.isArray(window.partitionBy)
               ? window.partitionBy
-                  .map((partitionBy) => expressionToSql(partitionBy, quotedAs))
+                  .map((partitionBy) =>
+                    expressionToSql(partitionBy, values, quotedAs),
+                  )
                   .join(', ')
-              : expressionToSql(window.partitionBy, quotedAs)
+              : expressionToSql(window.partitionBy, values, quotedAs)
           }`,
         );
       }
       if (window.order) {
-        sql.push(`ORDER BY ${orderByToSql(window.order, quotedAs)}`);
+        sql.push(`ORDER BY ${orderByToSql(window.order, values, quotedAs)}`);
       }
       return `(${sql.join(' ')})`;
     }

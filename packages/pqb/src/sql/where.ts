@@ -1,29 +1,32 @@
 import { Query } from '../query';
 import { QueryData, SelectQueryData } from './types';
-import { q, qc, quoteFullColumn } from './common';
+import { addValue, q, qc, quoteFullColumn } from './common';
 import { EMPTY_OBJECT, getRaw, isRaw, raw, RawExpression } from '../common';
-import { quote } from '../quote';
-import { pushOperatorSql } from './operator';
 
 export const pushWhereSql = (
   sql: string[],
   model: Pick<Query, 'shape'>,
   query: Pick<QueryData, 'and' | 'or'>,
+  values: unknown[],
   quotedAs?: string,
   otherTableQuotedAs?: string,
 ) => {
   const whereConditions = whereToSql(
     model,
     query,
+    values,
     quotedAs,
     otherTableQuotedAs,
   );
-  if (whereConditions.length) sql.push('WHERE', whereConditions);
+  if (whereConditions) {
+    sql.push('WHERE', whereConditions);
+  }
 };
 
 export const whereToSql = (
   model: Pick<Query, 'shape'>,
   query: Pick<QueryData, 'and' | 'or'>,
+  values: unknown[],
   quotedAs?: string,
   otherTableQuotedAs?: string,
 ): string => {
@@ -49,14 +52,17 @@ export const whereToSql = (
           const sql = whereToSql(
             query,
             query.query || EMPTY_OBJECT,
+            values,
             query.table && q(query.table),
           );
-          if (sql.length) ands.push(`${prefix}(${sql})`);
+          if (sql[0]) {
+            ands.push(`${prefix}(${sql})`);
+          }
           return;
         }
 
         if (isRaw(data)) {
-          ands.push(`${prefix}(${getRaw(data)})`);
+          ands.push(`${prefix}(${getRaw(data, values)})`);
           return;
         }
 
@@ -68,7 +74,9 @@ export const whereToSql = (
             value !== undefined
           ) {
             if (isRaw(value)) {
-              ands.push(`${prefix}${qc(key, quotedAs)} = ${getRaw(value)}`);
+              ands.push(
+                `${prefix}${qc(key, quotedAs)} = ${getRaw(value, values)}`,
+              );
             } else {
               const column = model.shape[key];
               if (!column) {
@@ -85,21 +93,20 @@ export const whereToSql = (
                   );
                 }
 
-                pushOperatorSql(
-                  ands,
-                  prefix,
-                  operator,
-                  qc(key, quotedAs),
-                  value,
-                  op,
+                ands.push(
+                  `${prefix}${operator(
+                    qc(key, quotedAs),
+                    value[op as keyof typeof value],
+                    values,
+                  )}`,
                 );
               }
             }
           } else {
             ands.push(
               `${prefix}${qc(key, quotedAs)} ${
-                value === null ? 'IS' : '='
-              } ${quote(value)}`,
+                value === null ? 'IS NULL' : `= ${addValue(values, value)}`
+              }`,
             );
           }
         }
@@ -117,25 +124,26 @@ export const whereToSql = (
       }
 
       if (item.type === 'in') {
-        pushIn(ands, prefix, quotedAs, item, 'IN');
+        pushIn(ands, prefix, quotedAs, values, item, 'IN');
         return;
       }
 
       if (item.type === 'notIn') {
-        pushIn(ands, prefix, quotedAs, item, 'NOT IN');
+        pushIn(ands, prefix, quotedAs, values, item, 'NOT IN');
         return;
       }
 
       if (item.type === 'exists') {
         let querySql: string;
         if (isRaw(item.query)) {
-          querySql = getRaw(item.query);
+          querySql = getRaw(item.query, values);
         } else {
           const q = item.query.clone();
           const query = q.query as SelectQueryData;
           query.select = [raw('1')];
           query.limit = 1;
-          querySql = q.toSql();
+          const sql = q.toSql(values);
+          querySql = sql.text;
         }
 
         ands.push(`${prefix}EXISTS (${querySql})`);
@@ -146,10 +154,15 @@ export const whereToSql = (
         const leftPath = item.data[1];
         const rightColumn = quoteFullColumn(item.data[2], otherTableQuotedAs);
         const rightPath = item.data[3];
+
         ands.push(
-          `${prefix}jsonb_path_query_first(${leftColumn}, ${quote(
+          `${prefix}jsonb_path_query_first(${leftColumn}, ${addValue(
+            values,
             leftPath,
-          )}) = jsonb_path_query_first(${rightColumn}, ${quote(rightPath)})`,
+          )}) = jsonb_path_query_first(${rightColumn}, ${addValue(
+            values,
+            rightPath,
+          )})`,
         );
         return;
       }
@@ -165,23 +178,31 @@ const pushIn = (
   ands: string[],
   prefix: string,
   quotedAs: string | undefined,
+  values: unknown[],
   arg: {
     columns: string[];
     values: unknown[][] | Query | RawExpression;
   },
   op: 'IN' | 'NOT IN',
 ) => {
+  let value: string;
+
+  if (Array.isArray(arg.values)) {
+    value = `(${arg.values
+      .map(
+        (arr) => `(${arr.map((value) => addValue(values, value)).join(', ')})`,
+      )
+      .join(', ')})`;
+  } else if (isRaw(arg.values)) {
+    value = getRaw(arg.values, values);
+  } else {
+    const sql = arg.values.toSql(values);
+    value = `(${sql.text})`;
+  }
+
   ands.push(
     `${prefix}(${arg.columns
       .map((column) => quoteFullColumn(column, quotedAs))
-      .join(', ')}) ${op} ${
-      Array.isArray(arg.values)
-        ? `(${arg.values
-            .map((arr) => `(${arr.map(quote).join(', ')})`)
-            .join(', ')})`
-        : isRaw(arg.values)
-        ? getRaw(arg.values)
-        : `(${arg.values.toSql()})`
-    }`,
+      .join(', ')}) ${op} ${value}`,
   );
 };

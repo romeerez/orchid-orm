@@ -1,20 +1,20 @@
-import { expectQueryNotMutated, line, User } from '../test-utils';
+import { expectQueryNotMutated, expectSql, User } from '../test-utils';
 import { raw } from '../common';
 
 describe('from', () => {
   it('should accept raw parameter', () => {
     const q = User.all();
-    expect(q.as('t').from(raw('profile')).toSql()).toBe(
-      line(`
-        SELECT "t".* FROM profile AS "t"
-      `),
+    expectSql(
+      q.as('t').from(raw('profile')).toSql(),
+      `SELECT "t".* FROM profile AS "t"`,
     );
     expectQueryNotMutated(q);
   });
 
   it('should accept query parameter', () => {
     const q = User.all();
-    expect(q.select('name').from(User.select('name')).toSql()).toBe(
+    expectSql(
+      q.select('name').from(User.select('name')).toSql(),
       'SELECT "user"."name" FROM (SELECT "user"."name" FROM "user") AS "user"',
     );
     expectQueryNotMutated(q);
@@ -22,18 +22,20 @@ describe('from', () => {
 
   it('accept `as` parameter', () => {
     const q = User.all();
-    expect(q.select('name').from(User.select('name'), 'wrapped').toSql()).toBe(
-      line(`
-          SELECT "wrapped"."name"
-          FROM (SELECT "user"."name" FROM "user") AS "wrapped"
-        `),
+    expectSql(
+      q.select('name').from(User.select('name'), 'wrapped').toSql(),
+      `
+        SELECT "wrapped"."name"
+        FROM (SELECT "user"."name" FROM "user") AS "wrapped"
+      `,
     );
     expectQueryNotMutated(q);
   });
 
   it('should not insert sub query and alias if provided query is simple', () => {
     const q = User.all();
-    expect(q.select('name').from(User).toSql()).toBe(
+    expectSql(
+      q.select('name').from(User).toSql(),
       'SELECT "user"."name" FROM "user"',
     );
     expectQueryNotMutated(q);
@@ -41,7 +43,8 @@ describe('from', () => {
 
   it('should add ONLY keyword when `only` parameter is provided', () => {
     const q = User.all();
-    expect(q.select('id').from(User, { only: true }).toSql()).toBe(
+    expectSql(
+      q.select('id').from(User, { only: true }).toSql(),
       'SELECT "user"."id" FROM ONLY "user"',
     );
   });

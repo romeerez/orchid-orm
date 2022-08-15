@@ -7,6 +7,7 @@ export const pushFromAndAs = (
   sql: string[],
   model: Query,
   query: SelectQueryData,
+  values: unknown[],
   quotedAs?: string,
 ) => {
   if (!query.from && !model.table) return;
@@ -14,7 +15,7 @@ export const pushFromAndAs = (
   sql.push('FROM');
   if (query.fromOnly) sql.push('ONLY');
 
-  const from = getFrom(model, query);
+  const from = getFrom(model, query, values);
   sql.push(from);
 
   if (query.as && quotedAs !== from) {
@@ -22,21 +23,23 @@ export const pushFromAndAs = (
   }
 };
 
-const getFrom = (model: Query, query: SelectQueryData) => {
+const getFrom = (model: Query, query: SelectQueryData, values: unknown[]) => {
   if (query.from) {
     if (typeof query.from === 'object') {
       if (isRaw(query.from)) {
-        return getRaw(query.from);
+        return getRaw(query.from, values);
       }
 
       if (!query.from.table) {
-        return `(${query.from.toSql()})`;
+        const sql = query.from.toSql(values);
+        return `(${sql.text})`;
       }
 
       const keys = query.from.query && Object.keys(query.from.query);
       // if query is present, and it contains more than just schema return (SELECT ...)
       if (keys && (keys.length !== 1 || keys[0] !== 'schema')) {
-        return `(${query.from.toSql()})`;
+        const sql = query.from.toSql(values);
+        return `(${sql.text})`;
       }
 
       return quoteSchemaAndTable(query.from.query?.schema, query.from.table);

@@ -63,8 +63,17 @@ export const Message = db('message', (t) => ({
 export const line = (s: string) =>
   s.trim().replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')');
 
+export const expectSql = (
+  sql: { text: string; values: unknown[] },
+  text: string,
+  values: unknown[] = [],
+) => {
+  expect(sql.text).toBe(line(text));
+  expect(sql.values).toEqual(values);
+};
+
 export const expectQueryNotMutated = (q: Query) => {
-  expect(q.toSql()).toBe(`SELECT "${q.table}".* FROM "${q.table}"`);
+  expectSql(q.toSql(), `SELECT "${q.table}".* FROM "${q.table}"`);
 };
 
 export const expectMatchObjectWithTimestamps = (

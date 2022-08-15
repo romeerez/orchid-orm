@@ -31,8 +31,8 @@ export default {
               link: '/guide/query-builder',
             },
             {
-              text: 'Models and Relations',
-              link: '/guide/models-and-relations',
+              text: 'ORM',
+              link: '/guide/orm',
             },
             {
               text: 'Migrations',

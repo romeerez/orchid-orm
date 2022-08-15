@@ -1,4 +1,4 @@
-import { line, Message, User } from '../test-utils';
+import { expectSql, line, Message, User } from '../test-utils';
 
 describe('clear', () => {
   it('should remove query statements for select', () => {
@@ -19,7 +19,7 @@ describe('clear', () => {
       .limit(10)
       .offset(10);
 
-    expect(
+    expectSql(
       query
         .clear(
           'with',
@@ -34,30 +34,32 @@ describe('clear', () => {
           'offset',
         )
         .toSql(),
-    ).toBe(
-      line(`
-        SELECT "user".* FROM "user"
-      `),
+      `SELECT "user".* FROM "user"`,
     );
   });
 
   it('should clear increment and decrement', () => {
     const expectedSql = line(`
-      UPDATE "user" SET "name" = 'new name'
+      UPDATE "user" SET "name" = $1
     `);
+    const expectedValues = ['new name'];
 
-    expect(
+    expectSql(
       User.update({ name: 'new name' })
         .increment('age')
         .clear('counters')
         .toSql(),
-    ).toBe(expectedSql);
+      expectedSql,
+      expectedValues,
+    );
 
-    expect(
+    expectSql(
       User.update({ name: 'new name' })
         .decrement('age')
         .clear('counters')
         .toSql(),
-    ).toBe(expectedSql);
+      expectedSql,
+      expectedValues,
+    );
   });
 });

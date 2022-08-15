@@ -1,4 +1,4 @@
-import { expectQueryNotMutated, User } from '../test-utils';
+import { expectQueryNotMutated, expectSql, User } from '../test-utils';
 import { raw } from '../common';
 
 describe('for', () => {
@@ -11,7 +11,8 @@ describe('for', () => {
   `('$method', ({ method, sql }) => {
     it(`should set FOR ${sql} expression`, () => {
       const q = User.all();
-      expect(q[method as 'forUpdate']().toSql()).toBe(
+      expectSql(
+        q[method as 'forUpdate']().toSql(),
         `SELECT "user".* FROM "user" FOR ${sql}`,
       );
       expectQueryNotMutated(q);
@@ -19,7 +20,8 @@ describe('for', () => {
 
     it('should accept tables', () => {
       const q = User.all();
-      expect(q[method as 'forUpdate'](['a', 'b']).toSql()).toBe(
+      expectSql(
+        q[method as 'forUpdate'](['a', 'b']).toSql(),
         `SELECT "user".* FROM "user" FOR ${sql} OF "a", "b"`,
       );
       expectQueryNotMutated(q);
@@ -27,7 +29,8 @@ describe('for', () => {
 
     it('should accept raw sql', () => {
       const q = User.all();
-      expect(q[method as 'forUpdate'](raw('raw sql')).toSql()).toBe(
+      expectSql(
+        q[method as 'forUpdate'](raw('raw sql')).toSql(),
         `SELECT "user".* FROM "user" FOR ${sql} OF raw sql`,
       );
       expectQueryNotMutated(q);
@@ -35,7 +38,8 @@ describe('for', () => {
 
     it('should set NO WAIT mode', () => {
       const q = User.all();
-      expect(q[method as 'forUpdate']().noWait().toSql()).toBe(
+      expectSql(
+        q[method as 'forUpdate']().noWait().toSql(),
         `SELECT "user".* FROM "user" FOR ${sql} NO WAIT`,
       );
       expectQueryNotMutated(q);
@@ -43,7 +47,8 @@ describe('for', () => {
 
     it('should set SKIP LOCKED mode', () => {
       const q = User.all();
-      expect(q[method as 'forUpdate']().skipLocked().toSql()).toBe(
+      expectSql(
+        q[method as 'forUpdate']().skipLocked().toSql(),
         `SELECT "user".* FROM "user" FOR ${sql} SKIP LOCKED`,
       );
       expectQueryNotMutated(q);

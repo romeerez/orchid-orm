@@ -21,10 +21,11 @@ export const quoteFullColumn = (fullColumn: string, quotedAs?: string) => {
 
 export const expressionToSql = <T extends Query>(
   expr: Expression<T>,
+  values: unknown[],
   quotedAs?: string,
 ) => {
   return typeof expr === 'object' && isRaw(expr)
-    ? getRaw(expr)
+    ? getRaw(expr, values)
     : quoteFullColumn(expr as string, quotedAs);
 };
 
@@ -33,4 +34,9 @@ export const quoteSchemaAndTable = (
   table: string,
 ) => {
   return schema ? `${q(schema)}.${q(table)}` : q(table);
+};
+
+export const addValue = (values: unknown[], value: unknown) => {
+  values.push(value);
+  return `$${values.length}`;
 };

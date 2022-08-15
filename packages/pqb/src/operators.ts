@@ -1,8 +1,9 @@
 import { Query } from './query';
 import { getRaw, isRaw, RawExpression } from './common';
 import { quote } from './quote';
+import { addValue } from './sql/common';
 
-type Fn<T> = (key: string, value: T) => string;
+type Fn<T> = (key: string, value: T, values: unknown[]) => string;
 
 export type Operator<T> = Fn<T> & { type: T };
 
@@ -13,102 +14,118 @@ export const createOperator = <T>(fn: Fn<T>) => {
   return Object.assign(fn, { type: undefined as unknown as T });
 };
 
-const quoteValue = (arg: unknown, jsonArray?: boolean): string => {
+const quoteValue = (
+  arg: unknown,
+  values: unknown[],
+  jsonArray?: boolean,
+): string => {
   if (arg && typeof arg === 'object') {
     if (!jsonArray && Array.isArray(arg)) {
-      return `(${arg.map(quote).join(', ')})`;
+      return `(${arg.map((value) => addValue(values, value)).join(', ')})`;
     }
 
     if ('toSql' in arg) {
-      return `(${(arg as Query).toSql()})`;
+      const sql = (arg as Query).toSql(values);
+      return `(${sql.text})`;
     }
 
     if (isRaw(arg)) {
-      return getRaw(arg);
+      return getRaw(arg, values);
     }
   }
 
-  return quote(arg);
+  return addValue(values, arg);
 };
 
 const all = {
   equals: <T>() =>
-    createOperator<T | Query | RawExpression>((key, value) =>
-      value === null ? `${key} IS NULL` : `${key} = ${quoteValue(value)}`,
+    createOperator<T | Query | RawExpression>((key, value, values) =>
+      value === null
+        ? `${key} IS NULL`
+        : `${key} = ${quoteValue(value, values)}`,
     ),
   not: <T>() =>
-    createOperator<T | Query | RawExpression>((key, value) =>
-      value === null ? `${key} IS NOT NULL` : `${key} <> ${quoteValue(value)}`,
+    createOperator<T | Query | RawExpression>((key, value, values) =>
+      value === null
+        ? `${key} IS NOT NULL`
+        : `${key} <> ${quoteValue(value, values)}`,
     ),
   in: <T>() =>
     createOperator<T[] | Query | RawExpression>(
-      (key, value) => `${key} IN ${quoteValue(value)}`,
+      (key, value, values) => `${key} IN ${quoteValue(value, values)}`,
     ),
   notIn: <T>() =>
     createOperator<T[] | Query | RawExpression>(
-      (key, value) => `${key} NOT IN ${quoteValue(value)}`,
+      (key, value, values) => `${key} NOT IN ${quoteValue(value, values)}`,
     ),
   lt: <T>() =>
     createOperator<T | Query | RawExpression>(
-      (key, value) => `${key} < ${quoteValue(value)}`,
+      (key, value, values) => `${key} < ${quoteValue(value, values)}`,
     ),
   lte: <T>() =>
     createOperator<T | Query | RawExpression>(
-      (key, value) => `${key} <= ${quoteValue(value)}`,
+      (key, value, values) => `${key} <= ${quoteValue(value, values)}`,
     ),
   gt: <T>() =>
     createOperator<T | Query | RawExpression>(
-      (key, value) => `${key} > ${quoteValue(value)}`,
+      (key, value, values) => `${key} > ${quoteValue(value, values)}`,
     ),
   gte: <T>() =>
     createOperator<T | Query | RawExpression>(
-      (key, value) => `${key} >= ${quoteValue(value)}`,
+      (key, value, values) => `${key} >= ${quoteValue(value, values)}`,
     ),
   contains: <T>() =>
     createOperator<T | Query | RawExpression>(
-      (key, value) => `${key} LIKE '%' || ${quoteValue(value)} || '%'`,
+      (key, value, values) =>
+        `${key} LIKE '%' || ${quoteValue(value, values)} || '%'`,
     ),
   containsInsensitive: <T>() =>
     createOperator<T | Query | RawExpression>(
-      (key, value) => `${key} ILIKE '%' || ${quoteValue(value)} || '%'`,
+      (key, value, values) =>
+        `${key} ILIKE '%' || ${quoteValue(value, values)} || '%'`,
     ),
   startsWith: <T>() =>
     createOperator<T | Query | RawExpression>(
-      (key, value) => `${key} LIKE ${quoteValue(value)} || '%'`,
+      (key, value, values) => `${key} LIKE ${quoteValue(value, values)} || '%'`,
     ),
   startsWithInsensitive: <T>() =>
     createOperator<T | Query | RawExpression>(
-      (key, value) => `${key} ILIKE ${quoteValue(value)} || '%'`,
+      (key, value, values) =>
+        `${key} ILIKE ${quoteValue(value, values)} || '%'`,
     ),
   endsWith: <T>() =>
     createOperator<T | Query | RawExpression>(
-      (key, value) => `${key} LIKE '%' || ${quoteValue(value)}`,
+      (key, value, values) => `${key} LIKE '%' || ${quoteValue(value, values)}`,
     ),
   endsWithInsensitive: <T>() =>
     createOperator<T | Query | RawExpression>(
-      (key, value) => `${key} ILIKE '%' || ${quoteValue(value)}`,
+      (key, value, values) =>
+        `${key} ILIKE '%' || ${quoteValue(value, values)}`,
     ),
   between: <T>() =>
     createOperator<[T | Query | RawExpression, T | Query | RawExpression]>(
-      (key, [from, to]) =>
-        `${key} BETWEEN ${quoteValue(from)} AND ${quoteValue(to)}`,
+      (key, [from, to], values) =>
+        `${key} BETWEEN ${quoteValue(from, values)} AND ${quoteValue(
+          to,
+          values,
+        )}`,
     ),
   jsonPath: <T>() =>
     createOperator<
       [path: string, op: string, value: T | Query | RawExpression]
     >(
-      (key, [path, op, value]) =>
+      (key, [path, op, value], values) =>
         `jsonb_path_query_first(${key}, ${quote(
           path,
-        )}) #>> '{}' ${op} ${quoteValue(value, true)}`,
+        )}) #>> '{}' ${op} ${quoteValue(value, values, true)}`,
     ),
   jsonSupersetOf: <T>() =>
     createOperator<T | Query | RawExpression>(
-      (key, value) => `${key} @> ${quoteValue(value, true)}`,
+      (key, value, values) => `${key} @> ${quoteValue(value, values, true)}`,
     ),
   jsonSubsetOf: <T>() =>
     createOperator<T | Query | RawExpression>(
-      (key, value) => `${key} <@ ${quoteValue(value, true)}`,
+      (key, value, values) => `${key} <@ ${quoteValue(value, values, true)}`,
     ),
 };
 

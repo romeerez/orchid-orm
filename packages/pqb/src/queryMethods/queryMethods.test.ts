@@ -1,7 +1,6 @@
 import { raw } from '../common';
 import { QueryData, SelectQueryData } from '../sql';
 import {
-  line,
   expectQueryNotMutated,
   adapter,
   User,
@@ -10,6 +9,7 @@ import {
   useTestDatabase,
   db,
   insert,
+  expectSql,
 } from '../test-utils';
 import { NumberColumn } from '../columnSchema';
 
@@ -58,9 +58,10 @@ describe('queryMethods', () => {
   describe('toSql', () => {
     it('generates sql', () => {
       const sql = User.toSql();
-      expect(sql).toBe(`SELECT "user".* FROM "user"`);
+      expectSql(sql, `SELECT "user".* FROM "user"`);
 
-      const eq: AssertEqual<typeof sql, string> = true;
+      const eq: AssertEqual<typeof sql, { text: string; values: unknown[] }> =
+        true;
       expect(eq).toBe(true);
     });
   });
@@ -78,7 +79,7 @@ describe('queryMethods', () => {
     });
 
     it('should produce correct sql', () => {
-      expect(User.all().toSql()).toBe(`SELECT "user".* FROM "user"`);
+      expectSql(User.all().toSql(), `SELECT "user".* FROM "user"`);
     });
   });
 
@@ -95,12 +96,13 @@ describe('queryMethods', () => {
       });
 
       const q = User.all();
-      expect(q.take().toSql()).toContain('LIMIT 1');
-      expect(q.toSql()).not.toContain('LIMIT 1');
+      expectSql(q.take().toSql(), `SELECT "user".* FROM "user" LIMIT $1`, [1]);
+      expectQueryNotMutated(q);
 
       const expected = await adapter
-        .query('SELECT * FROM "user" LIMIT 1')
+        .query({ text: 'SELECT * FROM "user" LIMIT 1' })
         .then((res) => res.rows[0]);
+
       expect(await q.take()).toEqual({
         ...expected,
         createdAt: new Date(expected.createdAt),
@@ -111,7 +113,9 @@ describe('queryMethods', () => {
 
   describe('rows', () => {
     it('returns array of rows', async () => {
-      const { rows: expected } = await adapter.arrays('SELECT * FROM "user"');
+      const { rows: expected } = await adapter.arrays({
+        text: 'SELECT * FROM "user"',
+      });
       const received = await User.rows();
       expect(received).toEqual(expected);
     });
@@ -186,72 +190,73 @@ describe('queryMethods', () => {
   describe('distinct', () => {
     it('should add distinct without specifying columns', () => {
       const q = User.all();
-      expect(q.distinct().toSql()).toBe('SELECT DISTINCT "user".* FROM "user"');
+      expectSql(q.distinct().toSql(), 'SELECT DISTINCT "user".* FROM "user"');
       expectQueryNotMutated(q);
     });
 
     it('should add distinct on columns', () => {
       const q = User.all();
-      expect(q.distinct('id', 'name').toSql()).toBe(
-        line(`
+      expectSql(
+        q.distinct('id', 'name').toSql(),
+        `
           SELECT DISTINCT ON ("user"."id", "user"."name") "user".*
           FROM "user"
-        `),
+        `,
       );
       expectQueryNotMutated(q);
     });
 
     it('should add distinct on table.column', () => {
       const q = User.all();
-      expect(q.distinct('user.id', 'user.name').toSql()).toBe(
-        line(`
+      expectSql(
+        q.distinct('user.id', 'user.name').toSql(),
+        `
           SELECT DISTINCT ON ("user"."id", "user"."name") "user".*
           FROM "user"
-        `),
+        `,
       );
       expectQueryNotMutated(q);
     });
 
     it('should add distinct on joined columns', () => {
       const q = User.all();
-      expect(
+      expectSql(
         q
           .join(Profile, 'profile.userId', '=', 'user.id')
           .distinct('user.id', 'profile.userId')
           .toSql(),
-      ).toBe(
-        line(`
+        `
           SELECT DISTINCT ON ("user"."id", "profile"."userId") "user".*
           FROM "user"
           JOIN "profile" ON "profile"."userId" = "user"."id"
-        `),
+        `,
       );
       expectQueryNotMutated(q);
     });
 
     it('should add distinct on joined columns with alias', () => {
       const q = User.all();
-      expect(
+      expectSql(
         q
           .join(Profile.as('p'), 'p.userId', '=', 'user.id')
           .distinct('user.id', 'p.userId')
           .toSql(),
-      ).toBe(
-        line(`
+        `
           SELECT DISTINCT ON ("user"."id", "p"."userId") "user".*
           FROM "user"
           JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
-        `),
+        `,
       );
       expectQueryNotMutated(q);
     });
 
     it('should add distinct on raw sql', () => {
       const q = User.all();
-      expect(q.distinct(raw('"user".id')).toSql()).toBe(
-        line(`
-        SELECT DISTINCT ON ("user".id) "user".* FROM "user"
-      `),
+      expectSql(
+        q.distinct(raw('"user".id')).toSql(),
+        `
+          SELECT DISTINCT ON ("user".id) "user".* FROM "user"
+        `,
       );
       expectQueryNotMutated(q);
     });
@@ -260,24 +265,28 @@ describe('queryMethods', () => {
   describe('find', () => {
     it('searches one by primary key', () => {
       const q = User.all();
-      expect(q.find(1).toSql()).toBe(
-        line(`
-          SELECT "user".* FROM "user"
-          WHERE "user"."id" = 1
-          LIMIT 1
-      `),
+      expectSql(
+        q.find(1).toSql(),
+        `
+            SELECT "user".* FROM "user"
+            WHERE "user"."id" = $1
+            LIMIT $2
+        `,
+        [1, 1],
       );
       expectQueryNotMutated(q);
     });
 
     it('should accept raw sql', () => {
       const q = User.all();
-      expect(q.find(raw('1 + 2')).toSql()).toBe(
-        line(`
-        SELECT "user".* FROM "user"
-        WHERE "user"."id" = 1 + 2
-        LIMIT 1
-      `),
+      expectSql(
+        q.find(raw('$1 + $2', 1, 2)).toSql(),
+        `
+          SELECT "user".* FROM "user"
+          WHERE "user"."id" = $1 + $2
+          LIMIT $3
+        `,
+        [1, 2, 1],
       );
       expectQueryNotMutated(q);
     });
@@ -286,7 +295,8 @@ describe('queryMethods', () => {
   describe('as', () => {
     it('sets table alias', () => {
       const q = User.all();
-      expect(q.select('id').as('as').toSql()).toBe(
+      expectSql(
+        q.select('id').as('as').toSql(),
         'SELECT "as"."id" FROM "user" AS "as"',
       );
       expectQueryNotMutated(q);
@@ -314,19 +324,18 @@ describe('queryMethods', () => {
 
       const q = City.all();
 
-      expect(
+      expectSql(
         q
           .join(Country, 'country.id', '=', 'city.countryId')
           .select('name')
           .selectAs({ countryName: 'country.name' })
           .withSchema('geo')
           .toSql(),
-      ).toBe(
-        line(`
+        `
           SELECT "city"."name", "country"."name" AS "countryName"
           FROM "geo"."city"
           JOIN "geo"."country" ON "country"."id" = "city"."countryId"
-        `),
+        `,
       );
 
       expectQueryNotMutated(q);
@@ -336,7 +345,8 @@ describe('queryMethods', () => {
   describe('wrap', () => {
     it('should wrap query with another', () => {
       const q = User.all();
-      expect(q.select('id').wrap(User.select('id')).toSql()).toBe(
+      expectSql(
+        q.select('id').wrap(User.select('id')).toSql(),
         'SELECT "t"."id" FROM (SELECT "user"."id" FROM "user") AS "t"',
       );
       expectQueryNotMutated(q);
@@ -344,7 +354,8 @@ describe('queryMethods', () => {
 
     it('should accept `as` parameter', () => {
       const q = User.all();
-      expect(q.select('id').wrap(User.select('id'), 'wrapped').toSql()).toBe(
+      expectSql(
+        q.select('id').wrap(User.select('id'), 'wrapped').toSql(),
         'SELECT "wrapped"."id" FROM (SELECT "user"."id" FROM "user") AS "wrapped"',
       );
       expectQueryNotMutated(q);
@@ -354,26 +365,27 @@ describe('queryMethods', () => {
   describe('group', () => {
     it('groups by columns', () => {
       const q = User.all();
-      expect(q.group('id', 'name').toSql()).toBe(
-        line(`
+      expectSql(
+        q.group('id', 'name').toSql(),
+        `
         SELECT "user".* FROM "user"
         GROUP BY "user"."id", "user"."name"
-      `),
+      `,
       );
       expectQueryNotMutated(q);
     });
 
     it('groups by raw sql', () => {
       const q = User.all();
-      const expectedSql = line(`
+      const expectedSql = `
         SELECT "user".* FROM "user"
         GROUP BY id, name
-      `);
-      expect(q.group(raw('id'), raw('name')).toSql()).toBe(expectedSql);
+      `;
+      expectSql(q.group(raw('id'), raw('name')).toSql(), expectedSql);
       expectQueryNotMutated(q);
 
       q._group(raw('id'), raw('name'));
-      expect(q.toSql()).toBe(expectedSql);
+      expectSql(q.toSql(), expectedSql);
     });
   });
 });
@@ -382,7 +394,7 @@ describe('window', () => {
   it('add window which can be used in `over`', () => {
     const q = User.all();
 
-    expect(
+    expectSql(
       q
         .window({
           w: {
@@ -396,11 +408,10 @@ describe('window', () => {
           over: 'w',
         })
         .toSql(),
-    ).toBe(
-      line(`
-      SELECT avg("user"."id") OVER "w" FROM "user"
-      WINDOW "w" AS (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
-    `),
+      `
+        SELECT avg("user"."id") OVER "w" FROM "user"
+        WINDOW "w" AS (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
+      `,
     );
     expectQueryNotMutated(q);
   });
@@ -409,18 +420,17 @@ describe('window', () => {
     const q = User.all();
 
     const windowSql = 'PARTITION BY id ORDER BY name DESC';
-    expect(
+    expectSql(
       q
         .window({ w: raw(windowSql) })
         .selectAvg('id', {
           over: 'w',
         })
         .toSql(),
-    ).toBe(
-      line(`
-      SELECT avg("user"."id") OVER "w" FROM "user"
-      WINDOW "w" AS (PARTITION BY id ORDER BY name DESC)
-    `),
+      `
+        SELECT avg("user"."id") OVER "w" FROM "user"
+        WINDOW "w" AS (PARTITION BY id ORDER BY name DESC)
+      `,
     );
     expectQueryNotMutated(q);
   });
@@ -429,35 +439,36 @@ describe('window', () => {
 describe('order', () => {
   it('adds order conditions', () => {
     const q = User.all();
-    expect(q.order({ id: 'ASC', name: 'DESC' }).toSql()).toBe(
-      line(`
-      SELECT "user".* FROM "user"
-      ORDER BY "user"."id" ASC, "user"."name" DESC
-    `),
+    expectSql(
+      q.order({ id: 'ASC', name: 'DESC' }).toSql(),
+      `
+        SELECT "user".* FROM "user"
+        ORDER BY "user"."id" ASC, "user"."name" DESC
+      `,
     );
-    expect(
+    expectSql(
       q
         .order({
           id: { dir: 'ASC', nulls: 'FIRST' },
           name: { dir: 'DESC', nulls: 'LAST' },
         })
         .toSql(),
-    ).toBe(
-      line(`
-      SELECT "user".* FROM "user"
-      ORDER BY "user"."id" ASC NULLS FIRST, "user"."name" DESC NULLS LAST
-    `),
+      `
+        SELECT "user".* FROM "user"
+        ORDER BY "user"."id" ASC NULLS FIRST, "user"."name" DESC NULLS LAST
+      `,
     );
     expectQueryNotMutated(q);
   });
 
   it('adds order with raw sql', () => {
     const q = User.all();
-    expect(q.order(raw('id ASC NULLS FIRST')).toSql()).toBe(
-      line(`
-      SELECT "user".* FROM "user"
-      ORDER BY id ASC NULLS FIRST
-    `),
+    expectSql(
+      q.order(raw('id ASC NULLS FIRST')).toSql(),
+      `
+        SELECT "user".* FROM "user"
+        ORDER BY id ASC NULLS FIRST
+      `,
     );
     expectQueryNotMutated(q);
   });
@@ -466,7 +477,7 @@ describe('order', () => {
 describe('limit', () => {
   it('sets limit', () => {
     const q = User.all();
-    expect(q.limit(5).toSql()).toBe('SELECT "user".* FROM "user" LIMIT 5');
+    expectSql(q.limit(5).toSql(), 'SELECT "user".* FROM "user" LIMIT $1', [5]);
     expectQueryNotMutated(q);
   });
 });
@@ -474,7 +485,9 @@ describe('limit', () => {
 describe('offset', () => {
   it('sets offset', () => {
     const q = User.all();
-    expect(q.offset(5).toSql()).toBe('SELECT "user".* FROM "user" OFFSET 5');
+    expectSql(q.offset(5).toSql(), 'SELECT "user".* FROM "user" OFFSET $1', [
+      5,
+    ]);
     expectQueryNotMutated(q);
   });
 });
@@ -482,7 +495,7 @@ describe('offset', () => {
 describe('exists', () => {
   it('selects 1', () => {
     const q = User.all();
-    expect(q.exists().toSql()).toBe('SELECT 1 AS "exists" FROM "user"');
+    expectSql(q.exists().toSql(), 'SELECT 1 AS "exists" FROM "user"');
     expectQueryNotMutated(q);
   });
 });
@@ -490,13 +503,14 @@ describe('exists', () => {
 describe('truncate', () => {
   it('should truncate table', () => {
     const q = User.all();
-    expect(q.truncate().toSql()).toBe('TRUNCATE "user"');
+    expectSql(q.truncate().toSql(), 'TRUNCATE "user"');
     expectQueryNotMutated(q);
   });
 
   it('should handle restart identity and cascade options', () => {
     const q = User.all();
-    expect(q.truncate({ restartIdentity: true, cascade: true }).toSql()).toBe(
+    expectSql(
+      q.truncate({ restartIdentity: true, cascade: true }).toSql(),
       'TRUNCATE "user" RESTART IDENTITY CASCADE',
     );
     expectQueryNotMutated(q);

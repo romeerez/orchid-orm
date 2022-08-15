@@ -8,6 +8,11 @@ import {
 import { Expression, RawExpression } from '../common';
 import { ColumnsShape, ColumnType } from '../columnSchema';
 
+export type Sql = {
+  text: string;
+  values: unknown[];
+};
+
 export type CommonQueryData = {
   take?: true;
   with?: WithItem[];
