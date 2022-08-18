@@ -58,7 +58,7 @@ describe('insert', () => {
     const isVoid: AssertEqual<typeof result, void> = true;
     expect(isVoid).toBe(true);
 
-    const inserted = await User.take();
+    const inserted = await User.takeOrThrow();
     expectMatchObjectWithTimestamps(inserted, data);
 
     expectQueryNotMutated(q);

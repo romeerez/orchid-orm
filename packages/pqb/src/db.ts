@@ -1,6 +1,6 @@
 import { ColumnsParsers, DefaultSelectColumns, Query } from './query';
 import { QueryMethods } from './queryMethods/queryMethods';
-import { QueryData, SelectQueryData } from './sql';
+import { QueryData, SelectQueryData, Sql } from './sql';
 import { PostgresAdapter } from './adapter';
 import {
   ColumnsShape,
@@ -98,7 +98,7 @@ export class Db<
     this.columnsParsers = hasParsers ? columnsParsers : undefined;
 
     this.toSql = defaultSelect
-      ? function <T extends Query>(this: T): string {
+      ? function <T extends Query>(this: T): Sql {
           const q = (this.query ? this : this.toQuery()) as T & {
             query: QueryData<T>;
           };
@@ -120,9 +120,9 @@ applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
 
 type DbResult = Db & {
-  <Table extends string, Shape extends ColumnsShape>(
+  <Table extends string, Shape extends ColumnsShape = ColumnsShape>(
     table: Table,
-    shape: ((t: ColumnTypes) => Shape) | Shape,
+    shape?: ((t: ColumnTypes) => Shape) | Shape,
     options?: DbTableOptions,
   ): Db<Table, Shape>;
 
@@ -135,9 +135,9 @@ export const createDb = (adapter: PostgresAdapter): DbResult => {
   qb.queryBuilder = qb;
 
   const db = Object.assign(
-    <Table extends string, Shape extends ColumnsShape>(
+    <Table extends string, Shape extends ColumnsShape = ColumnsShape>(
       table: Table,
-      shape: ((t: ColumnTypes) => Shape) | Shape,
+      shape?: ((t: ColumnTypes) => Shape) | Shape,
       options?: DbTableOptions,
     ): Db<Table, Shape> => {
       return new Db<Table, Shape>(

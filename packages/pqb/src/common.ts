@@ -25,7 +25,7 @@ export type ExpressionOfType<T extends Query, C extends ColumnType, Type> =
   | {
       [K in keyof T['selectable']]: ColumnOutput<
         T['selectable'][K]['column']
-      > extends Type
+      > extends Type | null
         ? K
         : never;
     }[Selectable<T>]

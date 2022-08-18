@@ -2,12 +2,16 @@ import {
   AssertEqual,
   expectQueryNotMutated,
   expectSql,
+  insert,
   Profile,
   User,
+  useTestDatabase,
 } from '../test-utils';
 import { DeleteQueryData } from '../sql';
 
 describe('delete', () => {
+  useTestDatabase();
+
   it('should be aliased as `del`', () => {
     const a = User.delete();
     const b = User.del();
@@ -15,13 +19,30 @@ describe('delete', () => {
     expect(a.query).toEqual(b.query);
   });
 
-  it('should delete records, returning void', () => {
+  it('should delete records, returning deleted rows count', async () => {
+    const rowsCount = 3;
+
+    const now = new Date();
+    for (let i = 0; i < rowsCount; i++) {
+      await insert('user', {
+        id: i + 1,
+        name: 'name',
+        password: 'password',
+        picture: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
     const q = User.all();
 
     const query = q.delete();
     expectSql(query.toSql(), 'DELETE FROM "user"');
 
-    const eq: AssertEqual<Awaited<typeof query>, void> = true;
+    const result = await query;
+    expect(result).toBe(rowsCount);
+
+    const eq: AssertEqual<typeof result, number> = true;
     expect(eq).toBe(true);
 
     expectQueryNotMutated(q);

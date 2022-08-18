@@ -11,7 +11,8 @@ import {
   insert,
   expectSql,
 } from '../test-utils';
-import { NumberColumn } from '../columnSchema';
+import { columnTypes, NumberColumn } from '../columnSchema';
+import { NotFoundError } from '../errors';
 
 describe('queryMethods', () => {
   useTestDatabase();
@@ -100,14 +101,68 @@ describe('queryMethods', () => {
       expectQueryNotMutated(q);
 
       const expected = await adapter
-        .query({ text: 'SELECT * FROM "user" LIMIT 1' })
+        .query('SELECT * FROM "user" LIMIT 1')
         .then((res) => res.rows[0]);
 
-      expect(await q.take()).toEqual({
+      const user = await q.take();
+      const eq: AssertEqual<typeof user, typeof User.type | undefined> = true;
+      expect(eq).toBe(true);
+
+      expect(user).toEqual({
         ...expected,
         createdAt: new Date(expected.createdAt),
         updatedAt: new Date(expected.updatedAt),
       });
+    });
+
+    it('should return undefined if not found', async () => {
+      const user = await User.take();
+      const eq: AssertEqual<typeof user, typeof User.type | undefined> = true;
+      expect(eq).toBe(true);
+
+      expect(user).toBe(undefined);
+    });
+  });
+
+  describe('takeOrThrow', () => {
+    it('limits to one and returns only one', async () => {
+      const now = new Date();
+      await insert('user', {
+        id: 1,
+        name: 'name',
+        password: 'password',
+        picture: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const q = User.all();
+      expectSql(
+        q.takeOrThrow().toSql(),
+        `SELECT "user".* FROM "user" LIMIT $1`,
+        [1],
+      );
+      expectQueryNotMutated(q);
+
+      const expected = await adapter
+        .query('SELECT * FROM "user" LIMIT 1')
+        .then((res) => res.rows[0]);
+
+      const user = await q.takeOrThrow();
+      const eq: AssertEqual<typeof user, typeof User.type> = true;
+      expect(eq).toBe(true);
+
+      expect(user).toEqual({
+        ...expected,
+        createdAt: new Date(expected.createdAt),
+        updatedAt: new Date(expected.updatedAt),
+      });
+    });
+
+    it('should throw if not found', async () => {
+      await expect(() => User.takeOrThrow()).rejects.toThrowError(
+        NotFoundError,
+      );
     });
   });
 
@@ -161,14 +216,67 @@ describe('queryMethods', () => {
 
   describe('value', () => {
     it('returns a first value', async () => {
-      const received = await User.from(
-        raw(`(VALUES ('one')) "user"(one)`),
-      ).value();
-      expect(received).toBe('one');
+      const now = new Date();
+      await insert('user', {
+        id: 1,
+        name: 'name',
+        password: 'password',
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const received = await User.select('id').value(columnTypes.integer());
+
+      const eq: AssertEqual<typeof received, number | undefined> = true;
+      expect(eq).toBe(true);
+
+      expect(received).toBe(1);
+    });
+
+    it('should return undefined if not found', async () => {
+      const value = await User.select('id').value(columnTypes.integer());
+      const eq: AssertEqual<typeof value, number | undefined> = true;
+      expect(eq).toBe(true);
+
+      expect(value).toBe(undefined);
     });
 
     it('removes `take` from query data', () => {
       expect((User.take().value().query as SelectQueryData)?.take).toBe(
+        undefined,
+      );
+    });
+  });
+
+  describe('valueOrThrow', () => {
+    it('returns a first value', async () => {
+      const now = new Date();
+      await insert('user', {
+        id: 1,
+        name: 'name',
+        password: 'password',
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const received = await User.select('id').valueOrThrow(
+        columnTypes.integer(),
+      );
+
+      const eq: AssertEqual<typeof received, number> = true;
+      expect(eq).toBe(true);
+
+      expect(received).toBe(1);
+    });
+
+    it('should throw if not found', async () => {
+      await expect(() =>
+        User.select('id').valueOrThrow(columnTypes.integer()),
+      ).rejects.toThrowError(NotFoundError);
+    });
+
+    it('removes `take` from query data', () => {
+      expect((User.take().valueOrThrow().query as SelectQueryData)?.take).toBe(
         undefined,
       );
     });

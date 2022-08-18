@@ -7,6 +7,7 @@ export const change = (db: Migration) => {
     t.text('picture');
     t.jsonb('data');
     t.integer('age');
+    t.boolean('active');
     t.timestamps();
   });
 };

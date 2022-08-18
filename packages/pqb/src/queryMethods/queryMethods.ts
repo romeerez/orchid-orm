@@ -4,9 +4,11 @@ import {
   QueryWithData,
   Selectable,
   SetQueryReturnsAll,
+  SetQueryReturnsOneOrUndefined,
   SetQueryReturnsOne,
   SetQueryReturnsPluck,
   SetQueryReturnsRows,
+  SetQueryReturnsValueOrUndefined,
   SetQueryReturnsValue,
   SetQueryReturnsVoid,
   SetQueryTableAlias,
@@ -29,9 +31,11 @@ import {
   Then,
   thenAll,
   thenOne,
+  thenOneOrThrow,
   thenPluck,
   thenRows,
   thenValue,
+  thenValueOrThrow,
   thenVoid,
 } from './then';
 import { ColumnShapeOutput, ColumnType, NumberColumn } from '../columnSchema';
@@ -54,10 +58,10 @@ import { Having } from './having';
 
 export type WindowArg<T extends Query> = Record<
   string,
-  WindowDeclaration<T> | RawExpression
+  WindowArgDeclaration<T> | RawExpression
 >;
 
-export type WindowDeclaration<T extends Query = Query> = {
+export type WindowArgDeclaration<T extends Query = Query> = {
   partitionBy?: Expression<T> | Expression<T>[];
   order?: OrderArg<T>;
 };
@@ -112,15 +116,28 @@ export class QueryMethods {
     return q as unknown as SetQueryReturnsAll<T>;
   }
 
-  take<T extends Query>(this: T): SetQueryReturnsOne<T> {
+  take<T extends Query>(this: T): SetQueryReturnsOneOrUndefined<T> {
     return this.then === thenOne
-      ? (this as unknown as SetQueryReturnsOne<T>)
+      ? (this as unknown as SetQueryReturnsOneOrUndefined<T>)
       : this.clone()._take();
   }
 
-  _take<T extends Query>(this: T): SetQueryReturnsOne<T> {
+  _take<T extends Query>(this: T): SetQueryReturnsOneOrUndefined<T> {
     const q = this.toQuery();
     q.then = thenOne;
+    setQueryValue(q, 'take', true);
+    return q as unknown as SetQueryReturnsOneOrUndefined<T>;
+  }
+
+  takeOrThrow<T extends Query>(this: T): SetQueryReturnsOne<T> {
+    return this.then === thenOneOrThrow
+      ? (this as unknown as SetQueryReturnsOne<T>)
+      : this.clone()._takeOrThrow();
+  }
+
+  _takeOrThrow<T extends Query>(this: T): SetQueryReturnsOne<T> {
+    const q = this.toQuery();
+    q.then = thenOneOrThrow;
     setQueryValue(q, 'take', true);
     return q as unknown as SetQueryReturnsOne<T>;
   }
@@ -161,17 +178,40 @@ export class QueryMethods {
 
   value<T extends Query, V extends ColumnType>(
     this: T,
-  ): SetQueryReturnsValue<T, V> {
+    columnType?: V,
+  ): SetQueryReturnsValueOrUndefined<T, V> {
     return this.then === thenValue
-      ? (this as unknown as SetQueryReturnsValue<T, V>)
-      : this.clone()._value<T, V>();
+      ? (this as unknown as SetQueryReturnsValueOrUndefined<T, V>)
+      : this.clone()._value<T, V>(columnType);
   }
 
   _value<T extends Query, V extends ColumnType>(
     this: T,
-  ): SetQueryReturnsValue<T, V> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _columnType?: V,
+  ): SetQueryReturnsValueOrUndefined<T, V> {
     const q = this.toQuery();
     q.then = thenValue;
+    removeFromQuery(q, 'take');
+    return q as unknown as SetQueryReturnsValueOrUndefined<T, V>;
+  }
+
+  valueOrThrow<T extends Query, V extends ColumnType>(
+    this: T,
+    columnType?: V,
+  ): SetQueryReturnsValue<T, V> {
+    return this.then === thenValueOrThrow
+      ? (this as unknown as SetQueryReturnsValue<T, V>)
+      : this.clone()._valueOrThrow<T, V>(columnType);
+  }
+
+  _valueOrThrow<T extends Query, V extends ColumnType>(
+    this: T,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _columnType?: V,
+  ): SetQueryReturnsValue<T, V> {
+    const q = this.toQuery();
+    q.then = thenValueOrThrow;
     removeFromQuery(q, 'take');
     return q as unknown as SetQueryReturnsValue<T, V>;
   }
@@ -221,14 +261,14 @@ export class QueryMethods {
   find<T extends Query>(
     this: T,
     ...args: GetTypesOrRaw<T['schema']['primaryTypes']>
-  ): SetQueryReturnsOne<T> {
+  ): SetQueryReturnsOneOrUndefined<T> {
     return this.clone()._find(...args);
   }
 
   _find<T extends Query>(
     this: T,
     ...args: GetTypesOrRaw<T['schema']['primaryTypes']>
-  ): SetQueryReturnsOne<T> {
+  ): SetQueryReturnsOneOrUndefined<T> {
     const conditions: Partial<ColumnShapeOutput<T['shape']>> = {};
     this.schema.primaryKeys.forEach((key: string, i: number) => {
       conditions[key as keyof ColumnShapeOutput<T['shape']>] = args[i];
@@ -339,11 +379,15 @@ export class QueryMethods {
     return setQueryValue(this, 'offset', arg);
   }
 
-  exists<T extends Query>(this: T): SetQueryReturnsValue<T, NumberColumn> {
+  exists<T extends Query>(
+    this: T,
+  ): SetQueryReturnsValueOrUndefined<T, NumberColumn> {
     return this.clone()._exists();
   }
 
-  _exists<T extends Query>(this: T): SetQueryReturnsValue<T, NumberColumn> {
+  _exists<T extends Query>(
+    this: T,
+  ): SetQueryReturnsValueOrUndefined<T, NumberColumn> {
     const q = setQueryValue(this, 'select', [
       { selectAs: { exists: raw('1') } },
     ]);

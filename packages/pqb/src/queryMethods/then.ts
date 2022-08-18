@@ -1,5 +1,6 @@
 import { ColumnsParsers, Query } from '../query';
 import { getQueryParsers } from '../common';
+import { NotFoundError } from '../errors';
 
 export type Then<Res> = <T extends Query>(
   this: T,
@@ -27,6 +28,19 @@ export const thenOne: Then<unknown> = function (resolve, reject) {
     .then((result) => {
       const row = result.rows[0];
       if (!row) return;
+
+      const parsers = getQueryParsers(this);
+      return parsers ? parseRecord(parsers, row) : row;
+    })
+    .then(resolve, reject);
+};
+
+export const thenOneOrThrow: Then<unknown> = function (resolve, reject) {
+  return this.adapter
+    .query(this.toSql())
+    .then((result) => {
+      const row = result.rows[0];
+      if (!row) throw new NotFoundError();
 
       const parsers = getQueryParsers(this);
       return parsers ? parseRecord(parsers, row) : row;
@@ -64,20 +78,33 @@ export const thenValue: Then<unknown> = function (resolve, reject) {
     .arrays(this.toSql())
     .then((result) => {
       const value = result.rows[0]?.[0];
-      const field = result.fields[0];
-      if (value !== null) {
-        const parsers = getQueryParsers(this);
-        if (parsers?.[field.name]) {
-          return parsers[field.name](value);
-        }
-      }
-      return value;
+      return value !== undefined
+        ? parseValue(value, result.fields, this)
+        : undefined;
+    })
+    .then(resolve, reject);
+};
+
+export const thenValueOrThrow: Then<unknown> = function (resolve, reject) {
+  return this.adapter
+    .arrays(this.toSql())
+    .then((result) => {
+      const value = result.rows[0]?.[0];
+      if (value === undefined) throw new NotFoundError();
+
+      return parseValue(value, result.fields, this);
     })
     .then(resolve, reject);
 };
 
 export const thenVoid: Then<void> = function (resolve, reject) {
   return this.adapter.query(this.toSql()).then(() => resolve?.(), reject);
+};
+
+export const thenRowsCount: Then<number> = function (resolve, reject) {
+  return this.adapter
+    .query(this.toSql())
+    .then(({ rowCount }) => resolve?.(rowCount), reject);
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -105,4 +132,20 @@ const parseRows = (
     }
   });
   return rows;
+};
+
+const parseValue = (
+  value: unknown,
+  fields: { name: string }[],
+  query: Query,
+) => {
+  const field = fields[0];
+  if (value !== null) {
+    const parsers = getQueryParsers(query);
+    const parser = parsers?.[field.name];
+    if (parser) {
+      return parser(value);
+    }
+  }
+  return value;
 };

@@ -69,7 +69,14 @@ export type DefaultSelectColumns<S extends ColumnsShape> = {
   [K in keyof S]: S[K]['isHidden'] extends true ? never : K;
 }[StringKey<keyof S>][];
 
-export type QueryReturnType = 'all' | 'one' | 'rows' | 'value' | 'void';
+export type QueryReturnType =
+  | 'all'
+  | 'one'
+  | 'oneOrThrow'
+  | 'rows'
+  | 'value'
+  | 'valueOrThrow'
+  | 'void';
 
 export type JoinedTablesBase = Record<
   string,
@@ -84,8 +91,14 @@ type QueryThen<
 > = ReturnType extends 'all'
   ? Then<ColumnShapeOutput<Result>[]>
   : ReturnType extends 'one'
+  ? Then<ColumnShapeOutput<Result> | undefined>
+  : ReturnType extends 'oneOrThrow'
   ? Then<ColumnShapeOutput<Result>>
   : ReturnType extends 'value'
+  ? Result extends { value: ColumnType }
+    ? Then<Result['value']['type'] | undefined>
+    : never
+  : ReturnType extends 'valueOrThrow'
   ? Result extends { value: ColumnType }
     ? Then<Result['value']['type']>
     : never
@@ -120,7 +133,15 @@ export type SetQueryReturns<T extends Query, R extends QueryReturnType> = Omit<
 
 export type SetQueryReturnsAll<T extends Query> = SetQueryReturns<T, 'all'>;
 
-export type SetQueryReturnsOne<T extends Query> = SetQueryReturns<T, 'one'>;
+export type SetQueryReturnsOneOrUndefined<T extends Query> = SetQueryReturns<
+  T,
+  'one'
+>;
+
+export type SetQueryReturnsOne<T extends Query> = SetQueryReturns<
+  T,
+  'oneOrThrow'
+>;
 
 export type SetQueryReturnsRows<T extends Query> = SetQueryReturns<T, 'rows'>;
 
@@ -138,12 +159,21 @@ export type SetQueryReturnsPluck<
   then: Then<C['type'][]>;
 };
 
+export type SetQueryReturnsValueOrUndefined<
+  T extends Query,
+  C extends ColumnType,
+> = Omit<T, 'result' | 'returnType' | 'then'> & {
+  result: { value: C };
+  returnType: 'value';
+  then: Then<C['type'] | undefined>;
+};
+
 export type SetQueryReturnsValue<T extends Query, C extends ColumnType> = Omit<
   T,
   'result' | 'returnType' | 'then'
 > & {
   result: { value: C };
-  returnType: 'value';
+  returnType: 'valueOrThrow';
   then: Then<C['type']>;
 };
 

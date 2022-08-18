@@ -15,10 +15,12 @@ import {
   NumberColumn,
   StringColumn,
   IntegerColumn,
+  NullableColumn,
 } from '../columnSchema';
 import { CoalesceString } from '../utils';
-import { OrderArg, WindowDeclaration } from './queryMethods';
+import { OrderArg, WindowArgDeclaration } from './queryMethods';
 import { serializeWhereItem, WhereArg } from './where';
+import { addParserToQuery } from './select';
 
 const allColumns = raw('*');
 
@@ -38,7 +40,7 @@ export type AggregateOptions<
   filter?: WhereArg<T>;
   filterOr?: WhereArg<T>[];
   withinGroup?: boolean;
-  over?: T['windows'][number] | WindowDeclaration<T>;
+  over?: T['windows'][number] | WindowArgDeclaration<T>;
 };
 
 // 1 in the name means only methods which takes 1 argument are listed here
@@ -52,7 +54,6 @@ export type Aggregate1ArgumentTypes<
   min: Expression<T, C>;
   max: Expression<T, C>;
   sum: NumberExpression<T, C>;
-  arrayAgg: Expression<T, C>;
   bitAnd: NumberExpression<T, C>;
   bitOr: NumberExpression<T, C>;
   boolAnd: BooleanExpression<T, C>;
@@ -69,7 +70,6 @@ export const aggregate1FunctionNames = {
   min: 'min',
   max: 'max',
   sum: 'sum',
-  arrayAgg: 'array_agg',
   bitAnd: 'bit_and',
   bitOr: 'bit_or',
   boolAnd: 'bool_and',
@@ -93,7 +93,30 @@ export type WindowFunctionOptions<
   T extends Query = Query,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   As extends string | undefined = any,
-> = { as?: As } & WindowDeclaration<T>;
+> = { as?: As } & WindowArgDeclaration<T>;
+
+const buildAggregateSelectItem = <T extends Query>(
+  functionName: string,
+  arg: AggregateArg<T>,
+  options?: AggregateOptions<T>,
+) => {
+  return {
+    function: functionName,
+    arg,
+    options: {
+      ...options,
+      order: options?.order
+        ? Array.isArray(options.order)
+          ? options.order
+          : [options.order]
+        : undefined,
+      filter: options?.filter ? serializeWhereItem(options.filter) : undefined,
+      filterOr: options?.filterOr
+        ? options.filterOr.map(serializeWhereItem)
+        : undefined,
+    },
+  };
+};
 
 const selectWindowFunction = <
   T extends Query,
@@ -113,6 +136,14 @@ const selectWindowFunction = <
     },
   }) as unknown as SelectAgg<T, Func, As, Value>;
 };
+
+const parseIntColumn = new IntegerColumn().parse((input) =>
+  parseInt(input as unknown as string),
+);
+
+const parseIntOrNullColumn = new IntegerColumn().parse((input) =>
+  input === null ? null : parseInt(input as unknown as string),
+);
 
 export class Aggregate {
   selectAgg<
@@ -144,25 +175,25 @@ export class Aggregate {
     functionName: Func,
     arg: AggregateArg<T>,
     options?: AggregateOptions<T, As>,
+    columnType?: ColumnType,
   ): SelectAgg<T, Func, As, Value> {
-    return pushQueryValue(this, 'select', {
-      function: functionName,
-      arg,
-      options: {
-        ...options,
-        order: options?.order
-          ? Array.isArray(options.order)
-            ? options.order
-            : [options.order]
-          : undefined,
-        filter: options?.filter
-          ? serializeWhereItem(options.filter)
-          : undefined,
-        filterOr: options?.filterOr
-          ? options.filterOr.map(serializeWhereItem)
-          : undefined,
-      },
-    }) as unknown as SelectAgg<T, Func, As, Value>;
+    const q = this.toQuery();
+
+    pushQueryValue(
+      q,
+      'select',
+      buildAggregateSelectItem<T>(functionName, arg, options),
+    );
+
+    if (columnType?.parseFn) {
+      addParserToQuery(
+        q.query,
+        options?.as || functionName,
+        columnType.parseFn,
+      );
+    }
+
+    return this as unknown as SelectAgg<T, Func, As, Value>;
   }
 
   count<T extends Query>(
@@ -179,12 +210,12 @@ export class Aggregate {
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NumberColumn> {
     const q = this._selectCount(arg, options) as unknown as T;
-    return q._value<T, NumberColumn>();
+    return q._valueOrThrow();
   }
 
   selectCount<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: AT1<T>['count'] | '*',
+    arg?: AT1<T>['count'] | '*',
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'count', As, NumberColumn> {
     return this.clone()._selectCount(arg, options);
@@ -192,13 +223,14 @@ export class Aggregate {
 
   _selectCount<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: AT1<T>['count'] | '*',
+    arg: AT1<T>['count'] | '*' = '*',
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'count', As, NumberColumn> {
     return this._selectAgg(
       aggregate1FunctionNames.count,
       arg === '*' ? allColumns : arg,
       options,
+      parseIntColumn,
     );
   }
 
@@ -206,7 +238,7 @@ export class Aggregate {
     this: T,
     arg: Aggregate1ArgumentTypes<T>['avg'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, NumberColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     return this.clone()._avg(arg, options);
   }
 
@@ -214,16 +246,16 @@ export class Aggregate {
     this: T,
     arg: Aggregate1ArgumentTypes<T>['avg'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, NumberColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     const q = this._selectAvg(arg, options) as unknown as T;
-    return q._value<T, NumberColumn>();
+    return q._valueOrThrow<T, NullableColumn<NumberColumn>>();
   }
 
   selectAvg<T extends Query, As extends string | undefined = undefined>(
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'avg', As, NumberColumn> {
+  ): SelectAgg<T, 'avg', As, NullableColumn<NumberColumn>> {
     return this.clone()._selectAvg(arg, options);
   }
 
@@ -231,15 +263,20 @@ export class Aggregate {
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'avg', As, NumberColumn> {
-    return this._selectAgg(aggregate1FunctionNames.avg, arg, options);
+  ): SelectAgg<T, 'avg', As, NullableColumn<NumberColumn>> {
+    return this._selectAgg(
+      aggregate1FunctionNames.avg,
+      arg,
+      options,
+      parseIntOrNullColumn,
+    );
   }
 
   min<T extends Query>(
     this: T,
     arg: Aggregate1ArgumentTypes<T>['min'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, NumberColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     return this.clone()._min(arg, options);
   }
 
@@ -247,16 +284,16 @@ export class Aggregate {
     this: T,
     arg: Aggregate1ArgumentTypes<T>['min'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, NumberColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     const q = this._selectMin(arg, options) as unknown as T;
-    return q._value<T, NumberColumn>();
+    return q._valueOrThrow<T, NullableColumn<NumberColumn>>();
   }
 
   selectMin<T extends Query, As extends string | undefined = undefined>(
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'min', As, NumberColumn> {
+  ): SelectAgg<T, 'min', As, NullableColumn<NumberColumn>> {
     return this.clone()._selectMin(arg, options);
   }
 
@@ -264,15 +301,20 @@ export class Aggregate {
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'min', As, NumberColumn> {
-    return this._selectAgg(aggregate1FunctionNames.min, arg, options);
+  ): SelectAgg<T, 'min', As, NullableColumn<NumberColumn>> {
+    return this._selectAgg(
+      aggregate1FunctionNames.min,
+      arg,
+      options,
+      parseIntOrNullColumn,
+    );
   }
 
   max<T extends Query>(
     this: T,
     arg: Aggregate1ArgumentTypes<T>['max'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, NumberColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     return this.clone()._max(arg, options);
   }
 
@@ -280,16 +322,16 @@ export class Aggregate {
     this: T,
     arg: Aggregate1ArgumentTypes<T>['max'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, NumberColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     const q = this._selectMax(arg, options) as unknown as T;
-    return q._value<T, NumberColumn>();
+    return q._valueOrThrow<T, NullableColumn<NumberColumn>>();
   }
 
   selectMax<T extends Query, As extends string | undefined = undefined>(
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'max', As, NumberColumn> {
+  ): SelectAgg<T, 'max', As, NullableColumn<NumberColumn>> {
     return this.clone()._selectMax(arg, options);
   }
 
@@ -297,15 +339,20 @@ export class Aggregate {
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'max', As, NumberColumn> {
-    return this._selectAgg(aggregate1FunctionNames.max, arg, options);
+  ): SelectAgg<T, 'max', As, NullableColumn<NumberColumn>> {
+    return this._selectAgg(
+      aggregate1FunctionNames.max,
+      arg,
+      options,
+      parseIntOrNullColumn,
+    );
   }
 
   sum<T extends Query>(
     this: T,
     arg: Aggregate1ArgumentTypes<T>['sum'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, NumberColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     return this.clone()._sum(arg, options);
   }
 
@@ -313,16 +360,16 @@ export class Aggregate {
     this: T,
     arg: Aggregate1ArgumentTypes<T>['sum'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, NumberColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     const q = this._selectSum(arg, options) as unknown as T;
-    return q._value<T, NumberColumn>();
+    return q._valueOrThrow<T, NullableColumn<NumberColumn>>();
   }
 
   selectSum<T extends Query, As extends string | undefined = undefined>(
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'sum', As, NumberColumn> {
+  ): SelectAgg<T, 'sum', As, NullableColumn<NumberColumn>> {
     return this.clone()._selectSum(arg, options);
   }
 
@@ -330,72 +377,20 @@ export class Aggregate {
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'sum', As, NumberColumn> {
-    return this._selectAgg(aggregate1FunctionNames.sum, arg, options);
-  }
-
-  arrayAgg<
-    T extends Query,
-    Expr extends Aggregate1ArgumentTypes<T>['arrayAgg'],
-  >(
-    this: T,
-    arg: Expr,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, ArrayColumn<ExpressionOutput<T, Expr>>> {
-    return this.clone()._arrayAgg(arg, options);
-  }
-
-  _arrayAgg<
-    T extends Query,
-    Expr extends Aggregate1ArgumentTypes<T>['arrayAgg'],
-  >(
-    this: T,
-    arg: Expr,
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, ArrayColumn<ExpressionOutput<T, Expr>>> {
-    const q = this._selectArrayAgg(arg, options) as unknown as T;
-    return q._value<T, ArrayColumn<ExpressionOutput<T, Expr>>>();
-  }
-
-  selectArrayAgg<
-    T extends Query,
-    Expr extends Aggregate1ArgumentTypes<T>['arrayAgg'],
-    As extends string | undefined = undefined,
-  >(
-    this: T,
-    arg: Expr,
-    options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'array_agg', As, ArrayColumn<ExpressionOutput<T, Expr>>> {
-    return this.clone()._selectArrayAgg(arg, options) as unknown as SelectAgg<
-      T,
-      'array_agg',
-      As,
-      ArrayColumn<ExpressionOutput<T, Expr>>
-    >;
-  }
-
-  _selectArrayAgg<
-    T extends Query,
-    Expr extends Aggregate1ArgumentTypes<T>['arrayAgg'],
-    As extends string | undefined = undefined,
-  >(
-    this: T,
-    arg: Expr,
-    options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'array_agg', As, ArrayColumn<ExpressionOutput<T, Expr>>> {
-    return this._selectAgg<
-      T,
-      'array_agg',
-      As,
-      ArrayColumn<ExpressionOutput<T, Expr>>
-    >(aggregate1FunctionNames.arrayAgg, arg, options);
+  ): SelectAgg<T, 'sum', As, NullableColumn<NumberColumn>> {
+    return this._selectAgg(
+      aggregate1FunctionNames.sum,
+      arg,
+      options,
+      parseIntOrNullColumn,
+    );
   }
 
   bitAnd<T extends Query>(
     this: T,
     arg: Aggregate1ArgumentTypes<T>['bitAnd'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, NumberColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     return this.clone()._bitAnd(arg, options);
   }
 
@@ -403,16 +398,16 @@ export class Aggregate {
     this: T,
     arg: Aggregate1ArgumentTypes<T>['bitAnd'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, NumberColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     const q = this._selectBitAnd(arg, options) as unknown as T;
-    return q._value<T, NumberColumn>();
+    return q._valueOrThrow<T, NullableColumn<NumberColumn>>();
   }
 
   selectBitAnd<T extends Query, As extends string | undefined = undefined>(
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'bit_and', As, NumberColumn> {
+  ): SelectAgg<T, 'bit_and', As, NullableColumn<NumberColumn>> {
     return this.clone()._selectBitAnd(arg, options);
   }
 
@@ -420,7 +415,7 @@ export class Aggregate {
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'bit_and', As, NumberColumn> {
+  ): SelectAgg<T, 'bit_and', As, NullableColumn<NumberColumn>> {
     return this._selectAgg(aggregate1FunctionNames.bitAnd, arg, options);
   }
 
@@ -428,7 +423,7 @@ export class Aggregate {
     this: T,
     arg: Aggregate1ArgumentTypes<T>['bitOr'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, NumberColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     return this.clone()._bitOr(arg, options);
   }
 
@@ -436,16 +431,16 @@ export class Aggregate {
     this: T,
     arg: Aggregate1ArgumentTypes<T>['bitOr'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, NumberColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     const q = this._selectBitOr(arg, options) as unknown as T;
-    return q._value<T, NumberColumn>();
+    return q._valueOrThrow<T, NullableColumn<NumberColumn>>();
   }
 
   selectBitOr<T extends Query, As extends string | undefined = undefined>(
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'bit_or', As, NumberColumn> {
+  ): SelectAgg<T, 'bit_or', As, NullableColumn<NumberColumn>> {
     return this.clone()._selectBitOr(arg, options);
   }
 
@@ -453,7 +448,7 @@ export class Aggregate {
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'bit_or', As, NumberColumn> {
+  ): SelectAgg<T, 'bit_or', As, NullableColumn<NumberColumn>> {
     return this._selectAgg(aggregate1FunctionNames.bitOr, arg, options);
   }
 
@@ -461,7 +456,7 @@ export class Aggregate {
     this: T,
     arg: Aggregate1ArgumentTypes<T>['boolAnd'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, BooleanColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<BooleanColumn>> {
     return this.clone()._boolAnd(arg, options);
   }
 
@@ -469,16 +464,16 @@ export class Aggregate {
     this: T,
     arg: Aggregate1ArgumentTypes<T>['boolAnd'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, BooleanColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<BooleanColumn>> {
     const q = this._selectBoolAnd(arg, options) as unknown as T;
-    return q._value<T, BooleanColumn>();
+    return q._valueOrThrow<T, NullableColumn<BooleanColumn>>();
   }
 
   selectBoolAnd<T extends Query, As extends string | undefined = undefined>(
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'bool_and', As, BooleanColumn> {
+  ): SelectAgg<T, 'bool_and', As, NullableColumn<BooleanColumn>> {
     return this.clone()._selectBoolAnd(arg, options);
   }
 
@@ -486,7 +481,7 @@ export class Aggregate {
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'bool_and', As, BooleanColumn> {
+  ): SelectAgg<T, 'bool_and', As, NullableColumn<BooleanColumn>> {
     return this._selectAgg(aggregate1FunctionNames.boolAnd, arg, options);
   }
 
@@ -494,7 +489,7 @@ export class Aggregate {
     this: T,
     arg: Aggregate1ArgumentTypes<T>['boolOr'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, BooleanColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<BooleanColumn>> {
     return this.clone()._boolOr(arg, options);
   }
 
@@ -502,16 +497,16 @@ export class Aggregate {
     this: T,
     arg: Aggregate1ArgumentTypes<T>['boolOr'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, BooleanColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<BooleanColumn>> {
     const q = this._selectBoolOr(arg, options) as unknown as T;
-    return q._value<T, BooleanColumn>();
+    return q._valueOrThrow<T, NullableColumn<BooleanColumn>>();
   }
 
   selectBoolOr<T extends Query, As extends string | undefined = undefined>(
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'bool_or', As, BooleanColumn> {
+  ): SelectAgg<T, 'bool_or', As, NullableColumn<BooleanColumn>> {
     return this.clone()._selectBoolOr(arg, options);
   }
 
@@ -519,7 +514,7 @@ export class Aggregate {
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'bool_or', As, BooleanColumn> {
+  ): SelectAgg<T, 'bool_or', As, NullableColumn<BooleanColumn>> {
     return this._selectAgg(aggregate1FunctionNames.boolOr, arg, options);
   }
 
@@ -527,7 +522,7 @@ export class Aggregate {
     this: T,
     arg: Aggregate1ArgumentTypes<T>['every'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, BooleanColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<BooleanColumn>> {
     return this.clone()._every(arg, options);
   }
 
@@ -535,16 +530,16 @@ export class Aggregate {
     this: T,
     arg: Aggregate1ArgumentTypes<T>['every'],
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, BooleanColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<BooleanColumn>> {
     const q = this._selectEvery(arg, options) as unknown as T;
-    return q._value<T, BooleanColumn>();
+    return q._valueOrThrow<T, NullableColumn<BooleanColumn>>();
   }
 
   selectEvery<T extends Query, As extends string | undefined = undefined>(
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'every', As, BooleanColumn> {
+  ): SelectAgg<T, 'every', As, NullableColumn<BooleanColumn>> {
     return this.clone()._selectEvery(arg, options);
   }
 
@@ -552,73 +547,133 @@ export class Aggregate {
     this: T,
     arg: Expression<T>,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'every', As, BooleanColumn> {
+  ): SelectAgg<T, 'every', As, NullableColumn<BooleanColumn>> {
     return this._selectAgg(aggregate1FunctionNames.every, arg, options);
   }
 
-  jsonAgg<T extends Query>(
+  jsonAgg<T extends Query, Expr extends Aggregate1ArgumentTypes<T>['jsonAgg']>(
     this: T,
-    arg: Aggregate1ArgumentTypes<T>['jsonAgg'],
+    arg: Expr,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, StringColumn> {
+  ): SetQueryReturnsValue<
+    T,
+    NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
+  > {
     return this.clone()._jsonAgg(arg, options);
   }
 
-  _jsonAgg<T extends Query>(
+  _jsonAgg<T extends Query, Expr extends Aggregate1ArgumentTypes<T>['jsonAgg']>(
     this: T,
-    arg: Aggregate1ArgumentTypes<T>['jsonAgg'],
+    arg: Expr,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, StringColumn> {
+  ): SetQueryReturnsValue<
+    T,
+    NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
+  > {
     const q = this._selectJsonAgg(arg, options) as unknown as T;
-    return q._value<T, StringColumn>();
+    return q._valueOrThrow<
+      T,
+      NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
+    >();
   }
 
-  selectJsonAgg<T extends Query, As extends string | undefined = undefined>(
+  selectJsonAgg<
+    T extends Query,
+    Expr extends Aggregate1ArgumentTypes<T>['jsonAgg'],
+    As extends string | undefined = undefined,
+  >(
     this: T,
-    arg: Aggregate1ArgumentTypes<T>['jsonAgg'],
+    arg: Expr,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'json_agg', As, StringColumn> {
+  ): SelectAgg<
+    T,
+    'json_agg',
+    As,
+    NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
+  > {
     return this.clone()._selectJsonAgg(arg, options);
   }
 
-  _selectJsonAgg<T extends Query, As extends string | undefined = undefined>(
+  _selectJsonAgg<
+    T extends Query,
+    Expr extends Aggregate1ArgumentTypes<T>['jsonAgg'],
+    As extends string | undefined = undefined,
+  >(
     this: T,
-    arg: Aggregate1ArgumentTypes<T>['jsonAgg'],
+    arg: Expr,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'json_agg', As, StringColumn> {
+  ): SelectAgg<
+    T,
+    'json_agg',
+    As,
+    NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
+  > {
     return this._selectAgg(aggregate1FunctionNames.jsonAgg, arg, options);
   }
 
-  jsonbAgg<T extends Query>(
+  jsonbAgg<
+    T extends Query,
+    Expr extends Aggregate1ArgumentTypes<T>['jsonbAgg'],
+  >(
     this: T,
-    arg: Aggregate1ArgumentTypes<T>['jsonbAgg'],
+    arg: Expr,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, StringColumn> {
+  ): SetQueryReturnsValue<
+    T,
+    NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
+  > {
     return this.clone()._jsonbAgg(arg, options);
   }
 
-  _jsonbAgg<T extends Query>(
+  _jsonbAgg<
+    T extends Query,
+    Expr extends Aggregate1ArgumentTypes<T>['jsonbAgg'],
+  >(
     this: T,
-    arg: Aggregate1ArgumentTypes<T>['jsonbAgg'],
+    arg: Expr,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, StringColumn> {
+  ): SetQueryReturnsValue<
+    T,
+    NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
+  > {
     const q = this._selectJsonbAgg(arg, options) as unknown as T;
-    return q._value<T, StringColumn>();
+    return q._valueOrThrow<
+      T,
+      NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
+    >();
   }
 
-  selectJsonbAgg<T extends Query, As extends string | undefined = undefined>(
+  selectJsonbAgg<
+    T extends Query,
+    Expr extends Aggregate1ArgumentTypes<T>['jsonbAgg'],
+    As extends string | undefined = undefined,
+  >(
     this: T,
-    arg: Aggregate1ArgumentTypes<T>['jsonbAgg'],
+    arg: Expr,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'jsonb_agg', As, StringColumn> {
+  ): SelectAgg<
+    T,
+    'jsonb_agg',
+    As,
+    NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
+  > {
     return this.clone()._selectJsonbAgg(arg, options);
   }
 
-  _selectJsonbAgg<T extends Query, As extends string | undefined = undefined>(
+  _selectJsonbAgg<
+    T extends Query,
+    Expr extends Aggregate1ArgumentTypes<T>['jsonbAgg'],
+    As extends string | undefined = undefined,
+  >(
     this: T,
-    arg: Aggregate1ArgumentTypes<T>['jsonbAgg'],
+    arg: Expr,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'jsonb_agg', As, StringColumn> {
+  ): SelectAgg<
+    T,
+    'jsonb_agg',
+    As,
+    NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
+  > {
     return this._selectAgg(aggregate1FunctionNames.jsonbAgg, arg, options);
   }
 
@@ -626,7 +681,7 @@ export class Aggregate {
     this: T,
     arg: Expr,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, StringColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<StringColumn>> {
     return this.clone()._xmlAgg(arg, options);
   }
 
@@ -634,16 +689,16 @@ export class Aggregate {
     this: T,
     arg: Expr,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, StringColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<StringColumn>> {
     const q = this._selectXmlAgg(arg, options) as unknown as T;
-    return q._value<T, StringColumn>();
+    return q._valueOrThrow<T, NullableColumn<StringColumn>>();
   }
 
   selectXmlAgg<T extends Query, As extends string | undefined = undefined>(
     this: T,
     arg: Aggregate1ArgumentTypes<T>['xmlAgg'],
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'xmlagg', As, StringColumn> {
+  ): SelectAgg<T, 'xmlagg', As, NullableColumn<StringColumn>> {
     return this.clone()._selectXmlAgg(arg, options);
   }
 
@@ -651,7 +706,7 @@ export class Aggregate {
     this: T,
     arg: Aggregate1ArgumentTypes<T>['xmlAgg'],
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'xmlagg', As, StringColumn> {
+  ): SelectAgg<T, 'xmlagg', As, NullableColumn<StringColumn>> {
     return this._selectAgg(aggregate1FunctionNames.xmlAgg, arg, options);
   }
 
@@ -659,7 +714,12 @@ export class Aggregate {
     this: T,
     obj: Obj,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, StringColumn> {
+  ): SetQueryReturnsValue<
+    T,
+    NullableColumn<
+      ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
+    >
+  > {
     return this.clone()._jsonObjectAgg(obj, options);
   }
 
@@ -667,9 +727,19 @@ export class Aggregate {
     this: T,
     obj: Obj,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, StringColumn> {
+  ): SetQueryReturnsValue<
+    T,
+    NullableColumn<
+      ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
+    >
+  > {
     const q = this._selectJsonObjectAgg(obj, options) as unknown as T;
-    return q._value<T, StringColumn>();
+    return q._valueOrThrow<
+      T,
+      NullableColumn<
+        ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
+      >
+    >();
   }
 
   selectJsonObjectAgg<
@@ -680,7 +750,14 @@ export class Aggregate {
     this: T,
     obj: Obj,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'json_object_agg', As, StringColumn> {
+  ): SelectAgg<
+    T,
+    'json_object_agg',
+    As,
+    NullableColumn<
+      ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
+    >
+  > {
     return this.clone()._selectJsonObjectAgg(obj, options);
   }
 
@@ -692,7 +769,14 @@ export class Aggregate {
     this: T,
     obj: Obj,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'json_object_agg', As, StringColumn> {
+  ): SelectAgg<
+    T,
+    'json_object_agg',
+    As,
+    NullableColumn<
+      ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
+    >
+  > {
     return this._selectAgg('json_object_agg', obj, options);
   }
 
@@ -700,7 +784,12 @@ export class Aggregate {
     this: T,
     obj: Obj,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, StringColumn> {
+  ): SetQueryReturnsValue<
+    T,
+    NullableColumn<
+      ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
+    >
+  > {
     return this.clone()._jsonbObjectAgg(obj, options);
   }
 
@@ -708,9 +797,19 @@ export class Aggregate {
     this: T,
     obj: Obj,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, StringColumn> {
+  ): SetQueryReturnsValue<
+    T,
+    NullableColumn<
+      ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
+    >
+  > {
     const q = this._selectJsonbObjectAgg(obj, options) as unknown as T;
-    return q._value<T, StringColumn>();
+    return q._valueOrThrow<
+      T,
+      NullableColumn<
+        ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
+      >
+    >();
   }
 
   selectJsonbObjectAgg<
@@ -721,7 +820,14 @@ export class Aggregate {
     this: T,
     obj: Obj,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'jsonb_object_agg', As, StringColumn> {
+  ): SelectAgg<
+    T,
+    'jsonb_object_agg',
+    As,
+    NullableColumn<
+      ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
+    >
+  > {
     return this.clone()._selectJsonbObjectAgg(obj, options);
   }
 
@@ -733,7 +839,14 @@ export class Aggregate {
     this: T,
     obj: Obj,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'jsonb_object_agg', As, StringColumn> {
+  ): SelectAgg<
+    T,
+    'jsonb_object_agg',
+    As,
+    NullableColumn<
+      ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
+    >
+  > {
     return this._selectAgg('jsonb_object_agg', obj, options);
   }
 
@@ -742,7 +855,7 @@ export class Aggregate {
     arg: StringExpression<T>,
     delimiter: string,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, StringColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<StringColumn>> {
     return this.clone()._stringAgg(arg, delimiter, options);
   }
 
@@ -751,9 +864,9 @@ export class Aggregate {
     arg: StringExpression<T>,
     delimiter: string,
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, StringColumn> {
+  ): SetQueryReturnsValue<T, NullableColumn<StringColumn>> {
     const q = this._selectStringAgg(arg, delimiter, options) as unknown as T;
-    return q._value<T, StringColumn>();
+    return q._valueOrThrow<T, NullableColumn<StringColumn>>();
   }
 
   selectStringAgg<T extends Query, As extends string | undefined = undefined>(
@@ -761,7 +874,7 @@ export class Aggregate {
     arg: StringExpression<T>,
     delimiter: string,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'string_agg', As, StringColumn> {
+  ): SelectAgg<T, 'string_agg', As, NullableColumn<StringColumn>> {
     return this.clone()._selectStringAgg(arg, delimiter, options);
   }
 
@@ -770,7 +883,7 @@ export class Aggregate {
     arg: StringExpression<T>,
     delimiter: string,
     options?: AggregateOptions<T, As>,
-  ): SelectAgg<T, 'string_agg', As, StringColumn> {
+  ): SelectAgg<T, 'string_agg', As, NullableColumn<StringColumn>> {
     return this._selectAgg('string_agg', [arg, delimiter], options);
   }
 

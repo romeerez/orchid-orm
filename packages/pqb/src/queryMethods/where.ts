@@ -1,4 +1,4 @@
-import { Query, QueryBase, SetQueryReturnsOne } from '../query';
+import { Query, QueryBase, SetQueryReturnsOneOrUndefined } from '../query';
 import { ColumnOperators, WhereItem } from '../sql';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { RawExpression } from '../common';
@@ -169,14 +169,14 @@ export class Where {
   findBy<T extends Query>(
     this: T,
     ...args: WhereArg<T>[]
-  ): SetQueryReturnsOne<T> {
+  ): SetQueryReturnsOneOrUndefined<T> {
     return this.clone()._findBy(...args);
   }
 
   _findBy<T extends Query>(
     this: T,
     ...args: WhereArg<T>[]
-  ): SetQueryReturnsOne<T> {
+  ): SetQueryReturnsOneOrUndefined<T> {
     return addWhere(this, args).take();
   }
 

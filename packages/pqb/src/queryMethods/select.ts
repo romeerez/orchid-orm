@@ -52,14 +52,14 @@ export const addParserForSelectItem = <T extends Query>(
   if (typeof item === 'object') {
     if (isRaw(item)) {
       const parser = item.__column?.parseFn;
-      if (parser) addParser(q.query, key, parser);
+      if (parser) addParserToQuery(q.query, key, parser);
     } else {
       const parsers = getQueryParsers(item);
       if (parsers) {
         if (item.query?.take) {
-          addParser(q.query, key, (item) => parseRecord(parsers, item));
+          addParserToQuery(q.query, key, (item) => parseRecord(parsers, item));
         } else {
-          addParser(q.query, key, (items) =>
+          addParserToQuery(q.query, key, (items) =>
             (items as unknown[]).map((item) => parseRecord(parsers, item)),
           );
         }
@@ -73,21 +73,25 @@ export const addParserForSelectItem = <T extends Query>(
 
       if (table === as) {
         const parser = q.columnsParsers?.[column];
-        if (parser) addParser(q.query, key, parser);
+        if (parser) addParserToQuery(q.query, key, parser);
       } else {
         const parser = (q.query as SelectQueryData).joinedParsers?.[table]?.[
           column
         ];
-        if (parser) addParser(q.query, key, parser);
+        if (parser) addParserToQuery(q.query, key, parser);
       }
     } else {
       const parser = q.columnsParsers?.[item as string];
-      if (parser) addParser(q.query, key, parser);
+      if (parser) addParserToQuery(q.query, key, parser);
     }
   }
 };
 
-const addParser = (query: QueryData, key: string, parser: ColumnParser) => {
+export const addParserToQuery = (
+  query: QueryData,
+  key: string,
+  parser: ColumnParser,
+) => {
   if (query.parsers) query.parsers[key] = parser;
   else query.parsers = { [key]: parser };
 };
@@ -118,16 +122,16 @@ export class Select {
 
         if (table === as) {
           const parser = q.columnsParsers?.[column];
-          if (parser) addParser(q.query, column, parser);
+          if (parser) addParserToQuery(q.query, column, parser);
         } else {
           const parser = (q.query as SelectQueryData).joinedParsers?.[table]?.[
             column
           ];
-          if (parser) addParser(q.query, column, parser);
+          if (parser) addParserToQuery(q.query, column, parser);
         }
       } else {
         const parser = q.columnsParsers?.[item as string];
-        if (parser) addParser(q.query, item as string, parser);
+        if (parser) addParserToQuery(q.query, item as string, parser);
       }
     });
 

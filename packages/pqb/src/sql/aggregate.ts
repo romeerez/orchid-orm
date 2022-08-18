@@ -32,7 +32,8 @@ export const aggregateToSql = (
       const args: string[] = [];
       for (const key in item.arg) {
         args.push(
-          `${addValue(values, key)}, ${expressionToSql(
+          // ::text is needed to bypass "could not determine data type of parameter" postgres error
+          `${addValue(values, key)}::text, ${expressionToSql(
             item.arg[key as keyof typeof item.arg] as unknown as Expression,
             values,
             quotedAs,

@@ -32,6 +32,7 @@ export const User = db('user', (t) => ({
     )
     .nullable(),
   age: t.integer().nullable(),
+  active: t.boolean().nullable(),
   createdAt: t.timestamp().parse((input) => new Date(input)),
   updatedAt: t.timestamp().parse((input) => new Date(input)),
 }));
@@ -115,6 +116,27 @@ export const insert = async <
   record.id = result.rows[0].id;
   return record;
 };
+
+export const insertUser = async (
+  options: Partial<typeof User.type> & { count?: number } = {},
+) => {
+  const now = new Date();
+  const { count = 1, ...data } = options;
+  for (let i = 0; i < count; i++) {
+    await insert('user', {
+      id: i + 1,
+      name: 'name',
+      password: 'password',
+      picture: null,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+      ...data,
+    });
+  }
+};
+
+export const insertUsers = (count: number) => insertUser({ count });
 
 export const useTestDatabase = () => {
   beforeAll(() => {

@@ -11,3 +11,4 @@ export * from './utils';
 export * from './queryDataUtils';
 export * from './queryMethods/then';
 export { ColumnInfo } from './queryMethods/columnInfo';
+export * from './errors';

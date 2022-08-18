@@ -65,6 +65,15 @@ export const pushSelectSql = (
   values: unknown[],
   quotedAs?: string,
 ) => {
+  sql.push(selectToSql(model, select, values, quotedAs));
+};
+
+export const selectToSql = (
+  model: Pick<Query, 'shape'>,
+  select: SelectQueryData['select'],
+  values: unknown[],
+  quotedAs?: string,
+): string => {
   if (select) {
     const list: string[] = [];
     select.forEach((item) => {
@@ -90,6 +99,15 @@ export const pushSelectSql = (
           );
         } else if (isRaw(item)) {
           list.push(getRaw(item, values));
+        } else if ('arguments' in item) {
+          list.push(
+            `${item.function}(${selectToSql(
+              model,
+              item.arguments,
+              values,
+              quotedAs,
+            )})${item.as ? ` AS ${q(item.as)}` : ''}`,
+          );
         } else {
           list.push(aggregateToSql(model, values, item, quotedAs));
         }
@@ -97,8 +115,8 @@ export const pushSelectSql = (
         list.push(quoteFullColumn(item, quotedAs));
       }
     });
-    sql.push(list.join(', '));
+    return list.join(', ');
   } else {
-    sql.push(`${quotedAs}.*`);
+    return `${quotedAs}.*`;
   }
 };

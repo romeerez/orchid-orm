@@ -2,10 +2,16 @@ import {
   AddQuerySelect,
   Query,
   SetQueryReturnsAll,
-  SetQueryReturnsVoid,
+  SetQueryReturnsValue,
 } from '../query';
 import { ReturningArg } from './insert';
-import { pushQueryValue, setQueryValue } from '../queryDataUtils';
+import {
+  pushQueryValue,
+  removeFromQuery,
+  setQueryValue,
+} from '../queryDataUtils';
+import { IntegerColumn } from '../columnSchema';
+import { thenRowsCount } from './then';
 
 type DeleteResult<
   T extends Query,
@@ -14,7 +20,7 @@ type DeleteResult<
   ? SetQueryReturnsAll<AddQuerySelect<T, T['shape']>>
   : Returning extends (keyof T['shape'])[]
   ? SetQueryReturnsAll<AddQuerySelect<T, Pick<T['shape'], Returning[number]>>>
-  : SetQueryReturnsVoid<T>;
+  : SetQueryReturnsValue<T, IntegerColumn>;
 
 const del = <
   T extends Query,
@@ -33,7 +39,15 @@ const _del = <
   self: T,
   returning?: Returning,
 ): DeleteResult<T, Returning> => {
-  const q = returning ? self._all() : self._exec();
+  let q: Query;
+  if (returning) {
+    q = self._all();
+  } else {
+    q = self.toQuery();
+    q.then = thenRowsCount;
+    removeFromQuery(q, 'take');
+  }
+
   setQueryValue(q, 'type', 'delete');
   if (returning) {
     pushQueryValue(q, 'returning', returning);

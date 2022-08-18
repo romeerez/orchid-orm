@@ -110,7 +110,7 @@ describe('selectMethods', () => {
         const q = User.select('createdAt');
 
         expect((await q.all())[0].createdAt instanceof Date).toBe(true);
-        expect((await q.take()).createdAt instanceof Date).toBe(true);
+        expect((await q.takeOrThrow()).createdAt instanceof Date).toBe(true);
         expect((await q.rows())[0][0] instanceof Date).toBe(true);
         expect((await q.value()) instanceof Date).toBe(true);
       });
@@ -119,7 +119,7 @@ describe('selectMethods', () => {
         const q = User.select('user.createdAt');
 
         expect((await q.all())[0].createdAt instanceof Date).toBe(true);
-        expect((await q.take()).createdAt instanceof Date).toBe(true);
+        expect((await q.takeOrThrow()).createdAt instanceof Date).toBe(true);
         expect((await q.rows())[0][0] instanceof Date).toBe(true);
         expect((await q.value()) instanceof Date).toBe(true);
       });
@@ -130,7 +130,7 @@ describe('selectMethods', () => {
         );
 
         expect((await q.all())[0].createdAt instanceof Date).toBe(true);
-        expect((await q.take()).createdAt instanceof Date).toBe(true);
+        expect((await q.takeOrThrow()).createdAt instanceof Date).toBe(true);
         expect((await q.rows())[0][0] instanceof Date).toBe(true);
         expect((await q.value()) instanceof Date).toBe(true);
       });
@@ -237,7 +237,7 @@ describe('selectMethods', () => {
           });
 
           expect((await q.all())[0].date instanceof Date).toBe(true);
-          expect((await q.take()).date instanceof Date).toBe(true);
+          expect((await q.takeOrThrow()).date instanceof Date).toBe(true);
           expect((await q.rows())[0][0] instanceof Date).toBe(true);
           expect((await q.value()) instanceof Date).toBe(true);
         });
@@ -248,7 +248,7 @@ describe('selectMethods', () => {
           });
 
           expect((await q.all())[0].date instanceof Date).toBe(true);
-          expect((await q.take()).date instanceof Date).toBe(true);
+          expect((await q.takeOrThrow()).date instanceof Date).toBe(true);
           expect((await q.rows())[0][0] instanceof Date).toBe(true);
           expect((await q.value()) instanceof Date).toBe(true);
         });
@@ -259,7 +259,7 @@ describe('selectMethods', () => {
           });
 
           expect((await q.all())[0].date instanceof Date).toBe(true);
-          expect((await q.take()).date instanceof Date).toBe(true);
+          expect((await q.takeOrThrow()).date instanceof Date).toBe(true);
           expect((await q.rows())[0][0] instanceof Date).toBe(true);
           expect((await q.value()) instanceof Date).toBe(true);
         });
@@ -272,9 +272,9 @@ describe('selectMethods', () => {
           expect((await q.all())[0].users[0].createdAt instanceof Date).toBe(
             true,
           );
-          expect((await q.take()).users[0].createdAt instanceof Date).toBe(
-            true,
-          );
+          expect(
+            (await q.takeOrThrow()).users[0].createdAt instanceof Date,
+          ).toBe(true);
           expect((await q.rows())[0][0][0].createdAt instanceof Date).toBe(
             true,
           );
@@ -290,7 +290,9 @@ describe('selectMethods', () => {
           });
 
           expect((await q.all())[0].user.createdAt instanceof Date).toBe(true);
-          expect((await q.take()).user.createdAt instanceof Date).toBe(true);
+          expect((await q.takeOrThrow()).user.createdAt instanceof Date).toBe(
+            true,
+          );
           expect((await q.rows())[0][0].createdAt instanceof Date).toBe(true);
           const value = await q.value();
           expect((value as { createdAt: Date }).createdAt instanceof Date).toBe(
@@ -307,7 +309,7 @@ describe('selectMethods', () => {
           });
 
           expect((await q.all())[0].date instanceof Date).toBe(true);
-          expect((await q.take()).date instanceof Date).toBe(true);
+          expect((await q.takeOrThrow()).date instanceof Date).toBe(true);
           expect((await q.rows())[0][0] instanceof Date).toBe(true);
           expect((await q.value()) instanceof Date).toBe(true);
         });

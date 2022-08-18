@@ -1,9 +1,19 @@
-import { User, expectQueryNotMutated, expectSql } from '../test-utils';
+import {
+  User,
+  expectQueryNotMutated,
+  expectSql,
+  AssertEqual,
+  useTestDatabase,
+  insertUser,
+  insertUsers,
+} from '../test-utils';
 import { raw } from '../common';
 
 describe('aggregate', () => {
+  useTestDatabase();
+
   describe('aggregate options', () => {
-    test('without options', () => {
+    test('without options', async () => {
       expectSql(User.count('*').toSql(), 'SELECT count(*) FROM "user"');
     });
 
@@ -113,6 +123,203 @@ describe('aggregate', () => {
     });
   });
 
+  describe('count', () => {
+    it('should return a number', async () => {
+      const count = await User.count();
+
+      const eq: AssertEqual<typeof count, number> = true;
+      expect(eq).toBe(true);
+
+      expect(typeof count).toBe('number');
+    });
+
+    describe('selectCount', () => {
+      it('should select number', async () => {
+        await insertUser();
+
+        const user = await User.selectCount().takeOrThrow();
+        expect(user.count).toBe(1);
+
+        const eq: AssertEqual<typeof user.count, number> = true;
+        expect(eq).toBe(true);
+      });
+    });
+  });
+
+  describe.each`
+    method      | functionName
+    ${'avg'}    | ${'avg'}
+    ${'min'}    | ${'min'}
+    ${'max'}    | ${'max'}
+    ${'sum'}    | ${'sum'}
+    ${'bitAnd'} | ${'bit_and'}
+    ${'bitOr'}  | ${'bit_or'}
+  `('$method', ({ method, functionName }) => {
+    it('should return null when no records', async () => {
+      const value = await User[method as 'avg']('id');
+
+      const eq: AssertEqual<typeof value, number | null> = true;
+      expect(eq).toBe(true);
+
+      expect(value).toBe(null);
+    });
+
+    it('should return number when have records', async () => {
+      await insertUser();
+
+      const value = await User[method as 'avg']('id');
+
+      const eq: AssertEqual<typeof value, number | null> = true;
+      expect(eq).toBe(true);
+
+      expect(typeof value).toBe('number');
+    });
+
+    const selectMethod = `select${method[0].toUpperCase()}${method.slice(
+      1,
+    )}` as 'selectAvg';
+    describe(selectMethod, () => {
+      it('should select null when no record', async () => {
+        const value = await User[selectMethod]('id').takeOrThrow();
+
+        const eq: AssertEqual<typeof value, { avg: number | null }> = true;
+        expect(eq).toBe(true);
+
+        expect(value).toEqual({ [functionName]: null });
+      });
+
+      it('should return number when have records', async () => {
+        await insertUser();
+
+        const value = await User[selectMethod]('id').takeOrThrow();
+
+        const eq: AssertEqual<typeof value, { avg: number | null }> = true;
+        expect(eq).toBe(true);
+
+        expect(value).toEqual({ [functionName]: 1 });
+      });
+    });
+  });
+
+  describe.each`
+    method       | functionName
+    ${'boolAnd'} | ${'bool_and'}
+    ${'boolOr'}  | ${'bool_or'}
+    ${'every'}   | ${'every'}
+  `('$method', ({ method, functionName }) => {
+    it('should return null when no records', async () => {
+      const value = await User[method as 'boolAnd']('active');
+
+      const eq: AssertEqual<typeof value, boolean | null> = true;
+      expect(eq).toBe(true);
+
+      expect(value).toBe(null);
+    });
+
+    it('should return boolean when have records', async () => {
+      await insertUser();
+
+      const value = await User[method as 'boolAnd']('active');
+
+      const eq: AssertEqual<typeof value, boolean | null> = true;
+      expect(eq).toBe(true);
+
+      expect(typeof value).toBe('boolean');
+    });
+
+    const selectMethod = `select${method[0].toUpperCase()}${method.slice(
+      1,
+    )}` as 'selectBoolAnd';
+    describe(selectMethod, () => {
+      it('should select null when no record', async () => {
+        const value = await User[selectMethod]('active').takeOrThrow();
+
+        const eq: AssertEqual<typeof value, { bool_and: boolean | null }> =
+          true;
+        expect(eq).toBe(true);
+
+        expect(value).toEqual({ [functionName]: null });
+      });
+
+      it('should return boolean when have records', async () => {
+        await insertUser();
+
+        const value = await User[selectMethod]('active').takeOrThrow();
+
+        const eq: AssertEqual<typeof value, { bool_and: boolean | null }> =
+          true;
+        expect(eq).toBe(true);
+
+        expect(value).toEqual({ [functionName]: true });
+      });
+    });
+  });
+
+  describe.each`
+    method        | functionName
+    ${'jsonAgg'}  | ${'json_agg'}
+    ${'jsonbAgg'} | ${'jsonb_agg'}
+  `('$method', ({ method, functionName }) => {
+    const data = { name: 'name', tags: [] };
+
+    it('should return null when no records', async () => {
+      const value = await User[method as 'jsonAgg']('data');
+
+      const eq: AssertEqual<
+        typeof value,
+        ({ name: string; tags: string[] } | null)[] | null
+      > = true;
+      expect(eq).toBe(true);
+
+      expect(value).toBe(null);
+    });
+
+    it('should return json array when have records', async () => {
+      await insertUser({ data });
+
+      const value = await User[method as 'jsonAgg']('data');
+
+      const eq: AssertEqual<
+        typeof value,
+        ({ name: string; tags: string[] } | null)[] | null
+      > = true;
+      expect(eq).toBe(true);
+
+      expect(value).toEqual([data]);
+    });
+
+    const selectMethod = `select${method[0].toUpperCase()}${method.slice(
+      1,
+    )}` as 'selectJsonAgg';
+    describe(selectMethod, () => {
+      it('should select null when no record', async () => {
+        const value = await User[selectMethod]('data').takeOrThrow();
+
+        const eq: AssertEqual<
+          typeof value,
+          { json_agg: ({ name: string; tags: string[] } | null)[] | null }
+        > = true;
+        expect(eq).toBe(true);
+
+        expect(value).toEqual({ [functionName]: null });
+      });
+
+      it('should return json array when have records', async () => {
+        await insertUser({ data });
+
+        const value = await User[selectMethod]('data').takeOrThrow();
+
+        const eq: AssertEqual<
+          typeof value,
+          { json_agg: ({ name: string; tags: string[] } | null)[] | null }
+        > = true;
+        expect(eq).toBe(true);
+
+        expect(value).toEqual({ [functionName]: [data] });
+      });
+    });
+  });
+
   describe.each`
     method        | functionName
     ${'count'}    | ${'count'}
@@ -120,7 +327,6 @@ describe('aggregate', () => {
     ${'min'}      | ${'min'}
     ${'max'}      | ${'max'}
     ${'sum'}      | ${'sum'}
-    ${'arrayAgg'} | ${'array_agg'}
     ${'bitAnd'}   | ${'bit_and'}
     ${'bitOr'}    | ${'bit_or'}
     ${'boolAnd'}  | ${'bool_and'}
@@ -130,9 +336,18 @@ describe('aggregate', () => {
     ${'jsonbAgg'} | ${'jsonb_agg'}
     ${'xmlAgg'}   | ${'xmlagg'}
   `('$method', ({ method, functionName }) => {
+    const getSql = (arg: string, as?: string) => {
+      let select = `${functionName}(${arg})`;
+
+      if (as) select += ` AS "${as}"`;
+
+      return `SELECT ${select} FROM "user"`;
+    };
+
     it(`should perform ${method} query for a column`, () => {
       const q = User.all();
-      const expectedSql = `SELECT ${functionName}("user"."name") FROM "user"`;
+
+      const expectedSql = getSql('"user"."name"');
       expectSql(q[method as 'count']('name').toSql(), expectedSql);
       expectQueryNotMutated(q);
 
@@ -142,17 +357,14 @@ describe('aggregate', () => {
 
     it('should support raw sql parameter', () => {
       const q = User.all();
-      expectSql(
-        q[method as 'count'](raw('name')).toSql(),
-        `SELECT ${functionName}(name) FROM "user"`,
-      );
+      expectSql(q[method as 'count'](raw('name')).toSql(), getSql('name'));
       expectQueryNotMutated(q);
     });
 
     const selectMethod = `select${method[0].toUpperCase()}${method.slice(1)}`;
     it(`.${selectMethod} should select aggregated value`, () => {
       const q = User.all();
-      const expectedSql = `SELECT ${functionName}("user"."name") AS "name" FROM "user"`;
+      const expectedSql = getSql('"user"."name"', 'name');
       expectSql(
         q[selectMethod as 'selectCount']('name', { as: 'name' }).toSql(),
         expectedSql,
@@ -162,7 +374,7 @@ describe('aggregate', () => {
 
     it(`.${selectMethod} supports raw sql`, () => {
       const q = User.all();
-      const expectedSql = `SELECT ${functionName}(name) AS "name" FROM "user"`;
+      const expectedSql = getSql('name', 'name');
       expectSql(
         q[selectMethod as 'selectCount'](raw('name'), { as: 'name' }).toSql(),
         expectedSql,
@@ -176,9 +388,60 @@ describe('aggregate', () => {
     ${'jsonObjectAgg'}  | ${'json_object_agg'}
     ${'jsonbObjectAgg'} | ${'jsonb_object_agg'}
   `('$method', ({ method, functionName }) => {
+    it('should return null when no records', async () => {
+      const value = await User[method as 'jsonObjectAgg']({ alias: 'name' });
+
+      const eq: AssertEqual<typeof value, { alias: string } | null> = true;
+      expect(eq).toBe(true);
+
+      expect(value).toBe(null);
+    });
+
+    it('should return json object when have records', async () => {
+      await insertUser();
+
+      const value = await User[method as 'jsonObjectAgg']({ alias: 'name' });
+
+      const eq: AssertEqual<typeof value, { alias: string } | null> = true;
+      expect(eq).toBe(true);
+
+      expect(value).toEqual({ alias: 'name' });
+    });
+
+    const selectMethod = `select${method[0].toUpperCase()}${method.slice(
+      1,
+    )}` as 'selectJsonObjectAgg';
+    describe(selectMethod, () => {
+      it('should select null when no record', async () => {
+        const value = await User[selectMethod]({ alias: 'name' }).takeOrThrow();
+
+        const eq: AssertEqual<
+          typeof value,
+          { json_object_agg: { alias: string } | null }
+        > = true;
+        expect(eq).toBe(true);
+
+        expect(value).toEqual({ [functionName]: null });
+      });
+
+      it('should return json object when have records', async () => {
+        await insertUser();
+
+        const value = await User[selectMethod]({ alias: 'name' }).takeOrThrow();
+
+        const eq: AssertEqual<
+          typeof value,
+          { json_object_agg: { alias: string } | null }
+        > = true;
+        expect(eq).toBe(true);
+
+        expect(value).toEqual({ [functionName]: { alias: 'name' } });
+      });
+    });
+
     it(`should perform ${method} query for a column`, () => {
       const q = User.all();
-      const expectedSql = `SELECT ${functionName}($1, "user"."name") FROM "user"`;
+      const expectedSql = `SELECT ${functionName}($1::text, "user"."name") FROM "user"`;
       expectSql(
         q[method as 'jsonObjectAgg']({ alias: 'name' }).toSql(),
         expectedSql,
@@ -196,16 +459,15 @@ describe('aggregate', () => {
         q[method as 'jsonObjectAgg']({
           alias: raw('name'),
         }).toSql(),
-        `SELECT ${functionName}($1, name) FROM "user"`,
+        `SELECT ${functionName}($1::text, name) FROM "user"`,
         ['alias'],
       );
       expectQueryNotMutated(q);
     });
 
-    const selectMethod = `select${method[0].toUpperCase()}${method.slice(1)}`;
     it(`.${selectMethod} should select aggregated value`, () => {
       const q = User.all();
-      const expectedSql = `SELECT ${functionName}($1, "user"."name") AS "name" FROM "user"`;
+      const expectedSql = `SELECT ${functionName}($1::text, "user"."name") AS "name" FROM "user"`;
       expectSql(
         q[selectMethod as 'jsonObjectAgg'](
           { alias: 'name' },
@@ -219,7 +481,7 @@ describe('aggregate', () => {
 
     it(`.${selectMethod} supports raw sql`, () => {
       const q = User.all();
-      const expectedSql = `SELECT ${functionName}($1, name) AS "name" FROM "user"`;
+      const expectedSql = `SELECT ${functionName}($1::text, name) AS "name" FROM "user"`;
       expectSql(
         q[selectMethod as 'jsonObjectAgg'](
           { alias: raw('name') },
@@ -233,6 +495,50 @@ describe('aggregate', () => {
   });
 
   describe('stringAgg', () => {
+    it('should return null when no records', async () => {
+      const value = await User.stringAgg('name', ', ');
+
+      const eq: AssertEqual<typeof value, string | null> = true;
+      expect(eq).toBe(true);
+
+      expect(value).toBe(null);
+    });
+
+    it('should return json object when have records', async () => {
+      await insertUsers(2);
+
+      const value = await User.stringAgg('name', ', ');
+
+      const eq: AssertEqual<typeof value, string | null> = true;
+      expect(eq).toBe(true);
+
+      expect(value).toEqual('name, name');
+    });
+
+    describe('selectStringAgg', () => {
+      it('should select null when no record', async () => {
+        const value = await User.selectStringAgg('name', ', ').takeOrThrow();
+
+        const eq: AssertEqual<typeof value, { string_agg: string | null }> =
+          true;
+        expect(eq).toBe(true);
+
+        expect(value).toEqual({ string_agg: null });
+      });
+
+      it('should return json object when have records', async () => {
+        await insertUsers(2);
+
+        const value = await User.selectStringAgg('name', ', ').takeOrThrow();
+
+        const eq: AssertEqual<typeof value, { string_agg: string | null }> =
+          true;
+        expect(eq).toBe(true);
+
+        expect(value).toEqual({ string_agg: 'name, name' });
+      });
+    });
+
     it('makes stringAgg query', () => {
       const q = User.all();
       const expectedSql = `SELECT string_agg("user"."name", $1) FROM "user"`;

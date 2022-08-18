@@ -25,7 +25,7 @@ export type CommonQueryData = {
 };
 
 export type SelectQueryData<T extends Query = Query> = CommonQueryData & {
-  select?: SelectItem<T>[];
+  select?: SelectItem[];
   distinct?: Expression<T>[];
   from?: string | Query | RawExpression;
   fromOnly?: boolean;
@@ -166,10 +166,11 @@ export type JsonItem<
       ];
 };
 
-export type SelectItem<T extends Query> =
-  | keyof T['selectable']
+export type SelectItem =
+  | string
   | AggregateItem
-  | { selectAs: Record<string, keyof T['selectable'] | Query | RawExpression> }
+  | { selectAs: Record<string, string | Query | RawExpression> }
+  | { function: string; arguments: SelectItem[]; as?: string }
   | JsonItem
   | RawExpression;
 

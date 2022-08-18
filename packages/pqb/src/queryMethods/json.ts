@@ -1,4 +1,8 @@
-import { AddQuerySelect, Query, SetQueryReturnsValue } from '../query';
+import {
+  AddQuerySelect,
+  Query,
+  SetQueryReturnsValueOrUndefined,
+} from '../query';
 import { pushQueryValue } from '../queryDataUtils';
 import { ColumnType, StringColumn } from '../columnSchema';
 import { JsonItem } from '../sql';
@@ -39,11 +43,15 @@ type JsonPathQueryResult<
   >;
 
 export class Json {
-  json<T extends Query>(this: T): SetQueryReturnsValue<T, StringColumn> {
+  json<T extends Query>(
+    this: T,
+  ): SetQueryReturnsValueOrUndefined<T, StringColumn> {
     return this.clone()._json();
   }
 
-  _json<T extends Query>(this: T): SetQueryReturnsValue<T, StringColumn> {
+  _json<T extends Query>(
+    this: T,
+  ): SetQueryReturnsValueOrUndefined<T, StringColumn> {
     const q = this._wrap(
       this.selectAs({
         json: raw(

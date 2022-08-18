@@ -70,7 +70,7 @@ describe('json methods', () => {
           ['"new value"'],
         );
 
-        const result = await query.take();
+        const result = await query.takeOrThrow();
         expect(result.data).toEqual({ name: 'new value', tags: ['one'] });
 
         const eq: AssertEqual<
@@ -98,7 +98,7 @@ describe('json methods', () => {
           ['"new value"'],
         );
 
-        const result = await query.take();
+        const result = await query.takeOrThrow();
         expect(result.alias).toEqual({ name: 'new value', tags: ['one'] });
 
         const eq: AssertEqual<
@@ -130,7 +130,7 @@ describe('json methods', () => {
           ['"two"', '"new value"'],
         );
 
-        const result = await query.take();
+        const result = await query.takeOrThrow();
         expect(result.data).toEqual({
           name: 'new value',
           tags: ['two', 'one'],
@@ -160,7 +160,7 @@ describe('json methods', () => {
           ['"two"'],
         );
 
-        const result = await query.take();
+        const result = await query.takeOrThrow();
         expect(result.data).toEqual({ name: 'value', tags: ['two', 'one'] });
 
         const eq: AssertEqual<
@@ -188,7 +188,7 @@ describe('json methods', () => {
           ['"two"'],
         );
 
-        const result = await query.take();
+        const result = await query.takeOrThrow();
         expect(result.alias).toEqual({ name: 'value', tags: ['one', 'two'] });
 
         const eq: AssertEqual<
@@ -220,7 +220,7 @@ describe('json methods', () => {
           ['[]', '"tag"'],
         );
 
-        const result = await query.take();
+        const result = await query.takeOrThrow();
         expect(result.data).toEqual({ name: 'value', tags: ['tag'] });
 
         const eq: AssertEqual<
@@ -246,7 +246,7 @@ describe('json methods', () => {
           `,
         );
 
-        const result = await query.take();
+        const result = await query.takeOrThrow();
         expect(result.data).toEqual({ name: 'value', tags: [] });
 
         const eq: AssertEqual<
@@ -270,7 +270,7 @@ describe('json methods', () => {
           `,
         );
 
-        const result = await query.take();
+        const result = await query.takeOrThrow();
         expect(result.alias).toEqual({ name: 'value', tags: [] });
 
         const eq: AssertEqual<
@@ -299,7 +299,7 @@ describe('json methods', () => {
           ['["tag"]'],
         );
 
-        const result = await query.take();
+        const result = await query.takeOrThrow();
         expect(result.data).toEqual({ name: 'value', tags: [] });
 
         const eq: AssertEqual<
@@ -312,7 +312,7 @@ describe('json methods', () => {
       });
     });
 
-    describe('selectJsonPathQuery', () => {
+    describe('jsonPathQuery', () => {
       it('should select json property', async () => {
         const q = User.all();
 
@@ -331,7 +331,7 @@ describe('json methods', () => {
           ['$.name'],
         );
 
-        const result = await query.take();
+        const result = await query.takeOrThrow();
         expect(result.name).toBe('value');
 
         const eq: AssertEqual<typeof result.name, string> = true;
@@ -387,7 +387,7 @@ describe('json methods', () => {
           ['["tag"]', '$.tags'],
         );
 
-        const result = await query.take();
+        const result = await query.takeOrThrow();
         expect(result.tags).toEqual(['tag']);
 
         const eq: AssertEqual<typeof result.tags, string[]> = true;

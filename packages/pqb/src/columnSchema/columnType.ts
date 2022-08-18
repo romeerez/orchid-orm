@@ -3,7 +3,10 @@ import { EmptyObject } from './utils';
 
 export type ColumnOutput<T extends ColumnType> = T['type'];
 
-type Nullable<T extends ColumnType> = Omit<T, 'type' | 'operators'> & {
+export type NullableColumn<T extends ColumnType> = Omit<
+  T,
+  'type' | 'operators'
+> & {
   type: T['type'] | null;
   isNullable: true;
   operators: Omit<T['operators'], 'equals' | 'not'> & {
@@ -37,9 +40,9 @@ export abstract class ColumnType<
     return Object.assign(this, { isHidden: true as const });
   }
 
-  nullable<T extends ColumnType>(this: T): Nullable<T> {
+  nullable<T extends ColumnType>(this: T): NullableColumn<T> {
     this.isNullable = true;
-    return this as unknown as Nullable<T>;
+    return this as unknown as NullableColumn<T>;
   }
 
   encode<T extends ColumnType, Input>(

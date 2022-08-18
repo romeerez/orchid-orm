@@ -63,7 +63,7 @@ describe('update', () => {
     const eq: AssertEqual<typeof result, void> = true;
     expect(eq).toBe(true);
 
-    const updated = await User.take();
+    const updated = await User.takeOrThrow();
     expectMatchObjectWithTimestamps(updated, { ...data, ...update });
 
     expectQueryNotMutated(q);
@@ -96,7 +96,7 @@ describe('update', () => {
     const eq: AssertEqual<typeof result, { id: number; name: string }[]> = true;
     expect(eq).toBe(true);
 
-    const updated = await User.take();
+    const updated = await User.takeOrThrow();
     expectMatchObjectWithTimestamps(updated, { ...data, ...update });
 
     expectQueryNotMutated(q);
@@ -131,7 +131,7 @@ describe('update', () => {
     const eq: AssertEqual<typeof result, typeof User['type'][]> = true;
     expect(eq).toBe(true);
 
-    const updated = await User.take();
+    const updated = await User.takeOrThrow();
     expectMatchObjectWithTimestamps(updated, { ...data, ...update });
 
     expectQueryNotMutated(q);
