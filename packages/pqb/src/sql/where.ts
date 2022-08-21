@@ -75,7 +75,10 @@ export const whereToSql = (
           ) {
             if (isRaw(value)) {
               ands.push(
-                `${prefix}${qc(key, quotedAs)} = ${getRaw(value, values)}`,
+                `${prefix}${quoteFullColumn(key, quotedAs)} = ${getRaw(
+                  value,
+                  values,
+                )}`,
               );
             } else {
               const column = model.shape[key];
@@ -104,7 +107,7 @@ export const whereToSql = (
             }
           } else {
             ands.push(
-              `${prefix}${qc(key, quotedAs)} ${
+              `${prefix}${quoteFullColumn(key, quotedAs)} ${
                 value === null ? 'IS NULL' : `= ${addValue(values, value)}`
               }`,
             );

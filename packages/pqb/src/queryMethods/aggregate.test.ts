@@ -189,7 +189,7 @@ describe('aggregate', () => {
       });
 
       it('should return number when have records', async () => {
-        await insertUser();
+        await insertUser({ id: 1 });
 
         const value = await User[selectMethod]('id').takeOrThrow();
 
@@ -579,36 +579,6 @@ describe('aggregate', () => {
         [' & '],
       );
       expectQueryNotMutated(q);
-    });
-  });
-
-  describe.each`
-    method           | functionName
-    ${'rowNumber'}   | ${'row_number'}
-    ${'rank'}        | ${'rank'}
-    ${'denseRank'}   | ${'dense_rank'}
-    ${'percentRank'} | ${'percent_rank'}
-    ${'cumeDust'}    | ${'cume_dust'}
-  `('$method', ({ method, functionName }) => {
-    it(`should perform ${method} query`, () => {
-      const q = User.all();
-      const expectedSql = `SELECT ${functionName}() OVER (PARTITION BY "user"."name" ORDER BY "user"."createdAt" DESC) AS "as" FROM "user"`;
-      expectSql(
-        q[method as 'rank']({
-          as: 'as',
-          partitionBy: 'name',
-          order: { createdAt: 'DESC' },
-        }).toSql(),
-        expectedSql,
-      );
-      expectQueryNotMutated(q);
-
-      q[`_${method}` as '_rank']({
-        as: 'as',
-        partitionBy: 'name',
-        order: { createdAt: 'DESC' },
-      });
-      expectSql(q.toSql(), expectedSql);
     });
   });
 });

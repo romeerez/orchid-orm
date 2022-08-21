@@ -49,7 +49,7 @@ describe('where', () => {
   it('should handle null value', () => {
     const q = User.all();
     expectSql(
-      q.where({ id: 1, picture: null }).toSql(),
+      q.where({ id: 1, 'user.picture': null }).toSql(),
       `
         SELECT "user".* FROM "user" WHERE "user"."id" = $1 AND "user"."picture" IS NULL
       `,

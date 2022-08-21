@@ -55,6 +55,7 @@ import { ColumnInfoMethods } from './columnInfo';
 import { Where } from './where';
 import { Clear } from './clear';
 import { Having } from './having';
+import { Window } from './window';
 
 export type WindowArg<T extends Query> = Record<
   string,
@@ -95,7 +96,8 @@ export interface QueryMethods
     ColumnInfoMethods,
     Where,
     Clear,
-    Having {
+    Having,
+    Window {
   then: Then<unknown>;
 }
 
@@ -435,4 +437,5 @@ applyMixins(QueryMethods, [
   Where,
   Clear,
   Having,
+  Window,
 ]);

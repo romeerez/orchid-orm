@@ -80,7 +80,7 @@ export const aggregate1FunctionNames = {
   xmlAgg: 'xmlagg',
 } as const;
 
-type SelectAgg<
+export type SelectAgg<
   T extends Query,
   Func extends string,
   As extends string | undefined,
@@ -116,25 +116,6 @@ const buildAggregateSelectItem = <T extends Query>(
         : undefined,
     },
   };
-};
-
-const selectWindowFunction = <
-  T extends Query,
-  Func extends string,
-  As extends string | undefined,
-  Value extends ColumnType,
->(
-  q: T,
-  functionName: Func,
-  options: WindowFunctionOptions<T, As>,
-): SelectAgg<T, Func, As, Value> => {
-  return pushQueryValue(q, 'select', {
-    function: functionName,
-    options: {
-      as: options.as,
-      over: options,
-    },
-  }) as unknown as SelectAgg<T, Func, As, Value>;
 };
 
 const parseIntColumn = new IntegerColumn().parse((input) =>
@@ -885,75 +866,5 @@ export class Aggregate {
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'string_agg', As, NullableColumn<StringColumn>> {
     return this._selectAgg('string_agg', [arg, delimiter], options);
-  }
-
-  rowNumber<T extends Query, As extends string | undefined = undefined>(
-    this: T,
-    options: WindowFunctionOptions<T, As>,
-  ): SelectAgg<T, 'row_number', As, IntegerColumn> {
-    return this.clone()._rowNumber(options);
-  }
-
-  _rowNumber<T extends Query, As extends string | undefined = undefined>(
-    this: T,
-    options: WindowFunctionOptions<T, As>,
-  ): SelectAgg<T, 'row_number', As, IntegerColumn> {
-    return selectWindowFunction(this, 'row_number', options);
-  }
-
-  rank<T extends Query, As extends string | undefined = undefined>(
-    this: T,
-    options: WindowFunctionOptions<T, As>,
-  ): SelectAgg<T, 'rank', As, IntegerColumn> {
-    return this.clone()._rank(options);
-  }
-
-  _rank<T extends Query, As extends string | undefined = undefined>(
-    this: T,
-    options: WindowFunctionOptions<T, As>,
-  ): SelectAgg<T, 'rank', As, IntegerColumn> {
-    return selectWindowFunction(this, 'rank', options);
-  }
-
-  denseRank<T extends Query, As extends string | undefined = undefined>(
-    this: T,
-    options: WindowFunctionOptions<T, As>,
-  ): SelectAgg<T, 'dense_rank', As, IntegerColumn> {
-    return this.clone()._denseRank(options);
-  }
-
-  _denseRank<T extends Query, As extends string | undefined = undefined>(
-    this: T,
-    options: WindowFunctionOptions<T, As>,
-  ): SelectAgg<T, 'dense_rank', As, IntegerColumn> {
-    return selectWindowFunction(this, 'dense_rank', options);
-  }
-
-  percentRank<T extends Query, As extends string | undefined = undefined>(
-    this: T,
-    options: WindowFunctionOptions<T, As>,
-  ): SelectAgg<T, 'percent_rank', As, IntegerColumn> {
-    return this.clone()._percentRank(options);
-  }
-
-  _percentRank<T extends Query, As extends string | undefined = undefined>(
-    this: T,
-    options: WindowFunctionOptions<T, As>,
-  ): SelectAgg<T, 'percent_rank', As, IntegerColumn> {
-    return selectWindowFunction(this, 'percent_rank', options);
-  }
-
-  cumeDust<T extends Query, As extends string | undefined = undefined>(
-    this: T,
-    options: WindowFunctionOptions<T, As>,
-  ): SelectAgg<T, 'cume_dust', As, IntegerColumn> {
-    return this.clone()._cumeDust(options);
-  }
-
-  _cumeDust<T extends Query, As extends string | undefined = undefined>(
-    this: T,
-    options: WindowFunctionOptions<T, As>,
-  ): SelectAgg<T, 'cume_dust', As, IntegerColumn> {
-    return selectWindowFunction(this, 'cume_dust', options);
   }
 }
