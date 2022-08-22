@@ -1,5 +1,4 @@
 import { RawExpression } from './common';
-import { Query } from './query';
 import { QueryData } from './sql';
 
 export type GetTypesOrRaw<T extends [...unknown[]]> = T extends [
