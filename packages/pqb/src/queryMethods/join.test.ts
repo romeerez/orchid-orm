@@ -1,5 +1,6 @@
 import { expectQueryNotMutated, expectSql, Message, User } from '../test-utils';
 import { raw } from '../common';
+import { OnQueryBuilder } from './join';
 
 describe.each`
   method              | sql
@@ -163,197 +164,411 @@ describe.each`
   it('should accept callback to specify custom conditions', () => {});
 });
 
-test('on, .orOn', () => {
-  const q = User.all();
-
-  const expectedSql = `
-    SELECT "user".* FROM "user"
-    JOIN "message"
-      ON "message"."authorId" = "user"."id"
-      OR "message"."text" = "user"."name"
-  `;
-
-  expectSql(
-    q
-      .join(Message, (q) =>
-        q.on('message.authorId', 'user.id').orOn('message.text', 'user.name'),
-      )
-      .toSql(),
-    expectedSql,
-  );
-
-  expectSql(
-    q
-      .join(Message, (q) =>
-        q
-          .on('message.authorId', '=', 'user.id')
-          .orOn('message.text', '=', 'user.name'),
-      )
-      .toSql(),
-    expectedSql,
-  );
-
-  expectQueryNotMutated(q);
-});
-
-describe.each`
-  method         | sql         | or
-  ${'onIn'}      | ${'IN'}     | ${false}
-  ${'orOnIn'}    | ${'IN'}     | ${true}
-  ${'onNotIn'}   | ${'NOT IN'} | ${false}
-  ${'orOnNotIn'} | ${'NOT IN'} | ${true}
-`('$method', ({ method, sql, or }) => {
-  const onMethod = method as 'onIn';
-  const orSql = or ? `"message"."authorId" = "user"."id" OR ` : '';
-
-  it('should handle values', () => {
+describe('join callback with query builder', () => {
+  it('should have .on and .onOr properly working', () => {
     const q = User.all();
 
-    const query = q.join(Message, (q) =>
-      (or ? q.on('authorId', 'id') : q)[onMethod](
-        ['id', 'text'],
-        [
-          [1, 'a'],
-          [2, 'b'],
-        ],
-      ),
-    );
-    expectSql(
-      query.toSql(),
-      `
+    const expectedSql = `
       SELECT "user".* FROM "user"
       JOIN "message"
-        ON ${orSql}("message"."id", "message"."text") ${sql} (($1, $2), ($3, $4))
-      `,
-      [1, 'a', 2, 'b'],
+        ON "message"."authorId" = "user"."id"
+        OR "message"."text" = "user"."name"
+    `;
+
+    expectSql(
+      q
+        .join(Message, (q) =>
+          q.on('message.authorId', 'user.id').orOn('message.text', 'user.name'),
+        )
+        .toSql(),
+      expectedSql,
+    );
+
+    expectSql(
+      q
+        .join(Message, (q) =>
+          q
+            .on('message.authorId', '=', 'user.id')
+            .orOn('message.text', '=', 'user.name'),
+        )
+        .toSql(),
+      expectedSql,
     );
 
     expectQueryNotMutated(q);
   });
-});
 
-describe.each`
-  method           | not      | or
-  ${'onNull'}      | ${false} | ${false}
-  ${'orOnNull'}    | ${false} | ${true}
-  ${'onNotNull'}   | ${true}  | ${false}
-  ${'orOnNotNull'} | ${true}  | ${true}
-`('$method', ({ method, not, or }) => {
-  const onMethod = method as 'onNull';
-  const orSql = or ? `"message"."authorId" = "user"."id" OR ` : '';
-  const notSql = not ? 'NOT ' : '';
+  describe('where methods', () => {
+    describe('and', () => {
+      let query: OnQueryBuilder;
+      let where: OnQueryBuilder['where'];
+      let _where: OnQueryBuilder['_where'];
+      User.join(Message, (q) => {
+        query = q;
+        where = q.where;
+        _where = q._where;
+        return q;
+      });
+      beforeEach(() => {
+        query.where = jest.fn();
+        query._where = jest.fn();
+      });
+      afterAll(() => {
+        query.where = where;
+        query._where = _where;
+      });
 
-  it('should handle values', () => {
-    const q = User.all();
+      it('is alias for where', () => {
+        query.and({});
+        expect(query.where).toBeCalled();
+      });
 
-    const query = q.join(Message, (q) =>
-      (or ? q.on('authorId', 'id') : q)[onMethod]('text'),
-    );
-    expectSql(
-      query.toSql(),
-      `
-        SELECT "user".* FROM "user"
-        JOIN "message" ON ${orSql}${notSql}"message"."text" IS NULL
-      `,
-    );
+      it('has modifier', () => {
+        query._and({});
+        expect(query._where).toBeCalled();
+      });
+    });
 
-    expectQueryNotMutated(q);
-  });
-});
+    describe('andNot', () => {
+      let query: OnQueryBuilder;
+      let whereNot: OnQueryBuilder['whereNot'];
+      let _whereNot: OnQueryBuilder['_whereNot'];
+      User.join(Message, (q) => {
+        query = q;
+        whereNot = q.whereNot;
+        _whereNot = q._whereNot;
+        return q;
+      });
+      beforeEach(() => {
+        query.whereNot = jest.fn();
+        query._whereNot = jest.fn();
+      });
+      afterAll(() => {
+        query.whereNot = whereNot;
+        query._whereNot = _whereNot;
+      });
 
-describe.each`
-  method             | not      | or
-  ${'onExists'}      | ${false} | ${false}
-  ${'orOnExists'}    | ${false} | ${true}
-  ${'onNotExists'}   | ${true}  | ${false}
-  ${'orOnNotExists'} | ${true}  | ${true}
-`('$method', ({ method, not, or }) => {
-  const onMethod = method as 'onExists';
-  const orSql = or ? `"message"."authorId" = "user"."id" OR ` : '';
-  const notSql = not ? 'NOT ' : '';
+      it('is alias for where', () => {
+        query.andNot({});
+        expect(query.whereNot).toBeCalled();
+      });
 
-  it('should handle values', () => {
-    const q = User.all();
+      it('has modifier', () => {
+        query._andNot({});
+        expect(query._whereNot).toBeCalled();
+      });
+    });
 
-    const query = q.join(Message, (q) =>
-      (or ? q.on('authorId', 'id') : q)[onMethod](User),
-    );
-    expectSql(
-      query.toSql(),
-      `
-        SELECT "user".* FROM "user"
-        JOIN "message" ON ${orSql}${notSql}EXISTS (SELECT 1 FROM "user" LIMIT $1)
-      `,
-      [1],
-    );
+    const buildSql = (cb: (q: OnQueryBuilder) => OnQueryBuilder) => {
+      return User.join(Message, cb).toSql();
+    };
 
-    expectQueryNotMutated(q);
-  });
-});
+    const startSql = `SELECT "user".* FROM "user" JOIN "message" ON`;
 
-describe.each`
-  method              | not      | or
-  ${'onBetween'}      | ${false} | ${false}
-  ${'orOnBetween'}    | ${false} | ${true}
-  ${'onNotBetween'}   | ${true}  | ${false}
-  ${'orOnNotBetween'} | ${true}  | ${true}
-`('$method', ({ method, not, or }) => {
-  const onMethod = method as 'onBetween';
-  const orSql = or ? `"message"."authorId" = "user"."id" OR ` : '';
-  const notSql = not ? 'NOT ' : '';
+    describe('where', () => {
+      it('should handle null value', () => {
+        expectSql(
+          buildSql((q) => q.where({ id: 1, 'user.picture': null })),
+          `
+            ${startSql} "user"."id" = $1 AND "user"."picture" IS NULL
+          `,
+          [1],
+        );
+      });
 
-  it('should handle values', () => {
-    const q = User.all();
+      it('should accept sub query', () => {
+        expectSql(
+          buildSql((q) =>
+            q.where({ id: 1 }, q.where({ id: 2 }).or({ id: 3, name: 'n' })),
+          ),
+          `
+            ${startSql} "user"."id" = $1 AND (
+              "user"."id" = $2 OR "user"."id" = $3 AND "user"."name" = $4
+            )
+          `,
+          [1, 2, 3, 'n'],
+        );
+      });
 
-    const query = q.join(Message, (q) =>
-      (or ? q.on('authorId', 'id') : q)[onMethod]('id', [1, 10]),
-    );
-    expectSql(
-      query.toSql(),
-      `
-        SELECT "user".* FROM "user"
-        JOIN "message" ON ${orSql}${notSql}"message"."id" BETWEEN $1 AND $2
-      `,
-      [1, 10],
-    );
+      it('should handle condition with operator', () => {
+        expectSql(
+          buildSql((q) => q.where({ age: { gt: 20 } })),
+          `
+            ${startSql} "user"."age" > $1
+          `,
+          [20],
+        );
+      });
 
-    expectQueryNotMutated(q);
-  });
-});
+      it('should handle condition with operator and sub query', () => {
+        expectSql(
+          buildSql((q) => q.where({ id: { in: User.select('id') } })),
+          `
+            ${startSql}
+            "user"."id" IN (SELECT "user"."id" FROM "user")
+          `,
+        );
+      });
 
-describe.each`
-  method                     | not      | or
-  ${'onJsonPathEquals'}      | ${false} | ${false}
-  ${'orOnJsonPathEquals'}    | ${false} | ${true}
-  ${'onNotJsonPathEquals'}   | ${true}  | ${false}
-  ${'orOnNotJsonPathEquals'} | ${true}  | ${true}
-`('$method', ({ method, not, or }) => {
-  const onMethod = method as 'onJsonPathEquals';
-  const orSql = or ? `"message"."authorId" = "user"."id" OR ` : '';
-  const notSql = not ? 'NOT ' : '';
+      it('should handle condition with operator and raw', () => {
+        expectSql(
+          buildSql((q) => q.where({ id: { in: raw('(1, 2, 3)') } })),
+          `
+            ${startSql}
+            "user"."id" IN (1, 2, 3)
+          `,
+        );
+      });
 
-  it('should handle values', () => {
-    const q = User.all();
+      it('should accept raw sql', () => {
+        expectSql(
+          buildSql((q) => q.where({ id: raw('1 + 2') })),
+          `
+            ${startSql} "user"."id" = 1 + 2
+          `,
+        );
+      });
+    });
 
-    const query = q.join(Message, (q) =>
-      (or ? q.on('authorId', 'id') : q)[onMethod](
-        'meta',
-        '$.leftKey',
-        'data',
-        '$.rightKey',
-      ),
-    );
-    expectSql(
-      query.toSql(),
-      `
-        SELECT "user".* FROM "user"
-        JOIN "message" ON ${orSql}${notSql}
-          jsonb_path_query_first("message"."meta", $1) = 
-          jsonb_path_query_first("user"."data", $2)
-      `,
-      ['$.leftKey', '$.rightKey'],
-    );
+    describe('whereNot', () => {
+      it('should handle null value', () => {
+        expectSql(
+          buildSql((q) => q.whereNot({ id: 1, picture: null })),
+          `
+            ${startSql}
+            NOT "user"."id" = $1
+              AND NOT "user"."picture" IS NULL
+          `,
+          [1],
+        );
+      });
 
-    expectQueryNotMutated(q);
+      it('should accept sub query', () => {
+        expectSql(
+          buildSql((q) =>
+            q.whereNot({ id: 1 }, q.where({ id: 2 }).or({ id: 3, name: 'n' })),
+          ),
+          `
+            ${startSql}
+            NOT "user"."id" = $1 AND NOT (
+              "user"."id" = $2 OR "user"."id" = $3 AND "user"."name" = $4
+            )
+          `,
+          [1, 2, 3, 'n'],
+        );
+      });
+
+      it('should handle condition with operator', () => {
+        expectSql(
+          buildSql((q) => q.whereNot({ age: { gt: 20 } })),
+          `
+            ${startSql}
+            NOT "user"."age" > $1
+          `,
+          [20],
+        );
+      });
+
+      it('should handle condition with operator and sub query', () => {
+        expectSql(
+          buildSql((q) => q.whereNot({ id: { in: User.select('id') } })),
+          `
+            ${startSql}
+            NOT "user"."id" IN (SELECT "user"."id" FROM "user")
+          `,
+        );
+      });
+
+      it('should handle condition with operator and raw', () => {
+        expectSql(
+          buildSql((q) => q.whereNot({ id: { in: raw('(1, 2, 3)') } })),
+          `
+            ${startSql}
+            NOT "user"."id" IN (1, 2, 3)
+          `,
+        );
+      });
+
+      it('should accept raw sql', () => {
+        expectSql(
+          buildSql((q) => q.whereNot({ id: raw('1 + 2') })),
+          `
+            ${startSql} NOT "user"."id" = 1 + 2
+          `,
+        );
+      });
+    });
+
+    describe('or', () => {
+      it('should join conditions with or', () => {
+        expectSql(
+          buildSql((q) => q.or({ id: 1 }, { name: 'ko' })),
+          `
+            ${startSql}
+            "user"."id" = $1 OR "user"."name" = $2
+          `,
+          [1, 'ko'],
+        );
+      });
+
+      it('should handle sub queries', () => {
+        expectSql(
+          buildSql((q) =>
+            q.or({ id: 1 }, User.where({ id: 2 }).and({ name: 'n' })),
+          ),
+          `
+            ${startSql}
+            "user"."id" = $1 OR ("user"."id" = $2 AND "user"."name" = $3)
+          `,
+          [1, 2, 'n'],
+        );
+      });
+
+      it('should accept raw sql', () => {
+        expectSql(
+          buildSql((q) => q.or({ id: raw('1 + 2') }, { name: raw('2 + 3') })),
+          `
+            ${startSql}
+            "user"."id" = 1 + 2 OR "user"."name" = 2 + 3
+          `,
+        );
+      });
+    });
+
+    describe('orNot', () => {
+      it('should join conditions with or', () => {
+        expectSql(
+          buildSql((q) => q.orNot({ id: 1 }, { name: 'ko' })),
+          `
+            ${startSql}
+            NOT "user"."id" = $1 OR NOT "user"."name" = $2
+          `,
+          [1, 'ko'],
+        );
+      });
+
+      it('should handle sub queries', () => {
+        expectSql(
+          buildSql((q) =>
+            q.orNot({ id: 1 }, User.where({ id: 2 }).and({ name: 'n' })),
+          ),
+          `
+            ${startSql}
+            NOT "user"."id" = $1 OR NOT ("user"."id" = $2 AND "user"."name" = $3)
+          `,
+          [1, 2, 'n'],
+        );
+      });
+
+      it('should accept raw sql', () => {
+        expectSql(
+          buildSql((q) =>
+            q.orNot({ id: raw('1 + 2') }, { name: raw('2 + 3') }),
+          ),
+          `
+            ${startSql}
+            NOT "user"."id" = 1 + 2 OR NOT "user"."name" = 2 + 3
+          `,
+        );
+      });
+    });
+
+    describe('whereExists', () => {
+      it('should handle sub query', () => {
+        expectSql(
+          buildSql((q) => q.whereExists(User.all())),
+          `
+            ${startSql}
+            EXISTS (SELECT 1 FROM "user" LIMIT $1)
+          `,
+          [1],
+        );
+      });
+
+      it('should handle raw query', () => {
+        expectSql(
+          buildSql((q) => q.whereExists(raw(`SELECT 1 FROM "user"`))),
+          `
+            ${startSql}
+            EXISTS (SELECT 1 FROM "user")
+          `,
+        );
+      });
+    });
+
+    describe('orWhereExists', () => {
+      it('should handle sub query', () => {
+        expectSql(
+          buildSql((q) => q.where({ id: 1 }).orWhereExists(User.all())),
+          `
+            ${startSql}
+            "user"."id" = $1 OR EXISTS (SELECT 1 FROM "user" LIMIT $2)
+          `,
+          [1, 1],
+        );
+      });
+
+      it('should handle raw query', () => {
+        expectSql(
+          buildSql((q) =>
+            q.where({ id: 1 }).orWhereExists(raw(`SELECT 1 FROM "user"`)),
+          ),
+          `
+            ${startSql}
+            "user"."id" = $1 OR EXISTS (SELECT 1 FROM "user")
+          `,
+          [1],
+        );
+      });
+    });
+
+    describe('whereNotExists', () => {
+      it('should handle sub query', () => {
+        expectSql(
+          buildSql((q) => q.whereNotExists(User.all())),
+          `
+            ${startSql}
+            NOT EXISTS (SELECT 1 FROM "user" LIMIT $1)
+          `,
+          [1],
+        );
+      });
+
+      it('should handle raw query', () => {
+        expectSql(
+          buildSql((q) => q.whereNotExists(raw(`SELECT 1 FROM "user"`))),
+          `
+            ${startSql}
+            NOT EXISTS (SELECT 1 FROM "user")
+          `,
+        );
+      });
+    });
+
+    describe('orWhereNotExists', () => {
+      it('should handle sub query', () => {
+        expectSql(
+          buildSql((q) => q.where({ id: 1 }).orWhereNotExists(User.all())),
+          `
+            ${startSql}
+            "user"."id" = $1 OR NOT EXISTS (SELECT 1 FROM "user" LIMIT $2)
+          `,
+          [1, 1],
+        );
+      });
+
+      it('should handle raw query', () => {
+        expectSql(
+          buildSql((q) =>
+            q.where({ id: 1 }).orWhereNotExists(raw(`SELECT 1 FROM "user"`)),
+          ),
+          `
+            ${startSql}
+            "user"."id" = $1 OR NOT EXISTS (SELECT 1 FROM "user")
+          `,
+          [1],
+        );
+      });
+    });
   });
 });

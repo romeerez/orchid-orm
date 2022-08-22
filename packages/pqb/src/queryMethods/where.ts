@@ -3,14 +3,14 @@ import { ColumnOperators, WhereItem } from '../sql';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { RawExpression } from '../common';
 
-export type WhereArg<T extends Query> =
+export type WhereArg<T extends Pick<Query, 'selectable'>> =
   | {
       [K in keyof T['selectable']]?:
         | T['selectable'][K]['column']['type']
         | ColumnOperators<T['selectable'], K>
         | RawExpression;
     }
-  | Query
+  | QueryBase
   | RawExpression;
 
 export type WhereInColumn<T extends Pick<Query, 'selectable'>> =

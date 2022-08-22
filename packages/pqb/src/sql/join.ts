@@ -4,12 +4,10 @@ import {
   DeleteQueryData,
   InsertQueryData,
   JoinItem,
-  QueryData,
   SelectQueryData,
 } from './types';
 import { Query, QueryWithData, QueryWithTable } from '../query';
 import { whereToSql } from './where';
-import { ColumnsShape } from '../columnSchema';
 
 type ItemOf3Or4Length =
   | [
@@ -26,7 +24,6 @@ type ItemOf3Or4Length =
 
 export const processJoinItem = (
   model: Query,
-  query: QueryData,
   values: unknown[],
   { args }: JoinItem,
   quotedAs?: string,
@@ -76,13 +73,12 @@ export const processJoinItem = (
           target,
         );
       } else if (arg.query.query) {
-        const shape = query.withShapes?.[first] as ColumnsShape;
         const onConditions = whereToSql(
-          { shape },
+          model,
           arg.query.query,
           values,
-          target,
           quotedAs,
+          target,
         );
         if (onConditions) conditions = onConditions;
       }
@@ -117,11 +113,11 @@ export const processJoinItem = (
       conditions = getObjectOrRawConditions(arg.data, values, quotedAs, joinAs);
     } else if (arg.query.query) {
       const onConditions = whereToSql(
-        joinTarget,
+        model,
         arg.query.query,
         values,
-        joinAs,
         quotedAs,
+        joinAs,
       );
       if (onConditions) conditions = onConditions;
     }
@@ -195,7 +191,6 @@ export const pushJoinSql = (
   query.join?.forEach((item) => {
     const { target, conditions } = processJoinItem(
       model,
-      query,
       values,
       item,
       quotedAs,

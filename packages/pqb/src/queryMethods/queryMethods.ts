@@ -38,7 +38,7 @@ import {
   thenValueOrThrow,
   thenVoid,
 } from './then';
-import { ColumnShapeOutput, ColumnType, NumberColumn } from '../columnSchema';
+import { ColumnType, NumberColumn } from '../columnSchema';
 import { Aggregate } from './aggregate';
 import { addParserForSelectItem, Select } from './select';
 import { From } from './from';
@@ -52,7 +52,7 @@ import { Delete } from './delete';
 import { Transaction } from './transaction';
 import { For } from './for';
 import { ColumnInfoMethods } from './columnInfo';
-import { Where } from './where';
+import { Where, WhereArg } from './where';
 import { Clear } from './clear';
 import { Having } from './having';
 import { Window } from './window';
@@ -271,11 +271,11 @@ export class QueryMethods {
     this: T,
     ...args: GetTypesOrRaw<T['schema']['primaryTypes']>
   ): SetQueryReturnsOneOrUndefined<T> {
-    const conditions: Partial<ColumnShapeOutput<T['shape']>> = {};
+    const conditions: Partial<T['type']> = {};
     this.schema.primaryKeys.forEach((key: string, i: number) => {
-      conditions[key as keyof ColumnShapeOutput<T['shape']>] = args[i];
+      conditions[key as keyof T['type']] = args[i];
     });
-    return this._where(conditions)._take();
+    return this._where(conditions as WhereArg<T>)._take();
   }
 
   as<T extends Query, TableAlias extends string>(
