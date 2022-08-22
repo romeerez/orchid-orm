@@ -33,7 +33,7 @@ export type WhereInValues<
       | Query
       | RawExpression;
 
-type WhereInArg<T extends Query> = {
+export type WhereInArg<T extends Pick<Query, 'selectable'>> = {
   [K in keyof T['selectable']]?:
     | T['selectable'][K]['column']['type'][]
     | Query

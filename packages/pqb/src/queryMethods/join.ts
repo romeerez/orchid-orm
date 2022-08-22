@@ -9,7 +9,17 @@ import { QueryData } from '../sql';
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
 import { RawExpression, StringKey } from '../common';
 import { getClonedQueryData } from '../utils';
-import { addOr, addOrNot, addWhere, addWhereNot, WhereArg } from './where';
+import {
+  addOr,
+  addOrNot,
+  addWhere,
+  addWhereNot,
+  applyIn,
+  WhereArg,
+  WhereInArg,
+  WhereInColumn,
+  WhereInValues,
+} from './where';
 
 type WithSelectable<
   T extends Query,
@@ -314,7 +324,7 @@ export class OnQueryBuilder<
       cloned.__model = this;
     }
 
-    cloned.query = getClonedQueryData<Query>(this.query);
+    cloned.query = getClonedQueryData(this.query);
 
     return cloned as unknown as T & { query: QueryData };
   }
@@ -393,6 +403,122 @@ export class OnQueryBuilder<
 
   _orNot<T extends this>(this: T, ...args: WhereArg<T>[]): T {
     return addOrNot(this, args);
+  }
+
+  whereIn<T extends this, Column extends WhereInColumn<T>>(
+    this: T,
+    column: Column,
+    values: WhereInValues<T, Column>,
+  ): T;
+  whereIn<T extends this>(this: T, arg: WhereInArg<T>): T;
+  whereIn<T extends this>(
+    this: T,
+    arg: unknown | unknown[],
+    values?: unknown[] | unknown[][] | Query | RawExpression,
+  ): T {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.clone()._whereIn(arg as any, values as any);
+  }
+
+  _whereIn<T extends this, Column extends WhereInColumn<T>>(
+    this: T,
+    column: Column,
+    values: WhereInValues<T, Column>,
+  ): T;
+  _whereIn<T extends this>(this: T, arg: WhereInArg<T>): T;
+  _whereIn<T extends this>(
+    this: T,
+    arg: unknown,
+    values?: unknown[] | unknown[][] | Query | RawExpression,
+  ): T {
+    return applyIn(this, true, arg, values);
+  }
+
+  orWhereIn<T extends this, Column extends WhereInColumn<T>>(
+    this: T,
+    column: Column,
+    values: WhereInValues<T, Column>,
+  ): T;
+  orWhereIn<T extends this>(this: T, arg: WhereInArg<T>): T;
+  orWhereIn<T extends this>(
+    this: T,
+    arg: unknown | unknown[],
+    values?: unknown[] | unknown[][] | Query | RawExpression,
+  ): T {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.clone()._orWhereIn(arg as any, values as any);
+  }
+
+  _orWhereIn<T extends this, Column extends WhereInColumn<T>>(
+    this: T,
+    column: Column,
+    values: WhereInValues<T, Column>,
+  ): T;
+  _orWhereIn<T extends this>(this: T, arg: WhereInArg<T>): T;
+  _orWhereIn<T extends this>(
+    this: T,
+    arg: unknown,
+    values?: unknown[] | unknown[][] | Query | RawExpression,
+  ): T {
+    return applyIn(this, false, arg, values);
+  }
+
+  whereNotIn<T extends this, Column extends WhereInColumn<T>>(
+    this: T,
+    column: Column,
+    values: WhereInValues<T, Column>,
+  ): T;
+  whereNotIn<T extends this>(this: T, arg: WhereInArg<T>): T;
+  whereNotIn<T extends this>(
+    this: T,
+    arg: unknown | unknown[],
+    values?: unknown[] | unknown[][] | Query | RawExpression,
+  ): T {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.clone()._whereNotIn(arg as any, values as any);
+  }
+
+  _whereNotIn<T extends this, Column extends WhereInColumn<T>>(
+    this: T,
+    column: Column,
+    values: WhereInValues<T, Column>,
+  ): T;
+  _whereNotIn<T extends this>(this: T, arg: WhereInArg<T>): T;
+  _whereNotIn<T extends this>(
+    this: T,
+    arg: unknown,
+    values?: unknown[] | unknown[][] | Query | RawExpression,
+  ): T {
+    return applyIn(this, true, arg, values, true);
+  }
+
+  orWhereNotIn<T extends this, Column extends WhereInColumn<T>>(
+    this: T,
+    column: Column,
+    values: WhereInValues<T, Column>,
+  ): T;
+  orWhereNotIn<T extends this>(this: T, arg: WhereInArg<T>): T;
+  orWhereNotIn<T extends this>(
+    this: T,
+    arg: unknown | unknown[],
+    values?: unknown[] | unknown[][] | Query | RawExpression,
+  ): T {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.clone()._orWhereNotIn(arg as any, values as any);
+  }
+
+  _orWhereNotIn<T extends this, Column extends WhereInColumn<T>>(
+    this: T,
+    column: Column,
+    values: WhereInValues<T, Column>,
+  ): T;
+  _orWhereNotIn<T extends this>(this: T, arg: WhereInArg<T>): T;
+  _orWhereNotIn<T extends this>(
+    this: T,
+    arg: unknown,
+    values?: unknown[] | unknown[][] | Query | RawExpression,
+  ): T {
+    return applyIn(this, false, arg, values, true);
   }
 
   whereExists<T extends this>(this: T, query: Query | RawExpression): T {

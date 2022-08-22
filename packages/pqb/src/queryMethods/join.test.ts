@@ -473,6 +473,520 @@ describe('join callback with query builder', () => {
       });
     });
 
+    describe('whereIn', () => {
+      it('should handle (column, array)', () => {
+        expectSql(
+          buildSql((q) => q.whereIn('id', [1, 2, 3])),
+          `
+            ${startSql}
+            "user"."id" IN ($1, $2, $3)
+          `,
+          [1, 2, 3],
+        );
+      });
+
+      it('should handle object of columns and arrays', () => {
+        expectSql(
+          buildSql((q) => q.whereIn({ id: [1, 2, 3], name: ['a', 'b', 'c'] })),
+          `
+            ${startSql}
+            "user"."id" IN ($1, $2, $3)
+              AND "user"."name" IN ($4, $5, $6)
+          `,
+          [1, 2, 3, 'a', 'b', 'c'],
+        );
+      });
+
+      it('should handle raw query', () => {
+        expectSql(
+          buildSql((q) => q.whereIn('id', raw('(1, 2, 3)'))),
+          `
+            ${startSql}
+            "user"."id" IN (1, 2, 3)
+          `,
+        );
+
+        expectSql(
+          buildSql((q) =>
+            q.whereIn({ id: raw('(1, 2, 3)'), name: raw(`('a', 'b', 'c')`) }),
+          ),
+          `
+            ${startSql}
+            "user"."id" IN (1, 2, 3)
+              AND "user"."name" IN ('a', 'b', 'c')
+          `,
+        );
+      });
+
+      it('should handle sub query', () => {
+        expectSql(
+          buildSql((q) => q.whereIn('id', User.select('id'))),
+          `
+            ${startSql}
+            "user"."id" IN (SELECT "user"."id" FROM "user")
+          `,
+        );
+
+        expectSql(
+          buildSql((q) =>
+            q.whereIn({ id: User.select('id'), name: User.select('name') }),
+          ),
+          `
+            ${startSql}
+            "user"."id" IN (SELECT "user"."id" FROM "user")
+              AND "user"."name" IN (SELECT "user"."name" FROM "user")
+          `,
+        );
+      });
+
+      describe('tuple', () => {
+        it('should handle values', () => {
+          expectSql(
+            buildSql((q) =>
+              q.whereIn(
+                ['id', 'name'],
+                [
+                  [1, 'a'],
+                  [2, 'b'],
+                ],
+              ),
+            ),
+            `
+              ${startSql}
+              ("user"."id", "user"."name") IN (($1, $2), ($3, $4))
+            `,
+            [1, 'a', 2, 'b'],
+          );
+        });
+
+        it('should handle raw query', () => {
+          expectSql(
+            buildSql((q) =>
+              q.whereIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`)),
+            ),
+            `
+              ${startSql}
+              ("user"."id", "user"."name") IN ((1, 'a'), (2, 'b'))
+            `,
+          );
+        });
+
+        it('should handle sub query', () => {
+          expectSql(
+            buildSql((q) =>
+              q.whereIn(['id', 'name'], User.select('id', 'name')),
+            ),
+            `
+              ${startSql}
+              ("user"."id", "user"."name")
+                 IN (SELECT "user"."id", "user"."name" FROM "user")
+            `,
+          );
+        });
+      });
+    });
+
+    describe('orWhereIn', () => {
+      it('should handle (column, array)', () => {
+        expectSql(
+          buildSql((q) => q.where({ id: 1 }).orWhereIn('id', [1, 2, 3])),
+          `
+            ${startSql}
+            "user"."id" = $1 OR "user"."id" IN ($2, $3, $4)
+          `,
+          [1, 1, 2, 3],
+        );
+      });
+
+      it('should handle object of columns and arrays', () => {
+        expectSql(
+          buildSql((q) =>
+            q
+              .where({ id: 1 })
+              .orWhereIn({ id: [1, 2, 3], name: ['a', 'b', 'c'] }),
+          ),
+          `
+            ${startSql}
+            "user"."id" = $1
+              OR "user"."id" IN ($2, $3, $4) AND "user"."name" IN ($5, $6, $7)
+          `,
+          [1, 1, 2, 3, 'a', 'b', 'c'],
+        );
+      });
+
+      it('should handle raw query', () => {
+        expectSql(
+          buildSql((q) => q.where({ id: 1 }).orWhereIn('id', raw('(1, 2, 3)'))),
+          `
+            ${startSql}
+            "user"."id" = $1 OR "user"."id" IN (1, 2, 3)
+          `,
+          [1],
+        );
+
+        expectSql(
+          buildSql((q) =>
+            q.where({ id: 1 }).orWhereIn({
+              id: raw('(1, 2, 3)'),
+              name: raw(`('a', 'b', 'c')`),
+            }),
+          ),
+          `
+            ${startSql}
+            "user"."id" = $1
+               OR "user"."id" IN (1, 2, 3)
+              AND "user"."name" IN ('a', 'b', 'c')
+          `,
+          [1],
+        );
+      });
+
+      it('should handle sub query', () => {
+        expectSql(
+          buildSql((q) =>
+            q.where({ id: 1 }).orWhereIn('id', User.select('id')),
+          ),
+          `
+            ${startSql}
+            "user"."id" = $1
+               OR "user"."id" IN (SELECT "user"."id" FROM "user")
+          `,
+          [1],
+        );
+
+        expectSql(
+          buildSql((q) =>
+            q
+              .where({ id: 1 })
+              .orWhereIn({ id: User.select('id'), name: User.select('name') }),
+          ),
+          `
+            ${startSql}
+            "user"."id" = $1
+               OR "user"."id" IN (SELECT "user"."id" FROM "user")
+              AND "user"."name" IN (SELECT "user"."name" FROM "user")
+          `,
+          [1],
+        );
+      });
+
+      describe('tuple', () => {
+        it('should handle values', () => {
+          expectSql(
+            buildSql((q) =>
+              q.where({ id: 1 }).orWhereIn(
+                ['id', 'name'],
+                [
+                  [1, 'a'],
+                  [2, 'b'],
+                ],
+              ),
+            ),
+            `
+              ${startSql}
+              "user"."id" = $1
+                 OR ("user"."id", "user"."name") IN (($2, $3), ($4, $5))
+            `,
+            [1, 1, 'a', 2, 'b'],
+          );
+        });
+
+        it('should handle raw query', () => {
+          expectSql(
+            buildSql((q) =>
+              q
+                .where({ id: 1 })
+                .orWhereIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`)),
+            ),
+            `
+              ${startSql}
+              "user"."id" = $1
+                 OR ("user"."id", "user"."name") IN ((1, 'a'), (2, 'b'))
+            `,
+            [1],
+          );
+        });
+
+        it('should handle sub query', () => {
+          expectSql(
+            buildSql((q) =>
+              q
+                .where({ id: 1 })
+                .orWhereIn(['id', 'name'], User.select('id', 'name')),
+            ),
+            `
+              ${startSql}
+              "user"."id" = $1
+                 OR ("user"."id", "user"."name")
+                 IN (SELECT "user"."id", "user"."name" FROM "user")
+            `,
+            [1],
+          );
+        });
+      });
+    });
+
+    describe('whereNotIn', () => {
+      it('should handle (column, array)', () => {
+        expectSql(
+          buildSql((q) => q.whereNotIn('id', [1, 2, 3])),
+          `
+            ${startSql}
+            "user"."id" NOT IN ($1, $2, $3)
+          `,
+          [1, 2, 3],
+        );
+      });
+
+      it('should handle object of columns and arrays', () => {
+        expectSql(
+          buildSql((q) =>
+            q.whereNotIn({ id: [1, 2, 3], name: ['a', 'b', 'c'] }),
+          ),
+          `
+            ${startSql}
+            "user"."id" NOT IN ($1, $2, $3)
+              AND "user"."name" NOT IN ($4, $5, $6)
+          `,
+          [1, 2, 3, 'a', 'b', 'c'],
+        );
+      });
+
+      it('should handle raw query', () => {
+        expectSql(
+          buildSql((q) => q.whereNotIn('id', raw('(1, 2, 3)'))),
+          `
+            ${startSql}
+            "user"."id" NOT IN (1, 2, 3)
+          `,
+        );
+
+        expectSql(
+          buildSql((q) =>
+            q.whereNotIn({
+              id: raw('(1, 2, 3)'),
+              name: raw(`('a', 'b', 'c')`),
+            }),
+          ),
+          `
+            ${startSql}
+            "user"."id" NOT IN (1, 2, 3)
+              AND "user"."name" NOT IN ('a', 'b', 'c')
+          `,
+        );
+      });
+
+      it('should handle sub query', () => {
+        expectSql(
+          buildSql((q) => q.whereNotIn('id', User.select('id'))),
+          `
+            ${startSql}
+            "user"."id" NOT IN (SELECT "user"."id" FROM "user")
+          `,
+        );
+
+        expectSql(
+          buildSql((q) =>
+            q.whereNotIn({ id: User.select('id'), name: User.select('name') }),
+          ),
+          `
+            ${startSql}
+            "user"."id" NOT IN (SELECT "user"."id" FROM "user")
+              AND "user"."name" NOT IN (SELECT "user"."name" FROM "user")
+          `,
+        );
+      });
+
+      describe('tuple', () => {
+        it('should handle values', () => {
+          expectSql(
+            buildSql((q) =>
+              q.whereNotIn(
+                ['id', 'name'],
+                [
+                  [1, 'a'],
+                  [2, 'b'],
+                ],
+              ),
+            ),
+            `
+              ${startSql}
+              ("user"."id", "user"."name") NOT IN (($1, $2), ($3, $4))
+            `,
+            [1, 'a', 2, 'b'],
+          );
+        });
+
+        it('should handle raw query', () => {
+          expectSql(
+            buildSql((q) =>
+              q.whereNotIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`)),
+            ),
+            `
+            ${startSql}
+            ("user"."id", "user"."name") NOT IN ((1, 'a'), (2, 'b'))
+          `,
+          );
+        });
+
+        it('should handle sub query', () => {
+          expectSql(
+            buildSql((q) =>
+              q.whereNotIn(['id', 'name'], User.select('id', 'name')),
+            ),
+            `
+            ${startSql}
+            ("user"."id", "user"."name")
+               NOT IN (SELECT "user"."id", "user"."name" FROM "user")
+          `,
+          );
+        });
+      });
+    });
+
+    describe('orWhereNotIn', () => {
+      it('should handle (column, array)', () => {
+        expectSql(
+          buildSql((q) => q.where({ id: 1 }).orWhereNotIn('id', [1, 2, 3])),
+          `
+            ${startSql}
+            "user"."id" = $1 OR "user"."id" NOT IN ($2, $3, $4)
+          `,
+          [1, 1, 2, 3],
+        );
+      });
+
+      it('should handle object of columns and arrays', () => {
+        expectSql(
+          buildSql((q) =>
+            q
+              .where({ id: 1 })
+              .orWhereNotIn({ id: [1, 2, 3], name: ['a', 'b', 'c'] }),
+          ),
+          `
+            ${startSql}
+            "user"."id" = $1
+              OR "user"."id" NOT IN ($2, $3, $4) AND "user"."name" NOT IN ($5, $6, $7)
+          `,
+          [1, 1, 2, 3, 'a', 'b', 'c'],
+        );
+      });
+
+      it('should handle raw query', () => {
+        expectSql(
+          buildSql((q) =>
+            q.where({ id: 1 }).orWhereNotIn('id', raw('(1, 2, 3)')),
+          ),
+          `
+            ${startSql}
+            "user"."id" = $1 OR "user"."id" NOT IN (1, 2, 3)
+          `,
+          [1],
+        );
+
+        expectSql(
+          buildSql((q) =>
+            q.where({ id: 1 }).orWhereNotIn({
+              id: raw('(1, 2, 3)'),
+              name: raw(`('a', 'b', 'c')`),
+            }),
+          ),
+          `
+            ${startSql}
+            "user"."id" = $1
+               OR "user"."id" NOT IN (1, 2, 3)
+              AND "user"."name" NOT IN ('a', 'b', 'c')
+          `,
+          [1],
+        );
+      });
+
+      it('should handle sub query', () => {
+        expectSql(
+          buildSql((q) =>
+            q.where({ id: 1 }).orWhereNotIn('id', User.select('id')),
+          ),
+          `
+            ${startSql}
+            "user"."id" = $1
+               OR "user"."id" NOT IN (SELECT "user"."id" FROM "user")
+          `,
+          [1],
+        );
+
+        expectSql(
+          buildSql((q) =>
+            q.where({ id: 1 }).orWhereNotIn({
+              id: User.select('id'),
+              name: User.select('name'),
+            }),
+          ),
+          `
+            ${startSql}
+            "user"."id" = $1
+               OR "user"."id" NOT IN (SELECT "user"."id" FROM "user")
+              AND "user"."name" NOT IN (SELECT "user"."name" FROM "user")
+          `,
+          [1],
+        );
+      });
+
+      describe('tuple', () => {
+        it('should handle values', () => {
+          expectSql(
+            buildSql((q) =>
+              q.where({ id: 1 }).orWhereNotIn(
+                ['id', 'name'],
+                [
+                  [1, 'a'],
+                  [2, 'b'],
+                ],
+              ),
+            ),
+            `
+              ${startSql}
+              "user"."id" = $1
+                 OR ("user"."id", "user"."name") NOT IN (($2, $3), ($4, $5))
+            `,
+            [1, 1, 'a', 2, 'b'],
+          );
+        });
+
+        it('should handle raw query', () => {
+          expectSql(
+            buildSql((q) =>
+              q
+                .where({ id: 1 })
+                .orWhereNotIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`)),
+            ),
+            `
+              ${startSql}
+              "user"."id" = $1
+                 OR ("user"."id", "user"."name") NOT IN ((1, 'a'), (2, 'b'))
+            `,
+            [1],
+          );
+        });
+
+        it('should handle sub query', () => {
+          expectSql(
+            buildSql((q) =>
+              q
+                .where({ id: 1 })
+                .orWhereNotIn(['id', 'name'], User.select('id', 'name')),
+            ),
+            `
+              ${startSql}
+              "user"."id" = $1
+                 OR ("user"."id", "user"."name")
+                 NOT IN (SELECT "user"."id", "user"."name" FROM "user")
+            `,
+            [1],
+          );
+        });
+      });
+    });
+
     describe('whereExists', () => {
       it('should handle sub query', () => {
         expectSql(

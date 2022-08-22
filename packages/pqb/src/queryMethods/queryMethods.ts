@@ -243,7 +243,7 @@ export class QueryMethods {
       cloned.__model = this;
     }
 
-    cloned.query = getClonedQueryData<Query>(this.query);
+    cloned.query = getClonedQueryData(this.query);
 
     return cloned as unknown as QueryWithData<T>;
   }
