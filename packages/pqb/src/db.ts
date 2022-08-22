@@ -100,7 +100,7 @@ export class Db<
     this.toSql = defaultSelect
       ? function <T extends Query>(this: T): Sql {
           const q = (this.query ? this : this.toQuery()) as T & {
-            query: QueryData<T>;
+            query: QueryData;
           };
           const query = q.query as SelectQueryData;
           if (!query.select) {

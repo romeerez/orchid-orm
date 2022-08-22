@@ -25,10 +25,8 @@ describe('queryMethods', () => {
       expect(cloned.table).toBe(User.table);
       expect(cloned.shape).toBe(User.shape);
 
-      const eq: AssertEqual<
-        typeof User & { query: QueryData<typeof User> },
-        typeof cloned
-      > = true;
+      const eq: AssertEqual<typeof User & { query: QueryData }, typeof cloned> =
+        true;
       expect(eq).toBe(true);
     });
   });
@@ -48,10 +46,8 @@ describe('queryMethods', () => {
       const q = User.toQuery();
       expect(q).not.toBe(User);
 
-      const eq: AssertEqual<
-        typeof q,
-        typeof User & { query: QueryData<typeof User> }
-      > = true;
+      const eq: AssertEqual<typeof q, typeof User & { query: QueryData }> =
+        true;
       expect(eq).toBe(true);
     });
   });

@@ -2,7 +2,6 @@ import {
   ColumnsParsers,
   Query,
   QueryWithTable,
-  Selectable,
   SelectableBase,
 } from '../query';
 import { Expression, RawExpression } from '../common';
@@ -24,18 +23,18 @@ export type CommonQueryData = {
   parsers?: ColumnsParsers;
 };
 
-export type SelectQueryData<T extends Query = Query> = CommonQueryData & {
+export type SelectQueryData = CommonQueryData & {
   select?: SelectItem[];
-  distinct?: Expression<T>[];
+  distinct?: Expression[];
   from?: string | Query | RawExpression;
   fromOnly?: boolean;
   join?: JoinItem[];
   joinedParsers?: Record<string, ColumnsParsers>;
-  group?: (Selectable<T> | RawExpression)[];
+  group?: (string | RawExpression)[];
   having?: HavingItem[];
   havingOr?: HavingItem[][];
   window?: WindowItem[];
-  union?: { arg: UnionArg<T>; kind: UnionKind; wrap?: boolean }[];
+  union?: { arg: UnionItem; kind: UnionKind; wrap?: boolean }[];
   order?: OrderItem[];
   limit?: number;
   offset?: number;
@@ -98,8 +97,8 @@ export type ColumnInfoQueryData = CommonQueryData & {
   column?: string;
 };
 
-export type QueryData<T extends Query = Query> =
-  | SelectQueryData<T>
+export type QueryData =
+  | SelectQueryData
   | InsertQueryData
   | UpdateQueryData
   | DeleteQueryData
@@ -297,9 +296,7 @@ export type WindowDeclaration = {
   order?: OrderItem;
 };
 
-export type UnionArg<T extends Query> =
-  | (Omit<Query, 'result'> & { result: T['result'] })
-  | RawExpression;
+export type UnionItem = Query | RawExpression;
 
 type UnionKind =
   | 'UNION'

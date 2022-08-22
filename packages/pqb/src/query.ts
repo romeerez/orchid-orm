@@ -192,7 +192,7 @@ export type SetQueryReturnsColumnInfo<
   then: Then<Result>;
 };
 
-export type QueryWithData<T extends Query> = T & { query: QueryData<T> };
+export type QueryWithData<T extends Query> = T & { query: QueryData };
 
 export type SetQueryTableAlias<
   T extends Query,

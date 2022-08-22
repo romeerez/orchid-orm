@@ -13,10 +13,10 @@ const aggregateOptionNames: (keyof AggregateItemOptions)[] = [
   'withinGroup',
 ];
 
-export const pushHavingSql = <T extends Query>(
+export const pushHavingSql = (
   sql: string[],
   model: Pick<Query, 'shape'>,
-  query: SelectQueryData<T>,
+  query: SelectQueryData,
   values: unknown[],
   quotedAs?: string,
 ) => {
@@ -24,9 +24,9 @@ export const pushHavingSql = <T extends Query>(
   if (conditions.length) sql.push('HAVING', conditions);
 };
 
-export const havingToSql = <T extends Query>(
+export const havingToSql = (
   model: Pick<Query, 'shape'>,
-  query: SelectQueryData<T>,
+  query: SelectQueryData,
   values: unknown[],
   quotedAs?: string,
 ): string => {

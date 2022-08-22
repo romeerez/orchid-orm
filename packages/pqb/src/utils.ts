@@ -93,10 +93,8 @@ export const joinTruthy = (...strings: (string | false | undefined)[]) => {
   return strings.filter((string) => string).join('');
 };
 
-export const getClonedQueryData = <T extends Query>(
-  query?: QueryData<T>,
-): QueryData<T> => {
-  const cloned = {} as QueryData<T>;
+export const getClonedQueryData = (query?: QueryData): QueryData => {
+  const cloned = {} as QueryData;
 
   if (query) {
     for (const key in query) {
