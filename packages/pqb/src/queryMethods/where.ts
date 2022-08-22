@@ -1,4 +1,4 @@
-import { Query, QueryBase, SetQueryReturnsOne } from '../query';
+import { Query, QueryBase } from '../query';
 import { ColumnOperators, WhereItem } from '../sql';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { RawExpression } from '../common';
@@ -137,14 +137,6 @@ export const addOrNot = <T extends QueryBase>(
   );
 };
 
-export type WhereBetweenValues<
-  T extends QueryBase,
-  C extends keyof T['selectable'],
-> = [
-  T['selectable'][C]['column']['type'] | Query | RawExpression,
-  T['selectable'][C]['column']['type'] | Query | RawExpression,
-];
-
 export class Where {
   where<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
     return this.clone()._where(...args);
@@ -152,20 +144,6 @@ export class Where {
 
   _where<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
     return addWhere(this, args);
-  }
-
-  findBy<T extends Query>(
-    this: T,
-    ...args: WhereArg<T>[]
-  ): SetQueryReturnsOne<T> {
-    return this.clone()._findBy(...args);
-  }
-
-  _findBy<T extends Query>(
-    this: T,
-    ...args: WhereArg<T>[]
-  ): SetQueryReturnsOne<T> {
-    return addWhere(this, args).takeOrThrow();
   }
 
   whereNot<T extends Query>(this: T, ...args: WhereArg<T>[]): T {

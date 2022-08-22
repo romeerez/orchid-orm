@@ -121,28 +121,6 @@ describe('where', () => {
   });
 });
 
-describe('findBy', () => {
-  it('like where but with take', () => {
-    const q = User.all();
-    expectSql(
-      q.findBy({ name: 's' }).toSql(),
-      `SELECT "user".* FROM "user" WHERE "user"."name" = $1 LIMIT $2`,
-      ['s', 1],
-    );
-    expectQueryNotMutated(q);
-  });
-
-  it('should accept raw', () => {
-    const q = User.all();
-    expectSql(
-      q.findBy({ name: raw(`'string'`) }).toSql(),
-      `SELECT "user".* FROM "user" WHERE "user"."name" = 'string' LIMIT $1`,
-      [1],
-    );
-    expectQueryNotMutated(q);
-  });
-});
-
 describe('whereNot', () => {
   it('should handle null value', () => {
     const q = User.all();

@@ -52,7 +52,7 @@ import { Delete } from './delete';
 import { Transaction } from './transaction';
 import { For } from './for';
 import { ColumnInfoMethods } from './columnInfo';
-import { Where, WhereArg } from './where';
+import { addWhere, Where, WhereArg } from './where';
 import { Clear } from './clear';
 import { Having } from './having';
 import { Window } from './window';
@@ -276,6 +276,20 @@ export class QueryMethods {
       conditions[key as keyof T['type']] = args[i];
     });
     return this._where(conditions as WhereArg<T>)._take();
+  }
+
+  findBy<T extends Query>(
+    this: T,
+    ...args: WhereArg<T>[]
+  ): SetQueryReturnsOne<T> {
+    return this.clone()._findBy(...args);
+  }
+
+  _findBy<T extends Query>(
+    this: T,
+    ...args: WhereArg<T>[]
+  ): SetQueryReturnsOne<T> {
+    return addWhere(this, args).takeOrThrow();
   }
 
   as<T extends Query, TableAlias extends string>(
