@@ -13,6 +13,7 @@ import {
   SetQueryReturnsVoid,
   SetQueryTableAlias,
   SetQueryWindows,
+  QueryBase,
 } from '../query';
 import {
   applyMixins,
@@ -103,7 +104,7 @@ export interface QueryMethods
 
 export class QueryMethods {
   windows!: PropertyKey[];
-  private __model?: Query;
+  __model?: Query;
 
   all<T extends Query>(this: T): SetQueryReturnsAll<T> {
     return this.then === thenAll
@@ -231,13 +232,13 @@ export class QueryMethods {
     return q as unknown as SetQueryReturnsVoid<T>;
   }
 
-  toQuery<T extends Query>(this: T): QueryWithData<T> {
+  toQuery<T extends QueryBase>(this: T): QueryWithData<T> {
     if (this.query) return this as QueryWithData<T>;
     const q = this.clone();
     return q as QueryWithData<T>;
   }
 
-  clone<T extends Query>(this: T): QueryWithData<T> {
+  clone<T extends QueryBase>(this: T): QueryWithData<T> {
     const cloned = Object.create(this);
     if (!this.__model) {
       cloned.__model = this;

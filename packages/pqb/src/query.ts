@@ -23,6 +23,7 @@ export type QueryBase = {
   toQuery(): { query: QueryData };
   clone(): { query: QueryData };
   selectable: SelectableBase;
+  __model?: QueryBase;
 };
 
 export type Query = QueryMethods & {
@@ -192,7 +193,7 @@ export type SetQueryReturnsColumnInfo<
   then: Then<Result>;
 };
 
-export type QueryWithData<T extends Query> = T & { query: QueryData };
+export type QueryWithData<T extends QueryBase> = T & { query: QueryData };
 
 export type SetQueryTableAlias<
   T extends Query,

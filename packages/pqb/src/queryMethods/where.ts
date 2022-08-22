@@ -1,5 +1,5 @@
-import { Query, QueryBase } from '../query';
-import { ColumnOperators, WhereItem } from '../sql';
+import { Query, QueryBase, SelectableBase } from '../query';
+import { ColumnOperators, QueryData, WhereItem } from '../sql';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { RawExpression } from '../common';
 
@@ -93,10 +93,7 @@ export const applyIn = <T extends QueryBase>(
   return q;
 };
 
-export const addWhere = <T extends QueryBase>(
-  q: T,
-  args: WhereArg<Query>[],
-): T => {
+export const addWhere = <T extends Where>(q: T, args: WhereArg<Query>[]): T => {
   return pushQueryArray(
     q,
     'and',
@@ -137,62 +134,66 @@ export const addOrNot = <T extends QueryBase>(
   );
 };
 
-export class Where {
-  where<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
+export abstract class Where implements QueryBase {
+  abstract clone<T extends this>(this: T): T & { query: QueryData };
+  abstract toQuery<T extends this>(this: T): T & { query: QueryData };
+  abstract selectable: SelectableBase;
+
+  where<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
     return this.clone()._where(...args);
   }
 
-  _where<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
+  _where<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
     return addWhere(this, args);
   }
 
-  whereNot<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
+  whereNot<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
     return this.clone()._whereNot(...args);
   }
 
-  _whereNot<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
+  _whereNot<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
     return addWhereNot(this, args);
   }
 
-  and<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
+  and<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
     return this.where(...args);
   }
 
-  _and<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
+  _and<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
     return this._where(...args);
   }
 
-  andNot<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
+  andNot<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
     return this.whereNot(...args);
   }
 
-  _andNot<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
+  _andNot<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
     return this._whereNot(...args);
   }
 
-  or<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
+  or<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
     return this.clone()._or(...args);
   }
 
-  _or<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
+  _or<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
     return addOr(this, args);
   }
 
-  orNot<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
+  orNot<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
     return this.clone()._orNot(...args);
   }
 
-  _orNot<T extends Query>(this: T, ...args: WhereArg<T>[]): T {
+  _orNot<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
     return addOrNot(this, args);
   }
 
-  whereIn<T extends Query, Column extends WhereInColumn<T>>(
+  whereIn<T extends Where, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
   ): T;
-  whereIn<T extends Query>(this: T, arg: WhereInArg<T>): T;
-  whereIn<T extends Query>(
+  whereIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  whereIn<T extends Where>(
     this: T,
     arg: unknown | unknown[],
     values?: unknown[] | unknown[][] | Query | RawExpression,
@@ -201,13 +202,13 @@ export class Where {
     return this.clone()._whereIn(arg as any, values as any);
   }
 
-  _whereIn<T extends Query, Column extends WhereInColumn<T>>(
+  _whereIn<T extends Where, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
   ): T;
-  _whereIn<T extends Query>(this: T, arg: WhereInArg<T>): T;
-  _whereIn<T extends Query>(
+  _whereIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  _whereIn<T extends Where>(
     this: T,
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | RawExpression,
@@ -215,13 +216,13 @@ export class Where {
     return applyIn(this, true, arg, values);
   }
 
-  orWhereIn<T extends Query, Column extends WhereInColumn<T>>(
+  orWhereIn<T extends Where, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
   ): T;
-  orWhereIn<T extends Query>(this: T, arg: WhereInArg<T>): T;
-  orWhereIn<T extends Query>(
+  orWhereIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  orWhereIn<T extends Where>(
     this: T,
     arg: unknown | unknown[],
     values?: unknown[] | unknown[][] | Query | RawExpression,
@@ -230,13 +231,13 @@ export class Where {
     return this.clone()._orWhereIn(arg as any, values as any);
   }
 
-  _orWhereIn<T extends Query, Column extends WhereInColumn<T>>(
+  _orWhereIn<T extends Where, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
   ): T;
-  _orWhereIn<T extends Query>(this: T, arg: WhereInArg<T>): T;
-  _orWhereIn<T extends Query>(
+  _orWhereIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  _orWhereIn<T extends Where>(
     this: T,
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | RawExpression,
@@ -244,13 +245,13 @@ export class Where {
     return applyIn(this, false, arg, values);
   }
 
-  whereNotIn<T extends Query, Column extends WhereInColumn<T>>(
+  whereNotIn<T extends Where, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
   ): T;
-  whereNotIn<T extends Query>(this: T, arg: WhereInArg<T>): T;
-  whereNotIn<T extends Query>(
+  whereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  whereNotIn<T extends Where>(
     this: T,
     arg: unknown | unknown[],
     values?: unknown[] | unknown[][] | Query | RawExpression,
@@ -259,13 +260,13 @@ export class Where {
     return this.clone()._whereNotIn(arg as any, values as any);
   }
 
-  _whereNotIn<T extends Query, Column extends WhereInColumn<T>>(
+  _whereNotIn<T extends Where, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
   ): T;
-  _whereNotIn<T extends Query>(this: T, arg: WhereInArg<T>): T;
-  _whereNotIn<T extends Query>(
+  _whereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  _whereNotIn<T extends Where>(
     this: T,
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | RawExpression,
@@ -273,13 +274,13 @@ export class Where {
     return applyIn(this, true, arg, values, true);
   }
 
-  orWhereNotIn<T extends Query, Column extends WhereInColumn<T>>(
+  orWhereNotIn<T extends Where, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
   ): T;
-  orWhereNotIn<T extends Query>(this: T, arg: WhereInArg<T>): T;
-  orWhereNotIn<T extends Query>(
+  orWhereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  orWhereNotIn<T extends Where>(
     this: T,
     arg: unknown | unknown[],
     values?: unknown[] | unknown[][] | Query | RawExpression,
@@ -288,13 +289,13 @@ export class Where {
     return this.clone()._orWhereNotIn(arg as any, values as any);
   }
 
-  _orWhereNotIn<T extends Query, Column extends WhereInColumn<T>>(
+  _orWhereNotIn<T extends Where, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
   ): T;
-  _orWhereNotIn<T extends Query>(this: T, arg: WhereInArg<T>): T;
-  _orWhereNotIn<T extends Query>(
+  _orWhereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  _orWhereNotIn<T extends Where>(
     this: T,
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | RawExpression,
@@ -302,31 +303,31 @@ export class Where {
     return applyIn(this, false, arg, values, true);
   }
 
-  whereExists<T extends Query>(this: T, query: Query | RawExpression): T {
+  whereExists<T extends Where>(this: T, query: Query | RawExpression): T {
     return this.clone()._whereExists(query);
   }
-  _whereExists<T extends Query>(this: T, query: Query | RawExpression): T {
+  _whereExists<T extends Where>(this: T, query: Query | RawExpression): T {
     return this._where({ type: 'exists', query });
   }
 
-  orWhereExists<T extends Query>(this: T, query: Query | RawExpression): T {
+  orWhereExists<T extends Where>(this: T, query: Query | RawExpression): T {
     return this.clone()._orWhereExists(query);
   }
-  _orWhereExists<T extends Query>(this: T, query: Query | RawExpression): T {
+  _orWhereExists<T extends Where>(this: T, query: Query | RawExpression): T {
     return this._or({ type: 'exists', query });
   }
 
-  whereNotExists<T extends Query>(this: T, query: Query | RawExpression): T {
+  whereNotExists<T extends Where>(this: T, query: Query | RawExpression): T {
     return this.clone()._whereNotExists(query);
   }
-  _whereNotExists<T extends Query>(this: T, query: Query | RawExpression): T {
+  _whereNotExists<T extends Where>(this: T, query: Query | RawExpression): T {
     return this._whereNot({ type: 'exists', query });
   }
 
-  orWhereNotExists<T extends Query>(this: T, query: Query | RawExpression): T {
+  orWhereNotExists<T extends Where>(this: T, query: Query | RawExpression): T {
     return this.clone()._orWhereNotExists(query);
   }
-  _orWhereNotExists<T extends Query>(this: T, query: Query | RawExpression): T {
+  _orWhereNotExists<T extends Where>(this: T, query: Query | RawExpression): T {
     return this._orNot({ type: 'exists', query });
   }
 }
