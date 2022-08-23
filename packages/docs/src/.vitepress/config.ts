@@ -4,6 +4,9 @@ export default {
   head: [
     ["link", { rel: "icon", type: "image/png", href: "/logo.svg" }],
   ],
+  markdown: {
+    theme: 'one-dark-pro',
+  },
   themeConfig: {
     logo: '/logo.svg',
     nav: [

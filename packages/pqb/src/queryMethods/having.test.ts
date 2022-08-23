@@ -68,7 +68,6 @@ describe('having', () => {
   it('should support distinct option', () => {
     const q = User.all();
 
-    // TODO: improve order and filter for TS
     expectSql(
       q
         .having({

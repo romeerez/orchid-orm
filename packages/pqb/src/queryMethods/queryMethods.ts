@@ -158,7 +158,7 @@ export class QueryMethods {
     return q as unknown as SetQueryReturnsRows<T>;
   }
 
-  pluck<T extends Query, S extends keyof T['selectable'] | RawExpression>(
+  pluck<T extends Query, S extends Expression<T>>(
     this: T,
     select: S,
   ): SetQueryReturnsPluck<T, S> {
@@ -167,7 +167,7 @@ export class QueryMethods {
       : this.clone()._pluck(select);
   }
 
-  _pluck<T extends Query, S extends keyof T['selectable'] | RawExpression>(
+  _pluck<T extends Query, S extends Expression<T>>(
     this: T,
     select: S,
   ): SetQueryReturnsPluck<T, S> {
@@ -322,17 +322,11 @@ export class QueryMethods {
     return setQueryValue(this, 'schema', schema);
   }
 
-  group<T extends Query>(
-    this: T,
-    ...columns: (Selectable<T> | RawExpression)[]
-  ): T {
+  group<T extends Query>(this: T, ...columns: Expression<T>[]): T {
     return this.clone()._group(...columns);
   }
 
-  _group<T extends Query>(
-    this: T,
-    ...columns: (Selectable<T> | RawExpression)[]
-  ): T {
+  _group<T extends Query>(this: T, ...columns: Expression<T>[]): T {
     return pushQueryArray(this, 'group', columns);
   }
 
