@@ -2,8 +2,8 @@ import { db } from '../test-utils/test-db';
 import {
   AssertEqual,
   expectSql,
+  insert,
   insertChat,
-  insertMessage,
   insertUser,
   useTestDatabase,
 } from '../test-utils/test-utils';
@@ -29,16 +29,15 @@ describe('hasAndBelongsToMany', () => {
     const chat1Id = await insertChat(chatData);
     const chat2Id = await insertChat(chatData);
 
-    await insertMessage({
-      authorId: userId,
+    await insert('chatUser', {
+      id: 1,
+      userId,
       chatId: chat1Id,
-      text: 'text',
-      count: 2,
     });
-    await insertMessage({
-      authorId: userId,
+    await insert('chatUser', {
+      id: 2,
+      userId,
       chatId: chat2Id,
-      text: 'text',
     });
 
     const user = await db.user.find(userId).takeOrThrow();
@@ -49,9 +48,9 @@ describe('hasAndBelongsToMany', () => {
       `
         SELECT "chat".* FROM "chat"
         WHERE EXISTS (
-          SELECT 1 FROM "message"
-          WHERE "message"."chatId" = "chat"."id"
-            AND "message"."authorId" = $1
+          SELECT 1 FROM "chatUser"
+          WHERE "chatUser"."chatId" = "chat"."id"
+            AND "chatUser"."userId" = $1
           LIMIT $2
         )
       `,

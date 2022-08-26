@@ -41,10 +41,10 @@ export class UserModel extends Model {
 
     chats: this.hasAndBelongsToMany(() => ChatModel, {
       primaryKey: 'id',
-      foreignKey: 'authorId',
+      foreignKey: 'userId',
       associationPrimaryKey: 'id',
       associationForeignKey: 'chatId',
-      joinTable: 'message',
+      joinTable: 'chatUser',
     }),
   };
 }
