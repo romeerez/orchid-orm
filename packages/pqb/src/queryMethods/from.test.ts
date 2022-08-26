@@ -2,6 +2,21 @@ import { expectQueryNotMutated, expectSql, User } from '../test-utils';
 import { raw } from '../common';
 
 describe('from', () => {
+  it('should accept string parameter', () => {
+    const q = User.all();
+    expectSql(q.from('profile').toSql(), `SELECT "profile".* FROM "profile"`);
+    expectQueryNotMutated(q);
+  });
+
+  it('should accept string parameter with respect to `as`', () => {
+    const q = User.all();
+    expectSql(
+      q.as('t').from('profile').toSql(),
+      `SELECT "t".* FROM "profile" AS "t"`,
+    );
+    expectQueryNotMutated(q);
+  });
+
   it('should accept raw parameter', () => {
     const q = User.all();
     expectSql(

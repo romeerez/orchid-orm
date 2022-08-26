@@ -117,7 +117,7 @@ export const insert = async <
   return record;
 };
 
-let idCounter = 1;
+let userIdCounter = 1;
 export const insertUser = async (
   options: Partial<typeof User.type> & { count?: number } = {},
 ) => {
@@ -125,7 +125,7 @@ export const insertUser = async (
   const { count = 1, ...data } = options;
   for (let i = 0; i < count; i++) {
     await insert('user', {
-      id: idCounter++,
+      id: userIdCounter++,
       name: 'name',
       password: 'password',
       picture: null,

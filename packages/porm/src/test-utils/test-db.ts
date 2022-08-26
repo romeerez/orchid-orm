@@ -1,9 +1,8 @@
 import { Client } from 'pg';
-import { PostgresOrm } from '../orm';
 import { Adapter } from 'pqb';
+import { porm } from '../orm';
 import {
   ChatModel,
-  ChatUserModel,
   MessageModel,
   ProfileModel,
   UserModel,
@@ -15,12 +14,11 @@ export const pgConfig = {
 
 export const dbClient = new Client(pgConfig);
 
-export const createPg = PostgresOrm(Adapter(pgConfig));
+export const adapter = Adapter(pgConfig);
 
-export const db = createPg({
+export const db = porm(adapter)({
   user: UserModel,
   profile: ProfileModel,
   chat: ChatModel,
-  chatUser: ChatUserModel,
   message: MessageModel,
 });

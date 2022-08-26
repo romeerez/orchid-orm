@@ -1,45 +1,49 @@
 import { db } from '../test-utils/test-db';
-import { line, useTestDatabase } from '../test-utils/test-utils';
-import { userFactory } from '../test-utils/user.factory';
-import { profileFactory } from '../test-utils/profile.factory';
+import {
+  AssertEqual,
+  expectSql,
+  insertProfile,
+  insertUser,
+  useTestDatabase,
+} from '../test-utils/test-utils';
 
 describe('belongsTo', () => {
   useTestDatabase();
 
-  it('defines a method to query related record', async () => {
-    const user = await userFactory.create();
-    const profile = await profileFactory.create({ userId: user.id });
+  it('should have method to query related data', async () => {
+    const userQuery = db.user.take();
 
+    const eq: AssertEqual<
+      typeof db.profile.user,
+      (params: { userId: number }) => typeof userQuery
+    > = true;
+
+    expect(eq).toBe(true);
+
+    const userData = {
+      id: 1,
+      name: 'name',
+      password: 'password',
+      active: true,
+    };
+    const userId = await insertUser(userData);
+    const profileId = await insertProfile({ userId });
+
+    const profile = await db.profile.find(profileId).takeOrThrow();
     const query = db.profile.user(profile);
 
-    expect(query.toSql()).toBe(
-      line(`
-        SELECT "user".*
-        FROM "user"
-        WHERE "user"."id" = ${user.id}
-        LIMIT 1
-      `),
+    expectSql(
+      query.toSql(),
+      `
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = $1
+        LIMIT $2
+      `,
+      [userId, 1],
     );
 
-    const result = await query;
-    expect({
-      ...result,
-      updatedAt: result.updatedAt.getTime(),
-      createdAt: result.updatedAt.getTime(),
-    }).toEqual({
-      ...user,
-      updatedAt: result.updatedAt.getTime(),
-      createdAt: result.updatedAt.getTime(),
-    });
-  });
+    const user = await query;
 
-  it('can be joined and selected', async () => {
-    const query = db.profile.join('user');
-    expect(query.toSql()).toBe(
-      line(`
-      SELECT "profile".* FROM "profile"
-      JOIN "user" ON "profile"."userId" = "user"."id"
-    `),
-    );
+    expect(user).toMatchObject(userData);
   });
 });

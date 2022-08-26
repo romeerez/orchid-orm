@@ -3,7 +3,11 @@ import { AliasOrTable, isRaw, RawExpression } from '../common';
 import { setQueryValue } from '../queryDataUtils';
 
 type FromArgs<T extends Query> = [
-  first: Query | RawExpression | Exclude<keyof T['withData'], symbol | number>,
+  first:
+    | string
+    | Query
+    | RawExpression
+    | Exclude<keyof T['withData'], symbol | number>,
   second?: string | { as?: string; only?: boolean },
 ];
 
@@ -38,7 +42,7 @@ export class From {
     } else if (typeof args[1] === 'object' && args[1].as) {
       as = args[1].as;
     } else if (typeof args[0] === 'string') {
-      as = args[0];
+      if (!this.query?.as) as = args[0];
     } else if (!isRaw(args[0] as RawExpression)) {
       as = (args[0] as Query).query?.as || (args[0] as Query).table;
     }

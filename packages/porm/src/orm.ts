@@ -1,65 +1,49 @@
-import { ModelClass, PostgresModelConstructors } from './model';
-import { MapRelationMethods, Relations } from './relations/relations';
-import { BelongsTo } from './relations/belongsTo';
-import { Query, PostgresAdapter, QueryWithTable } from 'pqb';
+import { Db, PostgresAdapter, Transaction } from 'pqb';
+import { DbModel, Model, ModelClasses } from './model';
+import { applyRelations } from './relations/relations';
 
-type PostgresORM<T extends PostgresModelConstructors> = {
-  [K in keyof T]: MapRelationMethods<InstanceType<T[K]>>;
+export type PORM<T extends ModelClasses> = {
+  [K in keyof T]: DbModel<T[K]>;
 } & {
+  transaction: Transaction['transaction'];
   adapter: PostgresAdapter;
   destroy(): Promise<void>;
 };
 
-export const PostgresOrm =
-  (adapter: PostgresAdapter) =>
-  <T extends PostgresModelConstructors>(models: T): PostgresORM<T> => {
+export const porm = (adapter: PostgresAdapter) => {
+  const qb = new Db(adapter, undefined as unknown as Db);
+  qb.queryBuilder = qb;
+
+  return <T extends ModelClasses>(models: T): PORM<T> => {
     const result = {
+      transaction: Transaction.prototype.transaction,
       adapter,
       destroy: () => adapter.destroy(),
-    } as PostgresORM<T>;
+    } as PORM<ModelClasses>;
+
+    const modelInstances: Record<string, Model> = {};
 
     for (const key in models) {
       if (key === 'adapter' || key === 'destroy') {
         throw new Error(`Please choose another key for model ${key}`);
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      result[key] = new models[key](adapter) as any;
+
+      const model = new models[key]();
+      modelInstances[key] = model;
+
+      (result as Record<string, unknown>)[key] = new Db(
+        adapter,
+        qb,
+        model.table,
+        model.columns.shape,
+        {
+          schema: model.schema,
+        },
+      );
     }
 
-    for (const key in models) {
-      const model = result[key] as unknown as MapRelationMethods<Query>;
-      model.relations = {} as Relations<Query>;
+    applyRelations(qb, modelInstances, result);
 
-      for (const prop in model) {
-        const item = model[prop as keyof typeof model];
-        if (item instanceof BelongsTo) {
-          const modelOrQuery = item.fn() as ModelClass;
-          const query =
-            typeof modelOrQuery === 'function'
-              ? modelToQuery(
-                  result as PostgresORM<PostgresModelConstructors>,
-                  modelOrQuery,
-                )
-              : (modelOrQuery as QueryWithTable);
-
-          if (item instanceof BelongsTo) {
-            item.applyToModel(model as unknown as Query, query, prop);
-          }
-        }
-      }
-    }
-
-    return result;
+    return result as PORM<T>;
   };
-
-const modelToQuery = (
-  result: PostgresORM<PostgresModelConstructors>,
-  model: ModelClass,
-): QueryWithTable => {
-  for (const key in result) {
-    if (result[key] instanceof model) {
-      return result[key] as unknown as QueryWithTable;
-    }
-  }
-  throw new Error(`Cannot find model for ${model.name}`);
 };

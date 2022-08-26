@@ -1,133 +1,115 @@
 import {
+  ColumnShapeOutput,
   ColumnsShape,
   columnTypes,
   ColumnTypes,
-  TableSchema,
-  QueryMethods,
-  QueryData,
-  DefaultSelectColumns,
-  Query,
-  QueryReturnType,
-  PostgresAdapter,
-  applyMixins,
-  StringKey,
   Db,
-  DbTableOptions,
-  ColumnShapeOutput,
-  ColumnsParsers,
+  Query,
 } from 'pqb';
-import { RelationMethods } from './relations/relations';
+import { MapRelations } from './relations/relations';
 
-export interface PostgresModel<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Shape extends ColumnsShape = any,
-  Table extends string = string,
-> extends QueryMethods,
-    RelationMethods {
-  new (adapter: PostgresAdapter): this;
+export type ModelClass<T extends Model = Model> = new () => T;
 
-  queryBuilder: Db;
-  shape: Shape;
-  schema: TableSchema<Shape>;
-  type: ColumnShapeOutput<Shape>;
-  returnType: QueryReturnType;
-  query?: QueryData;
-  columns: (keyof ColumnShapeOutput<Shape>)[];
-  defaultSelectColumns: DefaultSelectColumns<Shape>;
-  columnsParsers?: ColumnsParsers;
-  result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
-  hasSelect: false;
-  selectable: { [K in keyof Shape]: { as: K; column: Shape[K] } } & {
-    [K in keyof Shape as `${Table}.${StringKey<K>}`]: {
-      as: K;
-      column: Shape[K];
+export type ModelClasses = Record<string, ModelClass>;
+
+export type ModelToDb<T extends ModelClass> = Db<
+  InstanceType<T>['table'],
+  InstanceType<T>['columns']['shape']
+>;
+
+export type DbModel<T extends ModelClass> = ModelToDb<T> &
+  MapRelations<InstanceType<T>>;
+
+type ModelConfig = {
+  shape: ColumnsShape;
+  type: unknown;
+};
+
+export abstract class Model {
+  abstract table: string;
+  abstract columns: ModelConfig;
+
+  schema?: string;
+
+  setColumns<T extends ColumnsShape>(
+    fn: (t: ColumnTypes) => T,
+  ): { shape: T; type: ColumnShapeOutput<T> } {
+    const shape = fn(columnTypes);
+
+    return {
+      shape,
+      type: undefined as unknown as ColumnShapeOutput<T>,
     };
-  };
-  table: Table;
-  tableAlias: undefined;
-  windows: PropertyKey[];
-  withData: Query['withData'];
-  joinedTables: Query['joinedTables'];
-  relations: Query['relations'];
-}
-
-export class PostgresModel<Shape extends ColumnsShape, Table extends string> {
-  constructor(public adapter: PostgresAdapter) {}
-
-  returnType: QueryReturnType = 'all';
-}
-
-applyMixins(PostgresModel, [QueryMethods, RelationMethods]);
-PostgresModel.prototype.constructor = PostgresModel;
-
-type ModelParams<Shape extends ColumnsShape, Table extends string> = {
-  table: Table;
-  schema(t: ColumnTypes): Shape;
-  options?: DbTableOptions;
-};
-
-export type ModelClass<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Shape extends ColumnsShape = any,
-  Table extends string = string,
-> = {
-  new (adapter: PostgresAdapter): PostgresModel<Shape, Table>;
-};
-
-export const model = <Shape extends ColumnsShape, Table extends string>({
-  table,
-  schema: schemaFn,
-  options,
-}: ModelParams<Shape, Table>): ModelClass<Shape, Table> => {
-  const shape = schemaFn(columnTypes);
-  const schema = new TableSchema(shape);
-  const columns = Object.keys(
-    shape,
-  ) as unknown as (keyof ColumnShapeOutput<Shape>)[];
-  const defaultSelectColumns = columns.filter(
-    (column) => !shape[column as keyof typeof shape].isHidden,
-  );
-  const defaultSelect =
-    defaultSelectColumns.length === columns.length
-      ? undefined
-      : defaultSelectColumns;
-
-  const columnsParsers: ColumnsParsers = {};
-  let hasParsers = false;
-  for (const key in shape) {
-    const column = shape[key];
-    if (column.parseFn) {
-      hasParsers = true;
-      columnsParsers[key] = column.parseFn;
-    }
   }
 
-  const { toSql } = PostgresModel.prototype;
+  belongsTo<
+    Self extends this,
+    Related extends Model,
+    Scope extends Query,
+    Options extends {
+      primaryKey: keyof Related['columns']['shape'];
+      foreignKey: keyof Self['columns']['shape'];
+      scope?(q: Db<Related['table'], Related['columns']['shape']>): Scope;
+    },
+  >(this: Self, fn: () => ModelClass<Related>, options: Options) {
+    return {
+      type: 'belongsTo' as const,
+      fn,
+      options,
+    };
+  }
 
-  return class extends PostgresModel<Shape, Table> {
-    table = table;
-    shape = shape;
-    schema = schema;
-    columns = columns;
-    defaultSelectColumns =
-      defaultSelectColumns as unknown as DefaultSelectColumns<Shape>;
+  hasOne<
+    Self extends this,
+    Related extends Model,
+    Scope extends Query,
+    Options extends {
+      primaryKey: keyof Self['columns']['shape'];
+      foreignKey: keyof Related['columns']['shape'];
+      scope?(q: Db<Related['table'], Related['columns']['shape']>): Scope;
+    },
+  >(this: Self, fn: () => ModelClass<Related>, options: Options) {
+    return {
+      type: 'hasOne' as const,
+      fn,
+      options,
+    };
+  }
 
-    columnsParsers = hasParsers ? columnsParsers : undefined;
+  hasMany<
+    Self extends this,
+    Related extends Model,
+    Scope extends Query,
+    Options extends {
+      primaryKey: keyof Self['columns']['shape'];
+      foreignKey: keyof Related['columns']['shape'];
+      scope?(q: Db<Related['table'], Related['columns']['shape']>): Scope;
+    },
+  >(this: Self, fn: () => ModelClass<Related>, options: Options) {
+    return {
+      type: 'hasMany' as const,
+      fn,
+      options,
+    };
+  }
 
-    query = options?.schema ? { schema: options.schema } : undefined;
-
-    toSql = defaultSelect
-      ? function <T extends Query>(this: T): string {
-          const q = (this.query ? this : this.toQuery()) as T & {
-            query: QueryData<T>;
-          };
-          if (!q.query.select) {
-            q.query.select = defaultSelect as string[];
-          }
-          return toSql.call(q);
-        }
-      : toSql;
-  };
-};
-
-export type PostgresModelConstructors = Record<string, ModelClass>;
+  hasAndBelongsToMany<
+    Self extends this,
+    Related extends Model,
+    Scope extends Query,
+    Options extends {
+      primaryKey: keyof Self['columns']['shape'];
+      associationPrimaryKey: keyof Related['columns']['shape'];
+      foreignKey: string;
+      associationForeignKey: string;
+      joinTable: string;
+      scope?(q: Db<Related['table'], Related['columns']['shape']>): Scope;
+    },
+  >(this: Self, fn: () => ModelClass<Related>, options: Options) {
+    return {
+      type: 'hasAndBelongsToMany' as const,
+      fn,
+      options,
+    };
+  }
+}

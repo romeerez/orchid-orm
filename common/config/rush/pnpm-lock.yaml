@@ -21,7 +21,6 @@ importers:
       '@types/node': ^18.0.1
       '@types/pg': ^8.6.5
       dotenv: ^16.0.1
-      fishery: ^2.2.2
       jest: ^28.1.2
       pg: ^8.7.3
       pg-transactional-tests: ^1.0.3
@@ -40,7 +39,6 @@ importers:
       '@types/node': 18.0.1
       '@types/pg': 8.6.5
       dotenv: 16.0.1
-      fishery: 2.2.2
       jest: 28.1.2_@types+node@18.0.1
       pg: 8.7.3
       pg-transactional-tests: 1.0.3_pg@8.7.3
@@ -1865,12 +1863,6 @@ packages:
       path-exists: 4.0.0
     dev: true
 
-  /fishery/2.2.2:
-    resolution: {integrity: sha512-jeU0nDhPHJkupmjX+r9niKgVMTBDB8X+U/pktoGHAiWOSyNlMd0HhmqnjrpjUOCDPJYaSSu4Ze16h6dZOKSp2w==}
-    dependencies:
-      lodash.mergewith: 4.6.2
-    dev: true
-
   /fs.realpath/1.0.0:
     resolution: {integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==}
     dev: true
@@ -2515,10 +2507,6 @@ packages:
     engines: {node: '>=8'}
     dependencies:
       p-locate: 4.1.0
-    dev: true
-
-  /lodash.mergewith/4.6.2:
-    resolution: {integrity: sha512-GK3g5RPZWTRSeLSpgP8Xhra+pnjBC56q9FZYe1d5RN3TJ35dbkGy3YqBSMbyCrlbi+CM9Z3Jk5yTL7RCsqboyQ==}
     dev: true
 
   /lru-cache/6.0.0:

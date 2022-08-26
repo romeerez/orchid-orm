@@ -152,6 +152,7 @@ export const createDb = (adapter: PostgresAdapter): DbResult => {
     { adapter, destroy: () => adapter.destroy() },
   );
 
+  // Set all methods from prototype to the db instance (needed for transaction at least):
   Object.getOwnPropertyNames(Db.prototype).forEach((name) => {
     (db as unknown as Record<string, unknown>)[name] =
       Db.prototype[name as keyof typeof Db.prototype];

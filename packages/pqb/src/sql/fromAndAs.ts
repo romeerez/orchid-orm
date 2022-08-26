@@ -18,7 +18,7 @@ export const pushFromAndAs = (
   const from = getFrom(model, query, values);
   sql.push(from);
 
-  if (query.as && quotedAs !== from) {
+  if (query.as && quotedAs && quotedAs !== from) {
     sql.push('AS', quotedAs as string);
   }
 };

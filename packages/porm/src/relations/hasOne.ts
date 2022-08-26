@@ -1,9 +1,9 @@
-import { Model, ModelClass } from '../model';
 import { Query, SetQueryReturnsOneOrUndefined } from 'pqb';
+import { Model, ModelClass } from '../model';
 import { RelationScopeOrModel, RelationThunkBase } from './relations';
 
-export interface BelongsTo extends RelationThunkBase {
-  type: 'belongsTo';
+export interface HasOne extends RelationThunkBase {
+  type: 'hasOne';
   fn(): ModelClass;
   options: {
     primaryKey: string;
@@ -12,17 +12,17 @@ export interface BelongsTo extends RelationThunkBase {
   };
 }
 
-export type BelongsToMethod<T extends Model, Relation extends BelongsTo> = (
+export type HasOneMethod<T extends Model, Relation extends HasOne> = (
   params: Record<
-    Relation['options']['foreignKey'],
-    T['columns']['shape'][Relation['options']['foreignKey']]['type']
+    Relation['options']['primaryKey'],
+    T['columns']['shape'][Relation['options']['primaryKey']]['type']
   >,
 ) => SetQueryReturnsOneOrUndefined<RelationScopeOrModel<Relation>>;
 
-export const makeBelongsToMethod = (relation: BelongsTo, query: Query) => {
+export const makeHasOneMethod = (relation: HasOne, query: Query) => {
   const { primaryKey, foreignKey } = relation.options;
 
   return (params: Record<string, unknown>) => {
-    return query.findBy({ [primaryKey]: params[foreignKey] });
+    return query.findBy({ [foreignKey]: params[primaryKey] });
   };
 };
