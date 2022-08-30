@@ -96,6 +96,7 @@ export type WindowFunctionOptions<
 > = { as?: As } & WindowArgDeclaration<T>;
 
 const buildAggregateSelectItem = <T extends Query>(
+  q: T,
   functionName: string,
   arg: AggregateArg<T>,
   options?: AggregateOptions<T>,
@@ -110,9 +111,11 @@ const buildAggregateSelectItem = <T extends Query>(
           ? options.order
           : [options.order]
         : undefined,
-      filter: options?.filter ? serializeWhereItem(options.filter) : undefined,
+      filter: options?.filter
+        ? serializeWhereItem(q, options.filter)
+        : undefined,
       filterOr: options?.filterOr
-        ? options.filterOr.map(serializeWhereItem)
+        ? options.filterOr.map((item) => serializeWhereItem(q, item))
         : undefined,
     },
   };
@@ -163,7 +166,7 @@ export class Aggregate {
     pushQueryValue(
       q,
       'select',
-      buildAggregateSelectItem<T>(functionName, arg, options),
+      buildAggregateSelectItem<T>(q, functionName, arg, options),
     );
 
     if (columnType?.parseFn) {

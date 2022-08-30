@@ -28,7 +28,10 @@ export type HavingArg<T extends Query = Query> =
   | Query
   | RawExpression;
 
-const processHavingArg = <T extends Query>(arg: HavingArg<T>): HavingItem => {
+const processHavingArg = <T extends Query>(
+  q: T,
+  arg: HavingArg<T>,
+): HavingItem => {
   if ('prototype' in arg || '__model' in arg || isRaw(arg)) {
     return arg;
   } else {
@@ -58,12 +61,16 @@ const processHavingArg = <T extends Query>(arg: HavingArg<T>): HavingItem => {
             }
 
             if ('filter' in options && options.filter) {
-              processed[fn][column].filter = serializeWhereItem(options.filter);
+              processed[fn][column].filter = serializeWhereItem(
+                q,
+                options.filter,
+              );
             }
 
             if ('filterOr' in options && options.filterOr) {
-              processed[fn][column].filterOr =
-                options.filterOr.map(serializeWhereItem);
+              processed[fn][column].filterOr = options.filterOr.map((item) =>
+                serializeWhereItem(q, item),
+              );
             }
           }
         }
@@ -79,7 +86,11 @@ export class Having {
   }
 
   _having<T extends Query>(this: T, ...args: HavingArg<T>[]): T {
-    return pushQueryArray(this, 'having', args.map(processHavingArg));
+    return pushQueryArray(
+      this,
+      'having',
+      args.map((arg) => processHavingArg(this, arg)),
+    );
   }
 
   havingOr<T extends Query>(this: T, ...args: HavingArg<T>[]): T {
@@ -90,7 +101,7 @@ export class Having {
     return pushQueryArray(
       this,
       'havingOr',
-      args.map((arg) => [processHavingArg(arg)]),
+      args.map((arg) => [processHavingArg(this, arg)]),
     );
   }
 }

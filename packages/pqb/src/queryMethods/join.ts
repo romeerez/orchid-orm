@@ -6,11 +6,9 @@ import {
   Selectable,
   WithDataItem,
 } from '../query';
-import { QueryData } from '../sql';
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
 import { RawExpression, StringKey } from '../common';
-import { getClonedQueryData } from '../utils';
-import { Where } from './where';
+import { WhereQueryBuilder } from './where';
 
 type WithSelectable<
   T extends Query,
@@ -299,31 +297,10 @@ export class OnQueryBuilder<
     S extends Query = Query,
     J extends PickQueryForSelect = PickQueryForSelect,
   >
-  extends Where
+  extends WhereQueryBuilder<S>
   implements QueryBase
 {
-  query?: QueryData;
   selectable!: S['selectable'] & J['selectable'];
-  __model?: this;
-
-  constructor(public table: S['table'], public tableAlias: S['tableAlias']) {
-    super();
-  }
-
-  toQuery<T extends this>(this: T): T & { query: QueryData } {
-    return (this.query ? this : this.clone()) as T & { query: QueryData };
-  }
-
-  clone<T extends this>(this: T): T & { query: QueryData } {
-    const cloned = Object.create(this);
-    if (!this.__model) {
-      cloned.__model = this;
-    }
-
-    cloned.query = getClonedQueryData(this.query);
-
-    return cloned as unknown as T & { query: QueryData };
-  }
 
   on<T extends this>(this: T, ...args: OnArgs<T>): T {
     return this.clone()._on(...args);

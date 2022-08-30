@@ -29,6 +29,7 @@ export const whereToSql = (
   values: unknown[],
   quotedAs?: string,
   otherTableQuotedAs?: string,
+  negate?: boolean,
 ): string => {
   const or =
     query.and && query.or
@@ -42,6 +43,7 @@ export const whereToSql = (
   or.forEach((and) => {
     const ands: string[] = [];
     and.forEach(({ item, not }) => {
+      if (negate) not = !not;
       const prefix = not ? 'NOT ' : '';
 
       if (item.type === 'object') {
@@ -113,6 +115,13 @@ export const whereToSql = (
             );
           }
         }
+        return;
+      }
+
+      if (item.type === 'nested') {
+        ands.push(
+          whereToSql(model, item, values, quotedAs, otherTableQuotedAs, not),
+        );
         return;
       }
 

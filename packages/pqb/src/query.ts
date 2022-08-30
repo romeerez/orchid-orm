@@ -20,6 +20,8 @@ export type SelectableBase = Record<string, { as: string; column: ColumnType }>;
 
 export type QueryBase = {
   query?: QueryData;
+  table?: string;
+  tableAlias?: string;
   toQuery(): { query: QueryData };
   clone(): { query: QueryData };
   selectable: SelectableBase;

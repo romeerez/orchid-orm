@@ -1440,10 +1440,21 @@ Table.where({ id: 1 }, otherQuery)
 // this will produce WHERE "table"."id" = 1 AND "table"."name' = 'John'
 ```
 
-It supports raw argument:
+`.where` supports raw argument:
 
 ```ts
 Table.where(raw('a = b'))
+```
+
+`.where` can accept a callback with specific query builder containing all "where" methods such as `.where`, `.or`, `.whereNot`, `.whereIn`, `.whereExists`:
+
+```ts
+Table.where((q) =>
+  q.where({ name: 'Name' })
+    .or({ id: 1 }, { id: 2 })
+    .whereIn('letter', ['a', 'b', 'c'])
+    .whereExists(OtherTable.where(...conditions))
+)
 ```
 
 `.where` can accept multiple arguments, conditions are joined with `AND`:

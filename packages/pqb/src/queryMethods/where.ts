@@ -2,8 +2,9 @@ import { Query, QueryBase, SelectableBase } from '../query';
 import { ColumnOperators, QueryData, WhereItem } from '../sql';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { RawExpression } from '../common';
+import { getClonedQueryData } from '../utils';
 
-export type WhereArg<T extends Pick<Query, 'selectable'>> =
+export type WhereArg<T extends QueryBase> =
   | {
       [K in keyof T['selectable']]?:
         | T['selectable'][K]['column']['type']
@@ -11,14 +12,15 @@ export type WhereArg<T extends Pick<Query, 'selectable'>> =
         | RawExpression;
     }
   | QueryBase
-  | RawExpression;
+  | RawExpression
+  | ((q: WhereQueryBuilder<T>) => WhereQueryBuilder);
 
-export type WhereInColumn<T extends Pick<Query, 'selectable'>> =
+export type WhereInColumn<T extends QueryBase> =
   | keyof T['selectable']
   | [keyof T['selectable'], ...(keyof T['selectable'])[]];
 
 export type WhereInValues<
-  T extends Pick<Query, 'selectable'>,
+  T extends QueryBase,
   Column extends WhereInColumn<T>,
 > = Column extends keyof T['selectable']
   ? T['selectable'][Column]['column']['type'][] | Query | RawExpression
@@ -40,10 +42,24 @@ export type WhereInArg<T extends Pick<Query, 'selectable'>> = {
     | RawExpression;
 };
 
-export const serializeWhereItem = (item: WhereArg<Query>): WhereItem => {
+export const serializeWhereItem = <T extends QueryBase>(
+  q: T,
+  item: WhereArg<T>,
+): WhereItem => {
   if ('type' in item && typeof item.type === 'string') {
     return item as unknown as WhereItem;
   }
+
+  if (typeof item === 'function') {
+    const qb = item(new WhereQueryBuilder(q.table, q.tableAlias));
+
+    return {
+      type: 'nested',
+      and: qb.query?.and,
+      or: qb.query?.or,
+    };
+  }
+
   return {
     type: 'object',
     data: item,
@@ -93,44 +109,38 @@ export const applyIn = <T extends QueryBase>(
   return q;
 };
 
-export const addWhere = <T extends Where>(q: T, args: WhereArg<Query>[]): T => {
+export const addWhere = <T extends Where>(q: T, args: WhereArg<T>[]): T => {
   return pushQueryArray(
     q,
     'and',
-    args.map((item) => ({ item: serializeWhereItem(item) })),
+    args.map((item) => ({ item: serializeWhereItem(q, item) })),
   );
 };
 
 export const addWhereNot = <T extends QueryBase>(
   q: T,
-  args: WhereArg<Query>[],
+  args: WhereArg<T>[],
 ): T => {
   return pushQueryArray(
     q,
     'and',
-    args.map((item) => ({ item: serializeWhereItem(item), not: true })),
+    args.map((item) => ({ item: serializeWhereItem(q, item), not: true })),
   );
 };
 
-export const addOr = <T extends QueryBase>(
-  q: T,
-  args: WhereArg<Query>[],
-): T => {
+export const addOr = <T extends QueryBase>(q: T, args: WhereArg<T>[]): T => {
   return pushQueryArray(
     q,
     'or',
-    args.map((item) => [{ item: serializeWhereItem(item) }]),
+    args.map((item) => [{ item: serializeWhereItem(q, item) }]),
   );
 };
 
-export const addOrNot = <T extends QueryBase>(
-  q: T,
-  args: WhereArg<Query>[],
-): T => {
+export const addOrNot = <T extends QueryBase>(q: T, args: WhereArg<T>[]): T => {
   return pushQueryArray(
     q,
     'or',
-    args.map((item) => [{ item: serializeWhereItem(item), not: true }]),
+    args.map((item) => [{ item: serializeWhereItem(q, item), not: true }]),
   );
 };
 
@@ -329,5 +339,33 @@ export abstract class Where implements QueryBase {
   }
   _orWhereNotExists<T extends Where>(this: T, query: Query | RawExpression): T {
     return this._orNot({ type: 'exists', query });
+  }
+}
+
+export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
+  extends Where
+  implements QueryBase
+{
+  query?: QueryData;
+  selectable!: Q['selectable'];
+  __model?: this;
+
+  constructor(public table: Q['table'], public tableAlias: Q['tableAlias']) {
+    super();
+  }
+
+  toQuery<T extends this>(this: T): T & { query: QueryData } {
+    return (this.query ? this : this.clone()) as T & { query: QueryData };
+  }
+
+  clone<T extends this>(this: T): T & { query: QueryData } {
+    const cloned = Object.create(this);
+    if (!this.__model) {
+      cloned.__model = this;
+    }
+
+    cloned.query = getClonedQueryData(this.query);
+
+    return cloned as unknown as T & { query: QueryData };
   }
 }

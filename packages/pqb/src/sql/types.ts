@@ -216,6 +216,11 @@ export type WhereItem =
         | RawExpression;
     }
   | {
+      type: 'nested';
+      and?: { item: WhereItem; not?: boolean }[];
+      or?: { item: WhereItem; not?: boolean }[][];
+    }
+  | {
       type: 'in';
       columns: string[];
       values: unknown[][] | Query | RawExpression;

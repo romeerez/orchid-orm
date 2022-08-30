@@ -122,8 +122,7 @@ export const testWhere = (
         buildSql((q) => q.whereNot({ id: 1, picture: null })),
         `
             ${startSql}
-            NOT "user"."id" = $1
-              AND NOT "user"."picture" IS NULL
+            NOT "user"."id" = $1 AND NOT "user"."picture" IS NULL
           `,
         [1],
       );
@@ -181,6 +180,20 @@ export const testWhere = (
         `
             ${startSql} NOT "user"."id" = 1 + 2
           `,
+      );
+    });
+
+    it('should handle sub query builder', () => {
+      expectSql(
+        buildSql((q) =>
+          q.whereNot((q) => q.whereIn('id', [1, 2, 3]).whereExists(User.all())),
+        ),
+        `
+          ${startSql}
+          NOT "user"."id" IN ($1, $2, $3)
+          AND NOT EXISTS (SELECT 1 FROM "user" LIMIT $4)
+        `,
+        [1, 2, 3, 1],
       );
     });
   });
