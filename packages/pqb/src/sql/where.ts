@@ -1,11 +1,12 @@
 import { Query } from '../query';
-import { QueryData, SelectQueryData } from './types';
+import { QueryData } from './types';
 import { addValue, q, qc, quoteFullColumn } from './common';
-import { EMPTY_OBJECT, getRaw, isRaw, raw, RawExpression } from '../common';
+import { EMPTY_OBJECT, getRaw, isRaw, RawExpression } from '../common';
+import { processJoinItem } from './join';
 
 export const pushWhereSql = (
   sql: string[],
-  model: Pick<Query, 'shape'>,
+  model: Pick<Query, 'shape' | 'relations'>,
   query: Pick<QueryData, 'and' | 'or'>,
   values: unknown[],
   quotedAs?: string,
@@ -24,7 +25,7 @@ export const pushWhereSql = (
 };
 
 export const whereToSql = (
-  model: Pick<Query, 'shape'>,
+  model: Pick<Query, 'shape' | 'relations'>,
   query: Pick<QueryData, 'and' | 'or'>,
   values: unknown[],
   quotedAs?: string,
@@ -146,19 +147,16 @@ export const whereToSql = (
       }
 
       if (item.type === 'exists') {
-        let querySql: string;
-        if (isRaw(item.query)) {
-          querySql = getRaw(item.query, values);
-        } else {
-          const q = item.query.clone();
-          const query = q.query as SelectQueryData;
-          query.select = [raw('1')];
-          query.limit = 1;
-          const sql = q.toSql(values);
-          querySql = sql.text;
-        }
+        const { target, conditions } = processJoinItem(
+          model,
+          values,
+          item.args,
+          quotedAs,
+        );
 
-        ands.push(`${prefix}EXISTS (${querySql})`);
+        ands.push(
+          `${prefix}EXISTS (SELECT 1 FROM ${target} WHERE ${conditions} LIMIT 1)`,
+        );
       }
 
       if (item.type === 'onJsonPathEquals') {

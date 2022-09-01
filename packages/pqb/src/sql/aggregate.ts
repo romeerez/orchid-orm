@@ -7,7 +7,7 @@ import { whereToSql } from './where';
 import { Query } from '../query';
 
 export const aggregateToSql = (
-  model: Pick<Query, 'shape'>,
+  model: Pick<Query, 'shape' | 'relations'>,
   values: unknown[],
   item: AggregateItem,
   quotedAs?: string,

@@ -1453,7 +1453,7 @@ Table.where((q) =>
   q.where({ name: 'Name' })
     .or({ id: 1 }, { id: 2 })
     .whereIn('letter', ['a', 'b', 'c'])
-    .whereExists(OtherTable.where(...conditions))
+    .whereExists(Message, 'authorId', 'id')
 )
 ```
 
@@ -1562,21 +1562,15 @@ Table.whereIn(
 
 `.whereExists` and related methods are for support of `WHERE EXISTS (query)` clause.
 
-If other query is provided, it will add `SELECT 1` and `LIMIT 1` to it.
-
-If raw query is supplied, it will be placed into `WHERE EXISTS ( ... )` as is.
+This method is accepting the same arguments as `.join`, see [join](#join) section for more details.
 
 `.orWhereExists` acts as `.or`, `.whereNotExists` acts as `.whereNot`, `.orWhereNotExists` acts as `.orNot`.
 
 ```ts
-// where other query exists:
-User.whereExists(
-  Account.where(raw('"user"."accountId" = "account"."id"'))
-)
+User.whereExists(Account, 'account.id', 'user.id')
 
-// where exists with raw expression:
-User.whereExists(
-  raw(`SELECT 1 FROM "account" WHERE "user"."accountId" = "account"."id"`)
+User.whereExists(Account, (q) =>
+  q.on('account.id', '=', 'user.id')
 )
 ```
 

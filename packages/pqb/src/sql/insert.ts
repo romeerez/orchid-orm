@@ -7,7 +7,7 @@ import { Query } from '../query';
 export const pushInsertSql = (
   sql: string[],
   values: unknown[],
-  model: Pick<Query, 'shape'>,
+  model: Pick<Query, 'shape' | 'relations'>,
   query: InsertQueryData,
   quotedAs: string,
 ) => {

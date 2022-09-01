@@ -1,4 +1,4 @@
-import { expectSql, User } from '../test-utils';
+import { expectSql, Message, User } from '../test-utils';
 import { raw } from '../common';
 import { Sql } from '../sql';
 import { Query } from '../query';
@@ -186,14 +186,16 @@ export const testWhere = (
     it('should handle sub query builder', () => {
       expectSql(
         buildSql((q) =>
-          q.whereNot((q) => q.whereIn('id', [1, 2, 3]).whereExists(User.all())),
+          q.whereNot((q) =>
+            q.whereIn('id', [1, 2, 3]).whereExists(Message, 'authorId', 'id'),
+          ),
         ),
         `
           ${startSql}
           NOT "user"."id" IN ($1, $2, $3)
-          AND NOT EXISTS (SELECT 1 FROM "user" LIMIT $4)
+          AND NOT EXISTS (SELECT 1 FROM "message" WHERE "message"."authorId" = "user"."id" LIMIT 1)
         `,
-        [1, 2, 3, 1],
+        [1, 2, 3],
       );
     });
   });
@@ -779,101 +781,185 @@ export const testWhere = (
   });
 
   describe('whereExists', () => {
-    it('should handle sub query', () => {
-      expectSql(
-        buildSql((q) => q.whereExists(User.all())),
-        `
-            ${startSql}
-            EXISTS (SELECT 1 FROM "user" LIMIT $1)
-          `,
-        [1],
-      );
-    });
-
-    it('should handle raw query', () => {
-      expectSql(
-        buildSql((q) => q.whereExists(raw(`SELECT 1 FROM "user"`))),
-        `
-            ${startSql}
-            EXISTS (SELECT 1 FROM "user")
-          `,
-      );
-    });
+    testJoin(
+      'whereExists',
+      (target: string, conditions: string) => `
+        SELECT "user".* FROM "user"
+        WHERE EXISTS (
+          SELECT 1 FROM ${target}
+          WHERE ${conditions}
+          LIMIT 1
+        )
+      `,
+    );
   });
 
   describe('orWhereExists', () => {
-    it('should handle sub query', () => {
-      expectSql(
-        buildSql((q) => q.where({ id: 1 }).orWhereExists(User.all())),
-        `
-            ${startSql}
-            "user"."id" = $1 OR EXISTS (SELECT 1 FROM "user" LIMIT $2)
-          `,
-        [1, 1],
-      );
-    });
-
-    it('should handle raw query', () => {
-      expectSql(
-        buildSql((q) =>
-          q.where({ id: 1 }).orWhereExists(raw(`SELECT 1 FROM "user"`)),
-        ),
-        `
-            ${startSql}
-            "user"."id" = $1 OR EXISTS (SELECT 1 FROM "user")
-          `,
-        [1],
-      );
-    });
+    testJoin(
+      'orWhereExists',
+      (target: string, conditions: string) => `
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = $1 OR EXISTS (
+          SELECT 1 FROM ${target}
+          WHERE ${conditions}
+          LIMIT 1
+        )
+      `,
+      User.where({ id: 1 }),
+      [1],
+    );
   });
 
   describe('whereNotExists', () => {
-    it('should handle sub query', () => {
-      expectSql(
-        buildSql((q) => q.whereNotExists(User.all())),
-        `
-            ${startSql}
-            NOT EXISTS (SELECT 1 FROM "user" LIMIT $1)
-          `,
-        [1],
-      );
-    });
-
-    it('should handle raw query', () => {
-      expectSql(
-        buildSql((q) => q.whereNotExists(raw(`SELECT 1 FROM "user"`))),
-        `
-            ${startSql}
-            NOT EXISTS (SELECT 1 FROM "user")
-          `,
-      );
-    });
+    testJoin(
+      'whereNotExists',
+      (target: string, conditions: string) => `
+        SELECT "user".* FROM "user"
+        WHERE NOT EXISTS (
+          SELECT 1 FROM ${target}
+          WHERE ${conditions}
+          LIMIT 1
+        )
+      `,
+    );
   });
 
   describe('orWhereNotExists', () => {
-    it('should handle sub query', () => {
-      expectSql(
-        buildSql((q) => q.where({ id: 1 }).orWhereNotExists(User.all())),
-        `
-            ${startSql}
-            "user"."id" = $1 OR NOT EXISTS (SELECT 1 FROM "user" LIMIT $2)
-          `,
-        [1, 1],
-      );
-    });
+    testJoin(
+      'orWhereNotExists',
+      (target: string, conditions: string) => `
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = $1 OR NOT EXISTS (
+          SELECT 1 FROM ${target}
+          WHERE ${conditions}
+          LIMIT 1
+        )
+      `,
+      User.where({ id: 1 }),
+      [1],
+    );
+  });
+};
 
-    it('should handle raw query', () => {
-      expectSql(
-        buildSql((q) =>
-          q.where({ id: 1 }).orWhereNotExists(raw(`SELECT 1 FROM "user"`)),
-        ),
-        `
-            ${startSql}
-            "user"."id" = $1 OR NOT EXISTS (SELECT 1 FROM "user")
-          `,
-        [1],
-      );
-    });
+export const testJoin = (
+  method: string,
+  sql: (target: string, conditions: string) => string,
+  q: Query = User.all(),
+  values?: unknown[],
+) => {
+  const join = method as unknown as 'join';
+  const initialSql = q.toSql().text;
+
+  it('should accept left column and right column', () => {
+    expectSql(
+      q[join](Message, 'authorId', 'id').toSql(),
+      sql(`"message"`, `"message"."authorId" = "user"."id"`),
+      values,
+    );
+    expectSql(
+      q[join](Message.as('as'), 'authorId', 'id').toSql(),
+      sql(`"message" AS "as"`, `"as"."authorId" = "user"."id"`),
+      values,
+    );
+    expect(q.toSql().text).toBe(initialSql);
+  });
+
+  it('should accept left column, op and right column', () => {
+    expectSql(
+      q[join](Message, 'authorId', '=', 'id').toSql(),
+      sql(`"message"`, `"message"."authorId" = "user"."id"`),
+      values,
+    );
+    expectSql(
+      q[join](Message.as('as'), 'authorId', '=', 'id').toSql(),
+      sql(`"message" AS "as"`, `"as"."authorId" = "user"."id"`),
+      values,
+    );
+    expect(q.toSql().text).toBe(initialSql);
+  });
+
+  it('should accept raw and raw', () => {
+    expectSql(
+      q[join](Message, raw('"message"."authorId"'), raw('"user"."id"')).toSql(),
+      sql(`"message"`, `"message"."authorId" = "user"."id"`),
+      values,
+    );
+    expectSql(
+      q[join](
+        Message.as('as'),
+        raw('"as"."authorId"'),
+        raw('"user"."id"'),
+      ).toSql(),
+      sql(`"message" AS "as"`, `"as"."authorId" = "user"."id"`),
+      values,
+    );
+    expect(q.toSql().text).toBe(initialSql);
+  });
+
+  it('should accept raw, op and raw', () => {
+    expectSql(
+      q[join](
+        Message,
+        raw('"message"."authorId"'),
+        '=',
+        raw('"user"."id"'),
+      ).toSql(),
+      sql(`"message"`, `"message"."authorId" = "user"."id"`),
+      values,
+    );
+    expectSql(
+      q[join](
+        Message.as('as'),
+        raw('"as"."authorId"'),
+        '=',
+        raw('"user"."id"'),
+      ).toSql(),
+      sql(`"message" AS "as"`, `"as"."authorId" = "user"."id"`),
+      values,
+    );
+    expect(q.toSql().text).toBe(initialSql);
+  });
+
+  it('should accept object of columns', () => {
+    expectSql(
+      q[join](Message, { authorId: 'id' }).toSql(),
+      sql(`"message"`, `"message"."authorId" = "user"."id"`),
+      values,
+    );
+    expectSql(
+      q[join](Message.as('as'), { authorId: 'id' }).toSql(),
+      sql(`"message" AS "as"`, `"as"."authorId" = "user"."id"`),
+      values,
+    );
+    expect(q.toSql().text).toBe(initialSql);
+  });
+
+  it('should accept object of columns with raw value', () => {
+    expectSql(
+      q[join](Message, { authorId: raw('"user"."id"') }).toSql(),
+      sql(`"message"`, `"message"."authorId" = "user"."id"`),
+      values,
+    );
+    expectSql(
+      q[join](Message.as('as'), { authorId: raw('"user"."id"') }).toSql(),
+      sql(`"message" AS "as"`, `"as"."authorId" = "user"."id"`),
+      values,
+    );
+    expect(q.toSql().text).toBe(initialSql);
+  });
+
+  it('should accept raw sql', () => {
+    expectSql(
+      q[join](Message, raw('"authorId" = "user".id')).toSql(),
+      sql(`"message"`, `"authorId" = "user".id`),
+      values,
+    );
+    expectSql(
+      q[join](Message.as('as'), raw('"authorId" = "user".id')).toSql(),
+      sql(`"message" AS "as"`, `"authorId" = "user".id`),
+      values,
+    );
+    expect(q.toSql().text).toBe(initialSql);
   });
 };
 

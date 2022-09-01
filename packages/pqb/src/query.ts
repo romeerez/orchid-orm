@@ -18,6 +18,18 @@ export type ColumnsParsers = Record<string, ColumnParser>;
 
 export type SelectableBase = Record<string, { as: string; column: ColumnType }>;
 
+export type Relation = {
+  key: string;
+  type: string;
+  query: QueryWithTable;
+  options: Record<string, unknown>;
+  joinQuery: QueryWithData<Query>;
+};
+export type RelationsBase = Record<never, Relation>;
+
+export type WithDataItem = { table: string; shape: ColumnsShape };
+export type WithDataBase = Record<never, WithDataItem>;
+
 export type QueryBase = {
   query?: QueryData;
   table?: string;
@@ -26,6 +38,8 @@ export type QueryBase = {
   clone(): { query: QueryData };
   selectable: SelectableBase;
   __model?: QueryBase;
+  relations: RelationsBase;
+  withData: WithDataBase;
 };
 
 export type Query = QueryMethods & {
@@ -48,24 +62,15 @@ export type Query = QueryMethods & {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   then: any;
   tableAlias: string | undefined;
-  withData: Record<never, WithDataItem>;
   joinedTables: Record<string, Pick<Query, 'result' | 'tableAlias' | 'table'>>;
   windows: PropertyKey[];
   defaultSelectColumns: string[];
   columnsParsers?: ColumnsParsers;
-  relations: Record<
-    never,
-    {
-      key: string;
-      type: string;
-      query: QueryWithTable;
-      options: Record<string, unknown>;
-      joinQuery: QueryWithData<Query>;
-    }
-  >;
+  relations: RelationsBase;
+  withData: WithDataBase;
 };
 
-export type Selectable<T extends Query> = StringKey<keyof T['selectable']>;
+export type Selectable<T extends QueryBase> = StringKey<keyof T['selectable']>;
 
 export type QueryWithTable = Query & { table: string };
 
@@ -86,8 +91,6 @@ export type JoinedTablesBase = Record<
   string,
   Pick<Query, 'result' | 'tableAlias' | 'table'>
 >;
-
-export type WithDataItem = { table: string; shape: ColumnsShape };
 
 type QueryThen<
   ReturnType extends QueryReturnType,

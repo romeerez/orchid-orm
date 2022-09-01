@@ -23,9 +23,9 @@ type ItemOf3Or4Length =
     ];
 
 export const processJoinItem = (
-  model: Query,
+  model: Pick<Query, 'shape' | 'relations'>,
   values: unknown[],
-  { args }: JoinItem,
+  args: JoinItem['args'],
   quotedAs?: string,
 ): { target: string; conditions?: string } => {
   const [first] = args;
@@ -192,7 +192,7 @@ export const pushJoinSql = (
     const { target, conditions } = processJoinItem(
       model,
       values,
-      item,
+      item.args,
       quotedAs,
     );
 

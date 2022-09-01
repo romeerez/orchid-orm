@@ -11,7 +11,7 @@ import { RawExpression, StringKey } from '../common';
 import { WhereQueryBuilder } from './where';
 
 type WithSelectable<
-  T extends Query,
+  T extends QueryBase,
   W extends keyof T['withData'],
 > = T['withData'][W] extends WithDataItem
   ?
@@ -21,8 +21,8 @@ type WithSelectable<
         >}`
   : never;
 
-type JoinArgs<
-  T extends Query,
+export type JoinArgs<
+  T extends QueryBase,
   Q extends Query = Query,
   W extends keyof T['withData'] = keyof T['withData'],
   QW extends Query | keyof T['withData'] = Query | keyof T['withData'],
@@ -294,7 +294,7 @@ type OnArgs<Q extends OnQueryBuilder> =
     ];
 
 export class OnQueryBuilder<
-    S extends Query = Query,
+    S extends QueryBase = QueryBase,
     J extends PickQueryForSelect = PickQueryForSelect,
   >
   extends WhereQueryBuilder<S>

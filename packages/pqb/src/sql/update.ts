@@ -8,7 +8,7 @@ import { pushWhereSql } from './where';
 export const pushUpdateSql = (
   sql: string[],
   values: unknown[],
-  model: Pick<Query, 'shape'>,
+  model: Pick<Query, 'shape' | 'relations'>,
   query: UpdateQueryData,
   quotedAs: string,
 ) => {

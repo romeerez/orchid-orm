@@ -232,7 +232,7 @@ export type WhereItem =
     }
   | {
       type: 'exists';
-      query: Query | RawExpression;
+      args: JoinItem['args'];
     }
   | {
       type: 'on';

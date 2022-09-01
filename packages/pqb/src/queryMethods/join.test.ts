@@ -1,7 +1,6 @@
 import { expectQueryNotMutated, expectSql, Message, User } from '../test-utils';
-import { raw } from '../common';
 import { OnQueryBuilder } from './join';
-import { testWhere } from './where.test';
+import { testJoin, testWhere } from './where.test';
 import { Sql } from '../sql';
 import { Query } from '../query';
 
@@ -15,156 +14,13 @@ describe.each`
   ${'rightOuterJoin'} | ${'RIGHT OUTER JOIN'}
   ${'fullOuterJoin'}  | ${'FULL OUTER JOIN'}
 `('$method', ({ method, sql }) => {
-  const join = method as 'join';
-
-  it('should accept left column and right column', () => {
-    const q = User.all();
-    expectSql(
-      q[join](Message, 'authorId', 'id').toSql(),
-      `
-        SELECT "user".* FROM "user"
-        ${sql} "message" ON "message"."authorId" = "user"."id"
-      `,
-    );
-    expectSql(
-      q[join](Message.as('as'), 'authorId', 'id').toSql(),
-      `
-        SELECT "user".* FROM "user"
-        ${sql} "message" AS "as" ON "as"."authorId" = "user"."id"
-      `,
-    );
-    expectQueryNotMutated(q);
-  });
-
-  it('should accept left column, op and right column', () => {
-    const q = User.all();
-    expectSql(
-      q[join](Message, 'authorId', '=', 'id').toSql(),
-      `
-        SELECT "user".* FROM "user"
-        ${sql} "message" ON "message"."authorId" = "user"."id"
-      `,
-    );
-    expectSql(
-      q[join](Message.as('as'), 'authorId', '=', 'id').toSql(),
-      `
-        SELECT "user".* FROM "user"
-        ${sql} "message" AS "as" ON "as"."authorId" = "user"."id"
-      `,
-    );
-    expectQueryNotMutated(q);
-  });
-
-  it('should accept raw and raw', () => {
-    const q = User.all();
-    expectSql(
-      q[join](Message, raw('"message"."authorId"'), raw('"user"."id"')).toSql(),
-      `
-        SELECT "user".* FROM "user"
-        ${sql} "message" ON "message"."authorId" = "user"."id"
-      `,
-    );
-    expectSql(
-      q[join](
-        Message.as('as'),
-        raw('"as"."authorId"'),
-        raw('"user"."id"'),
-      ).toSql(),
-      `
-        SELECT "user".* FROM "user"
-        ${sql} "message" AS "as" ON "as"."authorId" = "user"."id"
-      `,
-    );
-    expectQueryNotMutated(q);
-  });
-
-  it('should accept raw, op and raw', () => {
-    const q = User.all();
-    expectSql(
-      q[join](
-        Message,
-        raw('"message"."authorId"'),
-        '=',
-        raw('"user"."id"'),
-      ).toSql(),
-      `
-        SELECT "user".* FROM "user"
-        ${sql} "message" ON "message"."authorId" = "user"."id"
-      `,
-    );
-    expectSql(
-      q[join](
-        Message.as('as'),
-        raw('"as"."authorId"'),
-        '=',
-        raw('"user"."id"'),
-      ).toSql(),
-      `
-        SELECT "user".* FROM "user"
-        ${sql} "message" AS "as" ON "as"."authorId" = "user"."id"
-      `,
-    );
-    expectQueryNotMutated(q);
-  });
-
-  it('should accept object of columns', () => {
-    const q = User.all();
-    expectSql(
-      q[join](Message, { authorId: 'id' }).toSql(),
-      `
-        SELECT "user".* FROM "user"
-        ${sql} "message" ON "message"."authorId" = "user"."id"
-      `,
-    );
-    expectSql(
-      q[join](Message.as('as'), { authorId: 'id' }).toSql(),
-      `
-        SELECT "user".* FROM "user"
-        ${sql} "message" AS "as" ON "as"."authorId" = "user"."id"
-      `,
-    );
-    expectQueryNotMutated(q);
-  });
-
-  it('should accept object of columns with raw value', () => {
-    const q = User.all();
-    expectSql(
-      q[join](Message, { authorId: raw('"user"."id"') }).toSql(),
-      `
-        SELECT "user".* FROM "user"
-        ${sql} "message" ON "message"."authorId" = "user"."id"
-      `,
-    );
-    expectSql(
-      q[join](Message.as('as'), { authorId: raw('"user"."id"') }).toSql(),
-      `
-        SELECT "user".* FROM "user"
-        ${sql} "message" AS "as" ON "as"."authorId" = "user"."id"
-      `,
-    );
-    expectQueryNotMutated(q);
-  });
-
-  it('should accept raw sql', () => {
-    const q = User.all();
-    expectSql(
-      q[join](Message, raw('"authorId" = "user".id')).toSql(),
-      `
+  testJoin(
+    method,
+    (target: string, conditions: string) => `
       SELECT "user".* FROM "user"
-      ${sql} "message" ON "authorId" = "user".id
+      ${sql} ${target} ON ${conditions}
     `,
-    );
-    expectSql(
-      q[join](Message.as('as'), raw('"authorId" = "user".id')).toSql(),
-      `
-      SELECT "user".* FROM "user"
-      ${sql} "message" AS "as" ON "authorId" = "user".id
-    `,
-    );
-    expectQueryNotMutated(q);
-  });
-
-  it('should accept callback to specify custom conditions', () => {});
+  );
 });
 
 describe('join callback with query builder', () => {

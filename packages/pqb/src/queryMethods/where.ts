@@ -1,8 +1,15 @@
-import { Query, QueryBase, SelectableBase } from '../query';
+import {
+  Query,
+  QueryBase,
+  RelationsBase,
+  SelectableBase,
+  WithDataBase,
+} from '../query';
 import { ColumnOperators, QueryData, WhereItem } from '../sql';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { RawExpression } from '../common';
 import { getClonedQueryData } from '../utils';
+import { JoinArgs } from './join';
 
 export type WhereArg<T extends QueryBase> =
   | {
@@ -144,10 +151,35 @@ export const addOrNot = <T extends QueryBase>(q: T, args: WhereArg<T>[]): T => {
   );
 };
 
+const getWhereExistsArgs = <T extends Where, Args extends JoinArgs<T>>(
+  q: T,
+  args: Args,
+) => {
+  if (typeof args[1] === 'function') {
+    const [modelOrWith, fn] = args;
+
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { OnQueryBuilder } = require('./join');
+    const resultQuery = fn(new OnQueryBuilder(q.table, q.query?.as));
+
+    return [modelOrWith, { type: 'query', query: resultQuery }];
+  } else {
+    return args.length === 2
+      ? [args[0], { type: 'objectOrRaw', data: args[1] }]
+      : args;
+  }
+};
+
 export abstract class Where implements QueryBase {
   abstract clone<T extends this>(this: T): T & { query: QueryData };
   abstract toQuery<T extends this>(this: T): T & { query: QueryData };
   abstract selectable: SelectableBase;
+  abstract relations: RelationsBase;
+  abstract withData: WithDataBase;
+
+  query?: QueryData;
+  table?: string;
+  tableAlias?: string;
 
   where<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
     return this.clone()._where(...args);
@@ -313,32 +345,65 @@ export abstract class Where implements QueryBase {
     return applyIn(this, false, arg, values, true);
   }
 
-  whereExists<T extends Where>(this: T, query: Query | RawExpression): T {
-    return this.clone()._whereExists(query);
+  whereExists<T extends Where, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): T {
+    return (this.clone() as T)._whereExists(...args);
   }
-  _whereExists<T extends Where>(this: T, query: Query | RawExpression): T {
-    return this._where({ type: 'exists', query });
-  }
-
-  orWhereExists<T extends Where>(this: T, query: Query | RawExpression): T {
-    return this.clone()._orWhereExists(query);
-  }
-  _orWhereExists<T extends Where>(this: T, query: Query | RawExpression): T {
-    return this._or({ type: 'exists', query });
-  }
-
-  whereNotExists<T extends Where>(this: T, query: Query | RawExpression): T {
-    return this.clone()._whereNotExists(query);
-  }
-  _whereNotExists<T extends Where>(this: T, query: Query | RawExpression): T {
-    return this._whereNot({ type: 'exists', query });
+  _whereExists<T extends Where, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): T {
+    return this._where({
+      type: 'exists',
+      args: getWhereExistsArgs(this, args),
+    });
   }
 
-  orWhereNotExists<T extends Where>(this: T, query: Query | RawExpression): T {
-    return this.clone()._orWhereNotExists(query);
+  orWhereExists<T extends Where, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): T {
+    return (this.clone() as T)._orWhereExists(...args);
   }
-  _orWhereNotExists<T extends Where>(this: T, query: Query | RawExpression): T {
-    return this._orNot({ type: 'exists', query });
+  _orWhereExists<T extends Where, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): T {
+    return this._or({ type: 'exists', args: getWhereExistsArgs(this, args) });
+  }
+
+  whereNotExists<T extends Where, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): T {
+    return (this.clone() as T)._whereNotExists(...args);
+  }
+  _whereNotExists<T extends Where, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): T {
+    return this._whereNot({
+      type: 'exists',
+      args: getWhereExistsArgs(this, args),
+    });
+  }
+
+  orWhereNotExists<T extends Where, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): T {
+    return (this.clone() as T)._orWhereNotExists(...args);
+  }
+  _orWhereNotExists<T extends Where, Args extends JoinArgs<T>>(
+    this: T,
+    ...args: Args
+  ): T {
+    return this._orNot({
+      type: 'exists',
+      args: getWhereExistsArgs(this, args),
+    });
   }
 }
 
@@ -349,6 +414,8 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
   query?: QueryData;
   selectable!: Q['selectable'];
   __model?: this;
+  relations = {};
+  withData = {};
 
   constructor(public table: Q['table'], public tableAlias: Q['tableAlias']) {
     super();
