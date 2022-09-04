@@ -3,7 +3,9 @@ import {
   ColumnsParsers,
   Query,
   QueryBase,
+  Relation,
   Selectable,
+  SelectableBase,
   WithDataItem,
 } from '../query';
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
@@ -25,7 +27,10 @@ export type JoinArgs<
   T extends QueryBase,
   Q extends Query = Query,
   W extends keyof T['withData'] = keyof T['withData'],
-  QW extends Query | keyof T['withData'] = Query | keyof T['withData'],
+  CB extends Query | keyof T['relations'] | keyof T['withData'] =
+    | Query
+    | keyof T['relations']
+    | keyof T['withData'],
 > =
   | [relation: keyof T['relations']]
   | [
@@ -63,26 +68,30 @@ export type JoinArgs<
       rightColumn: Selectable<T> | RawExpression,
     ]
   | [
-      query: QW,
+      query: CB,
       on: (
         q: OnQueryBuilder<
           T,
-          QW extends keyof T['withData']
-            ? T['withData'][QW] extends WithDataItem
+          CB extends keyof T['relations']
+            ? T['relations'][CB] extends Relation
+              ? T['relations'][CB]['model']
+              : never
+            : CB extends keyof T['withData']
+            ? T['withData'][CB] extends WithDataItem
               ? {
-                  table: T['withData'][QW]['table'];
+                  table: T['withData'][CB]['table'];
                   tableAlias: undefined;
-                  shape: T['withData'][QW]['shape'];
+                  shape: T['withData'][CB]['shape'];
                   selectable: {
-                    [K in keyof T['withData'][QW]['shape'] as `${T['withData'][QW]['table']}.${StringKey<K>}`]: {
+                    [K in keyof T['withData'][CB]['shape'] as `${T['withData'][CB]['table']}.${StringKey<K>}`]: {
                       as: StringKey<K>;
-                      column: T['withData'][QW]['shape'][K];
+                      column: T['withData'][CB]['shape'][K];
                     };
                   };
                 }
               : never
-            : QW extends Query
-            ? QW
+            : CB extends Query
+            ? CB
             : never
         >,
       ) => OnQueryBuilder,
@@ -137,9 +146,9 @@ const _join = <T extends Query, Args extends JoinArgs<T>>(
   } else {
     joinKey = first as string;
 
-    const relation = (q.relations as Record<string, { query: Query }>)[joinKey];
+    const relation = (q.relations as Record<string, Relation>)[joinKey];
     if (relation) {
-      parsers = relation.query.query?.parsers || relation.query.columnsParsers;
+      parsers = relation.model.query?.parsers || relation.model.columnsParsers;
     } else {
       const shape = q.query?.withShapes?.[first as string];
       if (shape) {
@@ -285,13 +294,25 @@ type PickQueryForSelect<T extends Query = Query> = Pick<
   'table' | 'tableAlias' | 'selectable'
 >;
 
-type OnArgs<Q extends OnQueryBuilder> =
+type OnArgs<Q extends { selectable: SelectableBase }> =
   | [leftColumn: keyof Q['selectable'], rightColumn: keyof Q['selectable']]
   | [
       leftColumn: keyof Q['selectable'],
       op: string,
       rightColumn: keyof Q['selectable'],
     ];
+
+export const pushQueryOn = <T extends QueryBase>(
+  q: T,
+  ...args: OnArgs<QueryBase>
+): T => {
+  return pushQueryValue(q, 'and', {
+    item: {
+      type: 'on',
+      on: args,
+    },
+  });
+};
 
 export class OnQueryBuilder<
     S extends QueryBase = QueryBase,
@@ -307,12 +328,7 @@ export class OnQueryBuilder<
   }
 
   _on<T extends this>(this: T, ...args: OnArgs<T>): T {
-    return pushQueryValue(this, 'and', {
-      item: {
-        type: 'on',
-        on: args,
-      },
-    });
+    return pushQueryOn(this, ...args);
   }
 
   orOn<T extends this>(this: T, ...args: OnArgs<T>): T {

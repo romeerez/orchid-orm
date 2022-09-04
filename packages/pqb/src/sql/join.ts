@@ -4,9 +4,11 @@ import {
   DeleteQueryData,
   InsertQueryData,
   JoinItem,
+  QueryData,
   SelectQueryData,
+  WhereItemContainer,
 } from './types';
-import { Query, QueryWithData, QueryWithTable } from '../query';
+import { Query, Relation } from '../query';
 import { whereToSql } from './where';
 
 type ItemOf3Or4Length =
@@ -31,29 +33,50 @@ export const processJoinItem = (
   const [first] = args;
   if (typeof first === 'string') {
     if (first in model.relations) {
-      const { key, query, joinQuery } = (
-        model.relations as Record<
-          string,
-          {
-            key: string;
-            query: QueryWithTable;
-            joinQuery: QueryWithData<Query>;
-          }
-        >
-      )[first];
+      const {
+        key,
+        model: joinModel,
+        joinQuery,
+      } = (model.relations as Record<string, Relation>)[first];
 
-      let target = quoteSchemaAndTable(query.query?.schema, query.table);
-      const as = query.query?.as || key;
-      if (as !== query.table) {
+      let target = quoteSchemaAndTable(
+        joinModel.query?.schema,
+        joinModel.table,
+      );
+      const as = joinModel.query?.as || key;
+      if (as !== joinModel.table) {
         target += ` AS ${q(as as string)}`;
       }
 
+      const query = {
+        and: [],
+        or: [],
+      } as {
+        and: WhereItemContainer[];
+        or: WhereItemContainer[][];
+      };
+
+      if (joinQuery.query) {
+        if (joinQuery.query.and) query.and = joinQuery.query.and;
+        if (joinQuery.query.or) query.or = joinQuery.query.or;
+      }
+
+      const arg = (
+        args[1] as undefined | { type: 'query'; query: { query?: QueryData } }
+      )?.query.query;
+
+      if (arg) {
+        if (arg.and) query.and.push(...arg.and);
+        if (arg.or) query.or.push(...arg.or);
+      }
+
+      const joinAs = q(as as string);
       const onConditions = whereToSql(
-        query,
-        joinQuery.query,
+        joinModel,
+        joinQuery.query || {},
         values,
-        q(as as string),
         quotedAs,
+        joinAs,
       );
       const conditions = onConditions ? onConditions : undefined;
 

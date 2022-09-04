@@ -2,6 +2,7 @@ import { expectSql, Message, User } from '../test-utils';
 import { raw } from '../common';
 import { Sql } from '../sql';
 import { Query } from '../query';
+import { pushQueryOn } from './join';
 
 describe('and', () => {
   const [where, _where] = [User.where, User._where];
@@ -845,7 +846,7 @@ export const testJoin = (
   method: string,
   sql: (target: string, conditions: string) => string,
   q: Query = User.all(),
-  values?: unknown[],
+  values: unknown[] = [],
 ) => {
   const join = method as unknown as 'join';
   const initialSql = q.toSql().text;
@@ -960,6 +961,47 @@ export const testJoin = (
       values,
     );
     expect(q.toSql().text).toBe(initialSql);
+  });
+
+  describe('relation', () => {
+    const withRelation = q as Query & {
+      relations: {
+        message: { key: 'message'; model: typeof Message; joinQuery: Query };
+      };
+    };
+
+    withRelation.relations = {
+      message: {
+        key: 'message',
+        model: Message,
+        joinQuery: pushQueryOn(Message, 'authorId', 'id'),
+      },
+    };
+
+    it('should join relation', () => {
+      expectSql(
+        withRelation[join]('message').toSql(),
+        sql(`"message"`, `"message"."authorId" = "user"."id"`),
+        values,
+      );
+    });
+
+    it('should join relation with additional conditions', () => {
+      expectSql(
+        withRelation[join]('message', (q) =>
+          q.where({
+            'message.text': 'text',
+          }),
+        ).toSql(),
+        sql(
+          `"message"`,
+          `"message"."authorId" = "user"."id" AND "message"."text" = $${
+            values.length + 1
+          }`,
+        ),
+        [...values, 'text'],
+      );
+    });
   });
 };
 

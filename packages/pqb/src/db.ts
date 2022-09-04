@@ -19,6 +19,7 @@ export type DbTableOptions = {
 export interface Db<
   Table extends string | undefined = undefined,
   Shape extends ColumnsShape = Record<string, never>,
+  Relations extends Query['relations'] = Query['relations'],
 > extends QueryMethods {
   new (
     adapter: PostgresAdapter,
@@ -51,12 +52,13 @@ export interface Db<
   windows: PropertyKey[];
   withData: Query['withData'];
   joinedTables: Query['joinedTables'];
-  relations: Query['relations'];
+  relations: Relations;
 }
 
 export class Db<
   Table extends string | undefined = undefined,
   Shape extends ColumnsShape = Record<string, never>,
+  Relations extends Query['relations'] = Query['relations'],
 > implements Query
 {
   constructor(
@@ -110,7 +112,7 @@ export class Db<
         }
       : toSql;
 
-    this.relations = {};
+    this.relations = {} as Relations;
   }
 
   returnType = 'all' as const;

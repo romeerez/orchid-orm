@@ -16,14 +16,15 @@ import { ColumnInfo } from './queryMethods/columnInfo';
 export type ColumnParser = (input: unknown) => unknown;
 export type ColumnsParsers = Record<string, ColumnParser>;
 
-export type SelectableBase = Record<string, { as: string; column: ColumnType }>;
+export type SelectableBase = Record<
+  PropertyKey,
+  { as: string; column: ColumnType }
+>;
 
 export type Relation = {
   key: string;
-  type: string;
-  query: QueryWithTable;
-  options: Record<string, unknown>;
-  joinQuery: QueryWithData<Query>;
+  model: QueryWithTable;
+  joinQuery: Query;
 };
 export type RelationsBase = Record<never, Relation>;
 

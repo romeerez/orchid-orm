@@ -18,8 +18,8 @@ export type CommonQueryData = {
   withShapes?: Record<string, ColumnsShape>;
   schema?: string;
   as?: string;
-  and?: { item: WhereItem; not?: boolean }[];
-  or?: { item: WhereItem; not?: boolean }[][];
+  and?: WhereItemContainer[];
+  or?: WhereItemContainer[][];
   parsers?: ColumnsParsers;
 };
 
@@ -178,6 +178,10 @@ export type JoinItem = {
   args:
     | [relation: string]
     | [
+        relation: string,
+        conditions: { type: 'query'; query: { query?: QueryData } },
+      ]
+    | [
         withOrQuery: string | QueryWithTable,
         objectOrRawOrJoinQuery:
           | {
@@ -202,6 +206,11 @@ export type JoinItem = {
       ];
 };
 
+export type WhereItemContainer = {
+  item: WhereItem;
+  not?: boolean;
+};
+
 export type WhereItem =
   | {
       type: 'object';
@@ -217,8 +226,8 @@ export type WhereItem =
     }
   | {
       type: 'nested';
-      and?: { item: WhereItem; not?: boolean }[];
-      or?: { item: WhereItem; not?: boolean }[][];
+      and?: WhereItemContainer[];
+      or?: WhereItemContainer[][];
     }
   | {
       type: 'in';
