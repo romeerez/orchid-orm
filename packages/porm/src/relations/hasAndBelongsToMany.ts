@@ -1,35 +1,33 @@
-import { RelationScopeOrModel, RelationThunkBase } from './relations';
+import { RelationData, RelationThunkBase } from './relations';
 import { Model, ModelClass } from '../model';
-import { pushQueryValue, Query, SetQueryReturnsAll } from 'pqb';
+import { Query } from 'pqb';
 
 export interface HasAndBelongsToMany extends RelationThunkBase {
   type: 'hasAndBelongsToMany';
+  returns: 'many';
   fn(): ModelClass;
-  options: {
+  options: RelationThunkBase['options'] & {
     primaryKey: string;
     foreignKey: string;
     associationPrimaryKey: string;
     associationForeignKey: string;
     joinTable: string;
-    scope?(q: Query): Query;
   };
 }
 
-export type HasAndBelongsToManyMethod<
+export type HasAndBelongsToManyParams<
   T extends Model,
   Relation extends HasAndBelongsToMany,
-> = (
-  params: Record<
-    Relation['options']['primaryKey'],
-    T['columns']['shape'][Relation['options']['primaryKey']]['type']
-  >,
-) => SetQueryReturnsAll<RelationScopeOrModel<Relation>>;
+> = Record<
+  Relation['options']['primaryKey'],
+  T['columns']['shape'][Relation['options']['primaryKey']]['type']
+>;
 
 export const makeHasAndBelongsToManyMethod = (
   qb: Query,
   relation: HasAndBelongsToMany,
   query: Query,
-) => {
+): RelationData => {
   const {
     primaryKey,
     foreignKey,
@@ -44,18 +42,18 @@ export const makeHasAndBelongsToManyMethod = (
 
   const subQuery = qb.from(joinTable);
 
-  pushQueryValue(subQuery, 'and', {
-    item: {
-      type: 'on',
-      on: [associationForeignKeyFull, associationPrimaryKeyFull],
+  return {
+    method: (params: Record<string, unknown>) => {
+      return query.whereExists(subQuery, (q) =>
+        q.on(associationForeignKeyFull, associationPrimaryKeyFull).where({
+          [foreignKeyFull]: params[primaryKey],
+        }),
+      );
     },
-  });
-
-  return (params: Record<string, unknown>) => {
-    return query.whereExists(
-      subQuery.where({
-        [foreignKeyFull]: params[primaryKey],
-      }),
-    );
+    joinQuery: query.whereExists(subQuery, (q) =>
+      q
+        .on(associationForeignKeyFull, associationPrimaryKeyFull)
+        .on(foreignKeyFull, primaryKey),
+    ),
   };
 };

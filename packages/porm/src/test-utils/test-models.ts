@@ -90,4 +90,16 @@ export class MessageModel extends Model {
     createdAt: timestampAsDate,
     updatedAt: timestampAsDate,
   }));
+
+  relations = {
+    user: this.belongsTo(() => UserModel, {
+      primaryKey: 'id',
+      foreignKey: 'authorId',
+    }),
+
+    profile: this.hasOne(() => ProfileModel, {
+      through: 'user',
+      source: 'profile',
+    }),
+  };
 }

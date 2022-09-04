@@ -27,10 +27,10 @@ export type JoinArgs<
   T extends QueryBase,
   Q extends Query = Query,
   W extends keyof T['withData'] = keyof T['withData'],
-  CB extends Query | keyof T['relations'] | keyof T['withData'] =
+  CB extends Query | keyof T['withData'] | keyof T['relations'] =
     | Query
-    | keyof T['relations']
-    | keyof T['withData'],
+    | keyof T['withData']
+    | keyof T['relations'],
 > =
   | [relation: keyof T['relations']]
   | [
@@ -72,11 +72,7 @@ export type JoinArgs<
       on: (
         q: OnQueryBuilder<
           T,
-          CB extends keyof T['relations']
-            ? T['relations'][CB] extends Relation
-              ? T['relations'][CB]['model']
-              : never
-            : CB extends keyof T['withData']
+          CB extends keyof T['withData']
             ? T['withData'][CB] extends WithDataItem
               ? {
                   table: T['withData'][CB]['table'];
@@ -89,6 +85,12 @@ export type JoinArgs<
                     };
                   };
                 }
+              : never
+            : T['relations'] extends Record<string, Relation>
+            ? CB extends keyof T['relations']
+              ? T['relations'][CB] extends Relation
+                ? T['relations'][CB]['model']
+                : never
               : never
             : CB extends Query
             ? CB
@@ -289,7 +291,7 @@ export class Join {
   }
 }
 
-type PickQueryForSelect<T extends Query = Query> = Pick<
+type PickQueryForSelect<T extends QueryBase = QueryBase> = Pick<
   T,
   'table' | 'tableAlias' | 'selectable'
 >;

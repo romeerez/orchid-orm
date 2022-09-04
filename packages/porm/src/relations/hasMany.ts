@@ -1,28 +1,32 @@
-import { RelationScopeOrModel, RelationThunkBase } from './relations';
+import { RelationData, RelationThunkBase } from './relations';
 import { Model, ModelClass } from '../model';
-import { Query, SetQueryReturnsAll } from 'pqb';
+import { pushQueryOn, Query } from 'pqb';
 
 export interface HasMany extends RelationThunkBase {
   type: 'hasMany';
+  returns: 'many';
   fn(): ModelClass;
-  options: {
+  options: RelationThunkBase['options'] & {
     primaryKey: string;
     foreignKey: string;
-    scope?(q: Query): Query;
   };
 }
 
-export type HasManyMethod<T extends Model, Relation extends HasMany> = (
-  params: Record<
-    Relation['options']['primaryKey'],
-    T['columns']['shape'][Relation['options']['primaryKey']]['type']
-  >,
-) => SetQueryReturnsAll<RelationScopeOrModel<Relation>>;
+export type HasManyParams<T extends Model, Relation extends HasMany> = Record<
+  Relation['options']['primaryKey'],
+  T['columns']['shape'][Relation['options']['primaryKey']]['type']
+>;
 
-export const makeHasManyMethod = (relation: HasMany, query: Query) => {
+export const makeHasManyMethod = (
+  relation: HasMany,
+  query: Query,
+): RelationData => {
   const { primaryKey, foreignKey } = relation.options;
 
-  return (params: Record<string, unknown>) => {
-    return query.where({ [foreignKey]: params[primaryKey] });
+  return {
+    method: (params: Record<string, unknown>) => {
+      return query.where({ [foreignKey]: params[primaryKey] });
+    },
+    joinQuery: pushQueryOn(query, foreignKey, primaryKey),
   };
 };

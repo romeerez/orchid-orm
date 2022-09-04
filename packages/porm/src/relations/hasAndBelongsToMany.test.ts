@@ -51,14 +51,54 @@ describe('hasAndBelongsToMany', () => {
           SELECT 1 FROM "chatUser"
           WHERE "chatUser"."chatId" = "chat"."id"
             AND "chatUser"."userId" = $1
-          LIMIT $2
+          LIMIT 1
         )
       `,
-      [userId, 1],
+      [userId],
     );
 
     const messages = await query;
 
     expect(messages).toMatchObject([chatData, chatData]);
+  });
+
+  it('should be supported in whereExists', () => {
+    expectSql(
+      db.user.whereExists('chats').toSql(),
+      `
+        SELECT "user".* FROM "user"
+        WHERE EXISTS (
+          SELECT 1 FROM "chat" AS "chats"
+          WHERE EXISTS (
+            SELECT 1 FROM "chatUser"
+            WHERE "chatUser"."chatId" = "chat"."id"
+              AND "chatUser"."userId" = "user"."id"
+            LIMIT 1
+          )
+          LIMIT 1
+        )
+      `,
+    );
+
+    expectSql(
+      db.user
+        .whereExists('chats', (q) => q.where({ 'user.name': 'name' }))
+        .toSql(),
+      `
+        SELECT "user".* FROM "user"
+        WHERE EXISTS (
+          SELECT 1 FROM "chat" AS "chats"
+          WHERE EXISTS (
+            SELECT 1 FROM "chatUser"
+            WHERE "chatUser"."chatId" = "chat"."id"
+              AND "chatUser"."userId" = "user"."id"
+            LIMIT 1
+          )
+            AND "user"."name" = $1
+          LIMIT 1
+        )
+      `,
+      ['name'],
+    );
   });
 });

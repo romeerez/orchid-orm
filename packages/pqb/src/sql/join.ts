@@ -33,18 +33,20 @@ export const processJoinItem = (
   const [first] = args;
   if (typeof first === 'string') {
     if (first in model.relations) {
-      const {
-        key,
-        model: joinModel,
-        joinQuery,
-      } = (model.relations as Record<string, Relation>)[first];
+      const { key, joinQuery } = (model.relations as Record<string, Relation>)[
+        first
+      ];
 
-      let target = quoteSchemaAndTable(
-        joinModel.query?.schema,
-        joinModel.table,
-      );
-      const as = joinModel.query?.as || key;
-      if (as !== joinModel.table) {
+      const table = (
+        typeof joinQuery.query?.from === 'string'
+          ? joinQuery.query.from
+          : joinQuery.table
+      ) as string;
+
+      let target = quoteSchemaAndTable(joinQuery.query?.schema, table);
+
+      const as = joinQuery.query?.as || key;
+      if (as !== table) {
         target += ` AS ${q(as as string)}`;
       }
 
@@ -72,7 +74,7 @@ export const processJoinItem = (
 
       const joinAs = q(as as string);
       const onConditions = whereToSql(
-        joinModel,
+        joinQuery,
         joinQuery.query || {},
         values,
         quotedAs,
@@ -118,14 +120,23 @@ export const processJoinItem = (
   }
 
   const joinTarget = first;
-  let target = quoteSchemaAndTable(joinTarget.query?.schema, joinTarget.table);
 
-  let joinAs: string;
+  const quotedFrom =
+    typeof joinTarget.query?.from === 'string'
+      ? q(joinTarget.query.from)
+      : undefined;
+
+  let target =
+    quotedFrom ||
+    quoteSchemaAndTable(joinTarget.query?.schema, joinTarget.table);
+
+  let joinAs = quotedFrom || q(joinTarget.table);
   if (joinTarget.query?.as) {
-    joinAs = q(joinTarget.query.as);
-    target += ` AS ${joinAs}`;
-  } else {
-    joinAs = q(joinTarget.table);
+    const quoted = q(joinTarget.query.as);
+    if (quoted !== joinAs) {
+      joinAs = quoted;
+      target += ` AS ${quoted}`;
+    }
   }
 
   let conditions: string | undefined;

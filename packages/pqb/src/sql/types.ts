@@ -18,6 +18,7 @@ export type CommonQueryData = {
   withShapes?: Record<string, ColumnsShape>;
   schema?: string;
   as?: string;
+  from?: string | Query | RawExpression;
   and?: WhereItemContainer[];
   or?: WhereItemContainer[][];
   parsers?: ColumnsParsers;
@@ -26,7 +27,6 @@ export type CommonQueryData = {
 export type SelectQueryData = CommonQueryData & {
   select?: SelectItem[];
   distinct?: Expression[];
-  from?: string | Query | RawExpression;
   fromOnly?: boolean;
   join?: JoinItem[];
   joinedParsers?: Record<string, ColumnsParsers>;

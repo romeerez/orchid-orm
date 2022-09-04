@@ -47,4 +47,34 @@ describe('hasMany', () => {
 
     expect(messages).toMatchObject([messageData, messageData]);
   });
+
+  it('should be supported in whereExists', () => {
+    expectSql(
+      db.user.whereExists('messages').toSql(),
+      `
+        SELECT "user".* FROM "user"
+        WHERE EXISTS (
+          SELECT 1 FROM "message" AS "messages"
+          WHERE "messages"."authorId" = "user"."id"
+          LIMIT 1
+        )
+      `,
+    );
+
+    expectSql(
+      db.user
+        .whereExists('messages', (q) => q.where({ 'user.name': 'name' }))
+        .toSql(),
+      `
+        SELECT "user".* FROM "user"
+        WHERE EXISTS (
+          SELECT 1 FROM "message" AS "messages"
+          WHERE "messages"."authorId" = "user"."id"
+            AND "user"."name" = $1
+          LIMIT 1
+        )
+      `,
+      ['name'],
+    );
+  });
 });

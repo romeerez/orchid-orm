@@ -5,6 +5,7 @@ export * from './common';
 export * from './db';
 export * from './operators';
 export * from './query';
+export * from './queryMethods/join';
 export * from './queryMethods/transaction';
 export * from './queryMethods/queryMethods';
 export * from './quote';
