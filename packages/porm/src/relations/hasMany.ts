@@ -5,7 +5,7 @@ import {
   RelationThunks,
 } from './relations';
 import { Model, ModelClass } from '../model';
-import { addQueryOn, OnQueryBuilder, Query, Relation } from 'pqb';
+import { addQueryOn, Query, Relation } from 'pqb';
 
 export interface HasMany extends RelationThunkBase {
   type: 'hasMany';
@@ -58,10 +58,7 @@ export const makeHasManyMethod = (
       throughRelation.model.relations as Record<string, Relation>
     )[source];
 
-    const sourceQuery = sourceRelation.joinQuery.as(source);
-
-    const whereExistsCallback = (q: OnQueryBuilder<Query, never>) =>
-      sourceQuery as unknown as typeof q;
+    const whereExistsCallback = () => sourceRelation.joinQuery;
 
     return {
       method: (params: Record<string, unknown>) => {
@@ -69,9 +66,12 @@ export const makeHasManyMethod = (
           through
         ](params);
 
-        return query.whereExists(throughQuery, whereExistsCallback);
+        return (query.whereExists as (arg: Query, cb: () => Query) => Query)(
+          throughQuery,
+          whereExistsCallback,
+        );
       },
-      joinQuery: query.whereExists(
+      joinQuery: (query.whereExists as (arg: Query, cb: () => Query) => Query)(
         throughRelation.joinQuery,
         whereExistsCallback,
       ),

@@ -1,4 +1,4 @@
-import { addQueryOn, OnQueryBuilder, Query, Relation } from 'pqb';
+import { addQueryOn, Query, Relation } from 'pqb';
 import { Model, ModelClass } from '../model';
 import {
   RelationData,
@@ -58,8 +58,7 @@ export const makeHasOneMethod = (
       throughRelation.model.relations as Record<string, Relation>
     )[source];
 
-    const whereExistsCallback = (q: OnQueryBuilder<Query, never>) =>
-      sourceRelation.joinQuery as unknown as typeof q;
+    const whereExistsCallback = () => sourceRelation.joinQuery;
 
     return {
       method: (params: Record<string, unknown>) => {
@@ -67,9 +66,12 @@ export const makeHasOneMethod = (
           through
         ](params);
 
-        return query.whereExists(throughQuery, whereExistsCallback)._take();
+        return (query.whereExists as (arg: Query, cb: () => Query) => Query)(
+          throughQuery,
+          whereExistsCallback,
+        )._take();
       },
-      joinQuery: query.whereExists(
+      joinQuery: (query.whereExists as (arg: Query, cb: () => Query) => Query)(
         throughRelation.joinQuery,
         whereExistsCallback,
       ),
