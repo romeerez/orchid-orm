@@ -47,6 +47,16 @@ describe('belongsTo', () => {
     expect(user).toMatchObject(userData);
   });
 
+  it('should have proper joinQuery', () => {
+    expectSql(
+      db.profile.relations.user.joinQuery.toSql(),
+      `
+        SELECT "user".* FROM "user"
+        WHERE "user"."id" = "profile"."userId"
+      `,
+    );
+  });
+
   it('should be supported in whereExists', () => {
     expectSql(
       db.profile.whereExists('user').toSql(),

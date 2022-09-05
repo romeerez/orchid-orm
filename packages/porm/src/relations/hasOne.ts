@@ -1,4 +1,4 @@
-import { pushQueryOn, Query } from 'pqb';
+import { addQueryOn, OnQueryBuilder, Query, Relation } from 'pqb';
 import { Model, ModelClass } from '../model';
 import {
   RelationData,
@@ -38,34 +38,42 @@ export type HasOneParams<
   : never;
 
 export const makeHasOneMethod = (
-  _model: Query,
+  model: Query,
   relation: HasOne,
   query: Query,
 ): RelationData => {
   if ('through' in relation.options) {
+    const { through, source } = relation.options;
+
+    type ModelWithQueryMethod = Record<
+      string,
+      (params: Record<string, unknown>) => Query
+    >;
+
+    const throughRelation = (model.relations as Record<string, Relation>)[
+      through
+    ];
+
+    const sourceRelation = (
+      throughRelation.model.relations as Record<string, Relation>
+    )[source];
+
+    const whereExistsCallback = (q: OnQueryBuilder<Query, never>) =>
+      sourceRelation.joinQuery as unknown as typeof q;
+
     return {
-      method: () => query,
-      joinQuery: query,
+      method: (params: Record<string, unknown>) => {
+        const throughQuery = (model as unknown as ModelWithQueryMethod)[
+          through
+        ](params);
+
+        return query.whereExists(throughQuery, whereExistsCallback)._take();
+      },
+      joinQuery: query.whereExists(
+        throughRelation.joinQuery,
+        whereExistsCallback,
+      ),
     };
-    //   const { through, source } = relation.options;
-    //
-    //   return (params: Record<string, unknown>) => {
-    //     type ModelWithQueryMethod = Record<
-    //       string,
-    //       (params: Record<string, unknown>) => Query
-    //     >;
-    //
-    //     const query1 = (model as unknown as ModelWithQueryMethod)[through](
-    //       params,
-    //     );
-    //     console.log(query1.toSql().text);
-    //
-    //     const query2 = (query1.__model as unknown as ModelWithQueryMethod)[
-    //       source
-    //     ];
-    //
-    //     console.log(query2);
-    //   };
   }
 
   const { primaryKey, foreignKey } = relation.options;
@@ -74,6 +82,6 @@ export const makeHasOneMethod = (
     method: (params: Record<string, unknown>) => {
       return query.findBy({ [foreignKey]: params[primaryKey] });
     },
-    joinQuery: pushQueryOn(query, foreignKey, primaryKey),
+    joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),
   };
 };

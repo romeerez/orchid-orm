@@ -1,5 +1,5 @@
 import { Model, ModelClass } from '../model';
-import { pushQueryOn, Query } from 'pqb';
+import { addQueryOn, Query } from 'pqb';
 import { RelationData, RelationThunkBase } from './relations';
 
 export interface BelongsTo extends RelationThunkBase {
@@ -21,6 +21,7 @@ export type BelongsToParams<
 >;
 
 export const makeBelongsToMethod = (
+  model: Query,
   relation: BelongsTo,
   query: Query,
 ): RelationData => {
@@ -30,6 +31,6 @@ export const makeBelongsToMethod = (
     method: (params: Record<string, unknown>) => {
       return query.findBy({ [primaryKey]: params[foreignKey] });
     },
-    joinQuery: pushQueryOn(query, primaryKey, foreignKey),
+    joinQuery: addQueryOn(query, query, model, primaryKey, foreignKey),
   };
 };

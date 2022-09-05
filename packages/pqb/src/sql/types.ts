@@ -245,6 +245,8 @@ export type WhereItem =
     }
   | {
       type: 'on';
+      joinFrom: { table?: string; query?: { as?: string } } | string;
+      joinTo: { table?: string; query?: { as?: string } } | string;
       on:
         | [leftFullColumn: string, rightFullColumn: string]
         | [leftFullColumn: string, op: string, rightFullColumn: string];

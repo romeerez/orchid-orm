@@ -59,8 +59,8 @@ export const processJoinItem = (
       };
 
       if (joinQuery.query) {
-        if (joinQuery.query.and) query.and = joinQuery.query.and;
-        if (joinQuery.query.or) query.or = joinQuery.query.or;
+        if (joinQuery.query.and) query.and.push(...joinQuery.query.and);
+        if (joinQuery.query.or) query.or.push(...joinQuery.query.or);
       }
 
       const arg = (
@@ -75,7 +75,7 @@ export const processJoinItem = (
       const joinAs = q(as as string);
       const onConditions = whereToSql(
         joinQuery,
-        joinQuery.query || {},
+        query,
         values,
         quotedAs,
         joinAs,
@@ -120,19 +120,17 @@ export const processJoinItem = (
   }
 
   const joinTarget = first;
+  const joinQuery = joinTarget.query;
 
   const quotedFrom =
-    typeof joinTarget.query?.from === 'string'
-      ? q(joinTarget.query.from)
-      : undefined;
+    typeof joinQuery?.from === 'string' ? q(joinQuery.from) : undefined;
 
   let target =
-    quotedFrom ||
-    quoteSchemaAndTable(joinTarget.query?.schema, joinTarget.table);
+    quotedFrom || quoteSchemaAndTable(joinQuery?.schema, joinTarget.table);
 
   let joinAs = quotedFrom || q(joinTarget.table);
-  if (joinTarget.query?.as) {
-    const quoted = q(joinTarget.query.as);
+  if (joinQuery?.as) {
+    const quoted = q(joinQuery.as);
     if (quoted !== joinAs) {
       joinAs = quoted;
       target += ` AS ${quoted}`;
@@ -162,6 +160,14 @@ export const processJoinItem = (
       quotedAs,
       args as ItemOf3Or4Length,
     );
+  }
+
+  if (joinQuery) {
+    const whereSql = whereToSql(model, joinQuery, values, joinAs, quotedAs);
+    if (whereSql) {
+      if (conditions) conditions += ` AND ${whereSql}`;
+      else conditions = whereSql;
+    }
   }
 
   return { target, conditions };

@@ -46,10 +46,10 @@ describe('hasAndBelongsToMany', () => {
     expectSql(
       query.toSql(),
       `
-        SELECT "chat".* FROM "chat"
+        SELECT "chats".* FROM "chat" AS "chats"
         WHERE EXISTS (
           SELECT 1 FROM "chatUser"
-          WHERE "chatUser"."chatId" = "chat"."id"
+          WHERE "chatUser"."chatId" = "chats"."id"
             AND "chatUser"."userId" = $1
           LIMIT 1
         )
@@ -62,6 +62,21 @@ describe('hasAndBelongsToMany', () => {
     expect(messages).toMatchObject([chatData, chatData]);
   });
 
+  it('should have proper joinQuery', () => {
+    expectSql(
+      db.user.relations.chats.joinQuery.toSql(),
+      `
+        SELECT "chats".* FROM "chat" AS "chats"
+        WHERE EXISTS (
+          SELECT 1 FROM "chatUser"
+          WHERE "chatUser"."chatId" = "chats"."id"
+            AND "chatUser"."userId" = "user"."id"
+          LIMIT 1
+        )
+      `,
+    );
+  });
+
   it('should be supported in whereExists', () => {
     expectSql(
       db.user.whereExists('chats').toSql(),
@@ -71,7 +86,7 @@ describe('hasAndBelongsToMany', () => {
           SELECT 1 FROM "chat" AS "chats"
           WHERE EXISTS (
             SELECT 1 FROM "chatUser"
-            WHERE "chatUser"."chatId" = "chat"."id"
+            WHERE "chatUser"."chatId" = "chats"."id"
               AND "chatUser"."userId" = "user"."id"
             LIMIT 1
           )
@@ -90,7 +105,7 @@ describe('hasAndBelongsToMany', () => {
           SELECT 1 FROM "chat" AS "chats"
           WHERE EXISTS (
             SELECT 1 FROM "chatUser"
-            WHERE "chatUser"."chatId" = "chat"."id"
+            WHERE "chatUser"."chatId" = "chats"."id"
               AND "chatUser"."userId" = "user"."id"
             LIMIT 1
           )

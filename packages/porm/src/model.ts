@@ -109,9 +109,18 @@ export abstract class Model {
     Self extends this,
     Related extends Model,
     Scope extends Query,
-    Options extends {
-      primaryKey: keyof Self['columns']['shape'];
-      foreignKey: keyof Related['columns']['shape'];
+    Through extends string,
+    Source extends string,
+    Options extends (
+      | {
+          primaryKey: keyof Self['columns']['shape'];
+          foreignKey: keyof Related['columns']['shape'];
+        }
+      | {
+          through: Through;
+          source: Source;
+        }
+    ) & {
       scope?: ScopeFn<Related, Scope>;
     },
   >(this: Self, fn: () => ModelClass<Related>, options: Options) {

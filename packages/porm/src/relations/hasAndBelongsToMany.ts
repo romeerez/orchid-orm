@@ -1,6 +1,6 @@
 import { RelationData, RelationThunkBase } from './relations';
 import { Model, ModelClass } from '../model';
-import { Query } from 'pqb';
+import { getQueryAs, Query } from 'pqb';
 
 export interface HasAndBelongsToMany extends RelationThunkBase {
   type: 'hasAndBelongsToMany';
@@ -24,6 +24,7 @@ export type HasAndBelongsToManyParams<
 >;
 
 export const makeHasAndBelongsToManyMethod = (
+  model: Query,
   qb: Query,
   relation: HasAndBelongsToMany,
   query: Query,
@@ -36,9 +37,12 @@ export const makeHasAndBelongsToManyMethod = (
     joinTable,
   } = relation.options;
 
+  const primaryKeyFull = `${getQueryAs(model)}.${primaryKey}`;
   const foreignKeyFull = `${joinTable}.${foreignKey}`;
   const associationForeignKeyFull = `${joinTable}.${associationForeignKey}`;
-  const associationPrimaryKeyFull = `${query.table}.${associationPrimaryKey}`;
+  const associationPrimaryKeyFull = `${getQueryAs(
+    query,
+  )}.${associationPrimaryKey}`;
 
   const subQuery = qb.from(joinTable);
 
@@ -53,7 +57,7 @@ export const makeHasAndBelongsToManyMethod = (
     joinQuery: query.whereExists(subQuery, (q) =>
       q
         .on(associationForeignKeyFull, associationPrimaryKeyFull)
-        .on(foreignKeyFull, primaryKey),
+        .on(foreignKeyFull, primaryKeyFull),
     ),
   };
 };

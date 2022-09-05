@@ -963,6 +963,21 @@ export const testJoin = (
     expect(q.toSql().text).toBe(initialSql);
   });
 
+  it('should use conditions from provided query', () => {
+    expectSql(
+      q[join](Message.where({ text: 'text' }), (q) =>
+        q.on('authorId', 'id'),
+      ).toSql(),
+      sql(
+        `"message"`,
+        `"message"."authorId" = "user"."id" AND "message"."text" = $${
+          values.length + 1
+        }`,
+      ),
+      [...values, 'text'],
+    );
+  });
+
   describe('relation', () => {
     const withRelation = q as Query & {
       relations: {
@@ -974,7 +989,7 @@ export const testJoin = (
       message: {
         key: 'message',
         model: Message,
-        joinQuery: pushQueryOn(Message, 'authorId', 'id'),
+        joinQuery: pushQueryOn(Message.clone(), Message, q, 'authorId', 'id'),
       },
     };
 

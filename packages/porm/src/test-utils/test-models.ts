@@ -65,6 +65,11 @@ export class ProfileModel extends Model {
       primaryKey: 'id',
       foreignKey: 'userId',
     }),
+
+    chats: this.hasMany(() => ChatModel, {
+      through: 'user',
+      source: 'chats',
+    }),
   };
 }
 

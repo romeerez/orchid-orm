@@ -47,6 +47,16 @@ describe('hasOne', () => {
     expect(profile).toMatchObject(profileData);
   });
 
+  it('should have proper joinQuery', () => {
+    expectSql(
+      db.user.relations.profile.joinQuery.toSql(),
+      `
+        SELECT "profile".* FROM "profile"
+        WHERE "profile"."userId" = "user"."id"
+      `,
+    );
+  });
+
   it('should be supported in whereExists', () => {
     expectSql(
       db.user.whereExists('profile').toSql(),
@@ -78,34 +88,86 @@ describe('hasOne', () => {
   });
 });
 
-// describe('hasOne through', () => {
-//   it.only('should have method to query related data through belongsTo', async () => {
-//     const profileQuery = db.profile.take();
-//
-//     const eq: AssertEqual<
-//       typeof db.message.profile,
-//       (params: { authorId: number }) => typeof profileQuery
-//     > = true;
-//
-//     expect(eq).toBe(true);
-//
-//     // const query = db.message.profile({ authorId: 1 });
-//
-//     // console.log(query.toSql().text);
-//
-//     // expectSql(
-//     //   query.toSql(),
-//     //   `
-//     //     SELECT "profile".* FROM "profile"
-//     //     WHERE EXISTS (
-//     //       SELECT 1 FROM "user"
-//     //       WHERE "user"."profileId" = "profile"."id"
-//     //         AND "user"."authorId" = $1
-//     //       LIMIT $2
-//     //     )
-//     //     LIMIT $3
-//     //   `,
-//     //   [1, 1, 1],
-//     // );
-//   });
-// });
+describe('hasOne through', () => {
+  it('should have method to query related data', async () => {
+    const profileQuery = db.profile.take();
+
+    const eq: AssertEqual<
+      typeof db.message.profile,
+      (params: { authorId: number }) => typeof profileQuery
+    > = true;
+
+    expect(eq).toBe(true);
+
+    const query = db.message.profile({ authorId: 1 });
+    expectSql(
+      query.toSql(),
+      `
+        SELECT "profile".* FROM "profile"
+        WHERE EXISTS (
+          SELECT 1 FROM "user"
+          WHERE "profile"."userId" = "user"."id"
+            AND "user"."id" = $1
+          LIMIT 1
+        )
+        LIMIT $2
+      `,
+      [1, 1],
+    );
+  });
+
+  it('should have proper joinQuery', () => {
+    expectSql(
+      db.message.relations.profile.joinQuery.toSql(),
+      `
+        SELECT "profile".* FROM "profile"
+        WHERE EXISTS (
+          SELECT 1 FROM "user"
+          WHERE "profile"."userId" = "user"."id"
+            AND "user"."id" = "message"."authorId"
+          LIMIT 1
+        )
+      `,
+    );
+  });
+
+  it('should be supported in whereExists', () => {
+    expectSql(
+      db.message.whereExists('profile').toSql(),
+      `
+        SELECT "message".* FROM "message"
+        WHERE EXISTS (
+          SELECT 1 FROM "profile"
+          WHERE EXISTS (
+            SELECT 1 FROM "user"
+            WHERE "profile"."userId" = "user"."id"
+              AND "user"."id" = "message"."authorId"
+            LIMIT 1
+          )
+          LIMIT 1
+        )
+      `,
+    );
+
+    expectSql(
+      db.message
+        .whereExists('profile', (q) => q.where({ 'message.text': 'text' }))
+        .toSql(),
+      `
+        SELECT "message".* FROM "message"
+        WHERE EXISTS (
+          SELECT 1 FROM "profile"
+          WHERE EXISTS (
+            SELECT 1 FROM "user"
+            WHERE "profile"."userId" = "user"."id"
+              AND "user"."id" = "message"."authorId"
+            LIMIT 1
+          )
+          AND "message"."text" = $1
+          LIMIT 1
+        )
+      `,
+      ['text'],
+    );
+  });
+});

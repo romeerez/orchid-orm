@@ -48,7 +48,7 @@ export type RelationParams<
   : Relation extends HasOne
   ? HasOneParams<T, Relations, Relation>
   : Relation extends HasMany
-  ? HasManyParams<T, Relation>
+  ? HasManyParams<T, Relations, Relation>
   : Relation extends HasAndBelongsToMany
   ? HasAndBelongsToManyParams<T, Relation>
   : never;
@@ -88,7 +88,7 @@ export const applyRelations = (
     const model = models[modelName] as Model & {
       relations?: RelationThunks;
     };
-    const dbModel = result[modelName] as unknown as Record<string, unknown>;
+    const dbModel = result[modelName];
     if ('relations' in model && typeof model.relations === 'object') {
       for (const relationName in model.relations) {
         const relation = model.relations[relationName];
@@ -105,24 +105,27 @@ export const applyRelations = (
         if (!otherDbModel)
           throw new Error(`Cannot find model by name ${otherModelName}`);
 
-        const query = relation.options.scope
-          ? relation.options.scope(otherDbModel)
-          : (otherDbModel as unknown as QueryWithTable);
+        const query = (
+          relation.options.scope
+            ? relation.options.scope(otherDbModel)
+            : (otherDbModel as unknown as QueryWithTable)
+        ).as(relationName);
 
         const { type } = relation;
         let data;
         if (type === 'belongsTo') {
-          data = makeBelongsToMethod(relation, query);
+          data = makeBelongsToMethod(dbModel, relation, query);
         } else if (type === 'hasOne') {
-          data = makeHasOneMethod(dbModel as unknown as Query, relation, query);
+          data = makeHasOneMethod(dbModel, relation, query);
         } else if (type === 'hasMany') {
-          data = makeHasManyMethod(relation, query);
+          data = makeHasManyMethod(dbModel, relation, query);
         } else if (type === 'hasAndBelongsToMany') {
-          data = makeHasAndBelongsToManyMethod(qb, relation, query);
+          data = makeHasAndBelongsToManyMethod(dbModel, qb, relation, query);
         }
 
         if (data) {
-          dbModel[relationName] = data.method;
+          (dbModel as unknown as Record<string, unknown>)[relationName] =
+            data.method;
 
           (dbModel.relations as Record<string, Relation>)[relationName] = {
             key: relationName,

@@ -27,10 +27,6 @@ export type JoinArgs<
   T extends QueryBase,
   Q extends Query = Query,
   W extends keyof T['withData'] = keyof T['withData'],
-  CB extends Query | keyof T['withData'] | keyof T['relations'] =
-    | Query
-    | keyof T['withData']
-    | keyof T['relations'],
 > =
   | [relation: keyof T['relations']]
   | [
@@ -66,37 +62,6 @@ export type JoinArgs<
       leftColumn: WithSelectable<T, W> | RawExpression,
       op: string,
       rightColumn: Selectable<T> | RawExpression,
-    ]
-  | [
-      query: CB,
-      on: (
-        q: OnQueryBuilder<
-          T,
-          CB extends keyof T['withData']
-            ? T['withData'][CB] extends WithDataItem
-              ? {
-                  table: T['withData'][CB]['table'];
-                  tableAlias: undefined;
-                  shape: T['withData'][CB]['shape'];
-                  selectable: {
-                    [K in keyof T['withData'][CB]['shape'] as `${T['withData'][CB]['table']}.${StringKey<K>}`]: {
-                      as: StringKey<K>;
-                      column: T['withData'][CB]['shape'][K];
-                    };
-                  };
-                }
-              : never
-            : T['relations'] extends Record<string, Relation>
-            ? CB extends keyof T['relations']
-              ? T['relations'][CB] extends Relation
-                ? T['relations'][CB]['model']
-                : never
-              : never
-            : CB extends Query
-            ? CB
-            : never
-        >,
-      ) => OnQueryBuilder,
     ];
 
 type JoinResult<
@@ -122,6 +87,59 @@ type JoinResult<
     : never
 >;
 
+export type JoinCallbackArg<T extends QueryBase> =
+  | Query
+  | keyof T['withData']
+  | keyof T['relations'];
+
+export type JoinCallback<
+  T extends QueryBase,
+  Arg extends JoinCallbackArg<T>,
+> = (
+  q: OnQueryBuilder<
+    T,
+    Arg extends keyof T['withData']
+      ? T['withData'][Arg] extends WithDataItem
+        ? {
+            table: T['withData'][Arg]['table'];
+            tableAlias: undefined;
+            shape: T['withData'][Arg]['shape'];
+            selectable: {
+              [K in keyof T['withData'][Arg]['shape'] as `${T['withData'][Arg]['table']}.${StringKey<K>}`]: {
+                as: StringKey<K>;
+                column: T['withData'][Arg]['shape'][K];
+              };
+            };
+          }
+        : never
+      : Arg extends keyof T['relations']
+      ? T['relations'][Arg]['model']
+      : Arg extends Query
+      ? Arg
+      : never
+  >,
+) => OnQueryBuilder;
+
+type JoinCallbackResult<
+  T extends Query,
+  Arg extends JoinCallbackArg<T>,
+> = AddQueryJoinedTable<
+  T,
+  Arg extends Query
+    ? Arg
+    : Arg extends keyof T['relations']
+    ? T['relations'][Arg]['model']
+    : Arg extends keyof T['withData']
+    ? T['withData'][Arg] extends WithDataItem
+      ? {
+          table: T['withData'][Arg]['table'];
+          tableAlias: undefined;
+          result: T['withData'][Arg]['shape'];
+        }
+      : never
+    : never
+>;
+
 const join = <T extends Query, Args extends JoinArgs<T>>(
   q: T,
   type: string,
@@ -130,10 +148,14 @@ const join = <T extends Query, Args extends JoinArgs<T>>(
   return _join(q.clone() as T, type, args) as unknown as JoinResult<T, Args>;
 };
 
-const _join = <T extends Query, Args extends JoinArgs<T>>(
+const _join = <
+  T extends Query,
+  Arg extends JoinCallbackArg<T>,
+  Args extends JoinArgs<T>,
+>(
   q: T,
   type: string,
-  args: Args,
+  args: Args | [arg: Arg, cb: JoinCallback<T, Arg>],
 ): JoinResult<T, Args> => {
   const first = args[0];
   let joinKey: string | undefined;
@@ -172,7 +194,9 @@ const _join = <T extends Query, Args extends JoinArgs<T>>(
   if (typeof args[1] === 'function') {
     const [modelOrWith, fn] = args;
 
-    const resultQuery = fn(new OnQueryBuilder(q.table, q.query?.as));
+    const resultQuery = fn(
+      new OnQueryBuilder(q, modelOrWith as QueryBase | string),
+    );
 
     return pushQueryValue(q, 'join', {
       type,
@@ -195,98 +219,189 @@ export class Join {
   join<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): JoinResult<T, Args> {
+  ): JoinResult<T, Args>;
+  join<T extends Query, Arg extends JoinCallbackArg<T>>(
+    this: T,
+    arg: Arg,
+    cb: JoinCallback<T, Arg>,
+  ): JoinCallbackResult<T, Arg>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  join(this: Query, ...args: any) {
     return join(this, 'JOIN', args);
   }
-
   _join<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): JoinResult<T, Args> {
+  ): JoinResult<T, Args>;
+  _join<T extends Query, Arg extends JoinCallbackArg<T>>(
+    this: T,
+    arg: Arg,
+    cb: JoinCallback<T, Arg>,
+  ): JoinCallbackResult<T, Arg>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _join(this: Query, ...args: any) {
     return _join(this, 'JOIN', args);
   }
 
   innerJoin<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): JoinResult<T, Args> {
+  ): JoinResult<T, Args>;
+  innerJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+    this: T,
+    arg: Arg,
+    cb: JoinCallback<T, Arg>,
+  ): JoinCallbackResult<T, Arg>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  innerJoin(this: Query, ...args: any) {
     return join(this, 'INNER JOIN', args);
   }
-
   _innerJoin<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): JoinResult<T, Args> {
+  ): JoinResult<T, Args>;
+  _innerJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+    this: T,
+    arg: Arg,
+    cb: JoinCallback<T, Arg>,
+  ): JoinCallbackResult<T, Arg>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _innerJoin(this: Query, ...args: any) {
     return _join(this, 'INNER JOIN', args);
   }
 
   leftJoin<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): JoinResult<T, Args> {
+  ): JoinResult<T, Args>;
+  leftJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+    this: T,
+    arg: Arg,
+    cb: JoinCallback<T, Arg>,
+  ): JoinCallbackResult<T, Arg>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  leftJoin(this: Query, ...args: any) {
     return join(this, 'LEFT JOIN', args);
   }
-
   _leftJoin<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): JoinResult<T, Args> {
+  ): JoinResult<T, Args>;
+  _leftJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+    this: T,
+    arg: Arg,
+    cb: JoinCallback<T, Arg>,
+  ): JoinCallbackResult<T, Arg>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _leftJoin(this: Query, ...args: any) {
     return _join(this, 'LEFT JOIN', args);
   }
 
   leftOuterJoin<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): JoinResult<T, Args> {
+  ): JoinResult<T, Args>;
+  leftOuterJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+    this: T,
+    arg: Arg,
+    cb: JoinCallback<T, Arg>,
+  ): JoinCallbackResult<T, Arg>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  leftOuterJoin(this: Query, ...args: any) {
     return join(this, 'LEFT OUTER JOIN', args);
   }
-
   _leftOuterJoin<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): JoinResult<T, Args> {
+  ): JoinResult<T, Args>;
+  _leftOuterJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+    this: T,
+    arg: Arg,
+    cb: JoinCallback<T, Arg>,
+  ): JoinCallbackResult<T, Arg>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _leftOuterJoin(this: Query, ...args: any) {
     return _join(this, 'LEFT OUTER JOIN', args);
   }
 
   rightJoin<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): JoinResult<T, Args> {
+  ): JoinResult<T, Args>;
+  rightJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+    this: T,
+    arg: Arg,
+    cb: JoinCallback<T, Arg>,
+  ): JoinCallbackResult<T, Arg>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rightJoin(this: Query, ...args: any) {
     return join(this, 'RIGHT JOIN', args);
   }
-
   _rightJoin<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): JoinResult<T, Args> {
+  ): JoinResult<T, Args>;
+  _rightJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+    this: T,
+    arg: Arg,
+    cb: JoinCallback<T, Arg>,
+  ): JoinCallbackResult<T, Arg>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _rightJoin(this: Query, ...args: any) {
     return _join(this, 'RIGHT JOIN', args);
   }
 
   rightOuterJoin<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): JoinResult<T, Args> {
+  ): JoinResult<T, Args>;
+  rightOuterJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+    this: T,
+    arg: Arg,
+    cb: JoinCallback<T, Arg>,
+  ): JoinCallbackResult<T, Arg>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rightOuterJoin(this: Query, ...args: any) {
     return join(this, 'RIGHT OUTER JOIN', args);
   }
-
   _rightOuterJoin<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): JoinResult<T, Args> {
+  ): JoinResult<T, Args>;
+  _rightOuterJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+    this: T,
+    arg: Arg,
+    cb: JoinCallback<T, Arg>,
+  ): JoinCallbackResult<T, Arg>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _rightOuterJoin(this: Query, ...args: any) {
     return _join(this, 'RIGHT OUTER JOIN', args);
   }
 
   fullOuterJoin<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): JoinResult<T, Args> {
+  ): JoinResult<T, Args>;
+  fullOuterJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+    this: T,
+    arg: Arg,
+    cb: JoinCallback<T, Arg>,
+  ): JoinCallbackResult<T, Arg>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fullOuterJoin(this: Query, ...args: any) {
     return join(this, 'FULL OUTER JOIN', args);
   }
-
   _fullOuterJoin<T extends Query, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): JoinResult<T, Args> {
+  ): JoinResult<T, Args>;
+  _fullOuterJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+    this: T,
+    arg: Arg,
+    cb: JoinCallback<T, Arg>,
+  ): JoinCallbackResult<T, Arg>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _fullOuterJoin(this: Query, ...args: any) {
     return _join(this, 'FULL OUTER JOIN', args);
   }
 }
@@ -304,16 +419,55 @@ type OnArgs<Q extends { selectable: SelectableBase }> =
       rightColumn: keyof Q['selectable'],
     ];
 
-export const pushQueryOn = <T extends QueryBase>(
-  q: T,
-  ...args: OnArgs<QueryBase>
-): T => {
-  return pushQueryValue(q, 'and', {
+const makeOnItem = (
+  joinTo: QueryBase | string,
+  joinFrom: QueryBase | string,
+  args: OnArgs<QueryBase>,
+) => {
+  return {
     item: {
       type: 'on',
+      joinTo,
+      joinFrom,
       on: args,
     },
-  });
+  };
+};
+
+export const pushQueryOn = <T extends QueryBase>(
+  q: T,
+  joinFrom: QueryBase | string,
+  joinTo: QueryBase | string,
+  ...args: OnArgs<QueryBase>
+): T => {
+  return pushQueryValue(q, 'and', makeOnItem(joinFrom, joinTo, args));
+};
+
+export const pushQueryOrOn: typeof pushQueryOn = (
+  q,
+  joinFrom,
+  joinTo,
+  ...args
+) => {
+  return pushQueryValue(q, 'or', [makeOnItem(joinFrom, joinTo, args)]);
+};
+
+export const addQueryOn: typeof pushQueryOrOn = (
+  q,
+  joinFrom,
+  joinTo,
+  ...args
+) => {
+  return pushQueryOn(q.clone() as typeof q, joinFrom, joinTo, ...args);
+};
+
+export const addQueryOrOn: typeof pushQueryOrOn = (
+  q,
+  joinFrom,
+  joinTo,
+  ...args
+) => {
+  return pushQueryOrOn(q.clone() as typeof q, joinFrom, joinTo, ...args);
 };
 
 export class OnQueryBuilder<
@@ -325,12 +479,19 @@ export class OnQueryBuilder<
 {
   selectable!: S['selectable'] & J['selectable'];
 
+  constructor(
+    q: Pick<QueryBase, 'query' | 'table'>,
+    public joinTo: QueryBase | string,
+  ) {
+    super(q.table, q.query?.as);
+  }
+
   on<T extends this>(this: T, ...args: OnArgs<T>): T {
     return this.clone()._on(...args);
   }
 
   _on<T extends this>(this: T, ...args: OnArgs<T>): T {
-    return pushQueryOn(this, ...args);
+    return pushQueryOn(this, this.joinTo, this, ...args);
   }
 
   orOn<T extends this>(this: T, ...args: OnArgs<T>): T {
@@ -338,13 +499,6 @@ export class OnQueryBuilder<
   }
 
   _orOn<T extends this>(this: T, ...args: OnArgs<T>): T {
-    return pushQueryValue(this, 'or', [
-      {
-        item: {
-          type: 'on',
-          on: args,
-        },
-      },
-    ]);
+    return pushQueryOrOn(this, this.joinTo, this, ...args);
   }
 }

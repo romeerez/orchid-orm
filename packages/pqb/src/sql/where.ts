@@ -3,6 +3,7 @@ import { QueryData } from './types';
 import { addValue, q, qc, quoteFullColumn } from './common';
 import { EMPTY_OBJECT, getRaw, isRaw, RawExpression } from '../common';
 import { processJoinItem } from './join';
+import { getQueryAs } from '../utils';
 
 export const pushWhereSql = (
   sql: string[],
@@ -127,11 +128,23 @@ export const whereToSql = (
       }
 
       if (item.type === 'on') {
-        const leftColumn = quoteFullColumn(item.on[0], otherTableQuotedAs);
+        const leftColumn = quoteFullColumn(
+          item.on[0],
+          typeof item.joinTo === 'string'
+            ? q(item.joinTo)
+            : q(getQueryAs(item.joinTo)),
+        );
+
+        const joinTo =
+          typeof item.joinFrom === 'string'
+            ? item.joinFrom
+            : q(getQueryAs(item.joinFrom));
+
         const [op, rightColumn] =
           item.on.length === 2
-            ? ['=', quoteFullColumn(item.on[1], quotedAs)]
-            : [item.on[1], quoteFullColumn(item.on[2], quotedAs)];
+            ? ['=', quoteFullColumn(item.on[1], joinTo)]
+            : [item.on[1], quoteFullColumn(item.on[2], joinTo)];
+
         ands.push(`${prefix}${leftColumn} ${op} ${rightColumn}`);
         return;
       }

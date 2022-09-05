@@ -37,8 +37,8 @@ describe('hasMany', () => {
     expectSql(
       query.toSql(),
       `
-        SELECT "message".* FROM "message"
-        WHERE "message"."authorId" = $1
+        SELECT "messages".* FROM "message" AS "messages"
+        WHERE "messages"."authorId" = $1
       `,
       [userId],
     );
@@ -46,6 +46,16 @@ describe('hasMany', () => {
     const messages = await query;
 
     expect(messages).toMatchObject([messageData, messageData]);
+  });
+
+  it('should have proper joinQuery', () => {
+    expectSql(
+      db.user.relations.messages.joinQuery.toSql(),
+      `
+        SELECT "messages".* FROM "message" AS "messages"
+        WHERE "messages"."authorId" = "user"."id"
+      `,
+    );
   });
 
   it('should be supported in whereExists', () => {
@@ -75,6 +85,109 @@ describe('hasMany', () => {
         )
       `,
       ['name'],
+    );
+  });
+});
+
+describe('hasMany through', () => {
+  it('should have method to query related data', async () => {
+    const chatsQuery = db.chat.all();
+
+    const eq: AssertEqual<
+      typeof db.profile.chats,
+      (params: { userId: number }) => typeof chatsQuery
+    > = true;
+
+    expect(eq).toBe(true);
+
+    const query = db.profile.chats({ userId: 1 });
+    expectSql(
+      query.toSql(),
+      `
+        SELECT "chats".* FROM "chat" AS "chats"
+        WHERE EXISTS (
+          SELECT 1 FROM "user"
+          WHERE EXISTS (
+            SELECT 1 FROM "chatUser"
+            WHERE "chatUser"."chatId" = "chats"."id"
+              AND "chatUser"."userId" = "user"."id"
+            LIMIT 1
+          )
+          AND "user"."id" = $1
+          LIMIT 1
+        )
+      `,
+      [1],
+    );
+  });
+
+  it('should have proper joinQuery', () => {
+    expectSql(
+      db.profile.relations.chats.joinQuery.toSql(),
+      `
+        SELECT "chats".* FROM "chat" AS "chats"
+        WHERE EXISTS (
+          SELECT 1 FROM "user"
+          WHERE EXISTS (
+            SELECT 1 FROM "chatUser"
+            WHERE "chatUser"."chatId" = "chats"."id"
+              AND "chatUser"."userId" = "user"."id"
+            LIMIT 1
+          )
+          AND "user"."id" = "profile"."userId"
+          LIMIT 1
+        )
+      `,
+    );
+  });
+
+  it('should be supported in whereExists', () => {
+    expectSql(
+      db.profile.whereExists('chats').toSql(),
+      `
+        SELECT "profile".* FROM "profile"
+        WHERE EXISTS (
+          SELECT 1 FROM "chat" AS "chats"
+          WHERE EXISTS (
+            SELECT 1 FROM "user"
+            WHERE EXISTS (
+              SELECT 1 FROM "chatUser"
+              WHERE "chatUser"."chatId" = "chats"."id"
+                AND "chatUser"."userId" = "user"."id"
+              LIMIT 1
+            )
+            AND "user"."id" = "profile"."userId"
+            LIMIT 1
+          )
+          LIMIT 1
+        )
+      `,
+    );
+
+    expectSql(
+      db.profile
+        .whereExists('chats', (q) => q.where({ 'profile.bio': 'bio' }))
+        .toSql(),
+      `
+        SELECT "profile".* FROM "profile"
+        WHERE EXISTS (
+          SELECT 1 FROM "chat" AS "chats"
+          WHERE EXISTS (
+            SELECT 1 FROM "user"
+            WHERE EXISTS (
+              SELECT 1 FROM "chatUser"
+              WHERE "chatUser"."chatId" = "chats"."id"
+                AND "chatUser"."userId" = "user"."id"
+              LIMIT 1
+            )
+            AND "user"."id" = "profile"."userId"
+            LIMIT 1
+          )
+          AND "profile"."bio" = $1
+          LIMIT 1
+        )
+      `,
+      ['bio'],
     );
   });
 });
