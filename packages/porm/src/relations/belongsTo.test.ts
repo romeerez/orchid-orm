@@ -86,4 +86,25 @@ describe('belongsTo', () => {
       ['name'],
     );
   });
+
+  it('should be supported in join', () => {
+    const query = db.profile
+      .join('user', (q) => q.where({ 'user.name': 'name' }))
+      .select('bio', 'user.name');
+
+    const eq: AssertEqual<
+      Awaited<typeof query>,
+      { bio: string | null; name: string }[]
+    > = true;
+    expect(eq).toBe(true);
+
+    expectSql(
+      query.toSql(),
+      `
+        SELECT "profile"."bio", "user"."name" FROM "profile"
+        JOIN "user" ON "user"."id" = "profile"."userId" AND "user"."name" = $1
+      `,
+      ['name'],
+    );
+  });
 });

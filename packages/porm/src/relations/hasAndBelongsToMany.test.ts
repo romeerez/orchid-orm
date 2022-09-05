@@ -116,4 +116,32 @@ describe('hasAndBelongsToMany', () => {
       ['name'],
     );
   });
+
+  it('should be supported in join', () => {
+    const query = db.user
+      .join('chats', (q) => q.where({ 'user.name': 'name' }))
+      .select('name', 'chats.title');
+
+    const eq: AssertEqual<
+      Awaited<typeof query>,
+      { name: string; title: string }[]
+    > = true;
+    expect(eq).toBe(true);
+
+    expectSql(
+      query.toSql(),
+      `
+        SELECT "user"."name", "chats"."title" FROM "user"
+        JOIN "chat" AS "chats"
+          ON EXISTS (
+            SELECT 1 FROM "chatUser"
+            WHERE "chatUser"."chatId" = "chats"."id"
+              AND "chatUser"."userId" = "user"."id"
+            LIMIT 1
+          )
+          AND "user"."name" = $1
+      `,
+      ['name'],
+    );
+  });
 });

@@ -86,6 +86,29 @@ describe('hasOne', () => {
       ['name'],
     );
   });
+
+  it('should be supported in join', () => {
+    const query = db.user
+      .join('profile', (q) => q.where({ 'user.name': 'name' }))
+      .select('name', 'profile.bio');
+
+    const eq: AssertEqual<
+      Awaited<typeof query>,
+      { name: string; bio: string | null }[]
+    > = true;
+    expect(eq).toBe(true);
+
+    expectSql(
+      query.toSql(),
+      `
+        SELECT "user"."name", "profile"."bio" FROM "user"
+        JOIN "profile"
+          ON "profile"."userId" = "user"."id"
+         AND "user"."name" = $1
+      `,
+      ['name'],
+    );
+  });
 });
 
 describe('hasOne through', () => {
@@ -166,6 +189,34 @@ describe('hasOne through', () => {
           AND "message"."text" = $1
           LIMIT 1
         )
+      `,
+      ['text'],
+    );
+  });
+
+  it('should be supported in join', () => {
+    const query = db.message
+      .join('profile', (q) => q.where({ 'message.text': 'text' }))
+      .select('text', 'profile.bio');
+
+    const eq: AssertEqual<
+      Awaited<typeof query>,
+      { text: string; bio: string | null }[]
+    > = true;
+    expect(eq).toBe(true);
+
+    expectSql(
+      query.toSql(),
+      `
+        SELECT "message"."text", "profile"."bio" FROM "message"
+        JOIN "profile"
+          ON EXISTS (
+            SELECT 1 FROM "user"
+            WHERE "profile"."userId" = "user"."id"
+              AND "user"."id" = "message"."authorId"
+            LIMIT 1
+          )
+          AND "message"."text" = $1
       `,
       ['text'],
     );

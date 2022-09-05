@@ -26,9 +26,10 @@ type WithSelectable<
 export type JoinArgs<
   T extends QueryBase,
   Q extends Query = Query,
+  R extends keyof T['relations'] = keyof T['relations'],
   W extends keyof T['withData'] = keyof T['withData'],
 > =
-  | [relation: keyof T['relations']]
+  | [relation: R]
   | [
       query: Q,
       conditions:
@@ -73,9 +74,7 @@ type JoinResult<
   A extends Query
     ? A
     : A extends keyof T['relations']
-    ? T['relations'][A] extends { query: Query }
-      ? T['relations'][A]['query']
-      : never
+    ? T['relations'][A]['model']
     : A extends keyof T['withData']
     ? T['withData'][A] extends WithDataItem
       ? {

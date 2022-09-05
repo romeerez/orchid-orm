@@ -87,6 +87,29 @@ describe('hasMany', () => {
       ['name'],
     );
   });
+
+  it('should be supported in join', () => {
+    const query = db.user
+      .join('messages', (q) => q.where({ 'user.name': 'name' }))
+      .select('name', 'messages.text');
+
+    const eq: AssertEqual<
+      Awaited<typeof query>,
+      { name: string; text: string }[]
+    > = true;
+    expect(eq).toBe(true);
+
+    expectSql(
+      query.toSql(),
+      `
+        SELECT "user"."name", "messages"."text" FROM "user"
+        JOIN "message" AS "messages"
+          ON "messages"."authorId" = "user"."id"
+          AND "user"."name" = $1
+      `,
+      ['name'],
+    );
+  });
 });
 
 describe('hasMany through', () => {
@@ -186,6 +209,39 @@ describe('hasMany through', () => {
           AND "profile"."bio" = $1
           LIMIT 1
         )
+      `,
+      ['bio'],
+    );
+  });
+
+  it('should be supported in join', () => {
+    const query = db.profile
+      .join('chats', (q) => q.where({ 'profile.bio': 'bio' }))
+      .select('bio', 'chats.title');
+
+    const eq: AssertEqual<
+      Awaited<typeof query>,
+      { bio: string | null; title: string }[]
+    > = true;
+    expect(eq).toBe(true);
+
+    expectSql(
+      query.toSql(),
+      `
+        SELECT "profile"."bio", "chats"."title" FROM "profile"
+        JOIN "chat" AS "chats"
+          ON EXISTS (
+            SELECT 1 FROM "user"
+            WHERE EXISTS (
+              SELECT 1 FROM "chatUser"
+              WHERE "chatUser"."chatId" = "chats"."id"
+                AND "chatUser"."userId" = "user"."id"
+              LIMIT 1
+            )
+            AND "user"."id" = "profile"."userId"
+            LIMIT 1
+          )
+          AND "profile"."bio" = $1
       `,
       ['bio'],
     );
