@@ -73,15 +73,17 @@ type JoinResult<
   T,
   A extends Query
     ? A
-    : A extends keyof T['relations']
-    ? T['relations'][A]['model']
-    : A extends keyof T['withData']
-    ? T['withData'][A] extends WithDataItem
-      ? {
-          table: T['withData'][A]['table'];
-          tableAlias: undefined;
-          result: T['withData'][A]['shape'];
-        }
+    : T['relations'] extends Record<string, Relation>
+    ? A extends keyof T['relations']
+      ? T['relations'][A]['model']
+      : A extends keyof T['withData']
+      ? T['withData'][A] extends WithDataItem
+        ? {
+            table: T['withData'][A]['table'];
+            tableAlias: undefined;
+            result: T['withData'][A]['shape'];
+          }
+        : never
       : never
     : never
 >;
@@ -111,10 +113,12 @@ export type JoinCallback<
             };
           }
         : never
-      : Arg extends keyof T['relations']
-      ? T['relations'][Arg]['model']
       : Arg extends Query
       ? Arg
+      : T['relations'] extends Record<string, Relation>
+      ? Arg extends keyof T['relations']
+        ? T['relations'][Arg]['model']
+        : never
       : never
   >,
 ) => OnQueryBuilder;
@@ -126,15 +130,17 @@ type JoinCallbackResult<
   T,
   Arg extends Query
     ? Arg
-    : Arg extends keyof T['relations']
-    ? T['relations'][Arg]['model']
-    : Arg extends keyof T['withData']
-    ? T['withData'][Arg] extends WithDataItem
-      ? {
-          table: T['withData'][Arg]['table'];
-          tableAlias: undefined;
-          result: T['withData'][Arg]['shape'];
-        }
+    : T['relations'] extends Record<string, Relation>
+    ? Arg extends keyof T['relations']
+      ? T['relations'][Arg]['model']
+      : Arg extends keyof T['withData']
+      ? T['withData'][Arg] extends WithDataItem
+        ? {
+            table: T['withData'][Arg]['table'];
+            tableAlias: undefined;
+            result: T['withData'][Arg]['shape'];
+          }
+        : never
       : never
     : never
 >;
@@ -194,7 +200,10 @@ const _join = <
     const [modelOrWith, fn] = args;
 
     const resultQuery = fn(
-      new OnQueryBuilder(q, modelOrWith as QueryBase | string),
+      new OnQueryBuilder(
+        q,
+        modelOrWith as QueryBase | string,
+      ) as unknown as Parameters<typeof fn>[0],
     );
 
     return pushQueryValue(q, 'join', {

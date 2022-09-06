@@ -26,7 +26,7 @@ export type Relation = {
   model: QueryWithTable;
   joinQuery: Query;
 };
-export type RelationsBase = Record<string, Relation>;
+export type RelationsBase = Record<never, Relation>;
 
 export type WithDataItem = { table: string; shape: ColumnsShape };
 export type WithDataBase = Record<never, WithDataItem>;
