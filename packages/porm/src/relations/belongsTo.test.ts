@@ -135,20 +135,28 @@ describe('belongsTo', () => {
     );
   });
 
-  // it('should support nested insert', async () => {
-  //   const now = new Date();
+  // describe('insert', () => {
+  //   it.only('should support create', async () => {
+  //     const now = new Date();
   //
-  //   db.message.relations.profile.type;
+  //     db.message.relations.profile.type;
   //
-  //   const query = db.message.insert({
-  //     updatedAt: now,
-  //     createdAt: now,
-  //     chatId: 1,
-  //     authorId: 1,
-  //     text: 'text',
-  //     // author: {
-  //     //   create: true,
-  //     // },
+  //     const chatId = await insertChat();
+  //
+  //     const query = db.message.insert({
+  //       updatedAt: now,
+  //       createdAt: now,
+  //       chatId,
+  //       user: {
+  //         name: 'name',
+  //         password: 'password',
+  //         updatedAt: now,
+  //         createdAt: now,
+  //       },
+  //       text: 'text',
+  //     });
+  //
+  //     console.log(query.toSql().text);
   //   });
   // });
 });

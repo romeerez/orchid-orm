@@ -11,45 +11,24 @@ export const pushInsertSql = (
   query: InsertQueryData,
   quotedAs: string,
 ) => {
-  const { data, returning, onConflict } = query;
-
-  const isMany = Array.isArray(data);
-  let columns: string[];
-  let insertValues: string;
-  if (isMany) {
-    const columnsMap: Record<string, true> = {};
-    data.forEach((item) => {
-      Object.keys(item).forEach((key) => {
-        columnsMap[key] = true;
-      });
-    });
-
-    const keys = Object.keys(columnsMap);
-    columns = keys.map((key) => q(key));
-    const arr: string[][] = Array(data.length);
-    (data as Record<string, unknown>[]).forEach((item, i) => {
-      arr[i] = keys.map((key) =>
-        key in item ? addValue(values, item[key]) : 'DEFAULT',
-      );
-    });
-    insertValues = `${arr.map((row) => `(${row.join(', ')})`).join(', ')}`;
-  } else if (
-    'values' in data &&
-    typeof data.values === 'object' &&
-    data.values &&
-    isRaw(data.values)
-  ) {
-    columns = (data.columns as string[]).map((column) => q(column));
-    insertValues = getRaw(data.values, values);
-  } else {
-    columns = Object.keys(data).map(q);
-    insertValues = `(${Object.values(data)
-      .map((value) => addValue(values, value))
-      .join(', ')})`;
-  }
+  const { columns, values: insertValues, returning, onConflict } = query;
+  const quotedColumns = columns.map(q);
 
   sql.push(
-    `INSERT INTO ${quotedAs}(${columns.join(', ')}) VALUES ${insertValues}`,
+    `INSERT INTO ${quotedAs}(${quotedColumns.join(', ')}) VALUES ${
+      isRaw(insertValues)
+        ? getRaw(insertValues, values)
+        : insertValues
+            .map(
+              (row) =>
+                `(${row
+                  .map((value) =>
+                    value === undefined ? 'DEFAULT' : addValue(values, value),
+                  )
+                  .join(', ')})`,
+            )
+            .join(', ')
+    }`,
   );
 
   if (onConflict) {
@@ -64,7 +43,7 @@ export const pushInsertSql = (
         sql.push(getRaw(onConflict.expr, values));
       }
     } else {
-      sql.push(`(${columns.join(', ')})`);
+      sql.push(`(${quotedColumns.join(', ')})`);
     }
 
     if (onConflict.type === 'ignore') {
@@ -90,7 +69,7 @@ export const pushInsertSql = (
           set = arr.join(', ');
         }
       } else {
-        set = columns
+        set = quotedColumns
           .map((column) => `${column} = excluded.${column}`)
           .join(', ');
       }

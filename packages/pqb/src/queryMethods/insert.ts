@@ -6,7 +6,8 @@ import {
   SetQueryReturnsVoid,
 } from '../query';
 import { pushQueryValue, setQueryValue } from '../queryDataUtils';
-import { RawExpression } from '../common';
+import { isRaw, RawExpression } from '../common';
+import { BelongsToRelation, Relation } from '../relations';
 
 export type ReturningArg<T extends Query> = (keyof T['shape'])[] | '*';
 
@@ -18,9 +19,43 @@ type OptionalKeys<T extends Query> = {
     : never;
 }[keyof T['shape']];
 
-type InsertData<T extends Query> = Omit<T['type'], OptionalKeys<T>> & {
-  [K in OptionalKeys<T>]?: T['shape'][K]['type'];
-};
+type BelongsToRelations<T extends Query> = T['relations'] extends Record<
+  string,
+  Relation
+>
+  ? {
+      [K in keyof T['relations'] as T['relations'][K] extends BelongsToRelation
+        ? K
+        : never]: T['relations'][K] extends BelongsToRelation
+        ? T['relations'][K]
+        : never;
+    }
+  : Record<never, BelongsToRelation>;
+
+type InsertData<
+  T extends Query,
+  BT extends Record<string, BelongsToRelation> = BelongsToRelations<T>,
+> = Omit<
+  Omit<T['type'], OptionalKeys<T>> & {
+    [K in OptionalKeys<T>]?: T['shape'][K]['type'];
+  },
+  { [K in keyof BT]: BT[K]['options']['foreignKey'] }[keyof BT]
+> &
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  ({} extends BT
+    ? // eslint-disable-next-line @typescript-eslint/ban-types
+      {}
+    : {
+        [Key in keyof BT]:
+          | {
+              [K in BT[Key]['options']['foreignKey']]: BT[Key]['options']['foreignKey'] extends keyof T['type']
+                ? T['type'][BT[Key]['options']['foreignKey']]
+                : never;
+            }
+          | {
+              [K in Key]: InsertData<BT[Key]['model']>;
+            };
+      }[keyof BT]);
 
 type InsertOneResult<
   T extends Query,
@@ -64,7 +99,7 @@ export class Insert {
   ): InsertManyResult<T, Returning>;
   insert(
     this: Query,
-    data: InsertData<Query>,
+    data: InsertData<Query> & InsertData<Query>[],
     returning?: ReturningArg<Query>,
   ) {
     return this.clone()._insert(data, returning) as unknown as InsertOneResult<
@@ -90,15 +125,53 @@ export class Insert {
     data: InsertData<T>[] | { columns: string[]; values: RawExpression },
     returning?: Returning,
   ): InsertManyResult<T, Returning>;
-  _insert(data: unknown, returning?: unknown) {
+  _insert(
+    data:
+      | Record<string, unknown>
+      | Record<string, unknown>[]
+      | { columns: string[]; values: RawExpression },
+    returning?: unknown,
+  ) {
     const q = Array.isArray(data)
       ? (this as unknown as Query)._all()
       : (this as unknown as Query)._take();
+
+    let columns: string[];
+    let values: unknown[][] | RawExpression;
+    if (Array.isArray(data)) {
+      const columnsMap: Record<string, true> = {};
+      data.forEach((item) => {
+        Object.keys(item).forEach((key) => {
+          columnsMap[key] = true;
+        });
+      });
+
+      columns = Object.keys(columnsMap);
+      values = Array(data.length);
+      data.forEach((item, i) => {
+        (values as unknown[][])[i] = columns.map((key) => item[key]);
+      });
+    } else if (
+      'values' in data &&
+      typeof data.values === 'object' &&
+      data.values &&
+      isRaw(data.values)
+    ) {
+      columns = data.columns as string[];
+      values = data.values;
+    } else {
+      columns = Object.keys(data);
+      values = [Object.values(data)];
+    }
+
     setQueryValue(q, 'type', 'insert');
-    setQueryValue(q, 'data', data);
+    setQueryValue(q, 'columns', columns);
+    setQueryValue(q, 'values', values);
+
     if (returning) {
       pushQueryValue(q, 'returning', returning);
     }
+
     return q as unknown as InsertOneResult<Query, ReturningArg<Query>> &
       InsertManyResult<Query, ReturningArg<Query>>;
   }

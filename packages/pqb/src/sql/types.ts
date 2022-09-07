@@ -48,13 +48,8 @@ export type SelectQueryData = CommonQueryData & {
 
 export type InsertQueryData = CommonQueryData & {
   type: 'insert';
-  data:
-    | Record<string, unknown>
-    | Record<string, unknown>[]
-    | {
-        columns: string[];
-        values: RawExpression;
-      };
+  columns: string[];
+  values: unknown[][] | RawExpression;
   returning?: (string[] | '*')[];
   using?: JoinItem[];
   join?: JoinItem[];
