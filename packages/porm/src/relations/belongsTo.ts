@@ -1,15 +1,11 @@
-import { Model, ModelClass } from '../model';
-import { addQueryOn, Query } from 'pqb';
+import { Model } from '../model';
+import { addQueryOn, BelongsToRelation, Query } from 'pqb';
 import { RelationData, RelationThunkBase } from './relations';
 
 export interface BelongsTo extends RelationThunkBase {
   type: 'belongsTo';
   returns: 'one';
-  fn(): ModelClass;
-  options: RelationThunkBase['options'] & {
-    primaryKey: string;
-    foreignKey: string;
-  };
+  options: BelongsToRelation['options'];
 }
 
 export type BelongsToParams<

@@ -4,7 +4,6 @@ import {
   Query,
   QueryBase,
   QueryWithData,
-  RelationQuery,
 } from '../query';
 import {
   ArrayOfColumnsObjects,
@@ -16,6 +15,7 @@ import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { parseRecord } from './then';
 import { QueryData, SelectQueryData } from '../sql';
 import { getQueryAs } from '../utils';
+import { RelationQuery } from '../relations';
 
 type SelectArg<T extends QueryBase> = keyof T['selectable'] | RelationQuery;
 

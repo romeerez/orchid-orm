@@ -12,6 +12,7 @@ import { AliasOrTable, RawExpression, StringKey } from './common';
 import { Then } from './queryMethods/then';
 import { Db } from './db';
 import { ColumnInfo } from './queryMethods/columnInfo';
+import { RelationsBase } from './relations';
 
 export type ColumnParser = (input: unknown) => unknown;
 export type ColumnsParsers = Record<string, ColumnParser>;
@@ -20,20 +21,6 @@ export type SelectableBase = Record<
   PropertyKey,
   { as: string; column: ColumnType }
 >;
-
-export type Relation = {
-  type: string;
-  key: string;
-  model: QueryWithTable;
-  joinQuery: Query;
-};
-export type RelationsBase = Record<never, Relation>;
-
-export type RelationQuery<
-  Params = never,
-  T extends Query = Query,
-  Required extends boolean = boolean,
-> = ((params: Params) => T) & T & { requiredRelation: Required };
 
 export type WithDataItem = { table: string; shape: ColumnsShape };
 export type WithDataBase = Record<never, WithDataItem>;

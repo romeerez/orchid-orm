@@ -4,24 +4,13 @@ import {
   RelationThunkBase,
   RelationThunks,
 } from './relations';
-import { Model, ModelClass } from '../model';
-import { addQueryOn, Query, Relation } from 'pqb';
+import { Model } from '../model';
+import { addQueryOn, HasManyRelation, Query, Relation } from 'pqb';
 
 export interface HasMany extends RelationThunkBase {
   type: 'hasMany';
   returns: 'many';
-  fn(): ModelClass;
-  options: RelationThunkBase['options'] &
-    (
-      | {
-          primaryKey: string;
-          foreignKey: string;
-        }
-      | {
-          through: string;
-          source: string;
-        }
-    );
+  options: HasManyRelation['options'];
 }
 
 export type HasManyParams<

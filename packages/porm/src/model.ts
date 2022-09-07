@@ -26,6 +26,7 @@ export type ModelToDb<
             key: K;
             model: DbModel<ReturnType<Model['relations'][K]['fn']>>;
             joinQuery: Query;
+            options: Model['relations'][K]['options'];
           };
         }
       : Query['relations']

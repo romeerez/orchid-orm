@@ -1,15 +1,10 @@
-import {
-  Query,
-  QueryBase,
-  RelationsBase,
-  SelectableBase,
-  WithDataBase,
-} from '../query';
+import { Query, QueryBase, SelectableBase, WithDataBase } from '../query';
 import { ColumnOperators, QueryData, WhereItem } from '../sql';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { RawExpression } from '../common';
 import { getClonedQueryData } from '../utils';
 import { JoinArgs, JoinCallback, JoinCallbackArg } from './join';
+import { RelationsBase } from '../relations';
 
 export type WhereArg<T extends QueryBase> =
   | {

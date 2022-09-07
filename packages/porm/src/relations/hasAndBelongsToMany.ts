@@ -1,18 +1,11 @@
 import { RelationData, RelationThunkBase } from './relations';
-import { Model, ModelClass } from '../model';
-import { getQueryAs, Query } from 'pqb';
+import { Model } from '../model';
+import { getQueryAs, HasAndBelongsToManyRelation, Query } from 'pqb';
 
 export interface HasAndBelongsToMany extends RelationThunkBase {
   type: 'hasAndBelongsToMany';
   returns: 'many';
-  fn(): ModelClass;
-  options: RelationThunkBase['options'] & {
-    primaryKey: string;
-    foreignKey: string;
-    associationPrimaryKey: string;
-    associationForeignKey: string;
-    joinTable: string;
-  };
+  options: HasAndBelongsToManyRelation['options'];
 }
 
 export type HasAndBelongsToManyParams<

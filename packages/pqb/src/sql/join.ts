@@ -8,8 +8,9 @@ import {
   SelectQueryData,
   WhereItemContainer,
 } from './types';
-import { Query, Relation } from '../query';
+import { Query } from '../query';
 import { whereToSql } from './where';
+import { Relation } from '../relations';
 
 type ItemOf3Or4Length =
   | [

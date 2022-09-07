@@ -2,11 +2,11 @@ import {
   ColumnsParsers,
   Query,
   QueryWithTable,
-  RelationQuery,
   SelectableBase,
 } from '../query';
 import { Expression, RawExpression } from '../common';
 import { ColumnsShape, ColumnType } from '../columnSchema';
+import { RelationQuery } from '../relations';
 
 export type Sql = {
   text: string;

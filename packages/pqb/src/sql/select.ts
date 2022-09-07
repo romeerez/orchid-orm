@@ -1,9 +1,10 @@
 import { JsonItem, SelectQueryData } from './types';
 import { Expression, getRaw, isRaw } from '../common';
-import { Query, RelationQuery } from '../query';
+import { Query } from '../query';
 import { addValue, q, quoteFullColumn } from './common';
 import { aggregateToSql } from './aggregate';
 import { getQueryAs } from '../utils';
+import { RelationQuery } from '../relations';
 
 const jsonColumnOrMethodToSql = (
   column: string | JsonItem,

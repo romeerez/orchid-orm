@@ -14,8 +14,8 @@ import {
 } from '../test-utils';
 import { raw, rawColumn } from '../common';
 import { DateColumn } from '../columnSchema';
-import { RelationQuery } from '../query';
 import { addQueryOn } from './join';
+import { RelationQuery } from '../relations';
 
 const insertUserAndProfile = async () => {
   const now = new Date();

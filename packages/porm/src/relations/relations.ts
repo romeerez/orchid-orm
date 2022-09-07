@@ -3,9 +3,9 @@ import { HasOne, HasOneParams, makeHasOneMethod } from './hasOne';
 import { DbModel, Model, ModelClass, ModelClasses } from '../model';
 import { PORM } from '../orm';
 import {
+  BaseRelation,
   Query,
   QueryWithTable,
-  Relation,
   RelationQuery,
   SetQueryReturnsAll,
   SetQueryReturnsOneOrUndefined,
@@ -21,10 +21,7 @@ export interface RelationThunkBase {
   type: string;
   returns: 'one' | 'many';
   fn(): ModelClass;
-  options: {
-    scope?(q: QueryWithTable): QueryWithTable;
-    required?: boolean;
-  };
+  options: BaseRelation['options'];
 }
 
 export type RelationThunk = BelongsTo | HasOne | HasMany | HasAndBelongsToMany;
@@ -134,11 +131,12 @@ export const applyRelations = (
           (dbModel as unknown as Record<string, unknown>)[relationName] =
             makeRelationQuery(data);
 
-          (dbModel.relations as Record<string, Relation>)[relationName] = {
+          (dbModel.relations as Record<string, unknown>)[relationName] = {
             type,
             key: relationName,
             model: query,
             joinQuery: data.joinQuery,
+            options: relation.options,
           };
         }
       }

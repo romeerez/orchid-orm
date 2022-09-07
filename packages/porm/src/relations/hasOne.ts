@@ -1,5 +1,5 @@
-import { addQueryOn, Query, Relation } from 'pqb';
-import { Model, ModelClass } from '../model';
+import { addQueryOn, HasOneRelation, Query, Relation } from 'pqb';
+import { Model } from '../model';
 import {
   RelationData,
   RelationParams,
@@ -10,18 +10,7 @@ import {
 export interface HasOne extends RelationThunkBase {
   type: 'hasOne';
   returns: 'one';
-  fn(): ModelClass;
-  options: RelationThunkBase['options'] &
-    (
-      | {
-          primaryKey: string;
-          foreignKey: string;
-        }
-      | {
-          through: string;
-          source: string;
-        }
-    );
+  options: HasOneRelation['options'];
 }
 
 export type HasOneParams<

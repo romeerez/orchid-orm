@@ -3,7 +3,6 @@ import {
   ColumnsParsers,
   Query,
   QueryBase,
-  Relation,
   Selectable,
   SelectableBase,
   WithDataItem,
@@ -11,6 +10,7 @@ import {
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
 import { RawExpression, StringKey } from '../common';
 import { WhereQueryBuilder } from './where';
+import { Relation } from '../relations';
 
 type WithSelectable<
   T extends QueryBase,
