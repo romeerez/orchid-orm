@@ -3,6 +3,7 @@ import { Expression, getRaw, isRaw } from '../common';
 import { Query } from '../query';
 import { addValue, q, quoteFullColumn } from './common';
 import { aggregateToSql } from './aggregate';
+import { getQueryAs } from '../utils';
 
 const jsonColumnOrMethodToSql = (
   column: string | JsonItem,
@@ -89,8 +90,12 @@ export const selectToSql = (
                 const sql = (value as Query).json().toSql(values);
                 list.push(`(${sql.text}) AS ${q(as)}`);
               }
+            } else if (typeof value === 'function') {
+              // TODO: relation query
             } else {
-              list.push(`${quoteFullColumn(value, quotedAs)} AS ${q(as)}`);
+              list.push(
+                `${quoteFullColumn(value as string, quotedAs)} AS ${q(as)}`,
+              );
             }
           }
         } else if ('__json' in item) {
@@ -111,6 +116,10 @@ export const selectToSql = (
         } else {
           list.push(aggregateToSql(model, values, item, quotedAs));
         }
+      } else if (typeof item === 'function') {
+        list.push(
+          `(${item.json().toSql(values).text}) AS ${q(getQueryAs(item))}`,
+        );
       } else {
         list.push(quoteFullColumn(item, quotedAs));
       }

@@ -28,6 +28,12 @@ export type Relation = {
 };
 export type RelationsBase = Record<never, Relation>;
 
+export type RelationQuery<
+  T extends Query = Query,
+  Required extends boolean = boolean,
+> = ((params: Record<string, unknown>) => Query) &
+  T & { requiredRelation: Required };
+
 export type WithDataItem = { table: string; shape: ColumnsShape };
 export type WithDataBase = Record<never, WithDataItem>;
 
@@ -199,7 +205,10 @@ export type SetQueryReturnsColumnInfo<
   then: Then<Result>;
 };
 
-export type QueryWithData<T extends QueryBase> = T & { query: QueryData };
+export type QueryWithData<T extends QueryBase> = T & {
+  __model: Query;
+  query: QueryData;
+};
 
 export type SetQueryTableAlias<
   T extends Query,

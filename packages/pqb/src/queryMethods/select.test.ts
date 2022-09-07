@@ -1,13 +1,21 @@
 import {
+  AssertEqual,
   expectQueryNotMutated,
   expectSql,
   insert,
+  insertChat,
+  insertMessage,
+  insertProfile,
+  insertUser,
+  Message,
   Profile,
   User,
   useTestDatabase,
 } from '../test-utils';
 import { raw, rawColumn } from '../common';
 import { DateColumn } from '../columnSchema';
+import { RelationQuery } from '../query';
+import { addQueryOn } from './join';
 
 const insertUserAndProfile = async () => {
   const now = new Date();
@@ -101,6 +109,161 @@ describe('selectMethods', () => {
         `,
       );
       expectQueryNotMutated(q);
+    });
+
+    describe('select relation', () => {
+      const profileQuery = Profile.take();
+      const profileRelationQuery = addQueryOn(
+        profileQuery,
+        profileQuery,
+        User,
+        'userId',
+        'id',
+      );
+
+      const profileRelation = new Proxy(console.log, {
+        get(_, key) {
+          return (
+            profileRelationQuery as unknown as Record<string | symbol, unknown>
+          )[key];
+        },
+        set(_, key, value) {
+          return ((
+            profileRelationQuery as unknown as Record<string | symbol, unknown>
+          )[key] = value);
+        },
+      }) as unknown as RelationQuery<typeof profileQuery>;
+
+      it('should select relation which returns one record', () => {
+        const q = User.all();
+
+        const query = q.select('id', profileRelation);
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; profile: typeof Profile['type'] | null }[]
+        > = true;
+        expect(eq).toBe(true);
+
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "user"."id",
+              (
+                SELECT row_to_json("t".*) AS "json"
+                FROM (
+                  SELECT "profile".*
+                  FROM "profile"
+                  WHERE "profile"."userId" = "user"."id"
+                  LIMIT $1
+                ) AS "t"
+              ) AS "profile"
+            FROM "user"
+          `,
+          [1],
+        );
+
+        expectQueryNotMutated(q);
+      });
+
+      it('should have propert type for required relation', () => {
+        const q = User.all();
+
+        const query = q.select(
+          'id',
+          profileRelation as unknown as RelationQuery<
+            typeof profileRelationQuery,
+            true
+          >,
+        );
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; profile: typeof Profile['type'] }[]
+        > = true;
+        expect(eq).toBe(true);
+      });
+
+      it('should parse columns in single relation record result', async () => {
+        const userId = await insertUser();
+        const now = new Date();
+        await insertProfile({ userId, updatedAt: now, createdAt: now });
+
+        const [record] = await User.select('id', profileRelation);
+        expect(record.profile).toMatchObject({
+          updatedAt: now,
+          createdAt: now,
+        });
+      });
+
+      const messagesQuery = Message.as('messages');
+      const messageRelationQuery = addQueryOn(
+        messagesQuery,
+        messagesQuery,
+        User,
+        'authorId',
+        'id',
+      );
+
+      const messageRelation = new Proxy(console.log, {
+        get(_, key) {
+          return (
+            messageRelationQuery as unknown as Record<string | symbol, unknown>
+          )[key];
+        },
+        set(_, key, value) {
+          return ((
+            messageRelationQuery as unknown as Record<string | symbol, unknown>
+          )[key] = value);
+        },
+      }) as unknown as RelationQuery<typeof messageRelationQuery>;
+
+      it('should select relation which returns many records', () => {
+        const q = User.all();
+
+        const query = q.select('id', messageRelation);
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; messages: typeof Message['type'][] }[]
+        > = true;
+        expect(eq).toBe(true);
+
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "user"."id",
+              (
+                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+                FROM (
+                  SELECT "messages".*
+                  FROM "message" AS "messages"
+                  WHERE "messages"."authorId" = "user"."id"
+                ) AS "t"
+              ) AS "messages"
+            FROM "user"
+          `,
+        );
+
+        expectQueryNotMutated(q);
+      });
+
+      it('should parse columns in multiple relation records result', async () => {
+        const authorId = await insertUser();
+        const chatId = await insertChat();
+        const now = new Date();
+        await insertMessage({
+          authorId,
+          chatId,
+          updatedAt: now,
+          createdAt: now,
+        });
+
+        const [record] = await User.select('id', messageRelation);
+        expect(record.messages[0]).toMatchObject({
+          updatedAt: now,
+          createdAt: now,
+        });
+      });
     });
 
     describe('parse columns', () => {

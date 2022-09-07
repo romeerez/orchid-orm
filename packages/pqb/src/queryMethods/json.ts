@@ -53,10 +53,10 @@ export class Json {
     this: T,
   ): SetQueryReturnsValueOrUndefined<T, StringColumn> {
     const q = this._wrap(
-      this.selectAs({
+      (this.__model || this).selectAs({
         json: raw(
           this.query?.take
-            ? `COALESCE(row_to_json("t".*), '{}')`
+            ? `row_to_json("t".*)`
             : `COALESCE(json_agg(row_to_json("t".*)), '[]')`,
         ),
       }),

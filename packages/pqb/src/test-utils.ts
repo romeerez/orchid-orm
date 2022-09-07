@@ -9,6 +9,7 @@ import {
 } from 'pg-transactional-tests';
 import { Client } from 'pg';
 import { quote } from './quote';
+import { columnTypes } from './columnSchema';
 
 export const dbClient = new Client({
   connectionString: process.env.DATABASE_URL,
@@ -17,6 +18,8 @@ export const dbClient = new Client({
 export const adapter = Adapter({ connectionString: process.env.DATABASE_URL });
 
 export const db = createDb(adapter);
+
+const dateColumn = columnTypes.timestamp().parse((input) => new Date(input));
 
 export const User = db('user', (t) => ({
   id: t.serial().primaryKey(),
@@ -33,23 +36,23 @@ export const User = db('user', (t) => ({
     .nullable(),
   age: t.integer().nullable(),
   active: t.boolean().nullable(),
-  createdAt: t.timestamp().parse((input) => new Date(input)),
-  updatedAt: t.timestamp().parse((input) => new Date(input)),
+  createdAt: dateColumn,
+  updatedAt: dateColumn,
 }));
 
 export const Profile = db('profile', (t) => ({
   id: t.serial().primaryKey(),
   userId: t.integer(),
   bio: t.text().nullable(),
-  // createdAt: t.timestamp(),
-  // updatedAt: t.timestamp(),
+  createdAt: dateColumn,
+  updatedAt: dateColumn,
 }));
 
 export const Chat = db('chat', (t) => ({
   id: t.serial().primaryKey(),
   title: t.text(),
-  createdAt: t.timestamp(),
-  updatedAt: t.timestamp(),
+  createdAt: dateColumn,
+  updatedAt: dateColumn,
 }));
 
 export const Message = db('message', (t) => ({
@@ -57,8 +60,8 @@ export const Message = db('message', (t) => ({
   chatId: t.integer(),
   authorId: t.integer(),
   text: t.text(),
-  createdAt: t.timestamp(),
-  updatedAt: t.timestamp(),
+  createdAt: dateColumn,
+  updatedAt: dateColumn,
 }));
 
 export const line = (s: string) =>
@@ -123,6 +126,7 @@ export const insertUser = async (
 ) => {
   const now = new Date();
   const { count = 1, ...data } = options;
+  const id = userIdCounter;
   for (let i = 0; i < count; i++) {
     await insert('user', {
       id: userIdCounter++,
@@ -135,6 +139,67 @@ export const insertUser = async (
       ...data,
     });
   }
+  return id;
+};
+
+let profileIdCounter = 1;
+export const insertProfile = async (
+  options: Partial<typeof Profile.type> & { count?: number } = {},
+) => {
+  const now = new Date();
+  const { count = 1, ...data } = options;
+  const id = profileIdCounter;
+  for (let i = 0; i < count; i++) {
+    await insert('profile', {
+      id: profileIdCounter++,
+      userId: userIdCounter,
+      bio: 'text',
+      createdAt: now,
+      updatedAt: now,
+      ...data,
+    });
+  }
+  return id;
+};
+
+let chatIdCounter = 1;
+export const insertChat = async (
+  options: Partial<typeof Chat.type> & { count?: number } = {},
+) => {
+  const now = new Date();
+  const { count = 1, ...data } = options;
+  const id = chatIdCounter;
+  for (let i = 0; i < count; i++) {
+    await insert('chat', {
+      id: chatIdCounter++,
+      title: 'title',
+      createdAt: now,
+      updatedAt: now,
+      ...data,
+    });
+  }
+  return id;
+};
+
+let messageIdCounter = 1;
+export const insertMessage = async (
+  options: Partial<typeof Message.type> & { count?: number } = {},
+) => {
+  const now = new Date();
+  const { count = 1, ...data } = options;
+  const id = messageIdCounter;
+  for (let i = 0; i < count; i++) {
+    await insert('message', {
+      id: messageIdCounter++,
+      chatId: chatIdCounter,
+      authorId: userIdCounter,
+      text: 'text',
+      createdAt: now,
+      updatedAt: now,
+      ...data,
+    });
+  }
+  return id;
 };
 
 export const insertUsers = (

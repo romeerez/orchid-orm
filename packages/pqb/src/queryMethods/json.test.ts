@@ -15,13 +15,15 @@ describe('json methods', () => {
     it('wraps a query with json functions', () => {
       const q = User.all();
       expectSql(
-        q.json().toSql(),
+        q.where({ id: 1 }).json().toSql(),
         `
           SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
           FROM (
             SELECT "user".* FROM "user"
+            WHERE "user"."id" = $1
           ) AS "t"
         `,
+        [1],
       );
       expectQueryNotMutated(q);
     });
@@ -29,14 +31,16 @@ describe('json methods', () => {
     it('supports `take`', () => {
       const q = User.all();
       expectSql(
-        q.take().json().toSql(),
+        q.where({ id: 1 }).take().json().toSql(),
         `
-          SELECT COALESCE(row_to_json("t".*), '{}') AS "json"
+          SELECT row_to_json("t".*) AS "json"
           FROM (
-            SELECT "user".* FROM "user" LIMIT $1
+            SELECT "user".* FROM "user"
+            WHERE "user"."id" = $1
+            LIMIT $2
           ) AS "t"
         `,
-        [1],
+        [1, 1],
       );
       expectQueryNotMutated(q);
     });

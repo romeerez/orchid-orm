@@ -2,6 +2,7 @@ import {
   ColumnsParsers,
   Query,
   QueryWithTable,
+  RelationQuery,
   SelectableBase,
 } from '../query';
 import { Expression, RawExpression } from '../common';
@@ -167,6 +168,7 @@ export type JsonItem<
 
 export type SelectItem =
   | string
+  | RelationQuery
   | AggregateItem
   | { selectAs: Record<string, string | Query | RawExpression> }
   | { function: string; arguments: SelectItem[]; as?: string }
