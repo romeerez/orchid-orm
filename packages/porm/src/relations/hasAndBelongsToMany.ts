@@ -47,6 +47,7 @@ export const makeHasAndBelongsToManyMethod = (
   const subQuery = qb.from(joinTable);
 
   return {
+    returns: 'many',
     method: (params: Record<string, unknown>) => {
       return query.whereExists(subQuery, (q) =>
         q.on(associationForeignKeyFull, associationPrimaryKeyFull).where({

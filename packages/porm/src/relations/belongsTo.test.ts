@@ -6,16 +6,18 @@ import {
   insertUser,
   useTestDatabase,
 } from '../test-utils/test-utils';
+import { RelationQuery } from 'pqb';
 
 describe('belongsTo', () => {
   useTestDatabase();
 
   it('should have method to query related data', async () => {
     const userQuery = db.user.take();
+    type UserQuery = typeof userQuery;
 
     const eq: AssertEqual<
       typeof db.profile.user,
-      (params: { userId: number }) => typeof userQuery
+      RelationQuery<{ userId: number }, UserQuery, true>
     > = true;
 
     expect(eq).toBe(true);
@@ -105,6 +107,31 @@ describe('belongsTo', () => {
         JOIN "user" ON "user"."id" = "profile"."userId" AND "user"."name" = $1
       `,
       ['name'],
+    );
+  });
+
+  it('should be selectable', () => {
+    const query = db.profile.select(
+      'id',
+      db.profile.user.where({ name: 'name' }),
+    );
+    expectSql(
+      query.toSql(),
+      `
+        SELECT
+          "profile"."id",
+          (
+            SELECT row_to_json("t".*) AS "json"
+            FROM (
+              SELECT "user".* FROM "user"
+              WHERE "user"."id" = "profile"."userId"
+                AND "user"."name" = $1
+              LIMIT $2
+            ) AS "t"
+          ) AS "user"
+        FROM "profile"
+      `,
+      ['name', 1],
     );
   });
 });

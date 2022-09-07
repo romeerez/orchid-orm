@@ -28,6 +28,7 @@ export const makeBelongsToMethod = (
   const { primaryKey, foreignKey } = relation.options;
 
   return {
+    returns: 'one',
     method: (params: Record<string, unknown>) => {
       return query.findBy({ [primaryKey]: params[foreignKey] });
     },

@@ -68,6 +68,7 @@ export abstract class Model {
       primaryKey: keyof Related['columns']['shape'];
       foreignKey: keyof Self['columns']['shape'];
       scope?: ScopeFn<Related, Scope>;
+      required?: boolean;
     },
   >(this: Self, fn: () => ModelClass<Related>, options: Options) {
     return {
@@ -95,6 +96,7 @@ export abstract class Model {
         }
     ) & {
       scope?: ScopeFn<Related, Scope>;
+      required?: boolean;
     },
   >(this: Self, fn: () => ModelClass<Related>, options: Options) {
     return {
@@ -122,6 +124,7 @@ export abstract class Model {
         }
     ) & {
       scope?: ScopeFn<Related, Scope>;
+      required?: boolean;
     },
   >(this: Self, fn: () => ModelClass<Related>, options: Options) {
     return {
@@ -143,6 +146,7 @@ export abstract class Model {
       associationForeignKey: string;
       joinTable: string;
       scope?: ScopeFn<Related, Scope>;
+      required?: boolean;
     },
   >(this: Self, fn: () => ModelClass<Related>, options: Options) {
     return {

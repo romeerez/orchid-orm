@@ -61,6 +61,7 @@ export const makeHasOneMethod = (
     const whereExistsCallback = () => sourceRelation.joinQuery;
 
     return {
+      returns: 'one',
       method: (params: Record<string, unknown>) => {
         const throughQuery = (model as unknown as ModelWithQueryMethod)[
           through
@@ -81,6 +82,7 @@ export const makeHasOneMethod = (
   const { primaryKey, foreignKey } = relation.options;
 
   return {
+    returns: 'one',
     method: (params: Record<string, unknown>) => {
       return query.findBy({ [foreignKey]: params[primaryKey] });
     },

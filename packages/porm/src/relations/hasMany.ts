@@ -61,6 +61,7 @@ export const makeHasManyMethod = (
     const whereExistsCallback = () => sourceRelation.joinQuery;
 
     return {
+      returns: 'many',
       method: (params: Record<string, unknown>) => {
         const throughQuery = (model as unknown as ModelWithQueryMethod)[
           through
@@ -81,6 +82,7 @@ export const makeHasManyMethod = (
   const { primaryKey, foreignKey } = relation.options;
 
   return {
+    returns: 'many',
     method: (params: Record<string, unknown>) => {
       return query.where({ [foreignKey]: params[primaryKey] });
     },

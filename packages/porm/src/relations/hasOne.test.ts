@@ -6,6 +6,7 @@ import {
   insertUser,
   useTestDatabase,
 } from '../test-utils/test-utils';
+import { RelationQuery } from 'pqb';
 
 describe('hasOne', () => {
   useTestDatabase();
@@ -15,7 +16,7 @@ describe('hasOne', () => {
 
     const eq: AssertEqual<
       typeof db.user.profile,
-      (params: { id: number }) => typeof profileQuery
+      RelationQuery<{ id: number }, typeof profileQuery, true>
     > = true;
 
     expect(eq).toBe(true);
@@ -109,6 +110,28 @@ describe('hasOne', () => {
       ['name'],
     );
   });
+
+  it('should be selectable', () => {
+    const query = db.user.select('id', db.user.profile.where({ bio: 'bio' }));
+    expectSql(
+      query.toSql(),
+      `
+        SELECT
+          "user"."id",
+          (
+            SELECT row_to_json("t".*) AS "json"
+            FROM (
+              SELECT "profile".* FROM "profile"
+              WHERE "profile"."userId" = "user"."id"
+                AND "profile"."bio" = $1
+              LIMIT $2
+            ) AS "t"
+          ) AS "profile"
+        FROM "user"
+      `,
+      ['bio', 1],
+    );
+  });
 });
 
 describe('hasOne through', () => {
@@ -117,7 +140,7 @@ describe('hasOne through', () => {
 
     const eq: AssertEqual<
       typeof db.message.profile,
-      (params: { authorId: number }) => typeof profileQuery
+      RelationQuery<{ authorId: number }, typeof profileQuery, true>
     > = true;
 
     expect(eq).toBe(true);
@@ -219,6 +242,36 @@ describe('hasOne through', () => {
           AND "message"."text" = $1
       `,
       ['text'],
+    );
+  });
+
+  it('should be selectable', () => {
+    const query = db.message.select(
+      'id',
+      db.message.profile.where({ bio: 'bio' }),
+    );
+    expectSql(
+      query.toSql(),
+      `
+        SELECT
+          "message"."id",
+          (
+            SELECT row_to_json("t".*) AS "json"
+            FROM (
+              SELECT "profile".* FROM "profile"
+              WHERE EXISTS (
+                  SELECT 1 FROM "user"
+                  WHERE "profile"."userId" = "user"."id"
+                    AND "user"."id" = "message"."authorId"
+                  LIMIT 1
+                )
+                AND "profile"."bio" = $1
+              LIMIT $2
+            ) AS "t"
+          ) AS "profile"
+        FROM "message"
+      `,
+      ['bio', 1],
     );
   });
 });

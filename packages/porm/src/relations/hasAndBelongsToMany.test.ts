@@ -7,6 +7,7 @@ import {
   insertUser,
   useTestDatabase,
 } from '../test-utils/test-utils';
+import { RelationQuery } from 'pqb';
 
 describe('hasAndBelongsToMany', () => {
   useTestDatabase();
@@ -16,7 +17,7 @@ describe('hasAndBelongsToMany', () => {
 
     const eq: AssertEqual<
       typeof db.user.chats,
-      (params: { id: number }) => typeof chatsQuery
+      RelationQuery<{ id: number }, typeof chatsQuery, false>
     > = true;
 
     expect(eq).toBe(true);
@@ -142,6 +143,32 @@ describe('hasAndBelongsToMany', () => {
           AND "user"."name" = $1
       `,
       ['name'],
+    );
+  });
+
+  it('should be selectable', () => {
+    const query = db.user.select('id', db.user.chats.where({ title: 'title' }));
+    expectSql(
+      query.toSql(),
+      `
+        SELECT
+          "user"."id",
+          (
+            SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+            FROM (
+              SELECT "chats".* FROM "chat" AS "chats"
+              WHERE EXISTS (
+                SELECT 1 FROM "chatUser"
+                WHERE "chatUser"."chatId" = "chats"."id"
+                  AND "chatUser"."userId" = "user"."id"
+                LIMIT 1
+              )
+              AND "chats"."title" = $1
+            ) AS "t"
+          ) AS "chats"
+        FROM "user"
+      `,
+      ['title'],
     );
   });
 });

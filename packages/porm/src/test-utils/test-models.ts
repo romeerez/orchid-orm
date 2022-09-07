@@ -30,6 +30,7 @@ export class UserModel extends Model {
 
   relations = {
     profile: this.hasOne(() => ProfileModel, {
+      required: true,
       primaryKey: 'id',
       foreignKey: 'userId',
     }),
@@ -62,6 +63,7 @@ export class ProfileModel extends Model {
 
   relations = {
     user: this.belongsTo(() => UserModel, {
+      required: true,
       primaryKey: 'id',
       foreignKey: 'userId',
     }),
@@ -103,6 +105,7 @@ export class MessageModel extends Model {
     }),
 
     profile: this.hasOne(() => ProfileModel, {
+      required: true,
       through: 'user',
       source: 'profile',
     }),

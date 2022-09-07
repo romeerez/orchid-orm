@@ -6,6 +6,7 @@ import {
   Query,
   QueryWithTable,
   Relation,
+  RelationQuery,
   SetQueryReturnsAll,
   SetQueryReturnsOneOrUndefined,
 } from 'pqb';
@@ -22,6 +23,7 @@ export interface RelationThunkBase {
   fn(): ModelClass;
   options: {
     scope?(q: QueryWithTable): QueryWithTable;
+    required?: boolean;
   };
 }
 
@@ -30,6 +32,7 @@ export type RelationThunk = BelongsTo | HasOne | HasMany | HasAndBelongsToMany;
 export type RelationThunks = Record<string, RelationThunk>;
 
 export type RelationData = {
+  returns: 'one' | 'many';
   method(params: Record<string, unknown>): Query;
   joinQuery: Query;
 };
@@ -57,11 +60,15 @@ export type MapRelation<
   T extends Model,
   Relations extends RelationThunks,
   Relation extends RelationThunk,
-> = (
-  params: RelationParams<T, Relations, Relation>,
-) => Relation['returns'] extends 'one'
-  ? SetQueryReturnsOneOrUndefined<RelationScopeOrModel<Relation>>
-  : SetQueryReturnsAll<RelationScopeOrModel<Relation>>;
+> = RelationQuery<
+  RelationParams<T, Relations, Relation>,
+  Relation['returns'] extends 'one'
+    ? SetQueryReturnsOneOrUndefined<RelationScopeOrModel<Relation>>
+    : SetQueryReturnsAll<RelationScopeOrModel<Relation>>,
+  Relation['options']['required'] extends boolean
+    ? Relation['options']['required']
+    : false
+>;
 
 export type MapRelations<T extends Model> = 'relations' extends keyof T
   ? T['relations'] extends RelationThunks
@@ -125,7 +132,7 @@ export const applyRelations = (
 
         if (data) {
           (dbModel as unknown as Record<string, unknown>)[relationName] =
-            data.method;
+            makeRelationQuery(data);
 
           (dbModel.relations as Record<string, Relation>)[relationName] = {
             key: relationName,
@@ -136,4 +143,14 @@ export const applyRelations = (
       }
     }
   }
+};
+
+const makeRelationQuery = (data: RelationData): RelationQuery => {
+  const query = data.returns === 'one' ? data.joinQuery.take() : data.joinQuery;
+
+  return new Proxy(data.method, {
+    get(_, prop) {
+      return (query as unknown as Record<string, unknown>)[prop as string];
+    },
+  }) as unknown as RelationQuery;
 };

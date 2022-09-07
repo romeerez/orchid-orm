@@ -7,6 +7,7 @@ import {
   insertUser,
   useTestDatabase,
 } from '../test-utils/test-utils';
+import { RelationQuery } from 'pqb';
 
 describe('hasMany', () => {
   useTestDatabase();
@@ -16,7 +17,7 @@ describe('hasMany', () => {
 
     const eq: AssertEqual<
       typeof db.user.messages,
-      (params: { id: number }) => typeof messagesQuery
+      RelationQuery<{ id: number }, typeof messagesQuery, false>
     > = true;
 
     expect(eq).toBe(true);
@@ -110,6 +111,30 @@ describe('hasMany', () => {
       ['name'],
     );
   });
+
+  it('should be selectable', () => {
+    const query = db.user.select(
+      'id',
+      db.user.messages.where({ text: 'text' }),
+    );
+    expectSql(
+      query.toSql(),
+      `
+        SELECT
+          "user"."id",
+          (
+            SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+            FROM (
+              SELECT "messages".* FROM "message" AS "messages"
+              WHERE "messages"."authorId" = "user"."id"
+                AND "messages"."text" = $1
+            ) AS "t"
+          ) AS "messages"
+        FROM "user"
+      `,
+      ['text'],
+    );
+  });
 });
 
 describe('hasMany through', () => {
@@ -118,7 +143,7 @@ describe('hasMany through', () => {
 
     const eq: AssertEqual<
       typeof db.profile.chats,
-      (params: { userId: number }) => typeof chatsQuery
+      RelationQuery<{ userId: number }, typeof chatsQuery, false>
     > = true;
 
     expect(eq).toBe(true);
@@ -244,6 +269,41 @@ describe('hasMany through', () => {
           AND "profile"."bio" = $1
       `,
       ['bio'],
+    );
+  });
+
+  it('should be selectable', () => {
+    const query = db.profile.select(
+      'id',
+      db.profile.chats.where({ title: 'title' }),
+    );
+    expectSql(
+      query.toSql(),
+      `
+        SELECT
+          "profile"."id",
+          (
+            SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+            FROM (
+              SELECT "chats".*
+              FROM "chat" AS "chats"
+              WHERE EXISTS (
+                  SELECT 1 FROM "user"
+                  WHERE EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."chatId" = "chats"."id"
+                      AND "chatUser"."userId" = "user"."id"
+                    LIMIT 1
+                  )
+                  AND "user"."id" = "profile"."userId"
+                  LIMIT 1
+                )
+                AND "chats"."title" = $1
+            ) AS "t"
+          ) AS "chats"
+        FROM "profile"
+      `,
+      ['title'],
     );
   });
 });
