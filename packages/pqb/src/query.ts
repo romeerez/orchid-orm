@@ -29,10 +29,10 @@ export type Relation = {
 export type RelationsBase = Record<never, Relation>;
 
 export type RelationQuery<
+  Params = never,
   T extends Query = Query,
   Required extends boolean = boolean,
-> = ((params: Record<string, unknown>) => Query) &
-  T & { requiredRelation: Required };
+> = ((params: Params) => T) & T & { requiredRelation: Required };
 
 export type WithDataItem = { table: string; shape: ColumnsShape };
 export type WithDataBase = Record<never, WithDataItem>;

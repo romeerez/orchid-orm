@@ -1,6 +1,6 @@
 import { JsonItem, SelectQueryData } from './types';
 import { Expression, getRaw, isRaw } from '../common';
-import { Query } from '../query';
+import { Query, RelationQuery } from '../query';
 import { addValue, q, quoteFullColumn } from './common';
 import { aggregateToSql } from './aggregate';
 import { getQueryAs } from '../utils';
@@ -78,20 +78,39 @@ export const selectToSql = (
   if (select) {
     const list: string[] = [];
     select.forEach((item) => {
-      if (typeof item === 'object') {
+      if (
+        (item instanceof Function || typeof item === 'function') &&
+        !('function' in item)
+      ) {
+        const relationQuery = item as RelationQuery;
+        list.push(
+          relationQueryToSql(
+            relationQuery,
+            q(getQueryAs(relationQuery)),
+            values,
+          ),
+        );
+      } else if (typeof item === 'object') {
         if ('selectAs' in item) {
           const obj = item.selectAs as Record<string, Expression | Query>;
           for (const as in obj) {
             const value = obj[as];
-            if (typeof value === 'object') {
+            if (value instanceof Function || typeof item === 'function') {
+              const relationQuery = value as RelationQuery;
+              list.push(
+                relationQueryToSql(
+                  relationQuery,
+                  q(getQueryAs(relationQuery)),
+                  values,
+                ),
+              );
+            } else if (typeof value === 'object') {
               if (isRaw(value)) {
                 list.push(`${getRaw(value, values)} AS ${q(as)}`);
               } else {
                 const sql = (value as Query).json().toSql(values);
                 list.push(`(${sql.text}) AS ${q(as)}`);
               }
-            } else if (typeof value === 'function') {
-              // TODO: relation query
             } else {
               list.push(
                 `${quoteFullColumn(value as string, quotedAs)} AS ${q(as)}`,
@@ -116,12 +135,8 @@ export const selectToSql = (
         } else {
           list.push(aggregateToSql(model, values, item, quotedAs));
         }
-      } else if (typeof item === 'function') {
-        list.push(
-          `(${item.json().toSql(values).text}) AS ${q(getQueryAs(item))}`,
-        );
       } else {
-        list.push(quoteFullColumn(item, quotedAs));
+        list.push(quoteFullColumn(item as string, quotedAs));
       }
     });
     return list.join(', ');
@@ -129,3 +144,9 @@ export const selectToSql = (
     return `${quotedAs}.*`;
   }
 };
+
+const relationQueryToSql = (
+  relationQuery: RelationQuery,
+  as: string,
+  values: unknown[],
+) => `(${relationQuery.json().toSql(values).text}) AS ${as}`;

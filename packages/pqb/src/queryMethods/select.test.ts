@@ -121,23 +121,21 @@ describe('selectMethods', () => {
         'id',
       );
 
-      const profileRelation = new Proxy(console.log, {
+      const profileRelation = new Proxy(() => undefined, {
         get(_, key) {
           return (
             profileRelationQuery as unknown as Record<string | symbol, unknown>
           )[key];
         },
-        set(_, key, value) {
-          return ((
-            profileRelationQuery as unknown as Record<string | symbol, unknown>
-          )[key] = value);
-        },
-      }) as unknown as RelationQuery<typeof profileQuery>;
+      }) as unknown as RelationQuery<
+        Record<string, unknown>,
+        typeof profileQuery
+      >;
 
       it('should select relation which returns one record', () => {
         const q = User.all();
 
-        const query = q.select('id', profileRelation);
+        const query = q.select('id', profileRelation.where({ bio: 'bio' }));
         const eq: AssertEqual<
           Awaited<typeof query>,
           { id: number; profile: typeof Profile['type'] | null }[]
@@ -155,23 +153,25 @@ describe('selectMethods', () => {
                   SELECT "profile".*
                   FROM "profile"
                   WHERE "profile"."userId" = "user"."id"
-                  LIMIT $1
+                    AND "profile"."bio" = $1
+                  LIMIT $2
                 ) AS "t"
               ) AS "profile"
             FROM "user"
           `,
-          [1],
+          ['bio', 1],
         );
 
         expectQueryNotMutated(q);
       });
 
-      it('should have propert type for required relation', () => {
+      it('should have proper type for required relation', () => {
         const q = User.all();
 
         const query = q.select(
           'id',
           profileRelation as unknown as RelationQuery<
+            Record<string, unknown>,
             typeof profileRelationQuery,
             true
           >,
@@ -204,23 +204,21 @@ describe('selectMethods', () => {
         'id',
       );
 
-      const messageRelation = new Proxy(console.log, {
+      const messageRelation = new Proxy(() => undefined, {
         get(_, key) {
           return (
             messageRelationQuery as unknown as Record<string | symbol, unknown>
           )[key];
         },
-        set(_, key, value) {
-          return ((
-            messageRelationQuery as unknown as Record<string | symbol, unknown>
-          )[key] = value);
-        },
-      }) as unknown as RelationQuery<typeof messageRelationQuery>;
+      }) as unknown as RelationQuery<
+        Record<string, unknown>,
+        typeof messageRelationQuery
+      >;
 
       it('should select relation which returns many records', () => {
         const q = User.all();
 
-        const query = q.select('id', messageRelation);
+        const query = q.select('id', messageRelation.where({ text: 'text' }));
         const eq: AssertEqual<
           Awaited<typeof query>,
           { id: number; messages: typeof Message['type'][] }[]
@@ -238,10 +236,12 @@ describe('selectMethods', () => {
                   SELECT "messages".*
                   FROM "message" AS "messages"
                   WHERE "messages"."authorId" = "user"."id"
+                    AND "messages"."text" = $1
                 ) AS "t"
               ) AS "messages"
             FROM "user"
           `,
+          ['text'],
         );
 
         expectQueryNotMutated(q);
