@@ -134,4 +134,21 @@ describe('belongsTo', () => {
       ['name', 1],
     );
   });
+
+  // it('should support nested insert', async () => {
+  //   const now = new Date();
+  //
+  //   db.message.relations.profile.type;
+  //
+  //   const query = db.message.insert({
+  //     updatedAt: now,
+  //     createdAt: now,
+  //     chatId: 1,
+  //     authorId: 1,
+  //     text: 'text',
+  //     // author: {
+  //     //   create: true,
+  //     // },
+  //   });
+  // });
 });

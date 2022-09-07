@@ -104,6 +104,11 @@ export class MessageModel extends Model {
       foreignKey: 'authorId',
     }),
 
+    chat: this.belongsTo(() => ChatModel, {
+      primaryKey: 'id',
+      foreignKey: 'chatId',
+    }),
+
     profile: this.hasOne(() => ProfileModel, {
       required: true,
       through: 'user',

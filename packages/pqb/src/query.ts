@@ -22,6 +22,7 @@ export type SelectableBase = Record<
 >;
 
 export type Relation = {
+  type: string;
   key: string;
   model: QueryWithTable;
   joinQuery: Query;

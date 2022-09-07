@@ -22,33 +22,22 @@ type InsertData<T extends Query> = Omit<T['type'], OptionalKeys<T>> & {
   [K in OptionalKeys<T>]?: T['shape'][K]['type'];
 };
 
-type InsertArgs<T extends Query> = [
-  data:
-    | InsertData<T>
-    | InsertData<T>[]
-    | {
-        columns: string[];
-        values: RawExpression;
-      },
-  returning?: ReturningArg<T>,
-];
-
-type InsertResult<
+type InsertOneResult<
   T extends Query,
-  Args extends InsertArgs<T>,
-> = Args[1] extends ReturningArg<T>
-  ? Args[0] extends
-      | Array<unknown>
-      | {
-          columns: string[];
-          values: RawExpression;
-        }
-    ? Args[1] extends '*'
-      ? SetQueryReturnsAll<AddQuerySelect<T, T['shape']>>
-      : SetQueryReturnsAll<AddQuerySelect<T, Pick<T['shape'], Args[1][number]>>>
-    : Args[1] extends '*'
+  Returning extends ReturningArg<T> | undefined,
+> = Returning extends ReturningArg<T>
+  ? Returning extends '*'
     ? SetQueryReturnsOne<AddQuerySelect<T, T['shape']>>
-    : SetQueryReturnsOne<AddQuerySelect<T, Pick<T['shape'], Args[1][number]>>>
+    : SetQueryReturnsOne<AddQuerySelect<T, Pick<T['shape'], Returning[number]>>>
+  : SetQueryReturnsVoid<T>;
+
+type InsertManyResult<
+  T extends Query,
+  Returning extends ReturningArg<T> | undefined,
+> = Returning extends ReturningArg<T>
+  ? Returning extends '*'
+    ? SetQueryReturnsAll<AddQuerySelect<T, T['shape']>>
+    : SetQueryReturnsAll<AddQuerySelect<T, Pick<T['shape'], Returning[number]>>>
   : SetQueryReturnsVoid<T>;
 
 type OnConflictArg<T extends Query> =
@@ -57,25 +46,61 @@ type OnConflictArg<T extends Query> =
   | RawExpression;
 
 export class Insert {
-  insert<T extends Query, Args extends InsertArgs<T>>(
+  insert<
+    T extends Query,
+    Returning extends ReturningArg<T> | undefined = undefined,
+  >(
     this: T,
-    ...args: Args
-  ): InsertResult<T, Args> {
-    return this.clone()._insert(...args) as unknown as InsertResult<T, Args>;
+    data: InsertData<T>,
+    returning?: Returning,
+  ): InsertOneResult<T, Returning>;
+  insert<
+    T extends Query,
+    Returning extends ReturningArg<T> | undefined = undefined,
+  >(
+    this: T,
+    data: InsertData<T>[] | { columns: string[]; values: RawExpression },
+    returning?: Returning,
+  ): InsertManyResult<T, Returning>;
+  insert(
+    this: Query,
+    data: InsertData<Query>,
+    returning?: ReturningArg<Query>,
+  ) {
+    return this.clone()._insert(data, returning) as unknown as InsertOneResult<
+      Query,
+      ReturningArg<Query>
+    > &
+      InsertManyResult<Query, ReturningArg<Query>>;
   }
 
-  _insert<T extends Query, Args extends InsertArgs<T>>(
+  _insert<
+    T extends Query,
+    Returning extends ReturningArg<T> | undefined = undefined,
+  >(
     this: T,
-    ...args: Args
-  ): InsertResult<T, Args> {
-    const [data, returning] = args;
-    const q = Array.isArray(data) ? this._all() : this._take();
+    data: InsertData<T>,
+    returning?: Returning,
+  ): InsertOneResult<T, Returning>;
+  _insert<
+    T extends Query,
+    Returning extends ReturningArg<T> | undefined = undefined,
+  >(
+    this: T,
+    data: InsertData<T>[] | { columns: string[]; values: RawExpression },
+    returning?: Returning,
+  ): InsertManyResult<T, Returning>;
+  _insert(data: unknown, returning?: unknown) {
+    const q = Array.isArray(data)
+      ? (this as unknown as Query)._all()
+      : (this as unknown as Query)._take();
     setQueryValue(q, 'type', 'insert');
     setQueryValue(q, 'data', data);
     if (returning) {
       pushQueryValue(q, 'returning', returning);
     }
-    return q as unknown as InsertResult<T, Args>;
+    return q as unknown as InsertOneResult<Query, ReturningArg<Query>> &
+      InsertManyResult<Query, ReturningArg<Query>>;
   }
 
   onConflict<T extends Query, Arg extends OnConflictArg<T>>(

@@ -22,6 +22,7 @@ export type ModelToDb<
     ? Model['relations'] extends RelationThunks
       ? {
           [K in keyof Model['relations']]: {
+            type: Model['relations'][K]['type'];
             key: K;
             model: DbModel<ReturnType<Model['relations'][K]['fn']>>;
             joinQuery: Query;

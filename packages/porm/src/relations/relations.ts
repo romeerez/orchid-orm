@@ -135,6 +135,7 @@ export const applyRelations = (
             makeRelationQuery(data);
 
           (dbModel.relations as Record<string, Relation>)[relationName] = {
+            type,
             key: relationName,
             model: query,
             joinQuery: data.joinQuery,
