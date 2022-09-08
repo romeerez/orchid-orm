@@ -38,6 +38,10 @@ export default {
               link: '/guide/orm',
             },
             {
+              text: 'Columns schema',
+              link: '/guide/columns-schema',
+            },
+            {
               text: 'Migrations',
               link: '/guide/migrations',
             },

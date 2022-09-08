@@ -4,27 +4,30 @@ The query builder is the interface used for building and executing standard SQL 
 
 `pqb` is aiming to be as similar to [knex](https://knexjs.org/) query builder as possible, but with better TypeScript support and some additional features.
 
+Everything listed in this document also applies for the [ORM](/guide/orm), except for relations and other ORM specific features.
+
 ## createDb
 
-Instantiate a `db`:
+`createDb` is a function to configure query builder instance, it takes `Adapter` which is accepting the same options as [node-postgres](https://node-postgres.com/) library.
+
+For all connection options see: [client options](https://node-postgres.com/api/client) + [pool options](https://node-postgres.com/api/pool)
 
 ```ts
 import { Adapter, createDb } from 'pqb'
 
 const options = {
-  connectionString: process.env.DATABASE_URL // postgres://user:password@localhost:5432/dbname
+  // in the format: postgres://user:password@localhost:5432/dbname
+  connectionString: process.env.DATABASE_URL
 }
 
 const db = createDb(Adapter(options))
 ```
 
-`Adapter` is a wrapper around low-lever database library, for now only [node-postgres](https://node-postgres.com/) is supported and more to come.
-
-Pass `options` data to the `Adapter`, it is the same shape of parameters which is required by `node-postgres`, see all client options [here](https://node-postgres.com/api/client), `Adapter` also accepts [pool options](https://node-postgres.com/api/pool).
-
 ## db table interface
 
-Make a queryable object by calling `db` with a table name and schema definition:
+Make a queryable object by calling `db` with a table name and schema definition.
+
+(see [Columns schema](/guide/columns-schema) document for details)
 
 ```ts
 const db = createDb(Adapter(options))
@@ -713,6 +716,22 @@ Table
 
 ```ts
 Table.insert(data).onConflict().merge(raw('raw SQL expression'))
+```
+
+## defaults
+
+`.defaults` allows to set values which will be used later in `.insert`.
+
+Columns provided in `.defaults` are marked as optional in following `.insert`.
+
+```ts
+// Will use firstName from defauls and lastName from insert argument:
+Table.defaults({
+  firstName: 'first name',
+  lastName: 'last name',
+}).insert({
+  lastName: 'override last name'
+})
 ```
 
 ## update
