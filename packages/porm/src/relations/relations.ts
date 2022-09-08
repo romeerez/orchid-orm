@@ -32,6 +32,7 @@ export type RelationData = {
   returns: 'one' | 'many';
   method(params: Record<string, unknown>): Query;
   joinQuery: Query;
+  primaryKey: string;
 };
 
 export type RelationScopeOrModel<Relation extends RelationThunkBase> =
@@ -141,6 +142,7 @@ export const applyRelations = (
             key: relationName,
             model: query,
             joinQuery: data.joinQuery,
+            primaryKey: data.primaryKey,
             options: relation.options,
           };
         }

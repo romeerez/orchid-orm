@@ -29,5 +29,6 @@ export const makeBelongsToMethod = (
       return query.findBy({ [primaryKey]: params[foreignKey] });
     },
     joinQuery: addQueryOn(query, query, model, primaryKey, foreignKey),
+    primaryKey,
   };
 };

@@ -5,6 +5,7 @@ import {
   expectQueryNotMutated,
   expectSql,
   Message,
+  Profile,
   User,
   useTestDatabase,
 } from '../test-utils';
@@ -266,6 +267,8 @@ describe('insert', () => {
             key: 'user',
             model: User,
             joinQuery: User,
+            nestedCreateQuery: User,
+            primaryKey: 'id',
             options: {
               primaryKey: 'id',
               foreignKey: 'authorId',
@@ -276,6 +279,8 @@ describe('insert', () => {
             key: 'chat',
             model: Chat,
             joinQuery: Chat,
+            nestedCreateQuery: Chat,
+            primaryKey: 'id',
             options: {
               primaryKey: 'id',
               foreignKey: 'chatId',
@@ -307,13 +312,13 @@ describe('insert', () => {
 
       const query = MessageWithRelations.insert(
         {
+          ...messageData,
           chat: {
             create: chatData,
           },
           user: {
             create: userData,
           },
-          ...messageData,
         },
         ['id', 'chatId', 'authorId'],
       );
@@ -342,6 +347,70 @@ describe('insert', () => {
         data: null,
         picture: null,
         ...userData,
+      });
+    });
+
+    it('should insert with hasOne relation', async () => {
+      const UserWithRelations = Object.assign(User, {
+        relations: {
+          profile: {
+            type: 'hasOne',
+            key: 'profile',
+            model: Profile,
+            joinQuery: Profile,
+            nestedCreateQuery: Profile.defaults({ userId: 1 }),
+            primaryKey: 'id',
+            options: {
+              primaryKey: 'id',
+              foreignKey: 'userId',
+            } as const,
+          } as const,
+        },
+        profile(params: { id: number }) {
+          return Profile.defaults({ userId: params.id });
+        },
+      });
+
+      const now = new Date();
+      const userData = {
+        name: 'name',
+        password: 'password',
+        updatedAt: now,
+        createdAt: now,
+      };
+
+      const profileData = {
+        bio: 'bio',
+        updatedAt: now,
+        createdAt: now,
+      };
+
+      const query = UserWithRelations.insert(
+        {
+          ...userData,
+          profile: {
+            create: profileData,
+          },
+        },
+        ['id'],
+      );
+
+      const { id } = await query;
+      const user = await User.find(id);
+      expect(user).toEqual({
+        id,
+        active: null,
+        age: null,
+        data: null,
+        picture: null,
+        ...userData,
+      });
+
+      const profile = await Profile.findBy({ userId: id });
+      expect(profile).toEqual({
+        id: profile.id,
+        userId: id,
+        ...profileData,
       });
     });
   });

@@ -34,6 +34,7 @@ export class Then {
     if (this.query?.prependQueries) {
       await Promise.all(this.query.prependQueries.map((query) => query()));
     }
+    const appendQueries = this.query?.appendQueries;
 
     const { returnType } = this;
     return this.adapter[queryMethod[returnType] as 'query'](this.toSql())
@@ -104,7 +105,17 @@ export class Then {
           }
         }
       })
-      .then(resolve, reject);
+      .then(
+        appendQueries?.length
+          ? async (result) => {
+              const array = Array.isArray(result) ? result : [result];
+              await Promise.all(appendQueries.map((query) => query(array)));
+
+              resolve?.(result);
+            }
+          : resolve,
+        reject,
+      );
   }
 }
 

@@ -1,6 +1,8 @@
 import { RawExpression } from './common';
 import { QueryData } from './sql';
 
+export type MaybeArray<T> = T | T[];
+
 export type SetOptional<T, K extends PropertyKey> = Omit<T, K> & {
   [P in K]?: P extends keyof T ? T[P] : never;
 };

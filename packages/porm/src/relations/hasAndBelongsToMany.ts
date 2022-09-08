@@ -56,5 +56,6 @@ export const makeHasAndBelongsToManyMethod = (
         .on(associationForeignKeyFull, associationPrimaryKeyFull)
         .on(foreignKeyFull, primaryKeyFull),
     ),
+    primaryKey,
   };
 };

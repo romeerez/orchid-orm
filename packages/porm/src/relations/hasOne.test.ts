@@ -7,6 +7,7 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
+import { Profile, User } from 'pqb/src/test-utils';
 
 describe('hasOne', () => {
   useTestDatabase();
@@ -162,6 +163,50 @@ describe('hasOne', () => {
       `,
       ['bio', 1],
     );
+  });
+
+  it('should support create', async () => {
+    const now = new Date();
+    const userData = {
+      name: 'name',
+      password: 'password',
+      updatedAt: now,
+      createdAt: now,
+    };
+
+    const profileData = {
+      bio: 'bio',
+      updatedAt: now,
+      createdAt: now,
+    };
+
+    const query = db.user.insert(
+      {
+        ...userData,
+        profile: {
+          create: profileData,
+        },
+      },
+      ['id'],
+    );
+
+    const { id } = await query;
+    const user = await User.find(id);
+    expect(user).toEqual({
+      id,
+      active: null,
+      age: null,
+      data: null,
+      picture: null,
+      ...userData,
+    });
+
+    const profile = await Profile.findBy({ userId: id });
+    expect(profile).toEqual({
+      id: profile.id,
+      userId: id,
+      ...profileData,
+    });
   });
 });
 

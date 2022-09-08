@@ -7,6 +7,7 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
+import { Chat, Message, User } from 'pqb/src/test-utils';
 
 describe('belongsTo', () => {
   useTestDatabase();
@@ -135,28 +136,65 @@ describe('belongsTo', () => {
     );
   });
 
-  // describe('insert', () => {
-  //   it.only('should support create', async () => {
-  //     const now = new Date();
-  //
-  //     db.message.relations.profile.type;
-  //
-  //     const chatId = await insertChat();
-  //
-  //     const query = db.message.insert({
-  //       updatedAt: now,
-  //       createdAt: now,
-  //       chatId,
-  //       user: {
-  //         name: 'name',
-  //         password: 'password',
-  //         updatedAt: now,
-  //         createdAt: now,
-  //       },
-  //       text: 'text',
-  //     });
-  //
-  //     console.log(query.toSql().text);
-  //   });
-  // });
+  it('should support create', async () => {
+    const now = new Date();
+    const messageData = {
+      text: 'text',
+      meta: null,
+      updatedAt: now,
+      createdAt: now,
+    };
+
+    const chatData = {
+      title: 'title',
+      updatedAt: now,
+      createdAt: now,
+    };
+
+    const userData = {
+      name: 'name',
+      password: 'password',
+      updatedAt: now,
+      createdAt: now,
+    };
+
+    const query = db.message.insert(
+      {
+        ...messageData,
+        chat: {
+          create: chatData,
+        },
+        user: {
+          create: userData,
+        },
+      },
+      ['id', 'chatId', 'authorId'],
+    );
+
+    const { id, chatId, authorId } = await query;
+
+    const message = await Message.find(id);
+    expect(message).toEqual({
+      id,
+      chatId,
+      authorId,
+      ...messageData,
+    });
+
+    const chat = await Chat.find(chatId);
+    expect(chat).toEqual({
+      id: chatId,
+      ...chatData,
+    });
+
+    const user = await User.find(authorId);
+    expect(user).toEqual({
+      id: authorId,
+      active: null,
+      age: null,
+      data: null,
+      picture: null,
+      ...userData,
+    });
+  });
 });

@@ -8,7 +8,12 @@ import {
 } from '../query';
 import { pushQueryValue, setQueryValue } from '../queryDataUtils';
 import { isRaw, RawExpression } from '../common';
-import { BelongsToRelation, Relation } from '../relations';
+import {
+  BelongsToRelation,
+  HasOneRelation,
+  Relation,
+  RelationQuery,
+} from '../relations';
 import { noop, SetOptional } from '../utils';
 
 export type ReturningArg<T extends Query> = (keyof T['shape'])[] | '*';
@@ -21,44 +26,55 @@ type OptionalKeys<T extends Query> = {
     : never;
 }[keyof T['shape']];
 
-type BelongsToRelations<T extends Query> = T['relations'] extends Record<
-  string,
-  Relation
->
-  ? {
-      [K in keyof T['relations'] as T['relations'][K] extends BelongsToRelation
-        ? K
-        : never]: T['relations'][K] extends BelongsToRelation
-        ? T['relations'][K]
-        : never;
-    }
-  : Record<never, BelongsToRelation>;
-
 type InsertData<
   T extends Query,
-  BT extends Record<string, BelongsToRelation> = BelongsToRelations<T>,
-> = Omit<
-  SetOptional<SetOptional<T['type'], OptionalKeys<T>>, keyof T[defaultsKey]>,
-  { [K in keyof BT]: BT[K]['options']['foreignKey'] }[keyof BT]
-> &
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  ({} extends BT
-    ? // eslint-disable-next-line @typescript-eslint/ban-types
-      {}
-    : {
-        [Key in keyof BT]:
-          | SetOptional<
-              {
-                [K in BT[Key]['options']['foreignKey']]: BT[Key]['options']['foreignKey'] extends keyof T['type']
-                  ? T['type'][BT[Key]['options']['foreignKey']]
-                  : never;
-              },
-              keyof T[defaultsKey]
-            >
-          | {
-              [K in Key]: { create: InsertData<BT[Key]['model']> };
-            };
-      }[keyof BT]);
+  Data = SetOptional<
+    SetOptional<T['type'], OptionalKeys<T>>,
+    keyof T[defaultsKey]
+  >,
+> = [keyof T['relations']] extends [never]
+  ? Data
+  : Omit<
+      Data,
+      {
+        [K in keyof T['relations']]: T['relations'][K] extends BelongsToRelation
+          ? T['relations'][K]['options']['foreignKey']
+          : never;
+      }[keyof T['relations']]
+    > &
+      {
+        [Key in keyof T['relations']]: T['relations'][Key] extends BelongsToRelation
+          ?
+              | SetOptional<
+                  {
+                    [K in T['relations'][Key]['options']['foreignKey']]: T['relations'][Key]['options']['foreignKey'] extends keyof T['type']
+                      ? T['type'][T['relations'][Key]['options']['foreignKey']]
+                      : never;
+                  },
+                  keyof T[defaultsKey]
+                >
+              | {
+                  [K in Key]: {
+                    create: InsertData<
+                      T['relations'][Key]['nestedCreateQuery']
+                    >;
+                  };
+                }
+          : T['relations'][Key] extends HasOneRelation
+          ? {
+              [K in Key]?: {
+                create: InsertData<T['relations'][Key]['nestedCreateQuery']>;
+              };
+            }
+          : T['relations'][Key] extends Relation
+          ? {
+              [K in Key]?: {
+                create: InsertData<T['relations'][Key]['nestedCreateQuery']>[];
+              };
+            }
+          : // eslint-disable-next-line @typescript-eslint/ban-types
+            {};
+      }[keyof T['relations']];
 
 type InsertOneResult<
   T extends Query,
@@ -83,10 +99,16 @@ type OnConflictArg<T extends Query> =
   | (keyof T['shape'])[]
   | RawExpression;
 
-type RelationTuple = [
+type PrependRelationTuple = [
   relationName: string,
   rowIndex: number,
   columnIndex: number,
+  data: Record<string, unknown>,
+];
+
+type AppendRelationTuple = [
+  relationName: string,
+  rowIndex: number,
   data: Record<string, unknown>,
 ];
 
@@ -94,7 +116,9 @@ const processInsertItem = (
   item: Record<string, unknown>,
   rowIndex: number,
   relations: Record<string, Relation>,
-  prependRelations: RelationTuple[],
+  prependRelations: PrependRelationTuple[],
+  appendRelations: AppendRelationTuple[],
+  requiredReturning: Record<string, boolean>,
   columns: string[],
   columnsMap: Record<string, number>,
 ) => {
@@ -114,6 +138,14 @@ const processInsertItem = (
           key,
           rowIndex,
           columnIndex,
+          item[key] as Record<string, unknown>,
+        ]);
+      } else {
+        requiredReturning[relations[key].primaryKey] = true;
+
+        appendRelations.push([
+          key,
+          rowIndex,
           item[key] as Record<string, unknown>,
         ]);
       }
@@ -186,7 +218,9 @@ export class Insert {
     }
 
     let columns: string[];
-    const prependRelations: RelationTuple[] = [];
+    const prependRelations: PrependRelationTuple[] = [];
+    const appendRelations: AppendRelationTuple[] = [];
+    const requiredReturning: Record<string, boolean> = {};
     const relations = (this as unknown as Query).relations as unknown as Record<
       string,
       Relation
@@ -217,6 +251,8 @@ export class Insert {
             i,
             relations,
             prependRelations,
+            appendRelations,
+            requiredReturning,
             columns,
             columnsMap,
           );
@@ -237,6 +273,8 @@ export class Insert {
           0,
           relations,
           prependRelations,
+          appendRelations,
+          requiredReturning,
           columns,
           columnsMap,
         );
@@ -254,12 +292,41 @@ export class Insert {
           const primaryKey = (relation as BelongsToRelation).options.primaryKey;
           if (data.create) {
             return async () => {
-              const result = await relation.model.insert(
+              const result = await relation.nestedCreateQuery.insert(
                 data.create as InsertData<Query>,
                 [primaryKey],
               );
               const row = (values as unknown[][])[rowIndex];
               row[columnIndex] = result[primaryKey];
+            };
+          }
+          return noop;
+        }),
+      );
+    }
+
+    if (appendRelations.length) {
+      if (returning !== '*') {
+        const requiredColumns = Object.keys(requiredReturning);
+
+        if (!returning) {
+          returning = requiredColumns;
+        } else {
+          returning = [
+            ...new Set([...(returning as string[]), ...requiredColumns]),
+          ];
+        }
+      }
+
+      setQueryValue(
+        q,
+        'appendQueries',
+        appendRelations.map(([relationName, rowIndex, data]) => {
+          if (data.create) {
+            return async (rows: Record<string, unknown>[]) => {
+              await (this as unknown as Record<string, RelationQuery>)
+                [relationName](rows[rowIndex] as never)
+                .insert(data.create as InsertData<Query>);
             };
           }
           return noop;

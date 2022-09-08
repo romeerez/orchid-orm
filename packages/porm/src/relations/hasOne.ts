@@ -74,6 +74,7 @@ export const makeHasOneMethod = (
         throughRelation.joinQuery,
         whereExistsCallback,
       ),
+      primaryKey: sourceRelation.primaryKey,
     };
   }
 
@@ -86,5 +87,6 @@ export const makeHasOneMethod = (
       return query.findBy(values)._defaults(values);
     },
     joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),
+    primaryKey,
   };
 };

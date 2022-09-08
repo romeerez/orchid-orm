@@ -5,6 +5,8 @@ export type BaseRelation = {
   key: string;
   model: QueryWithTable;
   joinQuery: Query;
+  nestedCreateQuery: Query;
+  primaryKey: string;
   options: {
     scope?(q: QueryWithTable): QueryWithTable;
     required?: boolean;
