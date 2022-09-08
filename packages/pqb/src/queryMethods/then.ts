@@ -1,8 +1,9 @@
-import { ColumnsParsers, Query } from '../query';
+import { ColumnsParsers, Query, QueryReturnType } from '../query';
 import { getQueryParsers } from '../common';
 import { NotFoundError } from '../errors';
+import { QueryArraysResult } from '../adapter';
 
-export type Then<Res> = <T extends Query>(
+export type ThenResult<Res> = <T extends Query>(
   this: T,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   resolve?: (value: Res) => any,
@@ -10,102 +11,98 @@ export type Then<Res> = <T extends Query>(
   reject?: (error: any) => any,
 ) => Promise<Res | never>;
 
-export const thenAll: Then<unknown[]> = function (resolve, reject) {
-  return this.adapter
-    .query(this.toSql())
-    .then((result) => {
-      const parsers = getQueryParsers(this);
-      return parsers
-        ? result.rows.map((row) => parseRecord(parsers, row))
-        : result.rows;
-    })
-    .then(resolve, reject);
+const queryMethod: Record<QueryReturnType, 'query' | 'arrays'> = {
+  all: 'query',
+  one: 'query',
+  oneOrThrow: 'query',
+  rows: 'arrays',
+  pluck: 'arrays',
+  value: 'arrays',
+  valueOrThrow: 'arrays',
+  rowCount: 'arrays',
+  void: 'arrays',
 };
 
-export const thenOne: Then<unknown> = function (resolve, reject) {
-  return this.adapter
-    .query(this.toSql())
-    .then((result) => {
-      const row = result.rows[0];
-      if (!row) return;
+export class Then {
+  then(
+    this: Query,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolve?: (result: any) => any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    reject?: (error: any) => any,
+  ) {
+    const { returnType } = this;
+    return this.adapter[queryMethod[returnType] as 'query'](this.toSql())
+      .then((result) => {
+        switch (returnType) {
+          case 'all': {
+            const parsers = getQueryParsers(this);
+            return parsers
+              ? result.rows.map((row) => parseRecord(parsers, row))
+              : result.rows;
+          }
+          case 'one': {
+            const row = result.rows[0];
+            if (!row) return;
 
-      const parsers = getQueryParsers(this);
-      return parsers ? parseRecord(parsers, row) : row;
-    })
-    .then(resolve, reject);
-};
+            const parsers = getQueryParsers(this);
+            return parsers ? parseRecord(parsers, row) : row;
+          }
+          case 'oneOrThrow': {
+            const row = result.rows[0];
+            if (!row) throw new NotFoundError();
 
-export const thenOneOrThrow: Then<unknown> = function (resolve, reject) {
-  return this.adapter
-    .query(this.toSql())
-    .then((result) => {
-      const row = result.rows[0];
-      if (!row) throw new NotFoundError();
+            const parsers = getQueryParsers(this);
+            return parsers ? parseRecord(parsers, row) : row;
+          }
+          case 'rows': {
+            const parsers = getQueryParsers(this);
+            return parsers
+              ? parseRows(
+                  parsers,
+                  (result as unknown as QueryArraysResult).fields,
+                  result.rows,
+                )
+              : result.rows;
+          }
+          case 'pluck': {
+            const parsers = getQueryParsers(this);
+            if (parsers?.pluck) {
+              return result.rows.map((row) => parsers.pluck(row[0]));
+            }
+            return result.rows.map((row) => row[0]);
+          }
+          case 'value': {
+            const value = result.rows[0]?.[0];
+            return value !== undefined
+              ? parseValue(
+                  value,
+                  (result as unknown as QueryArraysResult).fields,
+                  this,
+                )
+              : undefined;
+          }
+          case 'valueOrThrow': {
+            const value = result.rows[0]?.[0];
+            if (value === undefined) throw new NotFoundError();
 
-      const parsers = getQueryParsers(this);
-      return parsers ? parseRecord(parsers, row) : row;
-    })
-    .then(resolve, reject);
-};
-
-export const thenRows: Then<unknown[][]> = function (resolve, reject) {
-  return this.adapter
-    .arrays(this.toSql())
-    .then((result) => {
-      const parsers = getQueryParsers(this);
-      return parsers
-        ? parseRows(parsers, result.fields, result.rows)
-        : result.rows;
-    })
-    .then(resolve, reject);
-};
-
-export const thenPluck: Then<unknown[]> = function (resolve, reject) {
-  return this.adapter
-    .arrays(this.toSql())
-    .then((result) => {
-      const parsers = getQueryParsers(this);
-      if (parsers?.pluck) {
-        return result.rows.map((row) => parsers.pluck(row[0]));
-      }
-      return result.rows.map((row) => row[0]);
-    })
-    .then(resolve, reject);
-};
-
-export const thenValue: Then<unknown> = function (resolve, reject) {
-  return this.adapter
-    .arrays(this.toSql())
-    .then((result) => {
-      const value = result.rows[0]?.[0];
-      return value !== undefined
-        ? parseValue(value, result.fields, this)
-        : undefined;
-    })
-    .then(resolve, reject);
-};
-
-export const thenValueOrThrow: Then<unknown> = function (resolve, reject) {
-  return this.adapter
-    .arrays(this.toSql())
-    .then((result) => {
-      const value = result.rows[0]?.[0];
-      if (value === undefined) throw new NotFoundError();
-
-      return parseValue(value, result.fields, this);
-    })
-    .then(resolve, reject);
-};
-
-export const thenVoid: Then<void> = function (resolve, reject) {
-  return this.adapter.query(this.toSql()).then(() => resolve?.(), reject);
-};
-
-export const thenRowsCount: Then<number> = function (resolve, reject) {
-  return this.adapter
-    .query(this.toSql())
-    .then(({ rowCount }) => resolve?.(rowCount), reject);
-};
+            return parseValue(
+              value,
+              (result as unknown as QueryArraysResult).fields,
+              this,
+            );
+          }
+          case 'rowCount': {
+            return result.rowCount;
+          }
+          case 'void': {
+            return;
+          }
+        }
+      })
+      .then(resolve, reject);
+  }
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const parseRecord = (parsers: ColumnsParsers, row: any) => {

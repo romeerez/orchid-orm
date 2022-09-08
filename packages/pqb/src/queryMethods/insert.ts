@@ -53,7 +53,7 @@ type InsertData<
                 : never;
             }
           | {
-              [K in Key]: InsertData<BT[Key]['model']>;
+              [K in Key]: { create: InsertData<BT[Key]['model']> };
             };
       }[keyof BT]);
 

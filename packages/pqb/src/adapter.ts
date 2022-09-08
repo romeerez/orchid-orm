@@ -9,17 +9,30 @@ export type TypeParsers = Record<number, (input: string) => unknown>;
 
 type Query = string | { text: string; values?: unknown[] };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type QueryResult<T extends QueryResultRow = any> = {
+  rowCount: number;
+  rows: T[];
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type QueryArraysResult<R extends any[] = any[]> = {
+  rowCount: number;
+  rows: R[];
+  fields: { name: string }[];
+};
+
 export type PostgresAdapter = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   query<T extends QueryResultRow = any>(
     query: Query,
     types?: TypeParsers,
-  ): Promise<{ rowCount: number; rows: T[] }>;
+  ): Promise<QueryResult<T>>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   arrays<R extends any[] = any[]>(
     query: Query,
     types?: TypeParsers,
-  ): Promise<{ rows: R[]; fields: { name: string }[] }>;
+  ): Promise<QueryArraysResult<R>>;
   transaction<Result>(
     cb: (adapter: PostgresAdapter) => Promise<Result>,
   ): Promise<Result>;
@@ -55,7 +68,7 @@ export const Adapter = ({
     async query<T extends QueryResultRow = any>(
       query: Query,
       types: TypeParsers = configTypes,
-    ): Promise<{ rowCount: number; rows: T[] }> {
+    ): Promise<QueryResult<T>> {
       const client = await pool.connect();
       try {
         return await performQuery<T>(client, query, types);
@@ -64,13 +77,13 @@ export const Adapter = ({
       }
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async arrays<T extends any[] = any[]>(
+    async arrays<R extends any[] = any[]>(
       query: Query,
       types: TypeParsers = configTypes,
-    ): Promise<{ rowCount: number; rows: T[]; fields: { name: string }[] }> {
+    ): Promise<QueryArraysResult<R>> {
       const client = await pool.connect();
       try {
-        return await performQueryArrays<T>(client, query, types);
+        return await performQueryArrays<R>(client, query, types);
       } finally {
         client.release();
       }
@@ -144,16 +157,16 @@ class TransactionAdapter implements PostgresAdapter {
   async query<T extends QueryResultRow = any>(
     query: Query,
     types: TypeParsers = this.types,
-  ): Promise<{ rowCount: number; rows: T[] }> {
+  ): Promise<QueryResult<T>> {
     return await performQuery<T>(this.client, query, types);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async arrays<T extends any[] = any[]>(
+  async arrays<R extends any[] = any[]>(
     query: Query,
     types: TypeParsers = this.types,
-  ): Promise<{ rowCount: number; rows: T[]; fields: { name: string }[] }> {
-    return await performQueryArrays<T>(this.client, query, types);
+  ): Promise<QueryArraysResult<R>> {
+    return await performQueryArrays<R>(this.client, query, types);
   }
 
   async transaction<Result>(

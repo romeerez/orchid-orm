@@ -28,17 +28,7 @@ import {
   removeFromQuery,
   setQueryValue,
 } from '../queryDataUtils';
-import {
-  Then,
-  thenAll,
-  thenOne,
-  thenOneOrThrow,
-  thenPluck,
-  thenRows,
-  thenValue,
-  thenValueOrThrow,
-  thenVoid,
-} from './then';
+import { Then } from './then';
 import { ColumnType, NumberColumn } from '../columnSchema';
 import { Aggregate } from './aggregate';
 import { addParserForSelectItem, Select } from './select';
@@ -98,62 +88,61 @@ export interface QueryMethods
     Where,
     Clear,
     Having,
-    Window {
-  then: Then<unknown>;
-}
+    Window,
+    Then {}
 
 export class QueryMethods {
   windows!: PropertyKey[];
   __model?: Query;
 
   all<T extends Query>(this: T): SetQueryReturnsAll<T> {
-    return this.then === thenAll
+    return this.returnType === 'all'
       ? (this.toQuery() as unknown as SetQueryReturnsAll<T>)
       : this.clone()._all();
   }
 
   _all<T extends Query>(this: T): SetQueryReturnsAll<T> {
     const q = this.toQuery();
-    q.then = thenAll;
+    q.returnType = 'all';
     removeFromQuery(q, 'take');
     return q as unknown as SetQueryReturnsAll<T>;
   }
 
   take<T extends Query>(this: T): SetQueryReturnsOneOrUndefined<T> {
-    return this.then === thenOne
+    return this.then === 'one'
       ? (this as unknown as SetQueryReturnsOneOrUndefined<T>)
       : this.clone()._take();
   }
 
   _take<T extends Query>(this: T): SetQueryReturnsOneOrUndefined<T> {
     const q = this.toQuery();
-    q.then = thenOne;
+    q.returnType = 'one';
     setQueryValue(q, 'take', true);
     return q as unknown as SetQueryReturnsOneOrUndefined<T>;
   }
 
   takeOrThrow<T extends Query>(this: T): SetQueryReturnsOne<T> {
-    return this.then === thenOneOrThrow
+    return this.then === 'oneOrThrow'
       ? (this as unknown as SetQueryReturnsOne<T>)
       : this.clone()._takeOrThrow();
   }
 
   _takeOrThrow<T extends Query>(this: T): SetQueryReturnsOne<T> {
     const q = this.toQuery();
-    q.then = thenOneOrThrow;
+    q.returnType = 'oneOrThrow';
     setQueryValue(q, 'take', true);
     return q as unknown as SetQueryReturnsOne<T>;
   }
 
   rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
-    return this.then === thenRows
+    return this.then === 'rows'
       ? (this as unknown as SetQueryReturnsRows<T>)
       : this.clone()._rows();
   }
 
   _rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
     const q = this.toQuery();
-    q.then = thenRows;
+    q.returnType = 'rows';
     removeFromQuery(q, 'take');
     return q as unknown as SetQueryReturnsRows<T>;
   }
@@ -162,7 +151,7 @@ export class QueryMethods {
     this: T,
     select: S,
   ): SetQueryReturnsPluck<T, S> {
-    return this.then === thenPluck
+    return this.then === 'pluck'
       ? (this as unknown as SetQueryReturnsPluck<T, S>)
       : this.clone()._pluck(select);
   }
@@ -172,7 +161,7 @@ export class QueryMethods {
     select: S,
   ): SetQueryReturnsPluck<T, S> {
     const q = this.toQuery();
-    q.then = thenPluck;
+    q.returnType = 'pluck';
     removeFromQuery(q, 'take');
     setQueryValue(q, 'select', [select]);
     addParserForSelectItem(q, q.query.as || q.table, 'pluck', select);
@@ -183,7 +172,7 @@ export class QueryMethods {
     this: T,
     columnType?: V,
   ): SetQueryReturnsValueOrUndefined<T, V> {
-    return this.then === thenValue
+    return this.then === 'value'
       ? (this as unknown as SetQueryReturnsValueOrUndefined<T, V>)
       : this.clone()._value<T, V>(columnType);
   }
@@ -194,7 +183,7 @@ export class QueryMethods {
     _columnType?: V,
   ): SetQueryReturnsValueOrUndefined<T, V> {
     const q = this.toQuery();
-    q.then = thenValue;
+    q.returnType = 'value';
     removeFromQuery(q, 'take');
     return q as unknown as SetQueryReturnsValueOrUndefined<T, V>;
   }
@@ -203,7 +192,7 @@ export class QueryMethods {
     this: T,
     columnType?: V,
   ): SetQueryReturnsValue<T, V> {
-    return this.then === thenValueOrThrow
+    return this.then === 'valueOrThrow'
       ? (this as unknown as SetQueryReturnsValue<T, V>)
       : this.clone()._valueOrThrow<T, V>(columnType);
   }
@@ -214,20 +203,20 @@ export class QueryMethods {
     _columnType?: V,
   ): SetQueryReturnsValue<T, V> {
     const q = this.toQuery();
-    q.then = thenValueOrThrow;
+    q.returnType = 'valueOrThrow';
     removeFromQuery(q, 'take');
     return q as unknown as SetQueryReturnsValue<T, V>;
   }
 
   exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {
-    return this.then === thenVoid
+    return this.then === 'void'
       ? (this as unknown as SetQueryReturnsVoid<T>)
       : this.clone()._exec();
   }
 
   _exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {
     const q = this.toQuery();
-    q.then = thenVoid;
+    q.returnType = 'void';
     removeFromQuery(q, 'take');
     return q as unknown as SetQueryReturnsVoid<T>;
   }
@@ -427,8 +416,6 @@ export class QueryMethods {
   }
 }
 
-QueryMethods.prototype.then = thenAll;
-
 applyMixins(QueryMethods, [
   Aggregate,
   Select,
@@ -447,4 +434,5 @@ applyMixins(QueryMethods, [
   Clear,
   Having,
   Window,
+  Then,
 ]);

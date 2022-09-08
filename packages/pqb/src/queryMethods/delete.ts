@@ -11,7 +11,6 @@ import {
   setQueryValue,
 } from '../queryDataUtils';
 import { IntegerColumn } from '../columnSchema';
-import { thenRowsCount } from './then';
 
 type DeleteResult<
   T extends Query,
@@ -44,7 +43,7 @@ const _del = <
     q = self._all();
   } else {
     q = self.toQuery();
-    q.then = thenRowsCount;
+    q.returnType = 'rowCount';
     removeFromQuery(q, 'take');
   }
 

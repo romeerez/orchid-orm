@@ -1,6 +1,6 @@
 import { Query, SetQueryReturnsColumnInfo } from '../query';
 import { setQueryValue } from '../queryDataUtils';
-import { Then, thenAll } from './then';
+import { ThenResult, Then } from './then';
 
 export type ColumnInfo = {
   defaultValue: unknown;
@@ -40,15 +40,16 @@ export class ColumnInfoMethods {
     const q = this.toQuery();
     setQueryValue(q, 'type', 'columnInfo');
     if (column) setQueryValue(q, 'column', column);
+    q.returnType = 'all';
     q.then = function (resolve, reject) {
-      thenAll.call(
+      new Then().then.call(
         this,
         (rows) => {
           if (column) {
             resolve?.(rowToColumnInfo(rows[0]));
           } else {
             const info: Record<string, ColumnInfo> = {};
-            rows.forEach((row) => {
+            (rows as unknown[]).forEach((row) => {
               info[(row as { column_name: string }).column_name] =
                 rowToColumnInfo(row);
             });
@@ -57,7 +58,7 @@ export class ColumnInfoMethods {
         },
         reject,
       );
-    } as Then<unknown>;
+    } as ThenResult<unknown>;
     return q as unknown as SetQueryReturnsColumnInfo<T, Column>;
   }
 }

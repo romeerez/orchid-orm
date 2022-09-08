@@ -9,7 +9,7 @@ import {
 } from './columnSchema';
 import { Spread } from './utils';
 import { AliasOrTable, RawExpression, StringKey } from './common';
-import { Then } from './queryMethods/then';
+import { ThenResult } from './queryMethods/then';
 import { Db } from './db';
 import { ColumnInfo } from './queryMethods/columnInfo';
 import { RelationsBase } from './relations';
@@ -78,8 +78,10 @@ export type QueryReturnType =
   | 'one'
   | 'oneOrThrow'
   | 'rows'
+  | 'pluck'
   | 'value'
   | 'valueOrThrow'
+  | 'rowCount'
   | 'void';
 
 export type JoinedTablesBase = Record<
@@ -91,27 +93,27 @@ type QueryThen<
   ReturnType extends QueryReturnType,
   Result extends ColumnsShape,
 > = ReturnType extends 'all'
-  ? Then<ColumnShapeOutput<Result>[]>
+  ? ThenResult<ColumnShapeOutput<Result>[]>
   : ReturnType extends 'one'
-  ? Then<ColumnShapeOutput<Result> | undefined>
+  ? ThenResult<ColumnShapeOutput<Result> | undefined>
   : ReturnType extends 'oneOrThrow'
-  ? Then<ColumnShapeOutput<Result>>
+  ? ThenResult<ColumnShapeOutput<Result>>
   : ReturnType extends 'value'
   ? Result extends { value: ColumnType }
-    ? Then<Result['value']['type'] | undefined>
+    ? ThenResult<Result['value']['type'] | undefined>
     : never
   : ReturnType extends 'valueOrThrow'
   ? Result extends { value: ColumnType }
-    ? Then<Result['value']['type']>
+    ? ThenResult<Result['value']['type']>
     : never
   : ReturnType extends 'rows'
-  ? Then<ColumnShapeOutput<Result>[keyof Result][][]>
+  ? ThenResult<ColumnShapeOutput<Result>[keyof Result][][]>
   : ReturnType extends 'pluck'
   ? Result extends { pluck: ColumnType }
-    ? Then<Result['pluck']['type'][]>
+    ? ThenResult<Result['pluck']['type'][]>
     : never
   : ReturnType extends 'void'
-  ? Then<void>
+  ? ThenResult<void>
   : never;
 
 export type AddQuerySelect<
@@ -158,7 +160,7 @@ export type SetQueryReturnsPluck<
 > = Omit<T, 'result' | 'returnType' | 'then'> & {
   result: { pluck: C };
   returnType: 'pluck';
-  then: Then<C['type'][]>;
+  then: ThenResult<C['type'][]>;
 };
 
 export type SetQueryReturnsValueOrUndefined<
@@ -167,7 +169,7 @@ export type SetQueryReturnsValueOrUndefined<
 > = Omit<T, 'result' | 'returnType' | 'then'> & {
   result: { value: C };
   returnType: 'value';
-  then: Then<C['type'] | undefined>;
+  then: ThenResult<C['type'] | undefined>;
 };
 
 export type SetQueryReturnsValue<T extends Query, C extends ColumnType> = Omit<
@@ -176,7 +178,7 @@ export type SetQueryReturnsValue<T extends Query, C extends ColumnType> = Omit<
 > & {
   result: { value: C };
   returnType: 'valueOrThrow';
-  then: Then<C['type']>;
+  then: ThenResult<C['type']>;
 };
 
 export type SetQueryReturnsVoid<T extends Query> = SetQueryReturns<T, 'void'>;
@@ -190,7 +192,7 @@ export type SetQueryReturnsColumnInfo<
 > = Omit<T, 'result' | 'returnType' | 'then'> & {
   result: { value: ColumnType<Result> };
   returnType: 'value';
-  then: Then<Result>;
+  then: ThenResult<Result>;
 };
 
 export type QueryWithData<T extends QueryBase> = T & {
