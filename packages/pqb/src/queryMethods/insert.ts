@@ -61,17 +61,25 @@ type InsertData<
                   };
                 }
           : T['relations'][Key] extends HasOneRelation
-          ? {
-              [K in Key]?: {
-                create: InsertData<T['relations'][Key]['nestedCreateQuery']>;
-              };
-            }
+          ? 'through' extends T['relations'][Key]['options']
+            ? // eslint-disable-next-line @typescript-eslint/ban-types
+              {}
+            : {
+                [K in Key]?: {
+                  create: InsertData<T['relations'][Key]['nestedCreateQuery']>;
+                };
+              }
           : T['relations'][Key] extends Relation
-          ? {
-              [K in Key]?: {
-                create: InsertData<T['relations'][Key]['nestedCreateQuery']>[];
-              };
-            }
+          ? 'through' extends T['relations'][Key]['options']
+            ? // eslint-disable-next-line @typescript-eslint/ban-types
+              {}
+            : {
+                [K in Key]?: {
+                  create: InsertData<
+                    T['relations'][Key]['nestedCreateQuery']
+                  >[];
+                };
+              }
           : // eslint-disable-next-line @typescript-eslint/ban-types
             {};
       }[keyof T['relations']];
