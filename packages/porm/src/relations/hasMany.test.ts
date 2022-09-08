@@ -49,6 +49,26 @@ describe('hasMany', () => {
     expect(messages).toMatchObject([messageData, messageData]);
   });
 
+  it('should have insert with defaults of provided id', () => {
+    const user = { id: 1 };
+    const now = new Date();
+    const query = db.user.messages(user).insert({
+      chatId: 2,
+      text: 'text',
+      updatedAt: now,
+      createdAt: now,
+    });
+
+    expectSql(
+      query.toSql(),
+      `
+        INSERT INTO "message"("authorId", "chatId", "text", "updatedAt", "createdAt")
+        VALUES ($1, $2, $3, $4, $5)
+      `,
+      [1, 2, 'text', now, now],
+    );
+  });
+
   it('should have proper joinQuery', () => {
     expectSql(
       db.user.relations.messages.joinQuery.toSql(),

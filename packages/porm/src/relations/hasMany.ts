@@ -82,7 +82,8 @@ export const makeHasManyMethod = (
   return {
     returns: 'many',
     method: (params: Record<string, unknown>) => {
-      return query.where({ [foreignKey]: params[primaryKey] });
+      const values = { [foreignKey]: params[primaryKey] };
+      return query.where(values)._defaults(values);
     },
     joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),
   };

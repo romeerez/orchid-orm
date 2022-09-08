@@ -47,11 +47,14 @@ type InsertData<
       {}
     : {
         [Key in keyof BT]:
-          | {
-              [K in BT[Key]['options']['foreignKey']]: BT[Key]['options']['foreignKey'] extends keyof T['type']
-                ? T['type'][BT[Key]['options']['foreignKey']]
-                : never;
-            }
+          | SetOptional<
+              {
+                [K in BT[Key]['options']['foreignKey']]: BT[Key]['options']['foreignKey'] extends keyof T['type']
+                  ? T['type'][BT[Key]['options']['foreignKey']]
+                  : never;
+              },
+              keyof T[defaultsKey]
+            >
           | {
               [K in Key]: { create: InsertData<BT[Key]['model']> };
             };
@@ -176,6 +179,11 @@ export class Insert {
     const q = Array.isArray(data)
       ? (this as unknown as Query)._all()
       : (this as unknown as Query)._take();
+
+    if (q.query) {
+      delete q.query.and;
+      delete q.query.or;
+    }
 
     let columns: string[];
     const prependRelations: RelationTuple[] = [];

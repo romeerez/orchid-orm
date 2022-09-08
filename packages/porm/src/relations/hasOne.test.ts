@@ -48,11 +48,31 @@ describe('hasOne', () => {
     expect(profile).toMatchObject(profileData);
   });
 
+  it('should have insert with defaults of provided id', () => {
+    const user = { id: 1 };
+    const now = new Date();
+
+    const query = db.user.profile(user).insert({
+      bio: 'bio',
+      updatedAt: now,
+      createdAt: now,
+    });
+
+    expectSql(
+      query.toSql(),
+      `
+        INSERT INTO "profile"("userId", "bio", "updatedAt", "createdAt")
+        VALUES ($1, $2, $3, $4)
+      `,
+      [1, 'bio', now, now],
+    );
+  });
+
   it('can insert after calling method', async () => {
     const id = await insertUser();
     const now = new Date();
     await db.user.profile({ id }).insert({
-      userId: 1,
+      userId: id,
       bio: 'bio',
       updatedAt: now,
       createdAt: now,

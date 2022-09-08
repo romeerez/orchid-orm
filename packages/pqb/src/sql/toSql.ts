@@ -38,36 +38,36 @@ export const toSql = (model: Query, values: unknown[] = []): Sql => {
     }
   }
 
-  const quotedAs = model.table && q(query.as || model.table);
-
   if (query.with) {
     pushWithSql(sql, values, query.with);
   }
 
   if ('type' in query) {
     if (query.type === 'insert') {
-      if (!quotedAs) throw new Error('Table is missing for insert');
+      if (!model.table) throw new Error('Table is missing for insert');
 
-      pushInsertSql(sql, values, model, query, quotedAs);
+      pushInsertSql(sql, values, model, query, q(model.table));
       return { text: sql.join(' '), values };
     }
 
     if (query.type === 'update') {
-      if (!quotedAs) throw new Error('Table is missing for update');
+      if (!model.table) throw new Error('Table is missing for update');
 
-      pushUpdateSql(sql, values, model, query, quotedAs);
+      pushUpdateSql(sql, values, model, query, q(model.table));
       return { text: sql.join(' '), values };
     }
 
     if (query.type === 'delete') {
-      if (!quotedAs) throw new Error('Table is missing for delete');
+      if (!model.table) throw new Error('Table is missing for delete');
 
-      pushDeleteSql(sql, values, model, query, quotedAs);
+      pushDeleteSql(sql, values, model, query, q(model.table));
       return { text: sql.join(' '), values };
     }
 
     return { text: '', values };
   }
+
+  const quotedAs = model.table && q(query.as || model.table);
 
   sql.push('SELECT');
 

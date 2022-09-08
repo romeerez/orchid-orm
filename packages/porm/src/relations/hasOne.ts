@@ -82,7 +82,8 @@ export const makeHasOneMethod = (
   return {
     returns: 'one',
     method: (params: Record<string, unknown>) => {
-      return query.findBy({ [foreignKey]: params[primaryKey] });
+      const values = { [foreignKey]: params[primaryKey] };
+      return query.findBy(values)._defaults(values);
     },
     joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),
   };
