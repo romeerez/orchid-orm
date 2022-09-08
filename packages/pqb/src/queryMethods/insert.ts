@@ -10,6 +10,7 @@ import { pushQueryValue, setQueryValue } from '../queryDataUtils';
 import { isRaw, RawExpression } from '../common';
 import {
   BelongsToRelation,
+  HasManyRelation,
   HasOneRelation,
   Relation,
   RelationQuery,
@@ -18,7 +19,7 @@ import { noop, SetOptional } from '../utils';
 
 export type ReturningArg<T extends Query> = (keyof T['shape'])[] | '*';
 
-type OptionalKeys<T extends Query> = {
+export type OptionalKeys<T extends Query> = {
   [K in keyof T['shape']]: T['shape'][K]['isPrimaryKey'] extends true
     ? K
     : T['shape'][K]['isNullable'] extends true
@@ -26,12 +27,12 @@ type OptionalKeys<T extends Query> = {
     : never;
 }[keyof T['shape']];
 
-type InsertData<
+export type InsertData<
   T extends Query,
-  Data = SetOptional<
-    SetOptional<T['type'], OptionalKeys<T>>,
-    keyof T[defaultsKey]
-  >,
+  DefaultKeys extends string = T[defaultsKey] extends string
+    ? T[defaultsKey]
+    : never,
+  Data = SetOptional<SetOptional<T['type'], OptionalKeys<T>>, DefaultKeys>,
 > = [keyof T['relations']] extends [never]
   ? Data
   : Omit<
@@ -51,7 +52,7 @@ type InsertData<
                       ? T['type'][T['relations'][Key]['options']['foreignKey']]
                       : never;
                   },
-                  keyof T[defaultsKey]
+                  DefaultKeys
                 >
               | {
                   [K in Key]: {
@@ -69,7 +70,7 @@ type InsertData<
                   create: InsertData<T['relations'][Key]['nestedCreateQuery']>;
                 };
               }
-          : T['relations'][Key] extends Relation
+          : T['relations'][Key] extends HasManyRelation
           ? 'through' extends T['relations'][Key]['options']
             ? // eslint-disable-next-line @typescript-eslint/ban-types
               {}
@@ -300,7 +301,7 @@ export class Insert {
           const primaryKey = (relation as BelongsToRelation).options.primaryKey;
           if (data.create) {
             return async () => {
-              const result = await relation.nestedCreateQuery.insert(
+              const result = await relation.model.insert(
                 data.create as InsertData<Query>,
                 [primaryKey],
               );

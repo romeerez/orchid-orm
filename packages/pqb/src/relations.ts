@@ -72,7 +72,7 @@ export type RelationsBase = Record<never, Relation>;
 
 export type RelationQuery<
   Params extends Record<string, unknown> = never,
-  Populate extends string = string,
+  Populate extends string = never,
   T extends Query = Query,
   Required extends boolean = boolean,
 > = ((params: Params) => T & { [defaultsKey]: Pick<T['type'], Populate> }) &

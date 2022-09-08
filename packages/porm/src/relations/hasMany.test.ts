@@ -155,6 +155,79 @@ describe('hasMany', () => {
       ['text'],
     );
   });
+
+  it('should support create', async () => {
+    const now = new Date();
+    const userData = {
+      name: 'name',
+      password: 'password',
+      updatedAt: now,
+      createdAt: now,
+    };
+
+    const messageData = {
+      meta: null,
+      updatedAt: now,
+      createdAt: now,
+    };
+
+    const { id: chatId } = await db.chat.insert(
+      {
+        title: 'title',
+        updatedAt: now,
+        createdAt: now,
+      },
+      ['id'],
+    );
+
+    const user = await db.user.insert(
+      {
+        ...userData,
+        messages: {
+          create: [
+            {
+              ...messageData,
+              text: 'title 1',
+              chatId,
+            },
+            {
+              ...messageData,
+              text: 'title 2',
+              chatId,
+            },
+          ],
+        },
+      },
+      '*',
+    );
+
+    expect(user).toEqual({
+      id: user.id,
+      ...userData,
+      active: null,
+      age: null,
+      data: null,
+      picture: null,
+    });
+
+    const messages = await db.message.order({ text: 'ASC' });
+    expect(messages).toEqual([
+      {
+        id: messages[0].id,
+        authorId: user.id,
+        ...messageData,
+        text: 'title 1',
+        chatId,
+      },
+      {
+        id: messages[1].id,
+        authorId: user.id,
+        ...messageData,
+        text: 'title 2',
+        chatId,
+      },
+    ]);
+  });
 });
 
 describe('hasMany through', () => {

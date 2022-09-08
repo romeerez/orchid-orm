@@ -22,15 +22,20 @@ type Relation<
   Relations extends RelationThunks,
   K extends keyof Relations,
   M extends Query = DbModel<ReturnType<Relations[K]['fn']>>,
-  Defaults = RelationInfo<T, Relations, Relations[K]>['populate'],
+  Defaults extends string = RelationInfo<
+    T,
+    Relations,
+    Relations[K]
+  >['populate'],
 > = {
   type: Relations[K]['type'];
   key: K;
   model: M;
   joinQuery: Query;
+  defaults: Defaults;
   nestedCreateQuery: [Defaults] extends [never]
     ? M
-    : M & {
+    : (M[defaultsKey] extends undefined ? Omit<M, defaultsKey> : M) & {
         [defaultsKey]: Defaults;
       };
   primaryKey: string;

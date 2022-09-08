@@ -58,7 +58,7 @@ export interface Db<
   withData: Query['withData'];
   joinedTables: Query['joinedTables'];
   relations: Relations;
-  [defaultsKey]?: object;
+  [defaultsKey]: Query[defaultsKey];
 }
 
 export class Db<

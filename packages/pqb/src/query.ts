@@ -66,7 +66,7 @@ export type Query = QueryMethods & {
   columnsParsers?: ColumnsParsers;
   relations: RelationsBase;
   withData: WithDataBase;
-  [defaultsKey]?: object;
+  [defaultsKey]?: string;
 };
 
 export type Selectable<T extends QueryBase> = StringKey<keyof T['selectable']>;
