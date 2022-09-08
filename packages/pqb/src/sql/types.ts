@@ -23,6 +23,7 @@ export type CommonQueryData = {
   and?: WhereItemContainer[];
   or?: WhereItemContainer[][];
   parsers?: ColumnsParsers;
+  prependQueries?: (() => Promise<void>)[];
 };
 
 export type SelectQueryData = CommonQueryData & {

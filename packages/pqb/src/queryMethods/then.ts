@@ -24,13 +24,17 @@ const queryMethod: Record<QueryReturnType, 'query' | 'arrays'> = {
 };
 
 export class Then {
-  then(
+  async then(
     this: Query,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolve?: (result: any) => any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     reject?: (error: any) => any,
   ) {
+    if (this.query?.prependQueries) {
+      await Promise.all(this.query.prependQueries.map((query) => query()));
+    }
+
     const { returnType } = this;
     return this.adapter[queryMethod[returnType] as 'query'](this.toSql())
       .then((result) => {

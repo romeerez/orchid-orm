@@ -1,8 +1,10 @@
 import {
   AssertEqual,
+  Chat,
   expectMatchObjectWithTimestamps,
   expectQueryNotMutated,
   expectSql,
+  Message,
   User,
   useTestDatabase,
 } from '../test-utils';
@@ -232,6 +234,95 @@ describe('insert', () => {
     });
 
     expectQueryNotMutated(q);
+  });
+
+  describe('insert with relations', () => {
+    it('should insert with belongsTo relation', async () => {
+      const MessageWithRelations = Object.assign(Message, {
+        relations: {
+          user: {
+            type: 'belongsTo',
+            key: 'user',
+            model: User,
+            joinQuery: User,
+            options: {
+              primaryKey: 'id',
+              foreignKey: 'authorId',
+            } as const,
+          } as const,
+          chat: {
+            type: 'belongsTo',
+            key: 'chat',
+            model: Chat,
+            joinQuery: Chat,
+            options: {
+              primaryKey: 'id',
+              foreignKey: 'chatId',
+            } as const,
+          } as const,
+        },
+      });
+
+      const now = new Date();
+      const messageData = {
+        text: 'text',
+        meta: null,
+        updatedAt: now,
+        createdAt: now,
+      };
+
+      const chatData = {
+        title: 'title',
+        updatedAt: now,
+        createdAt: now,
+      };
+
+      const userData = {
+        name: 'name',
+        password: 'password',
+        updatedAt: now,
+        createdAt: now,
+      };
+
+      const query = MessageWithRelations.insert(
+        {
+          chat: {
+            create: chatData,
+          },
+          user: {
+            create: userData,
+          },
+          ...messageData,
+        },
+        ['id', 'chatId', 'authorId'],
+      );
+
+      const { id, chatId, authorId } = await query;
+
+      const message = await Message.find(id);
+      expect(message).toEqual({
+        id,
+        chatId,
+        authorId,
+        ...messageData,
+      });
+
+      const chat = await Chat.find(chatId);
+      expect(chat).toEqual({
+        id: chatId,
+        ...chatData,
+      });
+
+      const user = await User.find(authorId);
+      expect(user).toEqual({
+        id: authorId,
+        active: null,
+        age: null,
+        data: null,
+        picture: null,
+        ...userData,
+      });
+    });
   });
 
   describe('onConflict', () => {

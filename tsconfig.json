@@ -7,6 +7,7 @@
     "gitignored"
   ],
   "compilerOptions": {
+    "target": "ES2015",
     "module": "commonjs",
     "lib": ["esnext"],
     "importHelpers": true,

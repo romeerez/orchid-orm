@@ -112,3 +112,5 @@ export const getClonedQueryData = (query?: QueryData): QueryData => {
 export const getQueryAs = (q: { table?: string; query?: { as?: string } }) => {
   return q.query?.as || (q.table as string);
 };
+
+export const noop = () => {};

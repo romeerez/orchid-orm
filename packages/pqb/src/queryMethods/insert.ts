@@ -8,6 +8,7 @@ import {
 import { pushQueryValue, setQueryValue } from '../queryDataUtils';
 import { isRaw, RawExpression } from '../common';
 import { BelongsToRelation, Relation } from '../relations';
+import { noop } from '../utils';
 
 export type ReturningArg<T extends Query> = (keyof T['shape'])[] | '*';
 
@@ -80,6 +81,47 @@ type OnConflictArg<T extends Query> =
   | (keyof T['shape'])[]
   | RawExpression;
 
+type RelationTuple = [
+  relationName: string,
+  rowIndex: number,
+  columnIndex: number,
+  data: Record<string, unknown>,
+];
+
+const processInsertItem = (
+  item: Record<string, unknown>,
+  rowIndex: number,
+  relations: Record<string, Relation>,
+  prependRelations: RelationTuple[],
+  columns: string[],
+  columnsMap: Record<string, number>,
+) => {
+  Object.keys(item).forEach((key) => {
+    if (relations[key]) {
+      if (relations[key].type === 'belongsTo') {
+        const foreignKey = (relations[key] as BelongsToRelation).options
+          .foreignKey;
+
+        let columnIndex = columnsMap[foreignKey];
+        if (columnIndex === undefined) {
+          columnsMap[foreignKey] = columnIndex = columns.length;
+          columns.push(foreignKey);
+        }
+
+        prependRelations.push([
+          key,
+          rowIndex,
+          columnIndex,
+          item[key] as Record<string, unknown>,
+        ]);
+      }
+    } else if (columnsMap[key] === undefined) {
+      columnsMap[key] = columns.length;
+      columns.push(key);
+    }
+  });
+};
+
 export class Insert {
   insert<
     T extends Query,
@@ -137,31 +179,73 @@ export class Insert {
       : (this as unknown as Query)._take();
 
     let columns: string[];
+    const prependRelations: RelationTuple[] = [];
+    const relations = (this as unknown as Query).relations as unknown as Record<
+      string,
+      Relation
+    >;
     let values: unknown[][] | RawExpression;
-    if (Array.isArray(data)) {
-      const columnsMap: Record<string, true> = {};
-      data.forEach((item) => {
-        Object.keys(item).forEach((key) => {
-          columnsMap[key] = true;
-        });
-      });
 
-      columns = Object.keys(columnsMap);
-      values = Array(data.length);
-      data.forEach((item, i) => {
-        (values as unknown[][])[i] = columns.map((key) => item[key]);
-      });
-    } else if (
+    if (
       'values' in data &&
       typeof data.values === 'object' &&
       data.values &&
       isRaw(data.values)
     ) {
-      columns = data.columns as string[];
+      columns = (data as { columns: string[] }).columns;
       values = data.values;
     } else {
-      columns = Object.keys(data);
-      values = [Object.values(data)];
+      columns = [];
+      const columnsMap: Record<string, number> = {};
+
+      if (Array.isArray(data)) {
+        data.forEach((item, i) => {
+          processInsertItem(
+            item,
+            i,
+            relations,
+            prependRelations,
+            columns,
+            columnsMap,
+          );
+        });
+        values = Array(data.length);
+        data.forEach((item, i) => {
+          (values as unknown[][])[i] = columns.map((key) => item[key]);
+        });
+      } else {
+        processInsertItem(
+          data,
+          0,
+          relations,
+          prependRelations,
+          columns,
+          columnsMap,
+        );
+        values = [columns.map((key) => (data as Record<string, unknown>)[key])];
+      }
+    }
+
+    if (prependRelations.length) {
+      setQueryValue(
+        q,
+        'prependQueries',
+        prependRelations.map(([relationName, rowIndex, columnIndex, data]) => {
+          const relation = relations[relationName];
+          const primaryKey = (relation as BelongsToRelation).options.primaryKey;
+          if (data.create) {
+            return async () => {
+              const result = await relation.model.insert(
+                data.create as InsertData<Query>,
+                [primaryKey],
+              );
+              const row = (values as unknown[][])[rowIndex];
+              row[columnIndex] = result[primaryKey];
+            };
+          }
+          return noop;
+        }),
+      );
     }
 
     setQueryValue(q, 'type', 'insert');
