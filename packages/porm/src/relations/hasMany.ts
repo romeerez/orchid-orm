@@ -1,6 +1,6 @@
 import {
   RelationData,
-  RelationParams,
+  RelationInfo,
   RelationThunkBase,
   RelationThunks,
 } from './relations';
@@ -13,18 +13,27 @@ export interface HasMany extends RelationThunkBase {
   options: HasManyRelation['options'];
 }
 
-export type HasManyParams<
+export type HasManyInfo<
   T extends Model,
   Relations extends RelationThunks,
   Relation extends HasMany,
-> = Relation['options'] extends { primaryKey: string }
-  ? Record<
-      Relation['options']['primaryKey'],
-      T['columns']['shape'][Relation['options']['primaryKey']]['type']
-    >
-  : Relation['options'] extends { through: string }
-  ? RelationParams<T, Relations, Relations[Relation['options']['through']]>
-  : never;
+> = {
+  params: Relation['options'] extends { primaryKey: string }
+    ? Record<
+        Relation['options']['primaryKey'],
+        T['columns']['shape'][Relation['options']['primaryKey']]['type']
+      >
+    : Relation['options'] extends { through: string }
+    ? RelationInfo<
+        T,
+        Relations,
+        Relations[Relation['options']['through']]
+      >['params']
+    : never;
+  populate: Relation['options'] extends { foreignKey: string }
+    ? Relation['options']['foreignKey']
+    : never;
+};
 
 export const makeHasManyMethod = (
   model: Query,

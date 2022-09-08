@@ -17,7 +17,7 @@ describe('hasAndBelongsToMany', () => {
 
     const eq: AssertEqual<
       typeof db.user.chats,
-      RelationQuery<{ id: number }, typeof chatsQuery, false>
+      RelationQuery<{ id: number }, never, typeof chatsQuery, false>
     > = true;
 
     expect(eq).toBe(true);

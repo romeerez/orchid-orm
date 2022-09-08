@@ -236,6 +236,27 @@ describe('insert', () => {
     expectQueryNotMutated(q);
   });
 
+  it('should insert record with provided defaults', () => {
+    const now = new Date();
+    const query = User.defaults({
+      name: 'name',
+      password: 'password',
+    }).insert({
+      password: 'override',
+      updatedAt: now,
+      createdAt: now,
+    });
+
+    expectSql(
+      query.toSql(),
+      `
+        INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
+        VALUES ($1, $2, $3, $4)
+      `,
+      ['name', 'override', now, now],
+    );
+  });
+
   describe('insert with relations', () => {
     it('should insert with belongsTo relation', async () => {
       const MessageWithRelations = Object.assign(Message, {

@@ -8,13 +8,16 @@ export interface HasAndBelongsToMany extends RelationThunkBase {
   options: HasAndBelongsToManyRelation['options'];
 }
 
-export type HasAndBelongsToManyParams<
+export type HasAndBelongsToManyInfo<
   T extends Model,
   Relation extends HasAndBelongsToMany,
-> = Record<
-  Relation['options']['primaryKey'],
-  T['columns']['shape'][Relation['options']['primaryKey']]['type']
->;
+> = {
+  params: Record<
+    Relation['options']['primaryKey'],
+    T['columns']['shape'][Relation['options']['primaryKey']]['type']
+  >;
+  populate: never;
+};
 
 export const makeHasAndBelongsToManyMethod = (
   model: Query,

@@ -16,7 +16,7 @@ describe('hasOne', () => {
 
     const eq: AssertEqual<
       typeof db.user.profile,
-      RelationQuery<{ id: number }, typeof profileQuery, true>
+      RelationQuery<{ id: number }, 'userId', typeof profileQuery, true>
     > = true;
 
     expect(eq).toBe(true);
@@ -46,6 +46,17 @@ describe('hasOne', () => {
     const profile = await query;
 
     expect(profile).toMatchObject(profileData);
+  });
+
+  it('can insert after calling method', async () => {
+    const id = await insertUser();
+    const now = new Date();
+    await db.user.profile({ id }).insert({
+      userId: 1,
+      bio: 'bio',
+      updatedAt: now,
+      createdAt: now,
+    });
   });
 
   it('should have proper joinQuery', () => {
@@ -140,7 +151,7 @@ describe('hasOne through', () => {
 
     const eq: AssertEqual<
       typeof db.message.profile,
-      RelationQuery<{ authorId: number }, typeof profileQuery, true>
+      RelationQuery<{ authorId: number }, never, typeof profileQuery, true>
     > = true;
 
     expect(eq).toBe(true);

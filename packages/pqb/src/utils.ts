@@ -1,6 +1,10 @@
 import { RawExpression } from './common';
 import { QueryData } from './sql';
 
+export type SetOptional<T, K extends PropertyKey> = Omit<T, K> & {
+  [P in K]?: P extends keyof T ? T[P] : never;
+};
+
 export type GetTypesOrRaw<T extends [...unknown[]]> = T extends [
   infer Head,
   ...infer Tail,
@@ -9,8 +13,6 @@ export type GetTypesOrRaw<T extends [...unknown[]]> = T extends [
   : [];
 
 export type GetTypeOrRaw<T> = T | RawExpression;
-
-export type ValueOf<T extends object> = T[keyof T];
 
 // credits goes to https://stackoverflow.com/a/50375286
 export type UnionToIntersection<U> =

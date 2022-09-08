@@ -129,6 +129,7 @@ describe('selectMethods', () => {
         },
       }) as unknown as RelationQuery<
         Record<string, unknown>,
+        never,
         typeof profileQuery
       >;
 
@@ -172,6 +173,7 @@ describe('selectMethods', () => {
           'id',
           profileRelation as unknown as RelationQuery<
             Record<string, unknown>,
+            never,
             typeof profileRelationQuery,
             true
           >,
@@ -212,6 +214,7 @@ describe('selectMethods', () => {
         },
       }) as unknown as RelationQuery<
         Record<string, unknown>,
+        never,
         typeof messageRelationQuery
       >;
 

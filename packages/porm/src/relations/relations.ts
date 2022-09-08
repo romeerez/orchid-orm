@@ -1,5 +1,5 @@
-import { BelongsTo, BelongsToParams, makeBelongsToMethod } from './belongsTo';
-import { HasOne, HasOneParams, makeHasOneMethod } from './hasOne';
+import { BelongsTo, BelongsToInfo, makeBelongsToMethod } from './belongsTo';
+import { HasOne, HasOneInfo, makeHasOneMethod } from './hasOne';
 import { DbModel, Model, ModelClass, ModelClasses } from '../model';
 import { PORM } from '../orm';
 import {
@@ -10,10 +10,10 @@ import {
   SetQueryReturnsAll,
   SetQueryReturnsOneOrUndefined,
 } from 'pqb';
-import { HasMany, HasManyParams, makeHasManyMethod } from './hasMany';
+import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
 import {
   HasAndBelongsToMany,
-  HasAndBelongsToManyParams,
+  HasAndBelongsToManyInfo,
   makeHasAndBelongsToManyMethod,
 } from './hasAndBelongsToMany';
 
@@ -39,26 +39,31 @@ export type RelationScopeOrModel<Relation extends RelationThunkBase> =
     ? ReturnType<Relation['options']['scope']>
     : DbModel<ReturnType<Relation['fn']>>;
 
-export type RelationParams<
+export type RelationInfo<
   T extends Model,
   Relations extends RelationThunks,
   Relation extends RelationThunk,
 > = Relation extends BelongsTo
-  ? BelongsToParams<T, Relation>
+  ? BelongsToInfo<T, Relation>
   : Relation extends HasOne
-  ? HasOneParams<T, Relations, Relation>
+  ? HasOneInfo<T, Relations, Relation>
   : Relation extends HasMany
-  ? HasManyParams<T, Relations, Relation>
+  ? HasManyInfo<T, Relations, Relation>
   : Relation extends HasAndBelongsToMany
-  ? HasAndBelongsToManyParams<T, Relation>
+  ? HasAndBelongsToManyInfo<T, Relation>
   : never;
 
 export type MapRelation<
   T extends Model,
   Relations extends RelationThunks,
   Relation extends RelationThunk,
+  Info extends {
+    params: Record<string, unknown>;
+    populate: string;
+  } = RelationInfo<T, Relations, Relation>,
 > = RelationQuery<
-  RelationParams<T, Relations, Relation>,
+  Info['params'],
+  Info['populate'],
   Relation['returns'] extends 'one'
     ? SetQueryReturnsOneOrUndefined<RelationScopeOrModel<Relation>>
     : SetQueryReturnsAll<RelationScopeOrModel<Relation>>,

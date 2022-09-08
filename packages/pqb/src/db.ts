@@ -1,4 +1,9 @@
-import { ColumnsParsers, DefaultSelectColumns, Query } from './query';
+import {
+  ColumnsParsers,
+  DefaultSelectColumns,
+  defaultsKey,
+  Query,
+} from './query';
 import { QueryMethods } from './queryMethods/queryMethods';
 import { QueryData, SelectQueryData, Sql } from './sql';
 import { PostgresAdapter } from './adapter';
@@ -53,6 +58,7 @@ export interface Db<
   withData: Query['withData'];
   joinedTables: Query['joinedTables'];
   relations: Relations;
+  [defaultsKey]?: object;
 }
 
 export class Db<

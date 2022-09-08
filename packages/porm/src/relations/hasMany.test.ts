@@ -17,7 +17,7 @@ describe('hasMany', () => {
 
     const eq: AssertEqual<
       typeof db.user.messages,
-      RelationQuery<{ id: number }, typeof messagesQuery, false>
+      RelationQuery<{ id: number }, 'authorId', typeof messagesQuery, false>
     > = true;
 
     expect(eq).toBe(true);
@@ -143,7 +143,7 @@ describe('hasMany through', () => {
 
     const eq: AssertEqual<
       typeof db.profile.chats,
-      RelationQuery<{ userId: number }, typeof chatsQuery, false>
+      RelationQuery<{ userId: number }, never, typeof chatsQuery, false>
     > = true;
 
     expect(eq).toBe(true);

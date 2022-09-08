@@ -37,6 +37,9 @@ export type QueryBase = {
   withData: WithDataBase;
 };
 
+export type defaultsKey = typeof defaultsKey;
+export const defaultsKey: unique symbol = Symbol('defaults');
+
 export type Query = QueryMethods & {
   adapter: PostgresAdapter;
   queryBuilder: Db;
@@ -48,7 +51,7 @@ export type Query = QueryMethods & {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     primaryTypes: any[];
   };
-  type: unknown;
+  type: Record<string, unknown>;
   query?: QueryData;
   result: ColumnsShape;
   hasSelect: boolean;
@@ -63,6 +66,7 @@ export type Query = QueryMethods & {
   columnsParsers?: ColumnsParsers;
   relations: RelationsBase;
   withData: WithDataBase;
+  [defaultsKey]?: object;
 };
 
 export type Selectable<T extends QueryBase> = StringKey<keyof T['selectable']>;

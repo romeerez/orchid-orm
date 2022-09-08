@@ -1,5 +1,6 @@
 import {
   AddQuerySelect,
+  defaultsKey,
   Query,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
@@ -8,7 +9,7 @@ import {
 import { pushQueryValue, setQueryValue } from '../queryDataUtils';
 import { isRaw, RawExpression } from '../common';
 import { BelongsToRelation, Relation } from '../relations';
-import { noop } from '../utils';
+import { noop, SetOptional } from '../utils';
 
 export type ReturningArg<T extends Query> = (keyof T['shape'])[] | '*';
 
@@ -37,9 +38,7 @@ type InsertData<
   T extends Query,
   BT extends Record<string, BelongsToRelation> = BelongsToRelations<T>,
 > = Omit<
-  Omit<T['type'], OptionalKeys<T>> & {
-    [K in OptionalKeys<T>]?: T['shape'][K]['type'];
-  },
+  SetOptional<SetOptional<T['type'], OptionalKeys<T>>, keyof T[defaultsKey]>,
   { [K in keyof BT]: BT[K]['options']['foreignKey'] }[keyof BT]
 > &
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -197,8 +196,13 @@ export class Insert {
     } else {
       columns = [];
       const columnsMap: Record<string, number> = {};
+      const defaults = q.query?.defaults;
 
       if (Array.isArray(data)) {
+        if (defaults) {
+          data = data.map((item) => ({ ...defaults, ...item }));
+        }
+
         data.forEach((item, i) => {
           processInsertItem(
             item,
@@ -209,11 +213,17 @@ export class Insert {
             columnsMap,
           );
         });
+
         values = Array(data.length);
+
         data.forEach((item, i) => {
           (values as unknown[][])[i] = columns.map((key) => item[key]);
         });
       } else {
+        if (defaults) {
+          data = { ...defaults, ...data };
+        }
+
         processInsertItem(
           data,
           0,
@@ -222,6 +232,7 @@ export class Insert {
           columns,
           columnsMap,
         );
+
         values = [columns.map((key) => (data as Record<string, unknown>)[key])];
       }
     }
@@ -258,6 +269,21 @@ export class Insert {
 
     return q as unknown as InsertOneResult<Query, ReturningArg<Query>> &
       InsertManyResult<Query, ReturningArg<Query>>;
+  }
+
+  defaults<T extends Query, Data extends Partial<InsertData<T>>>(
+    this: T,
+    data: Data,
+  ): T & { [defaultsKey]: Data } {
+    return (this.clone() as T)._defaults(data);
+  }
+  _defaults<T extends Query, Data extends Partial<InsertData<T>>>(
+    this: T,
+    data: Data,
+  ): T & { [defaultsKey]: Data } {
+    const q = this.toQuery();
+    setQueryValue(q, 'defaults', data);
+    return q as T & { [defaultsKey]: Data };
   }
 
   onConflict<T extends Query, Arg extends OnConflictArg<T>>(

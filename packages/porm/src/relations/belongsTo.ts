@@ -8,13 +8,13 @@ export interface BelongsTo extends RelationThunkBase {
   options: BelongsToRelation['options'];
 }
 
-export type BelongsToParams<
-  T extends Model,
-  Relation extends BelongsTo,
-> = Record<
-  Relation['options']['foreignKey'],
-  T['columns']['shape'][Relation['options']['foreignKey']]['type']
->;
+export type BelongsToInfo<T extends Model, Relation extends BelongsTo> = {
+  params: Record<
+    Relation['options']['foreignKey'],
+    T['columns']['shape'][Relation['options']['foreignKey']]['type']
+  >;
+  populate: never;
+};
 
 export const makeBelongsToMethod = (
   model: Query,

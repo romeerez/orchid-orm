@@ -17,7 +17,7 @@ describe('belongsTo', () => {
 
     const eq: AssertEqual<
       typeof db.profile.user,
-      RelationQuery<{ userId: number }, UserQuery, true>
+      RelationQuery<{ userId: number }, never, UserQuery, true>
     > = true;
 
     expect(eq).toBe(true);

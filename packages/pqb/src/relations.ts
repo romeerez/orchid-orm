@@ -1,4 +1,4 @@
-import { Query, QueryWithTable } from './query';
+import { defaultsKey, Query, QueryWithTable } from './query';
 
 export type BaseRelation = {
   type: string;
@@ -69,7 +69,9 @@ export type Relation =
 export type RelationsBase = Record<never, Relation>;
 
 export type RelationQuery<
-  Params = never,
+  Params extends Record<string, unknown> = never,
+  Populate extends string = string,
   T extends Query = Query,
   Required extends boolean = boolean,
-> = ((params: Params) => T) & T & { requiredRelation: Required };
+> = ((params: Params) => T & { [defaultsKey]: Pick<T['type'], Populate> }) &
+  T & { requiredRelation: Required };

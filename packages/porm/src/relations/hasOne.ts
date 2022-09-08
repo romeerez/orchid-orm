@@ -2,7 +2,7 @@ import { addQueryOn, HasOneRelation, Query, Relation } from 'pqb';
 import { Model } from '../model';
 import {
   RelationData,
-  RelationParams,
+  RelationInfo,
   RelationThunkBase,
   RelationThunks,
 } from './relations';
@@ -13,18 +13,27 @@ export interface HasOne extends RelationThunkBase {
   options: HasOneRelation['options'];
 }
 
-export type HasOneParams<
+export type HasOneInfo<
   T extends Model,
   Relations extends RelationThunks,
   Relation extends HasOne,
-> = Relation['options'] extends { primaryKey: string }
-  ? Record<
-      Relation['options']['primaryKey'],
-      T['columns']['shape'][Relation['options']['primaryKey']]['type']
-    >
-  : Relation['options'] extends { through: string }
-  ? RelationParams<T, Relations, Relations[Relation['options']['through']]>
-  : never;
+> = {
+  params: Relation['options'] extends { primaryKey: string }
+    ? Record<
+        Relation['options']['primaryKey'],
+        T['columns']['shape'][Relation['options']['primaryKey']]['type']
+      >
+    : Relation['options'] extends { through: string }
+    ? RelationInfo<
+        T,
+        Relations,
+        Relations[Relation['options']['through']]
+      >['params']
+    : never;
+  populate: Relation['options'] extends { foreignKey: string }
+    ? Relation['options']['foreignKey']
+    : never;
+};
 
 export const makeHasOneMethod = (
   model: Query,
