@@ -2141,27 +2141,53 @@ Table.select('id').clear('id')
 
 ## callbacks
 
-`beforeInsert` callback is called before insert, does not take arguments:
+### beforeInsert
+
+`beforeInsert` is called in the beginning of `.insert` method, and it should be placed before `.insert`:
 
 ```ts
-await Table
+Table
   .beforeInsert(() => console.log('before insert'))
   .insert(data)
 ```
 
-`afterInsert` callback is called after insert, takes returnType and data arguments:
+This should be a synchronous callback.
+
+First argument is a query object and the rest arguments are passed from `.insert`:
+
+```ts
+Table.beforeInsert((query, data, returning) => {
+  query // is the query object
+  data // is the data passed to insert
+  returning // is returning argument, ['id'] in this case
+}).insert(data, ['id'])
+```
+
+`.beforeInsert` can return modified query.
+
+In following example query defaults are modified in beforeInsert and will be used in the insert:
+
+```ts
+Table.beforeInsert((query) => {
+  return query.defaults({ name: 'default name' })
+}).insert(data)
+```
+
+### afterInsert
+
+`afterInsert` callback is called after successfully running insert query.
+
+First argument is query object, then `data` and `returning` are arguments of `.insert` method, and the last argument is the result of the insert query.
+
+Callback may return Promise which will be awaited after insert query:
 
 ```ts
 await Table
-  .afterInsert((returnType, data) => {
-    if (returnType === 'all') {
-      data // has type unknown[]
-    } else if (returnType === 'one') {
-      data // has type unknown
-    } else {
-      returnType // has type 'rowCount'
-      data // has type number
-    }
+  .afterInsert((query, data, returning, inserted) => {
+    query // is the query object
+    data // is the data provided to .insert method
+    returning // is the returning argument of .insert, '*' in this case
+    inserted // is the result of the query, it may be array of objects, single object or number of modified rows
   })
-  .insert(data)
+  .insert(data, '*')
 ```

@@ -1,13 +1,13 @@
 import {
   ColumnsParsers,
   Query,
-  QueryReturnType,
   QueryWithTable,
   SelectableBase,
 } from '../query';
 import { Expression, RawExpression } from '../common';
 import { ColumnsShape, ColumnType } from '../columnSchema';
 import { RelationQuery } from '../relations';
+import { MaybeArray } from '../utils';
 
 export type Sql = {
   text: string;
@@ -25,6 +25,8 @@ export type CommonQueryData = {
   or?: WhereItemContainer[][];
   parsers?: ColumnsParsers;
   defaults?: Record<string, unknown>;
+  beforeQuery?: ((q: Query) => void | Promise<void>)[];
+  afterQuery?: ((q: Query, data: unknown) => void | Promise<void>)[];
 };
 
 export type SelectQueryData = CommonQueryData & {
@@ -67,10 +69,20 @@ export type InsertQueryData = CommonQueryData & {
         expr?: OnConflictItem;
         update?: string | string[] | Record<string, unknown> | RawExpression;
       };
-  beforeInsert?: (() => Promise<void>)[];
+  beforeInsert?: ((
+    q: Query,
+    data:
+      | MaybeArray<Record<string, unknown>>
+      | { columns: string[]; values: RawExpression },
+    returning?: '*' | string[],
+  ) => Query | void)[];
   afterInsert?: ((
-    returnType: QueryReturnType,
-    data: unknown,
+    q: Query,
+    data:
+      | MaybeArray<Record<string, unknown>>
+      | { columns: string[]; values: RawExpression },
+    returning: '*' | string[] | undefined,
+    inserted: unknown,
   ) => Promise<void>)[];
 };
 

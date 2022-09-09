@@ -643,30 +643,60 @@ describe('insert', () => {
 
   describe('callbacks', () => {
     describe('beforeInsert', () => {
-      it('should run callback before insert', async () => {
+      it('should run callback before insert', () => {
         const fn = jest.fn();
         const now = new Date();
-        await User.insert({
+        User.beforeInsert(fn).insert({
           name: 'name',
           password: 'password',
           updatedAt: now,
           createdAt: now,
-        }).beforeInsert(fn);
+        });
 
         expect(fn).toBeCalled();
       });
 
+      it('should be able to change query by returning it', () => {
+        const now = new Date();
+        const data = {
+          password: 'password',
+          updatedAt: now,
+          createdAt: now,
+        };
+        const query = User.beforeInsert((q, arg, returning) => {
+          expect(arg).toBe(data);
+          expect(returning).toEqual(['id']);
+          return q.defaults({ name: 'name from beforeInsert' });
+        }).insert(data as unknown as typeof User.type, ['id']);
+
+        expectSql(
+          query.toSql(),
+          `
+            INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
+            VALUES ($1, $2, $3, $4)
+            RETURNING "user"."id"
+          `,
+          ['name from beforeInsert', 'password', now, now],
+        );
+      });
+    });
+
+    describe('afterInsert', () => {
       it('should run callback after insert', async () => {
         const fn = jest.fn();
         const now = new Date();
-        await User.insert({
+        const data = {
           name: 'name',
           password: 'password',
           updatedAt: now,
           createdAt: now,
-        }).afterInsert(fn);
+        };
 
-        expect(fn).toBeCalled();
+        const query = User.afterInsert(fn).insert(data, ['id']);
+
+        const { id } = await query;
+
+        expect(fn.mock.calls[0]).toEqual([query, data, ['id'], { id }]);
       });
     });
   });

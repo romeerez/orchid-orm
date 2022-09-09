@@ -19,7 +19,8 @@ import {
   Relation,
   RelationQuery,
 } from '../relations';
-import { noop, SetOptional } from '../utils';
+import { MaybeArray, noop, SetOptional } from '../utils';
+import { InsertQueryData } from '../sql';
 
 export type ReturningArg<T extends Query> = (keyof T['shape'])[] | '*';
 
@@ -125,9 +126,22 @@ type AppendRelationTuple = [
   data: Record<string, unknown>,
 ];
 
-type AfterInsertCallback = (
-  ...args: ['all', unknown[]] | ['one', unknown] | ['rowCount', number]
-) => void;
+type BeforeInsertCallback<T extends Query> = (
+  q: T,
+  data:
+    | MaybeArray<InsertData<T>>
+    | { columns: string[]; values: RawExpression },
+  returning?: ReturningArg<T>,
+) => void | Query;
+
+type AfterInsertCallback<T extends Query> = (
+  q: T,
+  data:
+    | MaybeArray<InsertData<T>>
+    | { columns: string[]; values: RawExpression },
+  returning: ReturningArg<T> | undefined,
+  inserted: unknown,
+) => void | Promise<void>;
 
 const processInsertItem = (
   item: Record<string, unknown>,
@@ -223,15 +237,29 @@ export class Insert {
       | Record<string, unknown>
       | Record<string, unknown>[]
       | { columns: string[]; values: RawExpression },
-    returning?: unknown,
+    returning?: ReturningArg<Query>,
   ) {
-    const q = Array.isArray(data)
-      ? (this as unknown as Query)._all()
-      : (this as unknown as Query)._take();
+    let q = this as unknown as Query;
+    const query = q.query as InsertQueryData;
+    delete query.and;
+    delete query.or;
 
-    if (q.query) {
-      delete q.query.and;
-      delete q.query.or;
+    if (query.beforeInsert) {
+      for (const cb of query.beforeInsert) {
+        const result = cb(q, data, returning);
+        if (result) q = result as typeof q;
+      }
+    }
+
+    if (query.afterInsert) {
+      pushQueryArray(
+        q,
+        'afterQuery',
+        query.afterInsert.map(
+          (cb) => (q: Query, inserted: unknown) =>
+            cb(q, data, returning, inserted),
+        ),
+      );
     }
 
     let columns: string[];
@@ -303,7 +331,7 @@ export class Insert {
     if (prependRelations.length) {
       pushQueryArray(
         q,
-        'beforeInsert',
+        'beforeQuery',
         prependRelations.map(([relationName, rowIndex, columnIndex, data]) => {
           const relation = relations[relationName];
           const primaryKey = (relation as BelongsToRelation).options.primaryKey;
@@ -337,7 +365,7 @@ export class Insert {
 
       pushQueryArray(
         q,
-        'afterInsert',
+        'afterQuery',
         appendRelations.map(([relationName, rowIndex, data]) => {
           if (data.create) {
             return async (returnType: QueryReturnType, inserted: unknown) => {
@@ -360,7 +388,10 @@ export class Insert {
     setQueryValue(q, 'values', values);
 
     if (returning) {
+      q.returnType = Array.isArray(data) ? 'all' : 'one';
       pushQueryValue(q, 'returning', returning);
+    } else {
+      q.returnType = 'rowCount';
     }
 
     return q as unknown as InsertOneResult<Query, ReturningArg<Query>> &
@@ -395,17 +426,17 @@ export class Insert {
     return new OnConflictQueryBuilder(this, arg as Arg);
   }
 
-  beforeInsert<T extends Query>(this: T, cb: () => void): T {
+  beforeInsert<T extends Query>(this: T, cb: BeforeInsertCallback<T>): T {
     return this.clone()._beforeInsert(cb);
   }
-  _beforeInsert<T extends Query>(this: T, cb: () => void): T {
+  _beforeInsert<T extends Query>(this: T, cb: BeforeInsertCallback<T>): T {
     return pushQueryValue(this, 'beforeInsert', cb);
   }
 
-  afterInsert<T extends Query>(this: T, cb: AfterInsertCallback): T {
+  afterInsert<T extends Query>(this: T, cb: AfterInsertCallback<T>): T {
     return this.clone()._afterInsert(cb);
   }
-  _afterInsert<T extends Query>(this: T, cb: AfterInsertCallback): T {
+  _afterInsert<T extends Query>(this: T, cb: AfterInsertCallback<T>): T {
     return pushQueryValue(this, 'afterInsert', cb);
   }
 }

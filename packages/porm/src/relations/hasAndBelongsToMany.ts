@@ -45,11 +45,13 @@ export const makeHasAndBelongsToManyMethod = (
   return {
     returns: 'many',
     method: (params: Record<string, unknown>) => {
-      return query.whereExists(subQuery, (q) =>
-        q.on(associationForeignKeyFull, associationPrimaryKeyFull).where({
-          [foreignKeyFull]: params[primaryKey],
-        }),
-      );
+      return query
+        .whereExists(subQuery, (q) =>
+          q.on(associationForeignKeyFull, associationPrimaryKeyFull).where({
+            [foreignKeyFull]: params[primaryKey],
+          }),
+        )
+        .beforeInsert(async () => {});
     },
     joinQuery: query.whereExists(subQuery, (q) =>
       q
