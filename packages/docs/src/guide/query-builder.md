@@ -521,6 +521,8 @@ await Table.insert({
 
 Insert multiple records by passing in an array of objects.
 
+`beforeInsert` and `afterInsert` callback are supported for insert, see [callbacks](#callbacks).
+
 In case if one of objects has fewer fields, `DEFAULT` sql keyword will be used for the missing value:
 ```ts
 await Table.insert([
@@ -2135,4 +2137,31 @@ Note that currently it does not affect on resulting TypeScript type, it may be i
 ```ts
 // Clears select statement but resulting type still has `id` column selected.
 Table.select('id').clear('id')
+```
+
+## callbacks
+
+`beforeInsert` callback is called before insert, does not take arguments:
+
+```ts
+await Table
+  .beforeInsert(() => console.log('before insert'))
+  .insert(data)
+```
+
+`afterInsert` callback is called after insert, takes returnType and data arguments:
+
+```ts
+await Table
+  .afterInsert((returnType, data) => {
+    if (returnType === 'all') {
+      data // has type unknown[]
+    } else if (returnType === 'one') {
+      data // has type unknown
+    } else {
+      returnType // has type 'rowCount'
+      data // has type number
+    }
+  })
+  .insert(data)
 ```

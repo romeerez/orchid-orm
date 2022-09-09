@@ -171,4 +171,35 @@ describe('hasAndBelongsToMany', () => {
       ['title'],
     );
   });
+
+  // it('should support create', async () => {
+  //   const now = new Date();
+  //   const userData = {
+  //     name: 'name',
+  //     password: 'password',
+  //     updatedAt: now,
+  //     createdAt: now,
+  //   };
+  //
+  //   const chatData = {
+  //     updatedAt: now,
+  //     createdAt: now,
+  //   };
+  //
+  //   await db.user.insert({
+  //     ...userData,
+  //     chats: {
+  //       create: [
+  //         {
+  //           ...chatData,
+  //           title: 'title 1',
+  //         },
+  //         {
+  //           ...chatData,
+  //           title: 'title 2',
+  //         },
+  //       ],
+  //     },
+  //   });
+  // });
 });

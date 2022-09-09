@@ -2,15 +2,19 @@ import {
   AddQuerySelect,
   defaultsKey,
   Query,
+  QueryReturnType,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
   SetQueryReturnsVoid,
 } from '../query';
-import { pushQueryValue, setQueryValue } from '../queryDataUtils';
+import {
+  pushQueryArray,
+  pushQueryValue,
+  setQueryValue,
+} from '../queryDataUtils';
 import { isRaw, RawExpression } from '../common';
 import {
   BelongsToRelation,
-  HasManyRelation,
   HasOneRelation,
   Relation,
   RelationQuery,
@@ -70,7 +74,7 @@ export type InsertData<
                   create: InsertData<T['relations'][Key]['nestedCreateQuery']>;
                 };
               }
-          : T['relations'][Key] extends HasManyRelation
+          : T['relations'][Key] extends Relation
           ? 'through' extends T['relations'][Key]['options']
             ? // eslint-disable-next-line @typescript-eslint/ban-types
               {}
@@ -120,6 +124,10 @@ type AppendRelationTuple = [
   rowIndex: number,
   data: Record<string, unknown>,
 ];
+
+type AfterInsertCallback = (
+  ...args: ['all', unknown[]] | ['one', unknown] | ['rowCount', number]
+) => void;
 
 const processInsertItem = (
   item: Record<string, unknown>,
@@ -293,9 +301,9 @@ export class Insert {
     }
 
     if (prependRelations.length) {
-      setQueryValue(
+      pushQueryArray(
         q,
-        'prependQueries',
+        'beforeInsert',
         prependRelations.map(([relationName, rowIndex, columnIndex, data]) => {
           const relation = relations[relationName];
           const primaryKey = (relation as BelongsToRelation).options.primaryKey;
@@ -327,14 +335,18 @@ export class Insert {
         }
       }
 
-      setQueryValue(
+      pushQueryArray(
         q,
-        'appendQueries',
+        'afterInsert',
         appendRelations.map(([relationName, rowIndex, data]) => {
           if (data.create) {
-            return async (rows: Record<string, unknown>[]) => {
+            return async (returnType: QueryReturnType, inserted: unknown) => {
               await (this as unknown as Record<string, RelationQuery>)
-                [relationName](rows[rowIndex] as never)
+                [relationName](
+                  (returnType === 'all'
+                    ? (inserted as unknown[])[rowIndex]
+                    : inserted) as never,
+                )
                 .insert(data.create as InsertData<Query>);
             };
           }
@@ -358,16 +370,16 @@ export class Insert {
   defaults<T extends Query, Data extends Partial<InsertData<T>>>(
     this: T,
     data: Data,
-  ): T & { [defaultsKey]: Data } {
+  ): T & { [defaultsKey]: keyof Data } {
     return (this.clone() as T)._defaults(data);
   }
   _defaults<T extends Query, Data extends Partial<InsertData<T>>>(
     this: T,
     data: Data,
-  ): T & { [defaultsKey]: Data } {
+  ): T & { [defaultsKey]: keyof Data } {
     const q = this.toQuery();
     setQueryValue(q, 'defaults', data);
-    return q as T & { [defaultsKey]: Data };
+    return q as T & { [defaultsKey]: keyof Data };
   }
 
   onConflict<T extends Query, Arg extends OnConflictArg<T>>(
@@ -376,12 +388,25 @@ export class Insert {
   ): OnConflictQueryBuilder<T, Arg> {
     return this.clone()._onConflict(arg);
   }
-
   _onConflict<
     T extends Query,
     Arg extends OnConflictArg<T> | undefined = undefined,
   >(this: T, arg?: Arg): OnConflictQueryBuilder<T, Arg> {
     return new OnConflictQueryBuilder(this, arg as Arg);
+  }
+
+  beforeInsert<T extends Query>(this: T, cb: () => void): T {
+    return this.clone()._beforeInsert(cb);
+  }
+  _beforeInsert<T extends Query>(this: T, cb: () => void): T {
+    return pushQueryValue(this, 'beforeInsert', cb);
+  }
+
+  afterInsert<T extends Query>(this: T, cb: AfterInsertCallback): T {
+    return this.clone()._afterInsert(cb);
+  }
+  _afterInsert<T extends Query>(this: T, cb: AfterInsertCallback): T {
+    return pushQueryValue(this, 'afterInsert', cb);
   }
 }
 

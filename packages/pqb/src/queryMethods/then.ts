@@ -31,10 +31,19 @@ export class Then {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     reject?: (error: any) => any,
   ) {
-    if (this.query?.prependQueries) {
-      await Promise.all(this.query.prependQueries.map((query) => query()));
+    let beforeQuery: (() => void)[] | undefined;
+    let afterQuery:
+      | ((returnType: QueryReturnType, data: unknown) => void)[]
+      | undefined;
+
+    if (this.query?.type === 'insert') {
+      beforeQuery = this.query.beforeInsert;
+      afterQuery = this.query.afterInsert;
     }
-    const appendQueries = this.query?.appendQueries;
+
+    if (beforeQuery) {
+      await Promise.all(beforeQuery.map((query) => query()));
+    }
 
     const { returnType } = this;
     return this.adapter[queryMethod[returnType] as 'query'](this.toSql())
@@ -106,10 +115,11 @@ export class Then {
         }
       })
       .then(
-        appendQueries?.length
+        afterQuery?.length
           ? async (result) => {
-              const array = Array.isArray(result) ? result : [result];
-              await Promise.all(appendQueries.map((query) => query(array)));
+              await Promise.all(
+                afterQuery!.map((query) => query(returnType, result)),
+              );
 
               resolve?.(result);
             }

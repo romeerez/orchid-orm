@@ -1,6 +1,7 @@
 import {
   ColumnsParsers,
   Query,
+  QueryReturnType,
   QueryWithTable,
   SelectableBase,
 } from '../query';
@@ -23,12 +24,11 @@ export type CommonQueryData = {
   and?: WhereItemContainer[];
   or?: WhereItemContainer[][];
   parsers?: ColumnsParsers;
-  prependQueries?: (() => Promise<void>)[];
-  appendQueries?: ((rows: Record<string, unknown>[]) => Promise<void>)[];
   defaults?: Record<string, unknown>;
 };
 
 export type SelectQueryData = CommonQueryData & {
+  type: undefined;
   select?: SelectItem[];
   distinct?: Expression[];
   fromOnly?: boolean;
@@ -67,6 +67,11 @@ export type InsertQueryData = CommonQueryData & {
         expr?: OnConflictItem;
         update?: string | string[] | Record<string, unknown> | RawExpression;
       };
+  beforeInsert?: (() => Promise<void>)[];
+  afterInsert?: ((
+    returnType: QueryReturnType,
+    data: unknown,
+  ) => Promise<void>)[];
 };
 
 export type UpdateQueryData = CommonQueryData & {

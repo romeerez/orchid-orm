@@ -640,4 +640,34 @@ describe('insert', () => {
       });
     });
   });
+
+  describe('callbacks', () => {
+    describe('beforeInsert', () => {
+      it('should run callback before insert', async () => {
+        const fn = jest.fn();
+        const now = new Date();
+        await User.insert({
+          name: 'name',
+          password: 'password',
+          updatedAt: now,
+          createdAt: now,
+        }).beforeInsert(fn);
+
+        expect(fn).toBeCalled();
+      });
+
+      it('should run callback after insert', async () => {
+        const fn = jest.fn();
+        const now = new Date();
+        await User.insert({
+          name: 'name',
+          password: 'password',
+          updatedAt: now,
+          createdAt: now,
+        }).afterInsert(fn);
+
+        expect(fn).toBeCalled();
+      });
+    });
+  });
 });
