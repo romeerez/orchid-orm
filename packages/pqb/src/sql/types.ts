@@ -69,21 +69,27 @@ export type InsertQueryData = CommonQueryData & {
         expr?: OnConflictItem;
         update?: string | string[] | Record<string, unknown> | RawExpression;
       };
-  beforeInsert?: ((
-    q: Query,
-    data:
+  beforeInsert?: ((params: {
+    query: Query;
+    params:
       | MaybeArray<Record<string, unknown>>
-      | { columns: string[]; values: RawExpression },
-    returning?: '*' | string[],
-  ) => Query | void)[];
-  afterInsert?: ((
-    q: Query,
-    data:
+      | { columns: string[]; values: RawExpression };
+    returning?: '*' | string[];
+  }) => void | {
+    query?: Query;
+    params?:
       | MaybeArray<Record<string, unknown>>
-      | { columns: string[]; values: RawExpression },
-    returning: '*' | string[] | undefined,
-    inserted: unknown,
-  ) => Promise<void>)[];
+      | { columns: string[]; values: RawExpression };
+    returning?: '*' | string[];
+  })[];
+  afterInsert?: ((params: {
+    query: Query;
+    params:
+      | MaybeArray<Record<string, unknown>>
+      | { columns: string[]; values: RawExpression };
+    returning: '*' | string[] | undefined;
+    data: unknown;
+  }) => Promise<void>)[];
 };
 
 export type UpdateQueryData = CommonQueryData & {

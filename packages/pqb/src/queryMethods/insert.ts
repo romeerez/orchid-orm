@@ -126,22 +126,28 @@ type AppendRelationTuple = [
   data: Record<string, unknown>,
 ];
 
-type BeforeInsertCallback<T extends Query> = (
-  q: T,
-  data:
+type BeforeInsertCallback<T extends Query> = (arg: {
+  query: T;
+  params:
     | MaybeArray<InsertData<T>>
-    | { columns: string[]; values: RawExpression },
-  returning?: ReturningArg<T>,
-) => void | Query;
+    | { columns: string[]; values: RawExpression };
+  returning?: ReturningArg<T>;
+}) => void | {
+  query?: Query;
+  params?:
+    | MaybeArray<InsertData<T>>
+    | { columns: string[]; values: RawExpression };
+  returning?: ReturningArg<T>;
+};
 
-type AfterInsertCallback<T extends Query> = (
-  q: T,
-  data:
+type AfterInsertCallback<T extends Query> = (arg: {
+  query: T;
+  params:
     | MaybeArray<InsertData<T>>
-    | { columns: string[]; values: RawExpression },
-  returning: ReturningArg<T> | undefined,
-  inserted: unknown,
-) => void | Promise<void>;
+    | { columns: string[]; values: RawExpression };
+  returning: ReturningArg<T> | undefined;
+  data: unknown;
+}) => void | Promise<void>;
 
 const processInsertItem = (
   item: Record<string, unknown>,
@@ -239,25 +245,45 @@ export class Insert {
       | { columns: string[]; values: RawExpression },
     returning?: ReturningArg<Query>,
   ) {
-    let q = this as unknown as Query;
-    const query = q.query as InsertQueryData;
-    delete query.and;
-    delete query.or;
+    let q = this as unknown as Query & { query: InsertQueryData };
+    delete q.query.and;
+    delete q.query.or;
 
-    if (query.beforeInsert) {
-      for (const cb of query.beforeInsert) {
-        const result = cb(q, data, returning);
-        if (result) q = result as typeof q;
+    if (q.query.beforeInsert) {
+      const arg = {
+        query: q as Query,
+        params: data,
+        returning,
+      };
+
+      for (const cb of q.query.beforeInsert) {
+        const result = cb(arg);
+        if (result) {
+          if (result.query) {
+            q = (arg.query = result.query) as typeof q;
+          }
+          if (result.params) {
+            data = arg.params = result.params;
+          }
+          if (result.returning) {
+            returning = arg.returning = result.returning;
+          }
+        }
       }
     }
 
-    if (query.afterInsert) {
+    if (q.query.afterInsert) {
       pushQueryArray(
         q,
         'afterQuery',
-        query.afterInsert.map(
-          (cb) => (q: Query, inserted: unknown) =>
-            cb(q, data, returning, inserted),
+        q.query.afterInsert.map(
+          (cb) => (query: Query, inserted: unknown) =>
+            cb({
+              query,
+              params: data,
+              returning,
+              data: inserted,
+            }),
         ),
       );
     }

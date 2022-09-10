@@ -7,7 +7,7 @@ import {
   insertUser,
   useTestDatabase,
 } from '../test-utils/test-utils';
-import { RelationQuery } from 'pqb';
+import { RelationQuery, Sql } from 'pqb';
 
 describe('hasAndBelongsToMany', () => {
   useTestDatabase();
@@ -186,20 +186,63 @@ describe('hasAndBelongsToMany', () => {
       createdAt: now,
     };
 
-    await db.user.insert({
-      ...userData,
-      chats: {
-        create: [
-          {
-            ...chatData,
-            title: 'title 1',
-          },
-          {
-            ...chatData,
-            title: 'title 2',
-          },
-        ],
+    const query = db.user.insert(
+      {
+        ...userData,
+        chats: {
+          create: [
+            {
+              ...chatData,
+              title: 'title 1',
+            },
+            {
+              ...chatData,
+              title: 'title 2',
+            },
+          ],
+        },
       },
-    });
+      ['id'],
+    );
+
+    const querySpy = jest.spyOn(db.user.adapter, 'query');
+    const arraysSpy = jest.spyOn(db.user.adapter, 'arrays');
+
+    const user = await query;
+    const chatIds = await db.user.chats(user).order({ id: 'ASC' }).pluck('id');
+
+    const [insertUserSql, insertChatsSql] = querySpy.mock.calls.map(
+      (item) => item[0],
+    );
+    const insertChatUserSql = arraysSpy.mock.calls[0][0];
+
+    expectSql(
+      insertUserSql as Sql,
+      `
+        INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
+        VALUES ($1, $2, $3, $4)
+        RETURNING "user"."id"
+      `,
+      ['name', 'password', now, now],
+    );
+
+    expectSql(
+      insertChatsSql as Sql,
+      `
+        INSERT INTO "chat"("updatedAt", "createdAt", "title")
+        VALUES ($1, $2, $3), ($4, $5, $6)
+        RETURNING "chat"."id"
+      `,
+      [now, now, 'title 1', now, now, 'title 2'],
+    );
+
+    expectSql(
+      insertChatUserSql as Sql,
+      `
+        INSERT INTO "chatUser"("userId", "chatId")
+        VALUES ($1, $2), ($3, $4)
+      `,
+      [user.id, chatIds[0], user.id, chatIds[1]],
+    );
   });
 });

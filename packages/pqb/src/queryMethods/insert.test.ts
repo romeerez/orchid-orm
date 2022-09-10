@@ -663,10 +663,14 @@ describe('insert', () => {
           updatedAt: now,
           createdAt: now,
         };
-        const query = User.beforeInsert((q, arg, returning) => {
-          expect(arg).toBe(data);
+        const query = User.beforeInsert(({ query, params, returning }) => {
+          expect(params).toBe(data);
           expect(returning).toEqual(['id']);
-          return q.defaults({ name: 'name from beforeInsert' });
+          return {
+            query: query.defaults({ name: 'name from beforeInsert' }),
+            params: { ...params, password: 'modified password' },
+            returning: ['id', 'name'],
+          };
         }).insert(data as unknown as typeof User.type, ['id']);
 
         expectSql(
@@ -674,9 +678,9 @@ describe('insert', () => {
           `
             INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
             VALUES ($1, $2, $3, $4)
-            RETURNING "user"."id"
+            RETURNING "user"."id", "user"."name"
           `,
-          ['name from beforeInsert', 'password', now, now],
+          ['name from beforeInsert', 'modified password', now, now],
         );
       });
     });
@@ -696,7 +700,12 @@ describe('insert', () => {
 
         const { id } = await query;
 
-        expect(fn.mock.calls[0]).toEqual([query, data, ['id'], { id }]);
+        expect(fn.mock.calls[0][0]).toEqual({
+          query,
+          params: data,
+          returning: ['id'],
+          data: { id },
+        });
       });
     });
   });

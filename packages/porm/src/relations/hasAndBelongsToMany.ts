@@ -40,7 +40,8 @@ export const makeHasAndBelongsToManyMethod = (
     query,
   )}.${associationPrimaryKey}`;
 
-  const subQuery = qb.from(joinTable);
+  const subQuery = qb.clone();
+  subQuery.table = joinTable;
 
   return {
     returns: 'many',
@@ -51,7 +52,19 @@ export const makeHasAndBelongsToManyMethod = (
             [foreignKeyFull]: params[primaryKey],
           }),
         )
-        .beforeInsert(async () => {});
+        .beforeInsert(({ query }) => {
+          return {
+            returning: [associationPrimaryKey],
+            query: query.afterInsert(async ({ data }) => {
+              await subQuery.insert(
+                (data as Record<string, unknown>[]).map((item) => ({
+                  [foreignKey]: params[primaryKey],
+                  [associationForeignKey]: item[associationPrimaryKey],
+                })),
+              );
+            }),
+          };
+        });
     },
     joinQuery: query.whereExists(subQuery, (q) =>
       q

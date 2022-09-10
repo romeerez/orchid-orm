@@ -2143,51 +2143,63 @@ Table.select('id').clear('id')
 
 ### beforeInsert
 
-`beforeInsert` is called in the beginning of `.insert` method, and it should be placed before `.insert`:
+`beforeInsert` is called in the beginning of `.insert` method, and it should be placed before `.insert`.
+
+Argument has such type:
 
 ```ts
-Table
-  .beforeInsert(() => console.log('before insert'))
-  .insert(data)
+Table.beforeInsert((argument: {
+  // type of Query object, in this case it is of type `Table`:
+  query: Query,
+  // this is data passed to the `.insert`:
+  params: object | object[] | { columns: string[], values: RawExpression },
+  // returning * or list of columns passed to the `.insert`:
+  returning?: '*' | string[]
+}) => {
+  // ...
+})
 ```
 
-This should be a synchronous callback.
+`.beforeInsert` is a synchronous callback and should not return Promise.
 
-First argument is a query object and the rest arguments are passed from `.insert`:
+Return type can be `void` or you can return object of the same type as the argument.
 
-```ts
-Table.beforeInsert((query, data, returning) => {
-  query // is the query object
-  data // is the data passed to insert
-  returning // is returning argument, ['id'] in this case
-}).insert(data, ['id'])
-```
+If object is returned, it modifies `.insert` behavior by replacing the query object and params.
 
-`.beforeInsert` can return modified query.
-
-In following example query defaults are modified in beforeInsert and will be used in the insert:
+You can omit properties of returned object to not modify them.
 
 ```ts
-Table.beforeInsert((query) => {
-  return query.defaults({ name: 'default name' })
-}).insert(data)
+Table.beforeInsert((arg) => {
+  return {
+    // set onConflict for the insert
+    query: arg.query.onConflict(...),
+    // you can return changed params object, but remember params can be Array, object and object for raw insert.
+    params: arg.params,
+    // returning can be modified as well, remember that this won't change TS type
+    returning: ['id', 'name'],
+  }
+})
 ```
 
 ### afterInsert
 
 `afterInsert` callback is called after successfully running insert query.
 
-First argument is query object, then `data` and `returning` are arguments of `.insert` method, and the last argument is the result of the insert query.
-
-Callback may return Promise which will be awaited after insert query:
+Argument has such type:
 
 ```ts
-await Table
-  .afterInsert((query, data, returning, inserted) => {
-    query // is the query object
-    data // is the data provided to .insert method
-    returning // is the returning argument of .insert, '*' in this case
-    inserted // is the result of the query, it may be array of objects, single object or number of modified rows
-  })
-  .insert(data, '*')
+Table.afterInsert((argument: {
+  // type of Query object, in this case it is of type `Table`:
+  query: Query,
+  // this is data passed to the `.insert`:
+  params: object | object[] | { columns: string[], values: RawExpression },
+  // returning * or list of columns passed to the `.insert`:
+  returning: '*' | string[] | undefined
+  // data returned from the insert query, the type of data depends on the returning:
+  data: unknown
+}) => {
+  // ...
+})
 ```
+
+Callback may return Promise which will be awaited after insert query.
