@@ -15,9 +15,9 @@ import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { parseRecord } from './then';
 import { QueryData, SelectQueryData } from '../sql';
 import { getQueryAs } from '../utils';
-import { RelationQuery } from '../relations';
+import { isRequiredRelationKey, RelationQueryBase } from '../relations';
 
-type SelectArg<T extends QueryBase> = keyof T['selectable'] | RelationQuery;
+type SelectArg<T extends QueryBase> = keyof T['selectable'] | RelationQueryBase;
 
 type SelectResult<
   T extends Query,
@@ -27,18 +27,16 @@ type SelectResult<
   {
     [Arg in Args[number] as Arg extends keyof T['selectable']
       ? T['selectable'][Arg]['as']
-      : Arg extends RelationQuery
+      : Arg extends RelationQueryBase
       ? Arg['tableAlias'] extends string
         ? Arg['tableAlias']
-        : Arg['table'] extends string
-        ? Arg['table']
         : never
       : never]: Arg extends keyof T['selectable']
       ? T['selectable'][Arg]['column']
-      : Arg extends RelationQuery
+      : Arg extends RelationQueryBase
       ? Arg['returnType'] extends 'all'
         ? ArrayOfColumnsObjects<Arg['result']>
-        : Arg['requiredRelation'] extends true
+        : Arg[isRequiredRelationKey] extends true
         ? ColumnsObject<Arg['result']>
         : NullableColumn<ColumnsObject<Arg['result']>>
       : never;
@@ -157,7 +155,7 @@ export class Select {
           if (parser) addParserToQuery(q.query, item, parser);
         }
       } else {
-        const relation = item as RelationQuery;
+        const relation = item as RelationQueryBase;
         const parsers = relation.query?.parsers || relation.columnsParsers;
         if (parsers) {
           addParserToQuery(q.query, getQueryAs(relation), (input) => {

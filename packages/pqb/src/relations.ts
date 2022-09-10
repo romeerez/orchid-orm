@@ -70,10 +70,26 @@ export type Relation =
 
 export type RelationsBase = Record<never, Relation>;
 
+export type relationQueryKey = typeof relationQueryKey;
+export const relationQueryKey = Symbol('relationQuery');
+
+export type isRequiredRelationKey = typeof isRequiredRelationKey;
+export const isRequiredRelationKey = Symbol('isRequiredRelation');
+
+export type RelationQueryBase = Query & {
+  [relationQueryKey]: true;
+  [isRequiredRelationKey]: boolean;
+};
+
 export type RelationQuery<
+  RelationName extends PropertyKey = string,
   Params extends Record<string, unknown> = never,
   Populate extends string = never,
   T extends Query = Query,
   Required extends boolean = boolean,
-> = ((params: Params) => T & { [defaultsKey]: Pick<T['type'], Populate> }) &
-  T & { requiredRelation: Required };
+  Q extends Query = Omit<T, 'tableAlias'> & {
+    tableAlias: RelationName extends string ? RelationName : never;
+    [isRequiredRelationKey]: Required;
+    [relationQueryKey]: true;
+  },
+> = ((params: Params) => Q & { [defaultsKey]: Pick<T['type'], Populate> }) & Q;

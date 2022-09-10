@@ -8,6 +8,7 @@ import {
   QueryWithTable,
   RelationQuery,
   SetQueryReturnsAll,
+  SetQueryReturnsOne,
   SetQueryReturnsOneOrUndefined,
 } from 'pqb';
 import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
@@ -57,16 +58,20 @@ export type RelationInfo<
 export type MapRelation<
   T extends Model,
   Relations extends RelationThunks,
-  Relation extends RelationThunk,
+  RelationName extends keyof Relations,
+  Relation extends RelationThunk = Relations[RelationName],
   Info extends {
     params: Record<string, unknown>;
     populate: string;
   } = RelationInfo<T, Relations, Relation>,
 > = RelationQuery<
+  RelationName,
   Info['params'],
   Info['populate'],
   Relation['returns'] extends 'one'
-    ? SetQueryReturnsOneOrUndefined<RelationScopeOrModel<Relation>>
+    ? Relation['options']['required'] extends true
+      ? SetQueryReturnsOne<RelationScopeOrModel<Relation>>
+      : SetQueryReturnsOneOrUndefined<RelationScopeOrModel<Relation>>
     : SetQueryReturnsAll<RelationScopeOrModel<Relation>>,
   Relation['options']['required'] extends boolean
     ? Relation['options']['required']
@@ -76,11 +81,7 @@ export type MapRelation<
 export type MapRelations<T extends Model> = 'relations' extends keyof T
   ? T['relations'] extends RelationThunks
     ? {
-        [K in keyof T['relations']]: MapRelation<
-          T,
-          T['relations'],
-          T['relations'][K]
-        >;
+        [K in keyof T['relations']]: MapRelation<T, T['relations'], K>;
       }
     : // eslint-disable-next-line @typescript-eslint/ban-types
       {}

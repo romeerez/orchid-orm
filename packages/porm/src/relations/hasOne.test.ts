@@ -13,11 +13,17 @@ describe('hasOne', () => {
   useTestDatabase();
 
   it('should have method to query related data', async () => {
-    const profileQuery = db.profile.take();
+    const profileQuery = db.profile.takeOrThrow();
 
     const eq: AssertEqual<
       typeof db.user.profile,
-      RelationQuery<{ id: number }, 'userId', typeof profileQuery, true>
+      RelationQuery<
+        'profile',
+        { id: number },
+        'userId',
+        typeof profileQuery,
+        true
+      >
     > = true;
 
     expect(eq).toBe(true);
@@ -212,11 +218,17 @@ describe('hasOne', () => {
 
 describe('hasOne through', () => {
   it('should have method to query related data', async () => {
-    const profileQuery = db.profile.take();
+    const profileQuery = db.profile.takeOrThrow();
 
     const eq: AssertEqual<
       typeof db.message.profile,
-      RelationQuery<{ authorId: number }, never, typeof profileQuery, true>
+      RelationQuery<
+        'profile',
+        { authorId: number },
+        never,
+        typeof profileQuery,
+        true
+      >
     > = true;
 
     expect(eq).toBe(true);

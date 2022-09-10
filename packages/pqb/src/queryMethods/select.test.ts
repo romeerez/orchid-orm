@@ -128,6 +128,7 @@ describe('selectMethods', () => {
           )[key];
         },
       }) as unknown as RelationQuery<
+        'profile',
         Record<string, unknown>,
         never,
         typeof profileQuery
@@ -172,6 +173,7 @@ describe('selectMethods', () => {
         const query = q.select(
           'id',
           profileRelation as unknown as RelationQuery<
+            'profile',
             Record<string, unknown>,
             never,
             typeof profileRelationQuery,
@@ -213,6 +215,7 @@ describe('selectMethods', () => {
           )[key];
         },
       }) as unknown as RelationQuery<
+        'messages',
         Record<string, unknown>,
         never,
         typeof messageRelationQuery

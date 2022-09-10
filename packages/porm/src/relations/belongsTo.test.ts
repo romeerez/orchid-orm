@@ -7,18 +7,17 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
-import { Chat, Message, User } from 'pqb/src/test-utils';
 
 describe('belongsTo', () => {
   useTestDatabase();
 
   it('should have method to query related data', async () => {
-    const userQuery = db.user.take();
+    const userQuery = db.user.takeOrThrow();
     type UserQuery = typeof userQuery;
 
     const eq: AssertEqual<
       typeof db.profile.user,
-      RelationQuery<{ userId: number }, never, UserQuery, true>
+      RelationQuery<'user', { userId: number }, never, UserQuery, true>
     > = true;
 
     expect(eq).toBe(true);
@@ -111,11 +110,18 @@ describe('belongsTo', () => {
     );
   });
 
-  it('should be selectable', () => {
-    const query = db.profile.select(
-      'id',
-      db.profile.user.where({ name: 'name' }),
-    );
+  it('should be selectable', async () => {
+    const query = db.profile.select('id', db.profile.user.select('name'));
+
+    const userQuery = db.profile.user;
+    userQuery.table;
+
+    const eq: AssertEqual<
+      Awaited<typeof query>,
+      { id: number; user: { name: string } }[]
+    > = true;
+    expect(eq).toBe(true);
+
     expectSql(
       query.toSql(),
       `
@@ -173,7 +179,7 @@ describe('belongsTo', () => {
 
     const { id, chatId, authorId } = await query;
 
-    const message = await Message.find(id);
+    const message = await db.message.find(id);
     expect(message).toEqual({
       id,
       chatId,
@@ -181,13 +187,13 @@ describe('belongsTo', () => {
       ...messageData,
     });
 
-    const chat = await Chat.find(chatId);
+    const chat = await db.chat.find(chatId);
     expect(chat).toEqual({
       id: chatId,
       ...chatData,
     });
 
-    const user = await User.find(authorId);
+    const user = await db.user.find(authorId);
     expect(user).toEqual({
       id: authorId,
       active: null,

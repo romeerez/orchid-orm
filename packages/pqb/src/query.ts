@@ -121,7 +121,7 @@ type QueryThen<
   : never;
 
 export type AddQuerySelect<
-  T extends Query,
+  T extends Pick<Query, 'hasSelect' | 'result' | 'then' | 'returnType'>,
   Result extends ColumnsShape,
 > = T['hasSelect'] extends false
   ? Omit<T, 'hasSelect' | 'result' | 'then'> & {
