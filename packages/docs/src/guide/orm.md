@@ -89,6 +89,7 @@ Two models can have relation with each other without circular dependency problem
 import { Model } from 'porm'
 import { ProfileModel } from './profile.model'
 
+export type User = UserModel['columns']['type']
 export class UserModel extends Model {
   table = 'user'
   columns = this.setColumns((t) => ({
@@ -108,6 +109,7 @@ export class UserModel extends Model {
 import { Model } from 'porm'
 import { UserModel } from './user.model'
 
+export type Profile = ProfileModel['columns']['type']
 export class ProfileModel extends Model {
   table = 'profile'
   columns = this.setColumns((t) => ({
@@ -134,7 +136,8 @@ For example, `Book` belongs to `Author`:
 ```ts
 import { Model } from 'porm'
 
-export class Author extends Model {
+export type Author = AuthorModel['columns']['type']
+export class AuthorModel extends Model {
   table = 'author'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -142,7 +145,8 @@ export class Author extends Model {
   }))
 }
 
-export class Book extends Model {
+export type Book = BookModel['columns']['type']
+export class BookModel extends Model {
   table = 'book'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -158,7 +162,7 @@ export class Book extends Model {
       // primaryKey is a column of Author to connect with
       primaryKey: 'id',
       // foreignKey is a column of Book to use
-      foreignKey: 'bookId',
+      foreignKey: 'authorId',
     })
   }
 }
@@ -166,16 +170,16 @@ export class Book extends Model {
 
 ### belongsTo queries
 
-Query author of the book when already having a book record:
+Query author of the book when we already have a book record:
 
 ```ts
 const book = await db.book.find(1).takeOrThrow()
 
 // type of author can be undefined if relation option required is not true:
-const author = await db.book.author(book)
+const author = await db.book.author(book) // type of argument is { authorId: number }
 
 // additional query methods can be applied:
-const authorWithName = await db.book.author(book).where({ name: 'Vasyl' })
+const authorWithSpecificName = await db.book.author(book).where({ name: 'Vasyl' })
 ```
 
 Relation can be used in `.whereExists`, following query will find all books where related authors exists:
@@ -185,7 +189,7 @@ await db.book.whereExists('author')
 
 // additional query methods can be applied in a callback:
 await db.book.whereExists('author', (q) =>
-  q.where({ 'author.name': 'Alex' })
+  q.where({ 'author.name': 'Olexiy' })
 )
 ```
 
@@ -201,7 +205,7 @@ await db.book.join('author').select(
 
 // additional query methods can be applied in a callback:
 await db.book.join('author', (q) =>
-  q.where({ 'author.name': 'Alex' })
+  q.where({ 'author.name': 'Olexiy' })
 ).select('title', 'author.name')
 ```
 
@@ -210,7 +214,11 @@ Relation can be added to select and a related object will be added to each recor
 If there is no related record in the database it will be returned as `null`.
 
 ```ts
-const bookWithAuthor = await db.book.select(
+type Result = Pick<Book, 'id' | 'title'> & {
+  author: Pick<Author, 'id', 'name'>
+}
+
+const bookWithAuthor: Result = await db.book.select(
   'id',
   'title',
   db.book.author.select('id', 'name'),
@@ -223,24 +231,381 @@ bookWithAuthor.title
 bookWithAuthor.author.id
 bookWithAuthor.author.name
 
-// author can be null unless relation has option required: true
+// author can be null unless relation has option required set to true
 bookWithAuthor.author?.id
 ```
 
 ### belongsTo nested insert
 
-Insert book with author all at once (two queries will run in transaction):
+Insert book with author all at once:
+
+This will run two insert queries in a transaction.
 
 ```ts
-const { id } = await db.book.insert(
+const result: Pick<Book, 'id' | 'authorId'> = await db.book.insert(
   {
     title: 'Book title',
     author: {
       create: {
-        name: 'Peter',
+        name: 'Author',
       }
     }
   },
+  ['id', 'authorId']
+)
+```
+
+Insert many books with authors:
+
+This will also run only two insert queries in a transaction.
+
+```ts
+const result: Pick<Book, 'id' | 'authorId'>[] = await db.book.insert(
+  [
+    {
+      title: 'Book 1',
+      author: {
+        create: {
+          name: 'Author 1',
+        }
+      }
+    },
+    {
+      title: 'Book 2',
+      author: {
+        create: {
+          name: 'Author 2',
+        }
+      }
+    },
+  ],
+  ['id', 'authorId']
+)
+```
+
+## hasOne
+
+`hasOne` association indicates that one other model has a reference to this model. That model can be fetched through this association.
+
+This association adds all the same queries and abilities as `belongsTo`, only difference is the reference column is located in another table.
+
+For example, if each supplier in your application has only one account, you'd declare the supplier model like this:
+
+```ts
+import { Model } from 'porm'
+
+export type Account = AccountModel['columns']['type']
+export class AccountModel extends Model {
+  table = 'account'
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    name: t.text(),
+    // Account has a column pointing to Supplier:
+    supplierId: t.integer(),
+  }))
+}
+
+export type Supplier = SupplierModel['columns']['type']
+export class SupplierModel extends Model {
+  table = 'supplier'
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    brand: t.text(),
+    // here are no reference columns for an Account
+  }))
+  
+  relations = {
+    account: this.hasOne(() => Account, {
+      // required is offecting on TS type of returned record
+      required: true,
+      // primaryKey is a column of Supplier to use
+      primaryKey: 'id',
+      // foreignKey is a column of Account to connect with
+      foreignKey: 'supplierId',
+    })
+  }
+}
+```
+
+### hasOne queries
+
+Query account of the supplier when we already have a supplier record:
+
+```ts
+const supplier = await db.supplier.find(1).takeOrThrow()
+
+// type of account can be undefined if relation option required is not true
+const account = await db.supplier.account(supplier) // type of argument is { id: number }
+
+// additional query methods can be applied:
+const accountWithSpecificName = await db.supplier.account(supplier).where({ name: 'Andriy' })
+```
+
+Relation can be used in `.whereExists`, following query will find all suppliers where related account exists:
+
+```ts
+await db.supplier.whereExists('account')
+
+// additional query methods can be applied in a callback:
+await db.supplier.whereExists('account', (q) =>
+  q.where({ 'account.name': 'Dmytro' })
+)
+```
+
+Relation can be used in `.join`, following query will join and select account name:
+
+```ts
+await db.supplier.join('account').select(
+  // column without table is for current book table
+  'id',
+  // select column of joined table
+  'account.name',
+)
+
+// additional query methods can be applied in a callback:
+await db.supplier.join('account', (q) =>
+  q.where({ 'account.name': 'Dmytro' })
+).select('id', 'account.name')
+```
+
+Relation can be added to select and a related object will be added to each record.
+
+If there is no related record in the database it will be returned as `null`.
+
+```ts
+type Result = Pick<Supplier, 'id'> & {
+  account: Pick<Accunt, 'id' | 'name'>
+}
+
+const supplierWithAccount: Result = await db.supplier.select(
+  'id',
+  db.supplier.account.select('id', 'name'),
+).takeOrThrow()
+
+// result has selected columns as usually:
+supplierWithAccount.id
+
+// result has object `account` with its columns:
+supplierWithAccount.account.id
+supplierWithAccount.account.name
+
+// account can be null unless relation has option required set to true
+supplierWithAccount.account?.id
+```
+
+### hasOne nested insert
+
+Insert supplier with account all at once:
+
+This will run two insert queries in a transaction.
+
+```ts
+const result: Pick<Supplier, 'id'> = db.supplier.insert(
+  {
+    brand: 'Supplier 1',
+    account: {
+      create: {
+        name: 'Account 1',
+      }
+    }
+  },
+  ['id']
+)
+```
+
+Insert many suppliers with authors:
+
+This will also run only two insert queries in a transaction.
+
+```ts
+const result: Pick<Supplier, 'id'>[] = await db.supplier.insert(
+  [
+    {
+      brand: 'Supplier 1',
+      account: {
+        create: {
+          name: 'Author 1',
+        }
+      }
+    },
+    {
+      brand: 'Supplier 2',
+      account: {
+        create: {
+          name: 'Author 2',
+        }
+      }
+    },
+  ],
+  ['id']
+)
+```
+
+## hasMany
+
+A `hasMany` association is similar to `hasOne`, but indicates a one-to-many connection with another model.
+You'll often find this association on the "other side" of a `belongsTo` association.
+This association indicates that each instance of the model has zero or more instances of another model.
+
+For example, in an application containing authors and books, the author model could be declared like this:
+
+```ts
+import { Model } from 'porm'
+
+export type Author = AuthorModel['columns']['type']
+export class AuthorModel extends Model {
+  table = 'author'
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    name: t.text(),
+  }))
+  
+  relations = {
+    books: this.hasMany(() => Book, {
+      // primaryKey is a column of Author to use
+      primaryKey: 'id',
+      // foreignKey is a column of Book to connect with
+      foreignKey: 'authorId',
+    })
+  }
+}
+
+export type Book = BookModel['columns']['type']
+export class BookModel extends Model {
+  table = 'book'
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    title: t.text(),
+    // book has a column pointing to author table
+    authorId: t.integer(),
+  }))
+}
+```
+
+### hasMany queries
+
+Query books of the author when we already have an author record:
+
+```ts
+const author = await db.author.find(1).takeOrThrow()
+
+const books = await db.author.books(author) // type of argument is { id: number }
+
+// additional query methods can be applied:
+const booksWithSpecificTitle = await db.author.books(author).where({ title: 'Kobzar' })
+```
+
+Relation can be used in `.whereExists`, following query will find all authors where at least one book exists:
+
+```ts
+await db.author.whereExists('books')
+
+// additional query methods can be applied in a callback:
+await db.author.whereExists('books', (q) =>
+  q.where({ 'books.title': 'Eneida' })
+)
+```
+
+Relation can be used in `.join`, but it is not suggested for `hasMany` relation because author columns will be duplicated for each book:
+
+```ts
+await db.author.join('books').select(
+  // column without table is for current author table
+  'name',
+  // select column of joined table
+  'books.title',
+)
+
+// additional query methods can be applied in a callback:
+await db.author.join('books', (q) =>
+  q.where({ 'books.title': 'Kamenyari' })
+).select('name', 'books.title')
+```
+
+Relation can be added to select and a related array of object will be added to each record.
+
+This works better than `join` because it won't lead to duplicative data.
+
+```ts
+type Result = Pick<Author, 'id' | 'name'> & {
+  books: Pick<Book, 'id' | 'title'>[]
+}
+
+const authorWithBooks: Result = await db.author.select(
+  'id',
+  'name',
+  db.author.books.select('id', 'title'),
+).takeOrThrow()
+
+// result has selected columns as usually:
+authorWithBooks.name
+
+// result has array `books` with object:
+authorWithBooks.books.forEach((book) => {
+  book.id
+  book.title
+})
+```
+
+### hasMany nested insert
+
+Insert author with books all at once:
+
+This will run two insert queries in a transaction.
+
+```ts
+const result: Pick<Author, 'id'> = await db.author.insert(
+  {
+    name: 'Author',
+    books: {
+      create: [
+        {
+          title: 'Book 1',
+        },
+        {
+          title: 'Book 2',
+        },
+      ]
+    }
+  },
+  ['id']
+)
+```
+
+Insert many authors with books:
+
+This will also run only two insert queries in a transaction.
+
+```ts
+const result: Pick<Author, 'id'>[] = await db.author.insert(
+  [
+    {
+      name: 'Author 1',
+      books: {
+        create: [
+          {
+            title: 'Book 1',
+          },
+          {
+            title: 'Book 2',
+          },
+        ],
+      },
+    },
+    {
+      name: 'Author 2',
+      books: {
+        create: [
+          {
+            title: 'Book 3',
+          },
+          {
+            title: 'Book 4',
+          },
+        ],
+      }
+    },
+  ],
   ['id']
 )
 ```
