@@ -1,6 +1,12 @@
 import { RelationData, RelationThunkBase } from './relations';
 import { Model } from '../model';
-import { getQueryAs, HasAndBelongsToManyRelation, Query } from 'pqb';
+import {
+  getQueryAs,
+  HasAndBelongsToManyRelation,
+  HasManyNestedInsert,
+  InsertData,
+  Query,
+} from 'pqb';
 
 export interface HasAndBelongsToMany extends RelationThunkBase {
   type: 'hasAndBelongsToMany';
@@ -45,27 +51,44 @@ export const makeHasAndBelongsToManyMethod = (
 
   return {
     returns: 'many',
-    method: (params: Record<string, unknown>) => {
-      return query
-        .whereExists(subQuery, (q) =>
-          q.on(associationForeignKeyFull, associationPrimaryKeyFull).where({
-            [foreignKeyFull]: params[primaryKey],
-          }),
-        )
-        .beforeInsert(({ query }) => {
-          return {
-            returning: [associationPrimaryKey],
-            query: query.afterInsert(async ({ data }) => {
-              await subQuery.insert(
-                (data as Record<string, unknown>[]).map((item) => ({
-                  [foreignKey]: params[primaryKey],
-                  [associationForeignKey]: item[associationPrimaryKey],
-                })),
-              );
-            }),
-          };
-        });
+    method(params: Record<string, unknown>) {
+      return query.whereExists(subQuery, (q) =>
+        q.on(associationForeignKeyFull, associationPrimaryKeyFull).where({
+          [foreignKeyFull]: params[primaryKey],
+        }),
+      );
     },
+    nestedInsert: (async (data) => {
+      const allKeys = data as unknown as [
+        selfData: Record<string, unknown>,
+        relationKeys: Record<string, unknown>[],
+      ][];
+
+      const create = data.filter(([, relationData]) => relationData.create);
+
+      if (create.length) {
+        const result = await query.insert(
+          create.flatMap(([, { create }]) => create) as InsertData<Query>[],
+          [associationPrimaryKey],
+        );
+        let pos = 0;
+        create.forEach(([, data], index) => {
+          const len = data.create.length;
+          allKeys[index][1] = result.slice(pos, pos + len);
+          pos += len;
+        });
+      }
+
+      await subQuery.insert(
+        allKeys.flatMap(([selfData, relationKeys]) => {
+          const selfKey = selfData[primaryKey];
+          return relationKeys.map((relationData) => ({
+            [foreignKey]: selfKey,
+            [associationForeignKey]: relationData[associationPrimaryKey],
+          }));
+        }),
+      );
+    }) as HasManyNestedInsert,
     joinQuery: query.whereExists(subQuery, (q) =>
       q
         .on(associationForeignKeyFull, associationPrimaryKeyFull)

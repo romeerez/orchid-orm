@@ -5,7 +5,14 @@ import {
   RelationThunks,
 } from './relations';
 import { Model } from '../model';
-import { addQueryOn, HasManyRelation, Query, Relation } from 'pqb';
+import {
+  addQueryOn,
+  HasManyNestedInsert,
+  HasManyRelation,
+  InsertData,
+  Query,
+  Relation,
+} from 'pqb';
 
 export interface HasMany extends RelationThunkBase {
   type: 'hasMany';
@@ -70,6 +77,7 @@ export const makeHasManyMethod = (
           whereExistsCallback,
         );
       },
+      nestedInsert: undefined,
       joinQuery: (query.whereExists as (arg: Query, cb: () => Query) => Query)(
         throughRelation.joinQuery,
         whereExistsCallback,
@@ -86,6 +94,20 @@ export const makeHasManyMethod = (
       const values = { [foreignKey]: params[primaryKey] };
       return query.where(values)._defaults(values);
     },
+    nestedInsert: (async (data) => {
+      const create = data.filter(([, relationData]) => relationData.create);
+
+      if (create.length) {
+        await query.insert(
+          create.flatMap(([selfData, { create }]) =>
+            create.map((item) => ({
+              [foreignKey]: selfData[primaryKey],
+              ...item,
+            })),
+          ) as InsertData<Query>[],
+        );
+      }
+    }) as HasManyNestedInsert,
     joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),
     primaryKey,
   };

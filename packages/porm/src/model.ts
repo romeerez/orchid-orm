@@ -4,43 +4,13 @@ import {
   columnTypes,
   ColumnTypes,
   Db,
-  defaultsKey,
   Query,
 } from 'pqb';
-import {
-  MapRelations,
-  RelationInfo,
-  RelationThunks,
-} from './relations/relations';
+import { MapRelations, Relation, RelationThunks } from './relations/relations';
 
 export type ModelClass<T extends Model = Model> = new () => T;
 
 export type ModelClasses = Record<string, ModelClass>;
-
-type Relation<
-  T extends Model,
-  Relations extends RelationThunks,
-  K extends keyof Relations,
-  M extends Query = DbModel<ReturnType<Relations[K]['fn']>>,
-  Defaults extends string = RelationInfo<
-    T,
-    Relations,
-    Relations[K]
-  >['populate'],
-> = {
-  type: Relations[K]['type'];
-  key: K;
-  model: M;
-  joinQuery: Query;
-  defaults: Defaults;
-  nestedCreateQuery: [Defaults] extends [never]
-    ? M
-    : (M[defaultsKey] extends undefined ? Omit<M, defaultsKey> : M) & {
-        [defaultsKey]: Defaults;
-      };
-  primaryKey: string;
-  options: Relations[K]['options'];
-};
 
 export type ModelToDb<
   T extends ModelClass,

@@ -6,8 +6,8 @@ import {
   insertUser,
   useTestDatabase,
 } from '../test-utils/test-utils';
+import { User, Profile } from '../test-utils/test-models';
 import { RelationQuery } from 'pqb';
-import { Profile, User } from 'pqb/src/test-utils';
 
 describe('hasOne', () => {
   useTestDatabase();
@@ -171,47 +171,116 @@ describe('hasOne', () => {
     );
   });
 
-  it('should support create', async () => {
+  describe('insert', () => {
     const now = new Date();
     const userData = {
-      name: 'name',
       password: 'password',
       updatedAt: now,
       createdAt: now,
     };
 
     const profileData = {
-      bio: 'bio',
       updatedAt: now,
       createdAt: now,
     };
 
-    const query = db.user.insert(
-      {
+    const checkUserAndProfile = ({
+      user,
+      profile,
+      name,
+      bio,
+    }: {
+      user: User;
+      profile: Profile;
+      name: string;
+      bio: string;
+    }) => {
+      expect(user).toEqual({
+        id: user.id,
+        name,
+        active: null,
+        age: null,
+        data: null,
+        picture: null,
         ...userData,
-        profile: {
-          create: profileData,
-        },
-      },
-      ['id'],
-    );
+      });
 
-    const { id } = await query;
-    const user = await User.find(id);
-    expect(user).toEqual({
-      id,
-      active: null,
-      age: null,
-      data: null,
-      picture: null,
-      ...userData,
+      expect(profile).toEqual({
+        id: profile.id,
+        bio,
+        userId: user.id,
+        ...profileData,
+      });
+    };
+
+    it('should support create', async () => {
+      const query = db.user.insert(
+        {
+          name: 'user',
+          ...userData,
+          profile: {
+            create: {
+              bio: 'profile',
+              ...profileData,
+            },
+          },
+        },
+        '*',
+      );
+
+      const user = await query;
+      const profile = await db.profile.findBy({ userId: user.id });
+
+      checkUserAndProfile({ user, profile, name: 'user', bio: 'profile' });
     });
 
-    const profile = await Profile.findBy({ userId: id });
-    expect(profile).toEqual({
-      id: profile.id,
-      userId: id,
-      ...profileData,
+    it('should support create many', async () => {
+      const query = db.user.insert(
+        [
+          {
+            name: 'user 1',
+            ...userData,
+            profile: {
+              create: {
+                bio: 'profile 1',
+                ...profileData,
+              },
+            },
+          },
+          {
+            name: 'user 2',
+            ...userData,
+            profile: {
+              create: {
+                bio: 'profile 2',
+                ...profileData,
+              },
+            },
+          },
+        ],
+        '*',
+      );
+
+      const users = await query;
+      const profiles = await db.profile
+        .where({
+          userId: { in: users.map((user) => user.id) },
+        })
+        .order({ id: 'ASC' });
+
+      checkUserAndProfile({
+        user: users[0],
+        profile: profiles[0],
+        name: 'user 1',
+        bio: 'profile 1',
+      });
+
+      checkUserAndProfile({
+        user: users[1],
+        profile: profiles[1],
+        name: 'user 2',
+        bio: 'profile 2',
+      });
     });
   });
 });

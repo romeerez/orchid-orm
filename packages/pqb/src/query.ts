@@ -57,8 +57,7 @@ export type Query = QueryMethods & {
   hasSelect: boolean;
   selectable: SelectableBase;
   returnType: QueryReturnType;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  then: any;
+  then: ThenResult<unknown>;
   tableAlias: string | undefined;
   joinedTables: Record<string, Pick<Query, 'result' | 'tableAlias' | 'table'>>;
   windows: PropertyKey[];

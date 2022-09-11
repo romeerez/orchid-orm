@@ -164,6 +164,8 @@ export class Book extends Model {
 }
 ```
 
+### belongsTo queries
+
 Query author of the book when already having a book record:
 
 ```ts
@@ -224,6 +226,8 @@ bookWithAuthor.author.name
 // author can be null unless relation has option required: true
 bookWithAuthor.author?.id
 ```
+
+### belongsTo nested insert
 
 Insert book with author all at once (two queries will run in transaction):
 

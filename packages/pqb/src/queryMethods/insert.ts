@@ -2,7 +2,6 @@ import {
   AddQuerySelect,
   defaultsKey,
   Query,
-  QueryReturnType,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
   SetQueryReturnsVoid,
@@ -14,12 +13,15 @@ import {
 } from '../queryDataUtils';
 import { isRaw, RawExpression } from '../common';
 import {
+  BelongsToNestedInsert,
   BelongsToRelation,
+  HasOneNestedInsert,
   HasOneRelation,
+  NestedInsertItem,
+  NestedInsertOneItem,
   Relation,
-  RelationQuery,
 } from '../relations';
-import { MaybeArray, noop, SetOptional } from '../utils';
+import { MaybeArray, SetOptional } from '../utils';
 import { InsertQueryData } from '../sql';
 
 export type ReturningArg<T extends Query> = (keyof T['shape'])[] | '*';
@@ -113,18 +115,15 @@ type OnConflictArg<T extends Query> =
   | (keyof T['shape'])[]
   | RawExpression;
 
-type PrependRelationTuple = [
-  relationName: string,
-  rowIndex: number,
-  columnIndex: number,
-  data: Record<string, unknown>,
-];
+type PrependRelations = Record<
+  string,
+  [rowIndex: number, columnIndex: number, data: Record<string, unknown>][]
+>;
 
-type AppendRelationTuple = [
-  relationName: string,
-  rowIndex: number,
-  data: Record<string, unknown>,
-];
+type AppendRelations = Record<
+  string,
+  [rowIndex: number, data: NestedInsertItem][]
+>;
 
 type BeforeInsertCallback<T extends Query> = (arg: {
   query: T;
@@ -153,8 +152,8 @@ const processInsertItem = (
   item: Record<string, unknown>,
   rowIndex: number,
   relations: Record<string, Relation>,
-  prependRelations: PrependRelationTuple[],
-  appendRelations: AppendRelationTuple[],
+  prependRelations: PrependRelations,
+  appendRelations: AppendRelations,
   requiredReturning: Record<string, boolean>,
   columns: string[],
   columnsMap: Record<string, number>,
@@ -171,8 +170,9 @@ const processInsertItem = (
           columns.push(foreignKey);
         }
 
-        prependRelations.push([
-          key,
+        if (!prependRelations[key]) prependRelations[key] = [];
+
+        prependRelations[key].push([
           rowIndex,
           columnIndex,
           item[key] as Record<string, unknown>,
@@ -180,11 +180,9 @@ const processInsertItem = (
       } else {
         requiredReturning[relations[key].primaryKey] = true;
 
-        appendRelations.push([
-          key,
-          rowIndex,
-          item[key] as Record<string, unknown>,
-        ]);
+        if (!appendRelations[key]) appendRelations[key] = [];
+
+        appendRelations[key].push([rowIndex, item[key] as NestedInsertItem]);
       }
     } else if (columnsMap[key] === undefined) {
       columnsMap[key] = columns.length;
@@ -289,8 +287,8 @@ export class Insert {
     }
 
     let columns: string[];
-    const prependRelations: PrependRelationTuple[] = [];
-    const appendRelations: AppendRelationTuple[] = [];
+    const prependRelations: PrependRelations = {};
+    const appendRelations: AppendRelations = {};
     const requiredReturning: Record<string, boolean> = {};
     const relations = (this as unknown as Query).relations as unknown as Record<
       string,
@@ -354,29 +352,33 @@ export class Insert {
       }
     }
 
-    if (prependRelations.length) {
+    const prependRelationsKeys = Object.keys(prependRelations);
+    if (prependRelationsKeys.length) {
       pushQueryArray(
         q,
         'beforeQuery',
-        prependRelations.map(([relationName, rowIndex, columnIndex, data]) => {
-          const relation = relations[relationName];
-          const primaryKey = (relation as BelongsToRelation).options.primaryKey;
-          if (data.create) {
-            return async () => {
-              const result = await relation.model.insert(
-                data.create as InsertData<Query>,
-                [primaryKey],
-              );
-              const row = (values as unknown[][])[rowIndex];
-              row[columnIndex] = result[primaryKey];
-            };
-          }
-          return noop;
+        prependRelationsKeys.map((relationName) => {
+          return async () => {
+            const relationData = prependRelations[relationName];
+            const relation = relations[relationName];
+
+            const inserted = await (
+              relation.nestedInsert as BelongsToNestedInsert
+            )(relationData.map(([, , data]) => data as NestedInsertOneItem));
+
+            const primaryKey = (relation as BelongsToRelation).options
+              .primaryKey;
+            relationData.forEach(([rowIndex, columnIndex], index) => {
+              (values as unknown[][])[rowIndex][columnIndex] =
+                inserted[index][primaryKey];
+            });
+          };
         }),
       );
     }
 
-    if (appendRelations.length) {
+    const appendRelationsKeys = Object.keys(appendRelations);
+    if (appendRelationsKeys.length) {
       if (returning !== '*') {
         const requiredColumns = Object.keys(requiredReturning);
 
@@ -392,19 +394,22 @@ export class Insert {
       pushQueryArray(
         q,
         'afterQuery',
-        appendRelations.map(([relationName, rowIndex, data]) => {
-          if (data.create) {
-            return async (returnType: QueryReturnType, inserted: unknown) => {
-              await (this as unknown as Record<string, RelationQuery>)
-                [relationName](
-                  (returnType === 'all'
-                    ? (inserted as unknown[])[rowIndex]
-                    : inserted) as never,
-                )
-                .insert(data.create as InsertData<Query>);
-            };
-          }
-          return noop;
+        appendRelationsKeys.map((relationName) => {
+          return async (q: Query, result: unknown) => {
+            const all = (q.returnType === 'all' ? result : [result]) as Record<
+              string,
+              unknown
+            >[];
+
+            await (
+              relations[relationName].nestedInsert as HasOneNestedInsert
+            )?.(
+              appendRelations[relationName].map(([rowIndex, data]) => [
+                all[rowIndex],
+                data as NestedInsertOneItem,
+              ]),
+            );
+          };
         }),
       );
     }

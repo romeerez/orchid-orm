@@ -111,14 +111,17 @@ describe('belongsTo', () => {
   });
 
   it('should be selectable', async () => {
-    const query = db.profile.select('id', db.profile.user.select('name'));
+    const query = db.profile.select(
+      'id',
+      db.profile.user.select('id', 'name').where({ 'user.name': 'name' }),
+    );
 
     const userQuery = db.profile.user;
     userQuery.table;
 
     const eq: AssertEqual<
       Awaited<typeof query>,
-      { id: number; user: { name: string } }[]
+      { id: number; user: { id: number; name: string } }[]
     > = true;
     expect(eq).toBe(true);
 
@@ -130,7 +133,7 @@ describe('belongsTo', () => {
           (
             SELECT row_to_json("t".*) AS "json"
             FROM (
-              SELECT "user".* FROM "user"
+              SELECT "user"."id", "user"."name" FROM "user"
               WHERE "user"."id" = "profile"."userId"
                 AND "user"."name" = $1
               LIMIT $2
@@ -142,65 +145,159 @@ describe('belongsTo', () => {
     );
   });
 
-  it('should support create', async () => {
+  describe('insert', () => {
     const now = new Date();
     const messageData = {
-      text: 'text',
       meta: null,
       updatedAt: now,
       createdAt: now,
     };
 
     const chatData = {
-      title: 'title',
       updatedAt: now,
       createdAt: now,
     };
 
     const userData = {
-      name: 'name',
       password: 'password',
       updatedAt: now,
       createdAt: now,
     };
 
-    const query = db.message.insert(
-      {
-        ...messageData,
-        chat: {
-          create: chatData,
-        },
-        user: {
-          create: userData,
-        },
-      },
-      ['id', 'chatId', 'authorId'],
-    );
-
-    const { id, chatId, authorId } = await query;
-
-    const message = await db.message.find(id);
-    expect(message).toEqual({
-      id,
+    const checkInsertedResults = async ({
+      messageId,
       chatId,
       authorId,
-      ...messageData,
+      text,
+      title,
+      name,
+    }: {
+      messageId: number;
+      chatId: number;
+      authorId: number;
+      text: string;
+      title: string;
+      name: string;
+    }) => {
+      const message = await db.message.find(messageId);
+      expect(message).toEqual({
+        id: messageId,
+        chatId,
+        authorId,
+        text,
+        ...messageData,
+      });
+
+      const chat = await db.chat.find(chatId);
+      expect(chat).toEqual({
+        id: chatId,
+        title,
+        ...chatData,
+      });
+
+      const user = await db.user.find(authorId);
+      expect(user).toEqual({
+        id: authorId,
+        active: null,
+        age: null,
+        data: null,
+        picture: null,
+        name,
+        ...userData,
+      });
+    };
+
+    it('should support create', async () => {
+      const query = db.message.insert(
+        {
+          text: 'text',
+          ...messageData,
+          chat: {
+            create: {
+              title: 'title',
+              ...chatData,
+            },
+          },
+          user: {
+            create: {
+              name: 'name',
+              ...userData,
+            },
+          },
+        },
+        ['id', 'chatId', 'authorId'],
+      );
+
+      const { id: messageId, chatId, authorId } = await query;
+
+      await checkInsertedResults({
+        messageId,
+        chatId,
+        authorId,
+        text: 'text',
+        title: 'title',
+        name: 'name',
+      });
     });
 
-    const chat = await db.chat.find(chatId);
-    expect(chat).toEqual({
-      id: chatId,
-      ...chatData,
-    });
+    it('should support create many', async () => {
+      const query = db.message.insert(
+        [
+          {
+            text: 'message 1',
+            ...messageData,
+            chat: {
+              create: {
+                title: 'chat 1',
+                ...chatData,
+              },
+            },
+            user: {
+              create: {
+                name: 'user 1',
+                ...userData,
+              },
+            },
+          },
+          {
+            text: 'message 2',
+            ...messageData,
+            chat: {
+              create: {
+                title: 'chat 2',
+                ...chatData,
+              },
+            },
+            user: {
+              create: {
+                name: 'user 2',
+                ...userData,
+              },
+            },
+          },
+        ],
+        ['id', 'chatId', 'authorId'],
+      );
 
-    const user = await db.user.find(authorId);
-    expect(user).toEqual({
-      id: authorId,
-      active: null,
-      age: null,
-      data: null,
-      picture: null,
-      ...userData,
+      const [first, second] = await query;
+
+      await checkInsertedResults({
+        messageId: first.id,
+        chatId: first.chatId,
+        authorId: first.authorId,
+        text: 'message 1',
+        title: 'chat 1',
+        name: 'user 1',
+      });
+
+      await checkInsertedResults({
+        messageId: second.id,
+        chatId: second.chatId,
+        authorId: second.authorId,
+        text: 'message 2',
+        title: 'chat 2',
+        name: 'user 2',
+      });
     });
   });
 });

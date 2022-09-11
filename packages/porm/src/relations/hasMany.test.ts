@@ -8,6 +8,7 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
+import { Message, User } from '../test-utils/test-models';
 
 describe('hasMany', () => {
   useTestDatabase();
@@ -162,10 +163,9 @@ describe('hasMany', () => {
     );
   });
 
-  it('should support create', async () => {
+  describe('insert', () => {
     const now = new Date();
     const userData = {
-      name: 'name',
       password: 'password',
       updatedAt: now,
       createdAt: now,
@@ -177,62 +177,157 @@ describe('hasMany', () => {
       createdAt: now,
     };
 
-    const { id: chatId } = await db.chat.insert(
-      {
-        title: 'title',
-        updatedAt: now,
-        createdAt: now,
-      },
-      ['id'],
-    );
+    const chatData = {
+      title: 'title',
+      updatedAt: now,
+      createdAt: now,
+    };
 
-    const user = await db.user.insert(
-      {
+    const checkUser = (user: User, name: string) => {
+      expect(user).toEqual({
+        id: user.id,
+        name: name,
         ...userData,
-        messages: {
-          create: [
-            {
-              ...messageData,
-              text: 'title 1',
-              chatId,
-            },
-            {
-              ...messageData,
-              text: 'title 2',
-              chatId,
-            },
-          ],
-        },
-      },
-      '*',
-    );
+        active: null,
+        age: null,
+        data: null,
+        picture: null,
+      });
+    };
 
-    expect(user).toEqual({
-      id: user.id,
-      ...userData,
-      active: null,
-      age: null,
-      data: null,
-      picture: null,
+    const checkMessages = ({
+      messages,
+      userId,
+      chatId,
+      text1,
+      text2,
+    }: {
+      messages: Message[];
+      userId: number;
+      chatId: number;
+      text1: string;
+      text2: string;
+    }) => {
+      expect(messages).toEqual([
+        {
+          id: messages[0].id,
+          authorId: userId,
+          ...messageData,
+          text: text1,
+          chatId,
+        },
+        {
+          id: messages[1].id,
+          authorId: userId,
+          ...messageData,
+          text: text2,
+          chatId,
+        },
+      ]);
+    };
+
+    it('should support create', async () => {
+      const { id: chatId } = await db.chat.insert(chatData, ['id']);
+
+      const user = await db.user.insert(
+        {
+          name: 'user 1',
+          ...userData,
+          messages: {
+            create: [
+              {
+                text: 'message 1',
+                ...messageData,
+                chatId,
+              },
+              {
+                text: 'message 2',
+                ...messageData,
+                chatId,
+              },
+            ],
+          },
+        },
+        '*',
+      );
+
+      checkUser(user, 'user 1');
+
+      const messages = await db.message.order({ text: 'ASC' });
+      checkMessages({
+        messages,
+        userId: user.id,
+        chatId,
+        text1: 'message 1',
+        text2: 'message 2',
+      });
     });
 
-    const messages = await db.message.order({ text: 'ASC' });
-    expect(messages).toEqual([
-      {
-        id: messages[0].id,
-        authorId: user.id,
-        ...messageData,
-        text: 'title 1',
+    it('should support create many', async () => {
+      const { id: chatId } = await db.chat.insert(chatData, ['id']);
+
+      const user = await db.user.insert(
+        [
+          {
+            name: 'user 1',
+            ...userData,
+            messages: {
+              create: [
+                {
+                  text: 'message 1',
+                  ...messageData,
+                  chatId,
+                },
+                {
+                  text: 'message 2',
+                  ...messageData,
+                  chatId,
+                },
+              ],
+            },
+          },
+          {
+            name: 'user 2',
+            ...userData,
+            messages: {
+              create: [
+                {
+                  text: 'message 3',
+                  ...messageData,
+                  chatId,
+                },
+                {
+                  text: 'message 4',
+                  ...messageData,
+                  chatId,
+                },
+              ],
+            },
+          },
+        ],
+        '*',
+      );
+
+      checkUser(user[0], 'user 1');
+      checkUser(user[1], 'user 2');
+
+      const messages = await db.message.order({ text: 'ASC' });
+      checkMessages({
+        messages: messages.slice(0, 2),
+        userId: user[0].id,
         chatId,
-      },
-      {
-        id: messages[1].id,
-        authorId: user.id,
-        ...messageData,
-        text: 'title 2',
+        text1: 'message 1',
+        text2: 'message 2',
+      });
+
+      checkMessages({
+        messages: messages.slice(2, 4),
+        userId: user[1].id,
         chatId,
-      },
-    ]);
+        text1: 'message 3',
+        text2: 'message 4',
+      });
+    });
   });
 });
 

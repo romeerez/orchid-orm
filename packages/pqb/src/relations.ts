@@ -1,11 +1,37 @@
 import { defaultsKey, Query, QueryWithTable } from './query';
 
+export type NestedInsertOneItem = { create: Record<string, unknown> };
+export type NestedInsertManyItems = { create: Record<string, unknown>[] };
+export type NestedInsertItem = NestedInsertOneItem | NestedInsertManyItems;
+
+export type BelongsToNestedInsert = (
+  relationData: NestedInsertOneItem[],
+) => Promise<Record<string, unknown>[]>;
+
+export type HasOneNestedInsert = (
+  data: [
+    selfData: Record<string, unknown>,
+    relationData: NestedInsertOneItem,
+  ][],
+) => Promise<void>;
+
+export type HasManyNestedInsert = (
+  data: [
+    selfData: Record<string, unknown>,
+    relationData: NestedInsertManyItems,
+  ][],
+) => Promise<void>;
+
 export type BaseRelation = {
   type: string;
   key: string;
   model: QueryWithTable;
   joinQuery: Query;
   nestedCreateQuery: Query;
+  nestedInsert?:
+    | BelongsToNestedInsert
+    | HasOneNestedInsert
+    | HasManyNestedInsert;
   primaryKey: string;
   options: {
     scope?(q: QueryWithTable): QueryWithTable;

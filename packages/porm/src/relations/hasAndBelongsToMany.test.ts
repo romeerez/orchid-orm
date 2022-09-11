@@ -147,7 +147,17 @@ describe('hasAndBelongsToMany', () => {
   });
 
   it('should be selectable', () => {
-    const query = db.user.select('id', db.user.chats.where({ title: 'title' }));
+    const query = db.user.select(
+      'id',
+      db.user.chats.select('id', 'title').where({ title: 'title' }),
+    );
+
+    const eq: AssertEqual<
+      Awaited<typeof query>,
+      { id: number; chats: { id: number; title: string }[] }[]
+    > = true;
+    expect(eq).toBe(true);
+
     expectSql(
       query.toSql(),
       `
@@ -156,7 +166,7 @@ describe('hasAndBelongsToMany', () => {
           (
             SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
             FROM (
-              SELECT "chats".* FROM "chat" AS "chats"
+              SELECT "chats"."id", "chats"."title" FROM "chat" AS "chats"
               WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "chats"."id"
@@ -172,10 +182,13 @@ describe('hasAndBelongsToMany', () => {
     );
   });
 
-  it('should support create', async () => {
+  describe('insert', () => {
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
     const now = new Date();
     const userData = {
-      name: 'name',
       password: 'password',
       updatedAt: now,
       createdAt: now,
@@ -186,63 +199,171 @@ describe('hasAndBelongsToMany', () => {
       createdAt: now,
     };
 
-    const query = db.user.insert(
-      {
-        ...userData,
-        chats: {
-          create: [
-            {
-              ...chatData,
-              title: 'title 1',
-            },
-            {
-              ...chatData,
-              title: 'title 2',
-            },
-          ],
+    it('should support create', async () => {
+      const query = db.user.insert(
+        {
+          name: 'user 1',
+          ...userData,
+          chats: {
+            create: [
+              {
+                ...chatData,
+                title: 'chat 1',
+              },
+              {
+                ...chatData,
+                title: 'chat 2',
+              },
+            ],
+          },
         },
-      },
-      ['id'],
-    );
+        ['id'],
+      );
 
-    const querySpy = jest.spyOn(db.user.adapter, 'query');
-    const arraysSpy = jest.spyOn(db.user.adapter, 'arrays');
+      const querySpy = jest.spyOn(db.user.adapter, 'query');
+      const arraysSpy = jest.spyOn(db.user.adapter, 'arrays');
 
-    const user = await query;
-    const chatIds = await db.user.chats(user).order({ id: 'ASC' }).pluck('id');
+      const user = await query;
+      const chatIds = await db.user
+        .chats(user)
+        .order({ id: 'ASC' })
+        .pluck('id');
 
-    const [insertUserSql, insertChatsSql] = querySpy.mock.calls.map(
-      (item) => item[0],
-    );
-    const insertChatUserSql = arraysSpy.mock.calls[0][0];
+      const [insertUserSql, insertChatsSql] = querySpy.mock.calls.map(
+        (item) => item[0],
+      );
+      const insertChatUserSql = arraysSpy.mock.calls[0][0];
 
-    expectSql(
-      insertUserSql as Sql,
-      `
+      expectSql(
+        insertUserSql as Sql,
+        `
         INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
         VALUES ($1, $2, $3, $4)
         RETURNING "user"."id"
       `,
-      ['name', 'password', now, now],
-    );
+        ['user 1', 'password', now, now],
+      );
 
-    expectSql(
-      insertChatsSql as Sql,
-      `
+      expectSql(
+        insertChatsSql as Sql,
+        `
         INSERT INTO "chat"("updatedAt", "createdAt", "title")
         VALUES ($1, $2, $3), ($4, $5, $6)
         RETURNING "chat"."id"
       `,
-      [now, now, 'title 1', now, now, 'title 2'],
-    );
+        [now, now, 'chat 1', now, now, 'chat 2'],
+      );
 
-    expectSql(
-      insertChatUserSql as Sql,
-      `
+      expectSql(
+        insertChatUserSql as Sql,
+        `
         INSERT INTO "chatUser"("userId", "chatId")
         VALUES ($1, $2), ($3, $4)
       `,
-      [user.id, chatIds[0], user.id, chatIds[1]],
-    );
+        [user.id, chatIds[0], user.id, chatIds[1]],
+      );
+    });
+
+    it('should support create many', async () => {
+      const query = db.user.insert(
+        [
+          {
+            name: 'user 1',
+            ...userData,
+            chats: {
+              create: [
+                {
+                  title: 'chat 1',
+                  ...chatData,
+                },
+                {
+                  title: 'chat 2',
+                  ...chatData,
+                },
+              ],
+            },
+          },
+          {
+            name: 'user 2',
+            ...userData,
+            chats: {
+              create: [
+                {
+                  title: 'chat 3',
+                  ...chatData,
+                },
+                {
+                  title: 'chat 4',
+                  ...chatData,
+                },
+              ],
+            },
+          },
+        ],
+        ['id'],
+      );
+
+      const querySpy = jest.spyOn(db.user.adapter, 'query');
+      const arraysSpy = jest.spyOn(db.user.adapter, 'arrays');
+
+      const users = await query;
+      const chatIds = await db.user.join('chats').pluck('chats.id');
+
+      const [insertUserSql, insertChatsSql] = querySpy.mock.calls.map(
+        (item) => item[0],
+      );
+      const insertChatUserSql = arraysSpy.mock.calls[0][0];
+
+      expectSql(
+        insertUserSql as Sql,
+        `
+        INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
+        VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
+        RETURNING "user"."id"
+      `,
+        ['user 1', 'password', now, now, 'user 2', 'password', now, now],
+      );
+
+      expectSql(
+        insertChatsSql as Sql,
+        `
+        INSERT INTO "chat"("title", "updatedAt", "createdAt")
+        VALUES ($1, $2, $3), ($4, $5, $6), ($7, $8, $9), ($10, $11, $12)
+        RETURNING "chat"."id"
+      `,
+        [
+          'chat 1',
+          now,
+          now,
+          'chat 2',
+          now,
+          now,
+          'chat 3',
+          now,
+          now,
+          'chat 4',
+          now,
+          now,
+        ],
+      );
+
+      expectSql(
+        insertChatUserSql as Sql,
+        `
+        INSERT INTO "chatUser"("userId", "chatId")
+        VALUES ($1, $2), ($3, $4), ($5, $6), ($7, $8)
+      `,
+        [
+          users[0].id,
+          chatIds[0],
+          users[0].id,
+          chatIds[1],
+          users[1].id,
+          chatIds[2],
+          users[1].id,
+          chatIds[3],
+        ],
+      );
+    });
   });
 });

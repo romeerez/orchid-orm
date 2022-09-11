@@ -3,13 +3,14 @@ import { HasOne, HasOneInfo, makeHasOneMethod } from './hasOne';
 import { DbModel, Model, ModelClass, ModelClasses } from '../model';
 import { PORM } from '../orm';
 import {
-  BaseRelation,
   Query,
   QueryWithTable,
   RelationQuery,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
   SetQueryReturnsOneOrUndefined,
+  BaseRelation,
+  defaultsKey,
 } from 'pqb';
 import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
 import {
@@ -32,8 +33,35 @@ export type RelationThunks = Record<string, RelationThunk>;
 export type RelationData = {
   returns: 'one' | 'many';
   method(params: Record<string, unknown>): Query;
+  nestedInsert: BaseRelation['nestedInsert'];
   joinQuery: Query;
   primaryKey: string;
+};
+
+export type Relation<
+  T extends Model,
+  Relations extends RelationThunks,
+  K extends keyof Relations,
+  M extends Query = DbModel<ReturnType<Relations[K]['fn']>>,
+  Defaults extends string = RelationInfo<
+    T,
+    Relations,
+    Relations[K]
+  >['populate'],
+> = {
+  type: Relations[K]['type'];
+  key: K;
+  model: M;
+  joinQuery: Query;
+  defaults: Defaults;
+  nestedCreateQuery: [Defaults] extends [never]
+    ? M
+    : (M[defaultsKey] extends undefined ? Omit<M, defaultsKey> : M) & {
+        [defaultsKey]: Defaults;
+      };
+  nestedInsert: BaseRelation['nestedInsert'];
+  primaryKey: string;
+  options: Relations[K]['options'];
 };
 
 export type RelationScopeOrModel<Relation extends RelationThunkBase> =
@@ -142,6 +170,7 @@ export const applyRelations = (
             type,
             key: relationName,
             model: query,
+            nestedInsert: data.nestedInsert,
             joinQuery: data.joinQuery,
             primaryKey: data.primaryKey,
             options: relation.options,

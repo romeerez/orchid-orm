@@ -16,6 +16,7 @@ import {
 } from './columnSchema';
 import { applyMixins } from './utils';
 import { StringKey } from './common';
+import { ThenResult } from './queryMethods/then';
 
 export type DbTableOptions = {
   schema?: string;
@@ -41,6 +42,9 @@ export interface Db<
   schema: TableSchema<Shape>;
   type: ColumnShapeOutput<Shape>;
   returnType: 'all';
+  then: ThenResult<
+    Pick<ColumnShapeOutput<Shape>, DefaultSelectColumns<Shape>[number]>[]
+  >;
   query?: QueryData;
   columns: (keyof ColumnShapeOutput<Shape>)[];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
@@ -75,7 +79,7 @@ export class Db<
     options?: DbTableOptions,
   ) {
     if (options?.schema) {
-      this.query = { schema: options.schema };
+      this.query = { schema: options.schema } as SelectQueryData;
     }
 
     this.schema = new TableSchema(shape);

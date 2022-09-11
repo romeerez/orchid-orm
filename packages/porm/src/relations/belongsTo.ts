@@ -1,5 +1,10 @@
 import { Model } from '../model';
-import { addQueryOn, BelongsToRelation, Query } from 'pqb';
+import {
+  addQueryOn,
+  BelongsToNestedInsert,
+  BelongsToRelation,
+  Query,
+} from 'pqb';
 import { RelationData, RelationThunkBase } from './relations';
 
 export interface BelongsTo extends RelationThunkBase {
@@ -28,6 +33,14 @@ export const makeBelongsToMethod = (
     method: (params: Record<string, unknown>) => {
       return query.findBy({ [primaryKey]: params[foreignKey] });
     },
+    nestedInsert: (async (data) => {
+      const create = data.filter((item) => item.create);
+
+      return await query.insert(
+        create.map((item) => item.create),
+        [primaryKey],
+      );
+    }) as BelongsToNestedInsert,
     joinQuery: addQueryOn(query, query, model, primaryKey, foreignKey),
     primaryKey,
   };

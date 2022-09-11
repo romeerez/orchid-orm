@@ -1,4 +1,10 @@
-import { addQueryOn, HasOneRelation, Query, Relation } from 'pqb';
+import {
+  addQueryOn,
+  HasOneNestedInsert,
+  HasOneRelation,
+  Query,
+  Relation,
+} from 'pqb';
 import { Model } from '../model';
 import {
   RelationData,
@@ -70,6 +76,7 @@ export const makeHasOneMethod = (
           whereExistsCallback,
         )._take();
       },
+      nestedInsert: undefined,
       joinQuery: (query.whereExists as (arg: Query, cb: () => Query) => Query)(
         throughRelation.joinQuery,
         whereExistsCallback,
@@ -86,6 +93,18 @@ export const makeHasOneMethod = (
       const values = { [foreignKey]: params[primaryKey] };
       return query.findBy(values)._defaults(values);
     },
+    nestedInsert: (async (data) => {
+      const create = data.filter(([, relationData]) => relationData.create);
+
+      if (create.length) {
+        await query.insert(
+          create.map(([selfData, { create }]) => ({
+            [foreignKey]: selfData[primaryKey],
+            ...create,
+          })),
+        );
+      }
+    }) as HasOneNestedInsert,
     joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),
     primaryKey,
   };
