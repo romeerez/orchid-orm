@@ -1,11 +1,8 @@
 import {
   AssertEqual,
-  Chat,
   expectMatchObjectWithTimestamps,
   expectQueryNotMutated,
   expectSql,
-  Message,
-  Profile,
   User,
   useTestDatabase,
 } from '../test-utils';
@@ -258,163 +255,6 @@ describe('insert', () => {
     );
   });
 
-  describe('insert with relations', () => {
-    it('should insert with belongsTo relation', async () => {
-      const MessageWithRelations = Object.assign(Message, {
-        relations: {
-          user: {
-            type: 'belongsTo',
-            key: 'user',
-            model: User,
-            joinQuery: User,
-            nestedCreateQuery: User,
-            primaryKey: 'id',
-            options: {
-              primaryKey: 'id',
-              foreignKey: 'authorId',
-            } as const,
-          } as const,
-          chat: {
-            type: 'belongsTo',
-            key: 'chat',
-            model: Chat,
-            joinQuery: Chat,
-            nestedCreateQuery: Chat,
-            primaryKey: 'id',
-            options: {
-              primaryKey: 'id',
-              foreignKey: 'chatId',
-            } as const,
-          } as const,
-        },
-      });
-
-      const now = new Date();
-      const messageData = {
-        text: 'text',
-        meta: null,
-        updatedAt: now,
-        createdAt: now,
-      };
-
-      const chatData = {
-        title: 'title',
-        updatedAt: now,
-        createdAt: now,
-      };
-
-      const userData = {
-        name: 'name',
-        password: 'password',
-        updatedAt: now,
-        createdAt: now,
-      };
-
-      const query = MessageWithRelations.insert(
-        {
-          ...messageData,
-          chat: {
-            create: chatData,
-          },
-          user: {
-            create: userData,
-          },
-        },
-        ['id', 'chatId', 'authorId'],
-      );
-
-      const { id, chatId, authorId } = await query;
-
-      const message = await Message.find(id);
-      expect(message).toEqual({
-        id,
-        chatId,
-        authorId,
-        ...messageData,
-      });
-
-      const chat = await Chat.find(chatId);
-      expect(chat).toEqual({
-        id: chatId,
-        ...chatData,
-      });
-
-      const user = await User.find(authorId);
-      expect(user).toEqual({
-        id: authorId,
-        active: null,
-        age: null,
-        data: null,
-        picture: null,
-        ...userData,
-      });
-    });
-
-    it('should insert with hasOne relation', async () => {
-      const UserWithRelations = Object.assign(User, {
-        relations: {
-          profile: {
-            type: 'hasOne',
-            key: 'profile',
-            model: Profile,
-            joinQuery: Profile,
-            nestedCreateQuery: Profile.defaults({ userId: 1 }),
-            primaryKey: 'id',
-            options: {
-              primaryKey: 'id',
-              foreignKey: 'userId',
-            } as const,
-          } as const,
-        },
-        profile(params: { id: number }) {
-          return Profile.defaults({ userId: params.id });
-        },
-      });
-
-      const now = new Date();
-      const userData = {
-        name: 'name',
-        password: 'password',
-        updatedAt: now,
-        createdAt: now,
-      };
-
-      const profileData = {
-        bio: 'bio',
-        updatedAt: now,
-        createdAt: now,
-      };
-
-      const query = UserWithRelations.insert(
-        {
-          ...userData,
-          profile: {
-            create: profileData,
-          },
-        },
-        ['id'],
-      );
-
-      const { id } = await query;
-      const user = await User.find(id);
-      expect(user).toEqual({
-        id,
-        active: null,
-        age: null,
-        data: null,
-        picture: null,
-        ...userData,
-      });
-
-      const profile = await Profile.findBy({ userId: id });
-      expect(profile).toEqual({
-        id: profile.id,
-        userId: id,
-        ...profileData,
-      });
-    });
-  });
-
   describe('onConflict', () => {
     it('should return special query builder and return previous after ignore or merge', () => {
       const q = User.all();
@@ -643,69 +483,25 @@ describe('insert', () => {
 
   describe('callbacks', () => {
     describe('beforeInsert', () => {
-      it('should run callback before insert', () => {
+      it('should run callback before insert', async () => {
         const fn = jest.fn();
-        const now = new Date();
-        User.beforeInsert(fn).insert({
-          name: 'name',
-          password: 'password',
-          updatedAt: now,
-          createdAt: now,
-        });
+        const query = User.beforeInsert(fn).insert(data);
 
-        expect(fn).toBeCalled();
-      });
+        await query;
 
-      it('should be able to change query by returning it', () => {
-        const now = new Date();
-        const data = {
-          password: 'password',
-          updatedAt: now,
-          createdAt: now,
-        };
-        const query = User.beforeInsert(({ query, params, returning }) => {
-          expect(params).toBe(data);
-          expect(returning).toEqual(['id']);
-          return {
-            query: query.defaults({ name: 'name from beforeInsert' }),
-            params: { ...params, password: 'modified password' },
-            returning: ['id', 'name'],
-          };
-        }).insert(data as unknown as typeof User.type, ['id']);
-
-        expectSql(
-          query.toSql(),
-          `
-            INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
-            VALUES ($1, $2, $3, $4)
-            RETURNING "user"."id", "user"."name"
-          `,
-          ['name from beforeInsert', 'modified password', now, now],
-        );
+        expect(fn.mock.calls[0]).toEqual([query]);
       });
     });
 
     describe('afterInsert', () => {
       it('should run callback after insert', async () => {
         const fn = jest.fn();
-        const now = new Date();
-        const data = {
-          name: 'name',
-          password: 'password',
-          updatedAt: now,
-          createdAt: now,
-        };
 
         const query = User.afterInsert(fn).insert(data, ['id']);
 
-        const { id } = await query;
+        const result = await query;
 
-        expect(fn.mock.calls[0][0]).toEqual({
-          query,
-          params: data,
-          returning: ['id'],
-          data: { id },
-        });
+        expect(fn.mock.calls[0]).toEqual([query, result]);
       });
     });
   });

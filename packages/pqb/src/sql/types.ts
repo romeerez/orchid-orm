@@ -7,7 +7,6 @@ import {
 import { Expression, RawExpression } from '../common';
 import { ColumnsShape, ColumnType } from '../columnSchema';
 import { RelationQuery } from '../relations';
-import { MaybeArray } from '../utils';
 
 export type Sql = {
   text: string;
@@ -69,27 +68,8 @@ export type InsertQueryData = CommonQueryData & {
         expr?: OnConflictItem;
         update?: string | string[] | Record<string, unknown> | RawExpression;
       };
-  beforeInsert?: ((params: {
-    query: Query;
-    params:
-      | MaybeArray<Record<string, unknown>>
-      | { columns: string[]; values: RawExpression };
-    returning?: '*' | string[];
-  }) => void | {
-    query?: Query;
-    params?:
-      | MaybeArray<Record<string, unknown>>
-      | { columns: string[]; values: RawExpression };
-    returning?: '*' | string[];
-  })[];
-  afterInsert?: ((params: {
-    query: Query;
-    params:
-      | MaybeArray<Record<string, unknown>>
-      | { columns: string[]; values: RawExpression };
-    returning: '*' | string[] | undefined;
-    data: unknown;
-  }) => Promise<void>)[];
+  beforeInsert?: CommonQueryData['beforeQuery'];
+  afterInsert?: CommonQueryData['afterQuery'];
 };
 
 export type UpdateQueryData = CommonQueryData & {

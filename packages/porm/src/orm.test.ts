@@ -1,5 +1,4 @@
 import { porm } from './orm';
-import { ProfileModel, User, UserModel } from './test-utils/test-models';
 import {
   AssertEqual,
   expectSql,
@@ -7,9 +6,26 @@ import {
   useTestDatabase,
 } from './test-utils/test-utils';
 import { adapter } from './test-utils/test-db';
+import { Model } from './model';
 
 describe('orm', () => {
   useTestDatabase();
+
+  type User = UserModel['columns']['type'];
+  class UserModel extends Model {
+    table = 'user';
+    columns = this.setColumns((t) => ({
+      id: t.serial().primaryKey(),
+      name: t.text(),
+    }));
+  }
+
+  class ProfileModel extends Model {
+    table = 'profile';
+    columns = this.setColumns((t) => ({
+      id: t.serial().primaryKey(),
+    }));
+  }
 
   it('should return object with provided adapter, destroy and transaction method, models', () => {
     const db = porm(adapter)({
@@ -30,16 +46,15 @@ describe('orm', () => {
 
     const db = porm(adapter)({
       user: UserModel,
+      profile: ProfileModel,
     });
 
-    const query = db.user
-      .select('id', 'name', 'active')
-      .where({ id: { gt: 0 } });
+    const query = db.user.select('id', 'name').where({ id: { gt: 0 } });
 
     expectSql(
       query.toSql(),
       `
-        SELECT "user"."id", "user"."name", "user"."active"
+        SELECT "user"."id", "user"."name"
         FROM "user"
         WHERE "user"."id" > $1
       `,
@@ -47,12 +62,9 @@ describe('orm', () => {
     );
 
     const result = await query;
-    expect(result).toEqual([{ id: 1, name: 'name', active: true }]);
+    expect(result).toEqual([{ id: 1, name: 'name' }]);
 
-    const eq: AssertEqual<
-      typeof result,
-      Pick<User, 'id' | 'name' | 'active'>[]
-    > = true;
+    const eq: AssertEqual<typeof result, Pick<User, 'id' | 'name'>[]> = true;
     expect(eq).toBe(true);
   });
 });

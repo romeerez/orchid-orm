@@ -21,7 +21,7 @@ import {
   NestedInsertOneItem,
   Relation,
 } from '../relations';
-import { MaybeArray, SetOptional } from '../utils';
+import { SetOptional } from '../utils';
 import { InsertQueryData } from '../sql';
 
 export type ReturningArg<T extends Query> = (keyof T['shape'])[] | '*';
@@ -127,24 +127,10 @@ type AppendRelations = Record<
 
 type BeforeInsertCallback<T extends Query> = (arg: {
   query: T;
-  params:
-    | MaybeArray<InsertData<T>>
-    | { columns: string[]; values: RawExpression };
-  returning?: ReturningArg<T>;
-}) => void | {
-  query?: Query;
-  params?:
-    | MaybeArray<InsertData<T>>
-    | { columns: string[]; values: RawExpression };
-  returning?: ReturningArg<T>;
-};
+}) => void | Promise<void>;
 
 type AfterInsertCallback<T extends Query> = (arg: {
   query: T;
-  params:
-    | MaybeArray<InsertData<T>>
-    | { columns: string[]; values: RawExpression };
-  returning: ReturningArg<T> | undefined;
   data: unknown;
 }) => void | Promise<void>;
 
@@ -243,48 +229,9 @@ export class Insert {
       | { columns: string[]; values: RawExpression },
     returning?: ReturningArg<Query>,
   ) {
-    let q = this as unknown as Query & { query: InsertQueryData };
+    const q = this as unknown as Query & { query: InsertQueryData };
     delete q.query.and;
     delete q.query.or;
-
-    if (q.query.beforeInsert) {
-      const arg = {
-        query: q as Query,
-        params: data,
-        returning,
-      };
-
-      for (const cb of q.query.beforeInsert) {
-        const result = cb(arg);
-        if (result) {
-          if (result.query) {
-            q = (arg.query = result.query) as typeof q;
-          }
-          if (result.params) {
-            data = arg.params = result.params;
-          }
-          if (result.returning) {
-            returning = arg.returning = result.returning;
-          }
-        }
-      }
-    }
-
-    if (q.query.afterInsert) {
-      pushQueryArray(
-        q,
-        'afterQuery',
-        q.query.afterInsert.map(
-          (cb) => (query: Query, inserted: unknown) =>
-            cb({
-              query,
-              params: data,
-              returning,
-              data: inserted,
-            }),
-        ),
-      );
-    }
 
     let columns: string[];
     const prependRelations: PrependRelations = {};

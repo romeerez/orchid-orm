@@ -2,6 +2,7 @@ import { ColumnsParsers, Query, QueryReturnType } from '../query';
 import { getQueryParsers } from '../common';
 import { NotFoundError } from '../errors';
 import { QueryArraysResult } from '../adapter';
+import { CommonQueryData } from '../sql';
 
 export type ThenResult<Res> = <T extends Query>(
   this: T,
@@ -31,8 +32,21 @@ export class Then {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     reject?: (error: any) => any,
   ) {
-    if (this.query?.beforeQuery) {
-      await Promise.all(this.query.beforeQuery.map((cb) => cb(this)));
+    let beforeCallbacks: CommonQueryData['beforeQuery'];
+    let afterCallbacks: CommonQueryData['afterQuery'];
+    if (this.query) {
+      if (this.query.type === 'insert') {
+        beforeCallbacks = this.query.beforeInsert;
+        afterCallbacks = this.query.afterInsert;
+      }
+
+      if (beforeCallbacks) {
+        await Promise.all(beforeCallbacks.map((cb) => cb(this)));
+      }
+
+      if (this.query.beforeQuery) {
+        await Promise.all(this.query.beforeQuery.map((cb) => cb(this)));
+      }
     }
 
     const { returnType } = this;
@@ -105,11 +119,17 @@ export class Then {
         }
       })
       .then(
-        this.query?.afterQuery?.length
+        afterCallbacks?.length || this.query?.afterQuery?.length
           ? async (result) => {
               if (this.query?.afterQuery?.length) {
                 await Promise.all(
                   this.query?.afterQuery.map((query) => query(this, result)),
+                );
+              }
+
+              if (afterCallbacks?.length) {
+                await Promise.all(
+                  afterCallbacks.map((query) => query(this, result)),
                 );
               }
 
