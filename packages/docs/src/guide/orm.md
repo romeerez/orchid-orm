@@ -609,3 +609,185 @@ const result: Pick<Author, 'id'>[] = await db.author.insert(
   ['id']
 )
 ```
+
+## hasAndBelongsToMany
+
+A `hasAndBelongsToMany` association creates a direct many-to-many connection with another model, with no intervening model.
+This association indicates that each instance of the declaring model refers to zero or more instances of another model.
+
+For example, if your application includes posts and tags, with each post having many tags and each tag appearing in many posts, you could declare the models this way:
+
+```ts
+import { Model } from 'porm'
+
+export type Post = PostModel['columns']['type']
+export class PostModel extends Model {
+  table = 'post'
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    title: t.text(),
+  }))
+
+  relations = {
+    tags: this.hasOwnProperty(() => Tag, {
+      // primaryKey is a column of this model
+      primaryKey: 'id',
+      // foreignKey is a column of joinTable to connect with this model
+      foreignKey: 'postId',
+      // associationPrimaryKey is a primaryKey of related model
+      associationPrimaryKey: 'id',
+      // associationForeignKey is a column of joinTable to connect with related model
+      associationForeignKey: 'tagId',
+      // joinTable is a connection table between this and related models
+      joinTable: 'postTag',
+    })
+  }
+}
+
+export type Tag = TagModel['columns']['type']
+export class TagModel extends Model {
+  table = 'tag'
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    name: t.text(),
+  }))
+  
+  relations = {
+    posts: this.hasAndBelongsToMany(() => Post, {
+      primaryKey: 'id',
+      foreignKey: 'tagId',
+      associationPrimaryKey: 'id',
+      associationForeignKey: 'postId',
+      joinTable: 'postTag',
+    })
+  }
+}
+```
+
+### hasAndBelongsToMany queries
+
+Query tags of the post when we already have a post record:
+
+```ts
+const post = await db.post.find(1).takeOrThrow()
+
+const tags = await db.post.tags(post) // type of argument is { id: number }
+
+// additional query methods can be applied:
+const specificTags = await db.post.tags(post).where({ name: { startsWith: 'a' } })
+```
+
+Relation can be used in `.whereExists`, following query will find all posts where at least one tag exists:
+
+```ts
+await db.post.whereExists('tags')
+
+// additional query methods can be applied in a callback:
+await db.post.whereExists('tags', (q) =>
+  q.where({ 'tags.name': 'porm' })
+)
+```
+
+Relation can be used in `.join`, but it is not suggested for `hasAndBelongsToMany` relation because post columns will be duplicated for each tag:
+
+```ts
+await db.post.join('tags').select(
+  // column without table is for current author table
+  'title',
+  // select column of joined table
+  'tags.name',
+)
+
+// additional query methods can be applied in a callback:
+await db.post.join('tags', (q) =>
+  q.where({ 'tags.name': 'pqb' })
+).select('title', 'tags.name')
+```
+
+Relation can be added to select and a related array of object will be added to each record.
+
+This works better than `join` because it won't lead to duplicative data.
+
+```ts
+type Result = Pick<Post, 'id' | 'title'> & {
+  tags: Pick<Tag, 'id' | 'name'>[]
+}
+
+const postWithTags: Result = await db.post.select(
+  'id',
+  'title',
+  db.post.tags.select('id', 'name'),
+).takeOrThrow()
+
+// result has selected columns as usually:
+postWithTags.title
+
+// result has array `books` with object:
+postWithTags.tags.forEach((tag) => {
+  tag.id
+  tag.title
+})
+```
+
+### hasAndBelongsToMany nested insert
+
+Insert post with tags all at once:
+
+This will run three insert queries in a transaction. One insert for post, one for tags and one for join table.
+
+```ts
+const result: Pick<Post, 'id'> = await db.post.insert(
+  {
+    title: 'Post',
+    tags: {
+      create: [
+        {
+          name: 'Tag 1',
+        },
+        {
+          name: 'Tag 2',
+        },
+      ]
+    }
+  },
+  ['id']
+)
+```
+
+Insert many posts with tags:
+
+This will also run only three insert queries in a transaction.
+
+```ts
+const result: Pick<Post, 'id'>[] = await db.post.insert(
+  [
+    {
+      title: 'Post 1',
+      tags: {
+        create: [
+          {
+            name: 'Tag 1',
+          },
+          {
+            name: 'Tag 2',
+          },
+        ],
+      },
+    },
+    {
+      title: 'Post 2',
+      tags: {
+        create: [
+          {
+            name: 'Tag 3',
+          },
+          {
+            name: 'Tag 4',
+          },
+        ],
+      }
+    },
+  ],
+  ['id']
+)
+```
