@@ -1,6 +1,5 @@
 import { Query } from '../query';
 import { RawExpression } from '../common';
-import { setQueryValue } from '../queryDataUtils';
 import { SelectQueryData } from '../sql';
 
 type ForQueryBuilder<Q extends Query> = Q & {
@@ -15,7 +14,7 @@ const forQueryBuilder = <T extends Query>(
   type: Exclude<SelectQueryData['for'], undefined>['type'],
   tableNames?: string[] | RawExpression,
 ) => {
-  setQueryValue(q, 'for', { type, tableNames });
+  (q.query as SelectQueryData).for = { type, tableNames };
   return Object.assign(q, {
     noWait<T extends ForQueryBuilder<Query>>(this: T): T {
       return this.clone()._noWait();

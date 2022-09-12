@@ -6,11 +6,7 @@ import {
   SetQueryReturnsOne,
   SetQueryReturnsVoid,
 } from '../query';
-import {
-  pushQueryArray,
-  pushQueryValue,
-  setQueryValue,
-} from '../queryDataUtils';
+import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { isRaw, RawExpression } from '../common';
 import {
   BelongsToNestedInsert,
@@ -22,7 +18,7 @@ import {
   Relation,
 } from '../relations';
 import { SetOptional } from '../utils';
-import { InsertQueryData } from '../sql';
+import { InsertQueryData, OnConflictItem, OnConflictMergeUpdate } from '../sql';
 
 export type ReturningArg<T extends Query> = (keyof T['shape'])[] | '*';
 
@@ -365,9 +361,9 @@ export class Insert {
       );
     }
 
-    setQueryValue(q, 'type', 'insert');
-    setQueryValue(q, 'columns', columns);
-    setQueryValue(q, 'values', values);
+    q.query.type = 'insert';
+    q.query.columns = columns;
+    q.query.values = values;
     if (prependRelationsKeys.length || appendRelationsKeys.length) {
       q.query.wrapInTransaction = true;
     }
@@ -393,7 +389,7 @@ export class Insert {
     this: T,
     data: Data,
   ): T & { [defaultsKey]: keyof Data } {
-    setQueryValue(this, 'defaults', data);
+    this.query.defaults = data;
     return this as T & { [defaultsKey]: keyof Data };
   }
 
@@ -432,10 +428,10 @@ export class OnConflictQueryBuilder<
   constructor(private query: T, private onConflict: Arg) {}
 
   ignore(): T {
-    setQueryValue(this.query, 'onConflict', {
+    (this.query.query as InsertQueryData).onConflict = {
       type: 'ignore',
-      expr: this.onConflict,
-    });
+      expr: this.onConflict as OnConflictItem,
+    };
     return this.query;
   }
 
@@ -446,11 +442,11 @@ export class OnConflictQueryBuilder<
       | Partial<T['type']>
       | RawExpression,
   ): T {
-    setQueryValue(this.query, 'onConflict', {
+    (this.query.query as InsertQueryData).onConflict = {
       type: 'merge',
-      expr: this.onConflict,
-      update,
-    });
+      expr: this.onConflict as OnConflictItem,
+      update: update as OnConflictMergeUpdate,
+    };
     return this.query;
   }
 }

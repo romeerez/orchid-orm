@@ -1,6 +1,6 @@
 import { Query, SetQueryTableAlias } from '../query';
 import { AliasOrTable, isRaw, RawExpression } from '../common';
-import { setQueryValue } from '../queryDataUtils';
+import { SelectQueryData } from '../sql';
 
 type FromArgs<T extends Query> = [
   first:
@@ -48,13 +48,11 @@ export class From {
     }
 
     if (typeof args[1] === 'object' && 'only' in args[1]) {
-      setQueryValue(this, 'fromOnly', args[1].only);
+      (this.query as SelectQueryData).fromOnly = args[1].only;
     }
 
-    return setQueryValue(
-      as ? this._as(as) : this,
-      'from',
-      args[0],
-    ) as unknown as FromResult<T, Args>;
+    const q = as ? this._as(as) : this;
+    q.query.from = args[0];
+    return q as unknown as FromResult<T, Args>;
   }
 }

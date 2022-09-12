@@ -1,6 +1,6 @@
 import { Query, SetQueryReturnsColumnInfo } from '../query';
-import { setQueryValue } from '../queryDataUtils';
 import { ThenResult, Then } from './then';
+import { ColumnInfoQueryData } from '../sql';
 
 export type ColumnInfo = {
   defaultValue: unknown;
@@ -37,8 +37,8 @@ export class ColumnInfoMethods {
     T extends Query,
     Column extends keyof T['shape'] | undefined = undefined,
   >(this: T, column?: Column): SetQueryReturnsColumnInfo<T, Column> {
-    setQueryValue(this, 'type', 'columnInfo');
-    if (column) setQueryValue(this, 'column', column);
+    this.query.type = 'columnInfo';
+    if (column) (this.query as ColumnInfoQueryData).column = column as string;
     this.returnType = 'all';
     this.then = function (resolve, reject) {
       new Then().then.call(

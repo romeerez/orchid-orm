@@ -6,15 +6,6 @@ export const removeFromQuery = <T extends Query>(q: T, key: string): T => {
   return q;
 };
 
-export const setQueryValue = <T extends Query>(
-  q: T,
-  key: string,
-  value: unknown,
-): T => {
-  (q.query as unknown as Record<string, unknown>)[key] = value;
-  return q;
-};
-
 export const pushQueryArray = <T extends { query: QueryData }>(
   q: T,
   key: string,

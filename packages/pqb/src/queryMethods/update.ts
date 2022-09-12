@@ -4,7 +4,7 @@ import {
   SetQueryReturnsAll,
   SetQueryReturnsVoid,
 } from '../query';
-import { pushQueryValue, setQueryValue } from '../queryDataUtils';
+import { pushQueryValue } from '../queryDataUtils';
 import { RawExpression } from '../common';
 import { ReturningArg } from './insert';
 
@@ -38,7 +38,7 @@ const applyCountChange = <T extends Query, Args extends ChangeCountArgs<T>>(
   args: Args,
 ) => {
   const [data, returning] = args;
-  setQueryValue(self, 'type', 'update');
+  self.query.type = 'update';
 
   let map: Record<string, { op: string; arg: number }>;
   if (typeof data === 'object') {
@@ -71,7 +71,7 @@ export class Update {
     ...args: Args
   ): UpdateResult<T, Args> {
     const [data, returning] = args;
-    setQueryValue(this, 'type', 'update');
+    this.query.type = 'update';
     pushQueryValue(this, 'data', data);
     if (returning) {
       pushQueryValue(this, 'returning', returning);

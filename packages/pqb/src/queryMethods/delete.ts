@@ -5,11 +5,7 @@ import {
   SetQueryReturnsValue,
 } from '../query';
 import { ReturningArg } from './insert';
-import {
-  pushQueryValue,
-  removeFromQuery,
-  setQueryValue,
-} from '../queryDataUtils';
+import { pushQueryValue, removeFromQuery } from '../queryDataUtils';
 import { IntegerColumn } from '../columnSchema';
 
 type DeleteResult<
@@ -47,7 +43,7 @@ const _del = <
     removeFromQuery(q, 'take');
   }
 
-  setQueryValue(q, 'type', 'delete');
+  q.query.type = 'delete';
   if (returning) {
     pushQueryValue(q, 'returning', returning);
   }

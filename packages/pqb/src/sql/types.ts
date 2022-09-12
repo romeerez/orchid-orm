@@ -49,7 +49,7 @@ export type SelectQueryData = CommonQueryData & {
   offset?: number;
   for?: {
     type: 'UPDATE' | 'NO KEY UPDATE' | 'SHARE' | 'KEY SHARE';
-    tableNames: string[] | RawExpression;
+    tableNames?: string[] | RawExpression;
     mode?: 'NO WAIT' | 'SKIP LOCKED';
   };
 };
@@ -70,7 +70,7 @@ export type InsertQueryData = CommonQueryData & {
     | {
         type: 'merge';
         expr?: OnConflictItem;
-        update?: string | string[] | Record<string, unknown> | RawExpression;
+        update?: OnConflictMergeUpdate;
       };
   beforeInsert?: CommonQueryData['beforeQuery'];
   afterInsert?: CommonQueryData['afterQuery'];
@@ -329,4 +329,10 @@ type UnionKind =
   | 'EXCEPT'
   | 'EXCEPT ALL';
 
-type OnConflictItem = string | string[] | RawExpression;
+export type OnConflictItem = string | string[] | RawExpression;
+
+export type OnConflictMergeUpdate =
+  | string
+  | string[]
+  | Record<string, unknown>
+  | RawExpression;

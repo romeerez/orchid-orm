@@ -46,7 +46,7 @@ export const havingToSql = (
         const query = item as Query;
         const sql = havingToSql(
           query,
-          query.query || EMPTY_OBJECT,
+          query.query as SelectQueryData,
           values,
           query.table && q(query.table),
         );

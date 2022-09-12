@@ -20,12 +20,18 @@ import {
   GetTypesOrRaw,
   PropertyKeyUnionToArray,
 } from '../utils';
-import { SortDir, Sql, toSql } from '../sql';
+import {
+  SelectItem,
+  SelectQueryData,
+  SortDir,
+  Sql,
+  toSql,
+  TruncateQueryData,
+} from '../sql';
 import {
   pushQueryArray,
   pushQueryValue,
   removeFromQuery,
-  setQueryValue,
 } from '../queryDataUtils';
 import { Then } from './then';
 import { ColumnType, NumberColumn } from '../columnSchema';
@@ -114,7 +120,7 @@ export class QueryMethods {
 
   _take<T extends Query>(this: T): SetQueryReturnsOneOrUndefined<T> {
     this.returnType = 'one';
-    setQueryValue(this, 'take', true);
+    this.query.take = true;
     return this as unknown as SetQueryReturnsOneOrUndefined<T>;
   }
 
@@ -126,7 +132,7 @@ export class QueryMethods {
 
   _takeOrThrow<T extends Query>(this: T): SetQueryReturnsOne<T> {
     this.returnType = 'oneOrThrow';
-    setQueryValue(this, 'take', true);
+    this.query.take = true;
     return this as unknown as SetQueryReturnsOne<T>;
   }
 
@@ -157,7 +163,7 @@ export class QueryMethods {
   ): SetQueryReturnsPluck<T, S> {
     this.returnType = 'pluck';
     removeFromQuery(this, 'take');
-    setQueryValue(this, 'select', [select]);
+    (this.query as SelectQueryData).select = [select as SelectItem];
     addParserForSelectItem(this, this.query.as || this.table, 'pluck', select);
     return this as unknown as SetQueryReturnsPluck<T, S>;
   }
@@ -281,11 +287,8 @@ export class QueryMethods {
     this: T,
     tableAlias: TableAlias,
   ): SetQueryTableAlias<T, TableAlias> {
-    return setQueryValue(
-      this,
-      'as',
-      tableAlias,
-    ) as unknown as SetQueryTableAlias<T, TableAlias>;
+    this.query.as = tableAlias;
+    return this as unknown as SetQueryTableAlias<T, TableAlias>;
   }
 
   withSchema<T extends Query>(this: T, schema: string): T {
@@ -293,7 +296,8 @@ export class QueryMethods {
   }
 
   _withSchema<T extends Query>(this: T, schema: string): T {
-    return setQueryValue(this, 'schema', schema);
+    this.query.schema = schema;
+    return this;
   }
 
   group<T extends Query>(this: T, ...columns: Expression<T>[]): T {
@@ -353,7 +357,8 @@ export class QueryMethods {
   }
 
   _limit<T extends Query>(this: T, arg: number): T {
-    return setQueryValue(this, 'limit', arg);
+    (this.query as SelectQueryData).limit = arg;
+    return this;
   }
 
   offset<T extends Query>(this: T, arg: number): T {
@@ -361,7 +366,8 @@ export class QueryMethods {
   }
 
   _offset<T extends Query>(this: T, arg: number): T {
-    return setQueryValue(this, 'offset', arg);
+    (this.query as SelectQueryData).offset = arg;
+    return this;
   }
 
   exists<T extends Query>(
@@ -373,10 +379,10 @@ export class QueryMethods {
   _exists<T extends Query>(
     this: T,
   ): SetQueryReturnsValueOrUndefined<T, NumberColumn> {
-    const q = setQueryValue(this, 'select', [
+    (this.query as SelectQueryData).select = [
       { selectAs: { exists: raw('1') } },
-    ]);
-    return q._value<T, NumberColumn>();
+    ];
+    return this._value<T, NumberColumn>();
   }
 
   truncate<T extends Query>(
@@ -390,12 +396,13 @@ export class QueryMethods {
     this: T,
     options?: { restartIdentity?: boolean; cascade?: boolean },
   ): SetQueryReturnsVoid<T> {
-    setQueryValue(this, 'type', 'truncate');
+    const q = this.query as TruncateQueryData;
+    q.type = 'truncate';
     if (options?.restartIdentity) {
-      setQueryValue(this, 'restartIdentity', true);
+      q.restartIdentity = true;
     }
     if (options?.cascade) {
-      setQueryValue(this, 'cascade', true);
+      q.cascade = true;
     }
     return this._exec();
   }
