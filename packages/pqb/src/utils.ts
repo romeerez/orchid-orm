@@ -96,25 +96,23 @@ export const joinTruthy = (...strings: (string | false | undefined)[]) => {
   return strings.filter((string) => string).join('');
 };
 
-export const getClonedQueryData = (query?: QueryData): QueryData => {
+export const getClonedQueryData = (query: QueryData): QueryData => {
   const cloned = {} as QueryData;
 
-  if (query) {
-    for (const key in query) {
-      const value = query[key as keyof QueryData];
-      if (Array.isArray(value)) {
-        (cloned as Record<string, unknown>)[key] = [...value];
-      } else {
-        (cloned as Record<string, unknown>)[key] = value;
-      }
+  for (const key in query) {
+    const value = query[key as keyof QueryData];
+    if (Array.isArray(value)) {
+      (cloned as Record<string, unknown>)[key] = [...value];
+    } else {
+      (cloned as Record<string, unknown>)[key] = value;
     }
   }
 
   return cloned;
 };
 
-export const getQueryAs = (q: { table?: string; query?: { as?: string } }) => {
-  return q.query?.as || (q.table as string);
+export const getQueryAs = (q: { table?: string; query: { as?: string } }) => {
+  return q.query.as || (q.table as string);
 };
 
 export const noop = () => {};

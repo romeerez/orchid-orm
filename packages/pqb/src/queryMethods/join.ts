@@ -170,16 +170,16 @@ const _join = <
     const as = first.tableAlias || first.table;
     if (as) {
       joinKey = as;
-      parsers = first.query?.parsers || first.columnsParsers;
+      parsers = first.query.parsers || first.columnsParsers;
     }
   } else {
     joinKey = first as string;
 
     const relation = (q.relations as Record<string, Relation>)[joinKey];
     if (relation) {
-      parsers = relation.model.query?.parsers || relation.model.columnsParsers;
+      parsers = relation.model.query.parsers || relation.model.columnsParsers;
     } else {
-      const shape = q.query?.withShapes?.[first as string];
+      const shape = q.query.withShapes?.[first as string];
       if (shape) {
         parsers = {};
         for (const key in shape) {
@@ -491,7 +491,7 @@ export class OnQueryBuilder<
     q: Pick<QueryBase, 'query' | 'table'>,
     public joinTo: QueryBase | string,
   ) {
-    super(q.table, q.query?.as);
+    super(q.table, q.query.as);
   }
 
   on<T extends this>(this: T, ...args: OnArgs<T>): T {

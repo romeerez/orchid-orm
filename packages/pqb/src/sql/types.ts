@@ -182,7 +182,7 @@ export type JoinItem = {
     | [relation: string]
     | [
         relation: string,
-        conditions: { type: 'query'; query: { query?: QueryData } },
+        conditions: { type: 'query'; query: { query: QueryData } },
       ]
     | [
         withOrQuery: string | QueryWithTable,
@@ -193,7 +193,7 @@ export type JoinItem = {
             }
           | {
               type: 'query';
-              query: { query?: QueryData };
+              query: { query: QueryData };
             },
       ]
     | [
@@ -248,8 +248,8 @@ export type WhereItem =
     }
   | {
       type: 'on';
-      joinFrom: { table?: string; query?: { as?: string } } | string;
-      joinTo: { table?: string; query?: { as?: string } } | string;
+      joinFrom: { table?: string; query: { as?: string } } | string;
+      joinTo: { table?: string; query: { as?: string } } | string;
       on:
         | [leftFullColumn: string, rightFullColumn: string]
         | [leftFullColumn: string, op: string, rightFullColumn: string];

@@ -26,11 +26,10 @@ export type WithDataItem = { table: string; shape: ColumnsShape };
 export type WithDataBase = Record<never, WithDataItem>;
 
 export type QueryBase = {
-  query?: QueryData;
+  query: QueryData;
   table?: string;
   tableAlias?: string;
-  toQuery(): { query: QueryData };
-  clone(): { query: QueryData };
+  clone(): QueryBase;
   selectable: SelectableBase;
   __model?: QueryBase;
   relations: RelationsBase;
@@ -52,7 +51,7 @@ export type Query = QueryMethods & {
     primaryTypes: any[];
   };
   type: Record<string, unknown>;
-  query?: QueryData;
+  query: QueryData;
   result: ColumnsShape;
   hasSelect: boolean;
   selectable: SelectableBase;
@@ -196,11 +195,6 @@ export type SetQueryReturnsColumnInfo<
   result: { value: ColumnType<Result> };
   returnType: 'value';
   then: ThenResult<Result>;
-};
-
-export type QueryWithData<T extends QueryBase> = T & {
-  __model: Query;
-  query: QueryData;
 };
 
 export type SetQueryTableAlias<

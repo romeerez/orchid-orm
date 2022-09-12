@@ -188,7 +188,7 @@ describe('having', () => {
   });
 
   it('adds having condition with raw sql', () => {
-    const q = User.all();
+    const q = User.clone();
 
     const expectedSql = `
       SELECT "user".*

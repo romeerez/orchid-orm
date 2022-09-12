@@ -55,7 +55,7 @@ export class Json {
     const q = this._wrap(
       (this.__model || this).selectAs({
         json: raw(
-          this.query?.take
+          this.query.take
             ? `row_to_json("t".*)`
             : `COALESCE(json_agg(row_to_json("t".*)), '[]')`,
         ),

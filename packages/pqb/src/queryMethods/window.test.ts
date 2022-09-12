@@ -37,7 +37,7 @@ describe('window functions', () => {
     });
 
     it(`should perform ${method} query`, () => {
-      const q = User.all();
+      const q = User.clone();
       const expectedSql = `SELECT ${functionName}() OVER (PARTITION BY "user"."name" ORDER BY "user"."createdAt" DESC) AS "as" FROM "user"`;
       expectSql(
         q[method as 'selectRank']({

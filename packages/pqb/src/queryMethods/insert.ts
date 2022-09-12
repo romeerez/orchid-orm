@@ -254,7 +254,7 @@ export class Insert {
     } else {
       columns = [];
       const columnsMap: Record<string, number> = {};
-      const defaults = q.query?.defaults;
+      const defaults = q.query.defaults;
 
       if (Array.isArray(data)) {
         if (defaults) {
@@ -386,9 +386,8 @@ export class Insert {
     this: T,
     data: Data,
   ): T & { [defaultsKey]: keyof Data } {
-    const q = this.toQuery();
-    setQueryValue(q, 'defaults', data);
-    return q as T & { [defaultsKey]: keyof Data };
+    setQueryValue(this, 'defaults', data);
+    return this as T & { [defaultsKey]: keyof Data };
   }
 
   onConflict<T extends Query, Arg extends OnConflictArg<T>>(
@@ -426,12 +425,11 @@ export class OnConflictQueryBuilder<
   constructor(private query: T, private onConflict: Arg) {}
 
   ignore(): T {
-    const q = this.query.toQuery();
-    setQueryValue(q, 'onConflict', {
+    setQueryValue(this.query, 'onConflict', {
       type: 'ignore',
       expr: this.onConflict,
     });
-    return q;
+    return this.query;
   }
 
   merge(
@@ -441,12 +439,11 @@ export class OnConflictQueryBuilder<
       | Partial<T['type']>
       | RawExpression,
   ): T {
-    const q = this.query.toQuery();
-    setQueryValue(q, 'onConflict', {
+    setQueryValue(this.query, 'onConflict', {
       type: 'merge',
       expr: this.onConflict,
       update,
     });
-    return q;
+    return this.query;
   }
 }

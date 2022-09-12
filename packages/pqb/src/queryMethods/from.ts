@@ -42,9 +42,9 @@ export class From {
     } else if (typeof args[1] === 'object' && args[1].as) {
       as = args[1].as;
     } else if (typeof args[0] === 'string') {
-      if (!this.query?.as) as = args[0];
+      if (!this.query.as) as = args[0];
     } else if (!isRaw(args[0] as RawExpression)) {
-      as = (args[0] as Query).query?.as || (args[0] as Query).table;
+      as = (args[0] as Query).query.as || (args[0] as Query).table;
     }
 
     if (typeof args[1] === 'object' && 'only' in args[1]) {

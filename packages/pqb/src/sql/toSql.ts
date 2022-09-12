@@ -1,7 +1,7 @@
-import { EMPTY_OBJECT, getRaw, isRaw } from '../common';
+import { getRaw, isRaw } from '../common';
 import { Query } from '../query';
 import { addValue, q, qc } from './common';
-import { QueryData, Sql } from './types';
+import { Sql } from './types';
 import { pushDistinctSql } from './distinct';
 import { pushSelectSql } from './select';
 import { windowToSql } from './window';
@@ -18,7 +18,7 @@ import { pushColumnInfoSql } from './columnInfo';
 import { pushOrderBySql } from './orderBy';
 
 export const toSql = (model: Query, values: unknown[] = []): Sql => {
-  const query = (model.query || EMPTY_OBJECT) as QueryData;
+  const query = model.query;
 
   const sql: string[] = [];
 
@@ -42,29 +42,25 @@ export const toSql = (model: Query, values: unknown[] = []): Sql => {
     pushWithSql(sql, values, query.with);
   }
 
-  if ('type' in query) {
-    if (query.type === 'insert') {
-      if (!model.table) throw new Error('Table is missing for insert');
+  if (query.type === 'insert') {
+    if (!model.table) throw new Error('Table is missing for insert');
 
-      pushInsertSql(sql, values, model, query, q(model.table));
-      return { text: sql.join(' '), values };
-    }
+    pushInsertSql(sql, values, model, query, q(model.table));
+    return { text: sql.join(' '), values };
+  }
 
-    if (query.type === 'update') {
-      if (!model.table) throw new Error('Table is missing for update');
+  if (query.type === 'update') {
+    if (!model.table) throw new Error('Table is missing for update');
 
-      pushUpdateSql(sql, values, model, query, q(model.table));
-      return { text: sql.join(' '), values };
-    }
+    pushUpdateSql(sql, values, model, query, q(model.table));
+    return { text: sql.join(' '), values };
+  }
 
-    if (query.type === 'delete') {
-      if (!model.table) throw new Error('Table is missing for delete');
+  if (query.type === 'delete') {
+    if (!model.table) throw new Error('Table is missing for delete');
 
-      pushDeleteSql(sql, values, model, query, q(model.table));
-      return { text: sql.join(' '), values };
-    }
-
-    return { text: '', values };
+    pushDeleteSql(sql, values, model, query, q(model.table));
+    return { text: sql.join(' '), values };
   }
 
   const quotedAs = model.table && q(query.as || model.table);

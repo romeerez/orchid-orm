@@ -505,4 +505,14 @@ describe('insert', () => {
       });
     });
   });
+
+  // describe('automatic wrap in transaction', () => {
+  //   it('should wrap queries in transaction when have a query in the callback', () => {
+  //     User.transacting
+  //
+  //     const query = User.beforeInsert((q) => {
+  //
+  //     }).insert(data)
+  //   })
+  // })
 });

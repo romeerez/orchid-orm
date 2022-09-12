@@ -7,13 +7,13 @@ describe('transaction', () => {
   it('should start and commit transaction', async () => {
     const spy = jest.spyOn(Client.prototype, 'query');
 
-    const result = await db.transaction(async (trx) => {
+    const result = await db.transaction(async (db) => {
       const {
         rows: [{ a }],
-      } = await trx.query('SELECT 1 AS a');
+      } = await db.adapter.query('SELECT 1 AS a');
       const {
         rows: [{ b }],
-      } = await trx.query('SELECT 2 AS b');
+      } = await db.adapter.query('SELECT 2 AS b');
       return a + b;
     });
 

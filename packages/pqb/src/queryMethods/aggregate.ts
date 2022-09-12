@@ -161,17 +161,15 @@ export class Aggregate {
     options?: AggregateOptions<T, As>,
     columnType?: ColumnType,
   ): SelectAgg<T, Func, As, Value> {
-    const q = this.toQuery();
-
     pushQueryValue(
-      q,
+      this,
       'select',
-      buildAggregateSelectItem<T>(q, functionName, arg, options),
+      buildAggregateSelectItem<T>(this, functionName, arg, options),
     );
 
     if (columnType?.parseFn) {
       addParserToQuery(
-        q.query,
+        this.query,
         options?.as || functionName,
         columnType.parseFn,
       );

@@ -1,7 +1,6 @@
 import { Expression, raw, RawExpression } from '../common';
 import {
   Query,
-  QueryWithData,
   Selectable,
   SetQueryReturnsAll,
   SetQueryReturnsOneOrUndefined,
@@ -97,61 +96,57 @@ export class QueryMethods {
 
   all<T extends Query>(this: T): SetQueryReturnsAll<T> {
     return this.returnType === 'all'
-      ? (this.toQuery() as unknown as SetQueryReturnsAll<T>)
+      ? (this as unknown as SetQueryReturnsAll<T>)
       : this.clone()._all();
   }
 
   _all<T extends Query>(this: T): SetQueryReturnsAll<T> {
-    const q = this.toQuery();
-    q.returnType = 'all';
-    removeFromQuery(q, 'take');
-    return q as unknown as SetQueryReturnsAll<T>;
+    this.returnType = 'all';
+    removeFromQuery(this, 'take');
+    return this as unknown as SetQueryReturnsAll<T>;
   }
 
   take<T extends Query>(this: T): SetQueryReturnsOneOrUndefined<T> {
-    return this.then === 'one'
+    return this.returnType === 'one'
       ? (this as unknown as SetQueryReturnsOneOrUndefined<T>)
       : this.clone()._take();
   }
 
   _take<T extends Query>(this: T): SetQueryReturnsOneOrUndefined<T> {
-    const q = this.toQuery();
-    q.returnType = 'one';
-    setQueryValue(q, 'take', true);
-    return q as unknown as SetQueryReturnsOneOrUndefined<T>;
+    this.returnType = 'one';
+    setQueryValue(this, 'take', true);
+    return this as unknown as SetQueryReturnsOneOrUndefined<T>;
   }
 
   takeOrThrow<T extends Query>(this: T): SetQueryReturnsOne<T> {
-    return this.then === 'oneOrThrow'
+    return this.returnType === 'oneOrThrow'
       ? (this as unknown as SetQueryReturnsOne<T>)
       : this.clone()._takeOrThrow();
   }
 
   _takeOrThrow<T extends Query>(this: T): SetQueryReturnsOne<T> {
-    const q = this.toQuery();
-    q.returnType = 'oneOrThrow';
-    setQueryValue(q, 'take', true);
-    return q as unknown as SetQueryReturnsOne<T>;
+    this.returnType = 'oneOrThrow';
+    setQueryValue(this, 'take', true);
+    return this as unknown as SetQueryReturnsOne<T>;
   }
 
   rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
-    return this.then === 'rows'
+    return this.returnType === 'rows'
       ? (this as unknown as SetQueryReturnsRows<T>)
       : this.clone()._rows();
   }
 
   _rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
-    const q = this.toQuery();
-    q.returnType = 'rows';
-    removeFromQuery(q, 'take');
-    return q as unknown as SetQueryReturnsRows<T>;
+    this.returnType = 'rows';
+    removeFromQuery(this, 'take');
+    return this as unknown as SetQueryReturnsRows<T>;
   }
 
   pluck<T extends Query, S extends Expression<T>>(
     this: T,
     select: S,
   ): SetQueryReturnsPluck<T, S> {
-    return this.then === 'pluck'
+    return this.returnType === 'pluck'
       ? (this as unknown as SetQueryReturnsPluck<T, S>)
       : this.clone()._pluck(select);
   }
@@ -160,19 +155,18 @@ export class QueryMethods {
     this: T,
     select: S,
   ): SetQueryReturnsPluck<T, S> {
-    const q = this.toQuery();
-    q.returnType = 'pluck';
-    removeFromQuery(q, 'take');
-    setQueryValue(q, 'select', [select]);
-    addParserForSelectItem(q, q.query.as || q.table, 'pluck', select);
-    return q as unknown as SetQueryReturnsPluck<T, S>;
+    this.returnType = 'pluck';
+    removeFromQuery(this, 'take');
+    setQueryValue(this, 'select', [select]);
+    addParserForSelectItem(this, this.query.as || this.table, 'pluck', select);
+    return this as unknown as SetQueryReturnsPluck<T, S>;
   }
 
   value<T extends Query, V extends ColumnType>(
     this: T,
     columnType?: V,
   ): SetQueryReturnsValueOrUndefined<T, V> {
-    return this.then === 'value'
+    return this.returnType === 'value'
       ? (this as unknown as SetQueryReturnsValueOrUndefined<T, V>)
       : this.clone()._value<T, V>(columnType);
   }
@@ -182,17 +176,16 @@ export class QueryMethods {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _columnType?: V,
   ): SetQueryReturnsValueOrUndefined<T, V> {
-    const q = this.toQuery();
-    q.returnType = 'value';
-    removeFromQuery(q, 'take');
-    return q as unknown as SetQueryReturnsValueOrUndefined<T, V>;
+    this.returnType = 'value';
+    removeFromQuery(this, 'take');
+    return this as unknown as SetQueryReturnsValueOrUndefined<T, V>;
   }
 
   valueOrThrow<T extends Query, V extends ColumnType>(
     this: T,
     columnType?: V,
   ): SetQueryReturnsValue<T, V> {
-    return this.then === 'valueOrThrow'
+    return this.returnType === 'valueOrThrow'
       ? (this as unknown as SetQueryReturnsValue<T, V>)
       : this.clone()._valueOrThrow<T, V>(columnType);
   }
@@ -202,32 +195,24 @@ export class QueryMethods {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _columnType?: V,
   ): SetQueryReturnsValue<T, V> {
-    const q = this.toQuery();
-    q.returnType = 'valueOrThrow';
-    removeFromQuery(q, 'take');
-    return q as unknown as SetQueryReturnsValue<T, V>;
+    this.returnType = 'valueOrThrow';
+    removeFromQuery(this, 'take');
+    return this as unknown as SetQueryReturnsValue<T, V>;
   }
 
   exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {
-    return this.then === 'void'
+    return this.returnType === 'void'
       ? (this as unknown as SetQueryReturnsVoid<T>)
       : this.clone()._exec();
   }
 
   _exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {
-    const q = this.toQuery();
-    q.returnType = 'void';
-    removeFromQuery(q, 'take');
-    return q as unknown as SetQueryReturnsVoid<T>;
+    this.returnType = 'void';
+    removeFromQuery(this, 'take');
+    return this as unknown as SetQueryReturnsVoid<T>;
   }
 
-  toQuery<T extends QueryBase>(this: T): QueryWithData<T> {
-    if (this.query) return this as QueryWithData<T>;
-    const q = this.clone();
-    return q as QueryWithData<T>;
-  }
-
-  clone<T extends QueryBase>(this: T): QueryWithData<T> {
+  clone<T extends QueryBase>(this: T): T {
     const cloned = Object.create(this);
     if (!this.__model) {
       cloned.__model = this;
@@ -235,7 +220,7 @@ export class QueryMethods {
 
     cloned.query = getClonedQueryData(this.query);
 
-    return cloned as unknown as QueryWithData<T>;
+    return cloned;
   }
 
   toSql(this: Query, values?: unknown[]): Sql {

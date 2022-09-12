@@ -82,5 +82,5 @@ export const getRaw = (raw: RawExpression, values: unknown[]) => {
 export const EMPTY_OBJECT = {};
 
 export const getQueryParsers = (q: Query) => {
-  return q.query?.parsers ? q.query.parsers : q.columnsParsers;
+  return q.query.parsers || q.columnsParsers;
 };

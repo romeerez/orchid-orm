@@ -1,5 +1,5 @@
 import { raw } from '../common';
-import { QueryData, SelectQueryData } from '../sql';
+import { SelectQueryData } from '../sql';
 import {
   expectQueryNotMutated,
   adapter,
@@ -21,33 +21,10 @@ describe('queryMethods', () => {
     it('should return new object with the same data structures', async () => {
       const cloned = User.clone();
       expect(cloned).not.toBe(User);
-      expect(cloned.adapter).toBe(adapter);
       expect(cloned.table).toBe(User.table);
       expect(cloned.shape).toBe(User.shape);
 
-      const eq: AssertEqual<typeof User & { query: QueryData }, typeof cloned> =
-        true;
-      expect(eq).toBe(true);
-    });
-  });
-
-  describe('toQuery', () => {
-    it('should return the same object if query is present', () => {
-      const a = User.clone();
-      a.query = {};
-      const b = a.toQuery();
-      expect(a).toBe(b);
-
-      const eq: AssertEqual<typeof a, typeof b> = true;
-      expect(eq).toBe(true);
-    });
-
-    it('should return new object if it is a model', () => {
-      const q = User.toQuery();
-      expect(q).not.toBe(User);
-
-      const eq: AssertEqual<typeof q, typeof User & { query: QueryData }> =
-        true;
+      const eq: AssertEqual<typeof User, typeof cloned> = true;
       expect(eq).toBe(true);
     });
   });
@@ -502,7 +479,7 @@ describe('queryMethods', () => {
     });
 
     it('groups by raw sql', () => {
-      const q = User.all();
+      const q = User.clone();
       const expectedSql = `
         SELECT "user".* FROM "user"
         GROUP BY id, name

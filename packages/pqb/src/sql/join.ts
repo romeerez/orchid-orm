@@ -39,14 +39,14 @@ export const processJoinItem = (
       ];
 
       const table = (
-        typeof joinQuery.query?.from === 'string'
+        typeof joinQuery.query.from === 'string'
           ? joinQuery.query.from
           : joinQuery.table
       ) as string;
 
-      let target = quoteSchemaAndTable(joinQuery.query?.schema, table);
+      let target = quoteSchemaAndTable(joinQuery.query.schema, table);
 
-      const as = joinQuery.query?.as || key;
+      const as = joinQuery.query.as || key;
       if (as !== table) {
         target += ` AS ${q(as as string)}`;
       }
@@ -59,13 +59,11 @@ export const processJoinItem = (
         or: WhereItemContainer[][];
       };
 
-      if (joinQuery.query) {
-        if (joinQuery.query.and) query.and.push(...joinQuery.query.and);
-        if (joinQuery.query.or) query.or.push(...joinQuery.query.or);
-      }
+      if (joinQuery.query.and) query.and.push(...joinQuery.query.and);
+      if (joinQuery.query.or) query.or.push(...joinQuery.query.or);
 
       const arg = (
-        args[1] as undefined | { type: 'query'; query: { query?: QueryData } }
+        args[1] as undefined | { type: 'query'; query: { query: QueryData } }
       )?.query.query;
 
       if (arg) {
@@ -98,7 +96,7 @@ export const processJoinItem = (
           quotedAs,
           target,
         );
-      } else if (arg.query.query) {
+      } else {
         const onConditions = whereToSql(
           model,
           arg.query.query,
@@ -144,7 +142,7 @@ export const processJoinItem = (
     const [, arg] = args;
     if (arg.type === 'objectOrRaw') {
       conditions = getObjectOrRawConditions(arg.data, values, quotedAs, joinAs);
-    } else if (arg.query.query) {
+    } else {
       const onConditions = whereToSql(
         model,
         arg.query.query,

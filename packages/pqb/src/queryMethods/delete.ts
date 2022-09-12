@@ -42,7 +42,7 @@ const _del = <
   if (returning) {
     q = self._all();
   } else {
-    q = self.toQuery();
+    q = self;
     q.returnType = 'rowCount';
     removeFromQuery(q, 'take');
   }

@@ -45,7 +45,7 @@ export interface Db<
   then: ThenResult<
     Pick<ColumnShapeOutput<Shape>, DefaultSelectColumns<Shape>[number]>[]
   >;
-  query?: QueryData;
+  query: QueryData;
   columns: (keyof ColumnShapeOutput<Shape>)[];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
   columnsParsers?: ColumnsParsers;
@@ -78,8 +78,10 @@ export class Db<
     public shape: Shape = {} as Shape,
     options?: DbTableOptions,
   ) {
+    this.query = {} as QueryData;
+
     if (options?.schema) {
-      this.query = { schema: options.schema } as SelectQueryData;
+      this.query.schema = options.schema;
     }
 
     this.schema = new TableSchema(shape);

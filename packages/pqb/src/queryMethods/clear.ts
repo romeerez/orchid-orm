@@ -22,14 +22,13 @@ export class Clear {
   }
 
   _clear<T extends Query>(this: T, ...clears: ClearStatement[]): T {
-    const q = this.toQuery();
     clears.forEach((clear) => {
       if (clear === 'where') {
-        removeFromQuery(q, 'and');
-        removeFromQuery(q, 'or');
+        removeFromQuery(this, 'and');
+        removeFromQuery(this, 'or');
       } else if (clear === 'counters') {
-        if ('type' in q.query && q.query.type === 'update') {
-          q.query.data = q.query.data.filter((item) => {
+        if ('type' in this.query && this.query.type === 'update') {
+          this.query.data = this.query.data.filter((item) => {
             if (!isRaw(item)) {
               let removed = false;
               for (const key in item) {
@@ -51,9 +50,9 @@ export class Clear {
           });
         }
       } else {
-        removeFromQuery(q, clear);
+        removeFromQuery(this, clear);
       }
     });
-    return q;
+    return this;
   }
 }

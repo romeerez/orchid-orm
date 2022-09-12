@@ -1,10 +1,4 @@
-import {
-  AddQuerySelect,
-  ColumnParser,
-  Query,
-  QueryBase,
-  QueryWithData,
-} from '../query';
+import { AddQuerySelect, ColumnParser, Query, QueryBase } from '../query';
 import {
   ArrayOfColumnsObjects,
   ColumnsObject,
@@ -64,7 +58,7 @@ type SelectAsResult<T extends Query, S extends SelectAsArg<T>> = AddQuerySelect<
 >;
 
 export const addParserForSelectItem = <T extends Query>(
-  q: QueryWithData<T>,
+  q: T,
   as: string | undefined,
   key: string,
   item: keyof T['selectable'] | Query | RawExpression,
@@ -76,7 +70,7 @@ export const addParserForSelectItem = <T extends Query>(
     } else {
       const parsers = getQueryParsers(item);
       if (parsers) {
-        if (item.query?.take) {
+        if (item.query.take) {
           addParserToQuery(q.query, key, (item) => parseRecord(parsers, item));
         } else {
           addParserToQuery(q.query, key, (items) =>
@@ -128,12 +122,11 @@ export class Select {
     this: T,
     ...args: K
   ): SelectResult<T, K> {
-    const q = this.toQuery();
     if (!args.length) {
       return this as unknown as SelectResult<T, K>;
     }
 
-    const as = q.query.as || q.table;
+    const as = this.query.as || this.table;
     args.forEach((item) => {
       if (typeof item === 'string') {
         const index = item.indexOf('.');
@@ -142,23 +135,23 @@ export class Select {
           const column = item.slice(index + 1);
 
           if (table === as) {
-            const parser = q.columnsParsers?.[column];
-            if (parser) addParserToQuery(q.query, column, parser);
+            const parser = this.columnsParsers?.[column];
+            if (parser) addParserToQuery(this.query, column, parser);
           } else {
-            const parser = (q.query as SelectQueryData).joinedParsers?.[
+            const parser = (this.query as SelectQueryData).joinedParsers?.[
               table
             ]?.[column];
-            if (parser) addParserToQuery(q.query, column, parser);
+            if (parser) addParserToQuery(this.query, column, parser);
           }
         } else {
-          const parser = q.columnsParsers?.[item];
-          if (parser) addParserToQuery(q.query, item, parser);
+          const parser = this.columnsParsers?.[item];
+          if (parser) addParserToQuery(this.query, item, parser);
         }
       } else {
         const relation = item as RelationQueryBase;
-        const parsers = relation.query?.parsers || relation.columnsParsers;
+        const parsers = relation.query.parsers || relation.columnsParsers;
         if (parsers) {
-          addParserToQuery(q.query, getQueryAs(relation), (input) => {
+          addParserToQuery(this.query, getQueryAs(relation), (input) => {
             if (Array.isArray(input)) {
               input.forEach((record: unknown) => {
                 for (const key in parsers) {
@@ -183,7 +176,10 @@ export class Select {
       }
     });
 
-    return pushQueryArray(q, 'select', args) as unknown as SelectResult<T, K>;
+    return pushQueryArray(this, 'select', args) as unknown as SelectResult<
+      T,
+      K
+    >;
   }
 
   selectAs<T extends Query, S extends SelectAsArg<T>>(
@@ -197,13 +193,12 @@ export class Select {
     this: T,
     select: S,
   ): SelectAsResult<T, S> {
-    const q = this.toQuery();
-    const as = q.query.as || q.table;
+    const as = this.query.as || this.table;
     for (const key in select) {
-      addParserForSelectItem(q, as, key, select[key]);
+      addParserForSelectItem(this, as, key, select[key]);
     }
 
-    return pushQueryValue(q, 'select', {
+    return pushQueryValue(this, 'select', {
       selectAs: select,
     }) as unknown as SelectAsResult<T, S>;
   }

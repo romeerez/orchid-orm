@@ -35,14 +35,20 @@ const getFrom = (model: Query, query: SelectQueryData, values: unknown[]) => {
         return `(${sql.text})`;
       }
 
-      const keys = query.from.query && Object.keys(query.from.query);
+      const q = query.from.query;
+      const keys = Object.keys(q);
       // if query is present, and it contains more than just schema return (SELECT ...)
-      if (keys && (keys.length !== 1 || keys[0] !== 'schema')) {
+      let maxKeys = 0;
+      if ('schema' in q) maxKeys++;
+      if ('type' in q) maxKeys++;
+      if ('adapter' in q) maxKeys++;
+
+      if (keys.length > maxKeys) {
         const sql = query.from.toSql(values);
         return `(${sql.text})`;
       }
 
-      return quoteSchemaAndTable(query.from.query?.schema, query.from.table);
+      return quoteSchemaAndTable(q.schema, query.from.table);
     }
 
     return quoteSchemaAndTable(query.schema, query.from);

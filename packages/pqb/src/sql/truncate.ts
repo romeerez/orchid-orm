@@ -6,7 +6,7 @@ export const pushTruncateSql = (
   table: string,
   query: TruncateQueryData,
 ) => {
-  sql.push('TRUNCATE', quoteSchemaAndTable(query?.schema, table));
+  sql.push('TRUNCATE', quoteSchemaAndTable(query.schema, table));
 
   if (query.restartIdentity) sql.push('RESTART IDENTITY');
   if (query.cascade) sql.push('CASCADE');

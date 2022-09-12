@@ -345,7 +345,7 @@ describe('aggregate', () => {
     };
 
     it(`should perform ${method} query for a column`, () => {
-      const q = User.all();
+      const q = User.clone();
 
       const expectedSql = getSql('"user"."name"');
       expectSql(q[method as 'count']('name').toSql(), expectedSql);
@@ -440,7 +440,7 @@ describe('aggregate', () => {
     });
 
     it(`should perform ${method} query for a column`, () => {
-      const q = User.all();
+      const q = User.clone();
       const expectedSql = `SELECT ${functionName}($1::text, "user"."name") FROM "user"`;
       expectSql(
         q[method as 'jsonObjectAgg']({ alias: 'name' }).toSql(),
@@ -454,7 +454,7 @@ describe('aggregate', () => {
     });
 
     it('should support raw sql parameter', () => {
-      const q = User.all();
+      const q = User.clone();
       expectSql(
         q[method as 'jsonObjectAgg']({
           alias: raw('name'),
@@ -540,7 +540,7 @@ describe('aggregate', () => {
     });
 
     it('makes stringAgg query', () => {
-      const q = User.all();
+      const q = User.clone();
       const expectedSql = `SELECT string_agg("user"."name", $1) FROM "user"`;
       expectSql(q.stringAgg('name', ' & ').toSql(), expectedSql, [' & ']);
       expectQueryNotMutated(q);

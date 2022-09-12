@@ -57,8 +57,8 @@ export const serializeWhereItem = <T extends QueryBase>(
 
     return {
       type: 'nested',
-      and: qb.query?.and,
-      or: qb.query?.or,
+      and: qb.query.and,
+      or: qb.query.or,
     };
   }
 
@@ -116,7 +116,7 @@ export const addWhere = <T extends Where>(q: T, args: WhereArg<T>[]): T => {
     q,
     'and',
     args.map((item) => ({ item: serializeWhereItem(q, item) })),
-  );
+  ) as T;
 };
 
 export const addWhereNot = <T extends QueryBase>(
@@ -171,13 +171,12 @@ const getWhereExistsArgs = (
 };
 
 export abstract class Where implements QueryBase {
-  abstract clone<T extends this>(this: T): T & { query: QueryData };
-  abstract toQuery<T extends this>(this: T): T & { query: QueryData };
+  abstract clone<T extends this>(this: T): T;
   abstract selectable: SelectableBase;
   abstract relations: RelationsBase;
   abstract withData: WithDataBase;
 
-  query?: QueryData;
+  query = {} as QueryData;
   table?: string;
   tableAlias?: string;
 
@@ -467,7 +466,7 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
   extends Where
   implements QueryBase
 {
-  query?: QueryData;
+  query = {} as QueryData;
   selectable!: Q['selectable'];
   __model?: this;
   relations = {};
@@ -477,11 +476,7 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
     super();
   }
 
-  toQuery<T extends this>(this: T): T & { query: QueryData } {
-    return (this.query ? this : this.clone()) as T & { query: QueryData };
-  }
-
-  clone<T extends this>(this: T): T & { query: QueryData } {
+  clone<T extends this>(this: T): T {
     const cloned = Object.create(this);
     if (!this.__model) {
       cloned.__model = this;
@@ -489,6 +484,6 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
 
     cloned.query = getClonedQueryData(this.query);
 
-    return cloned as unknown as T & { query: QueryData };
+    return cloned as unknown as T;
   }
 }

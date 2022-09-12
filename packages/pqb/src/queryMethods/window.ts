@@ -15,9 +15,7 @@ const selectWindowFunction = <
   options: WindowFunctionOptions<T, As>,
   parse?: (input: unknown) => Value['type'],
 ): SelectAgg<T, Func, As, Value> => {
-  const q = self.toQuery();
-
-  pushQueryValue(q, 'select', {
+  pushQueryValue(self, 'select', {
     function: functionName,
     options: {
       as: options.as,
@@ -26,10 +24,10 @@ const selectWindowFunction = <
   });
 
   if (parse) {
-    addParserToQuery(q.query, options.as || functionName, parse);
+    addParserToQuery(self.query, options.as || functionName, parse);
   }
 
-  return q as unknown as SelectAgg<T, Func, As, Value>;
+  return self as unknown as SelectAgg<T, Func, As, Value>;
 };
 
 const toInt = (input: unknown) => parseInt(input as string);

@@ -37,11 +37,10 @@ export class ColumnInfoMethods {
     T extends Query,
     Column extends keyof T['shape'] | undefined = undefined,
   >(this: T, column?: Column): SetQueryReturnsColumnInfo<T, Column> {
-    const q = this.toQuery();
-    setQueryValue(q, 'type', 'columnInfo');
-    if (column) setQueryValue(q, 'column', column);
-    q.returnType = 'all';
-    q.then = function (resolve, reject) {
+    setQueryValue(this, 'type', 'columnInfo');
+    if (column) setQueryValue(this, 'column', column);
+    this.returnType = 'all';
+    this.then = function (resolve, reject) {
       new Then().then.call(
         this,
         (rows) => {
@@ -59,6 +58,6 @@ export class ColumnInfoMethods {
         reject,
       );
     } as ThenResult<unknown>;
-    return q as unknown as SetQueryReturnsColumnInfo<T, Column>;
+    return this as unknown as SetQueryReturnsColumnInfo<T, Column>;
   }
 }

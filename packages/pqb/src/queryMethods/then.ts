@@ -34,19 +34,17 @@ export class Then {
   ) {
     let beforeCallbacks: CommonQueryData['beforeQuery'];
     let afterCallbacks: CommonQueryData['afterQuery'];
-    if (this.query) {
-      if (this.query.type === 'insert') {
-        beforeCallbacks = this.query.beforeInsert;
-        afterCallbacks = this.query.afterInsert;
-      }
+    if (this.query.type === 'insert') {
+      beforeCallbacks = this.query.beforeInsert;
+      afterCallbacks = this.query.afterInsert;
+    }
 
-      if (beforeCallbacks) {
-        await Promise.all(beforeCallbacks.map((cb) => cb(this)));
-      }
+    if (beforeCallbacks) {
+      await Promise.all(beforeCallbacks.map((cb) => cb(this)));
+    }
 
-      if (this.query.beforeQuery) {
-        await Promise.all(this.query.beforeQuery.map((cb) => cb(this)));
-      }
+    if (this.query.beforeQuery) {
+      await Promise.all(this.query.beforeQuery.map((cb) => cb(this)));
     }
 
     const { returnType } = this;
@@ -119,11 +117,11 @@ export class Then {
         }
       })
       .then(
-        afterCallbacks?.length || this.query?.afterQuery?.length
+        afterCallbacks?.length || this.query.afterQuery?.length
           ? async (result) => {
-              if (this.query?.afterQuery?.length) {
+              if (this.query.afterQuery?.length) {
                 await Promise.all(
-                  this.query?.afterQuery.map((query) => query(this, result)),
+                  this.query.afterQuery.map((query) => query(this, result)),
                 );
               }
 
