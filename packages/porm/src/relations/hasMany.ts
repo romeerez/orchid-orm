@@ -94,11 +94,11 @@ export const makeHasManyMethod = (
       const values = { [foreignKey]: params[primaryKey] };
       return query.where(values)._defaults(values);
     },
-    nestedInsert: (async (data) => {
+    nestedInsert: (async (q, data) => {
       const create = data.filter(([, relationData]) => relationData.create);
 
       if (create.length) {
-        await query.insert(
+        await query.transacting(q).insert(
           create.flatMap(([selfData, { create }]) =>
             create.map((item) => ({
               [foreignKey]: selfData[primaryKey],

@@ -8,6 +8,7 @@ export class Transaction {
     return this.query.adapter.transaction((adapter) => {
       const q = this.clone();
       q.query.adapter = adapter;
+      q.query.inTransaction = true;
       return cb(q);
     });
   }

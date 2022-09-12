@@ -16,6 +16,8 @@ export type Sql = {
 
 export type CommonQueryData = {
   adapter: PostgresAdapter;
+  inTransaction?: true;
+  wrapInTransaction?: true;
   take?: true;
   with?: WithItem[];
   withShapes?: Record<string, ColumnsShape>;

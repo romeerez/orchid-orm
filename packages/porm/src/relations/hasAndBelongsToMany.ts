@@ -58,7 +58,7 @@ export const makeHasAndBelongsToManyMethod = (
         }),
       );
     },
-    nestedInsert: (async (data) => {
+    nestedInsert: (async (q, data) => {
       const allKeys = data as unknown as [
         selfData: Record<string, unknown>,
         relationKeys: Record<string, unknown>[],
@@ -67,10 +67,12 @@ export const makeHasAndBelongsToManyMethod = (
       const create = data.filter(([, relationData]) => relationData.create);
 
       if (create.length) {
-        const result = await query.insert(
-          create.flatMap(([, { create }]) => create) as InsertData<Query>[],
-          [associationPrimaryKey],
-        );
+        const result = await query
+          .transacting(q)
+          .insert(
+            create.flatMap(([, { create }]) => create) as InsertData<Query>[],
+            [associationPrimaryKey],
+          );
         let pos = 0;
         create.forEach(([, data], index) => {
           const len = data.create.length;
@@ -79,7 +81,7 @@ export const makeHasAndBelongsToManyMethod = (
         });
       }
 
-      await subQuery.insert(
+      await subQuery.transacting(q).insert(
         allKeys.flatMap(([selfData, relationKeys]) => {
           const selfKey = selfData[primaryKey];
           return relationKeys.map((relationData) => ({

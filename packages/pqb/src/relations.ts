@@ -5,10 +5,12 @@ export type NestedInsertManyItems = { create: Record<string, unknown>[] };
 export type NestedInsertItem = NestedInsertOneItem | NestedInsertManyItems;
 
 export type BelongsToNestedInsert = (
+  query: Query,
   relationData: NestedInsertOneItem[],
 ) => Promise<Record<string, unknown>[]>;
 
 export type HasOneNestedInsert = (
+  query: Query,
   data: [
     selfData: Record<string, unknown>,
     relationData: NestedInsertOneItem,
@@ -16,6 +18,7 @@ export type HasOneNestedInsert = (
 ) => Promise<void>;
 
 export type HasManyNestedInsert = (
+  query: Query,
   data: [
     selfData: Record<string, unknown>,
     relationData: NestedInsertManyItems,

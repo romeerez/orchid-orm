@@ -33,10 +33,10 @@ export const makeBelongsToMethod = (
     method: (params: Record<string, unknown>) => {
       return query.findBy({ [primaryKey]: params[foreignKey] });
     },
-    nestedInsert: (async (data) => {
+    nestedInsert: (async (q, data) => {
       const create = data.filter((item) => item.create);
 
-      return await query.insert(
+      return await query.transacting(q).insert(
         create.map((item) => item.create),
         [primaryKey],
       );

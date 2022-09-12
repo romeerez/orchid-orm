@@ -8,6 +8,8 @@ describe('transaction', () => {
     const spy = jest.spyOn(Client.prototype, 'query');
 
     const result = await db.transaction(async (db) => {
+      expect(db.query.inTransaction).toBe(true);
+
       const {
         rows: [{ a }],
       } = await db.adapter.query('SELECT 1 AS a');

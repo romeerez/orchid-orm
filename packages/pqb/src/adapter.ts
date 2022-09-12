@@ -146,7 +146,7 @@ const performQueryArrays = <T extends any[] = any[]>(
   });
 };
 
-class TransactionAdapter implements PostgresAdapter {
+export class TransactionAdapter implements PostgresAdapter {
   constructor(
     public pool: Pool,
     public client: PoolClient,

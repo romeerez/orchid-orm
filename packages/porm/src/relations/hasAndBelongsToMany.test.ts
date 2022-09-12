@@ -7,7 +7,7 @@ import {
   insertUser,
   useTestDatabase,
 } from '../test-utils/test-utils';
-import { RelationQuery, Sql } from 'pqb';
+import { RelationQuery, Sql, TransactionAdapter } from 'pqb';
 
 describe('hasAndBelongsToMany', () => {
   useTestDatabase();
@@ -220,8 +220,8 @@ describe('hasAndBelongsToMany', () => {
         ['id'],
       );
 
-      const querySpy = jest.spyOn(db.user.adapter, 'query');
-      const arraysSpy = jest.spyOn(db.user.adapter, 'arrays');
+      const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
+      const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
 
       const user = await query;
       const chatIds = await db.user
@@ -303,8 +303,8 @@ describe('hasAndBelongsToMany', () => {
         ['id'],
       );
 
-      const querySpy = jest.spyOn(db.user.adapter, 'query');
-      const arraysSpy = jest.spyOn(db.user.adapter, 'arrays');
+      const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
+      const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
 
       const users = await query;
       const chatIds = await db.user.join('chats').pluck('chats.id');

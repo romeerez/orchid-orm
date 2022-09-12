@@ -305,13 +305,16 @@ export class Insert {
         q,
         'beforeQuery',
         prependRelationsKeys.map((relationName) => {
-          return async () => {
+          return async (q: Query) => {
             const relationData = prependRelations[relationName];
             const relation = relations[relationName];
 
             const inserted = await (
               relation.nestedInsert as BelongsToNestedInsert
-            )(relationData.map(([, , data]) => data as NestedInsertOneItem));
+            )(
+              q,
+              relationData.map(([, , data]) => data as NestedInsertOneItem),
+            );
 
             const primaryKey = (relation as BelongsToRelation).options
               .primaryKey;
@@ -351,6 +354,7 @@ export class Insert {
             await (
               relations[relationName].nestedInsert as HasOneNestedInsert
             )?.(
+              q,
               appendRelations[relationName].map(([rowIndex, data]) => [
                 all[rowIndex],
                 data as NestedInsertOneItem,
@@ -364,6 +368,9 @@ export class Insert {
     setQueryValue(q, 'type', 'insert');
     setQueryValue(q, 'columns', columns);
     setQueryValue(q, 'values', values);
+    if (prependRelationsKeys.length || appendRelationsKeys.length) {
+      q.query.wrapInTransaction = true;
+    }
 
     if (returning) {
       q.returnType = Array.isArray(data) ? 'all' : 'one';
