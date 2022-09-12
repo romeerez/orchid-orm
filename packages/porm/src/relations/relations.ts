@@ -11,6 +11,7 @@ import {
   SetQueryReturnsOneOrUndefined,
   BaseRelation,
   defaultsKey,
+  relationQueryKey,
 } from 'pqb';
 import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
 import {
@@ -183,6 +184,7 @@ export const applyRelations = (
 
 const makeRelationQuery = (data: RelationData): RelationQuery => {
   const query = data.returns === 'one' ? data.joinQuery.take() : data.joinQuery;
+  query.query[relationQueryKey] = true;
 
   return new Proxy(data.method, {
     get(_, prop) {

@@ -106,7 +106,7 @@ describe('with', () => {
     options.forEach((options) => {
       const args: Parameters<typeof q.with> = [
         'withAlias',
-        (qb) => qb.selectAs({ one: raw<NumberColumn>('1') }),
+        (qb) => qb.select({ one: raw<NumberColumn>('1') }),
       ];
 
       if (options) {

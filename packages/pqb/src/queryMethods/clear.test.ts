@@ -3,11 +3,10 @@ import { expectSql, line, Message, User } from '../test-utils';
 describe('clear', () => {
   it('should remove query statements for select', () => {
     const query = User.with('withAlias', User.all())
-      .select('id')
-      .selectAs({ as: 'name' })
+      .select('id', { as: 'name' })
       .where({ id: 1 })
       .or({ id: 2 })
-      .union([User.select('id').selectAs({ as: 'name' })])
+      .union([User.select('id', { as: 'name' })])
       .join(Message, 'authorId', 'id')
       .group('id')
       .order({ id: 'ASC' })

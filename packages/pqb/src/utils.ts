@@ -73,6 +73,24 @@ export type Spread<A extends readonly [...any]> = A extends [
   ? SpreadTwo<L, Spread<R>>
   : unknown;
 
+export type SimpleSpread<A extends readonly [...any]> = A extends [
+  infer L,
+  ...infer R,
+]
+  ? L & SimpleSpread<R>
+  : // eslint-disable-next-line @typescript-eslint/ban-types
+    {};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type FilterTuple<T extends readonly any[], E> = T extends [
+  infer F,
+  ...infer R,
+]
+  ? [F] extends [E]
+    ? [F, ...FilterTuple<R, E>]
+    : FilterTuple<R, E>
+  : [];
+
 export type CoalesceString<
   Left extends string | undefined,
   Right extends string,
@@ -97,14 +115,13 @@ export const joinTruthy = (...strings: (string | false | undefined)[]) => {
 };
 
 export const getClonedQueryData = (query: QueryData): QueryData => {
-  const cloned = {} as QueryData;
+  const cloned = { ...query };
 
   for (const key in query) {
-    const value = query[key as keyof QueryData];
-    if (Array.isArray(value)) {
-      (cloned as Record<string, unknown>)[key] = [...value];
-    } else {
-      (cloned as Record<string, unknown>)[key] = value;
+    if (Array.isArray(query[key as keyof QueryData])) {
+      (cloned as Record<string, unknown>)[key] = [
+        ...(query[key as keyof QueryData] as unknown[]),
+      ];
     }
   }
 

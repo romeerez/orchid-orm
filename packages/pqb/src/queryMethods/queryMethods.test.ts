@@ -430,8 +430,7 @@ describe('queryMethods', () => {
       expectSql(
         q
           .join(Country, 'country.id', '=', 'city.countryId')
-          .select('name')
-          .selectAs({ countryName: 'country.name' })
+          .select('name', { countryName: 'country.name' })
           .withSchema('geo')
           .toSql(),
         `

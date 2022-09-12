@@ -5,17 +5,30 @@ import {
   NullableColumn,
 } from '../columnSchema';
 import { getQueryParsers, isRaw, RawExpression } from '../common';
-import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
+import { pushQueryArray } from '../queryDataUtils';
 import { parseRecord } from './then';
 import { QueryData, SelectQueryData } from '../sql';
-import { getQueryAs } from '../utils';
-import { isRequiredRelationKey, RelationQueryBase } from '../relations';
+import { FilterTuple, getQueryAs, SimpleSpread } from '../utils';
+import {
+  isRequiredRelationKey,
+  RelationQueryBase,
+  relationQueryKey,
+} from '../relations';
 
-type SelectArg<T extends QueryBase> = keyof T['selectable'] | RelationQueryBase;
+type SelectArg<T extends QueryBase> =
+  | keyof T['selectable']
+  | RelationQueryBase
+  | SelectAsArg<T>;
+
+type SelectAsArg<T extends QueryBase> = Record<
+  string,
+  keyof T['selectable'] | Query | RawExpression
+>;
 
 type SelectResult<
   T extends Query,
   Args extends SelectArg<T>[],
+  SelectAsArgs = SimpleSpread<FilterTuple<Args, SelectAsArg<QueryBase>>>,
 > = AddQuerySelect<
   T,
   {
@@ -34,25 +47,15 @@ type SelectResult<
         ? ColumnsObject<Arg['result']>
         : NullableColumn<ColumnsObject<Arg['result']>>
       : never;
-  }
->;
-
-type SelectAsArg<T extends Query> = Record<
-  string,
-  keyof T['selectable'] | Query | RawExpression
->;
-
-type SelectAsResult<T extends Query, S extends SelectAsArg<T>> = AddQuerySelect<
-  T,
-  {
-    [K in keyof S]: S[K] extends keyof T['selectable']
-      ? T['selectable'][S[K]]['column']
-      : S[K] extends RawExpression
-      ? S[K]['__column']
-      : S[K] extends Query
-      ? S[K]['returnType'] extends 'all'
-        ? ArrayOfColumnsObjects<S[K]['result']>
-        : ColumnsObject<S[K]['result']>
+  } & {
+    [K in keyof SelectAsArgs]: SelectAsArgs[K] extends keyof T['selectable']
+      ? T['selectable'][SelectAsArgs[K]]['column']
+      : SelectAsArgs[K] extends RawExpression
+      ? SelectAsArgs[K]['__column']
+      : SelectAsArgs[K] extends Query
+      ? SelectAsArgs[K]['returnType'] extends 'all'
+        ? ArrayOfColumnsObjects<SelectAsArgs[K]['result']>
+        : ColumnsObject<SelectAsArgs[K]['result']>
       : never;
   }
 >;
@@ -127,7 +130,7 @@ export class Select {
     }
 
     const as = this.query.as || this.table;
-    args.forEach((item) => {
+    const selectArgs = args.map((item) => {
       if (typeof item === 'string') {
         const index = item.indexOf('.');
         if (index !== -1) {
@@ -147,7 +150,7 @@ export class Select {
           const parser = this.columnsParsers?.[item];
           if (parser) addParserToQuery(this.query, item, parser);
         }
-      } else {
+      } else if ((item as { query?: QueryData }).query?.[relationQueryKey]) {
         const relation = item as RelationQueryBase;
         const parsers = relation.query.parsers || relation.columnsParsers;
         if (parsers) {
@@ -173,33 +176,26 @@ export class Select {
             return input;
           });
         }
+      } else {
+        for (const key in item as SelectAsArg<QueryBase>) {
+          addParserForSelectItem(
+            this,
+            as,
+            key,
+            (item as SelectAsArg<QueryBase>)[key],
+          );
+        }
+
+        return { selectAs: item };
       }
+
+      return item;
     });
 
-    return pushQueryArray(this, 'select', args) as unknown as SelectResult<
-      T,
-      K
-    >;
-  }
-
-  selectAs<T extends Query, S extends SelectAsArg<T>>(
-    this: T,
-    select: S,
-  ): SelectAsResult<T, S> {
-    return this.clone()._selectAs(select) as unknown as SelectAsResult<T, S>;
-  }
-
-  _selectAs<T extends Query, S extends SelectAsArg<T>>(
-    this: T,
-    select: S,
-  ): SelectAsResult<T, S> {
-    const as = this.query.as || this.table;
-    for (const key in select) {
-      addParserForSelectItem(this, as, key, select[key]);
-    }
-
-    return pushQueryValue(this, 'select', {
-      selectAs: select,
-    }) as unknown as SelectAsResult<T, S>;
+    return pushQueryArray(
+      this,
+      'select',
+      selectArgs,
+    ) as unknown as SelectResult<T, K>;
   }
 }

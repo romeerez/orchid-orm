@@ -6,7 +6,7 @@ import {
 } from '../query';
 import { Expression, RawExpression } from '../common';
 import { ColumnsShape, ColumnType } from '../columnSchema';
-import { RelationQuery } from '../relations';
+import { RelationQuery, relationQueryKey } from '../relations';
 import { PostgresAdapter } from '../adapter';
 
 export type Sql = {
@@ -16,6 +16,7 @@ export type Sql = {
 
 export type CommonQueryData = {
   adapter: PostgresAdapter;
+  [relationQueryKey]?: true;
   inTransaction?: true;
   wrapInTransaction?: true;
   take?: true;
