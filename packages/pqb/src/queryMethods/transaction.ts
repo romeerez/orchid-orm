@@ -1,27 +1,23 @@
 import { Query } from '../query';
-import { PostgresAdapter } from '../adapter';
 
 export class Transaction {
-  // TODO: pass this to callback
-  async transaction<T extends { adapter: PostgresAdapter }, Result>(
+  async transaction<T extends Query, Result>(
     this: T,
-    cb: (query: { adapter: PostgresAdapter }) => Promise<Result>,
+    cb: (query: T) => Promise<Result>,
   ): Promise<Result> {
-    return this.adapter.transaction((adapter) => cb({ adapter }));
+    return this.query.adapter.transaction((adapter) => {
+      const q = this.clone();
+      q.query.adapter = adapter;
+      return cb(q);
+    });
   }
 
-  transacting<T extends Query>(
-    this: T,
-    query: { adapter: PostgresAdapter },
-  ): T {
+  transacting<T extends Query>(this: T, query: Query): T {
     return this.clone()._transacting(query);
   }
 
-  _transacting<T extends Query>(
-    this: T,
-    query: { adapter: PostgresAdapter },
-  ): T {
-    this.query.adapter = query.adapter;
+  _transacting<T extends Query>(this: T, query: Query): T {
+    this.query.adapter = query.query.adapter;
     return this;
   }
 }
