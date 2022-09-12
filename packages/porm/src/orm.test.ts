@@ -5,7 +5,7 @@ import {
   insertUser,
   useTestDatabase,
 } from './test-utils/test-utils';
-import { adapter } from './test-utils/test-db';
+import { adapter, pgConfig } from './test-utils/test-db';
 import { Model } from './model';
 
 describe('orm', () => {
@@ -28,12 +28,12 @@ describe('orm', () => {
   }
 
   it('should return object with provided adapter, destroy and transaction method, models', () => {
-    const db = porm(adapter)({
+    const db = porm(pgConfig, {
       user: UserModel,
       profile: ProfileModel,
     });
 
-    expect(db.adapter).toBe(adapter);
+    expect(Object.keys(db.adapter)).toEqual(Object.keys(adapter));
     expect(db.destroy).toBeInstanceOf(Function);
     expect(db.transaction).toBeInstanceOf(Function);
     expect(Object.keys(db)).toEqual(
@@ -44,7 +44,7 @@ describe('orm', () => {
   it('should return model which is queryable interface', async () => {
     await insertUser();
 
-    const db = porm(adapter)({
+    const db = porm(pgConfig, {
       user: UserModel,
       profile: ProfileModel,
     });

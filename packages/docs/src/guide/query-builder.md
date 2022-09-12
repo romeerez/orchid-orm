@@ -8,19 +8,17 @@ Everything listed in this document also applies for the [ORM](/guide/orm), excep
 
 ## createDb
 
-`createDb` is a function to configure query builder instance, it takes `Adapter` which is accepting the same options as [node-postgres](https://node-postgres.com/) library.
+`createDb` is a function to configure query builder instance, it is accepting the same options as [node-postgres](https://node-postgres.com/) library.
 
 For all connection options see: [client options](https://node-postgres.com/api/client) + [pool options](https://node-postgres.com/api/pool)
 
 ```ts
-import { Adapter, createDb } from 'pqb'
+import { createDb } from 'pqb'
 
-const options = {
+const db = createDb({
   // in the format: postgres://user:password@localhost:5432/dbname
   connectionString: process.env.DATABASE_URL
-}
-
-const db = createDb(Adapter(options))
+})
 ```
 
 ## db table interface
@@ -30,7 +28,7 @@ Make a queryable object by calling `db` with a table name and schema definition.
 (see [Columns schema](/guide/columns-schema) document for details)
 
 ```ts
-const db = createDb(Adapter(options))
+const db = createDb(options)
 
 export const User = db('user', (t) => ({
   id: t.serial().primaryKey(),
@@ -847,9 +845,9 @@ Transactions are handled by passing a handler function into `db.transaction`.
 `.transaction` method exists both on object returned by `createDb` and on table wrappers returned by `db(table, () => schema)`.
 
 ```ts
-import { Adapter, createDb } from 'pqb'
+import { createDb } from 'pqb'
 
-const db = createDb(Adapter(options))
+const db = createDb(options)
 
 const Catalogue = db('catalogue', () => ({
   id: t.serial().primaryKey(),

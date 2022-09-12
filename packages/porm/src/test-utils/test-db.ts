@@ -1,5 +1,4 @@
 import { Client } from 'pg';
-import { Adapter } from 'pqb';
 import { porm } from '../orm';
 import {
   ChatModel,
@@ -14,11 +13,11 @@ export const pgConfig = {
 
 export const dbClient = new Client(pgConfig);
 
-export const adapter = Adapter(pgConfig);
-
-export const db = porm(adapter)({
+export const db = porm(pgConfig, {
   user: UserModel,
   profile: ProfileModel,
   chat: ChatModel,
   message: MessageModel,
 });
+
+export const adapter = db.adapter;

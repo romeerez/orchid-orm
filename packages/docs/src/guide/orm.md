@@ -8,27 +8,34 @@ While `pqb` query builder is designed to cover abilities of [knex](https://knexj
 
 ## Setup
 
-`porm` is an entry function of the ORM, it takes `Adapter` which is accepting the same options as [node-postgres](https://node-postgres.com/) library.
+`porm` is an entry function of the ORM.
 
-For all connection options see: [client options](https://node-postgres.com/api/client) + [pool options](https://node-postgres.com/api/pool)
+First argument is a connection options object, for all connection options see: [client options](https://node-postgres.com/api/client) + [pool options](https://node-postgres.com/api/pool)
+ 
+Second argument is an object where keys are model names and values are models (see next section for defining model).
 
-`porm` returns another function which takes object where keys are model names and values are models (see next section for defining model).
+Returns instance with models and some specific functions as `destroy`.
 
 ```ts
-import { Adapter } from 'pqb'
 import { porm } from 'porm'
 
 // import all models
 import { UserModel } from './models/user'
 import { MessageModel } from './models/message'
 
-export const db = porm(Adapter({
+export const db = porm({
   // in the format: postgres://user:password@localhost:5432/dbname
   connectionString: process.env.DATABASE_URL
-}))({
+})({
   user: UserModel,
   message: MessageModel,
 })
+```
+
+Call `destroy` to close connection:
+
+```ts
+await db.destroy()
 ```
 
 ## Model

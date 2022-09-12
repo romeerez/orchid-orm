@@ -6,7 +6,7 @@ import {
 } from './query';
 import { QueryMethods } from './queryMethods/queryMethods';
 import { QueryData, SelectQueryData, Sql } from './sql';
-import { PostgresAdapter } from './adapter';
+import { Adapter, AdapterOptions, PostgresAdapter } from './adapter';
 import {
   ColumnsShape,
   columnTypes,
@@ -143,7 +143,8 @@ type DbResult = Db & {
   destroy: PostgresAdapter['destroy'];
 };
 
-export const createDb = (adapter: PostgresAdapter): DbResult => {
+export const createDb = (options: AdapterOptions): DbResult => {
+  const adapter = Adapter(options);
   const qb = new Db(adapter, undefined as unknown as Db);
   qb.queryBuilder = qb;
 

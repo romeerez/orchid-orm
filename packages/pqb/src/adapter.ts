@@ -57,10 +57,14 @@ for (const key in types.builtins) {
 
 const returnArg = (arg: unknown) => arg;
 
+export type AdapterOptions = Omit<PoolConfig, 'types'> & {
+  types?: TypeParsers;
+};
+
 export const Adapter = ({
   types: configTypes = defaultTypeParsers,
   ...config
-}: Omit<PoolConfig, 'types'> & { types?: TypeParsers }): PostgresAdapter => {
+}: AdapterOptions): PostgresAdapter => {
   const pool = new Pool(config);
 
   return {

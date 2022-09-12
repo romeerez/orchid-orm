@@ -1,5 +1,4 @@
 import { Query } from './query';
-import { Adapter } from './adapter';
 import { createDb } from './db';
 import {
   patchPgForTransactions,
@@ -15,9 +14,9 @@ export const dbClient = new Client({
   connectionString: process.env.DATABASE_URL,
 });
 
-export const adapter = Adapter({ connectionString: process.env.DATABASE_URL });
+export const db = createDb({ connectionString: process.env.DATABASE_URL });
 
-export const db = createDb(adapter);
+export const adapter = db.adapter;
 
 const dateColumn = columnTypes.timestamp().parse((input) => new Date(input));
 
