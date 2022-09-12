@@ -48,7 +48,7 @@ export class Then {
     }
 
     const { returnType } = this;
-    return this.adapter[queryMethod[returnType] as 'query'](this.toSql())
+    return this.query.adapter[queryMethod[returnType] as 'query'](this.toSql())
       .then((result) => {
         switch (returnType) {
           case 'all': {

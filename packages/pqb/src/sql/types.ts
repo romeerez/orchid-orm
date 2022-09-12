@@ -7,6 +7,7 @@ import {
 import { Expression, RawExpression } from '../common';
 import { ColumnsShape, ColumnType } from '../columnSchema';
 import { RelationQuery } from '../relations';
+import { PostgresAdapter } from '../adapter';
 
 export type Sql = {
   text: string;
@@ -14,6 +15,7 @@ export type Sql = {
 };
 
 export type CommonQueryData = {
+  adapter: PostgresAdapter;
   take?: true;
   with?: WithItem[];
   withShapes?: Record<string, ColumnsShape>;

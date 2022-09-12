@@ -1,5 +1,4 @@
 import { QueryMethods } from './queryMethods/queryMethods';
-import { PostgresAdapter } from './adapter';
 import { QueryData } from './sql';
 import {
   ColumnShapeOutput,
@@ -40,7 +39,6 @@ export type defaultsKey = typeof defaultsKey;
 export const defaultsKey: unique symbol = Symbol('defaults');
 
 export type Query = QueryMethods & {
-  adapter: PostgresAdapter;
   queryBuilder: Db;
   table?: string;
   shape: ColumnsShape;

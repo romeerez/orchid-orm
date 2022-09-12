@@ -38,10 +38,9 @@ const getFrom = (model: Query, query: SelectQueryData, values: unknown[]) => {
       const q = query.from.query;
       const keys = Object.keys(q);
       // if query is present, and it contains more than just schema return (SELECT ...)
-      let maxKeys = 0;
+      let maxKeys = 1;
       if ('schema' in q) maxKeys++;
       if ('type' in q) maxKeys++;
-      if ('adapter' in q) maxKeys++;
 
       if (keys.length > maxKeys) {
         const sql = query.from.toSql(values);

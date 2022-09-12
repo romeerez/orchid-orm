@@ -21,7 +21,7 @@ export class Transaction {
     this: T,
     query: { adapter: PostgresAdapter },
   ): T {
-    this.adapter = query.adapter;
+    this.query.adapter = query.adapter;
     return this;
   }
 }

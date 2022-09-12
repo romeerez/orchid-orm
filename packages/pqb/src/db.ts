@@ -78,7 +78,9 @@ export class Db<
     public shape: Shape = {} as Shape,
     options?: DbTableOptions,
   ) {
-    this.query = {} as QueryData;
+    this.query = {
+      adapter,
+    } as QueryData;
 
     if (options?.schema) {
       this.query.schema = options.schema;
@@ -112,15 +114,12 @@ export class Db<
     this.columnsParsers = hasParsers ? columnsParsers : undefined;
 
     this.toSql = defaultSelect
-      ? function <T extends Query>(this: T): Sql {
-          const q = (this.query ? this : this.toQuery()) as T & {
-            query: QueryData;
-          };
-          const query = q.query as SelectQueryData;
-          if (!query.select) {
-            query.select = defaultSelect as string[];
+      ? function <T extends Query>(this: T, values?: unknown[]): Sql {
+          const q = this.clone();
+          if (!(q.query as SelectQueryData).select) {
+            (q.query as SelectQueryData).select = defaultSelect as string[];
           }
-          return toSql.call(q);
+          return toSql.call(q, values);
         }
       : toSql;
 
