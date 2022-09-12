@@ -192,36 +192,31 @@ const records = Table
 
 Takes a list of columns to be selected, by default query builder will select all columns of the table.
 
+Pass an object to select columns with aliases. Keys of the object are column aliases, value can be a column name, sub query, or raw expression.
+
 ```ts
 // select columns of the table:
-Table.select('id', 'name')
+Table.select('id', 'name', { idAlias: 'id' })
 
 // accepts columns with table name:
-Table.select('user.id', 'user.name')
+Table.select('user.id', 'user.name', { nameAlias: 'user.name' })
 
 // table name may refer to the current table or to a joined table:
 Table
   .join(Message, 'authorId', 'id')
-  .select('user.name', 'message.text')
-```
+  .select('user.name', 'message.text', { textAlias: 'message.text' })
 
-## selectAs
+// select value from subquery,
+// this sub query should returng single record and single column:
+Table.select({
+  subQueryResult: OtherTable.select('column').take(),
+})
 
-Allows to select a column, raw expression, subquery with an alias.
+// select raw expression,
+// provide a column type to have a properly typed result:
+import { IntegerColumn } from 'pqb'
 
-```ts
-import { raw, IntegerColumn } from 'pqb';
-
-Table.selectAs({
-  foo: 'id', // select user column
-  bar: 'user.id', // select column pointing a table
-  
-  // select value from subquery,
-  // this sub query should returng single record and single column:
-  subQuery: OtherTable.select('column').take(),
-  
-  // selecting raw expression,
-  // provide a column type to have a properly typed result:
+Table.select({
   raw: raw<IntegerColumn>('1 + 2'),
 })
 ```
@@ -320,7 +315,7 @@ Table.with(
 // accepts a callback for a query builder:
 Table.with(
   'alias',
-  (qb) => qb.selectAs({ one: raw<NumberColumn>('1') }),
+  (qb) => qb.select({ one: raw<NumberColumn>('1') }),
 )
 
 // All mentional forms can accept options as a second argument:
