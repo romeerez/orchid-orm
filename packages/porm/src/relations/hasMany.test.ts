@@ -386,6 +386,137 @@ describe('hasMany', () => {
         text2: 'message 4',
       });
     });
+
+    it('should support connect', async () => {
+      const { id: chatId } = await db.chat.insert(chatData, ['id']);
+      await db.message.insert([
+        {
+          ...messageData,
+          chatId,
+          user: { create: { name: 'tmp', ...userData } },
+          text: 'message 1',
+        },
+        {
+          ...messageData,
+          chatId,
+          user: { connect: { name: 'tmp' } },
+          text: 'message 2',
+        },
+      ]);
+
+      const user = await db.user.insert(
+        {
+          name: 'user 1',
+          ...userData,
+          messages: {
+            connect: [
+              {
+                text: 'message 1',
+              },
+              {
+                text: 'message 2',
+              },
+            ],
+          },
+        },
+        '*',
+      );
+
+      checkUser(user, 'user 1');
+
+      const messages = await db.message.order({ text: 'ASC' });
+      checkMessages({
+        messages,
+        userId: user.id,
+        chatId,
+        text1: 'message 1',
+        text2: 'message 2',
+      });
+    });
+
+    it('should support create many', async () => {
+      const { id: chatId } = await db.chat.insert(chatData, ['id']);
+      await db.message.insert([
+        {
+          ...messageData,
+          chatId,
+          user: { create: { name: 'tmp', ...userData } },
+          text: 'message 1',
+        },
+        {
+          ...messageData,
+          chatId,
+          user: { connect: { name: 'tmp' } },
+          text: 'message 2',
+        },
+        {
+          ...messageData,
+          chatId,
+          user: { connect: { name: 'tmp' } },
+          text: 'message 3',
+        },
+        {
+          ...messageData,
+          chatId,
+          user: { connect: { name: 'tmp' } },
+          text: 'message 4',
+        },
+      ]);
+
+      const user = await db.user.insert(
+        [
+          {
+            name: 'user 1',
+            ...userData,
+            messages: {
+              connect: [
+                {
+                  text: 'message 1',
+                },
+                {
+                  text: 'message 2',
+                },
+              ],
+            },
+          },
+          {
+            name: 'user 2',
+            ...userData,
+            messages: {
+              connect: [
+                {
+                  text: 'message 3',
+                },
+                {
+                  text: 'message 4',
+                },
+              ],
+            },
+          },
+        ],
+        '*',
+      );
+
+      checkUser(user[0], 'user 1');
+      checkUser(user[1], 'user 2');
+
+      const messages = await db.message.order({ text: 'ASC' });
+      checkMessages({
+        messages: messages.slice(0, 2),
+        userId: user[0].id,
+        chatId,
+        text1: 'message 1',
+        text2: 'message 2',
+      });
+
+      checkMessages({
+        messages: messages.slice(2, 4),
+        userId: user[1].id,
+        chatId,
+        text1: 'message 3',
+        text2: 'message 4',
+      });
+    });
   });
 });
 

@@ -1,7 +1,14 @@
-import { defaultsKey, Query, QueryWithTable } from './query';
+import { defaultsKey, Query, QueryBase, QueryWithTable } from './query';
+import { WhereArg } from './queryMethods/where';
 
-export type NestedInsertOneItem = { create: Record<string, unknown> };
-export type NestedInsertManyItems = { create: Record<string, unknown>[] };
+export type NestedInsertOneItem = {
+  create?: Record<string, unknown>;
+  connect?: WhereArg<QueryBase>;
+};
+export type NestedInsertManyItems = {
+  create?: Record<string, unknown>[];
+  connect?: WhereArg<QueryBase>[];
+};
 export type NestedInsertItem = NestedInsertOneItem | NestedInsertManyItems;
 
 export type BelongsToNestedInsert = (

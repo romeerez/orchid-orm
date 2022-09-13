@@ -6,7 +6,9 @@ import {
   HasManyNestedInsert,
   InsertData,
   Query,
+  QueryBase,
 } from 'pqb';
+import { WhereArg } from 'pqb/src/queryMethods/where';
 
 export interface HasAndBelongsToMany extends RelationThunkBase {
   type: 'hasAndBelongsToMany';
@@ -64,22 +66,52 @@ export const makeHasAndBelongsToManyMethod = (
         relationKeys: Record<string, unknown>[],
       ][];
 
-      const create = data.filter(([, relationData]) => relationData.create);
+      const create = data.filter(([, item]) => item.create);
+      const connect = data.filter(([, item]) => item.connect) as [
+        selfData: Record<string, unknown>,
+        relationData: {
+          connect: WhereArg<QueryBase>[];
+        },
+      ][];
 
+      const t = query.transacting(q);
+
+      let created: Record<string, unknown>[];
       if (create.length) {
-        const result = await query
-          .transacting(q)
-          .insert(
-            create.flatMap(([, { create }]) => create) as InsertData<Query>[],
-            [associationPrimaryKey],
-          );
-        let pos = 0;
-        create.forEach(([, data], index) => {
-          const len = data.create.length;
-          allKeys[index][1] = result.slice(pos, pos + len);
-          pos += len;
-        });
+        created = await t.insert(
+          create.flatMap(([, { create }]) => create) as InsertData<Query>[],
+          [associationPrimaryKey],
+        );
+      } else {
+        created = [];
       }
+
+      let connected: Record<string, unknown>[];
+      if (connect.length) {
+        connected = (await Promise.all(
+          connect.flatMap(([, { connect }]) =>
+            connect.map((item) =>
+              t.select(associationPrimaryKey).findBy(item).takeOrThrow(),
+            ),
+          ),
+        )) as Record<string, unknown[]>[];
+      } else {
+        connected = [];
+      }
+
+      let createI = 0;
+      let connectI = 0;
+      data.forEach(([, data], index) => {
+        if (data.create) {
+          const len = data.create.length;
+          allKeys[index][1] = created.slice(createI, createI + len);
+          createI += len;
+        } else if (data.connect) {
+          const len = data.connect.length;
+          allKeys[index][1] = connected.slice(connectI, connectI + len);
+          connectI += len;
+        }
+      });
 
       await subQuery.transacting(q).insert(
         allKeys.flatMap(([selfData, relationKeys]) => {

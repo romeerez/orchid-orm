@@ -35,10 +35,33 @@ export const makeBelongsToMethod = (
     },
     nestedInsert: (async (q, data) => {
       const create = data.filter((item) => item.create);
+      const connect = data.filter((item) => item.connect);
 
-      return await query.transacting(q).insert(
-        create.map((item) => item.create),
-        [primaryKey],
+      const t = query.transacting(q);
+
+      let created: unknown[];
+      if (create.length) {
+        created = await t.insert(
+          create.map((item) => item.create),
+          [primaryKey],
+        );
+      } else {
+        created = [];
+      }
+
+      let connected: unknown[];
+      if (connect.length) {
+        connected = await Promise.all(
+          connect.map((item) => t.findBy(item.connect).takeOrThrow()),
+        );
+      } else {
+        connected = [];
+      }
+
+      let createdI = 0;
+      let connectedI = 0;
+      return data.map((item) =>
+        item.create ? created[createdI++] : connected[connectedI++],
       );
     }) as BelongsToNestedInsert,
     joinQuery: addQueryOn(query, query, model, primaryKey, foreignKey),

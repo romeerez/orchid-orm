@@ -426,5 +426,171 @@ describe('hasAndBelongsToMany', () => {
         ],
       );
     });
+
+    it('should support connect', async () => {
+      await db.chat.insert([
+        { ...chatData, title: 'chat 1' },
+        { ...chatData, title: 'chat 2' },
+      ]);
+
+      const query = db.user.insert(
+        {
+          name: 'user 1',
+          ...userData,
+          chats: {
+            connect: [
+              {
+                title: 'chat 1',
+              },
+              {
+                title: 'chat 2',
+              },
+            ],
+          },
+        },
+        ['id'],
+      );
+
+      const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
+      const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
+
+      const user = await query;
+      const chatIds = await db.user
+        .chats(user)
+        .order({ id: 'ASC' })
+        .pluck('id');
+
+      const [insertUserSql, ...findChatsSql] = querySpy.mock.calls.map(
+        (item) => item[0],
+      );
+      const insertChatUserSql = arraysSpy.mock.calls[0][0];
+
+      expectSql(
+        insertUserSql as Sql,
+        `
+        INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
+        VALUES ($1, $2, $3, $4)
+        RETURNING "user"."id"
+      `,
+        ['user 1', 'password', now, now],
+      );
+
+      expect(findChatsSql.length).toBe(2);
+      findChatsSql.forEach((sql, i) => {
+        expectSql(
+          sql as Sql,
+          `
+            SELECT "chats"."id" FROM "chat" AS "chats"
+            WHERE "chats"."title" = $1
+            LIMIT $2
+          `,
+          [`chat ${i + 1}`, 1],
+        );
+      });
+
+      expectSql(
+        insertChatUserSql as Sql,
+        `
+        INSERT INTO "chatUser"("userId", "chatId")
+        VALUES ($1, $2), ($3, $4)
+      `,
+        [user.id, chatIds[0], user.id, chatIds[1]],
+      );
+    });
+
+    it('should support connect many', async () => {
+      await db.chat.insert([
+        { ...chatData, title: 'chat 1' },
+        { ...chatData, title: 'chat 2' },
+        { ...chatData, title: 'chat 3' },
+        { ...chatData, title: 'chat 4' },
+      ]);
+
+      const query = db.user.insert(
+        [
+          {
+            name: 'user 1',
+            ...userData,
+            chats: {
+              connect: [
+                {
+                  title: 'chat 1',
+                },
+                {
+                  title: 'chat 2',
+                },
+              ],
+            },
+          },
+          {
+            name: 'user 2',
+            ...userData,
+            chats: {
+              connect: [
+                {
+                  title: 'chat 3',
+                },
+                {
+                  title: 'chat 4',
+                },
+              ],
+            },
+          },
+        ],
+        ['id'],
+      );
+
+      const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
+      const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
+
+      const users = await query;
+      const chatIds = await db.user.join('chats').pluck('chats.id');
+
+      const [insertUserSql, ...findChatsSql] = querySpy.mock.calls.map(
+        (item) => item[0],
+      );
+      const insertChatUserSql = arraysSpy.mock.calls[0][0];
+
+      expectSql(
+        insertUserSql as Sql,
+        `
+        INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
+        VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
+        RETURNING "user"."id"
+      `,
+        ['user 1', 'password', now, now, 'user 2', 'password', now, now],
+      );
+
+      expect(findChatsSql.length).toBe(4);
+      findChatsSql.forEach((sql, i) => {
+        expectSql(
+          sql as Sql,
+          `
+            SELECT "chats"."id" FROM "chat" AS "chats"
+            WHERE "chats"."title" = $1
+            LIMIT $2
+          `,
+          [`chat ${i + 1}`, 1],
+        );
+      });
+
+      expectSql(
+        insertChatUserSql as Sql,
+        `
+        INSERT INTO "chatUser"("userId", "chatId")
+        VALUES ($1, $2), ($3, $4), ($5, $6), ($7, $8)
+      `,
+        [
+          users[0].id,
+          chatIds[0],
+          users[0].id,
+          chatIds[1],
+          users[1].id,
+          chatIds[2],
+          users[1].id,
+          chatIds[3],
+        ],
+      );
+    });
   });
 });

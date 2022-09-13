@@ -11,8 +11,10 @@ import {
   HasManyRelation,
   InsertData,
   Query,
+  QueryBase,
   Relation,
 } from 'pqb';
+import { WhereArg } from 'pqb/src/queryMethods/where';
 
 export interface HasMany extends RelationThunkBase {
   type: 'hasMany';
@@ -95,16 +97,43 @@ export const makeHasManyMethod = (
       return query.where(values)._defaults(values);
     },
     nestedInsert: (async (q, data) => {
-      const create = data.filter(([, relationData]) => relationData.create);
+      const create = data.filter(
+        (
+          item,
+        ): item is [
+          Record<string, unknown>,
+          { create: Record<string, unknown>[] },
+        ] => Boolean(item[1].create),
+      );
+      const connect = data.filter(
+        (
+          item,
+        ): item is [
+          Record<string, unknown>,
+          { connect: WhereArg<QueryBase>[] },
+        ] => Boolean(item[1].connect),
+      );
+
+      const t = query.transacting(q);
 
       if (create.length) {
-        await query.transacting(q).insert(
+        await t.insert(
           create.flatMap(([selfData, { create }]) =>
             create.map((item) => ({
               [foreignKey]: selfData[primaryKey],
               ...item,
             })),
           ) as InsertData<Query>[],
+        );
+      }
+
+      if (connect.length) {
+        await Promise.all(
+          connect.flatMap(([selfData, { connect }]) =>
+            connect.map((item) =>
+              t.update({ [foreignKey]: selfData[primaryKey] }).where(item),
+            ),
+          ),
         );
       }
     }) as HasManyNestedInsert,

@@ -209,17 +209,17 @@ describe('belongsTo', () => {
     it('should support create', async () => {
       const query = db.message.insert(
         {
-          text: 'text',
+          text: 'message',
           ...messageData,
           chat: {
             create: {
-              title: 'title',
+              title: 'chat',
               ...chatData,
             },
           },
           user: {
             create: {
-              name: 'name',
+              name: 'user',
               ...userData,
             },
           },
@@ -233,9 +233,9 @@ describe('belongsTo', () => {
         messageId,
         chatId,
         authorId,
-        text: 'text',
-        title: 'title',
-        name: 'name',
+        text: 'message',
+        title: 'chat',
+        name: 'user',
       });
     });
 
@@ -272,6 +272,93 @@ describe('belongsTo', () => {
                 name: 'user 2',
                 ...userData,
               },
+            },
+          },
+        ],
+        ['id', 'chatId', 'authorId'],
+      );
+
+      const [first, second] = await query;
+
+      await checkInsertedResults({
+        messageId: first.id,
+        chatId: first.chatId,
+        authorId: first.authorId,
+        text: 'message 1',
+        title: 'chat 1',
+        name: 'user 1',
+      });
+
+      await checkInsertedResults({
+        messageId: second.id,
+        chatId: second.chatId,
+        authorId: second.authorId,
+        text: 'message 2',
+        title: 'chat 2',
+        name: 'user 2',
+      });
+    });
+
+    it('should support connect', async () => {
+      await db.chat.insert({ ...chatData, title: 'chat' });
+      await db.user.insert({ ...userData, name: 'user' });
+
+      const query = db.message.insert(
+        {
+          text: 'message',
+          ...messageData,
+          chat: {
+            connect: { title: 'chat' },
+          },
+          user: {
+            connect: { name: 'user' },
+          },
+        },
+        ['id', 'chatId', 'authorId'],
+      );
+
+      const { id: messageId, chatId, authorId } = await query;
+
+      await checkInsertedResults({
+        messageId,
+        chatId,
+        authorId,
+        text: 'message',
+        title: 'chat',
+        name: 'user',
+      });
+    });
+
+    it('should support connect many', async () => {
+      await db.chat.insert([
+        { ...chatData, title: 'chat 1' },
+        { ...chatData, title: 'chat 2' },
+      ]);
+      await db.user.insert([
+        { ...userData, name: 'user 1' },
+        { ...userData, name: 'user 2' },
+      ]);
+
+      const query = db.message.insert(
+        [
+          {
+            text: 'message 1',
+            ...messageData,
+            chat: {
+              connect: { title: 'chat 1' },
+            },
+            user: {
+              connect: { name: 'user 1' },
+            },
+          },
+          {
+            text: 'message 2',
+            ...messageData,
+            chat: {
+              connect: { title: 'chat 2' },
+            },
+            user: {
+              connect: { name: 'user 2' },
             },
           },
         ],

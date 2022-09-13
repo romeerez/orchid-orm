@@ -19,6 +19,7 @@ import {
 } from '../relations';
 import { SetOptional } from '../utils';
 import { InsertQueryData, OnConflictItem, OnConflictMergeUpdate } from '../sql';
+import { WhereArg } from './where';
 
 export type ReturningArg<T extends Query> = (keyof T['shape'])[] | '*';
 
@@ -58,20 +59,30 @@ export type InsertData<
                   DefaultKeys
                 >
               | {
-                  [K in Key]: {
-                    create: InsertData<
-                      T['relations'][Key]['nestedCreateQuery']
-                    >;
-                  };
+                  [K in Key]:
+                    | {
+                        create: InsertData<
+                          T['relations'][Key]['nestedCreateQuery']
+                        >;
+                      }
+                    | {
+                        connect: WhereArg<T['relations'][Key]['model']>;
+                      };
                 }
           : T['relations'][Key] extends HasOneRelation
           ? 'through' extends T['relations'][Key]['options']
             ? // eslint-disable-next-line @typescript-eslint/ban-types
               {}
             : {
-                [K in Key]?: {
-                  create: InsertData<T['relations'][Key]['nestedCreateQuery']>;
-                };
+                [K in Key]?:
+                  | {
+                      create: InsertData<
+                        T['relations'][Key]['nestedCreateQuery']
+                      >;
+                    }
+                  | {
+                      connect: WhereArg<T['relations'][Key]['model']>;
+                    };
               }
           : T['relations'][Key] extends Relation
           ? 'through' extends T['relations'][Key]['options']
@@ -79,9 +90,10 @@ export type InsertData<
               {}
             : {
                 [K in Key]?: {
-                  create: InsertData<
+                  create?: InsertData<
                     T['relations'][Key]['nestedCreateQuery']
                   >[];
+                  connect?: WhereArg<T['relations'][Key]['model']>[];
                 };
               }
           : // eslint-disable-next-line @typescript-eslint/ban-types

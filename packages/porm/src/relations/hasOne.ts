@@ -94,14 +94,25 @@ export const makeHasOneMethod = (
       return query.findBy(values)._defaults(values);
     },
     nestedInsert: (async (q, data) => {
-      const create = data.filter(([, relationData]) => relationData.create);
+      const create = data.filter(([, item]) => item.create);
+      const connect = data.filter(([, item]) => item.connect);
+
+      const t = query.transacting(q);
 
       if (create.length) {
-        await query.transacting(q).insert(
+        await t.insert(
           create.map(([selfData, { create }]) => ({
             [foreignKey]: selfData[primaryKey],
             ...create,
           })),
+        );
+      }
+
+      if (connect.length) {
+        await Promise.all(
+          connect.map(([selfData, { connect }]) =>
+            t.update({ [foreignKey]: selfData[primaryKey] }).where(connect),
+          ),
         );
       }
     }) as HasOneNestedInsert,

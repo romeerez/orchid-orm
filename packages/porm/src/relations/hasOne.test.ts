@@ -290,6 +290,98 @@ describe('hasOne', () => {
           bio: 'profile 2',
         });
       });
+
+      it('should support connect', async () => {
+        await db.profile.insert({
+          bio: 'profile',
+          ...profileData,
+          user: {
+            create: {
+              name: 'tmp',
+              ...userData,
+            },
+          },
+        });
+
+        const query = db.user.insert(
+          {
+            name: 'user',
+            ...userData,
+            profile: {
+              connect: { bio: 'profile' },
+            },
+          },
+          '*',
+        );
+
+        const user = await query;
+        const profile = await db.user.profile(user);
+
+        checkUserAndProfile({ user, profile, name: 'user', bio: 'profile' });
+      });
+
+      it('should support connect many', async () => {
+        await db.profile.insert([
+          {
+            bio: 'profile 1',
+            ...profileData,
+            user: {
+              create: {
+                name: 'tmp',
+                ...userData,
+              },
+            },
+          },
+          {
+            bio: 'profile 2',
+            ...profileData,
+            user: {
+              connect: { name: 'tmp' },
+            },
+          },
+        ]);
+
+        const query = db.user.insert(
+          [
+            {
+              name: 'user 1',
+              ...userData,
+              profile: {
+                connect: { bio: 'profile 1' },
+              },
+            },
+            {
+              name: 'user 2',
+              ...userData,
+              profile: {
+                connect: { bio: 'profile 2' },
+              },
+            },
+          ],
+          '*',
+        );
+
+        const users = await query;
+        const profiles = await db.profile
+          .where({
+            userId: { in: users.map((user) => user.id) },
+          })
+          .order({ id: 'ASC' });
+
+        checkUserAndProfile({
+          user: users[0],
+          profile: profiles[0],
+          name: 'user 1',
+          bio: 'profile 1',
+        });
+
+        checkUserAndProfile({
+          user: users[1],
+          profile: profiles[1],
+          name: 'user 2',
+          bio: 'profile 2',
+        });
+      });
     });
   });
 });

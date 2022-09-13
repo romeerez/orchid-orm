@@ -242,7 +242,7 @@ bookWithAuthor.author.name
 bookWithAuthor.author?.id
 ```
 
-### belongsTo nested insert
+### belongsTo nested create
 
 Insert book with author all at once:
 
@@ -287,6 +287,27 @@ const result: Pick<Book, 'id' | 'authorId'>[] = await db.book.insert(
     },
   ],
   ['id', 'authorId']
+)
+```
+
+### belongsTo connect in insert
+
+Connect record to another record while inserting:
+
+This will search a record by provided where condition, throw if not found, and use its id for the inserting record.
+
+It is supported in insert multiple as well.
+
+```ts
+const result: Pick<Book, 'id' | 'authorId'> =  await db.book.insert(
+  {
+    title: 'Book title',
+    author: {
+      connect: {
+        name: 'Author',
+      }
+    }
+  }
 )
 ```
 
@@ -339,7 +360,7 @@ export class AccountModel extends Model {
 A `hasOne through` association sets up a one-to-one connection with another model.
 This association indicates that the declaring model can be matched with one instance of another model by proceeding through a third model.
 
-`hasOne through` gives the same querying abilities as a regular `hasOne`, but without nested insert functionality.
+`hasOne through` gives the same querying abilities as a regular `hasOne`, but without nested create functionality.
 
 For example, if each supplier has one account, and each account is associated with one account history, then the supplier model could look like this:
 
@@ -476,7 +497,7 @@ supplierWithAccount.account.name
 supplierWithAccount.account?.id
 ```
 
-### hasOne nested insert
+### hasOne nested create
 
 Insert supplier with account all at once:
 
@@ -520,6 +541,28 @@ const result: Pick<Supplier, 'id'>[] = await db.supplier.insert(
       }
     },
   ],
+  ['id']
+)
+```
+
+### hasOne connect in insert
+
+Connect record to another record while inserting:
+
+This will search a record by provided where condition, throw if not found, and update it to connect to the inserted record.
+
+It is supported in insert multiple as well.
+
+```ts
+const result: Pick<Supplier, 'id'> = db.supplier.insert(
+  {
+    brand: 'Supplier 1',
+    account: {
+      connect: {
+        name: 'Account 1',
+      }
+    }
+  },
   ['id']
 )
 ```
@@ -570,7 +613,7 @@ export class BookModel extends Model {
 A `hasMany though` association is often used to set up a many-to-many connection with another model.
 This association indicates that the declaring model can be matched with zero or more instances of another model by proceeding through a third model.
 
-`hasMany through` gives the same querying abilities as a regular `hasMany`, but without nested insert functionality.
+`hasMany through` gives the same querying abilities as a regular `hasMany`, but without nested create functionality.
 
 For example, consider a medical practice where patients make appointments to see physicians. The relevant association declarations could look like this:
 
@@ -745,7 +788,7 @@ const result: Result = await db.author.select(
 ).takeOrThrow()
 ```
 
-### hasMany nested insert
+### hasMany nested create
 
 Insert author with books all at once:
 
@@ -804,6 +847,33 @@ const result: Pick<Author, 'id'>[] = await db.author.insert(
       }
     },
   ],
+  ['id']
+)
+```
+
+### hasMany connect in insert
+
+Connect record to another record while inserting:
+
+This will search one record per provided where condition, throw if any of them is not found, and update found records to connect to the inserted record.
+
+It is supported in insert multiple as well.
+
+```ts
+const result: Pick<Author, 'id'> = await db.author.insert(
+  {
+    name: 'Author',
+    books: {
+      connect: [
+        {
+          title: 'Book 1',
+        },
+        {
+          title: 'Book 2',
+        },
+      ]
+    }
+  },
   ['id']
 )
 ```
@@ -956,7 +1026,7 @@ const result: Result = await db.author.select(
 ).takeOrThrow()
 ```
 
-### hasAndBelongsToMany nested insert
+### hasAndBelongsToMany nested create
 
 Insert post with tags all at once:
 
@@ -1018,3 +1088,31 @@ const result: Pick<Post, 'id'>[] = await db.post.insert(
   ['id']
 )
 ```
+
+### hasAndBelongsToMany connect in insert
+
+Connect record to another record while inserting:
+
+This will search one record per provided where condition, throw if any of them is not found, and insert join table entries to connect found records and inserted.
+
+It is supported in insert multiple as well.
+
+```ts
+const result: Pick<Post, 'id'> = await db.post.insert(
+  {
+    title: 'Post',
+    tags: {
+      connect: [
+        {
+          name: 'Tag 1',
+        },
+        {
+          name: 'Tag 2',
+        },
+      ]
+    }
+  },
+  ['id']
+)
+```
+
