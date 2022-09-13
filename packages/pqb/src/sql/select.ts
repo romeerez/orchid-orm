@@ -62,7 +62,10 @@ const jsonToSql = (
 
 export const pushSelectSql = (
   sql: string[],
-  model: Pick<Query, 'shape' | 'relations'>,
+  model: Pick<
+    Query,
+    'whereQueryBuilder' | 'onQueryBuilder' | 'as' | 'shape' | 'relations'
+  >,
   select: SelectQueryData['select'],
   values: unknown[],
   quotedAs?: string,
@@ -71,7 +74,10 @@ export const pushSelectSql = (
 };
 
 export const selectToSql = (
-  model: Pick<Query, 'shape' | 'relations'>,
+  model: Pick<
+    Query,
+    'whereQueryBuilder' | 'onQueryBuilder' | 'as' | 'shape' | 'relations'
+  >,
   select: SelectQueryData['select'],
   values: unknown[],
   quotedAs?: string,

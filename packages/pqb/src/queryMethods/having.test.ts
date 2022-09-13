@@ -42,7 +42,6 @@ describe('having', () => {
   it('should support column operators', () => {
     const q = User.all();
 
-    // TODO: improve order and filter for TS
     expectSql(
       q
         .having({

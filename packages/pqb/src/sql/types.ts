@@ -1,6 +1,7 @@
 import {
   ColumnsParsers,
   Query,
+  QueryBase,
   QueryWithTable,
   SelectableBase,
 } from '../query';
@@ -8,6 +9,7 @@ import { Expression, RawExpression } from '../common';
 import { ColumnsShape, ColumnType } from '../columnSchema';
 import { RelationQuery, relationQueryKey } from '../relations';
 import { PostgresAdapter } from '../adapter';
+import { MaybeArray } from '../utils';
 
 export type Sql = {
   text: string;
@@ -25,8 +27,8 @@ export type CommonQueryData = {
   schema?: string;
   as?: string;
   from?: string | Query | RawExpression;
-  and?: WhereItemContainer[];
-  or?: WhereItemContainer[][];
+  and?: WhereItem[];
+  or?: WhereItem[][];
   parsers?: ColumnsParsers;
   defaults?: Record<string, unknown>;
   beforeQuery?: ((q: Query) => void | Promise<void>)[];
@@ -192,88 +194,65 @@ export type JoinItem = {
   args:
     | [relation: string]
     | [
-        relation: string,
-        conditions: { type: 'query'; query: { query: QueryData } },
+        arg: string | QueryWithTable,
+        conditions:
+          | Record<string, string | RawExpression>
+          | RawExpression
+          | ((q: unknown) => QueryBase),
       ]
     | [
-        withOrQuery: string | QueryWithTable,
-        objectOrRawOrJoinQuery:
-          | {
-              type: 'objectOrRaw';
-              data: Record<string, string | RawExpression> | RawExpression;
-            }
-          | {
-              type: 'query';
-              query: { query: QueryData };
-            },
-      ]
-    | [
-        withOrQuery: string | QueryWithTable,
+        arg: string | QueryWithTable,
         leftColumn: string | RawExpression,
         rightColumn: string | RawExpression,
       ]
     | [
-        withOrQuery: string | QueryWithTable,
+        arg: string | QueryWithTable,
         leftColumn: string | RawExpression,
         op: string,
         rightColumn: string | RawExpression,
       ];
 };
 
-export type WhereItemContainer = {
-  item: WhereItem;
-  not?: boolean;
+export type WhereItem =
+  | (Omit<
+      Record<
+        string,
+        | unknown
+        | Record<string, unknown | Query | RawExpression>
+        | RawExpression
+      >,
+      'NOT' | 'AND' | 'OR' | 'IN' | 'EXISTS' | 'ON' | 'ON_JSON_PATH_EQUALS'
+    > & {
+      NOT?: MaybeArray<WhereItem>;
+      AND?: MaybeArray<WhereItem>;
+      OR?: MaybeArray<WhereItem>[];
+      IN?: MaybeArray<WhereInItem>;
+      EXISTS?: MaybeArray<JoinItem['args']>;
+      ON?: WhereOnItem | WhereJsonPathEqualsItem;
+    })
+  | ((q: unknown) => QueryBase)
+  | Query
+  | RawExpression;
+
+export type WhereInItem = {
+  columns: string[];
+  values: unknown[][] | Query | RawExpression;
 };
 
-export type WhereItem =
-  | {
-      type: 'object';
-      data:
-        | Record<
-            string,
-            | unknown
-            | Record<string, unknown | Query | RawExpression>
-            | RawExpression
-          >
-        | Query
-        | RawExpression;
-    }
-  | {
-      type: 'nested';
-      and?: WhereItemContainer[];
-      or?: WhereItemContainer[][];
-    }
-  | {
-      type: 'in';
-      columns: string[];
-      values: unknown[][] | Query | RawExpression;
-    }
-  | {
-      type: 'notIn';
-      columns: string[];
-      values: unknown[][] | Query | RawExpression;
-    }
-  | {
-      type: 'exists';
-      args: JoinItem['args'];
-    }
-  | {
-      type: 'on';
-      joinFrom: { table?: string; query: { as?: string } } | string;
-      joinTo: { table?: string; query: { as?: string } } | string;
-      on:
-        | [leftFullColumn: string, rightFullColumn: string]
-        | [leftFullColumn: string, op: string, rightFullColumn: string];
-    }
-  | {
-      type: 'onJsonPathEquals';
-      data: [
-        leftColumn: string,
-        leftPath: string,
-        rightColumn: string,
-        rightPath: string,
-      ];
-    };
+export type WhereJsonPathEqualsItem = [
+  leftColumn: string,
+  leftPath: string,
+  rightColumn: string,
+  rightPath: string,
+];
+
+export type WhereOnItem = {
+  joinFrom: { table?: string; query: { as?: string } } | string;
+  joinTo: { table?: string; query: { as?: string } } | string;
+  on:
+    | [leftFullColumn: string, rightFullColumn: string]
+    | [leftFullColumn: string, op: string, rightFullColumn: string];
+};
 
 export type AggregateItemOptions = {
   as?: string;

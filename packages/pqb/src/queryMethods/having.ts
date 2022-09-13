@@ -4,11 +4,11 @@ import {
   ColumnOperators,
   HavingItem,
   OrderItem,
+  WhereItem,
 } from '../sql';
 import { pushQueryArray } from '../queryDataUtils';
 import { Aggregate1ArgumentTypes, AggregateOptions } from './aggregate';
 import { isRaw, RawExpression } from '../common';
-import { serializeWhereItem } from './where';
 
 type HavingArgObject<
   T extends Query,
@@ -28,10 +28,7 @@ export type HavingArg<T extends Query = Query> =
   | Query
   | RawExpression;
 
-const processHavingArg = <T extends Query>(
-  q: T,
-  arg: HavingArg<T>,
-): HavingItem => {
+const processHavingArg = <T extends Query>(arg: HavingArg<T>): HavingItem => {
   if ('prototype' in arg || '__model' in arg || isRaw(arg)) {
     return arg;
   } else {
@@ -61,16 +58,11 @@ const processHavingArg = <T extends Query>(
             }
 
             if ('filter' in options && options.filter) {
-              processed[fn][column].filter = serializeWhereItem(
-                q,
-                options.filter,
-              );
+              processed[fn][column].filter = options.filter as WhereItem;
             }
 
             if ('filterOr' in options && options.filterOr) {
-              processed[fn][column].filterOr = options.filterOr.map((item) =>
-                serializeWhereItem(q, item),
-              );
+              processed[fn][column].filterOr = options.filterOr as WhereItem[];
             }
           }
         }
@@ -89,7 +81,7 @@ export class Having {
     return pushQueryArray(
       this,
       'having',
-      args.map((arg) => processHavingArg(this, arg)),
+      args.map((arg) => processHavingArg(arg)),
     );
   }
 
@@ -101,7 +93,7 @@ export class Having {
     return pushQueryArray(
       this,
       'havingOr',
-      args.map((arg) => [processHavingArg(this, arg)]),
+      args.map((arg) => [processHavingArg(arg)]),
     );
   }
 }

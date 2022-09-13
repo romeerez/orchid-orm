@@ -6,9 +6,8 @@ import {
   JoinItem,
   QueryData,
   SelectQueryData,
-  WhereItemContainer,
 } from './types';
-import { Query } from '../query';
+import { Query, QueryBase } from '../query';
 import { whereToSql } from './where';
 import { Relation } from '../relations';
 
@@ -26,7 +25,11 @@ type ItemOf3Or4Length =
     ];
 
 export const processJoinItem = (
-  model: Pick<Query, 'shape' | 'relations'>,
+  model: Pick<
+    Query,
+    'whereQueryBuilder' | 'onQueryBuilder' | 'table' | 'shape' | 'relations'
+  >,
+  query: Pick<QueryData, 'as'>,
   values: unknown[],
   args: JoinItem['args'],
   quotedAs?: string,
@@ -51,30 +54,30 @@ export const processJoinItem = (
         target += ` AS ${q(as as string)}`;
       }
 
-      const query = {
+      const queryData = {
         and: [],
         or: [],
       } as {
-        and: WhereItemContainer[];
-        or: WhereItemContainer[][];
+        and: Exclude<QueryData['and'], undefined>;
+        or: Exclude<QueryData['or'], undefined>;
       };
 
-      if (joinQuery.query.and) query.and.push(...joinQuery.query.and);
-      if (joinQuery.query.or) query.or.push(...joinQuery.query.or);
+      if (joinQuery.query.and) queryData.and.push(...joinQuery.query.and);
+      if (joinQuery.query.or) queryData.or.push(...joinQuery.query.or);
 
-      const arg = (
-        args[1] as undefined | { type: 'query'; query: { query: QueryData } }
-      )?.query.query;
+      const arg = (args[1] as ((q: unknown) => QueryBase) | undefined)?.(
+        new model.onQueryBuilder({ table: model.table, query }, args[0]),
+      ).query;
 
       if (arg) {
-        if (arg.and) query.and.push(...arg.and);
-        if (arg.or) query.or.push(...arg.or);
+        if (arg.and) queryData.and.push(...arg.and);
+        if (arg.or) queryData.or.push(...arg.or);
       }
 
       const joinAs = q(as as string);
       const onConditions = whereToSql(
         joinQuery,
-        query,
+        queryData,
         values,
         quotedAs,
         joinAs,
@@ -88,23 +91,21 @@ export const processJoinItem = (
     let conditions: string | undefined;
 
     if (args.length === 2) {
-      const [, arg] = args;
-      if (arg.type === 'objectOrRaw') {
-        conditions = getObjectOrRawConditions(
-          arg.data,
-          values,
-          quotedAs,
-          target,
+      const arg = args[1];
+      if (typeof arg === 'function') {
+        const joinQuery = arg(
+          new model.onQueryBuilder({ table: model.table, query }, args[0]),
         );
-      } else {
         const onConditions = whereToSql(
           model,
-          arg.query.query,
+          joinQuery.query,
           values,
           quotedAs,
           target,
         );
         if (onConditions) conditions = onConditions;
+      } else {
+        conditions = getObjectOrRawConditions(arg, values, quotedAs, target);
       }
     } else if (args.length >= 3) {
       conditions = getConditionsFor3Or4LengthItem(
@@ -139,18 +140,21 @@ export const processJoinItem = (
   let conditions: string | undefined;
 
   if (args.length === 2) {
-    const [, arg] = args;
-    if (arg.type === 'objectOrRaw') {
-      conditions = getObjectOrRawConditions(arg.data, values, quotedAs, joinAs);
-    } else {
+    const arg = args[1];
+    if (typeof arg === 'function') {
+      const joinQuery = arg(
+        new model.onQueryBuilder({ table: model.table, query }, args[0]),
+      );
       const onConditions = whereToSql(
         model,
-        arg.query.query,
+        joinQuery.query,
         values,
         quotedAs,
         joinAs,
       );
       if (onConditions) conditions = onConditions;
+    } else {
+      conditions = getObjectOrRawConditions(arg, values, quotedAs, joinAs);
     }
   } else if (args.length >= 3) {
     conditions = getConditionsFor3Or4LengthItem(
@@ -230,6 +234,7 @@ export const pushJoinSql = (
   query.join?.forEach((item) => {
     const { target, conditions } = processJoinItem(
       model,
+      query,
       values,
       item.args,
       quotedAs,

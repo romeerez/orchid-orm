@@ -8,12 +8,12 @@ import { ColumnType, StringColumn } from '../columnSchema';
 import { JsonItem } from '../sql';
 import { raw, StringKey } from '../common';
 
-type JsonColumnName<T extends Query> = StringKey<
+type JsonColumnName<T extends Pick<Query, 'selectable'>> = StringKey<
   {
-    [K in keyof T['shape']]: T['shape'][K]['dataType'] extends 'jsonb'
+    [K in keyof T['selectable']]: T['selectable'][K]['column']['dataType'] extends 'jsonb'
       ? K
       : never;
-  }[keyof T['shape']]
+  }[keyof T['selectable']]
 >;
 
 type ColumnOrJsonMethod<T extends Query> = JsonColumnName<T> | JsonItem;

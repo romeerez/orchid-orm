@@ -12,6 +12,8 @@ import { ThenResult } from './queryMethods/then';
 import { Db } from './db';
 import { ColumnInfo } from './queryMethods/columnInfo';
 import { RelationsBase } from './relations';
+import { WhereQueryBuilder } from './queryMethods/where';
+import { OnQueryBuilder } from './queryMethods/join';
 
 export type ColumnParser = (input: unknown) => unknown;
 export type ColumnsParsers = Record<string, ColumnParser>;
@@ -40,6 +42,8 @@ export const defaultsKey: unique symbol = Symbol('defaults');
 
 export type Query = QueryMethods & {
   queryBuilder: Db;
+  whereQueryBuilder: typeof WhereQueryBuilder;
+  onQueryBuilder: typeof OnQueryBuilder;
   table?: string;
   shape: ColumnsShape;
   schema: Omit<TableSchema<ColumnsShape>, 'primaryKeys' | 'primaryTypes'> & {

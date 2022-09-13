@@ -16,7 +16,7 @@ export const pushDeleteSql = (
   let conditions: string | undefined;
   if (query.join?.length) {
     const items = query.join.map((item) =>
-      processJoinItem(model, values, item.args, quotedAs),
+      processJoinItem(model, query, values, item.args, quotedAs),
     );
 
     sql.push(`USING ${items.map((item) => item.target).join(', ')}`);

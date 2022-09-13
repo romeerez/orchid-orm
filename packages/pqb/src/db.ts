@@ -17,6 +17,8 @@ import {
 import { applyMixins } from './utils';
 import { StringKey } from './common';
 import { ThenResult } from './queryMethods/then';
+import { WhereQueryBuilder } from './queryMethods/where';
+import { OnQueryBuilder } from './queryMethods/join';
 
 export type DbTableOptions = {
   schema?: string;
@@ -37,6 +39,7 @@ export interface Db<
 
   adapter: PostgresAdapter;
   queryBuilder: Db;
+  whereQueryBuilder: Query['whereQueryBuilder'];
   table: Table;
   shape: Shape;
   schema: TableSchema<Shape>;
@@ -71,6 +74,10 @@ export class Db<
   Relations extends Query['relations'] = Query['relations'],
 > implements Query
 {
+  whereQueryBuilder = WhereQueryBuilder;
+  onQueryBuilder = OnQueryBuilder;
+  returnType = 'all' as const;
+
   constructor(
     public adapter: PostgresAdapter,
     public queryBuilder: Db,
@@ -125,8 +132,6 @@ export class Db<
 
     this.relations = {} as Relations;
   }
-
-  returnType = 'all' as const;
 }
 
 applyMixins(Db, [QueryMethods]);

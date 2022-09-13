@@ -132,4 +132,9 @@ export const getQueryAs = (q: { table?: string; query: { as?: string } }) => {
   return q.query.as || (q.table as string);
 };
 
+export const toArray = <T>(item: T) =>
+  (Array.isArray(item) ? item : [item]) as unknown as T extends unknown[]
+    ? T
+    : [T];
+
 export const noop = () => {};

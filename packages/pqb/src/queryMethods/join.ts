@@ -196,31 +196,10 @@ const _join = <
     setQueryObjectValue(q, 'joinedParsers', joinKey, parsers);
   }
 
-  if (typeof args[1] === 'function') {
-    const [modelOrWith, fn] = args;
-
-    const resultQuery = fn(
-      new OnQueryBuilder(
-        q,
-        modelOrWith as QueryBase | string,
-      ) as unknown as Parameters<typeof fn>[0],
-    );
-
-    return pushQueryValue(q, 'join', {
-      type,
-      args: [modelOrWith, { type: 'query', query: resultQuery }],
-    }) as unknown as JoinResult<T, Args>;
-  } else {
-    const items =
-      args.length === 2
-        ? [args[0], { type: 'objectOrRaw', data: args[1] }]
-        : args;
-
-    return pushQueryValue(q, 'join', {
-      type,
-      args: items,
-    }) as unknown as JoinResult<T, Args>;
-  }
+  return pushQueryValue(q, 'join', {
+    type,
+    args,
+  }) as unknown as JoinResult<T, Args>;
 };
 
 export class Join {
@@ -433,8 +412,7 @@ const makeOnItem = (
   args: OnArgs<QueryBase>,
 ) => {
   return {
-    item: {
-      type: 'on',
+    ON: {
       joinTo,
       joinFrom,
       on: args,
@@ -446,18 +424,18 @@ export const pushQueryOn = <T extends QueryBase>(
   q: T,
   joinFrom: QueryBase | string,
   joinTo: QueryBase | string,
-  ...args: OnArgs<QueryBase>
+  ...on: OnArgs<QueryBase>
 ): T => {
-  return pushQueryValue(q, 'and', makeOnItem(joinFrom, joinTo, args));
+  return pushQueryValue(q, 'and', makeOnItem(joinFrom, joinTo, on));
 };
 
 export const pushQueryOrOn: typeof pushQueryOn = (
   q,
   joinFrom,
   joinTo,
-  ...args
+  ...on
 ) => {
-  return pushQueryValue(q, 'or', [makeOnItem(joinFrom, joinTo, args)]);
+  return pushQueryValue(q, 'or', [makeOnItem(joinFrom, joinTo, on)]);
 };
 
 export const addQueryOn: typeof pushQueryOrOn = (
@@ -478,6 +456,13 @@ export const addQueryOrOn: typeof pushQueryOrOn = (
   return pushQueryOrOn(q.clone() as typeof q, joinFrom, joinTo, ...args);
 };
 
+type OnJsonPathEqualsArgs<T extends QueryBase> = [
+  leftColumn: keyof T['selectable'],
+  leftPath: string,
+  rightColumn: keyof T['selectable'],
+  rightPath: string,
+];
+
 export class OnQueryBuilder<
     S extends QueryBase = QueryBase,
     J extends PickQueryForSelect = PickQueryForSelect,
@@ -488,7 +473,7 @@ export class OnQueryBuilder<
   selectable!: S['selectable'] & J['selectable'];
 
   constructor(
-    q: Pick<QueryBase, 'query' | 'table'>,
+    q: { table?: string; query: { as?: string } },
     public joinTo: QueryBase | string,
   ) {
     super(q.table, q.query.as);
@@ -497,7 +482,6 @@ export class OnQueryBuilder<
   on<T extends this>(this: T, ...args: OnArgs<T>): T {
     return this.clone()._on(...args);
   }
-
   _on<T extends this>(this: T, ...args: OnArgs<T>): T {
     return pushQueryOn(this, this.joinTo, this, ...args);
   }
@@ -505,8 +489,20 @@ export class OnQueryBuilder<
   orOn<T extends this>(this: T, ...args: OnArgs<T>): T {
     return this.clone()._orOn(...args);
   }
-
   _orOn<T extends this>(this: T, ...args: OnArgs<T>): T {
     return pushQueryOrOn(this, this.joinTo, this, ...args);
+  }
+
+  onJsonPathEquals<T extends this>(
+    this: T,
+    ...args: OnJsonPathEqualsArgs<T>
+  ): T {
+    return this.clone()._onJsonPathEquals(...args);
+  }
+  _onJsonPathEquals<T extends this>(
+    this: T,
+    ...args: OnJsonPathEqualsArgs<T>
+  ): T {
+    return pushQueryValue(this, 'and', { ON: args });
   }
 }

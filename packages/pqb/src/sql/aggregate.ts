@@ -7,7 +7,10 @@ import { whereToSql } from './where';
 import { Query } from '../query';
 
 export const aggregateToSql = (
-  model: Pick<Query, 'shape' | 'relations'>,
+  model: Pick<
+    Query,
+    'whereQueryBuilder' | 'onQueryBuilder' | 'as' | 'shape' | 'relations'
+  >,
   values: unknown[],
   item: AggregateItem,
   quotedAs?: string,
@@ -57,8 +60,8 @@ export const aggregateToSql = (
     const whereSql = whereToSql(
       model,
       {
-        and: options.filter ? [{ item: options.filter }] : undefined,
-        or: options.filterOr?.map((item) => [{ item }]),
+        and: options.filter ? [options.filter] : undefined,
+        or: options.filterOr?.map((item) => [item]),
       },
       values,
       quotedAs,

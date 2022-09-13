@@ -57,6 +57,24 @@ describe('join callback with query builder', () => {
     expectQueryNotMutated(q);
   });
 
+  it('should have .onJsonPathEquals method', () => {
+    const q = User.all();
+
+    expectSql(
+      q
+        .join(User.as('otherUser'), (q) =>
+          q.onJsonPathEquals('user.data', '$.name', 'otherUser.data', '$.name'),
+        )
+        .toSql(),
+      `
+        SELECT "user".* FROM "user"
+        JOIN "user" AS "otherUser"
+          ON jsonb_path_query_first("user"."data", $1) = jsonb_path_query_first("otherUser"."data", $2)
+      `,
+      ['$.name', '$.name'],
+    );
+  });
+
   describe('where methods', () => {
     describe('and', () => {
       let query: OnQueryBuilder;
@@ -67,7 +85,7 @@ describe('join callback with query builder', () => {
         where = q.where;
         _where = q._where;
         return q;
-      });
+      }).toSql();
       beforeEach(() => {
         query.where = jest.fn();
         query._where = jest.fn();
@@ -97,7 +115,7 @@ describe('join callback with query builder', () => {
         whereNot = q.whereNot;
         _whereNot = q._whereNot;
         return q;
-      });
+      }).toSql();
       beforeEach(() => {
         query.whereNot = jest.fn();
         query._whereNot = jest.fn();
