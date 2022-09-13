@@ -571,4 +571,75 @@ describe('hasMany through', () => {
       ['title'],
     );
   });
+
+  it('should allow to select count', () => {
+    const query = db.profile.select('id', db.profile.chats.count());
+
+    const eq: AssertEqual<
+      Awaited<typeof query>,
+      { id: number; chats: number }[]
+    > = true;
+    expect(eq).toBe(true);
+
+    expectSql(
+      query.toSql(),
+      `
+        SELECT
+          "profile"."id",
+          (
+            SELECT count(*)
+            FROM "chat" AS "chats"
+            WHERE EXISTS (
+                SELECT 1 FROM "user"
+                WHERE EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."chatId" = "chats"."id"
+                    AND "chatUser"."userId" = "user"."id"
+                  LIMIT 1
+                )
+                AND "user"."id" = "profile"."userId"
+                LIMIT 1
+              )
+          ) AS "chats"
+        FROM "profile"
+      `,
+    );
+  });
+
+  it('should allow to select count with alias', () => {
+    const query = db.profile.select(
+      'id',
+      db.profile.chats.count().as('chatsCount'),
+    );
+
+    const eq: AssertEqual<
+      Awaited<typeof query>,
+      { id: number; chatsCount: number }[]
+    > = true;
+    expect(eq).toBe(true);
+
+    expectSql(
+      query.toSql(),
+      `
+        SELECT
+          "profile"."id",
+          (
+            SELECT count(*)
+            FROM "chat" AS "chats"
+            WHERE EXISTS (
+                SELECT 1 FROM "user"
+                WHERE EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."chatId" = "chats"."id"
+                    AND "chatUser"."userId" = "user"."id"
+                  LIMIT 1
+                )
+                AND "user"."id" = "profile"."userId"
+                LIMIT 1
+              )
+          ) AS "chatsCount"
+        FROM "profile"
+      `,
+    );
+  });
 });

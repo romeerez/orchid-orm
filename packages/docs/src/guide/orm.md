@@ -163,7 +163,7 @@ export class BookModel extends Model {
   }))
   
   relations = {
-    author: this.belongsTo(() => Author, {
+    author: this.belongsTo(() => AuthorModel, {
       // required is affecting on TS type of returned record
       required: true,
       // primaryKey is a column of Author to connect with
@@ -301,6 +301,27 @@ For example, if each supplier in your application has only one account, you'd de
 ```ts
 import { Model } from 'porm'
 
+export type Supplier = SupplierModel['columns']['type']
+export class SupplierModel extends Model {
+  table = 'supplier'
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    brand: t.text(),
+    // here are no reference columns for an Account
+  }))
+
+  relations = {
+    account: this.hasOne(() => AccountModel, {
+      // required is offecting on TS type of returned record
+      required: true,
+      // primaryKey is a column of Supplier to use
+      primaryKey: 'id',
+      // foreignKey is a column of Account to connect with
+      foreignKey: 'supplierId',
+    })
+  }
+}
+
 export type Account = AccountModel['columns']['type']
 export class AccountModel extends Model {
   table = 'account'
@@ -311,6 +332,19 @@ export class AccountModel extends Model {
     supplierId: t.integer(),
   }))
 }
+```
+
+### hasOne through
+
+A `hasOne through` association sets up a one-to-one connection with another model.
+This association indicates that the declaring model can be matched with one instance of another model by proceeding through a third model.
+
+`hasOne through` gives the same querying abilities as a regular `hasOne`, but without nested insert functionality.
+
+For example, if each supplier has one account, and each account is associated with one account history, then the supplier model could look like this:
+
+```ts
+import { Model } from 'porm'
 
 export type Supplier = SupplierModel['columns']['type']
 export class SupplierModel extends Model {
@@ -318,18 +352,60 @@ export class SupplierModel extends Model {
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     brand: t.text(),
-    // here are no reference columns for an Account
+  }))
+
+  relations = {
+    account: this.hasOne(() => AccountModel, {
+      required: true,
+      primaryKey: 'id',
+      foreignKey: 'supplierId',
+    }),
+    
+    accountHistory: this.hasOne(() => AccountModel, {
+      required: true,
+      // previously defined relation name
+      through: 'account',
+      // name of relation in Account model
+      source: 'accountHistory',
+    }),
+  }
+}
+
+export type Account = AccountModel['columns']['type']
+export class AccountModel extends Model {
+  table = 'account'
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    name: t.text(),
+    // Account has a column pointing to Supplier:
+    supplierId: t.integer(),
   }))
   
   relations = {
-    account: this.hasOne(() => Account, {
-      // required is offecting on TS type of returned record
+    accountHistory: this.hasOne(() => AccountHistoryModel, {
       required: true,
-      // primaryKey is a column of Supplier to use
       primaryKey: 'id',
-      // foreignKey is a column of Account to connect with
-      foreignKey: 'supplierId',
-    })
+      foreignKey: 'accountId',
+    }),
+  }
+}
+
+export type AccountHistory = AccountHistoryModel['columns']['type']
+export class AccountHistoryModel extends Model {
+  table = 'accountHistory'
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    data: t.text(),
+    // column pointing to the Account
+    accountId: t.integer(),
+  }))
+
+  relations = {
+    account: this.belongsTo(() => AccountModel, {
+      required: true,
+      primaryKey: 'id',
+      foreignKey: 'accountId',
+    }),
   }
 }
 ```
@@ -468,7 +544,7 @@ export class AuthorModel extends Model {
   }))
   
   relations = {
-    books: this.hasMany(() => Book, {
+    books: this.hasMany(() => BookModel, {
       // primaryKey is a column of Author to use
       primaryKey: 'id',
       // foreignKey is a column of Book to connect with
@@ -486,6 +562,92 @@ export class BookModel extends Model {
     // book has a column pointing to author table
     authorId: t.integer(),
   }))
+}
+```
+
+### hasMany through
+
+A `hasMany though` association is often used to set up a many-to-many connection with another model.
+This association indicates that the declaring model can be matched with zero or more instances of another model by proceeding through a third model.
+
+`hasMany through` gives the same querying abilities as a regular `hasMany`, but without nested insert functionality.
+
+For example, consider a medical practice where patients make appointments to see physicians. The relevant association declarations could look like this:
+
+```ts
+import { Model } from 'porm'
+
+export type Physician = PhysicianModel['columns']['type']
+export class PhysicianModel extends Model {
+  table = 'physician'
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    name: t.text(),
+  }))
+
+  relations = {
+    appointments: this.hasMany(() => AppointmentModel, {
+      // primaryKey is a column of Physician to use
+      primaryKey: 'id',
+      // foreignKey is a column of Appointment to connect with
+      foreignKey: 'authorId',
+    }),
+    
+    patients: this.hasMany(() => PatienModel, {
+      // previously defined relation name
+      through: 'appointments',
+      // name of relation in Appointment model
+      source: 'patient',
+    }),
+  }
+}
+
+export type Appointment = AppointmentModel['columns']['type']
+export class AppointmentModel extends Model {
+  table = 'appointment'
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    appointmentDate: t.datetime(),
+    // column references physycian:
+    physycianId: t.integer(),
+    // column references patient:
+    patientId: t.integer(),
+  }))
+  
+  relations = {
+    physician: this.belongsTo(() => PhysicianModel, {
+      primaryKey: 'id',
+      foreignKey: 'physycianId',
+    }),
+    
+    patient: this.belongsTo(() => PatientModel, {
+      primaryKey: 'id',
+      foreignKey: 'patientId',
+    }),
+  }
+}
+
+export type Patient = PatientModel['columns']['type']
+export class PatientModel extends Model {
+  table = 'patient'
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    name: t.text(),
+  }))
+  
+  relations = {
+    appointments: this.hasMany(() => AppointmentModel, {
+      primaryKey: 'id',
+      foreignKey: 'patientId',
+    }),
+    
+    physicians: this.hasMany(() => PhysicianModel, {
+      // previously defined relation name
+      through: 'appointments',
+      // name of relation in Appointment model
+      source: 'physician',
+    })
+  }
 }
 ```
 
@@ -665,7 +827,7 @@ export class PostModel extends Model {
   }))
 
   relations = {
-    tags: this.hasOwnProperty(() => Tag, {
+    tags: this.hasAndBelongsToMany(() => TagModel, {
       // primaryKey is a column of this model
       primaryKey: 'id',
       // foreignKey is a column of joinTable to connect with this model
@@ -689,7 +851,7 @@ export class TagModel extends Model {
   }))
   
   relations = {
-    posts: this.hasAndBelongsToMany(() => Post, {
+    posts: this.hasAndBelongsToMany(() => PostModel, {
       primaryKey: 'id',
       foreignKey: 'tagId',
       associationPrimaryKey: 'id',
