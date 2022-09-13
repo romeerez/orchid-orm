@@ -165,7 +165,7 @@ export const applyRelations = (
 
         if (data) {
           (dbModel as unknown as Record<string, unknown>)[relationName] =
-            makeRelationQuery(data);
+            makeRelationQuery(relationName, data);
 
           (dbModel.relations as Record<string, unknown>)[relationName] = {
             type,
@@ -182,9 +182,12 @@ export const applyRelations = (
   }
 };
 
-const makeRelationQuery = (data: RelationData): RelationQuery => {
+const makeRelationQuery = (
+  relationName: string,
+  data: RelationData,
+): RelationQuery => {
   const query = data.returns === 'one' ? data.joinQuery.take() : data.joinQuery;
-  query.query[relationQueryKey] = true;
+  query.query[relationQueryKey] = relationName;
 
   return new Proxy(data.method, {
     get(_, prop) {

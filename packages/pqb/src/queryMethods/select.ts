@@ -43,6 +43,8 @@ type SelectResult<
       : Arg extends RelationQueryBase
       ? Arg['returnType'] extends 'all'
         ? ArrayOfColumnsObjects<Arg['result']>
+        : Arg['returnType'] extends 'valueOrThrow'
+        ? Arg['result']['value']
         : Arg[isRequiredRelationKey] extends true
         ? ColumnsObject<Arg['result']>
         : NullableColumn<ColumnsObject<Arg['result']>>

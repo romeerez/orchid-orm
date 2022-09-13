@@ -16,7 +16,7 @@ export type Sql = {
 
 export type CommonQueryData = {
   adapter: PostgresAdapter;
-  [relationQueryKey]?: true;
+  [relationQueryKey]?: string;
   inTransaction?: true;
   wrapInTransaction?: true;
   take?: true;
@@ -177,9 +177,15 @@ export type SelectItem =
   | RelationQuery
   | AggregateItem
   | { selectAs: Record<string, string | Query | RawExpression> }
-  | { function: string; arguments: SelectItem[]; as?: string }
+  | SelectFunctionItem
   | JsonItem
   | RawExpression;
+
+export type SelectFunctionItem = {
+  function: string;
+  arguments: SelectItem[];
+  as?: string;
+};
 
 export type JoinItem = {
   type: string;

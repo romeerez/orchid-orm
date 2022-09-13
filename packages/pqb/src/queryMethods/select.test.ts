@@ -120,7 +120,7 @@ describe('selectMethods', () => {
         'userId',
         'id',
       );
-      profileRelationQuery.query[relationQueryKey] = true;
+      profileRelationQuery.query[relationQueryKey] = 'profile';
 
       const profileRelation = new Proxy(() => undefined, {
         get(_, key) {
@@ -208,7 +208,7 @@ describe('selectMethods', () => {
         'authorId',
         'id',
       );
-      messageRelationQuery.query[relationQueryKey] = true;
+      messageRelationQuery.query[relationQueryKey] = 'messages';
 
       const messageRelation = new Proxy(() => undefined, {
         get(_, key) {

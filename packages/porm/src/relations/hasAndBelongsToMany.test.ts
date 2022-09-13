@@ -12,41 +12,42 @@ import { RelationQuery, Sql, TransactionAdapter } from 'pqb';
 describe('hasAndBelongsToMany', () => {
   useTestDatabase();
 
-  it('should have method to query related data', async () => {
-    const chatsQuery = db.chat.all();
+  describe('querying', () => {
+    it('should have method to query related data', async () => {
+      const chatsQuery = db.chat.all();
 
-    const eq: AssertEqual<
-      typeof db.user.chats,
-      RelationQuery<'chats', { id: number }, never, typeof chatsQuery, false>
-    > = true;
+      const eq: AssertEqual<
+        typeof db.user.chats,
+        RelationQuery<'chats', { id: number }, never, typeof chatsQuery, false>
+      > = true;
 
-    expect(eq).toBe(true);
+      expect(eq).toBe(true);
 
-    const userId = await insertUser();
+      const userId = await insertUser();
 
-    const chatData = {
-      title: 'title',
-    };
-    const chat1Id = await insertChat(chatData);
-    const chat2Id = await insertChat(chatData);
+      const chatData = {
+        title: 'title',
+      };
+      const chat1Id = await insertChat(chatData);
+      const chat2Id = await insertChat(chatData);
 
-    await insert('chatUser', {
-      id: 1,
-      userId,
-      chatId: chat1Id,
-    });
-    await insert('chatUser', {
-      id: 2,
-      userId,
-      chatId: chat2Id,
-    });
+      await insert('chatUser', {
+        id: 1,
+        userId,
+        chatId: chat1Id,
+      });
+      await insert('chatUser', {
+        id: 2,
+        userId,
+        chatId: chat2Id,
+      });
 
-    const user = await db.user.find(userId).takeOrThrow();
-    const query = db.user.chats(user);
+      const user = await db.user.find(userId).takeOrThrow();
+      const query = db.user.chats(user);
 
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         SELECT "chats".* FROM "chat" AS "chats"
         WHERE EXISTS (
           SELECT 1 FROM "chatUser"
@@ -55,18 +56,18 @@ describe('hasAndBelongsToMany', () => {
           LIMIT 1
         )
       `,
-      [userId],
-    );
+        [userId],
+      );
 
-    const messages = await query;
+      const messages = await query;
 
-    expect(messages).toMatchObject([chatData, chatData]);
-  });
+      expect(messages).toMatchObject([chatData, chatData]);
+    });
 
-  it('should have proper joinQuery', () => {
-    expectSql(
-      db.user.relations.chats.joinQuery.toSql(),
-      `
+    it('should have proper joinQuery', () => {
+      expectSql(
+        db.user.relations.chats.joinQuery.toSql(),
+        `
         SELECT "chats".* FROM "chat" AS "chats"
         WHERE EXISTS (
           SELECT 1 FROM "chatUser"
@@ -75,13 +76,13 @@ describe('hasAndBelongsToMany', () => {
           LIMIT 1
         )
       `,
-    );
-  });
+      );
+    });
 
-  it('should be supported in whereExists', () => {
-    expectSql(
-      db.user.whereExists('chats').toSql(),
-      `
+    it('should be supported in whereExists', () => {
+      expectSql(
+        db.user.whereExists('chats').toSql(),
+        `
         SELECT "user".* FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "chat" AS "chats"
@@ -94,13 +95,13 @@ describe('hasAndBelongsToMany', () => {
           LIMIT 1
         )
       `,
-    );
+      );
 
-    expectSql(
-      db.user
-        .whereExists('chats', (q) => q.where({ 'user.name': 'name' }))
-        .toSql(),
-      `
+      expectSql(
+        db.user
+          .whereExists('chats', (q) => q.where({ 'user.name': 'name' }))
+          .toSql(),
+        `
         SELECT "user".* FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "chat" AS "chats"
@@ -114,24 +115,24 @@ describe('hasAndBelongsToMany', () => {
           LIMIT 1
         )
       `,
-      ['name'],
-    );
-  });
+        ['name'],
+      );
+    });
 
-  it('should be supported in join', () => {
-    const query = db.user
-      .join('chats', (q) => q.where({ 'user.name': 'name' }))
-      .select('name', 'chats.title');
+    it('should be supported in join', () => {
+      const query = db.user
+        .join('chats', (q) => q.where({ 'user.name': 'name' }))
+        .select('name', 'chats.title');
 
-    const eq: AssertEqual<
-      Awaited<typeof query>,
-      { name: string; title: string }[]
-    > = true;
-    expect(eq).toBe(true);
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { name: string; title: string }[]
+      > = true;
+      expect(eq).toBe(true);
 
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         SELECT "user"."name", "chats"."title" FROM "user"
         JOIN "chat" AS "chats"
           ON EXISTS (
@@ -142,25 +143,25 @@ describe('hasAndBelongsToMany', () => {
           )
           AND "user"."name" = $1
       `,
-      ['name'],
-    );
-  });
+        ['name'],
+      );
+    });
 
-  it('should be selectable', () => {
-    const query = db.user.select(
-      'id',
-      db.user.chats.select('id', 'title').where({ title: 'title' }),
-    );
+    it('should be selectable', () => {
+      const query = db.user.select(
+        'id',
+        db.user.chats.select('id', 'title').where({ title: 'title' }),
+      );
 
-    const eq: AssertEqual<
-      Awaited<typeof query>,
-      { id: number; chats: { id: number; title: string }[] }[]
-    > = true;
-    expect(eq).toBe(true);
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; chats: { id: number; title: string }[] }[]
+      > = true;
+      expect(eq).toBe(true);
 
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         SELECT
           "user"."id",
           (
@@ -178,8 +179,68 @@ describe('hasAndBelongsToMany', () => {
           ) AS "chats"
         FROM "user"
       `,
-      ['title'],
-    );
+        ['title'],
+      );
+    });
+
+    it('should allow to select count', () => {
+      const query = db.user.select('id', db.user.chats.count());
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; chats: number }[]
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT
+            "user"."id",
+            (
+              SELECT count(*) FROM "chat" AS "chats"
+              WHERE EXISTS (
+                SELECT 1 FROM "chatUser"
+                WHERE "chatUser"."chatId" = "chats"."id"
+                  AND "chatUser"."userId" = "user"."id"
+                LIMIT 1
+              )
+            ) AS "chats"
+          FROM "user"
+        `,
+      );
+    });
+
+    it('should allow to select count with alias', () => {
+      const query = db.user.select(
+        'id',
+        db.user.chats.count().as('chatsCount'),
+      );
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; chatsCount: number }[]
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT
+            "user"."id",
+            (
+              SELECT count(*) FROM "chat" AS "chats"
+              WHERE EXISTS (
+                SELECT 1 FROM "chatUser"
+                WHERE "chatUser"."chatId" = "chats"."id"
+                  AND "chatUser"."userId" = "user"."id"
+                LIMIT 1
+              )
+            ) AS "chatsCount"
+          FROM "user"
+        `,
+      );
+    });
   });
 
   describe('insert', () => {

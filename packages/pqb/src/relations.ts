@@ -106,7 +106,7 @@ export type isRequiredRelationKey = typeof isRequiredRelationKey;
 export const isRequiredRelationKey = Symbol('isRequiredRelation');
 
 export type RelationQueryBase = Query & {
-  [relationQueryKey]: true;
+  [relationQueryKey]: string;
   [isRequiredRelationKey]: boolean;
 };
 
@@ -116,9 +116,9 @@ export type RelationQuery<
   Populate extends string = never,
   T extends Query = Query,
   Required extends boolean = boolean,
-  Q extends Query = Omit<T, 'tableAlias'> & {
+  Q extends RelationQueryBase = Omit<T, 'tableAlias'> & {
     tableAlias: RelationName extends string ? RelationName : never;
     [isRequiredRelationKey]: Required;
-    [relationQueryKey]: true;
+    [relationQueryKey]: string;
   },
 > = ((params: Params) => Q & { [defaultsKey]: Pick<T['type'], Populate> }) & Q;

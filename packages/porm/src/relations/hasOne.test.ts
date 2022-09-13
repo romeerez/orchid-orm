@@ -12,94 +12,95 @@ import { RelationQuery } from 'pqb';
 describe('hasOne', () => {
   useTestDatabase();
 
-  it('should have method to query related data', async () => {
-    const profileQuery = db.profile.takeOrThrow();
+  describe('querying', () => {
+    it('should have method to query related data', async () => {
+      const profileQuery = db.profile.takeOrThrow();
 
-    const eq: AssertEqual<
-      typeof db.user.profile,
-      RelationQuery<
-        'profile',
-        { id: number },
-        'userId',
-        typeof profileQuery,
-        true
-      >
-    > = true;
+      const eq: AssertEqual<
+        typeof db.user.profile,
+        RelationQuery<
+          'profile',
+          { id: number },
+          'userId',
+          typeof profileQuery,
+          true
+        >
+      > = true;
 
-    expect(eq).toBe(true);
+      expect(eq).toBe(true);
 
-    const userId = await insertUser();
+      const userId = await insertUser();
 
-    const profileData = {
-      id: 1,
-      userId,
-      bio: 'text',
-    };
-    await insertProfile(profileData);
+      const profileData = {
+        id: 1,
+        userId,
+        bio: 'text',
+      };
+      await insertProfile(profileData);
 
-    const user = await db.user.find(userId).takeOrThrow();
-    const query = db.user.profile(user);
+      const user = await db.user.find(userId).takeOrThrow();
+      const query = db.user.profile(user);
 
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         SELECT "profile".* FROM "profile"
         WHERE "profile"."userId" = $1
         LIMIT $2
       `,
-      [userId, 1],
-    );
+        [userId, 1],
+      );
 
-    const profile = await query;
+      const profile = await query;
 
-    expect(profile).toMatchObject(profileData);
-  });
-
-  it('should have insert with defaults of provided id', () => {
-    const user = { id: 1 };
-    const now = new Date();
-
-    const query = db.user.profile(user).insert({
-      bio: 'bio',
-      updatedAt: now,
-      createdAt: now,
+      expect(profile).toMatchObject(profileData);
     });
 
-    expectSql(
-      query.toSql(),
-      `
+    it('should have insert with defaults of provided id', () => {
+      const user = { id: 1 };
+      const now = new Date();
+
+      const query = db.user.profile(user).insert({
+        bio: 'bio',
+        updatedAt: now,
+        createdAt: now,
+      });
+
+      expectSql(
+        query.toSql(),
+        `
         INSERT INTO "profile"("userId", "bio", "updatedAt", "createdAt")
         VALUES ($1, $2, $3, $4)
       `,
-      [1, 'bio', now, now],
-    );
-  });
-
-  it('can insert after calling method', async () => {
-    const id = await insertUser();
-    const now = new Date();
-    await db.user.profile({ id }).insert({
-      userId: id,
-      bio: 'bio',
-      updatedAt: now,
-      createdAt: now,
+        [1, 'bio', now, now],
+      );
     });
-  });
 
-  it('should have proper joinQuery', () => {
-    expectSql(
-      db.user.relations.profile.joinQuery.toSql(),
-      `
+    it('can insert after calling method', async () => {
+      const id = await insertUser();
+      const now = new Date();
+      await db.user.profile({ id }).insert({
+        userId: id,
+        bio: 'bio',
+        updatedAt: now,
+        createdAt: now,
+      });
+    });
+
+    it('should have proper joinQuery', () => {
+      expectSql(
+        db.user.relations.profile.joinQuery.toSql(),
+        `
         SELECT "profile".* FROM "profile"
         WHERE "profile"."userId" = "user"."id"
       `,
-    );
-  });
+      );
+    });
 
-  it('should be supported in whereExists', () => {
-    expectSql(
-      db.user.whereExists('profile').toSql(),
-      `
+    it('should be supported in whereExists', () => {
+      expectSql(
+        db.user.whereExists('profile').toSql(),
+        `
         SELECT "user".* FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "profile"
@@ -107,13 +108,13 @@ describe('hasOne', () => {
           LIMIT 1
         )
       `,
-    );
+      );
 
-    expectSql(
-      db.user
-        .whereExists('profile', (q) => q.where({ 'user.name': 'name' }))
-        .toSql(),
-      `
+      expectSql(
+        db.user
+          .whereExists('profile', (q) => q.where({ 'user.name': 'name' }))
+          .toSql(),
+        `
         SELECT "user".* FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "profile"
@@ -122,38 +123,45 @@ describe('hasOne', () => {
           LIMIT 1
         )
       `,
-      ['name'],
-    );
-  });
+        ['name'],
+      );
+    });
 
-  it('should be supported in join', () => {
-    const query = db.user
-      .join('profile', (q) => q.where({ 'user.name': 'name' }))
-      .select('name', 'profile.bio');
+    it('should be supported in join', () => {
+      const query = db.user
+        .join('profile', (q) => q.where({ 'user.name': 'name' }))
+        .select('name', 'profile.bio');
 
-    const eq: AssertEqual<
-      Awaited<typeof query>,
-      { name: string; bio: string | null }[]
-    > = true;
-    expect(eq).toBe(true);
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { name: string; bio: string | null }[]
+      > = true;
+      expect(eq).toBe(true);
 
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         SELECT "user"."name", "profile"."bio" FROM "user"
         JOIN "profile"
           ON "profile"."userId" = "user"."id"
          AND "user"."name" = $1
       `,
-      ['name'],
-    );
-  });
+        ['name'],
+      );
+    });
 
-  it('should be selectable', () => {
-    const query = db.user.select('id', db.user.profile.where({ bio: 'bio' }));
-    expectSql(
-      query.toSql(),
-      `
+    it('should be selectable', () => {
+      const query = db.user.select('id', db.user.profile.where({ bio: 'bio' }));
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; profile: Profile }[]
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
+        `
         SELECT
           "user"."id",
           (
@@ -167,119 +175,120 @@ describe('hasOne', () => {
           ) AS "profile"
         FROM "user"
       `,
-      ['bio', 1],
-    );
-  });
-
-  describe('insert', () => {
-    const now = new Date();
-    const userData = {
-      password: 'password',
-      updatedAt: now,
-      createdAt: now,
-    };
-
-    const profileData = {
-      updatedAt: now,
-      createdAt: now,
-    };
-
-    const checkUserAndProfile = ({
-      user,
-      profile,
-      name,
-      bio,
-    }: {
-      user: User;
-      profile: Profile;
-      name: string;
-      bio: string;
-    }) => {
-      expect(user).toEqual({
-        id: user.id,
-        name,
-        active: null,
-        age: null,
-        data: null,
-        picture: null,
-        ...userData,
-      });
-
-      expect(profile).toEqual({
-        id: profile.id,
-        bio,
-        userId: user.id,
-        ...profileData,
-      });
-    };
-
-    it('should support create', async () => {
-      const query = db.user.insert(
-        {
-          name: 'user',
-          ...userData,
-          profile: {
-            create: {
-              bio: 'profile',
-              ...profileData,
-            },
-          },
-        },
-        '*',
+        ['bio', 1],
       );
-
-      const user = await query;
-      const profile = await db.profile.findBy({ userId: user.id });
-
-      checkUserAndProfile({ user, profile, name: 'user', bio: 'profile' });
     });
 
-    it('should support create many', async () => {
-      const query = db.user.insert(
-        [
+    describe('insert', () => {
+      const now = new Date();
+      const userData = {
+        password: 'password',
+        updatedAt: now,
+        createdAt: now,
+      };
+
+      const profileData = {
+        updatedAt: now,
+        createdAt: now,
+      };
+
+      const checkUserAndProfile = ({
+        user,
+        profile,
+        name,
+        bio,
+      }: {
+        user: User;
+        profile: Profile;
+        name: string;
+        bio: string;
+      }) => {
+        expect(user).toEqual({
+          id: user.id,
+          name,
+          active: null,
+          age: null,
+          data: null,
+          picture: null,
+          ...userData,
+        });
+
+        expect(profile).toEqual({
+          id: profile.id,
+          bio,
+          userId: user.id,
+          ...profileData,
+        });
+      };
+
+      it('should support create', async () => {
+        const query = db.user.insert(
           {
-            name: 'user 1',
+            name: 'user',
             ...userData,
             profile: {
               create: {
-                bio: 'profile 1',
+                bio: 'profile',
                 ...profileData,
               },
             },
           },
-          {
-            name: 'user 2',
-            ...userData,
-            profile: {
-              create: {
-                bio: 'profile 2',
-                ...profileData,
-              },
-            },
-          },
-        ],
-        '*',
-      );
+          '*',
+        );
 
-      const users = await query;
-      const profiles = await db.profile
-        .where({
-          userId: { in: users.map((user) => user.id) },
-        })
-        .order({ id: 'ASC' });
+        const user = await query;
+        const profile = await db.profile.findBy({ userId: user.id });
 
-      checkUserAndProfile({
-        user: users[0],
-        profile: profiles[0],
-        name: 'user 1',
-        bio: 'profile 1',
+        checkUserAndProfile({ user, profile, name: 'user', bio: 'profile' });
       });
 
-      checkUserAndProfile({
-        user: users[1],
-        profile: profiles[1],
-        name: 'user 2',
-        bio: 'profile 2',
+      it('should support create many', async () => {
+        const query = db.user.insert(
+          [
+            {
+              name: 'user 1',
+              ...userData,
+              profile: {
+                create: {
+                  bio: 'profile 1',
+                  ...profileData,
+                },
+              },
+            },
+            {
+              name: 'user 2',
+              ...userData,
+              profile: {
+                create: {
+                  bio: 'profile 2',
+                  ...profileData,
+                },
+              },
+            },
+          ],
+          '*',
+        );
+
+        const users = await query;
+        const profiles = await db.profile
+          .where({
+            userId: { in: users.map((user) => user.id) },
+          })
+          .order({ id: 'ASC' });
+
+        checkUserAndProfile({
+          user: users[0],
+          profile: profiles[0],
+          name: 'user 1',
+          bio: 'profile 1',
+        });
+
+        checkUserAndProfile({
+          user: users[1],
+          profile: profiles[1],
+          name: 'user 2',
+          bio: 'profile 2',
+        });
       });
     });
   });
@@ -407,6 +416,13 @@ describe('hasOne through', () => {
       'id',
       db.message.profile.where({ bio: 'bio' }),
     );
+
+    const eq: AssertEqual<
+      Awaited<typeof query>,
+      { id: number; profile: Profile }[]
+    > = true;
+    expect(eq).toBe(true);
+
     expectSql(
       query.toSql(),
       `

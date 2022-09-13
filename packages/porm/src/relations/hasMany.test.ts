@@ -8,88 +8,89 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
-import { Message, User } from '../test-utils/test-models';
+import { Chat, Message, User } from '../test-utils/test-models';
 
 describe('hasMany', () => {
   useTestDatabase();
 
-  it('should have method to query related data', async () => {
-    const messagesQuery = db.message.all();
+  describe('querying', () => {
+    it('should have method to query related data', async () => {
+      const messagesQuery = db.message.all();
 
-    const eq: AssertEqual<
-      typeof db.user.messages,
-      RelationQuery<
-        'messages',
-        { id: number },
-        'authorId',
-        typeof messagesQuery,
-        false
-      >
-    > = true;
+      const eq: AssertEqual<
+        typeof db.user.messages,
+        RelationQuery<
+          'messages',
+          { id: number },
+          'authorId',
+          typeof messagesQuery,
+          false
+        >
+      > = true;
 
-    expect(eq).toBe(true);
+      expect(eq).toBe(true);
 
-    const userId = await insertUser();
-    const chatId = await insertChat();
+      const userId = await insertUser();
+      const chatId = await insertChat();
 
-    const messageData = {
-      authorId: userId,
-      chatId,
-      text: 'text',
-    };
-    await insertMessage({ ...messageData, count: 2 });
+      const messageData = {
+        authorId: userId,
+        chatId,
+        text: 'text',
+      };
+      await insertMessage({ ...messageData, count: 2 });
 
-    const user = await db.user.find(userId).takeOrThrow();
-    const query = db.user.messages(user);
+      const user = await db.user.find(userId).takeOrThrow();
+      const query = db.user.messages(user);
 
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         SELECT "messages".* FROM "message" AS "messages"
         WHERE "messages"."authorId" = $1
       `,
-      [userId],
-    );
+        [userId],
+      );
 
-    const messages = await query;
+      const messages = await query;
 
-    expect(messages).toMatchObject([messageData, messageData]);
-  });
-
-  it('should have insert with defaults of provided id', () => {
-    const user = { id: 1 };
-    const now = new Date();
-    const query = db.user.messages(user).insert({
-      chatId: 2,
-      text: 'text',
-      updatedAt: now,
-      createdAt: now,
+      expect(messages).toMatchObject([messageData, messageData]);
     });
 
-    expectSql(
-      query.toSql(),
-      `
+    it('should have insert with defaults of provided id', () => {
+      const user = { id: 1 };
+      const now = new Date();
+      const query = db.user.messages(user).insert({
+        chatId: 2,
+        text: 'text',
+        updatedAt: now,
+        createdAt: now,
+      });
+
+      expectSql(
+        query.toSql(),
+        `
         INSERT INTO "message"("authorId", "chatId", "text", "updatedAt", "createdAt")
         VALUES ($1, $2, $3, $4, $5)
       `,
-      [1, 2, 'text', now, now],
-    );
-  });
+        [1, 2, 'text', now, now],
+      );
+    });
 
-  it('should have proper joinQuery', () => {
-    expectSql(
-      db.user.relations.messages.joinQuery.toSql(),
-      `
+    it('should have proper joinQuery', () => {
+      expectSql(
+        db.user.relations.messages.joinQuery.toSql(),
+        `
         SELECT "messages".* FROM "message" AS "messages"
         WHERE "messages"."authorId" = "user"."id"
       `,
-    );
-  });
+      );
+    });
 
-  it('should be supported in whereExists', () => {
-    expectSql(
-      db.user.whereExists('messages').toSql(),
-      `
+    it('should be supported in whereExists', () => {
+      expectSql(
+        db.user.whereExists('messages').toSql(),
+        `
         SELECT "user".* FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "message" AS "messages"
@@ -97,13 +98,13 @@ describe('hasMany', () => {
           LIMIT 1
         )
       `,
-    );
+      );
 
-    expectSql(
-      db.user
-        .whereExists('messages', (q) => q.where({ 'user.name': 'name' }))
-        .toSql(),
-      `
+      expectSql(
+        db.user
+          .whereExists('messages', (q) => q.where({ 'user.name': 'name' }))
+          .toSql(),
+        `
         SELECT "user".* FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "message" AS "messages"
@@ -112,41 +113,48 @@ describe('hasMany', () => {
           LIMIT 1
         )
       `,
-      ['name'],
-    );
-  });
+        ['name'],
+      );
+    });
 
-  it('should be supported in join', () => {
-    const query = db.user
-      .join('messages', (q) => q.where({ 'user.name': 'name' }))
-      .select('name', 'messages.text');
+    it('should be supported in join', () => {
+      const query = db.user
+        .join('messages', (q) => q.where({ 'user.name': 'name' }))
+        .select('name', 'messages.text');
 
-    const eq: AssertEqual<
-      Awaited<typeof query>,
-      { name: string; text: string }[]
-    > = true;
-    expect(eq).toBe(true);
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { name: string; text: string }[]
+      > = true;
+      expect(eq).toBe(true);
 
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         SELECT "user"."name", "messages"."text" FROM "user"
         JOIN "message" AS "messages"
           ON "messages"."authorId" = "user"."id"
           AND "user"."name" = $1
       `,
-      ['name'],
-    );
-  });
+        ['name'],
+      );
+    });
 
-  it('should be selectable', () => {
-    const query = db.user.select(
-      'id',
-      db.user.messages.where({ text: 'text' }),
-    );
-    expectSql(
-      query.toSql(),
-      `
+    it('should be selectable', () => {
+      const query = db.user.select(
+        'id',
+        db.user.messages.where({ text: 'text' }),
+      );
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; messages: Message[] }[]
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
+        `
         SELECT
           "user"."id",
           (
@@ -159,8 +167,58 @@ describe('hasMany', () => {
           ) AS "messages"
         FROM "user"
       `,
-      ['text'],
-    );
+        ['text'],
+      );
+    });
+
+    it('should allow to select count', () => {
+      const query = db.user.select('id', db.user.messages.count());
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; messages: number }[]
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT
+            "user"."id",
+            (
+              SELECT count(*) FROM "message" AS "messages"
+              WHERE "messages"."authorId" = "user"."id"
+            ) AS "messages"
+          FROM "user"
+        `,
+      );
+    });
+
+    it('should allow to select count with alias', () => {
+      const query = db.user.select(
+        'id',
+        db.user.messages.count().as('messagesCount'),
+      );
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; messagesCount: number }[]
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT
+            "user"."id",
+            (
+              SELECT count(*) FROM "message" AS "messages"
+              WHERE "messages"."authorId" = "user"."id"
+            ) AS "messagesCount"
+          FROM "user"
+        `,
+      );
+    });
   });
 
   describe('insert', () => {
@@ -477,6 +535,13 @@ describe('hasMany through', () => {
       'id',
       db.profile.chats.where({ title: 'title' }),
     );
+
+    const eq: AssertEqual<
+      Awaited<typeof query>,
+      { id: number; chats: Chat[] }[]
+    > = true;
+    expect(eq).toBe(true);
+
     expectSql(
       query.toSql(),
       `

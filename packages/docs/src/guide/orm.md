@@ -499,7 +499,7 @@ const author = await db.author.find(1).takeOrThrow()
 const books = await db.author.books(author) // type of argument is { id: number }
 
 // additional query methods can be applied:
-const booksWithSpecificTitle = await db.author.books(author).where({ title: 'Kobzar' })
+const countBooks = await db.author.books(author).where({ title: 'Kobzar' }).count()
 ```
 
 Relation can be used in `.whereExists`, following query will find all authors where at least one book exists:
@@ -552,6 +552,35 @@ authorWithBooks.books.forEach((book) => {
   book.id
   book.title
 })
+```
+
+In the select you can also apply aggregation queries such as `count`, `min`, `max`, `sum`, `avg`:
+
+```ts
+type Result = Pick<Author, 'id'> & {
+  // books number is for the count
+  books: number
+}
+
+const result: Result = await db.author.select(
+  'id',
+  db.author.books.count()
+).takeOrThrow()
+```
+
+Value of `count` and other aggregations will be returned under the name of relation, but you can use an alias to change it:
+
+```ts
+type Result = Pick<Author, 'id'> & {
+  booksCount: number
+  booksAvgYear: number | null // null if there is no books
+}
+
+const result: Result = await db.author.select(
+  'id',
+  db.author.books.count().as('booksCount'),
+  db.author.books.avg('year').as('booksAvgYear'),
+).takeOrThrow()
 ```
 
 ### hasMany nested insert
@@ -734,6 +763,35 @@ postWithTags.tags.forEach((tag) => {
   tag.id
   tag.title
 })
+```
+
+In the select you can also apply aggregation queries such as `count`, `min`, `max`, `sum`, `avg`:
+
+```ts
+type Result = Pick<Post, 'id'> & {
+  // tags number is for the count
+  tags: number
+}
+
+const result: Result = await db.post.select(
+  'id',
+  db.post.tags.count()
+).takeOrThrow()
+```
+
+Value of `count` and other aggregations will be returned under the name of relation, but you can use an alias to change it:
+
+```ts
+type Result = Pick<Post, 'id'> & {
+  tagsCount: number
+  tagsCommaSeparated: string | null // null if there is no books
+}
+
+const result: Result = await db.author.select(
+  'id',
+  db.post.tags.count().as('booksCount'),
+  db.post.tags.stringAgg('name', ', ').as('tagsCommaSeparated'),
+).takeOrThrow()
 ```
 
 ### hasAndBelongsToMany nested insert

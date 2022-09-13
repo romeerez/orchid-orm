@@ -11,58 +11,59 @@ import { RelationQuery } from 'pqb';
 describe('belongsTo', () => {
   useTestDatabase();
 
-  it('should have method to query related data', async () => {
-    const userQuery = db.user.takeOrThrow();
-    type UserQuery = typeof userQuery;
+  describe('querying', () => {
+    it('should have method to query related data', async () => {
+      const userQuery = db.user.takeOrThrow();
+      type UserQuery = typeof userQuery;
 
-    const eq: AssertEqual<
-      typeof db.profile.user,
-      RelationQuery<'user', { userId: number }, never, UserQuery, true>
-    > = true;
+      const eq: AssertEqual<
+        typeof db.profile.user,
+        RelationQuery<'user', { userId: number }, never, UserQuery, true>
+      > = true;
 
-    expect(eq).toBe(true);
+      expect(eq).toBe(true);
 
-    const userData = {
-      id: 1,
-      name: 'name',
-      password: 'password',
-      active: true,
-    };
-    const userId = await insertUser(userData);
-    const profileId = await insertProfile({ userId });
+      const userData = {
+        id: 1,
+        name: 'name',
+        password: 'password',
+        active: true,
+      };
+      const userId = await insertUser(userData);
+      const profileId = await insertProfile({ userId });
 
-    const profile = await db.profile.find(profileId).takeOrThrow();
-    const query = db.profile.user(profile);
+      const profile = await db.profile.find(profileId).takeOrThrow();
+      const query = db.profile.user(profile);
 
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         SELECT "user".* FROM "user"
         WHERE "user"."id" = $1
         LIMIT $2
       `,
-      [userId, 1],
-    );
+        [userId, 1],
+      );
 
-    const user = await query;
+      const user = await query;
 
-    expect(user).toMatchObject(userData);
-  });
+      expect(user).toMatchObject(userData);
+    });
 
-  it('should have proper joinQuery', () => {
-    expectSql(
-      db.profile.relations.user.joinQuery.toSql(),
-      `
+    it('should have proper joinQuery', () => {
+      expectSql(
+        db.profile.relations.user.joinQuery.toSql(),
+        `
         SELECT "user".* FROM "user"
         WHERE "user"."id" = "profile"."userId"
       `,
-    );
-  });
+      );
+    });
 
-  it('should be supported in whereExists', () => {
-    expectSql(
-      db.profile.whereExists('user').toSql(),
-      `
+    it('should be supported in whereExists', () => {
+      expectSql(
+        db.profile.whereExists('user').toSql(),
+        `
         SELECT "profile".* FROM "profile"
         WHERE EXISTS (
           SELECT 1 FROM "user"
@@ -70,13 +71,13 @@ describe('belongsTo', () => {
           LIMIT 1
         )
       `,
-    );
+      );
 
-    expectSql(
-      db.profile
-        .whereExists('user', (q) => q.where({ 'user.name': 'name' }))
-        .toSql(),
-      `
+      expectSql(
+        db.profile
+          .whereExists('user', (q) => q.where({ 'user.name': 'name' }))
+          .toSql(),
+        `
         SELECT "profile".* FROM "profile"
         WHERE EXISTS (
           SELECT 1 FROM "user"
@@ -85,49 +86,46 @@ describe('belongsTo', () => {
           LIMIT 1
         )
       `,
-      ['name'],
-    );
-  });
+        ['name'],
+      );
+    });
 
-  it('should be supported in join', () => {
-    const query = db.profile
-      .join('user', (q) => q.where({ 'user.name': 'name' }))
-      .select('bio', 'user.name');
+    it('should be supported in join', () => {
+      const query = db.profile
+        .join('user', (q) => q.where({ 'user.name': 'name' }))
+        .select('bio', 'user.name');
 
-    const eq: AssertEqual<
-      Awaited<typeof query>,
-      { bio: string | null; name: string }[]
-    > = true;
-    expect(eq).toBe(true);
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { bio: string | null; name: string }[]
+      > = true;
+      expect(eq).toBe(true);
 
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         SELECT "profile"."bio", "user"."name" FROM "profile"
         JOIN "user" ON "user"."id" = "profile"."userId" AND "user"."name" = $1
       `,
-      ['name'],
-    );
-  });
+        ['name'],
+      );
+    });
 
-  it('should be selectable', async () => {
-    const query = db.profile.select(
-      'id',
-      db.profile.user.select('id', 'name').where({ 'user.name': 'name' }),
-    );
+    it('should be selectable', async () => {
+      const query = db.profile.select(
+        'id',
+        db.profile.user.select('id', 'name').where({ 'user.name': 'name' }),
+      );
 
-    const userQuery = db.profile.user;
-    userQuery.table;
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; user: { id: number; name: string } }[]
+      > = true;
+      expect(eq).toBe(true);
 
-    const eq: AssertEqual<
-      Awaited<typeof query>,
-      { id: number; user: { id: number; name: string } }[]
-    > = true;
-    expect(eq).toBe(true);
-
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         SELECT
           "profile"."id",
           (
@@ -141,8 +139,9 @@ describe('belongsTo', () => {
           ) AS "user"
         FROM "profile"
       `,
-      ['name', 1],
-    );
+        ['name', 1],
+      );
+    });
   });
 
   describe('insert', () => {
