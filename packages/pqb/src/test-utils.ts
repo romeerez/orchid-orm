@@ -9,6 +9,7 @@ import {
 import { Client } from 'pg';
 import { quote } from './quote';
 import { columnTypes } from './columnSchema';
+import { MaybeArray, toArray } from './utils';
 
 export const dbClient = new Client({
   connectionString: process.env.DATABASE_URL,
@@ -67,12 +68,14 @@ export const line = (s: string) =>
   s.trim().replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')');
 
 export const expectSql = (
-  sql: { text: string; values: unknown[] },
+  sql: MaybeArray<{ text: string; values: unknown[] }>,
   text: string,
   values: unknown[] = [],
 ) => {
-  expect(sql.text).toBe(line(text));
-  expect(sql.values).toEqual(values);
+  toArray(sql).forEach((item) => {
+    expect(item.text).toBe(line(text));
+    expect(item.values).toEqual(values);
+  });
 };
 
 export const expectQueryNotMutated = (q: Query) => {

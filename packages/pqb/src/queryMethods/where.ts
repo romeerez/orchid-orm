@@ -97,15 +97,14 @@ export const addWhereIn = <T extends QueryBase>(
   if (values) {
     if (Array.isArray(arg)) {
       item = {
-        columns: arg,
-        values,
+        IN: {
+          columns: arg,
+          values,
+        },
       };
       if (not) item = { NOT: item };
     } else {
-      item = {
-        type: 'object',
-        data: { [arg as string]: { [op]: values } },
-      };
+      item = { [arg as string]: { [op]: values } };
     }
   } else {
     item = {} as Record<string, { in: unknown[] }>;

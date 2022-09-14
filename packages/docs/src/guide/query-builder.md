@@ -1477,6 +1477,57 @@ Table.where((q) =>
 Table.where({ id: 1 }, Table.where({ name: 'John' }), raw('a = b'))
 ```
 
+### where special keys
+
+Object passed to `.where` can contain special keys, each of the key corresponds to own method and takes the same value as the type of argument of the method.
+
+For example, key `EXISTS` is for `WHERE EXISTS` SQL statement, code below will find posts where at least one comment exists:
+
+```ts
+Post.where({
+  EXISTS: [Comment, 'postId', 'id']
+})
+```
+
+The same query may be achieved with the method `whereExists`:
+
+```ts
+Post.whereExists(Comment, 'postId', 'id')
+```
+
+Using methods are shorter and cleaner way, but in some cases such object keys way may be more convenient.
+
+```ts
+Table.where({
+  // see .whereNot
+  NOT: { id: 1 },
+  // can be an array:
+  NOT: [{ id: 1 }, { id: 2 }],
+  
+  // see .or
+  OR: [{ name: 'a' }, { name: 'b' }],
+  // can be an array:
+  // this will give id = 1 AND id = 2 OR id = 3 AND id = 4
+  OR: [[{ id: 1 }, { id: 2 }], [{ id: 3 }, { id: 4 }]],
+  
+  // see .in, key syntax requires object with columns and values
+  IN: { columns: ['id', 'name'], values: [[1, 'a'], [2, 'b']] },
+  // can be an array:
+  IN: [
+    { columns: ['id', 'name'], values: [[1, 'a'], [2, 'b']] },
+    { columns: ['someColumn'], values: [['foo', 'bar']] },
+  ],
+  
+  // see .whereExists
+  EXISTS: [OtherTable, 'someId', 'id'],
+  // can be an array:
+  EXISTS: [
+    [SomeTable, 'someId', 'id'],
+    [AnotherTable, 'anotherId', 'id'],
+  ]
+})
+```
+
 ## and
 
 `.and` is an alias for `.where` to make it closer to SQL:
