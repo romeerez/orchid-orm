@@ -11,12 +11,16 @@ import { QueryData, SelectQueryData } from '../sql';
 import { FilterTuple, getQueryAs, SimpleSpread } from '../utils';
 import {
   isRequiredRelationKey,
+  Relation,
   RelationQueryBase,
   relationQueryKey,
 } from '../relations';
 
 type SelectArg<T extends QueryBase> =
   | keyof T['selectable']
+  | (T['relations'] extends Record<string, Relation>
+      ? keyof T['relations']
+      : never)
   | RelationQueryBase
   | SelectAsArg<T>;
 
@@ -34,6 +38,8 @@ type SelectResult<
   {
     [Arg in Args[number] as Arg extends keyof T['selectable']
       ? T['selectable'][Arg]['as']
+      : Arg extends keyof T['relations']
+      ? Arg
       : Arg extends RelationQueryBase
       ? Arg['tableAlias'] extends string
         ? Arg['tableAlias']
@@ -48,6 +54,16 @@ type SelectResult<
         : Arg[isRequiredRelationKey] extends true
         ? ColumnsObject<Arg['result']>
         : NullableColumn<ColumnsObject<Arg['result']>>
+      : T['relations'] extends Record<string, Relation>
+      ? Arg extends keyof T['relations']
+        ? T['relations'][Arg]['returns'] extends 'many'
+          ? ArrayOfColumnsObjects<T['relations'][Arg]['model']['result']>
+          : T['relations'][Arg]['options']['required'] extends true
+          ? ColumnsObject<T['relations'][Arg]['model']['result']>
+          : NullableColumn<
+              ColumnsObject<T['relations'][Arg]['model']['result']>
+            >
+        : never
       : never;
   } & {
     [K in keyof SelectAsArgs]: SelectAsArgs[K] extends keyof T['selectable']
@@ -134,25 +150,32 @@ export class Select {
     const as = this.query.as || this.table;
     const selectArgs = args.map((item) => {
       if (typeof item === 'string') {
-        const index = item.indexOf('.');
-        if (index !== -1) {
-          const table = item.slice(0, index);
-          const column = item.slice(index + 1);
-
-          if (table === as) {
-            const parser = this.columnsParsers?.[column];
-            if (parser) addParserToQuery(this.query, column, parser);
-          } else {
-            const parser = (this.query as SelectQueryData).joinedParsers?.[
-              table
-            ]?.[column];
-            if (parser) addParserToQuery(this.query, column, parser);
-          }
+        if ((this.relations as Record<string, Relation>)[item]) {
+          item = (this as unknown as Record<string, RelationQueryBase>)[item];
         } else {
-          const parser = this.columnsParsers?.[item];
-          if (parser) addParserToQuery(this.query, item, parser);
+          const index = item.indexOf('.');
+          if (index !== -1) {
+            const table = item.slice(0, index);
+            const column = item.slice(index + 1);
+
+            if (table === as) {
+              const parser = this.columnsParsers?.[column];
+              if (parser) addParserToQuery(this.query, column, parser);
+            } else {
+              const parser = (this.query as SelectQueryData).joinedParsers?.[
+                table
+              ]?.[column];
+              if (parser) addParserToQuery(this.query, column, parser);
+            }
+          } else {
+            const parser = this.columnsParsers?.[item];
+            if (parser) addParserToQuery(this.query, item, parser);
+          }
+          return item;
         }
-      } else if ((item as { query?: QueryData }).query?.[relationQueryKey]) {
+      }
+
+      if ((item as { query?: QueryData }).query?.[relationQueryKey]) {
         const relation = item as RelationQueryBase;
         const parsers = relation.query.parsers || relation.columnsParsers;
         if (parsers) {

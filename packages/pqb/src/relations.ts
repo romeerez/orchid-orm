@@ -51,6 +51,7 @@ export type BaseRelation = {
 
 export interface BelongsToRelation extends BaseRelation {
   type: 'belongsTo';
+  returns: 'one';
   options: BaseRelation['options'] & {
     primaryKey: string;
     foreignKey: string;
@@ -59,6 +60,7 @@ export interface BelongsToRelation extends BaseRelation {
 
 export interface HasOneRelation extends BaseRelation {
   type: 'hasOne';
+  returns: 'one';
   options: BaseRelation['options'] &
     (
       | {
@@ -74,6 +76,7 @@ export interface HasOneRelation extends BaseRelation {
 
 export interface HasManyRelation extends BaseRelation {
   type: 'hasMany';
+  returns: 'many';
   options: BaseRelation['options'] &
     (
       | {
@@ -89,6 +92,7 @@ export interface HasManyRelation extends BaseRelation {
 
 export interface HasAndBelongsToManyRelation extends BaseRelation {
   type: 'hasAndBelongsToMany';
+  returns: 'many';
   options: BaseRelation['options'] & {
     primaryKey: string;
     foreignKey: string;

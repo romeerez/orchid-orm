@@ -7,6 +7,7 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
+import { User } from '../test-utils/test-models';
 
 describe('belongsTo', () => {
   useTestDatabase();
@@ -111,36 +112,66 @@ describe('belongsTo', () => {
       );
     });
 
-    it('should be selectable', async () => {
-      const query = db.profile.select(
-        'id',
-        db.profile.user.select('id', 'name').where({ 'user.name': 'name' }),
-      );
+    describe('select', () => {
+      it('should be selectable', async () => {
+        const query = db.profile.select(
+          'id',
+          db.profile.user.select('id', 'name').where({ 'user.name': 'name' }),
+        );
 
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        { id: number; user: { id: number; name: string } }[]
-      > = true;
-      expect(eq).toBe(true);
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; user: { id: number; name: string } }[]
+        > = true;
+        expect(eq).toBe(true);
 
-      expectSql(
-        query.toSql(),
-        `
-        SELECT
-          "profile"."id",
-          (
-            SELECT row_to_json("t".*) AS "json"
-            FROM (
-              SELECT "user"."id", "user"."name" FROM "user"
-              WHERE "user"."id" = "profile"."userId"
-                AND "user"."name" = $1
-              LIMIT $2
-            ) AS "t"
-          ) AS "user"
-        FROM "profile"
-      `,
-        ['name', 1],
-      );
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "profile"."id",
+              (
+                SELECT row_to_json("t".*) AS "json"
+                FROM (
+                  SELECT "user"."id", "user"."name" FROM "user"
+                  WHERE "user"."id" = "profile"."userId"
+                    AND "user"."name" = $1
+                  LIMIT $2
+                ) AS "t"
+              ) AS "user"
+            FROM "profile"
+          `,
+          ['name', 1],
+        );
+      });
+
+      it('should be selectable by relation name', async () => {
+        const query = db.profile.select('id', 'user');
+
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; user: User }[]
+        > = true;
+        expect(eq).toBe(true);
+
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "profile"."id",
+              (
+                SELECT row_to_json("t".*) AS "json"
+                FROM (
+                  SELECT "user".* FROM "user"
+                  WHERE "user"."id" = "profile"."userId"
+                  LIMIT $1
+                ) AS "t"
+              ) AS "user"
+            FROM "profile"
+          `,
+          [1],
+        );
+      });
     });
   });
 

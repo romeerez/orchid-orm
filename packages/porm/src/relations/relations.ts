@@ -51,6 +51,7 @@ export type Relation<
   >['populate'],
 > = {
   type: Relations[K]['type'];
+  returns: Relations[K]['returns'];
   key: K;
   model: M;
   joinQuery: Query;

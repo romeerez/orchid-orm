@@ -503,40 +503,75 @@ describe('hasOne through', () => {
     );
   });
 
-  it('should be selectable', () => {
-    const query = db.message.select(
-      'id',
-      db.message.profile.where({ bio: 'bio' }),
-    );
+  describe('select', () => {
+    it('should be selectable', () => {
+      const query = db.message.select(
+        'id',
+        db.message.profile.where({ bio: 'bio' }),
+      );
 
-    const eq: AssertEqual<
-      Awaited<typeof query>,
-      { id: number; profile: Profile }[]
-    > = true;
-    expect(eq).toBe(true);
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; profile: Profile }[]
+      > = true;
+      expect(eq).toBe(true);
 
-    expectSql(
-      query.toSql(),
-      `
-        SELECT
-          "message"."id",
-          (
-            SELECT row_to_json("t".*) AS "json"
-            FROM (
-              SELECT "profile".* FROM "profile"
-              WHERE EXISTS (
-                  SELECT 1 FROM "user"
-                  WHERE "profile"."userId" = "user"."id"
-                    AND "user"."id" = "message"."authorId"
-                  LIMIT 1
-                )
-                AND "profile"."bio" = $1
-              LIMIT $2
-            ) AS "t"
-          ) AS "profile"
-        FROM "message"
-      `,
-      ['bio', 1],
-    );
+      expectSql(
+        query.toSql(),
+        `
+          SELECT
+            "message"."id",
+            (
+              SELECT row_to_json("t".*) AS "json"
+              FROM (
+                SELECT "profile".* FROM "profile"
+                WHERE EXISTS (
+                    SELECT 1 FROM "user"
+                    WHERE "profile"."userId" = "user"."id"
+                      AND "user"."id" = "message"."authorId"
+                    LIMIT 1
+                  )
+                  AND "profile"."bio" = $1
+                LIMIT $2
+              ) AS "t"
+            ) AS "profile"
+          FROM "message"
+        `,
+        ['bio', 1],
+      );
+    });
+
+    it('should be selectable by relation name', () => {
+      const query = db.message.select('id', 'profile');
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; profile: Profile }[]
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT
+            "message"."id",
+            (
+              SELECT row_to_json("t".*) AS "json"
+              FROM (
+                SELECT "profile".* FROM "profile"
+                WHERE EXISTS (
+                    SELECT 1 FROM "user"
+                    WHERE "profile"."userId" = "user"."id"
+                      AND "user"."id" = "message"."authorId"
+                    LIMIT 1
+                  )
+                LIMIT $1
+              ) AS "t"
+            ) AS "profile"
+          FROM "message"
+        `,
+        [1],
+      );
+    });
   });
 });

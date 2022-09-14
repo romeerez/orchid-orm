@@ -223,6 +223,14 @@ Relation can be added to select and a related object will be added to each recor
 
 If there is no related record in the database it will be returned as `null`.
 
+Select full related object by providing relation name to `.select`:
+
+```ts
+const booksWithAuthor = await db.book.select('*', 'author').takeOrThrow()
+```
+
+Select specific fields of related object in such way:
+
 ```ts
 type Result = Pick<Book, 'id' | 'title'> & {
   author: Pick<Author, 'id', 'name'>
@@ -478,6 +486,14 @@ await db.supplier.join('account', (q) =>
 Relation can be added to select and a related object will be added to each record.
 
 If there is no related record in the database it will be returned as `null`.
+
+Select full related object by providing relation name to `.select`:
+
+```ts
+const suppliersWithAccount = await db.supplier.select('*', 'account')
+```
+
+Select specific fields of related object in such way:
 
 ```ts
 type Result = Pick<Supplier, 'id'> & {
@@ -741,6 +757,14 @@ Relation can be added to select and a related array of object will be added to e
 
 This works better than `join` because it won't lead to duplicative data.
 
+Select full related objects by providing relation name to `.select`:
+
+```ts
+const authorsWithBooks = await db.author.select('*', 'books')
+```
+
+Select specific fields of related object in such way:
+
 ```ts
 type Result = Pick<Author, 'id' | 'name'> & {
   books: Pick<Book, 'id' | 'title'>[]
@@ -978,6 +1002,14 @@ await db.post.join('tags', (q) =>
 Relation can be added to select and a related array of object will be added to each record.
 
 This works better than `join` because it won't lead to duplicative data.
+
+Select full related object by providing relation name to `.select`:
+
+```ts
+const postsWithTags = await db.post.select('*', 'tags')
+```
+
+Select specific fields of related object in such way:
 
 ```ts
 type Result = Pick<Post, 'id' | 'title'> & {

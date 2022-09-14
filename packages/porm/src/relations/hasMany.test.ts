@@ -661,46 +661,86 @@ describe('hasMany through', () => {
     );
   });
 
-  it('should be selectable', () => {
-    const query = db.profile.select(
-      'id',
-      db.profile.chats.where({ title: 'title' }),
-    );
+  describe('select', () => {
+    it('should be selectable', () => {
+      const query = db.profile.select(
+        'id',
+        db.profile.chats.where({ title: 'title' }),
+      );
 
-    const eq: AssertEqual<
-      Awaited<typeof query>,
-      { id: number; chats: Chat[] }[]
-    > = true;
-    expect(eq).toBe(true);
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; chats: Chat[] }[]
+      > = true;
+      expect(eq).toBe(true);
 
-    expectSql(
-      query.toSql(),
-      `
-        SELECT
-          "profile"."id",
-          (
-            SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
-            FROM (
-              SELECT "chats".*
-              FROM "chat" AS "chats"
-              WHERE EXISTS (
-                  SELECT 1 FROM "user"
-                  WHERE EXISTS (
-                    SELECT 1 FROM "chatUser"
-                    WHERE "chatUser"."chatId" = "chats"."id"
-                      AND "chatUser"."userId" = "user"."id"
+      expectSql(
+        query.toSql(),
+        `
+          SELECT
+            "profile"."id",
+            (
+              SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+              FROM (
+                SELECT "chats".*
+                FROM "chat" AS "chats"
+                WHERE EXISTS (
+                    SELECT 1 FROM "user"
+                    WHERE EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."chatId" = "chats"."id"
+                        AND "chatUser"."userId" = "user"."id"
+                      LIMIT 1
+                    )
+                    AND "user"."id" = "profile"."userId"
                     LIMIT 1
                   )
-                  AND "user"."id" = "profile"."userId"
-                  LIMIT 1
-                )
-                AND "chats"."title" = $1
-            ) AS "t"
-          ) AS "chats"
-        FROM "profile"
-      `,
-      ['title'],
-    );
+                  AND "chats"."title" = $1
+              ) AS "t"
+            ) AS "chats"
+          FROM "profile"
+        `,
+        ['title'],
+      );
+    });
+
+    it('should be selectable by relation name', () => {
+      const query = db.profile.select('id', 'chats');
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; chats: Chat[] }[]
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT
+            "profile"."id",
+            (
+              SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+              FROM (
+                SELECT "chats".*
+                FROM "chat" AS "chats"
+                WHERE EXISTS (
+                    SELECT 1 FROM "user"
+                    WHERE EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."chatId" = "chats"."id"
+                        AND "chatUser"."userId" = "user"."id"
+                      LIMIT 1
+                    )
+                    AND "user"."id" = "profile"."userId"
+                    LIMIT 1
+                  )
+              ) AS "t"
+            ) AS "chats"
+          FROM "profile"
+        `,
+        [],
+      );
+    });
   });
 
   it('should allow to select count', () => {

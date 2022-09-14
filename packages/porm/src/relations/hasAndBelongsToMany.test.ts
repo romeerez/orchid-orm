@@ -8,6 +8,7 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery, Sql, TransactionAdapter } from 'pqb';
+import { Chat } from '../test-utils/test-models';
 
 describe('hasAndBelongsToMany', () => {
   useTestDatabase();
@@ -147,40 +148,73 @@ describe('hasAndBelongsToMany', () => {
       );
     });
 
-    it('should be selectable', () => {
-      const query = db.user.select(
-        'id',
-        db.user.chats.select('id', 'title').where({ title: 'title' }),
-      );
+    describe('select', () => {
+      it('should be selectable', () => {
+        const query = db.user.select(
+          'id',
+          db.user.chats.select('id', 'title').where({ title: 'title' }),
+        );
 
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        { id: number; chats: { id: number; title: string }[] }[]
-      > = true;
-      expect(eq).toBe(true);
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; chats: { id: number; title: string }[] }[]
+        > = true;
+        expect(eq).toBe(true);
 
-      expectSql(
-        query.toSql(),
-        `
-        SELECT
-          "user"."id",
-          (
-            SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
-            FROM (
-              SELECT "chats"."id", "chats"."title" FROM "chat" AS "chats"
-              WHERE EXISTS (
-                SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chatId" = "chats"."id"
-                  AND "chatUser"."userId" = "user"."id"
-                LIMIT 1
-              )
-              AND "chats"."title" = $1
-            ) AS "t"
-          ) AS "chats"
-        FROM "user"
-      `,
-        ['title'],
-      );
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "user"."id",
+              (
+                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+                FROM (
+                  SELECT "chats"."id", "chats"."title" FROM "chat" AS "chats"
+                  WHERE EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."chatId" = "chats"."id"
+                      AND "chatUser"."userId" = "user"."id"
+                    LIMIT 1
+                  )
+                  AND "chats"."title" = $1
+                ) AS "t"
+              ) AS "chats"
+            FROM "user"
+          `,
+          ['title'],
+        );
+      });
+
+      it('should be selectable by relation name', () => {
+        const query = db.user.select('id', 'chats');
+
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; chats: Chat[] }[]
+        > = true;
+        expect(eq).toBe(true);
+
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "user"."id",
+              (
+                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+                FROM (
+                  SELECT "chats".* FROM "chat" AS "chats"
+                  WHERE EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."chatId" = "chats"."id"
+                      AND "chatUser"."userId" = "user"."id"
+                    LIMIT 1
+                  )
+                ) AS "t"
+              ) AS "chats"
+            FROM "user"
+          `,
+        );
+      });
     });
 
     it('should allow to select count', () => {
