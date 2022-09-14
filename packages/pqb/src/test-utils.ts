@@ -10,14 +10,15 @@ import { Client } from 'pg';
 import { quote } from './quote';
 import { columnTypes } from './columnSchema';
 import { MaybeArray, toArray } from './utils';
+import { Adapter } from './adapter';
 
-export const dbClient = new Client({
-  connectionString: process.env.DATABASE_URL,
-});
+export const dbOptions = { connectionString: process.env.DATABASE_URL };
 
-export const db = createDb({ connectionString: process.env.DATABASE_URL });
+export const dbClient = new Client(dbOptions);
 
-export const adapter = db.adapter;
+export const adapter = new Adapter(dbOptions);
+
+export const db = createDb(adapter);
 
 const dateColumn = columnTypes.timestamp().parse((input) => new Date(input));
 

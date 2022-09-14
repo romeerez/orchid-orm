@@ -52,6 +52,7 @@ import { addWhere, Where, WhereArg } from './where';
 import { Clear } from './clear';
 import { Having } from './having';
 import { Window } from './window';
+import { QueryLog } from './log';
 
 export type WindowArg<T extends Query> = Record<
   string,
@@ -94,7 +95,8 @@ export interface QueryMethods
     Clear,
     Having,
     Window,
-    Then {}
+    Then,
+    QueryLog {}
 
 export class QueryMethods {
   windows!: PropertyKey[];
@@ -427,4 +429,5 @@ applyMixins(QueryMethods, [
   Having,
   Window,
   Then,
+  QueryLog,
 ]);

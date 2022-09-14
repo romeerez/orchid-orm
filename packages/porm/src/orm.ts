@@ -1,4 +1,4 @@
-import { Adapter, AdapterOptions, Db, PostgresAdapter, Transaction } from 'pqb';
+import { Adapter, DbOptions, Db, Transaction } from 'pqb';
 import { DbModel, Model, ModelClasses } from './model';
 import { applyRelations } from './relations/relations';
 
@@ -6,16 +6,23 @@ export type PORM<T extends ModelClasses> = {
   [K in keyof T]: DbModel<T[K]>;
 } & {
   transaction: Transaction['transaction'];
-  adapter: PostgresAdapter;
+  adapter: Adapter;
   destroy(): Promise<void>;
 };
 
 export const porm = <T extends ModelClasses>(
-  options: AdapterOptions,
+  { log, logger, ...options }: DbOptions,
   models: T,
 ): PORM<T> => {
-  const adapter = Adapter(options);
-  const qb = new Db(adapter, undefined as unknown as Db);
+  const adapter = new Adapter(options);
+  const commonOptions = { log, logger };
+  const qb = new Db(
+    adapter,
+    undefined as unknown as Db,
+    undefined,
+    {},
+    commonOptions,
+  );
   qb.queryBuilder = qb;
 
   const result = {
@@ -40,6 +47,7 @@ export const porm = <T extends ModelClasses>(
       model.table,
       model.columns.shape,
       {
+        ...commonOptions,
         schema: model.schema,
       },
     );

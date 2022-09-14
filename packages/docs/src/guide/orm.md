@@ -10,7 +10,9 @@ While `pqb` query builder is designed to cover abilities of [knex](https://knexj
 
 `porm` is an entry function of the ORM.
 
-First argument is a connection options object, for all connection options see: [client options](https://node-postgres.com/api/client) + [pool options](https://node-postgres.com/api/pool)
+First argument is a connection options object, for all connection options see: [client options](https://node-postgres.com/api/client) + [pool options](https://node-postgres.com/api/pool).
+
+Connection options may include `log` and `logger`, see [createDb](/guide/query-builder.html#createDb) for details.
  
 Second argument is an object where keys are model names and values are models (see next section for defining model).
 
@@ -25,7 +27,8 @@ import { MessageModel } from './models/message'
 
 export const db = porm({
   // in the format: postgres://user:password@localhost:5432/dbname
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
+  log: true, // option for logging, false by default
 })({
   user: UserModel,
   message: MessageModel,

@@ -8,7 +8,7 @@ Everything listed in this document also applies for the [ORM](/guide/orm), excep
 
 ## createDb
 
-`createDb` is a function to configure query builder instance, it is accepting the same options as [node-postgres](https://node-postgres.com/) library.
+`createDb` is a function to configure query builder instance, it is accepting the same options as [node-postgres](https://node-postgres.com/) library and some additional.
 
 For all connection options see: [client options](https://node-postgres.com/api/client) + [pool options](https://node-postgres.com/api/pool)
 
@@ -17,7 +17,56 @@ import { createDb } from 'pqb'
 
 const db = createDb({
   // in the format: postgres://user:password@localhost:5432/dbname
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
+  log: true, // option for logging, false by default
+})
+```
+
+To reuse underlying `Adapter` instance, you can provide an adapter:
+
+```ts
+import { createDb, Adapter } from 'pqb'
+
+const db = createDb(
+  new Adapter({ connectionString: process.env.DATABASE_URL }),
+  { log: true }, // second argument is for pqb specific options
+)
+```
+
+`log` option is false by default, `true` or custom object can be provided:
+
+```ts
+type LogOption = {
+  // for colourful log, true by default
+  colors?: boolean,
+  
+  // callback to run before query
+  // Query is a query object, sql is { text: string, values: unknown[] }
+  // returned value will be passed to afterQuery and to onError
+  beforeQuery?(q: Query, sql: Sql): unknown;
+  
+  // callback to run after query, logData is data returned by beforeQuery
+  afterQuery?(q: Query, sql: Sql, logData: unknown): void;
+  
+  // callback to run in case of error
+  onError?(error: Error, q: Query, sql: Sql, logData: unknown): void;
+}
+```
+
+Log will use `console.log` and `console.error` by default, it can be overridden by passing `logger` option:
+
+```ts
+const db = createDb({
+  connectionString: process.env.DATABASE_URL,
+  log: true,
+  logger: {
+    log(message: string): void {
+      // ...
+    },
+    error(message: string): void {
+      // ...
+    },
+  }
 })
 ```
 
@@ -38,6 +87,18 @@ export const User = db('user', (t) => ({
   createdAt: t.timestamp(),
   updatedAt: t.timestamp(),
 }));
+```
+
+Optional third argument is for table options:
+
+```ts
+const Table = db('table', (t) => ({ ...columns }), {
+  // provide this value if table belongs to specific database schema
+  schema: 'customTableSchema',
+  // override `log` option of `createDb`:
+  log: true, // boolean or object described `createdDb` section
+  logger: { ... } // override logger
+})
 ```
 
 Now the `User` can be used for making type safe queries:
@@ -2155,6 +2216,19 @@ Table.havingOr({ count: 1 }, { count: 2 })
 ```sql
 SELECT * FROM "table"
 HAVING count(*) = 1 OR count(*) = 2
+```
+
+## log
+
+Override `log` option, which can also be set in `createDb` or when creating table instance:
+
+```ts
+// turn log on for this query:
+await Table.all().log(true)
+await Table.all().log() // no argument for true
+
+// turn log off for this query:
+await Table.all().log(false)
 ```
 
 ## clear

@@ -8,8 +8,9 @@ import {
 import { Expression, RawExpression } from '../common';
 import { ColumnsShape, ColumnType } from '../columnSchema';
 import { RelationQuery, relationQueryKey } from '../relations';
-import { PostgresAdapter } from '../adapter';
+import { Adapter } from '../adapter';
 import { MaybeArray } from '../utils';
+import { QueryLogger, QueryLogObject } from '../queryMethods/log';
 
 export type Sql = {
   text: string;
@@ -17,7 +18,7 @@ export type Sql = {
 };
 
 export type CommonQueryData = {
-  adapter: PostgresAdapter;
+  adapter: Adapter;
   [relationQueryKey]?: string;
   inTransaction?: true;
   wrapInTransaction?: true;
@@ -33,6 +34,8 @@ export type CommonQueryData = {
   defaults?: Record<string, unknown>;
   beforeQuery?: ((q: Query) => void | Promise<void>)[];
   afterQuery?: ((q: Query, data: unknown) => void | Promise<void>)[];
+  log?: QueryLogObject;
+  logger: QueryLogger;
 };
 
 export type SelectQueryData = CommonQueryData & {

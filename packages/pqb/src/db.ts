@@ -6,7 +6,7 @@ import {
 } from './query';
 import { QueryMethods } from './queryMethods/queryMethods';
 import { QueryData, SelectQueryData, Sql } from './sql';
-import { Adapter, AdapterOptions, PostgresAdapter } from './adapter';
+import { AdapterOptions, Adapter } from './adapter';
 import {
   ColumnsShape,
   columnTypes,
@@ -19,10 +19,11 @@ import { StringKey } from './common';
 import { ThenResult } from './queryMethods/then';
 import { WhereQueryBuilder } from './queryMethods/where';
 import { OnQueryBuilder } from './queryMethods/join';
+import { logParamToLogObject, QueryLogOptions } from './queryMethods/log';
 
 export type DbTableOptions = {
   schema?: string;
-};
+} & QueryLogOptions;
 
 export interface Db<
   Table extends string | undefined = undefined,
@@ -30,14 +31,14 @@ export interface Db<
   Relations extends Query['relations'] = Query['relations'],
 > extends QueryMethods {
   new (
-    adapter: PostgresAdapter,
+    adapter: Adapter,
     queryBuilder: Db,
     table?: Table,
     shape?: Shape,
     options?: DbTableOptions,
   ): this;
 
-  adapter: PostgresAdapter;
+  adapter: Adapter;
   queryBuilder: Db;
   whereQueryBuilder: Query['whereQueryBuilder'];
   table: Table;
@@ -79,14 +80,17 @@ export class Db<
   returnType = 'all' as const;
 
   constructor(
-    public adapter: PostgresAdapter,
+    public adapter: Adapter,
     public queryBuilder: Db,
     public table: Table = undefined as Table,
     public shape: Shape = {} as Shape,
-    options?: DbTableOptions,
+    options: DbTableOptions,
   ) {
+    const logger = options.logger || console;
     this.query = {
       adapter,
+      logger,
+      log: logParamToLogObject(logger, options.log),
     } as QueryData;
 
     if (options?.schema) {
@@ -144,13 +148,34 @@ type DbResult = Db & {
     options?: DbTableOptions,
   ): Db<Table, Shape>;
 
-  adapter: PostgresAdapter;
-  destroy: PostgresAdapter['destroy'];
+  adapter: Adapter;
+  destroy: Adapter['destroy'];
 };
 
-export const createDb = (options: AdapterOptions): DbResult => {
-  const adapter = Adapter(options);
-  const qb = new Db(adapter, undefined as unknown as Db);
+export type DbOptions = Omit<AdapterOptions, keyof QueryLogOptions> &
+  QueryLogOptions;
+
+export const createDb = (
+  ...args: [adapter: Adapter, options?: QueryLogOptions] | [DbOptions]
+): DbResult => {
+  let adapter: Adapter;
+  let commonOptions: QueryLogOptions;
+  if (args[0] instanceof Adapter) {
+    adapter = args[0];
+    commonOptions = args[1] || {};
+  } else {
+    const { log, logger, ...options } = args[0];
+    adapter = new Adapter(options);
+    commonOptions = { log, logger };
+  }
+
+  const qb = new Db(
+    adapter,
+    undefined as unknown as Db,
+    undefined,
+    {},
+    commonOptions,
+  );
   qb.queryBuilder = qb;
 
   const db = Object.assign(
@@ -164,7 +189,7 @@ export const createDb = (options: AdapterOptions): DbResult => {
         qb,
         table as Table,
         typeof shape === 'function' ? shape(columnTypes) : shape,
-        options,
+        { ...commonOptions, ...options },
       );
     },
     qb,
