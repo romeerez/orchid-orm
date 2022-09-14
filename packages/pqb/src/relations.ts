@@ -8,6 +8,10 @@ export type NestedInsertOneItem = {
 export type NestedInsertManyItems = {
   create?: Record<string, unknown>[];
   connect?: WhereArg<QueryBase>[];
+  connectOrCreate?: {
+    where: WhereArg<QueryBase>;
+    create: Record<string, unknown>;
+  }[];
 };
 export type NestedInsertItem = NestedInsertOneItem | NestedInsertManyItems;
 

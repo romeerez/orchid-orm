@@ -415,6 +415,118 @@ describe('hasOne', () => {
           bio: 'profile 2',
         });
       });
+
+      it('should support connect or create', async () => {
+        const { id: profileId } = await db.profile.insert(
+          {
+            bio: 'profile 1',
+            ...profileData,
+            user: {
+              create: {
+                name: 'tmp',
+                ...userData,
+              },
+            },
+          },
+          ['id'],
+        );
+
+        const user1 = await db.user.insert(
+          {
+            name: 'user 1',
+            ...userData,
+            profile: {
+              connect: { bio: 'profile 1' },
+              create: { bio: 'profile 1', ...profileData },
+            },
+          },
+          '*',
+        );
+
+        const user2 = await db.user.insert(
+          {
+            name: 'user 2',
+            ...userData,
+            profile: {
+              connect: { bio: 'profile 2' },
+              create: { bio: 'profile 2', ...profileData },
+            },
+          },
+          '*',
+        );
+
+        const profile1 = await db.user.profile(user1);
+        expect(profile1.id).toBe(profileId);
+        checkUserAndProfile({
+          user: user1,
+          profile: profile1,
+          name: 'user 1',
+          bio: 'profile 1',
+        });
+
+        const profile2 = await db.user.profile(user2);
+        checkUserAndProfile({
+          user: user2,
+          profile: profile2,
+          name: 'user 2',
+          bio: 'profile 2',
+        });
+      });
+
+      it('should support connect or create many', async () => {
+        const { id: profileId } = await db.profile.insert(
+          {
+            bio: 'profile 1',
+            ...profileData,
+            user: {
+              create: {
+                name: 'tmp',
+                ...userData,
+              },
+            },
+          },
+          ['id'],
+        );
+
+        const [user1, user2] = await db.user.insert(
+          [
+            {
+              name: 'user 1',
+              ...userData,
+              profile: {
+                connect: { bio: 'profile 1' },
+                create: { bio: 'profile 1', ...profileData },
+              },
+            },
+            {
+              name: 'user 2',
+              ...userData,
+              profile: {
+                connect: { bio: 'profile 2' },
+                create: { bio: 'profile 2', ...profileData },
+              },
+            },
+          ],
+          '*',
+        );
+
+        const profile1 = await db.user.profile(user1);
+        expect(profile1.id).toBe(profileId);
+        checkUserAndProfile({
+          user: user1,
+          profile: profile1,
+          name: 'user 1',
+          bio: 'profile 1',
+        });
+
+        const profile2 = await db.user.profile(user2);
+        checkUserAndProfile({
+          user: user2,
+          profile: profile2,
+          name: 'user 2',
+          bio: 'profile 2',
+        });
+      });
     });
   });
 });

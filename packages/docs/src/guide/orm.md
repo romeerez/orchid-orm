@@ -307,7 +307,7 @@ Connect record to another record while inserting:
 
 This will search a record by provided where condition, throw if not found, and use its id for the inserting record.
 
-It is supported in insert multiple as well.
+Also supported when inserting multiple records.
 
 ```ts
 const result: Pick<Book, 'id' | 'authorId'> =  await db.book.insert(
@@ -315,6 +315,28 @@ const result: Pick<Book, 'id' | 'authorId'> =  await db.book.insert(
     title: 'Book title',
     author: {
       connect: {
+        name: 'Author',
+      }
+    }
+  }
+)
+```
+
+### belongsTo connect or create
+
+Specify both `connect` and `create` properties to first look for record to connect with and then create it in case if not found.
+
+Also supported when inserting multiple records.
+
+```ts
+const result: Pick<Book, 'id' | 'authorId'> =  await db.book.insert(
+  {
+    title: 'Book title',
+    author: {
+      connect: {
+        name: 'Author',
+      },
+      create: {
         name: 'Author',
       }
     }
@@ -570,7 +592,7 @@ Connect record to another record while inserting:
 
 This will search a record by provided where condition, throw if not found, and update it to connect to the inserted record.
 
-It is supported in insert multiple as well.
+Also supported when inserting multiple records.
 
 ```ts
 const result: Pick<Supplier, 'id'> = db.supplier.insert(
@@ -578,6 +600,29 @@ const result: Pick<Supplier, 'id'> = db.supplier.insert(
     brand: 'Supplier 1',
     account: {
       connect: {
+        name: 'Account 1',
+      }
+    }
+  },
+  ['id']
+)
+```
+
+### hasOne connect or create
+
+Specify both `connect` and `create` properties to first look for record to connect with and then create it in case if not found.
+
+Also supported when inserting multiple records.
+
+```ts
+const result: Pick<Supplier, 'id'> = db.supplier.insert(
+  {
+    brand: 'Supplier 1',
+    account: {
+      connect: {
+        name: 'Account 1',
+      },
+      create: {
         name: 'Account 1',
       }
     }
@@ -884,7 +929,7 @@ Connect record to another record while inserting:
 
 This will search one record per provided where condition, throw if any of them is not found, and update found records to connect to the inserted record.
 
-It is supported in insert multiple as well.
+Also supported when inserting multiple records.
 
 ```ts
 const result: Pick<Author, 'id'> = await db.author.insert(
@@ -897,6 +942,33 @@ const result: Pick<Author, 'id'> = await db.author.insert(
         },
         {
           title: 'Book 2',
+        },
+      ]
+    }
+  },
+  ['id']
+)
+```
+
+### hasMany connectOrCreate
+
+Specify `connectOrCreate` object with `where` and `connect` properties to first look for record to connect with and then create it in case if not found.
+
+Also supported when inserting multiple records.
+
+```ts
+const result: Pick<Author, 'id'> = await db.author.insert(
+  {
+    name: 'Author',
+    books: {
+      connectOrCreate: [
+        {
+          where: { title: 'Book 1' },
+          create: { title: 'Book 1' },
+        },
+        {
+          where: { title: 'Book 2' },
+          create: { title: 'Book 2' },
         },
       ]
     }
@@ -1151,3 +1223,29 @@ const result: Pick<Post, 'id'> = await db.post.insert(
 )
 ```
 
+### hasAndBelongsToMany connectOrCreate
+
+Specify `connectOrCreate` object with `where` and `connect` properties to first look for record to connect with and then create it in case if not found.
+
+Also supported when inserting multiple records.
+
+```ts
+const result: Pick<Post, 'id'> = await db.post.insert(
+  {
+    title: 'Post',
+    tags: {
+      connectOrCreate: [
+        {
+          where: { name: 'Tag 1' },
+          create: { name: 'Tag 1' },
+        },
+        {
+          where: { name: 'Tag 2' },
+          create: { name: 'Tag 2' },
+        },
+      ]
+    }
+  },
+  ['id']
+)
+```

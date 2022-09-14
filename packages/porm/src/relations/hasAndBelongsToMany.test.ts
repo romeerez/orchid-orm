@@ -8,7 +8,7 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery, Sql, TransactionAdapter } from 'pqb';
-import { Chat } from '../test-utils/test-models';
+import { Chat, User } from '../test-utils/test-models';
 
 describe('hasAndBelongsToMany', () => {
   useTestDatabase();
@@ -292,6 +292,42 @@ describe('hasAndBelongsToMany', () => {
     const chatData = {
       updatedAt: now,
       createdAt: now,
+    };
+
+    const checkUserAndChats = ({
+      user,
+      chats,
+      name,
+      title1,
+      title2,
+    }: {
+      user: User;
+      chats: Chat[];
+      name: string;
+      title1: string;
+      title2: string;
+    }) => {
+      expect(user).toEqual({
+        ...userData,
+        active: null,
+        age: null,
+        data: null,
+        picture: null,
+        id: user.id,
+        name,
+      });
+
+      expect(chats[0]).toEqual({
+        ...chatData,
+        id: chats[0].id,
+        title: title1,
+      });
+
+      expect(chats[1]).toEqual({
+        ...chatData,
+        id: chats[1].id,
+        title: title2,
+      });
     };
 
     it('should support create', async () => {
@@ -625,6 +661,125 @@ describe('hasAndBelongsToMany', () => {
           chatIds[3],
         ],
       );
+    });
+
+    it('should support connect or create', async () => {
+      const { id: chatId } = await db.chat.insert(
+        {
+          ...chatData,
+          title: 'chat 1',
+        },
+        ['id'],
+      );
+
+      const query = db.user.insert(
+        {
+          name: 'user 1',
+          ...userData,
+          chats: {
+            connectOrCreate: [
+              {
+                where: { title: 'chat 1' },
+                create: { title: 'chat 1', ...chatData },
+              },
+              {
+                where: { title: 'chat 2' },
+                create: { title: 'chat 2', ...chatData },
+              },
+            ],
+          },
+        },
+        '*',
+      );
+
+      const user = await query;
+      const chats = await db.user.chats(user).order({ title: 'ASC' });
+
+      expect(chats[0].id).toBe(chatId);
+
+      checkUserAndChats({
+        user,
+        chats,
+        name: 'user 1',
+        title1: 'chat 1',
+        title2: 'chat 2',
+      });
+    });
+
+    it('should support connect or create many', async () => {
+      const [{ id: chat1Id }, { id: chat4Id }] = await db.chat.insert(
+        [
+          {
+            ...chatData,
+            title: 'chat 1',
+          },
+          {
+            ...chatData,
+            title: 'chat 4',
+          },
+        ],
+        ['id'],
+      );
+
+      const query = db.user.insert(
+        [
+          {
+            name: 'user 1',
+            ...userData,
+            chats: {
+              connectOrCreate: [
+                {
+                  where: { title: 'chat 1' },
+                  create: { title: 'chat 1', ...chatData },
+                },
+                {
+                  where: { title: 'chat 2' },
+                  create: { title: 'chat 2', ...chatData },
+                },
+              ],
+            },
+          },
+          {
+            name: 'user 2',
+            ...userData,
+            chats: {
+              connectOrCreate: [
+                {
+                  where: { title: 'chat 3' },
+                  create: { title: 'chat 3', ...chatData },
+                },
+                {
+                  where: { title: 'chat 4' },
+                  create: { title: 'chat 4', ...chatData },
+                },
+              ],
+            },
+          },
+        ],
+        '*',
+      );
+
+      const users = await query;
+      const chats = await db.chat.order({ title: 'ASC' });
+
+      expect(chats[0].id).toBe(chat1Id);
+      expect(chats[3].id).toBe(chat4Id);
+
+      checkUserAndChats({
+        user: users[0],
+        chats: chats.slice(0, 2),
+        name: 'user 1',
+        title1: 'chat 1',
+        title2: 'chat 2',
+      });
+
+      checkUserAndChats({
+        user: users[1],
+        chats: chats.slice(2, 4),
+        name: 'user 2',
+        title1: 'chat 3',
+        title2: 'chat 4',
+      });
     });
   });
 });

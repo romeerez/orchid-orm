@@ -4,7 +4,6 @@ import {
   getQueryAs,
   HasAndBelongsToManyRelation,
   HasManyNestedInsert,
-  InsertData,
   Query,
   QueryBase,
 } from 'pqb';
@@ -61,30 +60,18 @@ export const makeHasAndBelongsToManyMethod = (
       );
     },
     nestedInsert: (async (q, data) => {
-      const allKeys = data as unknown as [
-        selfData: Record<string, unknown>,
-        relationKeys: Record<string, unknown>[],
-      ][];
-
-      const create = data.filter(([, item]) => item.create);
-      const connect = data.filter(([, item]) => item.connect) as [
-        selfData: Record<string, unknown>,
-        relationData: {
-          connect: WhereArg<QueryBase>[];
-        },
-      ][];
+      const connect = data.filter(
+        (
+          item,
+        ): item is [
+          selfData: Record<string, unknown>,
+          relationData: {
+            connect: WhereArg<QueryBase>[];
+          },
+        ] => Boolean(item[1].connect),
+      );
 
       const t = query.transacting(q);
-
-      let created: Record<string, unknown>[];
-      if (create.length) {
-        created = await t.insert(
-          create.flatMap(([, { create }]) => create) as InsertData<Query>[],
-          [associationPrimaryKey],
-        );
-      } else {
-        created = [];
-      }
 
       let connected: Record<string, unknown>[];
       if (connect.length) {
@@ -99,14 +86,106 @@ export const makeHasAndBelongsToManyMethod = (
         connected = [];
       }
 
+      const connectOrCreate = data.filter(
+        (
+          item,
+        ): item is [
+          Record<string, unknown>,
+          {
+            connectOrCreate: {
+              where: WhereArg<QueryBase>;
+              create: Record<string, unknown>;
+            }[];
+          },
+        ] => Boolean(item[1].connectOrCreate),
+      );
+
+      let connectOrCreated: (Record<string, unknown> | undefined)[];
+      if (connectOrCreate.length) {
+        connectOrCreated = await Promise.all(
+          connectOrCreate.flatMap(([, { connectOrCreate }]) =>
+            connectOrCreate.map((item) =>
+              t.select(associationPrimaryKey).findBy(item.where).take(),
+            ),
+          ),
+        );
+      } else {
+        connectOrCreated = [];
+      }
+
+      let connectOrCreateI = 0;
+      const create = data.filter(
+        (
+          item,
+        ): item is [
+          Record<string, unknown>,
+          {
+            create?: Record<string, unknown>[];
+            connectOrCreate?: {
+              where: WhereArg<QueryBase>;
+              create: Record<string, unknown>;
+            }[];
+          },
+        ] => {
+          if (item[1].connectOrCreate) {
+            const length = item[1].connectOrCreate.length;
+            connectOrCreateI += length;
+            for (let i = length; i > 0; i--) {
+              if (!connectOrCreated[connectOrCreateI - i]) return true;
+            }
+          }
+          return Boolean(item[1].create);
+        },
+      );
+
+      connectOrCreateI = 0;
+      let created: Record<string, unknown>[];
+      if (create.length) {
+        created = await t.insert(
+          create.flatMap(([, { create = [], connectOrCreate = [] }]) => [
+            ...create,
+            ...connectOrCreate
+              .filter(() => !connectOrCreated[connectOrCreateI++])
+              .map((item) => item.create),
+          ]),
+          [associationPrimaryKey],
+        );
+      } else {
+        created = [];
+      }
+
+      const allKeys = data as unknown as [
+        selfData: Record<string, unknown>,
+        relationKeys: Record<string, unknown>[],
+      ][];
+
       let createI = 0;
       let connectI = 0;
+      connectOrCreateI = 0;
       data.forEach(([, data], index) => {
-        if (data.create) {
-          const len = data.create.length;
-          allKeys[index][1] = created.slice(createI, createI + len);
-          createI += len;
-        } else if (data.connect) {
+        if (data.create || data.connectOrCreate) {
+          if (data.create) {
+            const len = data.create.length;
+            allKeys[index][1] = created.slice(createI, createI + len);
+            createI += len;
+          }
+          if (data.connectOrCreate) {
+            const arr: Record<string, unknown>[] = [];
+            allKeys[index][1] = arr;
+
+            const len = data.connectOrCreate.length;
+            for (let i = 0; i < len; i++) {
+              const item = connectOrCreated[connectOrCreateI++];
+              if (item) {
+                arr.push(item);
+              } else {
+                arr.push(created[createI++]);
+              }
+            }
+          }
+        }
+
+        if (data.connect) {
           const len = data.connect.length;
           allKeys[index][1] = connected.slice(connectI, connectI + len);
           connectI += len;

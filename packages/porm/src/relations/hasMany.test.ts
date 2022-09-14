@@ -462,7 +462,7 @@ describe('hasMany', () => {
       });
     });
 
-    it('should support create many', async () => {
+    it('should support connect many', async () => {
       const { id: chatId } = await db.chat.insert(chatData, ['id']);
       await db.message.insert([
         {
@@ -540,6 +540,134 @@ describe('hasMany', () => {
       checkMessages({
         messages: messages.slice(2, 4),
         userId: user[1].id,
+        chatId,
+        text1: 'message 3',
+        text2: 'message 4',
+      });
+    });
+
+    it('should support connect or create', async () => {
+      const { id: chatId } = await db.chat.insert(chatData, ['id']);
+      const { id: messageId } = await db.message.insert(
+        {
+          ...messageData,
+          chatId,
+          user: { create: { name: 'tmp', ...userData } },
+          text: 'message 1',
+        },
+        ['id'],
+      );
+
+      const user = await db.user.insert(
+        {
+          name: 'user 1',
+          ...userData,
+          messages: {
+            connectOrCreate: [
+              {
+                where: { text: 'message 1' },
+                create: { text: 'message 1', chatId, ...messageData },
+              },
+              {
+                where: { text: 'message 2' },
+                create: { text: 'message 2', chatId, ...messageData },
+              },
+            ],
+          },
+        },
+        '*',
+      );
+
+      checkUser(user, 'user 1');
+
+      const messages = await db.message.order({ text: 'ASC' });
+      expect(messages[0].id).toBe(messageId);
+
+      checkMessages({
+        messages,
+        userId: user.id,
+        chatId,
+        text1: 'message 1',
+        text2: 'message 2',
+      });
+    });
+
+    it('should support connect or create many', async () => {
+      const { id: chatId } = await db.chat.insert(chatData, ['id']);
+      const [{ id: message1Id }, { id: message4Id }] = await db.message.insert(
+        [
+          {
+            ...messageData,
+            chatId,
+            user: { create: { name: 'tmp', ...userData } },
+            text: 'message 1',
+          },
+          {
+            ...messageData,
+            chatId,
+            user: { create: { name: 'tmp', ...userData } },
+            text: 'message 4',
+          },
+        ],
+        ['id'],
+      );
+
+      const users = await db.user.insert(
+        [
+          {
+            name: 'user 1',
+            ...userData,
+            messages: {
+              connectOrCreate: [
+                {
+                  where: { text: 'message 1' },
+                  create: { text: 'message 1', chatId, ...messageData },
+                },
+                {
+                  where: { text: 'message 2' },
+                  create: { text: 'message 2', chatId, ...messageData },
+                },
+              ],
+            },
+          },
+          {
+            name: 'user 2',
+            ...userData,
+            messages: {
+              connectOrCreate: [
+                {
+                  where: { text: 'message 3' },
+                  create: { text: 'message 3', chatId, ...messageData },
+                },
+                {
+                  where: { text: 'message 4' },
+                  create: { text: 'message 4', chatId, ...messageData },
+                },
+              ],
+            },
+          },
+        ],
+        '*',
+      );
+
+      checkUser(users[0], 'user 1');
+      checkUser(users[1], 'user 2');
+
+      const messages = await db.message.order({ text: 'ASC' });
+      expect(messages[0].id).toBe(message1Id);
+      expect(messages[3].id).toBe(message4Id);
+
+      checkMessages({
+        messages: messages.slice(0, 2),
+        userId: users[0].id,
+        chatId,
+        text1: 'message 1',
+        text2: 'message 2',
+      });
+
+      checkMessages({
+        messages: messages.slice(2, 4),
+        userId: users[1].id,
         chatId,
         text1: 'message 3',
         text2: 'message 4',

@@ -416,5 +416,114 @@ describe('belongsTo', () => {
         name: 'user 2',
       });
     });
+
+    it('should support connect or create', async () => {
+      const chat = await db.chat.insert(
+        {
+          title: 'chat',
+          ...chatData,
+        },
+        ['id'],
+      );
+
+      const query = await db.message.insert(
+        {
+          text: 'message',
+          ...messageData,
+          chat: {
+            connect: { title: 'chat' },
+            create: { title: 'chat', ...chatData },
+          },
+          user: {
+            connect: { name: 'user' },
+            create: { name: 'user', ...userData },
+          },
+        },
+        ['id', 'chatId', 'authorId'],
+      );
+
+      const { id: messageId, chatId, authorId } = await query;
+
+      expect(chatId).toBe(chat.id);
+
+      await checkInsertedResults({
+        messageId,
+        chatId,
+        authorId,
+        text: 'message',
+        title: 'chat',
+        name: 'user',
+      });
+    });
+
+    it('should support connect or create many', async () => {
+      const chat = await db.chat.insert(
+        {
+          title: 'chat 1',
+          ...chatData,
+        },
+        ['id'],
+      );
+      const user = await db.user.insert(
+        {
+          name: 'user 2',
+          ...userData,
+        },
+        ['id'],
+      );
+
+      const query = await db.message.insert(
+        [
+          {
+            text: 'message 1',
+            ...messageData,
+            chat: {
+              connect: { title: 'chat 1' },
+              create: { title: 'chat 1', ...chatData },
+            },
+            user: {
+              connect: { name: 'user 1' },
+              create: { name: 'user 1', ...userData },
+            },
+          },
+          {
+            text: 'message 2',
+            ...messageData,
+            chat: {
+              connect: { title: 'chat 2' },
+              create: { title: 'chat 2', ...chatData },
+            },
+            user: {
+              connect: { name: 'user 2' },
+              create: { name: 'user 2', ...userData },
+            },
+          },
+        ],
+        ['id', 'chatId', 'authorId'],
+      );
+
+      const [first, second] = await query;
+
+      expect(first.chatId).toBe(chat.id);
+      expect(second.authorId).toBe(user.id);
+
+      await checkInsertedResults({
+        messageId: first.id,
+        chatId: first.chatId,
+        authorId: first.authorId,
+        text: 'message 1',
+        title: 'chat 1',
+        name: 'user 1',
+      });
+
+      await checkInsertedResults({
+        messageId: second.id,
+        chatId: second.chatId,
+        authorId: second.authorId,
+        text: 'message 2',
+        title: 'chat 2',
+        name: 'user 2',
+      });
+    });
   });
 });

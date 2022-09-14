@@ -97,14 +97,6 @@ export const makeHasManyMethod = (
       return query.where(values)._defaults(values);
     },
     nestedInsert: (async (q, data) => {
-      const create = data.filter(
-        (
-          item,
-        ): item is [
-          Record<string, unknown>,
-          { create: Record<string, unknown>[] },
-        ] => Boolean(item[1].create),
-      );
       const connect = data.filter(
         (
           item,
@@ -116,24 +108,91 @@ export const makeHasManyMethod = (
 
       const t = query.transacting(q);
 
-      if (create.length) {
-        await t.insert(
-          create.flatMap(([selfData, { create }]) =>
-            create.map((item) => ({
-              [foreignKey]: selfData[primaryKey],
-              ...item,
-            })),
-          ) as InsertData<Query>[],
-        );
-      }
-
       if (connect.length) {
         await Promise.all(
           connect.flatMap(([selfData, { connect }]) =>
             connect.map((item) =>
-              t.update({ [foreignKey]: selfData[primaryKey] }).where(item),
+              t
+                .where<Query>(item)
+                .updateOrThrow({ [foreignKey]: selfData[primaryKey] }),
             ),
           ),
+        );
+      }
+
+      const connectOrCreate = data.filter(
+        (
+          item,
+        ): item is [
+          Record<string, unknown>,
+          {
+            connectOrCreate: {
+              where: WhereArg<QueryBase>;
+              create: Record<string, unknown>;
+            }[];
+          },
+        ] => Boolean(item[1].connectOrCreate),
+      );
+
+      let connected: number[];
+      if (connectOrCreate.length) {
+        connected = await Promise.all(
+          connectOrCreate.flatMap(([selfData, { connectOrCreate }]) =>
+            connectOrCreate.map((item) =>
+              t
+                .where<Query>(item.where)
+                .update({ [foreignKey]: selfData[primaryKey] }),
+            ),
+          ),
+        );
+      } else {
+        connected = [];
+      }
+
+      let connectedI = 0;
+      const create = data.filter(
+        (
+          item,
+        ): item is [
+          Record<string, unknown>,
+          {
+            create?: Record<string, unknown>[];
+            connectOrCreate?: {
+              where: WhereArg<QueryBase>;
+              create: Record<string, unknown>;
+            }[];
+          },
+        ] => {
+          if (item[1].connectOrCreate) {
+            const length = item[1].connectOrCreate.length;
+            connectedI += length;
+            for (let i = length; i > 0; i--) {
+              if (connected[connectedI - i] === 0) return true;
+            }
+          }
+          return Boolean(item[1].create);
+        },
+      );
+
+      connectedI = 0;
+      if (create.length) {
+        await t.insert(
+          create.flatMap(
+            ([selfData, { create = [], connectOrCreate = [] }]) => {
+              return [
+                ...create.map((item) => ({
+                  [foreignKey]: selfData[primaryKey],
+                  ...item,
+                })),
+                ...connectOrCreate
+                  .filter(() => connected[connectedI++] === 0)
+                  .map((item) => ({
+                    [foreignKey]: selfData[primaryKey],
+                    ...item.create,
+                  })),
+              ];
+            },
+          ) as InsertData<Query>[],
         );
       }
     }) as HasManyNestedInsert,

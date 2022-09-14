@@ -86,6 +86,12 @@ export type InsertData<
                     T['relations'][Key]['nestedCreateQuery']
                   >[];
                   connect?: WhereArg<T['relations'][Key]['model']>[];
+                  connectOrCreate?: {
+                    where: WhereArg<T['relations'][Key]['model']>;
+                    create: InsertData<
+                      T['relations'][Key]['nestedCreateQuery']
+                    >;
+                  }[];
                 };
               }
           : // eslint-disable-next-line @typescript-eslint/ban-types

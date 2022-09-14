@@ -3,9 +3,12 @@ import {
   addQueryOn,
   BelongsToNestedInsert,
   BelongsToRelation,
+  NestedInsertOneItem,
   Query,
+  QueryBase,
 } from 'pqb';
 import { RelationData, RelationThunkBase } from './relations';
+import { WhereArg } from 'pqb/src/queryMethods/where';
 
 export interface BelongsTo extends RelationThunkBase {
   type: 'belongsTo';
@@ -34,10 +37,42 @@ export const makeBelongsToMethod = (
       return query.findBy({ [primaryKey]: params[foreignKey] });
     },
     nestedInsert: (async (q, data) => {
-      const create = data.filter((item) => item.create);
-      const connect = data.filter((item) => item.connect);
+      const connectOrCreate = data.filter(
+        (
+          item,
+        ): item is NestedInsertOneItem & {
+          connect: WhereArg<QueryBase>;
+          create: Record<string, unknown>;
+        } => Boolean(item.connect && item.create),
+      );
 
       const t = query.transacting(q);
+
+      let connectOrCreated: unknown[];
+      if (connectOrCreate.length) {
+        connectOrCreated = await Promise.all(
+          connectOrCreate.map((item) => t.findBy(item.connect).take()),
+        );
+      } else {
+        connectOrCreated = [];
+      }
+
+      let connectOrCreatedI = 0;
+      const create = data.filter(
+        (
+          item,
+        ): item is NestedInsertOneItem & {
+          create: Record<string, unknown>;
+        } => {
+          if (item.connect) {
+            return (
+              !connectOrCreated[connectOrCreatedI++] && Boolean(item.create)
+            );
+          } else {
+            return Boolean(item.create);
+          }
+        },
+      );
 
       let created: unknown[];
       if (create.length) {
@@ -48,6 +83,14 @@ export const makeBelongsToMethod = (
       } else {
         created = [];
       }
+
+      const connect = data.filter(
+        (
+          item,
+        ): item is {
+          connect: WhereArg<QueryBase>;
+        } => Boolean(!item.create && item.connect),
+      );
 
       let connected: unknown[];
       if (connect.length) {
@@ -60,8 +103,13 @@ export const makeBelongsToMethod = (
 
       let createdI = 0;
       let connectedI = 0;
+      connectOrCreatedI = 0;
       return data.map((item) =>
-        item.create ? created[createdI++] : connected[connectedI++],
+        item.connect && item.create
+          ? connectOrCreated[connectOrCreatedI++] || created[createdI++]
+          : item.connect
+          ? connected[connectedI++]
+          : created[createdI++],
       );
     }) as BelongsToNestedInsert,
     joinQuery: addQueryOn(query, query, model, primaryKey, foreignKey),

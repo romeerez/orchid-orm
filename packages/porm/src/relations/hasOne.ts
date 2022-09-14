@@ -2,7 +2,9 @@ import {
   addQueryOn,
   HasOneNestedInsert,
   HasOneRelation,
+  NestedInsertOneItem,
   Query,
+  QueryBase,
   Relation,
 } from 'pqb';
 import { Model } from '../model';
@@ -12,6 +14,7 @@ import {
   RelationThunkBase,
   RelationThunks,
 } from './relations';
+import { WhereArg } from 'pqb/src/queryMethods/where';
 
 export interface HasOne extends RelationThunkBase {
   type: 'hasOne';
@@ -94,10 +97,45 @@ export const makeHasOneMethod = (
       return query.findBy(values)._defaults(values);
     },
     nestedInsert: (async (q, data) => {
-      const create = data.filter(([, item]) => item.create);
-      const connect = data.filter(([, item]) => item.connect);
+      const connect = data.filter(
+        (
+          item,
+        ): item is [
+          Record<string, unknown>,
+          NestedInsertOneItem & { connect: WhereArg<QueryBase> },
+        ] => Boolean(item[1].connect),
+      );
 
       const t = query.transacting(q);
+
+      let connected: number[];
+      if (connect.length) {
+        connected = await Promise.all(
+          connect.map(([selfData, item]) => {
+            const data = { [foreignKey]: selfData[primaryKey] };
+            return item.create
+              ? t.where<Query>(item.connect).update(data)
+              : t.where<Query>(item.connect).updateOrThrow(data);
+          }),
+        );
+      } else {
+        connected = [];
+      }
+
+      let connectedI = 0;
+      const create = data.filter(
+        (
+          item,
+        ): item is [
+          Record<string, unknown>,
+          NestedInsertOneItem & { create: Record<string, unknown> },
+        ] => {
+          if (item[1].connect) {
+            return !connected[connectedI++] && Boolean(item[1].create);
+          }
+          return Boolean(item[1].create);
+        },
+      );
 
       if (create.length) {
         await t.insert(
@@ -105,14 +143,6 @@ export const makeHasOneMethod = (
             [foreignKey]: selfData[primaryKey],
             ...create,
           })),
-        );
-      }
-
-      if (connect.length) {
-        await Promise.all(
-          connect.map(([selfData, { connect }]) =>
-            t.update({ [foreignKey]: selfData[primaryKey] }).where(connect),
-          ),
         );
       }
     }) as HasOneNestedInsert,
