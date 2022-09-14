@@ -123,22 +123,26 @@ export const insert = async <
   return record;
 };
 
+const now = new Date();
+export const userData = {
+  name: 'name',
+  password: 'password',
+  picture: null,
+  active: true,
+  createdAt: now,
+  updatedAt: now,
+};
+
 let userIdCounter = 1;
 export const insertUser = async (
   options: Partial<typeof User.type> & { count?: number } = {},
 ) => {
-  const now = new Date();
   const { count = 1, ...data } = options;
   const id = userIdCounter;
   for (let i = 0; i < count; i++) {
     await insert('user', {
       id: userIdCounter++,
-      name: 'name',
-      password: 'password',
-      picture: null,
-      active: true,
-      createdAt: now,
-      updatedAt: now,
+      ...userData,
       ...data,
     });
   }

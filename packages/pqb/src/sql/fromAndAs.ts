@@ -1,7 +1,7 @@
 import { getRaw, isRaw } from '../common';
 import { quoteSchemaAndTable } from './common';
 import { Query } from '../query';
-import { SelectQueryData } from './types';
+import { queryKeysOfNotSimpleQuery, SelectQueryData } from './types';
 
 export const pushFromAndAs = (
   sql: string[],
@@ -36,13 +36,9 @@ const getFrom = (model: Query, query: SelectQueryData, values: unknown[]) => {
       }
 
       const q = query.from.query;
-      const keys = Object.keys(q);
-      // if query is present, and it contains more than just schema return (SELECT ...)
-      let maxKeys = 1;
-      if ('schema' in q) maxKeys++;
-      if ('type' in q) maxKeys++;
-
-      if (keys.length > maxKeys) {
+      const keys = Object.keys(q) as (keyof SelectQueryData)[];
+      // if query contains more than just schema return (SELECT ...)
+      if (keys.some((key) => queryKeysOfNotSimpleQuery.includes(key))) {
         const sql = query.from.toSql(values);
         return `(${sql.text})`;
       }

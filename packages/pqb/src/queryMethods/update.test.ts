@@ -3,6 +3,7 @@ import {
   expectMatchObjectWithTimestamps,
   expectQueryNotMutated,
   expectSql,
+  insertUsers,
   User,
   useTestDatabase,
 } from '../test-utils';
@@ -19,25 +20,31 @@ describe('update', () => {
     updatedAt: now,
   };
 
-  it('should update record with raw sql, returning void', () => {
+  it('should update record with raw sql, returning updated rows count', async () => {
+    const count = 2;
+    await insertUsers(count);
+
     const q = User.all();
 
-    const query = q.update(raw('raw sql'));
+    const query = q.update(raw(`name = 'name'`));
     expectSql(
       query.toSql(),
       `
         UPDATE "user"
-        SET raw sql
+        SET name = 'name'
       `,
     );
 
-    const eq: AssertEqual<Awaited<typeof query>, void> = true;
+    const eq: AssertEqual<Awaited<typeof query>, number> = true;
     expect(eq).toBe(true);
+
+    const result = await query;
+    expect(result).toBe(count);
 
     expectQueryNotMutated(q);
   });
 
-  it('should update record, returning void', async () => {
+  it('should update record, returning updated row count', async () => {
     const q = User.all();
 
     const { id } = await q.insert(data, ['id']);
@@ -60,8 +67,10 @@ describe('update', () => {
     );
 
     const result = await query;
-    const eq: AssertEqual<typeof result, void> = true;
+    const eq: AssertEqual<typeof result, number> = true;
     expect(eq).toBe(true);
+
+    expect(result).toBe(1);
 
     const updated = await User.takeOrThrow();
     expectMatchObjectWithTimestamps(updated, { ...data, ...update });
@@ -155,7 +164,7 @@ describe('update', () => {
       ['new name', null],
     );
 
-    const eq: AssertEqual<Awaited<typeof query>, void> = true;
+    const eq: AssertEqual<Awaited<typeof query>, number> = true;
     expect(eq).toBe(true);
 
     expectQueryNotMutated(q);
@@ -165,20 +174,34 @@ describe('update', () => {
     const q = User.all();
 
     const query = q.update({
-      name: raw('raw sql'),
+      name: raw(`'raw sql'`),
     });
     expectSql(
       query.toSql(),
       `
         UPDATE "user"
-        SET "name" = raw sql
+        SET "name" = 'raw sql'
       `,
     );
 
-    const eq: AssertEqual<Awaited<typeof query>, void> = true;
+    const eq: AssertEqual<Awaited<typeof query>, number> = true;
     expect(eq).toBe(true);
 
     expectQueryNotMutated(q);
+  });
+
+  describe('updateOrThrow', () => {
+    it('should throw if no records were found for update', async () => {
+      await expect(
+        User.where({ name: 'not found' }).updateOrThrow({ name: 'name' }),
+      ).rejects.toThrow();
+
+      await expect(
+        User.where({ name: 'not found' }).updateOrThrow({ name: 'name' }, [
+          'id',
+        ]),
+      ).rejects.toThrow();
+    });
   });
 
   describe('increment', () => {

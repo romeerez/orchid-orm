@@ -480,29 +480,4 @@ describe('insert', () => {
       });
     });
   });
-
-  describe('callbacks', () => {
-    describe('beforeInsert', () => {
-      it('should run callback before insert', async () => {
-        const fn = jest.fn();
-        const query = User.beforeInsert(fn).insert(data);
-
-        await query;
-
-        expect(fn.mock.calls[0]).toEqual([query]);
-      });
-    });
-
-    describe('afterInsert', () => {
-      it('should run callback after insert', async () => {
-        const fn = jest.fn();
-
-        const query = User.afterInsert(fn).insert(data, ['id']);
-
-        const result = await query;
-
-        expect(fn.mock.calls[0]).toEqual([query, result]);
-      });
-    });
-  });
 });

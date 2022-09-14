@@ -2,7 +2,8 @@ import { ColumnsParsers, Query, QueryReturnType } from '../query';
 import { getQueryParsers } from '../common';
 import { NotFoundError } from '../errors';
 import { QueryArraysResult, QueryResult } from '../adapter';
-import { CommonQueryData, Sql } from '../sql';
+import { Sql } from '../sql';
+import { AfterCallback, BeforeCallback } from './callbacks';
 
 export type ThenResult<Res> = <T extends Query>(
   this: T,
@@ -52,11 +53,14 @@ const then = async (
   let sql: Sql | undefined;
   let logData: unknown | undefined;
   try {
-    let beforeCallbacks: CommonQueryData['beforeQuery'];
-    let afterCallbacks: CommonQueryData['afterQuery'];
+    let beforeCallbacks: BeforeCallback<Query>[] | undefined;
+    let afterCallbacks: AfterCallback<Query>[] | undefined;
     if (q.query.type === 'insert') {
       beforeCallbacks = q.query.beforeInsert;
       afterCallbacks = q.query.afterInsert;
+    } else if (q.query.type === 'update') {
+      beforeCallbacks = q.query.beforeUpdate;
+      afterCallbacks = q.query.afterUpdate;
     }
 
     if (beforeCallbacks) {
@@ -82,6 +86,8 @@ const then = async (
 
     if (q.query.log) {
       q.query.log?.afterQuery(q, sql, logData);
+      // set sql to be undefined to prevent logging on error in case if afterCallbacks throws
+      sql = undefined;
     }
 
     if (afterCallbacks?.length || q.query.afterQuery?.length) {
@@ -110,6 +116,9 @@ const parseResult = (
 ): unknown => {
   switch (returnType) {
     case 'all': {
+      if (q.query.throwOnNotFound && result.rows.length === 0)
+        throw new NotFoundError();
+
       const parsers = getQueryParsers(q);
       return parsers
         ? result.rows.map((row) => parseRecord(parsers, row))
@@ -163,6 +172,8 @@ const parseResult = (
       );
     }
     case 'rowCount': {
+      if (q.query.throwOnNotFound && result.rowCount === 0)
+        throw new NotFoundError();
       return result.rowCount;
     }
     case 'void': {

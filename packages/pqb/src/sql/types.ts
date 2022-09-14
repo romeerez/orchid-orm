@@ -11,11 +11,35 @@ import { RelationQuery, relationQueryKey } from '../relations';
 import { Adapter } from '../adapter';
 import { MaybeArray } from '../utils';
 import { QueryLogger, QueryLogObject } from '../queryMethods/log';
+import { AfterCallback, BeforeCallback } from '../queryMethods/callbacks';
 
 export type Sql = {
   text: string;
   values: unknown[];
 };
+
+// used in `from` logic to decide if convert query to sql or just write table name
+export const queryKeysOfNotSimpleQuery: (keyof SelectQueryData)[] = [
+  'take',
+  'with',
+  'as',
+  'from',
+  'and',
+  'or',
+  'select',
+  'distinct',
+  'fromOnly',
+  'join',
+  'group',
+  'having',
+  'havingOr',
+  'window',
+  'union',
+  'order',
+  'limit',
+  'offset',
+  'for',
+];
 
 export type CommonQueryData = {
   adapter: Adapter;
@@ -23,6 +47,7 @@ export type CommonQueryData = {
   inTransaction?: true;
   wrapInTransaction?: true;
   take?: true;
+  throwOnNotFound?: true;
   with?: WithItem[];
   withShapes?: Record<string, ColumnsShape>;
   schema?: string;
@@ -32,8 +57,8 @@ export type CommonQueryData = {
   or?: WhereItem[][];
   parsers?: ColumnsParsers;
   defaults?: Record<string, unknown>;
-  beforeQuery?: ((q: Query) => void | Promise<void>)[];
-  afterQuery?: ((q: Query, data: unknown) => void | Promise<void>)[];
+  beforeQuery?: BeforeCallback<Query>[];
+  afterQuery?: AfterCallback<Query>[];
   log?: QueryLogObject;
   logger: QueryLogger;
 };
@@ -78,8 +103,8 @@ export type InsertQueryData = CommonQueryData & {
         expr?: OnConflictItem;
         update?: OnConflictMergeUpdate;
       };
-  beforeInsert?: CommonQueryData['beforeQuery'];
-  afterInsert?: CommonQueryData['afterQuery'];
+  beforeInsert?: BeforeCallback<Query>[];
+  afterInsert?: AfterCallback<Query>[];
 };
 
 export type UpdateQueryData = CommonQueryData & {
@@ -89,6 +114,8 @@ export type UpdateQueryData = CommonQueryData & {
     | RawExpression
   )[];
   returning?: (string[] | '*')[];
+  beforeUpdate?: BeforeCallback<Query>[];
+  afterUpdate?: AfterCallback<Query>[];
 };
 
 export type DeleteQueryData = CommonQueryData & {

@@ -2,7 +2,7 @@ import {
   AddQuerySelect,
   Query,
   SetQueryReturnsAll,
-  SetQueryReturnsVoid,
+  SetQueryReturnsRowCount,
 } from '../query';
 import { pushQueryValue } from '../queryDataUtils';
 import { RawExpression } from '../common';
@@ -24,7 +24,7 @@ type UpdateResult<
   ? Args[1] extends '*'
     ? SetQueryReturnsAll<AddQuerySelect<T, T['shape']>>
     : SetQueryReturnsAll<AddQuerySelect<T, Pick<T['shape'], Args[1][number]>>>
-  : SetQueryReturnsVoid<T>;
+  : SetQueryReturnsRowCount<T>;
 
 type ChangeCountArgs<T extends Query> =
   | [
@@ -72,11 +72,28 @@ export class Update {
   ): UpdateResult<T, Args> {
     const [data, returning] = args;
     this.query.type = 'update';
+    this.returnType = returning ? 'all' : 'rowCount';
     pushQueryValue(this, 'data', data);
     if (returning) {
       pushQueryValue(this, 'returning', returning);
     }
     return this as unknown as UpdateResult<T, Args>;
+  }
+
+  updateOrThrow<T extends Query, Args extends UpdateArgs<T>>(
+    this: T,
+    ...args: Args
+  ): UpdateResult<T, Args> {
+    const q = this.clone() as T;
+    return q._updateOrThrow(...args);
+  }
+
+  _updateOrThrow<T extends Query, Args extends UpdateArgs<T>>(
+    this: T,
+    ...args: Args
+  ): UpdateResult<T, Args> {
+    this.query.throwOnNotFound = true;
+    return this._update(...args) as unknown as UpdateResult<T, Args>;
   }
 
   increment<T extends Query, Args extends ChangeCountArgs<T>>(

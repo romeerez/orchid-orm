@@ -794,16 +794,15 @@ Table.defaults({
 
 Creates an update query, takes object of properties or raw expression, optionally takes list of columns to return.
 
+If second argument `returning` is not passed, query will return number of updated rows.
+
 ```ts
-// returns Promise<void>
-Table.where({ id: 1 }).update({ name: 'new name' })
-Table.where({ id: 1 }).update(raw(`name = 'new name'`))
+const updatedCount = await Table.where({ id: 1 }).update({ name: 'new name' })
+const updatedCount2 = await Table.where({ id: 1 }).update(raw(`name = 'new name'`))
 
-// returns some columns:
-Table.where({ id: 1 }).update({ name: 'new name' }, ['id', 'name'])
+const recordsArray = await Table.where({ id: 1 }).update({ name: 'new name' }, ['id', 'name'])
 
-// returns full record:
-Table.where({ id: 1 }).update({ name: 'new name' }, '*')
+const fullRecordsArray = await Table.where({ id: 1 }).update({ name: 'new name' }, '*')
 ```
 
 `null` value will set column to `NULL`, and `undefined` value will be skipped:
@@ -812,6 +811,26 @@ Table.update({
   name: null, // updates to null
   age: undefined, // skipped, no effect
 })
+```
+
+## updateOrThrow
+
+To make sure that at least one row was updated use `updateOrThrow`:
+
+```ts
+import { NotFoundError } from 'pqb'
+
+try {
+  const updatedCount = await Table.updateOrThrow({ name: 'name' })
+  // updatedCount is guaranteed to be greater than 0
+  
+  const updatedRecords = await Table.updateOrThrow({ name: 'name' }, ['id'])
+  // updatedRecords is guaranteed to be non-empty array
+} catch (err) {
+  if (err instanceof NotFoundError) {
+    // handle error
+  }
+}
 ```
 
 ## increment
@@ -2259,65 +2278,47 @@ Table.select('id').clear('id')
 
 ## callbacks
 
-### beforeInsert
+Before callbacks run before query and have such type:
 
-`beforeInsert` is called in the beginning of `.insert` method, and it should be placed before `.insert`.
-
-Argument has such type:
+(returned promise will be awaited)
 
 ```ts
-Table.beforeInsert((argument: {
-  // type of Query object, in this case it is of type `Table`:
-  query: Query,
-  // this is data passed to the `.insert`:
-  params: object | object[] | { columns: string[], values: RawExpression },
-  // returning * or list of columns passed to the `.insert`:
-  returning?: '*' | string[]
-}) => {
-  // ...
-})
+// query is a query object
+type BeforeCallback = (query: Query) => void | Promise<void>
 ```
 
-`.beforeInsert` is a synchronous callback and should not return Promise.
+After callbacks run after query and have such type:
 
-Return type can be `void` or you can return object of the same type as the argument.
-
-If object is returned, it modifies `.insert` behavior by replacing the query object and params.
-
-You can omit properties of returned object to not modify them.
+(returned promise will be awaited)
 
 ```ts
-Table.beforeInsert((arg) => {
-  return {
-    // set onConflict for the insert
-    query: arg.query.onConflict(...),
-    // you can return changed params object, but remember params can be Array, object and object for raw insert.
-    params: arg.params,
-    // returning can be modified as well, remember that this won't change TS type
-    returning: ['id', 'name'],
-  }
-})
+// query is a query object, data is result of the query
+type AfterCallback = (query: Query, data: unknown) => void | Promise<void>
 ```
 
-### afterInsert
-
-`afterInsert` callback is called after successfully running insert query.
-
-Argument has such type:
+`beforeQuery` and `afterQuery` callbacks will run on any kind of query:
 
 ```ts
-Table.afterInsert((argument: {
-  // type of Query object, in this case it is of type `Table`:
-  query: Query,
-  // this is data passed to the `.insert`:
-  params: object | object[] | { columns: string[], values: RawExpression },
-  // returning * or list of columns passed to the `.insert`:
-  returning: '*' | string[] | undefined
-  // data returned from the insert query, the type of data depends on the returning:
-  data: unknown
-}) => {
-  // ...
-})
+await Table
+  .beforeQuery(() => console.log('before query'))
+  .afterQuery((_, data) => console.log('after query', data))
+  .all()
 ```
 
-Callback may return Promise which will be awaited after insert query.
+`beforeInsert` and `afterInsert` callbacks will run only on insert query:
+
+```ts
+await Table
+  .beforeInsert(() => console.log('before insert'))
+  .afterInsert((_, data) => console.log('after insert', data))
+  .all()
+```
+
+`beforeUpdate` and `afterUpdate` callbacks will run only on update query:
+
+```ts
+await Table
+  .beforeUpdate(() => console.log('before update'))
+  .afterUpdate((_, data) => console.log('after update', data))
+  .all()
+```

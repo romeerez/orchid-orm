@@ -59,30 +59,22 @@ export type InsertData<
                   DefaultKeys
                 >
               | {
-                  [K in Key]:
-                    | {
-                        create: InsertData<
-                          T['relations'][Key]['nestedCreateQuery']
-                        >;
-                      }
-                    | {
-                        connect: WhereArg<T['relations'][Key]['model']>;
-                      };
+                  [K in Key]: {
+                    create?: InsertData<
+                      T['relations'][Key]['nestedCreateQuery']
+                    >;
+                    connect?: WhereArg<T['relations'][Key]['model']>;
+                  };
                 }
           : T['relations'][Key] extends HasOneRelation
           ? 'through' extends T['relations'][Key]['options']
             ? // eslint-disable-next-line @typescript-eslint/ban-types
               {}
             : {
-                [K in Key]?:
-                  | {
-                      create: InsertData<
-                        T['relations'][Key]['nestedCreateQuery']
-                      >;
-                    }
-                  | {
-                      connect: WhereArg<T['relations'][Key]['model']>;
-                    };
+                [K in Key]?: {
+                  create?: InsertData<T['relations'][Key]['nestedCreateQuery']>;
+                  connect?: WhereArg<T['relations'][Key]['model']>;
+                };
               }
           : T['relations'][Key] extends Relation
           ? 'through' extends T['relations'][Key]['options']
@@ -132,15 +124,6 @@ type AppendRelations = Record<
   string,
   [rowIndex: number, data: NestedInsertItem][]
 >;
-
-type BeforeInsertCallback<T extends Query> = (arg: {
-  query: T;
-}) => void | Promise<void>;
-
-type AfterInsertCallback<T extends Query> = (arg: {
-  query: T;
-  data: unknown;
-}) => void | Promise<void>;
 
 const processInsertItem = (
   item: Record<string, unknown>,
@@ -416,20 +399,6 @@ export class Insert {
     Arg extends OnConflictArg<T> | undefined = undefined,
   >(this: T, arg?: Arg): OnConflictQueryBuilder<T, Arg> {
     return new OnConflictQueryBuilder(this, arg as Arg);
-  }
-
-  beforeInsert<T extends Query>(this: T, cb: BeforeInsertCallback<T>): T {
-    return this.clone()._beforeInsert(cb);
-  }
-  _beforeInsert<T extends Query>(this: T, cb: BeforeInsertCallback<T>): T {
-    return pushQueryValue(this, 'beforeInsert', cb);
-  }
-
-  afterInsert<T extends Query>(this: T, cb: AfterInsertCallback<T>): T {
-    return this.clone()._afterInsert(cb);
-  }
-  _afterInsert<T extends Query>(this: T, cb: AfterInsertCallback<T>): T {
-    return pushQueryValue(this, 'afterInsert', cb);
   }
 }
 

@@ -116,6 +116,8 @@ type QueryThen<
   ? Result extends { pluck: ColumnType }
     ? ThenResult<Result['pluck']['type'][]>
     : never
+  : ReturnType extends 'rowCount'
+  ? ThenResult<number>
   : ReturnType extends 'void'
   ? ThenResult<void>
   : never;
@@ -184,6 +186,11 @@ export type SetQueryReturnsValue<T extends Query, C extends ColumnType> = Omit<
   returnType: 'valueOrThrow';
   then: ThenResult<C['type']>;
 };
+
+export type SetQueryReturnsRowCount<T extends Query> = SetQueryReturns<
+  T,
+  'rowCount'
+>;
 
 export type SetQueryReturnsVoid<T extends Query> = SetQueryReturns<T, 'void'>;
 
