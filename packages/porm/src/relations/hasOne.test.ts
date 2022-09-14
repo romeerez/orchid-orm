@@ -150,33 +150,66 @@ describe('hasOne', () => {
       );
     });
 
-    it('should be selectable', () => {
-      const query = db.user.select('id', db.user.profile.where({ bio: 'bio' }));
+    describe('select', () => {
+      it('should be selectable', () => {
+        const query = db.user.select(
+          'id',
+          db.user.profile.where({ bio: 'bio' }),
+        );
 
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        { id: number; profile: Profile }[]
-      > = true;
-      expect(eq).toBe(true);
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; profile: Profile }[]
+        > = true;
+        expect(eq).toBe(true);
 
-      expectSql(
-        query.toSql(),
-        `
-        SELECT
-          "user"."id",
-          (
-            SELECT row_to_json("t".*) AS "json"
-            FROM (
-              SELECT "profile".* FROM "profile"
-              WHERE "profile"."userId" = "user"."id"
-                AND "profile"."bio" = $1
-              LIMIT $2
-            ) AS "t"
-          ) AS "profile"
-        FROM "user"
-      `,
-        ['bio', 1],
-      );
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "user"."id",
+              (
+                SELECT row_to_json("t".*) AS "json"
+                FROM (
+                  SELECT "profile".* FROM "profile"
+                  WHERE "profile"."userId" = "user"."id"
+                    AND "profile"."bio" = $1
+                  LIMIT $2
+                ) AS "t"
+              ) AS "profile"
+            FROM "user"
+          `,
+          ['bio', 1],
+        );
+      });
+
+      it('should be selectable by relation name', () => {
+        const query = db.user.select('id', 'profile');
+
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; profile: Profile }[]
+        > = true;
+        expect(eq).toBe(true);
+
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "user"."id",
+              (
+                SELECT row_to_json("t".*) AS "json"
+                FROM (
+                  SELECT "profile".* FROM "profile"
+                  WHERE "profile"."userId" = "user"."id"
+                  LIMIT $1
+                ) AS "t"
+              ) AS "profile"
+            FROM "user"
+          `,
+          [1],
+        );
+      });
     });
 
     describe('insert', () => {

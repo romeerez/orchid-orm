@@ -566,15 +566,17 @@ export const testWhere = (
     });
   });
 
-  // TODO: add tests for methods below
   describe('orWhereIn', () => {
     it('should handle (column, array)', () => {
       expectSql(
-        buildSql((q) =>
-          q.where({
-            OR: [{ id: 1 }, { IN: { columns: ['id'], values: [[1, 2, 3]] } }],
-          }),
-        ),
+        [
+          buildSql((q) =>
+            q.where({
+              OR: [{ id: 1 }, { IN: { columns: ['id'], values: [[1, 2, 3]] } }],
+            }),
+          ),
+          buildSql((q) => q.where({ id: 1 }).orWhereIn('id', [1, 2, 3])),
+        ],
         `
             ${startSql}
             "user"."id" = $1 OR "user"."id" IN ($2, $3, $4)
@@ -585,19 +587,27 @@ export const testWhere = (
 
     it('should handle object of columns and arrays', () => {
       expectSql(
-        buildSql((q) =>
-          q.where({
-            OR: [
-              { id: 1 },
-              {
-                IN: [
-                  { columns: ['id'], values: [[1, 2, 3]] },
-                  { columns: ['name'], values: [['a', 'b', 'c']] },
-                ],
-              },
-            ],
-          }),
-        ),
+        [
+          buildSql((q) =>
+            q.where({
+              OR: [
+                { id: 1 },
+                {
+                  IN: [
+                    { columns: ['id'], values: [[1, 2, 3]] },
+                    { columns: ['name'], values: [['a', 'b', 'c']] },
+                  ],
+                },
+              ],
+            }),
+          ),
+          buildSql((q) =>
+            q.where({ id: 1 }).orWhereIn({
+              id: [1, 2, 3],
+              name: ['a', 'b', 'c'],
+            }),
+          ),
+        ],
         `
             ${startSql}
             "user"."id" = $1
@@ -609,14 +619,19 @@ export const testWhere = (
 
     it('should handle raw query', () => {
       expectSql(
-        buildSql((q) =>
-          q.where({
-            OR: [
-              { id: 1 },
-              { IN: { columns: ['id'], values: raw('(1, 2, 3)') } },
-            ],
-          }),
-        ),
+        [
+          buildSql((q) =>
+            q.where({
+              OR: [
+                { id: 1 },
+                { IN: { columns: ['id'], values: raw('(1, 2, 3)') } },
+              ],
+            }),
+          ),
+          buildSql((q) =>
+            q.where({ id: 1 }).orWhereIn({ id: raw('(1, 2, 3)') }),
+          ),
+        ],
         `
             ${startSql}
             "user"."id" = $1 OR "user"."id" IN (1, 2, 3)
@@ -625,19 +640,27 @@ export const testWhere = (
       );
 
       expectSql(
-        buildSql((q) =>
-          q.where({
-            OR: [
-              { id: 1 },
-              {
-                IN: [
-                  { columns: ['id'], values: raw('(1, 2, 3)') },
-                  { columns: ['name'], values: raw(`('a', 'b', 'c')`) },
-                ],
-              },
-            ],
-          }),
-        ),
+        [
+          buildSql((q) =>
+            q.where({
+              OR: [
+                { id: 1 },
+                {
+                  IN: [
+                    { columns: ['id'], values: raw('(1, 2, 3)') },
+                    { columns: ['name'], values: raw(`('a', 'b', 'c')`) },
+                  ],
+                },
+              ],
+            }),
+          ),
+          buildSql((q) =>
+            q.where({ id: 1 }).orWhereIn({
+              id: raw('(1, 2, 3)'),
+              name: raw(`('a', 'b', 'c')`),
+            }),
+          ),
+        ],
         `
             ${startSql}
             "user"."id" = $1
@@ -650,14 +673,19 @@ export const testWhere = (
 
     it('should handle sub query', () => {
       expectSql(
-        buildSql((q) =>
-          q.where({
-            OR: [
-              { id: 1 },
-              { IN: { columns: ['id'], values: User.select('id') } },
-            ],
-          }),
-        ),
+        [
+          buildSql((q) =>
+            q.where({
+              OR: [
+                { id: 1 },
+                { IN: { columns: ['id'], values: User.select('id') } },
+              ],
+            }),
+          ),
+          buildSql((q) =>
+            q.where({ id: 1 }).orWhereIn({ id: User.select('id') }),
+          ),
+        ],
         `
             ${startSql}
             "user"."id" = $1
@@ -667,19 +695,27 @@ export const testWhere = (
       );
 
       expectSql(
-        buildSql((q) =>
-          q.where({
-            OR: [
-              { id: 1 },
-              {
-                IN: [
-                  { columns: ['id'], values: User.select('id') },
-                  { columns: ['name'], values: User.select('name') },
-                ],
-              },
-            ],
-          }),
-        ),
+        [
+          buildSql((q) =>
+            q.where({
+              OR: [
+                { id: 1 },
+                {
+                  IN: [
+                    { columns: ['id'], values: User.select('id') },
+                    { columns: ['name'], values: User.select('name') },
+                  ],
+                },
+              ],
+            }),
+          ),
+          buildSql((q) =>
+            q.where({ id: 1 }).orWhereIn({
+              id: User.select('id'),
+              name: User.select('name'),
+            }),
+          ),
+        ],
         `
             ${startSql}
             "user"."id" = $1
@@ -693,22 +729,33 @@ export const testWhere = (
     describe('tuple', () => {
       it('should handle values', () => {
         expectSql(
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { id: 1 },
-                {
-                  IN: {
-                    columns: ['id', 'name'],
-                    values: [
-                      [1, 'a'],
-                      [2, 'b'],
-                    ],
+          [
+            buildSql((q) =>
+              q.where({
+                OR: [
+                  { id: 1 },
+                  {
+                    IN: {
+                      columns: ['id', 'name'],
+                      values: [
+                        [1, 'a'],
+                        [2, 'b'],
+                      ],
+                    },
                   },
-                },
-              ],
-            }),
-          ),
+                ],
+              }),
+            ),
+            buildSql((q) =>
+              q.where({ id: 1 }).orWhereIn(
+                ['id', 'name'],
+                [
+                  [1, 'a'],
+                  [2, 'b'],
+                ],
+              ),
+            ),
+          ],
           `
               ${startSql}
               "user"."id" = $1
@@ -720,19 +767,26 @@ export const testWhere = (
 
       it('should handle raw query', () => {
         expectSql(
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { id: 1 },
-                {
-                  IN: {
-                    columns: ['id', 'name'],
-                    values: raw(`((1, 'a'), (2, 'b'))`),
+          [
+            buildSql((q) =>
+              q.where({
+                OR: [
+                  { id: 1 },
+                  {
+                    IN: {
+                      columns: ['id', 'name'],
+                      values: raw(`((1, 'a'), (2, 'b'))`),
+                    },
                   },
-                },
-              ],
-            }),
-          ),
+                ],
+              }),
+            ),
+            buildSql((q) =>
+              q
+                .where({ id: 1 })
+                .orWhereIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`)),
+            ),
+          ],
           `
               ${startSql}
               "user"."id" = $1
@@ -744,19 +798,26 @@ export const testWhere = (
 
       it('should handle sub query', () => {
         expectSql(
-          buildSql((q) =>
-            q.where({
-              OR: [
-                { id: 1 },
-                {
-                  IN: {
-                    columns: ['id', 'name'],
-                    values: User.select('id', 'name'),
+          [
+            buildSql((q) =>
+              q.where({
+                OR: [
+                  { id: 1 },
+                  {
+                    IN: {
+                      columns: ['id', 'name'],
+                      values: User.select('id', 'name'),
+                    },
                   },
-                },
-              ],
-            }),
-          ),
+                ],
+              }),
+            ),
+            buildSql((q) =>
+              q
+                .where({ id: 1 })
+                .orWhereIn(['id', 'name'], User.select('id', 'name')),
+            ),
+          ],
           `
               ${startSql}
               "user"."id" = $1
@@ -769,6 +830,7 @@ export const testWhere = (
     });
   });
 
+  // TODO: add tests for methods below
   describe('whereNotIn', () => {
     it('should handle (column, array)', () => {
       expectSql(

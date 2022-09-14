@@ -140,35 +140,63 @@ describe('hasMany', () => {
       );
     });
 
-    it('should be selectable', () => {
-      const query = db.user.select(
-        'id',
-        db.user.messages.where({ text: 'text' }),
-      );
+    describe('select', () => {
+      it('should be selectable', () => {
+        const query = db.user.select(
+          'id',
+          db.user.messages.where({ text: 'text' }),
+        );
 
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        { id: number; messages: Message[] }[]
-      > = true;
-      expect(eq).toBe(true);
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; messages: Message[] }[]
+        > = true;
+        expect(eq).toBe(true);
 
-      expectSql(
-        query.toSql(),
-        `
-        SELECT
-          "user"."id",
-          (
-            SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
-            FROM (
-              SELECT "messages".* FROM "message" AS "messages"
-              WHERE "messages"."authorId" = "user"."id"
-                AND "messages"."text" = $1
-            ) AS "t"
-          ) AS "messages"
-        FROM "user"
-      `,
-        ['text'],
-      );
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "user"."id",
+              (
+                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+                FROM (
+                  SELECT "messages".* FROM "message" AS "messages"
+                  WHERE "messages"."authorId" = "user"."id"
+                    AND "messages"."text" = $1
+                ) AS "t"
+              ) AS "messages"
+            FROM "user"
+          `,
+          ['text'],
+        );
+      });
+
+      it('should be selectable by relation name', () => {
+        const query = db.user.select('id', 'messages');
+
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; messages: Message[] }[]
+        > = true;
+        expect(eq).toBe(true);
+
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "user"."id",
+              (
+                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+                FROM (
+                  SELECT "messages".* FROM "message" AS "messages"
+                  WHERE "messages"."authorId" = "user"."id"
+                ) AS "t"
+              ) AS "messages"
+            FROM "user"
+          `,
+        );
+      });
     });
 
     it('should allow to select count', () => {
