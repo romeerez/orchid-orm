@@ -2117,14 +2117,16 @@ const results = Product
 
 Adds an order by clause to the query.
 
-Takes one or more arguments, each argument can be an object or a raw expression.
+Takes one or more arguments, each argument can be a column name, an object, or a raw expression.
 
 ```ts
+Table.order('id', 'name') // ASC by default
+
 Table.order({
-  columnName: 'ASC', // or DESC
+  id: 'ASC', // or DESC
   
   // to set nulls order:
-  columnName: {
+  name: {
     dir: 'ASC', // or DESC
     nulls: 'FIRST', // or LAST
   },
