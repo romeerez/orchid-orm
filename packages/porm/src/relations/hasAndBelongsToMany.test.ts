@@ -1,10 +1,12 @@
 import { db } from '../test-utils/test-db';
 import {
   AssertEqual,
+  chatData,
   expectSql,
   insert,
   insertChat,
   insertUser,
+  userData,
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery, Sql, TransactionAdapter } from 'pqb';
@@ -779,6 +781,37 @@ describe('hasAndBelongsToMany', () => {
         name: 'user 2',
         title1: 'chat 3',
         title2: 'chat 4',
+      });
+    });
+  });
+
+  describe('update', () => {
+    describe('disconnect', () => {
+      it('should delete join table rows', async () => {
+        const { id: userId } = await db.user.insert(
+          {
+            ...userData,
+            name: 'user',
+            chats: {
+              create: [
+                { ...chatData, title: 'chat 1' },
+                { ...chatData, title: 'chat 2' },
+                { ...chatData, title: 'chat 3' },
+              ],
+            },
+          },
+          ['id'],
+        );
+
+        await db.user.where({ id: userId }).update({
+          chats: {
+            disconnect: [{ title: 'chat 1' }, { title: 'chat 2' }],
+          },
+        });
+
+        const chats = await db.user.chats({ id: userId });
+        expect(chats.length).toBe(1);
+        expect(chats[0].title).toEqual('chat 3');
       });
     });
   });

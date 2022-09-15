@@ -1,10 +1,13 @@
 import { db } from '../test-utils/test-db';
 import {
   AssertEqual,
+  chatData,
   expectSql,
   insertChat,
   insertMessage,
   insertUser,
+  messageData,
+  userData,
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
@@ -674,6 +677,41 @@ describe('hasMany', () => {
       });
     });
   });
+
+  describe('update', () => {
+    describe('disconnect', () => {
+      it('should nullify foreignKey', async () => {
+        const { id: chatId } = await db.chat.insert(
+          { ...chatData, title: 'chat 1' },
+          ['id'],
+        );
+        const { id: userId } = await db.user.insert(
+          {
+            ...userData,
+            messages: {
+              create: [
+                { ...messageData, chatId: chatId, text: 'message 1' },
+                { ...messageData, chatId: chatId, text: 'message 2' },
+                { ...messageData, chatId: chatId, text: 'message 3' },
+              ],
+            },
+          },
+          ['id'],
+        );
+
+        await db.user.where({ id: userId }).update({
+          messages: {
+            disconnect: [{ text: 'message 1' }, { text: 'message 2' }],
+          },
+        });
+
+        const messages = await db.message.order({ text: 'ASC' });
+        expect(messages[0].authorId).toBe(null);
+        expect(messages[1].authorId).toBe(null);
+        expect(messages[2].authorId).toBe(userId);
+      });
+    });
+  });
 });
 
 describe('hasMany through', () => {
@@ -684,7 +722,7 @@ describe('hasMany through', () => {
       typeof db.profile.chats,
       RelationQuery<
         'chats',
-        { userId: number },
+        { userId: number | null },
         never,
         typeof chatsQuery,
         false

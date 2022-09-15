@@ -2,6 +2,7 @@ import { Model } from '../model';
 import {
   addQueryOn,
   BelongsToNestedInsert,
+  BelongsToNestedUpdate,
   BelongsToRelation,
   NestedInsertOneItem,
   Query,
@@ -112,6 +113,12 @@ export const makeBelongsToMethod = (
           : created[createdI++],
       );
     }) as BelongsToNestedInsert,
+    nestedUpdate: (async (_, data) => {
+      if (data.disconnect) {
+        return { [primaryKey]: null };
+      }
+      return {};
+    }) as BelongsToNestedUpdate,
     joinQuery: addQueryOn(query, query, model, primaryKey, foreignKey),
     primaryKey,
   };

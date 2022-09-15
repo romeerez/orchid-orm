@@ -44,10 +44,10 @@ export const queryKeysOfNotSimpleQuery: (keyof SelectQueryData)[] = [
 export type CommonQueryData = {
   adapter: Adapter;
   [relationQueryKey]?: string;
-  inTransaction?: true;
-  wrapInTransaction?: true;
-  take?: true;
-  throwOnNotFound?: true;
+  inTransaction?: boolean;
+  wrapInTransaction?: boolean;
+  throwOnNotFound?: boolean;
+  take?: boolean;
   with?: WithItem[];
   withShapes?: Record<string, ColumnsShape>;
   schema?: string;

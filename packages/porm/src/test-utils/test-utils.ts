@@ -45,72 +45,86 @@ export const insert = async <
   return record;
 };
 
+const now = new Date();
+export const userData = {
+  name: 'name',
+  password: 'password',
+  picture: null,
+  active: true,
+  createdAt: now,
+  updatedAt: now,
+};
+
 let userIdCounter = 1;
 export const insertUser = async (
   options: Partial<User> & { count?: number } = {},
 ) => {
-  const now = new Date();
   const { count = 1, ...data } = options;
   const id = userIdCounter;
   for (let i = 0; i < count; i++) {
     await insert('user', {
       id: userIdCounter++,
-      name: 'name',
-      password: 'password',
-      picture: null,
-      active: true,
-      createdAt: now,
-      updatedAt: now,
+      ...userData,
       ...data,
     });
   }
   return id;
+};
+
+export const profileData = {
+  bio: 'bio',
+  createdAt: now,
+  updatedAt: now,
 };
 
 let profileIdCounter = 1;
 export const insertProfile = async (
   options: Partial<Profile> & { count?: number } = {},
 ) => {
-  const now = new Date();
   const { count = 1, ...data } = options;
   const id = profileIdCounter;
   for (let i = 0; i < count; i++) {
     await insert('profile', {
       id: profileIdCounter++,
       userId: userIdCounter,
-      bio: 'text',
-      createdAt: now,
-      updatedAt: now,
+      ...profileData,
       ...data,
     });
   }
   return id;
+};
+
+export const chatData = {
+  createdAt: now,
+  updatedAt: now,
 };
 
 let chatIdCounter = 1;
 export const insertChat = async (
   options: Partial<Chat> & { count?: number } = {},
 ) => {
-  const now = new Date();
   const { count = 1, ...data } = options;
   const id = chatIdCounter;
   for (let i = 0; i < count; i++) {
     await insert('chat', {
       id: chatIdCounter++,
       title: 'title',
-      createdAt: now,
-      updatedAt: now,
       ...data,
     });
   }
   return id;
 };
 
+export const messageData = {
+  text: 'text',
+  createdAt: now,
+  updatedAt: now,
+};
+
 let messageIdCounter = 1;
 export const insertMessage = async (
   options: Partial<Message> & { count?: number } = {},
 ) => {
-  const now = new Date();
   const { count = 1, ...data } = options;
   const id = messageIdCounter;
   for (let i = 0; i < count; i++) {
@@ -118,9 +132,7 @@ export const insertMessage = async (
       id: messageIdCounter++,
       chatId: chatIdCounter,
       authorId: userIdCounter,
-      text: 'text',
-      createdAt: now,
-      updatedAt: now,
+      ...messageData,
       ...data,
     });
   }

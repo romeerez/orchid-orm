@@ -8,6 +8,7 @@ import { Model } from '../model';
 import {
   addQueryOn,
   HasManyNestedInsert,
+  HasManyNestedUpdate,
   HasManyRelation,
   InsertData,
   Query,
@@ -80,6 +81,7 @@ export const makeHasManyMethod = (
         );
       },
       nestedInsert: undefined,
+      nestedUpdate: undefined,
       joinQuery: (query.whereExists as (arg: Query, cb: () => Query) => Query)(
         throughRelation.joinQuery,
         whereExistsCallback,
@@ -196,6 +198,17 @@ export const makeHasManyMethod = (
         );
       }
     }) as HasManyNestedInsert,
+    nestedUpdate: (async (q, data, params) => {
+      const t = query.transacting(q);
+      if (params.disconnect) {
+        await t
+          .where<Query>({
+            [foreignKey]: { in: data.map((item) => item[primaryKey]) },
+            OR: params.disconnect,
+          })
+          .updateOrThrow({ [foreignKey]: null });
+      }
+    }) as HasManyNestedUpdate,
     joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),
     primaryKey,
   };

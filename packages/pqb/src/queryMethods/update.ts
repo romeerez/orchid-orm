@@ -1,19 +1,37 @@
 import {
   AddQuerySelect,
   Query,
+  QueryBase,
   SetQueryReturnsAll,
   SetQueryReturnsRowCount,
 } from '../query';
-import { pushQueryValue } from '../queryDataUtils';
-import { RawExpression } from '../common';
+import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
+import { isRaw, RawExpression } from '../common';
 import { ReturningArg } from './insert';
+import {
+  BelongsToNestedUpdate,
+  BelongsToRelation,
+  HasOneNestedUpdate,
+  Relation,
+} from '../relations';
+import { SelectArg } from './select';
+import { WhereArg } from './where';
 
 type UpdateData<T extends Query> = {
   [K in keyof T['type']]?: T['type'][K] | RawExpression;
-};
+} & (T['relations'] extends Record<string, Relation>
+  ? {
+      [K in keyof T['relations']]?: T['relations'][K]['returns'] extends 'one'
+        ? { disconnect?: boolean }
+        : T['relations'][K]['returns'] extends 'many'
+        ? { disconnect?: WhereArg<T['relations'][K]['model']>[] }
+        : never;
+    }
+  : // eslint-disable-next-line @typescript-eslint/ban-types
+    {});
 
 type UpdateArgs<T extends Query> = [
-  data: UpdateData<T> | RawExpression,
+  data: RawExpression | UpdateData<T>,
   returning?: ReturningArg<T>,
 ];
 
@@ -70,13 +88,90 @@ export class Update {
     this: T,
     ...args: Args
   ): UpdateResult<T, Args> {
-    const [data, returning] = args;
+    const data = args[0];
+    let returning = args[1];
     this.query.type = 'update';
     this.returnType = returning ? 'all' : 'rowCount';
-    pushQueryValue(this, 'data', data);
+
+    if (isRaw(data)) {
+      pushQueryValue(this, 'data', data);
+    } else {
+      const relations = this.relations as Record<string, Relation>;
+
+      const prependRelations: Record<string, Record<string, unknown>> = {};
+      const appendRelations: Record<string, Record<string, unknown>> = {};
+
+      const update: Record<string, unknown> = { ...data };
+      for (const key in data) {
+        if (relations[key]) {
+          delete update[key];
+          if (relations[key].type === 'belongsTo') {
+            prependRelations[key] = data[key] as Record<string, unknown>;
+          } else {
+            if (returning !== '*') {
+              const primaryKey = relations[key].primaryKey;
+              if (!returning) {
+                returning = [primaryKey];
+              } else if (!returning.includes(primaryKey)) {
+                returning.push(primaryKey);
+              }
+            }
+            appendRelations[key] = data[key] as Record<string, unknown>;
+          }
+        }
+      }
+      const prependRelationKeys = Object.keys(prependRelations);
+      if (prependRelationKeys.length) {
+        pushQueryArray(
+          this,
+          'beforeQuery',
+          prependRelationKeys.map((relationName) => {
+            return async (q: Query) => {
+              const relationData = prependRelations[relationName];
+              const relation = relations[relationName];
+
+              const updated = await (
+                relation.nestedUpdate as BelongsToNestedUpdate
+              )(q, relationData);
+
+              const { options } = relation as BelongsToRelation;
+
+              update[options.foreignKey] = updated[options.primaryKey];
+            };
+          }),
+        );
+      } else if (!Object.keys(update).length) {
+        delete this.query.type;
+        this.returnType = 'all';
+        if (returning) this._select(...(returning as SelectArg<QueryBase>[]));
+      }
+
+      const appendRelationKeys = Object.keys(appendRelations);
+      if (appendRelationKeys.length) {
+        pushQueryArray(
+          this,
+          'afterQuery',
+          appendRelationKeys.map((relationName) => {
+            return async (q: Query, result: unknown) => {
+              const all = (
+                q.returnType === 'all' ? result : [result]
+              ) as Record<string, unknown>[];
+
+              await (
+                relations[relationName].nestedUpdate as HasOneNestedUpdate
+              )?.(q, all, appendRelations[relationName]);
+            };
+          }),
+        );
+      }
+
+      pushQueryValue(this, 'data', update);
+    }
+
     if (returning) {
       pushQueryValue(this, 'returning', returning);
     }
+
     return this as unknown as UpdateResult<T, Args>;
   }
 

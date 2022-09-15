@@ -4,6 +4,8 @@ import {
   expectSql,
   insertProfile,
   insertUser,
+  profileData,
+  userData,
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
@@ -19,7 +21,7 @@ describe('belongsTo', () => {
 
       const eq: AssertEqual<
         typeof db.profile.user,
-        RelationQuery<'user', { userId: number }, never, UserQuery, true>
+        RelationQuery<'user', { userId: number | null }, never, UserQuery, true>
       > = true;
 
       expect(eq).toBe(true);
@@ -523,6 +525,27 @@ describe('belongsTo', () => {
         text: 'message 2',
         title: 'chat 2',
         name: 'user 2',
+      });
+    });
+  });
+
+  describe('update', () => {
+    describe('disconnect', () => {
+      it('should nullify foreignKey', async () => {
+        const { id } = await db.profile.insert(
+          { ...profileData, user: { create: userData } },
+          ['id'],
+        );
+
+        const [profile] = await db.profile.where({ id }).update(
+          {
+            bio: 'string',
+            user: { disconnect: true },
+          },
+          ['userId'],
+        );
+
+        expect(profile.userId).toBe(null);
       });
     });
   });

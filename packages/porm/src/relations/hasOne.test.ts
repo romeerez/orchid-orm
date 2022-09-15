@@ -4,6 +4,8 @@ import {
   expectSql,
   insertProfile,
   insertUser,
+  profileData,
+  userData,
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { User, Profile } from '../test-utils/test-models';
@@ -525,6 +527,27 @@ describe('hasOne', () => {
           profile: profile2,
           name: 'user 2',
           bio: 'profile 2',
+        });
+      });
+    });
+
+    describe('update', () => {
+      describe('disconnect', () => {
+        it('should nullify foreignKey', async () => {
+          const user = await db.user.insert(
+            { ...userData, profile: { create: profileData } },
+            ['id'],
+          );
+          const { id: profileId } = await db.user.profile(user);
+
+          await db.user.where(user).update({
+            profile: {
+              disconnect: true,
+            },
+          });
+
+          const profile = await db.profile.find(profileId).takeOrThrow();
+          expect(profile.userId).toBe(null);
         });
       });
     });

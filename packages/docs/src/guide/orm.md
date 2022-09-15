@@ -344,6 +344,22 @@ const result: Pick<Book, 'id' | 'authorId'> =  await db.book.insert(
 )
 ```
 
+### belongsTo disconnect
+
+Disconnect related record by writing `{ disconnect: true }` in `update`.
+
+This command will update foreignKey of current record to `NULL`, the foreignKey has to be nullable.
+
+Following query will set `authorId` of the book to `NULL`:
+
+```ts
+await db.book.where({ title: 'book title' }).update({
+  author: {
+    disconnect: true,
+  },
+})
+```
+
 ## hasOne
 
 `hasOne` association indicates that one other model has a reference to this model. That model can be fetched through this association.
@@ -629,6 +645,22 @@ const result: Pick<Supplier, 'id'> = db.supplier.insert(
   },
   ['id']
 )
+```
+
+### hasOne disconnect
+
+Disconnect related record by writing `{ disconnect: true }` in `update`.
+
+This command will update foreignKey of related record to `NULL`, the foreignKey has to be nullable.
+
+Following query will set `supplierId` of the account to `NULL`:
+
+```ts
+await db.supplier.where({ brand: 'supplier brand' }).update({
+  account: {
+    disconnect: true,
+  },
+})
 ```
 
 ## hasMany
@@ -977,6 +1009,27 @@ const result: Pick<Author, 'id'> = await db.author.insert(
 )
 ```
 
+### hasMany disconnect
+
+Disconnect related record with array of conditions in `update`:
+
+This command will update foreignKey of related records to `NULL`, the foreignKey has to be nullable.
+
+Each provided condition may match 0 or more related records, there is no check to find exactly one.
+
+Following query will set `authorId` of related books found by conditions to `NULL`:
+
+```ts
+await db.author.where({ name: 'author name' }).update({
+  books: {
+    disconnect: [
+      { id: 5 },
+      { title: 'book title' }
+    ],
+  },
+})
+```
+
 ## hasAndBelongsToMany
 
 A `hasAndBelongsToMany` association creates a direct many-to-many connection with another model, with no intervening model.
@@ -1248,4 +1301,25 @@ const result: Pick<Post, 'id'> = await db.post.insert(
   },
   ['id']
 )
+```
+
+### hasAndBelongsToMany disconnect
+
+Disconnect related record with array of conditions in `update`:
+
+This command will delete connecting rows from join table for related records found by conditions.
+
+Each provided condition may match 0 or more related records, there is no check to find exactly one.
+
+Following query delete join table rows between the post and matching tags:
+
+```ts
+await db.post.where({ title: 'post title' }).update({
+  tags: {
+    disconnect: [
+      { id: 5 },
+      { name: 'some tag' }
+    ],
+  },
+})
 ```

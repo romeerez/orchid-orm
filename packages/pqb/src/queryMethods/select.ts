@@ -16,7 +16,7 @@ import {
   relationQueryKey,
 } from '../relations';
 
-type SelectArg<T extends QueryBase> =
+export type SelectArg<T extends QueryBase> =
   | keyof T['selectable']
   | (T['relations'] extends Record<string, Relation>
       ? keyof T['relations']

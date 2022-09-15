@@ -1,6 +1,7 @@
 import {
   addQueryOn,
   HasOneNestedInsert,
+  HasOneNestedUpdate,
   HasOneRelation,
   NestedInsertOneItem,
   Query,
@@ -80,6 +81,7 @@ export const makeHasOneMethod = (
         )._take();
       },
       nestedInsert: undefined,
+      nestedUpdate: undefined,
       joinQuery: (query.whereExists as (arg: Query, cb: () => Query) => Query)(
         throughRelation.joinQuery,
         whereExistsCallback,
@@ -146,6 +148,16 @@ export const makeHasOneMethod = (
         );
       }
     }) as HasOneNestedInsert,
+    nestedUpdate: (async (q, data, params) => {
+      const t = query.transacting(q);
+      if (params.disconnect) {
+        await t
+          .where({
+            [foreignKey]: { in: data.map((item) => item[primaryKey]) },
+          })
+          .update({ [foreignKey]: null });
+      }
+    }) as HasOneNestedUpdate,
     joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),
     primaryKey,
   };

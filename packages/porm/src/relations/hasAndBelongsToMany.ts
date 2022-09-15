@@ -4,6 +4,7 @@ import {
   getQueryAs,
   HasAndBelongsToManyRelation,
   HasManyNestedInsert,
+  HasManyNestedUpdate,
   Query,
   QueryBase,
 } from 'pqb';
@@ -49,6 +50,10 @@ export const makeHasAndBelongsToManyMethod = (
 
   const subQuery = qb.clone();
   subQuery.table = joinTable;
+  subQuery.shape = {
+    [foreignKey]: model.shape[primaryKey],
+    [associationForeignKey]: query.shape[associationPrimaryKey],
+  };
 
   return {
     returns: 'many',
@@ -202,6 +207,21 @@ export const makeHasAndBelongsToManyMethod = (
         }),
       );
     }) as HasManyNestedInsert,
+    nestedUpdate: (async (q, data, params) => {
+      const t = subQuery.transacting(q);
+      if (params.disconnect) {
+        await t
+          .where({
+            [foreignKey]: { in: data.map((item) => item[primaryKey]) },
+            [associationForeignKey]: {
+              in: query
+                .or<Query>(...params.disconnect)
+                .select(associationPrimaryKey),
+            },
+          })
+          .delete();
+      }
+    }) as HasManyNestedUpdate,
     joinQuery: query.whereExists(subQuery, (q) =>
       q
         .on(associationForeignKeyFull, associationPrimaryKeyFull)

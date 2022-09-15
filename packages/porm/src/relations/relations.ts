@@ -35,6 +35,7 @@ export type RelationData = {
   returns: 'one' | 'many';
   method(params: Record<string, unknown>): Query;
   nestedInsert: BaseRelation['nestedInsert'];
+  nestedUpdate: BaseRelation['nestedUpdate'];
   joinQuery: Query;
   primaryKey: string;
 };
@@ -62,6 +63,7 @@ export type Relation<
         [defaultsKey]: Defaults;
       };
   nestedInsert: BaseRelation['nestedInsert'];
+  nestedUpdate: BaseRelation['nestedUpdate'];
   primaryKey: string;
   options: Relations[K]['options'];
 };
@@ -173,6 +175,7 @@ export const applyRelations = (
             key: relationName,
             model: query,
             nestedInsert: data.nestedInsert,
+            nestedUpdate: data.nestedUpdate,
             joinQuery: data.joinQuery,
             primaryKey: data.primaryKey,
             options: relation.options,

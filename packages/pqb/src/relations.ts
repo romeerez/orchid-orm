@@ -5,6 +5,7 @@ export type NestedInsertOneItem = {
   create?: Record<string, unknown>;
   connect?: WhereArg<QueryBase>;
 };
+
 export type NestedInsertManyItems = {
   create?: Record<string, unknown>[];
   connect?: WhereArg<QueryBase>[];
@@ -13,6 +14,7 @@ export type NestedInsertManyItems = {
     create: Record<string, unknown>;
   }[];
 };
+
 export type NestedInsertItem = NestedInsertOneItem | NestedInsertManyItems;
 
 export type BelongsToNestedInsert = (
@@ -36,6 +38,33 @@ export type HasManyNestedInsert = (
   ][],
 ) => Promise<void>;
 
+export type NestedUpdateOneItem = {
+  disconnect?: true;
+};
+
+export type NestedUpdateManyItems = {
+  disconnect?: WhereArg<QueryBase>[];
+};
+
+export type NestedUpdateItem = NestedUpdateOneItem | NestedUpdateManyItems;
+
+export type BelongsToNestedUpdate = (
+  query: Query,
+  relationData: NestedUpdateOneItem,
+) => Promise<Record<string, unknown>>;
+
+export type HasOneNestedUpdate = (
+  query: Query,
+  data: Record<string, unknown>[],
+  relationData: NestedUpdateOneItem,
+) => Promise<void>;
+
+export type HasManyNestedUpdate = (
+  query: Query,
+  data: Record<string, unknown>[],
+  relationData: NestedUpdateManyItems,
+) => Promise<void>;
+
 export type BaseRelation = {
   type: string;
   key: string;
@@ -46,6 +75,10 @@ export type BaseRelation = {
     | BelongsToNestedInsert
     | HasOneNestedInsert
     | HasManyNestedInsert;
+  nestedUpdate?:
+    | BelongsToNestedUpdate
+    | HasOneNestedUpdate
+    | HasManyNestedUpdate;
   primaryKey: string;
   options: {
     scope?(q: QueryWithTable): QueryWithTable;
