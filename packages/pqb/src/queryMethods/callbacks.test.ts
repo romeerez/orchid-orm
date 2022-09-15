@@ -36,7 +36,7 @@ describe('callbacks', () => {
   describe('afterInsert', () => {
     it('should run callback after insert', async () => {
       const fn = jest.fn();
-      const query = User.afterInsert(fn).insert(userData, ['id']);
+      const query = User.afterInsert(fn).select('id').insert(userData);
       const result = await query;
 
       expect(fn.mock.calls[0]).toEqual([query, result]);

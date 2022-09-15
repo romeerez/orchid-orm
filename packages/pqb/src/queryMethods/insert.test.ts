@@ -3,7 +3,9 @@ import {
   expectMatchObjectWithTimestamps,
   expectQueryNotMutated,
   expectSql,
+  now,
   User,
+  userData,
   useTestDatabase,
 } from '../test-utils';
 import { raw } from '../common';
@@ -11,14 +13,6 @@ import { OnConflictQueryBuilder } from './insert';
 
 describe('insert', () => {
   useTestDatabase();
-
-  const now = new Date();
-  const data = {
-    name: 'name',
-    password: 'password',
-    createdAt: now,
-    updatedAt: now,
-  };
 
   it('should insert with raw sql and list of columns', () => {
     const q = User.all();
@@ -44,7 +38,7 @@ describe('insert', () => {
   it('should insert one record, returning rows count', async () => {
     const q = User.all();
 
-    const query = q.insert(data);
+    const query = q.insert(userData);
     expectSql(
       query.toSql(),
       `
@@ -61,7 +55,7 @@ describe('insert', () => {
     expect(eq).toBe(true);
 
     const inserted = await User.takeOrThrow();
-    expectMatchObjectWithTimestamps(inserted, data);
+    expectMatchObjectWithTimestamps(inserted, userData);
 
     expectQueryNotMutated(q);
   });
@@ -69,7 +63,9 @@ describe('insert', () => {
   it('should insert one record, returning columns', async () => {
     const q = User.all();
 
-    const query = q.select('id', 'name', 'createdAt', 'updatedAt').insert(data);
+    const query = q
+      .select('id', 'name', 'createdAt', 'updatedAt')
+      .insert(userData);
     expectSql(
       query.toSql(),
       `
@@ -88,7 +84,7 @@ describe('insert', () => {
     expect(eq).toBe(true);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...other } = data;
+    const { password, ...other } = userData;
     expectMatchObjectWithTimestamps(result, other);
 
     expectQueryNotMutated(q);
@@ -97,7 +93,7 @@ describe('insert', () => {
   it('should insert one record, returning all columns', async () => {
     const q = User.all();
 
-    const query = q.selectAll().insert(data);
+    const query = q.selectAll().insert(userData);
     expectSql(
       query.toSql(),
       `
@@ -113,7 +109,7 @@ describe('insert', () => {
     expect(eq).toBe(true);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...other } = data;
+    const { password, ...other } = userData;
     expectMatchObjectWithTimestamps(result, other);
 
     expectQueryNotMutated(q);
@@ -124,10 +120,10 @@ describe('insert', () => {
 
     const arr = [
       {
-        ...data,
+        ...userData,
         picture: null,
       },
-      data,
+      userData,
     ];
 
     const query = q.insert(arr);
@@ -162,10 +158,10 @@ describe('insert', () => {
 
     const arr = [
       {
-        ...data,
+        ...userData,
         picture: null,
       },
-      data,
+      userData,
     ];
 
     const query = q.select('id', 'name', 'createdAt', 'updatedAt').insert(arr);
@@ -202,10 +198,10 @@ describe('insert', () => {
 
     const arr = [
       {
-        ...data,
+        ...userData,
         picture: null,
       },
-      data,
+      userData,
     ];
 
     const query = q.selectAll().insert(arr);
@@ -239,7 +235,6 @@ describe('insert', () => {
   });
 
   it('should insert record with provided defaults', () => {
-    const now = new Date();
     const query = User.defaults({
       name: 'name',
       password: 'password',
@@ -263,7 +258,7 @@ describe('insert', () => {
     it('should return special query builder and return previous after ignore or merge', () => {
       const q = User.all();
 
-      const originalQuery = q.insert(data);
+      const originalQuery = q.insert(userData);
       const onConflictQuery = q.onConflict();
       expect(originalQuery instanceof OnConflictQueryBuilder).not.toBe(true);
       expect(onConflictQuery instanceof OnConflictQueryBuilder).toBe(true);
@@ -283,7 +278,7 @@ describe('insert', () => {
 
       const query = q
         .select('id')
-        .insert(data)
+        .insert(userData)
         .onConflict('name')
         .ignore()
         .where({ name: 'where name' });
@@ -308,7 +303,7 @@ describe('insert', () => {
       it('should set `ON CONFLICT` to all columns if no arguments provided', () => {
         const q = User.all();
 
-        const query = q.insert(data).onConflict().ignore();
+        const query = q.insert(userData).onConflict().ignore();
         expectSql(
           query.toSql(),
           `
@@ -326,7 +321,7 @@ describe('insert', () => {
       it('should accept single column', () => {
         const q = User.all();
 
-        const query = q.insert(data).onConflict('id').ignore();
+        const query = q.insert(userData).onConflict('id').ignore();
         expectSql(
           query.toSql(),
           `
@@ -343,7 +338,7 @@ describe('insert', () => {
       it('should accept multiple columns', () => {
         const q = User.all();
 
-        const query = q.insert(data).onConflict(['id', 'name']).ignore();
+        const query = q.insert(userData).onConflict(['id', 'name']).ignore();
         expectSql(
           query.toSql(),
           `
@@ -360,7 +355,7 @@ describe('insert', () => {
       it('can accept raw query', () => {
         const q = User.all();
 
-        const query = q.insert(data).onConflict(raw('raw query')).ignore();
+        const query = q.insert(userData).onConflict(raw('raw query')).ignore();
         expectSql(
           query.toSql(),
           `
@@ -379,7 +374,7 @@ describe('insert', () => {
       it('should update all columns when calling without arguments', () => {
         const q = User.all();
 
-        const query = q.insert(data).onConflict().merge();
+        const query = q.insert(userData).onConflict().merge();
         expectSql(
           query.toSql(),
           `
@@ -401,7 +396,7 @@ describe('insert', () => {
       it('should accept single column', () => {
         const q = User.all();
 
-        const query = q.insert(data).onConflict('name').merge('name');
+        const query = q.insert(userData).onConflict('name').merge('name');
         expectSql(
           query.toSql(),
           `
@@ -420,7 +415,7 @@ describe('insert', () => {
         const q = User.all();
 
         const query = q
-          .insert(data)
+          .insert(userData)
           .onConflict(['name', 'password'])
           .merge(['name', 'password']);
 
@@ -444,7 +439,7 @@ describe('insert', () => {
         const q = User.all();
 
         const query = q
-          .insert(data)
+          .insert(userData)
           .onConflict('name')
           .merge({ name: 'new name' });
 
@@ -466,7 +461,7 @@ describe('insert', () => {
         const q = User.all();
 
         const query = q
-          .insert(data)
+          .insert(userData)
           .onConflict(raw('on conflict raw'))
           .merge(raw('merge raw'));
 
@@ -483,6 +478,55 @@ describe('insert', () => {
 
         expectQueryNotMutated(q);
       });
+    });
+  });
+
+  describe('create', () => {
+    it('should return full record', async () => {
+      const result = await User.create(userData);
+      expectMatchObjectWithTimestamps(result, userData);
+
+      const eq: AssertEqual<typeof result, typeof User.type> = true;
+      expect(eq).toBe(true);
+    });
+
+    it('should return columns from select', async () => {
+      const result = await User.select('id', 'name').create(userData);
+      expect(result).toEqual({
+        id: result.id,
+        name: userData.name,
+      });
+
+      const eq: AssertEqual<typeof result, { id: number; name: string }> = true;
+      expect(eq).toBe(true);
+    });
+
+    it('should return full records when creating many', async () => {
+      const result = await User.create([userData, userData]);
+      expectMatchObjectWithTimestamps(result[0], userData);
+      expectMatchObjectWithTimestamps(result[1], userData);
+
+      const eq: AssertEqual<typeof result, typeof User.type[]> = true;
+      expect(eq).toBe(true);
+    });
+
+    it('should return columns from select when creating many', async () => {
+      const result = await User.select('id', 'name').create([
+        userData,
+        userData,
+      ]);
+      expect(result[0]).toEqual({
+        id: result[0].id,
+        name: userData.name,
+      });
+      expect(result[1]).toEqual({
+        id: result[1].id,
+        name: userData.name,
+      });
+
+      const eq: AssertEqual<typeof result, { id: number; name: string }[]> =
+        true;
+      expect(eq).toBe(true);
     });
   });
 });

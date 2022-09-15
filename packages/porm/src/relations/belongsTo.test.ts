@@ -2,8 +2,6 @@ import { db } from '../test-utils/test-db';
 import {
   AssertEqual,
   expectSql,
-  insertProfile,
-  insertUser,
   profileData,
   userData,
   useTestDatabase,
@@ -26,14 +24,10 @@ describe('belongsTo', () => {
 
       expect(eq).toBe(true);
 
-      const userData = {
-        id: 1,
-        name: 'name',
-        password: 'password',
-        active: true,
-      };
-      const userId = await insertUser(userData);
-      const profileId = await insertProfile({ userId });
+      const { id: userId } = await db.user.select('id').insert(userData);
+      const { id: profileId } = await db.profile
+        .select('id')
+        .insert({ ...profileData, userId });
 
       const profile = await db.profile.find(profileId).takeOrThrow();
       const query = db.profile.user(profile);

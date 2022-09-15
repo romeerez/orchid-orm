@@ -4,8 +4,7 @@ import {
   expectSql,
   AssertEqual,
   useTestDatabase,
-  insertUser,
-  insertUsers,
+  userData,
 } from '../test-utils';
 import { raw } from '../common';
 
@@ -135,7 +134,7 @@ describe('aggregate', () => {
 
     describe('selectCount', () => {
       it('should select number', async () => {
-        await insertUser();
+        await User.insert(userData);
 
         const user = await User.selectCount().takeOrThrow();
         expect(user.count).toBe(1);
@@ -165,7 +164,7 @@ describe('aggregate', () => {
     });
 
     it('should return number when have records', async () => {
-      await insertUser();
+      await User.insert(userData);
 
       const value = await User[method as 'avg']('id');
 
@@ -189,14 +188,14 @@ describe('aggregate', () => {
       });
 
       it('should return number when have records', async () => {
-        await insertUser({ id: 1 });
+        const { id } = await User.select('id').insert(userData);
 
         const value = await User[selectMethod]('id').takeOrThrow();
 
         const eq: AssertEqual<typeof value, { avg: number | null }> = true;
         expect(eq).toBe(true);
 
-        expect(value).toEqual({ [functionName]: 1 });
+        expect(value).toEqual({ [functionName]: id });
       });
     });
   });
@@ -217,7 +216,7 @@ describe('aggregate', () => {
     });
 
     it('should return boolean when have records', async () => {
-      await insertUser();
+      await User.insert({ ...userData, active: true });
 
       const value = await User[method as 'boolAnd']('active');
 
@@ -242,7 +241,7 @@ describe('aggregate', () => {
       });
 
       it('should return boolean when have records', async () => {
-        await insertUser();
+        await User.insert({ ...userData, active: true });
 
         const value = await User[selectMethod]('active').takeOrThrow();
 
@@ -275,7 +274,7 @@ describe('aggregate', () => {
     });
 
     it('should return json array when have records', async () => {
-      await insertUser({ data });
+      await User.insert({ ...userData, data });
 
       const value = await User[method as 'jsonAgg']('data');
 
@@ -305,7 +304,7 @@ describe('aggregate', () => {
       });
 
       it('should return json array when have records', async () => {
-        await insertUser({ data });
+        await User.insert({ ...userData, data });
 
         const value = await User[selectMethod]('data').takeOrThrow();
 
@@ -398,7 +397,7 @@ describe('aggregate', () => {
     });
 
     it('should return json object when have records', async () => {
-      await insertUser();
+      await User.insert(userData);
 
       const value = await User[method as 'jsonObjectAgg']({ alias: 'name' });
 
@@ -425,7 +424,7 @@ describe('aggregate', () => {
       });
 
       it('should return json object when have records', async () => {
-        await insertUser();
+        await User.insert(userData);
 
         const value = await User[selectMethod]({ alias: 'name' }).takeOrThrow();
 
@@ -505,7 +504,7 @@ describe('aggregate', () => {
     });
 
     it('should return json object when have records', async () => {
-      await insertUsers(2);
+      await User.insert([userData, userData]);
 
       const value = await User.stringAgg('name', ', ');
 
@@ -527,7 +526,7 @@ describe('aggregate', () => {
       });
 
       it('should return json object when have records', async () => {
-        await insertUsers(2);
+        await User.insert([userData, userData]);
 
         const value = await User.selectStringAgg('name', ', ').takeOrThrow();
 

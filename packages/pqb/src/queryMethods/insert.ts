@@ -338,6 +338,28 @@ export class Insert {
     return q as unknown as InsertOneResult<Query> & InsertManyResult<Query>;
   }
 
+  create<T extends Query>(this: T, data: InsertData<T>): SetQueryReturnsOne<T>;
+  create<T extends Query>(
+    this: T,
+    data: InsertData<T>[] | { columns: string[]; values: RawExpression },
+  ): SetQueryReturnsAll<T>;
+  create(this: Query, data: InsertData<Query> & InsertData<Query>[]) {
+    return this.clone()._create(data) as unknown as SetQueryReturnsOne<Query> &
+      SetQueryReturnsAll<Query>;
+  }
+
+  _create<T extends Query>(this: T, data: InsertData<T>): SetQueryReturnsOne<T>;
+  _create<T extends Query>(
+    this: T,
+    data: InsertData<T>[] | { columns: string[]; values: RawExpression },
+  ): SetQueryReturnsAll<T>;
+  _create(this: Query, data: InsertData<Query> & InsertData<Query>[]) {
+    if (!this.query.select) {
+      this.query.select = ['*'];
+    }
+    return this.insert(data) as unknown as never;
+  }
+
   defaults<T extends Query, Data extends Partial<InsertData<T>>>(
     this: T,
     data: Data,

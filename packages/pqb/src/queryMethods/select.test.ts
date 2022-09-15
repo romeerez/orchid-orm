@@ -1,15 +1,16 @@
 import {
   AssertEqual,
+  Chat,
+  chatData,
   expectQueryNotMutated,
   expectSql,
-  insert,
-  insertChat,
-  insertMessage,
-  insertProfile,
-  insertUser,
   Message,
+  messageData,
+  now,
   Profile,
+  profileData,
   User,
+  userData,
   useTestDatabase,
 } from '../test-utils';
 import { raw, rawColumn } from '../common';
@@ -18,23 +19,8 @@ import { addQueryOn } from './join';
 import { RelationQuery, relationQueryKey } from '../relations';
 
 const insertUserAndProfile = async () => {
-  const now = new Date();
-  await insert('user', {
-    id: 1,
-    name: 'name',
-    password: 'password',
-    picture: null,
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  await insert('profile', {
-    id: 1,
-    userId: 1,
-    bio: 'text',
-    createdAt: now,
-    updatedAt: now,
-  });
+  const { id } = await User.select('id').insert(userData);
+  await Profile.insert({ ...profileData, userId: id });
 };
 
 describe('selectMethods', () => {
@@ -189,9 +175,9 @@ describe('selectMethods', () => {
       });
 
       it('should parse columns in single relation record result', async () => {
-        const userId = await insertUser();
+        const { id: userId } = await User.select('id').insert(userData);
         const now = new Date();
-        await insertProfile({ userId, updatedAt: now, createdAt: now });
+        await Profile.insert({ userId, updatedAt: now, createdAt: now });
 
         const [record] = await User.select('id', profileRelation);
         expect(record.profile).toMatchObject({
@@ -256,14 +242,12 @@ describe('selectMethods', () => {
       });
 
       it('should parse columns in multiple relation records result', async () => {
-        const authorId = await insertUser();
-        const chatId = await insertChat();
-        const now = new Date();
-        await insertMessage({
+        const { id: authorId } = await User.select('id').insert(userData);
+        const { id: chatId } = await Chat.select('id').insert(chatData);
+        await Message.insert({
           authorId,
           chatId,
-          updatedAt: now,
-          createdAt: now,
+          ...messageData,
         });
 
         const [record] = await User.select('id', messageRelation);
@@ -296,7 +280,7 @@ describe('selectMethods', () => {
       });
 
       it('should parse columns of joined table', async () => {
-        const q = Profile.join(User, 'user.id', '=', 'profile.id').select(
+        const q = Profile.join(User, 'user.id', '=', 'profile.userId').select(
           'user.createdAt',
         );
 
@@ -452,7 +436,7 @@ describe('selectMethods', () => {
     });
 
     it('should parse columns of joined table', async () => {
-      const q = Profile.join(User, 'user.id', '=', 'profile.id').select({
+      const q = Profile.join(User, 'user.id', '=', 'profile.userId').select({
         date: 'user.createdAt',
       });
 

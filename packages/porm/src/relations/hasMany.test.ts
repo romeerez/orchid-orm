@@ -3,9 +3,6 @@ import {
   AssertEqual,
   chatData,
   expectSql,
-  insertChat,
-  insertMessage,
-  insertUser,
   messageData,
   userData,
   useTestDatabase,
@@ -33,15 +30,13 @@ describe('hasMany', () => {
 
       expect(eq).toBe(true);
 
-      const userId = await insertUser();
-      const chatId = await insertChat();
+      const { id: userId } = await db.user.select('id').insert(userData);
+      const { id: chatId } = await db.chat.select('id').insert(chatData);
 
-      const messageData = {
-        authorId: userId,
-        chatId,
-        text: 'text',
-      };
-      await insertMessage({ ...messageData, count: 2 });
+      await db.message.insert([
+        { ...messageData, authorId: userId, chatId },
+        { ...messageData, authorId: userId, chatId },
+      ]);
 
       const user = await db.user.find(userId).takeOrThrow();
       const query = db.user.messages(user);
@@ -318,7 +313,7 @@ describe('hasMany', () => {
     it('should support create', async () => {
       const { id: chatId } = await db.chat.select('id').insert(chatData);
 
-      const user = await db.user.selectAll().insert({
+      const user = await db.user.create({
         name: 'user 1',
         ...userData,
         messages: {
@@ -352,7 +347,7 @@ describe('hasMany', () => {
     it('should support create many', async () => {
       const { id: chatId } = await db.chat.select('id').insert(chatData);
 
-      const user = await db.user.selectAll().insert([
+      const user = await db.user.create([
         {
           name: 'user 1',
           ...userData,
@@ -429,7 +424,7 @@ describe('hasMany', () => {
         },
       ]);
 
-      const user = await db.user.selectAll().insert({
+      const user = await db.user.create({
         name: 'user 1',
         ...userData,
         messages: {
@@ -485,7 +480,7 @@ describe('hasMany', () => {
         },
       ]);
 
-      const user = await db.user.selectAll().insert([
+      const user = await db.user.create([
         {
           name: 'user 1',
           ...userData,
@@ -546,7 +541,7 @@ describe('hasMany', () => {
         text: 'message 1',
       });
 
-      const user = await db.user.selectAll().insert({
+      const user = await db.user.create({
         name: 'user 1',
         ...userData,
         messages: {
@@ -596,7 +591,7 @@ describe('hasMany', () => {
           },
         ]);
 
-      const users = await db.user.selectAll().insert([
+      const users = await db.user.create([
         {
           name: 'user 1',
           ...userData,

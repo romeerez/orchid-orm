@@ -2,9 +2,9 @@ import {
   AssertEqual,
   expectQueryNotMutated,
   expectSql,
-  insert,
   Profile,
   User,
+  userData,
   useTestDatabase,
 } from '../test-utils';
 import { DeleteQueryData } from '../sql';
@@ -22,16 +22,8 @@ describe('delete', () => {
   it('should delete records, returning deleted rows count', async () => {
     const rowsCount = 3;
 
-    const now = new Date();
     for (let i = 0; i < rowsCount; i++) {
-      await insert('user', {
-        id: i + 1,
-        name: 'name',
-        password: 'password',
-        picture: null,
-        createdAt: now,
-        updatedAt: now,
-      });
+      await User.insert(userData);
     }
 
     const q = User.all();

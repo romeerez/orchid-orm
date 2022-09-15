@@ -255,12 +255,12 @@ bookWithAuthor.author?.id
 
 ### belongsTo nested create
 
-Insert book with author all at once:
+Create book with author all at once:
 
 This will run two insert queries in a transaction.
 
 ```ts
-const result = await db.book.selectAll().insert({
+const result = await db.book.create({
   title: 'Book title',
   author: {
     create: {
@@ -270,12 +270,12 @@ const result = await db.book.selectAll().insert({
 })
 ```
 
-Insert many books with authors:
+Create many books with authors:
 
 This will also run only two insert queries in a transaction.
 
 ```ts
-const result = await db.book.selectAll().insert([
+const result = await db.book.create([
   {
     title: 'Book 1',
     author: {
@@ -304,7 +304,7 @@ This will search a record by provided where condition, throw if not found, and u
 Also supported when inserting multiple records.
 
 ```ts
-const result = await db.book.selectAll().insert({
+const result = await db.book.create({
   title: 'Book title',
   author: {
     connect: {
@@ -321,7 +321,7 @@ Specify both `connect` and `create` properties to first look for record to conne
 Also supported when inserting multiple records.
 
 ```ts
-const result = await db.book.selectAll().insert({
+const result = await db.book.create({
   title: 'Book title',
   author: {
     connect: {
@@ -570,12 +570,12 @@ supplierWithAccount.account?.id
 
 ### hasOne nested create
 
-Insert supplier with account all at once:
+Create supplier with account all at once:
 
 This will run two insert queries in a transaction.
 
 ```ts
-const result = db.supplier.selectAll().insert({
+const result = db.supplier.create({
   brand: 'Supplier 1',
   account: {
     create: {
@@ -585,12 +585,12 @@ const result = db.supplier.selectAll().insert({
 })
 ```
 
-Insert many suppliers with authors:
+Create many suppliers with authors:
 
 This will also run only two insert queries in a transaction.
 
 ```ts
-const result = await db.supplier.selectAll().insert([
+const result = await db.supplier.create([
   {
     brand: 'Supplier 1',
     account: {
@@ -619,7 +619,7 @@ This will search a record by provided where condition, throw if not found, and u
 Also supported when inserting multiple records.
 
 ```ts
-const result = db.supplier.selectAll().insert({
+const result = db.supplier.create({
   brand: 'Supplier 1',
   account: {
     connect: {
@@ -636,7 +636,7 @@ Specify both `connect` and `create` properties to first look for record to conne
 Also supported when inserting multiple records.
 
 ```ts
-const result = db.supplier.selectAll().insert({
+const result = db.supplier.create({
   brand: 'Supplier 1',
   account: {
     connect: {
@@ -924,12 +924,12 @@ const result: Result = await db.author.select(
 
 ### hasMany nested create
 
-Insert author with books all at once:
+Create author with books all at once:
 
 This will run two insert queries in a transaction.
 
 ```ts
-const result = await db.author.selectAll().insert({
+const result = await db.author.create({
   name: 'Author',
   books: {
     create: [
@@ -944,12 +944,12 @@ const result = await db.author.selectAll().insert({
 })
 ```
 
-Insert many authors with books:
+Create many authors with books:
 
 This will also run only two insert queries in a transaction.
 
 ```ts
-const result = await db.author.selectAll().insert([
+const result = await db.author.create([
   {
     name: 'Author 1',
     books: {
@@ -988,7 +988,7 @@ This will search one record per provided where condition, throw if any of them i
 Also supported when inserting multiple records.
 
 ```ts
-const result = await db.author.selectAll().insert({
+const result = await db.author.create({
   name: 'Author',
   books: {
     connect: [
@@ -1010,7 +1010,7 @@ Specify `connectOrCreate` object with `where` and `connect` properties to first 
 Also supported when inserting multiple records.
 
 ```ts
-const result = await db.author.selectAll().insert({
+const result = await db.author.create({
   name: 'Author',
   books: {
     connectOrCreate: [
@@ -1239,12 +1239,12 @@ const result: Result = await db.author.select(
 
 ### hasAndBelongsToMany nested create
 
-Insert post with tags all at once:
+Create post with tags all at once:
 
 This will run three insert queries in a transaction. One insert for post, one for tags and one for join table.
 
 ```ts
-const result = await db.post.selectAll().insert({
+const result = await db.post.create({
   title: 'Post',
   tags: {
     create: [
@@ -1259,12 +1259,12 @@ const result = await db.post.selectAll().insert({
 })
 ```
 
-Insert many posts with tags:
+Create many posts with tags:
 
 This will also run only three insert queries in a transaction.
 
 ```ts
-const result = await db.post.selectAll().insert([
+const result = await db.post.create([
   {
     title: 'Post 1',
     tags: {
@@ -1303,7 +1303,7 @@ This will search one record per provided where condition, throw if any of them i
 It is supported in insert multiple as well.
 
 ```ts
-const result = await db.post.selectAll().insert({
+const result = await db.post.create({
   title: 'Post',
   tags: {
     connect: [
@@ -1325,7 +1325,7 @@ Specify `connectOrCreate` object with `where` and `connect` properties to first 
 Also supported when inserting multiple records.
 
 ```ts
-const result = await db.post.selectAll().insert({
+const result = await db.post.create({
   title: 'Post',
   tags: {
     connectOrCreate: [

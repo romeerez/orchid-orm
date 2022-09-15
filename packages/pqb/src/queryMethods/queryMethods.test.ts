@@ -8,8 +8,9 @@ import {
   AssertEqual,
   useTestDatabase,
   db,
-  insert,
   expectSql,
+  userData,
+  now,
 } from '../test-utils';
 import { columnTypes, NumberColumn } from '../columnSchema';
 import { NotFoundError } from '../errors';
@@ -59,15 +60,7 @@ describe('queryMethods', () => {
 
   describe('take', () => {
     it('limits to one and returns only one', async () => {
-      const now = new Date();
-      await insert('user', {
-        id: 1,
-        name: 'name',
-        password: 'password',
-        picture: null,
-        createdAt: now,
-        updatedAt: now,
-      });
+      await User.insert(userData);
 
       const q = User.all();
       expectSql(q.take().toSql(), `SELECT * FROM "user" LIMIT $1`, [1]);
@@ -99,15 +92,7 @@ describe('queryMethods', () => {
 
   describe('takeOrThrow', () => {
     it('limits to one and returns only one', async () => {
-      const now = new Date();
-      await insert('user', {
-        id: 1,
-        name: 'name',
-        password: 'password',
-        picture: null,
-        createdAt: now,
-        updatedAt: now,
-      });
+      await User.insert(userData);
 
       const q = User.all();
       expectSql(q.takeOrThrow().toSql(), `SELECT * FROM "user" LIMIT $1`, [1]);
@@ -152,17 +137,9 @@ describe('queryMethods', () => {
   });
 
   describe('pluck', () => {
-    const now = new Date();
-
     beforeEach(async () => {
       for (let i = 0; i < 3; i++) {
-        await insert('user', {
-          id: i + 1,
-          name: 'name',
-          password: 'password',
-          createdAt: now,
-          updatedAt: now,
-        });
+        await User.insert(userData);
       }
     });
 
@@ -185,21 +162,14 @@ describe('queryMethods', () => {
 
   describe('value', () => {
     it('returns a first value', async () => {
-      const now = new Date();
-      await insert('user', {
-        id: 1,
-        name: 'name',
-        password: 'password',
-        createdAt: now,
-        updatedAt: now,
-      });
+      const { id } = await User.select('id').insert(userData);
 
       const received = await User.select('id').value(columnTypes.integer());
 
       const eq: AssertEqual<typeof received, number | undefined> = true;
       expect(eq).toBe(true);
 
-      expect(received).toBe(1);
+      expect(received).toBe(id);
     });
 
     it('should return undefined if not found', async () => {
@@ -219,14 +189,7 @@ describe('queryMethods', () => {
 
   describe('valueOrThrow', () => {
     it('returns a first value', async () => {
-      const now = new Date();
-      await insert('user', {
-        id: 1,
-        name: 'name',
-        password: 'password',
-        createdAt: now,
-        updatedAt: now,
-      });
+      const { id } = await User.select('id').insert(userData);
 
       const received = await User.select('id').valueOrThrow(
         columnTypes.integer(),
@@ -235,7 +198,7 @@ describe('queryMethods', () => {
       const eq: AssertEqual<typeof received, number> = true;
       expect(eq).toBe(true);
 
-      expect(received).toBe(1);
+      expect(received).toBe(id);
     });
 
     it('should throw if not found', async () => {

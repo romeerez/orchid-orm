@@ -297,6 +297,10 @@ const insertedFull = await Table
   .selectAll()
   .insert(data)
 
+// create is alias for .selectAll().insert(...)
+const createdFull = await Table
+  .create(data)
+
 const updatedFull = await Table
   .selectAll()
   .update(data)
@@ -641,6 +645,20 @@ const arrayOfIds2 = await Table.select('id').insert({
 // Use selectAll to return all columns:
 const fullRecord = await Table.selectAll().insert(data)
 const fullRecords = await Table.selectAll().insert([data, data])
+```
+
+## create
+
+`.create` is an alias for `.selectAll().insert(...)`
+
+```ts
+const fullRecord = await Table.create(data)
+```
+
+It respects `select` if specified:
+
+```ts
+const onlyName = await Table.select('name').create(data)
 ```
 
 ## onConflict
@@ -999,8 +1017,7 @@ try {
     // insert multiple books and return full records
     await Book
       .transacting(tr)
-      .selectAll()
-      .insert(
+      .create(
         books.map((book) => ({ ...book, catalogueId })),
       )
   })

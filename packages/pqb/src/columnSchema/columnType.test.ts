@@ -4,8 +4,8 @@ import {
   AssertEqual,
   db,
   expectSql,
-  insert,
   User,
+  userData,
   useTestDatabase,
 } from '../test-utils';
 
@@ -101,15 +101,7 @@ describe('column base', () => {
 
     describe('parsing columns', () => {
       beforeEach(async () => {
-        const now = new Date();
-        await insert('user', {
-          id: 1,
-          name: 'name',
-          password: 'password',
-          picture: null,
-          createdAt: now,
-          updatedAt: now,
-        });
+        await User.insert(userData);
       });
 
       it('should return column data as returned from db if not set', async () => {
@@ -117,14 +109,14 @@ describe('column base', () => {
           createdAt: t.timestamp(),
         }));
 
-        expect(typeof (await UserWithPlainTimestamp.take()).createdAt).toBe(
-          'string',
-        );
+        expect(
+          typeof (await UserWithPlainTimestamp.takeOrThrow()).createdAt,
+        ).toBe('string');
       });
 
       it('should parse all columns', async () => {
         expect((await User.all())[0].createdAt instanceof Date).toBe(true);
-        expect((await User.take()).createdAt instanceof Date).toBe(true);
+        expect((await User.takeOrThrow()).createdAt instanceof Date).toBe(true);
         const idx = Object.keys(User.shape).indexOf('createdAt');
         expect((await User.rows())[0][idx] instanceof Date).toBe(true);
       });

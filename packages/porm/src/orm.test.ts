@@ -2,7 +2,7 @@ import { porm } from './orm';
 import {
   AssertEqual,
   expectSql,
-  insertUser,
+  userData,
   useTestDatabase,
 } from './test-utils/test-utils';
 import { adapter, pgConfig } from './test-utils/test-db';
@@ -42,12 +42,12 @@ describe('orm', () => {
   });
 
   it('should return model which is queryable interface', async () => {
-    await insertUser();
-
     const db = porm(pgConfig, {
       user: UserModel,
       profile: ProfileModel,
     });
+
+    const { id, name } = await db.user.create(userData);
 
     const query = db.user.select('id', 'name').where({ id: { gt: 0 } });
 
@@ -62,7 +62,7 @@ describe('orm', () => {
     );
 
     const result = await query;
-    expect(result).toEqual([{ id: 1, name: 'name' }]);
+    expect(result).toEqual([{ id, name }]);
 
     const eq: AssertEqual<typeof result, Pick<User, 'id' | 'name'>[]> = true;
     expect(eq).toBe(true);

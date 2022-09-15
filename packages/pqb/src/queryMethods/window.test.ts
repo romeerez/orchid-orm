@@ -2,8 +2,8 @@ import {
   AssertEqual,
   expectQueryNotMutated,
   expectSql,
-  insertUsers,
   User,
+  userData,
   useTestDatabase,
 } from '../test-utils';
 
@@ -20,8 +20,14 @@ describe('window functions', () => {
   `('$method', ({ method, functionName, results }) => {
     it('should return array of objects with number value', async () => {
       if (method === 'selectCumeDist') {
-        await insertUsers(2, { age: 20 });
-        await insertUsers(2, { age: 30 });
+        await User.insert([
+          { ...userData, age: 20 },
+          { ...userData, age: 20 },
+        ]);
+        await User.insert([
+          { ...userData, age: 30 },
+          { ...userData, age: 30 },
+        ]);
 
         const value = await User[method as 'selectRowNumber']({
           partitionBy: 'age',

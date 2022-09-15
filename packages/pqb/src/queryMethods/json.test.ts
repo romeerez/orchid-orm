@@ -2,8 +2,8 @@ import {
   AssertEqual,
   expectQueryNotMutated,
   expectSql,
-  insert,
   User,
+  userData,
   useTestDatabase,
 } from '../test-utils';
 import { columnTypes } from '../columnSchema';
@@ -48,15 +48,9 @@ describe('json methods', () => {
 
   describe('processing and selecting json data', () => {
     beforeEach(async () => {
-      const now = new Date();
-      await insert('user', {
-        id: 1,
-        name: 'name',
-        password: 'password',
-        picture: null,
-        data: `{"name": "value", "tags": ["one"]}`,
-        createdAt: now,
-        updatedAt: now,
+      await User.insert({
+        ...userData,
+        data: { name: 'value', tags: ['one'] },
       });
     });
 

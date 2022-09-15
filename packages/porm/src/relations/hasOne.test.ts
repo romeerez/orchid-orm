@@ -2,8 +2,6 @@ import { db } from '../test-utils/test-db';
 import {
   AssertEqual,
   expectSql,
-  insertProfile,
-  insertUser,
   profileData,
   userData,
   useTestDatabase,
@@ -31,14 +29,9 @@ describe('hasOne', () => {
 
       expect(eq).toBe(true);
 
-      const userId = await insertUser();
+      const { id: userId } = await db.user.select('id').insert(userData);
 
-      const profileData = {
-        id: 1,
-        userId,
-        bio: 'text',
-      };
-      await insertProfile(profileData);
+      await db.profile.insert({ ...profileData, userId });
 
       const user = await db.user.find(userId).takeOrThrow();
       const query = db.user.profile(user);
@@ -79,7 +72,7 @@ describe('hasOne', () => {
     });
 
     it('can insert after calling method', async () => {
-      const id = await insertUser();
+      const { id } = await db.user.select('id').insert(userData);
       const now = new Date();
       await db.user.profile({ id }).insert({
         userId: id,
@@ -257,7 +250,7 @@ describe('hasOne', () => {
       };
 
       it('should support create', async () => {
-        const query = db.user.selectAll().insert({
+        const query = db.user.create({
           name: 'user',
           ...userData,
           profile: {
@@ -275,7 +268,7 @@ describe('hasOne', () => {
       });
 
       it('should support create many', async () => {
-        const query = db.user.selectAll().insert([
+        const query = db.user.create([
           {
             name: 'user 1',
             ...userData,
@@ -332,7 +325,7 @@ describe('hasOne', () => {
           },
         });
 
-        const query = db.user.selectAll().insert({
+        const query = db.user.create({
           name: 'user',
           ...userData,
           profile: {
@@ -367,7 +360,7 @@ describe('hasOne', () => {
           },
         ]);
 
-        const query = db.user.selectAll().insert([
+        const query = db.user.create([
           {
             name: 'user 1',
             ...userData,
@@ -407,7 +400,7 @@ describe('hasOne', () => {
       });
 
       it('should support connect or create', async () => {
-        const { id: profileId } = await db.profile.selectAll().insert({
+        const { id: profileId } = await db.profile.create({
           bio: 'profile 1',
           ...profileData,
           user: {
@@ -418,7 +411,7 @@ describe('hasOne', () => {
           },
         });
 
-        const user1 = await db.user.selectAll().insert({
+        const user1 = await db.user.create({
           name: 'user 1',
           ...userData,
           profile: {
@@ -427,7 +420,7 @@ describe('hasOne', () => {
           },
         });
 
-        const user2 = await db.user.selectAll().insert({
+        const user2 = await db.user.create({
           name: 'user 2',
           ...userData,
           profile: {
@@ -455,7 +448,7 @@ describe('hasOne', () => {
       });
 
       it('should support connect or create many', async () => {
-        const { id: profileId } = await db.profile.selectAll().insert({
+        const { id: profileId } = await db.profile.create({
           bio: 'profile 1',
           ...profileData,
           user: {
@@ -466,7 +459,7 @@ describe('hasOne', () => {
           },
         });
 
-        const [user1, user2] = await db.user.selectAll().insert([
+        const [user1, user2] = await db.user.create([
           {
             name: 'user 1',
             ...userData,

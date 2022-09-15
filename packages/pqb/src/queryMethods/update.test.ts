@@ -3,8 +3,8 @@ import {
   expectMatchObjectWithTimestamps,
   expectQueryNotMutated,
   expectSql,
-  insertUsers,
   User,
+  userData,
   useTestDatabase,
 } from '../test-utils';
 import { raw } from '../common';
@@ -22,7 +22,7 @@ describe('update', () => {
 
   it('should update record with raw sql, returning updated rows count', async () => {
     const count = 2;
-    await insertUsers(count);
+    await User.insert([userData, userData]);
 
     const q = User.all();
 

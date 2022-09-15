@@ -3,9 +3,6 @@ import {
   AssertEqual,
   chatData,
   expectSql,
-  insert,
-  insertChat,
-  insertUser,
   userData,
   useTestDatabase,
 } from '../test-utils/test-utils';
@@ -26,23 +23,11 @@ describe('hasAndBelongsToMany', () => {
 
       expect(eq).toBe(true);
 
-      const userId = await insertUser();
-
-      const chatData = {
-        title: 'title',
-      };
-      const chat1Id = await insertChat(chatData);
-      const chat2Id = await insertChat(chatData);
-
-      await insert('chatUser', {
-        id: 1,
-        userId,
-        chatId: chat1Id,
-      });
-      await insert('chatUser', {
-        id: 2,
-        userId,
-        chatId: chat2Id,
+      const { id: userId } = await db.user.select('id').insert({
+        ...userData,
+        chats: {
+          create: [chatData, chatData],
+        },
       });
 
       const user = await db.user.find(userId).takeOrThrow();
@@ -659,7 +644,7 @@ describe('hasAndBelongsToMany', () => {
         title: 'chat 1',
       });
 
-      const query = db.user.selectAll().insert({
+      const query = db.user.create({
         name: 'user 1',
         ...userData,
         chats: {
@@ -704,7 +689,7 @@ describe('hasAndBelongsToMany', () => {
           },
         ]);
 
-      const query = db.user.selectAll().insert([
+      const query = db.user.create([
         {
           name: 'user 1',
           ...userData,
