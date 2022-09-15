@@ -210,17 +210,42 @@ export const makeHasAndBelongsToManyMethod = (
     }) as HasManyNestedInsert,
     nestedUpdate: (async (q, data, params) => {
       const t = subQuery.transacting(q);
-      if (params.disconnect) {
-        await t
-          ._where({
-            [foreignKey]: { in: data.map((item) => item[primaryKey]) },
-            [associationForeignKey]: {
-              in: query
-                .or<Query>(...params.disconnect)
-                ._select(associationPrimaryKey),
-            },
-          })
-          ._delete();
+      if ('disconnect' in params || 'set' in params) {
+        const where: WhereArg<Query> = {
+          [foreignKey]: { in: data.map((item) => item[primaryKey]) },
+        };
+
+        if ('disconnect' in params) {
+          where[associationForeignKey] = {
+            in: query
+              .where<Query>(
+                Array.isArray(params.disconnect)
+                  ? { OR: params.disconnect }
+                  : params.disconnect,
+              )
+              ._select(associationPrimaryKey),
+          };
+        }
+
+        await t._where(where)._delete();
+
+        if ('set' in params) {
+          const ids = await query
+            .transacting(q)
+            ._where<Query>(
+              Array.isArray(params.set) ? { OR: params.set } : params.set,
+            )
+            ._pluck(associationPrimaryKey);
+
+          await t._insert(
+            data.flatMap((item) =>
+              ids.map((id) => ({
+                [foreignKey]: item[primaryKey],
+                [associationForeignKey]: id,
+              })),
+            ),
+          );
+        }
       }
     }) as HasManyNestedUpdate,
     joinQuery: query.whereExists(subQuery, (q) =>

@@ -10,19 +10,39 @@ import {
   BelongsToNestedUpdate,
   BelongsToRelation,
   HasOneNestedUpdate,
+  NestedUpdateOneItem,
   Relation,
 } from '../relations';
 import { SelectArg } from './select';
 import { WhereArg } from './where';
+import { MaybeArray } from '../utils';
 
 type UpdateData<T extends Query> = {
   [K in keyof T['type']]?: T['type'][K] | RawExpression;
 } & (T['relations'] extends Record<string, Relation>
   ? {
-      [K in keyof T['relations']]?: T['relations'][K]['returns'] extends 'one'
-        ? { disconnect?: boolean }
-        : T['relations'][K]['returns'] extends 'many'
-        ? { disconnect?: WhereArg<T['relations'][K]['model']>[] }
+      [K in keyof T['relations']]?: T['relations'][K]['type'] extends 'belongsTo'
+        ?
+            | { disconnect: boolean }
+            | { set: WhereArg<T['relations'][K]['model']> }
+        : T['relations'][K]['type'] extends 'hasOne'
+        ?
+            | { disconnect: boolean }
+            | (T['returnType'] extends 'one' | 'oneOrThrow'
+                ? { set: WhereArg<T['relations'][K]['model']> }
+                : never)
+        : T['relations'][K]['type'] extends 'hasMany'
+        ?
+            | { disconnect: MaybeArray<WhereArg<T['relations'][K]['model']>> }
+            | (T['returnType'] extends 'one' | 'oneOrThrow'
+                ? { set: MaybeArray<WhereArg<T['relations'][K]['model']>> }
+                : never)
+        : T['relations'][K]['type'] extends 'hasAndBelongsToMany'
+        ?
+            | { disconnect: WhereArg<T['relations'][K]['model']>[] }
+            | {
+                set: MaybeArray<WhereArg<T['relations'][K]['model']>>;
+              }
         : never;
     }
   : // eslint-disable-next-line @typescript-eslint/ban-types
@@ -113,7 +133,7 @@ export class Update {
 
               const updated = await (
                 relation.nestedUpdate as BelongsToNestedUpdate
-              )(q, relationData);
+              )(q, relationData as NestedUpdateOneItem);
 
               const { options } = relation as BelongsToRelation;
 
@@ -140,7 +160,7 @@ export class Update {
 
               await (
                 relations[relationName].nestedUpdate as HasOneNestedUpdate
-              )?.(q, all, appendRelations[relationName]);
+              )?.(q, all, appendRelations[relationName] as NestedUpdateOneItem);
             };
           }),
         );

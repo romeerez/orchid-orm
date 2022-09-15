@@ -521,5 +521,42 @@ describe('belongsTo', () => {
         expect(profile.userId).toBe(null);
       });
     });
+
+    describe('set', () => {
+      it('should set foreignKey of current record with provided primaryKey', async () => {
+        const { id } = await db.profile.select('id').insert(profileData);
+        const user = await db.user.select('id').insert(userData);
+
+        const [profile] = await db.profile
+          .where({ id })
+          .selectAll()
+          .update({
+            user: {
+              set: user,
+            },
+          });
+
+        expect(profile.userId).toBe(user.id);
+      });
+
+      it('should set foreignKey of current record from found related record', async () => {
+        const { id } = await db.profile.select('id').insert(profileData);
+        const user = await db.user.select('id').insert({
+          ...userData,
+          name: 'user',
+        });
+
+        const [profile] = await db.profile
+          .where({ id })
+          .selectAll()
+          .update({
+            user: {
+              set: { name: 'user' },
+            },
+          });
+
+        expect(profile.userId).toBe(user.id);
+      });
+    });
   });
 });

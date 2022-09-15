@@ -45,22 +45,18 @@ export type Relation<
   Relations extends RelationThunks,
   K extends keyof Relations,
   M extends Query = DbModel<ReturnType<Relations[K]['fn']>>,
-  Defaults extends string = RelationInfo<
-    T,
-    Relations,
-    Relations[K]
-  >['populate'],
+  Info extends RelationInfo = RelationInfo<T, Relations, Relations[K]>,
 > = {
   type: Relations[K]['type'];
   returns: Relations[K]['returns'];
   key: K;
   model: M;
   joinQuery: Query;
-  defaults: Defaults;
-  nestedCreateQuery: [Defaults] extends [never]
+  defaults: Info['populate'];
+  nestedCreateQuery: [Info['populate']] extends [never]
     ? M
     : (M[defaultsKey] extends undefined ? Omit<M, defaultsKey> : M) & {
-        [defaultsKey]: Defaults;
+        [defaultsKey]: Info['populate'];
       };
   nestedInsert: BaseRelation['nestedInsert'];
   nestedUpdate: BaseRelation['nestedUpdate'];
@@ -74,9 +70,9 @@ export type RelationScopeOrModel<Relation extends RelationThunkBase> =
     : DbModel<ReturnType<Relation['fn']>>;
 
 export type RelationInfo<
-  T extends Model,
-  Relations extends RelationThunks,
-  Relation extends RelationThunk,
+  T extends Model = Model,
+  Relations extends RelationThunks = RelationThunks,
+  Relation extends RelationThunk = RelationThunk,
 > = Relation extends BelongsTo
   ? BelongsToInfo<T, Relation>
   : Relation extends HasOne
@@ -92,6 +88,7 @@ export type MapRelation<
   Relations extends RelationThunks,
   RelationName extends keyof Relations,
   Relation extends RelationThunk = Relations[RelationName],
+  RelatedQuery extends Query = RelationScopeOrModel<Relation>,
   Info extends {
     params: Record<string, unknown>;
     populate: string;
@@ -102,9 +99,9 @@ export type MapRelation<
   Info['populate'],
   Relation['returns'] extends 'one'
     ? Relation['options']['required'] extends true
-      ? SetQueryReturnsOne<RelationScopeOrModel<Relation>>
-      : SetQueryReturnsOneOrUndefined<RelationScopeOrModel<Relation>>
-    : SetQueryReturnsAll<RelationScopeOrModel<Relation>>,
+      ? SetQueryReturnsOne<RelatedQuery>
+      : SetQueryReturnsOneOrUndefined<RelatedQuery>
+    : SetQueryReturnsAll<RelatedQuery>,
   Relation['options']['required'] extends boolean
     ? Relation['options']['required']
     : false

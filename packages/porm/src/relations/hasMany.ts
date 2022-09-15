@@ -200,13 +200,31 @@ export const makeHasManyMethod = (
     }) as HasManyNestedInsert,
     nestedUpdate: (async (q, data, params) => {
       const t = query.transacting(q);
-      if (params.disconnect) {
-        await t
-          .where<Query>({
-            [foreignKey]: { in: data.map((item) => item[primaryKey]) },
-            OR: params.disconnect,
-          })
-          ._updateOrThrow({ [foreignKey]: null });
+      if ('disconnect' in params || 'set' in params) {
+        const where: WhereArg<Query> = {
+          [foreignKey]: { in: data.map((item) => item[primaryKey]) },
+        };
+        if ('disconnect' in params) {
+          if (Array.isArray(params.disconnect)) {
+            where.OR = params.disconnect;
+          } else {
+            Object.assign(where, params.disconnect);
+          }
+        }
+
+        await t.where<Query>(where)._update({ [foreignKey]: null });
+
+        if ('set' in params) {
+          await t
+            .where<Query>(
+              Array.isArray(params.set)
+                ? {
+                    OR: params.set,
+                  }
+                : params.set,
+            )
+            ._update({ [foreignKey]: data[0][primaryKey] });
+        }
       }
     }) as HasManyNestedUpdate,
     joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),

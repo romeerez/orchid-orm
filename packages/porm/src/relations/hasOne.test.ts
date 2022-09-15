@@ -522,6 +522,30 @@ describe('hasOne', () => {
           expect(profile.userId).toBe(null);
         });
       });
+
+      describe('set', () => {
+        it('should nullify foreignKey of previous related record and set foreignKey to new related record', async () => {
+          const { id } = await db.user.select('id').insert(userData);
+          const [{ id: profile1Id }, { id: profile2Id }] = await db.profile
+            .select('id')
+            .insert([
+              { ...profileData, userId: id },
+              { ...profileData, userId: null },
+            ]);
+
+          await db.user.findBy({ id }).update({
+            profile: {
+              set: { id: profile2Id },
+            },
+          });
+
+          const profile1 = await db.profile.find(profile1Id).takeOrThrow();
+          expect(profile1.userId).toBe(null);
+
+          const profile2 = await db.profile.find(profile2Id).takeOrThrow();
+          expect(profile2.userId).toBe(id);
+        });
+      });
     });
   });
 });

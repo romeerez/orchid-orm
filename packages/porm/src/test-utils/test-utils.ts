@@ -95,6 +95,7 @@ export const insertProfile = async (
 };
 
 export const chatData = {
+  title: 'chat',
   createdAt: now,
   updatedAt: now,
 };

@@ -17,11 +17,12 @@ export interface BelongsTo extends RelationThunkBase {
   options: BelongsToRelation['options'];
 }
 
-export type BelongsToInfo<T extends Model, Relation extends BelongsTo> = {
-  params: Record<
-    Relation['options']['foreignKey'],
-    T['columns']['shape'][Relation['options']['foreignKey']]['type']
-  >;
+export type BelongsToInfo<
+  T extends Model,
+  Relation extends BelongsTo,
+  FK extends string = Relation['options']['foreignKey'],
+> = {
+  params: Record<FK, T['columns']['shape'][FK]['type']>;
   populate: never;
 };
 
@@ -112,9 +113,17 @@ export const makeBelongsToMethod = (
           : created[createdI++],
       );
     }) as BelongsToNestedInsert,
-    nestedUpdate: (async (_, data) => {
-      if (data.disconnect) {
+    nestedUpdate: (async (q, params) => {
+      if ('disconnect' in params) {
         return { [primaryKey]: null };
+      } else if ('set' in params) {
+        if (primaryKey in params.set) {
+          return {
+            [primaryKey]: params.set[primaryKey as keyof typeof params.set],
+          };
+        } else {
+          return query.transacting(q)._findBy(params.set)._takeOrThrow();
+        }
       }
       return {};
     }) as BelongsToNestedUpdate,

@@ -154,12 +154,18 @@ export const makeHasOneMethod = (
     }) as HasOneNestedInsert,
     nestedUpdate: (async (q, data, params) => {
       const t = query.transacting(q);
-      if (params.disconnect) {
+      if ('disconnect' in params || 'set' in params) {
         await t
           .where({
             [foreignKey]: { in: data.map((item) => item[primaryKey]) },
           })
           ._update({ [foreignKey]: null });
+
+        if ('set' in params) {
+          await t
+            .where<Query>(params.set)
+            ._update({ [foreignKey]: data[0][primaryKey] });
+        }
       }
     }) as HasOneNestedUpdate,
     joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),

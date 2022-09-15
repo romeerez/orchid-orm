@@ -685,6 +685,37 @@ describe('hasMany', () => {
         expect(messages[2].authorId).toBe(userId);
       });
     });
+
+    describe('set', () => {
+      it('should nullify foreignKey of previous related record and set foreignKey to new related record', async () => {
+        const { id: chatId } = await db.chat.select('id').insert(chatData);
+        const { id } = await db.user.select('id').insert({
+          ...userData,
+          messages: {
+            create: [
+              { ...messageData, chatId, text: 'message 1' },
+              { ...messageData, chatId, text: 'message 2' },
+            ],
+          },
+        });
+
+        await db.message.insert({ ...messageData, chatId, text: 'message 3' });
+
+        await db.user.findBy({ id }).update({
+          messages: {
+            set: { text: { in: ['message 2', 'message 3'] } },
+          },
+        });
+
+        const [message1, message2, message3] = await db.message.order({
+          text: 'ASC',
+        });
+
+        expect(message1.authorId).toBe(null);
+        expect(message2.authorId).toBe(id);
+        expect(message3.authorId).toBe(id);
+      });
+    });
   });
 });
 

@@ -350,6 +350,30 @@ await db.book.where({ title: 'book title' }).update({
 })
 ```
 
+### belongsTo set
+
+Set related record when updating.
+
+Following query will update `authorId` of the book:
+
+```ts
+const author = await db.author.find(1).takeOrThrow()
+
+// it will use id from the author object:
+await db.book.where({ title: 'book title' }).update({
+  author: {
+    set: author,
+  },
+})
+
+// it will find first author with given conditions to use their id
+await db.book.where({ title: 'book title' }).update({
+  author: {
+    set: { name: 'author name' }
+  },
+})
+```
+
 ## hasOne
 
 `hasOne` association indicates that one other model has a reference to this model. That model can be fetched through this association.
@@ -637,6 +661,34 @@ Following query will set `supplierId` of the account to `NULL`:
 await db.supplier.where({ brand: 'supplier brand' }).update({
   account: {
     disconnect: true,
+  },
+})
+```
+
+### hasOne set
+
+Set related record when updating.
+
+It is available only when updating one record, so query should have `findBy`, `take` or similar methods which returns one record.
+
+If related record already exists before update, it's `foreignKey` will be set to `NULL`, so foreignKey has to be nullable for this.
+
+Following query will update `supplierId` of the account, and set `supplierId` to `NULl` to the previous account if it existed.
+
+```ts
+const account = await db.account.find(1).takeOrThrow();
+
+// TypeScript error because need to use `findBy` instead of `where`:
+await db.supplier.where({ id: 1 }).update({
+  account: {
+    set: account,
+  },
+})
+
+await db.supplier.findBy({ id: 1 }).update({
+  account: {
+    // find account by id and update it's `supplierId`
+    set: { id: account.id },
   },
 })
 ```
@@ -996,6 +1048,39 @@ await db.author.where({ name: 'author name' }).update({
 })
 ```
 
+### hasMany set
+
+Set related records when updating.
+
+It is available only when updating one record, so query should have `findBy`, `take` or similar methods which returns one record.
+
+If there were related records before update, their `foreignKey` will be set to `NULL`, so the `foreignKey` column has to be nullable.
+
+Following query will update `authorId` of found books, and set `authorId` to `NULL` for the books author was connected to before.
+
+```ts
+// TypeScript error because need to use `findBy` instead of `where`:
+await db.author.where({ id: 1 }).update({
+  books: {
+    set: { id: 1 }
+  }
+})
+
+await db.author.findBy({ id: 1 }).update({
+  books: {
+    // all found books with such title will be connected to the author
+    set: { title: 'book title' }
+  }
+})
+
+await db.author.findBy({ id: 1 }).update({
+  books: {
+    // array of conditions can be provided:
+    set: [{ id: 1 }, { id: 2 }]
+  }
+})
+```
+
 ## hasAndBelongsToMany
 
 A `hasAndBelongsToMany` association creates a direct many-to-many connection with another model, with no intervening model.
@@ -1275,5 +1360,30 @@ await db.post.where({ title: 'post title' }).update({
       { name: 'some tag' }
     ],
   },
+})
+```
+
+### hasAndBelongsToMany set
+
+Set related records when updating.
+
+All records found for the update will be connected to all records found by `set` conditions.
+
+All previous rows of join table will be deleted and new ones will be created.
+
+Following query will disconnect post with previous tags and connect with new ones:
+
+```ts
+await db.post.where({ title: 'post title' }).update({
+  tags: {
+    set: { name: 'tag name' }
+  }
+})
+
+await db.post.where({ title: 'post title' }).update({
+  tags: {
+    // array of conditions can be provided:
+    set: [{ id: 1 }, { id: 2 }]
+  }
 })
 ```

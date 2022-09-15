@@ -789,5 +789,36 @@ describe('hasAndBelongsToMany', () => {
         expect(chats[0].title).toEqual('chat 3');
       });
     });
+
+    describe('set', () => {
+      it('should delete previous join records and create join records for matching related records', async () => {
+        const { id } = await db.user.select('id').insert({
+          ...userData,
+          chats: {
+            create: [
+              { ...chatData, title: 'chat 1' },
+              { ...chatData, title: 'chat 2' },
+            ],
+          },
+        });
+
+        await db.chat.insert({
+          ...chatData,
+          title: 'chat 3',
+        });
+
+        await db.user.where({ id }).update({
+          chats: {
+            set: [{ title: 'chat 2' }, { title: 'chat 3' }],
+          },
+        });
+
+        const chats = await db.user
+          .chats({ id })
+          .select('title')
+          .order({ title: 'ASC' });
+        expect(chats).toEqual([{ title: 'chat 2' }, { title: 'chat 3' }]);
+      });
+    });
   });
 });

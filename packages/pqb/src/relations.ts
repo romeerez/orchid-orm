@@ -1,5 +1,6 @@
 import { defaultsKey, Query, QueryBase, QueryWithTable } from './query';
 import { WhereArg } from './queryMethods/where';
+import { MaybeArray } from './utils';
 
 export type NestedInsertOneItem = {
   create?: Record<string, unknown>;
@@ -38,13 +39,21 @@ export type HasManyNestedInsert = (
   ][],
 ) => Promise<void>;
 
-export type NestedUpdateOneItem = {
-  disconnect?: true;
-};
+export type NestedUpdateOneItem =
+  | {
+      disconnect: true;
+    }
+  | {
+      set: WhereArg<QueryBase>;
+    };
 
-export type NestedUpdateManyItems = {
-  disconnect?: WhereArg<QueryBase>[];
-};
+export type NestedUpdateManyItems =
+  | {
+      disconnect: MaybeArray<WhereArg<QueryBase>>;
+    }
+  | {
+      set: MaybeArray<WhereArg<QueryBase>>;
+    };
 
 export type NestedUpdateItem = NestedUpdateOneItem | NestedUpdateManyItems;
 
