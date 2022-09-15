@@ -282,6 +282,31 @@ Table.select({
 })
 ```
 
+## selectAll
+
+For `SELECT` query all columns will be selected by default, but for `INSERT`, `UPDATE`, `DELETE` queries by default will be returned rows count.
+
+Use `selectAll` to select all columns. If `.select` method was applied before it will be discarded was applied before it will be discarded.
+
+```ts
+const selectFull = await Table
+  .select('id', 'name') // discarded by `selectAll`
+  .selectAll()
+
+const insertedFull = await Table
+  .selectAll()
+  .insert(data)
+
+const updatedFull = await Table
+  .selectAll()
+  .update(data)
+
+const deletedFull = await Table
+  .selectAll()
+  .where(conditions)
+  .delete()
+```
+
 ## distinct
 
 Adds a `DISTINCT` keyword to `SELECT`:

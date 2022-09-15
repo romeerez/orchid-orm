@@ -136,6 +136,15 @@ export type AddQuerySelect<
       then: QueryThen<T['returnType'], Spread<[T['result'], Result]>>;
     };
 
+export type QuerySelectAll<T extends Query> = Omit<
+  T,
+  'hasSelect' | 'result' | 'then'
+> & {
+  hasSelect: true;
+  result: T['shape'];
+  then: QueryThen<T['returnType'], T['shape']>;
+};
+
 export type SetQueryReturns<T extends Query, R extends QueryReturnType> = Omit<
   T,
   'returnType' | 'then'

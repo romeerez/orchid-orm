@@ -51,6 +51,7 @@ export type CommonQueryData = {
   with?: WithItem[];
   withShapes?: Record<string, ColumnsShape>;
   schema?: string;
+  select?: SelectItem[];
   as?: string;
   from?: string | Query | RawExpression;
   and?: WhereItem[];
@@ -65,7 +66,6 @@ export type CommonQueryData = {
 
 export type SelectQueryData = CommonQueryData & {
   type: undefined;
-  select?: SelectItem[];
   distinct?: Expression[];
   fromOnly?: boolean;
   join?: JoinItem[];

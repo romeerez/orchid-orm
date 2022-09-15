@@ -306,104 +306,106 @@ describe('selectMethods', () => {
         expect((await q.value()) instanceof Date).toBe(true);
       });
     });
-  });
 
-  it('should select columns with aliases', async () => {
-    const q = User.all();
+    it('should select columns with aliases', async () => {
+      const q = User.all();
 
-    const query = q.select({ aliasedId: 'id', aliasedName: 'name' });
+      const query = q.select({ aliasedId: 'id', aliasedName: 'name' });
 
-    const eq: AssertEqual<
-      Awaited<typeof query>,
-      { aliasedId: number; aliasedName: string }[]
-    > = true;
-    expect(eq).toBe(true);
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { aliasedId: number; aliasedName: string }[]
+      > = true;
+      expect(eq).toBe(true);
 
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
           SELECT "user"."id" AS "aliasedId", "user"."name" AS "aliasedName"
           FROM "user"
         `,
-    );
-    expectQueryNotMutated(q);
-  });
+      );
+      expectQueryNotMutated(q);
+    });
 
-  it('should select table.column with aliases', () => {
-    const q = User.all();
+    it('should select table.column with aliases', () => {
+      const q = User.all();
 
-    const query = q.select({ aliasedId: 'user.id', aliasedName: 'user.name' });
+      const query = q.select({
+        aliasedId: 'user.id',
+        aliasedName: 'user.name',
+      });
 
-    const eq: AssertEqual<
-      Awaited<typeof query>,
-      { aliasedId: number; aliasedName: string }[]
-    > = true;
-    expect(eq).toBe(true);
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { aliasedId: number; aliasedName: string }[]
+      > = true;
+      expect(eq).toBe(true);
 
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
           SELECT "user"."id" AS "aliasedId", "user"."name" AS "aliasedName"
           FROM "user"
         `,
-    );
-    expectQueryNotMutated(q);
-  });
+      );
+      expectQueryNotMutated(q);
+    });
 
-  it('should select joined columns', () => {
-    const q = User.all();
-    expectSql(
-      q
-        .join(Profile, 'profile.userId', '=', 'user.id')
-        .select({
-          aliasedId: 'user.id',
-          aliasedUserId: 'profile.userId',
-        })
-        .toSql(),
-      `
+    it('should select joined columns', () => {
+      const q = User.all();
+      expectSql(
+        q
+          .join(Profile, 'profile.userId', '=', 'user.id')
+          .select({
+            aliasedId: 'user.id',
+            aliasedUserId: 'profile.userId',
+          })
+          .toSql(),
+        `
           SELECT "user"."id" AS "aliasedId", "profile"."userId" AS "aliasedUserId"
           FROM "user"
           JOIN "profile" ON "profile"."userId" = "user"."id"
         `,
-    );
-    expectQueryNotMutated(q);
-  });
+      );
+      expectQueryNotMutated(q);
+    });
 
-  it('should select joined columns with alias', () => {
-    const q = User.all();
-    expectSql(
-      q
-        .join(Profile.as('p'), 'p.userId', '=', 'user.id')
-        .select({
-          aliasedId: 'user.id',
-          aliasedUserId: 'p.userId',
-        })
-        .toSql(),
-      `
+    it('should select joined columns with alias', () => {
+      const q = User.all();
+      expectSql(
+        q
+          .join(Profile.as('p'), 'p.userId', '=', 'user.id')
+          .select({
+            aliasedId: 'user.id',
+            aliasedUserId: 'p.userId',
+          })
+          .toSql(),
+        `
           SELECT "user"."id" AS "aliasedId", "p"."userId" AS "aliasedUserId"
           FROM "user"
           JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
         `,
-    );
-    expectQueryNotMutated(q);
-  });
+      );
+      expectQueryNotMutated(q);
+    });
 
-  it('can select raw', () => {
-    const q = User.all();
-    expectSql(
-      q.select({ one: raw('1') }).toSql(),
-      `
+    it('can select raw', () => {
+      const q = User.all();
+      expectSql(
+        q.select({ one: raw('1') }).toSql(),
+        `
           SELECT 1 AS "one" FROM "user"
         `,
-    );
-    expectQueryNotMutated(q);
-  });
+      );
+      expectQueryNotMutated(q);
+    });
 
-  it('can select subquery', () => {
-    const q = User.all();
-    expectSql(
-      q.select({ subquery: User.all() }).toSql(),
-      `
+    it('can select subquery', () => {
+      const q = User.all();
+      expectSql(
+        q.select({ subquery: User.all() }).toSql(),
+        `
           SELECT
             (
               SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
@@ -411,8 +413,17 @@ describe('selectMethods', () => {
             ) AS "subquery"
           FROM "user"
         `,
-    );
-    expectQueryNotMutated(q);
+      );
+      expectQueryNotMutated(q);
+    });
+  });
+
+  describe('selectAll', () => {
+    it('should select all columns', () => {
+      const query = User.select('id', 'name').selectAll();
+
+      expectSql(query.toSql(), `SELECT "user".* FROM "user"`);
+    });
   });
 
   describe('parse columns', () => {

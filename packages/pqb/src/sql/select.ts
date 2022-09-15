@@ -86,7 +86,9 @@ export const selectToSql = (
     const list: string[] = [];
     select.forEach((item) => {
       if (typeof item === 'string') {
-        list.push(quoteFullColumn(item, quotedAs));
+        list.push(
+          item === '*' ? `${quotedAs}.*` : quoteFullColumn(item, quotedAs),
+        );
       } else if ((item as Query).query?.[relationQueryKey]) {
         let relationQuery = (item as RelationQuery).clone();
         const as = q(getQueryAs(relationQuery));

@@ -1,4 +1,10 @@
-import { AddQuerySelect, ColumnParser, Query, QueryBase } from '../query';
+import {
+  AddQuerySelect,
+  ColumnParser,
+  Query,
+  QueryBase,
+  QuerySelectAll,
+} from '../query';
 import {
   ArrayOfColumnsObjects,
   ColumnsObject,
@@ -222,5 +228,14 @@ export class Select {
       'select',
       selectArgs,
     ) as unknown as SelectResult<T, K>;
+  }
+
+  selectAll<T extends Query>(this: T): QuerySelectAll<T> {
+    return this.clone()._selectAll();
+  }
+
+  _selectAll<T extends Query>(this: T): QuerySelectAll<T> {
+    this.query.select = ['*'];
+    return this as unknown as QuerySelectAll<T>;
   }
 }
