@@ -1,5 +1,4 @@
 import {
-  AddQuerySelect,
   Query,
   QueryBase,
   SetQueryReturnsAll,
@@ -7,7 +6,6 @@ import {
 } from '../query';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { isRaw, RawExpression } from '../common';
-import { ReturningArg } from './insert';
 import {
   BelongsToNestedUpdate,
   BelongsToRelation,
@@ -30,32 +28,19 @@ type UpdateData<T extends Query> = {
   : // eslint-disable-next-line @typescript-eslint/ban-types
     {});
 
-type UpdateArgs<T extends Query> = [
-  data: RawExpression | UpdateData<T>,
-  returning?: ReturningArg<T>,
-];
+type UpdateResult<T extends Query> = T['hasSelect'] extends false
+  ? SetQueryReturnsRowCount<T>
+  : SetQueryReturnsAll<T>;
 
-type UpdateResult<
-  T extends Query,
-  Args extends [_: unknown, returning?: ReturningArg<T>],
-> = Args[1] extends ReturningArg<T>
-  ? Args[1] extends '*'
-    ? SetQueryReturnsAll<AddQuerySelect<T, T['shape']>>
-    : SetQueryReturnsAll<AddQuerySelect<T, Pick<T['shape'], Args[1][number]>>>
-  : SetQueryReturnsRowCount<T>;
+type ChangeCountArg<T extends Query> =
+  | keyof T['shape']
+  | Partial<Record<keyof T['shape'], number>>;
 
-type ChangeCountArgs<T extends Query> =
-  | [
-      arg: keyof T['shape'] | Partial<Record<keyof T['shape'], number>>,
-      returning?: ReturningArg<T>,
-    ];
-
-const applyCountChange = <T extends Query, Args extends ChangeCountArgs<T>>(
+const applyCountChange = <T extends Query>(
   self: T,
   op: string,
-  args: Args,
+  data: ChangeCountArg<T>,
 ) => {
-  const [data, returning] = args;
   self.query.type = 'update';
 
   let map: Record<string, { op: string; arg: number }>;
@@ -69,27 +54,23 @@ const applyCountChange = <T extends Query, Args extends ChangeCountArgs<T>>(
   }
 
   pushQueryValue(self, 'data', map);
-  if (returning) {
-    pushQueryValue(self, 'returning', returning);
-  }
-  return self as unknown as UpdateResult<T, Args>;
+  return self as unknown as UpdateResult<T>;
 };
 
 export class Update {
-  update<T extends Query, Args extends UpdateArgs<T>>(
+  update<T extends Query>(
     this: T,
-    ...args: Args
-  ): UpdateResult<T, Args> {
+    data: RawExpression | UpdateData<T>,
+  ): UpdateResult<T> {
     const q = this.clone() as T;
-    return q._update(...args);
+    return q._update(data);
   }
 
-  _update<T extends Query, Args extends UpdateArgs<T>>(
+  _update<T extends Query>(
     this: T,
-    ...args: Args
-  ): UpdateResult<T, Args> {
-    const data = args[0];
-    let returning = args[1];
+    data: RawExpression | UpdateData<T>,
+  ): UpdateResult<T> {
+    let returning = this.query.select;
     this.query.type = 'update';
     this.returnType = returning ? 'all' : 'rowCount';
 
@@ -108,7 +89,7 @@ export class Update {
           if (relations[key].type === 'belongsTo') {
             prependRelations[key] = data[key] as Record<string, unknown>;
           } else {
-            if (returning !== '*') {
+            if (!returning?.includes('*')) {
               const primaryKey = relations[key].primaryKey;
               if (!returning) {
                 returning = [primaryKey];
@@ -169,53 +150,53 @@ export class Update {
     }
 
     if (returning) {
-      pushQueryValue(this, 'returning', returning);
+      this.query.select = returning;
     }
 
-    return this as unknown as UpdateResult<T, Args>;
+    return this as unknown as UpdateResult<T>;
   }
 
-  updateOrThrow<T extends Query, Args extends UpdateArgs<T>>(
+  updateOrThrow<T extends Query>(
     this: T,
-    ...args: Args
-  ): UpdateResult<T, Args> {
+    data: RawExpression | UpdateData<T>,
+  ): UpdateResult<T> {
     const q = this.clone() as T;
-    return q._updateOrThrow(...args);
+    return q._updateOrThrow(data);
   }
 
-  _updateOrThrow<T extends Query, Args extends UpdateArgs<T>>(
+  _updateOrThrow<T extends Query>(
     this: T,
-    ...args: Args
-  ): UpdateResult<T, Args> {
+    data: RawExpression | UpdateData<T>,
+  ): UpdateResult<T> {
     this.query.throwOnNotFound = true;
-    return this._update(...args) as unknown as UpdateResult<T, Args>;
+    return this._update(data) as unknown as UpdateResult<T>;
   }
 
-  increment<T extends Query, Args extends ChangeCountArgs<T>>(
+  increment<T extends Query>(
     this: T,
-    ...args: Args
-  ): UpdateResult<T, Args> {
-    return this.clone()._increment(...args) as unknown as UpdateResult<T, Args>;
+    data: ChangeCountArg<T>,
+  ): UpdateResult<T> {
+    return this.clone()._increment(data) as unknown as UpdateResult<T>;
   }
 
-  _increment<T extends Query, Args extends ChangeCountArgs<T>>(
+  _increment<T extends Query>(
     this: T,
-    ...args: Args
-  ): UpdateResult<T, Args> {
-    return applyCountChange(this, '+', args);
+    data: ChangeCountArg<T>,
+  ): UpdateResult<T> {
+    return applyCountChange(this, '+', data);
   }
 
-  decrement<T extends Query, Args extends ChangeCountArgs<T>>(
+  decrement<T extends Query>(
     this: T,
-    ...args: Args
-  ): UpdateResult<T, Args> {
-    return this.clone()._decrement(...args) as unknown as UpdateResult<T, Args>;
+    data: ChangeCountArg<T>,
+  ): UpdateResult<T> {
+    return this.clone()._decrement(data) as unknown as UpdateResult<T>;
   }
 
-  _decrement<T extends Query, Args extends ChangeCountArgs<T>>(
+  _decrement<T extends Query>(
     this: T,
-    ...args: Args
-  ): UpdateResult<T, Args> {
-    return applyCountChange(this, '-', args);
+    data: ChangeCountArg<T>,
+  ): UpdateResult<T> {
+    return applyCountChange(this, '-', data);
   }
 }

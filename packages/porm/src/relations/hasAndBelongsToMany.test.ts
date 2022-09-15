@@ -51,7 +51,7 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         query.toSql(),
         `
-        SELECT "chats".* FROM "chat" AS "chats"
+        SELECT * FROM "chat" AS "chats"
         WHERE EXISTS (
           SELECT 1 FROM "chatUser"
           WHERE "chatUser"."chatId" = "chats"."id"
@@ -71,7 +71,7 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         db.user.relations.chats.joinQuery.toSql(),
         `
-        SELECT "chats".* FROM "chat" AS "chats"
+        SELECT * FROM "chat" AS "chats"
         WHERE EXISTS (
           SELECT 1 FROM "chatUser"
           WHERE "chatUser"."chatId" = "chats"."id"
@@ -86,7 +86,7 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         db.user.whereExists('chats').toSql(),
         `
-        SELECT "user".* FROM "user"
+        SELECT * FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "chat" AS "chats"
           WHERE EXISTS (
@@ -105,7 +105,7 @@ describe('hasAndBelongsToMany', () => {
           .whereExists('chats', (q) => q.where({ 'user.name': 'name' }))
           .toSql(),
         `
-        SELECT "user".* FROM "user"
+        SELECT * FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "chat" AS "chats"
           WHERE EXISTS (
@@ -204,7 +204,7 @@ describe('hasAndBelongsToMany', () => {
               (
                 SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
                 FROM (
-                  SELECT "chats".* FROM "chat" AS "chats"
+                  SELECT * FROM "chat" AS "chats"
                   WHERE EXISTS (
                     SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."chatId" = "chats"."id"
@@ -333,25 +333,22 @@ describe('hasAndBelongsToMany', () => {
     };
 
     it('should support create', async () => {
-      const query = db.user.insert(
-        {
-          name: 'user 1',
-          ...userData,
-          chats: {
-            create: [
-              {
-                ...chatData,
-                title: 'chat 1',
-              },
-              {
-                ...chatData,
-                title: 'chat 2',
-              },
-            ],
-          },
+      const query = db.user.select('id').insert({
+        name: 'user 1',
+        ...userData,
+        chats: {
+          create: [
+            {
+              ...chatData,
+              title: 'chat 1',
+            },
+            {
+              ...chatData,
+              title: 'chat 2',
+            },
+          ],
         },
-        ['id'],
-      );
+      });
 
       const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
       const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
@@ -398,43 +395,40 @@ describe('hasAndBelongsToMany', () => {
     });
 
     it('should support create many', async () => {
-      const query = db.user.insert(
-        [
-          {
-            name: 'user 1',
-            ...userData,
-            chats: {
-              create: [
-                {
-                  title: 'chat 1',
-                  ...chatData,
-                },
-                {
-                  title: 'chat 2',
-                  ...chatData,
-                },
-              ],
-            },
+      const query = db.user.select('id').insert([
+        {
+          name: 'user 1',
+          ...userData,
+          chats: {
+            create: [
+              {
+                title: 'chat 1',
+                ...chatData,
+              },
+              {
+                title: 'chat 2',
+                ...chatData,
+              },
+            ],
           },
-          {
-            name: 'user 2',
-            ...userData,
-            chats: {
-              create: [
-                {
-                  title: 'chat 3',
-                  ...chatData,
-                },
-                {
-                  title: 'chat 4',
-                  ...chatData,
-                },
-              ],
-            },
+        },
+        {
+          name: 'user 2',
+          ...userData,
+          chats: {
+            create: [
+              {
+                title: 'chat 3',
+                ...chatData,
+              },
+              {
+                title: 'chat 4',
+                ...chatData,
+              },
+            ],
           },
-        ],
-        ['id'],
-      );
+        },
+      ]);
 
       const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
       const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
@@ -505,23 +499,20 @@ describe('hasAndBelongsToMany', () => {
         { ...chatData, title: 'chat 2' },
       ]);
 
-      const query = db.user.insert(
-        {
-          name: 'user 1',
-          ...userData,
-          chats: {
-            connect: [
-              {
-                title: 'chat 1',
-              },
-              {
-                title: 'chat 2',
-              },
-            ],
-          },
+      const query = db.user.select('id').insert({
+        name: 'user 1',
+        ...userData,
+        chats: {
+          connect: [
+            {
+              title: 'chat 1',
+            },
+            {
+              title: 'chat 2',
+            },
+          ],
         },
-        ['id'],
-      );
+      });
 
       const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
       const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
@@ -578,39 +569,36 @@ describe('hasAndBelongsToMany', () => {
         { ...chatData, title: 'chat 4' },
       ]);
 
-      const query = db.user.insert(
-        [
-          {
-            name: 'user 1',
-            ...userData,
-            chats: {
-              connect: [
-                {
-                  title: 'chat 1',
-                },
-                {
-                  title: 'chat 2',
-                },
-              ],
-            },
+      const query = db.user.select('id').insert([
+        {
+          name: 'user 1',
+          ...userData,
+          chats: {
+            connect: [
+              {
+                title: 'chat 1',
+              },
+              {
+                title: 'chat 2',
+              },
+            ],
           },
-          {
-            name: 'user 2',
-            ...userData,
-            chats: {
-              connect: [
-                {
-                  title: 'chat 3',
-                },
-                {
-                  title: 'chat 4',
-                },
-              ],
-            },
+        },
+        {
+          name: 'user 2',
+          ...userData,
+          chats: {
+            connect: [
+              {
+                title: 'chat 3',
+              },
+              {
+                title: 'chat 4',
+              },
+            ],
           },
-        ],
-        ['id'],
-      );
+        },
+      ]);
 
       const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
       const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
@@ -666,33 +654,27 @@ describe('hasAndBelongsToMany', () => {
     });
 
     it('should support connect or create', async () => {
-      const { id: chatId } = await db.chat.insert(
-        {
-          ...chatData,
-          title: 'chat 1',
-        },
-        ['id'],
-      );
+      const { id: chatId } = await db.chat.select('id').insert({
+        ...chatData,
+        title: 'chat 1',
+      });
 
-      const query = db.user.insert(
-        {
-          name: 'user 1',
-          ...userData,
-          chats: {
-            connectOrCreate: [
-              {
-                where: { title: 'chat 1' },
-                create: { title: 'chat 1', ...chatData },
-              },
-              {
-                where: { title: 'chat 2' },
-                create: { title: 'chat 2', ...chatData },
-              },
-            ],
-          },
+      const query = db.user.selectAll().insert({
+        name: 'user 1',
+        ...userData,
+        chats: {
+          connectOrCreate: [
+            {
+              where: { title: 'chat 1' },
+              create: { title: 'chat 1', ...chatData },
+            },
+            {
+              where: { title: 'chat 2' },
+              create: { title: 'chat 2', ...chatData },
+            },
+          ],
         },
-        '*',
-      );
+      });
 
       const user = await query;
       const chats = await db.user.chats(user).order({ title: 'ASC' });
@@ -709,8 +691,9 @@ describe('hasAndBelongsToMany', () => {
     });
 
     it('should support connect or create many', async () => {
-      const [{ id: chat1Id }, { id: chat4Id }] = await db.chat.insert(
-        [
+      const [{ id: chat1Id }, { id: chat4Id }] = await db.chat
+        .select('id')
+        .insert([
           {
             ...chatData,
             title: 'chat 1',
@@ -719,47 +702,42 @@ describe('hasAndBelongsToMany', () => {
             ...chatData,
             title: 'chat 4',
           },
-        ],
-        ['id'],
-      );
+        ]);
 
-      const query = db.user.insert(
-        [
-          {
-            name: 'user 1',
-            ...userData,
-            chats: {
-              connectOrCreate: [
-                {
-                  where: { title: 'chat 1' },
-                  create: { title: 'chat 1', ...chatData },
-                },
-                {
-                  where: { title: 'chat 2' },
-                  create: { title: 'chat 2', ...chatData },
-                },
-              ],
-            },
+      const query = db.user.selectAll().insert([
+        {
+          name: 'user 1',
+          ...userData,
+          chats: {
+            connectOrCreate: [
+              {
+                where: { title: 'chat 1' },
+                create: { title: 'chat 1', ...chatData },
+              },
+              {
+                where: { title: 'chat 2' },
+                create: { title: 'chat 2', ...chatData },
+              },
+            ],
           },
-          {
-            name: 'user 2',
-            ...userData,
-            chats: {
-              connectOrCreate: [
-                {
-                  where: { title: 'chat 3' },
-                  create: { title: 'chat 3', ...chatData },
-                },
-                {
-                  where: { title: 'chat 4' },
-                  create: { title: 'chat 4', ...chatData },
-                },
-              ],
-            },
+        },
+        {
+          name: 'user 2',
+          ...userData,
+          chats: {
+            connectOrCreate: [
+              {
+                where: { title: 'chat 3' },
+                create: { title: 'chat 3', ...chatData },
+              },
+              {
+                where: { title: 'chat 4' },
+                create: { title: 'chat 4', ...chatData },
+              },
+            ],
           },
-        ],
-        '*',
-      );
+        },
+      ]);
 
       const users = await query;
       const chats = await db.chat.order({ title: 'ASC' });
@@ -788,20 +766,17 @@ describe('hasAndBelongsToMany', () => {
   describe('update', () => {
     describe('disconnect', () => {
       it('should delete join table rows', async () => {
-        const { id: userId } = await db.user.insert(
-          {
-            ...userData,
-            name: 'user',
-            chats: {
-              create: [
-                { ...chatData, title: 'chat 1' },
-                { ...chatData, title: 'chat 2' },
-                { ...chatData, title: 'chat 3' },
-              ],
-            },
+        const { id: userId } = await db.user.select('id').insert({
+          ...userData,
+          name: 'user',
+          chats: {
+            create: [
+              { ...chatData, title: 'chat 1' },
+              { ...chatData, title: 'chat 2' },
+              { ...chatData, title: 'chat 3' },
+            ],
           },
-          ['id'],
-        );
+        });
 
         await db.user.where({ id: userId }).update({
           chats: {

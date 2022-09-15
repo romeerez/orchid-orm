@@ -37,7 +37,7 @@ describe('with', () => {
     } (
           ${sql}
         )
-        SELECT "withAlias".*
+        SELECT *
         FROM "withAlias"
       `;
   };
@@ -90,7 +90,7 @@ describe('with', () => {
           .from('withAlias')
           .toSql(),
         getExpectedWithSql(
-          'SELECT "user".* FROM "user"',
+          'SELECT * FROM "user"',
           Object.keys(User.shape),
           options,
         ),
@@ -159,7 +159,7 @@ describe('with', () => {
 
     const expected = `
       WITH "withAlias" AS (
-        SELECT "user".* FROM "user"
+        SELECT * FROM "user"
       )
       SELECT "withAlias"."id" FROM "user"
       JOIN "withAlias" ON "withAlias"."id" = "user"."id"
@@ -180,7 +180,7 @@ describe('with', () => {
       q.with('withAlias', User.all()).from('withAlias').select('id').toSql(),
       `
         WITH "withAlias" AS (
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
         )
         SELECT "withAlias"."id" FROM "withAlias"
       `,

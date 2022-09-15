@@ -19,7 +19,7 @@ describe('json methods', () => {
         `
           SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
           FROM (
-            SELECT "user".* FROM "user"
+            SELECT * FROM "user"
             WHERE "user"."id" = $1
           ) AS "t"
         `,
@@ -35,7 +35,7 @@ describe('json methods', () => {
         `
           SELECT row_to_json("t".*) AS "json"
           FROM (
-            SELECT "user".* FROM "user"
+            SELECT * FROM "user"
             WHERE "user"."id" = $1
             LIMIT $2
           ) AS "t"

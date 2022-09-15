@@ -60,7 +60,7 @@ describe('transaction', () => {
         spy.mock.calls.map(
           (call) => (call[0] as unknown as { text: string }).text,
         ),
-      ).toEqual(['BEGIN', 'SELECT "user".* FROM "user"', 'COMMIT']);
+      ).toEqual(['BEGIN', 'SELECT * FROM "user"', 'COMMIT']);
     });
   });
 });

@@ -1,10 +1,9 @@
 import {
-  AddQuerySelect,
   defaultsKey,
   Query,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
-  SetQueryReturnsVoid,
+  SetQueryReturnsRowCount,
 } from '../query';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { isRaw, RawExpression } from '../common';
@@ -20,8 +19,6 @@ import {
 import { SetOptional } from '../utils';
 import { InsertQueryData, OnConflictItem, OnConflictMergeUpdate } from '../sql';
 import { WhereArg } from './where';
-
-export type ReturningArg<T extends Query> = (keyof T['shape'])[] | '*';
 
 export type OptionalKeys<T extends Query> = {
   [K in keyof T['shape']]: T['shape'][K]['isPrimaryKey'] extends true
@@ -98,23 +95,13 @@ export type InsertData<
             {};
       }[keyof T['relations']];
 
-type InsertOneResult<
-  T extends Query,
-  Returning extends ReturningArg<T> | undefined,
-> = Returning extends ReturningArg<T>
-  ? Returning extends '*'
-    ? SetQueryReturnsOne<AddQuerySelect<T, T['shape']>>
-    : SetQueryReturnsOne<AddQuerySelect<T, Pick<T['shape'], Returning[number]>>>
-  : SetQueryReturnsVoid<T>;
+type InsertOneResult<T extends Query> = T['hasSelect'] extends false
+  ? SetQueryReturnsRowCount<T>
+  : SetQueryReturnsOne<T>;
 
-type InsertManyResult<
-  T extends Query,
-  Returning extends ReturningArg<T> | undefined,
-> = Returning extends ReturningArg<T>
-  ? Returning extends '*'
-    ? SetQueryReturnsAll<AddQuerySelect<T, T['shape']>>
-    : SetQueryReturnsAll<AddQuerySelect<T, Pick<T['shape'], Returning[number]>>>
-  : SetQueryReturnsVoid<T>;
+type InsertManyResult<T extends Query> = T['hasSelect'] extends false
+  ? SetQueryReturnsRowCount<T>
+  : SetQueryReturnsAll<T>;
 
 type OnConflictArg<T extends Query> =
   | keyof T['shape']
@@ -175,58 +162,30 @@ const processInsertItem = (
 };
 
 export class Insert {
-  insert<
-    T extends Query,
-    Returning extends ReturningArg<T> | undefined = undefined,
-  >(
-    this: T,
-    data: InsertData<T>,
-    returning?: Returning,
-  ): InsertOneResult<T, Returning>;
-  insert<
-    T extends Query,
-    Returning extends ReturningArg<T> | undefined = undefined,
-  >(
+  insert<T extends Query>(this: T, data: InsertData<T>): InsertOneResult<T>;
+  insert<T extends Query>(
     this: T,
     data: InsertData<T>[] | { columns: string[]; values: RawExpression },
-    returning?: Returning,
-  ): InsertManyResult<T, Returning>;
-  insert(
-    this: Query,
-    data: InsertData<Query> & InsertData<Query>[],
-    returning?: ReturningArg<Query>,
-  ) {
-    return this.clone()._insert(data, returning) as unknown as InsertOneResult<
-      Query,
-      ReturningArg<Query>
-    > &
-      InsertManyResult<Query, ReturningArg<Query>>;
+  ): InsertManyResult<T>;
+  insert(this: Query, data: InsertData<Query> & InsertData<Query>[]) {
+    return this.clone()._insert(data) as unknown as InsertOneResult<Query> &
+      InsertManyResult<Query>;
   }
 
-  _insert<
-    T extends Query,
-    Returning extends ReturningArg<T> | undefined = undefined,
-  >(
-    this: T,
-    data: InsertData<T>,
-    returning?: Returning,
-  ): InsertOneResult<T, Returning>;
-  _insert<
-    T extends Query,
-    Returning extends ReturningArg<T> | undefined = undefined,
-  >(
+  _insert<T extends Query>(this: T, data: InsertData<T>): InsertOneResult<T>;
+  _insert<T extends Query>(
     this: T,
     data: InsertData<T>[] | { columns: string[]; values: RawExpression },
-    returning?: Returning,
-  ): InsertManyResult<T, Returning>;
+  ): InsertManyResult<T>;
   _insert(
     data:
       | Record<string, unknown>
       | Record<string, unknown>[]
       | { columns: string[]; values: RawExpression },
-    returning?: ReturningArg<Query>,
   ) {
     const q = this as unknown as Query & { query: InsertQueryData };
+    let returning = q.query.select;
+
     delete q.query.and;
     delete q.query.or;
 
@@ -326,7 +285,7 @@ export class Insert {
 
     const appendRelationsKeys = Object.keys(appendRelations);
     if (appendRelationsKeys.length) {
-      if (returning !== '*') {
+      if (!returning?.includes('*')) {
         const requiredColumns = Object.keys(requiredReturning);
 
         if (!returning) {
@@ -376,8 +335,7 @@ export class Insert {
       q.returnType = 'rowCount';
     }
 
-    return q as unknown as InsertOneResult<Query, ReturningArg<Query>> &
-      InsertManyResult<Query, ReturningArg<Query>>;
+    return q as unknown as InsertOneResult<Query> & InsertManyResult<Query>;
   }
 
   defaults<T extends Query, Data extends Partial<InsertData<T>>>(

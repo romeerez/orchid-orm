@@ -1218,7 +1218,7 @@ export const testWhere = (
     testJoin(
       'whereExists',
       (target: string, conditions: string) => `
-        SELECT "user".* FROM "user"
+        SELECT * FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM ${target}
           WHERE ${conditions}
@@ -1232,7 +1232,7 @@ export const testWhere = (
     testJoin(
       'orWhereExists',
       (target: string, conditions: string) => `
-        SELECT "user".* FROM "user"
+        SELECT * FROM "user"
         WHERE "user"."id" = $1 OR EXISTS (
           SELECT 1 FROM ${target}
           WHERE ${conditions}
@@ -1248,7 +1248,7 @@ export const testWhere = (
     testJoin(
       'whereNotExists',
       (target: string, conditions: string) => `
-        SELECT "user".* FROM "user"
+        SELECT * FROM "user"
         WHERE NOT EXISTS (
           SELECT 1 FROM ${target}
           WHERE ${conditions}
@@ -1262,7 +1262,7 @@ export const testWhere = (
     testJoin(
       'orWhereNotExists',
       (target: string, conditions: string) => `
-        SELECT "user".* FROM "user"
+        SELECT * FROM "user"
         WHERE "user"."id" = $1 OR NOT EXISTS (
           SELECT 1 FROM ${target}
           WHERE ${conditions}
@@ -1457,6 +1457,6 @@ const buildSql = (cb: (q: Query) => Query) => {
   return cb(User.all()).toSql();
 };
 
-const startSql = `SELECT "user".* FROM "user" WHERE`;
+const startSql = `SELECT * FROM "user" WHERE`;
 
 testWhere(buildSql, startSql);

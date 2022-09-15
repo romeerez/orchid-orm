@@ -37,5 +37,5 @@ export const pushDeleteSql = (
     }
   }
 
-  pushReturningSql(sql, quotedAs, query.returning);
+  pushReturningSql(sql, model, query, values, quotedAs);
 };

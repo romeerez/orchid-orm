@@ -260,17 +260,14 @@ Insert book with author all at once:
 This will run two insert queries in a transaction.
 
 ```ts
-const result: Pick<Book, 'id' | 'authorId'> = await db.book.insert(
-  {
-    title: 'Book title',
-    author: {
-      create: {
-        name: 'Author',
-      }
+const result = await db.book.selectAll().insert({
+  title: 'Book title',
+  author: {
+    create: {
+      name: 'Author',
     }
-  },
-  ['id', 'authorId']
-)
+  }
+})
 ```
 
 Insert many books with authors:
@@ -278,27 +275,24 @@ Insert many books with authors:
 This will also run only two insert queries in a transaction.
 
 ```ts
-const result: Pick<Book, 'id' | 'authorId'>[] = await db.book.insert(
-  [
-    {
-      title: 'Book 1',
-      author: {
-        create: {
-          name: 'Author 1',
-        }
+const result = await db.book.selectAll().insert([
+  {
+    title: 'Book 1',
+    author: {
+      create: {
+        name: 'Author 1',
       }
-    },
-    {
-      title: 'Book 2',
-      author: {
-        create: {
-          name: 'Author 2',
-        }
+    }
+  },
+  {
+    title: 'Book 2',
+    author: {
+      create: {
+        name: 'Author 2',
       }
-    },
-  ],
-  ['id', 'authorId']
-)
+    }
+  },
+])
 ```
 
 ### belongsTo connect in insert
@@ -310,16 +304,14 @@ This will search a record by provided where condition, throw if not found, and u
 Also supported when inserting multiple records.
 
 ```ts
-const result: Pick<Book, 'id' | 'authorId'> =  await db.book.insert(
-  {
-    title: 'Book title',
-    author: {
-      connect: {
-        name: 'Author',
-      }
+const result = await db.book.selectAll().insert({
+  title: 'Book title',
+  author: {
+    connect: {
+      name: 'Author',
     }
   }
-)
+})
 ```
 
 ### belongsTo connect or create
@@ -329,19 +321,17 @@ Specify both `connect` and `create` properties to first look for record to conne
 Also supported when inserting multiple records.
 
 ```ts
-const result: Pick<Book, 'id' | 'authorId'> =  await db.book.insert(
-  {
-    title: 'Book title',
-    author: {
-      connect: {
-        name: 'Author',
-      },
-      create: {
-        name: 'Author',
-      }
+const result = await db.book.selectAll().insert({
+  title: 'Book title',
+  author: {
+    connect: {
+      name: 'Author',
+    },
+    create: {
+      name: 'Author',
     }
   }
-)
+})
 ```
 
 ### belongsTo disconnect
@@ -561,17 +551,14 @@ Insert supplier with account all at once:
 This will run two insert queries in a transaction.
 
 ```ts
-const result: Pick<Supplier, 'id'> = db.supplier.insert(
-  {
-    brand: 'Supplier 1',
-    account: {
-      create: {
-        name: 'Account 1',
-      }
+const result = db.supplier.selectAll().insert({
+  brand: 'Supplier 1',
+  account: {
+    create: {
+      name: 'Account 1',
     }
-  },
-  ['id']
-)
+  }
+})
 ```
 
 Insert many suppliers with authors:
@@ -579,27 +566,24 @@ Insert many suppliers with authors:
 This will also run only two insert queries in a transaction.
 
 ```ts
-const result: Pick<Supplier, 'id'>[] = await db.supplier.insert(
-  [
-    {
-      brand: 'Supplier 1',
-      account: {
-        create: {
-          name: 'Author 1',
-        }
+const result = await db.supplier.selectAll().insert([
+  {
+    brand: 'Supplier 1',
+    account: {
+      create: {
+        name: 'Author 1',
       }
-    },
-    {
-      brand: 'Supplier 2',
-      account: {
-        create: {
-          name: 'Author 2',
-        }
+    }
+  },
+  {
+    brand: 'Supplier 2',
+    account: {
+      create: {
+        name: 'Author 2',
       }
-    },
-  ],
-  ['id']
-)
+    }
+  },
+])
 ```
 
 ### hasOne connect in insert
@@ -611,17 +595,14 @@ This will search a record by provided where condition, throw if not found, and u
 Also supported when inserting multiple records.
 
 ```ts
-const result: Pick<Supplier, 'id'> = db.supplier.insert(
-  {
-    brand: 'Supplier 1',
-    account: {
-      connect: {
-        name: 'Account 1',
-      }
+const result = db.supplier.selectAll().insert({
+  brand: 'Supplier 1',
+  account: {
+    connect: {
+      name: 'Account 1',
     }
-  },
-  ['id']
-)
+  }
+})
 ```
 
 ### hasOne connect or create
@@ -631,20 +612,17 @@ Specify both `connect` and `create` properties to first look for record to conne
 Also supported when inserting multiple records.
 
 ```ts
-const result: Pick<Supplier, 'id'> = db.supplier.insert(
-  {
-    brand: 'Supplier 1',
-    account: {
-      connect: {
-        name: 'Account 1',
-      },
-      create: {
-        name: 'Account 1',
-      }
+const result = db.supplier.selectAll().insert({
+  brand: 'Supplier 1',
+  account: {
+    connect: {
+      name: 'Account 1',
+    },
+    create: {
+      name: 'Account 1',
     }
-  },
-  ['id']
-)
+  }
+})
 ```
 
 ### hasOne disconnect
@@ -899,9 +877,29 @@ Insert author with books all at once:
 This will run two insert queries in a transaction.
 
 ```ts
-const result: Pick<Author, 'id'> = await db.author.insert(
+const result = await db.author.selectAll().insert({
+  name: 'Author',
+  books: {
+    create: [
+      {
+        title: 'Book 1',
+      },
+      {
+        title: 'Book 2',
+      },
+    ]
+  }
+})
+```
+
+Insert many authors with books:
+
+This will also run only two insert queries in a transaction.
+
+```ts
+const result = await db.author.selectAll().insert([
   {
-    name: 'Author',
+    name: 'Author 1',
     books: {
       create: [
         {
@@ -910,49 +908,23 @@ const result: Pick<Author, 'id'> = await db.author.insert(
         {
           title: 'Book 2',
         },
-      ]
+      ],
+    },
+  },
+  {
+    name: 'Author 2',
+    books: {
+      create: [
+        {
+          title: 'Book 3',
+        },
+        {
+          title: 'Book 4',
+        },
+      ],
     }
   },
-  ['id']
-)
-```
-
-Insert many authors with books:
-
-This will also run only two insert queries in a transaction.
-
-```ts
-const result: Pick<Author, 'id'>[] = await db.author.insert(
-  [
-    {
-      name: 'Author 1',
-      books: {
-        create: [
-          {
-            title: 'Book 1',
-          },
-          {
-            title: 'Book 2',
-          },
-        ],
-      },
-    },
-    {
-      name: 'Author 2',
-      books: {
-        create: [
-          {
-            title: 'Book 3',
-          },
-          {
-            title: 'Book 4',
-          },
-        ],
-      }
-    },
-  ],
-  ['id']
-)
+])
 ```
 
 ### hasMany connect in insert
@@ -964,22 +936,19 @@ This will search one record per provided where condition, throw if any of them i
 Also supported when inserting multiple records.
 
 ```ts
-const result: Pick<Author, 'id'> = await db.author.insert(
-  {
-    name: 'Author',
-    books: {
-      connect: [
-        {
-          title: 'Book 1',
-        },
-        {
-          title: 'Book 2',
-        },
-      ]
-    }
-  },
-  ['id']
-)
+const result = await db.author.selectAll().insert({
+  name: 'Author',
+  books: {
+    connect: [
+      {
+        title: 'Book 1',
+      },
+      {
+        title: 'Book 2',
+      },
+    ]
+  }
+})
 ```
 
 ### hasMany connectOrCreate
@@ -989,24 +958,21 @@ Specify `connectOrCreate` object with `where` and `connect` properties to first 
 Also supported when inserting multiple records.
 
 ```ts
-const result: Pick<Author, 'id'> = await db.author.insert(
-  {
-    name: 'Author',
-    books: {
-      connectOrCreate: [
-        {
-          where: { title: 'Book 1' },
-          create: { title: 'Book 1' },
-        },
-        {
-          where: { title: 'Book 2' },
-          create: { title: 'Book 2' },
-        },
-      ]
-    }
-  },
-  ['id']
-)
+const result = await db.author.selectAll().insert({
+  name: 'Author',
+  books: {
+    connectOrCreate: [
+      {
+        where: { title: 'Book 1' },
+        create: { title: 'Book 1' },
+      },
+      {
+        where: { title: 'Book 2' },
+        create: { title: 'Book 2' },
+      },
+    ]
+  }
+})
 ```
 
 ### hasMany disconnect
@@ -1193,9 +1159,29 @@ Insert post with tags all at once:
 This will run three insert queries in a transaction. One insert for post, one for tags and one for join table.
 
 ```ts
-const result: Pick<Post, 'id'> = await db.post.insert(
+const result = await db.post.selectAll().insert({
+  title: 'Post',
+  tags: {
+    create: [
+      {
+        name: 'Tag 1',
+      },
+      {
+        name: 'Tag 2',
+      },
+    ]
+  }
+})
+```
+
+Insert many posts with tags:
+
+This will also run only three insert queries in a transaction.
+
+```ts
+const result = await db.post.selectAll().insert([
   {
-    title: 'Post',
+    title: 'Post 1',
     tags: {
       create: [
         {
@@ -1204,49 +1190,23 @@ const result: Pick<Post, 'id'> = await db.post.insert(
         {
           name: 'Tag 2',
         },
-      ]
+      ],
+    },
+  },
+  {
+    title: 'Post 2',
+    tags: {
+      create: [
+        {
+          name: 'Tag 3',
+        },
+        {
+          name: 'Tag 4',
+        },
+      ],
     }
   },
-  ['id']
-)
-```
-
-Insert many posts with tags:
-
-This will also run only three insert queries in a transaction.
-
-```ts
-const result: Pick<Post, 'id'>[] = await db.post.insert(
-  [
-    {
-      title: 'Post 1',
-      tags: {
-        create: [
-          {
-            name: 'Tag 1',
-          },
-          {
-            name: 'Tag 2',
-          },
-        ],
-      },
-    },
-    {
-      title: 'Post 2',
-      tags: {
-        create: [
-          {
-            name: 'Tag 3',
-          },
-          {
-            name: 'Tag 4',
-          },
-        ],
-      }
-    },
-  ],
-  ['id']
-)
+])
 ```
 
 ### hasAndBelongsToMany connect in insert
@@ -1258,22 +1218,19 @@ This will search one record per provided where condition, throw if any of them i
 It is supported in insert multiple as well.
 
 ```ts
-const result: Pick<Post, 'id'> = await db.post.insert(
-  {
-    title: 'Post',
-    tags: {
-      connect: [
-        {
-          name: 'Tag 1',
-        },
-        {
-          name: 'Tag 2',
-        },
-      ]
-    }
-  },
-  ['id']
-)
+const result = await db.post.selectAll().insert({
+  title: 'Post',
+  tags: {
+    connect: [
+      {
+        name: 'Tag 1',
+      },
+      {
+        name: 'Tag 2',
+      },
+    ]
+  }
+})
 ```
 
 ### hasAndBelongsToMany connectOrCreate
@@ -1283,24 +1240,21 @@ Specify `connectOrCreate` object with `where` and `connect` properties to first 
 Also supported when inserting multiple records.
 
 ```ts
-const result: Pick<Post, 'id'> = await db.post.insert(
-  {
-    title: 'Post',
-    tags: {
-      connectOrCreate: [
-        {
-          where: { name: 'Tag 1' },
-          create: { name: 'Tag 1' },
-        },
-        {
-          where: { name: 'Tag 2' },
-          create: { name: 'Tag 2' },
-        },
-      ]
-    }
-  },
-  ['id']
-)
+const result = await db.post.selectAll().insert({
+  title: 'Post',
+  tags: {
+    connectOrCreate: [
+      {
+        where: { name: 'Tag 1' },
+        create: { name: 'Tag 1' },
+      },
+      {
+        where: { name: 'Tag 2' },
+        create: { name: 'Tag 2' },
+      },
+    ]
+  }
+})
 ```
 
 ### hasAndBelongsToMany disconnect

@@ -7,7 +7,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { equals: 'name' } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" = $1
         `,
         ['name'],
@@ -18,7 +18,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { equals: User.select('name').take() } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" = (SELECT "user"."name" FROM "user" LIMIT $1)
         `,
         [1],
@@ -29,7 +29,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { equals: raw("'name'") } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" = 'name'
         `,
       );
@@ -41,7 +41,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { not: 'name' } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" <> $1
         `,
         ['name'],
@@ -52,7 +52,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { not: User.select('name').take() } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" <> (SELECT "user"."name" FROM "user" LIMIT $1)
         `,
         [1],
@@ -63,7 +63,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { not: raw("'name'") } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" <> 'name'
         `,
       );
@@ -75,7 +75,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { in: ['a', 'b'] } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" IN ($1, $2)
         `,
         ['a', 'b'],
@@ -86,7 +86,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { in: User.select('name') } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" IN (SELECT "user"."name" FROM "user")
         `,
       );
@@ -96,7 +96,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { in: raw("('a', 'b')") } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" IN ('a', 'b')
         `,
       );
@@ -108,7 +108,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { notIn: ['a', 'b'] } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" NOT IN ($1, $2)
         `,
         ['a', 'b'],
@@ -119,7 +119,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { notIn: User.select('name') } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" NOT IN (SELECT "user"."name" FROM "user")
         `,
       );
@@ -129,7 +129,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { notIn: raw("('a', 'b')") } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" NOT IN ('a', 'b')
         `,
       );
@@ -141,7 +141,7 @@ describe('operators', () => {
       expectSql(
         User.where({ id: { lt: 5 } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."id" < $1
         `,
         [5],
@@ -152,7 +152,7 @@ describe('operators', () => {
       expectSql(
         User.where({ id: { lt: User.select('id').take() } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."id" < (SELECT "user"."id" FROM "user" LIMIT $1)
         `,
         [1],
@@ -163,7 +163,7 @@ describe('operators', () => {
       expectSql(
         User.where({ id: { lt: raw('5') } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."id" < 5
         `,
       );
@@ -175,7 +175,7 @@ describe('operators', () => {
       expectSql(
         User.where({ id: { lte: 5 } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."id" <= $1
         `,
         [5],
@@ -186,7 +186,7 @@ describe('operators', () => {
       expectSql(
         User.where({ id: { lte: User.select('id').take() } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."id" <= (SELECT "user"."id" FROM "user" LIMIT $1)
         `,
         [1],
@@ -197,7 +197,7 @@ describe('operators', () => {
       expectSql(
         User.where({ id: { lte: raw('5') } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."id" <= 5
         `,
       );
@@ -209,7 +209,7 @@ describe('operators', () => {
       expectSql(
         User.where({ id: { gt: 5 } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."id" > $1
         `,
         [5],
@@ -220,7 +220,7 @@ describe('operators', () => {
       expectSql(
         User.where({ id: { gt: User.select('id').take() } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."id" > (SELECT "user"."id" FROM "user" LIMIT $1)
         `,
         [1],
@@ -231,7 +231,7 @@ describe('operators', () => {
       expectSql(
         User.where({ id: { gt: raw('5') } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."id" > 5
         `,
       );
@@ -243,7 +243,7 @@ describe('operators', () => {
       expectSql(
         User.where({ id: { gte: 5 } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."id" >= $1
         `,
         [5],
@@ -254,7 +254,7 @@ describe('operators', () => {
       expectSql(
         User.where({ id: { gte: User.select('id').take() } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."id" >= (SELECT "user"."id" FROM "user" LIMIT $1)
         `,
         [1],
@@ -265,7 +265,7 @@ describe('operators', () => {
       expectSql(
         User.where({ id: { gte: raw('5') } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."id" >= 5
         `,
       );
@@ -277,7 +277,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { contains: 'ko' } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" LIKE '%' || $1 || '%'
         `,
         ['ko'],
@@ -288,7 +288,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { contains: User.select('name').take() } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" LIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
         `,
         [1],
@@ -299,7 +299,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { contains: raw("'ko'") } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" LIKE '%' || 'ko' || '%'
         `,
       );
@@ -311,7 +311,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { containsInsensitive: 'ko' } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" ILIKE '%' || $1 || '%'
         `,
         ['ko'],
@@ -324,7 +324,7 @@ describe('operators', () => {
           name: { containsInsensitive: User.select('name').take() },
         }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" ILIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
         `,
         [1],
@@ -335,7 +335,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { containsInsensitive: raw("'ko'") } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" ILIKE '%' || 'ko' || '%'
         `,
       );
@@ -347,7 +347,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { startsWith: 'ko' } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" LIKE $1 || '%'
         `,
         ['ko'],
@@ -360,7 +360,7 @@ describe('operators', () => {
           name: { startsWith: User.select('name').take() },
         }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" LIKE (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
         `,
         [1],
@@ -371,7 +371,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { startsWith: raw("'ko'") } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" LIKE 'ko' || '%'
         `,
       );
@@ -383,7 +383,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { startsWithInsensitive: 'ko' } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" ILIKE $1 || '%'
         `,
         ['ko'],
@@ -396,7 +396,7 @@ describe('operators', () => {
           name: { startsWithInsensitive: User.select('name').take() },
         }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" ILIKE (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
         `,
         [1],
@@ -407,7 +407,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { startsWithInsensitive: raw("'ko'") } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" ILIKE 'ko' || '%'
         `,
       );
@@ -419,7 +419,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { endsWith: 'ko' } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" LIKE '%' || $1
         `,
         ['ko'],
@@ -432,7 +432,7 @@ describe('operators', () => {
           name: { endsWith: User.select('name').take() },
         }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" LIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1)
         `,
         [1],
@@ -443,7 +443,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { endsWith: raw("'ko'") } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" LIKE '%' || 'ko'
         `,
       );
@@ -455,7 +455,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { endsWithInsensitive: 'ko' } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" ILIKE '%' || $1
         `,
         ['ko'],
@@ -468,7 +468,7 @@ describe('operators', () => {
           name: { endsWithInsensitive: User.select('name').take() },
         }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" ILIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1)
         `,
         [1],
@@ -479,7 +479,7 @@ describe('operators', () => {
       expectSql(
         User.where({ name: { endsWithInsensitive: raw("'ko'") } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."name" ILIKE '%' || 'ko'
         `,
       );
@@ -491,7 +491,7 @@ describe('operators', () => {
       expectSql(
         User.where({ id: { between: [1, 10] } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."id" BETWEEN $1 AND $2
         `,
         [1, 10],
@@ -504,7 +504,7 @@ describe('operators', () => {
           id: { between: [User.select('id').take(), User.select('id').take()] },
         }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."id"
           BETWEEN (SELECT "user"."id" FROM "user" LIMIT $1)
               AND (SELECT "user"."id" FROM "user" LIMIT $2)
@@ -517,7 +517,7 @@ describe('operators', () => {
       expectSql(
         User.where({ id: { between: [raw('1'), raw('10')] } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."id" BETWEEN 1 AND 10
         `,
       );
@@ -529,7 +529,7 @@ describe('operators', () => {
       expectSql(
         User.where({ data: { jsonPath: ['$.name', '=', 'name'] } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE jsonb_path_query_first("user"."data", '$.name') #>> '{}' = $1
         `,
         ['name'],
@@ -542,7 +542,7 @@ describe('operators', () => {
           data: { jsonPath: ['$.name', '=', User.select('name').take()] },
         }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE jsonb_path_query_first("user"."data", '$.name') #>> '{}' = (
             SELECT "user"."name" FROM "user" LIMIT $1
           )
@@ -557,7 +557,7 @@ describe('operators', () => {
           data: { jsonPath: ['$.name', '=', raw("'name'")] },
         }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE jsonb_path_query_first("user"."data", '$.name') #>> '{}' = 'name'
         `,
       );
@@ -573,7 +573,7 @@ describe('operators', () => {
       expectSql(
         User.where({ data: { [method]: { a: 'b' } } }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."data" ${sql} $1
         `,
         [{ a: 'b' }],
@@ -586,7 +586,7 @@ describe('operators', () => {
           data: { [method]: User.select('data').take() },
         }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT $1)
         `,
         [1],
@@ -599,7 +599,7 @@ describe('operators', () => {
           data: { [method]: raw(`'{"a":"b"}'`) },
         }).toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
           WHERE "user"."data" ${sql} '{"a":"b"}'
         `,
       );

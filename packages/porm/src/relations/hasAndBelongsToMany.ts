@@ -83,7 +83,7 @@ export const makeHasAndBelongsToManyMethod = (
         connected = (await Promise.all(
           connect.flatMap(([, { connect }]) =>
             connect.map((item) =>
-              t.select(associationPrimaryKey).findBy(item).takeOrThrow(),
+              t.select(associationPrimaryKey)._findBy(item)._takeOrThrow(),
             ),
           ),
         )) as Record<string, unknown[]>[];
@@ -110,7 +110,7 @@ export const makeHasAndBelongsToManyMethod = (
         connectOrCreated = await Promise.all(
           connectOrCreate.flatMap(([, { connectOrCreate }]) =>
             connectOrCreate.map((item) =>
-              t.select(associationPrimaryKey).findBy(item.where).take(),
+              t.select(associationPrimaryKey)._findBy(item.where)._take(),
             ),
           ),
         );
@@ -146,15 +146,16 @@ export const makeHasAndBelongsToManyMethod = (
       connectOrCreateI = 0;
       let created: Record<string, unknown>[];
       if (create.length) {
-        created = await t.insert(
-          create.flatMap(([, { create = [], connectOrCreate = [] }]) => [
-            ...create,
-            ...connectOrCreate
-              .filter(() => !connectOrCreated[connectOrCreateI++])
-              .map((item) => item.create),
-          ]),
-          [associationPrimaryKey],
-        );
+        created = await t
+          .select(associationPrimaryKey)
+          ._insert(
+            create.flatMap(([, { create = [], connectOrCreate = [] }]) => [
+              ...create,
+              ...connectOrCreate
+                .filter(() => !connectOrCreated[connectOrCreateI++])
+                .map((item) => item.create),
+            ]),
+          );
       } else {
         created = [];
       }
@@ -197,7 +198,7 @@ export const makeHasAndBelongsToManyMethod = (
         }
       });
 
-      await subQuery.transacting(q).insert(
+      await subQuery.transacting(q)._insert(
         allKeys.flatMap(([selfData, relationKeys]) => {
           const selfKey = selfData[primaryKey];
           return relationKeys.map((relationData) => ({
@@ -211,21 +212,21 @@ export const makeHasAndBelongsToManyMethod = (
       const t = subQuery.transacting(q);
       if (params.disconnect) {
         await t
-          .where({
+          ._where({
             [foreignKey]: { in: data.map((item) => item[primaryKey]) },
             [associationForeignKey]: {
               in: query
                 .or<Query>(...params.disconnect)
-                .select(associationPrimaryKey),
+                ._select(associationPrimaryKey),
             },
           })
-          .delete();
+          ._delete();
       }
     }) as HasManyNestedUpdate,
     joinQuery: query.whereExists(subQuery, (q) =>
       q
-        .on(associationForeignKeyFull, associationPrimaryKeyFull)
-        .on(foreignKeyFull, primaryKeyFull),
+        ._on(associationForeignKeyFull, associationPrimaryKeyFull)
+        ._on(foreignKeyFull, primaryKeyFull),
     ),
     primaryKey,
   };

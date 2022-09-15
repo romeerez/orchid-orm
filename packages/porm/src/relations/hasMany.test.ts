@@ -49,7 +49,7 @@ describe('hasMany', () => {
       expectSql(
         query.toSql(),
         `
-        SELECT "messages".* FROM "message" AS "messages"
+        SELECT * FROM "message" AS "messages"
         WHERE "messages"."authorId" = $1
       `,
         [userId],
@@ -84,7 +84,7 @@ describe('hasMany', () => {
       expectSql(
         db.user.relations.messages.joinQuery.toSql(),
         `
-        SELECT "messages".* FROM "message" AS "messages"
+        SELECT * FROM "message" AS "messages"
         WHERE "messages"."authorId" = "user"."id"
       `,
       );
@@ -94,7 +94,7 @@ describe('hasMany', () => {
       expectSql(
         db.user.whereExists('messages').toSql(),
         `
-        SELECT "user".* FROM "user"
+        SELECT * FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "message" AS "messages"
           WHERE "messages"."authorId" = "user"."id"
@@ -108,7 +108,7 @@ describe('hasMany', () => {
           .whereExists('messages', (q) => q.where({ 'user.name': 'name' }))
           .toSql(),
         `
-        SELECT "user".* FROM "user"
+        SELECT * FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "message" AS "messages"
           WHERE "messages"."authorId" = "user"."id"
@@ -164,7 +164,7 @@ describe('hasMany', () => {
               (
                 SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
                 FROM (
-                  SELECT "messages".* FROM "message" AS "messages"
+                  SELECT * FROM "message" AS "messages"
                   WHERE "messages"."authorId" = "user"."id"
                     AND "messages"."text" = $1
                 ) AS "t"
@@ -192,7 +192,7 @@ describe('hasMany', () => {
               (
                 SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
                 FROM (
-                  SELECT "messages".* FROM "message" AS "messages"
+                  SELECT * FROM "message" AS "messages"
                   WHERE "messages"."authorId" = "user"."id"
                 ) AS "t"
               ) AS "messages"
@@ -316,9 +316,43 @@ describe('hasMany', () => {
     };
 
     it('should support create', async () => {
-      const { id: chatId } = await db.chat.insert(chatData, ['id']);
+      const { id: chatId } = await db.chat.select('id').insert(chatData);
 
-      const user = await db.user.insert(
+      const user = await db.user.selectAll().insert({
+        name: 'user 1',
+        ...userData,
+        messages: {
+          create: [
+            {
+              text: 'message 1',
+              ...messageData,
+              chatId,
+            },
+            {
+              text: 'message 2',
+              ...messageData,
+              chatId,
+            },
+          ],
+        },
+      });
+
+      checkUser(user, 'user 1');
+
+      const messages = await db.message.order({ text: 'ASC' });
+      checkMessages({
+        messages,
+        userId: user.id,
+        chatId,
+        text1: 'message 1',
+        text2: 'message 2',
+      });
+    });
+
+    it('should support create many', async () => {
+      const { id: chatId } = await db.chat.select('id').insert(chatData);
+
+      const user = await db.user.selectAll().insert([
         {
           name: 'user 1',
           ...userData,
@@ -337,65 +371,25 @@ describe('hasMany', () => {
             ],
           },
         },
-        '*',
-      );
-
-      checkUser(user, 'user 1');
-
-      const messages = await db.message.order({ text: 'ASC' });
-      checkMessages({
-        messages,
-        userId: user.id,
-        chatId,
-        text1: 'message 1',
-        text2: 'message 2',
-      });
-    });
-
-    it('should support create many', async () => {
-      const { id: chatId } = await db.chat.insert(chatData, ['id']);
-
-      const user = await db.user.insert(
-        [
-          {
-            name: 'user 1',
-            ...userData,
-            messages: {
-              create: [
-                {
-                  text: 'message 1',
-                  ...messageData,
-                  chatId,
-                },
-                {
-                  text: 'message 2',
-                  ...messageData,
-                  chatId,
-                },
-              ],
-            },
+        {
+          name: 'user 2',
+          ...userData,
+          messages: {
+            create: [
+              {
+                text: 'message 3',
+                ...messageData,
+                chatId,
+              },
+              {
+                text: 'message 4',
+                ...messageData,
+                chatId,
+              },
+            ],
           },
-          {
-            name: 'user 2',
-            ...userData,
-            messages: {
-              create: [
-                {
-                  text: 'message 3',
-                  ...messageData,
-                  chatId,
-                },
-                {
-                  text: 'message 4',
-                  ...messageData,
-                  chatId,
-                },
-              ],
-            },
-          },
-        ],
-        '*',
-      );
+        },
+      ]);
 
       checkUser(user[0], 'user 1');
       checkUser(user[1], 'user 2');
@@ -419,7 +413,7 @@ describe('hasMany', () => {
     });
 
     it('should support connect', async () => {
-      const { id: chatId } = await db.chat.insert(chatData, ['id']);
+      const { id: chatId } = await db.chat.select('id').insert(chatData);
       await db.message.insert([
         {
           ...messageData,
@@ -435,23 +429,20 @@ describe('hasMany', () => {
         },
       ]);
 
-      const user = await db.user.insert(
-        {
-          name: 'user 1',
-          ...userData,
-          messages: {
-            connect: [
-              {
-                text: 'message 1',
-              },
-              {
-                text: 'message 2',
-              },
-            ],
-          },
+      const user = await db.user.selectAll().insert({
+        name: 'user 1',
+        ...userData,
+        messages: {
+          connect: [
+            {
+              text: 'message 1',
+            },
+            {
+              text: 'message 2',
+            },
+          ],
         },
-        '*',
-      );
+      });
 
       checkUser(user, 'user 1');
 
@@ -466,7 +457,7 @@ describe('hasMany', () => {
     });
 
     it('should support connect many', async () => {
-      const { id: chatId } = await db.chat.insert(chatData, ['id']);
+      const { id: chatId } = await db.chat.select('id').insert(chatData);
       await db.message.insert([
         {
           ...messageData,
@@ -494,39 +485,36 @@ describe('hasMany', () => {
         },
       ]);
 
-      const user = await db.user.insert(
-        [
-          {
-            name: 'user 1',
-            ...userData,
-            messages: {
-              connect: [
-                {
-                  text: 'message 1',
-                },
-                {
-                  text: 'message 2',
-                },
-              ],
-            },
+      const user = await db.user.selectAll().insert([
+        {
+          name: 'user 1',
+          ...userData,
+          messages: {
+            connect: [
+              {
+                text: 'message 1',
+              },
+              {
+                text: 'message 2',
+              },
+            ],
           },
-          {
-            name: 'user 2',
-            ...userData,
-            messages: {
-              connect: [
-                {
-                  text: 'message 3',
-                },
-                {
-                  text: 'message 4',
-                },
-              ],
-            },
+        },
+        {
+          name: 'user 2',
+          ...userData,
+          messages: {
+            connect: [
+              {
+                text: 'message 3',
+              },
+              {
+                text: 'message 4',
+              },
+            ],
           },
-        ],
-        '*',
-      );
+        },
+      ]);
 
       checkUser(user[0], 'user 1');
       checkUser(user[1], 'user 2');
@@ -550,36 +538,30 @@ describe('hasMany', () => {
     });
 
     it('should support connect or create', async () => {
-      const { id: chatId } = await db.chat.insert(chatData, ['id']);
-      const { id: messageId } = await db.message.insert(
-        {
-          ...messageData,
-          chatId,
-          user: { create: { name: 'tmp', ...userData } },
-          text: 'message 1',
-        },
-        ['id'],
-      );
+      const { id: chatId } = await db.chat.select('id').insert(chatData);
+      const { id: messageId } = await db.message.select('id').insert({
+        ...messageData,
+        chatId,
+        user: { create: { name: 'tmp', ...userData } },
+        text: 'message 1',
+      });
 
-      const user = await db.user.insert(
-        {
-          name: 'user 1',
-          ...userData,
-          messages: {
-            connectOrCreate: [
-              {
-                where: { text: 'message 1' },
-                create: { text: 'message 1', chatId, ...messageData },
-              },
-              {
-                where: { text: 'message 2' },
-                create: { text: 'message 2', chatId, ...messageData },
-              },
-            ],
-          },
+      const user = await db.user.selectAll().insert({
+        name: 'user 1',
+        ...userData,
+        messages: {
+          connectOrCreate: [
+            {
+              where: { text: 'message 1' },
+              create: { text: 'message 1', chatId, ...messageData },
+            },
+            {
+              where: { text: 'message 2' },
+              create: { text: 'message 2', chatId, ...messageData },
+            },
+          ],
         },
-        '*',
-      );
+      });
 
       checkUser(user, 'user 1');
 
@@ -596,9 +578,10 @@ describe('hasMany', () => {
     });
 
     it('should support connect or create many', async () => {
-      const { id: chatId } = await db.chat.insert(chatData, ['id']);
-      const [{ id: message1Id }, { id: message4Id }] = await db.message.insert(
-        [
+      const { id: chatId } = await db.chat.select('id').insert(chatData);
+      const [{ id: message1Id }, { id: message4Id }] = await db.message
+        .selectAll()
+        .insert([
           {
             ...messageData,
             chatId,
@@ -611,47 +594,42 @@ describe('hasMany', () => {
             user: { create: { name: 'tmp', ...userData } },
             text: 'message 4',
           },
-        ],
-        ['id'],
-      );
+        ]);
 
-      const users = await db.user.insert(
-        [
-          {
-            name: 'user 1',
-            ...userData,
-            messages: {
-              connectOrCreate: [
-                {
-                  where: { text: 'message 1' },
-                  create: { text: 'message 1', chatId, ...messageData },
-                },
-                {
-                  where: { text: 'message 2' },
-                  create: { text: 'message 2', chatId, ...messageData },
-                },
-              ],
-            },
+      const users = await db.user.selectAll().insert([
+        {
+          name: 'user 1',
+          ...userData,
+          messages: {
+            connectOrCreate: [
+              {
+                where: { text: 'message 1' },
+                create: { text: 'message 1', chatId, ...messageData },
+              },
+              {
+                where: { text: 'message 2' },
+                create: { text: 'message 2', chatId, ...messageData },
+              },
+            ],
           },
-          {
-            name: 'user 2',
-            ...userData,
-            messages: {
-              connectOrCreate: [
-                {
-                  where: { text: 'message 3' },
-                  create: { text: 'message 3', chatId, ...messageData },
-                },
-                {
-                  where: { text: 'message 4' },
-                  create: { text: 'message 4', chatId, ...messageData },
-                },
-              ],
-            },
+        },
+        {
+          name: 'user 2',
+          ...userData,
+          messages: {
+            connectOrCreate: [
+              {
+                where: { text: 'message 3' },
+                create: { text: 'message 3', chatId, ...messageData },
+              },
+              {
+                where: { text: 'message 4' },
+                create: { text: 'message 4', chatId, ...messageData },
+              },
+            ],
           },
-        ],
-        '*',
-      );
+        },
+      ]);
 
       checkUser(users[0], 'user 1');
       checkUser(users[1], 'user 2');
@@ -681,23 +659,19 @@ describe('hasMany', () => {
   describe('update', () => {
     describe('disconnect', () => {
       it('should nullify foreignKey', async () => {
-        const { id: chatId } = await db.chat.insert(
-          { ...chatData, title: 'chat 1' },
-          ['id'],
-        );
-        const { id: userId } = await db.user.insert(
-          {
-            ...userData,
-            messages: {
-              create: [
-                { ...messageData, chatId: chatId, text: 'message 1' },
-                { ...messageData, chatId: chatId, text: 'message 2' },
-                { ...messageData, chatId: chatId, text: 'message 3' },
-              ],
-            },
+        const { id: chatId } = await db.chat
+          .select('id')
+          .insert({ ...chatData, title: 'chat 1' });
+        const { id: userId } = await db.user.select('id').insert({
+          ...userData,
+          messages: {
+            create: [
+              { ...messageData, chatId: chatId, text: 'message 1' },
+              { ...messageData, chatId: chatId, text: 'message 2' },
+              { ...messageData, chatId: chatId, text: 'message 3' },
+            ],
           },
-          ['id'],
-        );
+        });
 
         await db.user.where({ id: userId }).update({
           messages: {
@@ -735,7 +709,7 @@ describe('hasMany through', () => {
     expectSql(
       query.toSql(),
       `
-        SELECT "chats".* FROM "chat" AS "chats"
+        SELECT * FROM "chat" AS "chats"
         WHERE EXISTS (
           SELECT 1 FROM "user"
           WHERE EXISTS (
@@ -756,7 +730,7 @@ describe('hasMany through', () => {
     expectSql(
       db.profile.relations.chats.joinQuery.toSql(),
       `
-        SELECT "chats".* FROM "chat" AS "chats"
+        SELECT * FROM "chat" AS "chats"
         WHERE EXISTS (
           SELECT 1 FROM "user"
           WHERE EXISTS (
@@ -776,7 +750,7 @@ describe('hasMany through', () => {
     expectSql(
       db.profile.whereExists('chats').toSql(),
       `
-        SELECT "profile".* FROM "profile"
+        SELECT * FROM "profile"
         WHERE EXISTS (
           SELECT 1 FROM "chat" AS "chats"
           WHERE EXISTS (
@@ -800,7 +774,7 @@ describe('hasMany through', () => {
         .whereExists('chats', (q) => q.where({ 'profile.bio': 'bio' }))
         .toSql(),
       `
-        SELECT "profile".* FROM "profile"
+        SELECT * FROM "profile"
         WHERE EXISTS (
           SELECT 1 FROM "chat" AS "chats"
           WHERE EXISTS (
@@ -876,7 +850,7 @@ describe('hasMany through', () => {
             (
               SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
               FROM (
-                SELECT "chats".*
+                SELECT *
                 FROM "chat" AS "chats"
                 WHERE EXISTS (
                     SELECT 1 FROM "user"
@@ -915,7 +889,7 @@ describe('hasMany through', () => {
             (
               SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
               FROM (
-                SELECT "chats".*
+                SELECT *
                 FROM "chat" AS "chats"
                 WHERE EXISTS (
                     SELECT 1 FROM "user"

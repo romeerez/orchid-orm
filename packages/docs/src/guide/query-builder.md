@@ -126,7 +126,7 @@ const Country = db(
 );
 
 const sql = Country.all().toSql()
-sql === `SELECT "country".* FROM "geo"."country"`
+sql === `SELECT * FROM "geo"."country"`
 ```
 
 Schema argument is optional, in the case it was not provided query builder won't have any type guarantees and result will have fields of type `unknown`:
@@ -592,8 +592,9 @@ SomeTable
 ## insert
 
 Insert one record by passing in an object:
+
 ```ts
-await Table.insert({
+const insertedCount = await Table.insert({
   name: 'John', password: '1234'
 })
 ```
@@ -603,40 +604,43 @@ Insert multiple records by passing in an array of objects.
 `beforeInsert` and `afterInsert` callback are supported for insert, see [callbacks](#callbacks).
 
 In case if one of objects has fewer fields, `DEFAULT` sql keyword will be used for the missing value:
+
 ```ts
-await Table.insert([
+const insertedCount = await Table.insert([
   { name: 'John', password: '1234' },
   { name: 'Peter', password: '4321' }
 ])
 ```
 
 Insert using a raw query:
+
 ```ts
-await Table.insert({
+const insertedCount = await Table.insert({
   columns: ['name', 'password'],
   values: raw(`raw expression for VALUES`)
 })
 ```
 
-By default `insert` won't return any data, use second argument to specify `RETURNING` clause:
+By default `.insert` will return count of inserted records.
+
+Place `.select` or `.selectAll` before `.insert` to specify returning columns:
+
 ```ts
 // returns single object when inserting single record
-const { id } = await Table.insert({ ...data }, ['id'])
+const objectWithId: { id: number } = await Table.select('id').insert(data)
 
 // returns array of objects when inserting multiple
-const result = await Table.insert([one, two], ['id'])
-// result is of type Array<{ id: number }>
+const arrayOfIds: { id: number }[] = await Table.select('id').insert([one, two])
 
 // returns array of objects as well for raw values:
-const result2 = await Table.insert({
+const arrayOfIds2 = await Table.select('id').insert({
   columns: ['name', 'password'],
   values: raw(`raw expression for VALUES`)
-}, ['id'])
-// result2 is of type Array<{ id: number }>
+})
 
-// Use `*` to have all columns:
-const record = await Table.insert({ ...data }, '*')
-// record is a full record
+// Use selectAll to return all columns:
+const fullRecord = await Table.selectAll().insert(data)
+const fullRecords = await Table.selectAll().insert([data, data])
 ```
 
 ## onConflict
@@ -819,15 +823,23 @@ Table.defaults({
 
 Creates an update query, takes object of properties or raw expression, optionally takes list of columns to return.
 
-If second argument `returning` is not passed, query will return number of updated rows.
+By default `.update` will return count of inserted records.
+
+Place `.select` or `.selectAll` before `.update` to specify returning columns.
 
 ```ts
 const updatedCount = await Table.where({ id: 1 }).update({ name: 'new name' })
 const updatedCount2 = await Table.where({ id: 1 }).update(raw(`name = 'new name'`))
 
-const recordsArray = await Table.where({ id: 1 }).update({ name: 'new name' }, ['id', 'name'])
+const recordsArray = await Table
+  .select('id', 'name')
+  .where({ id: 1 })
+  .update({ name: 'new name' })
 
-const fullRecordsArray = await Table.where({ id: 1 }).update({ name: 'new name' }, '*')
+const fullRecordsArray = await Table
+  .selectAll()
+  .where({ id: 1 })
+  .update({ name: 'new name' })
 ```
 
 `null` value will set column to `NULL`, and `undefined` value will be skipped:
@@ -846,11 +858,12 @@ To make sure that at least one row was updated use `updateOrThrow`:
 import { NotFoundError } from 'pqb'
 
 try {
-  const updatedCount = await Table.updateOrThrow({ name: 'name' })
   // updatedCount is guaranteed to be greater than 0
-  
-  const updatedRecords = await Table.updateOrThrow({ name: 'name' }, ['id'])
+  const updatedCount = await Table.updateOrThrow({ name: 'name' })
+
   // updatedRecords is guaranteed to be non-empty array
+  const updatedRecords = await Table.select('id')
+    .updateOrThrow({ name: 'name' })
 } catch (err) {
   if (err instanceof NotFoundError) {
     // handle error
@@ -866,17 +879,19 @@ Increments a column value by the specified amount. Optionally takes `returning` 
 ```ts
 // increment numericColumn column by 1, return ids of updated records
 const ids1 = Table
+  .select('id')
   .where(...conditions)
-  .increment('numericColumn', ['id'])
+  .increment('numericColumn')
 
 
 // increment someColumn by 5 and otherColumn by 10, return ids of updated records
 const ids2 = Table
+  .select('id')
   .where(...conditions)
   .increment({
     someColumn: 5,
     otherColumn: 10,
-  }, ['id'])
+  })
 ```
 
 ## decrement
@@ -887,17 +902,19 @@ Decrements a column value by the specified amount. Optionally takes `returning` 
 ```ts
 // decrement numericColumn column by 1, return ids of updated records
 const ids1 = Table
+  .select('id')
   .where(...conditions)
-  .decrement('numericColumn', ['id'])
+  .decrement('numericColumn')
 
 
 // decrement someColumn by 5 and otherColumn by 10, return ids of updated records
 const ids2 = Table
+  .select('id')
   .where(...conditions)
   .decrement({
     someColumn: 5,
     otherColumn: 10,
-  }, ['id'])
+  })
 ```
 
 ## del / delete
@@ -906,23 +923,27 @@ Aliased to `del` as `delete` is a reserved word in JavaScript,
 this method deletes one or more rows,
 based on other conditions specified in the query.
 
-If `returning` is not specified, returns the number of deleted rows for the query.
+By default `.delete` will return count of inserted records.
+
+Place `.select` or `.selectAll` before `.delete` to specify returning columns.
 
 ```ts
 // deletedCount is the number of deleted records
 const deletedCount = await Table
-  .delete()
   .where(...conditions)
+  .delete()
 
 // Returns array of records with specified columns
-const deletedUsersPartial = await Table
-  .delete(['id', 'name', 'age'])
+const deletedRecord = await Table
+  .select('id', 'name', 'age')
   .where(...conditions)
+  .delete()
 
 // Returns array of full deleted records
 const deletedUsersFull = await Table
-  .delete('*')
+  .selectAll()
   .where(...conditions)
+  .delete()
 ```
 
 `.delete` supports joining, under the hood the join is transformed to `USING` and `WHERE` statements:
@@ -930,8 +951,8 @@ const deletedUsersFull = await Table
 ```ts
 // delete all users which have corresponding profile records:
 Table
-  .delete()
   .join(Profile, 'profile.userId', 'user.id')
+  .delete()
 ```
 
 ## transaction
@@ -972,14 +993,15 @@ try {
     // insert new catalogue and return id
     const catalogueId = await Catalogue
       .transacting(tr)
-      .insert({ name: 'Old Books' }, ['id'])
+      .select('id')
+      .insert({ name: 'Old Books' })
 
     // insert multiple books and return full records
     await Book
       .transacting(tr)
+      .selectAll()
       .insert(
         books.map((book) => ({ ...book, catalogueId })),
-        '*'
       )
   })
 } catch (error) {

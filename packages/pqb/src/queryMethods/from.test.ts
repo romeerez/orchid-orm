@@ -4,7 +4,7 @@ import { raw } from '../common';
 describe('from', () => {
   it('should accept string parameter', () => {
     const q = User.all();
-    expectSql(q.from('profile').toSql(), `SELECT "profile".* FROM "profile"`);
+    expectSql(q.from('profile').toSql(), `SELECT * FROM "profile"`);
     expectQueryNotMutated(q);
   });
 
@@ -12,7 +12,7 @@ describe('from', () => {
     const q = User.all();
     expectSql(
       q.as('t').from('profile').toSql(),
-      `SELECT "t".* FROM "profile" AS "t"`,
+      `SELECT * FROM "profile" AS "t"`,
     );
     expectQueryNotMutated(q);
   });
@@ -21,7 +21,7 @@ describe('from', () => {
     const q = User.all();
     expectSql(
       q.as('t').from(raw('profile')).toSql(),
-      `SELECT "t".* FROM profile AS "t"`,
+      `SELECT * FROM profile AS "t"`,
     );
     expectQueryNotMutated(q);
   });

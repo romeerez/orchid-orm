@@ -1,81 +1,36 @@
-import {
-  AddQuerySelect,
-  Query,
-  SetQueryReturnsAll,
-  SetQueryReturnsValue,
-} from '../query';
-import { ReturningArg } from './insert';
-import { pushQueryValue, removeFromQuery } from '../queryDataUtils';
-import { IntegerColumn } from '../columnSchema';
+import { Query, SetQueryReturnsAll, SetQueryReturnsRowCount } from '../query';
 
-type DeleteResult<
-  T extends Query,
-  Returning extends ReturningArg<T> | undefined,
-> = Returning extends '*'
-  ? SetQueryReturnsAll<AddQuerySelect<T, T['shape']>>
-  : Returning extends (keyof T['shape'])[]
-  ? SetQueryReturnsAll<AddQuerySelect<T, Pick<T['shape'], Returning[number]>>>
-  : SetQueryReturnsValue<T, IntegerColumn>;
+type DeleteResult<T extends Query> = T['hasSelect'] extends false
+  ? SetQueryReturnsRowCount<T>
+  : SetQueryReturnsAll<T>;
 
-const del = <
-  T extends Query,
-  Returning extends ReturningArg<T> | undefined = undefined,
->(
-  self: T,
-  returning?: Returning,
-): DeleteResult<T, Returning> => {
-  return self.clone()._del(returning) as unknown as DeleteResult<T, Returning>;
+const del = <T extends Query>(self: T): DeleteResult<T> => {
+  return self.clone()._del() as unknown as DeleteResult<T>;
 };
 
-const _del = <
-  T extends Query,
-  Returning extends ReturningArg<T> | undefined = undefined,
->(
-  self: T,
-  returning?: Returning,
-): DeleteResult<T, Returning> => {
-  let q: Query;
-  if (returning) {
-    q = self._all();
-  } else {
-    q = self;
+const _del = <T extends Query>(q: T): DeleteResult<T> => {
+  if (!q.query.select) {
     q.returnType = 'rowCount';
-    removeFromQuery(q, 'take');
   }
 
   q.query.type = 'delete';
-  if (returning) {
-    pushQueryValue(q, 'returning', returning);
-  }
-  return q as unknown as DeleteResult<T, Returning>;
+  return q as unknown as DeleteResult<T>;
 };
 
 export class Delete {
-  del<
-    T extends Query,
-    Returning extends ReturningArg<T> | undefined = undefined,
-  >(this: T, returning?: Returning): DeleteResult<T, Returning> {
-    return del(this, returning);
+  del<T extends Query>(this: T): DeleteResult<T> {
+    return del(this);
   }
 
-  _del<
-    T extends Query,
-    Returning extends ReturningArg<T> | undefined = undefined,
-  >(this: T, returning?: Returning): DeleteResult<T, Returning> {
-    return _del(this, returning);
+  _del<T extends Query>(this: T): DeleteResult<T> {
+    return _del(this);
   }
 
-  delete<
-    T extends Query,
-    Returning extends ReturningArg<T> | undefined = undefined,
-  >(this: T, returning?: Returning): DeleteResult<T, Returning> {
-    return del(this, returning);
+  delete<T extends Query>(this: T): DeleteResult<T> {
+    return del(this);
   }
 
-  _delete<
-    T extends Query,
-    Returning extends ReturningArg<T> | undefined = undefined,
-  >(this: T, returning?: Returning): DeleteResult<T, Returning> {
-    return _del(this, returning);
+  _delete<T extends Query>(this: T): DeleteResult<T> {
+    return _del(this);
   }
 }

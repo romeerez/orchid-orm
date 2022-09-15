@@ -116,7 +116,7 @@ export const makeHasManyMethod = (
             connect.map((item) =>
               t
                 .where<Query>(item)
-                .updateOrThrow({ [foreignKey]: selfData[primaryKey] }),
+                ._updateOrThrow({ [foreignKey]: selfData[primaryKey] }),
             ),
           ),
         );
@@ -141,9 +141,9 @@ export const makeHasManyMethod = (
         connected = await Promise.all(
           connectOrCreate.flatMap(([selfData, { connectOrCreate }]) =>
             connectOrCreate.map((item) =>
-              t
-                .where<Query>(item.where)
-                .update({ [foreignKey]: selfData[primaryKey] }),
+              (t.where(item.where) as Query & { hasSelect: false })._update({
+                [foreignKey]: selfData[primaryKey],
+              }),
             ),
           ),
         );
@@ -206,7 +206,7 @@ export const makeHasManyMethod = (
             [foreignKey]: { in: data.map((item) => item[primaryKey]) },
             OR: params.disconnect,
           })
-          .updateOrThrow({ [foreignKey]: null });
+          ._updateOrThrow({ [foreignKey]: null });
       }
     }) as HasManyNestedUpdate,
     joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),

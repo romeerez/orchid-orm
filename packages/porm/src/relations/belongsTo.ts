@@ -52,7 +52,7 @@ export const makeBelongsToMethod = (
       let connectOrCreated: unknown[];
       if (connectOrCreate.length) {
         connectOrCreated = await Promise.all(
-          connectOrCreate.map((item) => t.findBy(item.connect).take()),
+          connectOrCreate.map((item) => t.findBy(item.connect)._take()),
         );
       } else {
         connectOrCreated = [];
@@ -77,10 +77,9 @@ export const makeBelongsToMethod = (
 
       let created: unknown[];
       if (create.length) {
-        created = await t.insert(
-          create.map((item) => item.create),
-          [primaryKey],
-        );
+        created = await t
+          .select(primaryKey)
+          ._insert(create.map((item) => item.create));
       } else {
         created = [];
       }
@@ -96,7 +95,7 @@ export const makeBelongsToMethod = (
       let connected: unknown[];
       if (connect.length) {
         connected = await Promise.all(
-          connect.map((item) => t.findBy(item.connect).takeOrThrow()),
+          connect.map((item) => t.findBy(item.connect)._takeOrThrow()),
         );
       } else {
         connected = [];

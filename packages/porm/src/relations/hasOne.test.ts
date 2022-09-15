@@ -46,7 +46,7 @@ describe('hasOne', () => {
       expectSql(
         query.toSql(),
         `
-        SELECT "profile".* FROM "profile"
+        SELECT * FROM "profile"
         WHERE "profile"."userId" = $1
         LIMIT $2
       `,
@@ -93,7 +93,7 @@ describe('hasOne', () => {
       expectSql(
         db.user.relations.profile.joinQuery.toSql(),
         `
-        SELECT "profile".* FROM "profile"
+        SELECT * FROM "profile"
         WHERE "profile"."userId" = "user"."id"
       `,
       );
@@ -103,7 +103,7 @@ describe('hasOne', () => {
       expectSql(
         db.user.whereExists('profile').toSql(),
         `
-        SELECT "user".* FROM "user"
+        SELECT * FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "profile"
           WHERE "profile"."userId" = "user"."id"
@@ -117,7 +117,7 @@ describe('hasOne', () => {
           .whereExists('profile', (q) => q.where({ 'user.name': 'name' }))
           .toSql(),
         `
-        SELECT "user".* FROM "user"
+        SELECT * FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "profile"
           WHERE "profile"."userId" = "user"."id"
@@ -173,7 +173,7 @@ describe('hasOne', () => {
               (
                 SELECT row_to_json("t".*) AS "json"
                 FROM (
-                  SELECT "profile".* FROM "profile"
+                  SELECT * FROM "profile"
                   WHERE "profile"."userId" = "user"."id"
                     AND "profile"."bio" = $1
                   LIMIT $2
@@ -202,7 +202,7 @@ describe('hasOne', () => {
               (
                 SELECT row_to_json("t".*) AS "json"
                 FROM (
-                  SELECT "profile".* FROM "profile"
+                  SELECT * FROM "profile"
                   WHERE "profile"."userId" = "user"."id"
                   LIMIT $1
                 ) AS "t"
@@ -257,19 +257,16 @@ describe('hasOne', () => {
       };
 
       it('should support create', async () => {
-        const query = db.user.insert(
-          {
-            name: 'user',
-            ...userData,
-            profile: {
-              create: {
-                bio: 'profile',
-                ...profileData,
-              },
+        const query = db.user.selectAll().insert({
+          name: 'user',
+          ...userData,
+          profile: {
+            create: {
+              bio: 'profile',
+              ...profileData,
             },
           },
-          '*',
-        );
+        });
 
         const user = await query;
         const profile = await db.profile.findBy({ userId: user.id });
@@ -278,31 +275,28 @@ describe('hasOne', () => {
       });
 
       it('should support create many', async () => {
-        const query = db.user.insert(
-          [
-            {
-              name: 'user 1',
-              ...userData,
-              profile: {
-                create: {
-                  bio: 'profile 1',
-                  ...profileData,
-                },
+        const query = db.user.selectAll().insert([
+          {
+            name: 'user 1',
+            ...userData,
+            profile: {
+              create: {
+                bio: 'profile 1',
+                ...profileData,
               },
             },
-            {
-              name: 'user 2',
-              ...userData,
-              profile: {
-                create: {
-                  bio: 'profile 2',
-                  ...profileData,
-                },
+          },
+          {
+            name: 'user 2',
+            ...userData,
+            profile: {
+              create: {
+                bio: 'profile 2',
+                ...profileData,
               },
             },
-          ],
-          '*',
-        );
+          },
+        ]);
 
         const users = await query;
         const profiles = await db.profile
@@ -338,16 +332,13 @@ describe('hasOne', () => {
           },
         });
 
-        const query = db.user.insert(
-          {
-            name: 'user',
-            ...userData,
-            profile: {
-              connect: { bio: 'profile' },
-            },
+        const query = db.user.selectAll().insert({
+          name: 'user',
+          ...userData,
+          profile: {
+            connect: { bio: 'profile' },
           },
-          '*',
-        );
+        });
 
         const user = await query;
         const profile = await db.user.profile(user);
@@ -376,25 +367,22 @@ describe('hasOne', () => {
           },
         ]);
 
-        const query = db.user.insert(
-          [
-            {
-              name: 'user 1',
-              ...userData,
-              profile: {
-                connect: { bio: 'profile 1' },
-              },
+        const query = db.user.selectAll().insert([
+          {
+            name: 'user 1',
+            ...userData,
+            profile: {
+              connect: { bio: 'profile 1' },
             },
-            {
-              name: 'user 2',
-              ...userData,
-              profile: {
-                connect: { bio: 'profile 2' },
-              },
+          },
+          {
+            name: 'user 2',
+            ...userData,
+            profile: {
+              connect: { bio: 'profile 2' },
             },
-          ],
-          '*',
-        );
+          },
+        ]);
 
         const users = await query;
         const profiles = await db.profile
@@ -419,43 +407,34 @@ describe('hasOne', () => {
       });
 
       it('should support connect or create', async () => {
-        const { id: profileId } = await db.profile.insert(
-          {
-            bio: 'profile 1',
-            ...profileData,
-            user: {
-              create: {
-                name: 'tmp',
-                ...userData,
-              },
+        const { id: profileId } = await db.profile.selectAll().insert({
+          bio: 'profile 1',
+          ...profileData,
+          user: {
+            create: {
+              name: 'tmp',
+              ...userData,
             },
           },
-          ['id'],
-        );
+        });
 
-        const user1 = await db.user.insert(
-          {
-            name: 'user 1',
-            ...userData,
-            profile: {
-              connect: { bio: 'profile 1' },
-              create: { bio: 'profile 1', ...profileData },
-            },
+        const user1 = await db.user.selectAll().insert({
+          name: 'user 1',
+          ...userData,
+          profile: {
+            connect: { bio: 'profile 1' },
+            create: { bio: 'profile 1', ...profileData },
           },
-          '*',
-        );
+        });
 
-        const user2 = await db.user.insert(
-          {
-            name: 'user 2',
-            ...userData,
-            profile: {
-              connect: { bio: 'profile 2' },
-              create: { bio: 'profile 2', ...profileData },
-            },
+        const user2 = await db.user.selectAll().insert({
+          name: 'user 2',
+          ...userData,
+          profile: {
+            connect: { bio: 'profile 2' },
+            create: { bio: 'profile 2', ...profileData },
           },
-          '*',
-        );
+        });
 
         const profile1 = await db.user.profile(user1);
         expect(profile1.id).toBe(profileId);
@@ -476,41 +455,35 @@ describe('hasOne', () => {
       });
 
       it('should support connect or create many', async () => {
-        const { id: profileId } = await db.profile.insert(
-          {
-            bio: 'profile 1',
-            ...profileData,
-            user: {
-              create: {
-                name: 'tmp',
-                ...userData,
-              },
+        const { id: profileId } = await db.profile.selectAll().insert({
+          bio: 'profile 1',
+          ...profileData,
+          user: {
+            create: {
+              name: 'tmp',
+              ...userData,
             },
           },
-          ['id'],
-        );
+        });
 
-        const [user1, user2] = await db.user.insert(
-          [
-            {
-              name: 'user 1',
-              ...userData,
-              profile: {
-                connect: { bio: 'profile 1' },
-                create: { bio: 'profile 1', ...profileData },
-              },
+        const [user1, user2] = await db.user.selectAll().insert([
+          {
+            name: 'user 1',
+            ...userData,
+            profile: {
+              connect: { bio: 'profile 1' },
+              create: { bio: 'profile 1', ...profileData },
             },
-            {
-              name: 'user 2',
-              ...userData,
-              profile: {
-                connect: { bio: 'profile 2' },
-                create: { bio: 'profile 2', ...profileData },
-              },
+          },
+          {
+            name: 'user 2',
+            ...userData,
+            profile: {
+              connect: { bio: 'profile 2' },
+              create: { bio: 'profile 2', ...profileData },
             },
-          ],
-          '*',
-        );
+          },
+        ]);
 
         const profile1 = await db.user.profile(user1);
         expect(profile1.id).toBe(profileId);
@@ -534,10 +507,9 @@ describe('hasOne', () => {
     describe('update', () => {
       describe('disconnect', () => {
         it('should nullify foreignKey', async () => {
-          const user = await db.user.insert(
-            { ...userData, profile: { create: profileData } },
-            ['id'],
-          );
+          const user = await db.user
+            .selectAll()
+            .insert({ ...userData, profile: { create: profileData } });
           const { id: profileId } = await db.user.profile(user);
 
           await db.user.where(user).update({
@@ -562,7 +534,7 @@ describe('hasOne through', () => {
       typeof db.message.profile,
       RelationQuery<
         'profile',
-        { authorId: number },
+        { authorId: number | null },
         never,
         typeof profileQuery,
         true
@@ -575,7 +547,7 @@ describe('hasOne through', () => {
     expectSql(
       query.toSql(),
       `
-        SELECT "profile".* FROM "profile"
+        SELECT * FROM "profile"
         WHERE EXISTS (
           SELECT 1 FROM "user"
           WHERE "profile"."userId" = "user"."id"
@@ -592,7 +564,7 @@ describe('hasOne through', () => {
     expectSql(
       db.message.relations.profile.joinQuery.toSql(),
       `
-        SELECT "profile".* FROM "profile"
+        SELECT * FROM "profile"
         WHERE EXISTS (
           SELECT 1 FROM "user"
           WHERE "profile"."userId" = "user"."id"
@@ -607,7 +579,7 @@ describe('hasOne through', () => {
     expectSql(
       db.message.whereExists('profile').toSql(),
       `
-        SELECT "message".* FROM "message"
+        SELECT * FROM "message"
         WHERE EXISTS (
           SELECT 1 FROM "profile"
           WHERE EXISTS (
@@ -626,7 +598,7 @@ describe('hasOne through', () => {
         .whereExists('profile', (q) => q.where({ 'message.text': 'text' }))
         .toSql(),
       `
-        SELECT "message".* FROM "message"
+        SELECT * FROM "message"
         WHERE EXISTS (
           SELECT 1 FROM "profile"
           WHERE EXISTS (
@@ -692,7 +664,7 @@ describe('hasOne through', () => {
             (
               SELECT row_to_json("t".*) AS "json"
               FROM (
-                SELECT "profile".* FROM "profile"
+                SELECT * FROM "profile"
                 WHERE EXISTS (
                     SELECT 1 FROM "user"
                     WHERE "profile"."userId" = "user"."id"
@@ -726,7 +698,7 @@ describe('hasOne through', () => {
             (
               SELECT row_to_json("t".*) AS "json"
               FROM (
-                SELECT "profile".* FROM "profile"
+                SELECT * FROM "profile"
                 WHERE EXISTS (
                     SELECT 1 FROM "user"
                     WHERE "profile"."userId" = "user"."id"

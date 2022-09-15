@@ -71,7 +71,7 @@ export const toSql = (model: Query, values: unknown[] = []): Sql => {
     pushDistinctSql(sql, values, query.distinct, quotedAs);
   }
 
-  pushSelectSql(sql, model, query.select, values, quotedAs);
+  pushSelectSql(sql, model, query, values, quotedAs);
 
   pushFromAndAs(sql, model, query, values, quotedAs);
 

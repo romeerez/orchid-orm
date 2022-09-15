@@ -33,7 +33,7 @@ describe('clear', () => {
           'offset',
         )
         .toSql(),
-      `SELECT "user".* FROM "user"`,
+      `SELECT * FROM "user"`,
     );
   });
 

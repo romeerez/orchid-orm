@@ -116,8 +116,12 @@ export const makeHasOneMethod = (
           connect.map(([selfData, item]) => {
             const data = { [foreignKey]: selfData[primaryKey] };
             return item.create
-              ? t.where<Query>(item.connect).update(data)
-              : t.where<Query>(item.connect).updateOrThrow(data);
+              ? (t.where(item.connect) as Query & { hasSelect: false })._update(
+                  data,
+                )
+              : (
+                  t.where(item.connect) as Query & { hasSelect: false }
+                )._updateOrThrow(data);
           }),
         );
       } else {
@@ -155,7 +159,7 @@ export const makeHasOneMethod = (
           .where({
             [foreignKey]: { in: data.map((item) => item[primaryKey]) },
           })
-          .update({ [foreignKey]: null });
+          ._update({ [foreignKey]: null });
       }
     }) as HasOneNestedUpdate,
     joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),

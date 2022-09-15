@@ -35,13 +35,13 @@ describe('insert', () => {
       `,
     );
 
-    const isVoid: AssertEqual<Awaited<typeof query>, void> = true;
-    expect(isVoid).toBe(true);
+    const eq: AssertEqual<Awaited<typeof query>, number> = true;
+    expect(eq).toBe(true);
 
     expectQueryNotMutated(q);
   });
 
-  it('should insert one record, returning void', async () => {
+  it('should insert one record, returning rows count', async () => {
     const q = User.all();
 
     const query = q.insert(data);
@@ -55,8 +55,10 @@ describe('insert', () => {
     );
 
     const result = await query;
-    const isVoid: AssertEqual<typeof result, void> = true;
-    expect(isVoid).toBe(true);
+    expect(result).toBe(1);
+
+    const eq: AssertEqual<typeof result, number> = true;
+    expect(eq).toBe(true);
 
     const inserted = await User.takeOrThrow();
     expectMatchObjectWithTimestamps(inserted, data);
@@ -67,7 +69,7 @@ describe('insert', () => {
   it('should insert one record, returning columns', async () => {
     const q = User.all();
 
-    const query = q.insert(data, ['id', 'name', 'createdAt', 'updatedAt']);
+    const query = q.select('id', 'name', 'createdAt', 'updatedAt').insert(data);
     expectSql(
       query.toSql(),
       `
@@ -95,7 +97,7 @@ describe('insert', () => {
   it('should insert one record, returning all columns', async () => {
     const q = User.all();
 
-    const query = q.insert(data, '*');
+    const query = q.selectAll().insert(data);
     expectSql(
       query.toSql(),
       `
@@ -142,8 +144,10 @@ describe('insert', () => {
     );
 
     const result = await query;
-    const isVoid: AssertEqual<typeof result, void> = true;
-    expect(isVoid).toBe(true);
+    expect(result).toBe(2);
+
+    const eq: AssertEqual<typeof result, number> = true;
+    expect(eq).toBe(true);
 
     const inserted = await User.all();
     inserted.forEach((item, i) => {
@@ -164,7 +168,7 @@ describe('insert', () => {
       data,
     ];
 
-    const query = q.insert(arr, ['id', 'name', 'createdAt', 'updatedAt']);
+    const query = q.select('id', 'name', 'createdAt', 'updatedAt').insert(arr);
 
     expectSql(
       query.toSql(),
@@ -204,7 +208,7 @@ describe('insert', () => {
       data,
     ];
 
-    const query = q.insert(arr, '*');
+    const query = q.selectAll().insert(arr);
 
     expectSql(
       query.toSql(),
@@ -278,7 +282,8 @@ describe('insert', () => {
       const q = User.all();
 
       const query = q
-        .insert(data, ['id'])
+        .select('id')
+        .insert(data)
         .onConflict('name')
         .ignore()
         .where({ name: 'where name' });

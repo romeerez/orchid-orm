@@ -51,7 +51,7 @@ describe('delete', () => {
   it('should delete records, returning all columns', () => {
     const q = User.all();
 
-    const query = q.delete('*');
+    const query = q.selectAll().delete();
     expectSql(query.toSql(), `DELETE FROM "user" RETURNING *`);
 
     const eq: AssertEqual<Awaited<typeof query>, typeof User['type'][]> = true;
@@ -63,7 +63,7 @@ describe('delete', () => {
   it('should delete records, returning specified columns', () => {
     const q = User.all();
 
-    const query = q.delete(['id', 'name']);
+    const query = q.select('id', 'name').delete();
     expectSql(
       query.toSql(),
       `DELETE FROM "user" RETURNING "user"."id", "user"."name"`,
@@ -82,9 +82,10 @@ describe('delete', () => {
     const q = User.all();
 
     const query = q
-      .delete('*')
+      .selectAll()
       .where({ id: 1 })
-      .join(Profile, 'userId', '=', 'id');
+      .join(Profile, 'userId', '=', 'id')
+      .delete();
 
     expectSql(
       query.toSql(),
@@ -92,7 +93,7 @@ describe('delete', () => {
         DELETE FROM "user"
         USING "profile"
         WHERE "user"."id" = $1 AND "profile"."userId" = "user"."id"
-        RETURNING *
+        RETURNING "user".*
       `,
       [1],
     );

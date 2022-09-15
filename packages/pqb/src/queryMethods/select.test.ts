@@ -46,7 +46,7 @@ describe('selectMethods', () => {
       expectSql(
         q.select().toSql(),
         `
-          SELECT "user".* FROM "user"
+          SELECT * FROM "user"
         `,
       );
       expectSql(
@@ -153,7 +153,7 @@ describe('selectMethods', () => {
               (
                 SELECT row_to_json("t".*) AS "json"
                 FROM (
-                  SELECT "profile".*
+                  SELECT *
                   FROM "profile"
                   WHERE "profile"."userId" = "user"."id"
                     AND "profile"."bio" = $1
@@ -241,7 +241,7 @@ describe('selectMethods', () => {
               (
                 SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
                 FROM (
-                  SELECT "messages".*
+                  SELECT *
                   FROM "message" AS "messages"
                   WHERE "messages"."authorId" = "user"."id"
                     AND "messages"."text" = $1
@@ -409,7 +409,7 @@ describe('selectMethods', () => {
           SELECT
             (
               SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
-              FROM (SELECT "user".* FROM "user") AS "t"
+              FROM (SELECT * FROM "user") AS "t"
             ) AS "subquery"
           FROM "user"
         `,
@@ -422,7 +422,7 @@ describe('selectMethods', () => {
     it('should select all columns', () => {
       const query = User.select('id', 'name').selectAll();
 
-      expectSql(query.toSql(), `SELECT "user".* FROM "user"`);
+      expectSql(query.toSql(), `SELECT * FROM "user"`);
     });
   });
 

@@ -1,8 +1,9 @@
-import { InsertQueryData } from './types';
-import { addValue, q, qc } from './common';
+import { InsertQueryData, QueryData } from './types';
+import { addValue, q } from './common';
 import { getRaw, isRaw } from '../common';
 import { pushWhereSql } from './where';
 import { Query } from '../query';
+import { selectToSql } from './select';
 
 export const pushInsertSql = (
   sql: string[],
@@ -14,14 +15,13 @@ export const pushInsertSql = (
   query: InsertQueryData,
   quotedAs: string,
 ) => {
-  const { columns, values: insertValues, returning, onConflict } = query;
-  const quotedColumns = columns.map(q);
+  const quotedColumns = query.columns.map(q);
 
   sql.push(
     `INSERT INTO ${quotedAs}(${quotedColumns.join(', ')}) VALUES ${
-      isRaw(insertValues)
-        ? getRaw(insertValues, values)
-        : insertValues
+      isRaw(query.values)
+        ? getRaw(query.values, values)
+        : query.values
             .map(
               (row) =>
                 `(${row
@@ -34,27 +34,28 @@ export const pushInsertSql = (
     }`,
   );
 
-  if (onConflict) {
+  if (query.onConflict) {
     sql.push('ON CONFLICT');
 
-    if (onConflict.expr) {
-      if (typeof onConflict.expr === 'string') {
-        sql.push(`(${q(onConflict.expr)})`);
-      } else if (Array.isArray(onConflict.expr)) {
-        sql.push(`(${onConflict.expr.map(q).join(', ')})`);
+    const { expr, type } = query.onConflict;
+    if (expr) {
+      if (typeof expr === 'string') {
+        sql.push(`(${q(expr)})`);
+      } else if (Array.isArray(expr)) {
+        sql.push(`(${expr.map(q).join(', ')})`);
       } else {
-        sql.push(getRaw(onConflict.expr, values));
+        sql.push(getRaw(expr, values));
       }
     } else {
       sql.push(`(${quotedColumns.join(', ')})`);
     }
 
-    if (onConflict.type === 'ignore') {
+    if (type === 'ignore') {
       sql.push('DO NOTHING');
-    } else if (onConflict.type === 'merge') {
+    } else if (type === 'merge') {
       let set: string;
 
-      const { update } = onConflict;
+      const { update } = query.onConflict;
       if (update) {
         if (typeof update === 'string') {
           set = `${q(update)} = excluded.${q(update)}`;
@@ -82,24 +83,20 @@ export const pushInsertSql = (
   }
 
   pushWhereSql(sql, model, query, values, quotedAs);
-  pushReturningSql(sql, quotedAs, returning);
+  pushReturningSql(sql, model, query, values, quotedAs);
 };
 
 export const pushReturningSql = (
   sql: string[],
+  model: Pick<
+    Query,
+    'whereQueryBuilder' | 'onQueryBuilder' | 'as' | 'shape' | 'relations'
+  >,
+  query: QueryData,
+  values: unknown[],
   quotedAs: string,
-  returning?: (string[] | '*')[],
 ) => {
-  const items: string[] = [];
-  returning?.forEach((item) => {
-    items.push(
-      item === '*'
-        ? '*'
-        : item.map((column) => qc(column, quotedAs)).join(', '),
-    );
-  });
-
-  if (items?.length) {
-    sql.push(`RETURNING ${items.join(', ')}`);
+  if (query.select) {
+    sql.push(`RETURNING ${selectToSql(model, query, values, quotedAs)}`);
   }
 };

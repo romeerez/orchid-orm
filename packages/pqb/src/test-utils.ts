@@ -80,7 +80,7 @@ export const expectSql = (
 };
 
 export const expectQueryNotMutated = (q: Query) => {
-  expectSql(q.toSql(), `SELECT "${q.table}".* FROM "${q.table}"`);
+  expectSql(q.toSql(), `SELECT * FROM "${q.table}"`);
 };
 
 export const expectMatchObjectWithTimestamps = (

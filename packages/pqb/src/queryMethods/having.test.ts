@@ -8,7 +8,7 @@ describe('having', () => {
     expectSql(
       q.having({ count: 5 }).toSql(),
       `
-        SELECT "user".*
+        SELECT *
         FROM "user"
         HAVING count(*) = 5
       `,
@@ -29,7 +29,7 @@ describe('having', () => {
         })
         .toSql(),
       `
-        SELECT "user".*
+        SELECT *
         FROM "user"
         HAVING count("user"."id") = $1
       `,
@@ -54,7 +54,7 @@ describe('having', () => {
         })
         .toSql(),
       `
-        SELECT "user".*
+        SELECT *
         FROM "user"
         HAVING sum("user"."id") > $1 AND sum("user"."id") < $2
       `,
@@ -79,7 +79,7 @@ describe('having', () => {
         })
         .toSql(),
       `
-        SELECT "user".*
+        SELECT *
         FROM "user"
         HAVING count(DISTINCT "user"."id") = $1
       `,
@@ -106,7 +106,7 @@ describe('having', () => {
         })
         .toSql(),
       `
-        SELECT "user".*
+        SELECT *
         FROM "user"
         HAVING count("user"."id" ORDER BY "user"."name" ASC) = $1
       `,
@@ -147,7 +147,7 @@ describe('having', () => {
         })
         .toSql(),
       `
-        SELECT "user".*
+        SELECT *
         FROM "user"
         HAVING count("user"."id")
           FILTER (
@@ -176,7 +176,7 @@ describe('having', () => {
         })
         .toSql(),
       `
-        SELECT "user".*
+        SELECT *
         FROM "user"
         HAVING count("user"."id") WITHIN GROUP (ORDER BY "user"."name" ASC) = $1
       `,
@@ -190,7 +190,7 @@ describe('having', () => {
     const q = User.clone();
 
     const expectedSql = `
-      SELECT "user".*
+      SELECT *
       FROM "user"
       HAVING count(*) = 1 AND sum(id) = 2
     `;
@@ -211,7 +211,7 @@ describe('having', () => {
       expectSql(
         q.havingOr({ count: 1 }, { count: 2 }).toSql(),
         `
-        SELECT "user".* FROM "user"
+        SELECT * FROM "user"
         HAVING count(*) = 1 OR count(*) = 2
       `,
       );
@@ -225,7 +225,7 @@ describe('having', () => {
           .havingOr({ count: 1 }, User.having({ count: 2 }, { count: 3 }))
           .toSql(),
         `
-        SELECT "user".* FROM "user"
+        SELECT * FROM "user"
         HAVING count(*) = 1 OR (count(*) = 2 AND count(*) = 3)
       `,
       );
@@ -237,7 +237,7 @@ describe('having', () => {
       expectSql(
         q.havingOr(raw('count(*) = 1 + 2'), raw('count(*) = 2 + 3')).toSql(),
         `
-        SELECT "user".* FROM "user"
+        SELECT * FROM "user"
         HAVING count(*) = 1 + 2 OR count(*) = 2 + 3
       `,
       );

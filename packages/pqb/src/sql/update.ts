@@ -8,15 +8,16 @@ import { pushWhereSql } from './where';
 export const pushUpdateSql = (
   sql: string[],
   values: unknown[],
-  model: Pick<Query, 'shape' | 'relations'>,
+  model: Pick<
+    Query,
+    'whereQueryBuilder' | 'onQueryBuilder' | 'as' | 'shape' | 'relations'
+  >,
   query: UpdateQueryData,
   quotedAs: string,
 ) => {
-  const { data, returning } = query;
-
   sql.push(`UPDATE ${quotedAs} SET`);
 
-  data.forEach((item) => {
+  query.data.forEach((item) => {
     if (isRaw(item)) {
       sql.push(getRaw(item, values));
     } else {
@@ -34,7 +35,7 @@ export const pushUpdateSql = (
   });
 
   pushWhereSql(sql, model, query, values, quotedAs);
-  pushReturningSql(sql, quotedAs, returning);
+  pushReturningSql(sql, model, query, values, quotedAs);
 };
 
 const processValue = (

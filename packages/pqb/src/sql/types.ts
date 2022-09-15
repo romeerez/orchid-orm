@@ -89,7 +89,6 @@ export type InsertQueryData = CommonQueryData & {
   type: 'insert';
   columns: string[];
   values: unknown[][] | RawExpression;
-  returning?: (string[] | '*')[];
   using?: JoinItem[];
   join?: JoinItem[];
   joinedParsers?: Record<string, ColumnsParsers>;
@@ -113,14 +112,12 @@ export type UpdateQueryData = CommonQueryData & {
     | Record<string, RawExpression | { op: string; arg: unknown } | unknown>
     | RawExpression
   )[];
-  returning?: (string[] | '*')[];
   beforeUpdate?: BeforeCallback<Query>[];
   afterUpdate?: AfterCallback<Query>[];
 };
 
 export type DeleteQueryData = CommonQueryData & {
   type: 'delete';
-  returning?: (string[] | '*')[];
   join?: JoinItem[];
   joinedParsers?: Record<string, ColumnsParsers>;
 };

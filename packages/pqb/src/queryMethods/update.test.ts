@@ -47,7 +47,7 @@ describe('update', () => {
   it('should update record, returning updated row count', async () => {
     const q = User.all();
 
-    const { id } = await q.insert(data, ['id']);
+    const { id } = await q.select('id').insert(data);
 
     const update = {
       name: 'new name',
@@ -81,14 +81,14 @@ describe('update', () => {
   it('should update record, returning columns', async () => {
     const q = User.all();
 
-    const { id } = await q.insert(data, ['id']);
+    const { id } = await q.select('id').insert(data);
 
     const update = {
       name: 'new name',
       password: 'new password',
     };
 
-    const query = q.where({ id }).update(update, ['id', 'name']);
+    const query = q.select('id', 'name').where({ id }).update(update);
     expectSql(
       query.toSql(),
       `
@@ -114,14 +114,14 @@ describe('update', () => {
   it('should update record, returning all columns', async () => {
     const q = User.all();
 
-    const { id } = await q.insert(data, ['id']);
+    const { id } = await q.select('id').insert(data);
 
     const update = {
       name: 'new name',
       password: 'new password',
     };
 
-    const query = q.where({ id }).update(update, '*');
+    const query = q.selectAll().where({ id }).update(update);
     expectSql(
       query.toSql(),
       `
@@ -197,9 +197,9 @@ describe('update', () => {
       ).rejects.toThrow();
 
       await expect(
-        User.where({ name: 'not found' }).updateOrThrow({ name: 'name' }, [
-          'id',
-        ]),
+        User.select('id')
+          .where({ name: 'not found' })
+          .updateOrThrow({ name: 'name' }),
       ).rejects.toThrow();
     });
   });
@@ -240,7 +240,7 @@ describe('update', () => {
     it('should support returning', () => {
       const q = User.all();
 
-      const query = q.increment({ age: 3 }, ['id']);
+      const query = q.select('id').increment({ age: 3 });
       expectSql(
         query.toSql(),
         `
@@ -294,7 +294,7 @@ describe('update', () => {
     it('should support returning', () => {
       const q = User.all();
 
-      const query = q.decrement({ age: 3 }, ['id']);
+      const query = q.select('id').decrement({ age: 3 });
       expectSql(
         query.toSql(),
         `

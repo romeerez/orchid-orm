@@ -66,11 +66,11 @@ export const pushSelectSql = (
     Query,
     'whereQueryBuilder' | 'onQueryBuilder' | 'as' | 'shape' | 'relations'
   >,
-  select: SelectQueryData['select'],
+  query: Pick<SelectQueryData, 'select' | 'join'>,
   values: unknown[],
   quotedAs?: string,
 ) => {
-  sql.push(selectToSql(model, select, values, quotedAs));
+  sql.push(selectToSql(model, query, values, quotedAs));
 };
 
 export const selectToSql = (
@@ -78,16 +78,20 @@ export const selectToSql = (
     Query,
     'whereQueryBuilder' | 'onQueryBuilder' | 'as' | 'shape' | 'relations'
   >,
-  select: SelectQueryData['select'],
+  query: Pick<SelectQueryData, 'select' | 'join'>,
   values: unknown[],
   quotedAs?: string,
 ): string => {
-  if (select) {
+  if (query.select) {
     const list: string[] = [];
-    select.forEach((item) => {
+    query.select.forEach((item) => {
       if (typeof item === 'string') {
         list.push(
-          item === '*' ? `${quotedAs}.*` : quoteFullColumn(item, quotedAs),
+          item === '*'
+            ? query.join?.length
+              ? `${quotedAs}.*`
+              : '*'
+            : quoteFullColumn(item, quotedAs),
         );
       } else if ((item as Query).query?.[relationQueryKey]) {
         let relationQuery = (item as RelationQuery).clone();
@@ -130,7 +134,7 @@ export const selectToSql = (
           list.push(
             `${(item as SelectFunctionItem).function}(${selectToSql(
               model,
-              item.arguments,
+              { select: item.arguments },
               values,
               quotedAs,
             )})${item.as ? ` AS ${q((item as { as: string }).as)}` : ''}`,
@@ -142,6 +146,6 @@ export const selectToSql = (
     });
     return list.join(', ');
   } else {
-    return `${quotedAs}.*`;
+    return query.join?.length ? `${quotedAs}.*` : '*';
   }
 };
