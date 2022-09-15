@@ -56,7 +56,7 @@ const all = {
     ),
   notIn: <T>() =>
     createOperator<T[] | Query | RawExpression>(
-      (key, value, values) => `${key} NOT IN ${quoteValue(value, values)}`,
+      (key, value, values) => `NOT ${key} IN ${quoteValue(value, values)}`,
     ),
   lt: <T>() =>
     createOperator<T | Query | RawExpression>(

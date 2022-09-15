@@ -109,7 +109,7 @@ describe('operators', () => {
         User.where({ name: { notIn: ['a', 'b'] } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" NOT IN ($1, $2)
+          WHERE NOT "user"."name" IN ($1, $2)
         `,
         ['a', 'b'],
       );
@@ -120,7 +120,7 @@ describe('operators', () => {
         User.where({ name: { notIn: User.select('name') } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" NOT IN (SELECT "user"."name" FROM "user")
+          WHERE NOT "user"."name" IN (SELECT "user"."name" FROM "user")
         `,
       );
     });
@@ -130,7 +130,7 @@ describe('operators', () => {
         User.where({ name: { notIn: raw("('a', 'b')") } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" NOT IN ('a', 'b')
+          WHERE NOT "user"."name" IN ('a', 'b')
         `,
       );
     });

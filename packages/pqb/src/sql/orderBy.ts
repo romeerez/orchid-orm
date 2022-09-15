@@ -20,6 +20,10 @@ export const orderByToSql = (
   values: unknown[],
   quotedAs?: string,
 ) => {
+  if (typeof order === 'string') {
+    return `${qc(order, quotedAs)} ASC`;
+  }
+
   if (isRaw(order)) {
     return getRaw(order, values);
   }

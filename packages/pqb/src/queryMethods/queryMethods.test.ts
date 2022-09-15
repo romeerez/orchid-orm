@@ -498,7 +498,21 @@ describe('window', () => {
 });
 
 describe('order', () => {
-  it('adds order conditions', () => {
+  it('should add order by column ASC when string is provided', () => {
+    const q = User.all();
+
+    expectSql(
+      q.order('id', 'name').toSql(),
+      `
+        SELECT * FROM "user"
+        ORDER BY "user"."id" ASC, "user"."name" ASC
+      `,
+    );
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should handle object parameter', () => {
     const q = User.all();
     expectSql(
       q.order({ id: 'ASC', name: 'DESC' }).toSql(),

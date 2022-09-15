@@ -71,6 +71,7 @@ type WindowResult<T extends Query, W extends WindowArg<T>> = SetQueryWindows<
 >;
 
 export type OrderArg<T extends Query> =
+  | keyof T['selectable']
   | {
       [K in Selectable<T>]?:
         | SortDir

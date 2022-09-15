@@ -334,7 +334,7 @@ describe('hasMany', () => {
 
       checkUser(user, 'user 1');
 
-      const messages = await db.message.order({ text: 'ASC' });
+      const messages = await db.message.order('text');
       checkMessages({
         messages,
         userId: user.id,
@@ -389,7 +389,7 @@ describe('hasMany', () => {
       checkUser(user[0], 'user 1');
       checkUser(user[1], 'user 2');
 
-      const messages = await db.message.order({ text: 'ASC' });
+      const messages = await db.message.order('text');
       checkMessages({
         messages: messages.slice(0, 2),
         userId: user[0].id,
@@ -441,7 +441,7 @@ describe('hasMany', () => {
 
       checkUser(user, 'user 1');
 
-      const messages = await db.message.order({ text: 'ASC' });
+      const messages = await db.message.order('text');
       checkMessages({
         messages,
         userId: user.id,
@@ -514,7 +514,7 @@ describe('hasMany', () => {
       checkUser(user[0], 'user 1');
       checkUser(user[1], 'user 2');
 
-      const messages = await db.message.order({ text: 'ASC' });
+      const messages = await db.message.order('text');
       checkMessages({
         messages: messages.slice(0, 2),
         userId: user[0].id,
@@ -560,7 +560,7 @@ describe('hasMany', () => {
 
       checkUser(user, 'user 1');
 
-      const messages = await db.message.order({ text: 'ASC' });
+      const messages = await db.message.order('text');
       expect(messages[0].id).toBe(messageId);
 
       checkMessages({
@@ -629,7 +629,7 @@ describe('hasMany', () => {
       checkUser(users[0], 'user 1');
       checkUser(users[1], 'user 2');
 
-      const messages = await db.message.order({ text: 'ASC' });
+      const messages = await db.message.order('text');
       expect(messages[0].id).toBe(message1Id);
       expect(messages[3].id).toBe(message4Id);
 
@@ -674,7 +674,7 @@ describe('hasMany', () => {
           },
         });
 
-        const messages = await db.message.order({ text: 'ASC' });
+        const messages = await db.message.order('text');
         expect(messages[0].authorId).toBe(null);
         expect(messages[1].authorId).toBe(null);
         expect(messages[2].authorId).toBe(userId);

@@ -295,6 +295,7 @@ export type AggregateItemOptions = {
 export type SortDir = 'ASC' | 'DESC';
 
 export type OrderItem =
+  | string
   | Record<string, SortDir | { dir: SortDir; nulls: 'FIRST' | 'LAST' }>
   | RawExpression;
 

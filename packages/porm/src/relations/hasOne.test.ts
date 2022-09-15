@@ -296,7 +296,7 @@ describe('hasOne', () => {
           .where({
             userId: { in: users.map((user) => user.id) },
           })
-          .order({ id: 'ASC' });
+          .order('id');
 
         checkUserAndProfile({
           user: users[0],
@@ -382,7 +382,7 @@ describe('hasOne', () => {
           .where({
             userId: { in: users.map((user) => user.id) },
           })
-          .order({ id: 'ASC' });
+          .order('id');
 
         checkUserAndProfile({
           user: users[0],

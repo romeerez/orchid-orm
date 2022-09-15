@@ -339,10 +339,7 @@ describe('hasAndBelongsToMany', () => {
       const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
 
       const user = await query;
-      const chatIds = await db.user
-        .chats(user)
-        .order({ id: 'ASC' })
-        .pluck('id');
+      const chatIds = await db.user.chats(user).order('id').pluck('id');
 
       const [insertUserSql, insertChatsSql] = querySpy.mock.calls.map(
         (item) => item[0],
@@ -503,10 +500,7 @@ describe('hasAndBelongsToMany', () => {
       const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
 
       const user = await query;
-      const chatIds = await db.user
-        .chats(user)
-        .order({ id: 'ASC' })
-        .pluck('id');
+      const chatIds = await db.user.chats(user).order('id').pluck('id');
 
       const [insertUserSql, ...findChatsSql] = querySpy.mock.calls.map(
         (item) => item[0],
@@ -662,7 +656,7 @@ describe('hasAndBelongsToMany', () => {
       });
 
       const user = await query;
-      const chats = await db.user.chats(user).order({ title: 'ASC' });
+      const chats = await db.user.chats(user).order('title');
 
       expect(chats[0].id).toBe(chatId);
 
@@ -725,7 +719,7 @@ describe('hasAndBelongsToMany', () => {
       ]);
 
       const users = await query;
-      const chats = await db.chat.order({ title: 'ASC' });
+      const chats = await db.chat.order('title');
 
       expect(chats[0].id).toBe(chat1Id);
       expect(chats[3].id).toBe(chat4Id);
@@ -801,7 +795,7 @@ describe('hasAndBelongsToMany', () => {
         const chats = await db.user
           .chats({ id })
           .select('title')
-          .order({ title: 'ASC' });
+          .order('title');
         expect(chats).toEqual([{ title: 'chat 2' }, { title: 'chat 3' }]);
       });
     });

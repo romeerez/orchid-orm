@@ -9,7 +9,7 @@ describe('clear', () => {
       .union([User.select('id', { as: 'name' })])
       .join(Message, 'authorId', 'id')
       .group('id')
-      .order({ id: 'ASC' })
+      .order('id')
       .having({
         count: {
           id: 5,
