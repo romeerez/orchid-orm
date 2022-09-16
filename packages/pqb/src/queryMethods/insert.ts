@@ -5,7 +5,7 @@ import {
   SetQueryReturnsOne,
   SetQueryReturnsRowCount,
 } from '../query';
-import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
+import { pushQueryArray } from '../queryDataUtils';
 import { isRaw, RawExpression } from '../common';
 import {
   BelongsToNestedInsert,
@@ -330,7 +330,7 @@ export class Insert {
 
     if (returning) {
       q.returnType = Array.isArray(data) ? 'all' : 'one';
-      pushQueryValue(q, 'returning', returning);
+      q.query.select = returning;
     } else {
       q.returnType = 'rowCount';
     }

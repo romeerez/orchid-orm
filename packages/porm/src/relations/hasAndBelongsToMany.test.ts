@@ -802,16 +802,61 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.chat.insert(chatData);
+        await db.user.insert({
+          ...userData,
+          chats: {
+            create: [{ ...chatData, title: 'chat 4' }],
+          },
+        });
 
         await db.user.find(id).update({
-          chats: { delete: [{ title: 'chat 1' }, { title: 'chat 2' }] },
+          chats: {
+            delete: [{ title: 'chat 1' }, { title: 'chat 2' }],
+          },
         });
 
         expect(await db.chat.count()).toBe(2);
 
         const chats = await db.user.chats({ id }).select('title');
         expect(chats).toEqual([{ title: 'chat 3' }]);
+      });
+    });
+
+    describe('nested update', () => {
+      it('should update related records', async () => {
+        const { id } = await db.user.select('id').insert({
+          ...userData,
+          chats: {
+            create: [
+              { ...chatData, title: 'chat 1' },
+              { ...chatData, title: 'chat 2' },
+              { ...chatData, title: 'chat 3' },
+            ],
+          },
+        });
+
+        await db.user.insert({
+          ...userData,
+          chats: {
+            create: [{ ...chatData, title: 'chat 4' }],
+          },
+        });
+
+        await db.user.find(id).update({
+          chats: {
+            update: {
+              where: {
+                title: { in: ['chat 2', 'chat 3', 'chat 4'] },
+              },
+              data: {
+                title: 'updated',
+              },
+            },
+          },
+        });
+
+        const titles = await db.chat.order('id').pluck('title');
+        expect(titles).toEqual(['chat 1', 'updated', 'updated', 'chat 4']);
       });
     });
   });

@@ -227,17 +227,21 @@ export const makeHasManyMethod = (
             )
             ._update({ [foreignKey]: data[0][primaryKey] });
         }
-      } else if (params.delete) {
-        await t
-          .where(
-            getWhereForNestedUpdate(
-              data,
-              params.delete,
-              primaryKey,
-              foreignKey,
-            ),
-          )
-          .delete();
+      } else if (params.delete || params.update) {
+        const q = t._where(
+          getWhereForNestedUpdate(
+            data,
+            params.delete || params.update?.where,
+            primaryKey,
+            foreignKey,
+          ),
+        );
+
+        if (params.delete) {
+          await q._delete();
+        } else if (params.update) {
+          await q._update<WhereResult<Query>>(params.update.data);
+        }
       }
     }) as HasManyNestedUpdate,
     joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),

@@ -547,13 +547,37 @@ describe('belongsTo', () => {
           .select('userId')
           .find(id)
           .update({
-            user: { delete: true },
+            user: {
+              delete: true,
+            },
           });
 
         expect(profile.userId).toBe(null);
 
         const user = await db.user.findByOptional({ id: userId });
         expect(user).toBe(undefined);
+      });
+    });
+
+    describe('nested update', () => {
+      it('should update related record', async () => {
+        const { id, userId } = await db.profile
+          .select('id', 'userId')
+          .insert({ ...profileData, user: { create: userData } });
+
+        await db.profile
+          .select('userId')
+          .find(id)
+          .update({
+            user: {
+              update: {
+                name: 'new name',
+              },
+            },
+          });
+
+        const user = await db.user.findBy({ id: userId });
+        expect(user.name).toBe('new name');
       });
     });
   });

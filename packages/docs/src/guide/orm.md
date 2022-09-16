@@ -381,9 +381,31 @@ Updates `foreignKey` to null and deletes related record.
 Following query will set `authorId` of found book to `NULL` and delete related `author` if exists.
 
 ```ts
-await db.book.findBy({ id: 1 }).update({
+await db.book.find(1).update({
   author: {
     delete: true,
+  },
+})
+```
+
+### belongsTo update
+
+Update related record:
+
+```ts
+await db.book.find(1).update({
+  author: {
+    name: 'new name',
+  },
+})
+```
+
+In case of updating multiple records, all related records will be updated:
+
+```ts
+await db.book.where({ id: { in: [1, 2, 3] } }).update({
+  author: {
+    name: 'new name',
   },
 })
 ```
@@ -717,6 +739,28 @@ Following query will delete related `account` if exists.
 await db.supplier.find(1).update({
   account: {
     delete: true,
+  },
+})
+```
+
+### hasOne update
+
+Update related record:
+
+```ts
+await db.supplier.find(1).update({
+  account: {
+    name: 'new name',
+  },
+})
+```
+
+In case of updating multiple records, all related records will be updated:
+
+```ts
+await db.supplier.where({ id: [1, 2, 3] }).update({
+  account: {
+    name: 'new name',
   },
 })
 ```
@@ -1131,6 +1175,28 @@ await db.author.find(1).update({
 })
 ```
 
+### hasOne update
+
+Update related records:
+
+```ts
+await db.author.find(1).update({
+  books: {
+    title: 'new book title',
+  },
+})
+```
+
+In case of updating multiple records, all related records will be updated:
+
+```ts
+await db.author.where({ id: [1, 2, 3] }).update({
+  books: {
+    title: 'new book title',
+  },
+})
+```
+
 ## hasAndBelongsToMany
 
 A `hasAndBelongsToMany` association creates a direct many-to-many connection with another model, with no intervening model.
@@ -1456,5 +1522,27 @@ await db.post.where({ id: { in: [1, 2, 3] } }).update({
     // array of conditions can be provided:
     delete: [{ id: 1 }, { id: 2 }]
   }
+})
+```
+
+### hasAndBelongsToMany update
+
+Update related records:
+
+```ts
+await db.post.find(1).update({
+  tags: {
+    name: 'new tag name',
+  },
+})
+```
+
+In case of updating multiple records, all related records will be updated:
+
+```ts
+await db.author.where({ id: [1, 2, 3] }).update({
+  tags: {
+    name: 'new tag name',
+  },
 })
 ```

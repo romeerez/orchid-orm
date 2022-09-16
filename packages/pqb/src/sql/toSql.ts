@@ -22,7 +22,11 @@ export const toSql = (model: Query, values: unknown[] = []): Sql => {
 
   const sql: string[] = [];
 
-  if ('type' in query) {
+  if (query.with) {
+    pushWithSql(sql, values, query.with);
+  }
+
+  if (query.type) {
     if (query.type === 'truncate') {
       if (!model.table) throw new Error('Table is missing for truncate');
 
@@ -36,31 +40,25 @@ export const toSql = (model: Query, values: unknown[] = []): Sql => {
       pushColumnInfoSql(sql, values, model.table, query);
       return { text: sql.join(' '), values };
     }
-  }
 
-  if (query.with) {
-    pushWithSql(sql, values, query.with);
-  }
+    if (!model.table) throw new Error(`Table is missing for ${query.type}`);
 
-  if (query.type === 'insert') {
-    if (!model.table) throw new Error('Table is missing for insert');
+    const quotedAs = q(query.as || model.table);
 
-    pushInsertSql(sql, values, model, query, q(model.table));
-    return { text: sql.join(' '), values };
-  }
+    if (query.type === 'insert') {
+      pushInsertSql(sql, values, model, query, q(model.table));
+      return { text: sql.join(' '), values };
+    }
 
-  if (query.type === 'update') {
-    if (!model.table) throw new Error('Table is missing for update');
+    if (query.type === 'update') {
+      pushUpdateSql(sql, values, model, query, quotedAs);
+      return { text: sql.join(' '), values };
+    }
 
-    pushUpdateSql(sql, values, model, query, q(model.table));
-    return { text: sql.join(' '), values };
-  }
-
-  if (query.type === 'delete') {
-    if (!model.table) throw new Error('Table is missing for delete');
-
-    pushDeleteSql(sql, values, model, query, q(model.table));
-    return { text: sql.join(' '), values };
+    if (query.type === 'delete') {
+      pushDeleteSql(sql, values, model, query, q(model.table));
+      return { text: sql.join(' '), values };
+    }
   }
 
   const quotedAs = model.table && q(query.as || model.table);

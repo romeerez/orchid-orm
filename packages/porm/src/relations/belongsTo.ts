@@ -9,7 +9,7 @@ import {
   QueryBase,
 } from 'pqb';
 import { RelationData, RelationThunkBase } from './relations';
-import { WhereArg } from 'pqb/src/queryMethods/where';
+import { WhereArg, WhereResult } from 'pqb/src/queryMethods/where';
 
 export interface BelongsTo extends RelationThunkBase {
   type: 'belongsTo';
@@ -114,7 +114,7 @@ export const makeBelongsToMethod = (
       );
     }) as BelongsToNestedInsert,
     nestedUpdate: ((q, update, params) => {
-      let id: unknown;
+      let idForDelete: unknown;
 
       q._beforeUpdate(async (q) => {
         if (params.disconnect) {
@@ -136,23 +136,40 @@ export const makeBelongsToMethod = (
           const selectQuery = q.transacting(q);
           selectQuery.query.type = undefined;
           selectQuery.query.select = [foreignKey];
-          id = await selectQuery._valueOptional();
+          idForDelete = await selectQuery._valueOptional();
           update[foreignKey] = null;
         }
       });
 
-      if (params.delete) {
-        q._afterUpdate(async (q) => {
-          if (id) {
-            await query
-              .transacting(q)
-              .findBy({
-                [primaryKey]: id,
-              })
-              .delete();
+      if (params.delete || params.update) {
+        q._afterQuery(async (q, data) => {
+          const id = params.delete
+            ? idForDelete
+            : Array.isArray(data)
+            ? data.length === 0
+              ? null
+              : {
+                  in: data
+                    .map((item) => item[foreignKey])
+                    .filter((id) => id !== null),
+                }
+            : (data as Record<string, unknown>)[foreignKey];
+
+          if (id !== undefined && id !== null) {
+            const t = query.transacting(q)._findBy({
+              [primaryKey]: id,
+            });
+
+            if (params.delete) {
+              await t._delete();
+            } else if (params.update) {
+              await t._update<WhereResult<Query>>(params.update);
+            }
           }
         });
       }
+
+      return !params.update;
     }) as BelongsToNestedUpdate,
     joinQuery: addQueryOn(query, query, model, primaryKey, foreignKey),
     primaryKey,

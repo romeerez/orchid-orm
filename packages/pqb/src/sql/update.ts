@@ -1,6 +1,6 @@
-import { Query } from '../query';
+import { QueryWithTable } from '../query';
 import { UpdateQueryData } from './types';
-import { addValue, q } from './common';
+import { addValue, q, quoteSchemaAndTable } from './common';
 import { getRaw, isRaw, RawExpression } from '../common';
 import { pushReturningSql } from './insert';
 import { pushWhereSql } from './where';
@@ -8,14 +8,18 @@ import { pushWhereSql } from './where';
 export const pushUpdateSql = (
   sql: string[],
   values: unknown[],
-  model: Pick<
-    Query,
-    'whereQueryBuilder' | 'onQueryBuilder' | 'as' | 'shape' | 'relations'
-  >,
+  model: QueryWithTable,
   query: UpdateQueryData,
   quotedAs: string,
 ) => {
-  sql.push(`UPDATE ${quotedAs} SET`);
+  const quotedTable = quoteSchemaAndTable(query.schema, model.table);
+  sql.push(`UPDATE ${quotedTable}`);
+
+  if (query.as && quotedTable !== quotedAs) {
+    sql.push(`AS ${quotedAs}`);
+  }
+
+  sql.push('SET');
 
   query.data.forEach((item) => {
     if (isRaw(item)) {

@@ -711,13 +711,51 @@ describe('hasMany', () => {
         });
 
         await db.user.find(id).update({
-          messages: { delete: [{ text: 'message 1' }, { text: 'message 2' }] },
+          messages: {
+            delete: [{ text: 'message 1' }, { text: 'message 2' }],
+          },
         });
 
         expect(await db.message.count()).toBe(1);
 
         const messages = await db.user.messages({ id }).select('text');
         expect(messages).toEqual([{ text: 'message 3' }]);
+      });
+    });
+
+    describe('nested update', () => {
+      it('should update related records', async () => {
+        const { id: chatId } = await db.chat.select('id').insert(chatData);
+
+        const { id } = await db.user.select('id').insert({
+          ...userData,
+          messages: {
+            create: [
+              { ...messageData, chatId, text: 'message 1' },
+              { ...messageData, chatId, text: 'message 2' },
+              { ...messageData, chatId, text: 'message 3' },
+            ],
+          },
+        });
+
+        await db.user.find(id).update({
+          messages: {
+            update: {
+              where: {
+                text: { in: ['message 1', 'message 3'] },
+              },
+              data: {
+                text: 'updated',
+              },
+            },
+          },
+        });
+
+        const messages = await db.user
+          .messages({ id })
+          .order('id')
+          .pluck('text');
+        expect(messages).toEqual(['updated', 'message 2', 'updated']);
       });
     });
   });

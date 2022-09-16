@@ -540,11 +540,32 @@ describe('hasOne', () => {
             .take();
 
           await db.user.find(id).update({
-            profile: { delete: true },
+            profile: {
+              delete: true,
+            },
           });
 
           const profile = await db.profile.findByOptional({ id: profileId });
           expect(profile).toBe(undefined);
+        });
+      });
+
+      describe('nested update', () => {
+        it('should update related record', async () => {
+          const { id } = await db.user
+            .select('id')
+            .insert({ ...userData, profile: { create: profileData } });
+
+          await db.user.find(id).update({
+            profile: {
+              update: {
+                bio: 'updated',
+              },
+            },
+          });
+
+          const profile = await db.user.profile({ id }).take();
+          expect(profile.bio).toBe('updated');
         });
       });
     });

@@ -11,7 +11,7 @@ import { SelectArg } from './select';
 import { WhereArg } from './where';
 import { MaybeArray } from '../utils';
 
-type UpdateData<T extends Query> = {
+export type UpdateData<T extends Query> = {
   [K in keyof T['type']]?: T['type'][K] | RawExpression;
 } & (T['relations'] extends Record<string, Relation>
   ? {
@@ -20,6 +20,7 @@ type UpdateData<T extends Query> = {
             | { disconnect: boolean }
             | { set: WhereArg<T['relations'][K]['model']> }
             | { delete: boolean }
+            | { update: UpdateData<T['relations'][K]['model']> }
         : T['relations'][K]['type'] extends 'hasOne'
         ?
             | { disconnect: boolean }
@@ -27,6 +28,7 @@ type UpdateData<T extends Query> = {
                 ? { set: WhereArg<T['relations'][K]['model']> }
                 : never)
             | { delete: boolean }
+            | { update: UpdateData<T['relations'][K]['model']> }
         : T['relations'][K]['type'] extends 'hasMany'
         ?
             | { disconnect: MaybeArray<WhereArg<T['relations'][K]['model']>> }
@@ -34,6 +36,12 @@ type UpdateData<T extends Query> = {
                 ? { set: MaybeArray<WhereArg<T['relations'][K]['model']>> }
                 : never)
             | { delete: MaybeArray<WhereArg<T['relations'][K]['model']>> }
+            | {
+                update: {
+                  where: MaybeArray<WhereArg<T['relations'][K]['model']>>;
+                  data: UpdateData<T['relations'][K]['model']>;
+                };
+              }
         : T['relations'][K]['type'] extends 'hasAndBelongsToMany'
         ?
             | { disconnect: MaybeArray<WhereArg<T['relations'][K]['model']>> }
@@ -41,6 +49,12 @@ type UpdateData<T extends Query> = {
                 set: MaybeArray<WhereArg<T['relations'][K]['model']>>;
               }
             | { delete: MaybeArray<WhereArg<T['relations'][K]['model']>> }
+            | {
+                update: {
+                  where: MaybeArray<WhereArg<T['relations'][K]['model']>>;
+                  data: UpdateData<T['relations'][K]['model']>;
+                };
+              }
         : never;
     }
   : // eslint-disable-next-line @typescript-eslint/ban-types
@@ -135,9 +149,11 @@ export class Update {
           }
         }
       }
+
       const prependRelationKeys = Object.keys(prependRelations);
+      let willSetKeys = false;
       if (prependRelationKeys.length) {
-        prependRelationKeys.map((relationName) =>
+        willSetKeys = prependRelationKeys.some((relationName) =>
           (
             relations[relationName] as {
               nestedUpdate: BelongsToNestedUpdate;
@@ -148,9 +164,10 @@ export class Update {
             prependRelations[relationName] as NestedUpdateOneItem,
           ),
         );
-      } else if (!Object.keys(update).length) {
+      }
+
+      if (!willSetKeys && !Object.keys(update).length) {
         delete this.query.type;
-        this.returnType = 'all';
         if (returning) this._select(...(returning as SelectArg<QueryBase>[]));
       }
 

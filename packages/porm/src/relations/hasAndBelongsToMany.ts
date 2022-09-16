@@ -8,7 +8,7 @@ import {
   Query,
   QueryBase,
 } from 'pqb';
-import { WhereArg } from 'pqb/src/queryMethods/where';
+import { WhereArg, WhereResult } from 'pqb/src/queryMethods/where';
 
 export interface HasAndBelongsToMany extends RelationThunkBase {
   type: 'hasAndBelongsToMany';
@@ -212,6 +212,30 @@ export const makeHasAndBelongsToManyMethod = (
       );
     }) as HasManyNestedInsert,
     nestedUpdate: (async (q, data, params) => {
+      if (params.update) {
+        await (
+          query
+            .transacting(q)
+            .whereExists(subQuery, (q) =>
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (q as any)
+                ._on(associationForeignKeyFull, associationPrimaryKeyFull)
+                ._where({
+                  IN: {
+                    columns: [foreignKeyFull],
+                    values: [data.map((item) => item[primaryKey])],
+                  },
+                }),
+            )
+            .where(
+              Array.isArray(params.update.where)
+                ? { OR: params.update.where }
+                : params.update.where,
+            ) as WhereResult<Query>
+        ).update<WhereResult<Query>>(params.update.data);
+        return;
+      }
+
       const t = subQuery.transacting(q);
       const where: WhereArg<Query> = {
         [foreignKey]: { in: data.map((item) => item[primaryKey]) },

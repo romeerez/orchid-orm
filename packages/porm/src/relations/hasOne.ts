@@ -173,12 +173,16 @@ export const makeHasOneMethod = (
             ._where<Query>(params.set)
             ._update({ [foreignKey]: data[0][primaryKey] });
         }
-      } else if (params.delete) {
-        await t
-          ._where({
-            [foreignKey]: { in: data.map((item) => item[primaryKey]) },
-          })
-          ._delete();
+      } else if (params.delete || params.update) {
+        const q = t._where({
+          [foreignKey]: { in: data.map((item) => item[primaryKey]) },
+        });
+
+        if (params.delete) {
+          await q._delete();
+        } else if (params.update) {
+          await q._update<WhereResult<Query>>(params.update);
+        }
       }
     }) as HasOneNestedUpdate,
     joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),
