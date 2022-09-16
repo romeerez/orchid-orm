@@ -5,6 +5,7 @@ import {
   expectSql,
   userData,
   useTestDatabase,
+  now,
 } from '../test-utils/test-utils';
 import { RelationQuery, Sql, TransactionAdapter } from 'pqb';
 import { Chat, User } from '../test-utils/test-models';
@@ -269,18 +270,6 @@ describe('hasAndBelongsToMany', () => {
       jest.clearAllMocks();
     });
 
-    const now = new Date();
-    const userData = {
-      password: 'password',
-      updatedAt: now,
-      createdAt: now,
-    };
-
-    const chatData = {
-      updatedAt: now,
-      createdAt: now,
-    };
-
     const checkUserAndChats = ({
       user,
       chats,
@@ -319,8 +308,8 @@ describe('hasAndBelongsToMany', () => {
 
     it('should support create', async () => {
       const query = db.user.select('id').insert({
-        name: 'user 1',
         ...userData,
+        name: 'user 1',
         chats: {
           create: [
             {
@@ -359,11 +348,11 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         insertChatsSql as Sql,
         `
-        INSERT INTO "chat"("updatedAt", "createdAt", "title")
+        INSERT INTO "chat"("title", "updatedAt", "createdAt")
         VALUES ($1, $2, $3), ($4, $5, $6)
         RETURNING "chat"."id"
       `,
-        [now, now, 'chat 1', now, now, 'chat 2'],
+        ['chat 1', now, now, 'chat 2', now, now],
       );
 
       expectSql(
@@ -379,33 +368,33 @@ describe('hasAndBelongsToMany', () => {
     it('should support create many', async () => {
       const query = db.user.select('id').insert([
         {
-          name: 'user 1',
           ...userData,
+          name: 'user 1',
           chats: {
             create: [
               {
-                title: 'chat 1',
                 ...chatData,
+                title: 'chat 1',
               },
               {
-                title: 'chat 2',
                 ...chatData,
+                title: 'chat 2',
               },
             ],
           },
         },
         {
-          name: 'user 2',
           ...userData,
+          name: 'user 2',
           chats: {
             create: [
               {
-                title: 'chat 3',
                 ...chatData,
+                title: 'chat 3',
               },
               {
-                title: 'chat 4',
                 ...chatData,
+                title: 'chat 4',
               },
             ],
           },
@@ -482,8 +471,8 @@ describe('hasAndBelongsToMany', () => {
       ]);
 
       const query = db.user.select('id').insert({
-        name: 'user 1',
         ...userData,
+        name: 'user 1',
         chats: {
           connect: [
             {
@@ -550,8 +539,8 @@ describe('hasAndBelongsToMany', () => {
 
       const query = db.user.select('id').insert([
         {
-          name: 'user 1',
           ...userData,
+          name: 'user 1',
           chats: {
             connect: [
               {
@@ -564,8 +553,8 @@ describe('hasAndBelongsToMany', () => {
           },
         },
         {
-          name: 'user 2',
           ...userData,
+          name: 'user 2',
           chats: {
             connect: [
               {
@@ -639,17 +628,17 @@ describe('hasAndBelongsToMany', () => {
       });
 
       const query = db.user.create({
-        name: 'user 1',
         ...userData,
+        name: 'user 1',
         chats: {
           connectOrCreate: [
             {
               where: { title: 'chat 1' },
-              create: { title: 'chat 1', ...chatData },
+              create: { ...chatData, title: 'chat 1' },
             },
             {
               where: { title: 'chat 2' },
-              create: { title: 'chat 2', ...chatData },
+              create: { ...chatData, title: 'chat 2' },
             },
           ],
         },
@@ -685,33 +674,33 @@ describe('hasAndBelongsToMany', () => {
 
       const query = db.user.create([
         {
-          name: 'user 1',
           ...userData,
+          name: 'user 1',
           chats: {
             connectOrCreate: [
               {
                 where: { title: 'chat 1' },
-                create: { title: 'chat 1', ...chatData },
+                create: { ...chatData, title: 'chat 1' },
               },
               {
                 where: { title: 'chat 2' },
-                create: { title: 'chat 2', ...chatData },
+                create: { ...chatData, title: 'chat 2' },
               },
             ],
           },
         },
         {
-          name: 'user 2',
           ...userData,
+          name: 'user 2',
           chats: {
             connectOrCreate: [
               {
                 where: { title: 'chat 3' },
-                create: { title: 'chat 3', ...chatData },
+                create: { ...chatData, title: 'chat 3' },
               },
               {
                 where: { title: 'chat 4' },
-                create: { title: 'chat 4', ...chatData },
+                create: { ...chatData, title: 'chat 4' },
               },
             ],
           },

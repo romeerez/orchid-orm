@@ -844,9 +844,13 @@ By default `.update` will return count of inserted records.
 Place `.select` or `.selectAll` before `.update` to specify returning columns.
 
 Need to provide `.where`, or `.findBy`, or `.find` conditions before calling `.update`.
-To ensure that whole table won't be updated by accident, update without where will result in TypeScript and runtime error.
+To ensure that whole table won't be updated by accident, update without where conditions will result in TypeScript and runtime error.
 
-To update table without conditions put `true` in second argument:
+To update table without conditions put `true` in second argument.
+
+If `select` and `where` were specified before the update it will return array of updated records.
+
+If `select` and `take`, `find` or similar were specified before the update it will return one updated records.
 
 ```ts
 await Table.update({ name: 'new name' }, true)
@@ -858,10 +862,10 @@ const updatedCount2 = await Table.find(1).update(raw(`name = 'new name'`))
 
 const recordsArray = await Table
   .select('id', 'name')
-  .findBy({ id: 1 })
+  .where({ id: 1 })
   .update({ name: 'new name' })
 
-const fullRecordsArray = await Table
+const oneFullRecord = await Table
   .selectAll()
   .findBy({ id: 1 })
   .update({ name: 'new name' })

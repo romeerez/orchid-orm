@@ -24,32 +24,30 @@ export const expectSql = (
   expect(sql.values).toEqual(values);
 };
 
-const now = new Date();
+export const now = new Date();
 export const userData = {
   name: 'name',
   password: 'password',
-  picture: null,
-  active: true,
-  createdAt: now,
   updatedAt: now,
+  createdAt: now,
 };
 
 export const profileData = {
   bio: 'bio',
-  createdAt: now,
   updatedAt: now,
+  createdAt: now,
 };
 
 export const chatData = {
   title: 'chat',
-  createdAt: now,
   updatedAt: now,
+  createdAt: now,
 };
 
 export const messageData = {
   text: 'text',
-  createdAt: now,
   updatedAt: now,
+  createdAt: now,
 };
 
 export const useTestDatabase = () => {

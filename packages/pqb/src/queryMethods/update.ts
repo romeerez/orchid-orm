@@ -1,9 +1,4 @@
-import {
-  Query,
-  QueryBase,
-  SetQueryReturnsAll,
-  SetQueryReturnsRowCount,
-} from '../query';
+import { Query, QueryBase, SetQueryReturnsRowCount } from '../query';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { isRaw, RawExpression } from '../common';
 import {
@@ -59,7 +54,7 @@ type UpdateArgs<T extends Query, ForceAll extends boolean> = (
 
 type UpdateResult<T extends Query> = T['hasSelect'] extends false
   ? SetQueryReturnsRowCount<T>
-  : SetQueryReturnsAll<T>;
+  : T;
 
 type ChangeCountArg<T extends Query> =
   | keyof T['shape']
@@ -106,7 +101,6 @@ export class Update {
     ];
     let returning = this.query.select;
     this.query.type = 'update';
-    this.returnType = returning ? 'all' : 'rowCount';
 
     if (!this.query.and?.length && !this.query.or?.length && !forceAll) {
       throw new Error(
@@ -184,6 +178,8 @@ export class Update {
 
     if (returning) {
       this.query.select = returning;
+    } else {
+      this.returnType = 'rowCount';
     }
 
     return this as unknown as UpdateResult<T>;

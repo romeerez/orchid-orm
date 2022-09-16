@@ -1,7 +1,9 @@
 import { db } from '../test-utils/test-db';
 import {
   AssertEqual,
+  chatData,
   expectSql,
+  messageData,
   profileData,
   userData,
   useTestDatabase,
@@ -172,24 +174,6 @@ describe('belongsTo', () => {
   });
 
   describe('insert', () => {
-    const now = new Date();
-    const messageData = {
-      meta: null,
-      updatedAt: now,
-      createdAt: now,
-    };
-
-    const chatData = {
-      updatedAt: now,
-      createdAt: now,
-    };
-
-    const userData = {
-      password: 'password',
-      updatedAt: now,
-      createdAt: now,
-    };
-
     const checkInsertedResults = async ({
       messageId,
       chatId,
@@ -207,47 +191,47 @@ describe('belongsTo', () => {
     }) => {
       const message = await db.message.find(messageId);
       expect(message).toEqual({
-        id: messageId,
+        ...message,
+        ...messageData,
         chatId,
         authorId,
         text,
-        ...messageData,
       });
 
       const chat = await db.chat.find(chatId);
       expect(chat).toEqual({
-        id: chatId,
-        title,
+        ...chat,
         ...chatData,
+        title,
       });
 
       if (!authorId) return;
       const user = await db.user.find(authorId);
       expect(user).toEqual({
-        id: authorId,
+        ...user,
+        ...userData,
         active: null,
         age: null,
         data: null,
         picture: null,
         name,
-        ...userData,
       });
     };
 
     it('should support create', async () => {
       const query = db.message.select('id', 'chatId', 'authorId').insert({
-        text: 'message',
         ...messageData,
+        text: 'message',
         chat: {
           create: {
-            title: 'chat',
             ...chatData,
+            title: 'chat',
           },
         },
         user: {
           create: {
-            name: 'user',
             ...userData,
+            name: 'user',
           },
         },
       });
@@ -267,34 +251,34 @@ describe('belongsTo', () => {
     it('should support create many', async () => {
       const query = db.message.select('id', 'chatId', 'authorId').insert([
         {
-          text: 'message 1',
           ...messageData,
+          text: 'message 1',
           chat: {
             create: {
-              title: 'chat 1',
               ...chatData,
+              title: 'chat 1',
             },
           },
           user: {
             create: {
-              name: 'user 1',
               ...userData,
+              name: 'user 1',
             },
           },
         },
         {
-          text: 'message 2',
           ...messageData,
+          text: 'message 2',
           chat: {
             create: {
-              title: 'chat 2',
               ...chatData,
+              title: 'chat 2',
             },
           },
           user: {
             create: {
-              name: 'user 2',
               ...userData,
+              name: 'user 2',
             },
           },
         },
@@ -326,8 +310,8 @@ describe('belongsTo', () => {
       await db.user.insert({ ...userData, name: 'user' });
 
       const query = db.message.select('id', 'chatId', 'authorId').insert({
-        text: 'message',
         ...messageData,
+        text: 'message',
         chat: {
           connect: { title: 'chat' },
         },
@@ -360,8 +344,8 @@ describe('belongsTo', () => {
 
       const query = db.message.select('id', 'chatId', 'authorId').insert([
         {
-          text: 'message 1',
           ...messageData,
+          text: 'message 1',
           chat: {
             connect: { title: 'chat 1' },
           },
@@ -370,8 +354,8 @@ describe('belongsTo', () => {
           },
         },
         {
-          text: 'message 2',
           ...messageData,
+          text: 'message 2',
           chat: {
             connect: { title: 'chat 2' },
           },
@@ -404,20 +388,20 @@ describe('belongsTo', () => {
 
     it('should support connect or create', async () => {
       const chat = await db.chat.select('id').insert({
-        title: 'chat',
         ...chatData,
+        title: 'chat',
       });
 
       const query = await db.message.select('id', 'chatId', 'authorId').insert({
-        text: 'message',
         ...messageData,
+        text: 'message',
         chat: {
           connect: { title: 'chat' },
-          create: { title: 'chat', ...chatData },
+          create: { ...chatData, title: 'chat' },
         },
         user: {
           connect: { name: 'user' },
-          create: { name: 'user', ...userData },
+          create: { ...userData, name: 'user' },
         },
       });
 
@@ -437,37 +421,37 @@ describe('belongsTo', () => {
 
     it('should support connect or create many', async () => {
       const chat = await db.chat.select('id').insert({
-        title: 'chat 1',
         ...chatData,
+        title: 'chat 1',
       });
       const user = await db.user.select('id').insert({
-        name: 'user 2',
         ...userData,
+        name: 'user 2',
       });
 
       const query = await db.message.select('id', 'chatId', 'authorId').insert([
         {
-          text: 'message 1',
           ...messageData,
+          text: 'message 1',
           chat: {
             connect: { title: 'chat 1' },
-            create: { title: 'chat 1', ...chatData },
+            create: { ...chatData, title: 'chat 1' },
           },
           user: {
             connect: { name: 'user 1' },
-            create: { name: 'user 1', ...userData },
+            create: { ...userData, name: 'user 1' },
           },
         },
         {
-          text: 'message 2',
           ...messageData,
+          text: 'message 2',
           chat: {
             connect: { title: 'chat 2' },
-            create: { title: 'chat 2', ...chatData },
+            create: { ...chatData, title: 'chat 2' },
           },
           user: {
             connect: { name: 'user 2' },
-            create: { name: 'user 2', ...userData },
+            create: { ...userData, name: 'user 2' },
           },
         },
       ]);
@@ -504,9 +488,9 @@ describe('belongsTo', () => {
           .select('id')
           .insert({ ...profileData, user: { create: userData } });
 
-        const [profile] = await db.profile
-          .where({ id })
+        const profile = await db.profile
           .select('userId')
+          .find(id)
           .update({
             bio: 'string',
             user: { disconnect: true },
@@ -521,9 +505,9 @@ describe('belongsTo', () => {
         const { id } = await db.profile.select('id').insert(profileData);
         const user = await db.user.select('id').insert(userData);
 
-        const [profile] = await db.profile
-          .where({ id })
+        const profile = await db.profile
           .selectAll()
+          .find(id)
           .update({
             user: {
               set: user,
@@ -540,9 +524,9 @@ describe('belongsTo', () => {
           name: 'user',
         });
 
-        const [profile] = await db.profile
-          .where({ id })
+        const profile = await db.profile
           .selectAll()
+          .find(id)
           .update({
             user: {
               set: { name: 'user' },
@@ -559,9 +543,9 @@ describe('belongsTo', () => {
           .select('id', 'userId')
           .insert({ ...profileData, user: { create: userData } });
 
-        const [profile] = await db.profile
-          .find(id)
+        const profile = await db.profile
           .select('userId')
+          .find(id)
           .update({
             user: { delete: true },
           });

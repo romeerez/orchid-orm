@@ -208,18 +208,6 @@ describe('hasOne', () => {
     });
 
     describe('insert', () => {
-      const now = new Date();
-      const userData = {
-        password: 'password',
-        updatedAt: now,
-        createdAt: now,
-      };
-
-      const profileData = {
-        updatedAt: now,
-        createdAt: now,
-      };
-
       const checkUserAndProfile = ({
         user,
         profile,
@@ -232,31 +220,31 @@ describe('hasOne', () => {
         bio: string;
       }) => {
         expect(user).toEqual({
+          ...userData,
           id: user.id,
           name,
           active: null,
           age: null,
           data: null,
           picture: null,
-          ...userData,
         });
 
         expect(profile).toEqual({
+          ...profileData,
           id: profile.id,
           bio,
           userId: user.id,
-          ...profileData,
         });
       };
 
       it('should support create', async () => {
         const query = db.user.create({
-          name: 'user',
           ...userData,
+          name: 'user',
           profile: {
             create: {
-              bio: 'profile',
               ...profileData,
+              bio: 'profile',
             },
           },
         });
@@ -270,22 +258,22 @@ describe('hasOne', () => {
       it('should support create many', async () => {
         const query = db.user.create([
           {
-            name: 'user 1',
             ...userData,
+            name: 'user 1',
             profile: {
               create: {
-                bio: 'profile 1',
                 ...profileData,
+                bio: 'profile 1',
               },
             },
           },
           {
-            name: 'user 2',
             ...userData,
+            name: 'user 2',
             profile: {
               create: {
-                bio: 'profile 2',
                 ...profileData,
+                bio: 'profile 2',
               },
             },
           },
@@ -315,19 +303,19 @@ describe('hasOne', () => {
 
       it('should support connect', async () => {
         await db.profile.insert({
-          bio: 'profile',
           ...profileData,
+          bio: 'profile',
           user: {
             create: {
-              name: 'tmp',
               ...userData,
+              name: 'tmp',
             },
           },
         });
 
         const query = db.user.create({
-          name: 'user',
           ...userData,
+          name: 'user',
           profile: {
             connect: { bio: 'profile' },
           },
@@ -342,18 +330,18 @@ describe('hasOne', () => {
       it('should support connect many', async () => {
         await db.profile.insert([
           {
-            bio: 'profile 1',
             ...profileData,
+            bio: 'profile 1',
             user: {
               create: {
-                name: 'tmp',
                 ...userData,
+                name: 'tmp',
               },
             },
           },
           {
-            bio: 'profile 2',
             ...profileData,
+            bio: 'profile 2',
             user: {
               connect: { name: 'tmp' },
             },
@@ -362,15 +350,15 @@ describe('hasOne', () => {
 
         const query = db.user.create([
           {
-            name: 'user 1',
             ...userData,
+            name: 'user 1',
             profile: {
               connect: { bio: 'profile 1' },
             },
           },
           {
-            name: 'user 2',
             ...userData,
+            name: 'user 2',
             profile: {
               connect: { bio: 'profile 2' },
             },
@@ -401,31 +389,31 @@ describe('hasOne', () => {
 
       it('should support connect or create', async () => {
         const { id: profileId } = await db.profile.create({
-          bio: 'profile 1',
           ...profileData,
+          bio: 'profile 1',
           user: {
             create: {
-              name: 'tmp',
               ...userData,
+              name: 'tmp',
             },
           },
         });
 
         const user1 = await db.user.create({
-          name: 'user 1',
           ...userData,
+          name: 'user 1',
           profile: {
             connect: { bio: 'profile 1' },
-            create: { bio: 'profile 1', ...profileData },
+            create: { ...profileData, bio: 'profile 1' },
           },
         });
 
         const user2 = await db.user.create({
-          name: 'user 2',
           ...userData,
+          name: 'user 2',
           profile: {
             connect: { bio: 'profile 2' },
-            create: { bio: 'profile 2', ...profileData },
+            create: { ...profileData, bio: 'profile 2' },
           },
         });
 
@@ -449,31 +437,31 @@ describe('hasOne', () => {
 
       it('should support connect or create many', async () => {
         const { id: profileId } = await db.profile.create({
-          bio: 'profile 1',
           ...profileData,
+          bio: 'profile 1',
           user: {
             create: {
-              name: 'tmp',
               ...userData,
+              name: 'tmp',
             },
           },
         });
 
         const [user1, user2] = await db.user.create([
           {
-            name: 'user 1',
             ...userData,
+            name: 'user 1',
             profile: {
               connect: { bio: 'profile 1' },
-              create: { bio: 'profile 1', ...profileData },
+              create: { ...profileData, bio: 'profile 1' },
             },
           },
           {
-            name: 'user 2',
             ...userData,
+            name: 'user 2',
             profile: {
               connect: { bio: 'profile 2' },
-              create: { bio: 'profile 2', ...profileData },
+              create: { ...profileData, bio: 'profile 2' },
             },
           },
         ]);
@@ -526,7 +514,7 @@ describe('hasOne', () => {
               { ...profileData, userId: null },
             ]);
 
-          await db.user.findBy({ id }).update({
+          await db.user.find(id).update({
             profile: {
               set: { id: profile2Id },
             },

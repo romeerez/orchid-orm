@@ -198,6 +198,51 @@ describe('update', () => {
     expectQueryNotMutated(q);
   });
 
+  it('should return one record when searching for one to update', async () => {
+    const q = User.all();
+
+    const { id } = await q.select('id').insert(userData);
+
+    const update = {
+      name: 'new name',
+      password: 'new password',
+    };
+
+    const query = q.selectAll().findBy({ id }).update(update);
+    expectSql(
+      query.toSql(),
+      `
+        UPDATE "user"
+        SET "name" = $1,
+            "password" = $2
+        WHERE "user"."id" = $3
+        RETURNING *
+      `,
+      [update.name, update.password, id],
+    );
+
+    const result = await query;
+    const eq: AssertEqual<typeof result, typeof User.type> = true;
+    expect(eq).toBe(true);
+
+    expectMatchObjectWithTimestamps(result, { ...userData, ...update });
+
+    expectQueryNotMutated(q);
+  });
+
+  it('should throw when searching for one to update and it is not found', async () => {
+    const q = User.all();
+
+    const query = q.selectAll().findBy({ id: 1 }).update({ name: 'new name' });
+
+    const eq: AssertEqual<Awaited<typeof query>, typeof User.type> = true;
+    expect(eq).toBe(true);
+
+    await expect(query).rejects.toThrow();
+
+    expectQueryNotMutated(q);
+  });
+
   describe('updateOrThrow', () => {
     it('should throw if no records were found for update', async () => {
       await expect(

@@ -248,30 +248,11 @@ describe('hasMany', () => {
   });
 
   describe('insert', () => {
-    const now = new Date();
-    const userData = {
-      password: 'password',
-      updatedAt: now,
-      createdAt: now,
-    };
-
-    const messageData = {
-      meta: null,
-      updatedAt: now,
-      createdAt: now,
-    };
-
-    const chatData = {
-      title: 'title',
-      updatedAt: now,
-      createdAt: now,
-    };
-
     const checkUser = (user: User, name: string) => {
       expect(user).toEqual({
+        ...userData,
         id: user.id,
         name: name,
-        ...userData,
         active: null,
         age: null,
         data: null,
@@ -294,18 +275,20 @@ describe('hasMany', () => {
     }) => {
       expect(messages).toEqual([
         {
+          ...messageData,
           id: messages[0].id,
           authorId: userId,
-          ...messageData,
           text: text1,
           chatId,
+          meta: null,
         },
         {
+          ...messageData,
           id: messages[1].id,
           authorId: userId,
-          ...messageData,
           text: text2,
           chatId,
+          meta: null,
         },
       ]);
     };
@@ -314,18 +297,18 @@ describe('hasMany', () => {
       const { id: chatId } = await db.chat.select('id').insert(chatData);
 
       const user = await db.user.create({
-        name: 'user 1',
         ...userData,
+        name: 'user 1',
         messages: {
           create: [
             {
-              text: 'message 1',
               ...messageData,
+              text: 'message 1',
               chatId,
             },
             {
-              text: 'message 2',
               ...messageData,
+              text: 'message 2',
               chatId,
             },
           ],
@@ -349,36 +332,36 @@ describe('hasMany', () => {
 
       const user = await db.user.create([
         {
-          name: 'user 1',
           ...userData,
+          name: 'user 1',
           messages: {
             create: [
               {
-                text: 'message 1',
                 ...messageData,
+                text: 'message 1',
                 chatId,
               },
               {
-                text: 'message 2',
                 ...messageData,
+                text: 'message 2',
                 chatId,
               },
             ],
           },
         },
         {
-          name: 'user 2',
           ...userData,
+          name: 'user 2',
           messages: {
             create: [
               {
-                text: 'message 3',
                 ...messageData,
+                text: 'message 3',
                 chatId,
               },
               {
-                text: 'message 4',
                 ...messageData,
+                text: 'message 4',
                 chatId,
               },
             ],
@@ -413,7 +396,7 @@ describe('hasMany', () => {
         {
           ...messageData,
           chatId,
-          user: { create: { name: 'tmp', ...userData } },
+          user: { create: { ...userData, name: 'tmp' } },
           text: 'message 1',
         },
         {
@@ -425,8 +408,8 @@ describe('hasMany', () => {
       ]);
 
       const user = await db.user.create({
-        name: 'user 1',
         ...userData,
+        name: 'user 1',
         messages: {
           connect: [
             {
@@ -457,7 +440,7 @@ describe('hasMany', () => {
         {
           ...messageData,
           chatId,
-          user: { create: { name: 'tmp', ...userData } },
+          user: { create: { ...userData, name: 'tmp' } },
           text: 'message 1',
         },
         {
@@ -482,8 +465,8 @@ describe('hasMany', () => {
 
       const user = await db.user.create([
         {
-          name: 'user 1',
           ...userData,
+          name: 'user 1',
           messages: {
             connect: [
               {
@@ -496,8 +479,8 @@ describe('hasMany', () => {
           },
         },
         {
-          name: 'user 2',
           ...userData,
+          name: 'user 2',
           messages: {
             connect: [
               {
@@ -537,22 +520,22 @@ describe('hasMany', () => {
       const { id: messageId } = await db.message.select('id').insert({
         ...messageData,
         chatId,
-        user: { create: { name: 'tmp', ...userData } },
+        user: { create: { ...userData, name: 'tmp' } },
         text: 'message 1',
       });
 
       const user = await db.user.create({
-        name: 'user 1',
         ...userData,
+        name: 'user 1',
         messages: {
           connectOrCreate: [
             {
               where: { text: 'message 1' },
-              create: { text: 'message 1', chatId, ...messageData },
+              create: { ...messageData, chatId, text: 'message 1' },
             },
             {
               where: { text: 'message 2' },
-              create: { text: 'message 2', chatId, ...messageData },
+              create: { ...messageData, chatId, text: 'message 2' },
             },
           ],
         },
@@ -580,46 +563,46 @@ describe('hasMany', () => {
           {
             ...messageData,
             chatId,
-            user: { create: { name: 'tmp', ...userData } },
+            user: { create: { ...userData, name: 'tmp' } },
             text: 'message 1',
           },
           {
             ...messageData,
             chatId,
-            user: { create: { name: 'tmp', ...userData } },
+            user: { create: { ...userData, name: 'tmp' } },
             text: 'message 4',
           },
         ]);
 
       const users = await db.user.create([
         {
-          name: 'user 1',
           ...userData,
+          name: 'user 1',
           messages: {
             connectOrCreate: [
               {
                 where: { text: 'message 1' },
-                create: { text: 'message 1', chatId, ...messageData },
+                create: { ...messageData, chatId, text: 'message 1' },
               },
               {
                 where: { text: 'message 2' },
-                create: { text: 'message 2', chatId, ...messageData },
+                create: { ...messageData, chatId, text: 'message 2' },
               },
             ],
           },
         },
         {
-          name: 'user 2',
           ...userData,
+          name: 'user 2',
           messages: {
             connectOrCreate: [
               {
                 where: { text: 'message 3' },
-                create: { text: 'message 3', chatId, ...messageData },
+                create: { ...messageData, chatId, text: 'message 3' },
               },
               {
                 where: { text: 'message 4' },
-                create: { text: 'message 4', chatId, ...messageData },
+                create: { ...messageData, chatId, text: 'message 4' },
               },
             ],
           },
