@@ -8,7 +8,7 @@ import {
 import { Expression, RawExpression } from '../common';
 import { ColumnsShape, ColumnType } from '../columnSchema';
 import { RelationQuery, relationQueryKey } from '../relations';
-import { Adapter } from '../adapter';
+import { Adapter, QueryResult } from '../adapter';
 import { MaybeArray } from '../utils';
 import { QueryLogger, QueryLogObject } from '../queryMethods/log';
 import { AfterCallback, BeforeCallback } from '../queryMethods/callbacks';
@@ -43,6 +43,7 @@ export const queryKeysOfNotSimpleQuery: (keyof SelectQueryData)[] = [
 
 export type CommonQueryData = {
   adapter: Adapter;
+  handleResult(q: Query, result: QueryResult): Promise<unknown>;
   [relationQueryKey]?: string;
   inTransaction?: boolean;
   wrapInTransaction?: boolean;

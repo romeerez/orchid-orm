@@ -2,7 +2,7 @@ import { ColumnsParsers, Query, QueryReturnType } from '../query';
 import { getQueryParsers } from '../common';
 import { NotFoundError } from '../errors';
 import { QueryArraysResult, QueryResult } from '../adapter';
-import { Sql } from '../sql';
+import { CommonQueryData, Sql } from '../sql';
 import { AfterCallback, BeforeCallback } from './callbacks';
 
 export type ThenResult<Res> = <T extends Query>(
@@ -42,6 +42,13 @@ export class Then {
   }
 }
 
+export const handleResult: CommonQueryData['handleResult'] = async (
+  q,
+  result: QueryResult,
+) => {
+  return parseResult(q, q.returnType, result);
+};
+
 const then = async (
   q: Query,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,11 +84,9 @@ const then = async (
       logData = q.query.log?.beforeQuery(q, sql);
     }
 
-    const { returnType } = q;
-    const result = parseResult(
+    const result = await q.query.handleResult(
       q,
-      returnType,
-      await q.query.adapter[queryMethod[returnType] as 'query'](sql),
+      await q.query.adapter[queryMethod[q.returnType] as 'query'](sql),
     );
 
     if (q.query.log) {
@@ -109,7 +114,7 @@ const then = async (
   }
 };
 
-const parseResult = (
+export const parseResult = (
   q: Query,
   returnType: QueryReturnType,
   result: QueryResult,
@@ -172,8 +177,9 @@ const parseResult = (
       );
     }
     case 'rowCount': {
-      if (q.query.throwOnNotFound && result.rowCount === 0)
+      if (q.query.throwOnNotFound && result.rowCount === 0) {
         throw new NotFoundError();
+      }
       return result.rowCount;
     }
     case 'void': {

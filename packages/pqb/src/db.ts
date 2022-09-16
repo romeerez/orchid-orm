@@ -16,7 +16,7 @@ import {
 } from './columnSchema';
 import { applyMixins } from './utils';
 import { StringKey } from './common';
-import { ThenResult } from './queryMethods/then';
+import { handleResult, ThenResult } from './queryMethods/then';
 import { WhereQueryBuilder } from './queryMethods/where';
 import { OnQueryBuilder } from './queryMethods/join';
 import { logParamToLogObject, QueryLogOptions } from './queryMethods/log';
@@ -90,6 +90,7 @@ export class Db<
     const logger = options.logger || console;
     this.query = {
       adapter,
+      handleResult: handleResult,
       logger,
       log: logParamToLogObject(logger, options.log),
     } as QueryData;

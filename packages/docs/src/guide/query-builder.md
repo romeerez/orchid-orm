@@ -900,6 +900,35 @@ try {
 }
 ```
 
+## upsert
+
+`.upsert` tries to update one record, and it will perform insert in case if record was not found.
+
+It will implicitly wrap queries in transaction if it was not wrapped yet.
+
+`.find` or `.findBy` must precede `.upsert` because it does not work with multiple update.
+
+In case if more than row was updated, it will throw `MoreThanOneRowError` and transaction will be rolled back.
+
+`update` and `create` properties are accepting the same type of objects as `update` and `create` command.
+
+Not returning value by default, place `.select` or `.selectAll` before `.upsert` to specify returning columns.
+
+```ts
+const user = await User
+  .selectAll()
+  .find({ email: 'some@email.com' })
+  .upsert({
+    update: {
+      name: 'updated user',
+    },
+    create: {
+      email: 'some@email.com',
+      name: 'created user'
+    },
+  })
+```
+
 ## increment
 
 Increments a column value by the specified amount. Optionally takes `returning` argument.

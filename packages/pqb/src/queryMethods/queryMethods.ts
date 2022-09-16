@@ -54,6 +54,7 @@ import { Having } from './having';
 import { Window } from './window';
 import { QueryLog } from './log';
 import { QueryCallbacks } from './callbacks';
+import { QueryUpsert } from './upsert';
 
 export type WindowArg<T extends Query> = Record<
   string,
@@ -99,7 +100,8 @@ export interface QueryMethods
     Window,
     Then,
     QueryLog,
-    QueryCallbacks {}
+    QueryCallbacks,
+    QueryUpsert {}
 
 export class QueryMethods {
   windows!: PropertyKey[];
@@ -466,4 +468,5 @@ applyMixins(QueryMethods, [
   Then,
   QueryLog,
   QueryCallbacks,
+  QueryUpsert,
 ]);

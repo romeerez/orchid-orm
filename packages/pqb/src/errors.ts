@@ -3,3 +3,5 @@ export class NotFoundError extends Error {
     super(message);
   }
 }
+
+export class MoreThanOneRowError extends Error {}
