@@ -50,11 +50,17 @@ const makeMessage = (
     elapsed[1] / 1000000
   ).toFixed(1)}ms)`;
 
+  const result = `${colors ? timeColor(formattedTime) : formattedTime} ${
+    colors ? sqlColor(sql) : sql
+  }`;
+
+  if (!values.length) {
+    return result;
+  }
+
   const formattedValues = `[${values.map(quote).join(', ')}]`;
 
-  return `${colors ? timeColor(formattedTime) : formattedTime} ${
-    colors ? sqlColor(sql) : sql
-  } ${colors ? valuesColor(formattedValues) : formattedValues}`;
+  return `${result} ${colors ? valuesColor(formattedValues) : formattedValues}`;
 };
 
 export const logParamToLogObject = (

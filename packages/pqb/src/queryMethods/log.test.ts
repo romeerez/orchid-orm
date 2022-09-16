@@ -1,9 +1,11 @@
 import { createDb } from '../db';
-import { adapter, dbOptions } from '../test-utils';
+import { adapter, dbOptions, userData, useTestDatabase } from '../test-utils';
 import { logColors } from './log';
 import { noop } from '../utils';
 
 describe('query log', () => {
+  useTestDatabase();
+
   it('should not have `log` query object by default', () => {
     const db = createDb(dbOptions);
 
@@ -118,6 +120,53 @@ describe('query log', () => {
       [
         `(1s 1.0ms) SELECT * FROM "user" WHERE "user"."wrongColumn" = $1 ['value'] Error: column user.wrongColumn does not exist`,
       ],
+    ]);
+  });
+
+  it('should log successful transaction', async () => {
+    const hrtime = jest.spyOn(process, 'hrtime');
+    hrtime.mockReturnValue([0, 0]);
+    hrtime.mockReturnValue([1, 1000000]);
+
+    const logger = {
+      log: jest.fn(),
+      error: jest.fn(),
+    };
+
+    const db = createDb(adapter, { log: { colors: false }, logger });
+
+    await db.transaction(async (q) => {
+      await db('user').transacting(q).insert(userData);
+    });
+
+    expect(logger.log.mock.calls).toEqual([
+      ['(1s 1.0ms) BEGIN'],
+      [expect.stringContaining('INSERT INTO "user"')],
+      ['(1s 1.0ms) COMMIT'],
+    ]);
+  });
+
+  it('should log failed transaction', async () => {
+    const hrtime = jest.spyOn(process, 'hrtime');
+    hrtime.mockReturnValue([0, 0]);
+    hrtime.mockReturnValue([1, 1000000]);
+
+    const logger = {
+      log: jest.fn(),
+      error: jest.fn(),
+    };
+
+    const db = createDb(adapter, { log: { colors: false }, logger });
+
+    await expect(
+      db.transaction(async (q) => {
+        await db('user').transacting(q).insert({ name: 'name' });
+      }),
+    ).rejects.toThrow();
+
+    expect(logger.log.mock.calls).toEqual([
+      ['(1s 1.0ms) BEGIN'],
+      ['(1s 1.0ms) ROLLBACK'],
     ]);
   });
 });
