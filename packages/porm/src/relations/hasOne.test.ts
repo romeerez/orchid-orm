@@ -262,7 +262,9 @@ describe('hasOne', () => {
         });
 
         const user = await query;
-        const profile = await db.profile.findBy({ userId: user.id });
+        const profile = await db.profile
+          .findBy({ userId: user.id })
+          .takeOrThrow();
 
         checkUserAndProfile({ user, profile, name: 'user', bio: 'profile' });
       });
@@ -537,6 +539,26 @@ describe('hasOne', () => {
 
           const profile2 = await db.profile.find(profile2Id).takeOrThrow();
           expect(profile2.userId).toBe(id);
+        });
+      });
+
+      describe('delete', () => {
+        it('should delete related record', async () => {
+          const { id } = await db.user
+            .select('id')
+            .insert({ ...userData, profile: { create: profileData } });
+
+          const { id: profileId } = await db.user
+            .profile({ id })
+            .select('id')
+            .takeOrThrow();
+
+          await db.user.find(id).update({
+            profile: { delete: true },
+          });
+
+          const profile = await db.profile.findBy({ id: profileId });
+          expect(profile).toBe(undefined);
         });
       });
     });

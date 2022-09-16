@@ -113,19 +113,46 @@ export const makeBelongsToMethod = (
           : created[createdI++],
       );
     }) as BelongsToNestedInsert,
-    nestedUpdate: (async (q, params) => {
-      if ('disconnect' in params) {
-        return { [primaryKey]: null };
-      } else if ('set' in params) {
-        if (primaryKey in params.set) {
-          return {
-            [primaryKey]: params.set[primaryKey as keyof typeof params.set],
-          };
-        } else {
-          return query.transacting(q)._findBy(params.set)._takeOrThrow();
+    nestedUpdate: ((q, update, params) => {
+      let id: unknown;
+
+      q._beforeUpdate(async (q) => {
+        if (params.disconnect) {
+          update[foreignKey] = null;
+        } else if (params.set) {
+          if (primaryKey in params.set) {
+            update[foreignKey] =
+              params.set[primaryKey as keyof typeof params.set];
+          } else {
+            const result = await query
+              .transacting(q)
+              ._findBy(params.set)
+              .select(primaryKey)
+              ._takeOrThrow();
+
+            update[foreignKey] = result[primaryKey];
+          }
+        } else if (params.delete) {
+          const selectQuery = q.transacting(q);
+          selectQuery.query.type = undefined;
+          selectQuery.query.select = [foreignKey];
+          id = await selectQuery._value();
+          update[foreignKey] = null;
         }
+      });
+
+      if (params.delete) {
+        q._afterUpdate(async (q) => {
+          if (id) {
+            await query
+              .transacting(q)
+              .findBy({
+                [primaryKey]: id,
+              })
+              .delete();
+          }
+        });
       }
-      return {};
     }) as BelongsToNestedUpdate,
     joinQuery: addQueryOn(query, query, model, primaryKey, foreignKey),
     primaryKey,

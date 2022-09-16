@@ -39,28 +39,25 @@ export type HasManyNestedInsert = (
   ][],
 ) => Promise<void>;
 
-export type NestedUpdateOneItem =
-  | {
-      disconnect: true;
-    }
-  | {
-      set: WhereArg<QueryBase>;
-    };
+export type NestedUpdateOneItem = {
+  disconnect?: boolean;
+  set?: WhereArg<QueryBase>;
+  delete?: boolean;
+};
 
-export type NestedUpdateManyItems =
-  | {
-      disconnect: MaybeArray<WhereArg<QueryBase>>;
-    }
-  | {
-      set: MaybeArray<WhereArg<QueryBase>>;
-    };
+export type NestedUpdateManyItems = {
+  disconnect?: MaybeArray<WhereArg<QueryBase>>;
+  set?: MaybeArray<WhereArg<QueryBase>>;
+  delete?: MaybeArray<WhereArg<QueryBase>>;
+};
 
 export type NestedUpdateItem = NestedUpdateOneItem | NestedUpdateManyItems;
 
 export type BelongsToNestedUpdate = (
-  query: Query,
-  relationData: NestedUpdateOneItem,
-) => Promise<Record<string, unknown>>;
+  q: Query,
+  update: Record<string, unknown>,
+  params: NestedUpdateOneItem,
+) => void;
 
 export type HasOneNestedUpdate = (
   query: Query,

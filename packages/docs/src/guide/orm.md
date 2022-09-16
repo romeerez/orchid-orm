@@ -374,6 +374,20 @@ await db.book.where({ title: 'book title' }).update({
 })
 ```
 
+### belongsTo delete
+
+Updates `foreignKey` to null and deletes related record.
+
+Following query will set `authorId` of found book to `NULL` and delete related `author` if exists.
+
+```ts
+await db.book.findBy({ id: 1 }).update({
+  author: {
+    delete: true,
+  },
+})
+```
+
 ## hasOne
 
 `hasOne` association indicates that one other model has a reference to this model. That model can be fetched through this association.
@@ -679,16 +693,30 @@ Following query will update `supplierId` of the account, and set `supplierId` to
 const account = await db.account.find(1).takeOrThrow();
 
 // TypeScript error because need to use `findBy` instead of `where`:
-await db.supplier.where({ id: 1 }).update({
+await db.supplier.find(1).update({
   account: {
     set: account,
   },
 })
 
-await db.supplier.findBy({ id: 1 }).update({
+await db.supplier.find(1).update({
   account: {
     // find account by id and update it's `supplierId`
     set: { id: account.id },
+  },
+})
+```
+
+### hasOne delete
+
+Deletes related record.
+
+Following query will delete related `account` if exists.
+
+```ts
+await db.supplier.find(1).update({
+  account: {
+    delete: true,
   },
 })
 ```
@@ -1060,24 +1088,46 @@ Following query will update `authorId` of found books, and set `authorId` to `NU
 
 ```ts
 // TypeScript error because need to use `findBy` instead of `where`:
-await db.author.where({ id: 1 }).update({
+await db.author.find(1).update({
   books: {
     set: { id: 1 }
   }
 })
 
-await db.author.findBy({ id: 1 }).update({
+await db.author.find(1).update({
   books: {
     // all found books with such title will be connected to the author
     set: { title: 'book title' }
   }
 })
 
-await db.author.findBy({ id: 1 }).update({
+await db.author.find(1).update({
   books: {
     // array of conditions can be provided:
     set: [{ id: 1 }, { id: 2 }]
   }
+})
+```
+
+### hasMany delete
+
+Deletes related records. Empty `{}` or `[]` will delete all related records, and if conditions applied it will delete only matching records.
+
+Following query will delete some books of the author:
+
+```ts
+await db.author.find(1).update({
+  account: {
+    // delete author book by conditions
+    delete: { title: 'book title' }
+  },
+})
+
+await db.author.find(1).update({
+  account: {
+    // array of conditions can be provided:
+    delete: [{ id: 1 }, { id: 2 }]
+  },
 })
 ```
 
@@ -1365,7 +1415,7 @@ await db.post.where({ title: 'post title' }).update({
 
 ### hasAndBelongsToMany set
 
-Set related records when updating.
+Set related records:
 
 All records found for the update will be connected to all records found by `set` conditions.
 
@@ -1376,14 +1426,35 @@ Following query will disconnect post with previous tags and connect with new one
 ```ts
 await db.post.where({ title: 'post title' }).update({
   tags: {
-    set: { name: 'tag name' }
+    set: { name: 'tag name' },
   }
 })
 
 await db.post.where({ title: 'post title' }).update({
   tags: {
     // array of conditions can be provided:
-    set: [{ id: 1 }, { id: 2 }]
+    set: [{ id: 1 }, { id: 2 }],
+  }
+})
+```
+
+### hasAndBelongsToMany delete
+
+Deletes related records. Empty `{}` or `[]` will delete all related records, and if conditions applied it will delete only matching records.
+
+Following query will delete matching tags of specific posts:
+
+```ts
+await db.post.where({ id: { in: [1, 2, 3] } }).update({
+  tags: {
+    delete: { name: 'tag name' },
+  },
+})
+
+await db.post.where({ id: { in: [1, 2, 3] } }).update({
+  tasg: {
+    // array of conditions can be provided:
+    delete: [{ id: 1 }, { id: 2 }]
   }
 })
 ```

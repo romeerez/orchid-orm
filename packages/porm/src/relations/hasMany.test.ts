@@ -711,6 +711,32 @@ describe('hasMany', () => {
         expect(message3.authorId).toBe(id);
       });
     });
+
+    describe('delete', () => {
+      it('should delete related records', async () => {
+        const { id: chatId } = await db.chat.select('id').insert(chatData);
+
+        const { id } = await db.user.select('id').insert({
+          ...userData,
+          messages: {
+            create: [
+              { ...messageData, chatId, text: 'message 1' },
+              { ...messageData, chatId, text: 'message 2' },
+              { ...messageData, chatId, text: 'message 3' },
+            ],
+          },
+        });
+
+        await db.user.find(id).update({
+          messages: { delete: [{ text: 'message 1' }, { text: 'message 2' }] },
+        });
+
+        expect(await db.message.count()).toBe(1);
+
+        const messages = await db.user.messages({ id }).select('text');
+        expect(messages).toEqual([{ text: 'message 3' }]);
+      });
+    });
   });
 });
 

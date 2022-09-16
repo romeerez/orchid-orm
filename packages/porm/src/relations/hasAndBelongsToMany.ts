@@ -210,42 +210,57 @@ export const makeHasAndBelongsToManyMethod = (
     }) as HasManyNestedInsert,
     nestedUpdate: (async (q, data, params) => {
       const t = subQuery.transacting(q);
-      if ('disconnect' in params || 'set' in params) {
-        const where: WhereArg<Query> = {
-          [foreignKey]: { in: data.map((item) => item[primaryKey]) },
-        };
+      const where: WhereArg<Query> = {
+        [foreignKey]: { in: data.map((item) => item[primaryKey]) },
+      };
 
-        if ('disconnect' in params) {
-          where[associationForeignKey] = {
-            in: query
-              .where<Query>(
-                Array.isArray(params.disconnect)
-                  ? { OR: params.disconnect }
-                  : params.disconnect,
-              )
-              ._select(associationPrimaryKey),
-          };
-        }
-
-        await t._where(where)._delete();
-
-        if ('set' in params) {
-          const ids = await query
-            .transacting(q)
-            ._where<Query>(
-              Array.isArray(params.set) ? { OR: params.set } : params.set,
+      const conditions = params.disconnect || params.delete;
+      if (conditions) {
+        where[associationForeignKey] = {
+          in: query
+            .where<Query>(
+              Array.isArray(conditions) ? { OR: conditions } : conditions,
             )
-            ._pluck(associationPrimaryKey);
+            ._select(associationPrimaryKey),
+        };
+      }
 
-          await t._insert(
-            data.flatMap((item) =>
-              ids.map((id) => ({
-                [foreignKey]: item[primaryKey],
-                [associationForeignKey]: id,
-              })),
-            ),
-          );
-        }
+      const deleteQuery = t._where(where);
+      let ids: Record<string, unknown>[];
+      if (params.delete) {
+        ids = await deleteQuery.select(associationForeignKey)._delete();
+      } else {
+        ids = [];
+        await deleteQuery._delete();
+      }
+
+      if (params.set) {
+        const ids = await query
+          .transacting(q)
+          ._where<Query>(
+            Array.isArray(params.set) ? { OR: params.set } : params.set,
+          )
+          ._pluck(associationPrimaryKey);
+
+        await t._insert(
+          data.flatMap((item) =>
+            ids.map((id) => ({
+              [foreignKey]: item[primaryKey],
+              [associationForeignKey]: id,
+            })),
+          ),
+        );
+      }
+
+      if (params.delete) {
+        await query
+          .transacting(t)
+          ._where({
+            [associationPrimaryKey]: {
+              in: ids.map((item) => item[associationForeignKey]),
+            },
+          })
+          ._delete();
       }
     }) as HasManyNestedUpdate,
     joinQuery: query.whereExists(subQuery, (q) =>

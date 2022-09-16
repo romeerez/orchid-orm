@@ -13,11 +13,14 @@ export const pgConfig = {
 
 export const dbClient = new Client(pgConfig);
 
-export const db = porm(pgConfig, {
-  user: UserModel,
-  profile: ProfileModel,
-  chat: ChatModel,
-  message: MessageModel,
-});
+export const db = porm(
+  { ...pgConfig, log: false },
+  {
+    user: UserModel,
+    profile: ProfileModel,
+    chat: ChatModel,
+    message: MessageModel,
+  },
+);
 
 export const adapter = db.adapter;

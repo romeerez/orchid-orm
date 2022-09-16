@@ -267,15 +267,15 @@ export class QueryMethods {
   findBy<T extends Query>(
     this: T,
     ...args: WhereArg<T>[]
-  ): SetQueryReturnsOne<WhereResult<T>> {
+  ): SetQueryReturnsOneOrUndefined<WhereResult<T>> {
     return this.clone()._findBy(...args);
   }
 
   _findBy<T extends Query>(
     this: T,
     ...args: WhereArg<T>[]
-  ): SetQueryReturnsOne<WhereResult<T>> {
-    return addWhere(this, args).takeOrThrow();
+  ): SetQueryReturnsOneOrUndefined<WhereResult<T>> {
+    return addWhere(this, args).take();
   }
 
   as<T extends Query, TableAlias extends string>(

@@ -799,5 +799,31 @@ describe('hasAndBelongsToMany', () => {
         expect(chats).toEqual([{ title: 'chat 2' }, { title: 'chat 3' }]);
       });
     });
+
+    describe('delete', () => {
+      it('should delete related records', async () => {
+        const { id } = await db.user.select('id').insert({
+          ...userData,
+          chats: {
+            create: [
+              { ...chatData, title: 'chat 1' },
+              { ...chatData, title: 'chat 2' },
+              { ...chatData, title: 'chat 3' },
+            ],
+          },
+        });
+
+        await db.chat.insert(chatData);
+
+        await db.user.find(id).update({
+          chats: { delete: [{ title: 'chat 1' }, { title: 'chat 2' }] },
+        });
+
+        expect(await db.chat.count()).toBe(2);
+
+        const chats = await db.user.chats({ id }).select('title');
+        expect(chats).toEqual([{ title: 'chat 3' }]);
+      });
+    });
   });
 });

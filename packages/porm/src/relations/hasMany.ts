@@ -11,11 +11,13 @@ import {
   HasManyNestedUpdate,
   HasManyRelation,
   InsertData,
+  JoinCallback,
+  MaybeArray,
   Query,
   QueryBase,
   Relation,
 } from 'pqb';
-import { WhereArg } from 'pqb/src/queryMethods/where';
+import { WhereArg, WhereResult } from 'pqb/src/queryMethods/where';
 
 export interface HasMany extends RelationThunkBase {
   type: 'hasMany';
@@ -75,16 +77,16 @@ export const makeHasManyMethod = (
           through
         ](params);
 
-        return (query.whereExists as (arg: Query, cb: () => Query) => Query)(
+        return query.whereExists<Query, Query>(
           throughQuery,
-          whereExistsCallback,
+          whereExistsCallback as unknown as JoinCallback<Query, Query>,
         );
       },
       nestedInsert: undefined,
       nestedUpdate: undefined,
-      joinQuery: (query.whereExists as (arg: Query, cb: () => Query) => Query)(
+      joinQuery: query.whereExists<Query, Query>(
         throughRelation.joinQuery,
-        whereExistsCallback,
+        whereExistsCallback as unknown as JoinCallback<Query, Query>,
       ),
       primaryKey: sourceRelation.primaryKey,
     };
@@ -141,7 +143,9 @@ export const makeHasManyMethod = (
         connected = await Promise.all(
           connectOrCreate.flatMap(([selfData, { connectOrCreate }]) =>
             connectOrCreate.map((item) =>
-              (t.where(item.where) as Query & { hasSelect: false })._update({
+              (
+                t.where(item.where) as WhereResult<Query & { hasSelect: false }>
+              )._update({
                 [foreignKey]: selfData[primaryKey],
               }),
             ),
@@ -200,21 +204,19 @@ export const makeHasManyMethod = (
     }) as HasManyNestedInsert,
     nestedUpdate: (async (q, data, params) => {
       const t = query.transacting(q);
-      if ('disconnect' in params || 'set' in params) {
-        const where: WhereArg<Query> = {
-          [foreignKey]: { in: data.map((item) => item[primaryKey]) },
-        };
-        if ('disconnect' in params) {
-          if (Array.isArray(params.disconnect)) {
-            where.OR = params.disconnect;
-          } else {
-            Object.assign(where, params.disconnect);
-          }
-        }
+      if (params.disconnect || params.set) {
+        await t
+          .where<Query>(
+            getWhereForNestedUpdate(
+              data,
+              params.disconnect,
+              primaryKey,
+              foreignKey,
+            ),
+          )
+          ._update({ [foreignKey]: null });
 
-        await t.where<Query>(where)._update({ [foreignKey]: null });
-
-        if ('set' in params) {
+        if (params.set) {
           await t
             .where<Query>(
               Array.isArray(params.set)
@@ -225,9 +227,39 @@ export const makeHasManyMethod = (
             )
             ._update({ [foreignKey]: data[0][primaryKey] });
         }
+      } else if (params.delete) {
+        await t
+          .where(
+            getWhereForNestedUpdate(
+              data,
+              params.delete,
+              primaryKey,
+              foreignKey,
+            ),
+          )
+          .delete();
       }
     }) as HasManyNestedUpdate,
     joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),
     primaryKey,
   };
+};
+
+const getWhereForNestedUpdate = (
+  data: Record<string, unknown>[],
+  params: MaybeArray<WhereArg<QueryBase>> | undefined,
+  primaryKey: string,
+  foreignKey: string,
+) => {
+  const where: WhereArg<Query> = {
+    [foreignKey]: { in: data.map((item) => item[primaryKey]) },
+  };
+  if (params) {
+    if (Array.isArray(params)) {
+      where.OR = params;
+    } else {
+      Object.assign(where, params);
+    }
+  }
+  return where;
 };

@@ -8,7 +8,6 @@ import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { isRaw, RawExpression } from '../common';
 import {
   BelongsToNestedUpdate,
-  BelongsToRelation,
   HasOneNestedUpdate,
   NestedUpdateOneItem,
   Relation,
@@ -25,24 +24,28 @@ type UpdateData<T extends Query> = {
         ?
             | { disconnect: boolean }
             | { set: WhereArg<T['relations'][K]['model']> }
+            | { delete: boolean }
         : T['relations'][K]['type'] extends 'hasOne'
         ?
             | { disconnect: boolean }
             | (T['returnType'] extends 'one' | 'oneOrThrow'
                 ? { set: WhereArg<T['relations'][K]['model']> }
                 : never)
+            | { delete: boolean }
         : T['relations'][K]['type'] extends 'hasMany'
         ?
             | { disconnect: MaybeArray<WhereArg<T['relations'][K]['model']>> }
             | (T['returnType'] extends 'one' | 'oneOrThrow'
                 ? { set: MaybeArray<WhereArg<T['relations'][K]['model']>> }
                 : never)
+            | { delete: MaybeArray<WhereArg<T['relations'][K]['model']>> }
         : T['relations'][K]['type'] extends 'hasAndBelongsToMany'
         ?
-            | { disconnect: WhereArg<T['relations'][K]['model']>[] }
+            | { disconnect: MaybeArray<WhereArg<T['relations'][K]['model']>> }
             | {
                 set: MaybeArray<WhereArg<T['relations'][K]['model']>>;
               }
+            | { delete: MaybeArray<WhereArg<T['relations'][K]['model']>> }
         : never;
     }
   : // eslint-disable-next-line @typescript-eslint/ban-types
@@ -140,23 +143,16 @@ export class Update {
       }
       const prependRelationKeys = Object.keys(prependRelations);
       if (prependRelationKeys.length) {
-        pushQueryArray(
-          this,
-          'beforeQuery',
-          prependRelationKeys.map((relationName) => {
-            return async (q: Query) => {
-              const relationData = prependRelations[relationName];
-              const relation = relations[relationName];
-
-              const updated = await (
-                relation.nestedUpdate as BelongsToNestedUpdate
-              )(q, relationData as NestedUpdateOneItem);
-
-              const { options } = relation as BelongsToRelation;
-
-              update[options.foreignKey] = updated[options.primaryKey];
-            };
-          }),
+        prependRelationKeys.map((relationName) =>
+          (
+            relations[relationName] as {
+              nestedUpdate: BelongsToNestedUpdate;
+            }
+          ).nestedUpdate(
+            this,
+            update,
+            prependRelations[relationName] as NestedUpdateOneItem,
+          ),
         );
       } else if (!Object.keys(update).length) {
         delete this.query.type;

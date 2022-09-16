@@ -552,5 +552,25 @@ describe('belongsTo', () => {
         expect(profile.userId).toBe(user.id);
       });
     });
+
+    describe('delete', () => {
+      it('should nullify foreignKey and delete related record', async () => {
+        const { id, userId } = await db.profile
+          .select('id', 'userId')
+          .insert({ ...profileData, user: { create: userData } });
+
+        const [profile] = await db.profile
+          .find(id)
+          .select('userId')
+          .update({
+            user: { delete: true },
+          });
+
+        expect(profile.userId).toBe(null);
+
+        const user = await db.user.findBy({ id: userId });
+        expect(user).toBe(undefined);
+      });
+    });
   });
 });

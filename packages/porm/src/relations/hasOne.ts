@@ -3,6 +3,7 @@ import {
   HasOneNestedInsert,
   HasOneNestedUpdate,
   HasOneRelation,
+  JoinCallback,
   NestedInsertOneItem,
   Query,
   QueryBase,
@@ -15,7 +16,7 @@ import {
   RelationThunkBase,
   RelationThunks,
 } from './relations';
-import { WhereArg } from 'pqb/src/queryMethods/where';
+import { WhereArg, WhereResult } from 'pqb/src/queryMethods/where';
 
 export interface HasOne extends RelationThunkBase {
   type: 'hasOne';
@@ -75,16 +76,18 @@ export const makeHasOneMethod = (
           through
         ](params);
 
-        return (query.whereExists as (arg: Query, cb: () => Query) => Query)(
-          throughQuery,
-          whereExistsCallback,
-        )._take();
+        return query
+          .whereExists<Query, Query>(
+            throughQuery,
+            whereExistsCallback as unknown as JoinCallback<Query, Query>,
+          )
+          ._take();
       },
       nestedInsert: undefined,
       nestedUpdate: undefined,
-      joinQuery: (query.whereExists as (arg: Query, cb: () => Query) => Query)(
+      joinQuery: query.whereExists<Query, Query>(
         throughRelation.joinQuery,
-        whereExistsCallback,
+        whereExistsCallback as unknown as JoinCallback<Query, Query>,
       ),
       primaryKey: sourceRelation.primaryKey,
     };
@@ -116,11 +119,15 @@ export const makeHasOneMethod = (
           connect.map(([selfData, item]) => {
             const data = { [foreignKey]: selfData[primaryKey] };
             return item.create
-              ? (t.where(item.connect) as Query & { hasSelect: false })._update(
-                  data,
-                )
+              ? (
+                  t.where(item.connect) as WhereResult<Query> & {
+                    hasSelect: false;
+                  }
+                )._update(data)
               : (
-                  t.where(item.connect) as Query & { hasSelect: false }
+                  t.where(item.connect) as WhereResult<Query> & {
+                    hasSelect: false;
+                  }
                 )._updateOrThrow(data);
           }),
         );
@@ -154,18 +161,24 @@ export const makeHasOneMethod = (
     }) as HasOneNestedInsert,
     nestedUpdate: (async (q, data, params) => {
       const t = query.transacting(q);
-      if ('disconnect' in params || 'set' in params) {
+      if (params.disconnect || params.set) {
         await t
           .where({
             [foreignKey]: { in: data.map((item) => item[primaryKey]) },
           })
           ._update({ [foreignKey]: null });
 
-        if ('set' in params) {
+        if (params.set) {
           await t
-            .where<Query>(params.set)
+            ._where<Query>(params.set)
             ._update({ [foreignKey]: data[0][primaryKey] });
         }
+      } else if (params.delete) {
+        await t
+          ._where({
+            [foreignKey]: { in: data.map((item) => item[primaryKey]) },
+          })
+          ._delete();
       }
     }) as HasOneNestedUpdate,
     joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),

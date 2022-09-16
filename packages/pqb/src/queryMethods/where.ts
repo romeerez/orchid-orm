@@ -11,6 +11,7 @@ export type WhereArg<T extends QueryBase> =
       {
         [K in keyof T['selectable']]?:
           | T['selectable'][K]['column']['type']
+          | null
           | ColumnOperators<T['selectable'], K>
           | RawExpression;
       },
