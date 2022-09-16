@@ -395,17 +395,21 @@ Update related record:
 ```ts
 await db.book.find(1).update({
   author: {
-    name: 'new name',
+    update: {
+      name: 'new name',
+    },
   },
 })
 ```
 
-In case of updating multiple records, all related records will be updated:
+In case of updating multiple records, all their related records will be updated:
 
 ```ts
 await db.book.where({ id: { in: [1, 2, 3] } }).update({
   author: {
-    name: 'new name',
+    update: {
+      name: 'new name',
+    },
   },
 })
 ```
@@ -750,12 +754,14 @@ Update related record:
 ```ts
 await db.supplier.find(1).update({
   account: {
-    name: 'new name',
+    update: {
+      name: 'new name',
+    },
   },
 })
 ```
 
-In case of updating multiple records, all related records will be updated:
+In case of updating multiple records, all their related records will be updated:
 
 ```ts
 await db.supplier.where({ id: [1, 2, 3] }).update({
@@ -1175,19 +1181,28 @@ await db.author.find(1).update({
 })
 ```
 
-### hasOne update
+### hasMany update
 
-Update related records:
+Update related records, all related records found by `where` conditions will be updated.
+
+`where` can be an array of objects with conditions.
 
 ```ts
 await db.author.find(1).update({
   books: {
-    title: 'new book title',
+    update: {
+      where: {
+        title: 'old book title',
+      },
+      data: {
+        title: 'new book title',
+      },
+    }
   },
 })
 ```
 
-In case of updating multiple records, all related records will be updated:
+In case of updating multiple records, all their related records will be updated:
 
 ```ts
 await db.author.where({ id: [1, 2, 3] }).update({
@@ -1527,17 +1542,24 @@ await db.post.where({ id: { in: [1, 2, 3] } }).update({
 
 ### hasAndBelongsToMany update
 
-Update related records:
+Update related records, all related records found by `where` conditions will be updated.
+
+`where` can be an array of objects with conditions.
 
 ```ts
 await db.post.find(1).update({
   tags: {
-    name: 'new tag name',
+    update: {
+      where: 'old tag name',
+    },
+    data: {
+      name: 'new tag name',
+    },
   },
 })
 ```
 
-In case of updating multiple records, all related records will be updated:
+In case of updating multiple records, all their related records will be updated:
 
 ```ts
 await db.author.where({ id: [1, 2, 3] }).update({
