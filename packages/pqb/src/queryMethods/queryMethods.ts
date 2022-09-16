@@ -3,7 +3,6 @@ import {
   Query,
   Selectable,
   SetQueryReturnsAll,
-  SetQueryReturnsOneOrUndefined,
   SetQueryReturnsOne,
   SetQueryReturnsPluck,
   SetQueryReturnsRows,
@@ -13,6 +12,7 @@ import {
   SetQueryTableAlias,
   SetQueryWindows,
   QueryBase,
+  SetQueryReturnsOneOrUndefined,
 } from '../query';
 import {
   applyMixins,
@@ -117,28 +117,28 @@ export class QueryMethods {
     return this as unknown as SetQueryReturnsAll<T>;
   }
 
-  take<T extends Query>(this: T): SetQueryReturnsOneOrUndefined<T> {
-    return this.returnType === 'one'
-      ? (this as unknown as SetQueryReturnsOneOrUndefined<T>)
+  take<T extends Query>(this: T): SetQueryReturnsOne<T> {
+    return this.returnType === 'oneOrThrow'
+      ? (this as unknown as SetQueryReturnsOne<T>)
       : this.clone()._take();
   }
 
-  _take<T extends Query>(this: T): SetQueryReturnsOneOrUndefined<T> {
-    this.returnType = 'one';
-    this.query.take = true;
-    return this as unknown as SetQueryReturnsOneOrUndefined<T>;
-  }
-
-  takeOrThrow<T extends Query>(this: T): SetQueryReturnsOne<T> {
-    return this.returnType === 'oneOrThrow'
-      ? (this as unknown as SetQueryReturnsOne<T>)
-      : this.clone()._takeOrThrow();
-  }
-
-  _takeOrThrow<T extends Query>(this: T): SetQueryReturnsOne<T> {
+  _take<T extends Query>(this: T): SetQueryReturnsOne<T> {
     this.returnType = 'oneOrThrow';
     this.query.take = true;
     return this as unknown as SetQueryReturnsOne<T>;
+  }
+
+  takeOptional<T extends Query>(this: T): SetQueryReturnsOneOrUndefined<T> {
+    return this.returnType === 'one'
+      ? (this as unknown as SetQueryReturnsOneOrUndefined<T>)
+      : this.clone()._takeOptional();
+  }
+
+  _takeOptional<T extends Query>(this: T): SetQueryReturnsOneOrUndefined<T> {
+    this.returnType = 'one';
+    this.query.take = true;
+    return this as unknown as SetQueryReturnsOneOrUndefined<T>;
   }
 
   rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
@@ -176,9 +176,9 @@ export class QueryMethods {
   value<T extends Query, V extends ColumnType>(
     this: T,
     columnType?: V,
-  ): SetQueryReturnsValueOrUndefined<T, V> {
-    return this.returnType === 'value'
-      ? (this as unknown as SetQueryReturnsValueOrUndefined<T, V>)
+  ): SetQueryReturnsValue<T, V> {
+    return this.returnType === 'valueOrThrow'
+      ? (this as unknown as SetQueryReturnsValue<T, V>)
       : this.clone()._value<T, V>(columnType);
   }
 
@@ -186,29 +186,29 @@ export class QueryMethods {
     this: T,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _columnType?: V,
-  ): SetQueryReturnsValueOrUndefined<T, V> {
-    this.returnType = 'value';
-    removeFromQuery(this, 'take');
-    return this as unknown as SetQueryReturnsValueOrUndefined<T, V>;
-  }
-
-  valueOrThrow<T extends Query, V extends ColumnType>(
-    this: T,
-    columnType?: V,
-  ): SetQueryReturnsValue<T, V> {
-    return this.returnType === 'valueOrThrow'
-      ? (this as unknown as SetQueryReturnsValue<T, V>)
-      : this.clone()._valueOrThrow<T, V>(columnType);
-  }
-
-  _valueOrThrow<T extends Query, V extends ColumnType>(
-    this: T,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _columnType?: V,
   ): SetQueryReturnsValue<T, V> {
     this.returnType = 'valueOrThrow';
     removeFromQuery(this, 'take');
     return this as unknown as SetQueryReturnsValue<T, V>;
+  }
+
+  valueOptional<T extends Query, V extends ColumnType>(
+    this: T,
+    columnType?: V,
+  ): SetQueryReturnsValueOrUndefined<T, V> {
+    return this.returnType === 'value'
+      ? (this as unknown as SetQueryReturnsValueOrUndefined<T, V>)
+      : this.clone()._valueOptional<T, V>(columnType);
+  }
+
+  _valueOptional<T extends Query, V extends ColumnType>(
+    this: T,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _columnType?: V,
+  ): SetQueryReturnsValueOrUndefined<T, V> {
+    this.returnType = 'value';
+    removeFromQuery(this, 'take');
+    return this as unknown as SetQueryReturnsValueOrUndefined<T, V>;
   }
 
   exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {
@@ -249,14 +249,14 @@ export class QueryMethods {
   find<T extends Query>(
     this: T,
     ...args: GetTypesOrRaw<T['schema']['primaryTypes']>
-  ): SetQueryReturnsOneOrUndefined<WhereResult<T>> {
+  ): SetQueryReturnsOne<WhereResult<T>> {
     return this.clone()._find(...args);
   }
 
   _find<T extends Query>(
     this: T,
     ...args: GetTypesOrRaw<T['schema']['primaryTypes']>
-  ): SetQueryReturnsOneOrUndefined<WhereResult<T>> {
+  ): SetQueryReturnsOne<WhereResult<T>> {
     const conditions: Partial<T['type']> = {};
     this.schema.primaryKeys.forEach((key: string, i: number) => {
       conditions[key as keyof T['type']] = args[i];
@@ -264,18 +264,50 @@ export class QueryMethods {
     return this._where(conditions as WhereArg<T>)._take();
   }
 
+  findOptional<T extends Query>(
+    this: T,
+    ...args: GetTypesOrRaw<T['schema']['primaryTypes']>
+  ): SetQueryReturnsOneOrUndefined<WhereResult<T>> {
+    return this.clone()._findOptional(...args);
+  }
+
+  _findOptional<T extends Query>(
+    this: T,
+    ...args: GetTypesOrRaw<T['schema']['primaryTypes']>
+  ): SetQueryReturnsOneOrUndefined<WhereResult<T>> {
+    return this._find(
+      ...args,
+    ).takeOptional() as unknown as SetQueryReturnsOneOrUndefined<
+      WhereResult<T>
+    >;
+  }
+
   findBy<T extends Query>(
     this: T,
     ...args: WhereArg<T>[]
-  ): SetQueryReturnsOneOrUndefined<WhereResult<T>> {
+  ): SetQueryReturnsOne<WhereResult<T>> {
     return this.clone()._findBy(...args);
   }
 
   _findBy<T extends Query>(
     this: T,
     ...args: WhereArg<T>[]
-  ): SetQueryReturnsOneOrUndefined<WhereResult<T>> {
+  ): SetQueryReturnsOne<WhereResult<T>> {
     return addWhere(this, args).take();
+  }
+
+  findByOptional<T extends Query>(
+    this: T,
+    ...args: WhereArg<T>[]
+  ): SetQueryReturnsOneOrUndefined<WhereResult<T>> {
+    return this.clone()._findByOptional(...args);
+  }
+
+  _findByOptional<T extends Query>(
+    this: T,
+    ...args: WhereArg<T>[]
+  ): SetQueryReturnsOneOrUndefined<WhereResult<T>> {
+    return addWhere(this, args).takeOptional();
   }
 
   as<T extends Query, TableAlias extends string>(
@@ -387,7 +419,7 @@ export class QueryMethods {
     (this.query as SelectQueryData).select = [
       { selectAs: { exists: raw('1') } },
     ];
-    return this._value<T, NumberColumn>();
+    return this._valueOptional<T, NumberColumn>();
   }
 
   truncate<T extends Query>(

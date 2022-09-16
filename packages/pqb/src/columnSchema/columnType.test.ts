@@ -109,14 +109,14 @@ describe('column base', () => {
           createdAt: t.timestamp(),
         }));
 
-        expect(
-          typeof (await UserWithPlainTimestamp.takeOrThrow()).createdAt,
-        ).toBe('string');
+        expect(typeof (await UserWithPlainTimestamp.take()).createdAt).toBe(
+          'string',
+        );
       });
 
       it('should parse all columns', async () => {
         expect((await User.all())[0].createdAt instanceof Date).toBe(true);
-        expect((await User.takeOrThrow()).createdAt instanceof Date).toBe(true);
+        expect((await User.take()).createdAt instanceof Date).toBe(true);
         const idx = Object.keys(User.shape).indexOf('createdAt');
         expect((await User.rows())[0][idx] instanceof Date).toBe(true);
       });

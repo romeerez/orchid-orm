@@ -53,7 +53,7 @@ export const makeBelongsToMethod = (
       let connectOrCreated: unknown[];
       if (connectOrCreate.length) {
         connectOrCreated = await Promise.all(
-          connectOrCreate.map((item) => t.findBy(item.connect)._take()),
+          connectOrCreate.map((item) => t.findBy(item.connect)._takeOptional()),
         );
       } else {
         connectOrCreated = [];
@@ -96,7 +96,7 @@ export const makeBelongsToMethod = (
       let connected: unknown[];
       if (connect.length) {
         connected = await Promise.all(
-          connect.map((item) => t.findBy(item.connect)._takeOrThrow()),
+          connect.map((item) => t.findBy(item.connect)._take()),
         );
       } else {
         connected = [];
@@ -128,7 +128,7 @@ export const makeBelongsToMethod = (
               .transacting(q)
               ._findBy(params.set)
               .select(primaryKey)
-              ._takeOrThrow();
+              ._take();
 
             update[foreignKey] = result[primaryKey];
           }
@@ -136,7 +136,7 @@ export const makeBelongsToMethod = (
           const selectQuery = q.transacting(q);
           selectQuery.query.type = undefined;
           selectQuery.query.select = [foreignKey];
-          id = await selectQuery._value();
+          id = await selectQuery._valueOptional();
           update[foreignKey] = null;
         }
       });

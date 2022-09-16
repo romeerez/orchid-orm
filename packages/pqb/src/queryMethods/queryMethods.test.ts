@@ -71,38 +71,6 @@ describe('queryMethods', () => {
         .then((res) => res.rows[0]);
 
       const user = await q.take();
-      const eq: AssertEqual<typeof user, typeof User.type | undefined> = true;
-      expect(eq).toBe(true);
-
-      expect(user).toEqual({
-        ...expected,
-        createdAt: new Date(expected.createdAt),
-        updatedAt: new Date(expected.updatedAt),
-      });
-    });
-
-    it('should return undefined if not found', async () => {
-      const user = await User.take();
-      const eq: AssertEqual<typeof user, typeof User.type | undefined> = true;
-      expect(eq).toBe(true);
-
-      expect(user).toBe(undefined);
-    });
-  });
-
-  describe('takeOrThrow', () => {
-    it('limits to one and returns only one', async () => {
-      await User.insert(userData);
-
-      const q = User.all();
-      expectSql(q.takeOrThrow().toSql(), `SELECT * FROM "user" LIMIT $1`, [1]);
-      expectQueryNotMutated(q);
-
-      const expected = await adapter
-        .query('SELECT * FROM "user" LIMIT 1')
-        .then((res) => res.rows[0]);
-
-      const user = await q.takeOrThrow();
       const eq: AssertEqual<typeof user, typeof User.type> = true;
       expect(eq).toBe(true);
 
@@ -114,9 +82,39 @@ describe('queryMethods', () => {
     });
 
     it('should throw if not found', async () => {
-      await expect(() => User.takeOrThrow()).rejects.toThrowError(
-        NotFoundError,
-      );
+      await expect(() => User.take()).rejects.toThrowError(NotFoundError);
+    });
+  });
+
+  describe('takeOptional', () => {
+    it('limits to one and returns only one', async () => {
+      await User.insert(userData);
+
+      const q = User.all();
+      expectSql(q.takeOptional().toSql(), `SELECT * FROM "user" LIMIT $1`, [1]);
+      expectQueryNotMutated(q);
+
+      const expected = await adapter
+        .query('SELECT * FROM "user" LIMIT 1')
+        .then((res) => res.rows[0]);
+
+      const user = await q.takeOptional();
+      const eq: AssertEqual<typeof user, typeof User.type | undefined> = true;
+      expect(eq).toBe(true);
+
+      expect(user).toEqual({
+        ...expected,
+        createdAt: new Date(expected.createdAt),
+        updatedAt: new Date(expected.updatedAt),
+      });
+    });
+
+    it('should return undefined if not found', async () => {
+      const user = await User.takeOptional();
+      const eq: AssertEqual<typeof user, typeof User.type | undefined> = true;
+      expect(eq).toBe(true);
+
+      expect(user).toBe(undefined);
     });
   });
 
@@ -164,7 +162,9 @@ describe('queryMethods', () => {
     it('returns a first value', async () => {
       const { id } = await User.select('id').insert(userData);
 
-      const received = await User.select('id').value(columnTypes.integer());
+      const received = await User.select('id').valueOptional(
+        columnTypes.integer(),
+      );
 
       const eq: AssertEqual<typeof received, number | undefined> = true;
       expect(eq).toBe(true);
@@ -173,7 +173,9 @@ describe('queryMethods', () => {
     });
 
     it('should return undefined if not found', async () => {
-      const value = await User.select('id').value(columnTypes.integer());
+      const value = await User.select('id').valueOptional(
+        columnTypes.integer(),
+      );
       const eq: AssertEqual<typeof value, number | undefined> = true;
       expect(eq).toBe(true);
 
@@ -181,7 +183,7 @@ describe('queryMethods', () => {
     });
 
     it('removes `take` from query data', () => {
-      expect((User.take().value().query as SelectQueryData)?.take).toBe(
+      expect((User.take().valueOptional().query as SelectQueryData)?.take).toBe(
         undefined,
       );
     });
@@ -191,9 +193,7 @@ describe('queryMethods', () => {
     it('returns a first value', async () => {
       const { id } = await User.select('id').insert(userData);
 
-      const received = await User.select('id').valueOrThrow(
-        columnTypes.integer(),
-      );
+      const received = await User.select('id').value(columnTypes.integer());
 
       const eq: AssertEqual<typeof received, number> = true;
       expect(eq).toBe(true);
@@ -203,12 +203,12 @@ describe('queryMethods', () => {
 
     it('should throw if not found', async () => {
       await expect(() =>
-        User.select('id').valueOrThrow(columnTypes.integer()),
+        User.select('id').value(columnTypes.integer()),
       ).rejects.toThrowError(NotFoundError);
     });
 
     it('removes `take` from query data', () => {
-      expect((User.take().valueOrThrow().query as SelectQueryData)?.take).toBe(
+      expect((User.take().value().query as SelectQueryData)?.take).toBe(
         undefined,
       );
     });
@@ -305,8 +305,13 @@ describe('queryMethods', () => {
   describe('find', () => {
     it('searches one by primary key', () => {
       const q = User.all();
+      const query = q.find(1);
+
+      const eq: AssertEqual<Awaited<typeof query>, typeof User.type> = true;
+      expect(eq).toBe(true);
+
       expectSql(
-        q.find(1).toSql(),
+        query.toSql(),
         `
             SELECT * FROM "user"
             WHERE "user"."id" = $1
@@ -319,8 +324,59 @@ describe('queryMethods', () => {
 
     it('should accept raw sql', () => {
       const q = User.all();
+      const query = q.find(raw('$1 + $2', 1, 2));
+
+      const eq: AssertEqual<Awaited<typeof query>, typeof User.type> = true;
+      expect(eq).toBe(true);
+
       expectSql(
-        q.find(raw('$1 + $2', 1, 2)).toSql(),
+        query.toSql(),
+        `
+          SELECT * FROM "user"
+          WHERE "user"."id" = $1 + $2
+          LIMIT $3
+        `,
+        [1, 2, 1],
+      );
+      expectQueryNotMutated(q);
+    });
+  });
+
+  describe('findOptional', () => {
+    it('searches one by primary key', () => {
+      const q = User.all();
+      const query = q.findOptional(1);
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        typeof User.type | undefined
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
+        `
+            SELECT * FROM "user"
+            WHERE "user"."id" = $1
+            LIMIT $2
+        `,
+        [1, 1],
+      );
+      expectQueryNotMutated(q);
+    });
+
+    it('should accept raw sql', () => {
+      const q = User.all();
+      const query = q.findOptional(raw('$1 + $2', 1, 2));
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        typeof User.type | undefined
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
         `
           SELECT * FROM "user"
           WHERE "user"."id" = $1 + $2
@@ -347,6 +403,44 @@ describe('queryMethods', () => {
       const q = User.all();
       expectSql(
         q.findBy({ name: raw(`'string'`) }).toSql(),
+        `SELECT * FROM "user" WHERE "user"."name" = 'string' LIMIT $1`,
+        [1],
+      );
+      expectQueryNotMutated(q);
+    });
+  });
+
+  describe('findByOptional', () => {
+    it('like where but with take', () => {
+      const q = User.all();
+      const query = q.findByOptional({ name: 's' });
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        typeof User.type | undefined
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
+        `SELECT * FROM "user" WHERE "user"."name" = $1 LIMIT $2`,
+        ['s', 1],
+      );
+      expectQueryNotMutated(q);
+    });
+
+    it('should accept raw', () => {
+      const q = User.all();
+      const query = q.findByOptional({ name: raw(`'string'`) });
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        typeof User.type | undefined
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
         `SELECT * FROM "user" WHERE "user"."name" = 'string' LIMIT $1`,
         [1],
       );

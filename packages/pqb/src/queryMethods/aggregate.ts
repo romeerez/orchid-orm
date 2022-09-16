@@ -187,7 +187,7 @@ export class Aggregate {
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NumberColumn> {
     const q = this._selectCount(arg, options) as unknown as T;
-    return q._valueOrThrow();
+    return q._value();
   }
 
   selectCount<T extends Query, As extends string | undefined = undefined>(
@@ -225,7 +225,7 @@ export class Aggregate {
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     const q = this._selectAvg(arg, options) as unknown as T;
-    return q._valueOrThrow<T, NullableColumn<NumberColumn>>();
+    return q._value<T, NullableColumn<NumberColumn>>();
   }
 
   selectAvg<T extends Query, As extends string | undefined = undefined>(
@@ -263,7 +263,7 @@ export class Aggregate {
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     const q = this._selectMin(arg, options) as unknown as T;
-    return q._valueOrThrow<T, NullableColumn<NumberColumn>>();
+    return q._value<T, NullableColumn<NumberColumn>>();
   }
 
   selectMin<T extends Query, As extends string | undefined = undefined>(
@@ -301,7 +301,7 @@ export class Aggregate {
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     const q = this._selectMax(arg, options) as unknown as T;
-    return q._valueOrThrow<T, NullableColumn<NumberColumn>>();
+    return q._value<T, NullableColumn<NumberColumn>>();
   }
 
   selectMax<T extends Query, As extends string | undefined = undefined>(
@@ -339,7 +339,7 @@ export class Aggregate {
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     const q = this._selectSum(arg, options) as unknown as T;
-    return q._valueOrThrow<T, NullableColumn<NumberColumn>>();
+    return q._value<T, NullableColumn<NumberColumn>>();
   }
 
   selectSum<T extends Query, As extends string | undefined = undefined>(
@@ -377,7 +377,7 @@ export class Aggregate {
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     const q = this._selectBitAnd(arg, options) as unknown as T;
-    return q._valueOrThrow<T, NullableColumn<NumberColumn>>();
+    return q._value<T, NullableColumn<NumberColumn>>();
   }
 
   selectBitAnd<T extends Query, As extends string | undefined = undefined>(
@@ -410,7 +410,7 @@ export class Aggregate {
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
     const q = this._selectBitOr(arg, options) as unknown as T;
-    return q._valueOrThrow<T, NullableColumn<NumberColumn>>();
+    return q._value<T, NullableColumn<NumberColumn>>();
   }
 
   selectBitOr<T extends Query, As extends string | undefined = undefined>(
@@ -443,7 +443,7 @@ export class Aggregate {
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<BooleanColumn>> {
     const q = this._selectBoolAnd(arg, options) as unknown as T;
-    return q._valueOrThrow<T, NullableColumn<BooleanColumn>>();
+    return q._value<T, NullableColumn<BooleanColumn>>();
   }
 
   selectBoolAnd<T extends Query, As extends string | undefined = undefined>(
@@ -476,7 +476,7 @@ export class Aggregate {
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<BooleanColumn>> {
     const q = this._selectBoolOr(arg, options) as unknown as T;
-    return q._valueOrThrow<T, NullableColumn<BooleanColumn>>();
+    return q._value<T, NullableColumn<BooleanColumn>>();
   }
 
   selectBoolOr<T extends Query, As extends string | undefined = undefined>(
@@ -509,7 +509,7 @@ export class Aggregate {
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<BooleanColumn>> {
     const q = this._selectEvery(arg, options) as unknown as T;
-    return q._valueOrThrow<T, NullableColumn<BooleanColumn>>();
+    return q._value<T, NullableColumn<BooleanColumn>>();
   }
 
   selectEvery<T extends Query, As extends string | undefined = undefined>(
@@ -548,7 +548,7 @@ export class Aggregate {
     NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
   > {
     const q = this._selectJsonAgg(arg, options) as unknown as T;
-    return q._valueOrThrow<
+    return q._value<
       T,
       NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
     >();
@@ -614,7 +614,7 @@ export class Aggregate {
     NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
   > {
     const q = this._selectJsonbAgg(arg, options) as unknown as T;
-    return q._valueOrThrow<
+    return q._value<
       T,
       NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
     >();
@@ -668,7 +668,7 @@ export class Aggregate {
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<StringColumn>> {
     const q = this._selectXmlAgg(arg, options) as unknown as T;
-    return q._valueOrThrow<T, NullableColumn<StringColumn>>();
+    return q._value<T, NullableColumn<StringColumn>>();
   }
 
   selectXmlAgg<T extends Query, As extends string | undefined = undefined>(
@@ -711,7 +711,7 @@ export class Aggregate {
     >
   > {
     const q = this._selectJsonObjectAgg(obj, options) as unknown as T;
-    return q._valueOrThrow<
+    return q._value<
       T,
       NullableColumn<
         ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
@@ -781,7 +781,7 @@ export class Aggregate {
     >
   > {
     const q = this._selectJsonbObjectAgg(obj, options) as unknown as T;
-    return q._valueOrThrow<
+    return q._value<
       T,
       NullableColumn<
         ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
@@ -843,7 +843,7 @@ export class Aggregate {
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<StringColumn>> {
     const q = this._selectStringAgg(arg, delimiter, options) as unknown as T;
-    return q._valueOrThrow<T, NullableColumn<StringColumn>>();
+    return q._value<T, NullableColumn<StringColumn>>();
   }
 
   selectStringAgg<T extends Query, As extends string | undefined = undefined>(

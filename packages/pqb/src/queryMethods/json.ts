@@ -62,7 +62,7 @@ export class Json {
       }),
     ) as unknown as T;
 
-    return q._value<T, StringColumn>();
+    return q._valueOptional<T, StringColumn>();
   }
 
   jsonSet<

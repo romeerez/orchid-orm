@@ -183,7 +183,7 @@ export class BookModel extends Model {
 Query author of the book when we already have a book record:
 
 ```ts
-const book = await db.book.find(1).takeOrThrow()
+const book = await db.book.find(1)
 
 // type of author can be undefined if relation option required is not true:
 const author = await db.book.author(book) // type of argument is { authorId: number }
@@ -226,7 +226,7 @@ If there is no related record in the database it will be returned as `null`.
 Select full related object by providing relation name to `.select`:
 
 ```ts
-const booksWithAuthor = await db.book.select('*', 'author').takeOrThrow()
+const booksWithAuthor = await db.book.select('*', 'author').take()
 ```
 
 Select specific fields of related object in such way:
@@ -240,7 +240,7 @@ const bookWithAuthor: Result = await db.book.select(
   'id',
   'title',
   db.book.author.select('id', 'name'),
-).takeOrThrow()
+).take()
 
 // result has selected columns as usually:
 bookWithAuthor.title
@@ -357,7 +357,7 @@ Set related record when updating.
 Following query will update `authorId` of the book:
 
 ```ts
-const author = await db.author.find(1).takeOrThrow()
+const author = await db.author.find(1)
 
 // it will use id from the author object:
 await db.book.where({ title: 'book title' }).update({
@@ -513,7 +513,7 @@ export class AccountHistoryModel extends Model {
 Query account of the supplier when we already have a supplier record:
 
 ```ts
-const supplier = await db.supplier.find(1).takeOrThrow()
+const supplier = await db.supplier.find(1)
 
 // type of account can be undefined if relation option required is not true
 const account = await db.supplier.account(supplier) // type of argument is { id: number }
@@ -569,7 +569,7 @@ type Result = Pick<Supplier, 'id'> & {
 const supplierWithAccount: Result = await db.supplier.select(
   'id',
   db.supplier.account.select('id', 'name'),
-).takeOrThrow()
+).take()
 
 // result has selected columns as usually:
 supplierWithAccount.id
@@ -690,7 +690,7 @@ If related record already exists before update, it's `foreignKey` will be set to
 Following query will update `supplierId` of the account, and set `supplierId` to `NULl` to the previous account if it existed.
 
 ```ts
-const account = await db.account.find(1).takeOrThrow();
+const account = await db.account.find(1)
 
 // TypeScript error because need to use `findBy` instead of `where`:
 await db.supplier.find(1).update({
@@ -853,7 +853,7 @@ export class PatientModel extends Model {
 Query books of the author when we already have an author record:
 
 ```ts
-const author = await db.author.find(1).takeOrThrow()
+const author = await db.author.find(1)
 
 const books = await db.author.books(author) // type of argument is { id: number }
 
@@ -909,7 +909,7 @@ const authorWithBooks: Result = await db.author.select(
   'id',
   'name',
   db.author.books.select('id', 'title'),
-).takeOrThrow()
+).take()
 
 // result has selected columns as usually:
 authorWithBooks.name
@@ -932,7 +932,7 @@ type Result = Pick<Author, 'id'> & {
 const result: Result = await db.author.select(
   'id',
   db.author.books.count()
-).takeOrThrow()
+).take()
 ```
 
 Value of `count` and other aggregations will be returned under the name of relation, but you can use an alias to change it:
@@ -947,7 +947,7 @@ const result: Result = await db.author.select(
   'id',
   db.author.books.count().as('booksCount'),
   db.author.books.avg('year').as('booksAvgYear'),
-).takeOrThrow()
+).take()
 ```
 
 ### hasMany nested create
@@ -1190,7 +1190,7 @@ export class TagModel extends Model {
 Query tags of the post when we already have a post record:
 
 ```ts
-const post = await db.post.find(1).takeOrThrow()
+const post = await db.post.find(1)
 
 const tags = await db.post.tags(post) // type of argument is { id: number }
 
@@ -1246,7 +1246,7 @@ const postWithTags: Result = await db.post.select(
   'id',
   'title',
   db.post.tags.select('id', 'name'),
-).takeOrThrow()
+).take()
 
 // result has selected columns as usually:
 postWithTags.title
@@ -1269,7 +1269,7 @@ type Result = Pick<Post, 'id'> & {
 const result: Result = await db.post.select(
   'id',
   db.post.tags.count()
-).takeOrThrow()
+).take()
 ```
 
 Value of `count` and other aggregations will be returned under the name of relation, but you can use an alias to change it:
@@ -1284,7 +1284,7 @@ const result: Result = await db.author.select(
   'id',
   db.post.tags.count().as('booksCount'),
   db.post.tags.stringAgg('name', ', ').as('tagsCommaSeparated'),
-).takeOrThrow()
+).take()
 ```
 
 ### hasAndBelongsToMany nested create

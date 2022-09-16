@@ -136,7 +136,7 @@ describe('aggregate', () => {
       it('should select number', async () => {
         await User.insert(userData);
 
-        const user = await User.selectCount().takeOrThrow();
+        const user = await User.selectCount().take();
         expect(user.count).toBe(1);
 
         const eq: AssertEqual<typeof user.count, number> = true;
@@ -179,7 +179,7 @@ describe('aggregate', () => {
     )}` as 'selectAvg';
     describe(selectMethod, () => {
       it('should select null when no record', async () => {
-        const value = await User[selectMethod]('id').takeOrThrow();
+        const value = await User[selectMethod]('id').take();
 
         const eq: AssertEqual<typeof value, { avg: number | null }> = true;
         expect(eq).toBe(true);
@@ -190,7 +190,7 @@ describe('aggregate', () => {
       it('should return number when have records', async () => {
         const { id } = await User.select('id').insert(userData);
 
-        const value = await User[selectMethod]('id').takeOrThrow();
+        const value = await User[selectMethod]('id').take();
 
         const eq: AssertEqual<typeof value, { avg: number | null }> = true;
         expect(eq).toBe(true);
@@ -231,7 +231,7 @@ describe('aggregate', () => {
     )}` as 'selectBoolAnd';
     describe(selectMethod, () => {
       it('should select null when no record', async () => {
-        const value = await User[selectMethod]('active').takeOrThrow();
+        const value = await User[selectMethod]('active').take();
 
         const eq: AssertEqual<typeof value, { bool_and: boolean | null }> =
           true;
@@ -243,7 +243,7 @@ describe('aggregate', () => {
       it('should return boolean when have records', async () => {
         await User.insert({ ...userData, active: true });
 
-        const value = await User[selectMethod]('active').takeOrThrow();
+        const value = await User[selectMethod]('active').take();
 
         const eq: AssertEqual<typeof value, { bool_and: boolean | null }> =
           true;
@@ -292,7 +292,7 @@ describe('aggregate', () => {
     )}` as 'selectJsonAgg';
     describe(selectMethod, () => {
       it('should select null when no record', async () => {
-        const value = await User[selectMethod]('data').takeOrThrow();
+        const value = await User[selectMethod]('data').take();
 
         const eq: AssertEqual<
           typeof value,
@@ -306,7 +306,7 @@ describe('aggregate', () => {
       it('should return json array when have records', async () => {
         await User.insert({ ...userData, data });
 
-        const value = await User[selectMethod]('data').takeOrThrow();
+        const value = await User[selectMethod]('data').take();
 
         const eq: AssertEqual<
           typeof value,
@@ -412,7 +412,7 @@ describe('aggregate', () => {
     )}` as 'selectJsonObjectAgg';
     describe(selectMethod, () => {
       it('should select null when no record', async () => {
-        const value = await User[selectMethod]({ alias: 'name' }).takeOrThrow();
+        const value = await User[selectMethod]({ alias: 'name' }).take();
 
         const eq: AssertEqual<
           typeof value,
@@ -426,7 +426,7 @@ describe('aggregate', () => {
       it('should return json object when have records', async () => {
         await User.insert(userData);
 
-        const value = await User[selectMethod]({ alias: 'name' }).takeOrThrow();
+        const value = await User[selectMethod]({ alias: 'name' }).take();
 
         const eq: AssertEqual<
           typeof value,
@@ -516,7 +516,7 @@ describe('aggregate', () => {
 
     describe('selectStringAgg', () => {
       it('should select null when no record', async () => {
-        const value = await User.selectStringAgg('name', ', ').takeOrThrow();
+        const value = await User.selectStringAgg('name', ', ').take();
 
         const eq: AssertEqual<typeof value, { string_agg: string | null }> =
           true;
@@ -528,7 +528,7 @@ describe('aggregate', () => {
       it('should return json object when have records', async () => {
         await User.insert([userData, userData]);
 
-        const value = await User.selectStringAgg('name', ', ').takeOrThrow();
+        const value = await User.selectStringAgg('name', ', ').take();
 
         const eq: AssertEqual<typeof value, { string_agg: string | null }> =
           true;

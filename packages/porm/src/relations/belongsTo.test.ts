@@ -14,7 +14,7 @@ describe('belongsTo', () => {
 
   describe('querying', () => {
     it('should have method to query related data', async () => {
-      const userQuery = db.user.takeOrThrow();
+      const userQuery = db.user.take();
       type UserQuery = typeof userQuery;
 
       const eq: AssertEqual<
@@ -29,7 +29,7 @@ describe('belongsTo', () => {
         .select('id')
         .insert({ ...profileData, userId });
 
-      const profile = await db.profile.find(profileId).takeOrThrow();
+      const profile = await db.profile.find(profileId);
       const query = db.profile.user(profile);
 
       expectSql(
@@ -568,7 +568,7 @@ describe('belongsTo', () => {
 
         expect(profile.userId).toBe(null);
 
-        const user = await db.user.findBy({ id: userId });
+        const user = await db.user.findByOptional({ id: userId });
         expect(user).toBe(undefined);
       });
     });

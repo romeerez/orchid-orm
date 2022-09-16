@@ -38,7 +38,7 @@ describe('hasMany', () => {
         { ...messageData, authorId: userId, chatId },
       ]);
 
-      const user = await db.user.find(userId).takeOrThrow();
+      const user = await db.user.find(userId);
       const query = db.user.messages(user);
 
       expectSql(

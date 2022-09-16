@@ -14,7 +14,7 @@ describe('hasOne', () => {
 
   describe('querying', () => {
     it('should have method to query related data', async () => {
-      const profileQuery = db.profile.takeOrThrow();
+      const profileQuery = db.profile.take();
 
       const eq: AssertEqual<
         typeof db.user.profile,
@@ -33,7 +33,7 @@ describe('hasOne', () => {
 
       await db.profile.insert({ ...profileData, userId });
 
-      const user = await db.user.find(userId).takeOrThrow();
+      const user = await db.user.find(userId);
       const query = db.user.profile(user);
 
       expectSql(
@@ -262,9 +262,7 @@ describe('hasOne', () => {
         });
 
         const user = await query;
-        const profile = await db.profile
-          .findBy({ userId: user.id })
-          .takeOrThrow();
+        const profile = await db.profile.findBy({ userId: user.id });
 
         checkUserAndProfile({ user, profile, name: 'user', bio: 'profile' });
       });
@@ -513,7 +511,7 @@ describe('hasOne', () => {
             },
           });
 
-          const profile = await db.profile.find(profileId).takeOrThrow();
+          const profile = await db.profile.find(profileId);
           expect(profile.userId).toBe(null);
         });
       });
@@ -534,10 +532,10 @@ describe('hasOne', () => {
             },
           });
 
-          const profile1 = await db.profile.find(profile1Id).takeOrThrow();
+          const profile1 = await db.profile.find(profile1Id);
           expect(profile1.userId).toBe(null);
 
-          const profile2 = await db.profile.find(profile2Id).takeOrThrow();
+          const profile2 = await db.profile.find(profile2Id);
           expect(profile2.userId).toBe(id);
         });
       });
@@ -551,13 +549,13 @@ describe('hasOne', () => {
           const { id: profileId } = await db.user
             .profile({ id })
             .select('id')
-            .takeOrThrow();
+            .take();
 
           await db.user.find(id).update({
             profile: { delete: true },
           });
 
-          const profile = await db.profile.findBy({ id: profileId });
+          const profile = await db.profile.findByOptional({ id: profileId });
           expect(profile).toBe(undefined);
         });
       });
@@ -567,7 +565,7 @@ describe('hasOne', () => {
 
 describe('hasOne through', () => {
   it('should have method to query related data', async () => {
-    const profileQuery = db.profile.takeOrThrow();
+    const profileQuery = db.profile.take();
 
     const eq: AssertEqual<
       typeof db.message.profile,

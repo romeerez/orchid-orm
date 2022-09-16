@@ -83,7 +83,7 @@ export const makeHasAndBelongsToManyMethod = (
         connected = (await Promise.all(
           connect.flatMap(([, { connect }]) =>
             connect.map((item) =>
-              t.select(associationPrimaryKey)._findBy(item)._takeOrThrow(),
+              t.select(associationPrimaryKey)._findBy(item)._take(),
             ),
           ),
         )) as Record<string, unknown[]>[];
@@ -110,7 +110,10 @@ export const makeHasAndBelongsToManyMethod = (
         connectOrCreated = await Promise.all(
           connectOrCreate.flatMap(([, { connectOrCreate }]) =>
             connectOrCreate.map((item) =>
-              t.select(associationPrimaryKey)._findBy(item.where)._take(),
+              t
+                .select(associationPrimaryKey)
+                ._findBy(item.where)
+                ._takeOptional(),
             ),
           ),
         );

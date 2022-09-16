@@ -181,28 +181,26 @@ Mutating methods are used internally, however their use is not recommended becau
 
 Query methods are building blocks for a query chain, and when query is ready use `await` to get all records:
 ```ts
-const records = await Table.select('id', 'name')
-// users has type Array<{ id: number, name: string }>
+const records: { id: number, name: string }[] = await Table.select('id', 'name')
 ```
 
-`.take()` to get just one record:
-```ts
-const record = await Table.take()
-// user can be undefined
-```
-
-`.takeOrThrow()` will throw `NotFoundError` when not found:
+`.take()` to get only one record, it will throw `NotFoundError` when not found:
 ```ts
 import { NotFoundError } from 'pqb'
 
 try {
-  const record = await Table.takeOrThrow()
+  const record = await Table.take()
   // user can NOT be undefined here
 } catch (err) {
   if (err instanceof NotFoundError) {
     // handle error
   }
 }
+```
+
+`.takeOptional()` to get one record or `undefined` when not found:
+```ts
+const recordOrUndefined = await Table.takeOptional()
 ```
 
 `.rows` returns array of rows without field names:
@@ -221,20 +219,19 @@ const ids = await Table.select('id').pluck()
 // ids is array of all users id
 ```
 
-`.value` loads a single value, optionally takes column type for a returning type:
+`.value` returns a single value, optionally takes column type for a returning type.
+It will throw `NotFoundError` when not found.
 ```ts
 import { columnTypes } from 'pqb';
 
-const firstName = await Table.select('name').value(columnTypes.text())
-// firstName has type string | undefined
+const firstName: string = await Table.select('name').value(columnTypes.text())
 ```
 
-`.valueOrThrow` will throw NotFoundError when not found:
+`.valueOptional` returns single value or undefined when not found:
 ```ts
 import { columnTypes } from 'pqb';
 
-const firstName = await Table.select('name').valueOrThrow(columnTypes.text())
-// firstName has type string
+const firstName: string | undefined = await Table.select('name').valueOptional(columnTypes.text())
 ```
 
 `.exec` won't parse response at all, returns undefined:
@@ -489,7 +486,7 @@ Path is an array of keys to access the value.
 ```ts
 const result = await Table
   .jsonSet('data', ['name'], 'new value')
-  .takeOrThrow()
+  .take()
 
 expect(result.data).toEqual({ name: 'new value' })
 ```
@@ -514,7 +511,7 @@ Return a json value/object/array where a given value is inserted at the given JS
 // imagine user has data = { tags: ['two'] }
 const result = await Table
   .jsonInsert('data', ['tags', 0], 'one')
-  .takeOrThrow()
+  .take()
 
 // 'one' is inserted to 0 position
 expect(result.data).toEqual({ tags: ['one', 'two'] })
@@ -533,7 +530,7 @@ const result = await Table
       insertAfter: true // insert after specified position
     },
   )
-  .takeOrThrow()
+  .take()
 
 // 'one' is inserted to 0 position
 expect(result.alias).toEqual({ tags: ['one', 'two'] })
@@ -553,7 +550,7 @@ const result = await Table
       as: 'alias', // select as alias
     }
   )
-  .takeOrThrow();
+  .take();
 
 expect(result.alias).toEqual({ tags: ['two'] })
 ```
@@ -1167,7 +1164,7 @@ const record = Table
   .select('id')
   .selectCount()
   .group('id')
-  .takeOrThrow()
+  .take()
 ```
 
 ### min, selectMin
@@ -1188,7 +1185,7 @@ const record = Table
   .select('id')
   .selectMin('numericColumn')
   .group('id')
-  .takeOrThrow()
+  .take()
 ```
 
 ### max, selectMax
@@ -1209,7 +1206,7 @@ const record = Table
   .select('id')
   .selectMax('numericColumn')
   .group('id')
-  .takeOrThrow()
+  .take()
 ```
 
 ### sum, selectSum
@@ -1230,7 +1227,7 @@ const record = Table
   .select('id')
   .selectSum('numericColumn')
   .group('id')
-  .takeOrThrow()
+  .take()
 ```
 
 ### avg, selectAvg
@@ -1251,7 +1248,7 @@ const record = Table
   .select('id')
   .selectAvg('numericColumn')
   .group('id')
-  .takeOrThrow()
+  .take()
 ```
 
 ### bitAnd, selectBitAnd
@@ -1272,7 +1269,7 @@ const record = Table
   .select('id')
   .selectBitAnd('numericColumn')
   .group('id')
-  .takeOrThrow()
+  .take()
 ```
 
 ### bitOr, selectBitOr
@@ -1293,7 +1290,7 @@ const record = Table
   .select('id')
   .selectBitOr('numericColumn')
   .group('id')
-  .takeOrThrow()
+  .take()
 ```
 
 ### boolAnd, selectBoolAnd
@@ -1314,7 +1311,7 @@ const record = Table
   .select('id')
   .selectBoolAnd('booleanColumn')
   .group('id')
-  .takeOrThrow()
+  .take()
 ```
 
 ### boolOr, selectBoolOr
@@ -1335,7 +1332,7 @@ const record = Table
   .select('id')
   .selectBoolOr('booleanColumn')
   .group('id')
-  .takeOrThrow()
+  .take()
 ```
 
 ### every, selectEvery
@@ -1364,7 +1361,7 @@ const record = Table
   .select('id')
   .selectJsonAgg('id', { as: 'ids' })
   .group('id')
-  .takeOrThrow()
+  .take()
 ```
 
 ### jsonObjectAgg, selectJsonObjectAgg, jsonbObjectAgg, selectJsonbObjectAgg
@@ -1391,7 +1388,7 @@ const record = Table
   .select('id')
   .selectJsonObjectAgg({ nameAlias: 'name' }, { as: 'object' })
   .group('id')
-  .takeOrThrow()
+  .take()
 ```
 
 ### stringAgg, selectStringAgg
@@ -1410,7 +1407,7 @@ const record = Table
   .select('id')
   .selectStringAgg('name', ', ', aggregateOptions)
   .group('id')
-  .takeOrThrow()
+  .take()
 ```
 
 ### xmlAgg, selectXmlAgg
@@ -1432,7 +1429,7 @@ const record = LegacyTable
   .select('id')
   .selectJsonAgg('xmlColumn', { as: 'xmlData' })
   .group('id')
-  .takeOrThrow()
+  .take()
 ```
 
 ## window functions
@@ -1718,14 +1715,40 @@ WHERE id = 1 AND color = 'red'
    OR id = 2 AND color = 'blue'
 ```
 
+## find
+
+Find record by id, throw `NotFoundError` if not found:
+
+```ts
+await Table.find(1)
+```
+
+## findOptional
+
+Find record by id, returns `undefined` when not found:
+
+```ts
+await Table.findOptional(1)
+```
+
 ## findBy
 
-`.findBy` Takes the same arguments as `.where` and returns single record, throws if not found.
+`.findBy` Takes the same arguments as `.where` and returns single record, throws `NotFoundError` if not found.
 
 ```ts
 Table.findBy(...conditions)
 // is equivalent to:
-Table.where(...conditions).takeOrThrow()
+Table.where(...conditions).take()
+```
+
+## findOptional
+
+`.findOptional` Takes the same arguments as `.where` and returns single record, returns `undefined` when not found:
+
+```ts
+Table.findOptional(...conditions)
+// is equivalent to:
+Table.where(...conditions).takeOptional()
 ```
 
 ## whereNot

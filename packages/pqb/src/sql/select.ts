@@ -100,7 +100,8 @@ export const selectToSql = (
 
         if (
           relationQuery.returnType === 'all' ||
-          relationQuery.returnType === 'one'
+          relationQuery.returnType === 'one' ||
+          relationQuery.returnType === 'oneOrThrow'
         ) {
           relationQuery = relationQuery._json() as unknown as RelationQuery;
         }

@@ -81,7 +81,7 @@ export const makeHasOneMethod = (
             throughQuery,
             whereExistsCallback as unknown as JoinCallback<Query, Query>,
           )
-          ._take();
+          ._takeOptional();
       },
       nestedInsert: undefined,
       nestedUpdate: undefined,
