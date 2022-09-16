@@ -56,6 +56,7 @@ export type Query = QueryMethods & {
   query: QueryData;
   result: ColumnsShape;
   hasSelect: boolean;
+  hasWhere: boolean;
   selectable: SelectableBase;
   returnType: QueryReturnType;
   then: ThenResult<unknown>;

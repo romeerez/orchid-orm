@@ -46,7 +46,9 @@ describe('callbacks', () => {
   describe('beforeUpdate', () => {
     it('should run callback before update', async () => {
       const fn = jest.fn();
-      const query = User.beforeUpdate(fn).update({ name: 'name' });
+      const query = User.beforeUpdate(fn)
+        .where({ id: 1 })
+        .update({ name: 'name' });
       await query;
 
       expect(fn.mock.calls[0]).toEqual([query]);
@@ -56,7 +58,9 @@ describe('callbacks', () => {
   describe('afterUpdate', () => {
     it('should run callback after update', async () => {
       const fn = jest.fn();
-      const query = User.afterUpdate(fn).update({ name: 'name' });
+      const query = User.afterUpdate(fn)
+        .where({ id: 1 })
+        .update({ name: 'name' });
       const result = await query;
 
       expect(fn.mock.calls[0]).toEqual([query, result]);

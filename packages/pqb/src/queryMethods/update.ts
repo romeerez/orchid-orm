@@ -48,6 +48,12 @@ type UpdateData<T extends Query> = {
   : // eslint-disable-next-line @typescript-eslint/ban-types
     {});
 
+type UpdateArgs<T extends Query, ForceAll extends boolean> = (
+  T['hasWhere'] extends true ? true : ForceAll
+) extends true
+  ? [update: RawExpression | UpdateData<T>, forceAll?: ForceAll]
+  : [update: RawExpression | UpdateData<T>, forceAll: true];
+
 type UpdateResult<T extends Query> = T['hasSelect'] extends false
   ? SetQueryReturnsRowCount<T>
   : SetQueryReturnsAll<T>;
@@ -78,21 +84,32 @@ const applyCountChange = <T extends Query>(
 };
 
 export class Update {
-  update<T extends Query>(
+  update<T extends Query, ForceAll extends boolean = false>(
     this: T,
-    data: RawExpression | UpdateData<T>,
+    ...args: UpdateArgs<T, ForceAll>
   ): UpdateResult<T> {
     const q = this.clone() as T;
-    return q._update(data);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return q._update(...(args as any));
   }
 
-  _update<T extends Query>(
+  _update<T extends Query, ForceAll extends boolean = false>(
     this: T,
-    data: RawExpression | UpdateData<T>,
+    ...args: UpdateArgs<T, ForceAll>
   ): UpdateResult<T> {
+    const [data, forceAll] = args as unknown as [
+      Record<string, unknown>,
+      boolean | undefined,
+    ];
     let returning = this.query.select;
     this.query.type = 'update';
     this.returnType = returning ? 'all' : 'rowCount';
+
+    if (!this.query.and?.length && !this.query.or?.length && !forceAll) {
+      throw new Error(
+        'No where conditions or forceAll flag provided to update',
+      );
+    }
 
     if (isRaw(data)) {
       pushQueryValue(this, 'data', data);
@@ -176,20 +193,22 @@ export class Update {
     return this as unknown as UpdateResult<T>;
   }
 
-  updateOrThrow<T extends Query>(
+  updateOrThrow<T extends Query, ForceAll extends boolean = false>(
     this: T,
-    data: RawExpression | UpdateData<T>,
+    ...args: UpdateArgs<T, ForceAll>
   ): UpdateResult<T> {
     const q = this.clone() as T;
-    return q._updateOrThrow(data);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return q._updateOrThrow(...(args as any));
   }
 
-  _updateOrThrow<T extends Query>(
+  _updateOrThrow<T extends Query, ForceAll extends boolean = false>(
     this: T,
-    data: RawExpression | UpdateData<T>,
+    ...args: UpdateArgs<T, ForceAll>
   ): UpdateResult<T> {
     this.query.throwOnNotFound = true;
-    return this._update(data) as unknown as UpdateResult<T>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this._update(...(args as any)) as unknown as UpdateResult<T>;
   }
 
   increment<T extends Query>(

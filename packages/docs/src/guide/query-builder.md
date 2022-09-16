@@ -303,6 +303,7 @@ const createdFull = await Table
 
 const updatedFull = await Table
   .selectAll()
+  .where(conditions)
   .update(data)
 
 const deletedFull = await Table
@@ -845,24 +846,33 @@ By default `.update` will return count of inserted records.
 
 Place `.select` or `.selectAll` before `.update` to specify returning columns.
 
+Need to provide `.where`, or `.findBy`, or `.find` conditions before calling `.update`.
+To ensure that whole table won't be updated by accident, update without where will result in TypeScript and runtime error.
+
+To update table without conditions put `true` in second argument:
+
 ```ts
-const updatedCount = await Table.where({ id: 1 }).update({ name: 'new name' })
-const updatedCount2 = await Table.where({ id: 1 }).update(raw(`name = 'new name'`))
+await Table.update({ name: 'new name' }, true)
+```
+
+```ts
+const updatedCount = await Table.where({ name: 'old name' }).update({ name: 'new name' })
+const updatedCount2 = await Table.find(1).update(raw(`name = 'new name'`))
 
 const recordsArray = await Table
   .select('id', 'name')
-  .where({ id: 1 })
+  .findBy({ id: 1 })
   .update({ name: 'new name' })
 
 const fullRecordsArray = await Table
   .selectAll()
-  .where({ id: 1 })
+  .findBy({ id: 1 })
   .update({ name: 'new name' })
 ```
 
 `null` value will set column to `NULL`, and `undefined` value will be skipped:
 ```ts
-Table.update({
+Table.findBy({ id: 1 }).update({
   name: null, // updates to null
   age: undefined, // skipped, no effect
 })
@@ -877,10 +887,10 @@ import { NotFoundError } from 'pqb'
 
 try {
   // updatedCount is guaranteed to be greater than 0
-  const updatedCount = await Table.updateOrThrow({ name: 'name' })
+  const updatedCount = await Table.where(conditions).updateOrThrow({ name: 'name' })
 
   // updatedRecords is guaranteed to be non-empty array
-  const updatedRecords = await Table.select('id')
+  const updatedRecords = await Table.where(conditions).select('id')
     .updateOrThrow({ name: 'name' })
 } catch (err) {
   if (err instanceof NotFoundError) {
@@ -945,6 +955,15 @@ By default `.delete` will return count of inserted records.
 
 Place `.select` or `.selectAll` before `.delete` to specify returning columns.
 
+Need to provide `.where`, or `.findBy`, or `.find` conditions before calling `.delete`.
+To prevent accidental deletion of all records , delete without where will result in TypeScript and runtime error.
+
+To delete all records without conditions add `true` argument:
+
+```ts
+await Table.delete(true)
+```
+
 ```ts
 // deletedCount is the number of deleted records
 const deletedCount = await Table
@@ -970,7 +989,7 @@ const deletedUsersFull = await Table
 // delete all users which have corresponding profile records:
 Table
   .join(Profile, 'profile.userId', 'user.id')
-  .delete()
+  .delete(true)
 ```
 
 ## transaction

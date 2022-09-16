@@ -48,7 +48,7 @@ import { Delete } from './delete';
 import { Transaction } from './transaction';
 import { For } from './for';
 import { ColumnInfoMethods } from './columnInfo';
-import { addWhere, Where, WhereArg } from './where';
+import { addWhere, Where, WhereArg, WhereResult } from './where';
 import { Clear } from './clear';
 import { Having } from './having';
 import { Window } from './window';
@@ -249,14 +249,14 @@ export class QueryMethods {
   find<T extends Query>(
     this: T,
     ...args: GetTypesOrRaw<T['schema']['primaryTypes']>
-  ): SetQueryReturnsOneOrUndefined<T> {
+  ): SetQueryReturnsOneOrUndefined<WhereResult<T>> {
     return this.clone()._find(...args);
   }
 
   _find<T extends Query>(
     this: T,
     ...args: GetTypesOrRaw<T['schema']['primaryTypes']>
-  ): SetQueryReturnsOneOrUndefined<T> {
+  ): SetQueryReturnsOneOrUndefined<WhereResult<T>> {
     const conditions: Partial<T['type']> = {};
     this.schema.primaryKeys.forEach((key: string, i: number) => {
       conditions[key as keyof T['type']] = args[i];
@@ -267,14 +267,14 @@ export class QueryMethods {
   findBy<T extends Query>(
     this: T,
     ...args: WhereArg<T>[]
-  ): SetQueryReturnsOne<T> {
+  ): SetQueryReturnsOne<WhereResult<T>> {
     return this.clone()._findBy(...args);
   }
 
   _findBy<T extends Query>(
     this: T,
     ...args: WhereArg<T>[]
-  ): SetQueryReturnsOne<T> {
+  ): SetQueryReturnsOne<WhereResult<T>> {
     return addWhere(this, args).takeOrThrow();
   }
 

@@ -48,6 +48,10 @@ export type WhereInValues<
       | Query
       | RawExpression;
 
+export type WhereResult<T extends QueryBase> = Omit<T, 'hasWhere'> & {
+  hasWhere: true;
+};
+
 export type WhereInArg<T extends Pick<Query, 'selectable'>> = {
   [K in keyof T['selectable']]?:
     | T['selectable'][K]['column']['type'][]
@@ -55,33 +59,42 @@ export type WhereInArg<T extends Pick<Query, 'selectable'>> = {
     | RawExpression;
 };
 
-export const addWhere = <T extends Where>(q: T, args: WhereArg<T>[]): T => {
-  return pushQueryArray(q, 'and', args) as T;
+export const addWhere = <T extends Where>(
+  q: T,
+  args: WhereArg<T>[],
+): WhereResult<T> => {
+  return pushQueryArray(q, 'and', args) as unknown as WhereResult<T>;
 };
 
 export const addWhereNot = <T extends QueryBase>(
   q: T,
   args: WhereArg<T>[],
-): T => {
+): WhereResult<T> => {
   return pushQueryValue(q, 'and', {
     NOT: args,
-  });
+  }) as unknown as WhereResult<T>;
 };
 
-export const addOr = <T extends QueryBase>(q: T, args: WhereArg<T>[]): T => {
+export const addOr = <T extends QueryBase>(
+  q: T,
+  args: WhereArg<T>[],
+): WhereResult<T> => {
   return pushQueryArray(
     q,
     'or',
     args.map((item) => [item]),
-  );
+  ) as unknown as WhereResult<T>;
 };
 
-export const addOrNot = <T extends QueryBase>(q: T, args: WhereArg<T>[]): T => {
+export const addOrNot = <T extends QueryBase>(
+  q: T,
+  args: WhereArg<T>[],
+): WhereResult<T> => {
   return pushQueryArray(
     q,
     'or',
     args.map((item) => [{ NOT: item }]),
-  );
+  ) as unknown as WhereResult<T>;
 };
 
 export const addWhereIn = <T extends QueryBase>(
@@ -90,7 +103,7 @@ export const addWhereIn = <T extends QueryBase>(
   arg: unknown,
   values: unknown[] | unknown[][] | Query | RawExpression | undefined,
   not?: boolean,
-): T => {
+): WhereResult<T> => {
   const op = not ? 'notIn' : 'in';
 
   let item;
@@ -119,7 +132,7 @@ export const addWhereIn = <T extends QueryBase>(
     pushQueryValue(q, 'or', [item]);
   }
 
-  return q;
+  return q as unknown as WhereResult<T>;
 };
 
 export abstract class Where implements QueryBase {
@@ -132,51 +145,51 @@ export abstract class Where implements QueryBase {
   table?: string;
   tableAlias?: string;
 
-  where<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
+  where<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
     return this.clone()._where(...args);
   }
 
-  _where<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
+  _where<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
     return addWhere(this, args);
   }
 
-  whereNot<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
+  whereNot<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
     return this.clone()._whereNot(...args);
   }
 
-  _whereNot<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
+  _whereNot<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
     return addWhereNot(this, args);
   }
 
-  and<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
+  and<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
     return this.where(...args);
   }
 
-  _and<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
+  _and<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
     return this._where(...args);
   }
 
-  andNot<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
+  andNot<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
     return this.whereNot(...args);
   }
 
-  _andNot<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
+  _andNot<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
     return this._whereNot(...args);
   }
 
-  or<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
+  or<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
     return this.clone()._or(...args);
   }
 
-  _or<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
+  _or<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
     return addOr(this, args);
   }
 
-  orNot<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
+  orNot<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
     return this.clone()._orNot(...args);
   }
 
-  _orNot<T extends Where>(this: T, ...args: WhereArg<T>[]): T {
+  _orNot<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
     return addOrNot(this, args);
   }
 
@@ -190,22 +203,25 @@ export abstract class Where implements QueryBase {
     this: T,
     arg: unknown | unknown[],
     values?: unknown[] | unknown[][] | Query | RawExpression,
-  ): T {
+  ): WhereResult<T> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return this.clone()._whereIn(arg as any, values as any);
+    return this.clone()._whereIn(
+      arg as any,
+      values as any,
+    ) as unknown as WhereResult<T>;
   }
 
   _whereIn<T extends Where, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
-  ): T;
-  _whereIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  ): WhereResult<T>;
+  _whereIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
   _whereIn<T extends Where>(
     this: T,
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | RawExpression,
-  ): T {
+  ): WhereResult<T> {
     return addWhereIn(this, true, arg, values);
   }
 
@@ -213,28 +229,32 @@ export abstract class Where implements QueryBase {
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
-  ): T;
-  orWhereIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  ): WhereResult<T>;
+  orWhereIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
   orWhereIn<T extends Where>(
     this: T,
     arg: unknown | unknown[],
     values?: unknown[] | unknown[][] | Query | RawExpression,
-  ): T {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return this.clone()._orWhereIn(arg as any, values as any);
+  ): WhereResult<T> {
+    return this.clone()._orWhereIn(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      arg as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      values as any,
+    ) as unknown as WhereResult<T>;
   }
 
   _orWhereIn<T extends Where, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
-  ): T;
-  _orWhereIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  ): WhereResult<T>;
+  _orWhereIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
   _orWhereIn<T extends Where>(
     this: T,
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | RawExpression,
-  ): T {
+  ): WhereResult<T> {
     return addWhereIn(this, false, arg, values);
   }
 
@@ -242,13 +262,13 @@ export abstract class Where implements QueryBase {
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
-  ): T;
-  whereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  ): WhereResult<T>;
+  whereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
   whereNotIn<T extends Where>(
     this: T,
     arg: unknown | unknown[],
     values?: unknown[] | unknown[][] | Query | RawExpression,
-  ): T {
+  ): WhereResult<T> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return this.clone()._whereNotIn(arg as any, values as any);
   }
@@ -257,13 +277,13 @@ export abstract class Where implements QueryBase {
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
-  ): T;
-  _whereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  ): WhereResult<T>;
+  _whereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
   _whereNotIn<T extends Where>(
     this: T,
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | RawExpression,
-  ): T {
+  ): WhereResult<T> {
     return addWhereIn(this, true, arg, values, true);
   }
 
@@ -271,13 +291,13 @@ export abstract class Where implements QueryBase {
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
-  ): T;
-  orWhereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  ): WhereResult<T>;
+  orWhereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
   orWhereNotIn<T extends Where>(
     this: T,
     arg: unknown | unknown[],
     values?: unknown[] | unknown[][] | Query | RawExpression,
-  ): T {
+  ): WhereResult<T> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return this.clone()._orWhereNotIn(arg as any, values as any);
   }
@@ -286,25 +306,25 @@ export abstract class Where implements QueryBase {
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
-  ): T;
-  _orWhereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  ): WhereResult<T>;
+  _orWhereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
   _orWhereNotIn<T extends Where>(
     this: T,
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | RawExpression,
-  ): T {
+  ): WhereResult<T> {
     return addWhereIn(this, false, arg, values, true);
   }
 
   whereExists<T extends Where, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): T;
+  ): WhereResult<T>;
   whereExists<T extends Where, Arg extends JoinCallbackArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
-  ): T;
+  ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   whereExists(...args: any) {
     return this.clone()._whereExists(...args);
@@ -312,12 +332,12 @@ export abstract class Where implements QueryBase {
   _whereExists<T extends Where, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): T;
+  ): WhereResult<T>;
   _whereExists<T extends Where, Arg extends JoinCallbackArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
-  ): T;
+  ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _whereExists(this: Where, ...args: any) {
     return this._where({ EXISTS: args });
@@ -326,12 +346,12 @@ export abstract class Where implements QueryBase {
   orWhereExists<T extends Where, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): T;
+  ): WhereResult<T>;
   orWhereExists<T extends Where, Arg extends JoinCallbackArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
-  ): T;
+  ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   orWhereExists(...args: any) {
     return this.clone()._orWhereExists(...args);
@@ -339,12 +359,12 @@ export abstract class Where implements QueryBase {
   _orWhereExists<T extends Where, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): T;
+  ): WhereResult<T>;
   _orWhereExists<T extends Where, Arg extends JoinCallbackArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
-  ): T;
+  ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _orWhereExists(this: Where, ...args: any) {
     return this._or({ EXISTS: args });
@@ -353,12 +373,12 @@ export abstract class Where implements QueryBase {
   whereNotExists<T extends Where, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): T;
+  ): WhereResult<T>;
   whereNotExists<T extends Where, Arg extends JoinCallbackArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
-  ): T;
+  ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   whereNotExists(...args: any) {
     return this.clone()._whereNotExists(...args);
@@ -366,12 +386,12 @@ export abstract class Where implements QueryBase {
   _whereNotExists<T extends Where, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): T;
+  ): WhereResult<T>;
   _whereNotExists<T extends Where, Arg extends JoinCallbackArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
-  ): T;
+  ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _whereNotExists(this: Where, ...args: any) {
     return this._whereNot({ EXISTS: args });
@@ -380,12 +400,12 @@ export abstract class Where implements QueryBase {
   orWhereNotExists<T extends Where, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): T;
+  ): WhereResult<T>;
   orWhereNotExists<T extends Where, Arg extends JoinCallbackArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
-  ): T;
+  ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   orWhereNotExists(...args: any) {
     return this.clone()._orWhereNotExists(...args);
@@ -393,12 +413,12 @@ export abstract class Where implements QueryBase {
   _orWhereNotExists<T extends Where, Args extends JoinArgs<T>>(
     this: T,
     ...args: Args
-  ): T;
+  ): WhereResult<T>;
   _orWhereNotExists<T extends Where, Arg extends JoinCallbackArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
-  ): T;
+  ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _orWhereNotExists(this: Where, ...args: any) {
     return this._orNot({ EXISTS: args });

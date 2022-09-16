@@ -44,7 +44,7 @@ describe('clear', () => {
     const expectedValues = ['new name'];
 
     expectSql(
-      User.update({ name: 'new name' })
+      User.update({ name: 'new name' }, true)
         .increment('age')
         .clear('counters')
         .toSql(),
@@ -53,7 +53,7 @@ describe('clear', () => {
     );
 
     expectSql(
-      User.update({ name: 'new name' })
+      User.update({ name: 'new name' }, true)
         .decrement('age')
         .clear('counters')
         .toSql(),

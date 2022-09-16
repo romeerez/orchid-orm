@@ -12,27 +12,32 @@ import { raw } from '../common';
 describe('update', () => {
   useTestDatabase();
 
-  const now = new Date();
-  const data = {
-    name: 'name',
-    password: 'password',
-    createdAt: now,
-    updatedAt: now,
-  };
+  it('should throw when updating without where condition', () => {
+    // @ts-expect-error update should have where condition or forceAll flag
+    expect(() => User.update({ name: 'new name' })).toThrow();
+  });
+
+  it('should run without where condition when forceAll flag provided', async () => {
+    await expect(
+      User.update({ name: 'new name' }, true),
+    ).resolves.not.toThrow();
+  });
 
   it('should update record with raw sql, returning updated rows count', async () => {
     const count = 2;
-    await User.insert([userData, userData]);
+    const users = await User.select('id').insert([userData, userData]);
 
     const q = User.all();
 
-    const query = q.update(raw(`name = 'name'`));
+    const query = q.or(...users).update(raw(`name = 'name'`));
     expectSql(
       query.toSql(),
       `
         UPDATE "user"
         SET name = 'name'
+        WHERE "user"."id" = $1 OR "user"."id" = $2
       `,
+      [users[0].id, users[1].id],
     );
 
     const eq: AssertEqual<Awaited<typeof query>, number> = true;
@@ -47,7 +52,7 @@ describe('update', () => {
   it('should update record, returning updated row count', async () => {
     const q = User.all();
 
-    const { id } = await q.select('id').insert(data);
+    const { id } = await q.select('id').insert(userData);
 
     const update = {
       name: 'new name',
@@ -73,7 +78,7 @@ describe('update', () => {
     expect(result).toBe(1);
 
     const updated = await User.takeOrThrow();
-    expectMatchObjectWithTimestamps(updated, { ...data, ...update });
+    expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
 
     expectQueryNotMutated(q);
   });
@@ -81,7 +86,7 @@ describe('update', () => {
   it('should update record, returning columns', async () => {
     const q = User.all();
 
-    const { id } = await q.select('id').insert(data);
+    const { id } = await q.select('id').insert(userData);
 
     const update = {
       name: 'new name',
@@ -106,7 +111,7 @@ describe('update', () => {
     expect(eq).toBe(true);
 
     const updated = await User.takeOrThrow();
-    expectMatchObjectWithTimestamps(updated, { ...data, ...update });
+    expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
 
     expectQueryNotMutated(q);
   });
@@ -114,7 +119,7 @@ describe('update', () => {
   it('should update record, returning all columns', async () => {
     const q = User.all();
 
-    const { id } = await q.select('id').insert(data);
+    const { id } = await q.select('id').insert(userData);
 
     const update = {
       name: 'new name',
@@ -135,13 +140,13 @@ describe('update', () => {
     );
 
     const result = await query;
-    expectMatchObjectWithTimestamps(result[0], { ...data, ...update });
+    expectMatchObjectWithTimestamps(result[0], { ...userData, ...update });
 
     const eq: AssertEqual<typeof result, typeof User['type'][]> = true;
     expect(eq).toBe(true);
 
     const updated = await User.takeOrThrow();
-    expectMatchObjectWithTimestamps(updated, { ...data, ...update });
+    expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
 
     expectQueryNotMutated(q);
   });
@@ -149,7 +154,7 @@ describe('update', () => {
   it('should ignore undefined values, and should not ignore null', () => {
     const q = User.all();
 
-    const query = q.update({
+    const query = q.where({ id: 1 }).update({
       name: 'new name',
       password: undefined,
       data: null,
@@ -160,8 +165,9 @@ describe('update', () => {
         UPDATE "user"
         SET "name" = $1,
             "data" = $2
+        WHERE "user"."id" = $3
       `,
-      ['new name', null],
+      ['new name', null, 1],
     );
 
     const eq: AssertEqual<Awaited<typeof query>, number> = true;
@@ -173,7 +179,7 @@ describe('update', () => {
   it('should support raw sql as a value', () => {
     const q = User.all();
 
-    const query = q.update({
+    const query = q.where({ id: 1 }).update({
       name: raw(`'raw sql'`),
     });
     expectSql(
@@ -181,7 +187,9 @@ describe('update', () => {
       `
         UPDATE "user"
         SET "name" = 'raw sql'
+        WHERE "user"."id" = $1
       `,
+      [1],
     );
 
     const eq: AssertEqual<Awaited<typeof query>, number> = true;
