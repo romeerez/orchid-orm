@@ -8,7 +8,7 @@ import {
   RelationQuery,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
-  SetQueryReturnsOneOrUndefined,
+  SetQueryReturnsOneOptional,
   BaseRelation,
   defaultsKey,
   relationQueryKey,
@@ -100,7 +100,7 @@ export type MapRelation<
   Relation['returns'] extends 'one'
     ? Relation['options']['required'] extends true
       ? SetQueryReturnsOne<RelatedQuery>
-      : SetQueryReturnsOneOrUndefined<RelatedQuery>
+      : SetQueryReturnsOneOptional<RelatedQuery>
     : SetQueryReturnsAll<RelatedQuery>,
   Relation['options']['required'] extends boolean
     ? Relation['options']['required']

@@ -13,7 +13,10 @@ export type ThenResult<Res> = <T extends Query>(
   reject?: (error: any) => any,
 ) => Promise<Res | never>;
 
-const queryMethod: Record<QueryReturnType, 'query' | 'arrays'> = {
+export const queryMethodByReturnType: Record<
+  QueryReturnType,
+  'query' | 'arrays'
+> = {
   all: 'query',
   one: 'query',
   oneOrThrow: 'query',
@@ -85,7 +88,7 @@ const then = async (
     }
 
     const queryResult = await q.query.adapter[
-      queryMethod[q.returnType] as 'query'
+      queryMethodByReturnType[q.returnType] as 'query'
     ](sql);
 
     if (q.query.log) {

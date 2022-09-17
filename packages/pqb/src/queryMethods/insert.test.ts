@@ -60,6 +60,29 @@ describe('insert', () => {
     expectQueryNotMutated(q);
   });
 
+  it('should insert one record, returning value', async () => {
+    const q = User.all();
+
+    const query = q.value('id').insert(userData);
+    expectSql(
+      query.toSql(),
+      `
+        INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
+        VALUES ($1, $2, $3, $4)
+        RETURNING "user"."id"
+      `,
+      ['name', 'password', now, now],
+    );
+
+    const result = await query;
+    const eq: AssertEqual<typeof result, number> = true;
+    expect(eq).toBe(true);
+
+    expect(typeof result).toBe('number');
+
+    expectQueryNotMutated(q);
+  });
+
   it('should insert one record, returning columns', async () => {
     const q = User.all();
 

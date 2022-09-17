@@ -19,6 +19,7 @@ import {
 import { SetOptional } from '../utils';
 import { InsertQueryData, OnConflictItem, OnConflictMergeUpdate } from '../sql';
 import { WhereArg } from './where';
+import { parseResult, queryMethodByReturnType } from './then';
 
 export type OptionalKeys<T extends Query> = {
   [K in keyof T['shape']]: T['shape'][K]['isPrimaryKey'] extends true
@@ -97,11 +98,17 @@ export type InsertData<
 
 type InsertOneResult<T extends Query> = T['hasSelect'] extends false
   ? SetQueryReturnsRowCount<T>
-  : SetQueryReturnsOne<T>;
+  : T['returnType'] extends 'all'
+  ? SetQueryReturnsOne<T>
+  : T['returnType'] extends 'one'
+  ? SetQueryReturnsOne<T>
+  : T;
 
 type InsertManyResult<T extends Query> = T['hasSelect'] extends false
   ? SetQueryReturnsRowCount<T>
-  : SetQueryReturnsAll<T>;
+  : T['returnType'] extends 'one' | 'oneOrThrow'
+  ? SetQueryReturnsAll<T>
+  : T;
 
 type OnConflictArg<T extends Query> =
   | keyof T['shape']
@@ -184,7 +191,7 @@ export class Insert {
       | { columns: string[]; values: RawExpression },
   ) {
     const q = this as unknown as Query & { query: InsertQueryData };
-    let returning = q.query.select;
+    const returning = q.query.select;
 
     delete q.query.and;
     delete q.query.or;
@@ -198,6 +205,21 @@ export class Insert {
       Relation
     >;
     let values: unknown[][] | RawExpression;
+
+    let returnType = q.returnType;
+    if (returning) {
+      if (Array.isArray(data)) {
+        if (returnType === 'one' || returnType === 'oneOrThrow') {
+          returnType = 'all';
+        }
+      } else {
+        if (returnType === 'all') {
+          returnType = 'one';
+        }
+      }
+    } else {
+      returnType = 'rowCount';
+    }
 
     if (
       'values' in data &&
@@ -289,25 +311,42 @@ export class Insert {
         const requiredColumns = Object.keys(requiredReturning);
 
         if (!returning) {
-          returning = requiredColumns;
+          q.query.select = requiredColumns;
         } else {
-          returning = [
+          q.query.select = [
             ...new Set([...(returning as string[]), ...requiredColumns]),
           ];
         }
+      }
+
+      let resultOfTypeAll: Record<string, unknown>[] | undefined;
+      if (returnType !== 'all') {
+        const { handleResult } = q.query;
+        q.query.handleResult = async (q, queryResult) => {
+          resultOfTypeAll = (await handleResult(q, queryResult)) as Record<
+            string,
+            unknown
+          >[];
+
+          if (queryMethodByReturnType[returnType] === 'arrays') {
+            queryResult.rows.forEach(
+              (row, i) =>
+                ((queryResult.rows as unknown as unknown[][])[i] =
+                  Object.values(row)),
+            );
+          }
+
+          return parseResult(q, returnType, queryResult);
+        };
       }
 
       pushQueryArray(
         q,
         'afterQuery',
         appendRelationsKeys.map((relationName) => {
-          return async (q: Query, result: unknown) => {
-            const all = (q.returnType === 'all' ? result : [result]) as Record<
-              string,
-              unknown
-            >[];
-
-            await (
+          return (q: Query, result: Record<string, unknown>[]) => {
+            const all = resultOfTypeAll || result;
+            return (
               relations[relationName].nestedInsert as HasOneNestedInsert
             )?.(
               q,
@@ -328,12 +367,7 @@ export class Insert {
       q.query.wrapInTransaction = true;
     }
 
-    if (returning) {
-      q.returnType = Array.isArray(data) ? 'all' : 'one';
-      q.query.select = returning;
-    } else {
-      q.returnType = 'rowCount';
-    }
+    q.returnType = appendRelationsKeys.length ? 'all' : returnType;
 
     return q as unknown as InsertOneResult<Query> & InsertManyResult<Query>;
   }

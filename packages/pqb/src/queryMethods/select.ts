@@ -13,7 +13,7 @@ import {
 import { getQueryParsers, isRaw, RawExpression } from '../common';
 import { pushQueryArray } from '../queryDataUtils';
 import { parseRecord } from './then';
-import { QueryData, SelectQueryData } from '../sql';
+import { QueryData, SelectItem, SelectQueryData } from '../sql';
 import { FilterTuple, getQueryAs, SimpleSpread } from '../utils';
 import {
   isRequiredRelationKey,
@@ -84,6 +84,15 @@ type SelectResult<
   }
 >;
 
+export const addParserForRawExpression = (
+  q: Query,
+  key: string,
+  raw: RawExpression,
+) => {
+  const parser = raw.__column?.parseFn;
+  if (parser) addParserToQuery(q.query, key, parser);
+};
+
 export const addParserForSelectItem = <T extends Query>(
   q: T,
   as: string | undefined,
@@ -92,8 +101,7 @@ export const addParserForSelectItem = <T extends Query>(
 ) => {
   if (typeof item === 'object') {
     if (isRaw(item)) {
-      const parser = item.__column?.parseFn;
-      if (parser) addParserToQuery(q.query, key, parser);
+      addParserForRawExpression(q, key, item);
     } else {
       const parsers = getQueryParsers(item);
       if (parsers) {
@@ -137,6 +145,73 @@ export const addParserToQuery = (
   else query.parsers = { [key]: parser };
 };
 
+export const processSelectArg = <T extends Query>(
+  q: T,
+  as: string | undefined,
+  item: SelectArg<T>,
+): SelectItem => {
+  if (typeof item === 'string') {
+    if ((q.relations as Record<string, Relation>)[item]) {
+      item = (q as unknown as Record<string, RelationQueryBase>)[item];
+    } else {
+      const index = item.indexOf('.');
+      if (index !== -1) {
+        const table = item.slice(0, index);
+        const column = item.slice(index + 1);
+
+        if (table === as) {
+          const parser = q.columnsParsers?.[column];
+          if (parser) addParserToQuery(q.query, column, parser);
+        } else {
+          const parser = (q.query as SelectQueryData).joinedParsers?.[table]?.[
+            column
+          ];
+          if (parser) addParserToQuery(q.query, column, parser);
+        }
+      } else {
+        const parser = q.columnsParsers?.[item];
+        if (parser) addParserToQuery(q.query, item, parser);
+      }
+      return item;
+    }
+  }
+
+  if ((item as { query?: QueryData }).query?.[relationQueryKey]) {
+    const relation = item as RelationQueryBase;
+    const parsers = relation.query.parsers || relation.columnsParsers;
+    if (parsers) {
+      addParserToQuery(q.query, getQueryAs(relation), (input) => {
+        if (Array.isArray(input)) {
+          input.forEach((record: unknown) => {
+            for (const key in parsers) {
+              const value = (record as Record<string, unknown>)[key];
+              if (value !== null) {
+                (record as Record<string, unknown>)[key] = parsers[key](value);
+              }
+            }
+          });
+        } else {
+          for (const key in parsers) {
+            const value = (input as Record<string, unknown>)[key];
+            if (value !== null) {
+              (input as Record<string, unknown>)[key] = parsers[key](value);
+            }
+          }
+        }
+        return input;
+      });
+    }
+  } else {
+    for (const key in item as SelectAsArg<QueryBase>) {
+      addParserForSelectItem(q, as, key, (item as SelectAsArg<QueryBase>)[key]);
+    }
+
+    return { selectAs: item } as SelectItem;
+  }
+
+  return item as SelectItem;
+};
+
 export class Select {
   select<T extends Query, K extends SelectArg<T>[]>(
     this: T,
@@ -154,74 +229,7 @@ export class Select {
     }
 
     const as = this.query.as || this.table;
-    const selectArgs = args.map((item) => {
-      if (typeof item === 'string') {
-        if ((this.relations as Record<string, Relation>)[item]) {
-          item = (this as unknown as Record<string, RelationQueryBase>)[item];
-        } else {
-          const index = item.indexOf('.');
-          if (index !== -1) {
-            const table = item.slice(0, index);
-            const column = item.slice(index + 1);
-
-            if (table === as) {
-              const parser = this.columnsParsers?.[column];
-              if (parser) addParserToQuery(this.query, column, parser);
-            } else {
-              const parser = (this.query as SelectQueryData).joinedParsers?.[
-                table
-              ]?.[column];
-              if (parser) addParserToQuery(this.query, column, parser);
-            }
-          } else {
-            const parser = this.columnsParsers?.[item];
-            if (parser) addParserToQuery(this.query, item, parser);
-          }
-          return item;
-        }
-      }
-
-      if ((item as { query?: QueryData }).query?.[relationQueryKey]) {
-        const relation = item as RelationQueryBase;
-        const parsers = relation.query.parsers || relation.columnsParsers;
-        if (parsers) {
-          addParserToQuery(this.query, getQueryAs(relation), (input) => {
-            if (Array.isArray(input)) {
-              input.forEach((record: unknown) => {
-                for (const key in parsers) {
-                  const value = (record as Record<string, unknown>)[key];
-                  if (value !== null) {
-                    (record as Record<string, unknown>)[key] =
-                      parsers[key](value);
-                  }
-                }
-              });
-            } else {
-              for (const key in parsers) {
-                const value = (input as Record<string, unknown>)[key];
-                if (value !== null) {
-                  (input as Record<string, unknown>)[key] = parsers[key](value);
-                }
-              }
-            }
-            return input;
-          });
-        }
-      } else {
-        for (const key in item as SelectAsArg<QueryBase>) {
-          addParserForSelectItem(
-            this,
-            as,
-            key,
-            (item as SelectAsArg<QueryBase>)[key],
-          );
-        }
-
-        return { selectAs: item };
-      }
-
-      return item;
-    });
+    const selectArgs = args.map((item) => processSelectArg(this, as, item));
 
     return pushQueryArray(
       this,

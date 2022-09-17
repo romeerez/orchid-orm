@@ -30,8 +30,8 @@ describe('hasMany', () => {
 
       expect(eq).toBe(true);
 
-      const { id: userId } = await db.user.select('id').insert(userData);
-      const { id: chatId } = await db.chat.select('id').insert(chatData);
+      const userId = await db.user.value('id').insert(userData);
+      const chatId = await db.chat.value('id').insert(chatData);
 
       await db.message.insert([
         { ...messageData, authorId: userId, chatId },
@@ -157,7 +157,7 @@ describe('hasMany', () => {
             SELECT
               "user"."id",
               (
-                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (
                   SELECT * FROM "message" AS "messages"
                   WHERE "messages"."authorId" = "user"."id"
@@ -185,7 +185,7 @@ describe('hasMany', () => {
             SELECT
               "user"."id",
               (
-                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (
                   SELECT * FROM "message" AS "messages"
                   WHERE "messages"."authorId" = "user"."id"
@@ -294,7 +294,7 @@ describe('hasMany', () => {
     };
 
     it('should support create', async () => {
-      const { id: chatId } = await db.chat.select('id').insert(chatData);
+      const chatId = await db.chat.value('id').insert(chatData);
 
       const user = await db.user.create({
         ...userData,
@@ -328,7 +328,7 @@ describe('hasMany', () => {
     });
 
     it('should support create many', async () => {
-      const { id: chatId } = await db.chat.select('id').insert(chatData);
+      const chatId = await db.chat.value('id').insert(chatData);
 
       const user = await db.user.create([
         {
@@ -391,7 +391,7 @@ describe('hasMany', () => {
     });
 
     it('should support connect', async () => {
-      const { id: chatId } = await db.chat.select('id').insert(chatData);
+      const chatId = await db.chat.value('id').insert(chatData);
       await db.message.insert([
         {
           ...messageData,
@@ -435,7 +435,7 @@ describe('hasMany', () => {
     });
 
     it('should support connect many', async () => {
-      const { id: chatId } = await db.chat.select('id').insert(chatData);
+      const chatId = await db.chat.value('id').insert(chatData);
       await db.message.insert([
         {
           ...messageData,
@@ -516,8 +516,8 @@ describe('hasMany', () => {
     });
 
     it('should support connect or create', async () => {
-      const { id: chatId } = await db.chat.select('id').insert(chatData);
-      const { id: messageId } = await db.message.select('id').insert({
+      const chatId = await db.chat.value('id').insert(chatData);
+      const messageId = await db.message.value('id').insert({
         ...messageData,
         chatId,
         user: { create: { ...userData, name: 'tmp' } },
@@ -556,7 +556,7 @@ describe('hasMany', () => {
     });
 
     it('should support connect or create many', async () => {
-      const { id: chatId } = await db.chat.select('id').insert(chatData);
+      const chatId = await db.chat.value('id').insert(chatData);
       const [{ id: message1Id }, { id: message4Id }] = await db.message
         .selectAll()
         .insert([
@@ -637,10 +637,10 @@ describe('hasMany', () => {
   describe('update', () => {
     describe('disconnect', () => {
       it('should nullify foreignKey', async () => {
-        const { id: chatId } = await db.chat
-          .select('id')
+        const chatId = await db.chat
+          .value('id')
           .insert({ ...chatData, title: 'chat 1' });
-        const { id: userId } = await db.user.select('id').insert({
+        const userId = await db.user.value('id').insert({
           ...userData,
           messages: {
             create: [
@@ -666,8 +666,8 @@ describe('hasMany', () => {
 
     describe('set', () => {
       it('should nullify foreignKey of previous related record and set foreignKey to new related record', async () => {
-        const { id: chatId } = await db.chat.select('id').insert(chatData);
-        const { id } = await db.user.select('id').insert({
+        const chatId = await db.chat.value('id').insert(chatData);
+        const id = await db.user.value('id').insert({
           ...userData,
           messages: {
             create: [
@@ -697,9 +697,9 @@ describe('hasMany', () => {
 
     describe('delete', () => {
       it('should delete related records', async () => {
-        const { id: chatId } = await db.chat.select('id').insert(chatData);
+        const chatId = await db.chat.value('id').insert(chatData);
 
-        const { id } = await db.user.select('id').insert({
+        const id = await db.user.value('id').insert({
           ...userData,
           messages: {
             create: [
@@ -725,9 +725,9 @@ describe('hasMany', () => {
 
     describe('nested update', () => {
       it('should update related records', async () => {
-        const { id: chatId } = await db.chat.select('id').insert(chatData);
+        const chatId = await db.chat.value('id').insert(chatData);
 
-        const { id } = await db.user.select('id').insert({
+        const id = await db.user.value('id').insert({
           ...userData,
           messages: {
             create: [
@@ -921,7 +921,7 @@ describe('hasMany through', () => {
           SELECT
             "profile"."id",
             (
-              SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+              SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
               FROM (
                 SELECT *
                 FROM "chat" AS "chats"
@@ -960,7 +960,7 @@ describe('hasMany through', () => {
           SELECT
             "profile"."id",
             (
-              SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+              SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
               FROM (
                 SELECT *
                 FROM "chat" AS "chats"

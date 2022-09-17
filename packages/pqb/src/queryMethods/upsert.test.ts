@@ -1,6 +1,8 @@
-import { AssertEqual, User, userData } from '../test-utils';
+import { AssertEqual, User, userData, useTestDatabase } from '../test-utils';
 
 describe('upsert', () => {
+  useTestDatabase();
+
   it('should return void by default', () => {
     const query = User.find(1).upsert({
       update: { name: 'name' },

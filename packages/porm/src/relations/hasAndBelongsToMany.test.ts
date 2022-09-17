@@ -24,7 +24,7 @@ describe('hasAndBelongsToMany', () => {
 
       expect(eq).toBe(true);
 
-      const { id: userId } = await db.user.select('id').insert({
+      const userId = await db.user.value('id').insert({
         ...userData,
         chats: {
           create: [chatData, chatData],
@@ -155,7 +155,7 @@ describe('hasAndBelongsToMany', () => {
             SELECT
               "user"."id",
               (
-                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (
                   SELECT "chats"."id", "chats"."title" FROM "chat" AS "chats"
                   WHERE EXISTS (
@@ -188,7 +188,7 @@ describe('hasAndBelongsToMany', () => {
             SELECT
               "user"."id",
               (
-                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (
                   SELECT * FROM "chat" AS "chats"
                   WHERE EXISTS (
@@ -622,7 +622,7 @@ describe('hasAndBelongsToMany', () => {
     });
 
     it('should support connect or create', async () => {
-      const { id: chatId } = await db.chat.select('id').insert({
+      const chatId = await db.chat.value('id').insert({
         ...chatData,
         title: 'chat 1',
       });
@@ -734,7 +734,7 @@ describe('hasAndBelongsToMany', () => {
   describe('update', () => {
     describe('disconnect', () => {
       it('should delete join table rows', async () => {
-        const { id: userId } = await db.user.select('id').insert({
+        const userId = await db.user.value('id').insert({
           ...userData,
           name: 'user',
           chats: {
@@ -760,7 +760,7 @@ describe('hasAndBelongsToMany', () => {
 
     describe('set', () => {
       it('should delete previous join records and create join records for matching related records', async () => {
-        const { id } = await db.user.select('id').insert({
+        const id = await db.user.value('id').insert({
           ...userData,
           chats: {
             create: [
@@ -791,7 +791,7 @@ describe('hasAndBelongsToMany', () => {
 
     describe('delete', () => {
       it('should delete related records', async () => {
-        const { id } = await db.user.select('id').insert({
+        const id = await db.user.value('id').insert({
           ...userData,
           chats: {
             create: [
@@ -824,7 +824,7 @@ describe('hasAndBelongsToMany', () => {
 
     describe('nested update', () => {
       it('should update related records', async () => {
-        const { id } = await db.user.select('id').insert({
+        const id = await db.user.value('id').insert({
           ...userData,
           chats: {
             create: [

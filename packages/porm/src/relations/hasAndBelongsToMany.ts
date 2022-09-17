@@ -149,7 +149,7 @@ export const makeHasAndBelongsToManyMethod = (
       connectOrCreateI = 0;
       let created: Record<string, unknown>[];
       if (create.length) {
-        created = await t
+        created = (await t
           .select(associationPrimaryKey)
           ._insert(
             create.flatMap(([, { create = [], connectOrCreate = [] }]) => [
@@ -158,7 +158,7 @@ export const makeHasAndBelongsToManyMethod = (
                 .filter(() => !connectOrCreated[connectOrCreateI++])
                 .map((item) => item.create),
             ]),
-          );
+          )) as Record<string, unknown>[];
       } else {
         created = [];
       }

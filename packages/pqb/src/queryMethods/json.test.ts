@@ -17,7 +17,7 @@ describe('json methods', () => {
       expectSql(
         q.where({ id: 1 }).json().toSql(),
         `
-          SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+          SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
           FROM (
             SELECT * FROM "user"
             WHERE "user"."id" = $1
@@ -33,7 +33,7 @@ describe('json methods', () => {
       expectSql(
         q.where({ id: 1 }).take().json().toSql(),
         `
-          SELECT row_to_json("t".*) AS "json"
+          SELECT row_to_json("t".*)
           FROM (
             SELECT * FROM "user"
             WHERE "user"."id" = $1

@@ -1,8 +1,4 @@
-import {
-  AddQuerySelect,
-  Query,
-  SetQueryReturnsValueOrUndefined,
-} from '../query';
+import { AddQuerySelect, Query, SetQueryReturnsValueOptional } from '../query';
 import { pushQueryValue } from '../queryDataUtils';
 import { ColumnType, StringColumn } from '../columnSchema';
 import { JsonItem } from '../sql';
@@ -45,24 +41,22 @@ type JsonPathQueryResult<
 export class Json {
   json<T extends Query>(
     this: T,
-  ): SetQueryReturnsValueOrUndefined<T, StringColumn> {
+  ): SetQueryReturnsValueOptional<T, StringColumn> {
     return this.clone()._json();
   }
 
   _json<T extends Query>(
     this: T,
-  ): SetQueryReturnsValueOrUndefined<T, StringColumn> {
-    const q = this._wrap(
-      (this.__model || this).select({
-        json: raw(
-          this.query.take
-            ? `row_to_json("t".*)`
-            : `COALESCE(json_agg(row_to_json("t".*)), '[]')`,
-        ),
-      }),
-    ) as unknown as T;
+  ): SetQueryReturnsValueOptional<T, StringColumn> {
+    const q = this._wrap((this.__model || this).clone()) as T;
 
-    return q._valueOptional<T, StringColumn>();
+    return q._valueOptional(
+      raw<StringColumn>(
+        this.query.take
+          ? `row_to_json("t".*)`
+          : `COALESCE(json_agg(row_to_json("t".*)), '[]')`,
+      ),
+    );
   }
 
   jsonSet<

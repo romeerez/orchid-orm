@@ -12,7 +12,7 @@ import {
   userData,
   now,
 } from '../test-utils';
-import { columnTypes, NumberColumn } from '../columnSchema';
+import { NumberColumn } from '../columnSchema';
 import { NotFoundError } from '../errors';
 
 describe('queryMethods', () => {
@@ -155,62 +155,6 @@ describe('queryMethods', () => {
 
       const eq: AssertEqual<typeof result, number[]> = true;
       expect(eq).toBe(true);
-    });
-  });
-
-  describe('value', () => {
-    it('returns a first value', async () => {
-      const { id } = await User.select('id').insert(userData);
-
-      const received = await User.select('id').valueOptional(
-        columnTypes.integer(),
-      );
-
-      const eq: AssertEqual<typeof received, number | undefined> = true;
-      expect(eq).toBe(true);
-
-      expect(received).toBe(id);
-    });
-
-    it('should return undefined if not found', async () => {
-      const value = await User.select('id').valueOptional(
-        columnTypes.integer(),
-      );
-      const eq: AssertEqual<typeof value, number | undefined> = true;
-      expect(eq).toBe(true);
-
-      expect(value).toBe(undefined);
-    });
-
-    it('removes `take` from query data', () => {
-      expect((User.take().valueOptional().query as SelectQueryData)?.take).toBe(
-        undefined,
-      );
-    });
-  });
-
-  describe('valueOrThrow', () => {
-    it('returns a first value', async () => {
-      const { id } = await User.select('id').insert(userData);
-
-      const received = await User.select('id').value(columnTypes.integer());
-
-      const eq: AssertEqual<typeof received, number> = true;
-      expect(eq).toBe(true);
-
-      expect(received).toBe(id);
-    });
-
-    it('should throw if not found', async () => {
-      await expect(() =>
-        User.select('id').value(columnTypes.integer()),
-      ).rejects.toThrowError(NotFoundError);
-    });
-
-    it('removes `take` from query data', () => {
-      expect((User.take().value().query as SelectQueryData)?.take).toBe(
-        undefined,
-      );
     });
   });
 
@@ -662,7 +606,7 @@ describe('offset', () => {
 describe('exists', () => {
   it('selects 1', () => {
     const q = User.all();
-    expectSql(q.exists().toSql(), 'SELECT 1 AS "exists" FROM "user"');
+    expectSql(q.exists().toSql(), 'SELECT 1 FROM "user"');
     expectQueryNotMutated(q);
   });
 });

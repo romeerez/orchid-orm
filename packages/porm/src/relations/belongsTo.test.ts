@@ -26,9 +26,9 @@ describe('belongsTo', () => {
 
       expect(eq).toBe(true);
 
-      const { id: userId } = await db.user.select('id').insert(userData);
-      const { id: profileId } = await db.profile
-        .select('id')
+      const userId = await db.user.value('id').insert(userData);
+      const profileId = await db.profile
+        .value('id')
         .insert({ ...profileData, userId });
 
       const profile = await db.profile.find(profileId);
@@ -129,7 +129,7 @@ describe('belongsTo', () => {
             SELECT
               "profile"."id",
               (
-                SELECT row_to_json("t".*) AS "json"
+                SELECT row_to_json("t".*)
                 FROM (
                   SELECT "user"."id", "user"."name" FROM "user"
                   WHERE "user"."id" = "profile"."userId"
@@ -158,7 +158,7 @@ describe('belongsTo', () => {
             SELECT
               "profile"."id",
               (
-                SELECT row_to_json("t".*) AS "json"
+                SELECT row_to_json("t".*)
                 FROM (
                   SELECT * FROM "user"
                   WHERE "user"."id" = "profile"."userId"
@@ -484,8 +484,8 @@ describe('belongsTo', () => {
   describe('update', () => {
     describe('disconnect', () => {
       it('should nullify foreignKey', async () => {
-        const { id } = await db.profile
-          .select('id')
+        const id = await db.profile
+          .value('id')
           .insert({ ...profileData, user: { create: userData } });
 
         const profile = await db.profile
@@ -502,7 +502,7 @@ describe('belongsTo', () => {
 
     describe('set', () => {
       it('should set foreignKey of current record with provided primaryKey', async () => {
-        const { id } = await db.profile.select('id').insert(profileData);
+        const id = await db.profile.value('id').insert(profileData);
         const user = await db.user.select('id').insert(userData);
 
         const profile = await db.profile
@@ -518,7 +518,7 @@ describe('belongsTo', () => {
       });
 
       it('should set foreignKey of current record from found related record', async () => {
-        const { id } = await db.profile.select('id').insert(profileData);
+        const id = await db.profile.value('id').insert(profileData);
         const user = await db.user.select('id').insert({
           ...userData,
           name: 'user',

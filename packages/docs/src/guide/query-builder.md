@@ -184,13 +184,20 @@ Query methods are building blocks for a query chain, and when query is ready use
 const records: { id: number, name: string }[] = await Table.select('id', 'name')
 ```
 
-`.take()` to get only one record, it will throw `NotFoundError` when not found:
+`.take()` to get only one record, it will throw `NotFoundError` when not found.
+
+`.find(id)` and `.findBy(conditions)` also returns one record.
+
 ```ts
 import { NotFoundError } from 'pqb'
 
 try {
-  const record = await Table.take()
-  // user can NOT be undefined here
+  // take one record:
+  const takenRecord = await Table.take()
+  
+  const foundById = await Table.find(1)
+  
+  const foundByConditions = await Table.findBy({ email: 'some@email.com' })
 } catch (err) {
   if (err instanceof NotFoundError) {
     // handle error
@@ -198,7 +205,10 @@ try {
 }
 ```
 
-`.takeOptional()` to get one record or `undefined` when not found:
+`.takeOptional()` to get one record or `undefined` when not found.
+
+`.findOptional(id)` and `.findByOptional(conditions)` also returns one record or `undefined`.
+
 ```ts
 const recordOrUndefined = await Table.takeOptional()
 ```
@@ -219,19 +229,19 @@ const ids = await Table.select('id').pluck()
 // ids is array of all users id
 ```
 
-`.value` returns a single value, optionally takes column type for a returning type.
+`.value` returns a single value, accepts column name or a raw expression.
 It will throw `NotFoundError` when not found.
 ```ts
-import { columnTypes } from 'pqb';
+import { raw, NumberColumn } from 'pqb'
 
-const firstName: string = await Table.select('name').value(columnTypes.text())
+const firstName: string = await Table.value('name')
+
+const rawResult: number = await Table.value(raw<NumberColumn>('1 + 1'))
 ```
 
 `.valueOptional` returns single value or undefined when not found:
 ```ts
-import { columnTypes } from 'pqb';
-
-const firstName: string | undefined = await Table.select('name').valueOptional(columnTypes.text())
+const firstName: string | undefined = await Table.valueOptional('name')
 ```
 
 `.exec` won't parse response at all, returns undefined:
@@ -625,9 +635,11 @@ const insertedCount = await Table.insert({
 
 By default `.insert` will return count of inserted records.
 
-Place `.select` or `.selectAll` before `.insert` to specify returning columns:
+Place `.select`, or `.selectAll`, or `.value` before `.insert` to specify returning columns:
 
 ```ts
+const id: number = await Table.value('id').insert(data)
+
 // returns single object when inserting single record
 const objectWithId: { id: number } = await Table.select('id').insert(data)
 
@@ -841,33 +853,38 @@ Creates an update query, takes object of properties or raw expression, optionall
 
 By default `.update` will return count of inserted records.
 
-Place `.select` or `.selectAll` before `.update` to specify returning columns.
+Place `.select`, or `.selectAll`, or `.value` before `.update` to specify returning columns.
 
 Need to provide `.where`, or `.findBy`, or `.find` conditions before calling `.update`.
 To ensure that whole table won't be updated by accident, update without where conditions will result in TypeScript and runtime error.
 
-To update table without conditions put `true` in second argument.
-
-If `select` and `where` were specified before the update it will return array of updated records.
-
-If `select` and `take`, `find` or similar were specified before the update it will return one updated records.
+To update table without conditions put `true` in second argument:
 
 ```ts
 await Table.update({ name: 'new name' }, true)
 ```
 
+If `.select` and `.where` were specified before the update it will return array of updated records.
+
+If `.select` and `.take`, `.find` or similar were specified before the update it will return one updated records.
+
 ```ts
 const updatedCount = await Table.where({ name: 'old name' }).update({ name: 'new name' })
 const updatedCount2 = await Table.find(1).update(raw(`name = 'new name'`))
 
-const recordsArray = await Table
-  .select('id', 'name')
-  .where({ id: 1 })
+const id = await Table
+  .find(1)
+  .value('id')
   .update({ name: 'new name' })
 
 const oneFullRecord = await Table
   .selectAll()
-  .findBy({ id: 1 })
+  .find(1)
+  .update({ name: 'new name' })
+
+const recordsArray = await Table
+  .select('id', 'name')
+  .where({ id: 1 })
   .update({ name: 'new name' })
 ```
 
@@ -983,7 +1000,7 @@ based on other conditions specified in the query.
 
 By default `.delete` will return count of inserted records.
 
-Place `.select` or `.selectAll` before `.delete` to specify returning columns.
+Place `.select`, or `.selectAll`, or `.value` before `.delete` to specify returning columns.
 
 Need to provide `.where`, or `.findBy`, or `.find` conditions before calling `.delete`.
 To prevent accidental deletion of all records , delete without where will result in TypeScript and runtime error.
@@ -1000,13 +1017,19 @@ const deletedCount = await Table
   .where(...conditions)
   .delete()
 
-// Returns array of records with specified columns
+// returns single value, throws if not found
+const id: number | undefined = await Table
+  .findBy(...conditions)
+  .value('id')
+  .delete()
+
+// returns array of records with specified columns
 const deletedRecord = await Table
   .select('id', 'name', 'age')
   .where(...conditions)
   .delete()
 
-// Returns array of full deleted records
+// returns array of full deleted records
 const deletedUsersFull = await Table
   .selectAll()
   .where(...conditions)

@@ -78,9 +78,9 @@ export const makeBelongsToMethod = (
 
       let created: unknown[];
       if (create.length) {
-        created = await t
+        created = (await t
           .select(primaryKey)
-          ._insert(create.map((item) => item.create));
+          ._insert(create.map((item) => item.create))) as unknown[];
       } else {
         created = [];
       }
@@ -135,8 +135,7 @@ export const makeBelongsToMethod = (
         } else if (params.delete) {
           const selectQuery = q.transacting(q);
           selectQuery.query.type = undefined;
-          selectQuery.query.select = [foreignKey];
-          idForDelete = await selectQuery._valueOptional();
+          idForDelete = await selectQuery._valueOptional(foreignKey);
           update[foreignKey] = null;
         }
       });
@@ -172,8 +171,9 @@ export const makeBelongsToMethod = (
                 ._select(primaryKey)
                 ._insert(upsert.create)
                 .then((result) => {
-                  (state.updateLater as Record<string, unknown>)[foreignKey] =
-                    result[primaryKey];
+                  (state.updateLater as Record<string, unknown>)[foreignKey] = (
+                    result as Record<string, unknown>
+                  )[primaryKey];
                 }) as unknown as Promise<void>,
             );
           }

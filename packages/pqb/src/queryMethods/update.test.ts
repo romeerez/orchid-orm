@@ -83,6 +83,41 @@ describe('update', () => {
     expectQueryNotMutated(q);
   });
 
+  it('should update record, returning value', async () => {
+    const q = User.all();
+
+    const id = await q.value('id').insert(userData);
+
+    const update = {
+      name: 'new name',
+      password: 'new password',
+    };
+
+    const query = q.find(id).value('id').update(update);
+    expectSql(
+      query.toSql(),
+      `
+        UPDATE "user"
+        SET "name" = $1,
+            "password" = $2
+        WHERE "user"."id" = $3
+        RETURNING "user"."id"
+      `,
+      [update.name, update.password, id],
+    );
+
+    const result = await query;
+    const eq: AssertEqual<typeof result, number> = true;
+    expect(eq).toBe(true);
+
+    expect(typeof result).toBe('number');
+
+    const updated = await User.take();
+    expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
+
+    expectQueryNotMutated(q);
+  });
+
   it('should update record, returning columns', async () => {
     const q = User.all();
 

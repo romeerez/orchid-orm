@@ -11,9 +11,10 @@ import { AliasOrTable, RawExpression, StringKey } from './common';
 import { ThenResult } from './queryMethods/then';
 import { Db } from './db';
 import { ColumnInfo } from './queryMethods/columnInfo';
-import { RelationsBase } from './relations';
+import { RelationQueryBase, RelationsBase } from './relations';
 import { WhereQueryBuilder } from './queryMethods/where';
 import { OnQueryBuilder } from './queryMethods/join';
+import { ValueArg } from './queryMethods/value';
 
 export type ColumnParser = (input: unknown) => unknown;
 export type ColumnsParsers = Record<string, ColumnParser>;
@@ -153,7 +154,7 @@ export type SetQueryReturns<T extends Query, R extends QueryReturnType> = Omit<
 
 export type SetQueryReturnsAll<T extends Query> = SetQueryReturns<T, 'all'>;
 
-export type SetQueryReturnsOneOrUndefined<T extends Query> = SetQueryReturns<
+export type SetQueryReturnsOneOptional<T extends Query> = SetQueryReturns<
   T,
   'one'
 >;
@@ -179,22 +180,38 @@ export type SetQueryReturnsPluck<
   then: ThenResult<C['type'][]>;
 };
 
-export type SetQueryReturnsValueOrUndefined<
+export type SetQueryReturnsValueOptional<
   T extends Query,
-  C extends ColumnType,
-> = Omit<T, 'result' | 'returnType' | 'then'> & {
-  result: { value: C };
+  Arg extends Exclude<ValueArg<T>, RawExpression> | ColumnType,
+  Column extends ColumnType = Arg extends ColumnType
+    ? Arg
+    : Arg extends keyof T['selectable']
+    ? T['selectable'][Arg]['column']
+    : Arg extends RelationQueryBase
+    ? Arg['result']['value']
+    : never,
+> = Omit<T, 'hasSelect' | 'result' | 'returnType' | 'then'> & {
+  hasSelect: true;
+  result: { value: Column };
   returnType: 'value';
-  then: ThenResult<C['type'] | undefined>;
+  then: ThenResult<Column['type'] | undefined>;
 };
 
-export type SetQueryReturnsValue<T extends Query, C extends ColumnType> = Omit<
-  T,
-  'result' | 'returnType' | 'then'
-> & {
-  result: { value: C };
+export type SetQueryReturnsValue<
+  T extends Query,
+  Arg extends Exclude<ValueArg<T>, RawExpression> | ColumnType,
+  Column extends ColumnType = Arg extends ColumnType
+    ? Arg
+    : Arg extends keyof T['selectable']
+    ? T['selectable'][Arg]['column']
+    : Arg extends RelationQueryBase
+    ? Arg['result']['value']
+    : never,
+> = Omit<T, 'hasSelect' | 'result' | 'returnType' | 'then'> & {
+  hasSelect: true;
+  result: { value: Column };
   returnType: 'valueOrThrow';
-  then: ThenResult<C['type']>;
+  then: ThenResult<Column['type']>;
 };
 
 export type SetQueryReturnsRowCount<T extends Query> = SetQueryReturns<

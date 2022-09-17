@@ -28,6 +28,29 @@ describe('delete', () => {
     expect(a.query).toEqual(b.query);
   });
 
+  it('should delete records, returning value', async () => {
+    const id = await User.value('id').insert(userData);
+    const q = User.all();
+
+    const query = q.find(id).value('id').delete();
+    expectSql(
+      query.toSql(),
+      `
+        DELETE FROM "user" WHERE "user"."id" = $1
+        RETURNING "user"."id"
+      `,
+      [id],
+    );
+
+    const result = await query;
+    expect(result).toBe(id);
+
+    const eq: AssertEqual<typeof result, number> = true;
+    expect(eq).toBe(true);
+
+    expectQueryNotMutated(q);
+  });
+
   it('should delete records, returning deleted rows count', async () => {
     const rowsCount = 3;
 

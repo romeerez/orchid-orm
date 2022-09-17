@@ -1,4 +1,4 @@
-import { Query, SetQueryReturnsAll, SetQueryReturnsRowCount } from '../query';
+import { Query, SetQueryReturnsRowCount } from '../query';
 
 type DeleteArgs<T extends Query> = T['hasWhere'] extends true
   ? [forceAll?: boolean]
@@ -6,7 +6,7 @@ type DeleteArgs<T extends Query> = T['hasWhere'] extends true
 
 type DeleteResult<T extends Query> = T['hasSelect'] extends false
   ? SetQueryReturnsRowCount<T>
-  : SetQueryReturnsAll<T>;
+  : T;
 
 const del = <T extends Query>(
   self: T,

@@ -19,7 +19,7 @@ import { addQueryOn } from './join';
 import { RelationQuery, relationQueryKey } from '../relations';
 
 const insertUserAndProfile = async () => {
-  const { id } = await User.select('id').insert(userData);
+  const id = await User.value('id').insert(userData);
   await Profile.insert({ ...profileData, userId: id });
 };
 
@@ -137,7 +137,7 @@ describe('selectMethods', () => {
             SELECT
               "user"."id",
               (
-                SELECT row_to_json("t".*) AS "json"
+                SELECT row_to_json("t".*)
                 FROM (
                   SELECT *
                   FROM "profile"
@@ -175,7 +175,7 @@ describe('selectMethods', () => {
       });
 
       it('should parse columns in single relation record result', async () => {
-        const { id: userId } = await User.select('id').insert(userData);
+        const userId = await User.value('id').insert(userData);
         const now = new Date();
         await Profile.insert({ userId, updatedAt: now, createdAt: now });
 
@@ -225,7 +225,7 @@ describe('selectMethods', () => {
             SELECT
               "user"."id",
               (
-                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (
                   SELECT *
                   FROM "message" AS "messages"
@@ -267,7 +267,7 @@ describe('selectMethods', () => {
         expect((await q.all())[0].createdAt instanceof Date).toBe(true);
         expect((await q.take()).createdAt instanceof Date).toBe(true);
         expect((await q.rows())[0][0] instanceof Date).toBe(true);
-        expect((await q.value()) instanceof Date).toBe(true);
+        expect((await q.value('createdAt')) instanceof Date).toBe(true);
       });
 
       it('should parse columns of the table, selected by column name and table name', async () => {
@@ -276,7 +276,7 @@ describe('selectMethods', () => {
         expect((await q.all())[0].createdAt instanceof Date).toBe(true);
         expect((await q.take()).createdAt instanceof Date).toBe(true);
         expect((await q.rows())[0][0] instanceof Date).toBe(true);
-        expect((await q.value()) instanceof Date).toBe(true);
+        expect((await q.value('user.createdAt')) instanceof Date).toBe(true);
       });
 
       it('should parse columns of joined table', async () => {
@@ -287,7 +287,7 @@ describe('selectMethods', () => {
         expect((await q.all())[0].createdAt instanceof Date).toBe(true);
         expect((await q.take()).createdAt instanceof Date).toBe(true);
         expect((await q.rows())[0][0] instanceof Date).toBe(true);
-        expect((await q.value()) instanceof Date).toBe(true);
+        expect((await q.value('user.createdAt')) instanceof Date).toBe(true);
       });
     });
 
@@ -392,7 +392,7 @@ describe('selectMethods', () => {
         `
           SELECT
             (
-              SELECT COALESCE(json_agg(row_to_json("t".*)), '[]') AS "json"
+              SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
               FROM (SELECT * FROM "user") AS "t"
             ) AS "subquery"
           FROM "user"
@@ -421,7 +421,6 @@ describe('selectMethods', () => {
       expect((await q.all())[0].date instanceof Date).toBe(true);
       expect((await q.take()).date instanceof Date).toBe(true);
       expect((await q.rows())[0][0] instanceof Date).toBe(true);
-      expect((await q.value()) instanceof Date).toBe(true);
     });
 
     it('should parse columns of the table, selected by column name and table name', async () => {
@@ -432,7 +431,6 @@ describe('selectMethods', () => {
       expect((await q.all())[0].date instanceof Date).toBe(true);
       expect((await q.take()).date instanceof Date).toBe(true);
       expect((await q.rows())[0][0] instanceof Date).toBe(true);
-      expect((await q.value()) instanceof Date).toBe(true);
     });
 
     it('should parse columns of joined table', async () => {
@@ -443,7 +441,6 @@ describe('selectMethods', () => {
       expect((await q.all())[0].date instanceof Date).toBe(true);
       expect((await q.take()).date instanceof Date).toBe(true);
       expect((await q.rows())[0][0] instanceof Date).toBe(true);
-      expect((await q.value()) instanceof Date).toBe(true);
     });
 
     it('should parse subquery array columns', async () => {
@@ -454,10 +451,6 @@ describe('selectMethods', () => {
       expect((await q.all())[0].users[0].createdAt instanceof Date).toBe(true);
       expect((await q.take()).users[0].createdAt instanceof Date).toBe(true);
       expect((await q.rows())[0][0][0].createdAt instanceof Date).toBe(true);
-      const value = await q.value();
-      expect(
-        (value as { createdAt: Date }[])[0].createdAt instanceof Date,
-      ).toBe(true);
     });
 
     it('should parse subquery item columns', async () => {
@@ -468,10 +461,6 @@ describe('selectMethods', () => {
       expect((await q.all())[0].user.createdAt instanceof Date).toBe(true);
       expect((await q.take()).user.createdAt instanceof Date).toBe(true);
       expect((await q.rows())[0][0].createdAt instanceof Date).toBe(true);
-      const value = await q.value();
-      expect((value as { createdAt: Date }).createdAt instanceof Date).toBe(
-        true,
-      );
     });
 
     it('should parse raw column', async () => {
@@ -485,7 +474,6 @@ describe('selectMethods', () => {
       expect((await q.all())[0].date instanceof Date).toBe(true);
       expect((await q.take()).date instanceof Date).toBe(true);
       expect((await q.rows())[0][0] instanceof Date).toBe(true);
-      expect((await q.value()) instanceof Date).toBe(true);
     });
   });
 });

@@ -10,6 +10,7 @@ import {
 import { WhereArg, WhereResult } from './where';
 import { MaybeArray } from '../utils';
 import { InsertData } from './insert';
+import { parseResult, queryMethodByReturnType } from './then';
 
 export type UpdateData<T extends Query> = {
   [K in keyof T['type']]?: T['type'][K] | RawExpression;
@@ -142,6 +143,8 @@ export class Update {
       const prependRelations: Record<string, Record<string, unknown>> = {};
       const appendRelations: Record<string, Record<string, unknown>> = {};
 
+      const originalReturnType = this.returnType;
+
       const update: Record<string, unknown> = { ...data };
       for (const key in data) {
         if (relations[key]) {
@@ -160,13 +163,13 @@ export class Update {
         }
       }
 
+      const state: {
+        updateLater?: Record<string, unknown>;
+        updateLaterPromises?: Promise<void>[];
+      } = {};
+
       const prependRelationKeys = Object.keys(prependRelations);
       if (prependRelationKeys.length) {
-        const state: {
-          updateLater?: Record<string, unknown>;
-          updateLaterPromises?: Promise<void>[];
-        } = {};
-
         const willSetKeys = prependRelationKeys.some((relationName) => {
           const data = prependRelations[relationName] as NestedUpdateOneItem;
 
@@ -177,50 +180,6 @@ export class Update {
           ).nestedUpdate(this, update, data, state);
         });
 
-        if (state.updateLater) {
-          const { updateLater } = state;
-
-          this.schema.primaryKeys.forEach((key: string) => {
-            if (!query.select?.includes('*') && !query.select?.includes(key)) {
-              this._select(key);
-            }
-          });
-
-          const { handleResult } = this.query;
-          this.query.handleResult = async (q, queryResult) => {
-            const result = await handleResult(q, queryResult);
-
-            await Promise.all(state.updateLaterPromises as Promise<void>[]);
-
-            const t = (this.__model || this).clone().transacting(q);
-            const keys = this.schema.primaryKeys as string[];
-            if (Array.isArray(result)) {
-              (
-                t._whereIn as unknown as (
-                  keys: string[],
-                  values: unknown[][],
-                ) => Query
-              )(
-                keys,
-                result.map((item) => keys.map((key) => item[key])),
-              );
-            } else {
-              const conditions: Record<string, unknown> = {};
-              keys.forEach(
-                (key) =>
-                  (conditions[key] = (result as Record<string, unknown>)[key]),
-              );
-              t._where(conditions as WhereArg<Query>);
-            }
-
-            await (t as WhereResult<Query>)._update(updateLater);
-
-            return Array.isArray(result)
-              ? result.map((item) => Object.assign(item, updateLater))
-              : Object.assign(result as object, updateLater);
-          };
-        }
-
         if (!willSetKeys && !Object.keys(update).length) {
           delete this.query.type;
         }
@@ -229,17 +188,72 @@ export class Update {
       }
 
       const appendRelationKeys = Object.keys(appendRelations);
+
+      let resultOfTypeAll: Record<string, unknown>[] | undefined;
+
+      if (
+        state?.updateLater ||
+        (appendRelationKeys.length && originalReturnType !== 'all')
+      ) {
+        this.returnType = 'all';
+
+        if (state?.updateLater) {
+          this.schema.primaryKeys.forEach((key: string) => {
+            if (!query.select?.includes('*') && !query.select?.includes(key)) {
+              this._select(key);
+            }
+          });
+        }
+
+        const { handleResult } = this.query;
+        this.query.handleResult = async (q, queryResult) => {
+          resultOfTypeAll = (await handleResult(q, queryResult)) as Record<
+            string,
+            unknown
+          >[];
+
+          if (state?.updateLater) {
+            await Promise.all(state.updateLaterPromises as Promise<void>[]);
+
+            const t = (this.__model || this).clone().transacting(q);
+            const keys = this.schema.primaryKeys as string[];
+            (
+              t._whereIn as unknown as (
+                keys: string[],
+                values: unknown[][],
+              ) => Query
+            )(
+              keys,
+              resultOfTypeAll.map((item) => keys.map((key) => item[key])),
+            );
+
+            await (t as WhereResult<Query>)._update(state.updateLater);
+
+            resultOfTypeAll.forEach((item) =>
+              Object.assign(item, state.updateLater),
+            );
+          }
+
+          if (queryMethodByReturnType[originalReturnType] === 'arrays') {
+            queryResult.rows.forEach(
+              (row, i) =>
+                ((queryResult.rows as unknown as unknown[][])[i] =
+                  Object.values(row)),
+            );
+          }
+
+          return parseResult(q, originalReturnType, queryResult);
+        };
+      }
+
       if (appendRelationKeys.length) {
         pushQueryArray(
           this,
           'afterQuery',
           appendRelationKeys.map((relationName) => {
-            return async (q: Query, result: unknown) => {
-              const all = (
-                q.returnType === 'all' ? result : [result]
-              ) as Record<string, unknown>[];
-
-              await (
+            return (q: Query, result: Record<string, unknown>[]) => {
+              const all = resultOfTypeAll || result;
+              return (
                 relations[relationName].nestedUpdate as HasOneNestedUpdate
               )?.(q, all, appendRelations[relationName] as NestedUpdateOneItem);
             };
