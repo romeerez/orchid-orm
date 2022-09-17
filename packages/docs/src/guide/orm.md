@@ -178,7 +178,7 @@ export class BookModel extends Model {
 }
 ```
 
-### belongsTo queries
+## belongsTo queries
 
 Query author of the book when we already have a book record:
 
@@ -253,7 +253,7 @@ bookWithAuthor.author.name
 bookWithAuthor.author?.id
 ```
 
-### belongsTo nested create
+## belongsTo nested create
 
 Create book with author all at once:
 
@@ -295,7 +295,7 @@ const result = await db.book.create([
 ])
 ```
 
-### belongsTo connect in insert
+## belongsTo connect in insert
 
 Connect record to another record while inserting:
 
@@ -314,7 +314,7 @@ const result = await db.book.create({
 })
 ```
 
-### belongsTo connect or create
+## belongsTo connect or create
 
 Specify both `connect` and `create` properties to first look for record to connect with and then create it in case if not found.
 
@@ -334,7 +334,7 @@ const result = await db.book.create({
 })
 ```
 
-### belongsTo disconnect
+## belongsTo disconnect
 
 Disconnect related record by writing `{ disconnect: true }` in `update`.
 
@@ -350,7 +350,7 @@ await db.book.where({ title: 'book title' }).update({
 })
 ```
 
-### belongsTo set
+## belongsTo set
 
 Set related record when updating.
 
@@ -374,7 +374,7 @@ await db.book.where({ title: 'book title' }).update({
 })
 ```
 
-### belongsTo delete
+## belongsTo delete
 
 Updates `foreignKey` to null and deletes related record.
 
@@ -388,7 +388,7 @@ await db.book.find(1).update({
 })
 ```
 
-### belongsTo update
+## belongsTo update
 
 Update related record:
 
@@ -411,6 +411,25 @@ await db.book.where({ id: { in: [1, 2, 3] } }).update({
       name: 'new name',
     },
   },
+})
+```
+
+## belongsTo upsert
+
+Update related record if exists, and create if it doesn't.
+This is supported when updating multiple records as well.
+
+```ts
+await db.book.find(1).update({
+  author: {
+    upsert: {
+      name: 'new name',
+    },
+    create: {
+      name: 'new name',
+      email: 'some@email.com'
+    }
+  }
 })
 ```
 
@@ -458,7 +477,7 @@ export class AccountModel extends Model {
 }
 ```
 
-### hasOne through
+## hasOne through
 
 A `hasOne through` association sets up a one-to-one connection with another model.
 This association indicates that the declaring model can be matched with one instance of another model by proceeding through a third model.
@@ -534,7 +553,7 @@ export class AccountHistoryModel extends Model {
 }
 ```
 
-### hasOne queries
+## hasOne queries
 
 Query account of the supplier when we already have a supplier record:
 
@@ -608,7 +627,7 @@ supplierWithAccount.account.name
 supplierWithAccount.account?.id
 ```
 
-### hasOne nested create
+## hasOne nested create
 
 Create supplier with account all at once:
 
@@ -650,7 +669,7 @@ const result = await db.supplier.create([
 ])
 ```
 
-### hasOne connect in insert
+## hasOne connect in insert
 
 Connect record to another record while inserting:
 
@@ -669,7 +688,7 @@ const result = db.supplier.create({
 })
 ```
 
-### hasOne connect or create
+## hasOne connect or create
 
 Specify both `connect` and `create` properties to first look for record to connect with and then create it in case if not found.
 
@@ -689,7 +708,7 @@ const result = db.supplier.create({
 })
 ```
 
-### hasOne disconnect
+## hasOne disconnect
 
 Disconnect related record by writing `{ disconnect: true }` in `update`.
 
@@ -705,7 +724,7 @@ await db.supplier.where({ brand: 'supplier brand' }).update({
 })
 ```
 
-### hasOne set
+## hasOne set
 
 Set related record when updating.
 
@@ -733,7 +752,7 @@ await db.supplier.find(1).update({
 })
 ```
 
-### hasOne delete
+## hasOne delete
 
 Deletes related record.
 
@@ -747,7 +766,7 @@ await db.supplier.find(1).update({
 })
 ```
 
-### hasOne update
+## hasOne update
 
 Update related record:
 
@@ -768,6 +787,25 @@ await db.supplier.where({ id: [1, 2, 3] }).update({
   account: {
     name: 'new name',
   },
+})
+```
+
+## hasOne upsert
+
+Update related record if exists, and create if it doesn't.
+This is supported when updating multiple records as well.
+
+```ts
+await db.supplier.find(1).update({
+  account: {
+    upsert: {
+      name: 'new name',
+    },
+    create: {
+      name: 'new name',
+      email: 'some@email.com'
+    }
+  }
 })
 ```
 
@@ -812,7 +850,7 @@ export class BookModel extends Model {
 }
 ```
 
-### hasMany through
+## hasMany through
 
 A `hasMany though` association is often used to set up a many-to-many connection with another model.
 This association indicates that the declaring model can be matched with zero or more instances of another model by proceeding through a third model.
@@ -898,7 +936,7 @@ export class PatientModel extends Model {
 }
 ```
 
-### hasMany queries
+## hasMany queries
 
 Query books of the author when we already have an author record:
 
@@ -1000,7 +1038,7 @@ const result: Result = await db.author.select(
 ).take()
 ```
 
-### hasMany nested create
+## hasMany nested create
 
 Create author with books all at once:
 
@@ -1057,7 +1095,7 @@ const result = await db.author.create([
 ])
 ```
 
-### hasMany connect in insert
+## hasMany connect in insert
 
 Connect record to another record while inserting:
 
@@ -1081,7 +1119,7 @@ const result = await db.author.create({
 })
 ```
 
-### hasMany connectOrCreate
+## hasMany connectOrCreate
 
 Specify `connectOrCreate` object with `where` and `connect` properties to first look for record to connect with and then create it in case if not found.
 
@@ -1105,7 +1143,7 @@ const result = await db.author.create({
 })
 ```
 
-### hasMany disconnect
+## hasMany disconnect
 
 Disconnect related record with array of conditions in `update`:
 
@@ -1126,7 +1164,7 @@ await db.author.where({ name: 'author name' }).update({
 })
 ```
 
-### hasMany set
+## hasMany set
 
 Set related records when updating.
 
@@ -1159,7 +1197,7 @@ await db.author.find(1).update({
 })
 ```
 
-### hasMany delete
+## hasMany delete
 
 Deletes related records. Empty `{}` or `[]` will delete all related records, and if conditions applied it will delete only matching records.
 
@@ -1181,7 +1219,7 @@ await db.author.find(1).update({
 })
 ```
 
-### hasMany update
+## hasMany update
 
 Update related records, all related records found by `where` conditions will be updated.
 
@@ -1266,7 +1304,7 @@ export class TagModel extends Model {
 }
 ```
 
-### hasAndBelongsToMany queries
+## hasAndBelongsToMany queries
 
 Query tags of the post when we already have a post record:
 
@@ -1368,7 +1406,7 @@ const result: Result = await db.author.select(
 ).take()
 ```
 
-### hasAndBelongsToMany nested create
+## hasAndBelongsToMany nested create
 
 Create post with tags all at once:
 
@@ -1425,7 +1463,7 @@ const result = await db.post.create([
 ])
 ```
 
-### hasAndBelongsToMany connect in insert
+## hasAndBelongsToMany connect in insert
 
 Connect record to another record while inserting:
 
@@ -1449,7 +1487,7 @@ const result = await db.post.create({
 })
 ```
 
-### hasAndBelongsToMany connectOrCreate
+## hasAndBelongsToMany connectOrCreate
 
 Specify `connectOrCreate` object with `where` and `connect` properties to first look for record to connect with and then create it in case if not found.
 
@@ -1473,7 +1511,7 @@ const result = await db.post.create({
 })
 ```
 
-### hasAndBelongsToMany disconnect
+## hasAndBelongsToMany disconnect
 
 Disconnect related record with array of conditions in `update`:
 
@@ -1494,7 +1532,7 @@ await db.post.where({ title: 'post title' }).update({
 })
 ```
 
-### hasAndBelongsToMany set
+## hasAndBelongsToMany set
 
 Set related records:
 
@@ -1519,7 +1557,7 @@ await db.post.where({ title: 'post title' }).update({
 })
 ```
 
-### hasAndBelongsToMany delete
+## hasAndBelongsToMany delete
 
 Deletes related records. Empty `{}` or `[]` will delete all related records, and if conditions applied it will delete only matching records.
 
@@ -1540,7 +1578,7 @@ await db.post.where({ id: { in: [1, 2, 3] } }).update({
 })
 ```
 
-### hasAndBelongsToMany update
+## hasAndBelongsToMany update
 
 Update related records, all related records found by `where` conditions will be updated.
 

@@ -84,16 +84,17 @@ const then = async (
       logData = q.query.log?.beforeQuery(q, sql);
     }
 
-    const result = await q.query.handleResult(
-      q,
-      await q.query.adapter[queryMethod[q.returnType] as 'query'](sql),
-    );
+    const queryResult = await q.query.adapter[
+      queryMethod[q.returnType] as 'query'
+    ](sql);
 
     if (q.query.log) {
       q.query.log?.afterQuery(q, sql, logData);
       // set sql to be undefined to prevent logging on error in case if afterCallbacks throws
       sql = undefined;
     }
+
+    const result = await q.query.handleResult(q, queryResult);
 
     if (afterCallbacks?.length || q.query.afterQuery?.length) {
       if (q.query.afterQuery?.length) {

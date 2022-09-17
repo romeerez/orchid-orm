@@ -45,6 +45,10 @@ export type NestedUpdateOneItem = {
   set?: WhereArg<QueryBase>;
   delete?: boolean;
   update?: UpdateData<Query>;
+  upsert?: {
+    update: UpdateData<Query>;
+    create: Record<string, unknown>;
+  };
 };
 
 export type NestedUpdateManyItems = {
@@ -63,6 +67,10 @@ export type BelongsToNestedUpdate = (
   q: Query,
   update: Record<string, unknown>,
   params: NestedUpdateOneItem,
+  state: {
+    updateLater?: Record<string, unknown>;
+    updateLaterPromises?: Promise<void>[];
+  },
 ) => boolean;
 
 export type HasOneNestedUpdate = (

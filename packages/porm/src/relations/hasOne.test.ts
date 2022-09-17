@@ -86,9 +86,11 @@ describe('hasOne', () => {
       expectSql(
         db.user.relations.profile.joinQuery.toSql(),
         `
-        SELECT * FROM "profile"
-        WHERE "profile"."userId" = "user"."id"
-      `,
+          SELECT * FROM "profile"
+          WHERE "profile"."userId" = "user"."id"
+          LIMIT $1
+        `,
+        [1],
       );
     });
 
@@ -568,6 +570,50 @@ describe('hasOne', () => {
           expect(profile.bio).toBe('updated');
         });
       });
+
+      describe('nested upsert', () => {
+        it('should update related record if it exists', async () => {
+          const user = await db.user.create({
+            ...userData,
+            profile: { create: profileData },
+          });
+
+          await db.user.find(user.id).update({
+            profile: {
+              upsert: {
+                update: {
+                  bio: 'updated',
+                },
+                create: profileData,
+              },
+            },
+          });
+
+          const profile = await db.user.profile(user);
+          expect(profile.bio).toBe('updated');
+        });
+
+        it('should create related record if it does not exists', async () => {
+          const user = await db.user.create(userData);
+
+          await db.user.find(user.id).update({
+            profile: {
+              upsert: {
+                update: {
+                  bio: 'updated',
+                },
+                create: {
+                  ...profileData,
+                  bio: 'created',
+                },
+              },
+            },
+          });
+
+          const profile = await db.user.profile(user);
+          expect(profile.bio).toBe('created');
+        });
+      });
     });
   });
 });
@@ -617,7 +663,9 @@ describe('hasOne through', () => {
             AND "user"."id" = "message"."authorId"
           LIMIT 1
         )
+        LIMIT $1
       `,
+      [1],
     );
   });
 

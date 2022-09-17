@@ -113,7 +113,7 @@ export const makeBelongsToMethod = (
           : created[createdI++],
       );
     }) as BelongsToNestedInsert,
-    nestedUpdate: ((q, update, params) => {
+    nestedUpdate: ((q, update, params, state) => {
       let idForDelete: unknown;
 
       q._beforeUpdate(async (q) => {
@@ -141,7 +141,46 @@ export const makeBelongsToMethod = (
         }
       });
 
-      if (params.delete || params.update) {
+      const { upsert } = params;
+      if (upsert) {
+        if (!state.updateLater) {
+          state.updateLater = {};
+          state.updateLaterPromises = [];
+        }
+
+        if (
+          !q.query.select?.includes('*') &&
+          !q.query.select?.includes(foreignKey)
+        ) {
+          q._select(foreignKey);
+        }
+
+        const { handleResult } = q.query;
+        q.query.handleResult = async (q, queryResult) => {
+          const data = await handleResult(q, queryResult);
+
+          const id = (data as Record<string, unknown>)[foreignKey];
+          if (id !== null) {
+            await query
+              .transacting(q)
+              ._findBy({ [primaryKey]: id })
+              ._update<WhereResult<Query>>(upsert.update);
+          } else {
+            (state.updateLaterPromises as Promise<void>[]).push(
+              query
+                .transacting(q)
+                ._select(primaryKey)
+                ._insert(upsert.create)
+                .then((result) => {
+                  (state.updateLater as Record<string, unknown>)[foreignKey] =
+                    result[primaryKey];
+                }) as unknown as Promise<void>,
+            );
+          }
+
+          return data;
+        };
+      } else if (params.delete || params.update) {
         q._afterQuery(async (q, data) => {
           const id = params.delete
             ? idForDelete
@@ -169,7 +208,7 @@ export const makeBelongsToMethod = (
         });
       }
 
-      return !params.update;
+      return !params.update && !params.upsert;
     }) as BelongsToNestedUpdate,
     joinQuery: addQueryOn(query, query, model, primaryKey, foreignKey),
     primaryKey,

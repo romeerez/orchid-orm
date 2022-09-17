@@ -580,5 +580,54 @@ describe('belongsTo', () => {
         expect(user.name).toBe('new name');
       });
     });
+
+    describe('nested upsert', () => {
+      it('should update related record if it exists', async () => {
+        const profile = await db.profile.create({
+          ...profileData,
+          user: {
+            create: userData,
+          },
+        });
+
+        await db.profile.find(profile.id).update({
+          user: {
+            upsert: {
+              update: {
+                name: 'updated',
+              },
+              create: userData,
+            },
+          },
+        });
+
+        const user = await db.profile.user(profile);
+        expect(user.name).toBe('updated');
+      });
+
+      it('should create related record if it does not exist', async () => {
+        const profile = await db.profile.create(profileData);
+
+        const updated = await db.profile
+          .selectAll()
+          .find(profile.id)
+          .update({
+            user: {
+              upsert: {
+                update: {
+                  name: 'updated',
+                },
+                create: {
+                  ...userData,
+                  name: 'created',
+                },
+              },
+            },
+          });
+
+        const user = await db.profile.user(updated);
+        expect(user.name).toBe('created');
+      });
+    });
   });
 });

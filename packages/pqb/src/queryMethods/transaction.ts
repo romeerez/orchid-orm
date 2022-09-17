@@ -60,6 +60,7 @@ export class Transaction {
 
   _transacting<T extends Query>(this: T, query: Query): T {
     this.query.adapter = query.query.adapter;
+    this.query.inTransaction = true;
     return this;
   }
 }

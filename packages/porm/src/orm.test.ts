@@ -5,7 +5,7 @@ import {
   userData,
   useTestDatabase,
 } from './test-utils/test-utils';
-import { adapter, pgConfig } from './test-utils/test-db';
+import { adapter } from './test-utils/test-db';
 import { Model } from './model';
 
 describe('orm', () => {
@@ -28,7 +28,7 @@ describe('orm', () => {
   }
 
   it('should return object with provided adapter, destroy and transaction method, models', () => {
-    const db = porm(pgConfig, {
+    const db = porm(adapter, {
       user: UserModel,
       profile: ProfileModel,
     });
@@ -42,7 +42,7 @@ describe('orm', () => {
   });
 
   it('should return model which is queryable interface', async () => {
-    const db = porm(pgConfig, {
+    const db = porm(adapter, {
       user: UserModel,
       profile: ProfileModel,
     });

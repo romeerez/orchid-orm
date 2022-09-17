@@ -1,4 +1,4 @@
-import { Query, QueryBase, SetQueryReturnsRowCount } from '../query';
+import { Query, SetQueryReturnsRowCount } from '../query';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { isRaw, RawExpression } from '../common';
 import {
@@ -7,9 +7,9 @@ import {
   NestedUpdateOneItem,
   Relation,
 } from '../relations';
-import { SelectArg } from './select';
-import { WhereArg } from './where';
+import { WhereArg, WhereResult } from './where';
 import { MaybeArray } from '../utils';
+import { InsertData } from './insert';
 
 export type UpdateData<T extends Query> = {
   [K in keyof T['type']]?: T['type'][K] | RawExpression;
@@ -21,6 +21,12 @@ export type UpdateData<T extends Query> = {
             | { set: WhereArg<T['relations'][K]['model']> }
             | { delete: boolean }
             | { update: UpdateData<T['relations'][K]['model']> }
+            | {
+                upsert: {
+                  update: UpdateData<T['relations'][K]['model']>;
+                  create: InsertData<T['relations'][K]['nestedCreateQuery']>;
+                };
+              }
         : T['relations'][K]['type'] extends 'hasOne'
         ?
             | { disconnect: boolean }
@@ -29,6 +35,12 @@ export type UpdateData<T extends Query> = {
                 : never)
             | { delete: boolean }
             | { update: UpdateData<T['relations'][K]['model']> }
+            | {
+                upsert: {
+                  update: UpdateData<T['relations'][K]['model']>;
+                  create: InsertData<T['relations'][K]['nestedCreateQuery']>;
+                };
+              }
         : T['relations'][K]['type'] extends 'hasMany'
         ?
             | { disconnect: MaybeArray<WhereArg<T['relations'][K]['model']>> }
@@ -113,10 +125,10 @@ export class Update {
       Record<string, unknown>,
       boolean | undefined,
     ];
-    let returning = this.query.select;
-    this.query.type = 'update';
+    const { query } = this;
+    query.type = 'update';
 
-    if (!this.query.and?.length && !this.query.or?.length && !forceAll) {
+    if (!query.and?.length && !query.or?.length && !forceAll) {
       throw new Error(
         'No where conditions or forceAll flag provided to update',
       );
@@ -137,12 +149,10 @@ export class Update {
           if (relations[key].type === 'belongsTo') {
             prependRelations[key] = data[key] as Record<string, unknown>;
           } else {
-            if (!returning?.includes('*')) {
+            if (!query.select?.includes('*')) {
               const primaryKey = relations[key].primaryKey;
-              if (!returning) {
-                returning = [primaryKey];
-              } else if (!returning.includes(primaryKey)) {
-                returning.push(primaryKey);
+              if (!query.select?.includes(primaryKey)) {
+                this._select(primaryKey);
               }
             }
             appendRelations[key] = data[key] as Record<string, unknown>;
@@ -151,24 +161,71 @@ export class Update {
       }
 
       const prependRelationKeys = Object.keys(prependRelations);
-      let willSetKeys = false;
       if (prependRelationKeys.length) {
-        willSetKeys = prependRelationKeys.some((relationName) =>
-          (
+        const state: {
+          updateLater?: Record<string, unknown>;
+          updateLaterPromises?: Promise<void>[];
+        } = {};
+
+        const willSetKeys = prependRelationKeys.some((relationName) => {
+          const data = prependRelations[relationName] as NestedUpdateOneItem;
+
+          return (
             relations[relationName] as {
               nestedUpdate: BelongsToNestedUpdate;
             }
-          ).nestedUpdate(
-            this,
-            update,
-            prependRelations[relationName] as NestedUpdateOneItem,
-          ),
-        );
-      }
+          ).nestedUpdate(this, update, data, state);
+        });
 
-      if (!willSetKeys && !Object.keys(update).length) {
+        if (state.updateLater) {
+          const { updateLater } = state;
+
+          this.schema.primaryKeys.forEach((key: string) => {
+            if (!query.select?.includes('*') && !query.select?.includes(key)) {
+              this._select(key);
+            }
+          });
+
+          const { handleResult } = this.query;
+          this.query.handleResult = async (q, queryResult) => {
+            const result = await handleResult(q, queryResult);
+
+            await Promise.all(state.updateLaterPromises as Promise<void>[]);
+
+            const t = (this.__model || this).clone().transacting(q);
+            const keys = this.schema.primaryKeys as string[];
+            if (Array.isArray(result)) {
+              (
+                t._whereIn as unknown as (
+                  keys: string[],
+                  values: unknown[][],
+                ) => Query
+              )(
+                keys,
+                result.map((item) => keys.map((key) => item[key])),
+              );
+            } else {
+              const conditions: Record<string, unknown> = {};
+              keys.forEach(
+                (key) =>
+                  (conditions[key] = (result as Record<string, unknown>)[key]),
+              );
+              t._where(conditions as WhereArg<Query>);
+            }
+
+            await (t as WhereResult<Query>)._update(updateLater);
+
+            return Array.isArray(result)
+              ? result.map((item) => Object.assign(item, updateLater))
+              : Object.assign(result as object, updateLater);
+          };
+        }
+
+        if (!willSetKeys && !Object.keys(update).length) {
+          delete this.query.type;
+        }
+      } else if (!Object.keys(update).length) {
         delete this.query.type;
-        if (returning) this._select(...(returning as SelectArg<QueryBase>[]));
       }
 
       const appendRelationKeys = Object.keys(appendRelations);
@@ -190,12 +247,14 @@ export class Update {
         );
       }
 
+      if (prependRelationKeys.length || appendRelationKeys.length) {
+        query.wrapInTransaction = true;
+      }
+
       pushQueryValue(this, 'data', update);
     }
 
-    if (returning) {
-      this.query.select = returning;
-    } else {
+    if (!query.select) {
       this.returnType = 'rowCount';
     }
 

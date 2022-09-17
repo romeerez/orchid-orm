@@ -51,6 +51,12 @@ export const makeHasOneMethod = (
   relation: HasOne,
   query: Query,
 ): RelationData => {
+  if (relation.options.required) {
+    query._take();
+  } else {
+    query._takeOptional();
+  }
+
   if ('through' in relation.options) {
     const { through, source } = relation.options;
 
@@ -76,12 +82,10 @@ export const makeHasOneMethod = (
           through
         ](params);
 
-        return query
-          .whereExists<Query, Query>(
-            throughQuery,
-            whereExistsCallback as unknown as JoinCallback<Query, Query>,
-          )
-          ._takeOptional();
+        return query.whereExists<Query, Query>(
+          throughQuery,
+          whereExistsCallback as unknown as JoinCallback<Query, Query>,
+        );
       },
       nestedInsert: undefined,
       nestedUpdate: undefined,
@@ -99,7 +103,7 @@ export const makeHasOneMethod = (
     returns: 'one',
     method: (params: Record<string, unknown>) => {
       const values = { [foreignKey]: params[primaryKey] };
-      return query.findBy(values)._defaults(values);
+      return query.where(values)._defaults(values);
     },
     nestedInsert: (async (q, data) => {
       const connect = data.filter(
@@ -161,12 +165,13 @@ export const makeHasOneMethod = (
     }) as HasOneNestedInsert,
     nestedUpdate: (async (q, data, params) => {
       const t = query.transacting(q);
+      const ids = data.map((item) => item[primaryKey]);
+      const currentRelationsQuery = t.where({
+        [foreignKey]: { in: ids },
+      });
+
       if (params.disconnect || params.set) {
-        await t
-          .where({
-            [foreignKey]: { in: data.map((item) => item[primaryKey]) },
-          })
-          ._update({ [foreignKey]: null });
+        await currentRelationsQuery._update({ [foreignKey]: null });
 
         if (params.set) {
           await t
@@ -174,14 +179,28 @@ export const makeHasOneMethod = (
             ._update({ [foreignKey]: data[0][primaryKey] });
         }
       } else if (params.delete || params.update) {
-        const q = t._where({
-          [foreignKey]: { in: data.map((item) => item[primaryKey]) },
-        });
-
         if (params.delete) {
-          await q._delete();
+          await currentRelationsQuery._delete();
         } else if (params.update) {
-          await q._update<WhereResult<Query>>(params.update);
+          await currentRelationsQuery._update<WhereResult<Query>>(
+            params.update,
+          );
+        }
+      } else if (params.upsert) {
+        const { update, create } = params.upsert;
+        const updatedIds: unknown[] = await currentRelationsQuery
+          ._pluck(foreignKey)
+          ._update<WhereResult<Query>>(update);
+
+        if (updatedIds.length < ids.length) {
+          await t.insert(
+            ids
+              .filter((id) => !updatedIds.includes(id))
+              .map((id) => ({
+                ...create,
+                [foreignKey]: id,
+              })),
+          );
         }
       }
     }) as HasOneNestedUpdate,
