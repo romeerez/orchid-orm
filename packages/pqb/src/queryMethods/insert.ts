@@ -206,7 +206,7 @@ export class Insert {
     >;
     let values: unknown[][] | RawExpression;
 
-    let returnType = q.returnType;
+    let returnType = q.query.returnType;
     if (returning) {
       if (Array.isArray(data)) {
         if (returnType === 'one' || returnType === 'oneOrThrow') {
@@ -367,7 +367,7 @@ export class Insert {
       q.query.wrapInTransaction = true;
     }
 
-    q.returnType = appendRelationsKeys.length ? 'all' : returnType;
+    q.query.returnType = appendRelationsKeys.length ? 'all' : returnType;
 
     return q as unknown as InsertOneResult<Query> & InsertManyResult<Query>;
   }

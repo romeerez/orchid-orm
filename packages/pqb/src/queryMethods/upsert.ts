@@ -24,7 +24,7 @@ export class QueryUpsert {
 
   _upsert<T extends UpsertThis>(this: T, data: UpsertData<T>): UpsertResult<T> {
     this._update<WhereResult<Query>>(data.update);
-    this.returnType = 'one';
+    this.query.returnType = 'one';
     this.query.wrapInTransaction = true;
     const { handleResult } = this.query;
     this.query.handleResult = async (q, queryResult) => {

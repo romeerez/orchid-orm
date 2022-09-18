@@ -128,7 +128,7 @@ const parseIntOrNullColumn = new IntegerColumn().parse((input) =>
 const value = <T extends Query, Column extends ColumnType>(
   q: Query,
 ): SetQueryReturnsValue<T, Column> => {
-  q.returnType = 'valueOrThrow';
+  q.query.returnType = 'valueOrThrow';
   removeFromQuery(q, 'take');
 
   const select = q.query.select as SelectItem[];

@@ -109,49 +109,49 @@ export class QueryMethods {
   __model?: Query;
 
   all<T extends Query>(this: T): SetQueryReturnsAll<T> {
-    return this.returnType === 'all'
+    return this.query.returnType === 'all'
       ? (this as unknown as SetQueryReturnsAll<T>)
       : this.clone()._all();
   }
 
   _all<T extends Query>(this: T): SetQueryReturnsAll<T> {
-    this.returnType = 'all';
+    this.query.returnType = 'all';
     removeFromQuery(this, 'take');
     return this as unknown as SetQueryReturnsAll<T>;
   }
 
   take<T extends Query>(this: T): SetQueryReturnsOne<T> {
-    return this.returnType === 'oneOrThrow'
+    return this.query.returnType === 'oneOrThrow'
       ? (this as unknown as SetQueryReturnsOne<T>)
       : this.clone()._take();
   }
 
   _take<T extends Query>(this: T): SetQueryReturnsOne<T> {
-    this.returnType = 'oneOrThrow';
+    this.query.returnType = 'oneOrThrow';
     this.query.take = true;
     return this as unknown as SetQueryReturnsOne<T>;
   }
 
   takeOptional<T extends Query>(this: T): SetQueryReturnsOneOptional<T> {
-    return this.returnType === 'one'
+    return this.query.returnType === 'one'
       ? (this as unknown as SetQueryReturnsOneOptional<T>)
       : this.clone()._takeOptional();
   }
 
   _takeOptional<T extends Query>(this: T): SetQueryReturnsOneOptional<T> {
-    this.returnType = 'one';
+    this.query.returnType = 'one';
     this.query.take = true;
     return this as unknown as SetQueryReturnsOneOptional<T>;
   }
 
   rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
-    return this.returnType === 'rows'
+    return this.query.returnType === 'rows'
       ? (this as unknown as SetQueryReturnsRows<T>)
       : this.clone()._rows();
   }
 
   _rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
-    this.returnType = 'rows';
+    this.query.returnType = 'rows';
     removeFromQuery(this, 'take');
     return this as unknown as SetQueryReturnsRows<T>;
   }
@@ -160,7 +160,7 @@ export class QueryMethods {
     this: T,
     select: S,
   ): SetQueryReturnsPluck<T, S> {
-    return this.returnType === 'pluck'
+    return this.query.returnType === 'pluck'
       ? (this as unknown as SetQueryReturnsPluck<T, S>)
       : this.clone()._pluck(select);
   }
@@ -169,7 +169,7 @@ export class QueryMethods {
     this: T,
     select: S,
   ): SetQueryReturnsPluck<T, S> {
-    this.returnType = 'pluck';
+    this.query.returnType = 'pluck';
     removeFromQuery(this, 'take');
     (this.query as SelectQueryData).select = [select as SelectItem];
     addParserForSelectItem(this, this.query.as || this.table, 'pluck', select);
@@ -177,13 +177,13 @@ export class QueryMethods {
   }
 
   exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {
-    return this.returnType === 'void'
+    return this.query.returnType === 'void'
       ? (this as unknown as SetQueryReturnsVoid<T>)
       : this.clone()._exec();
   }
 
   _exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {
-    this.returnType = 'void';
+    this.query.returnType = 'void';
     removeFromQuery(this, 'take');
     return this as unknown as SetQueryReturnsVoid<T>;
   }

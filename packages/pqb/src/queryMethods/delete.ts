@@ -24,7 +24,7 @@ const _del = <T extends Query>(
   }
 
   if (!q.query.select) {
-    q.returnType = 'rowCount';
+    q.query.returnType = 'rowCount';
   }
 
   q.query.type = 'delete';

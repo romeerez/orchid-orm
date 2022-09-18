@@ -39,7 +39,7 @@ const _value = <
   returnType: R,
   arg: Arg,
 ): R extends 'value' ? ValueOptionalResult<T, Arg> : ValueResult<T, Arg> => {
-  q.returnType = returnType;
+  q.query.returnType = returnType;
   removeFromQuery(q, 'take');
 
   if (typeof arg === 'object' && isRaw(arg)) {

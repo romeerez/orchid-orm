@@ -2,6 +2,7 @@ import {
   ColumnsParsers,
   Query,
   QueryBase,
+  QueryReturnType,
   QueryWithTable,
   SelectableBase,
 } from '../query';
@@ -44,6 +45,7 @@ export const queryKeysOfNotSimpleQuery: (keyof SelectQueryData)[] = [
 export type CommonQueryData = {
   adapter: Adapter;
   handleResult(q: Query, result: QueryResult): Promise<unknown>;
+  returnType: QueryReturnType;
   [relationQueryKey]?: string;
   inTransaction?: boolean;
   wrapInTransaction?: boolean;

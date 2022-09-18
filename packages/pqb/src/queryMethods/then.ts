@@ -49,7 +49,7 @@ export const handleResult: CommonQueryData['handleResult'] = async (
   q,
   result: QueryResult,
 ) => {
-  return parseResult(q, q.returnType, result);
+  return parseResult(q, q.query.returnType, result);
 };
 
 const then = async (
@@ -88,7 +88,7 @@ const then = async (
     }
 
     const queryResult = await q.query.adapter[
-      queryMethodByReturnType[q.returnType] as 'query'
+      queryMethodByReturnType[q.query.returnType] as 'query'
     ](sql);
 
     if (q.query.log) {

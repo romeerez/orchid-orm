@@ -78,7 +78,6 @@ export class Db<
 {
   whereQueryBuilder = WhereQueryBuilder;
   onQueryBuilder = OnQueryBuilder;
-  returnType = 'all' as const;
 
   constructor(
     public adapter: Adapter,
@@ -91,6 +90,7 @@ export class Db<
     this.query = {
       adapter,
       handleResult: handleResult,
+      returnType: 'all',
       logger,
       log: logParamToLogObject(logger, options.log),
     } as QueryData;

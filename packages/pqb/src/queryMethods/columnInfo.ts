@@ -38,8 +38,12 @@ export class ColumnInfoMethods {
     Column extends keyof T['shape'] | undefined = undefined,
   >(this: T, column?: Column): SetQueryReturnsColumnInfo<T, Column> {
     this.query.type = 'columnInfo';
-    if (column) (this.query as ColumnInfoQueryData).column = column as string;
-    this.returnType = 'all';
+    this.query.returnType = 'all';
+
+    if (column) {
+      (this.query as ColumnInfoQueryData).column = column as string;
+    }
+
     this.then = function (resolve, reject) {
       new Then().then.call(
         this,

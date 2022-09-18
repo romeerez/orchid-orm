@@ -170,7 +170,7 @@ export class Update {
       const prependRelations: Record<string, Record<string, unknown>> = {};
       const appendRelations: Record<string, Record<string, unknown>> = {};
 
-      const originalReturnType = this.returnType;
+      const originalReturnType = this.query.returnType;
 
       const update: Record<string, unknown> = { ...data };
       for (const key in data) {
@@ -222,7 +222,7 @@ export class Update {
         state?.updateLater ||
         (appendRelationKeys.length && originalReturnType !== 'all')
       ) {
-        this.returnType = 'all';
+        this.query.returnType = 'all';
 
         if (state?.updateLater) {
           this.schema.primaryKeys.forEach((key: string) => {
@@ -296,7 +296,7 @@ export class Update {
     }
 
     if (!query.select) {
-      this.returnType = 'rowCount';
+      this.query.returnType = 'rowCount';
     }
 
     return this as unknown as UpdateResult<T>;

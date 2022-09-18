@@ -98,10 +98,11 @@ export const selectToSql = (
         const as = q(getQueryAs(relationQuery));
         relationQuery._as(relationQuery.query[relationQueryKey] as string);
 
+        const { returnType } = relationQuery.query;
         if (
-          relationQuery.returnType === 'all' ||
-          relationQuery.returnType === 'one' ||
-          relationQuery.returnType === 'oneOrThrow'
+          returnType === 'all' ||
+          returnType === 'one' ||
+          returnType === 'oneOrThrow'
         ) {
           relationQuery = relationQuery._json() as unknown as RelationQuery;
         }
