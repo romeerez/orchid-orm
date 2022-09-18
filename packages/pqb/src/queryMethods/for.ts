@@ -15,7 +15,10 @@ const forQueryBuilder = <T extends Query>(
   tableNames?: string[] | RawExpression,
 ) => {
   (q.query as SelectQueryData).for = { type, tableNames };
-  return Object.assign(q, {
+  q.__model = Object.create(q.__model);
+  q.__model.__model = q.__model;
+
+  Object.assign(q.__model, {
     noWait<T extends ForQueryBuilder<Query>>(this: T): T {
       return this.clone()._noWait();
     },
@@ -33,6 +36,8 @@ const forQueryBuilder = <T extends Query>(
       return this;
     },
   });
+
+  return q.clone() as ForQueryBuilder<T>;
 };
 
 export class For {

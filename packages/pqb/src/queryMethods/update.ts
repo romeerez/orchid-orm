@@ -242,7 +242,7 @@ export class Update {
           if (state?.updateLater) {
             await Promise.all(state.updateLaterPromises as Promise<void>[]);
 
-            const t = (this.__model || this).clone().transacting(q);
+            const t = this.__model.clone().transacting(q);
             const keys = this.schema.primaryKeys as string[];
             (
               t._whereIn as unknown as (

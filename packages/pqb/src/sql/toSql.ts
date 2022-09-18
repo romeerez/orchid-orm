@@ -1,7 +1,7 @@
 import { getRaw, isRaw } from '../common';
 import { Query } from '../query';
 import { addValue, q, qc } from './common';
-import { Sql } from './types';
+import { JoinItem, QueryData, Sql } from './types';
 import { pushDistinctSql } from './distinct';
 import { pushSelectSql } from './select';
 import { windowToSql } from './window';
@@ -19,7 +19,6 @@ import { pushOrderBySql } from './orderBy';
 
 export const toSql = (model: Query, values: unknown[] = []): Sql => {
   const query = model.query;
-
   const sql: string[] = [];
 
   if (query.with) {
@@ -71,11 +70,23 @@ export const toSql = (model: Query, values: unknown[] = []): Sql => {
 
   pushSelectSql(sql, model, query, values, quotedAs);
 
-  pushFromAndAs(sql, model, query, values, quotedAs);
+  if (model.table || query.from) {
+    pushFromAndAs(sql, model, query, values, quotedAs);
+  }
 
-  pushJoinSql(sql, model, query, values, quotedAs);
+  if (query.join) {
+    pushJoinSql(
+      sql,
+      model,
+      query as QueryData & { join: JoinItem[] },
+      values,
+      quotedAs,
+    );
+  }
 
-  pushWhereSql(sql, model, query, values, quotedAs);
+  if (query.and || query.or) {
+    pushWhereSql(sql, model, query, values, quotedAs);
+  }
 
   if (query.group) {
     const group = query.group.map((item) =>
@@ -86,7 +97,9 @@ export const toSql = (model: Query, values: unknown[] = []): Sql => {
     sql.push(`GROUP BY ${group.join(', ')}`);
   }
 
-  pushHavingSql(sql, model, query, values, quotedAs);
+  if (query.having || query.havingOr) {
+    pushHavingSql(sql, model, query, values, quotedAs);
+  }
 
   if (query.window) {
     const window: string[] = [];
@@ -111,11 +124,12 @@ export const toSql = (model: Query, values: unknown[] = []): Sql => {
     });
   }
 
-  if (query.order) pushOrderBySql(sql, values, quotedAs, query.order);
+  if (query.order) {
+    pushOrderBySql(sql, values, quotedAs, query.order);
+  }
 
-  const limit = query.take ? 1 : query.limit;
-  if (limit) {
-    sql.push(`LIMIT ${addValue(values, limit)}`);
+  if (query.take || query.limit !== undefined) {
+    sql.push(`LIMIT ${addValue(values, query.take ? 1 : query.limit)}`);
   }
 
   if (query.offset) {

@@ -86,6 +86,8 @@ export class Db<
     public shape: Shape = {} as Shape,
     options: DbTableOptions,
   ) {
+    this.__model = this;
+
     const logger = options.logger || console;
     this.query = {
       adapter,

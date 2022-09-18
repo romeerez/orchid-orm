@@ -10,8 +10,6 @@ export const pushFromAndAs = (
   values: unknown[],
   quotedAs?: string,
 ) => {
-  if (!query.from && !model.table) return;
-
   sql.push('FROM');
   if (query.fromOnly) sql.push('ONLY');
 

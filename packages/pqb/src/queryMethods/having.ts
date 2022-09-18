@@ -29,7 +29,7 @@ export type HavingArg<T extends Query = Query> =
   | RawExpression;
 
 const processHavingArg = <T extends Query>(arg: HavingArg<T>): HavingItem => {
-  if ('prototype' in arg || '__model' in arg || isRaw(arg)) {
+  if ('__model' in arg || isRaw(arg)) {
     return arg;
   } else {
     const processed = { ...arg } as Record<

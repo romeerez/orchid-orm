@@ -106,7 +106,7 @@ export interface QueryMethods
 
 export class QueryMethods {
   windows!: PropertyKey[];
-  __model?: Query;
+  __model!: Query;
 
   all<T extends Query>(this: T): SetQueryReturnsAll<T> {
     return this.query.returnType === 'all'
@@ -189,13 +189,8 @@ export class QueryMethods {
   }
 
   clone<T extends QueryBase>(this: T): T {
-    const cloned = Object.create(this);
-    if (!this.__model) {
-      cloned.__model = this;
-    }
-
+    const cloned = Object.create(this.__model);
     cloned.query = getClonedQueryData(this.query);
-
     return cloned;
   }
 
@@ -338,7 +333,7 @@ export class QueryMethods {
     const sql = this.toSql();
 
     return query
-      ._as(as ?? 't')
+      .as(as ?? 't')
       ._from(
         raw(`(${sql.text})`, ...sql.values),
       ) as unknown as SetQueryTableAlias<Q, As>;

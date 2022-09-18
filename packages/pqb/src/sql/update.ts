@@ -1,4 +1,4 @@
-import { QueryWithTable } from '../query';
+import { Query } from '../query';
 import { UpdateQueryData } from './types';
 import { addValue, q, quoteSchemaAndTable } from './common';
 import { getRaw, isRaw, RawExpression } from '../common';
@@ -8,11 +8,11 @@ import { pushWhereSql } from './where';
 export const pushUpdateSql = (
   sql: string[],
   values: unknown[],
-  model: QueryWithTable,
+  model: Query,
   query: UpdateQueryData,
   quotedAs: string,
 ) => {
-  const quotedTable = quoteSchemaAndTable(query.schema, model.table);
+  const quotedTable = quoteSchemaAndTable(query.schema, model.table as string);
   sql.push(`UPDATE ${quotedTable}`);
 
   if (query.as && quotedTable !== quotedAs) {

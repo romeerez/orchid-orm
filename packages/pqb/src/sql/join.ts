@@ -1,12 +1,6 @@
 import { q, quoteFullColumn, quoteSchemaAndTable } from './common';
 import { getRaw, isRaw, RawExpression } from '../common';
-import {
-  DeleteQueryData,
-  InsertQueryData,
-  JoinItem,
-  QueryData,
-  SelectQueryData,
-} from './types';
+import { JoinItem, QueryData } from './types';
 import { Query, QueryBase } from '../query';
 import { whereToSql } from './where';
 import { Relation } from '../relations';
@@ -227,11 +221,13 @@ const getObjectOrRawConditions = (
 export const pushJoinSql = (
   sql: string[],
   model: Query,
-  query: SelectQueryData | InsertQueryData | DeleteQueryData,
+  query: QueryData & {
+    join: JoinItem[];
+  },
   values: unknown[],
   quotedAs?: string,
 ) => {
-  query.join?.forEach((item) => {
+  query.join.forEach((item) => {
     const { target, conditions } = processJoinItem(
       model,
       query,
