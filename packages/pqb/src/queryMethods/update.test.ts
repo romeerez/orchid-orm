@@ -12,6 +12,17 @@ import { raw } from '../common';
 describe('update', () => {
   useTestDatabase();
 
+  const update = {
+    name: 'new name',
+    password: 'new password',
+  };
+
+  it('should not mutate query', () => {
+    const q = User.all();
+    q.where({ name: 'name' }).update(update);
+    expectQueryNotMutated(q);
+  });
+
   it('should throw when updating without where condition', () => {
     // @ts-expect-error update should have where condition or forceAll flag
     expect(() => User.update({ name: 'new name' })).toThrow();
@@ -27,9 +38,7 @@ describe('update', () => {
     const count = 2;
     const users = await User.select('id').insert([userData, userData]);
 
-    const q = User.all();
-
-    const query = q.or(...users).update(raw(`name = 'name'`));
+    const query = User.or(...users).update(raw(`name = 'name'`));
     expectSql(
       query.toSql(),
       `
@@ -45,21 +54,17 @@ describe('update', () => {
 
     const result = await query;
     expect(result).toBe(count);
-
-    expectQueryNotMutated(q);
   });
 
   it('should update record, returning updated row count', async () => {
-    const q = User.all();
-
-    const { id } = await q.select('id').insert(userData);
+    const { id } = await User.select('id').insert(userData);
 
     const update = {
       name: 'new name',
       password: 'new password',
     };
 
-    const query = q.where({ id }).update(update);
+    const query = User.where({ id }).update(update);
     expectSql(
       query.toSql(),
       `
@@ -79,21 +84,17 @@ describe('update', () => {
 
     const updated = await User.take();
     expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
-
-    expectQueryNotMutated(q);
   });
 
   it('should update record, returning value', async () => {
-    const q = User.all();
-
-    const id = await q.value('id').insert(userData);
+    const id = await User.value('id').insert(userData);
 
     const update = {
       name: 'new name',
       password: 'new password',
     };
 
-    const query = q.find(id).value('id').update(update);
+    const query = User.find(id).value('id').update(update);
     expectSql(
       query.toSql(),
       `
@@ -114,21 +115,13 @@ describe('update', () => {
 
     const updated = await User.take();
     expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
-
-    expectQueryNotMutated(q);
   });
 
-  it('should update record, returning columns', async () => {
-    const q = User.all();
+  it('should update one record, return selected columns', async () => {
+    const id = await User.value('id').insert(userData);
 
-    const { id } = await q.select('id').insert(userData);
+    const query = User.select('id', 'name').find(id).update(update);
 
-    const update = {
-      name: 'new name',
-      password: 'new password',
-    };
-
-    const query = q.select('id', 'name').where({ id }).update(update);
     expectSql(
       query.toSql(),
       `
@@ -142,26 +135,18 @@ describe('update', () => {
     );
 
     const result = await query;
-    const eq: AssertEqual<typeof result, { id: number; name: string }[]> = true;
+    const eq: AssertEqual<typeof result, { id: number; name: string }> = true;
     expect(eq).toBe(true);
 
     const updated = await User.take();
     expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
-
-    expectQueryNotMutated(q);
   });
 
-  it('should update record, returning all columns', async () => {
-    const q = User.all();
+  it('should update one record, return all columns', async () => {
+    const id = await User.value('id').insert(userData);
 
-    const { id } = await q.select('id').insert(userData);
+    const query = User.selectAll().find(id).update(update);
 
-    const update = {
-      name: 'new name',
-      password: 'new password',
-    };
-
-    const query = q.selectAll().where({ id }).update(update);
     expectSql(
       query.toSql(),
       `
@@ -175,6 +160,70 @@ describe('update', () => {
     );
 
     const result = await query;
+    const eq: AssertEqual<typeof result, typeof User.type> = true;
+    expect(eq).toBe(true);
+
+    const updated = await User.take();
+    expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
+  });
+
+  it('should update multiple records, returning selected columns', async () => {
+    const ids = await User.pluck('id').insert([userData, userData]);
+
+    const update = {
+      name: 'new name',
+      password: 'new password',
+    };
+
+    const query = User.select('id', 'name')
+      .where({ id: { in: ids } })
+      .update(update);
+
+    expectSql(
+      query.toSql(),
+      `
+        UPDATE "user"
+        SET "name" = $1,
+            "password" = $2
+        WHERE "user"."id" IN ($3, $4)
+        RETURNING "user"."id", "user"."name"
+      `,
+      [update.name, update.password, ids[0], ids[1]],
+    );
+
+    const result = await query;
+    const eq: AssertEqual<typeof result, { id: number; name: string }[]> = true;
+    expect(eq).toBe(true);
+
+    const updated = await User.take();
+    expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
+  });
+
+  it('should update multiple records, returning all columns', async () => {
+    const ids = await User.pluck('id').insert([userData, userData]);
+
+    const update = {
+      name: 'new name',
+      password: 'new password',
+    };
+
+    const query = User.selectAll()
+      .where({ id: { in: ids } })
+      .update(update);
+
+    expectSql(
+      query.toSql(),
+      `
+        UPDATE "user"
+        SET "name" = $1,
+            "password" = $2
+        WHERE "user"."id" IN ($3, $4)
+        RETURNING *
+      `,
+      [update.name, update.password, ids[0], ids[1]],
+    );
+
+    const result = await query;
     expectMatchObjectWithTimestamps(result[0], { ...userData, ...update });
 
     const eq: AssertEqual<typeof result, typeof User['type'][]> = true;
@@ -182,14 +231,10 @@ describe('update', () => {
 
     const updated = await User.take();
     expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
-
-    expectQueryNotMutated(q);
   });
 
   it('should ignore undefined values, and should not ignore null', () => {
-    const q = User.all();
-
-    const query = q.where({ id: 1 }).update({
+    const query = User.where({ id: 1 }).update({
       name: 'new name',
       password: undefined,
       data: null,
@@ -207,14 +252,10 @@ describe('update', () => {
 
     const eq: AssertEqual<Awaited<typeof query>, number> = true;
     expect(eq).toBe(true);
-
-    expectQueryNotMutated(q);
   });
 
   it('should support raw sql as a value', () => {
-    const q = User.all();
-
-    const query = q.where({ id: 1 }).update({
+    const query = User.where({ id: 1 }).update({
       name: raw(`'raw sql'`),
     });
     expectSql(
@@ -229,21 +270,17 @@ describe('update', () => {
 
     const eq: AssertEqual<Awaited<typeof query>, number> = true;
     expect(eq).toBe(true);
-
-    expectQueryNotMutated(q);
   });
 
   it('should return one record when searching for one to update', async () => {
-    const q = User.all();
-
-    const { id } = await q.select('id').insert(userData);
+    const { id } = await User.select('id').insert(userData);
 
     const update = {
       name: 'new name',
       password: 'new password',
     };
 
-    const query = q.selectAll().findBy({ id }).update(update);
+    const query = User.selectAll().findBy({ id }).update(update);
     expectSql(
       query.toSql(),
       `
@@ -261,21 +298,17 @@ describe('update', () => {
     expect(eq).toBe(true);
 
     expectMatchObjectWithTimestamps(result, { ...userData, ...update });
-
-    expectQueryNotMutated(q);
   });
 
   it('should throw when searching for one to update and it is not found', async () => {
-    const q = User.all();
-
-    const query = q.selectAll().findBy({ id: 1 }).update({ name: 'new name' });
+    const query = User.selectAll()
+      .findBy({ id: 1 })
+      .update({ name: 'new name' });
 
     const eq: AssertEqual<Awaited<typeof query>, typeof User.type> = true;
     expect(eq).toBe(true);
 
     await expect(query).rejects.toThrow();
-
-    expectQueryNotMutated(q);
   });
 
   describe('updateOrThrow', () => {
@@ -293,10 +326,14 @@ describe('update', () => {
   });
 
   describe('increment', () => {
-    it('should increment column by 1', () => {
+    it('should not mutate query', () => {
       const q = User.all();
+      q.where({ name: 'name' }).increment('age');
+      expectQueryNotMutated(q);
+    });
 
-      const query = q.increment('age');
+    it('should increment column by 1', () => {
+      const query = User.increment('age');
       expectSql(
         query.toSql(),
         `
@@ -305,14 +342,10 @@ describe('update', () => {
         `,
         [1],
       );
-
-      expectQueryNotMutated(q);
     });
 
     it('should increment column by provided amount', () => {
-      const q = User.all();
-
-      const query = q.increment({ age: 3 });
+      const query = User.increment({ age: 3 });
       expectSql(
         query.toSql(),
         `
@@ -321,14 +354,10 @@ describe('update', () => {
         `,
         [3],
       );
-
-      expectQueryNotMutated(q);
     });
 
     it('should support returning', () => {
-      const q = User.all();
-
-      const query = q.select('id').increment({ age: 3 });
+      const query = User.select('id').increment({ age: 3 });
       expectSql(
         query.toSql(),
         `
@@ -341,16 +370,12 @@ describe('update', () => {
 
       const eq: AssertEqual<Awaited<typeof query>, { id: number }[]> = true;
       expect(eq).toBe(true);
-
-      expectQueryNotMutated(q);
     });
   });
 
   describe('decrement', () => {
     it('should decrement column by 1', () => {
-      const q = User.all();
-
-      const query = q.decrement('age');
+      const query = User.decrement('age');
       expectSql(
         query.toSql(),
         `
@@ -359,14 +384,10 @@ describe('update', () => {
         `,
         [1],
       );
-
-      expectQueryNotMutated(q);
     });
 
     it('should decrement column by provided amount', () => {
-      const q = User.all();
-
-      const query = q.decrement({ age: 3 });
+      const query = User.decrement({ age: 3 });
       expectSql(
         query.toSql(),
         `
@@ -375,14 +396,10 @@ describe('update', () => {
         `,
         [3],
       );
-
-      expectQueryNotMutated(q);
     });
 
     it('should support returning', () => {
-      const q = User.all();
-
-      const query = q.select('id').decrement({ age: 3 });
+      const query = User.select('id').decrement({ age: 3 });
       expectSql(
         query.toSql(),
         `
@@ -395,8 +412,6 @@ describe('update', () => {
 
       const eq: AssertEqual<Awaited<typeof query>, { id: number }[]> = true;
       expect(eq).toBe(true);
-
-      expectQueryNotMutated(q);
     });
   });
 });
