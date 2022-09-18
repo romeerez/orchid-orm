@@ -124,14 +124,16 @@ export const makeBelongsToMethod = (
             update[foreignKey] =
               params.set[primaryKey as keyof typeof params.set];
           } else {
-            const result = await query
+            update[foreignKey] = await query
               .transacting(q)
               ._findBy(params.set)
-              .select(primaryKey)
-              ._take();
-
-            update[foreignKey] = result[primaryKey];
+              ._value(primaryKey);
           }
+        } else if (params.create) {
+          update[foreignKey] = await query
+            .transacting(q)
+            ._value(primaryKey)
+            ._insert(params.create);
         } else if (params.delete) {
           const selectQuery = q.transacting(q);
           selectQuery.query.type = undefined;
@@ -156,9 +158,12 @@ export const makeBelongsToMethod = (
 
         const { handleResult } = q.query;
         q.query.handleResult = async (q, queryResult) => {
-          const data = await handleResult(q, queryResult);
+          const data = (await handleResult(q, queryResult)) as Record<
+            string,
+            unknown
+          >[];
 
-          const id = (data as Record<string, unknown>)[foreignKey];
+          const id = data[0][foreignKey];
           if (id !== null) {
             await query
               .transacting(q)

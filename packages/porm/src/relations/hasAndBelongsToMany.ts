@@ -5,6 +5,7 @@ import {
   HasAndBelongsToManyRelation,
   HasManyNestedInsert,
   HasManyNestedUpdate,
+  MaybeArray,
   Query,
   QueryBase,
 } from 'pqb';
@@ -27,6 +28,15 @@ export type HasAndBelongsToManyInfo<
   populate: never;
 };
 
+type State = {
+  relatedTableQuery: Query;
+  joinTableQuery: Query;
+  primaryKey: string;
+  foreignKey: string;
+  associationPrimaryKey: string;
+  associationForeignKey: string;
+};
+
 export const makeHasAndBelongsToManyMethod = (
   model: Query,
   qb: Query,
@@ -34,25 +44,32 @@ export const makeHasAndBelongsToManyMethod = (
   query: Query,
 ): RelationData => {
   const {
-    primaryKey,
-    foreignKey,
-    associationPrimaryKey,
-    associationForeignKey,
+    primaryKey: pk,
+    foreignKey: fk,
+    associationPrimaryKey: apk,
+    associationForeignKey: afk,
     joinTable,
   } = relation.options;
 
-  const primaryKeyFull = `${getQueryAs(model)}.${primaryKey}`;
-  const foreignKeyFull = `${joinTable}.${foreignKey}`;
-  const associationForeignKeyFull = `${joinTable}.${associationForeignKey}`;
-  const associationPrimaryKeyFull = `${getQueryAs(
-    query,
-  )}.${associationPrimaryKey}`;
+  const primaryKeyFull = `${getQueryAs(model)}.${pk}`;
+  const foreignKeyFull = `${joinTable}.${fk}`;
+  const associationForeignKeyFull = `${joinTable}.${afk}`;
+  const associationPrimaryKeyFull = `${getQueryAs(query)}.${apk}`;
 
   const subQuery = qb.clone();
   subQuery.table = joinTable;
   subQuery.shape = {
-    [foreignKey]: model.shape[primaryKey],
-    [associationForeignKey]: query.shape[associationPrimaryKey],
+    [fk]: model.shape[pk],
+    [afk]: query.shape[apk],
+  };
+
+  const state: State = {
+    relatedTableQuery: query,
+    joinTableQuery: subQuery,
+    primaryKey: pk,
+    foreignKey: fk,
+    associationPrimaryKey: apk,
+    associationForeignKey: afk,
   };
 
   return {
@@ -60,7 +77,7 @@ export const makeHasAndBelongsToManyMethod = (
     method(params: Record<string, unknown>) {
       return query.whereExists(subQuery, (q) =>
         q.on(associationForeignKeyFull, associationPrimaryKeyFull).where({
-          [foreignKeyFull]: params[primaryKey],
+          [foreignKeyFull]: params[pk],
         }),
       );
     },
@@ -82,9 +99,7 @@ export const makeHasAndBelongsToManyMethod = (
       if (connect.length) {
         connected = (await Promise.all(
           connect.flatMap(([, { connect }]) =>
-            connect.map((item) =>
-              t.select(associationPrimaryKey)._findBy(item)._take(),
-            ),
+            connect.map((item) => t.select(apk)._findBy(item)._take()),
           ),
         )) as Record<string, unknown[]>[];
       } else {
@@ -110,10 +125,7 @@ export const makeHasAndBelongsToManyMethod = (
         connectOrCreated = await Promise.all(
           connectOrCreate.flatMap(([, { connectOrCreate }]) =>
             connectOrCreate.map((item) =>
-              t
-                .select(associationPrimaryKey)
-                ._findBy(item.where)
-                ._takeOptional(),
+              t.select(apk)._findBy(item.where)._takeOptional(),
             ),
           ),
         );
@@ -150,7 +162,7 @@ export const makeHasAndBelongsToManyMethod = (
       let created: Record<string, unknown>[];
       if (create.length) {
         created = (await t
-          .select(associationPrimaryKey)
+          .select(apk)
           ._insert(
             create.flatMap(([, { create = [], connectOrCreate = [] }]) => [
               ...create,
@@ -203,16 +215,27 @@ export const makeHasAndBelongsToManyMethod = (
 
       await subQuery.transacting(q)._insert(
         allKeys.flatMap(([selfData, relationKeys]) => {
-          const selfKey = selfData[primaryKey];
+          const selfKey = selfData[pk];
           return relationKeys.map((relationData) => ({
-            [foreignKey]: selfKey,
-            [associationForeignKey]: relationData[associationPrimaryKey],
+            [fk]: selfKey,
+            [afk]: relationData[apk],
           }));
         }),
       );
     }) as HasManyNestedInsert,
     nestedUpdate: (async (q, data, params) => {
-      if (params.update) {
+      if (params.create) {
+        const ids = await query.transacting(q).pluck(apk).insert(params.create);
+
+        await subQuery.transacting(q).insert(
+          data.flatMap((item) =>
+            ids.map((id) => ({
+              [fk]: item[pk],
+              [afk]: id,
+            })),
+          ),
+        );
+      } else if (params.update) {
         await (
           query
             .transacting(q)
@@ -223,7 +246,7 @@ export const makeHasAndBelongsToManyMethod = (
                 ._where({
                   IN: {
                     columns: [foreignKeyFull],
-                    values: [data.map((item) => item[primaryKey])],
+                    values: [data.map((item) => item[pk])],
                   },
                 }),
             )
@@ -233,61 +256,21 @@ export const makeHasAndBelongsToManyMethod = (
                 : params.update.where,
             ) as WhereResult<Query>
         ).update<WhereResult<Query>>(params.update.data);
-        return;
-      }
+      } else if (params.disconnect) {
+        await queryJoinTable(state, q, data, params.disconnect)._delete();
+      } else if (params.delete) {
+        const j = queryJoinTable(state, q, data, params.delete);
 
-      const t = subQuery.transacting(q);
-      const where: WhereArg<Query> = {
-        [foreignKey]: { in: data.map((item) => item[primaryKey]) },
-      };
+        const ids = await j._pluck(afk)._delete();
 
-      const conditions = params.disconnect || params.delete;
-      if (conditions) {
-        where[associationForeignKey] = {
-          in: query
-            .where<Query>(
-              Array.isArray(conditions) ? { OR: conditions } : conditions,
-            )
-            ._select(associationPrimaryKey),
-        };
-      }
+        await queryRelatedTable(query, q, { [apk]: { in: ids } })._delete();
+      } else if (params.set) {
+        const j = queryJoinTable(state, q, data);
+        await j._delete();
 
-      const deleteQuery = t._where(where);
-      let ids: Record<string, unknown>[];
-      if (params.delete) {
-        ids = await deleteQuery.select(associationForeignKey)._delete();
-      } else {
-        ids = [];
-        await deleteQuery._delete();
-      }
+        const ids = await queryRelatedTable(query, q, params.set)._pluck(apk);
 
-      if (params.set) {
-        const ids = await query
-          .transacting(q)
-          ._where<Query>(
-            Array.isArray(params.set) ? { OR: params.set } : params.set,
-          )
-          ._pluck(associationPrimaryKey);
-
-        await t._insert(
-          data.flatMap((item) =>
-            ids.map((id) => ({
-              [foreignKey]: item[primaryKey],
-              [associationForeignKey]: id,
-            })),
-          ),
-        );
-      }
-
-      if (params.delete) {
-        await query
-          .transacting(t)
-          ._where({
-            [associationPrimaryKey]: {
-              in: ids.map((item) => item[associationForeignKey]),
-            },
-          })
-          ._delete();
+        await insertToJoinTable(state, j, data, ids);
       }
     }) as HasManyNestedUpdate,
     joinQuery: query.whereExists(subQuery, (q) =>
@@ -295,6 +278,56 @@ export const makeHasAndBelongsToManyMethod = (
         ._on(associationForeignKeyFull, associationPrimaryKeyFull)
         ._on(foreignKeyFull, primaryKeyFull),
     ),
-    primaryKey,
+    primaryKey: pk,
   };
+};
+
+const queryJoinTable = (
+  state: State,
+  q: Query,
+  data: Record<string, unknown>[],
+  conditions?: MaybeArray<WhereArg<Query>>,
+) => {
+  const t = state.joinTableQuery.transacting(q);
+  const where: WhereArg<Query> = {
+    [state.foreignKey]: { in: data.map((item) => item[state.primaryKey]) },
+  };
+
+  if (conditions) {
+    where[state.associationForeignKey] = {
+      in: state.relatedTableQuery
+        .where<Query>(
+          Array.isArray(conditions) ? { OR: conditions } : conditions,
+        )
+        ._select(state.associationPrimaryKey),
+    };
+  }
+
+  return t._where(where);
+};
+
+const queryRelatedTable = (
+  query: Query,
+  q: Query,
+  conditions: MaybeArray<WhereArg<Query>>,
+) => {
+  return query
+    .transacting(q)
+    ._where<Query>(Array.isArray(conditions) ? { OR: conditions } : conditions);
+};
+
+const insertToJoinTable = (
+  state: State,
+  joinTableTransaction: Query,
+  data: Record<string, unknown>[],
+  ids: unknown[],
+) => {
+  return joinTableTransaction._insert(
+    data.flatMap((item) =>
+      ids.map((id) => ({
+        [state.foreignKey]: item[state.primaryKey],
+        [state.associationForeignKey]: id,
+      })),
+    ),
+  );
 };

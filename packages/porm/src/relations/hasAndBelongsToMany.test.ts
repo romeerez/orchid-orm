@@ -859,5 +859,46 @@ describe('hasAndBelongsToMany', () => {
         expect(titles).toEqual(['chat 1', 'updated', 'updated', 'chat 4']);
       });
     });
+
+    describe('nested create', () => {
+      it('should create many records and connect all found updating with them', async () => {
+        const userIds = await db.user.pluck('id').insert([userData, userData]);
+
+        await db.user.where({ id: { in: userIds } }).update({
+          chats: {
+            create: [
+              {
+                ...chatData,
+                title: 'created 1',
+              },
+              {
+                ...chatData,
+                title: 'created 2',
+              },
+            ],
+          },
+        });
+
+        const firstUserChats = await db.user
+          .chats({ id: userIds[0] })
+          .order('title');
+        expect(firstUserChats.map((chat) => chat.title)).toEqual([
+          'created 1',
+          'created 2',
+        ]);
+
+        const secondUserChats = await db.user
+          .chats({ id: userIds[1] })
+          .order('title');
+        expect(secondUserChats.map((chat) => chat.title)).toEqual([
+          'created 1',
+          'created 2',
+        ]);
+
+        expect(firstUserChats.map((chat) => chat.id)).toEqual(
+          secondUserChats.map((chat) => chat.id),
+        );
+      });
+    });
   });
 });

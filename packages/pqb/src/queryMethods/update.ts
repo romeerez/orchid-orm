@@ -22,32 +22,47 @@ export type UpdateData<T extends Query> = {
             | { set: WhereArg<T['relations'][K]['model']> }
             | { delete: boolean }
             | { update: UpdateData<T['relations'][K]['model']> }
-            | {
-                upsert: {
-                  update: UpdateData<T['relations'][K]['model']>;
-                  create: InsertData<T['relations'][K]['nestedCreateQuery']>;
-                };
-              }
+            | (T['returnType'] extends 'one' | 'oneOrThrow'
+                ?
+                    | {
+                        create: InsertData<
+                          T['relations'][K]['nestedCreateQuery']
+                        >;
+                      }
+                    | {
+                        upsert: {
+                          update: UpdateData<T['relations'][K]['model']>;
+                          create: InsertData<
+                            T['relations'][K]['nestedCreateQuery']
+                          >;
+                        };
+                      }
+                : never)
         : T['relations'][K]['type'] extends 'hasOne'
         ?
             | { disconnect: boolean }
-            | (T['returnType'] extends 'one' | 'oneOrThrow'
-                ? { set: WhereArg<T['relations'][K]['model']> }
-                : never)
             | { delete: boolean }
             | { update: UpdateData<T['relations'][K]['model']> }
-            | {
-                upsert: {
-                  update: UpdateData<T['relations'][K]['model']>;
-                  create: InsertData<T['relations'][K]['nestedCreateQuery']>;
-                };
-              }
+            | (T['returnType'] extends 'one' | 'oneOrThrow'
+                ?
+                    | { set: WhereArg<T['relations'][K]['model']> }
+                    | {
+                        upsert: {
+                          update: UpdateData<T['relations'][K]['model']>;
+                          create: InsertData<
+                            T['relations'][K]['nestedCreateQuery']
+                          >;
+                        };
+                      }
+                    | {
+                        create: InsertData<
+                          T['relations'][K]['nestedCreateQuery']
+                        >;
+                      }
+                : never)
         : T['relations'][K]['type'] extends 'hasMany'
         ?
             | { disconnect: MaybeArray<WhereArg<T['relations'][K]['model']>> }
-            | (T['returnType'] extends 'one' | 'oneOrThrow'
-                ? { set: MaybeArray<WhereArg<T['relations'][K]['model']>> }
-                : never)
             | { delete: MaybeArray<WhereArg<T['relations'][K]['model']>> }
             | {
                 update: {
@@ -55,6 +70,15 @@ export type UpdateData<T extends Query> = {
                   data: UpdateData<T['relations'][K]['model']>;
                 };
               }
+            | (T['returnType'] extends 'one' | 'oneOrThrow'
+                ?
+                    | { set: MaybeArray<WhereArg<T['relations'][K]['model']>> }
+                    | {
+                        create: InsertData<
+                          T['relations'][K]['nestedCreateQuery']
+                        >[];
+                      }
+                : never)
         : T['relations'][K]['type'] extends 'hasAndBelongsToMany'
         ?
             | { disconnect: MaybeArray<WhereArg<T['relations'][K]['model']>> }
@@ -67,6 +91,9 @@ export type UpdateData<T extends Query> = {
                   where: MaybeArray<WhereArg<T['relations'][K]['model']>>;
                   data: UpdateData<T['relations'][K]['model']>;
                 };
+              }
+            | {
+                create: InsertData<T['relations'][K]['nestedCreateQuery']>[];
               }
         : never;
     }

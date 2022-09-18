@@ -6,7 +6,7 @@ While `pqb` query builder is designed to cover abilities of [knex](https://knexj
 
 `porm` models are interfaces on top of `pqb` tables, and all methods of `pqb` are also available here. For query methods see [query builder](/guide/query-builder) document.
 
-## Setup
+## setup
 
 `porm` is an entry function of the ORM.
 
@@ -41,7 +41,7 @@ Call `destroy` to close connection:
 await db.destroy()
 ```
 
-## Model
+## model
 
 Models are defined as classes with two required properties:
 
@@ -86,7 +86,7 @@ Don't use model classes directly, it won't work:
 await UserModel.findBy({ name: 'John' })
 ```
 
-## Relations
+## relations
 
 Different kinds of relations available: `belongsTo`, `hasOne`, `hasMany` and `hasAndBelongsToMany`.
 
@@ -176,261 +176,6 @@ export class BookModel extends Model {
     })
   }
 }
-```
-
-## belongsTo queries
-
-Query author of the book when we already have a book record:
-
-```ts
-const book = await db.book.find(1)
-
-// type of author can be undefined if relation option required is not true:
-const author = await db.book.author(book) // type of argument is { authorId: number }
-
-// additional query methods can be applied:
-const authorWithSpecificName = await db.book.author(book).where({ name: 'Vasyl' })
-```
-
-Relation can be used in `.whereExists`, following query will find all books where related authors exists:
-
-```ts
-await db.book.whereExists('author')
-
-// additional query methods can be applied in a callback:
-await db.book.whereExists('author', (q) =>
-  q.where({ 'author.name': 'Olexiy' })
-)
-```
-
-Relation can be used in `.join`, following query will join and select author name:
-
-```ts
-await db.book.join('author').select(
-  // column without table is for current book table
-  'title',
-  // select column of joined table
-  'author.name',
-)
-
-// additional query methods can be applied in a callback:
-await db.book.join('author', (q) =>
-  q.where({ 'author.name': 'Olexiy' })
-).select('title', 'author.name')
-```
-
-Relation can be added to select and a related object will be added to each record.
-
-If there is no related record in the database it will be returned as `null`.
-
-Select full related object by providing relation name to `.select`:
-
-```ts
-const booksWithAuthor = await db.book.select('*', 'author').take()
-```
-
-Select specific fields of related object in such way:
-
-```ts
-type Result = Pick<Book, 'id' | 'title'> & {
-  author: Pick<Author, 'id', 'name'>
-}
-
-const bookWithAuthor: Result = await db.book.select(
-  'id',
-  'title',
-  db.book.author.select('id', 'name'),
-).take()
-
-// result has selected columns as usually:
-bookWithAuthor.title
-
-// result has object `author` with its columns:
-bookWithAuthor.author.id
-bookWithAuthor.author.name
-
-// author can be null unless relation has option required set to true
-bookWithAuthor.author?.id
-```
-
-## belongsTo nested create
-
-Create book with author all at once:
-
-This will run two insert queries in a transaction.
-
-```ts
-const result = await db.book.create({
-  title: 'Book title',
-  author: {
-    create: {
-      name: 'Author',
-    }
-  }
-})
-```
-
-Create many books with authors:
-
-This will also run only two insert queries in a transaction.
-
-```ts
-const result = await db.book.create([
-  {
-    title: 'Book 1',
-    author: {
-      create: {
-        name: 'Author 1',
-      }
-    }
-  },
-  {
-    title: 'Book 2',
-    author: {
-      create: {
-        name: 'Author 2',
-      }
-    }
-  },
-])
-```
-
-## belongsTo connect in insert
-
-Connect record to another record while inserting:
-
-This will search a record by provided where condition, throw if not found, and use its id for the inserting record.
-
-Also supported when inserting multiple records.
-
-```ts
-const result = await db.book.create({
-  title: 'Book title',
-  author: {
-    connect: {
-      name: 'Author',
-    }
-  }
-})
-```
-
-## belongsTo connect or create
-
-Specify both `connect` and `create` properties to first look for record to connect with and then create it in case if not found.
-
-Also supported when inserting multiple records.
-
-```ts
-const result = await db.book.create({
-  title: 'Book title',
-  author: {
-    connect: {
-      name: 'Author',
-    },
-    create: {
-      name: 'Author',
-    }
-  }
-})
-```
-
-## belongsTo disconnect
-
-Disconnect related record by writing `{ disconnect: true }` in `update`.
-
-This command will update foreignKey of current record to `NULL`, the foreignKey has to be nullable.
-
-Following query will set `authorId` of the book to `NULL`:
-
-```ts
-await db.book.where({ title: 'book title' }).update({
-  author: {
-    disconnect: true,
-  },
-})
-```
-
-## belongsTo set
-
-Set related record when updating.
-
-Following query will update `authorId` of the book:
-
-```ts
-const author = await db.author.find(1)
-
-// it will use id from the author object:
-await db.book.where({ title: 'book title' }).update({
-  author: {
-    set: author,
-  },
-})
-
-// it will find first author with given conditions to use their id
-await db.book.where({ title: 'book title' }).update({
-  author: {
-    set: { name: 'author name' }
-  },
-})
-```
-
-## belongsTo delete
-
-Updates `foreignKey` to null and deletes related record.
-
-Following query will set `authorId` of found book to `NULL` and delete related `author` if exists.
-
-```ts
-await db.book.find(1).update({
-  author: {
-    delete: true,
-  },
-})
-```
-
-## belongsTo update
-
-Update related record:
-
-```ts
-await db.book.find(1).update({
-  author: {
-    update: {
-      name: 'new name',
-    },
-  },
-})
-```
-
-In case of updating multiple records, all their related records will be updated:
-
-```ts
-await db.book.where({ id: { in: [1, 2, 3] } }).update({
-  author: {
-    update: {
-      name: 'new name',
-    },
-  },
-})
-```
-
-## belongsTo upsert
-
-Update related record if exists, and create if it doesn't.
-This is supported when updating multiple records as well.
-
-```ts
-await db.book.find(1).update({
-  author: {
-    upsert: {
-      name: 'new name',
-    },
-    create: {
-      name: 'new name',
-      email: 'some@email.com'
-    }
-  }
-})
 ```
 
 ## hasOne
@@ -551,262 +296,6 @@ export class AccountHistoryModel extends Model {
     }),
   }
 }
-```
-
-## hasOne queries
-
-Query account of the supplier when we already have a supplier record:
-
-```ts
-const supplier = await db.supplier.find(1)
-
-// type of account can be undefined if relation option required is not true
-const account = await db.supplier.account(supplier) // type of argument is { id: number }
-
-// additional query methods can be applied:
-const accountWithSpecificName = await db.supplier.account(supplier).where({ name: 'Andriy' })
-```
-
-Relation can be used in `.whereExists`, following query will find all suppliers where related account exists:
-
-```ts
-await db.supplier.whereExists('account')
-
-// additional query methods can be applied in a callback:
-await db.supplier.whereExists('account', (q) =>
-  q.where({ 'account.name': 'Dmytro' })
-)
-```
-
-Relation can be used in `.join`, following query will join and select account name:
-
-```ts
-await db.supplier.join('account').select(
-  // column without table is for current book table
-  'id',
-  // select column of joined table
-  'account.name',
-)
-
-// additional query methods can be applied in a callback:
-await db.supplier.join('account', (q) =>
-  q.where({ 'account.name': 'Dmytro' })
-).select('id', 'account.name')
-```
-
-Relation can be added to select and a related object will be added to each record.
-
-If there is no related record in the database it will be returned as `null`.
-
-Select full related object by providing relation name to `.select`:
-
-```ts
-const suppliersWithAccount = await db.supplier.select('*', 'account')
-```
-
-Select specific fields of related object in such way:
-
-```ts
-type Result = Pick<Supplier, 'id'> & {
-  account: Pick<Accunt, 'id' | 'name'>
-}
-
-const supplierWithAccount: Result = await db.supplier.select(
-  'id',
-  db.supplier.account.select('id', 'name'),
-).take()
-
-// result has selected columns as usually:
-supplierWithAccount.id
-
-// result has object `account` with its columns:
-supplierWithAccount.account.id
-supplierWithAccount.account.name
-
-// account can be null unless relation has option required set to true
-supplierWithAccount.account?.id
-```
-
-## hasOne nested create
-
-Create supplier with account all at once:
-
-This will run two insert queries in a transaction.
-
-```ts
-const result = db.supplier.create({
-  brand: 'Supplier 1',
-  account: {
-    create: {
-      name: 'Account 1',
-    }
-  }
-})
-```
-
-Create many suppliers with authors:
-
-This will also run only two insert queries in a transaction.
-
-```ts
-const result = await db.supplier.create([
-  {
-    brand: 'Supplier 1',
-    account: {
-      create: {
-        name: 'Author 1',
-      }
-    }
-  },
-  {
-    brand: 'Supplier 2',
-    account: {
-      create: {
-        name: 'Author 2',
-      }
-    }
-  },
-])
-```
-
-## hasOne connect in insert
-
-Connect record to another record while inserting:
-
-This will search a record by provided where condition, throw if not found, and update it to connect to the inserted record.
-
-Also supported when inserting multiple records.
-
-```ts
-const result = db.supplier.create({
-  brand: 'Supplier 1',
-  account: {
-    connect: {
-      name: 'Account 1',
-    }
-  }
-})
-```
-
-## hasOne connect or create
-
-Specify both `connect` and `create` properties to first look for record to connect with and then create it in case if not found.
-
-Also supported when inserting multiple records.
-
-```ts
-const result = db.supplier.create({
-  brand: 'Supplier 1',
-  account: {
-    connect: {
-      name: 'Account 1',
-    },
-    create: {
-      name: 'Account 1',
-    }
-  }
-})
-```
-
-## hasOne disconnect
-
-Disconnect related record by writing `{ disconnect: true }` in `update`.
-
-This command will update foreignKey of related record to `NULL`, the foreignKey has to be nullable.
-
-Following query will set `supplierId` of the account to `NULL`:
-
-```ts
-await db.supplier.where({ brand: 'supplier brand' }).update({
-  account: {
-    disconnect: true,
-  },
-})
-```
-
-## hasOne set
-
-Set related record when updating.
-
-It is available only when updating one record, so query should have `findBy`, `take` or similar methods which returns one record.
-
-If related record already exists before update, it's `foreignKey` will be set to `NULL`, so foreignKey has to be nullable for this.
-
-Following query will update `supplierId` of the account, and set `supplierId` to `NULl` to the previous account if it existed.
-
-```ts
-const account = await db.account.find(1)
-
-// TypeScript error because need to use `findBy` instead of `where`:
-await db.supplier.find(1).update({
-  account: {
-    set: account,
-  },
-})
-
-await db.supplier.find(1).update({
-  account: {
-    // find account by id and update it's `supplierId`
-    set: { id: account.id },
-  },
-})
-```
-
-## hasOne delete
-
-Deletes related record.
-
-Following query will delete related `account` if exists.
-
-```ts
-await db.supplier.find(1).update({
-  account: {
-    delete: true,
-  },
-})
-```
-
-## hasOne update
-
-Update related record:
-
-```ts
-await db.supplier.find(1).update({
-  account: {
-    update: {
-      name: 'new name',
-    },
-  },
-})
-```
-
-In case of updating multiple records, all their related records will be updated:
-
-```ts
-await db.supplier.where({ id: [1, 2, 3] }).update({
-  account: {
-    name: 'new name',
-  },
-})
-```
-
-## hasOne upsert
-
-Update related record if exists, and create if it doesn't.
-This is supported when updating multiple records as well.
-
-```ts
-await db.supplier.find(1).update({
-  account: {
-    upsert: {
-      name: 'new name',
-    },
-    create: {
-      name: 'new name',
-      email: 'some@email.com'
-    }
-  }
-})
 ```
 
 ## hasMany
@@ -936,320 +425,6 @@ export class PatientModel extends Model {
 }
 ```
 
-## hasMany queries
-
-Query books of the author when we already have an author record:
-
-```ts
-const author = await db.author.find(1)
-
-const books = await db.author.books(author) // type of argument is { id: number }
-
-// additional query methods can be applied:
-const countBooks = await db.author.books(author).where({ title: 'Kobzar' }).count()
-```
-
-Relation can be used in `.whereExists`, following query will find all authors where at least one book exists:
-
-```ts
-await db.author.whereExists('books')
-
-// additional query methods can be applied in a callback:
-await db.author.whereExists('books', (q) =>
-  q.where({ 'books.title': 'Eneida' })
-)
-```
-
-Relation can be used in `.join`, but it is not suggested for `hasMany` relation because author columns will be duplicated for each book:
-
-```ts
-await db.author.join('books').select(
-  // column without table is for current author table
-  'name',
-  // select column of joined table
-  'books.title',
-)
-
-// additional query methods can be applied in a callback:
-await db.author.join('books', (q) =>
-  q.where({ 'books.title': 'Kamenyari' })
-).select('name', 'books.title')
-```
-
-Relation can be added to select and a related array of object will be added to each record.
-
-This works better than `join` because it won't lead to duplicative data.
-
-Select full related objects by providing relation name to `.select`:
-
-```ts
-const authorsWithBooks = await db.author.select('*', 'books')
-```
-
-Select specific fields of related object in such way:
-
-```ts
-type Result = Pick<Author, 'id' | 'name'> & {
-  books: Pick<Book, 'id' | 'title'>[]
-}
-
-const authorWithBooks: Result = await db.author.select(
-  'id',
-  'name',
-  db.author.books.select('id', 'title'),
-).take()
-
-// result has selected columns as usually:
-authorWithBooks.name
-
-// result has array `books` with object:
-authorWithBooks.books.forEach((book) => {
-  book.id
-  book.title
-})
-```
-
-In the select you can also apply aggregation queries such as `count`, `min`, `max`, `sum`, `avg`:
-
-```ts
-type Result = Pick<Author, 'id'> & {
-  // books number is for the count
-  books: number
-}
-
-const result: Result = await db.author.select(
-  'id',
-  db.author.books.count()
-).take()
-```
-
-Value of `count` and other aggregations will be returned under the name of relation, but you can use an alias to change it:
-
-```ts
-type Result = Pick<Author, 'id'> & {
-  booksCount: number
-  booksAvgYear: number | null // null if there is no books
-}
-
-const result: Result = await db.author.select(
-  'id',
-  db.author.books.count().as('booksCount'),
-  db.author.books.avg('year').as('booksAvgYear'),
-).take()
-```
-
-## hasMany nested create
-
-Create author with books all at once:
-
-This will run two insert queries in a transaction.
-
-```ts
-const result = await db.author.create({
-  name: 'Author',
-  books: {
-    create: [
-      {
-        title: 'Book 1',
-      },
-      {
-        title: 'Book 2',
-      },
-    ]
-  }
-})
-```
-
-Create many authors with books:
-
-This will also run only two insert queries in a transaction.
-
-```ts
-const result = await db.author.create([
-  {
-    name: 'Author 1',
-    books: {
-      create: [
-        {
-          title: 'Book 1',
-        },
-        {
-          title: 'Book 2',
-        },
-      ],
-    },
-  },
-  {
-    name: 'Author 2',
-    books: {
-      create: [
-        {
-          title: 'Book 3',
-        },
-        {
-          title: 'Book 4',
-        },
-      ],
-    }
-  },
-])
-```
-
-## hasMany connect in insert
-
-Connect record to another record while inserting:
-
-This will search one record per provided where condition, throw if any of them is not found, and update found records to connect to the inserted record.
-
-Also supported when inserting multiple records.
-
-```ts
-const result = await db.author.create({
-  name: 'Author',
-  books: {
-    connect: [
-      {
-        title: 'Book 1',
-      },
-      {
-        title: 'Book 2',
-      },
-    ]
-  }
-})
-```
-
-## hasMany connectOrCreate
-
-Specify `connectOrCreate` object with `where` and `connect` properties to first look for record to connect with and then create it in case if not found.
-
-Also supported when inserting multiple records.
-
-```ts
-const result = await db.author.create({
-  name: 'Author',
-  books: {
-    connectOrCreate: [
-      {
-        where: { title: 'Book 1' },
-        create: { title: 'Book 1' },
-      },
-      {
-        where: { title: 'Book 2' },
-        create: { title: 'Book 2' },
-      },
-    ]
-  }
-})
-```
-
-## hasMany disconnect
-
-Disconnect related record with array of conditions in `update`:
-
-This command will update foreignKey of related records to `NULL`, the foreignKey has to be nullable.
-
-Each provided condition may match 0 or more related records, there is no check to find exactly one.
-
-Following query will set `authorId` of related books found by conditions to `NULL`:
-
-```ts
-await db.author.where({ name: 'author name' }).update({
-  books: {
-    disconnect: [
-      { id: 5 },
-      { title: 'book title' }
-    ],
-  },
-})
-```
-
-## hasMany set
-
-Set related records when updating.
-
-It is available only when updating one record, so query should have `findBy`, `take` or similar methods which returns one record.
-
-If there were related records before update, their `foreignKey` will be set to `NULL`, so the `foreignKey` column has to be nullable.
-
-Following query will update `authorId` of found books, and set `authorId` to `NULL` for the books author was connected to before.
-
-```ts
-// TypeScript error because need to use `findBy` instead of `where`:
-await db.author.find(1).update({
-  books: {
-    set: { id: 1 }
-  }
-})
-
-await db.author.find(1).update({
-  books: {
-    // all found books with such title will be connected to the author
-    set: { title: 'book title' }
-  }
-})
-
-await db.author.find(1).update({
-  books: {
-    // array of conditions can be provided:
-    set: [{ id: 1 }, { id: 2 }]
-  }
-})
-```
-
-## hasMany delete
-
-Deletes related records. Empty `{}` or `[]` will delete all related records, and if conditions applied it will delete only matching records.
-
-Following query will delete some books of the author:
-
-```ts
-await db.author.find(1).update({
-  account: {
-    // delete author book by conditions
-    delete: { title: 'book title' }
-  },
-})
-
-await db.author.find(1).update({
-  account: {
-    // array of conditions can be provided:
-    delete: [{ id: 1 }, { id: 2 }]
-  },
-})
-```
-
-## hasMany update
-
-Update related records, all related records found by `where` conditions will be updated.
-
-`where` can be an array of objects with conditions.
-
-```ts
-await db.author.find(1).update({
-  books: {
-    update: {
-      where: {
-        title: 'old book title',
-      },
-      data: {
-        title: 'new book title',
-      },
-    }
-  },
-})
-```
-
-In case of updating multiple records, all their related records will be updated:
-
-```ts
-await db.author.where({ id: [1, 2, 3] }).update({
-  books: {
-    title: 'new book title',
-  },
-})
-```
-
 ## hasAndBelongsToMany
 
 A `hasAndBelongsToMany` association creates a direct many-to-many connection with another model, with no intervening model.
@@ -1304,84 +479,122 @@ export class TagModel extends Model {
 }
 ```
 
-## hasAndBelongsToMany queries
+## relation queries
 
-Query tags of the post when we already have a post record:
+Load related records by using record object (supported by all kinds of relations).
+
+Resulting record of `belongsTo` and `hasOne` relation can be undefined if `required` option was not set.
 
 ```ts
-const post = await db.post.find(1)
+const book = await db.book.find(1)
 
-const tags = await db.post.tags(post) // type of argument is { id: number }
+const author = await db.book.author(book) // type of argument is { authorId: number }
+
+const books = await db.author.books(author) // type of argument is { id: number }
 
 // additional query methods can be applied:
-const specificTags = await db.post.tags(post).where({ name: { startsWith: 'a' } })
+const partialAuthor = await db.book.author(book).select('id', 'name')
+
+const countBooks = await db.author.books(author).where({ title: 'Kobzar' }).count()
 ```
 
-Relation can be used in `.whereExists`, following query will find all posts where at least one tag exists:
+Relation can be used in `.whereExists` (supported by all kinds of relations):
 
 ```ts
-await db.post.whereExists('tags')
+// load books which have author
+await db.book.whereExists('author')
+
+// load authors which have books
+await db.authors.whereExists('book')
 
 // additional query methods can be applied in a callback:
-await db.post.whereExists('tags', (q) =>
-  q.where({ 'tags.name': 'porm' })
+await db.book.whereExists('author', (q) =>
+  q.where({ 'author.name': 'Olexiy' })
 )
 ```
 
-Relation can be used in `.join`, but it is not suggested for `hasAndBelongsToMany` relation because post columns will be duplicated for each tag:
+Relation can be used in `.join`.
+
+Supported by all kinds of relations, but it is not suggested for `hasMany` and `hasAndBelongsToMany` because data will be duplicated.
 
 ```ts
-await db.post.join('tags').select(
-  // column without table is for current author table
+await db.book.join('author').select(
+  // column without table is for current book table
   'title',
   // select column of joined table
-  'tags.name',
+  'author.name',
 )
 
+// author name will be repeated for each book title:
+await db.author.join('books').select('name', 'books.title')
+
 // additional query methods can be applied in a callback:
-await db.post.join('tags', (q) =>
-  q.where({ 'tags.name': 'pqb' })
-).select('title', 'tags.name')
+await db.book.join('author', (q) =>
+  q.where({ 'author.name': 'Olexiy' })
+).select('title', 'author.name')
 ```
 
-Relation can be added to select and a related array of object will be added to each record.
+Relation can be loaded using `.select` and a related records will be added to each record.
 
-This works better than `join` because it won't lead to duplicative data.
+`belongsTo` and `hasOne` will add object (can be `null` if not found).
 
-Select full related object by providing relation name to `.select`:
+`hasMany` and `hasAndBelongsToMany` will add array of objects.
+
+For `hasMany` and `hasAndBelongsToMany` this works better than `join` because it won't lead to duplicative data.
+
+Use the name of relation to load full records:
 
 ```ts
-const postsWithTags = await db.post.select('*', 'tags')
+// if `required` option is not set in the model,
+// type of author will be Author | null 
+const booksWithAuthor: Book & { author: Author } = await db.book
+  .select('*', 'author')
+  .take();
+
+const authorWithBooks: Author & { books: Book[] } = await db.book
+  .select('*', 'author')
+  .take();
 ```
 
-Select specific fields of related object in such way:
+To load specific fields or to apply `where`, `order`, `limit` and other methods, use such syntax:
 
 ```ts
-type Result = Pick<Post, 'id' | 'title'> & {
-  tags: Pick<Tag, 'id' | 'name'>[]
+type BookResult = {
+  id: number
+  title: string
+  author: {
+    id: number
+    name: number
+  }
 }
 
-const postWithTags: Result = await db.post.select(
+const bookWithAuthor: BookResult = await db.book.select(
   'id',
   'title',
-  db.post.tags.select('id', 'name'),
+  db.book.author.select('id', 'name'),
 ).take()
 
-// result has selected columns as usually:
-postWithTags.title
+type AuthorResult = {
+  id: number
+  name: string
+  books: {
+    id: number
+    title: string[]
+  }
+}
 
-// result has array `books` with object:
-postWithTags.tags.forEach((tag) => {
-  tag.id
-  tag.title
-})
+const authorWithBooks: AuthorResult = await db.author.select(
+  'id',
+  'name',
+  db.author.book.select('id', 'title').where(...conditions).order('title').limit(5),
+).take()
 ```
 
-In the select you can also apply aggregation queries such as `count`, `min`, `max`, `sum`, `avg`:
+For `hasMany` and `hasAndBelongsToMany` the select can also handle aggregation queries such as `count`, `min`, `max`, `sum`, `avg`:
 
 ```ts
-type Result = Pick<Post, 'id'> & {
-  // tags number is for the count
+type PostResult = {
+  id: number,
   tags: number
 }
 
@@ -1394,215 +607,384 @@ const result: Result = await db.post.select(
 Value of `count` and other aggregations will be returned under the name of relation, but you can use an alias to change it:
 
 ```ts
-type Result = Pick<Post, 'id'> & {
+type PostResult = {
+  id: number
   tagsCount: number
-  tagsCommaSeparated: string | null // null if there is no books
+  tagsCommaSeparated: string | null // null if there is no tags
 }
 
-const result: Result = await db.author.select(
+const result: Result = await db.post.select(
   'id',
-  db.post.tags.count().as('booksCount'),
+  db.post.tags.count().as('tagsCount'),
   db.post.tags.stringAgg('name', ', ').as('tagsCommaSeparated'),
 ).take()
 ```
 
-## hasAndBelongsToMany nested create
+## nested create
 
-Create post with tags all at once:
+Create record with related records all at once:
 
-This will run three insert queries in a transaction. One insert for post, one for tags and one for join table.
+This will run two insert queries in a transaction, (three insert queries in case of `hasAndBelongsToMany`).
 
 ```ts
-const result = await db.post.create({
-  title: 'Post',
-  tags: {
+const book = await db.book.create({
+  title: 'Book title',
+  author: {
+    create: {
+      name: 'Author',
+    }
+  }
+})
+
+const author = await db.author.create({
+  name: 'Author',
+  books: {
     create: [
-      {
-        name: 'Tag 1',
-      },
-      {
-        name: 'Tag 2',
-      },
+      { title: 'Book 1' },
+      { title: 'Book 2' },
+      { title: 'Book 3' },
     ]
   }
 })
 ```
 
-Create many posts with tags:
-
-This will also run only three insert queries in a transaction.
+Nested create is supported when inserting many as well:
 
 ```ts
-const result = await db.post.create([
+const books = await db.book.create([
   {
-    title: 'Post 1',
-    tags: {
-      create: [
-        {
-          name: 'Tag 1',
-        },
-        {
-          name: 'Tag 2',
-        },
-      ],
-    },
+    title: 'Book 1',
+    author: {
+      create: {
+        name: 'Author 1',
+      }
+    }
   },
   {
-    title: 'Post 2',
-    tags: {
-      create: [
-        {
-          name: 'Tag 3',
-        },
-        {
-          name: 'Tag 4',
-        },
-      ],
+    title: 'Book 2',
+    author: {
+      create: {
+        name: 'Author 2',
+      }
     }
   },
 ])
 ```
 
-## hasAndBelongsToMany connect in insert
+### create related records from update
 
-Connect record to another record while inserting:
+Create related records when updating:
 
-This will search one record per provided where condition, throw if any of them is not found, and insert join table entries to connect found records and inserted.
+For `belongsTo`, `hasOne`, `hasMany` it is available when updating one record, there must be `find`, or `findBy`, or `take` before update.
 
-It is supported in insert multiple as well.
+For `hasAndBelongsToMany` this will connect all found records for the update with all created records.
+
+`hasOne` relation will nullify `foreignKey` of previous related record if exists, so it has to be nullable.
 
 ```ts
-const result = await db.post.create({
-  title: 'Post',
+await db.book.find(1).update({
+  title: 'update book title',
+  author: {
+    create: {
+      name: 'new author',
+    },
+  },
+})
+
+await db.author.find(1).update({
+  name: 'update author name',
+  books: {
+    create: [
+      { title: 'new book 1' },
+      { title: 'new book 2' },
+    ],
+  },
+})
+
+// this will connect all 3 posts with 2 tags
+await db.post.where({ id: { in: [1, 2, 3] } }).update({
   tags: {
+    create: [
+      { name: 'new tag 1' },
+      { name: 'new tag 2' },
+    ]
+  }
+})
+```
+
+## connect related records
+
+Connect records when creating:
+
+This will search a record by provided where condition, throw `NotFoundError` if not found, and update the referring column.
+
+Supported when inserting multiple records as well.
+
+```ts
+const book = await db.book.create({
+  title: 'Book title',
+  author: {
+    connect: {
+      name: 'Author',
+    }
+  }
+})
+
+const author = await db.author.create({
+  name: 'Author name',
+  books: {
     connect: [
       {
-        name: 'Tag 1',
+        title: 'Book 1',
       },
       {
-        name: 'Tag 2',
+        title: 'Book 2',
       },
     ]
   }
 })
 ```
 
-## hasAndBelongsToMany connectOrCreate
+## connect or create
 
-Specify `connectOrCreate` object with `where` and `connect` properties to first look for record to connect with and then create it in case if not found.
+First look for record to connect with and then create it in case if not found.
 
 Also supported when inserting multiple records.
 
+`belongsTo` and `hasOne` relations are accepting `connect` and `create` options in such way:
+
 ```ts
-const result = await db.post.create({
-  title: 'Post',
-  tags: {
+const result = await db.book.create({
+  title: 'Book title',
+  author: {
+    connect: {
+      name: 'Author',
+    },
+    create: {
+      name: 'Author',
+    }
+  }
+})
+```
+
+`hasMany` and `hasAndBelongsToMany` relations are accepting `connectOrCreate` option in such way:
+
+```ts
+const result = await db.author.create({
+  name: 'Author',
+  books: {
     connectOrCreate: [
       {
-        where: { name: 'Tag 1' },
-        create: { name: 'Tag 1' },
+        where: { title: 'Book 1' },
+        create: { title: 'Book 1' },
       },
       {
-        where: { name: 'Tag 2' },
-        create: { name: 'Tag 2' },
+        where: { title: 'Book 2' },
+        create: { title: 'Book 2' },
       },
     ]
   }
 })
 ```
 
-## hasAndBelongsToMany disconnect
+## disconnect related records
 
-Disconnect related record with array of conditions in `update`:
+This will delete join table records for `hasAndBelongsToMany`, and nullify the `foreignKey` column for the other kinds (the column has to be nullable).
 
-This command will delete connecting rows from join table for related records found by conditions.
+Also supported when inserting multiple records.
+
+For `belongsTo` and `hasOne` relations write `disconnect: true`:
+
+```ts
+await db.book.where({ title: 'book title' }).update({
+  author: {
+    disconnect: true,
+  },
+})
+```
+
+`hasMany` and `hasAndBelongsToMany` relations are accepting filter conditions.
+
+```ts
+await db.post.where({ title: 'post title' }).update({
+  tags: {
+    disconnect: {
+      name: 'some tag',
+    },
+  },
+})
+```
+
+It may be an array of conditions:
 
 Each provided condition may match 0 or more related records, there is no check to find exactly one.
-
-Following query delete join table rows between the post and matching tags:
 
 ```ts
 await db.post.where({ title: 'post title' }).update({
   tags: {
     disconnect: [
-      { id: 5 },
-      { name: 'some tag' }
+      { id: 1 },
+      { id: 2 },
     ],
   },
 })
 ```
 
-## hasAndBelongsToMany set
+## set related records
 
-Set related records:
+Set related records when updating.
 
-All records found for the update will be connected to all records found by `set` conditions.
+For `hasOne` and `hasMany` it is available only when updating one record, so query should have `find`, or `findBy`, or `take` before the update.
 
-All previous rows of join table will be deleted and new ones will be created.
+For `hasOne` and `hasMany`, if there was a related record before update, it's `foreignKey` column will be updated to `NULL`, so it has to be nullable.
 
-Following query will disconnect post with previous tags and connect with new ones:
+In `hasAndBelongsToMany` relation this will delete all previous rows of join table and create new ones.
 
 ```ts
-await db.post.where({ title: 'post title' }).update({
-  tags: {
-    set: { name: 'tag name' },
+const author = await db.author.find(1)
+
+// this will update book with author's id from the given object
+await db.book.find(1).update({
+  author: {
+    set: author,
+  },
+})
+
+// this will find first author with given conditions to use their id
+await db.book.find(2).update({
+  author: {
+    set: { name: 'author name' }
+  },
+})
+
+// TypeScript error because need to use `findBy` instead of `where`:
+await db.author.where({ id: 1 }).update({
+  books: {
+    set: { id: 1 }
   }
 })
 
-await db.post.where({ title: 'post title' }).update({
-  tags: {
+await db.author.find(1).update({
+  books: {
+    // all found books with such title will be connected to the author
+    set: { title: 'book title' }
+  }
+})
+
+await db.author.find(1).update({
+  books: {
     // array of conditions can be provided:
-    set: [{ id: 1 }, { id: 2 }],
+    set: [{ id: 1 }, { id: 2 }]
   }
 })
 ```
 
-## hasAndBelongsToMany delete
+## delete related records
 
-Deletes related records. Empty `{}` or `[]` will delete all related records, and if conditions applied it will delete only matching records.
+Deletes related record.
 
-Following query will delete matching tags of specific posts:
+For `belongsTo` relation it will update `foreignKey` to `NULL` before deleting.
+
+`hasMany` and `hasAndBelongsToMany` are accepting same conditions as `.where` method to delete only matching records, as object or as array of objects.
+
+Empty `{}` or `[]` will delete all related records.
 
 ```ts
-await db.post.where({ id: { in: [1, 2, 3] } }).update({
-  tags: {
-    delete: { name: 'tag name' },
+await db.book.find(1).update({
+  author: {
+    delete: true,
   },
 })
 
-await db.post.where({ id: { in: [1, 2, 3] } }).update({
-  tasg: {
-    // array of conditions can be provided:
+await db.author.find(1).update({
+  account: {
+    // delete author book by conditions
+    delete: { title: 'book title' }
+  },
+})
+
+await db.author.find(1).update({
+  account: {
+    // array of conditions:
     delete: [{ id: 1 }, { id: 2 }]
-  }
+  },
 })
 ```
 
-## hasAndBelongsToMany update
+## nested update
 
-Update related records, all related records found by `where` conditions will be updated.
+Update related record.
 
-`where` can be an array of objects with conditions.
+`belongsTo` and `hasOne` are accepting object with data for update.
+
+`hasMany` and `hasAndBelongsToMany` are accepting `where` conditions and `data` object. `where` can be an object or an array of objects.
 
 ```ts
-await db.post.find(1).update({
-  tags: {
+await db.book.find(1).update({
+  author: {
     update: {
-      where: 'old tag name',
+      name: 'new name',
     },
-    data: {
-      name: 'new tag name',
-    },
+  },
+})
+
+await db.author.find(1).update({
+  books: {
+    update: {
+      where: {
+        title: 'old book title',
+      },
+      data: {
+        title: 'new book title',
+      },
+    }
   },
 })
 ```
 
-In case of updating multiple records, all their related records will be updated:
+When updating multiple records, all their related records will be updated:
 
 ```ts
-await db.author.where({ id: [1, 2, 3] }).update({
-  tags: {
-    name: 'new tag name',
+await db.book.where({ id: { in: [1, 2, 3] } }).update({
+  author: {
+    update: {
+      name: 'new name',
+    },
   },
+})
+
+await db.author.where({ id: [1, 2, 3] }).update({
+  books: {
+    update: {
+      where: {
+        title: 'old book title',
+      },
+      data: {
+        title: 'new book title',
+      }
+    }
+  },
+})
+```
+
+## upsert: update or insert
+
+Update related record if exists, and create if it doesn't.
+
+Only available for `belongsTo` and `hasOne` relations.
+
+Supported when updating multiple records as well.
+
+```ts
+await db.book.find(1).update({
+  author: {
+    upsert: {
+      name: 'new name',
+    },
+    create: {
+      name: 'new name',
+      email: 'some@email.com'
+    }
+  }
 })
 ```

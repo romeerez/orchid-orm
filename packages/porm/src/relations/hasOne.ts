@@ -170,22 +170,24 @@ export const makeHasOneMethod = (
         [foreignKey]: { in: ids },
       });
 
-      if (params.disconnect || params.set) {
+      if (params.create || params.disconnect || params.set) {
         await currentRelationsQuery._update({ [foreignKey]: null });
 
+        if (params.create) {
+          await t._insert({
+            ...params.create,
+            [foreignKey]: data[0][primaryKey],
+          });
+        }
         if (params.set) {
           await t
             ._where<Query>(params.set)
             ._update({ [foreignKey]: data[0][primaryKey] });
         }
-      } else if (params.delete || params.update) {
-        if (params.delete) {
-          await currentRelationsQuery._delete();
-        } else if (params.update) {
-          await currentRelationsQuery._update<WhereResult<Query>>(
-            params.update,
-          );
-        }
+      } else if (params.update) {
+        await currentRelationsQuery._update<WhereResult<Query>>(params.update);
+      } else if (params.delete) {
+        await currentRelationsQuery._delete();
       } else if (params.upsert) {
         const { update, create } = params.upsert;
         const updatedIds: unknown[] = await currentRelationsQuery

@@ -204,7 +204,14 @@ export const makeHasManyMethod = (
     }) as HasManyNestedInsert,
     nestedUpdate: (async (q, data, params) => {
       const t = query.transacting(q);
-      if (params.disconnect || params.set) {
+      if (params.create) {
+        await t._insert(
+          params.create.map((create) => ({
+            ...create,
+            [foreignKey]: data[0][primaryKey],
+          })),
+        );
+      } else if (params.disconnect || params.set) {
         await t
           .where<Query>(
             getWhereForNestedUpdate(

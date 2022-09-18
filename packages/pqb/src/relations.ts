@@ -49,6 +49,7 @@ export type NestedUpdateOneItem = {
     update: UpdateData<Query>;
     create: Record<string, unknown>;
   };
+  create: Record<string, unknown>;
 };
 
 export type NestedUpdateManyItems = {
@@ -59,6 +60,7 @@ export type NestedUpdateManyItems = {
     where: MaybeArray<WhereArg<QueryBase>>;
     data: UpdateData<Query>;
   };
+  create: Record<string, unknown>[];
 };
 
 export type NestedUpdateItem = NestedUpdateOneItem | NestedUpdateManyItems;

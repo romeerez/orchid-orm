@@ -629,5 +629,25 @@ describe('belongsTo', () => {
         expect(user.name).toBe('created');
       });
     });
+
+    describe('nested create', () => {
+      it('should create new related record and update foreignKey', async () => {
+        const profileId = await db.profile
+          .value('id')
+          .insert({ ...profileData, user: { create: userData } });
+
+        const updated = await db.profile
+          .selectAll()
+          .find(profileId)
+          .update({
+            user: {
+              create: { ...userData, name: 'created' },
+            },
+          });
+
+        const user = await db.profile.user(updated);
+        expect(user.name).toBe('created');
+      });
+    });
   });
 });

@@ -621,6 +621,33 @@ describe('hasOne', () => {
           expect(profile.bio).toBe('created');
         });
       });
+
+      describe('nested create', () => {
+        it('should create new related record', async () => {
+          const userId = await db.user
+            .value('id')
+            .insert({ ...userData, profile: { create: profileData } });
+
+          const previousProfileId = await db.user
+            .profile({ id: userId })
+            .value('id');
+
+          const updated = await db.user
+            .selectAll()
+            .find(userId)
+            .update({
+              profile: {
+                create: { ...profileData, bio: 'created' },
+              },
+            });
+
+          const previousProfile = await db.profile.find(previousProfileId);
+          expect(previousProfile.userId).toBe(null);
+
+          const profile = await db.user.profile(updated);
+          expect(profile.bio).toBe('created');
+        });
+      });
     });
   });
 });

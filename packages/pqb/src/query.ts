@@ -174,7 +174,8 @@ export type SetQueryReturnsPluck<
     : S extends RawExpression
     ? S['__column']
     : never,
-> = Omit<T, 'result' | 'returnType' | 'then'> & {
+> = Omit<T, 'hasSelect' | 'result' | 'returnType' | 'then'> & {
+  hasSelect: true;
   result: { pluck: C };
   returnType: 'pluck';
   then: ThenResult<C['type'][]>;
