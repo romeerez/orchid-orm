@@ -14,7 +14,7 @@ export interface DateTimeColumnData {
 
 export abstract class DateTimeBaseClass<
   Precision extends number | undefined = undefined,
-> extends ColumnType<string, typeof Operators.date> {
+> extends ColumnType<string, typeof Operators.date, string | number | Date> {
   data: DateTimeColumnData & { precision: Precision };
   operators = Operators.date;
 

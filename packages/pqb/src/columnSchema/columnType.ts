@@ -3,6 +3,8 @@ import { EmptyObject } from './utils';
 
 export type ColumnOutput<T extends ColumnType> = T['type'];
 
+export type ColumnInput<T extends ColumnType> = T['inputType'];
+
 export type NullableColumn<T extends ColumnType> = Omit<
   T,
   'type' | 'operators'
@@ -15,15 +17,22 @@ export type NullableColumn<T extends ColumnType> = Omit<
   };
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyColumnType = ColumnType<any, Record<string, Operator<any>>>;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyColumnTypeCreator = (...args: any[]) => AnyColumnType;
+
 export abstract class ColumnType<
   Type = unknown,
   Ops extends Operators = Operators,
+  InputType = Type,
 > {
   abstract dataType: string;
   abstract operators: Ops;
 
   type!: Type;
-  inputType!: Type;
+  inputType!: InputType;
   data = {} as EmptyObject;
   isPrimaryKey = false;
   isHidden = false;

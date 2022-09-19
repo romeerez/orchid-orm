@@ -1,4 +1,4 @@
-import { ColumnOutput, ColumnType } from './columnType';
+import { ColumnInput, ColumnOutput, ColumnType } from './columnType';
 import { Operators } from '../operators';
 import { UnionToIntersection } from '../utils';
 
@@ -6,6 +6,10 @@ export type ColumnsShape = Record<string, ColumnType>;
 
 export type ColumnShapeOutput<Shape extends ColumnsShape> = {
   [K in keyof Shape]: ColumnOutput<Shape[K]>;
+};
+
+export type ColumnShapeInput<Shape extends ColumnsShape> = {
+  [K in keyof Shape]: ColumnInput<Shape[K]>;
 };
 
 export class ColumnsObject<Shape extends ColumnsShape> extends ColumnType<

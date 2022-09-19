@@ -1,10 +1,14 @@
-import { Model } from '../model';
+import { createModel } from '../model';
 import { columnTypes } from 'pqb';
 
-const timestampAsDate = columnTypes
-  .timestamp()
-  .parse((input) => new Date(input))
-  .encode((date: Date) => date.toISOString());
+const Model = createModel({
+  columnTypes: {
+    ...columnTypes,
+    timestamp() {
+      return columnTypes.timestamp().parse((input) => new Date(input));
+    },
+  },
+});
 
 export type User = UserModel['columns']['type'];
 export class UserModel extends Model {
@@ -24,8 +28,8 @@ export class UserModel extends Model {
       .nullable(),
     age: t.integer().nullable(),
     active: t.boolean().nullable(),
-    createdAt: timestampAsDate,
-    updatedAt: timestampAsDate,
+    createdAt: t.timestamp(),
+    updatedAt: t.timestamp(),
   }));
 
   relations = {
@@ -57,8 +61,8 @@ export class ProfileModel extends Model {
     id: t.serial().primaryKey(),
     userId: t.integer().nullable(),
     bio: t.text().nullable(),
-    createdAt: timestampAsDate,
-    updatedAt: timestampAsDate,
+    createdAt: t.timestamp(),
+    updatedAt: t.timestamp(),
   }));
 
   relations = {
@@ -81,8 +85,8 @@ export class ChatModel extends Model {
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     title: t.text(),
-    createdAt: timestampAsDate,
-    updatedAt: timestampAsDate,
+    createdAt: t.timestamp(),
+    updatedAt: t.timestamp(),
   }));
 }
 
@@ -94,8 +98,8 @@ export class MessageModel extends Model {
     chatId: t.integer(),
     authorId: t.integer().nullable(),
     text: t.text(),
-    createdAt: timestampAsDate,
-    updatedAt: timestampAsDate,
+    createdAt: t.timestamp(),
+    updatedAt: t.timestamp(),
   }));
 
   relations = {

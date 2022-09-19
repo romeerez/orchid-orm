@@ -6,10 +6,12 @@ import {
   useTestDatabase,
 } from './test-utils/test-utils';
 import { adapter } from './test-utils/test-db';
-import { Model } from './model';
+import { createModel } from './model';
 
 describe('orm', () => {
   useTestDatabase();
+
+  const Model = createModel();
 
   type User = UserModel['columns']['type'];
   class UserModel extends Model {

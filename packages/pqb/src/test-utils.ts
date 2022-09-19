@@ -18,9 +18,15 @@ export const dbClient = new Client(dbOptions);
 
 export const adapter = new Adapter(dbOptions);
 
-export const db = createDb({ adapter });
-
-const dateColumn = columnTypes.timestamp().parse((input) => new Date(input));
+export const db = createDb({
+  adapter,
+  columnTypes: {
+    ...columnTypes,
+    timestamp() {
+      return columnTypes.timestamp().parse((input) => new Date(input));
+    },
+  },
+});
 
 export const User = db('user', (t) => ({
   id: t.serial().primaryKey(),
@@ -37,23 +43,23 @@ export const User = db('user', (t) => ({
     .nullable(),
   age: t.integer().nullable(),
   active: t.boolean().nullable(),
-  createdAt: dateColumn,
-  updatedAt: dateColumn,
+  createdAt: t.timestamp(),
+  updatedAt: t.timestamp(),
 }));
 
 export const Profile = db('profile', (t) => ({
   id: t.serial().primaryKey(),
   userId: t.integer(),
   bio: t.text().nullable(),
-  createdAt: dateColumn,
-  updatedAt: dateColumn,
+  createdAt: t.timestamp(),
+  updatedAt: t.timestamp(),
 }));
 
 export const Chat = db('chat', (t) => ({
   id: t.serial().primaryKey(),
   title: t.text(),
-  createdAt: dateColumn,
-  updatedAt: dateColumn,
+  createdAt: t.timestamp(),
+  updatedAt: t.timestamp(),
 }));
 
 export const Message = db('message', (t) => ({
@@ -61,8 +67,8 @@ export const Message = db('message', (t) => ({
   chatId: t.integer(),
   authorId: t.integer(),
   text: t.text(),
-  createdAt: dateColumn,
-  updatedAt: dateColumn,
+  createdAt: t.timestamp(),
+  updatedAt: t.timestamp(),
 }));
 
 export const line = (s: string) =>

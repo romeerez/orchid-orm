@@ -1,6 +1,7 @@
 import { ColumnType } from './columnType';
 import { Operators } from '../operators';
 import {
+  adapter,
   AssertEqual,
   db,
   expectSql,
@@ -8,6 +9,7 @@ import {
   userData,
   useTestDatabase,
 } from '../test-utils';
+import { createDb } from '../db';
 
 describe('column base', () => {
   useTestDatabase();
@@ -105,6 +107,8 @@ describe('column base', () => {
       });
 
       it('should return column data as returned from db if not set', async () => {
+        const db = createDb({ adapter });
+
         const UserWithPlainTimestamp = db('user', (t) => ({
           createdAt: t.timestamp(),
         }));

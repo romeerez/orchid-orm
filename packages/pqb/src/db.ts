@@ -10,9 +10,11 @@ import { AdapterOptions, Adapter } from './adapter';
 import {
   ColumnsShape,
   columnTypes,
-  ColumnTypes,
   ColumnShapeOutput,
   TableSchema,
+  AnyColumnTypeCreator,
+  ColumnShapeInput,
+  ColumnTypes,
 } from './columnSchema';
 import { applyMixins } from './utils';
 import { StringKey } from './common';
@@ -45,6 +47,7 @@ export interface Db<
   shape: Shape;
   schema: TableSchema<Shape>;
   type: ColumnShapeOutput<Shape>;
+  inputType: ColumnShapeInput<Shape>;
   returnType: 'all';
   then: ThenResult<
     Pick<ColumnShapeOutput<Shape>, DefaultSelectColumns<Shape>[number]>[]
@@ -145,10 +148,10 @@ export class Db<
 applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
 
-type DbResult = Db & {
+type DbResult<CT extends Record<string, AnyColumnTypeCreator>> = Db & {
   <Table extends string, Shape extends ColumnsShape = ColumnsShape>(
     table: Table,
-    shape?: ((t: ColumnTypes) => Shape) | Shape,
+    shape?: ((t: CT) => Shape) | Shape,
     options?: DbTableOptions,
   ): Db<Table, Shape>;
 
@@ -156,10 +159,19 @@ type DbResult = Db & {
   destroy: Adapter['destroy'];
 };
 
-export type DbOptions = ({ adapter: Adapter } | Omit<AdapterOptions, 'log'>) &
-  QueryLogOptions;
+export type DbOptions<
+  CT extends Record<string, AnyColumnTypeCreator> = ColumnTypes,
+> = ({ adapter: Adapter } | Omit<AdapterOptions, 'log'>) &
+  QueryLogOptions & {
+    columnTypes?: CT;
+  };
 
-export const createDb = ({ log, logger, ...options }: DbOptions): DbResult => {
+export const createDb = <CT extends Record<string, AnyColumnTypeCreator>>({
+  log,
+  logger,
+  columnTypes: ct = columnTypes as unknown as CT,
+  ...options
+}: DbOptions<CT>): DbResult<CT> => {
   const adapter = 'adapter' in options ? options.adapter : new Adapter(options);
   const commonOptions = { log, logger };
 
@@ -175,14 +187,14 @@ export const createDb = ({ log, logger, ...options }: DbOptions): DbResult => {
   const db = Object.assign(
     <Table extends string, Shape extends ColumnsShape = ColumnsShape>(
       table: Table,
-      shape?: ((t: ColumnTypes) => Shape) | Shape,
+      shape?: ((t: CT) => Shape) | Shape,
       options?: DbTableOptions,
     ): Db<Table, Shape> => {
       return new Db<Table, Shape>(
         adapter,
         qb,
         table as Table,
-        typeof shape === 'function' ? shape(columnTypes) : shape,
+        typeof shape === 'function' ? shape(ct) : shape,
         { ...commonOptions, ...options },
       );
     },
@@ -196,5 +208,5 @@ export const createDb = ({ log, logger, ...options }: DbOptions): DbResult => {
       Db.prototype[name as keyof typeof Db.prototype];
   });
 
-  return db;
+  return db as DbResult<CT>;
 };

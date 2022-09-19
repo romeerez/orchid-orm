@@ -19,6 +19,9 @@ const db = createDb({
   // in the format: postgres://user:password@localhost:5432/dbname
   connectionString: process.env.DATABASE_URL,
   log: true, // option for logging, false by default
+  
+  // option to override column types, details are below
+  // columnTypes: { ... }
 })
 ```
 
@@ -32,6 +35,8 @@ const db = createDb(
   { log: true }, // second argument is for pqb specific options
 )
 ```
+
+### log option
 
 `log` option is false by default, `true` or custom object can be provided:
 
@@ -68,6 +73,34 @@ const db = createDb({
     },
   }
 })
+```
+
+### columnTypes option
+
+It is possible to override parsing of columns returned from the database.
+
+For example, by default timestamps are returned as strings, and here is how to override it to be parsed into `Date` objects:
+
+```ts
+import { createDb, columnTypes } from 'pqb'
+
+const db = createDb({
+  connectionString: process.env.DATABASE_URL,
+  columnTypes: {
+    ...columnTypes,
+    timestamp() {
+      return columnTypes.timestamp().parse((input) => new Date(input))
+    },
+  }
+})
+
+const someTable = db('someTable', (t) => ({
+  createdAt: t.timestamp(),
+}))
+
+const record = await someTable.take()
+// createdAt is parsed and it has a proper TS type:
+const isDate: Date = record.createdAt
 ```
 
 ## db table interface

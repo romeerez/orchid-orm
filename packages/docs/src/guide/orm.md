@@ -43,11 +43,40 @@ await db.destroy()
 
 ## model
 
+First need to create a base `Model` class to extend from, this code should be in a separate from `db` file:
+
+```ts
+import { createModel } from 'porm'
+
+export const Model = createModel()
+```
+
+This step is needed for case of customization of column types.
+
+For example, by default timestamps are returned as strings, and if you want to parse them to `Date` objects for every model, here is the solution:
+
+```ts
+import { createModel } from 'porm'
+import { columnTypes } from 'pqb';
+
+export const Model = createModel({
+  columnTypes: {
+    ...columnTypes,
+    timestamp() {
+      return columnTypes.timestamp().parse((input) => new Date(input))
+    },
+  },
+})
+```
+
 Models are defined as classes with two required properties:
 
 `table` is a table name and `columns` is for defining table column types (see [Columns schema](/guide/columns-schema) document for details).
 
 ```ts
+// import Model from a file from previous step:
+import { Model } from './model'
+
 // export type of User object:
 export type User = UserModel['columns']['type']
 export class UserModel extends Model {

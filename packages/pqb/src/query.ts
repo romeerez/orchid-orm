@@ -54,6 +54,7 @@ export type Query = QueryMethods & {
     primaryTypes: any[];
   };
   type: Record<string, unknown>;
+  inputType: Record<string, unknown>;
   query: QueryData;
   result: ColumnsShape;
   hasSelect: boolean;

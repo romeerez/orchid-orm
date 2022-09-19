@@ -1,4 +1,5 @@
 import {
+  AnyColumnTypeCreator,
   ColumnShapeOutput,
   ColumnsShape,
   columnTypes,
@@ -43,117 +44,132 @@ type ScopeFn<Related extends Model, Scope extends Query> = (
   q: Db<Related['table'], Related['columns']['shape']>,
 ) => Scope;
 
-export abstract class Model {
-  abstract table: string;
-  abstract columns: ModelConfig;
-
+export type Model = {
+  table: string;
+  columns: ModelConfig;
   schema?: string;
+};
 
-  setColumns<T extends ColumnsShape>(
-    fn: (t: ColumnTypes) => T,
-  ): { shape: T; type: ColumnShapeOutput<T> } {
-    const shape = fn(columnTypes);
+export const createModel = <CT extends Record<string, AnyColumnTypeCreator>>(
+  options: {
+    columnTypes?: CT;
+  } = { columnTypes: columnTypes as unknown as CT },
+) => {
+  return class Model {
+    table!: string;
+    columns!: ModelConfig;
+    schema?: string;
 
-    return {
-      shape,
-      type: undefined as unknown as ColumnShapeOutput<T>,
-    };
-  }
+    setColumns<T extends ColumnsShape>(
+      fn: (t: CT extends undefined ? ColumnTypes : CT) => T,
+    ): { shape: T; type: ColumnShapeOutput<T> } {
+      const shape = fn(
+        (options?.columnTypes || columnTypes) as unknown as CT extends undefined
+          ? ColumnTypes
+          : CT,
+      );
 
-  belongsTo<
-    Self extends this,
-    Related extends Model,
-    Scope extends Query,
-    Options extends {
-      primaryKey: keyof Related['columns']['shape'];
-      foreignKey: keyof Self['columns']['shape'];
-      scope?: ScopeFn<Related, Scope>;
-      required?: boolean;
-    },
-  >(this: Self, fn: () => ModelClass<Related>, options: Options) {
-    return {
-      type: 'belongsTo' as const,
-      returns: 'one' as const,
-      fn,
-      options,
-    };
-  }
+      return {
+        shape,
+        type: undefined as unknown as ColumnShapeOutput<T>,
+      };
+    }
 
-  hasOne<
-    Self extends this,
-    Related extends Model,
-    Scope extends Query,
-    Through extends string,
-    Source extends string,
-    Options extends (
-      | {
-          primaryKey: keyof Self['columns']['shape'];
-          foreignKey: keyof Related['columns']['shape'];
-        }
-      | {
-          through: Through;
-          source: Source;
-        }
-    ) & {
-      scope?: ScopeFn<Related, Scope>;
-      required?: boolean;
-    },
-  >(this: Self, fn: () => ModelClass<Related>, options: Options) {
-    return {
-      type: 'hasOne' as const,
-      returns: 'one' as const,
-      fn,
-      options,
-    };
-  }
+    belongsTo<
+      Self extends this,
+      Related extends Model,
+      Scope extends Query,
+      Options extends {
+        primaryKey: keyof Related['columns']['shape'];
+        foreignKey: keyof Self['columns']['shape'];
+        scope?: ScopeFn<Related, Scope>;
+        required?: boolean;
+      },
+    >(this: Self, fn: () => ModelClass<Related>, options: Options) {
+      return {
+        type: 'belongsTo' as const,
+        returns: 'one' as const,
+        fn,
+        options,
+      };
+    }
 
-  hasMany<
-    Self extends this,
-    Related extends Model,
-    Scope extends Query,
-    Through extends string,
-    Source extends string,
-    Options extends (
-      | {
-          primaryKey: keyof Self['columns']['shape'];
-          foreignKey: keyof Related['columns']['shape'];
-        }
-      | {
-          through: Through;
-          source: Source;
-        }
-    ) & {
-      scope?: ScopeFn<Related, Scope>;
-      required?: boolean;
-    },
-  >(this: Self, fn: () => ModelClass<Related>, options: Options) {
-    return {
-      type: 'hasMany' as const,
-      returns: 'many' as const,
-      fn,
-      options,
-    };
-  }
+    hasOne<
+      Self extends this,
+      Related extends Model,
+      Scope extends Query,
+      Through extends string,
+      Source extends string,
+      Options extends (
+        | {
+            primaryKey: keyof Self['columns']['shape'];
+            foreignKey: keyof Related['columns']['shape'];
+          }
+        | {
+            through: Through;
+            source: Source;
+          }
+      ) & {
+        scope?: ScopeFn<Related, Scope>;
+        required?: boolean;
+      },
+    >(this: Self, fn: () => ModelClass<Related>, options: Options) {
+      return {
+        type: 'hasOne' as const,
+        returns: 'one' as const,
+        fn,
+        options,
+      };
+    }
 
-  hasAndBelongsToMany<
-    Self extends this,
-    Related extends Model,
-    Scope extends Query,
-    Options extends {
-      primaryKey: keyof Self['columns']['shape'];
-      associationPrimaryKey: keyof Related['columns']['shape'];
-      foreignKey: string;
-      associationForeignKey: string;
-      joinTable: string;
-      scope?: ScopeFn<Related, Scope>;
-      required?: boolean;
-    },
-  >(this: Self, fn: () => ModelClass<Related>, options: Options) {
-    return {
-      type: 'hasAndBelongsToMany' as const,
-      returns: 'many' as const,
-      fn,
-      options,
-    };
-  }
-}
+    hasMany<
+      Self extends this,
+      Related extends Model,
+      Scope extends Query,
+      Through extends string,
+      Source extends string,
+      Options extends (
+        | {
+            primaryKey: keyof Self['columns']['shape'];
+            foreignKey: keyof Related['columns']['shape'];
+          }
+        | {
+            through: Through;
+            source: Source;
+          }
+      ) & {
+        scope?: ScopeFn<Related, Scope>;
+        required?: boolean;
+      },
+    >(this: Self, fn: () => ModelClass<Related>, options: Options) {
+      return {
+        type: 'hasMany' as const,
+        returns: 'many' as const,
+        fn,
+        options,
+      };
+    }
+
+    hasAndBelongsToMany<
+      Self extends this,
+      Related extends Model,
+      Scope extends Query,
+      Options extends {
+        primaryKey: keyof Self['columns']['shape'];
+        associationPrimaryKey: keyof Related['columns']['shape'];
+        foreignKey: string;
+        associationForeignKey: string;
+        joinTable: string;
+        scope?: ScopeFn<Related, Scope>;
+        required?: boolean;
+      },
+    >(this: Self, fn: () => ModelClass<Related>, options: Options) {
+      return {
+        type: 'hasAndBelongsToMany' as const,
+        returns: 'many' as const,
+        fn,
+        options,
+      };
+    }
+  };
+};

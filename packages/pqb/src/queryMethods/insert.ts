@@ -34,7 +34,7 @@ export type InsertData<
   DefaultKeys extends string = T[defaultsKey] extends string
     ? T[defaultsKey]
     : never,
-  Data = SetOptional<SetOptional<T['type'], OptionalKeys<T>>, DefaultKeys>,
+  Data = SetOptional<SetOptional<T['inputType'], OptionalKeys<T>>, DefaultKeys>,
 > = [keyof T['relations']] extends [never]
   ? Data
   : Omit<
@@ -50,8 +50,8 @@ export type InsertData<
           ?
               | SetOptional<
                   {
-                    [K in T['relations'][Key]['options']['foreignKey']]: T['relations'][Key]['options']['foreignKey'] extends keyof T['type']
-                      ? T['type'][T['relations'][Key]['options']['foreignKey']]
+                    [K in T['relations'][Key]['options']['foreignKey']]: T['relations'][Key]['options']['foreignKey'] extends keyof T['inputType']
+                      ? T['inputType'][T['relations'][Key]['options']['foreignKey']]
                       : never;
                   },
                   DefaultKeys
@@ -440,7 +440,7 @@ export class OnConflictQueryBuilder<
     update?:
       | keyof T['shape']
       | (keyof T['shape'])[]
-      | Partial<T['type']>
+      | Partial<T['inputType']>
       | RawExpression,
   ): T {
     (this.query.query as InsertQueryData).onConflict = {
