@@ -741,6 +741,20 @@ await db.post.where({ id: { in: [1, 2, 3] } }).update({
 })
 ```
 
+For `belongsTo` when updating multiple records, `create` option will connect new record with all updating records:
+
+```ts
+await db.book.where({ id: { in: [1, 2, 3] } }).update({
+  title: 'update book title',
+  author: {
+    // all books will be connected with this author:
+    create: {
+      name: 'new author',
+    },
+  },
+})
+```
+
 ## connect related records
 
 Connect records when creating:

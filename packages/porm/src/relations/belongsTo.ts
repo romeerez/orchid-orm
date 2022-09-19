@@ -114,6 +114,10 @@ export const makeBelongsToMethod = (
       );
     }) as BelongsToNestedInsert,
     nestedUpdate: ((q, update, params, state) => {
+      if (params.upsert && !q.query.take) {
+        throw new Error('`upsert` option is not allowed in a batch update');
+      }
+
       let idForDelete: unknown;
 
       q._beforeUpdate(async (q) => {
@@ -143,17 +147,19 @@ export const makeBelongsToMethod = (
       });
 
       const { upsert } = params;
-      if (upsert) {
-        if (!state.updateLater) {
-          state.updateLater = {};
-          state.updateLaterPromises = [];
-        }
-
+      if (upsert || params.update || params.delete) {
         if (
           !q.query.select?.includes('*') &&
           !q.query.select?.includes(foreignKey)
         ) {
           q._select(foreignKey);
+        }
+      }
+
+      if (upsert) {
+        if (!state.updateLater) {
+          state.updateLater = {};
+          state.updateLaterPromises = [];
         }
 
         const { handleResult } = q.query;

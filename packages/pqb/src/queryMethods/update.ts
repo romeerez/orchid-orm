@@ -22,21 +22,18 @@ export type UpdateData<T extends Query> = {
             | { set: WhereArg<T['relations'][K]['model']> }
             | { delete: boolean }
             | { update: UpdateData<T['relations'][K]['model']> }
+            | {
+                create: InsertData<T['relations'][K]['nestedCreateQuery']>;
+              }
             | (T['returnType'] extends 'one' | 'oneOrThrow'
-                ?
-                    | {
-                        create: InsertData<
-                          T['relations'][K]['nestedCreateQuery']
-                        >;
-                      }
-                    | {
-                        upsert: {
-                          update: UpdateData<T['relations'][K]['model']>;
-                          create: InsertData<
-                            T['relations'][K]['nestedCreateQuery']
-                          >;
-                        };
-                      }
+                ? {
+                    upsert: {
+                      update: UpdateData<T['relations'][K]['model']>;
+                      create: InsertData<
+                        T['relations'][K]['nestedCreateQuery']
+                      >;
+                    };
+                  }
                 : never)
         : T['relations'][K]['type'] extends 'hasOne'
         ?

@@ -218,265 +218,275 @@ describe('belongsTo', () => {
       });
     };
 
-    it('should support create', async () => {
-      const query = db.message.select('id', 'chatId', 'authorId').insert({
-        ...messageData,
-        text: 'message',
-        chat: {
-          create: {
-            ...chatData,
-            title: 'chat',
-          },
-        },
-        user: {
-          create: {
-            ...userData,
-            name: 'user',
-          },
-        },
-      });
-
-      const { id: messageId, chatId, authorId } = await query;
-
-      await checkInsertedResults({
-        messageId,
-        chatId,
-        authorId,
-        text: 'message',
-        title: 'chat',
-        name: 'user',
-      });
-    });
-
-    it('should support create many', async () => {
-      const query = db.message.select('id', 'chatId', 'authorId').insert([
-        {
+    describe('nested create', () => {
+      it('should support create', async () => {
+        const query = db.message.select('id', 'chatId', 'authorId').insert({
           ...messageData,
-          text: 'message 1',
+          text: 'message',
           chat: {
             create: {
               ...chatData,
-              title: 'chat 1',
+              title: 'chat',
             },
           },
           user: {
             create: {
               ...userData,
-              name: 'user 1',
+              name: 'user',
             },
           },
-        },
-        {
-          ...messageData,
-          text: 'message 2',
-          chat: {
-            create: {
-              ...chatData,
-              title: 'chat 2',
+        });
+
+        const { id: messageId, chatId, authorId } = await query;
+
+        await checkInsertedResults({
+          messageId,
+          chatId,
+          authorId,
+          text: 'message',
+          title: 'chat',
+          name: 'user',
+        });
+      });
+
+      it('should support create in batch insert', async () => {
+        const query = db.message.select('id', 'chatId', 'authorId').insert([
+          {
+            ...messageData,
+            text: 'message 1',
+            chat: {
+              create: {
+                ...chatData,
+                title: 'chat 1',
+              },
+            },
+            user: {
+              create: {
+                ...userData,
+                name: 'user 1',
+              },
             },
           },
-          user: {
-            create: {
-              ...userData,
-              name: 'user 2',
+          {
+            ...messageData,
+            text: 'message 2',
+            chat: {
+              create: {
+                ...chatData,
+                title: 'chat 2',
+              },
+            },
+            user: {
+              create: {
+                ...userData,
+                name: 'user 2',
+              },
             },
           },
-        },
-      ]);
+        ]);
 
-      const [first, second] = await query;
+        const [first, second] = await query;
 
-      await checkInsertedResults({
-        messageId: first.id,
-        chatId: first.chatId,
-        authorId: first.authorId,
-        text: 'message 1',
-        title: 'chat 1',
-        name: 'user 1',
-      });
-
-      await checkInsertedResults({
-        messageId: second.id,
-        chatId: second.chatId,
-        authorId: second.authorId,
-        text: 'message 2',
-        title: 'chat 2',
-        name: 'user 2',
-      });
-    });
-
-    it('should support connect', async () => {
-      await db.chat.insert({ ...chatData, title: 'chat' });
-      await db.user.insert({ ...userData, name: 'user' });
-
-      const query = db.message.select('id', 'chatId', 'authorId').insert({
-        ...messageData,
-        text: 'message',
-        chat: {
-          connect: { title: 'chat' },
-        },
-        user: {
-          connect: { name: 'user' },
-        },
-      });
-
-      const { id: messageId, chatId, authorId } = await query;
-
-      await checkInsertedResults({
-        messageId,
-        chatId,
-        authorId,
-        text: 'message',
-        title: 'chat',
-        name: 'user',
-      });
-    });
-
-    it('should support connect many', async () => {
-      await db.chat.insert([
-        { ...chatData, title: 'chat 1' },
-        { ...chatData, title: 'chat 2' },
-      ]);
-      await db.user.insert([
-        { ...userData, name: 'user 1' },
-        { ...userData, name: 'user 2' },
-      ]);
-
-      const query = db.message.select('id', 'chatId', 'authorId').insert([
-        {
-          ...messageData,
+        await checkInsertedResults({
+          messageId: first.id,
+          chatId: first.chatId,
+          authorId: first.authorId,
           text: 'message 1',
-          chat: {
-            connect: { title: 'chat 1' },
-          },
-          user: {
-            connect: { name: 'user 1' },
-          },
-        },
-        {
-          ...messageData,
+          title: 'chat 1',
+          name: 'user 1',
+        });
+
+        await checkInsertedResults({
+          messageId: second.id,
+          chatId: second.chatId,
+          authorId: second.authorId,
           text: 'message 2',
+          title: 'chat 2',
+          name: 'user 2',
+        });
+      });
+    });
+
+    describe('connect', () => {
+      it('should support connect', async () => {
+        await db.chat.insert({ ...chatData, title: 'chat' });
+        await db.user.insert({ ...userData, name: 'user' });
+
+        const query = db.message.select('id', 'chatId', 'authorId').insert({
+          ...messageData,
+          text: 'message',
           chat: {
-            connect: { title: 'chat 2' },
+            connect: { title: 'chat' },
           },
           user: {
-            connect: { name: 'user 2' },
+            connect: { name: 'user' },
           },
-        },
-      ]);
+        });
 
-      const [first, second] = await query;
+        const { id: messageId, chatId, authorId } = await query;
 
-      await checkInsertedResults({
-        messageId: first.id,
-        chatId: first.chatId,
-        authorId: first.authorId,
-        text: 'message 1',
-        title: 'chat 1',
-        name: 'user 1',
+        await checkInsertedResults({
+          messageId,
+          chatId,
+          authorId,
+          text: 'message',
+          title: 'chat',
+          name: 'user',
+        });
       });
 
-      await checkInsertedResults({
-        messageId: second.id,
-        chatId: second.chatId,
-        authorId: second.authorId,
-        text: 'message 2',
-        title: 'chat 2',
-        name: 'user 2',
-      });
-    });
+      it('should support connect in batch insert', async () => {
+        await db.chat.insert([
+          { ...chatData, title: 'chat 1' },
+          { ...chatData, title: 'chat 2' },
+        ]);
+        await db.user.insert([
+          { ...userData, name: 'user 1' },
+          { ...userData, name: 'user 2' },
+        ]);
 
-    it('should support connect or create', async () => {
-      const chat = await db.chat.select('id').insert({
-        ...chatData,
-        title: 'chat',
-      });
+        const query = db.message.select('id', 'chatId', 'authorId').insert([
+          {
+            ...messageData,
+            text: 'message 1',
+            chat: {
+              connect: { title: 'chat 1' },
+            },
+            user: {
+              connect: { name: 'user 1' },
+            },
+          },
+          {
+            ...messageData,
+            text: 'message 2',
+            chat: {
+              connect: { title: 'chat 2' },
+            },
+            user: {
+              connect: { name: 'user 2' },
+            },
+          },
+        ]);
 
-      const query = await db.message.select('id', 'chatId', 'authorId').insert({
-        ...messageData,
-        text: 'message',
-        chat: {
-          connect: { title: 'chat' },
-          create: { ...chatData, title: 'chat' },
-        },
-        user: {
-          connect: { name: 'user' },
-          create: { ...userData, name: 'user' },
-        },
-      });
+        const [first, second] = await query;
 
-      const { id: messageId, chatId, authorId } = await query;
-
-      expect(chatId).toBe(chat.id);
-
-      await checkInsertedResults({
-        messageId,
-        chatId,
-        authorId,
-        text: 'message',
-        title: 'chat',
-        name: 'user',
-      });
-    });
-
-    it('should support connect or create many', async () => {
-      const chat = await db.chat.select('id').insert({
-        ...chatData,
-        title: 'chat 1',
-      });
-      const user = await db.user.select('id').insert({
-        ...userData,
-        name: 'user 2',
-      });
-
-      const query = await db.message.select('id', 'chatId', 'authorId').insert([
-        {
-          ...messageData,
+        await checkInsertedResults({
+          messageId: first.id,
+          chatId: first.chatId,
+          authorId: first.authorId,
           text: 'message 1',
-          chat: {
-            connect: { title: 'chat 1' },
-            create: { ...chatData, title: 'chat 1' },
-          },
-          user: {
-            connect: { name: 'user 1' },
-            create: { ...userData, name: 'user 1' },
-          },
-        },
-        {
-          ...messageData,
+          title: 'chat 1',
+          name: 'user 1',
+        });
+
+        await checkInsertedResults({
+          messageId: second.id,
+          chatId: second.chatId,
+          authorId: second.authorId,
           text: 'message 2',
-          chat: {
-            connect: { title: 'chat 2' },
-            create: { ...chatData, title: 'chat 2' },
-          },
-          user: {
-            connect: { name: 'user 2' },
-            create: { ...userData, name: 'user 2' },
-          },
-        },
-      ]);
+          title: 'chat 2',
+          name: 'user 2',
+        });
+      });
+    });
 
-      const [first, second] = await query;
+    describe('connect or create', () => {
+      it('should support connect or create', async () => {
+        const chat = await db.chat.select('id').insert({
+          ...chatData,
+          title: 'chat',
+        });
 
-      expect(first.chatId).toBe(chat.id);
-      expect(second.authorId).toBe(user.id);
+        const query = await db.message
+          .select('id', 'chatId', 'authorId')
+          .insert({
+            ...messageData,
+            text: 'message',
+            chat: {
+              connect: { title: 'chat' },
+              create: { ...chatData, title: 'chat' },
+            },
+            user: {
+              connect: { name: 'user' },
+              create: { ...userData, name: 'user' },
+            },
+          });
 
-      await checkInsertedResults({
-        messageId: first.id,
-        chatId: first.chatId,
-        authorId: first.authorId,
-        text: 'message 1',
-        title: 'chat 1',
-        name: 'user 1',
+        const { id: messageId, chatId, authorId } = await query;
+
+        expect(chatId).toBe(chat.id);
+
+        await checkInsertedResults({
+          messageId,
+          chatId,
+          authorId,
+          text: 'message',
+          title: 'chat',
+          name: 'user',
+        });
       });
 
-      await checkInsertedResults({
-        messageId: second.id,
-        chatId: second.chatId,
-        authorId: second.authorId,
-        text: 'message 2',
-        title: 'chat 2',
-        name: 'user 2',
+      it('should support connect or create in batch insert', async () => {
+        const chat = await db.chat.select('id').insert({
+          ...chatData,
+          title: 'chat 1',
+        });
+        const user = await db.user.select('id').insert({
+          ...userData,
+          name: 'user 2',
+        });
+
+        const query = await db.message
+          .select('id', 'chatId', 'authorId')
+          .insert([
+            {
+              ...messageData,
+              text: 'message 1',
+              chat: {
+                connect: { title: 'chat 1' },
+                create: { ...chatData, title: 'chat 1' },
+              },
+              user: {
+                connect: { name: 'user 1' },
+                create: { ...userData, name: 'user 1' },
+              },
+            },
+            {
+              ...messageData,
+              text: 'message 2',
+              chat: {
+                connect: { title: 'chat 2' },
+                create: { ...chatData, title: 'chat 2' },
+              },
+              user: {
+                connect: { name: 'user 2' },
+                create: { ...userData, name: 'user 2' },
+              },
+            },
+          ]);
+
+        const [first, second] = await query;
+
+        expect(first.chatId).toBe(chat.id);
+        expect(second.authorId).toBe(user.id);
+
+        await checkInsertedResults({
+          messageId: first.id,
+          chatId: first.chatId,
+          authorId: first.authorId,
+          text: 'message 1',
+          title: 'chat 1',
+          name: 'user 1',
+        });
+
+        await checkInsertedResults({
+          messageId: second.id,
+          chatId: second.chatId,
+          authorId: second.authorId,
+          text: 'message 2',
+          title: 'chat 2',
+          name: 'user 2',
+        });
       });
     });
   });
@@ -497,6 +507,23 @@ describe('belongsTo', () => {
           });
 
         expect(profile.userId).toBe(null);
+      });
+
+      it('should nullify foreignKey in batch update', async () => {
+        const ids = await db.profile.pluck('id').insert([
+          { ...profileData, user: { create: userData } },
+          { ...profileData, user: { create: userData } },
+        ]);
+
+        const userIds = await db.profile
+          .pluck('userId')
+          .where({ id: { in: ids } })
+          .update({
+            bio: 'string',
+            user: { disconnect: true },
+          });
+
+        expect(userIds).toEqual([null, null]);
       });
     });
 
@@ -535,6 +562,45 @@ describe('belongsTo', () => {
 
         expect(profile.userId).toBe(user.id);
       });
+
+      it('should set foreignKey of current record with provided primaryKey in batch update', async () => {
+        const profileIds = await db.profile
+          .pluck('id')
+          .insert([profileData, profileData]);
+        const user = await db.user.select('id').insert(userData);
+
+        const updatedUserIds = await db.profile
+          .pluck('userId')
+          .where({ id: { in: profileIds } })
+          .update({
+            user: {
+              set: user,
+            },
+          });
+
+        expect(updatedUserIds).toEqual([user.id, user.id]);
+      });
+
+      it('should set foreignKey of current record from found related record in batch update', async () => {
+        const profileIds = await db.profile
+          .pluck('id')
+          .insert([profileData, profileData]);
+        const user = await db.user.select('id').insert({
+          ...userData,
+          name: 'user',
+        });
+
+        const updatedUserIds = await db.profile
+          .pluck('userId')
+          .where({ id: { in: profileIds } })
+          .update({
+            user: {
+              set: { name: 'user' },
+            },
+          });
+
+        expect(updatedUserIds).toEqual([user.id, user.id]);
+      });
     });
 
     describe('delete', () => {
@@ -557,6 +623,28 @@ describe('belongsTo', () => {
         const user = await db.user.findByOptional({ id: userId });
         expect(user).toBe(undefined);
       });
+
+      it('should nullify foreignKey and delete related record in batch update', async () => {
+        const user = await db.user.selectAll().insert(userData);
+        const profileIds = await db.profile.pluck('id').insert([
+          { ...profileData, userId: user.id },
+          { ...profileData, userId: user.id },
+        ]);
+
+        const updatedUserIds = await db.profile
+          .pluck('userId')
+          .where({ id: { in: profileIds } })
+          .update({
+            user: {
+              delete: true,
+            },
+          });
+
+        expect(updatedUserIds).toEqual([null, null]);
+
+        const deletedUser = await db.user.findOptional(user.id);
+        expect(deletedUser).toBe(undefined);
+      });
     });
 
     describe('nested update', () => {
@@ -578,6 +666,28 @@ describe('belongsTo', () => {
 
         const user = await db.user.findBy({ id: userId });
         expect(user.name).toBe('new name');
+      });
+
+      it('should update related records in batch update', async () => {
+        const profiles = await db.profile.select('id', 'userId').insert([
+          { ...profileData, user: { create: userData } },
+          { ...profileData, user: { create: userData } },
+        ]);
+
+        await db.profile
+          .where({ id: { in: profiles.map((profile) => profile.id) } })
+          .update({
+            user: {
+              update: {
+                name: 'new name',
+              },
+            },
+          });
+
+        const updatedNames = await db.user.pluck('name').where({
+          id: { in: profiles.map((profile) => profile.userId as number) },
+        });
+        expect(updatedNames).toEqual(['new name', 'new name']);
       });
     });
 
@@ -628,6 +738,25 @@ describe('belongsTo', () => {
         const user = await db.profile.user(updated);
         expect(user.name).toBe('created');
       });
+
+      it('should throw in batch update', () => {
+        expect(() =>
+          db.profile.where({ id: 1 }).update({
+            user: {
+              // @ts-expect-error not allows in batch update
+              upsert: {
+                update: {
+                  name: 'updated',
+                },
+                create: {
+                  ...userData,
+                  name: 'created',
+                },
+              },
+            },
+          }),
+        ).toThrow();
+      });
     });
 
     describe('nested create', () => {
@@ -646,6 +775,26 @@ describe('belongsTo', () => {
           });
 
         const user = await db.profile.user(updated);
+        expect(user.name).toBe('created');
+      });
+
+      it('should create new related record and update foreignKey in batch update', async () => {
+        const profileIds = await db.profile
+          .pluck('id')
+          .insert([profileData, profileData]);
+
+        const updatedUserIds = await db.profile
+          .pluck('userId')
+          .where({ id: { in: profileIds } })
+          .update({
+            user: {
+              create: { ...userData, name: 'created' },
+            },
+          });
+
+        expect(updatedUserIds[0]).toBe(updatedUserIds[1]);
+
+        const user = await db.user.find(updatedUserIds[0] as number);
         expect(user.name).toBe('created');
       });
     });
