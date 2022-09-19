@@ -700,7 +700,7 @@ const books = await db.book.create([
 ])
 ```
 
-### create related records from update
+## create related records from update
 
 Create related records when updating:
 
@@ -1022,12 +1022,14 @@ Supported when updating multiple records as well.
 await db.book.find(1).update({
   author: {
     upsert: {
-      name: 'new name',
+      update: {
+        name: 'new name',
+      },
+      create: {
+        name: 'new name',
+        email: 'some@email.com'
+      }
     },
-    create: {
-      name: 'new name',
-      email: 'some@email.com'
-    }
   }
 })
 ```
