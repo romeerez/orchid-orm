@@ -1,0 +1,8 @@
+node_modules/
+.idea
+.vscode
+.codesandbox
+.github
+.rush
+.env
+.env.example

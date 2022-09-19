@@ -1,12 +1,24 @@
 {
   "name": "pqb",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Postgres query builder",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/romeerez/porm"
+  },
   "main": "dist/index.js",
+  "module": "dist/index.esm.js",
   "typings": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.esm.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "test": "jest",
-    "build": "rimraf ./dist/ && tsc --project tsconfig.build.json"
+    "build": "rimraf ./dist/ && rollup -c --rollup.config"
   },
   "jest": {
     "setupFiles": [
@@ -20,13 +32,17 @@
       "^.+\\.ts$": "@swc/jest"
     }
   },
-  "keywords": ["postgres", "query-builder"],
+  "keywords": [
+    "postgres",
+    "query-builder"
+  ],
   "author": "Roman Kushyn",
   "license": "ISC",
-  "dependencies": {
-    "zod": "> 3.1"
-  },
+  "dependencies": {},
   "devDependencies": {
+    "rollup": "^2.79.0",
+    "rollup-plugin-dts": "^4.2.2",
+    "rollup-plugin-esbuild": "^4.10.1",
     "@swc/core": "^1.2.210",
     "@swc/jest": "^0.2.21",
     "@types/jest": "^28.1.2",

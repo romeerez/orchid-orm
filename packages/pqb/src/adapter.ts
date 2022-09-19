@@ -111,7 +111,7 @@ const performQuery = <T extends QueryResultRow>(
     text: typeof query === 'string' ? query : query.text,
     values: typeof query === 'string' ? undefined : query.values,
     types: types && {
-      getTypeParser(id) {
+      getTypeParser(id: number) {
         return types[id] || returnArg;
       },
     },
@@ -129,7 +129,7 @@ const performQueryArrays = <T extends any[] = any[]>(
     values: typeof query === 'string' ? undefined : query.values,
     rowMode: 'array',
     types: types && {
-      getTypeParser(id) {
+      getTypeParser(id: number) {
         return types[id] || returnArg;
       },
     },

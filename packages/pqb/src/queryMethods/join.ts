@@ -467,11 +467,11 @@ export class OnQueryBuilder<
     S extends QueryBase = QueryBase,
     J extends PickQueryForSelect = PickQueryForSelect,
   >
-  extends WhereQueryBuilder<S>
+  extends WhereQueryBuilder<
+    Omit<S, 'selectable'> & { selectable: S['selectable'] & J['selectable'] }
+  >
   implements QueryBase
 {
-  selectable!: S['selectable'] & J['selectable'];
-
   constructor(
     q: { table?: string; query: { as?: string } },
     public joinTo: QueryBase | string,
