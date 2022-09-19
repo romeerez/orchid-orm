@@ -18,7 +18,7 @@ export const dbClient = new Client(dbOptions);
 
 export const adapter = new Adapter(dbOptions);
 
-export const db = createDb(adapter);
+export const db = createDb({ adapter });
 
 const dateColumn = columnTypes.timestamp().parse((input) => new Date(input));
 

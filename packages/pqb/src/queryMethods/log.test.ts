@@ -45,7 +45,7 @@ describe('query log', () => {
       error: jest.fn(),
     };
 
-    const db = createDb(adapter, { log: true, logger });
+    const db = createDb({ adapter, log: true, logger });
 
     await db('user').where({ name: 'name' });
 
@@ -68,7 +68,7 @@ describe('query log', () => {
       error: jest.fn(),
     };
 
-    const db = createDb(adapter, { log: { colors: false }, logger });
+    const db = createDb({ adapter, log: { colors: false }, logger });
 
     await db('user').where({ name: 'name' });
 
@@ -87,7 +87,7 @@ describe('query log', () => {
       error: jest.fn(),
     };
 
-    const db = createDb(adapter, { log: true, logger });
+    const db = createDb({ adapter, log: true, logger });
 
     await db('user').where({ wrongColumn: 'value' }).then(noop, noop);
 
@@ -112,7 +112,7 @@ describe('query log', () => {
       error: jest.fn(),
     };
 
-    const db = createDb(adapter, { log: { colors: false }, logger });
+    const db = createDb({ adapter, log: { colors: false }, logger });
 
     await db('user').where({ wrongColumn: 'value' }).then(noop, noop);
 
@@ -133,7 +133,7 @@ describe('query log', () => {
       error: jest.fn(),
     };
 
-    const db = createDb(adapter, { log: { colors: false }, logger });
+    const db = createDb({ adapter, log: { colors: false }, logger });
 
     await db.transaction(async (q) => {
       await db('user').transacting(q).insert(userData);
@@ -156,7 +156,7 @@ describe('query log', () => {
       error: jest.fn(),
     };
 
-    const db = createDb(adapter, { log: { colors: false }, logger });
+    const db = createDb({ adapter, log: { colors: false }, logger });
 
     await expect(
       db.transaction(async (q) => {

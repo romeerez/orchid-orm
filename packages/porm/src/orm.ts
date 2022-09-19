@@ -14,7 +14,7 @@ export const porm = <T extends ModelClasses>(
   { log, logger, ...options }: DbOptions,
   models: T,
 ): PORM<T> => {
-  const adapter = new Adapter(options);
+  const adapter = 'adapter' in options ? options.adapter : new Adapter(options);
   const commonOptions = { log, logger };
   const qb = new Db(
     adapter,

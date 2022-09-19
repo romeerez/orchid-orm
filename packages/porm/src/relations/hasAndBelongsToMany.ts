@@ -56,12 +56,15 @@ export const makeHasAndBelongsToManyMethod = (
   const associationForeignKeyFull = `${joinTable}.${afk}`;
   const associationPrimaryKeyFull = `${getQueryAs(query)}.${apk}`;
 
-  const subQuery = qb.clone();
-  subQuery.table = joinTable;
-  subQuery.shape = {
+  const __model = Object.create(qb.__model);
+  __model.__model = __model;
+  __model.table = joinTable;
+  __model.shape = {
     [fk]: model.shape[pk],
     [afk]: query.shape[apk],
   };
+  const subQuery = Object.create(__model);
+  subQuery.query = { ...subQuery.query };
 
   const state: State = {
     relatedTableQuery: query,

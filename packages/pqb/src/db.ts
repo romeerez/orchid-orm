@@ -156,22 +156,12 @@ type DbResult = Db & {
   destroy: Adapter['destroy'];
 };
 
-export type DbOptions = Omit<AdapterOptions, keyof QueryLogOptions> &
+export type DbOptions = ({ adapter: Adapter } | Omit<AdapterOptions, 'log'>) &
   QueryLogOptions;
 
-export const createDb = (
-  ...args: [adapter: Adapter, options?: QueryLogOptions] | [DbOptions]
-): DbResult => {
-  let adapter: Adapter;
-  let commonOptions: QueryLogOptions;
-  if (args[0] instanceof Adapter) {
-    adapter = args[0];
-    commonOptions = args[1] || {};
-  } else {
-    const { log, logger, ...options } = args[0];
-    adapter = new Adapter(options);
-    commonOptions = { log, logger };
-  }
+export const createDb = ({ log, logger, ...options }: DbOptions): DbResult => {
+  const adapter = 'adapter' in options ? options.adapter : new Adapter(options);
+  const commonOptions = { log, logger };
 
   const qb = new Db(
     adapter,

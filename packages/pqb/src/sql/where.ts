@@ -76,6 +76,7 @@ export const whereToSql = (
           not,
         );
         if (sql) ands.push(sql);
+        return;
       }
 
       if ('prototype' in data || '__model' in data) {

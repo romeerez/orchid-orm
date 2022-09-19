@@ -14,7 +14,7 @@ export const pgConfig = {
 export const dbClient = new Client(pgConfig);
 
 export const db = porm(
-  { ...pgConfig, log: true },
+  { ...pgConfig, log: false },
   {
     user: UserModel,
     profile: ProfileModel,
