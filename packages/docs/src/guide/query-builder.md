@@ -217,7 +217,7 @@ Query methods are building blocks for a query chain, and when query is ready use
 const records: { id: number, name: string }[] = await Table.select('id', 'name')
 ```
 
-`.take()` to get only one record, it will throw `NotFoundError` when not found.
+`.take()` to get only one record, it will add `LIMIT 1` to the query, will throw `NotFoundError` when not found.
 
 `.find(id)` and `.findBy(conditions)` also returns one record.
 
@@ -262,19 +262,19 @@ const ids = await Table.select('id').pluck()
 // ids is array of all users id
 ```
 
-`.value` returns a single value, accepts column name or a raw expression.
+`.get` returns a single value, it will add `LIMIT 1` to the query, accepts column name or a raw expression.
 It will throw `NotFoundError` when not found.
 ```ts
 import { raw, NumberColumn } from 'pqb'
 
-const firstName: string = await Table.value('name')
+const firstName: string = await Table.get('name')
 
-const rawResult: number = await Table.value(raw<NumberColumn>('1 + 1'))
+const rawResult: number = await Table.get(raw<NumberColumn>('1 + 1'))
 ```
 
-`.valueOptional` returns single value or undefined when not found:
+`.getOptional` returns single value or undefined when not found:
 ```ts
-const firstName: string | undefined = await Table.valueOptional('name')
+const firstName: string | undefined = await Table.getOptional('name')
 ```
 
 `.exec` won't parse response at all, returns undefined:
@@ -668,10 +668,10 @@ const insertedCount = await Table.insert({
 
 By default `.insert` will return count of inserted records.
 
-Place `.select`, or `.selectAll`, or `.value` before `.insert` to specify returning columns:
+Place `.select`, or `.selectAll`, or `.get` before `.insert` to specify returning columns:
 
 ```ts
-const id: number = await Table.value('id').insert(data)
+const id: number = await Table.get('id').insert(data)
 
 // returns single object when inserting single record
 const objectWithId: { id: number } = await Table.select('id').insert(data)
@@ -886,7 +886,7 @@ Creates an update query, takes object of properties or raw expression, optionall
 
 By default `.update` will return count of inserted records.
 
-Place `.select`, or `.selectAll`, or `.value` before `.update` to specify returning columns.
+Place `.select`, or `.selectAll`, or `.get` before `.update` to specify returning columns.
 
 Need to provide `.where`, or `.findBy`, or `.find` conditions before calling `.update`.
 To ensure that whole table won't be updated by accident, update without where conditions will result in TypeScript and runtime error.
@@ -907,7 +907,7 @@ const updatedCount2 = await Table.find(1).update(raw(`name = 'new name'`))
 
 const id = await Table
   .find(1)
-  .value('id')
+  .get('id')
   .update({ name: 'new name' })
 
 const oneFullRecord = await Table
@@ -985,16 +985,16 @@ Increments a column value by the specified amount. Optionally takes `returning` 
 
 
 ```ts
-// increment numericColumn column by 1, return ids of updated records
-const ids1 = Table
-  .select('id')
+// increment numericColumn column by 1, return updated records
+const result = await Table
+  .selectAll()
   .where(...conditions)
   .increment('numericColumn')
 
 
-// increment someColumn by 5 and otherColumn by 10, return ids of updated records
-const ids2 = Table
-  .select('id')
+// increment someColumn by 5 and otherColumn by 10, return updated records
+const result2 = await Table
+  .selectAll()
   .where(...conditions)
   .increment({
     someColumn: 5,
@@ -1008,16 +1008,15 @@ Decrements a column value by the specified amount. Optionally takes `returning` 
 
 
 ```ts
-// decrement numericColumn column by 1, return ids of updated records
-const ids1 = Table
-  .select('id')
+// decrement numericColumn column by 1, return updated records
+const result = await Table
+  .selectAll()
   .where(...conditions)
   .decrement('numericColumn')
 
-
-// decrement someColumn by 5 and otherColumn by 10, return ids of updated records
-const ids2 = Table
-  .select('id')
+// decrement someColumn by 5 and otherColumn by 10, return updated records
+const result2 = await Table
+  .selectAll()
   .where(...conditions)
   .decrement({
     someColumn: 5,
@@ -1033,7 +1032,7 @@ based on other conditions specified in the query.
 
 By default `.delete` will return count of inserted records.
 
-Place `.select`, or `.selectAll`, or `.value` before `.delete` to specify returning columns.
+Place `.select`, or `.selectAll`, or `.get` before `.delete` to specify returning columns.
 
 Need to provide `.where`, or `.findBy`, or `.find` conditions before calling `.delete`.
 To prevent accidental deletion of all records , delete without where will result in TypeScript and runtime error.
@@ -1053,7 +1052,7 @@ const deletedCount = await Table
 // returns single value, throws if not found
 const id: number | undefined = await Table
   .findBy(...conditions)
-  .value('id')
+  .get('id')
   .delete()
 
 // returns array of records with specified columns

@@ -30,7 +30,7 @@ describe('model', () => {
         },
       );
 
-      const result = await user.take().value('createdAt');
+      const result = await user.get('createdAt');
       expect(typeof result).toBe('string');
 
       const eq: AssertEqual<typeof result, string> = true;
@@ -62,7 +62,7 @@ describe('model', () => {
         },
       );
 
-      const result = await user.take().value('createdAt');
+      const result = await user.get('createdAt');
       expect(result instanceof Date).toBe(true);
 
       const eq: AssertEqual<typeof result, Date> = true;

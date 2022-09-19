@@ -54,7 +54,7 @@ import { Window } from './window';
 import { QueryLog } from './log';
 import { QueryCallbacks } from './callbacks';
 import { QueryUpsert } from './upsert';
-import { QueryValue } from './value';
+import { QueryGet } from './get';
 
 export type WindowArg<T extends Query> = Record<
   string,
@@ -102,7 +102,7 @@ export interface QueryMethods
     QueryLog,
     QueryCallbacks,
     QueryUpsert,
-    QueryValue {}
+    QueryGet {}
 
 export class QueryMethods {
   windows!: PropertyKey[];
@@ -374,7 +374,9 @@ export class QueryMethods {
   _exists<T extends Query>(
     this: T,
   ): SetQueryReturnsValueOptional<T, NumberColumn> {
-    return this._valueOptional(raw<NumberColumn>('1'));
+    const q = this._getOptional(raw<NumberColumn>('1'));
+    delete q.query.take;
+    return q as unknown as SetQueryReturnsValueOptional<T, NumberColumn>;
   }
 
   truncate<T extends Query>(
@@ -422,5 +424,5 @@ applyMixins(QueryMethods, [
   QueryLog,
   QueryCallbacks,
   QueryUpsert,
-  QueryValue,
+  QueryGet,
 ]);

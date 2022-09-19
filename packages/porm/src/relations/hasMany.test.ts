@@ -30,8 +30,8 @@ describe('hasMany', () => {
 
       expect(eq).toBe(true);
 
-      const userId = await db.user.value('id').insert(userData);
-      const chatId = await db.chat.value('id').insert(chatData);
+      const userId = await db.user.get('id').insert(userData);
+      const chatId = await db.chat.get('id').insert(chatData);
 
       await db.message.insert([
         { ...messageData, authorId: userId, chatId },
@@ -294,7 +294,7 @@ describe('hasMany', () => {
     };
 
     it('should support create', async () => {
-      const chatId = await db.chat.value('id').insert(chatData);
+      const chatId = await db.chat.get('id').insert(chatData);
 
       const user = await db.user.create({
         ...userData,
@@ -328,7 +328,7 @@ describe('hasMany', () => {
     });
 
     it('should support create many', async () => {
-      const chatId = await db.chat.value('id').insert(chatData);
+      const chatId = await db.chat.get('id').insert(chatData);
 
       const user = await db.user.create([
         {
@@ -391,7 +391,7 @@ describe('hasMany', () => {
     });
 
     it('should support connect', async () => {
-      const chatId = await db.chat.value('id').insert(chatData);
+      const chatId = await db.chat.get('id').insert(chatData);
       await db.message.insert([
         {
           ...messageData,
@@ -435,7 +435,7 @@ describe('hasMany', () => {
     });
 
     it('should support connect many', async () => {
-      const chatId = await db.chat.value('id').insert(chatData);
+      const chatId = await db.chat.get('id').insert(chatData);
       await db.message.insert([
         {
           ...messageData,
@@ -516,8 +516,8 @@ describe('hasMany', () => {
     });
 
     it('should support connect or create', async () => {
-      const chatId = await db.chat.value('id').insert(chatData);
-      const messageId = await db.message.value('id').insert({
+      const chatId = await db.chat.get('id').insert(chatData);
+      const messageId = await db.message.get('id').insert({
         ...messageData,
         chatId,
         user: { create: { ...userData, name: 'tmp' } },
@@ -556,7 +556,7 @@ describe('hasMany', () => {
     });
 
     it('should support connect or create many', async () => {
-      const chatId = await db.chat.value('id').insert(chatData);
+      const chatId = await db.chat.get('id').insert(chatData);
       const [{ id: message1Id }, { id: message4Id }] = await db.message
         .selectAll()
         .insert([
@@ -638,9 +638,9 @@ describe('hasMany', () => {
     describe('disconnect', () => {
       it('should nullify foreignKey', async () => {
         const chatId = await db.chat
-          .value('id')
+          .get('id')
           .insert({ ...chatData, title: 'chat 1' });
-        const userId = await db.user.value('id').insert({
+        const userId = await db.user.get('id').insert({
           ...userData,
           messages: {
             create: [
@@ -666,8 +666,8 @@ describe('hasMany', () => {
 
     describe('set', () => {
       it('should nullify foreignKey of previous related record and set foreignKey to new related record', async () => {
-        const chatId = await db.chat.value('id').insert(chatData);
-        const id = await db.user.value('id').insert({
+        const chatId = await db.chat.get('id').insert(chatData);
+        const id = await db.user.get('id').insert({
           ...userData,
           messages: {
             create: [
@@ -697,9 +697,9 @@ describe('hasMany', () => {
 
     describe('delete', () => {
       it('should delete related records', async () => {
-        const chatId = await db.chat.value('id').insert(chatData);
+        const chatId = await db.chat.get('id').insert(chatData);
 
-        const id = await db.user.value('id').insert({
+        const id = await db.user.get('id').insert({
           ...userData,
           messages: {
             create: [
@@ -725,9 +725,9 @@ describe('hasMany', () => {
 
     describe('nested update', () => {
       it('should update related records', async () => {
-        const chatId = await db.chat.value('id').insert(chatData);
+        const chatId = await db.chat.get('id').insert(chatData);
 
-        const id = await db.user.value('id').insert({
+        const id = await db.user.get('id').insert({
           ...userData,
           messages: {
             create: [
@@ -761,7 +761,7 @@ describe('hasMany', () => {
 
     describe('nested create', () => {
       it('should create new related records', async () => {
-        const chatId = await db.chat.value('id').insert(chatData);
+        const chatId = await db.chat.get('id').insert(chatData);
         const user = await db.user.create(userData);
 
         await db.user.find(user.id).update({

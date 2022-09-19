@@ -26,9 +26,9 @@ describe('belongsTo', () => {
 
       expect(eq).toBe(true);
 
-      const userId = await db.user.value('id').insert(userData);
+      const userId = await db.user.get('id').insert(userData);
       const profileId = await db.profile
-        .value('id')
+        .get('id')
         .insert({ ...profileData, userId });
 
       const profile = await db.profile.find(profileId);
@@ -485,7 +485,7 @@ describe('belongsTo', () => {
     describe('disconnect', () => {
       it('should nullify foreignKey', async () => {
         const id = await db.profile
-          .value('id')
+          .get('id')
           .insert({ ...profileData, user: { create: userData } });
 
         const profile = await db.profile
@@ -502,7 +502,7 @@ describe('belongsTo', () => {
 
     describe('set', () => {
       it('should set foreignKey of current record with provided primaryKey', async () => {
-        const id = await db.profile.value('id').insert(profileData);
+        const id = await db.profile.get('id').insert(profileData);
         const user = await db.user.select('id').insert(userData);
 
         const profile = await db.profile
@@ -518,7 +518,7 @@ describe('belongsTo', () => {
       });
 
       it('should set foreignKey of current record from found related record', async () => {
-        const id = await db.profile.value('id').insert(profileData);
+        const id = await db.profile.get('id').insert(profileData);
         const user = await db.user.select('id').insert({
           ...userData,
           name: 'user',
@@ -633,7 +633,7 @@ describe('belongsTo', () => {
     describe('nested create', () => {
       it('should create new related record and update foreignKey', async () => {
         const profileId = await db.profile
-          .value('id')
+          .get('id')
           .insert({ ...profileData, user: { create: userData } });
 
         const updated = await db.profile

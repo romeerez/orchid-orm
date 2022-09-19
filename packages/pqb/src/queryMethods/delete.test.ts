@@ -29,10 +29,10 @@ describe('delete', () => {
   });
 
   it('should delete records, returning value', async () => {
-    const id = await User.value('id').insert(userData);
+    const id = await User.get('id').insert(userData);
     const q = User.all();
 
-    const query = q.find(id).value('id').delete();
+    const query = q.find(id).get('id').delete();
     expectSql(
       query.toSql(),
       `

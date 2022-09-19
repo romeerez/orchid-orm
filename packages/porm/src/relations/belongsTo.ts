@@ -127,17 +127,17 @@ export const makeBelongsToMethod = (
             update[foreignKey] = await query
               .transacting(q)
               ._findBy(params.set)
-              ._value(primaryKey);
+              ._get(primaryKey);
           }
         } else if (params.create) {
           update[foreignKey] = await query
             .transacting(q)
-            ._value(primaryKey)
+            ._get(primaryKey)
             ._insert(params.create);
         } else if (params.delete) {
           const selectQuery = q.transacting(q);
           selectQuery.query.type = undefined;
-          idForDelete = await selectQuery._valueOptional(foreignKey);
+          idForDelete = await selectQuery._getOptional(foreignKey);
           update[foreignKey] = null;
         }
       });

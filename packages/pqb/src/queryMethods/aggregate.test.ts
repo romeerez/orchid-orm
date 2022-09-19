@@ -188,7 +188,7 @@ describe('aggregate', () => {
       });
 
       it('should return number when have records', async () => {
-        const id = await User.value('id').insert(userData);
+        const id = await User.get('id').insert(userData);
 
         const value = await User[selectMethod]('id').take();
 

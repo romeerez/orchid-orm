@@ -125,7 +125,7 @@ const parseIntOrNullColumn = new IntegerColumn().parse((input) =>
   input === null ? null : parseInt(input as unknown as string),
 );
 
-const value = <T extends Query, Column extends ColumnType>(
+const get = <T extends Query, Column extends ColumnType>(
   q: Query,
 ): SetQueryReturnsValue<T, Column> => {
   q.query.returnType = 'valueOrThrow';
@@ -202,7 +202,7 @@ export class Aggregate {
     arg: AT1<T>['count'] | '*' = '*',
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NumberColumn> {
-    return value<T, NumberColumn>(this._selectCount(arg, options));
+    return get<T, NumberColumn>(this._selectCount(arg, options));
   }
 
   selectCount<T extends Query, As extends string | undefined = undefined>(
@@ -239,9 +239,7 @@ export class Aggregate {
     arg: Aggregate1ArgumentTypes<T>['avg'],
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
-    return value<T, NullableColumn<NumberColumn>>(
-      this._selectAvg(arg, options),
-    );
+    return get<T, NullableColumn<NumberColumn>>(this._selectAvg(arg, options));
   }
 
   selectAvg<T extends Query, As extends string | undefined = undefined>(
@@ -278,9 +276,7 @@ export class Aggregate {
     arg: Aggregate1ArgumentTypes<T>['min'],
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
-    return value<T, NullableColumn<NumberColumn>>(
-      this._selectMin(arg, options),
-    );
+    return get<T, NullableColumn<NumberColumn>>(this._selectMin(arg, options));
   }
 
   selectMin<T extends Query, As extends string | undefined = undefined>(
@@ -317,9 +313,7 @@ export class Aggregate {
     arg: Aggregate1ArgumentTypes<T>['max'],
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
-    return value<T, NullableColumn<NumberColumn>>(
-      this._selectMax(arg, options),
-    );
+    return get<T, NullableColumn<NumberColumn>>(this._selectMax(arg, options));
   }
 
   selectMax<T extends Query, As extends string | undefined = undefined>(
@@ -356,9 +350,7 @@ export class Aggregate {
     arg: Aggregate1ArgumentTypes<T>['sum'],
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
-    return value<T, NullableColumn<NumberColumn>>(
-      this._selectSum(arg, options),
-    );
+    return get<T, NullableColumn<NumberColumn>>(this._selectSum(arg, options));
   }
 
   selectSum<T extends Query, As extends string | undefined = undefined>(
@@ -395,7 +387,7 @@ export class Aggregate {
     arg: Aggregate1ArgumentTypes<T>['bitAnd'],
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
-    return value<T, NullableColumn<NumberColumn>>(
+    return get<T, NullableColumn<NumberColumn>>(
       this._selectBitAnd(arg, options),
     );
   }
@@ -429,7 +421,7 @@ export class Aggregate {
     arg: Aggregate1ArgumentTypes<T>['bitOr'],
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<NumberColumn>> {
-    return value<T, NullableColumn<NumberColumn>>(
+    return get<T, NullableColumn<NumberColumn>>(
       this._selectBitOr(arg, options),
     );
   }
@@ -463,7 +455,7 @@ export class Aggregate {
     arg: Aggregate1ArgumentTypes<T>['boolAnd'],
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<BooleanColumn>> {
-    return value<T, NullableColumn<BooleanColumn>>(
+    return get<T, NullableColumn<BooleanColumn>>(
       this._selectBoolAnd(arg, options),
     );
   }
@@ -497,7 +489,7 @@ export class Aggregate {
     arg: Aggregate1ArgumentTypes<T>['boolOr'],
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<BooleanColumn>> {
-    return value<T, NullableColumn<BooleanColumn>>(
+    return get<T, NullableColumn<BooleanColumn>>(
       this._selectBoolOr(arg, options),
     );
   }
@@ -531,7 +523,7 @@ export class Aggregate {
     arg: Aggregate1ArgumentTypes<T>['every'],
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<BooleanColumn>> {
-    return value<T, NullableColumn<BooleanColumn>>(
+    return get<T, NullableColumn<BooleanColumn>>(
       this._selectEvery(arg, options),
     );
   }
@@ -571,7 +563,7 @@ export class Aggregate {
     T,
     NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
   > {
-    return value<T, NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>>(
+    return get<T, NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>>(
       this._selectJsonAgg(arg, options),
     );
   }
@@ -635,7 +627,7 @@ export class Aggregate {
     T,
     NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>
   > {
-    return value<T, NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>>(
+    return get<T, NullableColumn<ArrayColumn<ExpressionOutput<T, Expr>>>>(
       this._selectJsonbAgg(arg, options),
     );
   }
@@ -687,7 +679,7 @@ export class Aggregate {
     arg: Expr,
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<StringColumn>> {
-    return value<T, NullableColumn<StringColumn>>(
+    return get<T, NullableColumn<StringColumn>>(
       this._selectXmlAgg(arg, options),
     );
   }
@@ -731,7 +723,7 @@ export class Aggregate {
       ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
     >
   > {
-    return value<
+    return get<
       T,
       NullableColumn<
         ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
@@ -800,7 +792,7 @@ export class Aggregate {
       ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
     >
   > {
-    return value<
+    return get<
       T,
       NullableColumn<
         ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
@@ -861,7 +853,7 @@ export class Aggregate {
     delimiter: string,
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NullableColumn<StringColumn>> {
-    return value<T, NullableColumn<StringColumn>>(
+    return get<T, NullableColumn<StringColumn>>(
       this._selectStringAgg(arg, delimiter, options),
     );
   }

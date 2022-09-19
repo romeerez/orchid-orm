@@ -14,7 +14,7 @@ import { ColumnInfo } from './queryMethods/columnInfo';
 import { RelationQueryBase, RelationsBase } from './relations';
 import { WhereQueryBuilder } from './queryMethods/where';
 import { OnQueryBuilder } from './queryMethods/join';
-import { ValueArg } from './queryMethods/value';
+import { GetArg } from './queryMethods/get';
 
 export type ColumnParser = (input: unknown) => unknown;
 export type ColumnsParsers = Record<string, ColumnParser>;
@@ -184,7 +184,7 @@ export type SetQueryReturnsPluck<
 
 export type SetQueryReturnsValueOptional<
   T extends Query,
-  Arg extends Exclude<ValueArg<T>, RawExpression> | ColumnType,
+  Arg extends Exclude<GetArg<T>, RawExpression> | ColumnType,
   Column extends ColumnType = Arg extends ColumnType
     ? Arg
     : Arg extends keyof T['selectable']
@@ -201,7 +201,7 @@ export type SetQueryReturnsValueOptional<
 
 export type SetQueryReturnsValue<
   T extends Query,
-  Arg extends Exclude<ValueArg<T>, RawExpression> | ColumnType,
+  Arg extends Exclude<GetArg<T>, RawExpression> | ColumnType,
   Column extends ColumnType = Arg extends ColumnType
     ? Arg
     : Arg extends keyof T['selectable']

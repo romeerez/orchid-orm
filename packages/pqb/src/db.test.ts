@@ -35,7 +35,7 @@ describe('db', () => {
         createdAt: t.timestamp(),
       }));
 
-      const result = await table.take().value('createdAt');
+      const result = await table.take().get('createdAt');
       expect(typeof result).toBe('string');
 
       const eq: AssertEqual<typeof result, string> = true;
@@ -57,7 +57,7 @@ describe('db', () => {
         createdAt: t.timestamp(),
       }));
 
-      const result = await table.take().value('createdAt');
+      const result = await table.take().get('createdAt');
       expect(result instanceof Date).toBe(true);
 
       const eq: AssertEqual<typeof result, Date> = true;

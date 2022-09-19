@@ -6,41 +6,40 @@ import {
 } from '../query';
 import { RelationQueryBase } from '../relations';
 import { isRaw, RawExpression } from '../common';
-import { removeFromQuery } from '../queryDataUtils';
 import { addParserForRawExpression, processSelectArg } from './select';
 import { getQueryAs } from '../utils';
 
-export type ValueArg<T extends QueryBase> =
+export type GetArg<T extends QueryBase> =
   | keyof T['selectable']
   | (RelationQueryBase & { returnType: 'value' | 'valueOrThrow' })
   | RawExpression;
 
 type UnwrapRaw<
   T extends Query,
-  Arg extends ValueArg<T>,
+  Arg extends GetArg<T>,
 > = Arg extends RawExpression ? Arg['__column'] : Exclude<Arg, RawExpression>;
 
-type ValueResult<
-  T extends Query,
-  Arg extends ValueArg<T>,
-> = SetQueryReturnsValue<T, UnwrapRaw<T, Arg>>;
+type GetResult<T extends Query, Arg extends GetArg<T>> = SetQueryReturnsValue<
+  T,
+  UnwrapRaw<T, Arg>
+>;
 
-type ValueOptionalResult<
+type GetOptionalResult<
   T extends Query,
-  Arg extends ValueArg<T>,
+  Arg extends GetArg<T>,
 > = SetQueryReturnsValueOptional<T, UnwrapRaw<T, Arg>>;
 
-const _value = <
+const _get = <
   T extends Query,
   R extends 'value' | 'valueOrThrow',
-  Arg extends ValueArg<T>,
+  Arg extends GetArg<T>,
 >(
   q: T,
   returnType: R,
   arg: Arg,
-): R extends 'value' ? ValueOptionalResult<T, Arg> : ValueResult<T, Arg> => {
+): R extends 'value' ? GetOptionalResult<T, Arg> : GetResult<T, Arg> => {
   q.query.returnType = returnType;
-  removeFromQuery(q, 'take');
+  q.query.take = true;
 
   if (typeof arg === 'object' && isRaw(arg)) {
     addParserForRawExpression(q, 'value', arg);
@@ -50,40 +49,40 @@ const _value = <
       processSelectArg(
         q,
         getQueryAs(q),
-        arg as Exclude<ValueArg<T>, RawExpression>,
+        arg as Exclude<GetArg<T>, RawExpression>,
       ),
     ];
   }
 
-  return q as unknown as ValueResult<T, Arg> & ValueOptionalResult<T, Arg>;
+  return q as unknown as GetResult<T, Arg> & GetOptionalResult<T, Arg>;
 };
 
-export class QueryValue {
-  value<T extends Query, Arg extends ValueArg<T>>(
+export class QueryGet {
+  get<T extends Query, Arg extends GetArg<T>>(
     this: T,
     arg: Arg,
-  ): ValueResult<T, Arg> {
-    return this.clone()._value(arg);
+  ): GetResult<T, Arg> {
+    return this.clone()._get(arg);
   }
 
-  _value<T extends Query, Arg extends ValueArg<T>>(
+  _get<T extends Query, Arg extends GetArg<T>>(
     this: T,
     arg: Arg,
-  ): ValueResult<T, Arg> {
-    return _value(this, 'valueOrThrow', arg);
+  ): GetResult<T, Arg> {
+    return _get(this, 'valueOrThrow', arg);
   }
 
-  valueOptional<T extends Query, Arg extends ValueArg<T>>(
+  getOptional<T extends Query, Arg extends GetArg<T>>(
     this: T,
     arg: Arg,
-  ): ValueOptionalResult<T, Arg> {
-    return this.clone()._valueOptional(arg);
+  ): GetOptionalResult<T, Arg> {
+    return this.clone()._getOptional(arg);
   }
 
-  _valueOptional<T extends Query, Arg extends ValueArg<T>>(
+  _getOptional<T extends Query, Arg extends GetArg<T>>(
     this: T,
     arg: Arg,
-  ): ValueOptionalResult<T, Arg> {
-    return _value(this, 'value', arg);
+  ): GetOptionalResult<T, Arg> {
+    return _get(this, 'value', arg);
   }
 }

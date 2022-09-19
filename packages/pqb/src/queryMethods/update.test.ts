@@ -87,14 +87,14 @@ describe('update', () => {
   });
 
   it('should update record, returning value', async () => {
-    const id = await User.value('id').insert(userData);
+    const id = await User.get('id').insert(userData);
 
     const update = {
       name: 'new name',
       password: 'new password',
     };
 
-    const query = User.find(id).value('id').update(update);
+    const query = User.find(id).get('id').update(update);
     expectSql(
       query.toSql(),
       `
@@ -118,7 +118,7 @@ describe('update', () => {
   });
 
   it('should update one record, return selected columns', async () => {
-    const id = await User.value('id').insert(userData);
+    const id = await User.get('id').insert(userData);
 
     const query = User.select('id', 'name').find(id).update(update);
 
@@ -143,7 +143,7 @@ describe('update', () => {
   });
 
   it('should update one record, return all columns', async () => {
-    const id = await User.value('id').insert(userData);
+    const id = await User.get('id').insert(userData);
 
     const query = User.selectAll().find(id).update(update);
 

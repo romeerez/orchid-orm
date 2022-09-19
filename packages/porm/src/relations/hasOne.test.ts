@@ -29,7 +29,7 @@ describe('hasOne', () => {
 
       expect(eq).toBe(true);
 
-      const userId = await db.user.value('id').insert(userData);
+      const userId = await db.user.get('id').insert(userData);
 
       await db.profile.insert({ ...profileData, userId });
 
@@ -72,7 +72,7 @@ describe('hasOne', () => {
     });
 
     it('can insert after calling method', async () => {
-      const id = await db.user.value('id').insert(userData);
+      const id = await db.user.get('id').insert(userData);
       const now = new Date();
       await db.user.profile({ id }).insert({
         userId: id,
@@ -390,7 +390,7 @@ describe('hasOne', () => {
       });
 
       it('should support connect or create', async () => {
-        const profileId = await db.profile.value('id').insert({
+        const profileId = await db.profile.get('id').insert({
           ...profileData,
           bio: 'profile 1',
           user: {
@@ -438,7 +438,7 @@ describe('hasOne', () => {
       });
 
       it('should support connect or create many', async () => {
-        const profileId = await db.profile.value('id').insert({
+        const profileId = await db.profile.get('id').insert({
           ...profileData,
           bio: 'profile 1',
           user: {
@@ -496,7 +496,7 @@ describe('hasOne', () => {
           const { id: profileId } = await db.user.profile(user);
 
           const id = await db.user
-            .value('id')
+            .get('id')
             .where(user)
             .update({
               profile: {
@@ -513,7 +513,7 @@ describe('hasOne', () => {
 
       describe('set', () => {
         it('should nullify foreignKey of previous related record and set foreignKey to new related record', async () => {
-          const id = await db.user.value('id').insert(userData);
+          const id = await db.user.get('id').insert(userData);
           const [{ id: profile1Id }, { id: profile2Id }] = await db.profile
             .select('id')
             .insert([
@@ -538,7 +538,7 @@ describe('hasOne', () => {
       describe('delete', () => {
         it('should delete related record', async () => {
           const id = await db.user
-            .value('id')
+            .get('id')
             .insert({ ...userData, profile: { create: profileData } });
 
           await db.user.profile({ id });
@@ -562,7 +562,7 @@ describe('hasOne', () => {
       describe('nested update', () => {
         it('should update related record', async () => {
           const id = await db.user
-            .value('id')
+            .get('id')
             .insert({ ...userData, profile: { create: profileData } });
 
           await db.user.find(id).update({
@@ -625,12 +625,12 @@ describe('hasOne', () => {
       describe('nested create', () => {
         it('should create new related record', async () => {
           const userId = await db.user
-            .value('id')
+            .get('id')
             .insert({ ...userData, profile: { create: profileData } });
 
           const previousProfileId = await db.user
             .profile({ id: userId })
-            .value('id');
+            .get('id');
 
           const updated = await db.user
             .selectAll()

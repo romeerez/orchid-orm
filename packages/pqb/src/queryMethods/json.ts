@@ -49,14 +49,15 @@ export class Json {
     this: T,
   ): SetQueryReturnsValueOptional<T, StringColumn> {
     const q = this._wrap(this.__model.clone()) as T;
-
-    return q._valueOptional(
+    q._getOptional(
       raw<StringColumn>(
         this.query.take
           ? `row_to_json("t".*)`
           : `COALESCE(json_agg(row_to_json("t".*)), '[]')`,
       ),
     );
+    delete q.query.take;
+    return q as unknown as SetQueryReturnsValueOptional<T, StringColumn>;
   }
 
   jsonSet<

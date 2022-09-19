@@ -63,7 +63,7 @@ describe('insert', () => {
   it('should insert one record, returning value', async () => {
     const q = User.all();
 
-    const query = q.value('id').insert(userData);
+    const query = q.get('id').insert(userData);
     expectSql(
       query.toSql(),
       `
