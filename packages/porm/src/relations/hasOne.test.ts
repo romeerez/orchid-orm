@@ -239,99 +239,163 @@ describe('hasOne', () => {
         });
       };
 
-      it('should support create', async () => {
-        const query = db.user.create({
-          ...userData,
-          name: 'user',
-          profile: {
-            create: {
-              ...profileData,
-              bio: 'profile',
-            },
-          },
-        });
-
-        const user = await query;
-        const profile = await db.profile.findBy({ userId: user.id });
-
-        checkUserAndProfile({ user, profile, name: 'user', bio: 'profile' });
-      });
-
-      it('should support create many', async () => {
-        const query = db.user.create([
-          {
+      describe('nested create', () => {
+        it('should support create', async () => {
+          const query = db.user.create({
             ...userData,
-            name: 'user 1',
+            name: 'user',
             profile: {
               create: {
                 ...profileData,
-                bio: 'profile 1',
+                bio: 'profile',
               },
             },
-          },
-          {
-            ...userData,
-            name: 'user 2',
-            profile: {
-              create: {
-                ...profileData,
-                bio: 'profile 2',
-              },
-            },
-          },
-        ]);
+          });
 
-        const users = await query;
-        const profiles = await db.profile
-          .where({
-            userId: { in: users.map((user) => user.id) },
-          })
-          .order('id');
+          const user = await query;
+          const profile = await db.profile.findBy({ userId: user.id });
 
-        checkUserAndProfile({
-          user: users[0],
-          profile: profiles[0],
-          name: 'user 1',
-          bio: 'profile 1',
+          checkUserAndProfile({ user, profile, name: 'user', bio: 'profile' });
         });
 
-        checkUserAndProfile({
-          user: users[1],
-          profile: profiles[1],
-          name: 'user 2',
-          bio: 'profile 2',
-        });
-      });
-
-      it('should support connect', async () => {
-        await db.profile.insert({
-          ...profileData,
-          bio: 'profile',
-          user: {
-            create: {
+        it('should support create many', async () => {
+          const query = db.user.create([
+            {
               ...userData,
-              name: 'tmp',
+              name: 'user 1',
+              profile: {
+                create: {
+                  ...profileData,
+                  bio: 'profile 1',
+                },
+              },
             },
-          },
+            {
+              ...userData,
+              name: 'user 2',
+              profile: {
+                create: {
+                  ...profileData,
+                  bio: 'profile 2',
+                },
+              },
+            },
+          ]);
+
+          const users = await query;
+          const profiles = await db.profile
+            .where({
+              userId: { in: users.map((user) => user.id) },
+            })
+            .order('id');
+
+          checkUserAndProfile({
+            user: users[0],
+            profile: profiles[0],
+            name: 'user 1',
+            bio: 'profile 1',
+          });
+
+          checkUserAndProfile({
+            user: users[1],
+            profile: profiles[1],
+            name: 'user 2',
+            bio: 'profile 2',
+          });
         });
-
-        const query = db.user.create({
-          ...userData,
-          name: 'user',
-          profile: {
-            connect: { bio: 'profile' },
-          },
-        });
-
-        const user = await query;
-        const profile = await db.user.profile(user);
-
-        checkUserAndProfile({ user, profile, name: 'user', bio: 'profile' });
       });
 
-      it('should support connect many', async () => {
-        await db.profile.insert([
-          {
+      describe('nested connect', () => {
+        it('should support connect', async () => {
+          await db.profile.insert({
+            ...profileData,
+            bio: 'profile',
+            user: {
+              create: {
+                ...userData,
+                name: 'tmp',
+              },
+            },
+          });
+
+          const query = db.user.create({
+            ...userData,
+            name: 'user',
+            profile: {
+              connect: { bio: 'profile' },
+            },
+          });
+
+          const user = await query;
+          const profile = await db.user.profile(user);
+
+          checkUserAndProfile({ user, profile, name: 'user', bio: 'profile' });
+        });
+
+        it('should support connect many', async () => {
+          await db.profile.insert([
+            {
+              ...profileData,
+              bio: 'profile 1',
+              user: {
+                create: {
+                  ...userData,
+                  name: 'tmp',
+                },
+              },
+            },
+            {
+              ...profileData,
+              bio: 'profile 2',
+              user: {
+                connect: { name: 'tmp' },
+              },
+            },
+          ]);
+
+          const query = db.user.create([
+            {
+              ...userData,
+              name: 'user 1',
+              profile: {
+                connect: { bio: 'profile 1' },
+              },
+            },
+            {
+              ...userData,
+              name: 'user 2',
+              profile: {
+                connect: { bio: 'profile 2' },
+              },
+            },
+          ]);
+
+          const users = await query;
+          const profiles = await db.profile
+            .where({
+              userId: { in: users.map((user) => user.id) },
+            })
+            .order('id');
+
+          checkUserAndProfile({
+            user: users[0],
+            profile: profiles[0],
+            name: 'user 1',
+            bio: 'profile 1',
+          });
+
+          checkUserAndProfile({
+            user: users[1],
+            profile: profiles[1],
+            name: 'user 2',
+            bio: 'profile 2',
+          });
+        });
+      });
+
+      describe('connect or create', () => {
+        it('should support connect or create', async () => {
+          const profileId = await db.profile.get('id').insert({
             ...profileData,
             bio: 'profile 1',
             user: {
@@ -340,149 +404,91 @@ describe('hasOne', () => {
                 name: 'tmp',
               },
             },
-          },
-          {
-            ...profileData,
-            bio: 'profile 2',
-            user: {
-              connect: { name: 'tmp' },
-            },
-          },
-        ]);
+          });
 
-        const query = db.user.create([
-          {
-            ...userData,
-            name: 'user 1',
-            profile: {
-              connect: { bio: 'profile 1' },
-            },
-          },
-          {
-            ...userData,
-            name: 'user 2',
-            profile: {
-              connect: { bio: 'profile 2' },
-            },
-          },
-        ]);
-
-        const users = await query;
-        const profiles = await db.profile
-          .where({
-            userId: { in: users.map((user) => user.id) },
-          })
-          .order('id');
-
-        checkUserAndProfile({
-          user: users[0],
-          profile: profiles[0],
-          name: 'user 1',
-          bio: 'profile 1',
-        });
-
-        checkUserAndProfile({
-          user: users[1],
-          profile: profiles[1],
-          name: 'user 2',
-          bio: 'profile 2',
-        });
-      });
-
-      it('should support connect or create', async () => {
-        const profileId = await db.profile.get('id').insert({
-          ...profileData,
-          bio: 'profile 1',
-          user: {
-            create: {
-              ...userData,
-              name: 'tmp',
-            },
-          },
-        });
-
-        const user1 = await db.user.create({
-          ...userData,
-          name: 'user 1',
-          profile: {
-            connect: { bio: 'profile 1' },
-            create: { ...profileData, bio: 'profile 1' },
-          },
-        });
-
-        const user2 = await db.user.create({
-          ...userData,
-          name: 'user 2',
-          profile: {
-            connect: { bio: 'profile 2' },
-            create: { ...profileData, bio: 'profile 2' },
-          },
-        });
-
-        const profile1 = await db.user.profile(user1);
-        expect(profile1.id).toBe(profileId);
-        checkUserAndProfile({
-          user: user1,
-          profile: profile1,
-          name: 'user 1',
-          bio: 'profile 1',
-        });
-
-        const profile2 = await db.user.profile(user2);
-        checkUserAndProfile({
-          user: user2,
-          profile: profile2,
-          name: 'user 2',
-          bio: 'profile 2',
-        });
-      });
-
-      it('should support connect or create many', async () => {
-        const profileId = await db.profile.get('id').insert({
-          ...profileData,
-          bio: 'profile 1',
-          user: {
-            create: {
-              ...userData,
-              name: 'tmp',
-            },
-          },
-        });
-
-        const [user1, user2] = await db.user.create([
-          {
+          const user1 = await db.user.create({
             ...userData,
             name: 'user 1',
             profile: {
               connect: { bio: 'profile 1' },
               create: { ...profileData, bio: 'profile 1' },
             },
-          },
-          {
+          });
+
+          const user2 = await db.user.create({
             ...userData,
             name: 'user 2',
             profile: {
               connect: { bio: 'profile 2' },
               create: { ...profileData, bio: 'profile 2' },
             },
-          },
-        ]);
+          });
 
-        const profile1 = await db.user.profile(user1);
-        expect(profile1.id).toBe(profileId);
-        checkUserAndProfile({
-          user: user1,
-          profile: profile1,
-          name: 'user 1',
-          bio: 'profile 1',
+          const profile1 = await db.user.profile(user1);
+          expect(profile1.id).toBe(profileId);
+          checkUserAndProfile({
+            user: user1,
+            profile: profile1,
+            name: 'user 1',
+            bio: 'profile 1',
+          });
+
+          const profile2 = await db.user.profile(user2);
+          checkUserAndProfile({
+            user: user2,
+            profile: profile2,
+            name: 'user 2',
+            bio: 'profile 2',
+          });
         });
 
-        const profile2 = await db.user.profile(user2);
-        checkUserAndProfile({
-          user: user2,
-          profile: profile2,
-          name: 'user 2',
-          bio: 'profile 2',
+        it('should support connect or create many', async () => {
+          const profileId = await db.profile.get('id').insert({
+            ...profileData,
+            bio: 'profile 1',
+            user: {
+              create: {
+                ...userData,
+                name: 'tmp',
+              },
+            },
+          });
+
+          const [user1, user2] = await db.user.create([
+            {
+              ...userData,
+              name: 'user 1',
+              profile: {
+                connect: { bio: 'profile 1' },
+                create: { ...profileData, bio: 'profile 1' },
+              },
+            },
+            {
+              ...userData,
+              name: 'user 2',
+              profile: {
+                connect: { bio: 'profile 2' },
+                create: { ...profileData, bio: 'profile 2' },
+              },
+            },
+          ]);
+
+          const profile1 = await db.user.profile(user1);
+          expect(profile1.id).toBe(profileId);
+          checkUserAndProfile({
+            user: user1,
+            profile: profile1,
+            name: 'user 1',
+            bio: 'profile 1',
+          });
+
+          const profile2 = await db.user.profile(user2);
+          checkUserAndProfile({
+            user: user2,
+            profile: profile2,
+            name: 'user 2',
+            bio: 'profile 2',
+          });
         });
       });
     });
@@ -509,17 +515,37 @@ describe('hasOne', () => {
           const profile = await db.profile.find(profileId);
           expect(profile.userId).toBe(null);
         });
+
+        it('should nullify foreignKey in batch update', async () => {
+          const userIds = await db.user.pluck('id').insert([
+            { ...userData, profile: { create: profileData } },
+            { ...userData, profile: { create: profileData } },
+          ]);
+
+          const profileIds = await db.profile.pluck('id').where({
+            userId: { in: userIds },
+          });
+
+          await db.user.where({ id: { in: userIds } }).update({
+            profile: {
+              disconnect: true,
+            },
+          });
+
+          const updatedUserIds = await db.profile
+            .pluck('userId')
+            .where({ id: { in: profileIds } });
+          expect(updatedUserIds).toEqual([null, null]);
+        });
       });
 
       describe('set', () => {
         it('should nullify foreignKey of previous related record and set foreignKey to new related record', async () => {
           const id = await db.user.get('id').insert(userData);
+
           const [{ id: profile1Id }, { id: profile2Id }] = await db.profile
             .select('id')
-            .insert([
-              { ...profileData, userId: id },
-              { ...profileData, userId: null },
-            ]);
+            .insert([{ ...profileData, userId: id }, { ...profileData }]);
 
           await db.user.find(id).update({
             profile: {
@@ -533,6 +559,17 @@ describe('hasOne', () => {
           const profile2 = await db.profile.find(profile2Id);
           expect(profile2.userId).toBe(id);
         });
+
+        it('should throw in batch update', async () => {
+          const query = db.user.where({ id: { in: [1, 2, 3] } }).update({
+            profile: {
+              // @ts-expect-error not allows in batch update
+              set: { id: 1 },
+            },
+          });
+
+          await expect(query).rejects.toThrow();
+        });
       });
 
       describe('delete', () => {
@@ -540,8 +577,6 @@ describe('hasOne', () => {
           const id = await db.user
             .get('id')
             .insert({ ...userData, profile: { create: profileData } });
-
-          await db.user.profile({ id });
 
           const { id: profileId } = await db.user
             .profile({ id })
@@ -556,6 +591,22 @@ describe('hasOne', () => {
 
           const profile = await db.profile.findByOptional({ id: profileId });
           expect(profile).toBe(undefined);
+        });
+
+        it('should delete related record in batch update', async () => {
+          const userIds = await db.user.pluck('id').insert([
+            { ...userData, profile: { create: profileData } },
+            { ...userData, profile: { create: profileData } },
+          ]);
+
+          await db.user.where({ id: { in: userIds } }).update({
+            profile: {
+              delete: true,
+            },
+          });
+
+          const count = await db.profile.count();
+          expect(count).toBe(0);
         });
       });
 
@@ -575,6 +626,24 @@ describe('hasOne', () => {
 
           const profile = await db.user.profile({ id }).take();
           expect(profile.bio).toBe('updated');
+        });
+
+        it('should update related record in batch update', async () => {
+          const userIds = await db.user.pluck('id').insert([
+            { ...userData, profile: { create: profileData } },
+            { ...userData, profile: { create: profileData } },
+          ]);
+
+          await db.user.where({ id: { in: userIds } }).update({
+            profile: {
+              update: {
+                bio: 'updated',
+              },
+            },
+          });
+
+          const bios = await db.profile.pluck('bio');
+          expect(bios).toEqual(['updated', 'updated']);
         });
       });
 
@@ -620,6 +689,25 @@ describe('hasOne', () => {
           const profile = await db.user.profile(user);
           expect(profile.bio).toBe('created');
         });
+
+        it('should throw in batch update', async () => {
+          const query = db.user.where({ id: { in: [1, 2, 3] } }).update({
+            profile: {
+              // @ts-expect-error not allows in batch update
+              upsert: {
+                update: {
+                  bio: 'updated',
+                },
+                create: {
+                  ...profileData,
+                  bio: 'created',
+                },
+              },
+            },
+          });
+
+          await expect(query).rejects.toThrow();
+        });
       });
 
       describe('nested create', () => {
@@ -646,6 +734,20 @@ describe('hasOne', () => {
 
           const profile = await db.user.profile(updated);
           expect(profile.bio).toBe('created');
+        });
+
+        it('should throw in batch update', async () => {
+          const query = db.user.where({ id: { in: [1, 2, 3] } }).update({
+            profile: {
+              // @ts-expect-error not allows in batch update
+              create: {
+                ...profileData,
+                bio: 'created',
+              },
+            },
+          });
+
+          await expect(query).rejects.toThrow();
         });
       });
     });

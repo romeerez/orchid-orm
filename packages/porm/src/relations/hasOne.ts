@@ -164,6 +164,11 @@ export const makeHasOneMethod = (
       }
     }) as HasOneNestedInsert,
     nestedUpdate: (async (q, data, params) => {
+      if ((params.set || params.create || params.upsert) && !q.query.take) {
+        const key = params.set ? 'set' : params.create ? 'create' : 'upsert';
+        throw new Error(`\`${key}\` option is not allowed in a batch update`);
+      }
+
       const t = query.transacting(q);
       const ids = data.map((item) => item[primaryKey]);
       const currentRelationsQuery = t.where({
