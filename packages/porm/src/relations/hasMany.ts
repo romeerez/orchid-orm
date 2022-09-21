@@ -203,6 +203,11 @@ export const makeHasManyMethod = (
       }
     }) as HasManyNestedInsert,
     nestedUpdate: (async (q, data, params) => {
+      if ((params.set || params.create) && !q.query.take) {
+        const key = params.set ? 'set' : 'create';
+        throw new Error(`\`${key}\` option is not allowed in a batch update`);
+      }
+
       const t = query.transacting(q);
       if (params.create) {
         await t._insert(
