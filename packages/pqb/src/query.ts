@@ -14,10 +14,10 @@ import { ColumnInfo } from './queryMethods/columnInfo';
 import { RelationQueryBase, RelationsBase } from './relations';
 import { WhereQueryBuilder } from './queryMethods/where';
 import { OnQueryBuilder } from './queryMethods/join';
-import { GetArg } from './queryMethods/get';
+import { GetArg, getValueKey } from './queryMethods/get';
 
 export type ColumnParser = (input: unknown) => unknown;
-export type ColumnsParsers = Record<string, ColumnParser>;
+export type ColumnsParsers = Record<string | getValueKey, ColumnParser>;
 
 export type SelectableBase = Record<
   PropertyKey,

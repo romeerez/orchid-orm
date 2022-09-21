@@ -1,6 +1,7 @@
 import {
   AddQuerySelect,
   ColumnParser,
+  ColumnsParsers,
   Query,
   QueryBase,
   QuerySelectAll,
@@ -21,6 +22,7 @@ import {
   RelationQueryBase,
   relationQueryKey,
 } from '../relations';
+import { getValueKey } from './get';
 
 export type SelectArg<T extends QueryBase> =
   | keyof T['selectable']
@@ -86,7 +88,7 @@ type SelectResult<
 
 export const addParserForRawExpression = (
   q: Query,
-  key: string,
+  key: string | getValueKey,
   raw: RawExpression,
 ) => {
   const parser = raw.__column?.parseFn;
@@ -95,7 +97,7 @@ export const addParserForRawExpression = (
 
 export const addParserForSelectItem = <T extends Query>(
   q: T,
-  as: string | undefined,
+  as: string | getValueKey | undefined,
   key: string,
   item: keyof T['selectable'] | Query | RawExpression,
 ) => {
@@ -138,16 +140,16 @@ export const addParserForSelectItem = <T extends Query>(
 
 export const addParserToQuery = (
   query: QueryData,
-  key: string,
+  key: string | getValueKey,
   parser: ColumnParser,
 ) => {
   if (query.parsers) query.parsers[key] = parser;
-  else query.parsers = { [key]: parser };
+  else query.parsers = { [key]: parser } as ColumnsParsers;
 };
 
 export const processSelectArg = <T extends Query>(
   q: T,
-  as: string | undefined,
+  as: string | getValueKey | undefined,
   item: SelectArg<T>,
 ): SelectItem => {
   if (typeof item === 'string') {

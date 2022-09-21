@@ -1,5 +1,5 @@
 import { ColumnType } from './columnType';
-import { Operators } from '../operators';
+import { Operators } from '../columnsOperators';
 
 export class ArrayColumn<Item extends ColumnType> extends ColumnType<
   Item['type'][],
@@ -18,4 +18,99 @@ export class ArrayColumn<Item extends ColumnType> extends ColumnType<
   toSQL() {
     return `${this.data.item.toSQL()}[]`;
   }
+
+  parseFn = (input: unknown) => {
+    const entries: unknown[] = [];
+    parseArray(
+      input as string,
+      0,
+      (input as string).length,
+      entries,
+      false,
+      this.data.item,
+    );
+    return entries;
+  };
 }
+
+const parseArray = (
+  input: string,
+  pos: number,
+  len: number,
+  entries: unknown[],
+  nested: boolean,
+  item: ColumnType,
+): number => {
+  if (input[0] === '[') {
+    while (pos < len) {
+      let char = input[pos++];
+      if (char === '\\') {
+        char = input[pos++];
+      }
+      if (char === '=') break;
+    }
+  }
+
+  let quote = false;
+  let start = pos;
+  while (pos < len) {
+    let char = input[pos++];
+    const escaped = char === '\\';
+    if (escaped) {
+      char = input[pos++];
+    }
+
+    if (char === '"' && !escaped) {
+      if (quote) {
+        pushEntry(input, start, pos, entries, item);
+      } else {
+        start = pos;
+      }
+      quote = !quote;
+    } else if (char === ',' && !quote) {
+      if (start !== pos) {
+        pushEntry(input, start, pos, entries, item);
+      }
+      start = pos;
+    } else if (char === '{' && !quote) {
+      let array: unknown[];
+      let nestedItem = item;
+      if (nested) {
+        array = [];
+        entries.push(array);
+        if ('item' in item.data) {
+          nestedItem = (item as ArrayColumn<ColumnType>).data
+            .item as ColumnType;
+        }
+      } else {
+        array = entries;
+      }
+      pos = parseArray(input, pos, len, array, true, nestedItem);
+      start = pos + 1;
+    } else if (char === '}' && !quote) {
+      if (start !== pos) {
+        pushEntry(input, start, pos, entries, item);
+      }
+      start = pos + 1;
+      break;
+    }
+  }
+
+  return pos;
+};
+
+const pushEntry = (
+  input: string,
+  start: number,
+  pos: number,
+  entries: unknown[],
+  item: ColumnType,
+) => {
+  let entry: unknown = input.slice(start, pos - 1);
+  if (entry === 'NULL') {
+    entry = null;
+  } else if (item.parseItem) {
+    entry = item.parseItem(entry as string);
+  }
+  entries.push(entry);
+};

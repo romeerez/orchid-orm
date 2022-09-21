@@ -9,19 +9,20 @@ import {
 import { AddQuerySelect, Query, SetQueryReturnsValue } from '../query';
 import { pushQueryValue, removeFromQuery } from '../queryDataUtils';
 import {
+  ArrayColumn,
   BooleanColumn,
   ColumnType,
-  ArrayColumn,
-  NumberColumn,
-  StringColumn,
   IntegerColumn,
   NullableColumn,
+  NumberColumn,
+  StringColumn,
 } from '../columnSchema';
 import { CoalesceString } from '../utils';
 import { OrderArg, WindowArgDeclaration } from './queryMethods';
 import { WhereArg } from './where';
 import { addParserToQuery } from './select';
 import { SelectItem } from '../sql';
+import { getValueKey } from './get';
 
 const allColumns = raw('*');
 
@@ -179,6 +180,8 @@ export class Aggregate {
     );
 
     if (columnType?.parseFn) {
+      addParserToQuery(this.query, getValueKey, columnType.parseFn);
+
       addParserToQuery(
         this.query,
         options?.as || functionName,

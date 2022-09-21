@@ -1,4 +1,4 @@
-import { Operators } from '../operators';
+import { Operators } from '../columnsOperators';
 import { ColumnType } from './columnType';
 import { joinTruthy } from '../utils';
 import { assignMethodsToClass } from './utils';
@@ -39,7 +39,7 @@ export interface DecimalColumnData extends NumberColumnData {
 }
 
 export class DecimalBaseColumn<
-  Type extends number | bigint,
+  Type extends number | string,
   Precision extends number | undefined = undefined,
   Scale extends number | undefined = undefined,
 > extends NumberBaseColumn<Type> {
@@ -72,15 +72,17 @@ export class DecimalBaseColumn<
 // signed two-byte integer
 export class SmallIntColumn extends NumberBaseColumn<number> {
   dataType = 'smallint' as const;
+  parseItem = parseInt;
 }
 
 // signed four-byte integer
 export class IntegerColumn extends NumberBaseColumn<number> {
   dataType = 'integer' as const;
+  parseItem = parseInt;
 }
 
 // signed eight-byte integer
-export class BigIntColumn extends NumberBaseColumn<bigint> {
+export class BigIntColumn extends NumberBaseColumn<string> {
   dataType = 'bigint' as const;
 }
 
@@ -88,35 +90,32 @@ export class BigIntColumn extends NumberBaseColumn<bigint> {
 export class DecimalColumn<
   Precision extends number | undefined = undefined,
   Scale extends number | undefined = undefined,
-> extends DecimalBaseColumn<number, Precision, Scale> {}
-
-// exact numeric of selectable precision, bigint JS type
-export class DecimalBigIntColumn<
-  Precision extends number | undefined = undefined,
-  Scale extends number | undefined = undefined,
-> extends DecimalBaseColumn<bigint, Precision, Scale> {}
+> extends DecimalBaseColumn<string, Precision, Scale> {}
 
 // single precision floating-point number (4 bytes)
 export class RealColumn extends NumberBaseColumn<number> {
   dataType = 'real' as const;
+  parseItem = parseFloat;
 }
 
 // double precision floating-point number (8 bytes)
-export class DoublePrecisionColumn extends NumberBaseColumn<bigint> {
+export class DoublePrecisionColumn extends NumberBaseColumn<string> {
   dataType = 'double precision' as const;
 }
 
 // autoincrementing two-byte integer
 export class SmallSerialColumn extends NumberBaseColumn<number> {
   dataType = 'smallserial' as const;
+  parseItem = parseInt;
 }
 
 // autoincrementing four-byte integer
 export class SerialColumn extends NumberBaseColumn<number> {
   dataType = 'serial' as const;
+  parseItem = parseInt;
 }
 
 // autoincrementing eight-byte integer
-export class BigSerialColumn extends NumberBaseColumn<bigint> {
+export class BigSerialColumn extends NumberBaseColumn<string> {
   dataType = 'bigserial' as const;
 }

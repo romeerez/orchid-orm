@@ -1,8 +1,8 @@
 import { ColumnType } from './columnType';
-import { Operators } from '../operators';
+import { Operators } from '../columnsOperators';
 import { joinTruthy } from '../utils';
 
-// date	4 bytes	date (no time of day)	4713 BC	5874897 AD	1 day
+// date	4 bytes	date (no time of day)	4713 BC	5874897 AD 1 day
 export class DateColumn extends ColumnType<string, typeof Operators.date> {
   dataType = 'date' as const;
   operators = Operators.date;
@@ -14,7 +14,7 @@ export interface DateTimeColumnData {
 
 export abstract class DateTimeBaseClass<
   Precision extends number | undefined = undefined,
-> extends ColumnType<string, typeof Operators.date, string | number | Date> {
+> extends ColumnType<string, typeof Operators.date, string | Date> {
   data: DateTimeColumnData & { precision: Precision };
   operators = Operators.date;
 
@@ -76,11 +76,20 @@ export class TimeWithTimeZoneColumn<
   baseDataType = 'time' as const;
 }
 
+export type TimeInterval = {
+  years?: number;
+  months?: number;
+  days?: number;
+  hours?: number;
+  minutes?: number;
+  seconds?: number;
+};
+
 // interval [ fields ] [ (p) ]	16 bytes	time interval	-178000000 years	178000000 years	1 microsecond
 export class IntervalColumn<
   Fields extends string | undefined = undefined,
   Precision extends number | undefined = undefined,
-> extends ColumnType<string, typeof Operators.date> {
+> extends ColumnType<TimeInterval, typeof Operators.date> {
   dataType = 'interval' as const;
   data: DateTimeColumnData & { fields: Fields; precision: Precision };
   operators = Operators.date;

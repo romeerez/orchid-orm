@@ -53,21 +53,7 @@ export const Model = createModel()
 
 This step is needed for case of customization of column types.
 
-For example, by default timestamps are returned as strings, and if you want to parse them to `Date` objects for every model, here is the solution:
-
-```ts
-import { createModel } from 'porm'
-import { columnTypes } from 'pqb';
-
-export const Model = createModel({
-  columnTypes: {
-    ...columnTypes,
-    timestamp() {
-      return columnTypes.timestamp().parse((input) => new Date(input))
-    },
-  },
-})
-```
+See [column types document](/guide/columns-schema.html#override-column-types) for details.
 
 Models are defined as classes with two required properties:
 
@@ -1016,7 +1002,7 @@ Update related record if exists, and create if it doesn't.
 
 Only available for `belongsTo` and `hasOne` relations.
 
-Supported when updating multiple records as well.
+Supported when updating multiple records for `belongsTo`.
 
 ```ts
 await db.book.find(1).update({

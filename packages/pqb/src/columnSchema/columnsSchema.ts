@@ -1,5 +1,5 @@
 import { ColumnInput, ColumnOutput, ColumnType } from './columnType';
-import { Operators } from '../operators';
+import { Operators } from '../columnsOperators';
 import { UnionToIntersection } from '../utils';
 
 export type ColumnsShape = Record<string, ColumnType>;

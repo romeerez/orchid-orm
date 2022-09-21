@@ -1,7 +1,6 @@
 import {
   BigIntColumn,
   BigSerialColumn,
-  DecimalBigIntColumn,
   DecimalColumn,
   DoublePrecisionColumn,
   IntegerColumn,
@@ -62,13 +61,6 @@ export const columnTypes = {
     precision?: Precision,
     scale?: Scale,
   ) => new DecimalColumn(precision, scale),
-  numericBigInt: <
-    Precision extends number | undefined = undefined,
-    Scale extends number | undefined = undefined,
-  >(
-    precision?: Precision,
-    scale?: Scale,
-  ) => new DecimalBigIntColumn(precision, scale),
   decimal: <
     Precision extends number | undefined = undefined,
     Scale extends number | undefined = undefined,
@@ -76,24 +68,18 @@ export const columnTypes = {
     precision?: Precision,
     scale?: Scale,
   ) => new DecimalColumn(precision, scale),
-  decimalBigInt: <
-    Precision extends number | undefined = undefined,
-    Scale extends number | undefined = undefined,
-  >(
-    precision?: Precision,
-    scale?: Scale,
-  ) => new DecimalBigIntColumn(precision, scale),
   real: () => new RealColumn(),
   doublePrecision: () => new DoublePrecisionColumn(),
   smallSerial: () => new SmallSerialColumn(),
   serial: () => new SerialColumn(),
-  bigserial: () => new BigSerialColumn(),
+  bigSerial: () => new BigSerialColumn(),
   money: () => new MoneyColumn(),
   varchar: <Limit extends number | undefined = undefined>(limit?: Limit) =>
     new VarCharColumn(limit),
   char: <Limit extends number | undefined = undefined>(limit?: Limit) =>
     new CharColumn(limit),
   text: () => new TextColumn(),
+  string: () => new TextColumn(),
   bytea: () => new ByteaColumn(),
   date: () => new DateColumn(),
   timestamp: <Precision extends number | undefined = undefined>(
@@ -116,8 +102,7 @@ export const columnTypes = {
     precision?: Precision,
   ) => new IntervalColumn(fields, precision),
   boolean: () => new BooleanColumn(),
-  enum: <DataType extends string, Type>(dataType: DataType) =>
-    new EnumColumn<DataType, Type>(dataType),
+  enum: <Type>(dataType: string) => new EnumColumn<Type>(dataType),
   point: () => new PointColumn(),
   line: () => new LineColumn(),
   lseg: () => new LsegColumn(),
@@ -125,14 +110,14 @@ export const columnTypes = {
   path: () => new PathColumn(),
   polygon: () => new PolygonColumn(),
   circle: () => new CircleColumn(),
-  cidr() {
-    return new CidrColumn();
-  },
+  cidr: () => new CidrColumn(),
   inet: () => new InetColumn(),
   macaddr: () => new MacAddrColumn(),
   macaddr8: () => new MacAddr8Column(),
-  bit: () => new BitColumn(),
-  bitVarying: () => new BitVaryingColumn(),
+  bit: <Length extends number>(length: Length) => new BitColumn(length),
+  bitVarying: <Length extends number | undefined = undefined>(
+    length?: Length,
+  ) => new BitVaryingColumn(length),
   tsvector: () => new TsVectorColumn(),
   tsquery: () => new TsQueryColumn(),
   uuid: () => new UUIDColumn(),

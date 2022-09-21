@@ -1,5 +1,5 @@
 import { ColumnType } from './columnType';
-import { Operators } from '../operators';
+import { Operators } from '../columnsOperators';
 import { scalarTypes } from './json/scalarTypes';
 import { array } from './json/array';
 import { discriminatedUnion } from './json/discriminatedUnion';
@@ -21,7 +21,7 @@ import { union } from './json/union';
 import { JSONTypeAny } from './json/typeBase';
 
 export type JSONTypes = typeof jsonTypes;
-const jsonTypes = {
+export const jsonTypes = {
   array,
   discriminatedUnion,
   enum: enumType,

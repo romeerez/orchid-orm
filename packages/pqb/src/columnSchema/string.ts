@@ -1,5 +1,5 @@
 import { ColumnType } from './columnType';
-import { Operators } from '../operators';
+import { Operators } from '../columnsOperators';
 import { joinTruthy } from '../utils';
 import { NumberBaseColumn } from './number';
 import { assignMethodsToClass } from './utils';
@@ -57,14 +57,14 @@ export abstract class LimitedTextBaseColumn<
   }
 }
 
-// character varying(n), varchar(n)	variable-length with limit
+// character varying(n), varchar(n) variable-length with limit
 export class VarCharColumn<
   Limit extends number | undefined = undefined,
 > extends LimitedTextBaseColumn<Limit> {
   dataType = 'varchar' as const;
 }
 
-// character(n), char(n)	fixed-length, blank padded
+// character(n), char(n) fixed-length, blank padded
 export class CharColumn<
   Limit extends number | undefined = undefined,
 > extends LimitedTextBaseColumn<Limit> {
@@ -78,7 +78,7 @@ export class TextColumn extends ColumnType<string> {
 }
 
 // To store binary strings
-export class ByteaColumn extends NumberBaseColumn<string> {
+export class ByteaColumn extends NumberBaseColumn<Buffer> {
   dataType = 'bytea' as const;
 }
 
@@ -156,14 +156,15 @@ export class MacAddr8Column extends ColumnType<string, typeof Operators.text> {
 // Bit strings are strings of 1's and 0's.
 // They can be used to store or visualize bit masks.
 // There are two SQL bit types: bit(n) and bit varying(n), where n is a positive integer.
-export class BitColumn<
-  Length extends number | undefined = undefined,
-> extends ColumnType<string, typeof Operators.text> {
+export class BitColumn<Length extends number> extends ColumnType<
+  string,
+  typeof Operators.text
+> {
   dataType = 'bit' as const;
   operators = Operators.text;
   data: { length: Length };
 
-  constructor(length?: Length) {
+  constructor(length: Length) {
     super();
 
     this.data = { length } as { length: Length };
@@ -184,7 +185,7 @@ export class BitVaryingColumn<
   operators = Operators.text;
   data: { length: Length };
 
-  constructor(length?: Length) {
+  constructor(length: Length) {
     super();
 
     this.data = { length } as { length: Length };
@@ -210,12 +211,13 @@ export class TsQueryColumn extends ColumnType<string, typeof Operators.text> {
   operators = Operators.text;
 }
 
-// A tsquery value stores lexemes that are to be searched for
+// uuid stores Universally Unique Identifiers (UUID)
 export class UUIDColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'uuid' as const;
   operators = Operators.text;
 }
 
+// xml data type can be used to store XML data
 export class XMLColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'uuid' as const;
   operators = Operators.text;

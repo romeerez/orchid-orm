@@ -55,22 +55,24 @@ export type ExpressionOutput<
   ? ColumnType
   : never;
 
-export const raw = <C extends ColumnType>(sql: string, ...values: unknown[]) =>
-  ({
-    __raw: sql,
-    __values: values,
-  } as RawExpression<C>);
-
-export const rawColumn = <C extends ColumnType>(
-  column: C,
-  sql: string,
-  ...values: unknown[]
-) =>
-  ({
-    __column: column,
-    __raw: sql,
-    __values: values,
-  } as RawExpression<C>);
+export const raw = <C extends ColumnType>(
+  ...args:
+    | [column: C, sql: string, ...values: unknown[]]
+    | [sql: string, ...values: unknown[]]
+) => {
+  if (typeof args[0] === 'string') {
+    return {
+      __raw: args[0],
+      __values: args.slice(1),
+    } as RawExpression<C>;
+  } else {
+    return {
+      __column: args[0],
+      __raw: args[1],
+      __values: args.slice(2),
+    } as RawExpression<C>;
+  }
+};
 
 export const isRaw = (obj: object): obj is RawExpression => '__raw' in obj;
 

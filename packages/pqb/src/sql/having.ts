@@ -1,6 +1,6 @@
 import { AggregateItemOptions, HavingItem, SelectQueryData } from './types';
 import { EMPTY_OBJECT, getRaw, isRaw, RawExpression } from '../common';
-import { Operator } from '../operators';
+import { Operator } from '../columnsOperators';
 import { aggregateToSql } from './aggregate';
 import { Query } from '../query';
 import { addValue, q } from './common';

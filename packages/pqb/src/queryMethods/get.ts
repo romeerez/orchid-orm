@@ -7,7 +7,6 @@ import {
 import { RelationQueryBase } from '../relations';
 import { isRaw, RawExpression } from '../common';
 import { addParserForRawExpression, processSelectArg } from './select';
-import { getQueryAs } from '../utils';
 
 export type GetArg<T extends QueryBase> =
   | keyof T['selectable']
@@ -29,6 +28,9 @@ type GetOptionalResult<
   Arg extends GetArg<T>,
 > = SetQueryReturnsValueOptional<T, UnwrapRaw<T, Arg>>;
 
+export type getValueKey = typeof getValueKey;
+export const getValueKey = Symbol('get');
+
 const _get = <
   T extends Query,
   R extends 'value' | 'valueOrThrow',
@@ -42,13 +44,13 @@ const _get = <
   q.query.take = true;
 
   if (typeof arg === 'object' && isRaw(arg)) {
-    addParserForRawExpression(q, 'value', arg);
+    addParserForRawExpression(q, getValueKey, arg);
     q.query.select = [arg];
   } else {
     q.query.select = [
       processSelectArg(
         q,
-        getQueryAs(q),
+        getValueKey,
         arg as Exclude<GetArg<T>, RawExpression>,
       ),
     ];

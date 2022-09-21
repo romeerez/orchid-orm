@@ -1,4 +1,4 @@
-import { Operator, Operators } from '../operators';
+import { Operator, Operators } from '../columnsOperators';
 import { EmptyObject } from './utils';
 
 export type ColumnOutput<T extends ColumnType> = T['type'];
@@ -7,9 +7,10 @@ export type ColumnInput<T extends ColumnType> = T['inputType'];
 
 export type NullableColumn<T extends ColumnType> = Omit<
   T,
-  'type' | 'operators'
+  'type' | 'inputType' | 'operators'
 > & {
   type: T['type'] | null;
+  inputType: T['inputType'] | null;
   isNullable: true;
   operators: Omit<T['operators'], 'equals' | 'not'> & {
     equals: Operator<T['type'] | null>;
@@ -40,6 +41,8 @@ export abstract class ColumnType<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   encodeFn?: (input: any) => unknown;
   parseFn?: (input: unknown) => unknown;
+  // parse item in array:
+  parseItem?: (input: string) => unknown;
 
   primaryKey<T extends ColumnType>(this: T): T & { isPrimaryKey: true } {
     return Object.assign(this, { isPrimaryKey: true as const });
@@ -68,6 +71,7 @@ export abstract class ColumnType<
     fn: (input: T['type']) => Output,
   ): Omit<T, 'type'> & { type: Output } {
     this.parseFn = fn;
+    this.parseItem = fn;
     return this as unknown as Omit<T, 'type'> & { type: Output };
   }
 

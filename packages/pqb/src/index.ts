@@ -3,7 +3,7 @@ export * from './sql';
 export * from './adapter';
 export * from './common';
 export * from './db';
-export * from './operators';
+export * from './columnsOperators';
 export * from './query';
 export * from './queryMethods/insert';
 export * from './queryMethods/join';

@@ -59,7 +59,7 @@ export const stringTypeMethods = <Base extends { data: BaseStringData }>() => ({
 
   trim<T extends Base>(this: T) {
     this.data.trim = true;
-    return this as T & { data: Omit<T['data'], 'cuid'> & { trim: true } };
+    return this as T & { data: Omit<T['data'], 'trim'> & { trim: true } };
   },
 });
 

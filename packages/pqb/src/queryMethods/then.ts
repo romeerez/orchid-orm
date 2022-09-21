@@ -4,6 +4,7 @@ import { NotFoundError } from '../errors';
 import { QueryArraysResult, QueryResult } from '../adapter';
 import { CommonQueryData, Sql } from '../sql';
 import { AfterCallback, BeforeCallback } from './callbacks';
+import { getValueKey } from './get';
 
 export type ThenResult<Res> = <T extends Query>(
   this: T,
@@ -166,19 +167,12 @@ export const parseResult = (
     }
     case 'value': {
       const value = result.rows[0]?.[0];
-      return value !== undefined
-        ? parseValue(value, (result as unknown as QueryArraysResult).fields, q)
-        : undefined;
+      return value !== undefined ? parseValue(value, q) : undefined;
     }
     case 'valueOrThrow': {
       const value = result.rows[0]?.[0];
       if (value === undefined) throw new NotFoundError();
-
-      return parseValue(
-        value,
-        (result as unknown as QueryArraysResult).fields,
-        q,
-      );
+      return parseValue(value, q);
     }
     case 'rowCount': {
       if (q.query.throwOnNotFound && result.rowCount === 0) {
@@ -219,15 +213,10 @@ const parseRows = (
   return rows;
 };
 
-const parseValue = (
-  value: unknown,
-  fields: { name: string }[],
-  query: Query,
-) => {
-  const field = fields[0];
+const parseValue = (value: unknown, query: Query) => {
   if (value !== null) {
     const parsers = getQueryParsers(query);
-    const parser = parsers?.[field.name];
+    const parser = parsers?.[getValueKey];
     if (parser) {
       return parser(value);
     }

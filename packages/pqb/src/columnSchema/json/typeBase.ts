@@ -26,7 +26,7 @@ export type JSONTypeData = {
 
 export type Primitive = string | number | bigint | boolean | null | undefined;
 
-export type JSONType<Type, DataType> = {
+export type JSONType<Type, DataType extends string = string> = {
   type: Type;
   data: JSONTypeData;
   dataType: DataType;
@@ -68,7 +68,8 @@ export type JSONType<Type, DataType> = {
 
   superRefine<T extends JSONTypeAny, RefinedOutput extends T['type']>(
     this: T,
-    check: (arg: T['type']) => unknown,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    check: (arg: T['type'], ctx: any) => unknown,
   ): T & { type: RefinedOutput };
 
   and<A extends JSONTypeAny, B extends JSONTypeAny>(

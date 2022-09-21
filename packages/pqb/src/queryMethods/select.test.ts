@@ -13,7 +13,7 @@ import {
   userData,
   useTestDatabase,
 } from '../test-utils';
-import { raw, rawColumn } from '../common';
+import { raw } from '../common';
 import { DateColumn } from '../columnSchema';
 import { addQueryOn } from './join';
 import { RelationQuery, relationQueryKey } from '../relations';
@@ -465,7 +465,7 @@ describe('selectMethods', () => {
 
     it('should parse raw column', async () => {
       const q = User.select({
-        date: rawColumn(
+        date: raw(
           new DateColumn().parse((input) => new Date(input)),
           '"createdAt"',
         ),

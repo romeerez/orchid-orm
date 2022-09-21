@@ -34,6 +34,7 @@ for (const key in types.builtins) {
   types.builtins.TIMESTAMP,
   types.builtins.TIMESTAMPTZ,
   types.builtins.TIME,
+  types.builtins.CIRCLE,
 ].forEach((id) => {
   delete defaultTypeParsers[id];
 });
