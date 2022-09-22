@@ -125,8 +125,12 @@ export class CircleColumn extends ColumnType<string, typeof Operators.text> {
   operators = Operators.text;
 }
 
-export class MoneyColumn extends NumberBaseColumn<string> {
+export class MoneyColumn extends NumberBaseColumn<number> {
   dataType = 'money' as const;
+
+  parseFn = (input: unknown) => {
+    return parseFloat((input as string).replace(/,/g, '').replace(/\$/g, ''));
+  };
 }
 
 // cidr	7 or 19 bytes	IPv4 and IPv6 networks
@@ -219,6 +223,6 @@ export class UUIDColumn extends ColumnType<string, typeof Operators.text> {
 
 // xml data type can be used to store XML data
 export class XMLColumn extends ColumnType<string, typeof Operators.text> {
-  dataType = 'uuid' as const;
+  dataType = 'xml' as const;
   operators = Operators.text;
 }

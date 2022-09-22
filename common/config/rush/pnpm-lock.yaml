@@ -80,6 +80,37 @@ importers:
       tslib: 2.4.0
       typescript: 4.7.4
 
+  ../../packages/schema-to-zod:
+    specifiers:
+      '@swc/core': ^1.2.210
+      '@swc/jest': ^0.2.21
+      '@types/jest': ^28.1.2
+      '@types/node': ^18.0.1
+      jest: ^28.1.2
+      pqb: workspace:*
+      rimraf: ^3.0.2
+      rollup: ^2.79.0
+      rollup-plugin-dts: ^4.2.2
+      rollup-plugin-esbuild: ^4.10.1
+      tslib: ^2.4.0
+      typescript: ^4.7.4
+      zod: ^3.19.1
+    dependencies:
+      pqb: link:../pqb
+      zod: 3.19.1
+    devDependencies:
+      '@swc/core': 1.2.210
+      '@swc/jest': 0.2.21_@swc+core@1.2.210
+      '@types/jest': 28.1.4
+      '@types/node': 18.0.1
+      jest: 28.1.2_@types+node@18.0.1
+      rimraf: 3.0.2
+      rollup: 2.79.0
+      rollup-plugin-dts: 4.2.2_xdb5ss5ub2cemhlks3szmapm6q
+      rollup-plugin-esbuild: 4.10.1_rollup@2.79.0
+      tslib: 2.4.0
+      typescript: 4.7.4
+
 packages:
 
   /@algolia/autocomplete-core/1.7.1:
@@ -3291,4 +3322,8 @@ packages:
 
   /zod/3.17.3:
     resolution: {integrity: sha512-4oKP5zvG6GGbMlqBkI5FESOAweldEhSOZ6LI6cG+JzUT7ofj1ZOC0PJudpQOpT1iqOFpYYtX5Pw0+o403y4bcg==}
+    dev: false
+
+  /zod/3.19.1:
+    resolution: {integrity: sha512-LYjZsEDhCdYET9ikFu6dVPGp2YH9DegXjdJToSzD9rO6fy4qiRYFoyEYwps88OseJlPyl2NOe2iJuhEhL7IpEA==}
     dev: false

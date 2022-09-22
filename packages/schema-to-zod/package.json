@@ -1,7 +1,7 @@
 {
-  "name": "pqb",
+  "name": "porm-schema-to-zod",
   "version": "0.0.1",
-  "description": "Postgres query builder",
+  "description": "PORM columns schema to Zod converter",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/romeerez/porm"
@@ -26,20 +26,25 @@
     ],
     "globalSetup": "../../jest-global-setup.ts",
     "setupFilesAfterEnv": [
-      "../../jest-setup.ts"
+      "../../jest-setup.ts",
+      "./jest-setup.ts"
     ],
     "transform": {
       "^.+\\.ts$": "@swc/jest"
     }
   },
   "keywords": [
-    "pg",
-    "postgres",
-    "query-builder"
+    "porm",
+    "query-builder",
+    "schema",
+    "zod"
   ],
   "author": "Roman Kushyn",
   "license": "ISC",
-  "dependencies": {},
+  "dependencies": {
+    "pqb": "workspace:*",
+    "zod": "^3.19.1"
+  },
   "devDependencies": {
     "rollup": "^2.79.0",
     "rollup-plugin-dts": "^4.2.2",
@@ -48,11 +53,7 @@
     "@swc/jest": "^0.2.21",
     "@types/jest": "^28.1.2",
     "@types/node": "^18.0.1",
-    "@types/pg": "^8.6.5",
-    "dotenv": "^16.0.1",
     "jest": "^28.1.2",
-    "pg": "^8.7.3",
-    "pg-transactional-tests": "^1.0.3",
     "rimraf": "^3.0.2",
     "tslib": "^2.4.0",
     "typescript": "^4.7.4"

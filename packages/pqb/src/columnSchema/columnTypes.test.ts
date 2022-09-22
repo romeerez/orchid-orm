@@ -280,29 +280,16 @@ describe('column types', () => {
 
       type MoodUnion = 'sad' | 'ok' | 'happy';
 
-      enum MoodEnum {
-        sad = 'sad',
-        ok = 'ok',
-        happy = 'happy',
-      }
-
       it('should output proper union', async () => {
         const result = await db.get(
-          raw(columnTypes.enum<MoodUnion>('mood'), `'happy'::mood`),
+          raw(
+            columnTypes.enum('mood', ['sad', 'ok', 'happy']),
+            `'happy'::mood`,
+          ),
         );
         expect(result).toBe('happy');
 
         const eq: AssertEqual<typeof result, MoodUnion> = true;
-        expect(eq).toBe(true);
-      });
-
-      it('should output proper enum', async () => {
-        const result = await db.get(
-          raw(columnTypes.enum<MoodEnum>('mood'), `'happy'::mood`),
-        );
-        expect(result).toBe(MoodEnum.happy);
-
-        const eq: AssertEqual<typeof result, MoodEnum> = true;
         expect(eq).toBe(true);
       });
     });
@@ -567,11 +554,13 @@ describe('column types', () => {
 
   describe('other types', () => {
     describe('money', () => {
-      it('should output string', async () => {
-        const result = await db.get(raw(columnTypes.money(), `'12.34'::money`));
-        expect(result).toBe('$12.34');
+      it('should output number', async () => {
+        const result = await db.get(
+          raw(columnTypes.money(), `'1234567890.42'::money`),
+        );
+        expect(result).toBe(1234567890.42);
 
-        const eq: AssertEqual<typeof result, string> = true;
+        const eq: AssertEqual<typeof result, number> = true;
         expect(eq).toBe(true);
       });
     });

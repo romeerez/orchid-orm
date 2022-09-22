@@ -102,7 +102,8 @@ export const columnTypes = {
     precision?: Precision,
   ) => new IntervalColumn(fields, precision),
   boolean: () => new BooleanColumn(),
-  enum: <Type>(dataType: string) => new EnumColumn<Type>(dataType),
+  enum: <U extends string, T extends [U, ...U[]]>(dataType: string, type: T) =>
+    new EnumColumn<U, T>(dataType, type),
   point: () => new PointColumn(),
   line: () => new LineColumn(),
   lseg: () => new LsegColumn(),

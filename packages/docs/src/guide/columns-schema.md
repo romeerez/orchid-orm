@@ -326,27 +326,10 @@ await db.adapter.query(`
 `)
 ```
 
-Define enum type as a string union:
+Define enum, first argument is a name of enum in database, second is array of possible values:
 
 ```ts
-type Mood = 'sad' | 'ok' | 'happy'
-```
-
-Or define enum as a TypeScript enum:
-
-```ts
-enum Mood {
-  sad = 'sad',
-  ok = 'ok',
-  happy = 'happy',
-}
-```
-
-And now we can define a enum column:
-
-```ts
-// put name of TS type to <> and pass name of db enum as an argument:
-t.enum<Mood>('mood'); // -> outputs Mood type
+t.enum('mood', ['sad', 'ok', 'happy']); // -> outputs Mood type
 ```
 
 ## Geometric types

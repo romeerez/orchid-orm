@@ -1,10 +1,18 @@
 import { ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
 
-export class EnumColumn<Type> extends ColumnType<Type, typeof Operators.any> {
+export class EnumColumn<
+  U extends string,
+  T extends [U, ...U[]],
+> extends ColumnType<T[number], typeof Operators.any> {
   operators = Operators.any;
+  dataType = 'enum';
 
-  constructor(public dataType: string) {
+  constructor(public enumName: string, public options: T) {
     super();
+  }
+
+  toSql() {
+    return this.enumName;
   }
 }
