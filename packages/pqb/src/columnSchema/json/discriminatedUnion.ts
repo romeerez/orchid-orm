@@ -1,83 +1,92 @@
 import { constructType, JSONType, Primitive } from './typeBase';
-import { JSONObject } from './object';
+import { JSONObject, JSONObjectShape } from './object';
 import { JSONLiteral } from './literal';
 
 export interface JSONDiscriminatedUnion<
   Discriminator extends string,
-  Options extends DiscriminatedOptions<Discriminator>,
-> extends JSONType<Options[number]['type'], 'discriminatedUnion'> {
+  DiscriminatorValue extends Primitive,
+  Option extends JSONDiscriminatedObject<Discriminator, DiscriminatorValue>,
+> extends JSONType<Option['type'], 'discriminatedUnion'> {
   discriminator: Discriminator;
-  options: OptionsMap<Discriminator, Options>;
+  discriminatorValue: DiscriminatorValue;
+  options: Map<DiscriminatorValue, Option>;
+  _option: Option;
   // TODO: gave up on deepPartial type
   // deepPartial(): JSONDiscriminatedUnion<
   //   Discriminator,
   //   {
-  //     [Index in keyof Options]: {
-  //       [K in keyof Options[Index]['shape']]: K extends Discriminator
-  //         ? Options[Index]['shape'][K]
-  //         : JSONOptional<Options[Index]['shape'][K]>;
+  //     [Index in keyof Types]: {
+  //       [K in keyof Types[Index]['shape']]: K extends Discriminator
+  //         ? Types[Index]['shape'][K]
+  //         : JSONOptional<Types[Index]['shape'][K]>;
   //     } extends JSONObject<Record<Discriminator, JSONLiteral<Primitive>>>
   //       ? JSONObject<
   //           {
-  //             [K in keyof Options[Index]['shape']]: K extends Discriminator
-  //               ? Options[Index]['shape'][K]
-  //               : JSONOptional<Options[Index]['shape'][K]>;
+  //             [K in keyof Types[Index]['shape']]: K extends Discriminator
+  //               ? Types[Index]['shape'][K]
+  //               : JSONOptional<Types[Index]['shape'][K]>;
   //           },
-  //           Options[Index]['unknownKeys'],
-  //           Options[Index]['catchAllType']
+  //           Types[Index]['unknownKeys'],
+  //           Types[Index]['catchAllType']
   //         >
-  //       : Options[Index];
+  //       : Types[Index];
   //   } & {
-  //     length: Options['length'];
+  //     length: Types['length'];
   //   }
   // >;
 }
 
-type JSONDiscriminatedObject<Discriminator extends string> = JSONObject<
-  Record<Discriminator, JSONLiteral<Primitive>>
->;
-
-type DiscriminatedOptions<Discriminator extends string> = readonly [
-  JSONDiscriminatedObject<Discriminator>,
-  JSONDiscriminatedObject<Discriminator>,
-  ...JSONDiscriminatedObject<Discriminator>[],
-];
-
-type OptionsMap<
+export type JSONDiscriminatedObject<
   Discriminator extends string,
-  Options extends DiscriminatedOptions<Discriminator>,
-> = Map<Options[number]['shape'][Discriminator]['value'], Options[number]>;
+  DiscriminatorValue extends Primitive,
+> = JSONObject<
+  { [K in Discriminator]: JSONLiteral<DiscriminatorValue> } & JSONObjectShape,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  any
+>;
 
 export const discriminatedUnion = <
   Discriminator extends string,
-  Options extends DiscriminatedOptions<Discriminator>,
+  DiscriminatorValue extends Primitive,
+  Types extends [
+    JSONDiscriminatedObject<Discriminator, DiscriminatorValue>,
+    JSONDiscriminatedObject<Discriminator, DiscriminatorValue>,
+    ...JSONDiscriminatedObject<Discriminator, DiscriminatorValue>[],
+  ],
 >(
   discriminator: Discriminator,
-  options: Options,
-) => {
-  const optionsMap: OptionsMap<
-    Discriminator,
-    DiscriminatedOptions<Discriminator>
-  > = new Map();
+  options: Types,
+): JSONDiscriminatedUnion<Discriminator, DiscriminatorValue, Types[number]> => {
+  const optionsMap: Map<DiscriminatorValue, Types[number]> = new Map();
 
   options.forEach((option) => {
     const discriminatorValue = option.shape[discriminator].value;
-    optionsMap.set(discriminatorValue, option);
+    optionsMap.set(discriminatorValue as DiscriminatorValue, option);
   });
 
-  return constructType<JSONDiscriminatedUnion<Discriminator, Options>>({
+  return constructType<
+    JSONDiscriminatedUnion<Discriminator, DiscriminatorValue, Types[number]>
+  >({
     dataType: 'discriminatedUnion',
     discriminator,
+    discriminatorValue: undefined as unknown as DiscriminatorValue,
     options: optionsMap,
-    deepPartial(this: JSONDiscriminatedUnion<Discriminator, Options>) {
-      const newOptionsMap: OptionsMap<
+    _option: undefined as unknown as Types[number],
+    deepPartial(
+      this: JSONDiscriminatedUnion<
         Discriminator,
-        DiscriminatedOptions<Discriminator>
-      > = new Map();
+        DiscriminatorValue,
+        Types[number]
+      >,
+    ) {
+      const newOptionsMap: Map<DiscriminatorValue, Types[number]> = new Map();
 
       optionsMap.forEach((option, key) => {
         const partial =
-          option.deepPartial() as unknown as JSONDiscriminatedObject<Discriminator>;
+          option.deepPartial() as unknown as JSONDiscriminatedObject<
+            Discriminator,
+            DiscriminatorValue
+          >;
         partial.shape[discriminator] = option.shape[discriminator];
         newOptionsMap.set(key, partial);
       });

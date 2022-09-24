@@ -7,7 +7,7 @@ export interface JSONNativeEnum<T extends EnumLike>
   options: (number | string)[];
 }
 
-type EnumLike = { [k: string]: string | number; [nu: number]: string };
+export type EnumLike = { [k: string]: string | number; [nu: number]: string };
 
 export const getValidEnumValues = (obj: EnumLike) => {
   const values: (number | string)[] = [];

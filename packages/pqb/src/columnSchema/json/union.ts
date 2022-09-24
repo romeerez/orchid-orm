@@ -8,7 +8,7 @@ export interface JSONUnion<
 
 export const union = <T extends [JSONTypeAny, JSONTypeAny, ...JSONTypeAny[]]>(
   types: T,
-): T[number] => {
+): JSONUnion<T> => {
   return constructType<JSONUnion<T>>({
     dataType: 'union',
     types,

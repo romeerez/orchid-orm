@@ -1049,13 +1049,13 @@ import { JSONType, jsonTypes as t } from 'pqb'
 
 interface Category {
   name: string;
-  subcategories: Category[];
+  subCategories: Category[];
 }
 
 const Category: JSONType<Category> = t.lazy(() =>
   t.object({
     name: t.string(),
-    subcategories: t.array(Category),
+    subCategories: t.array(Category),
   })
 );
 

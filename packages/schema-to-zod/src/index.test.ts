@@ -1,7 +1,12 @@
-import { columnTypes as t } from 'pqb';
+import { columnTypes as t, jsonTypes } from 'pqb';
 import { schemaToZod } from './index';
 import { z } from 'zod';
 import { Buffer } from 'node:buffer';
+import {
+  JSONDiscriminatedObject,
+  JSONDiscriminatedUnion,
+} from 'pqb/src/columnSchema/json/discriminatedUnion';
+import { JSONType } from 'pqb/src/columnSchema/json/typeBase';
 
 export type AssertEqual<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]
@@ -335,6 +340,515 @@ describe('schema to zod', () => {
       expect(() => schema.parse(['a'])).toThrow(
         'Expected number, received string',
       );
+    });
+  });
+
+  describe.only('json', () => {
+    describe('any', () => {
+      it('should parse to any', () => {
+        const schema = schemaToZod(t.json((t) => t.any()));
+
+        assertType<typeof schema, z.ZodTypeAny>(true);
+
+        expect(schema.parse(123)).toBe(123);
+      });
+    });
+
+    describe('bigint', () => {
+      it('should validate bigint and parse to string', () => {
+        const schema = schemaToZod(t.json((t) => t.bigint()));
+
+        assertType<typeof schema, z.ZodString>(true);
+
+        expect(schema.parse('123')).toBe('123');
+
+        expect(() => schema.parse('kokoko')).toThrow('Failed to parse bigint');
+      });
+    });
+
+    describe('boolean', () => {
+      it('should parse boolean', () => {
+        const schema = schemaToZod(t.json((t) => t.boolean()));
+
+        assertType<typeof schema, z.ZodBoolean>(true);
+
+        expect(schema.parse(true)).toBe(true);
+
+        expect(() => schema.parse(123)).toThrow(
+          'Expected boolean, received number',
+        );
+      });
+    });
+
+    describe('date', () => {
+      it('should parse a Date', () => {
+        const schema = schemaToZod(t.json((t) => t.date()));
+
+        assertType<typeof schema, z.ZodDate>(true);
+
+        const date = new Date(2000, 0, 1);
+        expect(schema.parse(date).getTime()).toBe(date.getTime());
+
+        expect(() => schema.parse(new Date('koko'))).toThrow('Invalid date');
+      });
+    });
+
+    describe('nan', () => {
+      it('should parse a NaN', () => {
+        const schema = schemaToZod(t.json((t) => t.nan()));
+
+        assertType<typeof schema, z.ZodNaN>(true);
+
+        expect(schema.parse(NaN)).toBe(NaN);
+
+        expect(() => schema.parse(123)).toThrow(
+          'Expected nan, received number',
+        );
+      });
+    });
+
+    describe('never', () => {
+      it('should parse a never', () => {
+        const schema = schemaToZod(t.json((t) => t.never()));
+
+        assertType<typeof schema, z.ZodNever>(true);
+
+        expect(() => schema.parse(123)).toThrow(
+          'Expected never, received number',
+        );
+      });
+    });
+
+    describe('null', () => {
+      it('should parse a null', () => {
+        const schema = schemaToZod(t.json((t) => t.null()));
+
+        assertType<typeof schema, z.ZodNull>(true);
+
+        expect(schema.parse(null)).toBe(null);
+
+        expect(() => schema.parse(123)).toThrow(
+          'Expected null, received number',
+        );
+      });
+    });
+
+    describe('number', () => {
+      it('should parse a number', () => {
+        const schema = schemaToZod(t.json((t) => t.number()));
+
+        assertType<typeof schema, z.ZodNumber>(true);
+
+        expect(schema.parse(123)).toBe(123);
+
+        expect(() => schema.parse('123')).toThrow(
+          'Expected number, received string',
+        );
+      });
+    });
+
+    describe('string', () => {
+      it('should parse a string', () => {
+        const schema = schemaToZod(t.json((t) => t.string()));
+
+        assertType<typeof schema, z.ZodString>(true);
+
+        expect(schema.parse('string')).toBe('string');
+
+        expect(() => schema.parse(123)).toThrow(
+          'Expected string, received number',
+        );
+      });
+    });
+
+    describe('undefined', () => {
+      it('should parse a undefined', () => {
+        const schema = schemaToZod(t.json((t) => t.undefined()));
+
+        assertType<typeof schema, z.ZodUndefined>(true);
+
+        expect(schema.parse(undefined)).toBe(undefined);
+
+        expect(() => schema.parse(123)).toThrow(
+          'Expected undefined, received number',
+        );
+      });
+    });
+
+    describe('unknown', () => {
+      it('should parse unknown', () => {
+        const schema = schemaToZod(t.json((t) => t.unknown()));
+
+        assertType<typeof schema, z.ZodUnknown>(true);
+
+        expect(schema.parse(123)).toBe(123);
+      });
+    });
+
+    describe('void', () => {
+      it('should parse void', () => {
+        const schema = schemaToZod(t.json((t) => t.void()));
+
+        assertType<typeof schema, z.ZodVoid>(true);
+
+        expect(schema.parse(undefined)).toBe(undefined);
+
+        expect(() => schema.parse(123)).toThrow(
+          'Expected void, received number',
+        );
+      });
+    });
+
+    describe('array', () => {
+      it('should validate and parse array', () => {
+        const schema = schemaToZod(t.json((t) => t.array(t.number())));
+
+        assertType<typeof schema, z.ZodArray<z.ZodNumber>>(true);
+
+        expect(schema.parse([1, 2, 3])).toEqual([1, 2, 3]);
+
+        expect(() => schema.parse(123)).toThrow(
+          'Expected array, received number',
+        );
+        expect(() => schema.parse(['a'])).toThrow(
+          'Expected number, received string',
+        );
+      });
+    });
+
+    describe('enum', () => {
+      it('should parse enum', () => {
+        const schema = schemaToZod(t.json((t) => t.enum(['a', 'b', 'c'])));
+
+        assertType<typeof schema, z.ZodEnum<['a', 'b', 'c']>>(true);
+
+        expect(schema.parse('a')).toBe('a');
+
+        expect(() => schema.parse('d')).toThrow('Invalid enum value');
+      });
+    });
+
+    describe('instanceOf', () => {
+      it('should parse instance of', () => {
+        const schema = schemaToZod(t.json((t) => t.instanceOf(Date)));
+
+        assertType<typeof schema, z.ZodType<Date, z.ZodTypeDef, Date>>(true);
+
+        const date = new Date();
+        expect(schema.parse(date)).toBe(date);
+
+        expect(() => schema.parse({})).toThrow('Input not instance of Date');
+      });
+    });
+
+    describe('literal', () => {
+      it('should parse literal', () => {
+        const schema = schemaToZod(t.json((t) => t.literal('string')));
+
+        assertType<typeof schema, z.ZodLiteral<'string'>>(true);
+
+        expect(schema.parse('string')).toBe('string');
+
+        expect(() => schema.parse('koko')).toThrow('Invalid literal value');
+      });
+    });
+
+    describe('map', () => {
+      it('should parse map', () => {
+        const schema = schemaToZod(
+          t.json((t) => t.map(t.string(), t.number())),
+        );
+
+        assertType<typeof schema, z.ZodMap<z.ZodString, z.ZodNumber>>(true);
+
+        const map = new Map();
+        map.set('key', 123);
+        expect(schema.parse(map)).toEqual(map);
+
+        map.set(123, 'key');
+        expect(() => schema.parse(map)).toThrow(
+          'Expected number, received string',
+        );
+      });
+    });
+
+    describe('set', () => {
+      it('should parse set', () => {
+        const schema = schemaToZod(t.json((t) => t.set(t.number())));
+
+        assertType<typeof schema, z.ZodSet<z.ZodNumber>>(true);
+
+        const set = new Set();
+        set.add(1);
+        expect(schema.parse(set)).toEqual(set);
+
+        set.add('string');
+        expect(() => schema.parse(set)).toThrow(
+          'Expected number, received string',
+        );
+      });
+    });
+
+    describe('nativeEnum', () => {
+      it('should parse native enum', () => {
+        enum Test {
+          one = 'one',
+          two = 'two',
+        }
+
+        const schema = schemaToZod(t.json((t) => t.nativeEnum(Test)));
+
+        assertType<typeof schema, z.ZodNativeEnum<typeof Test>>(true);
+
+        expect(schema.parse('one')).toBe('one');
+
+        expect(() => schema.parse('ko')).toThrow('Invalid enum value');
+      });
+    });
+
+    describe('tuple', () => {
+      it('should parse tuple', () => {
+        const schema = schemaToZod(
+          t.json((t) => t.tuple([t.number(), t.string()])),
+        );
+
+        assertType<typeof schema, z.ZodTuple<[z.ZodNumber, z.ZodString]>>(true);
+
+        expect(schema.parse([1, 'string'])).toEqual([1, 'string']);
+
+        expect(() => schema.parse(['string', 1])).toThrow(
+          `Expected number, received string`,
+        );
+      });
+    });
+
+    describe('nullable', () => {
+      it('should parse nullable', () => {
+        const schema = schemaToZod(t.json((t) => t.nullable(t.number())));
+
+        assertType<typeof schema, z.ZodNullable<z.ZodNumber>>(true);
+
+        expect(schema.parse(null)).toBe(null);
+      });
+    });
+
+    describe('nullish', () => {
+      it('should parse nullish', () => {
+        const schema = schemaToZod(t.json((t) => t.nullish(t.number())));
+
+        assertType<typeof schema, z.ZodNullable<z.ZodOptional<z.ZodNumber>>>(
+          true,
+        );
+
+        expect(schema.parse(null)).toBe(null);
+        expect(schema.parse(undefined)).toBe(undefined);
+      });
+    });
+
+    describe('optional', () => {
+      it('should parse optional', () => {
+        const schema = schemaToZod(t.json((t) => t.optional(t.number())));
+
+        assertType<typeof schema, z.ZodOptional<z.ZodNumber>>(true);
+
+        expect(schema.parse(undefined)).toBe(undefined);
+      });
+    });
+
+    describe('object', () => {
+      it('should parse object', () => {
+        const schema = schemaToZod(
+          t.json((t) => t.object({ key: t.number() })),
+        );
+
+        assertType<typeof schema, z.ZodObject<{ key: z.ZodNumber }>>(true);
+
+        expect(schema.parse({ key: 123 })).toEqual({ key: 123 });
+
+        expect(() => schema.parse({ key: 'string' })).toThrow(
+          'Expected number, received string',
+        );
+      });
+
+      it('should parse object with passing through unknown keys', () => {
+        const schema = schemaToZod(
+          t.json((t) => t.object({ key: t.number() }).passthrough()),
+        );
+
+        assertType<
+          typeof schema,
+          z.ZodObject<{ key: z.ZodNumber }, 'passthrough'>
+        >(true);
+
+        expect(schema.parse({ key: 123, koko: 'koko' })).toEqual({
+          key: 123,
+          koko: 'koko',
+        });
+
+        expect(() => schema.parse({ key: 'string' })).toThrow(
+          'Expected number, received string',
+        );
+      });
+
+      it('should parse object with strict unknown keys', () => {
+        const schema = schemaToZod(
+          t.json((t) => t.object({ key: t.number() }).strict()),
+        );
+
+        assertType<typeof schema, z.ZodObject<{ key: z.ZodNumber }, 'strict'>>(
+          true,
+        );
+
+        expect(schema.parse({ key: 123 })).toEqual({ key: 123 });
+
+        expect(() => schema.parse({ key: 123, koko: 'koko' })).toThrow(
+          'Unrecognized key(s)',
+        );
+      });
+
+      it('should parse object with catch all option', () => {
+        const schema = schemaToZod(
+          t.json((t) => t.object({ key: t.number() }).catchAll(t.number())),
+        );
+
+        assertType<
+          typeof schema,
+          z.ZodObject<{ key: z.ZodNumber }, 'strip', z.ZodNumber>
+        >(true);
+
+        expect(schema.parse({ key: 123, koko: 123 })).toEqual({
+          key: 123,
+          koko: 123,
+        });
+
+        expect(() => schema.parse({ key: 123, koko: 'koko' })).toThrow(
+          'Expected number, received string',
+        );
+      });
+    });
+
+    describe('record', () => {
+      it('should parse record', () => {
+        const schema = schemaToZod(
+          t.json((t) => t.record(t.string(), t.number())),
+        );
+
+        assertType<typeof schema, z.ZodRecord<z.ZodString, z.ZodNumber>>(true);
+
+        expect(schema.parse({ key: 123 })).toEqual({ key: 123 });
+
+        expect(() => schema.parse({ key: 'string' })).toThrow(
+          'Expected number, received string',
+        );
+      });
+    });
+
+    describe('intersection', () => {
+      it('should parse intersection', () => {
+        const schema = schemaToZod(
+          t.json((t) =>
+            t.intersection(
+              t.object({ a: t.string(), b: t.number() }),
+              t.object({ a: t.string(), c: t.number() }),
+            ),
+          ),
+        );
+
+        assertType<
+          typeof schema,
+          z.ZodIntersection<
+            z.ZodObject<{ a: z.ZodString; b: z.ZodNumber }>,
+            z.ZodObject<{ a: z.ZodString; c: z.ZodNumber }>
+          >
+        >(true);
+
+        expect(schema.parse({ a: 'string', b: 123, c: 123 })).toEqual({
+          a: 'string',
+          b: 123,
+          c: 123,
+        });
+
+        expect(() => schema.parse({ a: 'string', b: 123 })).toThrow('Required');
+      });
+    });
+
+    describe('union', () => {
+      it('should parse union', () => {
+        const schema = schemaToZod(
+          t.json((t) => t.union([t.number(), t.string()])),
+        );
+
+        assertType<typeof schema, z.ZodUnion<[z.ZodNumber, z.ZodString]>>(true);
+
+        expect(schema.parse(123)).toBe(123);
+        expect(schema.parse('string')).toBe('string');
+
+        expect(() => schema.parse(true)).toThrow('Invalid input');
+      });
+    });
+
+    describe('discriminatedUnion', () => {
+      it('should parse discriminated union', () => {
+        const schema = schemaToZod(
+          t.json((t) =>
+            t.discriminatedUnion('type', [
+              t.object({ type: t.literal('a'), a: t.string() }),
+              t.object({ type: t.literal('b'), b: t.number() }),
+            ]),
+          ),
+        );
+
+        assertType<
+          typeof schema,
+          z.ZodDiscriminatedUnion<
+            'type',
+            z.Primitive,
+            | z.ZodObject<{ type: z.ZodLiteral<'a'>; a: z.ZodString }>
+            | z.ZodObject<{ type: z.ZodLiteral<'b'>; b: z.ZodNumber }>
+          >
+        >(true);
+
+        expect(schema.parse({ type: 'a', a: 'string' })).toEqual({
+          type: 'a',
+          a: 'string',
+        });
+        expect(schema.parse({ type: 'b', b: 123 })).toEqual({
+          type: 'b',
+          b: 123,
+        });
+
+        expect(() => schema.parse({ type: 'c' })).toThrow(
+          'Invalid discriminator value',
+        );
+      });
+    });
+
+    describe('lazy', () => {
+      it('should parse lazy type', () => {
+        interface Category {
+          name: string;
+          subCategories: Category[];
+        }
+
+        const JsonCategory: JSONType<Category> = jsonTypes.lazy(() =>
+          jsonTypes.object({
+            name: jsonTypes.string(),
+            subCategories: jsonTypes.array(JsonCategory),
+          }),
+        );
+
+        const schema = schemaToZod(t.json(() => JsonCategory));
+
+        const valid = {
+          name: 'name',
+          subCategories: [{ name: 'name', subCategories: [] }],
+        };
+        expect(schema.parse(valid)).toEqual(valid);
+
+        expect(() =>
+          schema.parse({ name: 'name', subCategories: [{ name: 'name' }] }),
+        ).toThrow('Required');
+      });
     });
   });
 });

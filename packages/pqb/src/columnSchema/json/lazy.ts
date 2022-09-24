@@ -7,10 +7,12 @@ export interface JSONLazy<T extends JSONTypeAny>
   deepPartial(): JSONLazy<ReturnType<T['deepPartial']>>;
 }
 
-export const lazy = <T extends JSONTypeAny>(fn: () => T) => {
-  constructType<JSONLazy<T>>({
+export const lazy = <T extends JSONTypeAny>(fn: () => T): JSONLazy<T> => {
+  return constructType<JSONLazy<T>>({
     dataType: 'lazy',
-    getter: fn,
+    getter() {
+      return this.typeCache || (this.typeCache = fn());
+    },
     deepPartial(this: JSONLazy<T>) {
       return {
         ...this,

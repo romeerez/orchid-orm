@@ -1,27 +1,27 @@
 import { constructType, JSONType } from './typeBase';
 
-export interface JSONEnum<T extends EnumValues>
-  extends JSONType<T[number], 'enum'> {
+export interface JSONEnum<
+  U extends string = string,
+  T extends [U, ...U[]] = [U],
+> extends JSONType<T[number], 'enum'> {
   enum: { [k in T[number]]: k };
   options: T;
 }
 
-type EnumValues = readonly [string, ...string[]];
-
-export const arrayToEnum = <T extends string, U extends readonly [T, ...T[]]>(
-  items: U,
+export const arrayToEnum = <U extends string, T extends [U, ...U[]]>(
+  items: T,
 ) => {
-  const obj = {} as { [k in U[number]]: k };
+  const obj = {} as { [k in T[number]]: k };
   for (const item of items) {
     obj[item] = item;
   }
   return obj;
 };
 
-export const enumType = <T extends readonly [string, ...string[]]>(
+export const enumType = <U extends string, T extends [U, ...U[]]>(
   options: T,
 ) => {
-  return constructType<JSONEnum<T>>({
+  return constructType<JSONEnum<U, T>>({
     dataType: 'enum',
     enum: arrayToEnum(options),
     options,
