@@ -1,13 +1,13 @@
 import { constructType, JSONType, JSONTypeAny, JSONTypeData } from './typeBase';
-import { ArrayMethods, arrayMethods } from '../commonMethods';
+import { SetMethods, setMethods } from '../commonMethods';
 
 export interface JSONSet<Value extends JSONTypeAny>
   extends JSONType<Set<Value['type']>, 'set'>,
-    ArrayMethods {
+    SetMethods {
   data: JSONTypeData & {
     min?: number;
     max?: number;
-    length?: number;
+    size?: number;
   };
   valueType: Value;
   deepPartial(): JSONSet<ReturnType<Value['deepPartial']>>;
@@ -29,6 +29,6 @@ export const set = <Value extends JSONTypeAny>(valueType: Value) => {
         data: { min: 1 };
       };
     },
-    ...arrayMethods,
+    ...setMethods,
   });
 };

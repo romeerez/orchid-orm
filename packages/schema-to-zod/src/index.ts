@@ -1,19 +1,13 @@
 import {
   ArrayColumn,
-  BigIntColumn,
-  BooleanColumn,
-  ByteaColumn,
   ColumnType,
   DateColumn,
   EnumColumn,
-  IntervalColumn,
   JSONColumn,
   NumberColumn,
   TextColumn,
-  TimeColumn,
-  UUIDColumn,
 } from 'pqb';
-import { z } from 'zod';
+import { z, ZodTypeAny } from 'zod';
 import { Buffer } from 'node:buffer';
 import { JSONTypeAny, Primitive } from 'pqb/src/columnSchema/json/typeBase';
 import { JSONArray } from 'pqb/src/columnSchema/json/array';
@@ -23,8 +17,6 @@ import { JSONLiteral } from 'pqb/src/columnSchema/json/literal';
 import { JSONMap } from 'pqb/src/columnSchema/json/map';
 import { EnumLike, JSONNativeEnum } from 'pqb/src/columnSchema/json/nativeEnum';
 import {
-  JSONBigInt,
-  JSONBoolean,
   JSONDate,
   JSONNumber,
   JSONString,
@@ -84,7 +76,12 @@ type UUIDType = 'uuid';
 
 type ByteaType = 'bytea';
 
-type SchemaToZod<T extends ColumnType, D = T['dataType']> = D extends NumberType
+type SchemaToZod<
+  T extends ColumnType,
+  D = T['dataType'],
+> = T['isNullable'] extends true
+  ? z.ZodNullable<SchemaToZod<Omit<T, 'isNullable'> & { isNullable: false }>>
+  : D extends NumberType
   ? z.ZodNumber
   : D extends
       | BigIntType
@@ -170,8 +167,8 @@ type JsonToZod<T extends JSONTypeAny, D = T['dataType']> = T extends {
   ? z.ZodSet<JsonToZod<U>>
   : T extends JSONNativeEnum<infer U>
   ? z.ZodNativeEnum<U>
-  : T extends JSONTuple<infer U>
-  ? z.ZodTuple<MapJsonTuple<U>>
+  : T extends JSONTuple<infer U, infer R>
+  ? z.ZodTuple<MapJsonTuple<U>, R extends JSONTypeAny ? JsonToZod<R> : null>
   : T extends JSONObject<Record<string, JSONTypeAny>, UnknownKeysParam>
   ? z.ZodObject<
       { [K in keyof T['shape']]: JsonToZod<T['shape'][K]> },
@@ -226,7 +223,23 @@ const typeHandler = <Type extends ColumnType | JSONTypeAny>(
 ) => {
   return (column: ColumnType | JSONTypeAny) => {
     let type = fn(column as Type);
-    if ('nullable' in column.data && column.data.nullable) {
+
+    column.chain.forEach((item) => {
+      if (item[0] === 'transform') {
+        type = type.transform(item[1]);
+      } else if (item[0] === 'to') {
+        type = z.preprocess(item[1], itemToZod(item[2]));
+      } else if (item[0] === 'refine') {
+        type = type.refine(item[1]);
+      } else if (item[0] === 'superRefine') {
+        type = type.superRefine(item[1]);
+      }
+    });
+
+    if (
+      ('nullable' in column.data && column.data.nullable) ||
+      (column as ColumnType).isNullable
+    ) {
       if ('optional' in column.data && column.data.optional) {
         type = type.nullish();
       } else {
@@ -235,19 +248,61 @@ const typeHandler = <Type extends ColumnType | JSONTypeAny>(
     } else if ('optional' in column.data && column.data.optional) {
       type = type.optional();
     }
+
+    if (column.data.default !== undefined) {
+      type = type.default(column.data.default);
+    }
+
     return type;
   };
 };
 
+const stringParams = [
+  'min',
+  'max',
+  'length',
+  'regex',
+  'startsWith',
+  'endsWith',
+];
+const stringEmptyParams = ['email', 'url', 'uuid', 'cuid', 'trim'];
 const handleString = typeHandler((column: TextColumn | JSONString) => {
-  return z.string();
+  let type = z.string();
+  stringParams.forEach((key) => {
+    const value = (column.data as Record<string, unknown>)[key];
+    if (value !== undefined) {
+      type = (
+        type as unknown as Record<string, (value: unknown) => z.ZodString>
+      )[key](value);
+    }
+  });
+  stringEmptyParams.forEach((key) => {
+    const value = (column.data as Record<string, unknown>)[key];
+    if (value) {
+      type = (type as unknown as Record<string, () => z.ZodString>)[key]();
+    }
+  });
+  return type;
 });
 
+const numberParams = ['lt', 'lte', 'gt', 'gte', 'multipleOf'];
 const handleNumber = typeHandler((column: NumberColumn | JSONNumber) => {
-  return z.number();
+  let type = z.number();
+  numberParams.forEach((key) => {
+    const value = (column.data as Record<string, unknown>)[key];
+    if (value !== undefined) {
+      type = (
+        type as unknown as Record<string, (value: unknown) => z.ZodNumber>
+      )[key](value);
+    }
+  });
+  if ((column.data as Record<string, boolean>).int) {
+    type = type.int();
+  }
+  return type;
 });
 
-const handleBigInt = typeHandler((column: BigIntColumn | JSONBigInt) => {
+const handleBigInt = typeHandler(() => {
   return z.string().refine(
     (value) => {
       try {
@@ -263,18 +318,29 @@ const handleBigInt = typeHandler((column: BigIntColumn | JSONBigInt) => {
   );
 });
 
-const handleBuffer = typeHandler((column: ByteaColumn) => {
+const handleBuffer = typeHandler(() => {
   return z.instanceof(Buffer);
 });
 
+const dateParams = ['min', 'max'];
 const handleDate = typeHandler((column: DateColumn | JSONDate) => {
+  let type = z.date();
+  dateParams.forEach((key) => {
+    const value = (column.data as Record<string, unknown>)[key];
+    if (value !== undefined) {
+      type = (type as unknown as Record<string, (value: unknown) => z.ZodDate>)[
+        key
+      ](value);
+    }
+  });
+
   return z.preprocess(
     (val) => (typeof val === 'string' ? new Date(val) : val),
-    z.date(),
+    type,
   );
 });
 
-const handleTime = typeHandler((column: TimeColumn) => {
+const handleTime = typeHandler(() => {
   return z.string().refine(
     (val) => {
       return !isNaN(new Date(`2000-01-01 ${val}`).getTime());
@@ -295,11 +361,11 @@ const interval = z
   })
   .strict();
 
-const handleInterval = typeHandler((column: IntervalColumn) => {
+const handleInterval = typeHandler(() => {
   return interval;
 });
 
-const handleBoolean = typeHandler((column: BooleanColumn | JSONBoolean) => {
+const handleBoolean = typeHandler(() => {
   return z.boolean();
 });
 
@@ -310,21 +376,37 @@ const handleEnum = typeHandler((column: EnumColumn | JSONEnum) => {
   return z.enum(enumColumn.options);
 });
 
-const handleBitString = typeHandler((column: ByteaColumn) => {
+const handleBitString = typeHandler(() => {
   return z.string().regex(/[10]/g);
 });
 
-const handleUUID = typeHandler((column: UUIDColumn) => {
+const handleUUID = typeHandler(() => {
   return z.string().uuid();
 });
 
+const arrayParams = ['min', 'max', 'length'];
 const handleArray = typeHandler(
   (array: ArrayColumn<ColumnType> | JSONArray<JSONTypeAny>) => {
+    let type: z.ZodArray<z.ZodTypeAny>;
     if ('element' in array) {
-      return z.array(jsonItemToZod(array.element));
+      type = z.array(jsonItemToZod(array.element));
     } else {
-      return z.array(schemaToZod(array.data.item));
+      type = z.array(schemaToZod(array.data.item));
     }
+
+    arrayParams.forEach((key) => {
+      const value = (array.data as Record<string, unknown>)[key];
+      if (value !== undefined) {
+        type = (
+          type as unknown as Record<
+            string,
+            (value: unknown) => z.ZodArray<z.ZodTypeAny>
+          >
+        )[key](value);
+      }
+    });
+
+    return type;
   },
 );
 
@@ -337,6 +419,10 @@ const jsonItemToZod = (type: JSONTypeAny) => {
   const converter = jsonConverters[type.dataType];
   if (!converter) throw new Error(`Cannot parse column ${type.dataType}`);
   return converter(type);
+};
+
+const itemToZod = (item: ColumnType | JSONTypeAny) => {
+  return item instanceof ColumnType ? schemaToZod(item) : jsonItemToZod(item);
 };
 
 const converters: Record<string, (column: ColumnType) => z.ZodType> = {
@@ -384,37 +470,39 @@ const converters: Record<string, (column: ColumnType) => z.ZodType> = {
   jsonb: handleJson,
 };
 
-const handleAny = typeHandler((type: JSONTypeAny) => {
+const handleAny = typeHandler(() => {
   return z.any();
 });
 
-const handleNaN = typeHandler((type: JSONTypeAny) => {
+const handleNaN = typeHandler(() => {
   return z.nan();
 });
 
-const handleNever = typeHandler((type: JSONTypeAny) => {
+const handleNever = typeHandler(() => {
   return z.never();
 });
 
-const handleNull = typeHandler((type: JSONTypeAny) => {
+const handleNull = typeHandler(() => {
   return z.null();
 });
 
-const handleUndefined = typeHandler((type: JSONTypeAny) => {
+const handleUndefined = typeHandler(() => {
   return z.undefined();
 });
 
-const handleUnknown = typeHandler((type: JSONTypeAny) => {
+const handleUnknown = typeHandler(() => {
   return z.unknown();
 });
 
-const handleVoid = typeHandler((type: JSONTypeAny) => {
+const handleVoid = typeHandler(() => {
   return z.void();
 });
 
-const handleInstanceOf = typeHandler((type: JSONTypeAny) => {
-  return z.instanceof((type as JSONInstanceOf<new () => unknown>).class);
-});
+const handleInstanceOf = typeHandler(
+  (type: JSONInstanceOf<new () => unknown>) => {
+    return z.instanceof(type.class);
+  },
+);
 
 const handleLiteral = typeHandler((type: JSONTypeAny) => {
   return z.literal((type as JSONLiteral<string>).value);
@@ -425,17 +513,36 @@ const handleMap = typeHandler((type: JSONMap<JSONTypeAny, JSONTypeAny>) => {
   return z.map(jsonItemToZod(keyType), jsonItemToZod(valueType));
 });
 
-const handleSet = typeHandler((type: JSONSet<JSONTypeAny>) => {
-  const { valueType } = type;
-  return z.set(jsonItemToZod(valueType));
+const setParams = ['min', 'max', 'size'];
+const handleSet = typeHandler((column: JSONSet<JSONTypeAny>) => {
+  const { valueType } = column;
+  let type = z.set(jsonItemToZod(valueType));
+  setParams.forEach((key) => {
+    const value = (column.data as Record<string, unknown>)[key];
+    if (value !== undefined) {
+      type = (
+        type as unknown as Record<
+          string,
+          (value: unknown) => z.ZodSet<z.ZodTypeAny>
+        >
+      )[key](value);
+    }
+  });
+  return type;
 });
 
 const handleNativeEnum = typeHandler((type: JSONTypeAny) => {
   return z.nativeEnum((type as JSONNativeEnum<EnumLike>).enum);
 });
 
-const handleTuple = typeHandler((type: JSONTuple) => {
-  return z.tuple(type.items.map((item) => jsonItemToZod(item)) as []);
+const handleTuple = typeHandler((column: JSONTuple) => {
+  let type: z.ZodTuple<[], ZodTypeAny | null> = z.tuple(
+    column.items.map((item) => jsonItemToZod(item)) as [],
+  );
+  if (column.restType) {
+    type = type.rest(jsonItemToZod(column.restType));
+  }
+  return type;
 });
 
 const handleObject = typeHandler(

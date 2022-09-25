@@ -9,6 +9,7 @@ import { JSONNotNullish, JSONNullish, notNullish, nullish } from './nullish';
 import { intersection, JSONIntersection } from './intersection';
 import { array, JSONArray } from './array';
 import { union } from './union';
+import { ColumnData, ValidationContext } from '../columnType';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type JSONTypeAny = JSONType<any, string>;
@@ -19,7 +20,7 @@ export type DeepPartial<T extends JSONTypeAny> = ReturnType<
   ? T
   : ReturnType<T['deepPartial']>;
 
-export type JSONTypeData = {
+export type JSONTypeData = ColumnData & {
   optional?: true;
   nullable?: true;
 };
@@ -31,10 +32,10 @@ export type JSONType<Type, DataType extends string = string> = {
   data: JSONTypeData;
   dataType: DataType;
   chain: (
-    | ['transform', (input: unknown) => unknown]
+    | ['transform', (input: unknown, ctx: ValidationContext) => unknown]
     | ['to', (input: unknown) => JSONTypeAny | undefined, JSONTypeAny]
     | ['refine', (input: unknown) => unknown]
-    | ['superRefine', (input: unknown) => unknown]
+    | ['superRefine', (input: unknown, ctx: ValidationContext) => unknown]
   )[];
 
   optional<T extends JSONTypeAny>(this: T): JSONOptional<T>;
@@ -47,7 +48,7 @@ export type JSONType<Type, DataType extends string = string> = {
 
   transform<T extends JSONTypeAny, Transformed>(
     this: T,
-    fn: (input: T['type']) => Transformed,
+    fn: (input: T['type'], ctx: ValidationContext) => Transformed,
   ): JSONType<
     Transformed extends PromiseLike<unknown>
       ? Awaited<Transformed>
@@ -68,8 +69,7 @@ export type JSONType<Type, DataType extends string = string> = {
 
   superRefine<T extends JSONTypeAny, RefinedOutput extends T['type']>(
     this: T,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    check: (arg: T['type'], ctx: any) => unknown,
+    check: (arg: T['type'], ctx: ValidationContext) => unknown,
   ): T & { type: RefinedOutput };
 
   and<A extends JSONTypeAny, B extends JSONTypeAny>(
@@ -127,7 +127,7 @@ const baseTypeMethods: JSONTypeAny = {
 
   transform<T extends JSONTypeAny, Transformed>(
     this: T,
-    fn: (input: unknown) => Transformed,
+    fn: (input: unknown, ctx: ValidationContext) => Transformed,
   ) {
     return {
       ...this,
@@ -166,15 +166,9 @@ const baseTypeMethods: JSONTypeAny = {
   },
 
   default(value) {
-    const defaultFn =
-      typeof value === 'function'
-        ? (input: unknown) => input ?? (value as () => unknown)()
-        : (input: unknown) => input ?? value;
-
-    return notNullish({
-      ...this,
-      chain: ['transform', defaultFn],
-    });
+    const cloned = Object.create(this);
+    cloned.data = { ...cloned.data, default: value };
+    return cloned;
   },
 
   array() {

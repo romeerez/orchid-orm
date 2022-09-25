@@ -1,130 +1,212 @@
-import { BaseStringData } from './string';
-import { BaseNumberData } from './number';
+export const setDataValue = <
+  T extends { data: object },
+  Key extends string,
+  Value,
+>(
+  item: T,
+  key: Key,
+  value: Value,
+) => {
+  const cloned = Object.create(item);
+  cloned.data = { ...item.data, [key]: value };
+  return cloned as Omit<T, 'data'> & {
+    data: Omit<T['data'], Key> & { [K in Key]: Value };
+  };
+};
+
+function min<T extends { data: { min?: number } }, Value extends number>(
+  this: T,
+  value: Value,
+) {
+  return setDataValue(this, 'min', value);
+}
+
+function max<T extends { data: { max?: number } }, Value extends number>(
+  this: T,
+  value: Value,
+) {
+  return setDataValue(this, 'max', value);
+}
+
+function length<T extends { data: { length?: number } }, Value extends number>(
+  this: T,
+  value: Value,
+) {
+  return setDataValue(this, 'length', value);
+}
+
+function size<T extends { data: { size?: number } }, Value extends number>(
+  this: T,
+  value: Value,
+) {
+  return setDataValue(this, 'size', value);
+}
+
+function nonempty<T extends { data: { min?: number } }>(this: T) {
+  return setDataValue(this, 'min', 1);
+}
 
 export type ArrayMethods = typeof arrayMethods;
 
 export const arrayMethods = {
-  min<T extends { data: { min?: number } }, Value extends number>(
-    this: T,
-    value: Value,
-  ) {
-    this.data.min = value;
-    return this as T & { data: Omit<T['data'], 'min'> & { min: Value } };
+  min,
+  max,
+  length,
+  nonempty,
+};
+
+export type SetMethods = typeof setMethods;
+
+export const setMethods = {
+  min,
+  max,
+  size,
+  nonempty,
+};
+
+export const stringTypeMethods = () => ({
+  ...arrayMethods,
+
+  email<T extends { data: { email?: boolean } }>(this: T) {
+    return setDataValue(this, 'email', true);
   },
 
-  max<T extends { data: { max?: number } }, Value extends number>(
-    this: T,
-    value: Value,
-  ) {
-    this.data.max = value;
-    return this as T & { data: Omit<T['data'], 'max'> & { max: Value } };
+  url<T extends { data: { url?: boolean } }>(this: T) {
+    return setDataValue(this, 'url', true);
   },
 
-  length<T extends { data: { length?: number } }, Value extends number>(
+  uuid<T extends { data: { uuid?: boolean } }>(this: T) {
+    return setDataValue(this, 'uuid', true);
+  },
+
+  cuid<T extends { data: { cuid?: boolean } }>(this: T) {
+    return setDataValue(this, 'cuid', true);
+  },
+
+  regex<T extends { data: { regex?: RegExp } }, Value extends RegExp>(
     this: T,
     value: Value,
   ) {
-    this.data.length = value;
-    return this as T & { data: Omit<T['data'], 'length'> & { length: Value } };
+    return setDataValue(this, 'regex', value);
+  },
+
+  startsWith<T extends { data: { startsWith?: string } }, Value extends string>(
+    this: T,
+    value: Value,
+  ) {
+    return setDataValue(this, 'startsWith', value);
+  },
+
+  endsWith<T extends { data: { endsWith?: string } }, Value extends string>(
+    this: T,
+    value: Value,
+  ) {
+    return setDataValue(this, 'endsWith', value);
+  },
+
+  trim<T extends { data: { trim?: boolean } }>(this: T) {
+    return setDataValue(this, 'trim', true);
+  },
+});
+
+export const numberTypeMethods = {
+  lt<T extends { data: { lt?: number } }, Value extends number>(
+    this: T,
+    value: Value,
+  ) {
+    return setDataValue(this, 'lt', value);
+  },
+
+  lte<T extends { data: { lte?: number } }, Value extends number>(
+    this: T,
+    value: Value,
+  ) {
+    return setDataValue(this, 'lte', value);
+  },
+
+  max<T extends { data: { lte?: number } }, Value extends number>(
+    this: T,
+    value: Value,
+  ) {
+    return setDataValue(this, 'lte', value);
+  },
+
+  gt<T extends { data: { gt?: number } }, Value extends number>(
+    this: T,
+    value: Value,
+  ) {
+    return setDataValue(this, 'gt', value);
+  },
+
+  gte<T extends { data: { gte?: number } }, Value extends number>(
+    this: T,
+    value: Value,
+  ) {
+    return setDataValue(this, 'gte', value);
+  },
+
+  min<T extends { data: { gte?: number } }, Value extends number>(
+    this: T,
+    value: Value,
+  ) {
+    return setDataValue(this, 'gte', value);
+  },
+
+  positive<T extends { data: { gt?: number } }>(this: T) {
+    return setDataValue(this, 'gt', 0);
+  },
+
+  nonNegative<T extends { data: { gte?: number } }>(this: T) {
+    return setDataValue(this, 'gte', 0);
+  },
+
+  negative<T extends { data: { lt?: number } }>(this: T) {
+    return setDataValue(this, 'lt', 0);
+  },
+
+  nonPositive<T extends { data: { lte?: number } }>(this: T) {
+    return setDataValue(this, 'lte', 0);
+  },
+
+  multipleOf<T extends { data: { multipleOf?: number } }, Value extends number>(
+    this: T,
+    value: Value,
+  ) {
+    return setDataValue(
+      this,
+      'multipleOf',
+      Array.isArray(value) ? value[0] : value,
+    );
+  },
+
+  step<T extends { data: { multipleOf?: number } }, Value extends number>(
+    this: T,
+    value: Value,
+  ) {
+    return setDataValue(
+      this,
+      'multipleOf',
+      Array.isArray(value) ? value[0] : value,
+    );
+  },
+
+  int<T extends { data: { int?: boolean } }>(this: T) {
+    return setDataValue(this, 'int', true);
   },
 };
 
-export const stringTypeMethods = <Base extends { data: BaseStringData }>() => ({
-  ...arrayMethods,
-
-  email<T extends Base>(this: T) {
-    this.data.email = true;
-    return this as T & { data: Omit<T['data'], 'email'> & { email: true } };
+export const dateTypeMethods = {
+  min<T extends { data: { min?: Date } }, Value extends Date>(
+    this: T,
+    value: Value,
+  ) {
+    return setDataValue(this, 'min', Array.isArray(value) ? value[0] : value);
   },
 
-  url<T extends Base>(this: T) {
-    this.data.url = true;
-    return this as T & { data: Omit<T['data'], 'url'> & { url: true } };
+  max<T extends { data: { max?: Date } }, Value extends Date>(
+    this: T,
+    value: Value,
+  ) {
+    return setDataValue(this, 'max', Array.isArray(value) ? value[0] : value);
   },
-
-  uuid<T extends Base>(this: T) {
-    this.data.uuid = true;
-    return this as T & { data: Omit<T['data'], 'uuid'> & { uuid: true } };
-  },
-
-  cuid<T extends Base>(this: T) {
-    this.data.cuid = true;
-    return this as T & { data: Omit<T['data'], 'cuid'> & { cuid: true } };
-  },
-
-  regex<T extends Base, Value extends RegExp>(this: T, value: Value) {
-    this.data.regex = value;
-    return this as T & { data: Omit<T['data'], 'regex'> & { regex: Value } };
-  },
-
-  trim<T extends Base>(this: T) {
-    this.data.trim = true;
-    return this as T & { data: Omit<T['data'], 'trim'> & { trim: true } };
-  },
-});
-
-export const numberTypeMethods = <Base extends { data: BaseNumberData }>() => ({
-  lt<T extends Base, Value extends number>(this: T, value: Value) {
-    this.data.lt = value;
-    return this as T & { data: Omit<T['data'], 'lt'> & { lt: Value } };
-  },
-
-  lte<T extends Base, Value extends number>(this: T, value: Value) {
-    this.data.lte = value;
-    return this as T & { data: Omit<T['data'], 'lte'> & { lte: Value } };
-  },
-
-  max<T extends Base, Value extends number>(this: T, value: Value) {
-    this.data.lte = value;
-    return this as T & { data: Omit<T['data'], 'lte'> & { lte: Value } };
-  },
-
-  gt<T extends Base, Value extends number>(this: T, value: Value) {
-    this.data.gt = value;
-    return this as T & { data: Omit<T['data'], 'gt'> & { gt: Value } };
-  },
-
-  gte<T extends Base, Value extends number>(this: T, value: Value) {
-    this.data.gte = value;
-    return this as T & { data: Omit<T['data'], 'gte'> & { gte: Value } };
-  },
-
-  min<T extends Base, Value extends number>(this: T, value: Value) {
-    this.data.gte = value;
-    return this as T & { data: Omit<T['data'], 'gte'> & { gte: Value } };
-  },
-
-  positive<T extends Base>(this: T) {
-    this.data.gt = 0;
-    return this as T & { data: Omit<T['data'], 'gt'> & { gt: 0 } };
-  },
-
-  nonNegative<T extends Base>(this: T) {
-    this.data.gte = 0;
-    return this as T & { data: Omit<T['data'], 'gte'> & { gte: 0 } };
-  },
-
-  negative<T extends Base>(this: T) {
-    this.data.lt = 0;
-    return this as T & { data: Omit<T['data'], 'lt'> & { lt: 0 } };
-  },
-
-  nonPositive<T extends Base>(this: T) {
-    this.data.lte = 0;
-    return this as T & { data: Omit<T['data'], 'lte'> & { lte: 0 } };
-  },
-
-  multipleOf<T extends Base, Value extends number>(this: T, value: Value) {
-    this.data.multipleOf = value;
-    return this as T & {
-      data: Omit<T['data'], 'multipleOf'> & { multipleOf: Value };
-    };
-  },
-
-  step<T extends Base, Value extends number>(this: T, value: Value) {
-    this.data.multipleOf = value;
-    return this as T & {
-      data: Omit<T['data'], 'multipleOf'> & { multipleOf: Value };
-    };
-  },
-});
+};

@@ -1,4 +1,4 @@
-import { ColumnType } from './columnType';
+import { ColumnData, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
 import { scalarTypes } from './json/scalarTypes';
 import { array } from './json/array';
@@ -47,7 +47,7 @@ export class JSONColumn<
 > extends ColumnType<Type['type'], typeof Operators.json> {
   dataType = 'jsonb' as const;
   operators = Operators.json;
-  data: { schema: Type };
+  data: ColumnData & { schema: Type };
 
   constructor(schemaOrFn: Type | ((j: JSONTypes) => Type)) {
     super();

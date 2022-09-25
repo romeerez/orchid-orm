@@ -1,11 +1,11 @@
-import { ColumnType } from './columnType';
+import { ColumnData, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
 import { joinTruthy } from '../utils';
 import { NumberBaseColumn } from './number';
 import { assignMethodsToClass } from './utils';
 import { stringTypeMethods } from './commonMethods';
 
-export interface BaseStringData {
+export type BaseStringData = ColumnData & {
   min?: number;
   max?: number;
   length?: number;
@@ -14,15 +14,17 @@ export interface BaseStringData {
   uuid?: boolean;
   cuid?: boolean;
   regex?: RegExp;
+  startsWith?: string;
+  endsWith?: string;
   trim?: boolean;
-}
+};
 
 export type StringColumn = ColumnType<string>;
 
 export type TextColumnData = BaseStringData;
 
 type TextMethods = typeof textMethods;
-const textMethods = stringTypeMethods<ColumnType<string>>();
+const textMethods = stringTypeMethods();
 
 export interface TextBaseColumn
   extends ColumnType<string, typeof Operators.text>,
@@ -72,14 +74,15 @@ export class CharColumn<
 }
 
 // text	variable unlimited length
-export class TextColumn extends ColumnType<string> {
+export class TextColumn extends TextBaseColumn {
   dataType = 'text' as const;
   operators = Operators.text;
 }
 
 // To store binary strings
-export class ByteaColumn extends NumberBaseColumn<Buffer> {
+export class ByteaColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'bytea' as const;
+  operators = Operators.text;
 }
 
 // point	16 bytes	Point on a plane	(x,y)
@@ -125,7 +128,7 @@ export class CircleColumn extends ColumnType<string, typeof Operators.text> {
   operators = Operators.text;
 }
 
-export class MoneyColumn extends NumberBaseColumn<number> {
+export class MoneyColumn extends NumberBaseColumn {
   dataType = 'money' as const;
 
   parseFn = (input: unknown) => {
@@ -166,7 +169,7 @@ export class BitColumn<Length extends number> extends ColumnType<
 > {
   dataType = 'bit' as const;
   operators = Operators.text;
-  data: { length: Length };
+  data: ColumnData & { length: Length };
 
   constructor(length: Length) {
     super();
@@ -187,7 +190,7 @@ export class BitVaryingColumn<
 > extends ColumnType<string, typeof Operators.text> {
   dataType = 'bit varying' as const;
   operators = Operators.text;
-  data: { length: Length };
+  data: ColumnData & { length: Length };
 
   constructor(length: Length) {
     super();

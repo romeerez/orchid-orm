@@ -1,5 +1,20 @@
-import { ColumnType } from './columnType';
+import { ColumnData, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
+import { assignMethodsToClass } from './utils';
+import { arrayMethods } from './commonMethods';
+
+export type ArrayData<Item extends ColumnType> = ColumnData & {
+  item: Item;
+  min?: number;
+  max?: number;
+  length?: number;
+};
+
+type ArrayMethods = typeof arrayMethods;
+
+export interface ArrayColumn<Item extends ColumnType>
+  extends ColumnType<Item['type'][], typeof Operators.array>,
+    ArrayMethods {}
 
 export class ArrayColumn<Item extends ColumnType> extends ColumnType<
   Item['type'][],
@@ -7,7 +22,7 @@ export class ArrayColumn<Item extends ColumnType> extends ColumnType<
 > {
   dataType = 'array' as const;
   operators = Operators.array;
-  data: { item: Item };
+  data: ArrayData<Item>;
 
   constructor(item: Item) {
     super();
@@ -98,6 +113,8 @@ const parseArray = (
 
   return pos;
 };
+
+assignMethodsToClass(ArrayColumn, arrayMethods);
 
 const pushEntry = (
   input: string,

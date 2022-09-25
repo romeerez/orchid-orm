@@ -5,6 +5,8 @@ export interface JSONTuple<
   Rest extends JSONTypeAny | null = null,
 > extends JSONType<OutputTypeOfTupleWithRest<T, Rest>, 'tuple'> {
   items: T;
+  restType: Rest;
+  rest<Rest extends JSONTypeAny | null>(rest: Rest): JSONTuple<T, Rest>;
   deepPartial(): {
     [k in keyof T]: T[k] extends JSONTypeAny ? DeepPartial<T[k]> : never;
   } extends infer PI
@@ -26,10 +28,23 @@ export type OutputTypeOfTupleWithRest<
   ? [...OutputTypeOfTuple<T>, ...Rest['type'][]]
   : OutputTypeOfTuple<T>;
 
-export const tuple = <T extends JSONTupleItems | []>(items: T) => {
-  return constructType<JSONTuple<T>>({
+export const tuple = <
+  T extends JSONTupleItems | [],
+  Rest extends JSONTypeAny | null = null,
+>(
+  items: T,
+  rest: Rest = null as Rest,
+) => {
+  return constructType<JSONTuple<T, Rest>>({
     dataType: 'tuple',
     items,
+    restType: rest,
+    rest<Rest extends JSONTypeAny | null>(rest: Rest): JSONTuple<T, Rest> {
+      return {
+        ...this,
+        restType: rest,
+      } as unknown as JSONTuple<T, Rest>;
+    },
     deepPartial(this: JSONTuple<T>) {
       return {
         ...this,

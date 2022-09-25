@@ -1,22 +1,44 @@
-import { ColumnType } from './columnType';
+import { ColumnData, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
 import { joinTruthy } from '../utils';
+import { dateTypeMethods } from './commonMethods';
+import { assignMethodsToClass } from './utils';
 
-// date	4 bytes	date (no time of day)	4713 BC	5874897 AD 1 day
-export class DateColumn extends ColumnType<string, typeof Operators.date> {
-  dataType = 'date' as const;
+export type DateColumnData = ColumnData & {
+  min?: Date;
+  max?: Date;
+};
+
+type DateMethods = typeof dateTypeMethods;
+
+export interface DateBaseColumn
+  extends ColumnType<string, typeof Operators.date, string | Date>,
+    DateMethods {}
+
+export abstract class DateBaseColumn extends ColumnType<
+  string,
+  typeof Operators.date,
+  string | Date
+> {
+  data = {} as DateColumnData;
   operators = Operators.date;
 }
 
-export interface DateTimeColumnData {
-  precision?: number;
+assignMethodsToClass(DateBaseColumn, dateTypeMethods);
+
+// date	4 bytes	date (no time of day)	4713 BC	5874897 AD 1 day
+export class DateColumn extends DateBaseColumn {
+  dataType = 'date' as const;
 }
+
+export type DateTimeColumnData = DateColumnData & {
+  precision?: number;
+};
 
 export abstract class DateTimeBaseClass<
   Precision extends number | undefined = undefined,
-> extends ColumnType<string, typeof Operators.date, string | Date> {
+> extends DateBaseColumn {
   data: DateTimeColumnData & { precision: Precision };
-  operators = Operators.date;
 
   constructor(precision?: Precision) {
     super();

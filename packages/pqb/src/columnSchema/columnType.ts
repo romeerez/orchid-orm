@@ -1,5 +1,5 @@
 import { Operator, Operators } from '../columnsOperators';
-import { EmptyObject } from './utils';
+import { JSONTypeAny } from './json/typeBase';
 
 export type ColumnOutput<T extends ColumnType> = T['type'];
 
@@ -24,6 +24,13 @@ export type AnyColumnType = ColumnType<any, Record<string, Operator<any>>>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyColumnTypeCreator = (...args: any[]) => AnyColumnType;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ValidationContext = any;
+
+export type ColumnData = {
+  default?: unknown;
+};
+
 export abstract class ColumnType<
   Type = unknown,
   Ops extends Operators = Operators,
@@ -34,7 +41,7 @@ export abstract class ColumnType<
 
   type!: Type;
   inputType!: InputType;
-  data = {} as EmptyObject;
+  data = {} as ColumnData;
   isPrimaryKey = false;
   isHidden = false;
   isNullable = false;
@@ -43,6 +50,13 @@ export abstract class ColumnType<
   parseFn?: (input: unknown) => unknown;
   // parse item in array:
   parseItem?: (input: string) => unknown;
+
+  chain = [] as (
+    | ['transform', (input: unknown, ctx: ValidationContext) => unknown]
+    | ['to', (input: unknown) => JSONTypeAny | undefined, JSONTypeAny]
+    | ['refine', (input: unknown) => unknown]
+    | ['superRefine', (input: unknown, ctx: ValidationContext) => unknown]
+  )[];
 
   primaryKey<T extends ColumnType>(this: T): T & { isPrimaryKey: true } {
     return Object.assign(this, { isPrimaryKey: true as const });
@@ -77,5 +91,48 @@ export abstract class ColumnType<
 
   toSQL() {
     return this.dataType;
+  }
+
+  default<T extends ColumnType>(this: T, value: T['type']) {
+    const cloned = Object.create(this);
+    cloned.data = { ...cloned.data, default: value };
+    return cloned;
+  }
+
+  transform<T extends ColumnType, Transformed>(
+    this: T,
+    fn: (input: T['type'], ctx: ValidationContext) => Transformed,
+  ): Omit<T, 'type'> & { type: Transformed } {
+    const cloned = Object.create(this);
+    cloned.chain = [...this.chain, ['transform', fn]];
+    return cloned as Omit<T, 'type'> & { type: Transformed };
+  }
+
+  to<T extends ColumnType, ToType extends ColumnType>(
+    this: T,
+    fn: (input: T['type']) => ToType['type'] | undefined,
+    type: ToType,
+  ): ToType {
+    const cloned = Object.create(type);
+    cloned.chain = [...this.chain, ['to', fn, type], ...cloned.chain];
+    return cloned as ToType;
+  }
+
+  refine<T extends ColumnType, RefinedOutput extends T['type']>(
+    this: T,
+    check: (arg: T['type']) => unknown,
+  ): T & { type: RefinedOutput } {
+    const cloned = Object.create(this);
+    cloned.chain = [...this.chain, ['refine', check]];
+    return cloned as T & { type: RefinedOutput };
+  }
+
+  superRefine<T extends ColumnType, RefinedOutput extends T['type']>(
+    this: T,
+    check: (arg: T['type'], ctx: ValidationContext) => unknown,
+  ): T & { type: RefinedOutput } {
+    const cloned = Object.create(this);
+    cloned.chain = [...this.chain, ['superRefine', check]];
+    return cloned as T & { type: RefinedOutput };
   }
 }

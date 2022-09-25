@@ -1,7 +1,12 @@
 import { constructType, JSONType, JSONTypeAny } from './typeBase';
 import { BaseNumberData } from '../number';
 import { BaseStringData } from '../string';
-import { numberTypeMethods, stringTypeMethods } from '../commonMethods';
+import {
+  dateTypeMethods,
+  numberTypeMethods,
+  stringTypeMethods,
+} from '../commonMethods';
+import { DateColumnData } from '../dateTime';
 
 export type JSONAny = JSONTypeAny & {
   dataType: 'any';
@@ -17,7 +22,7 @@ export type JSONBigInt = JSONType<bigint, 'bigint'> & {
 } & typeof bigIntMethods;
 const bigIntMethods = {
   dataType: 'bigint' as const,
-  ...numberTypeMethods<JSONType<bigint, 'bigint'> & { data: BaseNumberData }>(),
+  ...numberTypeMethods,
 };
 const bigint = () => {
   return constructType<JSONBigInt>(bigIntMethods);
@@ -55,25 +60,29 @@ export type JSONNumber = JSONType<number, 'number'> & {
   data: BaseNumberData;
 } & typeof numberMethods;
 const numberMethods = {
-  ...numberTypeMethods<JSONType<number, 'number'> & { data: BaseNumberData }>(),
+  ...numberTypeMethods,
   dataType: 'number' as const,
 };
 const number = () => {
   return constructType<JSONNumber>(numberMethods);
 };
 
-export type JSONDate = JSONType<Date, 'date'>;
+export type JSONDate = JSONType<Date, 'date'> & {
+  data: DateColumnData;
+} & typeof dateTypeMethods;
+const dateMethods = {
+  ...dateTypeMethods,
+  dataType: 'date' as const,
+};
 const date = () => {
-  return constructType<JSONDate>({
-    dataType: 'date',
-  });
+  return constructType<JSONDate>(dateMethods);
 };
 
 export type JSONString = JSONType<string, 'string'> & {
   data: BaseStringData;
 } & typeof stringMethods;
 const stringMethods = {
-  ...stringTypeMethods<JSONType<number, 'string'> & { data: BaseStringData }>(),
+  ...stringTypeMethods(),
   dataType: 'string' as const,
 };
 const string = () => {

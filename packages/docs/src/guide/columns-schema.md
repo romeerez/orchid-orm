@@ -934,7 +934,7 @@ A variadic ("rest") argument can be added with the `.rest` method.
 const someTable = db('someTable', (t) => ({
   data: t.json((t) => ({
     // type will be [string, ...number]
-    tupleWithRest: t.tuple([t.string()]).rest(t.number());
+    tupleWithRest: t.tuple([t.string()]).rest(t.number()),
   }))
 }))
 ```
