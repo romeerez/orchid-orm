@@ -80,7 +80,7 @@ export class TextColumn extends TextBaseColumn {
 }
 
 // To store binary strings
-export class ByteaColumn extends ColumnType<string, typeof Operators.text> {
+export class ByteaColumn extends ColumnType<Buffer, typeof Operators.text> {
   dataType = 'bytea' as const;
   operators = Operators.text;
 }

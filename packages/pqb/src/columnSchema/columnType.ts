@@ -1,5 +1,6 @@
 import { Operator, Operators } from '../columnsOperators';
 import { JSONTypeAny } from './json/typeBase';
+import { ColumnsShape } from './columnsSchema';
 
 export type ColumnOutput<T extends ColumnType> = T['type'];
 
@@ -31,6 +32,13 @@ export type ColumnData = {
   default?: unknown;
 };
 
+export type ForeignKey =
+  | { fn(): new () => { table: string }; column: string }
+  | {
+      table: string;
+      column: string;
+    };
+
 export abstract class ColumnType<
   Type = unknown,
   Ops extends Operators = Operators,
@@ -45,6 +53,8 @@ export abstract class ColumnType<
   isPrimaryKey = false;
   isHidden = false;
   isNullable = false;
+  foreignKeyData: ForeignKey | undefined;
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   encodeFn?: (input: any) => unknown;
   parseFn?: (input: unknown) => unknown;
@@ -60,6 +70,39 @@ export abstract class ColumnType<
 
   primaryKey<T extends ColumnType>(this: T): T & { isPrimaryKey: true } {
     return Object.assign(this, { isPrimaryKey: true as const });
+  }
+
+  foreignKey<
+    T extends ColumnType,
+    Model extends new () => { table: string; columns: { shape: ColumnsShape } },
+    Column extends keyof InstanceType<Model>['columns']['shape'],
+  >(
+    this: T,
+    fn: () => Model,
+    column: Column,
+  ): Omit<T, 'foreignKeyData'> & {
+    foreignKeyData: { fn: () => Model; column: Column };
+  };
+  foreignKey<T extends ColumnType, Table extends string, Column extends string>(
+    this: T,
+    table: Table,
+    column: Column,
+  ): Omit<T, 'foreignKeyData'> & {
+    foreignKeyData: { table: Table; column: Column };
+  };
+  foreignKey(
+    fnOrTable:
+      | (() => new () => { table: string; columns: { shape: ColumnsShape } })
+      | string,
+    column: string,
+  ) {
+    const cloned = Object.create(this);
+    if (typeof fnOrTable === 'string') {
+      cloned.foreignKeyData = { table: fnOrTable, column };
+    } else {
+      cloned.foreignKeyData = { fn: fnOrTable, column };
+    }
+    return cloned;
   }
 
   hidden<T extends ColumnType>(this: T): T & { isHidden: true } {

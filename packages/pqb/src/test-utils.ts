@@ -49,7 +49,7 @@ export const User = db('user', (t) => ({
 
 export const Profile = db('profile', (t) => ({
   id: t.serial().primaryKey(),
-  userId: t.integer(),
+  userId: t.integer().foreignKey('user', 'id'),
   bio: t.text().nullable(),
   createdAt: t.timestamp(),
   updatedAt: t.timestamp(),
@@ -64,8 +64,8 @@ export const Chat = db('chat', (t) => ({
 
 export const Message = db('message', (t) => ({
   id: t.serial().primaryKey(),
-  chatId: t.integer(),
-  authorId: t.integer(),
+  chatId: t.integer().foreignKey('chat', 'id'),
+  authorId: t.integer().foreignKey('user', 'id'),
   text: t.text(),
   createdAt: t.timestamp(),
   updatedAt: t.timestamp(),

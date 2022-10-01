@@ -149,8 +149,9 @@ export const addParserToQuery = (
 
 export const processSelectArg = <T extends Query>(
   q: T,
-  as: string | getValueKey | undefined,
+  as: string | undefined,
   item: SelectArg<T>,
+  columnAs?: string | getValueKey,
 ): SelectItem => {
   if (typeof item === 'string') {
     if ((q.relations as Record<string, Relation>)[item]) {
@@ -163,16 +164,16 @@ export const processSelectArg = <T extends Query>(
 
         if (table === as) {
           const parser = q.columnsParsers?.[column];
-          if (parser) addParserToQuery(q.query, column, parser);
+          if (parser) addParserToQuery(q.query, columnAs || column, parser);
         } else {
           const parser = (q.query as SelectQueryData).joinedParsers?.[table]?.[
             column
           ];
-          if (parser) addParserToQuery(q.query, column, parser);
+          if (parser) addParserToQuery(q.query, columnAs || column, parser);
         }
       } else {
         const parser = q.columnsParsers?.[item];
-        if (parser) addParserToQuery(q.query, item, parser);
+        if (parser) addParserToQuery(q.query, columnAs || item, parser);
       }
       return item;
     }

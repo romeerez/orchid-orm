@@ -50,8 +50,9 @@ const _get = <
     q.query.select = [
       processSelectArg(
         q,
-        getValueKey,
+        q.query.as || q.table,
         arg as Exclude<GetArg<T>, RawExpression>,
+        getValueKey,
       ),
     ];
   }

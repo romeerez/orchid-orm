@@ -85,7 +85,7 @@ export class SomeModel extends Model {
   table = 'someTable';
   columns = this.setColumns((t) => ({
     name: t.text(),
-    age: t.number(),
+    age: t.integer(),
   }))
 }
 
@@ -146,6 +146,174 @@ export const Model = createModel({
     },
   },
 })
+```
+
+## Common column methods
+
+All following methods are available on any kind of column.
+
+`.primaryKey`
+
+Mark the column as a primary key. This column type becomes an argument of the `.find` method. So if primary key is of `serial` type, `.find` will except number, or if primary key is of `uuid` type, `.find` will expect a string.
+
+```ts
+const someTable = db('someTable', (t) => ({
+  id: t.serial().primaryKey(),
+}))
+
+someTable.find(1)
+```
+
+`.foreignKey`
+
+Mark the column to be a foreign key of other table's column. At the moment it does not have any effect, maybe it will later.
+
+```ts
+const someTable = db('someTable', (t) => ({
+  otherId: t.integer().foreignKey('otherTableName', 'columnName'),
+}))
+```
+
+In the ORM specify a function returning a model instead of table name:
+
+```ts
+export class SomeModel extends Model {
+  table = 'someTable';
+  columns = this.setColumns((t) => ({
+    otherTableId: t.integer().foreignKey(() => OtherTable, 'id'),
+  }))
+}
+
+export class OtherTable extends Model {
+  table = 'otherTable'
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+  }))
+}
+```
+
+`.hidden`
+
+Remove the column from default selection. For example, password of user may be marked as hidden, and then this column won't load by default, only when specifically listed in `.select`.
+
+Caution: this functionality is not tested yet very well, to be done.
+
+`.nullable`
+
+Mark the column as nullable, by default it's not:
+
+```ts
+const someTable = db('someTable', (t) => ({
+  column: t.integer().nullable(),
+}))
+```
+
+`.encode`
+
+Process value for the column when inserting or updating.
+
+Type of `input` argument will be used as type of the column when inserting and updating.
+
+```ts
+const someTable = db('someTable', (t) => ({
+  column: t.text().encode((input: boolean | number | string) => String(input))
+}))
+
+// numbers and booleans will be converted to string:
+await someTable.insert({ column: 123 })
+await someTable.insert({ column: true })
+await someTable.where({ column: 'true' }).update({ column: false })
+```
+
+`.parse`
+
+Process value when loading it from database.
+
+Type of input is the type of column before `.parse`, resulting type will replace type of column. 
+
+```ts
+const someTable = db('someTable', (t) => ({
+  column: t.text().parse((input) => parseInt(input))
+}))
+
+// column will be parsed to a number
+const value: number = await someTable.get('column')
+```
+
+## Using columns schema for validation
+
+It's expected that validation happens at the moment when application is receiving data from client, in the controller layer.
+
+ORM and query builder does not perform validation because it's expected that data is already validated when it reaches ORM.
+
+## Common methods for validation
+
+Methods listed below does **not** affect on parsing or encoding when getting data from db or inserting, it is only makes effect when converting columns schema to Zod schema for validation.
+
+`.default`
+
+Set default value or a function, in case of function it's called on each validation.
+
+```ts
+const someTable = db('someTable', (t) => ({
+  column: t.text().default('default value')
+  dateColumn: t.date().default(() => new Date()),
+}))
+```
+
+`.transform`
+
+Transform value with a custom function. Returned type of value becomes a type of the column (this is not particularly useful).
+
+```ts
+const someTable = db('someTable', (t) => ({
+  // reverse a string during validation
+  column: t.text().transform((val) => val.split('').reverse().join(''))
+}))
+```
+
+`.to`
+
+Similar to `.preprocess` function of Zod, it allows to transform one type to another. The column last type is counted as the type of the column.
+
+```ts
+const someTable = db('someTable', (t) => ({
+  // transform text to integer
+  column: t.text().to((val) => parseInt(val), t.integer())
+}))
+```
+
+`.refine`
+
+Return truthy value when input is okay, return falsy value to produce error.
+
+```ts
+const someTable = db('someTable', (t) => ({
+  // will produce error when value is not 'something'
+  column: t.text().refine((val) => val === 'something')
+}))
+```
+
+`.superRefine`
+
+Add a custom check with access to the validation context, see `.superRefine` method in Zod for details.
+
+```ts
+import { z } from 'zod'
+
+const someTable = db('someTable', (t) => ({
+  column: t.text().superRefine((val, ctx) => {
+    if (val.length > 3) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.too_big,
+        maximum: 3,
+        type: 'string',
+        inclusive: true,
+        message: 'Too many items 😡',
+      });
+    }
+  })
+}))
 ```
 
 ## Numeric types

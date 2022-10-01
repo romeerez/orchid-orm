@@ -59,7 +59,10 @@ export class ProfileModel extends Model {
   table = 'profile';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    userId: t.integer().nullable(),
+    userId: t
+      .integer()
+      .nullable()
+      .foreignKey(() => UserModel, 'id'),
     bio: t.text().nullable(),
     createdAt: t.timestamp(),
     updatedAt: t.timestamp(),
@@ -95,8 +98,11 @@ export class MessageModel extends Model {
   table = 'message';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    chatId: t.integer(),
-    authorId: t.integer().nullable(),
+    chatId: t.integer().foreignKey(() => ChatModel, 'id'),
+    authorId: t
+      .integer()
+      .nullable()
+      .foreignKey(() => UserModel, 'id'),
     text: t.text(),
     createdAt: t.timestamp(),
     updatedAt: t.timestamp(),
