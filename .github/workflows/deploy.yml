@@ -22,7 +22,7 @@ jobs:
 
       - name: Build docs
         working-directory: packages/docs
-        run: npm build
+        run: npm run build
 
       - name: Deploy docs
         uses: peaceiris/actions-gh-pages@v3
