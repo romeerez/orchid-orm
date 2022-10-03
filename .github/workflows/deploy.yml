@@ -14,6 +14,8 @@ jobs:
         with:
           node-version: 16
           cache: npm
+          cache-dependency-path: packages/docs/package-lock.json
+
       - name: Install docs
         working-directory: packages/docs
         run: npm install
