@@ -1,5 +1,4 @@
 export default {
-  base: 'porm',
   title: 'PORM & PQB',
   description: 'Postgres ORM & Query Builder',
   head: [
