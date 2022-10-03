@@ -46,12 +46,6 @@
       "tags": ["query-builder"]
     },
     {
-      "packageName": "docs",
-      "projectFolder": "packages/docs",
-      "shouldPublish": false,
-      "tags": ["docs"]
-    },
-    {
       "packageName": "porm-schema-to-zod",
       "projectFolder": "packages/schema-to-zod",
       "shouldPublish": false,
