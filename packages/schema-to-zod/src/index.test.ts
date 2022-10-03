@@ -7,7 +7,7 @@ import {
   jsonTypes,
   TextColumn,
 } from 'pqb';
-import { schemaToZod } from './index';
+import { columnToZod, modelToZod } from './index';
 import { z } from 'zod';
 import { Buffer } from 'node:buffer';
 import { JSONType, JSONTypeAny } from 'pqb/src/columnSchema/json/typeBase';
@@ -32,14 +32,42 @@ const assertType = <T, Expected>(_: AssertEqual<T, Expected>) => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const columnOrJsonToZod = (type: any): z.ZodTypeAny => {
   return type instanceof ColumnType
-    ? schemaToZod(type)
-    : schemaToZod(t.json(() => type));
+    ? columnToZod(type)
+    : columnToZod(t.json(() => type));
 };
+
+describe('model to zod', () => {
+  it('should convert a model to a zod validation schema', () => {
+    const model = class Model {
+      columns = {
+        shape: {
+          id: t.serial().primaryKey(),
+          name: t.text().nullable(),
+        },
+      };
+    };
+
+    const result = modelToZod(model);
+    assertType<
+      typeof result,
+      z.ZodObject<{ id: z.ZodNumber; name: z.ZodNullable<z.ZodString> }>
+    >(true);
+
+    expect(result.parse({ id: 1, name: 'name' })).toEqual({
+      id: 1,
+      name: 'name',
+    });
+
+    expect(() => result.parse({ id: '1' })).toThrow(
+      'Expected number, received string',
+    );
+  });
+});
 
 describe('schema to zod', () => {
   describe('transform', () => {
     it('should transform column value', () => {
-      const type = schemaToZod(
+      const type = columnToZod(
         t.text().transform((text) => text.split('').reverse().join('')),
       );
 
@@ -47,7 +75,7 @@ describe('schema to zod', () => {
     });
 
     it('should transform json value', () => {
-      const type = schemaToZod(
+      const type = columnToZod(
         t.json((t) =>
           t.string().transform((text) => text.split('').reverse().join('')),
         ),
@@ -59,12 +87,12 @@ describe('schema to zod', () => {
 
   describe('to', () => {
     it('should transform column value to a type', () => {
-      const type = schemaToZod(t.text().to(parseInt, t.integer()));
+      const type = columnToZod(t.text().to(parseInt, t.integer()));
       expect(type.parse('123')).toBe(123);
     });
 
     it('should transform json value to a type', () => {
-      const type = schemaToZod(
+      const type = columnToZod(
         t.json((t) => t.string().to(parseInt, t.number())),
       );
       expect(type.parse('123')).toBe(123);
@@ -73,12 +101,12 @@ describe('schema to zod', () => {
 
   describe('refine', () => {
     it('should add a refine check for column type', () => {
-      const type = schemaToZod(t.text().refine((val) => val !== 'val'));
+      const type = columnToZod(t.text().refine((val) => val !== 'val'));
       expect(() => type.parse('val')).toThrow('Invalid input');
     });
 
     it('should add a refine check for json type', () => {
-      const type = schemaToZod(
+      const type = columnToZod(
         t.json((t) => t.string().refine((val) => val !== 'val')),
       );
       expect(() => type.parse('val')).toThrow('Invalid input');
@@ -87,7 +115,7 @@ describe('schema to zod', () => {
 
   describe('superRefine', () => {
     it('should add a superRefine check for column type', () => {
-      const type = schemaToZod(
+      const type = columnToZod(
         t.text().superRefine((val, ctx) => {
           if (val.length > 3) {
             ctx.addIssue({
@@ -105,7 +133,7 @@ describe('schema to zod', () => {
     });
 
     it('should add a superRefine check for json type', () => {
-      const type = schemaToZod(
+      const type = columnToZod(
         t.json((t) =>
           t.string().superRefine((val, ctx) => {
             if (val.length > 3) {
@@ -127,13 +155,13 @@ describe('schema to zod', () => {
 
   describe('default', () => {
     it('should set default value for column', () => {
-      const type = schemaToZod(t.text().default('value'));
+      const type = columnToZod(t.text().default('value'));
 
       expect(type.parse(undefined)).toBe('value');
     });
 
     it('should set default value for json type', () => {
-      const type = schemaToZod(t.json((t) => t.string().default('value')));
+      const type = columnToZod(t.json((t) => t.string().default('value')));
 
       expect(type.parse(undefined)).toBe('value');
     });
@@ -141,7 +169,7 @@ describe('schema to zod', () => {
 
   describe('nullable', () => {
     it('should parse nullable', () => {
-      const schema = schemaToZod(t.text().nullable());
+      const schema = columnToZod(t.text().nullable());
 
       assertType<typeof schema, z.ZodNullable<z.ZodString>>(true);
 
@@ -149,12 +177,12 @@ describe('schema to zod', () => {
     });
   });
 
-  const smallint = schemaToZod(t.smallint());
-  const integer = schemaToZod(t.integer());
-  const real = schemaToZod(t.real());
-  const smallSerial = schemaToZod(t.smallSerial());
-  const serial = schemaToZod(t.serial());
-  const money = schemaToZod(t.serial());
+  const smallint = columnToZod(t.smallint());
+  const integer = columnToZod(t.integer());
+  const real = columnToZod(t.real());
+  const smallSerial = columnToZod(t.smallSerial());
+  const serial = columnToZod(t.serial());
+  const money = columnToZod(t.serial());
   assertType<
     | typeof smallint
     | typeof integer
@@ -233,7 +261,7 @@ describe('schema to zod', () => {
     'money',
   ])('%s', (method) => {
     it('should convert to number', () => {
-      const schema = schemaToZod(t[method as 'integer']());
+      const schema = columnToZod(t[method as 'integer']());
 
       expect(schema.parse(123)).toBe(123);
 
@@ -246,11 +274,11 @@ describe('schema to zod', () => {
     });
   });
 
-  const bigint = schemaToZod(t.bigint());
-  const numeric = schemaToZod(t.numeric());
-  const decimal = schemaToZod(t.decimal());
-  const doublePrecision = schemaToZod(t.doublePrecision());
-  const bigSerial = schemaToZod(t.bigSerial());
+  const bigint = columnToZod(t.bigint());
+  const numeric = columnToZod(t.numeric());
+  const decimal = columnToZod(t.decimal());
+  const doublePrecision = columnToZod(t.doublePrecision());
+  const bigSerial = columnToZod(t.bigSerial());
   assertType<
     | typeof bigint
     | typeof numeric
@@ -268,7 +296,7 @@ describe('schema to zod', () => {
     'bigSerial',
   ])('%s', (method) => {
     it('should validate bigint and parse to a string', () => {
-      const schema = schemaToZod(t[method as 'bigint']());
+      const schema = columnToZod(t[method as 'bigint']());
 
       expect(schema.parse('123')).toBe('123');
 
@@ -276,10 +304,10 @@ describe('schema to zod', () => {
     });
   });
 
-  const varchar = schemaToZod(t.varchar());
-  const char = schemaToZod(t.char());
-  const text = schemaToZod(t.text());
-  const string = schemaToZod(t.string());
+  const varchar = columnToZod(t.varchar());
+  const char = columnToZod(t.char());
+  const text = columnToZod(t.text());
+  const string = columnToZod(t.string());
   assertType<
     typeof varchar | typeof char | typeof text | typeof string,
     z.ZodString
@@ -327,7 +355,7 @@ describe('schema to zod', () => {
 
   describe.each(['varchar', 'char', 'text', 'string'])('%s', (method) => {
     it('should convert to string', () => {
-      const schema = schemaToZod(t[method as 'text']());
+      const schema = columnToZod(t[method as 'text']());
 
       expect(schema.parse('s')).toBe('s');
 
@@ -339,7 +367,7 @@ describe('schema to zod', () => {
 
   describe('bytea', () => {
     it('should check Buffer', () => {
-      const schema = schemaToZod(t.bytea());
+      const schema = columnToZod(t.bytea());
 
       assertType<typeof schema, z.ZodType<Buffer>>(true);
 
@@ -352,9 +380,9 @@ describe('schema to zod', () => {
     });
   });
 
-  const date = schemaToZod(t.date());
-  const timestamp = schemaToZod(t.timestamp());
-  const timestampWithTimeZone = schemaToZod(t.timestampWithTimeZone());
+  const date = columnToZod(t.date());
+  const timestamp = columnToZod(t.timestamp());
+  const timestampWithTimeZone = columnToZod(t.timestampWithTimeZone());
   assertType<
     typeof date | typeof timestamp | typeof timestampWithTimeZone,
     z.ZodDate
@@ -376,7 +404,7 @@ describe('schema to zod', () => {
     '%s',
     (method) => {
       it('should parse from string to a Date', () => {
-        const schema = schemaToZod(t[method as 'date']());
+        const schema = columnToZod(t[method as 'date']());
 
         const date = new Date(2000, 0, 1, 0, 0, 0, 0);
         expect(schema.parse(date.toISOString()).getTime()).toBe(date.getTime());
@@ -385,7 +413,7 @@ describe('schema to zod', () => {
       });
 
       it('should parse from Date to a Date', () => {
-        const schema = schemaToZod(t[method as 'date']());
+        const schema = columnToZod(t[method as 'date']());
 
         assertType<typeof schema, z.ZodDate>(true);
 
@@ -397,13 +425,13 @@ describe('schema to zod', () => {
     },
   );
 
-  const time = schemaToZod(t.time());
-  const timeWithTimeZone = schemaToZod(t.timeWithTimeZone());
+  const time = columnToZod(t.time());
+  const timeWithTimeZone = columnToZod(t.timeWithTimeZone());
   assertType<typeof time | typeof timeWithTimeZone, z.ZodString>(true);
 
   describe.each(['time', 'timeWithTimeZone'])('%s', (method) => {
     it('should validate and parse to a string', () => {
-      const schema = schemaToZod(t[method as 'time']());
+      const schema = columnToZod(t[method as 'time']());
 
       const input = method === 'time' ? '12:12:12' : '12:12:12.1234 +00:00';
       expect(schema.parse(input)).toBe(input);
@@ -414,7 +442,7 @@ describe('schema to zod', () => {
 
   describe('interval', () => {
     it('should validate and parse time interval', () => {
-      const schema = schemaToZod(t.interval());
+      const schema = columnToZod(t.interval());
 
       const interval = {
         years: 1,
@@ -438,7 +466,7 @@ describe('schema to zod', () => {
 
   describe('boolean', () => {
     it('should validate and parse a boolean', () => {
-      const schema = schemaToZod(t.boolean());
+      const schema = columnToZod(t.boolean());
 
       assertType<typeof schema, z.ZodBoolean>(true);
 
@@ -452,7 +480,7 @@ describe('schema to zod', () => {
 
   describe('enum', () => {
     it('should validate and parse enum', () => {
-      const schema = schemaToZod(t.enum('name', ['a', 'b', 'c']));
+      const schema = columnToZod(t.enum('name', ['a', 'b', 'c']));
 
       assertType<typeof schema, z.ZodEnum<['a', 'b', 'c']>>(true);
 
@@ -462,13 +490,13 @@ describe('schema to zod', () => {
     });
   });
 
-  const point = schemaToZod(t.point());
-  const line = schemaToZod(t.line());
-  const lseg = schemaToZod(t.lseg());
-  const box = schemaToZod(t.box());
-  const path = schemaToZod(t.path());
-  const polygon = schemaToZod(t.polygon());
-  const circle = schemaToZod(t.circle());
+  const point = columnToZod(t.point());
+  const line = columnToZod(t.line());
+  const lseg = columnToZod(t.lseg());
+  const box = columnToZod(t.box());
+  const path = columnToZod(t.path());
+  const polygon = columnToZod(t.polygon());
+  const circle = columnToZod(t.circle());
   assertType<
     | typeof point
     | typeof line
@@ -484,7 +512,7 @@ describe('schema to zod', () => {
     '%s',
     (method) => {
       it('should parse to a string without validation', () => {
-        const schema = schemaToZod(t[method as 'point']());
+        const schema = columnToZod(t[method as 'point']());
 
         expect(schema.parse('string')).toBe('string');
 
@@ -495,10 +523,10 @@ describe('schema to zod', () => {
     },
   );
 
-  const cidr = schemaToZod(t.cidr());
-  const inet = schemaToZod(t.inet());
-  const macaddr = schemaToZod(t.macaddr());
-  const macaddr8 = schemaToZod(t.macaddr8());
+  const cidr = columnToZod(t.cidr());
+  const inet = columnToZod(t.inet());
+  const macaddr = columnToZod(t.macaddr());
+  const macaddr8 = columnToZod(t.macaddr8());
   assertType<
     typeof cidr | typeof inet | typeof macaddr | typeof macaddr8,
     z.ZodString
@@ -506,7 +534,7 @@ describe('schema to zod', () => {
 
   describe.each(['cidr', 'inet', 'macaddr', 'macaddr8'])('%s', (method) => {
     it('should parse to a string without validation', () => {
-      const schema = schemaToZod(t[method as 'cidr']());
+      const schema = columnToZod(t[method as 'cidr']());
 
       expect(schema.parse('string')).toBe('string');
 
@@ -516,13 +544,13 @@ describe('schema to zod', () => {
     });
   });
 
-  const bit = schemaToZod(t.bit(5));
-  const bitVarying = schemaToZod(t.bitVarying());
+  const bit = columnToZod(t.bit(5));
+  const bitVarying = columnToZod(t.bitVarying());
   assertType<typeof bit | typeof bitVarying, z.ZodString>(true);
 
   describe.each(['bit', 'bitVarying'])('%s', (method) => {
     it('should validate a string to contain only 1 or 0 and parse to a string', () => {
-      const schema = schemaToZod(t[method as 'bit'](5));
+      const schema = columnToZod(t[method as 'bit'](5));
 
       expect(schema.parse('10101')).toBe('10101');
 
@@ -530,13 +558,13 @@ describe('schema to zod', () => {
     });
   });
 
-  const tsvector = schemaToZod(t.tsvector());
-  const tsquery = schemaToZod(t.tsquery());
+  const tsvector = columnToZod(t.tsvector());
+  const tsquery = columnToZod(t.tsquery());
   assertType<typeof tsvector | typeof tsquery, z.ZodString>(true);
 
   describe.each(['tsvector', 'tsquery'])('%s', (method) => {
     it('should parse to a string without validation', () => {
-      const schema = schemaToZod(t[method as 'tsvector']());
+      const schema = columnToZod(t[method as 'tsvector']());
 
       expect(schema.parse('string')).toBe('string');
 
@@ -546,13 +574,13 @@ describe('schema to zod', () => {
     });
   });
 
-  const xml = schemaToZod(t.xml());
-  const jsonText = schemaToZod(t.jsonText());
+  const xml = columnToZod(t.xml());
+  const jsonText = columnToZod(t.jsonText());
   assertType<typeof xml | typeof jsonText, z.ZodString>(true);
 
   describe.each(['xml', 'jsonText'])('%s', (method) => {
     it('should parse to a string without validation', () => {
-      const schema = schemaToZod(t[method as 'xml']());
+      const schema = columnToZod(t[method as 'xml']());
 
       expect(schema.parse('string')).toBe('string');
 
@@ -564,7 +592,7 @@ describe('schema to zod', () => {
 
   describe('uuid', () => {
     it('should validate uuid and parse to a string', () => {
-      const schema = schemaToZod(t.uuid());
+      const schema = columnToZod(t.uuid());
 
       assertType<typeof schema, z.ZodString>(true);
 
@@ -601,7 +629,7 @@ describe('schema to zod', () => {
 
   describe('array', () => {
     it('should validate and parse array', () => {
-      const schema = schemaToZod(t.array(t.integer()));
+      const schema = columnToZod(t.array(t.integer()));
 
       assertType<typeof schema, z.ZodArray<z.ZodNumber>>(true);
 
@@ -621,7 +649,7 @@ describe('schema to zod', () => {
   describe('json', () => {
     describe('any', () => {
       it('should parse to any', () => {
-        const schema = schemaToZod(t.json((t) => t.any()));
+        const schema = columnToZod(t.json((t) => t.any()));
 
         assertType<typeof schema, z.ZodTypeAny>(true);
 
@@ -631,7 +659,7 @@ describe('schema to zod', () => {
 
     describe('bigint', () => {
       it('should validate bigint and parse to string', () => {
-        const schema = schemaToZod(t.json((t) => t.bigint()));
+        const schema = columnToZod(t.json((t) => t.bigint()));
 
         assertType<typeof schema, z.ZodString>(true);
 
@@ -643,7 +671,7 @@ describe('schema to zod', () => {
 
     describe('boolean', () => {
       it('should parse boolean', () => {
-        const schema = schemaToZod(t.json((t) => t.boolean()));
+        const schema = columnToZod(t.json((t) => t.boolean()));
 
         assertType<typeof schema, z.ZodBoolean>(true);
 
@@ -657,7 +685,7 @@ describe('schema to zod', () => {
 
     describe('date', () => {
       it('should parse a Date', () => {
-        const schema = schemaToZod(t.json((t) => t.date()));
+        const schema = columnToZod(t.json((t) => t.date()));
 
         assertType<typeof schema, z.ZodDate>(true);
 
@@ -672,7 +700,7 @@ describe('schema to zod', () => {
 
     describe('nan', () => {
       it('should parse a NaN', () => {
-        const schema = schemaToZod(t.json((t) => t.nan()));
+        const schema = columnToZod(t.json((t) => t.nan()));
 
         assertType<typeof schema, z.ZodNaN>(true);
 
@@ -686,7 +714,7 @@ describe('schema to zod', () => {
 
     describe('never', () => {
       it('should parse a never', () => {
-        const schema = schemaToZod(t.json((t) => t.never()));
+        const schema = columnToZod(t.json((t) => t.never()));
 
         assertType<typeof schema, z.ZodNever>(true);
 
@@ -698,7 +726,7 @@ describe('schema to zod', () => {
 
     describe('null', () => {
       it('should parse a null', () => {
-        const schema = schemaToZod(t.json((t) => t.null()));
+        const schema = columnToZod(t.json((t) => t.null()));
 
         assertType<typeof schema, z.ZodNull>(true);
 
@@ -712,7 +740,7 @@ describe('schema to zod', () => {
 
     describe('number', () => {
       it('should parse a number', () => {
-        const schema = schemaToZod(t.json((t) => t.number()));
+        const schema = columnToZod(t.json((t) => t.number()));
 
         assertType<typeof schema, z.ZodNumber>(true);
 
@@ -728,7 +756,7 @@ describe('schema to zod', () => {
 
     describe('string', () => {
       it('should parse a string', () => {
-        const schema = schemaToZod(t.json((t) => t.string()));
+        const schema = columnToZod(t.json((t) => t.string()));
 
         assertType<typeof schema, z.ZodString>(true);
 
@@ -744,7 +772,7 @@ describe('schema to zod', () => {
 
     describe('undefined', () => {
       it('should parse a undefined', () => {
-        const schema = schemaToZod(t.json((t) => t.undefined()));
+        const schema = columnToZod(t.json((t) => t.undefined()));
 
         assertType<typeof schema, z.ZodUndefined>(true);
 
@@ -758,7 +786,7 @@ describe('schema to zod', () => {
 
     describe('unknown', () => {
       it('should parse unknown', () => {
-        const schema = schemaToZod(t.json((t) => t.unknown()));
+        const schema = columnToZod(t.json((t) => t.unknown()));
 
         assertType<typeof schema, z.ZodUnknown>(true);
 
@@ -768,7 +796,7 @@ describe('schema to zod', () => {
 
     describe('void', () => {
       it('should parse void', () => {
-        const schema = schemaToZod(t.json((t) => t.void()));
+        const schema = columnToZod(t.json((t) => t.void()));
 
         assertType<typeof schema, z.ZodVoid>(true);
 
@@ -782,7 +810,7 @@ describe('schema to zod', () => {
 
     describe('array', () => {
       it('should validate and parse array', () => {
-        const schema = schemaToZod(t.json((t) => t.array(t.number())));
+        const schema = columnToZod(t.json((t) => t.array(t.number())));
 
         assertType<typeof schema, z.ZodArray<z.ZodNumber>>(true);
 
@@ -802,7 +830,7 @@ describe('schema to zod', () => {
 
     describe('enum', () => {
       it('should parse enum', () => {
-        const schema = schemaToZod(t.json((t) => t.enum(['a', 'b', 'c'])));
+        const schema = columnToZod(t.json((t) => t.enum(['a', 'b', 'c'])));
 
         assertType<typeof schema, z.ZodEnum<['a', 'b', 'c']>>(true);
 
@@ -814,7 +842,7 @@ describe('schema to zod', () => {
 
     describe('instanceOf', () => {
       it('should parse instance of', () => {
-        const schema = schemaToZod(t.json((t) => t.instanceOf(Date)));
+        const schema = columnToZod(t.json((t) => t.instanceOf(Date)));
 
         assertType<typeof schema, z.ZodType<Date, z.ZodTypeDef, Date>>(true);
 
@@ -827,7 +855,7 @@ describe('schema to zod', () => {
 
     describe('literal', () => {
       it('should parse literal', () => {
-        const schema = schemaToZod(t.json((t) => t.literal('string')));
+        const schema = columnToZod(t.json((t) => t.literal('string')));
 
         assertType<typeof schema, z.ZodLiteral<'string'>>(true);
 
@@ -839,7 +867,7 @@ describe('schema to zod', () => {
 
     describe('map', () => {
       it('should parse map', () => {
-        const schema = schemaToZod(
+        const schema = columnToZod(
           t.json((t) => t.map(t.string(), t.number())),
         );
 
@@ -858,7 +886,7 @@ describe('schema to zod', () => {
 
     describe('set', () => {
       it('should parse set', () => {
-        const schema = schemaToZod(t.json((t) => t.set(t.number())));
+        const schema = columnToZod(t.json((t) => t.set(t.number())));
 
         assertType<typeof schema, z.ZodSet<z.ZodNumber>>(true);
 
@@ -901,7 +929,7 @@ describe('schema to zod', () => {
           two = 'two',
         }
 
-        const schema = schemaToZod(t.json((t) => t.nativeEnum(Test)));
+        const schema = columnToZod(t.json((t) => t.nativeEnum(Test)));
 
         assertType<typeof schema, z.ZodNativeEnum<typeof Test>>(true);
 
@@ -913,7 +941,7 @@ describe('schema to zod', () => {
 
     describe('tuple', () => {
       it('should parse tuple', () => {
-        const schema = schemaToZod(
+        const schema = columnToZod(
           t.json((t) => t.tuple([t.number(), t.string()])),
         );
 
@@ -927,7 +955,7 @@ describe('schema to zod', () => {
       });
 
       it('should parse rest elements', () => {
-        const schema = schemaToZod(
+        const schema = columnToZod(
           t.json((t) => t.tuple([t.number()]).rest(t.string())),
         );
 
@@ -943,7 +971,7 @@ describe('schema to zod', () => {
 
     describe('nullable', () => {
       it('should parse nullable', () => {
-        const schema = schemaToZod(t.json((t) => t.nullable(t.number())));
+        const schema = columnToZod(t.json((t) => t.nullable(t.number())));
 
         assertType<typeof schema, z.ZodNullable<z.ZodNumber>>(true);
 
@@ -953,7 +981,7 @@ describe('schema to zod', () => {
 
     describe('nullish', () => {
       it('should parse nullish', () => {
-        const schema = schemaToZod(t.json((t) => t.nullish(t.number())));
+        const schema = columnToZod(t.json((t) => t.nullish(t.number())));
 
         assertType<typeof schema, z.ZodNullable<z.ZodOptional<z.ZodNumber>>>(
           true,
@@ -966,7 +994,7 @@ describe('schema to zod', () => {
 
     describe('optional', () => {
       it('should parse optional', () => {
-        const schema = schemaToZod(t.json((t) => t.optional(t.number())));
+        const schema = columnToZod(t.json((t) => t.optional(t.number())));
 
         assertType<typeof schema, z.ZodOptional<z.ZodNumber>>(true);
 
@@ -976,7 +1004,7 @@ describe('schema to zod', () => {
 
     describe('object', () => {
       it('should parse object', () => {
-        const schema = schemaToZod(
+        const schema = columnToZod(
           t.json((t) => t.object({ key: t.number() })),
         );
 
@@ -990,7 +1018,7 @@ describe('schema to zod', () => {
       });
 
       it('should parse object with passing through unknown keys', () => {
-        const schema = schemaToZod(
+        const schema = columnToZod(
           t.json((t) => t.object({ key: t.number() }).passthrough()),
         );
 
@@ -1010,7 +1038,7 @@ describe('schema to zod', () => {
       });
 
       it('should parse object with strict unknown keys', () => {
-        const schema = schemaToZod(
+        const schema = columnToZod(
           t.json((t) => t.object({ key: t.number() }).strict()),
         );
 
@@ -1026,7 +1054,7 @@ describe('schema to zod', () => {
       });
 
       it('should parse object with catch all option', () => {
-        const schema = schemaToZod(
+        const schema = columnToZod(
           t.json((t) => t.object({ key: t.number() }).catchAll(t.number())),
         );
 
@@ -1048,7 +1076,7 @@ describe('schema to zod', () => {
 
     describe('record', () => {
       it('should parse record', () => {
-        const schema = schemaToZod(
+        const schema = columnToZod(
           t.json((t) => t.record(t.string(), t.number())),
         );
 
@@ -1064,7 +1092,7 @@ describe('schema to zod', () => {
 
     describe('intersection', () => {
       it('should parse intersection', () => {
-        const schema = schemaToZod(
+        const schema = columnToZod(
           t.json((t) =>
             t.intersection(
               t.object({ a: t.string(), b: t.number() }),
@@ -1093,7 +1121,7 @@ describe('schema to zod', () => {
 
     describe('union', () => {
       it('should parse union', () => {
-        const schema = schemaToZod(
+        const schema = columnToZod(
           t.json((t) => t.union([t.number(), t.string()])),
         );
 
@@ -1108,7 +1136,7 @@ describe('schema to zod', () => {
 
     describe('discriminatedUnion', () => {
       it('should parse discriminated union', () => {
-        const schema = schemaToZod(
+        const schema = columnToZod(
           t.json((t) =>
             t.discriminatedUnion('type', [
               t.object({ type: t.literal('a'), a: t.string() }),
@@ -1156,7 +1184,7 @@ describe('schema to zod', () => {
           }),
         );
 
-        const schema = schemaToZod(t.json(() => JsonCategory));
+        const schema = columnToZod(t.json(() => JsonCategory));
 
         const valid = {
           name: 'name',

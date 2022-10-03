@@ -1,5 +1,6 @@
 import {
   ArrayColumn,
+  ColumnsShape,
   ColumnType,
   DateColumn,
   EnumColumn,
@@ -210,7 +211,28 @@ type MapJsonTuple<T extends unknown[]> = T extends [infer Head, ...infer Tail]
   ? [Head extends JSONTypeAny ? JsonToZod<Head> : never, ...MapJsonTuple<Tail>]
   : [];
 
-export const schemaToZod = <T extends ColumnType>(
+export type ModelToZod<
+  T extends new () => { columns: { shape: ColumnsShape } },
+> = z.ZodObject<{
+  [K in keyof InstanceType<T>['columns']['shape']]: SchemaToZod<
+    InstanceType<T>['columns']['shape'][K]
+  >;
+}>;
+
+export const modelToZod = <
+  T extends new () => { columns: { shape: ColumnsShape } },
+>(
+  model: T,
+): ModelToZod<T> => {
+  const result = {} as z.ZodRawShape;
+  const item = new model();
+  for (const key in item.columns.shape) {
+    result[key as keyof typeof result] = columnToZod(item.columns.shape[key]);
+  }
+  return z.object(result) as ModelToZod<T>;
+};
+
+export const columnToZod = <T extends ColumnType>(
   column: T,
 ): SchemaToZod<T> => {
   const converter = converters[column.dataType];
@@ -391,7 +413,7 @@ const handleArray = typeHandler(
     if ('element' in array) {
       type = z.array(jsonItemToZod(array.element));
     } else {
-      type = z.array(schemaToZod(array.data.item));
+      type = z.array(columnToZod(array.data.item));
     }
 
     arrayParams.forEach((key) => {
@@ -422,7 +444,7 @@ const jsonItemToZod = (type: JSONTypeAny) => {
 };
 
 const itemToZod = (item: ColumnType | JSONTypeAny) => {
-  return item instanceof ColumnType ? schemaToZod(item) : jsonItemToZod(item);
+  return item instanceof ColumnType ? columnToZod(item) : jsonItemToZod(item);
 };
 
 const converters: Record<string, (column: ColumnType) => z.ZodType> = {

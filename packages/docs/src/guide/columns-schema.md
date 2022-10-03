@@ -196,7 +196,7 @@ export class OtherTable extends Model {
 
 Remove the column from default selection. For example, password of user may be marked as hidden, and then this column won't load by default, only when specifically listed in `.select`.
 
-Caution: this functionality is not tested yet very well, to be done.
+Caution: `.hidden` functionality is not tested yet very well, to be done.
 
 `.nullable`
 
@@ -245,6 +245,49 @@ const value: number = await someTable.get('column')
 It's expected that validation happens at the moment when application is receiving data from client, in the controller layer.
 
 ORM and query builder does not perform validation because it's expected that data is already validated when it reaches ORM.
+
+You can convert the column schema into a validation schema with the use of additional package.
+
+For now only conversion to [Zod](https://github.com/colinhacks/zod) is supported.
+
+Install a package:
+
+```sh
+npm i porm-schema-to-zod
+```
+
+Use `modelToZod` utility to get a validation schema from a model:
+
+```ts
+import { modelToZod } from 'porm-schema-to-zod';
+import { Model } from './model'
+
+export class SomeModel extends Model {
+  table = 'someTable';
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    name: t.text(),
+  }))
+}
+
+export const SomeModelSchema = modelToZod(SomeModel)
+```
+
+Later in the code which is receiving user input you can use this schema for a validation:
+
+```ts
+import { Request } from 'express' // express is for example
+import { SomeModelSchema } from './some.model'
+
+// id is omitted because it's not needed in update:
+const updateSomeItemSchema = SomeModelSchema.omit('id')
+
+export const updateSomeItemController = (req: Request) => {
+  // dataForUpdate has a proper TS type and it is validated
+  const dataForUpdate = updateSomeItemSchema.parse(req.body)
+  // ...do something with dataForUpdate
+}
+```
 
 ## Common methods for validation
 
@@ -816,7 +859,7 @@ For example, reverse a string:
 ```ts
 const someTable = db('someTable', (t) => ({
   data: t.json((t) => ({
-    reverseString: t.string().transform((input) => input.reverse())
+    reverseString: t.string().transform((input) => input.split('').reverse().join(''))
   }))
 }))
 ```

@@ -120,7 +120,7 @@ export class Db<
         ? undefined
         : this.defaultSelectColumns;
 
-    const columnsParsers: ColumnsParsers = {};
+    const columnsParsers = {} as ColumnsParsers;
     let hasParsers = false;
     for (const key in shape) {
       const column = shape[key];

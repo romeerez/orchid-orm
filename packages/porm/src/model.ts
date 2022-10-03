@@ -2,6 +2,7 @@ import {
   AnyColumnTypeCreator,
   ColumnShapeOutput,
   ColumnsShape,
+  ColumnType,
   columnTypes,
   ColumnTypes,
   Db,
@@ -49,6 +50,8 @@ export type Model = {
   columns: ModelConfig;
   schema?: string;
 };
+
+export type SchemaConverter = (columnType: ColumnType) => unknown;
 
 export const createModel = <CT extends Record<string, AnyColumnTypeCreator>>(
   options: {

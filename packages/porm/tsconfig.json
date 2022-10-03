@@ -6,7 +6,8 @@
     "noEmit": false,
     "baseUrl": ".",
     "paths": {
-      "pqb": ["../pqb/src"]
+      "pqb": ["../pqb/src"],
+      "porm-schema-to-zod": ["../schema-to-zod/src"]
     }
   }
 }

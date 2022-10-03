@@ -1,5 +1,6 @@
 import { createModel } from '../model';
 import { columnTypes } from 'pqb';
+import { modelToZod } from 'porm-schema-to-zod';
 
 const Model = createModel({
   columnTypes: {
@@ -53,6 +54,7 @@ export class UserModel extends Model {
     }),
   };
 }
+export const UserSchema = modelToZod(UserModel);
 
 export type Profile = ProfileModel['columns']['type'];
 export class ProfileModel extends Model {
@@ -81,6 +83,7 @@ export class ProfileModel extends Model {
     }),
   };
 }
+export const ProfileSchema = modelToZod(ProfileModel);
 
 export type Chat = ChatModel['columns']['type'];
 export class ChatModel extends Model {
@@ -92,6 +95,7 @@ export class ChatModel extends Model {
     updatedAt: t.timestamp(),
   }));
 }
+export const ChatSchema = modelToZod(ChatModel);
 
 export type Message = MessageModel['columns']['type'];
 export class MessageModel extends Model {
@@ -126,3 +130,4 @@ export class MessageModel extends Model {
     }),
   };
 }
+export const MessageSchema = modelToZod(MessageModel);
