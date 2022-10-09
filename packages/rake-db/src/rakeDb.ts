@@ -5,6 +5,7 @@ import {
   getMigrationConfigWithDefaults,
   MigrationConfig,
 } from './commands/common';
+import { generate } from './commands/generate';
 
 export const rakeDb = async (
   options: MaybeArray<AdapterOptions>,
@@ -23,6 +24,8 @@ export const rakeDb = async (
     await migrate(options, config);
   } else if (command === 'rollback') {
     await rollback(options, config);
+  } else if (command === 'g' || command === 'generate') {
+    await generate(config, args.slice(1));
   } else {
     console.log(`Usage: rake-db [command] [arguments]`);
   }

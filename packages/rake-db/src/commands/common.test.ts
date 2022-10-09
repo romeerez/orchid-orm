@@ -1,7 +1,9 @@
 import {
   createSchemaMigrations,
   getDatabaseAndUserFromOptions,
+  getFirstWordAndRest,
   getMigrationConfigWithDefaults,
+  getTextAfterTo,
   migrationConfigDefaults,
   setAdapterOptions,
   setAdminCredentialsToOptions,
@@ -177,6 +179,26 @@ describe('common', () => {
       ]);
 
       expect(mockedLog.mock.calls).toEqual([['Versions table exists']]);
+    });
+  });
+
+  describe('getFirstWordAndRest', () => {
+    it('should return pair of first word and rest', () => {
+      expect(getFirstWordAndRest('fooBarBaz')).toEqual(['foo', 'barBaz']);
+      expect(getFirstWordAndRest('foo-barBaz')).toEqual(['foo', 'barBaz']);
+      expect(getFirstWordAndRest('foo_barBaz')).toEqual(['foo', 'barBaz']);
+    });
+
+    it('should return input when it is a single word', () => {
+      expect(getFirstWordAndRest('foo')).toEqual(['foo']);
+    });
+  });
+
+  describe('getTextAfterTo', () => {
+    it('should return text after To or to', () => {
+      expect(getTextAfterTo('addColumnToTable')).toBe('table');
+      expect(getTextAfterTo('add-column-to-table')).toBe('table');
+      expect(getTextAfterTo('add_column_to_table')).toBe('table');
     });
   });
 });

@@ -116,3 +116,41 @@ export const createSchemaMigrations = async (
     }
   }
 };
+
+export const getFirstWordAndRest = (
+  input: string,
+): [string] | [string, string] => {
+  const index = input.search(/(?=[A-Z])|[-_]/);
+  if (index !== -1) {
+    const restStart =
+      input[index] === '-' || input[index] === '_' ? index + 1 : index;
+    const rest = input.slice(restStart);
+    return [input.slice(0, index), rest[0].toLowerCase() + rest.slice(1)];
+  } else {
+    return [input];
+  }
+};
+
+const getTextAfterRegExp = (
+  input: string,
+  regex: RegExp,
+  length: number,
+): string | undefined => {
+  let index = input.search(regex);
+  if (index === -1) return;
+
+  if (input[index] === '-' || input[index] === '_') index++;
+  index += length;
+
+  const start = input[index] == '-' || input[index] === '_' ? index + 1 : index;
+  const text = input.slice(start);
+  return text[0].toLowerCase() + text.slice(1);
+};
+
+export const getTextAfterTo = (input: string): string | undefined => {
+  return getTextAfterRegExp(input, /(To|-to|_to)[A-Z-_]/, 2);
+};
+
+export const getTextAfterFrom = (input: string): string | undefined => {
+  return getTextAfterRegExp(input, /(From|-from|_from)[A-Z-_]/, 4);
+};
