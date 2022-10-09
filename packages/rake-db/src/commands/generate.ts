@@ -18,6 +18,7 @@ export const generate = async (config: MigrationConfig, args: string[]) => {
     `${makeFileTimeStamp()}_${name}.ts`,
   );
   await writeFile(filePath, makeContent(name, args.slice(1)));
+  console.log(`Created ${filePath}`);
 };
 
 const makeFileTimeStamp = () => {
@@ -35,7 +36,7 @@ const makeFileTimeStamp = () => {
 };
 
 const makeContent = (name: string, args: string[]): string => {
-  let content = `import { change } from 'rake-db'\n\nchange(async (db) => {`;
+  let content = `import { change } from 'rake-db';\n\nchange(async (db) => {`;
 
   const [first, rest] = getFirstWordAndRest(name);
   if (rest) {

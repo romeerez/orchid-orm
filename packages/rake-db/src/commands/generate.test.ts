@@ -8,6 +8,9 @@ jest.mock('fs/promises', () => ({
   writeFile: jest.fn(),
 }));
 
+const logMock = jest.fn();
+console.log = logMock;
+
 const migrationsPath = migrationConfigDefaults.migrationsPath;
 
 const testGenerate = async (args: string[], content: string) => {
@@ -15,10 +18,11 @@ const testGenerate = async (args: string[], content: string) => {
   await generate(migrationConfigDefaults, args);
 
   expect(mkdir).toHaveBeenCalledWith(migrationsPath, { recursive: true });
-  expect(writeFile).toHaveBeenCalledWith(
-    path.resolve(migrationsPath, `20000101000000_${name}.ts`),
-    content,
-  );
+
+  const filePath = path.resolve(migrationsPath, `20000101000000_${name}.ts`);
+  expect(writeFile).toHaveBeenCalledWith(filePath, content);
+
+  expect(logMock.mock.calls).toEqual([[`Created ${filePath}`]]);
 };
 
 describe('generate', () => {
@@ -36,7 +40,7 @@ describe('generate', () => {
   it('should create a file for create table migration', async () => {
     await testGenerate(
       ['createTable', 'id:integer.primaryKey', 'name:varchar(20).nullable'],
-      `import { change } from 'rake-db'
+      `import { change } from 'rake-db';
 
 change(async (db) => {
   db.createTable('table', (t) => ({
@@ -51,7 +55,7 @@ change(async (db) => {
   it('should create a file for change migration', async () => {
     await testGenerate(
       ['changeTable'],
-      `import { change } from 'rake-db'
+      `import { change } from 'rake-db';
 
 change(async (db) => {
   db.changeTable('table', (t) => ({
@@ -64,7 +68,7 @@ change(async (db) => {
   it('should create a file for add columns migration', async () => {
     await testGenerate(
       ['addColumns'],
-      `import { change } from 'rake-db'
+      `import { change } from 'rake-db';
 
 change(async (db) => {
   db.changeTable(tableName, (t) => ({
@@ -81,7 +85,7 @@ change(async (db) => {
         'id:integer.primaryKey',
         'name:varchar(20).nullable',
       ],
-      `import { change } from 'rake-db'
+      `import { change } from 'rake-db';
 
 change(async (db) => {
   db.changeTable('table', (t) => ({
@@ -100,7 +104,7 @@ change(async (db) => {
         'id:integer.primaryKey',
         'name:varchar(20).nullable',
       ],
-      `import { change } from 'rake-db'
+      `import { change } from 'rake-db';
 
 change(async (db) => {
   db.changeTable('table', (t) => ({
@@ -115,7 +119,7 @@ change(async (db) => {
   it('should create a file for drop table migration', async () => {
     await testGenerate(
       ['dropTable', 'id:integer.primaryKey', 'name:varchar(20).nullable'],
-      `import { change } from 'rake-db'
+      `import { change } from 'rake-db';
 
 change(async (db) => {
   db.dropTable('table', (t) => ({
