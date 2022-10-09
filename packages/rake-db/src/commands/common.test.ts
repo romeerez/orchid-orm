@@ -1,9 +1,11 @@
 import {
   createSchemaMigrations,
   getDatabaseAndUserFromOptions,
+  getMigrationConfigWithDefaults,
+  migrationConfigDefaults,
   setAdapterOptions,
   setAdminCredentialsToOptions,
-} from './utils';
+} from './common';
 import Enquirer from 'enquirer';
 import { Adapter } from 'pqb';
 
@@ -19,7 +21,20 @@ jest.mock('enquirer', () => {
   };
 });
 
-describe('utils', () => {
+describe('common', () => {
+  describe('getMigrationConfigWithDefaults', () => {
+    it('should return config with defaults', () => {
+      const result = getMigrationConfigWithDefaults({
+        migrationsPath: 'custom-path',
+      });
+
+      expect(result).toEqual({
+        migrationsPath: 'custom-path',
+        migrationsTable: 'schemaMigrations',
+      });
+    });
+  });
+
   describe('getDatabaseAndUserFromOptions', () => {
     it('should return data from connectionString', () => {
       const result = getDatabaseAndUserFromOptions({
@@ -143,7 +158,7 @@ describe('utils', () => {
     it('should create a "schemaMigrations" table', async () => {
       mockedQuery.mockReturnValueOnce(undefined);
 
-      await createSchemaMigrations(db);
+      await createSchemaMigrations(db, migrationConfigDefaults);
 
       expect(mockedQuery.mock.calls).toEqual([
         [`CREATE TABLE "schemaMigrations" ( version TEXT NOT NULL )`],
@@ -155,7 +170,7 @@ describe('utils', () => {
     it('should inform if table already exists', async () => {
       mockedQuery.mockRejectedValue({ code: '42P07' });
 
-      await createSchemaMigrations(db);
+      await createSchemaMigrations(db, migrationConfigDefaults);
 
       expect(mockedQuery.mock.calls).toEqual([
         [`CREATE TABLE "schemaMigrations" ( version TEXT NOT NULL )`],

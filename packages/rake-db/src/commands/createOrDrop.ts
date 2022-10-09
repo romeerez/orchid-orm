@@ -4,7 +4,9 @@ import {
   setAdminCredentialsToOptions,
   setAdapterOptions,
   createSchemaMigrations,
-} from './utils';
+  MigrationConfig,
+  migrationConfigDefaults,
+} from './common';
 
 const execute = async (
   options: AdapterOptions,
@@ -31,6 +33,7 @@ const execute = async (
 const createOrDrop = async (
   options: AdapterOptions,
   adminOptions: AdapterOptions,
+  config: MigrationConfig,
   args: {
     sql(params: { database: string; user: string }): string;
     successMessage(params: { database: string }): string;
@@ -52,6 +55,7 @@ const createOrDrop = async (
     await createOrDrop(
       options,
       await setAdminCredentialsToOptions(options),
+      config,
       args,
     );
     return;
@@ -62,13 +66,16 @@ const createOrDrop = async (
   if (!args.createVersionsTable) return;
 
   const db = new Adapter(options);
-  await createSchemaMigrations(db);
+  await createSchemaMigrations(db, config);
   await db.destroy();
 };
 
-export const createDb = async (arg: MaybeArray<AdapterOptions>) => {
+export const createDb = async (
+  arg: MaybeArray<AdapterOptions>,
+  config: MigrationConfig,
+) => {
   for (const options of toArray(arg)) {
-    await createOrDrop(options, options, {
+    await createOrDrop(options, options, config, {
       sql({ database, user }) {
         return `CREATE DATABASE "${database}" OWNER "${user}"`;
       },
@@ -85,7 +92,7 @@ export const createDb = async (arg: MaybeArray<AdapterOptions>) => {
 
 export const dropDb = async (arg: MaybeArray<AdapterOptions>) => {
   for (const options of toArray(arg)) {
-    await createOrDrop(options, options, {
+    await createOrDrop(options, options, migrationConfigDefaults, {
       sql({ database }) {
         return `DROP DATABASE "${database}"`;
       },

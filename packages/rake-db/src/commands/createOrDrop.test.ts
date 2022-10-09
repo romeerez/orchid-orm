@@ -1,9 +1,9 @@
 import { createDb, dropDb } from './createOrDrop';
 import { Adapter } from 'pqb';
-import { createSchemaMigrations, setAdminCredentialsToOptions } from './utils';
+import { createSchemaMigrations, setAdminCredentialsToOptions } from './common';
 
-jest.mock('./utils', () => ({
-  ...jest.requireActual('./utils'),
+jest.mock('./common', () => ({
+  ...jest.requireActual('./common'),
   setAdminCredentialsToOptions: jest.fn((options: Record<string, unknown>) => ({
     ...options,
     user: 'admin-user',

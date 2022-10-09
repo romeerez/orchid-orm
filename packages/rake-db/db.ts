@@ -10,4 +10,7 @@ if (!connectionString) {
   throw new Error('DATABASE_URL is missing in .env');
 }
 
-rakeDb({ connectionString });
+rakeDb(
+  { connectionString },
+  { migrationsPath: path.resolve(process.cwd(), 'migrations') },
+);

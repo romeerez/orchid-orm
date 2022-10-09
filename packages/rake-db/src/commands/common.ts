@@ -1,5 +1,22 @@
 import { Adapter, AdapterOptions } from 'pqb';
 import Enquirer from 'enquirer';
+import path from 'path';
+
+export type MigrationConfig = {
+  migrationsPath: string;
+  migrationsTable: string;
+};
+
+export const migrationConfigDefaults = {
+  migrationsPath: path.resolve(process.cwd(), 'src', 'migrations'),
+  migrationsTable: 'schemaMigrations',
+};
+
+export const getMigrationConfigWithDefaults = (
+  config: Partial<MigrationConfig>,
+) => {
+  return { ...migrationConfigDefaults, ...config };
+};
 
 export const getDatabaseAndUserFromOptions = (
   options: AdapterOptions,
@@ -82,9 +99,14 @@ export const setAdminCredentialsToOptions = async (
   return setAdapterOptions(options, values);
 };
 
-export const createSchemaMigrations = async (db: Adapter) => {
+export const createSchemaMigrations = async (
+  db: Adapter,
+  config: MigrationConfig,
+) => {
   try {
-    await db.query('CREATE TABLE "schemaMigrations" ( version TEXT NOT NULL )');
+    await db.query(
+      `CREATE TABLE "${config.migrationsTable}" ( version TEXT NOT NULL )`,
+    );
     console.log('Created versions table');
   } catch (err) {
     if ((err as Record<string, unknown>).code === '42P07') {
