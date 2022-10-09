@@ -1,4 +1,4 @@
-import { Adapter, AdapterOptions } from 'pqb';
+import { Adapter, AdapterOptions, MaybeArray, toArray } from 'pqb';
 import {
   getDatabaseAndUserFromOptions,
   setAdminCredentialsToOptions,
@@ -66,31 +66,35 @@ const createOrDrop = async (
   await db.destroy();
 };
 
-export const createDb = (options: AdapterOptions) => {
-  return createOrDrop(options, options, {
-    sql({ database, user }) {
-      return `CREATE DATABASE "${database}" OWNER "${user}"`;
-    },
-    successMessage({ database }) {
-      return `Database ${database} successfully created`;
-    },
-    alreadyMessage({ database }) {
-      return `Database ${database} already exists`;
-    },
-    createVersionsTable: true,
-  });
+export const createDb = async (arg: MaybeArray<AdapterOptions>) => {
+  for (const options of toArray(arg)) {
+    await createOrDrop(options, options, {
+      sql({ database, user }) {
+        return `CREATE DATABASE "${database}" OWNER "${user}"`;
+      },
+      successMessage({ database }) {
+        return `Database ${database} successfully created`;
+      },
+      alreadyMessage({ database }) {
+        return `Database ${database} already exists`;
+      },
+      createVersionsTable: true,
+    });
+  }
 };
 
-export const dropDb = (options: AdapterOptions) => {
-  return createOrDrop(options, options, {
-    sql({ database }) {
-      return `DROP DATABASE "${database}"`;
-    },
-    successMessage({ database }) {
-      return `Database ${database} was successfully dropped`;
-    },
-    alreadyMessage({ database }) {
-      return `Database ${database} does not exist`;
-    },
-  });
+export const dropDb = async (arg: MaybeArray<AdapterOptions>) => {
+  for (const options of toArray(arg)) {
+    await createOrDrop(options, options, {
+      sql({ database }) {
+        return `DROP DATABASE "${database}"`;
+      },
+      successMessage({ database }) {
+        return `Database ${database} was successfully dropped`;
+      },
+      alreadyMessage({ database }) {
+        return `Database ${database} does not exist`;
+      },
+    });
+  }
 };

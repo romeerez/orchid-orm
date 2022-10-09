@@ -39,6 +39,22 @@ describe('createOrDrop', () => {
       expect(createSchemaMigrations).toHaveBeenCalled();
     });
 
+    it('should create databases for each provided option', async () => {
+      queryMock.mockResolvedValue(undefined);
+
+      await createDb([options, { ...options, database: 'dbname-test' }]);
+
+      expect(queryMock.mock.calls).toEqual([
+        [`CREATE DATABASE "dbname" OWNER "user"`],
+        [`CREATE DATABASE "dbname-test" OWNER "user"`],
+      ]);
+      expect(logMock.mock.calls).toEqual([
+        [`Database dbname successfully created`],
+        [`Database dbname-test successfully created`],
+      ]);
+      expect(createSchemaMigrations).toHaveBeenCalledTimes(2);
+    });
+
     it('should inform if database already exists', async () => {
       queryMock.mockRejectedValueOnce({ code: '42P04' });
 
@@ -77,6 +93,21 @@ describe('createOrDrop', () => {
       expect(queryMock.mock.calls).toEqual([[`DROP DATABASE "dbname"`]]);
       expect(logMock.mock.calls).toEqual([
         [`Database dbname was successfully dropped`],
+      ]);
+    });
+
+    it('should drop databases for each provided option', async () => {
+      queryMock.mockResolvedValue(undefined);
+
+      await dropDb([options, { ...options, database: 'dbname-test' }]);
+
+      expect(queryMock.mock.calls).toEqual([
+        [`DROP DATABASE "dbname"`],
+        [`DROP DATABASE "dbname-test"`],
+      ]);
+      expect(logMock.mock.calls).toEqual([
+        [`Database dbname was successfully dropped`],
+        [`Database dbname-test was successfully dropped`],
       ]);
     });
 
