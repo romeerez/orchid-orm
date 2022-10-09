@@ -16,13 +16,14 @@ const testGenerate = async (args: string[], content: string) => {
 
   expect(mkdir).toHaveBeenCalledWith(migrationsPath, { recursive: true });
   expect(writeFile).toHaveBeenCalledWith(
-    path.resolve(migrationsPath, `${name}.ts`),
+    path.resolve(migrationsPath, `20000101000000_${name}.ts`),
     content,
   );
 };
 
 describe('generate', () => {
   beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date(2000, 0, 1, 0, 0, 0));
     jest.clearAllMocks();
   });
 

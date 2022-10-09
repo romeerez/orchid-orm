@@ -13,8 +13,25 @@ export const generate = async (config: MigrationConfig, args: string[]) => {
 
   await mkdir(config.migrationsPath, { recursive: true });
 
-  const filePath = path.resolve(config.migrationsPath, `${name}.ts`);
+  const filePath = path.resolve(
+    config.migrationsPath,
+    `${makeFileTimeStamp()}_${name}.ts`,
+  );
   await writeFile(filePath, makeContent(name, args.slice(1)));
+};
+
+const makeFileTimeStamp = () => {
+  const now = new Date();
+  return [
+    now.getUTCFullYear(),
+    now.getUTCMonth() + 1,
+    now.getUTCDate(),
+    now.getUTCHours(),
+    now.getUTCMinutes(),
+    now.getUTCSeconds(),
+  ]
+    .map((value) => (value < 10 ? `0${value}` : value))
+    .join('');
 };
 
 const makeContent = (name: string, args: string[]): string => {
