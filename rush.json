@@ -46,6 +46,12 @@
       "tags": ["query-builder"]
     },
     {
+      "packageName": "rake-db",
+      "projectFolder": "packages/rake-db",
+      "shouldPublish": false,
+      "tags": ["migrations"]
+    },
+    {
       "packageName": "porm-schema-to-zod",
       "projectFolder": "packages/schema-to-zod",
       "shouldPublish": false,

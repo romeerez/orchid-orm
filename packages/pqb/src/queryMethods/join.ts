@@ -181,7 +181,7 @@ const _join = <
     } else {
       const shape = q.query.withShapes?.[first as string];
       if (shape) {
-        parsers = {};
+        parsers = {} as ColumnsParsers;
         for (const key in shape) {
           const parser = shape[key].parseFn;
           if (parser) {

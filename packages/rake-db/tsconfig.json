@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "include": ["./src", "jest-setup.ts"],
+  "compilerOptions": {
+    "outDir": "./dist",
+    "noEmit": false,
+    "baseUrl": ".",
+    "paths": {
+      "pqb": ["../pqb/src"]
+    }
+  }
+}

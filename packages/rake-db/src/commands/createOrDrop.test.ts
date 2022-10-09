@@ -1,0 +1,107 @@
+import { createDb, dropDb } from './createOrDrop';
+import { Adapter } from 'pqb';
+import { createSchemaMigrations, setAdminCredentialsToOptions } from './utils';
+
+jest.mock('./utils', () => ({
+  ...jest.requireActual('./utils'),
+  setAdminCredentialsToOptions: jest.fn((options: Record<string, unknown>) => ({
+    ...options,
+    user: 'admin-user',
+    password: 'admin-password',
+  })),
+  createSchemaMigrations: jest.fn(),
+}));
+
+const options = { database: 'dbname', user: 'user', password: 'password' };
+const queryMock = jest.fn();
+Adapter.prototype.query = queryMock;
+
+const logMock = jest.fn();
+console.log = logMock;
+
+describe('createOrDrop', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('createDb', () => {
+    it('should create database when user is an admin', async () => {
+      queryMock.mockResolvedValueOnce(undefined);
+
+      await createDb(options);
+
+      expect(queryMock.mock.calls).toEqual([
+        [`CREATE DATABASE "dbname" OWNER "user"`],
+      ]);
+      expect(logMock.mock.calls).toEqual([
+        [`Database dbname successfully created`],
+      ]);
+      expect(createSchemaMigrations).toHaveBeenCalled();
+    });
+
+    it('should inform if database already exists', async () => {
+      queryMock.mockRejectedValueOnce({ code: '42P04' });
+
+      await createDb(options);
+
+      expect(queryMock.mock.calls).toEqual([
+        [`CREATE DATABASE "dbname" OWNER "user"`],
+      ]);
+      expect(logMock.mock.calls).toEqual([[`Database dbname already exists`]]);
+      expect(createSchemaMigrations).toHaveBeenCalled();
+    });
+
+    it('should ask and use admin credentials when cannot connect', async () => {
+      queryMock.mockRejectedValueOnce({ code: '42501' });
+
+      await createDb(options);
+
+      expect(setAdminCredentialsToOptions).toHaveBeenCalled();
+      expect(queryMock.mock.calls).toEqual([
+        [`CREATE DATABASE "dbname" OWNER "user"`],
+        [`CREATE DATABASE "dbname" OWNER "user"`],
+      ]);
+      expect(logMock.mock.calls).toEqual([
+        [`Database dbname successfully created`],
+      ]);
+      expect(createSchemaMigrations).toHaveBeenCalled();
+    });
+  });
+
+  describe('dropDb', () => {
+    it('should drop database when user is an admin', async () => {
+      queryMock.mockResolvedValueOnce(undefined);
+
+      await dropDb(options);
+
+      expect(queryMock.mock.calls).toEqual([[`DROP DATABASE "dbname"`]]);
+      expect(logMock.mock.calls).toEqual([
+        [`Database dbname was successfully dropped`],
+      ]);
+    });
+
+    it('should inform if database does not exist', async () => {
+      queryMock.mockRejectedValueOnce({ code: '3D000' });
+
+      await dropDb(options);
+
+      expect(queryMock.mock.calls).toEqual([[`DROP DATABASE "dbname"`]]);
+      expect(logMock.mock.calls).toEqual([[`Database dbname does not exist`]]);
+    });
+
+    it('should ask and use admin credentials when cannot connect', async () => {
+      queryMock.mockRejectedValueOnce({ code: '42501' });
+
+      await dropDb(options);
+
+      expect(setAdminCredentialsToOptions).toHaveBeenCalled();
+      expect(queryMock.mock.calls).toEqual([
+        [`DROP DATABASE "dbname"`],
+        [`DROP DATABASE "dbname"`],
+      ]);
+      expect(logMock.mock.calls).toEqual([
+        [`Database dbname was successfully dropped`],
+      ]);
+    });
+  });
+});

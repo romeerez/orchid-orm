@@ -1,7 +1,7 @@
 {
-  "name": "pqb",
-  "version": "0.0.1",
-  "description": "Postgres query builder",
+  "name": "rake-db",
+  "version": "2.0.0",
+  "description": "Migrations tools for Postgresql DB",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/romeerez/porm"
@@ -17,6 +17,7 @@
     }
   },
   "scripts": {
+    "db": "ts-node db.ts",
     "test": "jest",
     "build": "rimraf ./dist/ && rollup -c --rollup.config"
   },
@@ -26,34 +27,37 @@
     ],
     "globalSetup": "../../jest-global-setup.ts",
     "setupFilesAfterEnv": [
-      "../../jest-setup.ts"
+      "../../jest-setup.ts",
+      "./jest-setup.ts"
     ],
     "transform": {
       "^.+\\.ts$": "@swc/jest"
     }
   },
   "keywords": [
-    "pg",
+    "postgresql",
     "postgres",
-    "query-builder"
+    "pg",
+    "migrations",
+    "migration"
   ],
   "author": "Roman Kushyn",
   "license": "ISC",
-  "dependencies": {},
+  "dependencies": {
+    "pqb": "workspace:*",
+    "enquirer": "^2.3.6"
+  },
   "devDependencies": {
+    "ts-node": "^10.9.1",
+    "dotenv": "^16.0.3",
     "rollup": "^2.79.0",
     "rollup-plugin-dts": "^4.2.2",
     "rollup-plugin-esbuild": "^4.10.1",
-    "esbuild": "^0.15.10",
     "@swc/core": "^1.2.210",
     "@swc/jest": "^0.2.21",
     "@types/jest": "^28.1.2",
     "@types/node": "^18.0.1",
-    "@types/pg": "^8.6.5",
-    "dotenv": "^16.0.1",
     "jest": "^28.1.2",
-    "pg": "^8.7.3",
-    "pg-transactional-tests": "^1.0.3",
     "rimraf": "^3.0.2",
     "tslib": "^2.4.0",
     "typescript": "^4.7.4"
