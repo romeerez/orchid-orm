@@ -3,13 +3,18 @@ import {
   getDatabaseAndUserFromOptions,
   getFirstWordAndRest,
   getMigrationConfigWithDefaults,
+  getMigrationFiles,
   getTextAfterTo,
   migrationConfigDefaults,
   setAdapterOptions,
   setAdminCredentialsToOptions,
+  sortAsc,
+  sortDesc,
 } from './common';
 import Enquirer from 'enquirer';
 import { Adapter } from 'pqb';
+import { readdir } from 'fs/promises';
+import path from 'path';
 
 jest.mock('enquirer', () => {
   class Snippet {
@@ -23,6 +28,10 @@ jest.mock('enquirer', () => {
   };
 });
 
+jest.mock('fs/promises', () => ({
+  readdir: jest.fn(),
+}));
+
 describe('common', () => {
   describe('getMigrationConfigWithDefaults', () => {
     it('should return config with defaults', () => {
@@ -33,6 +42,7 @@ describe('common', () => {
       expect(result).toEqual({
         migrationsPath: 'custom-path',
         migrationsTable: 'schemaMigrations',
+        requireTs: expect.any(Function),
       });
     });
   });
@@ -199,6 +209,59 @@ describe('common', () => {
       expect(getTextAfterTo('addColumnToTable')).toBe('table');
       expect(getTextAfterTo('add-column-to-table')).toBe('table');
       expect(getTextAfterTo('add_column_to_table')).toBe('table');
+    });
+  });
+
+  describe('getMigrationFiles', () => {
+    it('should return files with versions', async () => {
+      const version = '12345678901234';
+      const files = [`${version}_a.ts`, `${version}_b.ts`, `${version}_c.ts`];
+      (readdir as jest.Mock).mockReturnValueOnce(files);
+
+      const result = await getMigrationFiles(migrationConfigDefaults, true);
+      expect(result).toEqual(
+        files.map((file) => ({
+          path: path.join(migrationConfigDefaults.migrationsPath, file),
+          version,
+        })),
+      );
+    });
+
+    it('should return empty array on error', async () => {
+      (readdir as jest.Mock).mockRejectedValue(new Error());
+
+      const result = await getMigrationFiles(migrationConfigDefaults, true);
+      expect(result).toEqual([]);
+    });
+
+    it('should throw if file is not a .ts file', async () => {
+      (readdir as jest.Mock).mockReturnValueOnce(['file.js']);
+
+      await expect(
+        getMigrationFiles(migrationConfigDefaults, true),
+      ).rejects.toThrow('Only .ts files are supported');
+    });
+
+    it('should throw on improper version', async () => {
+      (readdir as jest.Mock).mockReturnValueOnce(['1234567890_file.ts']);
+
+      await expect(
+        getMigrationFiles(migrationConfigDefaults, true),
+      ).rejects.toThrow(
+        'Migration file name should start with 14 digit version',
+      );
+    });
+  });
+
+  describe('sortAsc', () => {
+    it('should sort ascending', () => {
+      expect(sortAsc(['a', 'c', 'b'])).toEqual(['a', 'b', 'c']);
+    });
+  });
+
+  describe('sortDesc', () => {
+    it('should sort descending', () => {
+      expect(sortDesc(['a', 'c', 'b'])).toEqual(['c', 'b', 'a']);
     });
   });
 });

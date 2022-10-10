@@ -1,15 +1,26 @@
 import { Adapter, AdapterOptions } from 'pqb';
 import Enquirer from 'enquirer';
 import path from 'path';
+import { readdir } from 'fs/promises';
 
 export type MigrationConfig = {
   migrationsPath: string;
   migrationsTable: string;
+  requireTs(path: string): void;
 };
+
+const registered = false;
 
 export const migrationConfigDefaults = {
   migrationsPath: path.resolve(process.cwd(), 'src', 'migrations'),
   migrationsTable: 'schemaMigrations',
+  requireTs(path: string) {
+    if (!registered) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require('ts-node').register({ compilerOptions: { module: 'CommonJS' } });
+    }
+    require(path);
+  },
 };
 
 export const getMigrationConfigWithDefaults = (
@@ -154,3 +165,47 @@ export const getTextAfterTo = (input: string): string | undefined => {
 export const getTextAfterFrom = (input: string): string | undefined => {
   return getTextAfterRegExp(input, /(From|-from|_from)[A-Z-_]/, 4);
 };
+
+export type MigrationFile = {
+  path: string;
+  version: string;
+};
+
+export const getMigrationFiles = async (
+  config: MigrationConfig,
+  up: boolean,
+): Promise<MigrationFile[]> => {
+  const { migrationsPath } = config;
+
+  let files: string[];
+  try {
+    files = await readdir(migrationsPath);
+  } catch (_) {
+    return [];
+  }
+
+  const sort = up ? sortAsc : sortDesc;
+  return sort(files).map((file) => {
+    if (!file.endsWith('.ts')) {
+      throw new Error(
+        `Only .ts files are supported for migration, received: ${file}`,
+      );
+    }
+
+    const timestampMatch = file.match(/^(\d{14})\D/);
+    if (!timestampMatch) {
+      throw new Error(
+        `Migration file name should start with 14 digit version, received ${file}`,
+      );
+    }
+
+    return {
+      path: path.join(migrationsPath, file),
+      version: timestampMatch[1],
+    };
+  });
+};
+
+export const sortAsc = (arr: string[]) => arr.sort();
+
+export const sortDesc = (arr: string[]) => arr.sort((a, b) => (a > b ? -1 : 1));

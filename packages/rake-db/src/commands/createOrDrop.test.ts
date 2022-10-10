@@ -1,6 +1,10 @@
 import { createDb, dropDb } from './createOrDrop';
 import { Adapter } from 'pqb';
-import { createSchemaMigrations, setAdminCredentialsToOptions } from './common';
+import {
+  createSchemaMigrations,
+  migrationConfigDefaults,
+  setAdminCredentialsToOptions,
+} from './common';
 
 jest.mock('./common', () => ({
   ...jest.requireActual('./common'),
@@ -28,7 +32,7 @@ describe('createOrDrop', () => {
     it('should create database when user is an admin', async () => {
       queryMock.mockResolvedValueOnce(undefined);
 
-      await createDb(options);
+      await createDb(options, migrationConfigDefaults);
 
       expect(queryMock.mock.calls).toEqual([
         [`CREATE DATABASE "dbname" OWNER "user"`],
@@ -42,7 +46,10 @@ describe('createOrDrop', () => {
     it('should create databases for each provided option', async () => {
       queryMock.mockResolvedValue(undefined);
 
-      await createDb([options, { ...options, database: 'dbname-test' }]);
+      await createDb(
+        [options, { ...options, database: 'dbname-test' }],
+        migrationConfigDefaults,
+      );
 
       expect(queryMock.mock.calls).toEqual([
         [`CREATE DATABASE "dbname" OWNER "user"`],
@@ -58,7 +65,7 @@ describe('createOrDrop', () => {
     it('should inform if database already exists', async () => {
       queryMock.mockRejectedValueOnce({ code: '42P04' });
 
-      await createDb(options);
+      await createDb(options, migrationConfigDefaults);
 
       expect(queryMock.mock.calls).toEqual([
         [`CREATE DATABASE "dbname" OWNER "user"`],
@@ -70,7 +77,7 @@ describe('createOrDrop', () => {
     it('should ask and use admin credentials when cannot connect', async () => {
       queryMock.mockRejectedValueOnce({ code: '42501' });
 
-      await createDb(options);
+      await createDb(options, migrationConfigDefaults);
 
       expect(setAdminCredentialsToOptions).toHaveBeenCalled();
       expect(queryMock.mock.calls).toEqual([
