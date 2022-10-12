@@ -46,7 +46,12 @@ import { EnumColumn } from './enum';
 import { JSONColumn, JSONTextColumn, JSONTypes } from './json';
 import { JSONTypeAny } from './json/typeBase';
 import { ArrayColumn } from './array';
-import { ColumnType, ColumnTypesBase } from './columnType';
+import {
+  ColumnType,
+  ColumnTypesBase,
+  IndexColumnOptions,
+  IndexOptions,
+} from './columnType';
 import { emptyObject } from '../utils';
 import { ColumnsShape } from './columnsSchema';
 
@@ -54,9 +59,10 @@ export type ColumnTypes = typeof columnTypes;
 
 export type TableData = {
   primaryKey?: string[];
+  indexes: { columns: IndexColumnOptions[]; options: IndexOptions }[];
 };
 
-let tableData: TableData = {};
+let tableData: TableData = { indexes: [] };
 
 export const getTableData = () => tableData;
 
@@ -66,7 +72,7 @@ export const getColumnTypes = <
 >(
   types: CT,
   fn: (t: CT) => Shape,
-  data: TableData = {},
+  data: TableData = { indexes: [] },
 ) => {
   tableData = data;
   return fn(types);
@@ -153,6 +159,26 @@ export const columnTypes = {
 
   primaryKey(...columns: string[]) {
     tableData.primaryKey = columns;
+    return emptyObject;
+  },
+
+  index(columns: (string | IndexColumnOptions)[], options: IndexOptions = {}) {
+    tableData.indexes.push({
+      columns: columns.map((column) =>
+        typeof column === 'string' ? { column } : column,
+      ),
+      options,
+    });
+    return emptyObject;
+  },
+
+  unique(columns: (string | IndexColumnOptions)[], options: IndexOptions = {}) {
+    tableData.indexes.push({
+      columns: columns.map((column) =>
+        typeof column === 'string' ? { column } : column,
+      ),
+      options: { ...options, unique: true },
+    });
     return emptyObject;
   },
 };

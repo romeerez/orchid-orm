@@ -323,6 +323,68 @@ type IndexOptions = {
 
 Shortcut for `.index({ unique: true })`.
 
+### composite index
+
+Add index for multiple columns.
+
+First argument is an array of columns, where column can be a simple string or an object with such options:
+
+```ts
+type IndexColumnOptions = {
+  // name of the column
+  column: string,
+  // see comments above for these options
+  expression?: number | string;
+  collate?: string;
+  operator?: string;
+  order?: string;
+}
+```
+
+Second argument is optional object with index options:
+
+```ts
+type IndexOptions = {
+  // see comments above for these options
+  name?: string;
+  unique?: boolean;
+  using?: string;
+  include?: MaybeArray<string>;
+  with?: string;
+  tablespace?: string;
+  where?: string;
+  mode?: 'CASCADE' | 'RESTRICT';
+}
+```
+
+Example:
+
+```ts
+export class SomeModel extends Model {
+  table = 'someTable';
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    name: t.text(),
+    ...t.index(['id', { column: 'name', order: 'ASC' }], { name: 'indexName' }),
+  }))
+}
+```
+
+### composite unique index
+
+Shortcut for `t.index([...columns], { ...options, unique: true })`
+
+```ts
+export class SomeModel extends Model {
+  table = 'someTable';
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    name: t.text(),
+    ...t.unique(['id', 'name']),
+  }))
+}
+```
+
 ### composite primaryKey
 
 Use `t.primaryKey(column1, column2, ...columns)` to specify primary key consisting of multiple columns:

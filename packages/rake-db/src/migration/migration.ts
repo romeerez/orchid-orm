@@ -5,6 +5,7 @@ import {
   getColumnTypes,
   getRaw,
   getTableData,
+  IndexColumnOptions,
   IndexOptions,
   isRaw,
   quote,
@@ -44,7 +45,8 @@ export class Migration extends TransactionAdapter {
 
     const lines: string[] = [];
     const values: unknown[] = [];
-    const indexes: { column: string; index: IndexOptions }[] = [];
+    const indexes: { columns: IndexColumnOptions[]; options: IndexOptions }[] =
+      [];
     const comments: { column: string; comment: string }[] = [];
 
     for (const key in shape) {
@@ -108,7 +110,10 @@ export class Migration extends TransactionAdapter {
 
       if (item.data)
         if (item.data.index) {
-          indexes.push({ column: key, index: item.data.index });
+          indexes.push({
+            columns: [{ ...item.data.index, column: key }],
+            options: item.data.index,
+          });
         }
 
       if (item.data.comment) {
@@ -128,63 +133,76 @@ export class Migration extends TransactionAdapter {
       values,
     });
 
-    for (const { column, index } of indexes) {
+    indexes.push(...tableData.indexes);
+
+    for (const { columns, options } of indexes) {
       const sql: string[] = ['CREATE'];
 
-      if (index.unique) {
+      if (options.unique) {
         sql.push('UNIQUE');
       }
 
       sql.push(
         `INDEX "${
-          index.name || joinWords(tableName, column, 'index')
+          options.name ||
+          joinWords(tableName, ...columns.map(({ column }) => column), 'index')
         }" ON "${tableName}"`,
       );
 
-      if (index.using) {
-        sql.push(`USING ${index.using}`);
+      if (options.using) {
+        sql.push(`USING ${options.using}`);
       }
 
-      const columnSql: string[] = [
-        `"${column}"${index.expression ? `(${index.expression})` : ''}`,
-      ];
+      const columnsSql: string[] = [];
 
-      if (index.collate) {
-        columnSql.push(`COLLATE '${index.collate}'`);
-      }
+      columns.forEach((column) => {
+        const columnSql: string[] = [
+          `"${column.column}"${
+            column.expression ? `(${column.expression})` : ''
+          }`,
+        ];
 
-      if (index.operator) {
-        columnSql.push(index.operator);
-      }
+        if (column.collate) {
+          columnSql.push(`COLLATE '${column.collate}'`);
+        }
 
-      if (index.order) {
-        columnSql.push(index.order);
-      }
+        if (column.operator) {
+          columnSql.push(column.operator);
+        }
 
-      sql.push(`(${columnSql.join(' ')})`);
+        if (column.order) {
+          columnSql.push(column.order);
+        }
 
-      if (index.include) {
+        columnsSql.push(columnSql.join(' '));
+      });
+
+      sql.push(`(${columnsSql.join(', ')})`);
+
+      if (options.include) {
         sql.push(
-          `INCLUDE (${toArray(index.include)
+          `INCLUDE (${toArray(options.include)
             .map((column) => `"${column}"`)
             .join(', ')})`,
         );
       }
 
-      if (index.with) {
-        sql.push(`WITH (${index.with})`);
+      if (options.with) {
+        sql.push(`WITH (${options.with})`);
       }
 
-      if (index.tablespace) {
-        sql.push(`TABLESPACE ${index.tablespace}`);
+      if (options.tablespace) {
+        sql.push(`TABLESPACE ${options.tablespace}`);
       }
 
-      if (index.where) {
+      if (options.where) {
         sql.push(
           `WHERE ${
-            typeof index.where === 'object' && index.where && isRaw(index.where)
-              ? getRaw(index.where, values)
-              : index.where
+            typeof options.where === 'object' &&
+            options.where &&
+            isRaw(options.where)
+              ? getRaw(options.where, values)
+              : options.where
           }`,
         );
       }

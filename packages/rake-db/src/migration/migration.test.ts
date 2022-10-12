@@ -135,6 +135,50 @@ describe('migration', () => {
       `);
     });
 
+    it('should support composite index', async () => {
+      await db.createTable('table', (t) => ({
+        id: t.integer(),
+        name: t.text(),
+        ...t.index(['id', { column: 'name', order: 'DESC' }], {
+          name: 'compositeIndexOnTable',
+        }),
+      }));
+
+      expectSql([
+        `
+          CREATE TABLE "table" (
+            "id" integer NOT NULL,
+            "name" text NOT NULL
+          )
+        `,
+        `
+          CREATE INDEX "compositeIndexOnTable" ON "table" ("id", "name" DESC)
+        `,
+      ]);
+    });
+
+    it('should support composite unique index', async () => {
+      await db.createTable('table', (t) => ({
+        id: t.integer(),
+        name: t.text(),
+        ...t.unique(['id', { column: 'name', order: 'DESC' }], {
+          name: 'compositeIndexOnTable',
+        }),
+      }));
+
+      expectSql([
+        `
+          CREATE TABLE "table" (
+            "id" integer NOT NULL,
+            "name" text NOT NULL
+          )
+        `,
+        `
+          CREATE UNIQUE INDEX "compositeIndexOnTable" ON "table" ("id", "name" DESC)
+        `,
+      ]);
+    });
+
     it('should create table with comment', async () => {
       await db.createTable(
         'name',

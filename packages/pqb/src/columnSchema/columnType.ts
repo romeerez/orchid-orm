@@ -24,12 +24,13 @@ export type NullableColumn<T extends ColumnType> = Omit<
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyColumnType = ColumnType<any, Record<string, Operator<any>>>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyColumnTypeCreator = (...args: any[]) => AnyColumnType;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/ban-types
+export type AnyColumnTypeCreator = (...args: any[]) => AnyColumnType | {};
 
 export type ColumnTypesBase = Record<
   string,
-  AnyColumnTypeCreator | (() => Record<string, never>)
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  AnyColumnTypeCreator
 >;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,7 +39,7 @@ export type ValidationContext = any;
 export type ColumnData = {
   default?: unknown;
   validationDefault?: unknown;
-  index?: IndexOptions;
+  index?: Omit<SingleColumnIndexOptions, 'column'>;
   comment?: string;
   collate?: string;
   compression?: string;
@@ -72,20 +73,26 @@ type ForeignKeyOptions = {
   onDelete?: ForeignKeyAction;
 };
 
-export type IndexOptions = {
-  name?: string;
-  unique?: boolean;
-  using?: string;
+export type IndexColumnOptions = {
+  column: string;
   expression?: number | string;
   collate?: string;
   operator?: string;
   order?: string;
+};
+
+export type IndexOptions = {
+  name?: string;
+  unique?: boolean;
+  using?: string;
   include?: MaybeArray<string>;
   with?: string;
   tablespace?: string;
   where?: string;
   mode?: 'CASCADE' | 'RESTRICT';
 };
+
+export type SingleColumnIndexOptions = IndexColumnOptions & IndexOptions;
 
 export abstract class ColumnType<
   Type = unknown,
@@ -198,7 +205,10 @@ export abstract class ColumnType<
     return cloned;
   }
 
-  index<T extends ColumnType>(this: T, options: IndexOptions = {}) {
+  index<T extends ColumnType>(
+    this: T,
+    options: Omit<SingleColumnIndexOptions, 'column'> = {},
+  ) {
     const cloned = Object.create(this);
     cloned.data = { ...cloned.data, index: options };
     return cloned;
@@ -206,7 +216,7 @@ export abstract class ColumnType<
 
   unique<T extends ColumnType>(
     this: T,
-    options: Omit<IndexOptions, 'unique'> = {},
+    options: Omit<SingleColumnIndexOptions, 'column' | 'unique'> = {},
   ): T {
     const cloned = Object.create(this);
     cloned.data = { ...cloned.data, index: { ...options, unique: true } };
