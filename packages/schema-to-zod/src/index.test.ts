@@ -153,9 +153,9 @@ describe('schema to zod', () => {
     });
   });
 
-  describe('default', () => {
+  describe('validationDefault', () => {
     it('should set default value for column', () => {
-      const type = columnToZod(t.text().default('value'));
+      const type = columnToZod(t.text().validationDefault('value'));
 
       expect(type.parse(undefined)).toBe('value');
     });

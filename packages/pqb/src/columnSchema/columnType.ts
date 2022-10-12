@@ -1,6 +1,8 @@
 import { Operator, Operators } from '../columnsOperators';
 import { JSONTypeAny } from './json/typeBase';
 import { ColumnsShape } from './columnsSchema';
+import { RawExpression, StringKey } from '../common';
+import { MaybeArray } from '../utils';
 
 export type ColumnOutput<T extends ColumnType> = T['type'];
 
@@ -25,19 +27,65 @@ export type AnyColumnType = ColumnType<any, Record<string, Operator<any>>>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyColumnTypeCreator = (...args: any[]) => AnyColumnType;
 
+export type ColumnTypesBase = Record<
+  string,
+  AnyColumnTypeCreator | (() => Record<string, never>)
+>;
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ValidationContext = any;
 
 export type ColumnData = {
   default?: unknown;
+  validationDefault?: unknown;
+  index?: IndexOptions;
+  comment?: string;
+  collate?: string;
+  compression?: string;
+  foreignKey?: ForeignKey<string, string[]>;
 };
 
-export type ForeignKey =
-  | { fn(): new () => { table: string }; column: string }
+type ForeignKeyMatch = 'FULL' | 'PARTIAL' | 'SIMPLE';
+
+type ForeignKeyAction =
+  | 'NO ACTION'
+  | 'RESTRICT'
+  | 'CASCADE'
+  | 'SET NULL'
+  | 'SET DEFAULT';
+
+export type ForeignKey<Table extends string, Columns extends string[]> = (
   | {
-      table: string;
-      column: string;
-    };
+      fn(): new () => { table: Table };
+    }
+  | {
+      table: Table;
+    }
+) & {
+  columns: Columns;
+} & ForeignKeyOptions;
+
+type ForeignKeyOptions = {
+  name?: string;
+  match?: ForeignKeyMatch;
+  onUpdate?: ForeignKeyAction;
+  onDelete?: ForeignKeyAction;
+};
+
+export type IndexOptions = {
+  name?: string;
+  unique?: boolean;
+  using?: string;
+  expression?: number | string;
+  collate?: string;
+  operator?: string;
+  order?: string;
+  include?: MaybeArray<string>;
+  with?: string;
+  tablespace?: string;
+  where?: string;
+  mode?: 'CASCADE' | 'RESTRICT';
+};
 
 export abstract class ColumnType<
   Type = unknown,
@@ -53,7 +101,6 @@ export abstract class ColumnType<
   isPrimaryKey = false;
   isHidden = false;
   isNullable = false;
-  foreignKeyData: ForeignKey | undefined;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   encodeFn?: (input: any) => unknown;
@@ -75,32 +122,41 @@ export abstract class ColumnType<
   foreignKey<
     T extends ColumnType,
     Model extends new () => { table: string; columns: { shape: ColumnsShape } },
-    Column extends keyof InstanceType<Model>['columns']['shape'],
+    Column extends StringKey<keyof InstanceType<Model>['columns']['shape']>,
   >(
     this: T,
     fn: () => Model,
     column: Column,
+    options?: ForeignKeyOptions,
   ): Omit<T, 'foreignKeyData'> & {
-    foreignKeyData: { fn: () => Model; column: Column };
+    foreignKeyData: ForeignKey<InstanceType<Model>['table'], [Column]>;
   };
   foreignKey<T extends ColumnType, Table extends string, Column extends string>(
     this: T,
     table: Table,
     column: Column,
+    options?: ForeignKeyOptions,
   ): Omit<T, 'foreignKeyData'> & {
-    foreignKeyData: { table: Table; column: Column };
+    foreignKeyData: ForeignKey<Table, [Column]>;
   };
   foreignKey(
     fnOrTable:
       | (() => new () => { table: string; columns: { shape: ColumnsShape } })
       | string,
     column: string,
+    options: ForeignKeyOptions = {},
   ) {
     const cloned = Object.create(this);
     if (typeof fnOrTable === 'string') {
-      cloned.foreignKeyData = { table: fnOrTable, column };
+      cloned.data = {
+        ...this.data,
+        foreignKey: { table: fnOrTable, columns: [column], ...options },
+      };
     } else {
-      cloned.foreignKeyData = { fn: fnOrTable, column };
+      cloned.data = {
+        ...this.data,
+        foreignKey: { fn: fnOrTable, columns: [column], ...options },
+      };
     }
     return cloned;
   }
@@ -136,9 +192,48 @@ export abstract class ColumnType<
     return this.dataType;
   }
 
-  default<T extends ColumnType>(this: T, value: T['type']) {
+  default<T extends ColumnType>(this: T, value: T['type'] | RawExpression): T {
     const cloned = Object.create(this);
     cloned.data = { ...cloned.data, default: value };
+    return cloned;
+  }
+
+  index<T extends ColumnType>(this: T, options: IndexOptions = {}) {
+    const cloned = Object.create(this);
+    cloned.data = { ...cloned.data, index: options };
+    return cloned;
+  }
+
+  unique<T extends ColumnType>(
+    this: T,
+    options: Omit<IndexOptions, 'unique'> = {},
+  ): T {
+    const cloned = Object.create(this);
+    cloned.data = { ...cloned.data, index: { ...options, unique: true } };
+    return cloned;
+  }
+
+  comment<T extends ColumnType>(this: T, comment: string): T {
+    const cloned = Object.create(this);
+    cloned.data = { ...cloned.data, comment };
+    return cloned;
+  }
+
+  validationDefault<T extends ColumnType>(this: T, value: T['type']): T {
+    const cloned = Object.create(this);
+    cloned.data = { ...cloned.data, validationDefault: value };
+    return cloned;
+  }
+
+  compression<T extends ColumnType>(this: T, compression: string): T {
+    const cloned = Object.create(this);
+    cloned.data = { ...cloned.data, compression };
+    return cloned;
+  }
+
+  collate<T extends ColumnType>(this: T, collate: string): T {
+    const cloned = Object.create(this);
+    cloned.data = { ...cloned.data, collate };
     return cloned;
   }
 

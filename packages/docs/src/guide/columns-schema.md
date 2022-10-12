@@ -152,7 +152,7 @@ export const Model = createModel({
 
 All following methods are available on any kind of column.
 
-`.primaryKey`
+### primaryKey
 
 Mark the column as a primary key. This column type becomes an argument of the `.find` method. So if primary key is of `serial` type, `.find` will except number, or if primary key is of `uuid` type, `.find` will expect a string.
 
@@ -164,9 +164,76 @@ const someTable = db('someTable', (t) => ({
 someTable.find(1)
 ```
 
-`.foreignKey`
+### hidden
 
-Mark the column to be a foreign key of other table's column. At the moment it does not have any effect, maybe it will later.
+Remove the column from default selection. For example, password of user may be marked as hidden, and then this column won't load by default, only when specifically listed in `.select`.
+
+Caution: `.hidden` functionality is not tested yet very well, to be done.
+
+### nullable
+
+Mark the column as nullable, by default it's not:
+
+```ts
+const someTable = db('someTable', (t) => ({
+  column: t.integer().nullable(),
+}))
+```
+
+### encode
+
+Process value for the column when inserting or updating.
+
+Type of `input` argument will be used as type of the column when inserting and updating.
+
+```ts
+const someTable = db('someTable', (t) => ({
+  column: t.text().encode((input: boolean | number | string) => String(input))
+}))
+
+// numbers and booleans will be converted to string:
+await someTable.insert({ column: 123 })
+await someTable.insert({ column: true })
+await someTable.where({ column: 'true' }).update({ column: false })
+```
+
+### parse
+
+Process value when loading it from database.
+
+Type of input is the type of column before `.parse`, resulting type will replace type of column. 
+
+```ts
+const someTable = db('someTable', (t) => ({
+  column: t.text().parse((input) => parseInt(input))
+}))
+
+// column will be parsed to a number
+const value: number = await someTable.get('column')
+```
+
+## Column methods for migration
+
+Following methods have no effect on validation, parsing or encoding columns, they only have effect when using them in the migration.
+
+Even though they have no effect in app code, you still can copy code from migration to model definition for explicitness, to see database specifics in the model file.
+
+### default
+
+The default value is used only in the migration to set a default on a database level. Value can be a `raw()` SQL.
+
+```ts
+import { raw } from 'pqb'
+
+const someTable = db('someTable', (t) => ({
+  active: t.boolean().default(false),
+  date: t.date().default(raw('now()')),
+}))
+```
+
+### foreignKey
+
+Set the foreignKey for the column.
 
 ```ts
 const someTable = db('someTable', (t) => ({
@@ -192,53 +259,106 @@ export class OtherTable extends Model {
 }
 ```
 
-`.hidden`
-
-Remove the column from default selection. For example, password of user may be marked as hidden, and then this column won't load by default, only when specifically listed in `.select`.
-
-Caution: `.hidden` functionality is not tested yet very well, to be done.
-
-`.nullable`
-
-Mark the column as nullable, by default it's not:
+Optionally you can pass third argument to `foreignKey` with options:
 
 ```ts
-const someTable = db('someTable', (t) => ({
-  column: t.integer().nullable(),
-}))
+type ForeignKeyOptions = {
+  // name of the constraint
+  name?: string;
+  // see database docs for MATCH in FOREIGN KEY
+  match?: 'FULL' | 'PARTIAL' | 'SIMPLE';
+  
+  onUpdate?: 'NO ACTION' | 'RESTRICT' | 'CASCADE' | 'SET NULL' | 'SET DEFAULT';
+  onDelete?: 'NO ACTION' | 'RESTRICT' | 'CASCADE' | 'SET NULL' | 'SET DEFAULT';
+}
 ```
 
-`.encode`
+### index
 
-Process value for the column when inserting or updating.
-
-Type of `input` argument will be used as type of the column when inserting and updating.
+Add index to the column.
 
 ```ts
-const someTable = db('someTable', (t) => ({
-  column: t.text().encode((input: boolean | number | string) => String(input))
-}))
-
-// numbers and booleans will be converted to string:
-await someTable.insert({ column: 123 })
-await someTable.insert({ column: true })
-await someTable.where({ column: 'true' }).update({ column: false })
+export class SomeModel extends Model {
+  table = 'someTable';
+  columns = this.setColumns((t) => ({
+    // add index to name column with default settings:
+    name: t.text().index(),
+  }))
+}
 ```
 
-`.parse`
-
-Process value when loading it from database.
-
-Type of input is the type of column before `.parse`, resulting type will replace type of column. 
+Optionally you can pass a single argument with options:
 
 ```ts
-const someTable = db('someTable', (t) => ({
-  column: t.text().parse((input) => parseInt(input))
-}))
-
-// column will be parsed to a number
-const value: number = await someTable.get('column')
+type IndexOptions = {
+  // name of the index
+  name?: string;
+  // is it an unique index
+  unique?: boolean;
+  // index algorhytm to use such as GIST, GIN
+  using?: string;
+  // expression is an argument to be passed to a column:
+  // CREATE INDEX name ON table ( columnName(expression) )
+  expression?: number | string;
+  // specify collation:
+  collate?: string;
+  // see `opclass` in postgres document for creating index
+  operator?: string;
+  // specify index order such as ASC NULLS FIRST, DESC NULLS LAST
+  order?: string;
+  // include columns to index to optimize specific queries
+  include?: MaybeArray<string>;
+  // see "storage parameters" in postgres document for creating index, for example 'fillfactor = 70'
+  with?: string;
+  // The tablespace in which to create the index. If not specified, default_tablespace is consulted, or temp_tablespaces for indexes on temporary tables.
+  tablespace?: string;
+  // WHERE clause to filter records for the index
+  where?: string;
+  // mode is for dropping the index
+  mode?: 'CASCADE' | 'RESTRICT';
+};
 ```
+
+### unique
+
+Shortcut for `.index({ unique: true })`.
+
+### composite primaryKey
+
+Use `t.primaryKey(column1, column2, ...columns)` to specify primary key consisting of multiple columns:
+
+```ts
+export class SomeModel extends Model {
+  table = 'someTable';
+  columns = this.setColumns((t) => ({
+    id: t.integer(),
+    name: t.text(),
+    active: t.boolean(),
+    ...t.primaryKey('id', 'name', 'active'),
+  }))
+}
+```
+
+### comment
+
+Add database comment to the column.
+
+```ts
+export class SomeModel extends Model {
+  table = 'someTable';
+  columns = this.setColumns((t) => ({
+    name: t.text().comment('This is a column comment'),
+  }))
+}
+```
+
+### compression
+
+Set compression for the column, see postgres docs for it.
+
+### collate
+
+Set collation for the column.
 
 ## Using columns schema for validation
 
@@ -293,18 +413,18 @@ export const updateSomeItemController = (req: Request) => {
 
 Methods listed below does **not** affect on parsing or encoding when getting data from db or inserting, it is only makes effect when converting columns schema to Zod schema for validation.
 
-`.default`
+### validationDefault
 
 Set default value or a function, in case of function it's called on each validation.
 
 ```ts
 const someTable = db('someTable', (t) => ({
-  column: t.text().default('default value')
-  dateColumn: t.date().default(() => new Date()),
+  column: t.text().validationDefault('default value'),
+  dateColumn: t.date().validationDefault(() => new Date()),
 }))
 ```
 
-`.transform`
+### transform
 
 Transform value with a custom function. Returned type of value becomes a type of the column (this is not particularly useful).
 
@@ -315,7 +435,7 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-`.to`
+### to
 
 Similar to `.preprocess` function of Zod, it allows to transform one type to another. The column last type is counted as the type of the column.
 
@@ -326,7 +446,7 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-`.refine`
+### refine
 
 Return truthy value when input is okay, return falsy value to produce error.
 
@@ -337,7 +457,7 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-`.superRefine`
+### superRefine
 
 Add a custom check with access to the validation context, see `.superRefine` method in Zod for details.
 
@@ -797,12 +917,13 @@ const someTable = db('someTable', (t) => ({
 
 #### default
 
-Set a default value which will be returned in case if input is `null` or `undefined`:
+Set a default value which will be returned in case if input is `null` or `undefined`. If function provided, it will be called on each validation to use the returned value.
 
 ```ts
 const someTable = db('someTable', (t) => ({
   data: t.json((t) => ({
-    defautedNumber: t.number().default(123)
+    defautedNumber: t.number().default(123),
+    defautedRandom: t.number().default(() => Math.random()),
   }))
 }))
 ```
@@ -968,7 +1089,7 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-`.extend`:
+##### extend
 
 You can add additional fields to an object schema with the `.extend` method.
 
@@ -982,7 +1103,7 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-`.merge`:
+##### merge
 
 Merge two object types into one:
 
@@ -996,7 +1117,7 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-`.pick`:
+##### pick
 
 To only keep certain keys, use `.pick`:
 
@@ -1010,7 +1131,7 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-`.omit`:
+##### omit
 
 To remove certain keys, use `.omit`:
 
@@ -1024,7 +1145,7 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-`.partial`:
+##### partial
 
 The .partial method makes all properties optional:
 
@@ -1048,7 +1169,7 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-`.passthrough`:
+##### passthrough
 
 By default, object schemas strip out unrecognized keys during parsing.
 
@@ -1063,7 +1184,7 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-`.strict`:
+##### strict
 
 By default, object schemas strip out unrecognized keys during parsing.
 
@@ -1078,11 +1199,11 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-`.strip`:
+##### strip
 
 You can use the `.strip` method to reset an object schema to the default behavior (stripping unrecognized keys).
 
-`.catchall`:
+##### catchall
 
 You can pass a "catchall" schema into an object schema. All unknown keys will be validated against it.
 

@@ -4,12 +4,13 @@ import {
   getMigrationFiles,
   MigrationConfig,
   MigrationFile,
-} from './common';
+} from '../common';
 import {
   getCurrentPromise,
   setCurrentMigrationUp,
-  setDbForMigration,
+  setCurrentMigration,
 } from '../migration/change';
+import { Migration } from '../migration/migration';
 
 const migrateOrRollback = async (
   options: MaybeArray<AdapterOptions>,
@@ -44,8 +45,9 @@ const processMigration = async (
   file: MigrationFile,
   config: MigrationConfig,
 ) => {
-  await db.transaction(async (db) => {
-    setDbForMigration(db);
+  await db.transaction(async (tx) => {
+    const db = new Migration(tx, up);
+    setCurrentMigration(db);
     setCurrentMigrationUp(up);
     config.requireTs(file.path);
     await getCurrentPromise();

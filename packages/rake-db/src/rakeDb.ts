@@ -1,10 +1,7 @@
 import { AdapterOptions, MaybeArray } from 'pqb';
 import { createDb, dropDb } from './commands/createOrDrop';
 import { migrate, rollback } from './commands/migrateOrRollback';
-import {
-  getMigrationConfigWithDefaults,
-  MigrationConfig,
-} from './commands/common';
+import { getMigrationConfigWithDefaults, MigrationConfig } from './common';
 import { generate } from './commands/generate';
 
 export const rakeDb = async (

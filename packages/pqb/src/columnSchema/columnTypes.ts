@@ -46,9 +46,31 @@ import { EnumColumn } from './enum';
 import { JSONColumn, JSONTextColumn, JSONTypes } from './json';
 import { JSONTypeAny } from './json/typeBase';
 import { ArrayColumn } from './array';
-import { ColumnType } from './columnType';
+import { ColumnType, ColumnTypesBase } from './columnType';
+import { emptyObject } from '../utils';
+import { ColumnsShape } from './columnsSchema';
 
 export type ColumnTypes = typeof columnTypes;
+
+export type TableData = {
+  primaryKey?: string[];
+};
+
+let tableData: TableData = {};
+
+export const getTableData = () => tableData;
+
+export const getColumnTypes = <
+  CT extends ColumnTypesBase,
+  Shape extends ColumnsShape,
+>(
+  types: CT,
+  fn: (t: CT) => Shape,
+  data: TableData = {},
+) => {
+  tableData = data;
+  return fn(types);
+};
 
 export const columnTypes = {
   smallint: () => new SmallIntColumn(),
@@ -128,4 +150,9 @@ export const columnTypes = {
   ) => new JSONColumn(schemaOrFn),
   jsonText: () => new JSONTextColumn(),
   array: <Item extends ColumnType>(item: Item) => new ArrayColumn(item),
+
+  primaryKey(...columns: string[]) {
+    tableData.primaryKey = columns;
+    return emptyObject;
+  },
 };

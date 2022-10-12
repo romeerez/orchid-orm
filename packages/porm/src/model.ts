@@ -1,11 +1,12 @@
 import {
-  AnyColumnTypeCreator,
   ColumnShapeOutput,
   ColumnsShape,
   ColumnType,
   columnTypes,
   ColumnTypes,
+  ColumnTypesBase,
   Db,
+  getColumnTypes,
   Query,
 } from 'pqb';
 import { MapRelations, Relation, RelationThunks } from './relations/relations';
@@ -53,7 +54,7 @@ export type Model = {
 
 export type SchemaConverter = (columnType: ColumnType) => unknown;
 
-export const createModel = <CT extends Record<string, AnyColumnTypeCreator>>(
+export const createModel = <CT extends ColumnTypesBase>(
   options: {
     columnTypes?: CT;
   } = { columnTypes: columnTypes as unknown as CT },
@@ -66,11 +67,10 @@ export const createModel = <CT extends Record<string, AnyColumnTypeCreator>>(
     setColumns<T extends ColumnsShape>(
       fn: (t: CT extends undefined ? ColumnTypes : CT) => T,
     ): { shape: T; type: ColumnShapeOutput<T> } {
-      const shape = fn(
-        (options?.columnTypes || columnTypes) as unknown as CT extends undefined
-          ? ColumnTypes
-          : CT,
-      );
+      const types = (options?.columnTypes ||
+        columnTypes) as unknown as CT extends undefined ? ColumnTypes : CT;
+
+      const shape = getColumnTypes(types, fn);
 
       return {
         shape,

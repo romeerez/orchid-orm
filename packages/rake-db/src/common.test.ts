@@ -5,6 +5,8 @@ import {
   getMigrationConfigWithDefaults,
   getMigrationFiles,
   getTextAfterTo,
+  joinColumns,
+  joinWords,
   migrationConfigDefaults,
   setAdapterOptions,
   setAdminCredentialsToOptions,
@@ -262,6 +264,18 @@ describe('common', () => {
   describe('sortDesc', () => {
     it('should sort descending', () => {
       expect(sortDesc(['a', 'c', 'b'])).toEqual(['c', 'b', 'a']);
+    });
+  });
+
+  describe('joinWords', () => {
+    it('should join words', () => {
+      expect(joinWords('foo', 'bar', 'baz')).toEqual('fooBarBaz');
+    });
+  });
+
+  describe('joinColumns', () => {
+    it('should join columns', () => {
+      expect(joinColumns(['a', 'b', 'c'])).toBe('"a", "b", "c"');
     });
   });
 });

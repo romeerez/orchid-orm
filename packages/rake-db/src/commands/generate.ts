@@ -3,7 +3,7 @@ import {
   getTextAfterFrom,
   getTextAfterTo,
   MigrationConfig,
-} from './common';
+} from '../common';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 

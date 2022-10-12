@@ -12,9 +12,10 @@ import {
   columnTypes,
   ColumnShapeOutput,
   TableSchema,
-  AnyColumnTypeCreator,
   ColumnShapeInput,
   ColumnTypes,
+  ColumnTypesBase,
+  getColumnTypes,
 } from './columnSchema';
 import { applyMixins } from './utils';
 import { StringKey } from './common';
@@ -148,7 +149,7 @@ export class Db<
 applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
 
-type DbResult<CT extends Record<string, AnyColumnTypeCreator>> = Db & {
+type DbResult<CT extends ColumnTypesBase> = Db & {
   <Table extends string, Shape extends ColumnsShape = ColumnsShape>(
     table: Table,
     shape?: ((t: CT) => Shape) | Shape,
@@ -159,14 +160,15 @@ type DbResult<CT extends Record<string, AnyColumnTypeCreator>> = Db & {
   destroy: Adapter['destroy'];
 };
 
-export type DbOptions<
-  CT extends Record<string, AnyColumnTypeCreator> = ColumnTypes,
-> = ({ adapter: Adapter } | Omit<AdapterOptions, 'log'>) &
+export type DbOptions<CT extends ColumnTypesBase = ColumnTypes> = (
+  | { adapter: Adapter }
+  | Omit<AdapterOptions, 'log'>
+) &
   QueryLogOptions & {
     columnTypes?: CT;
   };
 
-export const createDb = <CT extends Record<string, AnyColumnTypeCreator>>({
+export const createDb = <CT extends ColumnTypesBase>({
   log,
   logger,
   columnTypes: ct = columnTypes as unknown as CT,
@@ -194,7 +196,7 @@ export const createDb = <CT extends Record<string, AnyColumnTypeCreator>>({
         adapter,
         qb,
         table as Table,
-        typeof shape === 'function' ? shape(ct) : shape,
+        typeof shape === 'function' ? getColumnTypes(ct, shape) : shape,
         { ...commonOptions, ...options },
       );
     },

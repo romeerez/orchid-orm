@@ -271,7 +271,11 @@ const typeHandler = <Type extends ColumnType | JSONTypeAny>(
       type = type.optional();
     }
 
-    if (column.data.default !== undefined) {
+    if (column instanceof ColumnType) {
+      if (column.data.validationDefault !== undefined) {
+        type = type.default(column.data.validationDefault);
+      }
+    } else if (column.data.default !== undefined) {
       type = type.default(column.data.default);
     }
 

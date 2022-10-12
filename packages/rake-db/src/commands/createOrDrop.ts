@@ -6,7 +6,7 @@ import {
   createSchemaMigrations,
   MigrationConfig,
   migrationConfigDefaults,
-} from './common';
+} from '../common';
 
 const execute = async (
   options: AdapterOptions,

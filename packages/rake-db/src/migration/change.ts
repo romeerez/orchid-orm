@@ -1,16 +1,16 @@
-import { Adapter } from 'pqb';
+import { Migration } from './migration';
 
-let currentDb: Adapter | undefined;
+let currentMigration: Migration | undefined;
 let currentPromise: Promise<void> | undefined;
 let currentUp = true;
 
-export const change = (fn: (db: Adapter, up: boolean) => Promise<void>) => {
-  if (!currentDb) throw new Error('Database instance is not set');
-  currentPromise = fn(currentDb, currentUp);
+export const change = (fn: (db: Migration, up: boolean) => Promise<void>) => {
+  if (!currentMigration) throw new Error('Database instance is not set');
+  currentPromise = fn(currentMigration, currentUp);
 };
 
-export const setDbForMigration = (db: Adapter) => {
-  currentDb = db;
+export const setCurrentMigration = (db: Migration) => {
+  currentMigration = db;
 };
 
 export const setCurrentMigrationUp = (up: boolean) => {

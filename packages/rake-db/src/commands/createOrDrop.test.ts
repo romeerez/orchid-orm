@@ -4,7 +4,7 @@ import {
   createSchemaMigrations,
   migrationConfigDefaults,
   setAdminCredentialsToOptions,
-} from './common';
+} from '../common';
 
 jest.mock('./common', () => ({
   ...jest.requireActual('./common'),

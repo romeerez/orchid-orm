@@ -81,7 +81,7 @@ export class Adapter {
   }
 
   async transaction<Result>(
-    cb: (adapter: Adapter) => Promise<Result>,
+    cb: (adapter: TransactionAdapter) => Promise<Result>,
   ): Promise<Result> {
     const client = await this.pool.connect();
     try {
@@ -98,6 +98,7 @@ export class Adapter {
       client.release();
     }
   }
+
   destroy(): Promise<void> {
     return this.pool.end();
   }
@@ -161,7 +162,7 @@ export class TransactionAdapter implements Adapter {
   }
 
   async transaction<Result>(
-    cb: (adapter: Adapter) => Promise<Result>,
+    cb: (adapter: TransactionAdapter) => Promise<Result>,
   ): Promise<Result> {
     return await cb(this);
   }

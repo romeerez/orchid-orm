@@ -209,3 +209,16 @@ export const getMigrationFiles = async (
 export const sortAsc = (arr: string[]) => arr.sort();
 
 export const sortDesc = (arr: string[]) => arr.sort((a, b) => (a > b ? -1 : 1));
+
+export const joinWords = (...words: string[]) => {
+  return words
+    .slice(1)
+    .reduce(
+      (acc, word) => acc + word[0].toUpperCase() + word.slice(1),
+      words[0],
+    );
+};
+
+export const joinColumns = (columns: string[]) => {
+  return columns.map((column) => `"${column}"`).join(', ');
+};
