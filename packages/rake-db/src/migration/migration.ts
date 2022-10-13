@@ -2,6 +2,8 @@ import {
   ColumnsShape,
   columnTypes,
   ColumnTypes,
+  ForeignKeyModel,
+  ForeignKeyOptions,
   getColumnTypes,
   getRaw,
   getTableData,
@@ -81,31 +83,15 @@ export class Migration extends TransactionAdapter {
 
       const { foreignKey } = item.data;
       if (foreignKey) {
-        let table: string;
-        if ('fn' in foreignKey) {
-          const klass = foreignKey.fn();
-          table = new klass().table;
-        } else {
-          table = foreignKey.table;
-        }
+        const table = getForeignKeyTable(
+          'fn' in foreignKey ? foreignKey.fn : foreignKey.table,
+        );
 
         if (foreignKey.name) {
           line.push(`CONSTRAINT "${foreignKey.name}"`);
         }
 
-        line.push(`REFERENCES "${table}"(${joinColumns(foreignKey.columns)})`);
-
-        if (foreignKey.match) {
-          line.push(`MATCH ${foreignKey.match.toUpperCase()}`);
-        }
-
-        if (foreignKey.onDelete) {
-          line.push(`ON DELETE ${foreignKey.onDelete.toUpperCase()}`);
-        }
-
-        if (foreignKey.onUpdate) {
-          line.push(`ON UPDATE ${foreignKey.onUpdate.toUpperCase()}`);
-        }
+        line.push(referencesToSql(table, foreignKey.columns, foreignKey));
       }
 
       if (item.data)
@@ -127,6 +113,20 @@ export class Migration extends TransactionAdapter {
     if (tableData.primaryKey) {
       lines.push(`\n  PRIMARY KEY (${joinColumns(tableData.primaryKey)})`);
     }
+
+    tableData.foreignKeys.forEach((foreignKey) => {
+      const table = getForeignKeyTable(foreignKey.fnOrTable);
+
+      lines.push(
+        `\n  CONSTRAINT "${
+          foreignKey.options.name || joinWords(tableName)
+        }" FOREIGN KEY (${joinColumns(foreignKey.columns)}) ${referencesToSql(
+          table,
+          foreignKey.foreignColumns,
+          foreignKey.options,
+        )}`,
+      );
+    });
 
     await this.query({
       text: `CREATE TABLE "${tableName}" (${lines.join(',')}\n)`,
@@ -223,3 +223,34 @@ export class Migration extends TransactionAdapter {
     }
   }
 }
+
+const getForeignKeyTable = (fnOrTable: (() => ForeignKeyModel) | string) => {
+  if (typeof fnOrTable === 'string') {
+    return fnOrTable;
+  }
+
+  const klass = fnOrTable();
+  return new klass().table;
+};
+
+const referencesToSql = (
+  table: string,
+  columns: string[],
+  foreignKey: Pick<ForeignKeyOptions, 'match' | 'onDelete' | 'onUpdate'>,
+) => {
+  const sql: string[] = [`REFERENCES "${table}"(${joinColumns(columns)})`];
+
+  if (foreignKey.match) {
+    sql.push(`MATCH ${foreignKey.match.toUpperCase()}`);
+  }
+
+  if (foreignKey.onDelete) {
+    sql.push(`ON DELETE ${foreignKey.onDelete.toUpperCase()}`);
+  }
+
+  if (foreignKey.onUpdate) {
+    sql.push(`ON UPDATE ${foreignKey.onUpdate.toUpperCase()}`);
+  }
+
+  return sql.join(' ');
+};

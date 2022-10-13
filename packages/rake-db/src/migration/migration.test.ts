@@ -179,6 +179,43 @@ describe('migration', () => {
       ]);
     });
 
+    it('should support composite foreign key', async () => {
+      await db.createTable('table', (t) => ({
+        id: t.integer(),
+        name: t.text(),
+        ...t.foreignKey(
+          ['id', 'name'],
+          'otherTable',
+          ['foreignId', 'foreignName'],
+          {
+            name: 'constraintName',
+            match: 'FULL',
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
+          },
+        ),
+      }));
+
+      const expectedConstraint = toLine(`
+        CONSTRAINT "constraintName"
+          FOREIGN KEY ("id", "name")
+          REFERENCES "otherTable"("foreignId", "foreignName")
+          MATCH FULL
+          ON DELETE CASCADE
+          ON UPDATE CASCADE
+      `);
+
+      expectSql([
+        `
+          CREATE TABLE "table" (
+            "id" integer NOT NULL,
+            "name" text NOT NULL,
+            ${expectedConstraint}
+          )
+        `,
+      ]);
+    });
+
     it('should create table with comment', async () => {
       await db.createTable(
         'name',

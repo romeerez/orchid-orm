@@ -1,5 +1,3 @@
-export type EmptyObject = Record<never, never>;
-
 export const cloneInstance = <T>(instance: T): T => {
   return Object.assign(
     Object.create(Object.getPrototypeOf(instance)),

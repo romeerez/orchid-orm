@@ -47,12 +47,16 @@ import { JSONColumn, JSONTextColumn, JSONTypes } from './json';
 import { JSONTypeAny } from './json/typeBase';
 import { ArrayColumn } from './array';
 import {
+  ColumnNameOfModel,
   ColumnType,
   ColumnTypesBase,
+  ForeignKeyModel,
   IndexColumnOptions,
   IndexOptions,
+  ForeignKeyOptions,
+  ForeignKeyModelWithColumns,
 } from './columnType';
-import { emptyObject } from '../utils';
+import { emptyObject, EmptyObject } from '../utils';
 import { ColumnsShape } from './columnsSchema';
 
 export type ColumnTypes = typeof columnTypes;
@@ -60,9 +64,20 @@ export type ColumnTypes = typeof columnTypes;
 export type TableData = {
   primaryKey?: string[];
   indexes: { columns: IndexColumnOptions[]; options: IndexOptions }[];
+  foreignKeys: {
+    columns: string[];
+    fnOrTable: (() => ForeignKeyModel) | string;
+    foreignColumns: string[];
+    options: ForeignKeyOptions;
+  }[];
 };
 
-let tableData: TableData = { indexes: [] };
+const newTableData = (): TableData => ({
+  indexes: [],
+  foreignKeys: [],
+});
+
+let tableData: TableData = newTableData();
 
 export const getTableData = () => tableData;
 
@@ -72,7 +87,7 @@ export const getColumnTypes = <
 >(
   types: CT,
   fn: (t: CT) => Shape,
-  data: TableData = { indexes: [] },
+  data: TableData = newTableData(),
 ) => {
   tableData = data;
   return fn(types);
@@ -181,4 +196,39 @@ export const columnTypes = {
     });
     return emptyObject;
   },
+
+  foreignKey,
 };
+
+function foreignKey<
+  Model extends ForeignKeyModelWithColumns,
+  Columns extends [ColumnNameOfModel<Model>, ...ColumnNameOfModel<Model>[]],
+>(
+  columns: string[],
+  fn: () => Model,
+  foreignColumns: Columns,
+  options?: ForeignKeyOptions,
+): EmptyObject;
+function foreignKey<
+  Table extends string,
+  Columns extends [string, ...string[]],
+>(
+  columns: string[],
+  table: Table,
+  foreignColumns: Columns,
+  options?: ForeignKeyOptions,
+): EmptyObject;
+function foreignKey(
+  columns: string[],
+  fnOrTable: (() => ForeignKeyModel) | string,
+  foreignColumns: string[],
+  options: ForeignKeyOptions = {},
+) {
+  tableData.foreignKeys.push({
+    columns,
+    fnOrTable,
+    foreignColumns,
+    options,
+  });
+  return emptyObject;
+}

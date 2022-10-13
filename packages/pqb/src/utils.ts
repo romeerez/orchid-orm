@@ -139,4 +139,5 @@ export const toArray = <T>(item: T) =>
 
 export const noop = () => {};
 
+export type EmptyObject = typeof emptyObject;
 export const emptyObject = {};

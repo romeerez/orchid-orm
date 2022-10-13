@@ -66,7 +66,7 @@ export type ForeignKey<Table extends string, Columns extends string[]> = (
   columns: Columns;
 } & ForeignKeyOptions;
 
-type ForeignKeyOptions = {
+export type ForeignKeyOptions = {
   name?: string;
   match?: ForeignKeyMatch;
   onUpdate?: ForeignKeyAction;
@@ -93,6 +93,18 @@ export type IndexOptions = {
 };
 
 export type SingleColumnIndexOptions = IndexColumnOptions & IndexOptions;
+
+export type ForeignKeyModel = new () => {
+  table: string;
+};
+
+export type ForeignKeyModelWithColumns = new () => {
+  table: string;
+  columns: { shape: ColumnsShape };
+};
+
+export type ColumnNameOfModel<Model extends ForeignKeyModelWithColumns> =
+  StringKey<keyof InstanceType<Model>['columns']['shape']>;
 
 export abstract class ColumnType<
   Type = unknown,
@@ -128,8 +140,8 @@ export abstract class ColumnType<
 
   foreignKey<
     T extends ColumnType,
-    Model extends new () => { table: string; columns: { shape: ColumnsShape } },
-    Column extends StringKey<keyof InstanceType<Model>['columns']['shape']>,
+    Model extends ForeignKeyModelWithColumns,
+    Column extends ColumnNameOfModel<Model>,
   >(
     this: T,
     fn: () => Model,
@@ -147,9 +159,7 @@ export abstract class ColumnType<
     foreignKeyData: ForeignKey<Table, [Column]>;
   };
   foreignKey(
-    fnOrTable:
-      | (() => new () => { table: string; columns: { shape: ColumnsShape } })
-      | string,
+    fnOrTable: (() => ForeignKeyModel) | string,
     column: string,
     options: ForeignKeyOptions = {},
   ) {

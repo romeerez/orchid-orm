@@ -273,6 +273,35 @@ type ForeignKeyOptions = {
 }
 ```
 
+### composite foreignKey
+
+Set foreign key from multiple columns in current table to corresponding columns in other table.
+
+First argument is array of columns in current table, second argument is other table name, third argument is array of columns in other table, forth argument is for options.
+
+Options are the same as in single column foreign key.
+
+```ts
+export class SomeModel extends Model {
+  table = 'someTable';
+  columns = this.setColumns((t) => ({
+    id: t.integer(),
+    name: t.string(),
+    ...t.foreignKey(
+      ['id', 'name'],
+      'otherTable',
+      ['foreignId', 'foreignName'],
+      {
+        name: 'constraintName',
+        match: 'FULL',
+        onUpdate: 'RESTRICT',
+        onDelete: 'CASCADE',
+      }
+    )
+  }))
+}
+```
+
 ### index
 
 Add index to the column.
