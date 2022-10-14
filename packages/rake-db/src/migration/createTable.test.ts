@@ -7,8 +7,8 @@ describe('createTable', () => {
   beforeEach(resetDb);
 
   it('should create table, drop table on rollback', async () => {
-    const createTable = () => {
-      return db.createTable('table', (t) => ({
+    const fn = (dropMode?: 'CASCADE') => {
+      return db.createTable('table', { dropMode }, (t) => ({
         id: t.serial().primaryKey(),
         nullable: t.text().nullable(),
         nonNullable: t.text(),
@@ -42,7 +42,7 @@ describe('createTable', () => {
       }));
     };
 
-    await createTable();
+    await fn();
 
     expectSql([
       `
@@ -80,10 +80,17 @@ describe('createTable', () => {
       `COMMENT ON COLUMN "table"."columnWithComment" IS 'this is a column comment'`,
     ]);
 
-    queryMock.mockClear();
     db.up = false;
 
-    await createTable();
+    queryMock.mockClear();
+    await fn();
+
+    expectSql(`
+      DROP TABLE "table"
+    `);
+
+    queryMock.mockClear();
+    await fn();
 
     expectSql(`
       DROP TABLE "table" CASCADE

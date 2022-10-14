@@ -89,7 +89,7 @@ export type IndexOptions = {
   with?: string;
   tablespace?: string;
   where?: string;
-  mode?: 'CASCADE' | 'RESTRICT';
+  dropMode?: 'CASCADE' | 'RESTRICT';
 };
 
 export type SingleColumnIndexOptions = IndexColumnOptions & IndexOptions;

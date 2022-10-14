@@ -4,23 +4,50 @@ import {
   columnTypes,
   resetTableData,
   quote,
+  getTableData,
 } from 'pqb';
 import {
   ChangeTableCallback,
   ChangeTableOptions,
+  ColumnComment,
+  ColumnIndex,
+  DropMode,
   Migration,
 } from './migration';
+import {
+  addColumnComment,
+  addColumnIndex,
+  columnToSql,
+  migrateIndexes,
+} from './migrationUtils';
 
 type TableChangeMethods = typeof tableChangeMethods;
 const tableChangeMethods = {
-  add: (item: ColumnType) => ['add' as const, item],
+  add: (item: ColumnType, options?: { dropMode?: DropMode }): ChangeItem => [
+    'add',
+    item,
+    options,
+  ],
 };
 
-export type ChangeItem = [action: 'add', item: ColumnType];
+export type ChangeItem = [
+  action: 'add',
+  item: ColumnType,
+  options?: { dropMode?: DropMode },
+];
 
 export type TableChanger = ColumnTypes & TableChangeMethods;
 
 export type TableChangeData = Record<string, ChangeItem>;
+
+type ChangeTableState = {
+  migration: Migration;
+  tableName: string;
+  alterTable: string[];
+  values: unknown[];
+  indexes: ColumnIndex[];
+  comments: ColumnComment[];
+};
 
 export const changeTable = async (
   migration: Migration,
@@ -34,19 +61,40 @@ export const changeTable = async (
 
   const changeData = fn(tableChanger);
 
+  const state: ChangeTableState = {
+    migration,
+    tableName,
+    alterTable: [],
+    values: [],
+    indexes: [],
+    comments: [],
+  };
+
   if (options.comment !== undefined) {
-    changeActions.tableComment(migration, tableName, options.comment);
+    await changeActions.tableComment(state, tableName, options.comment);
   }
 
   for (const key in changeData) {
-    const [action, item] = changeData[key];
-    changeActions[action](migration, tableName, item);
+    const [action, item, options] = changeData[key];
+    changeActions[action](state, key, item, options);
   }
+
+  const tableData = getTableData();
+
+  if (state.alterTable.length) {
+    await migration.query(
+      `ALTER TABLE "${tableName}"\n  ${state.alterTable.join(',\n  ')}`,
+    );
+  }
+
+  state.indexes.push(...tableData.indexes);
+
+  await migrateIndexes(state);
 };
 
 const changeActions = {
   tableComment(
-    migration: Migration,
+    { migration }: ChangeTableState,
     tableName: string,
     comment: Exclude<ChangeTableOptions['comment'], undefined>,
   ) {
@@ -61,7 +109,23 @@ const changeActions = {
     );
   },
 
-  add(migration: Migration, tableName: string, item: ColumnType) {
-    //
+  add(
+    state: ChangeTableState,
+    key: string,
+    item: ColumnType,
+    options?: { dropMode?: DropMode },
+  ) {
+    addColumnIndex(state.indexes, key, item);
+    addColumnComment(state.comments, key, item);
+
+    if (state.migration.up) {
+      state.alterTable.push(`ADD COLUMN ${columnToSql(key, item, state)}`);
+    } else {
+      state.alterTable.push(
+        `DROP COLUMN "${key}"${
+          options?.dropMode ? ` ${options.dropMode}` : ''
+        }`,
+      );
+    }
   },
 };

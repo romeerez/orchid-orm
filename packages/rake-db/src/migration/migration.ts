@@ -1,12 +1,26 @@
-import { ColumnsShape, ColumnTypes, TransactionAdapter } from 'pqb';
+import {
+  ColumnsShape,
+  ColumnTypes,
+  IndexColumnOptions,
+  IndexOptions,
+  TransactionAdapter,
+} from 'pqb';
 import { createTable } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
 
-export type TableOptions = { comment?: string };
+export type DropMode = 'CASCADE' | 'RESTRICT';
+
+export type TableOptions = { dropMode?: DropMode; comment?: string };
 export type ColumnsShapeCallback = (t: ColumnTypes) => ColumnsShape;
 
 export type ChangeTableOptions = { comment?: string | [string, string] | null };
 export type ChangeTableCallback = (t: TableChanger) => TableChangeData;
+
+export type ColumnIndex = {
+  columns: IndexColumnOptions[];
+  options: IndexOptions;
+};
+export type ColumnComment = { column: string; comment: string };
 
 export class Migration extends TransactionAdapter {
   constructor(tx: TransactionAdapter, public up: boolean) {
