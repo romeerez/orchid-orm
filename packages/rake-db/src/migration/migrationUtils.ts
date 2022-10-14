@@ -5,6 +5,7 @@ import {
   getRaw,
   isRaw,
   quote,
+  TableData,
   toArray,
 } from 'pqb';
 import { ColumnComment, ColumnIndex, Migration } from './migration';
@@ -93,6 +94,26 @@ export const getForeignKeyTable = (
 
   const klass = fnOrTable();
   return new klass().table;
+};
+
+export const constraintToSql = (
+  {
+    tableName,
+    migration: { up },
+  }: { tableName: string; migration: { up: boolean } },
+  foreignKey: TableData['foreignKeys'][number],
+) => {
+  const constraintName = foreignKey.options.name || joinWords(tableName);
+  if (!up) {
+    const { dropMode } = foreignKey.options;
+    return `CONSTRAINT "${constraintName}"${dropMode ? ` ${dropMode}` : ''}`;
+  }
+
+  const table = getForeignKeyTable(foreignKey.fnOrTable);
+
+  return `CONSTRAINT "${constraintName}" FOREIGN KEY (${joinColumns(
+    foreignKey.columns,
+  )}) ${referencesToSql(table, foreignKey.foreignColumns, foreignKey.options)}`;
 };
 
 export const referencesToSql = (

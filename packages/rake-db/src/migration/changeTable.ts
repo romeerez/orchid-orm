@@ -5,6 +5,9 @@ import {
   resetTableData,
   quote,
   getTableData,
+  EmptyObject,
+  emptyObject,
+  TableData,
 } from 'pqb';
 import {
   ChangeTableCallback,
@@ -18,16 +21,39 @@ import {
   addColumnComment,
   addColumnIndex,
   columnToSql,
+  constraintToSql,
   migrateIndexes,
 } from './migrationUtils';
+import { joinColumns } from '../common';
+
+const newChangeTableData = () => ({
+  add: [],
+});
+
+let changeTableData: { add: TableData[] } = newChangeTableData();
+
+const resetChangeTableData = () => {
+  changeTableData = newChangeTableData();
+};
+
+function add(item: ColumnType, options?: { dropMode?: DropMode }): ChangeItem;
+function add(emptyObject: EmptyObject): EmptyObject;
+function add(
+  itemOrEmptyObject: ColumnType | EmptyObject,
+  options?: { dropMode?: DropMode },
+): ChangeItem | EmptyObject {
+  if (itemOrEmptyObject instanceof ColumnType) {
+    return ['add', itemOrEmptyObject, options];
+  } else {
+    changeTableData.add.push(getTableData());
+    resetTableData();
+    return emptyObject;
+  }
+}
 
 type TableChangeMethods = typeof tableChangeMethods;
 const tableChangeMethods = {
-  add: (item: ColumnType, options?: { dropMode?: DropMode }): ChangeItem => [
-    'add',
-    item,
-    options,
-  ],
+  add,
 };
 
 export type ChangeItem = [
@@ -56,6 +82,8 @@ export const changeTable = async (
   fn: ChangeTableCallback,
 ) => {
   resetTableData();
+  resetChangeTableData();
+
   const tableChanger = Object.create(columnTypes) as TableChanger;
   Object.assign(tableChanger, tableChangeMethods);
 
@@ -79,15 +107,36 @@ export const changeTable = async (
     changeActions[action](state, key, item, options);
   }
 
-  const tableData = getTableData();
+  changeTableData.add.forEach((tableData) => {
+    if (tableData.primaryKey) {
+      if (migration.up) {
+        state.alterTable.push(
+          `ADD PRIMARY KEY (${joinColumns(tableData.primaryKey)})`,
+        );
+      } else {
+        state.alterTable.push(`DROP CONSTRAINT "${tableName}_pkey"`);
+      }
+    }
+
+    if (tableData.indexes.length) {
+      state.indexes.push(...tableData.indexes);
+    }
+
+    if (tableData.foreignKeys.length) {
+      tableData.foreignKeys.forEach((foreignKey) => {
+        const action = migration.up ? 'ADD' : 'DROP';
+        state.alterTable.push(
+          `\n  ${action} ${constraintToSql(state, foreignKey)}`,
+        );
+      });
+    }
+  });
 
   if (state.alterTable.length) {
     await migration.query(
       `ALTER TABLE "${tableName}"\n  ${state.alterTable.join(',\n  ')}`,
     );
   }
-
-  state.indexes.push(...tableData.indexes);
 
   await migrateIndexes(state);
 };

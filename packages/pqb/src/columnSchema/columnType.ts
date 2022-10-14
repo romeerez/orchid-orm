@@ -66,11 +66,14 @@ export type ForeignKey<Table extends string, Columns extends string[]> = (
   columns: Columns;
 } & ForeignKeyOptions;
 
+export type DropMode = 'CASCADE' | 'RESTRICT';
+
 export type ForeignKeyOptions = {
   name?: string;
   match?: ForeignKeyMatch;
   onUpdate?: ForeignKeyAction;
   onDelete?: ForeignKeyAction;
+  dropMode?: DropMode;
 };
 
 export type IndexColumnOptions = {

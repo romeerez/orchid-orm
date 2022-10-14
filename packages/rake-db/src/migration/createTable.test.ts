@@ -6,6 +6,22 @@ const db = getDb();
 describe('createTable', () => {
   beforeEach(resetDb);
 
+  it('should create table with comment', async () => {
+    await db.createTable(
+      'name',
+      { comment: 'this is a table comment' },
+      () => ({}),
+    );
+
+    expectSql([
+      `
+        CREATE TABLE "name" (
+        )
+      `,
+      `COMMENT ON TABLE "name" IS 'this is a table comment'`,
+    ]);
+  });
+
   it('should create table, drop table on rollback', async () => {
     const fn = (dropMode?: 'CASCADE') => {
       return db.createTable('table', { dropMode }, (t) => ({
@@ -185,30 +201,12 @@ describe('createTable', () => {
         ON UPDATE CASCADE
     `);
 
-    expectSql([
-      `
-        CREATE TABLE "table" (
-          "id" integer NOT NULL,
-          "name" text NOT NULL,
-          ${expectedConstraint}
-        )
-      `,
-    ]);
-  });
-
-  it('should create table with comment', async () => {
-    await db.createTable(
-      'name',
-      { comment: 'this is a table comment' },
-      () => ({}),
-    );
-
-    expectSql([
-      `
-        CREATE TABLE "name" (
-        )
-      `,
-      `COMMENT ON TABLE "name" IS 'this is a table comment'`,
-    ]);
+    expectSql(`
+      CREATE TABLE "table" (
+        "id" integer NOT NULL,
+        "name" text NOT NULL,
+        ${expectedConstraint}
+      )
+    `);
   });
 });

@@ -143,4 +143,122 @@ describe('changeTable', () => {
       toLine(`DROP INDEX "tableUniqueColumnIndex" CASCADE`),
     ]);
   });
+
+  it('should add composite primary key', async () => {
+    const fn = () => {
+      return db.changeTable('table', (t) => ({
+        ...t.add(t.primaryKey('id', 'name')),
+      }));
+    };
+
+    await fn();
+    expectSql(`
+      ALTER TABLE "table"
+      ADD PRIMARY KEY ("id", "name")
+    `);
+
+    db.up = false;
+    queryMock.mockClear();
+    await fn();
+    expectSql(`
+      ALTER TABLE "table"
+      DROP CONSTRAINT "table_pkey"
+    `);
+  });
+
+  it('should add composite index', async () => {
+    const fn = () => {
+      return db.changeTable('table', (t) => ({
+        ...t.add(
+          t.index(['id', { column: 'name', order: 'DESC' }], {
+            name: 'compositeIndexOnTable',
+            dropMode: 'CASCADE',
+          }),
+        ),
+      }));
+    };
+
+    await fn();
+    expectSql(`
+      CREATE INDEX "compositeIndexOnTable" ON "table" ("id", "name" DESC)
+    `);
+
+    db.up = false;
+    queryMock.mockClear();
+    await fn();
+    expectSql(`
+      DROP INDEX "compositeIndexOnTable" CASCADE
+    `);
+  });
+
+  it('should add composite unique index', async () => {
+    const fn = () => {
+      return db.changeTable('table', (t) => ({
+        ...t.add(
+          t.unique(['id', { column: 'name', order: 'DESC' }], {
+            name: 'compositeIndexOnTable',
+            dropMode: 'CASCADE',
+          }),
+        ),
+      }));
+    };
+
+    await fn();
+    expectSql(`
+      CREATE UNIQUE INDEX "compositeIndexOnTable" ON "table" ("id", "name" DESC)
+    `);
+
+    db.up = false;
+    queryMock.mockClear();
+    await fn();
+    expectSql(`
+      DROP INDEX "compositeIndexOnTable" CASCADE
+    `);
+  });
+
+  it('should add composite foreign key', async () => {
+    const fn = () => {
+      return db.changeTable('table', (t) => ({
+        ...t.add(
+          t.foreignKey(
+            ['id', 'name'],
+            'otherTable',
+            ['foreignId', 'foreignName'],
+            {
+              name: 'constraintName',
+              match: 'FULL',
+              onUpdate: 'CASCADE',
+              onDelete: 'CASCADE',
+              dropMode: 'CASCADE',
+            },
+          ),
+        ),
+      }));
+    };
+
+    await fn();
+
+    const expectedConstraint = toLine(`
+      ADD CONSTRAINT "constraintName"
+        FOREIGN KEY ("id", "name")
+        REFERENCES "otherTable"("foreignId", "foreignName")
+        MATCH FULL
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+    `);
+
+    expectSql(`
+      ALTER TABLE "table"
+      ${expectedConstraint}
+    `);
+
+    db.up = false;
+    queryMock.mockClear();
+    await fn();
+
+    expectSql(`
+      ALTER TABLE "table"
+      DROP CONSTRAINT "constraintName" CASCADE
+    `);
+  });
 });

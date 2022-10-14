@@ -1,5 +1,5 @@
 import { columnTypes, getColumnTypes, getTableData, quote } from 'pqb';
-import { joinColumns, joinWords } from '../common';
+import { joinColumns } from '../common';
 import {
   TableOptions,
   ColumnsShapeCallback,
@@ -11,9 +11,8 @@ import {
   addColumnComment,
   addColumnIndex,
   columnToSql,
-  getForeignKeyTable,
+  constraintToSql,
   migrateIndexes,
-  referencesToSql,
 } from './migrationUtils';
 
 export const createTable = async (
@@ -58,17 +57,7 @@ export const createTable = async (
   }
 
   tableData.foreignKeys.forEach((foreignKey) => {
-    const table = getForeignKeyTable(foreignKey.fnOrTable);
-
-    lines.push(
-      `\n  CONSTRAINT "${
-        foreignKey.options.name || joinWords(tableName)
-      }" FOREIGN KEY (${joinColumns(foreignKey.columns)}) ${referencesToSql(
-        table,
-        foreignKey.foreignColumns,
-        foreignKey.options,
-      )}`,
-    );
+    lines.push(`\n  ${constraintToSql(state, foreignKey)}`);
   });
 
   await migration.query({

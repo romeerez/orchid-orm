@@ -72,7 +72,7 @@ export type TableData = {
   }[];
 };
 
-const newTableData = (): TableData => ({
+export const newTableData = (): TableData => ({
   indexes: [],
   foreignKeys: [],
 });
