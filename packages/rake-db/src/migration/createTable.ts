@@ -25,7 +25,10 @@ export const createTable = async (
   const shape = getColumnTypes(columnTypes, fn);
 
   if (!migration.up) {
-    await migration.query(`DROP TABLE "${tableName}" CASCADE`);
+    const { dropMode } = options;
+    await migration.query(
+      `DROP TABLE "${tableName}"${dropMode ? ` ${dropMode}` : ''}`,
+    );
     return;
   }
 

@@ -22,7 +22,7 @@ describe('createTable', () => {
     ]);
   });
 
-  it('should create table, drop table on rollback', async () => {
+  it.only('should create table, drop table on rollback', async () => {
     const fn = (dropMode?: 'CASCADE') => {
       return db.createTable('table', { dropMode }, (t) => ({
         id: t.serial().primaryKey(),
@@ -106,7 +106,7 @@ describe('createTable', () => {
     `);
 
     queryMock.mockClear();
-    await fn();
+    await fn('CASCADE');
 
     expectSql(`
       DROP TABLE "table" CASCADE
