@@ -12,6 +12,7 @@ import {
   addColumnIndex,
   columnToSql,
   constraintToSql,
+  migrateComments,
   migrateIndexes,
 } from './migrationUtils';
 
@@ -57,7 +58,9 @@ export const createTable = async (
   }
 
   tableData.foreignKeys.forEach((foreignKey) => {
-    lines.push(`\n  ${constraintToSql(state, foreignKey)}`);
+    lines.push(
+      `\n  ${constraintToSql(state.tableName, migration.up, foreignKey)}`,
+    );
   });
 
   await migration.query({
@@ -67,13 +70,8 @@ export const createTable = async (
 
   state.indexes.push(...tableData.indexes);
 
-  await migrateIndexes(state);
-
-  for (const { column, comment } of state.comments) {
-    await migration.query(
-      `COMMENT ON COLUMN "${tableName}"."${column}" IS ${quote(comment)}`,
-    );
-  }
+  await migrateIndexes(state, state.indexes, migration.up);
+  await migrateComments(state, state.comments);
 
   if (options.comment) {
     await migration.query(

@@ -97,10 +97,8 @@ export const getForeignKeyTable = (
 };
 
 export const constraintToSql = (
-  {
-    tableName,
-    migration: { up },
-  }: { tableName: string; migration: { up: boolean } },
+  tableName: string,
+  up: boolean,
   foreignKey: TableData['foreignKeys'][number],
 ) => {
   const constraintName = foreignKey.options.name || joinWords(tableName);
@@ -138,25 +136,29 @@ export const referencesToSql = (
   return sql.join(' ');
 };
 
-export const migrateIndexes = async (state: {
-  migration: Migration;
-  tableName: string;
-  indexes: ColumnIndex[];
-}) => {
-  for (const item of state.indexes) {
-    await migrateIndex(state, item);
+export const migrateIndexes = async (
+  state: {
+    migration: Migration;
+    tableName: string;
+  },
+  indexes: ColumnIndex[],
+  up: boolean,
+) => {
+  for (const item of indexes) {
+    await migrateIndex(state, up, item);
   }
 };
 
 export const migrateIndex = (
   state: { migration: Migration; tableName: string },
+  up: boolean,
   { columns, options }: ColumnIndex,
 ) => {
   const indexName =
     options.name ||
     joinWords(state.tableName, ...columns.map(({ column }) => column), 'index');
 
-  if (!state.migration.up) {
+  if (!up) {
     return state.migration.query(
       `DROP INDEX "${indexName}"${
         options.dropMode ? ` ${options.dropMode}` : ''
@@ -231,4 +233,15 @@ export const migrateIndex = (
   }
 
   return state.migration.query({ text: sql.join(' '), values });
+};
+
+export const migrateComments = async (
+  state: { migration: Migration; tableName: string },
+  comments: ColumnComment[],
+) => {
+  for (const { column, comment } of comments) {
+    await state.migration.query(
+      `COMMENT ON COLUMN "${state.tableName}"."${column}" IS ${quote(comment)}`,
+    );
+  }
 };
