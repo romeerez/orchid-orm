@@ -4,8 +4,8 @@ import { getMigrationFiles } from '../common';
 import { Adapter, TransactionAdapter } from 'pqb';
 import { Migration } from '../migration/migration';
 
-jest.mock('./common', () => ({
-  ...jest.requireActual('./common'),
+jest.mock('../common', () => ({
+  ...jest.requireActual('../common'),
   getMigrationFiles: jest.fn(),
   createSchemaMigrations: jest.fn(),
 }));

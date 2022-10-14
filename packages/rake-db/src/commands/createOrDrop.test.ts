@@ -6,8 +6,8 @@ import {
   setAdminCredentialsToOptions,
 } from '../common';
 
-jest.mock('./common', () => ({
-  ...jest.requireActual('./common'),
+jest.mock('../common', () => ({
+  ...jest.requireActual('../common'),
   setAdminCredentialsToOptions: jest.fn((options: Record<string, unknown>) => ({
     ...options,
     user: 'admin-user',

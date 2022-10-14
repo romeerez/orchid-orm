@@ -81,6 +81,10 @@ let tableData: TableData = newTableData();
 
 export const getTableData = () => tableData;
 
+export const resetTableData = (data: TableData = newTableData()) => {
+  tableData = data;
+};
+
 export const getColumnTypes = <
   CT extends ColumnTypesBase,
   Shape extends ColumnsShape,
@@ -89,7 +93,7 @@ export const getColumnTypes = <
   fn: (t: CT) => Shape,
   data: TableData = newTableData(),
 ) => {
-  tableData = data;
+  resetTableData(data);
   return fn(types);
 };
 
