@@ -56,7 +56,7 @@ import {
   ForeignKeyOptions,
   ForeignKeyModelWithColumns,
 } from './columnType';
-import { emptyObject, EmptyObject } from '../utils';
+import { emptyObject, EmptyObject, MaybeArray, toArray } from '../utils';
 import { ColumnsShape } from './columnsSchema';
 
 export type ColumnTypes = typeof columnTypes;
@@ -178,26 +178,37 @@ export const columnTypes = {
 
   primaryKey(...columns: string[]) {
     tableData.primaryKey = columns;
-    return emptyObject;
+    return Object.create({ primaryKey: columns }) as EmptyObject;
   },
 
-  index(columns: (string | IndexColumnOptions)[], options: IndexOptions = {}) {
-    tableData.indexes.push({
-      columns: columns.map((column) =>
+  index(
+    columns: MaybeArray<string | IndexColumnOptions>,
+    options: IndexOptions = {},
+  ) {
+    const index = {
+      columns: toArray(columns).map((column) =>
         typeof column === 'string' ? { column } : column,
       ),
       options,
-    });
+    };
+
+    tableData.indexes.push(index);
     return emptyObject;
   },
 
-  unique(columns: (string | IndexColumnOptions)[], options: IndexOptions = {}) {
-    tableData.indexes.push({
-      columns: columns.map((column) =>
+  unique(
+    columns: MaybeArray<string | IndexColumnOptions>,
+    options: IndexOptions = {},
+  ) {
+    const index = {
+      columns: toArray(columns).map((column) =>
         typeof column === 'string' ? { column } : column,
       ),
       options: { ...options, unique: true },
-    });
+    };
+
+    tableData.indexes.push(index);
+
     return emptyObject;
   },
 
@@ -228,11 +239,13 @@ function foreignKey(
   foreignColumns: string[],
   options: ForeignKeyOptions = {},
 ) {
-  tableData.foreignKeys.push({
+  const foreignKey = {
     columns,
     fnOrTable,
     foreignColumns,
     options,
-  });
+  };
+
+  tableData.foreignKeys.push(foreignKey);
   return emptyObject;
 }

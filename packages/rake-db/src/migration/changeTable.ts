@@ -8,6 +8,9 @@ import {
   EmptyObject,
   emptyObject,
   TableData,
+  RawExpression,
+  getRaw,
+  isRaw,
 } from 'pqb';
 import {
   ChangeTableCallback,
@@ -64,17 +67,41 @@ const remove = ((itemOrEmptyObject, options) => {
   }
 }) as typeof add;
 
+type ChangeOptions = {
+  usingUp?: RawExpression;
+  usingDown?: RawExpression;
+};
+
+type ChangeArg =
+  | ColumnType
+  | ['default', unknown | RawExpression]
+  | ['nullable', boolean];
+
 type TableChangeMethods = typeof tableChangeMethods;
 const tableChangeMethods = {
   add,
   remove,
+  change(from: ChangeArg, to: ChangeArg, options?: ChangeOptions): ChangeItem {
+    return ['change', from, to, options];
+  },
+  default(value: unknown | RawExpression): ChangeArg {
+    return ['default', value];
+  },
+  nullable(): ChangeArg {
+    return ['nullable', true];
+  },
+  nonNullable(): ChangeArg {
+    return ['nullable', false];
+  },
 };
 
-export type ChangeItem = [
-  action: 'add' | 'remove',
-  item: ColumnType,
-  options?: { dropMode?: DropMode },
-];
+export type ChangeItem =
+  | [
+      action: 'add' | 'remove',
+      item: ColumnType,
+      options?: { dropMode?: DropMode },
+    ]
+  | [action: 'change', from: ChangeArg, to: ChangeArg, options?: ChangeOptions];
 
 export type TableChanger = ColumnTypes & TableChangeMethods;
 
@@ -121,8 +148,14 @@ export const changeTable = async (
   for (const key in changeData) {
     const result = changeData[key];
     if (Array.isArray(result)) {
-      const [action, item, options] = result;
-      changeActions[action](state, migration.up, key, item, options);
+      const [action] = result;
+      if (action === 'change') {
+        const [, from, to, options] = result;
+        changeActions.change(state, migration.up, key, from, to, options);
+      } else {
+        const [action, item, options] = result;
+        changeActions[action](state, migration.up, key, item, options);
+      }
     }
   }
 
@@ -197,6 +230,67 @@ const changeActions = {
   ) {
     this.add(state, !up, key, item, options);
   },
+
+  change(
+    state: ChangeTableState,
+    up: boolean,
+    key: string,
+    first: ChangeArg,
+    second: ChangeArg,
+    options?: ChangeOptions,
+  ) {
+    const [fromItem, toItem] = up ? [first, second] : [second, first];
+
+    const from = getChangeProperties(fromItem);
+    const to = getChangeProperties(toItem);
+
+    if (from.type !== to.type || from.collate !== to.collate) {
+      const using = up ? options?.usingUp : options?.usingDown;
+      state.alterTable.push(
+        `ALTER COLUMN "${key}" TYPE ${to.type}${
+          to.collate ? ` COLLATE ${quote(to.collate)}` : ''
+        }${using ? ` USING ${getRaw(using, state.values)}` : ''}`,
+      );
+    }
+
+    if (from.default !== to.default) {
+      const value = getRawOrValue(to.default, state.values);
+      const expr =
+        value === undefined ? `DROP DEFAULT` : `SET DEFAULT ${value}`;
+      state.alterTable.push(`ALTER COLUMN "${key}" ${expr}`);
+    }
+
+    if (from.nullable !== to.nullable) {
+      state.alterTable.push(
+        `ALTER COLUMN "${key}" ${to.nullable ? 'DROP' : 'SET'} NOT NULL`,
+      );
+    }
+  },
+};
+
+const getChangeProperties = (
+  item: ChangeArg,
+): {
+  type?: string;
+  collate?: string;
+  default?: unknown | RawExpression;
+  nullable?: boolean;
+} => {
+  if (item instanceof ColumnType) {
+    return {
+      type: item.toSQL(),
+      collate: item.data.collate,
+      default: item.data.default,
+      nullable: item.isNullable,
+    };
+  } else {
+    return {
+      type: undefined,
+      collate: undefined,
+      default: item[0] === 'default' ? item[1] : undefined,
+      nullable: item[0] === 'nullable' ? item[1] : undefined,
+    };
+  }
 };
 
 const handleTableData = (
@@ -227,4 +321,10 @@ const handleTableData = (
       );
     });
   }
+};
+
+const getRawOrValue = (item: unknown | RawExpression, values: unknown[]) => {
+  return typeof item === 'object' && item && isRaw(item)
+    ? getRaw(item, values)
+    : quote(item);
 };

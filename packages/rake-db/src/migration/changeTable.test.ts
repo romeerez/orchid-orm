@@ -304,4 +304,44 @@ describe('changeTable', () => {
       (action === 'add' ? expectDropConstraint : expectAddConstraint)();
     });
   });
+
+  it('should change column', async () => {
+    const fn = () => {
+      return db.changeTable('table', (t) => ({
+        changeType: t.change(t.integer(), t.text()),
+        changeTypeUsing: t.change(t.integer(), t.text(), {
+          usingUp: raw('b::text'),
+          usingDown: raw('b::int'),
+        }),
+        changeCollate: t.change(
+          t.text().collate('de_DE'),
+          t.text().collate('fr_FR'),
+        ),
+        changeDefault: t.change(t.default('from'), t.default(raw("'to'"))),
+        changeNull: t.change(t.nonNullable(), t.nullable()),
+      }));
+    };
+
+    await fn();
+    expectSql(`
+      ALTER TABLE "table"
+      ALTER COLUMN "changeType" TYPE text,
+      ALTER COLUMN "changeTypeUsing" TYPE text USING b::text,
+      ALTER COLUMN "changeCollate" TYPE text COLLATE 'fr_FR',
+      ALTER COLUMN "changeDefault" SET DEFAULT 'to',
+      ALTER COLUMN "changeNull" DROP NOT NULL
+    `);
+
+    queryMock.mockClear();
+    db.up = false;
+    await fn();
+    expectSql(`
+      ALTER TABLE "table"
+      ALTER COLUMN "changeType" TYPE integer,
+      ALTER COLUMN "changeTypeUsing" TYPE integer USING b::int,
+      ALTER COLUMN "changeCollate" TYPE text COLLATE 'de_DE',
+      ALTER COLUMN "changeDefault" SET DEFAULT 'from',
+      ALTER COLUMN "changeNull" SET NOT NULL
+    `);
+  });
 });
