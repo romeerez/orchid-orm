@@ -32,10 +32,10 @@ import { joinColumns } from '../common';
 
 const newChangeTableData = () => ({
   add: [],
-  remove: [],
+  drop: [],
 });
 
-let changeTableData: { add: TableData[]; remove: TableData[] } =
+let changeTableData: { add: TableData[]; drop: TableData[] } =
   newChangeTableData();
 
 const resetChangeTableData = () => {
@@ -57,11 +57,11 @@ function add(
   }
 }
 
-const remove = ((itemOrEmptyObject, options) => {
+const drop = ((itemOrEmptyObject, options) => {
   if (itemOrEmptyObject instanceof ColumnType) {
-    return ['remove', itemOrEmptyObject, options];
+    return ['drop', itemOrEmptyObject, options];
   } else {
-    changeTableData.remove.push(getTableData());
+    changeTableData.drop.push(getTableData());
     resetTableData();
     return emptyObject;
   }
@@ -75,12 +75,13 @@ type ChangeOptions = {
 type ChangeArg =
   | ColumnType
   | ['default', unknown | RawExpression]
-  | ['nullable', boolean];
+  | ['nullable', boolean]
+  | ['comment', string | null];
 
 type TableChangeMethods = typeof tableChangeMethods;
 const tableChangeMethods = {
   add,
-  remove,
+  drop,
   change(from: ChangeArg, to: ChangeArg, options?: ChangeOptions): ChangeItem {
     return ['change', from, to, options];
   },
@@ -93,15 +94,22 @@ const tableChangeMethods = {
   nonNullable(): ChangeArg {
     return ['nullable', false];
   },
+  comment(name: string | null): ChangeArg {
+    return ['comment', name];
+  },
+  rename(name: string): ChangeItem {
+    return ['rename', name];
+  },
 };
 
 export type ChangeItem =
   | [
-      action: 'add' | 'remove',
+      action: 'add' | 'drop',
       item: ColumnType,
       options?: { dropMode?: DropMode },
     ]
-  | [action: 'change', from: ChangeArg, to: ChangeArg, options?: ChangeOptions];
+  | [action: 'change', from: ChangeArg, to: ChangeArg, options?: ChangeOptions]
+  | ['rename', string];
 
 export type TableChanger = ColumnTypes & TableChangeMethods;
 
@@ -152,6 +160,9 @@ export const changeTable = async (
       if (action === 'change') {
         const [, from, to, options] = result;
         changeActions.change(state, migration.up, key, from, to, options);
+      } else if (action === 'rename') {
+        const [, name] = result;
+        changeActions.rename(state, migration.up, key, name);
       } else {
         const [action, item, options] = result;
         changeActions[action](state, migration.up, key, item, options);
@@ -163,7 +174,7 @@ export const changeTable = async (
     handleTableData(state, migration.up, tableName, tableData);
   });
 
-  changeTableData.remove.forEach((tableData) => {
+  changeTableData.drop.forEach((tableData) => {
     handleTableData(state, !migration.up, tableName, tableData);
   });
 
@@ -221,7 +232,7 @@ const changeActions = {
     }
   },
 
-  remove(
+  drop(
     state: ChangeTableState,
     up: boolean,
     key: string,
@@ -265,6 +276,15 @@ const changeActions = {
         `ALTER COLUMN "${key}" ${to.nullable ? 'DROP' : 'SET'} NOT NULL`,
       );
     }
+
+    if (from.comment !== to.comment) {
+      state.comments.push({ column: key, comment: to.comment || null });
+    }
+  },
+
+  rename(state: ChangeTableState, up: boolean, key: string, name: string) {
+    const [from, to] = up ? [key, name] : [name, key];
+    state.alterTable.push(`RENAME COLUMN "${from}" TO "${to}"`);
   },
 };
 
@@ -275,6 +295,7 @@ const getChangeProperties = (
   collate?: string;
   default?: unknown | RawExpression;
   nullable?: boolean;
+  comment?: string | null;
 } => {
   if (item instanceof ColumnType) {
     return {
@@ -282,6 +303,7 @@ const getChangeProperties = (
       collate: item.data.collate,
       default: item.data.default,
       nullable: item.isNullable,
+      comment: item.data.comment,
     };
   } else {
     return {
@@ -289,6 +311,7 @@ const getChangeProperties = (
       collate: undefined,
       default: item[0] === 'default' ? item[1] : undefined,
       nullable: item[0] === 'nullable' ? item[1] : undefined,
+      comment: item[0] === 'comment' ? item[1] : undefined,
     };
   }
 };

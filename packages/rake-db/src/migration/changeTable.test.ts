@@ -39,7 +39,7 @@ describe('changeTable', () => {
     expectSql(`COMMENT ON TABLE "table" IS 'old'`);
   });
 
-  (['add', 'remove'] as const).forEach((action) => {
+  (['add', 'drop'] as const).forEach((action) => {
     it(`should ${action} columns ${
       action === 'add' ? 'to' : 'from'
     } table`, async () => {
@@ -319,29 +319,62 @@ describe('changeTable', () => {
         ),
         changeDefault: t.change(t.default('from'), t.default(raw("'to'"))),
         changeNull: t.change(t.nonNullable(), t.nullable()),
+        changeComment: t.change(t.comment('comment 1'), t.comment('comment 2')),
       }));
     };
 
     await fn();
-    expectSql(`
-      ALTER TABLE "table"
-      ALTER COLUMN "changeType" TYPE text,
-      ALTER COLUMN "changeTypeUsing" TYPE text USING b::text,
-      ALTER COLUMN "changeCollate" TYPE text COLLATE 'fr_FR',
-      ALTER COLUMN "changeDefault" SET DEFAULT 'to',
-      ALTER COLUMN "changeNull" DROP NOT NULL
-    `);
+    expectSql([
+      `
+        ALTER TABLE "table"
+        ALTER COLUMN "changeType" TYPE text,
+        ALTER COLUMN "changeTypeUsing" TYPE text USING b::text,
+        ALTER COLUMN "changeCollate" TYPE text COLLATE 'fr_FR',
+        ALTER COLUMN "changeDefault" SET DEFAULT 'to',
+        ALTER COLUMN "changeNull" DROP NOT NULL
+      `,
+      `COMMENT ON COLUMN "table"."changeComment" IS 'comment 2'`,
+    ]);
 
     queryMock.mockClear();
     db.up = false;
     await fn();
-    expectSql(`
-      ALTER TABLE "table"
-      ALTER COLUMN "changeType" TYPE integer,
-      ALTER COLUMN "changeTypeUsing" TYPE integer USING b::int,
-      ALTER COLUMN "changeCollate" TYPE text COLLATE 'de_DE',
-      ALTER COLUMN "changeDefault" SET DEFAULT 'from',
-      ALTER COLUMN "changeNull" SET NOT NULL
-    `);
+    expectSql([
+      `
+        ALTER TABLE "table"
+        ALTER COLUMN "changeType" TYPE integer,
+        ALTER COLUMN "changeTypeUsing" TYPE integer USING b::int,
+        ALTER COLUMN "changeCollate" TYPE text COLLATE 'de_DE',
+        ALTER COLUMN "changeDefault" SET DEFAULT 'from',
+        ALTER COLUMN "changeNull" SET NOT NULL
+      `,
+      `COMMENT ON COLUMN "table"."changeComment" IS 'comment 1'`,
+    ]);
+  });
+
+  it('should rename a column', async () => {
+    const fn = () => {
+      return db.changeTable('table', (t) => ({
+        a: t.rename('b'),
+      }));
+    };
+
+    await fn();
+    expectSql(
+      `
+        ALTER TABLE "table"
+        RENAME COLUMN "a" TO "b"
+      `,
+    );
+
+    queryMock.mockClear();
+    db.up = false;
+    await fn();
+    expectSql(
+      `
+        ALTER TABLE "table"
+        RENAME COLUMN "b" TO "a"
+      `,
+    );
   });
 });

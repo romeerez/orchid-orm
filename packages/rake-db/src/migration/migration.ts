@@ -20,7 +20,7 @@ export type ColumnIndex = {
   columns: IndexColumnOptions[];
   options: IndexOptions;
 };
-export type ColumnComment = { column: string; comment: string };
+export type ColumnComment = { column: string; comment: string | null };
 
 export class Migration extends TransactionAdapter {
   constructor(tx: TransactionAdapter, public up: boolean) {
@@ -41,7 +41,24 @@ export class Migration extends TransactionAdapter {
     const options = typeof cbOrOptions === 'function' ? {} : cbOrOptions;
     const fn = (cb || cbOrOptions) as ColumnsShapeCallback;
 
-    return createTable(this, tableName, options, fn);
+    return createTable(this, this.up, tableName, options, fn);
+  }
+
+  dropTable(
+    tableName: string,
+    options: TableOptions,
+    fn: ColumnsShapeCallback,
+  ): Promise<void>;
+  dropTable(tableName: string, fn: ColumnsShapeCallback): Promise<void>;
+  dropTable(
+    tableName: string,
+    cbOrOptions: ColumnsShapeCallback | TableOptions,
+    cb?: ColumnsShapeCallback,
+  ) {
+    const options = typeof cbOrOptions === 'function' ? {} : cbOrOptions;
+    const fn = (cb || cbOrOptions) as ColumnsShapeCallback;
+
+    return createTable(this, !this.up, tableName, options, fn);
   }
 
   changeTable(

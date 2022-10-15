@@ -18,13 +18,14 @@ import {
 
 export const createTable = async (
   migration: Migration,
+  up: boolean,
   tableName: string,
   options: TableOptions,
   fn: ColumnsShapeCallback,
 ) => {
   const shape = getColumnTypes(columnTypes, fn);
 
-  if (!migration.up) {
+  if (!up) {
     const { dropMode } = options;
     await migration.query(
       `DROP TABLE "${tableName}"${dropMode ? ` ${dropMode}` : ''}`,
@@ -61,9 +62,7 @@ export const createTable = async (
   }
 
   tableData.foreignKeys.forEach((foreignKey) => {
-    lines.push(
-      `\n  ${constraintToSql(state.tableName, migration.up, foreignKey)}`,
-    );
+    lines.push(`\n  ${constraintToSql(state.tableName, up, foreignKey)}`);
   });
 
   await migration.query({
@@ -73,7 +72,7 @@ export const createTable = async (
 
   state.indexes.push(...tableData.indexes);
 
-  await migrateIndexes(state, state.indexes, migration.up);
+  await migrateIndexes(state, state.indexes, up);
   await migrateComments(state, state.comments);
 
   if (options.comment) {
