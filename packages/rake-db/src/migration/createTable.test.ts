@@ -62,6 +62,7 @@ const db = getDb();
             onUpdate: 'CASCADE',
             onDelete: 'CASCADE',
           }),
+          ...t.timestamps(),
         }));
       };
 
@@ -81,7 +82,9 @@ const db = getDb();
               "decimalWithPrecisionAndScale" decimal(10, 5) NOT NULL,
               "columnWithCompression" text COMPRESSION compression NOT NULL,
               "columnWithCollate" text COLLATE 'utf-8' NOT NULL,
-              "columnWithForeignKey" integer NOT NULL CONSTRAINT "fkeyConstraint" REFERENCES "table"("column") MATCH FULL ON DELETE CASCADE ON UPDATE CASCADE
+              "columnWithForeignKey" integer NOT NULL CONSTRAINT "fkeyConstraint" REFERENCES "table"("column") MATCH FULL ON DELETE CASCADE ON UPDATE CASCADE,
+              "createdAt" timestamp NOT NULL DEFAULT now(),
+              "updatedAt" timestamp NOT NULL DEFAULT now()
             )
           `,
           toLine(`
@@ -123,7 +126,7 @@ const db = getDb();
         id: t.integer(),
         name: t.text(),
         active: t.boolean(),
-        ...t.primaryKey('id', 'name', 'active'),
+        ...t.primaryKey(['id', 'name', 'active']),
       }));
 
       if (action === 'createTable') {
@@ -133,6 +136,30 @@ const db = getDb();
             "name" text NOT NULL,
             "active" boolean NOT NULL,
             PRIMARY KEY ("id", "name", "active")
+          )
+        `);
+      } else {
+        expectSql(`
+          DROP TABLE "table"
+        `);
+      }
+    });
+
+    it('should support composite primary key with constraint name', async () => {
+      await db[action]('table', (t) => ({
+        id: t.integer(),
+        name: t.text(),
+        active: t.boolean(),
+        ...t.primaryKey(['id', 'name', 'active'], { name: 'primaryKeyName' }),
+      }));
+
+      if (action === 'createTable') {
+        expectSql(`
+          CREATE TABLE "table" (
+            "id" integer NOT NULL,
+            "name" text NOT NULL,
+            "active" boolean NOT NULL,
+            CONSTRAINT "primaryKeyName" PRIMARY KEY ("id", "name", "active")
           )
         `);
       } else {

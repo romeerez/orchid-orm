@@ -1,4 +1,5 @@
 import {
+  Adapter,
   ColumnType,
   ForeignKeyModel,
   ForeignKeyOptions,
@@ -101,13 +102,14 @@ export const constraintToSql = (
   up: boolean,
   foreignKey: TableData['foreignKeys'][number],
 ) => {
-  const constraintName = foreignKey.options.name || joinWords(tableName);
+  const table = getForeignKeyTable(foreignKey.fnOrTable);
+  const constraintName =
+    foreignKey.options.name || joinWords(tableName, 'to', table);
+
   if (!up) {
     const { dropMode } = foreignKey.options;
     return `CONSTRAINT "${constraintName}"${dropMode ? ` ${dropMode}` : ''}`;
   }
-
-  const table = getForeignKeyTable(foreignKey.fnOrTable);
 
   return `CONSTRAINT "${constraintName}" FOREIGN KEY (${joinColumns(
     foreignKey.columns,
@@ -244,4 +246,36 @@ export const migrateComments = async (
       `COMMENT ON COLUMN "${state.tableName}"."${column}" IS ${quote(comment)}`,
     );
   }
+};
+
+export const primaryKeyToSql = (
+  primaryKey: Exclude<TableData['primaryKey'], undefined>,
+) => {
+  const name = primaryKey.options?.name;
+  return `${name ? `CONSTRAINT "${name}" ` : ''}PRIMARY KEY (${joinColumns(
+    primaryKey.columns,
+  )})`;
+};
+
+export const getPrimaryKeysOfTable = async (
+  db: Adapter,
+  tableName: string,
+): Promise<{ name: string; type: string }[]> => {
+  const { rows } = await db.query<{ name: string; type: string }>({
+    text: `SELECT
+  pg_attribute.attname AS name,
+  format_type(pg_attribute.atttypid, pg_attribute.atttypmod) AS type
+FROM pg_index, pg_class, pg_attribute, pg_namespace
+WHERE
+  pg_class.oid = $1::regclass AND
+  indrelid = pg_class.oid AND
+  nspname = 'public' AND
+  pg_class.relnamespace = pg_namespace.oid AND
+  pg_attribute.attrelid = pg_class.oid AND
+  pg_attribute.attnum = any(pg_index.indkey) AND
+  indisprimary`,
+    values: [tableName],
+  });
+
+  return rows;
 };

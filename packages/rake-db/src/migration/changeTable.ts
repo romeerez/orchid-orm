@@ -27,8 +27,8 @@ import {
   constraintToSql,
   migrateComments,
   migrateIndexes,
+  primaryKeyToSql,
 } from './migrationUtils';
-import { joinColumns } from '../common';
 
 const newChangeTableData = () => ({
   add: [],
@@ -45,25 +45,45 @@ const resetChangeTableData = () => {
 function add(item: ColumnType, options?: { dropMode?: DropMode }): ChangeItem;
 function add(emptyObject: EmptyObject): EmptyObject;
 function add(
-  itemOrEmptyObject: ColumnType | EmptyObject,
+  items: Record<string, ColumnType>,
   options?: { dropMode?: DropMode },
-): ChangeItem | EmptyObject {
-  if (itemOrEmptyObject instanceof ColumnType) {
-    return ['add', itemOrEmptyObject, options];
-  } else {
+): Record<string, ChangeItem>;
+function add(
+  item: ColumnType | EmptyObject | Record<string, ColumnType>,
+  options?: { dropMode?: DropMode },
+): ChangeItem | EmptyObject | Record<string, ChangeItem> {
+  if (item instanceof ColumnType) {
+    return ['add', item, options];
+  } else if (item === emptyObject) {
     changeTableData.add.push(getTableData());
     resetTableData();
     return emptyObject;
+  } else {
+    const result: Record<string, ChangeItem> = {};
+    for (const key in item) {
+      result[key] = ['add', (item as Record<string, ColumnType>)[key], options];
+    }
+    return result;
   }
 }
 
-const drop = ((itemOrEmptyObject, options) => {
-  if (itemOrEmptyObject instanceof ColumnType) {
-    return ['drop', itemOrEmptyObject, options];
-  } else {
+const drop = ((item, options) => {
+  if (item instanceof ColumnType) {
+    return ['drop', item, options];
+  } else if (item === emptyObject) {
     changeTableData.drop.push(getTableData());
     resetTableData();
     return emptyObject;
+  } else {
+    const result: Record<string, ChangeItem> = {};
+    for (const key in item) {
+      result[key] = [
+        'drop',
+        (item as Record<string, ColumnType>)[key],
+        options,
+      ];
+    }
+    return result;
   }
 }) as typeof add;
 
@@ -117,6 +137,7 @@ export type TableChangeData = Record<string, ChangeItem | EmptyObject>;
 
 type ChangeTableState = {
   migration: Migration;
+  up: boolean;
   tableName: string;
   alterTable: string[];
   values: unknown[];
@@ -127,9 +148,10 @@ type ChangeTableState = {
 
 export const changeTable = async (
   migration: Migration,
+  up: boolean,
   tableName: string,
   options: ChangeTableOptions,
-  fn: ChangeTableCallback,
+  fn?: ChangeTableCallback,
 ) => {
   resetTableData();
   resetChangeTableData();
@@ -137,10 +159,11 @@ export const changeTable = async (
   const tableChanger = Object.create(columnTypes) as TableChanger;
   Object.assign(tableChanger, tableChangeMethods);
 
-  const changeData = fn(tableChanger);
+  const changeData = fn?.(tableChanger) || {};
 
   const state: ChangeTableState = {
     migration,
+    up,
     tableName,
     alterTable: [],
     values: [],
@@ -159,46 +182,46 @@ export const changeTable = async (
       const [action] = result;
       if (action === 'change') {
         const [, from, to, options] = result;
-        changeActions.change(state, migration.up, key, from, to, options);
+        changeActions.change(state, up, key, from, to, options);
       } else if (action === 'rename') {
         const [, name] = result;
-        changeActions.rename(state, migration.up, key, name);
+        changeActions.rename(state, up, key, name);
       } else {
         const [action, item, options] = result;
-        changeActions[action](state, migration.up, key, item, options);
+        changeActions[action](state, up, key, item, options);
       }
     }
   }
 
   changeTableData.add.forEach((tableData) => {
-    handleTableData(state, migration.up, tableName, tableData);
+    handleTableData(state, up, tableName, tableData);
   });
 
   changeTableData.drop.forEach((tableData) => {
-    handleTableData(state, !migration.up, tableName, tableData);
+    handleTableData(state, !up, tableName, tableData);
   });
 
   if (state.alterTable.length) {
     await migration.query(
-      `ALTER TABLE "${tableName}"\n  ${state.alterTable.join(',\n  ')}`,
+      `ALTER TABLE "${tableName}"` + `\n  ${state.alterTable.join(',\n  ')}`,
     );
   }
 
-  const createIndexes = migration.up ? state.indexes : state.dropIndexes;
-  const dropIndexes = migration.up ? state.dropIndexes : state.indexes;
-  await migrateIndexes(state, createIndexes, migration.up);
-  await migrateIndexes(state, dropIndexes, !migration.up);
+  const createIndexes = up ? state.indexes : state.dropIndexes;
+  const dropIndexes = up ? state.dropIndexes : state.indexes;
+  await migrateIndexes(state, createIndexes, up);
+  await migrateIndexes(state, dropIndexes, !up);
   await migrateComments(state, state.comments);
 };
 
 const changeActions = {
   tableComment(
-    { migration }: ChangeTableState,
+    { migration, up }: ChangeTableState,
     tableName: string,
     comment: Exclude<ChangeTableOptions['comment'], undefined>,
   ) {
     let value;
-    if (migration.up) {
+    if (up) {
       value = Array.isArray(comment) ? comment[1] : comment;
     } else {
       value = Array.isArray(comment) ? comment[0] : null;
@@ -324,11 +347,10 @@ const handleTableData = (
 ) => {
   if (tableData.primaryKey) {
     if (up) {
-      state.alterTable.push(
-        `ADD PRIMARY KEY (${joinColumns(tableData.primaryKey)})`,
-      );
+      state.alterTable.push(`ADD ${primaryKeyToSql(tableData.primaryKey)}`);
     } else {
-      state.alterTable.push(`DROP CONSTRAINT "${tableName}_pkey"`);
+      const name = tableData.primaryKey.options?.name || `${tableName}_pkey`;
+      state.alterTable.push(`DROP CONSTRAINT "${name}"`);
     }
   }
 

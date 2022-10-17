@@ -1,20 +1,106 @@
-import { columnTypes, getColumnTypes, getTableData, quote } from 'pqb';
-import { joinColumns } from '../common';
+import {
+  ColumnType,
+  columnTypes,
+  getColumnTypes,
+  getTableData,
+  Operators,
+  quote,
+} from 'pqb';
 import {
   TableOptions,
   ColumnsShapeCallback,
   Migration,
   ColumnIndex,
   ColumnComment,
+  JoinTableOptions,
 } from './migration';
 import {
   addColumnComment,
   addColumnIndex,
   columnToSql,
   constraintToSql,
+  getPrimaryKeysOfTable,
   migrateComments,
   migrateIndexes,
+  primaryKeyToSql,
 } from './migrationUtils';
+import { joinWords } from '../common';
+import { singular } from 'pluralize';
+
+class UnknownColumn extends ColumnType {
+  operators = Operators.any;
+
+  constructor(public dataType: string) {
+    super();
+  }
+}
+
+export const createJoinTable = async (
+  migration: Migration,
+  up: boolean,
+  tables: string[],
+  options: JoinTableOptions,
+  fn?: ColumnsShapeCallback,
+) => {
+  const tableName = options.tableName || joinWords(...tables);
+
+  if (!up) {
+    return createTable(migration, up, tableName, options, () => ({}));
+  }
+
+  const tablesWithPrimaryKeys = await Promise.all(
+    tables.map(
+      async (table) =>
+        [
+          table,
+          await getPrimaryKeysOfTable(migration, table).then((items) =>
+            items.map((item) => ({
+              ...item,
+              joinedName: joinWords(singular(table), item.name),
+            })),
+          ),
+        ] as const,
+    ),
+  );
+
+  return createTable(migration, up, tableName, options, (t) => {
+    const result: Record<string, ColumnType> = {};
+
+    tablesWithPrimaryKeys.forEach(([table, primaryKeys]) => {
+      if (primaryKeys.length === 1) {
+        const [{ type, joinedName, name }] = primaryKeys;
+
+        const column = new UnknownColumn(type);
+
+        result[joinedName] = column.foreignKey(table, name);
+
+        return;
+      }
+
+      primaryKeys.forEach(({ joinedName, type }) => {
+        result[joinedName] = new UnknownColumn(type);
+      });
+
+      t.foreignKey(
+        primaryKeys.map((key) => key.joinedName) as [string, ...string[]],
+        table,
+        primaryKeys.map((key) => key.name) as [string, ...string[]],
+      );
+    });
+
+    if (fn) {
+      Object.assign(result, fn(t));
+    }
+
+    t.primaryKey(
+      tablesWithPrimaryKeys.flatMap(([, primaryKeys]) =>
+        primaryKeys.map((item) => item.joinedName),
+      ),
+    );
+
+    return result;
+  });
+};
 
 export const createTable = async (
   migration: Migration,
@@ -58,7 +144,7 @@ export const createTable = async (
 
   const tableData = getTableData();
   if (tableData.primaryKey) {
-    lines.push(`\n  PRIMARY KEY (${joinColumns(tableData.primaryKey)})`);
+    lines.push(`\n  ${primaryKeyToSql(tableData.primaryKey)}`);
   }
 
   tableData.foreignKeys.forEach((foreignKey) => {

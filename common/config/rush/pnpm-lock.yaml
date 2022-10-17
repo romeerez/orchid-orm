@@ -82,9 +82,11 @@ importers:
       '@swc/jest': ^0.2.21
       '@types/jest': ^28.1.2
       '@types/node': ^18.0.1
+      '@types/pluralize': ^0.0.29
       dotenv: ^16.0.3
       enquirer: ^2.3.6
       jest: ^28.1.2
+      pluralize: ^8.0.0
       pqb: workspace:*
       rimraf: ^3.0.2
       rollup: ^2.79.0
@@ -95,12 +97,14 @@ importers:
       typescript: ^4.7.4
     dependencies:
       enquirer: 2.3.6
+      pluralize: 8.0.0
       pqb: link:../pqb
     devDependencies:
       '@swc/core': 1.2.210
       '@swc/jest': 0.2.21_@swc+core@1.2.210
       '@types/jest': 28.1.4
       '@types/node': 18.0.1
+      '@types/pluralize': 0.0.29
       dotenv: 16.0.3
       jest: 28.1.2_vgaowovp4vif3h5newwzgtopqa
       rimraf: 3.0.2
@@ -1083,6 +1087,10 @@ packages:
       '@types/node': 18.0.1
       pg-protocol: 1.5.0
       pg-types: 2.2.0
+    dev: true
+
+  /@types/pluralize/0.0.29:
+    resolution: {integrity: sha512-BYOID+l2Aco2nBik+iYS4SZX0Lf20KPILP5RGmM1IgzdwNdTs0eebiFriOPcej1sX9mLnSoiNte5zcFxssgpGA==}
     dev: true
 
   /@types/prettier/2.6.3:
@@ -2737,6 +2745,11 @@ packages:
     dependencies:
       find-up: 4.1.0
     dev: true
+
+  /pluralize/8.0.0:
+    resolution: {integrity: sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==}
+    engines: {node: '>=4'}
+    dev: false
 
   /postgres-array/2.0.0:
     resolution: {integrity: sha512-VpZrUqU5A69eQyW2c5CA1jtLecCsN2U/bD6VilrFDWq5+5UIEVO7nazS3TEcHf1zuPYO/sqGvUvW62g86RXZuA==}

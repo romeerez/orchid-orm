@@ -58,11 +58,12 @@ import {
 } from './columnType';
 import { emptyObject, EmptyObject, MaybeArray, toArray } from '../utils';
 import { ColumnsShape } from './columnsSchema';
+import { raw } from '../common';
 
 export type ColumnTypes = typeof columnTypes;
 
 export type TableData = {
-  primaryKey?: string[];
+  primaryKey?: { columns: string[]; options?: { name?: string } };
   indexes: { columns: IndexColumnOptions[]; options: IndexOptions }[];
   foreignKeys: {
     columns: string[];
@@ -176,9 +177,14 @@ export const columnTypes = {
   jsonText: () => new JSONTextColumn(),
   array: <Item extends ColumnType>(item: Item) => new ArrayColumn(item),
 
-  primaryKey(...columns: string[]) {
-    tableData.primaryKey = columns;
-    return Object.create({ primaryKey: columns }) as EmptyObject;
+  timestamps: () => ({
+    createdAt: new TimestampColumn().default(raw('now()')),
+    updatedAt: new TimestampColumn().default(raw('now()')),
+  }),
+
+  primaryKey(columns: string[], options?: { name?: string }) {
+    tableData.primaryKey = { columns, options };
+    return emptyObject;
   },
 
   index(

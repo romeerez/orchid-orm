@@ -45,9 +45,11 @@
   "license": "ISC",
   "dependencies": {
     "pqb": "workspace:*",
-    "enquirer": "^2.3.6"
+    "enquirer": "^2.3.6",
+    "pluralize": "^8.0.0"
   },
   "devDependencies": {
+    "@types/pluralize": "^0.0.29",
     "ts-node": "^10.9.1",
     "dotenv": "^16.0.3",
     "rollup": "^2.79.0",

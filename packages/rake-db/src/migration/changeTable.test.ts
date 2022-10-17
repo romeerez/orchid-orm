@@ -15,7 +15,7 @@ describe('changeTable', () => {
 
   it('should set comment', async () => {
     const fn = () => {
-      return db.changeTable('table', { comment: 'comment' }, () => ({}));
+      return db.changeTable('table', { comment: 'comment' });
     };
 
     await fn();
@@ -28,7 +28,7 @@ describe('changeTable', () => {
 
   it('should change comment', async () => {
     const fn = () => {
-      return db.changeTable('table', { comment: ['old', 'new'] }, () => ({}));
+      return db.changeTable('table', { comment: ['old', 'new'] });
     };
 
     await fn();
@@ -82,6 +82,7 @@ describe('changeTable', () => {
               onDelete: 'CASCADE',
             }),
           ),
+          ...t[action](t.timestamps()),
         }));
       };
 
@@ -102,7 +103,9 @@ describe('changeTable', () => {
               ADD COLUMN "decimalWithPrecisionAndScale" decimal(10, 5) NOT NULL,
               ADD COLUMN "columnWithCompression" text COMPRESSION compression NOT NULL,
               ADD COLUMN "columnWithCollate" text COLLATE 'utf-8' NOT NULL,
-              ADD COLUMN "columnWithForeignKey" integer NOT NULL CONSTRAINT "fkeyConstraint" REFERENCES "table"("column") MATCH FULL ON DELETE CASCADE ON UPDATE CASCADE
+              ADD COLUMN "columnWithForeignKey" integer NOT NULL CONSTRAINT "fkeyConstraint" REFERENCES "table"("column") MATCH FULL ON DELETE CASCADE ON UPDATE CASCADE,
+              ADD COLUMN "createdAt" timestamp NOT NULL DEFAULT now(),
+              ADD COLUMN "updatedAt" timestamp NOT NULL DEFAULT now()
           `,
           toLine(`
             CREATE UNIQUE INDEX "indexName"
@@ -140,7 +143,9 @@ describe('changeTable', () => {
               DROP COLUMN "decimalWithPrecisionAndScale",
               DROP COLUMN "columnWithCompression",
               DROP COLUMN "columnWithCollate",
-              DROP COLUMN "columnWithForeignKey"
+              DROP COLUMN "columnWithForeignKey",
+              DROP COLUMN "createdAt",
+              DROP COLUMN "updatedAt"
           `,
           toLine(`DROP INDEX "indexName"`),
           toLine(`DROP INDEX "tableUniqueColumnIndex" CASCADE`),
@@ -159,7 +164,7 @@ describe('changeTable', () => {
     it(`should ${action} composite primary key`, async () => {
       const fn = () => {
         return db.changeTable('table', (t) => ({
-          ...t[action](t.primaryKey('id', 'name')),
+          ...t[action](t.primaryKey(['id', 'name'])),
         }));
       };
 
@@ -174,6 +179,38 @@ describe('changeTable', () => {
         expectSql(`
           ALTER TABLE "table"
           DROP CONSTRAINT "table_pkey"
+      `);
+      };
+
+      await fn();
+      (action === 'add' ? expectAddPrimaryKey : expectDropPrimaryKey)();
+
+      db.up = false;
+      queryMock.mockClear();
+      await fn();
+      (action === 'add' ? expectDropPrimaryKey : expectAddPrimaryKey)();
+    });
+
+    it(`should ${action} composite primary key with constraint name`, async () => {
+      const fn = () => {
+        return db.changeTable('table', (t) => ({
+          ...t[action](
+            t.primaryKey(['id', 'name'], { name: 'primaryKeyName' }),
+          ),
+        }));
+      };
+
+      const expectAddPrimaryKey = () => {
+        expectSql(`
+          ALTER TABLE "table"
+          ADD CONSTRAINT "primaryKeyName" PRIMARY KEY ("id", "name")
+      `);
+      };
+
+      const expectDropPrimaryKey = () => {
+        expectSql(`
+          ALTER TABLE "table"
+          DROP CONSTRAINT "primaryKeyName"
       `);
       };
 
