@@ -19,7 +19,8 @@
   "scripts": {
     "db": "ts-node db.ts",
     "test": "jest",
-    "build": "rimraf ./dist/ && rollup -c --rollup.config"
+    "build": "rimraf ./dist/ && rollup -c --rollup.config",
+    "prepublishOnly": "build"
   },
   "jest": {
     "setupFiles": [
