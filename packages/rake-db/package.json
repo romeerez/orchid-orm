@@ -20,7 +20,7 @@
     "db": "ts-node db.ts",
     "test": "jest",
     "build": "rimraf ./dist/ && rollup -c --rollup.config",
-    "prepublishOnly": "build"
+    "prepublishOnly": "pnpm build"
   },
   "jest": {
     "setupFiles": [
