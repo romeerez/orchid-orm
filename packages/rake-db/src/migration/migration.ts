@@ -5,11 +5,21 @@ import {
   ForeignKeyOptions,
   IndexColumnOptions,
   IndexOptions,
+  logParamToLogObject,
   MaybeArray,
+  QueryArraysResult,
+  QueryInput,
+  QueryLogObject,
+  QueryLogOptions,
+  QueryResult,
+  QueryResultRow,
+  Sql,
   TransactionAdapter,
+  TypeParsers,
 } from 'pqb';
 import { createJoinTable, createTable } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
+import { quoteTable } from '../common';
 
 export type DropMode = 'CASCADE' | 'RESTRICT';
 
@@ -31,9 +41,40 @@ export type JoinTableOptions = {
   dropMode?: DropMode;
 };
 
+export type ExtensionOptions = {
+  schema?: string;
+  version?: string;
+  cascade?: boolean;
+};
+
 export class Migration extends TransactionAdapter {
-  constructor(tx: TransactionAdapter, public up: boolean) {
+  public log?: QueryLogObject;
+
+  constructor(
+    tx: TransactionAdapter,
+    public up: boolean,
+    options: QueryLogOptions,
+  ) {
     super(tx.pool, tx.client, tx.types);
+    this.log = logParamToLogObject(options.logger || console, options.log);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async query<T extends QueryResultRow = any>(
+    query: QueryInput,
+    types: TypeParsers = this.types,
+    log = this.log,
+  ): Promise<QueryResult<T>> {
+    return wrapWithLog(log, query, () => super.query(query, types));
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async arrays<R extends any[] = any[]>(
+    query: QueryInput,
+    types: TypeParsers = this.types,
+    log = this.log,
+  ): Promise<QueryArraysResult<R>> {
+    return wrapWithLog(log, query, () => super.arrays(query, types));
   }
 
   createTable(
@@ -123,7 +164,7 @@ export class Migration extends TransactionAdapter {
 
   async renameTable(from: string, to: string): Promise<void> {
     const [table, newName] = this.up ? [from, to] : [to, from];
-    await this.query(`ALTER TABLE "${table}" RENAME TO "${newName}"`);
+    await this.query(`ALTER TABLE ${quoteTable(table)} RENAME TO "${newName}"`);
   }
 
   addColumn(
@@ -216,6 +257,34 @@ export class Migration extends TransactionAdapter {
     }));
   }
 
+  createSchema(schemaName: string) {
+    return createSchema(this, this.up, schemaName);
+  }
+
+  dropSchema(schemaName: string) {
+    return createSchema(this, !this.up, schemaName);
+  }
+
+  createExtension(
+    name: string,
+    options: ExtensionOptions & { ifNotExists?: boolean } = {},
+  ) {
+    return createExtension(this, this.up, name, {
+      ...options,
+      checkExists: options.ifNotExists,
+    });
+  }
+
+  dropExtension(
+    name: string,
+    options: { ifExists?: boolean; cascade?: boolean } = {},
+  ) {
+    return createExtension(this, !this.up, name, {
+      ...options,
+      checkExists: options.ifExists,
+    });
+  }
+
   async tableExists(tableName: string) {
     return queryExists(this, {
       text: `SELECT 1 FROM "information_schema"."tables" WHERE "table_name" = $1`,
@@ -237,6 +306,35 @@ export class Migration extends TransactionAdapter {
     });
   }
 }
+
+const wrapWithLog = async <Result>(
+  log: QueryLogObject | undefined,
+  query: QueryInput,
+  fn: () => Promise<Result>,
+): Promise<Result> => {
+  if (!log) {
+    return fn();
+  } else {
+    const sql = (
+      typeof query === 'string'
+        ? { text: query, values: [] }
+        : query.values
+        ? query
+        : { ...query, values: [] }
+    ) as Sql;
+
+    const logData = log.beforeQuery(sql);
+
+    try {
+      const result = await fn();
+      log.afterQuery(sql, logData);
+      return result;
+    } catch (err) {
+      log.onError(err as Error, sql, logData);
+      throw err;
+    }
+  }
+};
 
 const addColumn = (
   migration: Migration,
@@ -286,6 +384,43 @@ const addPrimaryKey = (
   return changeTable(migration, up, tableName, {}, (t) => ({
     ...t.add(t.primaryKey(columns, options)),
   }));
+};
+
+const createSchema = (
+  migration: Migration,
+  up: boolean,
+  schemaName: string,
+) => {
+  if (up) {
+    return migration.query(`CREATE SCHEMA "${schemaName}"`);
+  } else {
+    return migration.query(`DROP SCHEMA "${schemaName}"`);
+  }
+};
+
+const createExtension = (
+  migration: Migration,
+  up: boolean,
+  name: string,
+  options: ExtensionOptions & {
+    checkExists?: boolean;
+  },
+) => {
+  if (!up) {
+    return migration.query(
+      `DROP EXTENSION${options.checkExists ? ' IF EXISTS' : ''} "${name}"${
+        options.cascade ? ' CASCADE' : ''
+      }`,
+    );
+  }
+
+  return migration.query(
+    `CREATE EXTENSION${options.checkExists ? ' IF NOT EXISTS' : ''} "${name}"${
+      options.schema ? ` SCHEMA "${options.schema}"` : ''
+    }${options.version ? ` VERSION '${options.version}'` : ''}${
+      options.cascade ? ' CASCADE' : ''
+    }`,
+  );
 };
 
 const queryExists = (

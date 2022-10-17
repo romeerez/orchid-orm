@@ -43,7 +43,7 @@ describe('generate', () => {
       `import { change } from 'rake-db';
 
 change(async (db) => {
-  db.createTable('table', (t) => ({
+  await db.createTable('table', (t) => ({
     id: t.integer().primaryKey(),
     name: t.varchar(20).nullable(),
   }));
@@ -58,7 +58,7 @@ change(async (db) => {
       `import { change } from 'rake-db';
 
 change(async (db) => {
-  db.changeTable('table', (t) => ({
+  await db.changeTable('table', (t) => ({
   }));
 });
 `,
@@ -71,7 +71,7 @@ change(async (db) => {
       `import { change } from 'rake-db';
 
 change(async (db) => {
-  db.changeTable(tableName, (t) => ({
+  await db.changeTable(tableName, (t) => ({
   }));
 });
 `,
@@ -88,7 +88,7 @@ change(async (db) => {
       `import { change } from 'rake-db';
 
 change(async (db) => {
-  db.changeTable('table', (t) => ({
+  await db.changeTable('table', (t) => ({
     id: t.add(t.integer().primaryKey()),
     name: t.add(t.varchar(20).nullable()),
   }));
@@ -107,7 +107,7 @@ change(async (db) => {
       `import { change } from 'rake-db';
 
 change(async (db) => {
-  db.changeTable('table', (t) => ({
+  await db.changeTable('table', (t) => ({
     id: t.remove(t.integer().primaryKey()),
     name: t.remove(t.varchar(20).nullable()),
   }));
@@ -122,7 +122,7 @@ change(async (db) => {
       `import { change } from 'rake-db';
 
 change(async (db) => {
-  db.dropTable('table', (t) => ({
+  await db.dropTable('table', (t) => ({
     id: t.integer().primaryKey(),
     name: t.varchar(20).nullable(),
   }));

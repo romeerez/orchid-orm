@@ -1,4 +1,4 @@
-import { Adapter, AdapterOptions } from 'pqb';
+import { Adapter, AdapterOptions, QueryLogOptions } from 'pqb';
 import Enquirer from 'enquirer';
 import path from 'path';
 import { readdir } from 'fs/promises';
@@ -7,7 +7,7 @@ export type MigrationConfig = {
   migrationsPath: string;
   migrationsTable: string;
   requireTs(path: string): void;
-};
+} & QueryLogOptions;
 
 const registered = false;
 
@@ -21,6 +21,8 @@ export const migrationConfigDefaults = {
     }
     require(path);
   },
+  log: true,
+  logger: console,
 };
 
 export const getMigrationConfigWithDefaults = (
@@ -116,7 +118,9 @@ export const createSchemaMigrations = async (
 ) => {
   try {
     await db.query(
-      `CREATE TABLE "${config.migrationsTable}" ( version TEXT NOT NULL )`,
+      `CREATE TABLE ${quoteTable(
+        config.migrationsTable,
+      )} ( version TEXT NOT NULL )`,
     );
     console.log('Created versions table');
   } catch (err) {
@@ -221,4 +225,13 @@ export const joinWords = (...words: string[]) => {
 
 export const joinColumns = (columns: string[]) => {
   return columns.map((column) => `"${column}"`).join(', ');
+};
+
+export const quoteTable = (table: string) => {
+  const index = table.indexOf('.');
+  if (index !== -1) {
+    return `"${table.slice(0, index)}"."${table.slice(index + 1)}"`;
+  } else {
+    return `"${table}"`;
+  }
 };

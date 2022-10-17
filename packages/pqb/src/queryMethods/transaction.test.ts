@@ -12,10 +12,10 @@ describe('transaction', () => {
 
       const {
         rows: [{ a }],
-      } = await db.adapter.query('SELECT 1 AS a');
+      } = await db.query.adapter.query('SELECT 1 AS a');
       const {
         rows: [{ b }],
-      } = await db.adapter.query('SELECT 2 AS b');
+      } = await db.query.adapter.query('SELECT 2 AS b');
       return a + b;
     });
 

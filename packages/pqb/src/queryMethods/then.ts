@@ -85,7 +85,7 @@ const then = async (
     sql = q.toSql();
 
     if (q.query.log) {
-      logData = q.query.log?.beforeQuery(q, sql);
+      logData = q.query.log.beforeQuery(sql);
     }
 
     const queryResult = await q.query.adapter[
@@ -93,7 +93,7 @@ const then = async (
     ](sql);
 
     if (q.query.log) {
-      q.query.log?.afterQuery(q, sql, logData);
+      q.query.log.afterQuery(sql, logData);
       // set sql to be undefined to prevent logging on error in case if afterCallbacks throws
       sql = undefined;
     }
@@ -113,7 +113,7 @@ const then = async (
     resolve?.(result);
   } catch (error) {
     if (q.query.log && sql && logData) {
-      q.query.log.onError(error as Error, q, sql, logData);
+      q.query.log.onError(error as Error, sql, logData);
     }
     reject?.(error);
   }

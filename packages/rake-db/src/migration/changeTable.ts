@@ -29,6 +29,7 @@ import {
   migrateIndexes,
   primaryKeyToSql,
 } from './migrationUtils';
+import { quoteTable } from '../common';
 
 const newChangeTableData = () => ({
   add: [],
@@ -203,7 +204,8 @@ export const changeTable = async (
 
   if (state.alterTable.length) {
     await migration.query(
-      `ALTER TABLE "${tableName}"` + `\n  ${state.alterTable.join(',\n  ')}`,
+      `ALTER TABLE ${quoteTable(tableName)}` +
+        `\n  ${state.alterTable.join(',\n  ')}`,
     );
   }
 
@@ -227,7 +229,7 @@ const changeActions = {
       value = Array.isArray(comment) ? comment[0] : null;
     }
     return migration.query(
-      `COMMENT ON TABLE "${tableName}" IS ${quote(value)}`,
+      `COMMENT ON TABLE ${quoteTable(tableName)} IS ${quote(value)}`,
     );
   },
 

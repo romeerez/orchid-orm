@@ -1,7 +1,7 @@
 import { migrate, rollback } from './migrateOrRollback';
 import { createSchemaMigrations, migrationConfigDefaults } from '../common';
 import { getMigrationFiles } from '../common';
-import { Adapter, TransactionAdapter } from 'pqb';
+import { Adapter, noop, TransactionAdapter } from 'pqb';
 import { Migration } from '../migration/migration';
 
 jest.mock('../common', () => ({
@@ -35,6 +35,11 @@ const requireTsMock = jest.fn();
 const config = {
   ...migrationConfigDefaults,
   requireTs: requireTsMock,
+  log: false,
+  logger: {
+    log: jest.fn(),
+    error: noop,
+  },
 };
 
 describe('migrateOrRollback', () => {
@@ -49,7 +54,7 @@ describe('migrateOrRollback', () => {
       queryMock.mockReturnValueOnce(undefined);
       requireTsMock.mockResolvedValue(undefined);
 
-      await migrate(options, config);
+      await migrate(options, config, []);
 
       expect(getMigrationFiles).toBeCalledWith(config, true);
 
@@ -62,6 +67,9 @@ describe('migrateOrRollback', () => {
       expect(transactionQueryMock).toBeCalledWith(
         `INSERT INTO "schemaMigrations" VALUES ('3')`,
       );
+
+      expect(config.logger.log).toBeCalledWith('file2 migrated');
+      expect(config.logger.log).toBeCalledWith('file3 migrated');
     });
 
     it('should create migrations table if it not exist', async () => {
@@ -69,12 +77,13 @@ describe('migrateOrRollback', () => {
       getMigratedVersionsArrayMock.mockRejectedValueOnce({ code: '42P01' });
       (createSchemaMigrations as jest.Mock).mockResolvedValueOnce(undefined);
 
-      await migrate(options, config);
+      await migrate(options, config, []);
 
       expect(getMigrationFiles).toBeCalledWith(config, true);
       expect(createSchemaMigrations).toBeCalled();
       expect(requireTsMock).not.toBeCalled();
       expect(transactionQueryMock).not.toBeCalled();
+      expect(config.logger.log).not.toBeCalled();
     });
   });
 
@@ -87,19 +96,20 @@ describe('migrateOrRollback', () => {
       queryMock.mockReturnValueOnce(undefined);
       requireTsMock.mockResolvedValue(undefined);
 
-      await rollback(options, config);
+      await rollback(options, config, []);
 
       expect(getMigrationFiles).toBeCalledWith(config, false);
 
+      expect(requireTsMock).toBeCalledTimes(1);
       expect(requireTsMock).toBeCalledWith('file2');
-      expect(requireTsMock).toBeCalledWith('file1');
 
+      expect(transactionQueryMock).toBeCalledTimes(1);
       expect(transactionQueryMock).toBeCalledWith(
         `DELETE FROM "schemaMigrations" WHERE version = '2'`,
       );
-      expect(transactionQueryMock).toBeCalledWith(
-        `DELETE FROM "schemaMigrations" WHERE version = '1'`,
-      );
+
+      expect(config.logger.log).toBeCalledTimes(1);
+      expect(config.logger.log).toBeCalledWith('file2 rolled back');
     });
 
     it('should create migrations table if it not exist', async () => {
@@ -107,12 +117,13 @@ describe('migrateOrRollback', () => {
       getMigratedVersionsArrayMock.mockRejectedValueOnce({ code: '42P01' });
       (createSchemaMigrations as jest.Mock).mockResolvedValueOnce(undefined);
 
-      await rollback(options, config);
+      await rollback(options, config, []);
 
       expect(getMigrationFiles).toBeCalledWith(config, false);
       expect(createSchemaMigrations).toBeCalled();
       expect(requireTsMock).not.toBeCalled();
       expect(transactionQueryMock).not.toBeCalled();
+      expect(config.logger.log).not.toBeCalled();
     });
   });
 });

@@ -18,9 +18,9 @@ export const rakeDb = async (
   } else if (command === 'drop') {
     await dropDb(options);
   } else if (command === 'migrate') {
-    await migrate(options, config);
+    await migrate(options, config, args.slice(1));
   } else if (command === 'rollback') {
-    await rollback(options, config);
+    await rollback(options, config, args.slice(1));
   } else if (command === 'g' || command === 'generate') {
     await generate(config, args.slice(1));
   } else {

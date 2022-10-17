@@ -24,7 +24,7 @@ import {
   migrateIndexes,
   primaryKeyToSql,
 } from './migrationUtils';
-import { joinWords } from '../common';
+import { joinWords, quoteTable } from '../common';
 import { singular } from 'pluralize';
 
 class UnknownColumn extends ColumnType {
@@ -49,18 +49,23 @@ export const createJoinTable = async (
   }
 
   const tablesWithPrimaryKeys = await Promise.all(
-    tables.map(
-      async (table) =>
-        [
-          table,
-          await getPrimaryKeysOfTable(migration, table).then((items) =>
-            items.map((item) => ({
-              ...item,
-              joinedName: joinWords(singular(table), item.name),
-            })),
-          ),
-        ] as const,
-    ),
+    tables.map(async (table) => {
+      const primaryKeys = await getPrimaryKeysOfTable(migration, table).then(
+        (items) =>
+          items.map((item) => ({
+            ...item,
+            joinedName: joinWords(singular(table), item.name),
+          })),
+      );
+
+      if (!primaryKeys.length) {
+        throw new Error(
+          `Primary key for table ${quoteTable(table)} is not defined`,
+        );
+      }
+
+      return [table, primaryKeys] as const;
+    }),
   );
 
   return createTable(migration, up, tableName, options, (t) => {
@@ -114,7 +119,7 @@ export const createTable = async (
   if (!up) {
     const { dropMode } = options;
     await migration.query(
-      `DROP TABLE "${tableName}"${dropMode ? ` ${dropMode}` : ''}`,
+      `DROP TABLE ${quoteTable(tableName)}${dropMode ? ` ${dropMode}` : ''}`,
     );
     return;
   }
@@ -152,7 +157,7 @@ export const createTable = async (
   });
 
   await migration.query({
-    text: `CREATE TABLE "${tableName}" (${lines.join(',')}\n)`,
+    text: `CREATE TABLE ${quoteTable(tableName)} (${lines.join(',')}\n)`,
     values: state.values,
   });
 
@@ -163,7 +168,7 @@ export const createTable = async (
 
   if (options.comment) {
     await migration.query(
-      `COMMENT ON TABLE "${tableName}" IS ${quote(options.comment)}`,
+      `COMMENT ON TABLE ${quoteTable(tableName)} IS ${quote(options.comment)}`,
     );
   }
 };

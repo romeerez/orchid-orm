@@ -48,13 +48,13 @@ type LogOption = {
   // callback to run before query
   // Query is a query object, sql is { text: string, values: unknown[] }
   // returned value will be passed to afterQuery and to onError
-  beforeQuery?(q: Query, sql: Sql): unknown;
+  beforeQuery?(sql: Sql): unknown;
   
   // callback to run after query, logData is data returned by beforeQuery
-  afterQuery?(q: Query, sql: Sql, logData: unknown): void;
+  afterQuery?(sql: Sql, logData: unknown): void;
   
   // callback to run in case of error
-  onError?(error: Error, q: Query, sql: Sql, logData: unknown): void;
+  onError?(error: Error, sql: Sql, logData: unknown): void;
 }
 ```
 

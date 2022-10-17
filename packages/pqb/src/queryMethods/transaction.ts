@@ -23,11 +23,11 @@ export class Transaction {
     const log = this.query.log;
     let logData: unknown | undefined;
     if (log) {
-      logData = log.beforeQuery(this, beginSql);
+      logData = log.beforeQuery(beginSql);
     }
     const t = this.query.adapter.transaction((adapter) => {
       if (log) {
-        log.afterQuery(this, beginSql, logData);
+        log.afterQuery(beginSql, logData);
       }
 
       const q = this.clone();
@@ -35,7 +35,7 @@ export class Transaction {
       q.query.inTransaction = true;
 
       if (log) {
-        logData = log.beforeQuery(this, commitSql);
+        logData = log.beforeQuery(commitSql);
       }
       return cb(q);
     });
@@ -43,10 +43,10 @@ export class Transaction {
     if (log) {
       t.then(
         () => {
-          log.afterQuery(this, commitSql, logData);
+          log.afterQuery(commitSql, logData);
         },
         () => {
-          log.afterQuery(this, rollbackSql, logData);
+          log.afterQuery(rollbackSql, logData);
         },
       );
     }

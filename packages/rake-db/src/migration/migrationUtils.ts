@@ -1,5 +1,4 @@
 import {
-  Adapter,
   ColumnType,
   ForeignKeyModel,
   ForeignKeyOptions,
@@ -10,7 +9,7 @@ import {
   toArray,
 } from 'pqb';
 import { ColumnComment, ColumnIndex, Migration } from './migration';
-import { joinColumns, joinWords } from '../common';
+import { joinColumns, joinWords, quoteTable } from '../common';
 
 export const columnToSql = (
   key: string,
@@ -121,7 +120,9 @@ export const referencesToSql = (
   columns: string[],
   foreignKey: Pick<ForeignKeyOptions, 'match' | 'onDelete' | 'onUpdate'>,
 ) => {
-  const sql: string[] = [`REFERENCES "${table}"(${joinColumns(columns)})`];
+  const sql: string[] = [
+    `REFERENCES ${quoteTable(table)}(${joinColumns(columns)})`,
+  ];
 
   if (foreignKey.match) {
     sql.push(`MATCH ${foreignKey.match.toUpperCase()}`);
@@ -176,7 +177,7 @@ export const migrateIndex = (
     sql.push('UNIQUE');
   }
 
-  sql.push(`INDEX "${indexName}" ON "${state.tableName}"`);
+  sql.push(`INDEX "${indexName}" ON ${quoteTable(state.tableName)}`);
 
   if (options.using) {
     sql.push(`USING ${options.using}`);
@@ -243,7 +244,9 @@ export const migrateComments = async (
 ) => {
   for (const { column, comment } of comments) {
     await state.migration.query(
-      `COMMENT ON COLUMN "${state.tableName}"."${column}" IS ${quote(comment)}`,
+      `COMMENT ON COLUMN ${quoteTable(state.tableName)}."${column}" IS ${quote(
+        comment,
+      )}`,
     );
   }
 };
@@ -258,11 +261,12 @@ export const primaryKeyToSql = (
 };
 
 export const getPrimaryKeysOfTable = async (
-  db: Adapter,
+  db: Migration,
   tableName: string,
 ): Promise<{ name: string; type: string }[]> => {
-  const { rows } = await db.query<{ name: string; type: string }>({
-    text: `SELECT
+  const { rows } = await db.query<{ name: string; type: string }>(
+    {
+      text: `SELECT
   pg_attribute.attname AS name,
   format_type(pg_attribute.atttypid, pg_attribute.atttypmod) AS type
 FROM pg_index, pg_class, pg_attribute, pg_namespace
@@ -274,8 +278,11 @@ WHERE
   pg_attribute.attrelid = pg_class.oid AND
   pg_attribute.attnum = any(pg_index.indkey) AND
   indisprimary`,
-    values: [tableName],
-  });
+      values: [tableName],
+    },
+    db.types,
+    undefined,
+  );
 
   return rows;
 };

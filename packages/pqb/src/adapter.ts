@@ -7,7 +7,7 @@ export interface QueryResultRow {
 
 export type TypeParsers = Record<number, (input: string) => unknown>;
 
-type Query = string | { text: string; values?: unknown[] };
+export type QueryInput = string | { text: string; values?: unknown[] };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type QueryResult<T extends QueryResultRow = any> = {
@@ -56,7 +56,7 @@ export class Adapter {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async query<T extends QueryResultRow = any>(
-    query: Query,
+    query: QueryInput,
     types: TypeParsers = this.types,
   ): Promise<QueryResult<T>> {
     const client = await this.pool.connect();
@@ -69,7 +69,7 @@ export class Adapter {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async arrays<R extends any[] = any[]>(
-    query: Query,
+    query: QueryInput,
     types: TypeParsers = this.types,
   ): Promise<QueryArraysResult<R>> {
     const client = await this.pool.connect();
@@ -106,7 +106,7 @@ export class Adapter {
 
 const performQuery = <T extends QueryResultRow>(
   client: PoolClient,
-  query: Query,
+  query: QueryInput,
   types: TypeParsers,
 ) => {
   return client.query<T>({
@@ -123,7 +123,7 @@ const performQuery = <T extends QueryResultRow>(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const performQueryArrays = <T extends any[] = any[]>(
   client: PoolClient,
-  query: Query,
+  query: QueryInput,
   types: TypeParsers,
 ) => {
   return client.query<T>({
@@ -147,7 +147,7 @@ export class TransactionAdapter implements Adapter {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async query<T extends QueryResultRow = any>(
-    query: Query,
+    query: QueryInput,
     types: TypeParsers = this.types,
   ): Promise<QueryResult<T>> {
     return await performQuery<T>(this.client, query, types);
@@ -155,7 +155,7 @@ export class TransactionAdapter implements Adapter {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async arrays<R extends any[] = any[]>(
-    query: Query,
+    query: QueryInput,
     types: TypeParsers = this.types,
   ): Promise<QueryArraysResult<R>> {
     return await performQueryArrays<R>(this.client, query, types);

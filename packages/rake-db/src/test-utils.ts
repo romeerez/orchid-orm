@@ -6,7 +6,9 @@ let db: Migration | undefined;
 export const getDb = () => {
   if (db) return db;
 
-  db = new Migration({} as unknown as TransactionAdapter, true);
+  db = new Migration({} as unknown as TransactionAdapter, true, {
+    log: false,
+  });
   db.query = queryMock;
   return db;
 };

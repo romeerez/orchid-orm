@@ -41,18 +41,18 @@ const makeContent = (name: string, args: string[]): string => {
   const [first, rest] = getFirstWordAndRest(name);
   if (rest) {
     if (first === 'create' || first === 'drop') {
-      content += `\n  db.${
+      content += `\n  await db.${
         first === 'create' ? 'createTable' : 'dropTable'
       }('${rest}', (t) => ({`;
       content += makeColumnsContent(args);
       content += '\n  }));';
     } else if (first === 'change') {
-      content += `\n  db.changeTable('${rest}', (t) => ({`;
+      content += `\n  await db.changeTable('${rest}', (t) => ({`;
       content += '\n  }));';
     } else if (first === 'add' || first === 'remove') {
       const table =
         first === 'add' ? getTextAfterTo(rest) : getTextAfterFrom(rest);
-      content += `\n  db.changeTable(${
+      content += `\n  await db.changeTable(${
         table ? `'${table}'` : 'tableName'
       }, (t) => ({`;
       content += makeColumnsContent(args, first);

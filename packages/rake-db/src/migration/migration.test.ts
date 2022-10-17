@@ -306,6 +306,99 @@ describe('migration', () => {
           ? expectDropTable
           : expectCreateTable)();
       });
+
+      it('should throw error if table has no primary key', async () => {
+        if (action === 'dropJoinTable') {
+          db.up = false;
+        }
+
+        (getPrimaryKeysOfTable as jest.Mock)
+          .mockResolvedValueOnce([
+            {
+              name: 'id',
+              type: 'integer',
+            },
+          ])
+          .mockResolvedValueOnce([]);
+
+        await expect(db[action](['posts', 'comments'])).rejects.toThrow(
+          'Primary key for table "comments" is not defined',
+        );
+      });
+    });
+  });
+
+  (['createSchema', 'dropSchema'] as const).forEach((action) => {
+    describe(action, () => {
+      it(`should ${
+        action === 'createSchema' ? 'add' : 'drop'
+      } a schema`, async () => {
+        const fn = () => {
+          return db[action]('schemaName');
+        };
+
+        const expectCreateSchema = () => {
+          expectSql(`
+            CREATE SCHEMA "schemaName"
+          `);
+        };
+
+        const expectDropSchema = () => {
+          expectSql(`
+            DROP SCHEMA "schemaName"
+          `);
+        };
+
+        await fn();
+        (action === 'createSchema' ? expectCreateSchema : expectDropSchema)();
+
+        db.up = false;
+        queryMock.mockClear();
+        await fn();
+        (action === 'createSchema' ? expectDropSchema : expectCreateSchema)();
+      });
+    });
+  });
+
+  (['createExtension', 'dropExtension'] as const).forEach((action) => {
+    describe(action, () => {
+      it(`should ${
+        action === 'createExtension' ? 'add' : 'drop'
+      } an extension`, async () => {
+        const fn = () => {
+          return db[action]('extensionName', {
+            ifExists: true,
+            ifNotExists: true,
+            schema: 'schemaName',
+            version: '123',
+            cascade: true,
+          });
+        };
+
+        const expectCreateExtension = () => {
+          expectSql(`
+            CREATE EXTENSION IF NOT EXISTS "extensionName" SCHEMA "schemaName" VERSION '123' CASCADE
+          `);
+        };
+
+        const expectDropExtension = () => {
+          expectSql(`
+            DROP EXTENSION IF EXISTS "extensionName" CASCADE
+          `);
+        };
+
+        await fn();
+        (action === 'createExtension'
+          ? expectCreateExtension
+          : expectDropExtension)();
+
+        db.up = false;
+        queryMock.mockClear();
+        await fn();
+        (action === 'createExtension'
+          ? expectDropExtension
+          : expectCreateExtension)();
+      });
     });
   });
 

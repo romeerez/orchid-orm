@@ -8,6 +8,7 @@ import {
   joinColumns,
   joinWords,
   migrationConfigDefaults,
+  quoteTable,
   setAdapterOptions,
   setAdminCredentialsToOptions,
   sortAsc,
@@ -45,6 +46,8 @@ describe('common', () => {
         migrationsPath: 'custom-path',
         migrationsTable: 'schemaMigrations',
         requireTs: expect.any(Function),
+        log: true,
+        logger: console,
       });
     });
   });
@@ -276,6 +279,16 @@ describe('common', () => {
   describe('joinColumns', () => {
     it('should join columns', () => {
       expect(joinColumns(['a', 'b', 'c'])).toBe('"a", "b", "c"');
+    });
+  });
+
+  describe('quoteTable', () => {
+    it('should quote a table', () => {
+      expect(quoteTable('table')).toBe('"table"');
+    });
+
+    it('should quote a table with schema', () => {
+      expect(quoteTable('schema.table')).toBe('"schema"."table"');
     });
   });
 });

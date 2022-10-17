@@ -1,6 +1,6 @@
 {
   "name": "rake-db",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Migrations tools for Postgresql DB",
   "repository": {
     "type": "git",

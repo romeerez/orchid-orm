@@ -4,9 +4,9 @@ import { quote } from '../quote';
 
 export type QueryLogObject = {
   colors: boolean;
-  beforeQuery(q: Query, sql: Sql): unknown;
-  afterQuery(q: Query, sql: Sql, logData: unknown): void;
-  onError(error: Error, q: Query, sql: Sql, logData: unknown): void;
+  beforeQuery(sql: Sql): unknown;
+  afterQuery(sql: Sql, logData: unknown): void;
+  onError(error: Error, sql: Sql, logData: unknown): void;
 };
 
 export type QueryLogger = {
@@ -74,7 +74,7 @@ export const logParamToLogObject = (
       beforeQuery() {
         return process.hrtime();
       },
-      afterQuery(_, sql, time: [number, number]) {
+      afterQuery(sql, time: [number, number]) {
         logger.log(
           makeMessage(
             colors,
@@ -87,7 +87,7 @@ export const logParamToLogObject = (
           ),
         );
       },
-      onError(error, _, sql, time: [number, number]) {
+      onError(error, sql, time: [number, number]) {
         const message = `Error: ${error.message}`;
 
         logger.error(
