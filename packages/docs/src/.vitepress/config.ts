@@ -22,10 +22,6 @@ export default {
               link: '/guide/',
             },
             {
-              text: 'Installation',
-              link: '/guide/installation',
-            },
-            {
               text: 'CRUD Walk-through',
               link: '/guide/crud-walk-through',
             },

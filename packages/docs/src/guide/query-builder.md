@@ -6,6 +6,12 @@ The query builder is the interface used for building and executing standard SQL 
 
 Everything listed in this document also applies for the [ORM](/guide/orm), except for relations and other ORM specific features.
 
+Install by running:
+
+```sh
+npm i pqb
+```
+
 ## createDb
 
 `createDb` is a function to configure query builder instance, it is accepting the same options as [node-postgres](https://node-postgres.com/) library and some additional.

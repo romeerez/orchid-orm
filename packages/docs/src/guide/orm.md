@@ -8,6 +8,12 @@ While `pqb` query builder is designed to cover abilities of [knex](https://knexj
 
 ## setup
 
+Install by running:
+
+```sh
+npm i porm
+```
+
 `porm` is an entry function of the ORM.
 
 First argument is a connection options object, for all connection options see: [client options](https://node-postgres.com/api/client) + [pool options](https://node-postgres.com/api/pool).
