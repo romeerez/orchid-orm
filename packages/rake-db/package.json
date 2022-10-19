@@ -57,6 +57,7 @@
     "rollup-plugin-dts": "^4.2.2",
     "rollup-plugin-esbuild": "^4.10.1",
     "@swc/core": "^1.2.210",
+    "@swc/helpers": "^0.4.12",
     "@swc/jest": "^0.2.21",
     "@types/jest": "^28.1.2",
     "@types/node": "^18.0.1",

@@ -21,7 +21,7 @@ const migrateOrRollback = async (
 ) => {
   const files = await getMigrationFiles(config, up);
 
-  const argCount = parseInt(args[0]);
+  const argCount = args[0] === 'all' ? Infinity : parseInt(args[0]);
   let count = isNaN(argCount) ? (up ? Infinity : 1) : argCount;
 
   for (const opts of toArray(options)) {

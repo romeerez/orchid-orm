@@ -79,6 +79,7 @@ importers:
   ../../packages/rake-db:
     specifiers:
       '@swc/core': ^1.2.210
+      '@swc/helpers': ^0.4.12
       '@swc/jest': ^0.2.21
       '@types/jest': ^28.1.2
       '@types/node': ^18.0.1
@@ -101,6 +102,7 @@ importers:
       pqb: link:../pqb
     devDependencies:
       '@swc/core': 1.2.210
+      '@swc/helpers': 0.4.12
       '@swc/jest': 0.2.21_@swc+core@1.2.210
       '@types/jest': 28.1.4
       '@types/node': 18.0.1
@@ -991,6 +993,12 @@ packages:
       '@swc/core-win32-arm64-msvc': 1.2.210
       '@swc/core-win32-ia32-msvc': 1.2.210
       '@swc/core-win32-x64-msvc': 1.2.210
+    dev: true
+
+  /@swc/helpers/0.4.12:
+    resolution: {integrity: sha512-R6RmwS9Dld5lNvwKlPn62+piU+WDG1sMfsnfJioXCciyko/gZ0DQ4Mqglhq1iGU1nQ/RcGkAwfMH+elMSkJH3Q==}
+    dependencies:
+      tslib: 2.4.0
     dev: true
 
   /@swc/jest/0.2.21_@swc+core@1.2.210:
