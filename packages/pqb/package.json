@@ -1,10 +1,11 @@
 {
   "name": "pqb",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Postgres query builder",
+  "homepage": "https://porm.netlify.app/guide/query-builder.html",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/romeerez/porm"
+    "url": "git+https://github.com/romeerez/porm/tree/main/packages/pqb"
   },
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
