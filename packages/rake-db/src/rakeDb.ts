@@ -24,6 +24,31 @@ export const rakeDb = async (
   } else if (command === 'g' || command === 'generate') {
     await generate(config, args.slice(1));
   } else {
-    console.log(`Usage: rake-db [command] [arguments]`);
+    printHelp();
   }
 };
+
+const printHelp = () =>
+  console.log(
+    `Usage: rake-db [command] [arguments]
+
+Commands:
+  create                  creates databases
+  drop                    drops databases
+  g, generate             generates migration file, see below
+  migrate                 migrate all pending migrations
+  rollback                rollback the last migrated
+  no or unknown command   prints this message
+  
+Generate arguments:
+- (required) first argument is migration name
+  * create*      template for create table
+  * change*      template for change table
+  * add*To*      template for add columns
+  * remove*From* template for remove columns
+  * drop*        template for drop table
+
+- other arguments considered as columns with types and optional methods:
+  rake-db g createTable id:serial.primaryKey name:text.nullable
+`,
+  )
