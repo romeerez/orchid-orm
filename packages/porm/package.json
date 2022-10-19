@@ -1,7 +1,12 @@
 {
   "name": "porm",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Postgres ORM",
+  "homepage": "https://porm.netlify.app/guide/orm.html",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/romeerez/porm/tree/main/packages/porm"
+  },
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "scripts": {
@@ -20,7 +25,7 @@
       "^.+\\.ts$": "@swc/jest"
     }
   },
-  "keywords": ["postgres", "orm"],
+  "keywords": ["pg", "postgres", "orm", "ts", "typescript"],
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
