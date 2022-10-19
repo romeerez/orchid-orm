@@ -1,6 +1,6 @@
 {
   "name": "pqb",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Postgres query builder",
   "homepage": "https://porm.netlify.app/guide/query-builder.html",
   "repository": {
@@ -19,7 +19,8 @@
   },
   "scripts": {
     "test": "jest",
-    "build": "rimraf ./dist/ && rollup -c --rollup.config"
+    "build": "rimraf ./dist/ && rollup -c --rollup.config",
+    "prepublishOnly": "pnpm bulid"
   },
   "jest": {
     "setupFiles": [
