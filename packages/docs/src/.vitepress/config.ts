@@ -3,6 +3,7 @@ export default {
   description: 'Postgres ORM & Query Builder',
   head: [
     ["link", { rel: "icon", type: "image/png", href: "/logo.svg" }],
+    ["script", { async: true, src: 'https://www.googletagmanager.com/gtag/js?id=G-PV4PL9TK79' }],
   ],
   markdown: {
     theme: 'one-dark-pro',
