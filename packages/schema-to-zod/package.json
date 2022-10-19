@@ -2,9 +2,10 @@
   "name": "porm-schema-to-zod",
   "version": "0.0.1",
   "description": "PORM columns schema to Zod converter",
+  "homepage": "https://porm.netlify.app/guide/columns-schema.html#using-columns-schema-for-validation",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/romeerez/porm"
+    "url": "git+https://github.com/romeerez/porm/tree/main/packages/schema-to-zod"
   },
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -18,7 +19,8 @@
   },
   "scripts": {
     "test": "jest",
-    "build": "rimraf ./dist/ && rollup -c --rollup.config"
+    "build": "rimraf ./dist/ && rollup -c --rollup.config",
+    "prepublishOnly": "pnpm build"
   },
   "jest": {
     "setupFiles": [
