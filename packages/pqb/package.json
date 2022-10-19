@@ -20,7 +20,7 @@
   "scripts": {
     "test": "jest",
     "build": "rimraf ./dist/ && rollup -c --rollup.config",
-    "prepublishOnly": "pnpm bulid"
+    "prepublishOnly": "pnpm build"
   },
   "jest": {
     "setupFiles": [
