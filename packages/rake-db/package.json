@@ -1,6 +1,6 @@
 {
   "name": "rake-db",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "description": "Migrations tool for Postgresql DB",
   "homepage": "https://porm.netlify.app/guide/migrations.html",
   "repository": {
