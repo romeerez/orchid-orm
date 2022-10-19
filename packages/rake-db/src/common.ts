@@ -9,18 +9,10 @@ export type MigrationConfig = {
   requireTs(path: string): void;
 } & QueryLogOptions;
 
-const registered = false;
-
 export const migrationConfigDefaults = {
   migrationsPath: path.resolve(process.cwd(), 'src', 'migrations'),
   migrationsTable: 'schemaMigrations',
-  requireTs(path: string) {
-    if (!registered) {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      require('ts-node').register({ compilerOptions: { module: 'CommonJS' } });
-    }
-    require(path);
-  },
+  requireTs: require,
   log: true,
   logger: console,
 };
