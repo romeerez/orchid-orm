@@ -10,7 +10,12 @@ if (!connectionString) {
   throw new Error('DATABASE_URL is missing in .env');
 }
 
+const connectionStringTest = process.env.DATABASE_URL_TEST;
+if (!connectionStringTest) {
+  throw new Error('DATABASE_URL_TEST is missing in .env');
+}
+
 rakeDb(
-  { connectionString },
+  [{ connectionString }, { connectionString: connectionStringTest }],
   { migrationsPath: path.resolve(process.cwd(), 'migrations') },
 );

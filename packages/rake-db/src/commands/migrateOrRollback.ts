@@ -9,7 +9,7 @@ import {
 import {
   getCurrentPromise,
   setCurrentMigrationUp,
-  setCurrentMigration,
+  setCurrentMigration, ChangeCallback, change, getCurrentChangeCallback,
 } from '../migration/change';
 import { Migration } from '../migration/migration';
 
@@ -47,6 +47,8 @@ const migrateOrRollback = async (
   }
 };
 
+const changeCache: Record<string, ChangeCallback | undefined> = {}
+
 const processMigration = async (
   db: Adapter,
   up: boolean,
@@ -57,7 +59,15 @@ const processMigration = async (
     const db = new Migration(tx, up, config);
     setCurrentMigration(db);
     setCurrentMigrationUp(up);
-    config.requireTs(file.path);
+
+    const callback = changeCache[file.path]
+    if (callback) {
+      change(callback)
+    } else {
+      config.requireTs(file.path);
+      changeCache[file.path] = getCurrentChangeCallback()
+    }
+
     await getCurrentPromise();
     await (up ? saveMigratedVersion : removeMigratedVersion)(
       db,
