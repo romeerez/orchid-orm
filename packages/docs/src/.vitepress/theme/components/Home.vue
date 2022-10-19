@@ -11,7 +11,7 @@
     <ul class='list'>
       <li>🚀️ productive way to work with models and relations</li>
       <li>🧐️ full control over the database with powerful query builder</li>
-      <li>😎️ model schema is based on <a href='https://github.com/colinhacks/zod' target='_blank' class='link'>Zod</a> so it can be reused</li>
+      <li>😎️ model schema can be converted to <a href='https://github.com/colinhacks/zod' target='_blank' class='link'>Zod</a> for validations</li>
       <li>🛳️ migration tools</li>
       <li>💯 100% TypeScript, define a schema and everything else will be inferred</li>
     </ul>
