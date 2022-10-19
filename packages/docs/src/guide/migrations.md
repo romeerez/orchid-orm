@@ -101,7 +101,7 @@ type MigrationConfig = {
 }
 ```
 
-To configure logging, see (log option)[http://localhost:3000/guide/query-builder.html#createdb] in query builder document.
+To configure logging, see [log option](/guide/query-builder.html#createdb) in query builder document.
 
 Defaults are:
 
