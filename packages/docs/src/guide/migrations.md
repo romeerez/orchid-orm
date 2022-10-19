@@ -124,6 +124,14 @@ npm run db drop
 
 These commands will ask for a database administrator username and password.
 
+## reset a database
+
+`reset` is a shortcut command to drop, create and migrate.
+
+```sh
+npm run db reset
+```
+
 ## generate migration
 
 Generate a new migration file, use `generate` command is aliased with `g`:

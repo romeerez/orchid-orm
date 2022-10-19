@@ -1,5 +1,5 @@
 import { AdapterOptions, MaybeArray } from 'pqb';
-import { createDb, dropDb } from './commands/createOrDrop';
+import { createDb, dropDb, resetDb } from './commands/createOrDrop';
 import { migrate, rollback } from './commands/migrateOrRollback';
 import { getMigrationConfigWithDefaults, MigrationConfig } from './common';
 import { generate } from './commands/generate';
@@ -17,6 +17,8 @@ export const rakeDb = async (
     await createDb(options, config);
   } else if (command === 'drop') {
     await dropDb(options);
+  } else if (command === 'reset') {
+    await resetDb(options, config)
   } else if (command === 'migrate') {
     await migrate(options, config, args.slice(1));
   } else if (command === 'rollback') {
@@ -33,9 +35,10 @@ const printHelp = () =>
     `Usage: rake-db [command] [arguments]
 
 Commands:
-  create                  creates databases
-  drop                    drops databases
-  g, generate             generates migration file, see below
+  create                  create databases
+  drop                    drop databases
+  reset                   drop, create and migrate databases
+  g, generate             generate migration file, see below
   migrate                 migrate all pending migrations
   rollback                rollback the last migrated
   no or unknown command   prints this message

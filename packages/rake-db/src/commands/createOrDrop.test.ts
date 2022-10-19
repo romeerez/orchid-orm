@@ -1,10 +1,11 @@
-import { createDb, dropDb } from './createOrDrop';
+import { createDb, dropDb, resetDb } from './createOrDrop';
 import { Adapter } from 'pqb';
 import {
   createSchemaMigrations,
   migrationConfigDefaults,
   setAdminCredentialsToOptions,
 } from '../common';
+import { migrate } from './migrateOrRollback';
 
 jest.mock('../common', () => ({
   ...jest.requireActual('../common'),
@@ -15,6 +16,10 @@ jest.mock('../common', () => ({
   })),
   createSchemaMigrations: jest.fn(),
 }));
+
+jest.mock('./migrateOrRollback', () => ({
+  migrate: jest.fn(),
+}))
 
 const options = { database: 'dbname', user: 'user', password: 'password' };
 const queryMock = jest.fn();
@@ -142,4 +147,23 @@ describe('createOrDrop', () => {
       ]);
     });
   });
+
+  describe('reset', () => {
+    it('should drop and create database', async () => {
+      queryMock.mockResolvedValue(undefined);
+
+      await resetDb(options, migrationConfigDefaults);
+
+      expect(queryMock.mock.calls).toEqual([
+        [`DROP DATABASE "dbname"`],
+        [`CREATE DATABASE "dbname" OWNER "user"`],
+      ]);
+      expect(logMock.mock.calls).toEqual([
+        [`Database dbname was successfully dropped`],
+        [`Database dbname successfully created`],
+      ]);
+      expect(createSchemaMigrations).toHaveBeenCalled();
+      expect(migrate).toBeCalled();
+    })
+  })
 });

@@ -7,6 +7,7 @@ import {
   MigrationConfig,
   migrationConfigDefaults,
 } from '../common';
+import { migrate } from './migrateOrRollback';
 
 const execute = async (
   options: AdapterOptions,
@@ -105,3 +106,9 @@ export const dropDb = async (arg: MaybeArray<AdapterOptions>) => {
     });
   }
 };
+
+export const resetDb = async (arg: MaybeArray<AdapterOptions>, config: MigrationConfig) => {
+  await dropDb(arg)
+  await createDb(arg, config)
+  await migrate(arg, config)
+}

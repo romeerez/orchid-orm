@@ -120,11 +120,11 @@ const getMigratedVersionsMap = async (
 export const migrate = (
   options: MaybeArray<AdapterOptions>,
   config: MigrationConfig,
-  args: string[],
+  args: string[] = [],
 ) => migrateOrRollback(options, config, args, true);
 
 export const rollback = (
   options: MaybeArray<AdapterOptions>,
   config: MigrationConfig,
-  args: string[],
+  args: string[] = [],
 ) => migrateOrRollback(options, config, args, false);
