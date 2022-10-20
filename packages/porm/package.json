@@ -1,11 +1,11 @@
 {
   "name": "porm",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Postgres ORM",
   "homepage": "https://porm.netlify.app/guide/orm.html",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/romeerez/porm/tree/main/packages/porm"
+    "url": "https://github.com/romeerez/porm/tree/main/packages/porm"
   },
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",

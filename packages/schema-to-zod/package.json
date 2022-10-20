@@ -1,11 +1,11 @@
 {
   "name": "porm-schema-to-zod",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "PORM columns schema to Zod converter",
   "homepage": "https://porm.netlify.app/guide/columns-schema.html#using-columns-schema-for-validation",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/romeerez/porm/tree/main/packages/schema-to-zod"
+    "url": "https://github.com/romeerez/porm/tree/main/packages/schema-to-zod"
   },
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
