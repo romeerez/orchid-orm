@@ -64,7 +64,7 @@ Different ORMs enforces different problems when there is a need to customize a q
 `Porm` queries have no such problems:
 
 ```ts
-const posts = await Post
+const posts = await db.post
   // .select autocompletes and checks for Post columns
   .select('id', 'name')
   // .join allows to specify only relation name defined in Post model

@@ -168,7 +168,7 @@ export type DbOptions<CT extends ColumnTypesBase = ColumnTypes> = (
     columnTypes?: CT;
   };
 
-export const createDb = <CT extends ColumnTypesBase>({
+export const createDb = <CT extends ColumnTypesBase = ColumnTypes>({
   log,
   logger,
   columnTypes: ct = columnTypes as unknown as CT,

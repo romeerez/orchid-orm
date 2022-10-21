@@ -6,7 +6,7 @@ import {
   userData,
   useTestDatabase,
 } from './test-utils/test-utils';
-import { columnTypes, TimestampColumn } from 'pqb';
+import { columnTypes } from 'pqb';
 
 describe('model', () => {
   useTestDatabase();
@@ -19,7 +19,7 @@ describe('model', () => {
       class UserModel extends Model {
         table = 'user';
         columns = this.setColumns((t) => ({
-          createdAt: t.timestamp() as TimestampColumn,
+          createdAt: t.timestamp(),
         }));
       }
 
@@ -45,7 +45,7 @@ describe('model', () => {
           timestamp() {
             return columnTypes.timestamp().parse((input) => new Date(input));
           },
-        },
+        }
       });
 
       class UserModel extends Model {
