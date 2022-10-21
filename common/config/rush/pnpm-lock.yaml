@@ -19,6 +19,9 @@ importers:
       porm-schema-to-zod: workspace:*
       pqb: workspace:*
       rimraf: ^3.0.2
+      rollup: ^2.79.0
+      rollup-plugin-dts: ^4.2.2
+      rollup-plugin-esbuild: ^4.10.1
       tslib: ^2.4.0
       typescript: ^4.7.4
       zod: '> 3.1'
@@ -37,6 +40,9 @@ importers:
       pg-transactional-tests: 1.0.3_pg@8.7.3
       porm-schema-to-zod: link:../schema-to-zod
       rimraf: 3.0.2
+      rollup: 2.79.0
+      rollup-plugin-dts: 4.2.2_xdb5ss5ub2cemhlks3szmapm6q
+      rollup-plugin-esbuild: 4.10.1_rollup@2.79.0
       tslib: 2.4.0
       typescript: 4.7.4
 

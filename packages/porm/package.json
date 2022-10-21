@@ -1,6 +1,6 @@
 {
   "name": "porm",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Postgres ORM",
   "homepage": "https://porm.netlify.app/guide/orm.html",
   "repository": {
@@ -11,7 +11,7 @@
   "typings": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
-    "build": "rimraf ./dist/ && tsc --project tsconfig.build.json",
+    "build": "rimraf ./dist/ && rollup -c --rollup.config",
     "prepublishOnly": "pnpm build"
   },
   "jest": {
@@ -34,6 +34,9 @@
     "zod": "> 3.1"
   },
   "devDependencies": {
+    "rollup": "^2.79.0",
+    "rollup-plugin-dts": "^4.2.2",
+    "rollup-plugin-esbuild": "^4.10.1",
     "porm-schema-to-zod": "workspace:*",
     "@swc/core": "^1.2.210",
     "@swc/jest": "^0.2.21",

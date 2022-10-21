@@ -8,6 +8,8 @@ import {
   Query,
   QueryBase,
   Relation,
+  WhereArg,
+  WhereResult,
 } from 'pqb';
 import { Model } from '../model';
 import {
@@ -16,7 +18,6 @@ import {
   RelationThunkBase,
   RelationThunks,
 } from './relations';
-import { WhereArg, WhereResult } from 'pqb/src/queryMethods/where';
 
 export interface HasOne extends RelationThunkBase {
   type: 'hasOne';

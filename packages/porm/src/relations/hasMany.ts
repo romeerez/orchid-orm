@@ -16,8 +16,9 @@ import {
   Query,
   QueryBase,
   Relation,
+  WhereArg,
+  WhereResult,
 } from 'pqb';
-import { WhereArg, WhereResult } from 'pqb/src/queryMethods/where';
 
 export interface HasMany extends RelationThunkBase {
   type: 'hasMany';

@@ -1,24 +1,28 @@
 import { ColumnData, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
-import { scalarTypes } from './json/scalarTypes';
-import { array } from './json/array';
-import { discriminatedUnion } from './json/discriminatedUnion';
-import { enumType } from './json/enum';
-import { instanceOf } from './json/instanceOf';
-import { intersection } from './json/intersection';
-import { lazy } from './json/lazy';
-import { literal } from './json/literal';
-import { map } from './json/map';
-import { nativeEnum } from './json/nativeEnum';
-import { nullable } from './json/nullable';
-import { nullish } from './json/nullish';
-import { object } from './json/object';
-import { optional } from './json/optional';
-import { record } from './json/record';
-import { set } from './json/set';
-import { tuple } from './json/tuple';
-import { union } from './json/union';
-import { JSONTypeAny } from './json/typeBase';
+import {
+  scalarTypes,
+  array,
+  discriminatedUnion,
+  enumType,
+  instanceOf,
+  intersection,
+  lazy,
+  literal,
+  map,
+  nativeEnum,
+  nullable,
+  nullish,
+  object,
+  optional,
+  record,
+  set,
+  tuple,
+  union,
+  JSONTypeAny,
+} from './json/index';
+
+export * from './json/index';
 
 export type JSONTypes = typeof jsonTypes;
 export const jsonTypes = {

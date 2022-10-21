@@ -7,9 +7,10 @@ import {
   NestedInsertOneItem,
   Query,
   QueryBase,
+  WhereArg,
+  WhereResult,
 } from 'pqb';
 import { RelationData, RelationThunkBase } from './relations';
-import { WhereArg, WhereResult } from 'pqb/src/queryMethods/where';
 
 export interface BelongsTo extends RelationThunkBase {
   type: 'belongsTo';

@@ -8,8 +8,9 @@ import {
   MaybeArray,
   Query,
   QueryBase,
+  WhereArg,
+  WhereResult,
 } from 'pqb';
-import { WhereArg, WhereResult } from 'pqb/src/queryMethods/where';
 
 export interface HasAndBelongsToMany extends RelationThunkBase {
   type: 'hasAndBelongsToMany';
