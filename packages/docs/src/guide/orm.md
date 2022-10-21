@@ -35,7 +35,7 @@ export const db = porm({
   // in the format: postgres://user:password@localhost:5432/dbname
   connectionString: process.env.DATABASE_URL,
   log: true, // option for logging, false by default
-})({
+}, {
   user: UserModel,
   message: MessageModel,
 })
@@ -88,7 +88,7 @@ After defining model place it to main `db` file as in [setup](#setup) step:
 ```ts
 import { UserModel } from './models/user'
 
-export const db = porm(Adapter(options))({
+export const db = porm(Adapter(options), {
   user: UserModel,
 })
 ```
