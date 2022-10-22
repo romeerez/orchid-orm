@@ -51,11 +51,13 @@ describe('belongsTo', () => {
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.profile.relations.user.joinQuery.toSql(),
+        db.profile.relations.user
+          .joinQuery(db.profile.as('p'), db.user.as('u'))
+          .toSql(),
         `
-        SELECT * FROM "user"
-        WHERE "user"."id" = "profile"."userId"
-      `,
+          SELECT * FROM "user" AS "u"
+          WHERE "u"."id" = "p"."userId"
+        `,
       );
     });
 

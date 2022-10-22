@@ -1,5 +1,6 @@
 import {
   addQueryOn,
+  getQueryAs,
   HasOneNestedInsert,
   HasOneNestedUpdate,
   HasOneRelation,
@@ -50,6 +51,7 @@ export type HasOneInfo<
 export const makeHasOneMethod = (
   model: Query,
   relation: HasOne,
+  relationName: string,
   query: Query,
 ): RelationData => {
   if (relation.options.required) {
@@ -68,8 +70,11 @@ export const makeHasOneMethod = (
 
     const throughRelation = getThroughRelation(model, through);
     const sourceRelation = getSourceRelation(throughRelation, source);
+    const sourceQuery = sourceRelation
+      .joinQuery(throughRelation.query, sourceRelation.query)
+      .as(relationName);
 
-    const whereExistsCallback = () => sourceRelation.joinQuery;
+    const whereExistsCallback = () => sourceQuery;
 
     return {
       returns: 'one',
@@ -85,10 +90,20 @@ export const makeHasOneMethod = (
       },
       nestedInsert: undefined,
       nestedUpdate: undefined,
-      joinQuery: query.whereExists<Query, Query>(
-        throughRelation.joinQuery,
-        whereExistsCallback as unknown as JoinCallback<Query, Query>,
-      ),
+      joinQuery(fromQuery, toQuery) {
+        return toQuery
+          .whereExists<Query, Query>(
+            throughRelation.joinQuery(fromQuery, throughRelation.query),
+            (() => {
+              const as = getQueryAs(toQuery);
+              return sourceRelation.joinQuery(
+                throughRelation.query,
+                sourceRelation.query.as(as),
+              );
+            }) as unknown as JoinCallback<Query, Query>,
+          )
+          .take();
+      },
       primaryKey: sourceRelation.primaryKey,
     };
   }
@@ -207,7 +222,15 @@ export const makeHasOneMethod = (
         }
       }
     }) as HasOneNestedUpdate,
-    joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),
+    joinQuery(fromQuery, toQuery) {
+      return addQueryOn(
+        toQuery.take(),
+        toQuery,
+        fromQuery,
+        foreignKey,
+        primaryKey,
+      );
+    },
     primaryKey,
   };
 };

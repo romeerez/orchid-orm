@@ -15,10 +15,7 @@ const aggregateOptionNames: (keyof AggregateItemOptions)[] = [
 
 export const pushHavingSql = (
   sql: string[],
-  model: Pick<
-    Query,
-    'whereQueryBuilder' | 'onQueryBuilder' | 'as' | 'shape' | 'relations'
-  >,
+  model: Query,
   query: SelectQueryData,
   values: unknown[],
   quotedAs?: string,
@@ -28,10 +25,7 @@ export const pushHavingSql = (
 };
 
 export const havingToSql = (
-  model: Pick<
-    Query,
-    'whereQueryBuilder' | 'onQueryBuilder' | 'as' | 'shape' | 'relations'
-  >,
+  model: Query,
   query: SelectQueryData,
   values: unknown[],
   quotedAs?: string,

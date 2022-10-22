@@ -1546,7 +1546,11 @@ export const testJoin = (
   describe('relation', () => {
     const withRelation = q as Query & {
       relations: {
-        message: { key: 'message'; query: typeof Message; joinQuery: Query };
+        message: {
+          key: 'message';
+          query: typeof Message;
+          joinQuery(fromQuery: Query, toQuery: Query): Query;
+        };
       };
     };
 
@@ -1554,7 +1558,15 @@ export const testJoin = (
       message: {
         key: 'message',
         query: Message,
-        joinQuery: pushQueryOn(Message.clone(), Message, q, 'authorId', 'id'),
+        joinQuery(fromQuery, toQuery) {
+          return pushQueryOn(
+            toQuery.clone(),
+            toQuery,
+            fromQuery,
+            'authorId',
+            'id',
+          );
+        },
       },
     };
 

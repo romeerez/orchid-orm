@@ -28,7 +28,6 @@ export type BelongsToInfo<
 };
 
 export const makeBelongsToMethod = (
-  model: Query,
   relation: BelongsTo,
   query: Query,
 ): RelationData => {
@@ -222,7 +221,9 @@ export const makeBelongsToMethod = (
 
       return !params.update && !params.upsert;
     }) as BelongsToNestedUpdate,
-    joinQuery: addQueryOn(query, query, model, primaryKey, foreignKey),
+    joinQuery(fromQuery, toQuery) {
+      return addQueryOn(toQuery, toQuery, fromQuery, primaryKey, foreignKey);
+    },
     primaryKey,
   };
 };

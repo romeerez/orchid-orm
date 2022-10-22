@@ -6,6 +6,7 @@ import {
   WhereItem,
   WhereJsonPathEqualsItem,
   WhereOnItem,
+  WhereOnJoinItem,
 } from './types';
 import { addValue, q, qc, quoteFullColumn } from './common';
 import { EMPTY_OBJECT, getRaw, isRaw, RawExpression } from '../common';
@@ -14,10 +15,7 @@ import { processJoinItem } from './join';
 
 export const pushWhereSql = (
   sql: string[],
-  model: Pick<
-    Query,
-    'whereQueryBuilder' | 'onQueryBuilder' | 'as' | 'shape' | 'relations'
-  >,
+  model: Query,
   query: Pick<QueryData, 'as' | 'and' | 'or'>,
   values: unknown[],
   quotedAs?: string,
@@ -36,10 +34,7 @@ export const pushWhereSql = (
 };
 
 export const whereToSql = (
-  model: Pick<
-    Query,
-    'whereQueryBuilder' | 'onQueryBuilder' | 'table' | 'shape' | 'relations'
-  >,
+  model: Query,
   query: Pick<QueryData, 'as' | 'and' | 'or'>,
   values: unknown[],
   quotedAs?: string,
@@ -234,15 +229,10 @@ const whereHandlers: Record<
       const item = value as WhereOnItem;
       const leftColumn = quoteFullColumn(
         item.on[0],
-        typeof item.joinTo === 'string'
-          ? q(item.joinTo)
-          : q(getQueryAs(item.joinTo)),
+        getJoinItemSource(item.joinTo),
       );
 
-      const joinTo =
-        typeof item.joinFrom === 'string'
-          ? item.joinFrom
-          : q(getQueryAs(item.joinFrom));
+      const joinTo = getJoinItemSource(item.joinFrom);
 
       const [op, rightColumn] =
         item.on.length === 2
@@ -273,6 +263,10 @@ const whereHandlers: Record<
       );
     });
   },
+};
+
+const getJoinItemSource = (joinItem: WhereOnJoinItem) => {
+  return typeof joinItem === 'string' ? q(joinItem) : q(getQueryAs(joinItem));
 };
 
 const pushIn = (

@@ -52,7 +52,6 @@ export const makeHasAndBelongsToManyMethod = (
     joinTable,
   } = relation.options;
 
-  const primaryKeyFull = `${getQueryAs(model)}.${pk}`;
   const foreignKeyFull = `${joinTable}.${fk}`;
   const associationForeignKeyFull = `${joinTable}.${afk}`;
   const associationPrimaryKeyFull = `${getQueryAs(query)}.${apk}`;
@@ -277,11 +276,13 @@ export const makeHasAndBelongsToManyMethod = (
         await insertToJoinTable(state, j, data, ids);
       }
     }) as HasManyNestedUpdate,
-    joinQuery: query.whereExists(subQuery, (q) =>
-      q
-        ._on(associationForeignKeyFull, associationPrimaryKeyFull)
-        ._on(foreignKeyFull, primaryKeyFull),
-    ),
+    joinQuery(fromQuery, toQuery) {
+      return toQuery.whereExists(subQuery, (q) =>
+        q
+          ._on(associationForeignKeyFull, apk)
+          ._on(foreignKeyFull, `${getQueryAs(fromQuery)}.${pk}`),
+      );
+    },
     primaryKey: pk,
   };
 };

@@ -94,6 +94,21 @@ export class ChatModel extends Model {
     createdAt: t.timestamp(),
     updatedAt: t.timestamp(),
   }));
+
+  relations = {
+    users: this.hasAndBelongsToMany(() => UserModel, {
+      primaryKey: 'id',
+      foreignKey: 'chatId',
+      associationPrimaryKey: 'id',
+      associationForeignKey: 'userId',
+      joinTable: 'chatUser',
+    }),
+
+    profiles: this.hasMany(() => ProfileModel, {
+      through: 'users',
+      source: 'profile',
+    }),
+  };
 }
 export const ChatSchema = modelToZod(ChatModel);
 

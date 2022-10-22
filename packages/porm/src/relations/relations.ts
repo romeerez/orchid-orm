@@ -37,7 +37,7 @@ export type RelationData = {
   method(params: Record<string, unknown>): Query;
   nestedInsert: BaseRelation['nestedInsert'];
   nestedUpdate: BaseRelation['nestedUpdate'];
-  joinQuery: Query;
+  joinQuery(fromQuery: Query, toQuery: Query): Query;
   primaryKey: string;
 };
 
@@ -53,7 +53,7 @@ export type Relation<
   key: K;
   model: M;
   query: M;
-  joinQuery: Query;
+  joinQuery(fromQuery: Query, toQuery: Query): Query;
   defaults: Info['populate'];
   nestedCreateQuery: [Info['populate']] extends [never]
     ? M
@@ -232,11 +232,11 @@ const applyRelation = (
   const { type } = relation;
   let data;
   if (type === 'belongsTo') {
-    data = makeBelongsToMethod(dbModel, relation, query);
+    data = makeBelongsToMethod(relation, query);
   } else if (type === 'hasOne') {
-    data = makeHasOneMethod(dbModel, relation, query);
+    data = makeHasOneMethod(dbModel, relation, relationName, query);
   } else if (type === 'hasMany') {
-    data = makeHasManyMethod(dbModel, relation, query);
+    data = makeHasManyMethod(dbModel, relation, relationName, query);
   } else if (type === 'hasAndBelongsToMany') {
     data = makeHasAndBelongsToManyMethod(dbModel, qb, relation, query);
   } else {
@@ -244,7 +244,7 @@ const applyRelation = (
   }
 
   (dbModel as unknown as Record<string, unknown>)[relationName] =
-    makeRelationQuery(relationName, data);
+    makeRelationQuery(dbModel, query, relationName, data);
 
   (dbModel.relations as Record<string, unknown>)[relationName] = {
     type,
@@ -267,10 +267,14 @@ const applyRelation = (
 };
 
 const makeRelationQuery = (
+  fromModel: Query,
+  toModel: Query,
   relationName: string,
   data: RelationData,
 ): RelationQuery => {
-  const query = data.returns === 'one' ? data.joinQuery.take() : data.joinQuery;
+  const joinQuery = data.joinQuery(fromModel, toModel);
+
+  const query = data.returns === 'one' ? joinQuery.take() : joinQuery;
   query.query[relationQueryKey] = relationName;
 
   return new Proxy(data.method, {

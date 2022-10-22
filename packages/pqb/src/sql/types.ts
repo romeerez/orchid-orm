@@ -277,12 +277,16 @@ export type WhereJsonPathEqualsItem = [
 ];
 
 export type WhereOnItem = {
-  joinFrom: { table?: string; query: { as?: string } } | string;
-  joinTo: { table?: string; query: { as?: string } } | string;
+  joinFrom: WhereOnJoinItem;
+  joinTo: WhereOnJoinItem;
   on:
     | [leftFullColumn: string, rightFullColumn: string]
     | [leftFullColumn: string, op: string, rightFullColumn: string];
 };
+
+export type WhereOnJoinItem =
+  | { table?: string; query: { as?: string } }
+  | string;
 
 export type AggregateItemOptions = {
   as?: string;

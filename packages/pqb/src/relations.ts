@@ -92,7 +92,7 @@ export type BaseRelation = {
   key: string;
   model: QueryWithTable;
   query: QueryWithTable;
-  joinQuery: Query;
+  joinQuery(fromQuery: Query, toQuery: Query): Query;
   nestedCreateQuery: Query;
   nestedInsert?:
     | BelongsToNestedInsert

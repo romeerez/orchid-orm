@@ -7,6 +7,7 @@ import {
 import { Model } from '../model';
 import {
   addQueryOn,
+  getQueryAs,
   HasManyNestedInsert,
   HasManyNestedUpdate,
   HasManyRelation,
@@ -51,6 +52,7 @@ export type HasManyInfo<
 export const makeHasManyMethod = (
   model: Query,
   relation: HasMany,
+  relationName: string,
   query: Query,
 ): RelationData => {
   if ('through' in relation.options) {
@@ -63,8 +65,11 @@ export const makeHasManyMethod = (
 
     const throughRelation = getThroughRelation(model, through);
     const sourceRelation = getSourceRelation(throughRelation, source);
+    const sourceQuery = sourceRelation
+      .joinQuery(throughRelation.query, sourceRelation.query)
+      .as(relationName);
 
-    const whereExistsCallback = () => sourceRelation.joinQuery;
+    const whereExistsCallback = () => sourceQuery;
 
     return {
       returns: 'many',
@@ -80,10 +85,14 @@ export const makeHasManyMethod = (
       },
       nestedInsert: undefined,
       nestedUpdate: undefined,
-      joinQuery: query.whereExists<Query, Query>(
-        throughRelation.joinQuery,
-        whereExistsCallback as unknown as JoinCallback<Query, Query>,
-      ),
+      joinQuery(fromQuery, toQuery) {
+        return toQuery.whereExists<Query, Query>(
+          throughRelation.joinQuery(fromQuery, throughRelation.query),
+          (() => {
+            return sourceQuery.as(getQueryAs(toQuery));
+          }) as unknown as JoinCallback<Query, Query>,
+        );
+      },
       primaryKey: sourceRelation.primaryKey,
     };
   }
@@ -252,7 +261,9 @@ export const makeHasManyMethod = (
         }
       }
     }) as HasManyNestedUpdate,
-    joinQuery: addQueryOn(query, query, model, foreignKey, primaryKey),
+    joinQuery(fromQuery, toQuery) {
+      return addQueryOn(toQuery, toQuery, fromQuery, foreignKey, primaryKey);
+    },
     primaryKey,
   };
 };

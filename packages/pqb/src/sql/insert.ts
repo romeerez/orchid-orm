@@ -8,10 +8,7 @@ import { selectToSql } from './select';
 export const pushInsertSql = (
   sql: string[],
   values: unknown[],
-  model: Pick<
-    Query,
-    'whereQueryBuilder' | 'onQueryBuilder' | 'as' | 'shape' | 'relations'
-  >,
+  model: Query,
   query: InsertQueryData,
   quotedAs: string,
 ) => {
@@ -88,10 +85,7 @@ export const pushInsertSql = (
 
 export const pushReturningSql = (
   sql: string[],
-  model: Pick<
-    Query,
-    'whereQueryBuilder' | 'onQueryBuilder' | 'as' | 'shape' | 'relations'
-  >,
+  model: Query,
   query: QueryData,
   values: unknown[],
   quotedAs: string,

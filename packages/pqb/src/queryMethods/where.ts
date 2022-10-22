@@ -440,6 +440,9 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
   constructor(public table: Q['table'], public tableAlias: Q['tableAlias']) {
     super();
     this.__model = this as unknown as Query;
+    if (tableAlias) {
+      this.query.as = tableAlias;
+    }
   }
 
   clone<T extends this>(this: T): T {

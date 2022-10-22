@@ -85,10 +85,12 @@ describe('hasOne', () => {
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.user.relations.profile.joinQuery.toSql(),
+        db.user.relations.profile
+          .joinQuery(db.user.as('u'), db.profile.as('p'))
+          .toSql(),
         `
-          SELECT * FROM "profile"
-          WHERE "profile"."userId" = "user"."id"
+          SELECT * FROM "profile" AS "p"
+          WHERE "p"."userId" = "u"."id"
           LIMIT $1
         `,
         [1],
@@ -866,13 +868,15 @@ describe('hasOne through', () => {
 
   it('should have proper joinQuery', () => {
     expectSql(
-      db.message.relations.profile.joinQuery.toSql(),
+      db.message.relations.profile
+        .joinQuery(db.message.as('m'), db.profile.as('p'))
+        .toSql(),
       `
-        SELECT * FROM "profile"
+        SELECT * FROM "profile" AS "p"
         WHERE EXISTS (
           SELECT 1 FROM "user"
-          WHERE "profile"."userId" = "user"."id"
-            AND "user"."id" = "message"."authorId"
+          WHERE "p"."userId" = "user"."id"
+            AND "user"."id" = "m"."authorId"
           LIMIT 1
         )
         LIMIT $1

@@ -55,16 +55,18 @@ describe('hasAndBelongsToMany', () => {
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.user.relations.chats.joinQuery.toSql(),
+        db.user.relations.chats
+          .joinQuery(db.user.as('u'), db.chat.as('c'))
+          .toSql(),
         `
-        SELECT * FROM "chat" AS "chats"
-        WHERE EXISTS (
-          SELECT 1 FROM "chatUser"
-          WHERE "chatUser"."chatId" = "chats"."id"
-            AND "chatUser"."userId" = "user"."id"
-          LIMIT 1
-        )
-      `,
+          SELECT * FROM "chat" AS "c"
+          WHERE EXISTS (
+            SELECT 1 FROM "chatUser"
+            WHERE "chatUser"."chatId" = "c"."id"
+              AND "chatUser"."userId" = "u"."id"
+            LIMIT 1
+          )
+        `,
       );
     });
 
@@ -72,18 +74,18 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         db.user.whereExists('chats').toSql(),
         `
-        SELECT * FROM "user"
-        WHERE EXISTS (
-          SELECT 1 FROM "chat" AS "chats"
+          SELECT * FROM "user"
           WHERE EXISTS (
-            SELECT 1 FROM "chatUser"
-            WHERE "chatUser"."chatId" = "chats"."id"
-              AND "chatUser"."userId" = "user"."id"
+            SELECT 1 FROM "chat" AS "chats"
+            WHERE EXISTS (
+              SELECT 1 FROM "chatUser"
+              WHERE "chatUser"."chatId" = "chats"."id"
+                AND "chatUser"."userId" = "user"."id"
+              LIMIT 1
+            )
             LIMIT 1
           )
-          LIMIT 1
-        )
-      `,
+        `,
       );
 
       expectSql(

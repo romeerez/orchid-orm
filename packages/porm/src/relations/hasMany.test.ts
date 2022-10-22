@@ -78,10 +78,12 @@ describe('hasMany', () => {
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.user.relations.messages.joinQuery.toSql(),
+        db.user.relations.messages
+          .joinQuery(db.user.as('u'), db.message.as('m'))
+          .toSql(),
         `
-        SELECT * FROM "message" AS "messages"
-        WHERE "messages"."authorId" = "user"."id"
+        SELECT * FROM "message" AS "m"
+        WHERE "m"."authorId" = "u"."id"
       `,
       );
     });
@@ -994,26 +996,27 @@ describe('hasMany through', () => {
     expect(Object.keys(db.tag.relations)).toEqual(['postTags', 'posts']);
   });
 
-  it('should have method to query related data', async () => {
-    const chatsQuery = db.chat.all();
+  describe('through hasMany', () => {
+    it('should have method to query related data', async () => {
+      const chatsQuery = db.chat.all();
 
-    const eq: AssertEqual<
-      typeof db.profile.chats,
-      RelationQuery<
-        'chats',
-        { userId: number | null },
-        never,
-        typeof chatsQuery,
-        false
-      >
-    > = true;
+      const eq: AssertEqual<
+        typeof db.profile.chats,
+        RelationQuery<
+          'chats',
+          { userId: number | null },
+          never,
+          typeof chatsQuery,
+          false
+        >
+      > = true;
 
-    expect(eq).toBe(true);
+      expect(eq).toBe(true);
 
-    const query = db.profile.chats({ userId: 1 });
-    expectSql(
-      query.toSql(),
-      `
+      const query = db.profile.chats({ userId: 1 });
+      expectSql(
+        query.toSql(),
+        `
         SELECT * FROM "chat" AS "chats"
         WHERE EXISTS (
           SELECT 1 FROM "user"
@@ -1027,34 +1030,36 @@ describe('hasMany through', () => {
           LIMIT 1
         )
       `,
-      [1],
-    );
-  });
+        [1],
+      );
+    });
 
-  it('should have proper joinQuery', () => {
-    expectSql(
-      db.profile.relations.chats.joinQuery.toSql(),
-      `
-        SELECT * FROM "chat" AS "chats"
-        WHERE EXISTS (
-          SELECT 1 FROM "user"
+    it('should have proper joinQuery', () => {
+      expectSql(
+        db.profile.relations.chats
+          .joinQuery(db.profile.as('p'), db.chat.as('c'))
+          .toSql(),
+        `
+          SELECT * FROM "chat" AS "c"
           WHERE EXISTS (
-            SELECT 1 FROM "chatUser"
-            WHERE "chatUser"."chatId" = "chats"."id"
-              AND "chatUser"."userId" = "user"."id"
+            SELECT 1 FROM "user"
+            WHERE EXISTS (
+              SELECT 1 FROM "chatUser"
+              WHERE "chatUser"."chatId" = "c"."id"
+                AND "chatUser"."userId" = "user"."id"
+              LIMIT 1
+            )
+            AND "user"."id" = "p"."userId"
             LIMIT 1
           )
-          AND "user"."id" = "profile"."userId"
-          LIMIT 1
-        )
-      `,
-    );
-  });
+        `,
+      );
+    });
 
-  it('should be supported in whereExists', () => {
-    expectSql(
-      db.profile.whereExists('chats').toSql(),
-      `
+    it('should be supported in whereExists', () => {
+      expectSql(
+        db.profile.whereExists('chats').toSql(),
+        `
         SELECT * FROM "profile"
         WHERE EXISTS (
           SELECT 1 FROM "chat" AS "chats"
@@ -1072,13 +1077,13 @@ describe('hasMany through', () => {
           LIMIT 1
         )
       `,
-    );
+      );
 
-    expectSql(
-      db.profile
-        .whereExists('chats', (q) => q.where({ 'profile.bio': 'bio' }))
-        .toSql(),
-      `
+      expectSql(
+        db.profile
+          .whereExists('chats', (q) => q.where({ 'profile.bio': 'bio' }))
+          .toSql(),
+        `
         SELECT * FROM "profile"
         WHERE EXISTS (
           SELECT 1 FROM "chat" AS "chats"
@@ -1097,24 +1102,24 @@ describe('hasMany through', () => {
           LIMIT 1
         )
       `,
-      ['bio'],
-    );
-  });
+        ['bio'],
+      );
+    });
 
-  it('should be supported in join', () => {
-    const query = db.profile
-      .join('chats', (q) => q.where({ 'profile.bio': 'bio' }))
-      .select('bio', 'chats.title');
+    it('should be supported in join', () => {
+      const query = db.profile
+        .join('chats', (q) => q.where({ 'profile.bio': 'bio' }))
+        .select('bio', 'chats.title');
 
-    const eq: AssertEqual<
-      Awaited<typeof query>,
-      { bio: string | null; title: string }[]
-    > = true;
-    expect(eq).toBe(true);
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { bio: string | null; title: string }[]
+      > = true;
+      expect(eq).toBe(true);
 
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         SELECT "profile"."bio", "chats"."title" FROM "profile"
         JOIN "chat" AS "chats"
           ON EXISTS (
@@ -1130,26 +1135,26 @@ describe('hasMany through', () => {
           )
           AND "profile"."bio" = $1
       `,
-      ['bio'],
-    );
-  });
-
-  describe('select', () => {
-    it('should be selectable', () => {
-      const query = db.profile.select(
-        'id',
-        db.profile.chats.where({ title: 'title' }),
+        ['bio'],
       );
+    });
 
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        { id: number; chats: Chat[] }[]
-      > = true;
-      expect(eq).toBe(true);
+    describe('select', () => {
+      it('should be selectable', () => {
+        const query = db.profile.select(
+          'id',
+          db.profile.chats.where({ title: 'title' }),
+        );
 
-      expectSql(
-        query.toSql(),
-        `
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; chats: Chat[] }[]
+        > = true;
+        expect(eq).toBe(true);
+
+        expectSql(
+          query.toSql(),
+          `
           SELECT
             "profile"."id",
             (
@@ -1173,22 +1178,22 @@ describe('hasMany through', () => {
             ) AS "chats"
           FROM "profile"
         `,
-        ['title'],
-      );
-    });
+          ['title'],
+        );
+      });
 
-    it('should be selectable by relation name', () => {
-      const query = db.profile.select('id', 'chats');
+      it('should be selectable by relation name', () => {
+        const query = db.profile.select('id', 'chats');
 
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        { id: number; chats: Chat[] }[]
-      > = true;
-      expect(eq).toBe(true);
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; chats: Chat[] }[]
+        > = true;
+        expect(eq).toBe(true);
 
-      expectSql(
-        query.toSql(),
-        `
+        expectSql(
+          query.toSql(),
+          `
           SELECT
             "profile"."id",
             (
@@ -1211,23 +1216,23 @@ describe('hasMany through', () => {
             ) AS "chats"
           FROM "profile"
         `,
-        [],
-      );
+          [],
+        );
+      });
     });
-  });
 
-  it('should allow to select count', () => {
-    const query = db.profile.select('id', db.profile.chats.count());
+    it('should allow to select count', () => {
+      const query = db.profile.select('id', db.profile.chats.count());
 
-    const eq: AssertEqual<
-      Awaited<typeof query>,
-      { id: number; chats: number }[]
-    > = true;
-    expect(eq).toBe(true);
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; chats: number }[]
+      > = true;
+      expect(eq).toBe(true);
 
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         SELECT
           "profile"."id",
           (
@@ -1247,24 +1252,24 @@ describe('hasMany through', () => {
           ) AS "chats"
         FROM "profile"
       `,
-    );
-  });
+      );
+    });
 
-  it('should allow to select count with alias', () => {
-    const query = db.profile.select(
-      'id',
-      db.profile.chats.count().as('chatsCount'),
-    );
+    it('should allow to select count with alias', () => {
+      const query = db.profile.select(
+        'id',
+        db.profile.chats.count().as('chatsCount'),
+      );
 
-    const eq: AssertEqual<
-      Awaited<typeof query>,
-      { id: number; chatsCount: number }[]
-    > = true;
-    expect(eq).toBe(true);
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; chatsCount: number }[]
+      > = true;
+      expect(eq).toBe(true);
 
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         SELECT
           "profile"."id",
           (
@@ -1284,6 +1289,66 @@ describe('hasMany through', () => {
           ) AS "chatsCount"
         FROM "profile"
       `,
-    );
+      );
+    });
   });
+
+  // describe('through hasOne', () => {
+  //   it('should have method to query related data', () => {
+  //     const profilesQuery = db.profile.all();
+  //
+  //     const eq: AssertEqual<
+  //       typeof db.chat.profiles,
+  //       RelationQuery<
+  //         'profiles',
+  //         { id: number },
+  //         never,
+  //         typeof profilesQuery,
+  //         false
+  //       >
+  //     > = true;
+  //
+  //     expect(eq).toBe(true);
+  //
+  //     const query = db.chat.profiles({ id: 1 });
+  //     expectSql(
+  //       query.toSql(),
+  //       `
+  //         SELECT * FROM "profile" AS "profiles"
+  //         WHERE EXISTS (
+  //           SELECT 1 FROM "user" AS "users"
+  //           WHERE "profiles"."userId" = "users"."id"
+  //           AND EXISTS (
+  //             SELECT 1 FROM "chatUser"
+  //             WHERE "chatUser"."userId" = "users"."id"
+  //               AND "chatUser"."chatId" = $1
+  //           )
+  //         )
+  //       `,
+  //     );
+  //   });
+  //
+  //   it.only('should have proper joinQuery', () => {
+  //     // console.log(db.chat.relations.users.joinQuery.toSql());
+  //     // console.log(db.user.relations.profile.joinQuery.toSql());
+  //
+  //     expectSql(
+  //       db.chat.relations.profiles.joinQuery.toSql(),
+  //       `
+  //         SELECT * FROM "profile" AS "profiles"
+  //         WHERE EXISTS (
+  //           SELECT 1 FROM "user" AS "users"
+  //           WHERE "profiles"."userId" = "users"."id"
+  //             AND EXISTS (
+  //               SELECT 1 FROM "chatUser"
+  //               WHERE "chatUser"."userId" = "users"."id"
+  //                 AND "chatUser"."chatId" = "chat"."id"
+  //               LIMIT 1
+  //             )
+  //           LIMIT 1
+  //         )
+  //       `,
+  //     );
+  //   });
+  // });
 });

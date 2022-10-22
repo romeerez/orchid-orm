@@ -19,10 +19,7 @@ type ItemOf3Or4Length =
     ];
 
 export const processJoinItem = (
-  model: Pick<
-    Query,
-    'whereQueryBuilder' | 'onQueryBuilder' | 'table' | 'shape' | 'relations'
-  >,
+  model: Query,
   query: Pick<QueryData, 'as'>,
   values: unknown[],
   args: JoinItem['args'],
@@ -31,33 +28,40 @@ export const processJoinItem = (
   const [first] = args;
   if (typeof first === 'string') {
     if (first in model.relations) {
-      const { key, joinQuery } = (model.relations as Record<string, Relation>)[
-        first
-      ];
+      const {
+        key,
+        query: toQuery,
+        joinQuery,
+      } = (model.relations as Record<string, Relation>)[first];
+
+      const joinedQuery = joinQuery(model, toQuery);
+      const joinedQueryData = joinedQuery.query;
 
       const table = (
-        typeof joinQuery.query.from === 'string'
-          ? joinQuery.query.from
-          : joinQuery.table
+        typeof joinedQueryData.from === 'string'
+          ? joinedQueryData.from
+          : joinedQuery.table
       ) as string;
 
-      let target = quoteSchemaAndTable(joinQuery.query.schema, table);
+      let target = quoteSchemaAndTable(joinedQueryData.schema, table);
 
-      const as = joinQuery.query.as || key;
+      const as = joinedQueryData.as || key;
       if (as !== table) {
         target += ` AS ${q(as as string)}`;
       }
 
       const queryData = {
+        as: joinedQuery.query.as,
         and: [],
         or: [],
       } as {
+        as?: string;
         and: Exclude<QueryData['and'], undefined>;
         or: Exclude<QueryData['or'], undefined>;
       };
 
-      if (joinQuery.query.and) queryData.and.push(...joinQuery.query.and);
-      if (joinQuery.query.or) queryData.or.push(...joinQuery.query.or);
+      if (joinedQueryData.and) queryData.and.push(...joinedQueryData.and);
+      if (joinedQueryData.or) queryData.or.push(...joinedQueryData.or);
 
       const arg = (args[1] as ((q: unknown) => QueryBase) | undefined)?.(
         new model.onQueryBuilder({ table: model.table, query }, args[0]),
@@ -70,7 +74,7 @@ export const processJoinItem = (
 
       const joinAs = q(as as string);
       const onConditions = whereToSql(
-        joinQuery,
+        joinedQuery,
         queryData,
         values,
         quotedAs,
