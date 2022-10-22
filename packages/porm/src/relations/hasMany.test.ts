@@ -248,6 +248,30 @@ describe('hasMany', () => {
         `,
       );
     });
+
+    it('should allow to pluck values', () => {
+      const query = db.user.select('id', db.user.messages.pluck('text'));
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; messages: string[] }[]
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT
+            "user"."id",
+            (
+              SELECT COALESCE(json_agg("messages"."text"), '[]')
+              FROM "message" AS "messages"
+              WHERE "messages"."authorId" = "user"."id"
+            ) AS "messages"
+          FROM "user"
+        `,
+      );
+    });
   });
 
   describe('insert', () => {
@@ -1155,29 +1179,29 @@ describe('hasMany through', () => {
         expectSql(
           query.toSql(),
           `
-          SELECT
-            "profile"."id",
-            (
-              SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
-              FROM (
-                SELECT *
-                FROM "chat" AS "chats"
-                WHERE EXISTS (
-                    SELECT 1 FROM "user"
-                    WHERE EXISTS (
-                      SELECT 1 FROM "chatUser"
-                      WHERE "chatUser"."chatId" = "chats"."id"
-                        AND "chatUser"."userId" = "user"."id"
+            SELECT
+              "profile"."id",
+              (
+                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
+                FROM (
+                  SELECT *
+                  FROM "chat" AS "chats"
+                  WHERE EXISTS (
+                      SELECT 1 FROM "user"
+                      WHERE EXISTS (
+                        SELECT 1 FROM "chatUser"
+                        WHERE "chatUser"."chatId" = "chats"."id"
+                          AND "chatUser"."userId" = "user"."id"
+                        LIMIT 1
+                      )
+                      AND "user"."id" = "profile"."userId"
                       LIMIT 1
                     )
-                    AND "user"."id" = "profile"."userId"
-                    LIMIT 1
-                  )
-                  AND "chats"."title" = $1
-              ) AS "t"
-            ) AS "chats"
-          FROM "profile"
-        `,
+                    AND "chats"."title" = $1
+                ) AS "t"
+              ) AS "chats"
+            FROM "profile"
+          `,
           ['title'],
         );
       });
@@ -1194,28 +1218,28 @@ describe('hasMany through', () => {
         expectSql(
           query.toSql(),
           `
-          SELECT
-            "profile"."id",
-            (
-              SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
-              FROM (
-                SELECT *
-                FROM "chat" AS "chats"
-                WHERE EXISTS (
-                    SELECT 1 FROM "user"
-                    WHERE EXISTS (
-                      SELECT 1 FROM "chatUser"
-                      WHERE "chatUser"."chatId" = "chats"."id"
-                        AND "chatUser"."userId" = "user"."id"
+            SELECT
+              "profile"."id",
+              (
+                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
+                FROM (
+                  SELECT *
+                  FROM "chat" AS "chats"
+                  WHERE EXISTS (
+                      SELECT 1 FROM "user"
+                      WHERE EXISTS (
+                        SELECT 1 FROM "chatUser"
+                        WHERE "chatUser"."chatId" = "chats"."id"
+                          AND "chatUser"."userId" = "user"."id"
+                        LIMIT 1
+                      )
+                      AND "user"."id" = "profile"."userId"
                       LIMIT 1
                     )
-                    AND "user"."id" = "profile"."userId"
-                    LIMIT 1
-                  )
-              ) AS "t"
-            ) AS "chats"
-          FROM "profile"
-        `,
+                ) AS "t"
+              ) AS "chats"
+            FROM "profile"
+          `,
           [],
         );
       });
@@ -1233,25 +1257,25 @@ describe('hasMany through', () => {
       expectSql(
         query.toSql(),
         `
-        SELECT
-          "profile"."id",
-          (
-            SELECT count(*)
-            FROM "chat" AS "chats"
-            WHERE EXISTS (
-                SELECT 1 FROM "user"
-                WHERE EXISTS (
-                  SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."chatId" = "chats"."id"
-                    AND "chatUser"."userId" = "user"."id"
+          SELECT
+            "profile"."id",
+            (
+              SELECT count(*)
+              FROM "chat" AS "chats"
+              WHERE EXISTS (
+                  SELECT 1 FROM "user"
+                  WHERE EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."chatId" = "chats"."id"
+                      AND "chatUser"."userId" = "user"."id"
+                    LIMIT 1
+                  )
+                  AND "user"."id" = "profile"."userId"
                   LIMIT 1
                 )
-                AND "user"."id" = "profile"."userId"
-                LIMIT 1
-              )
-          ) AS "chats"
-        FROM "profile"
-      `,
+            ) AS "chats"
+          FROM "profile"
+        `,
       );
     });
 
@@ -1270,12 +1294,46 @@ describe('hasMany through', () => {
       expectSql(
         query.toSql(),
         `
-        SELECT
-          "profile"."id",
-          (
-            SELECT count(*)
-            FROM "chat" AS "chats"
-            WHERE EXISTS (
+          SELECT
+            "profile"."id",
+            (
+              SELECT count(*)
+              FROM "chat" AS "chats"
+              WHERE EXISTS (
+                  SELECT 1 FROM "user"
+                  WHERE EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."chatId" = "chats"."id"
+                      AND "chatUser"."userId" = "user"."id"
+                    LIMIT 1
+                  )
+                  AND "user"."id" = "profile"."userId"
+                  LIMIT 1
+                )
+            ) AS "chatsCount"
+          FROM "profile"
+        `,
+      );
+    });
+
+    it('should allow to pluck values', () => {
+      const query = db.profile.select('id', db.profile.chats.pluck('title'));
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; chats: string[] }[]
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT
+            "profile"."id",
+            (
+              SELECT COALESCE(json_agg("chats"."title"), '[]')
+              FROM "chat" AS "chats"
+              WHERE EXISTS (
                 SELECT 1 FROM "user"
                 WHERE EXISTS (
                   SELECT 1 FROM "chatUser"
@@ -1286,9 +1344,9 @@ describe('hasMany through', () => {
                 AND "user"."id" = "profile"."userId"
                 LIMIT 1
               )
-          ) AS "chatsCount"
-        FROM "profile"
-      `,
+            ) AS "chats"
+          FROM "profile"
+        `,
       );
     });
   });
@@ -1584,6 +1642,41 @@ describe('hasMany through', () => {
                   LIMIT 1
                 )
               ) AS "profilesCount"
+            FROM "chat"
+          `,
+          [],
+        );
+      });
+
+      it('should allow to pluck values', () => {
+        const query = db.chat.select('id', db.chat.profiles.pluck('bio'));
+
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; profiles: string | null }[]
+        > = true;
+        expect(eq).toBe(true);
+
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "chat"."id",
+              (
+                SELECT COALESCE(json_agg("profiles"."bio"), '[]')
+                FROM "profile" AS "profiles"
+                WHERE EXISTS (
+                  SELECT 1 FROM "user" AS "users"
+                  WHERE "profiles"."userId" = "users"."id"
+                    AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."userId" = "users"."id"
+                        AND "chatUser"."chatId" = "chat"."id"
+                      LIMIT 1
+                    )
+                  LIMIT 1
+                )
+              ) AS "profiles"
             FROM "chat"
           `,
           [],

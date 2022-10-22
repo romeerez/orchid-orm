@@ -38,6 +38,10 @@ export class ArrayOfColumnsObjects<
   }
 }
 
+export abstract class PluckResultColumnType<
+  C extends ColumnType,
+> extends ColumnType<C['type'][], typeof Operators.any> {}
+
 type UnionKeyofToOvlds<S, U> = UnionToIntersection<
   U extends keyof S ? (f: U) => void : never
 >;

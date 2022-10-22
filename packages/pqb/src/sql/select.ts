@@ -1,10 +1,11 @@
 import { JsonItem, SelectFunctionItem, SelectQueryData } from './types';
-import { Expression, getRaw, isRaw } from '../common';
+import { Expression, getRaw, isRaw, raw } from '../common';
 import { Query } from '../query';
 import { addValue, q, quoteFullColumn } from './common';
 import { aggregateToSql } from './aggregate';
 import { getQueryAs } from '../utils';
 import { RelationQuery, relationQueryKey } from '../relations';
+import { PormInternalError, UnhandledTypeError } from '../errors';
 
 const jsonColumnOrMethodToSql = (
   column: string | JsonItem,
@@ -93,12 +94,38 @@ export const selectToSql = (
         relationQuery._as(relationQuery.query[relationQueryKey] as string);
 
         const { returnType } = relationQuery.query;
-        if (
-          returnType === 'all' ||
-          returnType === 'one' ||
-          returnType === 'oneOrThrow'
-        ) {
-          relationQuery = relationQuery._json() as unknown as RelationQuery;
+        switch (returnType) {
+          case 'all':
+          case 'one':
+          case 'oneOrThrow':
+            relationQuery =
+              relationQuery._json() as unknown as typeof relationQuery;
+            break;
+          case 'pluck': {
+            const first = relationQuery.query.select?.[0];
+            if (!first)
+              throw new PormInternalError(`Nothing was selected for pluck`);
+
+            const selection = selectToSql(
+              relationQuery.__model,
+              relationQuery.query,
+              values,
+              q(getQueryAs(relationQuery)),
+            );
+
+            relationQuery.query.select = [
+              raw(`COALESCE(json_agg(${selection}), '[]')`),
+            ];
+            break;
+          }
+          case 'rows':
+          case 'value':
+          case 'valueOrThrow':
+          case 'rowCount':
+          case 'void':
+            break;
+          default:
+            throw new UnhandledTypeError(returnType);
         }
 
         list.push(`(${relationQuery.toSql(values).text}) AS ${as}`);

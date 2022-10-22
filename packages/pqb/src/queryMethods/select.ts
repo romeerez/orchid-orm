@@ -10,6 +10,7 @@ import {
   ArrayOfColumnsObjects,
   ColumnsObject,
   NullableColumn,
+  PluckResultColumnType,
 } from '../columnSchema';
 import { getQueryParsers, isRaw, RawExpression } from '../common';
 import { pushQueryArray } from '../queryDataUtils';
@@ -59,6 +60,8 @@ type SelectResult<
         ? ArrayOfColumnsObjects<Arg['result']>
         : Arg['returnType'] extends 'valueOrThrow'
         ? Arg['result']['value']
+        : Arg['returnType'] extends 'pluck'
+        ? PluckResultColumnType<Arg['result']['pluck']>
         : Arg[isRequiredRelationKey] extends true
         ? ColumnsObject<Arg['result']>
         : NullableColumn<ColumnsObject<Arg['result']>>
