@@ -44,7 +44,7 @@ export class ColumnInfoMethods {
       (this.query as ColumnInfoQueryData).column = column as string;
     }
 
-    this.then = function (resolve, reject) {
+    this.then = function (this: Query, resolve, reject) {
       new Then().then.call(
         this,
         (rows) => {
