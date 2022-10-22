@@ -65,9 +65,11 @@ export const makeHasManyMethod = (
 
     const throughRelation = getThroughRelation(model, through);
     const sourceRelation = getSourceRelation(throughRelation, source);
-    const sourceQuery = sourceRelation
-      .joinQuery(throughRelation.query, sourceRelation.query)
-      .as(relationName);
+    const sourceRelationQuery = sourceRelation.query.as(relationName);
+    const sourceQuery = sourceRelation.joinQuery(
+      throughRelation.query,
+      sourceRelationQuery,
+    );
 
     const whereExistsCallback = () => sourceQuery;
 
@@ -89,7 +91,11 @@ export const makeHasManyMethod = (
         return toQuery.whereExists<Query, Query>(
           throughRelation.joinQuery(fromQuery, throughRelation.query),
           (() => {
-            return sourceQuery.as(getQueryAs(toQuery));
+            const as = getQueryAs(toQuery);
+            return sourceRelation.joinQuery(
+              throughRelation.query,
+              sourceRelation.query.as(as),
+            );
           }) as unknown as JoinCallback<Query, Query>,
         );
       },

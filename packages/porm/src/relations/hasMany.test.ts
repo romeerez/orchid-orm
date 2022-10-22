@@ -8,7 +8,7 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
-import { Chat, Message, Model, User } from '../test-utils/test-models';
+import { Chat, Message, Model, Profile, User } from '../test-utils/test-models';
 import { porm } from '../orm';
 
 describe('hasMany', () => {
@@ -1120,21 +1120,21 @@ describe('hasMany through', () => {
       expectSql(
         query.toSql(),
         `
-        SELECT "profile"."bio", "chats"."title" FROM "profile"
-        JOIN "chat" AS "chats"
-          ON EXISTS (
-            SELECT 1 FROM "user"
-            WHERE EXISTS (
-              SELECT 1 FROM "chatUser"
-              WHERE "chatUser"."chatId" = "chats"."id"
-                AND "chatUser"."userId" = "user"."id"
+          SELECT "profile"."bio", "chats"."title" FROM "profile"
+          JOIN "chat" AS "chats"
+            ON EXISTS (
+              SELECT 1 FROM "user"
+              WHERE EXISTS (
+                SELECT 1 FROM "chatUser"
+                WHERE "chatUser"."chatId" = "chats"."id"
+                  AND "chatUser"."userId" = "user"."id"
+                LIMIT 1
+              )
+              AND "user"."id" = "profile"."userId"
               LIMIT 1
             )
-            AND "user"."id" = "profile"."userId"
-            LIMIT 1
-          )
-          AND "profile"."bio" = $1
-      `,
+            AND "profile"."bio" = $1
+        `,
         ['bio'],
       );
     });
@@ -1293,62 +1293,302 @@ describe('hasMany through', () => {
     });
   });
 
-  // describe('through hasOne', () => {
-  //   it('should have method to query related data', () => {
-  //     const profilesQuery = db.profile.all();
-  //
-  //     const eq: AssertEqual<
-  //       typeof db.chat.profiles,
-  //       RelationQuery<
-  //         'profiles',
-  //         { id: number },
-  //         never,
-  //         typeof profilesQuery,
-  //         false
-  //       >
-  //     > = true;
-  //
-  //     expect(eq).toBe(true);
-  //
-  //     const query = db.chat.profiles({ id: 1 });
-  //     expectSql(
-  //       query.toSql(),
-  //       `
-  //         SELECT * FROM "profile" AS "profiles"
-  //         WHERE EXISTS (
-  //           SELECT 1 FROM "user" AS "users"
-  //           WHERE "profiles"."userId" = "users"."id"
-  //           AND EXISTS (
-  //             SELECT 1 FROM "chatUser"
-  //             WHERE "chatUser"."userId" = "users"."id"
-  //               AND "chatUser"."chatId" = $1
-  //           )
-  //         )
-  //       `,
-  //     );
-  //   });
-  //
-  //   it.only('should have proper joinQuery', () => {
-  //     // console.log(db.chat.relations.users.joinQuery.toSql());
-  //     // console.log(db.user.relations.profile.joinQuery.toSql());
-  //
-  //     expectSql(
-  //       db.chat.relations.profiles.joinQuery.toSql(),
-  //       `
-  //         SELECT * FROM "profile" AS "profiles"
-  //         WHERE EXISTS (
-  //           SELECT 1 FROM "user" AS "users"
-  //           WHERE "profiles"."userId" = "users"."id"
-  //             AND EXISTS (
-  //               SELECT 1 FROM "chatUser"
-  //               WHERE "chatUser"."userId" = "users"."id"
-  //                 AND "chatUser"."chatId" = "chat"."id"
-  //               LIMIT 1
-  //             )
-  //           LIMIT 1
-  //         )
-  //       `,
-  //     );
-  //   });
-  // });
+  describe('through hasOne', () => {
+    it('should have method to query related data', () => {
+      const profilesQuery = db.profile.all();
+
+      const eq: AssertEqual<
+        typeof db.chat.profiles,
+        RelationQuery<
+          'profiles',
+          { id: number },
+          never,
+          typeof profilesQuery,
+          false
+        >
+      > = true;
+
+      expect(eq).toBe(true);
+
+      const query = db.chat.profiles({ id: 1 });
+      expectSql(
+        query.toSql(),
+        `
+          SELECT * FROM "profile" AS "profiles"
+          WHERE EXISTS (
+            SELECT 1 FROM "user" AS "users"
+            WHERE "profiles"."userId" = "users"."id"
+            AND EXISTS (
+              SELECT 1 FROM "chatUser"
+              WHERE "chatUser"."userId" = "users"."id"
+                AND "chatUser"."chatId" = $1
+              LIMIT 1
+            )
+            LIMIT 1
+          )
+        `,
+        [1],
+      );
+    });
+
+    it('should have proper joinQuery', () => {
+      expectSql(
+        db.chat.relations.profiles
+          .joinQuery(db.chat.as('c'), db.profile.as('p'))
+          .toSql(),
+        `
+          SELECT * FROM "profile" AS "p"
+          WHERE EXISTS (
+            SELECT 1 FROM "user" AS "users"
+            WHERE "p"."userId" = "users"."id"
+              AND EXISTS (
+                SELECT 1 FROM "chatUser"
+                WHERE "chatUser"."userId" = "users"."id"
+                  AND "chatUser"."chatId" = "c"."id"
+                LIMIT 1
+              )
+            LIMIT 1
+          )
+        `,
+      );
+    });
+
+    it('should be supported in whereExists', () => {
+      expectSql(
+        db.chat.whereExists('profiles').toSql(),
+        `
+          SELECT * FROM "chat"
+          WHERE EXISTS (
+            SELECT 1 FROM "profile" AS "profiles"
+            WHERE EXISTS (
+              SELECT 1 FROM "user" AS "users"
+              WHERE "profiles"."userId" = "users"."id"
+                AND EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."userId" = "users"."id"
+                    AND "chatUser"."chatId" = "chat"."id"
+                  LIMIT 1
+                )
+              LIMIT 1
+            )
+            LIMIT 1
+          )
+        `,
+      );
+
+      expectSql(
+        db.chat
+          .whereExists('profiles', (q) => q.where({ 'chat.title': 'title' }))
+          .toSql(),
+        `
+          SELECT * FROM "chat"
+          WHERE EXISTS (
+            SELECT 1 FROM "profile" AS "profiles"
+            WHERE EXISTS (
+              SELECT 1 FROM "user" AS "users"
+              WHERE "profiles"."userId" = "users"."id"
+                AND EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."userId" = "users"."id"
+                    AND "chatUser"."chatId" = "chat"."id"
+                  LIMIT 1
+                )
+              LIMIT 1
+            )
+            AND "chat"."title" = $1
+            LIMIT 1
+          )
+        `,
+        ['title'],
+      );
+    });
+
+    it('should be supported in join', () => {
+      const query = db.chat
+        .join('profiles', (q) => q.where({ 'chat.title': 'title' }))
+        .select('title', 'profiles.bio');
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { title: string; bio: string | null }[]
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT "chat"."title", "profiles"."bio" FROM "chat"
+          JOIN "profile" AS "profiles"
+            ON EXISTS (
+              SELECT 1 FROM "user" AS "users"
+              WHERE "profiles"."userId" = "users"."id"
+                AND EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."userId" = "users"."id"
+                    AND "chatUser"."chatId" = "chat"."id"
+                  LIMIT 1
+                )
+              LIMIT 1
+            )
+            AND "chat"."title" = $1
+        `,
+        ['title'],
+      );
+    });
+
+    describe('select', () => {
+      it('should be selectable', () => {
+        const query = db.chat.select(
+          'id',
+          db.chat.profiles.where({ bio: 'bio' }),
+        );
+
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; profiles: Profile[] }[]
+        > = true;
+        expect(eq).toBe(true);
+
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "chat"."id",
+              (
+                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
+                FROM (
+                  SELECT *
+                  FROM "profile" AS "profiles"
+                  WHERE EXISTS (
+                    SELECT 1 FROM "user" AS "users"
+                    WHERE "profiles"."userId" = "users"."id"
+                      AND EXISTS (
+                        SELECT 1 FROM "chatUser"
+                        WHERE "chatUser"."userId" = "users"."id"
+                          AND "chatUser"."chatId" = "chat"."id"
+                        LIMIT 1
+                      )
+                    LIMIT 1
+                  )
+                  AND "profiles"."bio" = $1
+                ) AS "t"
+              ) AS "profiles"
+            FROM "chat"
+          `,
+          ['bio'],
+        );
+      });
+
+      it('should be selectable by relation name', () => {
+        const query = db.chat.select('id', 'profiles');
+
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; profiles: Profile[] }[]
+        > = true;
+        expect(eq).toBe(true);
+
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "chat"."id",
+              (
+                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
+                FROM (
+                  SELECT *
+                  FROM "profile" AS "profiles"
+                  WHERE EXISTS (
+                    SELECT 1 FROM "user" AS "users"
+                    WHERE "profiles"."userId" = "users"."id"
+                      AND EXISTS (
+                        SELECT 1 FROM "chatUser"
+                        WHERE "chatUser"."userId" = "users"."id"
+                          AND "chatUser"."chatId" = "chat"."id"
+                        LIMIT 1
+                      )
+                    LIMIT 1
+                  )
+                ) AS "t"
+              ) AS "profiles"
+            FROM "chat"
+          `,
+          [],
+        );
+      });
+
+      it('should allow to select count', () => {
+        const query = db.chat.select('id', db.chat.profiles.count());
+
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; profiles: number }[]
+        > = true;
+        expect(eq).toBe(true);
+
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "chat"."id",
+              (
+                SELECT count(*)
+                FROM "profile" AS "profiles"
+                WHERE EXISTS (
+                  SELECT 1 FROM "user" AS "users"
+                  WHERE "profiles"."userId" = "users"."id"
+                    AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."userId" = "users"."id"
+                        AND "chatUser"."chatId" = "chat"."id"
+                      LIMIT 1
+                    )
+                  LIMIT 1
+                )
+              ) AS "profiles"
+            FROM "chat"
+          `,
+          [],
+        );
+      });
+
+      it('should allow to select count with alias', () => {
+        const query = db.chat.select(
+          'id',
+          db.chat.profiles.count().as('profilesCount'),
+        );
+
+        const eq: AssertEqual<
+          Awaited<typeof query>,
+          { id: number; profilesCount: number }[]
+        > = true;
+        expect(eq).toBe(true);
+
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "chat"."id",
+              (
+                SELECT count(*)
+                FROM "profile" AS "profiles"
+                WHERE EXISTS (
+                  SELECT 1 FROM "user" AS "users"
+                  WHERE "profiles"."userId" = "users"."id"
+                    AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."userId" = "users"."id"
+                        AND "chatUser"."chatId" = "chat"."id"
+                      LIMIT 1
+                    )
+                  LIMIT 1
+                )
+              ) AS "profilesCount"
+            FROM "chat"
+          `,
+          [],
+        );
+      });
+    });
+  });
 });
