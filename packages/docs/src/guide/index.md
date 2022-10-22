@@ -70,5 +70,5 @@ const posts = await db.post
   // .join allows to specify only relation name defined in Post model
   .join('author')
   // 'author.name' is selectable only after joining 'author', otherwise compile error
-  .selectAs({ authorName: 'author.name' })
+  .select({ authorName: 'author.name' })
 ```

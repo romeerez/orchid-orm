@@ -19,6 +19,7 @@ import {
   HasAndBelongsToManyInfo,
   makeHasAndBelongsToManyMethod,
 } from './hasAndBelongsToMany';
+import { getSourceRelation, getThroughRelation } from './utils';
 
 export interface RelationThunkBase {
   type: string;
@@ -51,6 +52,7 @@ export type Relation<
   returns: Relations[K]['returns'];
   key: K;
   model: M;
+  query: M;
   joinQuery: Query;
   defaults: Info['populate'];
   nestedCreateQuery: [Info['populate']] extends [never]
@@ -117,6 +119,15 @@ export type MapRelations<T extends Model> = 'relations' extends keyof T
   : // eslint-disable-next-line @typescript-eslint/ban-types
     {};
 
+type ApplyRelationData = {
+  relationName: string;
+  relation: RelationThunk;
+  dbModel: DbModel<ModelClass>;
+  otherDbModel: DbModel<ModelClass>;
+};
+
+type DelayedRelations = Map<Query, Record<string, ApplyRelationData[]>>;
+
 export const applyRelations = (
   qb: Query,
   models: Record<string, Model>,
@@ -124,63 +135,135 @@ export const applyRelations = (
 ) => {
   const modelsEntries = Object.entries(models);
 
+  const delayedRelations: DelayedRelations = new Map();
+
   for (const modelName in models) {
+    // if (modelName !== 'post' && modelName !== 'tag' && modelName !== 'postTag')
+    //   continue;
+
     const model = models[modelName] as Model & {
       relations?: RelationThunks;
     };
+    if (!('relations' in model) || typeof model.relations !== 'object')
+      continue;
+
     const dbModel = result[modelName];
-    if ('relations' in model && typeof model.relations === 'object') {
-      for (const relationName in model.relations) {
-        const relation = model.relations[relationName];
-        const otherModelClass = relation.fn();
-        const otherModelPair = modelsEntries.find(
-          (pair) => pair[1] instanceof otherModelClass,
-        );
-        if (!otherModelPair)
-          throw new Error(
-            `Cannot find model for class ${otherModelClass.name}`,
-          );
-        const otherModelName = otherModelPair[0];
-        const otherDbModel = result[otherModelName];
-        if (!otherDbModel)
-          throw new Error(`Cannot find model by name ${otherModelName}`);
+    for (const relationName in model.relations) {
+      const relation = model.relations[relationName];
+      const otherModelClass = relation.fn();
+      const otherModel = modelsEntries.find(
+        (pair) => pair[1] instanceof otherModelClass,
+      );
+      if (!otherModel) {
+        throw new Error(`Cannot find model for class ${otherModelClass.name}`);
+      }
+      const otherModelName = otherModel[0];
+      const otherDbModel = result[otherModelName];
+      if (!otherDbModel)
+        throw new Error(`Cannot find model by name ${otherModelName}`);
 
-        const query = (
-          relation.options.scope
-            ? relation.options.scope(otherDbModel)
-            : (otherDbModel as unknown as QueryWithTable)
-        ).as(relationName);
+      const data: ApplyRelationData = {
+        relationName,
+        relation,
+        dbModel,
+        otherDbModel,
+      };
 
-        const { type } = relation;
-        let data;
-        if (type === 'belongsTo') {
-          data = makeBelongsToMethod(dbModel, relation, query);
-        } else if (type === 'hasOne') {
-          data = makeHasOneMethod(dbModel, relation, query);
-        } else if (type === 'hasMany') {
-          data = makeHasManyMethod(dbModel, relation, query);
-        } else if (type === 'hasAndBelongsToMany') {
-          data = makeHasAndBelongsToManyMethod(dbModel, qb, relation, query);
+      const options = relation.options as { through?: string; source?: string };
+      if (
+        typeof options.through === 'string' &&
+        typeof options.source === 'string'
+      ) {
+        const throughRelation = getThroughRelation(dbModel, options.through);
+        if (!throughRelation) {
+          delayRelation(delayedRelations, dbModel, options.through, data);
+          continue;
         }
 
-        if (data) {
-          (dbModel as unknown as Record<string, unknown>)[relationName] =
-            makeRelationQuery(relationName, data);
-
-          (dbModel.relations as Record<string, unknown>)[relationName] = {
-            type,
-            key: relationName,
-            model: query,
-            nestedInsert: data.nestedInsert,
-            nestedUpdate: data.nestedUpdate,
-            joinQuery: data.joinQuery,
-            primaryKey: data.primaryKey,
-            options: relation.options,
-          };
+        const sourceRelation = getSourceRelation(
+          throughRelation,
+          options.source,
+        );
+        if (!sourceRelation) {
+          delayRelation(
+            delayedRelations,
+            throughRelation.model,
+            options.source,
+            data,
+          );
+          continue;
         }
       }
+
+      applyRelation(qb, data, delayedRelations);
     }
   }
+};
+
+const delayRelation = (
+  delayedRelations: DelayedRelations,
+  model: Query,
+  relationName: string,
+  data: ApplyRelationData,
+) => {
+  let modelRelations = delayedRelations.get(model);
+  if (!modelRelations) {
+    modelRelations = {};
+    delayedRelations.set(model, modelRelations);
+  }
+  if (modelRelations[relationName]) {
+    modelRelations[relationName].push(data);
+  } else {
+    modelRelations[relationName] = [data];
+  }
+};
+
+const applyRelation = (
+  qb: Query,
+  { relationName, relation, dbModel, otherDbModel }: ApplyRelationData,
+  delayedRelations: DelayedRelations,
+) => {
+  const query = (
+    relation.options.scope
+      ? relation.options.scope(otherDbModel)
+      : (otherDbModel as unknown as QueryWithTable)
+  ).as(relationName);
+
+  const { type } = relation;
+  let data;
+  if (type === 'belongsTo') {
+    data = makeBelongsToMethod(dbModel, relation, query);
+  } else if (type === 'hasOne') {
+    data = makeHasOneMethod(dbModel, relation, query);
+  } else if (type === 'hasMany') {
+    data = makeHasManyMethod(dbModel, relation, query);
+  } else if (type === 'hasAndBelongsToMany') {
+    data = makeHasAndBelongsToManyMethod(dbModel, qb, relation, query);
+  } else {
+    throw new Error(`Unknown relation type ${type}`);
+  }
+
+  (dbModel as unknown as Record<string, unknown>)[relationName] =
+    makeRelationQuery(relationName, data);
+
+  (dbModel.relations as Record<string, unknown>)[relationName] = {
+    type,
+    key: relationName,
+    model: otherDbModel,
+    query,
+    nestedInsert: data.nestedInsert,
+    nestedUpdate: data.nestedUpdate,
+    joinQuery: data.joinQuery,
+    primaryKey: data.primaryKey,
+    options: relation.options,
+  };
+
+  const modelRelations = delayedRelations.get(dbModel);
+  if (!modelRelations) return;
+
+  modelRelations[relationName]?.forEach((data) => {
+    applyRelation(qb, data, delayedRelations);
+  });
 };
 
 const makeRelationQuery = (

@@ -177,7 +177,7 @@ const _join = <
 
     const relation = (q.relations as Record<string, Relation>)[joinKey];
     if (relation) {
-      parsers = relation.model.query.parsers || relation.model.columnsParsers;
+      parsers = relation.query.query.parsers || relation.query.columnsParsers;
     } else {
       const shape = q.query.withShapes?.[first as string];
       if (shape) {

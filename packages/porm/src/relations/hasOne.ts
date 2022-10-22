@@ -7,7 +7,6 @@ import {
   NestedInsertOneItem,
   Query,
   QueryBase,
-  Relation,
   WhereArg,
   WhereResult,
 } from 'pqb';
@@ -18,6 +17,7 @@ import {
   RelationThunkBase,
   RelationThunks,
 } from './relations';
+import { getSourceRelation, getThroughRelation } from './utils';
 
 export interface HasOne extends RelationThunkBase {
   type: 'hasOne';
@@ -66,13 +66,8 @@ export const makeHasOneMethod = (
       (params: Record<string, unknown>) => Query
     >;
 
-    const throughRelation = (model.relations as Record<string, Relation>)[
-      through
-    ];
-
-    const sourceRelation = (
-      throughRelation.model.relations as Record<string, Relation>
-    )[source];
+    const throughRelation = getThroughRelation(model, through);
+    const sourceRelation = getSourceRelation(throughRelation, source);
 
     const whereExistsCallback = () => sourceRelation.joinQuery;
 

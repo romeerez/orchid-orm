@@ -57,7 +57,7 @@ export type SchemaConverter = (columnType: ColumnType) => unknown;
 export const createModel = <CT extends ColumnTypesBase>(
   options: {
     columnTypes?: CT;
-  } = {}
+  } = {},
 ) => {
   return class Model {
     table!: string;
@@ -68,7 +68,9 @@ export const createModel = <CT extends ColumnTypesBase>(
       fn: (t: ColumnTypesBase extends CT ? ColumnTypes : CT) => T,
     ): { shape: T; type: ColumnShapeOutput<T> } {
       const types = (options?.columnTypes ||
-        columnTypes) as unknown as ColumnTypesBase extends CT ? ColumnTypes : CT;
+        columnTypes) as unknown as ColumnTypesBase extends CT
+        ? ColumnTypes
+        : CT;
 
       const shape = getColumnTypes(types, fn);
 

@@ -15,10 +15,10 @@ import {
   MaybeArray,
   Query,
   QueryBase,
-  Relation,
   WhereArg,
   WhereResult,
 } from 'pqb';
+import { getSourceRelation, getThroughRelation } from './utils';
 
 export interface HasMany extends RelationThunkBase {
   type: 'hasMany';
@@ -61,13 +61,8 @@ export const makeHasManyMethod = (
       (params: Record<string, unknown>) => Query
     >;
 
-    const throughRelation = (model.relations as Record<string, Relation>)[
-      through
-    ];
-
-    const sourceRelation = (
-      throughRelation.model.relations as Record<string, Relation>
-    )[source];
+    const throughRelation = getThroughRelation(model, through);
+    const sourceRelation = getSourceRelation(throughRelation, source);
 
     const whereExistsCallback = () => sourceRelation.joinQuery;
 

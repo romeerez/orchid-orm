@@ -1,4 +1,4 @@
-import { db } from '../test-utils/test-db';
+import { db, pgConfig } from '../test-utils/test-db';
 import {
   AssertEqual,
   chatData,
@@ -8,7 +8,8 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
-import { Chat, Message, User } from '../test-utils/test-models';
+import { Chat, Message, Model, User } from '../test-utils/test-models';
+import { porm } from '../orm';
 
 describe('hasMany', () => {
   useTestDatabase();
@@ -918,6 +919,81 @@ describe('hasMany', () => {
 });
 
 describe('hasMany through', () => {
+  it('should resolve recursive situation when both models depends on each other', () => {
+    class Post extends Model {
+      table = 'post';
+      columns = this.setColumns((t) => ({
+        id: t.serial().primaryKey(),
+      }));
+
+      relations = {
+        postTags: this.hasMany(() => PostTag, {
+          primaryKey: 'id',
+          foreignKey: 'postId',
+        }),
+
+        tags: this.hasMany(() => Tag, {
+          through: 'postTags',
+          source: 'tag',
+        }),
+      };
+    }
+
+    class Tag extends Model {
+      table = 'tag';
+      columns = this.setColumns((t) => ({
+        id: t.serial().primaryKey(),
+      }));
+
+      relations = {
+        postTags: this.hasMany(() => PostTag, {
+          primaryKey: 'id',
+          foreignKey: 'postId',
+        }),
+
+        posts: this.hasMany(() => Post, {
+          through: 'postTags',
+          source: 'post',
+        }),
+      };
+    }
+
+    class PostTag extends Model {
+      table = 'postTag';
+      columns = this.setColumns((t) => ({
+        postId: t.integer().foreignKey(() => Post, 'id'),
+        tagId: t.integer().foreignKey(() => Tag, 'id'),
+      }));
+
+      relations = {
+        post: this.belongsTo(() => Post, {
+          primaryKey: 'id',
+          foreignKey: 'postId',
+        }),
+
+        tag: this.belongsTo(() => Tag, {
+          primaryKey: 'id',
+          foreignKey: 'tagId',
+        }),
+      };
+    }
+
+    const db = porm(
+      {
+        ...pgConfig,
+        log: false,
+      },
+      {
+        post: Post,
+        tag: Tag,
+        postTag: PostTag,
+      },
+    );
+
+    expect(Object.keys(db.post.relations)).toEqual(['postTags', 'tags']);
+    expect(Object.keys(db.tag.relations)).toEqual(['postTags', 'posts']);
+  });
+
   it('should have method to query related data', async () => {
     const chatsQuery = db.chat.all();
 

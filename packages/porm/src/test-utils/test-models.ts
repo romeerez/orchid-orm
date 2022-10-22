@@ -2,7 +2,7 @@ import { createModel } from '../model';
 import { columnTypes } from 'pqb';
 import { modelToZod } from 'porm-schema-to-zod';
 
-const Model = createModel({
+export const Model = createModel({
   columnTypes: {
     ...columnTypes,
     timestamp() {
