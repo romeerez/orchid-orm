@@ -166,7 +166,9 @@ export const parseResult = (
     }
     case 'value': {
       const value = result.rows[0]?.[0];
-      return value !== undefined ? parseValue(value, q) : undefined;
+      return value !== undefined
+        ? parseValue(value, q)
+        : q.query.notFoundDefault;
     }
     case 'valueOrThrow': {
       const value = result.rows[0]?.[0];

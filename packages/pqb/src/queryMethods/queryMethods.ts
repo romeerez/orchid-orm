@@ -1,17 +1,17 @@
 import { Expression, raw, RawExpression } from '../common';
 import {
   Query,
+  QueryBase,
   Selectable,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
+  SetQueryReturnsOneOptional,
   SetQueryReturnsPluck,
   SetQueryReturnsRows,
-  SetQueryReturnsValueOptional,
+  SetQueryReturnsValue,
   SetQueryReturnsVoid,
   SetQueryTableAlias,
   SetQueryWindows,
-  QueryBase,
-  SetQueryReturnsOneOptional,
 } from '../query';
 import {
   applyMixins,
@@ -33,7 +33,7 @@ import {
   removeFromQuery,
 } from '../queryDataUtils';
 import { Then } from './then';
-import { NumberColumn } from '../columnSchema';
+import { BooleanColumn } from '../columnSchema';
 import { Aggregate } from './aggregate';
 import { addParserForSelectItem, Select } from './select';
 import { From } from './from';
@@ -365,18 +365,16 @@ export class QueryMethods {
     return this;
   }
 
-  exists<T extends Query>(
-    this: T,
-  ): SetQueryReturnsValueOptional<T, NumberColumn> {
+  exists<T extends Query>(this: T): SetQueryReturnsValue<T, BooleanColumn> {
     return this.clone()._exists();
   }
 
-  _exists<T extends Query>(
-    this: T,
-  ): SetQueryReturnsValueOptional<T, NumberColumn> {
-    const q = this._getOptional(raw<NumberColumn>('1'));
+  _exists<T extends Query>(this: T): SetQueryReturnsValue<T, BooleanColumn> {
+    const q = this._getOptional(raw<BooleanColumn>('true'));
+    q.query.notFoundDefault = false;
+    q.query.coalesceValue = false;
     delete q.query.take;
-    return q as unknown as SetQueryReturnsValueOptional<T, NumberColumn>;
+    return q as unknown as SetQueryReturnsValue<T, BooleanColumn>;
   }
 
   truncate<T extends Query>(

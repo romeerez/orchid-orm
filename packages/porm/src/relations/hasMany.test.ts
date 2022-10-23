@@ -266,6 +266,40 @@ describe('hasMany', () => {
       expectSql(query.toSql(), expectedSql);
       expectSql(query2.toSql(), expectedSql);
     });
+
+    it('should handle exists sub query', () => {
+      const query = db.user.select(
+        'id',
+        db.user.messages.exists().as('hasMessages'),
+      );
+
+      const query2 = db.user.select('id', {
+        hasMessages: db.user.messages.exists(),
+      });
+
+      assertType<
+        Awaited<typeof query>,
+        { id: number; hasMessages: boolean }[]
+      >();
+      assertType<
+        Awaited<typeof query2>,
+        { id: number; hasMessages: boolean }[]
+      >();
+
+      const expectedSql = `
+        SELECT
+          "user"."id",
+          COALESCE((
+            SELECT true
+            FROM "message" AS "messages"
+            WHERE "messages"."authorId" = "user"."id"
+          ), false) AS "hasMessages"
+        FROM "user"
+      `;
+
+      expectSql(query.toSql(), expectedSql);
+      expectSql(query2.toSql(), expectedSql);
+    });
   });
 
   describe('insert', () => {
@@ -1330,6 +1364,43 @@ describe('hasMany through', () => {
       expectSql(query.toSql(), expectedSql);
       expectSql(query2.toSql(), expectedSql);
     });
+
+    it('should handle exists sub query', () => {
+      const query = db.profile.select(
+        'id',
+        db.profile.chats.exists().as('hasChats'),
+      );
+      const query2 = db.profile.select('id', {
+        hasChats: db.profile.chats.exists(),
+      });
+
+      assertType<Awaited<typeof query>, { id: number; hasChats: boolean }[]>();
+      assertType<Awaited<typeof query2>, { id: number; hasChats: boolean }[]>();
+
+      const expectedSql = `
+        SELECT
+          "profile"."id",
+          COALESCE((
+            SELECT true
+            FROM "chat" AS "chats"
+            WHERE EXISTS (
+              SELECT 1 FROM "user"
+              WHERE EXISTS (
+                SELECT 1 FROM "chatUser"
+                WHERE "chatUser"."chatId" = "chats"."id"
+                  AND "chatUser"."userId" = "user"."id"
+                LIMIT 1
+              )
+              AND "user"."id" = "profile"."userId"
+              LIMIT 1
+            )
+          ), false) AS "hasChats"
+        FROM "profile"
+      `;
+
+      expectSql(query.toSql(), expectedSql);
+      expectSql(query2.toSql(), expectedSql);
+    });
   });
 
   describe('through hasOne', () => {
@@ -1662,6 +1733,50 @@ describe('hasMany through', () => {
         `;
 
         expectSql(query.toSql(), expectedSql, []);
+        expectSql(query2.toSql(), expectedSql, []);
+      });
+
+      it('should handle exists sub query', () => {
+        const query = db.chat.select(
+          'id',
+          db.chat.profiles.exists().as('hasProfiles'),
+        );
+        const query2 = db.chat.select('id', {
+          hasProfiles: db.chat.profiles.exists(),
+        });
+
+        assertType<
+          Awaited<typeof query>,
+          { id: number; hasProfiles: boolean }[]
+        >();
+        assertType<
+          Awaited<typeof query2>,
+          { id: number; hasProfiles: boolean }[]
+        >();
+
+        const expectedSql = `
+          SELECT
+            "chat"."id",
+            COALESCE((
+              SELECT true
+              FROM "profile" AS "profiles"
+              WHERE EXISTS (
+                SELECT 1 FROM "user" AS "users"
+                WHERE "profiles"."userId" = "users"."id"
+                  AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."userId" = "users"."id"
+                      AND "chatUser"."chatId" = "chat"."id"
+                    LIMIT 1
+                  )
+                LIMIT 1
+              )
+            ), false) AS "hasProfiles"
+          FROM "chat"
+        `;
+
+        expectSql(query.toSql(), expectedSql, []);
+        expectSql(query2.toSql(), expectedSql, []);
       });
     });
   });

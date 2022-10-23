@@ -59,7 +59,9 @@ export type CommonQueryData = {
   from?: string | Query | RawExpression;
   and?: WhereItem[];
   or?: WhereItem[][];
+  coalesceValue?: unknown | RawExpression;
   parsers?: ColumnsParsers;
+  notFoundDefault?: unknown;
   defaults?: Record<string, unknown>;
   beforeQuery?: BeforeCallback<Query>[];
   afterQuery?: AfterCallback<Query>[];

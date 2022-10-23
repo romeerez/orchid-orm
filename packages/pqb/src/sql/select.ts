@@ -12,6 +12,7 @@ import { getQueryAs } from '../utils';
 import { RelationQuery, relationQueryKey } from '../relations';
 import { PormInternalError, UnhandledTypeError } from '../errors';
 import { StringColumn } from '../columnSchema';
+import { quote } from '../quote';
 
 const jsonColumnOrMethodToSql = (
   column: string | JsonItem,
@@ -179,5 +180,14 @@ const pushSubQuerySql = (
       throw new UnhandledTypeError(returnType);
   }
 
-  list.push(`(${query.toSql(values).text}) AS ${q(as)}`);
+  let subQuerySql = `(${query.toSql(values).text})`;
+  const { coalesceValue } = query.query;
+  if (coalesceValue !== undefined) {
+    const value =
+      typeof coalesceValue === 'object' && coalesceValue && isRaw(coalesceValue)
+        ? getRaw(coalesceValue, values)
+        : quote(coalesceValue);
+    subQuerySql = `COALESCE(${subQuerySql}, ${value})`;
+  }
+  list.push(`${subQuerySql} AS ${q(as)}`);
 };

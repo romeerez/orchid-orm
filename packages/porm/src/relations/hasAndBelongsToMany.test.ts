@@ -279,6 +279,36 @@ describe('hasAndBelongsToMany', () => {
       `;
 
       expectSql(query.toSql(), expectedSql);
+      expectSql(query2.toSql(), expectedSql);
+    });
+
+    it('should handle exists sub query', () => {
+      const query = db.user.select('id', db.user.chats.exists().as('hasChats'));
+      const query2 = db.user.select('id', {
+        hasChats: db.user.chats.exists(),
+      });
+
+      assertType<Awaited<typeof query>, { id: number; hasChats: boolean }[]>();
+      assertType<Awaited<typeof query2>, { id: number; hasChats: boolean }[]>();
+
+      const expectedSql = `
+        SELECT
+          "user"."id",
+          COALESCE((
+            SELECT true
+            FROM "chat" AS "chats"
+            WHERE EXISTS (
+              SELECT 1 FROM "chatUser"
+              WHERE "chatUser"."chatId" = "chats"."id"
+                AND "chatUser"."userId" = "user"."id"
+              LIMIT 1
+            )
+          ), false) AS "hasChats"
+        FROM "user"
+      `;
+
+      expectSql(query.toSql(), expectedSql);
+      expectSql(query2.toSql(), expectedSql);
     });
   });
 

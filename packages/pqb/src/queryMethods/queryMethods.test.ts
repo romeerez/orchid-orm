@@ -11,6 +11,7 @@ import {
   expectSql,
   userData,
   now,
+  assertType,
 } from '../test-utils';
 import { NumberColumn } from '../columnSchema';
 import { NotFoundError } from '../errors';
@@ -487,155 +488,165 @@ describe('queryMethods', () => {
       expectSql(q.toSql(), expectedSql);
     });
   });
-});
 
-describe('window', () => {
-  it('add window which can be used in `over`', () => {
-    const q = User.all();
+  describe('window', () => {
+    it('add window which can be used in `over`', () => {
+      const q = User.all();
 
-    expectSql(
-      q
-        .window({
-          w: {
-            partitionBy: 'id',
-            order: {
-              id: 'DESC',
+      expectSql(
+        q
+          .window({
+            w: {
+              partitionBy: 'id',
+              order: {
+                id: 'DESC',
+              },
             },
-          },
-        })
-        .selectAvg('id', {
-          over: 'w',
-        })
-        .toSql(),
-      `
+          })
+          .selectAvg('id', {
+            over: 'w',
+          })
+          .toSql(),
+        `
         SELECT avg("user"."id") OVER "w" FROM "user"
         WINDOW "w" AS (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
       `,
-    );
-    expectQueryNotMutated(q);
-  });
+      );
+      expectQueryNotMutated(q);
+    });
 
-  it('adds window with raw sql', () => {
-    const q = User.all();
+    it('adds window with raw sql', () => {
+      const q = User.all();
 
-    const windowSql = 'PARTITION BY id ORDER BY name DESC';
-    expectSql(
-      q
-        .window({ w: raw(windowSql) })
-        .selectAvg('id', {
-          over: 'w',
-        })
-        .toSql(),
-      `
+      const windowSql = 'PARTITION BY id ORDER BY name DESC';
+      expectSql(
+        q
+          .window({ w: raw(windowSql) })
+          .selectAvg('id', {
+            over: 'w',
+          })
+          .toSql(),
+        `
         SELECT avg("user"."id") OVER "w" FROM "user"
         WINDOW "w" AS (PARTITION BY id ORDER BY name DESC)
       `,
-    );
-    expectQueryNotMutated(q);
+      );
+      expectQueryNotMutated(q);
+    });
   });
-});
 
-describe('order', () => {
-  it('should add order by column ASC when string is provided', () => {
-    const q = User.all();
+  describe('order', () => {
+    it('should add order by column ASC when string is provided', () => {
+      const q = User.all();
 
-    expectSql(
-      q.order('id', 'name').toSql(),
-      `
+      expectSql(
+        q.order('id', 'name').toSql(),
+        `
         SELECT * FROM "user"
         ORDER BY "user"."id" ASC, "user"."name" ASC
       `,
-    );
+      );
 
-    expectQueryNotMutated(q);
-  });
+      expectQueryNotMutated(q);
+    });
 
-  it('should handle object parameter', () => {
-    const q = User.all();
-    expectSql(
-      q.order({ id: 'ASC', name: 'DESC' }).toSql(),
-      `
+    it('should handle object parameter', () => {
+      const q = User.all();
+      expectSql(
+        q.order({ id: 'ASC', name: 'DESC' }).toSql(),
+        `
         SELECT * FROM "user"
         ORDER BY "user"."id" ASC, "user"."name" DESC
       `,
-    );
-    expectSql(
-      q
-        .order({
-          id: { dir: 'ASC', nulls: 'FIRST' },
-          name: { dir: 'DESC', nulls: 'LAST' },
-        })
-        .toSql(),
-      `
+      );
+      expectSql(
+        q
+          .order({
+            id: { dir: 'ASC', nulls: 'FIRST' },
+            name: { dir: 'DESC', nulls: 'LAST' },
+          })
+          .toSql(),
+        `
         SELECT * FROM "user"
         ORDER BY "user"."id" ASC NULLS FIRST, "user"."name" DESC NULLS LAST
       `,
-    );
-    expectQueryNotMutated(q);
-  });
+      );
+      expectQueryNotMutated(q);
+    });
 
-  it('adds order with raw sql', () => {
-    const q = User.all();
-    expectSql(
-      q.order(raw('id ASC NULLS FIRST')).toSql(),
-      `
+    it('adds order with raw sql', () => {
+      const q = User.all();
+      expectSql(
+        q.order(raw('id ASC NULLS FIRST')).toSql(),
+        `
         SELECT * FROM "user"
         ORDER BY id ASC NULLS FIRST
       `,
-    );
-    expectQueryNotMutated(q);
-  });
-});
-
-describe('limit', () => {
-  it('should set limit', () => {
-    const q = User.all();
-    expectSql(q.limit(5).toSql(), 'SELECT * FROM "user" LIMIT $1', [5]);
-    expectQueryNotMutated(q);
+      );
+      expectQueryNotMutated(q);
+    });
   });
 
-  it('should reset limit', () => {
-    const q = User.all();
-    expectSql(q.limit(undefined).toSql(), 'SELECT * FROM "user"');
-    expectQueryNotMutated(q);
-  });
-});
+  describe('limit', () => {
+    it('should set limit', () => {
+      const q = User.all();
+      expectSql(q.limit(5).toSql(), 'SELECT * FROM "user" LIMIT $1', [5]);
+      expectQueryNotMutated(q);
+    });
 
-describe('offset', () => {
-  it('should set offset', () => {
-    const q = User.all();
-    expectSql(q.offset(5).toSql(), 'SELECT * FROM "user" OFFSET $1', [5]);
-    expectQueryNotMutated(q);
-  });
-
-  it('should reset offset', () => {
-    const q = User.all();
-    expectSql(q.offset(undefined).toSql(), 'SELECT * FROM "user"');
-    expectQueryNotMutated(q);
-  });
-});
-
-describe('exists', () => {
-  it('selects 1', () => {
-    const q = User.all();
-    expectSql(q.exists().toSql(), 'SELECT 1 FROM "user"');
-    expectQueryNotMutated(q);
-  });
-});
-
-describe('truncate', () => {
-  it('should truncate table', () => {
-    const q = User.all();
-    expectSql(q.truncate().toSql(), 'TRUNCATE "user"');
-    expectQueryNotMutated(q);
+    it('should reset limit', () => {
+      const q = User.all();
+      expectSql(q.limit(undefined).toSql(), 'SELECT * FROM "user"');
+      expectQueryNotMutated(q);
+    });
   });
 
-  it('should handle restart identity and cascade options', () => {
-    const q = User.all();
-    expectSql(
-      q.truncate({ restartIdentity: true, cascade: true }).toSql(),
-      'TRUNCATE "user" RESTART IDENTITY CASCADE',
-    );
-    expectQueryNotMutated(q);
+  describe('offset', () => {
+    it('should set offset', () => {
+      const q = User.all();
+      expectSql(q.offset(5).toSql(), 'SELECT * FROM "user" OFFSET $1', [5]);
+      expectQueryNotMutated(q);
+    });
+
+    it('should reset offset', () => {
+      const q = User.all();
+      expectSql(q.offset(undefined).toSql(), 'SELECT * FROM "user"');
+      expectQueryNotMutated(q);
+    });
+  });
+
+  describe('exists', () => {
+    it('should discard previous select, select 1 and transform to boolean', async () => {
+      const q = User.all();
+      const query = q.select('id').exists();
+      assertType<Awaited<typeof query>, boolean>();
+
+      expect(await query).toBe(false);
+
+      await User.insert(userData);
+
+      expect(await query).toBe(true);
+
+      expectSql(query.toSql(), 'SELECT true FROM "user"');
+
+      expectQueryNotMutated(q);
+    });
+  });
+
+  describe('truncate', () => {
+    it('should truncate table', () => {
+      const q = User.all();
+      expectSql(q.truncate().toSql(), 'TRUNCATE "user"');
+      expectQueryNotMutated(q);
+    });
+
+    it('should handle restart identity and cascade options', () => {
+      const q = User.all();
+      expectSql(
+        q.truncate({ restartIdentity: true, cascade: true }).toSql(),
+        'TRUNCATE "user" RESTART IDENTITY CASCADE',
+      );
+      expectQueryNotMutated(q);
+    });
   });
 });

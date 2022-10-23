@@ -1,6 +1,6 @@
 import { db } from '../test-utils/test-db';
 import {
-  AssertEqual,
+  assertType,
   chatData,
   expectSql,
   messageData,
@@ -19,12 +19,10 @@ describe('belongsTo', () => {
       const userQuery = db.user.take();
       type UserQuery = typeof userQuery;
 
-      const eq: AssertEqual<
+      assertType<
         typeof db.profile.user,
         RelationQuery<'user', { userId: number | null }, never, UserQuery, true>
-      > = true;
-
-      expect(eq).toBe(true);
+      >();
 
       const userId = await db.user.get('id').insert(userData);
       const profileId = await db.profile
@@ -96,11 +94,10 @@ describe('belongsTo', () => {
         .join('user', (q) => q.where({ 'user.name': 'name' }))
         .select('bio', 'user.name');
 
-      const eq: AssertEqual<
+      assertType<
         Awaited<typeof query>,
         { bio: string | null; name: string }[]
-      > = true;
-      expect(eq).toBe(true);
+      >();
 
       expectSql(
         query.toSql(),
@@ -119,11 +116,10 @@ describe('belongsTo', () => {
           db.profile.user.select('id', 'name').where({ 'user.name': 'name' }),
         );
 
-        const eq: AssertEqual<
+        assertType<
           Awaited<typeof query>,
           { id: number; user: { id: number; name: string } }[]
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expectSql(
           query.toSql(),
@@ -148,11 +144,7 @@ describe('belongsTo', () => {
       it('should be selectable by relation name', async () => {
         const query = db.profile.select('id', 'user');
 
-        const eq: AssertEqual<
-          Awaited<typeof query>,
-          { id: number; user: User }[]
-        > = true;
-        expect(eq).toBe(true);
+        assertType<Awaited<typeof query>, { id: number; user: User }[]>();
 
         expectSql(
           query.toSql(),
@@ -171,6 +163,36 @@ describe('belongsTo', () => {
           `,
           [1],
         );
+      });
+
+      it('should handle exists sub query', () => {
+        const query = db.profile.select(
+          'id',
+          db.profile.user.exists().as('hasUser'),
+        );
+        const query2 = db.profile.select('id', {
+          hasUser: db.profile.user.exists(),
+        });
+
+        assertType<Awaited<typeof query>, { id: number; hasUser: boolean }[]>();
+        assertType<
+          Awaited<typeof query2>,
+          { id: number; hasUser: boolean }[]
+        >();
+
+        const expectedSql = `
+          SELECT
+            "profile"."id",
+            COALESCE((
+              SELECT true
+              FROM "user"
+              WHERE "user"."id" = "profile"."userId"
+            ), false) AS "hasUser"
+          FROM "profile"
+        `;
+
+        expectSql(query.toSql(), expectedSql);
+        expectSql(query2.toSql(), expectedSql);
       });
     });
   });

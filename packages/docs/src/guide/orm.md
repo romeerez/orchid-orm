@@ -516,7 +516,9 @@ const books = await db.author.books(author) // type of argument is { id: number 
 // additional query methods can be applied:
 const partialAuthor = await db.book.author(book).select('id', 'name')
 
-const countBooks = await db.author.books(author).where({ title: 'Kobzar' }).count()
+const countBooks: number = await db.author.books(author).where({ title: 'Kobzar' }).count()
+
+const authorHasBooks: boolean = await db.author.books(author).exists()
 ```
 
 Relation can be used in `.whereExists` (supported by all kinds of relations):
@@ -577,7 +579,8 @@ const authorWithBooks: Author & { books: Book[] } = await db.book
   .take();
 ```
 
-To load specific fields or to apply `where`, `order`, `limit` and other methods, use such syntax:
+To load specific fields or to apply `where`, `order`, `limit` and other methods,
+relation can be selected by adding `db.model.relation` to select list or to an object in select list:
 
 ```ts
 type BookResult = {
@@ -595,6 +598,14 @@ const bookWithAuthor: BookResult = await db.book.select(
   db.book.author.select('id', 'name'),
 ).take()
 
+const bookSameAsAbove: BookResult = await db.book.select(
+  'id',
+  'title',
+  {
+    book: db.book.author.select('id', 'name'),
+  },
+)
+
 type AuthorResult = {
   id: number
   name: string
@@ -607,37 +618,51 @@ type AuthorResult = {
 const authorWithBooks: AuthorResult = await db.author.select(
   'id',
   'name',
-  db.author.book.select('id', 'title').where(...conditions).order('title').limit(5),
+  db.author.books.select('id', 'title').where(...conditions).order('title').limit(5),
 ).take()
+
+const authorSameAsAbove: AuthorResult = await db.author.select(
+  'id',
+  'name',
+  {
+    books: db.author.book.select('id', 'title').where(...conditions).order('title').limit(5),
+  },
+)
 ```
 
-For `hasMany` and `hasAndBelongsToMany` the select can also handle aggregation queries such as `count`, `min`, `max`, `sum`, `avg`:
+All relations are supporting `exists` in select (get a boolean to know whether related records exist or not):
 
 ```ts
-type PostResult = {
-  id: number,
-  tags: number
+type Result = {
+  id: number
+  hasTags: boolean
+  hasSpecificTag: boolean
 }
 
 const result: Result = await db.post.select(
   'id',
-  db.post.tags.count()
-).take()
+  {
+    hasTags: db.post.tags.exists(),
+    hasSpecificTag: db.post.tags.where({ name: 'specific' }).exists(),
+  }
+)
 ```
 
-Value of `count` and other aggregations will be returned under the name of relation, but you can use an alias to change it:
+For `hasMany` and `hasAndBelongsToMany` the select can handle aggregation queries such as `count`, `min`, `max`, `sum`, `avg`:
 
 ```ts
-type PostResult = {
+type Result = {
   id: number
   tagsCount: number
-  tagsCommaSeparated: string | null // null if there is no tags
+  tagsCommaSeparated: string
 }
 
 const result: Result = await db.post.select(
   'id',
-  db.post.tags.count().as('tagsCount'),
-  db.post.tags.stringAgg('name', ', ').as('tagsCommaSeparated'),
+  {
+    tagsCount: db.post.tags.count(),
+    tagsCommaSeparated: db.post.tags.stringAgg('name', ', '),
+  }
 ).take()
 ```
 

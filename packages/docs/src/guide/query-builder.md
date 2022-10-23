@@ -1896,6 +1896,16 @@ User.whereExists(Account, (q) =>
 )
 ```
 
+## exists
+
+Use `.exists()` to check if there is at least one record matching conditions.
+
+It will discard previous `.select` statements if any. Returns a boolean.
+
+```ts
+const exists: boolean = await Table.where(...conditions).exists()
+```
+
 ## column operators
 
 `.where` argument can take object where key is the name of operator and value is it's argument.

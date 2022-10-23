@@ -1,6 +1,6 @@
 import { db, pgConfig } from '../test-utils/test-db';
 import {
-  AssertEqual,
+  assertType,
   expectSql,
   profileData,
   userData,
@@ -17,7 +17,7 @@ describe('hasOne', () => {
     it('should have method to query related data', async () => {
       const profileQuery = db.profile.take();
 
-      const eq: AssertEqual<
+      assertType<
         typeof db.user.profile,
         RelationQuery<
           'profile',
@@ -26,9 +26,7 @@ describe('hasOne', () => {
           typeof profileQuery,
           true
         >
-      > = true;
-
-      expect(eq).toBe(true);
+      >();
 
       const userId = await db.user.get('id').insert(userData);
 
@@ -132,11 +130,10 @@ describe('hasOne', () => {
         .join('profile', (q) => q.where({ 'user.name': 'name' }))
         .select('name', 'profile.bio');
 
-      const eq: AssertEqual<
+      assertType<
         Awaited<typeof query>,
         { name: string; bio: string | null }[]
-      > = true;
-      expect(eq).toBe(true);
+      >();
 
       expectSql(
         query.toSql(),
@@ -157,11 +154,7 @@ describe('hasOne', () => {
           db.user.profile.where({ bio: 'bio' }),
         );
 
-        const eq: AssertEqual<
-          Awaited<typeof query>,
-          { id: number; profile: Profile }[]
-        > = true;
-        expect(eq).toBe(true);
+        assertType<Awaited<typeof query>, { id: number; profile: Profile }[]>();
 
         expectSql(
           query.toSql(),
@@ -186,11 +179,7 @@ describe('hasOne', () => {
       it('should be selectable by relation name', () => {
         const query = db.user.select('id', 'profile');
 
-        const eq: AssertEqual<
-          Awaited<typeof query>,
-          { id: number; profile: Profile }[]
-        > = true;
-        expect(eq).toBe(true);
+        assertType<Awaited<typeof query>, { id: number; profile: Profile }[]>();
 
         expectSql(
           query.toSql(),
@@ -209,6 +198,39 @@ describe('hasOne', () => {
           `,
           [1],
         );
+      });
+
+      it('should handle exists sub query', () => {
+        const query = db.user.select(
+          'id',
+          db.user.profile.exists().as('hasProfile'),
+        );
+        const query2 = db.user.select('id', {
+          hasProfile: db.user.profile.exists(),
+        });
+
+        assertType<
+          Awaited<typeof query>,
+          { id: number; hasProfile: boolean }[]
+        >();
+        assertType<
+          Awaited<typeof query2>,
+          { id: number; hasProfile: boolean }[]
+        >();
+
+        const expectedSql = `
+          SELECT
+            "user"."id",
+            COALESCE((
+              SELECT true
+              FROM "profile"
+              WHERE "profile"."userId" = "user"."id"
+            ), false) AS "hasProfile"
+          FROM "user"
+        `;
+
+        expectSql(query.toSql(), expectedSql);
+        expectSql(query2.toSql(), expectedSql);
       });
     });
 
@@ -836,7 +858,7 @@ describe('hasOne through', () => {
   it('should have method to query related data', async () => {
     const profileQuery = db.profile.take();
 
-    const eq: AssertEqual<
+    assertType<
       typeof db.message.profile,
       RelationQuery<
         'profile',
@@ -845,9 +867,7 @@ describe('hasOne through', () => {
         typeof profileQuery,
         true
       >
-    > = true;
-
-    expect(eq).toBe(true);
+    >();
 
     const query = db.message.profile({ authorId: 1 });
     expectSql(
@@ -930,11 +950,7 @@ describe('hasOne through', () => {
       .join('profile', (q) => q.where({ 'message.text': 'text' }))
       .select('text', 'profile.bio');
 
-    const eq: AssertEqual<
-      Awaited<typeof query>,
-      { text: string; bio: string | null }[]
-    > = true;
-    expect(eq).toBe(true);
+    assertType<Awaited<typeof query>, { text: string; bio: string | null }[]>();
 
     expectSql(
       query.toSql(),
@@ -960,11 +976,7 @@ describe('hasOne through', () => {
         db.message.profile.where({ bio: 'bio' }),
       );
 
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        { id: number; profile: Profile }[]
-      > = true;
-      expect(eq).toBe(true);
+      assertType<Awaited<typeof query>, { id: number; profile: Profile }[]>();
 
       expectSql(
         query.toSql(),
@@ -994,11 +1006,7 @@ describe('hasOne through', () => {
     it('should be selectable by relation name', () => {
       const query = db.message.select('id', 'profile');
 
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        { id: number; profile: Profile }[]
-      > = true;
-      expect(eq).toBe(true);
+      assertType<Awaited<typeof query>, { id: number; profile: Profile }[]>();
 
       expectSql(
         query.toSql(),
@@ -1022,6 +1030,44 @@ describe('hasOne through', () => {
         `,
         [1],
       );
+    });
+
+    it('should handle exists sub query', () => {
+      const query = db.message.select(
+        'id',
+        db.message.profile.exists().as('hasProfile'),
+      );
+      const query2 = db.message.select('id', {
+        hasProfile: db.message.profile.exists(),
+      });
+
+      assertType<
+        Awaited<typeof query>,
+        { id: number; hasProfile: boolean }[]
+      >();
+      assertType<
+        Awaited<typeof query2>,
+        { id: number; hasProfile: boolean }[]
+      >();
+
+      const expectedSql = `
+        SELECT
+          "message"."id",
+          COALESCE((
+            SELECT true
+            FROM "profile"
+            WHERE EXISTS (
+                SELECT 1 FROM "user"
+                WHERE "profile"."userId" = "user"."id"
+                  AND "user"."id" = "message"."authorId"
+                LIMIT 1
+              )
+          ), false) AS "hasProfile"
+        FROM "message"
+      `;
+
+      expectSql(query.toSql(), expectedSql);
+      expectSql(query2.toSql(), expectedSql);
     });
   });
 });

@@ -65,10 +65,12 @@ Different ORMs enforces different problems when there is a need to customize a q
 
 ```ts
 const posts = await db.post
-  // .select autocompletes and checks for Post columns
-  .select('id', 'name')
   // .join allows to specify only relation name defined in Post model
   .join('author')
-  // 'author.name' is selectable only after joining 'author', otherwise compile error
-  .select({ authorName: 'author.name' })
+  // .select autocompletes and checks for Post columns
+  .select('id', 'name', {
+    // select "author.name" as "authorName"
+    // 'author.name' is selectable only after joining 'author', otherwise compilation error
+    authorName: 'author.name'
+  })
 ```
