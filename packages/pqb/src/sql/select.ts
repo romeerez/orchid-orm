@@ -95,47 +95,10 @@ export const selectToSql = (
             : quoteFullColumn(item, quotedAs),
         );
       } else if ((item as Query).query?.[relationQueryKey]) {
-        let relationQuery = (item as RelationQuery).clone();
-        const as = q(getQueryAs(relationQuery));
+        const relationQuery = (item as RelationQuery).clone();
+        const as = getQueryAs(relationQuery);
         relationQuery._as(relationQuery.query[relationQueryKey] as string);
-
-        const { returnType } = relationQuery.query;
-        switch (returnType) {
-          case 'all':
-          case 'one':
-          case 'oneOrThrow':
-            relationQuery =
-              relationQuery._json() as unknown as typeof relationQuery;
-            break;
-          case 'pluck': {
-            const { select } = relationQuery.query;
-            const first = select?.[0];
-            if (!select || !first) {
-              throw new PormInternalError(`Nothing was selected for pluck`);
-            }
-
-            select.length = 0;
-            select[0] = { selectAs: { c: first } } as SelectItem;
-            relationQuery = relationQuery._wrap(
-              relationQuery.__model.clone(),
-            ) as unknown as typeof relationQuery;
-            relationQuery._getOptional(
-              raw<StringColumn>(`COALESCE(json_agg("c"), '[]')`),
-            );
-            delete relationQuery.query.take;
-            break;
-          }
-          case 'rows':
-          case 'value':
-          case 'valueOrThrow':
-          case 'rowCount':
-          case 'void':
-            break;
-          default:
-            throw new UnhandledTypeError(returnType);
-        }
-
-        list.push(`(${relationQuery.toSql(values).text}) AS ${as}`);
+        pushSubQuerySql(relationQuery, as, values, list);
       } else {
         if ('selectAs' in item) {
           const obj = item.selectAs as Record<string, Expression | Query>;
@@ -145,8 +108,7 @@ export const selectToSql = (
               if (isRaw(value)) {
                 list.push(`${getRaw(value, values)} AS ${q(as)}`);
               } else {
-                const sql = (value as Query).json().toSql(values);
-                list.push(`(${sql.text}) AS ${q(as)}`);
+                pushSubQuerySql(value as Query, as, values, list);
               }
             } else {
               list.push(
@@ -178,4 +140,44 @@ export const selectToSql = (
   } else {
     return query.join?.length ? `${quotedAs}.*` : '*';
   }
+};
+
+const pushSubQuerySql = (
+  query: Query,
+  as: string,
+  values: unknown[],
+  list: string[],
+) => {
+  const { returnType } = query.query;
+  switch (returnType) {
+    case 'all':
+    case 'one':
+    case 'oneOrThrow':
+      query = query._json() as unknown as typeof query;
+      break;
+    case 'pluck': {
+      const { select } = query.query;
+      const first = select?.[0];
+      if (!select || !first) {
+        throw new PormInternalError(`Nothing was selected for pluck`);
+      }
+
+      select.length = 0;
+      select[0] = { selectAs: { c: first } } as SelectItem;
+      query = query._wrap(query.__model.clone()) as unknown as typeof query;
+      query._getOptional(raw<StringColumn>(`COALESCE(json_agg("c"), '[]')`));
+      delete query.query.take;
+      break;
+    }
+    case 'rows':
+    case 'value':
+    case 'valueOrThrow':
+    case 'rowCount':
+    case 'void':
+      break;
+    default:
+      throw new UnhandledTypeError(returnType);
+  }
+
+  list.push(`(${query.toSql(values).text}) AS ${q(as)}`);
 };

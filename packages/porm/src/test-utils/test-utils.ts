@@ -12,6 +12,12 @@ export type AssertEqual<T, Expected> = [T] extends [Expected]
     : false
   : false;
 
+export const assertType = <T, Expected>(
+  ..._: AssertEqual<T, Expected> extends true ? [] : ['invalid type']
+) => {
+  // noop
+};
+
 export const line = (s: string) =>
   s.trim().replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')');
 

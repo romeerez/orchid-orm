@@ -1,11 +1,11 @@
 import { db } from '../test-utils/test-db';
 import {
-  AssertEqual,
   chatData,
   expectSql,
   userData,
   useTestDatabase,
   now,
+  assertType,
 } from '../test-utils/test-utils';
 import { RelationQuery, Sql, TransactionAdapter } from 'pqb';
 import { Chat, User } from '../test-utils/test-models';
@@ -17,12 +17,10 @@ describe('hasAndBelongsToMany', () => {
     it('should have method to query related data', async () => {
       const chatsQuery = db.chat.all();
 
-      const eq: AssertEqual<
+      assertType<
         typeof db.user.chats,
         RelationQuery<'chats', { id: number }, never, typeof chatsQuery, false>
-      > = true;
-
-      expect(eq).toBe(true);
+      >();
 
       const userId = await db.user.get('id').insert({
         ...userData,
@@ -115,11 +113,7 @@ describe('hasAndBelongsToMany', () => {
         .join('chats', (q) => q.where({ 'user.name': 'name' }))
         .select('name', 'chats.title');
 
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        { name: string; title: string }[]
-      > = true;
-      expect(eq).toBe(true);
+      assertType<Awaited<typeof query>, { name: string; title: string }[]>();
 
       expectSql(
         query.toSql(),
@@ -145,11 +139,10 @@ describe('hasAndBelongsToMany', () => {
           db.user.chats.select('id', 'title').where({ title: 'title' }),
         );
 
-        const eq: AssertEqual<
+        assertType<
           Awaited<typeof query>,
           { id: number; chats: { id: number; title: string }[] }[]
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expectSql(
           query.toSql(),
@@ -178,11 +171,7 @@ describe('hasAndBelongsToMany', () => {
       it('should be selectable by relation name', () => {
         const query = db.user.select('id', 'chats');
 
-        const eq: AssertEqual<
-          Awaited<typeof query>,
-          { id: number; chats: Chat[] }[]
-        > = true;
-        expect(eq).toBe(true);
+        assertType<Awaited<typeof query>, { id: number; chats: Chat[] }[]>();
 
         expectSql(
           query.toSql(),
@@ -210,11 +199,7 @@ describe('hasAndBelongsToMany', () => {
     it('should allow to select count', () => {
       const query = db.user.select('id', db.user.chats.count());
 
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        { id: number; chats: number }[]
-      > = true;
-      expect(eq).toBe(true);
+      assertType<Awaited<typeof query>, { id: number; chats: number }[]>();
 
       expectSql(
         query.toSql(),
@@ -241,11 +226,7 @@ describe('hasAndBelongsToMany', () => {
         db.user.chats.count().as('chatsCount'),
       );
 
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        { id: number; chatsCount: number }[]
-      > = true;
-      expect(eq).toBe(true);
+      assertType<Awaited<typeof query>, { id: number; chatsCount: number }[]>();
 
       expectSql(
         query.toSql(),
@@ -267,35 +248,37 @@ describe('hasAndBelongsToMany', () => {
     });
 
     it('should allow to pluck values', () => {
-      const query = db.user.select('id', db.user.chats.pluck('title'));
-
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        { id: number; chats: string[] }[]
-      > = true;
-      expect(eq).toBe(true);
-
-      expectSql(
-        query.toSql(),
-        `
-          SELECT
-            "user"."id",
-            (
-              SELECT COALESCE(json_agg("c"), '[]')
-              FROM (
-                SELECT "chats"."title" AS "c"
-                FROM "chat" AS "chats"
-                WHERE EXISTS (
-                  SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."chatId" = "chats"."id"
-                    AND "chatUser"."userId" = "user"."id"
-                  LIMIT 1
-                )
-              ) AS "t"
-            ) AS "chats"
-          FROM "user"
-        `,
+      const query = db.user.select(
+        'id',
+        db.user.chats.pluck('title').as('titles'),
       );
+      const query2 = db.user.select('id', {
+        titles: db.user.chats.pluck('title'),
+      });
+
+      assertType<Awaited<typeof query>, { id: number; titles: string[] }[]>();
+      assertType<Awaited<typeof query2>, { id: number; titles: string[] }[]>();
+
+      const expectedSql = `
+        SELECT
+          "user"."id",
+          (
+            SELECT COALESCE(json_agg("c"), '[]')
+            FROM (
+              SELECT "chats"."title" AS "c"
+              FROM "chat" AS "chats"
+              WHERE EXISTS (
+                SELECT 1 FROM "chatUser"
+                WHERE "chatUser"."chatId" = "chats"."id"
+                  AND "chatUser"."userId" = "user"."id"
+                LIMIT 1
+              )
+            ) AS "t"
+          ) AS "titles"
+        FROM "user"
+      `;
+
+      expectSql(query.toSql(), expectedSql);
     });
   });
 

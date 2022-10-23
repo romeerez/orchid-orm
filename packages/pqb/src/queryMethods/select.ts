@@ -56,15 +56,7 @@ type SelectResult<
       : never]: Arg extends keyof T['selectable']
       ? T['selectable'][Arg]['column']
       : Arg extends RelationQueryBase
-      ? Arg['returnType'] extends 'all'
-        ? ArrayOfColumnsObjects<Arg['result']>
-        : Arg['returnType'] extends 'valueOrThrow'
-        ? Arg['result']['value']
-        : Arg['returnType'] extends 'pluck'
-        ? PluckResultColumnType<Arg['result']['pluck']>
-        : Arg[isRequiredRelationKey] extends true
-        ? ColumnsObject<Arg['result']>
-        : NullableColumn<ColumnsObject<Arg['result']>>
+      ? SelectSubQueryResult<Arg>
       : T['relations'] extends Record<string, Relation>
       ? Arg extends keyof T['relations']
         ? T['relations'][Arg]['returns'] extends 'many'
@@ -82,12 +74,22 @@ type SelectResult<
       : SelectAsArgs[K] extends RawExpression
       ? SelectAsArgs[K]['__column']
       : SelectAsArgs[K] extends Query
-      ? SelectAsArgs[K]['returnType'] extends 'all'
-        ? ArrayOfColumnsObjects<SelectAsArgs[K]['result']>
-        : ColumnsObject<SelectAsArgs[K]['result']>
+      ? SelectSubQueryResult<SelectAsArgs[K]>
       : never;
   }
 >;
+
+type SelectSubQueryResult<
+  Arg extends Query & { [isRequiredRelationKey]?: boolean },
+> = Arg['returnType'] extends 'all'
+  ? ArrayOfColumnsObjects<Arg['result']>
+  : Arg['returnType'] extends 'valueOrThrow'
+  ? Arg['result']['value']
+  : Arg['returnType'] extends 'pluck'
+  ? PluckResultColumnType<Arg['result']['pluck']>
+  : Arg[isRequiredRelationKey] extends true
+  ? ColumnsObject<Arg['result']>
+  : NullableColumn<ColumnsObject<Arg['result']>>;
 
 export const addParserForRawExpression = (
   q: Query,
