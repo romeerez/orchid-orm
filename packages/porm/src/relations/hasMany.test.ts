@@ -264,9 +264,12 @@ describe('hasMany', () => {
           SELECT
             "user"."id",
             (
-              SELECT COALESCE(json_agg("messages"."text"), '[]')
-              FROM "message" AS "messages"
-              WHERE "messages"."authorId" = "user"."id"
+              SELECT COALESCE(json_agg("c"), '[]')
+              FROM (
+                SELECT "messages"."text" AS "c"
+                FROM "message" AS "messages"
+                WHERE "messages"."authorId" = "user"."id"
+              ) AS "t"
             ) AS "messages"
           FROM "user"
         `,
@@ -1331,19 +1334,22 @@ describe('hasMany through', () => {
           SELECT
             "profile"."id",
             (
-              SELECT COALESCE(json_agg("chats"."title"), '[]')
-              FROM "chat" AS "chats"
-              WHERE EXISTS (
-                SELECT 1 FROM "user"
+              SELECT COALESCE(json_agg("c"), '[]')
+              FROM (
+                SELECT "chats"."title" AS "c"
+                FROM "chat" AS "chats"
                 WHERE EXISTS (
-                  SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."chatId" = "chats"."id"
-                    AND "chatUser"."userId" = "user"."id"
+                  SELECT 1 FROM "user"
+                  WHERE EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."chatId" = "chats"."id"
+                      AND "chatUser"."userId" = "user"."id"
+                    LIMIT 1
+                  )
+                  AND "user"."id" = "profile"."userId"
                   LIMIT 1
                 )
-                AND "user"."id" = "profile"."userId"
-                LIMIT 1
-              )
+              ) AS "t"
             ) AS "chats"
           FROM "profile"
         `,
@@ -1653,7 +1659,7 @@ describe('hasMany through', () => {
 
         const eq: AssertEqual<
           Awaited<typeof query>,
-          { id: number; profiles: string | null }[]
+          { id: number; profiles: (string | null)[] }[]
         > = true;
         expect(eq).toBe(true);
 
@@ -1663,19 +1669,22 @@ describe('hasMany through', () => {
             SELECT
               "chat"."id",
               (
-                SELECT COALESCE(json_agg("profiles"."bio"), '[]')
-                FROM "profile" AS "profiles"
-                WHERE EXISTS (
-                  SELECT 1 FROM "user" AS "users"
-                  WHERE "profiles"."userId" = "users"."id"
-                    AND EXISTS (
-                      SELECT 1 FROM "chatUser"
-                      WHERE "chatUser"."userId" = "users"."id"
-                        AND "chatUser"."chatId" = "chat"."id"
-                      LIMIT 1
-                    )
-                  LIMIT 1
-                )
+                SELECT COALESCE(json_agg("c"), '[]')
+                FROM (
+                  SELECT "profiles"."bio" AS "c"
+                  FROM "profile" AS "profiles"
+                  WHERE EXISTS (
+                    SELECT 1 FROM "user" AS "users"
+                    WHERE "profiles"."userId" = "users"."id"
+                      AND EXISTS (
+                        SELECT 1 FROM "chatUser"
+                        WHERE "chatUser"."userId" = "users"."id"
+                          AND "chatUser"."chatId" = "chat"."id"
+                        LIMIT 1
+                      )
+                    LIMIT 1
+                  )
+                ) AS "t"
               ) AS "profiles"
             FROM "chat"
           `,

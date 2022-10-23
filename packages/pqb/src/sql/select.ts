@@ -1,4 +1,9 @@
-import { JsonItem, SelectFunctionItem, SelectQueryData } from './types';
+import {
+  JsonItem,
+  SelectFunctionItem,
+  SelectItem,
+  SelectQueryData,
+} from './types';
 import { Expression, getRaw, isRaw, raw } from '../common';
 import { Query } from '../query';
 import { addValue, q, quoteFullColumn } from './common';
@@ -6,6 +11,7 @@ import { aggregateToSql } from './aggregate';
 import { getQueryAs } from '../utils';
 import { RelationQuery, relationQueryKey } from '../relations';
 import { PormInternalError, UnhandledTypeError } from '../errors';
+import { StringColumn } from '../columnSchema';
 
 const jsonColumnOrMethodToSql = (
   column: string | JsonItem,
@@ -102,20 +108,21 @@ export const selectToSql = (
               relationQuery._json() as unknown as typeof relationQuery;
             break;
           case 'pluck': {
-            const first = relationQuery.query.select?.[0];
-            if (!first)
+            const { select } = relationQuery.query;
+            const first = select?.[0];
+            if (!select || !first) {
               throw new PormInternalError(`Nothing was selected for pluck`);
+            }
 
-            const selection = selectToSql(
-              relationQuery.__model,
-              relationQuery.query,
-              values,
-              q(getQueryAs(relationQuery)),
+            select.length = 0;
+            select[0] = { selectAs: { c: first } } as SelectItem;
+            relationQuery = relationQuery._wrap(
+              relationQuery.__model.clone(),
+            ) as unknown as typeof relationQuery;
+            relationQuery._getOptional(
+              raw<StringColumn>(`COALESCE(json_agg("c"), '[]')`),
             );
-
-            relationQuery.query.select = [
-              raw(`COALESCE(json_agg(${selection}), '[]')`),
-            ];
+            delete relationQuery.query.take;
             break;
           }
           case 'rows':

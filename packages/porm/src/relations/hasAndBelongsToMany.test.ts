@@ -265,6 +265,38 @@ describe('hasAndBelongsToMany', () => {
         `,
       );
     });
+
+    it('should allow to pluck values', () => {
+      const query = db.user.select('id', db.user.chats.pluck('title'));
+
+      const eq: AssertEqual<
+        Awaited<typeof query>,
+        { id: number; chats: string[] }[]
+      > = true;
+      expect(eq).toBe(true);
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT
+            "user"."id",
+            (
+              SELECT COALESCE(json_agg("c"), '[]')
+              FROM (
+                SELECT "chats"."title" AS "c"
+                FROM "chat" AS "chats"
+                WHERE EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."chatId" = "chats"."id"
+                    AND "chatUser"."userId" = "user"."id"
+                  LIMIT 1
+                )
+              ) AS "t"
+            ) AS "chats"
+          FROM "user"
+        `,
+      );
+    });
   });
 
   describe('insert', () => {
