@@ -347,20 +347,20 @@ export class QueryMethods {
     return pushQueryArray(this, 'order', args);
   }
 
-  limit<T extends Query>(this: T, arg: number): T {
+  limit<T extends Query>(this: T, arg: number | undefined): T {
     return this.clone()._limit(arg);
   }
 
-  _limit<T extends Query>(this: T, arg: number): T {
+  _limit<T extends Query>(this: T, arg: number | undefined): T {
     (this.query as SelectQueryData).limit = arg;
     return this;
   }
 
-  offset<T extends Query>(this: T, arg: number): T {
+  offset<T extends Query>(this: T, arg: number | undefined): T {
     return this.clone()._offset(arg);
   }
 
-  _offset<T extends Query>(this: T, arg: number): T {
+  _offset<T extends Query>(this: T, arg: number | undefined): T {
     (this.query as SelectQueryData).offset = arg;
     return this;
   }

@@ -14,8 +14,7 @@ const someTable = db('someTable', (t) => ({
   name: t.text(),
   active: t.boolean(),
   description: t.text().optional(),
-  updatedAt: t.timestamp(),
-  createdAt: t.timestamp(),
+  ...t.timestamps(),
 }))
 ```
 
@@ -32,8 +31,7 @@ export class SomeModel extends Model {
     name: t.text(),
     active: t.boolean(),
     description: t.text().optional(),
-    updatedAt: t.timestamp(),
-    createdAt: t.timestamp(),
+    ...t.timestamps(),
   }))
 }
 ```
@@ -124,12 +122,16 @@ const db = createDb({
 })
 
 const someTable = db('someTable', (t) => ({
-  createdAt: t.timestamp(),
+  datetime: t.timestamp(),
+  ...t.timestamps(),
 }))
 
 const record = await someTable.take()
-// createdAt is parsed and it has a proper TS type:
-const isDate: Date = record.createdAt
+// `datetime` is parsed and it has a proper TS type:
+const isDate1: Date = record.datetime
+// createdAt and updatedAt are defined by ...t.timestamps() and they use the output of custom timestamp()
+const isDate2: Date = record.createdAt
+const isDate3: Date = record.updatedAt
 ```
 
 For ORM:
@@ -215,6 +217,8 @@ const value: number = await someTable.get('column')
 ### timestamps
 
 Adds `createdAt` and `updatedAt` columns of type `timestamp` (without time zone) with default SQL `now()`.
+
+`timestamps` function is using `timestamp` internally. If `timestamp` is overridden to be parsed into `Date`, so will do `timestamps`. 
 
 ```ts
 const someTable = db('someTable', (t) => ({

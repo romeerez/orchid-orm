@@ -101,8 +101,7 @@ export const User = db('user', (t) => ({
   name: t.text(),
   password: t.text(),
   age: t.integer().nullable(),
-  updatedAt: t.timestamp(),
-  createdAt: t.timestamp(),
+  ...t.timestamps(),
 }));
 ```
 

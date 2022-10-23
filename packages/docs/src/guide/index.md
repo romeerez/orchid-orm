@@ -38,8 +38,8 @@ export class UserModel extends Model {
     id: t.serial().primaryKey(),
     name: t.text(),
     password: t.text(),
-    updatedAt: t.timestamp(),
-    createdAt: t.timestamp(),
+    // adds createdAt and updatedAt with defaults:
+    ...t.timestamps(),
   }))
   
   relations = {

@@ -588,17 +588,29 @@ describe('order', () => {
 });
 
 describe('limit', () => {
-  it('sets limit', () => {
+  it('should set limit', () => {
     const q = User.all();
     expectSql(q.limit(5).toSql(), 'SELECT * FROM "user" LIMIT $1', [5]);
+    expectQueryNotMutated(q);
+  });
+
+  it('should reset limit', () => {
+    const q = User.all();
+    expectSql(q.limit(undefined).toSql(), 'SELECT * FROM "user"');
     expectQueryNotMutated(q);
   });
 });
 
 describe('offset', () => {
-  it('sets offset', () => {
+  it('should set offset', () => {
     const q = User.all();
     expectSql(q.offset(5).toSql(), 'SELECT * FROM "user" OFFSET $1', [5]);
+    expectQueryNotMutated(q);
+  });
+
+  it('should reset offset', () => {
+    const q = User.all();
+    expectSql(q.offset(undefined).toSql(), 'SELECT * FROM "user"');
     expectQueryNotMutated(q);
   });
 });
