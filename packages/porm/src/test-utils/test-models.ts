@@ -29,8 +29,7 @@ export class UserModel extends Model {
       .nullable(),
     age: t.integer().nullable(),
     active: t.boolean().nullable(),
-    createdAt: t.timestamp(),
-    updatedAt: t.timestamp(),
+    ...t.timestamps(),
   }));
 
   relations = {
@@ -66,8 +65,7 @@ export class ProfileModel extends Model {
       .nullable()
       .foreignKey(() => UserModel, 'id'),
     bio: t.text().nullable(),
-    createdAt: t.timestamp(),
-    updatedAt: t.timestamp(),
+    ...t.timestamps(),
   }));
 
   relations = {
@@ -91,8 +89,7 @@ export class ChatModel extends Model {
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     title: t.text(),
-    createdAt: t.timestamp(),
-    updatedAt: t.timestamp(),
+    ...t.timestamps(),
   }));
 
   relations = {
@@ -123,8 +120,7 @@ export class MessageModel extends Model {
       .nullable()
       .foreignKey(() => UserModel, 'id'),
     text: t.text(),
-    createdAt: t.timestamp(),
-    updatedAt: t.timestamp(),
+    ...t.timestamps(),
   }));
 
   relations = {
