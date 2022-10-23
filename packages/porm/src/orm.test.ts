@@ -7,11 +7,12 @@ import {
 } from './test-utils/test-utils';
 import { adapter } from './test-utils/test-db';
 import { createModel } from './model';
+import { columnTypes } from 'pqb';
 
 describe('orm', () => {
   useTestDatabase();
 
-  const Model = createModel();
+  const Model = createModel({ columnTypes });
 
   type User = UserModel['columns']['type'];
   class UserModel extends Model {

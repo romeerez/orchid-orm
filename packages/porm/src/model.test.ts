@@ -15,7 +15,7 @@ describe('model', () => {
     it('should return date as string by default', async () => {
       await db.user.insert(userData);
 
-      const Model = createModel();
+      const Model = createModel({ columnTypes });
       class UserModel extends Model {
         table = 'user';
         columns = this.setColumns((t) => ({
@@ -45,7 +45,7 @@ describe('model', () => {
           timestamp() {
             return columnTypes.timestamp().parse((input) => new Date(input));
           },
-        }
+        },
       });
 
       class UserModel extends Model {

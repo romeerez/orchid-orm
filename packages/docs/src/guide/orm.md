@@ -53,8 +53,9 @@ First need to create a base `Model` class to extend from, this code should be in
 
 ```ts
 import { createModel } from 'porm'
+import { columnTypes } from 'pqb'
 
-export const Model = createModel()
+export const Model = createModel({ columnTypes })
 ```
 
 This step is needed for case of customization of column types.

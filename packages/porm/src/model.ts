@@ -2,8 +2,6 @@ import {
   ColumnShapeOutput,
   ColumnsShape,
   ColumnType,
-  columnTypes,
-  ColumnTypes,
   ColumnTypesBase,
   Db,
   getColumnTypes,
@@ -54,31 +52,24 @@ export type Model = {
 
 export type SchemaConverter = (columnType: ColumnType) => unknown;
 
-export const createModel = <CT extends ColumnTypesBase>(
-  options: {
-    columnTypes?: CT;
-  } = {},
-) => {
+export const createModel = <CT extends ColumnTypesBase>(options: {
+  columnTypes: CT;
+}) => {
   return class Model {
     table!: string;
     columns!: ModelConfig;
     schema?: string;
 
-    setColumns<T extends ColumnsShape>(
-      fn: (t: ColumnTypesBase extends CT ? ColumnTypes : CT) => T,
-    ): { shape: T; type: ColumnShapeOutput<T> } {
-      const types = (options?.columnTypes ||
-        columnTypes) as unknown as ColumnTypesBase extends CT
-        ? ColumnTypes
-        : CT;
-
-      const shape = getColumnTypes(types, fn);
+    setColumns = <T extends ColumnsShape>(
+      fn: (t: CT) => T,
+    ): { shape: T; type: ColumnShapeOutput<T> } => {
+      const shape = getColumnTypes(options.columnTypes, fn);
 
       return {
         shape,
         type: undefined as unknown as ColumnShapeOutput<T>,
       };
-    }
+    };
 
     belongsTo<
       Self extends this,
