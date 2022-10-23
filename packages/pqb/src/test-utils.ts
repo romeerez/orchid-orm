@@ -28,6 +28,7 @@ export const db = createDb({
   },
 });
 
+export type UserRecord = typeof User['type'];
 export const User = db('user', (t) => ({
   id: t.serial().primaryKey(),
   name: t.text(),
@@ -47,6 +48,7 @@ export const User = db('user', (t) => ({
   updatedAt: t.timestamp(),
 }));
 
+export type ProfileRecord = typeof Profile['type'];
 export const Profile = db('profile', (t) => ({
   id: t.serial().primaryKey(),
   userId: t.integer().foreignKey('user', 'id'),
@@ -62,6 +64,7 @@ export const Chat = db('chat', (t) => ({
   updatedAt: t.timestamp(),
 }));
 
+export type MessageRecord = typeof Message['type'];
 export const Message = db('message', (t) => ({
   id: t.serial().primaryKey(),
   chatId: t.integer().foreignKey('chat', 'id'),
@@ -109,6 +112,12 @@ export type AssertEqual<T, Expected> = [T] extends [Expected]
     ? true
     : false
   : false;
+
+export const assertType = <T, Expected>(
+  ..._: AssertEqual<T, Expected> extends true ? [] : ['invalid type']
+) => {
+  // noop
+};
 
 export const insert = async <
   T extends Record<string, unknown> & { id: number },

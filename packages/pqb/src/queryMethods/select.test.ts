@@ -1,16 +1,19 @@
 import {
-  AssertEqual,
+  assertType,
   Chat,
   chatData,
   expectQueryNotMutated,
   expectSql,
   Message,
   messageData,
+  MessageRecord,
   now,
   Profile,
   profileData,
+  ProfileRecord,
   User,
   userData,
+  UserRecord,
   useTestDatabase,
 } from '../test-utils';
 import { raw } from '../common';
@@ -29,16 +32,14 @@ describe('selectMethods', () => {
   describe('select', () => {
     it('should have no effect if no columns provided', () => {
       const q = User.all();
+      const query = q.select();
+
+      assertType<Awaited<typeof q>, UserRecord[]>();
+
       expectSql(
-        q.select().toSql(),
+        query.toSql(),
         `
           SELECT * FROM "user"
-        `,
-      );
-      expectSql(
-        q.select('id').select().toSql(),
-        `
-          SELECT "user"."id" FROM "user"
         `,
       );
       expectQueryNotMutated(q);
@@ -46,8 +47,12 @@ describe('selectMethods', () => {
 
     it('should select provided columns', () => {
       const q = User.all();
+      const query = q.select('id', 'name');
+
+      assertType<Awaited<typeof query>, Pick<UserRecord, 'id' | 'name'>[]>();
+
       expectSql(
-        q.select('id', 'name').toSql(),
+        query.toSql(),
         `
           SELECT "user"."id", "user"."name" FROM "user"
         `,
@@ -57,8 +62,12 @@ describe('selectMethods', () => {
 
     it('should select table.column', () => {
       const q = User.all();
+      const query = q.select('user.id', 'user.name');
+
+      assertType<Awaited<typeof query>, Pick<UserRecord, 'id' | 'name'>[]>();
+
       expectSql(
-        q.select('user.id', 'user.name').toSql(),
+        query.toSql(),
         `
           SELECT "user"."id", "user"."name" FROM "user"
         `,
@@ -68,12 +77,14 @@ describe('selectMethods', () => {
 
     it('should select joined columns', () => {
       const q = User.all();
+      const query = q
+        .join(Profile, 'profile.userId', '=', 'user.id')
+        .select('user.id', 'profile.userId');
+
+      assertType<Awaited<typeof query>, { id: number; userId: number }[]>();
 
       expectSql(
-        q
-          .join(Profile, 'profile.userId', '=', 'user.id')
-          .select('user.id', 'profile.userId')
-          .toSql(),
+        query.toSql(),
         `
           SELECT "user"."id", "profile"."userId" FROM "user"
           JOIN "profile" ON "profile"."userId" = "user"."id"
@@ -84,11 +95,14 @@ describe('selectMethods', () => {
 
     it('should select joined columns with alias', () => {
       const q = User.all();
+      const query = q
+        .join(Profile.as('p'), 'p.userId', '=', 'user.id')
+        .select('user.id', 'p.userId');
+
+      assertType<Awaited<typeof query>, { id: number; userId: number }[]>();
+
       expectSql(
-        q
-          .join(Profile.as('p'), 'p.userId', '=', 'user.id')
-          .select('user.id', 'p.userId')
-          .toSql(),
+        query.toSql(),
         `
           SELECT "user"."id", "p"."userId" FROM "user"
           JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
@@ -125,11 +139,10 @@ describe('selectMethods', () => {
         const q = User.all();
 
         const query = q.select('id', profileRelation.where({ bio: 'bio' }));
-        const eq: AssertEqual<
+        assertType<
           Awaited<typeof query>,
           { id: number; profile: typeof Profile['type'] | null }[]
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expectSql(
           query.toSql(),
@@ -167,11 +180,11 @@ describe('selectMethods', () => {
             true
           >,
         );
-        const eq: AssertEqual<
+
+        assertType<
           Awaited<typeof query>,
           { id: number; profile: typeof Profile['type'] }[]
-        > = true;
-        expect(eq).toBe(true);
+        >();
       });
 
       it('should parse columns in single relation record result', async () => {
@@ -180,6 +193,12 @@ describe('selectMethods', () => {
         await Profile.insert({ userId, updatedAt: now, createdAt: now });
 
         const [record] = await User.select('id', profileRelation);
+
+        assertType<
+          typeof record,
+          { id: number; profile: ProfileRecord | null }
+        >();
+
         expect(record.profile).toMatchObject({
           updatedAt: now,
           createdAt: now,
@@ -213,11 +232,10 @@ describe('selectMethods', () => {
         const q = User.all();
 
         const query = q.select('id', messageRelation.where({ text: 'text' }));
-        const eq: AssertEqual<
+        assertType<
           Awaited<typeof query>,
           { id: number; messages: typeof Message['type'][] }[]
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expectSql(
           query.toSql(),
@@ -251,6 +269,9 @@ describe('selectMethods', () => {
         });
 
         const [record] = await User.select('id', messageRelation);
+
+        assertType<typeof record, { id: number; messages: MessageRecord[] }>();
+
         expect(record.messages[0]).toMatchObject({
           updatedAt: now,
           createdAt: now,
@@ -264,6 +285,8 @@ describe('selectMethods', () => {
       it('should parse columns of the table', async () => {
         const q = User.select('createdAt');
 
+        assertType<Awaited<typeof q>, { createdAt: Date }[]>();
+
         expect((await q.all())[0].createdAt instanceof Date).toBe(true);
         expect((await q.take()).createdAt instanceof Date).toBe(true);
         expect((await q.rows())[0][0] instanceof Date).toBe(true);
@@ -272,6 +295,8 @@ describe('selectMethods', () => {
 
       it('should parse columns of the table, selected by column name and table name', async () => {
         const q = User.select('user.createdAt');
+
+        assertType<Awaited<typeof q>, { createdAt: Date }[]>();
 
         expect((await q.all())[0].createdAt instanceof Date).toBe(true);
         expect((await q.take()).createdAt instanceof Date).toBe(true);
@@ -283,6 +308,8 @@ describe('selectMethods', () => {
         const q = Profile.join(User, 'user.id', '=', 'profile.userId').select(
           'user.createdAt',
         );
+
+        assertType<Awaited<typeof q>, { createdAt: Date }[]>();
 
         expect((await q.all())[0].createdAt instanceof Date).toBe(true);
         expect((await q.take()).createdAt instanceof Date).toBe(true);
@@ -296,11 +323,10 @@ describe('selectMethods', () => {
 
       const query = q.select({ aliasedId: 'id', aliasedName: 'name' });
 
-      const eq: AssertEqual<
+      assertType<
         Awaited<typeof query>,
         { aliasedId: number; aliasedName: string }[]
-      > = true;
-      expect(eq).toBe(true);
+      >();
 
       expectSql(
         query.toSql(),
@@ -320,11 +346,10 @@ describe('selectMethods', () => {
         aliasedName: 'user.name',
       });
 
-      const eq: AssertEqual<
+      assertType<
         Awaited<typeof query>,
         { aliasedId: number; aliasedName: string }[]
-      > = true;
-      expect(eq).toBe(true);
+      >();
 
       expectSql(
         query.toSql(),
@@ -338,14 +363,18 @@ describe('selectMethods', () => {
 
     it('should select joined columns', () => {
       const q = User.all();
+      const query = q.join(Profile, 'profile.userId', '=', 'user.id').select({
+        aliasedId: 'user.id',
+        aliasedUserId: 'profile.userId',
+      });
+
+      assertType<
+        Awaited<typeof query>,
+        { aliasedId: number; aliasedUserId: number }[]
+      >();
+
       expectSql(
-        q
-          .join(Profile, 'profile.userId', '=', 'user.id')
-          .select({
-            aliasedId: 'user.id',
-            aliasedUserId: 'profile.userId',
-          })
-          .toSql(),
+        query.toSql(),
         `
           SELECT "user"."id" AS "aliasedId", "profile"."userId" AS "aliasedUserId"
           FROM "user"
@@ -357,14 +386,18 @@ describe('selectMethods', () => {
 
     it('should select joined columns with alias', () => {
       const q = User.all();
+      const query = q.join(Profile.as('p'), 'p.userId', '=', 'user.id').select({
+        aliasedId: 'user.id',
+        aliasedUserId: 'p.userId',
+      });
+
+      assertType<
+        Awaited<typeof query>,
+        { aliasedId: number; aliasedUserId: number }[]
+      >();
+
       expectSql(
-        q
-          .join(Profile.as('p'), 'p.userId', '=', 'user.id')
-          .select({
-            aliasedId: 'user.id',
-            aliasedUserId: 'p.userId',
-          })
-          .toSql(),
+        query.toSql(),
         `
           SELECT "user"."id" AS "aliasedId", "p"."userId" AS "aliasedUserId"
           FROM "user"
@@ -376,8 +409,12 @@ describe('selectMethods', () => {
 
     it('can select raw', () => {
       const q = User.all();
+      const query = q.select({ one: raw('1') });
+
+      assertType<Awaited<typeof query>, { one: unknown }[]>();
+
       expectSql(
-        q.select({ one: raw('1') }).toSql(),
+        query.toSql(),
         `
           SELECT 1 AS "one" FROM "user"
         `,
@@ -387,8 +424,12 @@ describe('selectMethods', () => {
 
     it('can select subquery', () => {
       const q = User.all();
+      const query = q.select({ subquery: User.all() });
+
+      assertType<Awaited<typeof query>, { subquery: UserRecord[] }[]>();
+
       expectSql(
-        q.select({ subquery: User.all() }).toSql(),
+        query.toSql(),
         `
           SELECT
             (
@@ -406,6 +447,8 @@ describe('selectMethods', () => {
     it('should select all columns', () => {
       const query = User.select('id', 'name').selectAll();
 
+      assertType<Awaited<typeof query>, UserRecord[]>();
+
       expectSql(query.toSql(), `SELECT * FROM "user"`);
     });
   });
@@ -418,6 +461,8 @@ describe('selectMethods', () => {
         date: 'createdAt',
       });
 
+      assertType<Awaited<typeof q>, { date: Date }[]>();
+
       expect((await q.all())[0].date instanceof Date).toBe(true);
       expect((await q.take()).date instanceof Date).toBe(true);
       expect((await q.rows())[0][0] instanceof Date).toBe(true);
@@ -427,6 +472,8 @@ describe('selectMethods', () => {
       const q = User.select({
         date: 'user.createdAt',
       });
+
+      assertType<Awaited<typeof q>, { date: Date }[]>();
 
       expect((await q.all())[0].date instanceof Date).toBe(true);
       expect((await q.take()).date instanceof Date).toBe(true);
@@ -438,6 +485,8 @@ describe('selectMethods', () => {
         date: 'user.createdAt',
       });
 
+      assertType<Awaited<typeof q>, { date: Date }[]>();
+
       expect((await q.all())[0].date instanceof Date).toBe(true);
       expect((await q.take()).date instanceof Date).toBe(true);
       expect((await q.rows())[0][0] instanceof Date).toBe(true);
@@ -448,6 +497,8 @@ describe('selectMethods', () => {
         users: User.all(),
       });
 
+      assertType<Awaited<typeof q>, { users: UserRecord[] }[]>();
+
       expect((await q.all())[0].users[0].createdAt instanceof Date).toBe(true);
       expect((await q.take()).users[0].createdAt instanceof Date).toBe(true);
       expect((await q.rows())[0][0][0].createdAt instanceof Date).toBe(true);
@@ -457,6 +508,8 @@ describe('selectMethods', () => {
       const q = User.select({
         user: User.take(),
       });
+
+      assertType<Awaited<typeof q>, { user: UserRecord }[]>();
 
       expect((await q.all())[0].user.createdAt instanceof Date).toBe(true);
       expect((await q.take()).user.createdAt instanceof Date).toBe(true);
@@ -470,6 +523,8 @@ describe('selectMethods', () => {
           '"createdAt"',
         ),
       });
+
+      assertType<Awaited<typeof q>, { date: Date }[]>();
 
       expect((await q.all())[0].date instanceof Date).toBe(true);
       expect((await q.take()).date instanceof Date).toBe(true);
