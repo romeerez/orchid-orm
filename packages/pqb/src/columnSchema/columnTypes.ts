@@ -177,7 +177,9 @@ export const columnTypes = {
   jsonText: () => new JSONTextColumn(),
   array: <Item extends ColumnType>(item: Item) => new ArrayColumn(item),
 
-  timestamps<T extends { timestamp(): ColumnType }>(this: T) {
+  timestamps<T extends ColumnType>(this: {
+    timestamp(): T;
+  }): { createdAt: T; updatedAt: T } {
     return {
       createdAt: this.timestamp().default(raw('now()')),
       updatedAt: this.timestamp().default(raw('now()')),
