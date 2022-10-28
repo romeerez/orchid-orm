@@ -2,28 +2,30 @@ import { InsertQueryData, QueryData } from './types';
 import { addValue, q } from './common';
 import { getRaw, isRaw } from '../common';
 import { pushWhereSql } from './where';
-import { Query } from '../query';
+import { QueryBase } from '../query';
 import { selectToSql } from './select';
+import { ToSqlCtx } from './toSql';
 
 export const pushInsertSql = (
-  sql: string[],
-  values: unknown[],
-  model: Query,
+  ctx: ToSqlCtx,
+  model: QueryBase,
   query: InsertQueryData,
   quotedAs: string,
 ) => {
   const quotedColumns = query.columns.map(q);
 
-  sql.push(
+  ctx.sql.push(
     `INSERT INTO ${quotedAs}(${quotedColumns.join(', ')}) VALUES ${
       isRaw(query.values)
-        ? getRaw(query.values, values)
+        ? getRaw(query.values, ctx.values)
         : query.values
             .map(
               (row) =>
                 `(${row
                   .map((value) =>
-                    value === undefined ? 'DEFAULT' : addValue(values, value),
+                    value === undefined
+                      ? 'DEFAULT'
+                      : addValue(ctx.values, value),
                   )
                   .join(', ')})`,
             )
@@ -32,23 +34,23 @@ export const pushInsertSql = (
   );
 
   if (query.onConflict) {
-    sql.push('ON CONFLICT');
+    ctx.sql.push('ON CONFLICT');
 
     const { expr, type } = query.onConflict;
     if (expr) {
       if (typeof expr === 'string') {
-        sql.push(`(${q(expr)})`);
+        ctx.sql.push(`(${q(expr)})`);
       } else if (Array.isArray(expr)) {
-        sql.push(`(${expr.map(q).join(', ')})`);
+        ctx.sql.push(`(${expr.map(q).join(', ')})`);
       } else {
-        sql.push(getRaw(expr, values));
+        ctx.sql.push(getRaw(expr, ctx.values));
       }
     } else {
-      sql.push(`(${quotedColumns.join(', ')})`);
+      ctx.sql.push(`(${quotedColumns.join(', ')})`);
     }
 
     if (type === 'ignore') {
-      sql.push('DO NOTHING');
+      ctx.sql.push('DO NOTHING');
     } else if (type === 'merge') {
       let set: string;
 
@@ -61,11 +63,11 @@ export const pushInsertSql = (
             .map((column) => `${q(column)} = excluded.${q(column)}`)
             .join(', ');
         } else if (isRaw(update)) {
-          set = getRaw(update, values);
+          set = getRaw(update, ctx.values);
         } else {
           const arr: string[] = [];
           for (const key in update) {
-            arr.push(`${q(key)} = ${addValue(values, update[key])}`);
+            arr.push(`${q(key)} = ${addValue(ctx.values, update[key])}`);
           }
           set = arr.join(', ');
         }
@@ -75,22 +77,21 @@ export const pushInsertSql = (
           .join(', ');
       }
 
-      sql.push('DO UPDATE SET', set);
+      ctx.sql.push('DO UPDATE SET', set);
     }
   }
 
-  pushWhereSql(sql, model, query, model.shape, values, quotedAs);
-  pushReturningSql(sql, model, query, values, quotedAs);
+  pushWhereSql(ctx, model, query, quotedAs);
+  pushReturningSql(ctx, model, query, quotedAs);
 };
 
 export const pushReturningSql = (
-  sql: string[],
-  model: Query,
+  ctx: ToSqlCtx,
+  model: QueryBase,
   query: QueryData,
-  values: unknown[],
   quotedAs: string,
 ) => {
   if (query.select) {
-    sql.push(`RETURNING ${selectToSql(model, query, values, quotedAs)}`);
+    ctx.sql.push(`RETURNING ${selectToSql(ctx, model, query, quotedAs)}`);
   }
 };

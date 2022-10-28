@@ -1,16 +1,16 @@
 import { OrderItem, SelectQueryData } from './types';
 import { getRaw, isRaw } from '../common';
 import { qc } from './common';
+import { ToSqlCtx } from './toSql';
 
 export const pushOrderBySql = (
-  sql: string[],
-  values: unknown[],
+  ctx: ToSqlCtx,
   quotedAs: string | undefined,
   order: Exclude<SelectQueryData['order'], undefined>,
 ) => {
-  sql.push(
+  ctx.sql.push(
     `ORDER BY ${order
-      .map((item) => orderByToSql(item, values, quotedAs))
+      .map((item) => orderByToSql(item, ctx.values, quotedAs))
       .join(', ')}`,
   );
 };

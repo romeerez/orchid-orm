@@ -1,45 +1,45 @@
-import { Query } from '../query';
+import { QueryBase } from '../query';
 import { UpdateQueryData } from './types';
 import { addValue, q, quoteSchemaAndTable } from './common';
 import { getRaw, isRaw, RawExpression } from '../common';
 import { pushReturningSql } from './insert';
 import { pushWhereSql } from './where';
+import { ToSqlCtx } from './toSql';
 
 export const pushUpdateSql = (
-  sql: string[],
-  values: unknown[],
-  model: Query,
+  ctx: ToSqlCtx,
+  model: QueryBase,
   query: UpdateQueryData,
   quotedAs: string,
 ) => {
   const quotedTable = quoteSchemaAndTable(query.schema, model.table as string);
-  sql.push(`UPDATE ${quotedTable}`);
+  ctx.sql.push(`UPDATE ${quotedTable}`);
 
   if (query.as && quotedTable !== quotedAs) {
-    sql.push(`AS ${quotedAs}`);
+    ctx.sql.push(`AS ${quotedAs}`);
   }
 
-  sql.push('SET');
+  ctx.sql.push('SET');
 
   query.data.forEach((item) => {
     if (isRaw(item)) {
-      sql.push(getRaw(item, values));
+      ctx.sql.push(getRaw(item, ctx.values));
     } else {
       const set: string[] = [];
 
       for (const key in item) {
         const value = item[key];
         if (value !== undefined) {
-          set.push(`${q(key)} = ${processValue(values, key, value)}`);
+          set.push(`${q(key)} = ${processValue(ctx.values, key, value)}`);
         }
       }
 
-      sql.push(set.join(', '));
+      ctx.sql.push(set.join(', '));
     }
   });
 
-  pushWhereSql(sql, model, query, model.shape, values, quotedAs);
-  pushReturningSql(sql, model, query, values, quotedAs);
+  pushWhereSql(ctx, model, query, quotedAs);
+  pushReturningSql(ctx, model, query, quotedAs);
 };
 
 const processValue = (

@@ -1,15 +1,15 @@
 import { ColumnInfoQueryData } from './types';
 import { addValue } from './common';
+import { ToSqlCtx } from './toSql';
 
 export const pushColumnInfoSql = (
-  sql: string[],
-  values: unknown[],
+  ctx: ToSqlCtx,
   table: string,
   query: ColumnInfoQueryData,
 ) => {
-  sql.push(
+  ctx.sql.push(
     `SELECT * FROM information_schema.columns WHERE table_name = ${addValue(
-      values,
+      ctx.values,
       table,
     )} AND table_catalog = current_database() AND table_schema = ${
       query.schema || 'current_schema()'
@@ -17,6 +17,6 @@ export const pushColumnInfoSql = (
   );
 
   if (query.column) {
-    sql.push(`AND column_name = ${addValue(values, query.column)}`);
+    ctx.sql.push(`AND column_name = ${addValue(ctx.values, query.column)}`);
   }
 };

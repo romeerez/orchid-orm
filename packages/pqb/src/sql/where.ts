@@ -1,4 +1,4 @@
-import { Query } from '../query';
+import { Query, QueryBase } from '../query';
 import {
   JoinItem,
   QueryData,
@@ -12,37 +12,25 @@ import { addValue, q, qc, quoteFullColumn } from './common';
 import { EMPTY_OBJECT, getRaw, isRaw, RawExpression } from '../common';
 import { getQueryAs, MaybeArray, toArray } from '../utils';
 import { processJoinItem } from './join';
-import { ColumnsShape } from '../columnSchema';
+import { ToSqlCtx } from './toSql';
 
 export const pushWhereSql = (
-  sql: string[],
-  model: Query,
+  ctx: ToSqlCtx,
+  model: QueryBase,
   query: Pick<QueryData, 'as' | 'and' | 'or'>,
-  shape: ColumnsShape,
-  values: unknown[],
   quotedAs?: string,
-  otherTableQuotedAs?: string,
 ) => {
-  const whereConditions = whereToSql(
-    model,
-    query,
-    shape,
-    values,
-    quotedAs,
-    otherTableQuotedAs,
-  );
+  const whereConditions = whereToSql(ctx, model, query, quotedAs);
   if (whereConditions) {
-    sql.push('WHERE', whereConditions);
+    ctx.sql.push('WHERE', whereConditions);
   }
 };
 
 export const whereToSql = (
-  model: Query,
+  ctx: ToSqlCtx,
+  model: QueryBase,
   query: Pick<QueryData, 'as' | 'and' | 'or'>,
-  shape: ColumnsShape,
-  values: unknown[],
   quotedAs?: string,
-  otherTableQuotedAs?: string,
   not?: boolean,
 ): string => {
   const or =
@@ -60,19 +48,17 @@ export const whereToSql = (
       const prefix = not ? 'NOT ' : '';
 
       if (typeof data === 'function') {
-        const qb = data(new model.whereQueryBuilder(model, model.shape));
+        const qb = data(new ctx.whereQueryBuilder(model, model.shape));
 
         const sql = whereToSql(
+          ctx,
           model,
           {
             as: query.as,
             and: qb.query.and,
             or: qb.query.or,
           },
-          shape,
-          values,
           quotedAs,
-          otherTableQuotedAs,
           not,
         );
         if (sql) ands.push(sql);
@@ -82,10 +68,9 @@ export const whereToSql = (
       if ('prototype' in data || '__model' in data) {
         const query = data as Query;
         const sql = whereToSql(
+          ctx,
           query,
           query.query || EMPTY_OBJECT,
-          query.shape,
-          values,
           query.table && q(query.table),
         );
         if (sql) {
@@ -95,26 +80,104 @@ export const whereToSql = (
       }
 
       if (isRaw(data)) {
-        ands.push(`${prefix}(${getRaw(data, values)})`);
+        ands.push(`${prefix}(${getRaw(data, ctx.values)})`);
         return;
       }
 
       for (const key in data) {
         const value = (data as Record<string, unknown>)[key];
-        const handler = whereHandlers[key];
-        if (handler) {
-          handler(
-            value,
-            ands,
-            prefix,
+        if (key === 'AND') {
+          const sql = whereToSql(
+            ctx,
             model,
-            query,
-            shape,
-            values,
+            {
+              and: toArray(value as MaybeArray<WhereItem>),
+            },
             quotedAs,
-            otherTableQuotedAs,
             not,
           );
+          if (sql) ands.push(sql);
+        } else if (key === 'OR') {
+          const sql = whereToSql(
+            ctx,
+            model,
+            {
+              or: (value as MaybeArray<WhereItem>[]).map(toArray),
+            },
+            quotedAs,
+            not,
+          );
+          if (sql) ands.push(sql);
+        } else if (key === 'NOT') {
+          const sql = whereToSql(
+            ctx,
+            model,
+            {
+              and: toArray(value as MaybeArray<WhereItem>),
+            },
+            quotedAs,
+            !not,
+          );
+          if (sql) ands.push(sql);
+        } else if (key === 'ON') {
+          if (Array.isArray(value)) {
+            const item = value as WhereJsonPathEqualsItem;
+            const leftColumn = quoteFullColumn(item[0], quotedAs);
+            const leftPath = item[1];
+            const rightColumn = quoteFullColumn(
+              item[2],
+              getQueryAs({
+                table: model.table,
+                query,
+              }),
+            );
+            const rightPath = item[3];
+
+            ands.push(
+              `${prefix}jsonb_path_query_first(${leftColumn}, ${addValue(
+                ctx.values,
+                leftPath,
+              )}) = jsonb_path_query_first(${rightColumn}, ${addValue(
+                ctx.values,
+                rightPath,
+              )})`,
+            );
+          } else {
+            const item = value as WhereOnItem;
+            const leftColumn = quoteFullColumn(
+              item.on[0],
+              getJoinItemSource(item.joinFrom),
+            );
+
+            const joinTo = getJoinItemSource(item.joinTo);
+
+            const [op, rightColumn] =
+              item.on.length === 2
+                ? ['=', quoteFullColumn(item.on[1], joinTo)]
+                : [item.on[1], quoteFullColumn(item.on[2], joinTo)];
+
+            ands.push(`${prefix}${leftColumn} ${op} ${rightColumn}`);
+          }
+        } else if (key === 'IN') {
+          toArray(value as MaybeArray<WhereInItem>).forEach((item) => {
+            pushIn(ands, prefix, quotedAs, ctx.values, item);
+          });
+        } else if (key === 'EXISTS') {
+          const joinItems = Array.isArray((value as unknown[])[0])
+            ? value
+            : [value];
+          (joinItems as JoinItem['args'][]).forEach((item) => {
+            const { target, conditions } = processJoinItem(
+              ctx,
+              model,
+              item,
+              quotedAs,
+            );
+
+            ands.push(
+              `${prefix}EXISTS (SELECT 1 FROM ${target} WHERE ${conditions} LIMIT 1)`,
+            );
+          });
         } else if (
           typeof value === 'object' &&
           value !== null &&
@@ -124,11 +187,11 @@ export const whereToSql = (
             ands.push(
               `${prefix}${quoteFullColumn(key, quotedAs)} = ${getRaw(
                 value,
-                values,
+                ctx.values,
               )}`,
             );
           } else {
-            const column = shape[key];
+            const column = model.shape[key];
             if (!column) {
               // TODO: custom error classes
               throw new Error(`Unknown column ${key} provided to condition`);
@@ -145,7 +208,7 @@ export const whereToSql = (
                 `${prefix}${operator(
                   qc(key, quotedAs),
                   value[op as keyof typeof value],
-                  values,
+                  ctx.values,
                 )}`,
               );
             }
@@ -153,7 +216,7 @@ export const whereToSql = (
         } else {
           ands.push(
             `${prefix}${quoteFullColumn(key, quotedAs)} ${
-              value === null ? 'IS NULL' : `= ${addValue(values, value)}`
+              value === null ? 'IS NULL' : `= ${addValue(ctx.values, value)}`
             }`,
           );
         }
@@ -164,147 +227,6 @@ export const whereToSql = (
   });
 
   return ors.join(' OR ');
-};
-
-const whereHandlers: Record<
-  string,
-  | ((
-      value: unknown,
-      ands: string[],
-      prefix: string,
-      ...params: Parameters<typeof whereToSql>
-    ) => void)
-  | undefined
-> = {
-  AND(
-    value,
-    ands,
-    _,
-    model,
-    _q,
-    shape,
-    values,
-    quotedAs,
-    otherTableQuotedAs,
-    not,
-  ) {
-    const sql = whereToSql(
-      model,
-      {
-        and: toArray(value as MaybeArray<WhereItem>),
-      },
-      shape,
-      values,
-      quotedAs,
-      otherTableQuotedAs,
-      not,
-    );
-    if (sql) ands.push(sql);
-  },
-  OR(
-    value,
-    ands,
-    _,
-    model,
-    _q,
-    shape,
-    values,
-    quotedAs,
-    otherTableQuotedAs,
-    not,
-  ) {
-    const sql = whereToSql(
-      model,
-      {
-        or: (value as MaybeArray<WhereItem>[]).map(toArray),
-      },
-      shape,
-      values,
-      quotedAs,
-      otherTableQuotedAs,
-      not,
-    );
-    if (sql) ands.push(sql);
-  },
-  NOT(
-    value,
-    ands,
-    _,
-    model,
-    _q,
-    shape,
-    values,
-    quotedAs,
-    otherTableQuotedAs,
-    not,
-  ) {
-    const sql = whereToSql(
-      model,
-      {
-        and: toArray(value as MaybeArray<WhereItem>),
-      },
-      shape,
-      values,
-      quotedAs,
-      otherTableQuotedAs,
-      !not,
-    );
-    if (sql) ands.push(sql);
-  },
-  ON(value, ands, prefix, _, _q, _s, values, quotedAs, otherTableQuotedAs) {
-    if (Array.isArray(value)) {
-      const item = value as WhereJsonPathEqualsItem;
-      const leftColumn = quoteFullColumn(item[0], quotedAs);
-      const leftPath = item[1];
-      const rightColumn = quoteFullColumn(item[2], otherTableQuotedAs);
-      const rightPath = item[3];
-
-      ands.push(
-        `${prefix}jsonb_path_query_first(${leftColumn}, ${addValue(
-          values,
-          leftPath,
-        )}) = jsonb_path_query_first(${rightColumn}, ${addValue(
-          values,
-          rightPath,
-        )})`,
-      );
-    } else {
-      const item = value as WhereOnItem;
-      const leftColumn = quoteFullColumn(
-        item.on[0],
-        getJoinItemSource(item.joinFrom),
-      );
-
-      const joinTo = getJoinItemSource(item.joinTo);
-
-      const [op, rightColumn] =
-        item.on.length === 2
-          ? ['=', quoteFullColumn(item.on[1], joinTo)]
-          : [item.on[1], quoteFullColumn(item.on[2], joinTo)];
-
-      ands.push(`${prefix}${leftColumn} ${op} ${rightColumn}`);
-    }
-  },
-  IN(value, ands, prefix, _, _q, _s, values, quotedAs) {
-    toArray(value as MaybeArray<WhereInItem>).forEach((item) => {
-      pushIn(ands, prefix, quotedAs, values, item);
-    });
-  },
-  EXISTS(value, ands, prefix, model, _, _s, values, quotedAs) {
-    const joinItems = Array.isArray((value as unknown[])[0]) ? value : [value];
-    (joinItems as JoinItem['args'][]).forEach((item) => {
-      const { target, conditions } = processJoinItem(
-        model,
-        values,
-        item,
-        quotedAs,
-      );
-
-      ands.push(
-        `${prefix}EXISTS (SELECT 1 FROM ${target} WHERE ${conditions} LIMIT 1)`,
-      );
-    });
-  },
 };
 
 const getJoinItemSource = (joinItem: WhereOnJoinItem) => {

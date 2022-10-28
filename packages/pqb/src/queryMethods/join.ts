@@ -480,7 +480,7 @@ export class OnQueryBuilder<
   constructor(
     q: QueryBase | string,
     shape: ColumnsShape,
-    public joinTo: Query,
+    public joinTo: QueryBase,
   ) {
     super(q, shape);
   }

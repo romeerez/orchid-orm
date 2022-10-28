@@ -1,9 +1,10 @@
 import { q, quoteFullColumn, quoteSchemaAndTable } from './common';
 import { getRaw, isRaw, RawExpression } from '../common';
 import { JoinItem, QueryData } from './types';
-import { Query, QueryBase } from '../query';
+import { QueryBase } from '../query';
 import { whereToSql } from './where';
 import { Relation } from '../relations';
+import { ToSqlCtx } from './toSql';
 
 type ItemOf3Or4Length =
   | [
@@ -19,8 +20,8 @@ type ItemOf3Or4Length =
     ];
 
 export const processJoinItem = (
-  model: Query,
-  values: unknown[],
+  ctx: ToSqlCtx,
+  model: QueryBase,
   args: JoinItem['args'],
   quotedAs?: string,
 ): { target: string; conditions?: string } => {
@@ -63,7 +64,7 @@ export const processJoinItem = (
       if (joinedQueryData.or) queryData.or.push(...joinedQueryData.or);
 
       const arg = (args[1] as ((q: unknown) => QueryBase) | undefined)?.(
-        new model.onQueryBuilder(joinedQuery, joinedQuery.shape, model),
+        new ctx.onQueryBuilder(joinedQuery, joinedQuery.shape, model),
       ).query;
 
       if (arg) {
@@ -72,14 +73,7 @@ export const processJoinItem = (
       }
 
       const joinAs = q(as as string);
-      const onConditions = whereToSql(
-        joinedQuery,
-        queryData,
-        joinedQuery.shape,
-        values,
-        joinAs,
-        quotedAs,
-      );
+      const onConditions = whereToSql(ctx, joinedQuery, queryData, joinAs);
       const conditions = onConditions ? onConditions : undefined;
 
       return { target, conditions };
@@ -96,23 +90,26 @@ export const processJoinItem = (
           throw new Error('Cannot get shape of `with` statement');
         }
 
-        const joinQuery = arg(new model.onQueryBuilder(first, shape, model));
+        const joinQuery = arg(new ctx.onQueryBuilder(first, shape, model));
         const onConditions = whereToSql(
-          model,
+          ctx,
+          joinQuery,
           joinQuery.query,
-          joinQuery.shape,
-          values,
           quotedAs,
-          target,
         );
         if (onConditions) conditions = onConditions;
       } else {
-        conditions = getObjectOrRawConditions(arg, values, quotedAs, target);
+        conditions = getObjectOrRawConditions(
+          arg,
+          ctx.values,
+          quotedAs,
+          target,
+        );
       }
     } else if (args.length >= 3) {
       conditions = getConditionsFor3Or4LengthItem(
         target,
-        values,
+        ctx.values,
         quotedAs,
         args as ItemOf3Or4Length,
       );
@@ -144,38 +141,24 @@ export const processJoinItem = (
   if (args.length === 2) {
     const arg = args[1];
     if (typeof arg === 'function') {
-      const qb = new model.onQueryBuilder(first, first.shape, model);
+      const qb = new ctx.onQueryBuilder(first, first.shape, model);
       const joinQuery = arg(qb);
-      const onConditions = whereToSql(
-        model,
-        joinQuery.query,
-        joinQuery.shape,
-        values,
-        joinAs,
-        quotedAs,
-      );
+      const onConditions = whereToSql(ctx, joinQuery, joinQuery.query, joinAs);
       if (onConditions) conditions = onConditions;
     } else {
-      conditions = getObjectOrRawConditions(arg, values, quotedAs, joinAs);
+      conditions = getObjectOrRawConditions(arg, ctx.values, quotedAs, joinAs);
     }
   } else if (args.length >= 3) {
     conditions = getConditionsFor3Or4LengthItem(
       joinAs,
-      values,
+      ctx.values,
       quotedAs,
       args as ItemOf3Or4Length,
     );
   }
 
   if (joinQuery) {
-    const whereSql = whereToSql(
-      model,
-      joinQuery,
-      model.shape,
-      values,
-      joinAs,
-      quotedAs,
-    );
+    const whereSql = whereToSql(ctx, model, joinQuery, joinAs);
     if (whereSql) {
       if (conditions) conditions += ` AND ${whereSql}`;
       else conditions = whereSql;
@@ -234,23 +217,22 @@ const getObjectOrRawConditions = (
 };
 
 export const pushJoinSql = (
-  sql: string[],
-  model: Query,
+  ctx: ToSqlCtx,
+  model: QueryBase,
   query: QueryData & {
     join: JoinItem[];
   },
-  values: unknown[],
   quotedAs?: string,
 ) => {
   query.join.forEach((item) => {
     const { target, conditions } = processJoinItem(
+      ctx,
       model,
-      values,
       item.args,
       quotedAs,
     );
 
-    sql.push(item.type, target);
-    if (conditions) sql.push('ON', conditions);
+    ctx.sql.push(item.type, target);
+    if (conditions) ctx.sql.push('ON', conditions);
   });
 };

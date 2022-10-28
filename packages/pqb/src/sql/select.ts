@@ -5,7 +5,7 @@ import {
   SelectQueryData,
 } from './types';
 import { Expression, getRaw, isRaw, raw } from '../common';
-import { Query } from '../query';
+import { Query, QueryBase } from '../query';
 import { addValue, q, quoteFullColumn } from './common';
 import { aggregateToSql } from './aggregate';
 import { getQueryAs } from '../utils';
@@ -13,6 +13,7 @@ import { RelationQuery, relationQueryKey } from '../relations';
 import { PormInternalError, UnhandledTypeError } from '../errors';
 import { StringColumn } from '../columnSchema';
 import { quote } from '../quote';
+import { ToSqlCtx } from './toSql';
 
 const jsonColumnOrMethodToSql = (
   column: string | JsonItem,
@@ -69,19 +70,18 @@ const jsonToSql = (
 };
 
 export const pushSelectSql = (
-  sql: string[],
-  model: Query,
+  ctx: ToSqlCtx,
+  model: QueryBase,
   query: Pick<SelectQueryData, 'select' | 'join'>,
-  values: unknown[],
   quotedAs?: string,
 ) => {
-  sql.push(selectToSql(model, query, values, quotedAs));
+  ctx.sql.push(selectToSql(ctx, model, query, quotedAs));
 };
 
 export const selectToSql = (
-  model: Query,
+  ctx: ToSqlCtx,
+  model: QueryBase,
   query: Pick<SelectQueryData, 'select' | 'join'>,
-  values: unknown[],
   quotedAs?: string,
 ): string => {
   if (query.select) {
@@ -95,11 +95,11 @@ export const selectToSql = (
               : '*'
             : quoteFullColumn(item, quotedAs),
         );
-      } else if ((item as Query).query?.[relationQueryKey]) {
+      } else if ((item as QueryBase).query?.[relationQueryKey]) {
         const relationQuery = (item as RelationQuery).clone();
         const as = getQueryAs(relationQuery);
         relationQuery._as(relationQuery.query[relationQueryKey] as string);
-        pushSubQuerySql(relationQuery, as, values, list);
+        pushSubQuerySql(relationQuery, as, ctx.values, list);
       } else {
         if ('selectAs' in item) {
           const obj = item.selectAs as Record<string, Expression | Query>;
@@ -107,9 +107,9 @@ export const selectToSql = (
             const value = obj[as];
             if (typeof value === 'object') {
               if (isRaw(value)) {
-                list.push(`${getRaw(value, values)} AS ${q(as)}`);
+                list.push(`${getRaw(value, ctx.values)} AS ${q(as)}`);
               } else {
-                pushSubQuerySql(value as Query, as, values, list);
+                pushSubQuerySql(value as Query, as, ctx.values, list);
               }
             } else {
               list.push(
@@ -119,21 +119,21 @@ export const selectToSql = (
           }
         } else if ('__json' in item) {
           list.push(
-            `${jsonToSql(item, values, quotedAs)} AS ${q(item.__json[1])}`,
+            `${jsonToSql(item, ctx.values, quotedAs)} AS ${q(item.__json[1])}`,
           );
         } else if (isRaw(item)) {
-          list.push(getRaw(item, values));
+          list.push(getRaw(item, ctx.values));
         } else if ('arguments' in item) {
           list.push(
             `${(item as SelectFunctionItem).function}(${selectToSql(
+              ctx,
               model,
               { select: item.arguments },
-              values,
               quotedAs,
             )})${item.as ? ` AS ${q((item as { as: string }).as)}` : ''}`,
           );
         } else {
-          list.push(aggregateToSql(model, values, item, quotedAs));
+          list.push(aggregateToSql(ctx, model, item, quotedAs));
         }
       }
     });

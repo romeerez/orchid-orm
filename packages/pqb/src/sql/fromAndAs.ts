@@ -1,27 +1,31 @@
 import { getRaw, isRaw } from '../common';
 import { quoteSchemaAndTable } from './common';
-import { Query } from '../query';
+import { QueryBase } from '../query';
 import { queryKeysOfNotSimpleQuery, SelectQueryData } from './types';
+import { ToSqlCtx } from './toSql';
 
 export const pushFromAndAs = (
-  sql: string[],
-  model: Query,
+  ctx: ToSqlCtx,
+  model: QueryBase,
   query: SelectQueryData,
-  values: unknown[],
   quotedAs?: string,
 ) => {
-  sql.push('FROM');
-  if (query.fromOnly) sql.push('ONLY');
+  ctx.sql.push('FROM');
+  if (query.fromOnly) ctx.sql.push('ONLY');
 
-  const from = getFrom(model, query, values);
-  sql.push(from);
+  const from = getFrom(model, query, ctx.values);
+  ctx.sql.push(from);
 
   if (query.as && quotedAs && quotedAs !== from) {
-    sql.push('AS', quotedAs as string);
+    ctx.sql.push('AS', quotedAs as string);
   }
 };
 
-const getFrom = (model: Query, query: SelectQueryData, values: unknown[]) => {
+const getFrom = (
+  model: QueryBase,
+  query: SelectQueryData,
+  values: unknown[],
+) => {
   if (query.from) {
     if (typeof query.from === 'object') {
       if (isRaw(query.from)) {

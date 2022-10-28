@@ -1,10 +1,10 @@
 import { QueryData } from './types';
 import { q } from './common';
 import { isRaw, getRaw } from '../common';
+import { ToSqlCtx } from './toSql';
 
 export const pushWithSql = (
-  sql: string[],
-  values: unknown[],
+  ctx: ToSqlCtx,
   withData: Exclude<QueryData['with'], undefined>,
 ) => {
   withData.forEach((withItem) => {
@@ -12,12 +12,12 @@ export const pushWithSql = (
 
     let inner: string;
     if (isRaw(query)) {
-      inner = getRaw(query, values);
+      inner = getRaw(query, ctx.values);
     } else {
-      inner = query.toSql(values).text;
+      inner = query.toSql(ctx.values).text;
     }
 
-    sql.push(
+    ctx.sql.push(
       `WITH ${options.recursive ? 'RECURSIVE ' : ''}${q(name)}${
         options.columns ? `(${options.columns.map(q).join(', ')})` : ''
       } AS ${

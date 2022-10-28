@@ -16,27 +16,41 @@ import { pushDeleteSql } from './delete';
 import { pushTruncateSql } from './truncate';
 import { pushColumnInfoSql } from './columnInfo';
 import { pushOrderBySql } from './orderBy';
+import { OnQueryBuilder, WhereQueryBuilder } from '../queryMethods';
+
+export type ToSqlCtx = {
+  whereQueryBuilder: typeof WhereQueryBuilder;
+  onQueryBuilder: typeof OnQueryBuilder;
+  sql: string[];
+  values: unknown[];
+};
 
 export const toSql = (model: Query, values: unknown[] = []): Sql => {
   const query = model.query;
   const sql: string[] = [];
+  const ctx: ToSqlCtx = {
+    whereQueryBuilder: model.whereQueryBuilder,
+    onQueryBuilder: model.onQueryBuilder,
+    sql,
+    values,
+  };
 
   if (query.with) {
-    pushWithSql(sql, values, query.with);
+    pushWithSql(ctx, query.with);
   }
 
   if (query.type) {
     if (query.type === 'truncate') {
       if (!model.table) throw new Error('Table is missing for truncate');
 
-      pushTruncateSql(sql, model.table, query);
+      pushTruncateSql(ctx, model.table, query);
       return { text: sql.join(' '), values };
     }
 
     if (query.type === 'columnInfo') {
       if (!model.table) throw new Error('Table is missing for truncate');
 
-      pushColumnInfoSql(sql, values, model.table, query);
+      pushColumnInfoSql(ctx, model.table, query);
       return { text: sql.join(' '), values };
     }
 
@@ -45,17 +59,17 @@ export const toSql = (model: Query, values: unknown[] = []): Sql => {
     const quotedAs = q(query.as || model.table);
 
     if (query.type === 'insert') {
-      pushInsertSql(sql, values, model, query, q(model.table));
+      pushInsertSql(ctx, model, query, q(model.table));
       return { text: sql.join(' '), values };
     }
 
     if (query.type === 'update') {
-      pushUpdateSql(sql, values, model, query, quotedAs);
+      pushUpdateSql(ctx, model, query, quotedAs);
       return { text: sql.join(' '), values };
     }
 
     if (query.type === 'delete') {
-      pushDeleteSql(sql, values, model, query, q(model.table));
+      pushDeleteSql(ctx, model, query, q(model.table));
       return { text: sql.join(' '), values };
     }
   }
@@ -65,27 +79,26 @@ export const toSql = (model: Query, values: unknown[] = []): Sql => {
   sql.push('SELECT');
 
   if (query.distinct) {
-    pushDistinctSql(sql, values, query.distinct, quotedAs);
+    pushDistinctSql(ctx, query.distinct, quotedAs);
   }
 
-  pushSelectSql(sql, model, query, values, quotedAs);
+  pushSelectSql(ctx, model, query, quotedAs);
 
   if (model.table || query.from) {
-    pushFromAndAs(sql, model, query, values, quotedAs);
+    pushFromAndAs(ctx, model, query, quotedAs);
   }
 
   if (query.join) {
     pushJoinSql(
-      sql,
+      ctx,
       model,
       query as QueryData & { join: JoinItem[] },
-      values,
       quotedAs,
     );
   }
 
   if (query.and || query.or) {
-    pushWhereSql(sql, model, query, model.shape, values, quotedAs);
+    pushWhereSql(ctx, model, query, quotedAs);
   }
 
   if (query.group) {
@@ -98,7 +111,7 @@ export const toSql = (model: Query, values: unknown[] = []): Sql => {
   }
 
   if (query.having || query.havingOr) {
-    pushHavingSql(sql, model, query, values, quotedAs);
+    pushHavingSql(ctx, model, query, quotedAs);
   }
 
   if (query.window) {
@@ -125,7 +138,7 @@ export const toSql = (model: Query, values: unknown[] = []): Sql => {
   }
 
   if (query.order) {
-    pushOrderBySql(sql, values, quotedAs, query.order);
+    pushOrderBySql(ctx, quotedAs, query.order);
   }
 
   if (query.take || query.limit !== undefined) {

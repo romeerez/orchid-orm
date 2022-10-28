@@ -1,13 +1,14 @@
 import { TruncateQueryData } from './types';
 import { quoteSchemaAndTable } from './common';
+import { ToSqlCtx } from './toSql';
 
 export const pushTruncateSql = (
-  sql: string[],
+  ctx: ToSqlCtx,
   table: string,
   query: TruncateQueryData,
 ) => {
-  sql.push('TRUNCATE', quoteSchemaAndTable(query.schema, table));
+  ctx.sql.push('TRUNCATE', quoteSchemaAndTable(query.schema, table));
 
-  if (query.restartIdentity) sql.push('RESTART IDENTITY');
-  if (query.cascade) sql.push('CASCADE');
+  if (query.restartIdentity) ctx.sql.push('RESTART IDENTITY');
+  if (query.cascade) ctx.sql.push('CASCADE');
 };
