@@ -65,8 +65,9 @@ export const aggregateToSql = (
       },
       quotedAs,
     );
-
-    sql.push(` FILTER (WHERE ${whereSql})`);
+    if (whereSql) {
+      sql.push(` FILTER (WHERE ${whereSql})`);
+    }
   }
 
   if (options.over) {

@@ -6,7 +6,7 @@ import { pushDistinctSql } from './distinct';
 import { pushSelectSql } from './select';
 import { windowToSql } from './window';
 import { pushJoinSql } from './join';
-import { pushWhereSql } from './where';
+import { pushWhereStatementSql } from './where';
 import { pushHavingSql } from './having';
 import { pushWithSql } from './with';
 import { pushFromAndAs } from './fromAndAs';
@@ -98,7 +98,7 @@ export const toSql = (model: Query, values: unknown[] = []): Sql => {
   }
 
   if (query.and || query.or) {
-    pushWhereSql(ctx, model, query, quotedAs);
+    pushWhereStatementSql(ctx, model, query, quotedAs);
   }
 
   if (query.group) {

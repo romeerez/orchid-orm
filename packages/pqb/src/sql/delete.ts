@@ -1,6 +1,6 @@
 import { QueryBase } from '../query';
 import { DeleteQueryData } from './types';
-import { pushWhereSql } from './where';
+import { pushWhereStatementSql } from './where';
 import { pushReturningSql } from './insert';
 import { processJoinItem } from './join';
 import { ToSqlCtx } from './toSql';
@@ -27,7 +27,7 @@ export const pushDeleteSql = (
       .join(' AND ');
   }
 
-  pushWhereSql(ctx, model, query, quotedAs);
+  pushWhereStatementSql(ctx, model, query, quotedAs);
 
   if (conditions?.length) {
     if (query.and?.length || query.or?.length) {

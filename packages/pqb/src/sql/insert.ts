@@ -1,7 +1,7 @@
 import { InsertQueryData, QueryData } from './types';
 import { addValue, q } from './common';
 import { getRaw, isRaw } from '../common';
-import { pushWhereSql } from './where';
+import { pushWhereStatementSql } from './where';
 import { QueryBase } from '../query';
 import { selectToSql } from './select';
 import { ToSqlCtx } from './toSql';
@@ -81,7 +81,7 @@ export const pushInsertSql = (
     }
   }
 
-  pushWhereSql(ctx, model, query, quotedAs);
+  pushWhereStatementSql(ctx, model, query, quotedAs);
   pushReturningSql(ctx, model, query, quotedAs);
 };
 

@@ -3,7 +3,7 @@ import { UpdateQueryData } from './types';
 import { addValue, q, quoteSchemaAndTable } from './common';
 import { getRaw, isRaw, RawExpression } from '../common';
 import { pushReturningSql } from './insert';
-import { pushWhereSql } from './where';
+import { pushWhereStatementSql } from './where';
 import { ToSqlCtx } from './toSql';
 
 export const pushUpdateSql = (
@@ -15,7 +15,7 @@ export const pushUpdateSql = (
   const quotedTable = quoteSchemaAndTable(query.schema, model.table as string);
   ctx.sql.push(`UPDATE ${quotedTable}`);
 
-  if (query.as && quotedTable !== quotedAs) {
+  if (quotedTable !== quotedAs) {
     ctx.sql.push(`AS ${quotedAs}`);
   }
 
@@ -38,7 +38,7 @@ export const pushUpdateSql = (
     }
   });
 
-  pushWhereSql(ctx, model, query, quotedAs);
+  pushWhereStatementSql(ctx, model, query, quotedAs);
   pushReturningSql(ctx, model, query, quotedAs);
 };
 

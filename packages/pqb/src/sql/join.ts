@@ -1,7 +1,7 @@
 import { q, quoteFullColumn, quoteSchemaAndTable } from './common';
 import { getRaw, isRaw, RawExpression } from '../common';
 import { JoinItem, QueryData } from './types';
-import { QueryBase } from '../query';
+import { QueryBase, QueryWithTable } from '../query';
 import { whereToSql } from './where';
 import { Relation } from '../relations';
 import { ToSqlCtx } from './toSql';
@@ -25,6 +25,9 @@ export const processJoinItem = (
   args: JoinItem['args'],
   quotedAs?: string,
 ): { target: string; conditions?: string } => {
+  let target: string;
+  let conditions: string | undefined;
+
   const [first] = args;
   if (typeof first === 'string') {
     if (first in model.relations) {
@@ -34,131 +37,60 @@ export const processJoinItem = (
         joinQuery,
       } = (model.relations as Record<string, Relation>)[first];
 
-      const joinedQuery = joinQuery(model, toQuery);
-      const joinedQueryData = joinedQuery.query;
+      const jq = joinQuery(model, toQuery);
+      const { query } = jq;
 
       const table = (
-        typeof joinedQueryData.from === 'string'
-          ? joinedQueryData.from
-          : joinedQuery.table
+        typeof query.from === 'string' ? query.from : jq.table
       ) as string;
 
-      let target = quoteSchemaAndTable(joinedQueryData.schema, table);
+      target = quoteSchemaAndTable(query.schema, table);
 
-      const as = joinedQueryData.as || key;
+      const as = query.as || key;
+      const joinAs = q(as as string);
       if (as !== table) {
-        target += ` AS ${q(as as string)}`;
+        target += ` AS ${joinAs}`;
       }
 
       const queryData = {
-        as: joinedQuery.query.as,
-        and: [],
-        or: [],
-      } as {
-        as?: string;
-        and: Exclude<QueryData['and'], undefined>;
-        or: Exclude<QueryData['or'], undefined>;
+        and: query.and ? [...query.and] : [],
+        or: query.or ? [...query.or] : [],
       };
 
-      if (joinedQueryData.and) queryData.and.push(...joinedQueryData.and);
-      if (joinedQueryData.or) queryData.or.push(...joinedQueryData.or);
+      if (args[1]) {
+        const arg = (args[1] as (q: unknown) => QueryBase)(
+          new ctx.onQueryBuilder(jq, jq.shape, model),
+        ).query;
 
-      const arg = (args[1] as ((q: unknown) => QueryBase) | undefined)?.(
-        new ctx.onQueryBuilder(joinedQuery, joinedQuery.shape, model),
-      ).query;
-
-      if (arg) {
         if (arg.and) queryData.and.push(...arg.and);
         if (arg.or) queryData.or.push(...arg.or);
       }
 
-      const joinAs = q(as as string);
-      const onConditions = whereToSql(ctx, joinedQuery, queryData, joinAs);
-      const conditions = onConditions ? onConditions : undefined;
-
-      return { target, conditions };
-    }
-
-    const target = q(first);
-    let conditions: string | undefined;
-
-    if (args.length === 2) {
-      const arg = args[1];
-      if (typeof arg === 'function') {
-        const shape = model.query.withShapes?.[first];
-        if (!shape) {
-          throw new Error('Cannot get shape of `with` statement');
-        }
-
-        const joinQuery = arg(new ctx.onQueryBuilder(first, shape, model));
-        const onConditions = whereToSql(
-          ctx,
-          joinQuery,
-          joinQuery.query,
-          quotedAs,
-        );
-        if (onConditions) conditions = onConditions;
-      } else {
-        conditions = getObjectOrRawConditions(
-          arg,
-          ctx.values,
-          quotedAs,
-          target,
-        );
-      }
-    } else if (args.length >= 3) {
-      conditions = getConditionsFor3Or4LengthItem(
-        target,
-        ctx.values,
-        quotedAs,
-        args as ItemOf3Or4Length,
-      );
-    }
-
-    return { target, conditions };
-  }
-
-  const joinTarget = first;
-  const joinQuery = joinTarget.query;
-
-  const quotedFrom =
-    typeof joinQuery?.from === 'string' ? q(joinQuery.from) : undefined;
-
-  let target =
-    quotedFrom || quoteSchemaAndTable(joinQuery?.schema, joinTarget.table);
-
-  let joinAs = quotedFrom || q(joinTarget.table);
-  if (joinQuery?.as) {
-    const quoted = q(joinQuery.as);
-    if (quoted !== joinAs) {
-      joinAs = quoted;
-      target += ` AS ${quoted}`;
-    }
-  }
-
-  let conditions: string | undefined;
-
-  if (args.length === 2) {
-    const arg = args[1];
-    if (typeof arg === 'function') {
-      const qb = new ctx.onQueryBuilder(first, first.shape, model);
-      const joinQuery = arg(qb);
-      const onConditions = whereToSql(ctx, joinQuery, joinQuery.query, joinAs);
-      if (onConditions) conditions = onConditions;
+      conditions = whereToSql(ctx, jq, queryData, joinAs);
     } else {
-      conditions = getObjectOrRawConditions(arg, ctx.values, quotedAs, joinAs);
+      target = q(first);
+      conditions = processArgs(args, ctx, model, first, target, quotedAs);
     }
-  } else if (args.length >= 3) {
-    conditions = getConditionsFor3Or4LengthItem(
-      joinAs,
-      ctx.values,
-      quotedAs,
-      args as ItemOf3Or4Length,
-    );
-  }
+  } else {
+    const query = first.query;
 
-  if (joinQuery) {
-    const whereSql = whereToSql(ctx, model, joinQuery, joinAs);
+    const quotedFrom =
+      typeof query.from === 'string' ? q(query.from) : undefined;
+
+    target = quotedFrom || quoteSchemaAndTable(query.schema, first.table);
+
+    let joinAs = quotedFrom || q(first.table);
+    if (query.as) {
+      const quoted = q(query.as);
+      if (quoted !== joinAs) {
+        joinAs = quoted;
+        target += ` AS ${quoted}`;
+      }
+    }
+
+    conditions = processArgs(args, ctx, model, first, joinAs, quotedAs);
+
+    const whereSql = whereToSql(ctx, model, query, joinAs);
     if (whereSql) {
       if (conditions) conditions += ` AND ${whereSql}`;
       else conditions = whereSql;
@@ -166,6 +98,44 @@ export const processJoinItem = (
   }
 
   return { target, conditions };
+};
+
+const processArgs = (
+  args: JoinItem['args'],
+  ctx: ToSqlCtx,
+  model: QueryBase,
+  first: string | QueryWithTable,
+  joinAs: string,
+  quotedAs?: string,
+) => {
+  if (args.length === 2) {
+    const arg = args[1];
+    if (typeof arg === 'function') {
+      let shape;
+      if (typeof first === 'string') {
+        shape = model.query.withShapes?.[first];
+        if (!shape) {
+          throw new Error('Cannot get shape of `with` statement');
+        }
+      } else {
+        shape = first.shape;
+      }
+
+      const jq = arg(new ctx.onQueryBuilder(first, shape, model));
+      return whereToSql(ctx, jq, jq.query, joinAs);
+    } else {
+      return getObjectOrRawConditions(arg, ctx.values, quotedAs, joinAs);
+    }
+  } else if (args.length >= 3) {
+    return getConditionsFor3Or4LengthItem(
+      joinAs,
+      ctx.values,
+      quotedAs,
+      args as ItemOf3Or4Length,
+    );
+  }
+
+  return undefined;
 };
 
 const getConditionsFor3Or4LengthItem = (
