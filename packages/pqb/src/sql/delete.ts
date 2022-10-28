@@ -16,7 +16,7 @@ export const pushDeleteSql = (
   let conditions: string | undefined;
   if (query.join?.length) {
     const items = query.join.map((item) =>
-      processJoinItem(model, query, values, item.args, quotedAs),
+      processJoinItem(model, values, item.args, quotedAs),
     );
 
     sql.push(`USING ${items.map((item) => item.target).join(', ')}`);
@@ -27,7 +27,7 @@ export const pushDeleteSql = (
       .join(' AND ');
   }
 
-  pushWhereSql(sql, model, query, values, quotedAs);
+  pushWhereSql(sql, model, query, model.shape, values, quotedAs);
 
   if (conditions?.length) {
     if (query.and?.length || query.or?.length) {

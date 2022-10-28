@@ -88,29 +88,30 @@ describe('hasAndBelongsToMany', () => {
 
       expectSql(
         db.user
-          .whereExists('chats', (q) => q.where({ 'user.name': 'name' }))
+          .whereExists('chats', (q) => q.where({ title: 'title' }))
           .toSql(),
         `
         SELECT * FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "chat" AS "chats"
-          WHERE EXISTS (
-            SELECT 1 FROM "chatUser"
-            WHERE "chatUser"."chatId" = "chats"."id"
-              AND "chatUser"."userId" = "user"."id"
-            LIMIT 1
-          )
-            AND "user"."name" = $1
+          WHERE
+            EXISTS (
+              SELECT 1 FROM "chatUser"
+              WHERE "chatUser"."chatId" = "chats"."id"
+                AND "chatUser"."userId" = "user"."id"
+              LIMIT 1
+            )
+            AND "chats"."title" = $1
           LIMIT 1
         )
       `,
-        ['name'],
+        ['title'],
       );
     });
 
     it('should be supported in join', () => {
       const query = db.user
-        .join('chats', (q) => q.where({ 'user.name': 'name' }))
+        .join('chats', (q) => q.where({ title: 'title' }))
         .select('name', 'chats.title');
 
       assertType<Awaited<typeof query>, { name: string; title: string }[]>();
@@ -126,9 +127,9 @@ describe('hasAndBelongsToMany', () => {
               AND "chatUser"."userId" = "user"."id"
             LIMIT 1
           )
-          AND "user"."name" = $1
+          AND "chats"."title" = $1
       `,
-        ['name'],
+        ['title'],
       );
     });
 

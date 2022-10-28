@@ -33,6 +33,7 @@ export type QueryBase = {
   tableAlias?: string;
   clone(): QueryBase;
   selectable: SelectableBase;
+  shape: ColumnsShape;
   __model: Query;
   relations: RelationsBase;
   withData: WithDataBase;

@@ -5,12 +5,15 @@ import {
   QueryBase,
   Selectable,
   SelectableBase,
+  WithDataBase,
   WithDataItem,
 } from '../query';
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
 import { RawExpression, StringKey } from '../common';
 import { WhereQueryBuilder } from './where';
-import { Relation } from '../relations';
+import { Relation, RelationsBase } from '../relations';
+import { QueryData } from '../sql';
+import { ColumnsShape } from '../columnSchema';
 
 type WithSelectable<
   T extends QueryBase,
@@ -102,15 +105,20 @@ export type JoinCallback<
     Arg extends keyof T['withData']
       ? T['withData'][Arg] extends WithDataItem
         ? {
+            query: QueryData;
             table: T['withData'][Arg]['table'];
             tableAlias: undefined;
-            shape: T['withData'][Arg]['shape'];
+            clone(): QueryBase;
             selectable: {
               [K in keyof T['withData'][Arg]['shape'] as `${T['withData'][Arg]['table']}.${StringKey<K>}`]: {
                 as: StringKey<K>;
                 column: T['withData'][Arg]['shape'][K];
               };
             };
+            shape: T['withData'][Arg]['shape'];
+            __model: Query;
+            relations: RelationsBase;
+            withData: WithDataBase;
           }
         : never
       : Arg extends Query
@@ -393,11 +401,6 @@ export class Join {
   }
 }
 
-type PickQueryForSelect<T extends QueryBase = QueryBase> = Pick<
-  T,
-  'table' | 'tableAlias' | 'selectable'
->;
-
 type OnArgs<Q extends { selectable: SelectableBase }> =
   | [leftColumn: keyof Q['selectable'], rightColumn: keyof Q['selectable']]
   | [
@@ -465,18 +468,21 @@ type OnJsonPathEqualsArgs<T extends QueryBase> = [
 
 export class OnQueryBuilder<
     S extends QueryBase = QueryBase,
-    J extends PickQueryForSelect = PickQueryForSelect,
+    J extends QueryBase = QueryBase,
   >
   extends WhereQueryBuilder<
-    Omit<S, 'selectable'> & { selectable: S['selectable'] & J['selectable'] }
+    Omit<J, 'selectable'> & {
+      selectable: Omit<S['selectable'], keyof S['shape']> & J['selectable'];
+    }
   >
   implements QueryBase
 {
   constructor(
-    q: { table?: string; query: { as?: string } },
-    public joinTo: QueryBase | string,
+    q: QueryBase | string,
+    shape: ColumnsShape,
+    public joinTo: Query,
   ) {
-    super(q.table, q.query.as);
+    super(q, shape);
   }
 
   on<T extends this>(this: T, ...args: OnArgs<T>): T {

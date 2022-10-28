@@ -222,7 +222,7 @@ export const makeBelongsToMethod = (
       return !params.update && !params.upsert;
     }) as BelongsToNestedUpdate,
     joinQuery(fromQuery, toQuery) {
-      return addQueryOn(toQuery, toQuery, fromQuery, primaryKey, foreignKey);
+      return addQueryOn(toQuery, fromQuery, toQuery, primaryKey, foreignKey);
     },
     primaryKey,
   };

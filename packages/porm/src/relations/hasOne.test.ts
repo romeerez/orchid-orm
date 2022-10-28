@@ -109,25 +109,23 @@ describe('hasOne', () => {
       );
 
       expectSql(
-        db.user
-          .whereExists('profile', (q) => q.where({ 'user.name': 'name' }))
-          .toSql(),
+        db.user.whereExists('profile', (q) => q.where({ bio: 'bio' })).toSql(),
         `
         SELECT * FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "profile"
           WHERE "profile"."userId" = "user"."id"
-            AND "user"."name" = $1
+            AND "profile"."bio" = $1
           LIMIT 1
         )
       `,
-        ['name'],
+        ['bio'],
       );
     });
 
     it('should be supported in join', () => {
       const query = db.user
-        .join('profile', (q) => q.where({ 'user.name': 'name' }))
+        .join('profile', (q) => q.where({ bio: 'bio' }))
         .select('name', 'profile.bio');
 
       assertType<
@@ -141,9 +139,9 @@ describe('hasOne', () => {
         SELECT "user"."name", "profile"."bio" FROM "user"
         JOIN "profile"
           ON "profile"."userId" = "user"."id"
-         AND "user"."name" = $1
+         AND "profile"."bio" = $1
       `,
-        ['name'],
+        ['bio'],
       );
     });
 
@@ -924,9 +922,7 @@ describe('hasOne through', () => {
     );
 
     expectSql(
-      db.message
-        .whereExists('profile', (q) => q.where({ 'message.text': 'text' }))
-        .toSql(),
+      db.message.whereExists('profile', (q) => q.where({ bio: 'bio' })).toSql(),
       `
         SELECT * FROM "message"
         WHERE EXISTS (
@@ -937,17 +933,17 @@ describe('hasOne through', () => {
               AND "user"."id" = "message"."authorId"
             LIMIT 1
           )
-          AND "message"."text" = $1
+          AND "profile"."bio" = $1
           LIMIT 1
         )
       `,
-      ['text'],
+      ['bio'],
     );
   });
 
   it('should be supported in join', () => {
     const query = db.message
-      .join('profile', (q) => q.where({ 'message.text': 'text' }))
+      .join('profile', (q) => q.where({ bio: 'bio' }))
       .select('text', 'profile.bio');
 
     assertType<Awaited<typeof query>, { text: string; bio: string | null }[]>();
@@ -963,9 +959,9 @@ describe('hasOne through', () => {
               AND "user"."id" = "message"."authorId"
             LIMIT 1
           )
-          AND "message"."text" = $1
+          AND "profile"."bio" = $1
       `,
-      ['text'],
+      ['bio'],
     );
   });
 

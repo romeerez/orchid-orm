@@ -101,24 +101,24 @@ describe('hasMany', () => {
 
       expectSql(
         db.user
-          .whereExists('messages', (q) => q.where({ 'user.name': 'name' }))
+          .whereExists('messages', (q) => q.where({ text: 'text' }))
           .toSql(),
         `
         SELECT * FROM "user"
         WHERE EXISTS (
           SELECT 1 FROM "message" AS "messages"
           WHERE "messages"."authorId" = "user"."id"
-            AND "user"."name" = $1
+            AND "messages"."text" = $1
           LIMIT 1
         )
       `,
-        ['name'],
+        ['text'],
       );
     });
 
     it('should be supported in join', () => {
       const query = db.user
-        .join('messages', (q) => q.where({ 'user.name': 'name' }))
+        .join('messages', (q) => q.where({ text: 'text' }))
         .select('name', 'messages.text');
 
       assertType<Awaited<typeof query>, { name: string; text: string }[]>();
@@ -129,9 +129,9 @@ describe('hasMany', () => {
         SELECT "user"."name", "messages"."text" FROM "user"
         JOIN "message" AS "messages"
           ON "messages"."authorId" = "user"."id"
-          AND "user"."name" = $1
+          AND "messages"."text" = $1
       `,
-        ['name'],
+        ['text'],
       );
     });
 
@@ -1131,7 +1131,7 @@ describe('hasMany through', () => {
 
       expectSql(
         db.profile
-          .whereExists('chats', (q) => q.where({ 'profile.bio': 'bio' }))
+          .whereExists('chats', (q) => q.where({ title: 'title' }))
           .toSql(),
         `
         SELECT * FROM "profile"
@@ -1148,17 +1148,17 @@ describe('hasMany through', () => {
             AND "user"."id" = "profile"."userId"
             LIMIT 1
           )
-          AND "profile"."bio" = $1
+          AND "chats"."title" = $1
           LIMIT 1
         )
       `,
-        ['bio'],
+        ['title'],
       );
     });
 
     it('should be supported in join', () => {
       const query = db.profile
-        .join('chats', (q) => q.where({ 'profile.bio': 'bio' }))
+        .join('chats', (q) => q.where({ title: 'title' }))
         .select('bio', 'chats.title');
 
       assertType<
@@ -1182,9 +1182,9 @@ describe('hasMany through', () => {
               AND "user"."id" = "profile"."userId"
               LIMIT 1
             )
-            AND "profile"."bio" = $1
+            AND "chats"."title" = $1
         `,
-        ['bio'],
+        ['title'],
       );
     });
 
@@ -1485,9 +1485,7 @@ describe('hasMany through', () => {
       );
 
       expectSql(
-        db.chat
-          .whereExists('profiles', (q) => q.where({ 'chat.title': 'title' }))
-          .toSql(),
+        db.chat.whereExists('profiles', (q) => q.where({ bio: 'bio' })).toSql(),
         `
           SELECT * FROM "chat"
           WHERE EXISTS (
@@ -1503,17 +1501,17 @@ describe('hasMany through', () => {
                 )
               LIMIT 1
             )
-            AND "chat"."title" = $1
+            AND "profiles"."bio" = $1
             LIMIT 1
           )
         `,
-        ['title'],
+        ['bio'],
       );
     });
 
     it('should be supported in join', () => {
       const query = db.chat
-        .join('profiles', (q) => q.where({ 'chat.title': 'title' }))
+        .join('profiles', (q) => q.where({ bio: 'bio' }))
         .select('title', 'profiles.bio');
 
       assertType<
@@ -1537,9 +1535,9 @@ describe('hasMany through', () => {
                 )
               LIMIT 1
             )
-            AND "chat"."title" = $1
+            AND "profiles"."bio" = $1
         `,
-        ['title'],
+        ['bio'],
       );
     });
 

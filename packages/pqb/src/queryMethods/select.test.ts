@@ -115,8 +115,8 @@ describe('selectMethods', () => {
       const profileQuery = Profile.takeOptional();
       const profileRelationQuery = addQueryOn(
         profileQuery,
-        profileQuery,
         User,
+        profileQuery,
         'userId',
         'id',
       );
@@ -208,8 +208,8 @@ describe('selectMethods', () => {
       const messagesQuery = Message.as('messages');
       const messageRelationQuery = addQueryOn(
         messagesQuery,
-        messagesQuery,
         User,
+        messagesQuery,
         'authorId',
         'id',
       );
@@ -509,11 +509,11 @@ describe('selectMethods', () => {
         user: User.take(),
       });
 
-      assertType<Awaited<typeof q>, { user: UserRecord }[]>();
+      assertType<Awaited<typeof q>, { user: UserRecord | null }[]>();
 
-      expect((await q.all())[0].user.createdAt instanceof Date).toBe(true);
-      expect((await q.take()).user.createdAt instanceof Date).toBe(true);
-      expect((await q.rows())[0][0].createdAt instanceof Date).toBe(true);
+      expect((await q.all())[0].user?.createdAt instanceof Date).toBe(true);
+      expect((await q.take()).user?.createdAt instanceof Date).toBe(true);
+      expect((await q.rows())[0][0]?.createdAt instanceof Date).toBe(true);
     });
 
     it('should parse raw column', async () => {

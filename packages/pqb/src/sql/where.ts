@@ -12,11 +12,13 @@ import { addValue, q, qc, quoteFullColumn } from './common';
 import { EMPTY_OBJECT, getRaw, isRaw, RawExpression } from '../common';
 import { getQueryAs, MaybeArray, toArray } from '../utils';
 import { processJoinItem } from './join';
+import { ColumnsShape } from '../columnSchema';
 
 export const pushWhereSql = (
   sql: string[],
   model: Query,
   query: Pick<QueryData, 'as' | 'and' | 'or'>,
+  shape: ColumnsShape,
   values: unknown[],
   quotedAs?: string,
   otherTableQuotedAs?: string,
@@ -24,6 +26,7 @@ export const pushWhereSql = (
   const whereConditions = whereToSql(
     model,
     query,
+    shape,
     values,
     quotedAs,
     otherTableQuotedAs,
@@ -36,6 +39,7 @@ export const pushWhereSql = (
 export const whereToSql = (
   model: Query,
   query: Pick<QueryData, 'as' | 'and' | 'or'>,
+  shape: ColumnsShape,
   values: unknown[],
   quotedAs?: string,
   otherTableQuotedAs?: string,
@@ -56,7 +60,7 @@ export const whereToSql = (
       const prefix = not ? 'NOT ' : '';
 
       if (typeof data === 'function') {
-        const qb = data(new model.whereQueryBuilder(model.table, query.as));
+        const qb = data(new model.whereQueryBuilder(model, model.shape));
 
         const sql = whereToSql(
           model,
@@ -65,6 +69,7 @@ export const whereToSql = (
             and: qb.query.and,
             or: qb.query.or,
           },
+          shape,
           values,
           quotedAs,
           otherTableQuotedAs,
@@ -79,6 +84,7 @@ export const whereToSql = (
         const sql = whereToSql(
           query,
           query.query || EMPTY_OBJECT,
+          query.shape,
           values,
           query.table && q(query.table),
         );
@@ -103,6 +109,7 @@ export const whereToSql = (
             prefix,
             model,
             query,
+            shape,
             values,
             quotedAs,
             otherTableQuotedAs,
@@ -121,7 +128,7 @@ export const whereToSql = (
               )}`,
             );
           } else {
-            const column = model.shape[key];
+            const column = shape[key];
             if (!column) {
               // TODO: custom error classes
               throw new Error(`Unknown column ${key} provided to condition`);
@@ -169,12 +176,24 @@ const whereHandlers: Record<
     ) => void)
   | undefined
 > = {
-  AND(value, ands, _, model, _q, values, quotedAs, otherTableQuotedAs, not) {
+  AND(
+    value,
+    ands,
+    _,
+    model,
+    _q,
+    shape,
+    values,
+    quotedAs,
+    otherTableQuotedAs,
+    not,
+  ) {
     const sql = whereToSql(
       model,
       {
         and: toArray(value as MaybeArray<WhereItem>),
       },
+      shape,
       values,
       quotedAs,
       otherTableQuotedAs,
@@ -182,12 +201,24 @@ const whereHandlers: Record<
     );
     if (sql) ands.push(sql);
   },
-  OR(value, ands, _, model, _q, values, quotedAs, otherTableQuotedAs, not) {
+  OR(
+    value,
+    ands,
+    _,
+    model,
+    _q,
+    shape,
+    values,
+    quotedAs,
+    otherTableQuotedAs,
+    not,
+  ) {
     const sql = whereToSql(
       model,
       {
         or: (value as MaybeArray<WhereItem>[]).map(toArray),
       },
+      shape,
       values,
       quotedAs,
       otherTableQuotedAs,
@@ -195,12 +226,24 @@ const whereHandlers: Record<
     );
     if (sql) ands.push(sql);
   },
-  NOT(value, ands, _, model, _q, values, quotedAs, otherTableQuotedAs, not) {
+  NOT(
+    value,
+    ands,
+    _,
+    model,
+    _q,
+    shape,
+    values,
+    quotedAs,
+    otherTableQuotedAs,
+    not,
+  ) {
     const sql = whereToSql(
       model,
       {
         and: toArray(value as MaybeArray<WhereItem>),
       },
+      shape,
       values,
       quotedAs,
       otherTableQuotedAs,
@@ -208,7 +251,7 @@ const whereHandlers: Record<
     );
     if (sql) ands.push(sql);
   },
-  ON(value, ands, prefix, _, _q, values, quotedAs, otherTableQuotedAs) {
+  ON(value, ands, prefix, _, _q, _s, values, quotedAs, otherTableQuotedAs) {
     if (Array.isArray(value)) {
       const item = value as WhereJsonPathEqualsItem;
       const leftColumn = quoteFullColumn(item[0], quotedAs);
@@ -229,10 +272,10 @@ const whereHandlers: Record<
       const item = value as WhereOnItem;
       const leftColumn = quoteFullColumn(
         item.on[0],
-        getJoinItemSource(item.joinTo),
+        getJoinItemSource(item.joinFrom),
       );
 
-      const joinTo = getJoinItemSource(item.joinFrom);
+      const joinTo = getJoinItemSource(item.joinTo);
 
       const [op, rightColumn] =
         item.on.length === 2
@@ -242,17 +285,16 @@ const whereHandlers: Record<
       ands.push(`${prefix}${leftColumn} ${op} ${rightColumn}`);
     }
   },
-  IN(value, ands, prefix, _, _q, values, quotedAs) {
+  IN(value, ands, prefix, _, _q, _s, values, quotedAs) {
     toArray(value as MaybeArray<WhereInItem>).forEach((item) => {
       pushIn(ands, prefix, quotedAs, values, item);
     });
   },
-  EXISTS(value, ands, prefix, model, query, values, quotedAs) {
+  EXISTS(value, ands, prefix, model, _, _s, values, quotedAs) {
     const joinItems = Array.isArray((value as unknown[])[0]) ? value : [value];
     (joinItems as JoinItem['args'][]).forEach((item) => {
       const { target, conditions } = processJoinItem(
         model,
-        query,
         values,
         item,
         quotedAs,

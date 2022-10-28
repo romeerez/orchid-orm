@@ -5,6 +5,7 @@ import { RawExpression } from '../common';
 import { getClonedQueryData, MaybeArray } from '../utils';
 import { JoinArgs, JoinCallback, JoinCallbackArg } from './join';
 import { RelationsBase } from '../relations';
+import { ColumnsShape } from '../columnSchema';
 
 export type WhereArg<T extends QueryBase> =
   | (Omit<
@@ -139,6 +140,7 @@ export const addWhereIn = <T extends QueryBase>(
 export abstract class Where implements QueryBase {
   abstract clone<T extends this>(this: T): T;
   abstract selectable: SelectableBase;
+  abstract shape: ColumnsShape;
   abstract relations: RelationsBase;
   abstract withData: WithDataBase;
   abstract __model: Query;
@@ -433,15 +435,18 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
 {
   query = {} as QueryData;
   selectable!: Q['selectable'];
+  shape: Q['shape'];
   __model: Query;
   relations = {};
   withData = {};
 
-  constructor(public table: Q['table'], public tableAlias: Q['tableAlias']) {
+  constructor(q: QueryBase | string, shape: ColumnsShape) {
     super();
+    this.table = typeof q === 'object' ? q.table : q;
+    this.shape = shape;
     this.__model = this as unknown as Query;
-    if (tableAlias) {
-      this.query.as = tableAlias;
+    if (typeof q === 'object' && q.query.as) {
+      this.query.as = q.query.as;
     }
   }
 

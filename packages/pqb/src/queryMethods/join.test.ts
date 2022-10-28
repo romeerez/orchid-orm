@@ -137,10 +137,10 @@ describe('join callback with query builder', () => {
     });
 
     const buildSql = (cb: (q: OnQueryBuilder) => OnQueryBuilder): Sql => {
-      return User.join(Message, cb).toSql();
+      return Message.join(User, cb).toSql();
     };
 
-    const startSql = `SELECT "user".* FROM "user" JOIN "message" ON`;
+    const startSql = `SELECT "message".* FROM "message" JOIN "user" ON`;
 
     testWhere(
       buildSql as unknown as (cb: (q: Query) => Query) => Sql,

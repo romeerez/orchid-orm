@@ -20,7 +20,6 @@ type ItemOf3Or4Length =
 
 export const processJoinItem = (
   model: Query,
-  query: Pick<QueryData, 'as'>,
   values: unknown[],
   args: JoinItem['args'],
   quotedAs?: string,
@@ -64,7 +63,7 @@ export const processJoinItem = (
       if (joinedQueryData.or) queryData.or.push(...joinedQueryData.or);
 
       const arg = (args[1] as ((q: unknown) => QueryBase) | undefined)?.(
-        new model.onQueryBuilder({ table: model.table, query }, args[0]),
+        new model.onQueryBuilder(joinedQuery, joinedQuery.shape, model),
       ).query;
 
       if (arg) {
@@ -76,9 +75,10 @@ export const processJoinItem = (
       const onConditions = whereToSql(
         joinedQuery,
         queryData,
+        joinedQuery.shape,
         values,
-        quotedAs,
         joinAs,
+        quotedAs,
       );
       const conditions = onConditions ? onConditions : undefined;
 
@@ -91,12 +91,16 @@ export const processJoinItem = (
     if (args.length === 2) {
       const arg = args[1];
       if (typeof arg === 'function') {
-        const joinQuery = arg(
-          new model.onQueryBuilder({ table: model.table, query }, args[0]),
-        );
+        const shape = model.query.withShapes?.[first];
+        if (!shape) {
+          throw new Error('Cannot get shape of `with` statement');
+        }
+
+        const joinQuery = arg(new model.onQueryBuilder(first, shape, model));
         const onConditions = whereToSql(
           model,
           joinQuery.query,
+          joinQuery.shape,
           values,
           quotedAs,
           target,
@@ -140,15 +144,15 @@ export const processJoinItem = (
   if (args.length === 2) {
     const arg = args[1];
     if (typeof arg === 'function') {
-      const joinQuery = arg(
-        new model.onQueryBuilder({ table: model.table, query }, args[0]),
-      );
+      const qb = new model.onQueryBuilder(first, first.shape, model);
+      const joinQuery = arg(qb);
       const onConditions = whereToSql(
         model,
         joinQuery.query,
+        joinQuery.shape,
         values,
-        quotedAs,
         joinAs,
+        quotedAs,
       );
       if (onConditions) conditions = onConditions;
     } else {
@@ -164,7 +168,14 @@ export const processJoinItem = (
   }
 
   if (joinQuery) {
-    const whereSql = whereToSql(model, joinQuery, values, joinAs, quotedAs);
+    const whereSql = whereToSql(
+      model,
+      joinQuery,
+      model.shape,
+      values,
+      joinAs,
+      quotedAs,
+    );
     if (whereSql) {
       if (conditions) conditions += ` AND ${whereSql}`;
       else conditions = whereSql;
@@ -234,7 +245,6 @@ export const pushJoinSql = (
   query.join.forEach((item) => {
     const { target, conditions } = processJoinItem(
       model,
-      query,
       values,
       item.args,
       quotedAs,

@@ -60,6 +60,7 @@ export const aggregateToSql = (
         and: options.filter ? [options.filter] : undefined,
         or: options.filterOr?.map((item) => [item]),
       },
+      model.shape,
       values,
       quotedAs,
     );

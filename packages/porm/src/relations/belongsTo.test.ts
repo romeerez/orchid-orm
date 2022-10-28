@@ -63,18 +63,18 @@ describe('belongsTo', () => {
       expectSql(
         db.profile.whereExists('user').toSql(),
         `
-        SELECT * FROM "profile"
-        WHERE EXISTS (
-          SELECT 1 FROM "user"
-          WHERE "user"."id" = "profile"."userId"
-          LIMIT 1
-        )
-      `,
+          SELECT * FROM "profile"
+          WHERE EXISTS (
+            SELECT 1 FROM "user"
+            WHERE "user"."id" = "profile"."userId"
+            LIMIT 1
+          )
+        `,
       );
 
       expectSql(
         db.profile
-          .whereExists('user', (q) => q.where({ 'user.name': 'name' }))
+          .whereExists('user', (q) => q.where({ name: 'name' }))
           .toSql(),
         `
         SELECT * FROM "profile"
@@ -91,7 +91,7 @@ describe('belongsTo', () => {
 
     it('should be supported in join', () => {
       const query = db.profile
-        .join('user', (q) => q.where({ 'user.name': 'name' }))
+        .join('user', (q) => q.where({ name: 'name' }))
         .select('bio', 'user.name');
 
       assertType<
@@ -113,7 +113,7 @@ describe('belongsTo', () => {
       it('should be selectable', async () => {
         const query = db.profile.select(
           'id',
-          db.profile.user.select('id', 'name').where({ 'user.name': 'name' }),
+          db.profile.user.select('id', 'name').where({ name: 'name' }),
         );
 
         assertType<

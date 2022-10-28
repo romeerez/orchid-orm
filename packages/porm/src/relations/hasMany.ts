@@ -268,7 +268,7 @@ export const makeHasManyMethod = (
       }
     }) as HasManyNestedUpdate,
     joinQuery(fromQuery, toQuery) {
-      return addQueryOn(toQuery, toQuery, fromQuery, foreignKey, primaryKey);
+      return addQueryOn(toQuery, fromQuery, toQuery, foreignKey, primaryKey);
     },
     primaryKey,
   };

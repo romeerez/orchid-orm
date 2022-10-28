@@ -225,8 +225,8 @@ export const makeHasOneMethod = (
     joinQuery(fromQuery, toQuery) {
       return addQueryOn(
         toQuery.take(),
-        toQuery,
         fromQuery,
+        toQuery,
         foreignKey,
         primaryKey,
       );

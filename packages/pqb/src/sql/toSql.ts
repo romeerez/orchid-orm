@@ -85,7 +85,7 @@ export const toSql = (model: Query, values: unknown[] = []): Sql => {
   }
 
   if (query.and || query.or) {
-    pushWhereSql(sql, model, query, values, quotedAs);
+    pushWhereSql(sql, model, query, model.shape, values, quotedAs);
   }
 
   if (query.group) {

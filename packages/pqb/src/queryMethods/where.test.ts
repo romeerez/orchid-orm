@@ -1561,8 +1561,8 @@ export const testJoin = (
         joinQuery(fromQuery, toQuery) {
           return pushQueryOn(
             toQuery.clone(),
-            toQuery,
             fromQuery,
+            toQuery,
             'authorId',
             'id',
           );

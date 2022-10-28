@@ -79,7 +79,7 @@ export const pushInsertSql = (
     }
   }
 
-  pushWhereSql(sql, model, query, values, quotedAs);
+  pushWhereSql(sql, model, query, model.shape, values, quotedAs);
   pushReturningSql(sql, model, query, values, quotedAs);
 };
 

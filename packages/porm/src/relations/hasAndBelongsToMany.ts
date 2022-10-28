@@ -279,7 +279,7 @@ export const makeHasAndBelongsToManyMethod = (
     joinQuery(fromQuery, toQuery) {
       return toQuery.whereExists(subQuery, (q) =>
         q
-          ._on(associationForeignKeyFull, apk)
+          ._on(associationForeignKeyFull, `${getQueryAs(toQuery)}.${pk}`)
           ._on(foreignKeyFull, `${getQueryAs(fromQuery)}.${pk}`),
       );
     },
