@@ -147,10 +147,9 @@ describe('hasOne', () => {
 
     describe('select', () => {
       it('should be selectable', () => {
-        const query = db.user.select(
-          'id',
-          db.user.profile.where({ bio: 'bio' }),
-        );
+        const query = db.user.select('id', {
+          profile: (q) => q.profile.where({ bio: 'bio' }),
+        });
 
         assertType<Awaited<typeof query>, { id: number; profile: Profile }[]>();
 
@@ -199,36 +198,28 @@ describe('hasOne', () => {
       });
 
       it('should handle exists sub query', () => {
-        const query = db.user.select(
-          'id',
-          db.user.profile.exists().as('hasProfile'),
-        );
-        const query2 = db.user.select('id', {
-          hasProfile: db.user.profile.exists(),
+        const query = db.user.select('id', {
+          hasProfile: (q) => q.profile.exists(),
         });
 
         assertType<
           Awaited<typeof query>,
           { id: number; hasProfile: boolean }[]
         >();
-        assertType<
-          Awaited<typeof query2>,
-          { id: number; hasProfile: boolean }[]
-        >();
 
-        const expectedSql = `
-          SELECT
-            "user"."id",
-            COALESCE((
-              SELECT true
-              FROM "profile"
-              WHERE "profile"."userId" = "user"."id"
-            ), false) AS "hasProfile"
-          FROM "user"
-        `;
-
-        expectSql(query.toSql(), expectedSql);
-        expectSql(query2.toSql(), expectedSql);
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "user"."id",
+              COALESCE((
+                SELECT true
+                FROM "profile"
+                WHERE "profile"."userId" = "user"."id"
+              ), false) AS "hasProfile"
+            FROM "user"
+          `,
+        );
       });
     });
 
@@ -967,10 +958,9 @@ describe('hasOne through', () => {
 
   describe('select', () => {
     it('should be selectable', () => {
-      const query = db.message.select(
-        'id',
-        db.message.profile.where({ bio: 'bio' }),
-      );
+      const query = db.message.select('id', {
+        profile: (q) => q.profile.where({ bio: 'bio' }),
+      });
 
       assertType<Awaited<typeof query>, { id: number; profile: Profile }[]>();
 
@@ -1029,41 +1019,33 @@ describe('hasOne through', () => {
     });
 
     it('should handle exists sub query', () => {
-      const query = db.message.select(
-        'id',
-        db.message.profile.exists().as('hasProfile'),
-      );
-      const query2 = db.message.select('id', {
-        hasProfile: db.message.profile.exists(),
+      const query = db.message.select('id', {
+        hasProfile: (q) => q.profile.exists(),
       });
 
       assertType<
         Awaited<typeof query>,
         { id: number; hasProfile: boolean }[]
       >();
-      assertType<
-        Awaited<typeof query2>,
-        { id: number; hasProfile: boolean }[]
-      >();
 
-      const expectedSql = `
-        SELECT
-          "message"."id",
-          COALESCE((
-            SELECT true
-            FROM "profile"
-            WHERE EXISTS (
-                SELECT 1 FROM "user"
-                WHERE "profile"."userId" = "user"."id"
-                  AND "user"."id" = "message"."authorId"
-                LIMIT 1
-              )
-          ), false) AS "hasProfile"
-        FROM "message"
-      `;
-
-      expectSql(query.toSql(), expectedSql);
-      expectSql(query2.toSql(), expectedSql);
+      expectSql(
+        query.toSql(),
+        `
+          SELECT
+            "message"."id",
+            COALESCE((
+              SELECT true
+              FROM "profile"
+              WHERE EXISTS (
+                  SELECT 1 FROM "user"
+                  WHERE "profile"."userId" = "user"."id"
+                    AND "user"."id" = "message"."authorId"
+                  LIMIT 1
+                )
+            ), false) AS "hasProfile"
+          FROM "message"
+        `,
+      );
     });
   });
 });

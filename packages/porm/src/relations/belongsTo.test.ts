@@ -136,10 +136,9 @@ describe('belongsTo', () => {
 
     describe('select', () => {
       it('should be selectable', async () => {
-        const query = db.profile.select(
-          'id',
-          db.profile.user.select('id', 'name').where({ name: 'name' }),
-        );
+        const query = db.profile.select('id', {
+          user: (q) => q.user.select('id', 'name').where({ name: 'name' }),
+        });
 
         assertType<
           Awaited<typeof query>,
@@ -190,34 +189,26 @@ describe('belongsTo', () => {
         );
       });
 
-      it('should handle exists sub query', () => {
-        const query = db.profile.select(
-          'id',
-          db.profile.user.exists().as('hasUser'),
-        );
-        const query2 = db.profile.select('id', {
-          hasUser: db.profile.user.exists(),
+      it('should handle exists sub query', async () => {
+        const query = db.profile.select('id', {
+          hasUser: (q) => q.user.exists(),
         });
 
         assertType<Awaited<typeof query>, { id: number; hasUser: boolean }[]>();
-        assertType<
-          Awaited<typeof query2>,
-          { id: number; hasUser: boolean }[]
-        >();
 
-        const expectedSql = `
-          SELECT
-            "profile"."id",
-            COALESCE((
-              SELECT true
-              FROM "user"
-              WHERE "user"."id" = "profile"."userId"
-            ), false) AS "hasUser"
-          FROM "profile"
-        `;
-
-        expectSql(query.toSql(), expectedSql);
-        expectSql(query2.toSql(), expectedSql);
+        expectSql(
+          query.toSql(),
+          `
+            SELECT
+              "profile"."id",
+              COALESCE((
+                SELECT true
+                FROM "user"
+                WHERE "user"."id" = "profile"."userId"
+              ), false) AS "hasUser"
+            FROM "profile"
+          `,
+        );
       });
     });
   });

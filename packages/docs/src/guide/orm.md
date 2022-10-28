@@ -580,7 +580,7 @@ const authorWithBooks: Author & { books: Book[] } = await db.book
 ```
 
 To load specific fields or to apply `where`, `order`, `limit` and other methods,
-relation can be selected by adding `db.model.relation` to select list or to an object in select list:
+relation can be selected by adding a callback to the select list:
 
 ```ts
 type BookResult = {
@@ -595,16 +595,10 @@ type BookResult = {
 const bookWithAuthor: BookResult = await db.book.select(
   'id',
   'title',
-  db.book.author.select('id', 'name'),
-).take()
-
-const bookSameAsAbove: BookResult = await db.book.select(
-  'id',
-  'title',
   {
-    book: db.book.author.select('id', 'name'),
+    author: (q) => q.author.select('id', 'name'),
   },
-)
+).take()
 
 type AuthorResult = {
   id: number
@@ -618,16 +612,14 @@ type AuthorResult = {
 const authorWithBooks: AuthorResult = await db.author.select(
   'id',
   'name',
-  db.author.books.select('id', 'title').where(...conditions).order('title').limit(5),
-).take()
-
-const authorSameAsAbove: AuthorResult = await db.author.select(
-  'id',
-  'name',
   {
-    books: db.author.book.select('id', 'title').where(...conditions).order('title').limit(5),
-  },
-)
+    books: (q) => q.books
+      .select('id', 'title')
+      .where(...conditions)
+      .order('title')
+      .limit(5),
+  }
+).take()
 ```
 
 All relations are supporting `exists` in select (get a boolean to know whether related records exist or not):
@@ -642,8 +634,8 @@ type Result = {
 const result: Result = await db.post.select(
   'id',
   {
-    hasTags: db.post.tags.exists(),
-    hasSpecificTag: db.post.tags.where({ name: 'specific' }).exists(),
+    hasTags: (q) => q.tags.exists(),
+    hasSpecificTag: (q) => q.tags.where({ name: 'specific' }).exists(),
   }
 )
 ```
@@ -660,8 +652,8 @@ type Result = {
 const result: Result = await db.post.select(
   'id',
   {
-    tagsCount: db.post.tags.count(),
-    tagsCommaSeparated: db.post.tags.stringAgg('name', ', '),
+    tagsCount: (q) => q.tags.count(),
+    tagsCommaSeparated: (q) => q.tags.stringAgg('name', ', '),
   }
 ).take()
 ```

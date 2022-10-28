@@ -105,7 +105,7 @@ export const selectToSql = (
           const obj = item.selectAs as Record<string, Expression | Query>;
           for (const as in obj) {
             const value = obj[as];
-            if (typeof value === 'object') {
+            if (typeof value === 'object' || typeof value === 'function') {
               if (isRaw(value)) {
                 list.push(`${getRaw(value, ctx.values)} AS ${q(as)}`);
               } else {

@@ -243,6 +243,10 @@ const applyRelation = (
     throw new Error(`Unknown relation type ${type}`);
   }
 
+  if (data.returns === 'one') {
+    query._take();
+  }
+
   (dbModel as unknown as Record<string, unknown>)[relationName] =
     makeRelationQuery(dbModel, query, relationName, data);
 

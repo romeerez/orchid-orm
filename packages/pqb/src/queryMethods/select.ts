@@ -12,36 +12,30 @@ import {
   NullableColumn,
   PluckResultColumnType,
 } from '../columnSchema';
-import { getQueryParsers, isRaw, RawExpression } from '../common';
+import { getQueryParsers, RawExpression, StringKey } from '../common';
 import { pushQueryArray } from '../queryDataUtils';
 import { parseRecord } from './then';
 import { QueryData, SelectItem, SelectQueryData } from '../sql';
-import { FilterTuple, getQueryAs, SimpleSpread } from '../utils';
-import {
-  isRequiredRelationKey,
-  Relation,
-  RelationQueryBase,
-  relationQueryKey,
-} from '../relations';
+import { FilterTuple, SimpleSpread } from '../utils';
+import { isRequiredRelationKey, Relation } from '../relations';
 import { getValueKey } from './get';
 
 export type SelectArg<T extends QueryBase> =
-  | keyof T['selectable']
+  | StringKey<keyof T['selectable']>
   | (T['relations'] extends Record<string, Relation>
-      ? keyof T['relations']
+      ? StringKey<keyof T['relations']>
       : never)
-  | RelationQueryBase
   | SelectAsArg<T>;
 
 type SelectAsArg<T extends QueryBase> = Record<
   string,
-  keyof T['selectable'] | Query | RawExpression
+  StringKey<keyof T['selectable']> | RawExpression | ((q: T) => Query)
 >;
 
 type SelectResult<
   T extends Query,
   Args extends SelectArg<T>[],
-  SelectAsArgs = SimpleSpread<FilterTuple<Args, SelectAsArg<QueryBase>>>,
+  SelectAsArgs = SimpleSpread<FilterTuple<Args, SelectAsArg<T>>>,
 > = AddQuerySelect<
   T,
   {
@@ -49,14 +43,8 @@ type SelectResult<
       ? T['selectable'][Arg]['as']
       : Arg extends keyof T['relations']
       ? Arg
-      : Arg extends RelationQueryBase
-      ? Arg['tableAlias'] extends string
-        ? Arg['tableAlias']
-        : never
       : never]: Arg extends keyof T['selectable']
       ? T['selectable'][Arg]['column']
-      : Arg extends RelationQueryBase
-      ? SelectSubQueryResult<Arg>
       : T['relations'] extends Record<string, Relation>
       ? Arg extends keyof T['relations']
         ? T['relations'][Arg]['returns'] extends 'many'
@@ -73,8 +61,8 @@ type SelectResult<
       ? T['selectable'][SelectAsArgs[K]]['column']
       : SelectAsArgs[K] extends RawExpression
       ? SelectAsArgs[K]['__column']
-      : SelectAsArgs[K] extends Query
-      ? SelectSubQueryResult<SelectAsArgs[K]>
+      : SelectAsArgs[K] extends (q: T) => Query
+      ? SelectSubQueryResult<ReturnType<SelectAsArgs[K]>>
       : never;
   }
 >;
@@ -104,28 +92,29 @@ export const addParserForSelectItem = <T extends Query>(
   q: T,
   as: string | getValueKey | undefined,
   key: string,
-  item: keyof T['selectable'] | Query | RawExpression,
-) => {
-  if (typeof item === 'object') {
-    if (isRaw(item)) {
-      addParserForRawExpression(q, key, item);
-    } else {
-      const parsers = getQueryParsers(item);
-      if (parsers) {
-        if (item.query.take) {
-          addParserToQuery(q.query, key, (item) => parseRecord(parsers, item));
-        } else {
-          addParserToQuery(q.query, key, (items) =>
-            (items as unknown[]).map((item) => parseRecord(parsers, item)),
-          );
-        }
+  arg: StringKey<keyof T['selectable']> | RawExpression | ((q: T) => Query),
+): string | RawExpression | Query => {
+  if (typeof arg === 'object') {
+    addParserForRawExpression(q, key, arg);
+    return arg;
+  } else if (typeof arg === 'function') {
+    const rel = arg(q);
+    const parsers = getQueryParsers(rel);
+    if (parsers) {
+      if (rel.query.take) {
+        addParserToQuery(q.query, key, (item) => parseRecord(parsers, item));
+      } else {
+        addParserToQuery(q.query, key, (items) =>
+          (items as unknown[]).map((item) => parseRecord(parsers, item)),
+        );
       }
     }
+    return rel;
   } else {
-    const index = (item as string).indexOf('.');
+    const index = arg.indexOf('.');
     if (index !== -1) {
-      const table = (item as string).slice(0, index);
-      const column = (item as string).slice(index + 1);
+      const table = arg.slice(0, index);
+      const column = arg.slice(index + 1);
 
       if (table === as) {
         const parser = q.columnsParsers?.[column];
@@ -137,9 +126,10 @@ export const addParserForSelectItem = <T extends Query>(
         if (parser) addParserToQuery(q.query, key, parser);
       }
     } else {
-      const parser = q.columnsParsers?.[item as string];
+      const parser = q.columnsParsers?.[arg];
       if (parser) addParserToQuery(q.query, key, parser);
     }
+    return arg;
   }
 };
 
@@ -155,69 +145,60 @@ export const addParserToQuery = (
 export const processSelectArg = <T extends Query>(
   q: T,
   as: string | undefined,
-  item: SelectArg<T>,
+  arg: SelectArg<T>,
   columnAs?: string | getValueKey,
 ): SelectItem => {
-  if (typeof item === 'string') {
-    if ((q.relations as Record<string, Relation>)[item]) {
-      item = (q as unknown as Record<string, RelationQueryBase>)[item];
+  if (typeof arg === 'string') {
+    if ((q.relations as Record<string, Relation>)[arg]) {
+      const rel = (q.relations as Record<string, Relation>)[arg];
+      arg = {
+        [arg]: () => rel.joinQuery(q, rel.query),
+      };
     } else {
-      const index = item.indexOf('.');
-      if (index !== -1) {
-        const table = item.slice(0, index);
-        const column = item.slice(index + 1);
-
-        if (table === as) {
-          const parser = q.columnsParsers?.[column];
-          if (parser) addParserToQuery(q.query, columnAs || column, parser);
-        } else {
-          const parser = (q.query as SelectQueryData).joinedParsers?.[table]?.[
-            column
-          ];
-          if (parser) addParserToQuery(q.query, columnAs || column, parser);
-        }
-      } else {
-        const parser = q.columnsParsers?.[item];
-        if (parser) addParserToQuery(q.query, columnAs || item, parser);
-      }
-      return item;
+      return processSelectColumnArg(q, arg, as, columnAs);
     }
   }
 
-  if ((item as { query?: QueryData }).query?.[relationQueryKey]) {
-    const relation = item as RelationQueryBase;
-    const parsers = relation.query.parsers || relation.columnsParsers;
-    if (parsers) {
-      addParserToQuery(q.query, getQueryAs(relation), (input) => {
-        if (Array.isArray(input)) {
-          input.forEach((record: unknown) => {
-            for (const key in parsers) {
-              const value = (record as Record<string, unknown>)[key];
-              if (value !== null) {
-                (record as Record<string, unknown>)[key] = parsers[key](value);
-              }
-            }
-          });
-        } else {
-          for (const key in parsers) {
-            const value = (input as Record<string, unknown>)[key];
-            if (value !== null) {
-              (input as Record<string, unknown>)[key] = parsers[key](value);
-            }
-          }
-        }
-        return input;
-      });
+  return processSelectAsArg(q, arg, as);
+};
+
+const processSelectColumnArg = <T extends Query>(
+  q: T,
+  arg: string,
+  as?: string,
+  columnAs?: string | getValueKey,
+): SelectItem => {
+  const index = arg.indexOf('.');
+  if (index !== -1) {
+    const table = arg.slice(0, index);
+    const column = arg.slice(index + 1);
+
+    if (table === as) {
+      const parser = q.columnsParsers?.[column];
+      if (parser) addParserToQuery(q.query, columnAs || column, parser);
+    } else {
+      const parser = (q.query as SelectQueryData).joinedParsers?.[table]?.[
+        column
+      ];
+      if (parser) addParserToQuery(q.query, columnAs || column, parser);
     }
   } else {
-    for (const key in item as SelectAsArg<QueryBase>) {
-      addParserForSelectItem(q, as, key, (item as SelectAsArg<QueryBase>)[key]);
-    }
-
-    return { selectAs: item } as SelectItem;
+    const parser = q.columnsParsers?.[arg];
+    if (parser) addParserToQuery(q.query, columnAs || arg, parser);
   }
+  return arg;
+};
 
-  return item as SelectItem;
+const processSelectAsArg = <T extends Query>(
+  q: T,
+  arg: SelectAsArg<T>,
+  as?: string,
+): SelectItem => {
+  const selectAs: Record<string, string | Query | RawExpression> = {};
+  for (const key in arg) {
+    selectAs[key] = addParserForSelectItem(q, as, key, arg[key]);
+  }
+  return { selectAs };
 };
 
 export class Select {

@@ -71,6 +71,9 @@ const posts = await db.post
   .select('id', 'name', {
     // select "author.name" as "authorName"
     // 'author.name' is selectable only after joining 'author', otherwise compilation error
-    authorName: 'author.name'
+    authorName: 'author.name',
+    
+    // select number of post comments:
+    commentsCount: (q) => q.comments.count(),
   })
 ```

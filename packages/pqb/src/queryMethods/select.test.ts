@@ -138,7 +138,10 @@ describe('selectMethods', () => {
       it('should select relation which returns one record', () => {
         const q = User.all();
 
-        const query = q.select('id', profileRelation.where({ bio: 'bio' }));
+        const query = q.select('id', {
+          profile: () => profileRelation.where({ bio: 'bio' }),
+        });
+
         assertType<
           Awaited<typeof query>,
           { id: number; profile: typeof Profile['type'] | null }[]
@@ -170,16 +173,16 @@ describe('selectMethods', () => {
       it('should have proper type for required relation', () => {
         const q = User.all();
 
-        const query = q.select(
-          'id',
-          profileRelation as unknown as RelationQuery<
-            'profile',
-            Record<string, unknown>,
-            never,
-            typeof profileRelationQuery,
-            true
-          >,
-        );
+        const query = q.select('id', {
+          profile: () =>
+            profileRelation as unknown as RelationQuery<
+              'profile',
+              Record<string, unknown>,
+              never,
+              typeof profileRelationQuery,
+              true
+            >,
+        });
 
         assertType<
           Awaited<typeof query>,
@@ -192,7 +195,9 @@ describe('selectMethods', () => {
         const now = new Date();
         await Profile.insert({ userId, updatedAt: now, createdAt: now });
 
-        const [record] = await User.select('id', profileRelation);
+        const [record] = await User.select('id', {
+          profile: () => profileRelation,
+        });
 
         assertType<
           typeof record,
@@ -231,7 +236,10 @@ describe('selectMethods', () => {
       it('should select relation which returns many records', () => {
         const q = User.all();
 
-        const query = q.select('id', messageRelation.where({ text: 'text' }));
+        const query = q.select('id', {
+          messages: () => messageRelation.where({ text: 'text' }),
+        });
+
         assertType<
           Awaited<typeof query>,
           { id: number; messages: typeof Message['type'][] }[]
@@ -268,7 +276,9 @@ describe('selectMethods', () => {
           ...messageData,
         });
 
-        const [record] = await User.select('id', messageRelation);
+        const [record] = await User.select('id', {
+          messages: () => messageRelation,
+        });
 
         assertType<typeof record, { id: number; messages: MessageRecord[] }>();
 
@@ -424,7 +434,7 @@ describe('selectMethods', () => {
 
     it('can select subquery', () => {
       const q = User.all();
-      const query = q.select({ subquery: User.all() });
+      const query = q.select({ subquery: () => User.all() });
 
       assertType<Awaited<typeof query>, { subquery: UserRecord[] }[]>();
 
@@ -494,7 +504,7 @@ describe('selectMethods', () => {
 
     it('should parse subquery array columns', async () => {
       const q = User.select({
-        users: User.all(),
+        users: () => User.all(),
       });
 
       assertType<Awaited<typeof q>, { users: UserRecord[] }[]>();
@@ -506,7 +516,7 @@ describe('selectMethods', () => {
 
     it('should parse subquery item columns', async () => {
       const q = User.select({
-        user: User.take(),
+        user: () => User.take(),
       });
 
       assertType<Awaited<typeof q>, { user: UserRecord | null }[]>();
