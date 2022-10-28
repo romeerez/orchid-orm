@@ -436,8 +436,8 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
   query = {} as QueryData;
   selectable!: Q['selectable'];
   shape: Q['shape'];
+  relations!: Q['relations'];
   __model: Query;
-  relations = {};
   withData = {};
 
   constructor(q: QueryBase | string, shape: ColumnsShape) {

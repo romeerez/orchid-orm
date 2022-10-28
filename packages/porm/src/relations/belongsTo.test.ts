@@ -89,6 +89,31 @@ describe('belongsTo', () => {
       );
     });
 
+    it('should support nested whereExists', () => {
+      expectSql(
+        db.message
+          .whereExists('user', (q) =>
+            q.whereExists('profile', (q) => q.where({ bio: 'bio' })),
+          )
+          .toSql(),
+        `
+          SELECT * FROM "message"
+          WHERE EXISTS (
+            SELECT 1 FROM "user"
+            WHERE "user"."id" = "message"."authorId"
+              AND EXISTS (
+                SELECT 1 FROM "profile"
+                WHERE "profile"."userId" = "user"."id"
+                  AND "profile"."bio" = $1
+                LIMIT 1
+              )
+            LIMIT 1
+          )
+        `,
+        ['bio'],
+      );
+    });
+
     it('should be supported in join', () => {
       const query = db.profile
         .join('user', (q) => q.where({ name: 'name' }))
