@@ -70,7 +70,8 @@ export type Query = QueryMethods & {
   columnsParsers?: ColumnsParsers;
   relations: RelationsBase;
   withData: WithDataBase;
-  [defaultsKey]?: string;
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  [defaultsKey]: {};
 };
 
 export type Selectable<T extends QueryBase> = StringKey<keyof T['selectable']>;

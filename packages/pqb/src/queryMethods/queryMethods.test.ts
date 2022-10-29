@@ -133,7 +133,7 @@ describe('queryMethods', () => {
   describe('pluck', () => {
     beforeEach(async () => {
       for (let i = 0; i < 3; i++) {
-        await User.insert(userData);
+        await User.insert({ ...userData, createdAt: now });
       }
     });
 

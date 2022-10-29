@@ -274,6 +274,8 @@ describe('selectMethods', () => {
           authorId,
           chatId,
           ...messageData,
+          createdAt: now,
+          updatedAt: now,
         });
 
         const [record] = await User.select('id', {

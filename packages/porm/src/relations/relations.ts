@@ -57,8 +57,8 @@ export type Relation<
   defaults: Info['populate'];
   nestedCreateQuery: [Info['populate']] extends [never]
     ? M
-    : (M[defaultsKey] extends undefined ? Omit<M, defaultsKey> : M) & {
-        [defaultsKey]: Info['populate'];
+    : M & {
+        [defaultsKey]: Record<Info['populate'], true>;
       };
   nestedInsert: BaseRelation['nestedInsert'];
   nestedUpdate: BaseRelation['nestedUpdate'];

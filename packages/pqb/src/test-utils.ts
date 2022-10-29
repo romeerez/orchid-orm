@@ -44,8 +44,7 @@ export const User = db('user', (t) => ({
     .nullable(),
   age: t.integer().nullable(),
   active: t.boolean().nullable(),
-  createdAt: t.timestamp(),
-  updatedAt: t.timestamp(),
+  ...t.timestamps(),
 }));
 
 export type ProfileRecord = typeof Profile['type'];
@@ -53,15 +52,13 @@ export const Profile = db('profile', (t) => ({
   id: t.serial().primaryKey(),
   userId: t.integer().foreignKey('user', 'id'),
   bio: t.text().nullable(),
-  createdAt: t.timestamp(),
-  updatedAt: t.timestamp(),
+  ...t.timestamps(),
 }));
 
 export const Chat = db('chat', (t) => ({
   id: t.serial().primaryKey(),
   title: t.text(),
-  createdAt: t.timestamp(),
-  updatedAt: t.timestamp(),
+  ...t.timestamps(),
 }));
 
 export type MessageRecord = typeof Message['type'];
@@ -70,8 +67,7 @@ export const Message = db('message', (t) => ({
   chatId: t.integer().foreignKey('chat', 'id'),
   authorId: t.integer().foreignKey('user', 'id'),
   text: t.text(),
-  createdAt: t.timestamp(),
-  updatedAt: t.timestamp(),
+  ...t.timestamps(),
 }));
 
 export const line = (s: string) =>
@@ -90,21 +86,6 @@ export const expectSql = (
 
 export const expectQueryNotMutated = (q: Query) => {
   expectSql(q.toSql(), `SELECT * FROM "${q.table}"`);
-};
-
-export const expectMatchObjectWithTimestamps = (
-  actual: { createdAt: Date; updatedAt: Date },
-  expected: { createdAt: Date; updatedAt: Date },
-) => {
-  expect({
-    ...actual,
-    createdAt: actual.createdAt.toISOString(),
-    updatedAt: actual.updatedAt.toISOString(),
-  }).toMatchObject({
-    ...expected,
-    createdAt: expected.createdAt.toISOString(),
-    updatedAt: expected.updatedAt.toISOString(),
-  });
 };
 
 export type AssertEqual<T, Expected> = [T] extends [Expected]
@@ -142,26 +123,18 @@ export const now = new Date();
 export const userData = {
   name: 'name',
   password: 'password',
-  createdAt: now,
-  updatedAt: now,
 };
 
 export const profileData = {
   bio: 'text',
-  createdAt: now,
-  updatedAt: now,
 };
 
 export const chatData = {
   title: 'title',
-  createdAt: now,
-  updatedAt: now,
 };
 
 export const messageData = {
   text: 'text',
-  createdAt: now,
-  updatedAt: now,
 };
 
 export const useTestDatabase = () => {

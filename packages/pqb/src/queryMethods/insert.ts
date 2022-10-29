@@ -31,9 +31,7 @@ export type OptionalKeys<T extends Query> = {
 
 export type InsertData<
   T extends Query,
-  DefaultKeys extends string = T[defaultsKey] extends string
-    ? T[defaultsKey]
-    : never,
+  DefaultKeys extends PropertyKey = keyof T[defaultsKey],
   Data = SetOptional<SetOptional<T['inputType'], OptionalKeys<T>>, DefaultKeys>,
 > = [keyof T['relations']] extends [never]
   ? Data
@@ -397,15 +395,17 @@ export class Insert {
   defaults<T extends Query, Data extends Partial<InsertData<T>>>(
     this: T,
     data: Data,
-  ): T & { [defaultsKey]: keyof Data } {
+  ): T & {
+    [defaultsKey]: Record<keyof Data, true>;
+  } {
     return (this.clone() as T)._defaults(data);
   }
   _defaults<T extends Query, Data extends Partial<InsertData<T>>>(
     this: T,
     data: Data,
-  ): T & { [defaultsKey]: keyof Data } {
+  ): T & { [defaultsKey]: Record<keyof Data, true> } {
     this.query.defaults = data;
-    return this as T & { [defaultsKey]: keyof Data };
+    return this as T & { [defaultsKey]: Record<keyof Data, true> };
   }
 
   onConflict<T extends Query, Arg extends OnConflictArg<T>>(

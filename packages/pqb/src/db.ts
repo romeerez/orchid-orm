@@ -71,7 +71,12 @@ export interface Db<
   withData: Query['withData'];
   joinedTables: Query['joinedTables'];
   relations: Relations;
-  [defaultsKey]: Query[defaultsKey];
+  [defaultsKey]: Record<
+    {
+      [K in keyof Shape]: Shape[K]['hasDefault'] extends true ? K : never;
+    }[keyof Shape],
+    true
+  >;
 }
 
 export class Db<

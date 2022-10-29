@@ -179,7 +179,10 @@ export const columnTypes = {
 
   timestamps<T extends ColumnType>(this: {
     timestamp(): T;
-  }): { createdAt: T; updatedAt: T } {
+  }): {
+    createdAt: T & { hasDefault: true };
+    updatedAt: T & { hasDefault: true };
+  } {
     return {
       createdAt: this.timestamp().default(raw('now()')),
       updatedAt: this.timestamp().default(raw('now()')),

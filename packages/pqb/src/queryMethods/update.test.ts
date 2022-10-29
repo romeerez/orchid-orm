@@ -1,6 +1,5 @@
 import {
   AssertEqual,
-  expectMatchObjectWithTimestamps,
   expectQueryNotMutated,
   expectSql,
   User,
@@ -83,7 +82,7 @@ describe('update', () => {
     expect(result).toBe(1);
 
     const updated = await User.take();
-    expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
+    expect(updated).toMatchObject({ ...userData, ...update });
   });
 
   it('should update record, returning value', async () => {
@@ -114,7 +113,7 @@ describe('update', () => {
     expect(typeof result).toBe('number');
 
     const updated = await User.take();
-    expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
+    expect(updated).toMatchObject({ ...userData, ...update });
   });
 
   it('should update one record, return selected columns', async () => {
@@ -139,7 +138,7 @@ describe('update', () => {
     expect(eq).toBe(true);
 
     const updated = await User.take();
-    expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
+    expect(updated).toMatchObject({ ...userData, ...update });
   });
 
   it('should update one record, return all columns', async () => {
@@ -164,7 +163,7 @@ describe('update', () => {
     expect(eq).toBe(true);
 
     const updated = await User.take();
-    expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
+    expect(updated).toMatchObject({ ...userData, ...update });
   });
 
   it('should update multiple records, returning selected columns', async () => {
@@ -196,7 +195,7 @@ describe('update', () => {
     expect(eq).toBe(true);
 
     const updated = await User.take();
-    expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
+    expect(updated).toMatchObject({ ...userData, ...update });
   });
 
   it('should update multiple records, returning all columns', async () => {
@@ -224,13 +223,13 @@ describe('update', () => {
     );
 
     const result = await query;
-    expectMatchObjectWithTimestamps(result[0], { ...userData, ...update });
+    expect(result[0]).toMatchObject({ ...userData, ...update });
 
     const eq: AssertEqual<typeof result, typeof User['type'][]> = true;
     expect(eq).toBe(true);
 
     const updated = await User.take();
-    expectMatchObjectWithTimestamps(updated, { ...userData, ...update });
+    expect(updated).toMatchObject({ ...userData, ...update });
   });
 
   it('should ignore undefined values, and should not ignore null', () => {
@@ -297,7 +296,7 @@ describe('update', () => {
     const eq: AssertEqual<typeof result, typeof User.type> = true;
     expect(eq).toBe(true);
 
-    expectMatchObjectWithTimestamps(result, { ...userData, ...update });
+    expect(result).toMatchObject({ ...userData, ...update });
   });
 
   it('should throw when searching for one to update and it is not found', async () => {

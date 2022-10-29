@@ -192,4 +192,4 @@ export type RelationQuery<
     [isRequiredRelationKey]: Required;
     [relationQueryKey]: string;
   },
-> = ((params: Params) => Q & { [defaultsKey]: Pick<T['type'], Populate> }) & Q;
+> = ((params: Params) => Q & { [defaultsKey]: Record<Populate, true> }) & Q;

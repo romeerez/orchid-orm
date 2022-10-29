@@ -123,6 +123,7 @@ export abstract class ColumnType<
   isPrimaryKey = false;
   isHidden = false;
   isNullable = false;
+  hasDefault = false;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   encodeFn?: (input: any) => unknown;
@@ -212,7 +213,10 @@ export abstract class ColumnType<
     return this.dataType;
   }
 
-  default<T extends ColumnType>(this: T, value: T['type'] | RawExpression): T {
+  default<T extends ColumnType>(
+    this: T,
+    value: T['type'] | RawExpression,
+  ): T & { hasDefault: true } {
     const cloned = Object.create(this);
     cloned.data = { ...cloned.data, default: value };
     return cloned;
