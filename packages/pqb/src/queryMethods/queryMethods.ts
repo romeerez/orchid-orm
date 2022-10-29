@@ -109,9 +109,7 @@ export class QueryMethods {
   __model!: Query;
 
   all<T extends Query>(this: T): SetQueryReturnsAll<T> {
-    return this.query.returnType === 'all'
-      ? (this as unknown as SetQueryReturnsAll<T>)
-      : this.clone()._all();
+    return this.clone()._all();
   }
 
   _all<T extends Query>(this: T): SetQueryReturnsAll<T> {
@@ -121,9 +119,7 @@ export class QueryMethods {
   }
 
   take<T extends Query>(this: T): SetQueryReturnsOne<T> {
-    return this.query.returnType === 'oneOrThrow'
-      ? (this as unknown as SetQueryReturnsOne<T>)
-      : this.clone()._take();
+    return this.clone()._take();
   }
 
   _take<T extends Query>(this: T): SetQueryReturnsOne<T> {
@@ -133,9 +129,7 @@ export class QueryMethods {
   }
 
   takeOptional<T extends Query>(this: T): SetQueryReturnsOneOptional<T> {
-    return this.query.returnType === 'one'
-      ? (this as unknown as SetQueryReturnsOneOptional<T>)
-      : this.clone()._takeOptional();
+    return this.clone()._takeOptional();
   }
 
   _takeOptional<T extends Query>(this: T): SetQueryReturnsOneOptional<T> {
@@ -145,9 +139,7 @@ export class QueryMethods {
   }
 
   rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
-    return this.query.returnType === 'rows'
-      ? (this as unknown as SetQueryReturnsRows<T>)
-      : this.clone()._rows();
+    return this.clone()._rows();
   }
 
   _rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
@@ -160,9 +152,7 @@ export class QueryMethods {
     this: T,
     select: S,
   ): SetQueryReturnsPluck<T, S> {
-    return this.query.returnType === 'pluck'
-      ? (this as unknown as SetQueryReturnsPluck<T, S>)
-      : this.clone()._pluck(select);
+    return this.clone()._pluck(select);
   }
 
   _pluck<T extends Query, S extends Expression<T>>(
@@ -177,9 +167,7 @@ export class QueryMethods {
   }
 
   exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {
-    return this.query.returnType === 'void'
-      ? (this as unknown as SetQueryReturnsVoid<T>)
-      : this.clone()._exec();
+    return this.clone()._exec();
   }
 
   _exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {

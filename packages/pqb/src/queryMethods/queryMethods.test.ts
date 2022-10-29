@@ -43,11 +43,6 @@ describe('queryMethods', () => {
   });
 
   describe('.all', () => {
-    it('should return the same query if already all', () => {
-      const q = User.all();
-      expect(q.all()).toBe(q);
-    });
-
     it('should remove `take` from query if it is set', () => {
       const q = User.take();
       expect((q.query as SelectQueryData)?.take).toBe(true);
