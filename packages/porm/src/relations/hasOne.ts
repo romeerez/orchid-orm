@@ -166,7 +166,7 @@ export const makeHasOneMethod = (
       );
 
       if (create.length) {
-        await t.insert(
+        await t.insertMany(
           create.map(([selfData, { create }]) => ({
             [foreignKey]: selfData[primaryKey],
             ...create,
@@ -211,7 +211,7 @@ export const makeHasOneMethod = (
           ._update<WhereResult<Query>>(update);
 
         if (updatedIds.length < ids.length) {
-          await t.insert(
+          await t.insertMany(
             ids
               .filter((id) => !updatedIds.includes(id))
               .map((id) => ({

@@ -689,7 +689,7 @@ const author = await db.author.create({
 Nested create is supported when inserting many as well:
 
 ```ts
-const books = await db.book.create([
+const books = await db.book.createMany([
   {
     title: 'Book 1',
     author: {

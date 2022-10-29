@@ -35,7 +35,7 @@ describe('update', () => {
 
   it('should update record with raw sql, returning updated rows count', async () => {
     const count = 2;
-    const users = await User.select('id').insert([userData, userData]);
+    const users = await User.select('id').insertMany([userData, userData]);
 
     const query = User.or(...users).update(raw(`name = 'name'`));
     expectSql(
@@ -167,7 +167,7 @@ describe('update', () => {
   });
 
   it('should update multiple records, returning selected columns', async () => {
-    const ids = await User.pluck('id').insert([userData, userData]);
+    const ids = await User.pluck('id').insertMany([userData, userData]);
 
     const update = {
       name: 'new name',
@@ -199,7 +199,7 @@ describe('update', () => {
   });
 
   it('should update multiple records, returning all columns', async () => {
-    const ids = await User.pluck('id').insert([userData, userData]);
+    const ids = await User.pluck('id').insertMany([userData, userData]);
 
     const update = {
       name: 'new name',

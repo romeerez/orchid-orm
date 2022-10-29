@@ -80,7 +80,7 @@ export const makeBelongsToMethod = (
       if (create.length) {
         created = (await t
           .select(primaryKey)
-          ._insert(create.map((item) => item.create))) as unknown[];
+          ._insertMany(create.map((item) => item.create))) as unknown[];
       } else {
         created = [];
       }

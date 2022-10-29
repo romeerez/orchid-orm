@@ -383,7 +383,7 @@ describe('hasAndBelongsToMany', () => {
     });
 
     it('should support create many', async () => {
-      const query = db.user.select('id').insert([
+      const query = db.user.select('id').insertMany([
         {
           ...userData,
           name: 'user 1',
@@ -482,7 +482,7 @@ describe('hasAndBelongsToMany', () => {
     });
 
     it('should support connect', async () => {
-      await db.chat.insert([
+      await db.chat.insertMany([
         { ...chatData, title: 'chat 1' },
         { ...chatData, title: 'chat 2' },
       ]);
@@ -547,14 +547,14 @@ describe('hasAndBelongsToMany', () => {
     });
 
     it('should support connect many', async () => {
-      await db.chat.insert([
+      await db.chat.insertMany([
         { ...chatData, title: 'chat 1' },
         { ...chatData, title: 'chat 2' },
         { ...chatData, title: 'chat 3' },
         { ...chatData, title: 'chat 4' },
       ]);
 
-      const query = db.user.select('id').insert([
+      const query = db.user.select('id').insertMany([
         {
           ...userData,
           name: 'user 1',
@@ -678,7 +678,7 @@ describe('hasAndBelongsToMany', () => {
     it('should support connect or create many', async () => {
       const [{ id: chat1Id }, { id: chat4Id }] = await db.chat
         .select('id')
-        .insert([
+        .insertMany([
           {
             ...chatData,
             title: 'chat 1',
@@ -689,7 +689,7 @@ describe('hasAndBelongsToMany', () => {
           },
         ]);
 
-      const query = db.user.create([
+      const query = db.user.createMany([
         {
           ...userData,
           name: 'user 1',
@@ -879,7 +879,9 @@ describe('hasAndBelongsToMany', () => {
 
     describe('nested create', () => {
       it('should create many records and connect all found updating with them', async () => {
-        const userIds = await db.user.pluck('id').insert([userData, userData]);
+        const userIds = await db.user
+          .pluck('id')
+          .insertMany([userData, userData]);
 
         await db.user.where({ id: { in: userIds } }).update({
           chats: {

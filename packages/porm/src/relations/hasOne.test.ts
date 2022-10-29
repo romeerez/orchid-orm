@@ -277,7 +277,7 @@ describe('hasOne', () => {
         });
 
         it('should support create many', async () => {
-          const query = db.user.create([
+          const query = db.user.createMany([
             {
               ...userData,
               name: 'user 1',
@@ -351,7 +351,7 @@ describe('hasOne', () => {
         });
 
         it('should support connect many', async () => {
-          await db.profile.insert([
+          await db.profile.insertMany([
             {
               ...profileData,
               bio: 'profile 1',
@@ -371,7 +371,7 @@ describe('hasOne', () => {
             },
           ]);
 
-          const query = db.user.create([
+          const query = db.user.createMany([
             {
               ...userData,
               name: 'user 1',
@@ -472,7 +472,7 @@ describe('hasOne', () => {
             },
           });
 
-          const [user1, user2] = await db.user.create([
+          const [user1, user2] = await db.user.createMany([
             {
               ...userData,
               name: 'user 1',
@@ -535,7 +535,7 @@ describe('hasOne', () => {
         });
 
         it('should nullify foreignKey in batch update', async () => {
-          const userIds = await db.user.pluck('id').insert([
+          const userIds = await db.user.pluck('id').insertMany([
             { ...userData, profile: { create: profileData } },
             { ...userData, profile: { create: profileData } },
           ]);
@@ -563,7 +563,7 @@ describe('hasOne', () => {
 
           const [{ id: profile1Id }, { id: profile2Id }] = await db.profile
             .select('id')
-            .insert([{ ...profileData, userId: id }, { ...profileData }]);
+            .insertMany([{ ...profileData, userId: id }, { ...profileData }]);
 
           await db.user.find(id).update({
             profile: {
@@ -612,7 +612,7 @@ describe('hasOne', () => {
         });
 
         it('should delete related record in batch update', async () => {
-          const userIds = await db.user.pluck('id').insert([
+          const userIds = await db.user.pluck('id').insertMany([
             { ...userData, profile: { create: profileData } },
             { ...userData, profile: { create: profileData } },
           ]);
@@ -647,7 +647,7 @@ describe('hasOne', () => {
         });
 
         it('should update related record in batch update', async () => {
-          const userIds = await db.user.pluck('id').insert([
+          const userIds = await db.user.pluck('id').insertMany([
             { ...userData, profile: { create: profileData } },
             { ...userData, profile: { create: profileData } },
           ]);

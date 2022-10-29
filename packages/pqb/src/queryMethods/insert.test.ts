@@ -9,260 +9,267 @@ import {
 import { raw } from '../common';
 import { OnConflictQueryBuilder } from './insert';
 
-describe('insert', () => {
+describe('insert functions', () => {
   useTestDatabase();
 
-  it('should insert with raw sql and list of columns', () => {
-    const q = User.all();
+  describe('insertRaw', () => {
+    it('should insert with raw sql and list of columns', () => {
+      const q = User.all();
 
-    const query = q.insert({
-      columns: ['name', 'password'],
-      values: raw('raw sql'),
-    });
-    expectSql(
-      query.toSql(),
-      `
+      const query = q.insertRaw({
+        columns: ['name', 'password'],
+        values: raw('raw sql'),
+      });
+      expectSql(
+        query.toSql(),
+        `
         INSERT INTO "user"("name", "password")
         VALUES raw sql
       `,
-    );
+      );
 
-    const eq: AssertEqual<Awaited<typeof query>, number> = true;
-    expect(eq).toBe(true);
+      const eq: AssertEqual<Awaited<typeof query>, number> = true;
+      expect(eq).toBe(true);
 
-    expectQueryNotMutated(q);
+      expectQueryNotMutated(q);
+    });
   });
 
-  it('should insert one record, returning rows count', async () => {
-    const q = User.all();
+  describe('insert', () => {
+    it('should insert one record, returning rows count', async () => {
+      const q = User.all();
 
-    const query = q.insert(userData);
-    expectSql(
-      query.toSql(),
-      `
+      const query = q.insert(userData);
+      expectSql(
+        query.toSql(),
+        `
         INSERT INTO "user"("name", "password")
         VALUES ($1, $2)
       `,
-      ['name', 'password'],
-    );
+        ['name', 'password'],
+      );
 
-    const result = await query;
-    expect(result).toBe(1);
+      const result = await query;
+      expect(result).toBe(1);
 
-    const eq: AssertEqual<typeof result, number> = true;
-    expect(eq).toBe(true);
+      const eq: AssertEqual<typeof result, number> = true;
+      expect(eq).toBe(true);
 
-    const inserted = await User.take();
-    expect(inserted).toMatchObject(userData);
+      const inserted = await User.take();
+      expect(inserted).toMatchObject(userData);
 
-    expectQueryNotMutated(q);
-  });
+      expectQueryNotMutated(q);
+    });
 
-  it('should insert one record, returning value', async () => {
-    const q = User.all();
+    it('should insert one record, returning value', async () => {
+      const q = User.all();
 
-    const query = q.get('id').insert(userData);
-    expectSql(
-      query.toSql(),
-      `
+      const query = q.get('id').insert(userData);
+      expectSql(
+        query.toSql(),
+        `
         INSERT INTO "user"("name", "password")
         VALUES ($1, $2)
         RETURNING "user"."id"
       `,
-      ['name', 'password'],
-    );
+        ['name', 'password'],
+      );
 
-    const result = await query;
-    const eq: AssertEqual<typeof result, number> = true;
-    expect(eq).toBe(true);
+      const result = await query;
+      const eq: AssertEqual<typeof result, number> = true;
+      expect(eq).toBe(true);
 
-    expect(typeof result).toBe('number');
+      expect(typeof result).toBe('number');
 
-    expectQueryNotMutated(q);
-  });
+      expectQueryNotMutated(q);
+    });
 
-  it('should insert one record, returning columns', async () => {
-    const q = User.all();
+    it('should insert one record, returning columns', async () => {
+      const q = User.all();
 
-    const query = q.select('id', 'name').insert(userData);
-    expectSql(
-      query.toSql(),
-      `
+      const query = q.select('id', 'name').insert(userData);
+      expectSql(
+        query.toSql(),
+        `
         INSERT INTO "user"("name", "password")
         VALUES ($1, $2)
         RETURNING "user"."id", "user"."name"
       `,
-      ['name', 'password'],
-    );
+        ['name', 'password'],
+      );
 
-    const result = await query;
-    const eq: AssertEqual<typeof result, { id: number; name: string }> = true;
-    expect(eq).toBe(true);
+      const result = await query;
+      const eq: AssertEqual<typeof result, { id: number; name: string }> = true;
+      expect(eq).toBe(true);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...other } = userData;
-    expect(result).toMatchObject(other);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...other } = userData;
+      expect(result).toMatchObject(other);
 
-    expectQueryNotMutated(q);
-  });
+      expectQueryNotMutated(q);
+    });
 
-  it('should insert one record, returning all columns', async () => {
-    const q = User.all();
+    it('should insert one record, returning all columns', async () => {
+      const q = User.all();
 
-    const query = q.selectAll().insert(userData);
-    expectSql(
-      query.toSql(),
-      `
+      const query = q.selectAll().insert(userData);
+      expectSql(
+        query.toSql(),
+        `
         INSERT INTO "user"("name", "password")
         VALUES ($1, $2)
         RETURNING *
       `,
-      ['name', 'password'],
-    );
+        ['name', 'password'],
+      );
 
-    const result = await query;
-    const eq: AssertEqual<typeof result, typeof User['type']> = true;
-    expect(eq).toBe(true);
+      const result = await query;
+      const eq: AssertEqual<typeof result, typeof User['type']> = true;
+      expect(eq).toBe(true);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...other } = userData;
-    expect(result).toMatchObject(other);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...other } = userData;
+      expect(result).toMatchObject(other);
 
-    expectQueryNotMutated(q);
+      expectQueryNotMutated(q);
+    });
+
+    it('should insert record with provided defaults', () => {
+      const query = User.defaults({
+        name: 'name',
+        password: 'password',
+      }).insert({
+        password: 'override',
+      });
+
+      expectSql(
+        query.toSql(),
+        `
+        INSERT INTO "user"("name", "password")
+        VALUES ($1, $2)
+      `,
+        ['name', 'override'],
+      );
+    });
   });
 
-  it('should insert many records, returning void', async () => {
-    const q = User.all();
+  describe('insertMany', () => {
+    it('should insert many records, returning void', async () => {
+      const q = User.all();
 
-    const arr = [
-      {
-        ...userData,
-        picture: null,
-      },
-      userData,
-    ];
+      const arr = [
+        {
+          ...userData,
+          picture: null,
+        },
+        userData,
+      ];
 
-    const query = q.insert(arr);
+      const query = q.insertMany(arr);
 
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         INSERT INTO "user"("name", "password", "picture")
         VALUES
           ($1, $2, $3),
           ($4, $5, DEFAULT)
       `,
-      ['name', 'password', null, 'name', 'password'],
-    );
+        ['name', 'password', null, 'name', 'password'],
+      );
 
-    const result = await query;
-    expect(result).toBe(2);
+      const result = await query;
+      expect(result).toBe(2);
 
-    const eq: AssertEqual<typeof result, number> = true;
-    expect(eq).toBe(true);
+      const eq: AssertEqual<typeof result, number> = true;
+      expect(eq).toBe(true);
 
-    const inserted = await User.all();
-    inserted.forEach((item, i) => {
-      expect(item).toMatchObject(arr[i]);
+      const inserted = await User.all();
+      inserted.forEach((item, i) => {
+        expect(item).toMatchObject(arr[i]);
+      });
+
+      expectQueryNotMutated(q);
     });
 
-    expectQueryNotMutated(q);
-  });
+    it('should insert many records, returning columns', async () => {
+      const q = User.all();
 
-  it('should insert many records, returning columns', async () => {
-    const q = User.all();
+      const arr = [
+        {
+          ...userData,
+          picture: null,
+        },
+        userData,
+      ];
 
-    const arr = [
-      {
-        ...userData,
-        picture: null,
-      },
-      userData,
-    ];
+      const query = q.select('id', 'name').insertMany(arr);
 
-    const query = q.select('id', 'name').insert(arr);
-
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         INSERT INTO "user"("name", "password", "picture")
         VALUES
           ($1, $2, $3),
           ($4, $5, DEFAULT)
         RETURNING "user"."id", "user"."name"
       `,
-      ['name', 'password', null, 'name', 'password'],
-    );
+        ['name', 'password', null, 'name', 'password'],
+      );
 
-    const result = await query;
-    const eq: AssertEqual<typeof result, { id: number; name: string }[]> = true;
-    expect(eq).toBe(true);
+      const result = await query;
+      const eq: AssertEqual<typeof result, { id: number; name: string }[]> =
+        true;
+      expect(eq).toBe(true);
 
-    const inserted = await User.all();
-    inserted.forEach((item, i) => {
-      expect(item).toMatchObject(arr[i]);
+      const inserted = await User.all();
+      inserted.forEach((item, i) => {
+        expect(item).toMatchObject(arr[i]);
+      });
+
+      expectQueryNotMutated(q);
     });
 
-    expectQueryNotMutated(q);
-  });
+    it('should insert many records, returning all columns', async () => {
+      const q = User.all();
 
-  it('should insert many records, returning all columns', async () => {
-    const q = User.all();
+      const arr = [
+        {
+          ...userData,
+          picture: null,
+        },
+        userData,
+      ];
 
-    const arr = [
-      {
-        ...userData,
-        picture: null,
-      },
-      userData,
-    ];
+      const query = q.selectAll().insertMany(arr);
 
-    const query = q.selectAll().insert(arr);
-
-    expectSql(
-      query.toSql(),
-      `
+      expectSql(
+        query.toSql(),
+        `
         INSERT INTO "user"("name", "password", "picture")
         VALUES
           ($1, $2, $3),
           ($4, $5, DEFAULT)
         RETURNING *
       `,
-      ['name', 'password', null, 'name', 'password'],
-    );
+        ['name', 'password', null, 'name', 'password'],
+      );
 
-    const result = await query;
-    result.forEach((item, i) => {
-      expect(item).toMatchObject(arr[i]);
+      const result = await query;
+      result.forEach((item, i) => {
+        expect(item).toMatchObject(arr[i]);
+      });
+
+      const eq: AssertEqual<typeof result, typeof User['type'][]> = true;
+      expect(eq).toBe(true);
+
+      const inserted = await User.all();
+      inserted.forEach((item, i) => {
+        expect(item).toMatchObject(arr[i]);
+      });
+
+      expectQueryNotMutated(q);
     });
-
-    const eq: AssertEqual<typeof result, typeof User['type'][]> = true;
-    expect(eq).toBe(true);
-
-    const inserted = await User.all();
-    inserted.forEach((item, i) => {
-      expect(item).toMatchObject(arr[i]);
-    });
-
-    expectQueryNotMutated(q);
-  });
-
-  it('should insert record with provided defaults', () => {
-    const query = User.defaults({
-      name: 'name',
-      password: 'password',
-    }).insert({
-      password: 'override',
-    });
-
-    expectSql(
-      query.toSql(),
-      `
-        INSERT INTO "user"("name", "password")
-        VALUES ($1, $2)
-      `,
-      ['name', 'override'],
-    );
   });
 
   describe('onConflict', () => {
@@ -490,52 +497,57 @@ describe('insert', () => {
     });
   });
 
-  describe('create', () => {
-    it('should return full record', async () => {
-      const result = await User.create(userData);
-      expect(result).toMatchObject(userData);
+  describe('create functions', () => {
+    describe('create', () => {
+      it('should return full record', async () => {
+        const result = await User.create(userData);
+        expect(result).toMatchObject(userData);
 
-      const eq: AssertEqual<typeof result, typeof User.type> = true;
-      expect(eq).toBe(true);
-    });
-
-    it('should return columns from select', async () => {
-      const result = await User.select('id', 'name').create(userData);
-      expect(result).toEqual({
-        id: result.id,
-        name: userData.name,
+        const eq: AssertEqual<typeof result, typeof User.type> = true;
+        expect(eq).toBe(true);
       });
 
-      const eq: AssertEqual<typeof result, { id: number; name: string }> = true;
-      expect(eq).toBe(true);
+      it('should return columns from select', async () => {
+        const result = await User.select('id', 'name').create(userData);
+        expect(result).toEqual({
+          id: result.id,
+          name: userData.name,
+        });
+
+        const eq: AssertEqual<typeof result, { id: number; name: string }> =
+          true;
+        expect(eq).toBe(true);
+      });
     });
 
-    it('should return full records when creating many', async () => {
-      const result = await User.create([userData, userData]);
-      expect(result[0]).toMatchObject(userData);
-      expect(result[1]).toMatchObject(userData);
+    describe('createMany', () => {
+      it('should return full records', async () => {
+        const result = await User.createMany([userData, userData]);
+        expect(result[0]).toMatchObject(userData);
+        expect(result[1]).toMatchObject(userData);
 
-      const eq: AssertEqual<typeof result, typeof User.type[]> = true;
-      expect(eq).toBe(true);
-    });
-
-    it('should return columns from select when creating many', async () => {
-      const result = await User.select('id', 'name').create([
-        userData,
-        userData,
-      ]);
-      expect(result[0]).toEqual({
-        id: result[0].id,
-        name: userData.name,
-      });
-      expect(result[1]).toEqual({
-        id: result[1].id,
-        name: userData.name,
+        const eq: AssertEqual<typeof result, typeof User.type[]> = true;
+        expect(eq).toBe(true);
       });
 
-      const eq: AssertEqual<typeof result, { id: number; name: string }[]> =
-        true;
-      expect(eq).toBe(true);
+      it('should return columns from select', async () => {
+        const result = await User.select('id', 'name').createMany([
+          userData,
+          userData,
+        ]);
+        expect(result[0]).toEqual({
+          id: result[0].id,
+          name: userData.name,
+        });
+        expect(result[1]).toEqual({
+          id: result[1].id,
+          name: userData.name,
+        });
+
+        const eq: AssertEqual<typeof result, { id: number; name: string }[]> =
+          true;
+        expect(eq).toBe(true);
+      });
     });
   });
 });

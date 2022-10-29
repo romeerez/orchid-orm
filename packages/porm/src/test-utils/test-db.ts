@@ -3,7 +3,10 @@ import { porm } from '../orm';
 import {
   ChatModel,
   MessageModel,
+  PostModel,
+  PostTagModel,
   ProfileModel,
+  TagModel,
   UserModel,
 } from './test-models';
 
@@ -23,6 +26,9 @@ export const db = porm(
     profile: ProfileModel,
     chat: ChatModel,
     message: MessageModel,
+    post: PostModel,
+    postTag: PostTagModel,
+    tag: TagModel,
   },
 );
 

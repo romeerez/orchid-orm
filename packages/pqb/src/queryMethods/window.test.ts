@@ -20,11 +20,11 @@ describe('window functions', () => {
   `('$method', ({ method, functionName, results }) => {
     it('should return array of objects with number value', async () => {
       if (method === 'selectCumeDist') {
-        await User.insert([
+        await User.insertMany([
           { ...userData, age: 20 },
           { ...userData, age: 20 },
         ]);
-        await User.insert([
+        await User.insertMany([
           { ...userData, age: 30 },
           { ...userData, age: 30 },
         ]);

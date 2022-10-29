@@ -193,7 +193,7 @@ export const makeHasManyMethod = (
 
       connectedI = 0;
       if (create.length) {
-        await t.insert(
+        await t.insertMany(
           create.flatMap(
             ([selfData, { create = [], connectOrCreate = [] }]) => {
               return [
@@ -221,7 +221,7 @@ export const makeHasManyMethod = (
 
       const t = query.transacting(q);
       if (params.create) {
-        await t._insert(
+        await t._insertMany(
           params.create.map((create) => ({
             ...create,
             [foreignKey]: data[0][primaryKey],

@@ -294,7 +294,7 @@ describe('belongsTo', () => {
       });
 
       it('should support create in batch insert', async () => {
-        const query = db.message.select('id', 'chatId', 'authorId').insert([
+        const query = db.message.select('id', 'chatId', 'authorId').insertMany([
           {
             ...messageData,
             text: 'message 1',
@@ -380,16 +380,16 @@ describe('belongsTo', () => {
       });
 
       it('should support connect in batch insert', async () => {
-        await db.chat.insert([
+        await db.chat.insertMany([
           { ...chatData, title: 'chat 1' },
           { ...chatData, title: 'chat 2' },
         ]);
-        await db.user.insert([
+        await db.user.insertMany([
           { ...userData, name: 'user 1' },
           { ...userData, name: 'user 2' },
         ]);
 
-        const query = db.message.select('id', 'chatId', 'authorId').insert([
+        const query = db.message.select('id', 'chatId', 'authorId').insertMany([
           {
             ...messageData,
             text: 'message 1',
@@ -482,7 +482,7 @@ describe('belongsTo', () => {
 
         const query = await db.message
           .select('id', 'chatId', 'authorId')
-          .insert([
+          .insertMany([
             {
               ...messageData,
               text: 'message 1',
@@ -554,7 +554,7 @@ describe('belongsTo', () => {
       });
 
       it('should nullify foreignKey in batch update', async () => {
-        const ids = await db.profile.pluck('id').insert([
+        const ids = await db.profile.pluck('id').insertMany([
           { ...profileData, user: { create: userData } },
           { ...profileData, user: { create: userData } },
         ]);
@@ -610,7 +610,7 @@ describe('belongsTo', () => {
       it('should set foreignKey of current record with provided primaryKey in batch update', async () => {
         const profileIds = await db.profile
           .pluck('id')
-          .insert([profileData, profileData]);
+          .insertMany([profileData, profileData]);
         const user = await db.user.select('id').insert(userData);
 
         const updatedUserIds = await db.profile
@@ -628,7 +628,7 @@ describe('belongsTo', () => {
       it('should set foreignKey of current record from found related record in batch update', async () => {
         const profileIds = await db.profile
           .pluck('id')
-          .insert([profileData, profileData]);
+          .insertMany([profileData, profileData]);
         const user = await db.user.select('id').insert({
           ...userData,
           name: 'user',
@@ -670,7 +670,7 @@ describe('belongsTo', () => {
 
       it('should nullify foreignKey and delete related record in batch update', async () => {
         const user = await db.user.selectAll().insert(userData);
-        const profileIds = await db.profile.pluck('id').insert([
+        const profileIds = await db.profile.pluck('id').insertMany([
           { ...profileData, userId: user.id },
           { ...profileData, userId: user.id },
         ]);
@@ -713,7 +713,7 @@ describe('belongsTo', () => {
       });
 
       it('should update related records in batch update', async () => {
-        const profiles = await db.profile.select('id', 'userId').insert([
+        const profiles = await db.profile.select('id', 'userId').insertMany([
           { ...profileData, user: { create: userData } },
           { ...profileData, user: { create: userData } },
         ]);
@@ -825,7 +825,7 @@ describe('belongsTo', () => {
       it('should create new related record and update foreignKey in batch update', async () => {
         const profileIds = await db.profile
           .pluck('id')
-          .insert([profileData, profileData]);
+          .insertMany([profileData, profileData]);
 
         const updatedUserIds = await db.profile
           .pluck('userId')

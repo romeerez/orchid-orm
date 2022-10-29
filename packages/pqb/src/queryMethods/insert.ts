@@ -1,12 +1,13 @@
 import {
   defaultsKey,
   Query,
+  QueryReturnType,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
   SetQueryReturnsRowCount,
 } from '../query';
 import { pushQueryArray } from '../queryDataUtils';
-import { isRaw, RawExpression } from '../common';
+import { RawExpression } from '../common';
 import {
   BelongsToNestedInsert,
   BelongsToRelation,
@@ -94,6 +95,8 @@ export type InsertData<
             {};
       }[keyof T['relations']];
 
+type InsertRawData = { columns: string[]; values: RawExpression };
+
 type InsertOneResult<T extends Query> = T['hasSelect'] extends false
   ? SetQueryReturnsRowCount<T>
   : T['returnType'] extends 'all'
@@ -123,20 +126,24 @@ type AppendRelations = Record<
   [rowIndex: number, data: NestedInsertItem][]
 >;
 
+type InsertCtx = {
+  prependRelations: PrependRelations;
+  appendRelations: AppendRelations;
+  requiredReturning: Record<string, boolean>;
+  relations: Record<string, Relation>;
+};
+
 const processInsertItem = (
   item: Record<string, unknown>,
   rowIndex: number,
-  relations: Record<string, Relation>,
-  prependRelations: PrependRelations,
-  appendRelations: AppendRelations,
-  requiredReturning: Record<string, boolean>,
+  ctx: InsertCtx,
   columns: string[],
   columnsMap: Record<string, number>,
 ) => {
   Object.keys(item).forEach((key) => {
-    if (relations[key]) {
-      if (relations[key].type === 'belongsTo') {
-        const foreignKey = (relations[key] as BelongsToRelation).options
+    if (ctx.relations[key]) {
+      if (ctx.relations[key].type === 'belongsTo') {
+        const foreignKey = (ctx.relations[key] as BelongsToRelation).options
           .foreignKey;
 
         let columnIndex = columnsMap[foreignKey];
@@ -145,19 +152,22 @@ const processInsertItem = (
           columns.push(foreignKey);
         }
 
-        if (!prependRelations[key]) prependRelations[key] = [];
+        if (!ctx.prependRelations[key]) ctx.prependRelations[key] = [];
 
-        prependRelations[key].push([
+        ctx.prependRelations[key].push([
           rowIndex,
           columnIndex,
           item[key] as Record<string, unknown>,
         ]);
       } else {
-        requiredReturning[relations[key].primaryKey] = true;
+        ctx.requiredReturning[ctx.relations[key].primaryKey] = true;
 
-        if (!appendRelations[key]) appendRelations[key] = [];
+        if (!ctx.appendRelations[key]) ctx.appendRelations[key] = [];
 
-        appendRelations[key].push([rowIndex, item[key] as NestedInsertItem]);
+        ctx.appendRelations[key].push([
+          rowIndex,
+          item[key] as NestedInsertItem,
+        ]);
       }
     } else if (columnsMap[key] === undefined) {
       columnsMap[key] = columns.length;
@@ -166,230 +176,290 @@ const processInsertItem = (
   });
 };
 
-export class Insert {
-  insert<T extends Query>(this: T, data: InsertData<T>): InsertOneResult<T>;
-  insert<T extends Query>(
-    this: T,
-    data: InsertData<T>[] | { columns: string[]; values: RawExpression },
-  ): InsertManyResult<T>;
-  insert(this: Query, data: InsertData<Query> & InsertData<Query>[]) {
-    return this.clone()._insert(data) as unknown as InsertOneResult<Query> &
-      InsertManyResult<Query>;
+const createInsertCtx = (q: Query): InsertCtx => ({
+  prependRelations: {},
+  appendRelations: {},
+  requiredReturning: {},
+  relations: (q as unknown as Query).relations,
+});
+
+const getInsertSingleReturnType = (q: Query) => {
+  const { select, returnType } = q.query;
+  if (select) {
+    return returnType === 'all' ? 'one' : returnType;
+  } else {
+    return 'rowCount';
+  }
+};
+
+const getInsertManyReturnType = (q: Query) => {
+  const { select, returnType } = q.query;
+  if (select) {
+    return returnType === 'one' || returnType === 'oneOrThrow'
+      ? 'all'
+      : returnType;
+  } else {
+    return 'rowCount';
+  }
+};
+
+const handleInsertOneData = (
+  q: Query,
+  data: InsertData<Query>,
+  ctx: InsertCtx,
+) => {
+  const columns: string[] = [];
+  const columnsMap: Record<string, number> = {};
+  const defaults = q.query.defaults;
+
+  if (defaults) {
+    data = { ...defaults, ...data };
   }
 
-  _insert<T extends Query>(this: T, data: InsertData<T>): InsertOneResult<T>;
-  _insert<T extends Query>(
-    this: T,
-    data: InsertData<T>[] | { columns: string[]; values: RawExpression },
-  ): InsertManyResult<T>;
-  _insert(
-    data:
-      | Record<string, unknown>
-      | Record<string, unknown>[]
-      | { columns: string[]; values: RawExpression },
-  ) {
-    const q = this as unknown as Query & { query: InsertQueryData };
-    const returning = q.query.select;
+  processInsertItem(data, 0, ctx, columns, columnsMap);
 
-    delete q.query.and;
-    delete q.query.or;
+  const values = [columns.map((key) => (data as Record<string, unknown>)[key])];
 
-    let columns: string[];
-    const prependRelations: PrependRelations = {};
-    const appendRelations: AppendRelations = {};
-    const requiredReturning: Record<string, boolean> = {};
-    const relations = (this as unknown as Query).relations as unknown as Record<
-      string,
-      Relation
-    >;
-    let values: unknown[][] | RawExpression;
+  return { columns, values };
+};
 
-    let returnType = q.query.returnType;
-    if (returning) {
-      if (Array.isArray(data)) {
-        if (returnType === 'one' || returnType === 'oneOrThrow') {
-          returnType = 'all';
-        }
-      } else {
-        if (returnType === 'all') {
-          returnType = 'one';
-        }
-      }
-    } else {
-      returnType = 'rowCount';
-    }
+const handleInsertManyData = (
+  q: Query,
+  data: InsertData<Query>[],
+  ctx: InsertCtx,
+) => {
+  const columns: string[] = [];
+  const columnsMap: Record<string, number> = {};
+  const defaults = q.query.defaults;
 
-    if (
-      'values' in data &&
-      typeof data.values === 'object' &&
-      data.values &&
-      isRaw(data.values)
-    ) {
-      columns = (data as { columns: string[] }).columns;
-      values = data.values;
-    } else {
-      columns = [];
-      const columnsMap: Record<string, number> = {};
-      const defaults = q.query.defaults;
+  if (defaults) {
+    data = data.map((item) => ({ ...defaults, ...item }));
+  }
 
-      if (Array.isArray(data)) {
-        if (defaults) {
-          data = data.map((item) => ({ ...defaults, ...item }));
-        }
+  data.forEach((item, i) => {
+    processInsertItem(item, i, ctx, columns, columnsMap);
+  });
 
-        data.forEach((item, i) => {
-          processInsertItem(
-            item,
-            i,
-            relations,
-            prependRelations,
-            appendRelations,
-            requiredReturning,
-            columns,
-            columnsMap,
+  const values = Array(data.length);
+
+  data.forEach((item, i) => {
+    (values as unknown[][])[i] = columns.map((key) => item[key]);
+  });
+
+  return { columns, values };
+};
+
+const insert = (
+  self: Query,
+  {
+    columns,
+    values,
+  }: {
+    columns: string[];
+    values: unknown[][] | RawExpression;
+  },
+  returnType: QueryReturnType,
+  ctx?: InsertCtx,
+) => {
+  const q = self as Query & { query: InsertQueryData };
+  const returning = q.query.select;
+
+  delete q.query.and;
+  delete q.query.or;
+
+  q.query.type = 'insert';
+  q.query.columns = columns;
+  q.query.values = values;
+
+  if (!ctx) {
+    q.query.returnType = returnType;
+    return q;
+  }
+
+  const prependRelationsKeys = Object.keys(ctx.prependRelations);
+  if (prependRelationsKeys.length) {
+    pushQueryArray(
+      q,
+      'beforeQuery',
+      prependRelationsKeys.map((relationName) => {
+        return async (q: Query) => {
+          const relationData = ctx.prependRelations[relationName];
+          const relation = ctx.relations[relationName];
+
+          const inserted = await (
+            relation.nestedInsert as BelongsToNestedInsert
+          )(
+            q,
+            relationData.map(([, , data]) => data as NestedInsertOneItem),
           );
-        });
 
-        values = Array(data.length);
-
-        data.forEach((item, i) => {
-          (values as unknown[][])[i] = columns.map((key) => item[key]);
-        });
-      } else {
-        if (defaults) {
-          data = { ...defaults, ...data };
-        }
-
-        processInsertItem(
-          data,
-          0,
-          relations,
-          prependRelations,
-          appendRelations,
-          requiredReturning,
-          columns,
-          columnsMap,
-        );
-
-        values = [columns.map((key) => (data as Record<string, unknown>)[key])];
-      }
-    }
-
-    const prependRelationsKeys = Object.keys(prependRelations);
-    if (prependRelationsKeys.length) {
-      pushQueryArray(
-        q,
-        'beforeQuery',
-        prependRelationsKeys.map((relationName) => {
-          return async (q: Query) => {
-            const relationData = prependRelations[relationName];
-            const relation = relations[relationName];
-
-            const inserted = await (
-              relation.nestedInsert as BelongsToNestedInsert
-            )(
-              q,
-              relationData.map(([, , data]) => data as NestedInsertOneItem),
-            );
-
-            const primaryKey = (relation as BelongsToRelation).options
-              .primaryKey;
-            relationData.forEach(([rowIndex, columnIndex], index) => {
-              (values as unknown[][])[rowIndex][columnIndex] =
-                inserted[index][primaryKey];
-            });
-          };
-        }),
-      );
-    }
-
-    const appendRelationsKeys = Object.keys(appendRelations);
-    if (appendRelationsKeys.length) {
-      if (!returning?.includes('*')) {
-        const requiredColumns = Object.keys(requiredReturning);
-
-        if (!returning) {
-          q.query.select = requiredColumns;
-        } else {
-          q.query.select = [
-            ...new Set([...(returning as string[]), ...requiredColumns]),
-          ];
-        }
-      }
-
-      let resultOfTypeAll: Record<string, unknown>[] | undefined;
-      if (returnType !== 'all') {
-        const { handleResult } = q.query;
-        q.query.handleResult = async (q, queryResult) => {
-          resultOfTypeAll = (await handleResult(q, queryResult)) as Record<
-            string,
-            unknown
-          >[];
-
-          if (queryMethodByReturnType[returnType] === 'arrays') {
-            queryResult.rows.forEach(
-              (row, i) =>
-                ((queryResult.rows as unknown as unknown[][])[i] =
-                  Object.values(row)),
-            );
-          }
-
-          return parseResult(q, returnType, queryResult);
+          const primaryKey = (relation as BelongsToRelation).options.primaryKey;
+          relationData.forEach(([rowIndex, columnIndex], index) => {
+            (values as unknown[][])[rowIndex][columnIndex] =
+              inserted[index][primaryKey];
+          });
         };
+      }),
+    );
+  }
+
+  const appendRelationsKeys = Object.keys(ctx.appendRelations);
+  if (appendRelationsKeys.length) {
+    if (!returning?.includes('*')) {
+      const requiredColumns = Object.keys(ctx.requiredReturning);
+
+      if (!returning) {
+        q.query.select = requiredColumns;
+      } else {
+        q.query.select = [
+          ...new Set([...(returning as string[]), ...requiredColumns]),
+        ];
       }
-
-      pushQueryArray(
-        q,
-        'afterQuery',
-        appendRelationsKeys.map((relationName) => {
-          return (q: Query, result: Record<string, unknown>[]) => {
-            const all = resultOfTypeAll || result;
-            return (
-              relations[relationName].nestedInsert as HasOneNestedInsert
-            )?.(
-              q,
-              appendRelations[relationName].map(([rowIndex, data]) => [
-                all[rowIndex],
-                data as NestedInsertOneItem,
-              ]),
-            );
-          };
-        }),
-      );
     }
 
-    q.query.type = 'insert';
-    q.query.columns = columns;
-    q.query.values = values;
-    if (prependRelationsKeys.length || appendRelationsKeys.length) {
-      q.query.wrapInTransaction = true;
+    let resultOfTypeAll: Record<string, unknown>[] | undefined;
+    if (returnType !== 'all') {
+      const { handleResult } = q.query;
+      q.query.handleResult = async (q, queryResult) => {
+        resultOfTypeAll = (await handleResult(q, queryResult)) as Record<
+          string,
+          unknown
+        >[];
+
+        if (queryMethodByReturnType[returnType] === 'arrays') {
+          queryResult.rows.forEach(
+            (row, i) =>
+              ((queryResult.rows as unknown as unknown[][])[i] =
+                Object.values(row)),
+          );
+        }
+
+        return parseResult(q, returnType, queryResult);
+      };
     }
 
-    q.query.returnType = appendRelationsKeys.length ? 'all' : returnType;
-
-    return q as unknown as InsertOneResult<Query> & InsertManyResult<Query>;
+    pushQueryArray(
+      q,
+      'afterQuery',
+      appendRelationsKeys.map((relationName) => {
+        return (q: Query, result: Record<string, unknown>[]) => {
+          const all = resultOfTypeAll || result;
+          return (
+            ctx.relations[relationName].nestedInsert as HasOneNestedInsert
+          )?.(
+            q,
+            ctx.appendRelations[relationName].map(([rowIndex, data]) => [
+              all[rowIndex],
+              data as NestedInsertOneItem,
+            ]),
+          );
+        };
+      }),
+    );
   }
 
-  create<T extends Query>(this: T, data: InsertData<T>): SetQueryReturnsOne<T>;
-  create<T extends Query>(
+  if (prependRelationsKeys.length || appendRelationsKeys.length) {
+    q.query.wrapInTransaction = true;
+  }
+
+  q.query.returnType = appendRelationsKeys.length ? 'all' : returnType;
+
+  return q;
+};
+
+export class Insert {
+  insert<T extends Query>(this: T, data: InsertData<T>): InsertOneResult<T> {
+    return this.clone()._insert(data);
+  }
+  _insert<T extends Query>(this: T, data: InsertData<T>): InsertOneResult<T> {
+    const ctx = createInsertCtx(this);
+    return insert(
+      this,
+      handleInsertOneData(this, data, ctx),
+      getInsertSingleReturnType(this),
+      ctx,
+    ) as InsertOneResult<T>;
+  }
+
+  insertMany<T extends Query>(
     this: T,
-    data: InsertData<T>[] | { columns: string[]; values: RawExpression },
-  ): SetQueryReturnsAll<T>;
-  create(this: Query, data: InsertData<Query> & InsertData<Query>[]) {
-    return this.clone()._create(data) as unknown as SetQueryReturnsOne<Query> &
-      SetQueryReturnsAll<Query>;
+    data: InsertData<T>[],
+  ): InsertManyResult<T> {
+    return this.clone()._insertMany(data);
+  }
+  _insertMany<T extends Query>(
+    this: T,
+    data: InsertData<T>[],
+  ): InsertManyResult<T> {
+    const ctx = createInsertCtx(this);
+    return insert(
+      this,
+      handleInsertManyData(this, data, ctx),
+      getInsertManyReturnType(this),
+      ctx,
+    ) as InsertManyResult<T>;
   }
 
-  _create<T extends Query>(this: T, data: InsertData<T>): SetQueryReturnsOne<T>;
+  insertRaw<T extends Query>(
+    this: T,
+    data: InsertRawData,
+  ): InsertManyResult<T> {
+    return this.clone()._insertRaw(data);
+  }
+  _insertRaw<T extends Query>(
+    this: T,
+    data: InsertRawData,
+  ): InsertManyResult<T> {
+    return insert(
+      this,
+      data,
+      getInsertManyReturnType(this),
+    ) as InsertManyResult<T>;
+  }
+
+  create<T extends Query>(this: T, data: InsertData<T>): SetQueryReturnsOne<T> {
+    return this.clone()._create(data);
+  }
   _create<T extends Query>(
     this: T,
-    data: InsertData<T>[] | { columns: string[]; values: RawExpression },
-  ): SetQueryReturnsAll<T>;
-  _create(this: Query, data: InsertData<Query> & InsertData<Query>[]) {
+    data: InsertData<T>,
+  ): SetQueryReturnsOne<T> {
     if (!this.query.select) {
       this.query.select = ['*'];
     }
-    return this.insert(data) as unknown as never;
+    return this.clone()._insert(data) as SetQueryReturnsOne<T>;
+  }
+
+  createMany<T extends Query>(
+    this: T,
+    data: InsertData<T>[],
+  ): SetQueryReturnsAll<T> {
+    return this.clone()._createMany(data);
+  }
+  _createMany<T extends Query>(
+    this: T,
+    data: InsertData<T>[],
+  ): SetQueryReturnsAll<T> {
+    if (!this.query.select) {
+      this.query.select = ['*'];
+    }
+    return this.clone()._insertMany(data) as SetQueryReturnsAll<T>;
+  }
+
+  createRaw<T extends Query>(
+    this: T,
+    data: InsertRawData,
+  ): SetQueryReturnsAll<T> {
+    return this.clone()._createRaw(data);
+  }
+  _createRaw<T extends Query>(
+    this: T,
+    data: InsertRawData,
+  ): SetQueryReturnsAll<T> {
+    if (!this.query.select) {
+      this.query.select = ['*'];
+    }
+    return this.clone()._insertRaw(data) as SetQueryReturnsAll<T>;
   }
 
   defaults<T extends Query, Data extends Partial<InsertData<T>>>(

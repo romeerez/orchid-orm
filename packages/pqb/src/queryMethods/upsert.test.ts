@@ -42,7 +42,7 @@ describe('upsert', () => {
   });
 
   it('should throw if more than one row was updated', async () => {
-    await User.create([userData, userData]);
+    await User.createMany([userData, userData]);
 
     await expect(
       User.findBy({ name: userData.name }).upsert({

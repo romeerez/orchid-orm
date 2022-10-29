@@ -617,9 +617,9 @@ SomeTable
   // .exceptAll(...)
 ```
 
-## insert
+## insert, insertMany, insertRaw
 
-Insert one record by passing in an object:
+`insert` will insert one record:
 
 ```ts
 const insertedCount = await Table.insert({
@@ -627,20 +627,18 @@ const insertedCount = await Table.insert({
 })
 ```
 
-Insert multiple records by passing in an array of objects.
+`insertMany` will insert a batch of records:
 
-`beforeInsert` and `afterInsert` callback are supported for insert, see [callbacks](#callbacks).
-
-In case if one of objects has fewer fields, `DEFAULT` sql keyword will be used for the missing value:
+In case if one of objects has fewer fields, `DEFAULT` sql keyword will be placed on its place in `VALUES` statement.
 
 ```ts
-const insertedCount = await Table.insert([
+const insertedCount = await Table.insertMany([
   { name: 'John', password: '1234' },
   { name: 'Peter', password: '4321' }
 ])
 ```
 
-Insert using a raw query:
+`insertRaw` is for inserting records with a raw expression:
 
 ```ts
 const insertedCount = await Table.insert({
@@ -649,7 +647,9 @@ const insertedCount = await Table.insert({
 })
 ```
 
-By default `.insert` will return count of inserted records.
+`beforeInsert` and `afterInsert` callback are supported for insert, see [callbacks](#callbacks).
+
+By default, all insert methods will return count of inserted records.
 
 Place `.select`, or `.selectAll`, or `.get` before `.insert` to specify returning columns:
 
@@ -660,25 +660,22 @@ const id: number = await Table.get('id').insert(data)
 const objectWithId: { id: number } = await Table.select('id').insert(data)
 
 // returns array of objects when inserting multiple
-const arrayOfIds: { id: number }[] = await Table.select('id').insert([one, two])
+const arrayOfIds: { id: number }[] = await Table.select('id').insertMany([one, two])
 
 // returns array of objects as well for raw values:
-const arrayOfIds2 = await Table.select('id').insert({
+const arrayOfIds2 = await Table.select('id').insertRaw({
   columns: ['name', 'password'],
   values: raw(`raw expression for VALUES`)
 })
-
-// Use selectAll to return all columns:
-const fullRecord = await Table.selectAll().insert(data)
-const fullRecords = await Table.selectAll().insert([data, data])
 ```
 
-## create
+## create, createMany, createRaw
 
-`.create` is an alias for `.selectAll().insert(...)`
+`create` methods are the same as `insert`, except that by default `insert` returns affect row count number, and `create` returns full records by default.
 
 ```ts
 const fullRecord = await Table.create(data)
+const fullRecords = await Table.createMany([data, data])
 ```
 
 It respects `select` if specified:
@@ -772,7 +769,7 @@ This also works with batch inserts:
 
 ```ts
 Table
-  .insert([
+  .insertMany([
     { email: "john@example.com", name: "John Doe" },
     { email: "jane@example.com", name: "Jane Doe" },
     { email: "alex@example.com", name: "Alex Doe" },
@@ -1104,7 +1101,7 @@ try {
     // insert multiple books and return full records
     await Book
       .transacting(tr)
-      .create(
+      .createMany(
         books.map((book) => ({ ...book, catalogueId })),
       )
   })

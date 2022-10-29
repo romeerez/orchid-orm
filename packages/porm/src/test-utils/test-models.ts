@@ -142,3 +142,48 @@ export class MessageModel extends Model {
   };
 }
 export const MessageSchema = modelToZod(MessageModel);
+
+export type Post = PostModel['columns']['type'];
+export class PostModel extends Model {
+  table = 'post';
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    userId: t.integer().foreignKey(() => UserModel, 'id'),
+    title: t.text(),
+    ...t.timestamps(),
+  }));
+
+  relations = {
+    postTags: this.hasMany(() => PostTagModel, {
+      primaryKey: 'id',
+      foreignKey: 'postId',
+    }),
+  };
+}
+export const PostSchema = modelToZod(PostModel);
+
+export type PostTag = PostTagModel['columns']['type'];
+export class PostTagModel extends Model {
+  table = 'postTag';
+  columns = this.setColumns((t) => ({
+    postId: t.integer().foreignKey(() => PostModel, 'id'),
+    tag: t.text().foreignKey(() => TagModel, 'tag'),
+    ...t.primaryKey(['postId', 'tag']),
+  }));
+
+  relations = {
+    tag: this.belongsTo(() => TagModel, {
+      primaryKey: 'tag',
+      foreignKey: 'tag',
+    }),
+  };
+}
+export const PostTagSchema = modelToZod(PostTagModel);
+
+export type Tag = TagModel['columns']['type'];
+export class TagModel extends Model {
+  table = 'tag';
+  columns = this.setColumns((t) => ({
+    tag: t.text().primaryKey(),
+  }));
+}

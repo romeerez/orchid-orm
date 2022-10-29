@@ -32,7 +32,7 @@ describe('hasMany', () => {
       const userId = await db.user.get('id').insert(userData);
       const chatId = await db.chat.get('id').insert(chatData);
 
-      await db.message.insert([
+      await db.message.insertMany([
         { ...messageData, authorId: userId, chatId },
         { ...messageData, authorId: userId, chatId },
       ]);
@@ -352,7 +352,7 @@ describe('hasMany', () => {
       it('should support create in batch insert', async () => {
         const chatId = await db.chat.get('id').insert(chatData);
 
-        const user = await db.user.create([
+        const user = await db.user.createMany([
           {
             ...userData,
             name: 'user 1',
@@ -416,7 +416,7 @@ describe('hasMany', () => {
     describe('nested connect', () => {
       it('should support connect', async () => {
         const chatId = await db.chat.get('id').insert(chatData);
-        await db.message.insert([
+        await db.message.insertMany([
           {
             ...messageData,
             chatId,
@@ -460,7 +460,7 @@ describe('hasMany', () => {
 
       it('should support connect in batch insert', async () => {
         const chatId = await db.chat.get('id').insert(chatData);
-        await db.message.insert([
+        await db.message.insertMany([
           {
             ...messageData,
             chatId,
@@ -487,7 +487,7 @@ describe('hasMany', () => {
           },
         ]);
 
-        const user = await db.user.create([
+        const user = await db.user.createMany([
           {
             ...userData,
             name: 'user 1',
@@ -585,7 +585,7 @@ describe('hasMany', () => {
         const chatId = await db.chat.get('id').insert(chatData);
         const [{ id: message1Id }, { id: message4Id }] = await db.message
           .selectAll()
-          .insert([
+          .insertMany([
             {
               ...messageData,
               chatId,
@@ -600,7 +600,7 @@ describe('hasMany', () => {
             },
           ]);
 
-        const users = await db.user.create([
+        const users = await db.user.createMany([
           {
             ...userData,
             name: 'user 1',
@@ -696,7 +696,7 @@ describe('hasMany', () => {
           .get('id')
           .insert({ ...chatData, title: 'chat 1' });
 
-        const userIds = await db.user.pluck('id').insert([
+        const userIds = await db.user.pluck('id').insertMany([
           {
             ...userData,
             messages: {
@@ -799,7 +799,7 @@ describe('hasMany', () => {
       it('should delete related records in batch update', async () => {
         const chatId = await db.chat.get('id').insert(chatData);
 
-        const userIds = await db.user.pluck('id').insert([
+        const userIds = await db.user.pluck('id').insertMany([
           {
             ...userData,
             messages: {
@@ -870,7 +870,7 @@ describe('hasMany', () => {
       it('should update related records in batch update', async () => {
         const chatId = await db.chat.get('id').insert(chatData);
 
-        const userIds = await db.user.pluck('id').insert([
+        const userIds = await db.user.pluck('id').insertMany([
           {
             ...userData,
             messages: {

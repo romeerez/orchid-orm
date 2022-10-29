@@ -504,7 +504,7 @@ describe('aggregate', () => {
     });
 
     it('should return json object when have records', async () => {
-      await User.insert([userData, userData]);
+      await User.insertMany([userData, userData]);
 
       const value = await User.stringAgg('name', ', ');
 
@@ -526,7 +526,7 @@ describe('aggregate', () => {
       });
 
       it('should return json object when have records', async () => {
-        await User.insert([userData, userData]);
+        await User.insertMany([userData, userData]);
 
         const value = await User.selectStringAgg('name', ', ').take();
 

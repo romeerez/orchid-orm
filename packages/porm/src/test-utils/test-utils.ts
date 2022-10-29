@@ -56,6 +56,12 @@ export const messageData = {
   createdAt: now,
 };
 
+export const postData = {
+  title: 'title',
+  updatedAt: now,
+  createdAt: now,
+};
+
 export const useTestDatabase = () => {
   beforeAll(() => {
     patchPgForTransactions();
