@@ -74,13 +74,14 @@ describe('belongsTo', () => {
 
       expectSql(
         db.profile
+          .as('p')
           .whereExists('user', (q) => q.where({ name: 'name' }))
           .toSql(),
         `
-        SELECT * FROM "profile"
+        SELECT * FROM "profile" AS "p"
         WHERE EXISTS (
           SELECT 1 FROM "user"
-          WHERE "user"."id" = "profile"."userId"
+          WHERE "user"."id" = "p"."userId"
             AND "user"."name" = $1
           LIMIT 1
         )
@@ -92,15 +93,16 @@ describe('belongsTo', () => {
     it('should support nested whereExists', () => {
       expectSql(
         db.message
+          .as('m')
           .whereExists('user', (q) =>
             q.whereExists('profile', (q) => q.where({ bio: 'bio' })),
           )
           .toSql(),
         `
-          SELECT * FROM "message"
+          SELECT * FROM "message" AS "m"
           WHERE EXISTS (
             SELECT 1 FROM "user"
-            WHERE "user"."id" = "message"."authorId"
+            WHERE "user"."id" = "m"."authorId"
               AND EXISTS (
                 SELECT 1 FROM "profile"
                 WHERE "profile"."userId" = "user"."id"
@@ -116,6 +118,7 @@ describe('belongsTo', () => {
 
     it('should be supported in join', () => {
       const query = db.profile
+        .as('p')
         .join('user', (q) => q.where({ name: 'name' }))
         .select('bio', 'user.name');
 
@@ -127,8 +130,9 @@ describe('belongsTo', () => {
       expectSql(
         query.toSql(),
         `
-        SELECT "profile"."bio", "user"."name" FROM "profile"
-        JOIN "user" ON "user"."id" = "profile"."userId" AND "user"."name" = $1
+        SELECT "p"."bio", "user"."name"
+        FROM "profile" AS "p"
+        JOIN "user" ON "user"."id" = "p"."userId" AND "user"."name" = $1
       `,
         ['name'],
       );
@@ -136,7 +140,7 @@ describe('belongsTo', () => {
 
     describe('select', () => {
       it('should be selectable', async () => {
-        const query = db.profile.select('id', {
+        const query = db.profile.as('p').select('id', {
           user: (q) => q.user.select('id', 'name').where({ name: 'name' }),
         });
 
@@ -149,17 +153,17 @@ describe('belongsTo', () => {
           query.toSql(),
           `
             SELECT
-              "profile"."id",
+              "p"."id",
               (
                 SELECT row_to_json("t".*)
                 FROM (
                   SELECT "user"."id", "user"."name" FROM "user"
-                  WHERE "user"."id" = "profile"."userId"
+                  WHERE "user"."id" = "p"."userId"
                     AND "user"."name" = $1
                   LIMIT $2
                 ) AS "t"
               ) AS "user"
-            FROM "profile"
+            FROM "profile" AS "p"
           `,
           ['name', 1],
         );
@@ -190,7 +194,7 @@ describe('belongsTo', () => {
       });
 
       it('should handle exists sub query', async () => {
-        const query = db.profile.select('id', {
+        const query = db.profile.as('p').select('id', {
           hasUser: (q) => q.user.exists(),
         });
 
@@ -200,13 +204,13 @@ describe('belongsTo', () => {
           query.toSql(),
           `
             SELECT
-              "profile"."id",
+              "p"."id",
               COALESCE((
                 SELECT true
                 FROM "user"
-                WHERE "user"."id" = "profile"."userId"
+                WHERE "user"."id" = "p"."userId"
               ), false) AS "hasUser"
-            FROM "profile"
+            FROM "profile" AS "p"
           `,
         );
       });

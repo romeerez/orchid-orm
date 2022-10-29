@@ -8,8 +8,6 @@ import { Expression, getRaw, isRaw, raw } from '../common';
 import { Query, QueryBase } from '../query';
 import { addValue, q, quoteFullColumn } from './common';
 import { aggregateToSql } from './aggregate';
-import { getQueryAs } from '../utils';
-import { RelationQuery, relationQueryKey } from '../relations';
 import { PormInternalError, UnhandledTypeError } from '../errors';
 import { StringColumn } from '../columnSchema';
 import { quote } from '../quote';
@@ -95,11 +93,6 @@ export const selectToSql = (
               : '*'
             : quoteFullColumn(item, quotedAs),
         );
-      } else if ((item as QueryBase).query?.[relationQueryKey]) {
-        const relationQuery = (item as RelationQuery).clone();
-        const as = getQueryAs(relationQuery);
-        relationQuery._as(relationQuery.query[relationQueryKey] as string);
-        pushSubQuerySql(relationQuery, as, ctx.values, list);
       } else {
         if ('selectAs' in item) {
           const obj = item.selectAs as Record<string, Expression | Query>;

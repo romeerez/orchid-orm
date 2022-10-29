@@ -101,13 +101,14 @@ describe('hasMany', () => {
 
       expectSql(
         db.user
+          .as('u')
           .whereExists('messages', (q) => q.where({ text: 'text' }))
           .toSql(),
         `
-        SELECT * FROM "user"
+        SELECT * FROM "user" AS "u"
         WHERE EXISTS (
           SELECT 1 FROM "message" AS "messages"
-          WHERE "messages"."authorId" = "user"."id"
+          WHERE "messages"."authorId" = "u"."id"
             AND "messages"."text" = $1
           LIMIT 1
         )
@@ -118,6 +119,7 @@ describe('hasMany', () => {
 
     it('should be supported in join', () => {
       const query = db.user
+        .as('u')
         .join('messages', (q) => q.where({ text: 'text' }))
         .select('name', 'messages.text');
 
@@ -126,9 +128,9 @@ describe('hasMany', () => {
       expectSql(
         query.toSql(),
         `
-        SELECT "user"."name", "messages"."text" FROM "user"
+        SELECT "u"."name", "messages"."text" FROM "user" AS "u"
         JOIN "message" AS "messages"
-          ON "messages"."authorId" = "user"."id"
+          ON "messages"."authorId" = "u"."id"
           AND "messages"."text" = $1
       `,
         ['text'],
@@ -137,7 +139,7 @@ describe('hasMany', () => {
 
     describe('select', () => {
       it('should be selectable', () => {
-        const query = db.user.select('id', {
+        const query = db.user.as('u').select('id', {
           messages: (q) => q.messages.where({ text: 'text' }),
         });
 
@@ -150,16 +152,16 @@ describe('hasMany', () => {
           query.toSql(),
           `
             SELECT
-              "user"."id",
+              "u"."id",
               (
                 SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (
                   SELECT * FROM "message" AS "messages"
-                  WHERE "messages"."authorId" = "user"."id"
+                  WHERE "messages"."authorId" = "u"."id"
                     AND "messages"."text" = $1
                 ) AS "t"
               ) AS "messages"
-            FROM "user"
+            FROM "user" AS "u"
           `,
           ['text'],
         );
@@ -192,7 +194,7 @@ describe('hasMany', () => {
     });
 
     it('should allow to select count', () => {
-      const query = db.user.select('id', {
+      const query = db.user.as('u').select('id', {
         messagesCount: (q) => q.messages.count(),
       });
 
@@ -205,18 +207,18 @@ describe('hasMany', () => {
         query.toSql(),
         `
           SELECT
-            "user"."id",
+            "u"."id",
             (
               SELECT count(*) FROM "message" AS "messages"
-              WHERE "messages"."authorId" = "user"."id"
+              WHERE "messages"."authorId" = "u"."id"
             ) AS "messagesCount"
-          FROM "user"
+          FROM "user" AS "u"
         `,
       );
     });
 
     it('should allow to pluck values', () => {
-      const query = db.user.select('id', {
+      const query = db.user.as('u').select('id', {
         texts: (q) => q.messages.pluck('text'),
       });
 
@@ -226,22 +228,22 @@ describe('hasMany', () => {
         query.toSql(),
         `
           SELECT
-            "user"."id",
+            "u"."id",
             (
               SELECT COALESCE(json_agg("c"), '[]')
               FROM (
                 SELECT "messages"."text" AS "c"
                 FROM "message" AS "messages"
-                WHERE "messages"."authorId" = "user"."id"
+                WHERE "messages"."authorId" = "u"."id"
               ) AS "t"
             ) AS "texts"
-          FROM "user"
+          FROM "user" AS "u"
         `,
       );
     });
 
     it('should handle exists sub query', () => {
-      const query = db.user.select('id', {
+      const query = db.user.as('u').select('id', {
         hasMessages: (q) => q.messages.exists(),
       });
 
@@ -254,13 +256,13 @@ describe('hasMany', () => {
         query.toSql(),
         `
           SELECT
-            "user"."id",
+            "u"."id",
             COALESCE((
               SELECT true
               FROM "message" AS "messages"
-              WHERE "messages"."authorId" = "user"."id"
+              WHERE "messages"."authorId" = "u"."id"
             ), false) AS "hasMessages"
-          FROM "user"
+          FROM "user" AS "u"
         `,
       );
     });
@@ -1095,10 +1097,11 @@ describe('hasMany through', () => {
 
       expectSql(
         db.profile
+          .as('p')
           .whereExists('chats', (q) => q.where({ title: 'title' }))
           .toSql(),
         `
-        SELECT * FROM "profile"
+        SELECT * FROM "profile" AS "p"
         WHERE EXISTS (
           SELECT 1 FROM "chat" AS "chats"
           WHERE EXISTS (
@@ -1109,7 +1112,7 @@ describe('hasMany through', () => {
                 AND "chatUser"."userId" = "user"."id"
               LIMIT 1
             )
-            AND "user"."id" = "profile"."userId"
+            AND "user"."id" = "p"."userId"
             LIMIT 1
           )
           AND "chats"."title" = $1
@@ -1122,6 +1125,7 @@ describe('hasMany through', () => {
 
     it('should be supported in join', () => {
       const query = db.profile
+        .as('p')
         .join('chats', (q) => q.where({ title: 'title' }))
         .select('bio', 'chats.title');
 
@@ -1133,7 +1137,7 @@ describe('hasMany through', () => {
       expectSql(
         query.toSql(),
         `
-          SELECT "profile"."bio", "chats"."title" FROM "profile"
+          SELECT "p"."bio", "chats"."title" FROM "profile" AS "p"
           JOIN "chat" AS "chats"
             ON EXISTS (
               SELECT 1 FROM "user"
@@ -1143,7 +1147,7 @@ describe('hasMany through', () => {
                   AND "chatUser"."userId" = "user"."id"
                 LIMIT 1
               )
-              AND "user"."id" = "profile"."userId"
+              AND "user"."id" = "p"."userId"
               LIMIT 1
             )
             AND "chats"."title" = $1
@@ -1154,7 +1158,7 @@ describe('hasMany through', () => {
 
     describe('select', () => {
       it('should be selectable', () => {
-        const query = db.profile.select('id', {
+        const query = db.profile.as('p').select('id', {
           chats: (q) => q.chats.where({ title: 'title' }),
         });
 
@@ -1164,7 +1168,7 @@ describe('hasMany through', () => {
           query.toSql(),
           `
             SELECT
-              "profile"."id",
+              "p"."id",
               (
                 SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (
@@ -1178,13 +1182,13 @@ describe('hasMany through', () => {
                           AND "chatUser"."userId" = "user"."id"
                         LIMIT 1
                       )
-                      AND "user"."id" = "profile"."userId"
+                      AND "user"."id" = "p"."userId"
                       LIMIT 1
                     )
                     AND "chats"."title" = $1
                 ) AS "t"
               ) AS "chats"
-            FROM "profile"
+            FROM "profile" AS "p"
           `,
           ['title'],
         );
@@ -1226,7 +1230,7 @@ describe('hasMany through', () => {
     });
 
     it('should allow to select count', () => {
-      const query = db.profile.select('id', {
+      const query = db.profile.as('p').select('id', {
         chatsCount: (q) => q.chats.count(),
       });
 
@@ -1236,7 +1240,7 @@ describe('hasMany through', () => {
         query.toSql(),
         `
           SELECT
-            "profile"."id",
+            "p"."id",
             (
               SELECT count(*)
               FROM "chat" AS "chats"
@@ -1248,17 +1252,17 @@ describe('hasMany through', () => {
                       AND "chatUser"."userId" = "user"."id"
                     LIMIT 1
                   )
-                  AND "user"."id" = "profile"."userId"
+                  AND "user"."id" = "p"."userId"
                   LIMIT 1
                 )
             ) AS "chatsCount"
-          FROM "profile"
+          FROM "profile" AS "p"
         `,
       );
     });
 
     it('should allow to pluck values', () => {
-      const query = db.profile.select('id', {
+      const query = db.profile.as('p').select('id', {
         titles: (q) => q.chats.pluck('title'),
       });
 
@@ -1268,7 +1272,7 @@ describe('hasMany through', () => {
         query.toSql(),
         `
           SELECT
-            "profile"."id",
+            "p"."id",
             (
               SELECT COALESCE(json_agg("c"), '[]')
               FROM (
@@ -1282,18 +1286,18 @@ describe('hasMany through', () => {
                       AND "chatUser"."userId" = "user"."id"
                     LIMIT 1
                   )
-                  AND "user"."id" = "profile"."userId"
+                  AND "user"."id" = "p"."userId"
                   LIMIT 1
                 )
               ) AS "t"
             ) AS "titles"
-          FROM "profile"
+          FROM "profile" AS "p"
         `,
       );
     });
 
     it('should handle exists sub query', () => {
-      const query = db.profile.select('id', {
+      const query = db.profile.as('p').select('id', {
         hasChats: (q) => q.chats.exists(),
       });
 
@@ -1303,7 +1307,7 @@ describe('hasMany through', () => {
         query.toSql(),
         `
           SELECT
-            "profile"."id",
+            "p"."id",
             COALESCE((
               SELECT true
               FROM "chat" AS "chats"
@@ -1315,11 +1319,11 @@ describe('hasMany through', () => {
                     AND "chatUser"."userId" = "user"."id"
                   LIMIT 1
                 )
-                AND "user"."id" = "profile"."userId"
+                AND "user"."id" = "p"."userId"
                 LIMIT 1
               )
             ), false) AS "hasChats"
-          FROM "profile"
+          FROM "profile" AS "p"
         `,
       );
     });
@@ -1407,9 +1411,12 @@ describe('hasMany through', () => {
       );
 
       expectSql(
-        db.chat.whereExists('profiles', (q) => q.where({ bio: 'bio' })).toSql(),
+        db.chat
+          .as('c')
+          .whereExists('profiles', (q) => q.where({ bio: 'bio' }))
+          .toSql(),
         `
-          SELECT * FROM "chat"
+          SELECT * FROM "chat" AS "c"
           WHERE EXISTS (
             SELECT 1 FROM "profile" AS "profiles"
             WHERE EXISTS (
@@ -1418,7 +1425,7 @@ describe('hasMany through', () => {
                 AND EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."userId" = "users"."id"
-                    AND "chatUser"."chatId" = "chat"."id"
+                    AND "chatUser"."chatId" = "c"."id"
                   LIMIT 1
                 )
               LIMIT 1
@@ -1433,6 +1440,7 @@ describe('hasMany through', () => {
 
     it('should be supported in join', () => {
       const query = db.chat
+        .as('c')
         .join('profiles', (q) => q.where({ bio: 'bio' }))
         .select('title', 'profiles.bio');
 
@@ -1444,7 +1452,7 @@ describe('hasMany through', () => {
       expectSql(
         query.toSql(),
         `
-          SELECT "chat"."title", "profiles"."bio" FROM "chat"
+          SELECT "c"."title", "profiles"."bio" FROM "chat" AS "c"
           JOIN "profile" AS "profiles"
             ON EXISTS (
               SELECT 1 FROM "user" AS "users"
@@ -1452,7 +1460,7 @@ describe('hasMany through', () => {
                 AND EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."userId" = "users"."id"
-                    AND "chatUser"."chatId" = "chat"."id"
+                    AND "chatUser"."chatId" = "c"."id"
                   LIMIT 1
                 )
               LIMIT 1
@@ -1465,7 +1473,7 @@ describe('hasMany through', () => {
 
     describe('select', () => {
       it('should be selectable', () => {
-        const query = db.chat.select('id', {
+        const query = db.chat.as('c').select('id', {
           profiles: (q) => q.profiles.where({ bio: 'bio' }),
         });
 
@@ -1478,7 +1486,7 @@ describe('hasMany through', () => {
           query.toSql(),
           `
             SELECT
-              "chat"."id",
+              "c"."id",
               (
                 SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (
@@ -1490,7 +1498,7 @@ describe('hasMany through', () => {
                       AND EXISTS (
                         SELECT 1 FROM "chatUser"
                         WHERE "chatUser"."userId" = "users"."id"
-                          AND "chatUser"."chatId" = "chat"."id"
+                          AND "chatUser"."chatId" = "c"."id"
                         LIMIT 1
                       )
                     LIMIT 1
@@ -1498,7 +1506,7 @@ describe('hasMany through', () => {
                   AND "profiles"."bio" = $1
                 ) AS "t"
               ) AS "profiles"
-            FROM "chat"
+            FROM "chat" AS "c"
           `,
           ['bio'],
         );
@@ -1542,7 +1550,7 @@ describe('hasMany through', () => {
       });
 
       it('should allow to select count', () => {
-        const query = db.chat.select('id', {
+        const query = db.chat.as('c').select('id', {
           profilesCount: (q) => q.profiles.count(),
         });
 
@@ -1555,7 +1563,7 @@ describe('hasMany through', () => {
           query.toSql(),
           `
             SELECT
-              "chat"."id",
+              "c"."id",
               (
                 SELECT count(*)
                 FROM "profile" AS "profiles"
@@ -1565,20 +1573,20 @@ describe('hasMany through', () => {
                     AND EXISTS (
                       SELECT 1 FROM "chatUser"
                       WHERE "chatUser"."userId" = "users"."id"
-                        AND "chatUser"."chatId" = "chat"."id"
+                        AND "chatUser"."chatId" = "c"."id"
                       LIMIT 1
                     )
                   LIMIT 1
                 )
               ) AS "profilesCount"
-            FROM "chat"
+            FROM "chat" AS "c"
           `,
           [],
         );
       });
 
       it('should allow to pluck values', () => {
-        const query = db.chat.select('id', {
+        const query = db.chat.as('c').select('id', {
           bios: (q) => q.profiles.pluck('bio'),
         });
 
@@ -1591,7 +1599,7 @@ describe('hasMany through', () => {
           query.toSql(),
           `
             SELECT
-              "chat"."id",
+              "c"."id",
               (
                 SELECT COALESCE(json_agg("c"), '[]')
                 FROM (
@@ -1603,20 +1611,20 @@ describe('hasMany through', () => {
                       AND EXISTS (
                         SELECT 1 FROM "chatUser"
                         WHERE "chatUser"."userId" = "users"."id"
-                          AND "chatUser"."chatId" = "chat"."id"
+                          AND "chatUser"."chatId" = "c"."id"
                         LIMIT 1
                       )
                     LIMIT 1
                   )
                 ) AS "t"
               ) AS "bios"
-            FROM "chat"
+            FROM "chat" AS "c"
           `,
         );
       });
 
       it('should handle exists sub query', () => {
-        const query = db.chat.select('id', {
+        const query = db.chat.as('c').select('id', {
           hasProfiles: (q) => q.profiles.exists(),
         });
 
@@ -1629,7 +1637,7 @@ describe('hasMany through', () => {
           query.toSql(),
           `
             SELECT
-              "chat"."id",
+              "c"."id",
               COALESCE((
                 SELECT true
                 FROM "profile" AS "profiles"
@@ -1639,13 +1647,13 @@ describe('hasMany through', () => {
                     AND EXISTS (
                       SELECT 1 FROM "chatUser"
                       WHERE "chatUser"."userId" = "users"."id"
-                        AND "chatUser"."chatId" = "chat"."id"
+                        AND "chatUser"."chatId" = "c"."id"
                       LIMIT 1
                     )
                   LIMIT 1
                 )
               ), false) AS "hasProfiles"
-            FROM "chat"
+            FROM "chat" AS "c"
           `,
         );
       });

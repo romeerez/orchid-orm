@@ -1,6 +1,6 @@
 {
   "name": "pqb",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Postgres query builder",
   "homepage": "https://porm.netlify.app/guide/query-builder.html",
   "repository": {

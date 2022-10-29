@@ -247,8 +247,7 @@ const applyRelation = (
     query._take();
   }
 
-  (dbModel as unknown as Record<string, unknown>)[relationName] =
-    makeRelationQuery(dbModel, query, relationName, data);
+  makeRelationQuery(dbModel, query, relationName, data);
 
   (dbModel.relations as Record<string, unknown>)[relationName] = {
     type,
@@ -271,19 +270,27 @@ const applyRelation = (
 };
 
 const makeRelationQuery = (
-  fromModel: Query,
+  model: Query,
   toModel: Query,
   relationName: string,
   data: RelationData,
-): RelationQuery => {
-  const joinQuery = data.joinQuery(fromModel, toModel);
+) => {
+  const sourceQuery = model.clone();
+  const joinQuery = data.joinQuery(sourceQuery, toModel);
 
   const query = data.returns === 'one' ? joinQuery.take() : joinQuery;
   query.query[relationQueryKey] = relationName;
 
-  return new Proxy(data.method, {
+  const proxy = new Proxy(data.method, {
     get(_, prop) {
       return (query as unknown as Record<string, unknown>)[prop as string];
     },
   }) as unknown as RelationQuery;
+
+  Object.defineProperty(model, relationName, {
+    get() {
+      sourceQuery.query.as = this.query.as;
+      return proxy;
+    },
+  });
 };

@@ -1,6 +1,6 @@
 import { Query, SetQueryReturnsRowCount } from '../query';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
-import { isRaw, RawExpression } from '../common';
+import { isRaw, RawExpression, StringKey } from '../common';
 import {
   BelongsToNestedUpdate,
   HasOneNestedUpdate,
@@ -179,7 +179,7 @@ export class Update {
             if (!query.select?.includes('*')) {
               const primaryKey = relations[key].primaryKey;
               if (!query.select?.includes(primaryKey)) {
-                this._select(primaryKey);
+                this._select(primaryKey as StringKey<keyof T['selectable']>);
               }
             }
             appendRelations[key] = data[key] as Record<string, unknown>;
@@ -224,7 +224,7 @@ export class Update {
         if (state?.updateLater) {
           this.schema.primaryKeys.forEach((key: string) => {
             if (!query.select?.includes('*') && !query.select?.includes(key)) {
-              this._select(key);
+              this._select(key as StringKey<keyof T['selectable']>);
             }
           });
         }

@@ -19,7 +19,7 @@ export type RawExpression<C extends ColumnType = ColumnType> = {
 export type Expression<
   T extends Query = Query,
   C extends ColumnType = ColumnType,
-> = keyof T['selectable'] | RawExpression<C>;
+> = StringKey<keyof T['selectable']> | RawExpression<C>;
 
 export type ExpressionOfType<T extends Query, C extends ColumnType, Type> =
   | {

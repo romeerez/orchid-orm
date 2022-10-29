@@ -88,17 +88,18 @@ describe('hasAndBelongsToMany', () => {
 
       expectSql(
         db.user
+          .as('u')
           .whereExists('chats', (q) => q.where({ title: 'title' }))
           .toSql(),
         `
-        SELECT * FROM "user"
+        SELECT * FROM "user" AS "u"
         WHERE EXISTS (
           SELECT 1 FROM "chat" AS "chats"
           WHERE
             EXISTS (
               SELECT 1 FROM "chatUser"
               WHERE "chatUser"."chatId" = "chats"."id"
-                AND "chatUser"."userId" = "user"."id"
+                AND "chatUser"."userId" = "u"."id"
               LIMIT 1
             )
             AND "chats"."title" = $1
@@ -111,6 +112,7 @@ describe('hasAndBelongsToMany', () => {
 
     it('should be supported in join', () => {
       const query = db.user
+        .as('u')
         .join('chats', (q) => q.where({ title: 'title' }))
         .select('name', 'chats.title');
 
@@ -119,12 +121,12 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         query.toSql(),
         `
-        SELECT "user"."name", "chats"."title" FROM "user"
+        SELECT "u"."name", "chats"."title" FROM "user" AS "u"
         JOIN "chat" AS "chats"
           ON EXISTS (
             SELECT 1 FROM "chatUser"
             WHERE "chatUser"."chatId" = "chats"."id"
-              AND "chatUser"."userId" = "user"."id"
+              AND "chatUser"."userId" = "u"."id"
             LIMIT 1
           )
           AND "chats"."title" = $1
@@ -135,7 +137,7 @@ describe('hasAndBelongsToMany', () => {
 
     describe('select', () => {
       it('should be selectable', () => {
-        const query = db.user.select('id', {
+        const query = db.user.as('u').select('id', {
           chats: (q) => q.chats.select('id', 'title').where({ title: 'title' }),
         });
 
@@ -148,7 +150,7 @@ describe('hasAndBelongsToMany', () => {
           query.toSql(),
           `
             SELECT
-              "user"."id",
+              "u"."id",
               (
                 SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (
@@ -156,13 +158,13 @@ describe('hasAndBelongsToMany', () => {
                   WHERE EXISTS (
                     SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."chatId" = "chats"."id"
-                      AND "chatUser"."userId" = "user"."id"
+                      AND "chatUser"."userId" = "u"."id"
                     LIMIT 1
                   )
                   AND "chats"."title" = $1
                 ) AS "t"
               ) AS "chats"
-            FROM "user"
+            FROM "user" AS "u"
           `,
           ['title'],
         );
@@ -197,7 +199,7 @@ describe('hasAndBelongsToMany', () => {
     });
 
     it('should allow to select count', () => {
-      const query = db.user.select('id', {
+      const query = db.user.as('u').select('id', {
         chatsCount: (q) => q.chats.count(),
       });
 
@@ -207,23 +209,23 @@ describe('hasAndBelongsToMany', () => {
         query.toSql(),
         `
           SELECT
-            "user"."id",
+            "u"."id",
             (
               SELECT count(*) FROM "chat" AS "chats"
               WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "chats"."id"
-                  AND "chatUser"."userId" = "user"."id"
+                  AND "chatUser"."userId" = "u"."id"
                 LIMIT 1
               )
             ) AS "chatsCount"
-          FROM "user"
+          FROM "user" AS "u"
         `,
       );
     });
 
     it('should allow to pluck values', () => {
-      const query = db.user.select('id', {
+      const query = db.user.as('u').select('id', {
         titles: (q) => q.chats.pluck('title'),
       });
 
@@ -233,7 +235,7 @@ describe('hasAndBelongsToMany', () => {
         query.toSql(),
         `
           SELECT
-            "user"."id",
+            "u"."id",
             (
               SELECT COALESCE(json_agg("c"), '[]')
               FROM (
@@ -242,18 +244,18 @@ describe('hasAndBelongsToMany', () => {
                 WHERE EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."chatId" = "chats"."id"
-                    AND "chatUser"."userId" = "user"."id"
+                    AND "chatUser"."userId" = "u"."id"
                   LIMIT 1
                 )
               ) AS "t"
             ) AS "titles"
-          FROM "user"
+          FROM "user" AS "u"
         `,
       );
     });
 
     it('should handle exists sub query', () => {
-      const query = db.user.select('id', {
+      const query = db.user.as('u').select('id', {
         hasChats: (q) => q.chats.exists(),
       });
 
@@ -263,18 +265,18 @@ describe('hasAndBelongsToMany', () => {
         query.toSql(),
         `
           SELECT
-            "user"."id",
+            "u"."id",
             COALESCE((
               SELECT true
               FROM "chat" AS "chats"
               WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "chats"."id"
-                  AND "chatUser"."userId" = "user"."id"
+                  AND "chatUser"."userId" = "u"."id"
                 LIMIT 1
               )
             ), false) AS "hasChats"
-          FROM "user"
+          FROM "user" AS "u"
         `,
       );
     });

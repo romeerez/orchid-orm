@@ -4,13 +4,11 @@ import {
   SetQueryReturnsValue,
   SetQueryReturnsValueOptional,
 } from '../query';
-import { RelationQueryBase } from '../relations';
-import { isRaw, RawExpression } from '../common';
+import { isRaw, RawExpression, StringKey } from '../common';
 import { addParserForRawExpression, processSelectArg } from './select';
 
 export type GetArg<T extends QueryBase> =
-  | keyof T['selectable']
-  | (RelationQueryBase & { returnType: 'value' | 'valueOrThrow' })
+  | StringKey<keyof T['selectable']>
   | RawExpression;
 
 type UnwrapRaw<
@@ -51,7 +49,7 @@ const _get = <
       processSelectArg(
         q,
         q.query.as || q.table,
-        arg as Exclude<GetArg<T>, RawExpression>,
+        arg as unknown as Exclude<GetArg<T>, RawExpression>,
         getValueKey,
       ),
     ];

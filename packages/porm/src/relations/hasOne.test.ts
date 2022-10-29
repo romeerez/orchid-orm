@@ -97,24 +97,27 @@ describe('hasOne', () => {
 
     it('should be supported in whereExists', () => {
       expectSql(
-        db.user.whereExists('profile').toSql(),
+        db.user.as('u').whereExists('profile').toSql(),
         `
-        SELECT * FROM "user"
+        SELECT * FROM "user" AS "u"
         WHERE EXISTS (
           SELECT 1 FROM "profile"
-          WHERE "profile"."userId" = "user"."id"
+          WHERE "profile"."userId" = "u"."id"
           LIMIT 1
         )
       `,
       );
 
       expectSql(
-        db.user.whereExists('profile', (q) => q.where({ bio: 'bio' })).toSql(),
+        db.user
+          .as('u')
+          .whereExists('profile', (q) => q.where({ bio: 'bio' }))
+          .toSql(),
         `
-        SELECT * FROM "user"
+        SELECT * FROM "user" AS "u"
         WHERE EXISTS (
           SELECT 1 FROM "profile"
-          WHERE "profile"."userId" = "user"."id"
+          WHERE "profile"."userId" = "u"."id"
             AND "profile"."bio" = $1
           LIMIT 1
         )
@@ -125,6 +128,7 @@ describe('hasOne', () => {
 
     it('should be supported in join', () => {
       const query = db.user
+        .as('u')
         .join('profile', (q) => q.where({ bio: 'bio' }))
         .select('name', 'profile.bio');
 
@@ -136,9 +140,9 @@ describe('hasOne', () => {
       expectSql(
         query.toSql(),
         `
-        SELECT "user"."name", "profile"."bio" FROM "user"
+        SELECT "u"."name", "profile"."bio" FROM "user" AS "u"
         JOIN "profile"
-          ON "profile"."userId" = "user"."id"
+          ON "profile"."userId" = "u"."id"
          AND "profile"."bio" = $1
       `,
         ['bio'],
@@ -147,7 +151,7 @@ describe('hasOne', () => {
 
     describe('select', () => {
       it('should be selectable', () => {
-        const query = db.user.select('id', {
+        const query = db.user.as('u').select('id', {
           profile: (q) => q.profile.where({ bio: 'bio' }),
         });
 
@@ -157,17 +161,17 @@ describe('hasOne', () => {
           query.toSql(),
           `
             SELECT
-              "user"."id",
+              "u"."id",
               (
                 SELECT row_to_json("t".*)
                 FROM (
                   SELECT * FROM "profile"
-                  WHERE "profile"."userId" = "user"."id"
+                  WHERE "profile"."userId" = "u"."id"
                     AND "profile"."bio" = $1
                   LIMIT $2
                 ) AS "t"
               ) AS "profile"
-            FROM "user"
+            FROM "user" AS "u"
           `,
           ['bio', 1],
         );
@@ -198,7 +202,7 @@ describe('hasOne', () => {
       });
 
       it('should handle exists sub query', () => {
-        const query = db.user.select('id', {
+        const query = db.user.as('u').select('id', {
           hasProfile: (q) => q.profile.exists(),
         });
 
@@ -211,13 +215,13 @@ describe('hasOne', () => {
           query.toSql(),
           `
             SELECT
-              "user"."id",
+              "u"."id",
               COALESCE((
                 SELECT true
                 FROM "profile"
-                WHERE "profile"."userId" = "user"."id"
+                WHERE "profile"."userId" = "u"."id"
               ), false) AS "hasProfile"
-            FROM "user"
+            FROM "user" AS "u"
           `,
         );
       });
@@ -913,15 +917,18 @@ describe('hasOne through', () => {
     );
 
     expectSql(
-      db.message.whereExists('profile', (q) => q.where({ bio: 'bio' })).toSql(),
+      db.message
+        .as('m')
+        .whereExists('profile', (q) => q.where({ bio: 'bio' }))
+        .toSql(),
       `
-        SELECT * FROM "message"
+        SELECT * FROM "message" AS "m"
         WHERE EXISTS (
           SELECT 1 FROM "profile"
           WHERE EXISTS (
             SELECT 1 FROM "user"
             WHERE "profile"."userId" = "user"."id"
-              AND "user"."id" = "message"."authorId"
+              AND "user"."id" = "m"."authorId"
             LIMIT 1
           )
           AND "profile"."bio" = $1
@@ -934,6 +941,7 @@ describe('hasOne through', () => {
 
   it('should be supported in join', () => {
     const query = db.message
+      .as('m')
       .join('profile', (q) => q.where({ bio: 'bio' }))
       .select('text', 'profile.bio');
 
@@ -942,12 +950,12 @@ describe('hasOne through', () => {
     expectSql(
       query.toSql(),
       `
-        SELECT "message"."text", "profile"."bio" FROM "message"
+        SELECT "m"."text", "profile"."bio" FROM "message" AS "m"
         JOIN "profile"
           ON EXISTS (
             SELECT 1 FROM "user"
             WHERE "profile"."userId" = "user"."id"
-              AND "user"."id" = "message"."authorId"
+              AND "user"."id" = "m"."authorId"
             LIMIT 1
           )
           AND "profile"."bio" = $1
@@ -958,7 +966,7 @@ describe('hasOne through', () => {
 
   describe('select', () => {
     it('should be selectable', () => {
-      const query = db.message.select('id', {
+      const query = db.message.as('m').select('id', {
         profile: (q) => q.profile.where({ bio: 'bio' }),
       });
 
@@ -968,7 +976,7 @@ describe('hasOne through', () => {
         query.toSql(),
         `
           SELECT
-            "message"."id",
+            "m"."id",
             (
               SELECT row_to_json("t".*)
               FROM (
@@ -976,14 +984,14 @@ describe('hasOne through', () => {
                 WHERE EXISTS (
                     SELECT 1 FROM "user"
                     WHERE "profile"."userId" = "user"."id"
-                      AND "user"."id" = "message"."authorId"
+                      AND "user"."id" = "m"."authorId"
                     LIMIT 1
                   )
                   AND "profile"."bio" = $1
                 LIMIT $2
               ) AS "t"
             ) AS "profile"
-          FROM "message"
+          FROM "message" AS "m"
         `,
         ['bio', 1],
       );
@@ -1019,7 +1027,7 @@ describe('hasOne through', () => {
     });
 
     it('should handle exists sub query', () => {
-      const query = db.message.select('id', {
+      const query = db.message.as('m').select('id', {
         hasProfile: (q) => q.profile.exists(),
       });
 
@@ -1032,18 +1040,18 @@ describe('hasOne through', () => {
         query.toSql(),
         `
           SELECT
-            "message"."id",
+            "m"."id",
             COALESCE((
               SELECT true
               FROM "profile"
               WHERE EXISTS (
                   SELECT 1 FROM "user"
                   WHERE "profile"."userId" = "user"."id"
-                    AND "user"."id" = "message"."authorId"
+                    AND "user"."id" = "m"."authorId"
                   LIMIT 1
                 )
             ), false) AS "hasProfile"
-          FROM "message"
+          FROM "message" AS "m"
         `,
       );
     });
