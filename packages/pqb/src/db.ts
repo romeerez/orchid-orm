@@ -59,7 +59,7 @@ export interface Db<
   columnsParsers?: ColumnsParsers;
   result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
   hasSelect: false;
-  hasWhere: false;
+  hasWhere: boolean;
   selectable: { [K in keyof Shape]: { as: K; column: Shape[K] } } & {
     [K in keyof Shape as `${Table}.${StringKey<K>}`]: {
       as: K;

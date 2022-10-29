@@ -1604,3 +1604,11 @@ const buildSql = (cb: (q: Query) => Query) => {
 const startSql = `SELECT * FROM "user" WHERE`;
 
 testWhere(buildSql, startSql);
+
+describe('where', () => {
+  it('should be assignable to the query', () => {
+    let q = User.all();
+    q = q.where({ id: 1 });
+    expectSql(q.toSql(), 'SELECT * FROM "user" WHERE "user"."id" = $1', [1]);
+  });
+});

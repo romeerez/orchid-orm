@@ -50,7 +50,7 @@ export type WhereInValues<
       | Query
       | RawExpression;
 
-export type WhereResult<T extends QueryBase> = Omit<T, 'hasWhere'> & {
+export type WhereResult<T extends QueryBase> = T & {
   hasWhere: true;
 };
 
