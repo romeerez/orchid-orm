@@ -29,7 +29,7 @@ export class QueryUpsert {
     const { handleResult } = this.query;
     this.query.handleResult = async (q, queryResult) => {
       if (queryResult.rowCount === 0) {
-        return q.insert(data.create);
+        return (q as Query).insert(data.create as InsertData<Query>);
       } else if (queryResult.rowCount > 1) {
         throw new MoreThanOneRowError(
           `Only one row was expected to find for upsert, found ${queryResult.rowCount} rows.`,
