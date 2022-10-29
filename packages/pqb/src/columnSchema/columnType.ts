@@ -225,7 +225,7 @@ export abstract class ColumnType<
   index<T extends ColumnType>(
     this: T,
     options: Omit<SingleColumnIndexOptions, 'column'> = {},
-  ) {
+  ): T {
     const cloned = Object.create(this);
     cloned.data = { ...cloned.data, index: options };
     return cloned;
