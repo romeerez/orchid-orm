@@ -9,7 +9,10 @@ import {
 import {
   getCurrentPromise,
   setCurrentMigrationUp,
-  setCurrentMigration, ChangeCallback, change, getCurrentChangeCallback,
+  setCurrentMigration,
+  ChangeCallback,
+  change,
+  getCurrentChangeCallback,
 } from '../migration/change';
 import { Migration } from '../migration/migration';
 
@@ -42,12 +45,12 @@ const migrateOrRollback = async (
         config.logger?.log(`${file.path} ${up ? 'migrated' : 'rolled back'}`);
       }
     } finally {
-      await db.destroy();
+      await db.close();
     }
   }
 };
 
-const changeCache: Record<string, ChangeCallback | undefined> = {}
+const changeCache: Record<string, ChangeCallback | undefined> = {};
 
 const processMigration = async (
   db: Adapter,
@@ -60,12 +63,12 @@ const processMigration = async (
     setCurrentMigration(db);
     setCurrentMigrationUp(up);
 
-    const callback = changeCache[file.path]
+    const callback = changeCache[file.path];
     if (callback) {
-      change(callback)
+      change(callback);
     } else {
       config.requireTs(file.path);
-      changeCache[file.path] = getCurrentChangeCallback()
+      changeCache[file.path] = getCurrentChangeCallback();
     }
 
     await getCurrentPromise();

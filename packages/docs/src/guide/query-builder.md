@@ -87,6 +87,14 @@ It is possible to override parsing of columns returned from the database.
 
 See [column types document](/guide/columns-schema.html#override-column-types) for details.
 
+### close
+
+Call `db.close` to end the database connection:
+
+```ts
+await db.close()
+```
+
 ## db table interface
 
 Make a queryable object by calling `db` with a table name and schema definition.

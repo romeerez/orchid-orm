@@ -30,15 +30,15 @@ describe('orm', () => {
     }));
   }
 
-  it('should return object with provided adapter, destroy and transaction method, models', () => {
+  it('should return object with provided adapter, close and transaction method, models', () => {
     const db = porm(adapter, {
       user: UserModel,
       profile: ProfileModel,
     });
 
-    expect(Object.keys(db.adapter)).toEqual(Object.keys(adapter));
-    expect(db.destroy).toBeInstanceOf(Function);
-    expect(db.transaction).toBeInstanceOf(Function);
+    expect(Object.keys(db.$adapter)).toEqual(Object.keys(adapter));
+    expect(db.$close).toBeInstanceOf(Function);
+    expect(db.$transaction).toBeInstanceOf(Function);
     expect(Object.keys(db)).toEqual(
       expect.arrayContaining(['user', 'profile']),
     );

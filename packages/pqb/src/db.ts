@@ -162,7 +162,7 @@ type DbResult<CT extends ColumnTypesBase> = Db & {
   ): Db<Table, Shape>;
 
   adapter: Adapter;
-  destroy: Adapter['destroy'];
+  close: Adapter['close'];
 };
 
 export type DbOptions<CT extends ColumnTypesBase = ColumnTypes> = (
@@ -206,7 +206,7 @@ export const createDb = <CT extends ColumnTypesBase = ColumnTypes>({
       );
     },
     qb,
-    { adapter, destroy: () => adapter.destroy() },
+    { adapter, close: () => adapter.close() },
   );
 
   // Set all methods from prototype to the db instance (needed for transaction at least):

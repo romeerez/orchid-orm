@@ -8,7 +8,7 @@ describe('transaction', () => {
     const spy = jest.spyOn(Client.prototype, 'query');
 
     await db
-      .transaction(async (db) => {
+      .$transaction(async (db) => {
         await db.user.create(userData);
         await db.profile.create(profileData);
         throw new Error('Throw error to rollback');

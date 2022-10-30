@@ -22,7 +22,7 @@ Connection options may include `log` and `logger`, see [createDb](/guide/query-b
  
 Second argument is an object where keys are model names and values are models (see next section for defining model).
 
-Returns instance with models and some specific functions as `destroy`.
+Returns instance with models and some specific functions prefixed with `$` sign to not overlap with your models.
 
 ```ts
 import { porm } from 'porm'
@@ -39,12 +39,6 @@ export const db = porm({
   user: UserModel,
   message: MessageModel,
 })
-```
-
-Call `destroy` to close connection:
-
-```ts
-await db.destroy()
 ```
 
 ## model
@@ -105,6 +99,40 @@ Don't use model classes directly, it won't work:
 ```ts
 // error
 await UserModel.findBy({ name: 'John' })
+```
+
+## $transaction
+
+Use `.$transaction` to wrap multiple database modification queries into a single transaction.
+
+First argument of callback is a copy of your main porm instance, but every model on it is patched to use a transaction.
+
+```ts
+const { someId, otherId } = await db.$transaction(async (db) => {
+  await db.someModel.where(...conditions).update(...data)
+  await db.anotherModel.where(...conditions).delete()
+  const someId = await db.someModel.insert(...data)
+  const otherId = await db.otherModel.insert(...data)
+  
+  return { someId, otherId }
+})
+```
+
+Be careful to use `db` from the callback argument, and not the main instance.
+
+```ts
+// mistake: someModel won't use a transaction because argument was forgotten.
+await db.$transaction(async () => {
+  await db.someModel.create(...data)
+})
+```
+
+## $close
+
+Call `$clone` to end a database connection:
+
+```ts
+await db.$close()
 ```
 
 ## relations
@@ -1042,31 +1070,5 @@ await db.book.find(1).update({
       }
     },
   }
-})
-```
-
-## transactions
-
-Use `.transaction` to wrap multiple database modification queries into a single transaction.
-
-First argument of callback is a copy of your main porm instance, but every model on it is patched to use a transaction.
-
-```ts
-const { someId, otherId } = await db.transaction(async (db) => {
-  await db.someModel.where(...conditions).update(...data)
-  await db.anotherModel.where(...conditions).delete()
-  const someId = await db.someModel.insert(...data)
-  const otherId = await db.otherModel.insert(...data)
-  
-  return { someId, otherId }
-})
-```
-
-Be careful to use `db` from the callback argument, and not the main instance.
-
-```ts
-// mistake: someModel won't use a transaction because argument was forgotten.
-await db.transaction(async () => {
-  await db.someModel.create(...data)
 })
 ```

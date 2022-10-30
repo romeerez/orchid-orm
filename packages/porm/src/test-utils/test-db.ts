@@ -32,4 +32,4 @@ export const db = porm(
   },
 );
 
-export const adapter = db.adapter;
+export const adapter = db.$adapter;

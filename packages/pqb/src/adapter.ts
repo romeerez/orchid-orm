@@ -99,7 +99,7 @@ export class Adapter {
     }
   }
 
-  destroy(): Promise<void> {
+  close(): Promise<void> {
     return this.pool.end();
   }
 }
@@ -167,7 +167,7 @@ export class TransactionAdapter implements Adapter {
     return await cb(this);
   }
 
-  destroy() {
+  close() {
     return this.pool.end();
   }
 }

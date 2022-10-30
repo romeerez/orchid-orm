@@ -6,10 +6,10 @@ import { transaction } from './transaction';
 export type PORM<T extends ModelClasses> = {
   [K in keyof T]: DbModel<T[K]>;
 } & {
-  transaction: typeof transaction;
-  adapter: Adapter;
-  queryBuilder: Db;
-  destroy(): Promise<void>;
+  $transaction: typeof transaction;
+  $adapter: Adapter;
+  $queryBuilder: Db;
+  $close(): Promise<void>;
 };
 
 export const porm = <T extends ModelClasses>(
@@ -28,17 +28,17 @@ export const porm = <T extends ModelClasses>(
   qb.queryBuilder = qb;
 
   const result = {
-    transaction,
-    adapter,
-    queryBuilder: qb,
-    destroy: () => adapter.destroy(),
+    $transaction: transaction,
+    $adapter: adapter,
+    $queryBuilder: qb,
+    $close: () => adapter.close(),
   } as PORM<ModelClasses>;
 
   const modelInstances: Record<string, Model> = {};
 
   for (const key in models) {
-    if (key === 'adapter' || key === 'destroy') {
-      throw new Error(`Please choose another key for model ${key}`);
+    if (key[0] === '$') {
+      throw new Error(`Model name must not start with $`);
     }
 
     const model = new models[key]();

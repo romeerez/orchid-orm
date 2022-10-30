@@ -27,7 +27,7 @@ const execute = async (
       return { error };
     }
   } finally {
-    await db.destroy();
+    await db.close();
   }
 };
 
@@ -68,7 +68,7 @@ const createOrDrop = async (
 
   const db = new Adapter(options);
   await createSchemaMigrations(db, config);
-  await db.destroy();
+  await db.close();
 };
 
 export const createDb = async (
@@ -107,8 +107,11 @@ export const dropDb = async (arg: MaybeArray<AdapterOptions>) => {
   }
 };
 
-export const resetDb = async (arg: MaybeArray<AdapterOptions>, config: MigrationConfig) => {
-  await dropDb(arg)
-  await createDb(arg, config)
-  await migrate(arg, config)
-}
+export const resetDb = async (
+  arg: MaybeArray<AdapterOptions>,
+  config: MigrationConfig,
+) => {
+  await dropDb(arg);
+  await createDb(arg, config);
+  await migrate(arg, config);
+};
