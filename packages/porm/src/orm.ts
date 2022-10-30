@@ -1,12 +1,14 @@
-import { Adapter, DbOptions, Db, Transaction } from 'pqb';
+import { Adapter, DbOptions, Db } from 'pqb';
 import { DbModel, Model, ModelClasses } from './model';
 import { applyRelations } from './relations/relations';
+import { transaction } from './transaction';
 
 export type PORM<T extends ModelClasses> = {
   [K in keyof T]: DbModel<T[K]>;
 } & {
-  transaction: Transaction['transaction'];
+  transaction: typeof transaction;
   adapter: Adapter;
+  queryBuilder: Db;
   destroy(): Promise<void>;
 };
 
@@ -26,8 +28,9 @@ export const porm = <T extends ModelClasses>(
   qb.queryBuilder = qb;
 
   const result = {
-    transaction: Transaction.prototype.transaction,
+    transaction,
     adapter,
+    queryBuilder: qb,
     destroy: () => adapter.destroy(),
   } as PORM<ModelClasses>;
 

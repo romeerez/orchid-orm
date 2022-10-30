@@ -30,6 +30,10 @@ export const expectSql = (
   expect(sql.values).toEqual(values);
 };
 
+export const toLine = (s: string) => {
+  return s.trim().replace(/\n\s*/g, ' ');
+};
+
 export const now = new Date();
 export const userData = {
   name: 'name',
@@ -52,12 +56,6 @@ export const chatData = {
 
 export const messageData = {
   text: 'text',
-  updatedAt: now,
-  createdAt: now,
-};
-
-export const postData = {
-  title: 'title',
   updatedAt: now,
   createdAt: now,
 };

@@ -44,7 +44,7 @@ describe('orm', () => {
     );
   });
 
-  it('should return model which is queryable interface', async () => {
+  it('should return model which is a queryable interface', async () => {
     const db = porm(adapter, {
       user: UserModel,
       profile: ProfileModel,
