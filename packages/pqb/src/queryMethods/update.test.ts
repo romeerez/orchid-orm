@@ -413,4 +413,29 @@ describe('update', () => {
       expect(eq).toBe(true);
     });
   });
+
+  describe('chaining', () => {
+    it('should handle multiple updates with increment and decrement', () => {
+      const query = User.select('id')
+        .find(1)
+        .update({ name: 'name' })
+        .increment('id')
+        .update({ password: 'password' })
+        .decrement('age');
+
+      expectSql(
+        query.toSql(),
+        `
+          UPDATE "user"
+          SET "name" = $1,
+              "id" = "id" + $2,
+              "password" = $3,
+              "age" = "age" - $4
+          WHERE "user"."id" = $5
+          RETURNING "user"."id"
+        `,
+        ['name', 1, 'password', 1, 1],
+      );
+    });
+  });
 });

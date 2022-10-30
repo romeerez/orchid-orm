@@ -21,22 +21,20 @@ export const pushUpdateSql = (
 
   ctx.sql.push('SET');
 
+  const set: string[] = [];
   query.data.forEach((item) => {
     if (isRaw(item)) {
-      ctx.sql.push(getRaw(item, ctx.values));
+      set.push(getRaw(item, ctx.values));
     } else {
-      const set: string[] = [];
-
       for (const key in item) {
         const value = item[key];
         if (value !== undefined) {
           set.push(`${q(key)} = ${processValue(ctx.values, key, value)}`);
         }
       }
-
-      ctx.sql.push(set.join(', '));
     }
   });
+  ctx.sql.push(set.join(', '));
 
   pushWhereStatementSql(ctx, model, query, quotedAs);
   pushReturningSql(ctx, model, query, quotedAs);
