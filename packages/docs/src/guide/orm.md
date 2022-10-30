@@ -1044,3 +1044,29 @@ await db.book.find(1).update({
   }
 })
 ```
+
+## transactions
+
+Use `.transaction` to wrap multiple database modification queries into a single transaction.
+
+First argument of callback is a copy of your main porm instance, but every model on it is patched to use a transaction.
+
+```ts
+const { someId, otherId } = await db.transaction(async (db) => {
+  await db.someModel.where(...conditions).update(...data)
+  await db.anotherModel.where(...conditions).delete()
+  const someId = await db.someModel.insert(...data)
+  const otherId = await db.otherModel.insert(...data)
+  
+  return { someId, otherId }
+})
+```
+
+Be careful to use `db` from the callback argument, and not the main instance.
+
+```ts
+// mistake: someModel won't use a transaction because argument was forgotten.
+await db.transaction(async () => {
+  await db.someModel.create(...data)
+})
+```
