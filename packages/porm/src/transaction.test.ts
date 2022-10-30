@@ -34,4 +34,12 @@ describe('transaction', () => {
       'ROLLBACK',
     ]);
   });
+
+  it('should throw error if argument is forgotten', async () => {
+    expect(() =>
+      db.$transaction(async () => {
+        // noop
+      }),
+    ).toThrow('Argument of $transaction callback should be used');
+  });
 });
