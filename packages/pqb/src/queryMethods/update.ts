@@ -40,21 +40,22 @@ type UpdateBelongsToData<T extends Query, Rel extends BelongsToRelation> =
   | {
       create: InsertData<Rel['nestedCreateQuery']>;
     }
-  | (T['returnType'] extends 'one' | 'oneOrThrow'
-      ? {
+  | (T['returnType'] extends 'all'
+      ? never
+      : {
           upsert: {
             update: UpdateData<Rel['model']>;
             create: InsertData<Rel['nestedCreateQuery']>;
           };
-        }
-      : never);
+        });
 
 type UpdateHasOneData<T extends Query, Rel extends HasOneRelation> =
   | { disconnect: boolean }
   | { delete: boolean }
   | { update: UpdateData<Rel['model']> }
-  | (T['returnType'] extends 'one' | 'oneOrThrow'
-      ?
+  | (T['returnType'] extends 'all'
+      ? never
+      :
           | { set: WhereArg<Rel['model']> }
           | {
               upsert: {
@@ -64,8 +65,7 @@ type UpdateHasOneData<T extends Query, Rel extends HasOneRelation> =
             }
           | {
               create: InsertData<Rel['nestedCreateQuery']>;
-            }
-      : never);
+            });
 
 type UpdateHasManyData<T extends Query, Rel extends HasManyRelation> = {
   disconnect?: MaybeArray<WhereArg<Rel['model']>>;
@@ -74,12 +74,12 @@ type UpdateHasManyData<T extends Query, Rel extends HasManyRelation> = {
     where: MaybeArray<WhereArg<Rel['model']>>;
     data: UpdateData<Rel['model']>;
   };
-} & (T['returnType'] extends 'one' | 'oneOrThrow'
-  ? {
+} & (T['returnType'] extends 'all'
+  ? EmptyObject
+  : {
       set?: MaybeArray<WhereArg<Rel['model']>>;
       create?: InsertData<Rel['nestedCreateQuery']>[];
-    }
-  : EmptyObject);
+    });
 
 type UpdateHasAndBelongsToManyData<Rel extends HasAndBelongsToManyRelation> = {
   disconnect?: MaybeArray<WhereArg<Rel['model']>>;

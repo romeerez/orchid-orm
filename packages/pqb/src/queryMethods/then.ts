@@ -18,10 +18,10 @@ export const queryMethodByReturnType: Record<
   'query' | 'arrays'
 > = {
   all: 'query',
-  one: 'query',
-  oneOrThrow: 'query',
   rows: 'arrays',
   pluck: 'arrays',
+  one: 'query',
+  oneOrThrow: 'query',
   value: 'arrays',
   valueOrThrow: 'arrays',
   rowCount: 'arrays',
