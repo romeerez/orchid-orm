@@ -5,7 +5,6 @@ import {
   HasOneNestedUpdate,
   HasOneRelation,
   JoinCallback,
-  NestedInsertOneItem,
   Query,
   QueryBase,
   WhereArg,
@@ -122,8 +121,18 @@ export const makeHasOneMethod = (
           item,
         ): item is [
           Record<string, unknown>,
-          NestedInsertOneItem & { connect: WhereArg<QueryBase> },
-        ] => Boolean(item[1].connect),
+          (
+            | {
+                connect: WhereArg<QueryBase>;
+              }
+            | {
+                connectOrCreate: {
+                  where: WhereArg<QueryBase>;
+                  create: Record<string, unknown>;
+                };
+              }
+          ),
+        ] => Boolean(item[1].connect || item[1].connectOrCreate),
       );
 
       const t = query.transacting(q);
@@ -133,17 +142,17 @@ export const makeHasOneMethod = (
         connected = await Promise.all(
           connect.map(([selfData, item]) => {
             const data = { [foreignKey]: selfData[primaryKey] };
-            return item.create
+            return 'connect' in item
               ? (
                   t.where(item.connect) as WhereResult<Query> & {
                     hasSelect: false;
                   }
-                )._update(data)
+                )._updateOrThrow(data)
               : (
-                  t.where(item.connect) as WhereResult<Query> & {
+                  t.where(item.connectOrCreate.where) as WhereResult<Query> & {
                     hasSelect: false;
                   }
-                )._updateOrThrow(data);
+                )._update(data);
           }),
         );
       } else {
@@ -156,10 +165,18 @@ export const makeHasOneMethod = (
           item,
         ): item is [
           Record<string, unknown>,
-          NestedInsertOneItem & { create: Record<string, unknown> },
+          (
+            | { create: Record<string, unknown> }
+            | {
+                connectOrCreate: {
+                  where: WhereArg<QueryBase>;
+                  create: Record<string, unknown>;
+                };
+              }
+          ),
         ] => {
-          if (item[1].connect) {
-            return !connected[connectedI++] && Boolean(item[1].create);
+          if (item[1].connectOrCreate) {
+            return !connected[connectedI++];
           }
           return Boolean(item[1].create);
         },
@@ -167,9 +184,9 @@ export const makeHasOneMethod = (
 
       if (create.length) {
         await t.insertMany(
-          create.map(([selfData, { create }]) => ({
+          create.map(([selfData, item]) => ({
             [foreignKey]: selfData[primaryKey],
-            ...create,
+            ...('create' in item ? item.create : item.connectOrCreate.create),
           })),
         );
       }

@@ -4,7 +4,6 @@ import {
   BelongsToNestedInsert,
   BelongsToNestedUpdate,
   BelongsToRelation,
-  NestedInsertOneItem,
   Query,
   QueryBase,
   WhereArg,
@@ -42,10 +41,12 @@ export const makeBelongsToMethod = (
       const connectOrCreate = data.filter(
         (
           item,
-        ): item is NestedInsertOneItem & {
-          connect: WhereArg<QueryBase>;
-          create: Record<string, unknown>;
-        } => Boolean(item.connect && item.create),
+        ): item is {
+          connectOrCreate: {
+            where: WhereArg<QueryBase>;
+            create: Record<string, unknown>;
+          };
+        } => Boolean(item.connectOrCreate),
       );
 
       const t = query.transacting(q);
@@ -53,7 +54,9 @@ export const makeBelongsToMethod = (
       let connectOrCreated: unknown[];
       if (connectOrCreate.length) {
         connectOrCreated = await Promise.all(
-          connectOrCreate.map((item) => t.findBy(item.connect)._takeOptional()),
+          connectOrCreate.map((item) =>
+            t.findBy(item.connectOrCreate.where)._takeOptional(),
+          ),
         );
       } else {
         connectOrCreated = [];
@@ -63,13 +66,18 @@ export const makeBelongsToMethod = (
       const create = data.filter(
         (
           item,
-        ): item is NestedInsertOneItem & {
-          create: Record<string, unknown>;
-        } => {
-          if (item.connect) {
-            return (
-              !connectOrCreated[connectOrCreatedI++] && Boolean(item.create)
-            );
+        ): item is
+          | {
+              create: Record<string, unknown>;
+            }
+          | {
+              connectOrCreate: {
+                where: WhereArg<QueryBase>;
+                create: Record<string, unknown>;
+              };
+            } => {
+          if (item.connectOrCreate) {
+            return !connectOrCreated[connectOrCreatedI++];
           } else {
             return Boolean(item.create);
           }
@@ -80,7 +88,11 @@ export const makeBelongsToMethod = (
       if (create.length) {
         created = (await t
           .select(primaryKey)
-          ._insertMany(create.map((item) => item.create))) as unknown[];
+          ._insertMany(
+            create.map((item) =>
+              'create' in item ? item.create : item.connectOrCreate.create,
+            ),
+          )) as unknown[];
       } else {
         created = [];
       }
@@ -90,7 +102,7 @@ export const makeBelongsToMethod = (
           item,
         ): item is {
           connect: WhereArg<QueryBase>;
-        } => Boolean(!item.create && item.connect),
+        } => Boolean(item.connect),
       );
 
       let connected: unknown[];
@@ -106,7 +118,7 @@ export const makeBelongsToMethod = (
       let connectedI = 0;
       connectOrCreatedI = 0;
       return data.map((item) =>
-        item.connect && item.create
+        item.connectOrCreate
           ? connectOrCreated[connectOrCreatedI++] || created[createdI++]
           : item.connect
           ? connected[connectedI++]

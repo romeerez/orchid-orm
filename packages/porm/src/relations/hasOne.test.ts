@@ -428,8 +428,10 @@ describe('hasOne', () => {
             ...userData,
             name: 'user 1',
             profile: {
-              connect: { bio: 'profile 1' },
-              create: { ...profileData, bio: 'profile 1' },
+              connectOrCreate: {
+                where: { bio: 'profile 1' },
+                create: { ...profileData, bio: 'profile 1' },
+              },
             },
           });
 
@@ -437,8 +439,10 @@ describe('hasOne', () => {
             ...userData,
             name: 'user 2',
             profile: {
-              connect: { bio: 'profile 2' },
-              create: { ...profileData, bio: 'profile 2' },
+              connectOrCreate: {
+                where: { bio: 'profile 2' },
+                create: { ...profileData, bio: 'profile 2' },
+              },
             },
           });
 
@@ -477,16 +481,20 @@ describe('hasOne', () => {
               ...userData,
               name: 'user 1',
               profile: {
-                connect: { bio: 'profile 1' },
-                create: { ...profileData, bio: 'profile 1' },
+                connectOrCreate: {
+                  where: { bio: 'profile 1' },
+                  create: { ...profileData, bio: 'profile 1' },
+                },
               },
             },
             {
               ...userData,
               name: 'user 2',
               profile: {
-                connect: { bio: 'profile 2' },
-                create: { ...profileData, bio: 'profile 2' },
+                connectOrCreate: {
+                  where: { bio: 'profile 2' },
+                  create: { ...profileData, bio: 'profile 2' },
+                },
               },
             },
           ]);

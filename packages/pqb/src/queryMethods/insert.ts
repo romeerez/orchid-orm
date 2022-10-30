@@ -67,10 +67,25 @@ type InsertBelongsToData<
       keyof T[defaultsKey]
     >
   | {
-      [K in Key]: {
-        create?: InsertData<Rel['nestedCreateQuery']>;
-        connect?: WhereArg<Rel['model']>;
-      };
+      [K in Key]:
+        | {
+            create: InsertData<Rel['nestedCreateQuery']>;
+            connect?: never;
+            connectOrCreate?: never;
+          }
+        | {
+            create?: never;
+            connect: WhereArg<Rel['model']>;
+            connectOrCreate?: never;
+          }
+        | {
+            create?: never;
+            connect?: never;
+            connectOrCreate: {
+              where: WhereArg<Rel['model']>;
+              create: InsertData<Rel['nestedCreateQuery']>;
+            };
+          };
     };
 
 type InsertHasOneData<
@@ -81,10 +96,25 @@ type InsertHasOneData<
   ? // eslint-disable-next-line @typescript-eslint/ban-types
     {}
   : {
-      [K in Key]?: {
-        create?: InsertData<Rel['nestedCreateQuery']>;
-        connect?: WhereArg<Rel['model']>;
-      };
+      [K in Key]?:
+        | {
+            create: InsertData<Rel['nestedCreateQuery']>;
+            connect?: never;
+            connectOrCreate?: never;
+          }
+        | {
+            create?: never;
+            connect: WhereArg<Rel['model']>;
+            connectOrCreate?: never;
+          }
+        | {
+            create?: never;
+            connect?: never;
+            connectOrCreate: {
+              where?: WhereArg<Rel['model']>;
+              create?: InsertData<Rel['nestedCreateQuery']>;
+            };
+          };
     };
 
 type InsertHasManyData<

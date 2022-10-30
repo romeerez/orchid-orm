@@ -1,11 +1,14 @@
 import { defaultsKey, Query, QueryBase, QueryWithTable } from './query';
-import { WhereArg } from './queryMethods/where';
+import { WhereArg, UpdateData } from './queryMethods';
 import { MaybeArray } from './utils';
-import { UpdateData } from './queryMethods/update';
 
 export type NestedInsertOneItem = {
   create?: Record<string, unknown>;
   connect?: WhereArg<QueryBase>;
+  connectOrCreate?: {
+    where: WhereArg<QueryBase>;
+    create: Record<string, unknown>;
+  };
 };
 
 export type NestedInsertManyItems = {

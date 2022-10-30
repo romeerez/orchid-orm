@@ -799,27 +799,29 @@ const author = await db.author.create({
 
 ## connect or create
 
-First look for record to connect with and then create it in case if not found.
+`connectOrCreate` options will try to find a record to connect with, and it will create the record if not found.
 
-Also supported when inserting multiple records.
+This is also supported when inserting multiple records.
 
-`belongsTo` and `hasOne` relations are accepting `connect` and `create` options in such way:
+`belongsTo` and `hasOne` relations are accepting object `{ where: ..., create ... }`:
 
 ```ts
 const result = await db.book.create({
   title: 'Book title',
   author: {
-    connect: {
-      name: 'Author',
-    },
-    create: {
-      name: 'Author',
+    connectOrCreate: {
+      where: {
+        name: 'Author',
+      },
+      create: {
+        name: 'Author',
+      }
     }
   }
 })
 ```
 
-`hasMany` and `hasAndBelongsToMany` relations are accepting `connectOrCreate` option in such way:
+`hasMany` and `hasAndBelongsToMany` relations are accepting array of `{ where: ..., create ... }`:
 
 ```ts
 const result = await db.author.create({

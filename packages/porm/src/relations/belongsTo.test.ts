@@ -264,7 +264,11 @@ describe('belongsTo', () => {
 
     describe('nested create', () => {
       it('should support create', async () => {
-        const query = db.message.select('id', 'chatId', 'authorId').insert({
+        const {
+          id: messageId,
+          chatId,
+          authorId,
+        } = await db.message.select('id', 'chatId', 'authorId').insert({
           ...messageData,
           text: 'message',
           chat: {
@@ -280,8 +284,6 @@ describe('belongsTo', () => {
             },
           },
         });
-
-        const { id: messageId, chatId, authorId } = await query;
 
         await checkInsertedResults({
           messageId,
@@ -434,7 +436,7 @@ describe('belongsTo', () => {
       });
     });
 
-    describe('connect or create', () => {
+    describe('connectOrCreate', () => {
       it('should support connect or create', async () => {
         const chat = await db.chat.select('id').insert({
           ...chatData,
@@ -447,12 +449,16 @@ describe('belongsTo', () => {
             ...messageData,
             text: 'message',
             chat: {
-              connect: { title: 'chat' },
-              create: { ...chatData, title: 'chat' },
+              connectOrCreate: {
+                where: { title: 'chat' },
+                create: { ...chatData, title: 'chat' },
+              },
             },
             user: {
-              connect: { name: 'user' },
-              create: { ...userData, name: 'user' },
+              connectOrCreate: {
+                where: { name: 'user' },
+                create: { ...userData, name: 'user' },
+              },
             },
           });
 
@@ -487,24 +493,32 @@ describe('belongsTo', () => {
               ...messageData,
               text: 'message 1',
               chat: {
-                connect: { title: 'chat 1' },
-                create: { ...chatData, title: 'chat 1' },
+                connectOrCreate: {
+                  where: { title: 'chat 1' },
+                  create: { ...chatData, title: 'chat 1' },
+                },
               },
               user: {
-                connect: { name: 'user 1' },
-                create: { ...userData, name: 'user 1' },
+                connectOrCreate: {
+                  where: { name: 'user 1' },
+                  create: { ...userData, name: 'user 1' },
+                },
               },
             },
             {
               ...messageData,
               text: 'message 2',
               chat: {
-                connect: { title: 'chat 2' },
-                create: { ...chatData, title: 'chat 2' },
+                connectOrCreate: {
+                  where: { title: 'chat 2' },
+                  create: { ...chatData, title: 'chat 2' },
+                },
               },
               user: {
-                connect: { name: 'user 2' },
-                create: { ...userData, name: 'user 2' },
+                connectOrCreate: {
+                  where: { name: 'user 2' },
+                  create: { ...userData, name: 'user 2' },
+                },
               },
             },
           ]);
