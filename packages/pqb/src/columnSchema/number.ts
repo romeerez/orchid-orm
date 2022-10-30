@@ -119,15 +119,18 @@ export class DoublePrecisionColumn extends NumberAsStringBaseColumn {
 export class SmallSerialColumn extends IntegerBaseColumn {
   dataType = 'smallserial' as const;
   parseItem = parseInt;
+  hasDefault = true as const;
 }
 
 // autoincrementing four-byte integer
 export class SerialColumn extends IntegerBaseColumn {
   dataType = 'serial' as const;
   parseItem = parseInt;
+  hasDefault = true as const;
 }
 
 // autoincrementing eight-byte integer
 export class BigSerialColumn extends NumberAsStringBaseColumn {
   dataType = 'bigserial' as const;
+  hasDefault = true as const;
 }

@@ -11,89 +11,99 @@ import { RawExpression } from '../common';
 import {
   BelongsToNestedInsert,
   BelongsToRelation,
+  HasAndBelongsToManyRelation,
+  HasManyRelation,
   HasOneNestedInsert,
   HasOneRelation,
   NestedInsertItem,
   NestedInsertOneItem,
   Relation,
+  RelationsBase,
 } from '../relations';
 import { SetOptional } from '../utils';
 import { InsertQueryData, OnConflictItem, OnConflictMergeUpdate } from '../sql';
 import { WhereArg } from './where';
 import { parseResult, queryMethodByReturnType } from './then';
 
-export type OptionalKeys<T extends Query> = {
-  [K in keyof T['shape']]: T['shape'][K]['isPrimaryKey'] extends true
-    ? K
-    : T['shape'][K]['isNullable'] extends true
-    ? K
-    : never;
-}[keyof T['shape']];
-
 export type InsertData<
   T extends Query,
   DefaultKeys extends PropertyKey = keyof T[defaultsKey],
-  Data = SetOptional<SetOptional<T['inputType'], OptionalKeys<T>>, DefaultKeys>,
+  Data = SetOptional<T['inputType'], DefaultKeys>,
 > = [keyof T['relations']] extends [never]
   ? Data
-  : Omit<
-      Data,
+  : OmitBelongsToForeignKeys<T['relations'], Data> & InsertRelationData<T>;
+
+type OmitBelongsToForeignKeys<R extends RelationsBase, Data> = Omit<
+  Data,
+  {
+    [K in keyof R]: R[K] extends BelongsToRelation
+      ? R[K]['options']['foreignKey']
+      : never;
+  }[keyof R]
+>;
+
+type InsertRelationData<T extends Query> = {
+  [Key in keyof T['relations']]: T['relations'][Key] extends BelongsToRelation
+    ? InsertBelongsToData<T, Key, T['relations'][Key]>
+    : T['relations'][Key] extends HasOneRelation
+    ? InsertHasOneData<T, Key, T['relations'][Key]>
+    : T['relations'][Key] extends HasManyRelation | HasAndBelongsToManyRelation
+    ? InsertHasManyData<T, Key, T['relations'][Key]>
+    : // eslint-disable-next-line @typescript-eslint/ban-types
+      {};
+}[keyof T['relations']];
+
+type InsertBelongsToData<
+  T extends Query,
+  Key extends keyof T['relations'],
+  Rel extends BelongsToRelation,
+> =
+  | SetOptional<
       {
-        [K in keyof T['relations']]: T['relations'][K] extends BelongsToRelation
-          ? T['relations'][K]['options']['foreignKey']
+        [K in Rel['options']['foreignKey']]: Rel['options']['foreignKey'] extends keyof T['inputType']
+          ? T['inputType'][Rel['options']['foreignKey']]
           : never;
-      }[keyof T['relations']]
-    > &
-      {
-        [Key in keyof T['relations']]: T['relations'][Key] extends BelongsToRelation
-          ?
-              | SetOptional<
-                  {
-                    [K in T['relations'][Key]['options']['foreignKey']]: T['relations'][Key]['options']['foreignKey'] extends keyof T['inputType']
-                      ? T['inputType'][T['relations'][Key]['options']['foreignKey']]
-                      : never;
-                  },
-                  DefaultKeys
-                >
-              | {
-                  [K in Key]: {
-                    create?: InsertData<
-                      T['relations'][Key]['nestedCreateQuery']
-                    >;
-                    connect?: WhereArg<T['relations'][Key]['model']>;
-                  };
-                }
-          : T['relations'][Key] extends HasOneRelation
-          ? 'through' extends T['relations'][Key]['options']
-            ? // eslint-disable-next-line @typescript-eslint/ban-types
-              {}
-            : {
-                [K in Key]?: {
-                  create?: InsertData<T['relations'][Key]['nestedCreateQuery']>;
-                  connect?: WhereArg<T['relations'][Key]['model']>;
-                };
-              }
-          : T['relations'][Key] extends Relation
-          ? 'through' extends T['relations'][Key]['options']
-            ? // eslint-disable-next-line @typescript-eslint/ban-types
-              {}
-            : {
-                [K in Key]?: {
-                  create?: InsertData<
-                    T['relations'][Key]['nestedCreateQuery']
-                  >[];
-                  connect?: WhereArg<T['relations'][Key]['model']>[];
-                  connectOrCreate?: {
-                    where: WhereArg<T['relations'][Key]['model']>;
-                    create: InsertData<
-                      T['relations'][Key]['nestedCreateQuery']
-                    >;
-                  }[];
-                };
-              }
-          : // eslint-disable-next-line @typescript-eslint/ban-types
-            {};
-      }[keyof T['relations']];
+      },
+      keyof T[defaultsKey]
+    >
+  | {
+      [K in Key]: {
+        create?: InsertData<Rel['nestedCreateQuery']>;
+        connect?: WhereArg<Rel['model']>;
+      };
+    };
+
+type InsertHasOneData<
+  T extends Query,
+  Key extends keyof T['relations'],
+  Rel extends HasOneRelation,
+> = 'through' extends Rel['options']
+  ? // eslint-disable-next-line @typescript-eslint/ban-types
+    {}
+  : {
+      [K in Key]?: {
+        create?: InsertData<Rel['nestedCreateQuery']>;
+        connect?: WhereArg<Rel['model']>;
+      };
+    };
+
+type InsertHasManyData<
+  T extends Query,
+  Key extends keyof T['relations'],
+  Rel extends HasManyRelation | HasAndBelongsToManyRelation,
+> = 'through' extends Rel['options']
+  ? // eslint-disable-next-line @typescript-eslint/ban-types
+    {}
+  : {
+      [K in Key]?: {
+        create?: InsertData<Rel['nestedCreateQuery']>[];
+        connect?: WhereArg<Rel['model']>[];
+        connectOrCreate?: {
+          where: WhereArg<Rel['model']>;
+          create: InsertData<Rel['nestedCreateQuery']>;
+        }[];
+      };
+    };
 
 type InsertRawData = { columns: string[]; values: RawExpression };
 

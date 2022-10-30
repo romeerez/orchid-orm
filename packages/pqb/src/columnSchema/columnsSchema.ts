@@ -1,6 +1,6 @@
 import { ColumnInput, ColumnOutput, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
-import { UnionToIntersection } from '../utils';
+import { SetOptional, SomeIsTrue, UnionToIntersection } from '../utils';
 
 export type ColumnsShape = Record<string, ColumnType>;
 
@@ -8,9 +8,20 @@ export type ColumnShapeOutput<Shape extends ColumnsShape> = {
   [K in keyof Shape]: ColumnOutput<Shape[K]>;
 };
 
-export type ColumnShapeInput<Shape extends ColumnsShape> = {
-  [K in keyof Shape]: ColumnInput<Shape[K]>;
-};
+type OptionalColumnsForInput<Shape extends ColumnsShape> = {
+  [K in keyof Shape]: SomeIsTrue<
+    [Shape[K]['isNullable'], Shape[K]['hasDefault']]
+  > extends true
+    ? K
+    : never;
+}[keyof Shape];
+
+export type ColumnShapeInput<Shape extends ColumnsShape> = SetOptional<
+  {
+    [K in keyof Shape]: ColumnInput<Shape[K]>;
+  },
+  OptionalColumnsForInput<Shape>
+>;
 
 export class ColumnsObject<Shape extends ColumnsShape> extends ColumnType<
   { [K in keyof Shape]: Shape[K]['type'] },

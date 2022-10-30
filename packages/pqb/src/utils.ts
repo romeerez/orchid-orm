@@ -1,6 +1,15 @@
 import { RawExpression } from './common';
 import { QueryData } from './sql';
 
+export type SomeIsTrue<T extends unknown[]> = T extends [
+  infer Head,
+  ...infer Tail,
+]
+  ? Head extends true
+    ? true
+    : SomeIsTrue<Tail>
+  : false;
+
 export type MaybeArray<T> = T | T[];
 
 export type SetOptional<T, K extends PropertyKey> = Omit<T, K> & {
