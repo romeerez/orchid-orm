@@ -227,7 +227,9 @@ export const makeHasManyMethod = (
             [foreignKey]: data[0][primaryKey],
           })),
         );
-      } else if (params.disconnect || params.set) {
+      }
+
+      if (params.disconnect || params.set) {
         await t
           .where<Query>(
             getWhereForNestedUpdate(
@@ -250,7 +252,9 @@ export const makeHasManyMethod = (
             )
             ._update({ [foreignKey]: data[0][primaryKey] });
         }
-      } else if (params.delete || params.update) {
+      }
+
+      if (params.delete || params.update) {
         const q = t._where(
           getWhereForNestedUpdate(
             data,

@@ -786,7 +786,9 @@ describe('hasMany', () => {
 
         await db.user.find(id).update({
           messages: {
-            delete: [{ text: 'message 1' }, { text: 'message 2' }],
+            delete: {
+              text: { in: ['message 1', 'message 2'] },
+            },
           },
         });
 

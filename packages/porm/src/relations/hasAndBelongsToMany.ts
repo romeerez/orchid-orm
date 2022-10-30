@@ -241,7 +241,9 @@ export const makeHasAndBelongsToManyMethod = (
             })),
           ),
         );
-      } else if (params.update) {
+      }
+
+      if (params.update) {
         await (
           query
             .transacting(q)
@@ -262,15 +264,21 @@ export const makeHasAndBelongsToManyMethod = (
                 : params.update.where,
             ) as WhereResult<Query>
         ).update<WhereResult<Query>>(params.update.data);
-      } else if (params.disconnect) {
+      }
+
+      if (params.disconnect) {
         await queryJoinTable(state, q, data, params.disconnect)._delete();
-      } else if (params.delete) {
+      }
+
+      if (params.delete) {
         const j = queryJoinTable(state, q, data, params.delete);
 
         const ids = await j._pluck(afk)._delete();
 
         await queryRelatedTable(query, q, { [apk]: { in: ids } })._delete();
-      } else if (params.set) {
+      }
+
+      if (params.set) {
         const j = queryJoinTable(state, q, data);
         await j._delete();
 

@@ -20,7 +20,7 @@ import {
   Relation,
   RelationsBase,
 } from '../relations';
-import { SetOptional } from '../utils';
+import { EmptyObject, SetOptional } from '../utils';
 import { InsertQueryData, OnConflictItem, OnConflictMergeUpdate } from '../sql';
 import { WhereArg } from './where';
 import { parseResult, queryMethodByReturnType } from './then';
@@ -43,14 +43,13 @@ type OmitBelongsToForeignKeys<R extends RelationsBase, Data> = Omit<
 >;
 
 type InsertRelationData<T extends Query> = {
-  [Key in keyof T['relations']]: T['relations'][Key] extends BelongsToRelation
-    ? InsertBelongsToData<T, Key, T['relations'][Key]>
-    : T['relations'][Key] extends HasOneRelation
-    ? InsertHasOneData<T, Key, T['relations'][Key]>
-    : T['relations'][Key] extends HasManyRelation | HasAndBelongsToManyRelation
-    ? InsertHasManyData<T, Key, T['relations'][Key]>
-    : // eslint-disable-next-line @typescript-eslint/ban-types
-      {};
+  [K in keyof T['relations']]: T['relations'][K] extends BelongsToRelation
+    ? InsertBelongsToData<T, K, T['relations'][K]>
+    : T['relations'][K] extends HasOneRelation
+    ? InsertHasOneData<T, K, T['relations'][K]>
+    : T['relations'][K] extends HasManyRelation | HasAndBelongsToManyRelation
+    ? InsertHasManyData<T, K, T['relations'][K]>
+    : EmptyObject;
 }[keyof T['relations']];
 
 type InsertBelongsToData<

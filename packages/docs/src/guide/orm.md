@@ -537,14 +537,17 @@ Resulting record of `belongsTo` and `hasOne` relation can be undefined if `requi
 ```ts
 const book = await db.book.find(1)
 
-const author = await db.book.author(book) // type of argument is { authorId: number }
+// type of argument is { authorId: number }
+const author = await db.book.author(book)
 
-const books = await db.author.books(author) // type of argument is { id: number }
+// type of argument is { id: number }
+const books = await db.author.books(author)
 
 // additional query methods can be applied:
 const partialAuthor = await db.book.author(book).select('id', 'name')
 
-const countBooks: number = await db.author.books(author).where({ title: 'Kobzar' }).count()
+const countBooks: number = await db.author.books(author)
+  .where({ title: 'Kobzar' }).count()
 
 const authorHasBooks: boolean = await db.author.books(author).exists()
 ```
@@ -685,6 +688,17 @@ const result: Result = await db.post.select(
   }
 ).take()
 ```
+
+## create, update, delete related records
+
+At this part `Porm` is inspired by `Prisma` which makes it very easy to do modifications of related records.
+
+For `belongsTo` and `hasOne` you can do only one thing per each relation.
+For instance, create author while creating a book, or connect book to the author while creating it.
+But not create and connect at the same time.
+
+For `hasMany` and `hasAndBelongsToMany` you can combine multiple commands for a single relations:
+while updating the author you can create new books, connect some books, delete books by conditions.
 
 ## nested create
 

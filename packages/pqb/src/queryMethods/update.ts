@@ -3,12 +3,16 @@ import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { isRaw, RawExpression, StringKey } from '../common';
 import {
   BelongsToNestedUpdate,
+  BelongsToRelation,
+  HasAndBelongsToManyRelation,
+  HasManyRelation,
   HasOneNestedUpdate,
+  HasOneRelation,
   NestedUpdateOneItem,
   Relation,
 } from '../relations';
 import { WhereArg, WhereResult } from './where';
-import { MaybeArray } from '../utils';
+import { EmptyObject, MaybeArray } from '../utils';
 import { InsertData } from './insert';
 import { parseResult, queryMethodByReturnType } from './then';
 
@@ -16,86 +20,77 @@ export type UpdateData<T extends Query> = {
   [K in keyof T['type']]?: T['type'][K] | RawExpression;
 } & (T['relations'] extends Record<string, Relation>
   ? {
-      [K in keyof T['relations']]?: T['relations'][K]['type'] extends 'belongsTo'
-        ?
-            | { disconnect: boolean }
-            | { set: WhereArg<T['relations'][K]['model']> }
-            | { delete: boolean }
-            | { update: UpdateData<T['relations'][K]['model']> }
-            | {
-                create: InsertData<T['relations'][K]['nestedCreateQuery']>;
-              }
-            | (T['returnType'] extends 'one' | 'oneOrThrow'
-                ? {
-                    upsert: {
-                      update: UpdateData<T['relations'][K]['model']>;
-                      create: InsertData<
-                        T['relations'][K]['nestedCreateQuery']
-                      >;
-                    };
-                  }
-                : never)
-        : T['relations'][K]['type'] extends 'hasOne'
-        ?
-            | { disconnect: boolean }
-            | { delete: boolean }
-            | { update: UpdateData<T['relations'][K]['model']> }
-            | (T['returnType'] extends 'one' | 'oneOrThrow'
-                ?
-                    | { set: WhereArg<T['relations'][K]['model']> }
-                    | {
-                        upsert: {
-                          update: UpdateData<T['relations'][K]['model']>;
-                          create: InsertData<
-                            T['relations'][K]['nestedCreateQuery']
-                          >;
-                        };
-                      }
-                    | {
-                        create: InsertData<
-                          T['relations'][K]['nestedCreateQuery']
-                        >;
-                      }
-                : never)
-        : T['relations'][K]['type'] extends 'hasMany'
-        ?
-            | { disconnect: MaybeArray<WhereArg<T['relations'][K]['model']>> }
-            | { delete: MaybeArray<WhereArg<T['relations'][K]['model']>> }
-            | {
-                update: {
-                  where: MaybeArray<WhereArg<T['relations'][K]['model']>>;
-                  data: UpdateData<T['relations'][K]['model']>;
-                };
-              }
-            | (T['returnType'] extends 'one' | 'oneOrThrow'
-                ?
-                    | { set: MaybeArray<WhereArg<T['relations'][K]['model']>> }
-                    | {
-                        create: InsertData<
-                          T['relations'][K]['nestedCreateQuery']
-                        >[];
-                      }
-                : never)
-        : T['relations'][K]['type'] extends 'hasAndBelongsToMany'
-        ?
-            | { disconnect: MaybeArray<WhereArg<T['relations'][K]['model']>> }
-            | {
-                set: MaybeArray<WhereArg<T['relations'][K]['model']>>;
-              }
-            | { delete: MaybeArray<WhereArg<T['relations'][K]['model']>> }
-            | {
-                update: {
-                  where: MaybeArray<WhereArg<T['relations'][K]['model']>>;
-                  data: UpdateData<T['relations'][K]['model']>;
-                };
-              }
-            | {
-                create: InsertData<T['relations'][K]['nestedCreateQuery']>[];
-              }
+      [K in keyof T['relations']]?: T['relations'][K] extends BelongsToRelation
+        ? UpdateBelongsToData<T, T['relations'][K]>
+        : T['relations'][K] extends HasOneRelation
+        ? UpdateHasOneData<T, T['relations'][K]>
+        : T['relations'][K] extends HasManyRelation
+        ? UpdateHasManyData<T, T['relations'][K]>
+        : T['relations'][K] extends HasAndBelongsToManyRelation
+        ? UpdateHasAndBelongsToManyData<T['relations'][K]>
         : never;
     }
-  : // eslint-disable-next-line @typescript-eslint/ban-types
-    {});
+  : EmptyObject);
+
+type UpdateBelongsToData<T extends Query, Rel extends BelongsToRelation> =
+  | { disconnect: boolean }
+  | { set: WhereArg<Rel['model']> }
+  | { delete: boolean }
+  | { update: UpdateData<Rel['model']> }
+  | {
+      create: InsertData<Rel['nestedCreateQuery']>;
+    }
+  | (T['returnType'] extends 'one' | 'oneOrThrow'
+      ? {
+          upsert: {
+            update: UpdateData<Rel['model']>;
+            create: InsertData<Rel['nestedCreateQuery']>;
+          };
+        }
+      : never);
+
+type UpdateHasOneData<T extends Query, Rel extends HasOneRelation> =
+  | { disconnect: boolean }
+  | { delete: boolean }
+  | { update: UpdateData<Rel['model']> }
+  | (T['returnType'] extends 'one' | 'oneOrThrow'
+      ?
+          | { set: WhereArg<Rel['model']> }
+          | {
+              upsert: {
+                update: UpdateData<Rel['model']>;
+                create: InsertData<Rel['nestedCreateQuery']>;
+              };
+            }
+          | {
+              create: InsertData<Rel['nestedCreateQuery']>;
+            }
+      : never);
+
+type UpdateHasManyData<T extends Query, Rel extends HasManyRelation> = {
+  disconnect?: MaybeArray<WhereArg<Rel['model']>>;
+  delete?: MaybeArray<WhereArg<Rel['model']>>;
+  update?: {
+    where: MaybeArray<WhereArg<Rel['model']>>;
+    data: UpdateData<Rel['model']>;
+  };
+} & (T['returnType'] extends 'one' | 'oneOrThrow'
+  ? {
+      set?: MaybeArray<WhereArg<Rel['model']>>;
+      create?: InsertData<Rel['nestedCreateQuery']>[];
+    }
+  : EmptyObject);
+
+type UpdateHasAndBelongsToManyData<Rel extends HasAndBelongsToManyRelation> = {
+  disconnect?: MaybeArray<WhereArg<Rel['model']>>;
+  set?: MaybeArray<WhereArg<Rel['model']>>;
+  delete?: MaybeArray<WhereArg<Rel['model']>>;
+  update?: {
+    where: MaybeArray<WhereArg<Rel['model']>>;
+    data: UpdateData<Rel['model']>;
+  };
+  create?: InsertData<Rel['nestedCreateQuery']>[];
+};
 
 type UpdateArgs<T extends Query, ForceAll extends boolean> = (
   T['hasWhere'] extends true ? true : ForceAll
