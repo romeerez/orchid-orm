@@ -911,16 +911,22 @@ describe('hasMany', () => {
     describe('nested create', () => {
       it('should create new related records', async () => {
         const chatId = await db.chat.get('id').insert(chatData);
-        const user = await db.user.create(userData);
+        const user = await db.user.create({ ...userData, age: 1 });
 
-        await db.user.find(user.id).update({
-          messages: {
-            create: [
-              { ...messageData, chatId, text: 'created 1' },
-              { ...messageData, chatId, text: 'created 2' },
-            ],
-          },
-        });
+        const updated = await db.user
+          .select('age')
+          .find(user.id)
+          .increment('age')
+          .update({
+            messages: {
+              create: [
+                { ...messageData, chatId, text: 'created 1' },
+                { ...messageData, chatId, text: 'created 2' },
+              ],
+            },
+          });
+
+        expect(updated.age).toBe(2);
 
         const texts = await db.user.messages(user).order('text').pluck('text');
         expect(texts).toEqual(['created 1', 'created 2']);

@@ -15,6 +15,7 @@ import { WhereArg, WhereResult } from './where';
 import { EmptyObject, MaybeArray } from '../utils';
 import { InsertData } from './insert';
 import { parseResult, queryMethodByReturnType } from './then';
+import { UpdateQueryData } from '../sql';
 
 export type UpdateData<T extends Query> = {
   [K in keyof T['type']]?: T['type'][K] | RawExpression;
@@ -127,6 +128,10 @@ const applyCountChange = <T extends Query>(
   return self as unknown as UpdateResult<T>;
 };
 
+const checkIfUpdateIsEmpty = (q: UpdateQueryData) => {
+  return !q.data?.some((item) => isRaw(item) || Object.keys(item).length);
+};
+
 export class Update {
   update<T extends Query, ForceAll extends boolean = false>(
     this: T,
@@ -157,6 +162,9 @@ export class Update {
     if (isRaw(data)) {
       pushQueryValue(this, 'data', data);
     } else {
+      const update: Record<string, unknown> = { ...data };
+      pushQueryValue(this, 'data', update);
+
       const relations = this.relations as Record<string, Relation>;
 
       const prependRelations: Record<string, Record<string, unknown>> = {};
@@ -164,7 +172,6 @@ export class Update {
 
       const originalReturnType = this.query.returnType;
 
-      const update: Record<string, unknown> = { ...data };
       for (const key in data) {
         if (relations[key]) {
           delete update[key];
@@ -188,8 +195,9 @@ export class Update {
       } = {};
 
       const prependRelationKeys = Object.keys(prependRelations);
+      let willSetKeys = false;
       if (prependRelationKeys.length) {
-        const willSetKeys = prependRelationKeys.some((relationName) => {
+        willSetKeys = prependRelationKeys.some((relationName) => {
           const data = prependRelations[relationName] as NestedUpdateOneItem;
 
           return (
@@ -198,11 +206,9 @@ export class Update {
             }
           ).nestedUpdate(this, update, data, state);
         });
+      }
 
-        if (!willSetKeys && !Object.keys(update).length) {
-          delete this.query.type;
-        }
-      } else if (!Object.keys(update).length) {
+      if (!willSetKeys && checkIfUpdateIsEmpty(this.query as UpdateQueryData)) {
         delete this.query.type;
       }
 
@@ -283,8 +289,6 @@ export class Update {
       if (prependRelationKeys.length || appendRelationKeys.length) {
         query.wrapInTransaction = true;
       }
-
-      pushQueryValue(this, 'data', update);
     }
 
     if (!query.select) {
