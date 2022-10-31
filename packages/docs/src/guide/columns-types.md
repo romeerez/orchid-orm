@@ -1,0 +1,279 @@
+# Column types
+
+## Numeric types
+
+As not all database numeric types can fit into JS number type, some types will be returned as string.
+
+```ts
+// signed two-byte integer
+t.smallint() // -> number
+
+// signed four-byte integer
+t.integer() // -> number
+
+// signed eight-byte integer
+t.bigint() // -> string
+
+// exact numeric of selectable precision
+t.numeric(precision?: number, scale?: number) // -> string
+
+// decimal is alias for numeric
+t.decimal(precision?: number, scale?: number) // -> string
+
+// single precision floating-point number (4 bytes)
+t.real() // -> number
+
+// double precision floating-point number (8 bytes)
+t.doublePrecision() // -> number
+
+// autoincrementing two-byte integer
+t.smallSerial() // -> number
+
+// autoincrementing four-byte integer
+t.serial() // -> number
+
+// autoincrementing eight-byte integer
+t.bigSerial() // -> string
+```
+
+As listed in code comments above, `bigint`, `numeric`, `decimal`, `bigSerial` have string output.
+
+You can set up parsing to a `number` type, (remember this can cause bugs on large numbers):
+
+```ts
+t.bigint().parse(parseInt)
+```
+
+Or `bigint` postgres type can be parsed to `bigint` JavaScript type, but be aware that such values should be explicitly turned to a string when preparing JSON response:
+
+```ts
+t.bigint().parse(BigInt)
+```
+
+Numeric type columns supports following `where` operators:
+
+```ts
+db.someModel.where({
+  numericColumn: {
+    // lower than
+    lt: value,
+    // lower than or equal to
+    lte: value,
+    // greater than
+    gt: value,
+    // greater than or equal to
+    gte: value,
+    // between x and y
+    between: [x, y]
+  }
+})
+```
+
+## Text types
+
+Use `t.text()` type as a go-to for strings, other types are for special cases.
+
+```ts
+// character varying(n), varchar(n) variable-length with limit
+t.varchar(limit?: number) // -> string
+
+// character(n), char(n) fixed-length, blank padded
+t.chat(limit?: number) // -> string
+
+// text variable unlimited length
+t.text() // -> string
+
+// Alias for t.text()
+t.string()
+```
+
+Text type columns supports following `where` operators:
+
+```ts
+db.someModel.where({
+  textColumn: {
+    // LIKE '%string%'
+    contains: 'string',
+    // ILIKE '%string%'
+    containsInsensitive: 'string',
+    // LIKE 'string%'
+    startsWith: 'string',
+    // ILIKE 'string%'
+    startsWithInsensitive: 'string',
+    // LIKE '%string'
+    endsWith: 'string',
+    // ILIKE '%string'
+    endsWithInsensitive: 'string',
+  }
+})
+```
+
+## Binary data type
+
+The bytea data type allows storage of binary strings, it is returned as a node.js Buffer object.
+
+```ts
+t.bytea() // -> Buffer
+```
+
+## Date/Time types
+
+```ts
+// 4 bytes date (no time of day)
+t.date() // -> string
+
+// timestamp [ (p) ] [ without time zone ] 8 bytes both date and time (no time zone) 4713 BC 294276 AD 1 microsecond
+t.timestamp(precision?: number) // -> string
+
+// timestamp [ (p) ] with time zone	8 bytes	both date and time, with time zone	4713 BC	294276 AD	1 microsecond
+t.timestampWithTimeZone(precision?: number) // -> string
+
+// time [ (p) ] [ without time zone ]	8 bytes	time of day (no date)	00:00:00	24:00:00	1 microsecond
+t.time(precision?: number) // -> string
+
+// time [ (p) ] with time zone	12 bytes	time of day (no date), with time zone	00:00:00+1559	24:00:00-1559	1 microsecond
+t.timeWithTimeZone(precision?: number) // -> string
+
+// interval [ fields ] [ (p) ]	16 bytes	time interval	-178000000 years	178000000 years	1 microsecond
+t.interval(fields?: string, precision?: number) // -> PostgresInterval object
+```
+
+`interval` type takes two optional parameters:
+
+First parameter is a string containing `YEAR`, `MONTH`, `DAY`, `HOUR` and so on, check full list in postgres docs [here](https://www.postgresql.org/docs/current/datatype-datetime.html).
+
+Second parameter specifies the number of fractional digits retained in the seconds field.
+
+The output of `interval` column is an object containing `years`, `month` and other fields:
+
+```ts
+type Interval = {
+  years?: number;
+  months?: number;
+  days?: number;
+  hours?: number;
+  minutes?: number;
+  seconds?: number;
+}
+
+const result: Interval = await Table.get('intervalColumn')
+```
+
+## Boolean type
+
+Boolean returns `true` or `false`.
+
+```ts
+// 1 byte, true or false
+t.boolean() // -> boolean
+```
+
+## Enum type
+
+Create the enum database type:
+
+```ts
+await db.adapter.query(`
+  CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');
+`)
+```
+
+Define enum, first argument is a name of enum in database, second is array of possible values:
+
+```ts
+t.enum('mood', ['sad', 'ok', 'happy']); // -> outputs Mood type
+```
+
+## Geometric types
+
+Geometric types are not parsed and returned as strings as database returns them.
+
+```ts
+// point	16 bytes	Point on a plane	(x,y)
+t.point() // -> string
+
+// line	32 bytes	Infinite line	{A,B,C}
+t.line() // -> string
+
+// lseg	32 bytes	Finite line segment	[(x1,y1),(x2,y2)]
+t.lseg() // -> string
+
+// box	32 bytes	Rectangular box	((x1,y1),(x2,y2))
+t.box() // -> string
+
+// path	16+16n bytes	Closed path (similar to polygon)	((x1,y1),...)
+// path	16+16n bytes	Open path	[(x1,y1),...]
+t.path() // -> string
+
+// polygon	40+16n bytes	Polygon (similar to closed path)	((x1,y1),...)
+t.polygon() // -> string
+
+// circle	24 bytes	Circle	<(x,y),r> (center point and radius)
+t.circle() // -> string
+```
+
+## Network address types
+
+```ts
+// cidr	7 or 19 bytes	IPv4 and IPv6 networks
+t.cidr() // -> string, example: 192.168.100.128/25
+
+// inet	7 or 19 bytes	IPv4 and IPv6 hosts and networks
+t.inet() // -> string, example: 192.168.100.128/25
+
+// macaddr	6 bytes	MAC addresses
+t.macaddr() // -> string, example: 08:00:2b:01:02:03
+
+// macaddr8	8 bytes	MAC addresses (EUI-64 format)
+t.macaddr8() // -> string, example: 08:00:2b:ff:fe:01:02:03
+```
+
+## Bit string types
+
+it strings are strings of 1's and 0's. They can be used to store or visualize bit masks.
+
+```ts
+// Bit strings are strings of 1's and 0's.
+// They can be used to store or visualize bit masks.
+// There are two SQL bit types: bit(n) and bit varying(n), where n is a positive integer.
+t.bit() // -> string
+
+// bit varying(n), where n is a positive integer
+t.bitVarying() // -> string
+```
+
+## Text search types
+
+```ts
+// A tsvector value is a sorted list of distinct lexemes
+t.tsvector() // -> string
+
+// A tsquery value stores lexemes that are to be searched for
+t.tsquery() // -> string
+```
+
+## UUID type
+
+The data type uuid stores Universally Unique Identifiers (UUID).
+
+```ts
+// uuid stores Universally Unique Identifiers (UUID)
+t.uuid() // -> string, example: a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11
+```
+
+## Array type
+
+```ts
+// array of other column type
+t.array(item: ColumnType) // -> array of argument type
+```
+
+## Other column types
+
+```ts
+// for currency amount (8 bytes)
+t.money() // -> string, example: '$12.34'
+
+// xml data type can be used to store XML data
+t.xml() // -> string
+```
