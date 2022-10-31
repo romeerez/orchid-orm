@@ -17,7 +17,7 @@ import {
   useTestDatabase,
 } from '../test-utils';
 import { raw } from '../common';
-import { DateColumn } from '../columnSchema';
+import { columnTypes, DateColumn } from '../columnSchema';
 import { addQueryOn } from './join';
 import { RelationQuery, relationQueryKey } from '../relations';
 
@@ -288,6 +288,21 @@ describe('selectMethods', () => {
           updatedAt: now,
           createdAt: now,
         });
+      });
+
+      it('should have proper type for conditional sub queries', async () => {
+        const condition = true;
+
+        const query = User.select('id', {
+          hasProfile: condition
+            ? () => profileRelation.exists()
+            : raw(columnTypes.boolean(), 'true'),
+        });
+
+        assertType<
+          Awaited<typeof query>,
+          { id: number; hasProfile: boolean }[]
+        >();
       });
     });
 

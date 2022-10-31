@@ -63,6 +63,12 @@ type SelectResult<
       ? SelectAsArgs[K]['__column']
       : SelectAsArgs[K] extends (q: T) => Query
       ? SelectSubQueryResult<ReturnType<SelectAsArgs[K]>>
+      : SelectAsArgs[K] extends ((q: T) => Query) | RawExpression
+      ?
+          | SelectSubQueryResult<
+              ReturnType<Exclude<SelectAsArgs[K], RawExpression>>
+            >
+          | Exclude<SelectAsArgs[K], (q: T) => Query>['__column']
       : never;
   }
 >;
