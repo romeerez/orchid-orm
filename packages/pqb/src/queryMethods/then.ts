@@ -71,10 +71,15 @@ const then = async (
     } else if (q.query.type === 'update') {
       beforeCallbacks = q.query.beforeUpdate;
       afterCallbacks = q.query.afterUpdate;
+    } else if (q.query.type === 'delete') {
+      beforeCallbacks = q.query.beforeDelete;
+      afterCallbacks = q.query.afterDelete;
     }
 
-    if (beforeCallbacks) {
-      await Promise.all(beforeCallbacks.map((cb) => cb(q)));
+    if (beforeCallbacks || q.query.beforeQuery) {
+      await Promise.all(
+        getCallbacks(beforeCallbacks, q.query.beforeQuery).map((cb) => cb(q)),
+      );
     }
 
     if (q.query.beforeQuery) {
@@ -99,14 +104,12 @@ const then = async (
 
     const result = await q.query.handleResult(q, queryResult);
 
-    if (afterCallbacks?.length || q.query.afterQuery?.length) {
-      if (q.query.afterQuery?.length) {
-        await Promise.all(q.query.afterQuery.map((query) => query(q, result)));
-      }
-
-      if (afterCallbacks?.length) {
-        await Promise.all(afterCallbacks.map((query) => query(q, result)));
-      }
+    if (afterCallbacks || q.query.afterQuery) {
+      await Promise.all(
+        getCallbacks(q.query.afterQuery, afterCallbacks).map((query) =>
+          query(q, result),
+        ),
+      );
     }
 
     resolve?.(result);
@@ -223,4 +226,15 @@ const parseValue = (value: unknown, query: Query) => {
     }
   }
   return value;
+};
+
+const getCallbacks = <
+  T extends BeforeCallback<Query>[] | AfterCallback<Query>[],
+>(
+  first?: T,
+  second?: T,
+): T => {
+  return (
+    first && second ? [...first, ...second] : first ? first : second
+  ) as T;
 };

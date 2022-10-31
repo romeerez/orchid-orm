@@ -66,4 +66,24 @@ describe('callbacks', () => {
       expect(fn.mock.calls[0]).toEqual([query, result]);
     });
   });
+
+  describe('beforeDelete', () => {
+    it('should run callback before delete', async () => {
+      const fn = jest.fn();
+      const query = User.beforeDelete(fn).where({ id: 1 }).delete();
+      await query;
+
+      expect(fn.mock.calls[0]).toEqual([query]);
+    });
+  });
+
+  describe('afterDelete', () => {
+    it('should run callback after delete', async () => {
+      const fn = jest.fn();
+      const query = User.afterDelete(fn).where({ id: 1 }).delete();
+      const result = await query;
+
+      expect(fn.mock.calls[0]).toEqual([query, result]);
+    });
+  });
 });

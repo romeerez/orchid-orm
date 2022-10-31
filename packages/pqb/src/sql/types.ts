@@ -125,6 +125,8 @@ export type DeleteQueryData = CommonQueryData & {
   type: 'delete';
   join?: JoinItem[];
   joinedParsers?: Record<string, ColumnsParsers>;
+  beforeDelete?: BeforeCallback<Query>[];
+  afterDelete?: AfterCallback<Query>[];
 };
 
 export type TruncateQueryData = CommonQueryData & {

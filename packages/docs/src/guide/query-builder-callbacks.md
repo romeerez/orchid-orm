@@ -1,24 +1,24 @@
 # Query builder callbacks
 
-Before callbacks run before query and have such type:
+You can add callbacks to run before or after the query. 
 
-(returned promise will be awaited)
+Callbacks are executed concurrently by using `Promise.all` under the hood.
 
 ```ts
 // query is a query object
 type BeforeCallback = (query: Query) => void | Promise<void>
-```
 
-After callbacks run after query and have such type:
-
-(returned promise will be awaited)
-
-```ts
 // query is a query object, data is result of the query
 type AfterCallback = (query: Query, data: unknown) => void | Promise<void>
 ```
 
-`beforeQuery` and `afterQuery` callbacks will run on any kind of query:
+## beforeQuery, afterQuery
+
+`beforeQuery` and `afterQuery` callbacks will run on any kind of query.
+
+If query has both `beforeQuery` and `beforeInsert`, `beforeInsert` will run first.
+
+If query has both `afterQuery` and `afterInsert`, `afterInsert` will run last.
 
 ```ts
 await Table
@@ -27,14 +27,18 @@ await Table
   .all()
 ```
 
+## beforeInsert, afterInsert
+
 `beforeInsert` and `afterInsert` callbacks will run only on insert query:
 
 ```ts
 await Table
   .beforeInsert(() => console.log('before insert'))
   .afterInsert((_, data) => console.log('after insert', data))
-  .all()
+  .create(data)
 ```
+
+## beforeUpdate, afterUpdate
 
 `beforeUpdate` and `afterUpdate` callbacks will run only on update query:
 
@@ -42,5 +46,18 @@ await Table
 await Table
   .beforeUpdate(() => console.log('before update'))
   .afterUpdate((_, data) => console.log('after update', data))
-  .all()
+  .where({ ...conditions })
+  .update({ key: 'value' })
+```
+
+## beforeDelete, afterDelete
+
+`beforeDelete` and `afterDelete` callbacks will run only on delete query:
+
+```ts
+await Table
+  .beforeDelete(() => console.log('before delete'))
+  .afterDelete((_, data) => console.log('after delete', data))
+  .where({ ...conditions })
+  .delete()
 ```

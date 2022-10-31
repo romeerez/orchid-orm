@@ -52,4 +52,18 @@ export class QueryCallbacks {
   _afterUpdate<T extends Query>(this: T, cb: AfterCallback<T>): T {
     return pushQueryValue(this, 'afterUpdate', cb);
   }
+
+  beforeDelete<T extends Query>(this: T, cb: BeforeCallback<T>): T {
+    return this.clone()._beforeDelete(cb);
+  }
+  _beforeDelete<T extends Query>(this: T, cb: BeforeCallback<T>): T {
+    return pushQueryValue(this, 'beforeDelete', cb);
+  }
+
+  afterDelete<T extends Query>(this: T, cb: AfterCallback<T>): T {
+    return this.clone()._afterDelete(cb);
+  }
+  _afterDelete<T extends Query>(this: T, cb: AfterCallback<T>): T {
+    return pushQueryValue(this, 'afterDelete', cb);
+  }
 }
