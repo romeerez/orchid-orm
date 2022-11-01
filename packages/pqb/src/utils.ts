@@ -154,3 +154,29 @@ export const emptyObject = {};
 export const makeRegexToFindInSql = (value: string) => {
   return new RegExp(`${value}(?=(?:[^']*'[^']*')*[^']*$)`, 'g');
 };
+
+export const pushOrNewArrayToObject = <
+  Obj extends EmptyObject,
+  Key extends keyof Obj,
+>(
+  obj: Obj,
+  key: Key,
+  value: Exclude<Obj[Key], undefined> extends unknown[]
+    ? Exclude<Obj[Key], undefined>[number]
+    : never,
+) => {
+  if (obj[key]) (obj[key] as unknown[]).push(value);
+  else (obj[key] as unknown[]) = [value];
+};
+
+export const pushOrNewArray = <Arr extends unknown[]>(
+  arr: Arr | undefined,
+  value: Arr[number],
+): Arr => {
+  if (arr) {
+    arr.push(value);
+    return arr;
+  } else {
+    return [value] as Arr;
+  }
+};

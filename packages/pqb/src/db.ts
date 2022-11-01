@@ -25,7 +25,7 @@ import {
   ColumnTypesBase,
   getColumnTypes,
 } from './columnSchema';
-import { applyMixins } from './utils';
+import { applyMixins, pushOrNewArray } from './utils';
 import { StringKey } from './common';
 
 export type DbTableOptions = {
@@ -141,8 +141,7 @@ export class Db<
       }
 
       if (column.data.modifyQuery) {
-        if (!modifyQuery) modifyQuery = [column.data.modifyQuery];
-        else modifyQuery.push(column.data.modifyQuery);
+        modifyQuery = pushOrNewArray(modifyQuery, column.data.modifyQuery);
       }
     }
     this.columnsParsers = hasParsers ? columnsParsers : undefined;

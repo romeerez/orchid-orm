@@ -4,6 +4,8 @@ import {
   GetTypesOrRaw,
   makeRegexToFindInSql,
   MaybeArray,
+  pushOrNewArray,
+  pushOrNewArrayToObject,
   SetOptional,
   SomeIsTrue,
 } from './utils';
@@ -68,6 +70,42 @@ describe('utils', () => {
       expect('updatedAt'.match(regex)).toEqual(['updatedAt']);
       expect(' updatedAt '.match(regex)).toEqual(['updatedAt']);
       expect("'updatedAt'".match(regex)).toEqual(null);
+    });
+  });
+
+  describe('pushOrNewArrayToObject', () => {
+    it('should define new array with value when object has no array by provided key', () => {
+      const obj: { ko?: number[] } = {};
+
+      pushOrNewArrayToObject(obj, 'ko', 123);
+
+      expect(obj).toEqual({
+        ko: [123],
+      });
+    });
+
+    it('should push value to array when obj has array by provided key', () => {
+      const obj = { ko: [] as number[] };
+
+      pushOrNewArrayToObject(obj, 'ko', 123);
+
+      expect(obj).toEqual({
+        ko: [123],
+      });
+    });
+  });
+
+  describe('pushOrNewArray', () => {
+    it('should return new array with value when array is not provided', () => {
+      const arr: number[] | undefined = undefined;
+
+      expect(pushOrNewArray(arr, 123)).toEqual([123]);
+    });
+
+    it('should push value to array when array is provided', () => {
+      const arr: number[] | undefined = [];
+
+      expect(pushOrNewArray(arr, 123)).toEqual([123]);
     });
   });
 });

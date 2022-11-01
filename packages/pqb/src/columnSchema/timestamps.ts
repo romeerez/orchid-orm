@@ -1,7 +1,7 @@
 import { ColumnType } from './columnType';
 import { getRawSql, isRaw, raw } from '../common';
 import { Query } from '../query';
-import { makeRegexToFindInSql } from '../utils';
+import { makeRegexToFindInSql, pushOrNewArrayToObject } from '../utils';
 import {
   UpdatedAtDataInjector,
   UpdateQueryData,
@@ -26,9 +26,11 @@ const updatedAtRegex = makeRegexToFindInSql('\\bupdatedAt\\b"?\\s*=');
 const updateUpdatedAtItem = raw('"updatedAt" = now()');
 
 const addHookForUpdate = (q: Query) => {
-  const query = q.query as UpdateQueryData;
-  if (query.updateData) query.updateData.push(updatedAtInjector);
-  else query.updateData = [updatedAtInjector];
+  pushOrNewArrayToObject(
+    q.query as UpdateQueryData,
+    'updateData',
+    updatedAtInjector,
+  );
 };
 
 const updatedAtInjector: UpdatedAtDataInjector = (data) => {

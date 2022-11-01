@@ -1,5 +1,6 @@
 import { Query } from './query';
 import { QueryData } from './sql';
+import { pushOrNewArrayToObject } from './utils';
 
 // TODO: remove
 export const removeFromQuery = <T extends Query>(q: T, key: string): T => {
@@ -26,10 +27,12 @@ export const pushQueryValue = <T extends { query: QueryData }>(
   key: string,
   value: unknown,
 ): T => {
-  if (!q.query[key as keyof typeof q.query])
-    (q.query as Record<string, unknown>)[key] = [value];
-  else (q.query[key as keyof typeof q.query] as unknown[]).push(value);
-  return q as unknown as T;
+  pushOrNewArrayToObject(
+    q.query as unknown as Record<string, unknown[]>,
+    key,
+    value,
+  );
+  return q;
 };
 
 export const setQueryObjectValue = <T extends { query: QueryData }>(

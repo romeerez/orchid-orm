@@ -9,6 +9,7 @@ import { getRaw, isRaw } from '../common';
 import { pushReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
 import { ToSqlCtx } from './toSql';
+import { pushOrNewArray } from '../utils';
 
 export const pushUpdateSql = (
   ctx: ToSqlCtx,
@@ -42,10 +43,7 @@ const processData = (
   data.forEach((item) => {
     if (typeof item === 'function') {
       const result = item(data);
-      if (result) {
-        if (append) append.push(result);
-        else append = [result];
-      }
+      if (result) append = pushOrNewArray(append, result);
     } else if (isRaw(item)) {
       set.push(getRaw(item, ctx.values));
     } else {
