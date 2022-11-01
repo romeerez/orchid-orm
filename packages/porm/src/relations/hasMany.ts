@@ -16,6 +16,7 @@ import {
   MaybeArray,
   Query,
   QueryBase,
+  toSqlCacheKey,
   WhereArg,
   WhereResult,
 } from 'pqb';
@@ -227,6 +228,7 @@ export const makeHasManyMethod = (
             [foreignKey]: data[0][primaryKey],
           })),
         );
+        delete t.query[toSqlCacheKey];
       }
 
       if (params.disconnect || params.set) {
@@ -242,6 +244,7 @@ export const makeHasManyMethod = (
           ._update({ [foreignKey]: null });
 
         if (params.set) {
+          delete t.query[toSqlCacheKey];
           await t
             .where<Query>(
               Array.isArray(params.set)
@@ -255,6 +258,7 @@ export const makeHasManyMethod = (
       }
 
       if (params.delete || params.update) {
+        delete t.query[toSqlCacheKey];
         const q = t._where(
           getWhereForNestedUpdate(
             data,

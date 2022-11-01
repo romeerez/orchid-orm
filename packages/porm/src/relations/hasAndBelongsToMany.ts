@@ -231,10 +231,10 @@ export const makeHasAndBelongsToManyMethod = (
       if (params.create) {
         const ids = await query
           .transacting(q)
-          .pluck(apk)
-          .insertMany(params.create);
+          ._pluck(apk)
+          ._insertMany(params.create);
 
-        await subQuery.transacting(q).insertMany(
+        await subQuery.transacting(q)._insertMany(
           data.flatMap((item) =>
             ids.map((id) => ({
               [fk]: item[pk],
@@ -248,7 +248,7 @@ export const makeHasAndBelongsToManyMethod = (
         await (
           query
             .transacting(q)
-            .whereExists(subQuery, (q) =>
+            ._whereExists(subQuery, (q) =>
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (q as any)
                 ._on(associationForeignKeyFull, associationPrimaryKeyFull)
@@ -259,12 +259,12 @@ export const makeHasAndBelongsToManyMethod = (
                   },
                 }),
             )
-            .where(
+            ._where(
               Array.isArray(params.update.where)
                 ? { OR: params.update.where }
                 : params.update.where,
             ) as WhereResult<Query>
-        ).update<WhereResult<Query>>(params.update.data);
+        )._update<WhereResult<Query>>(params.update.data);
       }
 
       if (params.disconnect) {

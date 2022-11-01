@@ -183,7 +183,7 @@ export const makeHasOneMethod = (
       );
 
       if (create.length) {
-        await t.insertMany(
+        await t._insertMany(
           create.map(([selfData, item]) => ({
             [foreignKey]: selfData[primaryKey],
             ...('create' in item ? item.create : item.connectOrCreate.create),
