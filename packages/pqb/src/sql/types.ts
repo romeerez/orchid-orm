@@ -13,6 +13,7 @@ import { Adapter, QueryResult } from '../adapter';
 import { MaybeArray } from '../utils';
 import { QueryLogger, QueryLogObject } from '../queryMethods/log';
 import { AfterCallback, BeforeCallback } from '../queryMethods/callbacks';
+import { toSqlCacheKey } from './toSql';
 
 export type Sql = {
   text: string;
@@ -63,10 +64,11 @@ export type CommonQueryData = {
   parsers?: ColumnsParsers;
   notFoundDefault?: unknown;
   defaults?: Record<string, unknown>;
-  beforeQuery?: BeforeCallback<Query>[];
-  afterQuery?: AfterCallback<Query>[];
+  beforeQuery?: BeforeCallback[];
+  afterQuery?: AfterCallback[];
   log?: QueryLogObject;
   logger: QueryLogger;
+  [toSqlCacheKey]?: Sql;
 };
 
 export type SelectQueryData = CommonQueryData & {
@@ -107,26 +109,37 @@ export type InsertQueryData = CommonQueryData & {
         expr?: OnConflictItem;
         update?: OnConflictMergeUpdate;
       };
-  beforeInsert?: BeforeCallback<Query>[];
-  afterInsert?: AfterCallback<Query>[];
+  beforeInsert?: BeforeCallback[];
+  afterInsert?: AfterCallback[];
 };
+
+export type UpdateQueryDataObject = Record<
+  string,
+  RawExpression | { op: string; arg: unknown } | unknown
+>;
+
+export type UpdatedAtDataInjector = (
+  data: UpdateQueryDataItem[],
+) => UpdateQueryDataItem | void;
+
+export type UpdateQueryDataItem =
+  | UpdateQueryDataObject
+  | RawExpression
+  | UpdatedAtDataInjector;
 
 export type UpdateQueryData = CommonQueryData & {
   type: 'update';
-  data: (
-    | Record<string, RawExpression | { op: string; arg: unknown } | unknown>
-    | RawExpression
-  )[];
-  beforeUpdate?: BeforeCallback<Query>[];
-  afterUpdate?: AfterCallback<Query>[];
+  updateData: UpdateQueryDataItem[];
+  beforeUpdate?: BeforeCallback[];
+  afterUpdate?: AfterCallback[];
 };
 
 export type DeleteQueryData = CommonQueryData & {
   type: 'delete';
   join?: JoinItem[];
   joinedParsers?: Record<string, ColumnsParsers>;
-  beforeDelete?: BeforeCallback<Query>[];
-  afterDelete?: AfterCallback<Query>[];
+  beforeDelete?: BeforeCallback[];
+  afterDelete?: AfterCallback[];
 };
 
 export type TruncateQueryData = CommonQueryData & {

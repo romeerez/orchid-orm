@@ -1,5 +1,5 @@
 import { Query, Selectable } from './query';
-import { ColumnOutput, ColumnType } from './columnSchema';
+import { ColumnOutput, ColumnType } from './columnSchema/columnType';
 
 export type AliasOrTable<T extends Pick<Query, 'tableAlias' | 'table'>> =
   T['tableAlias'] extends string
@@ -78,6 +78,10 @@ export const isRaw = (obj: object): obj is RawExpression => '__raw' in obj;
 
 export const getRaw = (raw: RawExpression, values: unknown[]) => {
   values.push(...raw.__values);
+  return raw.__raw;
+};
+
+export const getRawSql = (raw: RawExpression) => {
   return raw.__raw;
 };
 

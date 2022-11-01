@@ -25,7 +25,22 @@ export type ToSqlCtx = {
   values: unknown[];
 };
 
-export const toSql = (model: Query, values: unknown[] = []): Sql => {
+export type toSqlCacheKey = typeof toSqlCacheKey;
+export const toSqlCacheKey = Symbol('toSqlCache');
+
+export type ToSqlOptions = {
+  clearCache?: boolean;
+  values?: unknown[];
+};
+
+export const toSql = (model: Query, options?: ToSqlOptions): Sql => {
+  return (
+    (!options?.clearCache && model.query[toSqlCacheKey]) ||
+    (model.query[toSqlCacheKey] = makeSql(model, options))
+  );
+};
+
+const makeSql = (model: Query, { values = [] }: ToSqlOptions = {}): Sql => {
   const query = model.query;
   const sql: string[] = [];
   const ctx: ToSqlCtx = {
@@ -130,7 +145,7 @@ export const toSql = (model: Query, values: unknown[] = []): Sql => {
       if (isRaw(item.arg)) {
         itemSql = getRaw(item.arg, values);
       } else {
-        const argSql = item.arg.toSql(values);
+        const argSql = item.arg.toSql({ values });
         itemSql = argSql.text;
       }
       sql.push(`${item.kind} ${item.wrap ? `(${itemSql})` : itemSql}`);

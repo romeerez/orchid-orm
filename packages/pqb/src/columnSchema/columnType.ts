@@ -3,6 +3,7 @@ import { JSONTypeAny } from './json/typeBase';
 import { ColumnsShape } from './columnsSchema';
 import { RawExpression, StringKey } from '../common';
 import { MaybeArray } from '../utils';
+import { Query } from '../query';
 
 export type ColumnOutput<T extends ColumnType> = T['type'];
 
@@ -44,6 +45,7 @@ export type ColumnData = {
   collate?: string;
   compression?: string;
   foreignKey?: ForeignKey<string, string[]>;
+  modifyQuery?: (q: Query) => void;
 };
 
 type ForeignKeyMatch = 'FULL' | 'PARTIAL' | 'SIMPLE';
@@ -108,6 +110,16 @@ export type ForeignKeyModelWithColumns = new () => {
 
 export type ColumnNameOfModel<Model extends ForeignKeyModelWithColumns> =
   StringKey<keyof InstanceType<Model>['columns']['shape']>;
+
+const addColumnData = <T extends ColumnType, K extends keyof ColumnData>(
+  q: T,
+  key: K,
+  value: T['data'][K],
+): T => {
+  const cloned = Object.create(q);
+  cloned.data = { ...q.data, [key]: value };
+  return cloned;
+};
 
 export abstract class ColumnType<
   Type = unknown,
@@ -217,51 +229,43 @@ export abstract class ColumnType<
     this: T,
     value: T['type'] | RawExpression,
   ): T & { hasDefault: true } {
-    const cloned = Object.create(this);
-    cloned.data = { ...cloned.data, default: value };
-    return cloned;
+    return addColumnData(this, 'default', value as unknown) as T & {
+      hasDefault: true;
+    };
   }
 
   index<T extends ColumnType>(
     this: T,
     options: Omit<SingleColumnIndexOptions, 'column'> = {},
   ): T {
-    const cloned = Object.create(this);
-    cloned.data = { ...cloned.data, index: options };
-    return cloned;
+    return addColumnData(this, 'index', options);
   }
 
   unique<T extends ColumnType>(
     this: T,
     options: Omit<SingleColumnIndexOptions, 'column' | 'unique'> = {},
   ): T {
-    const cloned = Object.create(this);
-    cloned.data = { ...cloned.data, index: { ...options, unique: true } };
-    return cloned;
+    return addColumnData(this, 'index', { ...options, unique: true });
   }
 
   comment<T extends ColumnType>(this: T, comment: string): T {
-    const cloned = Object.create(this);
-    cloned.data = { ...cloned.data, comment };
-    return cloned;
+    return addColumnData(this, 'comment', comment);
   }
 
   validationDefault<T extends ColumnType>(this: T, value: T['type']): T {
-    const cloned = Object.create(this);
-    cloned.data = { ...cloned.data, validationDefault: value };
-    return cloned;
+    return addColumnData(this, 'validationDefault', value as unknown);
   }
 
   compression<T extends ColumnType>(this: T, compression: string): T {
-    const cloned = Object.create(this);
-    cloned.data = { ...cloned.data, compression };
-    return cloned;
+    return addColumnData(this, 'compression', compression);
   }
 
   collate<T extends ColumnType>(this: T, collate: string): T {
-    const cloned = Object.create(this);
-    cloned.data = { ...cloned.data, collate };
-    return cloned;
+    return addColumnData(this, 'collate', collate);
+  }
+
+  modifyQuery<T extends ColumnType>(this: T, cb: (q: Query) => void): T {
+    return addColumnData(this, 'modifyQuery', cb);
   }
 
   transform<T extends ColumnType, Transformed>(

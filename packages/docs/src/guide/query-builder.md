@@ -34,7 +34,7 @@ const results = await query
 
 Mutating methods started with `_` are used internally, however, their use is not recommended because it would be easier to make mistakes, code will be less obvious.
 
-## loading records, single record, arrays, values
+## querying multiple records, single, arrays, values
 
 Query methods are building blocks for a query chain, and when query is ready use `await` to get all records:
 ```ts
@@ -2313,4 +2313,28 @@ Note that currently it does not affect on resulting TypeScript type, it may be i
 ```ts
 // Clears select statement but resulting type still has `id` column selected.
 Table.select('id').clear('id')
+```
+
+## toSql
+
+Call `toSql` on a query to get an object with `text` SQL string and `values` array of binding values:
+
+```ts
+const sql = Table.select('id', 'name').where({ name: 'name' }).toSql()
+
+expect(sql.text).toBe('SELECT "table"."id", "table"."name" FROM "table" WHERE "table"."name" = $1')
+expect(sql.values).toEqual(['name'])
+```
+
+`toSql` is called internally when awaiting a query.
+
+It is caching result. Not mutating query methods are resetting the cache, but need to be careful with mutating methods which starts with `_` - they won't reset the cache, which may lead to unwanted result.
+
+`toSql` optionally accepts such parameters:
+
+```ts
+type ToSqlOptions = {
+  clearCache?: true
+  values?: []
+}
 ```

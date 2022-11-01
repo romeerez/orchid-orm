@@ -173,7 +173,7 @@ const pushSubQuerySql = (
       throw new UnhandledTypeError(returnType);
   }
 
-  let subQuerySql = `(${query.toSql(values).text})`;
+  let subQuerySql = `(${query.toSql({ values }).text})`;
   const { coalesceValue } = query.query;
   if (coalesceValue !== undefined) {
     const value =

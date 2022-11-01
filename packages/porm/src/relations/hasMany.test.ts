@@ -294,9 +294,8 @@ describe('hasMany', () => {
       text1: string;
       text2: string;
     }) => {
-      expect(messages).toEqual([
+      expect(messages).toMatchObject([
         {
-          ...messageData,
           id: messages[0].id,
           authorId: userId,
           text: text1,
@@ -304,7 +303,6 @@ describe('hasMany', () => {
           meta: null,
         },
         {
-          ...messageData,
           id: messages[1].id,
           authorId: userId,
           text: text2,
@@ -584,7 +582,7 @@ describe('hasMany', () => {
       it('should support connect or create in batch insert', async () => {
         const chatId = await db.chat.get('id').insert(chatData);
         const [{ id: message1Id }, { id: message4Id }] = await db.message
-          .selectAll()
+          .select('id')
           .insertMany([
             {
               ...messageData,

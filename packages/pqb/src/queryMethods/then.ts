@@ -63,8 +63,8 @@ const then = async (
   let sql: Sql | undefined;
   let logData: unknown | undefined;
   try {
-    let beforeCallbacks: BeforeCallback<Query>[] | undefined;
-    let afterCallbacks: AfterCallback<Query>[] | undefined;
+    let beforeCallbacks: BeforeCallback[] | undefined;
+    let afterCallbacks: AfterCallback[] | undefined;
     if (q.query.type === 'insert') {
       beforeCallbacks = q.query.beforeInsert;
       afterCallbacks = q.query.afterInsert;
@@ -80,10 +80,6 @@ const then = async (
       await Promise.all(
         getCallbacks(beforeCallbacks, q.query.beforeQuery).map((cb) => cb(q)),
       );
-    }
-
-    if (q.query.beforeQuery) {
-      await Promise.all(q.query.beforeQuery.map((cb) => cb(q)));
     }
 
     sql = q.toSql();
@@ -228,9 +224,7 @@ const parseValue = (value: unknown, query: Query) => {
   return value;
 };
 
-const getCallbacks = <
-  T extends BeforeCallback<Query>[] | AfterCallback<Query>[],
->(
+const getCallbacks = <T extends BeforeCallback[] | AfterCallback[]>(
   first?: T,
   second?: T,
 ): T => {

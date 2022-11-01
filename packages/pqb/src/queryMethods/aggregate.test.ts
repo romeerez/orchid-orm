@@ -351,7 +351,7 @@ describe('aggregate', () => {
       expectQueryNotMutated(q);
 
       q[`_${method}` as `_count`]('name');
-      expectSql(q.toSql(), expectedSql);
+      expectSql(q.toSql({ clearCache: true }), expectedSql);
     });
 
     it('should support raw sql parameter', () => {
@@ -449,7 +449,7 @@ describe('aggregate', () => {
       expectQueryNotMutated(q);
 
       q[`_${method}` as '_jsonObjectAgg']({ alias: 'name' });
-      expectSql(q.toSql(), expectedSql, ['alias']);
+      expectSql(q.toSql({ clearCache: true }), expectedSql, ['alias']);
     });
 
     it('should support raw sql parameter', () => {
@@ -545,7 +545,7 @@ describe('aggregate', () => {
       expectQueryNotMutated(q);
 
       q._stringAgg('name', ' & ');
-      expectSql(q.toSql(), expectedSql, [' & ']);
+      expectSql(q.toSql({ clearCache: true }), expectedSql, [' & ']);
     });
 
     it('should support raw sql parameter', async () => {

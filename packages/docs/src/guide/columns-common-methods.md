@@ -68,9 +68,25 @@ Adds `createdAt` and `updatedAt` columns of type `timestamp` (without time zone)
 
 `timestamps` function is using `timestamp` internally. If `timestamp` is overridden to be parsed into `Date`, so will do `timestamps`.
 
+`updatedAt` adds a hook to refresh its date on every `update` query, unless you specify `updatedAt` value explicitly in the update.
+
 ```ts
 const someTable = db('someTable', (t) => ({
   ...t.timestamps()
+}))
+```
+
+## modifyQuery
+
+Specify a callback which can modify a model for ORM or table instance for query builder.
+
+When mutating a query in this callback, the changes will be applied for all future queries of this table.
+
+```ts
+const someTable = db('someTable', (t) => ({
+  name: t.text().modifyQuery((table) => {
+    // table argument === someTable from outside
+  })
 }))
 ```
 

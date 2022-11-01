@@ -33,7 +33,7 @@ const getFrom = (
       }
 
       if (!query.from.table) {
-        const sql = query.from.toSql(values);
+        const sql = query.from.toSql({ values });
         return `(${sql.text})`;
       }
 
@@ -41,7 +41,7 @@ const getFrom = (
       const keys = Object.keys(q) as (keyof SelectQueryData)[];
       // if query contains more than just schema return (SELECT ...)
       if (keys.some((key) => queryKeysOfNotSimpleQuery.includes(key))) {
-        const sql = query.from.toSql(values);
+        const sql = query.from.toSql({ values });
         return `(${sql.text})`;
       }
 

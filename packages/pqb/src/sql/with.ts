@@ -14,7 +14,7 @@ export const pushWithSql = (
     if (isRaw(query)) {
       inner = getRaw(query, ctx.values);
     } else {
-      inner = query.toSql(ctx.values).text;
+      inner = query.toSql({ values: ctx.values }).text;
     }
 
     ctx.sql.push(

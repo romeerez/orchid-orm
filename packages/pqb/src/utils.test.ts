@@ -1,5 +1,13 @@
 import { assertType } from './test-utils';
-import { MaybeArray, SetOptional, SomeIsTrue } from './utils';
+import {
+  GetTypeOrRaw,
+  GetTypesOrRaw,
+  makeRegexToFindInSql,
+  MaybeArray,
+  SetOptional,
+  SomeIsTrue,
+} from './utils';
+import { RawExpression } from './common';
 
 describe('utils', () => {
   describe('SomeIsTrue', () => {
@@ -22,7 +30,7 @@ describe('utils', () => {
     });
   });
 
-  describe('setOptional', () => {
+  describe('SetOptional', () => {
     it('should make specified keys optional', () => {
       assertType<
         SetOptional<{ a: number; b: string; c: boolean }, 'b' | 'c'>,
@@ -32,6 +40,34 @@ describe('utils', () => {
           c?: boolean;
         }
       >();
+    });
+  });
+
+  describe('GetTypesOrRaw', () => {
+    it('should add each element to union with RawExpression', () => {
+      assertType<
+        GetTypesOrRaw<[number, string]>,
+        [number | RawExpression, string | RawExpression]
+      >();
+    });
+  });
+
+  describe('GetTypeOrRaw', () => {
+    it('should add type to union with RawExpression', () => {
+      assertType<GetTypeOrRaw<number>, number | RawExpression>();
+    });
+  });
+
+  describe('makeRegexToFindWordInSql', () => {
+    it('should return a proper regex', () => {
+      const regex = makeRegexToFindInSql('\\bupdatedAt\\b');
+
+      expect('koupdatedAtko'.match(regex)).toBe(null);
+      expect('updatedAtko'.match(regex)).toBe(null);
+      expect('koupdatedAt'.match(regex)).toBe(null);
+      expect('updatedAt'.match(regex)).toEqual(['updatedAt']);
+      expect(' updatedAt '.match(regex)).toEqual(['updatedAt']);
+      expect("'updatedAt'".match(regex)).toEqual(null);
     });
   });
 });

@@ -1,7 +1,11 @@
 import { QueryBase } from '../query';
-import { UpdateQueryData } from './types';
+import {
+  UpdateQueryData,
+  UpdateQueryDataItem,
+  UpdateQueryDataObject,
+} from './types';
 import { addValue, q, quoteSchemaAndTable } from './common';
-import { getRaw, isRaw, RawExpression } from '../common';
+import { getRaw, isRaw } from '../common';
 import { pushReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
 import { ToSqlCtx } from './toSql';
@@ -22,8 +26,27 @@ export const pushUpdateSql = (
   ctx.sql.push('SET');
 
   const set: string[] = [];
-  query.data.forEach((item) => {
-    if (isRaw(item)) {
+  processData(ctx, set, query.updateData);
+  ctx.sql.push(set.join(', '));
+
+  pushWhereStatementSql(ctx, model, query, quotedAs);
+  pushReturningSql(ctx, model, query, quotedAs);
+};
+
+const processData = (
+  ctx: ToSqlCtx,
+  set: string[],
+  data: UpdateQueryDataItem[],
+) => {
+  let append: UpdateQueryDataItem[] | undefined;
+  data.forEach((item) => {
+    if (typeof item === 'function') {
+      const result = item(data);
+      if (result) {
+        if (append) append.push(result);
+        else append = [result];
+      }
+    } else if (isRaw(item)) {
       set.push(getRaw(item, ctx.values));
     } else {
       for (const key in item) {
@@ -34,16 +57,14 @@ export const pushUpdateSql = (
       }
     }
   });
-  ctx.sql.push(set.join(', '));
 
-  pushWhereStatementSql(ctx, model, query, quotedAs);
-  pushReturningSql(ctx, model, query, quotedAs);
+  if (append) processData(ctx, set, append);
 };
 
 const processValue = (
   values: unknown[],
   key: string,
-  value: Exclude<UpdateQueryData['data'][number], RawExpression>[string],
+  value: UpdateQueryDataObject[string],
 ) => {
   if (value && typeof value === 'object') {
     if (isRaw(value)) {

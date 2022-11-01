@@ -1,11 +1,11 @@
 import { Query } from '../query';
 import { pushQueryValue } from '../queryDataUtils';
 
-export type BeforeCallback<T extends Query> = (
+export type BeforeCallback<T extends Query = Query> = (
   query: T,
 ) => void | Promise<void>;
 
-export type AfterCallback<T extends Query> = (
+export type AfterCallback<T extends Query = Query> = (
   query: T,
   data: unknown,
 ) => void | Promise<void>;

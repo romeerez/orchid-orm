@@ -58,7 +58,7 @@ import {
 } from './columnType';
 import { emptyObject, EmptyObject, MaybeArray, toArray } from '../utils';
 import { ColumnsShape } from './columnsSchema';
-import { raw } from '../common';
+import { timestamps } from './timestamps';
 
 export type ColumnTypes = typeof columnTypes;
 
@@ -177,17 +177,7 @@ export const columnTypes = {
   jsonText: () => new JSONTextColumn(),
   array: <Item extends ColumnType>(item: Item) => new ArrayColumn(item),
 
-  timestamps<T extends ColumnType>(this: {
-    timestamp(): T;
-  }): {
-    createdAt: T & { hasDefault: true };
-    updatedAt: T & { hasDefault: true };
-  } {
-    return {
-      createdAt: this.timestamp().default(raw('now()')),
-      updatedAt: this.timestamp().default(raw('now()')),
-    };
-  },
+  timestamps,
 
   primaryKey(columns: string[], options?: { name?: string }) {
     tableData.primaryKey = { columns, options };

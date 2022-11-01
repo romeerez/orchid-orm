@@ -28,8 +28,8 @@ export class Clear {
         removeFromQuery(this, 'or');
       } else if (clear === 'counters') {
         if ('type' in this.query && this.query.type === 'update') {
-          this.query.data = this.query.data.filter((item) => {
-            if (!isRaw(item)) {
+          this.query.updateData = this.query.updateData.filter((item) => {
+            if (!isRaw(item) && typeof item !== 'function') {
               let removed = false;
               for (const key in item) {
                 const value = item[key] as Record<string, unknown>;

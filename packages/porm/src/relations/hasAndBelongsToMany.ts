@@ -8,6 +8,7 @@ import {
   MaybeArray,
   Query,
   QueryBase,
+  toSqlCacheKey,
   WhereArg,
   WhereResult,
 } from 'pqb';
@@ -281,6 +282,7 @@ export const makeHasAndBelongsToManyMethod = (
       if (params.set) {
         const j = queryJoinTable(state, q, data);
         await j._delete();
+        delete j.query[toSqlCacheKey];
 
         const ids = await queryRelatedTable(query, q, params.set)._pluck(apk);
 

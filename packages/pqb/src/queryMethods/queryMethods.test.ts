@@ -480,7 +480,7 @@ describe('queryMethods', () => {
       expectQueryNotMutated(q);
 
       q._group(raw('id'), raw('name'));
-      expectSql(q.toSql(), expectedSql);
+      expectSql(q.toSql({ clearCache: true }), expectedSql);
     });
   });
 

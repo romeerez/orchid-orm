@@ -1,5 +1,5 @@
 import { RawExpression } from './common';
-import { QueryData } from './sql';
+import { QueryData, toSqlCacheKey } from './sql';
 
 export type SomeIsTrue<T extends unknown[]> = T extends [
   infer Head,
@@ -124,7 +124,7 @@ export const joinTruthy = (...strings: (string | false | undefined)[]) => {
 };
 
 export const getClonedQueryData = (query: QueryData): QueryData => {
-  const cloned = { ...query };
+  const cloned = { ...query, [toSqlCacheKey]: undefined };
 
   for (const key in query) {
     if (Array.isArray(query[key as keyof QueryData])) {
@@ -150,3 +150,7 @@ export const noop = () => {};
 
 export type EmptyObject = typeof emptyObject;
 export const emptyObject = {};
+
+export const makeRegexToFindInSql = (value: string) => {
+  return new RegExp(`${value}(?=(?:[^']*'[^']*')*[^']*$)`, 'g');
+};

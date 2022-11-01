@@ -4,7 +4,15 @@ import {
   defaultsKey,
   Query,
 } from './query';
-import { QueryMethods } from './queryMethods/queryMethods';
+import {
+  QueryMethods,
+  handleResult,
+  ThenResult,
+  WhereQueryBuilder,
+  OnQueryBuilder,
+  logParamToLogObject,
+  QueryLogOptions,
+} from './queryMethods';
 import { QueryData, SelectQueryData, Sql } from './sql';
 import { AdapterOptions, Adapter } from './adapter';
 import {
@@ -19,10 +27,6 @@ import {
 } from './columnSchema';
 import { applyMixins } from './utils';
 import { StringKey } from './common';
-import { handleResult, ThenResult } from './queryMethods/then';
-import { WhereQueryBuilder } from './queryMethods/where';
-import { OnQueryBuilder } from './queryMethods/join';
-import { logParamToLogObject, QueryLogOptions } from './queryMethods/log';
 
 export type DbTableOptions = {
   schema?: string;
@@ -128,11 +132,17 @@ export class Db<
 
     const columnsParsers = {} as ColumnsParsers;
     let hasParsers = false;
+    let modifyQuery: ((q: Query) => void)[] | undefined;
     for (const key in shape) {
       const column = shape[key];
       if (column.parseFn) {
         hasParsers = true;
         columnsParsers[key] = column.parseFn;
+      }
+
+      if (column.data.modifyQuery) {
+        if (!modifyQuery) modifyQuery = [column.data.modifyQuery];
+        else modifyQuery.push(column.data.modifyQuery);
       }
     }
     this.columnsParsers = hasParsers ? columnsParsers : undefined;
@@ -148,6 +158,8 @@ export class Db<
       : toSql;
 
     this.relations = {} as Relations;
+
+    modifyQuery?.forEach((cb) => cb(this));
   }
 }
 

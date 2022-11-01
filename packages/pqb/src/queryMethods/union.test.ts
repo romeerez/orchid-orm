@@ -45,7 +45,7 @@ import { raw } from '../common';
       );
       q[`_${what}All` as '_unionAll']([raw('SELECT 2')], true);
       expectSql(
-        q.toSql(),
+        q.toSql({ clearCache: true }),
         `
         SELECT "user"."id" FROM "user"
         ${upper}

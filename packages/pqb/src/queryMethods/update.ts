@@ -132,12 +132,12 @@ const applyCountChange = <T extends Query>(
     map = { [data as string]: { op, arg: 1 } };
   }
 
-  pushQueryValue(self, 'data', map);
+  pushQueryValue(self, 'updateData', map);
   return self as unknown as UpdateResult<T>;
 };
 
 const checkIfUpdateIsEmpty = (q: UpdateQueryData) => {
-  return !q.data?.some((item) => isRaw(item) || Object.keys(item).length);
+  return !q.updateData?.some((item) => isRaw(item) || Object.keys(item).length);
 };
 
 const update = <T extends Query>(q: T, forceAll: boolean): UpdateResult<T> => {
@@ -172,7 +172,7 @@ export class Update {
     const data = args[0];
 
     const set: Record<string, unknown> = { ...data };
-    pushQueryValue(this, 'data', set);
+    pushQueryValue(this, 'updateData', set);
 
     const relations = this.relations as Record<string, Relation>;
 
@@ -314,7 +314,7 @@ export class Update {
     this: T,
     ...args: UpdateRawArgs<T, ForceAll>
   ): UpdateResult<T> {
-    pushQueryValue(this, 'data', args[0]);
+    pushQueryValue(this, 'updateData', args[0]);
     return update(this, (args as [unknown, boolean])[1]);
   }
 

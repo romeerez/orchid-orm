@@ -202,7 +202,7 @@ describe('having', () => {
     expectQueryNotMutated(q);
 
     q._having(raw('count(*) = 1'), raw('sum(id) = 2'));
-    expectSql(q.toSql(), expectedSql);
+    expectSql(q.toSql({ clearCache: true }), expectedSql);
   });
 
   describe('havingOr', () => {

@@ -249,8 +249,7 @@ describe('hasOne', () => {
           picture: null,
         });
 
-        expect(profile).toEqual({
-          ...profileData,
+        expect(profile).toMatchObject({
           id: profile.id,
           bio,
           userId: user.id,

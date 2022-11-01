@@ -60,7 +60,7 @@ describe('window functions', () => {
         partitionBy: 'name',
         order: { createdAt: 'DESC' },
       });
-      expectSql(q.toSql(), expectedSql);
+      expectSql(q.toSql({ clearCache: true }), expectedSql);
     });
   });
 });

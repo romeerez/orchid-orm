@@ -25,6 +25,7 @@ import {
   SortDir,
   Sql,
   toSql,
+  ToSqlOptions,
   TruncateQueryData,
 } from '../sql';
 import {
@@ -182,8 +183,8 @@ export class QueryMethods {
     return cloned;
   }
 
-  toSql(this: Query, values?: unknown[]): Sql {
-    return toSql(this, values);
+  toSql(this: Query, options?: ToSqlOptions): Sql {
+    return toSql(this, options);
   }
 
   distinct<T extends Query>(this: T, ...columns: Expression<T>[]): T {

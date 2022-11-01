@@ -39,7 +39,7 @@ describe('clear', () => {
 
   it('should clear increment and decrement', () => {
     const expectedSql = line(`
-      UPDATE "user" SET "name" = $1
+      UPDATE "user" SET "name" = $1, "updatedAt" = now()
     `);
     const expectedValues = ['new name'];
 

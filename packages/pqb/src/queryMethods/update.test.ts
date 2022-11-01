@@ -42,7 +42,7 @@ describe('update', () => {
       query.toSql(),
       `
         UPDATE "user"
-        SET name = 'name'
+        SET name = 'name', "updatedAt" = now()
         WHERE "user"."id" = $1 OR "user"."id" = $2
       `,
       [users[0].id, users[1].id],
@@ -69,7 +69,8 @@ describe('update', () => {
       `
         UPDATE "user"
         SET "name" = $1,
-            "password" = $2
+            "password" = $2,
+            "updatedAt" = now()
         WHERE "user"."id" = $3
       `,
       [update.name, update.password, id],
@@ -99,7 +100,8 @@ describe('update', () => {
       `
         UPDATE "user"
         SET "name" = $1,
-            "password" = $2
+            "password" = $2,
+            "updatedAt" = now()
         WHERE "user"."id" = $3
         RETURNING "user"."id"
       `,
@@ -126,7 +128,8 @@ describe('update', () => {
       `
         UPDATE "user"
         SET "name" = $1,
-            "password" = $2
+            "password" = $2,
+            "updatedAt" = now()
         WHERE "user"."id" = $3
         RETURNING "user"."id", "user"."name"
       `,
@@ -151,7 +154,8 @@ describe('update', () => {
       `
         UPDATE "user"
         SET "name" = $1,
-            "password" = $2
+            "password" = $2,
+            "updatedAt" = now()
         WHERE "user"."id" = $3
         RETURNING *
       `,
@@ -183,7 +187,8 @@ describe('update', () => {
       `
         UPDATE "user"
         SET "name" = $1,
-            "password" = $2
+            "password" = $2,
+            "updatedAt" = now()
         WHERE "user"."id" IN ($3, $4)
         RETURNING "user"."id", "user"."name"
       `,
@@ -215,7 +220,8 @@ describe('update', () => {
       `
         UPDATE "user"
         SET "name" = $1,
-            "password" = $2
+            "password" = $2,
+            "updatedAt" = now()
         WHERE "user"."id" IN ($3, $4)
         RETURNING *
       `,
@@ -243,7 +249,8 @@ describe('update', () => {
       `
         UPDATE "user"
         SET "name" = $1,
-            "data" = $2
+            "data" = $2,
+            "updatedAt" = now()
         WHERE "user"."id" = $3
       `,
       ['new name', null, 1],
@@ -261,7 +268,7 @@ describe('update', () => {
       query.toSql(),
       `
         UPDATE "user"
-        SET "name" = 'raw sql'
+        SET "name" = 'raw sql', "updatedAt" = now()
         WHERE "user"."id" = $1
       `,
       [1],
@@ -285,7 +292,8 @@ describe('update', () => {
       `
         UPDATE "user"
         SET "name" = $1,
-            "password" = $2
+            "password" = $2,
+            "updatedAt" = now()
         WHERE "user"."id" = $3
         RETURNING *
       `,
@@ -337,7 +345,8 @@ describe('update', () => {
         query.toSql(),
         `
           UPDATE "user"
-          SET "age" = "age" + $1
+          SET "age" = "age" + $1,
+              "updatedAt" = now()
         `,
         [1],
       );
@@ -349,7 +358,8 @@ describe('update', () => {
         query.toSql(),
         `
           UPDATE "user"
-          SET "age" = "age" + $1
+          SET "age" = "age" + $1,
+              "updatedAt" = now()
         `,
         [3],
       );
@@ -361,7 +371,8 @@ describe('update', () => {
         query.toSql(),
         `
           UPDATE "user"
-          SET "age" = "age" + $1
+          SET "age" = "age" + $1,
+              "updatedAt" = now()
           RETURNING "user"."id"
         `,
         [3],
@@ -379,7 +390,8 @@ describe('update', () => {
         query.toSql(),
         `
           UPDATE "user"
-          SET "age" = "age" - $1
+          SET "age" = "age" - $1,
+              "updatedAt" = now()
         `,
         [1],
       );
@@ -391,7 +403,8 @@ describe('update', () => {
         query.toSql(),
         `
           UPDATE "user"
-          SET "age" = "age" - $1
+          SET "age" = "age" - $1,
+              "updatedAt" = now()
         `,
         [3],
       );
@@ -403,7 +416,8 @@ describe('update', () => {
         query.toSql(),
         `
           UPDATE "user"
-          SET "age" = "age" - $1
+          SET "age" = "age" - $1,
+              "updatedAt" = now()
           RETURNING "user"."id"
         `,
         [3],
@@ -430,7 +444,8 @@ describe('update', () => {
           SET "name" = $1,
               "id" = "id" + $2,
               "password" = $3,
-              "age" = "age" - $4
+              "age" = "age" - $4,
+              "updatedAt" = now()
           WHERE "user"."id" = $5
           RETURNING "user"."id"
         `,

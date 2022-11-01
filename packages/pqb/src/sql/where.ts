@@ -252,7 +252,7 @@ const pushIn = (
   } else if (isRaw(arg.values)) {
     value = getRaw(arg.values, values);
   } else {
-    const sql = arg.values.toSql(values);
+    const sql = arg.values.toSql({ values });
     value = `(${sql.text})`;
   }
 
