@@ -165,8 +165,8 @@ export const pushOrNewArrayToObject = <
     ? Exclude<Obj[Key], undefined>[number]
     : never,
 ) => {
-  if (obj[key]) (obj[key] as unknown[]).push(value);
-  else (obj[key] as unknown[]) = [value];
+  if (obj[key]) (obj[key] as unknown as unknown[]).push(value);
+  else (obj[key] as unknown as unknown[]) = [value];
 };
 
 export const pushOrNewArray = <Arr extends unknown[]>(
