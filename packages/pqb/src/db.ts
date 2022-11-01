@@ -13,7 +13,7 @@ import {
   logParamToLogObject,
   QueryLogOptions,
 } from './queryMethods';
-import { QueryData, SelectQueryData, Sql } from './sql';
+import { QueryData, SelectQueryData, Sql, ToSqlOptions } from './sql';
 import { AdapterOptions, Adapter } from './adapter';
 import {
   ColumnsShape,
@@ -147,12 +147,12 @@ export class Db<
     this.columnsParsers = hasParsers ? columnsParsers : undefined;
 
     this.toSql = defaultSelect
-      ? function <T extends Query>(this: T, values?: unknown[]): Sql {
+      ? function <T extends Query>(this: T, options?: ToSqlOptions): Sql {
           const q = this.clone();
           if (!(q.query as SelectQueryData).select) {
             (q.query as SelectQueryData).select = defaultSelect as string[];
           }
-          return toSql.call(q, values);
+          return toSql.call(q, options);
         }
       : toSql;
 
