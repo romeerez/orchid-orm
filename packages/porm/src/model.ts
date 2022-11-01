@@ -13,27 +13,20 @@ export type ModelClass<T extends Model = Model> = new () => T;
 
 export type ModelClasses = Record<string, ModelClass>;
 
-export type ModelToDb<
-  T extends ModelClass,
-  Model extends InstanceType<T> = InstanceType<T>,
-> = Db<
-  Model['table'],
-  Model['columns']['shape'],
-  'relations' extends keyof Model
-    ? Model['relations'] extends RelationThunks
+export type ModelToDb<T extends Model> = Db<
+  T['table'],
+  T['columns']['shape'],
+  'relations' extends keyof T
+    ? T['relations'] extends RelationThunks
       ? {
-          [K in keyof Model['relations']]: Relation<
-            Model,
-            Model['relations'],
-            K
-          >;
+          [K in keyof T['relations']]: Relation<T, T['relations'], K>;
         }
       : Query['relations']
     : Query['relations']
 >;
 
-export type DbModel<T extends ModelClass> = ModelToDb<T> &
-  Omit<MapRelations<InstanceType<T>>, keyof Query>;
+export type DbModel<T extends Model> = ModelToDb<T> &
+  Omit<MapRelations<T>, keyof Query>;
 
 type ModelConfig = {
   shape: ColumnsShape;

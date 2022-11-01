@@ -4,7 +4,7 @@ import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
 
 export type PORM<T extends ModelClasses> = {
-  [K in keyof T]: DbModel<T[K]>;
+  [K in keyof T]: DbModel<InstanceType<T[K]>>;
 } & {
   $transaction: typeof transaction;
   $adapter: Adapter;

@@ -45,7 +45,7 @@ export type Relation<
   T extends Model,
   Relations extends RelationThunks,
   K extends keyof Relations,
-  M extends Query = DbModel<ReturnType<Relations[K]['fn']>>,
+  M extends Query = DbModel<InstanceType<ReturnType<Relations[K]['fn']>>>,
   Info extends RelationInfo = RelationInfo<T, Relations, Relations[K]>,
 > = {
   type: Relations[K]['type'];
@@ -69,7 +69,7 @@ export type Relation<
 export type RelationScopeOrModel<Relation extends RelationThunkBase> =
   Relation['options']['scope'] extends (q: Query) => Query
     ? ReturnType<Relation['options']['scope']>
-    : DbModel<ReturnType<Relation['fn']>>;
+    : DbModel<InstanceType<ReturnType<Relation['fn']>>>;
 
 export type RelationInfo<
   T extends Model = Model,
@@ -122,8 +122,8 @@ export type MapRelations<T extends Model> = 'relations' extends keyof T
 type ApplyRelationData = {
   relationName: string;
   relation: RelationThunk;
-  dbModel: DbModel<ModelClass>;
-  otherDbModel: DbModel<ModelClass>;
+  dbModel: DbModel<Model>;
+  otherDbModel: DbModel<Model>;
 };
 
 type DelayedRelations = Map<Query, Record<string, ApplyRelationData[]>>;
