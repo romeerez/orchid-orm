@@ -31,7 +31,9 @@ export type UpdateData<T extends Query> = {
         ? UpdateHasAndBelongsToManyData<T['relations'][K]>
         : never;
     }
-  : EmptyObject);
+  : EmptyObject) & {
+    __raw?: never; // forbid RawExpression argument
+  };
 
 type UpdateBelongsToData<T extends Query, Rel extends BelongsToRelation> =
   | { disconnect: boolean }
@@ -96,8 +98,14 @@ type UpdateHasAndBelongsToManyData<Rel extends HasAndBelongsToManyRelation> = {
 type UpdateArgs<T extends Query, ForceAll extends boolean> = (
   T['hasWhere'] extends true ? true : ForceAll
 ) extends true
-  ? [update: RawExpression | UpdateData<T>, forceAll?: ForceAll]
-  : [update: RawExpression | UpdateData<T>, forceAll: true];
+  ? [update: UpdateData<T>]
+  : [update: UpdateData<T>, forceAll: true];
+
+type UpdateRawArgs<T extends Query, ForceAll extends boolean> = (
+  T['hasWhere'] extends true ? true : ForceAll
+) extends true
+  ? [update: RawExpression]
+  : [update: RawExpression, forceAll: true];
 
 type UpdateResult<T extends Query> = T['hasSelect'] extends false
   ? SetQueryReturnsRowCount<T>
@@ -132,6 +140,21 @@ const checkIfUpdateIsEmpty = (q: UpdateQueryData) => {
   return !q.data?.some((item) => isRaw(item) || Object.keys(item).length);
 };
 
+const update = <T extends Query>(q: T, forceAll: boolean): UpdateResult<T> => {
+  const { query } = q;
+  query.type = 'update';
+
+  if (!query.and?.length && !query.or?.length && !forceAll) {
+    throw new Error('No where conditions or forceAll flag provided to update');
+  }
+
+  if (!query.select) {
+    query.returnType = 'rowCount';
+  }
+
+  return q as unknown as UpdateResult<T>;
+};
+
 export class Update {
   update<T extends Query, ForceAll extends boolean = false>(
     this: T,
@@ -141,161 +164,158 @@ export class Update {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return q._update(...(args as any));
   }
-
   _update<T extends Query, ForceAll extends boolean = false>(
     this: T,
     ...args: UpdateArgs<T, ForceAll>
   ): UpdateResult<T> {
-    const [data, forceAll] = args as unknown as [
-      Record<string, unknown>,
-      boolean | undefined,
-    ];
     const { query } = this;
-    query.type = 'update';
+    const data = args[0];
 
-    if (!query.and?.length && !query.or?.length && !forceAll) {
-      throw new Error(
-        'No where conditions or forceAll flag provided to update',
-      );
-    }
+    const set: Record<string, unknown> = { ...data };
+    pushQueryValue(this, 'data', set);
 
-    if (isRaw(data)) {
-      pushQueryValue(this, 'data', data);
-    } else {
-      const update: Record<string, unknown> = { ...data };
-      pushQueryValue(this, 'data', update);
+    const relations = this.relations as Record<string, Relation>;
 
-      const relations = this.relations as Record<string, Relation>;
+    const prependRelations: Record<string, Record<string, unknown>> = {};
+    const appendRelations: Record<string, Record<string, unknown>> = {};
 
-      const prependRelations: Record<string, Record<string, unknown>> = {};
-      const appendRelations: Record<string, Record<string, unknown>> = {};
+    const originalReturnType = query.returnType;
 
-      const originalReturnType = this.query.returnType;
-
-      for (const key in data) {
-        if (relations[key]) {
-          delete update[key];
-          if (relations[key].type === 'belongsTo') {
-            prependRelations[key] = data[key] as Record<string, unknown>;
-          } else {
-            if (!query.select?.includes('*')) {
-              const primaryKey = relations[key].primaryKey;
-              if (!query.select?.includes(primaryKey)) {
-                this._select(primaryKey as StringKey<keyof T['selectable']>);
-              }
+    for (const key in data) {
+      if (relations[key]) {
+        delete set[key];
+        if (relations[key].type === 'belongsTo') {
+          prependRelations[key] = data[key] as Record<string, unknown>;
+        } else {
+          if (!query.select?.includes('*')) {
+            const primaryKey = relations[key].primaryKey;
+            if (!query.select?.includes(primaryKey)) {
+              this._select(primaryKey as StringKey<keyof T['selectable']>);
             }
-            appendRelations[key] = data[key] as Record<string, unknown>;
           }
+          appendRelations[key] = data[key] as Record<string, unknown>;
         }
       }
+    }
 
-      const state: {
-        updateLater?: Record<string, unknown>;
-        updateLaterPromises?: Promise<void>[];
-      } = {};
+    const state: {
+      updateLater?: Record<string, unknown>;
+      updateLaterPromises?: Promise<void>[];
+    } = {};
 
-      const prependRelationKeys = Object.keys(prependRelations);
-      let willSetKeys = false;
-      if (prependRelationKeys.length) {
-        willSetKeys = prependRelationKeys.some((relationName) => {
-          const data = prependRelations[relationName] as NestedUpdateOneItem;
+    const prependRelationKeys = Object.keys(prependRelations);
+    let willSetKeys = false;
+    if (prependRelationKeys.length) {
+      willSetKeys = prependRelationKeys.some((relationName) => {
+        const data = prependRelations[relationName] as NestedUpdateOneItem;
 
-          return (
-            relations[relationName] as {
-              nestedUpdate: BelongsToNestedUpdate;
-            }
-          ).nestedUpdate(this, update, data, state);
+        return (
+          relations[relationName] as {
+            nestedUpdate: BelongsToNestedUpdate;
+          }
+        ).nestedUpdate(this, set, data, state);
+      });
+    }
+
+    if (!willSetKeys && checkIfUpdateIsEmpty(query as UpdateQueryData)) {
+      delete query.type;
+    }
+
+    const appendRelationKeys = Object.keys(appendRelations);
+
+    let resultOfTypeAll: Record<string, unknown>[] | undefined;
+
+    if (
+      state?.updateLater ||
+      (appendRelationKeys.length && originalReturnType !== 'all')
+    ) {
+      query.returnType = 'all';
+
+      if (state?.updateLater) {
+        this.schema.primaryKeys.forEach((key: string) => {
+          if (!query.select?.includes('*') && !query.select?.includes(key)) {
+            this._select(key as StringKey<keyof T['selectable']>);
+          }
         });
       }
 
-      if (!willSetKeys && checkIfUpdateIsEmpty(this.query as UpdateQueryData)) {
-        delete this.query.type;
-      }
-
-      const appendRelationKeys = Object.keys(appendRelations);
-
-      let resultOfTypeAll: Record<string, unknown>[] | undefined;
-
-      if (
-        state?.updateLater ||
-        (appendRelationKeys.length && originalReturnType !== 'all')
-      ) {
-        this.query.returnType = 'all';
+      const { handleResult } = query;
+      query.handleResult = async (q, queryResult) => {
+        resultOfTypeAll = (await handleResult(q, queryResult)) as Record<
+          string,
+          unknown
+        >[];
 
         if (state?.updateLater) {
-          this.schema.primaryKeys.forEach((key: string) => {
-            if (!query.select?.includes('*') && !query.select?.includes(key)) {
-              this._select(key as StringKey<keyof T['selectable']>);
-            }
-          });
+          await Promise.all(state.updateLaterPromises as Promise<void>[]);
+
+          const t = this.__model.clone().transacting(q);
+          const keys = this.schema.primaryKeys as string[];
+          (
+            t._whereIn as unknown as (
+              keys: string[],
+              values: unknown[][],
+            ) => Query
+          )(
+            keys,
+            resultOfTypeAll.map((item) => keys.map((key) => item[key])),
+          );
+
+          await (t as WhereResult<Query>)._update(state.updateLater);
+
+          resultOfTypeAll.forEach((item) =>
+            Object.assign(item, state.updateLater),
+          );
         }
 
-        const { handleResult } = this.query;
-        this.query.handleResult = async (q, queryResult) => {
-          resultOfTypeAll = (await handleResult(q, queryResult)) as Record<
-            string,
-            unknown
-          >[];
+        if (queryMethodByReturnType[originalReturnType] === 'arrays') {
+          queryResult.rows.forEach(
+            (row, i) =>
+              ((queryResult.rows as unknown as unknown[][])[i] =
+                Object.values(row)),
+          );
+        }
 
-          if (state?.updateLater) {
-            await Promise.all(state.updateLaterPromises as Promise<void>[]);
-
-            const t = this.__model.clone().transacting(q);
-            const keys = this.schema.primaryKeys as string[];
-            (
-              t._whereIn as unknown as (
-                keys: string[],
-                values: unknown[][],
-              ) => Query
-            )(
-              keys,
-              resultOfTypeAll.map((item) => keys.map((key) => item[key])),
-            );
-
-            await (t as WhereResult<Query>)._update(state.updateLater);
-
-            resultOfTypeAll.forEach((item) =>
-              Object.assign(item, state.updateLater),
-            );
-          }
-
-          if (queryMethodByReturnType[originalReturnType] === 'arrays') {
-            queryResult.rows.forEach(
-              (row, i) =>
-                ((queryResult.rows as unknown as unknown[][])[i] =
-                  Object.values(row)),
-            );
-          }
-
-          return parseResult(q, originalReturnType, queryResult);
-        };
-      }
-
-      if (appendRelationKeys.length) {
-        pushQueryArray(
-          this,
-          'afterQuery',
-          appendRelationKeys.map((relationName) => {
-            return (q: Query, result: Record<string, unknown>[]) => {
-              const all = resultOfTypeAll || result;
-              return (
-                relations[relationName].nestedUpdate as HasOneNestedUpdate
-              )?.(q, all, appendRelations[relationName] as NestedUpdateOneItem);
-            };
-          }),
-        );
-      }
-
-      if (prependRelationKeys.length || appendRelationKeys.length) {
-        query.wrapInTransaction = true;
-      }
+        return parseResult(q, originalReturnType, queryResult);
+      };
     }
 
-    if (!query.select) {
-      this.query.returnType = 'rowCount';
+    if (appendRelationKeys.length) {
+      pushQueryArray(
+        this,
+        'afterQuery',
+        appendRelationKeys.map((relationName) => {
+          return (q: Query, result: Record<string, unknown>[]) => {
+            const all = resultOfTypeAll || result;
+            return (
+              relations[relationName].nestedUpdate as HasOneNestedUpdate
+            )?.(q, all, appendRelations[relationName] as NestedUpdateOneItem);
+          };
+        }),
+      );
     }
 
-    return this as unknown as UpdateResult<T>;
+    if (prependRelationKeys.length || appendRelationKeys.length) {
+      query.wrapInTransaction = true;
+    }
+
+    return update(this, (args as [unknown, boolean])[1]);
+  }
+
+  updateRaw<T extends Query, ForceAll extends boolean = false>(
+    this: T,
+    ...args: UpdateRawArgs<T, ForceAll>
+  ): UpdateResult<T> {
+    const q = this.clone() as T;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return q._updateRaw(...(args as any));
+  }
+  _updateRaw<T extends Query, ForceAll extends boolean = false>(
+    this: T,
+    ...args: UpdateRawArgs<T, ForceAll>
+  ): UpdateResult<T> {
+    pushQueryValue(this, 'data', args[0]);
+    return update(this, (args as [unknown, boolean])[1]);
   }
 
   updateOrThrow<T extends Query, ForceAll extends boolean = false>(

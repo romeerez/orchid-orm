@@ -37,7 +37,7 @@ describe('update', () => {
     const count = 2;
     const users = await User.select('id').insertMany([userData, userData]);
 
-    const query = User.or(...users).update(raw(`name = 'name'`));
+    const query = User.or(...users).updateRaw(raw(`name = 'name'`));
     expectSql(
       query.toSql(),
       `

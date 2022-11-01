@@ -703,13 +703,13 @@ Table.defaults({
 
 ## update
 
-Creates an update query, takes object of properties or raw expression, optionally takes list of columns to return.
+`.update` takes an object with columns and values to update records.
 
 By default `.update` will return count of inserted records.
 
 Place `.select`, or `.selectAll`, or `.get` before `.update` to specify returning columns.
 
-Need to provide `.where`, or `.findBy`, or `.find` conditions before calling `.update`.
+You need to provide `.where`, or `.findBy`, or `.find` conditions before calling `.update`.
 To ensure that whole table won't be updated by accident, update without where conditions will result in TypeScript and runtime error.
 
 To update table without conditions put `true` in second argument:
@@ -724,7 +724,6 @@ If `.select` and `.take`, `.find` or similar were specified before the update it
 
 ```ts
 const updatedCount = await Table.where({ name: 'old name' }).update({ name: 'new name' })
-const updatedCount2 = await Table.find(1).update(raw(`name = 'new name'`))
 
 const id = await Table
   .find(1)
@@ -748,6 +747,19 @@ Table.findBy({ id: 1 }).update({
   name: null, // updates to null
   age: undefined, // skipped, no effect
 })
+```
+
+## updateRaw
+
+`updateRaw` is for update records with raw expression.
+
+The behavior is the same as a regular `update` method has:
+add a second `true` argument if you want to update without conditions,
+it returns updated count by default,
+you can customize returning data by using `select`.
+
+```ts
+const updatedCount = await Table.find(1).update(raw(`name = $1`, ['name']))
 ```
 
 ## updateOrThrow
