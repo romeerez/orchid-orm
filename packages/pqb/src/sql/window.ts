@@ -5,7 +5,7 @@ import { expressionToSql, q } from './common';
 import { orderByToSql } from './orderBy';
 
 export const windowToSql = <T extends Query>(
-  window: T['windows'][number] | WindowDeclaration | RawExpression,
+  window: keyof T['windows'] | WindowDeclaration | RawExpression,
   values: unknown[],
   quotedAs?: string,
 ) => {

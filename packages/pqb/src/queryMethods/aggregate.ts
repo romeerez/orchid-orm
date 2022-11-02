@@ -42,7 +42,7 @@ export type AggregateOptions<
   filter?: WhereArg<T>;
   filterOr?: WhereArg<T>[];
   withinGroup?: boolean;
-  over?: T['windows'][number] | WindowArgDeclaration<T>;
+  over?: keyof T['windows'] | WindowArgDeclaration<T>;
 };
 
 // 1 in the name means only methods which takes 1 argument are listed here

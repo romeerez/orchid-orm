@@ -1,5 +1,4 @@
 import { Query, QueryReturnType, QueryThen } from '../query';
-import { QueryData } from '../sql';
 import { Spread } from '../utils';
 
 export type MergeQuery<
@@ -10,6 +9,7 @@ export type MergeQuery<
     : Q['returnType'],
 > = Omit<T, 'result' | 'returnType' | 'then'> & {
   hasSelect: Q['hasSelect'] extends true ? true : T['hasSelect'];
+  hasWhere: Q['hasWhere'] extends true ? true : T['hasWhere'];
   result: T['hasSelect'] extends true
     ? Spread<[T['result'], Q['result']]>
     : Q['result'];
@@ -17,18 +17,17 @@ export type MergeQuery<
   then: T['hasSelect'] extends true
     ? QueryThen<ReturnType, Spread<[T['result'], Q['result']]>>
     : QueryThen<ReturnType, Q['result']>;
+  selectable: T['selectable'] & Q['selectable'];
+  joinedTables: T['joinedTables'] & Q['joinedTables'];
+  windows: T['windows'] & Q['windows'];
+  withData: T['withData'] & Q['withData'];
 };
 
-const mergeArray = (a: QueryData, b: QueryData, key: keyof QueryData) => {
-  type T = Record<keyof QueryData, unknown[]>;
-
-  if (a[key]) {
-    if (b[key]) {
-      (a as unknown as T)[key].push(...(b as unknown as T)[key]);
-    }
-  } else if (b[key]) {
-    (a as unknown as T)[key] = (b as unknown as T)[key];
-  }
+const mergableObjects: Record<string, boolean> = {
+  withShapes: true,
+  parsers: true,
+  defaults: true,
+  joinedParsers: true,
 };
 
 export class MergeQueryMethods {
@@ -36,10 +35,30 @@ export class MergeQueryMethods {
     return this.clone()._merge(q);
   }
   _merge<T extends Query, Q extends Query>(this: T, q: Q): MergeQuery<T, Q> {
-    const a = this.query;
-    const b = q.query;
+    const a = this.query as Record<string, unknown>;
+    const b = q.query as Record<string, unknown>;
 
-    mergeArray(a, b, 'select');
+    for (const key in b) {
+      const value = b[key];
+      switch (typeof value) {
+        case 'boolean':
+        case 'string':
+        case 'number':
+          a[key] = value;
+          break;
+        case 'object':
+          if (Array.isArray(value)) {
+            a[key] = a[key] ? [...(a[key] as unknown[]), ...value] : value;
+          } else if (mergableObjects[key]) {
+            a[key] = a[key]
+              ? { ...(a[key] as Record<string, unknown>), ...value }
+              : value;
+          } else {
+            a[key] = value;
+          }
+          break;
+      }
+    }
 
     if (b.returnType) a.returnType = b.returnType;
 

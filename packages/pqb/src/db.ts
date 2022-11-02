@@ -70,7 +70,7 @@ export interface Db<
   >;
   tableAlias: undefined;
   joinedTables: Query['joinedTables'];
-  windows: PropertyKey[];
+  windows: Query['windows'];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
   columnsParsers?: ColumnsParsers;
   relations: Relations;

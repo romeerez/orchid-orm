@@ -38,24 +38,6 @@ export type UnionToOvlds<U> = UnionToIntersection<
   U extends any ? (f: U) => void : never
 >;
 
-type PopPropertyKeyUnion<U> = UnionToOvlds<U> extends (
-  a: infer A extends PropertyKey,
-) => void
-  ? A
-  : never;
-
-type IsUnion<T> = [T] extends [UnionToIntersection<T>] ? false : true;
-
-export type PropertyKeyUnionToArray<
-  T,
-  A extends PropertyKey[] = [],
-> = IsUnion<T> extends true
-  ? PropertyKeyUnionToArray<
-      Exclude<T, PopPropertyKeyUnion<T>>,
-      [PopPropertyKeyUnion<T>, ...A]
-    >
-  : [T, ...A];
-
 type OptionalPropertyNames<T> = {
   // eslint-disable-next-line @typescript-eslint/ban-types
   [K in keyof T]-?: {} extends { [P in K]: T[K] } ? K : never;

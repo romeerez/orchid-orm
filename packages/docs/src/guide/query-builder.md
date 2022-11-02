@@ -2315,6 +2315,22 @@ Note that currently it does not affect on resulting TypeScript type, it may be i
 Table.select('id').clear('id')
 ```
 
+## merge
+
+Merge two queries into one, with a decent type safety:
+
+```ts
+const query1 = Table.select('id').where({ id: 1 })
+const query2 = Table.select('name').where({ name: 'name' })
+
+// result has a proper type { id: number, name: string }
+const result = await query1.merge(query2).take()
+```
+
+Main info such as table name, column types, will not be overridden by `.merge(query)`,
+but all other query data will be merged if possible (`select`, `where`, `join`, `with`, and many others),
+or will be used from provided query argument if not possible to merge (`as`, `onConflict`, returning one or many).
+
 ## toSql
 
 Call `toSql` on a query to get an object with `text` SQL string and `values` array of binding values:

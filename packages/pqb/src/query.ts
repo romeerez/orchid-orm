@@ -14,7 +14,7 @@ import {
   ColumnType,
   TableSchema,
 } from './columnSchema';
-import { Spread } from './utils';
+import { EmptyObject, Spread } from './utils';
 import { AliasOrTable, RawExpression, StringKey } from './common';
 import { Db } from './db';
 import { RelationQueryBase, RelationsBase } from './relations';
@@ -68,7 +68,7 @@ export type Query = QueryMethods & {
   then: ThenResult<unknown>;
   tableAlias: string | undefined;
   joinedTables: Record<string, Pick<Query, 'result' | 'tableAlias' | 'table'>>;
-  windows: PropertyKey[];
+  windows: EmptyObject;
   defaultSelectColumns: string[];
   columnsParsers?: ColumnsParsers;
   relations: RelationsBase;
@@ -302,7 +302,6 @@ export type AddQueryWith<
   With extends WithDataItem,
 > = SetQueryWith<T, Spread<[T['withData'], { [K in With['table']]: With }]>>;
 
-export type SetQueryWindows<T extends Query, W extends PropertyKey[]> = Omit<
-  T,
-  'windows'
-> & { windows: W };
+export type SetQueryWindows<T extends Query, W extends EmptyObject> = T & {
+  windows: W;
+};

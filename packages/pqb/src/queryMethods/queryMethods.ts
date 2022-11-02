@@ -15,9 +15,9 @@ import {
 } from '../query';
 import {
   applyMixins,
+  EmptyObject,
   getClonedQueryData,
   GetTypesOrRaw,
-  PropertyKeyUnionToArray,
 } from '../utils';
 import {
   SelectItem,
@@ -66,7 +66,7 @@ export type WindowArgDeclaration<T extends Query = Query> = {
 
 type WindowResult<T extends Query, W extends WindowArg<T>> = SetQueryWindows<
   T,
-  PropertyKeyUnionToArray<keyof W>
+  Record<keyof W, true>
 >;
 
 export type OrderArg<T extends Query> =
@@ -104,7 +104,7 @@ export interface QueryMethods
     MergeQueryMethods {}
 
 export class QueryMethods {
-  windows!: PropertyKey[];
+  windows!: EmptyObject;
   __model!: Query;
 
   all<T extends Query>(this: T): SetQueryReturnsAll<T> {
