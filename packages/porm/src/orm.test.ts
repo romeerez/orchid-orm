@@ -1,6 +1,7 @@
 import { porm } from './orm';
 import {
   AssertEqual,
+  assertType,
   expectSql,
   userData,
   useTestDatabase,
@@ -69,5 +70,46 @@ describe('orm', () => {
 
     const eq: AssertEqual<typeof result, Pick<User, 'id' | 'name'>[]> = true;
     expect(eq).toBe(true);
+  });
+
+  describe('custom methods', () => {
+    class SomeModel extends Model {
+      table = 'someTable';
+      columns = this.setColumns((t) => ({
+        id: t.serial().primaryKey(),
+        name: t.text(),
+      }));
+    }
+
+    const someMethods = SomeModel.makeMethods({
+      one(q) {
+        return q.select('id');
+      },
+      two(q) {
+        return q.select('name');
+      },
+      three(q, id: number) {
+        return q.where({ id });
+      },
+    });
+
+    const db = porm(adapter, {
+      someModel: SomeModel.setMethods(someMethods),
+    });
+
+    const q = db.someModel.one().two().three(123).take();
+
+    assertType<Awaited<typeof q>, { id: number; name: string }>();
+
+    expectSql(
+      q.toSql(),
+      `
+        SELECT "someTable"."id", "someTable"."name"
+        FROM "someTable"
+        WHERE "someTable"."id" = $1
+        LIMIT $2
+      `,
+      [123, 1],
+    );
   });
 });

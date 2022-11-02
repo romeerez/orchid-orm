@@ -98,7 +98,7 @@ export type JoinedTablesBase = Record<
   Pick<Query, 'result' | 'tableAlias' | 'table'>
 >;
 
-type QueryThen<
+export type QueryThen<
   ReturnType extends QueryReturnType,
   Result extends ColumnsShape,
 > = ReturnType extends 'all'
@@ -130,15 +130,15 @@ type QueryThen<
 export type AddQuerySelect<
   T extends Pick<Query, 'hasSelect' | 'result' | 'then' | 'returnType'>,
   Result extends ColumnsShape,
-> = T['hasSelect'] extends false
-  ? Omit<T, 'hasSelect' | 'result' | 'then'> & {
+> = T['hasSelect'] extends true
+  ? Omit<T, 'result' | 'then'> & {
+      result: Spread<[T['result'], Result]>;
+      then: QueryThen<T['returnType'], Spread<[T['result'], Result]>>;
+    }
+  : Omit<T, 'hasSelect' | 'result' | 'then'> & {
       hasSelect: true;
       result: Result;
       then: QueryThen<T['returnType'], Result>;
-    }
-  : Omit<T, 'result' | 'then'> & {
-      result: Spread<[T['result'], Result]>;
-      then: QueryThen<T['returnType'], Spread<[T['result'], Result]>>;
     };
 
 export type QuerySelectAll<T extends Query> = Omit<

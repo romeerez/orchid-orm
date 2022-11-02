@@ -1,7 +1,6 @@
 import {
   ColumnShapeOutput,
   ColumnsShape,
-  ColumnType,
   ColumnTypesBase,
   Db,
   getColumnTypes,
@@ -9,7 +8,10 @@ import {
 } from 'pqb';
 import { MapRelations, Relation, RelationThunks } from './relations/relations';
 
-export type ModelClass<T extends Model = Model> = new () => T;
+export type ModelClass<T extends Model = Model> = (new () => T) & {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  methods?: Record<string, (...args: any[]) => any>;
+};
 
 export type ModelClasses = Record<string, ModelClass>;
 
@@ -43,7 +45,15 @@ export type Model = {
   schema?: string;
 };
 
-export type SchemaConverter = (columnType: ColumnType) => unknown;
+export type MethodsBase<T extends new () => Model> = Record<
+  string,
+  (
+    q: Omit<DbModel<InstanceType<T>>, 'hasSelect'> & {
+      hasSelect: boolean;
+    },
+    ...args: any[]
+  ) => any
+>;
 
 export const createModel = <CT extends ColumnTypesBase>(options: {
   columnTypes: CT;
@@ -52,6 +62,20 @@ export const createModel = <CT extends ColumnTypesBase>(options: {
     table!: string;
     columns!: ModelConfig;
     schema?: string;
+
+    static makeMethods<
+      T extends new () => Model,
+      Methods extends MethodsBase<T>,
+    >(this: T, methods: Methods): Methods {
+      return methods;
+    }
+
+    static setMethods<
+      T extends new () => Model,
+      Methods extends MethodsBase<T>,
+    >(this: T, methods: Methods): T & { methods: Methods } {
+      return Object.assign(this, { methods });
+    }
 
     setColumns = <T extends ColumnsShape>(
       fn: (t: CT) => T,

@@ -1,10 +1,34 @@
-import { Adapter, DbOptions, Db } from 'pqb';
+import { Adapter, DbOptions, Db, EmptyObject, Query, QueryThen } from 'pqb';
 import { DbModel, Model, ModelClasses } from './model';
 import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
 
+type MapMethods<Methods> = {
+  [K in keyof Methods]: Methods[K] extends (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    q: any,
+    ...args: infer Args
+  ) => // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  infer Result
+    ? <T extends Query>(
+        this: T,
+        ...args: Args
+      ) => Result extends Query
+        ? Omit<T, 'hasSelect' | 'result' | 'then'> & {
+            hasSelect: Result['hasSelect'];
+            result: T['result'] & Result['result'];
+            then: QueryThen<
+              Result['returnType'],
+              T['result'] & Result['result']
+            >;
+          }
+        : Result
+    : never;
+};
+
 export type PORM<T extends ModelClasses> = {
-  [K in keyof T]: DbModel<InstanceType<T[K]>>;
+  [K in keyof T]: DbModel<InstanceType<T[K]>> &
+    ('methods' extends keyof T[K] ? MapMethods<T[K]['methods']> : EmptyObject);
 } & {
   $transaction: typeof transaction;
   $adapter: Adapter;
@@ -44,16 +68,24 @@ export const porm = <T extends ModelClasses>(
     const model = new models[key]();
     modelInstances[key] = model;
 
-    (result as Record<string, unknown>)[key] = new Db(
-      adapter,
-      qb,
-      model.table,
-      model.columns.shape,
-      {
-        ...commonOptions,
-        schema: model.schema,
-      },
-    );
+    const dbModel = new Db(adapter, qb, model.table, model.columns.shape, {
+      ...commonOptions,
+      schema: model.schema,
+    });
+
+    const { methods } = models[key];
+    if (methods) {
+      for (const key in methods) {
+        const method = methods[key] as (...args: unknown[]) => unknown;
+        (dbModel as unknown as Record<string, unknown>)[key] = function (
+          ...args: unknown[]
+        ) {
+          return method(this, ...args);
+        };
+      }
+    }
+
+    (result as Record<string, unknown>)[key] = dbModel;
   }
 
   applyRelations(qb, modelInstances, result);
