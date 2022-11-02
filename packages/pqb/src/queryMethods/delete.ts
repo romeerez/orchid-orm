@@ -4,9 +4,9 @@ type DeleteArgs<T extends Query> = T['hasWhere'] extends true
   ? [forceAll?: boolean]
   : [true];
 
-type DeleteResult<T extends Query> = T['hasSelect'] extends false
-  ? SetQueryReturnsRowCount<T>
-  : T;
+type DeleteResult<T extends Query> = T['hasSelect'] extends true
+  ? T
+  : SetQueryReturnsRowCount<T>;
 
 const del = <T extends Query>(
   self: T,

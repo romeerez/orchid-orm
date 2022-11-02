@@ -17,11 +17,9 @@ import { QueryData, SelectQueryData, Sql, ToSqlOptions } from './sql';
 import { AdapterOptions, Adapter } from './adapter';
 import {
   ColumnsShape,
-  columnTypes,
   ColumnShapeOutput,
   TableSchema,
   ColumnShapeInput,
-  ColumnTypes,
   ColumnTypesBase,
   getColumnTypes,
 } from './columnSchema';
@@ -62,7 +60,7 @@ export interface Db<
   defaultSelectColumns: DefaultSelectColumns<Shape>;
   columnsParsers?: ColumnsParsers;
   result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
-  hasSelect: false;
+  hasSelect: Query['hasSelect'];
   hasWhere: boolean;
   selectable: { [K in keyof Shape]: { as: K; column: Shape[K] } } & {
     [K in keyof Shape as `${Table}.${StringKey<K>}`]: {
@@ -176,18 +174,18 @@ type DbResult<CT extends ColumnTypesBase> = Db & {
   close: Adapter['close'];
 };
 
-export type DbOptions<CT extends ColumnTypesBase = ColumnTypes> = (
+export type DbOptions<CT extends ColumnTypesBase> = (
   | { adapter: Adapter }
   | Omit<AdapterOptions, 'log'>
 ) &
   QueryLogOptions & {
-    columnTypes?: CT;
+    columnTypes: CT;
   };
 
-export const createDb = <CT extends ColumnTypesBase = ColumnTypes>({
+export const createDb = <CT extends ColumnTypesBase>({
   log,
   logger,
-  columnTypes: ct = columnTypes as unknown as CT,
+  columnTypes: ct,
   ...options
 }: DbOptions<CT>): DbResult<CT> => {
   const adapter = 'adapter' in options ? options.adapter : new Adapter(options);

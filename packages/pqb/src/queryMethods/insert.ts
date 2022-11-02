@@ -136,19 +136,19 @@ type InsertHasManyData<
 
 type InsertRawData = { columns: string[]; values: RawExpression };
 
-type InsertOneResult<T extends Query> = T['hasSelect'] extends false
-  ? SetQueryReturnsRowCount<T>
-  : T['returnType'] extends 'all'
-  ? SetQueryReturnsOne<T>
-  : T['returnType'] extends 'one'
-  ? SetQueryReturnsOne<T>
-  : T;
+type InsertOneResult<T extends Query> = T['hasSelect'] extends true
+  ? T['returnType'] extends 'all'
+    ? SetQueryReturnsOne<T>
+    : T['returnType'] extends 'one'
+    ? SetQueryReturnsOne<T>
+    : T
+  : SetQueryReturnsRowCount<T>;
 
-type InsertManyResult<T extends Query> = T['hasSelect'] extends false
-  ? SetQueryReturnsRowCount<T>
-  : T['returnType'] extends 'one' | 'oneOrThrow'
-  ? SetQueryReturnsAll<T>
-  : T;
+type InsertManyResult<T extends Query> = T['hasSelect'] extends true
+  ? T['returnType'] extends 'one' | 'oneOrThrow'
+    ? SetQueryReturnsAll<T>
+    : T
+  : SetQueryReturnsRowCount<T>;
 
 type OnConflictArg<T extends Query> =
   | keyof T['shape']

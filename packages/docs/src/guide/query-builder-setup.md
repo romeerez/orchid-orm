@@ -19,26 +19,31 @@ npm i pqb
 For all connection options see: [client options](https://node-postgres.com/api/client) + [pool options](https://node-postgres.com/api/pool)
 
 ```ts
-import { createDb } from 'pqb'
+import { createDb, columnTypes } from 'pqb'
 
 const db = createDb({
   // in the format: postgres://user:password@localhost:5432/dbname
   connectionString: process.env.DATABASE_URL,
-  log: true, // option for logging, false by default
   
-  // option to override column types
-  // columnTypes: { ... }
+  // option for logging, false by default
+  log: true,
+  
+  // use default column types from the import, or column types can be customized here
+  columnTypes,
 })
 ```
 
 To reuse underlying `Adapter` instance, you can provide an adapter:
 
 ```ts
-import { createDb, Adapter } from 'pqb'
+import { createDb, Adapter, columnTypes } from 'pqb'
 
 const db = createDb(
-  new Adapter({ connectionString: process.env.DATABASE_URL }),
-  { log: true }, // second argument is for pqb specific options
+  {
+    adapter: new Adapter({ connectionString: process.env.DATABASE_URL }),
+    log: true,
+    columnTypes,
+  }
 )
 ```
 
@@ -69,6 +74,7 @@ Log will use `console.log` and `console.error` by default, it can be overridden 
 ```ts
 const db = createDb({
   connectionString: process.env.DATABASE_URL,
+  columnTypes,
   log: true,
   logger: {
     log(message: string): void {

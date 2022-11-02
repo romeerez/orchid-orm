@@ -107,9 +107,9 @@ type UpdateRawArgs<T extends Query, ForceAll extends boolean> = (
   ? [update: RawExpression]
   : [update: RawExpression, forceAll: true];
 
-type UpdateResult<T extends Query> = T['hasSelect'] extends false
-  ? SetQueryReturnsRowCount<T>
-  : T;
+type UpdateResult<T extends Query> = T['hasSelect'] extends true
+  ? T
+  : SetQueryReturnsRowCount<T>;
 
 type ChangeCountArg<T extends Query> =
   | keyof T['shape']

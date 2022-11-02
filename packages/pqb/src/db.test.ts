@@ -30,7 +30,7 @@ describe('db', () => {
     it('should return date as string by default', async () => {
       await User.insert(userData);
 
-      const db = createDb({ adapter });
+      const db = createDb({ adapter, columnTypes });
       const table = db('user', (t) => ({
         createdAt: t.timestamp(),
       }));

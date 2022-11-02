@@ -29,6 +29,10 @@ const insertUserAndProfile = async () => {
 describe('selectMethods', () => {
   useTestDatabase();
 
+  it('table should have all columns selected if select was not applied', () => {
+    assertType<Awaited<typeof User>, UserRecord[]>();
+  });
+
   describe('select', () => {
     it('should have no effect if no columns provided', () => {
       const q = User.all();
