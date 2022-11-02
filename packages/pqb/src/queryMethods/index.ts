@@ -11,6 +11,7 @@ export * from './insert';
 export * from './join';
 export * from './json';
 export * from './log';
+export * from './merge';
 export * from './queryMethods';
 export * from './select';
 export * from './then';

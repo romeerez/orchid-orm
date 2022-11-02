@@ -47,12 +47,8 @@ export type Model = {
 
 export type MethodsBase<T extends new () => Model> = Record<
   string,
-  (
-    q: Omit<DbModel<InstanceType<T>>, 'hasSelect'> & {
-      hasSelect: boolean;
-    },
-    ...args: any[]
-  ) => any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (q: DbModel<InstanceType<T>>, ...args: any[]) => any
 >;
 
 export const createModel = <CT extends ColumnTypesBase>(options: {

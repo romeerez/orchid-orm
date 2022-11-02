@@ -135,7 +135,7 @@ export type AddQuerySelect<
       result: Spread<[T['result'], Result]>;
       then: QueryThen<T['returnType'], Spread<[T['result'], Result]>>;
     }
-  : Omit<T, 'hasSelect' | 'result' | 'then'> & {
+  : Omit<T, 'result' | 'then'> & {
       hasSelect: true;
       result: Result;
       then: QueryThen<T['returnType'], Result>;

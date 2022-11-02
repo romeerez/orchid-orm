@@ -1,4 +1,12 @@
-import { Adapter, DbOptions, Db, EmptyObject, Query, QueryThen } from 'pqb';
+import {
+  Adapter,
+  Db,
+  EmptyObject,
+  Query,
+  AdapterOptions,
+  QueryLogOptions,
+  MergeQuery,
+} from 'pqb';
 import { DbModel, Model, ModelClasses } from './model';
 import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
@@ -13,16 +21,7 @@ type MapMethods<Methods> = {
     ? <T extends Query>(
         this: T,
         ...args: Args
-      ) => Result extends Query
-        ? Omit<T, 'hasSelect' | 'result' | 'then'> & {
-            hasSelect: Result['hasSelect'];
-            result: T['result'] & Result['result'];
-            then: QueryThen<
-              Result['returnType'],
-              T['result'] & Result['result']
-            >;
-          }
-        : Result
+      ) => Result extends Query ? MergeQuery<T, Result> : Result
     : never;
 };
 
@@ -37,7 +36,11 @@ export type PORM<T extends ModelClasses> = {
 };
 
 export const porm = <T extends ModelClasses>(
-  { log, logger, ...options }: DbOptions,
+  {
+    log,
+    logger,
+    ...options
+  }: ({ adapter: Adapter } | Omit<AdapterOptions, 'log'>) & QueryLogOptions,
   models: T,
 ): PORM<T> => {
   const adapter = 'adapter' in options ? options.adapter : new Adapter(options);

@@ -56,6 +56,7 @@ import { QueryLog } from './log';
 import { QueryCallbacks } from './callbacks';
 import { QueryUpsert } from './upsert';
 import { QueryGet } from './get';
+import { MergeQueryMethods } from './merge';
 
 export type WindowArg<T extends Query> = Record<
   string,
@@ -103,7 +104,8 @@ export interface QueryMethods
     QueryLog,
     QueryCallbacks,
     QueryUpsert,
-    QueryGet {}
+    QueryGet,
+    MergeQueryMethods {}
 
 export class QueryMethods {
   windows!: PropertyKey[];
@@ -412,4 +414,5 @@ applyMixins(QueryMethods, [
   QueryCallbacks,
   QueryUpsert,
   QueryGet,
+  MergeQueryMethods,
 ]);

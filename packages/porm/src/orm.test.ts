@@ -72,7 +72,7 @@ describe('orm', () => {
     expect(eq).toBe(true);
   });
 
-  describe('custom methods', () => {
+  describe('custom methods', async () => {
     class SomeModel extends Model {
       table = 'someTable';
       columns = this.setColumns((t) => ({
