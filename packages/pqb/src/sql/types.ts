@@ -21,8 +21,13 @@ export type Sql = {
 };
 
 // used in `from` logic to decide if convert query to sql or just write table name
-export const queryKeysOfNotSimpleQuery: (keyof SelectQueryData)[] = [
-  'take',
+export const checkIfASimpleQuery = (q: QueryData) => {
+  if (q.returnType && q.returnType !== 'all') return false;
+  const keys = Object.keys(q) as (keyof SelectQueryData)[];
+  return !keys.some((key) => queryKeysOfNotSimpleQuery.includes(key));
+};
+
+const queryKeysOfNotSimpleQuery: (keyof SelectQueryData)[] = [
   'with',
   'as',
   'from',
@@ -51,7 +56,6 @@ export type CommonQueryData = {
   inTransaction?: boolean;
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
-  take?: boolean;
   with?: WithItem[];
   withShapes?: Record<string, ColumnsShape>;
   schema?: string;

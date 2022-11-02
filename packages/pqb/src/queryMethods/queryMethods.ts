@@ -28,11 +28,7 @@ import {
   ToSqlOptions,
   TruncateQueryData,
 } from '../sql';
-import {
-  pushQueryArray,
-  pushQueryValue,
-  removeFromQuery,
-} from '../queryDataUtils';
+import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { Then } from './then';
 import { BooleanColumn } from '../columnSchema';
 import { Aggregate } from './aggregate';
@@ -117,7 +113,6 @@ export class QueryMethods {
 
   _all<T extends Query>(this: T): SetQueryReturnsAll<T> {
     this.query.returnType = 'all';
-    removeFromQuery(this, 'take');
     return this as unknown as SetQueryReturnsAll<T>;
   }
 
@@ -127,7 +122,6 @@ export class QueryMethods {
 
   _take<T extends Query>(this: T): SetQueryReturnsOne<T> {
     this.query.returnType = 'oneOrThrow';
-    this.query.take = true;
     return this as unknown as SetQueryReturnsOne<T>;
   }
 
@@ -137,7 +131,6 @@ export class QueryMethods {
 
   _takeOptional<T extends Query>(this: T): SetQueryReturnsOneOptional<T> {
     this.query.returnType = 'one';
-    this.query.take = true;
     return this as unknown as SetQueryReturnsOneOptional<T>;
   }
 
@@ -147,7 +140,6 @@ export class QueryMethods {
 
   _rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
     this.query.returnType = 'rows';
-    removeFromQuery(this, 'take');
     return this as unknown as SetQueryReturnsRows<T>;
   }
 
@@ -163,7 +155,6 @@ export class QueryMethods {
     select: S,
   ): SetQueryReturnsPluck<T, S> {
     this.query.returnType = 'pluck';
-    removeFromQuery(this, 'take');
     (this.query as SelectQueryData).select = [select as SelectItem];
     addParserForSelectItem(this, this.query.as || this.table, 'pluck', select);
     return this as unknown as SetQueryReturnsPluck<T, S>;
@@ -175,7 +166,6 @@ export class QueryMethods {
 
   _exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {
     this.query.returnType = 'void';
-    removeFromQuery(this, 'take');
     return this as unknown as SetQueryReturnsVoid<T>;
   }
 
@@ -364,7 +354,6 @@ export class QueryMethods {
     const q = this._getOptional(raw<BooleanColumn>('true'));
     q.query.notFoundDefault = false;
     q.query.coalesceValue = false;
-    delete q.query.take;
     return q as unknown as SetQueryReturnsValue<T, BooleanColumn>;
   }
 

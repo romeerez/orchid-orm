@@ -10,6 +10,7 @@ import {
   useTestDatabase,
 } from '../test-utils';
 import { createDb } from '../db';
+import { columnTypes } from './columnTypes';
 
 describe('column base', () => {
   useTestDatabase();
@@ -107,7 +108,7 @@ describe('column base', () => {
       });
 
       it('should return column data as returned from db if not set', async () => {
-        const db = createDb({ adapter });
+        const db = createDb({ adapter, columnTypes });
 
         const UserWithPlainTimestamp = db('user', (t) => ({
           createdAt: t.timestamp(),

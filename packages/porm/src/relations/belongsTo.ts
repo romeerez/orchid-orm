@@ -6,6 +6,7 @@ import {
   BelongsToRelation,
   Query,
   QueryBase,
+  queryTypeWithLimitOne,
   WhereArg,
   WhereResult,
 } from 'pqb';
@@ -126,7 +127,7 @@ export const makeBelongsToMethod = (
       );
     }) as BelongsToNestedInsert,
     nestedUpdate: ((q, update, params, state) => {
-      if (params.upsert && !q.query.take) {
+      if (params.upsert && !queryTypeWithLimitOne[q.query.returnType]) {
         throw new Error('`upsert` option is not allowed in a batch update');
       }
 

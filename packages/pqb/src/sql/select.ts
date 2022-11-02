@@ -142,7 +142,7 @@ const pushSubQuerySql = (
   values: unknown[],
   list: string[],
 ) => {
-  const { returnType } = query.query;
+  const { returnType = 'all' } = query.query;
   switch (returnType) {
     case 'all':
     case 'one':
@@ -160,7 +160,6 @@ const pushSubQuerySql = (
       select[0] = { selectAs: { c: first } } as SelectItem;
       query = query._wrap(query.__model.clone()) as unknown as typeof query;
       query._getOptional(raw<StringColumn>(`COALESCE(json_agg("c"), '[]')`));
-      delete query.query.take;
       break;
     }
     case 'rows':

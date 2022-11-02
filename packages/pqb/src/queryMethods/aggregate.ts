@@ -7,7 +7,7 @@ import {
   StringExpression,
 } from '../common';
 import { AddQuerySelect, Query, SetQueryReturnsValue } from '../query';
-import { pushQueryValue, removeFromQuery } from '../queryDataUtils';
+import { pushQueryValue } from '../queryDataUtils';
 import {
   ArrayColumn,
   BooleanColumn,
@@ -130,7 +130,6 @@ const get = <T extends Query, Column extends ColumnType>(
   q: Query,
 ): SetQueryReturnsValue<T, Column> => {
   q.query.returnType = 'valueOrThrow';
-  removeFromQuery(q, 'take');
 
   const select = q.query.select as SelectItem[];
   if (select.length > 1) {

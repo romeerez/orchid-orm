@@ -1,4 +1,12 @@
-import { QueryMethods } from './queryMethods/queryMethods';
+import {
+  QueryMethods,
+  ThenResult,
+  ColumnInfo,
+  WhereQueryBuilder,
+  OnQueryBuilder,
+  GetArg,
+  getValueKey,
+} from './queryMethods';
 import { QueryData } from './sql';
 import {
   ColumnShapeOutput,
@@ -8,13 +16,8 @@ import {
 } from './columnSchema';
 import { Spread } from './utils';
 import { AliasOrTable, RawExpression, StringKey } from './common';
-import { ThenResult } from './queryMethods/then';
 import { Db } from './db';
-import { ColumnInfo } from './queryMethods/columnInfo';
 import { RelationQueryBase, RelationsBase } from './relations';
-import { WhereQueryBuilder } from './queryMethods/where';
-import { OnQueryBuilder } from './queryMethods/join';
-import { GetArg, getValueKey } from './queryMethods/get';
 
 export type ColumnParser = (input: unknown) => unknown;
 export type ColumnsParsers = Record<string | getValueKey, ColumnParser>;
@@ -93,15 +96,26 @@ export type QueryReturnType =
   | 'rowCount'
   | 'void';
 
+export const queryTypeWithLimitOne = {
+  one: true,
+  oneOrThrow: true,
+} as Record<QueryReturnType, true | undefined>;
+
 export type JoinedTablesBase = Record<
   string,
   Pick<Query, 'result' | 'tableAlias' | 'table'>
 >;
 
+export type QueryReturnsAll<T extends QueryReturnType> = (
+  QueryReturnType extends T ? 'all' : T
+) extends 'all'
+  ? true
+  : false;
+
 export type QueryThen<
   ReturnType extends QueryReturnType,
   Result extends ColumnsShape,
-> = ReturnType extends 'all'
+> = QueryReturnsAll<ReturnType> extends true
   ? ThenResult<ColumnShapeOutput<Result>[]>
   : ReturnType extends 'one'
   ? ThenResult<ColumnShapeOutput<Result> | undefined>

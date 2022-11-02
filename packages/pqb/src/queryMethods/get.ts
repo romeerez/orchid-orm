@@ -39,7 +39,6 @@ const _get = <
   arg: Arg,
 ): R extends 'value' ? GetOptionalResult<T, Arg> : GetResult<T, Arg> => {
   q.query.returnType = returnType;
-  q.query.take = true;
 
   if (typeof arg === 'object' && isRaw(arg)) {
     addParserForRawExpression(q, getValueKey, arg);

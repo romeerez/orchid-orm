@@ -1,5 +1,4 @@
 import { Query } from '../query';
-import { removeFromQuery } from '../queryDataUtils';
 import { isRaw } from '../common';
 
 export type ClearStatement =
@@ -24,8 +23,8 @@ export class Clear {
   _clear<T extends Query>(this: T, ...clears: ClearStatement[]): T {
     clears.forEach((clear) => {
       if (clear === 'where') {
-        removeFromQuery(this, 'and');
-        removeFromQuery(this, 'or');
+        delete this.query.and;
+        delete this.query.or;
       } else if (clear === 'counters') {
         if ('type' in this.query && this.query.type === 'update') {
           this.query.updateData = this.query.updateData.filter((item) => {
@@ -50,7 +49,7 @@ export class Clear {
           });
         }
       } else {
-        removeFromQuery(this, clear);
+        delete (this.query as Record<string, unknown>)[clear];
       }
     });
     return this;

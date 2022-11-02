@@ -4,7 +4,9 @@ import {
   ColumnsParsers,
   Query,
   QueryBase,
+  QueryReturnsAll,
   QuerySelectAll,
+  queryTypeWithLimitOne,
 } from '../query';
 import {
   ArrayOfColumnsObjects,
@@ -75,7 +77,7 @@ type SelectResult<
 
 type SelectSubQueryResult<
   Arg extends Query & { [isRequiredRelationKey]?: boolean },
-> = Arg['returnType'] extends 'all'
+> = QueryReturnsAll<Arg['returnType']> extends true
   ? ArrayOfColumnsObjects<Arg['result']>
   : Arg['returnType'] extends 'valueOrThrow'
   ? Arg['result']['value']
@@ -107,7 +109,7 @@ export const addParserForSelectItem = <T extends Query>(
     const rel = arg(q);
     const parsers = getQueryParsers(rel);
     if (parsers) {
-      if (rel.query.take) {
+      if (queryTypeWithLimitOne[rel.query.returnType]) {
         addParserToQuery(q.query, key, (item) => parseRecord(parsers, item));
       } else {
         addParserToQuery(q.query, key, (items) =>

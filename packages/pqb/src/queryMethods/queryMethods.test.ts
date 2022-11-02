@@ -1,5 +1,4 @@
 import { raw } from '../common';
-import { SelectQueryData } from '../sql';
 import {
   expectQueryNotMutated,
   adapter,
@@ -43,12 +42,6 @@ describe('queryMethods', () => {
   });
 
   describe('.all', () => {
-    it('should remove `take` from query if it is set', () => {
-      const q = User.take();
-      expect((q.query as SelectQueryData)?.take).toBe(true);
-      expect((q.all().query as SelectQueryData)?.take).toBe(undefined);
-    });
-
     it('should produce correct sql', () => {
       expectSql(User.all().toSql(), `SELECT * FROM "user"`);
     });
@@ -122,12 +115,6 @@ describe('queryMethods', () => {
       const received = await User.rows();
       expect(received).toEqual(expected);
     });
-
-    it('removes `take` from query data', () => {
-      expect((User.take().rows().query as SelectQueryData)?.take).toBe(
-        undefined,
-      );
-    });
   });
 
   describe('pluck', () => {
@@ -158,12 +145,6 @@ describe('queryMethods', () => {
     it('returns nothing', async () => {
       const received = await User.exec();
       expect(received).toEqual(undefined);
-    });
-
-    it('removes `take` from query data', () => {
-      expect((User.take().exec().query as SelectQueryData)?.take).toBe(
-        undefined,
-      );
     });
   });
 

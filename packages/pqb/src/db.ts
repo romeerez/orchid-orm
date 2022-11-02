@@ -44,21 +44,17 @@ export interface Db<
   ): this;
 
   adapter: Adapter;
+  columns: (keyof ColumnShapeOutput<Shape>)[];
+
   queryBuilder: Db;
   whereQueryBuilder: Query['whereQueryBuilder'];
+  onQueryBuilder: Query['onQueryBuilder'];
   table: Table;
   shape: Shape;
   schema: TableSchema<Shape>;
   type: ColumnShapeOutput<Shape>;
   inputType: ColumnShapeInput<Shape>;
-  returnType: 'all';
-  then: ThenResult<
-    Pick<ColumnShapeOutput<Shape>, DefaultSelectColumns<Shape>[number]>[]
-  >;
   query: QueryData;
-  columns: (keyof ColumnShapeOutput<Shape>)[];
-  defaultSelectColumns: DefaultSelectColumns<Shape>;
-  columnsParsers?: ColumnsParsers;
   result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
   hasSelect: Query['hasSelect'];
   hasWhere: boolean;
@@ -68,11 +64,17 @@ export interface Db<
       column: Shape[K];
     };
   };
+  returnType: Query['returnType'];
+  then: ThenResult<
+    Pick<ColumnShapeOutput<Shape>, DefaultSelectColumns<Shape>[number]>[]
+  >;
   tableAlias: undefined;
-  windows: PropertyKey[];
-  withData: Query['withData'];
   joinedTables: Query['joinedTables'];
+  windows: PropertyKey[];
+  defaultSelectColumns: DefaultSelectColumns<Shape>;
+  columnsParsers?: ColumnsParsers;
   relations: Relations;
+  withData: Query['withData'];
   [defaultsKey]: Record<
     {
       [K in keyof Shape]: Shape[K]['hasDefault'] extends true ? K : never;
@@ -103,7 +105,6 @@ export class Db<
     this.query = {
       adapter,
       handleResult: handleResult,
-      returnType: 'all',
       logger,
       log: logParamToLogObject(logger, options.log),
     } as QueryData;

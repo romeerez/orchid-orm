@@ -1,4 +1,9 @@
-import { AddQuerySelect, Query, SetQueryReturnsValueOptional } from '../query';
+import {
+  AddQuerySelect,
+  Query,
+  queryTypeWithLimitOne,
+  SetQueryReturnsValueOptional,
+} from '../query';
 import { pushQueryValue } from '../queryDataUtils';
 import { ColumnType, StringColumn } from '../columnSchema';
 import { JsonItem } from '../sql';
@@ -51,12 +56,11 @@ export class Json {
     const q = this._wrap(this.__model.clone()) as T;
     q._getOptional(
       raw<StringColumn>(
-        this.query.take
+        queryTypeWithLimitOne[this.query.returnType]
           ? `row_to_json("t".*)`
           : `COALESCE(json_agg(row_to_json("t".*)), '[]')`,
       ),
     );
-    delete q.query.take;
     return q as unknown as SetQueryReturnsValueOptional<T, StringColumn>;
   }
 

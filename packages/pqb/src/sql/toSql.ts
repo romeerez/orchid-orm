@@ -1,5 +1,5 @@
 import { getRaw, isRaw } from '../common';
-import { Query } from '../query';
+import { Query, queryTypeWithLimitOne } from '../query';
 import { addValue, q, qc } from './common';
 import { JoinItem, QueryData, Sql } from './types';
 import { pushDistinctSql } from './distinct';
@@ -156,8 +156,9 @@ const makeSql = (model: Query, { values = [] }: ToSqlOptions = {}): Sql => {
     pushOrderBySql(ctx, quotedAs, query.order);
   }
 
-  if (query.take || query.limit !== undefined) {
-    sql.push(`LIMIT ${addValue(values, query.take ? 1 : query.limit)}`);
+  const limit = queryTypeWithLimitOne[query.returnType] ? 1 : query.limit;
+  if (limit) {
+    sql.push(`LIMIT ${addValue(values, limit)}`);
   }
 
   if (query.offset) {

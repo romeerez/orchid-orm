@@ -1,7 +1,7 @@
 import { getRaw, isRaw } from '../common';
 import { quoteSchemaAndTable } from './common';
 import { QueryBase } from '../query';
-import { queryKeysOfNotSimpleQuery, SelectQueryData } from './types';
+import { checkIfASimpleQuery, SelectQueryData } from './types';
 import { ToSqlCtx } from './toSql';
 
 export const pushFromAndAs = (
@@ -38,9 +38,8 @@ const getFrom = (
       }
 
       const q = query.from.query;
-      const keys = Object.keys(q) as (keyof SelectQueryData)[];
       // if query contains more than just schema return (SELECT ...)
-      if (keys.some((key) => queryKeysOfNotSimpleQuery.includes(key))) {
+      if (!checkIfASimpleQuery(q)) {
         const sql = query.from.toSql({ values });
         return `(${sql.text})`;
       }

@@ -1,12 +1,5 @@
-import { Query } from './query';
 import { QueryData } from './sql';
 import { pushOrNewArrayToObject } from './utils';
-
-// TODO: remove
-export const removeFromQuery = <T extends Query>(q: T, key: string): T => {
-  if (q.query) delete q.query[key as keyof typeof q.query];
-  return q;
-};
 
 export const pushQueryArray = <T extends { query: QueryData }>(
   q: T,

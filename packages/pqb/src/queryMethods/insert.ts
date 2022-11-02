@@ -1,6 +1,7 @@
 import {
   defaultsKey,
   Query,
+  QueryReturnsAll,
   QueryReturnType,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
@@ -137,7 +138,7 @@ type InsertHasManyData<
 type InsertRawData = { columns: string[]; values: RawExpression };
 
 type InsertOneResult<T extends Query> = T['hasSelect'] extends true
-  ? T['returnType'] extends 'all'
+  ? QueryReturnsAll<T['returnType']> extends true
     ? SetQueryReturnsOne<T>
     : T['returnType'] extends 'one'
     ? SetQueryReturnsOne<T>
@@ -223,7 +224,7 @@ const createInsertCtx = (q: Query): InsertCtx => ({
 });
 
 const getInsertSingleReturnType = (q: Query) => {
-  const { select, returnType } = q.query;
+  const { select, returnType = 'all' } = q.query;
   if (select) {
     return returnType === 'all' ? 'one' : returnType;
   } else {

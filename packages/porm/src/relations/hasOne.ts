@@ -7,6 +7,7 @@ import {
   JoinCallback,
   Query,
   QueryBase,
+  queryTypeWithLimitOne,
   WhereArg,
   WhereResult,
 } from 'pqb';
@@ -192,7 +193,10 @@ export const makeHasOneMethod = (
       }
     }) as HasOneNestedInsert,
     nestedUpdate: (async (q, data, params) => {
-      if ((params.set || params.create || params.upsert) && !q.query.take) {
+      if (
+        (params.set || params.create || params.upsert) &&
+        !queryTypeWithLimitOne[q.query.returnType]
+      ) {
         const key = params.set ? 'set' : params.create ? 'create' : 'upsert';
         throw new Error(`\`${key}\` option is not allowed in a batch update`);
       }
@@ -225,7 +229,7 @@ export const makeHasOneMethod = (
         const { update, create } = params.upsert;
         const updatedIds: unknown[] = await currentRelationsQuery
           ._pluck(foreignKey)
-          ._update<WhereResult<Query>>(update);
+          ._update<WhereResult<Query & { hasSelect: true }>>(update);
 
         if (updatedIds.length < ids.length) {
           await t.insertMany(

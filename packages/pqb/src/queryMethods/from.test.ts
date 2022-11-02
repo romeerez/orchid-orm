@@ -50,16 +50,15 @@ describe('from', () => {
   it('should not insert sub query and alias if provided query is simple', () => {
     const q = User.all();
     expectSql(
-      q.select('name').from(User).toSql(),
+      User.select('name').from(User).toSql(),
       'SELECT "user"."name" FROM "user"',
     );
     expectQueryNotMutated(q);
   });
 
   it('should add ONLY keyword when `only` parameter is provided', () => {
-    const q = User.all();
     expectSql(
-      q.select('id').from(User, { only: true }).toSql(),
+      User.select('id').from(User, { only: true }).toSql(),
       'SELECT "user"."id" FROM ONLY "user"',
     );
   });

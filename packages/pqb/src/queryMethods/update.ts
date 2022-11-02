@@ -1,4 +1,4 @@
-import { Query, SetQueryReturnsRowCount } from '../query';
+import { Query, QueryReturnsAll, SetQueryReturnsRowCount } from '../query';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { isRaw, RawExpression, StringKey } from '../common';
 import {
@@ -43,7 +43,7 @@ type UpdateBelongsToData<T extends Query, Rel extends BelongsToRelation> =
   | {
       create: InsertData<Rel['nestedCreateQuery']>;
     }
-  | (T['returnType'] extends 'all'
+  | (QueryReturnsAll<T['returnType']> extends true
       ? never
       : {
           upsert: {
@@ -56,7 +56,7 @@ type UpdateHasOneData<T extends Query, Rel extends HasOneRelation> =
   | { disconnect: boolean }
   | { delete: boolean }
   | { update: UpdateData<Rel['model']> }
-  | (T['returnType'] extends 'all'
+  | (QueryReturnsAll<T['returnType']> extends true
       ? never
       :
           | { set: WhereArg<Rel['model']> }
@@ -77,7 +77,7 @@ type UpdateHasManyData<T extends Query, Rel extends HasManyRelation> = {
     where: MaybeArray<WhereArg<Rel['model']>>;
     data: UpdateData<Rel['model']>;
   };
-} & (T['returnType'] extends 'all'
+} & (QueryReturnsAll<T['returnType']> extends true
   ? EmptyObject
   : {
       set?: MaybeArray<WhereArg<Rel['model']>>;
@@ -179,7 +179,7 @@ export class Update {
     const prependRelations: Record<string, Record<string, unknown>> = {};
     const appendRelations: Record<string, Record<string, unknown>> = {};
 
-    const originalReturnType = query.returnType;
+    const originalReturnType = query.returnType || 'all';
 
     for (const key in data) {
       if (relations[key]) {
@@ -287,6 +287,11 @@ export class Update {
         appendRelationKeys.map((relationName) => {
           return (q: Query, result: Record<string, unknown>[]) => {
             const all = resultOfTypeAll || result;
+
+            if (q.query.returnType !== originalReturnType) {
+              q.query.returnType = originalReturnType;
+            }
+
             return (
               relations[relationName].nestedUpdate as HasOneNestedUpdate
             )?.(q, all, appendRelations[relationName] as NestedUpdateOneItem);
