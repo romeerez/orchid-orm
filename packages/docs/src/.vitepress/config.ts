@@ -21,8 +21,8 @@ export default {
             link: '/guide/'
           },
           {
-            text: 'Building example app',
-            link: '/guide/building-example-app'
+            text: 'Building a sample app',
+            link: '/guide/building-a-sample-app'
           }
         ]
       },
@@ -57,6 +57,10 @@ export default {
           {
             text: 'Relation queries',
             link: '/guide/orm-relation-queries'
+          },
+          {
+            text: 'Repository',
+            link: '/guide/orm-repo'
           }
         ]
       },

@@ -18,14 +18,15 @@ If all the ORMs feels limiting and messy, you may want to try using query builde
 
 With raw SQL it is much harder and error-prone to write dynamic queries, when the query structure depends on user parameters it may result in a messy SQL parts concatenation.
 
-Query-builder is not aware of relations between tables, so each time when querying posts with comments you have to write join query explicitly, and there may be 3, 4, 10 levels of joins. ORM does that for you.
+Query-builder is not aware of relations between tables, so each time when querying posts with comments you have to write join query explicitly, and there may be 3, 4, 10 levels of joins.
+ORM does that for you.
 
 Other ORMs takes different ways for defining models:
 
 - `Prisma` has own language for defining schema, which requires to recompile it to TS on each change.
-- `Sequelize` was designed for JS, and it takes a lot of boilerplate for TS, it will be a bit better in v7 which is currently in alpha, but still not as concise as the others.
+- `Sequelize` was designed for JS, and it takes a lot of boilerplate for TS.
 - `Objection` was designed for JS, and it won't let TS to autocomplete or check relation names or columns in your queries.
-- `TypeORM`, `MikroORM` models relies on decorators and a hacky tools to tweak TS compiler to get info about the types.
+- `TypeORM`, `MikroORM` models relies on decorators and requires specific typescript settings.
 - `DeepKit` hacks the compiler entirely, and it simply didn't work for me with strange errors.
 
 With `Porm` you write models in a such way:
@@ -56,14 +57,15 @@ There is no additional language to use and recompile, no decorators, no TS compi
 
 Different ORMs enforces different problems when there is a need to customize a query.
 
-- In `Prisma` when you have to rewrite a full query to raw SQL even if a small `WHERE` statement requires a custom check
-- `Sequelize` result type will be always a full record, even if you selected only specific columns
+- In `Prisma` you have to rewrite a full query to raw SQL even if a small `WHERE` statement requires a custom condition
+- `Sequelize` result type is always a full record, even if you selected only specific columns, the type doesn't know whether you included relation or not
 - `TypeORM`, `MikroORM` offers you to use very limited ORM interface for simple queries (with the same problem as in `Sequelize`), and to use a query builder for more complex queries which won't be type safe.
-- `Objection` has a nice to use query builder `knex`, but not type safe.
+- `Objection` is easier for writing queries, but it is not type safe.
 
-`Porm` queries have no such problems:
+`Porm` queries have no such problems, it is designed to build complex queries with relations and keep track of all the types:
 
 ```ts
+// posts type will be: Array<{ id: number, name: string, authorName: string, commentsCount: number }>
 const posts = await db.post
   // .join allows to specify only relation name defined in Post model
   .join('author')
@@ -76,4 +78,15 @@ const posts = await db.post
     // select number of post comments:
     commentsCount: (q) => q.comments.count(),
   })
+```
+
+`Porm` allows to define custom chainable methods (via [repository](/guide/orm-repo)) to write clean abstract queries like:
+
+```ts
+const posts = await postRepo
+  .selectForList()
+  .search('word')
+  .filterByTags(['tag 1', 'tag 2'])
+  .orderByPopularity()
+  .limit(20)
 ```
