@@ -1,33 +1,10 @@
-import {
-  Adapter,
-  Db,
-  EmptyObject,
-  Query,
-  AdapterOptions,
-  QueryLogOptions,
-  MergeQuery,
-} from 'pqb';
+import { Adapter, Db, AdapterOptions, QueryLogOptions } from 'pqb';
 import { DbModel, Model, ModelClasses } from './model';
 import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
 
-type MapMethods<Methods> = {
-  [K in keyof Methods]: Methods[K] extends (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    q: any,
-    ...args: infer Args
-  ) => // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  infer Result
-    ? <T extends Query>(
-        this: T,
-        ...args: Args
-      ) => Result extends Query ? MergeQuery<T, Result> : Result
-    : never;
-};
-
 export type PORM<T extends ModelClasses> = {
-  [K in keyof T]: DbModel<InstanceType<T[K]>> &
-    ('methods' extends keyof T[K] ? MapMethods<T[K]['methods']> : EmptyObject);
+  [K in keyof T]: DbModel<T[K]>;
 } & {
   $transaction: typeof transaction;
   $adapter: Adapter;

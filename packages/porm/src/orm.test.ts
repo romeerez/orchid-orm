@@ -73,16 +73,14 @@ describe('orm', () => {
   });
 
   describe('custom methods', () => {
-    it('should accept user defined methods and allow to use them on the model with chaining', () => {
-      class SomeModel extends Model {
-        table = 'someTable';
-        columns = this.setColumns((t) => ({
-          id: t.serial().primaryKey(),
-          name: t.text(),
-        }));
-      }
+    class SomeModel extends Model {
+      table = 'someTable';
+      columns = this.setColumns((t) => ({
+        id: t.serial().primaryKey(),
+        name: t.text(),
+      }));
 
-      const someMethods = SomeModel.makeMethods({
+      static methods = SomeModel.makeMethods({
         one(q) {
           return q.select('id');
         },
@@ -93,11 +91,29 @@ describe('orm', () => {
           return q.where({ id });
         },
       });
+    }
 
-      const db = porm(adapter, {
-        someModel: SomeModel.setMethods(someMethods),
-      });
+    class OtherModel extends Model {
+      table = 'otherTable';
+      columns = this.setColumns((t) => ({
+        id: t.serial().primaryKey(),
+        someId: t.integer().foreignKey(() => SomeModel, 'id'),
+      }));
 
+      relations = {
+        someModel: this.belongsTo(() => SomeModel, {
+          primaryKey: 'id',
+          foreignKey: 'someId',
+        }),
+      };
+    }
+
+    const db = porm(adapter, {
+      someModel: SomeModel,
+      otherModel: OtherModel,
+    });
+
+    it('should accept user defined methods and allow to use them on the model with chaining', () => {
       const q = db.someModel.one().two().three(123).take();
 
       assertType<Awaited<typeof q>, { id: number; name: string }>();
@@ -105,11 +121,60 @@ describe('orm', () => {
       expectSql(
         q.toSql(),
         `
-        SELECT "someTable"."id", "someTable"."name"
-        FROM "someTable"
-        WHERE "someTable"."id" = $1
-        LIMIT $2
-      `,
+          SELECT "someTable"."id", "someTable"."name"
+          FROM "someTable"
+          WHERE "someTable"."id" = $1
+          LIMIT $2
+        `,
+        [123, 1],
+      );
+    });
+
+    it('should have custom methods on relation queries', () => {
+      const q = db.otherModel.someModel.one().two().three(123).take();
+
+      assertType<Awaited<typeof q>, { id: number; name: string }>();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "someModel"."id", "someModel"."name"
+          FROM "someTable" AS "someModel"
+          WHERE "someModel"."id" = "otherTable"."someId"
+            AND "someModel"."id" = $1
+          LIMIT $2
+        `,
+        [123, 1],
+      );
+    });
+
+    it('should have custom methods on relation queries inside of select', () => {
+      const q = db.otherModel.select('id', {
+        someModel: (q) => q.someModel.one().two().three(123),
+      });
+
+      assertType<
+        Awaited<typeof q>,
+        { id: number; someModel: { id: number; name: string } }[]
+      >();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT
+            "otherTable"."id",
+            (
+              SELECT row_to_json("t".*)
+              FROM (
+                SELECT "someModel"."id", "someModel"."name"
+                FROM "someTable" AS "someModel"
+                WHERE "someModel"."id" = "otherTable"."someId"
+                  AND "someModel"."id" = $1
+                LIMIT $2
+              ) AS "t"
+            ) AS "someModel"
+          FROM "otherTable"
+        `,
         [123, 1],
       );
     });

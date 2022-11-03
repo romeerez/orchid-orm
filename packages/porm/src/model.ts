@@ -3,7 +3,9 @@ import {
   ColumnsShape,
   ColumnTypesBase,
   Db,
+  EmptyObject,
   getColumnTypes,
+  MergeQuery,
   Query,
 } from 'pqb';
 import { MapRelations, Relation, RelationThunks } from './relations/relations';
@@ -27,16 +29,31 @@ export type ModelToDb<T extends Model> = Db<
     : Query['relations']
 >;
 
-export type DbModel<T extends Model> = ModelToDb<T> &
-  Omit<MapRelations<T>, keyof Query>;
+type MapMethods<Methods> = {
+  [K in keyof Methods]: Methods[K] extends (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    q: any,
+    ...args: infer Args
+  ) => // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  infer Result
+    ? <T extends Query>(
+        this: T,
+        ...args: Args
+      ) => Result extends Query ? MergeQuery<T, Result> : Result
+    : never;
+};
+
+export type DbModel<T extends ModelClass> = ModelToDb<InstanceType<T>> &
+  Omit<MapRelations<InstanceType<T>>, keyof Query> &
+  ('methods' extends keyof T ? MapMethods<T['methods']> : EmptyObject);
 
 type ModelConfig = {
   shape: ColumnsShape;
   type: unknown;
 };
 
-type ScopeFn<Related extends Model, Scope extends Query> = (
-  q: Db<Related['table'], Related['columns']['shape']>,
+type ScopeFn<Related extends ModelClass, Scope extends Query> = (
+  q: DbModel<Related>,
 ) => Scope;
 
 export type Model = {
@@ -44,12 +61,6 @@ export type Model = {
   columns: ModelConfig;
   schema?: string;
 };
-
-export type MethodsBase<T extends new () => Model> = Record<
-  string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (q: DbModel<InstanceType<T>>, ...args: any[]) => any
->;
 
 export const createModel = <CT extends ColumnTypesBase>(options: {
   columnTypes: CT;
@@ -60,17 +71,14 @@ export const createModel = <CT extends ColumnTypesBase>(options: {
     schema?: string;
 
     static makeMethods<
-      T extends new () => Model,
-      Methods extends MethodsBase<T>,
-    >(this: T, methods: Methods): Methods {
+      T extends Model,
+      Methods extends Record<
+        string,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (q: DbModel<new () => T>, ...args: any[]) => any
+      >,
+    >(this: new () => T, methods: Methods): Methods {
       return methods;
-    }
-
-    static setMethods<
-      T extends new () => Model,
-      Methods extends MethodsBase<T>,
-    >(this: T, methods: Methods): T & { methods: Methods } {
-      return Object.assign(this, { methods });
     }
 
     setColumns = <T extends ColumnsShape>(
@@ -86,15 +94,15 @@ export const createModel = <CT extends ColumnTypesBase>(options: {
 
     belongsTo<
       Self extends this,
-      Related extends Model,
+      Related extends ModelClass,
       Scope extends Query,
       Options extends {
-        primaryKey: keyof Related['columns']['shape'];
+        primaryKey: keyof InstanceType<Related>['columns']['shape'];
         foreignKey: keyof Self['columns']['shape'];
         scope?: ScopeFn<Related, Scope>;
         required?: boolean;
       },
-    >(this: Self, fn: () => ModelClass<Related>, options: Options) {
+    >(this: Self, fn: () => Related, options: Options) {
       return {
         type: 'belongsTo' as const,
         returns: 'one' as const,
@@ -105,14 +113,14 @@ export const createModel = <CT extends ColumnTypesBase>(options: {
 
     hasOne<
       Self extends this,
-      Related extends Model,
+      Related extends ModelClass,
       Scope extends Query,
       Through extends string,
       Source extends string,
       Options extends (
         | {
             primaryKey: keyof Self['columns']['shape'];
-            foreignKey: keyof Related['columns']['shape'];
+            foreignKey: keyof InstanceType<Related>['columns']['shape'];
           }
         | {
             through: Through;
@@ -122,7 +130,7 @@ export const createModel = <CT extends ColumnTypesBase>(options: {
         scope?: ScopeFn<Related, Scope>;
         required?: boolean;
       },
-    >(this: Self, fn: () => ModelClass<Related>, options: Options) {
+    >(this: Self, fn: () => Related, options: Options) {
       return {
         type: 'hasOne' as const,
         returns: 'one' as const,
@@ -133,14 +141,14 @@ export const createModel = <CT extends ColumnTypesBase>(options: {
 
     hasMany<
       Self extends this,
-      Related extends Model,
+      Related extends ModelClass,
       Scope extends Query,
       Through extends string,
       Source extends string,
       Options extends (
         | {
             primaryKey: keyof Self['columns']['shape'];
-            foreignKey: keyof Related['columns']['shape'];
+            foreignKey: keyof InstanceType<Related>['columns']['shape'];
           }
         | {
             through: Through;
@@ -150,7 +158,7 @@ export const createModel = <CT extends ColumnTypesBase>(options: {
         scope?: ScopeFn<Related, Scope>;
         required?: boolean;
       },
-    >(this: Self, fn: () => ModelClass<Related>, options: Options) {
+    >(this: Self, fn: () => Related, options: Options) {
       return {
         type: 'hasMany' as const,
         returns: 'many' as const,
@@ -161,18 +169,18 @@ export const createModel = <CT extends ColumnTypesBase>(options: {
 
     hasAndBelongsToMany<
       Self extends this,
-      Related extends Model,
+      Related extends ModelClass,
       Scope extends Query,
       Options extends {
         primaryKey: keyof Self['columns']['shape'];
-        associationPrimaryKey: keyof Related['columns']['shape'];
+        associationPrimaryKey: keyof InstanceType<Related>['columns']['shape'];
         foreignKey: string;
         associationForeignKey: string;
         joinTable: string;
         scope?: ScopeFn<Related, Scope>;
         required?: boolean;
       },
-    >(this: Self, fn: () => ModelClass<Related>, options: Options) {
+    >(this: Self, fn: () => Related, options: Options) {
       return {
         type: 'hasAndBelongsToMany' as const,
         returns: 'many' as const,
