@@ -53,22 +53,10 @@ export const porm = <T extends ModelClasses>(
       schema: model.schema,
     });
 
-    const { methods } = models[key];
-    if (methods) {
-      for (const key in methods) {
-        const method = methods[key] as (...args: unknown[]) => unknown;
-        (dbModel as unknown as Record<string, unknown>)[key] = function (
-          ...args: unknown[]
-        ) {
-          return method(this, ...args);
-        };
-      }
-    }
-
     (result as Record<string, unknown>)[key] = dbModel;
   }
 
   applyRelations(qb, modelInstances, result);
 
-  return result as PORM<T>;
+  return result as unknown as PORM<T>;
 };

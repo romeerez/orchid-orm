@@ -7,7 +7,7 @@ import {
   useTestDatabase,
 } from './test-utils/test-utils';
 import { adapter } from './test-utils/test-db';
-import { createModel } from './model';
+import { createModel, createRepo } from './model';
 import { columnTypes } from 'pqb';
 
 describe('orm', () => {
@@ -80,17 +80,12 @@ describe('orm', () => {
         name: t.text(),
       }));
 
-      static methods = SomeModel.makeMethods({
-        one(q) {
-          return q.select('id');
-        },
-        two(q) {
-          return q.select('name');
-        },
-        three(q, id: number) {
-          return q.where({ id });
-        },
-      });
+      relations = {
+        otherModel: this.hasMany(() => OtherModel, {
+          primaryKey: 'id',
+          foreignKey: 'someId',
+        }),
+      };
     }
 
     class OtherModel extends Model {
@@ -98,6 +93,7 @@ describe('orm', () => {
       columns = this.setColumns((t) => ({
         id: t.serial().primaryKey(),
         someId: t.integer().foreignKey(() => SomeModel, 'id'),
+        anotherId: t.integer().foreignKey(() => AnotherModel, 'id'),
       }));
 
       relations = {
@@ -105,16 +101,40 @@ describe('orm', () => {
           primaryKey: 'id',
           foreignKey: 'someId',
         }),
+        anotherModel: this.belongsTo(() => AnotherModel, {
+          primaryKey: 'id',
+          foreignKey: 'anotherId',
+        }),
       };
+    }
+
+    class AnotherModel extends Model {
+      table = 'anotherModel';
+      columns = this.setColumns((t) => ({
+        id: t.serial().primaryKey(),
+      }));
     }
 
     const db = porm(adapter, {
       someModel: SomeModel,
       otherModel: OtherModel,
+      anotherModel: AnotherModel,
     });
 
-    it('should accept user defined methods and allow to use them on the model with chaining', () => {
-      const q = db.someModel.one().two().three(123).take();
+    const someRepo = createRepo(db.someModel, {
+      one(q) {
+        return q.select('id');
+      },
+      two(q) {
+        return q.select('name');
+      },
+      three(q, id: number) {
+        return q.where({ id });
+      },
+    });
+
+    it('should accept user defined methods and allow to use them on the model with chaining', async () => {
+      const q = someRepo.one().two().three(123).take();
 
       assertType<Awaited<typeof q>, { id: number; name: string }>();
 
@@ -130,27 +150,9 @@ describe('orm', () => {
       );
     });
 
-    it('should have custom methods on relation queries', () => {
-      const q = db.otherModel.someModel.one().two().three(123).take();
-
-      assertType<Awaited<typeof q>, { id: number; name: string }>();
-
-      expectSql(
-        q.toSql(),
-        `
-          SELECT "someModel"."id", "someModel"."name"
-          FROM "someTable" AS "someModel"
-          WHERE "someModel"."id" = "otherTable"."someId"
-            AND "someModel"."id" = $1
-          LIMIT $2
-        `,
-        [123, 1],
-      );
-    });
-
     it('should have custom methods on relation queries inside of select', async () => {
       const q = db.otherModel.select('id', {
-        someModel: (q) => q.someModel.one().two().three(123),
+        someModel: (q) => someRepo(q.someModel).one().two().three(123),
       });
 
       assertType<
