@@ -13,12 +13,7 @@ import {
   SetQueryTableAlias,
   SetQueryWindows,
 } from '../query';
-import {
-  applyMixins,
-  EmptyObject,
-  getClonedQueryData,
-  GetTypesOrRaw,
-} from '../utils';
+import { applyMixins, EmptyObject, getClonedQueryData } from '../utils';
 import {
   SelectItem,
   SelectQueryData,
@@ -189,35 +184,33 @@ export class QueryMethods {
 
   find<T extends Query>(
     this: T,
-    ...args: GetTypesOrRaw<T['schema']['primaryTypes']>
+    value: T['shape'][T['singlePrimaryKey']]['type'] | RawExpression,
   ): SetQueryReturnsOne<WhereResult<T>> {
-    return this.clone()._find(...args);
+    return this.clone()._find(value);
   }
 
   _find<T extends Query>(
     this: T,
-    ...args: GetTypesOrRaw<T['schema']['primaryTypes']>
+    value: T['shape'][T['singlePrimaryKey']]['type'] | RawExpression,
   ): SetQueryReturnsOne<WhereResult<T>> {
-    const conditions: Partial<T['type']> = {};
-    this.schema.primaryKeys.forEach((key: string, i: number) => {
-      conditions[key as keyof T['type']] = args[i];
-    });
-    return this._where(conditions as WhereArg<T>)._take();
+    return this._where({
+      [this.singlePrimaryKey]: value,
+    } as WhereArg<T>)._take();
   }
 
   findOptional<T extends Query>(
     this: T,
-    ...args: GetTypesOrRaw<T['schema']['primaryTypes']>
+    value: T['shape'][T['singlePrimaryKey']]['type'] | RawExpression,
   ): SetQueryReturnsOneOptional<WhereResult<T>> {
-    return this.clone()._findOptional(...args);
+    return this.clone()._findOptional(value);
   }
 
   _findOptional<T extends Query>(
     this: T,
-    ...args: GetTypesOrRaw<T['schema']['primaryTypes']>
+    value: T['shape'][T['singlePrimaryKey']]['type'] | RawExpression,
   ): SetQueryReturnsOneOptional<WhereResult<T>> {
     return this._find(
-      ...args,
+      value,
     ).takeOptional() as unknown as SetQueryReturnsOneOptional<WhereResult<T>>;
   }
 

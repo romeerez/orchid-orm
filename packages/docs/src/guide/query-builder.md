@@ -1638,6 +1638,8 @@ WHERE id = 1 AND color = 'red'
 
 ## find
 
+`find` methods is available only for tables which has exactly one primary key.
+
 Find record by id, throw `NotFoundError` if not found:
 
 ```ts

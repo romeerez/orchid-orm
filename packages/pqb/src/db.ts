@@ -18,10 +18,10 @@ import { AdapterOptions, Adapter } from './adapter';
 import {
   ColumnsShape,
   ColumnShapeOutput,
-  TableSchema,
   ColumnShapeInput,
   ColumnTypesBase,
   getColumnTypes,
+  SinglePrimaryKey,
 } from './columnSchema';
 import { applyMixins, pushOrNewArray } from './utils';
 import { StringKey } from './common';
@@ -51,7 +51,8 @@ export interface Db<
   onQueryBuilder: Query['onQueryBuilder'];
   table: Table;
   shape: Shape;
-  schema: TableSchema<Shape>;
+  singlePrimaryKey: SinglePrimaryKey<Shape>;
+  primaryKeys: Query['primaryKeys'];
   type: ColumnShapeOutput<Shape>;
   inputType: ColumnShapeInput<Shape>;
   query: QueryData;
@@ -113,7 +114,14 @@ export class Db<
       this.query.schema = options.schema;
     }
 
-    this.schema = new TableSchema(shape);
+    this.primaryKeys = Object.keys(shape).filter(
+      (key) => shape[key].isPrimaryKey,
+    );
+    if (this.primaryKeys.length === 1) {
+      this.singlePrimaryKey = this
+        .primaryKeys[0] as unknown as SinglePrimaryKey<Shape>;
+    }
+
     const columns = Object.keys(
       shape,
     ) as unknown as (keyof ColumnShapeOutput<Shape>)[];

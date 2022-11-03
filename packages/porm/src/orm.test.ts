@@ -148,14 +148,14 @@ describe('orm', () => {
       );
     });
 
-    it('should have custom methods on relation queries inside of select', () => {
+    it('should have custom methods on relation queries inside of select', async () => {
       const q = db.otherModel.select('id', {
         someModel: (q) => q.someModel.one().two().three(123),
       });
 
       assertType<
         Awaited<typeof q>,
-        { id: number; someModel: { id: number; name: string } }[]
+        { id: number; someModel: { id: number; name: string } | null }[]
       >();
 
       expectSql(

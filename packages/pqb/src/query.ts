@@ -8,12 +8,7 @@ import {
   getValueKey,
 } from './queryMethods';
 import { QueryData } from './sql';
-import {
-  ColumnShapeOutput,
-  ColumnsShape,
-  ColumnType,
-  TableSchema,
-} from './columnSchema';
+import { ColumnShapeOutput, ColumnsShape, ColumnType } from './columnSchema';
 import { EmptyObject, Spread } from './utils';
 import { AliasOrTable, RawExpression, StringKey } from './common';
 import { Db } from './db';
@@ -51,12 +46,8 @@ export type Query = QueryMethods & {
   onQueryBuilder: typeof OnQueryBuilder;
   table?: string;
   shape: ColumnsShape;
-  schema: Omit<TableSchema<ColumnsShape>, 'primaryKeys' | 'primaryTypes'> & {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    primaryKeys: any[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    primaryTypes: any[];
-  };
+  singlePrimaryKey: string;
+  primaryKeys: string[];
   type: Record<string, unknown>;
   inputType: Record<string, unknown>;
   query: QueryData;

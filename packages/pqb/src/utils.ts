@@ -1,4 +1,3 @@
-import { RawExpression } from './common';
 import { QueryData, toSqlCacheKey } from './sql';
 
 export type SomeIsTrue<T extends unknown[]> = T extends [
@@ -16,28 +15,7 @@ export type SetOptional<T, K extends PropertyKey> = Omit<T, K> & {
   [P in K]?: P extends keyof T ? T[P] : never;
 };
 
-export type GetTypesOrRaw<T extends [...unknown[]]> = T extends [
-  infer Head,
-  ...infer Tail,
-]
-  ? [GetTypeOrRaw<Head>, ...GetTypesOrRaw<Tail>]
-  : [];
-
-export type GetTypeOrRaw<T> = T | RawExpression;
-
-// credits goes to https://stackoverflow.com/a/50375286
-export type UnionToIntersection<U> =
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (U extends any ? (k: U) => void : never) extends (k: infer I) => void
-    ? I
-    : never;
-
 // Converts union to overloaded function
-export type UnionToOvlds<U> = UnionToIntersection<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  U extends any ? (f: U) => void : never
->;
-
 type OptionalPropertyNames<T> = {
   // eslint-disable-next-line @typescript-eslint/ban-types
   [K in keyof T]-?: {} extends { [P in K]: T[K] } ? K : never;

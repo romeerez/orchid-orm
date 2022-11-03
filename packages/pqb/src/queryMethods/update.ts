@@ -232,11 +232,13 @@ export class Update {
       query.returnType = 'all';
 
       if (state?.updateLater) {
-        this.schema.primaryKeys.forEach((key: string) => {
-          if (!query.select?.includes('*') && !query.select?.includes(key)) {
-            this._select(key as StringKey<keyof T['selectable']>);
-          }
-        });
+        if (!query.select?.includes('*')) {
+          this.primaryKeys.forEach((key) => {
+            if (!query.select?.includes(key)) {
+              this._select(key as StringKey<keyof T['selectable']>);
+            }
+          });
+        }
       }
 
       const { handleResult } = query;
@@ -250,7 +252,7 @@ export class Update {
           await Promise.all(state.updateLaterPromises as Promise<void>[]);
 
           const t = this.__model.clone().transacting(q);
-          const keys = this.schema.primaryKeys as string[];
+          const keys = this.primaryKeys;
           (
             t._whereIn as unknown as (
               keys: string[],

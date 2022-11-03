@@ -1,6 +1,7 @@
 import { ColumnInput, ColumnOutput, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
-import { SetOptional, SomeIsTrue, UnionToIntersection } from '../utils';
+import { SetOptional, SomeIsTrue } from '../utils';
+import { StringKey } from '../common';
 
 export type ColumnsShape = Record<string, ColumnType>;
 
@@ -53,63 +54,22 @@ export abstract class PluckResultColumnType<
   C extends ColumnType,
 > extends ColumnType<C['type'][], typeof Operators.any> {}
 
-type UnionKeyofToOvlds<S, U> = UnionToIntersection<
-  U extends keyof S ? (f: U) => void : never
+// resolves in string literal of single primary key
+// if table has two or more primary keys it will resolve in never
+export type SinglePrimaryKey<Shape extends ColumnsShape> = StringKey<
+  {
+    [K in keyof Shape]: Shape[K]['isPrimaryKey'] extends true
+      ? [
+          {
+            [S in keyof Shape]: Shape[S]['isPrimaryKey'] extends true
+              ? S extends K
+                ? never
+                : S
+              : never;
+          }[keyof Shape],
+        ] extends [never]
+        ? K
+        : never
+      : never;
+  }[keyof Shape]
 >;
-
-type PopKeyofColumnShapeUnion<
-  S extends ColumnsShape,
-  U extends keyof S,
-> = UnionKeyofToOvlds<S, U> extends (a: infer A extends keyof S) => void
-  ? A
-  : never;
-
-type IsUnion<T> = [T] extends [UnionToIntersection<T>] ? false : true;
-
-export type UnionToArray<
-  S extends ColumnsShape,
-  T extends keyof S,
-  A extends [...(keyof S)[]] = [],
-> = IsUnion<T> extends true
-  ? UnionToArray<
-      S,
-      Exclude<T, PopKeyofColumnShapeUnion<S, T>>,
-      [PopKeyofColumnShapeUnion<S, T>, ...A]
-    >
-  : [T, ...A];
-
-type GetPrimaryKeys<S extends ColumnsShape> = UnionToArray<
-  S,
-  { [K in keyof S]: S[K] extends { isPrimaryKey: true } ? K : never }[keyof S]
->;
-
-type GetPrimaryTypes<
-  S extends ColumnsShape,
-  Keys extends [...(keyof S | string)[]] = GetPrimaryKeys<S>,
-> = GetTypesFromKeys<S, Keys>;
-
-type GetTypesFromKeys<
-  S extends ColumnsShape,
-  T extends [...(keyof S)[]],
-> = T extends [
-  infer Head extends keyof S,
-  ...infer Tail extends [...(keyof S)[]],
-]
-  ? [GetTypeFromKey<S, Head>, ...GetTypesFromKeys<S, Tail>]
-  : [];
-
-type GetTypeFromKey<S extends ColumnsShape, T extends keyof S> = S[T]['type'];
-
-export class TableSchema<Shape extends ColumnsShape> {
-  primaryKeys: string extends keyof Shape ? string[] : GetPrimaryKeys<Shape>;
-  primaryTypes!: GetPrimaryTypes<Shape>;
-
-  constructor(public shape: Shape) {
-    this.primaryKeys = Object.entries(this.shape)
-      .filter(([, column]) => {
-        return column.isPrimaryKey;
-      })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map(([key]) => key) as any;
-  }
-}

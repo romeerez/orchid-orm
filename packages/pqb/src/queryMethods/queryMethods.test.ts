@@ -4,13 +4,13 @@ import {
   adapter,
   User,
   Profile,
-  AssertEqual,
   useTestDatabase,
   db,
   expectSql,
   userData,
   now,
   assertType,
+  UserRecord,
 } from '../test-utils';
 import { NumberColumn } from '../columnSchema';
 import { NotFoundError } from '../errors';
@@ -25,8 +25,7 @@ describe('queryMethods', () => {
       expect(cloned.table).toBe(User.table);
       expect(cloned.shape).toBe(User.shape);
 
-      const eq: AssertEqual<typeof User, typeof cloned> = true;
-      expect(eq).toBe(true);
+      assertType<typeof User, typeof cloned>();
     });
   });
 
@@ -35,9 +34,7 @@ describe('queryMethods', () => {
       const sql = User.toSql();
       expectSql(sql, `SELECT * FROM "user"`);
 
-      const eq: AssertEqual<typeof sql, { text: string; values: unknown[] }> =
-        true;
-      expect(eq).toBe(true);
+      assertType<typeof sql, { text: string; values: unknown[] }>();
     });
   });
 
@@ -60,8 +57,7 @@ describe('queryMethods', () => {
         .then((res) => res.rows[0]);
 
       const user = await q.take();
-      const eq: AssertEqual<typeof user, typeof User.type> = true;
-      expect(eq).toBe(true);
+      assertType<typeof user, UserRecord>();
 
       expect(user).toEqual({
         ...expected,
@@ -88,8 +84,7 @@ describe('queryMethods', () => {
         .then((res) => res.rows[0]);
 
       const user = await q.takeOptional();
-      const eq: AssertEqual<typeof user, typeof User.type | undefined> = true;
-      expect(eq).toBe(true);
+      assertType<typeof user, UserRecord | undefined>();
 
       expect(user).toEqual({
         ...expected,
@@ -100,8 +95,7 @@ describe('queryMethods', () => {
 
     it('should return undefined if not found', async () => {
       const user = await User.takeOptional();
-      const eq: AssertEqual<typeof user, typeof User.type | undefined> = true;
-      expect(eq).toBe(true);
+      assertType<typeof user, UserRecord | undefined>();
 
       expect(user).toBe(undefined);
     });
@@ -128,16 +122,14 @@ describe('queryMethods', () => {
       const result = await User.pluck('createdAt');
       expect(result).toEqual([now, now, now]);
 
-      const eq: AssertEqual<typeof result, Date[]> = true;
-      expect(eq).toBe(true);
+      assertType<typeof result, Date[]>();
     });
 
     it('should support raw expression', async () => {
       const result = await User.pluck(raw<NumberColumn>('123'));
       expect(result).toEqual([123, 123, 123]);
 
-      const eq: AssertEqual<typeof result, number[]> = true;
-      expect(eq).toBe(true);
+      assertType<typeof result, number[]>();
     });
   });
 
@@ -228,8 +220,7 @@ describe('queryMethods', () => {
       const q = User.all();
       const query = q.find(1);
 
-      const eq: AssertEqual<Awaited<typeof query>, typeof User.type> = true;
-      expect(eq).toBe(true);
+      assertType<Awaited<typeof query>, UserRecord>();
 
       expectSql(
         query.toSql(),
@@ -247,8 +238,7 @@ describe('queryMethods', () => {
       const q = User.all();
       const query = q.find(raw('$1 + $2', 1, 2));
 
-      const eq: AssertEqual<Awaited<typeof query>, typeof User.type> = true;
-      expect(eq).toBe(true);
+      assertType<Awaited<typeof query>, UserRecord>();
 
       expectSql(
         query.toSql(),
@@ -268,11 +258,7 @@ describe('queryMethods', () => {
       const q = User.all();
       const query = q.findOptional(1);
 
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        typeof User.type | undefined
-      > = true;
-      expect(eq).toBe(true);
+      assertType<Awaited<typeof query>, UserRecord | undefined>();
 
       expectSql(
         query.toSql(),
@@ -290,11 +276,7 @@ describe('queryMethods', () => {
       const q = User.all();
       const query = q.findOptional(raw('$1 + $2', 1, 2));
 
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        typeof User.type | undefined
-      > = true;
-      expect(eq).toBe(true);
+      assertType<Awaited<typeof query>, UserRecord | undefined>();
 
       expectSql(
         query.toSql(),
@@ -336,11 +318,7 @@ describe('queryMethods', () => {
       const q = User.all();
       const query = q.findByOptional({ name: 's' });
 
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        typeof User.type | undefined
-      > = true;
-      expect(eq).toBe(true);
+      assertType<Awaited<typeof query>, UserRecord | undefined>();
 
       expectSql(
         query.toSql(),
@@ -354,11 +332,7 @@ describe('queryMethods', () => {
       const q = User.all();
       const query = q.findByOptional({ name: raw(`'string'`) });
 
-      const eq: AssertEqual<
-        Awaited<typeof query>,
-        typeof User.type | undefined
-      > = true;
-      expect(eq).toBe(true);
+      assertType<Awaited<typeof query>, UserRecord | undefined>();
 
       expectSql(
         query.toSql(),
