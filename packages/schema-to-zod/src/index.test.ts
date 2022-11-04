@@ -6,17 +6,16 @@ import {
   IntegerColumn,
   jsonTypes,
   TextColumn,
+  JSONType,
+  JSONTypeAny,
+  JSONDate,
+  JSONNumber,
+  JSONString,
+  JSONArray,
 } from 'pqb';
 import { columnToZod, instanceToZod, modelToZod } from './index';
 import { z } from 'zod';
 import { Buffer } from 'node:buffer';
-import { JSONType, JSONTypeAny } from 'pqb/src/columnSchema/json/typeBase';
-import {
-  JSONDate,
-  JSONNumber,
-  JSONString,
-} from 'pqb/src/columnSchema/json/scalarTypes';
-import { JSONArray } from 'pqb/src/columnSchema/json/array';
 
 export type AssertEqual<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]

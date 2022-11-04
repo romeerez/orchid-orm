@@ -7,35 +7,32 @@ import {
   JSONColumn,
   NumberColumn,
   TextColumn,
-} from 'pqb';
-import { z, ZodTypeAny } from 'zod';
-import { Buffer } from 'node:buffer';
-import { JSONTypeAny, Primitive } from 'pqb/src/columnSchema/json/typeBase';
-import { JSONArray } from 'pqb/src/columnSchema/json/array';
-import { JSONEnum } from 'pqb/src/columnSchema/json/enum';
-import { JSONInstanceOf } from 'pqb/src/columnSchema/json/instanceOf';
-import { JSONLiteral } from 'pqb/src/columnSchema/json/literal';
-import { JSONMap } from 'pqb/src/columnSchema/json/map';
-import { EnumLike, JSONNativeEnum } from 'pqb/src/columnSchema/json/nativeEnum';
-import {
+  JSONTypeAny,
+  Primitive,
+  JSONArray,
+  JSONEnum,
+  JSONInstanceOf,
+  JSONLiteral,
+  JSONMap,
+  EnumLike,
+  JSONNativeEnum,
   JSONDate,
   JSONNumber,
   JSONString,
-} from 'pqb/src/columnSchema/json/scalarTypes';
-import { JSONSet } from 'pqb/src/columnSchema/json/set';
-import { JSONTuple } from 'pqb/src/columnSchema/json/tuple';
-import { JSONObject, UnknownKeysParam } from 'pqb/src/columnSchema/json/object';
-import {
+  JSONSet,
+  JSONTuple,
+  JSONObject,
+  UnknownKeysParam,
   JSONDiscriminatedObject,
   JSONDiscriminatedUnion,
-} from 'pqb/src/columnSchema/json/discriminatedUnion';
-import {
   JSONRecord,
   JSONRecordKeyType,
-} from 'pqb/src/columnSchema/json/record';
-import { JSONIntersection } from 'pqb/src/columnSchema/json/intersection';
-import { JSONUnion } from 'pqb/src/columnSchema/json/union';
-import { JSONLazy } from 'pqb/src/columnSchema/json/lazy';
+  JSONIntersection,
+  JSONUnion,
+  JSONLazy,
+} from 'pqb';
+import { z, ZodTypeAny } from 'zod';
+import { Buffer } from 'node:buffer';
 
 type NumberType =
   | 'smallint'
