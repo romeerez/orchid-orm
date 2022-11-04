@@ -1,11 +1,11 @@
 {
-  "name": "porm-schema-to-zod",
-  "version": "0.0.4",
-  "description": "PORM columns schema to Zod converter",
-  "homepage": "https://porm.netlify.app/guide/columns-validation-methods",
+  "name": "porm-test-factory",
+  "version": "0.0.0",
+  "description": "PORM factories for tests",
+  "homepage": "https://porm.netlify.app/guide/orm-test-factories",
   "repository": {
     "type": "git",
-    "url": "https://github.com/romeerez/porm/tree/main/packages/schema-to-zod"
+    "url": "https://github.com/romeerez/porm/tree/main/packages/test-factory"
   },
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -37,16 +37,17 @@
   },
   "keywords": [
     "porm",
-    "query-builder",
-    "schema",
-    "zod"
+    "test",
+    "factory"
   ],
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
-    "pqb": "workspace:*"
-  },
-  "peerDependencies": {
+    "porm": "workspace:*",
+    "pqb": "workspace:*",
+    "porm-schema-to-zod": "workspace:*",
+    "@faker-js/faker": "^7.6.0",
+    "@anatine/zod-mock": "^3.6.0",
     "zod": "^3.19.1"
   },
   "devDependencies": {
@@ -60,6 +61,10 @@
     "jest": "^28.1.2",
     "rimraf": "^3.0.2",
     "tslib": "^2.4.0",
-    "typescript": "^4.7.4"
+    "typescript": "^4.7.4",
+    "dotenv": "^16.0.1",
+    "pg-transactional-tests": "^1.0.3",
+    "pg": "^8.8.0",
+    "@types/pg": "^8.6.5"
   }
 }

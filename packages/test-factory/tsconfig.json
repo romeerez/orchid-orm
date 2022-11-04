@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.json",
+  "include": ["./src"],
+  "compilerOptions": {
+    "outDir": "./dist",
+    "noEmit": false,
+    "baseUrl": ".",
+    "paths": {
+      "porm": ["../porm/src"],
+      "porm-schema-to-zod": ["../schema-to-zod/src"]
+    }
+  }
+}
