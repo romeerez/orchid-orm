@@ -7,7 +7,7 @@ import {
   jsonTypes,
   TextColumn,
 } from 'pqb';
-import { columnToZod, modelToZod } from './index';
+import { columnToZod, instanceToZod, modelToZod } from './index';
 import { z } from 'zod';
 import { Buffer } from 'node:buffer';
 import { JSONType, JSONTypeAny } from 'pqb/src/columnSchema/json/typeBase';
@@ -48,6 +48,32 @@ describe('model to zod', () => {
     };
 
     const result = modelToZod(model);
+    assertType<
+      typeof result,
+      z.ZodObject<{ id: z.ZodNumber; name: z.ZodNullable<z.ZodString> }>
+    >(true);
+
+    expect(result.parse({ id: 1, name: 'name' })).toEqual({
+      id: 1,
+      name: 'name',
+    });
+
+    expect(() => result.parse({ id: '1' })).toThrow(
+      'Expected number, received string',
+    );
+  });
+});
+
+describe('instance to zod', () => {
+  it('should convert object with shape to a zod validation schema', () => {
+    const item = {
+      shape: {
+        id: t.serial().primaryKey(),
+        name: t.text().nullable(),
+      },
+    };
+
+    const result = instanceToZod(item);
     assertType<
       typeof result,
       z.ZodObject<{ id: z.ZodNumber; name: z.ZodNullable<z.ZodString> }>

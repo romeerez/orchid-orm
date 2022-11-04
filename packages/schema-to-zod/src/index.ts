@@ -213,23 +213,28 @@ type MapJsonTuple<T extends unknown[]> = T extends [infer Head, ...infer Tail]
 
 export type ModelToZod<
   T extends new () => { columns: { shape: ColumnsShape } },
-> = z.ZodObject<{
-  [K in keyof InstanceType<T>['columns']['shape']]: SchemaToZod<
-    InstanceType<T>['columns']['shape'][K]
-  >;
-}>;
+> = InstanceToZod<InstanceType<T>['columns']>;
 
 export const modelToZod = <
   T extends new () => { columns: { shape: ColumnsShape } },
 >(
   model: T,
 ): ModelToZod<T> => {
+  return instanceToZod(new model().columns) as unknown as ModelToZod<T>;
+};
+
+export type InstanceToZod<T extends { shape: ColumnsShape }> = z.ZodObject<{
+  [K in keyof T['shape']]: SchemaToZod<T['shape'][K]>;
+}>;
+
+export const instanceToZod = <T extends { shape: ColumnsShape }>({
+  shape,
+}: T): InstanceToZod<T> => {
   const result = {} as z.ZodRawShape;
-  const item = new model();
-  for (const key in item.columns.shape) {
-    result[key as keyof typeof result] = columnToZod(item.columns.shape[key]);
+  for (const key in shape) {
+    result[key as keyof typeof result] = columnToZod(shape[key]);
   }
-  return z.object(result) as ModelToZod<T>;
+  return z.object(result) as InstanceToZod<T>;
 };
 
 export const columnToZod = <T extends ColumnType>(

@@ -61,6 +61,10 @@ export default {
           {
             text: 'Repository',
             link: '/guide/orm-repo'
+          },
+          {
+            text: 'Test factories',
+            link: '/guide/orm-test-factories'
           }
         ]
       },
@@ -74,6 +78,10 @@ export default {
           {
             text: 'Common methods',
             link: '/guide/columns-common-methods',
+          },
+          {
+            text: 'Validation methods',
+            link: '/guide/columns-validation-methods',
           },
           {
             text: 'Column types',
