@@ -44,11 +44,11 @@ export class Then {
     }
   }
 
-  async catch<Result>(
-    this: Query,
+  async catch<T extends Query, Result>(
+    this: T,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     fn: (reason: any) => Result | PromiseLike<Result>,
-  ): Promise<Result> {
+  ): Promise<ReturnType<T['then']> | Result> {
     return this.then(undefined, fn);
   }
 }
