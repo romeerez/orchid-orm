@@ -30,8 +30,7 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
-    "pqb": "workspace:*",
-    "zod": "> 3.1"
+    "pqb": "workspace:*"
   },
   "devDependencies": {
     "rollup": "^2.79.0",

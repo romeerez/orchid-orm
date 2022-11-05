@@ -24,10 +24,8 @@ importers:
       rollup-plugin-esbuild: ^4.10.1
       tslib: ^2.4.0
       typescript: ^4.7.4
-      zod: '> 3.1'
     dependencies:
       pqb: link:../pqb
-      zod: 3.17.3
     devDependencies:
       '@swc/core': 1.2.210
       '@swc/jest': 0.2.21_@swc+core@1.2.210
@@ -154,6 +152,53 @@ importers:
       tslib: 2.4.0
       typescript: 4.7.4
 
+  ../../packages/test-factory:
+    specifiers:
+      '@anatine/zod-mock': ^3.6.0
+      '@faker-js/faker': ^7.6.0
+      '@swc/core': ^1.2.210
+      '@swc/jest': ^0.2.21
+      '@types/jest': ^28.1.2
+      '@types/node': ^18.0.1
+      '@types/pg': ^8.6.5
+      dotenv: ^16.0.1
+      jest: ^28.1.2
+      pg: ^8.8.0
+      pg-transactional-tests: ^1.0.3
+      porm: workspace:*
+      porm-schema-to-zod: workspace:*
+      pqb: workspace:*
+      rimraf: ^3.0.2
+      rollup: ^2.79.0
+      rollup-plugin-dts: ^4.2.2
+      rollup-plugin-esbuild: ^4.10.1
+      tslib: ^2.4.0
+      typescript: ^4.7.4
+      zod: ^3.19.1
+    dependencies:
+      '@anatine/zod-mock': 3.6.0_@faker-js+faker@7.6.0
+      '@faker-js/faker': 7.6.0
+      porm: link:../porm
+      porm-schema-to-zod: link:../schema-to-zod
+      pqb: link:../pqb
+      zod: 3.19.1
+    devDependencies:
+      '@swc/core': 1.2.210
+      '@swc/jest': 0.2.21_@swc+core@1.2.210
+      '@types/jest': 28.1.4
+      '@types/node': 18.0.1
+      '@types/pg': 8.6.5
+      dotenv: 16.0.3
+      jest: 28.1.2_@types+node@18.0.1
+      pg: 8.8.0
+      pg-transactional-tests: 1.0.3_pg@8.8.0
+      rimraf: 3.0.2
+      rollup: 2.79.0
+      rollup-plugin-dts: 4.2.2_xdb5ss5ub2cemhlks3szmapm6q
+      rollup-plugin-esbuild: 4.10.1_rollup@2.79.0
+      tslib: 2.4.0
+      typescript: 4.7.4
+
 packages:
 
   /@ampproject/remapping/2.2.0:
@@ -163,6 +208,15 @@ packages:
       '@jridgewell/gen-mapping': 0.1.1
       '@jridgewell/trace-mapping': 0.3.14
     dev: true
+
+  /@anatine/zod-mock/3.6.0_@faker-js+faker@7.6.0:
+    resolution: {integrity: sha512-xW7TuAr2dRS8J0Th0w/fAf3rJqDcYJvvpy1uuWvxVoEIs835f7BcqmYoL+rN5PjFU1E6gqa8rxXF3mo9bQt57g==}
+    peerDependencies:
+      '@faker-js/faker': ^7.0.0
+    dependencies:
+      '@faker-js/faker': 7.6.0
+      randexp: 0.5.3
+    dev: false
 
   /@babel/code-frame/7.18.6:
     resolution: {integrity: sha512-TDCmlK5eOvH+eH7cdAFlNXeVJqWIQ7gW9tY1GJIpUtFb6CmjVyq2VM3u71bOyR8CRihcCgMUYoDNyLXao3+70Q==}
@@ -503,6 +557,11 @@ packages:
     requiresBuild: true
     dev: true
     optional: true
+
+  /@faker-js/faker/7.6.0:
+    resolution: {integrity: sha512-XK6BTq1NDMo9Xqw/YkYyGjSsg44fbNwYRx7QK2CuoQgyy+f1rrTDHoExVM5PsyXCtfl2vs2vVJ0MN0yN6LppRw==}
+    engines: {node: '>=14.0.0', npm: '>=6.0.0'}
+    dev: false
 
   /@istanbuljs/load-nyc-config/1.1.0:
     resolution: {integrity: sha512-VjeHSlIzpv/NyD3N0YuHfXOPDIixcA1q2ZV98wsMqcYlPmv2n3Yb2lYP9XMElnaFVXg5A7YLTeLu6V84uQDjmQ==}
@@ -1467,6 +1526,11 @@ packages:
     resolution: {integrity: sha512-7GO6HghkA5fYG9TYnNxi14/7K9f5occMlp3zXAuSxn7CKCxt9xbNWG7yF8hTCSUchlfWSe3uLmlPfigevRItzQ==}
     engines: {node: '>=12'}
     dev: true
+
+  /drange/1.1.1:
+    resolution: {integrity: sha512-pYxfDYpued//QpnLIm4Avk7rsNtAtQkUES2cwAYSvD/wd2pKD71gN2Ebj3e7klzXwjocvE8c5vx/1fxwpqmSxA==}
+    engines: {node: '>=4'}
+    dev: false
 
   /electron-to-chromium/1.4.177:
     resolution: {integrity: sha512-FYPir3NSBEGexSZUEeht81oVhHfLFl6mhUKSkjHN/iB/TwEIt/WHQrqVGfTLN5gQxwJCQkIJBe05eOXjI7omgg==}
@@ -2692,6 +2756,14 @@ packages:
       pg: 8.7.3
     dev: true
 
+  /pg-pool/3.5.2_pg@8.8.0:
+    resolution: {integrity: sha512-His3Fh17Z4eg7oANLob6ZvH8xIVen3phEZh2QuyrIl4dQSDVEabNducv6ysROKpDNPSD+12tONZVWfSgMvDD9w==}
+    peerDependencies:
+      pg: '>=8.0'
+    dependencies:
+      pg: 8.8.0
+    dev: true
+
   /pg-protocol/1.5.0:
     resolution: {integrity: sha512-muRttij7H8TqRNu/DxrAJQITO4Ac7RmX3Klyr/9mJEOBeIpgnF8f9jAfRz5d3XwQZl5qBjF9gLsUtMPJE0vezQ==}
     dev: true
@@ -2702,6 +2774,14 @@ packages:
       pg: '*'
     dependencies:
       pg: 8.7.3
+    dev: true
+
+  /pg-transactional-tests/1.0.3_pg@8.8.0:
+    resolution: {integrity: sha512-QBrE1rPuLhaRg8uFyJDrE0Jwb2kuRNBvrGDvNr3mx6C31saPZvJQWsXGkD6SOb18RJ98uNN+lPcWMD0OQjRbtg==}
+    peerDependencies:
+      pg: '*'
+    dependencies:
+      pg: 8.8.0
     dev: true
 
   /pg-types/2.2.0:
@@ -2728,6 +2808,24 @@ packages:
       packet-reader: 1.0.0
       pg-connection-string: 2.5.0
       pg-pool: 3.5.1_pg@8.7.3
+      pg-protocol: 1.5.0
+      pg-types: 2.2.0
+      pgpass: 1.0.5
+    dev: true
+
+  /pg/8.8.0:
+    resolution: {integrity: sha512-UXYN0ziKj+AeNNP7VDMwrehpACThH7LUl/p8TDFpEUuSejCUIwGSfxpHsPvtM6/WXFy6SU4E5RG4IJV/TZAGjw==}
+    engines: {node: '>= 8.0.0'}
+    peerDependencies:
+      pg-native: '>=3.0.1'
+    peerDependenciesMeta:
+      pg-native:
+        optional: true
+    dependencies:
+      buffer-writer: 2.0.0
+      packet-reader: 1.0.0
+      pg-connection-string: 2.5.0
+      pg-pool: 3.5.2_pg@8.8.0
       pg-protocol: 1.5.0
       pg-types: 2.2.0
       pgpass: 1.0.5
@@ -2805,6 +2903,14 @@ packages:
       sisteransi: 1.0.5
     dev: true
 
+  /randexp/0.5.3:
+    resolution: {integrity: sha512-U+5l2KrcMNOUPYvazA3h5ekF80FHTUG+87SEAmHZmolh1M+i/WyTCxVzmi+tidIa1tM4BSe8g2Y/D3loWDjj+w==}
+    engines: {node: '>=4'}
+    dependencies:
+      drange: 1.1.1
+      ret: 0.2.2
+    dev: false
+
   /react-is/18.2.0:
     resolution: {integrity: sha512-xWGDIW6x921xtzPkhiULtthJHoJvBbF3q26fzloPCK0hsvxtPVelvftw3zjbHWSkR2km9Z+4uxbDDK/6Zw9B8w==}
     dev: true
@@ -2839,6 +2945,11 @@ packages:
       path-parse: 1.0.7
       supports-preserve-symlinks-flag: 1.0.0
     dev: true
+
+  /ret/0.2.2:
+    resolution: {integrity: sha512-M0b3YWQs7R3Z917WRQy1HHA7Ba7D8hvZg6UE5mLykJxQVE2ju0IXbGlaHPPlkY+WN7wFP+wUMXmBFA0aV6vYGQ==}
+    engines: {node: '>=4'}
+    dev: false
 
   /rimraf/3.0.2:
     resolution: {integrity: sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA==}
@@ -3235,10 +3346,6 @@ packages:
     resolution: {integrity: sha512-Ux4ygGWsu2c7isFWe8Yu1YluJmqVhxqK2cLXNQA5AcC3QfbGNpM7fu0Y8b/z16pXLnFxZYvWhd3fhBY9DLmC6Q==}
     engines: {node: '>=6'}
     dev: true
-
-  /zod/3.17.3:
-    resolution: {integrity: sha512-4oKP5zvG6GGbMlqBkI5FESOAweldEhSOZ6LI6cG+JzUT7ofj1ZOC0PJudpQOpT1iqOFpYYtX5Pw0+o403y4bcg==}
-    dev: false
 
   /zod/3.19.1:
     resolution: {integrity: sha512-LYjZsEDhCdYET9ikFu6dVPGp2YH9DegXjdJToSzD9rO6fy4qiRYFoyEYwps88OseJlPyl2NOe2iJuhEhL7IpEA==}

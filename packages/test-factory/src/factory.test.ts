@@ -1,7 +1,6 @@
-import { createFactory, TestFactory } from './factory';
+import { createFactory } from './factory';
 import { assertType, db, User, useTestDatabase } from './test-utils';
 import { z } from 'zod';
-import { InstanceToZod } from 'porm-schema-to-zod';
 
 describe('factory', () => {
   useTestDatabase();
@@ -11,6 +10,7 @@ describe('factory', () => {
   describe('build', () => {
     it('should build an object for the model', () => {
       const data = userFactory.build();
+      console.log(data);
 
       assertType<typeof data, User>();
 
@@ -24,7 +24,10 @@ describe('factory', () => {
         extra: true,
       });
 
-      assertType<typeof data, User & { age: number; extra: boolean }>();
+      assertType<
+        typeof data,
+        User & { name: 'name'; age: 18; extra: boolean }
+      >();
 
       expect(data).toMatchObject({ age: 18, name: 'name', extra: true });
     });
@@ -101,7 +104,7 @@ describe('factory', () => {
     it('should create record with overridden data', async () => {
       const item = await userFactory.create({ name: 'name' });
 
-      assertType<typeof item, User>();
+      assertType<typeof item, User & { name: 'name' }>();
 
       expect(item.name).toBe('name');
     });
@@ -119,7 +122,7 @@ describe('factory', () => {
     it('should create a list of records with overridden data', async () => {
       const items = await userFactory.createList(2, { name: 'name' });
 
-      assertType<typeof items, User[]>();
+      assertType<typeof items, (User & { name: 'name' })[]>();
 
       expect(items.map((item) => item.name)).toEqual(['name', 'name']);
     });
@@ -135,7 +138,7 @@ describe('factory', () => {
           name: 'name',
         });
 
-      assertType<typeof data, User>();
+      assertType<typeof data, User & { age: number; name: 'name' }>();
 
       expect(data).toMatchObject({ age: 18, name: 'name' });
     });
@@ -149,13 +152,13 @@ describe('factory', () => {
           name: 'name',
         });
 
-      assertType<typeof arr, User[]>();
+      assertType<typeof arr, (User & { age: number; name: 'name' })[]>();
     });
 
     it('should set data to override result and work with create', async () => {
       const item = await userFactory.set({ age: 18 }).create();
 
-      assertType<typeof item, User>();
+      assertType<typeof item, User & { age: number }>();
 
       expect(() => userFactory.schema.parse(item)).not.toThrow();
       expect(item.age).toBe(18);
@@ -164,33 +167,48 @@ describe('factory', () => {
     it('should set data to override result and work with createList', async () => {
       const items = await userFactory.set({ age: 18 }).createList(2);
 
-      assertType<typeof items, User[]>();
+      assertType<typeof items, (User & { age: number })[]>();
 
       expect(() => z.array(userFactory.schema).parse(items)).not.toThrow();
       expect(items.map((item) => item.age)).toEqual([18, 18]);
     });
   });
 
-  // describe('custom methods', () => {
-  //   class ExtendedFactory extends TestFactory<
-  //     InstanceToZod<typeof db.user>,
-  //     typeof db.user['type']
-  //   > {
-  //     specificUser(age: number) {
-  //       return this.set({
-  //         age,
-  //       });
-  //     }
-  //   }
-  //
-  //   const extendedFactory = new ExtendedFactory(db.user);
-  //
-  //   it('should be chainable with build', async () => {
-  //     const data = extendedFactory.specificUser(42).build();
-  //
-  //     assertType<typeof data, User>();
-  //
-  //     expect(data).toMatchObject({ age: 42, name: 'specific' });
-  //   });
-  // });
+  describe('custom methods', () => {
+    class ExtendedFactory extends createFactory(db.user).extend() {
+      specificUser(age: number) {
+        return this.otherMethod().set({
+          age,
+          name: 'specific',
+        });
+      }
+      otherMethod() {
+        return this.set({ extra: true });
+      }
+    }
+
+    const extendedFactory = new ExtendedFactory();
+
+    it('should respect omitted fields and build a proper object', async () => {
+      const data = extendedFactory.omit({ id: true }).specificUser(42).build();
+
+      assertType<
+        typeof data,
+        Omit<User, 'id'> & { age: number; extra: boolean }
+      >();
+
+      expect(data).toMatchObject({ age: 42, name: 'specific', extra: true });
+    });
+
+    it('should respect picked fields and build a proper object', async () => {
+      const data = extendedFactory
+        .pick({ age: true, name: true })
+        .specificUser(42)
+        .build();
+
+      assertType<typeof data, Pick<User, 'name'> & { age: number }>();
+
+      expect(data).toEqual({ age: 42, name: 'specific' });
+    });
+  });
 });

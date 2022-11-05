@@ -1,93 +1,53 @@
-import { ColumnsShape, EmptyObject, StringKey } from 'pqb';
-import { InstanceToZod, instanceToZod } from 'porm-schema-to-zod';
+import { AnyZodObject } from 'zod';
+import { EmptyObject, Query } from 'pqb';
+import { instanceToZod, InstanceToZod } from 'porm-schema-to-zod';
 import { generateMock } from '@anatine/zod-mock';
-import { AnyZodObject, ZodObject, ZodRawShape } from 'zod';
 
-// Converts union to overloaded function
-type OptionalPropertyNames<T> = {
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  [K in keyof T]-?: {} extends { [P in K]: T[K] } ? K : never;
-}[keyof T];
+type metaKey = typeof metaKey;
+const metaKey = Symbol('meta');
 
-type SpreadProperties<L, R, K extends keyof L & keyof R> = {
-  [P in K]: L[P] | Exclude<R[P], undefined>;
-};
+type Result<
+  T extends TestFactory,
+  BaseData,
+  Data extends BaseData,
+  Omitted = Omit<
+    BaseData extends Data
+      ? T[metaKey]['type']
+      : T[metaKey]['type'] & {
+          [K in keyof Data]: Data[K] extends () => void
+            ? ReturnType<Data[K]>
+            : Data[K];
+        },
+    keyof T[metaKey]['omit']
+  >,
+> = EmptyObject extends T[metaKey]['pick']
+  ? Omitted
+  : Pick<
+      Omitted,
+      {
+        [K in keyof Omitted]: K extends keyof T[metaKey]['pick'] ? K : never;
+      }[keyof Omitted]
+    >;
 
-type Id<T> = T extends infer U ? { [K in keyof U]: U[K] } : never;
+type BuildArg<T extends TestFactory> = CreateArg<T> & Record<string, unknown>;
 
-type SpreadTwo<L, R> = Id<
-  Pick<L, Exclude<keyof L, keyof R>> &
-    Pick<R, Exclude<keyof R, OptionalPropertyNames<R>>> &
-    Pick<R, Exclude<OptionalPropertyNames<R>, keyof L>> &
-    SpreadProperties<L, R, OptionalPropertyNames<R> & keyof L>
+type BuildResult<T extends TestFactory, Data extends BuildArg<T>> = Result<
+  T,
+  BuildArg<T>,
+  Data
 >;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Spread<A extends readonly [...any]> = A extends [
-  infer L,
-  ...infer R,
-]
-  ? SpreadTwo<L, Spread<R>>
-  : unknown;
-
-type FactoryBase = { shape: ColumnsShape; type: EmptyObject };
-
-type KeysMask<T extends TestFactory> = {
-  [K in keyof T['schema']['shape']]?: true;
-};
-
-type BuildArg<T extends TestFactory> = {
-  [K in keyof T['result']]?: T['result'][K] | (() => T['result'][K]);
-} & Record<string, unknown>;
-
 type CreateArg<T extends TestFactory> = {
-  [K in keyof T['result']]?: T['result'][K] | (() => T['result'][K]);
+  [K in keyof T[metaKey]['type']]?:
+    | T[metaKey]['type'][K]
+    | (() => T[metaKey]['type'][K]);
 };
 
-type ResolveOverrides<Arg> = {
-  [K in keyof Arg]: Arg[K] extends () => unknown ? ReturnType<Arg[K]> : Arg[K];
-};
-
-type TestFactoryBuild<T extends TestFactory, Arg> = BuildArg<T> extends Arg
-  ? T['result']
-  : Omit<T['result'], keyof Arg> & ResolveOverrides<Arg>;
-
-type TestFactoryCreate<T extends TestFactory, Arg> = T['result'] & Arg;
-
-type TestFactoryOmit<T extends TestFactory, Keys extends KeysMask<T>> = Omit<
+type CreateResult<T extends TestFactory, Data extends CreateArg<T>> = Result<
   T,
-  'schema' | 'data' | 'result'
-> & {
-  schema: ZodObject<Omit<T['schema']['shape'], keyof Keys>>;
-  data: Omit<T['data'], keyof Keys>;
-  result: Omit<T['result'], keyof Keys>;
-};
-
-type TestFactoryPick<T extends TestFactory, Keys extends KeysMask<T>> = Omit<
-  T,
-  'schema' | 'data' | 'result'
-> & {
-  schema: ZodObject<Pick<T['schema']['shape'], StringKey<keyof Keys>>>;
-  data: Pick<
-    T['data'],
-    {
-      [K in keyof T['data']]: K extends keyof Keys ? K : never;
-    }[keyof T['data']]
-  >;
-  result: Pick<
-    T['result'],
-    {
-      [K in keyof T['result']]: K extends keyof Keys ? K : never;
-    }[keyof T['result']]
-  >;
-};
-
-type TestFactorySet<T extends TestFactory, Arg extends CreateArg<T>> = Omit<
-  T,
-  'data'
-> & {
-  data: Spread<[T['data'], Arg]>;
-};
+  CreateArg<T>,
+  Data
+>;
 
 const omit = <T, Keys extends Record<string, unknown>>(
   obj: T,
@@ -115,111 +75,124 @@ const pick = <T, Keys extends Record<string, unknown>>(
 };
 
 export class TestFactory<
-  Schema extends ZodObject<ZodRawShape> = AnyZodObject,
-  Result extends EmptyObject = EmptyObject,
-  Data extends EmptyObject = EmptyObject,
+  Schema extends AnyZodObject = AnyZodObject,
+  Type extends EmptyObject = EmptyObject,
 > {
-  schema: Schema;
-  result!: Result;
+  private readonly data: EmptyObject;
+  private readonly omitValues: Record<PropertyKey, true> = {};
+  private readonly pickValues: Record<PropertyKey, true> = {};
 
-  constructor(public model: FactoryBase, public data: Data = {} as Data) {
-    this.schema = instanceToZod(model) as unknown as Schema;
+  [metaKey]!: {
+    type: Type;
+    omit: EmptyObject;
+    pick: EmptyObject;
+  };
+
+  constructor(public model: Query, public schema: Schema) {
+    this.data = {};
   }
 
-  build<T extends TestFactory, Arg extends BuildArg<T>>(
+  set<
+    T extends this,
+    Meta extends { type: EmptyObject },
+    Data extends {
+      [K in keyof Meta['type']]?: Meta['type'][K] | (() => Meta['type'][K]);
+    } & Record<string, unknown>,
+  >(
+    this: T & { [metaKey]: Meta },
+    data: Data,
+  ): T & { [metaKey]: Meta & { type: Data } } {
+    return Object.assign(Object.create(this), {
+      data: { ...this.data, ...data },
+    });
+  }
+
+  omit<T extends this, Keys extends { [K in keyof T[metaKey]['type']]?: true }>(
     this: T,
-    arg?: Arg,
-  ): TestFactoryBuild<T, Spread<[Data, Arg]>> {
-    const result = generateMock(this.schema) as Record<string, unknown>;
-    const data = arg ? { ...this.data, ...arg } : this.data;
-    for (const key in data) {
-      const value = (data as Record<string, unknown>)[key];
+    keys: Keys,
+  ): T & { [metaKey]: T[metaKey] & { omit: Keys } } {
+    return Object.assign(Object.create(this), {
+      omitValues: { ...this.omitValues, ...keys },
+    });
+  }
+
+  pick<T extends this, Keys extends { [K in keyof T[metaKey]['type']]?: true }>(
+    this: T,
+    keys: Keys,
+  ): T & { [metaKey]: T[metaKey] & { pick: Keys } } {
+    return Object.assign(Object.create(this), {
+      pickValues: { ...this.pickValues, ...keys },
+    });
+  }
+
+  build<T extends this, Data extends BuildArg<T>>(
+    this: T,
+    data?: Data,
+  ): BuildResult<T, Data> {
+    let schema = this.schema as AnyZodObject;
+    let arg = data ? { ...this.data, ...data } : this.data;
+
+    if (this.omitValues) {
+      schema = schema.omit(this.omitValues);
+      arg = omit(arg, this.omitValues);
+    }
+
+    if (this.pickValues && Object.keys(this.pickValues).length) {
+      schema = schema.pick(this.pickValues);
+      arg = pick(arg, this.pickValues);
+    }
+
+    const result = generateMock(schema) as Record<string, unknown>;
+    for (const key in arg) {
+      const value = (arg as Record<string, unknown>)[key];
       if (typeof value === 'function') {
         result[key] = value();
       } else {
         result[key] = value;
       }
     }
-    return result as TestFactoryBuild<T, Spread<[Data, Arg]>>;
+    return result as BuildResult<T, Data>;
   }
 
-  buildList<T extends TestFactory, Arg extends BuildArg<T>>(
+  buildList<T extends this, Data extends BuildArg<T>>(
     this: T,
     qty: number,
-    arg?: Arg,
-  ): TestFactoryBuild<T, Spread<[Data, Arg]>>[] {
-    return [...Array(qty)].map(() =>
-      this.build(arg),
-    ) as unknown as TestFactoryBuild<T, Spread<[Data, Arg]>>[];
+    data?: Data,
+  ): BuildResult<T, Data>[] {
+    return [...Array(qty)].map(() => this.build(data));
   }
 
-  async create<T extends TestFactory, Arg extends CreateArg<T>>(
+  async create<T extends this, Data extends CreateArg<T>>(
     this: T,
-    data?: Arg,
-  ): Promise<TestFactoryCreate<T, Arg>> {
+    data?: Data,
+  ): Promise<CreateResult<T, Data>> {
     const obj = this.build(data);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (await (this.model as any).create(obj as any)) as TestFactoryCreate<
-      T,
-      Arg
-    >;
+    return (await this.model.create(obj)) as CreateResult<T, Data>;
   }
 
-  async createList<T extends TestFactory, Arg extends CreateArg<T>>(
+  async createList<T extends this, Data extends CreateArg<T>>(
     this: T,
     qty: number,
-    data?: Arg,
-  ): Promise<TestFactoryCreate<T, Arg>[]> {
-    const obj = [...Array(qty)].map(() => this.build(data));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (await (this.model as any).createMany(
-      obj as any,
-    )) as TestFactoryCreate<T, Arg>[];
+    data?: Data,
+  ): Promise<CreateResult<T, Data>[]> {
+    const arr = [...Array(qty)].map(() => this.build(data));
+    return (await this.model.createMany(arr)) as CreateResult<T, Data>[];
   }
 
-  omit<T extends TestFactory, Keys extends KeysMask<T>>(
-    this: T,
-    keys: Keys,
-  ): TestFactoryOmit<T, Keys> {
-    return Object.assign(Object.create(this), {
-      schema: this.schema.omit(keys),
-      data: omit(this.data, keys),
-    });
-  }
+  extend<T extends this>(this: T): new () => TestFactory<Schema, Type> {
+    const { model, schema } = this;
 
-  pick<T extends TestFactory, Keys extends KeysMask<T>>(
-    this: T,
-    keys: Keys,
-  ): TestFactoryPick<T, Keys> {
-    return Object.assign(Object.create(this), {
-      schema: this.schema.pick(keys),
-      data: pick(this.data, keys),
-    });
+    return class extends TestFactory<Schema, Type> {
+      constructor() {
+        super(model, schema);
+      }
+    };
   }
-
-  set<T extends TestFactory, Arg extends CreateArg<T>>(
-    this: T,
-    data: Arg,
-  ): TestFactorySet<T, Arg> {
-    return Object.assign(Object.create(this), {
-      data: {
-        ...this.data,
-        ...data,
-      },
-    });
-  }
-
-  // extend<
-  //   T extends TestFactory<F>,
-  //   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  //   Methods extends Record<string, (this: T, ...args: any[]) => any>,
-  // >(this: T, methods: Methods): T & Methods {
-  //   return Object.assign(Object.create(this), methods);
-  // }
 }
 
-export const createFactory = <T extends FactoryBase>(
-  model: T,
-): TestFactory<InstanceToZod<T>, T['type']> => {
-  return new TestFactory(model) as TestFactory<InstanceToZod<T>, T['type']>;
+export const createFactory = <T extends Query>(model: T) => {
+  return new TestFactory<InstanceToZod<T>, T['type']>(
+    model,
+    instanceToZod(model),
+  );
 };

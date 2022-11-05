@@ -56,6 +56,12 @@
       "projectFolder": "packages/schema-to-zod",
       "shouldPublish": false,
       "tags": ["schema", "zod"]
+    },
+    {
+      "packageName": "porm-test-factory",
+      "projectFolder": "packages/test-factory",
+      "shouldPublish": false,
+      "tags": ["test-factory"]
     }
   ]
 }
