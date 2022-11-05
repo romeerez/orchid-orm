@@ -11,14 +11,14 @@ export const rakeDb = async (
 ) => {
   const config = getMigrationConfigWithDefaults(partialConfig);
 
-  const command = args[0].split(':')[0];
+  const command = args[0]?.split(':')[0];
 
   if (command === 'create') {
     await createDb(options, config);
   } else if (command === 'drop') {
     await dropDb(options);
   } else if (command === 'reset') {
-    await resetDb(options, config)
+    await resetDb(options, config);
   } else if (command === 'migrate') {
     await migrate(options, config, args.slice(1));
   } else if (command === 'rollback') {
@@ -54,4 +54,4 @@ Generate arguments:
 - other arguments considered as columns with types and optional methods:
   rake-db g createTable id:serial.primaryKey name:text.nullable
 `,
-  )
+  );
