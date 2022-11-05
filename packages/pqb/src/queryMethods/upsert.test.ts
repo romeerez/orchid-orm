@@ -1,4 +1,4 @@
-import { AssertEqual, User, userData, useTestDatabase } from '../test-utils';
+import { assertType, User, userData, useTestDatabase } from '../test-utils';
 
 describe('upsert', () => {
   useTestDatabase();
@@ -9,8 +9,7 @@ describe('upsert', () => {
       create: userData,
     });
 
-    const eq: AssertEqual<Awaited<typeof query>, void> = true;
-    expect(eq).toBe(true);
+    assertType<Awaited<typeof query>, void>();
   });
 
   it('should update record if exists', async () => {

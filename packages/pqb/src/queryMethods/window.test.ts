@@ -1,5 +1,5 @@
 import {
-  AssertEqual,
+  assertType,
   expectQueryNotMutated,
   expectSql,
   User,
@@ -33,8 +33,7 @@ describe('window functions', () => {
           partitionBy: 'age',
         });
 
-        const eq: AssertEqual<typeof value, { row_number: number }[]> = true;
-        expect(eq).toBe(true);
+        assertType<typeof value, { row_number: number }[]>();
 
         expect(value).toEqual(
           (results as number[]).map((item) => ({ [functionName]: item })),

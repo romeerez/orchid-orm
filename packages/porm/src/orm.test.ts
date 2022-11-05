@@ -1,12 +1,11 @@
 import { porm } from './orm';
 import {
-  AssertEqual,
   assertType,
   expectSql,
   userData,
   useTestDatabase,
 } from './test-utils/test-utils';
-import { adapter } from './test-utils/test-db';
+import { pgConfig } from './test-utils/test-db';
 import { createModel, createRepo } from './model';
 import { columnTypes } from 'pqb';
 
@@ -32,12 +31,12 @@ describe('orm', () => {
   }
 
   it('should return object with provided adapter, close and transaction method, models', () => {
-    const db = porm(adapter, {
+    const db = porm(pgConfig, {
       user: UserModel,
       profile: ProfileModel,
     });
 
-    expect(Object.keys(db.$adapter)).toEqual(Object.keys(adapter));
+    expect('$adapter' in db).toBe(true);
     expect(db.$close).toBeInstanceOf(Function);
     expect(db.$transaction).toBeInstanceOf(Function);
     expect(Object.keys(db)).toEqual(
@@ -46,7 +45,7 @@ describe('orm', () => {
   });
 
   it('should return model which is a queryable interface', async () => {
-    const db = porm(adapter, {
+    const db = porm(pgConfig, {
       user: UserModel,
       profile: ProfileModel,
     });
@@ -68,8 +67,7 @@ describe('orm', () => {
     const result = await query;
     expect(result).toEqual([{ id, name }]);
 
-    const eq: AssertEqual<typeof result, Pick<User, 'id' | 'name'>[]> = true;
-    expect(eq).toBe(true);
+    assertType<typeof result, Pick<User, 'id' | 'name'>[]>();
   });
 
   describe('custom methods', () => {
@@ -115,7 +113,7 @@ describe('orm', () => {
       }));
     }
 
-    const db = porm(adapter, {
+    const db = porm(pgConfig, {
       someModel: SomeModel,
       otherModel: OtherModel,
       anotherModel: AnotherModel,

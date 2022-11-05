@@ -2,9 +2,9 @@ import {
   User,
   expectQueryNotMutated,
   expectSql,
-  AssertEqual,
   useTestDatabase,
   userData,
+  assertType,
 } from '../test-utils';
 import { raw } from '../common';
 
@@ -126,8 +126,7 @@ describe('aggregate', () => {
     it('should return a number', async () => {
       const count = await User.count();
 
-      const eq: AssertEqual<typeof count, number> = true;
-      expect(eq).toBe(true);
+      assertType<typeof count, number>();
 
       expect(typeof count).toBe('number');
     });
@@ -139,8 +138,7 @@ describe('aggregate', () => {
         const user = await User.selectCount().take();
         expect(user.count).toBe(1);
 
-        const eq: AssertEqual<typeof user.count, number> = true;
-        expect(eq).toBe(true);
+        assertType<typeof user.count, number>();
       });
     });
   });
@@ -157,8 +155,7 @@ describe('aggregate', () => {
     it('should return null when no records', async () => {
       const value = await User[method as 'avg']('id');
 
-      const eq: AssertEqual<typeof value, number | null> = true;
-      expect(eq).toBe(true);
+      assertType<typeof value, number | null>();
 
       expect(value).toBe(null);
     });
@@ -168,8 +165,7 @@ describe('aggregate', () => {
 
       const value = await User[method as 'avg']('id');
 
-      const eq: AssertEqual<typeof value, number | null> = true;
-      expect(eq).toBe(true);
+      assertType<typeof value, number | null>();
 
       expect(typeof value).toBe('number');
     });
@@ -181,8 +177,7 @@ describe('aggregate', () => {
       it('should select null when no record', async () => {
         const value = await User[selectMethod]('id').take();
 
-        const eq: AssertEqual<typeof value, { avg: number | null }> = true;
-        expect(eq).toBe(true);
+        assertType<typeof value, { avg: number | null }>();
 
         expect(value).toEqual({ [functionName]: null });
       });
@@ -192,8 +187,7 @@ describe('aggregate', () => {
 
         const value = await User[selectMethod]('id').take();
 
-        const eq: AssertEqual<typeof value, { avg: number | null }> = true;
-        expect(eq).toBe(true);
+        assertType<typeof value, { avg: number | null }>();
 
         expect(value).toEqual({ [functionName]: id });
       });
@@ -209,8 +203,7 @@ describe('aggregate', () => {
     it('should return null when no records', async () => {
       const value = await User[method as 'boolAnd']('active');
 
-      const eq: AssertEqual<typeof value, boolean | null> = true;
-      expect(eq).toBe(true);
+      assertType<typeof value, boolean | null>();
 
       expect(value).toBe(null);
     });
@@ -220,8 +213,7 @@ describe('aggregate', () => {
 
       const value = await User[method as 'boolAnd']('active');
 
-      const eq: AssertEqual<typeof value, boolean | null> = true;
-      expect(eq).toBe(true);
+      assertType<typeof value, boolean | null>();
 
       expect(typeof value).toBe('boolean');
     });
@@ -233,9 +225,7 @@ describe('aggregate', () => {
       it('should select null when no record', async () => {
         const value = await User[selectMethod]('active').take();
 
-        const eq: AssertEqual<typeof value, { bool_and: boolean | null }> =
-          true;
-        expect(eq).toBe(true);
+        assertType<typeof value, { bool_and: boolean | null }>();
 
         expect(value).toEqual({ [functionName]: null });
       });
@@ -245,9 +235,7 @@ describe('aggregate', () => {
 
         const value = await User[selectMethod]('active').take();
 
-        const eq: AssertEqual<typeof value, { bool_and: boolean | null }> =
-          true;
-        expect(eq).toBe(true);
+        assertType<typeof value, { bool_and: boolean | null }>();
 
         expect(value).toEqual({ [functionName]: true });
       });
@@ -264,11 +252,10 @@ describe('aggregate', () => {
     it('should return null when no records', async () => {
       const value = await User[method as 'jsonAgg']('data');
 
-      const eq: AssertEqual<
+      assertType<
         typeof value,
         ({ name: string; tags: string[] } | null)[] | null
-      > = true;
-      expect(eq).toBe(true);
+      >();
 
       expect(value).toBe(null);
     });
@@ -278,11 +265,10 @@ describe('aggregate', () => {
 
       const value = await User[method as 'jsonAgg']('data');
 
-      const eq: AssertEqual<
+      assertType<
         typeof value,
         ({ name: string; tags: string[] } | null)[] | null
-      > = true;
-      expect(eq).toBe(true);
+      >();
 
       expect(value).toEqual([data]);
     });
@@ -294,11 +280,10 @@ describe('aggregate', () => {
       it('should select null when no record', async () => {
         const value = await User[selectMethod]('data').take();
 
-        const eq: AssertEqual<
+        assertType<
           typeof value,
           { json_agg: ({ name: string; tags: string[] } | null)[] | null }
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expect(value).toEqual({ [functionName]: null });
       });
@@ -308,11 +293,10 @@ describe('aggregate', () => {
 
         const value = await User[selectMethod]('data').take();
 
-        const eq: AssertEqual<
+        assertType<
           typeof value,
           { json_agg: ({ name: string; tags: string[] } | null)[] | null }
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expect(value).toEqual({ [functionName]: [data] });
       });
@@ -390,8 +374,7 @@ describe('aggregate', () => {
     it('should return null when no records', async () => {
       const value = await User[method as 'jsonObjectAgg']({ alias: 'name' });
 
-      const eq: AssertEqual<typeof value, { alias: string } | null> = true;
-      expect(eq).toBe(true);
+      assertType<typeof value, { alias: string } | null>();
 
       expect(value).toBe(null);
     });
@@ -401,8 +384,7 @@ describe('aggregate', () => {
 
       const value = await User[method as 'jsonObjectAgg']({ alias: 'name' });
 
-      const eq: AssertEqual<typeof value, { alias: string } | null> = true;
-      expect(eq).toBe(true);
+      assertType<typeof value, { alias: string } | null>();
 
       expect(value).toEqual({ alias: 'name' });
     });
@@ -414,11 +396,10 @@ describe('aggregate', () => {
       it('should select null when no record', async () => {
         const value = await User[selectMethod]({ alias: 'name' }).take();
 
-        const eq: AssertEqual<
+        assertType<
           typeof value,
           { json_object_agg: { alias: string } | null }
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expect(value).toEqual({ [functionName]: null });
       });
@@ -428,11 +409,10 @@ describe('aggregate', () => {
 
         const value = await User[selectMethod]({ alias: 'name' }).take();
 
-        const eq: AssertEqual<
+        assertType<
           typeof value,
           { json_object_agg: { alias: string } | null }
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expect(value).toEqual({ [functionName]: { alias: 'name' } });
       });
@@ -497,8 +477,7 @@ describe('aggregate', () => {
     it('should return null when no records', async () => {
       const value = await User.stringAgg('name', ', ');
 
-      const eq: AssertEqual<typeof value, string | null> = true;
-      expect(eq).toBe(true);
+      assertType<typeof value, string | null>();
 
       expect(value).toBe(null);
     });
@@ -508,8 +487,7 @@ describe('aggregate', () => {
 
       const value = await User.stringAgg('name', ', ');
 
-      const eq: AssertEqual<typeof value, string | null> = true;
-      expect(eq).toBe(true);
+      assertType<typeof value, string | null>();
 
       expect(value).toEqual('name, name');
     });
@@ -518,9 +496,7 @@ describe('aggregate', () => {
       it('should select null when no record', async () => {
         const value = await User.selectStringAgg('name', ', ').take();
 
-        const eq: AssertEqual<typeof value, { string_agg: string | null }> =
-          true;
-        expect(eq).toBe(true);
+        assertType<typeof value, { string_agg: string | null }>();
 
         expect(value).toEqual({ string_agg: null });
       });
@@ -530,9 +506,7 @@ describe('aggregate', () => {
 
         const value = await User.selectStringAgg('name', ', ').take();
 
-        const eq: AssertEqual<typeof value, { string_agg: string | null }> =
-          true;
-        expect(eq).toBe(true);
+        assertType<typeof value, { string_agg: string | null }>();
 
         expect(value).toEqual({ string_agg: 'name, name' });
       });

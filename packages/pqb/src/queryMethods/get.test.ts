@@ -1,4 +1,4 @@
-import { AssertEqual, User, userData, useTestDatabase } from '../test-utils';
+import { assertType, User, userData, useTestDatabase } from '../test-utils';
 import { NumberColumn } from '../columnSchema';
 import { NotFoundError } from '../errors';
 import { raw } from '../common';
@@ -12,8 +12,7 @@ describe('get', () => {
 
       const received = await User.get('id');
 
-      const eq: AssertEqual<typeof received, number> = true;
-      expect(eq).toBe(true);
+      assertType<typeof received, number>();
 
       expect(received).toBe(id);
     });
@@ -21,8 +20,7 @@ describe('get', () => {
     it('should select raw and return a single value', async () => {
       const received = await User.get(raw<NumberColumn>('count(*)::int'));
 
-      const eq: AssertEqual<typeof received, number> = true;
-      expect(eq).toBe(true);
+      assertType<typeof received, number>();
 
       expect(received).toBe(0);
     });
@@ -38,8 +36,7 @@ describe('get', () => {
 
       const received = await User.getOptional('id');
 
-      const eq: AssertEqual<typeof received, number | undefined> = true;
-      expect(eq).toBe(true);
+      assertType<typeof received, number | undefined>();
 
       expect(received).toBe(id);
     });
@@ -49,16 +46,14 @@ describe('get', () => {
         raw<NumberColumn>('count(*)::int'),
       );
 
-      const eq: AssertEqual<typeof received, number | undefined> = true;
-      expect(eq).toBe(true);
+      assertType<typeof received, number | undefined>();
 
       expect(received).toBe(0);
     });
 
     it('should return undefined if not found', async () => {
       const value = await User.getOptional('id');
-      const eq: AssertEqual<typeof value, number | undefined> = true;
-      expect(eq).toBe(true);
+      assertType<typeof value, number | undefined>();
 
       expect(value).toBe(undefined);
     });

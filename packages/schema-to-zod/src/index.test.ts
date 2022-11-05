@@ -17,7 +17,7 @@ import { columnToZod, instanceToZod, modelToZod } from './index';
 import { z } from 'zod';
 import { Buffer } from 'node:buffer';
 
-export type AssertEqual<T, Expected> = [T] extends [Expected]
+type AssertEqual<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]
     ? true
     : false

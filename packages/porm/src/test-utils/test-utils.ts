@@ -2,11 +2,10 @@ import {
   patchPgForTransactions,
   rollbackTransaction,
   startTransaction,
-  unpatchPgForTransactions,
 } from 'pg-transactional-tests';
-import { dbClient } from './test-db';
+import { db } from './test-db';
 
-export type AssertEqual<T, Expected> = [T] extends [Expected]
+type AssertEqual<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]
     ? true
     : false
@@ -61,17 +60,10 @@ export const messageData = {
 };
 
 export const useTestDatabase = () => {
-  beforeAll(() => {
-    patchPgForTransactions();
-  });
-  beforeEach(async () => {
-    await startTransaction(dbClient);
-  });
-  afterEach(async () => {
-    await rollbackTransaction(dbClient);
-  });
+  beforeAll(patchPgForTransactions);
+  beforeEach(startTransaction);
+  afterEach(rollbackTransaction);
   afterAll(async () => {
-    unpatchPgForTransactions();
-    await dbClient.end();
+    await db.$close();
   });
 };

@@ -1,6 +1,6 @@
 import {
   adapter,
-  AssertEqual,
+  assertType,
   db,
   expectSql,
   User,
@@ -38,8 +38,7 @@ describe('db', () => {
       const result = await table.take().get('createdAt');
       expect(typeof result).toBe('string');
 
-      const eq: AssertEqual<typeof result, string> = true;
-      expect(eq).toBe(true);
+      assertType<typeof result, string>();
     });
 
     it('should return date as Date when overridden', async () => {
@@ -60,8 +59,7 @@ describe('db', () => {
       const result = await table.take().get('createdAt');
       expect(result instanceof Date).toBe(true);
 
-      const eq: AssertEqual<typeof result, Date> = true;
-      expect(eq).toBe(true);
+      assertType<typeof result, Date>();
     });
   });
 });

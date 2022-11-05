@@ -2,7 +2,7 @@ import { ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
 import {
   adapter,
-  AssertEqual,
+  assertType,
   db,
   expectSql,
   User,
@@ -87,8 +87,7 @@ describe('column base', () => {
       const fn = (input: number) => input.toString();
       const withEncode = column.encode(fn);
       expect(withEncode.encodeFn).toBe(fn);
-      const eq: AssertEqual<typeof withEncode.inputType, number> = true;
-      expect(eq).toBeTruthy();
+      assertType<typeof withEncode.inputType, number>();
     });
   });
 
@@ -98,8 +97,7 @@ describe('column base', () => {
       const fn = () => 123;
       const withEncode = column.parse(fn);
       expect(withEncode.parseFn).toBe(fn);
-      const eq: AssertEqual<typeof withEncode.type, number> = true;
-      expect(eq).toBeTruthy();
+      assertType<typeof withEncode.type, number>();
     });
 
     describe('parsing columns', () => {

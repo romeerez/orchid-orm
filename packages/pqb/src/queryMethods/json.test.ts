@@ -1,5 +1,5 @@
 import {
-  AssertEqual,
+  assertType,
   expectQueryNotMutated,
   expectSql,
   User,
@@ -71,11 +71,10 @@ describe('json methods', () => {
         const result = await query.take();
         expect(result.data).toEqual({ name: 'new value', tags: ['one'] });
 
-        const eq: AssertEqual<
+        assertType<
           typeof result.data,
           { name: string; tags: string[] } | null
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expectQueryNotMutated(q);
       });
@@ -99,11 +98,10 @@ describe('json methods', () => {
         const result = await query.take();
         expect(result.alias).toEqual({ name: 'new value', tags: ['one'] });
 
-        const eq: AssertEqual<
+        assertType<
           typeof result.alias,
           { name: string; tags: string[] } | null
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expectQueryNotMutated(q);
       });
@@ -134,11 +132,10 @@ describe('json methods', () => {
           tags: ['two', 'one'],
         });
 
-        const eq: AssertEqual<
+        assertType<
           typeof result.data,
           { name: string; tags: string[] } | null
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expectQueryNotMutated(q);
       });
@@ -161,11 +158,10 @@ describe('json methods', () => {
         const result = await query.take();
         expect(result.data).toEqual({ name: 'value', tags: ['two', 'one'] });
 
-        const eq: AssertEqual<
+        assertType<
           typeof result.data,
           { name: string; tags: string[] } | null
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expectQueryNotMutated(q);
       });
@@ -189,11 +185,10 @@ describe('json methods', () => {
         const result = await query.take();
         expect(result.alias).toEqual({ name: 'value', tags: ['one', 'two'] });
 
-        const eq: AssertEqual<
+        assertType<
           typeof result.alias,
           { name: string; tags: string[] } | null
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expectQueryNotMutated(q);
       });
@@ -221,11 +216,10 @@ describe('json methods', () => {
         const result = await query.take();
         expect(result.data).toEqual({ name: 'value', tags: ['tag'] });
 
-        const eq: AssertEqual<
+        assertType<
           typeof result.data,
           { name: string; tags: string[] } | null
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expectQueryNotMutated(q);
       });
@@ -247,11 +241,10 @@ describe('json methods', () => {
         const result = await query.take();
         expect(result.data).toEqual({ name: 'value', tags: [] });
 
-        const eq: AssertEqual<
+        assertType<
           typeof result.data,
           { name: string; tags: string[] } | null
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expectQueryNotMutated(q);
       });
@@ -271,11 +264,10 @@ describe('json methods', () => {
         const result = await query.take();
         expect(result.alias).toEqual({ name: 'value', tags: [] });
 
-        const eq: AssertEqual<
+        assertType<
           typeof result.alias,
           { name: string; tags: string[] } | null
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expectQueryNotMutated(q);
       });
@@ -300,11 +292,10 @@ describe('json methods', () => {
         const result = await query.take();
         expect(result.data).toEqual({ name: 'value', tags: [] });
 
-        const eq: AssertEqual<
+        assertType<
           typeof result.data,
           { name: string; tags: string[] } | null
-        > = true;
-        expect(eq).toBe(true);
+        >();
 
         expectQueryNotMutated(q);
       });
@@ -332,8 +323,7 @@ describe('json methods', () => {
         const result = await query.take();
         expect(result.name).toBe('value');
 
-        const eq: AssertEqual<typeof result.name, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result.name, string>();
 
         expectQueryNotMutated(q);
       });
@@ -388,8 +378,7 @@ describe('json methods', () => {
         const result = await query.take();
         expect(result.tags).toEqual(['tag']);
 
-        const eq: AssertEqual<typeof result.tags, string[]> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result.tags, string[]>();
 
         expectQueryNotMutated(q);
       });

@@ -1,5 +1,5 @@
 import {
-  AssertEqual,
+  assertType,
   expectQueryNotMutated,
   expectSql,
   User,
@@ -28,8 +28,7 @@ describe('insert functions', () => {
       `,
       );
 
-      const eq: AssertEqual<Awaited<typeof query>, number> = true;
-      expect(eq).toBe(true);
+      assertType<Awaited<typeof query>, number>();
 
       expectQueryNotMutated(q);
     });
@@ -52,8 +51,7 @@ describe('insert functions', () => {
       const result = await query;
       expect(result).toBe(1);
 
-      const eq: AssertEqual<typeof result, number> = true;
-      expect(eq).toBe(true);
+      assertType<typeof result, number>();
 
       const inserted = await User.take();
       expect(inserted).toMatchObject(userData);
@@ -76,8 +74,7 @@ describe('insert functions', () => {
       );
 
       const result = await query;
-      const eq: AssertEqual<typeof result, number> = true;
-      expect(eq).toBe(true);
+      assertType<typeof result, number>();
 
       expect(typeof result).toBe('number');
 
@@ -99,8 +96,7 @@ describe('insert functions', () => {
       );
 
       const result = await query;
-      const eq: AssertEqual<typeof result, { id: number; name: string }> = true;
-      expect(eq).toBe(true);
+      assertType<typeof result, { id: number; name: string }>();
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...other } = userData;
@@ -124,8 +120,7 @@ describe('insert functions', () => {
       );
 
       const result = await query;
-      const eq: AssertEqual<typeof result, typeof User['type']> = true;
-      expect(eq).toBe(true);
+      assertType<typeof result, typeof User['type']>();
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...other } = userData;
@@ -181,8 +176,7 @@ describe('insert functions', () => {
       const result = await query;
       expect(result).toBe(2);
 
-      const eq: AssertEqual<typeof result, number> = true;
-      expect(eq).toBe(true);
+      assertType<typeof result, number>();
 
       const inserted = await User.all();
       inserted.forEach((item, i) => {
@@ -218,9 +212,7 @@ describe('insert functions', () => {
       );
 
       const result = await query;
-      const eq: AssertEqual<typeof result, { id: number; name: string }[]> =
-        true;
-      expect(eq).toBe(true);
+      assertType<typeof result, { id: number; name: string }[]>();
 
       const inserted = await User.all();
       inserted.forEach((item, i) => {
@@ -260,8 +252,7 @@ describe('insert functions', () => {
         expect(item).toMatchObject(arr[i]);
       });
 
-      const eq: AssertEqual<typeof result, typeof User['type'][]> = true;
-      expect(eq).toBe(true);
+      assertType<typeof result, typeof User['type'][]>();
 
       const inserted = await User.all();
       inserted.forEach((item, i) => {
@@ -503,8 +494,7 @@ describe('insert functions', () => {
         const result = await User.create(userData);
         expect(result).toMatchObject(userData);
 
-        const eq: AssertEqual<typeof result, typeof User.type> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, typeof User.type>();
       });
 
       it('should return columns from select', async () => {
@@ -514,9 +504,7 @@ describe('insert functions', () => {
           name: userData.name,
         });
 
-        const eq: AssertEqual<typeof result, { id: number; name: string }> =
-          true;
-        expect(eq).toBe(true);
+        assertType<typeof result, { id: number; name: string }>();
       });
     });
 
@@ -526,8 +514,7 @@ describe('insert functions', () => {
         expect(result[0]).toMatchObject(userData);
         expect(result[1]).toMatchObject(userData);
 
-        const eq: AssertEqual<typeof result, typeof User.type[]> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, typeof User.type[]>();
       });
 
       it('should return columns from select', async () => {
@@ -544,9 +531,7 @@ describe('insert functions', () => {
           name: userData.name,
         });
 
-        const eq: AssertEqual<typeof result, { id: number; name: string }[]> =
-          true;
-        expect(eq).toBe(true);
+        assertType<typeof result, { id: number; name: string }[]>();
       });
     });
   });

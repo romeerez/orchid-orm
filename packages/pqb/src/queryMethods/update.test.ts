@@ -1,5 +1,5 @@
 import {
-  AssertEqual,
+  assertType,
   expectQueryNotMutated,
   expectSql,
   User,
@@ -48,8 +48,7 @@ describe('update', () => {
       [users[0].id, users[1].id],
     );
 
-    const eq: AssertEqual<Awaited<typeof query>, number> = true;
-    expect(eq).toBe(true);
+    assertType<Awaited<typeof query>, number>();
 
     const result = await query;
     expect(result).toBe(count);
@@ -77,8 +76,7 @@ describe('update', () => {
     );
 
     const result = await query;
-    const eq: AssertEqual<typeof result, number> = true;
-    expect(eq).toBe(true);
+    assertType<typeof result, number>();
 
     expect(result).toBe(1);
 
@@ -109,8 +107,7 @@ describe('update', () => {
     );
 
     const result = await query;
-    const eq: AssertEqual<typeof result, number> = true;
-    expect(eq).toBe(true);
+    assertType<typeof result, number>();
 
     expect(typeof result).toBe('number');
 
@@ -137,8 +134,7 @@ describe('update', () => {
     );
 
     const result = await query;
-    const eq: AssertEqual<typeof result, { id: number; name: string }> = true;
-    expect(eq).toBe(true);
+    assertType<typeof result, { id: number; name: string }>();
 
     const updated = await User.take();
     expect(updated).toMatchObject({ ...userData, ...update });
@@ -163,8 +159,7 @@ describe('update', () => {
     );
 
     const result = await query;
-    const eq: AssertEqual<typeof result, typeof User.type> = true;
-    expect(eq).toBe(true);
+    assertType<typeof result, typeof User.type>();
 
     const updated = await User.take();
     expect(updated).toMatchObject({ ...userData, ...update });
@@ -196,8 +191,7 @@ describe('update', () => {
     );
 
     const result = await query;
-    const eq: AssertEqual<typeof result, { id: number; name: string }[]> = true;
-    expect(eq).toBe(true);
+    assertType<typeof result, { id: number; name: string }[]>();
 
     const updated = await User.take();
     expect(updated).toMatchObject({ ...userData, ...update });
@@ -231,8 +225,7 @@ describe('update', () => {
     const result = await query;
     expect(result[0]).toMatchObject({ ...userData, ...update });
 
-    const eq: AssertEqual<typeof result, typeof User['type'][]> = true;
-    expect(eq).toBe(true);
+    assertType<typeof result, typeof User['type'][]>();
 
     const updated = await User.take();
     expect(updated).toMatchObject({ ...userData, ...update });
@@ -256,8 +249,7 @@ describe('update', () => {
       ['new name', null, 1],
     );
 
-    const eq: AssertEqual<Awaited<typeof query>, number> = true;
-    expect(eq).toBe(true);
+    assertType<Awaited<typeof query>, number>();
   });
 
   it('should support raw sql as a value', () => {
@@ -274,8 +266,7 @@ describe('update', () => {
       [1],
     );
 
-    const eq: AssertEqual<Awaited<typeof query>, number> = true;
-    expect(eq).toBe(true);
+    assertType<Awaited<typeof query>, number>();
   });
 
   it('should return one record when searching for one to update', async () => {
@@ -301,8 +292,7 @@ describe('update', () => {
     );
 
     const result = await query;
-    const eq: AssertEqual<typeof result, typeof User.type> = true;
-    expect(eq).toBe(true);
+    assertType<typeof result, typeof User.type>();
 
     expect(result).toMatchObject({ ...userData, ...update });
   });
@@ -312,8 +302,7 @@ describe('update', () => {
       .findBy({ id: 1 })
       .update({ name: 'new name' });
 
-    const eq: AssertEqual<Awaited<typeof query>, typeof User.type> = true;
-    expect(eq).toBe(true);
+    assertType<Awaited<typeof query>, typeof User.type>();
 
     await expect(query).rejects.toThrow();
   });
@@ -378,8 +367,7 @@ describe('update', () => {
         [3],
       );
 
-      const eq: AssertEqual<Awaited<typeof query>, { id: number }[]> = true;
-      expect(eq).toBe(true);
+      assertType<Awaited<typeof query>, { id: number }[]>();
     });
   });
 
@@ -423,8 +411,7 @@ describe('update', () => {
         [3],
       );
 
-      const eq: AssertEqual<Awaited<typeof query>, { id: number }[]> = true;
-      expect(eq).toBe(true);
+      assertType<Awaited<typeof query>, { id: number }[]>();
     });
   });
 

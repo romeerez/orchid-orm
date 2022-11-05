@@ -1,4 +1,3 @@
-import { Client } from 'pg';
 import { porm } from '../orm';
 import {
   ChatModel,
@@ -13,8 +12,6 @@ import {
 export const pgConfig = {
   connectionString: process.env.DATABASE_URL,
 };
-
-export const dbClient = new Client(pgConfig);
 
 export const db = porm(
   {

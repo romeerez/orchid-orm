@@ -43,6 +43,14 @@ export class Then {
       return then(this, resolve, reject);
     }
   }
+
+  async catch<Result>(
+    this: Query,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    fn: (reason: any) => Result | PromiseLike<Result>,
+  ): Promise<Result> {
+    return this.then(undefined, fn);
+  }
 }
 
 export const handleResult: CommonQueryData['handleResult'] = async (

@@ -1,11 +1,7 @@
 import { createModel } from './model';
 import { porm } from './orm';
 import { adapter, db } from './test-utils/test-db';
-import {
-  AssertEqual,
-  userData,
-  useTestDatabase,
-} from './test-utils/test-utils';
+import { assertType, userData, useTestDatabase } from './test-utils/test-utils';
 import { columnTypes } from 'pqb';
 
 describe('model', () => {
@@ -33,8 +29,7 @@ describe('model', () => {
       const result = await user.get('createdAt');
       expect(typeof result).toBe('string');
 
-      const eq: AssertEqual<typeof result, string> = true;
-      expect(eq).toBe(true);
+      assertType<typeof result, string>();
     });
 
     it('should return date as Date when overridden', async () => {
@@ -65,8 +60,7 @@ describe('model', () => {
       const result = await user.get('createdAt');
       expect(result instanceof Date).toBe(true);
 
-      const eq: AssertEqual<typeof result, Date> = true;
-      expect(eq).toBe(true);
+      assertType<typeof result, Date>();
     });
   });
 });

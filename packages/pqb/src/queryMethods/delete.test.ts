@@ -1,5 +1,5 @@
 import {
-  AssertEqual,
+  assertType,
   expectQueryNotMutated,
   expectSql,
   Profile,
@@ -45,8 +45,7 @@ describe('delete', () => {
     const result = await query;
     expect(result).toBe(id);
 
-    const eq: AssertEqual<typeof result, number> = true;
-    expect(eq).toBe(true);
+    assertType<typeof result, number>();
 
     expectQueryNotMutated(q);
   });
@@ -66,8 +65,7 @@ describe('delete', () => {
     const result = await query;
     expect(result).toBe(rowsCount);
 
-    const eq: AssertEqual<typeof result, number> = true;
-    expect(eq).toBe(true);
+    assertType<typeof result, number>();
 
     expectQueryNotMutated(q);
   });
@@ -82,8 +80,7 @@ describe('delete', () => {
       [1],
     );
 
-    const eq: AssertEqual<Awaited<typeof query>, typeof User['type'][]> = true;
-    expect(eq).toBe(true);
+    assertType<Awaited<typeof query>, typeof User['type'][]>();
 
     expectQueryNotMutated(q);
   });
@@ -98,11 +95,7 @@ describe('delete', () => {
       [1],
     );
 
-    const eq: AssertEqual<
-      Awaited<typeof query>,
-      { id: number; name: string }[]
-    > = true;
-    expect(eq).toBe(true);
+    assertType<Awaited<typeof query>, { id: number; name: string }[]>();
 
     expectQueryNotMutated(q);
   });
@@ -127,8 +120,7 @@ describe('delete', () => {
       [1],
     );
 
-    const eq: AssertEqual<Awaited<typeof query>, typeof User['type'][]> = true;
-    expect(eq).toBe(true);
+    assertType<Awaited<typeof query>, typeof User['type'][]>();
 
     expectQueryNotMutated(q);
   });

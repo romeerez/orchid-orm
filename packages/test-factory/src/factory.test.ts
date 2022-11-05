@@ -10,7 +10,6 @@ describe('factory', () => {
   describe('build', () => {
     it('should build an object for the model', () => {
       const data = userFactory.build();
-      console.log(data);
 
       assertType<typeof data, User>();
 
@@ -93,7 +92,7 @@ describe('factory', () => {
   });
 
   describe('create', () => {
-    it('should create record with generated data', async () => {
+    it('should create record with generated data, except serial primary keys', async () => {
       const item = await userFactory.create();
 
       assertType<typeof item, User>();

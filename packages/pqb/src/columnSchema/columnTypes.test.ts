@@ -1,4 +1,4 @@
-import { AssertEqual, db } from '../test-utils';
+import { assertType, db } from '../test-utils';
 import { raw } from '../common';
 import { columnTypes } from './columnTypes';
 import { TimeInterval } from './dateTime';
@@ -10,8 +10,7 @@ describe('column types', () => {
         const result = await db.get(raw(columnTypes.smallint(), '1::smallint'));
         expect(result).toBe(1);
 
-        const eq: AssertEqual<typeof result, number> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, number>();
       });
     });
 
@@ -20,8 +19,7 @@ describe('column types', () => {
         const result = await db.get(raw(columnTypes.integer(), '1::integer'));
         expect(result).toBe(1);
 
-        const eq: AssertEqual<typeof result, number> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, number>();
       });
     });
 
@@ -30,8 +28,7 @@ describe('column types', () => {
         const result = await db.get(raw(columnTypes.bigint(), '1::bigint'));
         expect(result).toBe('1');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -40,8 +37,7 @@ describe('column types', () => {
         const result = await db.get(raw(columnTypes.numeric(), '1::numeric'));
         expect(result).toBe('1');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -50,8 +46,7 @@ describe('column types', () => {
         const result = await db.get(raw(columnTypes.decimal(), '1::decimal'));
         expect(result).toBe('1');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -60,8 +55,7 @@ describe('column types', () => {
         const result = await db.get(raw(columnTypes.real(), '1::real'));
         expect(result).toBe(1);
 
-        const eq: AssertEqual<typeof result, number> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, number>();
       });
     });
 
@@ -72,8 +66,7 @@ describe('column types', () => {
         );
         expect(result).toBe(1);
 
-        const eq: AssertEqual<typeof result, number> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, number>();
       });
     });
 
@@ -84,8 +77,7 @@ describe('column types', () => {
         );
         expect(result).toBe(1);
 
-        const eq: AssertEqual<typeof result, number> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, number>();
       });
     });
 
@@ -94,8 +86,7 @@ describe('column types', () => {
         const result = await db.get(raw(columnTypes.serial(), '1::integer'));
         expect(result).toBe(1);
 
-        const eq: AssertEqual<typeof result, number> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, number>();
       });
     });
 
@@ -104,8 +95,7 @@ describe('column types', () => {
         const result = await db.get(raw(columnTypes.bigSerial(), '1::bigint'));
         expect(result).toBe('1');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
   });
@@ -118,8 +108,7 @@ describe('column types', () => {
         );
         expect(result).toBe('text');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -128,8 +117,7 @@ describe('column types', () => {
         const result = await db.get(raw(columnTypes.char(), `'text'::char(4)`));
         expect(result).toBe('text');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -138,8 +126,7 @@ describe('column types', () => {
         const result = await db.get(raw(columnTypes.text(), `'text'::text`));
         expect(result).toBe('text');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -148,8 +135,7 @@ describe('column types', () => {
         const result = await db.get(raw(columnTypes.string(), `'text'::text`));
         expect(result).toBe('text');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
   });
@@ -161,8 +147,7 @@ describe('column types', () => {
         expect(result instanceof Buffer).toBe(true);
         expect(result.toString()).toBe('text');
 
-        const eq: AssertEqual<typeof result, Buffer> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, Buffer>();
       });
     });
   });
@@ -175,8 +160,7 @@ describe('column types', () => {
         );
         expect(result).toBe('1999-01-08');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -187,8 +171,7 @@ describe('column types', () => {
         );
         expect(result).toBe('1999-01-08 04:05:06');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -202,8 +185,7 @@ describe('column types', () => {
         );
         expect(result).toBe('1999-01-08 04:05:06');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -212,8 +194,7 @@ describe('column types', () => {
         const result = await db.get(raw(columnTypes.time(), `'12:00'::time`));
         expect(result).toBe('12:00:00');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -227,8 +208,7 @@ describe('column types', () => {
         );
         expect(result).toBe('12:00:00+00');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -249,8 +229,7 @@ describe('column types', () => {
           seconds: 6,
         });
 
-        const eq: AssertEqual<typeof result, TimeInterval> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, TimeInterval>();
       });
     });
   });
@@ -261,8 +240,7 @@ describe('column types', () => {
         const result = await db.get(raw(columnTypes.boolean(), `true`));
         expect(result).toBe(true);
 
-        const eq: AssertEqual<typeof result, boolean> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, boolean>();
       });
     });
   });
@@ -289,8 +267,7 @@ describe('column types', () => {
         );
         expect(result).toBe('happy');
 
-        const eq: AssertEqual<typeof result, MoodUnion> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, MoodUnion>();
       });
     });
   });
@@ -303,8 +280,7 @@ describe('column types', () => {
         );
         expect(result).toBe('(1,2)');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -315,8 +291,7 @@ describe('column types', () => {
         );
         expect(result).toBe('{1,2,3}');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -327,8 +302,7 @@ describe('column types', () => {
         );
         expect(result).toBe('[(1,2),(3,4)]');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -339,8 +313,7 @@ describe('column types', () => {
         );
         expect(result).toBe('(3,4),(1,2)');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -351,8 +324,7 @@ describe('column types', () => {
         );
         expect(result).toBe('((1,2),(3,4))');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -363,8 +335,7 @@ describe('column types', () => {
         );
         expect(result).toBe('((1,2),(3,4))');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -375,8 +346,7 @@ describe('column types', () => {
         );
         expect(result).toBe('<(1,2),3>');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
   });
@@ -389,8 +359,7 @@ describe('column types', () => {
         );
         expect(result).toBe('192.168.100.128/25');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -401,8 +370,7 @@ describe('column types', () => {
         );
         expect(result).toBe('192.168.100.128/25');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -413,8 +381,7 @@ describe('column types', () => {
         );
         expect(result).toBe('08:00:2b:01:02:03');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -425,8 +392,7 @@ describe('column types', () => {
         );
         expect(result).toBe('08:00:2b:ff:fe:01:02:03');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
   });
@@ -437,8 +403,7 @@ describe('column types', () => {
         const result = await db.get(raw(columnTypes.bit(3), `B'101'`));
         expect(result).toBe('101');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -449,8 +414,7 @@ describe('column types', () => {
         );
         expect(result).toBe('10101');
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
   });
@@ -468,8 +432,7 @@ describe('column types', () => {
           `'a' 'and' 'ate' 'cat' 'fat' 'mat' 'on' 'rat' 'sat'`,
         );
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
 
@@ -480,8 +443,7 @@ describe('column types', () => {
         );
         expect(result).toBe(`'fat' & 'rat'`);
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
   });
@@ -497,8 +459,7 @@ describe('column types', () => {
         );
         expect(result).toBe(`a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11`);
 
-        const eq: AssertEqual<typeof result, string> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string>();
       });
     });
   });
@@ -517,8 +478,7 @@ describe('column types', () => {
           [4, 5, 6],
         ]);
 
-        const eq: AssertEqual<typeof result, number[][]> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, number[][]>();
       });
 
       it('should output nested array of strings', async () => {
@@ -533,8 +493,7 @@ describe('column types', () => {
           ['c', 'd'],
         ]);
 
-        const eq: AssertEqual<typeof result, string[][]> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, string[][]>();
       });
 
       it('should output nested array of booleans', async () => {
@@ -546,8 +505,7 @@ describe('column types', () => {
         );
         expect(result).toEqual([[true], [false]]);
 
-        const eq: AssertEqual<typeof result, boolean[][]> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, boolean[][]>();
       });
     });
   });
@@ -560,8 +518,7 @@ describe('column types', () => {
         );
         expect(result).toBe(1234567890.42);
 
-        const eq: AssertEqual<typeof result, number> = true;
-        expect(eq).toBe(true);
+        assertType<typeof result, number>();
       });
     });
   });
