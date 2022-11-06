@@ -3,6 +3,9 @@ import { DatabaseError } from 'pg';
 export class PormError extends Error {}
 
 export class QueryError extends DatabaseError {
+  code: string | undefined;
+  detail: string | undefined;
+
   get isUnique() {
     return this.code === '23505';
   }
