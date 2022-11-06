@@ -34,11 +34,11 @@ type Resolve = (result: any) => any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Reject = (error: any) => any;
 
-let queryError: QueryError = undefined as unknown as QueryError;
+let queryError: Error = undefined as unknown as Error;
 
 export class Then {
   get then() {
-    queryError = new (QueryError as unknown as new () => QueryError)();
+    queryError = new Error();
     return maybeWrappedThen;
   }
 
@@ -124,8 +124,7 @@ const then = async (
 
     resolve?.(result);
   } catch (err) {
-    const error =
-      err instanceof DatabaseError ? assignError(queryError, err) : err;
+    const error = err instanceof DatabaseError ? assignError(q, err) : err;
 
     if (q.query.log && sql && logData) {
       q.query.log.onError(error as Error, sql, logData);
@@ -134,7 +133,9 @@ const then = async (
   }
 };
 
-const assignError = (to: QueryError, from: DatabaseError) => {
+const assignError = (q: Query, from: DatabaseError) => {
+  const to = new (q.error as unknown as new () => QueryError)();
+  to.stack = queryError.stack;
   to.message = from.message;
   (to as { length?: number }).length = from.length;
   (to as { name?: string }).name = from.name;

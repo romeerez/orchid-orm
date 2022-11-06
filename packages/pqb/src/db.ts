@@ -25,6 +25,7 @@ import {
 } from './columnSchema';
 import { applyMixins, pushOrNewArray } from './utils';
 import { StringKey } from './common';
+import { QueryError, QueryErrorName } from './errors';
 
 export type DbTableOptions = {
   schema?: string;
@@ -76,6 +77,11 @@ export interface Db<
   columnsParsers?: ColumnsParsers;
   relations: Relations;
   withData: Query['withData'];
+  error: new (
+    message: string,
+    length: number,
+    name: QueryErrorName,
+  ) => QueryError<this>;
   [defaultsKey]: Record<
     {
       [K in keyof Shape]: Shape[K]['hasDefault'] extends true ? K : never;
@@ -139,7 +145,7 @@ export class Db<
 
     const columnsParsers = {} as ColumnsParsers;
     let hasParsers = false;
-    let modifyQuery: ((q: Query) => void)[] | undefined;
+    let modifyQuery: ((q: Query) => void)[] | undefined = undefined;
     for (const key in shape) {
       const column = shape[key];
       if (column.parseFn) {
@@ -166,6 +172,8 @@ export class Db<
     this.relations = {} as Relations;
 
     modifyQuery?.forEach((cb) => cb(this));
+
+    this.error = class extends QueryError {};
   }
 }
 

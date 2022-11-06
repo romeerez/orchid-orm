@@ -1,9 +1,43 @@
 import { DatabaseError } from 'pg';
+import { ColumnsShape } from './columnSchema';
 
 export class PormError extends Error {}
 
-export class QueryError extends DatabaseError {
+export type QueryErrorName =
+  | 'parseComplete'
+  | 'bindComplete'
+  | 'closeComplete'
+  | 'noData'
+  | 'portalSuspended'
+  | 'replicationStart'
+  | 'emptyQuery'
+  | 'copyDone'
+  | 'copyData'
+  | 'rowDescription'
+  | 'parameterDescription'
+  | 'parameterStatus'
+  | 'backendKeyData'
+  | 'notification'
+  | 'readyForQuery'
+  | 'commandComplete'
+  | 'dataRow'
+  | 'copyInResponse'
+  | 'copyOutResponse'
+  | 'authenticationOk'
+  | 'authenticationMD5Password'
+  | 'authenticationCleartextPassword'
+  | 'authenticationSASL'
+  | 'authenticationSASLContinue'
+  | 'authenticationSASLFinal'
+  | 'error'
+  | 'notice';
+
+export class QueryError<
+  T extends { shape: ColumnsShape } = { shape: ColumnsShape },
+> extends DatabaseError {
   message!: string;
+  name!: QueryErrorName;
+  stack: string | undefined;
   code: string | undefined;
   detail: string | undefined;
   severity: string | undefined;
@@ -25,17 +59,21 @@ export class QueryError extends DatabaseError {
     return this.code === '23505';
   }
 
-  columnsCache?: Record<string, boolean>;
+  columnsCache?: { [K in keyof T['shape']]?: true };
   get columns() {
     if (this.columnsCache) return this.columnsCache;
 
-    const columns: Record<string, boolean> = {};
+    const columns: { [K in keyof T['shape']]?: true } = {};
 
     if (this.detail) {
       const list = this.detail.match(/\((.*)\)=/)?.[1];
       if (list) {
-        list.split(', ').forEach((column) => {
-          columns[column.startsWith('"') ? column.slice(1, -1) : column] = true;
+        list.split(', ').forEach((item) => {
+          const column = (
+            item.startsWith('"') ? item.slice(1, -1) : item
+          ) as keyof T['shape'];
+
+          columns[column] = true;
         });
       }
     }

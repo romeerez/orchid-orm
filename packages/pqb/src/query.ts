@@ -13,6 +13,7 @@ import { EmptyObject, Spread } from './utils';
 import { AliasOrTable, RawExpression, StringKey } from './common';
 import { Db } from './db';
 import { RelationQueryBase, RelationsBase } from './relations';
+import { QueryError, QueryErrorName } from './errors';
 
 export type ColumnParser = (input: unknown) => unknown;
 export type ColumnsParsers = Record<string | getValueKey, ColumnParser>;
@@ -64,6 +65,11 @@ export type Query = QueryMethods & {
   columnsParsers?: ColumnsParsers;
   relations: RelationsBase;
   withData: WithDataBase;
+  error: new (
+    message: string,
+    length: number,
+    name: QueryErrorName,
+  ) => QueryError;
   // eslint-disable-next-line @typescript-eslint/ban-types
   [defaultsKey]: {};
 };
