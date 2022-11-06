@@ -60,6 +60,14 @@ export const Chat = db('chat', (t) => ({
   ...t.timestamps(),
 }));
 
+export const UniqueTable = db('uniqueTable', (t) => ({
+  one: t.text().unique(),
+  two: t.integer().unique(),
+  thirdColumn: t.text(),
+  fourthColumn: t.integer(),
+  ...t.unique(['thirdColumn', 'fourthColumn']),
+}));
+
 export type MessageRecord = typeof Message['type'];
 export const Message = db('message', (t) => ({
   id: t.serial().primaryKey(),

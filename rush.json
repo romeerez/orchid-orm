@@ -36,31 +36,31 @@
     {
       "packageName": "porm",
       "projectFolder": "packages/porm",
-      "shouldPublish": false,
+      "shouldPublish": true,
       "tags": ["orm"]
     },
     {
       "packageName": "pqb",
       "projectFolder": "packages/pqb",
-      "shouldPublish": false,
+      "shouldPublish": true,
       "tags": ["query-builder"]
     },
     {
       "packageName": "rake-db",
       "projectFolder": "packages/rake-db",
-      "shouldPublish": false,
+      "shouldPublish": true,
       "tags": ["migrations"]
     },
     {
       "packageName": "porm-schema-to-zod",
       "projectFolder": "packages/schema-to-zod",
-      "shouldPublish": false,
+      "shouldPublish": true,
       "tags": ["schema", "zod"]
     },
     {
       "packageName": "porm-test-factory",
       "projectFolder": "packages/test-factory",
-      "shouldPublish": false,
+      "shouldPublish": true,
       "tags": ["test-factory"]
     }
   ]

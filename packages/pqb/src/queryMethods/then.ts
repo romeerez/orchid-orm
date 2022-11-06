@@ -1,10 +1,11 @@
 import { ColumnsParsers, Query, QueryReturnType } from '../query';
 import { getQueryParsers } from '../common';
-import { NotFoundError } from '../errors';
+import { NotFoundError, QueryError } from '../errors';
 import { QueryArraysResult, QueryResult } from '../adapter';
 import { CommonQueryData, Sql } from '../sql';
 import { AfterCallback, BeforeCallback } from './callbacks';
 import { getValueKey } from './get';
+import { DatabaseError } from 'pg';
 
 export type ThenResult<Res> = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,20 +29,17 @@ export const queryMethodByReturnType: Record<
   void: 'arrays',
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Resolve = (result: any) => any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Reject = (error: any) => any;
+
+let queryError: QueryError = undefined as unknown as QueryError;
+
 export class Then {
-  then(
-    this: Query,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolve?: (result: any) => any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    reject?: (error: any) => any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<any> {
-    if (this.query.wrapInTransaction && !this.query.inTransaction) {
-      return this.transaction((q) => then(q, resolve, reject));
-    } else {
-      return then(this, resolve, reject);
-    }
+  get then() {
+    queryError = new (QueryError as unknown as new () => QueryError)();
+    return maybeWrappedThen;
   }
 
   async catch<T extends Query, Result>(
@@ -59,6 +57,14 @@ export const handleResult: CommonQueryData['handleResult'] = async (
 ) => {
   return parseResult(q, q.query.returnType || 'all', result);
 };
+
+function maybeWrappedThen(this: Query, resolve?: Resolve, reject?: Reject) {
+  if (this.query.wrapInTransaction && !this.query.inTransaction) {
+    return this.transaction((q) => then(q, resolve, reject));
+  } else {
+    return then(this, resolve, reject);
+  }
+}
 
 const then = async (
   q: Query,
@@ -117,12 +123,39 @@ const then = async (
     }
 
     resolve?.(result);
-  } catch (error) {
+  } catch (err) {
+    const error =
+      err instanceof DatabaseError ? assignError(queryError, err) : err;
+
     if (q.query.log && sql && logData) {
       q.query.log.onError(error as Error, sql, logData);
     }
     reject?.(error);
   }
+};
+
+const assignError = (to: QueryError, from: DatabaseError) => {
+  to.message = from.message;
+  (to as { length?: number }).length = from.length;
+  (to as { name?: string }).name = from.name;
+  to.severity = from.severity;
+  to.code = from.code;
+  to.detail = from.detail;
+  to.hint = from.hint;
+  to.position = from.position;
+  to.internalPosition = from.internalPosition;
+  to.internalQuery = from.internalQuery;
+  to.where = from.where;
+  to.schema = from.schema;
+  to.table = from.table;
+  to.column = from.column;
+  to.dataType = from.dataType;
+  to.constraint = from.constraint;
+  to.file = from.file;
+  to.line = from.line;
+  to.routine = from.routine;
+
+  return to;
 };
 
 export const parseResult = (
