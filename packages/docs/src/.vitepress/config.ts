@@ -41,6 +41,10 @@ export default {
             text: 'Callbacks',
             link: '/guide/query-builder-callbacks'
           },
+          {
+            text: 'Error handling',
+            link: '/guide/query-builder-error-handling'
+          },
         ]
       },
       {
