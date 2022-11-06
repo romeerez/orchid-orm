@@ -100,6 +100,7 @@ export type InsertQueryData = CommonQueryData & {
   type: 'insert';
   columns: string[];
   values: unknown[][] | RawExpression;
+  fromQuery?: Query;
   using?: JoinItem[];
   join?: JoinItem[];
   joinedParsers?: Record<string, ColumnsParsers>;

@@ -3,6 +3,7 @@ import {
   Query,
   QueryReturnsAll,
   QueryReturnType,
+  queryTypeWithLimitOne,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
   SetQueryReturnsRowCount,
@@ -300,6 +301,7 @@ const insert = (
   },
   returnType: QueryReturnType,
   ctx?: InsertCtx,
+  fromQuery?: Query,
 ) => {
   const q = self as Query & { query: InsertQueryData };
   const returning = q.query.select;
@@ -310,6 +312,7 @@ const insert = (
   q.query.type = 'insert';
   q.query.columns = columns;
   q.query.values = values;
+  q.query.fromQuery = fromQuery;
 
   if (!ctx) {
     q.query.returnType = returnType;
@@ -500,6 +503,58 @@ export class Insert {
       this.query.select = ['*'];
     }
     return this.clone()._insertRaw(data) as SetQueryReturnsAll<T>;
+  }
+
+  createFrom<
+    T extends Query,
+    Q extends Query & { returnType: 'one' | 'oneOrThrow' },
+  >(
+    this: T,
+    query: Q,
+    data: Omit<InsertData<T>, keyof Q['result']>,
+  ): SetQueryReturnsOne<T> {
+    return this.clone()._createFrom(query, data);
+  }
+  _createFrom<
+    T extends Query,
+    Q extends Query & { returnType: 'one' | 'oneOrThrow' },
+  >(
+    this: T,
+    query: Q,
+    data: Omit<InsertData<T>, keyof Q['result']>,
+  ): SetQueryReturnsOne<T> {
+    if (!queryTypeWithLimitOne[query.query.returnType]) {
+      throw new Error(
+        'createFrom accepts only a query which returns one record',
+      );
+    }
+
+    if (!this.query.select) {
+      this.query.select = ['*'];
+    }
+
+    const ctx = createInsertCtx(this);
+
+    const queryColumns: string[] = [];
+    query.query.select?.forEach((item) => {
+      if (typeof item === 'string') {
+        const index = item.indexOf('.');
+        queryColumns.push(index === -1 ? item : item.slice(index + 1));
+      } else if ('selectAs' in item) {
+        queryColumns.push(...Object.keys(item.selectAs));
+      }
+    });
+
+    const { columns, values } = handleInsertOneData(this, data, ctx);
+    queryColumns.push(...columns);
+
+    return insert(
+      this,
+      { columns: queryColumns, values },
+      'one',
+      ctx,
+      query,
+    ) as SetQueryReturnsOne<T>;
   }
 
   defaults<T extends Query, Data extends Partial<InsertData<T>>>(

@@ -1,7 +1,10 @@
 import {
   assertType,
+  Chat,
   expectQueryNotMutated,
   expectSql,
+  Message,
+  MessageRecord,
   User,
   userData,
   useTestDatabase,
@@ -260,6 +263,43 @@ describe('insert functions', () => {
       });
 
       expectQueryNotMutated(q);
+    });
+  });
+
+  describe('createFrom', () => {
+    it('should insert record from select', () => {
+      const query = Message.createFrom(Chat.find(1).select({ chatId: 'id' }), {
+        authorId: 1,
+        text: 'text',
+      });
+
+      assertType<Awaited<typeof query>, MessageRecord>();
+
+      expectSql(
+        query.toSql(),
+        `
+          INSERT INTO "message"("chatId", "authorId", "text")
+          SELECT "chat"."id" AS "chatId", $1, $2
+          FROM "chat"
+          WHERE "chat"."id" = $3
+          LIMIT $4
+          RETURNING *
+        `,
+        [1, 'text', 1, 1],
+      );
+    });
+
+    it('should not allow to create from query which returns multiple records', () => {
+      expect(() =>
+        Message.createFrom(
+          // @ts-expect-error creating from multiple records is not allowed
+          Chat.where({ id: { in: [1, 2] } }).select({ chatId: 'id' }),
+          {
+            authorId: 1,
+            text: 'text',
+          },
+        ),
+      ).toThrow('accepts only a query which returns one record');
     });
   });
 

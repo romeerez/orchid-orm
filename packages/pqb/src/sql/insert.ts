@@ -1,10 +1,11 @@
 import { InsertQueryData, QueryData } from './types';
 import { addValue, q } from './common';
-import { getRaw, isRaw } from '../common';
+import { getRaw, isRaw, raw } from '../common';
 import { pushWhereStatementSql } from './where';
 import { QueryBase } from '../query';
 import { selectToSql } from './select';
 import { ToSqlCtx } from './toSql';
+import { pushQueryValue } from '../queryDataUtils';
 
 export const pushInsertSql = (
   ctx: ToSqlCtx,
@@ -14,24 +15,27 @@ export const pushInsertSql = (
 ) => {
   const quotedColumns = query.columns.map(q);
 
-  ctx.sql.push(
-    `INSERT INTO ${quotedAs}(${quotedColumns.join(', ')}) VALUES ${
-      isRaw(query.values)
-        ? getRaw(query.values, ctx.values)
-        : query.values
-            .map(
-              (row) =>
-                `(${row
-                  .map((value) =>
-                    value === undefined
-                      ? 'DEFAULT'
-                      : addValue(ctx.values, value),
-                  )
-                  .join(', ')})`,
-            )
-            .join(', ')
-    }`,
-  );
+  ctx.sql.push(`INSERT INTO ${quotedAs}(${quotedColumns.join(', ')})`);
+
+  if (query.fromQuery) {
+    const q = query.fromQuery.clone();
+
+    pushQueryValue(
+      q,
+      'select',
+      isRaw(query.values) ? query.values : raw(encodeRow(ctx, query.values[0])),
+    );
+
+    ctx.sql.push(q.toSql({ values: ctx.values }).text);
+  } else {
+    ctx.sql.push(
+      `VALUES ${
+        isRaw(query.values)
+          ? getRaw(query.values, ctx.values)
+          : query.values.map((row) => `(${encodeRow(ctx, row)})`).join(', ')
+      }`,
+    );
+  }
 
   if (query.onConflict) {
     ctx.sql.push('ON CONFLICT');
@@ -83,6 +87,14 @@ export const pushInsertSql = (
 
   pushWhereStatementSql(ctx, model, query, quotedAs);
   pushReturningSql(ctx, model, query, quotedAs);
+};
+
+const encodeRow = (ctx: ToSqlCtx, row: unknown[]) => {
+  return row
+    .map((value) =>
+      value === undefined ? 'DEFAULT' : addValue(ctx.values, value),
+    )
+    .join(', ');
 };
 
 export const pushReturningSql = (
