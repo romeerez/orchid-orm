@@ -1,6 +1,6 @@
 # Query Builder
 
-The query builder is the interface used for building and executing standard SQL queries, such as `select`, `insert`, `update`, `delete`.
+The query builder is the interface used for building and executing standard SQL queries, such as `select`, `create`, `update`, `delete`.
 
 `pqb` is aiming to be as similar to [knex](https://knexjs.org/) query builder as possible, but with better TypeScript support and some additional features.
 

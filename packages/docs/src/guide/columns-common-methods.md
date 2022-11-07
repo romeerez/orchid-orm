@@ -32,9 +32,9 @@ const someTable = db('someTable', (t) => ({
 
 ## encode
 
-Process value for the column when inserting or updating.
+Process value for the column when creating or updating.
 
-Type of `input` argument will be used as type of the column when inserting and updating.
+Type of `input` argument will be used as type of the column when creating and updating.
 
 ```ts
 const someTable = db('someTable', (t) => ({
@@ -42,8 +42,8 @@ const someTable = db('someTable', (t) => ({
 }))
 
 // numbers and booleans will be converted to string:
-await someTable.insert({ column: 123 })
-await someTable.insert({ column: true })
+await someTable.create({ column: 123 })
+await someTable.create({ column: true })
 await someTable.where({ column: 'true' }).update({ column: false })
 ```
 

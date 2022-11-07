@@ -2,7 +2,7 @@
 
 Different kinds of relations available: `belongsTo`, `hasOne`, `hasMany` and `hasAndBelongsToMany`.
 
-Each defined relation adds methods and additional abilities for the model to simplify building queries and inserting related data.
+Each defined relation adds methods and additional abilities for the model to simplify building queries and creating related data.
 
 Two models can have relation with each other without circular dependency problems:
 

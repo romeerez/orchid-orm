@@ -44,18 +44,18 @@ Each column type has a specific database type, input type and output type.
 
 In most cases input and output is the same, but in some cases may differ.
 
-For example, `timestamp` will be returned as a string by default (this may be overridden), but when inserting or updating it may accept `string` or `Date`.
+For example, `timestamp` will be returned as a string by default (this may be overridden), but when creating or updating it may accept `string` or `Date`.
 
 ```ts
 // get createdAt field from the first table record
 const createdAt: string = await Table.get('createdAt')
 
-await Table.insert({
+await Table.create({
   // Date is fine
   createdAt: new Date(),
 })
 
-await Table.insert({
+await Table.create({
   // string in ISO format is fine as well
   createdAt: new Date().toISOString(),
 })

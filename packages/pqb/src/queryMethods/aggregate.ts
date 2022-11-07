@@ -204,7 +204,9 @@ export class Aggregate {
     arg: AT1<T>['count'] | '*' = '*',
     options?: AggregateOptions<T>,
   ): SetQueryReturnsValue<T, NumberColumn> & { isCount: true } {
-    return get<T, NumberColumn>(this._selectCount(arg, options));
+    return get<T, NumberColumn>(
+      this._selectCount(arg, options),
+    ) as unknown as SetQueryReturnsValue<T, NumberColumn> & { isCount: true };
   }
 
   selectCount<T extends Query, As extends string | undefined = undefined>(

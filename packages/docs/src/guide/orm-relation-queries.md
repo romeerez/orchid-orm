@@ -198,7 +198,7 @@ const author = await db.author.create({
 })
 ```
 
-Nested create is supported when inserting many as well:
+Nested create is supported when creating many as well:
 
 ```ts
 const books = await db.book.createMany([
@@ -282,7 +282,7 @@ Connect records when creating:
 
 This will search a record by provided where condition, throw `NotFoundError` if not found, and update the referring column.
 
-Supported when inserting multiple records as well.
+Supported when creating multiple records as well.
 
 ```ts
 const book = await db.book.create({
@@ -313,7 +313,7 @@ const author = await db.author.create({
 
 `connectOrCreate` options will try to find a record to connect with, and it will create the record if not found.
 
-This is also supported when inserting multiple records.
+This is also supported when creating multiple records.
 
 `belongsTo` and `hasOne` relations are accepting object `{ where: ..., create ... }`:
 
@@ -357,7 +357,7 @@ const result = await db.author.create({
 
 This will delete join table records for `hasAndBelongsToMany`, and nullify the `foreignKey` column for the other kinds (the column has to be nullable).
 
-Also supported when inserting multiple records.
+Also supported when creating multiple records.
 
 For `belongsTo` and `hasOne` relations write `disconnect: true`:
 

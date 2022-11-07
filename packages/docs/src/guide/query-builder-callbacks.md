@@ -16,9 +16,9 @@ type AfterCallback = (query: Query, data: unknown) => void | Promise<void>
 
 `beforeQuery` and `afterQuery` callbacks will run on any kind of query.
 
-If query has both `beforeQuery` and `beforeInsert`, `beforeInsert` will run first.
+If query has both `beforeQuery` and `beforeCreate`, `beforeCreate` will run first.
 
-If query has both `afterQuery` and `afterInsert`, `afterInsert` will run last.
+If query has both `afterQuery` and `afterCreate`, `afterCreate` will run last.
 
 ```ts
 await Table
@@ -27,14 +27,14 @@ await Table
   .all()
 ```
 
-## beforeInsert, afterInsert
+## beforeCreate, afterCreate
 
-`beforeInsert` and `afterInsert` callbacks will run only on insert query:
+`beforeCreate` and `afterCreate` callbacks will run only on `create` query:
 
 ```ts
 await Table
-  .beforeInsert(() => console.log('before insert'))
-  .afterInsert((_, data) => console.log('after insert', data))
+  .beforeCreate(() => console.log('before create'))
+  .afterCreate((_, data) => console.log('after create', data))
   .create(data)
 ```
 

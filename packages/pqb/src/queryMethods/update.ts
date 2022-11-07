@@ -13,7 +13,7 @@ import {
 } from '../relations';
 import { WhereArg, WhereResult } from './where';
 import { EmptyObject, MaybeArray } from '../utils';
-import { InsertData } from './create';
+import { CreateData } from './create';
 import { parseResult, queryMethodByReturnType } from './then';
 import { UpdateQueryData } from '../sql';
 
@@ -41,14 +41,14 @@ type UpdateBelongsToData<T extends Query, Rel extends BelongsToRelation> =
   | { delete: boolean }
   | { update: UpdateData<Rel['model']> }
   | {
-      create: InsertData<Rel['nestedCreateQuery']>;
+      create: CreateData<Rel['nestedCreateQuery']>;
     }
   | (QueryReturnsAll<T['returnType']> extends true
       ? never
       : {
           upsert: {
             update: UpdateData<Rel['model']>;
-            create: InsertData<Rel['nestedCreateQuery']>;
+            create: CreateData<Rel['nestedCreateQuery']>;
           };
         });
 
@@ -63,11 +63,11 @@ type UpdateHasOneData<T extends Query, Rel extends HasOneRelation> =
           | {
               upsert: {
                 update: UpdateData<Rel['model']>;
-                create: InsertData<Rel['nestedCreateQuery']>;
+                create: CreateData<Rel['nestedCreateQuery']>;
               };
             }
           | {
-              create: InsertData<Rel['nestedCreateQuery']>;
+              create: CreateData<Rel['nestedCreateQuery']>;
             });
 
 type UpdateHasManyData<T extends Query, Rel extends HasManyRelation> = {
@@ -81,7 +81,7 @@ type UpdateHasManyData<T extends Query, Rel extends HasManyRelation> = {
   ? EmptyObject
   : {
       set?: MaybeArray<WhereArg<Rel['model']>>;
-      create?: InsertData<Rel['nestedCreateQuery']>[];
+      create?: CreateData<Rel['nestedCreateQuery']>[];
     });
 
 type UpdateHasAndBelongsToManyData<Rel extends HasAndBelongsToManyRelation> = {
@@ -92,7 +92,7 @@ type UpdateHasAndBelongsToManyData<Rel extends HasAndBelongsToManyRelation> = {
     where: MaybeArray<WhereArg<Rel['model']>>;
     data: UpdateData<Rel['model']>;
   };
-  create?: InsertData<Rel['nestedCreateQuery']>[];
+  create?: CreateData<Rel['nestedCreateQuery']>[];
 };
 
 type UpdateArgs<T extends Query, ForceAll extends boolean> = (

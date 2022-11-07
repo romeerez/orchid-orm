@@ -6,7 +6,7 @@ ORM and query builder does not perform validation because it's expected that dat
 
 You can convert the column schema into a validation schema with use of additional package.
 
-Column methods described in this section do **not** affect on parsing or encoding when getting data from db or inserting,
+Column methods described in this section do **not** affect on parsing or encoding when getting data from db or creating,
 they only have effect after converting to validation schema and using it in a controller or elsewhere.
 
 For now only conversion to [Zod](https://github.com/colinhacks/zod) is supported.

@@ -157,11 +157,6 @@ const selectFull = await Table
   .select('id', 'name') // discarded by `selectAll`
   .selectAll()
 
-const insertedFull = await Table
-  .selectAll()
-  .insert(data)
-
-// create is alias for .selectAll().insert(...)
 const createdFull = await Table
   .create(data)
 
@@ -458,78 +453,63 @@ SomeTable
   // .exceptAll(...)
 ```
 
-## insert, insertMany, insertRaw
+## create, createMany, createRaw
 
-`insert` will insert one record:
+`create` will create one record:
 
 ```ts
-const insertedCount = await Table.insert({
+const createdRecord = await Table.create({
   name: 'John', password: '1234'
 })
 ```
 
-`insertMany` will insert a batch of records:
+`createMany` will create a batch of records:
 
 In case if one of objects has fewer fields, `DEFAULT` sql keyword will be placed on its place in `VALUES` statement.
 
 ```ts
-const insertedCount = await Table.insertMany([
+const createdRecords = await Table.createMany([
   { name: 'John', password: '1234' },
   { name: 'Peter', password: '4321' }
 ])
 ```
 
-`insertRaw` is for inserting records with a raw expression:
+`createRaw` is for creating records with a raw expression:
 
 ```ts
-const insertedCount = await Table.insert({
+const createdRecords = await Table.createRaw({
   columns: ['name', 'password'],
   values: raw(`raw expression for VALUES`)
 })
 ```
 
-`beforeInsert` and `afterInsert` callback are supported for insert, see [callbacks](#callbacks).
+`beforeCreate` and `afterCreate` callback are supported for create, see [callbacks](#callbacks).
 
-By default, all insert methods will return count of inserted records.
+By default, all create methods will return a full record.
 
-Place `.select`, or `.selectAll`, or `.get` before `.insert` to specify returning columns:
+Place `.select`, or `.get` before `.create` to specify returning columns:
 
 ```ts
-const id: number = await Table.get('id').insert(data)
+const id: number = await Table.get('id').create(data)
 
-// returns single object when inserting single record
-const objectWithId: { id: number } = await Table.select('id').insert(data)
+// returns single object when creating single record
+const objectWithId: { id: number } = await Table.select('id').create(data)
 
-// returns array of objects when inserting multiple
-const arrayOfIds: { id: number }[] = await Table.select('id').insertMany([one, two])
+// returns array of objects when creating multiple
+const arrayOfIds: { id: number }[] = await Table.select('id').createMany([one, two])
 
 // returns array of objects as well for raw values:
-const arrayOfIds2 = await Table.select('id').insertRaw({
+const arrayOfIds2 = await Table.select('id').createRaw({
   columns: ['name', 'password'],
   values: raw(`raw expression for VALUES`)
 })
-```
-
-## create, createMany, createRaw
-
-`create` methods are the same as `insert`, except that by default `insert` returns affect row count number, and `create` returns full records by default.
-
-```ts
-const fullRecord = await Table.create(data)
-const fullRecords = await Table.createMany([data, data])
-```
-
-It respects `select` if specified:
-
-```ts
-const onlyName = await Table.select('name').create(data)
 ```
 
 ## onConflict
 
-A modifier for insert queries that specify alternative behaviour in the case of a conflict.
+A modifier for create queries that specify alternative behaviour in the case of a conflict.
 A conflict occurs when a table has a `PRIMARY KEY` or a `UNIQUE` index on a column
-(or a composite index on a set of columns) and a row being inserted has the same value as a row
+(or a composite index on a set of columns) and a row being created has the same value as a row
 which already exists in the table in this column(s).
 The default behaviour in case of conflict is to raise an error and abort the query.
 Using this method you can change this behaviour to either silently ignore the error by using .onConflict().ignore()
@@ -537,13 +517,13 @@ or to update the existing row with new data (perform an "UPSERT") by using .onCo
 
 ```ts
 // single column:
-Table.insert(data).onConfict('email')
+Table.create(data).onConfict('email')
 
 // array of columns:
-Table.insert(data).onConfict(['email', 'name'])
+Table.create(data).onConfict(['email', 'name'])
 
 // raw expression:
-Table.insert(data).onConfict(raw('(email) where condition'))
+Table.create(data).onConfict(raw('(email) where condition'))
 ```
 
 ::: info
@@ -555,7 +535,7 @@ It can be useful to specify condition when you have partial index:
 
 ```ts
 Table
-  .insert({
+  .create({
     email: "ignore@example.com",
     name: "John Doe",
     active: true
@@ -572,13 +552,13 @@ See documentation on .ignore() and .merge() methods for more details.
 
 Available only after `.onConflict`.
 
-Modifies an insert query, and causes it to be silently dropped without an error if a conflict occurs.
+Modifies a create query, and causes it to be silently dropped without an error if a conflict occurs.
 
 Adds `ON CONFLICT (columns) DO NOTHING` clause to the insert statement.
 
 ```ts
 Table
-  .insert({
+  .create({
     email: "ignore@example.com",
     name: "John Doe"
   })
@@ -590,7 +570,7 @@ Table
 
 Available only after `.onConflict`.
 
-Modifies an insert query, to turn it into an 'upsert' operation.
+Modifies a create query, to turn it into an 'upsert' operation.
 
 Adds an `ON CONFLICT (columns) DO UPDATE` clause to the insert statement.
 
@@ -598,7 +578,7 @@ By default, it merges all columns.
 
 ```ts
 Table
-  .insert({
+  .create({
     email: "ignore@example.com",
     name: "John Doe"
   })
@@ -606,11 +586,11 @@ Table
   .merge()
 ```
 
-This also works with batch inserts:
+This also works with batch creates:
 
 ```ts
 Table
-  .insertMany([
+  .createMany([
     { email: "john@example.com", name: "John Doe" },
     { email: "jane@example.com", name: "Jane Doe" },
     { email: "alex@example.com", name: "Alex Doe" },
@@ -620,13 +600,13 @@ Table
 ```
 
 It is also possible to specify a subset of the columns to merge when a conflict occurs.
-For example, you may want to set a 'createdAt' column when inserting but would prefer not to update it if the row already exists:
+For example, you may want to set a `createdAt` column when creating but would prefer not to update it if the row already exists:
 
 ```ts
 const timestamp = Date.now();
 
 Table
-  .insert({
+  .create({
     email: "ignore@example.com",
     name: "John Doe",
     createdAt: timestamp,
@@ -639,15 +619,15 @@ Table
   .merge(['email', 'name', 'updatedAt'])
 ```
 
-It is also possible to specify data to update separately from the data to insert.
-This is useful if you want to update with different data to the insert.
+It is also possible to specify data to update separately from the data to create.
+This is useful if you want to make an update with different data than in create.
 For example, you may want to change a value if the row already exists:
 
 ```ts
 const timestamp = Date.now();
 
 Table
-  .insert({
+  .create({
     email: "ignore@example.com",
     name: "John Doe",
     createdAt: timestamp,
@@ -665,7 +645,7 @@ It is also possible to add a WHERE clause to conditionally update only the match
 const timestamp = Date.now();
 
 Table
-  .insert({
+  .create({
     email: "ignore@example.com",
     name: "John Doe",
     createdAt: timestamp,
@@ -682,21 +662,21 @@ Table
 `.merge` also accepts raw expression:
 
 ```ts
-Table.insert(data).onConflict().merge(raw('raw SQL expression'))
+Table.create(data).onConflict().merge(raw('raw SQL expression'))
 ```
 
 ## defaults
 
-`.defaults` allows to set values which will be used later in `.insert`.
+`.defaults` allows to set values which will be used later in `.create`.
 
-Columns provided in `.defaults` are marked as optional in following `.insert`.
+Columns provided in `.defaults` are marked as optional in following `.create`.
 
 ```ts
-// Will use firstName from defauls and lastName from insert argument:
+// Will use firstName from defauls and lastName from create argument:
 Table.defaults({
   firstName: 'first name',
   lastName: 'last name',
-}).insert({
+}).create({
   lastName: 'override last name'
 })
 ```
@@ -705,7 +685,7 @@ Table.defaults({
 
 `.update` takes an object with columns and values to update records.
 
-By default `.update` will return count of inserted records.
+By default `.update` will return count of created records.
 
 Place `.select`, or `.selectAll`, or `.get` before `.update` to specify returning columns.
 
@@ -785,7 +765,7 @@ try {
 
 ## upsert
 
-`.upsert` tries to update one record, and it will perform insert in case if record was not found.
+`.upsert` tries to update one record, and it will perform create in case if record was not found.
 
 It will implicitly wrap queries in transaction if it was not wrapped yet.
 
@@ -863,7 +843,7 @@ Aliased to `del` as `delete` is a reserved word in JavaScript,
 this method deletes one or more rows,
 based on other conditions specified in the query.
 
-By default `.delete` will return count of inserted records.
+By default `.delete` will return count of deleted records.
 
 Place `.select`, or `.selectAll`, or `.get` before `.delete` to specify returning columns.
 
@@ -945,13 +925,13 @@ try {
       { title: 'Hamlet' },
     ]
 
-    // insert new catalogue and return id
+    // create new catalogue and return id
     const catalogueId = await Catalogue
       .transacting(tr)
       .select('id')
-      .insert({ name: 'Old Books' })
+      .create({ name: 'Old Books' })
 
-    // insert multiple books and return full records
+    // create multiple books and return full records
     await Book
       .transacting(tr)
       .createMany(

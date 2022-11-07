@@ -111,8 +111,8 @@ First argument of callback is a copy of your main porm instance, but every model
 const { someId, otherId } = await db.$transaction(async (db) => {
   await db.someModel.where(...conditions).update(...data)
   await db.anotherModel.where(...conditions).delete()
-  const someId = await db.someModel.insert(...data)
-  const otherId = await db.otherModel.insert(...data)
+  const someId = await db.someModel.get('id').create(...data)
+  const otherId = await db.otherModel.get('id').create(...data)
   
   return { someId, otherId }
 })
