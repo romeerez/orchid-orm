@@ -505,6 +505,30 @@ const arrayOfIds2 = await Table.select('id').createRaw({
 })
 ```
 
+## createFrom
+
+`createFrom` is to perform `INSERT ... SELECT ...` SQL statement, it does select and insert in a single query.
+
+First argument is a query, this query should search for one record by using `find`, `take`, or similar.
+
+Second argument is data which will be merged with columns returned from select query.
+
+```ts
+await Table.createFrom(
+  RelatedTable.select({ relatedId: 'id' }).find(1),
+  {
+    key: 'value',
+  }
+)
+```
+
+The query above will produce such SQL:
+
+```sql
+INSERT INTO "table"("relatedId", "key")
+SELECT "relatedTable"."id" AS "relatedId", 'value' FROM "relatedTable"
+```
+
 ## onConflict
 
 A modifier for create queries that specify alternative behaviour in the case of a conflict.
