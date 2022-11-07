@@ -1,5 +1,4 @@
 import { Query, SetQueryReturnsColumnInfo } from '../query';
-import { ThenResult, Then } from './then';
 import { ColumnInfoQueryData } from '../sql';
 
 export type ColumnInfo = {
@@ -44,24 +43,19 @@ export class ColumnInfoMethods {
       (this.query as ColumnInfoQueryData).column = column as string;
     }
 
-    this.then = function (this: Query, resolve, reject) {
-      new Then().then.call(
-        this,
-        (rows) => {
-          if (column) {
-            resolve?.(rowToColumnInfo(rows[0]));
-          } else {
-            const info: Record<string, ColumnInfo> = {};
-            (rows as unknown[]).forEach((row) => {
-              info[(row as { column_name: string }).column_name] =
-                rowToColumnInfo(row);
-            });
-            resolve?.(info);
-          }
-        },
-        reject,
-      );
-    } as ThenResult<unknown>;
+    this.query.handleResult = async (_, result) => {
+      if (column) {
+        return rowToColumnInfo(result.rows[0]);
+      } else {
+        const info: Record<string, ColumnInfo> = {};
+        result.rows.forEach((row) => {
+          info[(row as { column_name: string }).column_name] =
+            rowToColumnInfo(row);
+        });
+        return info;
+      }
+    };
+
     return this as unknown as SetQueryReturnsColumnInfo<T, Column>;
   }
 }

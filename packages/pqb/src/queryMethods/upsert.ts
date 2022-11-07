@@ -1,12 +1,12 @@
 import { Query, SetQueryReturnsOne, SetQueryReturnsVoid } from '../query';
 import { UpdateData } from './update';
-import { InsertData } from './insert';
+import { CreateData } from './create';
 import { WhereResult } from './where';
 import { MoreThanOneRowError } from '../errors';
 
 export type UpsertData<T extends Query> = {
   update: UpdateData<T>;
-  create: InsertData<T>;
+  create: CreateData<T>;
 };
 
 export type UpsertResult<T extends Query> = T['hasSelect'] extends true
@@ -29,7 +29,7 @@ export class QueryUpsert {
     const { handleResult } = this.query;
     this.query.handleResult = async (q, queryResult) => {
       if (queryResult.rowCount === 0) {
-        return (q as Query).insert(data.create as InsertData<Query>);
+        return (q as Query).create(data.create as CreateData<Query>);
       } else if (queryResult.rowCount > 1) {
         throw new MoreThanOneRowError(
           `Only one row was expected to find for upsert, found ${queryResult.rowCount} rows.`,

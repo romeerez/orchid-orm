@@ -48,7 +48,7 @@ describe('json methods', () => {
 
   describe('processing and selecting json data', () => {
     beforeEach(async () => {
-      await User.insert({
+      await User.create({
         ...userData,
         data: { name: 'value', tags: ['one'] },
       });

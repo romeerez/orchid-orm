@@ -184,7 +184,7 @@ export const makeHasOneMethod = (
       );
 
       if (create.length) {
-        await t._insertMany(
+        await t._count()._createMany(
           create.map(([selfData, item]) => ({
             [foreignKey]: selfData[primaryKey],
             ...('create' in item ? item.create : item.connectOrCreate.create),
@@ -211,7 +211,7 @@ export const makeHasOneMethod = (
         await currentRelationsQuery._update({ [foreignKey]: null });
 
         if (params.create) {
-          await t._insert({
+          await t._count()._create({
             ...params.create,
             [foreignKey]: data[0][primaryKey],
           });
@@ -232,7 +232,7 @@ export const makeHasOneMethod = (
           ._update<WhereResult<Query & { hasSelect: true }>>(update);
 
         if (updatedIds.length < ids.length) {
-          await t.insertMany(
+          await t.createMany(
             ids
               .filter((id) => !updatedIds.includes(id))
               .map((id) => ({

@@ -35,7 +35,7 @@ describe('update', () => {
 
   it('should update record with raw sql, returning updated rows count', async () => {
     const count = 2;
-    const users = await User.select('id').insertMany([userData, userData]);
+    const users = await User.select('id').createMany([userData, userData]);
 
     const query = User.or(...users).updateRaw(raw(`name = 'name'`));
     expectSql(
@@ -55,7 +55,7 @@ describe('update', () => {
   });
 
   it('should update record, returning updated row count', async () => {
-    const { id } = await User.select('id').insert(userData);
+    const { id } = await User.select('id').create(userData);
 
     const update = {
       name: 'new name',
@@ -85,7 +85,7 @@ describe('update', () => {
   });
 
   it('should update record, returning value', async () => {
-    const id = await User.get('id').insert(userData);
+    const id = await User.get('id').create(userData);
 
     const update = {
       name: 'new name',
@@ -116,7 +116,7 @@ describe('update', () => {
   });
 
   it('should update one record, return selected columns', async () => {
-    const id = await User.get('id').insert(userData);
+    const id = await User.get('id').create(userData);
 
     const query = User.select('id', 'name').find(id).update(update);
 
@@ -141,7 +141,7 @@ describe('update', () => {
   });
 
   it('should update one record, return all columns', async () => {
-    const id = await User.get('id').insert(userData);
+    const id = await User.get('id').create(userData);
 
     const query = User.selectAll().find(id).update(update);
 
@@ -166,7 +166,7 @@ describe('update', () => {
   });
 
   it('should update multiple records, returning selected columns', async () => {
-    const ids = await User.pluck('id').insertMany([userData, userData]);
+    const ids = await User.pluck('id').createMany([userData, userData]);
 
     const update = {
       name: 'new name',
@@ -198,7 +198,7 @@ describe('update', () => {
   });
 
   it('should update multiple records, returning all columns', async () => {
-    const ids = await User.pluck('id').insertMany([userData, userData]);
+    const ids = await User.pluck('id').createMany([userData, userData]);
 
     const update = {
       name: 'new name',
@@ -270,7 +270,7 @@ describe('update', () => {
   });
 
   it('should return one record when searching for one to update', async () => {
-    const { id } = await User.select('id').insert(userData);
+    const { id } = await User.select('id').create(userData);
 
     const update = {
       name: 'new name',

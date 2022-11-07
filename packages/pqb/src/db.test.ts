@@ -28,7 +28,7 @@ describe('db', () => {
 
   describe('overriding column types', () => {
     it('should return date as string by default', async () => {
-      await User.insert(userData);
+      await User.create(userData);
 
       const db = createDb({ adapter, columnTypes });
       const table = db('user', (t) => ({
@@ -42,7 +42,7 @@ describe('db', () => {
     });
 
     it('should return date as Date when overridden', async () => {
-      await User.insert(userData);
+      await User.create(userData);
 
       const db = createDb({
         adapter,

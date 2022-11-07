@@ -133,7 +133,7 @@ describe('aggregate', () => {
 
     describe('selectCount', () => {
       it('should select number', async () => {
-        await User.insert(userData);
+        await User.create(userData);
 
         const user = await User.selectCount().take();
         expect(user.count).toBe(1);
@@ -161,7 +161,7 @@ describe('aggregate', () => {
     });
 
     it('should return number when have records', async () => {
-      await User.insert(userData);
+      await User.create(userData);
 
       const value = await User[method as 'avg']('id');
 
@@ -183,7 +183,7 @@ describe('aggregate', () => {
       });
 
       it('should return number when have records', async () => {
-        const id = await User.get('id').insert(userData);
+        const id = await User.get('id').create(userData);
 
         const value = await User[selectMethod]('id').take();
 
@@ -209,7 +209,7 @@ describe('aggregate', () => {
     });
 
     it('should return boolean when have records', async () => {
-      await User.insert({ ...userData, active: true });
+      await User.create({ ...userData, active: true });
 
       const value = await User[method as 'boolAnd']('active');
 
@@ -231,7 +231,7 @@ describe('aggregate', () => {
       });
 
       it('should return boolean when have records', async () => {
-        await User.insert({ ...userData, active: true });
+        await User.create({ ...userData, active: true });
 
         const value = await User[selectMethod]('active').take();
 
@@ -261,7 +261,7 @@ describe('aggregate', () => {
     });
 
     it('should return json array when have records', async () => {
-      await User.insert({ ...userData, data });
+      await User.create({ ...userData, data });
 
       const value = await User[method as 'jsonAgg']('data');
 
@@ -289,7 +289,7 @@ describe('aggregate', () => {
       });
 
       it('should return json array when have records', async () => {
-        await User.insert({ ...userData, data });
+        await User.create({ ...userData, data });
 
         const value = await User[selectMethod]('data').take();
 
@@ -380,7 +380,7 @@ describe('aggregate', () => {
     });
 
     it('should return json object when have records', async () => {
-      await User.insert(userData);
+      await User.create(userData);
 
       const value = await User[method as 'jsonObjectAgg']({ alias: 'name' });
 
@@ -405,7 +405,7 @@ describe('aggregate', () => {
       });
 
       it('should return json object when have records', async () => {
-        await User.insert(userData);
+        await User.create(userData);
 
         const value = await User[selectMethod]({ alias: 'name' }).take();
 
@@ -483,7 +483,7 @@ describe('aggregate', () => {
     });
 
     it('should return json object when have records', async () => {
-      await User.insertMany([userData, userData]);
+      await User.createMany([userData, userData]);
 
       const value = await User.stringAgg('name', ', ');
 
@@ -502,7 +502,7 @@ describe('aggregate', () => {
       });
 
       it('should return json object when have records', async () => {
-        await User.insertMany([userData, userData]);
+        await User.createMany([userData, userData]);
 
         const value = await User.selectStringAgg('name', ', ').take();
 

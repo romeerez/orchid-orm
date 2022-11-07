@@ -105,6 +105,11 @@ export class ChatModel extends Model {
       through: 'users',
       source: 'profile',
     }),
+
+    messages: this.hasMany(() => MessageModel, {
+      primaryKey: 'id',
+      foreignKey: 'chatId',
+    }),
   };
 }
 export const ChatSchema = modelToZod(ChatModel);

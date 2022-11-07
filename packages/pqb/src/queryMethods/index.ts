@@ -7,7 +7,7 @@ export * from './for';
 export * from './from';
 export * from './get';
 export * from './having';
-export * from './insert';
+export * from './create';
 export * from './join';
 export * from './json';
 export * from './log';

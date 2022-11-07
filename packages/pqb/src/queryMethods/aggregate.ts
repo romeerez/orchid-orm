@@ -195,7 +195,7 @@ export class Aggregate {
     this: T,
     arg?: AT1<T>['count'] | '*',
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, NumberColumn> {
+  ): SetQueryReturnsValue<T, NumberColumn> & { isCount: true } {
     return this.clone()._count(arg, options);
   }
 
@@ -203,7 +203,7 @@ export class Aggregate {
     this: T,
     arg: AT1<T>['count'] | '*' = '*',
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsValue<T, NumberColumn> {
+  ): SetQueryReturnsValue<T, NumberColumn> & { isCount: true } {
     return get<T, NumberColumn>(this._selectCount(arg, options));
   }
 

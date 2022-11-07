@@ -33,7 +33,7 @@ import { Join } from './join';
 import { With } from './with';
 import { Union } from './union';
 import { Json } from './json';
-import { Insert } from './insert';
+import { Create } from './create';
 import { Update } from './update';
 import { Delete } from './delete';
 import { Transaction } from './transaction';
@@ -81,7 +81,7 @@ export interface QueryMethods
     With,
     Union,
     Json,
-    Insert,
+    Create,
     Update,
     Delete,
     Transaction,
@@ -381,7 +381,7 @@ applyMixins(QueryMethods, [
   With,
   Union,
   Json,
-  Insert,
+  Create,
   Update,
   Delete,
   Transaction,

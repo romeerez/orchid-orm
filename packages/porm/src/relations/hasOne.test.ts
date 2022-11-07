@@ -28,9 +28,9 @@ describe('hasOne', () => {
         >
       >();
 
-      const userId = await db.user.get('id').insert(userData);
+      const userId = await db.user.get('id').create(userData);
 
-      await db.profile.insert({ ...profileData, userId });
+      await db.profile.create({ ...profileData, userId });
 
       const user = await db.user.find(userId);
       const query = db.user.profile(user);
@@ -50,11 +50,11 @@ describe('hasOne', () => {
       expect(profile).toMatchObject(profileData);
     });
 
-    it('should have insert with defaults of provided id', () => {
+    it('should have create with defaults of provided id', () => {
       const user = { id: 1 };
       const now = new Date();
 
-      const query = db.user.profile(user).insert({
+      const query = db.user.profile(user).count().create({
         bio: 'bio',
         updatedAt: now,
         createdAt: now,
@@ -70,10 +70,10 @@ describe('hasOne', () => {
       );
     });
 
-    it('can insert after calling method', async () => {
-      const id = await db.user.get('id').insert(userData);
+    it('can create after calling method', async () => {
+      const id = await db.user.get('id').create(userData);
       const now = new Date();
-      await db.user.profile({ id }).insert({
+      await db.user.profile({ id }).create({
         userId: id,
         bio: 'bio',
         updatedAt: now,
@@ -227,7 +227,7 @@ describe('hasOne', () => {
       });
     });
 
-    describe('insert', () => {
+    describe('create', () => {
       const checkUserAndProfile = ({
         user,
         profile,
@@ -324,7 +324,7 @@ describe('hasOne', () => {
 
       describe('nested connect', () => {
         it('should support connect', async () => {
-          await db.profile.insert({
+          await db.profile.create({
             ...profileData,
             bio: 'profile',
             user: {
@@ -350,7 +350,7 @@ describe('hasOne', () => {
         });
 
         it('should support connect many', async () => {
-          await db.profile.insertMany([
+          await db.profile.createMany([
             {
               ...profileData,
               bio: 'profile 1',
@@ -412,7 +412,7 @@ describe('hasOne', () => {
 
       describe('connect or create', () => {
         it('should support connect or create', async () => {
-          const profileId = await db.profile.get('id').insert({
+          const profileId = await db.profile.get('id').create({
             ...profileData,
             bio: 'profile 1',
             user: {
@@ -464,7 +464,7 @@ describe('hasOne', () => {
         });
 
         it('should support connect or create many', async () => {
-          const profileId = await db.profile.get('id').insert({
+          const profileId = await db.profile.get('id').create({
             ...profileData,
             bio: 'profile 1',
             user: {
@@ -523,7 +523,7 @@ describe('hasOne', () => {
         it('should nullify foreignKey', async () => {
           const user = await db.user
             .selectAll()
-            .insert({ ...userData, profile: { create: profileData } });
+            .create({ ...userData, profile: { create: profileData } });
           const { id: profileId } = await db.user.profile(user);
 
           const id = await db.user
@@ -542,7 +542,7 @@ describe('hasOne', () => {
         });
 
         it('should nullify foreignKey in batch update', async () => {
-          const userIds = await db.user.pluck('id').insertMany([
+          const userIds = await db.user.pluck('id').createMany([
             { ...userData, profile: { create: profileData } },
             { ...userData, profile: { create: profileData } },
           ]);
@@ -566,11 +566,11 @@ describe('hasOne', () => {
 
       describe('set', () => {
         it('should nullify foreignKey of previous related record and set foreignKey to new related record', async () => {
-          const id = await db.user.get('id').insert(userData);
+          const id = await db.user.get('id').create(userData);
 
           const [{ id: profile1Id }, { id: profile2Id }] = await db.profile
             .select('id')
-            .insertMany([{ ...profileData, userId: id }, { ...profileData }]);
+            .createMany([{ ...profileData, userId: id }, { ...profileData }]);
 
           await db.user.find(id).update({
             profile: {
@@ -601,7 +601,7 @@ describe('hasOne', () => {
         it('should delete related record', async () => {
           const id = await db.user
             .get('id')
-            .insert({ ...userData, profile: { create: profileData } });
+            .create({ ...userData, profile: { create: profileData } });
 
           const { id: profileId } = await db.user
             .profile({ id })
@@ -619,7 +619,7 @@ describe('hasOne', () => {
         });
 
         it('should delete related record in batch update', async () => {
-          const userIds = await db.user.pluck('id').insertMany([
+          const userIds = await db.user.pluck('id').createMany([
             { ...userData, profile: { create: profileData } },
             { ...userData, profile: { create: profileData } },
           ]);
@@ -639,7 +639,7 @@ describe('hasOne', () => {
         it('should update related record', async () => {
           const id = await db.user
             .get('id')
-            .insert({ ...userData, profile: { create: profileData } });
+            .create({ ...userData, profile: { create: profileData } });
 
           await db.user.find(id).update({
             profile: {
@@ -654,7 +654,7 @@ describe('hasOne', () => {
         });
 
         it('should update related record in batch update', async () => {
-          const userIds = await db.user.pluck('id').insertMany([
+          const userIds = await db.user.pluck('id').createMany([
             { ...userData, profile: { create: profileData } },
             { ...userData, profile: { create: profileData } },
           ]);
@@ -739,7 +739,7 @@ describe('hasOne', () => {
         it('should create new related record', async () => {
           const userId = await db.user
             .get('id')
-            .insert({ ...userData, profile: { create: profileData } });
+            .create({ ...userData, profile: { create: profileData } });
 
           const previousProfileId = await db.user
             .profile({ id: userId })

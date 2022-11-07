@@ -22,8 +22,8 @@ import { addQueryOn } from './join';
 import { RelationQuery, relationQueryKey } from '../relations';
 
 const insertUserAndProfile = async () => {
-  const id = await User.get('id').insert(userData);
-  await Profile.insert({ ...profileData, userId: id });
+  const id = await User.get('id').create(userData);
+  await Profile.create({ ...profileData, userId: id });
 };
 
 describe('selectMethods', () => {
@@ -195,9 +195,9 @@ describe('selectMethods', () => {
       });
 
       it('should parse columns in single relation record result', async () => {
-        const userId = await User.get('id').insert(userData);
+        const userId = await User.get('id').create(userData);
         const now = new Date();
-        await Profile.insert({ userId, updatedAt: now, createdAt: now });
+        await Profile.create({ userId, updatedAt: now, createdAt: now });
 
         const [record] = await User.select('id', {
           profile: () => profileRelation,
@@ -272,9 +272,9 @@ describe('selectMethods', () => {
       });
 
       it('should parse columns in multiple relation records result', async () => {
-        const { id: authorId } = await User.select('id').insert(userData);
-        const { id: chatId } = await Chat.select('id').insert(chatData);
-        await Message.insert({
+        const { id: authorId } = await User.select('id').create(userData);
+        const { id: chatId } = await Chat.select('id').create(chatData);
+        await Message.create({
           authorId,
           chatId,
           ...messageData,

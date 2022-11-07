@@ -114,8 +114,8 @@ export type InsertQueryData = CommonQueryData & {
         expr?: OnConflictItem;
         update?: OnConflictMergeUpdate;
       };
-  beforeInsert?: BeforeCallback[];
-  afterInsert?: AfterCallback[];
+  beforeCreate?: BeforeCallback[];
+  afterCreate?: AfterCallback[];
 };
 
 export type UpdateQueryDataObject = Record<

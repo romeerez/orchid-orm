@@ -102,7 +102,7 @@ describe('column base', () => {
 
     describe('parsing columns', () => {
       beforeEach(async () => {
-        await User.insert(userData);
+        await User.create(userData);
       });
 
       it('should return column data as returned from db if not set', async () => {

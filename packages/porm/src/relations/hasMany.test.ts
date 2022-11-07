@@ -29,10 +29,10 @@ describe('hasMany', () => {
         >
       >();
 
-      const userId = await db.user.get('id').insert(userData);
-      const chatId = await db.chat.get('id').insert(chatData);
+      const userId = await db.user.get('id').create(userData);
+      const chatId = await db.chat.get('id').create(chatData);
 
-      await db.message.insertMany([
+      await db.message.createMany([
         { ...messageData, authorId: userId, chatId },
         { ...messageData, authorId: userId, chatId },
       ]);
@@ -54,25 +54,30 @@ describe('hasMany', () => {
       expect(messages).toMatchObject([messageData, messageData]);
     });
 
-    it('should have insert with defaults of provided id', () => {
+    it('should have create with defaults of provided id', () => {
       const user = { id: 1 };
-      const now = new Date();
-      const query = db.user.messages(user).insert({
+      const query = db.user.messages(user).count().create({
         chatId: 2,
         text: 'text',
-        updatedAt: now,
-        createdAt: now,
       });
 
       expectSql(
         query.toSql(),
         `
-        INSERT INTO "message"("authorId", "chatId", "text", "updatedAt", "createdAt")
-        VALUES ($1, $2, $3, $4, $5)
-      `,
-        [1, 2, 'text', now, now],
+          INSERT INTO "message"("authorId", "chatId", "text")
+          VALUES ($1, $2, $3)
+        `,
+        [1, 2, 'text'],
       );
     });
+
+    // it.only('should have create based on find query', async () => {
+    //   const query = db.chat.find(1).messages.create({
+    //     text: 'text',
+    //   });
+    //
+    //   console.log(query.toSql());
+    // });
 
     it('should have proper joinQuery', () => {
       expectSql(
@@ -268,7 +273,7 @@ describe('hasMany', () => {
     });
   });
 
-  describe('insert', () => {
+  describe('create', () => {
     const checkUser = (user: User, name: string) => {
       expect(user).toEqual({
         ...userData,
@@ -314,7 +319,7 @@ describe('hasMany', () => {
 
     describe('nested create', () => {
       it('should support create', async () => {
-        const chatId = await db.chat.get('id').insert(chatData);
+        const chatId = await db.chat.get('id').create(chatData);
 
         const user = await db.user.create({
           ...userData,
@@ -347,8 +352,8 @@ describe('hasMany', () => {
         });
       });
 
-      it('should support create in batch insert', async () => {
-        const chatId = await db.chat.get('id').insert(chatData);
+      it('should support create in batch create', async () => {
+        const chatId = await db.chat.get('id').create(chatData);
 
         const user = await db.user.createMany([
           {
@@ -413,8 +418,8 @@ describe('hasMany', () => {
 
     describe('nested connect', () => {
       it('should support connect', async () => {
-        const chatId = await db.chat.get('id').insert(chatData);
-        await db.message.insertMany([
+        const chatId = await db.chat.get('id').create(chatData);
+        await db.message.createMany([
           {
             ...messageData,
             chatId,
@@ -456,9 +461,9 @@ describe('hasMany', () => {
         });
       });
 
-      it('should support connect in batch insert', async () => {
-        const chatId = await db.chat.get('id').insert(chatData);
-        await db.message.insertMany([
+      it('should support connect in batch create', async () => {
+        const chatId = await db.chat.get('id').create(chatData);
+        await db.message.createMany([
           {
             ...messageData,
             chatId,
@@ -540,8 +545,8 @@ describe('hasMany', () => {
 
     describe('connectOrCreate', () => {
       it('should support connect or create', async () => {
-        const chatId = await db.chat.get('id').insert(chatData);
-        const messageId = await db.message.get('id').insert({
+        const chatId = await db.chat.get('id').create(chatData);
+        const messageId = await db.message.get('id').create({
           ...messageData,
           chatId,
           user: { create: { ...userData, name: 'tmp' } },
@@ -579,11 +584,11 @@ describe('hasMany', () => {
         });
       });
 
-      it('should support connect or create in batch insert', async () => {
-        const chatId = await db.chat.get('id').insert(chatData);
+      it('should support connect or create in batch create', async () => {
+        const chatId = await db.chat.get('id').create(chatData);
         const [{ id: message1Id }, { id: message4Id }] = await db.message
           .select('id')
-          .insertMany([
+          .createMany([
             {
               ...messageData,
               chatId,
@@ -664,9 +669,9 @@ describe('hasMany', () => {
       it('should nullify foreignKey', async () => {
         const chatId = await db.chat
           .get('id')
-          .insert({ ...chatData, title: 'chat 1' });
+          .create({ ...chatData, title: 'chat 1' });
 
-        const userId = await db.user.get('id').insert({
+        const userId = await db.user.get('id').create({
           ...userData,
           messages: {
             create: [
@@ -692,9 +697,9 @@ describe('hasMany', () => {
       it('should nullify foreignKey in batch update', async () => {
         const chatId = await db.chat
           .get('id')
-          .insert({ ...chatData, title: 'chat 1' });
+          .create({ ...chatData, title: 'chat 1' });
 
-        const userIds = await db.user.pluck('id').insertMany([
+        const userIds = await db.user.pluck('id').createMany([
           {
             ...userData,
             messages: {
@@ -727,8 +732,8 @@ describe('hasMany', () => {
 
     describe('set', () => {
       it('should nullify foreignKey of previous related record and set foreignKey to new related record', async () => {
-        const chatId = await db.chat.get('id').insert(chatData);
-        const id = await db.user.get('id').insert({
+        const chatId = await db.chat.get('id').create(chatData);
+        const id = await db.user.get('id').create({
           ...userData,
           messages: {
             create: [
@@ -738,7 +743,7 @@ describe('hasMany', () => {
           },
         });
 
-        await db.message.insert({ ...messageData, chatId, text: 'message 3' });
+        await db.message.create({ ...messageData, chatId, text: 'message 3' });
 
         await db.user.find(id).update({
           messages: {
@@ -769,9 +774,9 @@ describe('hasMany', () => {
 
     describe('delete', () => {
       it('should delete related records', async () => {
-        const chatId = await db.chat.get('id').insert(chatData);
+        const chatId = await db.chat.get('id').create(chatData);
 
-        const id = await db.user.get('id').insert({
+        const id = await db.user.get('id').create({
           ...userData,
           messages: {
             create: [
@@ -797,9 +802,9 @@ describe('hasMany', () => {
       });
 
       it('should delete related records in batch update', async () => {
-        const chatId = await db.chat.get('id').insert(chatData);
+        const chatId = await db.chat.get('id').create(chatData);
 
-        const userIds = await db.user.pluck('id').insertMany([
+        const userIds = await db.user.pluck('id').createMany([
           {
             ...userData,
             messages: {
@@ -834,9 +839,9 @@ describe('hasMany', () => {
 
     describe('nested update', () => {
       it('should update related records', async () => {
-        const chatId = await db.chat.get('id').insert(chatData);
+        const chatId = await db.chat.get('id').create(chatData);
 
-        const id = await db.user.get('id').insert({
+        const id = await db.user.get('id').create({
           ...userData,
           messages: {
             create: [
@@ -868,9 +873,9 @@ describe('hasMany', () => {
       });
 
       it('should update related records in batch update', async () => {
-        const chatId = await db.chat.get('id').insert(chatData);
+        const chatId = await db.chat.get('id').create(chatData);
 
-        const userIds = await db.user.pluck('id').insertMany([
+        const userIds = await db.user.pluck('id').createMany([
           {
             ...userData,
             messages: {
@@ -908,7 +913,7 @@ describe('hasMany', () => {
 
     describe('nested create', () => {
       it('should create new related records', async () => {
-        const chatId = await db.chat.get('id').insert(chatData);
+        const chatId = await db.chat.get('id').create(chatData);
         const user = await db.user.create({ ...userData, age: 1 });
 
         const updated = await db.user

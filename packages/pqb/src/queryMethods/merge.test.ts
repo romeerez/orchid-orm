@@ -373,8 +373,8 @@ describe('merge queries', () => {
       i2.join = [{ type: 'b', args: ['b'] }];
       i1.onConflict = { type: 'ignore' };
       i2.onConflict = { type: 'merge' };
-      i1.beforeInsert = [() => {}];
-      i2.beforeInsert = [() => {}];
+      i1.beforeCreate = [() => {}];
+      i2.beforeCreate = [() => {}];
 
       const u1 = q1.query as unknown as UpdateQueryData;
       const u2 = q2.query as unknown as UpdateQueryData;
@@ -451,7 +451,7 @@ describe('merge queries', () => {
       expect(i.using).toEqual([...i1.using, ...i2.using]);
       expect(i.join).toEqual([...i1.join, ...i2.join]);
       expect(i.onConflict).toEqual(i2.onConflict);
-      expect(i.beforeInsert).toEqual([...i1.beforeInsert, ...i2.beforeInsert]);
+      expect(i.beforeCreate).toEqual([...i1.beforeCreate, ...i2.beforeCreate]);
 
       const u = q as UpdateQueryData;
       expect(u.updateData).toEqual([...u1.updateData, ...u2.updateData]);

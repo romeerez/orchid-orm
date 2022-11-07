@@ -167,7 +167,7 @@ export const makeHasAndBelongsToManyMethod = (
       if (create.length) {
         created = (await t
           .select(apk)
-          ._insertMany(
+          ._createMany(
             create.flatMap(([, { create = [], connectOrCreate = [] }]) => [
               ...create,
               ...connectOrCreate
@@ -217,24 +217,27 @@ export const makeHasAndBelongsToManyMethod = (
         }
       });
 
-      await subQuery.transacting(q)._insertMany(
-        allKeys.flatMap(([selfData, relationKeys]) => {
-          const selfKey = selfData[pk];
-          return relationKeys.map((relationData) => ({
-            [fk]: selfKey,
-            [afk]: relationData[apk],
-          }));
-        }),
-      );
+      await subQuery
+        .transacting(q)
+        ._count()
+        ._createMany(
+          allKeys.flatMap(([selfData, relationKeys]) => {
+            const selfKey = selfData[pk];
+            return relationKeys.map((relationData) => ({
+              [fk]: selfKey,
+              [afk]: relationData[apk],
+            }));
+          }),
+        );
     }) as HasManyNestedInsert,
     nestedUpdate: (async (q, data, params) => {
       if (params.create) {
         const ids = await query
           .transacting(q)
           ._pluck(apk)
-          ._insertMany(params.create);
+          ._createMany(params.create);
 
-        await subQuery.transacting(q)._insertMany(
+        await subQuery.transacting(q)._createMany(
           data.flatMap((item) =>
             ids.map((id) => ({
               [fk]: item[pk],
@@ -340,7 +343,7 @@ const insertToJoinTable = (
   data: Record<string, unknown>[],
   ids: unknown[],
 ) => {
-  return joinTableTransaction._insertMany(
+  return joinTableTransaction._count()._createMany(
     data.flatMap((item) =>
       ids.map((id) => ({
         [state.foreignKey]: item[state.primaryKey],

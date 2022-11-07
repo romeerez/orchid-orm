@@ -13,7 +13,7 @@ import {
 } from '../relations';
 import { WhereArg, WhereResult } from './where';
 import { EmptyObject, MaybeArray } from '../utils';
-import { InsertData } from './insert';
+import { InsertData } from './create';
 import { parseResult, queryMethodByReturnType } from './then';
 import { UpdateQueryData } from '../sql';
 

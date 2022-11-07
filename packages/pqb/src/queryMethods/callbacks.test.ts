@@ -23,20 +23,20 @@ describe('callbacks', () => {
     });
   });
 
-  describe('beforeInsert', () => {
-    it('should run callback before insert', async () => {
+  describe('beforeCreate', () => {
+    it('should run callback before create', async () => {
       const fn = jest.fn();
-      const query = User.beforeInsert(fn).insert(userData);
+      const query = User.beforeCreate(fn).create(userData);
       await query;
 
       expect(fn.mock.calls[0]).toEqual([query]);
     });
   });
 
-  describe('afterInsert', () => {
-    it('should run callback after insert', async () => {
+  describe('afterCreate', () => {
+    it('should run callback after create', async () => {
       const fn = jest.fn();
-      const query = User.afterInsert(fn).select('id').insert(userData);
+      const query = User.afterCreate(fn).select('id').create(userData);
       const result = await query;
 
       expect(fn.mock.calls[0]).toEqual([query, result]);

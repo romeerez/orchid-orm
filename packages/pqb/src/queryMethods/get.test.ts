@@ -8,7 +8,7 @@ describe('get', () => {
 
   describe('get', () => {
     it('should select column and return a single value', async () => {
-      const { id } = await User.select('id').insert(userData);
+      const { id } = await User.select('id').create(userData);
 
       const received = await User.get('id');
 
@@ -32,7 +32,7 @@ describe('get', () => {
 
   describe('getOptional', () => {
     it('should select column and return a single value when exists', async () => {
-      const { id } = await User.select('id').insert(userData);
+      const { id } = await User.select('id').create(userData);
 
       const received = await User.getOptional('id');
 

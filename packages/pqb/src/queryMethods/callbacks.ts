@@ -25,18 +25,18 @@ export class QueryCallbacks {
     return pushQueryValue(this, 'afterQuery', cb);
   }
 
-  beforeInsert<T extends Query>(this: T, cb: BeforeCallback<T>): T {
-    return this.clone()._beforeInsert(cb);
+  beforeCreate<T extends Query>(this: T, cb: BeforeCallback<T>): T {
+    return this.clone()._beforeCreate(cb);
   }
-  _beforeInsert<T extends Query>(this: T, cb: BeforeCallback<T>): T {
-    return pushQueryValue(this, 'beforeInsert', cb);
+  _beforeCreate<T extends Query>(this: T, cb: BeforeCallback<T>): T {
+    return pushQueryValue(this, 'beforeCreate', cb);
   }
 
-  afterInsert<T extends Query>(this: T, cb: AfterCallback<T>): T {
-    return this.clone()._afterInsert(cb);
+  afterCreate<T extends Query>(this: T, cb: AfterCallback<T>): T {
+    return this.clone()._afterCreate(cb);
   }
-  _afterInsert<T extends Query>(this: T, cb: AfterCallback<T>): T {
-    return pushQueryValue(this, 'afterInsert', cb);
+  _afterCreate<T extends Query>(this: T, cb: AfterCallback<T>): T {
+    return pushQueryValue(this, 'afterCreate', cb);
   }
 
   beforeUpdate<T extends Query>(this: T, cb: BeforeCallback<T>): T {

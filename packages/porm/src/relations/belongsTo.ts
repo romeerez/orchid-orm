@@ -89,7 +89,7 @@ export const makeBelongsToMethod = (
       if (create.length) {
         created = (await t
           .select(primaryKey)
-          ._insertMany(
+          ._createMany(
             create.map((item) =>
               'create' in item ? item.create : item.connectOrCreate.create,
             ),
@@ -150,7 +150,7 @@ export const makeBelongsToMethod = (
           update[foreignKey] = await query
             .transacting(q)
             ._get(primaryKey)
-            ._insert(params.create);
+            ._create(params.create);
         } else if (params.delete) {
           const selectQuery = q.transacting(q);
           selectQuery.query.type = undefined;
@@ -193,7 +193,7 @@ export const makeBelongsToMethod = (
               query
                 .transacting(q)
                 ._select(primaryKey)
-                ._insert(upsert.create)
+                ._create(upsert.create)
                 .then((result) => {
                   (state.updateLater as Record<string, unknown>)[foreignKey] = (
                     result as Record<string, unknown>

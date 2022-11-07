@@ -9,7 +9,7 @@ describe('model', () => {
 
   describe('overriding column types', () => {
     it('should return date as string by default', async () => {
-      await db.user.insert(userData);
+      await db.user.create(userData);
 
       const Model = createModel({ columnTypes });
       class UserModel extends Model {
@@ -33,7 +33,7 @@ describe('model', () => {
     });
 
     it('should return date as Date when overridden', async () => {
-      await db.user.insert(userData);
+      await db.user.create(userData);
 
       const Model = createModel({
         columnTypes: {

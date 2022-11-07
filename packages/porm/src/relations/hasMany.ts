@@ -11,7 +11,7 @@ import {
   HasManyNestedInsert,
   HasManyNestedUpdate,
   HasManyRelation,
-  InsertData,
+  CreateData,
   JoinCallback,
   MaybeArray,
   Query,
@@ -195,7 +195,7 @@ export const makeHasManyMethod = (
 
       connectedI = 0;
       if (create.length) {
-        await t.insertMany(
+        await t._createMany(
           create.flatMap(
             ([selfData, { create = [], connectOrCreate = [] }]) => {
               return [
@@ -211,7 +211,7 @@ export const makeHasManyMethod = (
                   })),
               ];
             },
-          ) as InsertData<Query>[],
+          ) as CreateData<Query>[],
         );
       }
     }) as HasManyNestedInsert,
@@ -226,7 +226,7 @@ export const makeHasManyMethod = (
 
       const t = query.transacting(q);
       if (params.create) {
-        await t._insertMany(
+        await t._count()._createMany(
           params.create.map((create) => ({
             ...create,
             [foreignKey]: data[0][primaryKey],

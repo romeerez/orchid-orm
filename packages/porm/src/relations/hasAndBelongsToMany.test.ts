@@ -22,7 +22,7 @@ describe('hasAndBelongsToMany', () => {
         RelationQuery<'chats', { id: number }, never, typeof chatsQuery, false>
       >();
 
-      const userId = await db.user.get('id').insert({
+      const userId = await db.user.get('id').create({
         ...userData,
         chats: {
           create: [chatData, chatData],
@@ -282,7 +282,7 @@ describe('hasAndBelongsToMany', () => {
     });
   });
 
-  describe('insert', () => {
+  describe('create', () => {
     afterEach(() => {
       jest.clearAllMocks();
     });
@@ -324,7 +324,7 @@ describe('hasAndBelongsToMany', () => {
     };
 
     it('should support create', async () => {
-      const query = db.user.select('id').insert({
+      const query = db.user.select('id').create({
         ...userData,
         name: 'user 1',
         chats: {
@@ -347,43 +347,43 @@ describe('hasAndBelongsToMany', () => {
       const user = await query;
       const chatIds = await db.user.chats(user).order('id').pluck('id');
 
-      const [insertUserSql, insertChatsSql] = querySpy.mock.calls.map(
+      const [createUserSql, createChatsSql] = querySpy.mock.calls.map(
         (item) => item[0],
       );
-      const insertChatUserSql = arraysSpy.mock.calls[0][0];
+      const createChatUserSql = arraysSpy.mock.calls[0][0];
 
       expectSql(
-        insertUserSql as Sql,
+        createUserSql as Sql,
         `
-        INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
-        VALUES ($1, $2, $3, $4)
-        RETURNING "user"."id"
-      `,
+          INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
+          VALUES ($1, $2, $3, $4)
+          RETURNING "user"."id"
+        `,
         ['user 1', 'password', now, now],
       );
 
       expectSql(
-        insertChatsSql as Sql,
+        createChatsSql as Sql,
         `
-        INSERT INTO "chat"("title", "updatedAt", "createdAt")
-        VALUES ($1, $2, $3), ($4, $5, $6)
-        RETURNING "chat"."id"
-      `,
+          INSERT INTO "chat"("title", "updatedAt", "createdAt")
+          VALUES ($1, $2, $3), ($4, $5, $6)
+          RETURNING "chat"."id"
+        `,
         ['chat 1', now, now, 'chat 2', now, now],
       );
 
       expectSql(
-        insertChatUserSql as Sql,
+        createChatUserSql as Sql,
         `
-        INSERT INTO "chatUser"("userId", "chatId")
-        VALUES ($1, $2), ($3, $4)
-      `,
+          INSERT INTO "chatUser"("userId", "chatId")
+          VALUES ($1, $2), ($3, $4)
+        `,
         [user.id, chatIds[0], user.id, chatIds[1]],
       );
     });
 
     it('should support create many', async () => {
-      const query = db.user.select('id').insertMany([
+      const query = db.user.select('id').createMany([
         {
           ...userData,
           name: 'user 1',
@@ -424,28 +424,28 @@ describe('hasAndBelongsToMany', () => {
       const users = await query;
       const chatIds = await db.user.join('chats').pluck('chats.id');
 
-      const [insertUserSql, insertChatsSql] = querySpy.mock.calls.map(
+      const [createUserSql, createChatsSql] = querySpy.mock.calls.map(
         (item) => item[0],
       );
-      const insertChatUserSql = arraysSpy.mock.calls[0][0];
+      const createChatUserSql = arraysSpy.mock.calls[0][0];
 
       expectSql(
-        insertUserSql as Sql,
+        createUserSql as Sql,
         `
-        INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
-        VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
-        RETURNING "user"."id"
-      `,
+          INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
+          VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
+          RETURNING "user"."id"
+        `,
         ['user 1', 'password', now, now, 'user 2', 'password', now, now],
       );
 
       expectSql(
-        insertChatsSql as Sql,
+        createChatsSql as Sql,
         `
-        INSERT INTO "chat"("title", "updatedAt", "createdAt")
-        VALUES ($1, $2, $3), ($4, $5, $6), ($7, $8, $9), ($10, $11, $12)
-        RETURNING "chat"."id"
-      `,
+          INSERT INTO "chat"("title", "updatedAt", "createdAt")
+          VALUES ($1, $2, $3), ($4, $5, $6), ($7, $8, $9), ($10, $11, $12)
+          RETURNING "chat"."id"
+        `,
         [
           'chat 1',
           now,
@@ -463,11 +463,11 @@ describe('hasAndBelongsToMany', () => {
       );
 
       expectSql(
-        insertChatUserSql as Sql,
+        createChatUserSql as Sql,
         `
-        INSERT INTO "chatUser"("userId", "chatId")
-        VALUES ($1, $2), ($3, $4), ($5, $6), ($7, $8)
-      `,
+          INSERT INTO "chatUser"("userId", "chatId")
+          VALUES ($1, $2), ($3, $4), ($5, $6), ($7, $8)
+        `,
         [
           users[0].id,
           chatIds[0],
@@ -482,12 +482,12 @@ describe('hasAndBelongsToMany', () => {
     });
 
     it('should support connect', async () => {
-      await db.chat.insertMany([
+      await db.chat.createMany([
         { ...chatData, title: 'chat 1' },
         { ...chatData, title: 'chat 2' },
       ]);
 
-      const query = db.user.select('id').insert({
+      const query = db.user.select('id').create({
         ...userData,
         name: 'user 1',
         chats: {
@@ -508,18 +508,18 @@ describe('hasAndBelongsToMany', () => {
       const user = await query;
       const chatIds = await db.user.chats(user).order('id').pluck('id');
 
-      const [insertUserSql, ...findChatsSql] = querySpy.mock.calls.map(
+      const [createUserSql, ...findChatsSql] = querySpy.mock.calls.map(
         (item) => item[0],
       );
-      const insertChatUserSql = arraysSpy.mock.calls[0][0];
+      const createChatUserSql = arraysSpy.mock.calls[0][0];
 
       expectSql(
-        insertUserSql as Sql,
+        createUserSql as Sql,
         `
-        INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
-        VALUES ($1, $2, $3, $4)
-        RETURNING "user"."id"
-      `,
+          INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
+          VALUES ($1, $2, $3, $4)
+          RETURNING "user"."id"
+        `,
         ['user 1', 'password', now, now],
       );
 
@@ -537,24 +537,24 @@ describe('hasAndBelongsToMany', () => {
       });
 
       expectSql(
-        insertChatUserSql as Sql,
+        createChatUserSql as Sql,
         `
-        INSERT INTO "chatUser"("userId", "chatId")
-        VALUES ($1, $2), ($3, $4)
-      `,
+          INSERT INTO "chatUser"("userId", "chatId")
+          VALUES ($1, $2), ($3, $4)
+        `,
         [user.id, chatIds[0], user.id, chatIds[1]],
       );
     });
 
     it('should support connect many', async () => {
-      await db.chat.insertMany([
+      await db.chat.createMany([
         { ...chatData, title: 'chat 1' },
         { ...chatData, title: 'chat 2' },
         { ...chatData, title: 'chat 3' },
         { ...chatData, title: 'chat 4' },
       ]);
 
-      const query = db.user.select('id').insertMany([
+      const query = db.user.select('id').createMany([
         {
           ...userData,
           name: 'user 1',
@@ -591,18 +591,18 @@ describe('hasAndBelongsToMany', () => {
       const users = await query;
       const chatIds = await db.user.join('chats').pluck('chats.id');
 
-      const [insertUserSql, ...findChatsSql] = querySpy.mock.calls.map(
+      const [createUserSql, ...findChatsSql] = querySpy.mock.calls.map(
         (item) => item[0],
       );
-      const insertChatUserSql = arraysSpy.mock.calls[0][0];
+      const createChatUserSql = arraysSpy.mock.calls[0][0];
 
       expectSql(
-        insertUserSql as Sql,
+        createUserSql as Sql,
         `
-        INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
-        VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
-        RETURNING "user"."id"
-      `,
+          INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
+          VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
+          RETURNING "user"."id"
+        `,
         ['user 1', 'password', now, now, 'user 2', 'password', now, now],
       );
 
@@ -620,11 +620,11 @@ describe('hasAndBelongsToMany', () => {
       });
 
       expectSql(
-        insertChatUserSql as Sql,
+        createChatUserSql as Sql,
         `
-        INSERT INTO "chatUser"("userId", "chatId")
-        VALUES ($1, $2), ($3, $4), ($5, $6), ($7, $8)
-      `,
+          INSERT INTO "chatUser"("userId", "chatId")
+          VALUES ($1, $2), ($3, $4), ($5, $6), ($7, $8)
+        `,
         [
           users[0].id,
           chatIds[0],
@@ -639,7 +639,7 @@ describe('hasAndBelongsToMany', () => {
     });
 
     it('should support connect or create', async () => {
-      const chatId = await db.chat.get('id').insert({
+      const chatId = await db.chat.get('id').create({
         ...chatData,
         title: 'chat 1',
       });
@@ -678,7 +678,7 @@ describe('hasAndBelongsToMany', () => {
     it('should support connect or create many', async () => {
       const [{ id: chat1Id }, { id: chat4Id }] = await db.chat
         .select('id')
-        .insertMany([
+        .createMany([
           {
             ...chatData,
             title: 'chat 1',
@@ -751,7 +751,7 @@ describe('hasAndBelongsToMany', () => {
   describe('update', () => {
     describe('disconnect', () => {
       it('should delete join table rows', async () => {
-        const userId = await db.user.get('id').insert({
+        const userId = await db.user.get('id').create({
           ...userData,
           name: 'user',
           chats: {
@@ -777,7 +777,7 @@ describe('hasAndBelongsToMany', () => {
 
     describe('set', () => {
       it('should delete previous join records and create join records for matching related records', async () => {
-        const id = await db.user.get('id').insert({
+        const id = await db.user.get('id').create({
           ...userData,
           chats: {
             create: [
@@ -787,7 +787,7 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.chat.insert({
+        await db.chat.create({
           ...chatData,
           title: 'chat 3',
         });
@@ -808,7 +808,7 @@ describe('hasAndBelongsToMany', () => {
 
     describe('delete', () => {
       it('should delete related records', async () => {
-        const id = await db.user.get('id').insert({
+        const id = await db.user.get('id').create({
           ...userData,
           chats: {
             create: [
@@ -819,7 +819,7 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.user.insert({
+        await db.user.create({
           ...userData,
           chats: {
             create: [{ ...chatData, title: 'chat 4' }],
@@ -841,7 +841,7 @@ describe('hasAndBelongsToMany', () => {
 
     describe('nested update', () => {
       it('should update related records', async () => {
-        const id = await db.user.get('id').insert({
+        const id = await db.user.get('id').create({
           ...userData,
           chats: {
             create: [
@@ -852,7 +852,7 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        await db.user.insert({
+        await db.user.create({
           ...userData,
           chats: {
             create: [{ ...chatData, title: 'chat 4' }],
@@ -881,7 +881,7 @@ describe('hasAndBelongsToMany', () => {
       it('should create many records and connect all found updating with them', async () => {
         const userIds = await db.user
           .pluck('id')
-          .insertMany([userData, userData]);
+          .createMany([userData, userData]);
 
         await db.user.where({ id: { in: userIds } }).update({
           chats: {

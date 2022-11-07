@@ -24,10 +24,10 @@ describe('belongsTo', () => {
         RelationQuery<'user', { userId: number | null }, never, UserQuery, true>
       >();
 
-      const userId = await db.user.get('id').insert(userData);
+      const userId = await db.user.get('id').create(userData);
       const profileId = await db.profile
         .get('id')
-        .insert({ ...profileData, userId });
+        .create({ ...profileData, userId });
 
       const profile = await db.profile.find(profileId);
       const query = db.profile.user(profile);
@@ -217,8 +217,8 @@ describe('belongsTo', () => {
     });
   });
 
-  describe('insert', () => {
-    const checkInsertedResults = async ({
+  describe('create', () => {
+    const checkCreatedResults = async ({
       messageId,
       chatId,
       authorId,
@@ -268,7 +268,7 @@ describe('belongsTo', () => {
           id: messageId,
           chatId,
           authorId,
-        } = await db.message.select('id', 'chatId', 'authorId').insert({
+        } = await db.message.select('id', 'chatId', 'authorId').create({
           ...messageData,
           text: 'message',
           chat: {
@@ -285,7 +285,7 @@ describe('belongsTo', () => {
           },
         });
 
-        await checkInsertedResults({
+        await checkCreatedResults({
           messageId,
           chatId,
           authorId,
@@ -295,8 +295,8 @@ describe('belongsTo', () => {
         });
       });
 
-      it('should support create in batch insert', async () => {
-        const query = db.message.select('id', 'chatId', 'authorId').insertMany([
+      it('should support create in batch create', async () => {
+        const query = db.message.select('id', 'chatId', 'authorId').createMany([
           {
             ...messageData,
             text: 'message 1',
@@ -333,7 +333,7 @@ describe('belongsTo', () => {
 
         const [first, second] = await query;
 
-        await checkInsertedResults({
+        await checkCreatedResults({
           messageId: first.id,
           chatId: first.chatId,
           authorId: first.authorId,
@@ -342,7 +342,7 @@ describe('belongsTo', () => {
           name: 'user 1',
         });
 
-        await checkInsertedResults({
+        await checkCreatedResults({
           messageId: second.id,
           chatId: second.chatId,
           authorId: second.authorId,
@@ -355,10 +355,10 @@ describe('belongsTo', () => {
 
     describe('connect', () => {
       it('should support connect', async () => {
-        await db.chat.insert({ ...chatData, title: 'chat' });
-        await db.user.insert({ ...userData, name: 'user' });
+        await db.chat.create({ ...chatData, title: 'chat' });
+        await db.user.create({ ...userData, name: 'user' });
 
-        const query = db.message.select('id', 'chatId', 'authorId').insert({
+        const query = db.message.select('id', 'chatId', 'authorId').create({
           ...messageData,
           text: 'message',
           chat: {
@@ -371,7 +371,7 @@ describe('belongsTo', () => {
 
         const { id: messageId, chatId, authorId } = await query;
 
-        await checkInsertedResults({
+        await checkCreatedResults({
           messageId,
           chatId,
           authorId,
@@ -381,17 +381,17 @@ describe('belongsTo', () => {
         });
       });
 
-      it('should support connect in batch insert', async () => {
-        await db.chat.insertMany([
+      it('should support connect in batch create', async () => {
+        await db.chat.createMany([
           { ...chatData, title: 'chat 1' },
           { ...chatData, title: 'chat 2' },
         ]);
-        await db.user.insertMany([
+        await db.user.createMany([
           { ...userData, name: 'user 1' },
           { ...userData, name: 'user 2' },
         ]);
 
-        const query = db.message.select('id', 'chatId', 'authorId').insertMany([
+        const query = db.message.select('id', 'chatId', 'authorId').createMany([
           {
             ...messageData,
             text: 'message 1',
@@ -416,7 +416,7 @@ describe('belongsTo', () => {
 
         const [first, second] = await query;
 
-        await checkInsertedResults({
+        await checkCreatedResults({
           messageId: first.id,
           chatId: first.chatId,
           authorId: first.authorId,
@@ -425,7 +425,7 @@ describe('belongsTo', () => {
           name: 'user 1',
         });
 
-        await checkInsertedResults({
+        await checkCreatedResults({
           messageId: second.id,
           chatId: second.chatId,
           authorId: second.authorId,
@@ -438,14 +438,14 @@ describe('belongsTo', () => {
 
     describe('connectOrCreate', () => {
       it('should support connect or create', async () => {
-        const chat = await db.chat.select('id').insert({
+        const chat = await db.chat.select('id').create({
           ...chatData,
           title: 'chat',
         });
 
         const query = await db.message
           .select('id', 'chatId', 'authorId')
-          .insert({
+          .create({
             ...messageData,
             text: 'message',
             chat: {
@@ -466,7 +466,7 @@ describe('belongsTo', () => {
 
         expect(chatId).toBe(chat.id);
 
-        await checkInsertedResults({
+        await checkCreatedResults({
           messageId,
           chatId,
           authorId,
@@ -476,19 +476,19 @@ describe('belongsTo', () => {
         });
       });
 
-      it('should support connect or create in batch insert', async () => {
-        const chat = await db.chat.select('id').insert({
+      it('should support connect or create in batch create', async () => {
+        const chat = await db.chat.select('id').create({
           ...chatData,
           title: 'chat 1',
         });
-        const user = await db.user.select('id').insert({
+        const user = await db.user.select('id').create({
           ...userData,
           name: 'user 2',
         });
 
         const query = await db.message
           .select('id', 'chatId', 'authorId')
-          .insertMany([
+          .createMany([
             {
               ...messageData,
               text: 'message 1',
@@ -528,7 +528,7 @@ describe('belongsTo', () => {
         expect(first.chatId).toBe(chat.id);
         expect(second.authorId).toBe(user.id);
 
-        await checkInsertedResults({
+        await checkCreatedResults({
           messageId: first.id,
           chatId: first.chatId,
           authorId: first.authorId,
@@ -537,7 +537,7 @@ describe('belongsTo', () => {
           name: 'user 1',
         });
 
-        await checkInsertedResults({
+        await checkCreatedResults({
           messageId: second.id,
           chatId: second.chatId,
           authorId: second.authorId,
@@ -554,7 +554,7 @@ describe('belongsTo', () => {
       it('should nullify foreignKey', async () => {
         const id = await db.profile
           .get('id')
-          .insert({ ...profileData, user: { create: userData } });
+          .create({ ...profileData, user: { create: userData } });
 
         const profile = await db.profile
           .select('userId')
@@ -568,7 +568,7 @@ describe('belongsTo', () => {
       });
 
       it('should nullify foreignKey in batch update', async () => {
-        const ids = await db.profile.pluck('id').insertMany([
+        const ids = await db.profile.pluck('id').createMany([
           { ...profileData, user: { create: userData } },
           { ...profileData, user: { create: userData } },
         ]);
@@ -587,8 +587,8 @@ describe('belongsTo', () => {
 
     describe('set', () => {
       it('should set foreignKey of current record with provided primaryKey', async () => {
-        const id = await db.profile.get('id').insert(profileData);
-        const user = await db.user.select('id').insert(userData);
+        const id = await db.profile.get('id').create(profileData);
+        const user = await db.user.select('id').create(userData);
 
         const profile = await db.profile
           .selectAll()
@@ -603,8 +603,8 @@ describe('belongsTo', () => {
       });
 
       it('should set foreignKey of current record from found related record', async () => {
-        const id = await db.profile.get('id').insert(profileData);
-        const user = await db.user.select('id').insert({
+        const id = await db.profile.get('id').create(profileData);
+        const user = await db.user.select('id').create({
           ...userData,
           name: 'user',
         });
@@ -624,8 +624,8 @@ describe('belongsTo', () => {
       it('should set foreignKey of current record with provided primaryKey in batch update', async () => {
         const profileIds = await db.profile
           .pluck('id')
-          .insertMany([profileData, profileData]);
-        const user = await db.user.select('id').insert(userData);
+          .createMany([profileData, profileData]);
+        const user = await db.user.select('id').create(userData);
 
         const updatedUserIds = await db.profile
           .pluck('userId')
@@ -642,8 +642,8 @@ describe('belongsTo', () => {
       it('should set foreignKey of current record from found related record in batch update', async () => {
         const profileIds = await db.profile
           .pluck('id')
-          .insertMany([profileData, profileData]);
-        const user = await db.user.select('id').insert({
+          .createMany([profileData, profileData]);
+        const user = await db.user.select('id').create({
           ...userData,
           name: 'user',
         });
@@ -665,7 +665,7 @@ describe('belongsTo', () => {
       it('should nullify foreignKey and delete related record', async () => {
         const { id, userId } = await db.profile
           .select('id', 'userId')
-          .insert({ ...profileData, user: { create: userData } });
+          .create({ ...profileData, user: { create: userData } });
 
         const profile = await db.profile
           .select('userId')
@@ -683,8 +683,8 @@ describe('belongsTo', () => {
       });
 
       it('should nullify foreignKey and delete related record in batch update', async () => {
-        const user = await db.user.selectAll().insert(userData);
-        const profileIds = await db.profile.pluck('id').insertMany([
+        const user = await db.user.selectAll().create(userData);
+        const profileIds = await db.profile.pluck('id').createMany([
           { ...profileData, userId: user.id },
           { ...profileData, userId: user.id },
         ]);
@@ -709,7 +709,7 @@ describe('belongsTo', () => {
       it('should update related record', async () => {
         const { id, userId } = await db.profile
           .select('id', 'userId')
-          .insert({ ...profileData, user: { create: userData } });
+          .create({ ...profileData, user: { create: userData } });
 
         await db.profile
           .select('userId')
@@ -727,7 +727,7 @@ describe('belongsTo', () => {
       });
 
       it('should update related records in batch update', async () => {
-        const profiles = await db.profile.select('id', 'userId').insertMany([
+        const profiles = await db.profile.select('id', 'userId').createMany([
           { ...profileData, user: { create: userData } },
           { ...profileData, user: { create: userData } },
         ]);
@@ -821,7 +821,7 @@ describe('belongsTo', () => {
       it('should create new related record and update foreignKey', async () => {
         const profileId = await db.profile
           .get('id')
-          .insert({ ...profileData, user: { create: userData } });
+          .create({ ...profileData, user: { create: userData } });
 
         const updated = await db.profile
           .selectAll()
@@ -839,7 +839,7 @@ describe('belongsTo', () => {
       it('should create new related record and update foreignKey in batch update', async () => {
         const profileIds = await db.profile
           .pluck('id')
-          .insertMany([profileData, profileData]);
+          .createMany([profileData, profileData]);
 
         const updatedUserIds = await db.profile
           .pluck('userId')

@@ -46,7 +46,7 @@ describe('queryMethods', () => {
 
   describe('take', () => {
     it('limits to one and returns only one', async () => {
-      await User.insert(userData);
+      await User.create(userData);
 
       const q = User.all();
       expectSql(q.take().toSql(), `SELECT * FROM "user" LIMIT $1`, [1]);
@@ -73,7 +73,7 @@ describe('queryMethods', () => {
 
   describe('takeOptional', () => {
     it('limits to one and returns only one', async () => {
-      await User.insert(userData);
+      await User.create(userData);
 
       const q = User.all();
       expectSql(q.takeOptional().toSql(), `SELECT * FROM "user" LIMIT $1`, [1]);
@@ -114,7 +114,7 @@ describe('queryMethods', () => {
   describe('pluck', () => {
     beforeEach(async () => {
       for (let i = 0; i < 3; i++) {
-        await User.insert({ ...userData, createdAt: now });
+        await User.create({ ...userData, createdAt: now });
       }
     });
 
@@ -573,7 +573,7 @@ describe('queryMethods', () => {
 
       expect(await query).toBe(false);
 
-      await User.insert(userData);
+      await User.create(userData);
 
       expect(await query).toBe(true);
 

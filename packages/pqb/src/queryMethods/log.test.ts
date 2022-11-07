@@ -2,6 +2,7 @@ import { createDb } from '../db';
 import { adapter, dbOptions, userData, useTestDatabase } from '../test-utils';
 import { logColors } from './log';
 import { noop } from '../utils';
+import { columnTypes } from '../columnSchema';
 
 describe('query log', () => {
   useTestDatabase();
@@ -45,7 +46,7 @@ describe('query log', () => {
       error: jest.fn(),
     };
 
-    const db = createDb({ adapter, log: true, logger });
+    const db = createDb({ adapter, columnTypes, log: true, logger });
 
     await db('user').where({ name: 'name' });
 
@@ -68,7 +69,12 @@ describe('query log', () => {
       error: jest.fn(),
     };
 
-    const db = createDb({ adapter, log: { colors: false }, logger });
+    const db = createDb({
+      adapter,
+      columnTypes,
+      log: { colors: false },
+      logger,
+    });
 
     await db('user').where({ name: 'name' });
 
@@ -87,7 +93,7 @@ describe('query log', () => {
       error: jest.fn(),
     };
 
-    const db = createDb({ adapter, log: true, logger });
+    const db = createDb({ adapter, columnTypes, log: true, logger });
 
     await db('user').where({ wrongColumn: 'value' }).then(noop, noop);
 
@@ -112,7 +118,12 @@ describe('query log', () => {
       error: jest.fn(),
     };
 
-    const db = createDb({ adapter, log: { colors: false }, logger });
+    const db = createDb({
+      adapter,
+      columnTypes,
+      log: { colors: false },
+      logger,
+    });
 
     await db('user').where({ wrongColumn: 'value' }).then(noop, noop);
 
@@ -133,10 +144,15 @@ describe('query log', () => {
       error: jest.fn(),
     };
 
-    const db = createDb({ adapter, log: { colors: false }, logger });
+    const db = createDb({
+      adapter,
+      columnTypes,
+      log: { colors: false },
+      logger,
+    });
 
     await db.transaction(async (q) => {
-      await db('user').transacting(q).insert(userData);
+      await db('user').transacting(q).create(userData);
     });
 
     expect(logger.log.mock.calls).toEqual([
@@ -156,11 +172,16 @@ describe('query log', () => {
       error: jest.fn(),
     };
 
-    const db = createDb({ adapter, log: { colors: false }, logger });
+    const db = createDb({
+      adapter,
+      columnTypes,
+      log: { colors: false },
+      logger,
+    });
 
     await expect(
       db.transaction(async (q) => {
-        await db('user').transacting(q).insert({ name: 'name' });
+        await db('user').transacting(q).create({ name: 'name' });
       }),
     ).rejects.toThrow();
 

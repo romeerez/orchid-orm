@@ -80,8 +80,8 @@ const then = async (
     let beforeCallbacks: BeforeCallback[] | undefined;
     let afterCallbacks: AfterCallback[] | undefined;
     if (q.query.type === 'insert') {
-      beforeCallbacks = q.query.beforeInsert;
-      afterCallbacks = q.query.afterInsert;
+      beforeCallbacks = q.query.beforeCreate;
+      afterCallbacks = q.query.afterCreate;
     } else if (q.query.type === 'update') {
       beforeCallbacks = q.query.beforeUpdate;
       afterCallbacks = q.query.afterUpdate;

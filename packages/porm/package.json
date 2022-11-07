@@ -1,6 +1,6 @@
 {
   "name": "porm",
-  "version": "1.2.37",
+  "version": "1.2.38",
   "description": "Postgres ORM",
   "homepage": "https://porm.netlify.app/guide/orm.html",
   "repository": {

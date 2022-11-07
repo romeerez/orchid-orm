@@ -6,7 +6,6 @@ import {
   queryTypeWithLimitOne,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
-  SetQueryReturnsRowCount,
 } from '../query';
 import { pushQueryArray } from '../queryDataUtils';
 import { RawExpression } from '../common';
@@ -27,13 +26,13 @@ import { InsertQueryData, OnConflictItem, OnConflictMergeUpdate } from '../sql';
 import { WhereArg } from './where';
 import { parseResult, queryMethodByReturnType } from './then';
 
-export type InsertData<
+export type CreateData<
   T extends Query,
   DefaultKeys extends PropertyKey = keyof T[defaultsKey],
   Data = SetOptional<T['inputType'], DefaultKeys>,
 > = [keyof T['relations']] extends [never]
   ? Data
-  : OmitBelongsToForeignKeys<T['relations'], Data> & InsertRelationData<T>;
+  : OmitBelongsToForeignKeys<T['relations'], Data> & CreateRelationData<T>;
 
 type OmitBelongsToForeignKeys<R extends RelationsBase, Data> = Omit<
   Data,
@@ -44,17 +43,17 @@ type OmitBelongsToForeignKeys<R extends RelationsBase, Data> = Omit<
   }[keyof R]
 >;
 
-type InsertRelationData<T extends Query> = {
+type CreateRelationData<T extends Query> = {
   [K in keyof T['relations']]: T['relations'][K] extends BelongsToRelation
-    ? InsertBelongsToData<T, K, T['relations'][K]>
+    ? CreateBelongsToData<T, K, T['relations'][K]>
     : T['relations'][K] extends HasOneRelation
-    ? InsertHasOneData<T, K, T['relations'][K]>
+    ? CreateHasOneData<T, K, T['relations'][K]>
     : T['relations'][K] extends HasManyRelation | HasAndBelongsToManyRelation
-    ? InsertHasManyData<T, K, T['relations'][K]>
+    ? CreateHasManyData<T, K, T['relations'][K]>
     : EmptyObject;
 }[keyof T['relations']];
 
-type InsertBelongsToData<
+type CreateBelongsToData<
   T extends Query,
   Key extends keyof T['relations'],
   Rel extends BelongsToRelation,
@@ -70,7 +69,7 @@ type InsertBelongsToData<
   | {
       [K in Key]:
         | {
-            create: InsertData<Rel['nestedCreateQuery']>;
+            create: CreateData<Rel['nestedCreateQuery']>;
             connect?: never;
             connectOrCreate?: never;
           }
@@ -84,12 +83,12 @@ type InsertBelongsToData<
             connect?: never;
             connectOrCreate: {
               where: WhereArg<Rel['model']>;
-              create: InsertData<Rel['nestedCreateQuery']>;
+              create: CreateData<Rel['nestedCreateQuery']>;
             };
           };
     };
 
-type InsertHasOneData<
+type CreateHasOneData<
   T extends Query,
   Key extends keyof T['relations'],
   Rel extends HasOneRelation,
@@ -99,7 +98,7 @@ type InsertHasOneData<
   : {
       [K in Key]?:
         | {
-            create: InsertData<Rel['nestedCreateQuery']>;
+            create: CreateData<Rel['nestedCreateQuery']>;
             connect?: never;
             connectOrCreate?: never;
           }
@@ -113,12 +112,12 @@ type InsertHasOneData<
             connect?: never;
             connectOrCreate: {
               where?: WhereArg<Rel['model']>;
-              create?: InsertData<Rel['nestedCreateQuery']>;
+              create?: CreateData<Rel['nestedCreateQuery']>;
             };
           };
     };
 
-type InsertHasManyData<
+type CreateHasManyData<
   T extends Query,
   Key extends keyof T['relations'],
   Rel extends HasManyRelation | HasAndBelongsToManyRelation,
@@ -127,30 +126,28 @@ type InsertHasManyData<
     {}
   : {
       [K in Key]?: {
-        create?: InsertData<Rel['nestedCreateQuery']>[];
+        create?: CreateData<Rel['nestedCreateQuery']>[];
         connect?: WhereArg<Rel['model']>[];
         connectOrCreate?: {
           where: WhereArg<Rel['model']>;
-          create: InsertData<Rel['nestedCreateQuery']>;
+          create: CreateData<Rel['nestedCreateQuery']>;
         }[];
       };
     };
 
-type InsertRawData = { columns: string[]; values: RawExpression };
+type CreateResult<T extends Query> = T extends { isCount: true }
+  ? T
+  : QueryReturnsAll<T['returnType']> extends true
+  ? SetQueryReturnsOne<T>
+  : T;
 
-type InsertOneResult<T extends Query> = T['hasSelect'] extends true
-  ? QueryReturnsAll<T['returnType']> extends true
-    ? SetQueryReturnsOne<T>
-    : T['returnType'] extends 'one'
-    ? SetQueryReturnsOne<T>
-    : T
-  : SetQueryReturnsRowCount<T>;
+type CreateManyResult<T extends Query> = T extends { isCount: true }
+  ? T
+  : T['returnType'] extends 'one' | 'oneOrThrow'
+  ? SetQueryReturnsAll<T>
+  : T;
 
-type InsertManyResult<T extends Query> = T['hasSelect'] extends true
-  ? T['returnType'] extends 'one' | 'oneOrThrow'
-    ? SetQueryReturnsAll<T>
-    : T
-  : SetQueryReturnsRowCount<T>;
+type CreateRawData = { columns: string[]; values: RawExpression };
 
 type OnConflictArg<T extends Query> =
   | keyof T['shape']
@@ -167,17 +164,31 @@ type AppendRelations = Record<
   [rowIndex: number, data: NestedInsertItem][]
 >;
 
-type InsertCtx = {
+type CreateCtx = {
   prependRelations: PrependRelations;
   appendRelations: AppendRelations;
   requiredReturning: Record<string, boolean>;
   relations: Record<string, Relation>;
 };
 
-const processInsertItem = (
+const handleSelect = (q: Query) => {
+  const select = q.query.select?.[0];
+  const isCount =
+    typeof select === 'object' &&
+    'function' in select &&
+    select.function === 'count';
+
+  if (isCount) {
+    q.query.select = undefined;
+  } else if (isCount || !q.query.select) {
+    q.query.select = ['*'];
+  }
+};
+
+const processCreateItem = (
   item: Record<string, unknown>,
   rowIndex: number,
-  ctx: InsertCtx,
+  ctx: CreateCtx,
   columns: string[],
   columnsMap: Record<string, number>,
 ) => {
@@ -217,14 +228,14 @@ const processInsertItem = (
   });
 };
 
-const createInsertCtx = (q: Query): InsertCtx => ({
+const createCtx = (q: Query): CreateCtx => ({
   prependRelations: {},
   appendRelations: {},
   requiredReturning: {},
   relations: (q as unknown as Query).relations,
 });
 
-const getInsertSingleReturnType = (q: Query) => {
+const getSingleReturnType = (q: Query) => {
   const { select, returnType = 'all' } = q.query;
   if (select) {
     return returnType === 'all' ? 'one' : returnType;
@@ -233,7 +244,7 @@ const getInsertSingleReturnType = (q: Query) => {
   }
 };
 
-const getInsertManyReturnType = (q: Query) => {
+const getManyReturnType = (q: Query) => {
   const { select, returnType } = q.query;
   if (select) {
     return returnType === 'one' || returnType === 'oneOrThrow'
@@ -244,11 +255,7 @@ const getInsertManyReturnType = (q: Query) => {
   }
 };
 
-const handleInsertOneData = (
-  q: Query,
-  data: InsertData<Query>,
-  ctx: InsertCtx,
-) => {
+const handleOneData = (q: Query, data: CreateData<Query>, ctx: CreateCtx) => {
   const columns: string[] = [];
   const columnsMap: Record<string, number> = {};
   const defaults = q.query.defaults;
@@ -257,17 +264,17 @@ const handleInsertOneData = (
     data = { ...defaults, ...data };
   }
 
-  processInsertItem(data, 0, ctx, columns, columnsMap);
+  processCreateItem(data, 0, ctx, columns, columnsMap);
 
   const values = [columns.map((key) => (data as Record<string, unknown>)[key])];
 
   return { columns, values };
 };
 
-const handleInsertManyData = (
+const handleManyData = (
   q: Query,
-  data: InsertData<Query>[],
-  ctx: InsertCtx,
+  data: CreateData<Query>[],
+  ctx: CreateCtx,
 ) => {
   const columns: string[] = [];
   const columnsMap: Record<string, number> = {};
@@ -278,7 +285,7 @@ const handleInsertManyData = (
   }
 
   data.forEach((item, i) => {
-    processInsertItem(item, i, ctx, columns, columnsMap);
+    processCreateItem(item, i, ctx, columns, columnsMap);
   });
 
   const values = Array(data.length);
@@ -300,7 +307,7 @@ const insert = (
     values: unknown[][] | RawExpression;
   },
   returnType: QueryReturnType,
-  ctx?: InsertCtx,
+  ctx?: CreateCtx,
   fromQuery?: Query,
 ) => {
   const q = self as Query & { query: InsertQueryData };
@@ -410,99 +417,53 @@ const insert = (
   return q;
 };
 
-export class Insert {
-  insert<T extends Query>(this: T, data: InsertData<T>): InsertOneResult<T> {
-    return this.clone()._insert(data);
-  }
-  _insert<T extends Query>(this: T, data: InsertData<T>): InsertOneResult<T> {
-    const ctx = createInsertCtx(this);
-    return insert(
-      this,
-      handleInsertOneData(this, data, ctx),
-      getInsertSingleReturnType(this),
-      ctx,
-    ) as InsertOneResult<T>;
-  }
-
-  insertMany<T extends Query>(
-    this: T,
-    data: InsertData<T>[],
-  ): InsertManyResult<T> {
-    return this.clone()._insertMany(data);
-  }
-  _insertMany<T extends Query>(
-    this: T,
-    data: InsertData<T>[],
-  ): InsertManyResult<T> {
-    const ctx = createInsertCtx(this);
-    return insert(
-      this,
-      handleInsertManyData(this, data, ctx),
-      getInsertManyReturnType(this),
-      ctx,
-    ) as InsertManyResult<T>;
-  }
-
-  insertRaw<T extends Query>(
-    this: T,
-    data: InsertRawData,
-  ): InsertManyResult<T> {
-    return this.clone()._insertRaw(data);
-  }
-  _insertRaw<T extends Query>(
-    this: T,
-    data: InsertRawData,
-  ): InsertManyResult<T> {
-    return insert(
-      this,
-      data,
-      getInsertManyReturnType(this),
-    ) as InsertManyResult<T>;
-  }
-
-  create<T extends Query>(this: T, data: InsertData<T>): SetQueryReturnsOne<T> {
+export class Create {
+  create<T extends Query>(this: T, data: CreateData<T>): CreateResult<T> {
     return this.clone()._create(data);
   }
-  _create<T extends Query>(
-    this: T,
-    data: InsertData<T>,
-  ): SetQueryReturnsOne<T> {
-    if (!this.query.select) {
-      this.query.select = ['*'];
-    }
-    return this.clone()._insert(data) as SetQueryReturnsOne<T>;
+  _create<T extends Query>(this: T, data: CreateData<T>): CreateResult<T> {
+    handleSelect(this);
+    const ctx = createCtx(this);
+    return insert(
+      this,
+      handleOneData(this, data, ctx),
+      getSingleReturnType(this),
+      ctx,
+    ) as CreateResult<T>;
   }
 
   createMany<T extends Query>(
     this: T,
-    data: InsertData<T>[],
-  ): SetQueryReturnsAll<T> {
+    data: CreateData<T>[],
+  ): CreateManyResult<T> {
     return this.clone()._createMany(data);
   }
   _createMany<T extends Query>(
     this: T,
-    data: InsertData<T>[],
-  ): SetQueryReturnsAll<T> {
-    if (!this.query.select) {
-      this.query.select = ['*'];
-    }
-    return this.clone()._insertMany(data) as SetQueryReturnsAll<T>;
+    data: CreateData<T>[],
+  ): CreateManyResult<T> {
+    handleSelect(this);
+    const ctx = createCtx(this);
+    return insert(
+      this,
+      handleManyData(this, data, ctx),
+      getManyReturnType(this),
+      ctx,
+    ) as CreateManyResult<T>;
   }
 
   createRaw<T extends Query>(
     this: T,
-    data: InsertRawData,
-  ): SetQueryReturnsAll<T> {
+    data: CreateRawData,
+  ): CreateManyResult<T> {
     return this.clone()._createRaw(data);
   }
   _createRaw<T extends Query>(
     this: T,
-    data: InsertRawData,
-  ): SetQueryReturnsAll<T> {
-    if (!this.query.select) {
-      this.query.select = ['*'];
-    }
-    return this.clone()._insertRaw(data) as SetQueryReturnsAll<T>;
+    data: CreateRawData,
+  ): CreateManyResult<T> {
+    handleSelect(this);
+    return insert(this, data, getManyReturnType(this)) as CreateManyResult<T>;
   }
 
   createFrom<
@@ -511,7 +472,7 @@ export class Insert {
   >(
     this: T,
     query: Q,
-    data: Omit<InsertData<T>, keyof Q['result']>,
+    data: Omit<CreateData<T>, keyof Q['result']>,
   ): SetQueryReturnsOne<T> {
     return this.clone()._createFrom(query, data);
   }
@@ -521,7 +482,7 @@ export class Insert {
   >(
     this: T,
     query: Q,
-    data: Omit<InsertData<T>, keyof Q['result']>,
+    data: Omit<CreateData<T>, keyof Q['result']>,
   ): SetQueryReturnsOne<T> {
     if (!queryTypeWithLimitOne[query.query.returnType]) {
       throw new Error(
@@ -533,7 +494,7 @@ export class Insert {
       this.query.select = ['*'];
     }
 
-    const ctx = createInsertCtx(this);
+    const ctx = createCtx(this);
 
     const queryColumns: string[] = [];
     query.query.select?.forEach((item) => {
@@ -545,7 +506,7 @@ export class Insert {
       }
     });
 
-    const { columns, values } = handleInsertOneData(this, data, ctx);
+    const { columns, values } = handleOneData(this, data, ctx);
     queryColumns.push(...columns);
 
     return insert(
@@ -557,7 +518,7 @@ export class Insert {
     ) as SetQueryReturnsOne<T>;
   }
 
-  defaults<T extends Query, Data extends Partial<InsertData<T>>>(
+  defaults<T extends Query, Data extends Partial<CreateData<T>>>(
     this: T,
     data: Data,
   ): T & {
@@ -565,7 +526,7 @@ export class Insert {
   } {
     return (this.clone() as T)._defaults(data);
   }
-  _defaults<T extends Query, Data extends Partial<InsertData<T>>>(
+  _defaults<T extends Query, Data extends Partial<CreateData<T>>>(
     this: T,
     data: Data,
   ): T & { [defaultsKey]: Record<keyof Data, true> } {

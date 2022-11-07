@@ -7,65 +7,68 @@ import {
   MessageRecord,
   User,
   userData,
+  UserRecord,
   useTestDatabase,
 } from '../test-utils';
 import { raw } from '../common';
-import { OnConflictQueryBuilder } from './insert';
+import { OnConflictQueryBuilder } from './create';
 
-describe('insert functions', () => {
+describe('create functions', () => {
   useTestDatabase();
 
-  describe('insertRaw', () => {
-    it('should insert with raw sql and list of columns', () => {
+  describe('createRaw', () => {
+    it('should create with raw sql and list of columns', () => {
       const q = User.all();
 
-      const query = q.insertRaw({
+      const query = q.createRaw({
         columns: ['name', 'password'],
         values: raw('raw sql'),
       });
       expectSql(
         query.toSql(),
         `
-        INSERT INTO "user"("name", "password")
-        VALUES raw sql
-      `,
+          INSERT INTO "user"("name", "password")
+          VALUES raw sql
+          RETURNING *
+        `,
       );
 
-      assertType<Awaited<typeof query>, number>();
+      assertType<Awaited<typeof query>, UserRecord[]>();
 
       expectQueryNotMutated(q);
     });
   });
 
-  describe('insert', () => {
-    it('should insert one record, returning rows count', async () => {
+  describe('create', () => {
+    it('should create one record, returning record', async () => {
       const q = User.all();
 
-      const query = q.insert(userData);
+      const query = q.create(userData);
       expectSql(
         query.toSql(),
         `
         INSERT INTO "user"("name", "password")
         VALUES ($1, $2)
+        RETURNING *
       `,
         ['name', 'password'],
       );
 
       const result = await query;
-      expect(result).toBe(1);
+      expect(result).toMatchObject(userData);
 
-      assertType<typeof result, number>();
+      assertType<typeof result, UserRecord>();
 
-      const inserted = await User.take();
-      expect(inserted).toMatchObject(userData);
+      const created = await User.take();
+      expect(created).toMatchObject(userData);
 
       expectQueryNotMutated(q);
     });
 
-    it('should insert one record, returning value', async () => {
+    it('should create one record, returning value', async () => {
       const q = User.all();
 
-      const query = q.get('id').insert(userData);
+      const query = q.get('id').create(userData);
       expectSql(
         query.toSql(),
         `
@@ -84,10 +87,10 @@ describe('insert functions', () => {
       expectQueryNotMutated(q);
     });
 
-    it('should insert one record, returning columns', async () => {
+    it('should create one record, returning columns', async () => {
       const q = User.all();
 
-      const query = q.select('id', 'name').insert(userData);
+      const query = q.select('id', 'name').create(userData);
       expectSql(
         query.toSql(),
         `
@@ -108,51 +111,49 @@ describe('insert functions', () => {
       expectQueryNotMutated(q);
     });
 
-    it('should insert one record, returning all columns', async () => {
+    it('should create one record, returning created count', async () => {
       const q = User.all();
 
-      const query = q.selectAll().insert(userData);
+      const query = q.count().create(userData);
       expectSql(
         query.toSql(),
         `
         INSERT INTO "user"("name", "password")
         VALUES ($1, $2)
-        RETURNING *
       `,
         ['name', 'password'],
       );
 
       const result = await query;
-      assertType<typeof result, typeof User['type']>();
+      assertType<typeof result, number>();
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...other } = userData;
-      expect(result).toMatchObject(other);
+      expect(result).toBe(1);
 
       expectQueryNotMutated(q);
     });
 
-    it('should insert record with provided defaults', () => {
+    it('should create record with provided defaults', () => {
       const query = User.defaults({
         name: 'name',
         password: 'password',
-      }).insert({
+      }).create({
         password: 'override',
       });
 
       expectSql(
         query.toSql(),
         `
-        INSERT INTO "user"("name", "password")
-        VALUES ($1, $2)
-      `,
+          INSERT INTO "user"("name", "password")
+          VALUES ($1, $2)
+          RETURNING *
+        `,
         ['name', 'override'],
       );
     });
   });
 
-  describe('insertMany', () => {
-    it('should insert many records, returning void', async () => {
+  describe('createMany', () => {
+    it('should create many records, returning inserted count', async () => {
       const q = User.all();
 
       const arr = [
@@ -163,7 +164,7 @@ describe('insert functions', () => {
         userData,
       ];
 
-      const query = q.insertMany(arr);
+      const query = q.count().createMany(arr);
 
       expectSql(
         query.toSql(),
@@ -189,7 +190,7 @@ describe('insert functions', () => {
       expectQueryNotMutated(q);
     });
 
-    it('should insert many records, returning columns', async () => {
+    it('should create many records, returning columns', async () => {
       const q = User.all();
 
       const arr = [
@@ -200,7 +201,7 @@ describe('insert functions', () => {
         userData,
       ];
 
-      const query = q.select('id', 'name').insertMany(arr);
+      const query = q.select('id', 'name').createMany(arr);
 
       expectSql(
         query.toSql(),
@@ -225,7 +226,7 @@ describe('insert functions', () => {
       expectQueryNotMutated(q);
     });
 
-    it('should insert many records, returning all columns', async () => {
+    it('should create many records, returning all columns', async () => {
       const q = User.all();
 
       const arr = [
@@ -236,7 +237,7 @@ describe('insert functions', () => {
         userData,
       ];
 
-      const query = q.selectAll().insertMany(arr);
+      const query = q.createMany(arr);
 
       expectSql(
         query.toSql(),
@@ -267,7 +268,7 @@ describe('insert functions', () => {
   });
 
   describe('createFrom', () => {
-    it('should insert record from select', () => {
+    it('should create record from select', () => {
       const query = Message.createFrom(Chat.find(1).select({ chatId: 'id' }), {
         authorId: 1,
         text: 'text',
@@ -307,7 +308,7 @@ describe('insert functions', () => {
     it('should return special query builder and return previous after ignore or merge', () => {
       const q = User.all();
 
-      const originalQuery = q.insert(userData);
+      const originalQuery = q.count().create(userData);
       const onConflictQuery = q.onConflict();
       expect(originalQuery instanceof OnConflictQueryBuilder).not.toBe(true);
       expect(onConflictQuery instanceof OnConflictQueryBuilder).toBe(true);
@@ -327,7 +328,7 @@ describe('insert functions', () => {
 
       const query = q
         .select('id')
-        .insert(userData)
+        .create(userData)
         .onConflict('name')
         .ignore()
         .where({ name: 'where name' });
@@ -352,7 +353,7 @@ describe('insert functions', () => {
       it('should set `ON CONFLICT` to all columns if no arguments provided', () => {
         const q = User.all();
 
-        const query = q.insert(userData).onConflict().ignore();
+        const query = q.count().create(userData).onConflict().ignore();
         expectSql(
           query.toSql(),
           `
@@ -370,7 +371,7 @@ describe('insert functions', () => {
       it('should accept single column', () => {
         const q = User.all();
 
-        const query = q.insert(userData).onConflict('id').ignore();
+        const query = q.count().create(userData).onConflict('id').ignore();
         expectSql(
           query.toSql(),
           `
@@ -387,7 +388,11 @@ describe('insert functions', () => {
       it('should accept multiple columns', () => {
         const q = User.all();
 
-        const query = q.insert(userData).onConflict(['id', 'name']).ignore();
+        const query = q
+          .count()
+          .create(userData)
+          .onConflict(['id', 'name'])
+          .ignore();
         expectSql(
           query.toSql(),
           `
@@ -404,7 +409,11 @@ describe('insert functions', () => {
       it('can accept raw query', () => {
         const q = User.all();
 
-        const query = q.insert(userData).onConflict(raw('raw query')).ignore();
+        const query = q
+          .count()
+          .create(userData)
+          .onConflict(raw('raw query'))
+          .ignore();
         expectSql(
           query.toSql(),
           `
@@ -423,7 +432,7 @@ describe('insert functions', () => {
       it('should update all columns when calling without arguments', () => {
         const q = User.all();
 
-        const query = q.insert(userData).onConflict().merge();
+        const query = q.count().create(userData).onConflict().merge();
         expectSql(
           query.toSql(),
           `
@@ -443,7 +452,11 @@ describe('insert functions', () => {
       it('should accept single column', () => {
         const q = User.all();
 
-        const query = q.insert(userData).onConflict('name').merge('name');
+        const query = q
+          .count()
+          .create(userData)
+          .onConflict('name')
+          .merge('name');
         expectSql(
           query.toSql(),
           `
@@ -462,7 +475,8 @@ describe('insert functions', () => {
         const q = User.all();
 
         const query = q
-          .insert(userData)
+          .count()
+          .create(userData)
           .onConflict(['name', 'password'])
           .merge(['name', 'password']);
 
@@ -486,7 +500,8 @@ describe('insert functions', () => {
         const q = User.all();
 
         const query = q
-          .insert(userData)
+          .count()
+          .create(userData)
           .onConflict('name')
           .merge({ name: 'new name' });
 
@@ -508,7 +523,8 @@ describe('insert functions', () => {
         const q = User.all();
 
         const query = q
-          .insert(userData)
+          .count()
+          .create(userData)
           .onConflict(raw('on conflict raw'))
           .merge(raw('merge raw'));
 
@@ -524,54 +540,6 @@ describe('insert functions', () => {
         );
 
         expectQueryNotMutated(q);
-      });
-    });
-  });
-
-  describe('create functions', () => {
-    describe('create', () => {
-      it('should return full record', async () => {
-        const result = await User.create(userData);
-        expect(result).toMatchObject(userData);
-
-        assertType<typeof result, typeof User.type>();
-      });
-
-      it('should return columns from select', async () => {
-        const result = await User.select('id', 'name').create(userData);
-        expect(result).toEqual({
-          id: result.id,
-          name: userData.name,
-        });
-
-        assertType<typeof result, { id: number; name: string }>();
-      });
-    });
-
-    describe('createMany', () => {
-      it('should return full records', async () => {
-        const result = await User.createMany([userData, userData]);
-        expect(result[0]).toMatchObject(userData);
-        expect(result[1]).toMatchObject(userData);
-
-        assertType<typeof result, typeof User.type[]>();
-      });
-
-      it('should return columns from select', async () => {
-        const result = await User.select('id', 'name').createMany([
-          userData,
-          userData,
-        ]);
-        expect(result[0]).toEqual({
-          id: result[0].id,
-          name: userData.name,
-        });
-        expect(result[1]).toEqual({
-          id: result[1].id,
-          name: userData.name,
-        });
-
-        assertType<typeof result, { id: number; name: string }[]>();
       });
     });
   });

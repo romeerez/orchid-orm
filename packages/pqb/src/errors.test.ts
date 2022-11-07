@@ -19,7 +19,7 @@ describe('errors', () => {
   });
 
   it('should have isUnique and column names map when violating unique error over single column', async () => {
-    await UniqueTable.insert({
+    await UniqueTable.create({
       one: 'one',
       two: 1,
       thirdColumn: 'three',
@@ -29,7 +29,7 @@ describe('errors', () => {
     let err: InstanceType<typeof UniqueTable.error> | undefined;
 
     try {
-      await UniqueTable.insert({
+      await UniqueTable.create({
         one: 'one',
         two: 2,
         thirdColumn: 'three',
@@ -48,7 +48,7 @@ describe('errors', () => {
   });
 
   it('should have isUnique and column names map when violating unique error over multiple columns', async () => {
-    await UniqueTable.insert({
+    await UniqueTable.create({
       one: 'one',
       two: 1,
       thirdColumn: 'three',
@@ -58,7 +58,7 @@ describe('errors', () => {
     let err: QueryError | undefined;
 
     try {
-      await UniqueTable.insert({
+      await UniqueTable.create({
         one: 'two',
         two: 2,
         thirdColumn: 'three',

@@ -29,7 +29,7 @@ describe('delete', () => {
   });
 
   it('should delete records, returning value', async () => {
-    const id = await User.get('id').insert(userData);
+    const id = await User.get('id').create(userData);
     const q = User.all();
 
     const query = q.find(id).get('id').delete();
@@ -54,7 +54,7 @@ describe('delete', () => {
     const rowsCount = 3;
 
     for (let i = 0; i < rowsCount; i++) {
-      await User.insert(userData);
+      await User.create(userData);
     }
 
     const q = User.all();
