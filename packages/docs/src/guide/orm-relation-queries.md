@@ -193,6 +193,40 @@ This is only allowed to perform create based on a query which returns one record
 
 Using `createMany` or `createRaw` in such chained queries is not implemented yet, but it's in plans.
 
+Because `create` method is designed to return a full record by default,
+in the case when record is not found by condition it will throw `NotFoundError`, even when using `findOptional`:
+
+```ts
+// will throw if no post with such title
+await db.post.findBy({ title: 'non-existing' })
+  .tags.create({ name: 'tag name' })
+
+// will throw either
+const tag = await db.post.findByOptional({ title: 'non-existing' })
+  .tags.create({ name: 'tag name' })
+
+// we can be sure that tag is always returned
+tag.name
+```
+
+If you want `undefined` to be returned instead of throwing `NotFoundError`,
+use `takeOptional()` to get `RecordType | undefined`, or `count()` to get 0 for not found and 1 for created.
+
+`hasAndBelowToMany` relation will throw `NotFoundError` either way,
+to make sure we're not creating hanging record not connected to other records.
+
+```ts
+const tagOrUndefined = await db.author.findByOptional({ name: 'Author name' })
+  .books.takeOptional().create({ name: 'Book title' })
+
+const createdCount = await db.author.findByOptional({ name: 'Author name' })
+  .books.count().create({ name: 'Book title' })
+
+// hasAndBelongsToMany will throw when not found anyway:
+await db.post.findByOptional({ title: 'Post title' })
+  .tags.takeOptional().create({ name: 'tag name' })
+```
+
 ## nested create
 
 Create record with related records all at once:

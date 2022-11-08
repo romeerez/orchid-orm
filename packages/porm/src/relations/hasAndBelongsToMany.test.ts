@@ -71,8 +71,8 @@ describe('hasAndBelongsToMany', () => {
         expect(ids).toEqual([chat.id]);
       });
 
-      it('should throw not found when not found', async () => {
-        const query = db.user.find(1).chats.create({
+      it('should throw not found when not found even when searching with findOptional', async () => {
+        const query = db.user.findOptional(1).chats.create({
           title: 'title',
         });
 

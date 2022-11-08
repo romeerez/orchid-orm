@@ -25,6 +25,7 @@ import { EmptyObject, SetOptional } from '../utils';
 import { InsertQueryData, OnConflictItem, OnConflictMergeUpdate } from '../sql';
 import { WhereArg } from './where';
 import { parseResult, queryMethodByReturnType } from './then';
+import { NotFoundError } from '../errors';
 
 export type CreateData<
   T extends Query,
@@ -349,6 +350,19 @@ const insert = (
         };
       }),
     );
+  }
+
+  if (
+    returnType === 'oneOrThrow' ||
+    q.query.fromQuery?.query.returnType === 'oneOrThrow'
+  ) {
+    const { handleResult } = q.query;
+    q.query.handleResult = async (q, r) => {
+      if (r.rowCount === 0) {
+        throw new NotFoundError();
+      }
+      return await handleResult(q, r);
+    };
   }
 
   const appendRelationsKeys = Object.keys(ctx.appendRelations);

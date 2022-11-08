@@ -102,6 +102,21 @@ describe('hasMany', () => {
           'Cannot create based on a query which returns multiple records',
         );
       });
+
+      it('should throw when main record is not found', async () => {
+        await expect(
+          async () =>
+            await db.chat.find(1).messages.create({
+              text: 'text',
+            }),
+        ).rejects.toThrow('Record is not found');
+      });
+
+      it('should not throw when searching with findOptional', async () => {
+        await db.chat.findOptional(1).messages.takeOptional().create({
+          text: 'text',
+        });
+      });
     });
 
     it('should have proper joinQuery', () => {

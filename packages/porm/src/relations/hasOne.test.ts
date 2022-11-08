@@ -92,13 +92,13 @@ describe('hasOne', () => {
         expectSql(
           query.toSql(),
           `
-          INSERT INTO "profile"("userId", "bio")
-          SELECT "user"."id" AS "userId", $1
-          FROM "user"
-          WHERE "user"."id" = $2
-          LIMIT $3
-          RETURNING *
-        `,
+            INSERT INTO "profile"("userId", "bio")
+            SELECT "user"."id" AS "userId", $1
+            FROM "user"
+            WHERE "user"."id" = $2
+            LIMIT $3
+            RETURNING *
+          `,
           ['bio', 1, 1],
         );
       });
@@ -112,6 +112,21 @@ describe('hasOne', () => {
         ).rejects.toThrow(
           'Cannot create based on a query which returns multiple records',
         );
+      });
+
+      it('should throw when main record is not found', async () => {
+        await expect(
+          async () =>
+            await db.user.find(1).profile.create({
+              bio: 'bio',
+            }),
+        ).rejects.toThrow('Record is not found');
+      });
+
+      it('should not throw when searching with findOptional', async () => {
+        await db.user.findOptional(1).profile.takeOptional().create({
+          bio: 'bio',
+        });
       });
     });
 
