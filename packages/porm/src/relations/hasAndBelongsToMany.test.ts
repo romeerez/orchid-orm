@@ -91,6 +91,14 @@ describe('hasAndBelongsToMany', () => {
       });
     });
 
+    // describe('chained delete', () => {
+    //   it.only('should have chained delete', async () => {
+    //     const query = db.user.chats.where({ title: 'title' }).delete();
+    //
+    //     console.log(query.toSql());
+    //   });
+    // });
+
     it('should have proper joinQuery', () => {
       expectSql(
         db.user.relations.chats

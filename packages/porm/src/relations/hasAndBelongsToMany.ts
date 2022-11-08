@@ -308,7 +308,7 @@ export const makeHasAndBelongsToManyMethod = (
 
       pushQueryValue(
         relationQuery,
-        'afterQuery',
+        'afterCreate',
         async (q: Query, result: Record<string, unknown>) => {
           const fromQuery = ref.query.clone();
           fromQuery.query.select = [{ selectAs: { [fk]: pk } }];
