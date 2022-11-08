@@ -1,5 +1,5 @@
 import { defaultsKey, Query, QueryBase, QueryWithTable } from './query';
-import { WhereArg, UpdateData } from './queryMethods';
+import { WhereArg, UpdateData, CreateMethodsNames } from './queryMethods';
 import { MaybeArray } from './utils';
 
 export type NestedInsertOneItem = {
@@ -184,15 +184,26 @@ export type RelationQueryBase = Query & {
   [isRequiredRelationKey]: boolean;
 };
 
+type PrepareRelationQuery<
+  T extends Query,
+  RelationName extends PropertyKey,
+  Required extends boolean,
+> = Omit<T, 'tableAlias'> & {
+  tableAlias: RelationName extends string ? RelationName : never;
+  [isRequiredRelationKey]: Required;
+  [relationQueryKey]: string;
+};
+
 export type RelationQuery<
-  RelationName extends PropertyKey = string,
+  Name extends PropertyKey = string,
   Params extends Record<string, unknown> = never,
   Populate extends string = never,
   T extends Query = Query,
   Required extends boolean = boolean,
-  Q extends RelationQueryBase = Omit<T, 'tableAlias'> & {
-    tableAlias: RelationName extends string ? RelationName : never;
-    [isRequiredRelationKey]: Required;
-    [relationQueryKey]: string;
-  },
+  ChainedCreate extends boolean = false,
+  Q extends RelationQueryBase = ChainedCreate extends true
+    ? PrepareRelationQuery<T, Name, Required>
+    : PrepareRelationQuery<T, Name, Required> & {
+        [K in CreateMethodsNames]: never;
+      },
 > = ((params: Params) => Q & { [defaultsKey]: Record<Populate, true> }) & Q;

@@ -19,7 +19,14 @@ describe('hasAndBelongsToMany', () => {
 
       assertType<
         typeof db.user.chats,
-        RelationQuery<'chats', { id: number }, never, typeof chatsQuery, false>
+        RelationQuery<
+          'chats',
+          { id: number },
+          never,
+          typeof chatsQuery,
+          false,
+          true
+        >
       >();
 
       const userId = await db.user.get('id').create({
@@ -49,6 +56,39 @@ describe('hasAndBelongsToMany', () => {
       const messages = await query;
 
       expect(messages).toMatchObject([chatData, chatData]);
+    });
+
+    describe('create based on a query', () => {
+      it('should have create based on find query', async () => {
+        const user = await db.user.create(userData);
+
+        const chat = await db.user.find(user.id).chats.create({
+          title: 'title',
+        });
+
+        expect(chat.title).toBe('title');
+        const ids = await db.user.chats(user).pluck('id');
+        expect(ids).toEqual([chat.id]);
+      });
+
+      it('should throw not found when not found', async () => {
+        const query = db.user.find(1).chats.create({
+          title: 'title',
+        });
+
+        await expect(() => query).rejects.toThrow('Record is not found');
+      });
+
+      it('should throw when the main query returns many records', async () => {
+        await expect(
+          async () =>
+            await db.user.chats.create({
+              title: 'title',
+            }),
+        ).rejects.toThrow(
+          'Cannot create based on a query which returns multiple records',
+        );
+      });
     });
 
     it('should have proper joinQuery', () => {

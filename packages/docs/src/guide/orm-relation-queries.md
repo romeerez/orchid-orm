@@ -1,8 +1,8 @@
-# relation queries
+# Relation queries
 
 Load related records by using record object (supported by all kinds of relations).
 
-Resulting record of `belongsTo` and `hasOne` relation can be undefined if `required` option was not set.
+Resulting record of `belongsTo` and `hasOne` relation can be undefined if `required` option was not set in the model.
 
 ```ts
 const book = await db.book.find(1)
@@ -170,11 +170,41 @@ But not create and connect at the same time.
 For `hasMany` and `hasAndBelongsToMany` you can combine multiple commands for a single relations:
 while updating the author you can create new books, connect some books, delete books by conditions.
 
+## create from relation query
+
+It is possible to chain querying of the model with the creating of its relation, in a such way:
+
+```ts
+await db.author.find(1).books.create({
+  title: 'Book title'
+})
+
+// post hasAndBelongsToMany tags
+await db.post.find(1).tags.create({
+  name: 'tag name'
+})
+```
+
+This is possible for `hasOne`, `hasMany`, `hasAndBelongsToMany`, but this is disabled for `belongsTo` and `hasOne`/`hasMany` with `through` option.
+
+This is only allowed to perform create based on a query which returns one record, so you have to use methods `find`, `findBy`, `take` or similar.
+
+`db.post.tags.create` or `db.post.where(...).tags.create` won't wort because multiple posts are returned in these queries.
+
+Using `createMany` or `createRaw` in such chained queries is not implemented yet, but it's in plans.
+
 ## nested create
 
 Create record with related records all at once:
 
 This will run two insert queries in a transaction, (three insert queries in case of `hasAndBelongsToMany`).
+
+For relations with `through` option need to nest `creates` explicitly.
+
+If a post model has many tags through "postTags", need to create post, inside it create postTags, and inside it create tags.
+
+But if you do the same relation with `hasAndBelongsToMany`, you can create tags directly from post creation,
+and the postTag record in between will be created automatically.
 
 ```ts
 const book = await db.book.create({
@@ -193,8 +223,25 @@ const author = await db.author.create({
       { title: 'Book 1' },
       { title: 'Book 2' },
       { title: 'Book 3' },
-    ]
-  }
+    ],
+  },
+})
+
+// post hasMany tags through postTags
+// we cannot create tags directly
+const post = await db.post.create({
+  title: 'Post title',
+  postTags: {
+    create: [
+      {
+        tag: {
+          create: {
+            name: 'tag name',
+          },
+        },
+      },
+    ],
+  },
 })
 ```
 
@@ -221,9 +268,9 @@ const books = await db.book.createMany([
 ])
 ```
 
-## create related records from update
+## create in update
 
-Create related records when updating:
+Create related records when doing update:
 
 For `belongsTo`, `hasOne`, `hasMany` it is available when updating one record, there must be `find`, or `findBy`, or `take` before update.
 

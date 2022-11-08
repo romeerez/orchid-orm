@@ -4,6 +4,7 @@ import {
   HasOneNestedInsert,
   HasOneNestedUpdate,
   HasOneRelation,
+  InsertQueryData,
   JoinCallback,
   Query,
   QueryBase,
@@ -46,6 +47,9 @@ export type HasOneInfo<
   populate: Relation['options'] extends { foreignKey: string }
     ? Relation['options']['foreignKey']
     : never;
+  chainedCreate: Relation['options'] extends { primaryKey: string }
+    ? true
+    : false;
 };
 
 export const makeHasOneMethod = (
@@ -109,6 +113,8 @@ export const makeHasOneMethod = (
   }
 
   const { primaryKey, foreignKey } = relation.options;
+
+  const fromQuerySelect = [{ selectAs: { [foreignKey]: primaryKey } }];
 
   return {
     returns: 'one',
@@ -253,5 +259,12 @@ export const makeHasOneMethod = (
       );
     },
     primaryKey,
+    modifyRelatedQuery(relationQuery) {
+      return (query) => {
+        const fromQuery = query.clone();
+        fromQuery.query.select = fromQuerySelect;
+        (relationQuery.query as InsertQueryData).fromQuery = fromQuery;
+      };
+    },
   };
 };

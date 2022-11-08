@@ -47,6 +47,11 @@ describe('belongsTo', () => {
       expect(user).toMatchObject(userData);
     });
 
+    it('should have disabled create method', () => {
+      // @ts-expect-error belongsTo should not have chained create
+      db.profile.user.create(userData);
+    });
+
     it('should have proper joinQuery', () => {
       expectSql(
         db.profile.relations.user

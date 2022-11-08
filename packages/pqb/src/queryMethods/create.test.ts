@@ -300,7 +300,9 @@ describe('create functions', () => {
             text: 'text',
           },
         ),
-      ).toThrow('accepts only a query which returns one record');
+      ).toThrow(
+        'Cannot create based on a query which returns multiple records',
+      );
     });
   });
 

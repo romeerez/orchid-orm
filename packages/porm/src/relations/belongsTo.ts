@@ -25,6 +25,7 @@ export type BelongsToInfo<
 > = {
   params: Record<FK, T['columns']['shape'][FK]['type']>;
   populate: never;
+  chainedCreate: false;
 };
 
 export const makeBelongsToMethod = (

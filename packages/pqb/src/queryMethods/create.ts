@@ -308,7 +308,6 @@ const insert = (
   },
   returnType: QueryReturnType,
   ctx?: CreateCtx,
-  fromQuery?: Query,
 ) => {
   const q = self as Query & { query: InsertQueryData };
   const returning = q.query.select;
@@ -319,7 +318,6 @@ const insert = (
   q.query.type = 'insert';
   q.query.columns = columns;
   q.query.values = values;
-  q.query.fromQuery = fromQuery;
 
   if (!ctx) {
     q.query.returnType = returnType;
@@ -417,16 +415,53 @@ const insert = (
   return q;
 };
 
+export type CreateMethodsNames =
+  | 'create'
+  | '_create'
+  | 'createMany'
+  | '_createMany'
+  | 'createRaw'
+  | '_createRaw'
+  | 'createFrom'
+  | '_createFrom';
+
 export class Create {
   create<T extends Query>(this: T, data: CreateData<T>): CreateResult<T> {
     return this.clone()._create(data);
   }
   _create<T extends Query>(this: T, data: CreateData<T>): CreateResult<T> {
     handleSelect(this);
+
     const ctx = createCtx(this);
+
+    const obj = handleOneData(this, data, ctx);
+    let { columns } = obj;
+
+    const { fromQuery } = this.query as InsertQueryData;
+    if (fromQuery) {
+      if (!queryTypeWithLimitOne[fromQuery.query.returnType]) {
+        throw new Error(
+          'Cannot create based on a query which returns multiple records',
+        );
+      }
+
+      const queryColumns: string[] = [];
+      fromQuery.query.select?.forEach((item) => {
+        if (typeof item === 'string') {
+          const index = item.indexOf('.');
+          queryColumns.push(index === -1 ? item : item.slice(index + 1));
+        } else if ('selectAs' in item) {
+          queryColumns.push(...Object.keys(item.selectAs));
+        }
+      });
+
+      queryColumns.push(...columns);
+      columns = queryColumns;
+    }
+
     return insert(
       this,
-      handleOneData(this, data, ctx),
+      { columns, values: obj.values },
       getSingleReturnType(this),
       ctx,
     ) as CreateResult<T>;
@@ -483,39 +518,9 @@ export class Create {
     this: T,
     query: Q,
     data: Omit<CreateData<T>, keyof Q['result']>,
-  ): SetQueryReturnsOne<T> {
-    if (!queryTypeWithLimitOne[query.query.returnType]) {
-      throw new Error(
-        'createFrom accepts only a query which returns one record',
-      );
-    }
-
-    if (!this.query.select) {
-      this.query.select = ['*'];
-    }
-
-    const ctx = createCtx(this);
-
-    const queryColumns: string[] = [];
-    query.query.select?.forEach((item) => {
-      if (typeof item === 'string') {
-        const index = item.indexOf('.');
-        queryColumns.push(index === -1 ? item : item.slice(index + 1));
-      } else if ('selectAs' in item) {
-        queryColumns.push(...Object.keys(item.selectAs));
-      }
-    });
-
-    const { columns, values } = handleOneData(this, data, ctx);
-    queryColumns.push(...columns);
-
-    return insert(
-      this,
-      { columns: queryColumns, values },
-      'one',
-      ctx,
-      query,
-    ) as SetQueryReturnsOne<T>;
+  ): CreateResult<T> {
+    (this.query as InsertQueryData).fromQuery = query;
+    return this._create(data as CreateData<T>);
   }
 
   defaults<T extends Query, Data extends Partial<CreateData<T>>>(

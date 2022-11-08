@@ -12,6 +12,7 @@ import {
   BaseRelation,
   defaultsKey,
   relationQueryKey,
+  EmptyObject,
 } from 'pqb';
 import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
 import {
@@ -39,6 +40,7 @@ export type RelationData = {
   nestedUpdate: BaseRelation['nestedUpdate'];
   joinQuery(fromQuery: Query, toQuery: Query): Query;
   primaryKey: string;
+  modifyRelatedQuery?(relatedQuery: Query): (query: Query) => void;
 };
 
 export type Relation<
@@ -94,6 +96,7 @@ export type MapRelation<
   Info extends {
     params: Record<string, unknown>;
     populate: string;
+    chainedCreate: boolean;
   } = RelationInfo<T, Relations, Relation>,
 > = RelationQuery<
   RelationName,
@@ -106,7 +109,8 @@ export type MapRelation<
     : SetQueryReturnsAll<RelatedQuery>,
   Relation['options']['required'] extends boolean
     ? Relation['options']['required']
-    : false
+    : false,
+  Info['chainedCreate']
 >;
 
 export type MapRelations<T extends Model> = 'relations' extends keyof T
@@ -114,10 +118,8 @@ export type MapRelations<T extends Model> = 'relations' extends keyof T
     ? {
         [K in keyof T['relations']]: MapRelation<T, T['relations'], K>;
       }
-    : // eslint-disable-next-line @typescript-eslint/ban-types
-      {}
-  : // eslint-disable-next-line @typescript-eslint/ban-types
-    {};
+    : EmptyObject
+  : EmptyObject;
 
 type ApplyRelationData = {
   relationName: string;
@@ -287,9 +289,12 @@ const makeRelationQuery = (
     },
   }) as unknown as RelationQuery;
 
+  const setQuery = data.modifyRelatedQuery?.(query);
+
   Object.defineProperty(model, relationName, {
     get() {
-      sourceQuery.query.as = this.query.as;
+      setQuery?.(this);
+      sourceQuery.query = this.query;
       return proxy;
     },
   });

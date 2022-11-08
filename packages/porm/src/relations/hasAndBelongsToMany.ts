@@ -6,6 +6,8 @@ import {
   HasManyNestedInsert,
   HasManyNestedUpdate,
   MaybeArray,
+  NotFoundError,
+  pushQueryValue,
   Query,
   QueryBase,
   toSqlCacheKey,
@@ -28,6 +30,7 @@ export type HasAndBelongsToManyInfo<
     T['columns']['shape'][Relation['options']['primaryKey']]['type']
   >;
   populate: never;
+  chainedCreate: true;
 };
 
 type State = {
@@ -300,6 +303,37 @@ export const makeHasAndBelongsToManyMethod = (
       );
     },
     primaryKey: pk,
+    modifyRelatedQuery(relationQuery) {
+      const ref = {} as { query: Query };
+
+      pushQueryValue(
+        relationQuery,
+        'afterQuery',
+        async (q: Query, result: Record<string, unknown>) => {
+          const fromQuery = ref.query.clone();
+          fromQuery.query.select = [{ selectAs: { [fk]: pk } }];
+
+          const createdCount = await subQuery
+            .transacting(q)
+            .count()
+            ._createFrom(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              fromQuery as any,
+              {
+                [afk]: result[apk],
+              } as never,
+            );
+
+          if (createdCount === 0) {
+            throw new NotFoundError();
+          }
+        },
+      );
+
+      return (q) => {
+        ref.query = q;
+      };
+    },
   };
 };
 

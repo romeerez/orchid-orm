@@ -527,6 +527,7 @@ The query above will produce such SQL:
 ```sql
 INSERT INTO "table"("relatedId", "key")
 SELECT "relatedTable"."id" AS "relatedId", 'value' FROM "relatedTable"
+RETURNING *
 ```
 
 ## onConflict

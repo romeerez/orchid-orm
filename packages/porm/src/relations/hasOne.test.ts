@@ -1,6 +1,7 @@
 import { db, pgConfig } from '../test-utils/test-db';
 import {
   assertType,
+  chatData,
   expectSql,
   profileData,
   userData,
@@ -24,6 +25,7 @@ describe('hasOne', () => {
           { id: number },
           'userId',
           typeof profileQuery,
+          true,
           true
         >
       >();
@@ -78,6 +80,38 @@ describe('hasOne', () => {
         bio: 'bio',
         updatedAt: now,
         createdAt: now,
+      });
+    });
+
+    describe('create based on a query', () => {
+      it('should have create based on find query', () => {
+        const query = db.user.find(1).profile.create({
+          bio: 'bio',
+        });
+
+        expectSql(
+          query.toSql(),
+          `
+          INSERT INTO "profile"("userId", "bio")
+          SELECT "user"."id" AS "userId", $1
+          FROM "user"
+          WHERE "user"."id" = $2
+          LIMIT $3
+          RETURNING *
+        `,
+          ['bio', 1, 1],
+        );
+      });
+
+      it('should throw when the main query returns many records', async () => {
+        await expect(
+          async () =>
+            await db.user.profile.create({
+              bio: 'bio',
+            }),
+        ).rejects.toThrow(
+          'Cannot create based on a query which returns multiple records',
+        );
       });
     });
 
@@ -884,6 +918,11 @@ describe('hasOne through', () => {
       `,
       [1, 1],
     );
+  });
+
+  it('should have disabled create method', () => {
+    // @ts-expect-error hasOne with through option should not have chained create
+    db.message.profile.create(chatData);
   });
 
   it('should have proper joinQuery', () => {

@@ -25,7 +25,8 @@ describe('hasMany', () => {
           { id: number },
           'authorId',
           typeof messagesQuery,
-          false
+          false,
+          true
         >
       >();
 
@@ -71,13 +72,37 @@ describe('hasMany', () => {
       );
     });
 
-    // it.only('should have create based on find query', async () => {
-    //   const query = db.chat.find(1).messages.create({
-    //     text: 'text',
-    //   });
-    //
-    //   console.log(query.toSql());
-    // });
+    describe('create based on a query', () => {
+      it('should have create based on a query', () => {
+        const query = db.chat.find(1).messages.create({
+          text: 'text',
+        });
+
+        expectSql(
+          query.toSql(),
+          `
+          INSERT INTO "message"("chatId", "text")
+          SELECT "chat"."id" AS "chatId", $1
+          FROM "chat"
+          WHERE "chat"."id" = $2
+          LIMIT $3
+          RETURNING *
+        `,
+          ['text', 1, 1],
+        );
+      });
+
+      it('should throw when the main query returns many records', async () => {
+        await expect(
+          async () =>
+            await db.chat.messages.create({
+              text: 'text',
+            }),
+        ).rejects.toThrow(
+          'Cannot create based on a query which returns multiple records',
+        );
+      });
+    });
 
     it('should have proper joinQuery', () => {
       expectSql(
@@ -1061,6 +1086,11 @@ describe('hasMany through', () => {
       );
     });
 
+    it('should have disabled create method', () => {
+      // @ts-expect-error hasMany with through option should not have chained create
+      db.profile.chats.create(chatData);
+    });
+
     it('should have proper joinQuery', () => {
       expectSql(
         db.profile.relations.chats
@@ -1374,6 +1404,11 @@ describe('hasMany through', () => {
         `,
         [1],
       );
+    });
+
+    it('should have disabled create method', () => {
+      // @ts-expect-error hasMany with through option should not have chained create
+      db.profile.chats.create(chatData);
     });
 
     it('should have proper joinQuery', () => {

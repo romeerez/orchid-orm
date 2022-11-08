@@ -20,6 +20,7 @@ import {
   toSqlCacheKey,
   WhereArg,
   WhereResult,
+  InsertQueryData,
 } from 'pqb';
 import { getSourceRelation, getThroughRelation } from './utils';
 
@@ -49,6 +50,9 @@ export type HasManyInfo<
   populate: Relation['options'] extends { foreignKey: string }
     ? Relation['options']['foreignKey']
     : never;
+  chainedCreate: Relation['options'] extends { primaryKey: string }
+    ? true
+    : false;
 };
 
 export const makeHasManyMethod = (
@@ -106,6 +110,8 @@ export const makeHasManyMethod = (
   }
 
   const { primaryKey, foreignKey } = relation.options;
+
+  const fromQuerySelect = [{ selectAs: { [foreignKey]: primaryKey } }];
 
   return {
     returns: 'many',
@@ -283,6 +289,13 @@ export const makeHasManyMethod = (
       return addQueryOn(toQuery, fromQuery, toQuery, foreignKey, primaryKey);
     },
     primaryKey,
+    modifyRelatedQuery(relationQuery) {
+      return (query) => {
+        const fromQuery = query.clone();
+        fromQuery.query.select = fromQuerySelect;
+        (relationQuery.query as InsertQueryData).fromQuery = fromQuery;
+      };
+    },
   };
 };
 
