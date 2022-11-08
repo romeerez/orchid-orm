@@ -81,13 +81,13 @@ describe('hasMany', () => {
         expectSql(
           query.toSql(),
           `
-          INSERT INTO "message"("chatId", "text")
-          SELECT "chat"."id" AS "chatId", $1
-          FROM "chat"
-          WHERE "chat"."id" = $2
-          LIMIT $3
-          RETURNING *
-        `,
+            INSERT INTO "message"("chatId", "text")
+            SELECT "chat"."id" AS "chatId", $1
+            FROM "chat"
+            WHERE "chat"."id" = $2
+            LIMIT $3
+            RETURNING *
+          `,
           ['text', 1, 1],
         );
       });

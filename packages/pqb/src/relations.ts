@@ -188,11 +188,12 @@ type PrepareRelationQuery<
   T extends Query,
   RelationName extends PropertyKey,
   Required extends boolean,
+  Populate extends string,
 > = Omit<T, 'tableAlias'> & {
   tableAlias: RelationName extends string ? RelationName : never;
   [isRequiredRelationKey]: Required;
   [relationQueryKey]: string;
-};
+} & { [defaultsKey]: Record<Populate, true> };
 
 export type RelationQuery<
   Name extends PropertyKey = string,
@@ -202,8 +203,8 @@ export type RelationQuery<
   Required extends boolean = boolean,
   ChainedCreate extends boolean = false,
   Q extends RelationQueryBase = ChainedCreate extends true
-    ? PrepareRelationQuery<T, Name, Required>
-    : PrepareRelationQuery<T, Name, Required> & {
+    ? PrepareRelationQuery<T, Name, Required, Populate>
+    : PrepareRelationQuery<T, Name, Required, Populate> & {
         [K in CreateMethodsNames]: never;
       },
-> = ((params: Params) => Q & { [defaultsKey]: Record<Populate, true> }) & Q;
+> = ((params: Params) => Q) & Q;
