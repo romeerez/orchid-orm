@@ -1,5 +1,5 @@
 import { AnyZodObject } from 'zod';
-import { EmptyObject, Query } from 'pqb';
+import { CreateData, EmptyObject, Query } from 'pqb';
 import { instanceToZod, InstanceToZod } from 'porm-schema-to-zod';
 import { generateMock } from '@anatine/zod-mock';
 
@@ -8,18 +8,8 @@ const metaKey = Symbol('meta');
 
 type Result<
   T extends TestFactory,
-  BaseData,
-  Data extends BaseData,
-  Omitted = Omit<
-    BaseData extends Data
-      ? T[metaKey]['type']
-      : T[metaKey]['type'] & {
-          [K in keyof Data]: Data[K] extends () => void
-            ? ReturnType<Data[K]>
-            : Data[K];
-        },
-    keyof T[metaKey]['omit']
-  >,
+  Data,
+  Omitted = Omit<Data, keyof T[metaKey]['omit']>,
 > = EmptyObject extends T[metaKey]['pick']
   ? Omitted
   : Pick<
@@ -29,25 +19,34 @@ type Result<
       }[keyof Omitted]
     >;
 
-type BuildArg<T extends TestFactory> = CreateArg<T> & Record<string, unknown>;
-
-type BuildResult<T extends TestFactory, Data extends BuildArg<T>> = Result<
-  T,
-  BuildArg<T>,
-  Data
->;
-
-type CreateArg<T extends TestFactory> = {
+type BuildArg<T extends TestFactory> = {
   [K in keyof T[metaKey]['type']]?:
     | T[metaKey]['type'][K]
     | (() => T[metaKey]['type'][K]);
-};
+} & Record<string, unknown>;
 
-type CreateResult<T extends TestFactory, Data extends CreateArg<T>> = Result<
+type BuildResult<T extends TestFactory, Data extends BuildArg<T>> = Result<
   T,
-  CreateArg<T>,
-  Data
+  BuildArg<T> extends Data
+    ? T[metaKey]['type']
+    : T[metaKey]['type'] & {
+        [K in keyof Data]: Data[K] extends () => void
+          ? ReturnType<Data[K]>
+          : Data[K];
+      }
 >;
+
+type CreateArg<T extends TestFactory> = CreateData<
+  Omit<T['model'], 'inputType'> & {
+    inputType: {
+      [K in keyof T['model']['type']]?:
+        | T['model']['type'][K]
+        | (() => T['model']['type'][K]);
+    };
+  }
+>;
+
+type CreateResult<T extends TestFactory> = Result<T, T['model']['type']>;
 
 const omit = <T, Keys extends Record<string, unknown>>(
   obj: T,
@@ -74,7 +73,51 @@ const pick = <T, Keys extends Record<string, unknown>>(
   return res;
 };
 
+const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
+  { model, schema }: T,
+  data: Record<string, unknown>,
+  arg?: Data,
+) => {
+  const pick: Record<string, true> = {};
+  for (const key in model.shape) {
+    pick[key] = true;
+  }
+
+  model.primaryKeys.forEach((key) => {
+    if (model.shape[key].dataType.includes('serial')) {
+      delete pick[key];
+    }
+  });
+
+  const result: Record<string, unknown> = {};
+
+  const fns: Record<string, () => unknown> = {};
+
+  const allData = (arg ? { ...data, ...arg } : data) as Record<string, unknown>;
+
+  for (const key in allData) {
+    delete pick[key];
+    const value = allData[key];
+    if (typeof value === 'function') {
+      fns[key] = value as () => unknown;
+    } else {
+      result[key] = value;
+    }
+  }
+
+  Object.assign(result, generateMock(schema.pick(pick)));
+
+  return () => {
+    for (const key in fns) {
+      result[key] = fns[key]();
+    }
+
+    return result as CreateData<T['model']>;
+  };
+};
+
 export class TestFactory<
+  Q extends Query = Query,
   Schema extends AnyZodObject = AnyZodObject,
   Type extends EmptyObject = EmptyObject,
 > {
@@ -88,7 +131,7 @@ export class TestFactory<
     pick: EmptyObject;
   };
 
-  constructor(public model: Query, public schema: Schema) {
+  constructor(public model: Q, public schema: Schema) {
     this.data = {};
   }
 
@@ -165,24 +208,25 @@ export class TestFactory<
   async create<T extends this, Data extends CreateArg<T>>(
     this: T,
     data?: Data,
-  ): Promise<CreateResult<T, Data>> {
-    const obj = this.build(data);
-    return (await this.model.create(obj)) as CreateResult<T, Data>;
+  ): Promise<CreateResult<T>> {
+    const getData = processCreateData(this, this.data, data);
+    return (await this.model.create(getData())) as CreateResult<T>;
   }
 
   async createList<T extends this, Data extends CreateArg<T>>(
     this: T,
     qty: number,
     data?: Data,
-  ): Promise<CreateResult<T, Data>[]> {
-    const arr = [...Array(qty)].map(() => this.build(data));
-    return (await this.model.createMany(arr)) as CreateResult<T, Data>[];
+  ): Promise<CreateResult<T>[]> {
+    const getData = processCreateData(this, this.data, data);
+    const arr = [...Array(qty)].map(getData);
+    return (await this.model.createMany(arr)) as CreateResult<T>[];
   }
 
-  extend<T extends this>(this: T): new () => TestFactory<Schema, Type> {
+  extend<T extends this>(this: T): new () => TestFactory<Q, Schema, Type> {
     const { model, schema } = this;
 
-    return class extends TestFactory<Schema, Type> {
+    return class extends TestFactory<Q, Schema, Type> {
       constructor() {
         super(model, schema);
       }
@@ -191,7 +235,7 @@ export class TestFactory<
 }
 
 export const createFactory = <T extends Query>(model: T) => {
-  return new TestFactory<InstanceToZod<T>, T['type']>(
+  return new TestFactory<T, InstanceToZod<T>, T['type']>(
     model,
     instanceToZod(model),
   );

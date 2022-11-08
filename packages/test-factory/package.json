@@ -1,6 +1,6 @@
 {
   "name": "porm-test-factory",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "PORM factories for tests",
   "homepage": "https://porm.netlify.app/guide/orm-test-factories",
   "repository": {

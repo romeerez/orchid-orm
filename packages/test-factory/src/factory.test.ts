@@ -103,9 +103,21 @@ describe('factory', () => {
     it('should create record with overridden data', async () => {
       const item = await userFactory.create({ name: 'name' });
 
-      assertType<typeof item, User & { name: 'name' }>();
+      assertType<typeof item, User>();
 
       expect(item.name).toBe('name');
+    });
+
+    it('should create record with nested create', async () => {
+      const user = await userFactory.create({
+        profile: {
+          create: {
+            bio: 'bio',
+          },
+        },
+      });
+
+      assertType<typeof user, User>();
     });
   });
 
@@ -121,7 +133,7 @@ describe('factory', () => {
     it('should create a list of records with overridden data', async () => {
       const items = await userFactory.createList(2, { name: 'name' });
 
-      assertType<typeof items, (User & { name: 'name' })[]>();
+      assertType<typeof items, User[]>();
 
       expect(items.map((item) => item.name)).toEqual(['name', 'name']);
     });
@@ -157,7 +169,7 @@ describe('factory', () => {
     it('should set data to override result and work with create', async () => {
       const item = await userFactory.set({ age: 18 }).create();
 
-      assertType<typeof item, User & { age: number }>();
+      assertType<typeof item, User>();
 
       expect(() => userFactory.schema.parse(item)).not.toThrow();
       expect(item.age).toBe(18);
@@ -166,7 +178,7 @@ describe('factory', () => {
     it('should set data to override result and work with createList', async () => {
       const items = await userFactory.set({ age: 18 }).createList(2);
 
-      assertType<typeof items, (User & { age: number })[]>();
+      assertType<typeof items, User[]>();
 
       expect(() => z.array(userFactory.schema).parse(items)).not.toThrow();
       expect(items.map((item) => item.age)).toEqual([18, 18]);

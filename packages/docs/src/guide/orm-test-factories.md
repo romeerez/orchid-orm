@@ -98,12 +98,31 @@ const arrayOfCustomizedUsers = userFactory.build(5, {
 const user = await userFactory.create()
 ```
 
-Optional argument works in a same way as in `build`, but only existing columns of Model are allowed:
+In the argument you can provide values for columns, functions to generate values,
+and you can use all the nested create methods available for this model.
+
+In contrast to `build`, additional properties are not allowed here, only the columns of the model.
 
 ```ts
+// create a user with profile (user hasOne profile) and genres (user hasMany genres)
 const customizedUser = await userFactory.create({
   name: 'Mikael',
-  age: 48,
+  age: () => 48,
+  profile: {
+    create: {
+      bio: 'Eros Ramazzotti of Sweden',
+    },
+  },
+  genres: {
+    create: [
+      {
+        name: 'progressive metal',
+      },
+      {
+        name: 'progressive rock',
+      },
+    ]
+  }
 })
 ```
 
@@ -126,7 +145,7 @@ const arrayOfCustomizedUsers = await userFactory.create(5, {
 
 ## omit
 
-Omit some fields before building an object:
+Omit some fields before building an object. Only for `build` method, `create` will ignore it.
 
 ```ts
 const partialUser = await userFactory.omit({ id: true, name: true }).build()
@@ -135,7 +154,7 @@ const partialUser = await userFactory.omit({ id: true, name: true }).build()
 
 ## pick
 
-Pick specific fields before building an object:
+Pick specific fields before building an object. Only for `build` method, `create` will ignore it.
 
 ```ts
 const partialUser = await userFactory.pick({ id: true, name: true }).build()
