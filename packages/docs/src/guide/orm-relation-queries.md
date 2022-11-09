@@ -183,9 +183,11 @@ const result: Result = await db.post.select(
 ).take()
 ```
 
-## create, update, delete related records
+## create, update, delete
 
-At this part `Porm` is inspired by `Prisma` which makes it very easy to do modifications of related records.
+`Porm` makes it very easy to do modifications of related records,
+it allows to build a query chains to modify related records,
+it supports nested creates and updates.
 
 For `belongsTo` and `hasOne` you can do only one thing per each relation.
 For instance, create author while creating a book, or connect book to the author while creating it.
@@ -249,6 +251,26 @@ const createdCount = await db.author.findByOptional({ name: 'Author name' })
 // hasAndBelongsToMany will throw when not found anyway:
 await db.post.findByOptional({ title: 'Post title' })
   .tags.takeOptional().create({ name: 'tag name' })
+```
+
+## delete from relation query
+
+Delete related records from a relation query chain.
+
+This is supported for all kinds of relations only except `belongsTo`.
+
+```ts
+// delete all books of the author
+// `delete` methods requires `true` when deleting without conditions as a sanity check
+await db.author.find(1).books.delete(true)
+
+// delete specific books of specific authors
+await db.author.where({ name: 'author name' })
+  .books.where({ title: 'book title' }).delete()
+
+// TypeScript will highlight `delete` method
+// because deleting a `belongsTo` relation is not allowed
+await db.book.find(1).author.delete()
 ```
 
 ## nested create
