@@ -168,8 +168,8 @@ describe('orm', () => {
               FROM (
                 SELECT "someModel"."id", "someModel"."name"
                 FROM "someTable" AS "someModel"
-                WHERE "someModel"."id" = "otherTable"."someId"
-                  AND "someModel"."id" = $1
+                WHERE "someModel"."id" = $1
+                  AND "someModel"."id" = "otherTable"."someId"
                 LIMIT $2
               ) AS "t"
             ) AS "someModel"

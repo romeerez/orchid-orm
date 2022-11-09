@@ -52,6 +52,28 @@ describe('hasOne', () => {
       expect(profile).toMatchObject(profileData);
     });
 
+    it('should handle chained query', () => {
+      const query = db.user
+        .where({ name: 'name' })
+        .profile.where({ bio: 'bio' });
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT * FROM "profile"
+          WHERE EXISTS (
+              SELECT 1 FROM "user"
+              WHERE "user"."name" = $1
+                AND "user"."id" = "profile"."userId"
+              LIMIT 1
+            )
+            AND "profile"."bio" = $2
+          LIMIT $3
+        `,
+        ['name', 'bio', 1],
+      );
+    });
+
     it('should have create with defaults of provided id', () => {
       const user = { id: 1 };
       const now = new Date();
@@ -138,9 +160,7 @@ describe('hasOne', () => {
         `
           SELECT * FROM "profile" AS "p"
           WHERE "p"."userId" = "u"."id"
-          LIMIT $1
         `,
-        [1],
       );
     });
 
@@ -215,8 +235,8 @@ describe('hasOne', () => {
                 SELECT row_to_json("t".*)
                 FROM (
                   SELECT * FROM "profile"
-                  WHERE "profile"."userId" = "u"."id"
-                    AND "profile"."bio" = $1
+                  WHERE "profile"."bio" = $1
+                    AND "profile"."userId" = "u"."id"
                   LIMIT $2
                 ) AS "t"
               ) AS "profile"
@@ -935,6 +955,33 @@ describe('hasOne through', () => {
     );
   });
 
+  it('should handle chained query', () => {
+    const query = db.message
+      .where({ text: 'text' })
+      .profile.where({ bio: 'bio' });
+
+    expectSql(
+      query.toSql(),
+      `
+        SELECT * FROM "profile"
+        WHERE EXISTS (
+            SELECT 1 FROM "message"
+            WHERE "message"."text" = $1
+              AND EXISTS (
+                SELECT 1 FROM "user"
+                WHERE "profile"."userId" = "user"."id"
+                  AND "user"."id" = "message"."authorId"
+                LIMIT 1
+              )
+            LIMIT 1
+          )
+          AND "profile"."bio" = $2
+        LIMIT $3
+      `,
+      ['text', 'bio', 1],
+    );
+  });
+
   it('should have disabled create method', () => {
     // @ts-expect-error hasOne with through option should not have chained create
     db.message.profile.create(chatData);
@@ -953,9 +1000,7 @@ describe('hasOne through', () => {
             AND "user"."id" = "m"."authorId"
           LIMIT 1
         )
-        LIMIT $1
       `,
-      [1],
     );
   });
 
@@ -1042,13 +1087,13 @@ describe('hasOne through', () => {
               SELECT row_to_json("t".*)
               FROM (
                 SELECT * FROM "profile"
-                WHERE EXISTS (
-                    SELECT 1 FROM "user"
-                    WHERE "profile"."userId" = "user"."id"
-                      AND "user"."id" = "m"."authorId"
-                    LIMIT 1
-                  )
-                  AND "profile"."bio" = $1
+                WHERE "profile"."bio" = $1
+                  AND EXISTS (
+                        SELECT 1 FROM "user"
+                        WHERE "profile"."userId" = "user"."id"
+                          AND "user"."id" = "m"."authorId"
+                        LIMIT 1
+                      )
                 LIMIT $2
               ) AS "t"
             ) AS "profile"

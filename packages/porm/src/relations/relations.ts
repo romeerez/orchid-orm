@@ -39,6 +39,7 @@ export type RelationData = {
   nestedInsert: BaseRelation['nestedInsert'];
   nestedUpdate: BaseRelation['nestedUpdate'];
   joinQuery(fromQuery: Query, toQuery: Query): Query;
+  reverseJoin(fromQuery: Query, toQuery: Query): Query;
   primaryKey: string;
   modifyRelatedQuery?(relatedQuery: Query): (query: Query) => void;
 };
@@ -277,25 +278,27 @@ const makeRelationQuery = (
   relationName: string,
   data: RelationData,
 ) => {
-  const sourceQuery = model.clone();
-  const joinQuery = data.joinQuery(sourceQuery, toModel);
-
-  const query = data.returns === 'one' ? joinQuery.take() : joinQuery;
-  query.query[relationQueryKey] = relationName;
-
-  const proxy = new Proxy(data.method, {
-    get(_, prop) {
-      return (query as unknown as Record<string, unknown>)[prop as string];
-    },
-  }) as unknown as RelationQuery;
-
-  const setQuery = data.modifyRelatedQuery?.(query);
-
   Object.defineProperty(model, relationName, {
     get() {
+      const query = this.isSubQuery
+        ? toModel.clone()
+        : toModel.whereExists(data.reverseJoin(this, toModel), (q) => q);
+
+      query.query[relationQueryKey] = {
+        relationName,
+        sourceQuery: this,
+        relationQuery: toModel,
+        joinQuery: data.joinQuery,
+      };
+
+      const setQuery = data.modifyRelatedQuery?.(query);
       setQuery?.(this);
-      sourceQuery.query = this.query;
-      return proxy;
+
+      return new Proxy(data.method, {
+        get(_, prop) {
+          return (query as unknown as Record<string, unknown>)[prop as string];
+        },
+      }) as unknown as RelationQuery;
     },
   });
 };

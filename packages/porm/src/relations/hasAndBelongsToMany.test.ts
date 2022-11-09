@@ -58,6 +58,32 @@ describe('hasAndBelongsToMany', () => {
       expect(messages).toMatchObject([chatData, chatData]);
     });
 
+    it('should handle chained query', () => {
+      const query = db.user
+        .where({ name: 'name' })
+        .chats.where({ title: 'title' });
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT * FROM "chat" AS "chats"
+          WHERE EXISTS (
+              SELECT 1 FROM "user"
+              WHERE "user"."name" = $1
+                AND EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."chatId" = "chats"."id"
+                    AND "chatUser"."userId" = "user"."id"
+                  LIMIT 1
+                )
+              LIMIT 1
+            )
+            AND "chats"."title" = $2
+        `,
+        ['name', 'title'],
+      );
+    });
+
     describe('create based on a query', () => {
       it('should have create based on find query', async () => {
         const user = await db.user.create(userData);
@@ -93,7 +119,10 @@ describe('hasAndBelongsToMany', () => {
 
     // describe('chained delete', () => {
     //   it.only('should have chained delete', async () => {
-    //     const query = db.user.chats.where({ title: 'title' }).delete();
+    //     const query = db.user
+    //       .where({ name: 'name' })
+    //       .chats.where({ title: 'title' })
+    //       .delete();
     //
     //     console.log(query.toSql());
     //   });
@@ -203,13 +232,13 @@ describe('hasAndBelongsToMany', () => {
                 SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (
                   SELECT "chats"."id", "chats"."title" FROM "chat" AS "chats"
-                  WHERE EXISTS (
-                    SELECT 1 FROM "chatUser"
-                    WHERE "chatUser"."chatId" = "chats"."id"
-                      AND "chatUser"."userId" = "u"."id"
-                    LIMIT 1
-                  )
-                  AND "chats"."title" = $1
+                  WHERE "chats"."title" = $1
+                    AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."chatId" = "chats"."id"
+                        AND "chatUser"."userId" = "u"."id"
+                      LIMIT 1
+                    )
                 ) AS "t"
               ) AS "chats"
             FROM "user" AS "u"

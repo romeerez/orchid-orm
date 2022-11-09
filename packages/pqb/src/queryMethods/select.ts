@@ -106,7 +106,9 @@ export const addParserForSelectItem = <T extends Query>(
     addParserForRawExpression(q, key, arg);
     return arg;
   } else if (typeof arg === 'function') {
+    q.isSubQuery = true;
     const rel = arg(q);
+    q.isSubQuery = false;
     const parsers = getQueryParsers(rel);
     if (parsers) {
       if (queryTypeWithLimitOne[rel.query.returnType]) {

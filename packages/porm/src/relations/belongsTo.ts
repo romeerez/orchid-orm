@@ -238,6 +238,9 @@ export const makeBelongsToMethod = (
     joinQuery(fromQuery, toQuery) {
       return addQueryOn(toQuery, fromQuery, toQuery, primaryKey, foreignKey);
     },
+    reverseJoin(fromQuery, toQuery) {
+      return addQueryOn(fromQuery, toQuery, fromQuery, foreignKey, primaryKey);
+    },
     primaryKey,
   };
 };

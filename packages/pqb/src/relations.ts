@@ -179,8 +179,15 @@ export const relationQueryKey = Symbol('relationQuery');
 export type isRequiredRelationKey = typeof isRequiredRelationKey;
 export const isRequiredRelationKey = Symbol('isRequiredRelation');
 
+export type RelationQueryData = {
+  relationName: string;
+  sourceQuery: Query;
+  relationQuery: Query;
+  joinQuery(fromQuery: Query, toQuery: Query): Query;
+};
+
 export type RelationQueryBase = Query & {
-  [relationQueryKey]: string;
+  [relationQueryKey]: RelationQueryData;
   [isRequiredRelationKey]: boolean;
 };
 
@@ -192,7 +199,7 @@ type PrepareRelationQuery<
 > = Omit<T, 'tableAlias'> & {
   tableAlias: RelationName extends string ? RelationName : never;
   [isRequiredRelationKey]: Required;
-  [relationQueryKey]: string;
+  [relationQueryKey]: RelationQueryData;
 } & { [defaultsKey]: Record<Populate, true> };
 
 export type RelationQuery<

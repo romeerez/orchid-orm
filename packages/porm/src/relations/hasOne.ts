@@ -95,18 +95,28 @@ export const makeHasOneMethod = (
       nestedInsert: undefined,
       nestedUpdate: undefined,
       joinQuery(fromQuery, toQuery) {
-        return toQuery
-          .whereExists<Query, Query>(
-            throughRelation.joinQuery(fromQuery, throughRelation.query),
-            (() => {
-              const as = getQueryAs(toQuery);
-              return sourceRelation.joinQuery(
-                throughRelation.query,
-                sourceRelation.query.as(as),
-              );
-            }) as unknown as JoinCallback<Query, Query>,
-          )
-          .take();
+        return toQuery.whereExists<Query, Query>(
+          throughRelation.joinQuery(fromQuery, throughRelation.query),
+          (() => {
+            const as = getQueryAs(toQuery);
+            return sourceRelation.joinQuery(
+              throughRelation.query,
+              sourceRelation.query.as(as),
+            );
+          }) as unknown as JoinCallback<Query, Query>,
+        );
+      },
+      reverseJoin(fromQuery, toQuery) {
+        return fromQuery.whereExists<Query, Query>(
+          throughRelation.joinQuery(fromQuery, throughRelation.query),
+          (() => {
+            const as = getQueryAs(toQuery);
+            return sourceRelation.joinQuery(
+              throughRelation.query,
+              sourceRelation.query.as(as),
+            );
+          }) as unknown as JoinCallback<Query, Query>,
+        );
       },
       primaryKey: sourceRelation.primaryKey,
     };
@@ -250,13 +260,10 @@ export const makeHasOneMethod = (
       }
     }) as HasOneNestedUpdate,
     joinQuery(fromQuery, toQuery) {
-      return addQueryOn(
-        toQuery.take(),
-        fromQuery,
-        toQuery,
-        foreignKey,
-        primaryKey,
-      );
+      return addQueryOn(toQuery, fromQuery, toQuery, foreignKey, primaryKey);
+    },
+    reverseJoin(fromQuery, toQuery) {
+      return addQueryOn(fromQuery, toQuery, fromQuery, primaryKey, foreignKey);
     },
     primaryKey,
     modifyRelatedQuery(relationQuery) {

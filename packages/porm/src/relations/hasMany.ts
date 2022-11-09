@@ -105,6 +105,18 @@ export const makeHasManyMethod = (
           }) as unknown as JoinCallback<Query, Query>,
         );
       },
+      reverseJoin(fromQuery, toQuery) {
+        return fromQuery.whereExists<Query, Query>(
+          throughRelation.joinQuery(fromQuery, throughRelation.query),
+          (() => {
+            const as = getQueryAs(toQuery);
+            return sourceRelation.joinQuery(
+              throughRelation.query,
+              sourceRelation.query.as(as),
+            );
+          }) as unknown as JoinCallback<Query, Query>,
+        );
+      },
       primaryKey: sourceRelation.primaryKey,
     };
   }
@@ -287,6 +299,9 @@ export const makeHasManyMethod = (
     }) as HasManyNestedUpdate,
     joinQuery(fromQuery, toQuery) {
       return addQueryOn(toQuery, fromQuery, toQuery, foreignKey, primaryKey);
+    },
+    reverseJoin(fromQuery, toQuery) {
+      return addQueryOn(fromQuery, toQuery, fromQuery, primaryKey, foreignKey);
     },
     primaryKey,
     modifyRelatedQuery(relationQuery) {

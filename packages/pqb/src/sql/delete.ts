@@ -4,6 +4,7 @@ import { pushWhereStatementSql } from './where';
 import { pushReturningSql } from './insert';
 import { processJoinItem } from './join';
 import { ToSqlCtx } from './toSql';
+import { q } from './common';
 
 export const pushDeleteSql = (
   ctx: ToSqlCtx,
@@ -11,7 +12,12 @@ export const pushDeleteSql = (
   query: DeleteQueryData,
   quotedAs: string,
 ) => {
-  ctx.sql.push(`DELETE FROM ${quotedAs}`);
+  const from = q(model.table as string);
+  ctx.sql.push(`DELETE FROM ${from}`);
+
+  if (from !== quotedAs) {
+    ctx.sql.push(`AS ${quotedAs}`);
+  }
 
   let conditions: string | undefined;
   if (query.join?.length) {

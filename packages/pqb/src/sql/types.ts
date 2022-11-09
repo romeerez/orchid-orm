@@ -8,7 +8,11 @@ import {
 } from '../query';
 import { Expression, RawExpression } from '../common';
 import { ColumnsShape, ColumnType } from '../columnSchema';
-import { RelationQuery, relationQueryKey } from '../relations';
+import {
+  RelationQuery,
+  RelationQueryData,
+  relationQueryKey,
+} from '../relations';
 import { Adapter, QueryResult } from '../adapter';
 import { MaybeArray } from '../utils';
 import { QueryLogger, QueryLogObject } from '../queryMethods/log';
@@ -52,7 +56,7 @@ export type CommonQueryData = {
   adapter: Adapter;
   handleResult(q: Query, result: QueryResult): Promise<unknown>;
   returnType: QueryReturnType;
-  [relationQueryKey]?: string;
+  [relationQueryKey]?: RelationQueryData;
   inTransaction?: boolean;
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;

@@ -47,6 +47,28 @@ describe('belongsTo', () => {
       expect(user).toMatchObject(userData);
     });
 
+    it('should handle chained query', () => {
+      const query = db.profile
+        .where({ bio: 'bio' })
+        .user.where({ name: 'name' });
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT * FROM "user"
+          WHERE EXISTS (
+                  SELECT 1 FROM "profile"
+                  WHERE "profile"."bio" = $1
+                    AND "profile"."userId" = "user"."id"
+                  LIMIT 1
+                )
+            AND "user"."name" = $2
+          LIMIT $3
+        `,
+        ['bio', 'name', 1],
+      );
+    });
+
     it('should have disabled create method', () => {
       // @ts-expect-error belongsTo should not have chained create
       db.profile.user.create(userData);
@@ -163,8 +185,8 @@ describe('belongsTo', () => {
                 SELECT row_to_json("t".*)
                 FROM (
                   SELECT "user"."id", "user"."name" FROM "user"
-                  WHERE "user"."id" = "p"."userId"
-                    AND "user"."name" = $1
+                  WHERE "user"."name" = $1
+                    AND "user"."id" = "p"."userId"
                   LIMIT $2
                 ) AS "t"
               ) AS "user"

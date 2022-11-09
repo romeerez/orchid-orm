@@ -70,8 +70,8 @@ export type Query = QueryMethods & {
     length: number,
     name: QueryErrorName,
   ) => QueryError;
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  [defaultsKey]: {};
+  isSubQuery: boolean;
+  [defaultsKey]: EmptyObject;
 };
 
 export type Selectable<T extends QueryBase> = StringKey<keyof T['selectable']>;

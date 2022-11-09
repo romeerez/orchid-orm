@@ -1,6 +1,6 @@
 # Relation queries
 
-Load related records by using record object (supported by all kinds of relations).
+Here is how to load related records by using record object (supported by all kinds of relations):
 
 Resulting record of `belongsTo` and `hasOne` relation can be undefined if `required` option was not set in the model.
 
@@ -20,6 +20,30 @@ const countBooks: number = await db.author.books(author)
   .where({ title: 'Kobzar' }).count()
 
 const authorHasBooks: boolean = await db.author.books(author).exists()
+```
+
+It's possible to chain relations query without providing a loaded record (supported by all kinds of relations):
+
+```ts
+// find book and load author:
+const author = await db.book.find(1).author
+
+// find many books and load their authors:
+const manyAuthors = await db.book.where({ id: { in: [1, 2, 3] } }).author
+
+// filter both books and the authors and load authors in one query:
+const filteredAuthors = await db.book.where({ booksCondition: '...' })
+  .author.where({ authorCondition: '...' })
+
+// find author and load their books:
+const booksFromOneAuthor = await db.author.find(1).books
+
+// find many authors and load their books:
+const booksFromManyAuthors = await db.author.where({ id: { in: [1, 2, 3] } }).books
+
+// filter both authors and books and load books in one query:
+const filteredBooks = await db.author.where({ authorCondition: '...' })
+  .books.where({ booksCondition: '...' })
 ```
 
 Relation can be used in `.whereExists` (supported by all kinds of relations):

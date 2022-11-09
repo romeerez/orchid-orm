@@ -12,6 +12,7 @@ import { PormInternalError, UnhandledTypeError } from '../errors';
 import { StringColumn } from '../columnSchema';
 import { quote } from '../quote';
 import { ToSqlCtx } from './toSql';
+import { relationQueryKey } from '../relations';
 
 const jsonColumnOrMethodToSql = (
   column: string | JsonItem,
@@ -143,6 +144,12 @@ const pushSubQuerySql = (
   list: string[],
 ) => {
   const { returnType = 'all' } = query.query;
+
+  const rel = query.query[relationQueryKey];
+  if (rel) {
+    query = rel.joinQuery(rel.sourceQuery, query);
+  }
+
   switch (returnType) {
     case 'all':
     case 'one':

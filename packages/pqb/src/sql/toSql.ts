@@ -84,7 +84,7 @@ const makeSql = (model: Query, { values = [] }: ToSqlOptions = {}): Sql => {
     }
 
     if (query.type === 'delete') {
-      pushDeleteSql(ctx, model, query, q(model.table));
+      pushDeleteSql(ctx, model, query, quotedAs);
       return { text: sql.join(' '), values };
     }
   }

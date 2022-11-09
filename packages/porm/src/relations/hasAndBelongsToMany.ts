@@ -295,8 +295,17 @@ export const makeHasAndBelongsToManyMethod = (
         await insertToJoinTable(state, j, data, ids);
       }
     }) as HasManyNestedUpdate,
+    // joinQuery can be a property of RelationQuery and be used by whereExists and other stuff which needs it
+    // and the chained query itself may be a query around this joinQuery
     joinQuery(fromQuery, toQuery) {
       return toQuery.whereExists(subQuery, (q) =>
+        q
+          ._on(associationForeignKeyFull, `${getQueryAs(toQuery)}.${pk}`)
+          ._on(foreignKeyFull, `${getQueryAs(fromQuery)}.${pk}`),
+      );
+    },
+    reverseJoin(fromQuery, toQuery) {
+      return fromQuery.whereExists(subQuery, (q) =>
         q
           ._on(associationForeignKeyFull, `${getQueryAs(toQuery)}.${pk}`)
           ._on(foreignKeyFull, `${getQueryAs(fromQuery)}.${pk}`),

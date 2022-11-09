@@ -82,6 +82,7 @@ export interface Db<
     length: number,
     name: QueryErrorName,
   ) => QueryError<this>;
+  isSubQuery: false;
   [defaultsKey]: Record<
     {
       [K in keyof Shape]: Shape[K]['hasDefault'] extends true ? K : never;
