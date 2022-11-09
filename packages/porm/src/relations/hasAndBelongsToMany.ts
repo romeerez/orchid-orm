@@ -31,6 +31,7 @@ export type HasAndBelongsToManyInfo<
   >;
   populate: never;
   chainedCreate: true;
+  chainedDelete: true;
 };
 
 type State = {

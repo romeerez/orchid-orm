@@ -98,6 +98,7 @@ export type MapRelation<
     params: Record<string, unknown>;
     populate: string;
     chainedCreate: boolean;
+    chainedDelete: boolean;
   } = RelationInfo<T, Relations, Relation>,
 > = RelationQuery<
   RelationName,
@@ -111,7 +112,8 @@ export type MapRelation<
   Relation['options']['required'] extends boolean
     ? Relation['options']['required']
     : false,
-  Info['chainedCreate']
+  Info['chainedCreate'],
+  Info['chainedDelete']
 >;
 
 export type MapRelations<T extends Model> = 'relations' extends keyof T

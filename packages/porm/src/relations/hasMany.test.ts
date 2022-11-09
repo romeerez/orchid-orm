@@ -26,6 +26,7 @@ describe('hasMany', () => {
           'authorId',
           typeof messagesQuery,
           false,
+          true,
           true
         >
       >();
@@ -138,6 +139,28 @@ describe('hasMany', () => {
           text: 'text',
         });
       });
+    });
+
+    it('should have chained delete', () => {
+      const query = db.chat
+        .where({ title: 'title' })
+        .messages.where({ text: 'text' })
+        .delete();
+
+      expectSql(
+        query.toSql(),
+        `
+          DELETE FROM "message" AS "messages"
+          WHERE EXISTS (
+              SELECT 1 FROM "chat"
+              WHERE "chat"."title" = $1
+                AND "chat"."id" = "messages"."chatId"
+              LIMIT 1
+            )
+            AND "messages"."text" = $2
+        `,
+        ['title', 'text'],
+      );
     });
 
     it('should have proper joinQuery', () => {
@@ -1097,7 +1120,9 @@ describe('hasMany through', () => {
           { userId: number | null },
           never,
           typeof chatsQuery,
-          false
+          false,
+          false,
+          true
         >
       >();
 
@@ -1156,6 +1181,38 @@ describe('hasMany through', () => {
     it('should have disabled create method', () => {
       // @ts-expect-error hasMany with through option should not have chained create
       db.profile.chats.create(chatData);
+    });
+
+    it('should have chained delete', () => {
+      const query = db.profile
+        .where({ bio: 'bio' })
+        .chats.where({ title: 'title' })
+        .delete();
+
+      expectSql(
+        query.toSql(),
+        `
+          DELETE FROM "chat" AS "chats"
+          WHERE EXISTS (
+              SELECT 1 FROM "profile"
+              WHERE "profile"."bio" = $1
+                AND EXISTS (
+                  SELECT 1 FROM "user"
+                  WHERE EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."chatId" = "chats"."id"
+                        AND "chatUser"."userId" = "user"."id"
+                      LIMIT 1
+                    )
+                    AND "user"."id" = "profile"."userId"
+                  LIMIT 1
+                )
+              LIMIT 1
+            )
+            AND "chats"."title" = $2
+        `,
+        ['bio', 'title'],
+      );
     });
 
     it('should have proper joinQuery', () => {
@@ -1448,7 +1505,9 @@ describe('hasMany through', () => {
           { id: number },
           never,
           typeof profilesQuery,
-          false
+          false,
+          false,
+          true
         >
       >();
 
@@ -1474,39 +1533,71 @@ describe('hasMany through', () => {
     });
 
     it('should handle chained query', () => {
-      const query = db.profile
-        .where({ bio: 'bio' })
-        .chats.where({ title: 'title' });
+      const query = db.chat
+        .where({ title: 'title' })
+        .profiles.where({ bio: 'bio' });
 
       expectSql(
         query.toSql(),
         `
-          SELECT * FROM "chat" AS "chats"
+          SELECT * FROM "profile" AS "profiles"
           WHERE EXISTS (
-            SELECT 1 FROM "profile"
-            WHERE "profile"."bio" = $1
+            SELECT 1 FROM "chat"
+            WHERE "chat"."title" = $1
               AND EXISTS (
-                SELECT 1 FROM "user"
-                WHERE EXISTS (
+                SELECT 1 FROM "user" AS "users"
+                WHERE "profiles"."userId" = "users"."id"
+                  AND EXISTS (
                     SELECT 1 FROM "chatUser"
-                    WHERE "chatUser"."chatId" = "chats"."id"
-                      AND "chatUser"."userId" = "user"."id"
+                    WHERE "chatUser"."userId" = "users"."id"
+                      AND "chatUser"."chatId" = "chat"."id"
                     LIMIT 1
                   )
-                  AND "user"."id" = "profile"."userId"
                 LIMIT 1
               )
             LIMIT 1
           )
-          AND "chats"."title" = $2
+          AND "profiles"."bio" = $2
         `,
-        ['bio', 'title'],
+        ['title', 'bio'],
       );
     });
 
     it('should have disabled create method', () => {
       // @ts-expect-error hasMany with through option should not have chained create
-      db.profile.chats.create(chatData);
+      db.chat.profiles.create(chatData);
+    });
+
+    it('should have chained delete', () => {
+      const query = db.chat
+        .where({ title: 'title' })
+        .profiles.where({ bio: 'bio' })
+        .delete();
+
+      expectSql(
+        query.toSql(),
+        `
+          DELETE FROM "profile" AS "profiles"
+          WHERE EXISTS (
+              SELECT 1 FROM "chat"
+              WHERE "chat"."title" = $1
+                AND EXISTS (
+                  SELECT 1 FROM "user" AS "users"
+                  WHERE "profiles"."userId" = "users"."id"
+                    AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."userId" = "users"."id"
+                        AND "chatUser"."chatId" = "chat"."id"
+                      LIMIT 1
+                    )
+                  LIMIT 1
+                )
+              LIMIT 1
+            )
+            AND "profiles"."bio" = $2
+        `,
+        ['title', 'bio'],
+      );
     });
 
     it('should have proper joinQuery', () => {

@@ -26,6 +26,7 @@ describe('hasOne', () => {
           'userId',
           typeof profileQuery,
           true,
+          true,
           true
         >
       >();
@@ -105,7 +106,7 @@ describe('hasOne', () => {
       });
     });
 
-    describe('create based on a query', () => {
+    describe('chained create', () => {
       it('should have create based on find query', () => {
         const query = db.user.find(1).profile.create({
           bio: 'bio',
@@ -149,6 +150,30 @@ describe('hasOne', () => {
         await db.user.findOptional(1).profile.takeOptional().create({
           bio: 'bio',
         });
+      });
+    });
+
+    describe('chained delete', () => {
+      it('should delete relation records', () => {
+        const query = db.user
+          .where({ name: 'name' })
+          .profile.where({ bio: 'bio' })
+          .delete();
+
+        expectSql(
+          query.toSql(),
+          `
+            DELETE FROM "profile"
+            WHERE EXISTS (
+                SELECT 1 FROM "user"
+                WHERE "user"."name" = $1
+                  AND "user"."id" = "profile"."userId"
+                LIMIT 1
+              )
+              AND "profile"."bio" = $2
+          `,
+          ['name', 'bio'],
+        );
       });
     });
 
@@ -934,6 +959,8 @@ describe('hasOne through', () => {
         { authorId: number | null },
         never,
         typeof profileQuery,
+        true,
+        false,
         true
       >
     >();
@@ -985,6 +1012,33 @@ describe('hasOne through', () => {
   it('should have disabled create method', () => {
     // @ts-expect-error hasOne with through option should not have chained create
     db.message.profile.create(chatData);
+  });
+
+  it('should have chained delete method', () => {
+    const query = db.message
+      .where({ text: 'text' })
+      .profile.where({ bio: 'bio' })
+      .delete();
+
+    expectSql(
+      query.toSql(),
+      `
+        DELETE FROM "profile"
+        WHERE EXISTS (
+            SELECT 1 FROM "message"
+            WHERE "message"."text" = $1
+              AND EXISTS (
+                SELECT 1 FROM "user"
+                WHERE "profile"."userId" = "user"."id"
+                  AND "user"."id" = "message"."authorId"
+                LIMIT 1
+              )
+            LIMIT 1
+          )
+          AND "profile"."bio" = $2
+      `,
+      ['text', 'bio'],
+    );
   });
 
   it('should have proper joinQuery', () => {

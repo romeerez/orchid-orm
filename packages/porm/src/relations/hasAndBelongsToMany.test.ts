@@ -25,6 +25,7 @@ describe('hasAndBelongsToMany', () => {
           never,
           typeof chatsQuery,
           false,
+          true,
           true
         >
       >();
@@ -117,16 +118,32 @@ describe('hasAndBelongsToMany', () => {
       });
     });
 
-    // describe('chained delete', () => {
-    //   it.only('should have chained delete', async () => {
-    //     const query = db.user
-    //       .where({ name: 'name' })
-    //       .chats.where({ title: 'title' })
-    //       .delete();
-    //
-    //     console.log(query.toSql());
-    //   });
-    // });
+    it('should have chained delete method', () => {
+      const query = db.user
+        .where({ name: 'name' })
+        .chats.where({ title: 'title' })
+        .delete();
+
+      expectSql(
+        query.toSql(),
+        `
+          DELETE FROM "chat" AS "chats"
+          WHERE EXISTS (
+              SELECT 1 FROM "user"
+              WHERE "user"."name" = $1
+                AND EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."chatId" = "chats"."id"
+                    AND "chatUser"."userId" = "user"."id"
+                  LIMIT 1
+                )
+              LIMIT 1
+            )
+            AND "chats"."title" = $2
+        `,
+        ['name', 'title'],
+      );
+    });
 
     it('should have proper joinQuery', () => {
       expectSql(

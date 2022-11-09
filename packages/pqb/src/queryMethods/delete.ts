@@ -1,5 +1,7 @@
 import { Query, SetQueryReturnsRowCount } from '../query';
 
+export type DeleteMethodsNames = 'del' | '_del' | 'delete' | '_delete';
+
 type DeleteArgs<T extends Query> = T['hasWhere'] extends true
   ? [forceAll?: boolean]
   : [true];

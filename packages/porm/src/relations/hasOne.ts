@@ -50,6 +50,7 @@ export type HasOneInfo<
   chainedCreate: Relation['options'] extends { primaryKey: string }
     ? true
     : false;
+  chainedDelete: true;
 };
 
 export const makeHasOneMethod = (

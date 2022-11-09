@@ -1,6 +1,11 @@
 import { defaultsKey, Query, QueryBase, QueryWithTable } from './query';
-import { WhereArg, UpdateData, CreateMethodsNames } from './queryMethods';
-import { MaybeArray } from './utils';
+import {
+  WhereArg,
+  UpdateData,
+  CreateMethodsNames,
+  DeleteMethodsNames,
+} from './queryMethods';
+import { EmptyObject, MaybeArray } from './utils';
 
 export type NestedInsertOneItem = {
   create?: Record<string, unknown>;
@@ -209,9 +214,15 @@ export type RelationQuery<
   T extends Query = Query,
   Required extends boolean = boolean,
   ChainedCreate extends boolean = false,
-  Q extends RelationQueryBase = ChainedCreate extends true
+  ChainedDelete extends boolean = false,
+  Q extends RelationQueryBase = (ChainedCreate extends true
     ? PrepareRelationQuery<T, Name, Required, Populate>
     : PrepareRelationQuery<T, Name, Required, Populate> & {
         [K in CreateMethodsNames]: never;
-      },
+      }) &
+    (ChainedDelete extends true
+      ? EmptyObject
+      : {
+          [K in DeleteMethodsNames]: never;
+        }),
 > = ((params: Params) => Q) & Q;

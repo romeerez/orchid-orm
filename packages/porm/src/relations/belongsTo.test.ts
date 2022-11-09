@@ -69,9 +69,12 @@ describe('belongsTo', () => {
       );
     });
 
-    it('should have disabled create method', () => {
+    it('should have disabled create and delete method', () => {
       // @ts-expect-error belongsTo should not have chained create
       db.profile.user.create(userData);
+
+      // @ts-expect-error belongsTo should not have chained create
+      db.profile.user.find(1).delete();
     });
 
     it('should have proper joinQuery', () => {
