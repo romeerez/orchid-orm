@@ -23,7 +23,8 @@ export type ModelToDb<T extends Model> = Db<
           [K in keyof T['relations']]: Relation<T, T['relations'], K>;
         }
       : Query['relations']
-    : Query['relations']
+    : Query['relations'],
+  T['columnTypes']
 >;
 
 export type DbModel<T extends ModelClass> = ModelToDb<InstanceType<T>> &

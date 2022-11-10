@@ -134,3 +134,29 @@ Call `$clone` to end a database connection:
 ```ts
 await db.$close()
 ```
+
+## raw
+
+When using `raw` in `select` you need to provide a callback returning type:
+
+```ts
+raw((t) => t.integer(), 'sql')
+```
+
+Since column types can be customized when creating a base model, use `raw` method from the `db.model` and it will have customized types:
+
+```ts
+const result = await db.someModel.select({
+  rawValue: db.someModel.raw((t) => t.customTime(), 'sql')
+})
+```
+
+For simplicity, when the `raw` is used in `where` or other method which doesn't affect on resulting type, you cah import it from `pqb`:
+
+```ts
+import { raw } from 'pqb'
+
+const result = await db.someModel.where(
+  raw('a = $1 AND b = $2', 'string', 123)
+)
+```
