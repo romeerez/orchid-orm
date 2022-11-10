@@ -105,14 +105,16 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
     }
   }
 
-  Object.assign(result, generateMock(schema.pick(pick)));
+  const pickedSchema = schema.pick(pick);
 
   return () => {
+    Object.assign(result, generateMock(pickedSchema));
+
     for (const key in fns) {
       result[key] = fns[key]();
     }
 
-    return result as CreateData<T['model']>;
+    return { ...result } as CreateData<T['model']>;
   };
 };
 

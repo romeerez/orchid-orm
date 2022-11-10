@@ -34,6 +34,8 @@ It is inspired by [realworld](https://github.com/gothinkster/realworld) API spec
         - **tag**: filter articles by tag
         - **feed**: list articles only from authors which current user is following
         - **favorite**: list only articles favorited by current user
+        - **limit**: limit articles
+        - **offset**: offset articles
     * Responds with article data
 
 - **POST** `/articles`: create a new article

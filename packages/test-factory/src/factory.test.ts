@@ -127,6 +127,8 @@ describe('factory', () => {
 
       assertType<typeof items, User[]>();
 
+      expect(items[0].name).not.toBe(items[1].name);
+
       expect(() => z.array(userFactory.schema).parse(items)).not.toThrow();
     });
 
