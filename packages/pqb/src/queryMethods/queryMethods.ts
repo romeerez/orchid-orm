@@ -1,4 +1,4 @@
-import { Expression, raw, RawExpression } from '../common';
+import { Expression, RawExpression } from '../common';
 import {
   Query,
   QueryBase,
@@ -48,6 +48,7 @@ import { QueryCallbacks } from './callbacks';
 import { QueryUpsert } from './upsert';
 import { QueryGet } from './get';
 import { MergeQueryMethods } from './merge';
+import { RawMethods } from './raw';
 
 export type WindowArg<T extends Query> = Record<
   string,
@@ -96,7 +97,8 @@ export interface QueryMethods
     QueryCallbacks,
     QueryUpsert,
     QueryGet,
-    MergeQueryMethods {}
+    MergeQueryMethods,
+    RawMethods {}
 
 export class QueryMethods {
   windows!: EmptyObject;
@@ -309,7 +311,7 @@ export class QueryMethods {
     return query
       .as(as ?? 't')
       ._from(
-        raw(`(${sql.text})`, ...sql.values),
+        this.raw(`(${sql.text})`, ...sql.values),
       ) as unknown as SetQueryTableAlias<Q, As>;
   }
 
@@ -344,7 +346,7 @@ export class QueryMethods {
   }
 
   _exists<T extends Query>(this: T): SetQueryReturnsValue<T, BooleanColumn> {
-    const q = this._getOptional(raw<BooleanColumn>('true'));
+    const q = this._getOptional(this.raw<Query, BooleanColumn>('true'));
     q.query.notFoundDefault = false;
     q.query.coalesceValue = false;
     return q as unknown as SetQueryReturnsValue<T, BooleanColumn>;
@@ -397,4 +399,5 @@ applyMixins(QueryMethods, [
   QueryUpsert,
   QueryGet,
   MergeQueryMethods,
+  RawMethods,
 ]);

@@ -1,5 +1,4 @@
-import { expectQueryNotMutated, expectSql, User } from '../test-utils';
-import { raw } from '../common';
+import { db, expectQueryNotMutated, expectSql, User } from '../test-utils';
 
 describe('having', () => {
   it('should support { count: value } object', () => {
@@ -196,12 +195,12 @@ describe('having', () => {
     `;
 
     expectSql(
-      q.having(raw('count(*) = 1'), raw('sum(id) = 2')).toSql(),
+      q.having(db.raw('count(*) = 1'), db.raw('sum(id) = 2')).toSql(),
       expectedSql,
     );
     expectQueryNotMutated(q);
 
-    q._having(raw('count(*) = 1'), raw('sum(id) = 2'));
+    q._having(db.raw('count(*) = 1'), db.raw('sum(id) = 2'));
     expectSql(q.toSql({ clearCache: true }), expectedSql);
   });
 
@@ -235,7 +234,9 @@ describe('having', () => {
     it('should accept raw sql', () => {
       const q = User.all();
       expectSql(
-        q.havingOr(raw('count(*) = 1 + 2'), raw('count(*) = 2 + 3')).toSql(),
+        q
+          .havingOr(db.raw('count(*) = 1 + 2'), db.raw('count(*) = 2 + 3'))
+          .toSql(),
         `
         SELECT * FROM "user"
         HAVING count(*) = 1 + 2 OR count(*) = 2 + 3

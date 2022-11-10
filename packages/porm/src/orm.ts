@@ -1,4 +1,4 @@
-import { Adapter, Db, AdapterOptions, QueryLogOptions } from 'pqb';
+import { Adapter, Db, AdapterOptions, QueryLogOptions, columnTypes } from 'pqb';
 import { DbModel, Model, ModelClasses } from './model';
 import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
@@ -27,16 +27,17 @@ export const porm = <T extends ModelClasses>(
     undefined as unknown as Db,
     undefined,
     {},
+    columnTypes,
     commonOptions,
   );
-  qb.queryBuilder = qb;
+  qb.queryBuilder = qb as unknown as Db;
 
   const result = {
     $transaction: transaction,
     $adapter: adapter,
     $queryBuilder: qb,
     $close: () => adapter.close(),
-  } as PORM<ModelClasses>;
+  } as unknown as PORM<ModelClasses>;
 
   const modelInstances: Record<string, Model> = {};
 
@@ -48,10 +49,18 @@ export const porm = <T extends ModelClasses>(
     const model = new models[key]();
     modelInstances[key] = model;
 
-    const dbModel = new Db(adapter, qb, model.table, model.columns.shape, {
-      ...commonOptions,
-      schema: model.schema,
-    });
+    const dbModel = new Db(
+      adapter,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      qb as any,
+      model.table,
+      model.columns.shape,
+      model.columnTypes,
+      {
+        ...commonOptions,
+        schema: model.schema,
+      },
+    );
 
     (result as Record<string, unknown>)[key] = dbModel;
   }

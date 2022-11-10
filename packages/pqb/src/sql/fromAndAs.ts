@@ -1,8 +1,8 @@
-import { getRaw, isRaw } from '../common';
 import { quoteSchemaAndTable } from './common';
 import { QueryBase } from '../query';
 import { checkIfASimpleQuery, SelectQueryData } from './types';
 import { ToSqlCtx } from './toSql';
+import { getRaw, isRaw } from '../common';
 
 export const pushFromAndAs = (
   ctx: ToSqlCtx,

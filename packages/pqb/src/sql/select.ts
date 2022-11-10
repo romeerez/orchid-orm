@@ -9,7 +9,6 @@ import { Query, QueryBase } from '../query';
 import { addValue, q, quoteFullColumn } from './common';
 import { aggregateToSql } from './aggregate';
 import { PormInternalError, UnhandledTypeError } from '../errors';
-import { StringColumn } from '../columnSchema';
 import { quote } from '../quote';
 import { ToSqlCtx } from './toSql';
 import { relationQueryKey } from '../relations';
@@ -166,7 +165,7 @@ const pushSubQuerySql = (
       select.length = 0;
       select[0] = { selectAs: { c: first } } as SelectItem;
       query = query._wrap(query.__model.clone()) as unknown as typeof query;
-      query._getOptional(raw<StringColumn>(`COALESCE(json_agg("c"), '[]')`));
+      query._getOptional(raw(`COALESCE(json_agg("c"), '[]')`));
       break;
     }
     case 'rows':

@@ -1,5 +1,4 @@
 import { db, expectSql, now, useTestDatabase } from '../test-utils';
-import { raw } from '../common';
 
 describe('timestamps', () => {
   useTestDatabase();
@@ -37,7 +36,7 @@ describe('timestamps', () => {
   });
 
   it('should update updatedAt when updating with raw sql', async () => {
-    const query = model.updateRaw(raw('name = $1', 'name'), true);
+    const query = model.updateRaw(db.raw('name = $1', 'name'), true);
     await query;
 
     expectSql(
@@ -51,7 +50,7 @@ describe('timestamps', () => {
   });
 
   it('should update updatedAt when updating with raw sql which has updatedAt somewhere but not in set', async () => {
-    const query = model.updateRaw(raw('"createdAt" = "updatedAt"'), true);
+    const query = model.updateRaw(db.raw('"createdAt" = "updatedAt"'), true);
     await query;
 
     expectSql(
@@ -64,7 +63,7 @@ describe('timestamps', () => {
   });
 
   it('should not update updatedAt column when updating with raw sql which contains `updatedAt = `', async () => {
-    const query = model.updateRaw(raw('"updatedAt" = $1', now), true);
+    const query = model.updateRaw(db.raw('"updatedAt" = $1', now), true);
     await query;
 
     expectSql(

@@ -1,12 +1,12 @@
 import {
   assertType,
+  db,
   expectQueryNotMutated,
   expectSql,
   User,
   userData,
   useTestDatabase,
 } from '../test-utils';
-import { raw } from '../common';
 
 describe('update', () => {
   useTestDatabase();
@@ -37,7 +37,7 @@ describe('update', () => {
     const count = 2;
     const users = await User.select('id').createMany([userData, userData]);
 
-    const query = User.or(...users).updateRaw(raw(`name = 'name'`));
+    const query = User.or(...users).updateRaw(db.raw(`name = 'name'`));
     expectSql(
       query.toSql(),
       `
@@ -254,7 +254,7 @@ describe('update', () => {
 
   it('should support raw sql as a value', () => {
     const query = User.where({ id: 1 }).update({
-      name: raw(`'raw sql'`),
+      name: db.raw(`'raw sql'`),
     });
     expectSql(
       query.toSql(),

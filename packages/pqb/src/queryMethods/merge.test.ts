@@ -1,4 +1,11 @@
-import { assertType, expectSql, Message, Profile, User } from '../test-utils';
+import {
+  assertType,
+  db,
+  expectSql,
+  Message,
+  Profile,
+  User,
+} from '../test-utils';
 import { QueryReturnType } from '../query';
 import { IntegerColumn, TextColumn } from '../columnSchema';
 import { getValueKey } from './get';
@@ -11,7 +18,6 @@ import {
   TruncateQueryData,
   UpdateQueryData,
 } from '../sql';
-import { raw } from '../common';
 
 describe('merge queries', () => {
   describe('select', () => {
@@ -350,8 +356,8 @@ describe('merge queries', () => {
       s2.having = [{ b: { b: 2 } }];
       s1.havingOr = [[{ a: { a: 1 } }]];
       s2.havingOr = [[{ b: { b: 2 } }]];
-      s1.union = [{ arg: raw('a'), kind: 'UNION' }];
-      s2.union = [{ arg: raw('b'), kind: 'EXCEPT' }];
+      s1.union = [{ arg: db.raw('a'), kind: 'UNION' }];
+      s2.union = [{ arg: db.raw('b'), kind: 'EXCEPT' }];
       s1.order = [{ id: 'ASC' }];
       s2.order = [{ name: 'DESC' }];
       s1.limit = 1;

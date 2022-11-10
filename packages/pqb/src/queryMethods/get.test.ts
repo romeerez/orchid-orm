@@ -1,7 +1,5 @@
-import { assertType, User, userData, useTestDatabase } from '../test-utils';
-import { NumberColumn } from '../columnSchema';
+import { assertType, db, User, userData, useTestDatabase } from '../test-utils';
 import { NotFoundError } from '../errors';
-import { raw } from '../common';
 
 describe('get', () => {
   useTestDatabase();
@@ -18,7 +16,9 @@ describe('get', () => {
     });
 
     it('should select raw and return a single value', async () => {
-      const received = await User.get(raw<NumberColumn>('count(*)::int'));
+      const received = await User.get(
+        db.raw((t) => t.integer(), 'count(*)::int'),
+      );
 
       assertType<typeof received, number>();
 
@@ -43,7 +43,7 @@ describe('get', () => {
 
     it('should select raw and return a single value when exists', async () => {
       const received = await User.getOptional(
-        raw<NumberColumn>('count(*)::int'),
+        db.raw((t) => t.integer(), 'count(*)::int'),
       );
 
       assertType<typeof received, number | undefined>();

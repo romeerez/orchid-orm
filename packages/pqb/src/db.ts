@@ -35,10 +35,11 @@ export interface Db<
   Table extends string | undefined = undefined,
   Shape extends ColumnsShape = Record<string, never>,
   Relations extends Query['relations'] = Query['relations'],
+  CT extends ColumnTypesBase = ColumnTypesBase,
 > extends QueryMethods {
   new (
     adapter: Adapter,
-    queryBuilder: Db,
+    queryBuilder: Db<Table, Shape, Relations, CT>,
     table?: Table,
     shape?: Shape,
     options?: DbTableOptions,
@@ -48,6 +49,7 @@ export interface Db<
   columns: (keyof ColumnShapeOutput<Shape>)[];
 
   queryBuilder: Db;
+  columnTypes: CT;
   whereQueryBuilder: Query['whereQueryBuilder'];
   onQueryBuilder: Query['onQueryBuilder'];
   table: Table;
@@ -95,6 +97,7 @@ export class Db<
   Table extends string | undefined = undefined,
   Shape extends ColumnsShape = Record<string, never>,
   Relations extends Query['relations'] = Query['relations'],
+  CT extends ColumnTypesBase = ColumnTypesBase,
 > implements Query
 {
   whereQueryBuilder = WhereQueryBuilder;
@@ -105,9 +108,10 @@ export class Db<
     public queryBuilder: Db,
     public table: Table = undefined as Table,
     public shape: Shape = {} as Shape,
+    public columnTypes: CT,
     options: DbTableOptions,
   ) {
-    this.__model = this;
+    this.__model = this as Query;
 
     const logger = options.logger || console;
     this.query = {
@@ -181,7 +185,12 @@ export class Db<
 applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
 
-type DbResult<CT extends ColumnTypesBase> = Db & {
+type DbResult<CT extends ColumnTypesBase> = Db<
+  string,
+  Record<string, never>,
+  Query['relations'],
+  CT
+> & {
   <Table extends string, Shape extends ColumnsShape = ColumnsShape>(
     table: Table,
     shape?: ((t: CT) => Shape) | Shape,
@@ -214,21 +223,23 @@ export const createDb = <CT extends ColumnTypesBase>({
     undefined as unknown as Db,
     undefined,
     {},
+    ct,
     commonOptions,
   );
-  qb.queryBuilder = qb;
+  qb.queryBuilder = qb as unknown as Db;
 
   const db = Object.assign(
     <Table extends string, Shape extends ColumnsShape = ColumnsShape>(
       table: Table,
       shape?: ((t: CT) => Shape) | Shape,
       options?: DbTableOptions,
-    ): Db<Table, Shape> => {
-      return new Db<Table, Shape>(
+    ): Db<Table, Shape, Query['relations'], CT> => {
+      return new Db<Table, Shape, Query['relations'], CT>(
         adapter,
-        qb,
+        qb as unknown as Db,
         table as Table,
         typeof shape === 'function' ? getColumnTypes(ct, shape) : shape,
+        ct,
         { ...commonOptions, ...options },
       );
     },
@@ -242,5 +253,5 @@ export const createDb = <CT extends ColumnTypesBase>({
       Db.prototype[name as keyof typeof Db.prototype];
   });
 
-  return db as DbResult<CT>;
+  return db as unknown as DbResult<CT>;
 };

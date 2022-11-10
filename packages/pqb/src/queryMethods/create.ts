@@ -8,7 +8,6 @@ import {
   SetQueryReturnsOne,
 } from '../query';
 import { pushQueryArray } from '../queryDataUtils';
-import { RawExpression } from '../common';
 import {
   BelongsToNestedInsert,
   BelongsToRelation,
@@ -26,6 +25,7 @@ import { InsertQueryData, OnConflictItem, OnConflictMergeUpdate } from '../sql';
 import { WhereArg } from './where';
 import { parseResult, queryMethodByReturnType } from './then';
 import { NotFoundError } from '../errors';
+import { RawExpression } from '../common';
 
 export type CreateData<
   T extends Query,

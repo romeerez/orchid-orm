@@ -6,7 +6,6 @@ import {
   setDbDown,
   toLine,
 } from '../test-utils';
-import { raw } from 'pqb';
 
 const db = getDb();
 

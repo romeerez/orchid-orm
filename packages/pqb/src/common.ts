@@ -16,6 +16,23 @@ export type RawExpression<C extends ColumnType = ColumnType> = {
   __column: C;
 };
 
+export const raw = (sql: string, ...values: unknown[]): RawExpression =>
+  ({
+    __raw: sql,
+    __values: values,
+  } as RawExpression);
+
+export const isRaw = (obj: object): obj is RawExpression => '__raw' in obj;
+
+export const getRaw = (raw: RawExpression, values: unknown[]) => {
+  values.push(...raw.__values);
+  return raw.__raw;
+};
+
+export const getRawSql = (raw: RawExpression) => {
+  return raw.__raw;
+};
+
 export type Expression<
   T extends Query = Query,
   C extends ColumnType = ColumnType,
@@ -54,36 +71,6 @@ export type ExpressionOutput<
   : Expr extends RawExpression<infer ColumnType>
   ? ColumnType
   : never;
-
-export const raw = <C extends ColumnType>(
-  ...args:
-    | [column: C, sql: string, ...values: unknown[]]
-    | [sql: string, ...values: unknown[]]
-) => {
-  if (typeof args[0] === 'string') {
-    return {
-      __raw: args[0],
-      __values: args.slice(1),
-    } as RawExpression<C>;
-  } else {
-    return {
-      __column: args[0],
-      __raw: args[1],
-      __values: args.slice(2),
-    } as RawExpression<C>;
-  }
-};
-
-export const isRaw = (obj: object): obj is RawExpression => '__raw' in obj;
-
-export const getRaw = (raw: RawExpression, values: unknown[]) => {
-  values.push(...raw.__values);
-  return raw.__raw;
-};
-
-export const getRawSql = (raw: RawExpression) => {
-  return raw.__raw;
-};
 
 export const EMPTY_OBJECT = {};
 

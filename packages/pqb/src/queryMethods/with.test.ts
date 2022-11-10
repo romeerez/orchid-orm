@@ -1,7 +1,6 @@
 import { WithOptions } from '../sql';
-import { expectQueryNotMutated, expectSql, User } from '../test-utils';
-import { columnTypes, NumberColumn } from '../columnSchema';
-import { raw } from '../common';
+import { db, expectQueryNotMutated, expectSql, User } from '../test-utils';
+import { columnTypes } from '../columnSchema';
 
 describe('with', () => {
   const options: (
@@ -51,7 +50,7 @@ describe('with', () => {
       const args: Parameters<typeof q.with> = [
         'withAlias',
         columnShape,
-        raw(`(VALUES (1, 'two')) t(one, two)`),
+        db.raw(`(VALUES (1, 'two')) t(one, two)`),
       ];
 
       if (options) {
@@ -106,7 +105,7 @@ describe('with', () => {
     options.forEach((options) => {
       const args: Parameters<typeof q.with> = [
         'withAlias',
-        (qb) => qb.select({ one: raw<NumberColumn>('1') }),
+        (qb) => qb.select({ one: db.raw((t) => t.integer(), '1') }),
       ];
 
       if (options) {
@@ -147,7 +146,7 @@ describe('with', () => {
 
     const received3 = q
       .with('withAlias', User.all())
-      .join('withAlias', raw(`"withAlias"."id" = "user"."id"`))
+      .join('withAlias', db.raw(`"withAlias"."id" = "user"."id"`))
       .select('withAlias.id')
       .toSql();
 

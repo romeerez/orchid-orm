@@ -1,6 +1,4 @@
-import { assertType, User, useTestDatabase } from '../test-utils';
-import { raw } from '../common';
-import { columnTypes } from '../columnSchema';
+import { assertType, db, User, useTestDatabase } from '../test-utils';
 
 describe('then', () => {
   useTestDatabase();
@@ -8,7 +6,7 @@ describe('then', () => {
   describe('catch', () => {
     it('should catch error', (done) => {
       const query = User.select({
-        column: raw(columnTypes.boolean(), 'koko'),
+        column: db.raw((t) => t.boolean(), 'koko'),
       }).catch((err) => {
         expect(err.message).toBe(`column "koko" does not exist`);
         done();

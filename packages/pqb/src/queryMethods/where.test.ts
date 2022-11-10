@@ -1,5 +1,4 @@
-import { expectSql, Message, User } from '../test-utils';
-import { raw } from '../common';
+import { db, expectSql, Message, User } from '../test-utils';
 import { Sql } from '../sql';
 import { Query } from '../query';
 import { pushQueryOn } from './join';
@@ -107,7 +106,7 @@ export const testWhere = (
 
     it('should handle condition with operator and raw', () => {
       expectSql(
-        buildSql((q) => q.where({ id: { in: raw('(1, 2, 3)') } })),
+        buildSql((q) => q.where({ id: { in: db.raw('(1, 2, 3)') } })),
         `
             ${startSql}
             "user"."id" IN (1, 2, 3)
@@ -117,7 +116,7 @@ export const testWhere = (
 
     it('should accept raw sql', () => {
       expectSql(
-        buildSql((q) => q.where({ id: raw('1 + 2') })),
+        buildSql((q) => q.where({ id: db.raw('1 + 2') })),
         `
             ${startSql} "user"."id" = 1 + 2
           `,
@@ -195,8 +194,10 @@ export const testWhere = (
     it('should handle condition with operator and raw', () => {
       expectSql(
         [
-          buildSql((q) => q.where({ NOT: { id: { in: raw('(1, 2, 3)') } } })),
-          buildSql((q) => q.whereNot({ id: { in: raw('(1, 2, 3)') } })),
+          buildSql((q) =>
+            q.where({ NOT: { id: { in: db.raw('(1, 2, 3)') } } }),
+          ),
+          buildSql((q) => q.whereNot({ id: { in: db.raw('(1, 2, 3)') } })),
         ],
         `
             ${startSql}
@@ -208,8 +209,8 @@ export const testWhere = (
     it('should accept raw sql', () => {
       expectSql(
         [
-          buildSql((q) => q.where({ NOT: { id: raw('1 + 2') } })),
-          buildSql((q) => q.whereNot({ id: raw('1 + 2') })),
+          buildSql((q) => q.where({ NOT: { id: db.raw('1 + 2') } })),
+          buildSql((q) => q.whereNot({ id: db.raw('1 + 2') })),
         ],
         `
             ${startSql} NOT "user"."id" = 1 + 2
@@ -284,9 +285,13 @@ export const testWhere = (
       expectSql(
         [
           buildSql((q) =>
-            q.where({ OR: [{ id: raw('1 + 2') }, { name: raw('2 + 3') }] }),
+            q.where({
+              OR: [{ id: db.raw('1 + 2') }, { name: db.raw('2 + 3') }],
+            }),
           ),
-          buildSql((q) => q.or({ id: raw('1 + 2') }, { name: raw('2 + 3') })),
+          buildSql((q) =>
+            q.or({ id: db.raw('1 + 2') }, { name: db.raw('2 + 3') }),
+          ),
         ],
         `
             ${startSql}
@@ -347,13 +352,13 @@ export const testWhere = (
           buildSql((q) =>
             q.where({
               OR: [
-                { NOT: { id: raw('1 + 2') } },
-                { NOT: { name: raw('2 + 3') } },
+                { NOT: { id: db.raw('1 + 2') } },
+                { NOT: { name: db.raw('2 + 3') } },
               ],
             }),
           ),
           buildSql((q) =>
-            q.orNot({ id: raw('1 + 2') }, { name: raw('2 + 3') }),
+            q.orNot({ id: db.raw('1 + 2') }, { name: db.raw('2 + 3') }),
           ),
         ],
         `
@@ -412,9 +417,9 @@ export const testWhere = (
       expectSql(
         [
           buildSql((q) =>
-            q.where({ IN: { columns: ['id'], values: raw('(1, 2, 3)') } }),
+            q.where({ IN: { columns: ['id'], values: db.raw('(1, 2, 3)') } }),
           ),
-          buildSql((q) => q.whereIn('id', raw('(1, 2, 3)'))),
+          buildSql((q) => q.whereIn('id', db.raw('(1, 2, 3)'))),
         ],
         `
             ${startSql}
@@ -427,15 +432,15 @@ export const testWhere = (
           buildSql((q) =>
             q.where({
               IN: [
-                { columns: ['id'], values: raw('(1, 2, 3)') },
-                { columns: ['name'], values: raw(`('a', 'b', 'c')`) },
+                { columns: ['id'], values: db.raw('(1, 2, 3)') },
+                { columns: ['name'], values: db.raw(`('a', 'b', 'c')`) },
               ],
             }),
           ),
           buildSql((q) =>
             q.whereIn({
-              id: raw('(1, 2, 3)'),
-              name: raw(`('a', 'b', 'c')`),
+              id: db.raw('(1, 2, 3)'),
+              name: db.raw(`('a', 'b', 'c')`),
             }),
           ),
         ],
@@ -526,12 +531,12 @@ export const testWhere = (
               q.where({
                 IN: {
                   columns: ['id', 'name'],
-                  values: raw(`((1, 'a'), (2, 'b'))`),
+                  values: db.raw(`((1, 'a'), (2, 'b'))`),
                 },
               }),
             ),
             buildSql((q) =>
-              q.whereIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`)),
+              q.whereIn(['id', 'name'], db.raw(`((1, 'a'), (2, 'b'))`)),
             ),
           ],
           `
@@ -624,12 +629,12 @@ export const testWhere = (
             q.where({
               OR: [
                 { id: 1 },
-                { IN: { columns: ['id'], values: raw('(1, 2, 3)') } },
+                { IN: { columns: ['id'], values: db.raw('(1, 2, 3)') } },
               ],
             }),
           ),
           buildSql((q) =>
-            q.where({ id: 1 }).orWhereIn({ id: raw('(1, 2, 3)') }),
+            q.where({ id: 1 }).orWhereIn({ id: db.raw('(1, 2, 3)') }),
           ),
         ],
         `
@@ -647,8 +652,8 @@ export const testWhere = (
                 { id: 1 },
                 {
                   IN: [
-                    { columns: ['id'], values: raw('(1, 2, 3)') },
-                    { columns: ['name'], values: raw(`('a', 'b', 'c')`) },
+                    { columns: ['id'], values: db.raw('(1, 2, 3)') },
+                    { columns: ['name'], values: db.raw(`('a', 'b', 'c')`) },
                   ],
                 },
               ],
@@ -656,8 +661,8 @@ export const testWhere = (
           ),
           buildSql((q) =>
             q.where({ id: 1 }).orWhereIn({
-              id: raw('(1, 2, 3)'),
-              name: raw(`('a', 'b', 'c')`),
+              id: db.raw('(1, 2, 3)'),
+              name: db.raw(`('a', 'b', 'c')`),
             }),
           ),
         ],
@@ -775,7 +780,7 @@ export const testWhere = (
                   {
                     IN: {
                       columns: ['id', 'name'],
-                      values: raw(`((1, 'a'), (2, 'b'))`),
+                      values: db.raw(`((1, 'a'), (2, 'b'))`),
                     },
                   },
                 ],
@@ -784,7 +789,7 @@ export const testWhere = (
             buildSql((q) =>
               q
                 .where({ id: 1 })
-                .orWhereIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`)),
+                .orWhereIn(['id', 'name'], db.raw(`((1, 'a'), (2, 'b'))`)),
             ),
           ],
           `
@@ -882,12 +887,12 @@ export const testWhere = (
         [
           buildSql((q) =>
             q.where({
-              NOT: { IN: { columns: ['id'], values: raw('(1, 2, 3)') } },
+              NOT: { IN: { columns: ['id'], values: db.raw('(1, 2, 3)') } },
             }),
           ),
           buildSql((q) =>
             q.whereNotIn({
-              id: raw('(1, 2, 3)'),
+              id: db.raw('(1, 2, 3)'),
             }),
           ),
         ],
@@ -903,16 +908,16 @@ export const testWhere = (
             q.where({
               NOT: {
                 IN: [
-                  { columns: ['id'], values: raw('(1, 2, 3)') },
-                  { columns: ['name'], values: raw(`('a', 'b', 'c')`) },
+                  { columns: ['id'], values: db.raw('(1, 2, 3)') },
+                  { columns: ['name'], values: db.raw(`('a', 'b', 'c')`) },
                 ],
               },
             }),
           ),
           buildSql((q) =>
             q.whereNotIn({
-              id: raw('(1, 2, 3)'),
-              name: raw(`('a', 'b', 'c')`),
+              id: db.raw('(1, 2, 3)'),
+              name: db.raw(`('a', 'b', 'c')`),
             }),
           ),
         ],
@@ -1014,13 +1019,13 @@ export const testWhere = (
                 NOT: {
                   IN: {
                     columns: ['id', 'name'],
-                    values: raw(`((1, 'a'), (2, 'b'))`),
+                    values: db.raw(`((1, 'a'), (2, 'b'))`),
                   },
                 },
               }),
             ),
             buildSql((q) =>
-              q.whereNotIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`)),
+              q.whereNotIn(['id', 'name'], db.raw(`((1, 'a'), (2, 'b'))`)),
             ),
           ],
           `
@@ -1125,14 +1130,14 @@ export const testWhere = (
               OR: [
                 { id: 1 },
                 {
-                  NOT: { IN: { columns: ['id'], values: raw('(1, 2, 3)') } },
+                  NOT: { IN: { columns: ['id'], values: db.raw('(1, 2, 3)') } },
                 },
               ],
             }),
           ),
           buildSql((q) =>
             q.where({ id: 1 }).orWhereNotIn({
-              id: raw('(1, 2, 3)'),
+              id: db.raw('(1, 2, 3)'),
             }),
           ),
         ],
@@ -1152,8 +1157,8 @@ export const testWhere = (
                 {
                   NOT: {
                     IN: [
-                      { columns: ['id'], values: raw('(1, 2, 3)') },
-                      { columns: ['name'], values: raw(`('a', 'b', 'c')`) },
+                      { columns: ['id'], values: db.raw('(1, 2, 3)') },
+                      { columns: ['name'], values: db.raw(`('a', 'b', 'c')`) },
                     ],
                   },
                 },
@@ -1162,8 +1167,8 @@ export const testWhere = (
           ),
           buildSql((q) =>
             q.where({ id: 1 }).orWhereNotIn({
-              id: raw('(1, 2, 3)'),
-              name: raw(`('a', 'b', 'c')`),
+              id: db.raw('(1, 2, 3)'),
+              name: db.raw(`('a', 'b', 'c')`),
             }),
           ),
         ],
@@ -1288,7 +1293,7 @@ export const testWhere = (
                     NOT: {
                       IN: {
                         columns: ['id', 'name'],
-                        values: raw(`((1, 'a'), (2, 'b'))`),
+                        values: db.raw(`((1, 'a'), (2, 'b'))`),
                       },
                     },
                   },
@@ -1298,7 +1303,7 @@ export const testWhere = (
             buildSql((q) =>
               q
                 .where({ id: 1 })
-                .orWhereNotIn(['id', 'name'], raw(`((1, 'a'), (2, 'b'))`)),
+                .orWhereNotIn(['id', 'name'], db.raw(`((1, 'a'), (2, 'b'))`)),
             ),
           ],
           `
@@ -1446,15 +1451,19 @@ export const testJoin = (
 
   it('should accept raw and raw', () => {
     expectSql(
-      q[join](Message, raw('"message"."authorId"'), raw('"user"."id"')).toSql(),
+      q[join](
+        Message,
+        db.raw('"message"."authorId"'),
+        db.raw('"user"."id"'),
+      ).toSql(),
       sql(`"message"`, `"message"."authorId" = "user"."id"`),
       values,
     );
     expectSql(
       q[join](
         Message.as('as'),
-        raw('"as"."authorId"'),
-        raw('"user"."id"'),
+        db.raw('"as"."authorId"'),
+        db.raw('"user"."id"'),
       ).toSql(),
       sql(`"message" AS "as"`, `"as"."authorId" = "user"."id"`),
       values,
@@ -1466,9 +1475,9 @@ export const testJoin = (
     expectSql(
       q[join](
         Message,
-        raw('"message"."authorId"'),
+        db.raw('"message"."authorId"'),
         '=',
-        raw('"user"."id"'),
+        db.raw('"user"."id"'),
       ).toSql(),
       sql(`"message"`, `"message"."authorId" = "user"."id"`),
       values,
@@ -1476,9 +1485,9 @@ export const testJoin = (
     expectSql(
       q[join](
         Message.as('as'),
-        raw('"as"."authorId"'),
+        db.raw('"as"."authorId"'),
         '=',
-        raw('"user"."id"'),
+        db.raw('"user"."id"'),
       ).toSql(),
       sql(`"message" AS "as"`, `"as"."authorId" = "user"."id"`),
       values,
@@ -1502,12 +1511,12 @@ export const testJoin = (
 
   it('should accept object of columns with raw value', () => {
     expectSql(
-      q[join](Message, { authorId: raw('"user"."id"') }).toSql(),
+      q[join](Message, { authorId: db.raw('"user"."id"') }).toSql(),
       sql(`"message"`, `"message"."authorId" = "user"."id"`),
       values,
     );
     expectSql(
-      q[join](Message.as('as'), { authorId: raw('"user"."id"') }).toSql(),
+      q[join](Message.as('as'), { authorId: db.raw('"user"."id"') }).toSql(),
       sql(`"message" AS "as"`, `"as"."authorId" = "user"."id"`),
       values,
     );
@@ -1516,12 +1525,12 @@ export const testJoin = (
 
   it('should accept raw sql', () => {
     expectSql(
-      q[join](Message, raw('"authorId" = "user".id')).toSql(),
+      q[join](Message, db.raw('"authorId" = "user".id')).toSql(),
       sql(`"message"`, `"authorId" = "user".id`),
       values,
     );
     expectSql(
-      q[join](Message.as('as'), raw('"authorId" = "user".id')).toSql(),
+      q[join](Message.as('as'), db.raw('"authorId" = "user".id')).toSql(),
       sql(`"message" AS "as"`, `"authorId" = "user".id`),
       values,
     );

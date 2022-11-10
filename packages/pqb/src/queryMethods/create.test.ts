@@ -1,6 +1,7 @@
 import {
   assertType,
   Chat,
+  db,
   expectQueryNotMutated,
   expectSql,
   Message,
@@ -10,7 +11,6 @@ import {
   UserRecord,
   useTestDatabase,
 } from '../test-utils';
-import { raw } from '../common';
 import { OnConflictQueryBuilder } from './create';
 
 describe('create functions', () => {
@@ -22,7 +22,7 @@ describe('create functions', () => {
 
       const query = q.createRaw({
         columns: ['name', 'password'],
-        values: raw('raw sql'),
+        values: db.raw('raw sql'),
       });
       expectSql(
         query.toSql(),
@@ -414,7 +414,7 @@ describe('create functions', () => {
         const query = q
           .count()
           .create(userData)
-          .onConflict(raw('raw query'))
+          .onConflict(db.raw('raw query'))
           .ignore();
         expectSql(
           query.toSql(),
@@ -527,8 +527,8 @@ describe('create functions', () => {
         const query = q
           .count()
           .create(userData)
-          .onConflict(raw('on conflict raw'))
-          .merge(raw('merge raw'));
+          .onConflict(db.raw('on conflict raw'))
+          .merge(db.raw('merge raw'));
 
         expectSql(
           query.toSql(),

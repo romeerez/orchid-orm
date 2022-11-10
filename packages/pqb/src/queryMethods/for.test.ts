@@ -1,5 +1,4 @@
 import { expectQueryNotMutated, expectSql, User } from '../test-utils';
-import { raw } from '../common';
 
 describe('for', () => {
   describe.each`
@@ -30,7 +29,7 @@ describe('for', () => {
     it('should accept raw sql', () => {
       const q = User.all();
       expectSql(
-        q[method as 'forUpdate'](raw('raw sql')).toSql(),
+        q[method as 'forUpdate'](User.raw('raw sql')).toSql(),
         `SELECT * FROM "user" FOR ${sql} OF raw sql`,
       );
       expectQueryNotMutated(q);

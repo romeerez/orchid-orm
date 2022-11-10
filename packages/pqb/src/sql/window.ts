@@ -1,11 +1,10 @@
-import { Query } from '../query';
 import { WindowDeclaration } from './types';
-import { getRaw, isRaw, RawExpression } from '../common';
 import { expressionToSql, q } from './common';
 import { orderByToSql } from './orderBy';
+import { getRaw, isRaw, RawExpression } from '../common';
 
-export const windowToSql = <T extends Query>(
-  window: keyof T['windows'] | WindowDeclaration | RawExpression,
+export const windowToSql = (
+  window: string | WindowDeclaration | RawExpression,
   values: unknown[],
   quotedAs?: string,
 ) => {

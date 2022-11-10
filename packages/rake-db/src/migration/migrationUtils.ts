@@ -2,8 +2,6 @@ import {
   ColumnType,
   ForeignKeyModel,
   ForeignKeyOptions,
-  getRaw,
-  isRaw,
   quote,
   TableData,
   toArray,

@@ -1,5 +1,10 @@
-import { Chat, expectQueryNotMutated, expectSql, User } from '../test-utils';
-import { raw } from '../common';
+import {
+  Chat,
+  db,
+  expectQueryNotMutated,
+  expectSql,
+  User,
+} from '../test-utils';
 
 ['union', 'intersect', 'except'].forEach((what) => {
   const upper = what.toUpperCase();
@@ -7,10 +12,10 @@ import { raw } from '../common';
     it(`adds ${what}`, () => {
       const q = User.all();
       let query = q.select('id');
-      query = query[what as 'union']([Chat.select('id'), raw('SELECT 1')]);
+      query = query[what as 'union']([Chat.select('id'), db.raw('SELECT 1')]);
       query = query[
         (what + 'All') as 'unionAll' | 'intersectAll' | 'exceptAll'
-      ]([raw('SELECT 2')], true);
+      ]([db.raw('SELECT 2')], true);
 
       const wrapped = query.wrap(User.select('id'));
 
@@ -34,7 +39,7 @@ import { raw } from '../common';
 
     it('has modifier', () => {
       const q = User.select('id');
-      q[`_${what}` as '_union']([raw('SELECT 1')]);
+      q[`_${what}` as '_union']([db.raw('SELECT 1')]);
       expectSql(
         q.toSql(),
         `
@@ -43,7 +48,7 @@ import { raw } from '../common';
           SELECT 1
         `,
       );
-      q[`_${what}All` as '_unionAll']([raw('SELECT 2')], true);
+      q[`_${what}All` as '_unionAll']([db.raw('SELECT 2')], true);
       expectSql(
         q.toSql({ clearCache: true }),
         `

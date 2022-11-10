@@ -1,4 +1,3 @@
-// quote table or column
 import { Query } from '../query';
 import { Expression, getRaw, isRaw } from '../common';
 

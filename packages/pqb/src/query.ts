@@ -8,7 +8,12 @@ import {
   getValueKey,
 } from './queryMethods';
 import { QueryData } from './sql';
-import { ColumnShapeOutput, ColumnsShape, ColumnType } from './columnSchema';
+import {
+  ColumnShapeOutput,
+  ColumnsShape,
+  ColumnType,
+  ColumnTypesBase,
+} from './columnSchema';
 import { EmptyObject, Spread } from './utils';
 import { AliasOrTable, RawExpression, StringKey } from './common';
 import { Db } from './db';
@@ -43,6 +48,7 @@ export const defaultsKey: unique symbol = Symbol('defaults');
 
 export type Query = QueryMethods & {
   queryBuilder: Db;
+  columnTypes: ColumnTypesBase;
   whereQueryBuilder: typeof WhereQueryBuilder;
   onQueryBuilder: typeof OnQueryBuilder;
   table?: string;

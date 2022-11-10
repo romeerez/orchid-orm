@@ -1,4 +1,3 @@
-import { raw } from '../common';
 import {
   expectQueryNotMutated,
   adapter,
@@ -12,7 +11,6 @@ import {
   assertType,
   UserRecord,
 } from '../test-utils';
-import { NumberColumn } from '../columnSchema';
 import { NotFoundError } from '../errors';
 
 describe('queryMethods', () => {
@@ -126,7 +124,7 @@ describe('queryMethods', () => {
     });
 
     it('should support raw expression', async () => {
-      const result = await User.pluck(raw<NumberColumn>('123'));
+      const result = await User.pluck(db.raw((t) => t.integer(), '123'));
       expect(result).toEqual([123, 123, 123]);
 
       assertType<typeof result, number[]>();
@@ -206,7 +204,7 @@ describe('queryMethods', () => {
     it('should add distinct on raw sql', () => {
       const q = User.all();
       expectSql(
-        q.distinct(raw('"user".id')).toSql(),
+        q.distinct(db.raw('"user".id')).toSql(),
         `
           SELECT DISTINCT ON ("user".id) * FROM "user"
         `,
@@ -236,7 +234,7 @@ describe('queryMethods', () => {
 
     it('should accept raw sql', () => {
       const q = User.all();
-      const query = q.find(raw('$1 + $2', 1, 2));
+      const query = q.find(db.raw('$1 + $2', 1, 2));
 
       assertType<Awaited<typeof query>, UserRecord>();
 
@@ -274,7 +272,7 @@ describe('queryMethods', () => {
 
     it('should accept raw sql', () => {
       const q = User.all();
-      const query = q.findOptional(raw('$1 + $2', 1, 2));
+      const query = q.findOptional(db.raw('$1 + $2', 1, 2));
 
       assertType<Awaited<typeof query>, UserRecord | undefined>();
 
@@ -305,7 +303,7 @@ describe('queryMethods', () => {
     it('should accept raw', () => {
       const q = User.all();
       expectSql(
-        q.findBy({ name: raw(`'string'`) }).toSql(),
+        q.findBy({ name: db.raw(`'string'`) }).toSql(),
         `SELECT * FROM "user" WHERE "user"."name" = 'string' LIMIT $1`,
         [1],
       );
@@ -330,7 +328,7 @@ describe('queryMethods', () => {
 
     it('should accept raw', () => {
       const q = User.all();
-      const query = q.findByOptional({ name: raw(`'string'`) });
+      const query = q.findByOptional({ name: db.raw(`'string'`) });
 
       assertType<Awaited<typeof query>, UserRecord | undefined>();
 
@@ -431,10 +429,10 @@ describe('queryMethods', () => {
         SELECT * FROM "user"
         GROUP BY id, name
       `;
-      expectSql(q.group(raw('id'), raw('name')).toSql(), expectedSql);
+      expectSql(q.group(db.raw('id'), db.raw('name')).toSql(), expectedSql);
       expectQueryNotMutated(q);
 
-      q._group(raw('id'), raw('name'));
+      q._group(db.raw('id'), db.raw('name'));
       expectSql(q.toSql({ clearCache: true }), expectedSql);
     });
   });
@@ -471,7 +469,7 @@ describe('queryMethods', () => {
       const windowSql = 'PARTITION BY id ORDER BY name DESC';
       expectSql(
         q
-          .window({ w: raw(windowSql) })
+          .window({ w: db.raw(windowSql) })
           .selectAvg('id', {
             over: 'w',
           })
@@ -527,7 +525,7 @@ describe('queryMethods', () => {
     it('adds order with raw sql', () => {
       const q = User.all();
       expectSql(
-        q.order(raw('id ASC NULLS FIRST')).toSql(),
+        q.order(db.raw('id ASC NULLS FIRST')).toSql(),
         `
         SELECT * FROM "user"
         ORDER BY id ASC NULLS FIRST

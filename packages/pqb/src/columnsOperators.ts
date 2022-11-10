@@ -1,7 +1,7 @@
 import { Query } from './query';
-import { getRaw, isRaw, RawExpression } from './common';
 import { quote } from './quote';
 import { addValue } from './sql/common';
+import { getRaw, isRaw, RawExpression } from './common';
 
 type Fn<T> = (key: string, value: T, values: unknown[]) => string;
 

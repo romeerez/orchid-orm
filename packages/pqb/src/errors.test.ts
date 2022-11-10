@@ -1,6 +1,4 @@
-import { UniqueTable, User, useTestDatabase } from './test-utils';
-import { raw } from './common';
-import { columnTypes } from './columnSchema';
+import { db, UniqueTable, User, useTestDatabase } from './test-utils';
 import { QueryError } from './errors';
 
 describe('errors', () => {
@@ -10,7 +8,7 @@ describe('errors', () => {
     let err: Error | undefined;
 
     try {
-      await User.select({ column: raw(columnTypes.boolean(), 'koko') });
+      await User.select({ column: db.raw((t) => t.boolean(), 'koko') });
     } catch (error) {
       err = error as Error;
     }

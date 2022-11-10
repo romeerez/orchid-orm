@@ -1,11 +1,11 @@
 import { InsertQueryData, QueryData } from './types';
 import { addValue, q } from './common';
-import { getRaw, isRaw, raw } from '../common';
 import { pushWhereStatementSql } from './where';
 import { QueryBase } from '../query';
 import { selectToSql } from './select';
 import { ToSqlCtx } from './toSql';
 import { pushQueryValue } from '../queryDataUtils';
+import { getRaw, isRaw, raw } from '../common';
 
 export const pushInsertSql = (
   ctx: ToSqlCtx,

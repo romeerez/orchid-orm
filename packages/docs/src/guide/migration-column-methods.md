@@ -6,16 +6,15 @@ Even though they have no effect in the application code, you still can copy code
 
 ## default
 
-The default value is used only in the migration to set a default on a database level. Value can be a `raw()` SQL.
+The default value is used only in the migration to set a default on a database level. Value can be a raw SQL.
 
 ```ts
 import { change } from 'rake-db'
-import { raw } from 'pqb'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
     active: t.boolean().default(false),
-    date: t.date().default(raw('now()')),
+    date: t.date().default(db.raw('now()')),
   }))
 })
 ```

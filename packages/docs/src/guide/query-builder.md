@@ -89,11 +89,11 @@ const ids = await Table.select('id').pluck()
 `.get` returns a single value, it will add `LIMIT 1` to the query, accepts column name or a raw expression.
 It will throw `NotFoundError` when not found.
 ```ts
-import { raw, NumberColumn } from 'pqb'
+import { NumberColumn } from 'pqb'
 
 const firstName: string = await Table.get('name')
 
-const rawResult: number = await Table.get(raw<NumberColumn>('1 + 1'))
+const rawResult: number = await Table.get(Table.raw((t) => t.integer(), '1 + 1'))
 ```
 
 `.getOptional` returns single value or undefined when not found:
@@ -112,6 +112,32 @@ const records = Table
   .take() // .take() will be overriden by .all()
   .all()
 ```
+
+## raw
+
+When there is a need to use a piece of raw SQL, use `raw` method.
+
+When it is needed to select a value with raw SQL, first argument is a callback with type.
+The inferred type will be used for the query result.
+
+```ts
+const result: { num: number }[] = await Table.select({ num: Table.raw((t) => t.integer(), '1 + 1') })
+```
+
+When using raw SQL in `where` statement or in any other place which does not affect on query result, omit first type argument, provide only SQL:
+
+```ts
+const result = await Table.where(Table.raw('someColumn = $1', 'value'))
+```
+
+To safely use values in the query, write `$1`, `$2` and so on in the SQL and provide the values as the rest arguments.
+Values can be of any type.
+
+```ts
+raw('a = $1 AND b = $2 AND c = $3', 'string', 123, true)
+```
+
+For now, it is the only supported way to interpolate values, this will be extended in the future.
 
 ## select
 
@@ -142,7 +168,7 @@ Table.select({
 import { IntegerColumn } from 'pqb'
 
 Table.select({
-  raw: raw<IntegerColumn>('1 + 2'),
+  raw: Table.raw((t) => t.integer(), '1 + 2'),
 })
 ```
 
@@ -183,7 +209,7 @@ Can accept column names or raw expressions to place it to `DISTINCT ON (...)`:
 
 ```ts
 // Distinct on name and raw sql
-Table.distinct('name', raw('raw sql')).select('id', 'name')
+Table.distinct('name', Table.raw('raw sql')).select('id', 'name')
 ```
 
 ## as
@@ -204,7 +230,7 @@ Set the `FROM` value, by default table name is used.
 Table.from(OtherTable.select('foo', 'bar'))
 
 // accepts raw query:
-Table.from(raw('raw sql expression'))
+Table.from(Table.raw('raw sql expression'))
 
 // accepts alias of `WITH` expression:
 q.with('foo', OtherTable.select('id', 'name'))
@@ -253,7 +279,7 @@ type WithOptions = {
 Table.with(
   'alias',
   { id: columnTypes.integer(), name: columnTypes.text() },
-  raw('SELECT id, name FROM "someTable"'),
+  Table.raw('SELECT id, name FROM "someTable"'),
 )
 
 // accepts query:
@@ -265,7 +291,7 @@ Table.with(
 // accepts a callback for a query builder:
 Table.with(
   'alias',
-  (qb) => qb.select({ one: raw<NumberColumn>('1') }),
+  (qb) => qb.select({ one: Table.raw((t) => t.integer(), '1') }),
 )
 
 // All mentional forms can accept options as a second argument:
@@ -440,7 +466,7 @@ SomeTable
   .union(
     [
       OtherTable.select('id', 'name'),
-      raw(`SELECT id, name FROM "thirdTable"`)
+      SomeTable.raw(`SELECT id, name FROM "thirdTable"`)
     ],
     true, // optional wrap parameter
   )
@@ -479,7 +505,7 @@ const createdRecords = await Table.createMany([
 ```ts
 const createdRecords = await Table.createRaw({
   columns: ['name', 'password'],
-  values: raw(`raw expression for VALUES`)
+  values: Table.raw(`raw expression for VALUES`)
 })
 ```
 
@@ -501,7 +527,7 @@ const arrayOfIds: { id: number }[] = await Table.select('id').createMany([one, t
 // returns array of objects as well for raw values:
 const arrayOfIds2 = await Table.select('id').createRaw({
   columns: ['name', 'password'],
-  values: raw(`raw expression for VALUES`)
+  values: Table.raw(`raw expression for VALUES`)
 })
 ```
 
@@ -548,14 +574,14 @@ Table.create(data).onConfict('email')
 Table.create(data).onConfict(['email', 'name'])
 
 // raw expression:
-Table.create(data).onConfict(raw('(email) where condition'))
+Table.create(data).onConfict(Table.raw('(email) where condition'))
 ```
 
 ::: info
 The column(s) specified by this method must either be the table's PRIMARY KEY or have a UNIQUE index on them, or the query will fail to execute.
 When specifying multiple columns, they must be a composite PRIMARY KEY or have composite UNIQUE index.
 
-You can use raw(...) function in onConflict.
+You can use Table.raw(...) function in onConflict.
 It can be useful to specify condition when you have partial index:
 
 ```ts
@@ -566,7 +592,7 @@ Table
     active: true
   })
   // ignore only on email conflict and active is true.
-  .onConflict(knex.raw('(email) where active'))
+  .onConflict(Table.raw('(email) where active'))
   .ignore()
 ```
 :::
@@ -687,7 +713,7 @@ Table
 `.merge` also accepts raw expression:
 
 ```ts
-Table.create(data).onConflict().merge(raw('raw SQL expression'))
+Table.create(data).onConflict().merge(Table.raw('raw SQL expression'))
 ```
 
 ## defaults
@@ -764,7 +790,7 @@ it returns updated count by default,
 you can customize returning data by using `select`.
 
 ```ts
-const updatedCount = await Table.find(1).update(raw(`name = $1`, ['name']))
+const updatedCount = await Table.find(1).update(Table.raw(`name = $1`, ['name']))
 ```
 
 ## updateOrThrow
@@ -1302,7 +1328,7 @@ import { TextColumn } from './string';
 // object have type { nameAlias: string, foo: string } | null
 const object = Table.jsonAgg({
   nameAlias: 'name',
-  foo: raw<TextColumn>('"bar" || "baz"')
+  foo: Table.raw((t) => t.text(), '"bar" || "baz"')
 }, aggregateOptions)
 ```
 
@@ -1369,7 +1395,7 @@ type AggregateOptions = {
   // set select alias
   as?: string;
   
-  // Expression can be a table column name or raw()
+  // Expression can be a table column name or Table.raw()
   partitionBy?: Expression | Expression[];
   
   order?:
@@ -1526,7 +1552,7 @@ Table.where({
   },
   
   // where column equals to raw sql
-  column: raw('raw expression')
+  column: Table.raw('raw expression')
 })
 
 ```
@@ -1543,7 +1569,7 @@ Table.where({ id: 1 }, otherQuery)
 `.where` supports raw argument:
 
 ```ts
-Table.where(raw('a = b'))
+Table.where(Table.raw('a = b'))
 ```
 
 `.where` can accept a callback with specific query builder containing all "where" methods such as `.where`, `.or`, `.whereNot`, `.whereIn`, `.whereExists`:
@@ -1560,7 +1586,7 @@ Table.where((q) =>
 `.where` can accept multiple arguments, conditions are joined with `AND`:
 
 ```ts
-Table.where({ id: 1 }, Table.where({ name: 'John' }), raw('a = b'))
+Table.where({ id: 1 }, Table.where({ name: 'John' }), Table.raw('a = b'))
 ```
 
 ### where special keys
@@ -1733,7 +1759,7 @@ It supports raw query:
 ```ts
 Table.whereIn(
   ['id', 'name'],
-  raw(`((1, 'one'), (2, 'two'))`)
+  Table.raw(`((1, 'one'), (2, 'two'))`)
 )
 ```
 
@@ -1781,7 +1807,7 @@ Table.where({
     lt: OtherTable.select('someNumber').take(),
 
     // raw expression, produces WHERE "numericColumn" < "otherColumn" + 10
-    lt: raw('"otherColumn" + 10')
+    lt: Table.raw('"otherColumn" + 10')
   }
 })
 ```
@@ -1820,7 +1846,7 @@ Table.where({
     // WHERE "column" IN (SELECT "column" FROM "otherTable")
     in: OtherTable.select('column'),
     
-    in: raw("('a', 'b')")
+    in: Table.raw("('a', 'b')")
   }
 })
 ```
@@ -1869,7 +1895,7 @@ Table.where({
     // sub query and raw expression
     between: [
       OtherTable.select('column').take(),
-      raw('2 + 2'),
+      Table.raw('2 + 2'),
     ],
   }
 })
@@ -2002,13 +2028,13 @@ User.join(Message, 'userId', '!=', 'id')
 User.join(Message, 'message.userId', '!=', 'user.id')
 
 // can accept raw expression:
-User.join(Message, raw('"message"."userId" = "user"."id"'))
+User.join(Message, User.raw('"message"."userId" = "user"."id"'))
 
 // one of the columns or both can be raw expressions:
-User.join(Message, raw('left raw expression'), raw('rigth raw expression'))
+User.join(Message, User.raw('left raw expression'), User.raw('rigth raw expression'))
 
 // with operator:
-User.join(Message, raw('left raw expression'), '!=', raw('rigth raw expression'))
+User.join(Message, User.raw('left raw expression'), '!=', User.raw('rigth raw expression'))
 
 // can accept object where keys are joined table columns and values are main table columns:
 User.join(Message, {
@@ -2018,7 +2044,7 @@ User.join(Message, {
   'message.userId': 'user.id',
   
   // value can be a raw expression:
-  userId: raw('sql expression'),
+  userId: User.raw('sql expression'),
 })
 ```
 
@@ -2110,7 +2136,7 @@ Table.order({
     dir: 'ASC', // or DESC
     nulls: 'FIRST', // or LAST
   },
-}, raw('raw sql'))
+}, Table.raw('raw sql'))
 ```
 
 ## having, havingOr
@@ -2269,7 +2295,7 @@ HAVING count(column) WITHIN GROUP (ORDER name ASC) = 10
 `.having` method supports raw sql:
 
 ```ts
-Table.having(raw('raw sql'))
+Table.having(Table.raw('raw sql'))
 ```
 
 `.havingOr` takes the same arguments as `.having`, but joins them with `OR`:

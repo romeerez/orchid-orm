@@ -42,6 +42,7 @@ export type Model = {
   table: string;
   columns: ModelConfig;
   schema?: string;
+  columnTypes: ColumnTypesBase;
 };
 
 export const createModel = <CT extends ColumnTypesBase>(options: {
@@ -51,6 +52,11 @@ export const createModel = <CT extends ColumnTypesBase>(options: {
     table!: string;
     columns!: ModelConfig;
     schema?: string;
+    columnTypes: CT;
+
+    constructor() {
+      this.columnTypes = options.columnTypes;
+    }
 
     setColumns = <T extends ColumnsShape>(
       fn: (t: CT) => T,

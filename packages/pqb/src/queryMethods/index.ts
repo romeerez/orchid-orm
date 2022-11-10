@@ -21,3 +21,4 @@ export * from './update';
 export * from './upsert';
 export * from './where';
 export * from './with';
+export * from './raw';

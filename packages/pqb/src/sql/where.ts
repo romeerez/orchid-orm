@@ -9,10 +9,10 @@ import {
   WhereOnJoinItem,
 } from './types';
 import { addValue, q, qc, quoteFullColumn } from './common';
-import { getRaw, isRaw, RawExpression } from '../common';
 import { getQueryAs, MaybeArray, toArray } from '../utils';
 import { processJoinItem } from './join';
 import { ToSqlCtx } from './toSql';
+import { getRaw, isRaw, RawExpression } from '../common';
 
 export const pushWhereStatementSql = (
   ctx: ToSqlCtx,

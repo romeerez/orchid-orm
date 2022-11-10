@@ -1,5 +1,6 @@
 import {
   assertType,
+  db,
   expectQueryNotMutated,
   expectSql,
   Profile,
@@ -9,7 +10,6 @@ import {
   UserRecord,
   useTestDatabase,
 } from '../test-utils';
-import { raw } from '../common';
 import { DateColumn } from '../columnSchema';
 
 const insertUserAndProfile = async () => {
@@ -236,7 +236,7 @@ describe('selectMethods', () => {
 
     it('can select raw', () => {
       const q = User.all();
-      const query = q.select({ one: raw('1') });
+      const query = q.select({ one: db.raw('1') });
 
       assertType<Awaited<typeof query>, { one: unknown }[]>();
 
@@ -345,8 +345,8 @@ describe('selectMethods', () => {
 
     it('should parse raw column', async () => {
       const q = User.select({
-        date: raw(
-          new DateColumn().parse((input) => new Date(input)),
+        date: db.raw(
+          () => new DateColumn().parse((input) => new Date(input)),
           '"createdAt"',
         ),
       });

@@ -1,11 +1,11 @@
 import { Query, QueryBase, SelectableBase, WithDataBase } from '../query';
 import { ColumnOperators, QueryData } from '../sql';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
-import { RawExpression } from '../common';
 import { getClonedQueryData, MaybeArray } from '../utils';
 import { JoinArgs, JoinCallback, JoinCallbackArg } from './join';
 import { RelationsBase } from '../relations';
 import { ColumnsShape } from '../columnSchema';
+import { RawExpression } from '../common';
 
 export type WhereArg<T extends QueryBase> =
   | (Omit<

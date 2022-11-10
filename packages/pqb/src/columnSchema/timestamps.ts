@@ -1,5 +1,4 @@
 import { ColumnType } from './columnType';
-import { getRawSql, isRaw, raw } from '../common';
 import { Query } from '../query';
 import { makeRegexToFindInSql, pushOrNewArrayToObject } from '../utils';
 import {
@@ -7,6 +6,7 @@ import {
   UpdateQueryData,
   UpdateQueryDataItem,
 } from '../sql';
+import { getRawSql, isRaw, raw } from '../common';
 
 export function timestamps<T extends ColumnType>(this: {
   timestamp(): T;

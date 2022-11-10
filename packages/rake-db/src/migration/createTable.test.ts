@@ -1,4 +1,3 @@
-import { raw } from 'pqb';
 import { expectSql, getDb, queryMock, resetDb, toLine } from '../test-utils';
 
 const db = getDb();

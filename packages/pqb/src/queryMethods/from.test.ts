@@ -1,5 +1,4 @@
-import { expectQueryNotMutated, expectSql, User } from '../test-utils';
-import { raw } from '../common';
+import { db, expectQueryNotMutated, expectSql, User } from '../test-utils';
 
 describe('from', () => {
   it('should accept string parameter', () => {
@@ -20,7 +19,7 @@ describe('from', () => {
   it('should accept raw parameter', () => {
     const q = User.all();
     expectSql(
-      q.as('t').from(raw('profile')).toSql(),
+      q.as('t').from(db.raw('profile')).toSql(),
       `SELECT * FROM profile AS "t"`,
     );
     expectQueryNotMutated(q);

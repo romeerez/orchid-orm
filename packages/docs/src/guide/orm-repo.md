@@ -13,7 +13,7 @@ We can define a repository in such way:
 
 ```ts
 import { createRepo } from 'porm'
-import { raw, columnTypes } from 'pqb'
+import { columnTypes } from 'pqb'
 import { db } from '../path-to-db'
 import { User } from './user.model'
 import { followRepo } from './follow.repo'

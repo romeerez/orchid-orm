@@ -1,5 +1,4 @@
-import { expectSql, User } from './test-utils';
-import { raw } from './common';
+import { db, expectSql, User } from './test-utils';
 
 describe('operators', () => {
   describe('equals', () => {
@@ -27,7 +26,7 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ name: { equals: raw("'name'") } }).toSql(),
+        User.where({ name: { equals: db.raw("'name'") } }).toSql(),
         `
           SELECT * FROM "user"
           WHERE "user"."name" = 'name'
@@ -61,7 +60,7 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ name: { not: raw("'name'") } }).toSql(),
+        User.where({ name: { not: db.raw("'name'") } }).toSql(),
         `
           SELECT * FROM "user"
           WHERE "user"."name" <> 'name'
@@ -94,7 +93,7 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ name: { in: raw("('a', 'b')") } }).toSql(),
+        User.where({ name: { in: db.raw("('a', 'b')") } }).toSql(),
         `
           SELECT * FROM "user"
           WHERE "user"."name" IN ('a', 'b')
@@ -127,7 +126,7 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ name: { notIn: raw("('a', 'b')") } }).toSql(),
+        User.where({ name: { notIn: db.raw("('a', 'b')") } }).toSql(),
         `
           SELECT * FROM "user"
           WHERE NOT "user"."name" IN ('a', 'b')
@@ -161,7 +160,7 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ id: { lt: raw('5') } }).toSql(),
+        User.where({ id: { lt: db.raw('5') } }).toSql(),
         `
           SELECT * FROM "user"
           WHERE "user"."id" < 5
@@ -195,7 +194,7 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ id: { lte: raw('5') } }).toSql(),
+        User.where({ id: { lte: db.raw('5') } }).toSql(),
         `
           SELECT * FROM "user"
           WHERE "user"."id" <= 5
@@ -229,7 +228,7 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ id: { gt: raw('5') } }).toSql(),
+        User.where({ id: { gt: db.raw('5') } }).toSql(),
         `
           SELECT * FROM "user"
           WHERE "user"."id" > 5
@@ -263,7 +262,7 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ id: { gte: raw('5') } }).toSql(),
+        User.where({ id: { gte: db.raw('5') } }).toSql(),
         `
           SELECT * FROM "user"
           WHERE "user"."id" >= 5
@@ -297,7 +296,7 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ name: { contains: raw("'ko'") } }).toSql(),
+        User.where({ name: { contains: db.raw("'ko'") } }).toSql(),
         `
           SELECT * FROM "user"
           WHERE "user"."name" LIKE '%' || 'ko' || '%'
@@ -333,7 +332,7 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ name: { containsInsensitive: raw("'ko'") } }).toSql(),
+        User.where({ name: { containsInsensitive: db.raw("'ko'") } }).toSql(),
         `
           SELECT * FROM "user"
           WHERE "user"."name" ILIKE '%' || 'ko' || '%'
@@ -369,7 +368,7 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ name: { startsWith: raw("'ko'") } }).toSql(),
+        User.where({ name: { startsWith: db.raw("'ko'") } }).toSql(),
         `
           SELECT * FROM "user"
           WHERE "user"."name" LIKE 'ko' || '%'
@@ -405,7 +404,7 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ name: { startsWithInsensitive: raw("'ko'") } }).toSql(),
+        User.where({ name: { startsWithInsensitive: db.raw("'ko'") } }).toSql(),
         `
           SELECT * FROM "user"
           WHERE "user"."name" ILIKE 'ko' || '%'
@@ -441,7 +440,7 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ name: { endsWith: raw("'ko'") } }).toSql(),
+        User.where({ name: { endsWith: db.raw("'ko'") } }).toSql(),
         `
           SELECT * FROM "user"
           WHERE "user"."name" LIKE '%' || 'ko'
@@ -477,7 +476,7 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ name: { endsWithInsensitive: raw("'ko'") } }).toSql(),
+        User.where({ name: { endsWithInsensitive: db.raw("'ko'") } }).toSql(),
         `
           SELECT * FROM "user"
           WHERE "user"."name" ILIKE '%' || 'ko'
@@ -515,7 +514,7 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ id: { between: [raw('1'), raw('10')] } }).toSql(),
+        User.where({ id: { between: [db.raw('1'), db.raw('10')] } }).toSql(),
         `
           SELECT * FROM "user"
           WHERE "user"."id" BETWEEN 1 AND 10
@@ -554,7 +553,7 @@ describe('operators', () => {
     it('should handle raw query', () => {
       expectSql(
         User.where({
-          data: { jsonPath: ['$.name', '=', raw("'name'")] },
+          data: { jsonPath: ['$.name', '=', db.raw("'name'")] },
         }).toSql(),
         `
           SELECT * FROM "user"
@@ -596,7 +595,7 @@ describe('operators', () => {
     it('should handle raw query', () => {
       expectSql(
         User.where({
-          data: { [method]: raw(`'{"a":"b"}'`) },
+          data: { [method]: db.raw(`'{"a":"b"}'`) },
         }).toSql(),
         `
           SELECT * FROM "user"

@@ -1,5 +1,4 @@
 import { assertType, db } from '../test-utils';
-import { raw } from '../common';
 import { columnTypes } from './columnTypes';
 import { TimeInterval } from './dateTime';
 
@@ -7,7 +6,7 @@ describe('column types', () => {
   describe('numeric types', () => {
     describe('smallint', () => {
       it('should output number', async () => {
-        const result = await db.get(raw(columnTypes.smallint(), '1::smallint'));
+        const result = await db.get(db.raw((t) => t.smallint(), '1::smallint'));
         expect(result).toBe(1);
 
         assertType<typeof result, number>();
@@ -16,7 +15,7 @@ describe('column types', () => {
 
     describe('integer', () => {
       it('should output number', async () => {
-        const result = await db.get(raw(columnTypes.integer(), '1::integer'));
+        const result = await db.get(db.raw((t) => t.integer(), '1::integer'));
         expect(result).toBe(1);
 
         assertType<typeof result, number>();
@@ -25,7 +24,7 @@ describe('column types', () => {
 
     describe('bigint', () => {
       it('should output string', async () => {
-        const result = await db.get(raw(columnTypes.bigint(), '1::bigint'));
+        const result = await db.get(db.raw((t) => t.bigint(), '1::bigint'));
         expect(result).toBe('1');
 
         assertType<typeof result, string>();
@@ -34,7 +33,7 @@ describe('column types', () => {
 
     describe('numeric', () => {
       it('should output string', async () => {
-        const result = await db.get(raw(columnTypes.numeric(), '1::numeric'));
+        const result = await db.get(db.raw((t) => t.numeric(), '1::numeric'));
         expect(result).toBe('1');
 
         assertType<typeof result, string>();
@@ -43,7 +42,7 @@ describe('column types', () => {
 
     describe('decimal', () => {
       it('should output string', async () => {
-        const result = await db.get(raw(columnTypes.decimal(), '1::decimal'));
+        const result = await db.get(db.raw((t) => t.decimal(), '1::decimal'));
         expect(result).toBe('1');
 
         assertType<typeof result, string>();
@@ -52,7 +51,7 @@ describe('column types', () => {
 
     describe('real', () => {
       it('should output number', async () => {
-        const result = await db.get(raw(columnTypes.real(), '1::real'));
+        const result = await db.get(db.raw((t) => t.real(), '1::real'));
         expect(result).toBe(1);
 
         assertType<typeof result, number>();
@@ -62,7 +61,7 @@ describe('column types', () => {
     describe('doublePrecision', () => {
       it('should output number', async () => {
         const result = await db.get(
-          raw(columnTypes.real(), '1::double precision'),
+          db.raw((t) => t.real(), '1::double precision'),
         );
         expect(result).toBe(1);
 
@@ -73,7 +72,7 @@ describe('column types', () => {
     describe('smallSerial', () => {
       it('should output number', async () => {
         const result = await db.get(
-          raw(columnTypes.smallSerial(), '1::smallint'),
+          db.raw((t) => t.smallSerial(), '1::smallint'),
         );
         expect(result).toBe(1);
 
@@ -83,7 +82,7 @@ describe('column types', () => {
 
     describe('serial', () => {
       it('should output number', async () => {
-        const result = await db.get(raw(columnTypes.serial(), '1::integer'));
+        const result = await db.get(db.raw((t) => t.serial(), '1::integer'));
         expect(result).toBe(1);
 
         assertType<typeof result, number>();
@@ -92,7 +91,7 @@ describe('column types', () => {
 
     describe('bigSerial', () => {
       it('should output string', async () => {
-        const result = await db.get(raw(columnTypes.bigSerial(), '1::bigint'));
+        const result = await db.get(db.raw((t) => t.bigSerial(), '1::bigint'));
         expect(result).toBe('1');
 
         assertType<typeof result, string>();
@@ -104,7 +103,7 @@ describe('column types', () => {
     describe('varchar', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.varchar(), `'text'::varchar(4)`),
+          db.raw((t) => t.varchar(), `'text'::varchar(4)`),
         );
         expect(result).toBe('text');
 
@@ -114,7 +113,7 @@ describe('column types', () => {
 
     describe('char', () => {
       it('should output string', async () => {
-        const result = await db.get(raw(columnTypes.char(), `'text'::char(4)`));
+        const result = await db.get(db.raw((t) => t.char(), `'text'::char(4)`));
         expect(result).toBe('text');
 
         assertType<typeof result, string>();
@@ -123,7 +122,7 @@ describe('column types', () => {
 
     describe('text', () => {
       it('should output string', async () => {
-        const result = await db.get(raw(columnTypes.text(), `'text'::text`));
+        const result = await db.get(db.raw((t) => t.text(), `'text'::text`));
         expect(result).toBe('text');
 
         assertType<typeof result, string>();
@@ -132,7 +131,7 @@ describe('column types', () => {
 
     describe('string', () => {
       it('should be an alias for the text', async () => {
-        const result = await db.get(raw(columnTypes.string(), `'text'::text`));
+        const result = await db.get(db.raw((t) => t.string(), `'text'::text`));
         expect(result).toBe('text');
 
         assertType<typeof result, string>();
@@ -143,7 +142,7 @@ describe('column types', () => {
   describe('binary data type', () => {
     describe('bytea', () => {
       it('should output Buffer', async () => {
-        const result = await db.get(raw(columnTypes.bytea(), `'text'::bytea`));
+        const result = await db.get(db.raw((t) => t.bytea(), `'text'::bytea`));
         expect(result instanceof Buffer).toBe(true);
         expect(result.toString()).toBe('text');
 
@@ -156,7 +155,7 @@ describe('column types', () => {
     describe('date', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.date(), `'1999-01-08'::date`),
+          db.raw((t) => t.date(), `'1999-01-08'::date`),
         );
         expect(result).toBe('1999-01-08');
 
@@ -167,7 +166,10 @@ describe('column types', () => {
     describe('timestamp', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.timestamp(), `'1999-01-08 04:05:06'::timestamp`),
+          db.raw(
+            () => columnTypes.timestamp(),
+            `'1999-01-08 04:05:06'::timestamp`,
+          ),
         );
         expect(result).toBe('1999-01-08 04:05:06');
 
@@ -178,8 +180,8 @@ describe('column types', () => {
     describe('timestamp with time zone', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(
-            columnTypes.timestampWithTimeZone(),
+          db.raw(
+            (t) => t.timestampWithTimeZone(),
             `'1999-01-08 04:05:06 +0'::timestamptz AT TIME ZONE 'UTC'`,
           ),
         );
@@ -191,7 +193,7 @@ describe('column types', () => {
 
     describe('time', () => {
       it('should output string', async () => {
-        const result = await db.get(raw(columnTypes.time(), `'12:00'::time`));
+        const result = await db.get(db.raw((t) => t.time(), `'12:00'::time`));
         expect(result).toBe('12:00:00');
 
         assertType<typeof result, string>();
@@ -201,8 +203,8 @@ describe('column types', () => {
     describe('time with time zone', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(
-            columnTypes.timeWithTimeZone(),
+          db.raw(
+            (t) => t.timeWithTimeZone(),
             `'12:00 +0'::timetz AT TIME ZONE 'UTC'`,
           ),
         );
@@ -215,8 +217,8 @@ describe('column types', () => {
     describe('interval', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(
-            columnTypes.interval(),
+          db.raw(
+            (t) => t.interval(),
             `'1 year 2 months 3 days 4 hours 5 minutes 6 seconds'::interval`,
           ),
         );
@@ -237,7 +239,7 @@ describe('column types', () => {
   describe('boolean type', () => {
     describe('boolean', () => {
       it('should output boolean', async () => {
-        const result = await db.get(raw(columnTypes.boolean(), `true`));
+        const result = await db.get(db.raw((t) => t.boolean(), `true`));
         expect(result).toBe(true);
 
         assertType<typeof result, boolean>();
@@ -260,8 +262,8 @@ describe('column types', () => {
 
       it('should output proper union', async () => {
         const result = await db.get(
-          raw(
-            columnTypes.enum('mood', ['sad', 'ok', 'happy']),
+          db.raw(
+            (t) => t.enum('mood', ['sad', 'ok', 'happy']),
             `'happy'::mood`,
           ),
         );
@@ -276,7 +278,7 @@ describe('column types', () => {
     describe('point', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.point(), `'(1, 2)'::point`),
+          db.raw((t) => t.point(), `'(1, 2)'::point`),
         );
         expect(result).toBe('(1,2)');
 
@@ -287,7 +289,7 @@ describe('column types', () => {
     describe('line', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.line(), `'{1, 2, 3}'::line`),
+          db.raw((t) => t.line(), `'{1, 2, 3}'::line`),
         );
         expect(result).toBe('{1,2,3}');
 
@@ -298,7 +300,7 @@ describe('column types', () => {
     describe('lseg', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.lseg(), `'[(1, 2), (3, 4)]'::lseg`),
+          db.raw((t) => t.lseg(), `'[(1, 2), (3, 4)]'::lseg`),
         );
         expect(result).toBe('[(1,2),(3,4)]');
 
@@ -309,7 +311,7 @@ describe('column types', () => {
     describe('box', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.box(), `'((3, 4), (1, 2))'::box`),
+          db.raw((t) => t.box(), `'((3, 4), (1, 2))'::box`),
         );
         expect(result).toBe('(3,4),(1,2)');
 
@@ -320,7 +322,7 @@ describe('column types', () => {
     describe('path', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.path(), `'((1, 2), (3, 4))'::path`),
+          db.raw((t) => t.path(), `'((1, 2), (3, 4))'::path`),
         );
         expect(result).toBe('((1,2),(3,4))');
 
@@ -331,7 +333,7 @@ describe('column types', () => {
     describe('polygon', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.polygon(), `'((1, 2), (3, 4))'::polygon`),
+          db.raw((t) => t.polygon(), `'((1, 2), (3, 4))'::polygon`),
         );
         expect(result).toBe('((1,2),(3,4))');
 
@@ -342,7 +344,7 @@ describe('column types', () => {
     describe('circle', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.circle(), `'<(1,2),3>'::circle`),
+          db.raw((t) => t.circle(), `'<(1,2),3>'::circle`),
         );
         expect(result).toBe('<(1,2),3>');
 
@@ -355,7 +357,7 @@ describe('column types', () => {
     describe('cidr', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.cidr(), `'192.168.100.128/25'::cidr`),
+          db.raw((t) => t.cidr(), `'192.168.100.128/25'::cidr`),
         );
         expect(result).toBe('192.168.100.128/25');
 
@@ -366,7 +368,7 @@ describe('column types', () => {
     describe('inet', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.inet(), `'192.168.100.128/25'::inet`),
+          db.raw((t) => t.inet(), `'192.168.100.128/25'::inet`),
         );
         expect(result).toBe('192.168.100.128/25');
 
@@ -377,7 +379,7 @@ describe('column types', () => {
     describe('macaddr', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.macaddr(), `'08:00:2b:01:02:03'::macaddr`),
+          db.raw((t) => t.macaddr(), `'08:00:2b:01:02:03'::macaddr`),
         );
         expect(result).toBe('08:00:2b:01:02:03');
 
@@ -388,7 +390,7 @@ describe('column types', () => {
     describe('macaddr8', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.macaddr8(), `'08:00:2b:ff:fe:01:02:03'::macaddr8`),
+          db.raw((t) => t.macaddr8(), `'08:00:2b:ff:fe:01:02:03'::macaddr8`),
         );
         expect(result).toBe('08:00:2b:ff:fe:01:02:03');
 
@@ -400,7 +402,7 @@ describe('column types', () => {
   describe('bit string types', () => {
     describe('bit', () => {
       it('should output string', async () => {
-        const result = await db.get(raw(columnTypes.bit(3), `B'101'`));
+        const result = await db.get(db.raw((t) => t.bit(3), `B'101'`));
         expect(result).toBe('101');
 
         assertType<typeof result, string>();
@@ -410,7 +412,7 @@ describe('column types', () => {
     describe('bit varying', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.bitVarying(), `'10101'::bit varying(5)`),
+          db.raw((t) => t.bitVarying(), `'10101'::bit varying(5)`),
         );
         expect(result).toBe('10101');
 
@@ -423,8 +425,8 @@ describe('column types', () => {
     describe('tsvector', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(
-            columnTypes.tsvector(),
+          db.raw(
+            (t) => t.tsvector(),
             `'a fat cat sat on a mat and ate a fat rat'::tsvector`,
           ),
         );
@@ -439,7 +441,7 @@ describe('column types', () => {
     describe('tsquery', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(columnTypes.tsquery(), `'fat & rat'::tsquery`),
+          db.raw((t) => t.tsquery(), `'fat & rat'::tsquery`),
         );
         expect(result).toBe(`'fat' & 'rat'`);
 
@@ -452,8 +454,8 @@ describe('column types', () => {
     describe('uuid', () => {
       it('should output string', async () => {
         const result = await db.get(
-          raw(
-            columnTypes.uuid(),
+          db.raw(
+            (t) => t.uuid(),
             `'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid`,
           ),
         );
@@ -468,8 +470,8 @@ describe('column types', () => {
     describe('array', () => {
       it('should output nested array of numbers', async () => {
         const result = await db.get(
-          raw(
-            columnTypes.array(columnTypes.array(columnTypes.integer())),
+          db.raw(
+            (t) => t.array(t.array(t.integer())),
             `'{{1, 2, 3}, {4, 5, 6}}'::integer[][]`,
           ),
         );
@@ -483,8 +485,8 @@ describe('column types', () => {
 
       it('should output nested array of strings', async () => {
         const result = await db.get(
-          raw(
-            columnTypes.array(columnTypes.array(columnTypes.text())),
+          db.raw(
+            (t) => t.array(t.array(t.text())),
             `'{{"a", "b"}, {"c", "d"}}'::text[][]`,
           ),
         );
@@ -498,8 +500,8 @@ describe('column types', () => {
 
       it('should output nested array of booleans', async () => {
         const result = await db.get(
-          raw(
-            columnTypes.array(columnTypes.array(columnTypes.boolean())),
+          db.raw(
+            (t) => t.array(t.array(t.boolean())),
             `'{{true}, {false}}'::text[][]`,
           ),
         );
@@ -514,7 +516,7 @@ describe('column types', () => {
     describe('money', () => {
       it('should output number', async () => {
         const result = await db.get(
-          raw(columnTypes.money(), `'1234567890.42'::money`),
+          db.raw((t) => t.money(), `'1234567890.42'::money`),
         );
         expect(result).toBe(1234567890.42);
 
