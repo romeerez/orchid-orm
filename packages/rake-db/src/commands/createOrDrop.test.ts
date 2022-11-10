@@ -19,7 +19,7 @@ jest.mock('../common', () => ({
 
 jest.mock('./migrateOrRollback', () => ({
   migrate: jest.fn(),
-}))
+}));
 
 const options = { database: 'dbname', user: 'user', password: 'password' };
 const queryMock = jest.fn();
@@ -164,6 +164,6 @@ describe('createOrDrop', () => {
       ]);
       expect(createSchemaMigrations).toHaveBeenCalled();
       expect(migrate).toBeCalled();
-    })
-  })
+    });
+  });
 });

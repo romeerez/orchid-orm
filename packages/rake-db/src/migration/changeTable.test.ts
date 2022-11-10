@@ -49,7 +49,7 @@ describe('changeTable', () => {
           nullable: t[action](t.text().nullable()),
           nonNullable: t[action](t.text()),
           withDefault: t[action](t.boolean().default(false)),
-          withDefaultRaw: t[action](t.date().default(raw(`now()`))),
+          withDefaultRaw: t[action](t.date().default(t.raw(`now()`))),
           withIndex: t[action](
             t.text().index({
               name: 'indexName',
@@ -346,14 +346,14 @@ describe('changeTable', () => {
       return db.changeTable('table', (t) => ({
         changeType: t.change(t.integer(), t.text()),
         changeTypeUsing: t.change(t.integer(), t.text(), {
-          usingUp: raw('b::text'),
-          usingDown: raw('b::int'),
+          usingUp: t.raw('b::text'),
+          usingDown: t.raw('b::int'),
         }),
         changeCollate: t.change(
           t.text().collate('de_DE'),
           t.text().collate('fr_FR'),
         ),
-        changeDefault: t.change(t.default('from'), t.default(raw("'to'"))),
+        changeDefault: t.change(t.default('from'), t.default(t.raw("'to'"))),
         changeNull: t.change(t.nonNullable(), t.nullable()),
         changeComment: t.change(t.comment('comment 1'), t.comment('comment 2')),
       }));

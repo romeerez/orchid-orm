@@ -8,6 +8,10 @@ import {
   EmptyObject,
   emptyObject,
   TableData,
+  RawExpression,
+  getRaw,
+  isRaw,
+  raw,
 } from 'pqb';
 import {
   ChangeTableCallback,
@@ -98,6 +102,7 @@ type ChangeArg =
 
 type TableChangeMethods = typeof tableChangeMethods;
 const tableChangeMethods = {
+  raw: raw,
   add,
   drop,
   change(from: ChangeArg, to: ChangeArg, options?: ChangeOptions): ChangeItem {
@@ -184,9 +189,14 @@ export const changeTable = async (
       } else if (action === 'rename') {
         const [, name] = result;
         changeActions.rename(state, up, key, name);
-      } else {
+      } else if (action) {
         const [action, item, options] = result;
-        changeActions[action](state, up, key, item, options);
+        changeActions[
+          action as Exclude<
+            keyof typeof changeActions,
+            'change' | 'rename' | 'tableComment'
+          >
+        ](state, up, key, item, options);
       }
     }
   }

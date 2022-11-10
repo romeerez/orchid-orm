@@ -35,7 +35,7 @@ const db = getDb();
           nullable: t.text().nullable(),
           nonNullable: t.text(),
           withDefault: t.boolean().default(false),
-          withDefaultRaw: t.date().default(raw(`now()`)),
+          withDefaultRaw: t.date().default(t.raw(`now()`)),
           withIndex: t.text().index({
             name: 'indexName',
             unique: true,

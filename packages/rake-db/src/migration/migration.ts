@@ -16,6 +16,7 @@ import {
   Sql,
   TransactionAdapter,
   TypeParsers,
+  raw,
 } from 'pqb';
 import { createJoinTable, createTable } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
@@ -24,7 +25,9 @@ import { quoteTable } from '../common';
 export type DropMode = 'CASCADE' | 'RESTRICT';
 
 export type TableOptions = { dropMode?: DropMode; comment?: string };
-export type ColumnsShapeCallback = (t: ColumnTypes) => ColumnsShape;
+export type ColumnsShapeCallback = (
+  t: ColumnTypes & { raw: typeof raw },
+) => ColumnsShape;
 
 export type ChangeTableOptions = { comment?: string | [string, string] | null };
 export type ChangeTableCallback = (t: TableChanger) => TableChangeData;

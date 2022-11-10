@@ -5,6 +5,7 @@ import {
   getTableData,
   Operators,
   quote,
+  raw,
 } from 'pqb';
 import {
   TableOptions,
@@ -107,6 +108,10 @@ export const createJoinTable = async (
   });
 };
 
+const types = Object.assign(Object.create(columnTypes), {
+  raw,
+});
+
 export const createTable = async (
   migration: Migration,
   up: boolean,
@@ -114,7 +119,7 @@ export const createTable = async (
   options: TableOptions,
   fn: ColumnsShapeCallback,
 ) => {
-  const shape = getColumnTypes(columnTypes, fn);
+  const shape = getColumnTypes(types, fn);
 
   if (!up) {
     const { dropMode } = options;
