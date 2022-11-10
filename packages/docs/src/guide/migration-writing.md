@@ -221,8 +221,8 @@ change(async (db) => {
     
     // change column type using SQL expression to convert data
     column2: t.change(t.integer(), t.string(), {
-      usingUp: db.raw('column2::text'),
-      usingDown: db.raw('column2::integer'),
+      usingUp: t.raw('column2::text'),
+      usingDown: t.raw('column2::integer'),
     }),
     
     // change various column properties at once
@@ -235,7 +235,7 @@ change(async (db) => {
     column4: t.change(t.default(1), t.default(2)),
     
     // change column default with raw SQL
-    column5: t.change(t.default(db.raw('2 + 2')), t.default(db.raw('3 + 3'))),
+    column5: t.change(t.default(t.raw('2 + 2')), t.default(t.raw('3 + 3'))),
     
     // change column to be nullable or non nullable
     column6: t.change(t.nonNullable(), t.nullable()),

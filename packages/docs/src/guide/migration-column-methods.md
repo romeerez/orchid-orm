@@ -14,7 +14,7 @@ import { change } from 'rake-db'
 change(async (db) => {
   await db.createTable('table', (t) => ({
     active: t.boolean().default(false),
-    date: t.date().default(db.raw('now()')),
+    date: t.date().default(t.raw('now()')),
   }))
 })
 ```
