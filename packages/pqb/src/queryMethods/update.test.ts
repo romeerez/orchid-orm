@@ -5,6 +5,7 @@ import {
   expectSql,
   User,
   userData,
+  UserRecord,
   useTestDatabase,
 } from '../test-utils';
 
@@ -319,6 +320,23 @@ describe('update', () => {
           .updateOrThrow({ name: 'name' }),
       ).rejects.toThrow();
     });
+  });
+
+  it('should strip unknown keys', () => {
+    const query = User.find(1).update({
+      name: 'name',
+      unknown: 'should be stripped',
+    } as unknown as UserRecord);
+
+    expectSql(
+      query.toSql(),
+      `
+        UPDATE "user"
+        SET "name" = $1, "updatedAt" = now()
+        WHERE "user"."id" = $2
+      `,
+      ['name', 1],
+    );
   });
 
   describe('increment', () => {

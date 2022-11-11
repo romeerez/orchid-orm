@@ -150,6 +150,24 @@ describe('create functions', () => {
         ['name', 'override'],
       );
     });
+
+    it('should strip unknown keys', () => {
+      const query = User.create({
+        name: 'name',
+        password: 'password',
+        unknown: 'should be stripped',
+      } as unknown as UserRecord);
+
+      expectSql(
+        query.toSql(),
+        `
+          INSERT INTO "user"("name", "password")
+          VALUES ($1, $2)
+          RETURNING *
+        `,
+        ['name', 'password'],
+      );
+    });
   });
 
   describe('createMany', () => {
@@ -264,6 +282,31 @@ describe('create functions', () => {
       });
 
       expectQueryNotMutated(q);
+    });
+
+    it('should strip unknown keys', () => {
+      const query = User.createMany([
+        {
+          name: 'name',
+          password: 'password',
+          unknown: 'should be stripped',
+        },
+        {
+          name: 'name',
+          password: 'password',
+          unknown: 'should be stripped',
+        },
+      ] as unknown as UserRecord[]);
+
+      expectSql(
+        query.toSql(),
+        `
+          INSERT INTO "user"("name", "password")
+          VALUES ($1, $2), ($3, $4)
+          RETURNING *
+        `,
+        ['name', 'password', 'name', 'password'],
+      );
     });
   });
 

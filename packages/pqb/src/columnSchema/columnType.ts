@@ -221,6 +221,13 @@ export abstract class ColumnType<
     return this as unknown as Omit<T, 'type'> & { type: Output };
   }
 
+  as<
+    T extends ColumnType,
+    C extends ColumnType<T['type'], Operators, T['inputType']>,
+  >(this: T, _: C) {
+    return this as unknown as C;
+  }
+
   toSQL() {
     return this.dataType;
   }

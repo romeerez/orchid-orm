@@ -432,7 +432,7 @@ describe('schema to zod', () => {
         const schema = columnToZod(t[method as 'date']());
 
         const date = new Date(2000, 0, 1, 0, 0, 0, 0);
-        expect(schema.parse(date.toISOString()).getTime()).toBe(date.getTime());
+        expect(schema.parse(date)).toEqual(date);
 
         expect(() => schema.parse('malformed')).toThrow('Invalid date');
       });
@@ -443,7 +443,7 @@ describe('schema to zod', () => {
         assertType<typeof schema, z.ZodDate>(true);
 
         const date = new Date(2000, 0, 1, 0, 0, 0, 0);
-        expect(schema.parse(date).getTime()).toBe(date.getTime());
+        expect(schema.parse(date)).toEqual(date);
 
         testDateMethods(t[method as 'date']());
       });
@@ -1221,6 +1221,26 @@ describe('schema to zod', () => {
           schema.parse({ name: 'name', subCategories: [{ name: 'name' }] }),
         ).toThrow('Required');
       });
+    });
+  });
+
+  describe('as', () => {
+    it('should convert one type to the same schema as another type', () => {
+      const timestampAsInteger = columnToZod(
+        t
+          .timestamp()
+          .encode((input: number) => new Date(input))
+          .parse(Date.parse)
+          .as(t.integer()),
+      );
+
+      assertType<typeof timestampAsInteger, z.ZodNumber>(true);
+
+      const timestampAsDate = columnToZod(
+        t.timestamp().parse((string) => new Date(string)),
+      );
+
+      assertType<typeof timestampAsDate, z.ZodDate>(true);
     });
   });
 });

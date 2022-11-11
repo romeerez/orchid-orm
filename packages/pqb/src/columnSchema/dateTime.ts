@@ -3,6 +3,7 @@ import { Operators } from '../columnsOperators';
 import { joinTruthy } from '../utils';
 import { dateTypeMethods } from './commonMethods';
 import { assignMethodsToClass } from './utils';
+import { IntegerColumn } from './number';
 
 export type DateColumnData = ColumnData & {
   min?: Date;
@@ -22,6 +23,16 @@ export abstract class DateBaseColumn extends ColumnType<
 > {
   data = {} as DateColumnData;
   operators = Operators.date;
+
+  asNumber() {
+    return this.encode((input: number) => new Date(input)).parse(
+      Date.parse,
+    ) as unknown as IntegerColumn;
+  }
+
+  asDate<T extends ColumnType>(this: T) {
+    return this.parse((input) => new Date(input as string));
+  }
 }
 
 assignMethodsToClass(DateBaseColumn, dateTypeMethods);

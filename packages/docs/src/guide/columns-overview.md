@@ -104,9 +104,29 @@ db.someModel.where({
 
 It is possible to override parsing of columns returned from the database.
 
-For example, by default timestamps are returned as strings, and here is how to override it to be parsed into `Date` objects.
+Define `.encode` on a column to convert the value when creating or updating records,
+define `.parse` to parse values returned from database,
+`.as` will change TS type of one column to another for `porm-schema-to-zod` module to use a different schema.
 
-For query builder:
+For example, by default timestamps are returned as strings.
+Here is how to override this for all models to accept numbers when creating or updating,
+and to parse date to number when returning from database:
+
+```ts
+export const Model = createModel({
+  columnTypes: {
+    ...columnTypes,
+    timestamp() {
+      return columnTypes.timestamp()
+        .encode((input: number) => new Date(input))
+        .parse((input) => new Date(input))
+        .as(columnTypes.integer())
+    },
+  },
+})
+```
+
+Similarly, for query builder:
 
 ```ts
 import { createDb, columnTypes } from 'pqb'
@@ -116,35 +136,29 @@ const db = createDb({
   columnTypes: {
     ...columnTypes,
     timestamp() {
-      return columnTypes.timestamp().parse((input) => new Date(input))
+      return columnTypes.timestamp()
+        .encode((input: number) => new Date(input))
+        .parse((input) => new Date(input))
+        .as(columnTypes.integer())
     },
   }
 })
-
-const someTable = db('someTable', (t) => ({
-  datetime: t.timestamp(),
-  ...t.timestamps(),
-}))
-
-const record = await someTable.take()
-// `datetime` is parsed and it has a proper TS type:
-const isDate1: Date = record.datetime
-// createdAt and updatedAt are defined by ...t.timestamps() and they use the output of custom timestamp()
-const isDate2: Date = record.createdAt
-const isDate3: Date = record.updatedAt
 ```
 
-For ORM:
+Examples above demonstrate how to override column types in principle,
+however, for the specific case of overriding timestamp there are predefined shortcuts.
+
+`timestamp().asNumber()` will encode/parse timestamp from and to a number,
+
+`timestamp().asDate()` will encode/parse timestamp from and to a `Date` object.
 
 ```ts
-import { createModel } from 'porm'
-import { columnTypes } from 'pqb';
-
 export const Model = createModel({
   columnTypes: {
     ...columnTypes,
     timestamp() {
-      return columnTypes.timestamp().parse((input) => new Date(input))
+      // or use `.asDate()` to work with Date objects
+      return columnTypes.timestamp().asNumber()
     },
   },
 })

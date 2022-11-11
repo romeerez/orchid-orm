@@ -26,6 +26,8 @@ import { WhereArg } from './where';
 import { parseResult, queryMethodByReturnType } from './then';
 import { NotFoundError } from '../errors';
 import { RawExpression } from '../common';
+import { ColumnsShape } from '../columnSchema';
+import { anyShape } from '../db';
 
 export type CreateData<
   T extends Query,
@@ -172,6 +174,8 @@ type CreateCtx = {
   relations: Record<string, Relation>;
 };
 
+type Encoder = (input: unknown) => unknown;
+
 const handleSelect = (q: Query) => {
   const select = q.query.select?.[0];
   const isCount =
@@ -191,7 +195,9 @@ const processCreateItem = (
   rowIndex: number,
   ctx: CreateCtx,
   columns: string[],
+  encoders: Record<string, Encoder>,
   columnsMap: Record<string, number>,
+  shape: ColumnsShape,
 ) => {
   Object.keys(item).forEach((key) => {
     if (ctx.relations[key]) {
@@ -222,8 +228,12 @@ const processCreateItem = (
           item[key] as NestedInsertItem,
         ]);
       }
-    } else if (columnsMap[key] === undefined) {
+    } else if (
+      columnsMap[key] === undefined &&
+      (shape[key] || shape === anyShape)
+    ) {
       columnsMap[key] = columns.length;
+      encoders[key] = shape[key]?.encodeFn as Encoder;
       columns.push(key);
     }
   });
@@ -256,8 +266,19 @@ const getManyReturnType = (q: Query) => {
   }
 };
 
+const mapColumnValues = (
+  columns: string[],
+  encoders: Record<string, Encoder>,
+  data: Record<string, unknown>,
+) => {
+  return columns.map((key) =>
+    encoders[key] ? encoders[key](data[key]) : data[key],
+  );
+};
+
 const handleOneData = (q: Query, data: CreateData<Query>, ctx: CreateCtx) => {
   const columns: string[] = [];
+  const encoders: Record<string, Encoder> = {};
   const columnsMap: Record<string, number> = {};
   const defaults = q.query.defaults;
 
@@ -265,9 +286,9 @@ const handleOneData = (q: Query, data: CreateData<Query>, ctx: CreateCtx) => {
     data = { ...defaults, ...data };
   }
 
-  processCreateItem(data, 0, ctx, columns, columnsMap);
+  processCreateItem(data, 0, ctx, columns, encoders, columnsMap, q.shape);
 
-  const values = [columns.map((key) => (data as Record<string, unknown>)[key])];
+  const values = [mapColumnValues(columns, encoders, data)];
 
   return { columns, values };
 };
@@ -278,6 +299,7 @@ const handleManyData = (
   ctx: CreateCtx,
 ) => {
   const columns: string[] = [];
+  const encoders: Record<string, Encoder> = {};
   const columnsMap: Record<string, number> = {};
   const defaults = q.query.defaults;
 
@@ -286,13 +308,13 @@ const handleManyData = (
   }
 
   data.forEach((item, i) => {
-    processCreateItem(item, i, ctx, columns, columnsMap);
+    processCreateItem(item, i, ctx, columns, encoders, columnsMap, q.shape);
   });
 
   const values = Array(data.length);
 
   data.forEach((item, i) => {
-    (values as unknown[][])[i] = columns.map((key) => item[key]);
+    (values as unknown[][])[i] = mapColumnValues(columns, encoders, item);
   });
 
   return { columns, values };

@@ -16,6 +16,8 @@ import { EmptyObject, MaybeArray } from '../utils';
 import { CreateData } from './create';
 import { parseResult, queryMethodByReturnType } from './then';
 import { UpdateQueryData } from '../sql';
+import { ColumnsShape } from '../columnSchema';
+import { anyShape } from '../db';
 
 export type UpdateData<T extends Query> = {
   [K in keyof T['type']]?: T['type'][K] | RawExpression;
@@ -174,7 +176,10 @@ export class Update {
     const set: Record<string, unknown> = { ...data };
     pushQueryValue(this, 'updateData', set);
 
-    const relations = this.relations as Record<string, Relation>;
+    const { relations, shape } = this as {
+      relations: Record<string, Relation>;
+      shape: ColumnsShape;
+    };
 
     const prependRelations: Record<string, Record<string, unknown>> = {};
     const appendRelations: Record<string, Record<string, unknown>> = {};
@@ -195,6 +200,11 @@ export class Update {
           }
           appendRelations[key] = data[key] as Record<string, unknown>;
         }
+      } else if (!shape[key] && shape !== anyShape) {
+        delete set[key];
+      } else {
+        const encode = shape[key].encodeFn;
+        if (encode) set[key] = encode(set[key]);
       }
     }
 

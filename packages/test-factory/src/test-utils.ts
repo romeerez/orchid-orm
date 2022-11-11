@@ -1,10 +1,5 @@
 import { createModel, porm } from 'porm';
-import { columnTypes } from 'pqb';
-import {
-  patchPgForTransactions,
-  rollbackTransaction,
-  startTransaction,
-} from 'pg-transactional-tests';
+import { Adapter, columnTypes } from 'pqb';
 
 type AssertEqual<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]
@@ -73,9 +68,13 @@ export class ProfileModel extends Model {
   };
 }
 
+const adapter = new Adapter({
+  connectionString: process.env.DATABASE_URL,
+});
+
 export const db = porm(
   {
-    connectionString: process.env.DATABASE_URL,
+    adapter,
     log: false,
   },
   {
@@ -83,12 +82,3 @@ export const db = porm(
     profile: ProfileModel,
   },
 );
-
-export const useTestDatabase = () => {
-  beforeAll(patchPgForTransactions);
-  beforeEach(startTransaction);
-  afterEach(rollbackTransaction);
-  afterAll(async () => {
-    await db.$close();
-  });
-};

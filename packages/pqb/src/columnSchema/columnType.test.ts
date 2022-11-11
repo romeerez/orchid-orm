@@ -125,4 +125,224 @@ describe('column base', () => {
       });
     });
   });
+
+  describe('as', () => {
+    const numberTimestamp = columnTypes
+      .timestamp()
+      .encode((input: number) => new Date(input))
+      .parse(Date.parse)
+      .as(columnTypes.integer());
+
+    const dateTimestamp = columnTypes
+      .timestamp()
+      .parse((input) => new Date(input));
+
+    const db = createDb({
+      adapter,
+      columnTypes: {
+        ...columnTypes,
+        numberTimestamp: () => numberTimestamp,
+        dateTimestamp: () => dateTimestamp,
+      },
+    });
+
+    const UserWithCustomTimestamps = db('user', (t) => ({
+      id: t.serial().primaryKey(),
+      name: t.text(),
+      password: t.text(),
+      createdAt: t.numberTimestamp(),
+      updatedAt: t.dateTimestamp(),
+    }));
+
+    it('should accept only column of same type and input type', () => {
+      columnTypes
+        .timestamp()
+        .encode((input: number) => input.toString())
+        // @ts-expect-error should have both encode and parse with matching types
+        .as(columnTypes.integer());
+
+      // @ts-expect-error should have both encode and parse with matching types
+      columnTypes.timestamp().parse(Date.parse).as(columnTypes.integer());
+    });
+
+    it('should return same column with overridden type', () => {
+      const timestamp = columnTypes
+        .timestamp()
+        .encode((input: number) => new Date(input))
+        .parse(Date.parse);
+
+      const column = timestamp.as(columnTypes.integer());
+
+      expect(column).toBe(timestamp);
+    });
+
+    it('should parse correctly', async () => {
+      const id = await User.get('id').create(userData);
+
+      const user = await UserWithCustomTimestamps.find(id);
+
+      expect(typeof user.createdAt).toBe('number');
+      expect(user.updatedAt).toBeInstanceOf(Date);
+    });
+
+    it('should encode columns when creating', () => {
+      const createdAt = Date.now();
+      const updatedAt = new Date();
+
+      const query = UserWithCustomTimestamps.create({
+        ...userData,
+        createdAt,
+        updatedAt,
+      });
+
+      expectSql(
+        query.toSql(),
+        `
+          INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
+          VALUES ($1, $2, $3, $4)
+          RETURNING *
+        `,
+        [userData.name, userData.password, new Date(createdAt), updatedAt],
+      );
+    });
+
+    it('should encode columns when update', async () => {
+      const id = await User.get('id').create(userData);
+      const createdAt = Date.now();
+      const updatedAt = new Date();
+
+      const query = UserWithCustomTimestamps.find(id).update({
+        createdAt,
+        updatedAt,
+      });
+
+      expectSql(
+        query.toSql(),
+        `
+          UPDATE "user"
+          SET "createdAt" = $1, "updatedAt" = $2
+          WHERE "user"."id" = $3
+        `,
+        [new Date(createdAt), updatedAt, id],
+      );
+    });
+  });
+
+  describe('timestamp().asNumber()', () => {
+    it('should parse and encode timestamp as a number', async () => {
+      const UserWithNumberTimestamp = db('user', (t) => ({
+        id: t.serial().primaryKey(),
+        name: t.text(),
+        password: t.text(),
+        createdAt: t.timestamp().asNumber(),
+        updatedAt: t.timestamp().asNumber(),
+      }));
+
+      const now = Date.now();
+
+      const createQuery = UserWithNumberTimestamp.create({
+        ...userData,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      expectSql(
+        createQuery.toSql(),
+        `
+          INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
+          VALUES ($1, $2, $3, $4)
+          RETURNING *
+        `,
+        [userData.name, userData.password, new Date(now), new Date(now)],
+      );
+
+      const { id } = await createQuery;
+      const user = await UserWithNumberTimestamp.select(
+        'createdAt',
+        'updatedAt',
+      ).find(id);
+
+      assertType<typeof user, { createdAt: number; updatedAt: number }>();
+
+      expect(typeof user.createdAt).toBe('number');
+      expect(typeof user.updatedAt).toBe('number');
+
+      const updateQuery = UserWithNumberTimestamp.find(id).update({
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      expectSql(
+        updateQuery.toSql(),
+        `
+          UPDATE "user"
+          SET "createdAt" = $1, "updatedAt" = $2
+          WHERE "user"."id" = $3
+        `,
+        [new Date(now), new Date(now), id],
+      );
+    });
+  });
+
+  describe('timestamp().asDate()', () => {
+    it('should parse and encode timestamp as a number', async () => {
+      columnTypes
+        .text()
+        .encode((input: number) => input)
+        .parse((text) => parseInt(text))
+        .as(columnTypes.integer());
+
+      const UserWithNumberTimestamp = db('user', (t) => ({
+        id: t.serial().primaryKey(),
+        name: t.text(),
+        password: t.text(),
+        createdAt: columnTypes.timestamp().asDate(),
+        updatedAt: columnTypes.timestamp().asDate(),
+      }));
+
+      const now = new Date();
+
+      const createQuery = UserWithNumberTimestamp.create({
+        ...userData,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      expectSql(
+        createQuery.toSql(),
+        `
+          INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
+          VALUES ($1, $2, $3, $4)
+          RETURNING *
+        `,
+        [userData.name, userData.password, new Date(now), new Date(now)],
+      );
+
+      const { id } = await createQuery;
+      const user = await UserWithNumberTimestamp.select(
+        'createdAt',
+        'updatedAt',
+      ).find(id);
+
+      assertType<typeof user, { createdAt: Date; updatedAt: Date }>();
+
+      expect(user.createdAt).toBeInstanceOf(Date);
+      expect(user.updatedAt).toBeInstanceOf(Date);
+
+      const updateQuery = UserWithNumberTimestamp.find(id).update({
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      expectSql(
+        updateQuery.toSql(),
+        `
+          UPDATE "user"
+          SET "createdAt" = $1, "updatedAt" = $2
+          WHERE "user"."id" = $3
+        `,
+        [now, now, id],
+      );
+    });
+  });
 });

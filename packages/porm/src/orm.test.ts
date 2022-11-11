@@ -20,6 +20,7 @@ describe('orm', () => {
     columns = this.setColumns((t) => ({
       id: t.serial().primaryKey(),
       name: t.text(),
+      password: t.text(),
     }));
   }
 

@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["./src"],
+  "include": ["./src", "./jest-setup.ts"],
   "compilerOptions": {
     "outDir": "./dist",
     "noEmit": false,

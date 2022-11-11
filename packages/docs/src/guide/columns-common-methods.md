@@ -62,6 +62,21 @@ const someTable = db('someTable', (t) => ({
 const value: number = await someTable.get('column')
 ```
 
+## as
+
+This method doesn't affect on any column behavior, it only changes TS type of the column to the provided one.
+
+Before calling `.as` need to use `.encode` with input of same type as input of target column,
+and `.parse` which returns correct type.
+
+```ts
+// column as the same type as t.integer()
+const column = t.text()
+  .encode((input: number) => input)
+  .parse((text) => parseInt(text))
+  .as(t.integer())
+```
+
 ## timestamps
 
 Adds `createdAt` and `updatedAt` columns of type `timestamp` (without time zone) with default SQL `now()`.

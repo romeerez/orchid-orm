@@ -1,10 +1,8 @@
 import { createFactory } from './factory';
-import { assertType, db, User, useTestDatabase } from './test-utils';
+import { assertType, db, User } from './test-utils';
 import { z } from 'zod';
 
 describe('factory', () => {
-  useTestDatabase();
-
   const userFactory = createFactory(db.user);
 
   describe('build', () => {
@@ -92,7 +90,7 @@ describe('factory', () => {
   });
 
   describe('create', () => {
-    it('should create record with generated data, except serial primary keys', async () => {
+    it.only('should create record with generated data, except serial primary keys', async () => {
       const item = await userFactory.create();
 
       assertType<typeof item, User>();

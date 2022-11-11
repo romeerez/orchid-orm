@@ -22,6 +22,7 @@ import {
   ColumnTypesBase,
   getColumnTypes,
   SinglePrimaryKey,
+  ColumnType,
 } from './columnSchema';
 import { applyMixins, pushOrNewArray } from './utils';
 import { StringKey } from './common';
@@ -93,6 +94,8 @@ export interface Db<
   >;
 }
 
+export const anyShape = {} as Record<string, ColumnType>;
+
 export class Db<
   Table extends string | undefined = undefined,
   Shape extends ColumnsShape = Record<string, never>,
@@ -107,7 +110,7 @@ export class Db<
     public adapter: Adapter,
     public queryBuilder: Db,
     public table: Table = undefined as Table,
-    public shape: Shape = {} as Shape,
+    public shape: Shape = anyShape as Shape,
     public columnTypes: CT,
     options: DbTableOptions,
   ) {
