@@ -25,9 +25,9 @@ export abstract class DateBaseColumn extends ColumnType<
   operators = Operators.date;
 
   asNumber() {
-    return this.encode((input: number) => new Date(input)).parse(
-      Date.parse,
-    ) as unknown as IntegerColumn;
+    return this.encode((input: number) => new Date(input))
+      .parse(Date.parse)
+      .as(new IntegerColumn() as never) as unknown as IntegerColumn;
   }
 
   asDate<T extends ColumnType>(this: T) {
