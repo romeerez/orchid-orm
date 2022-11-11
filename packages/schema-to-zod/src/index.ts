@@ -237,8 +237,9 @@ export const instanceToZod = <T extends { shape: ColumnsShape }>({
 export const columnToZod = <T extends ColumnType>(
   column: T,
 ): SchemaToZod<T> => {
-  const converter = converters[column.dataType];
-  if (!converter) throw new Error(`Cannot parse column ${column.dataType}`);
+  const dataType = column.data.as?.dataType || column.dataType;
+  const converter = converters[dataType];
+  if (!converter) throw new Error(`Cannot parse column ${dataType}`);
   return converter(column) as SchemaToZod<T>;
 };
 

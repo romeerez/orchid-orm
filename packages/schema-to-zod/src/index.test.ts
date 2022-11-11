@@ -1235,12 +1235,15 @@ describe('schema to zod', () => {
       );
 
       assertType<typeof timestampAsInteger, z.ZodNumber>(true);
+      expect(timestampAsInteger.parse(123)).toBe(123);
 
       const timestampAsDate = columnToZod(
         t.timestamp().parse((string) => new Date(string)),
       );
 
       assertType<typeof timestampAsDate, z.ZodDate>(true);
+      const date = new Date();
+      expect(timestampAsDate.parse(date)).toEqual(date);
     });
   });
 });

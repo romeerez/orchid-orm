@@ -64,7 +64,8 @@ const value: number = await someTable.get('column')
 
 ## as
 
-This method doesn't affect on any column behavior, it only changes TS type of the column to the provided one.
+This method changes a column type without modifying its behavior.
+This is needed when converting columns to a validation schema, the converter will pick a different type specified by `.as`.
 
 Before calling `.as` need to use `.encode` with input of same type as input of target column,
 and `.parse` which returns correct type.

@@ -46,6 +46,7 @@ export type ColumnData = {
   compression?: string;
   foreignKey?: ForeignKey<string, string[]>;
   modifyQuery?: (q: Query) => void;
+  as?: ColumnType;
 };
 
 type ForeignKeyMatch = 'FULL' | 'PARTIAL' | 'SIMPLE';
@@ -224,8 +225,8 @@ export abstract class ColumnType<
   as<
     T extends ColumnType,
     C extends ColumnType<T['type'], Operators, T['inputType']>,
-  >(this: T, _: C) {
-    return this as unknown as C;
+  >(this: T, column: C): C {
+    return addColumnData(this, 'as', column) as unknown as C;
   }
 
   toSQL() {
