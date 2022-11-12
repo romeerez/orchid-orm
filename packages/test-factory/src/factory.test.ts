@@ -3,6 +3,35 @@ import { assertType, db, User } from './test-utils';
 import { z } from 'zod';
 
 describe('factory', () => {
+  describe('sequence and sequenceDistance', () => {
+    beforeAll(() => {
+      process.env.JEST_WORKER_ID = '5';
+    });
+
+    afterAll(() => {
+      process.env.JEST_WORKER_ID = '1';
+    });
+
+    it('should depend on process.env.JEST_WORKER_ID when it is defined', () => {
+      const factory = createFactory(db.user);
+      expect(factory.sequence).toBe(4000);
+    });
+
+    it('should allow to override sequence', () => {
+      const factory = createFactory(db.user, {
+        sequence: 123,
+      });
+      expect(factory.sequence).toBe(123);
+    });
+
+    it('should allow to override sequence distance', () => {
+      const factory = createFactory(db.user, {
+        sequenceDistance: 100,
+      });
+      expect(factory.sequence).toBe(400);
+    });
+  });
+
   const userFactory = createFactory(db.user);
 
   describe('build', () => {
@@ -90,8 +119,13 @@ describe('factory', () => {
   });
 
   describe('create', () => {
-    it.only('should create record with generated data, except serial primary keys', async () => {
+    it('should create record with generated data, except serial primary keys, datetime numbers should be the same in the record and to be around now', async () => {
       const item = await userFactory.create();
+      const now = Date.now();
+
+      expect(item.createdAt).toBe(item.updatedAt);
+
+      expect(Math.floor(item.createdAt / 1000)).toEqual(Math.floor(now / 1000));
 
       assertType<typeof item, User>();
 
@@ -120,12 +154,17 @@ describe('factory', () => {
   });
 
   describe('createList', () => {
-    it('should create a list of records', async () => {
+    it('should create a list of records, datetime numbers should be the same in one record and increase for each next record', async () => {
       const items = await userFactory.createList(2);
 
       assertType<typeof items, User[]>();
 
       expect(items[0].name).not.toBe(items[1].name);
+
+      expect(items[0].createdAt).toEqual(items[0].updatedAt);
+      expect(items[1].createdAt).toEqual(items[1].updatedAt);
+
+      expect(items[0].createdAt).toBeLessThan(items[1].createdAt);
 
       expect(() => z.array(userFactory.schema).parse(items)).not.toThrow();
     });

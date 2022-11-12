@@ -1,7 +1,18 @@
 import { AnyZodObject } from 'zod';
-import { CreateData, EmptyObject, Query } from 'pqb';
+import {
+  CreateData,
+  DateBaseColumn,
+  EmptyObject,
+  IntegerBaseColumn,
+  Query,
+} from 'pqb';
 import { instanceToZod, InstanceToZod } from 'porm-schema-to-zod';
 import { generateMock } from '@anatine/zod-mock';
+
+type FactoryOptions = {
+  sequence?: number;
+  sequenceDistance?: number;
+};
 
 type metaKey = typeof metaKey;
 const metaKey = Symbol('meta');
@@ -22,7 +33,7 @@ type Result<
 type BuildArg<T extends TestFactory> = {
   [K in keyof T[metaKey]['type']]?:
     | T[metaKey]['type'][K]
-    | (() => T[metaKey]['type'][K]);
+    | ((sequence: number) => T[metaKey]['type'][K]);
 } & Record<string, unknown>;
 
 type BuildResult<T extends TestFactory, Data extends BuildArg<T>> = Result<
@@ -41,7 +52,7 @@ type CreateArg<T extends TestFactory> = CreateData<
     inputType: {
       [K in keyof T['model']['type']]?:
         | T['model']['type'][K]
-        | (() => T['model']['type'][K]);
+        | ((sequence: number) => T['model']['type'][K]);
     };
   }
 >;
@@ -74,24 +85,24 @@ const pick = <T, Keys extends Record<string, unknown>>(
 };
 
 const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
-  { model, schema }: T,
+  factory: T,
   data: Record<string, unknown>,
   arg?: Data,
 ) => {
   const pick: Record<string, true> = {};
-  for (const key in model.shape) {
+  for (const key in factory.model.shape) {
     pick[key] = true;
   }
 
-  model.primaryKeys.forEach((key) => {
-    if (model.shape[key].dataType.includes('serial')) {
+  factory.model.primaryKeys.forEach((key) => {
+    if (factory.model.shape[key].dataType.includes('serial')) {
       delete pick[key];
     }
   });
 
   const result: Record<string, unknown> = {};
 
-  const fns: Record<string, () => unknown> = {};
+  const fns: Record<string, (sequence: number) => unknown> = {};
 
   const allData = (arg ? { ...data, ...arg } : data) as Record<string, unknown>;
 
@@ -105,14 +116,16 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
     }
   }
 
-  const pickedSchema = schema.pick(pick);
+  const pickedSchema = factory.schema.pick(pick);
 
   return () => {
     Object.assign(result, generateMock(pickedSchema));
 
     for (const key in fns) {
-      result[key] = fns[key]();
+      result[key] = fns[key](factory.sequence);
     }
+
+    factory.sequence++;
 
     return { ...result } as CreateData<T['model']>;
   };
@@ -123,7 +136,7 @@ export class TestFactory<
   Schema extends AnyZodObject = AnyZodObject,
   Type extends EmptyObject = EmptyObject,
 > {
-  private readonly data: EmptyObject;
+  sequence: number;
   private readonly omitValues: Record<PropertyKey, true> = {};
   private readonly pickValues: Record<PropertyKey, true> = {};
 
@@ -133,8 +146,19 @@ export class TestFactory<
     pick: EmptyObject;
   };
 
-  constructor(public model: Q, public schema: Schema) {
-    this.data = {};
+  constructor(
+    public model: Q,
+    public schema: Schema,
+    private readonly data: Record<string, unknown> = {},
+    options: FactoryOptions = {},
+  ) {
+    if (options.sequence !== undefined) {
+      this.sequence = options.sequence;
+    } else {
+      let workerId = parseInt(process.env.JEST_WORKER_ID as string);
+      if (isNaN(workerId)) workerId = 1;
+      this.sequence = (workerId - 1) * (options.sequenceDistance ?? 1000);
+    }
   }
 
   set<
@@ -191,11 +215,14 @@ export class TestFactory<
     for (const key in arg) {
       const value = (arg as Record<string, unknown>)[key];
       if (typeof value === 'function') {
-        result[key] = value();
+        result[key] = value(this.sequence);
       } else {
         result[key] = value;
       }
     }
+
+    this.sequence++;
+
     return result as BuildResult<T, Data>;
   }
 
@@ -236,9 +263,35 @@ export class TestFactory<
   }
 }
 
-export const createFactory = <T extends Query>(model: T) => {
+const nowString = new Date().toISOString();
+
+export const createFactory = <T extends Query>(
+  model: T,
+  options?: FactoryOptions,
+) => {
+  const schema = instanceToZod(model);
+
+  const data: Record<string, unknown> = {};
+  const now = Date.now();
+
+  for (const key in model.shape) {
+    const column = model.shape[key];
+    if (column instanceof DateBaseColumn) {
+      if (column.data.as instanceof IntegerBaseColumn) {
+        data[key] = (sequence: number) => now + sequence;
+      } else if (column.parseFn?.(nowString) instanceof Date) {
+        data[key] = (sequence: number) => new Date(now + sequence);
+      } else {
+        data[key] = (sequence: number) =>
+          new Date(now + sequence).toISOString();
+      }
+    }
+  }
+
   return new TestFactory<T, InstanceToZod<T>, T['type']>(
     model,
-    instanceToZod(model),
+    schema,
+    data,
+    options,
   );
 };

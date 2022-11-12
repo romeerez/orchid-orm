@@ -14,7 +14,10 @@ export const assertType = <T, Expected>(
 };
 
 const Model = createModel({
-  columnTypes,
+  columnTypes: {
+    ...columnTypes,
+    timestamp: () => columnTypes.timestamp().asNumber(),
+  },
 });
 
 export type User = UserModel['columns']['type'];
