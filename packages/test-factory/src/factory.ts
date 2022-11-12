@@ -157,7 +157,7 @@ export class TestFactory<
     } else {
       let workerId = parseInt(process.env.JEST_WORKER_ID as string);
       if (isNaN(workerId)) workerId = 1;
-      this.sequence = (workerId - 1) * (options.sequenceDistance ?? 1000);
+      this.sequence = (workerId - 1) * (options.sequenceDistance ?? 1000) + 1;
     }
   }
 
