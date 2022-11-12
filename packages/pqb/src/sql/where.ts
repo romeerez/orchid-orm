@@ -11,7 +11,7 @@ import {
 import { addValue, q, qc, quoteFullColumn } from './common';
 import { getQueryAs, MaybeArray, toArray } from '../utils';
 import { processJoinItem } from './join';
-import { ToSqlCtx } from './toSql';
+import { makeSql, ToSqlCtx } from './toSql';
 import { getRaw, isRaw, RawExpression } from '../common';
 
 export const pushWhereStatementSql = (
@@ -252,7 +252,7 @@ const pushIn = (
   } else if (isRaw(arg.values)) {
     value = getRaw(arg.values, values);
   } else {
-    const sql = arg.values.toSql({ values });
+    const sql = makeSql(arg.values, { values });
     value = `(${sql.text})`;
   }
 

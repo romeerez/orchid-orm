@@ -7,7 +7,7 @@ import {
 import { pushQueryValue } from '../queryDataUtils';
 import { ColumnType, StringColumn } from '../columnSchema';
 import { JsonItem } from '../sql';
-import { StringKey } from '../common';
+import { raw, StringKey } from '../common';
 
 type JsonColumnName<T extends Pick<Query, 'selectable'>> = StringKey<
   {
@@ -55,7 +55,7 @@ export class Json {
   ): SetQueryReturnsValueOptional<T, StringColumn> {
     const q = this._wrap(this.__model.clone()) as T;
     q._getOptional(
-      this.raw<Query, StringColumn>(
+      raw(
         queryTypeWithLimitOne[this.query.returnType]
           ? `row_to_json("t".*)`
           : `COALESCE(json_agg(row_to_json("t".*)), '[]')`,

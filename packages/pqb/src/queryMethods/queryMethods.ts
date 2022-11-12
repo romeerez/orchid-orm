@@ -304,15 +304,9 @@ export class QueryMethods {
   _wrap<T extends Query, Q extends Query, As extends string = 't'>(
     this: T,
     query: Q,
-    as?: As,
+    as: As = 't' as As,
   ): SetQueryTableAlias<Q, As> {
-    const sql = this.toSql();
-
-    return query
-      .as(as ?? 't')
-      ._from(
-        this.raw(`(${sql.text})`, ...sql.values),
-      ) as unknown as SetQueryTableAlias<Q, As>;
+    return query.as(as)._from(this, as) as unknown as SetQueryTableAlias<Q, As>;
   }
 
   order<T extends Query>(this: T, ...args: OrderArg<T>[]): T {

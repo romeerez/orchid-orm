@@ -165,15 +165,18 @@ describe('column base', () => {
       columnTypes.timestamp().parse(Date.parse).as(columnTypes.integer());
     });
 
-    it('should return same column with overridden type', () => {
+    it('should return same column with `as` property in data', () => {
       const timestamp = columnTypes
         .timestamp()
         .encode((input: number) => new Date(input))
         .parse(Date.parse);
 
-      const column = timestamp.as(columnTypes.integer());
+      const integer = columnTypes.integer();
 
-      expect(column).toBe(timestamp);
+      const column = timestamp.as(integer);
+
+      expect(column.dataType).toBe(timestamp.dataType);
+      expect(column.data.as).toBe(integer);
     });
 
     it('should parse correctly', async () => {

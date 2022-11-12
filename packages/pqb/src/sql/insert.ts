@@ -3,7 +3,7 @@ import { addValue, q } from './common';
 import { pushWhereStatementSql } from './where';
 import { QueryBase } from '../query';
 import { selectToSql } from './select';
-import { ToSqlCtx } from './toSql';
+import { makeSql, ToSqlCtx } from './toSql';
 import { pushQueryValue } from '../queryDataUtils';
 import { getRaw, isRaw, raw } from '../common';
 
@@ -26,7 +26,7 @@ export const pushInsertSql = (
       isRaw(query.values) ? query.values : raw(encodeRow(ctx, query.values[0])),
     );
 
-    ctx.sql.push(q.toSql({ values: ctx.values }).text);
+    ctx.sql.push(makeSql(q, { values: ctx.values }).text);
   } else {
     ctx.sql.push(
       `VALUES ${

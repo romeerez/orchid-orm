@@ -40,7 +40,10 @@ export const toSql = (model: Query, options?: ToSqlOptions): Sql => {
   );
 };
 
-const makeSql = (model: Query, { values = [] }: ToSqlOptions = {}): Sql => {
+export const makeSql = (
+  model: Query,
+  { values = [] }: ToSqlOptions = {},
+): Sql => {
   const query = model.query;
   const sql: string[] = [];
   const ctx: ToSqlCtx = {
@@ -145,7 +148,7 @@ const makeSql = (model: Query, { values = [] }: ToSqlOptions = {}): Sql => {
       if (isRaw(item.arg)) {
         itemSql = getRaw(item.arg, values);
       } else {
-        const argSql = item.arg.toSql({ values });
+        const argSql = makeSql(item.arg, { values });
         itemSql = argSql.text;
       }
       sql.push(`${item.kind} ${item.wrap ? `(${itemSql})` : itemSql}`);

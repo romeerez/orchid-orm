@@ -261,7 +261,7 @@ describe('selectMethods', () => {
           SELECT
             (
               SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
-              FROM (SELECT * FROM "user") AS "t"
+              FROM "user" AS "t"
             ) AS "subquery"
           FROM "user"
         `,

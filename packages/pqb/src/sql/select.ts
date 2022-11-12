@@ -10,7 +10,7 @@ import { addValue, q, quoteFullColumn } from './common';
 import { aggregateToSql } from './aggregate';
 import { PormInternalError, UnhandledTypeError } from '../errors';
 import { quote } from '../quote';
-import { ToSqlCtx } from './toSql';
+import { makeSql, ToSqlCtx } from './toSql';
 import { relationQueryKey } from '../relations';
 
 const jsonColumnOrMethodToSql = (
@@ -178,7 +178,7 @@ const pushSubQuerySql = (
       throw new UnhandledTypeError(returnType);
   }
 
-  let subQuerySql = `(${query.toSql({ values }).text})`;
+  let subQuerySql = `(${makeSql(query, { values }).text})`;
   const { coalesceValue } = query.query;
   if (coalesceValue !== undefined) {
     const value =

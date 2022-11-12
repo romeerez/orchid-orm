@@ -1,6 +1,6 @@
 import { QueryData } from './types';
 import { q } from './common';
-import { ToSqlCtx } from './toSql';
+import { makeSql, ToSqlCtx } from './toSql';
 import { getRaw, isRaw } from '../common';
 
 export const pushWithSql = (
@@ -19,7 +19,7 @@ export const pushWithSql = (
         if (isRaw(query)) {
           inner = getRaw(query, ctx.values);
         } else {
-          inner = query.toSql({ values: ctx.values }).text;
+          inner = makeSql(query, { values: ctx.values }).text;
         }
 
         return `${options.recursive ? 'RECURSIVE ' : ''}${q(name)}${

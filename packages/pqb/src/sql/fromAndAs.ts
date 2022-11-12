@@ -1,7 +1,7 @@
 import { quoteSchemaAndTable } from './common';
 import { QueryBase } from '../query';
 import { checkIfASimpleQuery, SelectQueryData } from './types';
-import { ToSqlCtx } from './toSql';
+import { makeSql, ToSqlCtx } from './toSql';
 import { getRaw, isRaw } from '../common';
 
 export const pushFromAndAs = (
@@ -33,14 +33,14 @@ const getFrom = (
       }
 
       if (!query.from.table) {
-        const sql = query.from.toSql({ values });
+        const sql = makeSql(query.from, { values });
         return `(${sql.text})`;
       }
 
       const q = query.from.query;
       // if query contains more than just schema return (SELECT ...)
       if (!checkIfASimpleQuery(q)) {
-        const sql = query.from.toSql({ values });
+        const sql = makeSql(query.from, { values });
         return `(${sql.text})`;
       }
 
