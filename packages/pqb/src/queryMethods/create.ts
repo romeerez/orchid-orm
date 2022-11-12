@@ -219,14 +219,23 @@ const processCreateItem = (
           item[key] as Record<string, unknown>,
         ]);
       } else {
+        const value = item[key] as NestedInsertItem;
+        if (
+          (!value.create ||
+            (Array.isArray(value.create) && value.create.length === 0)) &&
+          (!value.connect ||
+            (Array.isArray(value.connect) && value.connect.length === 0)) &&
+          (!value.connectOrCreate ||
+            (Array.isArray(value.connectOrCreate) &&
+              value.connectOrCreate.length === 0))
+        )
+          return;
+
         ctx.requiredReturning[ctx.relations[key].primaryKey] = true;
 
         if (!ctx.appendRelations[key]) ctx.appendRelations[key] = [];
 
-        ctx.appendRelations[key].push([
-          rowIndex,
-          item[key] as NestedInsertItem,
-        ]);
+        ctx.appendRelations[key].push([rowIndex, value]);
       }
     } else if (
       columnsMap[key] === undefined &&

@@ -498,6 +498,18 @@ describe('hasMany', () => {
           text2: 'message 4',
         });
       });
+
+      it('should ignore empty create list', async () => {
+        const user = await db.user.create({
+          ...userData,
+          name: 'user 1',
+          messages: {
+            create: [],
+          },
+        });
+
+        checkUser(user, 'user 1');
+      });
     });
 
     describe('nested connect', () => {
@@ -625,6 +637,18 @@ describe('hasMany', () => {
           text2: 'message 4',
         });
       });
+
+      it('should ignore empty connect list', async () => {
+        const user = await db.user.create({
+          ...userData,
+          name: 'user 1',
+          messages: {
+            connect: [],
+          },
+        });
+
+        checkUser(user, 'user 1');
+      });
     });
 
     describe('connectOrCreate', () => {
@@ -745,6 +769,18 @@ describe('hasMany', () => {
           text2: 'message 4',
         });
       });
+
+      it('should ignore empty connectOrCreate list', async () => {
+        const user = await db.user.create({
+          ...userData,
+          name: 'user 1',
+          messages: {
+            connectOrCreate: [],
+          },
+        });
+
+        checkUser(user, 'user 1');
+      });
     });
   });
 
@@ -811,6 +847,16 @@ describe('hasMany', () => {
         expect(messages[0].authorId).toBe(null);
         expect(messages[1].authorId).toBe(null);
         expect(messages[2].authorId).toBe(userIds[1]);
+      });
+
+      it('should ignore empty disconnect list', async () => {
+        const id = await db.user.get('id').create(userData);
+
+        await db.user.find(id).update({
+          messages: {
+            disconnect: [],
+          },
+        });
       });
     });
 
@@ -919,6 +965,26 @@ describe('hasMany', () => {
           .select('text');
         expect(messages).toEqual([{ text: 'message 3' }]);
       });
+
+      it('should ignore empty delete list', async () => {
+        const chatId = await db.chat.get('id').create(chatData);
+
+        const id = await db.user.get('id').create({
+          ...userData,
+          messages: {
+            create: [{ ...messageData, chatId, text: 'message 1' }],
+          },
+        });
+
+        await db.user.find(id).update({
+          messages: {
+            delete: [],
+          },
+        });
+
+        const messages = await db.user.messages({ id }).pluck('text');
+        expect(messages).toEqual(['message 1']);
+      });
     });
 
     describe('nested update', () => {
@@ -993,6 +1059,31 @@ describe('hasMany', () => {
         const messages = await db.message.order('id').pluck('text');
         expect(messages).toEqual(['updated', 'message 2', 'updated']);
       });
+
+      it('should ignore empty update where list', async () => {
+        const chatId = await db.chat.get('id').create(chatData);
+
+        const id = await db.user.get('id').create({
+          ...userData,
+          messages: {
+            create: [{ ...messageData, chatId, text: 'message 1' }],
+          },
+        });
+
+        await db.user.find(id).update({
+          messages: {
+            update: {
+              where: [],
+              data: {
+                text: 'updated',
+              },
+            },
+          },
+        });
+
+        const messages = await db.user.messages({ id }).pluck('text');
+        expect(messages).toEqual(['message 1']);
+      });
     });
 
     describe('nested create', () => {
@@ -1028,6 +1119,19 @@ describe('hasMany', () => {
         });
 
         await expect(query).rejects.toThrow();
+      });
+
+      it('should ignore empty create list', async () => {
+        const id = await db.user.get('id').create(userData);
+
+        await db.user.find(id).update({
+          messages: {
+            create: [],
+          },
+        });
+
+        const messages = await db.user.messages({ id });
+        expect(messages.length).toEqual(0);
       });
     });
   });

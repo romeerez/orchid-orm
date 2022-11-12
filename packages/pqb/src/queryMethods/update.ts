@@ -8,6 +8,7 @@ import {
   HasManyRelation,
   HasOneNestedUpdate,
   HasOneRelation,
+  NestedUpdateItem,
   NestedUpdateOneItem,
   Relation,
 } from '../relations';
@@ -192,6 +193,24 @@ export class Update {
         if (relations[key].type === 'belongsTo') {
           prependRelations[key] = data[key] as Record<string, unknown>;
         } else {
+          const value = data[key] as NestedUpdateItem;
+
+          if (
+            !value.set &&
+            !('upsert' in value) &&
+            (!value.disconnect ||
+              (Array.isArray(value.disconnect) &&
+                value.disconnect.length === 0)) &&
+            (!value.delete ||
+              (Array.isArray(value.delete) && value.delete.length === 0)) &&
+            (!value.update ||
+              (Array.isArray(value.update.where) &&
+                value.update.where.length === 0)) &&
+            (!value.create ||
+              (Array.isArray(value.create) && value.create.length === 0))
+          )
+            continue;
+
           if (!query.select?.includes('*')) {
             const primaryKey = relations[key].primaryKey;
             if (!query.select?.includes(primaryKey)) {
