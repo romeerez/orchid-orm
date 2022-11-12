@@ -34,6 +34,18 @@ for the default `t.timestamp()` columns will have equal timestamp string, and eq
 Each new generated object will have timestamp increased by 1 millisecond,
 so creating a list of records and then testing a query which is ordered by timestamp should work just fine.
 
+By default, all text columns will be limited to generate 1000 character long strings at most.
+You can override the maximum limit by specifying `maxTextLength`:
+
+```ts
+import { createFactory } from 'porm-test-factory'
+import { db } from '../path-to-db'
+
+const userFactory = createFactory(db.user, {
+  maxTextLength: 123
+})
+```
+
 ## setup
 
 Install this library:

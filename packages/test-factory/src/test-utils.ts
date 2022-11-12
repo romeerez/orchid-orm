@@ -58,7 +58,7 @@ export class ProfileModel extends Model {
       .integer()
       .nullable()
       .foreignKey(() => UserModel, 'id'),
-    bio: t.text().nullable(),
+    bio: t.text().min(100).max(100000),
     ...t.timestamps(),
   }));
 

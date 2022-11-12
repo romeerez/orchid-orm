@@ -1,10 +1,11 @@
-import { AnyZodObject } from 'zod';
+import { AnyZodObject, ZodNullable, ZodString, ZodTypeAny } from 'zod';
 import {
   CreateData,
   DateBaseColumn,
   EmptyObject,
   IntegerBaseColumn,
   Query,
+  TextBaseColumn,
 } from 'pqb';
 import { instanceToZod, InstanceToZod } from 'porm-schema-to-zod';
 import { generateMock } from '@anatine/zod-mock';
@@ -12,6 +13,7 @@ import { generateMock } from '@anatine/zod-mock';
 type FactoryOptions = {
   sequence?: number;
   sequenceDistance?: number;
+  maxTextLength?: number;
 };
 
 type metaKey = typeof metaKey;
@@ -285,6 +287,13 @@ export const createFactory = <T extends Query>(
         data[key] = (sequence: number) =>
           new Date(now + sequence).toISOString();
       }
+    } else if (column instanceof TextBaseColumn) {
+      const max = options?.maxTextLength ?? 1000;
+      const item = schema.shape[key];
+      (schema.shape as Record<string, ZodTypeAny>)[key] =
+        item instanceof ZodNullable
+          ? (item.unwrap() as ZodString).max(max).nullable()
+          : (schema.shape[key] as ZodString).max(max);
     }
   }
 

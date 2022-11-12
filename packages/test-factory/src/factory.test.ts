@@ -14,7 +14,7 @@ describe('factory', () => {
 
     it('should depend on process.env.JEST_WORKER_ID when it is defined', () => {
       const factory = createFactory(db.user);
-      expect(factory.sequence).toBe(4000);
+      expect(factory.sequence).toBe(4001);
     });
 
     it('should allow to override sequence', () => {
@@ -28,7 +28,7 @@ describe('factory', () => {
       const factory = createFactory(db.user, {
         sequenceDistance: 100,
       });
-      expect(factory.sequence).toBe(400);
+      expect(factory.sequence).toBe(401);
     });
   });
 
@@ -68,6 +68,22 @@ describe('factory', () => {
       assertType<typeof data, User & { age: number; extra: true }>();
 
       expect(data).toMatchObject({ age: 18, name: 'name', extra: true });
+    });
+
+    it('should limit long strings with 1000 by default', () => {
+      const profileFactory = createFactory(db.profile);
+      const data = profileFactory.build();
+
+      expect(data.bio.length).toBeLessThanOrEqual(1000);
+    });
+
+    it('should allow to override maxTextLength', () => {
+      const profileFactory = createFactory(db.profile, {
+        maxTextLength: 500,
+      });
+      const data = profileFactory.build();
+
+      expect(data.bio.length).toBeLessThanOrEqual(500);
     });
   });
 
