@@ -1,6 +1,7 @@
 import { createFactory } from './factory';
-import { assertType, db, User } from './test-utils';
+import { assertType, db, User, Model, adapter } from './test-utils';
 import { z } from 'zod';
+import { porm } from 'porm';
 
 describe('factory', () => {
   describe('sequence and sequenceDistance', () => {
@@ -75,6 +76,29 @@ describe('factory', () => {
       const data = profileFactory.build();
 
       expect(data.bio.length).toBeLessThanOrEqual(1000);
+    });
+
+    it('should respect max which is set on column', () => {
+      class ProfileModel extends Model {
+        table = 'profile';
+        columns = this.setColumns((t) => ({
+          bio: t.text().min(100).max(120),
+        }));
+      }
+
+      const db = porm(
+        {
+          adapter,
+        },
+        {
+          profile: ProfileModel,
+        },
+      );
+
+      const profileFactory = createFactory(db.profile);
+      const data = profileFactory.build();
+
+      expect(data.bio.length).toBeLessThanOrEqual(120);
     });
 
     it('should allow to override maxTextLength', () => {

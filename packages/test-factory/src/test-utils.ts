@@ -13,7 +13,7 @@ export const assertType = <T, Expected>(
   // noop
 };
 
-const Model = createModel({
+export const Model = createModel({
   columnTypes: {
     ...columnTypes,
     timestamp: () => columnTypes.timestamp().asNumber(),
@@ -71,7 +71,7 @@ export class ProfileModel extends Model {
   };
 }
 
-const adapter = new Adapter({
+export const adapter = new Adapter({
   connectionString: process.env.DATABASE_URL,
 });
 

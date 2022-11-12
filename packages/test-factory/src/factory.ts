@@ -290,10 +290,20 @@ export const createFactory = <T extends Query>(
     } else if (column instanceof TextBaseColumn) {
       const max = options?.maxTextLength ?? 1000;
       const item = schema.shape[key];
-      (schema.shape as Record<string, ZodTypeAny>)[key] =
-        item instanceof ZodNullable
-          ? (item.unwrap() as ZodString).max(max).nullable()
-          : (schema.shape[key] as ZodString).max(max);
+      const string = (
+        item instanceof ZodNullable ? item.unwrap() : item
+      ) as ZodString;
+
+      const maxCheck = string._def.checks.find(
+        (check) => check.kind === 'max',
+      ) as { value: [number] } | undefined;
+
+      if (!maxCheck || maxCheck.value[0] > max) {
+        (schema.shape as Record<string, ZodTypeAny>)[key] =
+          item instanceof ZodNullable
+            ? string.max(max).nullable()
+            : string.max(max);
+      }
     }
   }
 
