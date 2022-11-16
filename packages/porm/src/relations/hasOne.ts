@@ -5,10 +5,10 @@ import {
   HasOneNestedUpdate,
   HasOneRelation,
   InsertQueryData,
+  isQueryReturnsAll,
   JoinCallback,
   Query,
   QueryBase,
-  queryTypeWithLimitOne,
   WhereArg,
   WhereResult,
 } from 'pqb';
@@ -212,7 +212,7 @@ export const makeHasOneMethod = (
     nestedUpdate: (async (q, data, params) => {
       if (
         (params.set || params.create || params.upsert) &&
-        !queryTypeWithLimitOne[q.query.returnType]
+        isQueryReturnsAll(q)
       ) {
         const key = params.set ? 'set' : params.create ? 'create' : 'upsert';
         throw new Error(`\`${key}\` option is not allowed in a batch update`);

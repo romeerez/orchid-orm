@@ -104,6 +104,9 @@ export const queryTypeWithLimitOne = {
   oneOrThrow: true,
 } as Record<QueryReturnType, true | undefined>;
 
+export const isQueryReturnsAll = (q: Query) =>
+  !q.query.returnType || q.query.returnType === 'all';
+
 export type JoinedTablesBase = Record<
   string,
   Pick<Query, 'result' | 'tableAlias' | 'table'>

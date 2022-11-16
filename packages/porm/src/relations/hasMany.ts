@@ -16,11 +16,11 @@ import {
   MaybeArray,
   Query,
   QueryBase,
-  queryTypeWithLimitOne,
   toSqlCacheKey,
   WhereArg,
   WhereResult,
   InsertQueryData,
+  isQueryReturnsAll,
 } from 'pqb';
 import { getSourceRelation, getThroughRelation } from './utils';
 
@@ -235,10 +235,7 @@ export const makeHasManyMethod = (
       }
     }) as HasManyNestedInsert,
     nestedUpdate: (async (q, data, params) => {
-      if (
-        (params.set || params.create) &&
-        !queryTypeWithLimitOne[q.query.returnType]
-      ) {
+      if ((params.set || params.create) && isQueryReturnsAll(q)) {
         const key = params.set ? 'set' : 'create';
         throw new Error(`\`${key}\` option is not allowed in a batch update`);
       }

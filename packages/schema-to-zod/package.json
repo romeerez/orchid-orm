@@ -1,6 +1,6 @@
 {
   "name": "porm-schema-to-zod",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "PORM columns schema to Zod converter",
   "homepage": "https://porm.netlify.app/guide/columns-validation-methods",
   "repository": {
