@@ -314,7 +314,7 @@ export class Update {
     if (appendRelationKeys.length) {
       pushQueryArray(
         this,
-        'afterQuery',
+        'afterUpdate',
         appendRelationKeys.map((relationName) => {
           return (q: Query, result: Record<string, unknown>[]) => {
             const all = resultOfTypeAll || result;

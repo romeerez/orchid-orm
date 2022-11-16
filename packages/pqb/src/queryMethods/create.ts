@@ -360,7 +360,7 @@ const insert = (
   if (prependRelationsKeys.length) {
     pushQueryArray(
       q,
-      'beforeQuery',
+      'beforeCreate',
       prependRelationsKeys.map((relationName) => {
         return async (q: Query) => {
           const relationData = ctx.prependRelations[relationName];
@@ -433,7 +433,7 @@ const insert = (
 
     pushQueryArray(
       q,
-      'afterQuery',
+      'afterCreate',
       appendRelationsKeys.map((relationName) => {
         return (q: Query, result: Record<string, unknown>[]) => {
           const all = resultOfTypeAll || result;
