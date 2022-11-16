@@ -124,7 +124,8 @@ describe('createRepo', () => {
     const repo = createRepo(db.someModel, {
       queryOneMethods: {
         one(q) {
-          return q.select('id');
+          const type: 'one' | 'oneOrThrow' = q.returnType;
+          return type;
         },
       },
     });
@@ -142,7 +143,8 @@ describe('createRepo', () => {
     const repo = createRepo(db.someModel, {
       queryWithWhereMethods: {
         one(q) {
-          return q.select('id');
+          const hasWhere: true = q.hasWhere;
+          return hasWhere;
         },
       },
     });

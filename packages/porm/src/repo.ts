@@ -15,8 +15,8 @@ export type QueryMethods<T extends Query> = Record<
 
 export type MethodsBase<T extends Query> = {
   queryMethods?: QueryMethods<T>;
-  queryOneMethods?: QueryMethods<T>;
-  queryWithWhereMethods?: QueryMethods<T>;
+  queryOneMethods?: QueryMethods<SetQueryReturns<T, 'one' | 'oneOrThrow'>>;
+  queryWithWhereMethods?: QueryMethods<WhereResult<T>>;
   methods?: Record<string, unknown>;
 };
 
@@ -45,11 +45,15 @@ export type MapMethods<
   Methods extends MethodsBase<T>,
 > = MapQueryMethods<T, Query, Methods['queryMethods']> &
   MapQueryMethods<
-    T,
+    SetQueryReturns<T, 'one' | 'oneOrThrow'>,
     SetQueryReturns<Query, 'one' | 'oneOrThrow'>,
     Methods['queryOneMethods']
   > &
-  MapQueryMethods<T, WhereResult<Query>, Methods['queryWithWhereMethods']> &
+  MapQueryMethods<
+    WhereResult<T>,
+    WhereResult<Query>,
+    Methods['queryWithWhereMethods']
+  > &
   (Methods['methods'] extends Record<string, unknown>
     ? Methods['methods']
     : EmptyObject);
