@@ -3,9 +3,7 @@ import {
   ColumnsShape,
   ColumnTypesBase,
   Db,
-  getClonedQueryData,
   getColumnTypes,
-  MergeQuery,
   Query,
 } from 'pqb';
 import { MapRelations, Relation, RelationThunks } from './relations/relations';
@@ -167,62 +165,4 @@ export const createModel = <CT extends ColumnTypesBase>(options: {
       };
     }
   };
-};
-
-export type MethodsBase<T extends Query> = Record<
-  string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (q: T, ...args: any[]) => any
->;
-
-export type MapMethods<Methods> = {
-  [K in keyof Methods]: Methods[K] extends (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    q: any,
-    ...args: infer Args
-  ) => // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  infer Result
-    ? <T extends Query>(
-        this: T,
-        ...args: Args
-      ) => Result extends Query ? MergeQuery<T, Result> : Result
-    : never;
-};
-
-export type Repo<
-  T extends Query,
-  Methods extends MethodsBase<T>,
-  Mapped = MapMethods<Methods>,
-> = (<Q extends { table: T['table']; shape: T['shape'] }>(q: Q) => Q & Mapped) &
-  T &
-  Mapped;
-
-export const createRepo = <T extends Query, Methods extends MethodsBase<T>>(
-  model: T,
-  methods: Methods,
-): Repo<T, Methods> => {
-  const repo = (q: Query) => {
-    const proto = Object.create(q.__model);
-    const result = Object.create(proto);
-    result.query = getClonedQueryData(q.query);
-
-    for (const key in methods) {
-      const method = methods[key] as (...args: unknown[]) => unknown;
-      (proto.__model as unknown as Record<string, unknown>)[key] = function (
-        ...args: unknown[]
-      ) {
-        return method(this, ...args);
-      };
-    }
-
-    return result;
-  };
-
-  const q = repo(model);
-
-  return new Proxy(repo, {
-    get(_, key) {
-      return q[key];
-    },
-  }) as unknown as Repo<T, Methods>;
 };
