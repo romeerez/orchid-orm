@@ -2,7 +2,7 @@ import { porm } from './orm';
 import { pgConfig } from './test-utils/test-db';
 import { createModel } from './model';
 import { assertType, expectSql } from './test-utils/test-utils';
-import { columnTypes } from 'pqb';
+import { columnTypes, QueryReturnType } from 'pqb';
 import { createRepo } from './repo';
 
 const Model = createModel({ columnTypes });
@@ -124,7 +124,7 @@ describe('createRepo', () => {
     const repo = createRepo(db.someModel, {
       queryOneMethods: {
         one(q) {
-          const type: 'one' | 'oneOrThrow' = q.returnType;
+          const type: Exclude<QueryReturnType, 'all'> = q.returnType;
           return type;
         },
       },
@@ -150,12 +150,36 @@ describe('createRepo', () => {
     });
 
     it('should define methods which are available only after .where, .find, or similar', () => {
-      // @ts-expect-error should prevent using method on query which returns multiple
+      // @ts-expect-error should prevent using method on query without where conditions
       repo.one();
-      // @ts-expect-error should prevent using method on query which returns multiple
+      // @ts-expect-error should prevent using method on query without where conditions
       repo.take().one();
 
       repo.where().one();
+      repo.find(1).one();
+    });
+  });
+
+  describe('queryOneWithWhere', () => {
+    const repo = createRepo(db.someModel, {
+      queryOneWithWhereMethods: {
+        one(q) {
+          const type: Exclude<QueryReturnType, 'all'> = q.returnType;
+          const hasWhere: true = q.hasWhere;
+          return [type, hasWhere];
+        },
+      },
+    });
+
+    it('should define methods which are available only after .where, .find, or similar', () => {
+      // @ts-expect-error should prevent using method on query without where conditions
+      repo.one();
+      // @ts-expect-error should prevent using method on query without where conditions
+      repo.take().one();
+
+      // @ts-expect-error should prevent using method on query which returns multiple
+      repo.where().one();
+
       repo.find(1).one();
     });
   });
