@@ -62,6 +62,9 @@ export const porm = <T extends ModelClasses>(
       },
     );
 
+    (dbModel as unknown as { definedAs: string }).definedAs = key;
+    (dbModel as unknown as { db: unknown }).db = result;
+
     (result as Record<string, unknown>)[key] = dbModel;
   }
 

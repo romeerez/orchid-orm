@@ -143,9 +143,6 @@ export const applyRelations = (
   const delayedRelations: DelayedRelations = new Map();
 
   for (const modelName in models) {
-    // if (modelName !== 'post' && modelName !== 'tag' && modelName !== 'postTag')
-    //   continue;
-
     const model = models[modelName] as Model & {
       relations?: RelationThunks;
     };
@@ -234,6 +231,13 @@ const applyRelation = (
       : (otherDbModel as unknown as QueryWithTable)
   ).as(relationName);
 
+  const definedAs = (query as unknown as { definedAs?: string }).definedAs;
+  if (!definedAs) {
+    throw new Error(
+      `Model for table ${query.table} is not attached to db instance`,
+    );
+  }
+
   const { type } = relation;
   let data;
   if (type === 'belongsTo') {
@@ -252,7 +256,7 @@ const applyRelation = (
     query._take();
   }
 
-  makeRelationQuery(dbModel, query, relationName, data);
+  makeRelationQuery(dbModel, definedAs, relationName, data);
 
   (dbModel.relations as Record<string, unknown>)[relationName] = {
     type,
@@ -276,15 +280,21 @@ const applyRelation = (
 
 const makeRelationQuery = (
   model: Query,
-  toModel: Query,
+  definedAs: string,
   relationName: string,
   data: RelationData,
 ) => {
   Object.defineProperty(model, relationName, {
     get() {
+      const toModel = this.db[definedAs].as(relationName) as Query;
+
+      if (data.returns === 'one') {
+        toModel._take();
+      }
+
       const query = this.isSubQuery
-        ? toModel.clone()
-        : toModel.whereExists(data.reverseJoin(this, toModel), (q) => q);
+        ? toModel
+        : toModel._whereExists(data.reverseJoin(this, toModel), (q) => q);
 
       query.query[relationQueryKey] = {
         relationName,
