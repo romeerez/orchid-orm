@@ -1,10 +1,10 @@
 # Relations
 
-Different kinds of relations available: `belongsTo`, `hasOne`, `hasMany` and `hasAndBelongsToMany`.
+Different kinds of relations are available: `belongsTo`, `hasOne`, `hasMany`, and `hasAndBelongsToMany`.
 
 Each defined relation adds methods and additional abilities for the model to simplify building queries and creating related data.
 
-Two models can have relation with each other without circular dependency problems:
+Two models can have a relation with each other without circular dependency problems:
 
 ```ts
 // user.model.ts
@@ -73,7 +73,7 @@ export class BookModel extends Model {
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     title: t.text(),
-    // book has a column pointing to author table
+    // book has a column pointing to the author table
     authorId: t.integer(),
   }))
   
@@ -112,7 +112,7 @@ export class SupplierModel extends Model {
 
   relations = {
     account: this.hasOne(() => AccountModel, {
-      // required is offecting on TS type of returned record
+      // required is affecting on TS type of returned record
       required: true,
       // primaryKey is a column of Supplier to use
       primaryKey: 'id',
@@ -212,7 +212,7 @@ export class AccountHistoryModel extends Model {
 
 ## hasMany
 
-A `hasMany` association is similar to `hasOne`, but indicates a one-to-many connection with another model.
+A `hasMany` association is similar to `hasOne` but indicates a one-to-many connection with another model.
 You'll often find this association on the "other side" of a `belongsTo` association.
 This association indicates that each instance of the model has zero or more instances of another model.
 
@@ -245,7 +245,7 @@ export class BookModel extends Model {
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     title: t.text(),
-    // book has a column pointing to author table
+    // book has a column pointing to the author table
     authorId: t.integer(),
   }))
 }
@@ -256,7 +256,7 @@ export class BookModel extends Model {
 A `hasMany though` association is often used to set up a many-to-many connection with another model.
 This association indicates that the declaring model can be matched with zero or more instances of another model by proceeding through a third model.
 
-`hasMany through` gives the same querying abilities as a regular `hasMany`, but without nested create functionality.
+`hasMany through` gives the same querying abilities as a regular `hasMany` but without nested create functionality.
 
 For example, consider a medical practice where patients make appointments to see physicians. The relevant association declarations could look like this:
 
@@ -273,7 +273,7 @@ export class PhysicianModel extends Model {
 
   relations = {
     appointments: this.hasMany(() => AppointmentModel, {
-      // primaryKey is a column of Physician to use
+      // primaryKey is a column of Physicians to use
       primaryKey: 'id',
       // foreignKey is a column of Appointment to connect with
       foreignKey: 'authorId',
@@ -294,8 +294,8 @@ export class AppointmentModel extends Model {
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     appointmentDate: t.datetime(),
-    // column references physycian:
-    physycianId: t.integer(),
+    // column references physician:
+    physicianId: t.integer(),
     // column references patient:
     patientId: t.integer(),
   }))
@@ -361,7 +361,7 @@ export class PostModel extends Model {
       primaryKey: 'id',
       // foreignKey is a column of joinTable to connect with this model
       foreignKey: 'postId',
-      // associationPrimaryKey is a primaryKey of related model
+      // associationPrimaryKey is a primaryKey of a related model
       associationPrimaryKey: 'id',
       // associationForeignKey is a column of joinTable to connect with related model
       associationForeignKey: 'tagId',
@@ -378,7 +378,7 @@ export class TagModel extends Model {
     id: t.serial().primaryKey(),
     name: t.text(),
   }))
-  
+
   relations = {
     posts: this.hasAndBelongsToMany(() => PostModel, {
       primaryKey: 'id',
