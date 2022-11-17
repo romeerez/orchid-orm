@@ -1,6 +1,6 @@
 # JSON types
 
-Postgres supports two types of JSON: `json` is for storing JSON strings as they were saved, and `jsonb` which is stored in binary format and which allows additional methods.
+Postgres supports two types of JSON: `json` is for storing JSON strings as they were saved, and `jsonb` is stored in binary format and allows additional methods.
 
 For `json` use `t.jsonText()`:
 
@@ -10,7 +10,7 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-For `jsonb` use `t.json((t) => jsonSchema)` - it takes a schema, adds additional methods for querying:
+For `jsonb` use `t.json((t) => jsonSchema)` - it takes a schema, and adds additional methods for querying:
 
 ```ts
 const someTable = db('someTable', (t) => ({
@@ -23,20 +23,20 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-Text type columns supports following `where` operators:
+Text type columns support the following `where` operators:
 
 ```ts
 db.someModel.where({
   jsonColumn: {
     // first element is JSON path,
     // second is a compare operator,
-    // third value can be of any type, or a sub query, or a raw query
+    // third value can be of any type, or a subquery, or a raw query
     jsonPath: ['$.name', '=', value],
     
-    // check if JSON value in the column is a superset of provided value
+    // check if the JSON value in the column is a superset of the provided value
     jsonSupersetOf: { key: 'value' },
     
-    // check if JSON value in the column is a subset of provided value
+    // check if the JSON value in the column is a subset of the provided value
     jsonSubsetOf: { key: 'value' },
   }
 })
@@ -44,7 +44,7 @@ db.someModel.where({
 
 ## basic JSON types
 
-Basic types are:
+The basic types are:
 
 ```ts
 const someTable = db('someTable', (t) => ({
@@ -66,29 +66,29 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-`number` and `bigint` types can be chained with following validation methods:
+`number` and `bigint` types can be chained with the following validation methods:
 
 ```ts
 const someTable = db('someTable', (t) => ({
   data: t.json((t) => ({
     number: t.number()
       .lt(number) // must be lower than number
-      .lte(number) // must be lower than or equal to number
+      .lte(number) // must be lower than or equal to the number
       .max(number) // alias for .lte
       .gt(number) // must be greater than number
-      .gte(number) // must be greater than or equal to number
+      .gte(number) // must be greater than or equal to the number
       .min(number) // alias for .gte
       .positive() // must be greater than 0
       .nonNegative() // must be greater than or equal to 0
       .negative() // must be lower than 0
       .nonPositive() // must be lower than or equal to 0
-      .multipleOf(number) // must be a multiple of number
+      .multipleOf(number) // must be a multiple of the number
       .step(number) // alias for .multipleOf
   }))
 }))
 ```
 
-`string` type can be chained with following validation methods:
+`string` type can be chained with the following validation methods:
 
 ```ts
 const someTable = db('someTable', (t) => ({
@@ -168,7 +168,7 @@ const someTable = db('someTable', (t) => ({
 
 ## default
 
-Set a default value which will be returned in case if input is `null` or `undefined`. If function provided, it will be called on each validation to use the returned value.
+Set a default value that will be returned in case input is `null` or `undefined`. If the function is provided, it will be called on each validation to use the returned value.
 
 ```ts
 const someTable = db('someTable', (t) => ({
@@ -209,7 +209,7 @@ const someTable = db('someTable', (t) => ({
 
 ## deepPartial
 
-For a composite types such as `array`, `object`, `record`, `map`, `set` and some other, call `deepPartial()` to mark all inner object keys as optional:
+For a composite type such as `array`, `object`, `record`, `map`, `set`, and some others, call `deepPartial()` to mark all inner object keys as optional:
 
 ```ts
 const someTable = db('someTable', (t) => ({
@@ -238,7 +238,7 @@ const someTable = db('someTable', (t) => ({
 
 To transform value from one type to another, use `.to`.
 
-In following example, string will be transformed to number, and number method `lte` will become available:
+In the following example, the string will be transformed into a number, and the number method `lte` will become available:
 
 ```ts
 const someTable = db('someTable', (t) => ({
@@ -255,7 +255,7 @@ const someTable = db('someTable', (t) => ({
 
 ## refine
 
-Add a custom check for the value, validation will fail when falsy value is returned:
+Add a custom check for the value, validation will fail when a falsy value is returned:
 
 ```ts
 const someTable = db('someTable', (t) => ({
@@ -269,11 +269,11 @@ Refinements can also be async.
 
 ## superRefine
 
-`superRefine` allows to check a value and handle different cases using `ctx` context of the validation.
+`superRefine` allows one to check a value and handle different cases using the `ctx` context of the validation.
 
 Refer to [Zod document](https://github.com/colinhacks/zod#superrefine) for it.
 
-This library is designed to support Zod and later other validation libraries, so the `ctx` has type `any` and need to be explicitly typed with correct type of chosen lib:
+This library is designed to support Zod and later other validation libraries, so the `ctx` has type `any` and needs to be explicitly typed with the correct type of chosen lib:
 
 ```ts
 import { z, RefinementCtx } from 'zod'
@@ -297,7 +297,7 @@ const someTable = db('someTable', (t) => ({
 
 ## array
 
-Every type has `.array()` method to wrap it into array:
+Every type has the`.array()` method to wrap it into the array:
 
 ```ts
 const someTable = db('someTable', (t) => ({
@@ -311,7 +311,7 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-`array` type can be chained with following validation methods:
+The `array` type can be chained with the following validation methods:
 
 ```ts
 const someTable = db('someTable', (t) => ({
@@ -461,7 +461,7 @@ You can pass a "catchall" schema into an object schema. All unknown keys will be
 ```ts
 const someTable = db('someTable', (t) => ({
   data: t.json((t) => ({
-    // check `name` to be string and all other keys to have numbers
+    // check `name` to be a string and all other keys to have numbers
     object: t.object({ name: t.string() }).catchall(t.number());
   }))
 }))
@@ -568,7 +568,7 @@ const someTable = db('someTable', (t) => ({
 
 If the union consists of object schemas all identifiable by a common property, it is possible to use the `t.discriminatedUnion` method.
 
-The advantage is in more efficient evaluation and more human friendly errors. With the basic union method the input is tested against each of the provided "options", and in the case of invalidity, issues for all the "options" are shown in the zod error. On the other hand, the discriminated union allows for selecting just one of the "options", testing against it, and showing only the issues related to this "option".
+The advantage is in the more efficient evaluation and more human-friendly errors. With the basic union method the input is tested against each of the provided "options", and in the case of invalidity, issues for all the "options" are shown in the zod error. On the other hand, the discriminated union allows for selecting just one of the "options", testing against it, and showing only the issues related to this "option".
 
 ```ts
 const someTable = db('someTable', (t) => ({
@@ -597,7 +597,7 @@ const someTable = db('someTable', (t) => ({
 
 ### sets
 
-For JS `Set` type which holds a unique set of elements:
+For the JS `Set` type which holds a unique set of elements:
 
 ```ts
 const someTable = db('someTable', (t) => ({

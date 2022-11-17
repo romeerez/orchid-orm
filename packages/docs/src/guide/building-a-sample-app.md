@@ -1,10 +1,10 @@
 # Building a sample app
 
-In this section we will walk through the process of creation of API server.
+In this section, we will walk through the process of creating of API server.
 Here you can get an overall idea of how `Porm` looks and feels,
-what problem does it solve and how, see the benefits and possible drawbacks.
+what problem it solves, and see the benefits and possible drawbacks.
 
-We are going to build an API for a blog site with users, articles, tags, users can follow each other.
+We are going to build an API for a blog site with users, articles, and tags, users can follow each other.
 It is inspired by [realworld](https://github.com/gothinkster/realworld) API spec.
 
 ## API routes
@@ -16,7 +16,7 @@ It is inspired by [realworld](https://github.com/gothinkster/realworld) API spec
         - **password**: string
     * Responds with user object and auth token
 
-- **POST** `/users/auth`: log in
+- **POST** `/users/auth`: login
     * JSON payload:
         - **email**: string
         - **password**: string
@@ -28,12 +28,12 @@ It is inspired by [realworld](https://github.com/gothinkster/realworld) API spec
 - **DELETE** `/users/:username/follow`: unfollow a user
     * No payload and no response needed
 
-- **GET** `/articles`: get list of articles
+- **GET** `/articles`: get a list of articles
     * URI params:
-        - **author**: filter articles by username of author
+        - **author**: filter articles by the username of the author
         - **tag**: filter articles by tag
-        - **feed**: list articles only from authors which current user is following
-        - **favorite**: list only articles favorited by current user
+        - **feed**: list articles only from authors which the current user is following
+        - **favorite**: list only articles favorited by the current user
         - **limit**: limit articles
         - **offset**: offset articles
     * Responds with article data
@@ -57,10 +57,10 @@ It is inspired by [realworld](https://github.com/gothinkster/realworld) API spec
 - **POST** `/articles/:slug/favorite`
     * JSON payload:
         - **favorite**: true to make favorite, false to un-favorite the article
-    * No response needed
+    * No response is needed
 
 - **DELETE** `/articles/:slug`: delete article
-    * No response needed
+    * No response is needed
 
 Register and login responses should be of the following type:
 
@@ -82,18 +82,18 @@ type ArticleResponse = {
   body: string
   // how much users have favorited this article
   favoritesCount: number
-  // whether requesting user have favorited this article
+  // whether requesting user has favorited this article
   favorited: boolean
   tags: string[]
   author: {
     username: string
-    // following means if the user who performs request is following this user
+    // following means if the user who performs the request is following this user
     following: boolean
   }
   
   // Postgres is returning dates in such format: `2022-11-04 10:53:02.129306 +00:00`
-  // but this format is not supported by all browses
-  // As a bonus, both transferring and parsing date as a epoch number is more efficient, so let's use numbers for dates:
+  // but this format is not supported by all browsers
+  // As a bonus, both transferring and parsing date as an epoch number is more efficient, so let's use numbers for dates:
   createdAt: number
   udpatedAt: number
 }
@@ -101,7 +101,7 @@ type ArticleResponse = {
 
 ## initialize the project
 
-Lets init the project:
+Let's init the project:
 
 ```sh
 mkdir blog-api
@@ -120,17 +120,17 @@ node_modules
 .env.local
 ```
 
-First thing we need in every node.js project is a TypeScript:
+The first thing we need in every node.js project is a TypeScript:
 
 ```sh
 npm i -D typescript @types/node
 ```
 
-Second thing to do in every node.js project is eslint with prettier, it takes quite a long list of dependencies and few file changes, check this [commit](insert link) for example configuration.
+The second thing to add in every node.js project is eslint with prettier, it takes quite a long list of dependencies and few file changes, check this [commit](insert link) for an example configuration.
 
-We won't get stuck here on topic of configuring server and test framework, here is a [commit](link to commit) for sample server configuration and here is [commit](link to commit) for configuring tests.
+We won't get stuck here on the topic of configuring the server and test framework, here is a [commit](link to commit) for sample server configuration, and here is [commit](link to commit) for configuring tests.
 
-For the sample application I chose [fastify.io](https://www.fastify.io/) as a server framework,
+For the sample application, I chose [fastify](https://www.fastify.io/) as a server framework
 because it is easier to set up (async error handling out of the box, unlike express),
 has more concise syntax for routes, and it includes a very nice utility for testing out of the box.
 Of course, you can use `Porm` with your favorite framework.
@@ -152,13 +152,13 @@ npm i -D rake-db porm-test-factory
 - **porm-schema-to-zod**: convert model columns to a Zod schema to use it for validations
 - **porm-test-factory**: for building mock data in tests
 
-Let's also install additional tool for tests, it will wrap each test in transaction, so we won't have to clean db manually:
+Let's also install an additional tool for tests, it will wrap each test in a transaction, so we won't have to clean the db manually:
 
 ```sh
 npm i -D pg pg-transactional-tests
 ```
 
-Place database urls to .env.local file (which should be listed in .gitignore), one database for development and second for tests:
+Place database URLs to .env.local file (which should be listed in .gitignore), one database for development and a second for tests:
 
 ```text
 DATABASE_URL=postgres://user:password@localhost:5432/blog-api
@@ -198,10 +198,10 @@ export const config = {
 };
 ```
 
-Now `config` has `DATABASE_URL` for dev database, `DATABASE_URL_TEST` for test database,
-and `currentDatabaseUrl` with database for the current environment.
+Now, `config` has `DATABASE_URL` for the dev database, `DATABASE_URL_TEST` for the test database,
+and `currentDatabaseUrl` with the database for the current environment.
 
-Create a main file for database instance:
+Create the main file for the database instance:
 
 ```ts
 // src/db.ts
@@ -239,7 +239,7 @@ export const Model = createModel({
 });
 ```
 
-Create a script which we will use from a terminal to generate and run migrations:
+Create a script that we will use from a terminal to generate and run migrations:
 
 ```ts
 // src/scripts/db.ts
@@ -251,7 +251,7 @@ const migrationsPath = path.resolve(__dirname, '..', 'migrations');
 
 const options = [{ connectionString: config.DATABASE_URL }];
 
-// when running in production we don't need test database
+// when running in production we don't need to test the database
 if (config.NODE_ENV !== 'production') {
   const url = config.DATABASE_URL_TEST;
   if (!url) {
@@ -274,13 +274,13 @@ Add it to `package.json` scripts section:
 }
 ```
 
-Now we can create databases from command line:
+Now we can create databases from the command line:
 
 ```sh
 npm run db create
 ```
 
-If database user specified in `.env.local` is not a superuser, this command will ask for a superuser username/password to create databases.
+If the database user specified in `.env.local` is not a superuser, this command will ask for a superuser username/password to create databases.
 
 After successfully running it will print:
 
@@ -292,10 +292,10 @@ Created versions table
 ```
 
 So we can see it created two databases.
-Each of them has a special table to track which migration where already applied and which were not.
+Each of them has a special table to track which migrations were already applied and which were not.
 
 Add a `jest-setup.ts` to the root of the project.
-This will make every test case which makes db queries wrapped in a transaction with rollback,
+This will make every test case that makes db queries wrapped in a transaction with rollback,
 so every change will seamlessly disappear.
 
 ```ts
@@ -331,19 +331,19 @@ Add it to `package.json` "jest" section:
 
 ## user endpoints
 
-Let's begin from writing a user model.
+Let's begin by writing a user model.
 Every model must have a table name and a set of columns.
 
-Usually each model should have a primary key column.
-We will use `t.serial().primaryKey()` for this purpose, it is autoincrementing integer type.
-Other available option for primary keys is to use `t.uuid().primaryKey()`.
+Usually, each model should have a primary key column.
+We will use `t.serial().primaryKey()` for this purpose, it is an autoincrementing integer type.
+Another available option for primary keys is to use `t.uuid().primaryKey()`.
 
-It is a good idea to have `createdAt` and `updatedAt` columns in every model, even if it is not asked in requirements,
-these columns may come in hand later, for displaying, sorting by them, `updatedAt` may be used for cache invalidation.
-Add them to model by writing: `...t.timestamps()`.
+It is a good idea to have `createdAt` and `updatedAt` columns in every model, even if it is not asked in the requirements,
+these columns may come in handy later, for displaying, and sorting by them, `updatedAt` may be used for cache invalidation.
+Add them to the model by writing: `...t.timestamps()`.
 
 Each column has a type, which is used to get a TypeScript type and a database type when running a migration.
-Some column methods have effect only in migration, some methods are for validation.
+Some column methods have an effect only in migration, some methods are for validation.
 
 ## writing a model
 
@@ -367,11 +367,11 @@ export class UserModel extends Model {
   }));
 }
 
-// will be used later validate parameters
+// will be used later to validate the parameters
 export const userSchema = modelToZod(UserModel);
 ```
 
-Consider `email` column:
+Consider the `email` column:
 
 ```ts
 t.text() // this is a column type
@@ -379,7 +379,7 @@ t.text() // this is a column type
   .email() // validates email
 ```
 
-After defining a model, place it into `db` models list:
+After defining a model, place it into the `db` models list:
 
 ```ts
 // src/db.ts
@@ -398,9 +398,9 @@ export const db = porm(
 );
 ```
 
-Now `user` is defined on `db`, we can write queries like `db.user.count()`, `db.user.select(...)` and many others.
+Now `user` is defined on `db`, we can write queries like `db.user.count()`, `db.user.select(...)`, and many others.
 
-Define a test factory which we will use very soon:
+Define a test factory that we will use very soon:
 
 ```ts
 // src/lib/test/testFactories.ts
@@ -418,7 +418,7 @@ Generate a new migration file by running:
 npm run db g createUser
 ```
 
-In newly added file we can see such content:
+In the newly added file we can see such content:
 
 ```ts
 // src/migrations/*timestamp*_createUser.ts
@@ -446,11 +446,11 @@ change(async (db) => {
 });
 ```
 
-Note that `min`, `max`, `email` have no effect in the migration, these methods are only for validation that we will use later.
+Note that `min`, `max`, and `email` have no effect on the migration, these methods are only for validation that we will use later.
 
-`Porm` will probably gain a feature of auto-generated migrations in the future, but for now they are written manually.
+`Porm` will probably gain a feature of auto-generated migrations in the future, but for now, they are written manually.
 
-## writing tests for register user endpoint
+## writing tests for registering user endpoint
 
 Let's write tests for the first endpoint `POST /users`:
 
@@ -486,14 +486,14 @@ describe('user controller', () => {
         token: expect.any(String),
       });
 
-      // check that user was saved to the database with correct fields
+      // check that the user was saved to the database with the correct fields
       const savedUser = await db.user.findBy({ username: data.username });
       expect(savedUser).toMatchObject({
         username: data.username,
         email: data.email,
       });
 
-      // ensure that we don't store plain text password to the database
+      // ensure that we don't store plain text passwords to the database
       expect(savedUser.password).not.toBe(data.password);
     });
 
@@ -506,7 +506,7 @@ describe('user controller', () => {
       // perform request
       const res = await testRequest.post('/users', data);
 
-      // expect error because user with such username was created before the request
+      // expect error because a user with such username was created before the request
       expect(res.json()).toMatchObject({
         message: 'Username is already taken',
       });
@@ -527,7 +527,7 @@ describe('user controller', () => {
 });
 ```
 
-`testRequest` is a custom helper around `app.inject` from fastify to perform a fake requests without app running.
+`testRequest` is a custom helper around `app.inject` from fastify to perform a fake request without the app running.
 
 `express` doesn't have such tools and can be tested with real requests, it's recommended to use `axios` for this purpose.
 
@@ -535,9 +535,9 @@ We can freely create database records thanks to `pg-transactional-tests` which w
 
 ## register user endpoint
 
-On real projects the auth will be more sophisticated, but for demo purposes lets do a simplistic token based auth.
+On real projects, the auth will be more sophisticated, but for demo purposes, let's do a simple token-based auth.
 
-Add `JWT_SECRET` to `.env` file and to `config.ts`:
+Add `JWT_SECRET` to the `.env` file and `config.ts`:
 
 ```ts
 // src/config.ts
@@ -550,7 +550,7 @@ const env = z
 
 ```
 
-Here are utility functions for json web token:
+Here are utility functions for JSON web tokens:
 
 ```ts
 // src/lib/jwt.ts
@@ -566,7 +566,7 @@ export const verifyToken = (token: string): string | JwtPayload => {
 };
 ```
 
-Utility functions for hashing and comparing password:
+Utility functions for hashing and comparing passwords:
 
 ```ts
 // src/lib/password.ts
@@ -597,19 +597,19 @@ it('should register a new user, save it with hashed password, return a user and 
 })
 ```
 
-Every node.js framework and even specific project usually has own custom way of validating request parameters,
-some people use middlewares for this, some use decorators like in `Nest.js` framework.
+Every node.js framework and even specific project usually have own custom way of validating request parameters,
+some people use middleware for this, and some use decorators like in the `Nest.js` framework.
 No matter how it is implemented, it should serve the purposes of:
 
-- request query, body, route params must be validated properly
-- validated query, body, params should have proper types
-- it is nice to have response validation in dev/test environment, so you won't leak sensitive data by accident and no need to write a tedious tests for this
+- request query, body, and route params must be validated properly
+- validated query, body, and params should have proper types
+- it is nice to have response validation in the dev/test environment, so you won't leak sensitive data by accident, and no need to write tedious tests for this
 
-Usually out-of-the-box validation utility fails to satisfy all 3 points,
-I'm using a custom utility `routeHandler` to validate parameters and result by using `zod` schemas, [here is source](link to routeHandler).
+Usually, out-of-the-box validation utility fails to satisfy all 3 points,
+I'm using a custom utility `routeHandler` to validate parameters and results by using `zod` schemas, [here is the source](link to routeHandler).
 
-From our api spec we can see that both registration and login endpoint returns the same shape of data: user object and token,
-and it makes sense to reuse response validator for them. Let's place it in `user.dto.ts` file (dto stands for Data Transfer Object):
+From our API spec, we can see that both the registration and login endpoint returns the same shape of data: user object and token,
+and it makes sense to reuse the response validator for them. Let's place it in the `user.dto.ts` file (dto stands for Data Transfer Object):
 
 ```ts
 // src/user/user.dto.ts
@@ -626,7 +626,7 @@ export const authDto = z.object({
 });
 ```
 
-And, finally, we can write register endpoint itself:
+And, finally, we can write the registering endpoint itself:
 
 ```ts
 // src/app/user/user.controller.ts
@@ -687,9 +687,9 @@ const user = await db.user.select('username', 'email').create({
 
 It is safe to use `...req.body` because `body` was validated and all unknown keys were stripped out of it.
 
-Inside of error handler, first we check `err instanceof db.user.error` to know if this error belong to the user model,
-then we check `err.isUnique` to ensure this is unique violation error.
-And then we check `err.columns.username` and `err.columns.email` to determine which column has failed uniqueness to throw corresponding error.
+Inside of error handler, first, we check `err instanceof db.user.error` to know if this error belongs to the user model,
+then we check `err.isUnique` to ensure this is a unique violation error.
+And then we check `err.columns.username` and `err.columns.email` to determine which column has failed uniqueness to throw the corresponding error.
 
 Add the route function to the router:
 
@@ -703,7 +703,7 @@ export const routes = async (app: FastifyInstance) => {
 };
 ```
 
-I'm skipping some framework specific details: how to configure server, configure routing, this depends on the framework and your preferences.
+I'm skipping some framework-specific details: how to configure a server, and configure routing, this depends on the framework and your preferences.
 
 ## login endpoint
 
@@ -801,7 +801,7 @@ export const loginUser = routeHandler(
 
 In the user query note that we use `findByOptional` method, which returns `undefined` when not found.
 
-There is a similar `findBy` method which would throw a `NotFoundError` when not found, but here we want to check it manually.
+There is a similar `findBy` method that would throw a `NotFoundError` when not found, but here we want to check it manually.
 
 Add the route function to the router:
 
@@ -836,12 +836,12 @@ export class UserFollowModel extends Model {
 ```
 
 This model has `followingId` for the user who is being followed, and the `followerId` for the one who follows.
-Both these columns have `foreignKey` which connects it with an `id` of `UserModel` to ensure that value always points to existing user record.
+Both these columns have `foreignKey` which connects it with an `id` of `UserModel` to ensure that the value always points to an existing user record.
 
 With such syntax `...t.primaryKey([column1, column2])` we define a composite primary key.
 Internally Postgres will add a multi-column unique index and ensure that all of these columns are not null.
 
-Add this model to list of models in db:
+Add this model to the list of models in db:
 
 ```ts
 // src/db.ts
@@ -898,14 +898,14 @@ export class UserModel extends Model {
 }
 ```
 
-Tests for follow/unfollow endpoints:
+Tests for the follow/unfollow endpoints:
 
 ```ts
 // src/app/user/user.controller.test.ts
 
   describe('POST /users/:username/follow', () => {
     it('should follow a user', async () => {
-      // create a user to perform request from
+      // create a user to perform the request from
       const currentUser = await userFactory.create();
       // create a user to follow
       const userToFollow = await userFactory.create();
@@ -916,7 +916,7 @@ Tests for follow/unfollow endpoints:
         .post(`/users/${userToFollow.username}/follow`);
 
       
-      // check that userFollow record exists in the database
+      // check that the userFollow record exists in the database
       const follows = await db.userFollow.where({
         followingId: userToFollow.id,
       });
@@ -965,7 +965,7 @@ Tests for follow/unfollow endpoints:
         .as(currentUser)
         .post(`/users/lalala/follow`);
 
-      // check that such userFollow record doesn't exists
+      // check that such userFollow record doesn't exist
       const exists = await db.userFollow
         .where({
           followingId: userToFollow.id,
@@ -1001,15 +1001,15 @@ export const followUserRoute = routeHandler(
 );
 ```
 
-`getCurrentUserId` is a function to get user id form `JWT` token, leaving it beyond this tutorial, here is its [source](link to user.service).
+`getCurrentUserId` is a function to get the user id from the `JWT` token, leaving it beyond this tutorial, here is its [source](link to the user.service).
 
-After defining `follows` relation in user model, `db.user` receives a `follows` property which allows to do different queries, and the code above shows the use of such chained `create` method.
+After defining the `follows` relation in the user model, `db.user` receives a `follows` property which allows doing different queries, and the code above shows the use of such chained `create` method.
 
 If there is a need to do multiple queries it will wrap them in a transaction to prevent unexpected race conditions.
 
-`Porm` strives to perform as few queries as possible to gain maximum performance, and in this case it does a single `INSERT ... SELECT ...` query, so it inserts `userFollow` from selecting `user` record to use user id.
+`Porm` strives to perform as few queries as possible to gain the maximum performance, and in this case, it does a single `INSERT ... SELECT ...` query, so it inserts `userFollow` from selecting the `user` record to use user id.
 
-`findBy` method will throw `NotFoundError` in case if record is not found, add such section to the global error handler of your app to report such errors to user:
+The `findBy` method will throw `NotFoundError` in case the record is not found, add a such section to the global error handler of your app to report such errors to the user:
 
 ```ts
 if (error instanceof NotFoundError) {
@@ -1173,7 +1173,7 @@ export class TagModel extends Model {
 export const tagSchema = modelToZod(TagModel);
 ```
 
-Tag model has no relations in the example above, but only because they're not needed in future queries.
+The tag model has no relations in the example above, but only because they're not needed in future queries.
 `Porm` is designed to deal with circular dependencies without problems,
 so `TagModel` can use `ArticleModel` in the relation, and `ArticleModel` can have `TagModel` in the relation at the same time.
 
@@ -1193,7 +1193,7 @@ export class ArticleTagModel extends Model {
   }));
 
   relations = {
-    // this `tag` relation name is used in article model `tags` relation in the `source` option
+    // this `tag` relation name is used in the article model `tags` relation in the `source` option
     tag: this.belongsTo(() => TagModel, {
       primaryKey: 'id',
       foreignKey: 'tagId',
@@ -1235,7 +1235,7 @@ export class ArticleModel extends Model {
     id: t.serial().primaryKey(),
     userId: t.integer().foreignKey('user', 'id').index(),
     // it is important to set `min` and `max` for text fields
-    // to make sure that user won't submit empty string or billion chars long strings:
+    // to make sure that the user won't submit empty strings or billion chars long strings:
     slug: t.text().unique().min(10).max(200),
     title: t.text().min(10).max(200),
     body: t.text().min(100).max(100000),
@@ -1291,7 +1291,7 @@ export const db = porm(
 );
 ```
 
-Add a factory for article for use in tests:
+Add a factory for the article for use in tests:
 
 ```ts
 // src/lib/test/testFactories.ts
@@ -1307,9 +1307,9 @@ export const articleFactory = createFactory(db.article);
 
 I write one test for one feature, one by one, and this helps me a lot when writing backends and libraries.
 
-For this tutorial I'm listing whole test suite for endpoint only to keep the tutorial a bit more compact.
+For this tutorial, I'm listing the whole test suite for endpoint only to keep the tutorial a bit more compact.
 
-Here are all tests for `GET /articles` endpoint:
+Here are all tests for the `GET /articles` endpoint:
 
 ```ts
 // src/app/article/article.controller.test
@@ -1630,7 +1630,7 @@ export const listArticlesRoute = routeHandler(
         'createdAt',
         'updatedAt',
         {
-          // `pluck` method collects a column into array
+          // `pluck` method collects a column into an array
           // order is ASC by default
           tags: (q) => q.tags.order('name').pluck('name'),
           favorited: currentUserId
@@ -1640,7 +1640,7 @@ export const listArticlesRoute = routeHandler(
             : db.article.raw((t) => t.boolean(), 'false'),
           author: (q) =>
             q.author.select('username', {
-              // we load following similarly to the favorited above
+              // we load the following similar to the favorited above
               following: currentUserId
                 ? (q) => q.follows.where({ followerId: currentUserId }).exists()
                 : db.article.raw((t) => t.boolean(), 'false'),
@@ -1655,7 +1655,7 @@ export const listArticlesRoute = routeHandler(
       // offset parameter is optional, and it is fine to pass `undefined` to the .offset method
       .offset(req.query.offset);
 
-    // filtering articles by author, tag and other relations by using `whereExists`
+    // filtering articles by author, tag, and other relations by using `whereExists`
     if (req.query.author) {
       query = query.whereExists('author', (q) =>
         q.where({ username: req.query.author })
@@ -1673,7 +1673,7 @@ export const listArticlesRoute = routeHandler(
 
       if (req.query.feed) {
         query = query.whereExists('author', (q) =>
-          // `whereExists` can be nested to filter by relation of relation
+          // `whereExists` can be nested to filter by the relation of the relation
           q.whereExists('follows', (q) =>
             q.where({ followerId: currentUserId })
           )
@@ -1687,7 +1687,7 @@ export const listArticlesRoute = routeHandler(
       }
     }
 
-    // query is a Promise-like and will be awaited automatically
+    // query is Promise-like and will be awaited automatically
     return query;
   }
 );
@@ -1711,10 +1711,10 @@ Currently, the controller code for listing articles looks messy: too many things
 too many query details to read the code quickly and clearly.
 
 Here I want to tell about one special feature of the `Porm` which doesn't exist in other node.js ORMs.
-There are similar capabilities in `Objection.js` and `Openrecord`, but they aren't type safe.
+There are similar capabilities in `Objection.js` and `Openrecord`, but they aren't type-safe.
 
-Let's start from article's `author` field: querying author includes some nuances specific to user model,
-better to keep such queries encapsulated inside related feature folder.
+Let's start from the article's `author` field: querying author includes some nuances specific to the user model,
+better to keep such queries encapsulated inside the related feature folder.
 
 Extract author object from `articleDto` into own `userDto`:
 
@@ -1734,7 +1734,7 @@ export const articleDto = articleSchema
     z.object({
       tags: z.string().array(),
       favorited: z.boolean(),
-      // move this part to user.dto
+      // move this part to the user.dto
       // author: userSchema
       //   .pick({
       //     username: true,
@@ -1784,7 +1784,7 @@ export const userRepo = createRepo(db.user, {
 });
 ```
 
-And now we can simplify querying `author` object in the articles` controller:
+And now we can simplify querying the `author` object in the articles` controller:
 
 ```ts
 // src/article/article.controller.ts
@@ -1809,9 +1809,9 @@ export const listArticlesRoute = routeHandler(
 
 Note that in the `user.repo.ts` the `selectDto` has two arguments: first is a user query, and second is `currentUserId`.
 
-First argument is injected automatically, so in controller we are only passing the rest of arguments.
-Editor can be confused by this and print warning, but TypeScript understands it well,
-if you put a string instead of `currentUserId` TS will show error.
+The first argument is injected automatically, so in the controller, we are only passing the rest of the arguments.
+An editor can be confused by this and print a warning, but TypeScript understands it well,
+if you put a string instead of `currentUserId` TS will show an error.
 
 Later we will load the same article fields in other endpoints,
 and it makes sense for both readability and re-usability to move articles\` select into `articleRepo.selectDto`:
@@ -1845,9 +1845,9 @@ export const articleRepo = createRepo(db.article, {
 });
 ```
 
-When using the repo in a sub query, as we did for the `author` field, need to wrap a sub query into repo like `userRepo(q.user).selectDto(...)`.
+When using the repo in a subquery, as we did for the `author` field, need to wrap a subquery into a repo like `userRepo(q.user).selectDto(...)`.
 
-But if the repo is not inside of sub query, you can use repo object directly to build queries:
+But if the repo is not inside of the subquery, you can use the repo object directly to build queries:
 
 ```ts
 // src/article/article.controller.ts
@@ -1918,7 +1918,7 @@ export const articleRepo = createRepo(db.article, {
 });
 ```
 
-And now article controller can look so fabulous:
+And now the article controller can look so fabulous:
 
 ```ts
 // src/article/article.controller.ts
@@ -1962,13 +1962,13 @@ export const listArticlesRoute = routeHandler(
 );
 ```
 
-With the help of repos, the controller code became more than twice shorter,
-each repo method can be reused individually in other controllers or other repos,
+With the help of repositories, the controller code became more than twice shorter,
+each repo method can be reused individually in other controllers or other repositories,
 the code became easy to read and grasp.
 
-## create article
+## create an article
 
-Here are the test for creating article:
+Here is the test for creating an article:
 
 ```ts
 // src/app/article/article.controller.test.ts
@@ -2041,7 +2041,7 @@ describe('article controller', () => {
 })
 ```
 
-Implementation of controller:
+Implementation of the controller:
 
 ```ts
 export const createArticleRoute = routeHandler(
@@ -2059,7 +2059,7 @@ export const createArticleRoute = routeHandler(
   (req) => {
     const currentUserId = getCurrentUserId(req);
 
-    // wrap creating article and retrieving it to the transaction
+    // wrap creating an article and retrieving it to the transaction
     return db.$transaction(async (db) => {
       const { tags, ...params } = req.body;
 
@@ -2088,8 +2088,8 @@ export const createArticleRoute = routeHandler(
 This example demonstrates the use of nested `create` with nested `connectOrCreate`:
 it will try to find a tag by name and will create a tag only if not found.
 
-Notice that `articleRepo` is wrapping `db.article`: it must be so when using repository inside transaction.
-By default, repo will use a default connection, so it will try to perform query outside of transaction.
+Notice that `articleRepo` is wrapping `db.article`: it must be so when using the repository inside a transaction.
+By default, the repo will use a default connection, so it will try to perform a query outside of a transaction.
 Luckily, `pg-transactional-tests` will catch this mistake when running tests,
 the test will hang when trying to use more than 1 connection.
 
@@ -2107,11 +2107,11 @@ export const routes = async (app: FastifyInstance) => {
 
 ## update article endpoint
 
-One specific thing which is needed to be tested properly are tags:
-when user is updating article tags, app should create new tag records in case they didn't exist before,
-it should delete tags which aren't used by any article, and connect article to all tags properly.
+One specific thing which is needed to be tested properly is tags:
+when the user is updating article tags, the app should create new tag records in case they didn't exist before,
+it should delete tags that aren't used by any article, and connect the article to all tags properly.
 
-So if in the future the app will have tags endpoint which lists all tags, there won't be duplicates.
+So if in the future the app will have a tags endpoint that lists all tags, there won't be duplicates.
 
 Tests for the endpoint:
 
@@ -2237,7 +2237,7 @@ export const updateArticleRoute = routeHandler(
       // assigning repo to local variable to not repeat it
       const repo = articleRepo(db.article);
 
-      // retrive required fields and the current tags of article
+      // retrieve required fields and the current tags of article
       const article = await repo.findBy({ slug }).select('id', 'userId', {
         tags: (q) => q.tags.select('id', 'name'),
       });
@@ -2260,7 +2260,7 @@ export const updateArticleRoute = routeHandler(
 );
 ```
 
-Logic for updating tags is complex enough, so it is encapsulated into article repo.
+The logic for updating tags is complex enough, so it is encapsulated into the article repo.
 
 ```ts
 // src/app/article/article.repo.ts
@@ -2279,13 +2279,13 @@ export const articleRepo = createRepo(db.article, {
 })
 ```
 
-All previous repo methods were placed under `queryMethods`, but here we place it to the `queryOneWithWhereMethods`.
-The difference is in the type of `q` parameter.
+All previous repo methods were placed under `queryMethods`, but here we place it under the `queryOneWithWhereMethods`.
+The difference is in the type of the `q` parameter.
 
 It is forbidden to create related records from the query which returns multiple records, for example:
 
 ```ts
-// will result in TS error
+// will result in a TS error
 db.article.where({ id: { in: [1, 2, 3] } }).update({
   articleTags: {
     create: { ...someData }
@@ -2293,22 +2293,22 @@ db.article.where({ id: { in: [1, 2, 3] } }).update({
 })
 ```
 
-This code not only creates new `articleTags`, but also connects them to article.
-If we select 3 articles and create `articleTags` for the query it wouldn't make much sense because single `articleTag` can be connected to a single `article` only, cannot connect to many.
+This code not only creates new `articleTags` but also connects them to the article.
+If we select 3 articles and create `articleTags` for the query it wouldn't make much sense because a single `articleTag` can be connected to a single `article` only, but cannot connect to many.
 
-That's why type of `q` have to indicate that it is returning single record.
+That's why the type of `q` have to indicate that it is returning a single record.
 
-Also, `update` query must be applied only after we pass search conditions, to make sure we won't update all records in the database by mistake.
+Also, the `update` query must be applied only after we pass search conditions, to make sure we won't update all records in the database by mistake.
 
 ```ts
 // will result in TS error
 db.article.update({ ...data })
 ```
 
-That's why type of `q` have to indicate it has some search statements.
-So we placed new query method into `queryOneWithWhereMethods` where `q` is promised to have search conditions and to search for a single record.
+That's why the type of `q` have to indicate it has some search statements.
+So we placed a new query method into `queryOneWithWhereMethods` where `q` is promised to have search conditions and to search for a single record.
 
-Here is `updateTags` implementation:
+Here is the `updateTags` implementation:
 
 ```ts
 // src/app/article/article.repo.ts
@@ -2323,11 +2323,11 @@ export const articleRepo = createRepo(db.article, {
   queryOneWithWhereMethods: {
     async updateTags(
       q,
-      // first argument is a queryable instance of tag
+      // first argument is a queryable instance of the tag
       tag: typeof db.tag,
       // tags which article is connected to at the moment
       currentTags: { id: number; name: string }[],
-      // tag names from user parameter to use for the article
+      // tag names from user parameters to use for the article
       tags?: string[]
     ) {
       const currentTagNames = currentTags.map(({ name }) => name);
@@ -2342,7 +2342,7 @@ export const articleRepo = createRepo(db.article, {
 
       await q.update({
         articleTags: {
-          // note ? mark: nothing will happen if addTagNames is not defined
+          // note the `?` mark: nothing will happen if `addTagNames` is not defined
           create: addTagNames?.map((name) => ({
             tag: {
               connectOrCreate: {
@@ -2351,7 +2351,7 @@ export const articleRepo = createRepo(db.article, {
               },
             },
           })),
-          // won't delete anything if we pass empty array
+          // won't delete anything if we pass an empty array
           delete: removeTagIds.length ? { tagId: { in: removeTagIds } } : [],
         },
       });
@@ -2365,14 +2365,14 @@ export const articleRepo = createRepo(db.article, {
 })
 ```
 
-First parameter is `tag` from `db.tag` (see in article controller).
-We import `db.tag` directly here, because it is important to use `db` from the callback of transaction.
+The first parameter is `tag` from `db.tag` (see in article controller).
+We import `db.tag` directly here because it is important to use `db` from the callback of the transaction.
 
-Another thing to point here, this method doesn't return a query object, so it cannot be chained.
-This is a limitation for the case when you want to await a query inside of method.
+Another thing to point out here, this method doesn't return a query object, so it cannot be chained.
+This is a limitation for the case when you want to await a query inside of the method.
 
 `deleteUnused` is not complex and could be inlined, but it feels good to move the code to places where it feels like home.
-It is not a concern of article to know what unused tag is, it is a concern of a tag, so it belongs to tag repo:
+It is not a concern of the article to know what an unused tag is, it is a concern of a tag, so it belongs to the tag repo:
 
 ```ts
 // src/app/tag/tag.repo.ts
@@ -2388,7 +2388,7 @@ export const tagRepo = createRepo(db.tag, {
 });
 ```
 
-Add controller to the router:
+Add a controller to the router:
 
 ```ts
 // src/routes.ts
@@ -2400,7 +2400,7 @@ export const routes = async (app: FastifyInstance) => {
 };
 ```
 
-## mark/unmark article as favorite
+## mark/unmark the article as a favorite
 
 Tests:
 
@@ -2495,7 +2495,7 @@ describe('article controller', () => {
 })
 ```
 
-Define `.selectFavorite` to use in this test and in the controller later:
+Define `.selectFavorite` to use in this test and the controller later:
 
 It is not possible to use one method from another due to some TS limitations, so the way to do it is to define a standalone function.
 
@@ -2563,7 +2563,7 @@ export const toggleArticleFavoriteRoute = routeHandler(
           userId: currentUserId,
         });
       } catch (err) {
-        // ignore case when article is already favorited
+        // ignore case when an article is already favorited
         if (err instanceof db.articleFavorite.error && err.isUnique) {
           return;
         }
@@ -2580,7 +2580,7 @@ export const toggleArticleFavoriteRoute = routeHandler(
 );
 ```
 
-Add controller to the router:
+Add a controller to the router:
 
 ```ts
 // src/routes.ts
@@ -2592,7 +2592,7 @@ export const routes = async (app: FastifyInstance) => {
 };
 ```
 
-## delete article
+## delete an article
 
 Tests for the future endpoint:
 
@@ -2683,7 +2683,7 @@ export const deleteArticleRoute = routeHandler(
     const currentUserId = getCurrentUserId(req);
     const { slug } = req.params;
 
-    // wrapping in transaction to search for article and delete it in a single transaction
+    // wrapping in the transaction to search for an article and delete it in a single transaction
     await db.$transaction(async (db) => {
       const article = await db.article
         .select('id', 'userId', {
@@ -2699,15 +2699,15 @@ export const deleteArticleRoute = routeHandler(
       const articleQuery = db.article.find(article.id);
 
       if (article.tagIds.length) {
-        // before deleting a record need to delete all it's related records
-        // otherwise there would be an error complaining on a foreign key violation
+        // before deleting a record need to delete all its related records
+        // otherwise there would be an error complaining about a foreign key violation
         await articleQuery.articleTags.delete(true);
       }
-      
+
       await articleQuery.delete();
 
       if (article.tagIds.length) {
-        // tag repo with `deleteUnused` was defined before, at the step of updating article
+        // tag repo with `deleteUnused` was defined before, at the step of updating the article
         await tagRepo(db.tag).whereIn('id', article.tagIds).deleteUnused();
       }
     });

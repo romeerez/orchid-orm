@@ -1,8 +1,8 @@
 # Columns schema overview
 
-Columns schema is used in both query builder and the ORM to store information about table columns, to make querying type-safe, to add additional features for querying.
+Columns schema is used in both the query builder and the ORM to store information about table columns, to make querying type-safe, and to add additional features for querying.
 
-When using query-builder as a standalone, define columns in a such way:
+When using query-builder as a standalone, define columns in such way:
 
 ```ts
 import { createDb } from 'pqb'
@@ -18,7 +18,7 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-When using ORM, define columns in a such way:
+When using ORM, define columns in such way:
 
 ```ts
 // see ORM docs about defining Model
@@ -40,9 +40,9 @@ Note that all columns are **required** by default, use `.optional()` to mark the
 
 ## Column types
 
-Each column type has a specific database type, input type and output type.
+Each column type has a specific database type, input type, and output type.
 
-In most cases input and output is the same, but in some cases may differ.
+In most cases, input and output are the same, but in some cases may differ.
 
 For example, `timestamp` will be returned as a string by default (this may be overridden), but when creating or updating it may accept `string` or `Date`.
 
@@ -61,9 +61,9 @@ await Table.create({
 })
 ```
 
-All column types supports following operators in `where` conditions:
+All column types support the following operators in `where` conditions:
 
-value can be of the same type as the column, or a sub query, or a raw expression (using `raw` function):
+value can be of the same type as the column, a sub-query, or a raw expression (using the `raw` function):
 
 ```ts
 db.someModel.where({
@@ -76,7 +76,7 @@ db.someModel.where({
 })
 ```
 
-Different types of columns supports different operations in `where` conditions:
+Different types of columns support different operations in `where` conditions:
 
 ```ts
 export class SomeModel extends Model {
@@ -102,15 +102,15 @@ db.someModel.where({
 
 ## Override column types
 
-It is possible to override parsing of columns returned from the database.
+It is possible to override the parsing of columns returned from the database.
 
 Define `.encode` on a column to convert the value when creating or updating records,
-define `.parse` to parse values returned from database,
-`.as` will change TS type of one column to another for `porm-schema-to-zod` module to use a different schema.
+define `.parse` to parse values returned from the database,
+`.as` will change the TS type of one column to another for the `porm-schema-to-zod` module to use a different schema.
 
 For example, by default timestamps are returned as strings.
 Here is how to override this for all models to accept numbers when creating or updating,
-and to parse date to number when returning from database:
+and to parse the date to the number when returning from a database:
 
 ```ts
 export const Model = createModel({
@@ -145,8 +145,8 @@ const db = createDb({
 })
 ```
 
-Examples above demonstrate how to override column types in principle,
-however, for the specific case of overriding timestamp there are predefined shortcuts.
+The examples above demonstrate how to override column types in principle,
+however, for the specific case of overriding timestamp, there are predefined shortcuts.
 
 `timestamp().asNumber()` will encode/parse timestamp from and to a number,
 
