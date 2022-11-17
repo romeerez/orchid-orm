@@ -1287,15 +1287,16 @@ describe('hasMany through', () => {
       db.profile.chats.create(chatData);
     });
 
-    it('should have chained delete', () => {
-      const query = db.profile
-        .where({ bio: 'bio' })
-        .chats.where({ title: 'title' })
-        .delete();
+    describe('chained delete', () => {
+      it('should have chained delete', () => {
+        const query = db.profile
+          .where({ bio: 'bio' })
+          .chats.where({ title: 'title' })
+          .delete();
 
-      expectSql(
-        query.toSql(),
-        `
+        expectSql(
+          query.toSql(),
+          `
           DELETE FROM "chat" AS "chats"
           WHERE EXISTS (
               SELECT 1 FROM "profile"
@@ -1315,8 +1316,9 @@ describe('hasMany through', () => {
             )
             AND "chats"."title" = $2
         `,
-        ['bio', 'title'],
-      );
+          ['bio', 'title'],
+        );
+      });
     });
 
     it('should have proper joinQuery', () => {
