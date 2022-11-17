@@ -40,6 +40,7 @@ It is inspired by [realworld](https://github.com/gothinkster/realworld) API spec
 
 - **POST** `/articles`: create a new article
     * JSON payload:
+        - **slug**: string
         - **title**: string
         - **body**: string
         - **tags**: array of strings
@@ -47,19 +48,19 @@ It is inspired by [realworld](https://github.com/gothinkster/realworld) API spec
 
 - **PATCH** `/articles/:slug`: update article
     * JSON payload:
+        - **slug**?: string
         - **title**?: string
         - **body**?: string
         - **tags**?: array of strings
     * Responds with article data
 
+- **POST** `/articles/:slug/favorite`
+    * JSON payload:
+        - **favorite**: true to make favorite, false to un-favorite the article
+    * No response needed
+
 - **DELETE** `/articles/:slug`: delete article
     * No response needed
-
-- **POST** `/articles/:slug/favor`: mark article as favorite or undo that
-    * JSON payload:
-        - **favorite**: boolean
-    * No response needed
-
 
 Register and login responses should be of the following type:
 
@@ -98,7 +99,7 @@ type ArticleResponse = {
 }
 ```
 
-## Initialize the project
+## initialize the project
 
 Lets init the project:
 
@@ -134,7 +135,7 @@ because it is easier to set up (async error handling out of the box, unlike expr
 has more concise syntax for routes, and it includes a very nice utility for testing out of the box.
 Of course, you can use `Porm` with your favorite framework.
 
-## Setup Porm
+## setup Porm
 
 Install `Porm` dependencies:
 
@@ -218,7 +219,12 @@ export const db = porm(
 );
 ```
 
-Define a base `Model` class which will be used later to extend models from:
+Define a base `Model` class which will be used later to extend models from.
+
+By default, timestamps are returned as strings, the same as when loading timestamps from databases directly.
+
+For this API let's agree to return timestamps as epoch numbers (it's efficient and simple to use),
+but if you prefer to deal with `Date` objects write `columnTypes.timestamp().asDate()` instead.
 
 ```ts
 // src/lib/model.ts
@@ -228,11 +234,12 @@ import { columnTypes } from 'pqb';
 export const Model = createModel({
   columnTypes: {
     ...columnTypes,
+    timestamp: () => columnTypes.timestamp().asNumber(),
   },
 });
 ```
 
-Create a script which we will use from a terminal to generate and run migrations.
+Create a script which we will use from a terminal to generate and run migrations:
 
 ```ts
 // src/scripts/db.ts
@@ -322,7 +329,7 @@ Add it to `package.json` "jest" section:
 }
 ```
 
-## User endpoints
+## user endpoints
 
 Let's begin from writing a user model.
 Every model must have a table name and a set of columns.
@@ -338,7 +345,7 @@ Add them to model by writing: `...t.timestamps()`.
 Each column has a type, which is used to get a TypeScript type and a database type when running a migration.
 Some column methods have effect only in migration, some methods are for validation.
 
-### Writing a model
+## writing a model
 
 ```ts
 // src/app/user/user.model.ts
@@ -360,7 +367,7 @@ export class UserModel extends Model {
   }));
 }
 
-// will be used later in controller to validate parameters
+// will be used later validate parameters
 export const userSchema = modelToZod(UserModel);
 ```
 
@@ -403,7 +410,7 @@ import { db } from '../../db';
 export const userFactory = createFactory(db.user);
 ```
 
-### Add migration
+## add migration
 
 Generate a new migration file by running:
 
@@ -414,6 +421,7 @@ npm run db g createUser
 In newly added file we can see such content:
 
 ```ts
+// src/migrations/*timestamp*_createUser.ts
 import { change } from 'rake-db';
 
 change(async (db) => {
@@ -442,7 +450,7 @@ Note that `min`, `max`, `email` have no effect in the migration, these methods a
 
 `Porm` will probably gain a feature of auto-generated migrations in the future, but for now they are written manually.
 
-### Writing tests for register user endpoint
+## writing tests for register user endpoint
 
 Let's write tests for the first endpoint `POST /users`:
 
@@ -525,7 +533,7 @@ describe('user controller', () => {
 
 We can freely create database records thanks to `pg-transactional-tests` which was configured earlier in a `jest-setup.ts`.
 
-### Implementing register user endpoint
+## register user endpoint
 
 On real projects the auth will be more sophisticated, but for demo purposes lets do a simplistic token based auth.
 
@@ -589,18 +597,47 @@ it('should register a new user, save it with hashed password, return a user and 
 })
 ```
 
-And, finally, the register endpoint itself:
+Every node.js framework and even specific project usually has own custom way of validating request parameters,
+some people use middlewares for this, some use decorators like in `Nest.js` framework.
+No matter how it is implemented, it should serve the purposes of:
+
+- request query, body, route params must be validated properly
+- validated query, body, params should have proper types
+- it is nice to have response validation in dev/test environment, so you won't leak sensitive data by accident and no need to write a tedious tests for this
+
+Usually out-of-the-box validation utility fails to satisfy all 3 points,
+I'm using a custom utility `routeHandler` to validate parameters and result by using `zod` schemas, [here is source](link to routeHandler).
+
+From our api spec we can see that both registration and login endpoint returns the same shape of data: user object and token,
+and it makes sense to reuse response validator for them. Let's place it in `user.dto.ts` file (dto stands for Data Transfer Object):
+
+```ts
+// src/user/user.dto.ts
+import { z } from 'zod';
+import { userSchema } from './user.model';
+
+export const authDto = z.object({
+  user: userSchema.pick({
+    id: true,
+    username: true,
+    email: true,
+  }),
+  token: z.string(),
+});
+```
+
+And, finally, we can write register endpoint itself:
 
 ```ts
 // src/app/user/user.controller.ts
 
 import { routeHandler } from '../../lib/routeHandler';
-import { z } from 'zod';
 import { db } from '../../db';
 import { encryptPassword } from '../../lib/password';
 import { createToken } from '../../lib/jwt';
 import { userSchema } from './user.model';
 import { ApiError } from '../../lib/errors';
+import { authDto } from './user.dto';
 
 export const registerUserRoute = routeHandler(
   {
@@ -609,14 +646,7 @@ export const registerUserRoute = routeHandler(
       email: true,
       password: true,
     }),
-    result: {
-      user: userSchema.pick({
-        id: true,
-        username: true,
-        email: true,
-      }),
-      token: z.string(),
-    },
+    result: authDto,
   },
   async (req) => {
     try {
@@ -644,15 +674,6 @@ export const registerUserRoute = routeHandler(
 );
 ```
 
-I'm using a custom utility `routeHandler` to validate parameters and result by using `zod` schemas.
-
-Every node.js framework and even specific project usually has own custom way of validating request parameters,
-some use middlewares, some use decorators. It can be anything, but it should serve the purposes of:
-
-- request query, body, route params must be validated properly
-- validated query, body, params should have proper types
-- it is nice to have response validation in dev/test environment, so you won't leak sensitive data by accident and no need to write a tedious tests for this
-
 Consider the code for creating a user:
 
 ```ts
@@ -675,16 +696,16 @@ Add the route function to the router:
 ```ts
 // src/routes.ts
 import { FastifyInstance } from 'fastify';
-import * as userController from './app/user/user.controller';
+import * as user from './app/user/user.controller';
 
 export const routes = async (app: FastifyInstance) => {
-  app.post('/users', userController.registerUserRoute);
+  app.post('/users', user.registerUserRoute);
 };
 ```
 
 I'm skipping some framework specific details: how to configure server, configure routing, this depends on the framework and your preferences.
 
-### Implementing login endpoint
+## login endpoint
 
 Add corresponding tests:
 
@@ -756,14 +777,7 @@ export const loginUser = routeHandler(
       email: true,
       password: true,
     }),
-    result: {
-      user: userSchema.pick({
-        id: true,
-        username: true,
-        email: true,
-      }),
-      token: z.string(),
-    },
+    result: authDto,
   },
   async (req) => {
     const user = await db.user
@@ -794,15 +808,15 @@ Add the route function to the router:
 ```ts
 // src/routes.ts
 import { FastifyInstance } from 'fastify';
-import * as userController from './app/user/user.controller';
+import * as user from './app/user/user.controller';
 
 export const routes = async (app: FastifyInstance) => {
-  app.post('/users', userController.registerUserRoute);
-  app.post('/users/auth', userController.loginUserRoute);
+  app.post('/users', user.registerUserRoute);
+  app.post('/users/auth', user.loginUserRoute);
 };
 ```
 
-### Implementing follow and unfollow
+## follow and unfollow
 
 Add a new model `UserFollow`:
 
@@ -849,6 +863,7 @@ npm run db g createUserFollow
 ```
 
 ```ts
+// src/migrations/*timestamp*_createUserFollow.ts
 import { change } from 'rake-db';
 
 change(async (db) => {
@@ -1039,12 +1054,1663 @@ Add route functions to the router:
 ```ts
 // src/routes.ts
 import { FastifyInstance } from 'fastify';
-import * as userController from './app/user/user.controller';
+import * as user from './app/user/user.controller';
 
 export const routes = async (app: FastifyInstance) => {
   // ...snip
-  app.post('/users/:username/follow', userController.followUserRoute);
-  app.delete('/users/:username/follow', userController.unfollowUserRoute);
+  app.post('/users/:username/follow', user.followUserRoute);
+  app.delete('/users/:username/follow', user.unfollowUserRoute);
 };
 ```
 
+## article related models
+
+Create migration files:
+
+```sh
+npm run db g createArticle
+npm run db g createTag
+npm run db g createArticleTag
+npm run db g createArticleFavorite
+```
+
+Article table migration:
+
+```ts
+// src/migrations/*timestamp*_createArticle.ts
+import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createTable('article', (t) => ({
+    id: t.serial().primaryKey(),
+    userId: t.integer().foreignKey('user', 'id').index(),
+    slug: t.text().unique(),
+    title: t.text(),
+    body: t.text(),
+    favoritesCount: t.integer(),
+    ...t.timestamps(),
+  }));
+});
+```
+
+Tag table migration:
+
+```ts
+// src/migrations/*timestamp*_createTag.ts
+import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createTable('tag', (t) => ({
+    id: t.serial().primaryKey(),
+    name: t.text(),
+    ...t.timestamps(),
+  }));
+});
+```
+
+Article tag join table migration:
+
+```ts
+// src/migrations/*timestamp*_createArticleTag.ts
+import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createTable('articleTag', (t) => ({
+    articleId: t.integer().foreignKey('article', 'id'),
+    tagId: t.integer().foreignKey('tag', 'id'),
+    ...t.primaryKey(['tagId', 'articleId']),
+  }));
+});
+```
+
+Article favorite join table migration:
+
+```ts
+// src/migrations/*timestamp*_createArticleFavorite.ts
+import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createTable('articleFavorite', (t) => ({
+    userId: t.integer().foreignKey('user', 'id'),
+    articleId: t.integer().foreignKey('article', 'id'),
+    ...t.primaryKey(['userId', 'articleId']),
+  }));
+});
+```
+
+Run migrations:
+
+```sh
+npm run db migrate
+```
+
+Model files can be added in any order, and you can first define all models and later define their relations.
+
+Tag model:
+
+```ts
+// src/app/tag/tag.model.ts
+import { Model } from '../../lib/model';
+import { modelToZod } from 'porm-schema-to-zod';
+import { ArticleTagModel } from './articleTag.model';
+
+export class TagModel extends Model {
+  table = 'tag';
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    name: t.text().min(3).max(20),
+    ...t.timestamps(),
+  }));
+
+  relations = {
+    articleTags: this.hasMany(() => ArticleTagModel, {
+      primaryKey: 'id',
+      foreignKey: 'tagId',
+    }),
+  };
+}
+
+export const tagSchema = modelToZod(TagModel);
+```
+
+Tag model has no relations in the example above, but only because they're not needed in future queries.
+`Porm` is designed to deal with circular dependencies without problems,
+so `TagModel` can use `ArticleModel` in the relation, and `ArticleModel` can have `TagModel` in the relation at the same time.
+
+Article tag model:
+
+```ts
+// src/app/article/articleTag.model.ts
+import { Model } from '../../lib/model';
+import { TagModel } from '../tag/tag.model';
+
+export class ArticleTagModel extends Model {
+  table = 'articleTag';
+  columns = this.setColumns((t) => ({
+    articleId: t.integer().foreignKey('article', 'id'),
+    tagId: t.integer().foreignKey('tag', 'id'),
+    ...t.primaryKey(['tagId', 'articleId']),
+  }));
+
+  relations = {
+    // this `tag` relation name is used in article model `tags` relation in the `source` option
+    tag: this.belongsTo(() => TagModel, {
+      primaryKey: 'id',
+      foreignKey: 'tagId',
+    }),
+  };
+}
+```
+
+Article favorite model:
+
+```ts
+// src/app/article/articleFavorite.model.ts
+import { Model } from '../../lib/model';
+
+export class ArticleFavoriteModel extends Model {
+  table = 'articleFavorite';
+  columns = this.setColumns((t) => ({
+    userId: t.integer().foreignKey('user', 'id'),
+    articleId: t.integer().foreignKey('article', 'id'),
+    ...t.primaryKey(['userId', 'articleId']),
+  }));
+}
+```
+
+Article model:
+
+```ts
+// src/app/article/article.model.ts
+import { Model } from '../../lib/model';
+import { UserModel } from '../user/user.model';
+import { ArticleTagModel } from './articleTag.model';
+import { TagModel } from '../tag/tag.model';
+import { ArticleFavoriteModel } from './articleFavorite.model';
+import { modelToZod } from 'porm-schema-to-zod';
+
+export class ArticleModel extends Model {
+  table = 'article';
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    userId: t.integer().foreignKey('user', 'id').index(),
+    // it is important to set `min` and `max` for text fields
+    // to make sure that user won't submit empty string or billion chars long strings:
+    slug: t.text().unique().min(10).max(200),
+    title: t.text().min(10).max(200),
+    body: t.text().min(100).max(100000),
+    favoritesCount: t.integer(),
+    ...t.timestamps(),
+  }));
+
+  relations = {
+    author: this.belongsTo(() => UserModel, {
+      primaryKey: 'id',
+      foreignKey: 'userId',
+    }),
+
+    favorites: this.hasMany(() => ArticleFavoriteModel, {
+      primaryKey: 'id',
+      foreignKey: 'articleId',
+    }),
+
+    articleTags: this.hasMany(() => ArticleTagModel, {
+      primaryKey: 'id',
+      foreignKey: 'articleId',
+    }),
+
+    tags: this.hasMany(() => TagModel, {
+      through: 'articleTags',
+      source: 'tag',
+    }),
+  };
+}
+
+export const articleSchema = modelToZod(ArticleModel);
+```
+
+Add models to `db.ts`:
+
+```ts
+// src/db.ts
+
+import { ArticleModel } from './app/article/article.model';
+import { ArticleTagModel } from './app/article/articleTag.model';
+import { TagModel } from './app/tag/tag.model';
+import { ArticleFavoriteModel } from './app/article/articleFavorite.model';
+
+export const db = porm(
+  // ...snip
+  {
+    // ...snip
+    article: ArticleModel,
+    articleFavorite: ArticleFavoriteModel,
+    articleTag: ArticleTagModel,
+    tag: TagModel,
+  }
+);
+```
+
+Add a factory for article for use in tests:
+
+```ts
+// src/lib/test/testFactories.ts
+import { createFactory } from 'porm-test-factory';
+import { db } from '../../db';
+
+export const userFactory = createFactory(db.user);
+
+export const articleFactory = createFactory(db.article);
+```
+
+## list articles endpoint
+
+I write one test for one feature, one by one, and this helps me a lot when writing backends and libraries.
+
+For this tutorial I'm listing whole test suite for endpoint only to keep the tutorial a bit more compact.
+
+Here are all tests for `GET /articles` endpoint:
+
+```ts
+// src/app/article/article.controller.test
+import { articleFactory, userFactory } from '../../lib/test/testFactories';
+import { testRequest } from '../../lib/test/testRequest';
+import { itShouldRequireAuth } from '../../lib/test/testUtils';
+
+describe('article controller', () => {
+  describe('GET /articles', () => {
+    it('should load articles for public request, favorited and author following fields must be false, newer articles should go first', async () => {
+      const author = await userFactory.create();
+      await articleFactory.createList(2, { userId: author.id });
+
+      const res = await testRequest.get('/articles');
+
+      const data = res.json();
+      expect(data.length).toBe(2);
+
+      const [first, second] = data;
+      expect(first.favorited).toBe(false);
+      expect(first.author.following).toBe(false);
+      expect(first.createdAt).toBeGreaterThan(second.createdAt);
+    });
+
+    it('should load articles for authorized user, favorited and author following fields must have proper values, newer articles should go first', async () => {
+      const currentUser = await userFactory.create();
+
+      const notFollowedAuthor = await userFactory.create();
+      await articleFactory.create({ userId: notFollowedAuthor.id });
+
+      const followedAuthor = await userFactory.create({
+        follows: {
+          create: [
+            {
+              followerId: currentUser.id,
+            },
+          ],
+        },
+      });
+
+      await articleFactory.create({
+        userId: followedAuthor.id,
+        favorites: {
+          create: [
+            {
+              userId: currentUser.id,
+            },
+          ],
+        },
+      });
+
+      const res = await testRequest.as(currentUser).get('/articles');
+
+      const data = res.json();
+      const [first, second] = data;
+
+      expect(second.favorited).toBe(false);
+      expect(second.author.following).toBe(false);
+
+      expect(first.favorited).toBe(true);
+      expect(first.author.following).toBe(true);
+    });
+
+    describe('query params', () => {
+      describe('author', () => {
+        it('should filter articles by username of author', async () => {
+          const [author1, author2] = await userFactory.createList(2);
+
+          await articleFactory.create({ userId: author1.id });
+          await articleFactory.create({ userId: author2.id });
+
+          const res = await testRequest.get('/articles', {
+            query: {
+              author: author1.username,
+            },
+          });
+
+          const data = res.json();
+          expect(data.length).toBe(1);
+          expect(data[0].author.username).toBe(author1.username);
+        });
+      });
+
+      describe('tag', () => {
+        it('should filter articles by tag', async () => {
+          const author = await userFactory.create();
+
+          // create article with matching tag
+          await articleFactory.create({
+            userId: author.id,
+            articleTags: {
+              create: ['one', 'two'].map((name) => ({
+                tag: {
+                  create: {
+                    name,
+                  },
+                },
+              })),
+            },
+          });
+
+          // create article with different tags
+          await articleFactory.create({
+            userId: author.id,
+            articleTags: {
+              create: ['three', 'four'].map((name) => ({
+                tag: {
+                  create: {
+                    name,
+                  },
+                },
+              })),
+            },
+          });
+
+          // create article without tags
+          await articleFactory.create({ userId: author.id });
+
+          const res = await testRequest.get('/articles', {
+            query: {
+              tag: 'one',
+            },
+          });
+
+          const data = res.json();
+          expect(data.length).toBe(1);
+          expect(data[0].tags).toEqual(['one', 'two']);
+        });
+      });
+
+      describe('feed', () => {
+        itShouldRequireAuth(() =>
+          testRequest.get('/articles', {
+            query: {
+              feed: 'true',
+            },
+          })
+        );
+
+        it('should return articles from followed authors for authorized user', async () => {
+          const currentUser = await userFactory.create();
+          const unfollowedAuthor = await userFactory.create();
+          const followedAuthor = await userFactory.create({
+            follows: {
+              create: [
+                {
+                  followerId: currentUser.id,
+                },
+              ],
+            },
+          });
+
+          const expectedArticles = await articleFactory.createList(2, {
+            userId: followedAuthor.id,
+          });
+
+          await articleFactory.createList(2, {
+            userId: unfollowedAuthor.id,
+          });
+
+          const res = await testRequest.as(currentUser).get('/articles', {
+            query: {
+              feed: 'true',
+            },
+          });
+
+          const data = res.json();
+          expect(data.length).toBe(2);
+          expect(data).toMatchObject(
+            expectedArticles
+              .reverse()
+              .map((article) => ({ slug: article.slug }))
+          );
+        });
+      });
+
+      describe('favorite', () => {
+        itShouldRequireAuth(() =>
+          testRequest.get('/articles', {
+            query: {
+              favorite: 'true',
+            },
+          })
+        );
+
+        it('should returns only articles favorited by current user', async () => {
+          const [currentUser, author] = await userFactory.createList(2);
+
+          const favoritedArticles = await articleFactory.createList(2, {
+            userId: author.id,
+            favorites: {
+              create: [
+                {
+                  userId: currentUser.id,
+                },
+              ],
+            },
+          });
+
+          await articleFactory.create({ userId: author.id });
+
+          const res = await testRequest.as(currentUser).get('/articles', {
+            query: {
+              favorite: 'true',
+            },
+          });
+
+          const data = res.json();
+          expect(data).toMatchObject(
+            favoritedArticles
+              .reverse()
+              .map((article) => ({ slug: article.slug }))
+          );
+        });
+      });
+    });
+  });
+});
+```
+
+Note that all nested create code of the `userFactory` and `articleFactory` is also applicable to the `db.user` and `db.article`.
+
+`itShouldRequireAuth` is a utility for tests to save some lines of code when testing protected routes.
+
+```ts
+// src/lib/test/testUtils.ts
+export const itShouldRequireAuth = (
+  req: () => Promise<{ statusCode: number; json(): unknown }>
+) => {
+  it('should require authorization', async () => {
+    const res = await req();
+    expectUnauthorized(res);
+  });
+};
+
+export const expectUnauthorized = (res: {
+  statusCode: number;
+  json(): unknown;
+}) => {
+  expect(res.statusCode).toBe(401);
+  expect(res.json()).toEqual({
+    message: 'Unauthorized',
+  });
+};
+```
+
+Define the `articleDto` schema, it will be used for response in `GET /articles`, `PATCH /articles/:id`, `POST /articles`,
+so better to have it separately:
+
+```ts
+// src/app/article/article.dto.ts
+import { articleSchema } from './article.model';
+import { userSchema } from '../user/user.model';
+import { z } from 'zod';
+
+export const articleDto = articleSchema
+  .pick({
+    slug: true,
+    title: true,
+    body: true,
+    favoritesCount: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .and(
+    z.object({
+      tags: z.string().array(),
+      favorited: z.boolean(),
+      author: userSchema
+        .pick({
+          username: true,
+        })
+        .and(
+          z.object({
+            following: z.boolean(),
+          })
+        ),
+    })
+  );
+```
+
+Controller code:
+
+```ts
+import { routeHandler } from '../../lib/routeHandler';
+import { db } from '../../db';
+import { getOptionalCurrentUserId } from '../user/user.service';
+import { z } from 'zod';
+import { UnauthorizedError } from '../../lib/errors';
+import { articleDto } from './article.dto';
+
+export const listArticlesRoute = routeHandler(
+  {
+    query: z.object({
+      author: z.string().optional(),
+      tag: z.string().optional(),
+      feed: z.literal('true').optional(),
+      favorite: z.literal('true').optional(),
+      limit: z
+        .preprocess((s) => parseInt(s as string), z.number().min(1).max(20))
+        .default(20),
+      offset: z
+        .preprocess((s) => parseInt(s as string), z.number().min(0))
+        .optional(),
+    }),
+    result: articleDto.array(),
+  },
+  (req) => {
+    // currentUserId will be an id for authorized, undefined for not authorized
+    const currentUserId = getOptionalCurrentUserId(req);
+
+    let query = db.article
+      .select(
+        'slug',
+        'title',
+        'body',
+        'favoritesCount',
+        'createdAt',
+        'updatedAt',
+        {
+          // `pluck` method collects a column into array
+          // order is ASC by default
+          tags: (q) => q.tags.order('name').pluck('name'),
+          favorited: currentUserId
+            // if currentUserId is defined, return exists query
+            ? (q) => q.favorites.where({ userId: currentUserId }).exists()
+            // if no currentUserId, return raw 'false' SQL of boolean type
+            : db.article.raw((t) => t.boolean(), 'false'),
+          author: (q) =>
+            q.author.select('username', {
+              // we load following similarly to the favorited above
+              following: currentUserId
+                ? (q) => q.follows.where({ followerId: currentUserId }).exists()
+                : db.article.raw((t) => t.boolean(), 'false'),
+            }),
+        }
+      )
+      .order({
+        createdAt: 'DESC',
+      })
+      // limit has default 20 in the params schema above
+      .limit(req.query.limit)
+      // offset parameter is optional, and it is fine to pass `undefined` to the .offset method
+      .offset(req.query.offset);
+
+    // filtering articles by author, tag and other relations by using `whereExists`
+    if (req.query.author) {
+      query = query.whereExists('author', (q) =>
+        q.where({ username: req.query.author })
+      );
+    }
+
+    if (req.query.tag) {
+      query = query.whereExists('tags', (q) =>
+        q.where({ name: req.query.tag })
+      );
+    }
+
+    if (req.query.feed || req.query.favorite) {
+      if (!currentUserId) throw new UnauthorizedError();
+
+      if (req.query.feed) {
+        query = query.whereExists('author', (q) =>
+          // `whereExists` can be nested to filter by relation of relation
+          q.whereExists('follows', (q) =>
+            q.where({ followerId: currentUserId })
+          )
+        );
+      }
+
+      if (req.query.favorite) {
+        query = query.whereExists('favorites', (q) =>
+          q.where({ userId: currentUserId })
+        );
+      }
+    }
+
+    // query is a Promise-like and will be awaited automatically
+    return query;
+  }
+);
+```
+
+Register this controller in the router:
+
+```ts
+// src/routes.ts
+import * as article from './app/article/article.controller';
+
+export const routes = async (app: FastifyInstance) => {
+  // ...snip
+  app.get('/articles', article.listArticlesRoute);
+};
+```
+
+## refactoring code by using repo
+
+Currently, the controller code for listing articles looks messy: too many things are happening,
+too many query details to read the code quickly and clearly.
+
+Here I want to tell about one special feature of the `Porm` which doesn't exist in other node.js ORMs.
+There are similar capabilities in `Objection.js` and `Openrecord`, but they aren't type safe.
+
+Let's start from article's `author` field: querying author includes some nuances specific to user model,
+better to keep such queries encapsulated inside related feature folder.
+
+Extract author object from `articleDto` into own `userDto`:
+
+```ts
+// src/app/article/article.dto.ts
+import { userDto } from '../user/user.dto';
+
+export const articleDto = articleSchema
+  .pick({
+    slug: true,
+    title: true,
+    favoritesCount: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .and(
+    z.object({
+      tags: z.string().array(),
+      favorited: z.boolean(),
+      // move this part to user.dto
+      // author: userSchema
+      //   .pick({
+      //     username: true,
+      //   })
+      //   .and(
+      //     z.object({
+      //       following: z.boolean(),
+      //     })
+      //   ),
+      author: userDto,
+    })
+  );
+```
+
+```ts
+// src/app/user/user.dto.ts
+import { userSchema } from './user.model';
+
+export const userDto = userSchema
+  .pick({
+    username: true,
+  })
+  .and(
+    z.object({
+      following: z.boolean(),
+    })
+  );
+```
+
+Create a new file `user.repo.ts` with the content:
+
+```ts
+// src/app/user/user.repo.ts
+import { createRepo } from 'porm';
+import { db } from '../../db';
+
+export const userRepo = createRepo(db.user, {
+  queryMethods: {
+    selectDto(q, currentUserId: number | undefined) {
+      return q.select('username', {
+        following: currentUserId
+          ? (q) => q.follows.where({ followerId: currentUserId }).exists()
+          : db.article.raw((t) => t.boolean(), 'false'),
+      });
+    },
+  },
+});
+```
+
+And now we can simplify querying `author` object in the articles` controller:
+
+```ts
+// src/article/article.controller.ts
+import { userRepo } from '../user/user.repo';
+
+export const listArticlesRoute = routeHandler(
+  // ...snip
+  (req) => {
+    let query = db.article
+      .select(
+        // ...snip
+        {
+          // ...snip
+          author: (q) => userRepo(q.author).selectDto(currentUserId),
+        }
+      )
+    
+    // ...snip
+  }
+)
+```
+
+Note that in the `user.repo.ts` the `selectDto` has two arguments: first is a user query, and second is `currentUserId`.
+
+First argument is injected automatically, so in controller we are only passing the rest of arguments.
+Editor can be confused by this and print warning, but TypeScript understands it well,
+if you put a string instead of `currentUserId` TS will show error.
+
+Later we will load the same article fields in other endpoints,
+and it makes sense for both readability and re-usability to move articles\` select into `articleRepo.selectDto`:
+
+```ts
+// src/app/article/article.repo.ts
+import { createRepo } from 'porm';
+import { db } from '../../db';
+import { userRepo } from '../user/user.repo';
+
+export const articleRepo = createRepo(db.article, {
+  queryMethods: {
+    selectDto(q, currentUserId: number | undefined) {
+      return q.select(
+        'slug',
+        'title',
+        'body',
+        'favoritesCount',
+        'createdAt',
+        'updatedAt',
+        {
+          tags: (q) => q.tags.order('name').pluck('name'),
+          favorited: currentUserId
+            ? (q) => q.favorites.where({ userId: currentUserId }).exists()
+            : db.article.raw((t) => t.boolean(), 'false'),
+          author: (q) => userRepo(q.author).selectDto(currentUserId),
+        }
+      );
+    },
+  },
+});
+```
+
+When using the repo in a sub query, as we did for the `author` field, need to wrap a sub query into repo like `userRepo(q.user).selectDto(...)`.
+
+But if the repo is not inside of sub query, you can use repo object directly to build queries:
+
+```ts
+// src/article/article.controller.ts
+import { userRepo } from '../user/user.repo';
+
+export const listArticlesRoute = routeHandler(
+  // ...snip
+  (req) => {
+    const currentUserId = getOptionalCurrentUserId(req);
+
+    let query = articleRepo
+      .selectDto(currentUserId)
+      .order({
+        createdAt: 'DESC',
+      })
+      .limit(req.query.limit)
+      .offset(req.query.offset);
+    
+    // ...snip
+  }
+)
+```
+
+Let's move all article filtering logic into repo methods:
+
+```ts
+// src/app/article/article.repo.ts
+import { createRepo } from 'porm';
+import { db } from '../../db';
+import { userRepo } from '../user/user.repo';
+
+export const articleRepo = createRepo(db.article, {
+  queryMethods: {
+    selectDto(q, currentUserId: number | undefined) {
+      return q.select(
+        'slug',
+        'title',
+        'body',
+        'favoritesCount',
+        'createdAt',
+        'updatedAt',
+        {
+          tags: (q) => q.tags.order('name').pluck('name'),
+          favorited: currentUserId
+            ? (q) => q.favorites.where({ userId: currentUserId }).exists()
+            : db.article.raw((t) => t.boolean(), 'false'),
+          author: (q) => userRepo(q.author).selectDto(currentUserId),
+        }
+      );
+    },
+    filterByAuthorUsername(q, username: string) {
+      return q.whereExists('author', (q) => q.where({ username }));
+    },
+    filterByTag(q, name: string) {
+      return q.whereExists('tags', (q) => q.where({ name }));
+    },
+    filterForUserFeed(q, currentUserId: number) {
+      return q.whereExists('author', (q) =>
+        q.whereExists('follows', (q) => q.where({ followerId: currentUserId }))
+      );
+    },
+    filterFavorite(q, currentUserId: number) {
+      return q.whereExists('favorites', (q) =>
+        q.where({ userId: currentUserId })
+      );
+    },
+  },
+});
+```
+
+And now article controller can look so fabulous:
+
+```ts
+// src/article/article.controller.ts
+// ...imports
+
+export const listArticlesRoute = routeHandler(
+  // ...snip
+  (req) => {
+    const currentUserId = getOptionalCurrentUserId(req);
+
+    let query = articleRepo
+      .selectDto(currentUserId)
+      .order({
+        createdAt: 'DESC',
+      })
+      .limit(req.query.limit)
+      .offset(req.query.offset);
+
+    if (req.query.author) {
+      query = query.filterByAuthorUsername(req.query.author);
+    }
+
+    if (req.query.tag) {
+      query = query.filterByTag(req.query.tag);
+    }
+
+    if (req.query.feed || req.query.favorite) {
+      if (!currentUserId) throw new UnauthorizedError();
+
+      if (req.query.feed) {
+        query = query.filterForUserFeed(currentUserId);
+      }
+
+      if (req.query.favorite) {
+        query = query.filterFavorite(currentUserId);
+      }
+    }
+
+    return query;
+  }
+);
+```
+
+With the help of repos, the controller code became more than twice shorter,
+each repo method can be reused individually in other controllers or other repos,
+the code became easy to read and grasp.
+
+## create article
+
+Here are the test for creating article:
+
+```ts
+// src/app/article/article.controller.test.ts
+
+describe('article controller', () => {
+  // ...snip
+
+  describe('POST /articles', () => {
+    const params = articleFactory
+      .pick({
+        slug: true,
+        title: true,
+        body: true,
+      })
+      .build();
+
+    itShouldRequireAuth(() =>
+      testRequest.post('/articles', {
+        ...params,
+        tags: [],
+      })
+    );
+
+    it('should create article without tags, return articleDto', async () => {
+      const currentUser = await userFactory.create();
+
+      const res = await testRequest.as(currentUser).post('/articles', {
+        ...params,
+        tags: [],
+      });
+
+      const data = res.json();
+      expect(data.tags).toEqual([]);
+      expect(data.author.username).toBe(currentUser.username);
+    });
+
+    it('should create article and tags, should connect existing tags, return articleDto', async () => {
+      const currentUser = await userFactory.create();
+      const tagId = await db.tag.get('id').create({ name: 'one' });
+
+      const res = await testRequest.as(currentUser).post('/articles', {
+        ...params,
+        tags: ['one', 'two'],
+      });
+
+      const data = res.json();
+      expect(data.tags).toEqual(['one', 'two']);
+      expect(data.favorited).toBe(false);
+      expect(data.author.username).toBe(currentUser.username);
+      expect(data.author.following).toBe(false);
+
+      const savedArticle = await db.article
+        .findBy({ slug: data.slug })
+        .select('slug', 'title', 'body', {
+          tags: (q) => q.tags.order('name'),
+        });
+
+      expect(savedArticle).toMatchObject(params);
+      expect(savedArticle.tags).toMatchObject([
+        {
+          id: tagId,
+          name: 'one',
+        },
+        {
+          name: 'two',
+        },
+      ]);
+    });
+  });
+})
+```
+
+Implementation of controller:
+
+```ts
+export const createArticleRoute = routeHandler(
+  {
+    body: articleSchema
+      .pick({
+        slug: true,
+        title: true,
+        body: true,
+      })
+      .extend({
+        tags: tagSchema.shape.name.array(),
+      }),
+  },
+  (req) => {
+    const currentUserId = getCurrentUserId(req);
+
+    // wrap creating article and retrieving it to the transaction
+    return db.$transaction(async (db) => {
+      const { tags, ...params } = req.body;
+
+      const articleId = await db.article.get('id').create({
+        ...params,
+        favoritesCount: 0,
+        userId: currentUserId,
+        articleTags: {
+          create: tags.map((name) => ({
+            tag: {
+              connectOrCreate: {
+                where: { name },
+                create: { name },
+              },
+            },
+          })),
+        },
+      });
+
+      return articleRepo(db.article).selectDto(currentUserId).find(articleId);
+    });
+  }
+);
+```
+
+This example demonstrates the use of nested `create` with nested `connectOrCreate`:
+it will try to find a tag by name and will create a tag only if not found.
+
+Notice that `articleRepo` is wrapping `db.article`: it must be so when using repository inside transaction.
+By default, repo will use a default connection, so it will try to perform query outside of transaction.
+Luckily, `pg-transactional-tests` will catch this mistake when running tests,
+the test will hang when trying to use more than 1 connection.
+
+Register this controller in the router:
+
+```ts
+// src/routes.ts
+import * as article from './app/article/article.controller';
+
+export const routes = async (app: FastifyInstance) => {
+  // ...snip
+  app.post('/articles', article.listArticlesRoute);
+};
+```
+
+## update article endpoint
+
+One specific thing which is needed to be tested properly are tags:
+when user is updating article tags, app should create new tag records in case they didn't exist before,
+it should delete tags which aren't used by any article, and connect article to all tags properly.
+
+So if in the future the app will have tags endpoint which lists all tags, there won't be duplicates.
+
+Tests for the endpoint:
+
+```ts
+describe('article controller', () => {
+  // ...snip
+
+  describe('PATCH /articles/:slug', () => {
+    const params = articleFactory
+      .pick({
+        slug: true,
+        title: true,
+        body: true,
+      })
+      .build();
+
+    // this test helper was defined earlier
+    itShouldRequireAuth(() =>
+      testRequest.patch('/articles/article-slug', params)
+    );
+
+    it('should return unauthorized error when trying to update article of other user', async () => {
+      const currentUser = await userFactory.create();
+      const author = await userFactory.create();
+      const article = await articleFactory.create({
+        userId: author.id,
+      });
+
+      const res = await testRequest
+        .as(currentUser)
+        .patch(`/articles/${article.slug}`, params);
+
+      // this test helper was defined earlier
+      expectUnauthorized(res);
+    });
+
+    it('should update article fields', async () => {
+      const currentUser = await userFactory.create();
+      const article = await articleFactory.create({
+        userId: currentUser.id,
+      });
+
+      const res = await testRequest
+        .as(currentUser)
+        .patch(`/articles/${article.slug}`, params);
+
+      const data = res.json();
+      expect(data).toMatchObject(params);
+    });
+
+    it('should set new tags to article, create new tags, delete not used tags', async () => {
+      const [currentUser, otherAuthor] = await userFactory.createList(2);
+      
+      const article = await articleFactory.create({
+        userId: currentUser.id,
+        articleTags: {
+          create: ['one', 'two'].map((name) => ({
+            tag: {
+              create: {
+                name,
+              },
+            },
+          })),
+        },
+      });
+
+      await articleFactory.create({
+        userId: otherAuthor.id,
+        articleTags: {
+          create: ['two', 'three'].map((name) => ({
+            tag: {
+              create: {
+                name,
+              },
+            },
+          })),
+        },
+      });
+
+      const res = await testRequest
+        .as(currentUser)
+        .patch(`/articles/${article.slug}`, {
+          tags: ['two', 'new tag'],
+        });
+
+      const data = res.json();
+      expect(data.tags).toEqual(['new tag', 'two']);
+
+      const allTagNames = await db.tag.pluck('name');
+      expect(allTagNames).not.toContain('one');
+    });
+  });
+})
+```
+
+Controller:
+
+```ts
+export const updateArticleRoute = routeHandler(
+  {
+    body: articleSchema
+      .pick({
+        slug: true,
+        title: true,
+        body: true,
+      })
+      .extend({
+        tags: tagSchema.shape.name.array(),
+        favorite: z.boolean(),
+      })
+      .partial(),
+    params: z.object({
+      slug: articleSchema.shape.slug,
+    }),
+    result: articleDto,
+  },
+  (req) => {
+    const currentUserId = getCurrentUserId(req);
+
+    return db.$transaction(async (db) => {
+      const { slug } = req.params;
+      
+      // assigning repo to local variable to not repeat it
+      const repo = articleRepo(db.article);
+
+      // retrive required fields and the current tags of article
+      const article = await repo.findBy({ slug }).select('id', 'userId', {
+        tags: (q) => q.tags.select('id', 'name'),
+      });
+
+      if (article.userId !== currentUserId) {
+        throw new UnauthorizedError();
+      }
+
+      const { tags, favorite, ...params } = req.body;
+
+      await repo
+        .find(article.id)
+        .update(params)
+        // updateTags is a repo method, see below
+        .updateTags(db.tag, article.tags, tags);
+
+      return await repo.selectDto(currentUserId).find(article.id);
+    });
+  }
+);
+```
+
+Logic for updating tags is complex enough, so it is encapsulated into article repo.
+
+```ts
+// src/app/article/article.repo.ts
+import { createRepo } from 'porm';
+import { db } from '../../db';
+
+export const articleRepo = createRepo(db.article, {
+  queryMethods: {
+    // ...snip
+  },
+  queryOneWithWhereMethods: {
+    async updateTags(q) {
+      // TODO
+    },
+  },
+})
+```
+
+All previous repo methods were placed under `queryMethods`, but here we place it to the `queryOneWithWhereMethods`.
+The difference is in the type of `q` parameter.
+
+It is forbidden to create related records from the query which returns multiple records, for example:
+
+```ts
+// will result in TS error
+db.article.where({ id: { in: [1, 2, 3] } }).update({
+  articleTags: {
+    create: { ...someData }
+  }
+})
+```
+
+This code not only creates new `articleTags`, but also connects them to article.
+If we select 3 articles and create `articleTags` for the query it wouldn't make much sense because single `articleTag` can be connected to a single `article` only, cannot connect to many.
+
+That's why type of `q` have to indicate that it is returning single record.
+
+Also, `update` query must be applied only after we pass search conditions, to make sure we won't update all records in the database by mistake.
+
+```ts
+// will result in TS error
+db.article.update({ ...data })
+```
+
+That's why type of `q` have to indicate it has some search statements.
+So we placed new query method into `queryOneWithWhereMethods` where `q` is promised to have search conditions and to search for a single record.
+
+Here is `updateTags` implementation:
+
+```ts
+// src/app/article/article.repo.ts
+import { createRepo } from 'porm';
+import { db } from '../../db';
+import { tagRepo } from './tag.repo';
+
+export const articleRepo = createRepo(db.article, {
+  queryMethods: {
+    // ...snip
+  },
+  queryOneWithWhereMethods: {
+    async updateTags(
+      q,
+      // first argument is a queryable instance of tag
+      tag: typeof db.tag,
+      // tags which article is connected to at the moment
+      currentTags: { id: number; name: string }[],
+      // tag names from user parameter to use for the article
+      tags?: string[]
+    ) {
+      const currentTagNames = currentTags.map(({ name }) => name);
+      const addTagNames = tags?.filter(
+        (name) => !currentTagNames.includes(name)
+      );
+      const removeTagIds = tags
+        ? currentTags
+          .filter(({ name }) => !tags.includes(name))
+          .map((tag) => tag.id)
+        : [];
+
+      await q.update({
+        articleTags: {
+          // note ? mark: nothing will happen if addTagNames is not defined
+          create: addTagNames?.map((name) => ({
+            tag: {
+              connectOrCreate: {
+                where: { name },
+                create: { name },
+              },
+            },
+          })),
+          // won't delete anything if we pass empty array
+          delete: removeTagIds.length ? { tagId: { in: removeTagIds } } : [],
+        },
+      });
+
+      if (removeTagIds.length) {
+        // `deleteUnused` will be defined in a tag repo
+        await tagRepo(tag).whereIn('id', removeTagIds).deleteUnused();
+      }
+    },
+  },
+})
+```
+
+First parameter is `tag` from `db.tag` (see in article controller).
+We import `db.tag` directly here, because it is important to use `db` from the callback of transaction.
+
+Another thing to point here, this method doesn't return a query object, so it cannot be chained.
+This is a limitation for the case when you want to await a query inside of method.
+
+`deleteUnused` is not complex and could be inlined, but it feels good to move the code to places where it feels like home.
+It is not a concern of article to know what unused tag is, it is a concern of a tag, so it belongs to tag repo:
+
+```ts
+// src/app/tag/tag.repo.ts
+import { createRepo } from 'porm';
+import { db } from '../../db';
+
+export const tagRepo = createRepo(db.tag, {
+  queryMethods: {
+    deleteUnused(q) {
+      return q.whereNotExists('articleTags').delete();
+    },
+  },
+});
+```
+
+Add controller to the router:
+
+```ts
+// src/routes.ts
+import * as article from './app/article/article.controller';
+
+export const routes = async (app: FastifyInstance) => {
+  // ...snip
+  app.patch('/articles/:slug', article.updateArticleRoute);
+};
+```
+
+## mark/unmark article as favorite
+
+Tests:
+
+```ts
+// src/app/article/article.controller.test.ts
+
+describe('article controller', () => {
+  // ...snip
+
+  describe('POST /articles/:slug/favorite', () => {
+    it('should mark article as favorited when passing true', async () => {
+      const [currentUser, author] = await userFactory.createList(2);
+      const article = await articleFactory.create({
+        userId: author.id,
+      });
+
+      await testRequest
+        .as(currentUser)
+        .post(`/articles/${article.slug}/favorite`, {
+          favorite: true,
+        });
+
+      const { favorited } = await articleRepo
+        .find(article.id)
+        // .selectFavorited will be defined in articleRepo later
+        .selectFavorited(currentUser.id);
+      expect(favorited).toBe(true);
+    });
+
+    it('should not fail when passing true and article is already favorited', async () => {
+      const [currentUser, author] = await userFactory.createList(2);
+      const article = await articleFactory.create({
+        userId: author.id,
+        favorites: {
+          create: [
+            {
+              userId: currentUser.id,
+            },
+          ],
+        },
+      });
+
+      const res = await testRequest
+        .as(currentUser)
+        .post(`/articles/${article.slug}/favorite`, {
+          favorite: true,
+        });
+
+      expect(res.statusCode).toBe(200);
+    });
+
+    it('should unmark article as favorited when passing false', async () => {
+      const [currentUser, author] = await userFactory.createList(2);
+      const article = await articleFactory.create({
+        userId: author.id,
+        favorites: {
+          create: [
+            {
+              userId: currentUser.id,
+            },
+          ],
+        },
+      });
+
+      await testRequest
+        .as(currentUser)
+        .post(`/articles/${article.slug}/favorite`, {
+          favorite: false,
+        });
+
+      const { favorited } = await articleRepo
+        .find(article.id)
+        .selectFavorited(currentUser.id);
+      expect(favorited).toBe(false);
+    });
+
+    it('should not fail when article is not favorited and passing false', async () => {
+      const [currentUser, author] = await userFactory.createList(2);
+      const article = await articleFactory.create({
+        userId: author.id,
+      });
+
+      const res = await testRequest
+        .as(currentUser)
+        .post(`/articles/${article.slug}/favorite`, {
+          favorite: false,
+        });
+
+      expect(res.statusCode).toBe(200);
+    });
+  });
+})
+```
+
+Define `.selectFavorite` to use in this test and in the controller later:
+
+It is not possible to use one method from another due to some TS limitations, so the way to do it is to define a standalone function.
+
+```ts
+// src/app/article/article.repo.ts
+
+// define selectFavorite as a standalone function to use in multiple methods:
+const selectFavorited = (currentUserId: number | undefined) => {
+  return currentUserId
+    ? (q: typeof db.article) =>
+      q.favorites.where({ userId: currentUserId }).exists()
+    : db.article.raw((t) => t.boolean(), 'false');
+};
+
+export const articleRepo = createRepo(db.article, {
+  queryMethods: {
+    selectDto(q, currentUserId: number | undefined) {
+      return q.select(
+        'slug',
+        'title',
+        'body',
+        'favoritesCount',
+        'createdAt',
+        'updatedAt',
+        {
+          tags: (q) => q.tags.order('name').pluck('name'),
+          // use selectFavorited from above
+          favorited: selectFavorited(currentUserId),
+          author: (q) => userRepo(q.author).selectDto(currentUserId),
+        }
+      );
+    },
+    selectFavorited(q, currentUserId: number | undefined) {
+      return q.select({ favorited: selectFavorited(currentUserId) });
+    },
+    // ...snip
+  },
+  // ...snip
+})
+```
+
+Controller code:
+
+```ts
+export const toggleArticleFavoriteRoute = routeHandler(
+  {
+    body: z.object({
+      favorite: z.boolean(),
+    }),
+    params: z.object({
+      slug: articleSchema.shape.slug,
+    }),
+  },
+  async (req) => {
+    const currentUserId = getCurrentUserId(req);
+    const { slug } = req.params;
+    const { favorite } = req.body;
+
+    // assign favorites query to a variable to use it for different queries later:
+    const favoritesQuery = db.article.findBy({ slug }).favorites;
+    
+    if (favorite) {
+      try {
+        await favoritesQuery.create({
+          userId: currentUserId,
+        });
+      } catch (err) {
+        // ignore case when article is already favorited
+        if (err instanceof db.articleFavorite.error && err.isUnique) {
+          return;
+        }
+        throw err;
+      }
+    } else {
+      await favoritesQuery
+        .where({
+          userId: currentUserId,
+        })
+        .delete();
+    }
+  }
+);
+```
+
+Add controller to the router:
+
+```ts
+// src/routes.ts
+import * as article from './app/article/article.controller';
+
+export const routes = async (app: FastifyInstance) => {
+  // ...snip
+  app.patch('/articles/:slug', article.updateArticleRoute);
+};
+```
+
+## delete article
+
+Tests for the future endpoint:
+
+```ts
+// src/app/article/article.controller.test.ts
+
+describe('article controller', () => {
+  // ...snip
+
+  describe('DELETE /articles/:slug', () => {
+    itShouldRequireAuth(() => testRequest.delete('/articles/article-slug'));
+
+    it('should return unauthorized error when trying to delete article of other user', async () => {
+      const [currentUser, author] = await userFactory.createList(2);
+      const article = await articleFactory.create({
+        userId: author.id,
+      });
+
+      const res = await testRequest
+        .as(currentUser)
+        .delete(`/articles/${article.slug}`);
+
+      expectUnauthorized(res);
+    });
+
+    it('should delete article', async () => {
+      const currentUser = await userFactory.create();
+      const article = await articleFactory.create({
+        userId: currentUser.id,
+      });
+
+      await testRequest.as(currentUser).delete(`/articles/${article.slug}`);
+
+      const exists = await db.article.find(article.id).exists();
+      expect(exists).toBe(false);
+    });
+
+    it('should delete unused tags, and leave used tags', async () => {
+      const currentUser = await userFactory.create();
+      const article = await articleFactory.create({
+        userId: currentUser.id,
+        articleTags: {
+          create: ['one', 'two'].map((name) => ({
+            tag: {
+              create: {
+                name,
+              },
+            },
+          })),
+        },
+      });
+
+      await articleFactory.create({
+        userId: currentUser.id,
+        articleTags: {
+          create: ['two', 'three'].map((name) => ({
+            tag: {
+              connectOrCreate: {
+                where: { name },
+                create: { name },
+              },
+            },
+          })),
+        },
+      });
+
+      await testRequest.as(currentUser).delete(`/articles/${article.slug}`);
+
+      const allTagNames = await db.tag.pluck('name');
+      expect(allTagNames).toEqual(['two', 'three']);
+    });
+  });
+})
+```
+
+Controller code:
+
+```ts
+// src/app/article/article.controller.ts
+
+export const deleteArticleRoute = routeHandler(
+  {
+    params: z.object({
+      slug: articleSchema.shape.slug,
+    }),
+  },
+  async (req) => {
+    const currentUserId = getCurrentUserId(req);
+    const { slug } = req.params;
+
+    // wrapping in transaction to search for article and delete it in a single transaction
+    await db.$transaction(async (db) => {
+      const article = await db.article
+        .select('id', 'userId', {
+          tagIds: (q) => q.tags.pluck('id'),
+        })
+        .findBy({ slug });
+
+      if (article.userId !== currentUserId) {
+        throw new UnauthorizedError();
+      }
+
+      // assign a query to a variable to reuse it
+      const articleQuery = db.article.find(article.id);
+
+      if (article.tagIds.length) {
+        // before deleting a record need to delete all it's related records
+        // otherwise there would be an error complaining on a foreign key violation
+        await articleQuery.articleTags.delete(true);
+      }
+      
+      await articleQuery.delete();
+
+      if (article.tagIds.length) {
+        // tag repo with `deleteUnused` was defined before, at the step of updating article
+        await tagRepo(db.tag).whereIn('id', article.tagIds).deleteUnused();
+      }
+    });
+  }
+);
+```
