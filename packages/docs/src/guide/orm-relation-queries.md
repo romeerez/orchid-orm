@@ -1,8 +1,8 @@
 # Relation queries
 
-Here is how to load related records by using record object (supported by all kinds of relations):
+Here is how to load related records by using a record object (supported by all kinds of relations):
 
-Resulting record of `belongsTo` and `hasOne` relation can be undefined if `required` option was not set in the model.
+The resulting record of the `belongsTo` and `hasOne` relation can be undefined if the `required` option was not set in the model.
 
 ```ts
 const book = await db.book.find(1)
@@ -35,7 +35,7 @@ const manyAuthors = await db.book.where({ id: { in: [1, 2, 3] } }).author
 const filteredAuthors = await db.book.where({ booksCondition: '...' })
   .author.where({ authorCondition: '...' })
 
-// find author and load their books:
+// find the author and load their books:
 const booksFromOneAuthor = await db.author.find(1).books
 
 // find many authors and load their books:
@@ -46,7 +46,7 @@ const filteredBooks = await db.author.where({ authorCondition: '...' })
   .books.where({ booksCondition: '...' })
 ```
 
-Relation can be used in `.whereExists` (supported by all kinds of relations):
+The relation can be used in `.whereExists` (supported by all kinds of relations):
 
 ```ts
 // load books which have author
@@ -61,15 +61,15 @@ await db.book.whereExists('author', (q) =>
 )
 ```
 
-Relation can be used in `.join`.
+The relation can be used in `.join`.
 
 Supported by all kinds of relations, but it is not suggested for `hasMany` and `hasAndBelongsToMany` because data will be duplicated.
 
 ```ts
 await db.book.join('author').select(
-  // column without table is for current book table
+  // column without a table is for the current book table
   'title',
-  // select column of joined table
+  // select the column of a joined table
   'author.name',
 )
 
@@ -82,18 +82,18 @@ await db.book.join('author', (q) =>
 ).select('title', 'author.name')
 ```
 
-Relation can be loaded using `.select` and a related records will be added to each record.
+The relation can be loaded using `.select` and related records will be added to each record.
 
-`belongsTo` and `hasOne` will add object (can be `null` if not found).
+`belongsTo` and `hasOne` will add an object (can be `null` if not found).
 
-`hasMany` and `hasAndBelongsToMany` will add array of objects.
+`hasMany` and `hasAndBelongsToMany` will add an array of objects.
 
 For `hasMany` and `hasAndBelongsToMany` this works better than `join` because it won't lead to duplicative data.
 
 Use the name of relation to load full records:
 
 ```ts
-// if `required` option is not set in the model,
+// if the `required` option is not set in the model,
 // type of author will be Author | null 
 const booksWithAuthor: Book & { author: Author } = await db.book
   .select('*', 'author')
@@ -104,8 +104,8 @@ const authorWithBooks: Author & { books: Book[] } = await db.book
   .take();
 ```
 
-To load specific fields or to apply `where`, `order`, `limit` and other methods,
-relation can be selected by adding a callback to the select list:
+To load specific fields or to apply `where`, `order`, `limit`, and other methods,
+a relation can be selected by adding a callback to the select list:
 
 ```ts
 type BookResult = {
@@ -165,7 +165,7 @@ const result: Result = await db.post.select(
 )
 ```
 
-For `hasMany` and `hasAndBelongsToMany` the select can handle aggregation queries such as `count`, `min`, `max`, `sum`, `avg`:
+For `hasMany` and `hasAndBelongsToMany` the select can handle aggregation queries such as `count`, `min`, `max`, `sum`, and `avg`:
 
 ```ts
 type Result = {
@@ -186,15 +186,15 @@ const result: Result = await db.post.select(
 ## create, update, delete
 
 `Porm` makes it very easy to do modifications of related records,
-it allows to build a query chains to modify related records,
+it allows building a query chain to modify related records,
 it supports nested creates and updates.
 
 For `belongsTo` and `hasOne` you can do only one thing per each relation.
-For instance, create author while creating a book, or connect book to the author while creating it.
+For instance, create an author while creating a book, or connect the book to the author while creating it.
 But not create and connect at the same time.
 
-For `hasMany` and `hasAndBelongsToMany` you can combine multiple commands for a single relations:
-while updating the author you can create new books, connect some books, delete books by conditions.
+For `hasMany` and `hasAndBelongsToMany` you can combine multiple commands for a single relation:
+while updating the author you can create new books, connect some books, and delete books by conditions.
 
 ## create from relation query
 
@@ -211,19 +211,19 @@ await db.post.find(1).tags.create({
 })
 ```
 
-This is possible for `hasOne`, `hasMany`, `hasAndBelongsToMany`, but this is disabled for `belongsTo` and `hasOne`/`hasMany` with `through` option.
+This is possible for `hasOne`, `hasMany`, and `hasAndBelongsToMany`, but this is disabled for `belongsTo` and `hasOne`/`hasMany` with the `through` option.
 
-This is only allowed to perform create based on a query which returns one record, so you have to use methods `find`, `findBy`, `take` or similar.
+This is only allowed to perform create based on a query that returns one record, so you have to use methods `find`, `findBy`, `take`, or similar.
 
-`db.post.tags.create` or `db.post.where(...).tags.create` won't wort because multiple posts are returned in these queries.
+`db.post.tags.create` or `db.post.where(...).tags.create` won't work because multiple posts are returned in these queries.
 
-Using `createMany` or `createRaw` in such chained queries is not implemented yet, but it's in plans.
+Using `createMany` or `createRaw` in such chained queries is not implemented yet, but it's in the plans.
 
-Because `create` method is designed to return a full record by default,
-in the case when record is not found by condition it will throw `NotFoundError`, even when using `findOptional`:
+Because the `create` method is designed to return a full record by default,
+in the case when a record is not found by the condition it will throw `NotFoundError`, even when using `findOptional`:
 
 ```ts
-// will throw if no post with such title
+// will throw if no post with such a title
 await db.post.findBy({ title: 'non-existing' })
   .tags.create({ name: 'tag name' })
 
@@ -231,15 +231,15 @@ await db.post.findBy({ title: 'non-existing' })
 const tag = await db.post.findByOptional({ title: 'non-existing' })
   .tags.create({ name: 'tag name' })
 
-// we can be sure that tag is always returned
+// we can be sure that the tag is always returned
 tag.name
 ```
 
 If you want `undefined` to be returned instead of throwing `NotFoundError`,
-use `takeOptional()` to get `RecordType | undefined`, or `count()` to get 0 for not found and 1 for created.
+use `takeOptional()` to get `RecordType | undefined`, or `count()` to get 0 for not found and 1 for a created.
 
 `hasAndBelowToMany` relation will throw `NotFoundError` either way,
-to make sure we're not creating hanging record not connected to other records.
+to make sure we're not creating hanging records not connected to other records.
 
 ```ts
 const tagOrUndefined = await db.author.findByOptional({ name: 'Author name' })
@@ -261,27 +261,27 @@ This is supported for all kinds of relations only except `belongsTo`.
 
 ```ts
 // delete all books of the author
-// `delete` methods requires `true` when deleting without conditions as a sanity check
+// `delete` methods require `true` when deleting without conditions as a sanity check
 await db.author.find(1).books.delete(true)
 
 // delete specific books of specific authors
 await db.author.where({ name: 'author name' })
   .books.where({ title: 'book title' }).delete()
 
-// TypeScript will highlight `delete` method
+// TypeScript will highlight the `delete` method
 // because deleting a `belongsTo` relation is not allowed
 await db.book.find(1).author.delete()
 ```
 
 ## nested create
 
-Create record with related records all at once:
+Create a record with related records all at once:
 
-This will run two insert queries in a transaction, (three insert queries in case of `hasAndBelongsToMany`).
+This will run two insert queries in a transaction, (three insert queries in the case of `hasAndBelongsToMany`).
 
-For relations with `through` option need to nest `creates` explicitly.
+For relations with the `through` option need to nest `creates` explicitly.
 
-If a post model has many tags through "postTags", need to create post, inside it create postTags, and inside it create tags.
+If a post model has many tags through "postTags", needs to create a post, inside it create postTags, and inside it create tags.
 
 But if you do the same relation with `hasAndBelongsToMany`, you can create tags directly from post creation,
 and the postTag record in between will be created automatically.
@@ -348,15 +348,15 @@ const books = await db.book.createMany([
 ])
 ```
 
-## create in update
+## create from update
 
-Create related records when doing update:
+Create related records when doing an update:
 
-For `belongsTo`, `hasOne`, `hasMany` it is available when updating one record, there must be `find`, or `findBy`, or `take` before update.
+For `belongsTo`, `hasOne`, and `hasMany` it is available when updating one record, there must be `find`, `findBy`, or `take` before the update.
 
 For `hasAndBelongsToMany` this will connect all found records for the update with all created records.
 
-`hasOne` relation will nullify `foreignKey` of previous related record if exists, so it has to be nullable.
+The `hasOne` relation will nullify the `foreignKey` of the previous related record if exists, so it has to be nullable.
 
 ```ts
 await db.book.find(1).update({
@@ -389,7 +389,7 @@ await db.post.where({ id: { in: [1, 2, 3] } }).update({
 })
 ```
 
-For `belongsTo` when updating multiple records, `create` option will connect new record with all updating records:
+For `belongsTo` when updating multiple records, the `create` option will connect the new record with all updating records:
 
 ```ts
 await db.book.where({ id: { in: [1, 2, 3] } }).update({
@@ -438,7 +438,7 @@ const author = await db.author.create({
 
 ## connect or create
 
-`connectOrCreate` options will try to find a record to connect with, and it will create the record if not found.
+The `connectOrCreate` option will try to find a record to connect with, and it will create the record if not found.
 
 This is also supported when creating multiple records.
 
@@ -460,7 +460,7 @@ const result = await db.book.create({
 })
 ```
 
-`hasMany` and `hasAndBelongsToMany` relations are accepting array of `{ where: ..., create ... }`:
+`hasMany` and `hasAndBelongsToMany` relations are accepting an array of `{ where: ..., create ... }`:
 
 ```ts
 const result = await db.author.create({
@@ -527,30 +527,30 @@ await db.post.where({ title: 'post title' }).update({
 
 Set related records when updating.
 
-For `hasOne` and `hasMany` it is available only when updating one record, so query should have `find`, or `findBy`, or `take` before the update.
+For `hasOne` and `hasMany` it is available only when updating one record, so the query should have `find`, `findBy`, or `take` before the update.
 
-For `hasOne` and `hasMany`, if there was a related record before update, it's `foreignKey` column will be updated to `NULL`, so it has to be nullable.
+For `hasOne` and `hasMany`, if there was a related record before the update, its `foreignKey` column will be updated to `NULL`, so it has to be nullable.
 
-In `hasAndBelongsToMany` relation this will delete all previous rows of join table and create new ones.
+In the `hasAndBelongsToMany` relation this will delete all previous rows of the join table and create new ones.
 
 ```ts
 const author = await db.author.find(1)
 
-// this will update book with author's id from the given object
+// this will update the book with the author's id from the given object
 await db.book.find(1).update({
   author: {
     set: author,
   },
 })
 
-// this will find first author with given conditions to use their id
+// this will find the first author with given conditions to use their id
 await db.book.find(2).update({
   author: {
     set: { name: 'author name' }
   },
 })
 
-// TypeScript error because need to use `findBy` instead of `where`:
+// TypeScript error because of the need to use `findBy` instead of `where`:
 await db.author.where({ id: 1 }).update({
   books: {
     set: { id: 1 }
@@ -559,7 +559,7 @@ await db.author.where({ id: 1 }).update({
 
 await db.author.find(1).update({
   books: {
-    // all found books with such title will be connected to the author
+    // all found books with such titles will be connected to the author
     set: { title: 'book title' }
   }
 })
@@ -574,11 +574,11 @@ await db.author.find(1).update({
 
 ## delete related records
 
-Deletes related record.
+Deletes related records.
 
-For `belongsTo` relation it will update `foreignKey` to `NULL` before deleting.
+For the `belongsTo` relation it will update `foreignKey` to `NULL` before deleting.
 
-`hasMany` and `hasAndBelongsToMany` are accepting same conditions as `.where` method to delete only matching records, as object or as array of objects.
+`hasMany` and `hasAndBelongsToMany` are accepting the same conditions as the `.where` method to delete only matching records, as an object or as an array of objects.
 
 Empty `{}` or `[]` will delete all related records.
 
@@ -606,11 +606,11 @@ await db.author.find(1).update({
 
 ## nested update
 
-Update related record.
+Update related records.
 
-`belongsTo` and `hasOne` are accepting object with data for update.
+`belongsTo` and `hasOne` accept objects with data for the update.
 
-`hasMany` and `hasAndBelongsToMany` are accepting `where` conditions and `data` object. `where` can be an object or an array of objects.
+`hasMany` and `hasAndBelongsToMany` accepts `where` conditions and `data` objects. `where` can be an object or an array of objects.
 
 ```ts
 await db.book.find(1).update({

@@ -4,7 +4,7 @@ Migrations allow you to evolve your database schema over time. This migration to
 
 - write migrations in TypeScript
 - write only code to create or add something, and it will be automatically possible to undo the migration
-- it shares the same column types library as the ORM, which allows to write a `createTable` migration and copy-paste columns to your model
+- it shares the same column types library as the ORM, which allows you to write a `createTable` migration and copy-paste columns to your model
 
 ## setup
 
@@ -14,13 +14,13 @@ Install this tool by running:
 npm i -D rake-db
 ```
 
-Add a script file somewhere to your project, ensure it's located in one of `include` locations of your `tsconfig.json`.
+Add a script file somewhere to your project, and ensure it's located in one of `include` locations of your `tsconfig.json`.
 
 For example, it could be located in `scripts/db.ts` in your project.
 
 Since the configuration is done in a regular TypeScript, it's possible to perform any logic and use any configuration tools to specify database connection options.
 
-In following example `dotenv` is used and configured to first get env variables from `.env.local` and then to get them from `.env` file.
+In the following example, `dotenv` is used and configured to first get env variables from `.env.local` and then to get them from the `.env` file.
 
 ```ts
 // scripts/db.ts
@@ -44,7 +44,7 @@ rakeDb(
 );
 ```
 
-Add `db` script to your `package.json`:
+Add the `db` script to your `package.json`:
 
 ```json
 {
@@ -64,7 +64,7 @@ yarn db g createSomeTable
 
 ## rakeDb
 
-`rakeDb` function in setup script takes connection options, migration config and command line arguments:
+`rakeDb` function in the setup script takes connection options, migration config, and command line arguments:
 
 ```ts
 const rakeDb = async (
@@ -76,10 +76,10 @@ const rakeDb = async (
 }
 ```
 
-First is of the same type `AdapterOptions` which is used when configuring query builder and the ORM.
-Provide an array of such options to migrate two and more databases at the same time, which is helpful for maintaining a test database.
+The first is of the same type `AdapterOptions` which is used when configuring the query builder and the ORM.
+Provide an array of such options to migrate two and more databases at the same time, which helps maintain a test database.
 
-Second optional argument of type `MigrationConfig`, here is the type:
+The second optional argument of type `MigrationConfig`, here is the type:
 
 ```ts
 type MigrationConfig = {
@@ -92,7 +92,7 @@ type MigrationConfig = {
   // function to require typescript migration file
   requireTs(path: string): void;
   
-  // log options, see "log option" in query builder document
+  // log options, see "log option" in the query builder document
   log?: boolean | Partial<QueryLogObject>;
   logger?: {
     log(message: string): void;
@@ -101,7 +101,7 @@ type MigrationConfig = {
 }
 ```
 
-To configure logging, see [log option](/guide/query-builder.html#createdb) in query builder document.
+To configure logging, see [log option](/guide/query-builder.html#createdb) in the query builder document.
 
 Defaults are:
 
@@ -111,4 +111,4 @@ Defaults are:
 - `log` is on
 - `logger` is a standard `console`
 
-Third optional argument of `rakeDb` is array of strings from command line, by default it will use `process.argv` to get the arguments, but you can override it by passing arguments manually.
+The third optional argument of `rakeDb` is an array of strings from the command line, by default it will use `process.argv` to get the arguments, but you can override it by passing arguments manually.

@@ -14,7 +14,7 @@ change(async (db, up) => {
 })
 ```
 
-`db` is extended query builder, so it has all the same methods as a query builder and additional specific methods such as `createTable`, `changeTable` and the others.
+`db` is an extended query builder, so it has all the same methods as a query builder and additional specific methods such as `createTable`, `changeTable`, and others.
 
 It's possible to run custom raw queries, for example, to create a table and fill it:
 
@@ -38,11 +38,11 @@ change(async (db, up) => {
 
 ## createTable, dropTable
 
-`createTable` accepts a string for a table name, optional options, and a callback to specify a columns.
+`createTable` accepts a string for a table name, optional options, and a callback to specify columns.
 
-`dropTable` accepts the same arguments, it will drop table when migrating and create table when rolling back.
+`dropTable` accepts the same arguments, it will drop the table when migrating and create a table when rolling back.
 
-When creating table withing specific schema, write table name with schema name: `'schemaName.tableName'`.
+When creating a table within a specific schema, write the table name with schema name: `'schemaName.tableName'`.
 
 Options are:
 
@@ -83,26 +83,26 @@ change(async (db) => {
 
 ## createJoinTable, dropJoinTable
 
-`createJoinTable` helps with creating a join table. It accepts array of table names to join, optional options, and optional callback with columns.
+`createJoinTable` helps with creating a join table. It accepts an array of table names to join, optional options, and optional callbacks with columns.
 
-`dropJoinTable` accepts the same arguments, it will drop table when migrating and create table when rolling back.
+`dropJoinTable` accepts the same arguments, it will drop the table when migrating and create a table when rolling back.
 
-By default, name of join table is a camelCased union of provided table names.
+By default, the name of the join table is a camelCased union of provided table names.
 
 It will create a referencing non-nullable column for each primary key of each table.
 
-All referencing columns of the table will be included to its primary key, which makes every combination unique.
+All referencing columns of the table will be included in its primary key, which makes every combination unique.
 
 ```ts
 import { change } from 'rake-db'
 
 change(async (db) => {
-  // will create "fooBarBaz" table
+  // will create a "fooBarBaz" table
   await db.createJoinTable(['foo', 'bar', 'baz'])
 })
 ```
 
-Assuming tables 'foo', 'bar', 'baz' have one primary key of integer type, above code is equivalent for:
+Assuming tables 'foo', 'bar', and 'baz' have one primary key of integer type, the above code is equivalent for:
 
 ```ts
 import { change } from 'rake-db'
@@ -147,33 +147,33 @@ change(async (db) => {
 
 `changeTable` accepts a table name, optional options, and a special callback with column changes.
 
-When changing table withing specific schema, write table name with schema name: `'schemaName.tableName'`.
+When changing a table within a specific schema, write the table name with schema name: `'schemaName.tableName'`.
 
 Options are:
 
 ```ts
 type ChangeTableOptions = {
   comment?:
-    | // add comment to table on migrate, remove comment on rollback
+    | // add a comment to the table on migrating, remove a comment on rollback
       string
-    | // change comment from first to second on migrate, from second to first on rollback
+    | // change comment from first to second on migrating, from second to first on rollback
       [string, string]
-    | // remove comment on both migrate and rollback
+    | // remove a comment on both migrate and rollback
       null
 }
 ```
 
-Callback of change table is different from `createTable`in the way that it expects columns to be wrapped in change methods such as `add`, `drop`, `change`.
+The callback of the `changeTable` is different from `createTable` in the way that it expects columns to be wrapped in change methods such as `add`, `drop`, and `change`.
 
 ### add, drop
 
-`add` will add column on migrate, remove it on rollback.
+`add` will add a column on migrating, and remove it on rollback.
 
-`drop` will remove column on migrate, add it on rollback.
+`drop` will remove the column on migrating, and add it on rollback.
 
-The column in `add` or `drop` can have all the same methods as when creating table, such methods as `index`, `unique`, `foreignKey`.
+The column in `add` or `drop` can have all the same methods as when creating a table, such methods as `index`, `unique`, and `foreignKey`.
 
-Supports adding composite primary key, foreign key, index and all the same as when creating a table.
+Supports adding a composite primary key, foreign key, and index, and all the same as when creating a table.
 
 ```ts
 import { change } from 'rake-db'
@@ -209,7 +209,7 @@ change(async (db) => {
 
 ### change
 
-Takes array of two columns, on migrate it will change the column to second element, on rollback will change the column to first element.
+Takes an array of two columns, on migrating it will change the column to the second element, and on rollback will change the column to the first element.
 
 ```ts
 import { change } from 'rake-db'
@@ -237,7 +237,7 @@ change(async (db) => {
     // change column default with raw SQL
     column5: t.change(t.default(t.raw('2 + 2')), t.default(t.raw('3 + 3'))),
     
-    // change column to be nullable or non nullable
+    // change column to be nullable or non-nullable
     column6: t.change(t.nonNullable(), t.nullable()),
     column7: t.change(t.nullable(), t.nonNullable()),
     
@@ -278,9 +278,9 @@ change(async (db) => {
 
 ## addColumn, dropColumn
 
-Add column to table on migrate, remove it on rollback.
+Add a column to the table on migrating, and remove it on rollback.
 
-`dropColumn` takes the same arguments, removes a column on migrate and adds it on rollback.
+`dropColumn` takes the same arguments, removes a column on migrate, and adds it on rollback.
 
 ```ts
 import { change } from 'rake-db'
@@ -294,11 +294,11 @@ change(async (db) => {
 
 ## addIndex, dropIndex
 
-Add index to table on migrate, remove it on rollback.
+Add an index to the table on migrating, and remove it on rollback.
 
-`dropIndex` takes the same arguments, removes the index on migrate, adds it on rollback.
+`dropIndex` takes the same arguments, removes the index on migrate, and adds it on rollback.
 
-First argument is table name, other arguments are the same as in [composite index](#composite-index).
+The first argument is the table name, other arguments are the same as in [composite index](#composite-index).
 
 ```ts
 import { change } from 'rake-db'
@@ -316,11 +316,11 @@ change(async (db) => {
 
 ## addForeignKey, dropForeignKey
 
-Add foreign key to table on migrate, remove it on rollback.
+Add a foreign key to a table on migrating, and remove it on rollback.
 
-`dropForeignKey` takes the same arguments, removes the foreign key on migrate, adds it on rollback.
+`dropForeignKey` takes the same arguments, removes the foreign key on migrate, and adds it on rollback.
 
-First argument is table name, other arguments are the same as in [composite foreign key](#composite-foreign-key).
+The first argument is the table name, other arguments are the same as in [composite foreign key](#composite-foreign-key).
 
 ```ts
 import { change } from 'rake-db'
@@ -343,11 +343,11 @@ change(async (db) => {
 
 ## addPrimaryKey, dropPrimaryKey
 
-Add primary key to table on migrate, remove it on rollback.
+Add a primary key to a table on migrate, and remove it on rollback.
 
-`dropPrimaryKey` takes the same arguments, removes the primary key on migrate, adds it on rollback.
+`dropPrimaryKey` takes the same arguments, removes the primary key on migrate, and adds it on rollback.
 
-First argument is table name, other arguments are the same as in [composite primary key](#composite-primary-key).
+The first argument is the table name, other arguments are the same as in [composite primary key](#composite-primary-key).
 
 ```ts
 import { change } from 'rake-db'
@@ -375,9 +375,9 @@ change(async (db) => {
 
 ## createSchema, dropSchema
 
-`createSchema` creates a database schema, removes it on rollback.
+`createSchema` creates a database schema, and removes it on rollback.
 
-`dropSchema` takes the same arguments, removes schema on migrate and adds it on rollback.
+`dropSchema` takes the same arguments, removes schema on migration, and adds it on rollback.
 
 ```ts
 import { change } from 'rake-db'
@@ -389,9 +389,9 @@ change(async (db) => {
 
 ## createExtension, dropExtension
 
-`createExtension` creates a database extension, removes it on rollback.
+`createExtension` creates a database extension, and removes it on rollback.
 
-`dropExtension` takes the same arguments, removes extension on migrate and adds it on rollback.
+`dropExtension` takes the same arguments, removes the extension on migrate, and adds it on rollback.
 
 ```ts
 import { change } from 'rake-db'
@@ -417,7 +417,7 @@ change(async (db) => {
 
 ## columnExists
 
-Returns boolean to know if column exists:
+Returns boolean to know if a column exists:
 
 ```ts
 import { change } from 'rake-db'

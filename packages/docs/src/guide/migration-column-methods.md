@@ -1,8 +1,8 @@
 # migration column methods
 
-Following methods have no effect on validation (except some), parsing or encoding columns, they only have effect when used in the migration.
+The following methods do not affect validation (except some), parsing, or encoding columns, they only have an effect when used in the migration.
 
-Even though they have no effect in the application code, you still can copy code from migration to model definition for explicitness, to see database specifics in the model file.
+Even though they do not affect the application code, you still can copy code from migration to model definition for explicitness, to see database specifics in the model file.
 
 ## default
 
@@ -35,7 +35,7 @@ change(async (db) => {
 
 ## primaryKey
 
-Mark the column as a primary key. This column type becomes an argument of the `.find` method. So if primary key is of `serial` type, `.find` will except number, or if primary key is of `uuid` type, `.find` will expect a string.
+Mark the column as a primary key. This column type becomes an argument of the `.find` method. So if the primary key is of `serial` type, `.find` will accept the number, or if the primary key is of `uuid` type, `.find` will expect a string.
 
 ```ts
 import { change } from 'rake-db'
@@ -49,9 +49,9 @@ change(async (db) => {
 
 ## composite primary key
 
-Use `t.primaryKey([column1, column2, ...columns])` to specify primary key consisting of multiple columns:
+Use `t.primaryKey([column1, column2, ...columns])` to specify the primary key consisting of multiple columns:
 
-By default, postgres will name an underlying constraint as `${table name}_pkey`, override the name by passing second argument `{ name: 'customName' }`.
+By default, Postgres will name an underlying constraint as `${table name}_pkey`, and override the name by passing a second argument `{ name: 'customName' }`.
 
 ```ts
 import { change } from 'rake-db'
@@ -80,7 +80,7 @@ change(async (db) => {
 })
 ```
 
-In the ORM specify a function returning a model instead of table name:
+In the ORM specify a function returning a model instead of a table name:
 
 ```ts
 export class SomeModel extends Model {
@@ -98,7 +98,7 @@ export class OtherTable extends Model {
 }
 ```
 
-Optionally you can pass third argument to `foreignKey` with options:
+Optionally you can pass the third argument to `foreignKey` with options:
 
 ```ts
 type ForeignKeyOptions = {
@@ -114,11 +114,11 @@ type ForeignKeyOptions = {
 
 ## composite foreign key
 
-Set foreign key from multiple columns in current table to corresponding columns in other table.
+Set foreign key from multiple columns in the current table to corresponding columns in the other table.
 
-First argument is array of columns in current table, second argument is other table name, third argument is array of columns in other table, forth argument is for options.
+The first argument is an array of columns in the current table, the second argument is another table name, the third argument is an array of columns in another table, and the fourth argument is for options.
 
-Options are the same as in single column foreign key.
+Options are the same as in a single-column foreign key.
 
 ```ts
 import { change } from 'rake-db'
@@ -144,14 +144,14 @@ change(async (db) => {
 
 ## index
 
-Add index to the column.
+Add an index to the column.
 
 ```ts
 import { change } from 'rake-db'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
-    // add index to name column with default settings:
+    // add an index to the name column with default settings:
     name: t.text().index(),
   }))
 })
@@ -163,22 +163,22 @@ Optionally you can pass a single argument with options:
 type IndexOptions = {
   // name of the index
   name?: string;
-  // is it an unique index
+  // is it a unique index
   unique?: boolean;
-  // index algorhytm to use such as GIST, GIN
+  // index algorithm to use such as GIST, GIN
   using?: string;
   // expression is an argument to be passed to a column:
   // CREATE INDEX name ON table ( columnName(expression) )
   expression?: number | string;
   // specify collation:
   collate?: string;
-  // see `opclass` in postgres document for creating index
+  // see `opclass` in the Postgres document for creating the index
   operator?: string;
   // specify index order such as ASC NULLS FIRST, DESC NULLS LAST
   order?: string;
-  // include columns to index to optimize specific queries
+  // include columns to an index to optimize specific queries
   include?: MaybeArray<string>;
-  // see "storage parameters" in postgres document for creating index, for example 'fillfactor = 70'
+  // see "storage parameters" in the Postgres document for creating an index, for example, 'fillfactor = 70'
   with?: string;
   // The tablespace in which to create the index. If not specified, default_tablespace is consulted, or temp_tablespaces for indexes on temporary tables.
   tablespace?: string;
@@ -197,13 +197,13 @@ Shortcut for `.index({ unique: true })`.
 
 Add index for multiple columns.
 
-First argument is an array of columns, where column can be a simple string or an object with such options:
+The first argument is an array of columns, where the column can be a simple string or an object with such options:
 
 ```ts
 type IndexColumnOptions = {
   // name of the column
   column: string,
-  // see comments above for these options
+  // see the comments above for these options
   expression?: number | string;
   collate?: string;
   operator?: string;
@@ -211,11 +211,11 @@ type IndexColumnOptions = {
 }
 ```
 
-Second argument is optional object with index options:
+The second argument is an optional object with index options:
 
 ```ts
 type IndexOptions = {
-  // see comments above for these options
+  // see the comments above for these options
   name?: string;
   unique?: boolean;
   using?: string;
@@ -287,7 +287,7 @@ change(async (db) => {
 
 ## compression
 
-Set compression for the column, see postgres docs for it.
+Set compression for the column, see Postgres docs for it.
 
 ```ts
 import { change } from 'rake-db'

@@ -1,6 +1,6 @@
 # Migration commands
 
-After migration tool `rake-db` was set and configured, you can use it from a command line.
+After the migration tool, `rake-db`, was set and configured, you can use it from a command line.
 
 ## create and drop a database
 
@@ -23,13 +23,13 @@ npm run db reset
 
 ## generate migration
 
-Generate a new migration file, use `generate` command is aliased with `g`:
+Generate a new migration file, use the `generate` command is aliased with `g`:
 
 ```sh
 npm run db g migrationName
 ```
 
-If migration name matches one of known patterns, it will generate a template:
+If the migration name matches one of the known patterns, it will generate a template:
 
 - `create${table name}` for creating a new table
 - `drop${table name}` for dropping a table
@@ -37,9 +37,9 @@ If migration name matches one of known patterns, it will generate a template:
 - `add${any string}To${table name}` for adding columns to a table
 - `remove${any string}From${table name}` for removing columns from a table
 
-When using `create`, `drop`, `add...to` and `remove...from` name you can also specify columns in a command line to be added to a generated migration.
+When using the `create`, `drop`, `add...to`, and `remove...from` names you can also specify columns in a command line to be added to a generated migration.
 
-Specify a column by writing a column name, then a column type separated with `:`, column type can have an argument `(arg)`, then optionally specify a methods chain such as `.primaryKey`, `.nullable`, methods can have arguments too.
+Specify a column by writing a column name, then a column type separated with `:`, column type can accept an argument `(arg)`, then optionally specify a methods chain such as `.primaryKey`, `.nullable`, methods can have arguments too.
 
 When passing an argument, put a column definition into quotes.
 
@@ -77,7 +77,7 @@ Pass a number to migrate only this specific number of migrations:
 npm run db migrate 3
 ```
 
-Rollback command will revert one last applied migration:
+The rollback command will revert one last applied migration:
 
 ```sh
 npm run db rollback

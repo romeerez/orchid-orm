@@ -23,6 +23,10 @@ export default {
           {
             text: 'Building a sample app',
             link: '/guide/building-a-sample-app'
+          },
+          {
+            text: 'Current status and limitations',
+            link: '/guide/current-status-and-limitations'
           }
         ]
       },
