@@ -4,29 +4,29 @@
 
 Main focus is to keep it as powerful as possible, concise and intuitive, performant, and fully type safe.
 
-Node.js already has a lot of ORMs, query builders, but all of them forces compromises.
+Node.js already has a lot of ORMs, query builders, but all of them force compromises.
 
 To get maximum control over the db, it has a query builder `pqb` which is inspired by [knex](http://knexjs.org/) and has all the same functionalities, but `pqb` is written from scratch with TypeScript in mind.
 
-Type safeness is achieving by defining a schema of columns in the way as [Zod](https://github.com/colinhacks/zod) works and using inferred types in all methods.
+Type safeness is achieved by defining a schema of columns in the way [Zod](https://github.com/colinhacks/zod) works and using inferred types in all methods.
 
 ## Comparison with other database tools
 
-Before building yet another ORM I researched existing ones and wrote an [article](https://romeerez.hashnode.dev/nodejs-orms-overview-and-comparison#heading-typeorm) about it. And I came to conclusion that there is not a single ORM which can satisfy typical needs of a TS node.js project. And that's why `Porm` was born, because alternative is really needed.
+Before building yet another ORM I researched existing ones and wrote an [article](https://romeerez.hashnode.dev/nodejs-orms-overview-and-comparison#heading-typeorm) about it. And I came to the conclusion that there is not a single ORM which can satisfy typical needs of a TS node.js project. And that's why `Porm` was born, because alternative is really needed.
 
-If all the ORMs feels limiting and messy, you may want to try using query builders or raw SQL instead, but they bring own disadvantages:
+If all the ORMs feel limiting and messy, you may want to try using query builders or raw SQL instead, but they bring their own disadvantages:
 
 With raw SQL it is much harder and error-prone to write dynamic queries, when the query structure depends on user parameters it may result in a messy SQL parts concatenation.
 
 Query-builder is not aware of relations between tables, so each time when querying posts with comments you have to write join query explicitly, and there may be 3, 4, 10 levels of joins.
-ORM does that for you.
+An ORM does that for you.
 
-Other ORMs takes different ways for defining models:
+Other ORMs take different ways for defining models:
 
-- `Prisma` has own language for defining schema, which requires to recompile it to TS on each change.
+- `Prisma` has its own language for defining schema, which requires to recompile it to TS on each change.
 - `Sequelize` was designed for JS, and it takes a lot of boilerplate for TS.
 - `Objection` was designed for JS, and it won't let TS to autocomplete or check relation names or columns in your queries.
-- `TypeORM`, `MikroORM` models relies on decorators and requires specific typescript settings.
+- `TypeORM`, `MikroORM` models rely on decorators and requires specific typescript settings.
 - `DeepKit` hacks the compiler entirely, and it simply didn't work for me with strange errors.
 
 With `Porm` you write models in a such way:
@@ -55,7 +55,7 @@ export class UserModel extends Model {
 
 There is no additional language to use and recompile, no decorators, no TS compiler tweaks, no type safeness compromises.
 
-Different ORMs enforces different problems when there is a need to customize a query.
+Different ORMs enforce different problems when there is a need to customize a query.
 
 - In `Prisma` you have to rewrite a full query to raw SQL even if a small `WHERE` statement requires a custom condition
 - `Sequelize` result type is always a full record, even if you selected only specific columns, the type doesn't know whether you included relation or not
@@ -80,7 +80,7 @@ const posts = await db.post
   })
 ```
 
-`Porm` allows to define custom chainable methods (via [repository](/guide/orm-repo)) to write clean abstract queries like:
+`Porm` allows you to define custom chainable methods (via [repository](/guide/orm-repo)) to write clean abstract queries like:
 
 ```ts
 const posts = await postRepo
