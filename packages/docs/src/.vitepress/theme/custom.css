@@ -9,6 +9,21 @@
   --vp-button-brand-active-border: #5345da;
 }
 
+html:not(.dark) {
+  --vp-c-bg: #f6f8fa;
+  --vp-c-bg-alt: #eaedef;
+}
+
+@media (min-width: 960px) {
+  html:not(.dark) .VPNavBar.has-sidebar .content {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+
+  html:not(.dark) .VPNav.no-sidebar {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+}
+
 html.dark {
   --vp-c-text-1: rgba(216, 212, 221, 0.87);
 }
