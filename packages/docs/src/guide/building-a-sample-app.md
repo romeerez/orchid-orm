@@ -126,9 +126,9 @@ The first thing we need in every node.js project is a TypeScript:
 npm i -D typescript @types/node
 ```
 
-The second thing to add in every node.js project is eslint with prettier, it takes quite a long list of dependencies and few file changes, check this [commit](insert link) for an example configuration.
+The second thing to add in every node.js project is eslint with prettier, it takes quite a long list of dependencies and few file changes, check this [commit](https://github.com/romeerez/porm-examples/commit/5824fbdb334093154a41bb2104904cf6d2b6e6b1) for an example configuration.
 
-We won't get stuck here on the topic of configuring the server and test framework, here is a [commit](link to commit) for sample server configuration, and here is [commit](link to commit) for configuring tests.
+We won't get stuck here on the topic of configuring the server and test framework, here is a [commit](https://github.com/romeerez/porm-examples/commit/785511c77eb2376c46930c19ca5ccde798d3f8c1) for sample server configuration, and here is [commit](https://github.com/romeerez/porm-examples/commit/37decfa0e4ba676b7dd38ef0c34cd09b3d5150b4) for configuring tests.
 
 For the sample application, I chose [fastify](https://www.fastify.io/) as a server framework
 because it is easier to set up (async error handling out of the box, unlike express),
