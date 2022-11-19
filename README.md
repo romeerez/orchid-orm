@@ -1,6 +1,4 @@
-# Orchid ORM - another ORM for node.js
-
-(will be renamed after finding a good name that is available on npm)
+# Orchid ORM
 
 - 🚀️ productive way to work with models and relations
 - 🧐️ full control over the database with powerful query builder
