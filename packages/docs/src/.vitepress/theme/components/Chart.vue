@@ -22,7 +22,7 @@ export default {
     },
   },
   data() {
-    if (document.documentElement.classList.contains('dark')) {
+    if (typeof document !== 'undefined' && document.documentElement.classList.contains('dark')) {
       ChartJS.defaults.color = 'rgba(255, 255, 255, .8)'
       ChartJS.defaults.borderColor = 'rgba(0, 0, 0, .4)'
     }
