@@ -2,4 +2,4 @@
 
 Another ORM focused on type safety, easiness of use, flexibility and performance.
 
-[Read docs here](https://orchid-orm.netlify.app/guide/orm.html).
+[Read docs here](https://orchid-orm.netlify.app/guide/orm-setup-and-overview.html).
