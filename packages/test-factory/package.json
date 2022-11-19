@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm-test-factory",
-  "version": "0.0.28",
+  "version": "0.0.1",
   "description": "Orchid ORM factories for tests",
   "homepage": "https://orchid-orm.netlify.app/guide/orm-test-factories",
   "repository": {
