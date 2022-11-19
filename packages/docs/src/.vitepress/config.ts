@@ -21,6 +21,10 @@ export default {
             link: '/guide/'
           },
           {
+            text: 'Quickstart',
+            link: '/guide/quickstart'
+          },
+          {
             text: 'Building a sample app',
             link: '/guide/building-a-sample-app'
           },

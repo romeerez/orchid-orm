@@ -2,7 +2,7 @@
 
 Table object (returned from `db(table, () => schema)`) has lots of query methods.
 
-Each query method does **not** mutate the query chain, so calling it conditionally won't have effect:
+Each query method does **not** mutate the query chain, so calling it conditionally won't have an effect:
 
 ```ts
 let query = Table.select('id', 'name')
@@ -12,7 +12,7 @@ if (params.name) {
   query.where({ name: params.name })
 }
 
-// CORRECT: reassing `query` variable
+// CORRECT: reassign `query` variable
 if (params.name) {
   query = query.where({ name: params.name })
 }
@@ -36,12 +36,12 @@ Mutating methods started with `_` are used internally, however, their use is not
 
 ## querying multiple records, single, arrays, values
 
-Query methods are building blocks for a query chain, and when query is ready use `await` to get all records:
+Query methods are building blocks for a query chain, and when a query is a ready use `await` to get all records:
 ```ts
 const records: { id: number, name: string }[] = await Table.select('id', 'name')
 ```
 
-`.take()` to get only one record, it will add `LIMIT 1` to the query, will throw `NotFoundError` when not found.
+`.take()` to get only one record, it will add `LIMIT 1` to the query and will throw `NotFoundError` when not found.
 
 `.find(id)` and `.findBy(conditions)` also returns one record.
 
@@ -70,7 +70,7 @@ try {
 const recordOrUndefined = await Table.takeOptional()
 ```
 
-`.rows` returns array of rows without field names:
+`.rows` returns an array of rows without field names:
 ```ts
 const rows = await Table.rows()
 rows.forEach((row) => {
@@ -80,13 +80,13 @@ rows.forEach((row) => {
 })
 ```
 
-`.pluck` returns array of values:
+`.pluck` returns an array of values:
 ```ts
 const ids = await Table.select('id').pluck()
-// ids is array of all users id
+// ids are an array of all users' id
 ```
 
-`.get` returns a single value, it will add `LIMIT 1` to the query, accepts column name or a raw expression.
+`.get` returns a single value, it will add `LIMIT 1` to the query, and accepts a column name or a raw expression.
 It will throw `NotFoundError` when not found.
 ```ts
 import { NumberColumn } from 'pqb'
@@ -96,41 +96,41 @@ const firstName: string = await Table.get('name')
 const rawResult: number = await Table.get(Table.raw((t) => t.integer(), '1 + 1'))
 ```
 
-`.getOptional` returns single value or undefined when not found:
+`.getOptional` returns a single value or undefined when not found:
 ```ts
 const firstName: string | undefined = await Table.getOptional('name')
 ```
 
-`.exec` won't parse response at all, returns undefined:
+`.exec` won't parse the response at all, and returns undefined:
 ```ts
 const nothing = await Table.take().exec()
 ```
 
-`.all` is a default behavior, returns array of objects:
+`.all` is a default behavior, that returns an array of objects:
 ```ts
 const records = Table
-  .take() // .take() will be overriden by .all()
+  .take() // .take() will be overridden by .all()
   .all()
 ```
 
 ## raw
 
-When there is a need to use a piece of raw SQL, use `raw` method.
+When there is a need to use a piece of raw SQL, use the `raw` method.
 
-When it is needed to select a value with raw SQL, first argument is a callback with type.
+When it is needed to select a value with raw SQL, the first argument is a callback with type.
 The inferred type will be used for the query result.
 
 ```ts
 const result: { num: number }[] = await Table.select({ num: Table.raw((t) => t.integer(), '1 + 1') })
 ```
 
-When using raw SQL in `where` statement or in any other place which does not affect on query result, omit first type argument, provide only SQL:
+When using raw SQL in a `where` statement or in any other place which does not affect the query result, omit the first type argument, and provide only SQL:
 
 ```ts
 const result = await Table.where(Table.raw('someColumn = $1', 'value'))
 ```
 
-To safely use values in the query, write `$1`, `$2` and so on in the SQL and provide the values as the rest arguments.
+To safely use values in the query, write `$1`, `$2`, and so on in the SQL and provide the values as the rest arguments.
 Values can be of any type.
 
 ```ts
@@ -141,24 +141,24 @@ For now, it is the only supported way to interpolate values, this will be extend
 
 ## select
 
-Takes a list of columns to be selected, by default query builder will select all columns of the table.
+Takes a list of columns to be selected, and by default, the query builder will select all columns of the table.
 
-Pass an object to select columns with aliases. Keys of the object are column aliases, value can be a column name, sub query, or raw expression.
+Pass an object to select columns with aliases. Keys of the object are column aliases, value can be a column name, sub-query, or raw expression.
 
 ```ts
 // select columns of the table:
 Table.select('id', 'name', { idAlias: 'id' })
 
-// accepts columns with table name:
+// accepts columns with table names:
 Table.select('user.id', 'user.name', { nameAlias: 'user.name' })
 
-// table name may refer to the current table or to a joined table:
+// table name may refer to the current table or a joined table:
 Table
   .join(Message, 'authorId', 'id')
   .select('user.name', 'message.text', { textAlias: 'message.text' })
 
-// select value from subquery,
-// this sub query should returng single record and single column:
+// select value from the sub-query,
+// this sub-query should return a single record and a single column:
 Table.select({
   subQueryResult: OtherTable.select('column').take(),
 })
@@ -174,9 +174,9 @@ Table.select({
 
 ## selectAll
 
-For `SELECT` query all columns will be selected by default, but for `INSERT`, `UPDATE`, `DELETE` queries by default will be returned rows count.
+For the `SELECT` query all columns will be selected by default, but for `INSERT`, `UPDATE`, and `DELETE` queries by default will be returned rows count.
 
-Use `selectAll` to select all columns. If `.select` method was applied before it will be discarded was applied before it will be discarded.
+Use `selectAll` to select all columns. If the `.select` method was applied before it will be discarded.
 
 ```ts
 const selectFull = await Table
@@ -208,7 +208,7 @@ Table.distinct().select('name')
 Can accept column names or raw expressions to place it to `DISTINCT ON (...)`:
 
 ```ts
-// Distinct on name and raw sql
+// Distinct on the name and raw SQL
 Table.distinct('name', Table.raw('raw sql')).select('id', 'name')
 ```
 
@@ -218,15 +218,15 @@ Sets table alias:
 ```ts
 Table.as('u').select('u.name')
 
-// Can be used in join:
+// Can be used in the join:
 Table.join(Profile.as('p'), 'p.userId', 'user.id')
 ```
 
 ## from
 
-Set the `FROM` value, by default table name is used.
+Set the `FROM` value, by default the table name is used.
 ```ts
-// accepts sub query:
+// accepts sub-query:
 Table.from(OtherTable.select('foo', 'bar'))
 
 // accepts raw query:
@@ -244,7 +244,7 @@ Table.from(
   {
     as: 'alias', // set FROM source alias
 
-    // only is for table inheritance, check postgres docs for details
+    // only is for table inheritance, check Postgres docs for details
     only: true,
   }
 )
@@ -258,7 +258,7 @@ Add Common Table Expression (CTE) to the query.
 import { columnTypes } from 'pqb';
 import { NumberColumn } from './number';
 
-// .with optionally takes such options:
+// .with optionally accepts such options:
 type WithOptions = {
   // list of columns returned by this WITH statement
   // by default all columns from provided column shape will be included
@@ -294,7 +294,7 @@ Table.with(
   (qb) => qb.select({ one: Table.raw((t) => t.integer(), '1') }),
 )
 
-// All mentional forms can accept options as a second argument:
+// All mentioned forms can accept options as a second argument:
 Table.with(
   'alias',
   {
@@ -320,16 +320,16 @@ Table
 
 ## withSchema
 
-Specifies the schema to be used as prefix of table name.
+Specifies the schema to be used as a prefix of a table name.
 
-Though this method can be used to set the schema right when building query,
+Though this method can be used to set the schema right when building the query,
 it's better to specify schema when calling `db(table, () => columns, { schema: string })`
 
 ```ts
 Table.withSchema('customSchema').select('id')
 ```
 
-Resulting sql:
+Resulting SQL:
 
 ```sql
 SELECT "user"."id" FROM "customSchema"."user"
@@ -337,18 +337,18 @@ SELECT "user"."id" FROM "customSchema"."user"
 
 ## jsonPathQuery
 
-Selects a value from json data using a JSON path.
+Selects a value from JSON data using a JSON path.
 ```ts
 import { columnTypes } from 'pqb'
 
 Table.jsonPathQuery(
   columnTypes.text(), // type of the value
-  'data', // name of the json column
+  'data', // name of the JSON column
   '$.name', // JSON path
   'name', // select value as name
   
   // Optionally supports `vars` and `silent` options
-  // check postgres docs for jsonb_path_query for details
+  // check Postgres docs for jsonb_path_query for details
   {
     vars: 'vars',
     silent: true,
@@ -356,7 +356,7 @@ Table.jsonPathQuery(
 );
 ```
 
-Nested JSON operations can be used in place of json column name:
+Nested JSON operations can be used in place of JSON column name:
 ```ts
 Table.jsonPathQuery(
   columnTypes.text(),
@@ -369,8 +369,8 @@ Table.jsonPathQuery(
 
 ## jsonSet
 
-Return a json value/object/array where a given value is set at the given path.
-Path is an array of keys to access the value.
+Return a JSON value/object/array where a given value is set at the given path.
+The path is an array of keys to access the value.
 ```ts
 const result = await Table
   .jsonSet('data', ['name'], 'new value')
@@ -394,7 +394,7 @@ await Table.jsonSet(
 
 ## jsonInsert
 
-Return a json value/object/array where a given value is inserted at the given JSON path. Value can be single value or json object. If a value exists at the given path, the value is not replaced.
+Return a JSON value/object/array where a given value is inserted at the given JSON path. Value can be a single value or JSON object. If a value exists at the given path, the value is not replaced.
 ```ts
 // imagine user has data = { tags: ['two'] }
 const result = await Table
@@ -414,7 +414,7 @@ const result = await Table
     ['tags', 0],
     'two',
     {
-      as: 'alias', // select as alias
+      as: 'alias', // select as an alias
       insertAfter: true // insert after specified position
     },
   )
@@ -426,16 +426,16 @@ expect(result.alias).toEqual({ tags: ['one', 'two'] })
 
 ## jsonRemove
 
-Return a json value/object/array where a given value is removed at the given JSON path.
+Return a JSON value/object/array where a given value is removed at the given JSON path.
 ```ts
-// imagine user has data = { tags: ['one', 'two'] }
+// imagine a user has data = { tags: ['one', 'two'] }
 const result = await Table
   .jsonRemove(
     'data',
     ['tags', 0],
     // optional parameters:
     {
-      as: 'alias', // select as alias
+      as: 'alias', // select as an alias
     }
   )
   .take();
@@ -491,7 +491,7 @@ const createdRecord = await Table.create({
 
 `createMany` will create a batch of records:
 
-In case if one of objects has fewer fields, `DEFAULT` sql keyword will be placed on its place in `VALUES` statement.
+In case one of the objects has fewer fields, the `DEFAULT` SQL keyword will be placed in its place in the `VALUES` statement.
 
 ```ts
 const createdRecords = await Table.createMany([
@@ -509,7 +509,7 @@ const createdRecords = await Table.createRaw({
 })
 ```
 
-`beforeCreate` and `afterCreate` callback are supported for create, see [callbacks](#callbacks).
+`beforeCreate` and `afterCreate` callbacks are supported for creating, see [callbacks](#callbacks).
 
 By default, all create methods will return a full record.
 
@@ -518,13 +518,13 @@ Place `.select`, or `.get` before `.create` to specify returning columns:
 ```ts
 const id: number = await Table.get('id').create(data)
 
-// returns single object when creating single record
+// returns a single object when creating a single record
 const objectWithId: { id: number } = await Table.select('id').create(data)
 
-// returns array of objects when creating multiple
+// returns an array of objects when creating multiple
 const arrayOfIds: { id: number }[] = await Table.select('id').createMany([one, two])
 
-// returns array of objects as well for raw values:
+// returns an array of objects as well for raw values:
 const arrayOfIds2 = await Table.select('id').createRaw({
   columns: ['name', 'password'],
   values: Table.raw(`raw expression for VALUES`)
@@ -533,11 +533,11 @@ const arrayOfIds2 = await Table.select('id').createRaw({
 
 ## createFrom
 
-`createFrom` is to perform `INSERT ... SELECT ...` SQL statement, it does select and insert in a single query.
+`createFrom` is to perform the `INSERT ... SELECT ...` SQL statement, it does select and insert in a single query.
 
-First argument is a query, this query should search for one record by using `find`, `take`, or similar.
+The first argument is a query, this query should search for one record by using `find`, `take`, or similar.
 
-Second argument is data which will be merged with columns returned from select query.
+The second argument is data which will be merged with columns returned from the select query.
 
 ```ts
 await Table.createFrom(
@@ -558,12 +558,12 @@ RETURNING *
 
 ## onConflict
 
-A modifier for create queries that specify alternative behaviour in the case of a conflict.
+A modifier for creating queries that specify alternative behavior in the case of a conflict.
 A conflict occurs when a table has a `PRIMARY KEY` or a `UNIQUE` index on a column
 (or a composite index on a set of columns) and a row being created has the same value as a row
-which already exists in the table in this column(s).
-The default behaviour in case of conflict is to raise an error and abort the query.
-Using this method you can change this behaviour to either silently ignore the error by using .onConflict().ignore()
+that already exists in the table in this column(s).
+The default behavior in case of conflict is to raise an error and abort the query.
+Using this method you can change this behavior to either silently ignore the error by using .onConflict().ignore()
 or to update the existing row with new data (perform an "UPSERT") by using .onConflict().merge().
 
 ```ts
@@ -579,10 +579,10 @@ Table.create(data).onConfict(Table.raw('(email) where condition'))
 
 ::: info
 The column(s) specified by this method must either be the table's PRIMARY KEY or have a UNIQUE index on them, or the query will fail to execute.
-When specifying multiple columns, they must be a composite PRIMARY KEY or have composite UNIQUE index.
+When specifying multiple columns, they must be a composite PRIMARY KEY or have a composite UNIQUE index.
 
-You can use Table.raw(...) function in onConflict.
-It can be useful to specify condition when you have partial index:
+You can use the Table.raw(...) function in onConflict.
+It can be useful to specify a condition when you have a partial index:
 
 ```ts
 Table
@@ -597,7 +597,7 @@ Table
 ```
 :::
 
-See documentation on .ignore() and .merge() methods for more details.
+See the documentation on the .ignore() and .merge() methods for more details.
 
 ## ignore
 
@@ -605,7 +605,7 @@ Available only after `.onConflict`.
 
 Modifies a create query, and causes it to be silently dropped without an error if a conflict occurs.
 
-Adds `ON CONFLICT (columns) DO NOTHING` clause to the insert statement.
+Adds the `ON CONFLICT (columns) DO NOTHING` clause to the insert statement.
 
 ```ts
 Table
@@ -664,14 +664,14 @@ Table
     updatedAt: timestamp,
   })
   .onConflict('email')
-  // string argument for single column:
+  // string argument for a single column:
   .merge('email')
   // array of strings for multiple columns:
   .merge(['email', 'name', 'updatedAt'])
 ```
 
 It is also possible to specify data to update separately from the data to create.
-This is useful if you want to make an update with different data than in create.
+This is useful if you want to make an update with different data than in creating.
 For example, you may want to change a value if the row already exists:
 
 ```ts
@@ -718,17 +718,17 @@ Table.create(data).onConflict().merge(Table.raw('raw SQL expression'))
 
 ## defaults
 
-`.defaults` allows to set values which will be used later in `.create`.
+`.defaults` allows setting values that will be used later in `.create`.
 
-Columns provided in `.defaults` are marked as optional in following `.create`.
+Columns provided in `.defaults` are marked as optional in the following `.create`.
 
 ```ts
-// Will use firstName from defauls and lastName from create argument:
+// Will use firstName from defaults and lastName from create argument:
 Table.defaults({
   firstName: 'first name',
   lastName: 'last name',
 }).create({
-  lastName: 'override last name'
+  lastName: 'override the last name'
 })
 ```
 
@@ -736,22 +736,22 @@ Table.defaults({
 
 `.update` takes an object with columns and values to update records.
 
-By default `.update` will return count of created records.
+By default `.update` will return a count of created records.
 
-Place `.select`, or `.selectAll`, or `.get` before `.update` to specify returning columns.
+Place `.select`, `.selectAll`, or `.get` before `.update` to specify returning columns.
 
-You need to provide `.where`, or `.findBy`, or `.find` conditions before calling `.update`.
-To ensure that whole table won't be updated by accident, update without where conditions will result in TypeScript and runtime error.
+You need to provide `.where`, `.findBy`, or `.find` conditions before calling `.update`.
+To ensure that the whole table won't be updated by accident, updating without where conditions will result in TypeScript and runtime errors.
 
-To update table without conditions put `true` in second argument:
+To update the table without conditions put `true` in the second argument:
 
 ```ts
 await Table.update({ name: 'new name' }, true)
 ```
 
-If `.select` and `.where` were specified before the update it will return array of updated records.
+If `.select` and `.where` were specified before the update it will return an array of updated records.
 
-If `.select` and `.take`, `.find` or similar were specified before the update it will return one updated records.
+If `.select` and `.take`, `.find`, or similar were specified before the update it will return one updated record.
 
 ```ts
 const updatedCount = await Table.where({ name: 'old name' }).update({ name: 'new name' })
@@ -772,7 +772,7 @@ const recordsArray = await Table
   .update({ name: 'new name' })
 ```
 
-`null` value will set column to `NULL`, and `undefined` value will be skipped:
+`null` value will set a column to `NULL`, and the `undefined` value will be skipped:
 ```ts
 Table.findBy({ id: 1 }).update({
   name: null, // updates to null
@@ -782,11 +782,11 @@ Table.findBy({ id: 1 }).update({
 
 ## updateRaw
 
-`updateRaw` is for update records with raw expression.
+`updateRaw` is for updating records with raw expression.
 
 The behavior is the same as a regular `update` method has:
 add a second `true` argument if you want to update without conditions,
-it returns updated count by default,
+it returns an updated count by default,
 you can customize returning data by using `select`.
 
 ```ts
@@ -804,7 +804,7 @@ try {
   // updatedCount is guaranteed to be greater than 0
   const updatedCount = await Table.where(conditions).updateOrThrow({ name: 'name' })
 
-  // updatedRecords is guaranteed to be non-empty array
+  // updatedRecords is guaranteed to be a non-empty array
   const updatedRecords = await Table.where(conditions).select('id')
     .updateOrThrow({ name: 'name' })
 } catch (err) {
@@ -816,13 +816,13 @@ try {
 
 ## upsert
 
-`.upsert` tries to update one record, and it will perform create in case if record was not found.
+`.upsert` tries to update one record, and it will perform create in case a record was not found.
 
-It will implicitly wrap queries in transaction if it was not wrapped yet.
+It will implicitly wrap queries in a transaction if it was not wrapped yet.
 
-`.find` or `.findBy` must precede `.upsert` because it does not work with multiple update.
+`.find` or `.findBy` must precede `.upsert` because it does not work with multiple updates.
 
-In case if more than row was updated, it will throw `MoreThanOneRowError` and transaction will be rolled back.
+In case more than one row was updated, it will throw `MoreThanOneRowError` and the transaction will be rolled back.
 
 `update` and `create` properties are accepting the same type of objects as `update` and `create` command.
 
@@ -1068,22 +1068,22 @@ Each of the functions can accept such options:
 type AggregateOptions = {
   // set select alias
   as?: string;
-  
+
   // add DISTINCT inside of function call
   distinct?: boolean;
-  
+
   // the same argument as in .order() to be set inside of function call
   order?: OrderArg | OrderArg[];
-  
+
   // the same argument as in .where() to be set inside of function call
   filter?: WhereArg;
-  
+
   // the same argument as in .or() to support OR logic of the filter clause
   filterOr?: WhereArg[];
-  
+
   // adds WITHIN GROUP sql statement
   withinGroup?: boolean;
-  
+
   // defines OVER clause.
   // Can be a name of window defined by calling .window() method, 
   // or object the same as .window() method takes to define a window.
@@ -1394,16 +1394,16 @@ Each of the window functions can accept such options:
 type AggregateOptions = {
   // set select alias
   as?: string;
-  
+
   // Expression can be a table column name or Table.raw()
   partitionBy?: Expression | Expression[];
-  
+
   order?:
     | {
-      columnName:
-        | 'ASC' | 'DESC'
-        | { dir: 'ASC' | 'DESC', nulls: 'FIRST' | 'LAST' }
-    }
+    columnName:
+      | 'ASC' | 'DESC'
+      | { dir: 'ASC' | 'DESC', nulls: 'FIRST' | 'LAST' }
+  }
     | RawExpression;
 }
 ```
@@ -1541,16 +1541,16 @@ Constructing `WHERE` conditions:
 Table.where({
   // column of the current table
   name: 'John',
-  
+
   // table name may be specified, it can be a name of joined table
   'table.lastName': 'Johnsonuk',
-  
+
   // object with operators, see "column operators" section to see a full list of them:
   age: {
     gt: 30,
     lt: 70,
   },
-  
+
   // where column equals to raw sql
   column: Table.raw('raw expression')
 })
@@ -1615,13 +1615,13 @@ Table.where({
   NOT: { id: 1 },
   // can be an array:
   NOT: [{ id: 1 }, { id: 2 }],
-  
+
   // see .or
   OR: [{ name: 'a' }, { name: 'b' }],
   // can be an array:
   // this will give id = 1 AND id = 2 OR id = 3 AND id = 4
   OR: [[{ id: 1 }, { id: 2 }], [{ id: 3 }, { id: 4 }]],
-  
+
   // see .in, key syntax requires object with columns and values
   IN: { columns: ['id', 'name'], values: [[1, 'a'], [2, 'b']] },
   // can be an array:
@@ -1629,7 +1629,7 @@ Table.where({
     { columns: ['id', 'name'], values: [[1, 'a'], [2, 'b']] },
     { columns: ['someColumn'], values: [['foo', 'bar']] },
   ],
-  
+
   // see .whereExists
   EXISTS: [OtherTable, 'someId', 'id'],
   // can be an array:
@@ -1820,7 +1820,7 @@ Table.where({
 Table.where({
   // this will fail because object with operators is expected
   jsonColumn: someObject,
-  
+
   // use this instead:
   jsonColumn: { equals: someObject },
 })
@@ -1842,10 +1842,10 @@ Takes array of same type as column, or a sub query which returns a list of value
 Table.where({
   column: {
     in: ['a', 'b', 'c'],
-    
+
     // WHERE "column" IN (SELECT "column" FROM "otherTable")
     in: OtherTable.select('column'),
-    
+
     in: Table.raw("('a', 'b')")
   }
 })
@@ -1871,11 +1871,11 @@ Table.where({
     gt: 5,
     lt: 10,
   },
-  
+
   date: {
     lte: new Date()
   },
-  
+
   time: {
     gte: new Date(),
   },
@@ -1891,7 +1891,7 @@ Table.where({
   column: {
     // simple values
     between: [1, 10],
-    
+
     // sub query and raw expression
     between: [
       OtherTable.select('column').take(),
@@ -2039,10 +2039,10 @@ User.join(Message, User.raw('left raw expression'), '!=', User.raw('rigth raw ex
 // can accept object where keys are joined table columns and values are main table columns:
 User.join(Message, {
   userId: 'id',
-  
+
   // with table names:
   'message.userId': 'user.id',
-  
+
   // value can be a raw expression:
   userId: User.raw('sql expression'),
 })
@@ -2130,7 +2130,7 @@ Table.order('id', 'name') // ASC by default
 
 Table.order({
   id: 'ASC', // or DESC
-  
+
   // to set nulls order:
   name: {
     dir: 'ASC', // or DESC
@@ -2266,9 +2266,9 @@ Table.having({
 ```sql
 SELECT * FROM "table"
 HAVING
-  count(column) FILTER (
-    WHERE id < 10 OR id = 15 OR id > 20
-  ) = 10
+                count(column) FILTER (
+            WHERE id < 10 OR id = 15 OR id > 20
+            ) = 10
 ```
 
 `withinGroup` option is for `WITHIN GROUP` sql statement.

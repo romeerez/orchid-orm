@@ -4,6 +4,9 @@ In this section, we will walk through the process of creating of API server.
 Here you can get an overall idea of how `Porm` looks and feels,
 what problem it solves, and see the benefits and possible drawbacks.
 
+Feel free to skip it, or briefly scroll it, as it turned out to be embarrassingly long.
+Still, it can be useful to peek how one or another case can be handled with `Porm`.
+
 We are going to build an API for a blog site with users, articles, and tags, users can follow each other.
 It is inspired by [realworld](https://github.com/gothinkster/realworld) API spec.
 
@@ -143,16 +146,11 @@ Install `Porm` dependencies:
 
 ```sh
 npm i porm pqb porm-schema-to-zod
-
 # dev dependencies:
 npm i -D rake-db porm-test-factory
 ```
 
-- **porm**: this is the ORM, responsible for defining models, relations
-- **pqb**: query builder, used by other parts to build chainable query objects
-- **rake-db**: is responsible for migrations
-- **porm-schema-to-zod**: convert model columns to a Zod schema to use it for validations
-- **porm-test-factory**: for building mock data in tests
+See details for each dependency in a [Quickstart](/guide/quickstart).
 
 Let's also install an additional tool for tests, it will wrap each test in a transaction, so we won't have to clean the db manually:
 

@@ -62,7 +62,7 @@ All queries are running sequentially.
 
 Y-axis represents milliseconds - the lower is better.
 
-All tests are done locally on a laptop with Intel Core i7 10 Gen of U-series, Manjaro linux.
+All tests are done locally on a laptop with Intel Core i7 10 Gen of U-series, Manjaro Linux.
 
 All the code with instruction is in the [repo here](https://github.com/romeerez/porm-examples/tree/main/packages/benchmarks).
 
