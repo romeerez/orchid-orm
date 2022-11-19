@@ -1,7 +1,7 @@
 import { createFactory } from './factory';
 import { assertType, db, User, Model, adapter } from './test-utils';
 import { z } from 'zod';
-import { porm } from 'porm';
+import { orchidORM } from 'orchid-orm';
 
 describe('factory', () => {
   describe('sequence and sequenceDistance', () => {
@@ -86,7 +86,7 @@ describe('factory', () => {
         }));
       }
 
-      const db = porm(
+      const db = orchidORM(
         {
           adapter,
         },

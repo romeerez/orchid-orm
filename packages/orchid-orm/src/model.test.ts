@@ -1,5 +1,5 @@
 import { createModel } from './model';
-import { porm } from './orm';
+import { orchidORM } from './orm';
 import { adapter, db } from './test-utils/test-db';
 import { assertType, userData, useTestDatabase } from './test-utils/test-utils';
 import { ColumnType, columnTypes, Operators } from 'pqb';
@@ -22,7 +22,7 @@ describe('model', () => {
         }));
       }
 
-      const { user } = porm(
+      const { user } = orchidORM(
         { adapter },
         {
           user: UserModel,
@@ -45,7 +45,7 @@ describe('model', () => {
         }));
       }
 
-      const { user } = porm(
+      const { user } = orchidORM(
         { adapter },
         {
           user: UserModel,
@@ -76,7 +76,7 @@ describe('model', () => {
         }));
       }
 
-      const { user } = porm(
+      const { user } = orchidORM(
         { adapter },
         {
           user: UserModel,

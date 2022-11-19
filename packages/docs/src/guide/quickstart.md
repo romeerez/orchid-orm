@@ -7,19 +7,19 @@ npm i dotenv # for loading .env
 npm i -D typescript @types/node
 ```
 
-Porm dependencies:
+Orchid ORM dependencies:
 
 ```sh
-npm i porm pqb porm-schema-to-zod
+npm i orchid-orm pqb orchid-orm-schema-to-zod
 # dev dependencies:
-npm i -D rake-db porm-test-factory
+npm i -D rake-db orchid-orm-test-factory
 ```
 
-- **porm**: this is the ORM, responsible for defining models, relations
+- **orchid-orm**: this is the ORM, responsible for defining models, relations
 - **pqb**: query builder, used by other parts to build chainable query objects
 - **rake-db**: is responsible for migrations
-- **porm-schema-to-zod**: convert model columns to a Zod schema to use it for validations
-- **porm-test-factory**: for building mock data in tests
+- **orchid-orm-schema-to-zod**: convert model columns to a Zod schema to use it for validations
+- **orchid-orm-test-factory**: for building mock data in tests
 
 Add `.env` file with database credentials:
 
@@ -100,7 +100,7 @@ Add a base model:
 
 ```ts
 // src/model.ts
-import { createModel } from 'porm';
+import { createModel } from 'orchid-orm';
 import { columnTypes } from 'pqb';
 
 export const Model = createModel({
@@ -129,10 +129,10 @@ Add a main instance of the database:
 ```ts
 // src/db.ts
 import 'dotenv/config'
-import { porm } from 'porm';
+import { orchid-orm } from 'orchid-orm';
 import { TableModel } from './table.model'
 
-export const db = porm(
+export const db = orchid-orm(
   {
     connectionString: process.env.DATABASE_URL as string,
     log: true,

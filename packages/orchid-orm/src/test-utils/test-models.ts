@@ -1,6 +1,6 @@
 import { createModel } from '../model';
 import { columnTypes } from 'pqb';
-import { modelToZod } from 'porm-schema-to-zod';
+import { modelToZod } from 'orchid-orm-schema-to-zod';
 
 export const Model = createModel({
   columnTypes: {

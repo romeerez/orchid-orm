@@ -1,6 +1,6 @@
 # Test factories
 
-`Porm` ecosystem offers a library for setting up JavaScript objects, to use these objects in tests.
+`Orchid ORM` ecosystem offers a library for setting up JavaScript objects, to use these objects in tests.
 
 It is producing objects of the shape defined by your model columns.
 
@@ -8,7 +8,7 @@ Under the hood, it is using [@anatine/zod-mock](https://github.com/anatine/zod-p
 to create and fill the object with random values. Random values are produced by [faker.js](https://www.npmjs.com/package/@faker-js/faker).
 
 ```ts
-import { createFactory } from 'porm-test-factory'
+import { createFactory } from 'orchid-orm-test-factory'
 import { db } from '../path-to-db'
 
 const userFactory = createFactory(db.user)
@@ -38,7 +38,7 @@ By default, all text columns will be limited to generate 1000-character long str
 You can override the maximum limit by specifying `maxTextLength`:
 
 ```ts
-import { createFactory } from 'porm-test-factory'
+import { createFactory } from 'orchid-orm-test-factory'
 import { db } from '../path-to-db'
 
 const userFactory = createFactory(db.user, {
@@ -51,7 +51,7 @@ const userFactory = createFactory(db.user, {
 Install this library:
 
 ```sh
-npm i porm-test-factory
+npm i orchid-orm-test-factory
 ```
 
 Factory cannot be in the same file as the model, place it somewhere else, for example, you can have a file `src/utils/test-factories.ts` and have factories for all models in one place.
@@ -75,13 +75,13 @@ Modern test frameworks such as `Jest` are running test suites in parallel,
 and this can lead to a situation when 2 test suites are trying to save a record with the same `email-1@mail.com` email to the database.
 
 This problem is handled specifically for `Jest` by using the `process.env.JEST_WORKER_ID` env variable: if this var is defined,
-`porm-test-factory` will start the sequence from `(workerId - 1) * sequenceDistance + 1`, where `sequenceDistance` is 1000 by default.
+`orchid-orm-test-factory` will start the sequence from `(workerId - 1) * sequenceDistance + 1`, where `sequenceDistance` is 1000 by default.
 In such a way, the first suite sequence will start from 1, the second suite sequence will start from 1001, and so on.
 
 `sequenceDistance` for the described equation can be overridden:
 
 ```ts
-import { createFactory } from 'porm-test-factory'
+import { createFactory } from 'orchid-orm-test-factory'
 import { db } from '../path-to-db'
 
 const userFactory = createFactory(db.user, {
@@ -92,7 +92,7 @@ const userFactory = createFactory(db.user, {
 For other test frameworks which are running suites in parallel provide `sequence` manually when creating a factory:
 
 ```ts
-import { createFactory } from 'porm-test-factory'
+import { createFactory } from 'orchid-orm-test-factory'
 import { db } from '../path-to-db'
 
 // use VITEST_POOL_ID for vitest framework, this env var behaves like JEST_WORKER_ID in jest
@@ -108,7 +108,7 @@ const userFactory = createFactory(db.user, {
 Build a new object with the same structure as your model filled with random data:
 
 ```ts
-import { createFactory } from 'porm-test-factory'
+import { createFactory } from 'orchid-orm-test-factory'
 import { db } from '../path-to-db'
 
 const userFactory = createFactory(db.user)

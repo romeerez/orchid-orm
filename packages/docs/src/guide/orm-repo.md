@@ -1,6 +1,6 @@
 # Repository
 
-Repositories in `Porm` is a nice feature that allows decomposing complex queries into smaller single-purpose ones,
+Repositories in `Orchid ORM` is a nice feature that allows decomposing complex queries into smaller single-purpose ones,
 reuse query parts.
 
 Consider the following example, imagine we have a User model, it has a relation with `followers` to track if one user is following another.
@@ -12,7 +12,7 @@ Also, we want to have a search on users by checking if the substring contains `f
 We can define a repository in such ways:
 
 ```ts
-import { createRepo } from 'porm'
+import { createRepo } from 'orchid-orm'
 import { columnTypes } from 'pqb'
 import { db } from '../path-to-db'
 import { User } from './user.model'

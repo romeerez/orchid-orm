@@ -1,11 +1,11 @@
 {
-  "name": "porm-schema-to-zod",
+  "name": "orchid-orm-schema-to-zod",
   "version": "0.2.1",
-  "description": "PORM columns schema to Zod converter",
-  "homepage": "https://porm.netlify.app/guide/columns-validation-methods",
+  "description": "Orchid-ORM columns schema to Zod converter",
+  "homepage": "https://orchid-orm.netlify.app/guide/columns-validation-methods",
   "repository": {
     "type": "git",
-    "url": "https://github.com/romeerez/porm/tree/main/packages/schema-to-zod"
+    "url": "https://github.com/romeerez/orchid-orm/tree/main/packages/schema-to-zod"
   },
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -36,7 +36,7 @@
     }
   },
   "keywords": [
-    "porm",
+    "orchid-orm",
     "query-builder",
     "schema",
     "zod"

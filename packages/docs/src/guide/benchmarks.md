@@ -2,7 +2,7 @@
 import Chart from '../.vitepress/theme/components/Chart.vue'
 
 const queryAllData = {
-  labels: ['Porm', 'Prisma', 'Sequelize', 'Kysely', 'Knex'],
+  labels: ['Orchid ORM', 'Prisma', 'Sequelize', 'Kysely', 'Knex'],
   datasets: [{
     data: [635, 1295, 1156, 787, 826],
     backgroundColor: [
@@ -16,7 +16,7 @@ const queryAllData = {
 }
 
 const nestedSelectData = {
-  labels: ['Porm', 'Prisma', 'Sequelize'],
+  labels: ['Orchid ORM', 'Prisma', 'Sequelize'],
   datasets: [{
     data: [726, 1560, 3225],
     backgroundColor: [
@@ -28,7 +28,7 @@ const nestedSelectData = {
 }
 
 const simpleInsertData = {
-  labels: ['Porm', 'Prisma', 'Sequelize', 'Kysely', 'Knex'],
+  labels: ['Orchid ORM', 'Prisma', 'Sequelize', 'Kysely', 'Knex'],
   datasets: [{
     data: [896, 1836, 1440, 1158, 1639],
     backgroundColor: [
@@ -42,7 +42,7 @@ const simpleInsertData = {
 }
 
 const nestedInsertData = {
-  labels: ['Porm', 'Prisma', 'Sequelize'],
+  labels: ['Orchid ORM', 'Prisma', 'Sequelize'],
   datasets: [{
     data: [815, 2604, 1605],
     backgroundColor: [
@@ -64,7 +64,7 @@ Y-axis represents milliseconds - the lower is better.
 
 All tests are done locally on a laptop with Intel Core i7 10 Gen of U-series, Manjaro Linux.
 
-All the code with instruction is in the [repo here](https://github.com/romeerez/porm-examples/tree/main/packages/benchmarks).
+All the code with instruction is in the [repo here](https://github.com/romeerez/orchid-orm-examples/tree/main/packages/benchmarks).
 
 Tested against `Prisma` and `Sequelize`, which are probably the most popular node.js ORMs.
 
@@ -82,7 +82,7 @@ Measuring a simple query which loads all records from the table with 10 columns,
 
 Measuring a query with nested select, query is performed 500 times.
 
-Here is code for `Porm`:
+Here is code for `Orchid ORM`:
 
 ```ts
 await db.post
@@ -125,9 +125,9 @@ Sequelize is only inserting posts, because I didn't figure out how it is possibl
 
 <Chart :chartData='nestedInsertData' />
 
-## Why Porm performs faster
+## Why Orchid ORM performs faster
 
-`Porm` is build with performance in mind, it aims to perform as few queries as possible to load as much as possible.
+`Orchid ORM` is build with performance in mind, it aims to perform as few queries as possible to load as much as possible.
 It does no mapping unless necessary.
 
 `Prisma` is based upon Rust server, communication between node.js and the Rust server is implemented inefficiently,

@@ -1,6 +1,6 @@
 # Current status and limitations
 
-`Porm` status is somewhere in between of alpha and beta.
+`Orchid ORM` status is somewhere in between of alpha and beta.
 Despite thousands tests written, may have bugs, please drop an issue if you meet some.
 
 Only Postgres database is supported for now.

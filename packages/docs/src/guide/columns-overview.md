@@ -106,7 +106,7 @@ It is possible to override the parsing of columns returned from the database.
 
 Define `.encode` on a column to convert the value when creating or updating records,
 define `.parse` to parse values returned from the database,
-`.as` will change the TS type of one column to another for the `porm-schema-to-zod` module to use a different schema.
+`.as` will change the TS type of one column to another for the `orchid-orm-schema-to-zod` module to use a different schema.
 
 For example, by default timestamps are returned as strings.
 Here is how to override this for all models to accept numbers when creating or updating,

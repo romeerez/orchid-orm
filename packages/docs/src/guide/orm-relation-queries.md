@@ -185,7 +185,7 @@ const result: Result = await db.post.select(
 
 ## create, update, delete
 
-`Porm` makes it very easy to do modifications of related records,
+`Orchid ORM` makes it very easy to do modifications of related records,
 it allows building a query chain to modify related records,
 it supports nested creates and updates.
 

@@ -7,7 +7,7 @@ import {
   Query,
   TextBaseColumn,
 } from 'pqb';
-import { instanceToZod, InstanceToZod } from 'porm-schema-to-zod';
+import { instanceToZod, InstanceToZod } from 'orchid-orm-schema-to-zod';
 import { generateMock } from '@anatine/zod-mock';
 
 type FactoryOptions = {

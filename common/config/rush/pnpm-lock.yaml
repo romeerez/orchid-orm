@@ -5,7 +5,7 @@ importers:
   .:
     specifiers: {}
 
-  ../../packages/porm:
+  ../../packages/orchid-orm:
     specifiers:
       '@swc/core': ^1.2.210
       '@swc/jest': ^0.2.21
@@ -14,9 +14,9 @@ importers:
       '@types/pg': ^8.6.5
       dotenv: ^16.0.1
       jest: ^28.1.2
+      orchid-orm-schema-to-zod: workspace:*
       pg: ^8.7.3
       pg-transactional-tests: ^1.0.5
-      porm-schema-to-zod: workspace:*
       pqb: workspace:*
       rimraf: ^3.0.2
       rollup: ^2.79.0
@@ -32,11 +32,11 @@ importers:
       '@types/jest': 28.1.4
       '@types/node': 18.0.1
       '@types/pg': 8.6.5
-      dotenv: 16.0.1
+      dotenv: 16.0.3
       jest: 28.1.2_@types+node@18.0.1
+      orchid-orm-schema-to-zod: link:../schema-to-zod
       pg: 8.7.3
       pg-transactional-tests: 1.0.5_pg@8.7.3
-      porm-schema-to-zod: link:../schema-to-zod
       rimraf: 3.0.2
       rollup: 2.79.0
       rollup-plugin-dts: 4.2.2_xdb5ss5ub2cemhlks3szmapm6q
@@ -163,9 +163,10 @@ importers:
       '@types/pg': ^8.6.5
       dotenv: ^16.0.1
       jest: ^28.1.2
+      orchid-orm: workspace:*
+      orchid-orm-schema-to-zod: workspace:*
+      pg: ^8.8.0
       pg-transactional-tests: ^1.0.5
-      porm: workspace:*
-      porm-schema-to-zod: workspace:*
       pqb: workspace:*
       rimraf: ^3.0.2
       rollup: ^2.79.0
@@ -177,8 +178,8 @@ importers:
     dependencies:
       '@anatine/zod-mock': 3.6.0_@faker-js+faker@7.6.0
       '@faker-js/faker': 7.6.0
-      porm: link:../porm
-      porm-schema-to-zod: link:../schema-to-zod
+      orchid-orm: link:../orchid-orm
+      orchid-orm-schema-to-zod: link:../schema-to-zod
       pqb: link:../pqb
       zod: 3.19.1
     devDependencies:
@@ -189,7 +190,8 @@ importers:
       '@types/pg': 8.6.5
       dotenv: 16.0.3
       jest: 28.1.2_@types+node@18.0.1
-      pg-transactional-tests: 1.0.5
+      pg: 8.8.0
+      pg-transactional-tests: 1.0.5_pg@8.8.0
       rimraf: 3.0.2
       rollup: 2.79.0
       rollup-plugin-dts: 4.2.2_xdb5ss5ub2cemhlks3szmapm6q
@@ -2754,14 +2756,16 @@ packages:
       pg: 8.7.3
     dev: true
 
-  /pg-protocol/1.5.0:
-    resolution: {integrity: sha512-muRttij7H8TqRNu/DxrAJQITO4Ac7RmX3Klyr/9mJEOBeIpgnF8f9jAfRz5d3XwQZl5qBjF9gLsUtMPJE0vezQ==}
+  /pg-pool/3.5.2_pg@8.8.0:
+    resolution: {integrity: sha512-His3Fh17Z4eg7oANLob6ZvH8xIVen3phEZh2QuyrIl4dQSDVEabNducv6ysROKpDNPSD+12tONZVWfSgMvDD9w==}
+    peerDependencies:
+      pg: '>=8.0'
+    dependencies:
+      pg: 8.8.0
     dev: true
 
-  /pg-transactional-tests/1.0.5:
-    resolution: {integrity: sha512-Y63A1Ns8k7NlQxRixu6p3V08YiKSrpICgaMqvcL7nzRxOEXLoiS7r65hm9qoaqCrs9w+x35KAHSAvJ8+2J2NTw==}
-    peerDependencies:
-      pg: '*'
+  /pg-protocol/1.5.0:
+    resolution: {integrity: sha512-muRttij7H8TqRNu/DxrAJQITO4Ac7RmX3Klyr/9mJEOBeIpgnF8f9jAfRz5d3XwQZl5qBjF9gLsUtMPJE0vezQ==}
     dev: true
 
   /pg-transactional-tests/1.0.5_pg@8.7.3:
@@ -2770,6 +2774,14 @@ packages:
       pg: '*'
     dependencies:
       pg: 8.7.3
+    dev: true
+
+  /pg-transactional-tests/1.0.5_pg@8.8.0:
+    resolution: {integrity: sha512-Y63A1Ns8k7NlQxRixu6p3V08YiKSrpICgaMqvcL7nzRxOEXLoiS7r65hm9qoaqCrs9w+x35KAHSAvJ8+2J2NTw==}
+    peerDependencies:
+      pg: '*'
+    dependencies:
+      pg: 8.8.0
     dev: true
 
   /pg-types/2.2.0:
@@ -2796,6 +2808,24 @@ packages:
       packet-reader: 1.0.0
       pg-connection-string: 2.5.0
       pg-pool: 3.5.1_pg@8.7.3
+      pg-protocol: 1.5.0
+      pg-types: 2.2.0
+      pgpass: 1.0.5
+    dev: true
+
+  /pg/8.8.0:
+    resolution: {integrity: sha512-UXYN0ziKj+AeNNP7VDMwrehpACThH7LUl/p8TDFpEUuSejCUIwGSfxpHsPvtM6/WXFy6SU4E5RG4IJV/TZAGjw==}
+    engines: {node: '>= 8.0.0'}
+    peerDependencies:
+      pg-native: '>=3.0.1'
+    peerDependenciesMeta:
+      pg-native:
+        optional: true
+    dependencies:
+      buffer-writer: 2.0.0
+      packet-reader: 1.0.0
+      pg-connection-string: 2.5.0
+      pg-pool: 3.5.2_pg@8.8.0
       pg-protocol: 1.5.0
       pg-types: 2.2.0
       pgpass: 1.0.5

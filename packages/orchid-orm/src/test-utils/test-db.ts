@@ -1,4 +1,4 @@
-import { porm } from '../orm';
+import { orchidORM } from '../orm';
 import {
   ChatModel,
   MessageModel,
@@ -13,7 +13,7 @@ export const pgConfig = {
   connectionString: process.env.DATABASE_URL,
 };
 
-export const db = porm(
+export const db = orchidORM(
   {
     ...pgConfig,
     log: false,

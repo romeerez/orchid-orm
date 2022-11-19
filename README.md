@@ -1,4 +1,4 @@
-# Porm - Perfect ORM
+# Orchid ORM - another ORM for node.js
 
 - 🚀️ productive way to work with models and relations
 - 🧐️ full control over the database with powerful query builder
@@ -6,4 +6,4 @@
 - 🛳️ migration tools
 - 💯 100% TypeScript, define a schema and everything else will be inferred
 
-[Read the docs](https://porm.netlify.app/guide/).
+[Read the docs](https://orchid-orm.netlify.app/guide/).

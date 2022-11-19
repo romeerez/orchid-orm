@@ -7,7 +7,7 @@ import {
   Query,
 } from 'pqb';
 import { MapRelations, Relation, RelationThunks } from './relations/relations';
-import { PORM } from './orm';
+import { OrchidORM } from './orm';
 
 export type ModelClass<T extends Model = Model> = new () => T;
 
@@ -24,7 +24,7 @@ export type ModelToDb<T extends Model> = Db<
       : Query['relations']
     : Query['relations'],
   T['columnTypes']
-> & { definedAs: string; db: PORM<ModelClasses> };
+> & { definedAs: string; db: OrchidORM<ModelClasses> };
 
 export type DbModel<T extends ModelClass> = ModelToDb<InstanceType<T>> &
   Omit<MapRelations<InstanceType<T>>, keyof Query>;

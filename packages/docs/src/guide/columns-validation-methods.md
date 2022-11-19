@@ -14,13 +14,13 @@ For now, only conversion to [Zod](https://github.com/colinhacks/zod) is supporte
 Install a package:
 
 ```sh
-npm i porm-schema-to-zod
+npm i orchid-orm-schema-to-zod
 ```
 
 Use the `modelToZod` utility to get a validation schema from a model:
 
 ```ts
-import { modelToZod } from 'porm-schema-to-zod';
+import { modelToZod } from 'orchid-orm-schema-to-zod';
 import { Model } from './model'
 
 export class SomeModel extends Model {

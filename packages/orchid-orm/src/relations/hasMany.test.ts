@@ -9,7 +9,7 @@ import {
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
 import { Chat, Message, Model, Profile, User } from '../test-utils/test-models';
-import { porm } from '../orm';
+import { orchidORM } from '../orm';
 
 describe('hasMany', () => {
   useTestDatabase();
@@ -1197,7 +1197,7 @@ describe('hasMany through', () => {
       };
     }
 
-    const db = porm(
+    const db = orchidORM(
       {
         ...pgConfig,
         log: false,

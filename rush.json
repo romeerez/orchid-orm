@@ -34,8 +34,8 @@
   // "allowedProjectTags": [ "apps", "Web", "tools" ],
   "projects": [
     {
-      "packageName": "porm",
-      "projectFolder": "packages/porm",
+      "packageName": "orchid-orm",
+      "projectFolder": "packages/orchid-orm",
       "shouldPublish": true,
       "tags": ["orm"]
     },
@@ -52,13 +52,13 @@
       "tags": ["migrations"]
     },
     {
-      "packageName": "porm-schema-to-zod",
+      "packageName": "orchid-orm-schema-to-zod",
       "projectFolder": "packages/schema-to-zod",
       "shouldPublish": true,
       "tags": ["schema", "zod"]
     },
     {
-      "packageName": "porm-test-factory",
+      "packageName": "orchid-orm-test-factory",
       "projectFolder": "packages/test-factory",
       "shouldPublish": true,
       "tags": ["test-factory"]

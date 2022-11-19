@@ -3,7 +3,7 @@ import { DbModel, Model, ModelClasses } from './model';
 import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
 
-export type PORM<T extends ModelClasses> = {
+export type OrchidORM<T extends ModelClasses> = {
   [K in keyof T]: DbModel<T[K]>;
 } & {
   $transaction: typeof transaction;
@@ -12,14 +12,14 @@ export type PORM<T extends ModelClasses> = {
   $close(): Promise<void>;
 };
 
-export const porm = <T extends ModelClasses>(
+export const orchidORM = <T extends ModelClasses>(
   {
     log,
     logger,
     ...options
   }: ({ adapter: Adapter } | Omit<AdapterOptions, 'log'>) & QueryLogOptions,
   models: T,
-): PORM<T> => {
+): OrchidORM<T> => {
   const adapter = 'adapter' in options ? options.adapter : new Adapter(options);
   const commonOptions = { log, logger };
   const qb = new Db(
@@ -37,7 +37,7 @@ export const porm = <T extends ModelClasses>(
     $adapter: adapter,
     $queryBuilder: qb,
     $close: () => adapter.close(),
-  } as unknown as PORM<ModelClasses>;
+  } as unknown as OrchidORM<ModelClasses>;
 
   const modelInstances: Record<string, Model> = {};
 
@@ -70,5 +70,5 @@ export const porm = <T extends ModelClasses>(
 
   applyRelations(qb, modelInstances, result);
 
-  return result as unknown as PORM<T>;
+  return result as unknown as OrchidORM<T>;
 };

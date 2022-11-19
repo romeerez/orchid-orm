@@ -1,5 +1,5 @@
 export default {
-  title: 'PORM & PQB',
+  title: 'Orchid ORM',
   description: 'Postgres ORM & Query Builder',
   head: [
     ["link", { rel: "icon", type: "image/png", href: "/logo.svg" }],

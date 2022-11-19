@@ -7,7 +7,7 @@
     "baseUrl": ".",
     "paths": {
       "pqb": ["../pqb/src"],
-      "porm-schema-to-zod": ["../schema-to-zod/src"]
+      "orchid-orm-schema-to-zod": ["../schema-to-zod/src"]
     }
   }
 }

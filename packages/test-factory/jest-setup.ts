@@ -8,7 +8,7 @@ import { db } from './src/test-utils';
 jest.mock('pqb', () => require('../pqb/src'), {
   virtual: true,
 });
-jest.mock('porm', () => require('../porm/src'), {
+jest.mock('orchid-orm', () => require('../orchid-orm/src'), {
   virtual: true,
 });
 

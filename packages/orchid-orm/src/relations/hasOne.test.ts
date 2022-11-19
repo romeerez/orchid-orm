@@ -9,7 +9,7 @@ import {
 } from '../test-utils/test-utils';
 import { User, Profile, Model } from '../test-utils/test-models';
 import { RelationQuery } from 'pqb';
-import { porm } from '../orm';
+import { orchidORM } from '../orm';
 
 describe('hasOne', () => {
   useTestDatabase();
@@ -933,7 +933,7 @@ describe('hasOne through', () => {
       };
     }
 
-    const db = porm(
+    const db = orchidORM(
       {
         ...pgConfig,
         log: false,

@@ -1,5 +1,5 @@
-# porm schema to zod
+# Orchid ORM schema to zod converter
 
-Utility to convert Porm columns schema to [Zod](https://zod.dev/).
+Utility to convert Orchid ORM columns schema to [Zod](https://zod.dev/).
 
-[Read docs here](https://porm.netlify.app/guide/columns-validation-methods).
+[Read docs here](https://orchid-orm.netlify.app/guide/columns-validation-methods).

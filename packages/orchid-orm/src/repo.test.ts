@@ -1,4 +1,4 @@
-import { porm } from './orm';
+import { orchidORM } from './orm';
 import { pgConfig } from './test-utils/test-db';
 import { createModel } from './model';
 import { assertType, expectSql } from './test-utils/test-utils';
@@ -49,7 +49,7 @@ class AnotherModel extends Model {
   }));
 }
 
-const db = porm(pgConfig, {
+const db = orchidORM(pgConfig, {
   someModel: SomeModel,
   otherModel: OtherModel,
   anotherModel: AnotherModel,

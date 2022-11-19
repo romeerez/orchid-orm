@@ -3,15 +3,17 @@ lockfileVersion: 5.4
 specifiers:
   '@typescript-eslint/eslint-plugin': ^5.40.1
   '@typescript-eslint/parser': ^5.40.1
+  dotenv: ^16.0.1
   eslint: 8.22.0
   eslint-config-prettier: ^8.5.0
   eslint-plugin-prettier: ^4.2.1
   prettier: ^2.7.1
-  typescript: ^4.7.4
+  typescript: ^4.8.4
 
 devDependencies:
   '@typescript-eslint/eslint-plugin': 5.40.1_7l7rruczv4daimtr3qpeu6yv5e
   '@typescript-eslint/parser': 5.40.1_yv3nvntfnealqm77uomj2fi4ki
+  dotenv: 16.0.3
   eslint: 8.22.0
   eslint-config-prettier: 8.5.0_eslint@8.22.0
   eslint-plugin-prettier: 4.2.1_i2cojdczqdiurzgttlwdgf764e
@@ -340,6 +342,11 @@ packages:
     engines: {node: '>=6.0.0'}
     dependencies:
       esutils: 2.0.3
+    dev: true
+
+  /dotenv/16.0.3:
+    resolution: {integrity: sha512-7GO6HghkA5fYG9TYnNxi14/7K9f5occMlp3zXAuSxn7CKCxt9xbNWG7yF8hTCSUchlfWSe3uLmlPfigevRItzQ==}
+    engines: {node: '>=12'}
     dev: true
 
   /escape-string-regexp/4.0.0:

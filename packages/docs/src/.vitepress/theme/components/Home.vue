@@ -4,7 +4,10 @@
 
 <template>
   <div class="container">
-    <img src='/full-logo.svg' alt='Logo' class='logo'>
+    <div class="title">
+      <img src='/Orchid.png' alt='Logo' class='logo'>
+      Orchid ORM
+    </div>
 
     <h1 class='text'>Postgres ORM, query builder, migration tool.<br />First-class TypeScript support.</h1>
 
@@ -24,7 +27,7 @@
       <VPButton
         theme="alt"
         text="⭐ Star on GitHub"
-        href="https://github.com/romeerez/porm"
+        href="https://github.com/romeerez/orchid-orm"
       />
     </div>
   </div>
@@ -35,11 +38,21 @@
     text-align: center;
   }
 
-  .logo {
-    max-width: 100%;
-    width: 500px;
-    display: inline-block;
+  .title {
     margin: 40px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 72px;
+    font-weight: bold;
+    color: #c04c8b;
+    line-height: 0.7;
+  }
+
+  .logo {
+    position: relative;
+    top: -40px;
+    margin-right: -105px;
   }
 
   .text {

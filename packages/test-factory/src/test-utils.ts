@@ -1,4 +1,4 @@
-import { createModel, porm } from 'porm';
+import { createModel, orchidORM } from 'orchid-orm';
 import { Adapter, columnTypes } from 'pqb';
 
 type AssertEqual<T, Expected> = [T] extends [Expected]
@@ -75,7 +75,7 @@ export const adapter = new Adapter({
   connectionString: process.env.DATABASE_URL,
 });
 
-export const db = porm(
+export const db = orchidORM(
   {
     adapter,
     log: false,

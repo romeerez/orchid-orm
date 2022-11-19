@@ -8,7 +8,7 @@ Two models can have a relation with each other without circular dependency probl
 
 ```ts
 // user.model.ts
-import { Model } from 'porm'
+import { Model } from 'orchid-orm'
 import { ProfileModel } from './profile.model'
 
 export type User = UserModel['columns']['type']
@@ -28,7 +28,7 @@ export class UserModel extends Model {
 }
 
 // profile.model.ts
-import { Model } from 'porm'
+import { Model } from 'orchid-orm'
 import { UserModel } from './user.model'
 
 export type Profile = ProfileModel['columns']['type']
@@ -56,7 +56,7 @@ export class ProfileModel extends Model {
 For example, `Book` belongs to `Author`:
 
 ```ts
-import { Model } from 'porm'
+import { Model } from 'orchid-orm'
 
 export type Author = AuthorModel['columns']['type']
 export class AuthorModel extends Model {
@@ -99,7 +99,7 @@ This association adds all the same queries and abilities as `belongsTo`, only di
 For example, if each supplier in your application has only one account, you'd declare the supplier model like this:
 
 ```ts
-import { Model } from 'porm'
+import { Model } from 'orchid-orm'
 
 export type Supplier = SupplierModel['columns']['type']
 export class SupplierModel extends Model {
@@ -144,7 +144,7 @@ This association indicates that the declaring model can be matched with one inst
 For example, if each supplier has one account, and each account is associated with one account history, then the supplier model could look like this:
 
 ```ts
-import { Model } from 'porm'
+import { Model } from 'orchid-orm'
 
 export type Supplier = SupplierModel['columns']['type']
 export class SupplierModel extends Model {
@@ -219,7 +219,7 @@ This association indicates that each instance of the model has zero or more inst
 For example, in an application containing authors and books, the author model could be declared like this:
 
 ```ts
-import { Model } from 'porm'
+import { Model } from 'orchid-orm'
 
 export type Author = AuthorModel['columns']['type']
 export class AuthorModel extends Model {
@@ -261,7 +261,7 @@ This association indicates that the declaring model can be matched with zero or 
 For example, consider a medical practice where patients make appointments to see physicians. The relevant association declarations could look like this:
 
 ```ts
-import { Model } from 'porm'
+import { Model } from 'orchid-orm'
 
 export type Physician = PhysicianModel['columns']['type']
 export class PhysicianModel extends Model {
@@ -345,7 +345,7 @@ This association indicates that each instance of the declaring model refers to z
 For example, if your application includes posts and tags, with each post having many tags and each tag appearing in many posts, you could declare the models this way:
 
 ```ts
-import { Model } from 'porm'
+import { Model } from 'orchid-orm'
 
 export type Post = PostModel['columns']['type']
 export class PostModel extends Model {

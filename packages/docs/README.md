@@ -1,3 +1,3 @@
-# PORM docs
+# ORCHID-ORM docs
 
-[Read docs here](https://porm.netlify.app/)
+[Read docs here](https://orchid-orm.netlify.app/)

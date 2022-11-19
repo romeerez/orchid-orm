@@ -1,4 +1,4 @@
-import { porm } from './orm';
+import { orchidORM } from './orm';
 import {
   assertType,
   expectSql,
@@ -32,7 +32,7 @@ describe('orm', () => {
   }
 
   it('should return object with provided adapter, close and transaction method, models', () => {
-    const db = porm(pgConfig, {
+    const db = orchidORM(pgConfig, {
       user: UserModel,
       profile: ProfileModel,
     });
@@ -46,7 +46,7 @@ describe('orm', () => {
   });
 
   it('should return model which is a queryable interface', async () => {
-    const db = porm(pgConfig, {
+    const db = orchidORM(pgConfig, {
       user: UserModel,
       profile: ProfileModel,
     });

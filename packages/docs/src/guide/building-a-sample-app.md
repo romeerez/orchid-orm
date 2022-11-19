@@ -1,16 +1,16 @@
 # Building a sample app
 
 In this section, we will walk through the process of creating of API server.
-Here you can get an overall idea of how `Porm` looks and feels,
+Here you can get an overall idea of how `Orchid ORM` looks and feels,
 what problem it solves, and see the benefits and possible drawbacks.
 
 Feel free to skip it, or briefly scroll it, as it turned out to be embarrassingly long.
-Still, it can be useful to peek how one or another case can be handled with `Porm`.
+Still, it can be useful to peek how one or another case can be handled with `Orchid ORM`.
 
 We are going to build an API for a blog site with users, articles, and tags, users can follow each other.
 It is inspired by [realworld](https://github.com/gothinkster/realworld) API spec.
 
-Full code is available [here](https://github.com/romeerez/porm-examples/tree/main/packages/blog-api).
+Full code is available [here](https://github.com/romeerez/orchid-orm-examples/tree/main/packages/blog-api).
 
 ## API routes
 
@@ -131,23 +131,23 @@ The first thing we need in every node.js project is a TypeScript:
 npm i -D typescript @types/node
 ```
 
-The second thing to add in every node.js project is eslint with prettier, it takes quite a long list of dependencies and few file changes, check this [commit](https://github.com/romeerez/porm-examples/commit/5824fbdb334093154a41bb2104904cf6d2b6e6b1) for an example configuration.
+The second thing to add in every node.js project is eslint with prettier, it takes quite a long list of dependencies and few file changes, check this [commit](https://github.com/romeerez/orchid-orm-examples/commit/5824fbdb334093154a41bb2104904cf6d2b6e6b1) for an example configuration.
 
-We won't get stuck here on the topic of configuring the server and test framework, here is a [commit](https://github.com/romeerez/porm-examples/commit/785511c77eb2376c46930c19ca5ccde798d3f8c1) for sample server configuration, and here is [commit](https://github.com/romeerez/porm-examples/commit/37decfa0e4ba676b7dd38ef0c34cd09b3d5150b4) for configuring tests.
+We won't get stuck here on the topic of configuring the server and test framework, here is a [commit](https://github.com/romeerez/orchid-orm-examples/commit/785511c77eb2376c46930c19ca5ccde798d3f8c1) for sample server configuration, and here is [commit](https://github.com/romeerez/orchid-orm-examples/commit/37decfa0e4ba676b7dd38ef0c34cd09b3d5150b4) for configuring tests.
 
 For the sample application, I chose [fastify](https://www.fastify.io/) as a server framework
 because it is easier to set up (async error handling out of the box, unlike express),
 has more concise syntax for routes, and it includes a very nice utility for testing out of the box.
-Of course, you can use `Porm` with your favorite framework.
+Of course, you can use `Orchid ORM` with your favorite framework.
 
-## setup Porm
+## setup Orchid ORM
 
-Install `Porm` dependencies:
+Install `Orchid ORM` dependencies:
 
 ```sh
-npm i porm pqb porm-schema-to-zod
+npm i orchid-orm pqb orchid-orm-schema-to-zod
 # dev dependencies:
-npm i -D rake-db porm-test-factory
+npm i -D rake-db orchid-orm-test-factory
 ```
 
 See details for each dependency in a [Quickstart](/guide/quickstart).
@@ -205,10 +205,10 @@ Create the main file for the database instance:
 
 ```ts
 // src/db.ts
-import { porm } from 'porm';
+import { orchid-orm } from 'orchid-orm';
 import { config } from './config';
 
-export const db = porm(
+export const db = orchid-orm(
   {
     connectionString: config.currentDatabaseUrl,
     log: true,
@@ -228,7 +228,7 @@ but if you prefer to deal with `Date` objects write `columnTypes.timestamp().asD
 
 ```ts
 // src/lib/model.ts
-import { createModel } from 'porm';
+import { createModel } from 'orchid-orm';
 import { columnTypes } from 'pqb';
 
 export const Model = createModel({
@@ -350,7 +350,7 @@ Some column methods have an effect only in migration, some methods are for valid
 ```ts
 // src/app/user/user.model.ts
 import { Model } from '../../lib/model';
-import { modelToZod } from 'porm-schema-to-zod';
+import { modelToZod } from 'orchid-orm-schema-to-zod';
 
 export class UserModel extends Model {
   // specify a database table name:
@@ -383,11 +383,11 @@ After defining a model, place it into the `db` models list:
 
 ```ts
 // src/db.ts
-import { porm } from 'porm';
+import { orchid-orm } from 'orchid-orm';
 import { config } from './config';
 import { UserModel } from './app/user/user.model';
 
-export const db = porm(
+export const db = orchid-orm(
   {
     connectionString: config.currentDatabaseUrl,
     log: true,
@@ -404,7 +404,7 @@ Define a test factory that we will use very soon:
 
 ```ts
 // src/lib/test/testFactories.ts
-import { createFactory } from 'porm-test-factory';
+import { createFactory } from 'orchid-orm-test-factory';
 import { db } from '../../db';
 
 export const userFactory = createFactory(db.user);
@@ -448,7 +448,7 @@ change(async (db) => {
 
 Note that `min`, `max`, and `email` have no effect on the migration, these methods are only for validation that we will use later.
 
-`Porm` will probably gain a feature of auto-generated migrations in the future, but for now, they are written manually.
+`Orchid ORM` will probably gain a feature of auto-generated migrations in the future, but for now, they are written manually.
 
 ## writing tests for registering user endpoint
 
@@ -848,7 +848,7 @@ Add this model to the list of models in db:
 // ...snip
 import { UserFollowModel } from './app/user/userFollow.model';
 
-export const db = porm(
+export const db = orchid-orm(
   // ...snip
   {
     userFollow: UserFollowModel,
@@ -1007,7 +1007,7 @@ After defining the `follows` relation in the user model, `db.user` receives a `f
 
 If there is a need to do multiple queries it will wrap them in a transaction to prevent unexpected race conditions.
 
-`Porm` strives to perform as few queries as possible to gain the maximum performance, and in this case, it does a single `INSERT ... SELECT ...` query, so it inserts `userFollow` from selecting the `user` record to use user id.
+`Orchid ORM` strives to perform as few queries as possible to gain the maximum performance, and in this case, it does a single `INSERT ... SELECT ...` query, so it inserts `userFollow` from selecting the `user` record to use user id.
 
 The `findBy` method will throw `NotFoundError` in case the record is not found, add a such section to the global error handler of your app to report such errors to the user:
 
@@ -1047,7 +1047,7 @@ export const unfollowUserRoute = routeHandler(
 
 Similarly to the code in follow controller, this code building query to delete `userFollow`.
 
-`Porm` will perform one `DELETE` query by this code.
+`Orchid ORM` will perform one `DELETE` query by this code.
 
 Add route functions to the router:
 
@@ -1151,7 +1151,7 @@ Tag model:
 ```ts
 // src/app/tag/tag.model.ts
 import { Model } from '../../lib/model';
-import { modelToZod } from 'porm-schema-to-zod';
+import { modelToZod } from 'orchid-orm-schema-to-zod';
 import { ArticleTagModel } from './articleTag.model';
 
 export class TagModel extends Model {
@@ -1174,7 +1174,7 @@ export const tagSchema = modelToZod(TagModel);
 ```
 
 The tag model has no relations in the example above, but only because they're not needed in future queries.
-`Porm` is designed to deal with circular dependencies without problems,
+`Orchid ORM` is designed to deal with circular dependencies without problems,
 so `TagModel` can use `ArticleModel` in the relation, and `ArticleModel` can have `TagModel` in the relation at the same time.
 
 Article tag model:
@@ -1227,7 +1227,7 @@ import { UserModel } from '../user/user.model';
 import { ArticleTagModel } from './articleTag.model';
 import { TagModel } from '../tag/tag.model';
 import { ArticleFavoriteModel } from './articleFavorite.model';
-import { modelToZod } from 'porm-schema-to-zod';
+import { modelToZod } from 'orchid-orm-schema-to-zod';
 
 export class ArticleModel extends Model {
   table = 'article';
@@ -1279,7 +1279,7 @@ import { ArticleTagModel } from './app/article/articleTag.model';
 import { TagModel } from './app/tag/tag.model';
 import { ArticleFavoriteModel } from './app/article/articleFavorite.model';
 
-export const db = porm(
+export const db = orchid-orm(
   // ...snip
   {
     // ...snip
@@ -1295,7 +1295,7 @@ Add a factory for the article for use in tests:
 
 ```ts
 // src/lib/test/testFactories.ts
-import { createFactory } from 'porm-test-factory';
+import { createFactory } from 'orchid-orm-test-factory';
 import { db } from '../../db';
 
 export const userFactory = createFactory(db.user);
@@ -1710,7 +1710,7 @@ export const routes = async (app: FastifyInstance) => {
 Currently, the controller code for listing articles looks messy: too many things are happening,
 too many query details to read the code quickly and clearly.
 
-Here I want to tell about one special feature of the `Porm` which doesn't exist in other node.js ORMs.
+Here I want to tell about one special feature of the `Orchid ORM` which doesn't exist in other node.js ORMs.
 There are similar capabilities in `Objection.js` and `Openrecord`, but they aren't type-safe.
 
 Let's start from the article's `author` field: querying author includes some nuances specific to the user model,
@@ -1768,7 +1768,7 @@ Create a new file `user.repo.ts` with the content:
 
 ```ts
 // src/app/user/user.repo.ts
-import { createRepo } from 'porm';
+import { createRepo } from 'orchid-orm';
 import { db } from '../../db';
 
 export const userRepo = createRepo(db.user, {
@@ -1818,7 +1818,7 @@ and it makes sense for both readability and re-usability to move articles\` sele
 
 ```ts
 // src/app/article/article.repo.ts
-import { createRepo } from 'porm';
+import { createRepo } from 'orchid-orm';
 import { db } from '../../db';
 import { userRepo } from '../user/user.repo';
 
@@ -1875,7 +1875,7 @@ Let's move all article filtering logic into repo methods:
 
 ```ts
 // src/app/article/article.repo.ts
-import { createRepo } from 'porm';
+import { createRepo } from 'orchid-orm';
 import { db } from '../../db';
 import { userRepo } from '../user/user.repo';
 
@@ -2264,7 +2264,7 @@ The logic for updating tags is complex enough, so it is encapsulated into the ar
 
 ```ts
 // src/app/article/article.repo.ts
-import { createRepo } from 'porm';
+import { createRepo } from 'orchid-orm';
 import { db } from '../../db';
 
 export const articleRepo = createRepo(db.article, {
@@ -2312,7 +2312,7 @@ Here is the `updateTags` implementation:
 
 ```ts
 // src/app/article/article.repo.ts
-import { createRepo } from 'porm';
+import { createRepo } from 'orchid-orm';
 import { db } from '../../db';
 import { tagRepo } from './tag.repo';
 
@@ -2376,7 +2376,7 @@ It is not a concern of the article to know what an unused tag is, it is a concer
 
 ```ts
 // src/app/tag/tag.repo.ts
-import { createRepo } from 'porm';
+import { createRepo } from 'orchid-orm';
 import { db } from '../../db';
 
 export const tagRepo = createRepo(db.tag, {

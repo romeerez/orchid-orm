@@ -6,8 +6,8 @@
     "noEmit": false,
     "baseUrl": ".",
     "paths": {
-      "porm": ["../porm/src"],
-      "porm-schema-to-zod": ["../schema-to-zod/src"]
+      "orchid-orm": ["../orchid-orm/src"],
+      "orchid-orm-schema-to-zod": ["../schema-to-zod/src"]
     }
   }
 }

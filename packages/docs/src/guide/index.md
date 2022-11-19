@@ -1,6 +1,6 @@
 # Overview
 
-`Porm` is a library for node.js to help to work with a Postgres database (more databases to come), it allows us to define models, and relations, and keep everything type-safe.
+`Orchid ORM` is a library for node.js to help to work with a Postgres database (more databases to come), it allows us to define models, and relations, and keep everything type-safe.
 
 The main focus is to keep it as powerful as possible, concise and intuitive, performant, and fully type-safe.
 
@@ -12,7 +12,7 @@ Type safeness is achieved by defining a schema of columns in the way [Zod](https
 
 ## Comparison with other database tools
 
-Before building yet another ORM I researched existing ones and wrote an [article](https://romeerez.hashnode.dev/nodejs-orms-overview-and-comparison#heading-typeorm) about it. And I concluded that there is not a single ORM that can satisfy the typical needs of a TS node.js project. And that's why `Porm` was born because an alternative is needed.
+Before building yet another ORM I researched existing ones and wrote an [article](https://romeerez.hashnode.dev/nodejs-orms-overview-and-comparison#heading-typeorm) about it. And I concluded that there is not a single ORM that can satisfy the typical needs of a TS node.js project. And that's why `Orchid ORM` was born because an alternative is needed.
 
 If all the ORMs feel limiting and messy, you may want to try using query builders or raw SQL instead, but they bring their disadvantages:
 
@@ -29,7 +29,7 @@ Other ORMs take different ways of defining models:
 - `TypeORM`, and `MikroORM` models rely on decorators and require specific typescript settings.
 - `DeepKit` hacks the compiler entirely, and it simply didn't work for me with strange errors.
 
-With `Porm` you write models in a such way:
+With `Orchid ORM` you write models in a such way:
 
 ```ts
 export type User = UserModel['columns']['type']
@@ -62,7 +62,7 @@ Different ORMs enforce different problems when there is a need to customize a qu
 - `TypeORM`, and `MikroORM` offers you to use a very limited ORM interface for simple queries (with the same problem as in `Sequelize`), and to use a query builder for more complex queries which won't be type-safe.
 - `Objection` is easier for writing queries, but it is not type-safe.
 
-`Porm` queries have no such problems, it is designed to build complex queries with relations and keep track of all the types:
+`Orchid ORM` queries have no such problems, it is designed to build complex queries with relations and keep track of all the types:
 
 ```ts
 // posts type will be: Array<{ id: number, name: string, authorName: string, commentsCount: number }>
@@ -80,7 +80,7 @@ const posts = await db.post
   })
 ```
 
-`Porm` allows you to define custom chainable methods (via [repository](/guide/orm-repo)) to write clean abstract queries like:
+`Orchid ORM` allows you to define custom chainable methods (via [repository](/guide/orm-repo)) to write clean abstract queries like:
 
 ```ts
 const posts = await postRepo

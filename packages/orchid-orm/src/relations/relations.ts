@@ -1,7 +1,7 @@
 import { BelongsTo, BelongsToInfo, makeBelongsToMethod } from './belongsTo';
 import { HasOne, HasOneInfo, makeHasOneMethod } from './hasOne';
 import { DbModel, Model, ModelClass, ModelClasses } from '../model';
-import { PORM } from '../orm';
+import { OrchidORM } from '../orm';
 import {
   Query,
   QueryWithTable,
@@ -136,7 +136,7 @@ type DelayedRelations = Map<Query, Record<string, ApplyRelationData[]>>;
 export const applyRelations = (
   qb: Query,
   models: Record<string, Model>,
-  result: PORM<ModelClasses>,
+  result: OrchidORM<ModelClasses>,
 ) => {
   const modelsEntries = Object.entries(models);
 

@@ -1,6 +1,6 @@
 ---
 page: true
-title: Porm - Postgres ORM
+title: Orchid ORM
 layout: home
 ---
 

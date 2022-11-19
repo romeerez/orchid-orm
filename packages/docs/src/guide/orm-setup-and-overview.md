@@ -1,20 +1,20 @@
 # ORM setup and overview
 
-**Porm** stands for Postgres ORM, where ORM is an abstract interface to work with models and relations between them with ease and fun.
+**Orchid ORM** stands for Postgres ORM, where ORM is an abstract interface to work with models and relations between them with ease and fun.
 
-While the `pqb` query builder is designed to cover the abilities of [knex](https://knexjs.org) to allow building any possible queries, `porm` takes inspiration from [prisma](https://prisma.io/) and other ORMs to give the highest productivity.
+While the `pqb` query builder is designed to cover the abilities of [knex](https://knexjs.org) to allow building any possible queries, `orchid-orm` takes inspiration from [prisma](https://prisma.io/) and other ORMs to give the highest productivity.
 
-`porm` models are interfaces on top of `pqb` tables, and all methods of `pqb` are also available here. For query, methods see [query builder](/guide/query-builder) document.
+`orchid-orm` models are interfaces on top of `pqb` tables, and all methods of `pqb` are also available here. For query, methods see [query builder](/guide/query-builder) document.
 
 ## setup
 
 Install by running:
 
 ```sh
-npm i porm
+npm i orchid-orm
 ```
 
-`porm` is an entry function of the ORM.
+`orchid-orm` is an entry function of the ORM.
 
 The first argument is a connection options object, for all connection options see: [client options](https://node-postgres.com/api/client) + [pool options](https://node-postgres.com/api/pool).
 
@@ -25,13 +25,13 @@ The second argument is an object where keys are model names and values are model
 Returns an instance with models and some specific functions prefixed with a `$` sign to not overlap with your models.
 
 ```ts
-import { porm } from 'porm'
+import { orchid-orm } from 'orchid-orm'
 
 // import all models
 import { UserModel } from './models/user'
 import { MessageModel } from './models/message'
 
-export const db = porm({
+export const db = orchid-orm({
   // in the format: postgres://user:password@localhost:5432/dbname
   connectionString: process.env.DATABASE_URL,
   log: true, // option for logging, false by default
@@ -46,7 +46,7 @@ export const db = porm({
 First, need to create a base `Model` class to extend from, this code should be separate from the `db` file:
 
 ```ts
-import { createModel } from 'porm'
+import { createModel } from 'orchid-orm'
 import { columnTypes } from 'pqb'
 
 export const Model = createModel({ columnTypes })
@@ -82,7 +82,7 @@ After defining the model place it in the main `db` file as in [setup](#setup) st
 ```ts
 import { UserModel } from './models/user'
 
-export const db = porm(Adapter(options), {
+export const db = orchid-orm(Adapter(options), {
   user: UserModel,
 })
 ```
@@ -105,7 +105,7 @@ await UserModel.findBy({ name: 'John' })
 
 Use `.$transaction` to wrap multiple database modification queries into a single transaction.
 
-The first argument of callback is a copy of your main porm instance, but every model on it is patched to use a transaction.
+The first argument of callback is a copy of your main orchid-orm instance, but every model on it is patched to use a transaction.
 
 ```ts
 const { someId, otherId } = await db.$transaction(async (db) => {

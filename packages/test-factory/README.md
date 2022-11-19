@@ -1,5 +1,5 @@
-# porm test factory
+# Orchid ORM test factory
 
-This is a tool for building and creating mock objects basing on [Porm](https://github.com/romeerez/porm/tree/main/packages/porm) models.
+This is a tool for building and creating mock objects basing on [Orchid ORM](https://github.com/romeerez/orchid-orm/tree/main/packages/orchid-orm) models.
 
-[Read docs here](https://porm.netlify.app/guide/orm-test-factories).
+[Read docs here](https://orchid-orm.netlify.app/guide/orm-test-factories).
