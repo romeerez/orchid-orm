@@ -2,14 +2,14 @@ export default {
   title: 'Orchid ORM',
   description: 'Postgres ORM & Query Builder',
   head: [
-    ["link", { rel: "icon", type: "image/png", href: "/logo.svg" }],
+    ["link", { rel: "icon", type: "image/png", href: "/Orchid.png" }],
     ["script", { async: true, src: 'https://www.googletagmanager.com/gtag/js?id=G-PV4PL9TK79' }],
   ],
   markdown: {
     theme: 'one-dark-pro',
   },
   themeConfig: {
-    logo: '/logo.svg',
+    logo: '/Orchid.png',
     nav: [
       { text: 'Guide', link: '/guide/', activeMatch: '^/guide/' },
     ],
