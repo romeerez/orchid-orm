@@ -1,4 +1,4 @@
-# Porm - Perfect ORM
+# Porm - Perfect ORM (will be renamed after finding a good name which is available on npm)
 
 - 🚀️ productive way to work with models and relations
 - 🧐️ full control over the database with powerful query builder
