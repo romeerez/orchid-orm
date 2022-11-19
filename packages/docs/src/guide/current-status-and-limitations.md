@@ -5,6 +5,8 @@ Despite thousands tests written, may have bugs, please drop an issue if you meet
 
 Only Postgres database is supported for now.
 
+Migrations are written by hand instead of generating them like in some other ORMs.
+
 Relation models must be in a single database.
 
 Relations support only a single column for primary and foreign key.

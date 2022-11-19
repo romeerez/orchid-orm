@@ -25,6 +25,10 @@ export default {
             link: '/guide/building-a-sample-app'
           },
           {
+            text: 'Benchmarks',
+            link: '/guide/benchmarks'
+          },
+          {
             text: 'Current status and limitations',
             link: '/guide/current-status-and-limitations'
           }

@@ -7,7 +7,7 @@ what problem it solves, and see the benefits and possible drawbacks.
 We are going to build an API for a blog site with users, articles, and tags, users can follow each other.
 It is inspired by [realworld](https://github.com/gothinkster/realworld) API spec.
 
-Full code is available [here](https://github.com/romeerez/porm-examples).
+Full code is available [here](https://github.com/romeerez/porm-examples/tree/main/packages/blog-api).
 
 ## API routes
 
