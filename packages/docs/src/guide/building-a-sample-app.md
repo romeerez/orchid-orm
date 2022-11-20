@@ -205,10 +205,10 @@ Create the main file for the database instance:
 
 ```ts
 // src/db.ts
-import { orchid-orm } from 'orchid-orm';
+import { orchidORM } from 'orchid-orm';
 import { config } from './config';
 
-export const db = orchid-orm(
+export const db = orchidORM(
   {
     connectionString: config.currentDatabaseUrl,
     log: true,
@@ -383,11 +383,11 @@ After defining a model, place it into the `db` models list:
 
 ```ts
 // src/db.ts
-import { orchid-orm } from 'orchid-orm';
+import { orchidORM } from 'orchid-orm';
 import { config } from './config';
 import { UserModel } from './app/user/user.model';
 
-export const db = orchid-orm(
+export const db = orchidORM(
   {
     connectionString: config.currentDatabaseUrl,
     log: true,
@@ -848,7 +848,7 @@ Add this model to the list of models in db:
 // ...snip
 import { UserFollowModel } from './app/user/userFollow.model';
 
-export const db = orchid-orm(
+export const db = orchidORM(
   // ...snip
   {
     userFollow: UserFollowModel,
@@ -1279,7 +1279,7 @@ import { ArticleTagModel } from './app/article/articleTag.model';
 import { TagModel } from './app/tag/tag.model';
 import { ArticleFavoriteModel } from './app/article/articleFavorite.model';
 
-export const db = orchid-orm(
+export const db = orchidORM(
   // ...snip
   {
     // ...snip

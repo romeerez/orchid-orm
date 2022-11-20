@@ -129,10 +129,10 @@ Add a main instance of the database:
 ```ts
 // src/db.ts
 import 'dotenv/config'
-import { orchid-orm } from 'orchid-orm';
+import { orchidORM } from 'orchid-orm';
 import { TableModel } from './table.model'
 
-export const db = orchid-orm(
+export const db = orchidORM(
   {
     connectionString: process.env.DATABASE_URL as string,
     log: true,

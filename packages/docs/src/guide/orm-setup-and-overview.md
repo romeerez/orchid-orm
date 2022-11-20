@@ -14,7 +14,7 @@ Install by running:
 npm i orchid-orm
 ```
 
-`orchid-orm` is an entry function of the ORM.
+`orchidORM` is an entry function of the ORM.
 
 The first argument is a connection options object, for all connection options see: [client options](https://node-postgres.com/api/client) + [pool options](https://node-postgres.com/api/pool).
 
@@ -25,13 +25,13 @@ The second argument is an object where keys are model names and values are model
 Returns an instance with models and some specific functions prefixed with a `$` sign to not overlap with your models.
 
 ```ts
-import { orchid-orm } from 'orchid-orm'
+import { orchidORM } from 'orchid-orm'
 
 // import all models
 import { UserModel } from './models/user'
 import { MessageModel } from './models/message'
 
-export const db = orchid-orm({
+export const db = orchidORM({
   // in the format: postgres://user:password@localhost:5432/dbname
   connectionString: process.env.DATABASE_URL,
   log: true, // option for logging, false by default
@@ -82,7 +82,7 @@ After defining the model place it in the main `db` file as in [setup](#setup) st
 ```ts
 import { UserModel } from './models/user'
 
-export const db = orchid-orm(Adapter(options), {
+export const db = orchidORM(Adapter(options), {
   user: UserModel,
 })
 ```
