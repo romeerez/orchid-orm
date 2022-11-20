@@ -1,6 +1,6 @@
 # Query builder callbacks
 
-You can add callbacks to run before or after the query. 
+You can add callbacks to run before or after the query.
 
 Callbacks are executed concurrently by using `Promise.all` under the hood.
 
@@ -8,7 +8,7 @@ Callbacks are executed concurrently by using `Promise.all` under the hood.
 // query is a query object
 type BeforeCallback = (query: Query) => void | Promise<void>
 
-// query is a query object, data is result of the query
+// query is a query object, data is the result of the query
 type AfterCallback = (query: Query, data: unknown) => void | Promise<void>
 ```
 
@@ -16,9 +16,9 @@ type AfterCallback = (query: Query, data: unknown) => void | Promise<void>
 
 `beforeQuery` and `afterQuery` callbacks will run on any kind of query.
 
-If query has both `beforeQuery` and `beforeCreate`, `beforeCreate` will run first.
+If the query has both `beforeQuery` and `beforeCreate`, `beforeCreate` will run first.
 
-If query has both `afterQuery` and `afterCreate`, `afterCreate` will run last.
+If the query has both `afterQuery` and `afterCreate`, `afterCreate` will run last.
 
 ```ts
 await Table
@@ -29,7 +29,7 @@ await Table
 
 ## beforeCreate, afterCreate
 
-`beforeCreate` and `afterCreate` callbacks will run only on `create` query:
+`beforeCreate` and `afterCreate` callbacks will run only on the `create` query:
 
 ```ts
 await Table
@@ -40,7 +40,7 @@ await Table
 
 ## beforeUpdate, afterUpdate
 
-`beforeUpdate` and `afterUpdate` callbacks will run only on update query:
+`beforeUpdate` and `afterUpdate` callbacks will run only on the update query:
 
 ```ts
 await Table
@@ -52,7 +52,7 @@ await Table
 
 ## beforeDelete, afterDelete
 
-`beforeDelete` and `afterDelete` callbacks will run only on delete query:
+`beforeDelete` and `afterDelete` callbacks will run only on the delete query:
 
 ```ts
 await Table

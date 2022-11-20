@@ -51,9 +51,9 @@ import { NotFoundError } from 'pqb'
 try {
   // take one record:
   const takenRecord = await Table.take()
-  
+
   const foundById = await Table.find(1)
-  
+
   const foundByConditions = await Table.findBy({ email: 'some@email.com' })
 } catch (err) {
   if (err instanceof NotFoundError) {
@@ -346,7 +346,7 @@ Table.jsonPathQuery(
   'data', // name of the JSON column
   '$.name', // JSON path
   'name', // select value as name
-  
+
   // Optionally supports `vars` and `silent` options
   // check Postgres docs for jsonb_path_query for details
   {
@@ -470,13 +470,13 @@ SomeTable
     ],
     true, // optional wrap parameter
   )
-  // Other methods takes the same arguments,
-  // they are different by SQL keyword:
-  // .unionAll(...)
-  // .intersect(...)
-  // .intersectAll(...)
-  // .except(...)
-  // .exceptAll(...)
+// Other methods takes the same arguments,
+// they are different by SQL keyword:
+// .unionAll(...)
+// .intersect(...)
+// .intersectAll(...)
+// .except(...)
+// .exceptAll(...)
 ```
 
 ## create, createMany, createRaw
@@ -824,9 +824,9 @@ It will implicitly wrap queries in a transaction if it was not wrapped yet.
 
 In case more than one row was updated, it will throw `MoreThanOneRowError` and the transaction will be rolled back.
 
-`update` and `create` properties are accepting the same type of objects as `update` and `create` command.
+`update` and `create` properties are accepting the same type of objects as the `update` and `create` commands.
 
-Not returning value by default, place `.select` or `.selectAll` before `.upsert` to specify returning columns.
+Not returning a value by default, place `.select` or `.selectAll` before `.upsert` to specify returning columns.
 
 ```ts
 const user = await User
@@ -894,14 +894,14 @@ Aliased to `del` as `delete` is a reserved word in JavaScript,
 this method deletes one or more rows,
 based on other conditions specified in the query.
 
-By default `.delete` will return count of deleted records.
+By default `.delete` will return a count of deleted records.
 
-Place `.select`, or `.selectAll`, or `.get` before `.delete` to specify returning columns.
+Place `.select`, `.selectAll`, or `.get` before `.delete` to specify returning columns.
 
-Need to provide `.where`, or `.findBy`, or `.find` conditions before calling `.delete`.
-To prevent accidental deletion of all records , delete without where will result in TypeScript and runtime error.
+Need to provide `.where`, `.findBy`, or `.find` conditions before calling `.delete`.
+To prevent accidental deletion of all records, deleting without where will result in TypeScript and a runtime error.
 
-To delete all records without conditions add `true` argument:
+To delete all records without conditions add a `true` argument:
 
 ```ts
 await Table.delete(true)
@@ -913,19 +913,19 @@ const deletedCount = await Table
   .where(...conditions)
   .delete()
 
-// returns single value, throws if not found
+// returns a single value, throws if not found
 const id: number | undefined = await Table
   .findBy(...conditions)
   .get('id')
   .delete()
 
-// returns array of records with specified columns
+// returns an array of records with specified columns
 const deletedRecord = await Table
   .select('id', 'name', 'age')
   .where(...conditions)
   .delete()
 
-// returns array of full deleted records
+// returns an array of fully deleted records
 const deletedUsersFull = await Table
   .selectAll()
   .where(...conditions)
@@ -935,7 +935,7 @@ const deletedUsersFull = await Table
 `.delete` supports joining, under the hood the join is transformed to `USING` and `WHERE` statements:
 
 ```ts
-// delete all users which have corresponding profile records:
+// delete all users who have corresponding profile records:
 Table
   .join(Profile, 'profile.userId', 'user.id')
   .delete(true)
@@ -943,13 +943,13 @@ Table
 
 ## transaction
 
-All queries within a transaction are executed on the same database connection, and run the entire set of queries as a single unit of work. Any failure will mean the database will rollback any queries executed on that connection to the pre-transaction state.
+All queries within a transaction are executed on the same database connection and run the entire set of queries as a single unit of work. Any failure will mean the database will rollback any queries executed on that connection to the pre-transaction state.
 
 Transactions are handled by passing a handler function into `db.transaction`.
 
-`COMMIT` happens automatically after `.transaction` callback was successfully resolved, `ROLLBACK` is done automatically if callback fails.
+`COMMIT` happens automatically after the `.transaction` callback was successfully resolved, and `ROLLBACK` is done automatically if the callback fails.
 
-`.transaction` method exists both on object returned by `createDb` and on table wrappers returned by `db(table, () => schema)`.
+`.transaction` method exists both on the object returned by `createDb` and on table wrappers returned by `db(table, () => schema)`.
 
 ```ts
 import { createDb } from 'pqb'
@@ -968,7 +968,7 @@ const Book = db('book', () => ({
 }))
 
 try {
-  // db.transaction returns data which is returned from callback
+  // db.transaction returns data that is returned from the callback
   const books = await db.transaction(async (tr) => {
     const books = [
       { title: 'Canterbury Tales' },
@@ -976,7 +976,7 @@ try {
       { title: 'Hamlet' },
     ]
 
-    // create new catalogue and return id
+    // create a new catalog and return the id
     const catalogueId = await Catalogue
       .transacting(tr)
       .select('id')
@@ -1000,7 +1000,7 @@ Used by `.transaction`, the transacting method may be chained to any query and p
 
 ## forUpdate
 
-To be used in select queries inside of transaction, adds `FOR UPDATE` table lock modifier.
+To be used in select queries inside of the transaction adds the `FOR UPDATE` table lock modifier.
 
 ```ts
 Table.transacting(tr).forUpdate()
@@ -1011,7 +1011,7 @@ Table.transacting(tr).forUpdate(['someColumn', 'otherColumn'])
 
 ## forNoKeyUpdate
 
-To be used in select queries inside of transaction, adds `FOR NO KEY UPDATE` table lock modifier.
+To be used in select queries inside of the transaction adds the `FOR NO KEY UPDATE` table lock modifier.
 
 ```ts
 Table.transacting(tr).forUpdate()
@@ -1022,7 +1022,7 @@ Table.transacting(tr).forNoKeyUpdate(['someColumn', 'otherColumn'])
 
 ## forShare
 
-To be used in select queries inside of transaction, adds `FOR SHARE` table lock modifier.
+To be used in select queries inside of the transaction adds the `FOR SHARE` table lock modifier.
 
 ```ts
 Table.transacting(tr).forUpdate()
@@ -1033,7 +1033,7 @@ Table.transacting(tr).forShare(['someColumn', 'otherColumn'])
 
 ## forKeyShare
 
-To be used in select queries inside of transaction, adds `FOR KEY SHARE` table lock modifier.
+To be used in select queries inside of the transaction adds the `FOR KEY SHARE` table lock modifier.
 
 ```ts
 Table.transacting(tr).forUpdate()
@@ -1081,12 +1081,12 @@ type AggregateOptions = {
   // the same argument as in .or() to support OR logic of the filter clause
   filterOr?: WhereArg[];
 
-  // adds WITHIN GROUP sql statement
+  // adds WITHIN GROUP SQL statement
   withinGroup?: boolean;
 
   // defines OVER clause.
-  // Can be a name of window defined by calling .window() method, 
-  // or object the same as .window() method takes to define a window.
+  // Can be the name of a window defined by calling the .window() method, 
+  // or object the same as the .window() method takes to define a window.
   over?: WindowName | WindowArg
 }
 ```
@@ -1099,14 +1099,14 @@ Performs count, returns number:
 // count all:
 const number = Table.count()
 
-// count where column is not NULL:
+// count where a column is not NULL:
 Table.count('name')
 
 // see options above:
 Table.count('*', aggregateOptions)
 ```
 
-`selectCount` supports the same parameters as `count`, use with `group`.
+`selectCount` supports the same parameters as `count`, used with `group`.
 
 Select count among other fields:
 
@@ -1127,7 +1127,7 @@ Gets the minimum value for the specified column, returns number or `null`.
 const numberOrNull = Table.min('numericColumn', aggregateOptions)
 ```
 
-`selectMin` supports the same parameters as `min`, use with `group`.
+`selectMin` supports the same parameters as `min`, used with `group`.
 
 Select min among other fields:
 
@@ -1148,7 +1148,7 @@ Gets the maximum value for the specified column, returns number or `null`.
 const numberOrNull = Table.max('numericColumn', aggregateOptions)
 ```
 
-`selectMax` supports the same parameters as `max`, use with `group`.
+`selectMax` supports the same parameters as `max`, used with `group`.
 
 Select max among other fields:
 
@@ -1169,7 +1169,7 @@ Retrieve the sum of the values of a given column, returns number or `null`.
 const numberOrNull = Table.sum('numericColumn', aggregateOptions)
 ```
 
-`selectSum` supports the same parameters as `sum`, use with `group`.
+`selectSum` supports the same parameters as `sum`, used with `group`.
 
 Select sum among other fields:
 
@@ -1184,13 +1184,13 @@ const record = Table
 
 ### avg, selectAvg
 
-Retrieve the average of the values, returns number or `null`.
+Retrieve the average of the values, and returns a number or `null`.
 
 ```ts
 const numberOrNull = Table.avg('numericColumn', aggregateOptions)
 ```
 
-`selectAvg` supports the same parameters as `avg`, use with `group`.
+`selectAvg` supports the same parameters as `avg`, used with `group`.
 
 Select avg among other fields:
 
@@ -1205,13 +1205,13 @@ const record = Table
 
 ### bitAnd, selectBitAnd
 
-Bitwise and aggregation, returns `number` or `null`
+Bitwise and aggregation, return `number` or `null`
 
 ```ts
 const numberOrNull = Table.bitAnd('numericColumn', aggregateOptions)
 ```
 
-`selectBitAnd` supports the same parameters as `bitAnd`, use with `group`.
+`selectBitAnd` supports the same parameters as `bitAnd`, used with `group`.
 
 Select bit and among other fields:
 
@@ -1226,13 +1226,13 @@ const record = Table
 
 ### bitOr, selectBitOr
 
-Bitwise or aggregation, returns `number` or `null`
+Bitwise or aggregation returns `number` or `null`
 
 ```ts
 const numberOrNull = Table.bitOr('numericColumn', aggregateOptions)
 ```
 
-`selectBitOr` supports the same parameters as `bitOr`, use with `group`.
+`selectBitOr` supports the same parameters as `bitOr`, used with `group`.
 
 Select bit or among other fields:
 
@@ -1247,13 +1247,13 @@ const record = Table
 
 ### boolAnd, selectBoolAnd
 
-Aggregate booleans with and logic, returns `boolean` or `null`
+Aggregate booleans with and logic returns `boolean` or `null`
 
 ```ts
 const booleanOrNull = Table.boolAnd('booleanColumn', aggregateOptions)
 ```
 
-`selectBoolAnd` supports the same parameters as `boolAnd`, use with `group`.
+`selectBoolAnd` supports the same parameters as `boolAnd`, used with `group`.
 
 Select bool and among other fields:
 
@@ -1268,13 +1268,13 @@ const record = Table
 
 ### boolOr, selectBoolOr
 
-Aggregate booleans with or logic, returns `boolean` or `null`
+Aggregate booleans with or logic returns `boolean` or `null`
 
 ```ts
 const booleanOrNull = Table.boolOr('booleanColumn', aggregateOptions)
 ```
 
-`selectBoolOr` supports the same parameters as `boolOr`, use with `group`.
+`selectBoolOr` supports the same parameters as `boolOr`, used with `group`.
 
 Select bool or among other fields:
 
@@ -1293,7 +1293,7 @@ Equivalent to `boolAnd`.
 
 ### jsonAgg, selectJsonAgg, jsonbAgg, selectJsonbAgg
 
-Aggregate values into array, returns array column values or `null`.
+Aggregate values into an array return array column values or `null`.
 
 `jsonAgg` is different from `jsonbAgg` by internal representation in the database, possibly one of them will work a bit faster.
 
@@ -1305,7 +1305,7 @@ const idsOrNull = Table.jsonAgg('id', aggregateOptions)
 const namesOrNull = Table.jsonbAgg('name', aggregateOptions)
 ```
 
-`selectJsonAgg` supports the same parameters as `jsonAgg`, use with `group`.
+`selectJsonAgg` supports the same parameters as `jsonAgg`, used with `group`.
 
 ```ts
 // record contains both id and ids
@@ -1318,7 +1318,7 @@ const record = Table
 
 ### jsonObjectAgg, selectJsonObjectAgg, jsonbObjectAgg, selectJsonbObjectAgg
 
-It does construction of json objects, keys are provided strings and values can be table columns or raw expressions, returns `object` or `null`.
+It does the construction of JSON objects, keys are provided strings and values can be table columns or raw expressions, and returns `object` or `null`.
 
 `jsonObjectAgg` is different from `jsonbObjectAgg` by internal representation in the database, possibly one of them will work a bit faster.
 
@@ -1332,7 +1332,7 @@ const object = Table.jsonAgg({
 }, aggregateOptions)
 ```
 
-`selectJsonObjectAgg` supports the same parameters as `jsonObjectAgg`, use with `group`.
+`selectJsonObjectAgg` supports the same parameters as `jsonObjectAgg`, used with `group`.
 
 ```ts
 // record contains both id and object
@@ -1345,13 +1345,13 @@ const record = Table
 
 ### stringAgg, selectStringAgg
 
-It performs joining of string using a delimiter, returns `string` or `null`.
+It performs the joining of a string using a delimiter and returns `string` or `null`.
 
 ```ts
 const stringOrNull = Table.stringAgg('name', ', ', aggregateOptions)
 ```
 
-`selectStringAgg` supports the same parameters as `stringAgg`, use with `group`.
+`selectStringAgg` supports the same parameters as `stringAgg`, used with `group`.
 
 ```ts
 // record contains both id and names
@@ -1364,16 +1364,16 @@ const record = Table
 
 ### xmlAgg, selectXmlAgg
 
-No one use XML nowadays, this method is here for collection.
+No one uses XML nowadays, this method is here for collection.
 
-Argument is a column of XML type, returns a `string` or `null`.
+The argument is a column of XML type, that returns a `string` or `null`.
 
 ```ts
 // xml is of type string | null
 const xml = await LegacyTable.xmlAgg('xmlColumn', aggregateOptions)
 ```
 
-`selectXmlAgg` supports the same parameters as `xmlAgg`, use with `group`.
+`selectXmlAgg` supports the same parameters as `xmlAgg`, used with `group`.
 
 ```ts
 // record contains both id and xmlData
@@ -1386,7 +1386,7 @@ const record = LegacyTable
 
 ## window functions
 
-Window functions such as `row_number`, `rank`.
+Window functions such as `row_number`, and `rank`.
 
 Each of the window functions can accept such options:
 
@@ -1410,7 +1410,7 @@ type AggregateOptions = {
 
 ### selectRowNumber
 
-Selects `row_number` window function.
+Selects the` row_number` window function.
 
 Returns the number of the current row within its partition, counting from 1.
 
@@ -1427,7 +1427,7 @@ const result = await Table
 
 ### selectRank
 
-Selects `rank` window function.
+Selects the` rank` window function.
 
 Returns the rank of the current row, with gaps; that is, the row_number of the first row in its peer group.
 
@@ -1444,7 +1444,7 @@ const result = await Table
 
 ### selectDenseRank
 
-Selects `dense_rank` window function.
+Selects the` dense_rank` window function.
 
 Returns the rank of the current row, without gaps; this function effectively counts peer groups.
 
@@ -1461,7 +1461,7 @@ const result = await Table
 
 ### selectPercentRank
 
-Selects `percent_rank` window function.
+Selects the `percent_rank` window function.
 
 Returns the relative rank of the current row, that is (rank - 1) / (total partition rows - 1). The value thus ranges from 0 to 1 inclusive.
 
@@ -1478,7 +1478,7 @@ const result = await Table
 
 ### selectCumeDist
 
-Selects `cume_dist` window function.
+Selects the `cume_dist` window function.
 
 Returns the cumulative distribution, that is (number of partition rows preceding or peers with current row) / (total partition rows). The value thus ranges from 1/N to 1.
 
@@ -1512,7 +1512,7 @@ await Table.truncate({ cascade: true })
 
 Clones the current query chain, useful for re-using partial query snippets in other queries without mutating the original.
 
-Used under the hood, not really needed on app side.
+Used under the hood, and not really needed on the app side.
 
 ## columnInfo
 
@@ -1529,7 +1529,7 @@ type ColumnInfo = {
 // columnInfo has type Record<string, ColumnInfo>, where string is name of columns
 const columnInfo = await Table.columnInfo()
 
-// singleColumnInfo has type ColumnInfo
+// singleColumnInfo has the type ColumnInfo
 const singleColumnInfo = await Table.columnInfo('name')
 ```
 
@@ -1542,22 +1542,22 @@ Table.where({
   // column of the current table
   name: 'John',
 
-  // table name may be specified, it can be a name of joined table
+  // table name may be specified, it can be the name of a joined table
   'table.lastName': 'Johnsonuk',
 
-  // object with operators, see "column operators" section to see a full list of them:
+  // object with operators, see the "column operators" section to see a full list of them:
   age: {
     gt: 30,
     lt: 70,
   },
 
-  // where column equals to raw sql
+  // where column equals to raw SQL
   column: Table.raw('raw expression')
 })
 
 ```
 
-`.where` can accept other query and merge its conditions:
+`.where` can accept other queries and merge their conditions:
 
 ```ts
 const otherQuery = Table.where({ name: 'John' })
@@ -1572,7 +1572,7 @@ Table.where({ id: 1 }, otherQuery)
 Table.where(Table.raw('a = b'))
 ```
 
-`.where` can accept a callback with specific query builder containing all "where" methods such as `.where`, `.or`, `.whereNot`, `.whereIn`, `.whereExists`:
+`.where` can accept a callback with a specific query builder containing all "where" methods such as `.where`, `.or`, `.whereNot`, `.whereIn`, `.whereExists`:
 
 ```ts
 Table.where((q) =>
@@ -1591,9 +1591,9 @@ Table.where({ id: 1 }, Table.where({ name: 'John' }), Table.raw('a = b'))
 
 ### where special keys
 
-Object passed to `.where` can contain special keys, each of the key corresponds to own method and takes the same value as the type of argument of the method.
+The object passed to `.where` can contain special keys, each of the keys corresponds to its own method and takes the same value as the type of argument of the method.
 
-For example, key `EXISTS` is for `WHERE EXISTS` SQL statement, code below will find posts where at least one comment exists:
+For example, the key `EXISTS` is for the `WHERE EXISTS` SQL statement, code below will find posts where at least one comment exists:
 
 ```ts
 Post.where({
@@ -1607,7 +1607,7 @@ The same query may be achieved with the method `whereExists`:
 Post.whereExists(Comment, 'postId', 'id')
 ```
 
-Using methods are shorter and cleaner way, but in some cases such object keys way may be more convenient.
+Using methods is a shorter and cleaner way, but in some cases, such object keys way may be more convenient.
 
 ```ts
 Table.where({
@@ -1622,7 +1622,7 @@ Table.where({
   // this will give id = 1 AND id = 2 OR id = 3 AND id = 4
   OR: [[{ id: 1 }, { id: 2 }], [{ id: 3 }, { id: 4 }]],
 
-  // see .in, key syntax requires object with columns and values
+  // see .in, the key syntax requires an object with columns and values
   IN: { columns: ['id', 'name'], values: [[1, 'a'], [2, 'b']] },
   // can be an array:
   IN: [
@@ -1654,13 +1654,13 @@ Table.where({ id: 1 }).and({ name: 'John' })
 
 Columns in single arguments are still joined with `AND`.
 
-Database is processing `AND` before `OR`, so this should be intuitively clear.
+The database is processing `AND` before `OR`, so this should be intuitively clear.
 
 ```ts
 Table.or({ id: 1, color: 'red' }, { id: 2, color: 'blue' })
 ````
 
-This query will produce such sql (simplified):
+This query will produce such SQL (simplified):
 ```sql
 SELECT * FROM "table"
 WHERE id = 1 AND color = 'red'
@@ -1669,7 +1669,7 @@ WHERE id = 1 AND color = 'red'
 
 ## find
 
-`find` methods is available only for tables which has exactly one primary key.
+The `find` method is available only for tables which has exactly one primary key.
 
 Find record by id, throw `NotFoundError` if not found:
 
@@ -1687,7 +1687,7 @@ await Table.findOptional(1)
 
 ## findBy
 
-`.findBy` Takes the same arguments as `.where` and returns single record, throws `NotFoundError` if not found.
+`.findBy` Takes the same arguments as `.where` and returns a single record, throwing `NotFoundError` if not found.
 
 ```ts
 Table.findBy(...conditions)
@@ -1697,7 +1697,7 @@ Table.where(...conditions).take()
 
 ## findOptional
 
-`.findOptional` Takes the same arguments as `.where` and returns single record, returns `undefined` when not found:
+`.findOptional` Takes the same arguments as `.where` and returns a single record, returns `undefined` when not found:
 
 ```ts
 Table.findOptional(...conditions)
@@ -1716,7 +1716,7 @@ Table.whereNot({ color: 'red' })
 
 ## andNot
 
-`.andNot` is alias for `.whereNot`
+`.andNot` is an alias for `.whereNot`
 
 ## orNot
 
@@ -1724,11 +1724,11 @@ Table.whereNot({ color: 'red' })
 
 ## whereIn, orWhereIn, whereNotIn, orWhereNotIn
 
-`.whereIn` and related methods are for `IN` operator to check for inclusion in a list of values.
+`.whereIn` and related methods are for the `IN` operator to check for inclusion in a list of values.
 
-`.orWhereIn` acts as `.or`, `.whereNotIn` acts as `.whereNot`, `.orWhereNotIn` acts as `.orNot`.
+`.orWhereIn` acts as `.or`, `.whereNotIn` acts as `.whereNot`, and `.orWhereNotIn` acts as `.orNot`.
 
-When using with a single column it works like equivalent to `in` column operator:
+When used with a single column it works equivalent to the `in` column operator:
 
 ```ts
 Table.whereIn('column', [1, 2, 3])
@@ -1736,7 +1736,7 @@ Table.whereIn('column', [1, 2, 3])
 Table.where({ column: [1, 2, 3] })
 ```
 
-`.whereIn` can support a tuple of columns, that's what `in` operator cannot support:
+`.whereIn` can support a tuple of columns, that's what the `in` operator cannot support:
 
 ```ts
 Table.whereIn(
@@ -1745,7 +1745,7 @@ Table.whereIn(
 )
 ```
 
-It supports sub query which should return records with columns of same type:
+It supports sub query which should return records with columns of the same type:
 
 ```ts
 Table.whereIn(
@@ -1765,11 +1765,11 @@ Table.whereIn(
 
 ## whereExists, orWhereExists, whereNotExists, orWhereNotExists
 
-`.whereExists` and related methods are for support of `WHERE EXISTS (query)` clause.
+`.whereExists` and related methods are for support of the `WHERE EXISTS (query)` clause.
 
-This method is accepting the same arguments as `.join`, see [join](#join) section for more details.
+This method is accepting the same arguments as `.join`, see the [join](#join) section for more details.
 
-`.orWhereExists` acts as `.or`, `.whereNotExists` acts as `.whereNot`, `.orWhereNotExists` acts as `.orNot`.
+`.orWhereExists` acts as `.or`, `.whereNotExists` acts as `.whereNot`, and `.orWhereNotExists` acts as `.orNot`.
 
 ```ts
 User.whereExists(Account, 'account.id', 'user.id')
@@ -1781,7 +1781,7 @@ User.whereExists(Account, (q) =>
 
 ## exists
 
-Use `.exists()` to check if there is at least one record matching conditions.
+Use `.exists()` to check if there is at least one record-matching condition.
 
 It will discard previous `.select` statements if any. Returns a boolean.
 
@@ -1791,11 +1791,11 @@ const exists: boolean = await Table.where(...conditions).exists()
 
 ## column operators
 
-`.where` argument can take object where key is the name of operator and value is it's argument.
+`.where` argument can take an object where the key is the name of the operator and the value is its argument.
 
-Different types of columns supports different sets of operators.
+Different types of columns support different sets of operators.
 
-All column operators can take a value of the same type as the column, or a sub query, or a raw expression:
+All column operators can take a value of the same type as the column, a sub-query, or a raw expression:
 
 ```ts
 Table.where({
@@ -1803,10 +1803,10 @@ Table.where({
     // lower than 5
     lt: 5,
 
-    // lower than value returned by sub query
+    // lower than the value returned by sub-query
     lt: OtherTable.select('someNumber').take(),
 
-    // raw expression, produces WHERE "numericColumn" < "otherColumn" + 10
+    // raw expression produces WHERE "numericColumn" < "otherColumn" + 10
     lt: Table.raw('"otherColumn" + 10')
   }
 })
@@ -1818,7 +1818,7 @@ Table.where({
 
 ```ts
 Table.where({
-  // this will fail because object with operators is expected
+  // this will fail because an object with operators is expected
   jsonColumn: someObject,
 
   // use this instead:
@@ -1834,9 +1834,9 @@ Table.where({
 })
 ```
 
-`in` is for `IN` operator to check if column value is included in a list of values.
+`in` is for the `IN` operator to check if the column value is included in a list of values.
 
-Takes array of same type as column, or a sub query which returns a list of values, or a raw expression which returns a list.
+Takes an array of the same type as a column, a sub-query that returns a list of values, or a raw expression that returns a list.
 
 ```ts
 Table.where({
@@ -1851,11 +1851,11 @@ Table.where({
 })
 ```
 
-`notIn` is for `NOT IN` operator, takes the same arguments as `in`
+`notIn` is for the `NOT IN` operator, and takes the same arguments as `in`
 
-### Numeric, Date, Time column operators
+### Numeric, Date, and Time column operators
 
-To compare numbers, dates, time.
+To compare numbers, dates, and times.
 
 `lt` is for `<` (lower than)
 
@@ -1882,9 +1882,9 @@ Table.where({
 })
 ```
 
-`between` also works with numeric, dates and time columns, it takes array of two elements.
+`between` also works with numeric, dates, and time columns, it takes an array of two elements.
 
-Both elements can be of same type as column, or a sub query, or a raw query.
+Both elements can be of the same type as a column, a sub-query, or a raw query.
 
 ```ts
 Table.where({
@@ -1892,7 +1892,7 @@ Table.where({
     // simple values
     between: [1, 10],
 
-    // sub query and raw expression
+    // sub-query and raw expression
     between: [
       OtherTable.select('column').take(),
       Table.raw('2 + 2'),
@@ -1903,11 +1903,11 @@ Table.where({
 
 ### Text column operators
 
-For `text`, `char`, `varchar`, `json` columns.
+For `text`, `char`, `varchar`, and `json` columns.
 
-`json` is stored as text, so it has text operators. Use `jsonb` type for json operators.
+`json` is stored as text, so it has text operators. Use the `jsonb` type for JSON operators.
 
-Takes string, or sub query returning string, or raw expression as well as other operators.
+Takes a string, or sub-query returning string, or raw expression as well as other operators.
 
 ```ts
 Table.where({
@@ -1930,11 +1930,11 @@ Table.where({
 
 ### JSONB column operators
 
-For `jsonb` column, note that `json` type has text operators instead.
+For the `jsonb` column, note that the `json` type has text operators instead.
 
-`jsonPath` operator: compare a column value under a given JSON path with provided value.
+`jsonPath` operator: compare a column value under a given JSON path with the provided value.
 
-Value can be of any type to compare with json value, or it can be a sub query, or a raw expression.
+Value can be of any type to compare with JSON value, or it can be a sub-query or a raw expression.
 
 ```ts
 Table.where({
@@ -1948,11 +1948,11 @@ Table.where({
 })
 ```
 
-`jsonSupersetOf`: check if column value is a superset of provided value.
+`jsonSupersetOf`: check if the column value is a superset of provided value.
 
-For instance, it is true if column has json `{ "a": 1, "b": 2 }` and provided value is `{ "a": 1 }`.
+For instance, it is true if the column has JSON `{ "a": 1, "b": 2 }` and provided value is `{ "a": 1 }`.
 
-Takes value of any type, or sub query which returns single value, or a raw expression.
+Takes the value of any type, or sub query which returns a single value, or a raw expression.
 
 ```ts
 Table.where({
@@ -1962,11 +1962,11 @@ Table.where({
 })
 ```
 
-`jsonSubsetOf`: check if column value is a subset of provided value.
+`jsonSubsetOf`: check if the column value is a subset of provided value.
 
-For instance, it is true if column has json `{ "a": 1 }` and provided value is `{ "a": 1, "b": 2 }`.
+For instance, it is true if the column has JSON `{ "a": 1 }` and provided value is `{ "a": 1, "b": 2 }`.
 
-Takes value of any type, or sub query which returns single value, or a raw expression.
+Takes the value of any type, or sub query which returns a single value, or a raw expression.
 
 ```ts
 Table.where({
@@ -1978,7 +1978,7 @@ Table.where({
 
 ## join
 
-Several methods are provided which assist in building joins, they all take the same arguments:
+Several methods are provided that assist in building joins, and they all take the same arguments:
 
 | method         | SQL join type    | description                                                                            |
 |----------------|------------------|----------------------------------------------------------------------------------------|
@@ -1991,13 +1991,13 @@ Several methods are provided which assist in building joins, they all take the s
 | fullOuterJoin  | FULL OUTER JOIN  | combines the results of both left and right outer joins.                               |
 
 ```ts
-// Our main table is User
+// Our main table is the User
 const User = db('user', (t) => ({
   id: t.serial().primaryKey(),
   name: t.text(),
 }))
 
-// User has many messages, each message has "userId" column
+// User has many messages, each message has a "userId" column
 const Message = db('message', (t) => ({
   userId: t.integer(),
   text: t.text(),
@@ -2007,7 +2007,7 @@ const Message = db('message', (t) => ({
 User.join(Message, 'userId', 'id')
   .select(
     'name', // name is User column, table name may be omitted
-    'message.text', // text is Message column, table name is required
+    'message.text', // text is the Message column, and the table name is required
   )
 
 // Table names can be provided for clarity:
@@ -2036,7 +2036,7 @@ User.join(Message, User.raw('left raw expression'), User.raw('rigth raw expressi
 // with operator:
 User.join(Message, User.raw('left raw expression'), '!=', User.raw('rigth raw expression'))
 
-// can accept object where keys are joined table columns and values are main table columns:
+// can accept objects where keys are joined table columns and values are main table columns:
 User.join(Message, {
   userId: 'id',
 
@@ -2044,7 +2044,7 @@ User.join(Message, {
   'message.userId': 'user.id',
 
   // value can be a raw expression:
-  userId: User.raw('sql expression'),
+  userId: User.raw('SQL expression'),
 })
 ```
 
@@ -2052,7 +2052,7 @@ User.join(Message, {
 
 ```ts
 User.join(Message, (q) =>
-  // left column is Message column, right column is User column
+  // left column is the Message column, right column is the User column
   q.on('userId', 'id')
 )
 
@@ -2079,23 +2079,23 @@ User.join(Message, (q) =>
 )
 ```
 
-Join query builder supports all `where` methods: `.where`, `.whereIn`, `.whereExists`, and all `.or`, `.not`, `.orNot` forms.
+Join query builder supports all `where` methods: `.where`, `.whereIn`, `.whereExists`, and all `.or`, `.not`, and `.orNot` forms.
 
-Important note that this where methods are applied to main table we are joining to, not to the joining table.
+Important note that this is where methods are applied to the main table we are joining, not to the joining table.
 
-Where conditions in the callback are applied inside of `JOIN` condition.
+Where conditions in the callback are applied inside of the `JOIN` condition.
 
 ```ts
 User.join(Message, (q) =>
   q
     .on('a', 'b')
-    // this where methods are for User, not for Message:
+    // this is where methods are for User, not for Message:
     .where({ name: 'Vasya' })
     .whereIn('age', [20, 25, 30])
 )
 ```
 
-To add where conditions on joining table, add `.where` to first `.join` argument:
+To add where conditions on the joining table, add `.where` to the first `.join` argument:
 
 ```ts
 // join where message id is 1 and user id is 2
@@ -2107,12 +2107,12 @@ User.join(
 
 ## group
 
-For `GROUP BY` SQL statement, it is accepting column names or raw expressions.
+The `GROUP BY` SQL statement, it is accepting column names or raw expressions.
 
 `group` is useful when aggregating values.
 
 ```ts
-// Select category and sum of prices grouped by the category
+// Select the category and sum of prices grouped by the category
 const results = Product
   .select('category')
   .selectSum('price', { as: 'sumPrice' })
@@ -2145,7 +2145,7 @@ Adds a `HAVING` clause to the query.
 
 `.having` takes aggregate function names as keys, see all functions in [aggregate functions](#aggregate-functions) section.
 
-If value of a function is a primitive, it's treated as `*`:
+If the value of a function is a primitive, it's treated as `*`:
 
 ```ts
 Table.having({
@@ -2158,7 +2158,7 @@ SELECT * FROM "table"
 HAVING count(*) = 5
 ```
 
-If value of function is an object, key is a column name to pass to the function and value is for equality check:
+If the value of the function is an object, the key is a column name to pass to the function and the value is for the equality check:
 
 ```ts
 Table.having({
@@ -2173,7 +2173,7 @@ SELECT * FROM "table"
 HAVING count(id) = 5
 ```
 
-Value of a function can be an object
+The value of a function can be an object
 where keys are column operators (see [column operators](#column-operators) section for full list)
 and values are values to compare with.
 
@@ -2193,7 +2193,7 @@ SELECT * FROM "table"
 HAVING sum(price) > 10 AND sum(price) < 20
 ```
 
-`distinct` option is for `DISTINCT` keyword in aggregation function:
+The `distinct` option is for the `DISTINCT` keyword in the aggregation function:
 
 ```ts
 // 
@@ -2212,7 +2212,7 @@ SELECT * FROM "table"
 HAVING count(DISTINCT column) = 10
 ```
 
-`order` option is for `ORDER` in aggregation function, see [order](#order) for value spec.
+The `order` option is for `ORDER` in the aggregation function, see [order](#order) for value spec.
 
 ```ts
 Table.having({
@@ -2232,9 +2232,9 @@ SELECT * FROM "table"
 HAVING count(column ORDER BY id ASC) = 10
 ```
 
-`filter` is for `FILTER` clause to apply to the aggregation function.
+`filter` is for the `FILTER` clause to apply to the aggregation function.
 
-`filterOr` is for `OR` logic in the filter, it takes array of conditions.
+`filterOr` is for `OR` logic in the filter, it takes an array of conditions.
 
 ```ts
 Table.having({
@@ -2271,7 +2271,7 @@ HAVING
             ) = 10
 ```
 
-`withinGroup` option is for `WITHIN GROUP` sql statement.
+The `withinGroup` option is for the `WITHIN GROUP` SQL statement.
 
 ```ts
 Table.having({
@@ -2292,10 +2292,10 @@ SELECT * FROM "table"
 HAVING count(column) WITHIN GROUP (ORDER name ASC) = 10
 ```
 
-`.having` method supports raw sql:
+The `.having` method supports raw SQL:
 
 ```ts
-Table.having(Table.raw('raw sql'))
+Table.having(Table.raw('raw SQL'))
 ```
 
 `.havingOr` takes the same arguments as `.having`, but joins them with `OR`:
@@ -2311,7 +2311,7 @@ HAVING count(*) = 1 OR count(*) = 2
 
 ## log
 
-Override `log` option, which can also be set in `createDb` or when creating table instance:
+Override the `log` option, which can also be set in `createDb` or when creating a table instance:
 
 ```ts
 // turn log on for this query:
@@ -2324,9 +2324,9 @@ await Table.all().log(false)
 
 ## clear
 
-Clears the specified operator from the query, accepts one or more string keys.
+Clears the specified operator from the query, and accepts one or more string keys.
 
-Clear key can be one of the following:
+The clear key can be one of the following:
 
 - with
 - select
@@ -2341,10 +2341,10 @@ Clear key can be one of the following:
 - offset
 - counters: removes increment and decrement
 
-Note that currently it does not affect on resulting TypeScript type, it may be improved in the future.
+Note that currently, it does not affect on resulting TypeScript type, it may be improved in the future.
 
 ```ts
-// Clears select statement but resulting type still has `id` column selected.
+// Clears select statement but the resulting type still has the `id` column selected.
 Table.select('id').clear('id')
 ```
 
@@ -2360,13 +2360,13 @@ const query2 = Table.select('name').where({ name: 'name' })
 const result = await query1.merge(query2).take()
 ```
 
-Main info such as table name, column types, will not be overridden by `.merge(query)`,
+Main info such as table name, and column types, will not be overridden by `.merge(query)`,
 but all other query data will be merged if possible (`select`, `where`, `join`, `with`, and many others),
 or will be used from provided query argument if not possible to merge (`as`, `onConflict`, returning one or many).
 
 ## toSql
 
-Call `toSql` on a query to get an object with `text` SQL string and `values` array of binding values:
+Call `toSql` on a query to get an object with a `text` SQL string and a `values` array of binding values:
 
 ```ts
 const sql = Table.select('id', 'name').where({ name: 'name' }).toSql()
@@ -2377,7 +2377,7 @@ expect(sql.values).toEqual(['name'])
 
 `toSql` is called internally when awaiting a query.
 
-It is caching result. Not mutating query methods are resetting the cache, but need to be careful with mutating methods which starts with `_` - they won't reset the cache, which may lead to unwanted result.
+It is caching the result. Not mutating query methods are resetting the cache, but need to be careful with mutating methods that start with `_` - they won't reset the cache, which may lead to unwanted results.
 
 `toSql` optionally accepts such parameters:
 
