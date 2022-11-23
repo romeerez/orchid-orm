@@ -1,6 +1,6 @@
-import { SelectQueryData } from './types';
 import { expressionToSql } from './common';
 import { ToSqlCtx } from './toSql';
+import { SelectQueryData } from './data';
 
 export const pushDistinctSql = (
   ctx: ToSqlCtx,

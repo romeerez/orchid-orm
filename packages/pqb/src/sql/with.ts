@@ -1,7 +1,7 @@
-import { QueryData } from './types';
 import { q } from './common';
 import { makeSql, ToSqlCtx } from './toSql';
 import { getRaw, isRaw } from '../common';
+import { QueryData } from './data';
 
 export const pushWithSql = (
   ctx: ToSqlCtx,

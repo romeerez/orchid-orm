@@ -1,6 +1,6 @@
 import { Query, queryTypeWithLimitOne } from '../query';
 import { addValue, q, qc } from './common';
-import { JoinItem, QueryData, Sql } from './types';
+import { JoinItem, Sql } from './types';
 import { pushDistinctSql } from './distinct';
 import { pushSelectSql } from './select';
 import { windowToSql } from './window';
@@ -17,6 +17,7 @@ import { pushColumnInfoSql } from './columnInfo';
 import { pushOrderBySql } from './orderBy';
 import { OnQueryBuilder, WhereQueryBuilder } from '../queryMethods';
 import { getRaw, isRaw } from '../common';
+import { QueryData } from './data';
 
 export type ToSqlCtx = {
   whereQueryBuilder: typeof WhereQueryBuilder;

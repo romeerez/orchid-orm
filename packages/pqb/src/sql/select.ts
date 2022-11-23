@@ -1,9 +1,4 @@
-import {
-  JsonItem,
-  SelectFunctionItem,
-  SelectItem,
-  SelectQueryData,
-} from './types';
+import { JsonItem, SelectFunctionItem, SelectItem } from './types';
 import { Expression, getRaw, isRaw, raw } from '../common';
 import { Query, QueryBase } from '../query';
 import { addValue, q, quoteFullColumn } from './common';
@@ -12,6 +7,7 @@ import { PormInternalError, UnhandledTypeError } from '../errors';
 import { quote } from '../quote';
 import { makeSql, ToSqlCtx } from './toSql';
 import { relationQueryKey } from '../relations';
+import { SelectQueryData } from './data';
 
 const jsonColumnOrMethodToSql = (
   column: string | JsonItem,

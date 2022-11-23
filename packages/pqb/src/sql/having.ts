@@ -1,10 +1,11 @@
-import { AggregateItemOptions, HavingItem, SelectQueryData } from './types';
+import { AggregateItemOptions, HavingItem } from './types';
 import { EMPTY_OBJECT, getRaw, isRaw, RawExpression } from '../common';
 import { Operator } from '../columnsOperators';
 import { aggregateToSql } from './aggregate';
 import { QueryBase } from '../query';
 import { addValue, q } from './common';
 import { ToSqlCtx } from './toSql';
+import { SelectQueryData } from './data';
 
 const aggregateOptionNames: (keyof AggregateItemOptions)[] = [
   'distinct',

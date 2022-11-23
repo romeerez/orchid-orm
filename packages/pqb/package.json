@@ -1,6 +1,6 @@
 {
   "name": "pqb",
-  "version": "0.5.8",
+  "version": "0.5.9",
   "description": "Postgres query builder",
   "homepage": "https://orchid-orm.netlify.app/guide/query-builder.html",
   "repository": {

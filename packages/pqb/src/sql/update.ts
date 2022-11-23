@@ -1,15 +1,15 @@
 import { QueryBase } from '../query';
-import {
-  UpdateQueryData,
-  UpdateQueryDataItem,
-  UpdateQueryDataObject,
-} from './types';
 import { addValue, q, quoteSchemaAndTable } from './common';
 import { pushReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
 import { ToSqlCtx } from './toSql';
 import { pushOrNewArray } from '../utils';
 import { getRaw, isRaw } from '../common';
+import {
+  UpdateQueryData,
+  UpdateQueryDataItem,
+  UpdateQueryDataObject,
+} from './data';
 
 export const pushUpdateSql = (
   ctx: ToSqlCtx,

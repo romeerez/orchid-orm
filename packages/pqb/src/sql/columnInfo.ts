@@ -1,6 +1,6 @@
-import { ColumnInfoQueryData } from './types';
 import { addValue } from './common';
 import { ToSqlCtx } from './toSql';
+import { ColumnInfoQueryData } from './data';
 
 export const pushColumnInfoSql = (
   ctx: ToSqlCtx,

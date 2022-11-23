@@ -1,6 +1,6 @@
-import { TruncateQueryData } from './types';
 import { quoteSchemaAndTable } from './common';
 import { ToSqlCtx } from './toSql';
+import { TruncateQueryData } from './data';
 
 export const pushTruncateSql = (
   ctx: ToSqlCtx,

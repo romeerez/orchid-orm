@@ -1,27 +1,9 @@
-import {
-  ColumnsParsers,
-  Query,
-  QueryBase,
-  QueryReturnType,
-  QueryWithTable,
-  SelectableBase,
-} from '../query';
+import { Query, QueryBase, QueryWithTable, SelectableBase } from '../query';
 import { Expression, RawExpression } from '../common';
-import { ColumnsShape, ColumnType } from '../columnSchema';
-import {
-  RelationQuery,
-  RelationQueryData,
-  relationQueryKey,
-} from '../relations';
-import { Adapter, QueryResult } from '../adapter';
+import { ColumnType } from '../columnSchema';
+import { RelationQuery } from '../relations';
 import { MaybeArray } from '../utils';
-import {
-  QueryLogger,
-  QueryLogObject,
-  AfterCallback,
-  BeforeCallback,
-} from '../queryMethods';
-import { toSqlCacheKey } from './toSql';
+import { QueryData, SelectQueryData } from './data';
 
 export type Sql = {
   text: string;
@@ -55,125 +37,6 @@ const queryKeysOfNotSimpleQuery: (keyof SelectQueryData)[] = [
   'offset',
   'for',
 ];
-
-export type CommonQueryData = {
-  adapter: Adapter;
-  handleResult(q: Query, result: QueryResult): Promise<unknown>;
-  returnType: QueryReturnType;
-  [relationQueryKey]?: RelationQueryData;
-  inTransaction?: boolean;
-  wrapInTransaction?: boolean;
-  throwOnNotFound?: boolean;
-  with?: WithItem[];
-  withShapes?: Record<string, ColumnsShape>;
-  schema?: string;
-  select?: SelectItem[];
-  as?: string;
-  from?: string | Query | RawExpression;
-  and?: WhereItem[];
-  or?: WhereItem[][];
-  coalesceValue?: unknown | RawExpression;
-  parsers?: ColumnsParsers;
-  notFoundDefault?: unknown;
-  defaults?: Record<string, unknown>;
-  beforeQuery?: BeforeCallback[];
-  afterQuery?: AfterCallback[];
-  log?: QueryLogObject;
-  logger: QueryLogger;
-  autoPreparedStatements?: boolean;
-  [toSqlCacheKey]?: Sql;
-};
-
-export type SelectQueryData = CommonQueryData & {
-  type: undefined;
-  distinct?: Expression[];
-  fromOnly?: boolean;
-  join?: JoinItem[];
-  joinedParsers?: Record<string, ColumnsParsers>;
-  group?: (string | RawExpression)[];
-  having?: HavingItem[];
-  havingOr?: HavingItem[][];
-  window?: WindowItem[];
-  union?: { arg: UnionItem; kind: UnionKind; wrap?: boolean }[];
-  order?: OrderItem[];
-  limit?: number;
-  offset?: number;
-  for?: {
-    type: 'UPDATE' | 'NO KEY UPDATE' | 'SHARE' | 'KEY SHARE';
-    tableNames?: string[] | RawExpression;
-    mode?: 'NO WAIT' | 'SKIP LOCKED';
-  };
-};
-
-export type InsertQueryData = CommonQueryData & {
-  type: 'insert';
-  columns: string[];
-  values: unknown[][] | RawExpression;
-  fromQuery?: Query;
-  using?: JoinItem[];
-  join?: JoinItem[];
-  joinedParsers?: Record<string, ColumnsParsers>;
-  onConflict?:
-    | {
-        type: 'ignore';
-        expr?: OnConflictItem;
-      }
-    | {
-        type: 'merge';
-        expr?: OnConflictItem;
-        update?: OnConflictMergeUpdate;
-      };
-  beforeCreate?: BeforeCallback[];
-  afterCreate?: AfterCallback[];
-};
-
-export type UpdateQueryDataObject = Record<
-  string,
-  RawExpression | { op: string; arg: unknown } | unknown
->;
-
-export type UpdatedAtDataInjector = (
-  data: UpdateQueryDataItem[],
-) => UpdateQueryDataItem | void;
-
-export type UpdateQueryDataItem =
-  | UpdateQueryDataObject
-  | RawExpression
-  | UpdatedAtDataInjector;
-
-export type UpdateQueryData = CommonQueryData & {
-  type: 'update';
-  updateData: UpdateQueryDataItem[];
-  beforeUpdate?: BeforeCallback[];
-  afterUpdate?: AfterCallback[];
-};
-
-export type DeleteQueryData = CommonQueryData & {
-  type: 'delete';
-  join?: JoinItem[];
-  joinedParsers?: Record<string, ColumnsParsers>;
-  beforeDelete?: BeforeCallback[];
-  afterDelete?: AfterCallback[];
-};
-
-export type TruncateQueryData = CommonQueryData & {
-  type: 'truncate';
-  restartIdentity?: boolean;
-  cascade?: boolean;
-};
-
-export type ColumnInfoQueryData = CommonQueryData & {
-  type: 'columnInfo';
-  column?: string;
-};
-
-export type QueryData =
-  | SelectQueryData
-  | InsertQueryData
-  | UpdateQueryData
-  | DeleteQueryData
-  | TruncateQueryData
-  | ColumnInfoQueryData;
 
 export type WithItem = [
   as: string,
@@ -373,7 +236,7 @@ export type WindowDeclaration = {
 
 export type UnionItem = Query | RawExpression;
 
-type UnionKind =
+export type UnionKind =
   | 'UNION'
   | 'UNION ALL'
   | 'INTERSECT'

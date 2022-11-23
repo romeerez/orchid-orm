@@ -1,4 +1,5 @@
 import { QueryData, toSqlCacheKey } from './sql';
+import { cloneQueryArrays } from './sql/data';
 
 export type SomeIsTrue<T extends unknown[]> = T extends [
   infer Head,
@@ -84,17 +85,10 @@ export const joinTruthy = (...strings: (string | false | undefined)[]) => {
 };
 
 export const getClonedQueryData = (query: QueryData): QueryData => {
-  const cloned = { ...query, [toSqlCacheKey]: undefined };
-
-  for (const key in query) {
-    if (Array.isArray(query[key as keyof QueryData])) {
-      (cloned as Record<string, unknown>)[key] = [
-        ...(query[key as keyof QueryData] as unknown[]),
-      ];
-    }
-  }
-
-  return cloned;
+  const cloned = { ...query };
+  delete cloned[toSqlCacheKey];
+  cloneQueryArrays(cloned);
+  return cloned as QueryData;
 };
 
 export const getQueryAs = (q: { table?: string; query: { as?: string } }) => {

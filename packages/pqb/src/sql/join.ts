@@ -1,10 +1,11 @@
 import { q, quoteFullColumn, quoteSchemaAndTable } from './common';
-import { JoinItem, QueryData } from './types';
+import { JoinItem } from './types';
 import { QueryBase, QueryWithTable } from '../query';
 import { whereToSql } from './where';
 import { Relation } from '../relations';
 import { ToSqlCtx } from './toSql';
 import { getRaw, isRaw, RawExpression } from '../common';
+import { QueryData } from './data';
 
 type ItemOf3Or4Length =
   | [

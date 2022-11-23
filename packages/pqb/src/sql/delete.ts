@@ -1,10 +1,10 @@
 import { QueryBase } from '../query';
-import { DeleteQueryData } from './types';
 import { pushWhereStatementSql } from './where';
 import { pushReturningSql } from './insert';
 import { processJoinItem } from './join';
 import { ToSqlCtx } from './toSql';
 import { q } from './common';
+import { DeleteQueryData } from './data';
 
 export const pushDeleteSql = (
   ctx: ToSqlCtx,

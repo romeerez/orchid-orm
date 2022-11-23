@@ -1,7 +1,6 @@
 import { Query, QueryBase } from '../query';
 import {
   JoinItem,
-  QueryData,
   WhereInItem,
   WhereItem,
   WhereJsonPathEqualsItem,
@@ -13,6 +12,7 @@ import { getQueryAs, MaybeArray, toArray } from '../utils';
 import { processJoinItem } from './join';
 import { makeSql, ToSqlCtx } from './toSql';
 import { getRaw, isRaw, RawExpression } from '../common';
+import { QueryData } from './data';
 
 export const pushWhereStatementSql = (
   ctx: ToSqlCtx,

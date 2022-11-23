@@ -1,7 +1,8 @@
-import { OrderItem, SelectQueryData } from './types';
+import { OrderItem } from './types';
 import { qc } from './common';
 import { ToSqlCtx } from './toSql';
 import { getRaw, isRaw } from '../common';
+import { SelectQueryData } from './data';
 
 export const pushOrderBySql = (
   ctx: ToSqlCtx,
