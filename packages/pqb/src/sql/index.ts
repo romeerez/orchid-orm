@@ -1,13 +1,3 @@
 export * from './toSql';
 export * from './types';
-export { QueryData } from './data';
-export { ColumnInfoQueryData } from './data';
-export { TruncateQueryData } from './data';
-export { DeleteQueryData } from './data';
-export { UpdateQueryData } from './data';
-export { UpdateQueryDataItem } from './data';
-export { UpdatedAtDataInjector } from './data';
-export { UpdateQueryDataObject } from './data';
-export { InsertQueryData } from './data';
-export { SelectQueryData } from './data';
-export { CommonQueryData } from './data';
+export * from './data';

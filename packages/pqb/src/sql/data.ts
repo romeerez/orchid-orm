@@ -74,26 +74,6 @@ export type SelectQueryData = CommonQueryData & {
   };
 };
 
-export const cloneSelectQueryData = (
-  to: SelectQueryData,
-  q: SelectQueryData,
-) => {
-  to.type = q.type;
-  to.distinct = q.distinct?.slice(0);
-  to.fromOnly = q.fromOnly;
-  to.join = q.join?.slice(0);
-  to.joinedParsers = q.joinedParsers;
-  to.group = q.group?.slice(0);
-  to.having = q.having?.slice(0);
-  to.havingOr = q.havingOr?.slice(0);
-  to.window = q.window?.slice(0);
-  to.union = q.union?.slice(0);
-  to.order = q.order?.slice(0);
-  to.limit = q.limit;
-  to.offset = q.offset;
-  to.for = q.for;
-};
-
 export type InsertQueryData = CommonQueryData & {
   type: 'insert';
   columns: string[];
