@@ -15,8 +15,12 @@ import {
 } from '../relations';
 import { Adapter, QueryResult } from '../adapter';
 import { MaybeArray } from '../utils';
-import { QueryLogger, QueryLogObject } from '../queryMethods/log';
-import { AfterCallback, BeforeCallback } from '../queryMethods/callbacks';
+import {
+  QueryLogger,
+  QueryLogObject,
+  AfterCallback,
+  BeforeCallback,
+} from '../queryMethods';
 import { toSqlCacheKey } from './toSql';
 
 export type Sql = {
@@ -76,6 +80,7 @@ export type CommonQueryData = {
   afterQuery?: AfterCallback[];
   log?: QueryLogObject;
   logger: QueryLogger;
+  autoPreparedStatements?: boolean;
   [toSqlCacheKey]?: Sql;
 };
 

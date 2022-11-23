@@ -62,4 +62,13 @@ describe('db', () => {
       assertType<typeof result, Date>();
     });
   });
+
+  describe('autoPreparedStatements', () => {
+    it('should be true by default', () => {
+      const db = createDb({ adapter, columnTypes });
+
+      const table = db('table');
+      expect(table.query.autoPreparedStatements).toBe(true);
+    });
+  });
 });

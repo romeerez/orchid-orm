@@ -30,6 +30,9 @@ import { QueryError, QueryErrorName } from './errors';
 
 export type DbTableOptions = {
   schema?: string;
+  // prepare all SQL queries before executing
+  // true by default
+  autoPreparedStatements?: boolean;
 } & QueryLogOptions;
 
 export interface Db<
@@ -73,6 +76,7 @@ export interface Db<
   then: ThenResult<
     Pick<ColumnShapeOutput<Shape>, DefaultSelectColumns<Shape>[number]>[]
   >;
+  // TODO: remove tableAlias
   tableAlias: undefined;
   joinedTables: Query['joinedTables'];
   windows: Query['windows'];
@@ -122,6 +126,7 @@ export class Db<
       handleResult: handleResult,
       logger,
       log: logParamToLogObject(logger, options.log),
+      autoPreparedStatements: options.autoPreparedStatements || true,
     } as QueryData;
 
     if (options?.schema) {
@@ -210,6 +215,7 @@ export type DbOptions<CT extends ColumnTypesBase> = (
 ) &
   QueryLogOptions & {
     columnTypes: CT;
+    autoPreparedStatements?: boolean;
   };
 
 export const createDb = <CT extends ColumnTypesBase>({
@@ -219,7 +225,11 @@ export const createDb = <CT extends ColumnTypesBase>({
   ...options
 }: DbOptions<CT>): DbResult<CT> => {
   const adapter = 'adapter' in options ? options.adapter : new Adapter(options);
-  const commonOptions = { log, logger };
+  const commonOptions = {
+    log,
+    logger,
+    autoPreparedStatements: options.autoPreparedStatements ?? true,
+  };
 
   const qb = new Db(
     adapter,

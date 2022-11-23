@@ -16,12 +16,20 @@ export const orchidORM = <T extends ModelClasses>(
   {
     log,
     logger,
+    autoPreparedStatements,
     ...options
-  }: ({ adapter: Adapter } | Omit<AdapterOptions, 'log'>) & QueryLogOptions,
+  }: ({ adapter: Adapter } | Omit<AdapterOptions, 'log'>) &
+    QueryLogOptions & {
+      autoPreparedStatements?: boolean;
+    },
   models: T,
 ): OrchidORM<T> => {
   const adapter = 'adapter' in options ? options.adapter : new Adapter(options);
-  const commonOptions = { log, logger };
+  const commonOptions = {
+    log,
+    logger,
+    autoPreparedStatements,
+  };
   const qb = new Db(
     adapter,
     undefined as unknown as Db,

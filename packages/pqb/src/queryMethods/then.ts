@@ -66,6 +66,9 @@ function maybeWrappedThen(this: Query, resolve?: Resolve, reject?: Reject) {
   }
 }
 
+const queriesNames: Record<string, string> = {};
+let nameI = 0;
+
 const then = async (
   q: Query,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,7 +77,7 @@ const then = async (
   reject?: (error: any) => any,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> => {
-  let sql: Sql | undefined;
+  let sql: (Sql & { name?: string }) | undefined;
   let logData: unknown | undefined;
   try {
     let beforeCallbacks: BeforeCallback[] | undefined;
@@ -97,6 +100,12 @@ const then = async (
     }
 
     sql = q.toSql();
+
+    if (q.query.autoPreparedStatements) {
+      sql.name =
+        queriesNames[sql.text] ||
+        (queriesNames[sql.text] = (nameI++).toString(36));
+    }
 
     if (q.query.log) {
       logData = q.query.log.beforeQuery(sql);
