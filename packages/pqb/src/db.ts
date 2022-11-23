@@ -126,7 +126,7 @@ export class Db<
       handleResult: handleResult,
       logger,
       log: logParamToLogObject(logger, options.log),
-      autoPreparedStatements: options.autoPreparedStatements || true,
+      autoPreparedStatements: options.autoPreparedStatements ?? true,
     } as QueryData;
 
     if (options?.schema) {
