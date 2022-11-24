@@ -16,7 +16,7 @@ importers:
       jest: ^28.1.2
       orchid-orm-schema-to-zod: workspace:*
       pg: ^8.7.3
-      pg-transactional-tests: ^1.0.5
+      pg-transactional-tests: ^1.0.7
       pqb: workspace:*
       rimraf: ^3.0.2
       rollup: ^2.79.0
@@ -36,7 +36,7 @@ importers:
       jest: 28.1.2_@types+node@18.0.1
       orchid-orm-schema-to-zod: link:../schema-to-zod
       pg: 8.7.3
-      pg-transactional-tests: 1.0.5_pg@8.7.3
+      pg-transactional-tests: 1.0.7_pg@8.7.3
       rimraf: 3.0.2
       rollup: 2.79.0
       rollup-plugin-dts: 4.2.2_xdb5ss5ub2cemhlks3szmapm6q
@@ -55,7 +55,7 @@ importers:
       esbuild: ^0.15.10
       jest: ^28.1.2
       pg: ^8.7.3
-      pg-transactional-tests: ^1.0.5
+      pg-transactional-tests: ^1.0.7
       rimraf: ^3.0.2
       rollup: ^2.79.0
       rollup-plugin-dts: ^4.2.2
@@ -72,7 +72,7 @@ importers:
       esbuild: 0.15.10
       jest: 28.1.2_@types+node@18.0.1
       pg: 8.7.3
-      pg-transactional-tests: 1.0.5_pg@8.7.3
+      pg-transactional-tests: 1.0.7_pg@8.7.3
       rimraf: 3.0.2
       rollup: 2.79.0
       rollup-plugin-dts: 4.2.2_xdb5ss5ub2cemhlks3szmapm6q
@@ -166,7 +166,7 @@ importers:
       orchid-orm: workspace:*
       orchid-orm-schema-to-zod: workspace:*
       pg: ^8.8.0
-      pg-transactional-tests: ^1.0.5
+      pg-transactional-tests: ^1.0.7
       pqb: workspace:*
       rimraf: ^3.0.2
       rollup: ^2.79.0
@@ -191,7 +191,7 @@ importers:
       dotenv: 16.0.3
       jest: 28.1.2_@types+node@18.0.1
       pg: 8.8.0
-      pg-transactional-tests: 1.0.5_pg@8.8.0
+      pg-transactional-tests: 1.0.7_pg@8.8.0
       rimraf: 3.0.2
       rollup: 2.79.0
       rollup-plugin-dts: 4.2.2_xdb5ss5ub2cemhlks3szmapm6q
@@ -2886,16 +2886,16 @@ packages:
     resolution: {integrity: sha512-muRttij7H8TqRNu/DxrAJQITO4Ac7RmX3Klyr/9mJEOBeIpgnF8f9jAfRz5d3XwQZl5qBjF9gLsUtMPJE0vezQ==}
     dev: true
 
-  /pg-transactional-tests/1.0.5_pg@8.7.3:
-    resolution: {integrity: sha512-Y63A1Ns8k7NlQxRixu6p3V08YiKSrpICgaMqvcL7nzRxOEXLoiS7r65hm9qoaqCrs9w+x35KAHSAvJ8+2J2NTw==}
+  /pg-transactional-tests/1.0.7_pg@8.7.3:
+    resolution: {integrity: sha512-gM9QzzM/Dhb7wtwm6JHt3cm+Ibs18Yc30evukYWodQcnT4JXTMY0P5hyZ4+cMAX/P4S9sTiqDGkeQW0FxyBzBQ==}
     peerDependencies:
       pg: '*'
     dependencies:
       pg: 8.7.3
     dev: true
 
-  /pg-transactional-tests/1.0.5_pg@8.8.0:
-    resolution: {integrity: sha512-Y63A1Ns8k7NlQxRixu6p3V08YiKSrpICgaMqvcL7nzRxOEXLoiS7r65hm9qoaqCrs9w+x35KAHSAvJ8+2J2NTw==}
+  /pg-transactional-tests/1.0.7_pg@8.8.0:
+    resolution: {integrity: sha512-gM9QzzM/Dhb7wtwm6JHt3cm+Ibs18Yc30evukYWodQcnT4JXTMY0P5hyZ4+cMAX/P4S9sTiqDGkeQW0FxyBzBQ==}
     peerDependencies:
       pg: '*'
     dependencies:

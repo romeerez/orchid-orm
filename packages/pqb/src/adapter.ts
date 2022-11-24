@@ -57,27 +57,17 @@ export class Adapter {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async query<T extends QueryResultRow = any>(
     query: QueryInput,
-    types: TypeParsers = this.types,
+    types?: TypeParsers,
   ): Promise<QueryResult<T>> {
-    const client = await this.pool.connect();
-    try {
-      return await performQuery<T>(client, query, types);
-    } finally {
-      client.release();
-    }
+    return performQuery<T>(this.pool, query, types);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async arrays<R extends any[] = any[]>(
     query: QueryInput,
-    types: TypeParsers = this.types,
+    types?: TypeParsers,
   ): Promise<QueryArraysResult<R>> {
-    const client = await this.pool.connect();
-    try {
-      return await performQueryArrays<R>(client, query, types);
-    } finally {
-      client.release();
-    }
+    return performQueryArrays<R>(this.pool, query, types);
   }
 
   async transaction<Result>(
@@ -104,37 +94,47 @@ export class Adapter {
   }
 }
 
+const defaultTypesConfig = {
+  getTypeParser(id: number) {
+    return defaultTypeParsers[id] || returnArg;
+  },
+};
+
 const performQuery = <T extends QueryResultRow>(
-  client: PoolClient,
+  pool: Pool | PoolClient,
   query: QueryInput,
-  types: TypeParsers,
+  types?: TypeParsers,
 ) => {
-  return client.query<T>({
+  return pool.query<T>({
     text: typeof query === 'string' ? query : query.text,
     values: typeof query === 'string' ? undefined : query.values,
-    types: types && {
-      getTypeParser(id: number) {
-        return types[id] || returnArg;
-      },
-    },
+    types: types
+      ? {
+          getTypeParser(id: number) {
+            return types[id] || returnArg;
+          },
+        }
+      : defaultTypesConfig,
   });
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const performQueryArrays = <T extends any[] = any[]>(
-  client: PoolClient,
+  pool: Pool | PoolClient,
   query: QueryInput,
-  types: TypeParsers,
+  types?: TypeParsers,
 ) => {
-  return client.query<T>({
+  return pool.query<T>({
     text: typeof query === 'string' ? query : query.text,
     values: typeof query === 'string' ? undefined : query.values,
     rowMode: 'array',
-    types: types && {
-      getTypeParser(id: number) {
-        return types[id] || returnArg;
-      },
-    },
+    types: types
+      ? {
+          getTypeParser(id: number) {
+            return types[id] || returnArg;
+          },
+        }
+      : defaultTypesConfig,
   });
 };
 
@@ -148,7 +148,7 @@ export class TransactionAdapter implements Adapter {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async query<T extends QueryResultRow = any>(
     query: QueryInput,
-    types: TypeParsers = this.types,
+    types?: TypeParsers,
   ): Promise<QueryResult<T>> {
     return await performQuery<T>(this.client, query, types);
   }
@@ -156,7 +156,7 @@ export class TransactionAdapter implements Adapter {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async arrays<R extends any[] = any[]>(
     query: QueryInput,
-    types: TypeParsers = this.types,
+    types?: TypeParsers,
   ): Promise<QueryArraysResult<R>> {
     return await performQueryArrays<R>(this.client, query, types);
   }
