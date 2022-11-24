@@ -35,6 +35,7 @@ export const db = orchidORM({
   // in the format: postgres://user:password@localhost:5432/dbname
   connectionString: process.env.DATABASE_URL,
   log: true, // option for logging, false by default
+  autoPreparedStatements: true, // see in query builder setup docs, false by default
 }, {
   user: UserModel,
   message: MessageModel,

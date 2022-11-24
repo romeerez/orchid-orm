@@ -126,7 +126,7 @@ export class Db<
       handleResult: handleResult,
       logger,
       log: logParamToLogObject(logger, options.log),
-      autoPreparedStatements: options.autoPreparedStatements ?? true,
+      autoPreparedStatements: options.autoPreparedStatements ?? false,
     } as QueryData;
 
     if (options?.schema) {
@@ -228,7 +228,7 @@ export const createDb = <CT extends ColumnTypesBase>({
   const commonOptions = {
     log,
     logger,
-    autoPreparedStatements: options.autoPreparedStatements ?? true,
+    autoPreparedStatements: options.autoPreparedStatements ?? false,
   };
 
   const qb = new Db(

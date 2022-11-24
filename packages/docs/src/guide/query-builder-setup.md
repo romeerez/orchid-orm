@@ -30,6 +30,9 @@ const db = createDb({
   
   // use default column types from the import, or column types can be customized here
   columnTypes,
+
+  // option to create named prepared statements implicitly, false by default
+  autoPreparedStatements: true,
 })
 ```
 
@@ -92,6 +95,14 @@ const db = createDb({
 It is possible to override the parsing of columns returned from the database.
 
 See [column types document](/guide/columns-overview.html#override-column-types) for details.
+
+### autoPreparedStatements option
+
+This option was meant to speed queries up, but benchmarks cannot prove this, so simply ignore this option for now.
+
+`pg` node module used under the hood is performing "unnamed" prepared statements by default ([link](https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY) to Postgres details about this).
+
+When the option is set to `true`, the query builder will generate a name for each different query to make the statement named.
 
 ### close
 

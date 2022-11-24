@@ -64,11 +64,11 @@ describe('db', () => {
   });
 
   describe('autoPreparedStatements', () => {
-    it('should be true by default', () => {
+    it('should be false by default', () => {
       const db = createDb({ adapter, columnTypes });
 
       const table = db('table');
-      expect(table.query.autoPreparedStatements).toBe(true);
+      expect(table.query.autoPreparedStatements).toBe(false);
     });
   });
 });

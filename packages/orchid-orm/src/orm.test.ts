@@ -71,15 +71,15 @@ describe('orm', () => {
     assertType<typeof result, Pick<User, 'id' | 'name'>[]>();
   });
 
-  it('should be able to turn off autoPreparedStatements', () => {
+  it('should be able to turn on autoPreparedStatements', () => {
     const db = orchidORM(
-      { ...pgConfig, autoPreparedStatements: false },
+      { ...pgConfig, autoPreparedStatements: true },
       {
         user: UserModel,
         profile: ProfileModel,
       },
     );
 
-    expect(db.user.query.autoPreparedStatements).toBe(false);
+    expect(db.user.query.autoPreparedStatements).toBe(true);
   });
 });
