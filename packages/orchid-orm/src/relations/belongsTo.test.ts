@@ -6,6 +6,7 @@ import {
   messageData,
   profileData,
   userData,
+  useRelationCallback,
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
@@ -381,6 +382,35 @@ describe('belongsTo', () => {
           name: 'user 2',
         });
       });
+
+      describe('relation callbacks', () => {
+        const { beforeCreate, afterCreate, resetMocks } = useRelationCallback(
+          db.message.relations.chat,
+        );
+
+        const data = {
+          ...messageData,
+          chat: {
+            create: chatData,
+          },
+        };
+
+        it('should invoke callbacks', async () => {
+          await db.message.create(data);
+
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+        });
+
+        it('should invoke callbacks in a batch create', async () => {
+          resetMocks();
+
+          await db.message.createMany([data, data]);
+
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+        });
+      });
     });
 
     describe('connect', () => {
@@ -576,6 +606,38 @@ describe('belongsTo', () => {
           name: 'user 2',
         });
       });
+
+      describe('relation callbacks', () => {
+        const { beforeCreate, afterCreate, resetMocks } = useRelationCallback(
+          db.message.relations.chat,
+        );
+
+        const data = {
+          ...messageData,
+          chat: {
+            connectOrCreate: {
+              where: { title: 'title' },
+              create: chatData,
+            },
+          },
+        };
+
+        it('should invoke callbacks', async () => {
+          await db.message.create(data);
+
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+        });
+
+        it('should invoke callbacks in a batch create', async () => {
+          resetMocks();
+
+          await db.message.createMany([data, data]);
+
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+        });
+      });
     });
   });
 
@@ -733,6 +795,47 @@ describe('belongsTo', () => {
         const deletedUser = await db.user.findOptional(user.id);
         expect(deletedUser).toBe(undefined);
       });
+
+      describe('relation callbacks', () => {
+        const { beforeDelete, afterDelete, resetMocks } = useRelationCallback(
+          db.profile.relations.user,
+        );
+
+        const profileWithUserData = {
+          ...profileData,
+          user: {
+            create: userData,
+          },
+        };
+
+        const data = {
+          user: {
+            delete: true,
+          },
+        };
+
+        it('should invoke callbacks', async () => {
+          const id = await db.profile.get('id').create(profileWithUserData);
+
+          await db.profile.find(id).update(data);
+
+          expect(beforeDelete).toHaveBeenCalledTimes(1);
+          expect(afterDelete).toHaveBeenCalledTimes(1);
+        });
+
+        it('should invoke callbacks in a batch delete', async () => {
+          resetMocks();
+
+          const ids = await db.profile
+            .pluck('id')
+            .createMany([profileWithUserData, profileWithUserData]);
+
+          await db.profile.where({ id: { in: ids } }).update(data);
+
+          expect(beforeDelete).toHaveBeenCalledTimes(1);
+          expect(afterDelete).toHaveBeenCalledTimes(1);
+        });
+      });
     });
 
     describe('nested update', () => {
@@ -776,6 +879,49 @@ describe('belongsTo', () => {
           id: { in: profiles.map((profile) => profile.userId as number) },
         });
         expect(updatedNames).toEqual(['new name', 'new name']);
+      });
+
+      describe('relation callbacks', () => {
+        const { beforeUpdate, afterUpdate, resetMocks } = useRelationCallback(
+          db.profile.relations.user,
+        );
+
+        const profileWithUserData = {
+          ...profileData,
+          user: {
+            create: userData,
+          },
+        };
+
+        const data = {
+          user: {
+            update: {
+              name: 'new name',
+            },
+          },
+        };
+
+        it('should invoke callbacks', async () => {
+          const id = await db.profile.get('id').create(profileWithUserData);
+
+          await db.profile.find(id).update(data);
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+        });
+
+        it('should invoke callbacks in a batch create', async () => {
+          resetMocks();
+
+          const ids = await db.profile
+            .pluck('id')
+            .createMany([profileWithUserData, profileWithUserData]);
+
+          await db.profile.where({ id: { in: ids } }).update(data);
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+        });
       });
     });
 
@@ -845,6 +991,58 @@ describe('belongsTo', () => {
           }),
         ).toThrow();
       });
+
+      describe('relation callbacks', () => {
+        const {
+          beforeUpdate,
+          afterUpdate,
+          beforeCreate,
+          afterCreate,
+          resetMocks,
+        } = useRelationCallback(db.profile.relations.user);
+
+        const data = {
+          user: {
+            upsert: {
+              update: {
+                name: 'new name',
+              },
+              create: userData,
+            },
+          },
+        };
+
+        it('should invoke update callbacks when updating', async () => {
+          const id = await db.profile.get('id').create({
+            ...profileData,
+            user: {
+              create: userData,
+            },
+          });
+
+          resetMocks();
+
+          await db.profile.find(id).update(data);
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+          expect(beforeCreate).not.toBeCalled();
+          expect(afterCreate).not.toBeCalled();
+        });
+
+        it('should invoke create callbacks when creating', async () => {
+          resetMocks();
+
+          const id = await db.profile.get('id').create(profileData);
+
+          await db.profile.find(id).update(data);
+
+          expect(beforeUpdate).not.toBeCalled();
+          expect(afterUpdate).not.toBeCalled();
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+        });
+      });
     });
 
     describe('nested create', () => {
@@ -884,6 +1082,40 @@ describe('belongsTo', () => {
 
         const user = await db.user.find(updatedUserIds[0] as number);
         expect(user.name).toBe('created');
+      });
+
+      describe('relation callbacks', () => {
+        const { beforeCreate, afterCreate, resetMocks } = useRelationCallback(
+          db.profile.relations.user,
+        );
+
+        const data = {
+          user: {
+            create: userData,
+          },
+        };
+
+        it('should invoke callbacks', async () => {
+          const id = await db.profile.get('id').create(profileData);
+
+          await db.profile.find(id).update(data);
+
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+        });
+
+        it('should invoke callbacks in a batch update', async () => {
+          const ids = await db.profile
+            .pluck('id')
+            .createMany([profileData, profileData]);
+
+          resetMocks();
+
+          await db.profile.where({ id: { in: ids } }).update(data);
+
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+        });
       });
     });
   });

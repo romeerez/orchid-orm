@@ -147,11 +147,9 @@ export const makeHasManyMethod = (
       if (connect.length) {
         await Promise.all(
           connect.flatMap(([selfData, { connect }]) =>
-            connect.map((item) =>
-              t
-                .where<Query>(item)
-                ._updateOrThrow({ [foreignKey]: selfData[primaryKey] }),
-            ),
+            t
+              .or<Query>(...connect)
+              ._updateOrThrow({ [foreignKey]: selfData[primaryKey] }),
           ),
         );
       }

@@ -4,6 +4,7 @@ import {
   startTransaction,
 } from 'pg-transactional-tests';
 import { db } from './test-db';
+import { DeleteQueryData, InsertQueryData, Query, UpdateQueryData } from 'pqb';
 
 type AssertEqual<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]
@@ -66,4 +67,53 @@ export const useTestDatabase = () => {
   afterAll(async () => {
     await db.$close();
   });
+};
+
+export const useRelationCallback = (rel: { query: Query }) => {
+  const beforeCreate = jest.fn();
+  const afterCreate = jest.fn();
+  const beforeUpdate = jest.fn();
+  const afterUpdate = jest.fn();
+  const beforeDelete = jest.fn();
+  const afterDelete = jest.fn();
+  const relQuery = rel.query;
+
+  beforeAll(() => {
+    relQuery._beforeCreate(beforeCreate);
+    relQuery._afterCreate(afterCreate);
+    relQuery._beforeUpdate(beforeUpdate);
+    relQuery._afterUpdate(afterUpdate);
+    relQuery._beforeDelete(beforeDelete);
+    relQuery._afterDelete(afterDelete);
+  });
+
+  afterAll(() => {
+    let q;
+    q = relQuery.query as InsertQueryData;
+    q.beforeCreate?.pop();
+    q.afterCreate?.pop();
+    q = relQuery.query as UpdateQueryData;
+    q.beforeUpdate?.pop();
+    q.afterUpdate?.pop();
+    q = relQuery.query as DeleteQueryData;
+    q.beforeDelete?.pop();
+    q.afterDelete?.pop();
+  });
+
+  return {
+    beforeCreate,
+    afterCreate,
+    beforeUpdate,
+    afterUpdate,
+    beforeDelete,
+    afterDelete,
+    resetMocks() {
+      beforeCreate.mockReset();
+      afterCreate.mockReset();
+      beforeUpdate.mockReset();
+      afterUpdate.mockReset();
+      beforeDelete.mockReset();
+      afterDelete.mockReset();
+    },
+  };
 };

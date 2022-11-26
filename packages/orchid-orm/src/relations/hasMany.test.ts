@@ -5,6 +5,7 @@ import {
   expectSql,
   messageData,
   userData,
+  useRelationCallback,
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
@@ -510,6 +511,59 @@ describe('hasMany', () => {
 
         checkUser(user, 'user 1');
       });
+
+      describe('relation callbacks', () => {
+        const { beforeCreate, afterCreate, resetMocks } = useRelationCallback(
+          db.user.relations.messages,
+        );
+
+        it('should invoke callbacks', async () => {
+          const chatId = await db.chat.get('id').create(chatData);
+
+          await db.user.create({
+            ...userData,
+            messages: {
+              create: [
+                { ...messageData, chatId },
+                { ...messageData, chatId },
+              ],
+            },
+          });
+
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+        });
+
+        it('should invoke callbacks in a batch create', async () => {
+          resetMocks();
+
+          const chatId = await db.chat.get('id').create(chatData);
+
+          await db.user.createMany([
+            {
+              ...userData,
+              messages: {
+                create: [
+                  { ...messageData, chatId },
+                  { ...messageData, chatId },
+                ],
+              },
+            },
+            {
+              ...userData,
+              messages: {
+                create: [
+                  { ...messageData, chatId },
+                  { ...messageData, chatId },
+                ],
+              },
+            },
+          ]);
+
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+        });
+      });
     });
 
     describe('nested connect', () => {
@@ -649,6 +703,61 @@ describe('hasMany', () => {
 
         checkUser(user, 'user 1');
       });
+
+      describe('relation callbacks', () => {
+        const { beforeUpdate, afterUpdate, resetMocks } = useRelationCallback(
+          db.user.relations.messages,
+        );
+
+        it('should invoke callbacks', async () => {
+          const chatId = await db.chat.get('id').create(chatData);
+          const ids = await db.message.pluck('id').createMany([
+            { ...messageData, chatId },
+            { ...messageData, chatId },
+          ]);
+
+          await db.user.create({
+            ...userData,
+            messages: {
+              connect: [{ id: ids[0] }, { id: ids[1] }],
+            },
+          });
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+        });
+
+        it('should invoke callbacks in a batch create', async () => {
+          const chatId = await db.chat.get('id').create(chatData);
+
+          const ids = await db.message.pluck('id').createMany([
+            { ...messageData, chatId },
+            { ...messageData, chatId },
+            { ...messageData, chatId },
+            { ...messageData, chatId },
+          ]);
+
+          resetMocks();
+
+          await db.user.createMany([
+            {
+              ...userData,
+              messages: {
+                connect: [{ id: ids[0] }, { id: ids[1] }],
+              },
+            },
+            {
+              ...userData,
+              messages: {
+                connect: [{ id: ids[2] }, { id: ids[3] }],
+              },
+            },
+          ]);
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(2);
+          expect(afterUpdate).toHaveBeenCalledTimes(2);
+        });
+      });
     });
 
     describe('connectOrCreate', () => {
@@ -781,6 +890,116 @@ describe('hasMany', () => {
 
         checkUser(user, 'user 1');
       });
+
+      describe('relation callbacks', () => {
+        const {
+          beforeCreate,
+          afterCreate,
+          beforeUpdate,
+          afterUpdate,
+          resetMocks,
+        } = useRelationCallback(db.user.relations.messages);
+
+        it('should invoke callbacks when connecting', async () => {
+          const chatId = await db.chat.get('id').create(chatData);
+          const ids = await db.message.pluck('id').createMany([
+            { ...messageData, chatId },
+            { ...messageData, chatId },
+          ]);
+
+          await db.user.create({
+            ...userData,
+            messages: {
+              connectOrCreate: [
+                {
+                  where: { id: ids[0] },
+                  create: messageData,
+                },
+                {
+                  where: { id: ids[1] },
+                  create: messageData,
+                },
+              ],
+            },
+          });
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(2);
+          expect(afterUpdate).toHaveBeenCalledTimes(2);
+        });
+
+        it('should invoke callbacks when creating', async () => {
+          const chatId = await db.chat.get('id').create(chatData);
+
+          resetMocks();
+
+          await db.user.create({
+            ...userData,
+            messages: {
+              connectOrCreate: [
+                {
+                  where: { id: 0 },
+                  create: { ...messageData, chatId },
+                },
+                {
+                  where: { id: 0 },
+                  create: { ...messageData, chatId },
+                },
+              ],
+            },
+          });
+
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+        });
+
+        it('should invoke callbacks in a batch create', async () => {
+          const chatId = await db.chat.get('id').create(chatData);
+          const ids = await db.message.pluck('id').createMany([
+            { ...messageData, chatId },
+            { ...messageData, chatId },
+          ]);
+
+          resetMocks();
+
+          await db.user.createMany([
+            {
+              ...userData,
+              messages: {
+                connectOrCreate: [
+                  {
+                    where: { id: ids[0] },
+                    create: { ...messageData, chatId },
+                  },
+                  {
+                    where: { id: 0 },
+                    create: { ...messageData, chatId },
+                  },
+                ],
+              },
+            },
+            {
+              ...userData,
+              messages: {
+                connectOrCreate: [
+                  {
+                    where: { id: ids[1] },
+                    create: { ...messageData, chatId },
+                  },
+                  {
+                    where: { id: 0 },
+                    create: { ...messageData, chatId },
+                  },
+                ],
+              },
+            },
+          ]);
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(4);
+          expect(afterUpdate).toHaveBeenCalledTimes(4);
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+        });
+      });
     });
   });
 
@@ -858,6 +1077,93 @@ describe('hasMany', () => {
           },
         });
       });
+
+      describe('relation callbacks', () => {
+        const { beforeUpdate, afterUpdate, resetMocks } = useRelationCallback(
+          db.user.relations.messages,
+        );
+
+        it('should invoke callbacks', async () => {
+          const chatId = await db.chat.get('id').create(chatData);
+          const userId = await db.user.get('id').create({
+            ...userData,
+            messages: {
+              create: [
+                {
+                  ...messageData,
+                  chatId,
+                  text: 'message 1',
+                },
+                {
+                  ...messageData,
+                  chatId,
+                  text: 'message 2',
+                },
+              ],
+            },
+          });
+
+          await db.user.find(userId).update({
+            messages: {
+              disconnect: [{ text: 'message 1' }, { text: 'message 2' }],
+            },
+          });
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+        });
+
+        it('should invoke callbacks in a batch update', async () => {
+          resetMocks();
+
+          const chatId = await db.chat.get('id').create(chatData);
+          const ids = await db.user.pluck('id').createMany([
+            {
+              ...userData,
+              messages: {
+                create: [
+                  {
+                    ...messageData,
+                    chatId,
+                    text: 'message 1',
+                  },
+                  {
+                    ...messageData,
+                    chatId,
+                    text: 'message 1',
+                  },
+                ],
+              },
+            },
+            {
+              ...userData,
+              messages: {
+                create: [
+                  {
+                    ...messageData,
+                    chatId,
+                    text: 'message 3',
+                  },
+                  {
+                    ...messageData,
+                    chatId,
+                    text: 'message 4',
+                  },
+                ],
+              },
+            },
+          ]);
+
+          await db.user.where({ id: { in: ids } }).update({
+            messages: {
+              disconnect: [{ text: 'message 1' }, { text: 'message 3' }],
+            },
+          });
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+        });
+      });
     });
 
     describe('set', () => {
@@ -899,6 +1205,40 @@ describe('hasMany', () => {
         });
 
         await expect(query).rejects.toThrow();
+      });
+
+      describe('relation callbacks', () => {
+        const { beforeUpdate, afterUpdate } = useRelationCallback(
+          db.user.relations.messages,
+        );
+
+        it('should invoke callbacks', async () => {
+          const chatId = await db.chat.get('id').create(chatData);
+          const id = await db.user.get('id').create({
+            ...userData,
+            messages: {
+              create: [
+                { ...messageData, chatId, text: 'message 1' },
+                { ...messageData, chatId, text: 'message 2' },
+              ],
+            },
+          });
+
+          await db.message.create({
+            ...messageData,
+            chatId,
+            text: 'message 3',
+          });
+
+          await db.user.find(id).update({
+            messages: {
+              set: { text: { in: ['message 2', 'message 3'] } },
+            },
+          });
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(2);
+          expect(afterUpdate).toHaveBeenCalledTimes(2);
+        });
       });
     });
 
@@ -984,6 +1324,77 @@ describe('hasMany', () => {
 
         const messages = await db.user.messages({ id }).pluck('text');
         expect(messages).toEqual(['message 1']);
+      });
+
+      describe('relation callbacks', () => {
+        const { beforeDelete, afterDelete, resetMocks } = useRelationCallback(
+          db.user.relations.messages,
+        );
+
+        it('should invoke callbacks', async () => {
+          const chatId = await db.chat.get('id').create(chatData);
+          const id = await db.user.get('id').create({
+            ...userData,
+            messages: {
+              create: [
+                { ...messageData, chatId, text: 'message 1' },
+                { ...messageData, chatId, text: 'message 2' },
+                { ...messageData, chatId, text: 'message 3' },
+              ],
+            },
+          });
+
+          await db.user.find(id).update({
+            messages: {
+              delete: [{ text: 'message 1' }, { text: 'message 2' }],
+            },
+          });
+
+          expect(beforeDelete).toHaveBeenCalledTimes(1);
+          expect(afterDelete).toHaveBeenCalledTimes(1);
+        });
+
+        it('should invoke callbacks in a batch delete', async () => {
+          resetMocks();
+
+          const chatId = await db.chat.get('id').create(chatData);
+          const ids = await db.user.pluck('id').createMany([
+            {
+              ...userData,
+              messages: {
+                create: [
+                  { ...messageData, chatId, text: 'message 1' },
+                  { ...messageData, chatId, text: 'message 2' },
+                  { ...messageData, chatId, text: 'message 3' },
+                ],
+              },
+            },
+            {
+              ...userData,
+              messages: {
+                create: [
+                  { ...messageData, chatId, text: 'message 4' },
+                  { ...messageData, chatId, text: 'message 5' },
+                  { ...messageData, chatId, text: 'message 6' },
+                ],
+              },
+            },
+          ]);
+
+          await db.user.where({ id: { in: ids } }).update({
+            messages: {
+              delete: [
+                { text: 'message 1' },
+                { text: 'message 2' },
+                { text: 'message 4' },
+                { text: 'message 5' },
+              ],
+            },
+          });
+
+          expect(beforeDelete).toHaveBeenCalledTimes(1);
+          expect(afterDelete).toHaveBeenCalledTimes(1);
+        });
       });
     });
 
@@ -1084,6 +1495,87 @@ describe('hasMany', () => {
         const messages = await db.user.messages({ id }).pluck('text');
         expect(messages).toEqual(['message 1']);
       });
+
+      describe('relation callbacks', () => {
+        const { beforeUpdate, afterUpdate, resetMocks } = useRelationCallback(
+          db.user.relations.messages,
+        );
+
+        it('should invoke callbacks', async () => {
+          const chatId = await db.chat.get('id').create(chatData);
+          const id = await db.user.get('id').create({
+            ...userData,
+            messages: {
+              create: [
+                { ...messageData, chatId, text: 'message 1' },
+                { ...messageData, chatId, text: 'message 2' },
+                { ...messageData, chatId, text: 'message 3' },
+              ],
+            },
+          });
+
+          await db.user.find(id).update({
+            messages: {
+              update: {
+                where: [{ text: 'message 1' }, { text: 'message 2' }],
+                data: {
+                  text: 'updated',
+                },
+              },
+            },
+          });
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+        });
+
+        it('should invoke callbacks in a batch update', async () => {
+          resetMocks();
+
+          const chatId = await db.chat.get('id').create(chatData);
+          const ids = await db.user.pluck('id').createMany([
+            {
+              ...userData,
+              messages: {
+                create: [
+                  { ...messageData, chatId, text: 'message 1' },
+                  { ...messageData, chatId, text: 'message 2' },
+                  { ...messageData, chatId, text: 'message 3' },
+                ],
+              },
+            },
+            {
+              ...userData,
+              messages: {
+                create: [
+                  { ...messageData, chatId, text: 'message 1' },
+                  { ...messageData, chatId, text: 'message 2' },
+                  { ...messageData, chatId, text: 'message 3' },
+                ],
+              },
+            },
+          ]);
+
+          await db.user.where({ id: { in: ids } }).update({
+            messages: {
+              update: {
+                where: [
+                  { text: 'message 1' },
+                  { text: 'message 2' },
+                  { text: 'message 3' },
+                  { text: 'message 4' },
+                ],
+                data: {
+                  text: 'updated',
+                },
+              },
+            },
+          });
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+        });
+      });
     });
 
     describe('nested create', () => {
@@ -1132,6 +1624,29 @@ describe('hasMany', () => {
 
         const messages = await db.user.messages({ id });
         expect(messages.length).toEqual(0);
+      });
+
+      describe('relation callbacks', () => {
+        const { beforeCreate, afterCreate } = useRelationCallback(
+          db.user.relations.messages,
+        );
+
+        it('should invoke callbacks', async () => {
+          const chatId = await db.chat.get('id').create(chatData);
+          const id = await db.user.get('id').create({ ...userData, age: 1 });
+
+          await db.user.find(id).update({
+            messages: {
+              create: [
+                { ...messageData, chatId, text: 'created 1' },
+                { ...messageData, chatId, text: 'created 2' },
+              ],
+            },
+          });
+
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+        });
       });
     });
   });
