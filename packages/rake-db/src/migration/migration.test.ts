@@ -283,7 +283,7 @@ describe('migration', () => {
               "createdAt" timestamp NOT NULL DEFAULT now(),
               "updatedAt" timestamp NOT NULL DEFAULT now(),
               PRIMARY KEY ("postUuid", "commentId", "commentAuthorName"),
-              CONSTRAINT "postsCommentsToComments" FOREIGN KEY ("commentId", "commentAuthorName") REFERENCES "comments"("id", "authorName")
+              CONSTRAINT "postsComments_commentId_commentAuthorName_fkey" FOREIGN KEY ("commentId", "commentAuthorName") REFERENCES "comments"("id", "authorName")
             )
           `);
         };

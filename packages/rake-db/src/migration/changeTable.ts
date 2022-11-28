@@ -207,12 +207,12 @@ export const changeTable = async (
     }
   }
 
-  changeTableData.add.forEach((tableData) => {
-    handleTableData(state, up, tableName, tableData);
+  changeTableData[up ? 'drop' : 'add'].forEach((tableData) => {
+    handleTableData(state, false, tableName, tableData);
   });
 
-  changeTableData.drop.forEach((tableData) => {
-    handleTableData(state, !up, tableName, tableData);
+  changeTableData[up ? 'add' : 'drop'].forEach((tableData) => {
+    handleTableData(state, true, tableName, tableData);
   });
 
   if (state.alterTable.length) {
@@ -222,10 +222,8 @@ export const changeTable = async (
     );
   }
 
-  const createIndexes = up ? state.indexes : state.dropIndexes;
-  const dropIndexes = up ? state.dropIndexes : state.indexes;
-  await migrateIndexes(state, createIndexes, up);
-  await migrateIndexes(state, dropIndexes, !up);
+  await migrateIndexes(state, state.dropIndexes, false);
+  await migrateIndexes(state, state.indexes, true);
   await migrateComments(state, state.comments);
 };
 

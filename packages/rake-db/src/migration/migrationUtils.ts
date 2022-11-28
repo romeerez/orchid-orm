@@ -101,15 +101,16 @@ export const constraintToSql = (
   up: boolean,
   foreignKey: TableData['foreignKeys'][number],
 ) => {
-  const table = getForeignKeyTable(foreignKey.fnOrTable);
   const constraintName =
-    foreignKey.options.name || joinWords(tableName, 'to', table);
+    foreignKey.options.name ||
+    `${tableName}_${foreignKey.columns.join('_')}_fkey`;
 
   if (!up) {
     const { dropMode } = foreignKey.options;
     return `CONSTRAINT "${constraintName}"${dropMode ? ` ${dropMode}` : ''}`;
   }
 
+  const table = getForeignKeyTable(foreignKey.fnOrTable);
   return `CONSTRAINT "${constraintName}" FOREIGN KEY (${joinColumns(
     foreignKey.columns,
   )}) ${referencesToSql(table, foreignKey.foreignColumns, foreignKey.options)}`;

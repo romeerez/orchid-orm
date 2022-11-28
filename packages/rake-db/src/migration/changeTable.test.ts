@@ -440,12 +440,12 @@ describe('changeTable', () => {
     await fn();
     expectSql(`
       ALTER TABLE "table"
-      ADD CONSTRAINT "tableToOtherTable" FOREIGN KEY ("addFkey") REFERENCES "otherTable"("foreignId"),
-      ADD CONSTRAINT "foreignKeyName" FOREIGN KEY ("addFkeyWithOptions") REFERENCES "otherTable"("foreignId") MATCH FULL ON DELETE CASCADE ON UPDATE SET NULL,
-      ADD CONSTRAINT "toFkeyName" FOREIGN KEY ("changeForeignKey") REFERENCES "b"("bId") MATCH FULL ON DELETE CASCADE ON UPDATE NO ACTION,
-      DROP CONSTRAINT "tableToOtherTable",
+      DROP CONSTRAINT "table_removeFkey_fkey",
       DROP CONSTRAINT "foreignKeyName",
-      DROP CONSTRAINT "fromFkeyName"
+      DROP CONSTRAINT "fromFkeyName",
+      ADD CONSTRAINT "table_addFkey_fkey" FOREIGN KEY ("addFkey") REFERENCES "otherTable"("foreignId"),
+      ADD CONSTRAINT "foreignKeyName" FOREIGN KEY ("addFkeyWithOptions") REFERENCES "otherTable"("foreignId") MATCH FULL ON DELETE CASCADE ON UPDATE SET NULL,
+      ADD CONSTRAINT "toFkeyName" FOREIGN KEY ("changeForeignKey") REFERENCES "b"("bId") MATCH FULL ON DELETE CASCADE ON UPDATE NO ACTION
     `);
 
     queryMock.mockClear();
@@ -453,10 +453,10 @@ describe('changeTable', () => {
     await fn();
     expectSql(`
       ALTER TABLE "table"
-      DROP CONSTRAINT "tableToOtherTable",
+      DROP CONSTRAINT "table_addFkey_fkey",
       DROP CONSTRAINT "foreignKeyName",
       DROP CONSTRAINT "toFkeyName",
-      ADD CONSTRAINT "tableToOtherTable" FOREIGN KEY ("removeFkey") REFERENCES "otherTable"("foreignId"),
+      ADD CONSTRAINT "table_removeFkey_fkey" FOREIGN KEY ("removeFkey") REFERENCES "otherTable"("foreignId"),
       ADD CONSTRAINT "foreignKeyName" FOREIGN KEY ("removeFkeyWithOptions") REFERENCES "otherTable"("foreignId") MATCH FULL ON DELETE CASCADE ON UPDATE SET NULL,
       ADD CONSTRAINT "fromFkeyName" FOREIGN KEY ("changeForeignKey") REFERENCES "a"("aId") MATCH PARTIAL ON DELETE SET DEFAULT ON UPDATE RESTRICT
     `);
@@ -534,12 +534,12 @@ describe('changeTable', () => {
 
     await fn();
     expectSql([
-      `CREATE INDEX "tableAddIndexIndex" ON "table" ("addIndex")`,
-      `CREATE UNIQUE INDEX "tableAddIndexWithOptionsIndex" ON "table" USING using ("addIndexWithOptions"(expression) COLLATE 'collate' operator order) INCLUDE ("a", "b") WITH (with) TABLESPACE tablespace WHERE where`,
-      `CREATE UNIQUE INDEX "to" ON "table" USING to ("changeIndex"(to) COLLATE 'to' to to) INCLUDE ("c", "d") WITH (to) TABLESPACE to WHERE to`,
       `DROP INDEX "tableRemoveIndexIndex"`,
       `DROP INDEX "tableRemoveIndexWithOptionsIndex" CASCADE`,
       `DROP INDEX "from" CASCADE`,
+      `CREATE INDEX "tableAddIndexIndex" ON "table" ("addIndex")`,
+      `CREATE UNIQUE INDEX "tableAddIndexWithOptionsIndex" ON "table" USING using ("addIndexWithOptions"(expression) COLLATE 'collate' operator order) INCLUDE ("a", "b") WITH (with) TABLESPACE tablespace WHERE where`,
+      `CREATE UNIQUE INDEX "to" ON "table" USING to ("changeIndex"(to) COLLATE 'to' to to) INCLUDE ("c", "d") WITH (to) TABLESPACE to WHERE to`,
     ]);
 
     queryMock.mockClear();
