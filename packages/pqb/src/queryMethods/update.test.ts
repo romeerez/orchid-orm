@@ -7,7 +7,7 @@ import {
   userData,
   UserRecord,
   useTestDatabase,
-} from '../test-utils';
+} from '../test-utils/test-utils';
 
 describe('update', () => {
   useTestDatabase();

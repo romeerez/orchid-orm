@@ -1,4 +1,4 @@
-import { adapter } from './test-utils';
+import { adapter } from './test-utils/test-utils';
 
 describe('adapter', () => {
   it('should run query and close connection by calling .close()', async () => {

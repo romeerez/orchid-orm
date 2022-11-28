@@ -1,4 +1,4 @@
-import { assertType } from './test-utils';
+import { assertType } from './test-utils/test-utils';
 import {
   makeRegexToFindInSql,
   MaybeArray,

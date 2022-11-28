@@ -1,4 +1,9 @@
-import { assertType, db, User, useTestDatabase } from '../test-utils';
+import {
+  assertType,
+  db,
+  User,
+  useTestDatabase,
+} from '../test-utils/test-utils';
 
 describe('then', () => {
   useTestDatabase();

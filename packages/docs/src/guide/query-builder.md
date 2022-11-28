@@ -335,114 +335,6 @@ Resulting SQL:
 SELECT "user"."id" FROM "customSchema"."user"
 ```
 
-## jsonPathQuery
-
-Selects a value from JSON data using a JSON path.
-```ts
-import { columnTypes } from 'pqb'
-
-Table.jsonPathQuery(
-  columnTypes.text(), // type of the value
-  'data', // name of the JSON column
-  '$.name', // JSON path
-  'name', // select value as name
-
-  // Optionally supports `vars` and `silent` options
-  // check Postgres docs for jsonb_path_query for details
-  {
-    vars: 'vars',
-    silent: true,
-  }
-);
-```
-
-Nested JSON operations can be used in place of JSON column name:
-```ts
-Table.jsonPathQuery(
-  columnTypes.text(),
-  // Available: .jsonSet, .jsonInsert, .jsonRemove
-  Table.jsonSet('data', ['key'], 'value'),
-  '$.name',
-  'name',
-)
-```
-
-## jsonSet
-
-Return a JSON value/object/array where a given value is set at the given path.
-The path is an array of keys to access the value.
-```ts
-const result = await Table
-  .jsonSet('data', ['name'], 'new value')
-  .take()
-
-expect(result.data).toEqual({ name: 'new value' })
-```
-
-Optionally takes parameters of type `{ as?: string, createIfMissing?: boolean }`
-```ts
-await Table.jsonSet(
-  'data',
-  ['name'],
-  'new value',
-  {
-    as: 'alias', // select data as `alias`
-    createIfMissing: true, // ignored if missing by default
-  }
-)
-```
-
-## jsonInsert
-
-Return a JSON value/object/array where a given value is inserted at the given JSON path. Value can be a single value or JSON object. If a value exists at the given path, the value is not replaced.
-```ts
-// imagine user has data = { tags: ['two'] }
-const result = await Table
-  .jsonInsert('data', ['tags', 0], 'one')
-  .take()
-
-// 'one' is inserted to 0 position
-expect(result.data).toEqual({ tags: ['one', 'two'] })
-```
-
-Optionally takes parameters of type `{ as?: string, insertAfter?: boolean }`
-```ts
-// imagine user has data = { tags: ['one'] }
-const result = await Table
-  .jsonInsert(
-    'data',
-    ['tags', 0],
-    'two',
-    {
-      as: 'alias', // select as an alias
-      insertAfter: true // insert after specified position
-    },
-  )
-  .take()
-
-// 'one' is inserted to 0 position
-expect(result.alias).toEqual({ tags: ['one', 'two'] })
-```
-
-## jsonRemove
-
-Return a JSON value/object/array where a given value is removed at the given JSON path.
-```ts
-// imagine a user has data = { tags: ['one', 'two'] }
-const result = await Table
-  .jsonRemove(
-    'data',
-    ['tags', 0],
-    // optional parameters:
-    {
-      as: 'alias', // select as an alias
-    }
-  )
-  .take();
-
-expect(result.alias).toEqual({ tags: ['two'] })
-```
-
 ## offset
 
 Adds an offset clause to the query.
@@ -2386,4 +2278,157 @@ type ToSqlOptions = {
   clearCache?: true
   values?: []
 }
+```
+
+## copy
+
+`copy` is a method to invoke a `COPY` SQL statement, it can copy from or to a file or a program.
+
+Copying from `STDIN` or to `STDOUT` is not supported.
+
+It supports all the options of the `COPY` statement of Postgres. See details in [Postgres document](https://www.postgresql.org/docs/current/sql-copy.html).
+
+The copying is performed by the Postgres database server, and it must have access to the file.
+
+Type of copy argument:
+
+```ts
+export type CopyOptions<Column = string> = {
+  columns?: Column[];
+  format?: 'text' | 'csv' | 'binary';
+  freeze?: boolean;
+  delimiter?: string;
+  null?: string;
+  header?: boolean | 'match';
+  quote?: string;
+  escape?: string;
+  forceQuote?: Column[] | '*';
+  forceNotNull?: Column[];
+  forceNull?: Column[];
+  encoding?: string;
+} & (
+  | {
+      from: string | { program: string };
+    }
+  | {
+      to: string | { program: string };
+    }
+);
+```
+
+Example usage:
+
+```ts
+await Table.copy({
+  columns: ['id', 'title', 'description'],
+  from: 'path-to-file'
+})
+```
+
+## jsonPathQuery
+
+Selects a value from JSON data using a JSON path.
+```ts
+import { columnTypes } from 'pqb'
+
+Table.jsonPathQuery(
+  columnTypes.text(), // type of the value
+  'data', // name of the JSON column
+  '$.name', // JSON path
+  'name', // select value as name
+
+  // Optionally supports `vars` and `silent` options
+  // check Postgres docs for jsonb_path_query for details
+  {
+    vars: 'vars',
+    silent: true,
+  }
+);
+```
+
+Nested JSON operations can be used in place of JSON column name:
+```ts
+Table.jsonPathQuery(
+  columnTypes.text(),
+  // Available: .jsonSet, .jsonInsert, .jsonRemove
+  Table.jsonSet('data', ['key'], 'value'),
+  '$.name',
+  'name',
+)
+```
+
+## jsonSet
+
+Return a JSON value/object/array where a given value is set at the given path.
+The path is an array of keys to access the value.
+```ts
+const result = await Table
+  .jsonSet('data', ['name'], 'new value')
+  .take()
+
+expect(result.data).toEqual({ name: 'new value' })
+```
+
+Optionally takes parameters of type `{ as?: string, createIfMissing?: boolean }`
+```ts
+await Table.jsonSet(
+  'data',
+  ['name'],
+  'new value',
+  {
+    as: 'alias', // select data as `alias`
+    createIfMissing: true, // ignored if missing by default
+  }
+)
+```
+
+## jsonInsert
+
+Return a JSON value/object/array where a given value is inserted at the given JSON path. Value can be a single value or JSON object. If a value exists at the given path, the value is not replaced.
+```ts
+// imagine user has data = { tags: ['two'] }
+const result = await Table
+  .jsonInsert('data', ['tags', 0], 'one')
+  .take()
+
+// 'one' is inserted to 0 position
+expect(result.data).toEqual({ tags: ['one', 'two'] })
+```
+
+Optionally takes parameters of type `{ as?: string, insertAfter?: boolean }`
+```ts
+// imagine user has data = { tags: ['one'] }
+const result = await Table
+  .jsonInsert(
+    'data',
+    ['tags', 0],
+    'two',
+    {
+      as: 'alias', // select as an alias
+      insertAfter: true // insert after specified position
+    },
+  )
+  .take()
+
+// 'one' is inserted to 0 position
+expect(result.alias).toEqual({ tags: ['one', 'two'] })
+```
+
+## jsonRemove
+
+Return a JSON value/object/array where a given value is removed at the given JSON path.
+```ts
+// imagine a user has data = { tags: ['one', 'two'] }
+const result = await Table
+  .jsonRemove(
+    'data',
+    ['tags', 0],
+    // optional parameters:
+    {
+      as: 'alias', // select as an alias
+    }
+  )
+  .take();
+
+expect(result.alias).toEqual({ tags: ['two'] })
 ```

@@ -10,7 +10,7 @@ import {
   userData,
   UserRecord,
   useTestDatabase,
-} from '../test-utils';
+} from '../test-utils/test-utils';
 import { OnConflictQueryBuilder } from './create';
 
 describe('create functions', () => {

@@ -6,7 +6,7 @@ import {
   User,
   userData,
   useTestDatabase,
-} from '../test-utils';
+} from '../test-utils/test-utils';
 import { DeleteQueryData } from '../sql';
 
 describe('delete', () => {

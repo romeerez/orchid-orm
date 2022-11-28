@@ -1,4 +1,8 @@
-import { expectQueryNotMutated, expectSql, User } from '../test-utils';
+import {
+  expectQueryNotMutated,
+  expectSql,
+  User,
+} from '../test-utils/test-utils';
 
 describe('columnInfo', () => {
   it('should return all columns info', async () => {

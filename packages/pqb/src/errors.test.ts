@@ -1,4 +1,9 @@
-import { db, UniqueTable, User, useTestDatabase } from './test-utils';
+import {
+  db,
+  UniqueTable,
+  User,
+  useTestDatabase,
+} from './test-utils/test-utils';
 import { QueryError } from './errors';
 
 describe('errors', () => {

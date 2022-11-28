@@ -1,5 +1,10 @@
 import { createDb } from '../db';
-import { adapter, dbOptions, userData, useTestDatabase } from '../test-utils';
+import {
+  adapter,
+  dbOptions,
+  userData,
+  useTestDatabase,
+} from '../test-utils/test-utils';
 import { logColors } from './log';
 import { noop } from '../utils';
 import { columnTypes } from '../columnSchema';

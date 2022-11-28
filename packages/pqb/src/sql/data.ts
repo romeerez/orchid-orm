@@ -136,13 +136,41 @@ export type ColumnInfoQueryData = CommonQueryData & {
   column?: string;
 };
 
+export type CopyQueryData = CommonQueryData & {
+  type: 'copy';
+  copy: CopyOptions;
+};
+
+export type CopyOptions<Column = string> = {
+  columns?: Column[];
+  format?: 'text' | 'csv' | 'binary';
+  freeze?: boolean;
+  delimiter?: string;
+  null?: string;
+  header?: boolean | 'match';
+  quote?: string;
+  escape?: string;
+  forceQuote?: Column[] | '*';
+  forceNotNull?: Column[];
+  forceNull?: Column[];
+  encoding?: string;
+} & (
+  | {
+      from: string | { program: string };
+    }
+  | {
+      to: string | { program: string };
+    }
+);
+
 export type QueryData =
   | SelectQueryData
   | InsertQueryData
   | UpdateQueryData
   | DeleteQueryData
   | TruncateQueryData
-  | ColumnInfoQueryData;
+  | ColumnInfoQueryData
+  | CopyQueryData;
 
 export const cloneQueryArrays = (q: QueryData) => {
   if (q.with) q.with = q.with?.slice(0);

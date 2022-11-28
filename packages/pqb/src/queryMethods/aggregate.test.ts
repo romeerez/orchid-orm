@@ -6,7 +6,7 @@ import {
   userData,
   assertType,
   db,
-} from '../test-utils';
+} from '../test-utils/test-utils';
 
 describe('aggregate', () => {
   useTestDatabase();

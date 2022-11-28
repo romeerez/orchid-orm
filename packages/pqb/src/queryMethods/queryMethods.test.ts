@@ -10,7 +10,7 @@ import {
   now,
   assertType,
   UserRecord,
-} from '../test-utils';
+} from '../test-utils/test-utils';
 import { NotFoundError } from '../errors';
 
 describe('queryMethods', () => {

@@ -1,4 +1,4 @@
-import { expectSql, line, Message, User } from '../test-utils';
+import { expectSql, line, Message, User } from '../test-utils/test-utils';
 
 describe('clear', () => {
   it('should remove query statements for select', () => {

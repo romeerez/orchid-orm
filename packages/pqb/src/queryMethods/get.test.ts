@@ -1,4 +1,10 @@
-import { assertType, db, User, userData, useTestDatabase } from '../test-utils';
+import {
+  assertType,
+  db,
+  User,
+  userData,
+  useTestDatabase,
+} from '../test-utils/test-utils';
 import { NotFoundError } from '../errors';
 
 describe('get', () => {

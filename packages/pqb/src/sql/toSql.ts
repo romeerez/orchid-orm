@@ -18,6 +18,7 @@ import { pushOrderBySql } from './orderBy';
 import { OnQueryBuilder, WhereQueryBuilder } from '../queryMethods';
 import { getRaw, isRaw } from '../common';
 import { QueryData } from './data';
+import { pushCopySql } from './copy';
 
 export type ToSqlCtx = {
   whereQueryBuilder: typeof WhereQueryBuilder;
@@ -89,6 +90,11 @@ export const makeSql = (
 
     if (query.type === 'delete') {
       pushDeleteSql(ctx, model, query, quotedAs);
+      return { text: sql.join(' '), values };
+    }
+
+    if (query.type === 'copy') {
+      pushCopySql(ctx, model, query, quotedAs);
       return { text: sql.join(' '), values };
     }
   }

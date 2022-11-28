@@ -49,6 +49,7 @@ import { QueryUpsert } from './upsert';
 import { QueryGet } from './get';
 import { MergeQueryMethods } from './merge';
 import { RawMethods } from './raw';
+import { CopyMethods } from './copy';
 
 export type WindowArg<T extends Query> = Record<
   string,
@@ -98,7 +99,8 @@ export interface QueryMethods
     QueryUpsert,
     QueryGet,
     MergeQueryMethods,
-    RawMethods {}
+    RawMethods,
+    CopyMethods {}
 
 export class QueryMethods {
   windows!: EmptyObject;
@@ -394,4 +396,5 @@ applyMixins(QueryMethods, [
   QueryGet,
   MergeQueryMethods,
   RawMethods,
+  CopyMethods,
 ]);

@@ -1,4 +1,4 @@
-import { assertType, db } from '../test-utils';
+import { assertType, db } from '../test-utils/test-utils';
 import { columnTypes } from './columnTypes';
 import { TimeInterval } from './dateTime';
 

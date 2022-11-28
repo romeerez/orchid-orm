@@ -1,4 +1,4 @@
-import { db, User } from '../test-utils';
+import { db, User } from '../test-utils/test-utils';
 import { Client } from 'pg';
 
 describe('transaction', () => {

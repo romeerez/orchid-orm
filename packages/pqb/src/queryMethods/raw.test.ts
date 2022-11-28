@@ -1,6 +1,6 @@
 import { ColumnType } from '../columnSchema';
 import { createDb } from '../db';
-import { adapter } from '../test-utils';
+import { adapter } from '../test-utils/test-utils';
 
 describe('raw', () => {
   it('should use column types in callback from a db instance', () => {

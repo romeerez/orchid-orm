@@ -1,4 +1,4 @@
-import { db, expectSql, now, useTestDatabase } from '../test-utils';
+import { db, expectSql, now, useTestDatabase } from '../test-utils/test-utils';
 
 describe('timestamps', () => {
   useTestDatabase();

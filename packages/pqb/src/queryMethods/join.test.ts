@@ -1,4 +1,9 @@
-import { expectQueryNotMutated, expectSql, Message, User } from '../test-utils';
+import {
+  expectQueryNotMutated,
+  expectSql,
+  Message,
+  User,
+} from '../test-utils/test-utils';
 import { OnQueryBuilder } from './join';
 import { testJoin, testWhere } from './where.test';
 import { Sql } from '../sql';

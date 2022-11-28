@@ -1,4 +1,4 @@
-import { db, expectSql, Message, User } from '../test-utils';
+import { db, expectSql, Message, User } from '../test-utils/test-utils';
 import { Sql } from '../sql';
 import { Query } from '../query';
 import { pushQueryOn } from './join';

@@ -5,7 +5,7 @@ import {
   User,
   userData,
   useTestDatabase,
-} from '../test-utils';
+} from '../test-utils/test-utils';
 import { columnTypes } from '../columnSchema';
 
 describe('json methods', () => {

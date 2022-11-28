@@ -5,7 +5,7 @@ import {
   Message,
   Profile,
   User,
-} from '../test-utils';
+} from '../test-utils/test-utils';
 import { QueryReturnType } from '../query';
 import { IntegerColumn, TextColumn } from '../columnSchema';
 import { getValueKey } from './get';

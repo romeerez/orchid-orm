@@ -8,7 +8,7 @@ import {
   User,
   userData,
   useTestDatabase,
-} from '../test-utils';
+} from '../test-utils/test-utils';
 import { createDb } from '../db';
 import { columnTypes } from './columnTypes';
 

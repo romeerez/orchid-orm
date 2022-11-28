@@ -1,5 +1,10 @@
 import { WithOptions } from '../sql';
-import { db, expectQueryNotMutated, expectSql, User } from '../test-utils';
+import {
+  db,
+  expectQueryNotMutated,
+  expectSql,
+  User,
+} from '../test-utils/test-utils';
 import { columnTypes } from '../columnSchema';
 
 describe('with', () => {

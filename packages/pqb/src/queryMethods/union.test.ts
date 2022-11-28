@@ -4,7 +4,7 @@ import {
   expectQueryNotMutated,
   expectSql,
   User,
-} from '../test-utils';
+} from '../test-utils/test-utils';
 
 ['union', 'intersect', 'except'].forEach((what) => {
   const upper = what.toUpperCase();

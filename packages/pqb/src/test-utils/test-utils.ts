@@ -1,15 +1,15 @@
-import { Query } from './query';
-import { createDb } from './db';
+import { Query } from '../query';
+import { createDb } from '../db';
 import {
   patchPgForTransactions,
   rollbackTransaction,
   startTransaction,
 } from 'pg-transactional-tests';
 import { Client } from 'pg';
-import { quote } from './quote';
-import { columnTypes } from './columnSchema';
-import { MaybeArray, toArray } from './utils';
-import { Adapter } from './adapter';
+import { quote } from '../quote';
+import { columnTypes } from '../columnSchema';
+import { MaybeArray, toArray } from '../utils';
+import { Adapter } from '../adapter';
 
 export const dbOptions = {
   connectionString: process.env.DATABASE_URL,

@@ -1,4 +1,9 @@
-import { db, expectQueryNotMutated, expectSql, User } from '../test-utils';
+import {
+  db,
+  expectQueryNotMutated,
+  expectSql,
+  User,
+} from '../test-utils/test-utils';
 
 describe('having', () => {
   it('should support { count: value } object', () => {

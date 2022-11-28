@@ -9,7 +9,7 @@ import {
   userData,
   UserRecord,
   useTestDatabase,
-} from '../test-utils';
+} from '../test-utils/test-utils';
 import { DateColumn } from '../columnSchema';
 
 const insertUserAndProfile = async () => {

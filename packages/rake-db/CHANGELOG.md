@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.1.3
+
+### Patch Changes
+
+- 06b0182: Support changing compression, index, and foreign key to changeTable migration
+
 ## 2.1.0
 
 ### Minor Changes
