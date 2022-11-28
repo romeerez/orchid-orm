@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.3.2
+
+### Patch Changes
+
+- 1147182: Run relation callbacks when creating/updating/deleting in a nested way
+
 ## 1.3.0
 
 ### Minor Changes

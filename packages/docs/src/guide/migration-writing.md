@@ -165,7 +165,7 @@ type ChangeTableOptions = {
 
 The callback of the `changeTable` is different from `createTable` in the way that it expects columns to be wrapped in change methods such as `add`, `drop`, and `change`.
 
-### add, drop
+## add, drop
 
 `add` will add a column on migrating, and remove it on rollback.
 
@@ -207,9 +207,13 @@ change(async (db) => {
 })
 ```
 
-### change
+## change
 
 Takes an array of two columns, on migrating it will change the column to the second element, and on rollback will change the column to the first element.
+
+Index options are listed [here](/guide/migration-column-methods.html#index).
+
+Foreign key options are listed [here](/guide/migration-column-methods.html#foreignkey).
 
 ```ts
 import { change } from 'rake-db'
@@ -225,32 +229,92 @@ change(async (db) => {
       usingDown: t.raw('column2::integer'),
     }),
     
-    // change various column properties at once
-    column3: t.change(
-      t.integer().collate('de_DE').default(123).comment('from comment'),
-      t.text().collate('es_ES').default('123').comment('to comment').nullable(),
-    ),
-    
     // change column default
-    column4: t.change(t.default(1), t.default(2)),
+    column3: t.change(t.default(1), t.default(2)),
     
     // change column default with raw SQL
-    column5: t.change(t.default(t.raw('2 + 2')), t.default(t.raw('3 + 3'))),
+    column4: t.change(t.default(t.raw('2 + 2')), t.default(t.raw('3 + 3'))),
     
     // change column to be nullable or non-nullable
-    column6: t.change(t.nonNullable(), t.nullable()),
-    column7: t.change(t.nullable(), t.nonNullable()),
+    column5: t.change(t.nonNullable(), t.nullable()),
+    column6: t.change(t.nullable(), t.nonNullable()),
     
     // change column comment
-    column8: t.change(t.comment('from comment'), t.comment('to comment')),
+    column7: t.change(t.comment('from comment'), t.comment('to comment')),
     
-    // rename a column
-    column9: t.rename('newColumnName'),
-  }))
+    // add index
+    column8: t.change(t.integer(), t.integer().index()),
+    
+    // remove index
+    column9: t.change(t.integer().index(), t.integer()),
+    
+    // change index
+    column10: t.change(
+      t.integer().index({
+        // index options to be applied when migrating down
+      }),
+      t.integer().index({
+        // index options to be applied when migrating up
+      })
+    ),
+    
+    // add foreign key
+    column11: t.change(
+      t.integer(),
+      t.integer().foreignKey('otherTable', 'otherTableId'),
+    ),
+    
+    // remove foreign key
+    column12: t.change(
+      t.integer().foreignKey('otherTable', 'otherTableId'),
+      t.integer(),
+    ),
+    
+    // change foreign key
+    column13: t.change(
+      t.integer().foreignKey('oneTable', 'oneColumn', {
+        // foreign key options to be applied when migrating up
+        name: 'oneForeignKeyName',
+        match: 'PARTIAL',
+        onUpdate: 'RESTRICT',
+        onDelete: 'SET DEFAULT',
+      }),
+      t.integer().foreignKey('otherTable', 'otherColumn', {
+        // foreign key options to be applied when migrating down
+        name: 'otherForeignKeyName',
+        match: 'FULL',
+        onUpdate: 'NO ACTION',
+        onDelete: 'CASCADE',
+      }),
+    ),
+
+    // change various column properties at once
+    column14: t.change(
+      t.integer()
+        .collate('de_DE')
+        .default(123)
+        .comprssion('pglz')
+        .comment('from comment')
+        .index({ name: 'oneIndexName' })
+        .foreignKey('oneTable', 'oneColumn', {
+          name: 'oneForeignKeyName',
+        }),
+      t.text()
+        .collate('es_ES')
+        .default('123')
+        .compression('lz4')
+        .comment('to comment')
+        .nullable()
+        .index({ name: 'otherIndexName' })
+        .foreignKey('otherTable', 'otherColumn', {
+          name: 'otherForeignKeyName',
+        }),
+  ),
+}))
 })
 ```
 
-### rename
+## rename
 
 Rename a column:
 

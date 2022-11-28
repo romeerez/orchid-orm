@@ -356,6 +356,7 @@ describe('changeTable', () => {
         changeDefault: t.change(t.default('from'), t.default(t.raw("'to'"))),
         changeNull: t.change(t.nonNullable(), t.nullable()),
         changeComment: t.change(t.comment('comment 1'), t.comment('comment 2')),
+        changeCompression: t.change(t.text(), t.text().compression('value')),
       }));
     };
 
@@ -367,7 +368,8 @@ describe('changeTable', () => {
         ALTER COLUMN "changeTypeUsing" TYPE text USING b::text,
         ALTER COLUMN "changeCollate" TYPE text COLLATE 'fr_FR',
         ALTER COLUMN "changeDefault" SET DEFAULT 'to',
-        ALTER COLUMN "changeNull" DROP NOT NULL
+        ALTER COLUMN "changeNull" DROP NOT NULL,
+        ALTER COLUMN "changeCompression" SET COMPRESSION value
       `,
       `COMMENT ON COLUMN "table"."changeComment" IS 'comment 2'`,
     ]);
@@ -382,9 +384,174 @@ describe('changeTable', () => {
         ALTER COLUMN "changeTypeUsing" TYPE integer USING b::int,
         ALTER COLUMN "changeCollate" TYPE text COLLATE 'de_DE',
         ALTER COLUMN "changeDefault" SET DEFAULT 'from',
-        ALTER COLUMN "changeNull" SET NOT NULL
+        ALTER COLUMN "changeNull" SET NOT NULL,
+        ALTER COLUMN "changeCompression" SET COMPRESSION DEFAULT
       `,
       `COMMENT ON COLUMN "table"."changeComment" IS 'comment 1'`,
+    ]);
+  });
+
+  it('should change column foreign key', async () => {
+    const fn = () => {
+      return db.changeTable('table', (t) => ({
+        addFkey: t.change(
+          t.integer(),
+          t.integer().foreignKey('otherTable', 'foreignId'),
+        ),
+        addFkeyWithOptions: t.change(
+          t.integer(),
+          t.integer().foreignKey('otherTable', 'foreignId', {
+            name: 'foreignKeyName',
+            match: 'FULL',
+            onUpdate: 'SET NULL',
+            onDelete: 'CASCADE',
+          }),
+        ),
+        removeFkey: t.change(
+          t.integer().foreignKey('otherTable', 'foreignId'),
+          t.integer(),
+        ),
+        removeFkeyWithOptions: t.change(
+          t.integer().foreignKey('otherTable', 'foreignId', {
+            name: 'foreignKeyName',
+            match: 'FULL',
+            onUpdate: 'SET NULL',
+            onDelete: 'CASCADE',
+          }),
+          t.integer(),
+        ),
+        changeForeignKey: t.change(
+          t.integer().foreignKey('a', 'aId', {
+            name: 'fromFkeyName',
+            match: 'PARTIAL',
+            onUpdate: 'RESTRICT',
+            onDelete: 'SET DEFAULT',
+          }),
+          t.integer().foreignKey('b', 'bId', {
+            name: 'toFkeyName',
+            match: 'FULL',
+            onUpdate: 'NO ACTION',
+            onDelete: 'CASCADE',
+          }),
+        ),
+      }));
+    };
+
+    await fn();
+    expectSql(`
+      ALTER TABLE "table"
+      ADD CONSTRAINT "tableToOtherTable" FOREIGN KEY ("addFkey") REFERENCES "otherTable"("foreignId"),
+      ADD CONSTRAINT "foreignKeyName" FOREIGN KEY ("addFkeyWithOptions") REFERENCES "otherTable"("foreignId") MATCH FULL ON DELETE CASCADE ON UPDATE SET NULL,
+      ADD CONSTRAINT "toFkeyName" FOREIGN KEY ("changeForeignKey") REFERENCES "b"("bId") MATCH FULL ON DELETE CASCADE ON UPDATE NO ACTION,
+      DROP CONSTRAINT "tableToOtherTable",
+      DROP CONSTRAINT "foreignKeyName",
+      DROP CONSTRAINT "fromFkeyName"
+    `);
+
+    queryMock.mockClear();
+    db.up = false;
+    await fn();
+    expectSql(`
+      ALTER TABLE "table"
+      DROP CONSTRAINT "tableToOtherTable",
+      DROP CONSTRAINT "foreignKeyName",
+      DROP CONSTRAINT "toFkeyName",
+      ADD CONSTRAINT "tableToOtherTable" FOREIGN KEY ("removeFkey") REFERENCES "otherTable"("foreignId"),
+      ADD CONSTRAINT "foreignKeyName" FOREIGN KEY ("removeFkeyWithOptions") REFERENCES "otherTable"("foreignId") MATCH FULL ON DELETE CASCADE ON UPDATE SET NULL,
+      ADD CONSTRAINT "fromFkeyName" FOREIGN KEY ("changeForeignKey") REFERENCES "a"("aId") MATCH PARTIAL ON DELETE SET DEFAULT ON UPDATE RESTRICT
+    `);
+  });
+
+  it('should change index', async () => {
+    const fn = () => {
+      return db.changeTable('table', (t) => ({
+        addIndex: t.change(t.integer(), t.integer().index()),
+        addIndexWithOptions: t.change(
+          t.integer(),
+          t.integer().index({
+            expression: 'expression',
+            collate: 'collate',
+            operator: 'operator',
+            order: 'order',
+            unique: true,
+            using: 'using',
+            include: ['a', 'b'],
+            with: 'with',
+            tablespace: 'tablespace',
+            where: 'where',
+            dropMode: 'CASCADE',
+          }),
+        ),
+        removeIndex: t.change(t.integer().index(), t.integer()),
+        removeIndexWithOptions: t.change(
+          t.integer().index({
+            expression: 'expression',
+            collate: 'collate',
+            operator: 'operator',
+            order: 'order',
+            unique: true,
+            using: 'using',
+            include: ['a', 'b'],
+            with: 'with',
+            tablespace: 'tablespace',
+            where: 'where',
+            dropMode: 'CASCADE',
+          }),
+          t.integer(),
+        ),
+        changeIndex: t.change(
+          t.integer().index({
+            name: 'from',
+            expression: 'from',
+            collate: 'from',
+            operator: 'from',
+            order: 'from',
+            unique: false,
+            using: 'from',
+            include: ['a', 'b'],
+            with: 'from',
+            tablespace: 'from',
+            where: 'from',
+            dropMode: 'CASCADE',
+          }),
+          t.integer().index({
+            name: 'to',
+            expression: 'to',
+            collate: 'to',
+            operator: 'to',
+            order: 'to',
+            unique: true,
+            using: 'to',
+            include: ['c', 'd'],
+            with: 'to',
+            tablespace: 'to',
+            where: 'to',
+            dropMode: 'RESTRICT',
+          }),
+        ),
+      }));
+    };
+
+    await fn();
+    expectSql([
+      `CREATE INDEX "tableAddIndexIndex" ON "table" ("addIndex")`,
+      `CREATE UNIQUE INDEX "tableAddIndexWithOptionsIndex" ON "table" USING using ("addIndexWithOptions"(expression) COLLATE 'collate' operator order) INCLUDE ("a", "b") WITH (with) TABLESPACE tablespace WHERE where`,
+      `CREATE UNIQUE INDEX "to" ON "table" USING to ("changeIndex"(to) COLLATE 'to' to to) INCLUDE ("c", "d") WITH (to) TABLESPACE to WHERE to`,
+      `DROP INDEX "tableRemoveIndexIndex"`,
+      `DROP INDEX "tableRemoveIndexWithOptionsIndex" CASCADE`,
+      `DROP INDEX "from" CASCADE`,
+    ]);
+
+    queryMock.mockClear();
+    db.up = false;
+    await fn();
+    expectSql([
+      `DROP INDEX "tableAddIndexIndex"`,
+      `DROP INDEX "tableAddIndexWithOptionsIndex" CASCADE`,
+      `DROP INDEX "to" RESTRICT`,
+      `CREATE INDEX "tableRemoveIndexIndex" ON "table" ("removeIndex")`,
+      `CREATE UNIQUE INDEX "tableRemoveIndexWithOptionsIndex" ON "table" USING using ("removeIndexWithOptions"(expression) COLLATE 'collate' operator order) INCLUDE ("a", "b") WITH (with) TABLESPACE tablespace WHERE where`,
+      `CREATE INDEX "from" ON "table" USING from ("changeIndex"(from) COLLATE 'from' from from) INCLUDE ("a", "b") WITH (from) TABLESPACE from WHERE from`,
     ]);
   });
 

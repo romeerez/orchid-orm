@@ -12,6 +12,9 @@ import {
   getRaw,
   isRaw,
   raw,
+  ForeignKey,
+  newTableData,
+  SingleColumnIndexOptions,
 } from 'pqb';
 import {
   ChangeTableCallback,
@@ -98,7 +101,10 @@ type ChangeArg =
   | ColumnType
   | ['default', unknown | RawExpression]
   | ['nullable', boolean]
-  | ['comment', string | null];
+  | ['comment', string | null]
+  | ['compression', string]
+  | ['foreignKey', ForeignKey<string, string[]>]
+  | ['index', Omit<SingleColumnIndexOptions, 'column'>];
 
 type TableChangeMethods = typeof tableChangeMethods;
 const tableChangeMethods = {
@@ -309,6 +315,79 @@ const changeActions = {
       );
     }
 
+    if (from.compression !== to.compression) {
+      state.alterTable.push(
+        `ALTER COLUMN "${key}" SET COMPRESSION ${to.compression || 'DEFAULT'}`,
+      );
+    }
+
+    const fromFkey = from.foreignKey;
+    const toFkey = to.foreignKey;
+    if (fromFkey || toFkey) {
+      if ((fromFkey && 'fn' in fromFkey) || (toFkey && 'fn' in toFkey)) {
+        throw new Error('Callback in foreignKey is not allowed in migration');
+      }
+
+      if (checkIfForeignKeysAreDifferent(fromFkey, toFkey)) {
+        if (fromFkey) {
+          const data = newTableData();
+          data.foreignKeys.push({
+            columns: [key],
+            fnOrTable: fromFkey.table,
+            foreignColumns: fromFkey.columns,
+            options: fromFkey,
+          });
+          changeTableData[up ? 'drop' : 'add'].push(data);
+        }
+
+        if (toFkey) {
+          const data = newTableData();
+          data.foreignKeys.push({
+            columns: [key],
+            fnOrTable: toFkey.table,
+            foreignColumns: toFkey.columns,
+            options: toFkey,
+          });
+          changeTableData[up ? 'add' : 'drop'].push(data);
+        }
+      }
+    }
+
+    const fromIndex = from.index;
+    const toIndex = to.index;
+    if (
+      (fromIndex || toIndex) &&
+      checkIfIndexesAreDifferent(fromIndex, toIndex)
+    ) {
+      if (fromIndex) {
+        const data = newTableData();
+        data.indexes.push({
+          columns: [
+            {
+              column: key,
+              ...fromIndex,
+            },
+          ],
+          options: fromIndex,
+        });
+        changeTableData[up ? 'drop' : 'add'].push(data);
+      }
+
+      if (toIndex) {
+        const data = newTableData();
+        data.indexes.push({
+          columns: [
+            {
+              column: key,
+              ...toIndex,
+            },
+          ],
+          options: toIndex,
+        });
+        changeTableData[up ? 'add' : 'drop'].push(data);
+      }
+    }
+
     if (from.comment !== to.comment) {
       state.comments.push({ column: key, comment: to.comment || null });
     }
@@ -320,15 +399,60 @@ const changeActions = {
   },
 };
 
-const getChangeProperties = (
-  item: ChangeArg,
-): {
+const checkIfForeignKeysAreDifferent = (
+  from?: ForeignKey<string, string[]> & { table: string },
+  to?: ForeignKey<string, string[]> & { table: string },
+) => {
+  return (
+    !from ||
+    !to ||
+    from.name !== to.name ||
+    from.match !== to.match ||
+    from.onUpdate !== to.onUpdate ||
+    from.onDelete !== to.onDelete ||
+    from.dropMode !== to.dropMode ||
+    from.table !== to.table ||
+    from.columns.join(',') !== to.columns.join(',')
+  );
+};
+
+const checkIfIndexesAreDifferent = (
+  from?: Omit<SingleColumnIndexOptions, 'column'>,
+  to?: Omit<SingleColumnIndexOptions, 'column'>,
+) => {
+  return (
+    !from ||
+    !to ||
+    from.expression !== to.expression ||
+    from.collate !== to.collate ||
+    from.operator !== to.operator ||
+    from.order !== to.order ||
+    from.name !== to.name ||
+    from.unique !== to.unique ||
+    from.using !== to.using ||
+    from.include !== to.include ||
+    (Array.isArray(from.include) &&
+      Array.isArray(to.include) &&
+      from.include.join(',') !== to.include.join(',')) ||
+    from.with !== to.with ||
+    from.tablespace !== to.tablespace ||
+    from.where !== to.where ||
+    from.dropMode !== to.dropMode
+  );
+};
+
+type ChangeProperties = {
   type?: string;
   collate?: string;
   default?: unknown | RawExpression;
   nullable?: boolean;
   comment?: string | null;
-} => {
+  compression?: string;
+  foreignKey?: ForeignKey<string, string[]>;
+  index?: Omit<SingleColumnIndexOptions, 'column'>;
+};
+
+const getChangeProperties = (item: ChangeArg): ChangeProperties => {
   if (item instanceof ColumnType) {
     return {
       type: item.toSQL(),
@@ -336,6 +460,9 @@ const getChangeProperties = (
       default: item.data.default,
       nullable: item.isNullable,
       comment: item.data.comment,
+      compression: item.data.compression,
+      foreignKey: item.data.foreignKey,
+      index: item.data.index,
     };
   } else {
     return {
@@ -344,6 +471,9 @@ const getChangeProperties = (
       default: item[0] === 'default' ? item[1] : undefined,
       nullable: item[0] === 'nullable' ? item[1] : undefined,
       comment: item[0] === 'comment' ? item[1] : undefined,
+      compression: item[0] === 'compression' ? item[1] : undefined,
+      foreignKey: item[0] === 'foreignKey' ? item[1] : undefined,
+      index: item[0] === 'index' ? item[1] : undefined,
     };
   }
 };
