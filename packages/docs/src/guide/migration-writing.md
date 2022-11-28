@@ -309,8 +309,8 @@ change(async (db) => {
         .foreignKey('otherTable', 'otherColumn', {
           name: 'otherForeignKeyName',
         }),
-  ),
-}))
+    ),
+  }))
 })
 ```
 
