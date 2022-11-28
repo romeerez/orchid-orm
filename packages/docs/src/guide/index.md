@@ -1,6 +1,7 @@
 # Overview
 
-`Orchid ORM` is a library for node.js to help to work with a Postgres database (more databases to come), it allows us to define models, and relations, and keep everything type-safe.
+`Orchid ORM` is a library for node.js to help to work with a Postgres database (more databases to come),
+is allows to perform queries in a query builder style, define models and relations like an ORM.
 
 The main focus is to keep it as powerful as possible, concise and intuitive, performant, and fully type-safe.
 
@@ -9,6 +10,33 @@ Node.js already has a lot of ORMs, and query builders, but all of them force com
 To get maximum control over the db, it has a query builder `pqb` which is inspired by [knex](http://knexjs.org/) and has all the same functionalities, but `pqb` is written from scratch with TypeScript in mind.
 
 Type safeness is achieved by defining a schema of columns in the way [Zod](https://github.com/colinhacks/zod) works and using inferred types in all methods.
+
+## Not an ORM in OOP sense
+
+ORMs in OOP languages make it so all the records loaded from the database are instantiated as instances of a specific class,
+and it is allowed to call methods on these instances, this is called Active Record pattern. For example:
+
+```ts
+const post = await Post.findBy({ id: 123 })
+await post.update({ title: 'new title' })
+```
+
+Orchid ORM is designed with different goals, so the records are returned as a plain objects, for example:
+
+```ts
+const post = await Post.findBy({ id: 123 })
+await Post.update(post, { title: 'new title' })
+```
+
+This is done because instantiating records consumes some CPU time,
+accessing record data through getters/setters also takes some CPU time,
+serializing records to JSON would require a separate step.
+Only when selecting all columns it is possible to instantiate properly,
+because the model class requires all columns to be defined.
+So, the in author's opinion, Active Record pattern only complicates things and takes away a bit of performance.
+
+For the same reasons, Data Mapper pattern, Unit of Work, and Data encapsulation are not included, therefore,
+`Orchid ORM` is not an ORM in a traditional OOP sense.
 
 ## Comparison with other database tools
 
