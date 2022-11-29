@@ -43,28 +43,28 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
-    "orchid-orm": "workspace:*",
-    "pqb": "workspace:*",
-    "orchid-orm-schema-to-zod": "workspace:*",
-    "@faker-js/faker": "^7.6.0",
     "@anatine/zod-mock": "^3.6.0",
+    "@faker-js/faker": "^7.6.0",
+    "orchid-orm": "workspace:*",
+    "orchid-orm-schema-to-zod": "workspace:*",
+    "pqb": "workspace:*",
     "zod": "^3.19.1"
   },
   "devDependencies": {
-    "rollup": "^2.79.0",
-    "rollup-plugin-dts": "^4.2.2",
-    "rollup-plugin-esbuild": "^4.10.1",
     "@swc/core": "^1.2.210",
     "@swc/jest": "^0.2.21",
     "@types/jest": "^28.1.2",
     "@types/node": "^18.0.1",
-    "jest": "^28.1.2",
-    "rimraf": "^3.0.2",
-    "tslib": "^2.4.0",
-    "typescript": "^4.7.4",
+    "@types/pg": "^8.6.5",
     "dotenv": "^16.0.1",
-    "pg-transactional-tests": "^1.0.7",
+    "jest": "^28.1.2",
     "pg": "^8.8.0",
-    "@types/pg": "^8.6.5"
+    "pg-transactional-tests": "^1.0.7",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.79.0",
+    "rollup-plugin-dts": "^4.2.2",
+    "rollup-plugin-esbuild": "^4.10.1",
+    "tslib": "^2.4.0",
+    "typescript": "^4.7.4"
   }
 }

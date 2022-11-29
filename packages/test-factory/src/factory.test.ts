@@ -82,6 +82,7 @@ describe('factory', () => {
       class ProfileModel extends Model {
         table = 'profile';
         columns = this.setColumns((t) => ({
+          id: t.serial().primaryKey(),
           bio: t.text().min(100).max(120),
         }));
       }
