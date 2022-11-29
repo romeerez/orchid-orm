@@ -51,7 +51,7 @@ jobs:
       - name: Test orchid-orm-test-factory
         working-directory: packages/test-factory
         run: pnpm test
-      - run: echo 42 > coverage-percent.tx
+      - run: echo 42 > coverage-percent.txt
       - uses: actions/upload-artifact@v3
         with:
           name: coverage-percent
