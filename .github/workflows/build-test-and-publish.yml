@@ -15,3 +15,6 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install
+      - name: Test rake-db
+        working-directory: packages/rake-db
+        run: pnpm test
