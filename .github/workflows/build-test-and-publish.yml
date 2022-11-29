@@ -18,3 +18,6 @@ jobs:
       - name: Test rake-db
         working-directory: packages/rake-db
         run: pnpm test
+      - name: Test orchid-orm-schema-to-zod
+        working-directory: packages/schema-to-zod
+        run: pnpm test
