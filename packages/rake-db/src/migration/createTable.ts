@@ -46,7 +46,13 @@ export const createJoinTable = async (
   const tableName = options.tableName || joinWords(...tables);
 
   if (!up) {
-    return createTable(migration, up, tableName, options, () => ({}));
+    return createTable(
+      migration,
+      up,
+      tableName,
+      { ...options, noPrimaryKey: true },
+      () => ({}),
+    );
   }
 
   const tablesWithPrimaryKeys = await Promise.all(
