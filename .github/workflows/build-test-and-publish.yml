@@ -1,0 +1,39 @@
+name: Build, test, and publish
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: password
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install
+      - name: Setup database
+        working-directory: packages/rake-db
+        run: pnpm run db migrate
+        env:
+          DATABASE_URL: postgres://postgres:password@postgres:5432/orchid-orm
+      - name: Test rake-db
+        working-directory: packages/rake-db
+        run: pnpm test
+      - name: Test orchid-orm-schema-to-zod
+        working-directory: packages/schema-to-zod
+        run: pnpm test
