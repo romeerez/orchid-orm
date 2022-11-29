@@ -7,16 +7,15 @@ const db = getDb();
     beforeEach(resetDb);
 
     it(`should ${action} with comment`, async () => {
-      await db[action](
-        'name',
-        { comment: 'this is a table comment' },
-        () => ({}),
-      );
+      await db[action]('name', { comment: 'this is a table comment' }, (t) => ({
+        id: t.serial().primaryKey(),
+      }));
 
       if (action === 'createTable') {
         expectSql([
           `
             CREATE TABLE "name" (
+              "id" serial PRIMARY KEY
             )
           `,
           `COMMENT ON TABLE "name" IS 'this is a table comment'`,
@@ -170,7 +169,7 @@ const db = getDb();
 
     it('should support composite index', async () => {
       await db[action]('table', (t) => ({
-        id: t.integer(),
+        id: t.serial().primaryKey(),
         name: t.text(),
         ...t.index(['id', { column: 'name', order: 'DESC' }], {
           name: 'compositeIndexOnTable',
@@ -181,7 +180,7 @@ const db = getDb();
         expectSql([
           `
             CREATE TABLE "table" (
-              "id" integer NOT NULL,
+              "id" serial PRIMARY KEY,
               "name" text NOT NULL
             )
           `,
@@ -198,7 +197,7 @@ const db = getDb();
 
     it('should support composite unique index', async () => {
       await db[action]('table', (t) => ({
-        id: t.integer(),
+        id: t.serial().primaryKey(),
         name: t.text(),
         ...t.unique(['id', { column: 'name', order: 'DESC' }], {
           name: 'compositeIndexOnTable',
@@ -209,7 +208,7 @@ const db = getDb();
         expectSql([
           `
             CREATE TABLE "table" (
-              "id" integer NOT NULL,
+              "id" serial PRIMARY KEY,
               "name" text NOT NULL
             )
           `,
@@ -226,7 +225,7 @@ const db = getDb();
 
     it('should support composite foreign key', async () => {
       await db[action]('table', (t) => ({
-        id: t.integer(),
+        id: t.serial().primaryKey(),
         name: t.text(),
         ...t.foreignKey(
           ['id', 'name'],
@@ -253,7 +252,7 @@ const db = getDb();
 
         expectSql(`
           CREATE TABLE "table" (
-            "id" integer NOT NULL,
+            "id" serial PRIMARY KEY,
             "name" text NOT NULL,
             ${expectedConstraint}
           )
@@ -263,6 +262,51 @@ const db = getDb();
           DROP TABLE "table"
         `);
       }
+    });
+
+    describe('noPrimaryKey', () => {
+      const { warn } = console;
+      afterAll(() => {
+        db.options.noPrimaryKey = undefined;
+        console.warn = warn;
+      });
+
+      it('should throw by default when no primary key', async () => {
+        await expect(() => db[action]('table', () => ({}))).rejects.toThrow(
+          'Table table has no primary key',
+        );
+      });
+
+      it('should throw when no primary key and noPrimaryKey is set to `error`', async () => {
+        db.options.noPrimaryKey = 'error';
+
+        await expect(() => db[action]('table', () => ({}))).rejects.toThrow(
+          'Table table has no primary key',
+        );
+      });
+
+      it('should warn when no primary key and noPrimaryKey is set to `warning`', async () => {
+        console.warn = jest.fn();
+        db.options.noPrimaryKey = 'warning';
+
+        db[action]('table', () => ({}));
+
+        expect(console.warn).toBeCalledWith('Table table has no primary key');
+      });
+
+      it('should not throw when no primary key and noPrimaryKey is set to `ignore`', async () => {
+        db.options.noPrimaryKey = 'ignore';
+
+        expect(() => db[action]('table', () => ({}))).not.toThrow();
+      });
+
+      it(`should not throw if option is set to \`true\` as a ${action} option`, async () => {
+        db.options.noPrimaryKey = 'error';
+
+        expect(() =>
+          db[action]('table', { noPrimaryKey: true }, () => ({})),
+        ).not.toThrow();
+      });
     });
   });
 });

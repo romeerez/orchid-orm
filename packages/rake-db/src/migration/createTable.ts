@@ -120,6 +120,29 @@ export const createTable = async (
   fn: ColumnsShapeCallback,
 ) => {
   const shape = getColumnTypes(types, fn);
+  const tableData = getTableData();
+
+  const { noPrimaryKey } = migration.options;
+  if (!options.noPrimaryKey && (!noPrimaryKey || noPrimaryKey !== 'ignore')) {
+    let hasPrimaryKey = !!tableData.primaryKey?.columns?.length;
+    if (!hasPrimaryKey) {
+      for (const key in shape) {
+        if (shape[key].isPrimaryKey) {
+          hasPrimaryKey = true;
+          break;
+        }
+      }
+    }
+
+    if (!hasPrimaryKey) {
+      const message = `Table ${tableName} has no primary key`;
+      if (!noPrimaryKey || noPrimaryKey === 'error') {
+        throw new Error(message);
+      } else {
+        console.warn(message);
+      }
+    }
+  }
 
   if (!up) {
     const { dropMode } = options;
@@ -152,7 +175,6 @@ export const createTable = async (
     lines.push(`\n  ${columnToSql(key, item, state)}`);
   }
 
-  const tableData = getTableData();
   if (tableData.primaryKey) {
     lines.push(`\n  ${primaryKeyToSql(tableData.primaryKey)}`);
   }

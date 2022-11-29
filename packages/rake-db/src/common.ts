@@ -1,4 +1,9 @@
-import { Adapter, AdapterOptions, QueryLogOptions } from 'pqb';
+import {
+  Adapter,
+  AdapterOptions,
+  NoPrimaryKeyOption,
+  QueryLogOptions,
+} from 'pqb';
 import Enquirer from 'enquirer';
 import path from 'path';
 import { readdir } from 'fs/promises';
@@ -7,6 +12,7 @@ export type MigrationConfig = {
   migrationsPath: string;
   migrationsTable: string;
   requireTs(path: string): void;
+  noPrimaryKey?: NoPrimaryKeyOption;
 } & QueryLogOptions;
 
 export const migrationConfigDefaults = {

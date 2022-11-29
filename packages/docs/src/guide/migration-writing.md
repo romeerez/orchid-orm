@@ -49,10 +49,14 @@ Options are:
 ```ts
 type TableOptions = {
   // used when reverting a `createTable`
-  dropMode?: 'CASCADE' | 'RESTRICT'
+  dropMode?: 'CASCADE' | 'RESTRICT';
   
   // add a database comment on the table
-  comment?: string
+  comment?: string;
+  
+  // by default, it will throw an error when the table has no primary key
+  // set `noPrimaryKey` to `true` to bypass it
+  noPrimaryKey?: boolean;
 }
 ```
 
@@ -62,15 +66,20 @@ Example:
 import { change } from 'rake-db'
 
 change(async (db) => {
-  // table with comment and dropMode
+  // call `createTable` with options
   await db.createTable(
     'table',
-    { comment: 'Table comment', dropMode: 'CASCADE' },
+    {
+      comment: 'Table comment',
+      dropMode: 'CASCADE',
+      noPrimaryKey: true,
+    },
     (t) => ({
       // ...
     })
   )
   
+  // call without options
   await db.createTable('user', (t) => ({
     id: t.serial().primaryKey(),
     email: t.text().unique(),

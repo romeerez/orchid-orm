@@ -4,7 +4,7 @@ describe('timestamps', () => {
   useTestDatabase();
 
   const model = db('user', (t) => ({
-    name: t.string(),
+    name: t.string().primaryKey(),
     ...t.timestamps(),
   }));
 

@@ -92,6 +92,9 @@ type MigrationConfig = {
   // function to require typescript migration file
   requireTs(path: string): void;
   
+  // specify behavior for what to do when no primary key was defined on a table
+  noPrimaryKey?: 'error' | 'warn' | 'ignore'
+  
   // log options, see "log option" in the query builder document
   log?: boolean | Partial<QueryLogObject>;
   logger?: {
@@ -108,6 +111,7 @@ Defaults are:
 - `migrationPath` is `src/migrations`
 - `migrationsTable` is `schemaMigrations`
 - `requireTs` will use a `ts-node` package
+- `noPrimaryKey` is `error`
 - `log` is on
 - `logger` is a standard `console`
 

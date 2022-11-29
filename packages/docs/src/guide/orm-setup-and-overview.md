@@ -36,6 +36,7 @@ export const db = orchidORM({
   connectionString: process.env.DATABASE_URL,
   log: true, // option for logging, false by default
   autoPreparedStatements: true, // see in query builder setup docs, false by default
+  noPrimaryKey: 'ignore', // see in query builder setup docs, 'error' by default
 }, {
   user: UserModel,
   message: MessageModel,
@@ -83,7 +84,9 @@ After defining the model place it in the main `db` file as in [setup](#setup) st
 ```ts
 import { UserModel } from './models/user'
 
-export const db = orchidORM(Adapter(options), {
+export const db = orchidORM({
+  connectionString: process.env.DATABASE_URL,
+}, {
   user: UserModel,
 })
 ```
@@ -100,6 +103,20 @@ Don't use model classes directly, it won't work:
 ```ts
 // error
 await UserModel.findBy({ name: 'John' })
+```
+
+For the case when the table should not have a primary key, you can override `noPrimaryKey` by setting a property to the model:
+
+```ts
+import { Model } from './model'
+
+export class NoPrimaryKeyModel extends Model {
+  table = 'table';
+  noPrimaryKey = true; // set to `true` to ignore absence of primary key
+  columns = this.setColumns((t) => ({
+    // ...no primary key defined
+  }))
+}
 ```
 
 ## $transaction

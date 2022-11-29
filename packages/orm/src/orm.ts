@@ -1,4 +1,13 @@
-import { Adapter, Db, AdapterOptions, QueryLogOptions, columnTypes } from 'pqb';
+import {
+  Adapter,
+  Db,
+  AdapterOptions,
+  QueryLogOptions,
+  columnTypes,
+  NoPrimaryKeyOption,
+  anyShape,
+  DbTableOptions,
+} from 'pqb';
 import { DbModel, Model, ModelClasses } from './model';
 import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
@@ -17,10 +26,12 @@ export const orchidORM = <T extends ModelClasses>(
     log,
     logger,
     autoPreparedStatements,
+    noPrimaryKey = 'error',
     ...options
   }: ({ adapter: Adapter } | Omit<AdapterOptions, 'log'>) &
     QueryLogOptions & {
       autoPreparedStatements?: boolean;
+      noPrimaryKey?: NoPrimaryKeyOption;
     },
   models: T,
 ): OrchidORM<T> => {
@@ -29,12 +40,13 @@ export const orchidORM = <T extends ModelClasses>(
     log,
     logger,
     autoPreparedStatements,
+    noPrimaryKey,
   };
   const qb = new Db(
     adapter,
     undefined as unknown as Db,
     undefined,
-    {},
+    anyShape,
     columnTypes,
     commonOptions,
   );
@@ -57,6 +69,13 @@ export const orchidORM = <T extends ModelClasses>(
     const model = new models[key]();
     modelInstances[key] = model;
 
+    const options: DbTableOptions = {
+      ...commonOptions,
+      schema: model.schema,
+    };
+
+    if (model.noPrimaryKey) options.noPrimaryKey = 'ignore';
+
     const dbModel = new Db(
       adapter,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,10 +83,7 @@ export const orchidORM = <T extends ModelClasses>(
       model.table,
       model.columns.shape,
       model.columnTypes,
-      {
-        ...commonOptions,
-        schema: model.schema,
-      },
+      options,
     );
 
     (dbModel as unknown as { definedAs: string }).definedAs = key;

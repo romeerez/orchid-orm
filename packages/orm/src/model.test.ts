@@ -3,6 +3,7 @@ import { orchidORM } from './orm';
 import { adapter, db } from './test-utils/test-db';
 import { assertType, userData, useTestDatabase } from './test-utils/test-utils';
 import { ColumnType, columnTypes, Operators } from 'pqb';
+import { Model } from './test-utils/test-models';
 
 describe('model', () => {
   useTestDatabase();
@@ -18,6 +19,7 @@ describe('model', () => {
       class UserModel extends Model {
         table = 'user';
         columns = this.setColumns((t) => ({
+          id: t.type().primaryKey(),
           createdAt: t.type(),
         }));
       }
@@ -41,6 +43,7 @@ describe('model', () => {
       class UserModel extends Model {
         table = 'user';
         columns = this.setColumns((t) => ({
+          id: t.serial().primaryKey(),
           createdAt: t.timestamp(),
         }));
       }
@@ -63,6 +66,7 @@ describe('model', () => {
 
       const Model = createModel({
         columnTypes: {
+          serial: columnTypes.serial,
           timestamp() {
             return columnTypes.timestamp().parse((input) => new Date(input));
           },
@@ -72,6 +76,7 @@ describe('model', () => {
       class UserModel extends Model {
         table = 'user';
         columns = this.setColumns((t) => ({
+          id: t.serial().primaryKey(),
           createdAt: t.timestamp(),
         }));
       }
@@ -87,6 +92,27 @@ describe('model', () => {
       expect(result instanceof Date).toBe(true);
 
       assertType<typeof result, Date>();
+    });
+  });
+
+  describe('noPrimaryKey', () => {
+    it('should allow to the model to not have a primary key', () => {
+      class UserModel extends Model {
+        table = 'user';
+        noPrimaryKey = true;
+        columns = this.setColumns((t) => ({
+          name: t.text(),
+        }));
+      }
+
+      orchidORM(
+        {
+          adapter,
+        },
+        {
+          user: UserModel,
+        },
+      );
     });
   });
 });

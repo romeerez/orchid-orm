@@ -1308,6 +1308,7 @@ describe('hasOne through', () => {
       columns = this.setColumns((t) => ({
         postId: t.integer().foreignKey(() => Post, 'id'),
         tagId: t.integer().foreignKey(() => Tag, 'id'),
+        ...t.primaryKey(['postId', 'tagId']),
       }));
 
       relations = {

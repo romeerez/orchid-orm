@@ -109,6 +109,7 @@ describe('column base', () => {
         const db = createDb({ adapter, columnTypes });
 
         const UserWithPlainTimestamp = db('user', (t) => ({
+          id: t.serial().primaryKey(),
           createdAt: t.timestamp(),
         }));
 

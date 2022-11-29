@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.1.4
+
+### Patch Changes
+
+- Handle tables without primary key
+- ecd7521: Support copy
+- Updated dependencies
+  - pqb@0.7.1
+
 ## 2.1.3
 
 ### Patch Changes

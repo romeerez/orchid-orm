@@ -23,16 +23,30 @@ import {
   getColumnTypes,
   SinglePrimaryKey,
   ColumnType,
+  getTableData,
 } from './columnSchema';
 import { applyMixins, pushOrNewArray } from './utils';
 import { StringKey } from './common';
 import { QueryError, QueryErrorName } from './errors';
+
+export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
+
+export type DbOptions<CT extends ColumnTypesBase> = (
+  | { adapter: Adapter }
+  | Omit<AdapterOptions, 'log'>
+) &
+  QueryLogOptions & {
+    columnTypes: CT;
+    autoPreparedStatements?: boolean;
+    noPrimaryKey?: NoPrimaryKeyOption;
+  };
 
 export type DbTableOptions = {
   schema?: string;
   // prepare all SQL queries before executing
   // true by default
   autoPreparedStatements?: boolean;
+  noPrimaryKey?: NoPrimaryKeyOption;
 } & QueryLogOptions;
 
 export interface Db<
@@ -136,9 +150,20 @@ export class Db<
     this.primaryKeys = Object.keys(shape).filter(
       (key) => shape[key].isPrimaryKey,
     );
+    const primaryKeysFromData = getTableData().primaryKey?.columns;
+    if (primaryKeysFromData) this.primaryKeys.push(...primaryKeysFromData);
+
     if (this.primaryKeys.length === 1) {
       this.singlePrimaryKey = this
         .primaryKeys[0] as unknown as SinglePrimaryKey<Shape>;
+    } else if (
+      this.primaryKeys.length === 0 &&
+      shape !== anyShape &&
+      options.noPrimaryKey !== 'ignore'
+    ) {
+      const message = `Table ${table} has no primary key`;
+      if (options.noPrimaryKey === 'error') throw new Error(message);
+      else logger.warn(message);
     }
 
     const columns = Object.keys(
@@ -209,15 +234,6 @@ type DbResult<CT extends ColumnTypesBase> = Db<
   close: Adapter['close'];
 };
 
-export type DbOptions<CT extends ColumnTypesBase> = (
-  | { adapter: Adapter }
-  | Omit<AdapterOptions, 'log'>
-) &
-  QueryLogOptions & {
-    columnTypes: CT;
-    autoPreparedStatements?: boolean;
-  };
-
 export const createDb = <CT extends ColumnTypesBase>({
   log,
   logger,
@@ -229,13 +245,14 @@ export const createDb = <CT extends ColumnTypesBase>({
     log,
     logger,
     autoPreparedStatements: options.autoPreparedStatements ?? false,
+    noPrimaryKey: options.noPrimaryKey ?? 'error',
   };
 
   const qb = new Db(
     adapter,
     undefined as unknown as Db,
     undefined,
-    {},
+    anyShape,
     ct,
     commonOptions,
   );

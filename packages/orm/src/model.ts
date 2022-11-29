@@ -43,6 +43,7 @@ export type Model = {
   columns: ModelConfig;
   schema?: string;
   columnTypes: ColumnTypesBase;
+  noPrimaryKey?: boolean;
 };
 
 export const createModel = <CT extends ColumnTypesBase>(options: {
@@ -53,6 +54,7 @@ export const createModel = <CT extends ColumnTypesBase>(options: {
     columns!: ModelConfig;
     schema?: string;
     columnTypes: CT;
+    noPrimaryKey?: boolean;
 
     constructor() {
       this.columnTypes = options.columnTypes;

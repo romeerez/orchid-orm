@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.3.3
+
+### Patch Changes
+
+- Handle tables without primary key
+- Updated dependencies
+  - pqb@0.7.1
+
 ## 1.3.2
 
 ### Patch Changes

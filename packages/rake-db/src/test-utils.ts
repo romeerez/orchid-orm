@@ -8,6 +8,9 @@ export const getDb = () => {
 
   db = new Migration({} as unknown as TransactionAdapter, true, {
     log: false,
+    migrationsPath: 'migrations-path',
+    migrationsTable: 'schemaMigrations',
+    requireTs: require,
   });
   db.query = queryMock;
   return db;

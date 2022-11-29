@@ -10,7 +10,6 @@ import {
   QueryArraysResult,
   QueryInput,
   QueryLogObject,
-  QueryLogOptions,
   QueryResult,
   QueryResultRow,
   Sql,
@@ -20,11 +19,16 @@ import {
 } from 'pqb';
 import { createJoinTable, createTable } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
-import { quoteTable } from '../common';
+import { MigrationConfig, quoteTable } from '../common';
 
 export type DropMode = 'CASCADE' | 'RESTRICT';
 
-export type TableOptions = { dropMode?: DropMode; comment?: string };
+export type TableOptions = {
+  dropMode?: DropMode;
+  comment?: string;
+  noPrimaryKey?: boolean;
+};
+
 export type ColumnsShapeCallback = (
   t: ColumnTypes & { raw: typeof raw },
 ) => ColumnsShape;
@@ -56,7 +60,7 @@ export class Migration extends TransactionAdapter {
   constructor(
     tx: TransactionAdapter,
     public up: boolean,
-    options: QueryLogOptions,
+    public options: MigrationConfig,
   ) {
     super(tx.pool, tx.client, tx.types);
     this.log = logParamToLogObject(options.logger || console, options.log);

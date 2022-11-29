@@ -33,6 +33,10 @@ const db = createDb({
 
   // option to create named prepared statements implicitly, false by default
   autoPreparedStatements: true,
+  
+  // handle case when there is no primary key on a table, 'error' is default
+  // 'error' | 'warning' | 'ignore'
+  noPrimaryKey: 'ignore',
 })
 ```
 
@@ -50,7 +54,7 @@ const db = createDb(
 )
 ```
 
-### log option
+## log option
 
 The `log` option is false by default, `true` or custom object can be provided:
 
@@ -90,13 +94,13 @@ const db = createDb({
 })
 ```
 
-### columnTypes option
+## columnTypes option
 
 It is possible to override the parsing of columns returned from the database.
 
 See [column types document](/guide/columns-overview.html#override-column-types) for details.
 
-### autoPreparedStatements option
+## autoPreparedStatements option
 
 This option was meant to speed queries up, but benchmarks cannot prove this, so simply ignore this option for now.
 
@@ -104,7 +108,47 @@ This option was meant to speed queries up, but benchmarks cannot prove this, so 
 
 When the option is set to `true`, the query builder will generate a name for each different query to make the statement named.
 
-### close
+## noPrimaryKey option
+
+All tables should have a primary key. Even if it is a join table, it should have a composite primary key consisting of foreign key columns.
+
+In case when developer forgets about defining a primary key, this library will throw an error by default.
+
+You can change this behavior by specifying `warning` to print a warning message, or `ignore` to do nothing.
+
+```ts
+const db1 = createDb({ ...options })
+// will throw an error by default
+db1('table', () => ({
+  // no primary key defined
+}))
+
+const db2 = createDb({ ...options, noPrimaryKey: 'warning' })
+// will print a warning message
+db2('table', () => ({
+  // no primary key defined
+}))
+
+const db3 = createDb({ ...options, noPrimaryKey: 'ignore' })
+// no error or warning
+db2('table', () => ({
+  // no primary key defined
+}))
+```
+
+`noPrimaryKey` can be customized for a specific table:
+
+```ts
+const db = createDb({ ...options })
+db('table', () => ({
+  // no primary key defined
+}), {
+  // override the option for a specific table
+  noPrimaryKey: 'ignore'
+})
+```
+
+## close
 
 Call `db.close` to end the database connection:
 
@@ -138,7 +182,8 @@ const Table = db('table', (t) => ({ ...columns }), {
   schema: 'customTableSchema',
   // override `log` option of `createDb`:
   log: true, // boolean or object described `createdDb` section
-  logger: { ... } // override logger
+  logger: { ... }, // override logger
+  noPrimaryKey: 'ignore', // override noPrimaryKey
 })
 ```
 
