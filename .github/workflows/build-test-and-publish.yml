@@ -28,6 +28,11 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install
+      - name: Create database
+        working-directory: packages/rake-db
+        run: pnpm run db create
+        env:
+          DATABASE_URL: postgres://postgres:password@localhost:5432/orchid-orm
       - name: Setup database
         working-directory: packages/rake-db
         run: pnpm run db migrate
