@@ -1,8 +1,17 @@
 name: Build, test, and publish
-on: [push]
+on: push
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v3
       - uses: pnpm/action-setup@v2
@@ -15,6 +24,11 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install
+      - name: Setup database
+        working-directory: packages/rake-db
+        run: pnpm run db migrate
+        env:
+          DATABASE_URL: postgres://postgres:@postgres:5432/orchid-orm
       - name: Test rake-db
         working-directory: packages/rake-db
         run: pnpm test
