@@ -1,4 +1,4 @@
-name: Build, test, and publish
+name: tests
 on: push
 env:
   DATABASE_URL: postgres://postgres:password@localhost:5432/orchid-orm
