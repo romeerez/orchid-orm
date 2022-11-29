@@ -1,5 +1,7 @@
 name: Build, test, and publish
 on: push
+env:
+  DATABASE_URL: postgres://postgres:password@localhost:5432/orchid-orm
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -31,16 +33,21 @@ jobs:
       - name: Create database
         working-directory: packages/rake-db
         run: pnpm run db create
-        env:
-          DATABASE_URL: postgres://postgres:password@localhost:5432/orchid-orm
-      - name: Setup database
+      - name: Run migrations
         working-directory: packages/rake-db
         run: pnpm run db migrate
-        env:
-          DATABASE_URL: postgres://postgres:password@localhost:5432/orchid-orm
+      - name: Test pqb
+        working-directory: packages/pqb
+        run: pnpm test
+      - name: Test orchid-orm
+        working-directory: packages/orm
+        run: pnpm test
       - name: Test rake-db
         working-directory: packages/rake-db
         run: pnpm test
       - name: Test orchid-orm-schema-to-zod
         working-directory: packages/schema-to-zod
+        run: pnpm test
+      - name: Test orchid-orm-test-factory
+        working-directory: packages/test-factory
         run: pnpm test
