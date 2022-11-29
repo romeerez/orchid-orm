@@ -6,6 +6,8 @@ jobs:
     services:
       postgres:
         image: postgres
+        env:
+          POSTGRES_PASSWORD: password
         # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
@@ -28,7 +30,7 @@ jobs:
         working-directory: packages/rake-db
         run: pnpm run db migrate
         env:
-          DATABASE_URL: postgres://postgres:@postgres:5432/orchid-orm
+          DATABASE_URL: postgres://postgres:password@postgres:5432/orchid-orm
       - name: Test rake-db
         working-directory: packages/rake-db
         run: pnpm test
