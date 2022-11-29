@@ -64,6 +64,7 @@ export const Chat = db('chat', (t) => ({
 }));
 
 export const UniqueTable = db('uniqueTable', (t) => ({
+  id: t.serial().primaryKey(),
   one: t.text().unique().primaryKey(),
   two: t.integer().unique(),
   thirdColumn: t.text(),
