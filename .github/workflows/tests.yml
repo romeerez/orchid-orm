@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     
     outputs:
-      coverage: ${{ steps.coverage.outputs.coverage }}
+      coverage: ${{ steps.coverage.outputs.COVERAGE }}
     
     services:
       postgres:
@@ -73,7 +73,7 @@ jobs:
       
       - name: Get total coverage
         id: coverage
-        run: COVERAGE="$(pnpm run get-test-coverage-total)" && echo "##[set-output name=coverage;]${COVERAGE}"
+        run: echo "COVERAGE=$(ts-node scripts/getTestCoverageTotal.ts)" >> $GITHUB_OUTPUT
 
   badge:
     name: Generate badge image with test coverage value
@@ -91,7 +91,7 @@ jobs:
         id: badge
         with:
           label: 'test coverage'
-          status: ${{ needs.test.outputs.coverage }}
+          status: ${{ needs.test.outputs.COVERAGE }}
           color: 'green'
           path: coverage-badge.svg
     
