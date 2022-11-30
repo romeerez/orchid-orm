@@ -1,10 +1,32 @@
 name: tests
-on: push
+on:
+  push:
+    branches:
+    - '*'
+    - '!badges'
 env:
   DATABASE_URL: postgres://postgres:password@localhost:5432/orchid-orm
 jobs:
   build:
+    runs-on: ubuntu-latest    
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+      
+      - name: Install dependencies
+        run: pnpm install
+
+  test:
+    needs: build
     runs-on: ubuntu-latest
+    
     services:
       postgres:
         image: postgres
@@ -18,36 +40,71 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+    
     steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 7
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
-      - name: Install dependencies
-        run: pnpm install
       - name: Create database
         working-directory: packages/rake-db
         run: pnpm run db create
+      
       - name: Run migrations
         working-directory: packages/rake-db
         run: pnpm run db migrate
+      
       - name: Test pqb
         working-directory: packages/pqb
-        run: pnpm test
+        run: pnpm test --coverage --coverageReporters json-summary
+      
       - name: Test orchid-orm
         working-directory: packages/orm
-        run: pnpm test
+        run: pnpm test --coverage --coverageReporters json-summary
+      
       - name: Test rake-db
         working-directory: packages/rake-db
-        run: pnpm test
+        run: pnpm test --coverage --coverageReporters json-summary
+      
       - name: Test orchid-orm-schema-to-zod
         working-directory: packages/schema-to-zod
-        run: pnpm test
+        run: pnpm test --coverage --coverageReporters json-summary
+      
       - name: Test orchid-orm-test-factory
         working-directory: packages/test-factory
-        run: pnpm test
+        run: pnpm test --coverage --coverageReporters json-summary
+      
+  coverage:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get total coverage
+        id: coverage
+        run: |
+          COVERAGE="$(pnpm run get-test-coverage-total)"
+          echo "##[set-output name=coverage;]${COVERAGE}"
+      
+      - name: Generate the badge SVG image
+        uses: emibcn/badge-action@v1
+        id: badge
+        with:
+          label: 'test coverage'
+          status: ${{ steps.coverage.outputs.coverage }}
+          color: 'green'
+          path: coverage-badge.svg
+    
+      - name: Upload badge as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: badge
+          path: coverage-badge.svg
+
+      - name: Commit badge
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add coverage-badge.svg
+          git commit -m "Add/Update badge"
+      
+      - name: Push badge commit
+        uses: ad-m/github-push-action@master
+        if: ${{ success() }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: badges
