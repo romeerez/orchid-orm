@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "license": "MIT",
   "author": "Roman",
+  "scripts": {
+    "get-test-coverage-total": "ts-node scripts/getTestCoverageTotal.ts"
+  },
   "devDependencies": {
     "@changesets/cli": "^2.25.2",
     "@typescript-eslint/eslint-plugin": "^5.40.1",
@@ -12,6 +15,8 @@
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.2.1",
     "prettier": "^2.7.1",
+    "ts-node": "^10.9.1",
+    "tslib": "^2.4.0",
     "typescript": "^4.8.4"
   }
 }
