@@ -96,9 +96,14 @@ jobs:
           git add coverage-badge.svg
           git commit -m "Add/Update badge"
       
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+      
       - name: Push badge commit
         uses: ad-m/github-push-action@master
         if: ${{ success() }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: badges
+          branch: ${{ steps.extract_branch.outputs.branch }}
