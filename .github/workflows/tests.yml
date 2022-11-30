@@ -81,8 +81,9 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout to badges branch
-        run: git checkout badges
+      - uses: actions/checkout@v3
+        with:
+          ref: badges
     
       - name: Generate the badge SVG image
         uses: emibcn/badge-action@v1
