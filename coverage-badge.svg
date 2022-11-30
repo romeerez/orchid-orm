@@ -13,8 +13,8 @@
   <g aria-hidden="true" fill="#fff" text-anchor="start" font-family="Verdana,DejaVu Sans,sans-serif" font-size="110">
     <text x="60" y="148" textLength="751" fill="#000" opacity="0.25">test coverage</text>
     <text x="50" y="138" textLength="751">test coverage</text>
-    <text x="906" y="148" textLength="440" fill="#000" opacity="0.25">test</text>
-    <text x="896" y="138" textLength="440">test</text>
+    <text x="906" y="148" textLength="440" fill="#000" opacity="0.25">93.84%</text>
+    <text x="896" y="138" textLength="440">93.84%</text>
   </g>
   
 </svg>
