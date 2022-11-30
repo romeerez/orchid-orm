@@ -73,7 +73,7 @@ jobs:
       
       - name: Get total coverage
         id: coverage
-        run: echo "COVERAGE=$(ts-node scripts/getTestCoverageTotal.ts)" >> $GITHUB_OUTPUT
+        run: echo "COVERAGE=$(./node_modules/.bin/ts-node scripts/getTestCoverageTotal.ts)" >> $GITHUB_OUTPUT
 
   badge:
     name: Generate badge image with test coverage value
@@ -102,7 +102,10 @@ jobs:
           path: coverage-badge.svg
 
       - name: Commit badge
+        working-directory: .
         run: |
+          pwd
+          ls
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add coverage-badge.svg
