@@ -81,10 +81,8 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: badges
-          path: badges
+      - name: Checkout to badges branch
+        run: git checkout badges
     
       - name: Generate the badge SVG image
         uses: emibcn/badge-action@v1
@@ -102,10 +100,7 @@ jobs:
           path: coverage-badge.svg
 
       - name: Commit badge
-        working-directory: .
         run: |
-          pwd
-          ls
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add coverage-badge.svg
