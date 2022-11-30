@@ -7,24 +7,7 @@ on:
 env:
   DATABASE_URL: postgres://postgres:password@localhost:5432/orchid-orm
 jobs:
-  build:
-    runs-on: ubuntu-latest    
-    steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 7
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
-      
-      - name: Install dependencies
-        run: pnpm install
-
   test:
-    needs: build
     runs-on: ubuntu-latest
     
     services:
@@ -42,6 +25,21 @@ jobs:
           - 5432:5432
     
     steps:
+      - uses: actions/checkout@v3
+      
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+      
+      - name: Install dependencies
+        run: pnpm install
+      
       - name: Create database
         working-directory: packages/rake-db
         run: pnpm run db create
@@ -70,10 +68,6 @@ jobs:
         working-directory: packages/test-factory
         run: pnpm test --coverage --coverageReporters json-summary
       
-  coverage:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
       - name: Get total coverage
         id: coverage
         run: |
