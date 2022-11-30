@@ -72,6 +72,11 @@ jobs:
         id: coverage
         run: COVERAGE="$(pnpm run get-test-coverage-total)" && echo "##[set-output name=coverage;]${COVERAGE}"
       
+      - uses: actions/checkout@v3
+        with:
+          ref: badges
+          path: badges
+      
       - name: Generate the badge SVG image
         uses: emibcn/badge-action@v1
         id: badge
