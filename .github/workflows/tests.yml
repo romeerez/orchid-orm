@@ -50,23 +50,23 @@ jobs:
       
       - name: Test pqb
         working-directory: packages/pqb
-        run: pnpm test --coverage --coverageReporters json-summary
+        run: pnpm test -- --coverage --coverageReporters json-summary
       
       - name: Test orchid-orm
         working-directory: packages/orm
-        run: pnpm test --coverage --coverageReporters json-summary
+        run: pnpm test -- --coverage --coverageReporters json-summary
       
       - name: Test rake-db
         working-directory: packages/rake-db
-        run: pnpm test --coverage --coverageReporters json-summary
+        run: pnpm test -- --coverage --coverageReporters json-summary
       
       - name: Test orchid-orm-schema-to-zod
         working-directory: packages/schema-to-zod
-        run: pnpm test --coverage --coverageReporters json-summary
+        run: pnpm test -- --coverage --coverageReporters json-summary
       
       - name: Test orchid-orm-test-factory
         working-directory: packages/test-factory
-        run: pnpm test --coverage --coverageReporters json-summary
+        run: pnpm test -- --coverage --coverageReporters json-summary
       
       - name: Get total coverage
         id: coverage
