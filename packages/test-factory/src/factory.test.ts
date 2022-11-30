@@ -2,6 +2,7 @@ import { createFactory } from './factory';
 import { assertType, db, User, Model, adapter } from './test-utils';
 import { z } from 'zod';
 import { orchidORM } from 'orchid-orm';
+import { ColumnsShape, columnTypes, ColumnTypes } from 'pqb';
 
 describe('factory', () => {
   describe('sequence and sequenceDistance', () => {
@@ -109,29 +110,6 @@ describe('factory', () => {
       const data = profileFactory.build();
 
       expect(data.bio.length).toBeLessThanOrEqual(500);
-    });
-  });
-
-  describe('buildList', () => {
-    const original = userFactory.build;
-    const buildMock = jest.fn();
-
-    beforeAll(() => {
-      userFactory.build = buildMock;
-    });
-
-    afterAll(() => {
-      userFactory.build = original;
-    });
-
-    it('should call build provided number of times, pass the argument, return array', () => {
-      const arg = { extra: true };
-      const arr = userFactory.buildList(3, arg);
-
-      assertType<typeof arr, (User & { extra: boolean })[]>();
-
-      expect(buildMock).toHaveBeenCalledTimes(3);
-      expect(buildMock).toHaveBeenCalledWith(arg);
     });
   });
 
@@ -300,6 +278,147 @@ describe('factory', () => {
       assertType<typeof data, Pick<User, 'name'> & { age: number }>();
 
       expect(data).toEqual({ age: 42, name: 'specific' });
+    });
+  });
+
+  describe('unique columns', () => {
+    const makeModel = <T extends ColumnsShape>(fn: (t: ColumnTypes) => T) => {
+      return class extends Model {
+        table = 'table';
+        columns = this.setColumns((t) => ({
+          id: t.serial().primaryKey(),
+          ...fn(columnTypes),
+        }));
+      };
+    };
+
+    const min = 29;
+    const max = 30;
+    const gt = 10;
+    const gte = 10;
+
+    const db = orchidORM(
+      {
+        adapter,
+        log: false,
+      },
+      {
+        text: makeModel((t) => ({ name: t.text().unique() })),
+        email: makeModel((t) => ({ name: t.text().email().unique() })),
+        url: makeModel((t) => ({ name: t.text().url().unique() })),
+        max: makeModel((t) => ({ name: t.text().min(min).max(max).unique() })),
+        length: makeModel((t) => ({ name: t.text().length(max).unique() })),
+        number: makeModel((t) => ({ age: t.integer().unique() })),
+        gt: makeModel((t) => ({ age: t.integer().gt(gt).unique() })),
+        gte: makeModel((t) => ({ age: t.integer().gte(gte).unique() })),
+      },
+    );
+
+    const textFactory = createFactory(db.text);
+    const emailFactory = createFactory(db.email);
+    const urlFactory = createFactory(db.url);
+    const maxFactory = createFactory(db.max);
+    const lengthFactory = createFactory(db.length);
+    const numberFactory = createFactory(db.number);
+    const gtFactory = createFactory(db.gt);
+    const gteFactory = createFactory(db.gte);
+
+    it('should prefix unique text column with sequence and space', () => {
+      textFactory.sequence = 42;
+
+      const first = textFactory.build();
+      const second = textFactory.build();
+      const third = textFactory.build();
+
+      expect(first.name.startsWith('42 ')).toBe(true);
+      expect(second.name.startsWith('43 ')).toBe(true);
+      expect(third.name.startsWith('44 ')).toBe(true);
+    });
+
+    it('should prefix unique email with sequence and dash', () => {
+      emailFactory.sequence = 42;
+
+      const first = emailFactory.build();
+      const second = emailFactory.build();
+      const third = emailFactory.build();
+
+      expect(first.name.startsWith('42-')).toBe(true);
+      expect(second.name.startsWith('43-')).toBe(true);
+      expect(third.name.startsWith('44-')).toBe(true);
+    });
+
+    it('should prefix unique url with sequence and dash', () => {
+      urlFactory.sequence = 42;
+
+      const first = urlFactory.build();
+      const second = urlFactory.build();
+      const third = urlFactory.build();
+
+      expect(first.name.match(/^https?:\/\/42-/)).not.toBe(null);
+      expect(second.name.match(/^https?:\/\/43-/)).not.toBe(null);
+      expect(third.name.match(/^https?:\/\/44-/)).not.toBe(null);
+    });
+
+    it('should set value no longer than max', () => {
+      maxFactory.sequence = 42;
+
+      const value = maxFactory.build();
+
+      expect(value.name.length).toBeLessThanOrEqual(max);
+    });
+
+    it('should set value with correct length when length option is set', () => {
+      lengthFactory.sequence = 42;
+
+      const value = lengthFactory.build();
+
+      expect(value.name.length).toBe(max);
+    });
+
+    it('should use sequence for a number for unique numeric column', () => {
+      numberFactory.sequence = 42;
+
+      const first = numberFactory.build();
+      const second = numberFactory.build();
+      const third = numberFactory.build();
+
+      expect(first.age).toBe(42);
+      expect(second.age).toBe(43);
+      expect(third.age).toBe(44);
+    });
+
+    it('should support gt option for unique numeric column', () => {
+      gtFactory.sequence = 1;
+
+      const first = gtFactory.build();
+      const second = gtFactory.build();
+      const third = gtFactory.build();
+
+      expect(first.age).toBe(11);
+      expect(second.age).toBe(12);
+      expect(third.age).toBe(13);
+    });
+
+    it('should support gt option for unique numeric column', () => {
+      gteFactory.sequence = 1;
+
+      const first = gteFactory.build();
+      const second = gteFactory.build();
+      const third = gteFactory.build();
+
+      expect(first.age).toBe(10);
+      expect(second.age).toBe(11);
+      expect(third.age).toBe(12);
+    });
+
+    it('should work in buildList', () => {
+      textFactory.sequence = 42;
+
+      const [first, second, third] = textFactory.buildList(3);
+
+      expect(first.name.startsWith('42 ')).toBe(true);
+      expect(second.name.startsWith('43 ')).toBe(true);
+      expect(third.name.startsWith('44 ')).toBe(true);
     });
   });
 });

@@ -214,6 +214,57 @@ const arrayOfCustomizedUsers = await userFactory.create(5, {
 })
 ```
 
+## unique columns
+
+Test factory will prefix unique text columns with sequence, and it will use a sequence for unique numeric columns.
+
+Example:
+
+```ts
+class SomeModel extends Model {
+  table = 'table'
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    text: t.text().unique(),
+    email: t.text().email().unique(),
+    url: t.text().url().unique(),
+    number: t.integer().unique(),
+    greaterThan10: t.integer().gt(10).unique(),
+    greaterThanOrEqualTo10: t.integer().gte(10).unique(),
+  }))
+}
+
+const db = createDb({
+  ...dbOptions,
+}, {
+  model: SomeModel,
+})
+
+const factory = createFactory(db.model)
+
+// sequence is starting from 1
+
+// text columns are prefixed with sequence and a space:
+factory.text // '1 random text'
+
+// email is prefixed with a sequence and a dash:
+factory.email // '1-random@email.com'
+
+// URL is prefixed with https:// + sequence and a dash
+factory.url // 'https://1-random.url/'
+
+// number is set to sequence
+factory.number // 1
+
+// number with `.gt` is set to sequence + gt value
+factory.greaterThan10 // 11
+
+// number with `.gte` is set to sequence + gt value - 1
+factory.greaterThan10 // 10
+```
+
+`.max` and `.length` text column methods are taken into account to not exceed the limit when prefixing the value.
+
 ## omit
 
 Omit some fields before building an object. Only for the `build` method, `create` will ignore it.

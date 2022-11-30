@@ -18,7 +18,7 @@ export const assignMethodsToClass = <Methods extends Record<string, unknown>>(
         const cloned = cloneInstance(this);
         return (
           methods as unknown as Record<string, (...args: unknown[]) => unknown>
-        )[name].call(cloned, args);
+        )[name].apply(cloned, args);
       },
     });
   }

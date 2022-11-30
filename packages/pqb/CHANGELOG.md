@@ -1,5 +1,11 @@
 # pqb
 
+## 0.7.2
+
+### Patch Changes
+
+- 9b8b3d5: Prefix unique columns with sequences in test factory
+
 ## 0.7.1
 
 ### Patch Changes

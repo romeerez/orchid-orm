@@ -4,11 +4,27 @@ import {
   DateBaseColumn,
   EmptyObject,
   IntegerBaseColumn,
+  NumberBaseColumn,
   Query,
   TextBaseColumn,
 } from 'pqb';
 import { instanceToZod, InstanceToZod } from 'orchid-orm-schema-to-zod';
 import { generateMock } from '@anatine/zod-mock';
+
+type UniqueField =
+  | {
+      key: string;
+      type: 'text';
+      kind?: 'email' | 'url';
+      max?: number;
+      length?: number;
+    }
+  | {
+      key: string;
+      type: 'number';
+      gt?: number;
+      gte?: number;
+    };
 
 type FactoryOptions = {
   sequence?: number;
@@ -86,9 +102,110 @@ const pick = <T, Keys extends Record<string, unknown>>(
   return res;
 };
 
+const makeUniqueText = (sequence: number, value: string) =>
+  `${sequence} ${value}`;
+
+const makeUniqueEmail = (sequence: number, value: string) =>
+  `${sequence}-${value}`;
+
+const makeUniqueUrl = (sequence: number, value: string) =>
+  value.replace('://', `://${sequence}-`);
+
+const makeUniqueNumber = (sequence: number) => sequence;
+
+const makeSetUniqueValues = (uniqueFields: UniqueField[]) => {
+  type Fn = (sequence: number, value: unknown) => unknown;
+
+  const fns: Record<string, Fn> = {};
+  for (const field of uniqueFields) {
+    if (field.type === 'text') {
+      const getValue =
+        field.kind === 'email'
+          ? makeUniqueEmail
+          : field.kind === 'url'
+          ? makeUniqueUrl
+          : makeUniqueText;
+
+      let fn;
+      const max = field.length ?? field.max;
+      if (max !== undefined) {
+        fn = (sequence: number, value: string) => {
+          let result = getValue(sequence, value);
+          if (result.length > max) {
+            result = result.slice(0, -(result.length - max));
+          }
+          return result;
+        };
+      } else {
+        fn = getValue;
+      }
+      fns[field.key] = fn as unknown as Fn;
+    } else {
+      let fn;
+      const { gt, gte } = field;
+      if (gt) {
+        fn = (sequence: number) => sequence + gt;
+      } else if (gte) {
+        fn = (sequence: number) => sequence + gte - 1;
+      } else {
+        fn = makeUniqueNumber;
+      }
+      fns[field.key] = fn as unknown as Fn;
+    }
+  }
+
+  return (record: Record<string, unknown>, sequence: number) => {
+    for (const key in fns) {
+      record[key] = fns[key](sequence, record[key]);
+    }
+  };
+};
+
+const makeBuild = <T extends TestFactory, Data extends BuildArg<T>>(
+  factory: T,
+  data: Record<string, unknown>,
+  omitValues: Record<PropertyKey, true>,
+  pickValues: Record<PropertyKey, true>,
+  uniqueFields: UniqueField[],
+  arg?: Data,
+) => {
+  let schema = factory.schema as AnyZodObject;
+  let allData = arg ? { ...data, ...arg } : data;
+
+  if (omitValues) {
+    schema = schema.omit(omitValues);
+    allData = omit(allData, omitValues);
+  }
+
+  if (pickValues && Object.keys(pickValues).length) {
+    schema = schema.pick(pickValues);
+    allData = pick(allData, pickValues);
+  }
+
+  return () => {
+    const result = generateMock(schema) as Record<string, unknown>;
+    for (const key in allData) {
+      const value = (allData as Record<string, unknown>)[key];
+      if (typeof value === 'function') {
+        result[key] = value(factory.sequence);
+      } else {
+        result[key] = value;
+      }
+    }
+
+    const setUniqueValues = makeSetUniqueValues(uniqueFields);
+    setUniqueValues(result, factory.sequence);
+
+    factory.sequence++;
+
+    return result as BuildResult<T, Data>;
+  };
+};
+
 const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
   factory: T,
   data: Record<string, unknown>,
+  uniqueFields: UniqueField[],
   arg?: Data,
 ) => {
   const pick: Record<string, true> = {};
@@ -119,6 +236,7 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
   }
 
   const pickedSchema = factory.schema.pick(pick);
+  const setUniqueValues = makeSetUniqueValues(uniqueFields);
 
   return () => {
     Object.assign(result, generateMock(pickedSchema));
@@ -126,6 +244,8 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
     for (const key in fns) {
       result[key] = fns[key](factory.sequence);
     }
+
+    setUniqueValues(result, factory.sequence);
 
     factory.sequence++;
 
@@ -151,6 +271,7 @@ export class TestFactory<
   constructor(
     public model: Q,
     public schema: Schema,
+    private uniqueFields: UniqueField[],
     private readonly data: Record<string, unknown> = {},
     options: FactoryOptions = {},
   ) {
@@ -200,32 +321,16 @@ export class TestFactory<
     this: T,
     data?: Data,
   ): BuildResult<T, Data> {
-    let schema = this.schema as AnyZodObject;
-    let arg = data ? { ...this.data, ...data } : this.data;
+    const build = makeBuild(
+      this,
+      this.data,
+      this.omitValues,
+      this.pickValues,
+      this.uniqueFields,
+      data,
+    );
 
-    if (this.omitValues) {
-      schema = schema.omit(this.omitValues);
-      arg = omit(arg, this.omitValues);
-    }
-
-    if (this.pickValues && Object.keys(this.pickValues).length) {
-      schema = schema.pick(this.pickValues);
-      arg = pick(arg, this.pickValues);
-    }
-
-    const result = generateMock(schema) as Record<string, unknown>;
-    for (const key in arg) {
-      const value = (arg as Record<string, unknown>)[key];
-      if (typeof value === 'function') {
-        result[key] = value(this.sequence);
-      } else {
-        result[key] = value;
-      }
-    }
-
-    this.sequence++;
-
-    return result as BuildResult<T, Data>;
+    return build();
   }
 
   buildList<T extends this, Data extends BuildArg<T>>(
@@ -233,14 +338,23 @@ export class TestFactory<
     qty: number,
     data?: Data,
   ): BuildResult<T, Data>[] {
-    return [...Array(qty)].map(() => this.build(data));
+    const build = makeBuild(
+      this,
+      this.data,
+      this.omitValues,
+      this.pickValues,
+      this.uniqueFields,
+      data,
+    );
+
+    return [...Array(qty)].map(build);
   }
 
   async create<T extends this, Data extends CreateArg<T>>(
     this: T,
     data?: Data,
   ): Promise<CreateResult<T>> {
-    const getData = processCreateData(this, this.data, data);
+    const getData = processCreateData(this, this.data, this.uniqueFields, data);
     return (await this.model.create(getData())) as CreateResult<T>;
   }
 
@@ -249,17 +363,17 @@ export class TestFactory<
     qty: number,
     data?: Data,
   ): Promise<CreateResult<T>[]> {
-    const getData = processCreateData(this, this.data, data);
+    const getData = processCreateData(this, this.data, this.uniqueFields, data);
     const arr = [...Array(qty)].map(getData);
     return (await this.model.createMany(arr)) as CreateResult<T>[];
   }
 
   extend<T extends this>(this: T): new () => TestFactory<Q, Schema, Type> {
-    const { model, schema } = this;
+    const { model, schema, uniqueFields } = this;
 
     return class extends TestFactory<Q, Schema, Type> {
       constructor() {
-        super(model, schema);
+        super(model, schema, uniqueFields);
       }
     };
   }
@@ -275,6 +389,8 @@ export const createFactory = <T extends Query>(
 
   const data: Record<string, unknown> = {};
   const now = Date.now();
+
+  const uniqueFields: UniqueField[] = [];
 
   for (const key in model.shape) {
     const column = model.shape[key];
@@ -296,13 +412,36 @@ export const createFactory = <T extends Query>(
 
       const maxCheck = string._def.checks.find(
         (check) => check.kind === 'max',
-      ) as { value: [number] } | undefined;
+      ) as { value: number } | undefined;
 
-      if (!maxCheck || maxCheck.value[0] > max) {
+      if (!maxCheck || maxCheck.value > max) {
         (schema.shape as Record<string, ZodTypeAny>)[key] =
           item instanceof ZodNullable
             ? string.max(max).nullable()
             : string.max(max);
+      }
+    }
+
+    if (column.data.index?.unique) {
+      if (column instanceof TextBaseColumn) {
+        uniqueFields.push({
+          key,
+          type: 'text',
+          kind: column.data.email
+            ? 'email'
+            : column.data.url
+            ? 'url'
+            : undefined,
+          max: column.data.max,
+          length: column.data.length,
+        });
+      } else if (column instanceof NumberBaseColumn) {
+        uniqueFields.push({
+          key,
+          type: 'number',
+          gt: column.data.gt,
+          gte: column.data.gte,
+        });
       }
     }
   }
@@ -310,6 +449,7 @@ export const createFactory = <T extends Query>(
   return new TestFactory<T, InstanceToZod<T>, T['type']>(
     model,
     schema,
+    uniqueFields,
     data,
     options,
   );
