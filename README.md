@@ -1,7 +1,7 @@
 # Orchid ORM
 
 ![tests](https://github.com/romeerez/orchid-orm/actions/workflows/tests.yml/badge.svg)
-![coverage](https://raw.githubusercontent.com/romeerez/orchid-orm/badges/coverage-badge.svg)
+![coverage](https://raw.githubusercontent.com/romeerez/orchid-orm/badges/coverage-badge.svg?)
 
 - 🚀️ productive way to work with models and relations
 - 🧐️ full control over the database with powerful query builder
