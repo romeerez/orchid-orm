@@ -105,7 +105,9 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add coverage-badge.svg
-          git commit -m "Add/Update badge"
+          
+          # Will give error if badge did not changed
+          git commit -m "Update coverage badge" || true
       
       - name: Push badge commit
         uses: ad-m/github-push-action@master
