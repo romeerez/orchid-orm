@@ -638,10 +638,10 @@ Place `.select`, `.selectAll`, or `.get` before `.update` to specify returning c
 You need to provide `.where`, `.findBy`, or `.find` conditions before calling `.update`.
 To ensure that the whole table won't be updated by accident, updating without where conditions will result in TypeScript and runtime errors.
 
-To update the table without conditions put `true` in the second argument:
+To update the table without conditions use `where` method without arguments:
 
 ```ts
-await Table.update({ name: 'new name' }, true)
+await Table.where().update({ name: 'new name' })
 ```
 
 If `.select` and `.where` were specified before the update it will return an array of updated records.

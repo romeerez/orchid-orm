@@ -23,15 +23,13 @@ describe('update', () => {
     expectQueryNotMutated(q);
   });
 
-  it('should throw when updating without where condition', () => {
+  it('should prevent from updating without conditions with TS error', () => {
     // @ts-expect-error update should have where condition or forceAll flag
-    expect(() => User.update({ name: 'new name' })).toThrow();
+    User.update({ name: 'new name' });
   });
 
-  it('should run without where condition when forceAll flag provided', async () => {
-    await expect(
-      User.update({ name: 'new name' }, true),
-    ).resolves.not.toThrow();
+  it('should let update all with empty where', () => {
+    User.where().update({ name: 'new name' });
   });
 
   it('should update record with raw sql, returning updated rows count', async () => {

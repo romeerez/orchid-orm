@@ -2,29 +2,17 @@ import { Query, SetQueryReturnsRowCount } from '../query';
 
 export type DeleteMethodsNames = 'del' | '_del' | 'delete' | '_delete';
 
-type DeleteArgs<T extends Query> = T['hasWhere'] extends true
-  ? [forceAll?: boolean]
-  : [true];
+type DeleteArgs<T extends Query> = T['hasWhere'] extends true ? [] : [never];
 
 type DeleteResult<T extends Query> = T['hasSelect'] extends true
   ? T
   : SetQueryReturnsRowCount<T>;
 
-const del = <T extends Query>(
-  self: T,
-  ...args: DeleteArgs<T>
-): DeleteResult<T> => {
-  return self.clone()._del(...args) as unknown as DeleteResult<T>;
+const del = <T extends Query>(self: T): DeleteResult<T> => {
+  return _del(self.clone()) as unknown as DeleteResult<T>;
 };
 
-const _del = <T extends Query>(
-  q: T,
-  ...args: DeleteArgs<T>
-): DeleteResult<T> => {
-  if (!q.query.and?.length && !q.query.or?.length && !args[0]) {
-    throw new Error('No where conditions or forceAll flag provided to delete');
-  }
-
+const _del = <T extends Query>(q: T): DeleteResult<T> => {
   if (!q.query.select) {
     q.query.returnType = 'rowCount';
   }
@@ -34,19 +22,23 @@ const _del = <T extends Query>(
 };
 
 export class Delete {
-  del<T extends Query>(this: T, ...args: DeleteArgs<T>): DeleteResult<T> {
-    return del(this, ...args);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  del<T extends Query>(this: T, ..._args: DeleteArgs<T>): DeleteResult<T> {
+    return del(this);
   }
 
-  _del<T extends Query>(this: T, ...args: DeleteArgs<T>): DeleteResult<T> {
-    return _del(this, ...args);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _del<T extends Query>(this: T, ..._args: DeleteArgs<T>): DeleteResult<T> {
+    return _del(this);
   }
 
-  delete<T extends Query>(this: T, ...args: DeleteArgs<T>): DeleteResult<T> {
-    return del(this, ...args);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  delete<T extends Query>(this: T, ..._args: DeleteArgs<T>): DeleteResult<T> {
+    return del(this);
   }
 
-  _delete<T extends Query>(this: T, ...args: DeleteArgs<T>): DeleteResult<T> {
-    return _del(this, ...args);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _delete<T extends Query>(this: T, ..._args: DeleteArgs<T>): DeleteResult<T> {
+    return _del(this);
   }
 }

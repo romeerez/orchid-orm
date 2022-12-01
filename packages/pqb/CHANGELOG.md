@@ -1,5 +1,11 @@
 # pqb
 
+## 0.7.6
+
+### Patch Changes
+
+- Remove force flag from update and delete in favor of empty where
+
 ## 0.7.5
 
 ### Patch Changes

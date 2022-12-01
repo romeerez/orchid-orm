@@ -12,13 +12,13 @@ import { DeleteQueryData } from '../sql';
 describe('delete', () => {
   useTestDatabase();
 
-  it('should throw when updating without where condition', () => {
+  it('should prevent deleting all with TS error', () => {
     // @ts-expect-error update should have where condition or forceAll flag
-    expect(() => User.delete()).toThrow();
+    User.delete();
   });
 
-  it('should run without where condition when forceAll flag provided', async () => {
-    await expect(User.delete(true)).resolves.not.toThrow();
+  it('should allow deleting all with empty where', () => {
+    User.where().delete();
   });
 
   it('should be aliased as `del`', () => {

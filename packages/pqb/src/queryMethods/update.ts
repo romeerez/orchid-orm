@@ -98,17 +98,13 @@ type UpdateHasAndBelongsToManyData<Rel extends HasAndBelongsToManyRelation> = {
   create?: CreateData<Rel['nestedCreateQuery']>[];
 };
 
-type UpdateArgs<T extends Query, ForceAll extends boolean> = (
-  T['hasWhere'] extends true ? true : ForceAll
-) extends true
-  ? [update: UpdateData<T>]
-  : [update: UpdateData<T>, forceAll: true];
+type UpdateArg<T extends Query> = T['hasWhere'] extends true
+  ? UpdateData<T>
+  : never;
 
-type UpdateRawArgs<T extends Query, ForceAll extends boolean> = (
-  T['hasWhere'] extends true ? true : ForceAll
-) extends true
-  ? [update: RawExpression]
-  : [update: RawExpression, forceAll: true];
+type UpdateRawArg<T extends Query> = T['hasWhere'] extends true
+  ? RawExpression
+  : never;
 
 type UpdateResult<T extends Query> = T['hasSelect'] extends true
   ? T
@@ -143,13 +139,9 @@ const checkIfUpdateIsEmpty = (q: UpdateQueryData) => {
   return !q.updateData?.some((item) => isRaw(item) || Object.keys(item).length);
 };
 
-const update = <T extends Query>(q: T, forceAll: boolean): UpdateResult<T> => {
+const update = <T extends Query>(q: T): UpdateResult<T> => {
   const { query } = q;
   query.type = 'update';
-
-  if (!query.and?.length && !query.or?.length && !forceAll) {
-    throw new Error('No where conditions or forceAll flag provided to update');
-  }
 
   if (!query.select) {
     query.returnType = 'rowCount';
@@ -159,22 +151,14 @@ const update = <T extends Query>(q: T, forceAll: boolean): UpdateResult<T> => {
 };
 
 export class Update {
-  update<T extends Query, ForceAll extends boolean = false>(
-    this: T,
-    ...args: UpdateArgs<T, ForceAll>
-  ): UpdateResult<T> {
+  update<T extends Query>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
     const q = this.clone() as T;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return q._update(...(args as any));
+    return q._update(arg);
   }
-  _update<T extends Query, ForceAll extends boolean = false>(
-    this: T,
-    ...args: UpdateArgs<T, ForceAll>
-  ): UpdateResult<T> {
+  _update<T extends Query>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
     const { query } = this;
-    const data = args[0];
 
-    const set: Record<string, unknown> = { ...data };
+    const set: Record<string, unknown> = { ...arg };
     pushQueryValue(this, 'updateData', set);
 
     const { relations, shape } = this as {
@@ -187,13 +171,13 @@ export class Update {
 
     const originalReturnType = query.returnType || 'all';
 
-    for (const key in data) {
+    for (const key in arg) {
       if (relations[key]) {
         delete set[key];
         if (relations[key].type === 'belongsTo') {
-          prependRelations[key] = data[key] as Record<string, unknown>;
+          prependRelations[key] = arg[key] as Record<string, unknown>;
         } else {
-          const value = data[key] as NestedUpdateItem;
+          const value = arg[key] as NestedUpdateItem;
 
           if (
             !value.set &&
@@ -217,7 +201,7 @@ export class Update {
               this._select(primaryKey as StringKey<keyof T['selectable']>);
             }
           }
-          appendRelations[key] = data[key] as Record<string, unknown>;
+          appendRelations[key] = arg[key] as Record<string, unknown>;
         }
       } else if (!shape[key] && shape !== anyShape) {
         delete set[key];
@@ -335,41 +319,26 @@ export class Update {
       query.wrapInTransaction = true;
     }
 
-    return update(this, (args as [unknown, boolean])[1]);
+    return update(this);
   }
 
-  updateRaw<T extends Query, ForceAll extends boolean = false>(
-    this: T,
-    ...args: UpdateRawArgs<T, ForceAll>
-  ): UpdateResult<T> {
+  updateRaw<T extends Query>(this: T, arg: UpdateRawArg<T>): UpdateResult<T> {
     const q = this.clone() as T;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return q._updateRaw(...(args as any));
+    return q._updateRaw(arg);
   }
-  _updateRaw<T extends Query, ForceAll extends boolean = false>(
-    this: T,
-    ...args: UpdateRawArgs<T, ForceAll>
-  ): UpdateResult<T> {
-    pushQueryValue(this, 'updateData', args[0]);
-    return update(this, (args as [unknown, boolean])[1]);
+  _updateRaw<T extends Query>(this: T, arg: UpdateRawArg<T>): UpdateResult<T> {
+    pushQueryValue(this, 'updateData', arg);
+    return update(this);
   }
 
-  updateOrThrow<T extends Query, ForceAll extends boolean = false>(
-    this: T,
-    ...args: UpdateArgs<T, ForceAll>
-  ): UpdateResult<T> {
+  updateOrThrow<T extends Query>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
     const q = this.clone() as T;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return q._updateOrThrow(...(args as any));
+    return q._updateOrThrow(arg);
   }
 
-  _updateOrThrow<T extends Query, ForceAll extends boolean = false>(
-    this: T,
-    ...args: UpdateArgs<T, ForceAll>
-  ): UpdateResult<T> {
+  _updateOrThrow<T extends Query>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
     this.query.throwOnNotFound = true;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return this._update(...(args as any)) as unknown as UpdateResult<T>;
+    return this._update(arg);
   }
 
   increment<T extends Query>(
