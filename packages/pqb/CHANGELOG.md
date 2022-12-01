@@ -1,5 +1,11 @@
 # pqb
 
+## 0.7.4
+
+### Patch Changes
+
+- Update homepage link in package.json
+
 ## 0.7.3
 
 ### Patch Changes

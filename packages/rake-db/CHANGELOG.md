@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.1.7
+
+### Patch Changes
+
+- Update homepage link in package.json
+- Updated dependencies
+  - pqb@0.7.4
+
 ## 2.1.6
 
 ### Patch Changes
