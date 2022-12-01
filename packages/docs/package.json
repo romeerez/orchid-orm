@@ -9,12 +9,13 @@
   },
   "author": "Roman Kushyn",
   "license": "ISC",
-  "dependencies": {
-    "vue-chartjs": "^4.1.2",
-    "chart.js": "^3.7.0"
-  },
   "devDependencies": {
-    "vitepress": "1.0.0-alpha.4",
-    "vue": "^3.2.37"
+    "chart.js": "^3.7.0",
+    "flexsearch": "^0.7.31",
+    "markdown-it": "^13.0.1",
+    "vitepress": "1.0.0-alpha.29",
+    "vitepress-plugin-search": "^1.0.4-alpha.15",
+    "vue": "^3.2.45",
+    "vue-chartjs": "^4.1.2"
   }
 }

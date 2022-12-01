@@ -1,5 +1,5 @@
 <script setup>
-  import VPButton from 'vitepress/client/theme-default/components/VPButton.vue'
+  import VPButton from 'vitepress/dist/client/theme-default/components/VPButton.vue'
 </script>
 
 <template>

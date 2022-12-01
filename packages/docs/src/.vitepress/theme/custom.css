@@ -39,3 +39,18 @@ html.dark {
 html .content-container {
   max-width: 788px !important;
 }
+
+.VPNavBarSearch {
+  background: var(--vp-c-bg);
+  border: 1px solid var(--vp-c-divider-light);
+  border-radius: 12px;
+  margin-right: 24px;
+}
+
+.VPNavBarSearch .DocSearch-Button {
+  height: 42px;
+}
+
+.VPNavBarSearch .DocSearch-Button-Placeholder {
+  color: var(--vp-c-text-2);
+}
