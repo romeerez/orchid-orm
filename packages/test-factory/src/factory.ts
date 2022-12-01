@@ -113,11 +113,18 @@ const makeUniqueUrl = (sequence: number, value: string) =>
 
 const makeUniqueNumber = (sequence: number) => sequence;
 
-const makeSetUniqueValues = (uniqueFields: UniqueField[]) => {
+const makeSetUniqueValues = (
+  uniqueFields: UniqueField[],
+  data: Record<string, unknown>,
+) => {
   type Fn = (sequence: number, value: unknown) => unknown;
+
+  const dataKeys = Object.keys(data);
 
   const fns: Record<string, Fn> = {};
   for (const field of uniqueFields) {
+    if (dataKeys.includes(field.key)) continue;
+
     if (field.type === 'text') {
       const getValue =
         field.kind === 'email'
@@ -182,6 +189,8 @@ const makeBuild = <T extends TestFactory, Data extends BuildArg<T>>(
     allData = pick(allData, pickValues);
   }
 
+  const setUniqueValues = makeSetUniqueValues(uniqueFields, allData);
+
   return () => {
     const result = generateMock(schema) as Record<string, unknown>;
     for (const key in allData) {
@@ -193,7 +202,6 @@ const makeBuild = <T extends TestFactory, Data extends BuildArg<T>>(
       }
     }
 
-    const setUniqueValues = makeSetUniqueValues(uniqueFields);
     setUniqueValues(result, factory.sequence);
 
     factory.sequence++;
@@ -236,7 +244,7 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
   }
 
   const pickedSchema = factory.schema.pick(pick);
-  const setUniqueValues = makeSetUniqueValues(uniqueFields);
+  const setUniqueValues = makeSetUniqueValues(uniqueFields, allData);
 
   return () => {
     Object.assign(result, generateMock(pickedSchema));

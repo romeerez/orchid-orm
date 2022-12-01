@@ -1,5 +1,11 @@
 # orchid-orm-test-factory
 
+## 0.1.6
+
+### Patch Changes
+
+- Fix preventing explicitly set data in test-factory to be prefixed as for unique column
+
 ## 0.1.5
 
 ### Patch Changes

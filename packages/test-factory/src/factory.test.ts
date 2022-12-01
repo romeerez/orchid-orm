@@ -415,6 +415,11 @@ describe('factory', () => {
       expect(third.age).toBe(12);
     });
 
+    it('should leave explicitly set values as is', () => {
+      const data = textFactory.build({ name: 'name' });
+      expect(data.name).toBe('name');
+    });
+
     it('should work in buildList', () => {
       textFactory.sequence = 42;
 
