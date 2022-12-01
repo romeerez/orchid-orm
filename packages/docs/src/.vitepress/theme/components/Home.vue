@@ -5,7 +5,6 @@
 <template>
   <div class="container">
     <div class="title">
-      <img src='/Orchid.png' alt='Logo' class='logo'>
       Orchid ORM
     </div>
 
@@ -39,20 +38,17 @@
   }
 
   .title {
-    margin: 40px 0;
+    margin: 60px 0;
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 72px;
     font-weight: bold;
     color: #c04c8b;
-    line-height: 0.7;
-  }
-
-  .logo {
-    position: relative;
-    top: -40px;
-    margin-right: -105px;
+    line-height: 1;
+    background: -webkit-linear-gradient(#c04c8b, var(--vp-button-brand-bg));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 
   .text {
