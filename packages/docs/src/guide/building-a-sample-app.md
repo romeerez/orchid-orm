@@ -2711,7 +2711,8 @@ export const deleteArticleRoute = routeHandler(
       if (article.tagIds.length) {
         // before deleting a record need to delete all its related records
         // otherwise there would be an error complaining about a foreign key violation
-        await articleQuery.articleTags.delete(true);
+        // empty where is needed to delete records without conditions
+        await articleQuery.articleTags.where().delete();
       }
 
       await articleQuery.delete();

@@ -261,8 +261,8 @@ This is supported for all kinds of relations only except `belongsTo`.
 
 ```ts
 // delete all books of the author
-// `delete` methods require `true` when deleting without conditions as a sanity check
-await db.author.find(1).books.delete(true)
+// `delete` method requires where statement, empty where is here as a sanity check
+await db.author.find(1).books.where().delete()
 
 // delete specific books of specific authors
 await db.author.where({ name: 'author name' })

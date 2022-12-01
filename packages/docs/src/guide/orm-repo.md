@@ -135,7 +135,7 @@ export const repo = createRepo(db.model, {
   queryWithWhereMethods: {
     // q has `where` conditions
     queryWithWhereMethod(q) {
-      // .delete() method requires having `where`
+      // .delete() method requires `where`
       // to not delete all records by mistake
       return q.delete()
     }

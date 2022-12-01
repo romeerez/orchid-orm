@@ -796,10 +796,10 @@ Place `.select`, `.selectAll`, or `.get` before `.delete` to specify returning c
 Need to provide `.where`, `.findBy`, or `.find` conditions before calling `.delete`.
 To prevent accidental deletion of all records, deleting without where will result in TypeScript and a runtime error.
 
-To delete all records without conditions add a `true` argument:
+To delete all records without conditions add an empty `where`:
 
 ```ts
-await Table.delete(true)
+await Table.where().delete()
 ```
 
 ```ts
@@ -833,7 +833,8 @@ const deletedUsersFull = await Table
 // delete all users who have corresponding profile records:
 Table
   .join(Profile, 'profile.userId', 'user.id')
-  .delete(true)
+  .where()
+  .delete()
 ```
 
 ## transaction
