@@ -93,21 +93,23 @@ t.string(min: number, max: number)
 
 Text type columns support the following `where` operators:
 
+`contains`, `startsWith`, `endsWith` are case-insensitive.
+
 ```ts
 db.someModel.where({
   textColumn: {
-    // LIKE '%string%'
-    contains: 'string',
     // ILIKE '%string%'
-    containsInsensitive: 'string',
-    // LIKE 'string%'
-    startsWith: 'string',
+    contains: 'string',
+    // LIKE '%string%'
+    containsSensitive: 'string',
     // ILIKE 'string%'
-    startsWithInsensitive: 'string',
-    // LIKE '%string'
-    endsWith: 'string',
+    startsWith: 'string',
+    // LIKE 'string%'
+    startsWithSensitive: 'string',
     // ILIKE '%string'
-    endsWithInsensitive: 'string',
+    endsWith: 'string',
+    // LIKE '%string'
+    endsWithSensitive: 'string',
   }
 })
 ```

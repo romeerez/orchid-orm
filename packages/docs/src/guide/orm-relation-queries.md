@@ -183,7 +183,7 @@ const result: Result = await db.post.select(
 ).take()
 ```
 
-## create, update, delete
+## create update delete
 
 `Orchid ORM` makes it very easy to do modifications of related records,
 it allows building a query chain to modify related records,

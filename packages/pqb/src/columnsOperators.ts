@@ -77,30 +77,30 @@ const all = {
   contains: <T>() =>
     createOperator<T | Query | RawExpression>(
       (key, value, values) =>
-        `${key} LIKE '%' || ${quoteValue(value, values)} || '%'`,
-    ),
-  containsInsensitive: <T>() =>
-    createOperator<T | Query | RawExpression>(
-      (key, value, values) =>
         `${key} ILIKE '%' || ${quoteValue(value, values)} || '%'`,
     ),
-  startsWith: <T>() =>
+  containsSensitive: <T>() =>
     createOperator<T | Query | RawExpression>(
-      (key, value, values) => `${key} LIKE ${quoteValue(value, values)} || '%'`,
+      (key, value, values) =>
+        `${key} LIKE '%' || ${quoteValue(value, values)} || '%'`,
     ),
-  startsWithInsensitive: <T>() =>
+  startsWith: <T>() =>
     createOperator<T | Query | RawExpression>(
       (key, value, values) =>
         `${key} ILIKE ${quoteValue(value, values)} || '%'`,
     ),
-  endsWith: <T>() =>
+  startsWithSensitive: <T>() =>
     createOperator<T | Query | RawExpression>(
-      (key, value, values) => `${key} LIKE '%' || ${quoteValue(value, values)}`,
+      (key, value, values) => `${key} LIKE ${quoteValue(value, values)} || '%'`,
     ),
-  endsWithInsensitive: <T>() =>
+  endsWith: <T>() =>
     createOperator<T | Query | RawExpression>(
       (key, value, values) =>
         `${key} ILIKE '%' || ${quoteValue(value, values)}`,
+    ),
+  endsWithSensitive: <T>() =>
+    createOperator<T | Query | RawExpression>(
+      (key, value, values) => `${key} LIKE '%' || ${quoteValue(value, values)}`,
     ),
   between: <T>() =>
     createOperator<[T | Query | RawExpression, T | Query | RawExpression]>(
@@ -148,11 +148,11 @@ const numeric = <T>() => ({
 const text = <T>() => ({
   ...base<T>(),
   contains: all.contains<T>(),
-  containsInsensitive: all.containsInsensitive<T>(),
+  containsSensitive: all.containsSensitive<T>(),
   startsWith: all.startsWith<T>(),
-  startsWithInsensitive: all.startsWithInsensitive<T>(),
+  startsWithSensitive: all.startsWithSensitive<T>(),
   endsWith: all.endsWith<T>(),
-  endsWithInsensitive: all.endsWithInsensitive<T>(),
+  endsWithSensitive: all.endsWithSensitive<T>(),
 });
 
 const json = <T>() => ({

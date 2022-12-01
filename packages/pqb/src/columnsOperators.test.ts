@@ -277,7 +277,7 @@ describe('operators', () => {
         User.where({ name: { contains: 'ko' } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" LIKE '%' || $1 || '%'
+          WHERE "user"."name" ILIKE '%' || $1 || '%'
         `,
         ['ko'],
       );
@@ -288,7 +288,7 @@ describe('operators', () => {
         User.where({ name: { contains: User.select('name').take() } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" LIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
+          WHERE "user"."name" ILIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
         `,
         [1],
       );
@@ -299,19 +299,19 @@ describe('operators', () => {
         User.where({ name: { contains: db.raw("'ko'") } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" LIKE '%' || 'ko' || '%'
+          WHERE "user"."name" ILIKE '%' || 'ko' || '%'
         `,
       );
     });
   });
 
-  describe('containsInsensitive', () => {
+  describe('containsSensitive', () => {
     it('should handle value', () => {
       expectSql(
-        User.where({ name: { containsInsensitive: 'ko' } }).toSql(),
+        User.where({ name: { containsSensitive: 'ko' } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" ILIKE '%' || $1 || '%'
+          WHERE "user"."name" LIKE '%' || $1 || '%'
         `,
         ['ko'],
       );
@@ -320,11 +320,11 @@ describe('operators', () => {
     it('should handle sub query', () => {
       expectSql(
         User.where({
-          name: { containsInsensitive: User.select('name').take() },
+          name: { containsSensitive: User.select('name').take() },
         }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" ILIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
+          WHERE "user"."name" LIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
         `,
         [1],
       );
@@ -332,10 +332,10 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ name: { containsInsensitive: db.raw("'ko'") } }).toSql(),
+        User.where({ name: { containsSensitive: db.raw("'ko'") } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" ILIKE '%' || 'ko' || '%'
+          WHERE "user"."name" LIKE '%' || 'ko' || '%'
         `,
       );
     });
@@ -347,7 +347,7 @@ describe('operators', () => {
         User.where({ name: { startsWith: 'ko' } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" LIKE $1 || '%'
+          WHERE "user"."name" ILIKE $1 || '%'
         `,
         ['ko'],
       );
@@ -360,7 +360,7 @@ describe('operators', () => {
         }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" LIKE (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
+          WHERE "user"."name" ILIKE (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
         `,
         [1],
       );
@@ -371,19 +371,19 @@ describe('operators', () => {
         User.where({ name: { startsWith: db.raw("'ko'") } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" LIKE 'ko' || '%'
+          WHERE "user"."name" ILIKE 'ko' || '%'
         `,
       );
     });
   });
 
-  describe('startsWithInsensitive', () => {
+  describe('startsWithSensitive', () => {
     it('should handle value', () => {
       expectSql(
-        User.where({ name: { startsWithInsensitive: 'ko' } }).toSql(),
+        User.where({ name: { startsWithSensitive: 'ko' } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" ILIKE $1 || '%'
+          WHERE "user"."name" LIKE $1 || '%'
         `,
         ['ko'],
       );
@@ -392,11 +392,11 @@ describe('operators', () => {
     it('should handle sub query', () => {
       expectSql(
         User.where({
-          name: { startsWithInsensitive: User.select('name').take() },
+          name: { startsWithSensitive: User.select('name').take() },
         }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" ILIKE (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
+          WHERE "user"."name" LIKE (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
         `,
         [1],
       );
@@ -404,10 +404,10 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ name: { startsWithInsensitive: db.raw("'ko'") } }).toSql(),
+        User.where({ name: { startsWithSensitive: db.raw("'ko'") } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" ILIKE 'ko' || '%'
+          WHERE "user"."name" LIKE 'ko' || '%'
         `,
       );
     });
@@ -419,7 +419,7 @@ describe('operators', () => {
         User.where({ name: { endsWith: 'ko' } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" LIKE '%' || $1
+          WHERE "user"."name" ILIKE '%' || $1
         `,
         ['ko'],
       );
@@ -432,7 +432,7 @@ describe('operators', () => {
         }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" LIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1)
+          WHERE "user"."name" ILIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1)
         `,
         [1],
       );
@@ -443,19 +443,19 @@ describe('operators', () => {
         User.where({ name: { endsWith: db.raw("'ko'") } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" LIKE '%' || 'ko'
+          WHERE "user"."name" ILIKE '%' || 'ko'
         `,
       );
     });
   });
 
-  describe('endsWithInsensitive', () => {
+  describe('endsWithSensitive', () => {
     it('should handle value', () => {
       expectSql(
-        User.where({ name: { endsWithInsensitive: 'ko' } }).toSql(),
+        User.where({ name: { endsWithSensitive: 'ko' } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" ILIKE '%' || $1
+          WHERE "user"."name" LIKE '%' || $1
         `,
         ['ko'],
       );
@@ -464,11 +464,11 @@ describe('operators', () => {
     it('should handle sub query', () => {
       expectSql(
         User.where({
-          name: { endsWithInsensitive: User.select('name').take() },
+          name: { endsWithSensitive: User.select('name').take() },
         }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" ILIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1)
+          WHERE "user"."name" LIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1)
         `,
         [1],
       );
@@ -476,10 +476,10 @@ describe('operators', () => {
 
     it('should handle raw query', () => {
       expectSql(
-        User.where({ name: { endsWithInsensitive: db.raw("'ko'") } }).toSql(),
+        User.where({ name: { endsWithSensitive: db.raw("'ko'") } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" ILIKE '%' || 'ko'
+          WHERE "user"."name" LIKE '%' || 'ko'
         `,
       );
     });

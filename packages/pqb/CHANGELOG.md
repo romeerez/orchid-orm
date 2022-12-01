@@ -1,5 +1,11 @@
 # pqb
 
+## 0.7.5
+
+### Patch Changes
+
+- Make text operators case insensitive by default
+
 ## 0.7.4
 
 ### Patch Changes

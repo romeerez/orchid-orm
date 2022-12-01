@@ -28,12 +28,12 @@ export const userRepo = createRepo(db.user, {
     search(q, query: string) {
       return q.or({
           firstName: {
-            containsInsensitive: query
+            contains: query
           },
         },
         {
           lastName: {
-            containsInsensitive: query
+            contains: query
           },
         })
     },
