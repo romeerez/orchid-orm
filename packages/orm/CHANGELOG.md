@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.3.5
+
+### Patch Changes
+
+- Check if through and source relations are defined
+
 ## 1.3.4
 
 ### Patch Changes

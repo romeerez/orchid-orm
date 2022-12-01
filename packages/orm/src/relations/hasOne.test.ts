@@ -1340,6 +1340,97 @@ describe('hasOne through', () => {
     expect(Object.keys(db.tag.relations)).toEqual(['postTag', 'post']);
   });
 
+  it('should throw if through relation is not defined', () => {
+    class Post extends Model {
+      table = 'post';
+      columns = this.setColumns((t) => ({
+        id: t.serial().primaryKey(),
+      }));
+
+      relations = {
+        tag: this.hasOne(() => Tag, {
+          through: 'postTag',
+          source: 'tag',
+        }),
+      };
+    }
+
+    class Tag extends Model {
+      table = 'tag';
+      columns = this.setColumns((t) => ({
+        id: t.serial().primaryKey(),
+      }));
+    }
+
+    expect(() => {
+      orchidORM(
+        {
+          ...pgConfig,
+          log: false,
+        },
+        {
+          post: Post,
+          tag: Tag,
+        },
+      );
+    }).toThrow(
+      'Cannot define a `tag` relation on `post`: cannot find `postTag` relation required by the `through` option',
+    );
+  });
+
+  it('should throw if source relation is not defined', () => {
+    class Post extends Model {
+      table = 'post';
+      columns = this.setColumns((t) => ({
+        id: t.serial().primaryKey(),
+      }));
+
+      relations = {
+        postTag: this.hasOne(() => PostTag, {
+          primaryKey: 'id',
+          foreignKey: 'postId',
+        }),
+
+        tag: this.hasOne(() => Tag, {
+          through: 'postTag',
+          source: 'tag',
+        }),
+      };
+    }
+
+    class Tag extends Model {
+      table = 'tag';
+      columns = this.setColumns((t) => ({
+        id: t.serial().primaryKey(),
+      }));
+    }
+
+    class PostTag extends Model {
+      table = 'postTag';
+      columns = this.setColumns((t) => ({
+        postId: t.integer().foreignKey(() => Post, 'id'),
+        tagId: t.integer().foreignKey(() => Tag, 'id'),
+        ...t.primaryKey(['postId', 'tagId']),
+      }));
+    }
+
+    expect(() => {
+      orchidORM(
+        {
+          ...pgConfig,
+          log: false,
+        },
+        {
+          post: Post,
+          tag: Tag,
+          postTag: PostTag,
+        },
+      );
+    }).toThrow(
+      'Cannot define a `tag` relation on `post`: cannot find `tag` relation in `postTag` required by the `source` option',
+    );
+  });
+
   it('should have method to query related data', async () => {
     const profileQuery = db.profile.take();
 

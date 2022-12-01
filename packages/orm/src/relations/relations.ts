@@ -200,6 +200,45 @@ export const applyRelations = (
       applyRelation(qb, data, delayedRelations);
     }
   }
+
+  if (delayedRelations.size) {
+    const { value } = delayedRelations.values().next() as {
+      value: Record<string, ApplyRelationData[]>;
+    };
+    for (const key in value) {
+      for (const item of value[key]) {
+        const { relation } = item;
+
+        if (item.dbModel.relations[item.relationName as never]) continue;
+
+        const as = item.dbModel.definedAs;
+        let message = `Cannot define a \`${item.relationName}\` relation on \`${as}\``;
+        const model = result[as];
+
+        const { through, source } = relation.options as {
+          through: string;
+          source: string;
+        };
+        const throughRel = model.relations[
+          through as never
+        ] as unknown as BaseRelation;
+
+        if (through && !throughRel) {
+          message += `: cannot find \`${through}\` relation required by the \`through\` option`;
+        } else if (
+          source &&
+          throughRel &&
+          !throughRel.model.relations[source as never]
+        ) {
+          message += `: cannot find \`${source}\` relation in \`${
+            (throughRel.model as DbModel<ModelClass>).definedAs
+          }\` required by the \`source\` option`;
+        }
+
+        throw new Error(message);
+      }
+    }
+  }
 };
 
 const delayRelation = (
