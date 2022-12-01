@@ -167,8 +167,8 @@ const db = createDb(options)
 
 export const User = db('user', (t) => ({
   id: t.serial().primaryKey(),
-  name: t.text(),
-  password: t.text(),
+  name: t.text(3, 100),
+  password: t.text(8, 200),
   age: t.integer().nullable(),
   ...t.timestamps(),
 }));
@@ -204,7 +204,7 @@ const Country = db(
   'country',
   (t) => ({
     id: t.serial().primaryKey(),
-    name: t.text(),
+    name: t.text(3, 100),
   }),
   {
     schema: 'geo',

@@ -278,7 +278,10 @@ type WithOptions = {
 // accepts columns shape and a raw expression:
 Table.with(
   'alias',
-  { id: columnTypes.integer(), name: columnTypes.text() },
+  {
+    id: columnTypes.integer(),
+    name: columnTypes.text(3, 100),
+  },
   Table.raw('SELECT id, name FROM "someTable"'),
 )
 
@@ -850,12 +853,12 @@ const db = createDb(options)
 
 const Catalogue = db('catalogue', () => ({
   id: t.serial().primaryKey(),
-  name: t.text(),
+  name: t.text(3, 100),
 }))
 
 const Book = db('book', () => ({
   id: t.serial().primaryKey(),
-  title: t.text(),
+  title: t.text(5, 100),
   catalogueId: t.integer(),
 }))
 
@@ -1220,7 +1223,7 @@ import { TextColumn } from './string';
 // object have type { nameAlias: string, foo: string } | null
 const object = Table.jsonAgg({
   nameAlias: 'name',
-  foo: Table.raw((t) => t.text(), '"bar" || "baz"')
+  foo: Table.raw((t) => t.text(3, 100), '"bar" || "baz"')
 }, aggregateOptions)
 ```
 
@@ -1886,13 +1889,13 @@ Several methods are provided that assist in building joins, and they all take th
 // Our main table is the User
 const User = db('user', (t) => ({
   id: t.serial().primaryKey(),
-  name: t.text(),
+  name: t.text(3, 100),
 }))
 
 // User has many messages, each message has a "userId" column
 const Message = db('message', (t) => ({
   userId: t.integer(),
-  text: t.text(),
+  text: t.text(1, 1000),
 }))
 
 // Join message where authorId = id:
@@ -2332,7 +2335,7 @@ Selects a value from JSON data using a JSON path.
 import { columnTypes } from 'pqb'
 
 Table.jsonPathQuery(
-  columnTypes.text(), // type of the value
+  columnTypes.text(3, 100), // type of the value
   'data', // name of the JSON column
   '$.name', // JSON path
   'name', // select value as name
@@ -2349,7 +2352,7 @@ Table.jsonPathQuery(
 Nested JSON operations can be used in place of JSON column name:
 ```ts
 Table.jsonPathQuery(
-  columnTypes.text(),
+  columnTypes.text(3, 100),
   // Available: .jsonSet, .jsonInsert, .jsonRemove
   Table.jsonSet('data', ['key'], 'value'),
   '$.name',

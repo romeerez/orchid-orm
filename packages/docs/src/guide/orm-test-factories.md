@@ -225,9 +225,9 @@ class SomeModel extends Model {
   table = 'table'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    text: t.text().unique(),
-    email: t.text().email().unique(),
-    url: t.text().url().unique(),
+    text: t.text(5, 1000).unique(),
+    email: t.text(3, 100).email().unique(),
+    url: t.text(10, 200).url().unique(),
     number: t.integer().unique(),
     greaterThan10: t.integer().gt(10).unique(),
     greaterThanOrEqualTo10: t.integer().gte(10).unique(),

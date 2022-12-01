@@ -27,7 +27,7 @@ export class SomeModel extends Model {
   table = 'table';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    name: t.text(),
+    name: t.text(3, 100),
   }))
 }
 
@@ -58,7 +58,7 @@ Set default value or a function, in the case of a function it's called on each v
 class SomeModel extends Model {
   table = 'table'
   columns = this.setColumns((t) => ({
-    column: t.text().validationDefault('default value'),
+    column: t.text(1, 100).validationDefault('default value'),
     dateColumn: t.date().validationDefault(() => new Date()),
   }))
 }
@@ -73,7 +73,7 @@ class SomeModel extends Model {
   table = 'table'
   columns = this.setColumns((t) => ({
     // reverse a string during validation
-    column: t.text().transform((val) => val.split('').reverse().join(''))
+    column: t.text(1, 100).transform((val) => val.split('').reverse().join(''))
   }))
 }
 ```
@@ -87,7 +87,7 @@ class SomeModel extends Model {
   table = 'table'
   columns = this.setColumns((t) => ({
     // transform text to integer
-    column: t.text().to((val) => parseInt(val), t.integer())
+    column: t.text(1, 100).to((val) => parseInt(val), t.integer())
   }))
 }
 ```
@@ -101,7 +101,7 @@ class SomeModel extends Model {
   table = 'table'
   columns = this.setColumns((t) => ({
     // will produce an error when the value is not 'something'
-    column: t.text().refine((val) => val === 'something')
+    column: t.text(1, 100).refine((val) => val === 'something')
   }))
 }
 ```
@@ -114,7 +114,7 @@ Add a custom check with access to the validation context, see the `.superRefine`
 class SomeModel extends Model {
   table = 'table'
   columns = this.setColumns((t) => ({
-    column: t.text().superRefine((val, ctx) => {
+    column: t.text(1, 100).superRefine((val, ctx) => {
       if (val.length > 3) {
         ctx.addIssue({
           code: z.ZodIssueCode.too_big,

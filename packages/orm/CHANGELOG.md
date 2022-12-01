@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.3.6
+
+### Patch Changes
+
+- Add required min and max parameters to text column
+- Updated dependencies
+  - pqb@0.7.3
+
 ## 1.3.5
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.7.3
+
+### Patch Changes
+
+- Add required min and max parameters to text column
+
 ## 0.7.2
 
 ### Patch Changes

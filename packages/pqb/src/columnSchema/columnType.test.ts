@@ -142,6 +142,7 @@ describe('column base', () => {
       adapter,
       columnTypes: {
         ...columnTypes,
+        text: (min = 0, max = Infinity) => columnTypes.text(min, max),
         numberTimestamp: () => numberTimestamp,
         dateTimestamp: () => dateTimestamp,
       },
@@ -291,7 +292,7 @@ describe('column base', () => {
   describe('timestamp().asDate()', () => {
     it('should parse and encode timestamp as a number', async () => {
       columnTypes
-        .text()
+        .text(0, 100)
         .encode((input: number) => input)
         .parse((text) => parseInt(text))
         .as(columnTypes.integer());

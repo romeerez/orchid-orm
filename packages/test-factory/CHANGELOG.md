@@ -1,5 +1,15 @@
 # orchid-orm-test-factory
 
+## 0.1.5
+
+### Patch Changes
+
+- Add required min and max parameters to text column
+- Updated dependencies
+  - orchid-orm@1.3.6
+  - pqb@0.7.3
+  - orchid-orm-schema-to-zod@0.1.3
+
 ## 0.1.4
 
 ### Patch Changes

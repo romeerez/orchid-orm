@@ -306,7 +306,7 @@ describe('json methods', () => {
         const q = User.all();
 
         const query = q.jsonPathQuery(
-          columnTypes.text(),
+          columnTypes.text(0, 100),
           'data',
           '$.name',
           'name',
@@ -332,7 +332,7 @@ describe('json methods', () => {
         const q = User.all();
 
         const query = q.jsonPathQuery(
-          columnTypes.text(),
+          columnTypes.text(0, 100),
           'data',
           '$.name',
           'name',
@@ -357,7 +357,7 @@ describe('json methods', () => {
         const q = User.all();
 
         const query = q.jsonPathQuery(
-          columnTypes.array(columnTypes.text()),
+          columnTypes.array(columnTypes.text(0, 100)),
           q.jsonSet('data', ['tags'], ['tag']),
           '$.tags',
           'tags',

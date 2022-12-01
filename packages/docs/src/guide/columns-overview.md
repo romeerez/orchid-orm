@@ -11,9 +11,9 @@ const db = createDb(...options)
 
 const someTable = db('someTable', (t) => ({
   id: t.serial().primaryKey(),
-  name: t.text(),
+  name: t.text(3, 100),
   active: t.boolean(),
-  description: t.text().optional(),
+  description: t.text(10, 1000).optional(),
   ...t.timestamps(),
 }))
 ```
@@ -28,9 +28,9 @@ export class SomeModel extends Model {
   table = 'someTable';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    name: t.text(),
+    name: t.text(3, 100),
     active: t.boolean(),
-    description: t.text().optional(),
+    description: t.text(10, 1000).optional(),
     ...t.timestamps(),
   }))
 }
@@ -82,7 +82,7 @@ Different types of columns support different operations in `where` conditions:
 export class SomeModel extends Model {
   table = 'someTable';
   columns = this.setColumns((t) => ({
-    name: t.text(),
+    name: t.text(3, 100),
     age: t.integer(),
   }))
 }
@@ -104,7 +104,35 @@ db.someModel.where({
 
 It is possible to override the parsing of columns returned from the database.
 
-Define `.encode` on a column to convert the value when creating or updating records,
+`text` method requires `min` and `max` parameters, you can override it to use defaults:
+
+```ts
+export const Model = createModel({
+  columnTypes: {
+    ...columnTypes,
+    text: (min = 3, max = 100) => columnTypes.text(min, max),
+  },
+})
+```
+
+With such config, all text columns will be validated to have at least 3 and at most 100 characters:
+
+```ts
+export class SomeModel extends Model {
+  table = 'someTable';
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    // name will be validated to have at least 3 and at most 100 chars
+    name: t.text(),
+    // override min
+    password: t.text().min(8),
+    // override max
+    bio: t.text().max(1000),
+  }))
+}
+```
+
+You can define an `.encode` on a column to convert the value when creating or updating records,
 define `.parse` to parse values returned from the database,
 `.as` will change the TS type of one column to another for the `orchid-orm-schema-to-zod` module to use a different schema.
 

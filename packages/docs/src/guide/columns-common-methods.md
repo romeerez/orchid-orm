@@ -38,7 +38,7 @@ The type of `input` argument will be used as the type of the column when creatin
 
 ```ts
 const someTable = db('someTable', (t) => ({
-  column: t.text().encode((input: boolean | number | string) => String(input))
+  column: t.text(3, 100).encode((input: boolean | number | string) => String(input))
 }))
 
 // numbers and booleans will be converted to a string:
@@ -55,7 +55,7 @@ The type of input is the type of column before `.parse`, the resulting type will
 
 ```ts
 const someTable = db('someTable', (t) => ({
-  column: t.text().parse((input) => parseInt(input))
+  column: t.text(3, 100).parse((input) => parseInt(input))
 }))
 
 // column will be parsed to a number
@@ -72,7 +72,7 @@ and `.parse` which returns the correct type.
 
 ```ts
 // column as the same type as t.integer()
-const column = t.text()
+const column = t.text(1, 100)
   .encode((input: number) => input)
   .parse((text) => parseInt(text))
   .as(t.integer())
@@ -100,7 +100,7 @@ When mutating a query in this callback, the changes will be applied to all futur
 
 ```ts
 const someTable = db('someTable', (t) => ({
-  name: t.text().modifyQuery((table) => {
+  name: t.text(3, 100).modifyQuery((table) => {
     // table argument === someTable from outside
   })
 }))

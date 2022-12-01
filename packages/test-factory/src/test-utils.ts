@@ -16,6 +16,7 @@ export const assertType = <T, Expected>(
 export const Model = createModel({
   columnTypes: {
     ...columnTypes,
+    text: (min = 0, max = Infinity) => columnTypes.text(min, max),
     timestamp: () => columnTypes.timestamp().asNumber(),
   },
 });

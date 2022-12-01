@@ -98,6 +98,8 @@ export const getColumnTypes = <
   return fn(types);
 };
 
+const text = (min: number, max: number) => new TextColumn().min(min).max(max);
+
 export const columnTypes = {
   smallint: () => new SmallIntColumn(),
   integer: () => new IntegerColumn(),
@@ -126,8 +128,8 @@ export const columnTypes = {
     new VarCharColumn(limit),
   char: <Limit extends number | undefined = undefined>(limit?: Limit) =>
     new CharColumn(limit),
-  text: () => new TextColumn(),
-  string: () => new TextColumn(),
+  text,
+  string: text,
   bytea: () => new ByteaColumn(),
   date: () => new DateColumn(),
   timestamp: <Precision extends number | undefined = undefined>(

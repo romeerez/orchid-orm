@@ -1,5 +1,4 @@
 import {
-  ColumnTypes,
   ColumnType,
   columnTypes,
   resetTableData,
@@ -23,6 +22,7 @@ import {
   ColumnIndex,
   DropMode,
   Migration,
+  MigrationColumnTypes,
 } from './migration';
 import {
   addColumnComment,
@@ -140,7 +140,7 @@ export type ChangeItem =
   | [action: 'change', from: ChangeArg, to: ChangeArg, options?: ChangeOptions]
   | ['rename', string];
 
-export type TableChanger = ColumnTypes & TableChangeMethods;
+export type TableChanger = MigrationColumnTypes & TableChangeMethods;
 
 export type TableChangeData = Record<string, ChangeItem | EmptyObject>;
 

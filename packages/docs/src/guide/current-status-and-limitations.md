@@ -18,8 +18,6 @@ Support for `JOIN LATERAL` is in the plans, it will enable an interesting optimi
 
 Cannot select record with relations in the `create`, `update`, and `delete` queries.
 
-[Identity column](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-identity-column/) will be added soon.
-
 No helpful methods available for `PostGis`, full text search, trigram search. Need to use raw SQL pieces for this.
 
 Cannot customize error messages of the columns.

@@ -100,7 +100,7 @@ describe('db', () => {
 
       expect(() =>
         db('table', (t) => ({
-          name: t.text(),
+          name: t.text(0, 100),
         })),
       ).toThrow(`Table table has no primary key`);
     });
@@ -110,7 +110,7 @@ describe('db', () => {
 
       expect(() =>
         db('table', (t) => ({
-          name: t.text(),
+          name: t.text(0, 100),
         })),
       ).toThrow(`Table table has no primary key`);
     });
@@ -131,7 +131,7 @@ describe('db', () => {
       });
 
       db('table', (t) => ({
-        name: t.text(),
+        name: t.text(0, 100),
       }));
 
       expect(logger.warn).toBeCalledWith('Table table has no primary key');
@@ -147,7 +147,7 @@ describe('db', () => {
       });
 
       db('table', (t) => ({
-        name: t.text(),
+        name: t.text(0, 100),
       }));
 
       expect(logger.warn).not.toBeCalled();

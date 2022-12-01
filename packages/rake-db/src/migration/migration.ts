@@ -16,6 +16,7 @@ import {
   TransactionAdapter,
   TypeParsers,
   raw,
+  TextColumn,
 } from 'pqb';
 import { createJoinTable, createTable } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
@@ -29,8 +30,15 @@ export type TableOptions = {
   noPrimaryKey?: boolean;
 };
 
+type TextColumnCreator = () => TextColumn;
+
+export type MigrationColumnTypes = Omit<ColumnTypes, 'text' | 'string'> & {
+  text: TextColumnCreator;
+  string: TextColumnCreator;
+};
+
 export type ColumnsShapeCallback = (
-  t: ColumnTypes & { raw: typeof raw },
+  t: MigrationColumnTypes & { raw: typeof raw },
 ) => ColumnsShape;
 
 export type ChangeTableOptions = { comment?: string | [string, string] | null };
@@ -177,7 +185,7 @@ export class Migration extends TransactionAdapter {
   addColumn(
     tableName: string,
     columnName: string,
-    fn: (t: ColumnTypes) => ColumnType,
+    fn: (t: MigrationColumnTypes) => ColumnType,
   ) {
     return addColumn(this, this.up, tableName, columnName, fn);
   }
@@ -185,7 +193,7 @@ export class Migration extends TransactionAdapter {
   dropColumn(
     tableName: string,
     columnName: string,
-    fn: (t: ColumnTypes) => ColumnType,
+    fn: (t: MigrationColumnTypes) => ColumnType,
   ) {
     return addColumn(this, !this.up, tableName, columnName, fn);
   }
@@ -348,7 +356,7 @@ const addColumn = (
   up: boolean,
   tableName: string,
   columnName: string,
-  fn: (t: ColumnTypes) => ColumnType,
+  fn: (t: MigrationColumnTypes) => ColumnType,
 ) => {
   return changeTable(migration, up, tableName, {}, (t) => ({
     [columnName]: t.add(fn(t)),

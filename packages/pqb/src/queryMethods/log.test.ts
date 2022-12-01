@@ -49,9 +49,15 @@ describe('query log', () => {
     const logger = {
       log: jest.fn(),
       error: jest.fn(),
+      warn: noop,
     };
 
-    const db = createDb({ adapter, columnTypes, log: true, logger });
+    const db = createDb({
+      adapter,
+      columnTypes,
+      log: true,
+      logger,
+    });
 
     await db('user').where({ name: 'name' });
 
@@ -72,6 +78,7 @@ describe('query log', () => {
     const logger = {
       log: jest.fn(),
       error: jest.fn(),
+      warn: noop,
     };
 
     const db = createDb({
@@ -96,6 +103,7 @@ describe('query log', () => {
     const logger = {
       log: jest.fn(),
       error: jest.fn(),
+      warn: noop,
     };
 
     const db = createDb({ adapter, columnTypes, log: true, logger });
@@ -121,6 +129,7 @@ describe('query log', () => {
     const logger = {
       log: jest.fn(),
       error: jest.fn(),
+      warn: noop,
     };
 
     const db = createDb({
@@ -147,6 +156,7 @@ describe('query log', () => {
     const logger = {
       log: jest.fn(),
       error: jest.fn(),
+      warn: noop,
     };
 
     const db = createDb({
@@ -175,6 +185,7 @@ describe('query log', () => {
     const logger = {
       log: jest.fn(),
       error: jest.fn(),
+      warn: noop,
     };
 
     const db = createDb({

@@ -63,7 +63,7 @@ export class AuthorModel extends Model {
   table = 'author'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    name: t.text(),
+    name: t.text(3, 100),
   }))
 }
 
@@ -72,7 +72,7 @@ export class BookModel extends Model {
   table = 'book'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    title: t.text(),
+    title: t.text(5, 100),
     // book has a column pointing to the author table
     authorId: t.integer(),
   }))
@@ -106,7 +106,7 @@ export class SupplierModel extends Model {
   table = 'supplier'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    brand: t.text(),
+    brand: t.text(2, 30),
     // here are no reference columns for an Account
   }))
 
@@ -127,7 +127,7 @@ export class AccountModel extends Model {
   table = 'account'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    name: t.text(),
+    name: t.text(3, 100),
     // Account has a column pointing to Supplier:
     supplierId: t.integer(),
   }))
@@ -151,7 +151,7 @@ export class SupplierModel extends Model {
   table = 'supplier'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    brand: t.text(),
+    brand: t.text(2, 30),
   }))
 
   relations = {
@@ -176,7 +176,7 @@ export class AccountModel extends Model {
   table = 'account'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    name: t.text(),
+    name: t.text(3, 100),
     // Account has a column pointing to Supplier:
     supplierId: t.integer(),
   }))
@@ -195,7 +195,7 @@ export class AccountHistoryModel extends Model {
   table = 'accountHistory'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    data: t.text(),
+    data: t.text(0, 1000),
     // column pointing to the Account
     accountId: t.integer(),
   }))
@@ -226,7 +226,7 @@ export class AuthorModel extends Model {
   table = 'author'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    name: t.text(),
+    name: t.text(3, 100),
   }))
   
   relations = {
@@ -244,7 +244,7 @@ export class BookModel extends Model {
   table = 'book'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    title: t.text(),
+    title: t.text(3, 100),
     // book has a column pointing to the author table
     authorId: t.integer(),
   }))
@@ -268,7 +268,7 @@ export class PhysicianModel extends Model {
   table = 'physician'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    name: t.text(),
+    name: t.text(3, 100),
   }))
 
   relations = {
@@ -318,7 +318,7 @@ export class PatientModel extends Model {
   table = 'patient'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    name: t.text(),
+    name: t.text(3, 100),
   }))
   
   relations = {
@@ -352,7 +352,7 @@ export class PostModel extends Model {
   table = 'post'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    title: t.text(),
+    title: t.text(5, 100),
   }))
 
   relations = {
@@ -376,7 +376,7 @@ export class TagModel extends Model {
   table = 'tag'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    name: t.text(),
+    name: t.text(3, 100),
   }))
 
   relations = {

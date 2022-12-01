@@ -118,7 +118,8 @@ export class TableModel extends Model {
   table = 'table'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    text: t.text(),
+    // specify min and max length
+    text: t.text(1, 10000),
     ...t.timestamps(),
   }))
 }

@@ -226,6 +226,11 @@ By default, timestamps are returned as strings, the same as when loading timesta
 For this API let's agree to return timestamps as epoch numbers (it's efficient and simple to use),
 but if you prefer to deal with `Date` objects write `columnTypes.timestamp().asDate()` instead.
 
+The `text` column type requires `min` and `max` values to be passed,
+they are required to ensure that empty strings or strings of enormous length won't be allowed by your API backend.
+
+Setting `min` and `max` for each text column may be tiresome, let's override a `text` method to have default `min` and `max`.
+
 ```ts
 // src/lib/model.ts
 import { createModel } from 'orchid-orm';
@@ -234,6 +239,9 @@ import { columnTypes } from 'pqb';
 export const Model = createModel({
   columnTypes: {
     ...columnTypes,
+    // set default min and max for all text columns
+    text: (min = 3, max = 100) => columnTypes.text(min, max),
+    // parse timestamps to numbers
     timestamp: () => columnTypes.timestamp().asNumber(),
   },
 });
@@ -359,9 +367,11 @@ export class UserModel extends Model {
   // specify a set of columns:
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    username: t.text().unique().min(3).max(30),
-    email: t.text().unique().email().max(100),
-    password: t.text().min(8).max(100),
+    // min length is still 3, as defined in Model configuration, overriding max value here
+    username: t.text().unique().max(30),
+    email: t.text().unique().email(),
+    // overriding min value, max value defaults to 100
+    password: t.text().min(8),
     // add `createdAt` and `updatedAt` timestamps
     ...t.timestamps(),
   }));
@@ -375,7 +385,7 @@ Consider the `email` column:
 
 ```ts
 t.text() // this is a column type
-  .unique() // has effect only in migration
+  .unique() // mark the column as `unique`, this is used by migration and by test factory
   .email() // validates email
 ```
 
@@ -438,9 +448,9 @@ import { change } from 'rake-db';
 change(async (db) => {
   await db.createTable('user', (t) => ({
     id: t.serial().primaryKey(),
-    username: t.text().unique().min(3).max(30),
+    username: t.text().unique().max(30),
     email: t.text().unique().email().max(100),
-    password: t.text().min(8).max(100),
+    password: t.text().min(8),
     ...t.timestamps(),
   }));
 });

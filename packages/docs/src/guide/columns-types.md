@@ -71,7 +71,11 @@ db.someModel.where({
 
 ## Text types
 
-Use `t.text()` type as a go-to for strings, other types are for special cases.
+Use `t.text(min, max)` type as a go-to for strings, other types are for special cases.
+
+`min` and `max` number parameters defines a validation of string length, they are required to ensure that the app won't accept empty or enormous values from user.
+
+These parameters are not required on the `text` method in migrations, because they don't affect on a database column type.
 
 ```ts
 // character varying(n), varchar(n) variable-length with limit
@@ -81,10 +85,10 @@ t.varchar(limit?: number) // -> string
 t.chat(limit?: number) // -> string
 
 // text variable unlimited length
-t.text() // -> string
+t.text(min: number, max: number) // -> string
 
 // Alias for t.text()
-t.string()
+t.string(min: number, max: number)
 ```
 
 Text type columns support the following `where` operators:

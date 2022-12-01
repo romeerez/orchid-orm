@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.1.6
+
+### Patch Changes
+
+- Add required min and max parameters to text column
+- Updated dependencies
+  - pqb@0.7.3
+
 ## 2.1.5
 
 ### Patch Changes

@@ -65,8 +65,8 @@ export class UserModel extends Model {
   table = 'user';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    name: t.text(),
-    password: t.text(),
+    name: t.text(3, 30), // 3 characters minimum, 30 maximum
+    password: t.text(8, 200),
     // adds createdAt and updatedAt with defaults:
     ...t.timestamps(),
   }))

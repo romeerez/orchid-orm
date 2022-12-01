@@ -54,9 +54,7 @@ import { columnTypes } from 'pqb'
 export const Model = createModel({ columnTypes })
 ```
 
-This step is needed for the case of customization of column types.
-
-See [column types document](/guide/columns-overview.html#override-column-types) for details.
+See [column types document](/guide/columns-overview.html#override-column-types) for details of customizing columns.
 
 Models are defined as classes with two required properties:
 
@@ -72,8 +70,8 @@ export class UserModel extends Model {
   table = 'user';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    name: t.text(),
-    password: t.text(),
+    name: t.text(3, 100),
+    password: t.text(8, 200),
     ...t.timestamps(),
   }))
 }
