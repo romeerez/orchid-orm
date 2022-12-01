@@ -144,7 +144,7 @@ describe('factory', () => {
 
       expect(item.createdAt).toBe(item.updatedAt);
 
-      expect(Math.floor(item.createdAt / 1000)).toEqual(Math.floor(now / 1000));
+      expect(Math.round(item.createdAt / 1000)).toEqual(Math.round(now / 1000));
 
       assertType<typeof item, User>();
 
@@ -303,11 +303,15 @@ describe('factory', () => {
         log: false,
       },
       {
-        text: makeModel((t) => ({ name: t.text().unique() })),
-        email: makeModel((t) => ({ name: t.text().email().unique() })),
-        url: makeModel((t) => ({ name: t.text().url().unique() })),
-        max: makeModel((t) => ({ name: t.text().min(min).max(max).unique() })),
-        length: makeModel((t) => ({ name: t.text().length(max).unique() })),
+        text: makeModel((t) => ({ name: t.text(3, 100).unique() })),
+        email: makeModel((t) => ({ name: t.text(3, 100).email().unique() })),
+        url: makeModel((t) => ({ name: t.text(3, 100).url().unique() })),
+        max: makeModel((t) => ({
+          name: t.text(3, 100).min(min).max(max).unique(),
+        })),
+        length: makeModel((t) => ({
+          name: t.text(3, 100).length(max).unique(),
+        })),
         number: makeModel((t) => ({ age: t.integer().unique() })),
         gt: makeModel((t) => ({ age: t.integer().gt(gt).unique() })),
         gte: makeModel((t) => ({ age: t.integer().gte(gte).unique() })),
