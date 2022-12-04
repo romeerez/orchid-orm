@@ -31,8 +31,9 @@ Place a script for `db` somewhere, for example, in `src/scripts/db.ts`:
 
 ```ts
 // src/scripts/db.ts
-import 'dotenv/config'
+import 'dotenv/config';
 import { rakeDb } from 'rake-db';
+import path from 'path';
 
 rakeDb({
   connectionString: process.env.DATABASE_URL as string,

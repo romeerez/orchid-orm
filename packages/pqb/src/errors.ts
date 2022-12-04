@@ -1,4 +1,3 @@
-import { DatabaseError } from 'pg';
 import { ColumnsShape } from './columnSchema';
 
 export class PormError extends Error {}
@@ -34,7 +33,7 @@ export type QueryErrorName =
 
 export class QueryError<
   T extends { shape: ColumnsShape } = { shape: ColumnsShape },
-> extends DatabaseError {
+> extends Error {
   message!: string;
   name!: QueryErrorName;
   stack: string | undefined;

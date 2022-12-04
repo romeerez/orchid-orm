@@ -1,5 +1,11 @@
 # pqb
 
+## 0.7.7
+
+### Patch Changes
+
+- Change QueryError implemetation details
+
 ## 0.7.6
 
 ### Patch Changes
