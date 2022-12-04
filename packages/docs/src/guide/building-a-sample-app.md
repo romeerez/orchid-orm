@@ -210,7 +210,7 @@ import { config } from './config';
 
 export const db = orchidORM(
   {
-    connectionString: config.currentDatabaseUrl,
+    databaseURL: config.currentDatabaseUrl,
     log: true,
   },
   {
@@ -257,7 +257,7 @@ import { config } from '../config';
 
 const migrationsPath = path.resolve(__dirname, '..', 'migrations');
 
-const options = [{ connectionString: config.DATABASE_URL }];
+const options = [{ databaseURL: config.DATABASE_URL }];
 
 // when running in production we don't need to test the database
 if (config.NODE_ENV !== 'production') {
@@ -265,7 +265,7 @@ if (config.NODE_ENV !== 'production') {
   if (!url) {
     throw new Error('DATABASE_URL_TEST env variable is missing');
   }
-  options.push({ connectionString: url });
+  options.push({ databaseURL: url });
 }
 
 // pass options and migrationPath to `rakeDb`
@@ -399,7 +399,7 @@ import { UserModel } from './app/user/user.model';
 
 export const db = orchidORM(
   {
-    connectionString: config.currentDatabaseUrl,
+    databaseURL: config.currentDatabaseUrl,
     log: true,
   },
   {

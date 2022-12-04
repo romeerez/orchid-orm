@@ -31,15 +31,19 @@ import { rakeDb } from 'rake-db'
 config({ path: path.resolve(process.cwd(), '.env.local') })
 config()
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
+const databaseURL = process.env.DATABASE_URL;
+if (!databaseURL) {
   throw new Error('DATABASE_URL is missing in .env');
 }
 
 const migrationsPath = path.resolve(process.cwd(), 'migrations')
 
 rakeDb(
-  { connectionString },
+  {
+    databaseURL,
+    // ssl option can be set here or as a URL parameter on databaseURL
+    ssl: true
+  },
   { migrationsPath },
 );
 ```

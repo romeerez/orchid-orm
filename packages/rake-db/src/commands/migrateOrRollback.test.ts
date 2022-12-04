@@ -10,7 +10,7 @@ jest.mock('../common', () => ({
   createSchemaMigrations: jest.fn(),
 }));
 
-const options = { connectionString: 'postgres://user@localhost/dbname' };
+const options = { databaseURL: 'postgres://user@localhost/dbname' };
 
 const files = [
   { path: 'file1', version: '1' },
@@ -39,6 +39,7 @@ const config = {
   logger: {
     log: jest.fn(),
     error: noop,
+    warn: noop,
   },
 };
 

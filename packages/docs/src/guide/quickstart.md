@@ -27,6 +27,12 @@ Add `.env` file with database credentials:
 DATABASE_URL=postgres://user:password@localhost:5432/db-name
 ```
 
+For SSL connection to database, you can specify a `ssl` parameter right on this url:
+
+```
+DATABASE_URL=postgres://user:password@localhost:5432/db-name?ssl=true
+```
+
 Place a script for `db` somewhere, for example, in `src/scripts/db.ts`:
 
 ```ts
@@ -36,7 +42,9 @@ import { rakeDb } from 'rake-db';
 import path from 'path';
 
 rakeDb({
-  connectionString: process.env.DATABASE_URL as string,
+  databaseURL: process.env.DATABASE_URL as string,
+  // ssl alternatively can be specified as an option here:
+  ssl: true,
 }, {
   migrationsPath: path.resolve(__dirname, '..', 'migrations'),
 });
@@ -136,7 +144,7 @@ import { TableModel } from './table.model'
 
 export const db = orchidORM(
   {
-    connectionString: process.env.DATABASE_URL as string,
+    databaseURL: process.env.DATABASE_URL as string,
     log: true,
   },
   {

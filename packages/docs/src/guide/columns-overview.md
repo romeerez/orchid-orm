@@ -160,7 +160,7 @@ Similarly, for query builder:
 import { createDb, columnTypes } from 'pqb'
 
 const db = createDb({
-  connectionString: process.env.DATABASE_URL,
+  databaseURL: process.env.DATABASE_URL,
   columnTypes: {
     ...columnTypes,
     timestamp() {

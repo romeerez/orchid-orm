@@ -1,5 +1,11 @@
 # pqb
 
+## 0.7.8
+
+### Patch Changes
+
+- Change connectionString to databaseURL option, add ssl option
+
 ## 0.7.7
 
 ### Patch Changes

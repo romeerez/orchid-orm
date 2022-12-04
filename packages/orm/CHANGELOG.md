@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.3.11
+
+### Patch Changes
+
+- Change connectionString to databaseURL option, add ssl option
+- Updated dependencies
+  - pqb@0.7.8
+
 ## 1.3.10
 
 ### Patch Changes

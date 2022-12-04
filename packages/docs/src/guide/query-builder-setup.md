@@ -22,8 +22,15 @@ For all connection options see: [client options](https://node-postgres.com/api/c
 import { createDb, columnTypes } from 'pqb'
 
 const db = createDb({
-  // in the format: postgres://user:password@localhost:5432/dbname
-  connectionString: process.env.DATABASE_URL,
+  // databaseURL has the following format:
+  // postgres://user:password@localhost:5432/dbname
+  // 
+  // ssl option can be specified as a parameter:
+  // postgres://user:password@localhost:5432/dbname
+  databaseURL: process.env.DATABASE_URL,
+  
+  // ssl can also be specified as an option:
+  ssl: true,
   
   // option for logging, false by default
   log: true,
@@ -47,7 +54,7 @@ import { createDb, Adapter, columnTypes } from 'pqb'
 
 const db = createDb(
   {
-    adapter: new Adapter({ connectionString: process.env.DATABASE_URL }),
+    adapter: new Adapter({ databaseURL: process.env.DATABASE_URL }),
     log: true,
     columnTypes,
   }
@@ -80,7 +87,7 @@ The log will use `console.log` and `console.error` by default, it can be overrid
 
 ```ts
 const db = createDb({
-  connectionString: process.env.DATABASE_URL,
+  databaseURL: process.env.DATABASE_URL,
   columnTypes,
   log: true,
   logger: {

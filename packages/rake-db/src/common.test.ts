@@ -53,9 +53,9 @@ describe('common', () => {
   });
 
   describe('getDatabaseAndUserFromOptions', () => {
-    it('should return data from connectionString', () => {
+    it('should return data from databaseURL', () => {
       const result = getDatabaseAndUserFromOptions({
-        connectionString: 'postgres://user:password@localhost:5432/dbname',
+        databaseURL: 'postgres://user:password@localhost:5432/dbname',
       });
 
       expect(result).toEqual({
@@ -64,7 +64,7 @@ describe('common', () => {
       });
     });
 
-    it('should return data from options when no connectionString', () => {
+    it('should return data from options when no databaseURL', () => {
       const result = getDatabaseAndUserFromOptions({
         database: 'dbname',
         user: 'user',
@@ -78,10 +78,10 @@ describe('common', () => {
   });
 
   describe('setAdapterOptions', () => {
-    it('should set options in connectionString to postgres', () => {
+    it('should set options in databaseURL to postgres', () => {
       const result = setAdapterOptions(
         {
-          connectionString: 'postgres://user:password@localhost:5432/dbname',
+          databaseURL: 'postgres://user:password@localhost:5432/dbname',
         },
         {
           database: 'updated-db',
@@ -91,7 +91,7 @@ describe('common', () => {
       );
 
       expect(result).toEqual({
-        connectionString:
+        databaseURL:
           'postgres://updated-user:updated-password@localhost:5432/updated-db',
       });
     });
@@ -128,13 +128,13 @@ describe('common', () => {
       });
     });
 
-    it('should set admin credentials to connectionString', async () => {
+    it('should set admin credentials to databaseURL', async () => {
       const result = await setAdminCredentialsToOptions({
-        connectionString: 'postgres://user:password@localhost:5432/dbname',
+        databaseURL: 'postgres://user:password@localhost:5432/dbname',
       });
 
       expect(result).toEqual({
-        connectionString:
+        databaseURL:
           'postgres://admin-user:admin-password@localhost:5432/dbname',
       });
     });
@@ -159,7 +159,7 @@ describe('common', () => {
     const mockedLog = jest.fn();
     const mockedQuery = jest.fn();
 
-    const db = new Adapter({ connectionString: 'test' });
+    const db = new Adapter({ databaseURL: 'test' });
     db.query = mockedQuery;
 
     beforeAll(() => {

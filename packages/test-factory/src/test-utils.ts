@@ -73,7 +73,7 @@ export class ProfileModel extends Model {
 }
 
 export const adapter = new Adapter({
-  connectionString: process.env.DATABASE_URL,
+  databaseURL: process.env.DATABASE_URL,
 });
 
 export const db = orchidORM(

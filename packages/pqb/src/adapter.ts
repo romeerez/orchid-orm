@@ -41,8 +41,9 @@ for (const key in types.builtins) {
 
 const returnArg = (arg: unknown) => arg;
 
-export type AdapterOptions = Omit<PoolConfig, 'types'> & {
+export type AdapterOptions = Omit<PoolConfig, 'types' | 'connectionString'> & {
   types?: TypeParsers;
+  databaseURL?: string;
 };
 
 export class Adapter {
@@ -51,6 +52,13 @@ export class Adapter {
 
   constructor({ types = defaultTypeParsers, ...config }: AdapterOptions) {
     this.types = types;
+    if (config.databaseURL) {
+      (config as PoolConfig).connectionString = config.databaseURL;
+      const url = new URL(config.databaseURL);
+      if (url.searchParams.get('ssl') === 'true') {
+        config.ssl = true;
+      }
+    }
     this.pool = new Pool(config);
   }
 

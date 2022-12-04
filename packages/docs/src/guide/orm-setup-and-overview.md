@@ -32,8 +32,16 @@ import { UserModel } from './models/user'
 import { MessageModel } from './models/message'
 
 export const db = orchidORM({
-  // in the format: postgres://user:password@localhost:5432/dbname
-  connectionString: process.env.DATABASE_URL,
+  // databaseURL has the following format:
+  // postgres://user:password@localhost:5432/dbname
+  // 
+  // ssl option can be specified as a parameter:
+  // postgres://user:password@localhost:5432/dbname
+  databaseURL: process.env.DATABASE_URL,
+
+  // ssl can also be specified as an option:
+  ssl: true,
+  
   log: true, // option for logging, false by default
   autoPreparedStatements: true, // see in query builder setup docs, false by default
   noPrimaryKey: 'ignore', // see in query builder setup docs, 'error' by default
@@ -83,7 +91,7 @@ After defining the model place it in the main `db` file as in [setup](#setup) st
 import { UserModel } from './models/user'
 
 export const db = orchidORM({
-  connectionString: process.env.DATABASE_URL,
+  databaseURL: process.env.DATABASE_URL,
 }, {
   user: UserModel,
 })

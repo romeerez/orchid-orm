@@ -1,5 +1,15 @@
 # orchid-orm-test-factory
 
+## 0.1.11
+
+### Patch Changes
+
+- Change connectionString to databaseURL option, add ssl option
+- Updated dependencies
+  - orchid-orm@1.3.11
+  - pqb@0.7.8
+  - orchid-orm-schema-to-zod@0.1.8
+
 ## 0.1.10
 
 ### Patch Changes

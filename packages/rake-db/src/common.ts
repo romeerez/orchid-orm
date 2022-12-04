@@ -32,8 +32,8 @@ export const getMigrationConfigWithDefaults = (
 export const getDatabaseAndUserFromOptions = (
   options: AdapterOptions,
 ): { database: string; user: string } => {
-  if (options.connectionString) {
-    const url = new URL(options.connectionString);
+  if (options.databaseURL) {
+    const url = new URL(options.databaseURL);
     return {
       database: url.pathname.slice(1),
       user: url.username,
@@ -50,8 +50,8 @@ export const setAdapterOptions = (
   options: AdapterOptions,
   set: { database?: string; user?: string; password?: string },
 ): AdapterOptions => {
-  if (options.connectionString) {
-    const url = new URL(options.connectionString);
+  if (options.databaseURL) {
+    const url = new URL(options.databaseURL);
 
     if ('database' in set) {
       url.pathname = `/${set.database}`;
@@ -65,7 +65,7 @@ export const setAdapterOptions = (
       url.password = set.password;
     }
 
-    return { ...options, connectionString: url.toString() };
+    return { ...options, databaseURL: url.toString() };
   } else {
     return {
       ...options,

@@ -12,11 +12,11 @@ import { MaybeArray, toArray } from '../utils';
 import { Adapter } from '../adapter';
 
 export const dbOptions = {
-  connectionString: process.env.DATABASE_URL,
+  databaseURL: process.env.DATABASE_URL,
   columnTypes,
 };
 
-export const dbClient = new Client(dbOptions);
+export const dbClient = new Client({ connectionString: dbOptions.databaseURL });
 
 export const adapter = new Adapter(dbOptions);
 

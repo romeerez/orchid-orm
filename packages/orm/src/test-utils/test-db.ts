@@ -10,7 +10,7 @@ import {
 } from './test-models';
 
 export const pgConfig = {
-  connectionString: process.env.DATABASE_URL,
+  databaseURL: process.env.DATABASE_URL,
 };
 
 export const db = orchidORM(

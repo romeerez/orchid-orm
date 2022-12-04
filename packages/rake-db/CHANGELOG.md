@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.1.11
+
+### Patch Changes
+
+- Change connectionString to databaseURL option, add ssl option
+- Updated dependencies
+  - pqb@0.7.8
+
 ## 2.1.10
 
 ### Patch Changes

@@ -2,6 +2,7 @@ import {
   adapter,
   assertType,
   db,
+  dbOptions,
   expectSql,
   User,
   userData,
@@ -152,5 +153,17 @@ describe('db', () => {
 
       expect(logger.warn).not.toBeCalled();
     });
+  });
+
+  it('should use ssl when ssl=true query parameter provided on a databaseUrl option', () => {
+    const db = createDb({
+      ...dbOptions,
+      databaseURL: dbOptions.databaseURL + '?ssl=true',
+    });
+
+    expect(
+      (db.adapter.pool as unknown as { options: Record<string, unknown> })
+        .options.ssl,
+    ).toBe(true);
   });
 });
