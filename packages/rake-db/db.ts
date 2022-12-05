@@ -8,16 +8,16 @@ config();
 
 const options: AdapterOptions[] = [];
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
+const databaseURL = process.env.DATABASE_URL;
+if (!databaseURL) {
   throw new Error('DATABASE_URL is missing in .env');
 }
 
-options.push({ connectionString });
+options.push({ databaseURL });
 
-const connectionStringTest = process.env.DATABASE_URL_TEST;
-if (connectionStringTest) {
-  options.push({ connectionString: connectionStringTest });
+const databaseURLTest = process.env.DATABASE_URL_TEST;
+if (databaseURLTest) {
+  options.push({ databaseURL: databaseURLTest });
 }
 
 rakeDb(options, {
