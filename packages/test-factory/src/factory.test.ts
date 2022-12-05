@@ -144,7 +144,9 @@ describe('factory', () => {
 
       expect(item.createdAt).toBe(item.updatedAt);
 
-      expect(Math.round(item.createdAt / 1000)).toEqual(Math.round(now / 1000));
+      expect(Math.round(item.createdAt / 10000)).toEqual(
+        Math.round(now / 10000),
+      );
 
       assertType<typeof item, User>();
 
