@@ -159,7 +159,9 @@ describe('common', () => {
     const mockedLog = jest.fn();
     const mockedQuery = jest.fn();
 
-    const db = new Adapter({ databaseURL: 'test' });
+    const db = new Adapter({
+      databaseURL: 'postgres://user:password@host:1234/db-name',
+    });
     db.query = mockedQuery;
 
     beforeAll(() => {
