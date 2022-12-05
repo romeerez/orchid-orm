@@ -133,7 +133,15 @@ const then = async (
 
     resolve?.(result);
   } catch (err) {
-    const error = err instanceof DatabaseError ? assignError(q, err) : err;
+    let error;
+    if (err instanceof DatabaseError) {
+      error = new (q.error as unknown as new () => QueryError)();
+      assignError(error, err);
+    } else {
+      error = err;
+    }
+
+    (error as Error).stack = queryError.stack;
 
     if (q.query.log && sql && logData) {
       q.query.log.onError(error as Error, sql, logData);
@@ -142,9 +150,7 @@ const then = async (
   }
 };
 
-const assignError = (q: Query, from: DatabaseError) => {
-  const to = new (q.error as unknown as new () => QueryError)();
-  to.stack = queryError.stack;
+const assignError = (to: QueryError, from: DatabaseError) => {
   to.message = from.message;
   (to as { length?: number }).length = from.length;
   (to as { name?: string }).name = from.name;

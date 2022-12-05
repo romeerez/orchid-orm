@@ -1,5 +1,11 @@
 # pqb
 
+## 0.7.9
+
+### Patch Changes
+
+- Set proper stack trace on errors
+
 ## 0.7.8
 
 ### Patch Changes
