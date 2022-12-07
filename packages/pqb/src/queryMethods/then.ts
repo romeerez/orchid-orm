@@ -34,11 +34,11 @@ type Resolve = (result: any) => any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Reject = (error: any) => any;
 
-let queryError: Error = undefined as unknown as Error;
+let temporaryError: Error = undefined as unknown as Error;
 
 export class Then {
   get then() {
-    queryError = new Error();
+    temporaryError = new Error();
     return maybeWrappedThen;
   }
 
@@ -60,7 +60,9 @@ export const handleResult: CommonQueryData['handleResult'] = async (
 
 function maybeWrappedThen(this: Query, resolve?: Resolve, reject?: Reject) {
   if (this.query.wrapInTransaction && !this.query.inTransaction) {
-    return this.transaction((q) => then(q, resolve, reject));
+    return this.transaction(
+      (q) => new Promise((resolve, reject) => then(q, resolve, reject)),
+    ).then(resolve, reject);
   } else {
     return then(this, resolve, reject);
   }
@@ -79,6 +81,10 @@ const then = async (
 ): Promise<any> => {
   let sql: (Sql & { name?: string }) | undefined;
   let logData: unknown | undefined;
+
+  // save error to a local variable before async operations
+  const queryError = temporaryError;
+
   try {
     let beforeCallbacks: BeforeCallback[] | undefined;
     let afterCallbacks: AfterCallback[] | undefined;

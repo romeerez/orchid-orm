@@ -1,5 +1,11 @@
 # pqb
 
+## 0.7.10
+
+### Patch Changes
+
+- Fix incrorrect order on queries for automatic wrapping into transaction
+
 ## 0.7.9
 
 ### Patch Changes
