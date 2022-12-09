@@ -19,7 +19,7 @@ export type RawExpression<C extends ColumnType = ColumnType> = {
 
 export const raw = (
   sql: string,
-  values: Record<string, unknown> | false,
+  values?: Record<string, unknown> | false,
 ): RawExpression =>
   ({
     __raw: sql,
