@@ -1,5 +1,11 @@
 # pqb
 
+## 0.7.11
+
+### Patch Changes
+
+- Allow to open connections after closing
+
 ## 0.7.10
 
 ### Patch Changes

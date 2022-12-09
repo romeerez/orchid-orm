@@ -49,6 +49,7 @@ export type AdapterOptions = Omit<PoolConfig, 'types' | 'connectionString'> & {
 export class Adapter {
   types: TypeParsers;
   pool: Pool;
+  config: PoolConfig;
 
   constructor({ types = defaultTypeParsers, ...config }: AdapterOptions) {
     this.types = types;
@@ -59,6 +60,7 @@ export class Adapter {
         config.ssl = true;
       }
     }
+    this.config = config;
     this.pool = new Pool(config);
   }
 
@@ -84,9 +86,7 @@ export class Adapter {
     const client = await this.pool.connect();
     try {
       await performQuery(client, { text: 'BEGIN' }, this.types);
-      const result = await cb(
-        new TransactionAdapter(this.pool, client, this.types),
-      );
+      const result = await cb(new TransactionAdapter(this, client, this.types));
       await performQuery(client, { text: 'COMMIT' }, this.types);
       return result;
     } catch (err) {
@@ -98,7 +98,9 @@ export class Adapter {
   }
 
   close(): Promise<void> {
-    return this.pool.end();
+    const { pool } = this;
+    this.pool = new Pool(this.config);
+    return pool.end();
   }
 }
 
@@ -147,11 +149,17 @@ const performQueryArrays = <T extends any[] = any[]>(
 };
 
 export class TransactionAdapter implements Adapter {
+  pool: Pool;
+  config: PoolConfig;
+
   constructor(
-    public pool: Pool,
+    public adapter: Adapter,
     public client: PoolClient,
     public types: TypeParsers,
-  ) {}
+  ) {
+    this.pool = adapter.pool;
+    this.config = adapter.config;
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async query<T extends QueryResultRow = any>(
@@ -176,6 +184,6 @@ export class TransactionAdapter implements Adapter {
   }
 
   close() {
-    return this.pool.end();
+    return this.adapter.close();
   }
 }

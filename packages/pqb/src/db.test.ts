@@ -167,3 +167,13 @@ describe('db', () => {
     ).toBe(true);
   });
 });
+
+describe('db connection', () => {
+  it('should be able to open connection after closing it', async () => {
+    const db = createDb(dbOptions);
+
+    await db.close();
+
+    await expect(db.adapter.query('SELECT 1')).resolves.not.toThrow();
+  });
+});
