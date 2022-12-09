@@ -1,5 +1,11 @@
 # pqb
 
+## 0.7.12
+
+### Patch Changes
+
+- Improve usability of raw SQL
+
 ## 0.7.11
 
 ### Patch Changes

@@ -121,23 +121,39 @@ When it is needed to select a value with raw SQL, the first argument is a callba
 The inferred type will be used for the query result.
 
 ```ts
-const result: { num: number }[] = await Table.select({ num: Table.raw((t) => t.integer(), '1 + 1') })
+const result: { num: number }[] = await Table.select({
+  num: Table.raw((t) => t.integer(), '1 + 2'),
+})
+```
+
+When you need to have variables inside a SQL query, name them in the format `$name` and provide an object with values:
+
+```ts
+const result: { num: number }[] = await Table.select({
+  num: Table.raw((t) => t.integer(), '$a + $b', {
+    a: 1,
+    b: 2,
+  }),
+})
+```
+
+Inserting values directly into the query is not correct, as it opens the door for possible SQL injections:
+
+```ts
+// request params values may contain SQL injections:
+const { a, b } = req.params
+
+await Table.select({
+  // do NOT do it this way:
+  value: Table.raw((t) => t.integer(), `${a} + ${b}`),
+})
 ```
 
 When using raw SQL in a `where` statement or in any other place which does not affect the query result, omit the first type argument, and provide only SQL:
 
 ```ts
-const result = await Table.where(Table.raw('someColumn = $1', 'value'))
+const result = await Table.where(Table.raw('someColumn = $value', { value: 123 }))
 ```
-
-To safely use values in the query, write `$1`, `$2`, and so on in the SQL and provide the values as the rest arguments.
-Values can be of any type.
-
-```ts
-raw('a = $1 AND b = $2 AND c = $3', 'string', 123, true)
-```
-
-For now, it is the only supported way to interpolate values, this will be extended in the future.
 
 ## select
 
@@ -680,12 +696,14 @@ Table.findBy({ id: 1 }).update({
 `updateRaw` is for updating records with raw expression.
 
 The behavior is the same as a regular `update` method has:
-add a second `true` argument if you want to update without conditions,
+`find` or `where` must precede calling this method,
 it returns an updated count by default,
 you can customize returning data by using `select`.
 
 ```ts
-const updatedCount = await Table.find(1).update(Table.raw(`name = $1`, ['name']))
+const updatedCount = await Table.find(1).updateRaw(
+  Table.raw(`name = $name`, { name: 'name' })
+)
 ```
 
 ## updateOrThrow

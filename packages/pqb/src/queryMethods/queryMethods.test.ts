@@ -234,7 +234,7 @@ describe('queryMethods', () => {
 
     it('should accept raw sql', () => {
       const q = User.all();
-      const query = q.find(db.raw('$1 + $2', 1, 2));
+      const query = q.find(db.raw('$a + $b', { a: 1, b: 2 }));
 
       assertType<Awaited<typeof query>, UserRecord>();
 
@@ -272,7 +272,7 @@ describe('queryMethods', () => {
 
     it('should accept raw sql', () => {
       const q = User.all();
-      const query = q.findOptional(db.raw('$1 + $2', 1, 2));
+      const query = q.findOptional(db.raw('$a + $b', { a: 1, b: 2 }));
 
       assertType<Awaited<typeof query>, UserRecord | undefined>();
 

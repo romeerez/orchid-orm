@@ -23,7 +23,9 @@ export const pushInsertSql = (
     pushQueryValue(
       q,
       'select',
-      isRaw(query.values) ? query.values : raw(encodeRow(ctx, query.values[0])),
+      isRaw(query.values)
+        ? query.values
+        : raw(encodeRow(ctx, query.values[0]), false),
     );
 
     ctx.sql.push(makeSql(q, { values: ctx.values }).text);

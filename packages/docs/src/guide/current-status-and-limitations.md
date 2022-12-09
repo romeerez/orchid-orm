@@ -7,12 +7,9 @@ Only Postgres database is supported for now.
 
 Migrations are written by hand instead of generating them like in some other ORMs.
 
-Relation models must be in a single database.
+To perform relation queries, related models currently must be in a single database.
 
 Relations support only a single column for primary and foreign key.
-
-Raw query interpolation, such as `raw('a = $1 AND b = $2', [1, 2])` yet to be improved,
-currently it only supports incrementing `$1`, `$2` variables, in future it will handle named parameters, question marks.
 
 Support for `JOIN LATERAL` is in the plans, it will enable an interesting optimization of joining and selecting relations.
 

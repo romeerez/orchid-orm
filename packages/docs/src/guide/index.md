@@ -85,7 +85,7 @@ There is no additional language to use and recompile, no decorators, no TS compi
 
 Different ORMs enforce different problems when there is a need to customize a query.
 
-- In `Prisma` you have to rewrite a full query to raw SQL even if a small `WHERE` statement requires a custom condition
+- In `Prisma` you have to rewrite a full query to raw SQL even if a small part of `WHERE` statement requires a custom condition
 - `Sequelize` result type is always a full record, even if you selected only specific columns, the type doesn't know whether you included a relation or not
 - `TypeORM`, and `MikroORM` offers you to use a very limited ORM interface for simple queries (with the same problem as in `Sequelize`), and to use a query builder for more complex queries which won't be type-safe.
 - `Objection` is easier for writing queries, but it is not type-safe.
