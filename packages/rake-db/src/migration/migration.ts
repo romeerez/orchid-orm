@@ -70,7 +70,7 @@ export class Migration extends TransactionAdapter {
     public up: boolean,
     public options: MigrationConfig,
   ) {
-    super(tx.pool, tx.client, tx.types);
+    super(tx, tx.client, tx.types);
     this.log = logParamToLogObject(options.logger || console, options.log);
   }
 

@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.1.15
+
+### Patch Changes
+
+- Fix creating a transaction
+
 ## 2.1.14
 
 ### Patch Changes
