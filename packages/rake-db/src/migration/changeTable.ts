@@ -103,6 +103,7 @@ type ChangeArg =
   | ['nullable', boolean]
   | ['comment', string | null]
   | ['compression', string]
+  | ['primaryKey', boolean]
   | ['foreignKey', ForeignKey<string, string[]>]
   | ['index', Omit<SingleColumnIndexOptions, 'column'>];
 
@@ -144,15 +145,23 @@ export type TableChanger = MigrationColumnTypes & TableChangeMethods;
 
 export type TableChangeData = Record<string, ChangeItem | EmptyObject>;
 
+type PrimaryKeys = {
+  columns: string[];
+  change?: true;
+  options?: { name?: string };
+};
+
 type ChangeTableState = {
   migration: Migration;
   up: boolean;
   tableName: string;
-  alterTable: string[];
+  alterTable: (string | ((state: ChangeTableState) => string))[];
   values: unknown[];
   indexes: ColumnIndex[];
   dropIndexes: ColumnIndex[];
   comments: ColumnComment[];
+  addPrimaryKeys: PrimaryKeys;
+  dropPrimaryKeys: PrimaryKeys;
 };
 
 export const changeTable = async (
@@ -170,6 +179,28 @@ export const changeTable = async (
 
   const changeData = fn?.(tableChanger) || {};
 
+  const addPrimaryKeys: PrimaryKeys = {
+    columns: [],
+  };
+  const dropPrimaryKeys: PrimaryKeys = {
+    columns: [],
+  };
+  for (const key in changeData) {
+    const item = changeData[key];
+    if (Array.isArray(item)) {
+      const [action] = item;
+      if (action === 'add') {
+        if ((item[1] as ColumnType).isPrimaryKey) {
+          addPrimaryKeys.columns.push(key);
+        }
+      } else if (action === 'drop') {
+        if ((item[1] as ColumnType).isPrimaryKey) {
+          dropPrimaryKeys.columns.push(key);
+        }
+      }
+    }
+  }
+
   const state: ChangeTableState = {
     migration,
     up,
@@ -179,6 +210,8 @@ export const changeTable = async (
     indexes: [],
     dropIndexes: [],
     comments: [],
+    addPrimaryKeys,
+    dropPrimaryKeys,
   };
 
   if (options.comment !== undefined) {
@@ -186,39 +219,77 @@ export const changeTable = async (
   }
 
   for (const key in changeData) {
-    const result = changeData[key];
-    if (Array.isArray(result)) {
-      const [action] = result;
+    const item = changeData[key];
+    if (Array.isArray(item)) {
+      const [action] = item;
       if (action === 'change') {
-        const [, from, to, options] = result;
+        const [, from, to, options] = item;
         changeActions.change(state, up, key, from, to, options);
       } else if (action === 'rename') {
-        const [, name] = result;
+        const [, name] = item;
         changeActions.rename(state, up, key, name);
       } else if (action) {
-        const [action, item, options] = result;
+        const [action, columnType, options] = item;
         changeActions[
           action as Exclude<
             keyof typeof changeActions,
             'change' | 'rename' | 'tableComment'
           >
-        ](state, up, key, item, options);
+        ](state, up, key, columnType, options);
       }
     }
   }
 
+  const prependAlterTable: string[] = [];
+
+  let addedDownKey = false;
   changeTableData[up ? 'drop' : 'add'].forEach((tableData) => {
-    handleTableData(state, false, tableName, tableData);
+    if (tableData.primaryKey) {
+      addedDownKey = true;
+      const keys = state[up ? 'dropPrimaryKeys' : 'addPrimaryKeys'];
+      keys.columns.push(...tableData.primaryKey.columns);
+      keys.options = tableData.primaryKey.options;
+    }
+
+    state.dropIndexes.push(...tableData.indexes);
+
+    prependAlterTable.push(...getForeignKeysLines(state, false, tableData));
   });
 
+  const dropKeys = state[up ? 'dropPrimaryKeys' : 'addPrimaryKeys'];
+  if (addedDownKey || dropKeys.change || dropKeys.columns.length > 1) {
+    const name = dropKeys.options?.name || `${tableName}_pkey`;
+    prependAlterTable.push(`DROP CONSTRAINT "${name}"`);
+  }
+
+  let addedUpKey = false;
   changeTableData[up ? 'add' : 'drop'].forEach((tableData) => {
-    handleTableData(state, true, tableName, tableData);
+    if (tableData.primaryKey) {
+      addedUpKey = true;
+      const keys = state[up ? 'addPrimaryKeys' : 'dropPrimaryKeys'];
+      keys.columns.push(...tableData.primaryKey.columns);
+      keys.options = tableData.primaryKey.options;
+    }
+
+    state.indexes.push(...tableData.indexes);
+
+    state.alterTable.push(...getForeignKeysLines(state, true, tableData));
   });
 
-  if (state.alterTable.length) {
+  const addKeys = state[up ? 'addPrimaryKeys' : 'dropPrimaryKeys'];
+  if (addedUpKey || addKeys.change || addKeys.columns.length > 1) {
+    state.alterTable.push(`ADD ${primaryKeyToSql(addKeys)}`);
+  }
+
+  if (prependAlterTable.length || state.alterTable.length) {
     await migration.query(
       `ALTER TABLE ${quoteTable(tableName)}` +
-        `\n  ${state.alterTable.join(',\n  ')}`,
+        `\n  ${[
+          ...prependAlterTable,
+          ...state.alterTable.map((item) =>
+            typeof item === 'string' ? item : item(state),
+          ),
+        ].join(',\n  ')}`,
     );
   }
 
@@ -258,7 +329,16 @@ const changeActions = {
     }
 
     if (up) {
-      state.alterTable.push(`ADD COLUMN ${columnToSql(key, item, state)}`);
+      state.alterTable.push(
+        (state) =>
+          `ADD COLUMN ${columnToSql(
+            key,
+            item,
+            state.values,
+            (state.up ? state.addPrimaryKeys : state.dropPrimaryKeys).columns
+              .length > 1,
+          )}`,
+      );
     } else {
       state.alterTable.push(
         `DROP COLUMN "${key}"${
@@ -317,6 +397,17 @@ const changeActions = {
       state.alterTable.push(
         `ALTER COLUMN "${key}" SET COMPRESSION ${to.compression || 'DEFAULT'}`,
       );
+    }
+
+    if (from.primaryKey || to.primaryKey) {
+      const primaryKey =
+        state[
+          (up && to.primaryKey) || (!up && from.primaryKey)
+            ? 'addPrimaryKeys'
+            : 'dropPrimaryKeys'
+        ];
+      primaryKey.columns.push(key);
+      primaryKey.change = true;
     }
 
     const fromFkey = from.foreignKey;
@@ -446,6 +537,7 @@ type ChangeProperties = {
   nullable?: boolean;
   comment?: string | null;
   compression?: string;
+  primaryKey?: boolean;
   foreignKey?: ForeignKey<string, string[]>;
   index?: Omit<SingleColumnIndexOptions, 'column'>;
 };
@@ -459,6 +551,7 @@ const getChangeProperties = (item: ChangeArg): ChangeProperties => {
       nullable: item.isNullable,
       comment: item.data.comment,
       compression: item.data.compression,
+      primaryKey: item.isPrimaryKey,
       foreignKey: item.data.foreignKey,
       index: item.data.index,
     };
@@ -470,39 +563,26 @@ const getChangeProperties = (item: ChangeArg): ChangeProperties => {
       nullable: item[0] === 'nullable' ? item[1] : undefined,
       comment: item[0] === 'comment' ? item[1] : undefined,
       compression: item[0] === 'compression' ? item[1] : undefined,
+      primaryKey: item[0] === 'primaryKey' ? item[1] : undefined,
       foreignKey: item[0] === 'foreignKey' ? item[1] : undefined,
       index: item[0] === 'index' ? item[1] : undefined,
     };
   }
 };
 
-const handleTableData = (
+const getForeignKeysLines = (
   state: ChangeTableState,
   up: boolean,
-  tableName: string,
   tableData: TableData,
 ) => {
-  if (tableData.primaryKey) {
-    if (up) {
-      state.alterTable.push(`ADD ${primaryKeyToSql(tableData.primaryKey)}`);
-    } else {
-      const name = tableData.primaryKey.options?.name || `${tableName}_pkey`;
-      state.alterTable.push(`DROP CONSTRAINT "${name}"`);
-    }
-  }
-
-  if (tableData.indexes.length) {
-    state[up ? 'indexes' : 'dropIndexes'].push(...tableData.indexes);
-  }
-
-  if (tableData.foreignKeys.length) {
-    tableData.foreignKeys.forEach((foreignKey) => {
-      const action = up ? 'ADD' : 'DROP';
-      state.alterTable.push(
-        `\n  ${action} ${constraintToSql(state.tableName, up, foreignKey)}`,
-      );
-    });
-  }
+  return tableData.foreignKeys.map(
+    (foreignKey) =>
+      `\n  ${up ? 'ADD' : 'DROP'} ${constraintToSql(
+        state.tableName,
+        up,
+        foreignKey,
+      )}`,
+  );
 };
 
 const getRawOrValue = (item: unknown | RawExpression, values: unknown[]) => {

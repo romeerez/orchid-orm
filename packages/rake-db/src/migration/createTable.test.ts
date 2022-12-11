@@ -119,6 +119,29 @@ const db = getDb();
       (action === 'createTable' ? expectDropTable : expectCreateTable)();
     });
 
+    it('should support composite primary key defined on multiple columns', async () => {
+      await db[action]('table', (t) => ({
+        id: t.integer().primaryKey(),
+        name: t.text().primaryKey(),
+        active: t.boolean().primaryKey(),
+      }));
+
+      if (action === 'createTable') {
+        expectSql(`
+          CREATE TABLE "table" (
+            "id" integer NOT NULL,
+            "name" text NOT NULL,
+            "active" boolean NOT NULL,
+            PRIMARY KEY ("id", "name", "active")
+          )
+        `);
+      } else {
+        expectSql(`
+          DROP TABLE "table"
+        `);
+      }
+    });
+
     it('should support composite primary key', async () => {
       await db[action]('table', (t) => ({
         id: t.integer(),

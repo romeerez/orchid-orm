@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.1.17
+
+### Patch Changes
+
+- Support composite primary key by setting primaryKey on multiple columns
+
 ## 2.1.16
 
 ### Patch Changes

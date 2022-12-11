@@ -14,7 +14,8 @@ import { joinColumns, joinWords, quoteTable } from '../common';
 export const columnToSql = (
   key: string,
   item: ColumnType,
-  { values }: { values: unknown[] },
+  values: unknown[],
+  hasMultiplePrimaryKeys: boolean,
 ) => {
   const line = [`"${key}" ${item.toSQL()}`];
 
@@ -26,7 +27,7 @@ export const columnToSql = (
     line.push(`COLLATE ${quote(item.data.collate)}`);
   }
 
-  if (item.isPrimaryKey) {
+  if (item.isPrimaryKey && !hasMultiplePrimaryKeys) {
     line.push('PRIMARY KEY');
   } else if (!item.isNullable) {
     line.push('NOT NULL');

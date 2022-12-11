@@ -160,6 +160,46 @@ describe('changeTable', () => {
       (action === 'add' ? expectRemoveColumns : expectAddColumns)();
     });
 
+    it(`should ${action} columns with a primary key`, async () => {
+      const fn = () => {
+        return db.changeTable('table', (t) => ({
+          id: t[action](t.integer().primaryKey()),
+          text: t[action](t.text().primaryKey()),
+          active: t[action](t.boolean().primaryKey()),
+        }));
+      };
+
+      const expectAddColumns = () => {
+        expectSql([
+          `
+            ALTER TABLE "table"
+            ADD COLUMN "id" integer NOT NULL,
+            ADD COLUMN "text" text NOT NULL,
+            ADD COLUMN "active" boolean NOT NULL,
+            ADD PRIMARY KEY ("id", "text", "active")
+          `,
+        ]);
+      };
+
+      const expectRemoveColumns = () => {
+        expectSql(`
+          ALTER TABLE "table"
+          DROP CONSTRAINT "table_pkey",
+          DROP COLUMN "id",
+          DROP COLUMN "text",
+          DROP COLUMN "active"
+        `);
+      };
+
+      await fn();
+      (action === 'add' ? expectAddColumns : expectRemoveColumns)();
+
+      queryMock.mockClear();
+      db.up = false;
+      await fn();
+      (action === 'add' ? expectRemoveColumns : expectAddColumns)();
+    });
+
     it(`should ${action} composite primary key`, async () => {
       const fn = () => {
         return db.changeTable('table', (t) => ({
@@ -389,6 +429,78 @@ describe('changeTable', () => {
       `,
       `COMMENT ON COLUMN "table"."changeComment" IS 'comment 1'`,
     ]);
+  });
+
+  it('should add composite primary key via change', async () => {
+    const fn = () => {
+      return db.changeTable('table', (t) => ({
+        id: t.change(t.integer(), t.integer().primaryKey()),
+        text: t.change(t.integer(), t.integer().primaryKey()),
+      }));
+    };
+
+    await fn();
+    expectSql(`
+      ALTER TABLE "table"
+      ADD PRIMARY KEY ("id", "text")
+    `);
+
+    queryMock.mockClear();
+    db.up = false;
+    await fn();
+    expectSql(`
+      ALTER TABLE "table"
+      DROP CONSTRAINT "table_pkey"
+    `);
+  });
+
+  it('should drop composite primary key via change', async () => {
+    const fn = () => {
+      return db.changeTable('table', (t) => ({
+        id: t.change(t.integer().primaryKey(), t.integer()),
+        text: t.change(t.integer().primaryKey(), t.integer()),
+      }));
+    };
+
+    await fn();
+    expectSql(`
+      ALTER TABLE "table"
+      DROP CONSTRAINT "table_pkey"
+    `);
+
+    queryMock.mockClear();
+    db.up = false;
+    await fn();
+    expectSql(`
+      ALTER TABLE "table"
+      ADD PRIMARY KEY ("id", "text")
+    `);
+  });
+
+  it('should change composite primary key', async () => {
+    const fn = () => {
+      return db.changeTable('table', (t) => ({
+        id: t.change(t.integer().primaryKey(), t.integer()),
+        text: t.change(t.integer().primaryKey(), t.integer().primaryKey()),
+        active: t.change(t.integer(), t.integer().primaryKey()),
+      }));
+    };
+
+    await fn();
+    expectSql(`
+      ALTER TABLE "table"
+      DROP CONSTRAINT "table_pkey",
+      ADD PRIMARY KEY ("text", "active")
+    `);
+
+    queryMock.mockClear();
+    db.up = false;
+    await fn();
+    expectSql(`
+      ALTER TABLE "table"
+      DROP CONSTRAINT "table_pkey",
+      ADD PRIMARY KEY ("id")
+    `);
   });
 
   it('should change column foreign key', async () => {

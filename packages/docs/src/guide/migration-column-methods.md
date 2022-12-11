@@ -35,7 +35,9 @@ change(async (db) => {
 
 ## primaryKey
 
-Mark the column as a primary key. This column type becomes an argument of the `.find` method. So if the primary key is of `serial` type, `.find` will accept the number, or if the primary key is of `uuid` type, `.find` will expect a string.
+Mark the column as a primary key. This column type becomes an argument of the `.find` method.
+So if the primary key is of `serial` type, `.find` will accept the number,
+or if the primary key is of `uuid` type, `.find` will expect a string.
 
 ```ts
 import { change } from 'rake-db'
@@ -49,7 +51,23 @@ change(async (db) => {
 
 ## composite primary key
 
-Use `t.primaryKey([column1, column2, ...columns])` to specify the primary key consisting of multiple columns:
+Specify `primaryKey` on multiple columns to have a composite primary key. `.find` works only with single primary key.
+
+Composite key is useful when defining a join table which is designed to connect other tables. 
+
+```ts
+import { change } from 'rake-db'
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    id: t.serial().primaryKey(),
+    name: t.text().primaryKey(),
+    active: t.boolean().primaryKey(),
+  }))
+})
+```
+
+Alternatively, use `t.primaryKey([column1, column2, ...columns])` to specify the primary key consisting of multiple columns:
 
 By default, Postgres will name an underlying constraint as `${table name}_pkey`, and override the name by passing a second argument `{ name: 'customName' }`.
 

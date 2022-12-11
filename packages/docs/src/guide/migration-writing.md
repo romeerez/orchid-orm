@@ -220,6 +220,8 @@ change(async (db) => {
 
 Takes an array of two columns, on migrating it will change the column to the second element, and on rollback will change the column to the first element.
 
+Dropping or creating a primary key on multiple columns is allowed.
+
 Index options are listed [here](/guide/migration-column-methods.html#index).
 
 Foreign key options are listed [here](/guide/migration-column-methods.html#foreignkey).
@@ -267,20 +269,32 @@ change(async (db) => {
       })
     ),
     
-    // add foreign key
+    // add primary key
     column11: t.change(
+      t.integer(),
+      t.integer().primaryKey()
+    ),
+    
+    // drop primary key
+    column12: t.change(
+      t.integer().primaryKey(),
+      t.integer(),
+    ),
+    
+    // add foreign key
+    column13: t.change(
       t.integer(),
       t.integer().foreignKey('otherTable', 'otherTableId'),
     ),
     
     // remove foreign key
-    column12: t.change(
+    column14: t.change(
       t.integer().foreignKey('otherTable', 'otherTableId'),
       t.integer(),
     ),
     
     // change foreign key
-    column13: t.change(
+    column15: t.change(
       t.integer().foreignKey('oneTable', 'oneColumn', {
         // foreign key options to be applied when migrating up
         name: 'oneForeignKeyName',
@@ -298,7 +312,7 @@ change(async (db) => {
     ),
 
     // change various column properties at once
-    column14: t.change(
+    column16: t.change(
       t.integer()
         .collate('de_DE')
         .default(123)

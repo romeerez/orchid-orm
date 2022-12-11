@@ -1,4 +1,5 @@
 import {
+  ColumnsShape,
   ColumnType,
   columnTypes,
   getColumnTypes,
@@ -6,6 +7,7 @@ import {
   Operators,
   quote,
   raw,
+  TableData,
 } from 'pqb';
 import {
   TableOptions,
@@ -127,28 +129,7 @@ export const createTable = async (
 ) => {
   const shape = getColumnTypes(types, fn);
   const tableData = getTableData();
-
-  const { noPrimaryKey } = migration.options;
-  if (!options.noPrimaryKey && (!noPrimaryKey || noPrimaryKey !== 'ignore')) {
-    let hasPrimaryKey = !!tableData.primaryKey?.columns?.length;
-    if (!hasPrimaryKey) {
-      for (const key in shape) {
-        if (shape[key].isPrimaryKey) {
-          hasPrimaryKey = true;
-          break;
-        }
-      }
-    }
-
-    if (!hasPrimaryKey) {
-      const message = `Table ${tableName} has no primary key`;
-      if (!noPrimaryKey || noPrimaryKey === 'error') {
-        throw new Error(message);
-      } else {
-        console.warn(message);
-      }
-    }
-  }
+  validatePrimaryKey(migration, options, tableData, shape, tableName);
 
   if (!up) {
     const { dropMode } = options;
@@ -160,25 +141,31 @@ export const createTable = async (
 
   const lines: string[] = [];
 
+  applyMultiplePrimaryKeys(shape, tableData);
+
   const state: {
     migration: Migration;
     tableName: string;
     values: unknown[];
     indexes: ColumnIndex[];
     comments: ColumnComment[];
+    tableData: TableData;
   } = {
     migration,
     tableName,
     values: [],
     indexes: [],
     comments: [],
+    tableData,
   };
 
   for (const key in shape) {
     const item = shape[key];
     addColumnIndex(state.indexes, key, item);
     addColumnComment(state.comments, key, item);
-    lines.push(`\n  ${columnToSql(key, item, state)}`);
+    lines.push(
+      `\n  ${columnToSql(key, item, state.values, tableData.primaryKey)}`,
+    );
   }
 
   if (tableData.primaryKey) {
@@ -203,5 +190,55 @@ export const createTable = async (
     await migration.query(
       `COMMENT ON TABLE ${quoteTable(tableName)} IS ${quote(options.comment)}`,
     );
+  }
+};
+
+const validatePrimaryKey = (
+  migration: Migration,
+  options: TableOptions,
+  tableData: TableData,
+  shape: ColumnsShape,
+  tableName: string,
+) => {
+  const { noPrimaryKey } = migration.options;
+  if (!options.noPrimaryKey && (!noPrimaryKey || noPrimaryKey !== 'ignore')) {
+    let hasPrimaryKey = !!tableData.primaryKey?.columns?.length;
+    if (!hasPrimaryKey) {
+      for (const key in shape) {
+        if (shape[key].isPrimaryKey) {
+          hasPrimaryKey = true;
+          break;
+        }
+      }
+    }
+
+    if (!hasPrimaryKey) {
+      const message = `Table ${tableName} has no primary key`;
+      if (!noPrimaryKey || noPrimaryKey === 'error') {
+        throw new Error(message);
+      } else {
+        console.warn(message);
+      }
+    }
+  }
+};
+
+const applyMultiplePrimaryKeys = (
+  shape: ColumnsShape,
+  tableData: TableData,
+) => {
+  const columns: string[] = [];
+  for (const key in shape) {
+    if (shape[key].isPrimaryKey) {
+      columns.push(key);
+    }
+  }
+
+  if (columns.length <= 1) return;
+
+  if (!tableData.primaryKey) {
+    tableData.primaryKey = { columns };
+  } else {
+    tableData.primaryKey.columns.unshift(...columns);
   }
 };
