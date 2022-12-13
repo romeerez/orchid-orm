@@ -30,6 +30,7 @@ import {
   JSONIntersection,
   JSONUnion,
   JSONLazy,
+  VirtualColumn,
 } from 'pqb';
 import { z, ZodTypeAny } from 'zod';
 import { Buffer } from 'node:buffer';
@@ -105,6 +106,8 @@ type SchemaToZod<
   ? z.ZodArray<SchemaToZod<U>>
   : T extends JSONColumn
   ? JsonToZod<T['data']['schema']>
+  : T extends VirtualColumn
+  ? z.ZodNever
   : never;
 
 type JsonToZod<T extends JSONTypeAny, D = T['dataType']> = T extends {
@@ -229,7 +232,10 @@ export const instanceToZod = <T extends { shape: ColumnsShape }>({
 }: T): InstanceToZod<T> => {
   const result = {} as z.ZodRawShape;
   for (const key in shape) {
-    result[key as keyof typeof result] = columnToZod(shape[key]);
+    const column = shape[key];
+    if (!(column instanceof VirtualColumn)) {
+      result[key as keyof typeof result] = columnToZod(column);
+    }
   }
   return z.object(result) as InstanceToZod<T>;
 };
@@ -239,7 +245,12 @@ export const columnToZod = <T extends ColumnType>(
 ): SchemaToZod<T> => {
   const dataType = column.data.as?.dataType || column.dataType;
   const converter = converters[dataType];
-  if (!converter) throw new Error(`Cannot parse column ${dataType}`);
+  if (!converter) {
+    if (column instanceof VirtualColumn) {
+      return handleNever(column) as SchemaToZod<T>;
+    }
+    throw new Error(`Cannot parse column ${dataType}`);
+  }
   return converter(column) as SchemaToZod<T>;
 };
 

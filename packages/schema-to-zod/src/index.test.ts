@@ -1,7 +1,7 @@
 import {
   ArrayColumn,
   ColumnType,
-  columnTypes as t,
+  columnTypes,
   DateColumn,
   IntegerColumn,
   jsonTypes,
@@ -12,10 +12,17 @@ import {
   JSONNumber,
   JSONString,
   JSONArray,
+  VirtualColumn,
 } from 'pqb';
 import { columnToZod, instanceToZod, modelToZod } from './index';
 import { z } from 'zod';
 import { Buffer } from 'node:buffer';
+
+const t = {
+  ...columnTypes,
+  text: (min = 0, max = Infinity) => columnTypes.text(min, max),
+  string: (min = 0, max = Infinity) => columnTypes.string(min, max),
+};
 
 type AssertEqual<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]
@@ -1244,6 +1251,31 @@ describe('schema to zod', () => {
       assertType<typeof timestampAsDate, z.ZodDate>(true);
       const date = new Date();
       expect(timestampAsDate.parse(date)).toEqual(date);
+    });
+  });
+
+  describe('virtual', () => {
+    class Virtual extends VirtualColumn {}
+
+    it('should skip virtual column in instanceToZod', () => {
+      const schema = instanceToZod({
+        shape: {
+          text: t.text(),
+          virtual: new Virtual(),
+        },
+      });
+
+      expect(Object.keys(schema.shape)).toEqual(['text']);
+    });
+
+    it('should return ZodNever from columnToZod', () => {
+      const schema = columnToZod(new Virtual());
+
+      assertType<typeof schema, z.ZodNever>(true);
+
+      expect(() => schema.parse(123)).toThrow(
+        'Expected never, received number',
+      );
     });
   });
 });

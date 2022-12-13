@@ -13,6 +13,7 @@ import {
   defaultsKey,
   relationQueryKey,
   EmptyObject,
+  VirtualColumn,
 } from 'pqb';
 import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
 import {
@@ -36,8 +37,7 @@ export type RelationThunks = Record<string, RelationThunk>;
 export type RelationData = {
   returns: 'one' | 'many';
   method(params: Record<string, unknown>): Query;
-  nestedInsert: BaseRelation['nestedInsert'];
-  nestedUpdate: BaseRelation['nestedUpdate'];
+  virtualColumn?: VirtualColumn;
   joinQuery(fromQuery: Query, toQuery: Query): Query;
   reverseJoin(fromQuery: Query, toQuery: Query): Query;
   primaryKey: string;
@@ -63,8 +63,6 @@ export type Relation<
     : M & {
         [defaultsKey]: Record<Info['populate'], true>;
       };
-  nestedInsert: BaseRelation['nestedInsert'];
-  nestedUpdate: BaseRelation['nestedUpdate'];
   primaryKey: string;
   options: Relations[K]['options'];
 };
@@ -280,19 +278,29 @@ const applyRelation = (
   const { type } = relation;
   let data;
   if (type === 'belongsTo') {
-    data = makeBelongsToMethod(relation, query);
+    data = makeBelongsToMethod(relation, relationName, query);
   } else if (type === 'hasOne') {
     data = makeHasOneMethod(dbModel, relation, relationName, query);
   } else if (type === 'hasMany') {
     data = makeHasManyMethod(dbModel, relation, relationName, query);
   } else if (type === 'hasAndBelongsToMany') {
-    data = makeHasAndBelongsToManyMethod(dbModel, qb, relation, query);
+    data = makeHasAndBelongsToManyMethod(
+      dbModel,
+      qb,
+      relation,
+      relationName,
+      query,
+    );
   } else {
     throw new Error(`Unknown relation type ${type}`);
   }
 
   if (data.returns === 'one') {
     query._take();
+  }
+
+  if (data.virtualColumn) {
+    dbModel.shape[relationName] = data.virtualColumn;
   }
 
   makeRelationQuery(dbModel, definedAs, relationName, data);
@@ -302,8 +310,6 @@ const applyRelation = (
     key: relationName,
     model: otherDbModel,
     query,
-    nestedInsert: data.nestedInsert,
-    nestedUpdate: data.nestedUpdate,
     joinQuery: data.joinQuery,
     primaryKey: data.primaryKey,
     options: relation.options,

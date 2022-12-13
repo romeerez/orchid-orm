@@ -1,5 +1,13 @@
 # orchid-orm-schema-to-zod
 
+## 0.1.13
+
+### Patch Changes
+
+- Refactor create and update of relations
+- Updated dependencies
+  - pqb@0.7.13
+
 ## 0.1.12
 
 ### Patch Changes

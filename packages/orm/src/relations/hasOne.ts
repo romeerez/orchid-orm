@@ -1,14 +1,15 @@
 import {
   addQueryOn,
+  CreateCtx,
   getQueryAs,
-  HasOneNestedInsert,
-  HasOneNestedUpdate,
   HasOneRelation,
   InsertQueryData,
   isQueryReturnsAll,
   JoinCallback,
   Query,
   QueryBase,
+  UpdateCtx,
+  VirtualColumn,
   WhereArg,
   WhereResult,
 } from 'pqb';
@@ -19,7 +20,14 @@ import {
   RelationThunkBase,
   RelationThunks,
 } from './relations';
-import { getSourceRelation, getThroughRelation } from './utils';
+import {
+  getSourceRelation,
+  getThroughRelation,
+  hasRelationHandleCreate,
+  hasRelationHandleUpdate,
+  NestedInsertOneItem,
+  NestedUpdateOneItem,
+} from './utils';
 
 export interface HasOne extends RelationThunkBase {
   type: 'hasOne';
@@ -52,6 +60,65 @@ export type HasOneInfo<
     : false;
   chainedDelete: true;
 };
+
+type State = {
+  query: Query;
+  primaryKey: string;
+  foreignKey: string;
+};
+
+export type HasOneNestedInsert = (
+  query: Query,
+  data: [
+    selfData: Record<string, unknown>,
+    relationData: NestedInsertOneItem,
+  ][],
+) => Promise<void>;
+
+export type HasOneNestedUpdate = (
+  query: Query,
+  data: Record<string, unknown>[],
+  relationData: NestedUpdateOneItem,
+) => Promise<void>;
+
+class HasOneVirtualColumn extends VirtualColumn {
+  private readonly nestedInsert: HasOneNestedInsert;
+  private readonly nestedUpdate: HasOneNestedUpdate;
+
+  constructor(private key: string, private state: State) {
+    super();
+    this.nestedInsert = nestedInsert(state);
+    this.nestedUpdate = nestedUpdate(state);
+  }
+
+  create(
+    q: Query,
+    ctx: CreateCtx,
+    item: Record<string, unknown>,
+    rowIndex: number,
+  ) {
+    hasRelationHandleCreate(
+      q,
+      ctx,
+      item,
+      rowIndex,
+      this.key,
+      this.state.primaryKey,
+      this.nestedInsert,
+    );
+  }
+
+  update(q: Query, ctx: UpdateCtx, set: Record<string, unknown>) {
+    hasRelationHandleUpdate(
+      q,
+      ctx,
+      set,
+      this.key,
+      this.state.primaryKey,
+      this.nestedUpdate,
+    );
+  }
+}
 
 export const makeHasOneMethod = (
   model: Query,
@@ -93,8 +160,6 @@ export const makeHasOneMethod = (
           whereExistsCallback as unknown as JoinCallback<Query, Query>,
         );
       },
-      nestedInsert: undefined,
-      nestedUpdate: undefined,
       joinQuery(fromQuery, toQuery) {
         return toQuery.whereExists<Query, Query>(
           throughRelation.joinQuery(fromQuery, throughRelation.query),
@@ -124,6 +189,7 @@ export const makeHasOneMethod = (
   }
 
   const { primaryKey, foreignKey } = relation.options;
+  const state: State = { query, primaryKey, foreignKey };
 
   const fromQuerySelect = [{ selectAs: { [foreignKey]: primaryKey } }];
 
@@ -133,133 +199,7 @@ export const makeHasOneMethod = (
       const values = { [foreignKey]: params[primaryKey] };
       return query.where(values)._defaults(values);
     },
-    nestedInsert: (async (q, data) => {
-      const connect = data.filter(
-        (
-          item,
-        ): item is [
-          Record<string, unknown>,
-          (
-            | {
-                connect: WhereArg<QueryBase>;
-              }
-            | {
-                connectOrCreate: {
-                  where: WhereArg<QueryBase>;
-                  create: Record<string, unknown>;
-                };
-              }
-          ),
-        ] => Boolean(item[1].connect || item[1].connectOrCreate),
-      );
-
-      const t = query.transacting(q);
-
-      let connected: number[];
-      if (connect.length) {
-        connected = await Promise.all(
-          connect.map(([selfData, item]) => {
-            const data = { [foreignKey]: selfData[primaryKey] };
-            return 'connect' in item
-              ? (
-                  t.where(item.connect) as WhereResult<Query> & {
-                    hasSelect: false;
-                  }
-                )._updateOrThrow(data)
-              : (
-                  t.where(item.connectOrCreate.where) as WhereResult<Query> & {
-                    hasSelect: false;
-                  }
-                )._update(data);
-          }),
-        );
-      } else {
-        connected = [];
-      }
-
-      let connectedI = 0;
-      const create = data.filter(
-        (
-          item,
-        ): item is [
-          Record<string, unknown>,
-          (
-            | { create: Record<string, unknown> }
-            | {
-                connectOrCreate: {
-                  where: WhereArg<QueryBase>;
-                  create: Record<string, unknown>;
-                };
-              }
-          ),
-        ] => {
-          if (item[1].connectOrCreate) {
-            return !connected[connectedI++];
-          }
-          return Boolean(item[1].create);
-        },
-      );
-
-      if (create.length) {
-        await t._count()._createMany(
-          create.map(([selfData, item]) => ({
-            [foreignKey]: selfData[primaryKey],
-            ...('create' in item ? item.create : item.connectOrCreate.create),
-          })),
-        );
-      }
-    }) as HasOneNestedInsert,
-    nestedUpdate: (async (q, data, params) => {
-      if (
-        (params.set || params.create || params.upsert) &&
-        isQueryReturnsAll(q)
-      ) {
-        const key = params.set ? 'set' : params.create ? 'create' : 'upsert';
-        throw new Error(`\`${key}\` option is not allowed in a batch update`);
-      }
-
-      const t = query.transacting(q);
-      const ids = data.map((item) => item[primaryKey]);
-      const currentRelationsQuery = t.where({
-        [foreignKey]: { in: ids },
-      });
-
-      if (params.create || params.disconnect || params.set) {
-        await currentRelationsQuery._update({ [foreignKey]: null });
-
-        if (params.create) {
-          await t._count()._create({
-            ...params.create,
-            [foreignKey]: data[0][primaryKey],
-          });
-        }
-        if (params.set) {
-          await t
-            ._where<Query>(params.set)
-            ._update({ [foreignKey]: data[0][primaryKey] });
-        }
-      } else if (params.update) {
-        await currentRelationsQuery._update<WhereResult<Query>>(params.update);
-      } else if (params.delete) {
-        await currentRelationsQuery._delete();
-      } else if (params.upsert) {
-        const { update, create } = params.upsert;
-        const updatedIds: unknown[] = await currentRelationsQuery
-          ._pluck(foreignKey)
-          ._update<WhereResult<Query & { hasSelect: true }>>(update);
-
-        if (updatedIds.length < ids.length) {
-          await t.createMany(
-            ids
-              .filter((id) => !updatedIds.includes(id))
-              .map((id) => ({
-                ...create,
-                [foreignKey]: id,
-              })),
-          );
-        }
-      }
-    }) as HasOneNestedUpdate,
+    virtualColumn: new HasOneVirtualColumn(relationName, state),
     joinQuery(fromQuery, toQuery) {
       return addQueryOn(toQuery, fromQuery, toQuery, foreignKey, primaryKey);
     },
@@ -275,4 +215,137 @@ export const makeHasOneMethod = (
       };
     },
   };
+};
+
+const nestedInsert = ({ query, primaryKey, foreignKey }: State) => {
+  return (async (q, data) => {
+    const connect = data.filter(
+      (
+        item,
+      ): item is [
+        Record<string, unknown>,
+        (
+          | {
+              connect: WhereArg<QueryBase>;
+            }
+          | {
+              connectOrCreate: {
+                where: WhereArg<QueryBase>;
+                create: Record<string, unknown>;
+              };
+            }
+        ),
+      ] => Boolean(item[1].connect || item[1].connectOrCreate),
+    );
+
+    const t = query.transacting(q);
+
+    let connected: number[];
+    if (connect.length) {
+      connected = await Promise.all(
+        connect.map(([selfData, item]) => {
+          const data = { [foreignKey]: selfData[primaryKey] };
+          return 'connect' in item
+            ? (
+                t.where(item.connect) as WhereResult<Query> & {
+                  hasSelect: false;
+                }
+              )._updateOrThrow(data)
+            : (
+                t.where(item.connectOrCreate.where) as WhereResult<Query> & {
+                  hasSelect: false;
+                }
+              )._update(data);
+        }),
+      );
+    } else {
+      connected = [];
+    }
+
+    let connectedI = 0;
+    const create = data.filter(
+      (
+        item,
+      ): item is [
+        Record<string, unknown>,
+        (
+          | { create: Record<string, unknown> }
+          | {
+              connectOrCreate: {
+                where: WhereArg<QueryBase>;
+                create: Record<string, unknown>;
+              };
+            }
+        ),
+      ] => {
+        if (item[1].connectOrCreate) {
+          return !connected[connectedI++];
+        }
+        return Boolean(item[1].create);
+      },
+    );
+
+    if (create.length) {
+      await t._count()._createMany(
+        create.map(([selfData, item]) => ({
+          [foreignKey]: selfData[primaryKey],
+          ...('create' in item ? item.create : item.connectOrCreate.create),
+        })),
+      );
+    }
+  }) as HasOneNestedInsert;
+};
+
+const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
+  return (async (q, data, params) => {
+    if (
+      (params.set || params.create || params.upsert) &&
+      isQueryReturnsAll(q)
+    ) {
+      const key = params.set ? 'set' : params.create ? 'create' : 'upsert';
+      throw new Error(`\`${key}\` option is not allowed in a batch update`);
+    }
+
+    const t = query.transacting(q);
+    const ids = data.map((item) => item[primaryKey]);
+    const currentRelationsQuery = t.where({
+      [foreignKey]: { in: ids },
+    });
+
+    if (params.create || params.disconnect || params.set) {
+      await currentRelationsQuery._update({ [foreignKey]: null });
+
+      if (params.create) {
+        await t._count()._create({
+          ...params.create,
+          [foreignKey]: data[0][primaryKey],
+        });
+      }
+      if (params.set) {
+        await t
+          ._where<Query>(params.set)
+          ._update({ [foreignKey]: data[0][primaryKey] });
+      }
+    } else if (params.update) {
+      await currentRelationsQuery._update<WhereResult<Query>>(params.update);
+    } else if (params.delete) {
+      await currentRelationsQuery._delete();
+    } else if (params.upsert) {
+      const { update, create } = params.upsert;
+      const updatedIds: unknown[] = await currentRelationsQuery
+        ._pluck(foreignKey)
+        ._update<WhereResult<Query & { hasSelect: true }>>(update);
+
+      if (updatedIds.length < ids.length) {
+        await t.createMany(
+          ids
+            .filter((id) => !updatedIds.includes(id))
+            .map((id) => ({
+              ...create,
+              [foreignKey]: id,
+            })),
+        );
+      }
+    }
+  }) as HasOneNestedUpdate;
 };

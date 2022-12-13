@@ -7,17 +7,11 @@ import {
   SetQueryReturnsAll,
   SetQueryReturnsOne,
 } from '../query';
-import { pushQueryArray } from '../queryDataUtils';
 import {
-  BelongsToNestedInsert,
   BelongsToRelation,
   HasAndBelongsToManyRelation,
   HasManyRelation,
-  HasOneNestedInsert,
   HasOneRelation,
-  NestedInsertItem,
-  NestedInsertOneItem,
-  Relation,
   RelationsBase,
 } from '../relations';
 import { EmptyObject, SetOptional } from '../utils';
@@ -26,7 +20,7 @@ import { WhereArg } from './where';
 import { parseResult, queryMethodByReturnType } from './then';
 import { NotFoundError } from '../errors';
 import { RawExpression } from '../common';
-import { ColumnsShape } from '../columnSchema';
+import { VirtualColumn } from '../columnSchema';
 import { anyShape } from '../db';
 
 export type CreateData<
@@ -157,21 +151,11 @@ type OnConflictArg<T extends Query> =
   | (keyof T['shape'])[]
   | RawExpression;
 
-type PrependRelations = Record<
-  string,
-  [rowIndex: number, columnIndex: number, data: Record<string, unknown>][]
->;
-
-type AppendRelations = Record<
-  string,
-  [rowIndex: number, data: NestedInsertItem][]
->;
-
-type CreateCtx = {
-  prependRelations: PrependRelations;
-  appendRelations: AppendRelations;
+export type CreateCtx = {
   requiredReturning: Record<string, boolean>;
-  relations: Record<string, Relation>;
+  columns: Map<string, number>;
+  returnTypeAll?: true;
+  resultAll: Record<string, unknown>[];
 };
 
 type Encoder = (input: unknown) => unknown;
@@ -191,68 +175,27 @@ const handleSelect = (q: Query) => {
 };
 
 const processCreateItem = (
+  q: Query,
   item: Record<string, unknown>,
   rowIndex: number,
   ctx: CreateCtx,
-  columns: string[],
   encoders: Record<string, Encoder>,
-  columnsMap: Record<string, number>,
-  shape: ColumnsShape,
 ) => {
+  const { shape } = q;
   Object.keys(item).forEach((key) => {
-    if (ctx.relations[key]) {
-      if (ctx.relations[key].type === 'belongsTo') {
-        const foreignKey = (ctx.relations[key] as BelongsToRelation).options
-          .foreignKey;
-
-        let columnIndex = columnsMap[foreignKey];
-        if (columnIndex === undefined) {
-          columnsMap[foreignKey] = columnIndex = columns.length;
-          columns.push(foreignKey);
-        }
-
-        if (!ctx.prependRelations[key]) ctx.prependRelations[key] = [];
-
-        ctx.prependRelations[key].push([
-          rowIndex,
-          columnIndex,
-          item[key] as Record<string, unknown>,
-        ]);
-      } else {
-        const value = item[key] as NestedInsertItem;
-        if (
-          (!value.create ||
-            (Array.isArray(value.create) && value.create.length === 0)) &&
-          (!value.connect ||
-            (Array.isArray(value.connect) && value.connect.length === 0)) &&
-          (!value.connectOrCreate ||
-            (Array.isArray(value.connectOrCreate) &&
-              value.connectOrCreate.length === 0))
-        )
-          return;
-
-        ctx.requiredReturning[ctx.relations[key].primaryKey] = true;
-
-        if (!ctx.appendRelations[key]) ctx.appendRelations[key] = [];
-
-        ctx.appendRelations[key].push([rowIndex, value]);
-      }
-    } else if (
-      columnsMap[key] === undefined &&
-      (shape[key] || shape === anyShape)
-    ) {
-      columnsMap[key] = columns.length;
+    if (shape[key] instanceof VirtualColumn) {
+      (shape[key] as VirtualColumn).create?.(q, ctx, item, rowIndex);
+    } else if (!ctx.columns.has(key) && (shape[key] || shape === anyShape)) {
+      ctx.columns.set(key, ctx.columns.size);
       encoders[key] = shape[key]?.encodeFn as Encoder;
-      columns.push(key);
     }
   });
 };
 
-const createCtx = (q: Query): CreateCtx => ({
-  prependRelations: {},
-  appendRelations: {},
+const createCtx = (): CreateCtx => ({
   requiredReturning: {},
-  relations: (q as unknown as Query).relations,
+  columns: new Map(),
+  resultAll: undefined as unknown as Record<string, unknown>[],
 });
 
 const getSingleReturnType = (q: Query) => {
@@ -286,17 +229,16 @@ const mapColumnValues = (
 };
 
 const handleOneData = (q: Query, data: CreateData<Query>, ctx: CreateCtx) => {
-  const columns: string[] = [];
   const encoders: Record<string, Encoder> = {};
-  const columnsMap: Record<string, number> = {};
   const defaults = q.query.defaults;
 
   if (defaults) {
     data = { ...defaults, ...data };
   }
 
-  processCreateItem(data, 0, ctx, columns, encoders, columnsMap, q.shape);
+  processCreateItem(q, data, 0, ctx, encoders);
 
+  const columns = Array.from(ctx.columns.keys());
   const values = [mapColumnValues(columns, encoders, data)];
 
   return { columns, values };
@@ -307,9 +249,7 @@ const handleManyData = (
   data: CreateData<Query>[],
   ctx: CreateCtx,
 ) => {
-  const columns: string[] = [];
   const encoders: Record<string, Encoder> = {};
-  const columnsMap: Record<string, number> = {};
   const defaults = q.query.defaults;
 
   if (defaults) {
@@ -317,10 +257,11 @@ const handleManyData = (
   }
 
   data.forEach((item, i) => {
-    processCreateItem(item, i, ctx, columns, encoders, columnsMap, q.shape);
+    processCreateItem(q, item, i, ctx, encoders);
   });
 
   const values = Array(data.length);
+  const columns = Array.from(ctx.columns.keys());
 
   data.forEach((item, i) => {
     (values as unknown[][])[i] = mapColumnValues(columns, encoders, item);
@@ -356,33 +297,6 @@ const insert = (
     return q;
   }
 
-  const prependRelationsKeys = Object.keys(ctx.prependRelations);
-  if (prependRelationsKeys.length) {
-    pushQueryArray(
-      q,
-      'beforeCreate',
-      prependRelationsKeys.map((relationName) => {
-        return async (q: Query) => {
-          const relationData = ctx.prependRelations[relationName];
-          const relation = ctx.relations[relationName];
-
-          const inserted = await (
-            relation.nestedInsert as BelongsToNestedInsert
-          )(
-            q,
-            relationData.map(([, , data]) => data as NestedInsertOneItem),
-          );
-
-          const primaryKey = (relation as BelongsToRelation).options.primaryKey;
-          relationData.forEach(([rowIndex, columnIndex], index) => {
-            (values as unknown[][])[rowIndex][columnIndex] =
-              inserted[index][primaryKey];
-          });
-        };
-      }),
-    );
-  }
-
   if (
     returnType === 'oneOrThrow' ||
     q.query.fromQuery?.query.returnType === 'oneOrThrow'
@@ -396,66 +310,39 @@ const insert = (
     };
   }
 
-  const appendRelationsKeys = Object.keys(ctx.appendRelations);
-  if (appendRelationsKeys.length) {
-    if (!returning?.includes('*')) {
-      const requiredColumns = Object.keys(ctx.requiredReturning);
+  const requiredColumns = Object.keys(ctx.requiredReturning);
+  if (requiredColumns.length && !returning?.includes('*')) {
+    if (!returning) {
+      q.query.select = requiredColumns;
+    } else {
+      q.query.select = [
+        ...new Set([...(returning as string[]), ...requiredColumns]),
+      ];
+    }
+  }
 
-      if (!returning) {
-        q.query.select = requiredColumns;
-      } else {
-        q.query.select = [
-          ...new Set([...(returning as string[]), ...requiredColumns]),
-        ];
+  if (ctx.returnTypeAll) {
+    q.query.returnType = 'all';
+    const { handleResult } = q.query;
+    q.query.handleResult = async (q, queryResult) => {
+      ctx.resultAll = (await handleResult(q, queryResult)) as Record<
+        string,
+        unknown
+      >[];
+
+      if (queryMethodByReturnType[returnType] === 'arrays') {
+        queryResult.rows.forEach(
+          (row, i) =>
+            ((queryResult.rows as unknown as unknown[][])[i] =
+              Object.values(row)),
+        );
       }
-    }
 
-    let resultOfTypeAll: Record<string, unknown>[] | undefined;
-    if (returnType !== 'all') {
-      const { handleResult } = q.query;
-      q.query.handleResult = async (q, queryResult) => {
-        resultOfTypeAll = (await handleResult(q, queryResult)) as Record<
-          string,
-          unknown
-        >[];
-
-        if (queryMethodByReturnType[returnType] === 'arrays') {
-          queryResult.rows.forEach(
-            (row, i) =>
-              ((queryResult.rows as unknown as unknown[][])[i] =
-                Object.values(row)),
-          );
-        }
-
-        return parseResult(q, returnType, queryResult);
-      };
-    }
-
-    pushQueryArray(
-      q,
-      'afterCreate',
-      appendRelationsKeys.map((relationName) => {
-        return (q: Query, result: Record<string, unknown>[]) => {
-          const all = resultOfTypeAll || result;
-          return (
-            ctx.relations[relationName].nestedInsert as HasOneNestedInsert
-          )?.(
-            q,
-            ctx.appendRelations[relationName].map(([rowIndex, data]) => [
-              all[rowIndex],
-              data as NestedInsertOneItem,
-            ]),
-          );
-        };
-      }),
-    );
+      return parseResult(q, returnType, queryResult);
+    };
+  } else {
+    q.query.returnType = returnType;
   }
-
-  if (prependRelationsKeys.length || appendRelationsKeys.length) {
-    q.query.wrapInTransaction = true;
-  }
-
-  q.query.returnType = appendRelationsKeys.length ? 'all' : returnType;
 
   return q;
 };
@@ -477,7 +364,7 @@ export class Create {
   _create<T extends Query>(this: T, data: CreateData<T>): CreateResult<T> {
     handleSelect(this);
 
-    const ctx = createCtx(this);
+    const ctx = createCtx();
 
     const obj = handleOneData(this, data, ctx);
     let { columns } = obj;
@@ -523,7 +410,7 @@ export class Create {
     data: CreateData<T>[],
   ): CreateManyResult<T> {
     handleSelect(this);
-    const ctx = createCtx(this);
+    const ctx = createCtx();
     return insert(
       this,
       handleManyData(this, data, ctx),

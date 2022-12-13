@@ -1,15 +1,11 @@
 import { Query, QueryReturnsAll, SetQueryReturnsRowCount } from '../query';
-import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
+import { pushQueryValue } from '../queryDataUtils';
 import { isRaw, RawExpression, StringKey } from '../common';
 import {
-  BelongsToNestedUpdate,
   BelongsToRelation,
   HasAndBelongsToManyRelation,
   HasManyRelation,
-  HasOneNestedUpdate,
   HasOneRelation,
-  NestedUpdateItem,
-  NestedUpdateOneItem,
   Relation,
 } from '../relations';
 import { WhereArg, WhereResult } from './where';
@@ -17,7 +13,7 @@ import { EmptyObject, MaybeArray } from '../utils';
 import { CreateData } from './create';
 import { parseResult, queryMethodByReturnType } from './then';
 import { UpdateQueryData } from '../sql';
-import { ColumnsShape } from '../columnSchema';
+import { ColumnsShape, VirtualColumn } from '../columnSchema';
 import { anyShape } from '../db';
 
 export type UpdateData<T extends Query> = {
@@ -114,6 +110,14 @@ type ChangeCountArg<T extends Query> =
   | keyof T['shape']
   | Partial<Record<keyof T['shape'], number>>;
 
+export type UpdateCtx = {
+  willSetKeys?: true;
+  updateLater?: Record<string, unknown>;
+  updateLaterPromises?: Promise<void>[];
+  returnTypeAll?: true;
+  resultAll: Record<string, unknown>[];
+};
+
 const applyCountChange = <T extends Query>(
   self: T,
   op: string,
@@ -161,48 +165,19 @@ export class Update {
     const set: Record<string, unknown> = { ...arg };
     pushQueryValue(this, 'updateData', set);
 
-    const { relations, shape } = this as {
-      relations: Record<string, Relation>;
-      shape: ColumnsShape;
-    };
-
-    const prependRelations: Record<string, Record<string, unknown>> = {};
-    const appendRelations: Record<string, Record<string, unknown>> = {};
+    const { shape } = this as { shape: ColumnsShape };
 
     const originalReturnType = query.returnType || 'all';
 
+    const ctx: UpdateCtx = {
+      resultAll: undefined as unknown as Record<string, unknown>[],
+    };
+
     for (const key in arg) {
-      if (relations[key]) {
+      const item = shape[key];
+      if (item instanceof VirtualColumn && item.update) {
+        item.update(this, ctx, set);
         delete set[key];
-        if (relations[key].type === 'belongsTo') {
-          prependRelations[key] = arg[key] as Record<string, unknown>;
-        } else {
-          const value = arg[key] as NestedUpdateItem;
-
-          if (
-            !value.set &&
-            !('upsert' in value) &&
-            (!value.disconnect ||
-              (Array.isArray(value.disconnect) &&
-                value.disconnect.length === 0)) &&
-            (!value.delete ||
-              (Array.isArray(value.delete) && value.delete.length === 0)) &&
-            (!value.update ||
-              (Array.isArray(value.update.where) &&
-                value.update.where.length === 0)) &&
-            (!value.create ||
-              (Array.isArray(value.create) && value.create.length === 0))
-          )
-            continue;
-
-          if (!query.select?.includes('*')) {
-            const primaryKey = relations[key].primaryKey;
-            if (!query.select?.includes(primaryKey)) {
-              this._select(primaryKey as StringKey<keyof T['selectable']>);
-            }
-          }
-          appendRelations[key] = arg[key] as Record<string, unknown>;
-        }
       } else if (!shape[key] && shape !== anyShape) {
         delete set[key];
       } else {
@@ -211,58 +186,32 @@ export class Update {
       }
     }
 
-    const state: {
-      updateLater?: Record<string, unknown>;
-      updateLaterPromises?: Promise<void>[];
-    } = {};
-
-    const prependRelationKeys = Object.keys(prependRelations);
-    let willSetKeys = false;
-    if (prependRelationKeys.length) {
-      willSetKeys = prependRelationKeys.some((relationName) => {
-        const data = prependRelations[relationName] as NestedUpdateOneItem;
-
-        return (
-          relations[relationName] as {
-            nestedUpdate: BelongsToNestedUpdate;
-          }
-        ).nestedUpdate(this, set, data, state);
-      });
-    }
-
-    if (!willSetKeys && checkIfUpdateIsEmpty(query as UpdateQueryData)) {
+    if (!ctx.willSetKeys && checkIfUpdateIsEmpty(query as UpdateQueryData)) {
       delete query.type;
     }
 
-    const appendRelationKeys = Object.keys(appendRelations);
-
-    let resultOfTypeAll: Record<string, unknown>[] | undefined;
-
-    if (
-      state?.updateLater ||
-      (appendRelationKeys.length && originalReturnType !== 'all')
-    ) {
-      query.returnType = 'all';
-
-      if (state?.updateLater) {
-        if (!query.select?.includes('*')) {
-          this.primaryKeys.forEach((key) => {
-            if (!query.select?.includes(key)) {
-              this._select(key as StringKey<keyof T['selectable']>);
-            }
-          });
-        }
+    if (ctx.updateLater) {
+      if (!query.select?.includes('*')) {
+        this.primaryKeys.forEach((key) => {
+          if (!query.select?.includes(key)) {
+            this._select(key as StringKey<keyof T['selectable']>);
+          }
+        });
       }
+    }
+
+    if (ctx.updateLater || ctx.returnTypeAll) {
+      query.returnType = 'all';
 
       const { handleResult } = query;
       query.handleResult = async (q, queryResult) => {
-        resultOfTypeAll = (await handleResult(q, queryResult)) as Record<
+        ctx.resultAll = (await handleResult(q, queryResult)) as Record<
           string,
           unknown
         >[];
 
-        if (state?.updateLater) {
-          await Promise.all(state.updateLaterPromises as Promise<void>[]);
+        if (ctx.updateLater) {
+          await Promise.all(ctx.updateLaterPromises as Promise<void>[]);
 
           const t = this.__model.clone().transacting(q);
           const keys = this.primaryKeys;
@@ -273,14 +222,12 @@ export class Update {
             ) => Query
           )(
             keys,
-            resultOfTypeAll.map((item) => keys.map((key) => item[key])),
+            ctx.resultAll.map((item) => keys.map((key) => item[key])),
           );
 
-          await (t as WhereResult<Query>)._update(state.updateLater);
+          await (t as WhereResult<Query>)._update(ctx.updateLater);
 
-          resultOfTypeAll.forEach((item) =>
-            Object.assign(item, state.updateLater),
-          );
+          ctx.resultAll.forEach((item) => Object.assign(item, ctx.updateLater));
         }
 
         if (queryMethodByReturnType[originalReturnType] === 'arrays') {
@@ -291,32 +238,10 @@ export class Update {
           );
         }
 
+        q.query.returnType = originalReturnType;
+
         return parseResult(q, originalReturnType, queryResult);
       };
-    }
-
-    if (appendRelationKeys.length) {
-      pushQueryArray(
-        this,
-        'afterUpdate',
-        appendRelationKeys.map((relationName) => {
-          return (q: Query, result: Record<string, unknown>[]) => {
-            const all = resultOfTypeAll || result;
-
-            if (q.query.returnType !== originalReturnType) {
-              q.query.returnType = originalReturnType;
-            }
-
-            return (
-              relations[relationName].nestedUpdate as HasOneNestedUpdate
-            )?.(q, all, appendRelations[relationName] as NestedUpdateOneItem);
-          };
-        }),
-      );
-    }
-
-    if (prependRelationKeys.length || appendRelationKeys.length) {
-      query.wrapInTransaction = true;
     }
 
     return update(this);

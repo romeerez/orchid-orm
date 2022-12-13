@@ -1,99 +1,6 @@
 import { defaultsKey, Query, QueryBase, QueryWithTable } from './query';
-import {
-  WhereArg,
-  UpdateData,
-  CreateMethodsNames,
-  DeleteMethodsNames,
-} from './queryMethods';
-import { EmptyObject, MaybeArray } from './utils';
-
-export type NestedInsertOneItem = {
-  create?: Record<string, unknown>;
-  connect?: WhereArg<QueryBase>;
-  connectOrCreate?: {
-    where: WhereArg<QueryBase>;
-    create: Record<string, unknown>;
-  };
-};
-
-export type NestedInsertManyItems = {
-  create?: Record<string, unknown>[];
-  connect?: WhereArg<QueryBase>[];
-  connectOrCreate?: {
-    where: WhereArg<QueryBase>;
-    create: Record<string, unknown>;
-  }[];
-};
-
-export type NestedInsertItem = NestedInsertOneItem | NestedInsertManyItems;
-
-export type BelongsToNestedInsert = (
-  query: Query,
-  relationData: NestedInsertOneItem[],
-) => Promise<Record<string, unknown>[]>;
-
-export type HasOneNestedInsert = (
-  query: Query,
-  data: [
-    selfData: Record<string, unknown>,
-    relationData: NestedInsertOneItem,
-  ][],
-) => Promise<void>;
-
-export type HasManyNestedInsert = (
-  query: Query,
-  data: [
-    selfData: Record<string, unknown>,
-    relationData: NestedInsertManyItems,
-  ][],
-) => Promise<void>;
-
-export type NestedUpdateOneItem = {
-  disconnect?: boolean;
-  set?: WhereArg<QueryBase>;
-  delete?: boolean;
-  update?: UpdateData<Query>;
-  upsert?: {
-    update: UpdateData<Query>;
-    create: Record<string, unknown>;
-  };
-  create: Record<string, unknown>;
-};
-
-export type NestedUpdateManyItems = {
-  disconnect?: MaybeArray<WhereArg<QueryBase>>;
-  set?: MaybeArray<WhereArg<QueryBase>>;
-  delete?: MaybeArray<WhereArg<QueryBase>>;
-  update?: {
-    where: MaybeArray<WhereArg<QueryBase>>;
-    data: UpdateData<Query>;
-  };
-  create: Record<string, unknown>[];
-};
-
-export type NestedUpdateItem = NestedUpdateOneItem | NestedUpdateManyItems;
-
-export type BelongsToNestedUpdate = (
-  q: Query,
-  update: Record<string, unknown>,
-  params: NestedUpdateOneItem,
-  state: {
-    updateLater?: Record<string, unknown>;
-    updateLaterPromises?: Promise<void>[];
-  },
-) => boolean;
-
-export type HasOneNestedUpdate = (
-  query: Query,
-  data: Record<string, unknown>[],
-  relationData: NestedUpdateOneItem,
-) => Promise<void>;
-
-export type HasManyNestedUpdate = (
-  query: Query,
-  data: Record<string, unknown>[],
-  relationData: NestedUpdateManyItems,
-) => Promise<void>;
+import { CreateMethodsNames, DeleteMethodsNames } from './queryMethods';
+import { EmptyObject } from './utils';
 
 export type BaseRelation = {
   type: string;
@@ -102,14 +9,6 @@ export type BaseRelation = {
   query: QueryWithTable;
   joinQuery(fromQuery: QueryBase, toQuery: Query): Query;
   nestedCreateQuery: Query;
-  nestedInsert?:
-    | BelongsToNestedInsert
-    | HasOneNestedInsert
-    | HasManyNestedInsert;
-  nestedUpdate?:
-    | BelongsToNestedUpdate
-    | HasOneNestedUpdate
-    | HasManyNestedUpdate;
   primaryKey: string;
   options: {
     scope?(q: QueryWithTable): QueryWithTable;

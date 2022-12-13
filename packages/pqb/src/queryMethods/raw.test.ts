@@ -17,7 +17,7 @@ describe('raw', () => {
     expect(value.__column).toBe(type);
   });
 
-  it.only('should replace values started with $', () => {
+  it('should replace values started with $', () => {
     const query = User.where(
       db.raw('a = $a AND b = $B AND c = $a1B2', {
         a: 1,

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.7.13
+
+### Patch Changes
+
+- Refactor create and update of relations
+
 ## 0.7.12
 
 ### Patch Changes

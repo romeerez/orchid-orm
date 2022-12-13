@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.3.16
+
+### Patch Changes
+
+- Refactor create and update of relations
+- Updated dependencies
+  - pqb@0.7.13
+
 ## 1.3.15
 
 ### Patch Changes
