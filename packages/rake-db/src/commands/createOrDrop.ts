@@ -4,7 +4,7 @@ import {
   setAdminCredentialsToOptions,
   setAdapterOptions,
   createSchemaMigrations,
-  MigrationConfig,
+  RakeDbConfig,
   migrationConfigDefaults,
 } from '../common';
 import { migrate } from './migrateOrRollback';
@@ -34,7 +34,7 @@ const execute = async (
 const createOrDrop = async (
   options: AdapterOptions,
   adminOptions: AdapterOptions,
-  config: MigrationConfig,
+  config: RakeDbConfig,
   args: {
     sql(params: { database: string; user: string }): string;
     successMessage(params: { database: string }): string;
@@ -73,7 +73,7 @@ const createOrDrop = async (
 
 export const createDb = async (
   arg: MaybeArray<AdapterOptions>,
-  config: MigrationConfig,
+  config: RakeDbConfig,
 ) => {
   for (const options of toArray(arg)) {
     await createOrDrop(options, options, config, {
@@ -109,7 +109,7 @@ export const dropDb = async (arg: MaybeArray<AdapterOptions>) => {
 
 export const resetDb = async (
   arg: MaybeArray<AdapterOptions>,
-  config: MigrationConfig,
+  config: RakeDbConfig,
 ) => {
   await dropDb(arg);
   await createDb(arg, config);

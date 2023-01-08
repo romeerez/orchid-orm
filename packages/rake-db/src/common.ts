@@ -7,13 +7,17 @@ import {
 import Enquirer from 'enquirer';
 import path from 'path';
 import { readdir } from 'fs/promises';
+import { RakeDbAst } from './ast';
 
-export type MigrationConfig = {
+export type RakeDbConfig = {
   migrationsPath: string;
   migrationsTable: string;
   requireTs(path: string): void;
   noPrimaryKey?: NoPrimaryKeyOption;
+  appCodeUpdater?: AppCodeUpdater;
 } & QueryLogOptions;
+
+export type AppCodeUpdater = (ast: RakeDbAst) => Promise<void>;
 
 export const migrationConfigDefaults = {
   migrationsPath: path.resolve(process.cwd(), 'src', 'migrations'),
@@ -24,7 +28,7 @@ export const migrationConfigDefaults = {
 };
 
 export const getMigrationConfigWithDefaults = (
-  config: Partial<MigrationConfig>,
+  config: Partial<RakeDbConfig>,
 ) => {
   return { ...migrationConfigDefaults, ...config };
 };
@@ -112,7 +116,7 @@ export const setAdminCredentialsToOptions = async (
 
 export const createSchemaMigrations = async (
   db: Adapter,
-  config: MigrationConfig,
+  config: RakeDbConfig,
 ) => {
   try {
     await db.query(
@@ -174,7 +178,7 @@ export type MigrationFile = {
 };
 
 export const getMigrationFiles = async (
-  config: MigrationConfig,
+  config: RakeDbConfig,
   up: boolean,
 ): Promise<MigrationFile[]> => {
   const { migrationsPath } = config;

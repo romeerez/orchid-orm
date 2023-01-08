@@ -11,16 +11,19 @@ export const getDb = () => {
     migrationsPath: 'migrations-path',
     migrationsTable: 'schemaMigrations',
     requireTs: require,
+    appCodeUpdater: appCodeUpdaterMock,
   });
   db.query = queryMock;
   return db;
 };
 
 export const queryMock = jest.fn();
+const appCodeUpdaterMock = jest.fn();
 
 export const resetDb = () => {
   queryMock.mockClear();
   queryMock.mockResolvedValue(undefined);
+  appCodeUpdaterMock.mockClear();
   getDb().up = true;
 };
 

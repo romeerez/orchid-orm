@@ -2,12 +2,12 @@ import {
   getFirstWordAndRest,
   getTextAfterFrom,
   getTextAfterTo,
-  MigrationConfig,
+  RakeDbConfig,
 } from '../common';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 
-export const generate = async (config: MigrationConfig, args: string[]) => {
+export const generate = async (config: RakeDbConfig, args: string[]) => {
   const name = args[0];
   if (!name) throw new Error('Migration name is missing');
 

@@ -18,9 +18,10 @@ import {
   raw,
   TextColumn,
 } from 'pqb';
-import { createJoinTable, createTable } from './createTable';
+import { createTable } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
-import { MigrationConfig, quoteTable } from '../common';
+import { RakeDbConfig, quoteTable } from '../common';
+import { createJoinTable } from './createJoinTable';
 
 export type DropMode = 'CASCADE' | 'RESTRICT';
 
@@ -68,7 +69,7 @@ export class Migration extends TransactionAdapter {
   constructor(
     tx: TransactionAdapter,
     public up: boolean,
-    public options: MigrationConfig,
+    public options: RakeDbConfig,
   ) {
     super(tx, tx.client, tx.types);
     this.log = logParamToLogObject(options.logger || console, options.log);

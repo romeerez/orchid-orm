@@ -63,15 +63,29 @@ import { timestamps } from './timestamps';
 export type ColumnTypes = typeof columnTypes;
 
 export type TableData = {
-  primaryKey?: { columns: string[]; options?: { name?: string } };
-  indexes: { columns: IndexColumnOptions[]; options: IndexOptions }[];
-  foreignKeys: {
+  primaryKey?: TableData.PrimaryKey;
+  indexes: TableData.Index[];
+  foreignKeys: TableData.ForeignKey[];
+};
+
+export namespace TableData {
+  export type PrimaryKey = {
+    columns: string[];
+    options?: { name?: string };
+  };
+
+  export type Index = {
+    columns: IndexColumnOptions[];
+    options: IndexOptions;
+  };
+
+  export type ForeignKey = {
     columns: string[];
     fnOrTable: (() => ForeignKeyModel) | string;
     foreignColumns: string[];
     options: ForeignKeyOptions;
-  }[];
-};
+  };
+}
 
 export const newTableData = (): TableData => ({
   indexes: [],

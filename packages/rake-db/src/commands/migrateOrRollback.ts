@@ -2,7 +2,7 @@ import { Adapter, AdapterOptions, MaybeArray, toArray } from 'pqb';
 import {
   createSchemaMigrations,
   getMigrationFiles,
-  MigrationConfig,
+  RakeDbConfig,
   MigrationFile,
   quoteTable,
 } from '../common';
@@ -18,7 +18,7 @@ import { Migration } from '../migration/migration';
 
 const migrateOrRollback = async (
   options: MaybeArray<AdapterOptions>,
-  config: MigrationConfig,
+  config: RakeDbConfig,
   args: string[],
   up: boolean,
 ) => {
@@ -56,7 +56,7 @@ const processMigration = async (
   db: Adapter,
   up: boolean,
   file: MigrationFile,
-  config: MigrationConfig,
+  config: RakeDbConfig,
 ) => {
   await db.transaction(async (tx) => {
     const db = new Migration(tx, up, config);
@@ -83,7 +83,7 @@ const processMigration = async (
 const saveMigratedVersion = async (
   db: Adapter,
   version: string,
-  config: MigrationConfig,
+  config: RakeDbConfig,
 ) => {
   await db.query(
     `INSERT INTO ${quoteTable(config.migrationsTable)} VALUES ('${version}')`,
@@ -93,7 +93,7 @@ const saveMigratedVersion = async (
 const removeMigratedVersion = async (
   db: Adapter,
   version: string,
-  config: MigrationConfig,
+  config: RakeDbConfig,
 ) => {
   await db.query(
     `DELETE FROM ${quoteTable(
@@ -104,7 +104,7 @@ const removeMigratedVersion = async (
 
 const getMigratedVersionsMap = async (
   db: Adapter,
-  config: MigrationConfig,
+  config: RakeDbConfig,
 ): Promise<Record<string, boolean>> => {
   try {
     const result = await db.arrays<[string]>(
@@ -122,12 +122,12 @@ const getMigratedVersionsMap = async (
 
 export const migrate = (
   options: MaybeArray<AdapterOptions>,
-  config: MigrationConfig,
+  config: RakeDbConfig,
   args: string[] = [],
 ) => migrateOrRollback(options, config, args, true);
 
 export const rollback = (
   options: MaybeArray<AdapterOptions>,
-  config: MigrationConfig,
+  config: RakeDbConfig,
   args: string[] = [],
 ) => migrateOrRollback(options, config, args, false);

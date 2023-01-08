@@ -6,6 +6,14 @@ const db = getDb();
   describe(action, () => {
     beforeEach(resetDb);
 
+    it('should call appCodeUpdater', async () => {
+      await db[action]('name', (t) => ({
+        id: t.serial().primaryKey(),
+      }));
+
+      expect(db.options.appCodeUpdater).toHaveBeenCalled();
+    });
+
     it(`should ${action} with comment`, async () => {
       await db[action]('name', { comment: 'this is a table comment' }, (t) => ({
         id: t.serial().primaryKey(),

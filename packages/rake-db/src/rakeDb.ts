@@ -1,12 +1,12 @@
 import { AdapterOptions, MaybeArray } from 'pqb';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
 import { migrate, rollback } from './commands/migrateOrRollback';
-import { getMigrationConfigWithDefaults, MigrationConfig } from './common';
+import { getMigrationConfigWithDefaults, RakeDbConfig } from './common';
 import { generate } from './commands/generate';
 
 export const rakeDb = async (
   options: MaybeArray<AdapterOptions>,
-  partialConfig: Partial<MigrationConfig> = {},
+  partialConfig: Partial<RakeDbConfig> = {},
   args: string[] = process.argv.slice(2),
 ) => {
   const config = getMigrationConfigWithDefaults(partialConfig);

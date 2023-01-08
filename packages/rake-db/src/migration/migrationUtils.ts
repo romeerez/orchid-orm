@@ -5,6 +5,7 @@ import {
   getRaw,
   isRaw,
   quote,
+  Sql,
   TableData,
   toArray,
 } from 'pqb';
@@ -157,18 +158,27 @@ export const migrateIndexes = async (
 export const migrateIndex = (
   state: { migration: Migration; tableName: string },
   up: boolean,
-  { columns, options }: ColumnIndex,
+  index: ColumnIndex,
 ) => {
+  return state.migration.query(indexToQuery(up, state.tableName, index));
+};
+
+export const indexToQuery = (
+  up: boolean,
+  tableName: string,
+  { columns, options }: ColumnIndex,
+): Sql => {
   const indexName =
     options.name ||
-    joinWords(state.tableName, ...columns.map(({ column }) => column), 'index');
+    joinWords(tableName, ...columns.map(({ column }) => column), 'index');
 
   if (!up) {
-    return state.migration.query(
-      `DROP INDEX "${indexName}"${
+    return {
+      text: `DROP INDEX "${indexName}"${
         options.dropMode ? ` ${options.dropMode}` : ''
       }`,
-    );
+      values: [],
+    };
   }
 
   const values: unknown[] = [];
@@ -179,7 +189,7 @@ export const migrateIndex = (
     sql.push('UNIQUE');
   }
 
-  sql.push(`INDEX "${indexName}" ON ${quoteTable(state.tableName)}`);
+  sql.push(`INDEX "${indexName}" ON ${quoteTable(tableName)}`);
 
   if (options.using) {
     sql.push(`USING ${options.using}`);
@@ -237,21 +247,27 @@ export const migrateIndex = (
     );
   }
 
-  return state.migration.query({ text: sql.join(' '), values });
+  return { text: sql.join(' '), values };
 };
 
 export const migrateComments = async (
   state: { migration: Migration; tableName: string },
   comments: ColumnComment[],
 ) => {
-  for (const { column, comment } of comments) {
-    await state.migration.query(
-      `COMMENT ON COLUMN ${quoteTable(state.tableName)}."${column}" IS ${quote(
-        comment,
-      )}`,
-    );
+  for (const comment of comments) {
+    await state.migration.query(commentToQuery(state.tableName, comment));
   }
 };
+
+export const commentToQuery = (
+  tableName: string,
+  { column, comment }: ColumnComment,
+): Sql => ({
+  text: `COMMENT ON COLUMN ${quoteTable(tableName)}."${column}" IS ${quote(
+    comment,
+  )}`,
+  values: [],
+});
 
 export const primaryKeyToSql = (
   primaryKey: Exclude<TableData['primaryKey'], undefined>,

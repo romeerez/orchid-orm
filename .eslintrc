@@ -13,6 +13,8 @@
     "@typescript-eslint/explicit-module-boundary-types": "off",
     "no-async-promise-executor": "off",
     "no-empty": "off",
-    "@typescript-eslint/no-empty-function": "off"
+    "@typescript-eslint/no-empty-function": "off",
+    "@typescript-eslint/prefer-namespace-keyword": "off",
+    "@typescript-eslint/no-namespace": "off"
   }
 }

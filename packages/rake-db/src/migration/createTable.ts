@@ -1,120 +1,32 @@
 import {
   ColumnsShape,
-  ColumnType,
   columnTypes,
   getColumnTypes,
   getTableData,
-  Operators,
+  NoPrimaryKeyOption,
   quote,
   raw,
+  Sql,
   TableData,
 } from 'pqb';
 import {
-  TableOptions,
+  ColumnComment,
+  ColumnIndex,
   ColumnsShapeCallback,
   Migration,
-  ColumnIndex,
-  ColumnComment,
-  JoinTableOptions,
+  TableOptions,
 } from './migration';
 import {
   addColumnComment,
   addColumnIndex,
   columnToSql,
+  commentToQuery,
   constraintToSql,
-  getPrimaryKeysOfTable,
-  migrateComments,
-  migrateIndexes,
+  indexToQuery,
   primaryKeyToSql,
 } from './migrationUtils';
-import { joinWords, quoteTable } from '../common';
-import { singular } from 'pluralize';
-
-class UnknownColumn extends ColumnType {
-  operators = Operators.any;
-
-  constructor(public dataType: string) {
-    super();
-  }
-}
-
-export const createJoinTable = async (
-  migration: Migration,
-  up: boolean,
-  tables: string[],
-  options: JoinTableOptions,
-  fn?: ColumnsShapeCallback,
-) => {
-  const tableName = options.tableName || joinWords(...tables);
-
-  if (!up) {
-    return createTable(
-      migration,
-      up,
-      tableName,
-      { ...options, noPrimaryKey: true },
-      () => ({}),
-    );
-  }
-
-  const tablesWithPrimaryKeys = await Promise.all(
-    tables.map(async (table) => {
-      const primaryKeys = await getPrimaryKeysOfTable(migration, table).then(
-        (items) =>
-          items.map((item) => ({
-            ...item,
-            joinedName: joinWords(singular(table), item.name),
-          })),
-      );
-
-      if (!primaryKeys.length) {
-        throw new Error(
-          `Primary key for table ${quoteTable(table)} is not defined`,
-        );
-      }
-
-      return [table, primaryKeys] as const;
-    }),
-  );
-
-  return createTable(migration, up, tableName, options, (t) => {
-    const result: Record<string, ColumnType> = {};
-
-    tablesWithPrimaryKeys.forEach(([table, primaryKeys]) => {
-      if (primaryKeys.length === 1) {
-        const [{ type, joinedName, name }] = primaryKeys;
-
-        const column = new UnknownColumn(type);
-
-        result[joinedName] = column.foreignKey(table, name);
-
-        return;
-      }
-
-      primaryKeys.forEach(({ joinedName, type }) => {
-        result[joinedName] = new UnknownColumn(type);
-      });
-
-      t.foreignKey(
-        primaryKeys.map((key) => key.joinedName) as [string, ...string[]],
-        table,
-        primaryKeys.map((key) => key.name) as [string, ...string[]],
-      );
-    });
-
-    if (fn) {
-      Object.assign(result, fn(t));
-    }
-
-    t.primaryKey(
-      tablesWithPrimaryKeys.flatMap(([, primaryKeys]) =>
-        primaryKeys.map((item) => item.joinedName),
-      ),
-    );
-
-    return result;
-  });
-};
+import { quoteTable } from '../common';
+import { RakeDbAst } from '../ast';
 
 const types = Object.assign(Object.create(columnTypes), {
   raw,
@@ -129,83 +41,65 @@ export const createTable = async (
 ) => {
   const shape = getColumnTypes(types, fn);
   const tableData = getTableData();
-  validatePrimaryKey(migration, options, tableData, shape, tableName);
-
-  if (!up) {
-    const { dropMode } = options;
-    await migration.query(
-      `DROP TABLE ${quoteTable(tableName)}${dropMode ? ` ${dropMode}` : ''}`,
-    );
-    return;
-  }
-
-  const lines: string[] = [];
-
-  applyMultiplePrimaryKeys(shape, tableData);
-
-  const state: {
-    migration: Migration;
-    tableName: string;
-    values: unknown[];
-    indexes: ColumnIndex[];
-    comments: ColumnComment[];
-    tableData: TableData;
-  } = {
-    migration,
+  const ast = makeAst(
+    up,
     tableName,
-    values: [],
-    indexes: [],
-    comments: [],
+    shape,
     tableData,
-  };
+    options,
+    migration.options.noPrimaryKey,
+  );
 
-  for (const key in shape) {
-    const item = shape[key];
-    addColumnIndex(state.indexes, key, item);
-    addColumnComment(state.comments, key, item);
-    lines.push(
-      `\n  ${columnToSql(key, item, state.values, tableData.primaryKey)}`,
-    );
+  validatePrimaryKey(ast);
+
+  const queries = astToQueries(ast);
+  for (const query of queries) {
+    await migration.query(query);
   }
 
-  if (tableData.primaryKey) {
-    lines.push(`\n  ${primaryKeyToSql(tableData.primaryKey)}`);
-  }
-
-  tableData.foreignKeys.forEach((foreignKey) => {
-    lines.push(`\n  ${constraintToSql(state.tableName, up, foreignKey)}`);
-  });
-
-  await migration.query({
-    text: `CREATE TABLE ${quoteTable(tableName)} (${lines.join(',')}\n)`,
-    values: state.values,
-  });
-
-  state.indexes.push(...tableData.indexes);
-
-  await migrateIndexes(state, state.indexes, up);
-  await migrateComments(state, state.comments);
-
-  if (options.comment) {
-    await migration.query(
-      `COMMENT ON TABLE ${quoteTable(tableName)} IS ${quote(options.comment)}`,
-    );
-  }
+  await migration.options.appCodeUpdater?.(ast);
 };
 
-const validatePrimaryKey = (
-  migration: Migration,
-  options: TableOptions,
-  tableData: TableData,
-  shape: ColumnsShape,
+const makeAst = (
+  up: boolean,
   tableName: string,
-) => {
-  const { noPrimaryKey } = migration.options;
-  if (!options.noPrimaryKey && (!noPrimaryKey || noPrimaryKey !== 'ignore')) {
-    let hasPrimaryKey = !!tableData.primaryKey?.columns?.length;
+  shape: ColumnsShape,
+  tableData: TableData,
+  options: TableOptions,
+  noPrimaryKey?: NoPrimaryKeyOption,
+): RakeDbAst.Table => {
+  const shapePKeys: string[] = [];
+  for (const key in shape) {
+    if (shape[key].isPrimaryKey) {
+      shapePKeys.push(key);
+    }
+  }
+
+  const primaryKey = tableData.primaryKey;
+
+  return {
+    type: 'table',
+    action: up ? 'create' : 'drop',
+    name: tableName,
+    shape,
+    ...tableData,
+    primaryKey:
+      shapePKeys.length <= 1
+        ? primaryKey
+        : primaryKey
+        ? { ...primaryKey, columns: [...shapePKeys, ...primaryKey.columns] }
+        : { columns: shapePKeys },
+    ...options,
+    noPrimaryKey: options.noPrimaryKey ? 'ignore' : noPrimaryKey || 'error',
+  };
+};
+
+const validatePrimaryKey = (ast: RakeDbAst.Table) => {
+  if (ast.noPrimaryKey !== 'ignore') {
+    let hasPrimaryKey = !!ast.primaryKey?.columns?.length;
     if (!hasPrimaryKey) {
-      for (const key in shape) {
-        if (shape[key].isPrimaryKey) {
+      for (const key in ast.shape) {
+        if (ast.shape[key].isPrimaryKey) {
           hasPrimaryKey = true;
           break;
         }
@@ -213,8 +107,8 @@ const validatePrimaryKey = (
     }
 
     if (!hasPrimaryKey) {
-      const message = `Table ${tableName} has no primary key`;
-      if (!noPrimaryKey || noPrimaryKey === 'error') {
+      const message = `Table ${ast.name} has no primary key`;
+      if (ast.noPrimaryKey === 'error') {
         throw new Error(message);
       } else {
         console.warn(message);
@@ -223,22 +117,55 @@ const validatePrimaryKey = (
   }
 };
 
-const applyMultiplePrimaryKeys = (
-  shape: ColumnsShape,
-  tableData: TableData,
-) => {
-  const columns: string[] = [];
-  for (const key in shape) {
-    if (shape[key].isPrimaryKey) {
-      columns.push(key);
-    }
+const astToQueries = (ast: RakeDbAst.Table): Sql[] => {
+  if (ast.action === 'drop') {
+    return [
+      {
+        text: `DROP TABLE ${quoteTable(ast.name)}${
+          ast.dropMode ? ` ${ast.dropMode}` : ''
+        }`,
+        values: [],
+      },
+    ];
   }
 
-  if (columns.length <= 1) return;
+  const lines: string[] = [];
+  const values: unknown[] = [];
+  const indexes: ColumnIndex[] = [];
+  const comments: ColumnComment[] = [];
 
-  if (!tableData.primaryKey) {
-    tableData.primaryKey = { columns };
-  } else {
-    tableData.primaryKey.columns.unshift(...columns);
+  for (const key in ast.shape) {
+    const item = ast.shape[key];
+    addColumnIndex(indexes, key, item);
+    addColumnComment(comments, key, item);
+    lines.push(`\n  ${columnToSql(key, item, values, !!ast.primaryKey)}`);
   }
+
+  if (ast.primaryKey) {
+    lines.push(`\n  ${primaryKeyToSql(ast.primaryKey)}`);
+  }
+
+  ast.foreignKeys.forEach((foreignKey) => {
+    lines.push(`\n  ${constraintToSql(ast.name, true, foreignKey)}`);
+  });
+
+  indexes.push(...ast.indexes);
+
+  const result: Sql[] = [
+    {
+      text: `CREATE TABLE ${quoteTable(ast.name)} (${lines.join(',')}\n)`,
+      values,
+    },
+    ...indexes.map((index) => indexToQuery(true, ast.name, index)),
+    ...comments.map((comment) => commentToQuery(ast.name, comment)),
+  ];
+
+  if (ast.comment) {
+    result.push({
+      text: `COMMENT ON TABLE ${quoteTable(ast.name)} IS ${quote(ast.comment)}`,
+      values: [],
+    });
+  }
+
+  return result;
 };
