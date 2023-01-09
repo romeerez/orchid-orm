@@ -9,7 +9,7 @@ import {
   TableData,
   toArray,
 } from 'pqb';
-import { ColumnComment, ColumnIndex, Migration } from './migration';
+import { ColumnComment, Migration } from './migration';
 import { joinColumns, joinWords, quoteTable } from '../common';
 
 export const columnToSql = (
@@ -17,7 +17,7 @@ export const columnToSql = (
   item: ColumnType,
   values: unknown[],
   hasMultiplePrimaryKeys: boolean,
-) => {
+): string => {
   const line = [`"${key}" ${item.toSQL()}`];
 
   if (item.data.compression) {
@@ -63,7 +63,7 @@ export const columnToSql = (
 };
 
 export const addColumnIndex = (
-  indexes: ColumnIndex[],
+  indexes: TableData.Index[],
   key: string,
   item: ColumnType,
 ) => {
@@ -142,132 +142,108 @@ export const referencesToSql = (
   return sql.join(' ');
 };
 
-export const migrateIndexes = async (
-  state: {
-    migration: Migration;
-    tableName: string;
-  },
-  indexes: ColumnIndex[],
-  up: boolean,
-) => {
-  for (const item of indexes) {
-    await migrateIndex(state, up, item);
-  }
-};
-
-export const migrateIndex = (
-  state: { migration: Migration; tableName: string },
-  up: boolean,
-  index: ColumnIndex,
-) => {
-  return state.migration.query(indexToQuery(up, state.tableName, index));
-};
-
-export const indexToQuery = (
+export const indexesToQuery = (
   up: boolean,
   tableName: string,
-  { columns, options }: ColumnIndex,
-): Sql => {
-  const indexName =
-    options.name ||
-    joinWords(tableName, ...columns.map(({ column }) => column), 'index');
+  indexes: TableData.Index[],
+): Sql[] => {
+  return indexes.map(({ columns, options }) => {
+    const indexName =
+      options.name ||
+      joinWords(tableName, ...columns.map(({ column }) => column), 'index');
 
-  if (!up) {
-    return {
-      text: `DROP INDEX "${indexName}"${
-        options.dropMode ? ` ${options.dropMode}` : ''
-      }`,
-      values: [],
-    };
-  }
-
-  const values: unknown[] = [];
-
-  const sql: string[] = ['CREATE'];
-
-  if (options.unique) {
-    sql.push('UNIQUE');
-  }
-
-  sql.push(`INDEX "${indexName}" ON ${quoteTable(tableName)}`);
-
-  if (options.using) {
-    sql.push(`USING ${options.using}`);
-  }
-
-  const columnsSql: string[] = [];
-
-  columns.forEach((column) => {
-    const columnSql: string[] = [
-      `"${column.column}"${column.expression ? `(${column.expression})` : ''}`,
-    ];
-
-    if (column.collate) {
-      columnSql.push(`COLLATE '${column.collate}'`);
+    if (!up) {
+      return {
+        text: `DROP INDEX "${indexName}"${
+          options.dropMode ? ` ${options.dropMode}` : ''
+        }`,
+        values: [],
+      };
     }
 
-    if (column.operator) {
-      columnSql.push(column.operator);
+    const values: unknown[] = [];
+
+    const sql: string[] = ['CREATE'];
+
+    if (options.unique) {
+      sql.push('UNIQUE');
     }
 
-    if (column.order) {
-      columnSql.push(column.order);
+    sql.push(`INDEX "${indexName}" ON ${quoteTable(tableName)}`);
+
+    if (options.using) {
+      sql.push(`USING ${options.using}`);
     }
 
-    columnsSql.push(columnSql.join(' '));
+    const columnsSql: string[] = [];
+
+    columns.forEach((column) => {
+      const columnSql: string[] = [
+        `"${column.column}"${
+          column.expression ? `(${column.expression})` : ''
+        }`,
+      ];
+
+      if (column.collate) {
+        columnSql.push(`COLLATE '${column.collate}'`);
+      }
+
+      if (column.operator) {
+        columnSql.push(column.operator);
+      }
+
+      if (column.order) {
+        columnSql.push(column.order);
+      }
+
+      columnsSql.push(columnSql.join(' '));
+    });
+
+    sql.push(`(${columnsSql.join(', ')})`);
+
+    if (options.include) {
+      sql.push(
+        `INCLUDE (${toArray(options.include)
+          .map((column) => `"${column}"`)
+          .join(', ')})`,
+      );
+    }
+
+    if (options.with) {
+      sql.push(`WITH (${options.with})`);
+    }
+
+    if (options.tablespace) {
+      sql.push(`TABLESPACE ${options.tablespace}`);
+    }
+
+    if (options.where) {
+      sql.push(
+        `WHERE ${
+          typeof options.where === 'object' &&
+          options.where &&
+          isRaw(options.where)
+            ? getRaw(options.where, values)
+            : options.where
+        }`,
+      );
+    }
+
+    return { text: sql.join(' '), values };
   });
-
-  sql.push(`(${columnsSql.join(', ')})`);
-
-  if (options.include) {
-    sql.push(
-      `INCLUDE (${toArray(options.include)
-        .map((column) => `"${column}"`)
-        .join(', ')})`,
-    );
-  }
-
-  if (options.with) {
-    sql.push(`WITH (${options.with})`);
-  }
-
-  if (options.tablespace) {
-    sql.push(`TABLESPACE ${options.tablespace}`);
-  }
-
-  if (options.where) {
-    sql.push(
-      `WHERE ${
-        typeof options.where === 'object' &&
-        options.where &&
-        isRaw(options.where)
-          ? getRaw(options.where, values)
-          : options.where
-      }`,
-    );
-  }
-
-  return { text: sql.join(' '), values };
 };
 
-export const migrateComments = async (
-  state: { migration: Migration; tableName: string },
-  comments: ColumnComment[],
-) => {
-  for (const comment of comments) {
-    await state.migration.query(commentToQuery(state.tableName, comment));
-  }
-};
-
-export const commentToQuery = (
+export const commentsToQuery = (
   tableName: string,
-  { column, comment }: ColumnComment,
-): Sql => ({
-  text: `COMMENT ON COLUMN ${quoteTable(tableName)}."${column}" IS ${quote(
-    comment,
-  )}`,
-  values: [],
-});
+  comments: ColumnComment[],
+): Sql[] => {
+  return comments.map(({ column, comment }) => ({
+    text: `COMMENT ON COLUMN ${quoteTable(tableName)}."${column}" IS ${quote(
+      comment,
+    )}`,
+    values: [],
+  }));
+};
 
 export const primaryKeyToSql = (
   primaryKey: Exclude<TableData['primaryKey'], undefined>,

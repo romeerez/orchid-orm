@@ -11,7 +11,6 @@ import {
 } from 'pqb';
 import {
   ColumnComment,
-  ColumnIndex,
   ColumnsShapeCallback,
   Migration,
   TableOptions,
@@ -20,9 +19,9 @@ import {
   addColumnComment,
   addColumnIndex,
   columnToSql,
-  commentToQuery,
+  commentsToQuery,
   constraintToSql,
-  indexToQuery,
+  indexesToQuery,
   primaryKeyToSql,
 } from './migrationUtils';
 import { quoteTable } from '../common';
@@ -131,7 +130,7 @@ const astToQueries = (ast: RakeDbAst.Table): Sql[] => {
 
   const lines: string[] = [];
   const values: unknown[] = [];
-  const indexes: ColumnIndex[] = [];
+  const indexes: TableData.Index[] = [];
   const comments: ColumnComment[] = [];
 
   for (const key in ast.shape) {
@@ -156,8 +155,8 @@ const astToQueries = (ast: RakeDbAst.Table): Sql[] => {
       text: `CREATE TABLE ${quoteTable(ast.name)} (${lines.join(',')}\n)`,
       values,
     },
-    ...indexes.map((index) => indexToQuery(true, ast.name, index)),
-    ...comments.map((comment) => commentToQuery(ast.name, comment)),
+    ...indexesToQuery(true, ast.name, indexes),
+    ...commentsToQuery(ast.name, comments),
   ];
 
   if (ast.comment) {

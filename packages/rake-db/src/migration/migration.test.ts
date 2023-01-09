@@ -12,6 +12,12 @@ describe('migration', () => {
   beforeEach(resetDb);
 
   describe('renameTable', () => {
+    it('should call appCodeUpdater', async () => {
+      await db.renameTable('from', 'to');
+
+      expect(db.options.appCodeUpdater).toHaveBeenCalled();
+    });
+
     it('should rename a table', async () => {
       const fn = () => {
         return db.renameTable('from', 'to');
@@ -330,6 +336,12 @@ describe('migration', () => {
 
   (['createSchema', 'dropSchema'] as const).forEach((action) => {
     describe(action, () => {
+      it('should call appCodeUpdater', async () => {
+        await db[action]('schemaName');
+
+        expect(db.options.appCodeUpdater).toHaveBeenCalled();
+      });
+
       it(`should ${
         action === 'createSchema' ? 'add' : 'drop'
       } a schema`, async () => {
@@ -362,6 +374,12 @@ describe('migration', () => {
 
   (['createExtension', 'dropExtension'] as const).forEach((action) => {
     describe(action, () => {
+      it('should call appCodeUpdater', async () => {
+        await db[action]('extensionName');
+
+        expect(db.options.appCodeUpdater).toHaveBeenCalled();
+      });
+
       it(`should ${
         action === 'createExtension' ? 'add' : 'drop'
       } an extension`, async () => {

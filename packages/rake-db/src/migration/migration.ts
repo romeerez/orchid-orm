@@ -22,6 +22,7 @@ import { createTable } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
 import { RakeDbConfig, quoteTable } from '../common';
 import { createJoinTable } from './createJoinTable';
+import { RakeDbAst } from '../ast';
 
 export type DropMode = 'CASCADE' | 'RESTRICT';
 
@@ -45,10 +46,6 @@ export type ColumnsShapeCallback = (
 export type ChangeTableOptions = { comment?: string | [string, string] | null };
 export type ChangeTableCallback = (t: TableChanger) => TableChangeData;
 
-export type ColumnIndex = {
-  columns: IndexColumnOptions[];
-  options: IndexOptions;
-};
 export type ColumnComment = { column: string; comment: string | null };
 
 export type JoinTableOptions = {
@@ -179,8 +176,17 @@ export class Migration extends TransactionAdapter {
   }
 
   async renameTable(from: string, to: string): Promise<void> {
-    const [table, newName] = this.up ? [from, to] : [to, from];
-    await this.query(`ALTER TABLE ${quoteTable(table)} RENAME TO "${newName}"`);
+    const ast: RakeDbAst.RenameTable = {
+      type: 'renameTable',
+      from: this.up ? from : to,
+      to: this.up ? to : from,
+    };
+
+    await this.query(
+      `ALTER TABLE ${quoteTable(ast.from)} RENAME TO "${ast.to}"`,
+    );
+
+    await this.options.appCodeUpdater?.(ast);
   }
 
   addColumn(
@@ -285,20 +291,14 @@ export class Migration extends TransactionAdapter {
     name: string,
     options: ExtensionOptions & { ifNotExists?: boolean } = {},
   ) {
-    return createExtension(this, this.up, name, {
-      ...options,
-      checkExists: options.ifNotExists,
-    });
+    return createExtension(this, this.up, name, options);
   }
 
   dropExtension(
     name: string,
     options: { ifExists?: boolean; cascade?: boolean } = {},
   ) {
-    return createExtension(this, !this.up, name, {
-      ...options,
-      checkExists: options.ifExists,
-    });
+    return createExtension(this, !this.up, name, options);
   }
 
   async tableExists(tableName: string) {
@@ -402,19 +402,25 @@ const addPrimaryKey = (
   }));
 };
 
-const createSchema = (
+const createSchema = async (
   migration: Migration,
   up: boolean,
-  schemaName: string,
+  name: string,
 ) => {
-  if (up) {
-    return migration.query(`CREATE SCHEMA "${schemaName}"`);
-  } else {
-    return migration.query(`DROP SCHEMA "${schemaName}"`);
-  }
+  const ast: RakeDbAst.Schema = {
+    type: 'schema',
+    action: up ? 'create' : 'drop',
+    name,
+  };
+
+  await migration.query(
+    `${ast.action === 'create' ? 'CREATE' : 'DROP'} SCHEMA "${name}"`,
+  );
+
+  await migration.options.appCodeUpdater?.(ast);
 };
 
-const createExtension = (
+const createExtension = async (
   migration: Migration,
   up: boolean,
   name: string,
@@ -422,21 +428,29 @@ const createExtension = (
     checkExists?: boolean;
   },
 ) => {
-  if (!up) {
-    return migration.query(
-      `DROP EXTENSION${options.checkExists ? ' IF EXISTS' : ''} "${name}"${
-        options.cascade ? ' CASCADE' : ''
-      }`,
-    );
+  const ast: RakeDbAst.Extension = {
+    type: 'extension',
+    action: up ? 'create' : 'drop',
+    name,
+    ...options,
+  };
+
+  let query;
+  if (ast.action === 'drop') {
+    query = `DROP EXTENSION${ast.ifNotExists ? ' IF EXISTS' : ''} "${
+      ast.name
+    }"${ast.cascade ? ' CASCADE' : ''}`;
+  } else {
+    query = `CREATE EXTENSION${ast.ifExists ? ' IF NOT EXISTS' : ''} "${
+      ast.name
+    }"${ast.schema ? ` SCHEMA "${ast.schema}"` : ''}${
+      ast.version ? ` VERSION '${ast.version}'` : ''
+    }${ast.cascade ? ' CASCADE' : ''}`;
   }
 
-  return migration.query(
-    `CREATE EXTENSION${options.checkExists ? ' IF NOT EXISTS' : ''} "${name}"${
-      options.schema ? ` SCHEMA "${options.schema}"` : ''
-    }${options.version ? ` VERSION '${options.version}'` : ''}${
-      options.cascade ? ' CASCADE' : ''
-    }`,
-  );
+  await migration.query(query);
+
+  await migration.options.appCodeUpdater?.(ast);
 };
 
 const queryExists = (

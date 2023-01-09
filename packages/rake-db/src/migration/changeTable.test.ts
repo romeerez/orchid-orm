@@ -12,6 +12,12 @@ const db = getDb();
 describe('changeTable', () => {
   beforeEach(resetDb);
 
+  it('should call appCodeUpdater', async () => {
+    await db.changeTable('name', () => ({}));
+
+    expect(db.options.appCodeUpdater).toHaveBeenCalled();
+  });
+
   it('should set comment', async () => {
     const fn = () => {
       return db.changeTable('table', { comment: 'comment' });
@@ -499,7 +505,7 @@ describe('changeTable', () => {
     expectSql(`
       ALTER TABLE "table"
       DROP CONSTRAINT "table_pkey",
-      ADD PRIMARY KEY ("id")
+      ADD PRIMARY KEY ("id", "text")
     `);
   });
 
@@ -677,9 +683,9 @@ describe('changeTable', () => {
     await fn();
     expectSql(
       `
-        ALTER TABLE "table"
-        RENAME COLUMN "a" TO "b"
-      `,
+          ALTER TABLE "table"
+          RENAME COLUMN "a" TO "b"
+        `,
     );
 
     queryMock.mockClear();
@@ -687,9 +693,9 @@ describe('changeTable', () => {
     await fn();
     expectSql(
       `
-        ALTER TABLE "table"
-        RENAME COLUMN "b" TO "a"
-      `,
+          ALTER TABLE "table"
+          RENAME COLUMN "b" TO "a"
+        `,
     );
   });
 });

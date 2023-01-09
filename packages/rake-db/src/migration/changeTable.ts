@@ -1,72 +1,95 @@
 import {
   ColumnType,
-  columnTypes,
   resetTableData,
-  quote,
   getTableData,
   EmptyObject,
   emptyObject,
   TableData,
   RawExpression,
+  raw,
+  columnTypes,
+  Sql,
+  quote,
   getRaw,
   isRaw,
-  raw,
-  ForeignKey,
-  newTableData,
-  SingleColumnIndexOptions,
 } from 'pqb';
 import {
   ChangeTableCallback,
   ChangeTableOptions,
   ColumnComment,
-  ColumnIndex,
   DropMode,
   Migration,
   MigrationColumnTypes,
 } from './migration';
+import { RakeDbAst } from '../ast';
+import { quoteTable } from '../common';
 import {
   addColumnComment,
   addColumnIndex,
   columnToSql,
+  commentsToQuery,
   constraintToSql,
-  migrateComments,
-  migrateIndexes,
+  indexesToQuery,
   primaryKeyToSql,
 } from './migrationUtils';
-import { quoteTable } from '../common';
 
-const newChangeTableData = () => ({
-  add: [],
-  drop: [],
+type ChangeTableData = { add: TableData; drop: TableData };
+const newChangeTableData = (): ChangeTableData => ({
+  add: { indexes: [], foreignKeys: [] },
+  drop: { indexes: [], foreignKeys: [] },
 });
 
-let changeTableData: { add: TableData[]; drop: TableData[] } =
-  newChangeTableData();
+let changeTableData = newChangeTableData();
 
 const resetChangeTableData = () => {
   changeTableData = newChangeTableData();
 };
 
-function add(item: ColumnType, options?: { dropMode?: DropMode }): ChangeItem;
+const mergeTableData = (a: TableData, b: TableData) => {
+  if (b.primaryKey) {
+    if (!a.primaryKey) {
+      a.primaryKey = b.primaryKey;
+    } else {
+      a.primaryKey = {
+        columns: [...a.primaryKey.columns, ...b.primaryKey.columns],
+        options: { ...a.primaryKey.options, ...b.primaryKey.options },
+      };
+    }
+  }
+  a.indexes = [...a.indexes, ...b.indexes];
+  a.foreignKeys = [...a.foreignKeys, ...b.foreignKeys];
+};
+
+function add(
+  item: ColumnType,
+  options?: { dropMode?: DropMode },
+): RakeDbAst.ChangeTableItem.Column;
 function add(emptyObject: EmptyObject): EmptyObject;
 function add(
   items: Record<string, ColumnType>,
   options?: { dropMode?: DropMode },
-): Record<string, ChangeItem>;
+): Record<string, RakeDbAst.ChangeTableItem.Column>;
 function add(
   item: ColumnType | EmptyObject | Record<string, ColumnType>,
   options?: { dropMode?: DropMode },
-): ChangeItem | EmptyObject | Record<string, ChangeItem> {
+):
+  | RakeDbAst.ChangeTableItem.Column
+  | EmptyObject
+  | Record<string, RakeDbAst.ChangeTableItem.Column> {
   if (item instanceof ColumnType) {
-    return ['add', item, options];
+    return { type: 'add', item, dropMode: options?.dropMode };
   } else if (item === emptyObject) {
-    changeTableData.add.push(getTableData());
+    mergeTableData(changeTableData.add, getTableData());
     resetTableData();
     return emptyObject;
   } else {
-    const result: Record<string, ChangeItem> = {};
+    const result: Record<string, RakeDbAst.ChangeTableItem.Column> = {};
     for (const key in item) {
-      result[key] = ['add', (item as Record<string, ColumnType>)[key], options];
+      result[key] = {
+        type: 'add',
+        item: (item as Record<string, ColumnType>)[key],
+        dropMode: options?.dropMode,
+      };
     }
     return result;
   }
@@ -74,95 +97,104 @@ function add(
 
 const drop = ((item, options) => {
   if (item instanceof ColumnType) {
-    return ['drop', item, options];
+    return { type: 'drop', item, dropMode: options?.dropMode };
   } else if (item === emptyObject) {
-    changeTableData.drop.push(getTableData());
+    mergeTableData(changeTableData.drop, getTableData());
     resetTableData();
     return emptyObject;
   } else {
-    const result: Record<string, ChangeItem> = {};
+    const result: Record<string, RakeDbAst.ChangeTableItem.Column> = {};
     for (const key in item) {
-      result[key] = [
-        'drop',
-        (item as Record<string, ColumnType>)[key],
-        options,
-      ];
+      result[key] = {
+        type: 'drop',
+        item: (item as Record<string, ColumnType>)[key],
+        dropMode: options?.dropMode,
+      };
     }
     return result;
   }
 }) as typeof add;
+
+type Change = RakeDbAst.ChangeTableItem.Change & ChangeOptions;
 
 type ChangeOptions = {
   usingUp?: RawExpression;
   usingDown?: RawExpression;
 };
 
-type ChangeArg =
-  | ColumnType
-  | ['default', unknown | RawExpression]
-  | ['nullable', boolean]
-  | ['comment', string | null]
-  | ['compression', string]
-  | ['primaryKey', boolean]
-  | ['foreignKey', ForeignKey<string, string[]>]
-  | ['index', Omit<SingleColumnIndexOptions, 'column'>];
+const columnTypeToColumnChange = (
+  item: ColumnType | Change,
+): RakeDbAst.ColumnChange => {
+  if (item instanceof ColumnType) {
+    const foreignKey = item.data.foreignKey;
+    if (foreignKey && 'fn' in foreignKey) {
+      throw new Error('Callback in foreignKey is not allowed in migration');
+    }
+
+    return {
+      column: item,
+      type: item.toSQL(),
+      nullable: item.isNullable,
+      primaryKey: item.isPrimaryKey,
+      ...item.data,
+      foreignKey,
+    };
+  }
+
+  return item.to;
+};
 
 type TableChangeMethods = typeof tableChangeMethods;
 const tableChangeMethods = {
   raw: raw,
   add,
   drop,
-  change(from: ChangeArg, to: ChangeArg, options?: ChangeOptions): ChangeItem {
-    return ['change', from, to, options];
+  change(
+    from: ColumnType | Change,
+    to: ColumnType | Change,
+    options?: ChangeOptions,
+  ): Change {
+    return {
+      type: 'change',
+      from: columnTypeToColumnChange(from),
+      to: columnTypeToColumnChange(to),
+      ...options,
+    };
   },
-  default(value: unknown | RawExpression): ChangeArg {
-    return ['default', value];
+  default(value: unknown | RawExpression): Change {
+    return { type: 'change', from: { default: null }, to: { default: value } };
   },
-  nullable(): ChangeArg {
-    return ['nullable', true];
+  nullable(): Change {
+    return {
+      type: 'change',
+      from: { nullable: false },
+      to: { nullable: true },
+    };
   },
-  nonNullable(): ChangeArg {
-    return ['nullable', false];
+  nonNullable(): Change {
+    return {
+      type: 'change',
+      from: { nullable: true },
+      to: { nullable: false },
+    };
   },
-  comment(name: string | null): ChangeArg {
-    return ['comment', name];
+  comment(comment: string | null): Change {
+    return { type: 'change', from: { comment: null }, to: { comment } };
   },
-  rename(name: string): ChangeItem {
-    return ['rename', name];
+  rename(name: string): RakeDbAst.ChangeTableItem.Rename {
+    return { type: 'rename', name };
   },
 };
-
-export type ChangeItem =
-  | [
-      action: 'add' | 'drop',
-      item: ColumnType,
-      options?: { dropMode?: DropMode },
-    ]
-  | [action: 'change', from: ChangeArg, to: ChangeArg, options?: ChangeOptions]
-  | ['rename', string];
 
 export type TableChanger = MigrationColumnTypes & TableChangeMethods;
 
-export type TableChangeData = Record<string, ChangeItem | EmptyObject>;
-
-type PrimaryKeys = {
-  columns: string[];
-  change?: true;
-  options?: { name?: string };
-};
-
-type ChangeTableState = {
-  migration: Migration;
-  up: boolean;
-  tableName: string;
-  alterTable: (string | ((state: ChangeTableState) => string))[];
-  values: unknown[];
-  indexes: ColumnIndex[];
-  dropIndexes: ColumnIndex[];
-  comments: ColumnComment[];
-  addPrimaryKeys: PrimaryKeys;
-  dropPrimaryKeys: PrimaryKeys;
-};
+export type TableChangeData = Record<
+  string,
+  | RakeDbAst.ChangeTableItem.Column
+  | RakeDbAst.ChangeTableItem.Rename
+  | Change
+  | EmptyObject
+>;
 
 export const changeTable = async (
   migration: Migration,
@@ -179,414 +211,319 @@ export const changeTable = async (
 
   const changeData = fn?.(tableChanger) || {};
 
-  const addPrimaryKeys: PrimaryKeys = {
-    columns: [],
-  };
-  const dropPrimaryKeys: PrimaryKeys = {
-    columns: [],
-  };
-  for (const key in changeData) {
-    const item = changeData[key];
-    if (Array.isArray(item)) {
-      const [action] = item;
-      if (action === 'add') {
-        if ((item[1] as ColumnType).isPrimaryKey) {
-          addPrimaryKeys.columns.push(key);
-        }
-      } else if (action === 'drop') {
-        if ((item[1] as ColumnType).isPrimaryKey) {
-          dropPrimaryKeys.columns.push(key);
-        }
-      }
-    }
+  const ast = makeAst(up, tableName, changeData, changeTableData, options);
+
+  const queries = astToQueries(ast);
+  for (const query of queries) {
+    await migration.query(query);
   }
 
-  const state: ChangeTableState = {
-    migration,
-    up,
-    tableName,
-    alterTable: [],
-    values: [],
-    indexes: [],
-    dropIndexes: [],
-    comments: [],
-    addPrimaryKeys,
-    dropPrimaryKeys,
-  };
-
-  if (options.comment !== undefined) {
-    await changeActions.tableComment(state, tableName, options.comment);
-  }
-
-  for (const key in changeData) {
-    const item = changeData[key];
-    if (Array.isArray(item)) {
-      const [action] = item;
-      if (action === 'change') {
-        const [, from, to, options] = item;
-        changeActions.change(state, up, key, from, to, options);
-      } else if (action === 'rename') {
-        const [, name] = item;
-        changeActions.rename(state, up, key, name);
-      } else if (action) {
-        const [action, columnType, options] = item;
-        changeActions[
-          action as Exclude<
-            keyof typeof changeActions,
-            'change' | 'rename' | 'tableComment'
-          >
-        ](state, up, key, columnType, options);
-      }
-    }
-  }
-
-  const prependAlterTable: string[] = [];
-
-  let addedDownKey = false;
-  changeTableData[up ? 'drop' : 'add'].forEach((tableData) => {
-    if (tableData.primaryKey) {
-      addedDownKey = true;
-      const keys = state[up ? 'dropPrimaryKeys' : 'addPrimaryKeys'];
-      keys.columns.push(...tableData.primaryKey.columns);
-      keys.options = tableData.primaryKey.options;
-    }
-
-    state.dropIndexes.push(...tableData.indexes);
-
-    prependAlterTable.push(...getForeignKeysLines(state, false, tableData));
-  });
-
-  const dropKeys = state[up ? 'dropPrimaryKeys' : 'addPrimaryKeys'];
-  if (addedDownKey || dropKeys.change || dropKeys.columns.length > 1) {
-    const name = dropKeys.options?.name || `${tableName}_pkey`;
-    prependAlterTable.push(`DROP CONSTRAINT "${name}"`);
-  }
-
-  let addedUpKey = false;
-  changeTableData[up ? 'add' : 'drop'].forEach((tableData) => {
-    if (tableData.primaryKey) {
-      addedUpKey = true;
-      const keys = state[up ? 'addPrimaryKeys' : 'dropPrimaryKeys'];
-      keys.columns.push(...tableData.primaryKey.columns);
-      keys.options = tableData.primaryKey.options;
-    }
-
-    state.indexes.push(...tableData.indexes);
-
-    state.alterTable.push(...getForeignKeysLines(state, true, tableData));
-  });
-
-  const addKeys = state[up ? 'addPrimaryKeys' : 'dropPrimaryKeys'];
-  if (addedUpKey || addKeys.change || addKeys.columns.length > 1) {
-    state.alterTable.push(`ADD ${primaryKeyToSql(addKeys)}`);
-  }
-
-  if (prependAlterTable.length || state.alterTable.length) {
-    await migration.query(
-      `ALTER TABLE ${quoteTable(tableName)}` +
-        `\n  ${[
-          ...prependAlterTable,
-          ...state.alterTable.map((item) =>
-            typeof item === 'string' ? item : item(state),
-          ),
-        ].join(',\n  ')}`,
-    );
-  }
-
-  await migrateIndexes(state, state.dropIndexes, false);
-  await migrateIndexes(state, state.indexes, true);
-  await migrateComments(state, state.comments);
+  await migration.options.appCodeUpdater?.(ast);
 };
 
-const changeActions = {
-  tableComment(
-    { migration, up }: ChangeTableState,
-    tableName: string,
-    comment: Exclude<ChangeTableOptions['comment'], undefined>,
-  ) {
-    let value;
-    if (up) {
-      value = Array.isArray(comment) ? comment[1] : comment;
-    } else {
-      value = Array.isArray(comment) ? comment[0] : null;
+const makeAst = (
+  up: boolean,
+  name: string,
+  changeData: TableChangeData,
+  changeTableData: ChangeTableData,
+  options: ChangeTableOptions,
+): RakeDbAst.ChangeTable => {
+  const { comment } = options;
+
+  const shape: Record<string, RakeDbAst.ChangeTableItem> = {};
+  for (const key in changeData) {
+    const item = changeData[key];
+    if ('type' in item) {
+      if (up) {
+        shape[key] =
+          item.type === 'change' && item.usingUp
+            ? { ...item, using: item.usingUp }
+            : item;
+      } else {
+        if (item.type === 'rename') {
+          shape[item.name] = { ...item, name: key };
+        } else {
+          shape[key] =
+            item.type === 'add'
+              ? { ...item, type: 'drop' }
+              : item.type === 'drop'
+              ? { ...item, type: 'add' }
+              : item.type === 'change'
+              ? { ...item, from: item.to, to: item.from, using: item.usingDown }
+              : item;
+        }
+      }
     }
-    return migration.query(
-      `COMMENT ON TABLE ${quoteTable(tableName)} IS ${quote(value)}`,
-    );
-  },
+  }
 
-  add(
-    state: ChangeTableState,
-    up: boolean,
-    key: string,
-    item: ColumnType,
-    options?: { dropMode?: DropMode },
-  ) {
-    addColumnIndex(state[up ? 'indexes' : 'dropIndexes'], key, item);
+  return {
+    type: 'changeTable',
+    name,
+    comment: comment
+      ? up
+        ? Array.isArray(comment)
+          ? comment[1]
+          : comment
+        : Array.isArray(comment)
+        ? comment[0]
+        : null
+      : undefined,
+    shape,
+    ...(up
+      ? changeTableData
+      : { add: changeTableData.drop, drop: changeTableData.add }),
+  };
+};
 
-    if (up) {
-      addColumnComment(state.comments, key, item);
-    }
+type PrimaryKeys = {
+  columns: string[];
+  change?: true;
+  options?: { name?: string };
+};
 
-    if (up) {
-      state.alterTable.push(
-        (state) =>
-          `ADD COLUMN ${columnToSql(
-            key,
-            item,
-            state.values,
-            (state.up ? state.addPrimaryKeys : state.dropPrimaryKeys).columns
-              .length > 1,
-          )}`,
-      );
-    } else {
-      state.alterTable.push(
-        `DROP COLUMN "${key}"${
-          options?.dropMode ? ` ${options.dropMode}` : ''
-        }`,
-      );
-    }
-  },
+const astToQueries = (ast: RakeDbAst.ChangeTable): Sql[] => {
+  const result: Sql[] = [];
 
-  drop(
-    state: ChangeTableState,
-    up: boolean,
-    key: string,
-    item: ColumnType,
-    options?: { dropMode?: DropMode },
-  ) {
-    this.add(state, !up, key, item, options);
-  },
+  if (ast.comment !== undefined) {
+    result.push({
+      text: `COMMENT ON TABLE ${quoteTable(ast.name)} IS ${quote(ast.comment)}`,
+      values: [],
+    });
+  }
 
-  change(
-    state: ChangeTableState,
-    up: boolean,
-    key: string,
-    first: ChangeArg,
-    second: ChangeArg,
-    options?: ChangeOptions,
-  ) {
-    const [fromItem, toItem] = up ? [first, second] : [second, first];
+  const addPrimaryKeys: PrimaryKeys = ast.add.primaryKey
+    ? { ...ast.add.primaryKey }
+    : {
+        columns: [],
+      };
+  const dropPrimaryKeys: PrimaryKeys = ast.drop.primaryKey
+    ? { ...ast.drop.primaryKey }
+    : {
+        columns: [],
+      };
 
-    const from = getChangeProperties(fromItem);
-    const to = getChangeProperties(toItem);
+  for (const key in ast.shape) {
+    const item = ast.shape[key];
 
-    if (from.type !== to.type || from.collate !== to.collate) {
-      const using = up ? options?.usingUp : options?.usingDown;
-      state.alterTable.push(
-        `ALTER COLUMN "${key}" TYPE ${to.type}${
-          to.collate ? ` COLLATE ${quote(to.collate)}` : ''
-        }${using ? ` USING ${getRaw(using, state.values)}` : ''}`,
-      );
-    }
-
-    if (from.default !== to.default) {
-      const value = getRawOrValue(to.default, state.values);
-      const expr =
-        value === undefined ? `DROP DEFAULT` : `SET DEFAULT ${value}`;
-      state.alterTable.push(`ALTER COLUMN "${key}" ${expr}`);
-    }
-
-    if (from.nullable !== to.nullable) {
-      state.alterTable.push(
-        `ALTER COLUMN "${key}" ${to.nullable ? 'DROP' : 'SET'} NOT NULL`,
-      );
-    }
-
-    if (from.compression !== to.compression) {
-      state.alterTable.push(
-        `ALTER COLUMN "${key}" SET COMPRESSION ${to.compression || 'DEFAULT'}`,
-      );
-    }
-
-    if (from.primaryKey || to.primaryKey) {
-      const primaryKey =
-        state[
-          (up && to.primaryKey) || (!up && from.primaryKey)
-            ? 'addPrimaryKeys'
-            : 'dropPrimaryKeys'
-        ];
-      primaryKey.columns.push(key);
-      primaryKey.change = true;
-    }
-
-    const fromFkey = from.foreignKey;
-    const toFkey = to.foreignKey;
-    if (fromFkey || toFkey) {
-      if ((fromFkey && 'fn' in fromFkey) || (toFkey && 'fn' in toFkey)) {
-        throw new Error('Callback in foreignKey is not allowed in migration');
+    if (item.type === 'add') {
+      if (item.item.isPrimaryKey) {
+        addPrimaryKeys.columns.push(key);
+      }
+    } else if (item.type === 'drop') {
+      if (item.item.isPrimaryKey) {
+        dropPrimaryKeys.columns.push(key);
+      }
+    } else if (item.type === 'change') {
+      if (item.from.primaryKey) {
+        dropPrimaryKeys.columns.push(key);
+        dropPrimaryKeys.change = true;
       }
 
-      if (checkIfForeignKeysAreDifferent(fromFkey, toFkey)) {
+      if (item.to.primaryKey) {
+        addPrimaryKeys.columns.push(key);
+        addPrimaryKeys.change = true;
+      }
+    }
+  }
+
+  const alterTable: string[] = [];
+  const values: unknown[] = [];
+  const addIndexes: TableData.Index[] = [...ast.add.indexes];
+  const dropIndexes: TableData.Index[] = [...ast.drop.indexes];
+  const addForeignKeys: TableData.ForeignKey[] = [...ast.add.foreignKeys];
+  const dropForeignKeys: TableData.ForeignKey[] = [...ast.drop.foreignKeys];
+  const comments: ColumnComment[] = [];
+
+  for (const key in ast.shape) {
+    const item = ast.shape[key];
+
+    if (item.type === 'add') {
+      addColumnIndex(addIndexes, key, item.item);
+      addColumnComment(comments, key, item.item);
+
+      alterTable.push(
+        `ADD COLUMN ${columnToSql(
+          key,
+          item.item,
+          values,
+          addPrimaryKeys.columns.length > 1,
+        )}`,
+      );
+    } else if (item.type === 'drop') {
+      addColumnIndex(dropIndexes, key, item.item);
+
+      alterTable.push(
+        `DROP COLUMN "${key}"${item.dropMode ? ` ${item.dropMode}` : ''}`,
+      );
+    } else if (item.type === 'change') {
+      const { from, to } = item;
+      if (from.type !== to.type || from.collate !== to.collate) {
+        alterTable.push(
+          `ALTER COLUMN "${key}" TYPE ${to.type}${
+            to.collate ? ` COLLATE ${quote(to.collate)}` : ''
+          }${item.using ? ` USING ${getRaw(item.using, values)}` : ''}`,
+        );
+      }
+
+      if (from.default !== to.default) {
+        const value =
+          typeof to.default === 'object' && to.default && isRaw(to.default)
+            ? getRaw(to.default, values)
+            : quote(to.default);
+
+        const expr =
+          value === undefined ? 'DROP DEFAULT' : `SET DEFAULT ${value}`;
+
+        alterTable.push(`ALTER COLUMN "${key}" ${expr}`);
+      }
+
+      if (from.nullable !== to.nullable) {
+        alterTable.push(
+          `ALTER COLUMN "${key}" ${to.nullable ? 'DROP' : 'SET'} NOT NULL`,
+        );
+      }
+
+      if (from.compression !== to.compression) {
+        alterTable.push(
+          `ALTER COLUMN "${key}" SET COMPRESSION ${
+            to.compression || 'DEFAULT'
+          }`,
+        );
+      }
+
+      const fromFkey = from.foreignKey;
+      const toFkey = to.foreignKey;
+      if (
+        (fromFkey || toFkey) &&
+        (!fromFkey ||
+          !toFkey ||
+          fromFkey.name !== toFkey.name ||
+          fromFkey.match !== toFkey.match ||
+          fromFkey.onUpdate !== toFkey.onUpdate ||
+          fromFkey.onDelete !== toFkey.onDelete ||
+          fromFkey.dropMode !== toFkey.dropMode ||
+          fromFkey.table !== toFkey.table ||
+          fromFkey.columns.join(',') !== toFkey.columns.join(','))
+      ) {
         if (fromFkey) {
-          const data = newTableData();
-          data.foreignKeys.push({
+          dropForeignKeys.push({
             columns: [key],
             fnOrTable: fromFkey.table,
             foreignColumns: fromFkey.columns,
             options: fromFkey,
           });
-          changeTableData[up ? 'drop' : 'add'].push(data);
         }
 
         if (toFkey) {
-          const data = newTableData();
-          data.foreignKeys.push({
+          addForeignKeys.push({
             columns: [key],
             fnOrTable: toFkey.table,
             foreignColumns: toFkey.columns,
             options: toFkey,
           });
-          changeTableData[up ? 'add' : 'drop'].push(data);
         }
       }
-    }
 
-    const fromIndex = from.index;
-    const toIndex = to.index;
-    if (
-      (fromIndex || toIndex) &&
-      checkIfIndexesAreDifferent(fromIndex, toIndex)
-    ) {
-      if (fromIndex) {
-        const data = newTableData();
-        data.indexes.push({
-          columns: [
-            {
-              column: key,
-              ...fromIndex,
-            },
-          ],
-          options: fromIndex,
-        });
-        changeTableData[up ? 'drop' : 'add'].push(data);
+      const fromIndex = from.index;
+      const toIndex = to.index;
+      if (
+        (fromIndex || toIndex) &&
+        (!fromIndex ||
+          !toIndex ||
+          fromIndex.expression !== toIndex.expression ||
+          fromIndex.collate !== toIndex.collate ||
+          fromIndex.operator !== toIndex.operator ||
+          fromIndex.order !== toIndex.order ||
+          fromIndex.name !== toIndex.name ||
+          fromIndex.unique !== toIndex.unique ||
+          fromIndex.using !== toIndex.using ||
+          fromIndex.include !== toIndex.include ||
+          (Array.isArray(fromIndex.include) &&
+            Array.isArray(toIndex.include) &&
+            fromIndex.include.join(',') !== toIndex.include.join(',')) ||
+          fromIndex.with !== toIndex.with ||
+          fromIndex.tablespace !== toIndex.tablespace ||
+          fromIndex.where !== toIndex.where ||
+          fromIndex.dropMode !== toIndex.dropMode)
+      ) {
+        if (fromIndex) {
+          dropIndexes.push({
+            columns: [
+              {
+                column: key,
+                ...fromIndex,
+              },
+            ],
+            options: fromIndex,
+          });
+        }
+
+        if (toIndex) {
+          addIndexes.push({
+            columns: [
+              {
+                column: key,
+                ...toIndex,
+              },
+            ],
+            options: toIndex,
+          });
+        }
       }
 
-      if (toIndex) {
-        const data = newTableData();
-        data.indexes.push({
-          columns: [
-            {
-              column: key,
-              ...toIndex,
-            },
-          ],
-          options: toIndex,
-        });
-        changeTableData[up ? 'add' : 'drop'].push(data);
+      if (from.comment !== to.comment) {
+        comments.push({ column: key, comment: to.comment || null });
       }
+    } else if (item.type === 'rename') {
+      alterTable.push(`RENAME COLUMN "${key}" TO "${item.name}"`);
     }
-
-    if (from.comment !== to.comment) {
-      state.comments.push({ column: key, comment: to.comment || null });
-    }
-  },
-
-  rename(state: ChangeTableState, up: boolean, key: string, name: string) {
-    const [from, to] = up ? [key, name] : [name, key];
-    state.alterTable.push(`RENAME COLUMN "${from}" TO "${to}"`);
-  },
-};
-
-const checkIfForeignKeysAreDifferent = (
-  from?: ForeignKey<string, string[]> & { table: string },
-  to?: ForeignKey<string, string[]> & { table: string },
-) => {
-  return (
-    !from ||
-    !to ||
-    from.name !== to.name ||
-    from.match !== to.match ||
-    from.onUpdate !== to.onUpdate ||
-    from.onDelete !== to.onDelete ||
-    from.dropMode !== to.dropMode ||
-    from.table !== to.table ||
-    from.columns.join(',') !== to.columns.join(',')
-  );
-};
-
-const checkIfIndexesAreDifferent = (
-  from?: Omit<SingleColumnIndexOptions, 'column'>,
-  to?: Omit<SingleColumnIndexOptions, 'column'>,
-) => {
-  return (
-    !from ||
-    !to ||
-    from.expression !== to.expression ||
-    from.collate !== to.collate ||
-    from.operator !== to.operator ||
-    from.order !== to.order ||
-    from.name !== to.name ||
-    from.unique !== to.unique ||
-    from.using !== to.using ||
-    from.include !== to.include ||
-    (Array.isArray(from.include) &&
-      Array.isArray(to.include) &&
-      from.include.join(',') !== to.include.join(',')) ||
-    from.with !== to.with ||
-    from.tablespace !== to.tablespace ||
-    from.where !== to.where ||
-    from.dropMode !== to.dropMode
-  );
-};
-
-type ChangeProperties = {
-  type?: string;
-  collate?: string;
-  default?: unknown | RawExpression;
-  nullable?: boolean;
-  comment?: string | null;
-  compression?: string;
-  primaryKey?: boolean;
-  foreignKey?: ForeignKey<string, string[]>;
-  index?: Omit<SingleColumnIndexOptions, 'column'>;
-};
-
-const getChangeProperties = (item: ChangeArg): ChangeProperties => {
-  if (item instanceof ColumnType) {
-    return {
-      type: item.toSQL(),
-      collate: item.data.collate,
-      default: item.data.default,
-      nullable: item.isNullable,
-      comment: item.data.comment,
-      compression: item.data.compression,
-      primaryKey: item.isPrimaryKey,
-      foreignKey: item.data.foreignKey,
-      index: item.data.index,
-    };
-  } else {
-    return {
-      type: undefined,
-      collate: undefined,
-      default: item[0] === 'default' ? item[1] : undefined,
-      nullable: item[0] === 'nullable' ? item[1] : undefined,
-      comment: item[0] === 'comment' ? item[1] : undefined,
-      compression: item[0] === 'compression' ? item[1] : undefined,
-      primaryKey: item[0] === 'primaryKey' ? item[1] : undefined,
-      foreignKey: item[0] === 'foreignKey' ? item[1] : undefined,
-      index: item[0] === 'index' ? item[1] : undefined,
-    };
   }
-};
 
-const getForeignKeysLines = (
-  state: ChangeTableState,
-  up: boolean,
-  tableData: TableData,
-) => {
-  return tableData.foreignKeys.map(
-    (foreignKey) =>
-      `\n  ${up ? 'ADD' : 'DROP'} ${constraintToSql(
-        state.tableName,
-        up,
-        foreignKey,
-      )}`,
+  const prependAlterTable: string[] = [];
+
+  if (
+    ast.drop.primaryKey ||
+    dropPrimaryKeys.change ||
+    dropPrimaryKeys.columns.length > 1
+  ) {
+    const name = dropPrimaryKeys.options?.name || `${ast.name}_pkey`;
+    prependAlterTable.push(`DROP CONSTRAINT "${name}"`);
+  }
+
+  prependAlterTable.push(
+    ...dropForeignKeys.map(
+      (foreignKey) => `\n DROP ${constraintToSql(ast.name, false, foreignKey)}`,
+    ),
   );
-};
 
-const getRawOrValue = (item: unknown | RawExpression, values: unknown[]) => {
-  return typeof item === 'object' && item && isRaw(item)
-    ? getRaw(item, values)
-    : quote(item);
+  alterTable.unshift(...prependAlterTable);
+
+  if (
+    ast.add.primaryKey ||
+    addPrimaryKeys.change ||
+    addPrimaryKeys.columns.length > 1
+  ) {
+    alterTable.push(`ADD ${primaryKeyToSql(addPrimaryKeys)}`);
+  }
+
+  alterTable.push(
+    ...addForeignKeys.map(
+      (foreignKey) => `\n ADD ${constraintToSql(ast.name, true, foreignKey)}`,
+    ),
+  );
+
+  if (alterTable.length) {
+    result.push({
+      text:
+        `ALTER TABLE ${quoteTable(ast.name)}` +
+        `\n  ${alterTable.join(',\n  ')}`,
+      values,
+    });
+  }
+
+  result.push(...indexesToQuery(false, ast.name, dropIndexes));
+  result.push(...indexesToQuery(true, ast.name, addIndexes));
+  result.push(...commentsToQuery(ast.name, comments));
+
+  return result;
 };
