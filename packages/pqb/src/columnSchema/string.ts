@@ -192,7 +192,7 @@ export class BitVaryingColumn<
   operators = Operators.text;
   data: ColumnData & { length: Length };
 
-  constructor(length: Length) {
+  constructor(length?: Length) {
     super();
 
     this.data = { length } as { length: Length };
