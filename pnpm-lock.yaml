@@ -45,6 +45,7 @@ importers:
       pg: ^8.7.3
       pg-transactional-tests: ^1.0.7
       pqb: workspace:*
+      rake-db: workspace:*
       rimraf: ^3.0.2
       rollup: ^2.79.0
       rollup-plugin-dts: ^4.2.2
@@ -64,6 +65,7 @@ importers:
       orchid-orm-schema-to-zod: link:../schema-to-zod
       pg: 8.8.0
       pg-transactional-tests: 1.0.7_pg@8.8.0
+      rake-db: link:../rake-db
       rimraf: 3.0.2
       rollup: 2.79.1
       rollup-plugin-dts: 4.2.3_gypgyaqhine6mwjfvh7icfhviq
