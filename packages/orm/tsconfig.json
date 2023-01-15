@@ -7,6 +7,7 @@
     "baseUrl": ".",
     "paths": {
       "pqb": ["../pqb/src"],
+      "rake-db": ["../rake-db/src"],
       "orchid-orm-schema-to-zod": ["../schema-to-zod/src"]
     }
   }
