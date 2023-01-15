@@ -10,7 +10,7 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
-import { User } from '../test-utils/test-models';
+import { User } from '../test-utils/test-tables';
 
 describe('belongsTo', () => {
   useTestDatabase();

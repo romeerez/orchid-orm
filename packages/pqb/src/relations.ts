@@ -5,7 +5,7 @@ import { EmptyObject } from './utils';
 export type BaseRelation = {
   type: string;
   key: string;
-  model: QueryWithTable;
+  table: QueryWithTable;
   query: QueryWithTable;
   joinQuery(fromQuery: QueryBase, toQuery: Query): Query;
   nestedCreateQuery: Query;

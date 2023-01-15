@@ -36,9 +36,9 @@ export type UpdateData<T extends Query> = {
 
 type UpdateBelongsToData<T extends Query, Rel extends BelongsToRelation> =
   | { disconnect: boolean }
-  | { set: WhereArg<Rel['model']> }
+  | { set: WhereArg<Rel['table']> }
   | { delete: boolean }
-  | { update: UpdateData<Rel['model']> }
+  | { update: UpdateData<Rel['table']> }
   | {
       create: CreateData<Rel['nestedCreateQuery']>;
     }
@@ -46,7 +46,7 @@ type UpdateBelongsToData<T extends Query, Rel extends BelongsToRelation> =
       ? never
       : {
           upsert: {
-            update: UpdateData<Rel['model']>;
+            update: UpdateData<Rel['table']>;
             create: CreateData<Rel['nestedCreateQuery']>;
           };
         });
@@ -54,14 +54,14 @@ type UpdateBelongsToData<T extends Query, Rel extends BelongsToRelation> =
 type UpdateHasOneData<T extends Query, Rel extends HasOneRelation> =
   | { disconnect: boolean }
   | { delete: boolean }
-  | { update: UpdateData<Rel['model']> }
+  | { update: UpdateData<Rel['table']> }
   | (QueryReturnsAll<T['returnType']> extends true
       ? never
       :
-          | { set: WhereArg<Rel['model']> }
+          | { set: WhereArg<Rel['table']> }
           | {
               upsert: {
-                update: UpdateData<Rel['model']>;
+                update: UpdateData<Rel['table']>;
                 create: CreateData<Rel['nestedCreateQuery']>;
               };
             }
@@ -70,26 +70,26 @@ type UpdateHasOneData<T extends Query, Rel extends HasOneRelation> =
             });
 
 type UpdateHasManyData<T extends Query, Rel extends HasManyRelation> = {
-  disconnect?: MaybeArray<WhereArg<Rel['model']>>;
-  delete?: MaybeArray<WhereArg<Rel['model']>>;
+  disconnect?: MaybeArray<WhereArg<Rel['table']>>;
+  delete?: MaybeArray<WhereArg<Rel['table']>>;
   update?: {
-    where: MaybeArray<WhereArg<Rel['model']>>;
-    data: UpdateData<Rel['model']>;
+    where: MaybeArray<WhereArg<Rel['table']>>;
+    data: UpdateData<Rel['table']>;
   };
 } & (QueryReturnsAll<T['returnType']> extends true
   ? EmptyObject
   : {
-      set?: MaybeArray<WhereArg<Rel['model']>>;
+      set?: MaybeArray<WhereArg<Rel['table']>>;
       create?: CreateData<Rel['nestedCreateQuery']>[];
     });
 
 type UpdateHasAndBelongsToManyData<Rel extends HasAndBelongsToManyRelation> = {
-  disconnect?: MaybeArray<WhereArg<Rel['model']>>;
-  set?: MaybeArray<WhereArg<Rel['model']>>;
-  delete?: MaybeArray<WhereArg<Rel['model']>>;
+  disconnect?: MaybeArray<WhereArg<Rel['table']>>;
+  set?: MaybeArray<WhereArg<Rel['table']>>;
+  delete?: MaybeArray<WhereArg<Rel['table']>>;
   update?: {
-    where: MaybeArray<WhereArg<Rel['model']>>;
-    data: UpdateData<Rel['model']>;
+    where: MaybeArray<WhereArg<Rel['table']>>;
+    data: UpdateData<Rel['table']>;
   };
   create?: CreateData<Rel['nestedCreateQuery']>[];
 };
@@ -213,7 +213,7 @@ export class Update {
         if (ctx.updateLater) {
           await Promise.all(ctx.updateLaterPromises as Promise<void>[]);
 
-          const t = this.__model.clone().transacting(q);
+          const t = this.__table.clone().transacting(q);
           const keys = this.primaryKeys;
           (
             t._whereIn as unknown as (

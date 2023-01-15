@@ -17,17 +17,17 @@ const aggregateOptionNames: (keyof AggregateItemOptions)[] = [
 
 export const pushHavingSql = (
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   query: SelectQueryData,
   quotedAs?: string,
 ) => {
-  const conditions = havingToSql(ctx, model, query, quotedAs);
+  const conditions = havingToSql(ctx, table, query, quotedAs);
   if (conditions.length) ctx.sql.push('HAVING', conditions);
 };
 
 export const havingToSql = (
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   query: SelectQueryData,
   quotedAs?: string,
 ): string => {
@@ -43,7 +43,7 @@ export const havingToSql = (
   or.forEach((and) => {
     const ands: string[] = [];
     and.forEach((item) => {
-      if ('prototype' in item || '__model' in item) {
+      if ('prototype' in item || '__table' in item) {
         const query = item as QueryBase;
         const sql = havingToSql(
           ctx,
@@ -76,7 +76,7 @@ export const havingToSql = (
                     op as keyof AggregateItemOptions,
                   )
                 ) {
-                  const operator = model.shape[column].operators[
+                  const operator = table.shape[column].operators[
                     op
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   ] as Operator<any>;
@@ -89,7 +89,7 @@ export const havingToSql = (
 
                   const expression = aggregateToSql(
                     ctx,
-                    model,
+                    table,
                     {
                       function: key,
                       arg: column,
@@ -111,7 +111,7 @@ export const havingToSql = (
               ands.push(
                 `${aggregateToSql(
                   ctx,
-                  model,
+                  table,
                   {
                     function: key,
                     arg: column,

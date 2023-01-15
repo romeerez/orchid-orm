@@ -9,7 +9,7 @@ import { InsertQueryData, QueryData } from './data';
 
 export const pushInsertSql = (
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   query: InsertQueryData,
   quotedAs: string,
 ) => {
@@ -87,8 +87,8 @@ export const pushInsertSql = (
     }
   }
 
-  pushWhereStatementSql(ctx, model, query, quotedAs);
-  pushReturningSql(ctx, model, query, quotedAs);
+  pushWhereStatementSql(ctx, table, query, quotedAs);
+  pushReturningSql(ctx, table, query, quotedAs);
 };
 
 const encodeRow = (ctx: ToSqlCtx, row: unknown[]) => {
@@ -101,11 +101,11 @@ const encodeRow = (ctx: ToSqlCtx, row: unknown[]) => {
 
 export const pushReturningSql = (
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   query: QueryData,
   quotedAs: string,
 ) => {
   if (query.select) {
-    ctx.sql.push(`RETURNING ${selectToSql(ctx, model, query, quotedAs)}`);
+    ctx.sql.push(`RETURNING ${selectToSql(ctx, table, query, quotedAs)}`);
   }
 };

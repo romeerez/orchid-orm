@@ -53,7 +53,7 @@ t.bigint().parse(BigInt)
 Numeric-type columns support the following `where` operators:
 
 ```ts
-db.someModel.where({
+db.someTable.where({
   numericColumn: {
     // lower than
     lt: value,
@@ -96,7 +96,7 @@ Text type columns support the following `where` operators:
 `contains`, `startsWith`, `endsWith` are case-insensitive.
 
 ```ts
-db.someModel.where({
+db.someTable.where({
   textColumn: {
     // ILIKE '%string%'
     contains: 'string',

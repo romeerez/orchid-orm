@@ -66,16 +66,16 @@ type BuildResult<T extends TestFactory, Data extends BuildArg<T>> = Result<
 >;
 
 type CreateArg<T extends TestFactory> = CreateData<
-  Omit<T['model'], 'inputType'> & {
+  Omit<T['table'], 'inputType'> & {
     inputType: {
-      [K in keyof T['model']['type']]?:
-        | T['model']['type'][K]
-        | ((sequence: number) => T['model']['type'][K]);
+      [K in keyof T['table']['type']]?:
+        | T['table']['type'][K]
+        | ((sequence: number) => T['table']['type'][K]);
     };
   }
 >;
 
-type CreateResult<T extends TestFactory> = Result<T, T['model']['type']>;
+type CreateResult<T extends TestFactory> = Result<T, T['table']['type']>;
 
 const omit = <T, Keys extends Record<string, unknown>>(
   obj: T,
@@ -217,12 +217,12 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
   arg?: Data,
 ) => {
   const pick: Record<string, true> = {};
-  for (const key in factory.model.shape) {
+  for (const key in factory.table.shape) {
     pick[key] = true;
   }
 
-  factory.model.primaryKeys.forEach((key) => {
-    if (factory.model.shape[key].dataType.includes('serial')) {
+  factory.table.primaryKeys.forEach((key) => {
+    if (factory.table.shape[key].dataType.includes('serial')) {
       delete pick[key];
     }
   });
@@ -257,7 +257,7 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
 
     factory.sequence++;
 
-    return { ...result } as CreateData<T['model']>;
+    return { ...result } as CreateData<T['table']>;
   };
 };
 
@@ -277,7 +277,7 @@ export class TestFactory<
   };
 
   constructor(
-    public model: Q,
+    public table: Q,
     public schema: Schema,
     private uniqueFields: UniqueField[],
     private readonly data: Record<string, unknown> = {},
@@ -363,7 +363,7 @@ export class TestFactory<
     data?: Data,
   ): Promise<CreateResult<T>> {
     const getData = processCreateData(this, this.data, this.uniqueFields, data);
-    return (await this.model.create(getData())) as CreateResult<T>;
+    return (await this.table.create(getData())) as CreateResult<T>;
   }
 
   async createList<T extends this, Data extends CreateArg<T>>(
@@ -373,15 +373,15 @@ export class TestFactory<
   ): Promise<CreateResult<T>[]> {
     const getData = processCreateData(this, this.data, this.uniqueFields, data);
     const arr = [...Array(qty)].map(getData);
-    return (await this.model.createMany(arr)) as CreateResult<T>[];
+    return (await this.table.createMany(arr)) as CreateResult<T>[];
   }
 
   extend<T extends this>(this: T): new () => TestFactory<Q, Schema, Type> {
-    const { model, schema, uniqueFields } = this;
+    const { table, schema, uniqueFields } = this;
 
     return class extends TestFactory<Q, Schema, Type> {
       constructor() {
-        super(model, schema, uniqueFields);
+        super(table, schema, uniqueFields);
       }
     };
   }
@@ -390,18 +390,18 @@ export class TestFactory<
 const nowString = new Date().toISOString();
 
 export const createFactory = <T extends Query>(
-  model: T,
+  table: T,
   options?: FactoryOptions,
 ) => {
-  const schema = instanceToZod(model);
+  const schema = instanceToZod(table);
 
   const data: Record<string, unknown> = {};
   const now = Date.now();
 
   const uniqueFields: UniqueField[] = [];
 
-  for (const key in model.shape) {
-    const column = model.shape[key];
+  for (const key in table.shape) {
+    const column = table.shape[key];
     if (column instanceof DateBaseColumn) {
       if (column.data.as instanceof IntegerBaseColumn) {
         data[key] = (sequence: number) => now + sequence;
@@ -455,7 +455,7 @@ export const createFactory = <T extends Query>(
   }
 
   return new TestFactory<T, InstanceToZod<T>, T['type']>(
-    model,
+    table,
     schema,
     uniqueFields,
     data,

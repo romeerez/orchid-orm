@@ -75,7 +75,7 @@ export type Repo<
   Mapped;
 
 export const createRepo = <T extends Query, Methods extends MethodsBase<T>>(
-  model: T,
+  table: T,
   methods: Methods,
 ): Repo<T, Methods> => {
   const queryMethods = {
@@ -88,18 +88,18 @@ export const createRepo = <T extends Query, Methods extends MethodsBase<T>>(
   const plainMethods = methods.methods;
 
   const repo = (q: Query) => {
-    const proto = Object.create(q.__model);
-    proto.__model = proto;
+    const proto = Object.create(q.__table);
+    proto.__table = proto;
     const result = Object.create(proto);
     result.query = getClonedQueryData(q.query);
 
     if (plainMethods) {
-      Object.assign(proto.__model, plainMethods);
+      Object.assign(proto.__table, plainMethods);
     }
 
     for (const key in queryMethods) {
       const method = queryMethods[key] as (...args: unknown[]) => unknown;
-      (proto.__model as unknown as Record<string, unknown>)[key] = function (
+      (proto.__table as unknown as Record<string, unknown>)[key] = function (
         ...args: unknown[]
       ) {
         return method(this, ...args);
@@ -109,7 +109,7 @@ export const createRepo = <T extends Query, Methods extends MethodsBase<T>>(
     return result;
   };
 
-  const q = repo(model);
+  const q = repo(table);
 
   return new Proxy(repo, {
     get(_, key) {

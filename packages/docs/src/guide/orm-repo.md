@@ -3,7 +3,7 @@
 Repositories in `Orchid ORM` is a nice feature that allows decomposing complex queries into smaller single-purpose ones,
 reuse query parts.
 
-Consider the following example, imagine we have a User model, it has a relation with `followers` to track if one user is following another.
+Consider the following example, imagine we have a User table, it has a relation with `followers` to track if one user is following another.
 
 When querying the user for some kind of list, we need an id, name, picture, and a boolean flag to know if this user is followed by a current authorized user.
 
@@ -15,7 +15,7 @@ We can define a repository in such ways:
 import { createRepo } from 'orchid-orm'
 import { columnTypes } from 'pqb'
 import { db } from '../path-to-db'
-import { User } from './user.model'
+import { User } from './user.table'
 import { followRepo } from './follow.repo'
 
 export const userRepo = createRepo(db.user, {
@@ -48,7 +48,7 @@ the type of it is inferred and no need to specify explicitly.
 
 When more arguments are needed, they should have a type.
 
-Repositories can use all model features, such as sub-queries on relations.
+Repositories can use all table features, such as sub-queries on relations.
 
 Note how `followRepo` is used inside of the `followed` callback, in a such way one repository can use another to decouple responsibilities.
 
@@ -114,7 +114,7 @@ export const userRepo = createRepo(db.user, {
 Different scopes of methods are available:
 
 ```ts
-export const repo = createRepo(db.model, {
+export const repo = createRepo(db.table, {
   queryMethods: {
     queryMethod(q) {
       // q can be any query

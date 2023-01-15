@@ -1,5 +1,5 @@
 import { RelationData, RelationThunkBase } from './relations';
-import { Model } from '../model';
+import { Table } from '../table';
 import {
   CreateCtx,
   getQueryAs,
@@ -25,7 +25,7 @@ export interface HasAndBelongsToMany extends RelationThunkBase {
 }
 
 export type HasAndBelongsToManyInfo<
-  T extends Model,
+  T extends Table,
   Relation extends HasAndBelongsToMany,
 > = {
   params: Record<
@@ -89,7 +89,7 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn {
 }
 
 export const makeHasAndBelongsToManyMethod = (
-  model: Query,
+  table: Query,
   qb: Query,
   relation: HasAndBelongsToMany,
   relationName: string,
@@ -107,14 +107,14 @@ export const makeHasAndBelongsToManyMethod = (
   const associationForeignKeyFull = `${joinTable}.${afk}`;
   const associationPrimaryKeyFull = `${getQueryAs(query)}.${apk}`;
 
-  const __model = Object.create(qb.__model);
-  __model.__model = __model;
-  __model.table = joinTable;
-  __model.shape = {
-    [fk]: model.shape[pk],
+  const __table = Object.create(qb.__table);
+  __table.__table = __table;
+  __table.table = joinTable;
+  __table.shape = {
+    [fk]: table.shape[pk],
     [afk]: query.shape[apk],
   };
-  const subQuery = Object.create(__model);
+  const subQuery = Object.create(__table);
   subQuery.query = { ...subQuery.query };
 
   const state: State = {

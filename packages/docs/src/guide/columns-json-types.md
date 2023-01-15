@@ -26,7 +26,7 @@ const someTable = db('someTable', (t) => ({
 Text type columns support the following `where` operators:
 
 ```ts
-db.someModel.where({
+db.someTable.where({
   jsonColumn: {
     // first element is JSON path,
     // second is a compare operator,

@@ -65,16 +65,16 @@ const jsonToSql = (
 
 export const pushSelectSql = (
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   query: Pick<SelectQueryData, 'select' | 'join'>,
   quotedAs?: string,
 ) => {
-  ctx.sql.push(selectToSql(ctx, model, query, quotedAs));
+  ctx.sql.push(selectToSql(ctx, table, query, quotedAs));
 };
 
 export const selectToSql = (
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   query: Pick<SelectQueryData, 'select' | 'join'>,
   quotedAs?: string,
 ): string => {
@@ -116,13 +116,13 @@ export const selectToSql = (
           list.push(
             `${(item as SelectFunctionItem).function}(${selectToSql(
               ctx,
-              model,
+              table,
               { select: item.arguments },
               quotedAs,
             )})${item.as ? ` AS ${q((item as { as: string }).as)}` : ''}`,
           );
         } else {
-          list.push(aggregateToSql(ctx, model, item, quotedAs));
+          list.push(aggregateToSql(ctx, table, item, quotedAs));
         }
       }
     });
@@ -160,7 +160,7 @@ const pushSubQuerySql = (
 
       select.length = 0;
       select[0] = { selectAs: { c: first } } as SelectItem;
-      query = query._wrap(query.__model.clone()) as unknown as typeof query;
+      query = query._wrap(query.__table.clone()) as unknown as typeof query;
       query._getOptional(raw(`COALESCE(json_agg("c"), '[]')`));
       break;
     }

@@ -94,16 +94,19 @@ const someTable = db('someTable', (t) => ({
 
 ## modifyQuery
 
-Specify a callback that can modify a model for ORM or table instance for query builder.
+Specify a callback that can modify a table class.
 
 When mutating a query in this callback, the changes will be applied to all future queries of this table.
 
 ```ts
-const someTable = db('someTable', (t) => ({
-  name: t.text(3, 100).modifyQuery((table) => {
-    // table argument === someTable from outside
-  })
-}))
+export class SomeTable extends BaseTable {
+  table = 'someTable';
+  columns = this.setColumns((t) => ({
+    name: t.text(3, 100).modifyQuery((table) => {
+      // table argument is the query interface of SomeTable
+    }),
+  }))
+}
 ```
 
 ## methods for migration

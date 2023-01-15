@@ -7,7 +7,7 @@ Only Postgres database is supported for now.
 
 Migrations are written by hand instead of generating them like in some other ORMs.
 
-To perform relation queries, related models currently must be in a single database.
+To perform relation queries, related tables currently must be in a single database.
 
 Relations support only a single column for primary and foreign key.
 

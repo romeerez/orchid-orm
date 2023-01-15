@@ -57,15 +57,15 @@ export type NestedUpdateManyItems = {
 
 export type NestedUpdateItem = NestedUpdateOneItem | NestedUpdateManyItems;
 
-export const getThroughRelation = (model: Query, through: string) => {
-  return (model.relations as Record<string, Relation>)[through];
+export const getThroughRelation = (table: Query, through: string) => {
+  return (table.relations as Record<string, Relation>)[through];
 };
 
 export const getSourceRelation = (
   throughRelation: Relation,
   source: string,
 ) => {
-  return (throughRelation.model.relations as Record<string, Relation>)[source];
+  return (throughRelation.table.relations as Record<string, Relation>)[source];
 };
 
 export const hasRelationHandleCreate = (

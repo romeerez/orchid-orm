@@ -1,10 +1,12 @@
 # ORM setup and overview
 
-**Orchid ORM** stands for Postgres ORM, where ORM is an abstract interface to work with models and relations between them with ease and fun.
+**Orchid ORM** stands for Postgres ORM, where ORM is an abstract interface to work with tables and relations between them with ease and fun.
 
-While the `pqb` query builder is designed to cover the abilities of [knex](https://knexjs.org) to allow building any possible queries, `orchid-orm` takes inspiration from [prisma](https://prisma.io/) and other ORMs to give the highest productivity.
+While the `pqb` query builder is designed to cover the abilities of [knex](https://knexjs.org) to allow building any possible queries,
+`orchid-orm` takes inspiration from [prisma](https://prisma.io/) and other ORMs to give the highest productivity.
 
-`orchid-orm` models are interfaces on top of `pqb` tables, and all methods of `pqb` are also available here. For query, methods see [query builder](/guide/query-builder) document.
+`orchid-orm` tables are interfaces on top of `pqb` tables, and all methods of `pqb` are also available here.
+For query methods see [query builder](/guide/query-builder) document.
 
 ## setup
 
@@ -20,16 +22,16 @@ The first argument is a connection options object, for all connection options se
 
 Connection options may include `log` and `logger`, see [createDb](/guide/query-builder.html#createDb) for details.
 
-The second argument is an object where keys are model names and values are models (see next section for defining model).
+The second argument is an object where keys are names and values are table classes (see next section for defining a table class).
 
-Returns an instance with models and some specific functions prefixed with a `$` sign to not overlap with your models.
+Returns an instance with tables and some specific functions prefixed with a `$` sign to not overlap with your tables.
 
 ```ts
 import { orchidORM } from 'orchid-orm'
 
-// import all models
-import { UserModel } from './models/user'
-import { MessageModel } from './models/message'
+// import all tables
+import { UserTable } from './tables/user'
+import { MessageTable } from './tables/message'
 
 export const db = orchidORM({
   // databaseURL has the following format:
@@ -46,35 +48,35 @@ export const db = orchidORM({
   autoPreparedStatements: true, // see in query builder setup docs, false by default
   noPrimaryKey: 'ignore', // see in query builder setup docs, 'error' by default
 }, {
-  user: UserModel,
-  message: MessageModel,
+  user: UserTable,
+  message: MessageTable,
 })
 ```
 
-## defining a model
+## defining a base table
 
-First, need to create a base `Model` class to extend from, this code should be separate from the `db` file:
+First, need to create a base table class to extend from, this code should be separated from the `db` file:
 
 ```ts
-import { createModel } from 'orchid-orm'
+import { createBaseTable } from 'orchid-orm'
 import { columnTypes } from 'pqb'
 
-export const Model = createModel({ columnTypes })
+export const BaseTable = createBaseTable({ columnTypes })
 ```
 
 See [column types document](/guide/columns-overview.html#override-column-types) for details of customizing columns.
 
-Models are defined as classes with two required properties:
+Tables are defined as classes with two required properties:
 
 `table` is a table name and `columns` is for defining table column types (see [Columns schema](/guide/columns-overview) document for details).
 
 ```ts
-// import Model from a file from the previous step:
-import { Model } from './model'
+// import BaseTable from a file from the previous step:
+import { BaseTable } from './baseTable'
 
 // export type of User object:
-export type User = UserModel['columns']['type']
-export class UserModel extends Model {
+export type User = UserTable['columns']['type']
+export class UserTable extends BaseTable {
   table = 'user';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -85,15 +87,15 @@ export class UserModel extends Model {
 }
 ```
 
-After defining the model place it in the main `db` file as in [setup](#setup) step:
+After defining the table place it in the main `db` file as in [setup](#setup) step:
 
 ```ts
-import { UserModel } from './models/user'
+import { UserTable } from './tables/user'
 
 export const db = orchidORM({
   databaseURL: process.env.DATABASE_URL,
 }, {
-  user: UserModel,
+  user: UserTable,
 })
 ```
 
@@ -105,18 +107,18 @@ import { db } from './db'
 const user = await db.user.findBy({ name: 'John' })
 ```
 
-Don't use model classes directly, it won't work:
+Don't use table classes directly, this won't work:
 ```ts
 // error
-await UserModel.findBy({ name: 'John' })
+await UserTable.findBy({ name: 'John' })
 ```
 
-For the case when the table should not have a primary key, you can override `noPrimaryKey` by setting a property to the model:
+For the case when the table should not have a primary key, you can override `noPrimaryKey` by setting a property to the table:
 
 ```ts
-import { Model } from './model'
+import { BaseTable } from './baseTable'
 
-export class NoPrimaryKeyModel extends Model {
+export class NoPrimaryKeyTable extends BaseTable {
   table = 'table';
   noPrimaryKey = true; // set to `true` to ignore absence of primary key
   columns = this.setColumns((t) => ({
@@ -129,14 +131,14 @@ export class NoPrimaryKeyModel extends Model {
 
 Use `.$transaction` to wrap multiple database modification queries into a single transaction.
 
-The first argument of callback is a copy of your main orchid-orm instance, but every model on it is patched to use a transaction.
+The first argument of callback is a copy of your main orchid-orm instance, but every table interface on it is patched to use a transaction.
 
 ```ts
 const { someId, otherId } = await db.$transaction(async (db) => {
-  await db.someModel.where(...conditions).update(...data)
-  await db.anotherModel.where(...conditions).delete()
-  const someId = await db.someModel.get('id').create(...data)
-  const otherId = await db.otherModel.get('id').create(...data)
+  await db.someTable.where(...conditions).update(...data)
+  await db.anotherTable.where(...conditions).delete()
+  const someId = await db.someTable.get('id').create(...data)
+  const otherId = await db.otherTable.get('id').create(...data)
   
   return { someId, otherId }
 })
@@ -145,9 +147,9 @@ const { someId, otherId } = await db.$transaction(async (db) => {
 Be careful to use `db` from the callback argument, and not the main instance.
 
 ```ts
-// mistake: someModel won't use a transaction because the argument was forgotten.
+// mistake: someTable won't use a transaction because the argument was forgotten.
 await db.$transaction(async () => {
-  await db.someModel.create(...data)
+  await db.someTable.create(...data)
 })
 ```
 
@@ -161,11 +163,11 @@ await db.$close()
 
 ## raw
 
-Since column types can be customized when creating a base model, use the `raw` method from the `db.model` and it will have customized types:
+Since column types can be customized when creating a base table, use the `raw` method from the `db.table` and it will have customized types:
 
 ```ts
-const result = await db.someModel.select({
-  rawValue: db.someModel.raw((t) => t.customTime(), 'sql')
+const result = await db.someTable.select({
+  rawValue: db.someTable.raw((t) => t.customTime(), 'sql')
 })
 ```
 
@@ -174,7 +176,7 @@ For simplicity, when the `raw` is used in `where` or another method which doesn'
 ```ts
 import { raw } from 'pqb'
 
-const result = await db.someModel.where(
+const result = await db.someTable.where(
   raw('a = $a AND b = $b', {
     a: 123,
     b: 'text'

@@ -4,7 +4,7 @@ Migrations allow you to evolve your database schema over time. This migration to
 
 - write migrations in TypeScript
 - write only code to create or add something, and it will be automatically possible to undo the migration
-- it shares the same column types library as the ORM, which allows you to write a `createTable` migration and copy-paste columns to your model
+- it shares the same column types library as the ORM, which allows you to write a `createTable` migration and copy-paste columns to your table class
 
 ## setup
 

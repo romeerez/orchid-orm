@@ -14,7 +14,7 @@ import {
   JSONArray,
   VirtualColumn,
 } from 'pqb';
-import { columnToZod, instanceToZod, modelToZod } from './index';
+import { columnToZod, instanceToZod, tableToZod } from './index';
 import { z } from 'zod';
 import { Buffer } from 'node:buffer';
 
@@ -42,9 +42,9 @@ const columnOrJsonToZod = (type: any): z.ZodTypeAny => {
     : columnToZod(t.json(() => type));
 };
 
-describe('model to zod', () => {
-  it('should convert a model to a zod validation schema', () => {
-    const model = class Model {
+describe('table to zod', () => {
+  it('should convert a table to a zod validation schema', () => {
+    const table = class Table {
       columns = {
         shape: {
           id: t.serial().primaryKey(),
@@ -53,7 +53,7 @@ describe('model to zod', () => {
       };
     };
 
-    const result = modelToZod(model);
+    const result = tableToZod(table);
     assertType<
       typeof result,
       z.ZodObject<{ id: z.ZodNumber; name: z.ZodNullable<z.ZodString> }>

@@ -1,63 +1,63 @@
 import { orchidORM } from './orm';
 import { pgConfig } from './test-utils/test-db';
-import { createModel } from './model';
+import { createBaseTable } from './table';
 import { assertType, expectSql } from './test-utils/test-utils';
 import { columnTypes, QueryReturnType } from 'pqb';
 import { createRepo } from './repo';
 
-const Model = createModel({ columnTypes });
+const BaseTable = createBaseTable({ columnTypes });
 
-class SomeModel extends Model {
+class SomeTable extends BaseTable {
   table = 'someTable';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    name: t.text(),
+    name: t.text(0, 100),
   }));
 
   relations = {
-    otherModel: this.hasMany(() => OtherModel, {
+    other: this.hasMany(() => OtherTable, {
       primaryKey: 'id',
       foreignKey: 'someId',
     }),
   };
 }
 
-class OtherModel extends Model {
+class OtherTable extends BaseTable {
   table = 'otherTable';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    someId: t.integer().foreignKey(() => SomeModel, 'id'),
-    anotherId: t.integer().foreignKey(() => AnotherModel, 'id'),
+    someId: t.integer().foreignKey(() => SomeTable, 'id'),
+    anotherId: t.integer().foreignKey(() => AnotherTable, 'id'),
   }));
 
   relations = {
-    someModel: this.belongsTo(() => SomeModel, {
+    some: this.belongsTo(() => SomeTable, {
       primaryKey: 'id',
       foreignKey: 'someId',
     }),
-    anotherModel: this.belongsTo(() => AnotherModel, {
+    another: this.belongsTo(() => AnotherTable, {
       primaryKey: 'id',
       foreignKey: 'anotherId',
     }),
   };
 }
 
-class AnotherModel extends Model {
-  table = 'anotherModel';
+class AnotherTable extends BaseTable {
+  table = 'another';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
   }));
 }
 
 const db = orchidORM(pgConfig, {
-  someModel: SomeModel,
-  otherModel: OtherModel,
-  anotherModel: AnotherModel,
+  some: SomeTable,
+  other: OtherTable,
+  another: AnotherTable,
 });
 
 describe('createRepo', () => {
   describe('queryMethods', () => {
-    const repo = createRepo(db.someModel, {
+    const repo = createRepo(db.some, {
       queryMethods: {
         one(q) {
           return q.select('id');
@@ -71,7 +71,7 @@ describe('createRepo', () => {
       },
     });
 
-    it('should accept user defined methods and allow to use them on the model with chaining', async () => {
+    it('should accept user defined methods and allow to use them on the table with chaining', async () => {
       const q = repo.one().two().three(123).take();
 
       assertType<Awaited<typeof q>, { id: number; name: string }>();
@@ -89,13 +89,13 @@ describe('createRepo', () => {
     });
 
     it('should have custom methods on relation queries inside of select', async () => {
-      const q = db.otherModel.select('id', {
-        someModel: (q) => repo(q.someModel).one().two().three(123),
+      const q = db.other.select('id', {
+        some: (q) => repo(q.some).one().two().three(123),
       });
 
       assertType<
         Awaited<typeof q>,
-        { id: number; someModel: { id: number; name: string } | null }[]
+        { id: number; some: { id: number; name: string } | null }[]
       >();
 
       expectSql(
@@ -106,13 +106,13 @@ describe('createRepo', () => {
             (
               SELECT row_to_json("t".*)
               FROM (
-                SELECT "someModel"."id", "someModel"."name"
-                FROM "someTable" AS "someModel"
-                WHERE "someModel"."id" = $1
-                  AND "someModel"."id" = "otherTable"."someId"
+                SELECT "some"."id", "some"."name"
+                FROM "someTable" AS "some"
+                WHERE "some"."id" = $1
+                  AND "some"."id" = "otherTable"."someId"
                 LIMIT $2
               ) AS "t"
-            ) AS "someModel"
+            ) AS "some"
           FROM "otherTable"
         `,
         [123, 1],
@@ -121,7 +121,7 @@ describe('createRepo', () => {
   });
 
   describe('queryOneMethods', () => {
-    const repo = createRepo(db.someModel, {
+    const repo = createRepo(db.some, {
       queryOneMethods: {
         one(q) {
           const type: Exclude<QueryReturnType, 'all'> = q.returnType;
@@ -140,7 +140,7 @@ describe('createRepo', () => {
   });
 
   describe('queryWithWhereMethods', () => {
-    const repo = createRepo(db.someModel, {
+    const repo = createRepo(db.some, {
       queryWithWhereMethods: {
         one(q) {
           const hasWhere: true = q.hasWhere;
@@ -161,7 +161,7 @@ describe('createRepo', () => {
   });
 
   describe('queryOneWithWhere', () => {
-    const repo = createRepo(db.someModel, {
+    const repo = createRepo(db.some, {
       queryOneWithWhereMethods: {
         one(q) {
           const type: Exclude<QueryReturnType, 'all'> = q.returnType;
@@ -185,7 +185,7 @@ describe('createRepo', () => {
   });
 
   describe('methods', () => {
-    const repo = createRepo(db.someModel, {
+    const repo = createRepo(db.some, {
       methods: {
         one(a: number, b: string) {
           return a + b;

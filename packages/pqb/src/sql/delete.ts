@@ -8,11 +8,11 @@ import { DeleteQueryData } from './data';
 
 export const pushDeleteSql = (
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   query: DeleteQueryData,
   quotedAs: string,
 ) => {
-  const from = q(model.table as string);
+  const from = q(table.table as string);
   ctx.sql.push(`DELETE FROM ${from}`);
 
   if (from !== quotedAs) {
@@ -22,7 +22,7 @@ export const pushDeleteSql = (
   let conditions: string | undefined;
   if (query.join?.length) {
     const items = query.join.map((item) =>
-      processJoinItem(ctx, model, item.args, quotedAs),
+      processJoinItem(ctx, table, item.args, quotedAs),
     );
 
     ctx.sql.push(`USING ${items.map((item) => item.target).join(', ')}`);
@@ -33,7 +33,7 @@ export const pushDeleteSql = (
       .join(' AND ');
   }
 
-  pushWhereStatementSql(ctx, model, query, quotedAs);
+  pushWhereStatementSql(ctx, table, query, quotedAs);
 
   if (conditions?.length) {
     if (query.and?.length || query.or?.length) {
@@ -43,5 +43,5 @@ export const pushDeleteSql = (
     }
   }
 
-  pushReturningSql(ctx, model, query, quotedAs);
+  pushReturningSql(ctx, table, query, quotedAs);
 };

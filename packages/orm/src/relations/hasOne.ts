@@ -13,7 +13,7 @@ import {
   WhereArg,
   WhereResult,
 } from 'pqb';
-import { Model } from '../model';
+import { Table } from '../table';
 import {
   RelationData,
   RelationInfo,
@@ -36,7 +36,7 @@ export interface HasOne extends RelationThunkBase {
 }
 
 export type HasOneInfo<
-  T extends Model,
+  T extends Table,
   Relations extends RelationThunks,
   Relation extends HasOne,
 > = {
@@ -121,7 +121,7 @@ class HasOneVirtualColumn extends VirtualColumn {
 }
 
 export const makeHasOneMethod = (
-  model: Query,
+  table: Query,
   relation: HasOne,
   relationName: string,
   query: Query,
@@ -135,12 +135,12 @@ export const makeHasOneMethod = (
   if ('through' in relation.options) {
     const { through, source } = relation.options;
 
-    type ModelWithQueryMethod = Record<
+    type TableWithQueryMethod = Record<
       string,
       (params: Record<string, unknown>) => Query
     >;
 
-    const throughRelation = getThroughRelation(model, through);
+    const throughRelation = getThroughRelation(table, through);
     const sourceRelation = getSourceRelation(throughRelation, source);
     const sourceQuery = sourceRelation
       .joinQuery(throughRelation.query, sourceRelation.query)
@@ -151,7 +151,7 @@ export const makeHasOneMethod = (
     return {
       returns: 'one',
       method: (params: Record<string, unknown>) => {
-        const throughQuery = (model as unknown as ModelWithQueryMethod)[
+        const throughQuery = (table as unknown as TableWithQueryMethod)[
           through
         ](params);
 

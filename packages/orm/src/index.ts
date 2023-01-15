@@ -1,4 +1,4 @@
-export * from './model';
+export * from './table';
 export * from './orm';
 export * from './repo';
 export {

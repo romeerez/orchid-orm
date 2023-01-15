@@ -2,24 +2,24 @@
 
 Different kinds of relations are available: `belongsTo`, `hasOne`, `hasMany`, and `hasAndBelongsToMany`.
 
-Each defined relation adds methods and additional abilities for the model to simplify building queries and creating related data.
+Each defined relation adds methods and additional abilities for the table to simplify building queries and creating related data.
 
-Two models can have a relation with each other without circular dependency problems:
+Two tables can have a relation with each other without circular dependency problems:
 
 ```ts
-// user.model.ts
-import { Model } from 'orchid-orm'
-import { ProfileModel } from './profile.model'
+// user.table.ts
+import { BaseTable } from './baseTable'
+import { ProfileTable } from './profile.table'
 
-export type User = UserModel['columns']['type']
-export class UserModel extends Model {
+export type User = UserTable['columns']['type']
+export class UserTable extends BaseTable {
   table = 'user'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
   }))
   
   relations = {
-    profile: this.hasOne(() => ProfileModel, {
+    profile: this.hasOne(() => ProfileTable, {
       required: true,
       primaryKey: 'id',
       foreignKey: 'userId',
@@ -27,12 +27,12 @@ export class UserModel extends Model {
   }
 }
 
-// profile.model.ts
-import { Model } from 'orchid-orm'
-import { UserModel } from './user.model'
+// profile.table.ts
+import { BaseTable } from './baseTable'
+import { UserTable } from './user.table'
 
-export type Profile = ProfileModel['columns']['type']
-export class ProfileModel extends Model {
+export type Profile = ProfileTable['columns']['type']
+export class ProfileTable extends BaseTable {
   table = 'profile'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -40,7 +40,7 @@ export class ProfileModel extends Model {
   }))
 
   relations = {
-    profile: this.hasOne(() => UserModel, {
+    profile: this.hasOne(() => UserTable, {
       required: true,
       primaryKey: 'id',
       foreignKey: 'userId',
@@ -51,15 +51,15 @@ export class ProfileModel extends Model {
 
 ## belongsTo
 
-`belongsTo` is for a model which has a column pointing to another model.
+`belongsTo` is for a table which has a column pointing to another table.
 
 For example, `Book` belongs to `Author`:
 
 ```ts
-import { Model } from 'orchid-orm'
+import { BaseTable } from './baseTable'
 
-export type Author = AuthorModel['columns']['type']
-export class AuthorModel extends Model {
+export type Author = AuthorTable['columns']['type']
+export class AuthorTable extends BaseTable {
   table = 'author'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -67,8 +67,8 @@ export class AuthorModel extends Model {
   }))
 }
 
-export type Book = BookModel['columns']['type']
-export class BookModel extends Model {
+export type Book = BookTable['columns']['type']
+export class BookTable extends BaseTable {
   table = 'book'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -78,7 +78,7 @@ export class BookModel extends Model {
   }))
   
   relations = {
-    author: this.belongsTo(() => AuthorModel, {
+    author: this.belongsTo(() => AuthorTable, {
       // required is affecting on TS type of returned record
       required: true,
       // primaryKey is a column of Author to connect with
@@ -92,17 +92,17 @@ export class BookModel extends Model {
 
 ## hasOne
 
-`hasOne` association indicates that one other model has a reference to this model. That model can be fetched through this association.
+`hasOne` association indicates that one other table has a reference to this table. That table can be fetched through this association.
 
 This association adds all the same queries and abilities as `belongsTo`, only difference is the reference column is located in another table.
 
-For example, if each supplier in your application has only one account, you'd declare the supplier model like this:
+For example, if each supplier in your application has only one account, you'd declare the supplier table like this:
 
 ```ts
-import { Model } from 'orchid-orm'
+import { BaseTable } from './baseTable'
 
-export type Supplier = SupplierModel['columns']['type']
-export class SupplierModel extends Model {
+export type Supplier = SupplierTable['columns']['type']
+export class SupplierTable extends BaseTable {
   table = 'supplier'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -111,7 +111,7 @@ export class SupplierModel extends Model {
   }))
 
   relations = {
-    account: this.hasOne(() => AccountModel, {
+    account: this.hasOne(() => AccountTable, {
       // required is affecting on TS type of returned record
       required: true,
       // primaryKey is a column of Supplier to use
@@ -122,8 +122,8 @@ export class SupplierModel extends Model {
   }
 }
 
-export type Account = AccountModel['columns']['type']
-export class AccountModel extends Model {
+export type Account = AccountTable['columns']['type']
+export class AccountTable extends BaseTable {
   table = 'account'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -136,18 +136,18 @@ export class AccountModel extends Model {
 
 ## hasOne through
 
-A `hasOne through` association sets up a one-to-one connection with another model.
-This association indicates that the declaring model can be matched with one instance of another model by proceeding through a third model.
+A `hasOne through` association sets up a one-to-one connection with another table.
+This association indicates that the declaring table can be matched with one instance of another table by proceeding through a third table.
 
 `hasOne through` gives the same querying abilities as a regular `hasOne`, but without nested create functionality.
 
-For example, if each supplier has one account, and each account is associated with one account history, then the supplier model could look like this:
+For example, if each supplier has one account, and each account is associated with one account history, then the supplier table could look like this:
 
 ```ts
-import { Model } from 'orchid-orm'
+import { BaseTable } from './baseTable'
 
-export type Supplier = SupplierModel['columns']['type']
-export class SupplierModel extends Model {
+export type Supplier = SupplierTable['columns']['type']
+export class SupplierTable extends BaseTable {
   table = 'supplier'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -155,24 +155,24 @@ export class SupplierModel extends Model {
   }))
 
   relations = {
-    account: this.hasOne(() => AccountModel, {
+    account: this.hasOne(() => AccountTable, {
       required: true,
       primaryKey: 'id',
       foreignKey: 'supplierId',
     }),
     
-    accountHistory: this.hasOne(() => AccountModel, {
+    accountHistory: this.hasOne(() => AccountTable, {
       required: true,
       // previously defined relation name
       through: 'account',
-      // name of relation in Account model
+      // name of relation in Account table
       source: 'accountHistory',
     }),
   }
 }
 
-export type Account = AccountModel['columns']['type']
-export class AccountModel extends Model {
+export type Account = AccountTable['columns']['type']
+export class AccountTable extends BaseTable {
   table = 'account'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -182,7 +182,7 @@ export class AccountModel extends Model {
   }))
   
   relations = {
-    accountHistory: this.hasOne(() => AccountHistoryModel, {
+    accountHistory: this.hasOne(() => AccountHistoryTable, {
       required: true,
       primaryKey: 'id',
       foreignKey: 'accountId',
@@ -190,8 +190,8 @@ export class AccountModel extends Model {
   }
 }
 
-export type AccountHistory = AccountHistoryModel['columns']['type']
-export class AccountHistoryModel extends Model {
+export type AccountHistory = AccountHistoryTable['columns']['type']
+export class AccountHistoryTable extends BaseTable {
   table = 'accountHistory'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -201,7 +201,7 @@ export class AccountHistoryModel extends Model {
   }))
 
   relations = {
-    account: this.belongsTo(() => AccountModel, {
+    account: this.belongsTo(() => AccountTable, {
       required: true,
       primaryKey: 'id',
       foreignKey: 'accountId',
@@ -212,17 +212,17 @@ export class AccountHistoryModel extends Model {
 
 ## hasMany
 
-A `hasMany` association is similar to `hasOne` but indicates a one-to-many connection with another model.
+A `hasMany` association is similar to `hasOne` but indicates a one-to-many connection with another table.
 You'll often find this association on the "other side" of a `belongsTo` association.
-This association indicates that each instance of the model has zero or more instances of another model.
+This association indicates that each instance of the table has zero or more instances of another table.
 
-For example, in an application containing authors and books, the author model could be declared like this:
+For example, in an application containing authors and books, the author table could be declared like this:
 
 ```ts
-import { Model } from 'orchid-orm'
+import { BaseTable } from './baseTable'
 
-export type Author = AuthorModel['columns']['type']
-export class AuthorModel extends Model {
+export type Author = AuthorTable['columns']['type']
+export class AuthorTable extends BaseTable {
   table = 'author'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -230,7 +230,7 @@ export class AuthorModel extends Model {
   }))
   
   relations = {
-    books: this.hasMany(() => BookModel, {
+    books: this.hasMany(() => BookTable, {
       // primaryKey is a column of Author to use
       primaryKey: 'id',
       // foreignKey is a column of Book to connect with
@@ -239,8 +239,8 @@ export class AuthorModel extends Model {
   }
 }
 
-export type Book = BookModel['columns']['type']
-export class BookModel extends Model {
+export type Book = BookTable['columns']['type']
+export class BookTable extends BaseTable {
   table = 'book'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -253,18 +253,18 @@ export class BookModel extends Model {
 
 ## hasMany through
 
-A `hasMany though` association is often used to set up a many-to-many connection with another model.
-This association indicates that the declaring model can be matched with zero or more instances of another model by proceeding through a third model.
+A `hasMany though` association is often used to set up a many-to-many connection with another table.
+This association indicates that the declaring table can be matched with zero or more instances of another table by proceeding through a third table.
 
 `hasMany through` gives the same querying abilities as a regular `hasMany` but without nested create functionality.
 
 For example, consider a medical practice where patients make appointments to see physicians. The relevant association declarations could look like this:
 
 ```ts
-import { Model } from 'orchid-orm'
+import { BaseTable } from './baseTable'
 
-export type Physician = PhysicianModel['columns']['type']
-export class PhysicianModel extends Model {
+export type Physician = PhysicianTable['columns']['type']
+export class PhysicianTable extends BaseTable {
   table = 'physician'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -272,24 +272,24 @@ export class PhysicianModel extends Model {
   }))
 
   relations = {
-    appointments: this.hasMany(() => AppointmentModel, {
+    appointments: this.hasMany(() => AppointmentTable, {
       // primaryKey is a column of Physicians to use
       primaryKey: 'id',
       // foreignKey is a column of Appointment to connect with
       foreignKey: 'authorId',
     }),
     
-    patients: this.hasMany(() => PatienModel, {
+    patients: this.hasMany(() => PatienTable, {
       // previously defined relation name
       through: 'appointments',
-      // name of relation in Appointment model
+      // name of relation in Appointment table
       source: 'patient',
     }),
   }
 }
 
-export type Appointment = AppointmentModel['columns']['type']
-export class AppointmentModel extends Model {
+export type Appointment = AppointmentTable['columns']['type']
+export class AppointmentTable extends BaseTable {
   table = 'appointment'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -301,20 +301,20 @@ export class AppointmentModel extends Model {
   }))
   
   relations = {
-    physician: this.belongsTo(() => PhysicianModel, {
+    physician: this.belongsTo(() => PhysicianTable, {
       primaryKey: 'id',
       foreignKey: 'physycianId',
     }),
     
-    patient: this.belongsTo(() => PatientModel, {
+    patient: this.belongsTo(() => PatientTable, {
       primaryKey: 'id',
       foreignKey: 'patientId',
     }),
   }
 }
 
-export type Patient = PatientModel['columns']['type']
-export class PatientModel extends Model {
+export type Patient = PatientTable['columns']['type']
+export class PatientTable extends BaseTable {
   table = 'patient'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -322,15 +322,15 @@ export class PatientModel extends Model {
   }))
   
   relations = {
-    appointments: this.hasMany(() => AppointmentModel, {
+    appointments: this.hasMany(() => AppointmentTable, {
       primaryKey: 'id',
       foreignKey: 'patientId',
     }),
     
-    physicians: this.hasMany(() => PhysicianModel, {
+    physicians: this.hasMany(() => PhysicianTable, {
       // previously defined relation name
       through: 'appointments',
-      // name of relation in Appointment model
+      // name of relation in Appointment table
       source: 'physician',
     })
   }
@@ -339,16 +339,16 @@ export class PatientModel extends Model {
 
 ## hasAndBelongsToMany
 
-A `hasAndBelongsToMany` association creates a direct many-to-many connection with another model, with no intervening model.
-This association indicates that each instance of the declaring model refers to zero or more instances of another model.
+A `hasAndBelongsToMany` association creates a direct many-to-many connection with another table, with no intervening table.
+This association indicates that each instance of the declaring table refers to zero or more instances of another table.
 
-For example, if your application includes posts and tags, with each post having many tags and each tag appearing in many posts, you could declare the models this way:
+For example, if your application includes posts and tags, with each post having many tags and each tag appearing in many posts, you could declare the tables this way:
 
 ```ts
-import { Model } from 'orchid-orm'
+import { BaseTable } from './baseTable'
 
-export type Post = PostModel['columns']['type']
-export class PostModel extends Model {
+export type Post = PostTable['columns']['type']
+export class PostTable extends BaseTable {
   table = 'post'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -356,23 +356,23 @@ export class PostModel extends Model {
   }))
 
   relations = {
-    tags: this.hasAndBelongsToMany(() => TagModel, {
-      // primaryKey is a column of this model
+    tags: this.hasAndBelongsToMany(() => TagTable, {
+      // primaryKey is a column of this table
       primaryKey: 'id',
-      // foreignKey is a column of joinTable to connect with this model
+      // foreignKey is a column of joinTable to connect with this table
       foreignKey: 'postId',
-      // associationPrimaryKey is a primaryKey of a related model
+      // associationPrimaryKey is a primaryKey of a related table
       associationPrimaryKey: 'id',
-      // associationForeignKey is a column of joinTable to connect with related model
+      // associationForeignKey is a column of joinTable to connect with related table
       associationForeignKey: 'tagId',
-      // joinTable is a connection table between this and related models
+      // joinTable is a connection table between this and related tables
       joinTable: 'postTag',
     })
   }
 }
 
-export type Tag = TagModel['columns']['type']
-export class TagModel extends Model {
+export type Tag = TagTable['columns']['type']
+export class TagTable extends BaseTable {
   table = 'tag'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -380,7 +380,7 @@ export class TagModel extends Model {
   }))
 
   relations = {
-    posts: this.hasAndBelongsToMany(() => PostModel, {
+    posts: this.hasAndBelongsToMany(() => PostTable, {
       primaryKey: 'id',
       foreignKey: 'tagId',
       associationPrimaryKey: 'id',

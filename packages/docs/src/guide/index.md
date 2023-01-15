@@ -1,7 +1,7 @@
 # Overview
 
 `Orchid ORM` is a library for node.js to help to work with a Postgres database (more databases to come),
-is allows to perform queries in a query builder style, define models and relations like an ORM.
+is allows to perform queries in a query builder style, define tables and relations like an ORM.
 
 The main focus is to keep it as powerful as possible, concise and intuitive, performant, and fully type-safe.
 
@@ -32,7 +32,7 @@ This is done because instantiating records consumes some CPU time,
 accessing record data through getters/setters also takes some CPU time,
 serializing records to JSON would require a separate step.
 Only when selecting all columns it is possible to instantiate properly,
-because the model class requires all columns to be defined.
+because the table class requires all columns to be defined.
 So, the in author's opinion, Active Record pattern only complicates things and takes away a bit of performance.
 
 For the same reasons, Data Mapper pattern, Unit of Work, and Data encapsulation are not included, therefore,
@@ -57,11 +57,11 @@ Other ORMs take different ways of defining models:
 - `TypeORM`, and `MikroORM` models rely on decorators and require specific typescript settings.
 - `DeepKit` hacks the compiler entirely, and it simply didn't work for me with strange errors.
 
-With `Orchid ORM` you write models in a such way:
+With `Orchid ORM` you write table classes in a such way:
 
 ```ts
-export type User = UserModel['columns']['type']
-export class UserModel extends Model {
+export type User = UserTable['columns']['type']
+export class UserTable extends BaseTable {
   table = 'user';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -72,7 +72,7 @@ export class UserModel extends Model {
   }))
   
   relations = {
-    profile: this.hasOne(() => ProfileModel, {
+    profile: this.hasOne(() => ProfileTable, {
       required: true,
       primaryKey: 'id',
       foreignKey: 'userId',
@@ -95,7 +95,7 @@ Different ORMs enforce different problems when there is a need to customize a qu
 ```ts
 // posts type will be: Array<{ id: number, name: string, authorName: string, commentsCount: number }>
 const posts = await db.post
-  // .join allows specifying only the relation name defined in the Post model
+  // .join allows specifying only the relation name defined in the Post table
   .join('author')
   // .select autocompletes and checks for Post columns
   .select('id', 'name', {

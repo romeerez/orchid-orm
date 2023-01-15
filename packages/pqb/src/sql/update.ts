@@ -13,11 +13,11 @@ import {
 
 export const pushUpdateSql = (
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   query: UpdateQueryData,
   quotedAs: string,
 ) => {
-  const quotedTable = quoteSchemaAndTable(query.schema, model.table as string);
+  const quotedTable = quoteSchemaAndTable(query.schema, table.table as string);
   ctx.sql.push(`UPDATE ${quotedTable}`);
 
   if (quotedTable !== quotedAs) {
@@ -30,8 +30,8 @@ export const pushUpdateSql = (
   processData(ctx, set, query.updateData);
   ctx.sql.push(set.join(', '));
 
-  pushWhereStatementSql(ctx, model, query, quotedAs);
-  pushReturningSql(ctx, model, query, quotedAs);
+  pushWhereStatementSql(ctx, table, query, quotedAs);
+  pushReturningSql(ctx, table, query, quotedAs);
 };
 
 const processData = (

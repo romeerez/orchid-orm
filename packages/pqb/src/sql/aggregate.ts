@@ -9,7 +9,7 @@ import { ToSqlCtx } from './toSql';
 
 export const aggregateToSql = (
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   item: AggregateItem,
   quotedAs?: string,
 ) => {
@@ -58,7 +58,7 @@ export const aggregateToSql = (
   if (options.filter || options.filterOr) {
     const whereSql = whereToSql(
       ctx,
-      model,
+      table,
       {
         and: options.filter ? [options.filter] : undefined,
         or: options.filterOr?.map((item) => [item]),

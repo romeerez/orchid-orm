@@ -1,13 +1,13 @@
 import { orchidORM } from '../orm';
 import {
-  ChatModel,
-  MessageModel,
-  PostModel,
-  PostTagModel,
-  ProfileModel,
-  TagModel,
-  UserModel,
-} from './test-models';
+  ChatTable,
+  MessageTable,
+  PostTable,
+  PostTagTable,
+  ProfileTable,
+  TagTable,
+  UserTable,
+} from './test-tables';
 
 export const pgConfig = {
   databaseURL: process.env.DATABASE_URL,
@@ -19,13 +19,13 @@ export const db = orchidORM(
     log: false,
   },
   {
-    user: UserModel,
-    profile: ProfileModel,
-    chat: ChatModel,
-    message: MessageModel,
-    post: PostModel,
-    postTag: PostTagModel,
-    tag: TagModel,
+    user: UserTable,
+    profile: ProfileTable,
+    chat: ChatTable,
+    message: MessageTable,
+    post: PostTable,
+    postTag: PostTagTable,
+    tag: TagTable,
   },
 );
 

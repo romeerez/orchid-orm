@@ -1,4 +1,4 @@
-import { Model } from '../model';
+import { Table } from '../table';
 import {
   addQueryOn,
   BelongsToRelation,
@@ -23,7 +23,7 @@ export interface BelongsTo extends RelationThunkBase {
 }
 
 export type BelongsToInfo<
-  T extends Model,
+  T extends Table,
   Relation extends BelongsTo,
   FK extends string = Relation['options']['foreignKey'],
 > = {

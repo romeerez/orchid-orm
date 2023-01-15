@@ -78,7 +78,7 @@ type JoinResult<
     ? A
     : T['relations'] extends Record<string, Relation>
     ? A extends keyof T['relations']
-      ? T['relations'][A]['model']
+      ? T['relations'][A]['table']
       : A extends keyof T['withData']
       ? T['withData'][A] extends WithDataItem
         ? {
@@ -116,7 +116,7 @@ export type JoinCallback<
               };
             };
             shape: T['withData'][Arg]['shape'];
-            __model: Query;
+            __table: Query;
             relations: RelationsBase;
             withData: WithDataBase;
           }
@@ -125,7 +125,7 @@ export type JoinCallback<
       ? Arg
       : T['relations'] extends Record<string, Relation>
       ? Arg extends keyof T['relations']
-        ? T['relations'][Arg]['model']
+        ? T['relations'][Arg]['table']
         : never
       : never
   >,
@@ -140,7 +140,7 @@ type JoinCallbackResult<
     ? Arg
     : T['relations'] extends Record<string, Relation>
     ? Arg extends keyof T['relations']
-      ? T['relations'][Arg]['model']
+      ? T['relations'][Arg]['table']
       : Arg extends keyof T['withData']
       ? T['withData'][Arg] extends WithDataItem
         ? {

@@ -21,10 +21,10 @@ const someTable = db('someTable', (t) => ({
 When using ORM, define columns in such way:
 
 ```ts
-// see ORM docs about defining Model
-import { Model } from './model'
+// see ORM docs about defining BaseTable
+import { BaseTable } from './baseTable'
 
-export class SomeModel extends Model {
+export class SomeTable extends BaseTable {
   table = 'someTable';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -66,7 +66,7 @@ All column types support the following operators in `where` conditions:
 value can be of the same type as the column, a sub-query, or a raw expression (using the `raw` function):
 
 ```ts
-db.someModel.where({
+db.someTable.where({
   column: {
     equals: value,
     not: value,
@@ -79,7 +79,7 @@ db.someModel.where({
 Different types of columns support different operations in `where` conditions:
 
 ```ts
-export class SomeModel extends Model {
+export class SomeTable extends BaseTable {
   table = 'someTable';
   columns = this.setColumns((t) => ({
     name: t.text(3, 100),
@@ -87,8 +87,8 @@ export class SomeModel extends Model {
   }))
 }
 
-// When querying this model:
-db.someModel.where({
+// When querying this table:
+db.someTable.where({
   name: {
     // contains is available for strings
     contains: 'x'
@@ -107,7 +107,7 @@ It is possible to override the parsing of columns returned from the database.
 `text` method requires `min` and `max` parameters, you can override it to use defaults:
 
 ```ts
-export const Model = createModel({
+export const BaseTable = createBaseTable({
   columnTypes: {
     ...columnTypes,
     text: (min = 3, max = 100) => columnTypes.text(min, max),
@@ -118,7 +118,7 @@ export const Model = createModel({
 With such config, all text columns will be validated to have at least 3 and at most 100 characters:
 
 ```ts
-export class SomeModel extends Model {
+export class SomeTable extends BaseTable {
   table = 'someTable';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -137,11 +137,11 @@ define `.parse` to parse values returned from the database,
 `.as` will change the TS type of one column to another for the `orchid-orm-schema-to-zod` module to use a different schema.
 
 For example, by default timestamps are returned as strings.
-Here is how to override this for all models to accept numbers when creating or updating,
+Here is how to override this for all tables to accept numbers when creating or updating,
 and to parse the date to the number when returning from a database:
 
 ```ts
-export const Model = createModel({
+export const BaseTable = createBaseTable({
   columnTypes: {
     ...columnTypes,
     timestamp() {
@@ -181,7 +181,7 @@ however, for the specific case of overriding timestamp, there are predefined sho
 `timestamp().asDate()` will encode/parse timestamp from and to a `Date` object.
 
 ```ts
-export const Model = createModel({
+export const BaseTable = createBaseTable({
   columnTypes: {
     ...columnTypes,
     timestamp() {

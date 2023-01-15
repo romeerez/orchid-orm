@@ -8,12 +8,12 @@ import {
   anyShape,
   DbTableOptions,
 } from 'pqb';
-import { DbModel, Model, ModelClasses } from './model';
+import { DbTable, Table, TableClasses } from './table';
 import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
 
-export type OrchidORM<T extends ModelClasses> = {
-  [K in keyof T]: DbModel<T[K]>;
+export type OrchidORM<T extends TableClasses> = {
+  [K in keyof T]: DbTable<T[K]>;
 } & {
   $transaction: typeof transaction;
   $adapter: Adapter;
@@ -21,7 +21,7 @@ export type OrchidORM<T extends ModelClasses> = {
   $close(): Promise<void>;
 };
 
-export const orchidORM = <T extends ModelClasses>(
+export const orchidORM = <T extends TableClasses>(
   {
     log,
     logger,
@@ -33,7 +33,7 @@ export const orchidORM = <T extends ModelClasses>(
       autoPreparedStatements?: boolean;
       noPrimaryKey?: NoPrimaryKeyOption;
     },
-  models: T,
+  tables: T,
 ): OrchidORM<T> => {
   const adapter = 'adapter' in options ? options.adapter : new Adapter(options);
   const commonOptions = {
@@ -57,42 +57,42 @@ export const orchidORM = <T extends ModelClasses>(
     $adapter: adapter,
     $queryBuilder: qb,
     $close: () => adapter.close(),
-  } as unknown as OrchidORM<ModelClasses>;
+  } as unknown as OrchidORM<TableClasses>;
 
-  const modelInstances: Record<string, Model> = {};
+  const tableInstances: Record<string, Table> = {};
 
-  for (const key in models) {
+  for (const key in tables) {
     if (key[0] === '$') {
-      throw new Error(`Model name must not start with $`);
+      throw new Error(`Table class name must not start with $`);
     }
 
-    const model = new models[key]();
-    modelInstances[key] = model;
+    const table = new tables[key]();
+    tableInstances[key] = table;
 
     const options: DbTableOptions = {
       ...commonOptions,
-      schema: model.schema,
+      schema: table.schema,
     };
 
-    if (model.noPrimaryKey) options.noPrimaryKey = 'ignore';
+    if (table.noPrimaryKey) options.noPrimaryKey = 'ignore';
 
-    const dbModel = new Db(
+    const dbTable = new Db(
       adapter,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       qb as any,
-      model.table,
-      model.columns.shape,
-      model.columnTypes,
+      table.table,
+      table.columns.shape,
+      table.columnTypes,
       options,
     );
 
-    (dbModel as unknown as { definedAs: string }).definedAs = key;
-    (dbModel as unknown as { db: unknown }).db = result;
+    (dbTable as unknown as { definedAs: string }).definedAs = key;
+    (dbTable as unknown as { db: unknown }).db = result;
 
-    (result as Record<string, unknown>)[key] = dbModel;
+    (result as Record<string, unknown>)[key] = dbTable;
   }
 
-  applyRelations(qb, modelInstances, result);
+  applyRelations(qb, tableInstances, result);
 
   return result as unknown as OrchidORM<T>;
 };

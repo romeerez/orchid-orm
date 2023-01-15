@@ -15,10 +15,10 @@ npm i orchid-orm pqb orchid-orm-schema-to-zod
 npm i -D rake-db orchid-orm-test-factory
 ```
 
-- **orchid-orm**: this is the ORM, responsible for defining models, relations
+- **orchid-orm**: is responsible for defining tables and relations between them
 - **pqb**: query builder, used by other parts to build chainable query objects
 - **rake-db**: is responsible for migrations
-- **orchid-orm-schema-to-zod**: convert model columns to a Zod schema to use it for validations
+- **orchid-orm-schema-to-zod**: convert table columns to a Zod schema to use it for validations
 - **orchid-orm-test-factory**: for building mock data in tests
 
 Add `.env` file with database credentials:
@@ -105,25 +105,25 @@ Apply migration by running the command:
 npm run db migrate
 ```
 
-Add a base model:
+Add a base table:
 
 ```ts
-// src/model.ts
-import { createModel } from 'orchid-orm';
+// src/baseTable.ts
+import { createBaseTable } from 'orchid-orm';
 import { columnTypes } from 'pqb';
 
-export const Model = createModel({
+export const BaseTable = createBaseTable({
   columnTypes,
 });
 ```
 
-Add a model for the table (columns are simply copy-pasted from the migration):
+Add a table (columns are simply copy-pasted from the migration):
 
 ```ts
-// src/table.model.ts
-import { Model } from './model'
+// src/table.ts
+import { BaseTable } from './baseTable'
 
-export class TableModel extends Model {
+export class Table extends BaseTable {
   table = 'table'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -140,7 +140,7 @@ Add a main instance of the database:
 // src/db.ts
 import 'dotenv/config'
 import { orchidORM } from 'orchid-orm';
-import { TableModel } from './table.model'
+import { Table } from './table'
 
 export const db = orchidORM(
   {
@@ -148,7 +148,7 @@ export const db = orchidORM(
     log: true,
   },
   {
-    table: TableModel,
+    table: Table,
   }
 );
 ```

@@ -4,7 +4,7 @@ import {
   RelationThunkBase,
   RelationThunks,
 } from './relations';
-import { Model } from '../model';
+import { Table } from '../table';
 import {
   addQueryOn,
   getQueryAs,
@@ -39,7 +39,7 @@ export interface HasMany extends RelationThunkBase {
 }
 
 export type HasManyInfo<
-  T extends Model,
+  T extends Table,
   Relations extends RelationThunks,
   Relation extends HasMany,
 > = {
@@ -124,7 +124,7 @@ class HasManyVirtualColumn extends VirtualColumn {
 }
 
 export const makeHasManyMethod = (
-  model: Query,
+  table: Query,
   relation: HasMany,
   relationName: string,
   query: Query,
@@ -132,12 +132,12 @@ export const makeHasManyMethod = (
   if ('through' in relation.options) {
     const { through, source } = relation.options;
 
-    type ModelWithQueryMethod = Record<
+    type TableWithQueryMethod = Record<
       string,
       (params: Record<string, unknown>) => Query
     >;
 
-    const throughRelation = getThroughRelation(model, through);
+    const throughRelation = getThroughRelation(table, through);
     const sourceRelation = getSourceRelation(throughRelation, source);
     const sourceRelationQuery = sourceRelation.query.as(relationName);
     const sourceQuery = sourceRelation.joinQuery(
@@ -150,7 +150,7 @@ export const makeHasManyMethod = (
     return {
       returns: 'many',
       method: (params: Record<string, unknown>) => {
-        const throughQuery = (model as unknown as ModelWithQueryMethod)[
+        const throughQuery = (table as unknown as TableWithQueryMethod)[
           through
         ](params);
 

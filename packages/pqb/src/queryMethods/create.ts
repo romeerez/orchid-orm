@@ -72,14 +72,14 @@ type CreateBelongsToData<
           }
         | {
             create?: never;
-            connect: WhereArg<Rel['model']>;
+            connect: WhereArg<Rel['table']>;
             connectOrCreate?: never;
           }
         | {
             create?: never;
             connect?: never;
             connectOrCreate: {
-              where: WhereArg<Rel['model']>;
+              where: WhereArg<Rel['table']>;
               create: CreateData<Rel['nestedCreateQuery']>;
             };
           };
@@ -101,14 +101,14 @@ type CreateHasOneData<
           }
         | {
             create?: never;
-            connect: WhereArg<Rel['model']>;
+            connect: WhereArg<Rel['table']>;
             connectOrCreate?: never;
           }
         | {
             create?: never;
             connect?: never;
             connectOrCreate: {
-              where?: WhereArg<Rel['model']>;
+              where?: WhereArg<Rel['table']>;
               create?: CreateData<Rel['nestedCreateQuery']>;
             };
           };
@@ -124,9 +124,9 @@ type CreateHasManyData<
   : {
       [K in Key]?: {
         create?: CreateData<Rel['nestedCreateQuery']>[];
-        connect?: WhereArg<Rel['model']>[];
+        connect?: WhereArg<Rel['table']>[];
         connectOrCreate?: {
-          where: WhereArg<Rel['model']>;
+          where: WhereArg<Rel['table']>;
           create: CreateData<Rel['nestedCreateQuery']>;
         }[];
       };

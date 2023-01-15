@@ -2,7 +2,7 @@
 
 The following methods do not affect validation (except some), parsing, or encoding columns, they only have an effect when used in the migration.
 
-Even though they do not affect the application code, you still can copy code from migration to model definition for explicitness, to see database specifics in the model file.
+Even though they do not affect the application code, you still can copy code from migration to table definition for explicitness, to see database specifics in the table file.
 
 ## default
 
@@ -98,17 +98,17 @@ change(async (db) => {
 })
 ```
 
-In the ORM specify a function returning a model instead of a table name:
+In the ORM specify a function returning a table class instead of a name:
 
 ```ts
-export class SomeModel extends Model {
+export class SomeTable extends BaseTable {
   table = 'someTable';
   columns = this.setColumns((t) => ({
     otherTableId: t.integer().foreignKey(() => OtherTable, 'id'),
   }))
 }
 
-export class OtherTable extends Model {
+export class OtherTable extends BaseTable {
   table = 'otherTable'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),

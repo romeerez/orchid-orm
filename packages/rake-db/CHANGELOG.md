@@ -1,5 +1,16 @@
 # rake-db
 
+## 2.2.0
+
+### Minor Changes
+
+- 3f25b4d: Rename all model words to table words, because all models here are not models in OOP meaning
+
+### Patch Changes
+
+- Updated dependencies [3f25b4d]
+  - pqb@0.8.0
+
 ## 2.1.18
 
 ### Patch Changes

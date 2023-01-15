@@ -1,11 +1,11 @@
-import { createModel } from './model';
+import { createBaseTable } from './table';
 import { orchidORM } from './orm';
 import { adapter, db } from './test-utils/test-db';
 import { assertType, userData, useTestDatabase } from './test-utils/test-utils';
 import { ColumnType, columnTypes, Operators } from 'pqb';
-import { Model } from './test-utils/test-models';
+import { BaseTable } from './test-utils/test-tables';
 
-describe('model', () => {
+describe('table', () => {
   useTestDatabase();
 
   describe('overriding column types', () => {
@@ -15,8 +15,8 @@ describe('model', () => {
         operators = Operators.any;
       }
       const type = new Type();
-      const Model = createModel({ columnTypes: { type: () => type } });
-      class UserModel extends Model {
+      const BaseTable = createBaseTable({ columnTypes: { type: () => type } });
+      class UserTable extends BaseTable {
         table = 'user';
         columns = this.setColumns((t) => ({
           id: t.type().primaryKey(),
@@ -27,7 +27,7 @@ describe('model', () => {
       const { user } = orchidORM(
         { adapter },
         {
-          user: UserModel,
+          user: UserTable,
         },
       );
 
@@ -39,8 +39,8 @@ describe('model', () => {
     it('should return date as string by default', async () => {
       await db.user.create(userData);
 
-      const Model = createModel({ columnTypes });
-      class UserModel extends Model {
+      const BaseTable = createBaseTable({ columnTypes });
+      class UserTable extends BaseTable {
         table = 'user';
         columns = this.setColumns((t) => ({
           id: t.serial().primaryKey(),
@@ -51,7 +51,7 @@ describe('model', () => {
       const { user } = orchidORM(
         { adapter },
         {
-          user: UserModel,
+          user: UserTable,
         },
       );
 
@@ -64,7 +64,7 @@ describe('model', () => {
     it('should return date as Date when overridden', async () => {
       await db.user.create(userData);
 
-      const Model = createModel({
+      const BaseTable = createBaseTable({
         columnTypes: {
           serial: columnTypes.serial,
           timestamp() {
@@ -73,7 +73,7 @@ describe('model', () => {
         },
       });
 
-      class UserModel extends Model {
+      class UserTable extends BaseTable {
         table = 'user';
         columns = this.setColumns((t) => ({
           id: t.serial().primaryKey(),
@@ -84,7 +84,7 @@ describe('model', () => {
       const { user } = orchidORM(
         { adapter },
         {
-          user: UserModel,
+          user: UserTable,
         },
       );
 
@@ -96,8 +96,8 @@ describe('model', () => {
   });
 
   describe('noPrimaryKey', () => {
-    it('should allow to the model to not have a primary key', () => {
-      class UserModel extends Model {
+    it('should allow to the table to not have a primary key', () => {
+      class UserTable extends BaseTable {
         table = 'user';
         noPrimaryKey = true;
         columns = this.setColumns((t) => ({
@@ -110,7 +110,7 @@ describe('model', () => {
           adapter,
         },
         {
-          user: UserModel,
+          user: UserTable,
         },
       );
     });

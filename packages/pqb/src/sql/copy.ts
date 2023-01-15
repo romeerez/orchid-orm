@@ -7,7 +7,7 @@ import { pushWhereStatementSql } from './where';
 
 export const pushCopySql = (
   ctx: ToSqlCtx,
-  model: Query,
+  table: Query,
   query: CopyQueryData,
   quotedAs?: string,
 ) => {
@@ -19,7 +19,7 @@ export const pushCopySql = (
   const target = 'from' in copy ? copy.from : copy.to;
 
   sql.push(
-    `COPY ${q(model.table as string)}${columns} ${
+    `COPY ${q(table.table as string)}${columns} ${
       'from' in copy ? 'FROM' : 'TO'
     } ${
       typeof target === 'string'
@@ -55,5 +55,5 @@ export const pushCopySql = (
     sql.push(`WITH (${options.join(', ')})`);
   }
 
-  pushWhereStatementSql(ctx, model, query, quotedAs);
+  pushWhereStatementSql(ctx, table, query, quotedAs);
 };

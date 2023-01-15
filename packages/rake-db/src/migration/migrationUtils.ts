@@ -1,6 +1,6 @@
 import {
   ColumnType,
-  ForeignKeyModel,
+  ForeignKeyTable,
   ForeignKeyOptions,
   getRaw,
   isRaw,
@@ -88,7 +88,7 @@ export const addColumnComment = (
 };
 
 export const getForeignKeyTable = (
-  fnOrTable: (() => ForeignKeyModel) | string,
+  fnOrTable: (() => ForeignKeyTable) | string,
 ) => {
   if (typeof fnOrTable === 'string') {
     return fnOrTable;

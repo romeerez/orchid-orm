@@ -1,6 +1,6 @@
 import { BelongsTo, BelongsToInfo, makeBelongsToMethod } from './belongsTo';
 import { HasOne, HasOneInfo, makeHasOneMethod } from './hasOne';
-import { DbModel, Model, ModelClass, ModelClasses } from '../model';
+import { DbTable, Table, TableClass, TableClasses } from '../table';
 import { OrchidORM } from '../orm';
 import {
   Query,
@@ -26,7 +26,7 @@ import { getSourceRelation, getThroughRelation } from './utils';
 export interface RelationThunkBase {
   type: string;
   returns: 'one' | 'many';
-  fn(): ModelClass;
+  fn(): TableClass;
   options: BaseRelation['options'];
 }
 
@@ -45,16 +45,16 @@ export type RelationData = {
 };
 
 export type Relation<
-  T extends Model,
+  T extends Table,
   Relations extends RelationThunks,
   K extends keyof Relations,
-  M extends Query = DbModel<ReturnType<Relations[K]['fn']>>,
+  M extends Query = DbTable<ReturnType<Relations[K]['fn']>>,
   Info extends RelationInfo = RelationInfo<T, Relations, Relations[K]>,
 > = {
   type: Relations[K]['type'];
   returns: Relations[K]['returns'];
   key: K;
-  model: M;
+  table: M;
   query: M;
   joinQuery(fromQuery: Query, toQuery: Query): Query;
   defaults: Info['populate'];
@@ -67,13 +67,13 @@ export type Relation<
   options: Relations[K]['options'];
 };
 
-export type RelationScopeOrModel<Relation extends RelationThunkBase> =
+export type RelationScopeOrTable<Relation extends RelationThunkBase> =
   Relation['options']['scope'] extends (q: Query) => Query
     ? ReturnType<Relation['options']['scope']>
-    : DbModel<ReturnType<Relation['fn']>>;
+    : DbTable<ReturnType<Relation['fn']>>;
 
 export type RelationInfo<
-  T extends Model = Model,
+  T extends Table = Table,
   Relations extends RelationThunks = RelationThunks,
   Relation extends RelationThunk = RelationThunk,
 > = Relation extends BelongsTo
@@ -87,11 +87,11 @@ export type RelationInfo<
   : never;
 
 export type MapRelation<
-  T extends Model,
+  T extends Table,
   Relations extends RelationThunks,
   RelationName extends keyof Relations,
   Relation extends RelationThunk = Relations[RelationName],
-  RelatedQuery extends Query = RelationScopeOrModel<Relation>,
+  RelatedQuery extends Query = RelationScopeOrTable<Relation>,
   Info extends {
     params: Record<string, unknown>;
     populate: string;
@@ -114,7 +114,7 @@ export type MapRelation<
   Info['chainedDelete']
 >;
 
-export type MapRelations<T extends Model> = 'relations' extends keyof T
+export type MapRelations<T extends Table> = 'relations' extends keyof T
   ? T['relations'] extends RelationThunks
     ? {
         [K in keyof T['relations']]: MapRelation<T, T['relations'], K>;
@@ -125,48 +125,50 @@ export type MapRelations<T extends Model> = 'relations' extends keyof T
 type ApplyRelationData = {
   relationName: string;
   relation: RelationThunk;
-  dbModel: DbModel<ModelClass>;
-  otherDbModel: DbModel<ModelClass>;
+  dbTable: DbTable<TableClass>;
+  otherDbTable: DbTable<TableClass>;
 };
 
 type DelayedRelations = Map<Query, Record<string, ApplyRelationData[]>>;
 
 export const applyRelations = (
   qb: Query,
-  models: Record<string, Model>,
-  result: OrchidORM<ModelClasses>,
+  tables: Record<string, Table>,
+  result: OrchidORM<TableClasses>,
 ) => {
-  const modelsEntries = Object.entries(models);
+  const tableEntries = Object.entries(tables);
 
   const delayedRelations: DelayedRelations = new Map();
 
-  for (const modelName in models) {
-    const model = models[modelName] as Model & {
+  for (const name in tables) {
+    const table = tables[name] as Table & {
       relations?: RelationThunks;
     };
-    if (!('relations' in model) || typeof model.relations !== 'object')
+    if (!('relations' in table) || typeof table.relations !== 'object')
       continue;
 
-    const dbModel = result[modelName];
-    for (const relationName in model.relations) {
-      const relation = model.relations[relationName];
-      const otherModelClass = relation.fn();
-      const otherModel = modelsEntries.find(
-        (pair) => pair[1] instanceof otherModelClass,
+    const dbTable = result[name];
+    for (const relationName in table.relations) {
+      const relation = table.relations[relationName];
+      const otherTableClass = relation.fn();
+      const otherTable = tableEntries.find(
+        (pair) => pair[1] instanceof otherTableClass,
       );
-      if (!otherModel) {
-        throw new Error(`Cannot find model for class ${otherModelClass.name}`);
+      if (!otherTable) {
+        throw new Error(
+          `Cannot find table class for class ${otherTableClass.name}`,
+        );
       }
-      const otherModelName = otherModel[0];
-      const otherDbModel = result[otherModelName];
-      if (!otherDbModel)
-        throw new Error(`Cannot find model by name ${otherModelName}`);
+      const otherTableName = otherTable[0];
+      const otherDbTable = result[otherTableName];
+      if (!otherDbTable)
+        throw new Error(`Cannot find table class by name ${otherTableName}`);
 
       const data: ApplyRelationData = {
         relationName,
         relation,
-        dbModel,
-        otherDbModel,
+        dbTable,
+        otherDbTable,
       };
 
       const options = relation.options as { through?: string; source?: string };
@@ -174,9 +176,9 @@ export const applyRelations = (
         typeof options.through === 'string' &&
         typeof options.source === 'string'
       ) {
-        const throughRelation = getThroughRelation(dbModel, options.through);
+        const throughRelation = getThroughRelation(dbTable, options.through);
         if (!throughRelation) {
-          delayRelation(delayedRelations, dbModel, options.through, data);
+          delayRelation(delayedRelations, dbTable, options.through, data);
           continue;
         }
 
@@ -187,7 +189,7 @@ export const applyRelations = (
         if (!sourceRelation) {
           delayRelation(
             delayedRelations,
-            throughRelation.model,
+            throughRelation.table,
             options.source,
             data,
           );
@@ -207,17 +209,17 @@ export const applyRelations = (
       for (const item of value[key]) {
         const { relation } = item;
 
-        if (item.dbModel.relations[item.relationName as never]) continue;
+        if (item.dbTable.relations[item.relationName as never]) continue;
 
-        const as = item.dbModel.definedAs;
+        const as = item.dbTable.definedAs;
         let message = `Cannot define a \`${item.relationName}\` relation on \`${as}\``;
-        const model = result[as];
+        const table = result[as];
 
         const { through, source } = relation.options as {
           through: string;
           source: string;
         };
-        const throughRel = model.relations[
+        const throughRel = table.relations[
           through as never
         ] as unknown as BaseRelation;
 
@@ -226,10 +228,10 @@ export const applyRelations = (
         } else if (
           source &&
           throughRel &&
-          !throughRel.model.relations[source as never]
+          !throughRel.table.relations[source as never]
         ) {
           message += `: cannot find \`${source}\` relation in \`${
-            (throughRel.model as DbModel<ModelClass>).definedAs
+            (throughRel.table as DbTable<TableClass>).definedAs
           }\` required by the \`source\` option`;
         }
 
@@ -241,37 +243,37 @@ export const applyRelations = (
 
 const delayRelation = (
   delayedRelations: DelayedRelations,
-  model: Query,
+  table: Query,
   relationName: string,
   data: ApplyRelationData,
 ) => {
-  let modelRelations = delayedRelations.get(model);
-  if (!modelRelations) {
-    modelRelations = {};
-    delayedRelations.set(model, modelRelations);
+  let tableRelations = delayedRelations.get(table);
+  if (!tableRelations) {
+    tableRelations = {};
+    delayedRelations.set(table, tableRelations);
   }
-  if (modelRelations[relationName]) {
-    modelRelations[relationName].push(data);
+  if (tableRelations[relationName]) {
+    tableRelations[relationName].push(data);
   } else {
-    modelRelations[relationName] = [data];
+    tableRelations[relationName] = [data];
   }
 };
 
 const applyRelation = (
   qb: Query,
-  { relationName, relation, dbModel, otherDbModel }: ApplyRelationData,
+  { relationName, relation, dbTable, otherDbTable }: ApplyRelationData,
   delayedRelations: DelayedRelations,
 ) => {
   const query = (
     relation.options.scope
-      ? relation.options.scope(otherDbModel)
-      : (otherDbModel as unknown as QueryWithTable)
+      ? relation.options.scope(otherDbTable)
+      : (otherDbTable as unknown as QueryWithTable)
   ).as(relationName);
 
   const definedAs = (query as unknown as { definedAs?: string }).definedAs;
   if (!definedAs) {
     throw new Error(
-      `Model for table ${query.table} is not attached to db instance`,
+      `Table class for table ${query.table} is not attached to db instance`,
     );
   }
 
@@ -280,12 +282,12 @@ const applyRelation = (
   if (type === 'belongsTo') {
     data = makeBelongsToMethod(relation, relationName, query);
   } else if (type === 'hasOne') {
-    data = makeHasOneMethod(dbModel, relation, relationName, query);
+    data = makeHasOneMethod(dbTable, relation, relationName, query);
   } else if (type === 'hasMany') {
-    data = makeHasManyMethod(dbModel, relation, relationName, query);
+    data = makeHasManyMethod(dbTable, relation, relationName, query);
   } else if (type === 'hasAndBelongsToMany') {
     data = makeHasAndBelongsToManyMethod(
-      dbModel,
+      dbTable,
       qb,
       relation,
       relationName,
@@ -300,51 +302,51 @@ const applyRelation = (
   }
 
   if (data.virtualColumn) {
-    dbModel.shape[relationName] = data.virtualColumn;
+    dbTable.shape[relationName] = data.virtualColumn;
   }
 
-  makeRelationQuery(dbModel, definedAs, relationName, data);
+  makeRelationQuery(dbTable, definedAs, relationName, data);
 
-  (dbModel.relations as Record<string, unknown>)[relationName] = {
+  (dbTable.relations as Record<string, unknown>)[relationName] = {
     type,
     key: relationName,
-    model: otherDbModel,
+    table: otherDbTable,
     query,
     joinQuery: data.joinQuery,
     primaryKey: data.primaryKey,
     options: relation.options,
   };
 
-  const modelRelations = delayedRelations.get(dbModel);
-  if (!modelRelations) return;
+  const tableRelations = delayedRelations.get(dbTable);
+  if (!tableRelations) return;
 
-  modelRelations[relationName]?.forEach((data) => {
+  tableRelations[relationName]?.forEach((data) => {
     applyRelation(qb, data, delayedRelations);
   });
 };
 
 const makeRelationQuery = (
-  model: Query,
+  table: Query,
   definedAs: string,
   relationName: string,
   data: RelationData,
 ) => {
-  Object.defineProperty(model, relationName, {
+  Object.defineProperty(table, relationName, {
     get() {
-      const toModel = this.db[definedAs].as(relationName) as Query;
+      const toTable = this.db[definedAs].as(relationName) as Query;
 
       if (data.returns === 'one') {
-        toModel._take();
+        toTable._take();
       }
 
       const query = this.isSubQuery
-        ? toModel
-        : toModel._whereExists(data.reverseJoin(this, toModel), (q) => q);
+        ? toTable
+        : toTable._whereExists(data.reverseJoin(this, toTable), (q) => q);
 
       query.query[relationQueryKey] = {
         relationName,
         sourceQuery: this,
-        relationQuery: toModel,
+        relationQuery: toTable,
         joinQuery: data.joinQuery,
       };
 

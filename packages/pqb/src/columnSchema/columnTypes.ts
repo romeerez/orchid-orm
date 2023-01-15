@@ -47,14 +47,14 @@ import { JSONColumn, JSONTextColumn, JSONTypes } from './json';
 import { JSONTypeAny } from './json/typeBase';
 import { ArrayColumn } from './array';
 import {
-  ColumnNameOfModel,
+  ColumnNameOfTable,
   ColumnType,
   ColumnTypesBase,
-  ForeignKeyModel,
+  ForeignKeyTable,
   IndexColumnOptions,
   IndexOptions,
   ForeignKeyOptions,
-  ForeignKeyModelWithColumns,
+  ForeignKeyTableWithColumns,
 } from './columnType';
 import { emptyObject, EmptyObject, MaybeArray, toArray } from '../utils';
 import { ColumnsShape } from './columnsSchema';
@@ -81,7 +81,7 @@ export namespace TableData {
 
   export type ForeignKey = {
     columns: string[];
-    fnOrTable: (() => ForeignKeyModel) | string;
+    fnOrTable: (() => ForeignKeyTable) | string;
     foreignColumns: string[];
     options: ForeignKeyOptions;
   };
@@ -235,11 +235,11 @@ export const columnTypes = {
 };
 
 function foreignKey<
-  Model extends ForeignKeyModelWithColumns,
-  Columns extends [ColumnNameOfModel<Model>, ...ColumnNameOfModel<Model>[]],
+  Table extends ForeignKeyTableWithColumns,
+  Columns extends [ColumnNameOfTable<Table>, ...ColumnNameOfTable<Table>[]],
 >(
   columns: string[],
-  fn: () => Model,
+  fn: () => Table,
   foreignColumns: Columns,
   options?: ForeignKeyOptions,
 ): EmptyObject;
@@ -254,7 +254,7 @@ function foreignKey<
 ): EmptyObject;
 function foreignKey(
   columns: string[],
-  fnOrTable: (() => ForeignKeyModel) | string,
+  fnOrTable: (() => ForeignKeyTable) | string,
   foreignColumns: string[],
   options: ForeignKeyOptions = {},
 ) {

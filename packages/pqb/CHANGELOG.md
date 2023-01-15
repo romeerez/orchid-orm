@@ -1,5 +1,11 @@
 # pqb
 
+## 0.8.0
+
+### Minor Changes
+
+- 3f25b4d: Rename all model words to table words, because all models here are not models in OOP meaning
+
 ## 0.7.13
 
 ### Patch Changes

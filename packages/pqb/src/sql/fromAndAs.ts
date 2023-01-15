@@ -7,14 +7,14 @@ import { SelectQueryData } from './data';
 
 export const pushFromAndAs = (
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   query: SelectQueryData,
   quotedAs?: string,
 ) => {
   ctx.sql.push('FROM');
   if (query.fromOnly) ctx.sql.push('ONLY');
 
-  const from = getFrom(model, query, ctx.values);
+  const from = getFrom(table, query, ctx.values);
   ctx.sql.push(from);
 
   if (query.as && quotedAs && quotedAs !== from) {
@@ -23,7 +23,7 @@ export const pushFromAndAs = (
 };
 
 const getFrom = (
-  model: QueryBase,
+  table: QueryBase,
   query: SelectQueryData,
   values: unknown[],
 ) => {
@@ -51,5 +51,5 @@ const getFrom = (
     return quoteSchemaAndTable(query.schema, query.from);
   }
 
-  return quoteSchemaAndTable(query.schema, model.table as string);
+  return quoteSchemaAndTable(query.schema, table.table as string);
 };

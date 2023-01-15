@@ -53,7 +53,7 @@ export class Json {
   _json<T extends Query>(
     this: T,
   ): SetQueryReturnsValueOptional<T, StringColumn> {
-    const q = this._wrap(this.__model.clone()) as T;
+    const q = this._wrap(this.__table.clone()) as T;
     q._getOptional(
       raw(
         queryTypeWithLimitOne[this.query.returnType]

@@ -132,7 +132,7 @@ export class Db<
     public columnTypes: CT,
     options: DbTableOptions,
   ) {
-    this.__model = this as Query;
+    this.__table = this as Query;
 
     const logger = options.logger || console;
     this.query = {

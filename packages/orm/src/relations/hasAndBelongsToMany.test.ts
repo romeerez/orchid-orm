@@ -9,7 +9,7 @@ import {
   useRelationCallback,
 } from '../test-utils/test-utils';
 import { RelationQuery, Sql, TransactionAdapter } from 'pqb';
-import { Chat, User } from '../test-utils/test-models';
+import { Chat, User } from '../test-utils/test-tables';
 
 describe('hasAndBelongsToMany', () => {
   useTestDatabase();

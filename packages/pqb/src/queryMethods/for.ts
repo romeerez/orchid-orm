@@ -15,10 +15,10 @@ const forQueryBuilder = <T extends Query>(
   tableNames?: string[] | RawExpression,
 ) => {
   (q.query as SelectQueryData).for = { type, tableNames };
-  q.__model = Object.create(q.__model);
-  q.__model.__model = q.__model;
+  q.__table = Object.create(q.__table);
+  q.__table.__table = q.__table;
 
-  Object.assign(q.__model, {
+  Object.assign(q.__table, {
     noWait<T extends ForQueryBuilder<Query>>(this: T): T {
       return this.clone()._noWait();
     },

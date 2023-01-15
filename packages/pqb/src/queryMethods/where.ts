@@ -143,7 +143,7 @@ export abstract class Where implements QueryBase {
   abstract shape: ColumnsShape;
   abstract relations: RelationsBase;
   abstract withData: WithDataBase;
-  abstract __model: Query;
+  abstract __table: Query;
 
   query = {} as QueryData;
   table?: string;
@@ -437,21 +437,21 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
   selectable!: Q['selectable'];
   shape: Q['shape'];
   relations!: Q['relations'];
-  __model: Query;
+  __table: Query;
   withData = {};
 
   constructor(q: QueryBase | string, shape: ColumnsShape) {
     super();
     this.table = typeof q === 'object' ? q.table : q;
     this.shape = shape;
-    this.__model = this as unknown as Query;
+    this.__table = this as unknown as Query;
     if (typeof q === 'object' && q.query.as) {
       this.query.as = q.query.as;
     }
   }
 
   clone<T extends this>(this: T): T {
-    const cloned = Object.create(this.__model);
+    const cloned = Object.create(this.__table);
     cloned.query = getClonedQueryData(this.query);
     return cloned as unknown as T;
   }

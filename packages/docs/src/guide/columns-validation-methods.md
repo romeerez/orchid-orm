@@ -17,13 +17,13 @@ Install a package:
 npm i orchid-orm-schema-to-zod
 ```
 
-Use the `modelToZod` utility to get a validation schema from a model:
+Use the `tableToZod` utility to get a validation schema from a table class:
 
 ```ts
-import { modelToZod } from 'orchid-orm-schema-to-zod';
-import { Model } from './model'
+import { tableToZod } from 'orchid-orm-schema-to-zod';
+import { BaseTable } from './baseTable'
 
-export class SomeModel extends Model {
+export class SomeTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -31,17 +31,17 @@ export class SomeModel extends Model {
   }))
 }
 
-export const SomeModelSchema = modelToZod(SomeModel)
+export const SomeTableSchema = tableToZod(SomeTable)
 ```
 
 Later in the code which is receiving user input, you can use this schema for validation:
 
 ```ts
 import { Request } from 'express' // express is for example
-import { SomeModelSchema } from './some.model'
+import { SomeTableSchema } from './some.table'
 
 // id is omitted because it's not needed in the update:
-const updateSomeItemSchema = SomeModelSchema.omit('id')
+const updateSomeItemSchema = SomeTableSchema.omit('id')
 
 export const updateSomeItemController = (req: Request) => {
   // dataForUpdate has a proper TS type and it is validated
@@ -55,7 +55,7 @@ export const updateSomeItemController = (req: Request) => {
 Set default value or a function, in the case of a function it's called on each validation.
 
 ```ts
-class SomeModel extends Model {
+class SomeTable extends BaseTable {
   table = 'table'
   columns = this.setColumns((t) => ({
     column: t.text(1, 100).validationDefault('default value'),
@@ -69,7 +69,7 @@ class SomeModel extends Model {
 Transform value with a custom function. Returned type of value becomes a type of column (this is not particularly useful).
 
 ```ts
-class SomeModel extends Model {
+class SomeTable extends BaseTable {
   table = 'table'
   columns = this.setColumns((t) => ({
     // reverse a string during validation
@@ -83,7 +83,7 @@ class SomeModel extends Model {
 Similar to the `.preprocess` function of Zod, it allows the transformation of one type to another. The column last type is counted as the type of the column.
 
 ```ts
-class SomeModel extends Model {
+class SomeTable extends BaseTable {
   table = 'table'
   columns = this.setColumns((t) => ({
     // transform text to integer
@@ -97,7 +97,7 @@ class SomeModel extends Model {
 Return the truthy value when the input is okay, and return the falsy value to produce an error.
 
 ```ts
-class SomeModel extends Model {
+class SomeTable extends BaseTable {
   table = 'table'
   columns = this.setColumns((t) => ({
     // will produce an error when the value is not 'something'
@@ -111,7 +111,7 @@ class SomeModel extends Model {
 Add a custom check with access to the validation context, see the `.superRefine` method in Zod for details.
 
 ```ts
-class SomeModel extends Model {
+class SomeTable extends BaseTable {
   table = 'table'
   columns = this.setColumns((t) => ({
     column: t.text(1, 100).superRefine((val, ctx) => {
@@ -134,7 +134,7 @@ class SomeModel extends Model {
 Numeric columns `smallint`, `integer`, `numeric`, `decimal`, `real`, `smallSerial`, and `serial` have such validation methods:
 
 ```ts
-class SomeModel extends Model {
+class SomeTable extends BaseTable {
   table = 'table'
   columns = this.setColumns((t) => ({
     number: t.integer()
@@ -159,7 +159,7 @@ class SomeModel extends Model {
 Text columns `varchar`, `char`, and `text` have such validation methods:
 
 ```ts
-class SomeModel extends Model {
+class SomeTable extends BaseTable {
   table = 'table'
   columns = this.setColumns((t) => ({
     number: t.integer()
@@ -178,7 +178,7 @@ class SomeModel extends Model {
 Array columns have such validation methods:
 
 ```ts
-class SomeModel extends Model {
+class SomeTable extends BaseTable {
   table = 'table'
   columns = this.setColumns((t) => ({
     number: t.integer()

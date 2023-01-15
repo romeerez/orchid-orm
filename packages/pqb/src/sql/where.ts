@@ -16,11 +16,11 @@ import { QueryData } from './data';
 
 export const pushWhereStatementSql = (
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   query: Pick<QueryData, 'and' | 'or'>,
   quotedAs?: string,
 ) => {
-  const res = whereToSql(ctx, model, query, quotedAs, false);
+  const res = whereToSql(ctx, table, query, quotedAs, false);
   if (res) {
     ctx.sql.push('WHERE', res);
   }
@@ -29,12 +29,12 @@ export const pushWhereStatementSql = (
 export const pushWhereToSql = (
   sql: string[],
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   query: Pick<QueryData, 'and' | 'or'>,
   quotedAs?: string,
   not?: boolean,
 ) => {
-  const res = whereToSql(ctx, model, query, quotedAs, not);
+  const res = whereToSql(ctx, table, query, quotedAs, not);
   if (res) {
     sql.push(res);
   }
@@ -42,7 +42,7 @@ export const pushWhereToSql = (
 
 export const whereToSql = (
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   query: Pick<QueryData, 'and' | 'or'>,
   quotedAs?: string,
   not?: boolean,
@@ -50,10 +50,10 @@ export const whereToSql = (
   if (query.or) {
     const ors = query.and ? [query.and, ...query.or] : query.or;
     return ors
-      .map((and) => processAnds(and, ctx, model, quotedAs, not))
+      .map((and) => processAnds(and, ctx, table, quotedAs, not))
       .join(' OR ');
   } else if (query.and) {
-    return processAnds(query.and, ctx, model, quotedAs, not);
+    return processAnds(query.and, ctx, table, quotedAs, not);
   } else {
     return undefined;
   }
@@ -62,19 +62,19 @@ export const whereToSql = (
 const processAnds = (
   and: WhereItem[],
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   quotedAs?: string,
   not?: boolean,
 ): string => {
   const ands: string[] = [];
-  and.forEach((data) => processWhere(ands, ctx, model, data, quotedAs, not));
+  and.forEach((data) => processWhere(ands, ctx, table, data, quotedAs, not));
   return ands.join(' AND ');
 };
 
 const processWhere = (
   ands: string[],
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   data: WhereItem,
   quotedAs?: string,
   not?: boolean,
@@ -82,12 +82,12 @@ const processWhere = (
   const prefix = not ? 'NOT ' : '';
 
   if (typeof data === 'function') {
-    const qb = data(new ctx.whereQueryBuilder(model, model.shape));
+    const qb = data(new ctx.whereQueryBuilder(table, table.shape));
     pushWhereToSql(ands, ctx, qb, qb.query, quotedAs, not);
     return;
   }
 
-  if ('prototype' in data || '__model' in data) {
+  if ('prototype' in data || '__table' in data) {
     const query = data as Query;
     const sql = whereToSql(
       ctx,
@@ -110,17 +110,17 @@ const processWhere = (
     const value = (data as Record<string, unknown>)[key];
     if (key === 'AND') {
       const arr = toArray(value as MaybeArray<WhereItem>);
-      ands.push(processAnds(arr, ctx, model, quotedAs, not));
+      ands.push(processAnds(arr, ctx, table, quotedAs, not));
     } else if (key === 'OR') {
       const arr = (value as MaybeArray<WhereItem>[]).map(toArray);
       ands.push(
         arr
-          .map((and) => processAnds(and, ctx, model, quotedAs, not))
+          .map((and) => processAnds(and, ctx, table, quotedAs, not))
           .join(' OR '),
       );
     } else if (key === 'NOT') {
       const arr = toArray(value as MaybeArray<WhereItem>);
-      ands.push(processAnds(arr, ctx, model, quotedAs, !not));
+      ands.push(processAnds(arr, ctx, table, quotedAs, !not));
     } else if (key === 'ON') {
       if (Array.isArray(value)) {
         const item = value as WhereJsonPathEqualsItem;
@@ -129,7 +129,7 @@ const processWhere = (
         const rightColumn = quoteFullColumn(
           item[2],
           getQueryAs({
-            table: model.table,
+            table: table.table,
             query: { as: quotedAs },
           }),
         );
@@ -171,7 +171,7 @@ const processWhere = (
       (joinItems as JoinItem['args'][]).forEach((item) => {
         const { target, conditions } = processJoinItem(
           ctx,
-          model,
+          table,
           item,
           quotedAs,
         );
@@ -193,7 +193,7 @@ const processWhere = (
           )}`,
         );
       } else {
-        const column = model.shape[key];
+        const column = table.shape[key];
         if (!column) {
           // TODO: custom error classes
           throw new Error(`Unknown column ${key} provided to condition`);

@@ -9,11 +9,11 @@ import {
 import { MapRelations, Relation, RelationThunks } from './relations/relations';
 import { OrchidORM } from './orm';
 
-export type ModelClass<T extends Model = Model> = new () => T;
+export type TableClass<T extends Table = Table> = new () => T;
 
-export type ModelClasses = Record<string, ModelClass>;
+export type TableClasses = Record<string, TableClass>;
 
-export type ModelToDb<T extends Model> = Db<
+export type TableToDb<T extends Table> = Db<
   T['table'],
   T['columns']['shape'],
   'relations' extends keyof T
@@ -24,34 +24,34 @@ export type ModelToDb<T extends Model> = Db<
       : Query['relations']
     : Query['relations'],
   T['columnTypes']
-> & { definedAs: string; db: OrchidORM<ModelClasses> };
+> & { definedAs: string; db: OrchidORM<TableClasses> };
 
-export type DbModel<T extends ModelClass> = ModelToDb<InstanceType<T>> &
+export type DbTable<T extends TableClass> = TableToDb<InstanceType<T>> &
   Omit<MapRelations<InstanceType<T>>, keyof Query>;
 
-type ModelConfig = {
+type TableConfig = {
   shape: ColumnsShape;
   type: unknown;
 };
 
-type ScopeFn<Related extends ModelClass, Scope extends Query> = (
-  q: DbModel<Related>,
+type ScopeFn<Related extends TableClass, Scope extends Query> = (
+  q: DbTable<Related>,
 ) => Scope;
 
-export type Model = {
+export type Table = {
   table: string;
-  columns: ModelConfig;
+  columns: TableConfig;
   schema?: string;
   columnTypes: ColumnTypesBase;
   noPrimaryKey?: boolean;
 };
 
-export const createModel = <CT extends ColumnTypesBase>(options: {
+export const createBaseTable = <CT extends ColumnTypesBase>(options: {
   columnTypes: CT;
 }) => {
-  return class Model {
+  return class BaseTable {
     table!: string;
-    columns!: ModelConfig;
+    columns!: TableConfig;
     schema?: string;
     columnTypes: CT;
     noPrimaryKey?: boolean;
@@ -73,7 +73,7 @@ export const createModel = <CT extends ColumnTypesBase>(options: {
 
     belongsTo<
       Self extends this,
-      Related extends ModelClass,
+      Related extends TableClass,
       Scope extends Query,
       Options extends {
         primaryKey: keyof InstanceType<Related>['columns']['shape'];
@@ -92,7 +92,7 @@ export const createModel = <CT extends ColumnTypesBase>(options: {
 
     hasOne<
       Self extends this,
-      Related extends ModelClass,
+      Related extends TableClass,
       Scope extends Query,
       Through extends string,
       Source extends string,
@@ -120,7 +120,7 @@ export const createModel = <CT extends ColumnTypesBase>(options: {
 
     hasMany<
       Self extends this,
-      Related extends ModelClass,
+      Related extends TableClass,
       Scope extends Query,
       Through extends string,
       Source extends string,
@@ -148,7 +148,7 @@ export const createModel = <CT extends ColumnTypesBase>(options: {
 
     hasAndBelongsToMany<
       Self extends this,
-      Related extends ModelClass,
+      Related extends TableClass,
       Scope extends Query,
       Options extends {
         primaryKey: keyof Self['columns']['shape'];

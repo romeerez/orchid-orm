@@ -6,21 +6,21 @@ import {
   useTestDatabase,
 } from './test-utils/test-utils';
 import { pgConfig } from './test-utils/test-db';
-import { createModel } from './model';
+import { createBaseTable } from './table';
 import { columnTypes } from 'pqb';
 
 describe('orm', () => {
   useTestDatabase();
 
-  const Model = createModel({
+  const BaseTable = createBaseTable({
     columnTypes: {
       ...columnTypes,
       text: (min = 0, max = Infinity) => columnTypes.text(min, max),
     },
   });
 
-  type User = UserModel['columns']['type'];
-  class UserModel extends Model {
+  type User = UserTable['columns']['type'];
+  class UserTable extends BaseTable {
     table = 'user';
     columns = this.setColumns((t) => ({
       id: t.serial().primaryKey(),
@@ -29,17 +29,17 @@ describe('orm', () => {
     }));
   }
 
-  class ProfileModel extends Model {
+  class ProfileTable extends BaseTable {
     table = 'profile';
     columns = this.setColumns((t) => ({
       id: t.serial().primaryKey(),
     }));
   }
 
-  it('should return object with provided adapter, close and transaction method, models', () => {
+  it('should return object with provided adapter, close and transaction method, tables', () => {
     const db = orchidORM(pgConfig, {
-      user: UserModel,
-      profile: ProfileModel,
+      user: UserTable,
+      profile: ProfileTable,
     });
 
     expect('$adapter' in db).toBe(true);
@@ -50,10 +50,10 @@ describe('orm', () => {
     );
   });
 
-  it('should return model which is a queryable interface', async () => {
+  it('should return table which is a queryable interface', async () => {
     const db = orchidORM(pgConfig, {
-      user: UserModel,
-      profile: ProfileModel,
+      user: UserTable,
+      profile: ProfileTable,
     });
 
     const { id, name } = await db.user.create(userData);
@@ -80,8 +80,8 @@ describe('orm', () => {
     const db = orchidORM(
       { ...pgConfig, autoPreparedStatements: true },
       {
-        user: UserModel,
-        profile: ProfileModel,
+        user: UserTable,
+        profile: ProfileTable,
       },
     );
 

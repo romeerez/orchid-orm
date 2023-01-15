@@ -104,7 +104,7 @@ export interface QueryMethods
 
 export class QueryMethods {
   windows!: EmptyObject;
-  __model!: Query;
+  __table!: Query;
 
   all<T extends Query>(this: T): SetQueryReturnsAll<T> {
     return this.clone()._all();
@@ -169,7 +169,7 @@ export class QueryMethods {
   }
 
   clone<T extends QueryBase>(this: T): T {
-    const cloned = Object.create(this.__model);
+    const cloned = Object.create(this.__table);
     cloned.query = getClonedQueryData(this.query);
     return cloned;
   }

@@ -1,5 +1,5 @@
 import { createFactory } from './factory';
-import { assertType, db, User, Model, adapter } from './test-utils';
+import { assertType, db, User, BaseTable, adapter } from './test-utils';
 import { z } from 'zod';
 import { orchidORM } from 'orchid-orm';
 import { ColumnsShape, columnTypes, ColumnTypes } from 'pqb';
@@ -37,7 +37,7 @@ describe('factory', () => {
   const userFactory = createFactory(db.user);
 
   describe('build', () => {
-    it('should build an object for the model', () => {
+    it('should build an object for the table', () => {
       const data = userFactory.build();
 
       assertType<typeof data, User>();
@@ -80,7 +80,7 @@ describe('factory', () => {
     });
 
     it('should respect max which is set on column', () => {
-      class ProfileModel extends Model {
+      class ProfileTable extends BaseTable {
         table = 'profile';
         columns = this.setColumns((t) => ({
           id: t.serial().primaryKey(),
@@ -93,7 +93,7 @@ describe('factory', () => {
           adapter,
         },
         {
-          profile: ProfileModel,
+          profile: ProfileTable,
         },
       );
 
@@ -284,8 +284,8 @@ describe('factory', () => {
   });
 
   describe('unique columns', () => {
-    const makeModel = <T extends ColumnsShape>(fn: (t: ColumnTypes) => T) => {
-      return class extends Model {
+    const makeTable = <T extends ColumnsShape>(fn: (t: ColumnTypes) => T) => {
+      return class extends BaseTable {
         table = 'table';
         columns = this.setColumns((t) => ({
           id: t.serial().primaryKey(),
@@ -305,18 +305,18 @@ describe('factory', () => {
         log: false,
       },
       {
-        text: makeModel((t) => ({ name: t.text(3, 100).unique() })),
-        email: makeModel((t) => ({ name: t.text(3, 100).email().unique() })),
-        url: makeModel((t) => ({ name: t.text(3, 100).url().unique() })),
-        max: makeModel((t) => ({
+        text: makeTable((t) => ({ name: t.text(3, 100).unique() })),
+        email: makeTable((t) => ({ name: t.text(3, 100).email().unique() })),
+        url: makeTable((t) => ({ name: t.text(3, 100).url().unique() })),
+        max: makeTable((t) => ({
           name: t.text(3, 100).min(min).max(max).unique(),
         })),
-        length: makeModel((t) => ({
+        length: makeTable((t) => ({
           name: t.text(3, 100).length(max).unique(),
         })),
-        number: makeModel((t) => ({ age: t.integer().unique() })),
-        gt: makeModel((t) => ({ age: t.integer().gt(gt).unique() })),
-        gte: makeModel((t) => ({ age: t.integer().gte(gte).unique() })),
+        number: makeTable((t) => ({ age: t.integer().unique() })),
+        gt: makeTable((t) => ({ age: t.integer().gt(gt).unique() })),
+        gte: makeTable((t) => ({ age: t.integer().gte(gte).unique() })),
       },
     );
 

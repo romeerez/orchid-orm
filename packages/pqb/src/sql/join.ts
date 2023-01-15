@@ -22,7 +22,7 @@ type ItemOf3Or4Length =
 
 export const processJoinItem = (
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   args: JoinItem['args'],
   quotedAs?: string,
 ): { target: string; conditions?: string } => {
@@ -31,25 +31,25 @@ export const processJoinItem = (
 
   const [first] = args;
   if (typeof first === 'string') {
-    if (first in model.relations) {
+    if (first in table.relations) {
       const {
         key,
         query: toQuery,
         joinQuery,
-      } = (model.relations as Record<string, Relation>)[first];
+      } = (table.relations as Record<string, Relation>)[first];
 
-      const jq = joinQuery(model, toQuery);
+      const jq = joinQuery(table, toQuery);
       const { query } = jq;
 
-      const table = (
+      const tableName = (
         typeof query.from === 'string' ? query.from : jq.table
       ) as string;
 
-      target = quoteSchemaAndTable(query.schema, table);
+      target = quoteSchemaAndTable(query.schema, tableName);
 
       const as = query.as || key;
       const joinAs = q(as as string);
-      if (as !== table) {
+      if (as !== tableName) {
         target += ` AS ${joinAs}`;
       }
 
@@ -60,7 +60,7 @@ export const processJoinItem = (
 
       if (args[1]) {
         const arg = (args[1] as (q: unknown) => QueryBase)(
-          new ctx.onQueryBuilder(jq, jq.shape, model),
+          new ctx.onQueryBuilder(jq, jq.shape, table),
         ).query;
 
         if (arg.and) queryData.and.push(...arg.and);
@@ -70,7 +70,7 @@ export const processJoinItem = (
       conditions = whereToSql(ctx, jq, queryData, joinAs);
     } else {
       target = q(first);
-      conditions = processArgs(args, ctx, model, first, target, quotedAs);
+      conditions = processArgs(args, ctx, table, first, target, quotedAs);
     }
   } else {
     const query = first.query;
@@ -89,9 +89,9 @@ export const processJoinItem = (
       }
     }
 
-    conditions = processArgs(args, ctx, model, first, joinAs, quotedAs);
+    conditions = processArgs(args, ctx, table, first, joinAs, quotedAs);
 
-    const whereSql = whereToSql(ctx, model, query, joinAs);
+    const whereSql = whereToSql(ctx, table, query, joinAs);
     if (whereSql) {
       if (conditions) conditions += ` AND ${whereSql}`;
       else conditions = whereSql;
@@ -104,7 +104,7 @@ export const processJoinItem = (
 const processArgs = (
   args: JoinItem['args'],
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   first: string | QueryWithTable,
   joinAs: string,
   quotedAs?: string,
@@ -114,7 +114,7 @@ const processArgs = (
     if (typeof arg === 'function') {
       let shape;
       if (typeof first === 'string') {
-        shape = model.query.withShapes?.[first];
+        shape = table.query.withShapes?.[first];
         if (!shape) {
           throw new Error('Cannot get shape of `with` statement');
         }
@@ -122,7 +122,7 @@ const processArgs = (
         shape = first.shape;
       }
 
-      const jq = arg(new ctx.onQueryBuilder(first, shape, model));
+      const jq = arg(new ctx.onQueryBuilder(first, shape, table));
       return whereToSql(ctx, jq, jq.query, joinAs);
     } else {
       return getObjectOrRawConditions(arg, ctx.values, quotedAs, joinAs);
@@ -189,7 +189,7 @@ const getObjectOrRawConditions = (
 
 export const pushJoinSql = (
   ctx: ToSqlCtx,
-  model: QueryBase,
+  table: QueryBase,
   query: QueryData & {
     join: JoinItem[];
   },
@@ -198,7 +198,7 @@ export const pushJoinSql = (
   query.join.forEach((item) => {
     const { target, conditions } = processJoinItem(
       ctx,
-      model,
+      table,
       item.args,
       quotedAs,
     );

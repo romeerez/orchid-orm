@@ -1,8 +1,8 @@
-import { createModel } from '../model';
+import { createBaseTable } from '../table';
 import { columnTypes } from 'pqb';
-import { modelToZod } from 'orchid-orm-schema-to-zod';
+import { tableToZod } from 'orchid-orm-schema-to-zod';
 
-export const Model = createModel({
+export const BaseTable = createBaseTable({
   columnTypes: {
     ...columnTypes,
     text: (min = 0, max = Infinity) => columnTypes.text(min, max),
@@ -12,8 +12,8 @@ export const Model = createModel({
   },
 });
 
-export type User = UserModel['columns']['type'];
-export class UserModel extends Model {
+export type User = UserTable['columns']['type'];
+export class UserTable extends BaseTable {
   table = 'user';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -34,18 +34,18 @@ export class UserModel extends Model {
   }));
 
   relations = {
-    profile: this.hasOne(() => ProfileModel, {
+    profile: this.hasOne(() => ProfileTable, {
       required: true,
       primaryKey: 'id',
       foreignKey: 'userId',
     }),
 
-    messages: this.hasMany(() => MessageModel, {
+    messages: this.hasMany(() => MessageTable, {
       primaryKey: 'id',
       foreignKey: 'authorId',
     }),
 
-    chats: this.hasAndBelongsToMany(() => ChatModel, {
+    chats: this.hasAndBelongsToMany(() => ChatTable, {
       primaryKey: 'id',
       foreignKey: 'userId',
       associationPrimaryKey: 'id',
@@ -54,38 +54,38 @@ export class UserModel extends Model {
     }),
   };
 }
-export const UserSchema = modelToZod(UserModel);
+export const UserSchema = tableToZod(UserTable);
 
-export type Profile = ProfileModel['columns']['type'];
-export class ProfileModel extends Model {
+export type Profile = ProfileTable['columns']['type'];
+export class ProfileTable extends BaseTable {
   table = 'profile';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     userId: t
       .integer()
       .nullable()
-      .foreignKey(() => UserModel, 'id'),
+      .foreignKey(() => UserTable, 'id'),
     bio: t.text().nullable(),
     ...t.timestamps(),
   }));
 
   relations = {
-    user: this.belongsTo(() => UserModel, {
+    user: this.belongsTo(() => UserTable, {
       required: true,
       primaryKey: 'id',
       foreignKey: 'userId',
     }),
 
-    chats: this.hasMany(() => ChatModel, {
+    chats: this.hasMany(() => ChatTable, {
       through: 'user',
       source: 'chats',
     }),
   };
 }
-export const ProfileSchema = modelToZod(ProfileModel);
+export const ProfileSchema = tableToZod(ProfileTable);
 
-export type Chat = ChatModel['columns']['type'];
-export class ChatModel extends Model {
+export type Chat = ChatTable['columns']['type'];
+export class ChatTable extends BaseTable {
   table = 'chat';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -94,7 +94,7 @@ export class ChatModel extends Model {
   }));
 
   relations = {
-    users: this.hasAndBelongsToMany(() => UserModel, {
+    users: this.hasAndBelongsToMany(() => UserTable, {
       primaryKey: 'id',
       foreignKey: 'chatId',
       associationPrimaryKey: 'id',
@@ -102,92 +102,92 @@ export class ChatModel extends Model {
       joinTable: 'chatUser',
     }),
 
-    profiles: this.hasMany(() => ProfileModel, {
+    profiles: this.hasMany(() => ProfileTable, {
       through: 'users',
       source: 'profile',
     }),
 
-    messages: this.hasMany(() => MessageModel, {
+    messages: this.hasMany(() => MessageTable, {
       primaryKey: 'id',
       foreignKey: 'chatId',
     }),
   };
 }
-export const ChatSchema = modelToZod(ChatModel);
+export const ChatSchema = tableToZod(ChatTable);
 
-export type Message = MessageModel['columns']['type'];
-export class MessageModel extends Model {
+export type Message = MessageTable['columns']['type'];
+export class MessageTable extends BaseTable {
   table = 'message';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    chatId: t.integer().foreignKey(() => ChatModel, 'id'),
+    chatId: t.integer().foreignKey(() => ChatTable, 'id'),
     authorId: t
       .integer()
       .nullable()
-      .foreignKey(() => UserModel, 'id'),
+      .foreignKey(() => UserTable, 'id'),
     text: t.text(),
     ...t.timestamps(),
   }));
 
   relations = {
-    user: this.belongsTo(() => UserModel, {
+    user: this.belongsTo(() => UserTable, {
       primaryKey: 'id',
       foreignKey: 'authorId',
     }),
 
-    chat: this.belongsTo(() => ChatModel, {
+    chat: this.belongsTo(() => ChatTable, {
       primaryKey: 'id',
       foreignKey: 'chatId',
     }),
 
-    profile: this.hasOne(() => ProfileModel, {
+    profile: this.hasOne(() => ProfileTable, {
       required: true,
       through: 'user',
       source: 'profile',
     }),
   };
 }
-export const MessageSchema = modelToZod(MessageModel);
+export const MessageSchema = tableToZod(MessageTable);
 
-export type Post = PostModel['columns']['type'];
-export class PostModel extends Model {
+export type Post = PostTable['columns']['type'];
+export class PostTable extends BaseTable {
   table = 'post';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    userId: t.integer().foreignKey(() => UserModel, 'id'),
+    userId: t.integer().foreignKey(() => UserTable, 'id'),
     title: t.text(),
     ...t.timestamps(),
   }));
 
   relations = {
-    postTags: this.hasMany(() => PostTagModel, {
+    postTags: this.hasMany(() => PostTagTable, {
       primaryKey: 'id',
       foreignKey: 'postId',
     }),
   };
 }
-export const PostSchema = modelToZod(PostModel);
+export const PostSchema = tableToZod(PostTable);
 
-export type PostTag = PostTagModel['columns']['type'];
-export class PostTagModel extends Model {
+export type PostTag = PostTagTable['columns']['type'];
+export class PostTagTable extends BaseTable {
   table = 'postTag';
   columns = this.setColumns((t) => ({
-    postId: t.integer().foreignKey(() => PostModel, 'id'),
-    tag: t.text().foreignKey(() => TagModel, 'tag'),
+    postId: t.integer().foreignKey(() => PostTable, 'id'),
+    tag: t.text().foreignKey(() => TagTable, 'tag'),
     ...t.primaryKey(['postId', 'tag']),
   }));
 
   relations = {
-    tag: this.belongsTo(() => TagModel, {
+    tag: this.belongsTo(() => TagTable, {
       primaryKey: 'tag',
       foreignKey: 'tag',
     }),
   };
 }
-export const PostTagSchema = modelToZod(PostTagModel);
+export const PostTagSchema = tableToZod(PostTagTable);
 
-export type Tag = TagModel['columns']['type'];
-export class TagModel extends Model {
+export type Tag = TagTable['columns']['type'];
+export class TagTable extends BaseTable {
   table = 'tag';
   columns = this.setColumns((t) => ({
     tag: t.text().primaryKey(),

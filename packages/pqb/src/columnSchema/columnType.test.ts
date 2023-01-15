@@ -34,7 +34,7 @@ describe('column base', () => {
       expect(column.hidden().isHidden).toBe(true);
     });
 
-    test('model with hidden column should omit from select it by default', () => {
+    test('table with hidden column should omit from select it by default', () => {
       const User = db('user', (t) => ({
         id: t.serial().primaryKey(),
         name: t.text(),
@@ -53,7 +53,7 @@ describe('column base', () => {
       );
     });
 
-    test('model with hidden column still allows to select it', () => {
+    test('table with hidden column still allows to select it', () => {
       const User = db('user', (t) => ({
         id: t.serial().primaryKey(),
         name: t.text(),

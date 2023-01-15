@@ -50,11 +50,11 @@ type SelectResult<
       : T['relations'] extends Record<string, Relation>
       ? Arg extends keyof T['relations']
         ? T['relations'][Arg]['returns'] extends 'many'
-          ? ArrayOfColumnsObjects<T['relations'][Arg]['model']['result']>
+          ? ArrayOfColumnsObjects<T['relations'][Arg]['table']['result']>
           : T['relations'][Arg]['options']['required'] extends true
-          ? ColumnsObject<T['relations'][Arg]['model']['result']>
+          ? ColumnsObject<T['relations'][Arg]['table']['result']>
           : NullableColumn<
-              ColumnsObject<T['relations'][Arg]['model']['result']>
+              ColumnsObject<T['relations'][Arg]['table']['result']>
             >
         : never
       : never;

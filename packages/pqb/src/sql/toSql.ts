@@ -35,22 +35,22 @@ export type ToSqlOptions = {
   values?: unknown[];
 };
 
-export const toSql = (model: Query, options?: ToSqlOptions): Sql => {
+export const toSql = (table: Query, options?: ToSqlOptions): Sql => {
   return (
-    (!options?.clearCache && model.query[toSqlCacheKey]) ||
-    (model.query[toSqlCacheKey] = makeSql(model, options))
+    (!options?.clearCache && table.query[toSqlCacheKey]) ||
+    (table.query[toSqlCacheKey] = makeSql(table, options))
   );
 };
 
 export const makeSql = (
-  model: Query,
+  table: Query,
   { values = [] }: ToSqlOptions = {},
 ): Sql => {
-  const query = model.query;
+  const query = table.query;
   const sql: string[] = [];
   const ctx: ToSqlCtx = {
-    whereQueryBuilder: model.whereQueryBuilder,
-    onQueryBuilder: model.onQueryBuilder,
+    whereQueryBuilder: table.whereQueryBuilder,
+    onQueryBuilder: table.onQueryBuilder,
     sql,
     values,
   };
@@ -61,45 +61,45 @@ export const makeSql = (
 
   if (query.type) {
     if (query.type === 'truncate') {
-      if (!model.table) throw new Error('Table is missing for truncate');
+      if (!table.table) throw new Error('Table is missing for truncate');
 
-      pushTruncateSql(ctx, model.table, query);
+      pushTruncateSql(ctx, table.table, query);
       return { text: sql.join(' '), values };
     }
 
     if (query.type === 'columnInfo') {
-      if (!model.table) throw new Error('Table is missing for truncate');
+      if (!table.table) throw new Error('Table is missing for truncate');
 
-      pushColumnInfoSql(ctx, model.table, query);
+      pushColumnInfoSql(ctx, table.table, query);
       return { text: sql.join(' '), values };
     }
 
-    if (!model.table) throw new Error(`Table is missing for ${query.type}`);
+    if (!table.table) throw new Error(`Table is missing for ${query.type}`);
 
-    const quotedAs = q(query.as || model.table);
+    const quotedAs = q(query.as || table.table);
 
     if (query.type === 'insert') {
-      pushInsertSql(ctx, model, query, q(model.table));
+      pushInsertSql(ctx, table, query, q(table.table));
       return { text: sql.join(' '), values };
     }
 
     if (query.type === 'update') {
-      pushUpdateSql(ctx, model, query, quotedAs);
+      pushUpdateSql(ctx, table, query, quotedAs);
       return { text: sql.join(' '), values };
     }
 
     if (query.type === 'delete') {
-      pushDeleteSql(ctx, model, query, quotedAs);
+      pushDeleteSql(ctx, table, query, quotedAs);
       return { text: sql.join(' '), values };
     }
 
     if (query.type === 'copy') {
-      pushCopySql(ctx, model, query, quotedAs);
+      pushCopySql(ctx, table, query, quotedAs);
       return { text: sql.join(' '), values };
     }
   }
 
-  const quotedAs = model.table && q(query.as || model.table);
+  const quotedAs = table.table && q(query.as || table.table);
 
   sql.push('SELECT');
 
@@ -107,23 +107,23 @@ export const makeSql = (
     pushDistinctSql(ctx, query.distinct, quotedAs);
   }
 
-  pushSelectSql(ctx, model, query, quotedAs);
+  pushSelectSql(ctx, table, query, quotedAs);
 
-  if (model.table || query.from) {
-    pushFromAndAs(ctx, model, query, quotedAs);
+  if (table.table || query.from) {
+    pushFromAndAs(ctx, table, query, quotedAs);
   }
 
   if (query.join) {
     pushJoinSql(
       ctx,
-      model,
+      table,
       query as QueryData & { join: JoinItem[] },
       quotedAs,
     );
   }
 
   if (query.and || query.or) {
-    pushWhereStatementSql(ctx, model, query, quotedAs);
+    pushWhereStatementSql(ctx, table, query, quotedAs);
   }
 
   if (query.group) {
@@ -136,7 +136,7 @@ export const makeSql = (
   }
 
   if (query.having || query.havingOr) {
-    pushHavingSql(ctx, model, query, quotedAs);
+    pushHavingSql(ctx, table, query, quotedAs);
   }
 
   if (query.window) {

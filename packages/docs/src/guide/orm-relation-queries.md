@@ -2,7 +2,7 @@
 
 Here is how to load related records by using a record object (supported by all kinds of relations):
 
-The resulting record of the `belongsTo` and `hasOne` relation can be undefined if the `required` option was not set in the model.
+The resulting record of the `belongsTo` and `hasOne` relation can be undefined if the `required` option was not set in the table class.
 
 ```ts
 const book = await db.book.find(1)
@@ -93,7 +93,7 @@ For `hasMany` and `hasAndBelongsToMany` this works better than `join` because it
 Use the name of relation to load full records:
 
 ```ts
-// if the `required` option is not set in the model,
+// if the `required` option is not set in the table class,
 // type of author will be Author | null 
 const booksWithAuthor: Book & { author: Author } = await db.book
   .select('*', 'author')
@@ -198,7 +198,7 @@ while updating the author you can create new books, connect some books, and dele
 
 ## create from relation query
 
-It is possible to chain querying of the model with the creating of its relation, in a such way:
+It is possible to chain querying of the table with the creating of its relation, in a such way:
 
 ```ts
 await db.author.find(1).books.create({
@@ -281,7 +281,7 @@ This will run two insert queries in a transaction, (three insert queries in the 
 
 For relations with the `through` option need to nest `creates` explicitly.
 
-If a post model has many tags through "postTags", needs to create a post, inside it create postTags, and inside it create tags.
+If a post table has many tags through "postTags", needs to create a post, inside it create postTags, and inside it create tags.
 
 But if you do the same relation with `hasAndBelongsToMany`, you can create tags directly from post creation,
 and the postTag record in between will be created automatically.

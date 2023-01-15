@@ -214,12 +214,12 @@ export const db = orchidORM(
     log: true,
   },
   {
-    // models will be listed here
+    // tables will be listed here
   }
 );
 ```
 
-Define a base `Model` class which will be used later to extend models from.
+Define a base table class which will be used later to extend tables from.
 
 By default, timestamps are returned as strings, the same as when loading timestamps from databases directly.
 
@@ -232,11 +232,11 @@ they are required to ensure that empty strings or strings of enormous length won
 Setting `min` and `max` for each text column may be tiresome, let's override a `text` method to have default `min` and `max`.
 
 ```ts
-// src/lib/model.ts
-import { createModel } from 'orchid-orm';
+// src/lib/baseTable.ts
+import { createBaseTable } from 'orchid-orm';
 import { columnTypes } from 'pqb';
 
-export const Model = createModel({
+export const BaseTable = createBaseTable({
   columnTypes: {
     ...columnTypes,
     // set default min and max for all text columns
@@ -339,35 +339,35 @@ Add it to `package.json` "jest" section:
 
 ## user endpoints
 
-Let's begin by writing a user model.
-Every model must have a table name and a set of columns.
+Let's begin by writing a user table.
+Every table class must have a table name and a set of columns.
 
-Usually, each model should have a primary key column.
+Usually, each table should have a primary key column.
 We will use `t.serial().primaryKey()` for this purpose, it is an autoincrementing integer type.
 Another available option for primary keys is to use `t.uuid().primaryKey()`.
 
-It is a good idea to have `createdAt` and `updatedAt` columns in every model, even if it is not asked in the requirements,
+It is a good idea to have `createdAt` and `updatedAt` columns in every table, even if it is not asked in the requirements,
 these columns may come in handy later, for displaying, and sorting by them, `updatedAt` may be used for cache invalidation.
-Add them to the model by writing: `...t.timestamps()`.
+Add them to the table by writing: `...t.timestamps()`.
 
 Each column has a type, which is used to get a TypeScript type and a database type when running a migration.
 Some column methods have an effect only in migration, some methods are for validation.
 
-## writing a model
+## writing a table
 
 ```ts
-// src/app/user/user.model.ts
-import { Model } from '../../lib/model';
-import { modelToZod } from 'orchid-orm-schema-to-zod';
+// src/app/user/user.table.ts
+import { BaseTable } from '../../lib/baseTable';
+import { tableToZod } from 'orchid-orm-schema-to-zod';
 
-export class UserModel extends Model {
+export class UserTable extends BaseTable {
   // specify a database table name:
   table = 'user';
   
   // specify a set of columns:
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    // min length is still 3, as defined in Model configuration, overriding max value here
+    // min length is still 3, as defined in BaseTable configuration, overriding max value here
     username: t.text().unique().max(30),
     email: t.text().unique().email(),
     // overriding min value, max value defaults to 100
@@ -378,7 +378,7 @@ export class UserModel extends Model {
 }
 
 // will be used later to validate the parameters
-export const userSchema = modelToZod(UserModel);
+export const userSchema = tableToZod(UserTable);
 ```
 
 Consider the `email` column:
@@ -389,13 +389,13 @@ t.text() // this is a column type
   .email() // validates email
 ```
 
-After defining a model, place it into the `db` models list:
+After defining a table, place it into the `db` tables list:
 
 ```ts
 // src/db.ts
 import { orchidORM } from 'orchid-orm';
 import { config } from './config';
-import { UserModel } from './app/user/user.model';
+import { UserTable } from './app/user/user.table';
 
 export const db = orchidORM(
   {
@@ -403,7 +403,7 @@ export const db = orchidORM(
     log: true,
   },
   {
-    user: UserModel,
+    user: UserTable,
   }
 );
 ```
@@ -440,7 +440,7 @@ change(async (db) => {
 });
 ```
 
-Now simply copy-paste columns from your UserModel to this migration:
+Now simply copy-paste columns from your `UserTable` to this migration:
 
 ```ts
 import { change } from 'rake-db';
@@ -624,7 +624,7 @@ and it makes sense to reuse the response validator for them. Let's place it in t
 ```ts
 // src/user/user.dto.ts
 import { z } from 'zod';
-import { userSchema } from './user.model';
+import { userSchema } from './user.table';
 
 export const authDto = z.object({
   user: userSchema.pick({
@@ -645,7 +645,7 @@ import { routeHandler } from '../../lib/routeHandler';
 import { db } from '../../db';
 import { encryptPassword } from '../../lib/password';
 import { createToken } from '../../lib/jwt';
-import { userSchema } from './user.model';
+import { userSchema } from './user.table';
 import { ApiError } from '../../lib/errors';
 import { authDto } from './user.dto';
 
@@ -697,7 +697,7 @@ const user = await db.user.select('username', 'email').create({
 
 It is safe to use `...req.body` because `body` was validated and all unknown keys were stripped out of it.
 
-Inside of error handler, first, we check `err instanceof db.user.error` to know if this error belongs to the user model,
+Inside of error handler, first, we check `err instanceof db.user.error` to know if this error belongs to the user table,
 then we check `err.isUnique` to ensure this is a unique violation error.
 And then we check `err.columns.username` and `err.columns.email` to determine which column has failed uniqueness to throw the corresponding error.
 
@@ -828,40 +828,40 @@ export const routes = async (app: FastifyInstance) => {
 
 ## follow and unfollow
 
-Add a new model `UserFollow`:
+Add a new table `UserFollow`:
 
 ```ts
-// src/app/user/userFollow.model.ts
-import { Model } from '../../lib/model';
-import { UserModel } from './user.model';
+// src/app/user/userFollow.table.ts
+import { BaseTable } from '../../lib/baseTable';
+import { UserTable } from './user.table';
 
-export class UserFollowModel extends Model {
+export class UserFollowTable extends BaseTable {
   table = 'userFollow';
   columns = this.setColumns((t) => ({
-    followingId: t.integer().foreignKey(() => UserModel, 'id'),
-    followerId: t.integer().foreignKey(() => UserModel, 'id'),
+    followingId: t.integer().foreignKey(() => UserTable, 'id'),
+    followerId: t.integer().foreignKey(() => UserTable, 'id'),
     ...t.primaryKey(['followingId', 'followerId']),
   }));
 }
 ```
 
-This model has `followingId` for the user who is being followed, and the `followerId` for the one who follows.
-Both these columns have `foreignKey` which connects it with an `id` of `UserModel` to ensure that the value always points to an existing user record.
+This table has `followingId` for the user who is being followed, and the `followerId` for the one who follows.
+Both these columns have `foreignKey` which connects it with an `id` of `UserTable` to ensure that the value always points to an existing user record.
 
 With such syntax `...t.primaryKey([column1, column2])` we define a composite primary key.
 Internally Postgres will add a multi-column unique index and ensure that all of these columns are not null.
 
-Add this model to the list of models in db:
+Add this table to the list of tables in db:
 
 ```ts
 // src/db.ts
 // ...snip
-import { UserFollowModel } from './app/user/userFollow.model';
+import { UserFollowTable } from './app/user/userFollow.table';
 
 export const db = orchidORM(
   // ...snip
   {
-    userFollow: UserFollowModel,
+    userFollow: UserFollowTable,
   }
 );
 ```
@@ -885,22 +885,23 @@ change(async (db) => {
 });
 ```
 
-Adding `followers` and `followings` relations to the user model:
+Adding `followers` and `followings` relations to the user table:
 
 ```ts
-// src/app/user/user.model.ts
-import { UserFollowModel } from './userFollow.model';
+// src/app/user/user.table.ts
+import { BaseTable } from '../../lib/baseTable';
+import { UserFollowTable } from './userFollow.table';
 
-export class UserModel extends Model {
+export class UserTable extends BaseTable {
   // ...snip
   
   relations = {
-    follows: this.hasMany(() => UserFollowModel, {
+    follows: this.hasMany(() => UserFollowTable, {
       primaryKey: 'id',
       foreignKey: 'followingId',
     }),
 
-    followings: this.hasMany(() => UserFollowModel, {
+    followings: this.hasMany(() => UserFollowTable, {
       primaryKey: 'id',
       foreignKey: 'followerId',
     }),
@@ -1013,7 +1014,7 @@ export const followUserRoute = routeHandler(
 
 `getCurrentUserId` is a function to get the user id from the `JWT` token, leaving it beyond this tutorial, here is its [source](link to the user.service).
 
-After defining the `follows` relation in the user model, `db.user` receives a `follows` property which allows doing different queries, and the code above shows the use of such chained `create` method.
+After defining the `follows` relation in the user table, `db.user` receives a `follows` property which allows doing different queries, and the code above shows the use of such chained `create` method.
 
 If there is a need to do multiple queries it will wrap them in a transaction to prevent unexpected race conditions.
 
@@ -1073,7 +1074,7 @@ export const routes = async (app: FastifyInstance) => {
 };
 ```
 
-## article related models
+## article related tables
 
 Create migration files:
 
@@ -1154,17 +1155,17 @@ Run migrations:
 npm run db migrate
 ```
 
-Model files can be added in any order, and you can first define all models and later define their relations.
+Table files can be added in any order, and you can first define all tables and later define their relations.
 
-Tag model:
+Tag table:
 
 ```ts
-// src/app/tag/tag.model.ts
-import { Model } from '../../lib/model';
-import { modelToZod } from 'orchid-orm-schema-to-zod';
-import { ArticleTagModel } from './articleTag.model';
+// src/app/tag/tag.table.ts
+import { BaseTable } from '../../lib/baseTable';
+import { tableToZod } from 'orchid-orm-schema-to-zod';
+import { ArticleTagTable } from './articleTag.table';
 
-export class TagModel extends Model {
+export class TagTable extends BaseTable {
   table = 'tag';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -1173,28 +1174,28 @@ export class TagModel extends Model {
   }));
 
   relations = {
-    articleTags: this.hasMany(() => ArticleTagModel, {
+    articleTags: this.hasMany(() => ArticleTagTable, {
       primaryKey: 'id',
       foreignKey: 'tagId',
     }),
   };
 }
 
-export const tagSchema = modelToZod(TagModel);
+export const tagSchema = tableToZod(TagTable);
 ```
 
-The tag model has no relations in the example above, but only because they're not needed in future queries.
+The tag table has no relations in the example above, but only because they're not needed in future queries.
 `Orchid ORM` is designed to deal with circular dependencies without problems,
-so `TagModel` can use `ArticleModel` in the relation, and `ArticleModel` can have `TagModel` in the relation at the same time.
+so `TagTable` can use `ArticleTable` in the relation, and `ArticleTable` can have `TagTable` in the relation at the same time.
 
-Article tag model:
+Article tag table:
 
 ```ts
-// src/app/article/articleTag.model.ts
-import { Model } from '../../lib/model';
-import { TagModel } from '../tag/tag.model';
+// src/app/article/articleTag.table.ts
+import { BaseTable } from '../../lib/baseTable';
+import { TagTable } from '../tag/tag.table';
 
-export class ArticleTagModel extends Model {
+export class ArticleTagTable extends BaseTable {
   table = 'articleTag';
   columns = this.setColumns((t) => ({
     articleId: t.integer().foreignKey('article', 'id'),
@@ -1203,8 +1204,8 @@ export class ArticleTagModel extends Model {
   }));
 
   relations = {
-    // this `tag` relation name is used in the article model `tags` relation in the `source` option
-    tag: this.belongsTo(() => TagModel, {
+    // this `tag` relation name is used in the article table `tags` relation in the `source` option
+    tag: this.belongsTo(() => TagTable, {
       primaryKey: 'id',
       foreignKey: 'tagId',
     }),
@@ -1212,13 +1213,13 @@ export class ArticleTagModel extends Model {
 }
 ```
 
-Article favorite model:
+Article favorite table:
 
 ```ts
-// src/app/article/articleFavorite.model.ts
-import { Model } from '../../lib/model';
+// src/app/article/articleFavorite.table.ts
+import { BaseTable } from '../../lib/baseTable';
 
-export class ArticleFavoriteModel extends Model {
+export class ArticleFavoriteTable extends BaseTable {
   table = 'articleFavorite';
   columns = this.setColumns((t) => ({
     userId: t.integer().foreignKey('user', 'id'),
@@ -1228,18 +1229,18 @@ export class ArticleFavoriteModel extends Model {
 }
 ```
 
-Article model:
+Article table:
 
 ```ts
-// src/app/article/article.model.ts
-import { Model } from '../../lib/model';
-import { UserModel } from '../user/user.model';
-import { ArticleTagModel } from './articleTag.model';
-import { TagModel } from '../tag/tag.model';
-import { ArticleFavoriteModel } from './articleFavorite.model';
-import { modelToZod } from 'orchid-orm-schema-to-zod';
+// src/app/article/article.table.ts
+import { BaseTable } from '../../lib/baseTable';
+import { UserTable } from '../user/user.table';
+import { ArticleTagTable } from './articleTag.table';
+import { TagTable } from '../tag/tag.table';
+import { ArticleFavoriteTable } from './articleFavorite.table';
+import { tableToZod } from 'orchid-orm-schema-to-zod';
 
-export class ArticleModel extends Model {
+export class ArticleTable extends BaseTable {
   table = 'article';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -1254,49 +1255,49 @@ export class ArticleModel extends Model {
   }));
 
   relations = {
-    author: this.belongsTo(() => UserModel, {
+    author: this.belongsTo(() => UserTable, {
       primaryKey: 'id',
       foreignKey: 'userId',
     }),
 
-    favorites: this.hasMany(() => ArticleFavoriteModel, {
+    favorites: this.hasMany(() => ArticleFavoriteTable, {
       primaryKey: 'id',
       foreignKey: 'articleId',
     }),
 
-    articleTags: this.hasMany(() => ArticleTagModel, {
+    articleTags: this.hasMany(() => ArticleTagTable, {
       primaryKey: 'id',
       foreignKey: 'articleId',
     }),
 
-    tags: this.hasMany(() => TagModel, {
+    tags: this.hasMany(() => TagTable, {
       through: 'articleTags',
       source: 'tag',
     }),
   };
 }
 
-export const articleSchema = modelToZod(ArticleModel);
+export const articleSchema = tableToZod(ArticleTable);
 ```
 
-Add models to `db.ts`:
+Add tables to `db.ts`:
 
 ```ts
 // src/db.ts
 
-import { ArticleModel } from './app/article/article.model';
-import { ArticleTagModel } from './app/article/articleTag.model';
-import { TagModel } from './app/tag/tag.model';
-import { ArticleFavoriteModel } from './app/article/articleFavorite.model';
+import { ArticleTable } from './app/article/article.table';
+import { ArticleTagTable } from './app/article/articleTag.table';
+import { TagTable } from './app/tag/tag.table';
+import { ArticleFavoriteTable } from './app/article/articleFavorite.table';
 
 export const db = orchidORM(
   // ...snip
   {
     // ...snip
-    article: ArticleModel,
-    articleFavorite: ArticleFavoriteModel,
-    articleTag: ArticleTagModel,
-    tag: TagModel,
+    article: ArticleTable,
+    articleFavorite: ArticleFavoriteTable,
+    articleTag: ArticleTagTable,
+    tag: TagTable,
   }
 );
 ```
@@ -1571,8 +1572,8 @@ so better to have it separately:
 
 ```ts
 // src/app/article/article.dto.ts
-import { articleSchema } from './article.model';
-import { userSchema } from '../user/user.model';
+import { articleSchema } from './article.table';
+import { userSchema } from '../user/user.table';
 import { z } from 'zod';
 
 export const articleDto = articleSchema
@@ -1723,7 +1724,7 @@ too many query details to read the code quickly and clearly.
 Here I want to tell about one special feature of the `Orchid ORM` which doesn't exist in other node.js ORMs.
 There are similar capabilities in `Objection.js` and `Openrecord`, but they aren't type-safe.
 
-Let's start from the article's `author` field: querying author includes some nuances specific to the user model,
+Let's start from the article's `author` field: querying author includes some nuances specific to the user table,
 better to keep such queries encapsulated inside the related feature folder.
 
 Extract author object from `articleDto` into own `userDto`:
@@ -1761,7 +1762,7 @@ export const articleDto = articleSchema
 
 ```ts
 // src/app/user/user.dto.ts
-import { userSchema } from './user.model';
+import { userSchema } from './user.table';
 
 export const userDto = userSchema
   .pick({

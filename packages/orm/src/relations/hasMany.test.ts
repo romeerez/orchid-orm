@@ -9,7 +9,13 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
-import { Chat, Message, Model, Profile, User } from '../test-utils/test-models';
+import {
+  Chat,
+  Message,
+  BaseTable,
+  Profile,
+  User,
+} from '../test-utils/test-tables';
 import { orchidORM } from '../orm';
 
 describe('hasMany', () => {
@@ -1653,8 +1659,8 @@ describe('hasMany', () => {
 });
 
 describe('hasMany through', () => {
-  it('should resolve recursive situation when both models depends on each other', () => {
-    class Post extends Model {
+  it('should resolve recursive situation when both tables depends on each other', () => {
+    class Post extends BaseTable {
       table = 'post';
       columns = this.setColumns((t) => ({
         id: t.serial().primaryKey(),
@@ -1673,7 +1679,7 @@ describe('hasMany through', () => {
       };
     }
 
-    class Tag extends Model {
+    class Tag extends BaseTable {
       table = 'tag';
       columns = this.setColumns((t) => ({
         id: t.serial().primaryKey(),
@@ -1692,7 +1698,7 @@ describe('hasMany through', () => {
       };
     }
 
-    class PostTag extends Model {
+    class PostTag extends BaseTable {
       table = 'postTag';
       columns = this.setColumns((t) => ({
         postId: t.integer().foreignKey(() => Post, 'id'),
@@ -1730,7 +1736,7 @@ describe('hasMany through', () => {
   });
 
   it('should throw if through relation is not defined', () => {
-    class Post extends Model {
+    class Post extends BaseTable {
       table = 'post';
       columns = this.setColumns((t) => ({
         id: t.serial().primaryKey(),
@@ -1744,7 +1750,7 @@ describe('hasMany through', () => {
       };
     }
 
-    class Tag extends Model {
+    class Tag extends BaseTable {
       table = 'tag';
       columns = this.setColumns((t) => ({
         id: t.serial().primaryKey(),
@@ -1768,7 +1774,7 @@ describe('hasMany through', () => {
   });
 
   it('should throw if source relation is not defined', () => {
-    class Post extends Model {
+    class Post extends BaseTable {
       table = 'post';
       columns = this.setColumns((t) => ({
         id: t.serial().primaryKey(),
@@ -1787,14 +1793,14 @@ describe('hasMany through', () => {
       };
     }
 
-    class Tag extends Model {
+    class Tag extends BaseTable {
       table = 'tag';
       columns = this.setColumns((t) => ({
         id: t.serial().primaryKey(),
       }));
     }
 
-    class PostTag extends Model {
+    class PostTag extends BaseTable {
       table = 'postTag';
       columns = this.setColumns((t) => ({
         postId: t.integer().foreignKey(() => Post, 'id'),

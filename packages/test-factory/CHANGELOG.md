@@ -1,5 +1,18 @@
 # orchid-orm-test-factory
 
+## 0.2.0
+
+### Minor Changes
+
+- 3f25b4d: Rename all model words to table words, because all models here are not models in OOP meaning
+
+### Patch Changes
+
+- Updated dependencies [3f25b4d]
+  - orchid-orm@2.0.0
+  - pqb@0.8.0
+  - orchid-orm-schema-to-zod@0.2.0
+
 ## 0.1.16
 
 ### Patch Changes

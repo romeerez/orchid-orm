@@ -1,4 +1,4 @@
-import { createModel, orchidORM } from 'orchid-orm';
+import { createBaseTable, orchidORM } from 'orchid-orm';
 import { Adapter, columnTypes } from 'pqb';
 
 type AssertEqual<T, Expected> = [T] extends [Expected]
@@ -13,7 +13,7 @@ export const assertType = <T, Expected>(
   // noop
 };
 
-export const Model = createModel({
+export const BaseTable = createBaseTable({
   columnTypes: {
     ...columnTypes,
     text: (min = 0, max = Infinity) => columnTypes.text(min, max),
@@ -21,8 +21,8 @@ export const Model = createModel({
   },
 });
 
-export type User = UserModel['columns']['type'];
-class UserModel extends Model {
+export type User = UserTable['columns']['type'];
+class UserTable extends BaseTable {
   table = 'user';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -43,7 +43,7 @@ class UserModel extends Model {
   }));
 
   relations = {
-    profile: this.hasOne(() => ProfileModel, {
+    profile: this.hasOne(() => ProfileTable, {
       required: true,
       primaryKey: 'id',
       foreignKey: 'userId',
@@ -51,20 +51,20 @@ class UserModel extends Model {
   };
 }
 
-export class ProfileModel extends Model {
+export class ProfileTable extends BaseTable {
   table = 'profile';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     userId: t
       .integer()
       .nullable()
-      .foreignKey(() => UserModel, 'id'),
+      .foreignKey(() => UserTable, 'id'),
     bio: t.text().min(100).max(100000),
     ...t.timestamps(),
   }));
 
   relations = {
-    user: this.belongsTo(() => UserModel, {
+    user: this.belongsTo(() => UserTable, {
       required: true,
       primaryKey: 'id',
       foreignKey: 'userId',
@@ -82,7 +82,7 @@ export const db = orchidORM(
     log: false,
   },
   {
-    user: UserModel,
-    profile: ProfileModel,
+    user: UserTable,
+    profile: ProfileTable,
   },
 );

@@ -2,7 +2,7 @@
 
 `Orchid ORM` ecosystem offers a library for setting up JavaScript objects, to use these objects in tests.
 
-It is producing objects of the shape defined by your model columns.
+It is producing objects of the shape defined by your table columns.
 
 Under the hood, it is using [@anatine/zod-mock](https://github.com/anatine/zod-plugins/tree/main/packages/zod-mock)
 to create and fill the object with random values. Random values are produced by [faker.js](https://www.npmjs.com/package/@faker-js/faker).
@@ -54,7 +54,7 @@ Install this library:
 npm i orchid-orm-test-factory
 ```
 
-Factory cannot be in the same file as the model, place it somewhere else, for example, you can have a file `src/utils/test-factories.ts` and have factories for all models in one place.
+Factory cannot be in the same file as the table class, place it somewhere else, for example, you can have a file `src/utils/test-factories.ts` and have factories for all tables in one place.
 
 ## sequence
 
@@ -105,7 +105,7 @@ const userFactory = createFactory(db.user, {
 
 ## build
 
-Build a new object with the same structure as your model filled with random data:
+Build a new object with the same structure as your table filled with random data:
 
 ```ts
 import { createFactory } from 'orchid-orm-test-factory'
@@ -133,7 +133,7 @@ const user = userFactory.build({
 })
 ```
 
-It's possible to provide extra data, which is not defined by Model columns:
+It's possible to provide extra data, which is not defined by table columns:
 
 ```ts
 const user = userFactory.build({
@@ -167,11 +167,11 @@ const user = await userFactory.create()
 ```
 
 In the argument, you can provide values for columns, functions to generate values,
-and you can use all the nested create methods available for this model.
+and you can use all the nested create methods available for this table.
 
-In contrast to `build`, additional properties are not allowed here, only the columns of the model.
+In contrast to `build`, additional properties are not allowed here, only the columns of the table.
 
-The `create` method will automatically look for serial primary keys in the model to omit it from being generated,
+The `create` method will automatically look for serial primary keys in the table to omit it from being generated,
 so the natural sequence of `t.serial().primaryKey()` columns will be preserved.
 
 ```ts
@@ -221,7 +221,7 @@ Test factory will prefix unique text columns with sequence, and it will use a se
 Example:
 
 ```ts
-class SomeModel extends Model {
+class SomeTable extends BaseTable {
   table = 'table'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -237,10 +237,10 @@ class SomeModel extends Model {
 const db = createDb({
   ...dbOptions,
 }, {
-  model: SomeModel,
+  table: SomeTable,
 })
 
-const factory = createFactory(db.model)
+const factory = createFactory(db.table)
 
 // sequence is starting from 1
 
