@@ -4,12 +4,14 @@ import {
   JSONType,
   JSONTypeAny,
   JSONTypeData,
+  toCode,
 } from './typeBase';
 import { arrayMethods, ArrayMethods } from '../commonMethods';
+import { toArray } from '../../utils';
 
 export type ArrayCardinality = 'many' | 'atLeastOne';
 
-type arrayOutputType<
+type ArrayOutputType<
   T extends JSONTypeAny,
   Cardinality extends ArrayCardinality = 'many',
 > = Cardinality extends 'atLeastOne'
@@ -19,7 +21,7 @@ type arrayOutputType<
 export interface JSONArray<
   Type extends JSONTypeAny,
   Cardinality extends ArrayCardinality = 'many',
-> extends JSONType<arrayOutputType<Type, Cardinality>, 'array'>,
+> extends JSONType<ArrayOutputType<Type, Cardinality>, 'array'>,
     ArrayMethods {
   data: JSONTypeData & {
     min?: number;
@@ -27,10 +29,9 @@ export interface JSONArray<
     length?: number;
   };
   element: Type;
-  deepPartial(): JSONArray<DeepPartial<Type>, Cardinality>;
-  nonEmpty(
-    this: JSONArray<Type>,
-  ): JSONArray<Type, 'atLeastOne'> & { data: { min: 1 } };
+  deepPartial<T extends JSONArray<Type>>(
+    this: T,
+  ): JSONArray<DeepPartial<Type>, Cardinality>;
 }
 
 export const array = <Type extends JSONTypeAny>(
@@ -39,16 +40,29 @@ export const array = <Type extends JSONTypeAny>(
   return constructType<JSONArray<Type>>({
     dataType: 'array' as const,
     element,
-    deepPartial(this: JSONArray<Type>) {
+    toCode(this: JSONArray<Type>, t: string) {
+      let code = '.array()';
+
+      const { min, max, length, isNonEmpty } = this.data;
+
+      if (min !== undefined && (!isNonEmpty || (isNonEmpty && min !== 1)))
+        code += `.min(${min})`;
+
+      if (max !== undefined) code += `.max(${max})`;
+
+      if (length !== undefined) code += `.length(${length})`;
+
+      return toCode(this, t, [...toArray(this.element.toCode(t)), code]);
+    },
+    deepPartial<T extends JSONArray<Type>>(this: T) {
       return {
         ...this,
         element: this.element.deepPartial(),
-      };
-    },
-    nonEmpty(this: JSONArray<Type>) {
-      return this.min(1) as unknown as JSONArray<Type, 'atLeastOne'> & {
-        data: { min: 1 };
-      };
+        data: {
+          ...this.data,
+          isDeepPartial: true,
+        },
+      } as T;
     },
     ...arrayMethods,
   });

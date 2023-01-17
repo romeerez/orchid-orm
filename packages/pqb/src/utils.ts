@@ -134,3 +134,6 @@ export const pushOrNewArray = <Arr extends unknown[]>(
     return [value] as Arr;
   }
 };
+
+export const singleQuote = (s: string) =>
+  `'${s.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;

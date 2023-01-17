@@ -8,4 +8,10 @@ describe('boolean column', () => {
 
     assertType<typeof result, boolean>();
   });
+
+  it('should have toCode', () => {
+    const column = new BooleanColumn();
+
+    expect(column.toCode('t')).toBe('t.boolean()');
+  });
 });

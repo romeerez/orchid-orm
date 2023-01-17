@@ -1,5 +1,6 @@
 import { assertType, db } from '../test-utils/test-utils';
 import { ArrayColumn } from './array';
+import { IntegerColumn } from './number';
 
 describe('array column', () => {
   describe('array', () => {
@@ -43,6 +44,24 @@ describe('array column', () => {
       expect(result).toEqual([[true], [false]]);
 
       assertType<typeof result, boolean[][]>();
+    });
+
+    it('should have toCode', async () => {
+      const column = new ArrayColumn(new IntegerColumn());
+      expect(column.toCode('t')).toEqual(['t.array(', 't.integer()', ')']);
+
+      expect(column.nonEmpty().toCode('t')).toEqual([
+        't.array(',
+        't.integer()',
+        ')',
+        '.nonEmpty()',
+      ]);
+
+      expect(column.min(1).max(10).length(15).toCode('t')).toEqual([
+        't.array(',
+        't.integer()',
+        ').min(1).max(10).length(15)',
+      ]);
     });
   });
 });

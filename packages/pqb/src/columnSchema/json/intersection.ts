@@ -1,4 +1,4 @@
-import { constructType, JSONType, JSONTypeAny } from './typeBase';
+import { constructType, JSONType, JSONTypeAny, toCode } from './typeBase';
 
 export type JSONIntersection<
   Left extends JSONTypeAny,
@@ -19,5 +19,13 @@ export const intersection = <
     dataType: 'intersection',
     left,
     right,
+    toCode(this: JSONIntersection<Left, Right>, t: string) {
+      return toCode(this, t, [
+        this.left.toCode(t),
+        '.and(',
+        this.right.toCode(t),
+        ')',
+      ]);
+    },
   });
 };

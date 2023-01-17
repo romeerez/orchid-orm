@@ -42,8 +42,15 @@ function size<T extends { data: { size?: number } }, Value extends number>(
   return setDataValue(this, 'size', value);
 }
 
-function nonempty<T extends { data: { min?: number } }>(this: T) {
-  return setDataValue(this, 'min', 1);
+export type NonEmptyBase = { data: { min?: number; isNonEmpty?: true } };
+export type NonEmptyResult<T extends NonEmptyBase> = Omit<T, 'data'> & {
+  data: Omit<T['data'], 'min'> & { min: 1; isNonEmpty: true };
+};
+
+function nonEmpty<T extends NonEmptyBase>(this: T): NonEmptyResult<T> {
+  const cloned = setDataValue(this, 'min', 1);
+  cloned.data.isNonEmpty = true;
+  return cloned as NonEmptyResult<T>;
 }
 
 export type ArrayMethods = typeof arrayMethods;
@@ -52,7 +59,7 @@ export const arrayMethods = {
   min,
   max,
   length,
-  nonempty,
+  nonEmpty,
 };
 
 export type SetMethods = typeof setMethods;
@@ -61,7 +68,7 @@ export const setMethods = {
   min,
   max,
   size,
-  nonempty,
+  nonEmpty,
 };
 
 export const stringTypeMethods = () => ({

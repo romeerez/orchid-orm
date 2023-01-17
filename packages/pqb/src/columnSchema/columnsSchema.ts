@@ -24,11 +24,13 @@ export type ColumnShapeInput<Shape extends ColumnsShape> = SetOptional<
   OptionalColumnsForInput<Shape>
 >;
 
-export class ColumnsObject<Shape extends ColumnsShape> extends ColumnType<
+export abstract class ColumnsObject<
+  Shape extends ColumnsShape,
+> extends ColumnType<
   { [K in keyof Shape]: Shape[K]['type'] },
   typeof Operators.any
 > {
-  dataType = 'object';
+  dataType = 'object' as const;
   operators = Operators.any;
 
   constructor(public shape: Shape) {
@@ -36,13 +38,13 @@ export class ColumnsObject<Shape extends ColumnsShape> extends ColumnType<
   }
 }
 
-export class ArrayOfColumnsObjects<
+export abstract class ArrayOfColumnsObjects<
   Shape extends ColumnsShape,
 > extends ColumnType<
   { [K in keyof Shape]: Shape[K]['type'] }[],
   typeof Operators.any
 > {
-  dataType = 'array';
+  dataType = 'array' as const;
   operators = Operators.any;
 
   constructor(public shape: Shape) {

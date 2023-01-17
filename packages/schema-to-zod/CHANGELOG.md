@@ -1,5 +1,13 @@
 # orchid-orm-schema-to-zod
 
+## 0.2.1
+
+### Patch Changes
+
+- Add ability to convert columns to code
+- Updated dependencies
+  - pqb@0.8.1
+
 ## 0.2.0
 
 ### Minor Changes

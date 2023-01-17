@@ -1,6 +1,7 @@
-import { constructType, JSONType, Primitive } from './typeBase';
+import { constructType, JSONType, Primitive, toCode } from './typeBase';
 import { JSONObject, JSONObjectShape } from './object';
 import { JSONLiteral } from './literal';
+import { singleQuote } from '../../utils';
 
 export interface JSONDiscriminatedUnion<
   Discriminator extends string,
@@ -11,7 +12,7 @@ export interface JSONDiscriminatedUnion<
   discriminatorValue: DiscriminatorValue;
   options: Map<DiscriminatorValue, Option>;
   _option: Option;
-  // TODO: gave up on deepPartial type
+  // WON'T DO: gave up on deepPartial type
   // deepPartial(): JSONDiscriminatedUnion<
   //   Discriminator,
   //   {
@@ -72,6 +73,20 @@ export const discriminatedUnion = <
     discriminatorValue: undefined as unknown as DiscriminatorValue,
     options: optionsMap,
     _option: undefined as unknown as Types[number],
+    toCode(
+      this: JSONDiscriminatedUnion<
+        string,
+        Primitive,
+        JSONDiscriminatedObject<Discriminator, DiscriminatorValue>
+      >,
+      t: string,
+    ) {
+      return toCode(this, t, [
+        `${t}.discriminatedUnion(${singleQuote(this.discriminator)}, [`,
+        options.flatMap((option) => option.toCode(t)),
+        '])',
+      ]);
+    },
     deepPartial(
       this: JSONDiscriminatedUnion<
         Discriminator,

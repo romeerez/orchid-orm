@@ -16,12 +16,37 @@ import {
   PathColumn,
   PointColumn,
   PolygonColumn,
+  TextBaseColumn,
   TextColumn,
   TsQueryColumn,
   TsVectorColumn,
   UUIDColumn,
   VarCharColumn,
+  XMLColumn,
 } from './string';
+
+const testNumberColumnMethods = (type: TextBaseColumn, name: string) => {
+  expect(type.nonEmpty().toCode('t')).toEqual([`t.${name}()`, '.nonEmpty()']);
+
+  expect(
+    type
+      .min(1)
+      .max(10)
+      .length(15)
+      .email()
+      .url()
+      .uuid()
+      .cuid()
+      .startsWith('start')
+      .endsWith('end')
+      .trim()
+      .toCode('t'),
+  ).toBe(
+    `t.${name}().min(1).max(10).length(15).email().url().uuid().cuid().startsWith('start').endsWith('end').trim()`,
+  );
+
+  expect(type.regex(/\d+/g).toCode('t')).toBe(`t.${name}().regex(/\\d+/g)`);
+};
 
 describe('string columns', () => {
   describe('text', () => {
@@ -34,6 +59,13 @@ describe('string columns', () => {
 
         assertType<typeof result, string>();
       });
+
+      it('should have toCode', () => {
+        expect(new VarCharColumn().toCode('t')).toBe('t.varchar()');
+        expect(new VarCharColumn(5).toCode('t')).toBe('t.varchar(5)');
+
+        testNumberColumnMethods(new VarCharColumn(), 'varchar');
+      });
     });
 
     describe('char', () => {
@@ -45,6 +77,13 @@ describe('string columns', () => {
 
         assertType<typeof result, string>();
       });
+
+      it('should have toCode', () => {
+        expect(new CharColumn().toCode('t')).toBe('t.char()');
+        expect(new CharColumn(5).toCode('t')).toBe('t.char(5)');
+
+        testNumberColumnMethods(new CharColumn(), 'char');
+      });
     });
 
     describe('text', () => {
@@ -55,6 +94,12 @@ describe('string columns', () => {
         expect(result).toBe('text');
 
         assertType<typeof result, string>();
+      });
+
+      it('should have toCode', () => {
+        expect(new TextColumn().toCode('t')).toBe('t.text()');
+
+        testNumberColumnMethods(new TextColumn(), 'text');
       });
     });
   });
@@ -70,6 +115,10 @@ describe('string columns', () => {
 
         assertType<typeof result, Buffer>();
       });
+
+      it('should have toCode', () => {
+        expect(new ByteaColumn().toCode('t')).toBe('t.bytea()');
+      });
     });
   });
 
@@ -83,6 +132,10 @@ describe('string columns', () => {
 
         assertType<typeof result, string>();
       });
+
+      it('should have toCode', () => {
+        expect(new PointColumn().toCode('t')).toBe('t.point()');
+      });
     });
 
     describe('line', () => {
@@ -93,6 +146,10 @@ describe('string columns', () => {
         expect(result).toBe('{1,2,3}');
 
         assertType<typeof result, string>();
+      });
+
+      it('should have toCode', () => {
+        expect(new LineColumn().toCode('t')).toBe('t.line()');
       });
     });
 
@@ -105,6 +162,10 @@ describe('string columns', () => {
 
         assertType<typeof result, string>();
       });
+
+      it('should have toCode', () => {
+        expect(new LsegColumn().toCode('t')).toBe('t.lseg()');
+      });
     });
 
     describe('box', () => {
@@ -115,6 +176,10 @@ describe('string columns', () => {
         expect(result).toBe('(3,4),(1,2)');
 
         assertType<typeof result, string>();
+      });
+
+      it('should have toCode', () => {
+        expect(new BoxColumn().toCode('t')).toBe('t.box()');
       });
     });
 
@@ -127,6 +192,10 @@ describe('string columns', () => {
 
         assertType<typeof result, string>();
       });
+
+      it('should have toCode', () => {
+        expect(new PathColumn().toCode('t')).toBe('t.path()');
+      });
     });
 
     describe('polygon', () => {
@@ -138,6 +207,10 @@ describe('string columns', () => {
 
         assertType<typeof result, string>();
       });
+
+      it('should have toCode', () => {
+        expect(new PolygonColumn().toCode('t')).toBe('t.polygon()');
+      });
     });
 
     describe('circle', () => {
@@ -148,6 +221,10 @@ describe('string columns', () => {
         expect(result).toBe('<(1,2),3>');
 
         assertType<typeof result, string>();
+      });
+
+      it('should have toCode', () => {
+        expect(new CircleColumn().toCode('t')).toBe('t.circle()');
       });
     });
   });
@@ -162,6 +239,10 @@ describe('string columns', () => {
 
         assertType<typeof result, string>();
       });
+
+      it('should have toCode', () => {
+        expect(new CidrColumn().toCode('t')).toBe('t.cidr()');
+      });
     });
 
     describe('inet', () => {
@@ -173,6 +254,10 @@ describe('string columns', () => {
 
         assertType<typeof result, string>();
       });
+
+      it('should have toCode', () => {
+        expect(new InetColumn().toCode('t')).toBe('t.inet()');
+      });
     });
 
     describe('macaddr', () => {
@@ -183,6 +268,10 @@ describe('string columns', () => {
         expect(result).toBe('08:00:2b:01:02:03');
 
         assertType<typeof result, string>();
+      });
+
+      it('should have toCode', () => {
+        expect(new MacAddrColumn().toCode('t')).toBe('t.macaddr()');
       });
     });
 
@@ -198,6 +287,10 @@ describe('string columns', () => {
 
         assertType<typeof result, string>();
       });
+
+      it('should have toCode', () => {
+        expect(new MacAddr8Column().toCode('t')).toBe('t.macaddr8()');
+      });
     });
   });
 
@@ -209,6 +302,10 @@ describe('string columns', () => {
 
         assertType<typeof result, string>();
       });
+
+      it('should have toCode', () => {
+        expect(new BitColumn(5).toCode('t')).toBe('t.bit(5)');
+      });
     });
 
     describe('bit varying', () => {
@@ -219,6 +316,11 @@ describe('string columns', () => {
         expect(result).toBe('10101');
 
         assertType<typeof result, string>();
+      });
+
+      it('should have toCode', () => {
+        expect(new BitVaryingColumn().toCode('t')).toBe('t.bitVarying()');
+        expect(new BitVaryingColumn(5).toCode('t')).toBe('t.bitVarying(5)');
       });
     });
   });
@@ -238,6 +340,10 @@ describe('string columns', () => {
 
         assertType<typeof result, string>();
       });
+
+      it('should have toCode', () => {
+        expect(new TsVectorColumn().toCode('t')).toBe('t.tsvector()');
+      });
     });
 
     describe('tsquery', () => {
@@ -248,6 +354,10 @@ describe('string columns', () => {
         expect(result).toBe(`'fat' & 'rat'`);
 
         assertType<typeof result, string>();
+      });
+
+      it('should have toCode', () => {
+        expect(new TsQueryColumn().toCode('t')).toBe('t.tsquery()');
       });
     });
   });
@@ -264,6 +374,25 @@ describe('string columns', () => {
 
       assertType<typeof result, string>();
     });
+
+    it('should have toCode', () => {
+      expect(new UUIDColumn().toCode('t')).toBe('t.uuid()');
+    });
+  });
+
+  describe('xml', () => {
+    it('should output string', async () => {
+      const result = await db.get(
+        db.raw(() => new XMLColumn(), `'<xml></xml>'::xml`),
+      );
+      expect(result).toBe('<xml></xml>');
+
+      assertType<typeof result, string>();
+    });
+
+    it('should have toCode', () => {
+      expect(new XMLColumn().toCode('t')).toBe('t.xml()');
+    });
   });
 
   describe('money', () => {
@@ -274,6 +403,10 @@ describe('string columns', () => {
       expect(result).toBe(1234567890.42);
 
       assertType<typeof result, number>();
+    });
+
+    it('should have toCode', () => {
+      expect(new MoneyColumn().toCode('t')).toBe('t.money()');
     });
   });
 });

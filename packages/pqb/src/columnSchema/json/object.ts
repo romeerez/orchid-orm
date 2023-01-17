@@ -1,5 +1,12 @@
-import { constructType, DeepPartial, JSONType, JSONTypeAny } from './typeBase';
+import {
+  constructType,
+  DeepPartial,
+  JSONType,
+  JSONTypeAny,
+  toCode,
+} from './typeBase';
 import { JSONOptional, optional } from './optional';
+import { Code } from '../columnType';
 
 export type JSONObjectShape = Record<string, JSONTypeAny>;
 
@@ -36,7 +43,7 @@ export type baseObjectOutputType<Shape extends JSONObjectShape> = flatten<
   }>
 >;
 
-type objectOutputType<
+type ObjectOutputType<
   Shape extends JSONObjectShape,
   Catchall extends JSONTypeAny,
 > = JSONTypeAny extends Catchall
@@ -72,7 +79,7 @@ export interface JSONObject<
   T extends JSONObjectShape,
   UnknownKeys extends UnknownKeysParam = 'strip',
   Catchall extends JSONTypeAny = JSONTypeAny,
-  Output = objectOutputType<T, Catchall>,
+  Output = ObjectOutputType<T, Catchall>,
 > extends JSONType<Output, 'object'> {
   shape: T;
   unknownKeys: UnknownKeys;
@@ -120,6 +127,27 @@ export const object = <
     shape,
     unknownKeys: 'strip' as UnknownKeys,
     catchAllType: undefined as unknown as Catchall,
+    toCode(this: JSONObject<JSONObjectShape, UnknownKeysParam>, t: string) {
+      const { shape } = this;
+      const arr: Code[] = [];
+
+      for (const key in shape) {
+        arr.push(`${key}: ${shape[key].toCode(t)},`);
+      }
+
+      let lastLine = '})';
+      if (this.unknownKeys === 'passthrough') {
+        lastLine += '.passthrough()';
+      } else if (this.unknownKeys === 'strict') {
+        lastLine += '.strict()';
+      }
+
+      if (this.catchAllType) {
+        lastLine += `.catchAll(${this.catchAllType.toCode(t)})`;
+      }
+
+      return toCode(this, t, [`${t}.object({`, arr, lastLine]);
+    },
     extend<S extends JSONObjectShape>(add: S) {
       return object<Merge<T, S>, UnknownKeys, Catchall>(
         Object.assign({ ...this.shape }, add),

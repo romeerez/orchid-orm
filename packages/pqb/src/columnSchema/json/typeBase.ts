@@ -9,10 +9,16 @@ import { JSONNotNullish, JSONNullish, notNullish, nullish } from './nullish';
 import { intersection, JSONIntersection } from './intersection';
 import { array, JSONArray } from './array';
 import { union } from './union';
-import { ColumnData, ValidationContext } from '../columnType';
+import {
+  Code,
+  ColumnChain,
+  columnChainToCode,
+  ColumnData,
+  ValidationContext,
+} from '../columnType';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type JSONTypeAny = JSONType<any, string>;
+export type JSONTypeAny = JSONType<any>;
 
 export type DeepPartial<T extends JSONTypeAny> = ReturnType<
   JSONTypeAny['deepPartial']
@@ -23,6 +29,8 @@ export type DeepPartial<T extends JSONTypeAny> = ReturnType<
 export type JSONTypeData = ColumnData & {
   optional?: true;
   nullable?: true;
+  isDeepPartial?: true;
+  isNonEmpty?: true;
 };
 
 export type Primitive = string | number | bigint | boolean | null | undefined;
@@ -31,12 +39,9 @@ export type JSONType<Type, DataType extends string = string> = {
   type: Type;
   data: JSONTypeData;
   dataType: DataType;
-  chain: (
-    | ['transform', (input: unknown, ctx: ValidationContext) => unknown]
-    | ['to', (input: unknown) => JSONTypeAny | undefined, JSONTypeAny]
-    | ['refine', (input: unknown) => unknown]
-    | ['superRefine', (input: unknown, ctx: ValidationContext) => unknown]
-  )[];
+  chain: ColumnChain;
+
+  toCode(t: string): Code;
 
   optional<T extends JSONTypeAny>(this: T): JSONOptional<T>;
   required<T extends JSONTypeAny>(this: T): JSONRequired<T>;
@@ -90,12 +95,42 @@ export type JSONType<Type, DataType extends string = string> = {
   array<T extends JSONTypeAny>(this: T): JSONArray<T>;
 };
 
+export const toCode = (type: JSONTypeAny, t: string, code: Code) => {
+  let append = '';
+
+  if (type.data.nullable && type.data.optional) {
+    append += '.nullish()';
+  } else if (type.data.nullable) {
+    append += '.nullable()';
+  } else if (type.data.optional) {
+    append += '.optional()';
+  }
+
+  if (type.data.isDeepPartial) {
+    append += '.deepPartial()';
+  }
+
+  if (type.data.isNonEmpty) {
+    append += '.nonEmpty()';
+  }
+
+  if (type.data.default) {
+    append += `.default(${JSON.stringify(type.data.default)})`;
+  }
+
+  return columnChainToCode(type.chain, t, code, append);
+};
+
 const baseTypeMethods: JSONTypeAny = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type: undefined as any,
   data: {},
   dataType: 'any',
   chain: [],
+
+  toCode() {
+    throw new Error('toCode is not implemented');
+  },
 
   optional<T extends JSONTypeAny>(this: T) {
     return optional(this);
@@ -122,7 +157,7 @@ const baseTypeMethods: JSONTypeAny = {
   },
 
   deepPartial() {
-    return this;
+    return this.optional();
   },
 
   transform<T extends JSONTypeAny, Transformed>(
@@ -135,11 +170,15 @@ const baseTypeMethods: JSONTypeAny = {
     };
   },
 
-  to(fn, type) {
+  to<T extends JSONTypeAny, ToType extends JSONTypeAny>(
+    this: T,
+    fn: (input: T['type']) => ToType['type'] | undefined,
+    type: ToType,
+  ): ToType {
     return {
-      ...type,
+      ...this,
       chain: [...this.chain, ['to', fn, type], ...type.chain],
-    };
+    } as unknown as ToType;
   },
 
   refine(check) {
@@ -177,7 +216,7 @@ const baseTypeMethods: JSONTypeAny = {
 };
 
 type BaseTypeProps<T extends JSONTypeAny> = Omit<
-  JSONType<T['type'], string>,
+  JSONType<T['type']>,
   'dataType'
 >;
 export type OwnTypeProps<T extends JSONTypeAny> = Omit<

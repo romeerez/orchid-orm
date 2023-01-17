@@ -5,6 +5,7 @@ import {
   pushOrNewArray,
   pushOrNewArrayToObject,
   SetOptional,
+  singleQuote,
   SomeIsTrue,
 } from './utils';
 
@@ -88,6 +89,14 @@ describe('utils', () => {
       const arr: number[] | undefined = [];
 
       expect(pushOrNewArray(arr, 123)).toEqual([123]);
+    });
+  });
+
+  describe('singleQuote', () => {
+    it('should put string into single quotes, escape single quotes and backslashes', () => {
+      expect(singleQuote(`ko`)).toBe(`'ko'`);
+      expect(singleQuote(`k'o`)).toBe(`'k\\'o'`);
+      expect(singleQuote(`k\\'o`)).toBe(`'k\\\\\\'o'`);
     });
   });
 });

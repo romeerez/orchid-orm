@@ -1,5 +1,5 @@
 import { Operators } from '../columnsOperators';
-import { ColumnData, ColumnType } from './columnType';
+import { Code, columnCode, ColumnData, ColumnType } from './columnType';
 import { joinTruthy } from '../utils';
 import { assignMethodsToClass } from './utils';
 import { numberTypeMethods } from './commonMethods';
@@ -11,6 +11,16 @@ export type BaseNumberData = ColumnData & {
   gte?: number;
   multipleOf?: number;
   int?: boolean;
+};
+
+const numberDataToCode = (data: NumberBaseColumn['data']) => {
+  let code = '';
+  if (data.gte !== undefined) code += `.min(${data.gte})`;
+  if (data.gt !== undefined) code += `.gt(${data.gt})`;
+  if (data.lte !== undefined) code += `.max(${data.lte})`;
+  if (data.lt !== undefined) code += `.lt(${data.lt})`;
+  if (data.multipleOf !== undefined) code += `.step(${data.multipleOf})`;
+  return code;
 };
 
 export type NumberColumn = ColumnType<number>;
@@ -67,6 +77,15 @@ export class DecimalBaseColumn<
     } as DecimalColumnData & { precision: Precision; scale: Scale };
   }
 
+  toCode(t: string): Code {
+    const { precision, scale } = this.data;
+    return columnCode(
+      this,
+      t,
+      `${t}.decimal(${precision || ''}${scale ? `, ${scale}` : ''})`,
+    );
+  }
+
   toSQL() {
     const { precision, scale } = this.data;
 
@@ -85,17 +104,26 @@ export class DecimalBaseColumn<
 export class SmallIntColumn extends IntegerBaseColumn {
   dataType = 'smallint' as const;
   parseItem = parseInt;
+  toCode(t: string): Code {
+    return columnCode(this, t, `${t}.smallint()${numberDataToCode(this.data)}`);
+  }
 }
 
 // signed four-byte integer
 export class IntegerColumn extends IntegerBaseColumn {
   dataType = 'integer' as const;
   parseItem = parseInt;
+  toCode(t: string): Code {
+    return columnCode(this, t, `${t}.integer()${numberDataToCode(this.data)}`);
+  }
 }
 
 // signed eight-byte integer
 export class BigIntColumn extends NumberAsStringBaseColumn {
   dataType = 'bigint' as const;
+  toCode(t: string): Code {
+    return columnCode(this, t, `${t}.bigint()`);
+  }
 }
 
 // exact numeric of selectable precision
@@ -108,11 +136,17 @@ export class DecimalColumn<
 export class RealColumn extends NumberBaseColumn {
   dataType = 'real' as const;
   parseItem = parseFloat;
+  toCode(t: string): Code {
+    return columnCode(this, t, `${t}.real()${numberDataToCode(this.data)}`);
+  }
 }
 
 // double precision floating-point number (8 bytes)
 export class DoublePrecisionColumn extends NumberAsStringBaseColumn {
   dataType = 'double precision' as const;
+  toCode(t: string): Code {
+    return columnCode(this, t, `${t}.doublePrecision()`);
+  }
 }
 
 // autoincrementing two-byte integer
@@ -120,6 +154,13 @@ export class SmallSerialColumn extends IntegerBaseColumn {
   dataType = 'smallserial' as const;
   parseItem = parseInt;
   hasDefault = true as const;
+  toCode(t: string): Code {
+    return columnCode(
+      this,
+      t,
+      `${t}.smallSerial()${numberDataToCode(this.data)}`,
+    );
+  }
 }
 
 // autoincrementing four-byte integer
@@ -127,10 +168,16 @@ export class SerialColumn extends IntegerBaseColumn {
   dataType = 'serial' as const;
   parseItem = parseInt;
   hasDefault = true as const;
+  toCode(t: string): Code {
+    return columnCode(this, t, `${t}.serial()${numberDataToCode(this.data)}`);
+  }
 }
 
 // autoincrementing eight-byte integer
 export class BigSerialColumn extends NumberAsStringBaseColumn {
   dataType = 'bigserial' as const;
   hasDefault = true as const;
+  toCode(t: string): Code {
+    return columnCode(this, t, `${t}.bigSerial()`);
+  }
 }

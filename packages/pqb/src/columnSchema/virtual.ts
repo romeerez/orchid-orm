@@ -10,6 +10,10 @@ export abstract class VirtualColumn extends ColumnType<
   dataType = '';
   operators = Operators.any;
 
+  toCode(): never {
+    throw new Error(`toCode is not implemented for virtual column`);
+  }
+
   create?(
     q: Query,
     ctx: CreateCtx,

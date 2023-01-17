@@ -308,20 +308,31 @@ const stringParams = [
 const stringEmptyParams = ['email', 'url', 'uuid', 'cuid', 'trim'];
 const handleString = typeHandler((column: TextColumn | JSONString) => {
   let type = z.string();
+  const data = column.data;
+
   stringParams.forEach((key) => {
-    const value = (column.data as Record<string, unknown>)[key];
+    const value = (data as Record<string, unknown>)[key];
     if (value !== undefined) {
       type = (
         type as unknown as Record<string, (value: unknown) => z.ZodString>
       )[key](value);
     }
   });
+
   stringEmptyParams.forEach((key) => {
-    const value = (column.data as Record<string, unknown>)[key];
+    const value = (data as Record<string, unknown>)[key];
     if (value) {
       type = (type as unknown as Record<string, () => z.ZodString>)[key]();
     }
   });
+
+  const { arg } = data as { arg?: number };
+  if (arg !== undefined) {
+    type = (
+      type as unknown as Record<string, (len: number) => z.ZodString>
+    ).length(arg);
+  }
+
   return type;
 });
 

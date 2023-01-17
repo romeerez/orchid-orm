@@ -1,4 +1,5 @@
-import { constructType, JSONType } from './typeBase';
+import { constructType, JSONType, toCode } from './typeBase';
+import { singleQuote } from '../../utils';
 
 export interface JSONEnum<
   U extends string = string,
@@ -25,5 +26,12 @@ export const enumType = <U extends string, T extends [U, ...U[]]>(
     dataType: 'enum',
     enum: arrayToEnum(options),
     options,
+    toCode(this: JSONEnum<U, T>, t: string) {
+      return toCode(
+        this,
+        t,
+        `${t}.enum([${options.map(singleQuote).join(', ')}])`,
+      );
+    },
   });
 };

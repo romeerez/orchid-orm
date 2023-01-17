@@ -1,4 +1,4 @@
-import { constructType, JSONType, JSONTypeAny } from './typeBase';
+import { constructType, JSONType, JSONTypeAny, toCode } from './typeBase';
 import { JSONNumber, JSONString, scalarTypes } from './scalarTypes';
 
 export interface JSONRecord<
@@ -33,6 +33,17 @@ export function record<
     dataType: 'record',
     keyType,
     valueType,
+    toCode(this: JSONRecord<KeyType, ValueType>, t: string) {
+      return toCode(
+        this,
+        t,
+        `${t}.record(${
+          args.length === 1
+            ? this.valueType.toCode(t)
+            : `${this.keyType.toCode(t)}, ${this.valueType.toCode(t)}`
+        })`,
+      );
+    },
     deepPartial(this: JSONRecord<KeyType, ValueType>) {
       return {
         ...this,

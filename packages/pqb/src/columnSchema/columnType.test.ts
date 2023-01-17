@@ -1,4 +1,4 @@
-import { ColumnType } from './columnType';
+import { Code, columnCode, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
 import {
   adapter,
@@ -11,6 +11,7 @@ import {
 } from '../test-utils/test-utils';
 import { createDb } from '../db';
 import { columnTypes } from './columnTypes';
+import { IntegerColumn } from './number';
 
 describe('column base', () => {
   useTestDatabase();
@@ -18,6 +19,9 @@ describe('column base', () => {
   class Column extends ColumnType {
     dataType = 'test';
     operators = Operators.any;
+    toCode(t: string): Code {
+      return columnCode(this, t, `${t}.column()`);
+    }
   }
   const column = new Column();
 
@@ -26,12 +30,73 @@ describe('column base', () => {
       expect(column.isPrimaryKey).toBe(false);
       expect(column.primaryKey().isPrimaryKey).toBe(true);
     });
+
+    it('should have toCode', () => {
+      expect(column.primaryKey().toCode('t')).toEqual([
+        't.column()',
+        '.primaryKey()',
+      ]);
+    });
+  });
+
+  describe('.foreignKey', () => {
+    it('should have toCode', () => {
+      class Table {
+        table = 'table';
+        columns = { shape: { column: new IntegerColumn() } };
+      }
+
+      expect(column.foreignKey(() => Table, 'column').toCode('t')).toEqual([
+        't.column()',
+        '.foreignKey(',
+        '()=>Table',
+        `, 'column'`,
+        ')',
+      ]);
+
+      expect(column.foreignKey('table', 'column').toCode('t')).toEqual([
+        't.column()',
+        '.foreignKey(',
+        `'table'`,
+        `, 'column'`,
+        ')',
+      ]);
+
+      expect(
+        column
+          .foreignKey('table', 'column', {
+            name: 'name',
+            match: 'FULL',
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
+          })
+          .toCode('t'),
+      ).toEqual([
+        't.column()',
+        '.foreignKey(',
+        `'table'`,
+        `, 'column'`,
+        ', {',
+        [
+          `name: 'name',`,
+          `match: 'FULL',`,
+          `onUpdate: 'CASCADE',`,
+          `onDelete: 'CASCADE',`,
+        ],
+        '}',
+        ')',
+      ]);
+    });
   });
 
   describe('.hidden', () => {
     it('should mark column as hidden', () => {
       expect(column.isHidden).toBe(false);
       expect(column.hidden().isHidden).toBe(true);
+    });
+
+    it('should have toCode', () => {
+      expect(column.hidden().toCode('t')).toEqual(['t.column()', '.hidden()']);
     });
 
     test('table with hidden column should omit from select it by default', () => {
@@ -79,9 +144,16 @@ describe('column base', () => {
       expect(column.isNullable).toBe(false);
       expect(column.nullable().isNullable).toBe(true);
     });
+
+    it('should have toCode', () => {
+      expect(column.nullable().toCode('t')).toEqual([
+        't.column()',
+        '.nullable()',
+      ]);
+    });
   });
 
-  describe('.encodeFn', () => {
+  describe('.encode', () => {
     it('should set a function to encode value for this column', () => {
       expect(column.encodeFn).toBe(undefined);
       const fn = (input: number) => input.toString();
@@ -89,15 +161,28 @@ describe('column base', () => {
       expect(withEncode.encodeFn).toBe(fn);
       assertType<typeof withEncode.inputType, number>();
     });
+
+    it('should have toCode', () => {
+      expect(
+        column.encode((input: number) => input.toString()).toCode('t'),
+      ).toEqual(['t.column()', '.encode((input)=>input.toString())']);
+    });
   });
 
-  describe('.parseFn', () => {
+  describe('.parse', () => {
     it('should set a function to encode value for this column', () => {
       expect(column.parseFn).toBe(undefined);
       const fn = () => 123;
       const withEncode = column.parse(fn);
       expect(withEncode.parseFn).toBe(fn);
       assertType<typeof withEncode.type, number>();
+    });
+
+    it('should have toCode', () => {
+      expect(column.parse((v) => parseInt(v as string)).toCode('t')).toEqual([
+        't.column()',
+        '.parse((v)=>parseInt(v))',
+      ]);
     });
 
     describe('parsing columns', () => {
@@ -155,6 +240,13 @@ describe('column base', () => {
       createdAt: t.numberTimestamp(),
       updatedAt: t.dateTimestamp(),
     }));
+
+    it('should have toCode', () => {
+      expect(column.as(columnTypes.integer()).toCode('t')).toEqual([
+        't.column()',
+        '.as(t.integer())',
+      ]);
+    });
 
     it('should accept only column of same type and input type', () => {
       columnTypes
@@ -233,121 +325,152 @@ describe('column base', () => {
     });
   });
 
-  describe('timestamp().asNumber()', () => {
-    it('should parse and encode timestamp as a number', async () => {
-      const UserWithNumberTimestamp = db('user', (t) => ({
-        id: t.serial().primaryKey(),
-        name: t.text(),
-        password: t.text(),
-        createdAt: t.timestamp().asNumber(),
-        updatedAt: t.timestamp().asNumber(),
-      }));
-
-      const now = Date.now();
-
-      const createQuery = UserWithNumberTimestamp.create({
-        ...userData,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      expectSql(
-        createQuery.toSql(),
-        `
-          INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
-          VALUES ($1, $2, $3, $4)
-          RETURNING *
-        `,
-        [userData.name, userData.password, new Date(now), new Date(now)],
-      );
-
-      const { id } = await createQuery;
-      const user = await UserWithNumberTimestamp.select(
-        'createdAt',
-        'updatedAt',
-      ).find(id);
-
-      assertType<typeof user, { createdAt: number; updatedAt: number }>();
-
-      expect(typeof user.createdAt).toBe('number');
-      expect(typeof user.updatedAt).toBe('number');
-
-      const updateQuery = UserWithNumberTimestamp.find(id).update({
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      expectSql(
-        updateQuery.toSql(),
-        `
-          UPDATE "user"
-          SET "createdAt" = $1, "updatedAt" = $2
-          WHERE "user"."id" = $3
-        `,
-        [new Date(now), new Date(now), id],
-      );
+  describe('.default', () => {
+    it('should have toCode', () => {
+      expect(column.default(123).toCode('t')).toEqual([
+        't.column()',
+        '.default(123)',
+      ]);
     });
   });
 
-  describe('timestamp().asDate()', () => {
-    it('should parse and encode timestamp as a number', async () => {
-      columnTypes
-        .text(0, 100)
-        .encode((input: number) => input)
-        .parse((text) => parseInt(text))
-        .as(columnTypes.integer());
+  describe('.index', () => {
+    it('should have toCode', () => {
+      expect(
+        column
+          .index({
+            expression: 'expression',
+            collate: 'collate',
+            operator: 'operator',
+            order: 'order',
+            name: 'name',
+            using: 'using',
+            include: 'include',
+            with: 'with',
+            tablespace: 'tablespace',
+            where: 'where',
+          })
+          .toCode('t'),
+      ).toEqual([
+        't.column()',
+        '.index(',
+        '{',
+        [
+          `expression: 'expression',`,
+          `collate: 'collate',`,
+          `operator: 'operator',`,
+          `order: 'order',`,
+          `name: 'name',`,
+          `using: 'using',`,
+          `include: 'include',`,
+          `with: 'with',`,
+          `tablespace: 'tablespace',`,
+          `where: 'where',`,
+        ],
+        '}',
+        ')',
+      ]);
+    });
+  });
 
-      const UserWithNumberTimestamp = db('user', (t) => ({
-        id: t.serial().primaryKey(),
-        name: t.text(),
-        password: t.text(),
-        createdAt: columnTypes.timestamp().asDate(),
-        updatedAt: columnTypes.timestamp().asDate(),
-      }));
+  describe('unique', () => {
+    it('should have toCode', () => {
+      expect(column.unique().toCode('t')).toEqual([
+        't.column()',
+        '.unique(',
+        ')',
+      ]);
+    });
+  });
 
-      const now = new Date();
+  describe('comment', () => {
+    it('should have toCode', () => {
+      expect(column.comment('comment').toCode('t')).toEqual([
+        't.column()',
+        `.comment('comment')`,
+      ]);
+    });
+  });
 
-      const createQuery = UserWithNumberTimestamp.create({
-        ...userData,
-        createdAt: now,
-        updatedAt: now,
-      });
+  describe('validationDefault', () => {
+    it('should have toCode', () => {
+      expect(column.validationDefault('value').toCode('t')).toEqual([
+        't.column()',
+        `.validationDefault('value')`,
+      ]);
 
-      expectSql(
-        createQuery.toSql(),
-        `
-          INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
-          VALUES ($1, $2, $3, $4)
-          RETURNING *
-        `,
-        [userData.name, userData.password, new Date(now), new Date(now)],
-      );
+      expect(column.validationDefault(123).toCode('t')).toEqual([
+        't.column()',
+        `.validationDefault(123)`,
+      ]);
 
-      const { id } = await createQuery;
-      const user = await UserWithNumberTimestamp.select(
-        'createdAt',
-        'updatedAt',
-      ).find(id);
+      expect(column.validationDefault(() => 'value').toCode('t')).toEqual([
+        't.column()',
+        `.validationDefault(()=>'value')`,
+      ]);
+    });
+  });
 
-      assertType<typeof user, { createdAt: Date; updatedAt: Date }>();
+  describe('compression', () => {
+    it('should have toCode', () => {
+      expect(column.compression('compression').toCode('t')).toEqual([
+        't.column()',
+        `.compression('compression')`,
+      ]);
+    });
+  });
 
-      expect(user.createdAt).toBeInstanceOf(Date);
-      expect(user.updatedAt).toBeInstanceOf(Date);
+  describe('collate', () => {
+    it('should have toCode', () => {
+      expect(column.collate('collate').toCode('t')).toEqual([
+        't.column()',
+        `.collate('collate')`,
+      ]);
+    });
+  });
 
-      const updateQuery = UserWithNumberTimestamp.find(id).update({
-        createdAt: now,
-        updatedAt: now,
-      });
+  describe('modifyQuery', () => {
+    it('should have toCode', () => {
+      expect(column.modifyQuery((table) => table).toCode('t')).toEqual([
+        't.column()',
+        `.modifyQuery((table)=>table)`,
+      ]);
+    });
+  });
 
-      expectSql(
-        updateQuery.toSql(),
-        `
-          UPDATE "user"
-          SET "createdAt" = $1, "updatedAt" = $2
-          WHERE "user"."id" = $3
-        `,
-        [now, now, id],
-      );
+  describe('transform', () => {
+    it('should have toCode', () => {
+      expect(column.transform((s) => s).toCode('t')).toEqual([
+        't.column()',
+        '.transform((s)=>s)',
+      ]);
+    });
+  });
+
+  describe('to', () => {
+    it('should have toCode', () => {
+      expect(
+        column
+          .to((s) => parseInt(s as string), new IntegerColumn())
+          .toCode('t'),
+      ).toEqual(['t.column()', '.to((s)=>parseInt(s), ', 't.integer()', ')']);
+    });
+  });
+
+  describe('refine', () => {
+    it('should have toCode', () => {
+      expect(
+        column.refine((s) => (s as string).length > 0).toCode('t'),
+      ).toEqual(['t.column()', '.refine((s)=>s.length > 0)']);
+    });
+  });
+
+  describe('superRefine', () => {
+    it('should have toCode', () => {
+      expect(column.superRefine((s) => s).toCode('t')).toEqual([
+        't.column()',
+        '.superRefine((s)=>s)',
+      ]);
     });
   });
 });

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.8.1
+
+### Patch Changes
+
+- Add ability to convert columns to code
+
 ## 0.8.0
 
 ### Minor Changes

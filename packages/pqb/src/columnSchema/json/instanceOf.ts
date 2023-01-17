@@ -1,4 +1,4 @@
-import { constructType, JSONType } from './typeBase';
+import { constructType, JSONType, toCode } from './typeBase';
 
 export interface JSONInstanceOf<T extends Class>
   extends JSONType<T, 'instanceOf'> {
@@ -12,5 +12,8 @@ export const instanceOf = <T extends Class>(cls: T) => {
   return constructType<JSONInstanceOf<T>>({
     dataType: 'instanceOf',
     class: cls,
+    toCode(this: JSONInstanceOf<T>, t: string) {
+      return toCode(this, t, `${t}.instanceOf(${this.class.name})`);
+    },
   });
 };

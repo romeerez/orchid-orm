@@ -1,4 +1,4 @@
-import { ColumnData, ColumnType } from './columnType';
+import { Code, columnCode, ColumnData, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
 import {
   scalarTypes,
@@ -20,7 +20,7 @@ import {
   tuple,
   union,
   JSONTypeAny,
-} from './json/index';
+} from './json';
 
 export * from './json/index';
 
@@ -60,9 +60,17 @@ export class JSONColumn<
       typeof schemaOrFn === 'function' ? schemaOrFn(jsonTypes) : schemaOrFn;
     this.data = { schema };
   }
+
+  toCode(t: string): Code {
+    const { schema } = this.data;
+    return columnCode(this, t, `${t}.json((t) => ${schema.toCode('t')})`);
+  }
 }
 
 export class JSONTextColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'json' as const;
   operators = Operators.text;
+  toCode(t: string): Code {
+    return columnCode(this, t, `${t}.jsonText()`);
+  }
 }

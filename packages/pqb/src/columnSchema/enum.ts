@@ -1,4 +1,4 @@
-import { ColumnType } from './columnType';
+import { Code, columnCode, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
 
 export class EnumColumn<
@@ -10,6 +10,16 @@ export class EnumColumn<
 
   constructor(public enumName: string, public options: T) {
     super();
+  }
+
+  toCode(t: string): Code {
+    return columnCode(
+      this,
+      t,
+      `${t}.enum('${this.enumName}', [${this.options
+        .map((option) => `'${option}'`)
+        .join(', ')}])`,
+    );
   }
 
   toSql() {

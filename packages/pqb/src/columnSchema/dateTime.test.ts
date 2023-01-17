@@ -1,4 +1,10 @@
-import { assertType, db } from '../test-utils/test-utils';
+import {
+  assertType,
+  db,
+  expectSql,
+  userData,
+  useTestDatabase,
+} from '../test-utils/test-utils';
 import {
   DateColumn,
   IntervalColumn,
@@ -8,8 +14,11 @@ import {
   TimestampWithTimeZoneColumn,
   TimeWithTimeZoneColumn,
 } from './dateTime';
+import { columnTypes } from './columnTypes';
 
 describe('date time columns', () => {
+  useTestDatabase();
+
   describe('date', () => {
     it('should output string', async () => {
       const result = await db.get(
@@ -18,6 +27,17 @@ describe('date time columns', () => {
       expect(result).toBe('1999-01-08');
 
       assertType<typeof result, string>();
+    });
+
+    it('should have toCode', () => {
+      const column = new DateColumn();
+      expect(column.toCode('t')).toBe('t.date()');
+
+      const now = new Date();
+      const s = now.toISOString();
+      expect(column.min(now).max(now).toCode('t')).toBe(
+        `t.date().min(new Date('${s}')).max(new Date('${s}'))`,
+      );
     });
   });
 
@@ -29,6 +49,17 @@ describe('date time columns', () => {
       expect(result).toBe('1999-01-08 04:05:06');
 
       assertType<typeof result, string>();
+    });
+
+    it('should have toCode', () => {
+      expect(new TimestampColumn().toCode('t')).toBe('t.timestamp()');
+      expect(new TimestampColumn(10).toCode('t')).toBe('t.timestamp(10)');
+
+      const now = new Date();
+      const s = now.toISOString();
+      expect(new TimestampColumn().min(now).max(now).toCode('t')).toEqual(
+        `t.timestamp().min(new Date('${s}')).max(new Date('${s}'))`,
+      );
     });
   });
 
@@ -44,6 +75,23 @@ describe('date time columns', () => {
 
       assertType<typeof result, string>();
     });
+
+    it('should have toCode', () => {
+      expect(new TimestampWithTimeZoneColumn().toCode('t')).toBe(
+        't.timestampWithTimeZone()',
+      );
+      expect(new TimestampWithTimeZoneColumn(10).toCode('t')).toBe(
+        't.timestampWithTimeZone(10)',
+      );
+
+      const now = new Date();
+      const s = now.toISOString();
+      expect(
+        new TimestampWithTimeZoneColumn().min(now).max(now).toCode('t'),
+      ).toEqual(
+        `t.timestampWithTimeZone().min(new Date('${s}')).max(new Date('${s}'))`,
+      );
+    });
   });
 
   describe('time', () => {
@@ -54,6 +102,17 @@ describe('date time columns', () => {
       expect(result).toBe('12:00:00');
 
       assertType<typeof result, string>();
+    });
+
+    it('should have toCode', () => {
+      expect(new TimeColumn().toCode('t')).toBe('t.time()');
+      expect(new TimeColumn(10).toCode('t')).toBe('t.time(10)');
+
+      const now = new Date();
+      const s = now.toISOString();
+      expect(new TimeColumn().min(now).max(now).toCode('t')).toEqual(
+        `t.time().min(new Date('${s}')).max(new Date('${s}'))`,
+      );
     });
   });
 
@@ -68,6 +127,23 @@ describe('date time columns', () => {
       expect(result).toBe('12:00:00+00');
 
       assertType<typeof result, string>();
+    });
+
+    it('should have toCode', () => {
+      expect(new TimeWithTimeZoneColumn().toCode('t')).toBe(
+        't.timeWithTimeZone()',
+      );
+      expect(new TimeWithTimeZoneColumn(10).toCode('t')).toBe(
+        't.timeWithTimeZone(10)',
+      );
+
+      const now = new Date();
+      const s = now.toISOString();
+      expect(
+        new TimeWithTimeZoneColumn().min(now).max(now).toCode('t'),
+      ).toEqual(
+        `t.timeWithTimeZone().min(new Date('${s}')).max(new Date('${s}'))`,
+      );
     });
   });
 
@@ -89,6 +165,134 @@ describe('date time columns', () => {
       });
 
       assertType<typeof result, TimeInterval>();
+    });
+
+    it('should have toCode', () => {
+      expect(new IntervalColumn().toCode('t')).toBe('t.interval()');
+      expect(new IntervalColumn('fields').toCode('t')).toBe(
+        "t.interval('fields')",
+      );
+      expect(new IntervalColumn('fields', 10).toCode('t')).toBe(
+        "t.interval('fields', 10)",
+      );
+    });
+  });
+
+  describe('asNumber', () => {
+    it('should parse and encode timestamp as a number', async () => {
+      const UserWithNumberTimestamp = db('user', (t) => ({
+        id: t.serial().primaryKey(),
+        name: t.text(),
+        password: t.text(),
+        createdAt: t.timestamp().asNumber(),
+        updatedAt: t.timestamp().asNumber(),
+      }));
+
+      const now = Date.now();
+
+      const createQuery = UserWithNumberTimestamp.create({
+        ...userData,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      expectSql(
+        createQuery.toSql(),
+        `
+          INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
+          VALUES ($1, $2, $3, $4)
+          RETURNING *
+        `,
+        [userData.name, userData.password, new Date(now), new Date(now)],
+      );
+
+      const { id } = await createQuery;
+      const user = await UserWithNumberTimestamp.select(
+        'createdAt',
+        'updatedAt',
+      ).find(id);
+
+      assertType<typeof user, { createdAt: number; updatedAt: number }>();
+
+      expect(typeof user.createdAt).toBe('number');
+      expect(typeof user.updatedAt).toBe('number');
+
+      const updateQuery = UserWithNumberTimestamp.find(id).update({
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      expectSql(
+        updateQuery.toSql(),
+        `
+          UPDATE "user"
+          SET "createdAt" = $1, "updatedAt" = $2
+          WHERE "user"."id" = $3
+        `,
+        [new Date(now), new Date(now), id],
+      );
+    });
+  });
+
+  describe('asDate', () => {
+    it('should parse and encode timestamp as a number', async () => {
+      columnTypes
+        .text(0, 100)
+        .encode((input: number) => input)
+        .parse((text) => parseInt(text))
+        .as(columnTypes.integer());
+
+      const UserWithNumberTimestamp = db('user', (t) => ({
+        id: t.serial().primaryKey(),
+        name: t.text(),
+        password: t.text(),
+        createdAt: columnTypes.timestamp().asDate(),
+        updatedAt: columnTypes.timestamp().asDate(),
+      }));
+
+      const now = new Date();
+
+      const createQuery = UserWithNumberTimestamp.create({
+        ...userData,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      expectSql(
+        createQuery.toSql(),
+        `
+          INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
+          VALUES ($1, $2, $3, $4)
+          RETURNING *
+        `,
+        [userData.name, userData.password, new Date(now), new Date(now)],
+      );
+
+      const { id } = await createQuery;
+      const user = await UserWithNumberTimestamp.select(
+        'createdAt',
+        'updatedAt',
+      ).find(id);
+
+      assertType<typeof user, { createdAt: Date; updatedAt: Date }>();
+
+      expect(user.createdAt).toBeInstanceOf(Date);
+      expect(user.updatedAt).toBeInstanceOf(Date);
+
+      const updateQuery = UserWithNumberTimestamp.find(id).update({
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      expectSql(
+        updateQuery.toSql(),
+        `
+          UPDATE "user"
+          SET "createdAt" = $1, "updatedAt" = $2
+          WHERE "user"."id" = $3
+        `,
+        [now, now, id],
+      );
     });
   });
 });

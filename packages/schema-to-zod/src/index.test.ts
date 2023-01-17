@@ -380,7 +380,7 @@ describe('schema to zod', () => {
 
     expect(columnOrJsonToZod(type.trim()).parse('  trimmed  ')).toBe('trimmed');
 
-    expect(() => columnOrJsonToZod(type.nonempty()).parse('')).toThrow(
+    expect(() => columnOrJsonToZod(type.nonEmpty()).parse('')).toThrow(
       'String must contain at least 1 character(s)',
     );
   };
@@ -395,6 +395,20 @@ describe('schema to zod', () => {
 
       testStringMethods(t[method as 'text']());
     });
+
+    if (method === 'varchar' || method === 'char') {
+      it('should convert to string with limit', () => {
+        const schema = columnToZod(t[method as 'varchar'](3));
+
+        expect(() => schema.parse('')).toThrow(
+          'String must contain at least 3 character(s)',
+        );
+
+        expect(() => schema.parse('1234')).toThrow(
+          'String must contain at most 3 character(s)',
+        );
+      });
+    }
   });
 
   describe('bytea', () => {
@@ -654,7 +668,7 @@ describe('schema to zod', () => {
       'Array must contain at most 1 element(s)',
     );
 
-    expect(() => columnOrJsonToZod(type.nonempty()).parse([])).toThrow(
+    expect(() => columnOrJsonToZod(type.nonEmpty()).parse([])).toThrow(
       'Array must contain at least 1 element(s)',
     );
   };
@@ -949,7 +963,7 @@ describe('schema to zod', () => {
         ).toThrow('Invalid input');
 
         expect(() =>
-          columnOrJsonToZod(type.nonempty()).parse(new Set()),
+          columnOrJsonToZod(type.nonEmpty()).parse(new Set()),
         ).toThrow('Invalid input');
       });
     });

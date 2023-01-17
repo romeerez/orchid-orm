@@ -43,8 +43,7 @@ import {
 } from './dateTime';
 import { BooleanColumn } from './boolean';
 import { EnumColumn } from './enum';
-import { JSONColumn, JSONTextColumn, JSONTypes } from './json';
-import { JSONTypeAny } from './json/typeBase';
+import { JSONColumn, JSONTextColumn, JSONTypes, JSONTypeAny } from './json';
 import { ArrayColumn } from './array';
 import {
   ColumnNameOfTable,

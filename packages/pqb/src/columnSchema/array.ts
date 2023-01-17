@@ -1,13 +1,15 @@
-import { ColumnData, ColumnType } from './columnType';
+import { Code, columnCode, ColumnData, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
 import { assignMethodsToClass } from './utils';
 import { arrayMethods } from './commonMethods';
+import { toArray } from '../utils';
 
 export type ArrayData<Item extends ColumnType> = ColumnData & {
   item: Item;
   min?: number;
   max?: number;
   length?: number;
+  isNonEmpty?: true;
 };
 
 type ArrayMethods = typeof arrayMethods;
@@ -34,18 +36,42 @@ export class ArrayColumn<Item extends ColumnType> extends ColumnType<
     return `${this.data.item.toSQL()}[]`;
   }
 
-  parseFn = (input: unknown) => {
-    const entries: unknown[] = [];
-    parseArray(
-      input as string,
-      0,
-      (input as string).length,
-      entries,
-      false,
-      this.data.item,
-    );
-    return entries;
-  };
+  toCode(this: ArrayColumn<Item>, t: string): Code {
+    let code = ')';
+
+    const { min, max, length, isNonEmpty } = this.data;
+
+    if (min !== undefined && (!isNonEmpty || (isNonEmpty && min !== 1)))
+      code += `.min(${min})`;
+
+    if (max !== undefined) code += `.max(${max})`;
+
+    if (length !== undefined) code += `.length(${length})`;
+
+    return columnCode(this, t, [
+      't.array(',
+      ...toArray(this.data.item.toCode(t)),
+      code,
+    ]);
+  }
+
+  parseFn = Object.assign(
+    (input: unknown) => {
+      const entries: unknown[] = [];
+      parseArray(
+        input as string,
+        0,
+        (input as string).length,
+        entries,
+        false,
+        this.data.item,
+      );
+      return entries;
+    },
+    {
+      hideFromCode: true,
+    },
+  );
 }
 
 const parseArray = (

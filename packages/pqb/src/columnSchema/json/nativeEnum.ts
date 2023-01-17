@@ -1,4 +1,4 @@
-import { constructType, JSONType } from './typeBase';
+import { constructType, JSONType, toCode } from './typeBase';
 
 export interface JSONNativeEnum<T extends EnumLike>
   extends JSONType<T[keyof T], 'nativeEnum'> {
@@ -26,5 +26,8 @@ export const nativeEnum = <T extends EnumLike>(givenEnum: T) => {
     dataType: 'nativeEnum',
     enum: givenEnum,
     options,
+    toCode(this: JSONNativeEnum<T>, t: string) {
+      return toCode(this, t, `${t}.nativeEnum(enum)`);
+    },
   });
 };

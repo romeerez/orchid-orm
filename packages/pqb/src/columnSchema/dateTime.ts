@@ -1,4 +1,4 @@
-import { ColumnData, ColumnType } from './columnType';
+import { Code, columnCode, ColumnData, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
 import { joinTruthy } from '../utils';
 import { dateTypeMethods } from './commonMethods';
@@ -37,9 +37,21 @@ export abstract class DateBaseColumn extends ColumnType<
 
 assignMethodsToClass(DateBaseColumn, dateTypeMethods);
 
+const dateDataToCode = (data: DateColumnData) => {
+  let code = '';
+
+  if (data.min) code += `.min(new Date('${data.min.toISOString()}'))`;
+  if (data.max) code += `.max(new Date('${data.max.toISOString()}'))`;
+
+  return code;
+};
+
 // date	4 bytes	date (no time of day)	4713 BC	5874897 AD 1 day
 export class DateColumn extends DateBaseColumn {
   dataType = 'date' as const;
+  toCode(t: string): Code {
+    return columnCode(this, t, `${t}.date()${dateDataToCode(this.data)}`);
+  }
 }
 
 export type DateTimeColumnData = DateColumnData & {
@@ -84,6 +96,14 @@ export class TimestampColumn<
   Precision extends number | undefined = undefined,
 > extends DateTimeBaseClass<Precision> {
   dataType = 'timestamp' as const;
+  toCode(t: string): Code {
+    const { precision } = this.data;
+    return columnCode(
+      this,
+      t,
+      `${t}.timestamp(${precision || ''})${dateDataToCode(this.data)}`,
+    );
+  }
 }
 
 // timestamp [ (p) ] with time zone	8 bytes	both date and time, with time zone	4713 BC	294276 AD	1 microsecond
@@ -92,6 +112,16 @@ export class TimestampWithTimeZoneColumn<
 > extends DateTimeWithTimeZoneBaseClass<Precision> {
   dataType = 'timestamp with time zone' as const;
   baseDataType = 'timestamp' as const;
+  toCode(t: string): Code {
+    const { precision } = this.data;
+    return columnCode(
+      this,
+      t,
+      `${t}.timestampWithTimeZone(${precision || ''})${dateDataToCode(
+        this.data,
+      )}`,
+    );
+  }
 }
 
 // time [ (p) ] [ without time zone ]	8 bytes	time of day (no date)	00:00:00	24:00:00	1 microsecond
@@ -99,6 +129,14 @@ export class TimeColumn<
   Precision extends number | undefined = undefined,
 > extends DateTimeBaseClass<Precision> {
   dataType = 'time' as const;
+  toCode(t: string): Code {
+    const { precision } = this.data;
+    return columnCode(
+      this,
+      t,
+      `${t}.time(${precision || ''})${dateDataToCode(this.data)}`,
+    );
+  }
 }
 
 // time [ (p) ] with time zone	12 bytes	time of day (no date), with time zone	00:00:00+1559	24:00:00-1559	1 microsecond
@@ -107,6 +145,14 @@ export class TimeWithTimeZoneColumn<
 > extends DateTimeWithTimeZoneBaseClass<Precision> {
   dataType = 'time with time zone' as const;
   baseDataType = 'time' as const;
+  toCode(t: string): Code {
+    const { precision } = this.data;
+    return columnCode(
+      this,
+      t,
+      `${t}.timeWithTimeZone(${precision || ''})${dateDataToCode(this.data)}`,
+    );
+  }
 }
 
 export type TimeInterval = {
@@ -124,7 +170,7 @@ export class IntervalColumn<
   Precision extends number | undefined = undefined,
 > extends ColumnType<TimeInterval, typeof Operators.date> {
   dataType = 'interval' as const;
-  data: DateTimeColumnData & { fields: Fields; precision: Precision };
+  data: ColumnData & { fields: Fields; precision: Precision };
   operators = Operators.date;
 
   constructor(fields?: Fields, precision?: Precision) {
@@ -134,6 +180,17 @@ export class IntervalColumn<
       fields: Fields;
       precision: Precision;
     };
+  }
+
+  toCode(t: string): Code {
+    const { fields, precision } = this.data;
+    return columnCode(
+      this,
+      t,
+      `${t}.interval(${[fields && `'${fields}'`, precision && String(precision)]
+        .filter((part) => part)
+        .join(', ')})`,
+    );
   }
 
   toSQL() {

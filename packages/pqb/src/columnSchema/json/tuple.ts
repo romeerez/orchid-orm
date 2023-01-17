@@ -1,4 +1,10 @@
-import { constructType, DeepPartial, JSONType, JSONTypeAny } from './typeBase';
+import {
+  constructType,
+  DeepPartial,
+  JSONType,
+  JSONTypeAny,
+  toCode,
+} from './typeBase';
 
 export interface JSONTuple<
   T extends JSONTupleItems | [] = JSONTupleItems,
@@ -39,6 +45,15 @@ export const tuple = <
     dataType: 'tuple',
     items,
     restType: rest,
+    toCode(this: JSONTuple<T, Rest>, t: string) {
+      return toCode(
+        this,
+        t,
+        `${t}.tuple([${this.items.map((item) => item.toCode(t)).join(', ')}]${
+          this.restType ? `, ${this.restType.toCode(t)}` : ''
+        })`,
+      );
+    },
     rest<Rest extends JSONTypeAny | null>(rest: Rest): JSONTuple<T, Rest> {
       return {
         ...this,
