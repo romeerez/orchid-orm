@@ -1,5 +1,11 @@
 # pqb
 
+## 0.8.3
+
+### Patch Changes
+
+- Fix export
+
 ## 0.8.2
 
 ### Patch Changes
