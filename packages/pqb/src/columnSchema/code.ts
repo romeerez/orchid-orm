@@ -289,14 +289,14 @@ export const columnDefaultArgumentToCode = (value: unknown): string => {
 export const foreignKeyArgumentToCode = (
   foreignKey: ForeignKey<string, string[]>,
 ): Code[] => {
-  const code = [];
+  const code: Code = [];
 
   if ('fn' in foreignKey) {
     code.push(foreignKey.fn.toString());
   } else {
     code.push(singleQuote(foreignKey.table));
   }
-  code.push(`, ${singleQuote(foreignKey.columns[0])}`);
+  addCode(code, `, ${singleQuote(foreignKey.columns[0])}`);
 
   const hasOptions =
     foreignKey.name ||
@@ -314,7 +314,9 @@ export const foreignKeyArgumentToCode = (
     if (foreignKey.onDelete)
       arr.push(`onDelete: ${singleQuote(foreignKey.onDelete)},`);
 
-    code.push(', {', arr, '}');
+    addCode(code, ', {');
+    code.push(arr);
+    addCode(code, '}');
   }
 
   return code;
@@ -329,7 +331,9 @@ export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
 
   if (foreignKey) {
     addCode(code, `.foreignKey(`);
-    addCode(code, foreignKeyArgumentToCode(foreignKey));
+    for (const part of foreignKeyArgumentToCode(foreignKey)) {
+      addCode(code, part);
+    }
     addCode(code, ')');
   }
 

@@ -15,9 +15,14 @@ export type RakeDbConfig = {
   requireTs(path: string): void;
   noPrimaryKey?: NoPrimaryKeyOption;
   appCodeUpdater?: AppCodeUpdater;
+  useCodeUpdater?: boolean;
 } & QueryLogOptions;
 
-export type AppCodeUpdater = (ast: RakeDbAst) => Promise<void>;
+export type AppCodeUpdater = (params: {
+  ast: RakeDbAst;
+  options: AdapterOptions;
+  cache: object;
+}) => Promise<void>;
 
 export const migrationConfigDefaults = {
   migrationsPath: path.resolve(process.cwd(), 'src', 'migrations'),
@@ -25,6 +30,7 @@ export const migrationConfigDefaults = {
   requireTs: require,
   log: true,
   logger: console,
+  useCodeUpdaterByDefault: true,
 };
 
 export const getMigrationConfigWithDefaults = (

@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs/promises';
 
 jest.mock('fs/promises', () => ({
+  mkdir: jest.fn(),
   readFile: jest.fn(),
   writeFile: jest.fn(),
 }));

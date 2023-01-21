@@ -1,5 +1,15 @@
 # rake-db
 
+## 2.2.4
+
+### Patch Changes
+
+- Add --code cli argument to rake-db
+- Improve codegen
+- Updated dependencies
+- Updated dependencies
+  - pqb@0.8.4
+
 ## 2.2.3
 
 ### Patch Changes

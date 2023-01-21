@@ -1,18 +1,26 @@
 import { Migration } from './migration/migration';
 import { MaybeArray, toArray, TransactionAdapter } from 'pqb';
 
+export const asMock = (fn: unknown) => fn as jest.Mock;
+
 let db: Migration | undefined;
 
 export const getDb = () => {
   if (db) return db;
 
-  db = new Migration({} as unknown as TransactionAdapter, true, {
-    log: false,
-    migrationsPath: 'migrations-path',
-    migrationsTable: 'schemaMigrations',
-    requireTs: require,
-    appCodeUpdater: appCodeUpdaterMock,
-  });
+  db = new Migration(
+    {} as unknown as TransactionAdapter,
+    true,
+    {
+      log: false,
+      migrationsPath: 'migrations-path',
+      migrationsTable: 'schemaMigrations',
+      requireTs: require,
+      appCodeUpdater: appCodeUpdaterMock,
+    },
+    {},
+    {},
+  );
   db.query = queryMock;
   return db;
 };

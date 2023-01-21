@@ -13,6 +13,7 @@ import {
   ColumnComment,
   ColumnsShapeCallback,
   Migration,
+  runCodeUpdater,
   TableOptions,
 } from './migration';
 import {
@@ -56,7 +57,7 @@ export const createTable = async (
     await migration.query(query);
   }
 
-  await migration.options.appCodeUpdater?.(ast);
+  await runCodeUpdater(migration, ast);
 };
 
 const makeAst = (

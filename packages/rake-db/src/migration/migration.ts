@@ -17,6 +17,7 @@ import {
   TypeParsers,
   raw,
   TextColumn,
+  AdapterOptions,
 } from 'pqb';
 import { createTable } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
@@ -67,6 +68,8 @@ export class Migration extends TransactionAdapter {
     tx: TransactionAdapter,
     public up: boolean,
     public options: RakeDbConfig,
+    public adapterOptions: AdapterOptions,
+    public appCodeUpdaterCache: object,
   ) {
     super(tx, tx.client, tx.types);
     this.log = logParamToLogObject(options.logger || console, options.log);
@@ -186,7 +189,7 @@ export class Migration extends TransactionAdapter {
       `ALTER TABLE ${quoteTable(ast.from)} RENAME TO "${ast.to}"`,
     );
 
-    await this.options.appCodeUpdater?.(ast);
+    await runCodeUpdater(this, ast);
   }
 
   addColumn(
@@ -417,7 +420,7 @@ const createSchema = async (
     `${ast.action === 'create' ? 'CREATE' : 'DROP'} SCHEMA "${name}"`,
   );
 
-  await migration.options.appCodeUpdater?.(ast);
+  await runCodeUpdater(migration, ast);
 };
 
 const createExtension = async (
@@ -450,7 +453,7 @@ const createExtension = async (
 
   await migration.query(query);
 
-  await migration.options.appCodeUpdater?.(ast);
+  await runCodeUpdater(migration, ast);
 };
 
 const queryExists = (
@@ -458,4 +461,12 @@ const queryExists = (
   sql: { text: string; values: unknown[] },
 ) => {
   return db.query(sql).then(({ rowCount }) => rowCount > 0);
+};
+
+export const runCodeUpdater = (migration: Migration, ast: RakeDbAst) => {
+  return migration.options.appCodeUpdater?.({
+    ast,
+    options: migration.adapterOptions,
+    cache: migration.appCodeUpdaterCache,
+  });
 };

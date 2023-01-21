@@ -45,17 +45,13 @@ describe('column base', () => {
         columns = { shape: { column: new IntegerColumn() } };
       }
 
-      expect(column.foreignKey(() => Table, 'column').toCode('t')).toEqual([
-        't.column().foreignKey(',
-        ['()=>Table', `, 'column'`],
-        ')',
-      ]);
+      expect(column.foreignKey(() => Table, 'column').toCode('t')).toBe(
+        `t.column().foreignKey(()=>Table, 'column')`,
+      );
 
-      expect(column.foreignKey('table', 'column').toCode('t')).toEqual([
-        't.column().foreignKey(',
-        [`'table'`, `, 'column'`],
-        ')',
-      ]);
+      expect(column.foreignKey('table', 'column').toCode('t')).toBe(
+        `t.column().foreignKey('table', 'column')`,
+      );
 
       expect(
         column
@@ -67,20 +63,14 @@ describe('column base', () => {
           })
           .toCode('t'),
       ).toEqual([
-        't.column().foreignKey(',
+        `t.column().foreignKey('table', 'column', {`,
         [
-          `'table'`,
-          `, 'column'`,
-          ', {',
-          [
-            `name: 'name',`,
-            `match: 'FULL',`,
-            `onUpdate: 'CASCADE',`,
-            `onDelete: 'CASCADE',`,
-          ],
-          '}',
+          `name: 'name',`,
+          `match: 'FULL',`,
+          `onUpdate: 'CASCADE',`,
+          `onDelete: 'CASCADE',`,
         ],
-        ')',
+        '})',
       ]);
     });
   });

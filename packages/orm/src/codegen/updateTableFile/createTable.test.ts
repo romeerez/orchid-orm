@@ -1,10 +1,12 @@
 import { updateTableFile } from './updateTableFile';
-import { ast, makeTestWritten, tablePath } from '../testUtils';
+import { asMock, ast, makeTestWritten, tablePath } from '../testUtils';
 import path from 'path';
+import fs from 'fs/promises';
 
 jest.mock('fs/promises', () => ({
   readFile: jest.fn(),
   writeFile: jest.fn(),
+  mkdir: jest.fn(),
 }));
 
 const baseTablePath = path.resolve('baseTable.ts');
@@ -44,6 +46,10 @@ describe('createTable', () => {
       },
     });
 
+    expect(asMock(fs.mkdir)).toBeCalledWith(path.dirname(tablePath('table')), {
+      recursive: true,
+    });
+
     testWritten(`import { BaseTable } from '../baseTable';
 
 export class Table extends BaseTable {
@@ -64,7 +70,8 @@ export class Table extends BaseTable {
       },
     ),
   }));
-}`);
+}
+`);
   });
 
   it('should add noPrimaryKey prop when noPrimaryKey is `ignore` in ast', async () => {
@@ -81,6 +88,7 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
   }));
-}`);
+}
+`);
   });
 });

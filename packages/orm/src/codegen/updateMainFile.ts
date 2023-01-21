@@ -1,14 +1,16 @@
 import { RakeDbAst } from 'rake-db';
 import fs from 'fs/promises';
+import path from 'path';
 import { NodeArray, ObjectLiteralExpression, Statement } from 'typescript';
 import { toCamelCase, toPascalCase } from '../utils';
 import { AppCodeUpdaterError } from './appCodeUpdater';
 import { FileChanges } from './fileChanges';
 import { ts } from './tsUtils';
 import { getImportPath } from './utils';
+import { AdapterOptions, singleQuote } from 'pqb';
 
 type Context = {
-  path: string;
+  filePath: string;
   tablePath: (name: string) => string;
   statements: NodeArray<Statement>;
   object: ObjectLiteralExpression;
@@ -19,12 +21,48 @@ type Context = {
 const libraryName = 'orchid-orm';
 const importKey = 'orchidORM';
 
+const newFile = (
+  options: AdapterOptions,
+) => `import { orchidORM } from 'orchid-orm';
+
+export const db = orchidORM(
+  {
+    ${optionsToString(options)}
+  },
+  {
+  }
+);
+`;
+
+const optionsToString = (options: AdapterOptions) => {
+  const lines: string[] = [];
+  for (const key in options) {
+    const value = options[key as keyof AdapterOptions];
+    if (typeof value !== 'object' && typeof value !== 'function') {
+      lines.push(
+        `${key}: ${typeof value === 'string' ? singleQuote(value) : value},`,
+      );
+    }
+  }
+  return lines.join('\n    ');
+};
+
 export const updateMainFile = async (
-  path: string,
+  filePath: string,
   tablePath: (name: string) => string,
   ast: RakeDbAst,
+  options: AdapterOptions,
 ) => {
-  const content = await fs.readFile(path, 'utf-8');
+  const result = await fs.readFile(filePath, 'utf-8').then(
+    (content) => ({ error: undefined, content }),
+    (error) => {
+      return { error, content: undefined };
+    },
+  );
+
+  if (result.error && result.error.code !== 'ENOENT') throw result.error;
+  const content = result.content || newFile(options);
+
   const statements = ts.getStatements(content);
 
   const importName = ts.import.getStatementsImportedName(
@@ -46,7 +84,7 @@ export const updateMainFile = async (
   const spaces = ts.spaces.getAtLine(content, object.end);
 
   const context: Context = {
-    path,
+    filePath,
     tablePath,
     statements,
     object,
@@ -54,20 +92,28 @@ export const updateMainFile = async (
     spaces,
   };
 
+  let write: string | undefined;
   if (ast.type === 'table') {
     if (ast.action === 'create') {
-      return fs.writeFile(path, createTable(context, ast));
+      write = createTable(context, ast);
     } else {
-      return fs.writeFile(path, dropTable(context, ast));
+      write = dropTable(context, ast);
     }
   }
-
   // rename table is not handled because renaming of the class and the file is better to be done by the editor,
   // editor can scan all project files, rename import path and imported class name
+
+  if (write) {
+    if (result.error) {
+      await fs.mkdir(path.dirname(filePath), { recursive: true });
+    }
+
+    await fs.writeFile(filePath, write);
+  }
 };
 
 const createTable = (
-  { path, tablePath, statements, object, content, spaces }: Context,
+  { filePath, tablePath, statements, object, content, spaces }: Context,
   ast: RakeDbAst.Table,
 ) => {
   const key = toCamelCase(ast.name);
@@ -75,7 +121,7 @@ const createTable = (
 
   const changes = new FileChanges(content);
 
-  const importPath = getImportPath(path, tablePath(ast.name));
+  const importPath = getImportPath(filePath, tablePath(ast.name));
   const importPos = ts.import.getEndPos(statements);
   changes.add(
     importPos,
@@ -95,12 +141,12 @@ const createTable = (
 };
 
 const dropTable = (
-  { path, tablePath, statements, object, content }: Context,
+  { filePath, tablePath, statements, object, content }: Context,
   ast: RakeDbAst.Table,
 ) => {
   const changes = new FileChanges(content);
 
-  const importPath = getImportPath(path, tablePath(ast.name));
+  const importPath = getImportPath(filePath, tablePath(ast.name));
   const tableClassName = toPascalCase(ast.name);
   const importNames: string[] = [];
   for (const node of ts.import.iterateWithSource(statements, importPath)) {

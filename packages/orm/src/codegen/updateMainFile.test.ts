@@ -6,25 +6,44 @@ import { asMock, ast, makeTestWritten, tablePath } from './testUtils';
 jest.mock('fs/promises', () => ({
   readFile: jest.fn(),
   writeFile: jest.fn(),
+  mkdir: jest.fn(),
 }));
 
 const mainFilePath = path.resolve('db.ts');
 const testWritten = makeTestWritten(mainFilePath);
+const options = { databaseURL: 'url' };
 
 describe('updateMainFile', () => {
   beforeEach(() => {
     jest.resetAllMocks();
   });
 
-  it('should throw when file is not found', async () => {
-    asMock(fs.readFile).mockRejectedValue(new Error());
-
-    await expect(() =>
-      updateMainFile(mainFilePath, tablePath, ast.addTable),
-    ).rejects.toThrow();
-  });
-
   describe('add table', () => {
+    it('should create file if not exist and add a table', async () => {
+      asMock(fs.readFile).mockRejectedValue(
+        Object.assign(new Error(), { code: 'ENOENT' }),
+      );
+
+      await updateMainFile(mainFilePath, tablePath, ast.addTable, options);
+
+      expect(asMock(fs.mkdir)).toBeCalledWith(path.dirname(mainFilePath), {
+        recursive: true,
+      });
+
+      testWritten(`import { orchidORM } from 'orchid-orm';
+import { Table } from './tables/table';
+
+export const db = orchidORM(
+  {
+    databaseURL: 'url',
+  },
+  {
+    table: Table,
+  }
+);
+`);
+    });
+
     it('should add table', async () => {
       asMock(fs.readFile).mockResolvedValue(`
 import { orchidORM } from 'orchid-orm';
@@ -32,7 +51,7 @@ import { orchidORM } from 'orchid-orm';
 export const db = orchidORM({}, {});
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.addTable);
+      await updateMainFile(mainFilePath, tablePath, ast.addTable, options);
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
@@ -51,7 +70,7 @@ import { orchidORM as custom } from 'orchid-orm';
 export const db = custom({}, {});
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.addTable);
+      await updateMainFile(mainFilePath, tablePath, ast.addTable, options);
 
       testWritten(`
 import { orchidORM as custom } from 'orchid-orm';
@@ -73,7 +92,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.addTable);
+      await updateMainFile(mainFilePath, tablePath, ast.addTable, options);
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
@@ -97,7 +116,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.addTable);
+      await updateMainFile(mainFilePath, tablePath, ast.addTable, options);
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
@@ -123,7 +142,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.dropTable);
+      await updateMainFile(mainFilePath, tablePath, ast.dropTable, options);
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
@@ -143,7 +162,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.dropTable);
+      await updateMainFile(mainFilePath, tablePath, ast.dropTable, options);
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
@@ -163,7 +182,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.dropTable);
+      await updateMainFile(mainFilePath, tablePath, ast.dropTable, options);
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
@@ -187,7 +206,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.dropTable);
+      await updateMainFile(mainFilePath, tablePath, ast.dropTable, options);
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';

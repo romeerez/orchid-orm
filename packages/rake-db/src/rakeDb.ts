@@ -39,17 +39,30 @@ Commands:
   drop                    drop databases
   reset                   drop, create and migrate databases
   g, generate             generate migration file, see below
-  migrate                 migrate all pending migrations
+  migrate                 migrate pending migrations
   rollback                rollback the last migrated
   no or unknown command   prints this message
   
+Migrate arguments:
+  no arguments            run all pending migrations
+  number                  run specific number of pending migrations
+
+Rollback arguments:
+  no arguments            rollback one last applied migration
+  number                  rollback specific number of applied migrations
+  all                     rollback all applied migrations
+
+Migrate and rollback common arguments:
+  --code                  run code updater, overrides \`useCodeUpdater\` option
+  --code false            do not run code updater
+  
 Generate arguments:
 - (required) first argument is migration name
-  * create*      template for create table
-  * change*      template for change table
-  * add*To*      template for add columns
-  * remove*From* template for remove columns
-  * drop*        template for drop table
+  * create*               template for create table
+  * change*               template for change table
+  * add*To*               template for add columns
+  * remove*From*          template for remove columns
+  * drop*                 template for drop table
 
 - other arguments considered as columns with types and optional methods:
   rake-db g createTable id:serial.primaryKey name:text.nullable

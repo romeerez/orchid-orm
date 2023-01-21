@@ -22,10 +22,25 @@ const migrateOrRollback = async (
   args: string[],
   up: boolean,
 ) => {
+  config = { ...config };
   const files = await getMigrationFiles(config, up);
 
-  const argCount = args[0] === 'all' ? Infinity : parseInt(args[0]);
-  let count = isNaN(argCount) ? (up ? Infinity : 1) : argCount;
+  let count = up ? Infinity : 1;
+  let argI = 0;
+  const num = args[0] === 'all' ? Infinity : parseInt(args[0]);
+  if (!isNaN(num)) {
+    argI++;
+    count = num;
+  }
+
+  const arg = args[argI];
+  if (arg === '--code') {
+    config.useCodeUpdater = args[argI + 1] !== 'false';
+  }
+
+  if (!config.useCodeUpdater) delete config.appCodeUpdater;
+
+  const appCodeUpdaterCache = {};
 
   for (const opts of toArray(options)) {
     const db = new Adapter(opts);
@@ -41,12 +56,14 @@ const migrateOrRollback = async (
 
         if (count-- <= 0) break;
 
-        await processMigration(db, up, file, config);
+        await processMigration(db, up, file, config, opts, appCodeUpdaterCache);
         config.logger?.log(`${file.path} ${up ? 'migrated' : 'rolled back'}`);
       }
     } finally {
       await db.close();
     }
+    // use appCodeUpdater only for the first provided options
+    delete config.appCodeUpdater;
   }
 };
 
@@ -57,9 +74,11 @@ const processMigration = async (
   up: boolean,
   file: MigrationFile,
   config: RakeDbConfig,
+  options: AdapterOptions,
+  appCodeUpdaterCache: object,
 ) => {
   await db.transaction(async (tx) => {
-    const db = new Migration(tx, up, config);
+    const db = new Migration(tx, up, config, options, appCodeUpdaterCache);
     setCurrentMigration(db);
     setCurrentMigrationUp(up);
 

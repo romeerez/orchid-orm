@@ -1,5 +1,12 @@
 # pqb
 
+## 0.8.4
+
+### Patch Changes
+
+- Add --code cli argument to rake-db
+- Improve codegen
+
 ## 0.8.3
 
 ### Patch Changes

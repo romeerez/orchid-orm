@@ -4,6 +4,7 @@ import { Code, codeToString, columnsShapeToCode, singleQuote } from 'pqb';
 import { toPascalCase } from '../../utils';
 import fs from 'fs/promises';
 import { UpdateTableFileParams } from './updateTableFile';
+import path from 'path';
 
 export const createTable = async ({
   ast,
@@ -27,8 +28,9 @@ export const createTable = async ({
     `import { ${params.baseTableName} } from '${baseTablePath}';\n`,
     `export class ${toPascalCase(ast.name)} extends ${params.baseTableName} {`,
     props,
-    '}',
+    '}\n',
   ];
 
+  await fs.mkdir(path.dirname(tablePath), { recursive: true });
   await fs.writeFile(tablePath, codeToString(code, '', '  '));
 };

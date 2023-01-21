@@ -20,6 +20,7 @@ import {
   DropMode,
   Migration,
   MigrationColumnTypes,
+  runCodeUpdater,
 } from './migration';
 import { RakeDbAst } from '../ast';
 import { quoteTable } from '../common';
@@ -218,7 +219,7 @@ export const changeTable = async (
     await migration.query(query);
   }
 
-  await migration.options.appCodeUpdater?.(ast);
+  await runCodeUpdater(migration, ast);
 };
 
 const makeAst = (

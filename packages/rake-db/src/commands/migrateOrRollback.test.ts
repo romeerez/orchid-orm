@@ -3,6 +3,8 @@ import { createSchemaMigrations, migrationConfigDefaults } from '../common';
 import { getMigrationFiles } from '../common';
 import { Adapter, noop, TransactionAdapter } from 'pqb';
 import { Migration } from '../migration/migration';
+import { change } from '../migration/change';
+import { asMock } from '../test-utils';
 
 jest.mock('../common', () => ({
   ...jest.requireActual('../common'),
@@ -23,6 +25,7 @@ Adapter.prototype.arrays = getMigratedVersionsArrayMock;
 
 const queryMock = jest.fn();
 Adapter.prototype.query = queryMock;
+queryMock.mockImplementation(() => undefined);
 
 Adapter.prototype.transaction = (cb) => {
   return cb({} as unknown as TransactionAdapter);
@@ -43,17 +46,32 @@ const config = {
   },
 };
 
+const createTableCallback = () => {
+  change(async (db) => {
+    await db.createTable('table', (t) => ({
+      id: t.serial().primaryKey(),
+    }));
+  });
+};
+
+let migrationFiles: { path: string; version: string }[] = [];
+asMock(getMigrationFiles).mockImplementation(() => migrationFiles);
+
+let migratedVersions: string[] = [];
+getMigratedVersionsArrayMock.mockImplementation(() => ({
+  rows: migratedVersions.map((version) => [version]),
+}));
+
 describe('migrateOrRollback', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    requireTsMock.mockImplementation(() => undefined);
   });
 
   describe('migrate', () => {
     it('should work properly', async () => {
-      (getMigrationFiles as jest.Mock).mockReturnValueOnce(files);
-      getMigratedVersionsArrayMock.mockResolvedValueOnce({ rows: [['1']] });
-      queryMock.mockReturnValueOnce(undefined);
-      requireTsMock.mockResolvedValue(undefined);
+      migrationFiles = files;
+      migratedVersions = ['1'];
 
       await migrate(options, config, []);
 
@@ -74,7 +92,7 @@ describe('migrateOrRollback', () => {
     });
 
     it('should create migrations table if it not exist', async () => {
-      (getMigrationFiles as jest.Mock).mockReturnValueOnce([]);
+      migrationFiles = [];
       getMigratedVersionsArrayMock.mockRejectedValueOnce({ code: '42P01' });
       (createSchemaMigrations as jest.Mock).mockResolvedValueOnce(undefined);
 
@@ -86,16 +104,72 @@ describe('migrateOrRollback', () => {
       expect(transactionQueryMock).not.toBeCalled();
       expect(config.logger.log).not.toBeCalled();
     });
+
+    it('should call appCodeUpdater only on the first run', async () => {
+      migrationFiles = [files[0]];
+      migratedVersions = [];
+      requireTsMock.mockImplementationOnce(createTableCallback);
+      const appCodeUpdater = jest.fn();
+
+      await migrate(
+        [options, options],
+        { ...config, appCodeUpdater, useCodeUpdater: true },
+        [],
+      );
+
+      expect(appCodeUpdater).toBeCalledTimes(1);
+    });
+
+    it('should not call appCodeUpdater when useCodeUpdater is set to false in config', async () => {
+      migrationFiles = [files[0]];
+      migratedVersions = [];
+      requireTsMock.mockImplementation(createTableCallback);
+      const appCodeUpdater = jest.fn();
+
+      await migrate(
+        options,
+        { ...config, appCodeUpdater, useCodeUpdater: false },
+        [],
+      );
+
+      expect(appCodeUpdater).not.toBeCalled();
+    });
+
+    it('should not call appCodeUpdater when having argument --code false', async () => {
+      migrationFiles = [files[0]];
+      migratedVersions = [];
+      requireTsMock.mockImplementation(createTableCallback);
+      const appCodeUpdater = jest.fn();
+
+      await migrate(
+        options,
+        { ...config, appCodeUpdater, useCodeUpdater: true },
+        ['--code', 'false'],
+      );
+
+      expect(appCodeUpdater).not.toBeCalled();
+    });
+
+    it('should call appCodeUpdater when having argument --code', async () => {
+      migrationFiles = [files[0]];
+      migratedVersions = [];
+      requireTsMock.mockImplementation(createTableCallback);
+      const appCodeUpdater = jest.fn();
+
+      await migrate(
+        options,
+        { ...config, appCodeUpdater, useCodeUpdater: false },
+        ['--code'],
+      );
+
+      expect(appCodeUpdater).toBeCalled();
+    });
   });
 
   describe('rollback', () => {
     it('should work properly', async () => {
-      (getMigrationFiles as jest.Mock).mockReturnValueOnce(files.reverse());
-      getMigratedVersionsArrayMock.mockResolvedValueOnce({
-        rows: [['1'], ['2']],
-      });
-      queryMock.mockReturnValueOnce(undefined);
-      requireTsMock.mockResolvedValue(undefined);
+      migrationFiles = files.reverse();
+      migratedVersions = ['1', '2'];
 
       await rollback(options, config, []);
 
@@ -114,7 +188,7 @@ describe('migrateOrRollback', () => {
     });
 
     it('should create migrations table if it not exist', async () => {
-      (getMigrationFiles as jest.Mock).mockReturnValueOnce([]);
+      migrationFiles = [];
       getMigratedVersionsArrayMock.mockRejectedValueOnce({ code: '42P01' });
       (createSchemaMigrations as jest.Mock).mockResolvedValueOnce(undefined);
 

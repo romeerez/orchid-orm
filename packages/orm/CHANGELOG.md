@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.4.21
+
+### Patch Changes
+
+- Add --code cli argument to rake-db
+- Improve codegen
+- Updated dependencies
+- Updated dependencies
+  - pqb@0.8.4
+
 ## 1.4.19
 
 ### Patch Changes

@@ -2,6 +2,7 @@ import { AppCodeUpdater } from 'rake-db';
 import * as path from 'path';
 import { updateMainFile } from './updateMainFile';
 import { updateTableFile } from './updateTableFile/updateTableFile';
+import { createBaseTableFile } from './createBaseTableFile';
 
 export class AppCodeUpdaterError extends Error {}
 
@@ -21,10 +22,21 @@ export const appCodeUpdater = (
     mainFilePath: path.resolve(config.mainFilePath),
   };
 
-  return async (ast) => {
-    await Promise.all([
-      updateMainFile(params.mainFilePath, params.tablePath, ast),
+  return async ({ ast, options, cache: cacheObject }) => {
+    const promises: Promise<void>[] = [
+      updateMainFile(params.mainFilePath, params.tablePath, ast, options),
       updateTableFile({ ...params, ast }),
-    ]);
+    ];
+
+    const cache = cacheObject as { createdBaseTable?: true };
+    if (!cache.createdBaseTable) {
+      promises.push(
+        createBaseTableFile(params).then(() => {
+          cache.createdBaseTable = true;
+        }),
+      );
+    }
+
+    await Promise.all(promises);
   };
 };

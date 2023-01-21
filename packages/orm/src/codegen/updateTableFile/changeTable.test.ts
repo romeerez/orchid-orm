@@ -6,6 +6,7 @@ import { columnTypes, newTableData, TableData } from 'pqb';
 import { RakeDbAst } from 'rake-db';
 
 jest.mock('fs/promises', () => ({
+  mkdir: jest.fn(),
   readFile: jest.fn(),
   writeFile: jest.fn(),
 }));
