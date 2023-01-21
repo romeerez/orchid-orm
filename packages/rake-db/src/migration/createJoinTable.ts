@@ -11,6 +11,10 @@ class UnknownColumn extends ColumnType {
   constructor(public dataType: string) {
     super();
   }
+
+  toCode() {
+    return 'unknown';
+  }
 }
 
 export const createJoinTable = async (

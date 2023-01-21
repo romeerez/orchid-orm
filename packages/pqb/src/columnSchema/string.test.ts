@@ -26,7 +26,7 @@ import {
 } from './string';
 
 const testNumberColumnMethods = (type: TextBaseColumn, name: string) => {
-  expect(type.nonEmpty().toCode('t')).toEqual([`t.${name}()`, '.nonEmpty()']);
+  expect(type.nonEmpty().toCode('t')).toBe(`t.${name}().nonEmpty()`);
 
   expect(
     type
@@ -98,6 +98,9 @@ describe('string columns', () => {
 
       it('should have toCode', () => {
         expect(new TextColumn().toCode('t')).toBe('t.text()');
+
+        expect(new TextColumn(1).toCode('t')).toBe('t.text(1)');
+        expect(new TextColumn(1, 2).toCode('t')).toBe('t.text(1, 2)');
 
         testNumberColumnMethods(new TextColumn(), 'text');
       });

@@ -5,6 +5,8 @@ export class AppCodeUpdaterError extends Error {}
 
 export type AppCodeUpdaterConfig = {
   tablePath(tableName: string): string;
+  baseTablePath: string;
+  baseTableName: string;
   mainFilePath: string;
 };
 

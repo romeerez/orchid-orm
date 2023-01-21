@@ -51,7 +51,7 @@ describe('typeBase', () => {
         string()
           .transform((s) => s)
           .toCode('t'),
-      ).toEqual(['t.string()', '.transform((s)=>s)']);
+      ).toEqual('t.string().transform((s)=>s)');
     });
   });
 
@@ -61,7 +61,7 @@ describe('typeBase', () => {
         string()
           .to((s) => parseInt(s), number())
           .toCode('t'),
-      ).toEqual(['t.string()', '.to((s)=>parseInt(s), ', 't.number()', ')']);
+      ).toEqual('t.string().to((s)=>parseInt(s), t.number())');
     });
   });
 
@@ -71,7 +71,7 @@ describe('typeBase', () => {
         string()
           .refine((s) => s.length > 0)
           .toCode('t'),
-      ).toEqual(['t.string()', '.refine((s)=>s.length > 0)']);
+      ).toEqual('t.string().refine((s)=>s.length > 0)');
     });
   });
 
@@ -81,29 +81,23 @@ describe('typeBase', () => {
         string()
           .superRefine((s) => s)
           .toCode('t'),
-      ).toEqual(['t.string()', '.superRefine((s)=>s)']);
+      ).toEqual('t.string().superRefine((s)=>s)');
     });
   });
 
   describe('and', () => {
     it('should have toCode', () => {
-      expect(string().and(number()).toCode('t')).toEqual([
-        't.string()',
-        '.and(',
-        't.number()',
-        ')',
-      ]);
+      expect(string().and(number()).toCode('t')).toEqual(
+        't.string().and(t.number())',
+      );
     });
   });
 
   describe('or', () => {
     it('should have toCode', () => {
-      expect(string().or(number()).toCode('t')).toEqual([
-        't.string()',
-        '.or(',
-        't.number()',
-        ')',
-      ]);
+      expect(string().or(number()).toCode('t')).toEqual(
+        't.string().or(t.number())',
+      );
     });
   });
 
@@ -117,7 +111,7 @@ describe('typeBase', () => {
 
   describe('array', () => {
     it('should have toCode', () => {
-      expect(string().array().toCode('t')).toEqual(['t.string()', '.array()']);
+      expect(string().array().toCode('t')).toEqual('t.string().array()');
     });
   });
 });

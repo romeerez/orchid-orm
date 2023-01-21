@@ -13,6 +13,9 @@ describe('table', () => {
       class Type extends ColumnType {
         dataType = 'type';
         operators = Operators.any;
+        toCode() {
+          return '';
+        }
       }
       const type = new Type();
       const BaseTable = createBaseTable({ columnTypes: { type: () => type } });

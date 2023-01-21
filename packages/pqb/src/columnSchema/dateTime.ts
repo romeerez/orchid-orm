@@ -1,9 +1,10 @@
-import { Code, columnCode, ColumnData, ColumnType } from './columnType';
+import { ColumnData, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
 import { joinTruthy } from '../utils';
 import { dateTypeMethods } from './commonMethods';
 import { assignMethodsToClass } from './utils';
 import { IntegerColumn } from './number';
+import { Code, columnCode } from './code';
 
 export type DateColumnData = ColumnData & {
   min?: Date;

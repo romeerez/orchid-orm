@@ -1,4 +1,4 @@
-import { Code, columnCode, ColumnData, ColumnType } from './columnType';
+import { ColumnData, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
 import {
   scalarTypes,
@@ -21,6 +21,7 @@ import {
   union,
   JSONTypeAny,
 } from './json';
+import { Code, columnCode } from './code';
 
 export * from './json/index';
 

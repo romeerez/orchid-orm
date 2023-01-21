@@ -10,8 +10,9 @@ describe('intersection', () => {
         object({ age: scalarTypes.number() }),
       ).toCode('t'),
     ).toEqual([
-      ['t.object({', ['name: t.string(),'], '})'],
-      '.and(',
+      't.object({',
+      ['name: t.string(),'],
+      '}).and(',
       ['t.object({', ['age: t.number(),'], '})'],
       ')',
     ]);

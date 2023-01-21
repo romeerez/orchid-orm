@@ -111,7 +111,7 @@ export const getColumnTypes = <
   return fn(types);
 };
 
-const text = (min: number, max: number) => new TextColumn().min(min).max(max);
+const text = (min: number, max: number) => new TextColumn(min, max);
 
 export const columnTypes = {
   smallint: () => new SmallIntColumn(),

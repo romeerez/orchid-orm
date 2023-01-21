@@ -8,14 +8,10 @@ import {
 import { JSONNotNullish, JSONNullish, notNullish, nullish } from './nullish';
 import { intersection, JSONIntersection } from './intersection';
 import { array, JSONArray } from './array';
+import { ColumnChain, ColumnData, ValidationContext } from '../columnType';
+import { addCode, Code, columnChainToCode } from '../code';
 import { union } from './union';
-import {
-  Code,
-  ColumnChain,
-  columnChainToCode,
-  ColumnData,
-  ValidationContext,
-} from '../columnType';
+import { toArray } from '../../utils';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type JSONTypeAny = JSONType<any>;
@@ -96,29 +92,29 @@ export type JSONType<Type, DataType extends string = string> = {
 };
 
 export const toCode = (type: JSONTypeAny, t: string, code: Code) => {
-  let append = '';
+  code = toArray(code);
 
   if (type.data.nullable && type.data.optional) {
-    append += '.nullish()';
+    addCode(code, '.nullish()');
   } else if (type.data.nullable) {
-    append += '.nullable()';
+    addCode(code, '.nullable()');
   } else if (type.data.optional) {
-    append += '.optional()';
+    addCode(code, '.optional()');
   }
 
   if (type.data.isDeepPartial) {
-    append += '.deepPartial()';
+    addCode(code, '.deepPartial()');
   }
 
   if (type.data.isNonEmpty) {
-    append += '.nonEmpty()';
+    addCode(code, '.nonEmpty()');
   }
 
   if (type.data.default) {
-    append += `.default(${JSON.stringify(type.data.default)})`;
+    addCode(code, `.default(${JSON.stringify(type.data.default)})`);
   }
 
-  return columnChainToCode(type.chain, t, code, append);
+  return columnChainToCode(type.chain, t, code);
 };
 
 const baseTypeMethods: JSONTypeAny = {
@@ -219,6 +215,7 @@ type BaseTypeProps<T extends JSONTypeAny> = Omit<
   JSONType<T['type']>,
   'dataType'
 >;
+
 export type OwnTypeProps<T extends JSONTypeAny> = Omit<
   T,
   keyof BaseTypeProps<T>

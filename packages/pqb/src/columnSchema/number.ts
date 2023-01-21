@@ -1,8 +1,9 @@
 import { Operators } from '../columnsOperators';
-import { Code, columnCode, ColumnData, ColumnType } from './columnType';
+import { ColumnData, ColumnType } from './columnType';
 import { joinTruthy } from '../utils';
 import { assignMethodsToClass } from './utils';
 import { numberTypeMethods } from './commonMethods';
+import { Code, columnCode } from './code';
 
 export type BaseNumberData = ColumnData & {
   lt?: number;

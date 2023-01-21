@@ -17,3 +17,4 @@ export * from './set';
 export * from './tuple';
 export * from './typeBase';
 export * from './union';
+export { constructType } from './typeBase';

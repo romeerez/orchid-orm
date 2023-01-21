@@ -1,5 +1,4 @@
-import { QueryData, toSqlCacheKey } from './sql';
-import { cloneQueryArrays } from './sql/data';
+import { QueryData, toSqlCacheKey, cloneQueryArrays } from './sql';
 
 export type SomeIsTrue<T extends unknown[]> = T extends [
   infer Head,
@@ -135,5 +134,14 @@ export const pushOrNewArray = <Arr extends unknown[]>(
   }
 };
 
-export const singleQuote = (s: string) =>
-  `'${s.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;
+export const singleQuote = (s: string) => {
+  return `'${s.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;
+};
+
+export const singleQuoteArray = (arr: string[]) => {
+  return `[${arr.map(singleQuote).join(', ')}]`;
+};
+
+export const quoteObjectKey = (s: string) => {
+  return /[A-z_]\w*/.test(s) ? s : singleQuote(s);
+};

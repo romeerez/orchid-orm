@@ -26,7 +26,7 @@ export const lazy = <T extends JSONTypeAny>(fn: () => T): JSONLazy<T> => {
     toCode(this: JSONLazy<T>, t: string) {
       return toCode(this, t, [
         `${t}.lazy(() => `,
-        ...toArray(this.getter().toCode(t)),
+        toArray(this.getter().toCode(t)),
         ')',
       ]);
     },

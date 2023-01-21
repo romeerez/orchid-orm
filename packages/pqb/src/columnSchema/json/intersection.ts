@@ -1,4 +1,6 @@
 import { constructType, JSONType, JSONTypeAny, toCode } from './typeBase';
+import { addCode } from '../code';
+import { toArray } from '../../utils';
 
 export type JSONIntersection<
   Left extends JSONTypeAny,
@@ -20,12 +22,17 @@ export const intersection = <
     left,
     right,
     toCode(this: JSONIntersection<Left, Right>, t: string) {
-      return toCode(this, t, [
-        this.left.toCode(t),
-        '.and(',
-        this.right.toCode(t),
-        ')',
-      ]);
+      const code = [...toArray(this.left.toCode(t))];
+      addCode(code, '.and(');
+      const right = this.right.toCode(t);
+      if (typeof right === 'string') {
+        addCode(code, right);
+      } else {
+        code.push(right);
+      }
+      addCode(code, ')');
+
+      return toCode(this, t, code);
     },
   });
 };

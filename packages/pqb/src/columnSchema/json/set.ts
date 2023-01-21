@@ -6,7 +6,7 @@ import {
   toCode,
 } from './typeBase';
 import { SetMethods, setMethods } from '../commonMethods';
-import { toArray } from '../../utils';
+import { addCode, Code } from '../code';
 
 export interface JSONSet<Value extends JSONTypeAny>
   extends JSONType<Set<Value['type']>, 'set'>,
@@ -25,22 +25,20 @@ export const set = <Value extends JSONTypeAny>(valueType: Value) => {
     dataType: 'set',
     valueType,
     toCode(this: JSONSet<Value>, t: string) {
-      let append = ')';
+      const code: Code[] = [`${t}.set(`];
+      addCode(code, this.valueType.toCode(t));
+      addCode(code, ')');
 
       const { min, max, size, isNonEmpty } = this.data;
 
       if (min !== undefined && (!isNonEmpty || (isNonEmpty && min !== 1)))
-        append += `.min(${min})`;
+        addCode(code, `.min(${min})`);
 
-      if (max !== undefined) append += `.max(${max})`;
+      if (max !== undefined) addCode(code, `.max(${max})`);
 
-      if (size !== undefined) append += `.size(${size})`;
+      if (size !== undefined) addCode(code, `.size(${size})`);
 
-      return toCode(this, t, [
-        `${t}.set(`,
-        ...toArray(this.valueType.toCode(t)),
-        append,
-      ]);
+      return toCode(this, t, code);
     },
     deepPartial(this: JSONSet<Value>) {
       return {

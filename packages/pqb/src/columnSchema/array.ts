@@ -1,8 +1,8 @@
-import { Code, columnCode, ColumnData, ColumnType } from './columnType';
+import { ColumnData, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
 import { assignMethodsToClass } from './utils';
 import { arrayMethods } from './commonMethods';
-import { toArray } from '../utils';
+import { addCode, Code, columnCode } from './code';
 
 export type ArrayData<Item extends ColumnType> = ColumnData & {
   item: Item;
@@ -37,22 +37,20 @@ export class ArrayColumn<Item extends ColumnType> extends ColumnType<
   }
 
   toCode(this: ArrayColumn<Item>, t: string): Code {
-    let code = ')';
+    const code: Code[] = [`${t}.array(`];
+    addCode(code, this.data.item.toCode(t));
+    addCode(code, ')');
 
     const { min, max, length, isNonEmpty } = this.data;
 
     if (min !== undefined && (!isNonEmpty || (isNonEmpty && min !== 1)))
-      code += `.min(${min})`;
+      addCode(code, `.min(${min})`);
 
-    if (max !== undefined) code += `.max(${max})`;
+    if (max !== undefined) addCode(code, `.max(${max})`);
 
-    if (length !== undefined) code += `.length(${length})`;
+    if (length !== undefined) addCode(code, `.length(${length})`);
 
-    return columnCode(this, t, [
-      't.array(',
-      ...toArray(this.data.item.toCode(t)),
-      code,
-    ]);
+    return columnCode(this, t, code);
   }
 
   parseFn = Object.assign(

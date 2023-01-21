@@ -1,5 +1,6 @@
-import { Code, columnCode, ColumnType } from './columnType';
+import { ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
+import { Code, columnCode } from './code';
 
 export class EnumColumn<
   U extends string = string,

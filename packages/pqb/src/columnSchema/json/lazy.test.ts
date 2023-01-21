@@ -5,18 +5,13 @@ describe('lazy', () => {
   it('should have toCode', () => {
     expect(lazy(() => scalarTypes.string()).toCode('t')).toEqual([
       't.lazy(() => ',
-      't.string()',
+      ['t.string()'],
       ')',
     ]);
     expect(
       lazy(() => scalarTypes.string())
         .deepPartial()
         .toCode('t'),
-    ).toEqual([
-      't.lazy(() => ',
-      't.string().optional()',
-      ')',
-      '.deepPartial()',
-    ]);
+    ).toEqual(['t.lazy(() => ', ['t.string().optional()'], ').deepPartial()']);
   });
 });

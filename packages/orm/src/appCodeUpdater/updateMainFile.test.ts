@@ -1,17 +1,15 @@
 import { updateMainFile } from './updateMainFile';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { ast } from './testUtils';
+import { asMock, ast, makeTestWritten, tablePath } from './testUtils';
 
 jest.mock('fs/promises', () => ({
   readFile: jest.fn(),
   writeFile: jest.fn(),
 }));
 
-const asMock = (fn: unknown) => fn as jest.Mock;
-
 const mainFilePath = path.resolve('db.ts');
-const tablePath = (table: string) => path.resolve(`tables/${table}`);
+const testWritten = makeTestWritten(mainFilePath);
 
 describe('updateMainFile', () => {
   beforeEach(() => {
@@ -36,17 +34,14 @@ export const db = orchidORM({}, {});
 
       await updateMainFile(mainFilePath, tablePath, ast.addTable);
 
-      expect(fs.writeFile).toBeCalledWith(
-        mainFilePath,
-        `
+      testWritten(`
 import { orchidORM } from 'orchid-orm';
 import { Table } from './tables/table';
 
 export const db = orchidORM({}, {
   table: Table,
 });
-`,
-      );
+`);
     });
 
     it('should handle import as', async () => {
@@ -58,17 +53,14 @@ export const db = custom({}, {});
 
       await updateMainFile(mainFilePath, tablePath, ast.addTable);
 
-      expect(fs.writeFile).toBeCalledWith(
-        mainFilePath,
-        `
+      testWritten(`
 import { orchidORM as custom } from 'orchid-orm';
 import { Table } from './tables/table';
 
 export const db = custom({}, {
   table: Table,
 });
-`,
-      );
+`);
     });
 
     it('should handle object list with elements', async () => {
@@ -83,9 +75,7 @@ export const db = orchidORM({}, {
 
       await updateMainFile(mainFilePath, tablePath, ast.addTable);
 
-      expect(fs.writeFile).toBeCalledWith(
-        mainFilePath,
-        `
+      testWritten(`
 import { orchidORM } from 'orchid-orm';
 import { Some } from './tables/some';
 import { Table } from './tables/table';
@@ -94,8 +84,7 @@ export const db = orchidORM({}, {
   some: Some,
   table: Table,
 });
-`,
-      );
+`);
     });
 
     it('should handle object list without ending coma', async () => {
@@ -110,9 +99,7 @@ export const db = orchidORM({}, {
 
       await updateMainFile(mainFilePath, tablePath, ast.addTable);
 
-      expect(fs.writeFile).toBeCalledWith(
-        mainFilePath,
-        `
+      testWritten(`
 import { orchidORM } from 'orchid-orm';
 import { Some } from './tables/some';
 import { Table } from './tables/table';
@@ -121,8 +108,7 @@ export const db = orchidORM({}, {
   some: Some,
   table: Table,
 });
-`,
-      );
+`);
     });
   });
 
@@ -139,15 +125,12 @@ export const db = orchidORM({}, {
 
       await updateMainFile(mainFilePath, tablePath, ast.dropTable);
 
-      expect(fs.writeFile).toBeCalledWith(
-        mainFilePath,
-        `
+      testWritten(`
 import { orchidORM } from 'orchid-orm';
 
 export const db = orchidORM({}, {
 });
-`,
-      );
+`);
     });
 
     it('should remove aliased import', async () => {
@@ -162,15 +145,12 @@ export const db = orchidORM({}, {
 
       await updateMainFile(mainFilePath, tablePath, ast.dropTable);
 
-      expect(fs.writeFile).toBeCalledWith(
-        mainFilePath,
-        `
+      testWritten(`
 import { orchidORM } from 'orchid-orm';
 
 export const db = orchidORM({}, {
 });
-`,
-      );
+`);
     });
 
     it('should remove short form of key and value', async () => {
@@ -185,15 +165,12 @@ export const db = orchidORM({}, {
 
       await updateMainFile(mainFilePath, tablePath, ast.dropTable);
 
-      expect(fs.writeFile).toBeCalledWith(
-        mainFilePath,
-        `
+      testWritten(`
 import { orchidORM } from 'orchid-orm';
 
 export const db = orchidORM({}, {
 });
-`,
-      );
+`);
     });
 
     it('should not remove other tables', async () => {
@@ -212,9 +189,7 @@ export const db = orchidORM({}, {
 
       await updateMainFile(mainFilePath, tablePath, ast.dropTable);
 
-      expect(fs.writeFile).toBeCalledWith(
-        mainFilePath,
-        `
+      testWritten(`
 import { orchidORM } from 'orchid-orm';
 import { One } from './tables/one';
 import { Two } from './tables/two';
@@ -223,8 +198,7 @@ export const db = orchidORM({}, {
   one,
   two,
 });
-`,
-      );
+`);
     });
   });
 });

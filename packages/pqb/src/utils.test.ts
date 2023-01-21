@@ -4,6 +4,7 @@ import {
   MaybeArray,
   pushOrNewArray,
   pushOrNewArrayToObject,
+  quoteObjectKey,
   SetOptional,
   singleQuote,
   SomeIsTrue,
@@ -97,6 +98,18 @@ describe('utils', () => {
       expect(singleQuote(`ko`)).toBe(`'ko'`);
       expect(singleQuote(`k'o`)).toBe(`'k\\'o'`);
       expect(singleQuote(`k\\'o`)).toBe(`'k\\\\\\'o'`);
+    });
+  });
+
+  describe('quoteObjectKey', () => {
+    it('should leave simple key unquoted', () => {
+      expect(quoteObjectKey('Abc123')).toBe('Abc123');
+      expect(quoteObjectKey('_')).toBe('_');
+    });
+
+    it('should surround a key with special characters with single quotes', () => {
+      expect(quoteObjectKey('123')).toBe(`'123'`);
+      expect(quoteObjectKey('&')).toBe(`'&'`);
     });
   });
 });

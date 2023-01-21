@@ -57,7 +57,7 @@ describe('date time columns', () => {
 
       const now = new Date();
       const s = now.toISOString();
-      expect(new TimestampColumn().min(now).max(now).toCode('t')).toEqual(
+      expect(new TimestampColumn().min(now).max(now).toCode('t')).toBe(
         `t.timestamp().min(new Date('${s}')).max(new Date('${s}'))`,
       );
     });
@@ -88,7 +88,7 @@ describe('date time columns', () => {
       const s = now.toISOString();
       expect(
         new TimestampWithTimeZoneColumn().min(now).max(now).toCode('t'),
-      ).toEqual(
+      ).toBe(
         `t.timestampWithTimeZone().min(new Date('${s}')).max(new Date('${s}'))`,
       );
     });
@@ -110,7 +110,7 @@ describe('date time columns', () => {
 
       const now = new Date();
       const s = now.toISOString();
-      expect(new TimeColumn().min(now).max(now).toCode('t')).toEqual(
+      expect(new TimeColumn().min(now).max(now).toCode('t')).toBe(
         `t.time().min(new Date('${s}')).max(new Date('${s}'))`,
       );
     });
@@ -139,9 +139,7 @@ describe('date time columns', () => {
 
       const now = new Date();
       const s = now.toISOString();
-      expect(
-        new TimeWithTimeZoneColumn().min(now).max(now).toCode('t'),
-      ).toEqual(
+      expect(new TimeWithTimeZoneColumn().min(now).max(now).toCode('t')).toBe(
         `t.timeWithTimeZone().min(new Date('${s}')).max(new Date('${s}'))`,
       );
     });

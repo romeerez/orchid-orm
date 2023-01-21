@@ -1,5 +1,5 @@
 import { constructType, JSONType, JSONTypeAny, toCode } from './typeBase';
-import { toArray } from '../../utils';
+import { addCode, Code } from '../code';
 
 export interface JSONUnion<
   T extends [JSONTypeAny, JSONTypeAny, ...JSONTypeAny[]],
@@ -15,19 +15,19 @@ export const union = <T extends [JSONTypeAny, JSONTypeAny, ...JSONTypeAny[]]>(
     types,
     toCode(this: JSONUnion<T>, t: string) {
       const last = this.types.length - 1;
-      return toCode(
-        this,
-        t,
-        this.types.flatMap((type, i) => {
-          const item = [...toArray(type.toCode(t))];
-          if (i < last) {
-            item.push(`${i > 0 ? ')' : ''}.or(`);
-          } else {
-            item.push(')');
-          }
-          return item;
-        }),
-      );
+
+      const code: Code = [];
+      this.types.forEach((type, i) => {
+        addCode(code, type.toCode(t));
+        if (i < last) {
+          addCode(code, `${i > 0 ? ')' : ''}.or(`);
+        } else {
+          addCode(code, ')');
+        }
+        return code;
+      });
+
+      return toCode(this, t, code);
     },
   });
 };

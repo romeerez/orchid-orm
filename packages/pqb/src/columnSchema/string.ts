@@ -1,9 +1,10 @@
-import { Code, columnCode, ColumnData, ColumnType } from './columnType';
+import { ColumnData, ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
 import { joinTruthy, singleQuote } from '../utils';
 import { NumberBaseColumn } from './number';
 import { assignMethodsToClass } from './utils';
 import { stringTypeMethods } from './commonMethods';
+import { Code, columnCode } from './code';
 
 export type BaseStringData = ColumnData & {
   min?: number;
@@ -118,8 +119,30 @@ export class CharColumn<
 export class TextColumn extends TextBaseColumn {
   dataType = 'text' as const;
   operators = Operators.text;
+  data = {} as TextColumnData & { minArg?: number; maxArg?: number };
+
+  constructor(minArg?: number, maxArg?: number) {
+    super();
+    if (minArg !== undefined) {
+      this.data.min = this.data.minArg = minArg;
+      if (maxArg !== undefined) {
+        this.data.max = this.data.maxArg = maxArg;
+      }
+    }
+  }
+
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.text()${stringDataToCode(this.data)}`);
+    const data = { ...this.data };
+    let args = '';
+    if (data.minArg !== undefined && data.min === data.minArg) {
+      args += data.minArg;
+      delete data.min;
+      if (data.maxArg !== undefined && data.max === data.maxArg) {
+        args += `, ${data.maxArg}`;
+        delete data.max;
+      }
+    }
+    return columnCode(this, t, `${t}.text(${args})${stringDataToCode(data)}`);
   }
 }
 

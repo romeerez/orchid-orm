@@ -6,7 +6,7 @@ import {
   toCode,
 } from './typeBase';
 import { JSONOptional, optional } from './optional';
-import { Code } from '../columnType';
+import { addCode, Code } from '../code';
 
 export type JSONObjectShape = Record<string, JSONTypeAny>;
 
@@ -129,24 +129,23 @@ export const object = <
     catchAllType: undefined as unknown as Catchall,
     toCode(this: JSONObject<JSONObjectShape, UnknownKeysParam>, t: string) {
       const { shape } = this;
-      const arr: Code[] = [];
+      const code: Code[] = [
+        `${t}.object({`,
+        Object.keys(shape).map((key) => `${key}: ${shape[key].toCode(t)},`),
+        '})',
+      ];
 
-      for (const key in shape) {
-        arr.push(`${key}: ${shape[key].toCode(t)},`);
-      }
-
-      let lastLine = '})';
       if (this.unknownKeys === 'passthrough') {
-        lastLine += '.passthrough()';
+        addCode(code, '.passthrough()');
       } else if (this.unknownKeys === 'strict') {
-        lastLine += '.strict()';
+        addCode(code, '.strict()');
       }
 
       if (this.catchAllType) {
-        lastLine += `.catchAll(${this.catchAllType.toCode(t)})`;
+        addCode(code, `.catchAll(${this.catchAllType.toCode(t)})`);
       }
 
-      return toCode(this, t, [`${t}.object({`, arr, lastLine]);
+      return toCode(this, t, code);
     },
     extend<S extends JSONObjectShape>(add: S) {
       return object<Merge<T, S>, UnknownKeys, Catchall>(

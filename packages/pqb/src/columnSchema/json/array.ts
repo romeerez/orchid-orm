@@ -8,6 +8,7 @@ import {
 } from './typeBase';
 import { arrayMethods, ArrayMethods } from '../commonMethods';
 import { toArray } from '../../utils';
+import { addCode } from '../code';
 
 export type ArrayCardinality = 'many' | 'atLeastOne';
 
@@ -41,18 +42,19 @@ export const array = <Type extends JSONTypeAny>(
     dataType: 'array' as const,
     element,
     toCode(this: JSONArray<Type>, t: string) {
-      let code = '.array()';
+      const code = [...toArray(this.element.toCode(t))];
+      addCode(code, '.array()');
 
       const { min, max, length, isNonEmpty } = this.data;
 
       if (min !== undefined && (!isNonEmpty || (isNonEmpty && min !== 1)))
-        code += `.min(${min})`;
+        addCode(code, `.min(${min})`);
 
-      if (max !== undefined) code += `.max(${max})`;
+      if (max !== undefined) addCode(code, `.max(${max})`);
 
-      if (length !== undefined) code += `.length(${length})`;
+      if (length !== undefined) addCode(code, `.length(${length})`);
 
-      return toCode(this, t, [...toArray(this.element.toCode(t)), code]);
+      return toCode(this, t, code);
     },
     deepPartial<T extends JSONArray<Type>>(this: T) {
       return {

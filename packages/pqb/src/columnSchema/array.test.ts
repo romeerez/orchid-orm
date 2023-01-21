@@ -48,20 +48,15 @@ describe('array column', () => {
 
     it('should have toCode', async () => {
       const column = new ArrayColumn(new IntegerColumn());
-      expect(column.toCode('t')).toEqual(['t.array(', 't.integer()', ')']);
+      expect(column.toCode('t')).toBe('t.array(t.integer())');
 
-      expect(column.nonEmpty().toCode('t')).toEqual([
-        't.array(',
-        't.integer()',
-        ')',
-        '.nonEmpty()',
-      ]);
+      expect(column.nonEmpty().toCode('t')).toBe(
+        't.array(t.integer()).nonEmpty()',
+      );
 
-      expect(column.min(1).max(10).length(15).toCode('t')).toEqual([
-        't.array(',
-        't.integer()',
-        ').min(1).max(10).length(15)',
-      ]);
+      expect(column.min(1).max(10).length(15).toCode('t')).toBe(
+        't.array(t.integer()).min(1).max(10).length(15)',
+      );
     });
   });
 });

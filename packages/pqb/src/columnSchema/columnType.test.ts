@@ -1,4 +1,4 @@
-import { Code, columnCode, ColumnType } from './columnType';
+import { ColumnType } from './columnType';
 import { Operators } from '../columnsOperators';
 import {
   adapter,
@@ -12,6 +12,8 @@ import {
 import { createDb } from '../db';
 import { columnTypes } from './columnTypes';
 import { IntegerColumn } from './number';
+import { Code, columnCode } from './code';
+import { raw } from '../common';
 
 describe('column base', () => {
   useTestDatabase();
@@ -32,10 +34,7 @@ describe('column base', () => {
     });
 
     it('should have toCode', () => {
-      expect(column.primaryKey().toCode('t')).toEqual([
-        't.column()',
-        '.primaryKey()',
-      ]);
+      expect(column.primaryKey().toCode('t')).toBe('t.column().primaryKey()');
     });
   });
 
@@ -47,18 +46,14 @@ describe('column base', () => {
       }
 
       expect(column.foreignKey(() => Table, 'column').toCode('t')).toEqual([
-        't.column()',
-        '.foreignKey(',
-        '()=>Table',
-        `, 'column'`,
+        't.column().foreignKey(',
+        ['()=>Table', `, 'column'`],
         ')',
       ]);
 
       expect(column.foreignKey('table', 'column').toCode('t')).toEqual([
-        't.column()',
-        '.foreignKey(',
-        `'table'`,
-        `, 'column'`,
+        't.column().foreignKey(',
+        [`'table'`, `, 'column'`],
         ')',
       ]);
 
@@ -72,18 +67,19 @@ describe('column base', () => {
           })
           .toCode('t'),
       ).toEqual([
-        't.column()',
-        '.foreignKey(',
-        `'table'`,
-        `, 'column'`,
-        ', {',
+        't.column().foreignKey(',
         [
-          `name: 'name',`,
-          `match: 'FULL',`,
-          `onUpdate: 'CASCADE',`,
-          `onDelete: 'CASCADE',`,
+          `'table'`,
+          `, 'column'`,
+          ', {',
+          [
+            `name: 'name',`,
+            `match: 'FULL',`,
+            `onUpdate: 'CASCADE',`,
+            `onDelete: 'CASCADE',`,
+          ],
+          '}',
         ],
-        '}',
         ')',
       ]);
     });
@@ -96,7 +92,7 @@ describe('column base', () => {
     });
 
     it('should have toCode', () => {
-      expect(column.hidden().toCode('t')).toEqual(['t.column()', '.hidden()']);
+      expect(column.hidden().toCode('t')).toBe('t.column().hidden()');
     });
 
     test('table with hidden column should omit from select it by default', () => {
@@ -146,10 +142,7 @@ describe('column base', () => {
     });
 
     it('should have toCode', () => {
-      expect(column.nullable().toCode('t')).toEqual([
-        't.column()',
-        '.nullable()',
-      ]);
+      expect(column.nullable().toCode('t')).toEqual('t.column().nullable()');
     });
   });
 
@@ -165,7 +158,7 @@ describe('column base', () => {
     it('should have toCode', () => {
       expect(
         column.encode((input: number) => input.toString()).toCode('t'),
-      ).toEqual(['t.column()', '.encode((input)=>input.toString())']);
+      ).toBe('t.column().encode((input)=>input.toString())');
     });
   });
 
@@ -179,10 +172,9 @@ describe('column base', () => {
     });
 
     it('should have toCode', () => {
-      expect(column.parse((v) => parseInt(v as string)).toCode('t')).toEqual([
-        't.column()',
-        '.parse((v)=>parseInt(v))',
-      ]);
+      expect(column.parse((v) => parseInt(v as string)).toCode('t')).toBe(
+        't.column().parse((v)=>parseInt(v))',
+      );
     });
 
     describe('parsing columns', () => {
@@ -242,10 +234,9 @@ describe('column base', () => {
     }));
 
     it('should have toCode', () => {
-      expect(column.as(columnTypes.integer()).toCode('t')).toEqual([
-        't.column()',
-        '.as(t.integer())',
-      ]);
+      expect(column.as(columnTypes.integer()).toCode('t')).toEqual(
+        't.column().as(t.integer())',
+      );
     });
 
     it('should accept only column of same type and input type', () => {
@@ -327,10 +318,11 @@ describe('column base', () => {
 
   describe('.default', () => {
     it('should have toCode', () => {
-      expect(column.default(123).toCode('t')).toEqual([
-        't.column()',
-        '.default(123)',
-      ]);
+      expect(column.default(123).toCode('t')).toBe(`t.column().default(123)`);
+
+      expect(column.default(raw('sql', { key: 'value' })).toCode('t')).toBe(
+        `t.column().default('sql', {"key":"value"})`,
+      );
     });
   });
 
@@ -352,9 +344,7 @@ describe('column base', () => {
           })
           .toCode('t'),
       ).toEqual([
-        't.column()',
-        '.index(',
-        '{',
+        't.column().index({',
         [
           `expression: 'expression',`,
           `collate: 'collate',`,
@@ -367,83 +357,70 @@ describe('column base', () => {
           `tablespace: 'tablespace',`,
           `where: 'where',`,
         ],
-        '}',
-        ')',
+        '})',
       ]);
     });
   });
 
   describe('unique', () => {
     it('should have toCode', () => {
-      expect(column.unique().toCode('t')).toEqual([
-        't.column()',
-        '.unique(',
-        ')',
-      ]);
+      expect(column.unique().toCode('t')).toBe('t.column().unique()');
     });
   });
 
   describe('comment', () => {
     it('should have toCode', () => {
-      expect(column.comment('comment').toCode('t')).toEqual([
-        't.column()',
-        `.comment('comment')`,
-      ]);
+      expect(column.comment('comment').toCode('t')).toBe(
+        `t.column().comment('comment')`,
+      );
     });
   });
 
   describe('validationDefault', () => {
     it('should have toCode', () => {
-      expect(column.validationDefault('value').toCode('t')).toEqual([
-        't.column()',
-        `.validationDefault('value')`,
-      ]);
+      expect(column.validationDefault('value').toCode('t')).toBe(
+        `t.column().validationDefault('value')`,
+      );
 
-      expect(column.validationDefault(123).toCode('t')).toEqual([
-        't.column()',
-        `.validationDefault(123)`,
-      ]);
+      expect(column.validationDefault(123).toCode('t')).toBe(
+        `t.column().validationDefault(123)`,
+      );
 
-      expect(column.validationDefault(() => 'value').toCode('t')).toEqual([
-        't.column()',
-        `.validationDefault(()=>'value')`,
-      ]);
+      expect(column.validationDefault(() => 'value').toCode('t')).toBe(
+        `t.column().validationDefault(()=>'value')`,
+      );
     });
   });
 
   describe('compression', () => {
     it('should have toCode', () => {
-      expect(column.compression('compression').toCode('t')).toEqual([
-        't.column()',
-        `.compression('compression')`,
-      ]);
+      expect(column.compression('compression').toCode('t')).toBe(
+        `t.column().compression('compression')`,
+      );
     });
   });
 
   describe('collate', () => {
     it('should have toCode', () => {
-      expect(column.collate('collate').toCode('t')).toEqual([
-        't.column()',
-        `.collate('collate')`,
-      ]);
+      expect(column.collate('collate').toCode('t')).toBe(
+        `t.column().collate('collate')`,
+      );
     });
   });
 
   describe('modifyQuery', () => {
     it('should have toCode', () => {
-      expect(column.modifyQuery((table) => table).toCode('t')).toEqual([
-        't.column()',
-        `.modifyQuery((table)=>table)`,
-      ]);
+      expect(column.modifyQuery((table) => table).toCode('t')).toBe(
+        't.column().modifyQuery((table)=>table)',
+      );
     });
   });
 
   describe('transform', () => {
     it('should have toCode', () => {
-      expect(column.transform((s) => s).toCode('t')).toEqual([
-        't.column()',
-        '.transform((s)=>s)',
-      ]);
+      expect(column.transform((s) => s).toCode('t')).toBe(
+        't.column().transform((s)=>s)',
+      );
     });
   });
 
@@ -453,24 +430,23 @@ describe('column base', () => {
         column
           .to((s) => parseInt(s as string), new IntegerColumn())
           .toCode('t'),
-      ).toEqual(['t.column()', '.to((s)=>parseInt(s), ', 't.integer()', ')']);
+      ).toEqual('t.column().to((s)=>parseInt(s), t.integer())');
     });
   });
 
   describe('refine', () => {
     it('should have toCode', () => {
-      expect(
-        column.refine((s) => (s as string).length > 0).toCode('t'),
-      ).toEqual(['t.column()', '.refine((s)=>s.length > 0)']);
+      expect(column.refine((s) => (s as string).length > 0).toCode('t')).toBe(
+        't.column().refine((s)=>s.length > 0)',
+      );
     });
   });
 
   describe('superRefine', () => {
     it('should have toCode', () => {
-      expect(column.superRefine((s) => s).toCode('t')).toEqual([
-        't.column()',
-        '.superRefine((s)=>s)',
-      ]);
+      expect(column.superRefine((s) => s).toCode('t')).toBe(
+        't.column().superRefine((s)=>s)',
+      );
     });
   });
 });

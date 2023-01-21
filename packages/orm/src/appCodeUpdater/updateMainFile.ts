@@ -1,16 +1,11 @@
 import { RakeDbAst } from 'rake-db';
 import fs from 'fs/promises';
-import {
-  createSourceFile,
-  NodeArray,
-  ObjectLiteralExpression,
-  ScriptTarget,
-  Statement,
-} from 'typescript';
+import { NodeArray, ObjectLiteralExpression, Statement } from 'typescript';
 import { toCamelCase, toPascalCase } from '../utils';
 import { AppCodeUpdaterError } from './appCodeUpdater';
 import { FileChanges } from './fileChanges';
 import { ts } from './tsUtils';
+import { getImportPath } from './utils';
 
 type Context = {
   path: string;
@@ -30,13 +25,7 @@ export const updateMainFile = async (
   ast: RakeDbAst,
 ) => {
   const content = await fs.readFile(path, 'utf-8');
-
-  const { statements } = createSourceFile(
-    'file.ts',
-    content,
-    ScriptTarget.Latest,
-    true,
-  );
+  const statements = ts.getStatements(content);
 
   const importName = ts.import.getStatementsImportedName(
     statements,
@@ -86,7 +75,7 @@ const createTable = (
 
   const changes = new FileChanges(content);
 
-  const importPath = ts.path.getRelative(path, tablePath(ast.name));
+  const importPath = getImportPath(path, tablePath(ast.name));
   const importPos = ts.import.getEndPos(statements);
   changes.add(
     importPos,
@@ -111,7 +100,7 @@ const dropTable = (
 ) => {
   const changes = new FileChanges(content);
 
-  const importPath = ts.path.getRelative(path, tablePath(ast.name));
+  const importPath = getImportPath(path, tablePath(ast.name));
   const tableClassName = toPascalCase(ast.name);
   const importNames: string[] = [];
   for (const node of ts.import.iterateWithSource(statements, importPath)) {

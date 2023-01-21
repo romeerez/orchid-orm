@@ -1,18 +1,33 @@
 import {
   CallExpression,
+  ClassDeclaration,
+  ComputedPropertyName,
+  createSourceFile,
   Expression,
+  Identifier,
   ImportDeclaration,
   NamedImports,
+  Node,
   NodeArray,
+  NumericLiteral,
   ObjectLiteralElement,
   ObjectLiteralExpression,
+  PrivateIdentifier,
+  PropertyAccessExpression,
   PropertyAssignment,
+  ScriptTarget,
   ShorthandPropertyAssignment,
   Statement,
+  StringLiteral,
   SyntaxKind,
   VariableStatement,
+  ThisExpression,
+  ArrowFunction,
+  ParenthesizedExpression,
+  PropertyName,
+  SpreadAssignment,
+  ArrayLiteralExpression,
 } from 'typescript';
-import path from 'path';
 
 const iterate = <T>(
   kind: number,
@@ -26,29 +41,54 @@ const iterate = <T>(
   };
 };
 
-const isNode = <T extends { kind: number }>() => {
-  return <U extends T>(kind: number) => {
-    return (node?: T): node is U => {
-      return node?.kind === kind;
-    };
+const isNode = <T extends Expression | ObjectLiteralElement | Node>(
+  kind: number,
+) => {
+  return (node?: Expression | ObjectLiteralElement | Node): node is T => {
+    return node?.kind === kind;
   };
 };
 
-const isExpression = isNode<Expression>();
-const isObjectLiteral = isNode<ObjectLiteralElement>();
-
 export const ts = {
+  getStatements(content: string): NodeArray<Statement> {
+    const { statements } = createSourceFile(
+      'file.ts',
+      content,
+      ScriptTarget.Latest,
+      true,
+    );
+    return statements;
+  },
   is: {
-    call: isExpression<CallExpression>(SyntaxKind.CallExpression),
-    objectLiteral: isExpression<ObjectLiteralExpression>(
+    call: isNode<CallExpression>(SyntaxKind.CallExpression),
+    objectLiteral: isNode<ObjectLiteralExpression>(
       SyntaxKind.ObjectLiteralExpression,
     ),
-    propertyAssignment: isObjectLiteral<PropertyAssignment>(
+    propertyAssignment: isNode<PropertyAssignment>(
       SyntaxKind.PropertyAssignment,
     ),
-    shorthandPropertyAssignment: isObjectLiteral<ShorthandPropertyAssignment>(
+    shorthandPropertyAssignment: isNode<ShorthandPropertyAssignment>(
       SyntaxKind.ShorthandPropertyAssignment,
     ),
+    identifier: isNode<Identifier>(SyntaxKind.Identifier),
+    stringLiteral: isNode<StringLiteral>(SyntaxKind.StringLiteral),
+    arrayLiteral: isNode<ArrayLiteralExpression>(
+      SyntaxKind.ArrayLiteralExpression,
+    ),
+    numericLiteral: isNode<NumericLiteral>(SyntaxKind.NumericLiteral),
+    computedPropertyName: isNode<ComputedPropertyName>(
+      SyntaxKind.ComputedPropertyName,
+    ),
+    privateIdentifier: isNode<PrivateIdentifier>(SyntaxKind.PrivateIdentifier),
+    this: isNode<ThisExpression>(SyntaxKind.ThisKeyword),
+    propertyAccess: isNode<PropertyAccessExpression>(
+      SyntaxKind.PropertyAccessExpression,
+    ),
+    arrowFunction: isNode<ArrowFunction>(SyntaxKind.ArrowFunction),
+    parenthesizedExpression: isNode<ParenthesizedExpression>(
+      SyntaxKind.ParenthesizedExpression,
+    ),
+    spreadAssignment: isNode<SpreadAssignment>(SyntaxKind.SpreadAssignment),
   },
   import: {
     iterate: iterate<ImportDeclaration>(SyntaxKind.ImportDeclaration),
@@ -110,7 +150,17 @@ export const ts = {
       }
     },
   },
+  class: {
+    iterate: iterate<ClassDeclaration>(SyntaxKind.ClassDeclaration),
+  },
   prop: {
+    getName({ name }: { name?: PropertyName }) {
+      if (ts.is.identifier(name)) {
+        return name.escapedText;
+      } else {
+        return name?.getText();
+      }
+    },
     getValue(prop: ObjectLiteralElement) {
       if (ts.is.propertyAssignment(prop)) {
         return prop.initializer.getText();
@@ -119,12 +169,6 @@ export const ts = {
       } else {
         return;
       }
-    },
-  },
-  path: {
-    getRelative(from: string, to: string) {
-      const rel = path.relative(path.dirname(from), to);
-      return rel.startsWith('./') || rel.startsWith('../') ? rel : `./${rel}`;
     },
   },
   spaces: {
