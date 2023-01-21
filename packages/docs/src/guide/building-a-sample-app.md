@@ -138,7 +138,7 @@ We won't get stuck here on the topic of configuring the server and test framewor
 For the sample application, I chose [fastify](https://www.fastify.io/) as a server framework
 because it is easier to set up (async error handling out of the box, unlike express),
 has more concise syntax for routes, and it includes a very nice utility for testing out of the box.
-Of course, you can use `Orchid ORM` with your favorite framework.
+Of course, you can use `Orchid ORM` with any other framework.
 
 ## setup Orchid ORM
 
@@ -254,6 +254,7 @@ Create a script that we will use from a terminal to generate and run migrations:
 import path from 'path';
 import { rakeDb } from 'rake-db';
 import { config } from '../config';
+import { appCodeUpdater } from 'orchid-orm';
 
 const migrationsPath = path.resolve(__dirname, '..', 'migrations');
 
@@ -269,10 +270,20 @@ if (config.NODE_ENV !== 'production') {
 }
 
 // pass options and migrationPath to `rakeDb`
-rakeDb(options, { migrationsPath });
+rakeDb(options, {
+  migrationsPath,
+  appCodeUpdater: appCodeUpdater({
+    tablePath: (tableName) => `src/app/tables/${tableName}.table.ts`,
+    baseTablePath: 'src/lib/baseTable.ts',
+    baseTableName: 'BaseTable',
+    mainFilePath: 'src/db.ts',
+  }),
+});
 ```
 
-Add it to `package.json` scripts section:
+`appCodeUpdater` is optional. When configured, this will automatically add and update table files in the project.
+
+Add the script to `package.json` scripts section:
 
 ```json
 {
@@ -339,9 +350,6 @@ Add it to `package.json` "jest" section:
 
 ## user endpoints
 
-Let's begin by writing a user table.
-Every table class must have a table name and a set of columns.
-
 Usually, each table should have a primary key column.
 We will use `t.serial().primaryKey()` for this purpose, it is an autoincrementing integer type.
 Another available option for primary keys is to use `t.uuid().primaryKey()`.
@@ -353,7 +361,83 @@ Add them to the table by writing: `...t.timestamps()`.
 Each column has a type, which is used to get a TypeScript type and a database type when running a migration.
 Some column methods have an effect only in migration, some methods are for validation.
 
-## writing a table
+## add migration
+
+Generate a new migration file by running:
+
+```sh
+npm run db g createUser
+```
+
+In the newly added file such content appears:
+
+```ts
+// src/migrations/*timestamp*_createUser.ts
+import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createTable('user', (t) => ({
+  }));
+});
+```
+
+Add user columns and timestamps:
+
+```ts
+import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createTable('user', (t) => ({
+    id: t.serial().primaryKey(),
+    username: t.text().unique(),
+    email: t.text().unique(),
+    password: t.text(),
+    ...t.timestamps(),
+  }));
+});
+```
+
+Apply the migration by running:
+
+```sh
+npm run db migrate
+```
+
+This will create a new table in the database. If case you need to roll it back, run:
+
+```sh
+npm run db rollback
+```
+
+## table class
+
+Migration script was configured to generate table files by itself.
+
+Check `src/app/tables/user.table.ts` - it should have the following content:
+
+```ts
+// src/app/tables/user.ts
+import { BaseTable } from '../../lib/baseTable';
+
+export class User extends BaseTable {
+  table = 'user';
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    username: t.text().unique(),
+    email: t.text().unique(),
+    password: t.text(),
+    ...t.timestamps(),
+  }));
+}
+```
+
+`src/app/tables` is only a temporary destination, feel free to move files from here to where it feels better.
+
+Let it be in `src/app/user/user.table.ts`.
+
+There is an entry in `src/db.ts` for `UserTable`, it was also added automatically by running migration.
+
+Modify the table file to have exported validation schema, add validations to columns:
 
 ```ts
 // src/app/user/user.table.ts
@@ -361,10 +445,7 @@ import { BaseTable } from '../../lib/baseTable';
 import { tableToZod } from 'orchid-orm-schema-to-zod';
 
 export class UserTable extends BaseTable {
-  // specify a database table name:
   table = 'user';
-  
-  // specify a set of columns:
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     // min length is still 3, as defined in BaseTable configuration, overriding max value here
@@ -389,26 +470,7 @@ t.text() // this is a column type
   .email() // validates email
 ```
 
-After defining a table, place it into the `db` tables list:
-
-```ts
-// src/db.ts
-import { orchidORM } from 'orchid-orm';
-import { config } from './config';
-import { UserTable } from './app/user/user.table';
-
-export const db = orchidORM(
-  {
-    databaseURL: config.currentDatabaseUrl,
-    log: true,
-  },
-  {
-    user: UserTable,
-  }
-);
-```
-
-Now `user` is defined on `db`, we can write queries like `db.user.count()`, `db.user.select(...)`, and many others.
+Now that we have table class, and it is registered in `db.ts`, we can write queries like `db.user.count()`, `db.user.select(...)`, and many others.
 
 Define a test factory that we will use very soon:
 
@@ -419,46 +481,6 @@ import { db } from '../../db';
 
 export const userFactory = createFactory(db.user);
 ```
-
-## add migration
-
-Generate a new migration file by running:
-
-```sh
-npm run db g createUser
-```
-
-In the newly added file we can see such content:
-
-```ts
-// src/migrations/*timestamp*_createUser.ts
-import { change } from 'rake-db';
-
-change(async (db) => {
-  await db.createTable('user', (t) => ({
-  }));
-});
-```
-
-Now simply copy-paste columns from your `UserTable` to this migration:
-
-```ts
-import { change } from 'rake-db';
-
-change(async (db) => {
-  await db.createTable('user', (t) => ({
-    id: t.serial().primaryKey(),
-    username: t.text().unique().max(30),
-    email: t.text().unique().email().max(100),
-    password: t.text().min(8),
-    ...t.timestamps(),
-  }));
-});
-```
-
-Note that `min`, `max`, and `email` have no effect on the migration, these methods are only for validation that we will use later.
-
-`Orchid ORM` will probably gain a feature of auto-generated migrations in the future, but for now, they are written manually.
 
 ## writing tests for registering user endpoint
 
@@ -828,44 +850,6 @@ export const routes = async (app: FastifyInstance) => {
 
 ## follow and unfollow
 
-Add a new table `UserFollow`:
-
-```ts
-// src/app/user/userFollow.table.ts
-import { BaseTable } from '../../lib/baseTable';
-import { UserTable } from './user.table';
-
-export class UserFollowTable extends BaseTable {
-  table = 'userFollow';
-  columns = this.setColumns((t) => ({
-    followingId: t.integer().foreignKey(() => UserTable, 'id'),
-    followerId: t.integer().foreignKey(() => UserTable, 'id'),
-    ...t.primaryKey(['followingId', 'followerId']),
-  }));
-}
-```
-
-This table has `followingId` for the user who is being followed, and the `followerId` for the one who follows.
-Both these columns have `foreignKey` which connects it with an `id` of `UserTable` to ensure that the value always points to an existing user record.
-
-With such syntax `...t.primaryKey([column1, column2])` we define a composite primary key.
-Internally Postgres will add a multi-column unique index and ensure that all of these columns are not null.
-
-Add this table to the list of tables in db:
-
-```ts
-// src/db.ts
-// ...snip
-import { UserFollowTable } from './app/user/userFollow.table';
-
-export const db = orchidORM(
-  // ...snip
-  {
-    userFollow: UserFollowTable,
-  }
-);
-```
-
 Add a migration:
 
 ```sh
@@ -884,6 +868,35 @@ change(async (db) => {
   }));
 });
 ```
+
+This table has `followingId` for the user who is being followed, and the `followerId` for the one who follows.
+Both these columns have `foreignKey` which connects it with an `id` of `user` to ensure that the value always points to an existing user record.
+
+With such syntax `...t.primaryKey([column1, column2])` we define a composite primary key.
+Internally Postgres will add a multi-column unique index and ensure that all of these columns are not null.
+
+Apply it with `npm run db migrate`, and `src/tables/userFollow.table.ts` will appear.
+
+Move it to `src/app/user` directory and modify:
+
+```ts
+// src/app/user/userFollow.table.ts
+import { BaseTable } from '../../lib/baseTable';
+import { UserTable } from './user.table';
+
+export class UserFollowTable extends BaseTable {
+  table = 'userFollow';
+  columns = this.setColumns((t) => ({
+    // in the migration we have a string argument for the foreign table
+    // in the model it can be a string as well, or as a callback with table class
+    followingId: t.integer().foreignKey(() => UserTable, 'id'),
+    followerId: t.integer().foreignKey(() => UserTable, 'id'),
+    ...t.primaryKey(['followingId', 'followerId']),
+  }));
+}
+```
+
+Make sure the table file is linked in `db.ts`.
 
 Adding `followers` and `followings` relations to the user table:
 
@@ -1149,13 +1162,9 @@ change(async (db) => {
 });
 ```
 
-Run migrations:
+Run migrations with `npm run db migrate`.
 
-```sh
-npm run db migrate
-```
-
-Table files can be added in any order, and you can first define all tables and later define their relations.
+Move the tables from `src/app/tables` to `src/app/...` directories, and modify them to have relations.
 
 Tag table:
 
@@ -1280,27 +1289,7 @@ export class ArticleTable extends BaseTable {
 export const articleSchema = tableToZod(ArticleTable);
 ```
 
-Add tables to `db.ts`:
-
-```ts
-// src/db.ts
-
-import { ArticleTable } from './app/article/article.table';
-import { ArticleTagTable } from './app/article/articleTag.table';
-import { TagTable } from './app/tag/tag.table';
-import { ArticleFavoriteTable } from './app/article/articleFavorite.table';
-
-export const db = orchidORM(
-  // ...snip
-  {
-    // ...snip
-    article: ArticleTable,
-    articleFavorite: ArticleFavoriteTable,
-    articleTag: ArticleTagTable,
-    tag: TagTable,
-  }
-);
-```
+Make sure all tables are linked in `db.ts`.
 
 Add a factory for the article for use in tests:
 

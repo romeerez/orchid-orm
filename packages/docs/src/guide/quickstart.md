@@ -40,6 +40,7 @@ Place a script for `db` somewhere, for example, in `src/scripts/db.ts`:
 import 'dotenv/config';
 import { rakeDb } from 'rake-db';
 import path from 'path';
+import { appCodeUpdater } from 'orchid-orm';
 
 rakeDb({
   databaseURL: process.env.DATABASE_URL as string,
@@ -47,6 +48,14 @@ rakeDb({
   ssl: true,
 }, {
   migrationsPath: path.resolve(__dirname, '..', 'migrations'),
+  
+  // optionally, for automatic code updating after running migrations:
+  appCodeUpdater: appCodeUpdater({
+    tablePath: (tableName) => `src/app/tables/${tableName}.table.ts`,
+    baseTablePath: 'src/lib/baseTable.ts',
+    baseTableName: 'BaseTable',
+    mainFilePath: 'src/db.ts',
+  }),
 });
 ```
 
@@ -60,7 +69,7 @@ Add it to `package.json` scripts section:
 }
 ```
 
-Now we can create databases from the command line:
+Create databases from the command line:
 
 ```sh
 npm run db create
@@ -84,14 +93,14 @@ change(async (db) => {
 });
 ```
 
-Add some columns to it:
+Add columns to the table:
 
 ```ts
 // src/migrations/*timestamp*_createTable.ts
 import { change } from 'rake-db';
 
 change(async (db) => {
-  await db.createTable('table', (t) => ({
+  await db.createTable('myTable', (t) => ({
     id: t.serial().primaryKey(),
     text: t.text(),
     ...t.timestamps(),
@@ -99,13 +108,13 @@ change(async (db) => {
 });
 ```
 
-Apply migration by running the command:
+Apply migration by running:
 
 ```sh
 npm run db migrate
 ```
 
-Add a base table:
+`baseTable.ts` file should have been created automatically with the following content:
 
 ```ts
 // src/baseTable.ts
@@ -113,17 +122,22 @@ import { createBaseTable } from 'orchid-orm';
 import { columnTypes } from 'pqb';
 
 export const BaseTable = createBaseTable({
-  columnTypes,
+  columnTypes: {
+    ...columnTypes,
+  },
 });
 ```
 
-Add a table (columns are simply copy-pasted from the migration):
+`src/tables/myTable.table.ts` was created.
+
+TypeScript should highlight `t.text()` because it doesn't have `min` and `max` specified,
+this is needed to prevent unpleasant situations when empty or huge texts are submitted.
 
 ```ts
-// src/table.ts
+// src/tables/myTable.table.ts
 import { BaseTable } from './baseTable'
 
-export class Table extends BaseTable {
+export class MyTable extends BaseTable {
   table = 'table'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -134,7 +148,7 @@ export class Table extends BaseTable {
 }
 ```
 
-Add a main instance of the database:
+`db.ts` also was created after running migration, add a proper configuration to it:
 
 ```ts
 // src/db.ts
@@ -145,6 +159,7 @@ import { Table } from './table'
 export const db = orchidORM(
   {
     databaseURL: process.env.DATABASE_URL as string,
+    // log queries to console
     log: true,
   },
   {

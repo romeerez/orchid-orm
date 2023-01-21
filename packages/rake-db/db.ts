@@ -29,5 +29,5 @@ rakeDb(options, {
     baseTableName: 'BaseTable',
     mainFilePath: 'app/db.ts',
   }),
-  useCodeUpdaterByDefault: false,
+  useCodeUpdater: false,
 });
