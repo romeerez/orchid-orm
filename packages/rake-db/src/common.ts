@@ -30,7 +30,7 @@ export const migrationConfigDefaults = {
   requireTs: require,
   log: true,
   logger: console,
-  useCodeUpdaterByDefault: true,
+  useCodeUpdater: true,
 };
 
 export const getMigrationConfigWithDefaults = (

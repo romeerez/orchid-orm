@@ -48,6 +48,7 @@ describe('common', () => {
         requireTs: expect.any(Function),
         log: true,
         logger: console,
+        useCodeUpdater: true,
       });
     });
   });
