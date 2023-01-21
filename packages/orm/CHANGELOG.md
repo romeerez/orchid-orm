@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.4.18
+
+### Patch Changes
+
+- Add code generator to change project files after migrations
+- Updated dependencies
+  - pqb@0.8.2
+
 ## 1.4.17
 
 ### Patch Changes

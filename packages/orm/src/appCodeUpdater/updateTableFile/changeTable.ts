@@ -1,23 +1,8 @@
-import fs from 'fs/promises';
 import { RakeDbAst } from 'rake-db';
-import {
-  addCode,
-  Code,
-  codeToString,
-  columnDefaultArgumentToCode,
-  columnsShapeToCode,
-  ColumnType,
-  foreignKeyToCode,
-  indexToCode,
-  primaryKeyToCode,
-  quoteObjectKey,
-  singleQuote,
-  TableData,
-} from 'pqb';
-import { toPascalCase } from '../utils';
-import { FileChanges } from './fileChanges';
-import { ts } from './tsUtils';
-import { getImportPath } from './utils';
+import fs from 'fs/promises';
+import { FileChanges } from '../fileChanges';
+import { ts } from '../tsUtils';
+import { toPascalCase } from '../../utils';
 import {
   CallExpression,
   Expression,
@@ -27,55 +12,25 @@ import {
   PropertyAssignment,
   Statement,
 } from 'typescript';
+import {
+  addCode,
+  Code,
+  codeToString,
+  columnDefaultArgumentToCode,
+  ColumnType,
+  foreignKeyToCode,
+  indexToCode,
+  primaryKeyToCode,
+  quoteObjectKey,
+  singleQuote,
+  TableData,
+} from 'pqb';
+import { UpdateTableFileParams } from './updateTableFile';
 
-type Params = {
-  baseTablePath: string;
-  baseTableName: string;
-  tablePath: (name: string) => string;
-  ast: RakeDbAst;
-};
-
-export const updateTableFile = async (params: Params) => {
-  const { ast } = params;
-  if (ast.type === 'table' && ast.action === 'create') {
-    await createTable({ ...params, ast });
-  } else if (ast.type === 'changeTable') {
-    await changeTable({ ...params, ast });
-  }
-};
-
-const createTable = async ({
+export const changeTable = async ({
   ast,
   ...params
-}: Params & { ast: RakeDbAst.Table }) => {
-  const tablePath = params.tablePath(ast.name);
-  const baseTablePath = getImportPath(tablePath, params.baseTablePath);
-
-  const props: Code[] = [`table = ${singleQuote(ast.name)};`];
-  if (ast.noPrimaryKey === 'ignore') {
-    props.push('noPrimaryKey = true;');
-  }
-
-  props.push(
-    'columns = this.setColumns((t) => ({',
-    columnsShapeToCode(ast.shape, ast, 't'),
-    '}));',
-  );
-
-  const code: Code[] = [
-    `import { ${params.baseTableName} } from '${baseTablePath}';\n`,
-    `export class ${toPascalCase(ast.name)} extends ${params.baseTableName} {`,
-    props,
-    '}',
-  ];
-
-  await fs.writeFile(tablePath, codeToString(code, '', '  '));
-};
-
-const changeTable = async ({
-  ast,
-  ...params
-}: Params & { ast: RakeDbAst.ChangeTable }) => {
+}: UpdateTableFileParams & { ast: RakeDbAst.ChangeTable }) => {
   const tablePath = params.tablePath(ast.name);
   const content = await fs.readFile(tablePath, 'utf-8').catch(() => undefined);
   if (!content) return;
@@ -102,7 +57,7 @@ function* iterateColumnsShapes(
   className: string,
 ) {
   for (const node of ts.class.iterate(statements)) {
-    if (!node.name || node.name.escapedText !== className) continue;
+    if (node.name?.escapedText !== className) continue;
 
     for (const member of node.members) {
       const name = ts.prop.getName(member);

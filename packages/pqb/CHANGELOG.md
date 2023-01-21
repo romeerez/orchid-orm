@@ -1,5 +1,11 @@
 # pqb
 
+## 0.8.2
+
+### Patch Changes
+
+- Add code generator to change project files after migrations
+
 ## 0.8.1
 
 ### Patch Changes

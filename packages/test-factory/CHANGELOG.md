@@ -1,5 +1,15 @@
 # orchid-orm-test-factory
 
+## 0.2.2
+
+### Patch Changes
+
+- Add code generator to change project files after migrations
+- Updated dependencies
+  - orchid-orm@1.4.18
+  - pqb@0.8.2
+  - orchid-orm-schema-to-zod@0.2.2
+
 ## 0.2.1
 
 ### Patch Changes

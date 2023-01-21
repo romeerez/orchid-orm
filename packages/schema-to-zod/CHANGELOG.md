@@ -1,5 +1,13 @@
 # orchid-orm-schema-to-zod
 
+## 0.2.2
+
+### Patch Changes
+
+- Add code generator to change project files after migrations
+- Updated dependencies
+  - pqb@0.8.2
+
 ## 0.2.1
 
 ### Patch Changes
