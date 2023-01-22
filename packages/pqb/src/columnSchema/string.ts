@@ -69,18 +69,18 @@ assignMethodsToClass(TextBaseColumn, textMethods);
 export abstract class LimitedTextBaseColumn<
   Limit extends number | undefined = undefined,
 > extends TextBaseColumn {
-  data: TextColumnData & { arg: Limit };
+  data: TextColumnData & { maxChars: Limit };
 
   constructor(limit?: Limit) {
     super();
 
-    this.data = { arg: limit } as TextColumnData & { arg: Limit };
+    this.data = { maxChars: limit } as TextColumnData & { maxChars: Limit };
   }
 
   toSQL() {
     return joinTruthy(
       this.dataType,
-      this.data.arg !== undefined && `(${this.data.arg})`,
+      this.data.maxChars !== undefined && `(${this.data.maxChars})`,
     );
   }
 }
@@ -91,11 +91,11 @@ export class VarCharColumn<
 > extends LimitedTextBaseColumn<Limit> {
   dataType = 'varchar' as const;
   toCode(t: string): Code {
-    const { arg } = this.data;
+    const { maxChars } = this.data;
     return columnCode(
       this,
       t,
-      `${t}.varchar(${arg ?? ''})${stringDataToCode(this.data)}`,
+      `${t}.varchar(${maxChars ?? ''})${stringDataToCode(this.data)}`,
     );
   }
 }
@@ -106,11 +106,11 @@ export class CharColumn<
 > extends LimitedTextBaseColumn<Limit> {
   dataType = 'char' as const;
   toCode(t: string): Code {
-    const { arg } = this.data;
+    const { maxChars } = this.data;
     return columnCode(
       this,
       t,
-      `${t}.char(${arg ?? ''})${stringDataToCode(this.data)}`,
+      `${t}.char(${maxChars ?? ''})${stringDataToCode(this.data)}`,
     );
   }
 }

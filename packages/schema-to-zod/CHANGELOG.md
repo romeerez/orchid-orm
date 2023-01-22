@@ -1,5 +1,13 @@
 # orchid-orm-schema-to-zod
 
+## 0.2.5
+
+### Patch Changes
+
+- Change inner aspects of columns
+- Updated dependencies
+  - pqb@0.8.5
+
 ## 0.2.4
 
 ### Patch Changes

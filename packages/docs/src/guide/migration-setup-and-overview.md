@@ -166,7 +166,7 @@ What `appCodeUpdater` does:
 - adds table entry to `db` file when creating a table
 - adds new columns, indexes, and foreign keys to the table file when they are added in a migration
 - changes columns, indexes, and foreign keys in the table file when they are changed in a migration
-- changes `table` property in the table file when renaming a table
+- changes `table` and `schema` property in the table file when renaming a table
 - removes table entry from `db` file when dropping a table
 
 `appCodeUpdater` does not delete or rename existing files, because it is better to be done manually.

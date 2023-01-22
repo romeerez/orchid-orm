@@ -339,7 +339,7 @@ export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
 
   if (type.isHidden) addCode(code, '.hidden()');
 
-  if (type.isNullable) addCode(code, '.nullable()');
+  if (type.data.isNullable) addCode(code, '.nullable()');
 
   if ('isNonEmpty' in type.data) addCode(code, '.nonEmpty()');
 

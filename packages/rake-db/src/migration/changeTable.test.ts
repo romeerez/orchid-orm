@@ -18,6 +18,23 @@ describe('changeTable', () => {
     expect(db.options.appCodeUpdater).toHaveBeenCalled();
   });
 
+  it('should work for table with schema', async () => {
+    const fn = () => {
+      return db.changeTable('schema.table', (t) => ({
+        column: t.add(t.text()),
+      }));
+    };
+
+    await fn();
+    expectSql(
+      `ALTER TABLE "schema"."table"\nADD COLUMN "column" text NOT NULL`,
+    );
+
+    setDbDown();
+    await fn();
+    expectSql(`ALTER TABLE "schema"."table"\nDROP COLUMN "column"`);
+  });
+
   it('should set comment', async () => {
     const fn = () => {
       return db.changeTable('table', { comment: 'comment' });

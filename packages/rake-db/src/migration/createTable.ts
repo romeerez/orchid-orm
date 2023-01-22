@@ -25,7 +25,7 @@ import {
   indexesToQuery,
   primaryKeyToSql,
 } from './migrationUtils';
-import { quoteTable } from '../common';
+import { getSchemaAndTableFromName, quoteWithSchema } from '../common';
 import { RakeDbAst } from '../ast';
 
 const types = Object.assign(Object.create(columnTypes), {
@@ -77,10 +77,13 @@ const makeAst = (
 
   const primaryKey = tableData.primaryKey;
 
+  const [schema, table] = getSchemaAndTableFromName(tableName);
+
   return {
     type: 'table',
     action: up ? 'create' : 'drop',
-    name: tableName,
+    schema,
+    name: table,
     shape,
     ...tableData,
     primaryKey:
@@ -121,7 +124,7 @@ const astToQueries = (ast: RakeDbAst.Table): Sql[] => {
   if (ast.action === 'drop') {
     return [
       {
-        text: `DROP TABLE ${quoteTable(ast.name)}${
+        text: `DROP TABLE ${quoteWithSchema(ast)}${
           ast.dropMode ? ` ${ast.dropMode}` : ''
         }`,
         values: [],
@@ -146,23 +149,23 @@ const astToQueries = (ast: RakeDbAst.Table): Sql[] => {
   }
 
   ast.foreignKeys.forEach((foreignKey) => {
-    lines.push(`\n  ${constraintToSql(ast.name, true, foreignKey)}`);
+    lines.push(`\n  ${constraintToSql(ast, true, foreignKey)}`);
   });
 
   indexes.push(...ast.indexes);
 
   const result: Sql[] = [
     {
-      text: `CREATE TABLE ${quoteTable(ast.name)} (${lines.join(',')}\n)`,
+      text: `CREATE TABLE ${quoteWithSchema(ast)} (${lines.join(',')}\n)`,
       values,
     },
-    ...indexesToQuery(true, ast.name, indexes),
-    ...commentsToQuery(ast.name, comments),
+    ...indexesToQuery(true, ast, indexes),
+    ...commentsToQuery(ast, comments),
   ];
 
   if (ast.comment) {
     result.push({
-      text: `COMMENT ON TABLE ${quoteTable(ast.name)} IS ${quote(ast.comment)}`,
+      text: `COMMENT ON TABLE ${quoteWithSchema(ast)} IS ${quote(ast.comment)}`,
       values: [],
     });
   }

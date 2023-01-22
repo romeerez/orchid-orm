@@ -39,7 +39,12 @@ export type ColumnTypesBase = Record<
 export type ValidationContext = any;
 
 export type ColumnData = {
+  isNullable?: boolean;
   default?: unknown;
+  maxChars?: number;
+  numericPrecision?: number;
+  numericScale?: number;
+  dateTimePrecision?: number;
   validationDefault?: unknown;
   index?: Omit<SingleColumnIndexOptions, 'column'>;
   comment?: string;
@@ -102,6 +107,7 @@ export type IndexOptions = {
 export type SingleColumnIndexOptions = IndexColumnOptions & IndexOptions;
 
 export type ForeignKeyTable = new () => {
+  schema?: string;
   table: string;
 };
 
@@ -130,6 +136,24 @@ export type ColumnChain = (
   | ['superRefine', (input: unknown, ctx: ValidationContext) => unknown]
 )[];
 
+export type ColumnFromDbParams = {
+  isNullable?: boolean;
+  default?: string;
+  maxChars?: number;
+  numericPrecision?: number;
+  numericScale?: number;
+  dateTimePrecision?: number;
+};
+
+export const instantiateColumn = (
+  klass: new (...args: never[]) => ColumnType,
+  params: ColumnFromDbParams,
+): ColumnType => {
+  const column = new (klass as unknown as new () => ColumnType)();
+  Object.assign(column.data, params);
+  return column as unknown as ColumnType;
+};
+
 export abstract class ColumnType<
   Type = unknown,
   Ops extends Operators = Operators,
@@ -141,10 +165,10 @@ export abstract class ColumnType<
 
   type!: Type;
   inputType!: InputType;
+  isNullable!: boolean;
   data = {} as ColumnData;
   isPrimaryKey = false;
   isHidden = false;
-  isNullable = false;
   hasDefault = false;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -205,9 +229,11 @@ export abstract class ColumnType<
   }
 
   nullable<T extends ColumnType>(this: T): NullableColumn<T> {
-    return Object.assign(Object.create(this), {
-      isNullable: true,
-    }) as unknown as NullableColumn<T>;
+    return addColumnData(
+      this,
+      'isNullable',
+      true,
+    ) as unknown as NullableColumn<T>;
   }
 
   encode<T extends ColumnType, Input>(

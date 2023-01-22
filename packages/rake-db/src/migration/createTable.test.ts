@@ -14,6 +14,22 @@ const db = getDb();
       expect(db.options.appCodeUpdater).toHaveBeenCalled();
     });
 
+    it(`should ${action} with schema`, async () => {
+      await db[action]('schema.name', (t) => ({ id: t.serial().primaryKey() }));
+
+      if (action === 'createTable') {
+        expectSql(`
+          CREATE TABLE "schema"."name" (
+            "id" serial PRIMARY KEY
+          )
+        `);
+      } else {
+        expectSql(`
+          DROP TABLE "schema"."name"
+        `);
+      }
+    });
+
     it(`should ${action} with comment`, async () => {
       await db[action]('name', { comment: 'this is a table comment' }, (t) => ({
         id: t.serial().primaryKey(),

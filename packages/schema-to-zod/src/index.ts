@@ -274,7 +274,7 @@ const typeHandler = <Type extends ColumnType | JSONTypeAny>(
 
     if (
       ('nullable' in column.data && column.data.nullable) ||
-      (column as ColumnType).isNullable
+      (column as ColumnType).data.isNullable
     ) {
       if ('optional' in column.data && column.data.optional) {
         type = type.nullish();
@@ -326,11 +326,11 @@ const handleString = typeHandler((column: TextColumn | JSONString) => {
     }
   });
 
-  const { arg } = data as { arg?: number };
-  if (arg !== undefined) {
+  const { maxChars } = data as { maxChars?: number };
+  if (maxChars !== undefined) {
     type = (
       type as unknown as Record<string, (len: number) => z.ZodString>
-    ).length(arg);
+    ).length(maxChars);
   }
 
   return type;

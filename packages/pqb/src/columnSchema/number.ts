@@ -56,46 +56,43 @@ export abstract class NumberAsStringBaseColumn extends ColumnType<
   operators = Operators.number;
 }
 
-export type DecimalColumnData = ColumnData & {
-  precision?: number;
-  scale?: number;
-};
-
 export class DecimalBaseColumn<
   Precision extends number | undefined = undefined,
   Scale extends number | undefined = undefined,
 > extends ColumnType<string, typeof Operators.number> {
-  data: DecimalColumnData & { precision: Precision; scale: Scale };
+  data: ColumnData & { numericPrecision: Precision; numericScale: Scale };
   operators = Operators.number;
   dataType = 'decimal' as const;
 
-  constructor(precision?: Precision, scale?: Scale) {
+  constructor(numericPrecision?: Precision, numericScale?: Scale) {
     super();
 
     this.data = {
-      precision,
-      scale,
-    } as DecimalColumnData & { precision: Precision; scale: Scale };
+      numericPrecision,
+      numericScale,
+    } as { numericPrecision: Precision; numericScale: Scale };
   }
 
   toCode(t: string): Code {
-    const { precision, scale } = this.data;
+    const { numericPrecision, numericScale } = this.data;
     return columnCode(
       this,
       t,
-      `${t}.decimal(${precision || ''}${scale ? `, ${scale}` : ''})`,
+      `${t}.decimal(${numericPrecision || ''}${
+        numericScale ? `, ${numericScale}` : ''
+      })`,
     );
   }
 
   toSQL() {
-    const { precision, scale } = this.data;
+    const { numericPrecision, numericScale } = this.data;
 
     return joinTruthy(
       this.dataType,
-      precision
-        ? scale
-          ? `(${precision}, ${scale})`
-          : `(${precision})`
+      numericPrecision
+        ? numericScale
+          ? `(${numericPrecision}, ${numericScale})`
+          : `(${numericPrecision})`
         : undefined,
     );
   }

@@ -126,9 +126,9 @@ export const createSchemaMigrations = async (
 ) => {
   try {
     await db.query(
-      `CREATE TABLE ${quoteTable(
-        config.migrationsTable,
-      )} ( version TEXT NOT NULL )`,
+      `CREATE TABLE ${quoteWithSchema({
+        name: config.migrationsTable,
+      })} ( version TEXT NOT NULL )`,
     );
     console.log('Created versions table');
   } catch (err) {
@@ -235,11 +235,21 @@ export const joinColumns = (columns: string[]) => {
   return columns.map((column) => `"${column}"`).join(', ');
 };
 
-export const quoteTable = (table: string) => {
-  const index = table.indexOf('.');
-  if (index !== -1) {
-    return `"${table.slice(0, index)}"."${table.slice(index + 1)}"`;
-  } else {
-    return `"${table}"`;
-  }
+export const quoteWithSchema = ({
+  schema,
+  name,
+}: {
+  schema?: string;
+  name: string;
+}) => {
+  return schema ? `"${schema}"."${name}"` : `"${name}"`;
+};
+
+export const getSchemaAndTableFromName = (
+  name: string,
+): [string | undefined, string] => {
+  const index = name.indexOf('.');
+  return index !== -1
+    ? [name.slice(0, index), name.slice(index + 1)]
+    : [undefined, name];
 };

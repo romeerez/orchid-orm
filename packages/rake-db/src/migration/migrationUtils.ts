@@ -10,7 +10,12 @@ import {
   toArray,
 } from 'pqb';
 import { ColumnComment, Migration } from './migration';
-import { joinColumns, joinWords, quoteTable } from '../common';
+import {
+  getSchemaAndTableFromName,
+  joinColumns,
+  joinWords,
+  quoteWithSchema,
+} from '../common';
 
 export const columnToSql = (
   key: string,
@@ -30,7 +35,7 @@ export const columnToSql = (
 
   if (item.isPrimaryKey && !hasMultiplePrimaryKeys) {
     line.push('PRIMARY KEY');
-  } else if (!item.isNullable) {
+  } else if (!item.data.isNullable) {
     line.push('NOT NULL');
   }
 
@@ -48,7 +53,7 @@ export const columnToSql = (
 
   const { foreignKey } = item.data;
   if (foreignKey) {
-    const table = getForeignKeyTable(
+    const [schema, table] = getForeignKeyTable(
       'fn' in foreignKey ? foreignKey.fn : foreignKey.table,
     );
 
@@ -56,7 +61,7 @@ export const columnToSql = (
       line.push(`CONSTRAINT "${foreignKey.name}"`);
     }
 
-    line.push(referencesToSql(table, foreignKey.columns, foreignKey));
+    line.push(referencesToSql(schema, table, foreignKey.columns, foreignKey));
   }
 
   return line.join(' ');
@@ -89,42 +94,49 @@ export const addColumnComment = (
 
 export const getForeignKeyTable = (
   fnOrTable: (() => ForeignKeyTable) | string,
-) => {
+): [string | undefined, string] => {
   if (typeof fnOrTable === 'string') {
-    return fnOrTable;
+    return getSchemaAndTableFromName(fnOrTable);
   }
 
-  const klass = fnOrTable();
-  return new klass().table;
+  const item = new (fnOrTable())();
+  return [item.schema, item.table];
 };
 
 export const constraintToSql = (
-  tableName: string,
+  { name }: { schema?: string; name: string },
   up: boolean,
   foreignKey: TableData['foreignKeys'][number],
 ) => {
   const constraintName =
-    foreignKey.options.name ||
-    `${tableName}_${foreignKey.columns.join('_')}_fkey`;
+    foreignKey.options.name || `${name}_${foreignKey.columns.join('_')}_fkey`;
 
   if (!up) {
     const { dropMode } = foreignKey.options;
     return `CONSTRAINT "${constraintName}"${dropMode ? ` ${dropMode}` : ''}`;
   }
 
-  const table = getForeignKeyTable(foreignKey.fnOrTable);
+  const [schema, table] = getForeignKeyTable(foreignKey.fnOrTable);
   return `CONSTRAINT "${constraintName}" FOREIGN KEY (${joinColumns(
     foreignKey.columns,
-  )}) ${referencesToSql(table, foreignKey.foreignColumns, foreignKey.options)}`;
+  )}) ${referencesToSql(
+    schema,
+    table,
+    foreignKey.foreignColumns,
+    foreignKey.options,
+  )}`;
 };
 
 export const referencesToSql = (
+  schema: string | undefined,
   table: string,
   columns: string[],
   foreignKey: Pick<ForeignKeyOptions, 'match' | 'onDelete' | 'onUpdate'>,
 ) => {
   const sql: string[] = [
-    `REFERENCES ${quoteTable(table)}(${joinColumns(columns)})`,
+    `REFERENCES ${quoteWithSchema({ schema, name: table })}(${joinColumns(
+      columns,
+    )})`,
   ];
 
   if (foreignKey.match) {
@@ -144,13 +156,13 @@ export const referencesToSql = (
 
 export const indexesToQuery = (
   up: boolean,
-  tableName: string,
+  { schema, name }: { schema?: string; name: string },
   indexes: TableData.Index[],
 ): Sql[] => {
   return indexes.map(({ columns, options }) => {
     const indexName =
       options.name ||
-      joinWords(tableName, ...columns.map(({ column }) => column), 'index');
+      joinWords(name, ...columns.map(({ column }) => column), 'index');
 
     if (!up) {
       return {
@@ -169,7 +181,7 @@ export const indexesToQuery = (
       sql.push('UNIQUE');
     }
 
-    sql.push(`INDEX "${indexName}" ON ${quoteTable(tableName)}`);
+    sql.push(`INDEX "${indexName}" ON ${quoteWithSchema({ schema, name })}`);
 
     if (options.using) {
       sql.push(`USING ${options.using}`);
@@ -234,13 +246,13 @@ export const indexesToQuery = (
 };
 
 export const commentsToQuery = (
-  tableName: string,
+  schemaTable: { schema?: string; name: string },
   comments: ColumnComment[],
 ): Sql[] => {
   return comments.map(({ column, comment }) => ({
-    text: `COMMENT ON COLUMN ${quoteTable(tableName)}."${column}" IS ${quote(
-      comment,
-    )}`,
+    text: `COMMENT ON COLUMN ${quoteWithSchema(
+      schemaTable,
+    )}."${column}" IS ${quote(comment)}`,
     values: [],
   }));
 };

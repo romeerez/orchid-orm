@@ -11,3 +11,4 @@ export * from './json';
 export * from './array';
 export * from './virtual';
 export * from './code';
+export * from './columnsByType';

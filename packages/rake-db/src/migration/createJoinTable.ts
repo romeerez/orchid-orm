@@ -1,6 +1,10 @@
 import { ColumnType, Operators } from 'pqb';
 import { ColumnsShapeCallback, JoinTableOptions, Migration } from './migration';
-import { joinWords, quoteTable } from '../common';
+import {
+  getSchemaAndTableFromName,
+  joinWords,
+  quoteWithSchema,
+} from '../common';
 import { getPrimaryKeysOfTable } from './migrationUtils';
 import { singular } from 'pluralize';
 import { createTable } from './createTable';
@@ -46,26 +50,33 @@ export const createJoinTable = async (
           })),
       );
 
+      const [schema, name] = getSchemaAndTableFromName(table);
       if (!primaryKeys.length) {
         throw new Error(
-          `Primary key for table ${quoteTable(table)} is not defined`,
+          `Primary key for table ${quoteWithSchema({
+            schema,
+            name,
+          })} is not defined`,
         );
       }
 
-      return [table, primaryKeys] as const;
+      return [schema, table, primaryKeys] as const;
     }),
   );
 
   return createTable(migration, up, tableName, options, (t) => {
     const result: Record<string, ColumnType> = {};
 
-    tablesWithPrimaryKeys.forEach(([table, primaryKeys]) => {
+    tablesWithPrimaryKeys.forEach(([schema, table, primaryKeys]) => {
       if (primaryKeys.length === 1) {
         const [{ type, joinedName, name }] = primaryKeys;
 
         const column = new UnknownColumn(type);
 
-        result[joinedName] = column.foreignKey(table, name);
+        result[joinedName] = column.foreignKey(
+          schema ? `${schema}.${table}` : table,
+          name,
+        );
 
         return;
       }
@@ -86,7 +97,7 @@ export const createJoinTable = async (
     }
 
     t.primaryKey(
-      tablesWithPrimaryKeys.flatMap(([, primaryKeys]) =>
+      tablesWithPrimaryKeys.flatMap(([, , primaryKeys]) =>
         primaryKeys.map((item) => item.joinedName),
       ),
     );

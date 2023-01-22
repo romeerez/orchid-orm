@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.2.6
+
+### Patch Changes
+
+- Change inner aspects of columns
+- Updated dependencies
+  - pqb@0.8.5
+
 ## 2.2.5
 
 ### Patch Changes

@@ -8,7 +8,7 @@ import {
   joinColumns,
   joinWords,
   migrationConfigDefaults,
-  quoteTable,
+  quoteWithSchema,
   setAdapterOptions,
   setAdminCredentialsToOptions,
   sortAsc,
@@ -285,13 +285,15 @@ describe('common', () => {
     });
   });
 
-  describe('quoteTable', () => {
-    it('should quote a table', () => {
-      expect(quoteTable('table')).toBe('"table"');
+  describe('quoteWithSchema', () => {
+    it('should quote a name', () => {
+      expect(quoteWithSchema({ name: 'table' })).toBe('"table"');
     });
 
-    it('should quote a table with schema', () => {
-      expect(quoteTable('schema.table')).toBe('"schema"."table"');
+    it('should quote a name with schema', () => {
+      expect(quoteWithSchema({ schema: 'schema', name: 'table' })).toBe(
+        '"schema"."table"',
+      );
     });
   });
 });

@@ -23,7 +23,7 @@ import {
   runCodeUpdater,
 } from './migration';
 import { RakeDbAst } from '../ast';
-import { quoteTable } from '../common';
+import { getSchemaAndTableFromName, quoteWithSchema } from '../common';
 import {
   addColumnComment,
   addColumnIndex,
@@ -135,7 +135,7 @@ const columnTypeToColumnChange = (
     return {
       column: item,
       type: item.toSQL(),
-      nullable: item.isNullable,
+      nullable: item.data.isNullable,
       primaryKey: item.isPrimaryKey,
       ...item.data,
       foreignKey,
@@ -257,9 +257,12 @@ const makeAst = (
     }
   }
 
+  const [schema, table] = getSchemaAndTableFromName(name);
+
   return {
     type: 'changeTable',
-    name,
+    schema,
+    name: table,
     comment: comment
       ? up
         ? Array.isArray(comment)
@@ -287,7 +290,7 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): Sql[] => {
 
   if (ast.comment !== undefined) {
     result.push({
-      text: `COMMENT ON TABLE ${quoteTable(ast.name)} IS ${quote(ast.comment)}`,
+      text: `COMMENT ON TABLE ${quoteWithSchema(ast)} IS ${quote(ast.comment)}`,
       values: [],
     });
   }
@@ -493,7 +496,7 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): Sql[] => {
 
   prependAlterTable.push(
     ...dropForeignKeys.map(
-      (foreignKey) => `\n DROP ${constraintToSql(ast.name, false, foreignKey)}`,
+      (foreignKey) => `\n DROP ${constraintToSql(ast, false, foreignKey)}`,
     ),
   );
 
@@ -509,22 +512,22 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): Sql[] => {
 
   alterTable.push(
     ...addForeignKeys.map(
-      (foreignKey) => `\n ADD ${constraintToSql(ast.name, true, foreignKey)}`,
+      (foreignKey) => `\n ADD ${constraintToSql(ast, true, foreignKey)}`,
     ),
   );
 
   if (alterTable.length) {
     result.push({
       text:
-        `ALTER TABLE ${quoteTable(ast.name)}` +
+        `ALTER TABLE ${quoteWithSchema(ast)}` +
         `\n  ${alterTable.join(',\n  ')}`,
       values,
     });
   }
 
-  result.push(...indexesToQuery(false, ast.name, dropIndexes));
-  result.push(...indexesToQuery(true, ast.name, addIndexes));
-  result.push(...commentsToQuery(ast.name, comments));
+  result.push(...indexesToQuery(false, ast, dropIndexes));
+  result.push(...indexesToQuery(true, ast, addIndexes));
+  result.push(...commentsToQuery(ast, comments));
 
   return result;
 };

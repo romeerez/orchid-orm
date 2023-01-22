@@ -54,7 +54,9 @@ export class JSONColumn<
   operators = Operators.json;
   data: ColumnData & { schema: Type };
 
-  constructor(schemaOrFn: Type | ((j: JSONTypes) => Type)) {
+  constructor(
+    schemaOrFn: Type | ((j: JSONTypes) => Type) = scalarTypes.unknown() as Type,
+  ) {
     super();
 
     const schema =

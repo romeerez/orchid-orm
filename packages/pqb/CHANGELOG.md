@@ -1,5 +1,11 @@
 # pqb
 
+## 0.8.5
+
+### Patch Changes
+
+- Change inner aspects of columns
+
 ## 0.8.4
 
 ### Patch Changes

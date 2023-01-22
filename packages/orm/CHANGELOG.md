@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.4.22
+
+### Patch Changes
+
+- Change inner aspects of columns
+- Updated dependencies
+  - pqb@0.8.5
+
 ## 1.4.21
 
 ### Patch Changes

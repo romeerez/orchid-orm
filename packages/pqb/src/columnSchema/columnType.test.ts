@@ -1,4 +1,4 @@
-import { ColumnType } from './columnType';
+import { ColumnType, instantiateColumn } from './columnType';
 import { Operators } from '../columnsOperators';
 import {
   adapter,
@@ -127,8 +127,8 @@ describe('column base', () => {
 
   describe('.nullable', () => {
     it('should mark column as nullable', () => {
-      expect(column.isNullable).toBe(false);
-      expect(column.nullable().isNullable).toBe(true);
+      expect(column.data.isNullable).toBe(undefined);
+      expect(column.nullable().data.isNullable).toBe(true);
     });
 
     it('should have toCode', () => {
@@ -437,6 +437,20 @@ describe('column base', () => {
       expect(column.superRefine((s) => s).toCode('t')).toBe(
         't.column().superRefine((s)=>s)',
       );
+    });
+  });
+
+  describe('fromDb', () => {
+    it('should instantiate a column', () => {
+      const params = {
+        maxChars: 1,
+        numericPrecision: 2,
+        numericScale: 3,
+        dateTimePrecision: 4,
+      };
+      const column = instantiateColumn(Column, params);
+      expect(column).toBeInstanceOf(Column);
+      expect(column.data).toMatchObject(params);
     });
   });
 });

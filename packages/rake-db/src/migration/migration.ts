@@ -21,7 +21,11 @@ import {
 } from 'pqb';
 import { createTable } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
-import { RakeDbConfig, quoteTable } from '../common';
+import {
+  RakeDbConfig,
+  quoteWithSchema,
+  getSchemaAndTableFromName,
+} from '../common';
 import { createJoinTable } from './createJoinTable';
 import { RakeDbAst } from '../ast';
 
@@ -179,14 +183,24 @@ export class Migration extends TransactionAdapter {
   }
 
   async renameTable(from: string, to: string): Promise<void> {
+    const [fromSchema, f] = getSchemaAndTableFromName(this.up ? from : to);
+    const [toSchema, t] = getSchemaAndTableFromName(this.up ? to : from);
     const ast: RakeDbAst.RenameTable = {
       type: 'renameTable',
-      from: this.up ? from : to,
-      to: this.up ? to : from,
+      fromSchema,
+      from: f,
+      toSchema,
+      to: t,
     };
 
     await this.query(
-      `ALTER TABLE ${quoteTable(ast.from)} RENAME TO "${ast.to}"`,
+      `ALTER TABLE ${quoteWithSchema({
+        schema: ast.fromSchema,
+        name: ast.from,
+      })} RENAME TO ${quoteWithSchema({
+        schema: ast.toSchema,
+        name: ast.to,
+      })}`,
     );
 
     await runCodeUpdater(this, ast);

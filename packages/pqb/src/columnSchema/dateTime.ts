@@ -55,25 +55,24 @@ export class DateColumn extends DateBaseColumn {
   }
 }
 
-export type DateTimeColumnData = DateColumnData & {
-  precision?: number;
-};
-
 export abstract class DateTimeBaseClass<
   Precision extends number | undefined = undefined,
 > extends DateBaseColumn {
-  data: DateTimeColumnData & { precision: Precision };
+  data: DateColumnData & { dateTimePrecision: Precision };
 
-  constructor(precision?: Precision) {
+  constructor(dateTimePrecision?: Precision) {
     super();
 
-    this.data = { precision } as DateTimeColumnData & { precision: Precision };
+    this.data = { dateTimePrecision } as DateColumnData & {
+      dateTimePrecision: Precision;
+    };
   }
 
   toSQL() {
     return joinTruthy(
       this.dataType,
-      this.data.precision !== undefined && `(${this.data.precision})`,
+      this.data.dateTimePrecision !== undefined &&
+        `(${this.data.dateTimePrecision})`,
     );
   }
 }
@@ -86,7 +85,8 @@ export abstract class DateTimeWithTimeZoneBaseClass<
   toSQL() {
     return joinTruthy(
       this.baseDataType,
-      this.data.precision !== undefined && `(${this.data.precision})`,
+      this.data.dateTimePrecision !== undefined &&
+        `(${this.data.dateTimePrecision})`,
       ' with time zone',
     );
   }
@@ -98,11 +98,11 @@ export class TimestampColumn<
 > extends DateTimeBaseClass<Precision> {
   dataType = 'timestamp' as const;
   toCode(t: string): Code {
-    const { precision } = this.data;
+    const { dateTimePrecision } = this.data;
     return columnCode(
       this,
       t,
-      `${t}.timestamp(${precision || ''})${dateDataToCode(this.data)}`,
+      `${t}.timestamp(${dateTimePrecision || ''})${dateDataToCode(this.data)}`,
     );
   }
 }
@@ -114,11 +114,11 @@ export class TimestampWithTimeZoneColumn<
   dataType = 'timestamp with time zone' as const;
   baseDataType = 'timestamp' as const;
   toCode(t: string): Code {
-    const { precision } = this.data;
+    const { dateTimePrecision } = this.data;
     return columnCode(
       this,
       t,
-      `${t}.timestampWithTimeZone(${precision || ''})${dateDataToCode(
+      `${t}.timestampWithTimeZone(${dateTimePrecision || ''})${dateDataToCode(
         this.data,
       )}`,
     );
@@ -131,11 +131,11 @@ export class TimeColumn<
 > extends DateTimeBaseClass<Precision> {
   dataType = 'time' as const;
   toCode(t: string): Code {
-    const { precision } = this.data;
+    const { dateTimePrecision } = this.data;
     return columnCode(
       this,
       t,
-      `${t}.time(${precision || ''})${dateDataToCode(this.data)}`,
+      `${t}.time(${dateTimePrecision || ''})${dateDataToCode(this.data)}`,
     );
   }
 }
@@ -147,11 +147,13 @@ export class TimeWithTimeZoneColumn<
   dataType = 'time with time zone' as const;
   baseDataType = 'time' as const;
   toCode(t: string): Code {
-    const { precision } = this.data;
+    const { dateTimePrecision } = this.data;
     return columnCode(
       this,
       t,
-      `${t}.timeWithTimeZone(${precision || ''})${dateDataToCode(this.data)}`,
+      `${t}.timeWithTimeZone(${dateTimePrecision || ''})${dateDataToCode(
+        this.data,
+      )}`,
     );
   }
 }
@@ -177,7 +179,7 @@ export class IntervalColumn<
   constructor(fields?: Fields, precision?: Precision) {
     super();
 
-    this.data = { fields, precision } as DateTimeColumnData & {
+    this.data = { fields, precision } as DateColumnData & {
       fields: Fields;
       precision: Precision;
     };

@@ -4,7 +4,7 @@ import {
   getMigrationFiles,
   RakeDbConfig,
   MigrationFile,
-  quoteTable,
+  quoteWithSchema,
 } from '../common';
 import {
   getCurrentPromise,
@@ -105,7 +105,9 @@ const saveMigratedVersion = async (
   config: RakeDbConfig,
 ) => {
   await db.query(
-    `INSERT INTO ${quoteTable(config.migrationsTable)} VALUES ('${version}')`,
+    `INSERT INTO ${quoteWithSchema({
+      name: config.migrationsTable,
+    })} VALUES ('${version}')`,
   );
 };
 
@@ -115,9 +117,9 @@ const removeMigratedVersion = async (
   config: RakeDbConfig,
 ) => {
   await db.query(
-    `DELETE FROM ${quoteTable(
-      config.migrationsTable,
-    )} WHERE version = '${version}'`,
+    `DELETE FROM ${quoteWithSchema({
+      name: config.migrationsTable,
+    })} WHERE version = '${version}'`,
   );
 };
 
@@ -127,7 +129,7 @@ const getMigratedVersionsMap = async (
 ): Promise<Record<string, boolean>> => {
   try {
     const result = await db.arrays<[string]>(
-      `SELECT * FROM ${quoteTable(config.migrationsTable)}`,
+      `SELECT * FROM ${quoteWithSchema({ name: config.migrationsTable })}`,
     );
     return Object.fromEntries(result.rows.map((row) => [row[0], true]));
   } catch (err) {

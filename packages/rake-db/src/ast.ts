@@ -20,6 +20,7 @@ export namespace RakeDbAst {
   export type Table = {
     type: 'table';
     action: 'create' | 'drop';
+    schema?: string;
     name: string;
     shape: ColumnsShape;
     noPrimaryKey: NoPrimaryKeyOption;
@@ -29,6 +30,7 @@ export namespace RakeDbAst {
 
   export type ChangeTable = {
     type: 'changeTable';
+    schema?: string;
     name: string;
     comment?: string | null;
     shape: Record<string, ChangeTableItem>;
@@ -79,7 +81,9 @@ export namespace RakeDbAst {
 
   export type RenameTable = {
     type: 'renameTable';
+    fromSchema?: string;
     from: string;
+    toSchema?: string;
     to: string;
   };
 

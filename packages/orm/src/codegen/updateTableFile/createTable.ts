@@ -13,7 +13,14 @@ export const createTable = async ({
   const tablePath = params.tablePath(ast.name);
   const baseTablePath = getImportPath(tablePath, params.baseTablePath);
 
-  const props: Code[] = [`table = ${singleQuote(ast.name)};`];
+  const props: Code[] = [];
+
+  if (ast.schema) {
+    props.push(`schema = ${singleQuote(ast.schema)};`);
+  }
+
+  props.push(`table = ${singleQuote(ast.name)};`);
+
   if (ast.noPrimaryKey === 'ignore') {
     props.push('noPrimaryKey = true;');
   }
