@@ -184,7 +184,7 @@ describe('structureToAst', () => {
       db.getIndexes = async () => [{ ...index, isPrimary: true }];
 
       const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
-      expect(ast.shape.name.data.index).toBe(undefined);
+      expect(ast.shape.name.data.indexes).toBe(undefined);
       expect(ast.indexes).toHaveLength(0);
     });
 
@@ -195,10 +195,12 @@ describe('structureToAst', () => {
       db.getIndexes = async () => [index];
 
       const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
-      expect(ast.shape.name.data.index).toEqual({
-        name: 'index',
-        unique: false,
-      });
+      expect(ast.shape.name.data.indexes).toEqual([
+        {
+          name: 'index',
+          unique: false,
+        },
+      ]);
       expect(ast.indexes).toHaveLength(0);
     });
 
@@ -212,7 +214,7 @@ describe('structureToAst', () => {
       ];
 
       const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
-      expect(ast.shape.name.data.index).toBe(undefined);
+      expect(ast.shape.name.data.indexes).toBe(undefined);
       expect(ast.indexes).toEqual([
         {
           columns: [{ column: 'id' }, { column: 'name' }],
@@ -236,11 +238,13 @@ describe('structureToAst', () => {
 
       const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
 
-      expect(ast.shape.otherId.data.foreignKey).toEqual({
-        columns: ['id'],
-        name: 'fkey',
-        table: 'otherTable',
-      });
+      expect(ast.shape.otherId.data.foreignKeys).toEqual([
+        {
+          columns: ['id'],
+          name: 'fkey',
+          table: 'otherTable',
+        },
+      ]);
       expect(ast.foreignKeys).toHaveLength(0);
     });
 
@@ -261,7 +265,7 @@ describe('structureToAst', () => {
 
       const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
 
-      expect(ast.shape.otherId.data.foreignKey).toBe(undefined);
+      expect(ast.shape.otherId.data.foreignKeys).toBe(undefined);
       expect(ast.foreignKeys).toEqual([
         {
           columns: ['name', 'otherId'],

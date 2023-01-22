@@ -51,17 +51,19 @@ export const columnToSql = (
     }
   }
 
-  const { foreignKey } = item.data;
-  if (foreignKey) {
-    const [schema, table] = getForeignKeyTable(
-      'fn' in foreignKey ? foreignKey.fn : foreignKey.table,
-    );
+  const { foreignKeys } = item.data;
+  if (foreignKeys) {
+    for (const foreignKey of foreignKeys) {
+      const [schema, table] = getForeignKeyTable(
+        'fn' in foreignKey ? foreignKey.fn : foreignKey.table,
+      );
 
-    if (foreignKey.name) {
-      line.push(`CONSTRAINT "${foreignKey.name}"`);
+      if (foreignKey.name) {
+        line.push(`CONSTRAINT "${foreignKey.name}"`);
+      }
+
+      line.push(referencesToSql(schema, table, foreignKey.columns, foreignKey));
     }
-
-    line.push(referencesToSql(schema, table, foreignKey.columns, foreignKey));
   }
 
   return line.join(' ');
@@ -72,13 +74,13 @@ export const addColumnIndex = (
   key: string,
   item: ColumnType,
 ) => {
-  if (item.data) {
-    if (item.data.index) {
-      indexes.push({
-        columns: [{ ...item.data.index, column: key }],
-        options: item.data.index,
-      });
-    }
+  if (item.data.indexes) {
+    indexes.push(
+      ...item.data.indexes.map((index) => ({
+        columns: [{ ...index, column: key }],
+        options: index,
+      })),
+    );
   }
 };
 

@@ -46,11 +46,11 @@ export type ColumnData = {
   numericScale?: number;
   dateTimePrecision?: number;
   validationDefault?: unknown;
-  index?: Omit<SingleColumnIndexOptions, 'column'>;
+  indexes?: Omit<SingleColumnIndexOptions, 'column'>[];
   comment?: string;
   collate?: string;
   compression?: string;
-  foreignKey?: ForeignKey<string, string[]>;
+  foreignKeys?: ForeignKey<string, string[]>[];
   modifyQuery?: (q: Query) => void;
   as?: ColumnType;
 };
@@ -127,6 +127,19 @@ const addColumnData = <T extends ColumnType, K extends keyof ColumnData>(
   const cloned = Object.create(q);
   cloned.data = { ...q.data, [key]: value };
   return cloned;
+};
+
+const pushColumnData = <T extends ColumnType, K extends keyof ColumnData>(
+  q: T,
+  key: K,
+  value: unknown,
+) => {
+  const arr = q.data[key] as unknown[];
+  return addColumnData(
+    q,
+    key,
+    (arr ? [...arr, value] : [value]) as unknown as undefined,
+  );
 };
 
 export type ColumnChain = (
@@ -209,19 +222,11 @@ export abstract class ColumnType<
     column: string,
     options: ForeignKeyOptions = {},
   ) {
-    const cloned = Object.create(this);
-    if (typeof fnOrTable === 'string') {
-      cloned.data = {
-        ...this.data,
-        foreignKey: { table: fnOrTable, columns: [column], ...options },
-      };
-    } else {
-      cloned.data = {
-        ...this.data,
-        foreignKey: { fn: fnOrTable, columns: [column], ...options },
-      };
-    }
-    return cloned;
+    const item =
+      typeof fnOrTable === 'string'
+        ? { table: fnOrTable, columns: [column], ...options }
+        : { fn: fnOrTable, columns: [column], ...options };
+    return pushColumnData(this, 'foreignKeys', item);
   }
 
   hidden<T extends ColumnType>(this: T): T & { isHidden: true } {
@@ -279,14 +284,14 @@ export abstract class ColumnType<
     this: T,
     options: Omit<SingleColumnIndexOptions, 'column'> = {},
   ): T {
-    return addColumnData(this, 'index', options);
+    return pushColumnData(this, 'indexes', options);
   }
 
   unique<T extends ColumnType>(
     this: T,
     options: Omit<SingleColumnIndexOptions, 'column' | 'unique'> = {},
   ): T {
-    return addColumnData(this, 'index', { ...options, unique: true });
+    return pushColumnData(this, 'indexes', { ...options, unique: true });
   }
 
   comment<T extends ColumnType>(this: T, comment: string): T {

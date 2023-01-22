@@ -430,7 +430,7 @@ export const createFactory = <T extends Query>(
       }
     }
 
-    if (column.data.index?.unique) {
+    if (column.data.indexes?.some((index) => index.unique)) {
       if (column instanceof TextBaseColumn) {
         uniqueFields.push({
           key,

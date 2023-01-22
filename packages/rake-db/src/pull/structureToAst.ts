@@ -58,23 +58,23 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
         column = column.primaryKey();
       }
 
-      const index = tableIndexes.find(
+      const indexes = tableIndexes.filter(
         (it) =>
           it.isPrimary === false &&
           it.columnNames.length === 1 &&
           it.columnNames[0] === item.name,
       );
-      if (index) {
+      for (const index of indexes) {
         column = column.index({
           name: index.name,
           unique: index.isUnique,
         });
       }
 
-      const foreignKey = tableForeignKeys.find(
+      const foreignKeys = tableForeignKeys.filter(
         (it) => it.columnNames.length === 1 && it.columnNames[0] === item.name,
       );
-      if (foreignKey) {
+      for (const foreignKey of foreignKeys) {
         column = column.foreignKey(
           foreignKey.foreignTableName,
           foreignKey.foreignColumnNames[0],

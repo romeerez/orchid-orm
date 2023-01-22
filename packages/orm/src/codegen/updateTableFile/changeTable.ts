@@ -17,8 +17,12 @@ import {
   Code,
   codeToString,
   columnDefaultArgumentToCode,
+  columnForeignKeysToCode,
+  columnIndexesToCode,
   ColumnType,
+  ForeignKey,
   foreignKeyToCode,
+  IndexColumnOptions,
   indexToCode,
   primaryKeyToCode,
   quoteObjectKey,
@@ -266,20 +270,32 @@ const changeColumn = (
   }
 
   const changedProps: Partial<Record<Key, true>> = {};
+  const replaced: Record<string, true> = {};
   for (const item of items.reverse()) {
     if (!ts.is.propertyAccess(item.expression)) continue;
 
     const { name } = item.expression;
-    const key = name.escapedText.toString();
+    let key = name.escapedText.toString();
+    if (key === 'index') key = 'indexes';
+    else if (key === 'foreignKey') key = 'foreignKeys';
+
     if (!propsToChange[key as Key]) continue;
 
-    const value = getColumnMethodArgs(to, key as Key);
-    if (value) {
-      const code = [`${key}(`];
-      addCode(code, value);
-      addCode(code, ')');
-      changes.replace(name.pos, item.end, codeToString(code, '', '  ').trim());
-    } else {
+    let remove = true;
+    if (!replaced[key]) {
+      const code = getColumnMethodArgs(to, key as Key);
+      if (code) {
+        changes.replace(
+          item.expression.expression.end,
+          item.end,
+          codeToString(code, spaces + '  ', '  ').trim(),
+        );
+        replaced[key] = true;
+        remove = false;
+      }
+    }
+
+    if (remove) {
       changes.remove(item.expression.expression.end, item.end);
     }
 
@@ -290,12 +306,9 @@ const changeColumn = (
   for (const key in propsToChange) {
     if (changedProps[key as Key]) continue;
 
-    const value = getColumnMethodArgs(to, key as Key);
-    if (value !== undefined) {
-      const code = [`.${key}(`];
-      addCode(code, value);
-      addCode(code, ')');
-      append += codeToString(code, '', '  ').trim();
+    const code = getColumnMethodArgs(to, key as Key);
+    if (code) {
+      append += codeToString(code, spaces + '  ', '  ').trim();
     }
   }
 
@@ -350,19 +363,30 @@ const addTableData = ({ add, changes, object, t, spaces }: ChangeContext) => {
 const getColumnMethodArgs = (
   to: RakeDbAst.ChangeTableItem.Change['to'],
   key: keyof RakeDbAst.ChangeTableItem.Change['to'],
-): Code | undefined => {
+): Code[] | undefined => {
   const value = to[key];
   if (!value) return;
 
+  if (key === 'indexes') {
+    return columnIndexesToCode(value as IndexColumnOptions[]);
+  }
+
+  if (key === 'foreignKeys') {
+    return columnForeignKeysToCode(value as ForeignKey<string, string[]>[]);
+  }
+
+  const code = [`.${key}(`];
+
   if (key === 'collate' || key === 'compression') {
-    return singleQuote(value as string);
+    addCode(code, singleQuote(value as string));
   } else if (key === 'default') {
-    return columnDefaultArgumentToCode(value);
-  } else if (key === 'nullable' || key === 'primaryKey') {
-    return '';
-  } else {
+    addCode(code, columnDefaultArgumentToCode(value));
+  } else if (key !== 'nullable' && key !== 'primaryKey') {
     return;
   }
+
+  addCode(code, ')');
+  return code;
 };
 
 const dropMatchingIndexes = (

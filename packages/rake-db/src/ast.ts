@@ -72,11 +72,11 @@ export namespace RakeDbAst {
     comment?: string | null;
     compression?: string;
     primaryKey?: boolean;
-    foreignKey?: {
+    foreignKeys?: ({
       table: string;
       columns: string[];
-    } & ForeignKeyOptions;
-    index?: Omit<SingleColumnIndexOptions, 'column'>;
+    } & ForeignKeyOptions)[];
+    indexes?: Omit<SingleColumnIndexOptions, 'column'>[];
   };
 
   export type RenameTable = {

@@ -127,8 +127,8 @@ const columnTypeToColumnChange = (
   item: ColumnType | Change,
 ): RakeDbAst.ColumnChange => {
   if (item instanceof ColumnType) {
-    const foreignKey = item.data.foreignKey;
-    if (foreignKey && 'fn' in foreignKey) {
+    const foreignKeys = item.data.foreignKeys;
+    if (foreignKeys?.some((it) => 'fn' in it)) {
       throw new Error('Callback in foreignKey is not allowed in migration');
     }
 
@@ -138,7 +138,7 @@ const columnTypeToColumnChange = (
       nullable: item.data.isNullable,
       primaryKey: item.isPrimaryKey,
       ...item.data,
-      foreignKey,
+      foreignKeys: foreignKeys as RakeDbAst.ColumnChange['foreignKeys'],
     };
   }
 
@@ -395,83 +395,97 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): Sql[] => {
         );
       }
 
-      const fromFkey = from.foreignKey;
-      const toFkey = to.foreignKey;
-      if (
-        (fromFkey || toFkey) &&
-        (!fromFkey ||
-          !toFkey ||
-          fromFkey.name !== toFkey.name ||
-          fromFkey.match !== toFkey.match ||
-          fromFkey.onUpdate !== toFkey.onUpdate ||
-          fromFkey.onDelete !== toFkey.onDelete ||
-          fromFkey.dropMode !== toFkey.dropMode ||
-          fromFkey.table !== toFkey.table ||
-          fromFkey.columns.join(',') !== toFkey.columns.join(','))
-      ) {
-        if (fromFkey) {
-          dropForeignKeys.push({
-            columns: [key],
-            fnOrTable: fromFkey.table,
-            foreignColumns: fromFkey.columns,
-            options: fromFkey,
-          });
-        }
+      const foreignKeysLen = Math.max(
+        from.foreignKeys?.length || 0,
+        to.foreignKeys?.length || 0,
+      );
+      for (let i = 0; i < foreignKeysLen; i++) {
+        const fromFkey = from.foreignKeys?.[i];
+        const toFkey = to.foreignKeys?.[i];
 
-        if (toFkey) {
-          addForeignKeys.push({
-            columns: [key],
-            fnOrTable: toFkey.table,
-            foreignColumns: toFkey.columns,
-            options: toFkey,
-          });
+        if (
+          (fromFkey || toFkey) &&
+          (!fromFkey ||
+            !toFkey ||
+            fromFkey.name !== toFkey.name ||
+            fromFkey.match !== toFkey.match ||
+            fromFkey.onUpdate !== toFkey.onUpdate ||
+            fromFkey.onDelete !== toFkey.onDelete ||
+            fromFkey.dropMode !== toFkey.dropMode ||
+            fromFkey.table !== toFkey.table ||
+            fromFkey.columns.join(',') !== toFkey.columns.join(','))
+        ) {
+          if (fromFkey) {
+            dropForeignKeys.push({
+              columns: [key],
+              fnOrTable: fromFkey.table,
+              foreignColumns: fromFkey.columns,
+              options: fromFkey,
+            });
+          }
+
+          if (toFkey) {
+            addForeignKeys.push({
+              columns: [key],
+              fnOrTable: toFkey.table,
+              foreignColumns: toFkey.columns,
+              options: toFkey,
+            });
+          }
         }
       }
 
-      const fromIndex = from.index;
-      const toIndex = to.index;
-      if (
-        (fromIndex || toIndex) &&
-        (!fromIndex ||
-          !toIndex ||
-          fromIndex.expression !== toIndex.expression ||
-          fromIndex.collate !== toIndex.collate ||
-          fromIndex.operator !== toIndex.operator ||
-          fromIndex.order !== toIndex.order ||
-          fromIndex.name !== toIndex.name ||
-          fromIndex.unique !== toIndex.unique ||
-          fromIndex.using !== toIndex.using ||
-          fromIndex.include !== toIndex.include ||
-          (Array.isArray(fromIndex.include) &&
-            Array.isArray(toIndex.include) &&
-            fromIndex.include.join(',') !== toIndex.include.join(',')) ||
-          fromIndex.with !== toIndex.with ||
-          fromIndex.tablespace !== toIndex.tablespace ||
-          fromIndex.where !== toIndex.where ||
-          fromIndex.dropMode !== toIndex.dropMode)
-      ) {
-        if (fromIndex) {
-          dropIndexes.push({
-            columns: [
-              {
-                column: key,
-                ...fromIndex,
-              },
-            ],
-            options: fromIndex,
-          });
-        }
+      const indexesLen = Math.max(
+        from.indexes?.length || 0,
+        to.indexes?.length || 0,
+      );
+      for (let i = 0; i < indexesLen; i++) {
+        const fromIndex = from.indexes?.[i];
+        const toIndex = to.indexes?.[i];
 
-        if (toIndex) {
-          addIndexes.push({
-            columns: [
-              {
-                column: key,
-                ...toIndex,
-              },
-            ],
-            options: toIndex,
-          });
+        if (
+          (fromIndex || toIndex) &&
+          (!fromIndex ||
+            !toIndex ||
+            fromIndex.expression !== toIndex.expression ||
+            fromIndex.collate !== toIndex.collate ||
+            fromIndex.operator !== toIndex.operator ||
+            fromIndex.order !== toIndex.order ||
+            fromIndex.name !== toIndex.name ||
+            fromIndex.unique !== toIndex.unique ||
+            fromIndex.using !== toIndex.using ||
+            fromIndex.include !== toIndex.include ||
+            (Array.isArray(fromIndex.include) &&
+              Array.isArray(toIndex.include) &&
+              fromIndex.include.join(',') !== toIndex.include.join(',')) ||
+            fromIndex.with !== toIndex.with ||
+            fromIndex.tablespace !== toIndex.tablespace ||
+            fromIndex.where !== toIndex.where ||
+            fromIndex.dropMode !== toIndex.dropMode)
+        ) {
+          if (fromIndex) {
+            dropIndexes.push({
+              columns: [
+                {
+                  column: key,
+                  ...fromIndex,
+                },
+              ],
+              options: fromIndex,
+            });
+          }
+
+          if (toIndex) {
+            addIndexes.push({
+              columns: [
+                {
+                  column: key,
+                  ...toIndex,
+                },
+              ],
+              options: toIndex,
+            });
+          }
         }
       }
 

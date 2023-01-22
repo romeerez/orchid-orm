@@ -1,5 +1,5 @@
 import { ColumnsShape } from './columnsSchema';
-import { ColumnChain, ColumnType, ForeignKey } from './columnType';
+import { ColumnChain, ColumnData, ColumnType, ForeignKey } from './columnType';
 import { TimestampColumn } from './dateTime';
 import { getRaw, isRaw } from '../common';
 import {
@@ -286,6 +286,20 @@ export const columnDefaultArgumentToCode = (value: unknown): string => {
     : JSON.stringify(value);
 };
 
+export const columnForeignKeysToCode = (
+  foreignKeys: ForeignKey<string, string[]>[],
+): Code[] => {
+  const code: Code[] = [];
+  for (const foreignKey of foreignKeys) {
+    addCode(code, `.foreignKey(`);
+    for (const part of foreignKeyArgumentToCode(foreignKey)) {
+      addCode(code, part);
+    }
+    addCode(code, ')');
+  }
+  return code;
+};
+
 export const foreignKeyArgumentToCode = (
   foreignKey: ForeignKey<string, string[]>,
 ): Code[] => {
@@ -322,41 +336,11 @@ export const foreignKeyArgumentToCode = (
   return code;
 };
 
-export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
-  code = toArray(code);
-
-  const { foreignKey, index, validationDefault } = type.data;
-
-  if (type.isPrimaryKey) addCode(code, '.primaryKey()');
-
-  if (foreignKey) {
-    addCode(code, `.foreignKey(`);
-    for (const part of foreignKeyArgumentToCode(foreignKey)) {
-      addCode(code, part);
-    }
-    addCode(code, ')');
-  }
-
-  if (type.isHidden) addCode(code, '.hidden()');
-
-  if (type.data.isNullable) addCode(code, '.nullable()');
-
-  if ('isNonEmpty' in type.data) addCode(code, '.nonEmpty()');
-
-  if (type.encodeFn) addCode(code, `.encode(${type.encodeFn.toString()})`);
-
-  if (type.parseFn && !('hideFromCode' in type.parseFn))
-    addCode(code, `.parse(${type.parseFn.toString()})`);
-
-  if (type.data.as) addCode(code, `.as(${type.data.as.toCode(t)})`);
-
-  if (type.data.default)
-    addCode(
-      code,
-      `.default(${columnDefaultArgumentToCode(type.data.default)})`,
-    );
-
-  if (index) {
+export const columnIndexesToCode = (
+  indexes: Exclude<ColumnData['indexes'], undefined>,
+): Code[] => {
+  const code: Code[] = [];
+  for (const index of indexes) {
     addCode(code, `.${index.unique ? 'unique' : 'index'}(`);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -400,10 +384,49 @@ export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
 
     addCode(code, ')');
   }
+  return code;
+};
+
+export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
+  code = toArray(code);
+
+  if (type.isPrimaryKey) addCode(code, '.primaryKey()');
+
+  if (type.data.foreignKeys) {
+    for (const part of columnForeignKeysToCode(type.data.foreignKeys)) {
+      addCode(code, part);
+    }
+  }
+
+  if (type.isHidden) addCode(code, '.hidden()');
+
+  if (type.data.isNullable) addCode(code, '.nullable()');
+
+  if ('isNonEmpty' in type.data) addCode(code, '.nonEmpty()');
+
+  if (type.encodeFn) addCode(code, `.encode(${type.encodeFn.toString()})`);
+
+  if (type.parseFn && !('hideFromCode' in type.parseFn))
+    addCode(code, `.parse(${type.parseFn.toString()})`);
+
+  if (type.data.as) addCode(code, `.as(${type.data.as.toCode(t)})`);
+
+  if (type.data.default)
+    addCode(
+      code,
+      `.default(${columnDefaultArgumentToCode(type.data.default)})`,
+    );
+
+  if (type.data.indexes) {
+    for (const part of columnIndexesToCode(type.data.indexes)) {
+      addCode(code, part);
+    }
+  }
 
   if (type.data.comment)
     addCode(code, `.comment(${singleQuote(type.data.comment)})`);
 
+  const { validationDefault } = type.data;
   if (validationDefault) {
     addCode(
       code,

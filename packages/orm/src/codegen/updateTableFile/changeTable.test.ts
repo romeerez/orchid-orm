@@ -401,6 +401,84 @@ export class Table extends BaseTable {
   });
 
   describe('indexes', () => {
+    it('should change column indexes', async () => {
+      asMock(fs.readFile)
+        .mockResolvedValue(`import { BaseTable } from '../baseTable';
+
+export class Table extends BaseTable {
+  table = 'table';
+  columns = this.setColumns((t) => ({
+    name: t.text().index({ order: 'one' }).index({ expression: 1 })
+  }));
+}`);
+
+      await updateTableFile({
+        ...params,
+        ast: {
+          ...ast.changeTable,
+          shape: {
+            name: {
+              type: 'change',
+              from: { indexes: [{ order: 'one' }, { expression: 1 }] },
+              to: { indexes: [{ order: 'two' }, { expression: 2 }] },
+            },
+          },
+        },
+      });
+
+      testWritten(`import { BaseTable } from '../baseTable';
+
+export class Table extends BaseTable {
+  table = 'table';
+  columns = this.setColumns((t) => ({
+    name: t.text().index({
+      order: 'two',
+    }).index({
+      expression: 2,
+    }),
+  }));
+}`);
+    });
+
+    it('should add column indexes', async () => {
+      asMock(fs.readFile)
+        .mockResolvedValue(`import { BaseTable } from '../baseTable';
+
+export class Table extends BaseTable {
+  table = 'table';
+  columns = this.setColumns((t) => ({
+    name: t.text(),
+  }));
+}`);
+
+      await updateTableFile({
+        ...params,
+        ast: {
+          ...ast.changeTable,
+          shape: {
+            name: {
+              type: 'change',
+              from: {},
+              to: { indexes: [{ order: 'two' }, { expression: 2 }] },
+            },
+          },
+        },
+      });
+
+      testWritten(`import { BaseTable } from '../baseTable';
+
+export class Table extends BaseTable {
+  table = 'table';
+  columns = this.setColumns((t) => ({
+    name: t.text().index({
+      order: 'two',
+    }).index({
+      expression: 2,
+    }),
+  }));
+}`);
+    });
+
     const result = `import { BaseTable } from '../baseTable';
 
 export class Table extends BaseTable {
@@ -512,6 +590,91 @@ export class Table extends BaseTable {
   });
 
   describe('foreignKeys', () => {
+    it('should change column foreignKeys', async () => {
+      asMock(fs.readFile)
+        .mockResolvedValue(`import { BaseTable } from '../baseTable';
+
+export class Table extends BaseTable {
+  table = 'table';
+  columns = this.setColumns((t) => ({
+    name: t.text().foreignKey('a', 'b').foreignKey('c', 'd')
+  }));
+}`);
+
+      await updateTableFile({
+        ...params,
+        ast: {
+          ...ast.changeTable,
+          shape: {
+            name: {
+              type: 'change',
+              from: {
+                foreignKeys: [
+                  { table: 'a', columns: ['b'] },
+                  { table: 'c', columns: ['d'] },
+                ],
+              },
+              to: {
+                foreignKeys: [
+                  { table: 'e', columns: ['f'] },
+                  { table: 'g', columns: ['h'] },
+                ],
+              },
+            },
+          },
+        },
+      });
+
+      testWritten(`import { BaseTable } from '../baseTable';
+
+export class Table extends BaseTable {
+  table = 'table';
+  columns = this.setColumns((t) => ({
+    name: t.text().foreignKey('e', 'f').foreignKey('g', 'h'),
+  }));
+}`);
+    });
+
+    it('should add column indexes', async () => {
+      asMock(fs.readFile)
+        .mockResolvedValue(`import { BaseTable } from '../baseTable';
+
+export class Table extends BaseTable {
+  table = 'table';
+  columns = this.setColumns((t) => ({
+    name: t.text(),
+  }));
+}`);
+
+      await updateTableFile({
+        ...params,
+        ast: {
+          ...ast.changeTable,
+          shape: {
+            name: {
+              type: 'change',
+              from: {},
+              to: {
+                foreignKeys: [
+                  { table: 'e', columns: ['f'] },
+                  { table: 'g', columns: ['h'] },
+                ],
+              },
+            },
+          },
+        },
+      });
+
+      testWritten(`import { BaseTable } from '../baseTable';
+
+export class Table extends BaseTable {
+  table = 'table';
+  columns = this.setColumns((t) => ({
+    name: t.text().foreignKey('e', 'f').foreignKey('g', 'h'),
+  }));
+}`);
+    });
+
     const result = `import { BaseTable } from '../baseTable';
 
 export class Table extends BaseTable {
