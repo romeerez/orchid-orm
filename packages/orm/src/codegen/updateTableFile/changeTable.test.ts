@@ -408,7 +408,7 @@ export class Table extends BaseTable {
 export class Table extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
-    name: t.text().index({ order: 'one' }).index({ expression: 1 })
+    name: t.text().index({ order: 'one' }).index({ collate: 'en_US' })
   }));
 }`);
 
@@ -419,8 +419,8 @@ export class Table extends BaseTable {
           shape: {
             name: {
               type: 'change',
-              from: { indexes: [{ order: 'one' }, { expression: 1 }] },
-              to: { indexes: [{ order: 'two' }, { expression: 2 }] },
+              from: { indexes: [{ order: 'one' }, { collate: 'en_US' }] },
+              to: { indexes: [{ order: 'two' }, { collate: 'en_UK' }] },
             },
           },
         },
@@ -434,7 +434,7 @@ export class Table extends BaseTable {
     name: t.text().index({
       order: 'two',
     }).index({
-      expression: 2,
+      collate: 'en_UK',
     }),
   }));
 }`);
@@ -459,7 +459,7 @@ export class Table extends BaseTable {
             name: {
               type: 'change',
               from: {},
-              to: { indexes: [{ order: 'two' }, { expression: 2 }] },
+              to: { indexes: [{ order: 'two' }, { collate: 'fr_FR' }] },
             },
           },
         },
@@ -473,7 +473,7 @@ export class Table extends BaseTable {
     name: t.text().index({
       order: 'two',
     }).index({
-      expression: 2,
+      collate: 'fr_FR',
     }),
   }));
 }`);
@@ -491,7 +491,6 @@ export class Table extends BaseTable {
         '9',
         {
           column: '10',
-          expression: 321,
           order: 'new',
         },
       ],
@@ -514,10 +513,7 @@ export class Table extends BaseTable {
           options: {},
         },
         {
-          columns: [
-            { column: '9' },
-            { column: '10', order: 'new', expression: 321 },
-          ],
+          columns: [{ column: '9' }, { column: '10', order: 'new' }],
           options: { name: 'newName' },
         },
       ],
@@ -532,7 +528,7 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     ...t.index('1'),
     ...t.index(['2', '3']),
-    ...t.index(['4', { column: '5', order: 'order', expression: 123 }], { name: 'indexName' }),
+    ...t.index(['4', { column: '5', order: 'order' }], { name: 'indexName' }),
   }));
 }`);
 
@@ -552,10 +548,7 @@ export class Table extends BaseTable {
                 options: {},
               },
               {
-                columns: [
-                  { column: '4' },
-                  { column: '5', order: 'order', expression: 123 },
-                ],
+                columns: [{ column: '4' }, { column: '5', order: 'order' }],
                 options: { name: 'indexName' },
               },
             ],

@@ -85,11 +85,12 @@ export type ForeignKeyOptions = {
   dropMode?: DropMode;
 };
 
-export type IndexColumnOptions = {
-  column: string;
-  expression?: number | string;
+export type IndexColumnOptions = (
+  | { column: string }
+  | { expression: string }
+) & {
   collate?: string;
-  operator?: string;
+  opclass?: string;
   order?: string;
 };
 

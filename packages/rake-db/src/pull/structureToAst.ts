@@ -1,6 +1,25 @@
 import { DbStructure } from './dbStructure';
 import { RakeDbAst } from '../ast';
-import { columnsByType, ColumnsShape, instantiateColumn } from 'pqb';
+import {
+  columnsByType,
+  ColumnsShape,
+  ForeignKeyOptions,
+  instantiateColumn,
+} from 'pqb';
+
+const matchMap = {
+  s: undefined,
+  f: 'FULL',
+  p: 'PARTIAL',
+};
+
+const fkeyActionMap = {
+  a: 'NO ACTION',
+  r: undefined, // default
+  c: 'CASCADE',
+  n: 'SET NULL',
+  d: 'SET DEFAULT',
+};
 
 export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
   const ast: RakeDbAst[] = [];
@@ -9,7 +28,7 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
     schemas,
     tables,
     allColumns,
-    allConstraints,
+    allPrimaryKeys,
     allIndexes,
     allForeignKeys,
     extensions,
@@ -17,7 +36,7 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
     db.getSchemas(),
     db.getTables(),
     db.getColumns(),
-    db.getConstraints(),
+    db.getPrimaryKeys(),
     db.getIndexes(),
     db.getForeignKeys(),
     db.getExtensions(),
@@ -39,16 +58,16 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
     const belongsToTable = makeBelongsToTable(schemaName, name);
 
     const columns = allColumns.filter(belongsToTable);
-    const tableConstraints = allConstraints.filter(belongsToTable);
-    const primaryKey = tableConstraints.find(
-      (item) => item.type === 'PRIMARY KEY',
-    );
+    const primaryKey = allPrimaryKeys.find(belongsToTable);
     const tableIndexes = allIndexes.filter(belongsToTable);
     const tableForeignKeys = allForeignKeys.filter(belongsToTable);
 
     const shape: ColumnsShape = {};
     for (const item of columns) {
       const klass = columnsByType[item.type];
+      if (!klass) {
+        throw new Error(`Column type \`${item.type}\` is not supported`);
+      }
       let column = instantiateColumn(klass, item);
 
       if (
@@ -60,14 +79,23 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
 
       const indexes = tableIndexes.filter(
         (it) =>
-          it.isPrimary === false &&
-          it.columnNames.length === 1 &&
-          it.columnNames[0] === item.name,
+          it.columns.length === 1 &&
+          'column' in it.columns[0] &&
+          it.columns[0].column === item.name,
       );
       for (const index of indexes) {
+        const options = index.columns[0];
         column = column.index({
+          collate: options.collate,
+          opclass: options.opclass,
+          order: options.order,
           name: index.name,
+          using: index.using === 'btree' ? undefined : index.using,
           unique: index.isUnique,
+          include: index.include,
+          with: index.with,
+          tablespace: index.tablespace,
+          where: index.where,
         });
       }
 
@@ -80,7 +108,10 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
           foreignKey.foreignColumnNames[0],
           {
             name: foreignKey.name,
-          },
+            match: matchMap[foreignKey.match],
+            onUpdate: fkeyActionMap[foreignKey.onUpdate],
+            onDelete: fkeyActionMap[foreignKey.onDelete],
+          } as ForeignKeyOptions,
         );
       }
 
@@ -91,6 +122,7 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
       type: 'table',
       action: 'create',
       schema: schemaName === 'public' ? undefined : schemaName,
+      comment: table.comment,
       name: name,
       shape,
       noPrimaryKey: primaryKey ? 'error' : 'ignore',
@@ -105,12 +137,28 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
             }
           : undefined,
       indexes: tableIndexes
-        .filter((index) => index.columnNames.length > 1)
+        .filter(
+          (index) =>
+            index.columns.length > 1 ||
+            index.columns.some((it) => 'expression' in it),
+        )
         .map((index) => ({
-          columns: index.columnNames.map((column) => ({ column })),
+          columns: index.columns.map((it) => ({
+            ...('column' in it
+              ? { column: it.column }
+              : { expression: it.expression }),
+            collate: it.collate,
+            opclass: it.opclass,
+            order: it.order,
+          })),
           options: {
             name: index.name,
+            using: index.using === 'btree' ? undefined : index.using,
             unique: index.isUnique,
+            include: index.include,
+            with: index.with,
+            tablespace: index.tablespace,
+            where: index.where,
           },
         })),
       foreignKeys: tableForeignKeys
@@ -121,7 +169,10 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
           foreignColumns: it.foreignColumnNames,
           options: {
             name: it.name,
-          },
+            match: matchMap[it.match],
+            onUpdate: fkeyActionMap[it.onUpdate],
+            onDelete: fkeyActionMap[it.onDelete],
+          } as ForeignKeyOptions,
         })),
     });
   }

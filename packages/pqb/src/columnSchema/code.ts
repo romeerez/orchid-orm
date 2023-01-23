@@ -134,31 +134,26 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
   code.push(`...${t}.index(`);
 
   const columnsMultiline = index.columns.some(
-    (column) => Object.keys(column).length > 1,
+    (column) => Object.keys(column).length > 1 || 'expression' in column,
   );
   if (columnsMultiline) {
     const objects: Code[] = [];
 
     for (const column of index.columns) {
+      const expr = 'column' in column ? column.column : column.expression;
       if (Object.keys(column).length === 1) {
-        objects.push(`${singleQuote(column.column)},`);
+        objects.push(`${singleQuote(expr)},`);
       } else {
-        const props: Code[] = [`column: ${singleQuote(column.column)},`];
-        const { expression } = column;
-        if (expression !== undefined) {
-          props.push(
-            `expression: ${
-              typeof expression === 'number'
-                ? expression
-                : singleQuote(expression.toString())
-            },`,
-          );
-        }
+        const props: Code[] = [
+          `${'column' in column ? 'column' : 'expression'}: ${singleQuote(
+            expr,
+          )},`,
+        ];
         if (column.collate !== undefined) {
           props.push(`collate: ${singleQuote(column.collate)},`);
         }
-        if (column.operator !== undefined) {
-          props.push(`operator: ${singleQuote(column.operator)},`);
+        if (column.opclass !== undefined) {
+          props.push(`opclass: ${singleQuote(column.opclass)},`);
         }
         if (column.order !== undefined) {
           props.push(`order: ${singleQuote(column.order)},`);
@@ -172,7 +167,9 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
   } else {
     addCode(
       code,
-      `[${index.columns.map(({ column }) => singleQuote(column)).join(', ')}]`,
+      `[${index.columns
+        .map((it) => singleQuote((it as { column: string }).column))
+        .join(', ')}]`,
     );
   }
 
@@ -349,16 +346,8 @@ export const columnIndexesToCode = (
 
       const arr: string[] = [];
 
-      if (index.expression)
-        arr.push(
-          `expression: ${
-            typeof index.expression === 'string'
-              ? singleQuote(index.expression)
-              : index.expression
-          },`,
-        );
       if (index.collate) arr.push(`collate: ${singleQuote(index.collate)},`);
-      if (index.operator) arr.push(`operator: ${singleQuote(index.operator)},`);
+      if (index.opclass) arr.push(`opclass: ${singleQuote(index.opclass)},`);
       if (index.order) arr.push(`order: ${singleQuote(index.order)},`);
       if (index.name) arr.push(`name: ${singleQuote(index.name)},`);
       if (index.unique) arr.push(`unique: true,`);

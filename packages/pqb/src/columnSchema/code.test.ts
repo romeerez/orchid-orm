@@ -124,9 +124,8 @@ bool: t.boolean(),
               columns: [
                 {
                   column: 'id',
-                  expression: 'expr',
                   collate: 'collate',
-                  operator: 'operator',
+                  opclass: 'opclass',
                   order: 'order',
                 },
                 {
@@ -161,9 +160,8 @@ bool: t.boolean(),
   [
     {
       column: 'id',
-      expression: 'expr',
       collate: 'collate',
-      operator: 'operator',
+      opclass: 'opclass',
       order: 'order',
     },
     'bool',

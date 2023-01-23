@@ -92,6 +92,7 @@ export const columnsByType: Record<
   varbit: BitVaryingColumn,
   'bit varying': BitVaryingColumn,
   numeric: DecimalColumn,
+  decimal: DecimalColumn,
   uuid: UUIDColumn,
   tsvector: TsVectorColumn,
   tsquery: TsQueryColumn,

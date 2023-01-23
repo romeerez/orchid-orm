@@ -1,5 +1,16 @@
 # orchid-orm-test-factory
 
+## 0.2.6
+
+### Patch Changes
+
+- f1cd5db: Handle multiple indexes and foreignKeys of the column
+- Updated dependencies
+- Updated dependencies [f1cd5db]
+  - orchid-orm@1.5.0
+  - pqb@0.9.0
+  - orchid-orm-schema-to-zod@0.2.6
+
 ## 0.2.5
 
 ### Patch Changes

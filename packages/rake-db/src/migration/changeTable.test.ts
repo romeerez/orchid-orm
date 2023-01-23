@@ -78,9 +78,8 @@ describe('changeTable', () => {
               name: 'indexName',
               unique: true,
               using: 'gin',
-              expression: 10,
               collate: 'utf-8',
-              operator: 'operator',
+              opclass: 'opclass',
               order: 'ASC',
               include: 'id',
               with: 'fillfactor = 70',
@@ -133,7 +132,7 @@ describe('changeTable', () => {
             CREATE UNIQUE INDEX "indexName"
               ON "table"
               USING gin
-              ("withIndex"(10) COLLATE 'utf-8' operator ASC)
+              ("withIndex" COLLATE 'utf-8' opclass ASC)
               INCLUDE ("id")
               WITH (fillfactor = 70)
               TABLESPACE tablespace
@@ -604,9 +603,8 @@ describe('changeTable', () => {
         addIndexWithOptions: t.change(
           t.integer(),
           t.integer().index({
-            expression: 'expression',
             collate: 'collate',
-            operator: 'operator',
+            opclass: 'opclass',
             order: 'order',
             unique: true,
             using: 'using',
@@ -620,9 +618,8 @@ describe('changeTable', () => {
         removeIndex: t.change(t.integer().index(), t.integer()),
         removeIndexWithOptions: t.change(
           t.integer().index({
-            expression: 'expression',
             collate: 'collate',
-            operator: 'operator',
+            opclass: 'opclass',
             order: 'order',
             unique: true,
             using: 'using',
@@ -637,9 +634,8 @@ describe('changeTable', () => {
         changeIndex: t.change(
           t.integer().index({
             name: 'from',
-            expression: 'from',
             collate: 'from',
-            operator: 'from',
+            opclass: 'from',
             order: 'from',
             unique: false,
             using: 'from',
@@ -651,9 +647,8 @@ describe('changeTable', () => {
           }),
           t.integer().index({
             name: 'to',
-            expression: 'to',
             collate: 'to',
-            operator: 'to',
+            opclass: 'to',
             order: 'to',
             unique: true,
             using: 'to',
@@ -673,8 +668,8 @@ describe('changeTable', () => {
       `DROP INDEX "tableRemoveIndexWithOptionsIndex" CASCADE`,
       `DROP INDEX "from" CASCADE`,
       `CREATE INDEX "tableAddIndexIndex" ON "table" ("addIndex")`,
-      `CREATE UNIQUE INDEX "tableAddIndexWithOptionsIndex" ON "table" USING using ("addIndexWithOptions"(expression) COLLATE 'collate' operator order) INCLUDE ("a", "b") WITH (with) TABLESPACE tablespace WHERE where`,
-      `CREATE UNIQUE INDEX "to" ON "table" USING to ("changeIndex"(to) COLLATE 'to' to to) INCLUDE ("c", "d") WITH (to) TABLESPACE to WHERE to`,
+      `CREATE UNIQUE INDEX "tableAddIndexWithOptionsIndex" ON "table" USING using ("addIndexWithOptions" COLLATE 'collate' opclass order) INCLUDE ("a", "b") WITH (with) TABLESPACE tablespace WHERE where`,
+      `CREATE UNIQUE INDEX "to" ON "table" USING to ("changeIndex" COLLATE 'to' to to) INCLUDE ("c", "d") WITH (to) TABLESPACE to WHERE to`,
     ]);
 
     queryMock.mockClear();
@@ -685,8 +680,8 @@ describe('changeTable', () => {
       `DROP INDEX "tableAddIndexWithOptionsIndex" CASCADE`,
       `DROP INDEX "to" RESTRICT`,
       `CREATE INDEX "tableRemoveIndexIndex" ON "table" ("removeIndex")`,
-      `CREATE UNIQUE INDEX "tableRemoveIndexWithOptionsIndex" ON "table" USING using ("removeIndexWithOptions"(expression) COLLATE 'collate' operator order) INCLUDE ("a", "b") WITH (with) TABLESPACE tablespace WHERE where`,
-      `CREATE INDEX "from" ON "table" USING from ("changeIndex"(from) COLLATE 'from' from from) INCLUDE ("a", "b") WITH (from) TABLESPACE from WHERE from`,
+      `CREATE UNIQUE INDEX "tableRemoveIndexWithOptionsIndex" ON "table" USING using ("removeIndexWithOptions" COLLATE 'collate' opclass order) INCLUDE ("a", "b") WITH (with) TABLESPACE tablespace WHERE where`,
+      `CREATE INDEX "from" ON "table" USING from ("changeIndex" COLLATE 'from' from from) INCLUDE ("a", "b") WITH (from) TABLESPACE from WHERE from`,
     ]);
   });
 

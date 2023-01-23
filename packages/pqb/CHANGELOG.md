@@ -1,5 +1,15 @@
 # pqb
 
+## 0.9.0
+
+### Minor Changes
+
+- Change index options: column or expression is required, operator renamed to opclass
+
+### Patch Changes
+
+- f1cd5db: Handle multiple indexes and foreignKeys of the column
+
 ## 0.8.5
 
 ### Patch Changes

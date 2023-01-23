@@ -76,7 +76,7 @@ export namespace RakeDbAst {
       table: string;
       columns: string[];
     } & ForeignKeyOptions)[];
-    indexes?: Omit<SingleColumnIndexOptions, 'column'>[];
+    indexes?: Omit<SingleColumnIndexOptions, 'column' | 'expression'>[];
   };
 
   export type RenameTable = {

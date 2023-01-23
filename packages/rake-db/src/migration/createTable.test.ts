@@ -63,9 +63,8 @@ const db = getDb();
             name: 'indexName',
             unique: true,
             using: 'gin',
-            expression: 10,
             collate: 'utf-8',
-            operator: 'operator',
+            opclass: 'opclass',
             order: 'ASC',
             include: 'id',
             with: 'fillfactor = 70',
@@ -113,7 +112,7 @@ const db = getDb();
             CREATE UNIQUE INDEX "indexName"
               ON "table"
               USING gin
-              ("withIndex"(10) COLLATE 'utf-8' operator ASC)
+              ("withIndex" COLLATE 'utf-8' opclass ASC)
               INCLUDE ("id")
               WITH (fillfactor = 70)
               TABLESPACE tablespace

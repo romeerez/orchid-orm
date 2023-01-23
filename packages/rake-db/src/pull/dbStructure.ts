@@ -4,6 +4,7 @@ export namespace DbStructure {
   export type Table = {
     schemaName: string;
     name: string;
+    comment?: string;
   };
 
   export type View = {
@@ -35,16 +36,30 @@ export namespace DbStructure {
     dateTimePrecision?: number;
     default?: string;
     isNullable: boolean;
+    collation?: string;
+    compression?: 'p' | 'l'; // p for pglz, l for lz4
+    comment?: string;
   };
 
   export type Index = {
     schemaName: string;
     tableName: string;
-    columnNames: string[];
     name: string;
+    using: string;
     isUnique: boolean;
-    isPrimary: boolean;
+    columns: (({ column: string } | { expression: string }) & {
+      collate?: string;
+      opclass?: string;
+      order?: string;
+    })[];
+    include?: string[];
+    with?: string;
+    tablespace?: string;
+    where?: string;
   };
+
+  // a = no action, r = restrict, c = cascade, n = set null, d = set default
+  type ForeignKeyAction = 'a' | 'r' | 'c' | 'n' | 'd';
 
   export type ForeignKey = {
     schemaName: string;
@@ -54,13 +69,15 @@ export namespace DbStructure {
     name: string;
     columnNames: string[];
     foreignColumnNames: string[];
+    match: 'f' | 'p' | 's'; // FULL | PARTIAL | SIMPLE
+    onUpdate: ForeignKeyAction;
+    onDelete: ForeignKeyAction;
   };
 
-  export type Constraint = {
+  export type PrimaryKey = {
     schemaName: string;
     tableName: string;
     name: string;
-    type: 'CHECK' | 'FOREIGN KEY' | 'PRIMARY KEY' | 'UNIQUE';
     columnNames: string[];
   };
 
@@ -101,12 +118,14 @@ ORDER BY "name"`,
   async getTables() {
     const { rows } = await this.db.query<DbStructure.Table>(
       `SELECT
-  table_schema "schemaName",
-  table_name "name"
-FROM information_schema.tables
-WHERE table_type = 'BASE TABLE'
-  AND ${filterSchema('table_schema')}
-ORDER BY table_name`,
+  nspname AS "schemaName",
+  relname AS "name",
+  obj_description(c.oid) AS comment
+FROM pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid = relnamespace
+WHERE relkind = 'r'
+  AND ${filterSchema('nspname')}
+ORDER BY relname`,
     );
     return rows;
   }
@@ -156,7 +175,8 @@ WHERE ${filterSchema('n.nspname')}`,
 
   async getColumns() {
     const { rows } = await this.db.query<DbStructure.Column>(
-      `SELECT table_schema "schemaName",
+      `SELECT
+  table_schema "schemaName",
   table_name "tableName",
   column_name "name",
   udt_name "type",
@@ -165,10 +185,22 @@ WHERE ${filterSchema('n.nspname')}`,
   numeric_scale AS "numericScale",
   datetime_precision AS "dateTimePrecision",
   column_default "default",
-  is_nullable::boolean "isNullable"
-FROM information_schema.columns
+  is_nullable::boolean "isNullable",
+  collation_name AS "collation",
+  NULLIF(a.attcompression, '') AS compression,
+  pgd.description AS "comment"
+FROM information_schema.columns c
+LEFT JOIN pg_catalog.pg_statio_all_tables AS st
+  ON c.table_schema = st.schemaname
+ AND c.table_name = st.relname
+LEFT JOIN pg_catalog.pg_description pgd
+  ON pgd.objoid = st.relid
+ AND pgd.objsubid = c.ordinal_position
+LEFT JOIN pg_catalog.pg_attribute a
+  ON a.attrelid = st.relid
+ AND a.attnum = c.ordinal_position
 WHERE ${filterSchema('table_schema')}
-ORDER BY ordinal_position`,
+ORDER BY c.ordinal_position`,
     );
     return rows;
   }
@@ -176,64 +208,152 @@ ORDER BY ordinal_position`,
   async getIndexes() {
     const { rows } = await this.db.query<DbStructure.Index>(
       `SELECT
-  nspname "schemaName",
+  n.nspname "schemaName",
   t.relname "tableName",
-  json_agg(attname) "columnNames",
   ic.relname "name",
-  indisunique "isUnique",
-  indisprimary "isPrimary"
-FROM pg_index
-JOIN pg_class t ON t.oid = indrelid
+  am.amname AS "using",
+  i.indisunique "isUnique",
+  (
+    SELECT json_agg(
+      (
+        CASE WHEN t.e = 0
+        THEN jsonb_build_object('expression', pg_get_indexdef(i.indexrelid, t.i::int4, false))
+        ELSE jsonb_build_object('column', (
+          (
+            SELECT attname
+            FROM pg_catalog.pg_attribute
+            WHERE attrelid = i.indrelid
+              AND attnum = t.e
+          )
+        ))
+        END
+      ) || (
+        CASE WHEN i.indcollation[t.i - 1] = 0
+        THEN '{}'::jsonb
+        ELSE (
+          SELECT (
+            CASE WHEN collname = 'default'
+            THEN '{}'::jsonb
+            ELSE jsonb_build_object('collate', collname)
+            END
+          )
+          FROM pg_catalog.pg_collation
+          WHERE oid = i.indcollation[t.i - 1]
+        )
+        END
+      ) || (
+        SELECT
+          CASE WHEN opcdefault AND attoptions IS NULL
+          THEN '{}'::jsonb
+          ELSE jsonb_build_object(
+            'opclass', opcname || COALESCE('(' || array_to_string(attoptions, ', ') || ')', '')
+          )
+          END
+        FROM pg_opclass
+        LEFT JOIN pg_attribute
+          ON attrelid = i.indexrelid
+         AND attnum = t.i
+        WHERE oid = i.indclass[t.i - 1]
+      ) || (
+        CASE WHEN i.indoption[t.i - 1] = 0
+        THEN '{}'::jsonb
+        ELSE jsonb_build_object(
+          'order',
+          CASE
+            WHEN i.indoption[t.i - 1] = 1 THEN 'DESC NULLS LAST'
+            WHEN i.indoption[t.i - 1] = 2 THEN 'ASC NULLS FIRST'
+            WHEN i.indoption[t.i - 1] = 3 THEN 'DESC'
+            ELSE NULL
+          END
+        )
+        END
+      )
+    )
+    FROM unnest(i.indkey[:indnkeyatts - 1]) WITH ORDINALITY AS t(e, i)
+  ) "columns",
+  (
+    SELECT json_agg(
+      (
+        SELECT attname
+        FROM pg_catalog.pg_attribute
+        WHERE attrelid = i.indrelid
+          AND attnum = j.e
+      )
+    )
+    FROM unnest(i.indkey[indnkeyatts:]) AS j(e)
+  ) AS "include",
+  NULLIF(pg_catalog.array_to_string(
+    ic.reloptions || array(SELECT 'toast.' || x FROM pg_catalog.unnest(tc.reloptions) x),
+    ', '
+  ), '') AS "with",
+  (
+    SELECT tablespace
+    FROM pg_indexes
+    WHERE schemaname = n.nspname
+      AND indexname = ic.relname
+  ) AS tablespace,
+  pg_get_expr(i.indpred, i.indrelid) AS "where"
+FROM pg_index i
+JOIN pg_class t ON t.oid = i.indrelid
 JOIN pg_namespace n ON n.oid = t.relnamespace
-JOIN pg_attribute ON attrelid = t.oid AND attnum = any(indkey)
-JOIN pg_class ic ON ic.oid = indexrelid
+JOIN pg_class ic ON ic.oid = i.indexrelid
+JOIN pg_am am ON am.oid = ic.relam
+LEFT JOIN pg_catalog.pg_class tc ON (ic.reltoastrelid = tc.oid)
 WHERE ${filterSchema('n.nspname')}
-GROUP BY "schemaName", "tableName", "name", "isUnique", "isPrimary"
-ORDER BY "name"`,
+  AND NOT i.indisprimary
+ORDER BY ic.relname`,
     );
     return rows;
   }
 
   async getForeignKeys() {
     const { rows } = await this.db.query<DbStructure.ForeignKey>(
-      `SELECT tc.table_schema AS "schemaName",
-  tc.table_name AS "tableName",
-  ccu.table_schema AS "foreignTableSchemaName",
-  ccu.table_name AS "foreignTableName",
-  tc.constraint_name AS "name",
+      `SELECT
+  s.nspname AS "schemaName",
+  t.relname AS "tableName",
+  fs.nspname AS "foreignTableSchemaName",
+  ft.relname AS "foreignTableName",
+  c.conname AS "name",
   (
-    SELECT json_agg(kcu.column_name)
-    FROM information_schema.key_column_usage kcu
-    WHERE kcu.constraint_name = tc.constraint_name
-      AND kcu.table_schema = tc.table_schema
+    SELECT json_agg(ccu.column_name)
+    FROM information_schema.key_column_usage ccu
+    WHERE ccu.constraint_name = c.conname
+      AND ccu.table_schema = cs.nspname
   ) AS "columnNames",
-  json_agg(ccu.column_name) AS "foreignColumnNames"
-FROM information_schema.table_constraints tc
-JOIN information_schema.constraint_column_usage ccu
-  ON ccu.constraint_name = tc.constraint_name
- AND ccu.table_schema = tc.table_schema
-WHERE tc.constraint_type = 'FOREIGN KEY'
-  AND ${filterSchema('tc.table_schema')}
-GROUP BY "schemaName", "tableName", "name", "foreignTableSchemaName", "foreignTableName"
-ORDER BY "name"`,
+  (
+    SELECT json_agg(ccu.column_name)
+    FROM information_schema.constraint_column_usage ccu
+    WHERE ccu.constraint_name = c.conname
+      AND ccu.table_schema = cs.nspname
+  ) AS "foreignColumnNames",
+  c.confmatchtype AS match,
+  c.confupdtype AS "onUpdate",
+  c.confdeltype AS "onDelete"
+FROM pg_catalog.pg_constraint c
+JOIN pg_class t ON t.oid = conrelid
+JOIN pg_catalog.pg_namespace s ON s.oid = t.relnamespace
+JOIN pg_class ft ON ft.oid = confrelid
+JOIN pg_catalog.pg_namespace fs ON fs.oid = ft.relnamespace
+JOIN pg_catalog.pg_namespace cs ON cs.oid = c.connamespace
+WHERE contype = 'f'
+ORDER BY c.conname`,
     );
     return rows;
   }
 
-  async getConstraints() {
-    const { rows } = await this.db.query<DbStructure.Constraint>(
+  async getPrimaryKeys() {
+    const { rows } = await this.db.query<DbStructure.PrimaryKey>(
       `SELECT tc.table_schema AS "schemaName",
   tc.table_name AS "tableName",
   tc.constraint_name AS "name",
-  tc.constraint_type AS "type",
   json_agg(ccu.column_name) "columnNames"
 FROM information_schema.table_constraints tc
 JOIN information_schema.constraint_column_usage ccu
   ON ccu.constraint_name = tc.constraint_name
  AND ccu.table_schema = tc.table_schema
-WHERE tc.constraint_type != 'FOREIGN KEY'
+WHERE tc.constraint_type = 'PRIMARY KEY'
   AND ${filterSchema('tc.table_schema')}
-GROUP BY "schemaName", "tableName", "name", "type"
+GROUP BY "schemaName", "tableName", "name"
 ORDER BY "name"`,
     );
     return rows;

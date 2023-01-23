@@ -1,5 +1,12 @@
 import { DbStructure } from './dbStructure';
-import { Adapter, IntegerColumn, TextColumn } from 'pqb';
+import {
+  Adapter,
+  DecimalColumn,
+  IntegerColumn,
+  TextColumn,
+  TimestampColumn,
+  VarCharColumn,
+} from 'pqb';
 import { structureToAst } from './structureToAst';
 import { RakeDbAst } from '../ast';
 
@@ -8,7 +15,7 @@ const query = jest.fn().mockImplementation(() => ({ rows: [] }));
 adapter.query = query;
 adapter.arrays = query;
 
-const tableColumn: DbStructure.Column = {
+const intColumn: DbStructure.Column = {
   schemaName: 'public',
   tableName: 'table',
   name: 'column',
@@ -17,32 +24,54 @@ const tableColumn: DbStructure.Column = {
   isNullable: false,
 };
 
+const varCharColumn: DbStructure.Column = {
+  ...intColumn,
+  name: 'varchar',
+  type: 'character varying',
+  collation: 'en_US',
+  maxChars: 10,
+};
+
+const decimalColumn: DbStructure.Column = {
+  ...intColumn,
+  name: 'decimal',
+  type: 'decimal',
+  numericPrecision: 10,
+  numericScale: 2,
+};
+
+const timestampColumn: DbStructure.Column = {
+  ...intColumn,
+  name: 'timestamp',
+  type: 'timestamp',
+  dateTimePrecision: 10,
+};
+
 const tableColumns = [
-  { ...tableColumn, name: 'id' },
-  { ...tableColumn, name: 'name', type: 'text' },
+  { ...intColumn, name: 'id' },
+  { ...intColumn, name: 'name', type: 'text' },
 ];
 
-const otherTableColumn = { ...tableColumn, tableName: 'otherTable' };
+const otherTableColumn = { ...intColumn, tableName: 'otherTable' };
 
 const table = { schemaName: 'public', name: 'table' };
 
 const columns = [...tableColumns, otherTableColumn];
 
-const primaryKey: DbStructure.Constraint = {
+const primaryKey: DbStructure.PrimaryKey = {
   schemaName: 'public',
   tableName: 'table',
   name: 'pkey',
-  type: 'PRIMARY KEY',
   columnNames: ['id'],
 };
 
 const index: DbStructure.Index = {
   schemaName: 'public',
   tableName: 'table',
-  columnNames: ['name'],
   name: 'index',
+  using: 'btree',
   isUnique: false,
-  isPrimary: false,
+  columns: [{ column: 'name' }],
 };
 
 const foreignKey: DbStructure.ForeignKey = {
@@ -53,6 +82,9 @@ const foreignKey: DbStructure.ForeignKey = {
   name: 'fkey',
   columnNames: ['otherId'],
   foreignColumnNames: ['id'],
+  match: 'f',
+  onUpdate: 'c',
+  onDelete: 'c',
 };
 
 const extension: DbStructure.Extension = {
@@ -83,13 +115,16 @@ describe('structureToAst', () => {
   describe('table', () => {
     it('should add table', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [{ schemaName: 'public', name: 'table' }];
+      db.getTables = async () => [
+        { schemaName: 'public', name: 'table', comment: 'comment' },
+      ];
       const ast = await structureToAst(db);
       expect(ast).toEqual([
         {
           type: 'table',
           action: 'create',
           name: 'table',
+          comment: 'comment',
           shape: {},
           noPrimaryKey: 'ignore',
           indexes: [],
@@ -129,11 +164,50 @@ describe('structureToAst', () => {
       expect(ast.shape.name).toBeInstanceOf(TextColumn);
     });
 
+    it('should set maxChars to char column', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [{ schemaName: 'public', name: 'table' }];
+      db.getColumns = async () => [varCharColumn];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+
+      const column = ast.shape[varCharColumn.name];
+      expect(column).toBeInstanceOf(VarCharColumn);
+      expect(column.data.maxChars).toBe(varCharColumn.maxChars);
+    });
+
+    it('should set numericPrecision and numericScale to decimal column', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [{ schemaName: 'public', name: 'table' }];
+      db.getColumns = async () => [decimalColumn];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+
+      const column = ast.shape[decimalColumn.name];
+      expect(column).toBeInstanceOf(DecimalColumn);
+      expect(column.data.numericPrecision).toBe(decimalColumn.numericPrecision);
+      expect(column.data.numericScale).toBe(decimalColumn.numericScale);
+    });
+
+    it('should set dateTimePrecision to timestamp column', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [{ schemaName: 'public', name: 'table' }];
+      db.getColumns = async () => [timestampColumn];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+
+      const column = ast.shape[timestampColumn.name];
+      expect(column).toBeInstanceOf(TimestampColumn);
+      expect(column.data.dateTimePrecision).toBe(
+        timestampColumn.dateTimePrecision,
+      );
+    });
+
     it('should set primaryKey to column', async () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [{ schemaName: 'public', name: 'table' }];
       db.getColumns = async () => columns;
-      db.getConstraints = async () => [primaryKey];
+      db.getPrimaryKeys = async () => [primaryKey];
 
       const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
 
@@ -146,7 +220,7 @@ describe('structureToAst', () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [{ schemaName: 'public', name: 'table' }];
       db.getColumns = async () => columns;
-      db.getConstraints = async () => [
+      db.getPrimaryKeys = async () => [
         { ...primaryKey, columnNames: ['id', 'name'] },
       ];
 
@@ -164,7 +238,7 @@ describe('structureToAst', () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [{ schemaName: 'public', name: 'table' }];
       db.getColumns = async () => columns;
-      db.getConstraints = async () => [
+      db.getPrimaryKeys = async () => [
         { ...primaryKey, columnNames: ['id', 'name'], name: 'table_pkey' },
       ];
 
@@ -175,17 +249,6 @@ describe('structureToAst', () => {
       expect(ast.primaryKey).toEqual({
         columns: ['id', 'name'],
       });
-    });
-
-    it('should ignore primary key indexes', async () => {
-      const db = new DbStructure(adapter);
-      db.getTables = async () => [{ schemaName: 'public', name: 'table' }];
-      db.getColumns = async () => columns;
-      db.getIndexes = async () => [{ ...index, isPrimary: true }];
-
-      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
-      expect(ast.shape.name.data.indexes).toBe(undefined);
-      expect(ast.indexes).toHaveLength(0);
     });
 
     it('should add index to column', async () => {
@@ -204,13 +267,59 @@ describe('structureToAst', () => {
       expect(ast.indexes).toHaveLength(0);
     });
 
-    it('should add composite indexes to table', async () => {
+    it('should set index options to column index', async () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [table];
       db.getColumns = async () => columns;
       db.getIndexes = async () => [
-        { ...index, columnNames: ['id', 'name'] },
-        { ...index, columnNames: ['id', 'name'], isUnique: true },
+        {
+          ...index,
+          using: 'gist',
+          isUnique: true,
+          columns: [
+            {
+              column: 'name',
+              collate: 'en_US',
+              opclass: 'varchar_ops',
+              order: 'DESC',
+            },
+          ],
+          include: ['id'],
+          with: 'fillfactor=80',
+          tablespace: 'tablespace',
+          where: 'condition',
+        },
+      ];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+      expect(ast.shape.name.data.indexes).toEqual([
+        {
+          name: 'index',
+          using: 'gist',
+          unique: true,
+          collate: 'en_US',
+          opclass: 'varchar_ops',
+          order: 'DESC',
+          include: ['id'],
+          with: 'fillfactor=80',
+          tablespace: 'tablespace',
+          where: 'condition',
+        },
+      ]);
+      expect(ast.indexes).toHaveLength(0);
+    });
+
+    it('should add composite indexes to the table', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [table];
+      db.getColumns = async () => columns;
+      db.getIndexes = async () => [
+        { ...index, columns: [{ column: 'id' }, { column: 'name' }] },
+        {
+          ...index,
+          columns: [{ column: 'id' }, { column: 'name' }],
+          isUnique: true,
+        },
       ];
 
       const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
@@ -227,12 +336,61 @@ describe('structureToAst', () => {
       ]);
     });
 
+    it('should add index with expression and options to the table', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [table];
+      db.getColumns = async () => columns;
+      db.getIndexes = async () => [
+        {
+          ...index,
+          using: 'gist',
+          isUnique: true,
+          columns: [
+            {
+              expression: 'lower(name)',
+              collate: 'en_US',
+              opclass: 'varchar_ops',
+              order: 'DESC',
+            },
+          ],
+          include: ['id'],
+          with: 'fillfactor=80',
+          tablespace: 'tablespace',
+          where: 'condition',
+        },
+      ];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+      expect(ast.shape.name.data.indexes).toBe(undefined);
+      expect(ast.indexes).toEqual([
+        {
+          columns: [
+            {
+              expression: 'lower(name)',
+              collate: 'en_US',
+              opclass: 'varchar_ops',
+              order: 'DESC',
+            },
+          ],
+          options: {
+            name: 'index',
+            using: 'gist',
+            unique: true,
+            include: ['id'],
+            with: 'fillfactor=80',
+            tablespace: 'tablespace',
+            where: 'condition',
+          },
+        },
+      ]);
+    });
+
     it('should add foreign key to the column', async () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [table];
       db.getColumns = async () => [
         ...columns,
-        { ...tableColumn, name: 'otherId' },
+        { ...intColumn, name: 'otherId' },
       ];
       db.getForeignKeys = async () => [foreignKey];
 
@@ -243,6 +401,9 @@ describe('structureToAst', () => {
           columns: ['id'],
           name: 'fkey',
           table: 'otherTable',
+          match: 'FULL',
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE',
         },
       ]);
       expect(ast.foreignKeys).toHaveLength(0);
@@ -253,7 +414,7 @@ describe('structureToAst', () => {
       db.getTables = async () => [table];
       db.getColumns = async () => [
         ...columns,
-        { ...tableColumn, name: 'otherId' },
+        { ...intColumn, name: 'otherId' },
       ];
       db.getForeignKeys = async () => [
         {
@@ -273,6 +434,9 @@ describe('structureToAst', () => {
           foreignColumns: ['name', 'id'],
           options: {
             name: 'fkey',
+            match: 'FULL',
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
           },
         },
       ]);

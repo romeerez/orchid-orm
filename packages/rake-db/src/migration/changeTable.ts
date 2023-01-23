@@ -447,9 +447,8 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): Sql[] => {
           (fromIndex || toIndex) &&
           (!fromIndex ||
             !toIndex ||
-            fromIndex.expression !== toIndex.expression ||
             fromIndex.collate !== toIndex.collate ||
-            fromIndex.operator !== toIndex.operator ||
+            fromIndex.opclass !== toIndex.opclass ||
             fromIndex.order !== toIndex.order ||
             fromIndex.name !== toIndex.name ||
             fromIndex.unique !== toIndex.unique ||

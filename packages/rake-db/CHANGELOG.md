@@ -1,5 +1,18 @@
 # rake-db
 
+## 2.3.0
+
+### Minor Changes
+
+- Change index options: column or expression is required, operator renamed to opclass
+
+### Patch Changes
+
+- f1cd5db: Handle multiple indexes and foreignKeys of the column
+- Updated dependencies
+- Updated dependencies [f1cd5db]
+  - pqb@0.9.0
+
 ## 2.2.6
 
 ### Patch Changes

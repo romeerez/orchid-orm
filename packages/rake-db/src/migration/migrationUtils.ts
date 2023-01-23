@@ -164,7 +164,13 @@ export const indexesToQuery = (
   return indexes.map(({ columns, options }) => {
     const indexName =
       options.name ||
-      joinWords(name, ...columns.map(({ column }) => column), 'index');
+      joinWords(
+        name,
+        ...columns
+          .filter((it): it is { column: string } => 'column' in it)
+          .map((it) => it.column),
+        'index',
+      );
 
     if (!up) {
       return {
@@ -193,17 +199,15 @@ export const indexesToQuery = (
 
     columns.forEach((column) => {
       const columnSql: string[] = [
-        `"${column.column}"${
-          column.expression ? `(${column.expression})` : ''
-        }`,
+        'column' in column ? `"${column.column}"` : `(${column.expression})`,
       ];
 
       if (column.collate) {
         columnSql.push(`COLLATE '${column.collate}'`);
       }
 
-      if (column.operator) {
-        columnSql.push(column.operator);
+      if (column.opclass) {
+        columnSql.push(column.opclass);
       }
 
       if (column.order) {

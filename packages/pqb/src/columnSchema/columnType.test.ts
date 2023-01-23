@@ -321,9 +321,8 @@ describe('column base', () => {
       expect(
         column
           .index({
-            expression: 'expression',
             collate: 'collate',
-            operator: 'operator',
+            opclass: 'opclass',
             order: 'order',
             name: 'name',
             using: 'using',
@@ -336,9 +335,8 @@ describe('column base', () => {
       ).toEqual([
         't.column().index({',
         [
-          `expression: 'expression',`,
           `collate: 'collate',`,
-          `operator: 'operator',`,
+          `opclass: 'opclass',`,
           `order: 'order',`,
           `name: 'name',`,
           `using: 'using',`,

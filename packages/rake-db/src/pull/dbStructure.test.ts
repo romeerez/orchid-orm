@@ -20,7 +20,7 @@ describe('dbStructure', () => {
 
   describe('getTables', () => {
     it('should return tables', async () => {
-      rows = [{ schemaName: 'schema', name: 'table' }];
+      rows = [{ schemaName: 'schema', name: 'table', comment: 'comment' }];
       const result = await db.getTables();
       expect(result).toEqual(rows);
     });
@@ -65,6 +65,9 @@ describe('dbStructure', () => {
           type: 'int4',
           default: '123',
           isNullable: false,
+          collation: 'en_US',
+          compression: 'p',
+          comment: 'column comment',
         },
       ];
       const result = await db.getColumns();
@@ -78,10 +81,13 @@ describe('dbStructure', () => {
         {
           schemaName: 'public',
           tableName: 'table',
-          columnNames: ['column'],
           name: 'indexName',
           isUnique: true,
-          isPrimary: true,
+          columns: [{ column: 'column' }],
+          include: null,
+          with: null,
+          tablespace: null,
+          where: null,
         },
       ];
       const result = await db.getIndexes();
@@ -100,6 +106,9 @@ describe('dbStructure', () => {
           name: 'name',
           columnNames: ['column'],
           foreignColumnNames: ['foreignColumn'],
+          match: 's',
+          onUpdate: 'a',
+          onDelete: 'a',
         },
       ];
       const result = await db.getForeignKeys();
@@ -107,18 +116,17 @@ describe('dbStructure', () => {
     });
   });
 
-  describe('getConstraints', () => {
+  describe('getPrimaryKeys', () => {
     it('should return constraints', async () => {
       rows = [
         {
           schemaName: 'public',
           tableName: 'table',
           name: 'name',
-          type: 'PRIMARY KEY',
           columnNames: ['id'],
         },
       ];
-      const result = await db.getConstraints();
+      const result = await db.getPrimaryKeys();
       expect(result).toEqual(rows);
     });
   });

@@ -185,13 +185,10 @@ type IndexOptions = {
   unique?: boolean;
   // index algorithm to use such as GIST, GIN
   using?: string;
-  // expression is an argument to be passed to a column:
-  // CREATE INDEX name ON table ( columnName(expression) )
-  expression?: number | string;
   // specify collation:
   collate?: string;
   // see `opclass` in the Postgres document for creating the index
-  operator?: string;
+  opclass?: string;
   // specify index order such as ASC NULLS FIRST, DESC NULLS LAST
   order?: string;
   // include columns to an index to optimize specific queries
@@ -219,13 +216,14 @@ The first argument is an array of columns, where the column can be a simple stri
 
 ```ts
 type IndexColumnOptions = {
-  // name of the column
+  // column name OR expression is required
   column: string,
-  // see the comments above for these options
-  expression?: number | string;
+  // SQL expression, like 'lower(name)'
+  expression: string;
+  
   collate?: string;
-  operator?: string;
-  order?: string;
+  opclass?: string; // for example, varchar_ops
+  order?: string; // ASC, DESC, ASC NULLS FIRST, DESC NULLS LAST
 }
 ```
 
