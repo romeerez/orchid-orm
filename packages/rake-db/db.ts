@@ -4,7 +4,7 @@ import { rakeDb } from './src/rakeDb';
 import { AdapterOptions } from 'pqb';
 import { appCodeUpdater } from '../orm/src';
 
-config({ path: path.resolve(process.cwd(), '.env.local') });
+config({ path: path.resolve('.env.local') });
 config();
 
 const options: AdapterOptions[] = [];
@@ -22,7 +22,7 @@ if (databaseURLTest) {
 }
 
 rakeDb(options, {
-  migrationsPath: path.resolve(process.cwd(), 'migrations'),
+  migrationsPath: 'migrations',
   appCodeUpdater: appCodeUpdater({
     tablePath: (tableName) => `app/tables/${tableName}.ts`,
     baseTablePath: 'app/lib/baseTable.ts',

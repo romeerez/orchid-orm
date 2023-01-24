@@ -5,6 +5,7 @@ import {
   ColumnsShape,
   ForeignKeyOptions,
   instantiateColumn,
+  singleQuote,
 } from 'pqb';
 
 const matchMap = {
@@ -63,11 +64,16 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
     const tableForeignKeys = allForeignKeys.filter(belongsToTable);
 
     const shape: ColumnsShape = {};
-    for (const item of columns) {
-      const klass = columnsByType[item.type];
+    for (let item of columns) {
+      const isSerial = getIsSerial(item);
+      const klass = columnsByType[getColumnType(item, isSerial)];
       if (!klass) {
         throw new Error(`Column type \`${item.type}\` is not supported`);
       }
+      if (isSerial) {
+        item = { ...item, default: undefined };
+      }
+
       let column = instantiateColumn(klass, item);
 
       if (
@@ -194,3 +200,35 @@ const makeBelongsToTable =
   (schema: string | undefined, table: string) =>
   (item: { schemaName: string; tableName: string }) =>
     item.schemaName === schema && item.tableName === table;
+
+const getIsSerial = (item: DbStructure.Column) => {
+  if (item.type === 'int2' || item.type === 'int4' || item.type === 'int8') {
+    const { default: def, schemaName, tableName, name } = item;
+    const seq = `${tableName}_${name}_seq`;
+    if (
+      def &&
+      (def === `nextval(${singleQuote(`${seq}`)}::regclass)` ||
+        def === `nextval(${singleQuote(`"${seq}"`)}::regclass)` ||
+        def === `nextval(${singleQuote(`${schemaName}.${seq}`)}::regclass)` ||
+        def === `nextval(${singleQuote(`"${schemaName}".${seq}`)}::regclass)` ||
+        def === `nextval(${singleQuote(`${schemaName}."${seq}"`)}::regclass)` ||
+        def === `nextval(${singleQuote(`"${schemaName}"."${seq}"`)}::regclass)`)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const getColumnType = (item: DbStructure.Column, isSerial: boolean) => {
+  if (isSerial) {
+    return item.type === 'int2'
+      ? 'smallserial'
+      : item.type === 'int4'
+      ? 'serial'
+      : 'bigserial';
+  }
+
+  return item.type;
+};

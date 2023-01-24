@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.3.1
+
+### Patch Changes
+
+- Add command for pulling database structure into a migration
+- Updated dependencies
+  - pqb@0.9.1
+
 ## 2.3.0
 
 ### Minor Changes

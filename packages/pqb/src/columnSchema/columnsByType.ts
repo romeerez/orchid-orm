@@ -26,11 +26,14 @@ import {
 } from './string';
 import {
   BigIntColumn,
+  BigSerialColumn,
   DecimalColumn,
   DoublePrecisionColumn,
   IntegerColumn,
   RealColumn,
+  SerialColumn,
   SmallIntColumn,
+  SmallSerialColumn,
 } from './number';
 import { JSONColumn, JSONTextColumn } from './json';
 import {
@@ -97,4 +100,7 @@ export const columnsByType: Record<
   tsvector: TsVectorColumn,
   tsquery: TsQueryColumn,
   jsonb: JSONColumn,
+  smallserial: SmallSerialColumn,
+  serial: SerialColumn,
+  bigserial: BigSerialColumn,
 };

@@ -256,8 +256,6 @@ import { rakeDb } from 'rake-db';
 import { config } from '../config';
 import { appCodeUpdater } from 'orchid-orm';
 
-const migrationsPath = path.resolve(__dirname, '..', 'migrations');
-
 const options = [{ databaseURL: config.DATABASE_URL }];
 
 // when running in production we don't need to test the database
@@ -271,7 +269,7 @@ if (config.NODE_ENV !== 'production') {
 
 // pass options and migrationPath to `rakeDb`
 rakeDb(options, {
-  migrationsPath,
+  migrationsPath: 'migrations',
   appCodeUpdater: appCodeUpdater({
     tablePath: (tableName) => `src/app/tables/${tableName}.table.ts`,
     baseTablePath: 'src/lib/baseTable.ts',

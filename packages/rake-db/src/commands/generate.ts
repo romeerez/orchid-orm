@@ -7,18 +7,26 @@ import {
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 
-export const generate = async (config: RakeDbConfig, args: string[]) => {
-  const name = args[0];
-  if (!name) throw new Error('Migration name is missing');
-
-  await mkdir(config.migrationsPath, { recursive: true });
+export const writeMigrationFile = async (
+  config: RakeDbConfig,
+  name: string,
+  content: string,
+) => {
+  await mkdir(path.resolve(config.migrationsPath), { recursive: true });
 
   const filePath = path.resolve(
     config.migrationsPath,
     `${makeFileTimeStamp()}_${name}.ts`,
   );
-  await writeFile(filePath, makeContent(name, args.slice(1)));
+  await writeFile(filePath, content);
   console.log(`Created ${filePath}`);
+};
+
+export const generate = async (config: RakeDbConfig, args: string[]) => {
+  const name = args[0];
+  if (!name) throw new Error('Migration name is missing');
+
+  await writeMigrationFile(config, name, makeContent(name, args.slice(1)));
 };
 
 const makeFileTimeStamp = () => {

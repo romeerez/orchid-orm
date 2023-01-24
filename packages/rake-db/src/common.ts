@@ -3,6 +3,7 @@ import {
   AdapterOptions,
   NoPrimaryKeyOption,
   QueryLogOptions,
+  singleQuote,
 } from 'pqb';
 import Enquirer from 'enquirer';
 import path from 'path';
@@ -25,7 +26,7 @@ export type AppCodeUpdater = (params: {
 }) => Promise<void>;
 
 export const migrationConfigDefaults = {
-  migrationsPath: path.resolve(process.cwd(), 'src', 'migrations'),
+  migrationsPath: path.resolve('src', 'migrations'),
   migrationsTable: 'schemaMigrations',
   requireTs: require,
   log: true,
@@ -191,7 +192,7 @@ export const getMigrationFiles = async (
 
   let files: string[];
   try {
-    files = await readdir(migrationsPath);
+    files = await readdir(path.resolve(migrationsPath));
   } catch (_) {
     return [];
   }
@@ -212,7 +213,7 @@ export const getMigrationFiles = async (
     }
 
     return {
-      path: path.join(migrationsPath, file),
+      path: path.resolve(migrationsPath, file),
       version: timestampMatch[1],
     };
   });
@@ -252,4 +253,14 @@ export const getSchemaAndTableFromName = (
   return index !== -1
     ? [name.slice(0, index), name.slice(index + 1)]
     : [undefined, name];
+};
+
+export const quoteSchemaTable = ({
+  schema,
+  name,
+}: {
+  schema?: string;
+  name: string;
+}) => {
+  return singleQuote(schema ? `${schema}.${name}` : name);
 };

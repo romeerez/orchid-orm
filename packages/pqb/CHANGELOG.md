@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.1
+
+### Patch Changes
+
+- Add command for pulling database structure into a migration
+
 ## 0.9.0
 
 ### Minor Changes

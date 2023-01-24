@@ -39,7 +39,6 @@ Place a script for `db` somewhere, for example, in `src/scripts/db.ts`:
 // src/scripts/db.ts
 import 'dotenv/config';
 import { rakeDb } from 'rake-db';
-import path from 'path';
 import { appCodeUpdater } from 'orchid-orm';
 
 rakeDb({
@@ -47,7 +46,7 @@ rakeDb({
   // ssl alternatively can be specified as an option here:
   ssl: true,
 }, {
-  migrationsPath: path.resolve(__dirname, '..', 'migrations'),
+  migrationsPath: '../migrations',
   
   // optionally, for automatic code updating after running migrations:
   appCodeUpdater: appCodeUpdater({

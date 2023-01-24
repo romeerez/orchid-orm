@@ -1,8 +1,11 @@
 import { DbStructure } from './dbStructure';
 import {
   Adapter,
+  BigSerialColumn,
   DecimalColumn,
   IntegerColumn,
+  SerialColumn,
+  SmallSerialColumn,
   TextColumn,
   TimestampColumn,
   VarCharColumn,
@@ -162,6 +165,68 @@ describe('structureToAst', () => {
       expect(ast.noPrimaryKey).toBe('ignore');
       expect(ast.shape.id).toBeInstanceOf(IntegerColumn);
       expect(ast.shape.name).toBeInstanceOf(TextColumn);
+    });
+
+    describe('serial column', () => {
+      it('should add serial column based on various default values', async () => {
+        const db = new DbStructure(adapter);
+        db.getTables = async () => [{ schemaName: 'schema', name: 'table' }];
+
+        const defaults = [
+          `nextval('table_id_seq'::regclass)`,
+          `nextval('"table_id_seq"'::regclass)`,
+          `nextval('schema.table_id_seq'::regclass)`,
+          `nextval('schema."table_id_seq"'::regclass)`,
+          `nextval('"schema".table_id_seq'::regclass)`,
+          `nextval('"schema"."table_id_seq"'::regclass)`,
+        ];
+
+        for (const def of defaults) {
+          db.getColumns = async () => [
+            {
+              ...intColumn,
+              name: 'id',
+              schemaName: 'schema',
+              tableName: 'table',
+              default: def,
+            },
+          ];
+
+          const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+
+          expect(ast.shape.id).toBeInstanceOf(SerialColumn);
+          expect(ast.shape.id.data.default).toBe(undefined);
+        }
+      });
+
+      it('should support smallserial, serial, and bigserial', async () => {
+        const db = new DbStructure(adapter);
+        db.getTables = async () => [{ schemaName: 'schema', name: 'table' }];
+
+        const types = [
+          ['int2', SmallSerialColumn],
+          ['int4', SerialColumn],
+          ['int8', BigSerialColumn],
+        ] as const;
+
+        for (const [type, Column] of types) {
+          db.getColumns = async () => [
+            {
+              ...intColumn,
+              type,
+              name: 'id',
+              schemaName: 'schema',
+              tableName: 'table',
+              default: `nextval('table_id_seq'::regclass)`,
+            },
+          ];
+
+          const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+
+          expect(ast.shape.id).toBeInstanceOf(Column);
+          expect(ast.shape.id.data.default).toBe(undefined);
+        }
+      });
     });
 
     it('should set maxChars to char column', async () => {

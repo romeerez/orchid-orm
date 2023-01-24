@@ -1,8 +1,9 @@
-import { AdapterOptions, MaybeArray } from 'pqb';
+import { AdapterOptions, MaybeArray, toArray } from 'pqb';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
 import { migrate, rollback } from './commands/migrateOrRollback';
 import { getMigrationConfigWithDefaults, RakeDbConfig } from './common';
 import { generate } from './commands/generate';
+import { pullDbStructure } from './pull/pull';
 
 export const rakeDb = async (
   options: MaybeArray<AdapterOptions>,
@@ -25,6 +26,8 @@ export const rakeDb = async (
     await rollback(options, config, args.slice(1));
   } else if (command === 'g' || command === 'generate') {
     await generate(config, args.slice(1));
+  } else if (command === 'pull') {
+    await pullDbStructure(toArray(options)[0], config);
   } else {
     printHelp();
   }
