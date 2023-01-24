@@ -139,7 +139,7 @@ describe('changeTable', () => {
               WHERE column = 123
           `),
           toLine(`
-            CREATE UNIQUE INDEX "tableUniqueColumnIndex"
+            CREATE UNIQUE INDEX "table_uniqueColumn_idx"
               ON "table"
               ("uniqueColumn")
           `),
@@ -169,7 +169,7 @@ describe('changeTable', () => {
               DROP COLUMN "updatedAt"
           `,
           toLine(`DROP INDEX "indexName"`),
-          toLine(`DROP INDEX "tableUniqueColumnIndex" CASCADE`),
+          toLine(`DROP INDEX "table_uniqueColumn_idx" CASCADE`),
         ]);
       };
 
@@ -664,11 +664,11 @@ describe('changeTable', () => {
 
     await fn();
     expectSql([
-      `DROP INDEX "tableRemoveIndexIndex"`,
-      `DROP INDEX "tableRemoveIndexWithOptionsIndex" CASCADE`,
+      `DROP INDEX "table_removeIndex_idx"`,
+      `DROP INDEX "table_removeIndexWithOptions_idx" CASCADE`,
       `DROP INDEX "from" CASCADE`,
-      `CREATE INDEX "tableAddIndexIndex" ON "table" ("addIndex")`,
-      `CREATE UNIQUE INDEX "tableAddIndexWithOptionsIndex" ON "table" USING using ("addIndexWithOptions" COLLATE 'collate' opclass order) INCLUDE ("a", "b") WITH (with) TABLESPACE tablespace WHERE where`,
+      `CREATE INDEX "table_addIndex_idx" ON "table" ("addIndex")`,
+      `CREATE UNIQUE INDEX "table_addIndexWithOptions_idx" ON "table" USING using ("addIndexWithOptions" COLLATE 'collate' opclass order) INCLUDE ("a", "b") WITH (with) TABLESPACE tablespace WHERE where`,
       `CREATE UNIQUE INDEX "to" ON "table" USING to ("changeIndex" COLLATE 'to' to to) INCLUDE ("c", "d") WITH (to) TABLESPACE to WHERE to`,
     ]);
 
@@ -676,11 +676,11 @@ describe('changeTable', () => {
     db.up = false;
     await fn();
     expectSql([
-      `DROP INDEX "tableAddIndexIndex"`,
-      `DROP INDEX "tableAddIndexWithOptionsIndex" CASCADE`,
+      `DROP INDEX "table_addIndex_idx"`,
+      `DROP INDEX "table_addIndexWithOptions_idx" CASCADE`,
       `DROP INDEX "to" RESTRICT`,
-      `CREATE INDEX "tableRemoveIndexIndex" ON "table" ("removeIndex")`,
-      `CREATE UNIQUE INDEX "tableRemoveIndexWithOptionsIndex" ON "table" USING using ("removeIndexWithOptions" COLLATE 'collate' opclass order) INCLUDE ("a", "b") WITH (with) TABLESPACE tablespace WHERE where`,
+      `CREATE INDEX "table_removeIndex_idx" ON "table" ("removeIndex")`,
+      `CREATE UNIQUE INDEX "table_removeIndexWithOptions_idx" ON "table" USING using ("removeIndexWithOptions" COLLATE 'collate' opclass order) INCLUDE ("a", "b") WITH (with) TABLESPACE tablespace WHERE where`,
       `CREATE INDEX "from" ON "table" USING from ("changeIndex" COLLATE 'from' from from) INCLUDE ("a", "b") WITH (from) TABLESPACE from WHERE from`,
     ]);
   });

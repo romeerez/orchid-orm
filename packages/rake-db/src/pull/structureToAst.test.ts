@@ -14,6 +14,7 @@ import {
 } from 'pqb';
 import { structureToAst } from './structureToAst';
 import { RakeDbAst } from '../ast';
+import { getIndexName } from '../migration/migrationUtils';
 
 const adapter = new Adapter({ databaseURL: 'file:path' });
 const query = jest.fn().mockImplementation(() => ({ rows: [] }));
@@ -361,6 +362,23 @@ describe('structureToAst', () => {
       expect(ast.indexes).toHaveLength(0);
     });
 
+    it('should ignore standard index name', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [table];
+      db.getColumns = async () => columns;
+      db.getIndexes = async () => [
+        { ...index, name: getIndexName(table.name, index.columns) },
+      ];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+      expect(ast.shape.name.data.indexes).toEqual([
+        {
+          unique: false,
+        },
+      ]);
+      expect(ast.indexes).toHaveLength(0);
+    });
+
     it('should set index options to column index', async () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [table];
@@ -426,6 +444,30 @@ describe('structureToAst', () => {
         {
           columns: [{ column: 'id' }, { column: 'name' }],
           options: { name: 'index', unique: true },
+        },
+      ]);
+    });
+
+    it('should ignore standard index name in composite index', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [table];
+      db.getColumns = async () => columns;
+
+      const indexColumns = [{ column: 'id' }, { column: 'name' }];
+      db.getIndexes = async () => [
+        {
+          ...index,
+          columns: indexColumns,
+          name: getIndexName(table.name, indexColumns),
+        },
+      ];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+      expect(ast.shape.name.data.indexes).toBe(undefined);
+      expect(ast.indexes).toEqual([
+        {
+          columns: indexColumns,
+          options: { unique: false },
         },
       ]);
     });
@@ -503,6 +545,31 @@ describe('structureToAst', () => {
       expect(ast.foreignKeys).toHaveLength(0);
     });
 
+    it('should ignore standard foreign key name', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [table];
+      db.getColumns = async () => [
+        ...columns,
+        { ...intColumn, name: 'otherId' },
+      ];
+      db.getForeignKeys = async () => [
+        { ...foreignKey, name: `${table.name}_otherId_fkey` },
+      ];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+
+      expect(ast.shape.otherId.data.foreignKeys).toEqual([
+        {
+          columns: ['id'],
+          table: 'otherTable',
+          match: 'FULL',
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE',
+        },
+      ]);
+      expect(ast.foreignKeys).toHaveLength(0);
+    });
+
     it('should add composite foreign key', async () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [table];
@@ -528,6 +595,39 @@ describe('structureToAst', () => {
           foreignColumns: ['name', 'id'],
           options: {
             name: 'fkey',
+            match: 'FULL',
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
+          },
+        },
+      ]);
+    });
+
+    it('should ignore standard foreign key name in a composite foreign key', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [table];
+      db.getColumns = async () => [
+        ...columns,
+        { ...intColumn, name: 'otherId' },
+      ];
+      db.getForeignKeys = async () => [
+        {
+          ...foreignKey,
+          columnNames: ['name', 'otherId'],
+          foreignColumnNames: ['name', 'id'],
+          name: 'table_name_otherId_fkey',
+        },
+      ];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+
+      expect(ast.shape.otherId.data.foreignKeys).toBe(undefined);
+      expect(ast.foreignKeys).toEqual([
+        {
+          columns: ['name', 'otherId'],
+          fnOrTable: 'otherTable',
+          foreignColumns: ['name', 'id'],
+          options: {
             match: 'FULL',
             onUpdate: 'CASCADE',
             onDelete: 'CASCADE',

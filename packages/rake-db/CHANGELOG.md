@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.3.3
+
+### Patch Changes
+
+- Improve pullindg db structure
+
 ## 2.3.2
 
 ### Patch Changes

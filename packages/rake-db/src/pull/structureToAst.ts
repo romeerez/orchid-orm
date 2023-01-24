@@ -7,6 +7,7 @@ import {
   instantiateColumn,
   singleQuote,
 } from 'pqb';
+import { getForeignKeyName, getIndexName } from '../migration/migrationUtils';
 
 const matchMap = {
   s: undefined,
@@ -98,7 +99,10 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
           collate: options.collate,
           opclass: options.opclass,
           order: options.order,
-          name: index.name,
+          name:
+            index.name !== getIndexName(name, index.columns)
+              ? index.name
+              : undefined,
           using: index.using === 'btree' ? undefined : index.using,
           unique: index.isUnique,
           include: index.include,
@@ -116,7 +120,12 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
           foreignKey.foreignTableName,
           foreignKey.foreignColumnNames[0],
           {
-            name: foreignKey.name,
+            name:
+              foreignKey.name &&
+              foreignKey.name !==
+                getForeignKeyName(name, foreignKey.columnNames)
+                ? foreignKey.name
+                : undefined,
             match: matchMap[foreignKey.match],
             onUpdate: fkeyActionMap[foreignKey.onUpdate],
             onDelete: fkeyActionMap[foreignKey.onDelete],
@@ -161,7 +170,10 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
             order: it.order,
           })),
           options: {
-            name: index.name,
+            name:
+              index.name !== getIndexName(name, index.columns)
+                ? index.name
+                : undefined,
             using: index.using === 'btree' ? undefined : index.using,
             unique: index.isUnique,
             include: index.include,
@@ -177,7 +189,10 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
           fnOrTable: it.foreignTableName,
           foreignColumns: it.foreignColumnNames,
           options: {
-            name: it.name,
+            name:
+              it.name && it.name !== getForeignKeyName(name, it.columnNames)
+                ? it.name
+                : undefined,
             match: matchMap[it.match],
             onUpdate: fkeyActionMap[it.onUpdate],
             onDelete: fkeyActionMap[it.onDelete],

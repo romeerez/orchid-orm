@@ -13,7 +13,6 @@ import { ColumnComment, Migration } from './migration';
 import {
   getSchemaAndTableFromName,
   joinColumns,
-  joinWords,
   quoteWithSchema,
 } from '../common';
 
@@ -105,13 +104,17 @@ export const getForeignKeyTable = (
   return [item.schema, item.table];
 };
 
+export const getForeignKeyName = (table: string, columns: string[]) => {
+  return `${table}_${columns.join('_')}_fkey`;
+};
+
 export const constraintToSql = (
   { name }: { schema?: string; name: string },
   up: boolean,
   foreignKey: TableData['foreignKeys'][number],
 ) => {
   const constraintName =
-    foreignKey.options.name || `${name}_${foreignKey.columns.join('_')}_fkey`;
+    foreignKey.options.name || getForeignKeyName(name, foreignKey.columns);
 
   if (!up) {
     const { dropMode } = foreignKey.options;
@@ -156,21 +159,26 @@ export const referencesToSql = (
   return sql.join(' ');
 };
 
+export const getIndexName = (
+  table: string,
+  columns: TableData.Index['columns'],
+) => {
+  return `${table}_${columns
+    .map((it) =>
+      'column' in it
+        ? it.column
+        : it.expression.match(/\w+/g)?.join('_') || 'expression',
+    )
+    .join('_')}_idx`;
+};
+
 export const indexesToQuery = (
   up: boolean,
   { schema, name }: { schema?: string; name: string },
   indexes: TableData.Index[],
 ): Sql[] => {
   return indexes.map(({ columns, options }) => {
-    const indexName =
-      options.name ||
-      joinWords(
-        name,
-        ...columns
-          .filter((it): it is { column: string } => 'column' in it)
-          .map((it) => it.column),
-        'index',
-      );
+    const indexName = options.name || getIndexName(name, columns);
 
     if (!up) {
       return {

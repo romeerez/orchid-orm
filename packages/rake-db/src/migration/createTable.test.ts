@@ -119,7 +119,7 @@ const db = getDb();
               WHERE column = 123
           `),
           toLine(`
-            CREATE UNIQUE INDEX "tableUniqueColumnIndex"
+            CREATE UNIQUE INDEX "table_uniqueColumn_idx"
               ON "table"
               ("uniqueColumn")
           `),
