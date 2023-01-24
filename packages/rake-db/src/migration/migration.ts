@@ -26,7 +26,6 @@ import {
   quoteWithSchema,
   getSchemaAndTableFromName,
 } from '../common';
-import { createJoinTable } from './createJoinTable';
 import { RakeDbAst } from '../ast';
 
 export type DropMode = 'CASCADE' | 'RESTRICT';
@@ -129,40 +128,6 @@ export class Migration extends TransactionAdapter {
     const fn = (cb || cbOrOptions) as ColumnsShapeCallback;
 
     return createTable(this, !this.up, tableName, options, fn);
-  }
-
-  createJoinTable(
-    tables: string[],
-    options?: JoinTableOptions,
-    fn?: ColumnsShapeCallback,
-  ): Promise<void>;
-  createJoinTable(tables: string[], fn?: ColumnsShapeCallback): Promise<void>;
-  async createJoinTable(
-    tables: string[],
-    cbOrOptions?: ColumnsShapeCallback | JoinTableOptions,
-    cb?: ColumnsShapeCallback,
-  ): Promise<void> {
-    const options = typeof cbOrOptions === 'function' ? {} : cbOrOptions || {};
-    const fn = (cb || cbOrOptions) as ColumnsShapeCallback | undefined;
-
-    return createJoinTable(this, this.up, tables, options, fn);
-  }
-
-  dropJoinTable(
-    tables: string[],
-    options?: JoinTableOptions,
-    fn?: ColumnsShapeCallback,
-  ): Promise<void>;
-  dropJoinTable(tables: string[], fn?: ColumnsShapeCallback): Promise<void>;
-  async dropJoinTable(
-    tables: string[],
-    cbOrOptions?: ColumnsShapeCallback | JoinTableOptions,
-    cb?: ColumnsShapeCallback,
-  ): Promise<void> {
-    const options = typeof cbOrOptions === 'function' ? {} : cbOrOptions || {};
-    const fn = (cb || cbOrOptions) as ColumnsShapeCallback | undefined;
-
-    return createJoinTable(this, !this.up, tables, options, fn);
   }
 
   changeTable(

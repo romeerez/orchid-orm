@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.3.4
+
+### Patch Changes
+
+- Remove createJoinTable
+
 ## 2.3.3
 
 ### Patch Changes

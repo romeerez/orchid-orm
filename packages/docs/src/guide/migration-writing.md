@@ -90,68 +90,6 @@ change(async (db) => {
 })
 ```
 
-## createJoinTable, dropJoinTable
-
-`createJoinTable` helps with creating a join table. It accepts an array of table names to join, optional options, and optional callbacks with columns.
-
-`dropJoinTable` accepts the same arguments, it will drop the table when migrating and create a table when rolling back.
-
-By default, the name of the join table is a camelCased union of provided table names.
-
-It will create a referencing non-nullable column for each primary key of each table.
-
-All referencing columns of the table will be included in its primary key, which makes every combination unique.
-
-```ts
-import { change } from 'rake-db'
-
-change(async (db) => {
-  // will create a "fooBarBaz" table
-  await db.createJoinTable(['foo', 'bar', 'baz'])
-})
-```
-
-Assuming tables 'foo', 'bar', and 'baz' have one primary key of integer type, the above code is equivalent for:
-
-```ts
-import { change } from 'rake-db'
-
-change(async (db) => {
-  await db.createTable('fooBarBaz', (t) => ({
-    fooId: t.integer().foreignKey('foo', 'id'),
-    barId: t.integer().foreignKey('bar', 'id'),
-    bazId: t.integer().foreignKey('baz', 'id'),
-    ...t.primaryKey(['fooId', 'barId', 'bazId']),
-  }))
-})
-```
-
-Options are:
-
-```ts
-type JoinTableOptions = {
-  // override join table name:
-  tableName?: string;
-  
-  // same options as in createTable:
-  comment?: string;
-  dropMode?: 'CASCADE' | 'RESTRICT';
-}
-```
-
-Provide a callback if you want to add additional columns:
-
-```ts
-import { change } from 'rake-db'
-
-change(async (db) => {
-  await db.createJoinTable(['foo', 'bar', 'baz'], (t) => ({
-    something: t.text(),
-    ...t.timestamps(),
-  }))
-})
-```
-
 ## changeTable
 
 `changeTable` accepts a table name, optional options, and a special callback with column changes.
