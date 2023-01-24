@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.3.2
+
+### Patch Changes
+
+- Improve pulling db structure
+- Updated dependencies
+  - pqb@0.9.2
+
 ## 2.3.1
 
 ### Patch Changes

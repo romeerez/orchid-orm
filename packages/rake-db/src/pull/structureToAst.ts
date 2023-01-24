@@ -15,8 +15,8 @@ const matchMap = {
 };
 
 const fkeyActionMap = {
-  a: 'NO ACTION',
-  r: undefined, // default
+  a: undefined, // default
+  r: 'RESTRICT',
   c: 'CASCADE',
   n: 'SET NULL',
   d: 'SET DEFAULT',
@@ -56,6 +56,8 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
   for (const table of tables) {
     const { schemaName, name } = table;
 
+    if (name === 'schemaMigrations') continue;
+
     const belongsToTable = makeBelongsToTable(schemaName, name);
 
     const columns = allColumns.filter(belongsToTable);
@@ -66,12 +68,13 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
     const shape: ColumnsShape = {};
     for (let item of columns) {
       const isSerial = getIsSerial(item);
+      if (isSerial) {
+        item = { ...item, default: undefined };
+      }
+
       const klass = columnsByType[getColumnType(item, isSerial)];
       if (!klass) {
         throw new Error(`Column type \`${item.type}\` is not supported`);
-      }
-      if (isSerial) {
-        item = { ...item, default: undefined };
       }
 
       let column = instantiateColumn(klass, item);

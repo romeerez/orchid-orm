@@ -9,8 +9,12 @@ export const pullDbStructure = async (
   options: AdapterOptions,
   config: RakeDbConfig,
 ) => {
-  const db = new DbStructure(new Adapter(options));
+  const adapter = new Adapter(options);
+  const db = new DbStructure(adapter);
   const ast = await structureToAst(db);
+
+  await adapter.close();
+
   const result = astToMigration(ast);
   if (!result) return;
 

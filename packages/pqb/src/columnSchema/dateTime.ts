@@ -92,18 +92,27 @@ export abstract class DateTimeWithTimeZoneBaseClass<
   }
 }
 
+const timestampToCode = <P extends number | undefined>(
+  self: TimestampColumn<P> | TimestampWithTimeZoneColumn<P>,
+  t: string,
+) => {
+  const { dateTimePrecision: p } = self.data;
+  return columnCode(
+    self,
+    t,
+    `${t}.${
+      self instanceof TimestampColumn ? 'timestamp' : 'timestampWithTimeZone'
+    }(${p && p !== 6 ? p : ''})${dateDataToCode(self.data)}`,
+  );
+};
+
 // timestamp [ (p) ] [ without time zone ]	8 bytes	both date and time (no time zone)	4713 BC	294276 AD	1 microsecond
 export class TimestampColumn<
   Precision extends number | undefined = undefined,
 > extends DateTimeBaseClass<Precision> {
   dataType = 'timestamp' as const;
   toCode(t: string): Code {
-    const { dateTimePrecision } = this.data;
-    return columnCode(
-      this,
-      t,
-      `${t}.timestamp(${dateTimePrecision || ''})${dateDataToCode(this.data)}`,
-    );
+    return timestampToCode(this, t);
   }
 }
 
@@ -114,14 +123,7 @@ export class TimestampWithTimeZoneColumn<
   dataType = 'timestamp with time zone' as const;
   baseDataType = 'timestamp' as const;
   toCode(t: string): Code {
-    const { dateTimePrecision } = this.data;
-    return columnCode(
-      this,
-      t,
-      `${t}.timestampWithTimeZone(${dateTimePrecision || ''})${dateDataToCode(
-        this.data,
-      )}`,
-    );
+    return timestampToCode(this, t);
   }
 }
 

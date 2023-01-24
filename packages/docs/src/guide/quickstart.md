@@ -46,7 +46,7 @@ rakeDb({
   // ssl alternatively can be specified as an option here:
   ssl: true,
 }, {
-  migrationsPath: '../migrations',
+  migrationsPath: 'migrations',
   
   // optionally, for automatic code updating after running migrations:
   appCodeUpdater: appCodeUpdater({

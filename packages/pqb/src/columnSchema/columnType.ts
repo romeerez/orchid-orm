@@ -1,7 +1,7 @@
 import { Operator, Operators } from '../columnsOperators';
 import { JSONTypeAny } from './json';
 import { ColumnsShape } from './columnsSchema';
-import { RawExpression, StringKey } from '../common';
+import { raw, RawExpression, StringKey } from '../common';
 import { MaybeArray } from '../utils';
 import { Query } from '../query';
 import { Code } from './code';
@@ -164,7 +164,15 @@ export const instantiateColumn = (
   params: ColumnFromDbParams,
 ): ColumnType => {
   const column = new (klass as unknown as new () => ColumnType)();
-  Object.assign(column.data, params);
+
+  let data;
+  if (params.default !== null && params.default !== undefined) {
+    data = { ...params, default: raw(params.default) };
+  } else {
+    data = params;
+  }
+
+  Object.assign(column.data, data);
   return column as unknown as ColumnType;
 };
 

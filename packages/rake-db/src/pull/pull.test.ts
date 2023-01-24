@@ -56,6 +56,24 @@ describe('pull', () => {
         type: 'text',
         isNullable: false,
       },
+      {
+        schemaName: 'public',
+        tableName: 'table2',
+        name: 'createdAt',
+        type: 'timestamp',
+        dateTimePrecision: 6,
+        isNullable: false,
+        default: 'now()',
+      },
+      {
+        schemaName: 'public',
+        tableName: 'table2',
+        name: 'updatedAt',
+        type: 'timestamp',
+        dateTimePrecision: 6,
+        isNullable: false,
+        default: 'now()',
+      },
     ];
 
     const config = getMigrationConfigWithDefaults({
@@ -84,6 +102,7 @@ change(async (db) => {
 
   await db.createTable('table2', (t) => ({
     text: t.text(),
+    ...t.timestamps(),
   }));
 });
 `,

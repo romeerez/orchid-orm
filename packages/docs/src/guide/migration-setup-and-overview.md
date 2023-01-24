@@ -44,7 +44,10 @@ rakeDb(
     ssl: true
   },
   {
-    migrationsPath: path.resolve(process.cwd(), 'migrations'),
+    // relative path:
+    migrationsPath: 'migrations',
+    // it also can be an absolute path:
+    // migrationsPath: path.resolve('..', 'migrations'),
     
     // optionally, for automatic code updating after running migrations:
     appCodeUpdater: appCodeUpdater({

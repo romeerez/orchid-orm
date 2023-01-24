@@ -51,9 +51,12 @@ describe('date time columns', () => {
       assertType<typeof result, string>();
     });
 
-    it('should have toCode', () => {
+    it('should have toCode, ignore default precision', () => {
       expect(new TimestampColumn().toCode('t')).toBe('t.timestamp()');
+
       expect(new TimestampColumn(10).toCode('t')).toBe('t.timestamp(10)');
+
+      expect(new TimestampColumn(6).toCode('t')).toBe('t.timestamp()');
 
       const now = new Date();
       const s = now.toISOString();
@@ -76,10 +79,15 @@ describe('date time columns', () => {
       assertType<typeof result, string>();
     });
 
-    it('should have toCode', () => {
+    it('should have toCode, ignore default precision', () => {
       expect(new TimestampWithTimeZoneColumn().toCode('t')).toBe(
         't.timestampWithTimeZone()',
       );
+
+      expect(new TimestampWithTimeZoneColumn(6).toCode('t')).toBe(
+        't.timestampWithTimeZone()',
+      );
+
       expect(new TimestampWithTimeZoneColumn(10).toCode('t')).toBe(
         't.timestampWithTimeZone(10)',
       );

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.2
+
+### Patch Changes
+
+- Improve pulling db structure
+
 ## 0.9.1
 
 ### Patch Changes

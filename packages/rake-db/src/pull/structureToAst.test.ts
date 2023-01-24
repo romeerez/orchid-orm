@@ -4,6 +4,8 @@ import {
   BigSerialColumn,
   DecimalColumn,
   IntegerColumn,
+  isRaw,
+  RawExpression,
   SerialColumn,
   SmallSerialColumn,
   TextColumn,
@@ -121,7 +123,9 @@ describe('structureToAst', () => {
       db.getTables = async () => [
         { schemaName: 'public', name: 'table', comment: 'comment' },
       ];
+
       const ast = await structureToAst(db);
+
       expect(ast).toEqual([
         {
           type: 'table',
@@ -139,7 +143,9 @@ describe('structureToAst', () => {
     it('should add table with schema', async () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [{ schemaName: 'custom', name: 'table' }];
+
       const ast = await structureToAst(db);
+
       expect(ast).toEqual([
         {
           type: 'table',
@@ -154,9 +160,20 @@ describe('structureToAst', () => {
       ]);
     });
 
+    it('should ignore schemaMigrations table', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [
+        { schemaName: 'public', name: 'schemaMigrations' },
+      ];
+
+      const ast = await structureToAst(db);
+
+      expect(ast).toEqual([]);
+    });
+
     it('should add columns', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [{ schemaName: 'public', name: 'table' }];
+      db.getTables = async () => [table];
       db.getColumns = async () => columns;
 
       const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
@@ -165,6 +182,18 @@ describe('structureToAst', () => {
       expect(ast.noPrimaryKey).toBe('ignore');
       expect(ast.shape.id).toBeInstanceOf(IntegerColumn);
       expect(ast.shape.name).toBeInstanceOf(TextColumn);
+    });
+
+    it('should wrap column default into raw', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [table];
+      db.getColumns = async () => [{ ...timestampColumn, default: 'now()' }];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+
+      const { default: def } = ast.shape.timestamp.data;
+      expect(def && typeof def === 'object' && isRaw(def)).toBe(true);
+      expect((def as RawExpression).__raw).toBe('now()');
     });
 
     describe('serial column', () => {
@@ -231,7 +260,7 @@ describe('structureToAst', () => {
 
     it('should set maxChars to char column', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [{ schemaName: 'public', name: 'table' }];
+      db.getTables = async () => [table];
       db.getColumns = async () => [varCharColumn];
 
       const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
@@ -243,7 +272,7 @@ describe('structureToAst', () => {
 
     it('should set numericPrecision and numericScale to decimal column', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [{ schemaName: 'public', name: 'table' }];
+      db.getTables = async () => [table];
       db.getColumns = async () => [decimalColumn];
 
       const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
@@ -256,7 +285,7 @@ describe('structureToAst', () => {
 
     it('should set dateTimePrecision to timestamp column', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [{ schemaName: 'public', name: 'table' }];
+      db.getTables = async () => [table];
       db.getColumns = async () => [timestampColumn];
 
       const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
@@ -270,7 +299,7 @@ describe('structureToAst', () => {
 
     it('should set primaryKey to column', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [{ schemaName: 'public', name: 'table' }];
+      db.getTables = async () => [table];
       db.getColumns = async () => columns;
       db.getPrimaryKeys = async () => [primaryKey];
 
@@ -283,7 +312,7 @@ describe('structureToAst', () => {
 
     it('should add composite primary key', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [{ schemaName: 'public', name: 'table' }];
+      db.getTables = async () => [table];
       db.getColumns = async () => columns;
       db.getPrimaryKeys = async () => [
         { ...primaryKey, columnNames: ['id', 'name'] },
@@ -301,7 +330,7 @@ describe('structureToAst', () => {
 
     it('should ignore primary key name if it is standard', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [{ schemaName: 'public', name: 'table' }];
+      db.getTables = async () => [table];
       db.getColumns = async () => columns;
       db.getPrimaryKeys = async () => [
         { ...primaryKey, columnNames: ['id', 'name'], name: 'table_pkey' },

@@ -187,6 +187,8 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
     const options: string[] = [];
     for (const key of optionsKeys) {
       const value = index.options[key as keyof typeof index.options];
+      if (value === null || value === undefined) continue;
+
       options.push(
         `${key}: ${
           typeof value === 'object'
@@ -350,7 +352,6 @@ export const columnIndexesToCode = (
       if (index.opclass) arr.push(`opclass: ${singleQuote(index.opclass)},`);
       if (index.order) arr.push(`order: ${singleQuote(index.order)},`);
       if (index.name) arr.push(`name: ${singleQuote(index.name)},`);
-      if (index.unique) arr.push(`unique: true,`);
       if (index.using) arr.push(`using: ${singleQuote(index.using)},`);
       if (index.include)
         arr.push(

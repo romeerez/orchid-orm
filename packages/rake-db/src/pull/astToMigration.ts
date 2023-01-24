@@ -3,11 +3,14 @@ import {
   addCode,
   Code,
   codeToString,
+  ColumnType,
   foreignKeyToCode,
   indexToCode,
+  isRaw,
   primaryKeyToCode,
   quoteObjectKey,
   singleQuote,
+  TimestampColumn,
 } from 'pqb';
 import { quoteSchemaTable } from '../common';
 
@@ -40,11 +43,22 @@ const createTable = (ast: RakeDbAst.Table) => {
   const code: Code[] = [];
   addCode(code, `await db.createTable(${quoteSchemaTable(ast)}, (t) => ({`);
 
+  const hasTimestamps =
+    isTimestamp(ast.shape.createdAt) && isTimestamp(ast.shape.updatedAt);
+
   for (const key in ast.shape) {
+    if (hasTimestamps && (key === 'createdAt' || key === 'updatedAt')) continue;
+
     const line: Code[] = [`${quoteObjectKey(key)}: `];
-    addCode(line, ast.shape[key].toCode('t'));
+    for (const part of ast.shape[key].toCode('t')) {
+      addCode(line, part);
+    }
     addCode(line, ',');
     code.push(line);
+  }
+
+  if (hasTimestamps) {
+    code.push(['...t.timestamps(),']);
   }
 
   if (ast.primaryKey) {
@@ -62,4 +76,18 @@ const createTable = (ast: RakeDbAst.Table) => {
   addCode(code, '}));');
 
   return code;
+};
+
+const isTimestamp = (column?: ColumnType) => {
+  if (!column) return false;
+
+  const { default: def } = column.data;
+  return (
+    column instanceof TimestampColumn &&
+    !column.data.isNullable &&
+    def &&
+    typeof def === 'object' &&
+    isRaw(def) &&
+    def.__raw === 'now()'
+  );
 };

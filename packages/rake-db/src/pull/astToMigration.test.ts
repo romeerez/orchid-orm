@@ -59,6 +59,41 @@ describe('astToMigration', () => {
       );
     });
 
+    it('should add columns with indexes and foreignKeys', () => {
+      const result = astToMigration([
+        {
+          ...tableAst,
+          shape: {
+            someId: columnTypes
+              .integer()
+              .unique({ name: 'indexName' })
+              .foreignKey('otherTable', 'otherId', {
+                name: 'fkey',
+                match: 'FULL',
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
+              }),
+          },
+        },
+      ]);
+
+      expect(result).toBe(`import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createTable('schema.table', (t) => ({
+    someId: t.integer().foreignKey('otherTable', 'otherId', {
+      name: 'fkey',
+      match: 'FULL',
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
+    }).unique({
+      name: 'indexName',
+    }),
+  }));
+});
+`);
+    });
+
     it('should add composite primaryKeys, indexes, foreignKeys', () => {
       const result = astToMigration([
         {
