@@ -48,6 +48,30 @@ export default {
             link: '/guide/query-builder'
           },
           {
+            text: 'Where conditions',
+            link: '/guide/query-builder-where'
+          },
+          {
+            text: 'Create records',
+            link: '/guide/query-builder-create'
+          },
+          {
+            text: 'Update records',
+            link: '/guide/query-builder-update'
+          },
+          {
+            text: 'Delete records',
+            link: '/guide/query-builder-delete'
+          },
+          {
+            text: 'Aggregate functions',
+            link: '/guide/query-builder-aggregate'
+          },
+          {
+            text: 'Advanced methods',
+            link: '/guide/query-builder-advanced',
+          },
+          {
             text: 'Callbacks',
             link: '/guide/query-builder-callbacks'
           },
