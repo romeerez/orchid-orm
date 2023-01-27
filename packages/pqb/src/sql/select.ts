@@ -4,7 +4,6 @@ import { Query, QueryBase } from '../query';
 import { addValue, q, quoteFullColumn } from './common';
 import { aggregateToSql } from './aggregate';
 import { PormInternalError, UnhandledTypeError } from '../errors';
-import { quote } from '../quote';
 import { makeSql, ToSqlCtx } from './toSql';
 import { relationQueryKey } from '../relations';
 import { SelectQueryData } from './data';
@@ -177,10 +176,17 @@ const pushSubQuerySql = (
   let subQuerySql = `(${makeSql(query, { values }).text})`;
   const { coalesceValue } = query.query;
   if (coalesceValue !== undefined) {
-    const value =
-      typeof coalesceValue === 'object' && coalesceValue && isRaw(coalesceValue)
-        ? getRaw(coalesceValue, values)
-        : quote(coalesceValue);
+    let value;
+    if (
+      typeof coalesceValue === 'object' &&
+      coalesceValue &&
+      isRaw(coalesceValue)
+    ) {
+      value = getRaw(coalesceValue, values);
+    } else {
+      values.push(coalesceValue);
+      value = `$${values.length}`;
+    }
     subQuerySql = `COALESCE(${subQuerySql}, ${value})`;
   }
   list.push(`${subQuerySql} AS ${q(as)}`);

@@ -1,5 +1,4 @@
 import { Query } from './query';
-import { quote } from './quote';
 import { addValue } from './sql/common';
 import { getRaw, isRaw, RawExpression } from './common';
 
@@ -115,9 +114,11 @@ const all = {
       [path: string, op: string, value: T | Query | RawExpression]
     >(
       (key, [path, op, value], values) =>
-        `jsonb_path_query_first(${key}, ${quote(
-          path,
-        )}) #>> '{}' ${op} ${quoteValue(value, values, true)}`,
+        `jsonb_path_query_first(${key}, '${path}') #>> '{}' ${op} ${quoteValue(
+          value,
+          values,
+          true,
+        )}`,
     ),
   jsonSupersetOf: <T>() =>
     createOperator<T | Query | RawExpression>(

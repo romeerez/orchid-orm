@@ -2,7 +2,7 @@ import { ToSqlCtx } from './toSql';
 import { CopyQueryData } from './data';
 import { Query } from '../query';
 import { q } from './common';
-import { quote } from '../quote';
+import { quoteString } from '../quote';
 import { pushWhereStatementSql } from './where';
 
 export const pushCopySql = (
@@ -23,8 +23,8 @@ export const pushCopySql = (
       'from' in copy ? 'FROM' : 'TO'
     } ${
       typeof target === 'string'
-        ? quote(target)
-        : `PROGRAM ${quote(target.program)}`
+        ? quoteString(target)
+        : `PROGRAM ${quoteString(target.program)}`
     }`,
   );
 
@@ -33,11 +33,12 @@ export const pushCopySql = (
 
     if (copy.format) options.push(`FORMAT ${copy.format}`);
     if (copy.freeze) options.push(`FREEZE ${copy.freeze}`);
-    if (copy.delimiter) options.push(`DELIMITER ${quote(copy.delimiter)}`);
-    if (copy.null) options.push(`NULL ${quote(copy.null)}`);
+    if (copy.delimiter)
+      options.push(`DELIMITER ${quoteString(copy.delimiter)}`);
+    if (copy.null) options.push(`NULL ${quoteString(copy.null)}`);
     if (copy.header) options.push(`HEADER ${copy.header}`);
-    if (copy.quote) options.push(`QUOTE ${quote(copy.quote)}`);
-    if (copy.escape) options.push(`ESCAPE ${quote(copy.escape)}`);
+    if (copy.quote) options.push(`QUOTE ${quoteString(copy.quote)}`);
+    if (copy.escape) options.push(`ESCAPE ${quoteString(copy.escape)}`);
     if (copy.forceQuote)
       options.push(
         `FORCE_QUOTE ${
@@ -50,7 +51,7 @@ export const pushCopySql = (
       options.push(`FORCE_NOT_NULL (${copy.forceNotNull.map(q).join(', ')})`);
     if (copy.forceNull)
       options.push(`FORCE_NULL (${copy.forceNull.map(q).join(', ')})`);
-    if (copy.encoding) options.push(`ENCODING ${quote(copy.encoding)}`);
+    if (copy.encoding) options.push(`ENCODING ${quoteString(copy.encoding)}`);
 
     sql.push(`WITH (${options.join(', ')})`);
   }
