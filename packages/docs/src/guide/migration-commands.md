@@ -13,6 +13,25 @@ npm run db drop
 
 These commands will ask for a database administrator username and password.
 
+## pull
+
+Generate migration file from an existing database using `pull` command:
+
+```sh
+npm run db pull
+```
+
+This will create a single migration file with all the tables and columns.
+
+Currently, it supports generating code to create:
+
+- schemas
+- tables
+- columns with all possible column options
+- primary keys
+- foreign keys
+- indexes
+
 ## reset a database
 
 `reset` is a shortcut command to drop, create and migrate.
