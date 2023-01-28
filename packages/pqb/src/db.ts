@@ -218,7 +218,7 @@ export class Db<
 applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
 
-type DbResult<CT extends ColumnTypesBase> = Db<
+export type DbResult<CT extends ColumnTypesBase> = Db<
   string,
   Record<string, never>,
   Query['relations'],

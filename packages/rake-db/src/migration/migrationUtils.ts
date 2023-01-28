@@ -284,7 +284,7 @@ export const getPrimaryKeysOfTable = async (
   db: Migration,
   tableName: string,
 ): Promise<{ name: string; type: string }[]> => {
-  const { rows } = await db.query<{ name: string; type: string }>(
+  const { rows } = await db.adapter.query<{ name: string; type: string }>(
     {
       text: `SELECT
   pg_attribute.attname AS name,
@@ -300,8 +300,7 @@ WHERE
   indisprimary`,
       values: [tableName],
     },
-    db.types,
-    undefined,
+    db.adapter.types,
   );
 
   return rows;

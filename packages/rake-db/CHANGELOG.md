@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.3.7
+
+### Patch Changes
+
+- Mix query builder into migration db interface
+- Updated dependencies
+  - pqb@0.9.5
+
 ## 2.3.6
 
 ### Patch Changes

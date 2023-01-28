@@ -7,17 +7,16 @@ import {
   IndexOptions,
   logParamToLogObject,
   MaybeArray,
-  QueryArraysResult,
   QueryInput,
   QueryLogObject,
-  QueryResult,
-  QueryResultRow,
   Sql,
   TransactionAdapter,
-  TypeParsers,
   raw,
   TextColumn,
   AdapterOptions,
+  createDb,
+  columnTypes,
+  DbResult,
 } from 'pqb';
 import { createTable } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
@@ -64,37 +63,52 @@ export type ExtensionOptions = {
   cascade?: boolean;
 };
 
-export class Migration extends TransactionAdapter {
+export type Migration = DbResult<typeof columnTypes> & MigrationBase;
+
+export const createMigrationInterface = (
+  tx: TransactionAdapter,
+  up: boolean,
+  options: RakeDbConfig,
+  adapterOptions: AdapterOptions,
+  appCodeUpdaterCache: object,
+) => {
+  const adapter = new TransactionAdapter(tx, tx.client, tx.types);
+  const { query, arrays } = adapter;
+  const log = logParamToLogObject(options.logger || console, options.log);
+
+  adapter.query = ((q, types) => {
+    return wrapWithLog(log, q, () => query.call(adapter, q, types));
+  }) as typeof adapter.query;
+
+  adapter.arrays = ((q, types) => {
+    return wrapWithLog(log, q, () => arrays.call(adapter, q, types));
+  }) as typeof adapter.arrays;
+
+  const db = createDb({ adapter, columnTypes }) as unknown as Migration;
+
+  const { prototype: proto } = MigrationBase;
+  for (const key of Object.getOwnPropertyNames(proto)) {
+    (db as unknown as Record<string, unknown>)[key] =
+      proto[key as keyof typeof proto];
+  }
+
+  return Object.assign(db, {
+    adapter,
+    log,
+    up,
+    options,
+    adapterOptions,
+    appCodeUpdaterCache,
+  });
+};
+
+export class MigrationBase {
+  public adapter!: TransactionAdapter;
   public log?: QueryLogObject;
-
-  constructor(
-    tx: TransactionAdapter,
-    public up: boolean,
-    public options: RakeDbConfig,
-    public adapterOptions: AdapterOptions,
-    public appCodeUpdaterCache: object,
-  ) {
-    super(tx, tx.client, tx.types);
-    this.log = logParamToLogObject(options.logger || console, options.log);
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async query<T extends QueryResultRow = any>(
-    query: QueryInput,
-    types: TypeParsers = this.types,
-    log = this.log,
-  ): Promise<QueryResult<T>> {
-    return wrapWithLog(log, query, () => super.query(query, types));
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async arrays<R extends any[] = any[]>(
-    query: QueryInput,
-    types: TypeParsers = this.types,
-    log = this.log,
-  ): Promise<QueryArraysResult<R>> {
-    return wrapWithLog(log, query, () => super.arrays(query, types));
-  }
+  public up!: boolean;
+  public options!: RakeDbConfig;
+  public adapterOptions!: AdapterOptions;
+  public appCodeUpdaterCache!: object;
 
   createTable(
     tableName: string,
@@ -158,7 +172,7 @@ export class Migration extends TransactionAdapter {
       to: t,
     };
 
-    await this.query(
+    await this.adapter.query(
       `ALTER TABLE ${quoteWithSchema({
         schema: ast.fromSchema,
         name: ast.from,
@@ -335,7 +349,7 @@ const wrapWithLog = async <Result>(
 };
 
 const addColumn = (
-  migration: Migration,
+  migration: MigrationBase,
   up: boolean,
   tableName: string,
   columnName: string,
@@ -347,7 +361,7 @@ const addColumn = (
 };
 
 const addIndex = (
-  migration: Migration,
+  migration: MigrationBase,
   up: boolean,
   tableName: string,
   columns: MaybeArray<string | IndexColumnOptions>,
@@ -359,7 +373,7 @@ const addIndex = (
 };
 
 const addForeignKey = (
-  migration: Migration,
+  migration: MigrationBase,
   up: boolean,
   tableName: string,
   columns: [string, ...string[]],
@@ -373,7 +387,7 @@ const addForeignKey = (
 };
 
 const addPrimaryKey = (
-  migration: Migration,
+  migration: MigrationBase,
   up: boolean,
   tableName: string,
   columns: string[],
@@ -385,7 +399,7 @@ const addPrimaryKey = (
 };
 
 const createSchema = async (
-  migration: Migration,
+  migration: MigrationBase,
   up: boolean,
   name: string,
 ) => {
@@ -395,7 +409,7 @@ const createSchema = async (
     name,
   };
 
-  await migration.query(
+  await migration.adapter.query(
     `${ast.action === 'create' ? 'CREATE' : 'DROP'} SCHEMA "${name}"`,
   );
 
@@ -403,7 +417,7 @@ const createSchema = async (
 };
 
 const createExtension = async (
-  migration: Migration,
+  migration: MigrationBase,
   up: boolean,
   name: string,
   options: ExtensionOptions & {
@@ -430,19 +444,19 @@ const createExtension = async (
     }${ast.cascade ? ' CASCADE' : ''}`;
   }
 
-  await migration.query(query);
+  await migration.adapter.query(query);
 
   await runCodeUpdater(migration, ast);
 };
 
 const queryExists = (
-  db: Migration,
+  db: MigrationBase,
   sql: { text: string; values: unknown[] },
 ) => {
-  return db.query(sql).then(({ rowCount }) => rowCount > 0);
+  return db.adapter.query(sql).then(({ rowCount }) => rowCount > 0);
 };
 
-export const runCodeUpdater = (migration: Migration, ast: RakeDbAst) => {
+export const runCodeUpdater = (migration: MigrationBase, ast: RakeDbAst) => {
   return migration.options.appCodeUpdater?.({
     ast,
     options: migration.adapterOptions,

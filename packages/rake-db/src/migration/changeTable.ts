@@ -18,7 +18,7 @@ import {
   ChangeTableOptions,
   ColumnComment,
   DropMode,
-  Migration,
+  MigrationBase,
   MigrationColumnTypes,
   runCodeUpdater,
 } from './migration';
@@ -198,7 +198,7 @@ export type TableChangeData = Record<
 >;
 
 export const changeTable = async (
-  migration: Migration,
+  migration: MigrationBase,
   up: boolean,
   tableName: string,
   options: ChangeTableOptions,
@@ -216,7 +216,7 @@ export const changeTable = async (
 
   const queries = astToQueries(ast);
   for (const query of queries) {
-    await migration.query(query);
+    await migration.adapter.query(query);
   }
 
   await runCodeUpdater(migration, ast);

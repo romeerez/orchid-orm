@@ -14,7 +14,7 @@ import {
   change,
   getCurrentChangeCallback,
 } from '../migration/change';
-import { Migration } from '../migration/migration';
+import { createMigrationInterface } from '../migration/migration';
 
 const migrateOrRollback = async (
   options: MaybeArray<AdapterOptions>,
@@ -78,7 +78,13 @@ const processMigration = async (
   appCodeUpdaterCache: object,
 ) => {
   await db.transaction(async (tx) => {
-    const db = new Migration(tx, up, config, options, appCodeUpdaterCache);
+    const db = createMigrationInterface(
+      tx,
+      up,
+      config,
+      options,
+      appCodeUpdaterCache,
+    );
     setCurrentMigration(db);
     setCurrentMigrationUp(up);
 
@@ -92,7 +98,7 @@ const processMigration = async (
 
     await getCurrentPromise();
     await (up ? saveMigratedVersion : removeMigratedVersion)(
-      db,
+      db.adapter,
       file.version,
       config,
     );

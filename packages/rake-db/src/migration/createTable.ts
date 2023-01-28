@@ -12,7 +12,7 @@ import {
 import {
   ColumnComment,
   ColumnsShapeCallback,
-  Migration,
+  MigrationBase,
   runCodeUpdater,
   TableOptions,
 } from './migration';
@@ -33,7 +33,7 @@ const types = Object.assign(Object.create(columnTypes), {
 });
 
 export const createTable = async (
-  migration: Migration,
+  migration: MigrationBase,
   up: boolean,
   tableName: string,
   options: TableOptions,
@@ -54,7 +54,7 @@ export const createTable = async (
 
   const queries = astToQueries(ast);
   for (const query of queries) {
-    await migration.query(query);
+    await migration.adapter.query(query);
   }
 
   await runCodeUpdater(migration, ast);

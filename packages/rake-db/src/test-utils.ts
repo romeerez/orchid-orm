@@ -1,4 +1,4 @@
-import { Migration } from './migration/migration';
+import { createMigrationInterface, Migration } from './migration/migration';
 import { MaybeArray, toArray, TransactionAdapter } from 'pqb';
 
 export const asMock = (fn: unknown) => fn as jest.Mock;
@@ -8,7 +8,7 @@ let db: Migration | undefined;
 export const getDb = () => {
   if (db) return db;
 
-  db = new Migration(
+  db = createMigrationInterface(
     {} as unknown as TransactionAdapter,
     true,
     {
@@ -21,7 +21,7 @@ export const getDb = () => {
     {},
     {},
   );
-  db.query = queryMock;
+  db.adapter.query = queryMock;
   return db;
 };
 

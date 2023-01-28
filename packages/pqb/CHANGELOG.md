@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.5
+
+### Patch Changes
+
+- Mix query builder into migration db interface
+
 ## 0.9.4
 
 ### Patch Changes

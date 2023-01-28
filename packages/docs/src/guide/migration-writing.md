@@ -14,26 +14,41 @@ change(async (db, up) => {
 })
 ```
 
-`db` is an extended query builder, so it has all the same methods as a query builder and additional specific methods such as `createTable`, `changeTable`, and others.
+`db` is an extended query builder, so it has [all the same methods](/guide/query-builder) as a query builder and additional specific methods such as `createTable`, `changeTable`, and others.
 
-It's possible to run custom raw queries, for example, to create a table and fill it:
+Example of creating a table and populating it with values:
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../src';
 
 change(async (db, up) => {
-  await db.createTable('table', (t) => ({
+  await db.createTable('languages', (t) => ({
     id: t.serial().primaryKey(),
-    name: t.text(),
-  }))
+    name: t.string().unique(),
+    code: t.string().unique(),
+  }));
 
+  // it's important to use this `up` check to not run the queries on rollback
   if (up) {
-    await db.query({
-      text: 'INSERT INTO table(name) VALUES ($1, $2, $3)',
-      values: ['a', 'b', 'c']
+    const data: { code: string; name: string }[] = [
+      { name: 'Ukrainian', code: 'ua' },
+      { name: 'English', code: 'en' },
+      { name: 'Polish', code: 'pl' },
+      { name: 'Belarusian', code: 'be' },
+      { name: 'French', code: 'fr' },
+    ];
+
+    await db('languages').createMany(data);
+
+    // use db.adapter.query to perform raw SQL queries
+    // the query function is the same as in node-postgres library
+    const { rows } = await db.adapter.query({
+      text: 'SELECT * FROM languages WHERE name = $1',
+      values: ['Ukrainian'],
     })
+    console.log(rows)
   }
-})
+});
 ```
 
 ## createTable, dropTable

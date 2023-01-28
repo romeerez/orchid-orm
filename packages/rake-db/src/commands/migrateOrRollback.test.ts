@@ -2,7 +2,6 @@ import { migrate, rollback } from './migrateOrRollback';
 import { createSchemaMigrations, migrationConfigDefaults } from '../common';
 import { getMigrationFiles } from '../common';
 import { Adapter, noop, TransactionAdapter } from 'pqb';
-import { Migration } from '../migration/migration';
 import { change } from '../migration/change';
 import { asMock } from '../test-utils';
 
@@ -32,7 +31,7 @@ Adapter.prototype.transaction = (cb) => {
 };
 
 const transactionQueryMock = jest.fn();
-Migration.prototype.query = transactionQueryMock;
+TransactionAdapter.prototype.query = transactionQueryMock;
 
 const requireTsMock = jest.fn();
 const config = {
@@ -82,9 +81,11 @@ describe('migrateOrRollback', () => {
 
       expect(transactionQueryMock).toBeCalledWith(
         `INSERT INTO "schemaMigrations" VALUES ('2')`,
+        undefined,
       );
       expect(transactionQueryMock).toBeCalledWith(
         `INSERT INTO "schemaMigrations" VALUES ('3')`,
+        undefined,
       );
 
       expect(config.logger.log).toBeCalledWith('file2 migrated');
@@ -181,6 +182,7 @@ describe('migrateOrRollback', () => {
       expect(transactionQueryMock).toBeCalledTimes(1);
       expect(transactionQueryMock).toBeCalledWith(
         `DELETE FROM "schemaMigrations" WHERE version = '2'`,
+        undefined,
       );
 
       expect(config.logger.log).toBeCalledTimes(1);
