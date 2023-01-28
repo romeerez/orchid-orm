@@ -86,7 +86,7 @@ const processMigration = async (
     if (callback) {
       change(callback);
     } else {
-      config.requireTs(file.path);
+      await config.requireTs(file.path);
       changeCache[file.path] = getCurrentChangeCallback();
     }
 

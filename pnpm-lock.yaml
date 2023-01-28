@@ -230,6 +230,12 @@ importers:
       tslib: 2.4.1
       typescript: 4.8.4
 
+  packages/tmp:
+    specifiers:
+      rake-db: workspace:*
+    dependencies:
+      rake-db: link:../rake-db
+
 packages:
 
   /@ampproject/remapping/2.2.0:

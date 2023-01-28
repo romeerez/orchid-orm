@@ -5,7 +5,7 @@ import { QueryArraysResult, QueryResult } from '../adapter';
 import { CommonQueryData, Sql } from '../sql';
 import { AfterCallback, BeforeCallback } from './callbacks';
 import { getValueKey } from './get';
-import { DatabaseError } from 'pg';
+import pg from 'pg';
 
 export type ThenResult<Res> = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -140,7 +140,7 @@ const then = async (
     resolve?.(result);
   } catch (err) {
     let error;
-    if (err instanceof DatabaseError) {
+    if (err instanceof pg.DatabaseError) {
       error = new (q.error as unknown as new () => QueryError)();
       assignError(error, err);
     } else {
@@ -156,7 +156,7 @@ const then = async (
   }
 };
 
-const assignError = (to: QueryError, from: DatabaseError) => {
+const assignError = (to: QueryError, from: pg.DatabaseError) => {
   to.message = from.message;
   (to as { length?: number }).length = from.length;
   (to as { name?: string }).name = from.name;

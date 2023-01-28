@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.4
+
+### Patch Changes
+
+- Improve esm support
+
 ## 0.9.3
 
 ### Patch Changes

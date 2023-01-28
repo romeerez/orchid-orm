@@ -1,11 +1,11 @@
 import { db, User } from '../test-utils/test-utils';
-import { Client } from 'pg';
+import pg from 'pg';
 
 describe('transaction', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('should start and commit transaction', async () => {
-    const spy = jest.spyOn(Client.prototype, 'query');
+    const spy = jest.spyOn(pg.Client.prototype, 'query');
 
     const result = await db.transaction(async (db) => {
       expect(db.query.inTransaction).toBe(true);
@@ -29,7 +29,7 @@ describe('transaction', () => {
   });
 
   it('should rollback if error happens', async () => {
-    const spy = jest.spyOn(Client.prototype, 'query');
+    const spy = jest.spyOn(pg.Client.prototype, 'query');
 
     let error: Error | undefined;
 
@@ -50,7 +50,7 @@ describe('transaction', () => {
 
   describe('transacting', () => {
     it('should use provided adapter to perform queries', async () => {
-      const spy = jest.spyOn(Client.prototype, 'query');
+      const spy = jest.spyOn(pg.Client.prototype, 'query');
 
       await db.transaction(async (trx) => {
         return User.transacting(trx).all();

@@ -13,7 +13,7 @@ import { RakeDbAst } from './ast';
 export type RakeDbConfig = {
   migrationsPath: string;
   migrationsTable: string;
-  requireTs(path: string): void;
+  requireTs(path: string): Promise<void>;
   noPrimaryKey?: NoPrimaryKeyOption;
   appCodeUpdater?: AppCodeUpdater;
   useCodeUpdater?: boolean;
@@ -28,7 +28,7 @@ export type AppCodeUpdater = (params: {
 export const migrationConfigDefaults = {
   migrationsPath: path.resolve('src', 'migrations'),
   migrationsTable: 'schemaMigrations',
-  requireTs: require,
+  requireTs: (path: string) => import(path),
   log: true,
   logger: console,
   useCodeUpdater: true,

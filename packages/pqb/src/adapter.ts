@@ -1,4 +1,5 @@
-import { Pool, PoolClient, PoolConfig, types } from 'pg';
+import pg, { Pool, PoolClient, PoolConfig } from 'pg';
+const { types } = pg;
 
 export interface QueryResultRow {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,7 +62,7 @@ export class Adapter {
       }
     }
     this.config = config;
-    this.pool = new Pool(config);
+    this.pool = new pg.Pool(config);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -99,7 +100,7 @@ export class Adapter {
 
   close(): Promise<void> {
     const { pool } = this;
-    this.pool = new Pool(this.config);
+    this.pool = new pg.Pool(this.config);
     return pool.end();
   }
 }

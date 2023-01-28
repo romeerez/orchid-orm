@@ -1,4 +1,4 @@
-import { Expression, RawExpression } from '../common';
+import { Expression, raw, RawExpression } from '../common';
 import {
   Query,
   QueryBase,
@@ -344,7 +344,7 @@ export class QueryMethods {
   _exists<T extends Query>(this: T): SetQueryReturnsValue<T, BooleanColumn> {
     const q = this._getOptional(this.raw<Query, BooleanColumn>('true'));
     q.query.notFoundDefault = false;
-    q.query.coalesceValue = false;
+    q.query.coalesceValue = raw('false');
     return q as unknown as SetQueryReturnsValue<T, BooleanColumn>;
   }
 
