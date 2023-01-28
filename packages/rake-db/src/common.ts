@@ -1,6 +1,8 @@
 import {
   Adapter,
   AdapterOptions,
+  columnTypes,
+  DbResult,
   NoPrimaryKeyOption,
   QueryLogOptions,
   singleQuote,
@@ -10,6 +12,8 @@ import path from 'path';
 import { readdir } from 'fs/promises';
 import { RakeDbAst } from './ast';
 
+type Db = DbResult<typeof columnTypes>;
+
 export type RakeDbConfig = {
   migrationsPath: string;
   migrationsTable: string;
@@ -17,6 +21,10 @@ export type RakeDbConfig = {
   noPrimaryKey?: NoPrimaryKeyOption;
   appCodeUpdater?: AppCodeUpdater;
   useCodeUpdater?: boolean;
+  beforeMigrate?(db: Db): Promise<void>;
+  afterMigrate?(db: Db): Promise<void>;
+  beforeRollback?(db: Db): Promise<void>;
+  afterRollback?(db: Db): Promise<void>;
 } & QueryLogOptions;
 
 export type AppCodeUpdater = (params: {

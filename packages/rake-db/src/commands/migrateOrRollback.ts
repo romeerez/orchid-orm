@@ -1,4 +1,12 @@
-import { Adapter, AdapterOptions, MaybeArray, toArray } from 'pqb';
+import {
+  Adapter,
+  AdapterOptions,
+  columnTypes,
+  createDb,
+  DbResult,
+  MaybeArray,
+  toArray,
+} from 'pqb';
 import {
   createSchemaMigrations,
   getMigrationFiles,
@@ -15,6 +23,8 @@ import {
   getCurrentChangeCallback,
 } from '../migration/change';
 import { createMigrationInterface } from '../migration/migration';
+
+const getDb = (adapter: Adapter) => createDb({ adapter, columnTypes });
 
 const migrateOrRollback = async (
   options: MaybeArray<AdapterOptions>,
@@ -43,8 +53,16 @@ const migrateOrRollback = async (
   const appCodeUpdaterCache = {};
 
   for (const opts of toArray(options)) {
-    const db = new Adapter(opts);
-    const migratedVersions = await getMigratedVersionsMap(db, config);
+    const adapter = new Adapter(opts);
+    let db: DbResult<typeof columnTypes> | undefined;
+
+    if (up) {
+      await config.beforeMigrate?.((db ??= getDb(adapter)));
+    } else {
+      await config.beforeRollback?.((db ??= getDb(adapter)));
+    }
+
+    const migratedVersions = await getMigratedVersionsMap(adapter, config);
     try {
       for (const file of files) {
         if (
@@ -56,11 +74,24 @@ const migrateOrRollback = async (
 
         if (count-- <= 0) break;
 
-        await processMigration(db, up, file, config, opts, appCodeUpdaterCache);
+        await processMigration(
+          adapter,
+          up,
+          file,
+          config,
+          opts,
+          appCodeUpdaterCache,
+        );
         config.logger?.log(`${file.path} ${up ? 'migrated' : 'rolled back'}`);
       }
+
+      if (up) {
+        await config.afterMigrate?.((db ??= getDb(adapter)));
+      } else {
+        await config.afterRollback?.((db ??= getDb(adapter)));
+      }
     } finally {
-      await db.close();
+      await adapter.close();
     }
     // use appCodeUpdater only for the first provided options
     delete config.appCodeUpdater;

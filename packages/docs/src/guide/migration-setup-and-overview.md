@@ -109,7 +109,7 @@ type MigrationConfig = {
   requireTs(path: string): void;
   
   // specify behavior for what to do when no primary key was defined on a table
-  noPrimaryKey?: 'error' | 'warn' | 'ignore'
+  noPrimaryKey?: 'error' | 'warn' | 'ignore';
   
   // log options, see "log option" in the query builder document
   log?: boolean | Partial<QueryLogObject>;
@@ -125,9 +125,14 @@ type MigrationConfig = {
     options: AdapterOptions;
     // the same object is passed between various appCodeUpdater calls
     cache: object;
-  }): Promise<void>
+  }): Promise<void>;
 
-  useCodeUpdater?: boolean,
+  useCodeUpdater?: boolean;
+  
+  beforeMigrate?(db: Db): Promise<void>;
+  afterMigrate?(db: Db): Promise<void>;
+  beforeRollback?(db: Db): Promise<void>;
+  afterRollback?(db: Db): Promise<void>;
 }
 ```
 
@@ -175,3 +180,28 @@ What `appCodeUpdater` does:
 `appCodeUpdater` does not delete or rename existing files, because it is better to be done manually.
 A modern editor will update all file usage in imports across the project when renaming a file or an exported class.
 
+## Before and after callbacks
+
+To run custom code before or after `migrate` or `rollback` command, define functions in `rakeDb` config object:
+
+Supported callbacks are `beforeMigrate`, `afterMigrate`, `beforeRollback`, `afterRollback`.
+
+Example: each time when `npm run db migrate` is run, after the migration was successfully applied, this will create new records of a specific table if it is empty.
+
+If `options` is an array of multiple database configs, callbacks are run for each of the databases.
+
+```ts
+rakeDb(options, {
+  migrationsPath: 'migrations',
+  async afterMigrate(db: Db) {
+    const haveRecords = await db('table').exists()
+    if (!haveRecords) {
+      await db('table').createMany([
+        { name: 'one' },
+        { name: 'two' },
+        { name: 'three' },
+      ])
+    }
+  },
+})
+```

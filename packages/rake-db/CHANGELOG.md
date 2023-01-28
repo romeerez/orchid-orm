@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.3.9
+
+### Patch Changes
+
+- Add migrate and rollback callbacks
+
 ## 2.3.8
 
 ### Patch Changes

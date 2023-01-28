@@ -71,10 +71,18 @@ describe('migrateOrRollback', () => {
     it('should work properly', async () => {
       migrationFiles = files;
       migratedVersions = ['1'];
+      const conf = {
+        ...config,
+        beforeMigrate: jest.fn(),
+        afterMigrate: jest.fn(),
+      };
 
-      await migrate(options, config, []);
+      await migrate(options, conf, []);
 
-      expect(getMigrationFiles).toBeCalledWith(config, true);
+      expect(getMigrationFiles).toBeCalledWith(conf, true);
+
+      expect(conf.beforeMigrate).toBeCalled();
+      expect(conf.afterMigrate).toBeCalled();
 
       expect(requireTsMock).toBeCalledWith('file2');
       expect(requireTsMock).toBeCalledWith('file3');
@@ -171,10 +179,18 @@ describe('migrateOrRollback', () => {
     it('should work properly', async () => {
       migrationFiles = files.reverse();
       migratedVersions = ['1', '2'];
+      const conf = {
+        ...config,
+        beforeRollback: jest.fn(),
+        afterRollback: jest.fn(),
+      };
 
-      await rollback(options, config, []);
+      await rollback(options, conf, []);
 
-      expect(getMigrationFiles).toBeCalledWith(config, false);
+      expect(conf.beforeRollback).toBeCalled();
+      expect(conf.afterRollback).toBeCalled();
+
+      expect(getMigrationFiles).toBeCalledWith(conf, false);
 
       expect(requireTsMock).toBeCalledTimes(1);
       expect(requireTsMock).toBeCalledWith('file2');
