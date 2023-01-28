@@ -1,5 +1,13 @@
 # orchid-orm-schema-to-zod
 
+## 0.2.9
+
+### Patch Changes
+
+- Change package.json exports for esm support
+- Updated dependencies
+  - pqb@0.9.3
+
 ## 0.2.8
 
 ### Patch Changes

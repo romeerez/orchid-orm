@@ -1,6 +1,6 @@
 {
   "name": "rake-db",
-  "version": "2.3.4",
+  "version": "2.3.5",
   "description": "Migrations tool for Postgresql DB",
   "homepage": "https://orchid-orm.netlify.app/guide/migration-setup-and-overview.html",
   "repository": {
@@ -8,12 +8,12 @@
     "url": "https://github.com/romeerez/orchid-orm/tree/main/packages/rake-db"
   },
   "main": "dist/index.js",
-  "module": "dist/index.esm.js",
+  "module": "dist/index.mjs",
   "typings": "dist/index.d.ts",
   "exports": {
     ".": {
       "require": "./dist/index.js",
-      "import": "./dist/index.esm.js",
+      "import": "./dist/index.mjs",
       "types": "./dist/index.d.ts"
     }
   },

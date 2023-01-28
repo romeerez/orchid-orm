@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.3
+
+### Patch Changes
+
+- Change package.json exports for esm support
+
 ## 0.9.2
 
 ### Patch Changes

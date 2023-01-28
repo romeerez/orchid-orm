@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.3.5
+
+### Patch Changes
+
+- Change package.json exports for esm support
+- Updated dependencies
+  - pqb@0.9.3
+
 ## 2.3.4
 
 ### Patch Changes

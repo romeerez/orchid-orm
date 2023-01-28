@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.5.3
+
+### Patch Changes
+
+- Change package.json exports for esm support
+- Updated dependencies
+  - pqb@0.9.3
+
 ## 1.5.2
 
 ### Patch Changes
