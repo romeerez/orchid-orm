@@ -55,9 +55,22 @@ import {
   ForeignKeyOptions,
   ForeignKeyTableWithColumns,
 } from './columnType';
-import { emptyObject, EmptyObject, MaybeArray, toArray } from '../utils';
+import {
+  emptyObject,
+  EmptyObject,
+  makeRegexToFindInSql,
+  MaybeArray,
+  pushOrNewArrayToObject,
+  toArray,
+} from '../utils';
 import { ColumnsShape } from './columnsSchema';
-import { timestamps } from './timestamps';
+import { getRawSql, isRaw, raw } from '../common';
+import {
+  QueryData,
+  UpdatedAtDataInjector,
+  UpdateQueryData,
+  UpdateQueryDataItem,
+} from '../sql';
 
 export type ColumnTypes = typeof columnTypes;
 
@@ -112,6 +125,46 @@ export const getColumnTypes = <
 };
 
 const text = (min: number, max: number) => new TextColumn(min, max);
+
+function timestamps<T extends ColumnType>(this: {
+  timestamp(): T;
+}): {
+  createdAt: T & { hasDefault: true };
+  updatedAt: T & { hasDefault: true };
+} {
+  return {
+    createdAt: this.timestamp().default(raw('now()')),
+    updatedAt: this.timestamp()
+      .default(raw('now()'))
+      .modifyQuery(addHookForUpdate),
+  };
+}
+
+const updatedAtRegex = makeRegexToFindInSql('\\bupdatedAt\\b"?\\s*=');
+const updateUpdatedAtItem = raw('"updatedAt" = now()');
+
+const addHookForUpdate = (q: { query: QueryData }) => {
+  pushOrNewArrayToObject(
+    q.query as UpdateQueryData,
+    'updateData',
+    updatedAtInjector,
+  );
+};
+
+const updatedAtInjector: UpdatedAtDataInjector = (data) => {
+  return checkIfDataHasUpdatedAt(data) ? undefined : updateUpdatedAtItem;
+};
+
+const checkIfDataHasUpdatedAt = (data: UpdateQueryDataItem[]) => {
+  return data.some((item) => {
+    if (isRaw(item)) {
+      updatedAtRegex.lastIndex = 0;
+      return updatedAtRegex.test(getRawSql(item));
+    } else {
+      return typeof item !== 'function' && item.updatedAt;
+    }
+  });
+};
 
 export const columnTypes = {
   smallint: () => new SmallIntColumn(),
