@@ -2,7 +2,6 @@ import {
   CallExpression,
   ClassDeclaration,
   ComputedPropertyName,
-  createSourceFile,
   Expression,
   Identifier,
   ImportDeclaration,
@@ -15,11 +14,9 @@ import {
   PrivateIdentifier,
   PropertyAccessExpression,
   PropertyAssignment,
-  ScriptTarget,
   ShorthandPropertyAssignment,
   Statement,
   StringLiteral,
-  SyntaxKind,
   VariableStatement,
   ThisExpression,
   ArrowFunction,
@@ -28,6 +25,8 @@ import {
   SpreadAssignment,
   ArrayLiteralExpression,
 } from 'typescript';
+import typescript from 'typescript';
+const { createSourceFile, ScriptTarget, SyntaxKind } = typescript;
 
 const iterate = <T>(
   kind: number,

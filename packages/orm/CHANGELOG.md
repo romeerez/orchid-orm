@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.5.5
+
+### Patch Changes
+
+- ESM support for orm
+
 ## 1.5.4
 
 ### Patch Changes
