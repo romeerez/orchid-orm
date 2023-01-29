@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.5.8
+
+### Patch Changes
+
+- Fix import path on windows in generated code
+
 ## 1.5.7
 
 ### Patch Changes
