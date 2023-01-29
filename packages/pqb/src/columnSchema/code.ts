@@ -221,6 +221,12 @@ export const foreignKeyToCode = (
   foreignKey: TableData.ForeignKey,
   t: string,
 ): Code[] => {
+  return [`...${t}.foreignKey(`, foreignKeyArgsToCode(foreignKey), '),'];
+};
+
+export const foreignKeyArgsToCode = (
+  foreignKey: TableData.ForeignKey,
+): Code[] => {
   const args: Code[] = [];
 
   args.push(`${singleQuoteArray(foreignKey.columns)},`);
@@ -248,7 +254,7 @@ export const foreignKeyToCode = (
     args.push('{', lines, '},');
   }
 
-  return [`...${t}.foreignKey(`, args, '),'];
+  return args;
 };
 
 export const columnChainToCode = (

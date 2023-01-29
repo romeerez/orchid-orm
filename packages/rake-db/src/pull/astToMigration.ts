@@ -4,6 +4,7 @@ import {
   Code,
   codeToString,
   ColumnType,
+  foreignKeyArgsToCode,
   foreignKeyToCode,
   indexToCode,
   isRaw,
@@ -20,10 +21,14 @@ export const astToMigration = (ast: RakeDbAst[]): string | undefined => {
     if (item.type === 'schema' && item.action === 'create') {
       code.push(createSchema(item));
     } else if (item.type === 'extension' && item.action === 'create') {
+      if (code.length) code.push([]);
       code.push(...createExtension(item));
     } else if (item.type === 'table' && item.action === 'create') {
       if (code.length) code.push([]);
       code.push(...createTable(item));
+    } else if (item.type === 'foreignKey') {
+      if (code.length) code.push([]);
+      code.push(...createForeignKey(item));
     }
   }
 
@@ -108,4 +113,18 @@ const isTimestamp = (column?: ColumnType) => {
     isRaw(def) &&
     def.__raw === 'now()'
   );
+};
+
+const createForeignKey = (item: RakeDbAst.ForeignKey): Code[] => {
+  return [
+    `await db.addForeignKey(`,
+    [
+      `${quoteSchemaTable({
+        schema: item.tableSchema,
+        name: item.tableName,
+      })},`,
+      ...foreignKeyArgsToCode(item),
+    ],
+    ');',
+  ];
 };

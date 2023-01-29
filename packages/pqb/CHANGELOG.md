@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.7
+
+### Patch Changes
+
+- Handle table ordering by foreign key when pulling db
+
 ## 0.9.6
 
 ### Patch Changes

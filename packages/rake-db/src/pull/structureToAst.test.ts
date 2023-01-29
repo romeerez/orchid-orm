@@ -523,20 +523,25 @@ describe('structureToAst', () => {
 
     it('should add foreign key to the column', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
+      db.getTables = async () => [
+        { ...table, name: 'table1' },
+        { ...table, name: 'table2' },
+      ];
       db.getColumns = async () => [
         ...columns,
-        { ...intColumn, name: 'otherId' },
+        { ...intColumn, name: 'otherId', tableName: 'table2' },
       ];
-      db.getForeignKeys = async () => [foreignKey];
+      db.getForeignKeys = async () => [
+        { ...foreignKey, tableName: 'table2', foreignTableName: 'table1' },
+      ];
 
-      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+      const [, ast] = (await structureToAst(db)) as RakeDbAst.Table[];
 
       expect(ast.shape.otherId.data.foreignKeys).toEqual([
         {
           columns: ['id'],
           name: 'fkey',
-          table: 'otherTable',
+          table: 'table1',
           match: 'FULL',
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
@@ -547,21 +552,28 @@ describe('structureToAst', () => {
 
     it('should ignore standard foreign key name', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
+      db.getTables = async () => [
+        { ...table, name: 'table1' },
+        { ...table, name: 'table2' },
+      ];
       db.getColumns = async () => [
-        ...columns,
-        { ...intColumn, name: 'otherId' },
+        { ...intColumn, name: 'otherId', tableName: 'table2' },
       ];
       db.getForeignKeys = async () => [
-        { ...foreignKey, name: `${table.name}_otherId_fkey` },
+        {
+          ...foreignKey,
+          name: `table2_otherId_fkey`,
+          tableName: 'table2',
+          foreignTableName: 'table1',
+        },
       ];
 
-      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+      const [, ast] = (await structureToAst(db)) as RakeDbAst.Table[];
 
       expect(ast.shape.otherId.data.foreignKeys).toEqual([
         {
           columns: ['id'],
-          table: 'otherTable',
+          table: 'table1',
           match: 'FULL',
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
@@ -572,26 +584,30 @@ describe('structureToAst', () => {
 
     it('should add composite foreign key', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
+      db.getTables = async () => [
+        { ...table, name: 'table1' },
+        { ...table, name: 'table2' },
+      ];
       db.getColumns = async () => [
-        ...columns,
-        { ...intColumn, name: 'otherId' },
+        { ...intColumn, name: 'otherId', tableName: 'table2' },
       ];
       db.getForeignKeys = async () => [
         {
           ...foreignKey,
+          tableName: 'table2',
           columnNames: ['name', 'otherId'],
+          foreignTableName: 'table1',
           foreignColumnNames: ['name', 'id'],
         },
       ];
 
-      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+      const [, ast] = (await structureToAst(db)) as RakeDbAst.Table[];
 
       expect(ast.shape.otherId.data.foreignKeys).toBe(undefined);
       expect(ast.foreignKeys).toEqual([
         {
           columns: ['name', 'otherId'],
-          fnOrTable: 'otherTable',
+          fnOrTable: 'table1',
           foreignColumns: ['name', 'id'],
           options: {
             name: 'fkey',
@@ -605,27 +621,31 @@ describe('structureToAst', () => {
 
     it('should ignore standard foreign key name in a composite foreign key', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
+      db.getTables = async () => [
+        { ...table, name: 'table1' },
+        { ...table, name: 'table2' },
+      ];
       db.getColumns = async () => [
-        ...columns,
-        { ...intColumn, name: 'otherId' },
+        { ...intColumn, name: 'otherId', tableName: 'table2' },
       ];
       db.getForeignKeys = async () => [
         {
           ...foreignKey,
+          tableName: 'table2',
+          foreignTableName: 'table1',
           columnNames: ['name', 'otherId'],
           foreignColumnNames: ['name', 'id'],
-          name: 'table_name_otherId_fkey',
+          name: 'table2_name_otherId_fkey',
         },
       ];
 
-      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+      const [, ast] = (await structureToAst(db)) as RakeDbAst.Table[];
 
       expect(ast.shape.otherId.data.foreignKeys).toBe(undefined);
       expect(ast.foreignKeys).toEqual([
         {
           columns: ['name', 'otherId'],
-          fnOrTable: 'otherTable',
+          fnOrTable: 'table1',
           foreignColumns: ['name', 'id'],
           options: {
             match: 'FULL',
@@ -634,6 +654,120 @@ describe('structureToAst', () => {
           },
         },
       ]);
+    });
+
+    it('should have referenced table before the table with foreign key', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [
+        { ...table, name: 'fkTable' },
+        { ...table, name: 'table1' },
+        { ...table, name: 'table2' },
+        { ...table, name: 'otherTable' },
+      ];
+      db.getColumns = async () => [
+        { ...intColumn, name: 'table1Id', tableName: 'fkTable' },
+        { ...intColumn, name: 'table2Id', tableName: 'fkTable' },
+      ];
+      db.getForeignKeys = async () => [
+        {
+          ...foreignKey,
+          tableName: 'fkTable',
+          columnNames: ['table1Id'],
+          foreignTableName: 'table1',
+        },
+        {
+          ...foreignKey,
+          tableName: 'fkTable',
+          columnNames: ['table2Id'],
+          foreignTableName: 'table2',
+        },
+      ];
+
+      const [table1, table2, fkTable, otherTable] = (await structureToAst(
+        db,
+      )) as RakeDbAst.Table[];
+
+      expect(table1.name).toBe('table1');
+      expect(table2.name).toBe('table2');
+      expect(fkTable.name).toBe('fkTable');
+      expect(otherTable.name).toBe('otherTable');
+    });
+
+    it('should add foreign key to a same table', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [table];
+      db.getColumns = async () => [intColumn];
+      db.getForeignKeys = async () => [
+        {
+          ...foreignKey,
+          tableName: table.name,
+          columnNames: [intColumn.name],
+          foreignTableName: table.name,
+        },
+      ];
+
+      const [ast] = (await structureToAst(db)) as RakeDbAst.Table[];
+
+      expect(ast.name).toBe(table.name);
+    });
+
+    it('should add standalone foreign key when it is recursive', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [
+        { ...table, name: 'table1' },
+        { ...table, name: 'table2' },
+      ];
+      db.getColumns = async () => [
+        { ...intColumn, tableName: 'table1' },
+        { ...intColumn, tableName: 'table2' },
+      ];
+      db.getForeignKeys = async () => [
+        {
+          ...foreignKey,
+          tableName: 'table1',
+          columnNames: [intColumn.name],
+          foreignTableName: 'table2',
+        },
+        {
+          ...foreignKey,
+          tableName: 'table2',
+          columnNames: [intColumn.name],
+          foreignTableName: 'table1',
+        },
+      ];
+
+      const [table1, table2, fkey] = (await structureToAst(
+        db,
+      )) as RakeDbAst.Table[];
+
+      expect(table1.name).toBe('table1');
+      expect(table1.shape[intColumn.name].data.foreignKeys).toBe(undefined);
+      expect(table2.name).toBe('table2');
+      expect(table2.shape[intColumn.name].data.foreignKeys).toEqual([
+        {
+          table: 'table1',
+          columns: ['id'],
+          match: 'FULL',
+          name: 'fkey',
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE',
+        },
+      ]);
+
+      expect(fkey).toEqual({
+        type: 'foreignKey',
+        action: 'create',
+        tableName: 'table1',
+        columns: ['column'],
+        fnOrTable: 'table2',
+        foreignColumns: ['id'],
+        options: {
+          match: 'FULL',
+          name: 'fkey',
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
+        },
+      });
     });
   });
 

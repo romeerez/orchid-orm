@@ -166,4 +166,41 @@ change(async (db) => {
       );
     });
   });
+
+  describe('foreignKey', () => {
+    it('should add standalone foreignKey', () => {
+      const result = astToMigration([
+        {
+          type: 'foreignKey',
+          action: 'create',
+          tableSchema: 'custom',
+          tableName: 'table',
+          columns: ['otherId'],
+          fnOrTable: 'otherTable',
+          foreignColumns: ['id'],
+          options: {
+            name: 'fkey',
+            match: 'FULL',
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
+          },
+        },
+      ]);
+
+      expect(result).toBe(
+        template(`  await db.addForeignKey(
+    'custom.table',
+    ['otherId'],
+    'otherTable',
+    ['id'],
+    {
+      name: 'fkey',
+      match: 'FULL',
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
+    },
+  );`),
+      );
+    });
+  });
 });

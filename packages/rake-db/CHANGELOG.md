@@ -1,5 +1,19 @@
 # rake-db
 
+## 2.3.12
+
+### Patch Changes
+
+- Handle table ordering by foreign key when pulling db
+- Updated dependencies
+  - pqb@0.9.7
+
+## 2.3.11
+
+### Patch Changes
+
+- Add generating extension to db pull
+
 ## 2.3.10
 
 ### Patch Changes

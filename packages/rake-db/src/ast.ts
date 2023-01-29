@@ -14,7 +14,8 @@ export type RakeDbAst =
   | RakeDbAst.ChangeTable
   | RakeDbAst.RenameTable
   | RakeDbAst.Schema
-  | RakeDbAst.Extension;
+  | RakeDbAst.Extension
+  | RakeDbAst.ForeignKey;
 
 export namespace RakeDbAst {
   export type Table = {
@@ -103,4 +104,11 @@ export namespace RakeDbAst {
     ifExists?: boolean;
     ifNotExists?: boolean;
   };
+
+  export type ForeignKey = {
+    type: 'foreignKey';
+    action: 'create';
+    tableSchema?: string;
+    tableName: string;
+  } & TableData.ForeignKey;
 }
