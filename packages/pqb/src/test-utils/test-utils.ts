@@ -7,7 +7,6 @@ import {
 } from 'pg-transactional-tests';
 import { Client } from 'pg';
 import { quote } from '../quote';
-import { columnTypes } from '../columnSchema';
 import { MaybeArray, toArray } from '../utils';
 import { Adapter } from '../adapter';
 
@@ -21,13 +20,13 @@ export const adapter = new Adapter(dbOptions);
 
 export const db = createDb({
   adapter,
-  columnTypes: {
-    ...columnTypes,
-    text: (min = 0, max = Infinity) => columnTypes.text(min, max),
+  columnTypes: (t) => ({
+    ...t,
+    text: (min = 0, max = Infinity) => t.text(min, max),
     timestamp() {
-      return columnTypes.timestamp().parse((input) => new Date(input));
+      return t.timestamp().parse((input) => new Date(input));
     },
-  },
+  }),
 });
 
 export type UserRecord = typeof User['type'];

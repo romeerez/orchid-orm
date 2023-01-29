@@ -224,7 +224,7 @@ Define a base table class which will be used later to extend tables from.
 By default, timestamps are returned as strings, the same as when loading timestamps from databases directly.
 
 For this API let's agree to return timestamps as epoch numbers (it's efficient and simple to use),
-but if you prefer to deal with `Date` objects write `columnTypes.timestamp().asDate()` instead.
+but if you prefer to deal with `Date` objects write `t.timestamp().asDate()` instead.
 
 The `text` column type requires `min` and `max` values to be passed,
 they are required to ensure that empty strings or strings of enormous length won't be allowed by your API backend.
@@ -234,16 +234,15 @@ Setting `min` and `max` for each text column may be tiresome, let's override a `
 ```ts
 // src/lib/baseTable.ts
 import { createBaseTable } from 'orchid-orm';
-import { columnTypes } from 'pqb';
 
 export const BaseTable = createBaseTable({
-  columnTypes: {
-    ...columnTypes,
+  columnTypes: (t) => ({
+    ...t,
     // set default min and max for all text columns
-    text: (min = 3, max = 100) => columnTypes.text(min, max),
+    text: (min = 3, max = 100) => t.text(min, max),
     // parse timestamps to numbers
-    timestamp: () => columnTypes.timestamp().asNumber(),
-  },
+    timestamp: () => t.timestamp().asNumber(),
+  }),
 });
 ```
 

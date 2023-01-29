@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.9
+
+### Patch Changes
+
+- Override column types via callback
+
 ## 0.9.8
 
 ### Patch Changes

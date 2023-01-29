@@ -50,12 +50,15 @@ export type Table = {
 
 export const createBaseTable = <CT extends ColumnTypesBase>(
   options: {
-    columnTypes?: CT;
+    columnTypes?: CT | ((t: DefaultColumnTypes) => CT);
   } = { columnTypes: columnTypes as unknown as CT },
 ) => {
-  return create(
-    options.columnTypes as ColumnTypesBase extends CT ? DefaultColumnTypes : CT,
-  );
+  const ct =
+    typeof options.columnTypes === 'function'
+      ? options.columnTypes(columnTypes)
+      : options.columnTypes;
+
+  return create(ct as ColumnTypesBase extends CT ? DefaultColumnTypes : CT);
 };
 
 const create = <CT extends ColumnTypesBase>(columnTypes: CT) => {

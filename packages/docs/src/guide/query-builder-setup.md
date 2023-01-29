@@ -19,7 +19,7 @@ npm i pqb
 For all connection options see: [client options](https://node-postgres.com/api/client) + [pool options](https://node-postgres.com/api/pool)
 
 ```ts
-import { createDb, columnTypes } from 'pqb'
+import { createDb } from 'pqb'
 
 const db = createDb({
   // databaseURL has the following format:
@@ -36,11 +36,11 @@ const db = createDb({
   log: true,
   
   // optionally, you can customize column types behavior
-  columnTypes: {
-    ...columnTypes,
+  columnTypes: (t) => ({
+    ...t,
     // by default timestamp is returned as a stirng, override to a number
-    timestamp: () => columnTypes.timestamp().asNumber(),
-  },
+    timestamp: () => t.timestamp().asNumber(),
+  }),
 
   // option to create named prepared statements implicitly, false by default
   autoPreparedStatements: true,

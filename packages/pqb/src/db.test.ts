@@ -9,7 +9,6 @@ import {
   useTestDatabase,
 } from './test-utils/test-utils';
 import { createDb } from './db';
-import { columnTypes } from './columnSchema';
 import { QueryLogger } from './queryMethods';
 
 describe('db', () => {
@@ -66,12 +65,12 @@ describe('db', () => {
 
       const db = createDb({
         adapter,
-        columnTypes: {
-          serial: columnTypes.serial,
+        columnTypes: (t) => ({
+          serial: t.serial,
           timestamp() {
-            return columnTypes.timestamp().parse((input) => new Date(input));
+            return t.timestamp().parse((input) => new Date(input));
           },
-        },
+        }),
       });
 
       const table = db('user', (t) => ({

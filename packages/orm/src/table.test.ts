@@ -2,7 +2,7 @@ import { createBaseTable } from './table';
 import { orchidORM } from './orm';
 import { adapter, db } from './test-utils/test-db';
 import { assertType, userData, useTestDatabase } from './test-utils/test-utils';
-import { ColumnType, columnTypes, Operators } from 'pqb';
+import { ColumnType, Operators } from 'pqb';
 import { BaseTable } from './test-utils/test-tables';
 
 describe('table', () => {
@@ -68,12 +68,12 @@ describe('table', () => {
       await db.user.create(userData);
 
       const BaseTable = createBaseTable({
-        columnTypes: {
-          serial: columnTypes.serial,
+        columnTypes: (t) => ({
+          serial: t.serial,
           timestamp() {
-            return columnTypes.timestamp().parse((input) => new Date(input));
+            return t.timestamp().parse((input) => new Date(input));
           },
-        },
+        }),
       });
 
       class UserTable extends BaseTable {

@@ -207,12 +207,12 @@ describe('column base', () => {
 
     const db = createDb({
       adapter,
-      columnTypes: {
-        ...columnTypes,
-        text: (min = 0, max = Infinity) => columnTypes.text(min, max),
+      columnTypes: (t) => ({
+        ...t,
+        text: (min = 0, max = Infinity) => t.text(min, max),
         numberTimestamp: () => numberTimestamp,
         dateTimestamp: () => dateTimestamp,
-      },
+      }),
     });
 
     const UserWithCustomTimestamps = db('user', (t) => ({

@@ -1,15 +1,14 @@
 import { createBaseTable } from '../table';
-import { columnTypes } from 'pqb';
 import { tableToZod } from 'orchid-orm-schema-to-zod';
 
 export const BaseTable = createBaseTable({
-  columnTypes: {
-    ...columnTypes,
-    text: (min = 0, max = Infinity) => columnTypes.text(min, max),
+  columnTypes: (t) => ({
+    ...t,
+    text: (min = 0, max = Infinity) => t.text(min, max),
     timestamp() {
-      return columnTypes.timestamp().parse((input) => new Date(input));
+      return t.timestamp().parse((input) => new Date(input));
     },
-  },
+  }),
 });
 
 export type User = UserTable['columns']['type'];

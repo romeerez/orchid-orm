@@ -66,12 +66,13 @@ export const BaseTable = createBaseTable()
 Optionally, you can customize column types behavior here for all future tables:
 
 ```ts
-import { createBaseTable, columnTypes } from 'orchid-orm'
+import { createBaseTable } from 'orchid-orm'
 
 export const BaseTable = createBaseTable({
-  ...columnTypes,
-  // by default timestamp is returned as a stirng, override to a number
-  timestamp: () => columnTypes.timestamp().asNumber(),
+  columnTypes: (t) => ({
+    // by default timestamp is returned as a stirng, override to a number
+    timestamp: () => t.timestamp().asNumber(),
+  }),
 })
 ```
 

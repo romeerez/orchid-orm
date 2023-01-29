@@ -38,7 +38,7 @@ export type DbOptions<CT extends ColumnTypesBase> = (
   | Omit<AdapterOptions, 'log'>
 ) &
   QueryLogOptions & {
-    columnTypes?: CT;
+    columnTypes?: CT | ((t: DefaultColumnTypes) => CT);
     autoPreparedStatements?: boolean;
     noPrimaryKey?: NoPrimaryKeyOption;
   };
@@ -241,7 +241,7 @@ export type DbResult<CT extends ColumnTypesBase> = Db<
 export const createDb = <CT extends ColumnTypesBase>({
   log,
   logger,
-  columnTypes: ct = columnTypes as unknown as CT,
+  columnTypes: ctOrFn = columnTypes as unknown as CT,
   ...options
 }: DbOptions<CT>): DbResult<CT> => {
   const adapter = 'adapter' in options ? options.adapter : new Adapter(options);
@@ -251,6 +251,8 @@ export const createDb = <CT extends ColumnTypesBase>({
     autoPreparedStatements: options.autoPreparedStatements ?? false,
     noPrimaryKey: options.noPrimaryKey ?? 'error',
   };
+
+  const ct = typeof ctOrFn === 'function' ? ctOrFn(columnTypes) : ctOrFn;
 
   const qb = new Db(
     adapter,

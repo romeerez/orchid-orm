@@ -1,5 +1,15 @@
 # orchid-orm-test-factory
 
+## 0.2.17
+
+### Patch Changes
+
+- Override column types via callback
+- Updated dependencies
+  - orchid-orm@1.5.11
+  - pqb@0.9.9
+  - orchid-orm-schema-to-zod@0.2.15
+
 ## 0.2.16
 
 ### Patch Changes

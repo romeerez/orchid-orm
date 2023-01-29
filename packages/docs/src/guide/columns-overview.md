@@ -108,10 +108,10 @@ It is possible to override the parsing of columns returned from the database.
 
 ```ts
 export const BaseTable = createBaseTable({
-  columnTypes: {
-    ...columnTypes,
-    text: (min = 3, max = 100) => columnTypes.text(min, max),
-  },
+  columnTypes: (t) => ({
+    ...t,
+    text: (min = 3, max = 100) => t.text(min, max),
+  }),
 })
 ```
 
@@ -142,34 +142,34 @@ and to parse the date to the number when returning from a database:
 
 ```ts
 export const BaseTable = createBaseTable({
-  columnTypes: {
-    ...columnTypes,
+  columnTypes: (t) => ({
+    ...t,
     timestamp() {
-      return columnTypes.timestamp()
+      return t.timestamp()
         .encode((input: number) => new Date(input))
         .parse((input) => new Date(input))
-        .as(columnTypes.integer())
+        .as(t.integer())
     },
-  },
+  }),
 })
 ```
 
 Similarly, for query builder:
 
 ```ts
-import { createDb, columnTypes } from 'pqb'
+import { createDb } from 'pqb'
 
 const db = createDb({
   databaseURL: process.env.DATABASE_URL,
-  columnTypes: {
-    ...columnTypes,
+  columnTypes: (t) => ({
+    ...t,
     timestamp() {
-      return columnTypes.timestamp()
+      return t.timestamp()
         .encode((input: number) => new Date(input))
         .parse((input) => new Date(input))
-        .as(columnTypes.integer())
+        .as(t.integer())
     },
-  }
+  }),
 })
 ```
 
@@ -182,12 +182,12 @@ however, for the specific case of overriding timestamp, there are predefined sho
 
 ```ts
 export const BaseTable = createBaseTable({
-  columnTypes: {
-    ...columnTypes,
+  columnTypes: (t) => ({
+    ...t,
     timestamp() {
       // or use `.asDate()` to work with Date objects
-      return columnTypes.timestamp().asNumber()
+      return t.timestamp().asNumber()
     },
-  },
+  }),
 })
 ```

@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.5.11
+
+### Patch Changes
+
+- Override column types via callback
+- Updated dependencies
+  - pqb@0.9.9
+
 ## 1.5.10
 
 ### Patch Changes

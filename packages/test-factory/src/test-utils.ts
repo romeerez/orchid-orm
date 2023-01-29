@@ -1,5 +1,5 @@
 import { createBaseTable, orchidORM } from 'orchid-orm';
-import { Adapter, columnTypes } from 'pqb';
+import { Adapter } from 'pqb';
 
 type AssertEqual<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]
@@ -14,11 +14,11 @@ export const assertType = <T, Expected>(
 };
 
 export const BaseTable = createBaseTable({
-  columnTypes: {
-    ...columnTypes,
-    text: (min = 0, max = Infinity) => columnTypes.text(min, max),
-    timestamp: () => columnTypes.timestamp().asNumber(),
-  },
+  columnTypes: (t) => ({
+    ...t,
+    text: (min = 0, max = Infinity) => t.text(min, max),
+    timestamp: () => t.timestamp().asNumber(),
+  }),
 });
 
 export type User = UserTable['columns']['type'];
