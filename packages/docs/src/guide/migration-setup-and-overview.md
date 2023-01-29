@@ -56,6 +56,20 @@ rakeDb(
       baseTableName: 'BaseTable',
       mainFilePath: 'src/db.ts',
     }),
+    
+    // true by default, whether to use code updater by default
+    useCodeUpdater: false,
+    
+    // custom commands can be defined as follows:
+    commands: {
+      // dbOptions is an array of database configs
+      // config is the config of `rakeDb` (that contains migrationPath, appCodeUpdater, etc)
+      // args of type string[] is an array of command line arguments startring after the command name
+      async seed(dbOptions, config, args) {
+        const { run } = await import('../db/seed')
+        await run()
+      }
+    }
   },
 );
 ```
@@ -224,7 +238,7 @@ rakeDb(
         // here we want to seed only the first database:
         const devDbOptions = options[0]
         
-        const { run } = await import('./src/db/seed.ts')
+        const { run } = await import('../db/seed')
         await run(devDbOptions)
       },
     }
