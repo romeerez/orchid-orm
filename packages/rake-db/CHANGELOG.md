@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.3.13
+
+### Patch Changes
+
+- ee1961e: Make columnTypes optional in configs
+- Updated dependencies [ee1961e]
+  - pqb@0.9.8
+
 ## 2.3.12
 
 ### Patch Changes

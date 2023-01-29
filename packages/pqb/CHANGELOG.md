@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.8
+
+### Patch Changes
+
+- ee1961e: Make columnTypes optional in configs
+
 ## 0.9.7
 
 ### Patch Changes

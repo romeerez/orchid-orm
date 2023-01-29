@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.5.10
+
+### Patch Changes
+
+- ee1961e: Make columnTypes optional in configs
+- Updated dependencies [ee1961e]
+  - pqb@0.9.8
+
 ## 1.5.9
 
 ### Patch Changes
