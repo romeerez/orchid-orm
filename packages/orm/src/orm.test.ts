@@ -7,25 +7,19 @@ import {
 } from './test-utils/test-utils';
 import { pgConfig } from './test-utils/test-db';
 import { createBaseTable } from './table';
-import { columnTypes } from 'pqb';
 
 describe('orm', () => {
   useTestDatabase();
 
-  const BaseTable = createBaseTable({
-    columnTypes: {
-      ...columnTypes,
-      text: (min = 0, max = Infinity) => columnTypes.text(min, max),
-    },
-  });
+  const BaseTable = createBaseTable();
 
   type User = UserTable['columns']['type'];
   class UserTable extends BaseTable {
     table = 'user';
     columns = this.setColumns((t) => ({
       id: t.serial().primaryKey(),
-      name: t.text(),
-      password: t.text(),
+      name: t.text(1, 10),
+      password: t.text(1, 10),
     }));
   }
 

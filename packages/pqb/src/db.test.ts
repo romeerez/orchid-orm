@@ -49,7 +49,7 @@ describe('db', () => {
     it('should return date as string by default', async () => {
       await User.create(userData);
 
-      const db = createDb({ adapter, columnTypes });
+      const db = createDb({ adapter });
       const table = db('user', (t) => ({
         id: t.serial().primaryKey(),
         createdAt: t.timestamp(),
@@ -88,7 +88,7 @@ describe('db', () => {
 
   describe('autoPreparedStatements', () => {
     it('should be false by default', () => {
-      const db = createDb({ adapter, columnTypes });
+      const db = createDb({ adapter });
 
       const table = db('table');
       expect(table.query.autoPreparedStatements).toBe(false);
@@ -97,7 +97,7 @@ describe('db', () => {
 
   describe('noPrimaryKey', () => {
     it('should throw error when no primary key by default', () => {
-      const db = createDb({ adapter, columnTypes });
+      const db = createDb({ adapter });
 
       expect(() =>
         db('table', (t) => ({
@@ -107,7 +107,7 @@ describe('db', () => {
     });
 
     it('should throw error when no primary key when noPrimaryKey is set to `error`', () => {
-      const db = createDb({ adapter, columnTypes, noPrimaryKey: 'error' });
+      const db = createDb({ adapter, noPrimaryKey: 'error' });
 
       expect(() =>
         db('table', (t) => ({
@@ -117,7 +117,7 @@ describe('db', () => {
     });
 
     it('should not throw when no column shape is provided', () => {
-      const db = createDb({ adapter, columnTypes });
+      const db = createDb({ adapter });
 
       expect(() => db('table')).not.toThrow();
     });
@@ -126,7 +126,6 @@ describe('db', () => {
       const logger = { warn: jest.fn() };
       const db = createDb({
         adapter,
-        columnTypes,
         noPrimaryKey: 'warning',
         logger: logger as unknown as QueryLogger,
       });
@@ -142,7 +141,6 @@ describe('db', () => {
       const logger = { warn: jest.fn() };
       const db = createDb({
         adapter,
-        columnTypes,
         noPrimaryKey: 'ignore',
         logger: logger as unknown as QueryLogger,
       });

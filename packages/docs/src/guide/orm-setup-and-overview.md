@@ -59,9 +59,20 @@ First, need to create a base table class to extend from, this code should be sep
 
 ```ts
 import { createBaseTable } from 'orchid-orm'
-import { columnTypes } from 'pqb'
 
-export const BaseTable = createBaseTable({ columnTypes })
+export const BaseTable = createBaseTable()
+```
+
+Optionally, you can customize column types behavior here for all future tables:
+
+```ts
+import { createBaseTable, columnTypes } from 'orchid-orm'
+
+export const BaseTable = createBaseTable({
+  ...columnTypes,
+  // by default timestamp is returned as a stirng, override to a number
+  timestamp: () => columnTypes.timestamp().asNumber(),
+})
 ```
 
 See [column types document](/guide/columns-overview.html#override-column-types) for details of customizing columns.

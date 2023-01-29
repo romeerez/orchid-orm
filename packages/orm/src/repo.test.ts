@@ -2,10 +2,10 @@ import { orchidORM } from './orm';
 import { pgConfig } from './test-utils/test-db';
 import { createBaseTable } from './table';
 import { assertType, expectSql } from './test-utils/test-utils';
-import { columnTypes, QueryReturnType } from 'pqb';
+import { QueryReturnType } from 'pqb';
 import { createRepo } from './repo';
 
-const BaseTable = createBaseTable({ columnTypes });
+const BaseTable = createBaseTable();
 
 class SomeTable extends BaseTable {
   table = 'someTable';

@@ -173,7 +173,7 @@ describe('column base', () => {
       });
 
       it('should return column data as returned from db if not set', async () => {
-        const db = createDb({ adapter, columnTypes });
+        const db = createDb({ adapter });
 
         const UserWithPlainTimestamp = db('user', (t) => ({
           id: t.serial().primaryKey(),

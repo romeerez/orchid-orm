@@ -42,7 +42,7 @@ describe('table', () => {
     it('should return date as string by default', async () => {
       await db.user.create(userData);
 
-      const BaseTable = createBaseTable({ columnTypes });
+      const BaseTable = createBaseTable();
       class UserTable extends BaseTable {
         table = 'user';
         columns = this.setColumns((t) => ({

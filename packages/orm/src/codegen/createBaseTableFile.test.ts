@@ -34,13 +34,8 @@ describe('createBaseTableFile', () => {
     expect(asMock(fs.writeFile)).toBeCalledWith(
       params.baseTablePath,
       `import { createBaseTable } from 'orchid-orm';
-import { columnTypes } from 'pqb';
 
-export const ${params.baseTableName} = createBaseTable({
-  columnTypes: {
-    ...columnTypes,
-  },
-});
+export const ${params.baseTableName} = createBaseTable();
 `,
       {
         flag: 'wx',

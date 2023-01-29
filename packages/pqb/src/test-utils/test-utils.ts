@@ -13,7 +13,6 @@ import { Adapter } from '../adapter';
 
 export const dbOptions = {
   databaseURL: process.env.DATABASE_URL,
-  columnTypes,
 };
 
 export const dbClient = new Client({ connectionString: dbOptions.databaseURL });

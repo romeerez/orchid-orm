@@ -166,6 +166,7 @@ const checkIfDataHasUpdatedAt = (data: UpdateQueryDataItem[]) => {
   });
 };
 
+export type DefaultColumnTypes = typeof columnTypes;
 export const columnTypes = {
   smallint: () => new SmallIntColumn(),
   integer: () => new IntegerColumn(),

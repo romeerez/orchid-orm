@@ -203,13 +203,10 @@ but you can import `db` object from where it's defined in your app.
 
 ```ts
 // db/seed.ts
-import { createDb, columnTypes, AdapterOptions } from 'pqb'
+import { createDb, AdapterOptions } from 'pqb'
 
 export const run = async (options: AdapterOptions) => {
-  const db = createDb({
-    ...options,
-    columnTypes,
-  })
+  const db = createDb(options)
   
   await db('table').createMany([
     { name: 'record 1' },
@@ -225,7 +222,7 @@ Set up a script for seeding data via a custom command of `rake-db` as follows:
 ```ts
 // scripts/db.ts
 import { rakeDb } from 'rake-db'
-import { createDb, columnTypes } from 'pqb'
+import { createDb } from 'pqb'
 
 rakeDb(
   {

@@ -35,8 +35,12 @@ const db = createDb({
   // option for logging, false by default
   log: true,
   
-  // use default column types from the import, or column types can be customized here
-  columnTypes,
+  // optionally, you can customize column types behavior
+  columnTypes: {
+    ...columnTypes,
+    // by default timestamp is returned as a stirng, override to a number
+    timestamp: () => columnTypes.timestamp().asNumber(),
+  },
 
   // option to create named prepared statements implicitly, false by default
   autoPreparedStatements: true,
@@ -50,13 +54,12 @@ const db = createDb({
 To reuse the underlying `Adapter` instance, you can provide an adapter:
 
 ```ts
-import { createDb, Adapter, columnTypes } from 'pqb'
+import { createDb, Adapter } from 'pqb'
 
 const db = createDb(
   {
     adapter: new Adapter({ databaseURL: process.env.DATABASE_URL }),
     log: true,
-    columnTypes,
   }
 )
 ```
@@ -88,7 +91,6 @@ The log will use `console.log` and `console.error` by default, it can be overrid
 ```ts
 const db = createDb({
   databaseURL: process.env.DATABASE_URL,
-  columnTypes,
   log: true,
   logger: {
     log(message: string): void {

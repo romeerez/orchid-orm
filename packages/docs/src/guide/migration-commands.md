@@ -115,7 +115,7 @@ npm run db rollback all
 
 ```ts
 import { rakeDb } from 'rake-db'
-import { createDb, columnTypes } from 'pqb'
+import { createDb } from 'pqb'
 
 const dbConfig = {
   databaseUrl: 'postgres://...'
@@ -128,7 +128,7 @@ rakeDb(
       async custom(dbConfigs, config, args) {
         // dbConfig is array of provided database configs
         for (const dbConfig of dbConfigs) {
-          const db = createDb({ ...dbConfig, columnTypes })
+          const db = createDb(dbConfig)
           
           // perform some query
           await db('table').insert(someData)

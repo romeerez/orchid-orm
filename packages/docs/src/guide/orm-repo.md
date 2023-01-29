@@ -13,7 +13,6 @@ We can define a repository in such ways:
 
 ```ts
 import { createRepo } from 'orchid-orm'
-import { columnTypes } from 'pqb'
 import { db } from '../path-to-db'
 import { User } from './user.table'
 import { followRepo } from './follow.repo'

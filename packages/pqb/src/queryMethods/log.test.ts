@@ -7,7 +7,6 @@ import {
 } from '../test-utils/test-utils';
 import { logColors } from './log';
 import { noop } from '../utils';
-import { columnTypes } from '../columnSchema';
 
 describe('query log', () => {
   useTestDatabase();
@@ -54,7 +53,6 @@ describe('query log', () => {
 
     const db = createDb({
       adapter,
-      columnTypes,
       log: true,
       logger,
     });
@@ -83,7 +81,6 @@ describe('query log', () => {
 
     const db = createDb({
       adapter,
-      columnTypes,
       log: { colors: false },
       logger,
     });
@@ -106,7 +103,7 @@ describe('query log', () => {
       warn: noop,
     };
 
-    const db = createDb({ adapter, columnTypes, log: true, logger });
+    const db = createDb({ adapter, log: true, logger });
 
     await db('user').where({ wrongColumn: 'value' }).then(noop, noop);
 
@@ -134,7 +131,6 @@ describe('query log', () => {
 
     const db = createDb({
       adapter,
-      columnTypes,
       log: { colors: false },
       logger,
     });
@@ -161,7 +157,6 @@ describe('query log', () => {
 
     const db = createDb({
       adapter,
-      columnTypes,
       log: { colors: false },
       logger,
     });
@@ -190,7 +185,6 @@ describe('query log', () => {
 
     const db = createDb({
       adapter,
-      columnTypes,
       log: { colors: false },
       logger,
     });

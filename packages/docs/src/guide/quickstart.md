@@ -118,13 +118,8 @@ npm run db migrate
 ```ts
 // src/baseTable.ts
 import { createBaseTable } from 'orchid-orm';
-import { columnTypes } from 'pqb';
 
-export const BaseTable = createBaseTable({
-  columnTypes: {
-    ...columnTypes,
-  },
-});
+export const BaseTable = createBaseTable();
 ```
 
 `src/tables/myTable.table.ts` was created.

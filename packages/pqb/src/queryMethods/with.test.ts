@@ -46,7 +46,10 @@ describe('with', () => {
       `;
   };
 
-  const columnShape = { one: columnTypes.integer(), two: columnTypes.text() };
+  const columnShape = {
+    one: columnTypes.integer(),
+    two: columnTypes.text(1, 10),
+  };
 
   it('accepts raw parameter preceded by columns shape', () => {
     const q = User.all();

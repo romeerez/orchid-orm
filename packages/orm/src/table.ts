@@ -1,8 +1,10 @@
 import {
   ColumnShapeOutput,
   ColumnsShape,
+  columnTypes,
   ColumnTypesBase,
   Db,
+  DefaultColumnTypes,
   getColumnTypes,
   Query,
 } from 'pqb';
@@ -46,9 +48,17 @@ export type Table = {
   noPrimaryKey?: boolean;
 };
 
-export const createBaseTable = <CT extends ColumnTypesBase>(options: {
-  columnTypes: CT;
-}) => {
+export const createBaseTable = <CT extends ColumnTypesBase>(
+  options: {
+    columnTypes?: CT;
+  } = { columnTypes: columnTypes as unknown as CT },
+) => {
+  return create(
+    options.columnTypes as ColumnTypesBase extends CT ? DefaultColumnTypes : CT,
+  );
+};
+
+const create = <CT extends ColumnTypesBase>(columnTypes: CT) => {
   return class BaseTable {
     table!: string;
     columns!: TableConfig;
@@ -57,13 +67,13 @@ export const createBaseTable = <CT extends ColumnTypesBase>(options: {
     noPrimaryKey?: boolean;
 
     constructor() {
-      this.columnTypes = options.columnTypes;
+      this.columnTypes = columnTypes;
     }
 
     setColumns = <T extends ColumnsShape>(
       fn: (t: CT) => T,
     ): { shape: T; type: ColumnShapeOutput<T> } => {
-      const shape = getColumnTypes(options.columnTypes, fn);
+      const shape = getColumnTypes(columnTypes, fn);
 
       return {
         shape,

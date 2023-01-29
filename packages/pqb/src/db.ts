@@ -24,6 +24,8 @@ import {
   SinglePrimaryKey,
   ColumnType,
   getTableData,
+  DefaultColumnTypes,
+  columnTypes,
 } from './columnSchema';
 import { applyMixins, pushOrNewArray } from './utils';
 import { StringKey } from './common';
@@ -36,7 +38,7 @@ export type DbOptions<CT extends ColumnTypesBase> = (
   | Omit<AdapterOptions, 'log'>
 ) &
   QueryLogOptions & {
-    columnTypes: CT;
+    columnTypes?: CT;
     autoPreparedStatements?: boolean;
     noPrimaryKey?: NoPrimaryKeyOption;
   };
@@ -53,7 +55,7 @@ export interface Db<
   Table extends string | undefined = undefined,
   Shape extends ColumnsShape = Record<string, never>,
   Relations extends Query['relations'] = Query['relations'],
-  CT extends ColumnTypesBase = ColumnTypesBase,
+  CT extends ColumnTypesBase = DefaultColumnTypes,
 > extends QueryMethods {
   new (
     adapter: Adapter,
@@ -118,7 +120,7 @@ export class Db<
   Table extends string | undefined = undefined,
   Shape extends ColumnsShape = Record<string, never>,
   Relations extends Query['relations'] = Query['relations'],
-  CT extends ColumnTypesBase = ColumnTypesBase,
+  CT extends ColumnTypesBase = DefaultColumnTypes,
 > implements Query
 {
   whereQueryBuilder = WhereQueryBuilder;
@@ -222,11 +224,13 @@ export type DbResult<CT extends ColumnTypesBase> = Db<
   string,
   Record<string, never>,
   Query['relations'],
-  CT
+  ColumnTypesBase extends CT ? DefaultColumnTypes : CT
 > & {
   <Table extends string, Shape extends ColumnsShape = ColumnsShape>(
     table: Table,
-    shape?: ((t: CT) => Shape) | Shape,
+    shape?:
+      | ((t: ColumnTypesBase extends CT ? DefaultColumnTypes : CT) => Shape)
+      | Shape,
     options?: DbTableOptions,
   ): Db<Table, Shape>;
 
@@ -237,7 +241,7 @@ export type DbResult<CT extends ColumnTypesBase> = Db<
 export const createDb = <CT extends ColumnTypesBase>({
   log,
   logger,
-  columnTypes: ct,
+  columnTypes: ct = columnTypes as unknown as CT,
   ...options
 }: DbOptions<CT>): DbResult<CT> => {
   const adapter = 'adapter' in options ? options.adapter : new Adapter(options);

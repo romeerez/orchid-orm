@@ -17,13 +17,8 @@ export const createBaseTableFile = async ({
     .writeFile(
       baseTablePath,
       `import { createBaseTable } from 'orchid-orm';
-import { columnTypes } from 'pqb';
 
-export const ${baseTableName} = createBaseTable({
-  columnTypes: {
-    ...columnTypes,
-  },
-});
+export const ${baseTableName} = createBaseTable();
 `,
       {
         flag: 'wx',

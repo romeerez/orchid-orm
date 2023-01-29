@@ -1,9 +1,9 @@
 import {
   Adapter,
   AdapterOptions,
-  columnTypes,
   createDb,
   DbResult,
+  DefaultColumnTypes,
   MaybeArray,
   toArray,
 } from 'pqb';
@@ -24,7 +24,7 @@ import {
 } from '../migration/change';
 import { createMigrationInterface } from '../migration/migration';
 
-const getDb = (adapter: Adapter) => createDb({ adapter, columnTypes });
+const getDb = (adapter: Adapter) => createDb({ adapter });
 
 const migrateOrRollback = async (
   options: MaybeArray<AdapterOptions>,
@@ -54,7 +54,7 @@ const migrateOrRollback = async (
 
   for (const opts of toArray(options)) {
     const adapter = new Adapter(opts);
-    let db: DbResult<typeof columnTypes> | undefined;
+    let db: DbResult<DefaultColumnTypes> | undefined;
 
     if (up) {
       await config.beforeMigrate?.((db ??= getDb(adapter)));

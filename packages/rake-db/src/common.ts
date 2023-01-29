@@ -1,8 +1,8 @@
 import {
   Adapter,
   AdapterOptions,
-  columnTypes,
   DbResult,
+  DefaultColumnTypes,
   NoPrimaryKeyOption,
   QueryLogOptions,
   singleQuote,
@@ -12,7 +12,7 @@ import path from 'path';
 import { readdir } from 'fs/promises';
 import { RakeDbAst } from './ast';
 
-type Db = DbResult<typeof columnTypes>;
+type Db = DbResult<DefaultColumnTypes>;
 
 export type RakeDbConfig = {
   migrationsPath: string;

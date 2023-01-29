@@ -15,8 +15,8 @@ import {
   TextColumn,
   AdapterOptions,
   createDb,
-  columnTypes,
   DbResult,
+  DefaultColumnTypes,
 } from 'pqb';
 import { createTable } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
@@ -63,7 +63,7 @@ export type ExtensionOptions = {
   cascade?: boolean;
 };
 
-export type Migration = DbResult<typeof columnTypes> & MigrationBase;
+export type Migration = DbResult<DefaultColumnTypes> & MigrationBase;
 
 export const createMigrationInterface = (
   tx: TransactionAdapter,
@@ -84,7 +84,7 @@ export const createMigrationInterface = (
     return wrapWithLog(log, q, () => arrays.call(adapter, q, types));
   }) as typeof adapter.arrays;
 
-  const db = createDb({ adapter, columnTypes }) as unknown as Migration;
+  const db = createDb({ adapter }) as unknown as Migration;
 
   const { prototype: proto } = MigrationBase;
   for (const key of Object.getOwnPropertyNames(proto)) {
