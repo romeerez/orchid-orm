@@ -49,6 +49,7 @@ describe('common', () => {
         log: true,
         logger: console,
         useCodeUpdater: true,
+        commands: {},
       });
     });
   });

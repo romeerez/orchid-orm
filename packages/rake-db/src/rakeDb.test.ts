@@ -38,6 +38,7 @@ const options = [
 
 const config = {
   migrationsPath: 'migrations',
+  commands: {},
 };
 
 describe('rakeDb', () => {
@@ -87,6 +88,16 @@ describe('rakeDb', () => {
     await rakeDb(options, config, ['pull']);
 
     expect(pullDbStructure).toBeCalledWith(options[0], config);
+  });
+
+  test('custom command', async () => {
+    const custom = jest.fn();
+
+    const conf = { ...config, commands: { custom } };
+
+    await rakeDb(options, conf, ['custom', 'arg']);
+
+    expect(custom).toBeCalledWith(options, conf, ['arg']);
   });
 
   test('other', async () => {

@@ -17,6 +17,14 @@ type Db = DbResult<typeof columnTypes>;
 export type RakeDbConfig = {
   migrationsPath: string;
   migrationsTable: string;
+  commands: Record<
+    string,
+    (
+      options: AdapterOptions[],
+      config: RakeDbConfig,
+      args: string[],
+    ) => Promise<void>
+  >;
   requireTs(path: string): Promise<void>;
   noPrimaryKey?: NoPrimaryKeyOption;
   appCodeUpdater?: AppCodeUpdater;
@@ -33,9 +41,10 @@ export type AppCodeUpdater = (params: {
   cache: object;
 }) => Promise<void>;
 
-export const migrationConfigDefaults = {
-  migrationsPath: path.resolve('src', 'migrations'),
+export const migrationConfigDefaults: RakeDbConfig = {
+  migrationsPath: path.resolve('src', 'db', 'migrations'),
   migrationsTable: 'schemaMigrations',
+  commands: {},
   requireTs: (path: string) => import(path),
   log: true,
   logger: console,

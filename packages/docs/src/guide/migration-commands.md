@@ -108,3 +108,48 @@ Pass a number to revert multiple last applied migrations, or pass 'all' to rever
 npm run db rollback 3
 npm run db rollback all
 ```
+
+## custom commands
+
+`rakeDb` allows to specify your own functions for a custom commands:
+
+```ts
+import { rakeDb } from 'rake-db'
+import { createDb, columnTypes } from 'pqb'
+
+const dbConfig = {
+  databaseUrl: 'postgres://...'
+}
+
+rakeDb(
+  dbConfig,
+  {
+    commands: {
+      async custom(dbConfigs, config, args) {
+        // dbConfig is array of provided database configs
+        for (const dbConfig of dbConfigs) {
+          const db = createDb({ ...dbConfig, columnTypes })
+          
+          // perform some query
+          await db('table').insert(someData)
+          
+          // closing db after using it
+          await db.close()
+        }
+        
+        // config is this config object we're inside
+        config.commands.custom // this is a function we're inside of
+        
+        // command line arguments of type string[]
+        console.log(args)
+      }
+    }
+  },
+);
+```
+
+Running this command will perform a query and log arguments `['one', 'two']` to the console:
+
+```sh
+npm run db custom one two
+```

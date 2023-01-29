@@ -180,7 +180,65 @@ What `appCodeUpdater` does:
 `appCodeUpdater` does not delete or rename existing files, because it is better to be done manually.
 A modern editor will update all file usage in imports across the project when renaming a file or an exported class.
 
-## Before and after callbacks
+## seeds
+
+To make database seeds, create own script with the needed logic.
+
+In the example, new db instance is constructed with `createDb`,
+but you can import `db` object from where it's defined in your app.
+
+```ts
+// db/seed.ts
+import { createDb, columnTypes, AdapterOptions } from 'pqb'
+
+export const run = async (options: AdapterOptions) => {
+  const db = createDb({
+    ...options,
+    columnTypes,
+  })
+  
+  await db('table').createMany([
+    { name: 'record 1' },
+    { name: 'record 2' },
+  ])
+  
+  await db.close()
+}
+```
+
+Set up a script for seeding data via a custom command of `rake-db` as follows:
+
+```ts
+// scripts/db.ts
+import { rakeDb } from 'rake-db'
+import { createDb, columnTypes } from 'pqb'
+
+rakeDb(
+  {
+    databaseURL: 'postgres://...',
+  },
+  {
+    commands: {
+      async seed(options) {
+        // there can be multiple databases, so `options` is an array
+        // here we want to seed only the first database:
+        const devDbOptions = options[0]
+        
+        const { run } = await import('./src/db/seed.ts')
+        await run(devDbOptions)
+      },
+    }
+  }
+)
+```
+
+Run the seeds with the command:
+
+```sh
+npm run db seed
+```
+
+## before and after callbacks
 
 To run custom code before or after `migrate` or `rollback` command, define functions in `rakeDb` config object:
 

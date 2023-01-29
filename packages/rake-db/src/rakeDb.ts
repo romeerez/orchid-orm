@@ -28,6 +28,8 @@ export const rakeDb = async (
     await generate(config, args.slice(1));
   } else if (command === 'pull') {
     await pullDbStructure(toArray(options)[0], config);
+  } else if (config.commands[command]) {
+    await config.commands[command](toArray(options), config, args.slice(1));
   } else {
     printHelp();
   }
