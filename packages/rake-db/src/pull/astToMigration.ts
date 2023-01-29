@@ -19,6 +19,8 @@ export const astToMigration = (ast: RakeDbAst[]): string | undefined => {
   for (const item of ast) {
     if (item.type === 'schema' && item.action === 'create') {
       code.push(createSchema(item));
+    } else if (item.type === 'extension' && item.action === 'create') {
+      code.push(...createExtension(item));
     } else if (item.type === 'table' && item.action === 'create') {
       if (code.length) code.push([]);
       code.push(...createTable(item));
@@ -37,6 +39,22 @@ ${codeToString(code, '  ', '  ')}
 
 const createSchema = (ast: RakeDbAst.Schema) => {
   return `await db.createSchema(${singleQuote(ast.name)});`;
+};
+
+const createExtension = (ast: RakeDbAst.Extension): Code[] => {
+  const code: Code[] = [`await db.createExtension(${singleQuote(ast.name)}`];
+  if (ast.schema || ast.version) {
+    addCode(code, ', {');
+    if (ast.schema) {
+      code.push([`schema: ${singleQuote(ast.schema)},`]);
+    }
+    if (ast.version) {
+      code.push([`version: ${singleQuote(ast.version)},`]);
+    }
+    addCode(code, '}');
+  }
+  addCode(code, ')');
+  return code;
 };
 
 const createTable = (ast: RakeDbAst.Table) => {

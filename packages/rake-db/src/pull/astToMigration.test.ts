@@ -41,6 +41,25 @@ describe('astToMigration', () => {
     expect(result).toBe(template(`  await db.createSchema('schemaName');`));
   });
 
+  it('should create extension', () => {
+    const result = astToMigration([
+      {
+        type: 'extension',
+        action: 'create',
+        name: 'extensionName',
+        schema: 'schema',
+        version: '123',
+      },
+    ]);
+
+    expect(result).toBe(
+      template(`  await db.createExtension('extensionName', {
+    schema: 'schema',
+    version: '123',
+  })`),
+    );
+  });
+
   describe('table', () => {
     it('should create table', () => {
       const result = astToMigration([
