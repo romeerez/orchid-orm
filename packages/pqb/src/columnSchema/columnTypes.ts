@@ -199,9 +199,8 @@ export const columnTypes = {
   string: text,
   bytea: () => new ByteaColumn(),
   date: () => new DateColumn(),
-  timestamp: <Precision extends number | undefined = undefined>(
-    precision?: Precision,
-  ) => new TimestampColumn(precision),
+  timestamp: <Precision extends number>(precision?: Precision) =>
+    new TimestampColumn(precision),
   timestampWithTimeZone: <Precision extends number | undefined = undefined>(
     precision?: Precision,
   ) => new TimestampWithTimeZoneColumn(precision),

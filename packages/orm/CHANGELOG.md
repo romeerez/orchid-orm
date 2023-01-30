@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.5.12
+
+### Patch Changes
+
+- Add init script
+- Updated dependencies
+  - pqb@0.9.10
+
 ## 1.5.11
 
 ### Patch Changes

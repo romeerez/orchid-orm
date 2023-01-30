@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.10
+
+### Patch Changes
+
+- Add init script
+
 ## 0.9.9
 
 ### Patch Changes
