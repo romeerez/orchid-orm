@@ -33,11 +33,19 @@ export const createTable = async ({
 
   const code: Code[] = [
     `import { ${params.baseTableName} } from '${baseTablePath}';\n`,
-    `export class ${toPascalCase(ast.name)} extends ${params.baseTableName} {`,
+    `export class ${toPascalCase(ast.name)}Table extends ${
+      params.baseTableName
+    } {`,
     props,
     '}\n',
   ];
 
   await fs.mkdir(path.dirname(tablePath), { recursive: true });
-  await fs.writeFile(tablePath, codeToString(code, '', '  '));
+  try {
+    await fs.writeFile(tablePath, codeToString(code, '', '  '), { flag: 'wx' });
+  } catch (err) {
+    if ((err as unknown as { code: string }).code !== 'EEXIST') {
+      throw err;
+    }
+  }
 };

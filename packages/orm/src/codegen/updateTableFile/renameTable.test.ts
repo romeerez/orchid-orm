@@ -24,7 +24,7 @@ describe('renameTable', () => {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({}));
 }`);
@@ -36,7 +36,7 @@ export class Table extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'renamedTable';
   columns = this.setColumns((t) => ({}));
 }`);
@@ -46,7 +46,7 @@ export class Table extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   schema = 'one';
   table = 'table';
   columns = this.setColumns((t) => ({}));
@@ -63,7 +63,7 @@ export class Table extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   schema = 'two';
   table = 'renamedTable';
   columns = this.setColumns((t) => ({}));
@@ -74,7 +74,7 @@ export class Table extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   schema = 'one';
   table = 'table';
   columns = this.setColumns((t) => ({}));
@@ -90,7 +90,7 @@ export class Table extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'renamedTable';
   columns = this.setColumns((t) => ({}));
 }`);
@@ -100,7 +100,7 @@ export class Table extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({}));
 }`);
@@ -115,7 +115,7 @@ export class Table extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   schema = 'schema';
   table = 'renamedTable';
   columns = this.setColumns((t) => ({}));

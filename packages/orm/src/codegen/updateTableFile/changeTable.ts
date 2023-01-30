@@ -41,7 +41,7 @@ export const changeTable = async ({
 
   const changes = new FileChanges(content);
   const statements = ts.getStatements(content);
-  const className = toPascalCase(ast.name);
+  const className = toPascalCase(ast.name) + 'Table';
 
   for (const { t, object } of iterateColumnsShapes(statements, className)) {
     const context = makeChangeContext(changes, ast, content, object, t);

@@ -81,6 +81,7 @@ const setupPackageJson = async (config: InitConfig) => {
     getLatestPackageVersion('dotenv', 'dependencies'),
     getLatestPackageVersion('orchid-orm', 'dependencies'),
     getLatestPackageVersion('pqb', 'dependencies'),
+    getLatestPackageVersion('pg', 'dependencies'),
     config.addSchemaToZod &&
       getLatestPackageVersion('orchid-orm-schema-to-zod', 'dependencies'),
     getLatestPackageVersion('rake-db', 'devDependencies'),
@@ -213,14 +214,16 @@ const setupBaseTable = async (config: InitConfig) => {
 
 export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
-    text: (min: 0, max: Infinity) => t.text(min, max),`;
+    ...t,
+    text: (min = 0, max = Infinity) => t.text(min, max),`;
 
   const { timestamp } = config;
   if (timestamp) {
     content += `
-    timestamp: <P extends number>(precision?: P) => t.timestamp<P>(precision).${
-      timestamp === 'date' ? 'asDate' : 'asNumber'
-    }(),`;
+    timestamp: <P extends number>(precision?: P) =>
+      t.timestamp<P>(precision).${
+        timestamp === 'date' ? 'asDate' : 'asNumber'
+      }(),`;
   }
 
   content += `
@@ -247,7 +250,7 @@ ${
     : ''
 }
 export type Post = PostTable['columns']['type'];
-class PostTable extends BaseTable {
+export class PostTable extends BaseTable {
   table = 'post';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -255,13 +258,13 @@ class PostTable extends BaseTable {
     text: t.text(20, 10000),
     ...t.timestamps(),
   }));
-  
+
   relations = {
     comments: this.hasMany(() => CommentTable, {
       primaryKey: 'id',
       foreignKey: 'postId',
     }),
-  }
+  };
 }
 ${
   config.addSchemaToZod
@@ -280,21 +283,24 @@ ${
     : ''
 }
 export type Comment = CommentTable['columns']['type'];
-class CommentTable extends BaseTable {
+export class CommentTable extends BaseTable {
   table = 'comment';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    postId: t.integer().foreignKey(() => PostTable, 'id').index(),
+    postId: t
+      .integer()
+      .foreignKey(() => PostTable, 'id')
+      .index(),
     text: t.text(5, 1000),
     ...t.timestamps(),
   }));
-  
+
   relations = {
     post: this.belongsTo(() => PostTable, {
       primaryKey: 'id',
       foreignKey: 'postId',
     }),
-  }
+  };
 }
 ${
   config.addSchemaToZod
@@ -345,7 +351,7 @@ export const config = {`;
   database,`;
   }
   content += `
-}
+};
 `;
 
   await fs.writeFile(configPath, content);
@@ -356,11 +362,11 @@ const setupMainDb = async (config: InitConfig) => {
   let tables = '';
   if (config.demoTables) {
     imports += `
-import { Post } from './tables/post.table';
-import { Comment } from './tables/comment.table';`;
+import { PostTable } from './tables/post.table';
+import { CommentTable } from './tables/comment.table';`;
     tables += `
-    post: Post,
-    comment: Comment,`;
+  post: PostTable,
+  comment: CommentTable,`;
   }
 
   const dbPath = path.join(dirPath, 'db.ts');
@@ -369,11 +375,8 @@ import { Comment } from './tables/comment.table';`;
     `import { orchidORM } from 'orchid-orm';
 import { config } from './config';${imports}
 
-export const db = orchidORM(
-  config.database,
-  {${tables}
-  }
-);
+export const db = orchidORM(config.database, {${tables}
+});
 `,
   );
 };
@@ -389,15 +392,16 @@ import { appCodeUpdater } from 'orchid-orm';
 rakeDb(${config.testDatabase ? 'config.allDatabases' : 'config.database'}, {
   migrationsPath: 'src/db/migrations',
   appCodeUpdater: appCodeUpdater({
-    tablePath: (tableName) => \`src/db/tables/\${tableName}.ts\`,
+    tablePath: (tableName) => \`src/db/tables/\${tableName}.table.ts\`,
     baseTablePath: 'src/db/baseTable.ts',
     baseTableName: 'BaseTable',
     mainFilePath: 'src/db/db.ts',
   }),
+  useCodeUpdater: true, // set to false to disable code updater
   commands: {
     async seed() {
-      const { run } = await import('./seed');
-      await run();
+      const { seed } = await import('./seed');
+      await seed();
     },
   },
 });
@@ -411,9 +415,11 @@ const createMigrations = async (config: InitConfig) => {
 
   if (!config.demoTables) return;
 
+  const now = new Date();
+
   const postPath = path.join(
     migrationsPath,
-    `${makeFileTimeStamp()}_createPost.ts`,
+    `${makeFileTimeStamp(now)}_createPost.ts`,
   );
   await fs.writeFile(
     postPath,
@@ -430,9 +436,11 @@ change(async (db) => {
 `,
   );
 
+  now.setTime(now.getTime() + 1000);
+
   const commentPath = path.join(
     migrationsPath,
-    `${makeFileTimeStamp()}_createComment.ts`,
+    `${makeFileTimeStamp(now)}_createComment.ts`,
   );
   await fs.writeFile(
     commentPath,
@@ -450,8 +458,7 @@ change(async (db) => {
   );
 };
 
-const makeFileTimeStamp = () => {
-  const now = new Date();
+const makeFileTimeStamp = (now: Date) => {
   return [
     now.getUTCFullYear(),
     now.getUTCMonth() + 1,
@@ -473,8 +480,8 @@ const createSeed = async () => {
 export const seed = async () => {
   // create records here
 
-  await db.close();
-}
+  await db.$close();
+};
 `,
   );
 };

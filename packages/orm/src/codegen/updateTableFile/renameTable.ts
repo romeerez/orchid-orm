@@ -17,7 +17,7 @@ export const renameTable = async ({
 
   const changes = new FileChanges(content);
   const statements = ts.getStatements(content);
-  const className = toPascalCase(ast.from);
+  const className = toPascalCase(ast.from) + 'Table';
 
   const changeSchema = ast.fromSchema !== ast.toSchema;
 

@@ -25,7 +25,7 @@ const template = ({
   noPrimaryKey?: boolean;
 }) => `import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   ${schema ? `schema = '${schema}';\n  ` : ''}table = 'table';${
   noPrimaryKey ? '\n  noPrimaryKey = true;' : ''
 }
@@ -124,5 +124,16 @@ describe('createTable', () => {
   }`,
       }),
     );
+  });
+
+  it('should create file with wx flag', async () => {
+    asMock(fs.writeFile).mockRejectedValue(
+      Object.assign(new Error(), { code: 'EEXIST' }),
+    );
+
+    await updateTableFile({ ...params, ast: ast.addTable });
+
+    const [, , options] = asMock(fs.writeFile).mock.calls[0];
+    expect(options).toEqual({ flag: 'wx' });
   });
 });

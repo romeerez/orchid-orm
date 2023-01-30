@@ -42,7 +42,7 @@ describe('updateTableFile', () => {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({}));
 }`);
@@ -59,7 +59,7 @@ export class Table extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     name: t.text(1, 10),
@@ -71,7 +71,7 @@ export class Table extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -90,7 +90,7 @@ export class Table extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -103,7 +103,7 @@ export class Table extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -123,7 +123,7 @@ export class Table extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -137,7 +137,7 @@ export class Table extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey()
@@ -157,7 +157,7 @@ export class Table extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -171,7 +171,7 @@ export class Table extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -192,7 +192,7 @@ export class Table extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -205,7 +205,7 @@ export class Table extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -225,7 +225,7 @@ export class Table extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -237,7 +237,7 @@ export class Table extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     name: t.integer(),
@@ -263,7 +263,7 @@ export class Table extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     name: t.text(1, 10),
@@ -275,7 +275,7 @@ export class Table extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     changeCollate: t.text().collate('one'),
@@ -318,7 +318,7 @@ export class Table extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     changeCollate: t.text().collate('two'),
@@ -341,7 +341,7 @@ export class Table extends BaseTable {
   describe('primaryKey', () => {
     const result = `import { BaseTable } from '../baseTable';
  
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     ...t.primaryKey(['one', 'two'], { name: 'name' }),
@@ -360,7 +360,7 @@ export class Table extends BaseTable {
       asMock(fs.readFile)
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
  
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     ...t.primaryKey(['foo', 'bar'], { name: 'baz' }),
@@ -382,7 +382,7 @@ export class Table extends BaseTable {
       asMock(fs.readFile)
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
  
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
   }));
@@ -405,7 +405,7 @@ export class Table extends BaseTable {
       asMock(fs.readFile)
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     name: t.text().index({ order: 'one' }).index({ collate: 'en_US' })
@@ -428,7 +428,7 @@ export class Table extends BaseTable {
 
       testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     name: t.text().index({
@@ -444,7 +444,7 @@ export class Table extends BaseTable {
       asMock(fs.readFile)
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     name: t.text(),
@@ -467,7 +467,7 @@ export class Table extends BaseTable {
 
       testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     name: t.text().index({
@@ -481,7 +481,7 @@ export class Table extends BaseTable {
 
     const result = `import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     ...t.index(['6']),
@@ -523,7 +523,7 @@ export class Table extends BaseTable {
       asMock(fs.readFile)
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     ...t.index('1'),
@@ -564,7 +564,7 @@ export class Table extends BaseTable {
       asMock(fs.readFile)
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
   }));
@@ -587,7 +587,7 @@ export class Table extends BaseTable {
       asMock(fs.readFile)
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     name: t.text().foreignKey('a', 'b').foreignKey('c', 'd')
@@ -620,7 +620,7 @@ export class Table extends BaseTable {
 
       testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     name: t.text().foreignKey('e', 'f').foreignKey('g', 'h'),
@@ -632,7 +632,7 @@ export class Table extends BaseTable {
       asMock(fs.readFile)
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     name: t.text(),
@@ -660,7 +660,7 @@ export class Table extends BaseTable {
 
       testWritten(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     name: t.text().foreignKey('e', 'f').foreignKey('g', 'h'),
@@ -670,7 +670,7 @@ export class Table extends BaseTable {
 
     const result = `import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     ...t.foreignKey(
@@ -724,7 +724,7 @@ export class Table extends BaseTable {
       asMock(fs.readFile)
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
     ...t.foreignKey(
@@ -784,7 +784,7 @@ export class Table extends BaseTable {
       asMock(fs.readFile)
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class Table extends BaseTable {
+export class TableTable extends BaseTable {
   table = 'table';
   columns = this.setColumns((t) => ({
   }));

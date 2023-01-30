@@ -65,7 +65,8 @@ describe('initOrchidORM', () => {
   "dependencies": {
     "dotenv": "^1.2.3",
     "orchid-orm": "^1.2.3",
-    "pqb": "^1.2.3"
+    "pqb": "^1.2.3",
+    "pg": "^1.2.3"
   },
   "devDependencies": {
     "rake-db": "^1.2.3",
@@ -85,6 +86,7 @@ describe('initOrchidORM', () => {
     "dotenv": "^1.2.3",
     "orchid-orm": "^1.2.3",
     "pqb": "^1.2.3",
+    "pg": "^1.2.3",
     "orchid-orm-schema-to-zod": "^1.2.3"
   },
   "devDependencies": {
@@ -187,6 +189,7 @@ describe('initOrchidORM', () => {
     "dotenv": "^1.2.3",
     "orchid-orm": "^1.2.3",
     "pqb": "^1.2.3",
+    "pg": "^1.2.3",
     "orchid-orm-schema-to-zod": "^1.2.3"
   },
   "devDependencies": {
@@ -355,7 +358,8 @@ ko
 
 export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
-    text: (min: 0, max: Infinity) => t.text(min, max),
+    ...t,
+    text: (min = 0, max = Infinity) => t.text(min, max),
   }),
 });
 `);
@@ -373,8 +377,10 @@ export const BaseTable = createBaseTable({
 
 export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
-    text: (min: 0, max: Infinity) => t.text(min, max),
-    timestamp: <P extends number>(precision?: P) => t.timestamp<P>(precision).asDate(),
+    ...t,
+    text: (min = 0, max = Infinity) => t.text(min, max),
+    timestamp: <P extends number>(precision?: P) =>
+      t.timestamp<P>(precision).asDate(),
   }),
 });
 `);
@@ -392,8 +398,10 @@ export const BaseTable = createBaseTable({
 
 export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
-    text: (min: 0, max: Infinity) => t.text(min, max),
-    timestamp: <P extends number>(precision?: P) => t.timestamp<P>(precision).asNumber(),
+    ...t,
+    text: (min = 0, max = Infinity) => t.text(min, max),
+    timestamp: <P extends number>(precision?: P) =>
+      t.timestamp<P>(precision).asNumber(),
   }),
 });
 `);
@@ -427,7 +435,7 @@ export const BaseTable = createBaseTable({
 import { CommentTable } from './comment.table';
 
 export type Post = PostTable['columns']['type'];
-class PostTable extends BaseTable {
+export class PostTable extends BaseTable {
   table = 'post';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -435,13 +443,13 @@ class PostTable extends BaseTable {
     text: t.text(20, 10000),
     ...t.timestamps(),
   }));
-  
+
   relations = {
     comments: this.hasMany(() => CommentTable, {
       primaryKey: 'id',
       foreignKey: 'postId',
     }),
-  }
+  };
 }
 `);
     });
@@ -460,7 +468,7 @@ import { CommentTable } from './comment.table';
 import { tableToZod } from 'orchid-orm-schema-to-zod';
 
 export type Post = PostTable['columns']['type'];
-class PostTable extends BaseTable {
+export class PostTable extends BaseTable {
   table = 'post';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
@@ -468,13 +476,13 @@ class PostTable extends BaseTable {
     text: t.text(20, 10000),
     ...t.timestamps(),
   }));
-  
+
   relations = {
     comments: this.hasMany(() => CommentTable, {
       primaryKey: 'id',
       foreignKey: 'postId',
     }),
-  }
+  };
 }
 
 export const postSchema = tableToZod(PostTable);
@@ -493,21 +501,24 @@ export const postSchema = tableToZod(PostTable);
 import { PostTable } from './post.table';
 
 export type Comment = CommentTable['columns']['type'];
-class CommentTable extends BaseTable {
+export class CommentTable extends BaseTable {
   table = 'comment';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    postId: t.integer().foreignKey(() => PostTable, 'id').index(),
+    postId: t
+      .integer()
+      .foreignKey(() => PostTable, 'id')
+      .index(),
     text: t.text(5, 1000),
     ...t.timestamps(),
   }));
-  
+
   relations = {
     post: this.belongsTo(() => PostTable, {
       primaryKey: 'id',
       foreignKey: 'postId',
     }),
-  }
+  };
 }
 `);
     });
@@ -526,21 +537,24 @@ import { PostTable } from './post.table';
 import { tableToZod } from 'orchid-orm-schema-to-zod';
 
 export type Comment = CommentTable['columns']['type'];
-class CommentTable extends BaseTable {
+export class CommentTable extends BaseTable {
   table = 'comment';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    postId: t.integer().foreignKey(() => PostTable, 'id').index(),
+    postId: t
+      .integer()
+      .foreignKey(() => PostTable, 'id')
+      .index(),
     text: t.text(5, 1000),
     ...t.timestamps(),
   }));
-  
+
   relations = {
     post: this.belongsTo(() => PostTable, {
       primaryKey: 'id',
       foreignKey: 'postId',
     }),
-  }
+  };
 }
 
 export const commentSchema = tableToZod(CommentTable);
@@ -564,7 +578,7 @@ if (!database.databaseURL) throw new Error('DATABASE_URL is missing in .env');
 
 export const config = {
   database,
-}
+};
 `);
     });
 
@@ -596,7 +610,7 @@ if (testDatabase.databaseURL) {
 export const config = {
   allDatabases,
   database: process.env.NODE_ENV === 'test' ? testDatabase : database,
-}
+};
 `);
     });
   });
@@ -611,11 +625,8 @@ export const config = {
       expect(content).toBe(`import { orchidORM } from 'orchid-orm';
 import { config } from './config';
 
-export const db = orchidORM(
-  config.database,
-  {
-  }
-);
+export const db = orchidORM(config.database, {
+});
 `);
     });
 
@@ -629,16 +640,13 @@ export const db = orchidORM(
       );
       expect(content).toBe(`import { orchidORM } from 'orchid-orm';
 import { config } from './config';
-import { Post } from './tables/post.table';
-import { Comment } from './tables/comment.table';
+import { PostTable } from './tables/post.table';
+import { CommentTable } from './tables/comment.table';
 
-export const db = orchidORM(
-  config.database,
-  {
-    post: Post,
-    comment: Comment,
-  }
-);
+export const db = orchidORM(config.database, {
+  post: PostTable,
+  comment: CommentTable,
+});
 `);
     });
   });
@@ -657,15 +665,16 @@ import { appCodeUpdater } from 'orchid-orm';
 rakeDb(config.database, {
   migrationsPath: 'src/db/migrations',
   appCodeUpdater: appCodeUpdater({
-    tablePath: (tableName) => \`src/db/tables/\${tableName}.ts\`,
+    tablePath: (tableName) => \`src/db/tables/\${tableName}.table.ts\`,
     baseTablePath: 'src/db/baseTable.ts',
     baseTableName: 'BaseTable',
     mainFilePath: 'src/db/db.ts',
   }),
+  useCodeUpdater: true, // set to false to disable code updater
   commands: {
     async seed() {
-      const { run } = await import('./seed');
-      await run();
+      const { seed } = await import('./seed');
+      await seed();
     },
   },
 });
@@ -687,15 +696,16 @@ import { appCodeUpdater } from 'orchid-orm';
 rakeDb(config.allDatabases, {
   migrationsPath: 'src/db/migrations',
   appCodeUpdater: appCodeUpdater({
-    tablePath: (tableName) => \`src/db/tables/\${tableName}.ts\`,
+    tablePath: (tableName) => \`src/db/tables/\${tableName}.table.ts\`,
     baseTablePath: 'src/db/baseTable.ts',
     baseTableName: 'BaseTable',
     mainFilePath: 'src/db/db.ts',
   }),
+  useCodeUpdater: true, // set to false to disable code updater
   commands: {
     async seed() {
-      const { run } = await import('./seed');
-      await run();
+      const { seed } = await import('./seed');
+      await seed();
     },
   },
 });
@@ -759,8 +769,8 @@ change(async (db) => {
 export const seed = async () => {
   // create records here
 
-  await db.close();
-}
+  await db.$close();
+};
 `);
     });
   });
