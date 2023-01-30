@@ -8,6 +8,7 @@ export default [
     plugins: [esbuild()],
     output: [
       {
+        banner: '#!/usr/bin/env node',
         file: 'dist/bin.js',
         format: 'cjs',
         sourcemap: true,

@@ -1,4 +1,3 @@
-#!/usr/bin/env node
-import { astOrchidORMConfig, initOrchidORM } from './init';
+import { askOrchidORMConfig, initOrchidORM } from './init';
 
-astOrchidORMConfig().then(initOrchidORM);
+askOrchidORMConfig().then(initOrchidORM);

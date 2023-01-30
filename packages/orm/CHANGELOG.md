@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.5.14
+
+### Patch Changes
+
+- Improve init script
+
 ## 1.5.13
 
 ### Patch Changes

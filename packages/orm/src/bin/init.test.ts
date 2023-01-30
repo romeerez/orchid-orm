@@ -46,6 +46,7 @@ const configPath = path.join(dbDirPath, 'config.ts');
 const dbPath = path.join(dbDirPath, 'db.ts');
 const migrationScriptPath = path.join(dbDirPath, 'dbScripts.ts');
 const migrationsPath = path.join(dbDirPath, 'migrations');
+const seedPath = path.join(dbDirPath, 'seed.ts');
 
 describe('initOrchidORM', () => {
   beforeEach(jest.clearAllMocks);
@@ -657,10 +658,16 @@ rakeDb(config.database, {
   migrationsPath: 'src/db/migrations',
   appCodeUpdater: appCodeUpdater({
     tablePath: (tableName) => \`src/db/tables/\${tableName}.ts\`,
-    baseTablePath: 'src/lib/baseTable.ts',
+    baseTablePath: 'src/db/baseTable.ts',
     baseTableName: 'BaseTable',
-    mainFilePath: 'src/db.ts',
+    mainFilePath: 'src/db/db.ts',
   }),
+  commands: {
+    async seed() {
+      const { run } = await import('./seed');
+      await run();
+    },
+  },
 });
 `);
     });
@@ -681,10 +688,16 @@ rakeDb(config.allDatabases, {
   migrationsPath: 'src/db/migrations',
   appCodeUpdater: appCodeUpdater({
     tablePath: (tableName) => \`src/db/tables/\${tableName}.ts\`,
-    baseTablePath: 'src/lib/baseTable.ts',
+    baseTablePath: 'src/db/baseTable.ts',
     baseTableName: 'BaseTable',
-    mainFilePath: 'src/db.ts',
+    mainFilePath: 'src/db/db.ts',
   }),
+  commands: {
+    async seed() {
+      const { run } = await import('./seed');
+      await run();
+    },
+  },
 });
 `);
     });
@@ -730,6 +743,24 @@ change(async (db) => {
     ...t.timestamps(),
   }));
 });
+`);
+    });
+  });
+
+  describe('seed', () => {
+    it('should create seed file', async () => {
+      await initOrchidORM({});
+
+      const [, content] = asMock(fs.writeFile).mock.calls.find(
+        ([to]) => to === seedPath,
+      );
+      expect(content).toBe(`import { db } from './db';
+
+export const seed = async () => {
+  // create records here
+
+  await db.close();
+}
 `);
     });
   });

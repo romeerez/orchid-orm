@@ -15,7 +15,7 @@ type DependencyKind = 'dependencies' | 'devDependencies';
 
 const dirPath = path.resolve(process.cwd(), 'src', 'db');
 
-export const astOrchidORMConfig = async () => {
+export const askOrchidORMConfig = async () => {
   const response = await prompts([
     {
       type: 'select',
@@ -73,6 +73,7 @@ export const initOrchidORM = async (config: InitConfig) => {
   await setupMainDb(config);
   await setupMigrationScript(config);
   await createMigrations(config);
+  await createSeed();
 };
 
 const setupPackageJson = async (config: InitConfig) => {
@@ -389,10 +390,16 @@ rakeDb(${config.testDatabase ? 'config.allDatabases' : 'config.database'}, {
   migrationsPath: 'src/db/migrations',
   appCodeUpdater: appCodeUpdater({
     tablePath: (tableName) => \`src/db/tables/\${tableName}.ts\`,
-    baseTablePath: 'src/lib/baseTable.ts',
+    baseTablePath: 'src/db/baseTable.ts',
     baseTableName: 'BaseTable',
-    mainFilePath: 'src/db.ts',
+    mainFilePath: 'src/db/db.ts',
   }),
+  commands: {
+    async seed() {
+      const { run } = await import('./seed');
+      await run();
+    },
+  },
 });
 `,
   );
@@ -455,4 +462,19 @@ const makeFileTimeStamp = () => {
   ]
     .map((value) => (value < 10 ? `0${value}` : value))
     .join('');
+};
+
+const createSeed = async () => {
+  const filePath = path.join(dirPath, 'seed.ts');
+  await fs.writeFile(
+    filePath,
+    `import { db } from './db';
+
+export const seed = async () => {
+  // create records here
+
+  await db.close();
+}
+`,
+  );
 };
