@@ -74,6 +74,8 @@ export const initOrchidORM = async (config: InitConfig) => {
   await setupMigrationScript(config);
   await createMigrations(config);
   await createSeed();
+
+  greet();
 };
 
 const setupPackageJson = async (config: InitConfig) => {
@@ -484,4 +486,21 @@ export const seed = async () => {
 };
 `,
   );
+};
+
+const greet = () => {
+  console.log(`Thank you for trying Orchid ORM!
+  
+To finish setup, install dependencies:
+
+> npm i
+
+Enter the correct database credentials to the .env file,
+then create the database:
+
+> npm run db create
+
+And run the migrations:
+
+> npm run db migrate`);
 };

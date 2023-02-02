@@ -13,7 +13,7 @@ const baseTablePath = path.resolve('baseTable.ts');
 const baseTableName = 'BaseTable';
 const params = { baseTablePath, baseTableName, tablePath };
 
-const testWritten = makeTestWritten(tablePath('renamedTable'));
+const testWritten = makeTestWritten(tablePath('some'));
 
 describe('renameTable', () => {
   beforeEach(() => {
@@ -24,8 +24,8 @@ describe('renameTable', () => {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class TableTable extends BaseTable {
-  table = 'table';
+export class SomeTable extends BaseTable {
+  table = 'some';
   columns = this.setColumns((t) => ({}));
 }`);
 
@@ -36,8 +36,8 @@ export class TableTable extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class TableTable extends BaseTable {
-  table = 'renamedTable';
+export class SomeTable extends BaseTable {
+  table = 'another';
   columns = this.setColumns((t) => ({}));
 }`);
   });
@@ -46,9 +46,9 @@ export class TableTable extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class TableTable extends BaseTable {
+export class SomeTable extends BaseTable {
   schema = 'one';
-  table = 'table';
+  table = 'some';
   columns = this.setColumns((t) => ({}));
 }`);
 
@@ -63,9 +63,9 @@ export class TableTable extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class TableTable extends BaseTable {
+export class SomeTable extends BaseTable {
   schema = 'two';
-  table = 'renamedTable';
+  table = 'another';
   columns = this.setColumns((t) => ({}));
 }`);
   });
@@ -74,9 +74,9 @@ export class TableTable extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class TableTable extends BaseTable {
+export class SomeTable extends BaseTable {
   schema = 'one';
-  table = 'table';
+  table = 'some';
   columns = this.setColumns((t) => ({}));
 }`);
 
@@ -90,8 +90,8 @@ export class TableTable extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class TableTable extends BaseTable {
-  table = 'renamedTable';
+export class SomeTable extends BaseTable {
+  table = 'another';
   columns = this.setColumns((t) => ({}));
 }`);
   });
@@ -100,8 +100,8 @@ export class TableTable extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class TableTable extends BaseTable {
-  table = 'table';
+export class SomeTable extends BaseTable {
+  table = 'some';
   columns = this.setColumns((t) => ({}));
 }`);
 
@@ -115,9 +115,9 @@ export class TableTable extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class TableTable extends BaseTable {
+export class SomeTable extends BaseTable {
   schema = 'schema';
-  table = 'renamedTable';
+  table = 'another';
   columns = this.setColumns((t) => ({}));
 }`);
   });

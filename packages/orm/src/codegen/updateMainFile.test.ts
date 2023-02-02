@@ -31,14 +31,14 @@ describe('updateMainFile', () => {
       });
 
       testWritten(`import { orchidORM } from 'orchid-orm';
-import { Table } from './tables/table';
+import { SomeTable } from './tables/some.table';
 
 export const db = orchidORM(
   {
     databaseURL: 'url',
   },
   {
-    table: Table,
+    some: SomeTable,
   }
 );
 `);
@@ -55,10 +55,10 @@ export const db = orchidORM({}, {});
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
-import { Table } from './tables/table';
+import { SomeTable } from './tables/some.table';
 
 export const db = orchidORM({}, {
-  table: Table,
+  some: SomeTable,
 });
 `);
     });
@@ -74,10 +74,10 @@ export const db = custom({}, {});
 
       testWritten(`
 import { orchidORM as custom } from 'orchid-orm';
-import { Table } from './tables/table';
+import { SomeTable } from './tables/some.table';
 
 export const db = custom({}, {
-  table: Table,
+  some: SomeTable,
 });
 `);
     });
@@ -97,11 +97,11 @@ export const db = orchidORM({}, {
       testWritten(`
 import { orchidORM } from 'orchid-orm';
 import { Some } from './tables/some';
-import { Table } from './tables/table';
+import { SomeTable } from './tables/some.table';
 
 export const db = orchidORM({}, {
   some: Some,
-  table: Table,
+  some: SomeTable,
 });
 `);
     });
@@ -121,11 +121,11 @@ export const db = orchidORM({}, {
       testWritten(`
 import { orchidORM } from 'orchid-orm';
 import { Some } from './tables/some';
-import { Table } from './tables/table';
+import { SomeTable } from './tables/some.table';
 
 export const db = orchidORM({}, {
   some: Some,
-  table: Table,
+  some: SomeTable,
 });
 `);
     });
@@ -135,10 +135,10 @@ export const db = orchidORM({}, {
     it('should remove table', async () => {
       asMock(fs.readFile).mockResolvedValue(`
 import { orchidORM } from 'orchid-orm';
-import { Table } from './tables/table';
+import { SomeTable } from './tables/some.table';
 
 export const db = orchidORM({}, {
-  table: Table,
+  some: SomeTable,
 });
 `);
 
@@ -155,7 +155,7 @@ export const db = orchidORM({}, {
     it('should remove aliased import', async () => {
       asMock(fs.readFile).mockResolvedValue(`
 import { orchidORM } from 'orchid-orm';
-import { Table as koko } from './tables/table';
+import { SomeTable as koko } from './tables/some.table';
 
 export const db = orchidORM({}, {
   koko: koko,
@@ -175,7 +175,7 @@ export const db = orchidORM({}, {
     it('should remove short form of key and value', async () => {
       asMock(fs.readFile).mockResolvedValue(`
 import { orchidORM } from 'orchid-orm';
-import { Table as koko } from './tables/table';
+import { SomeTable as koko } from './tables/some.table';
 
 export const db = orchidORM({}, {
   koko,
@@ -196,12 +196,12 @@ export const db = orchidORM({}, {
       asMock(fs.readFile).mockResolvedValue(`
 import { orchidORM } from 'orchid-orm';
 import { One } from './tables/one';
-import { Table } from './tables/table';
+import { SomeTable } from './tables/some.table';
 import { Two } from './tables/two';
 
 export const db = orchidORM({}, {
   one,
-  table: Table,
+  some: SomeTable,
   two,
 });
 `);

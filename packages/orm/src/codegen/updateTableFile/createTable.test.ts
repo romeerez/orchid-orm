@@ -13,7 +13,7 @@ const baseTablePath = path.resolve('baseTable.ts');
 const baseTableName = 'BaseTable';
 const params = { baseTablePath, baseTableName, tablePath };
 
-const testWritten = makeTestWritten(tablePath('table'));
+const testWritten = makeTestWritten(tablePath('some'));
 
 const template = ({
   schema,
@@ -25,8 +25,8 @@ const template = ({
   noPrimaryKey?: boolean;
 }) => `import { BaseTable } from '../baseTable';
 
-export class TableTable extends BaseTable {
-  ${schema ? `schema = '${schema}';\n  ` : ''}table = 'table';${
+export class SomeTable extends BaseTable {
+  ${schema ? `schema = '${schema}';\n  ` : ''}table = 'some';${
   noPrimaryKey ? '\n  noPrimaryKey = true;' : ''
 }
   columns = this.setColumns((t) => (${columns}));
@@ -48,7 +48,7 @@ describe('createTable', () => {
       },
     });
 
-    expect(asMock(fs.mkdir)).toBeCalledWith(path.dirname(tablePath('table')), {
+    expect(asMock(fs.mkdir)).toBeCalledWith(path.dirname(tablePath('some')), {
       recursive: true,
     });
 
@@ -80,7 +80,7 @@ describe('createTable', () => {
         foreignKeys: [
           {
             columns: ['one', 'two'],
-            fnOrTable: 'table',
+            fnOrTable: 'some',
             foreignColumns: ['three', 'four'],
             options: { name: 'foreignKeyName' },
           },
@@ -99,7 +99,7 @@ describe('createTable', () => {
     }),
     ...t.foreignKey(
       ['one', 'two'],
-      'table',
+      'some',
       ['three', 'four'],
       {
         name: 'foreignKeyName',

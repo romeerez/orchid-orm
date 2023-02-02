@@ -117,7 +117,7 @@ const createTable = (
   ast: RakeDbAst.Table,
 ) => {
   const key = toCamelCase(ast.name);
-  const value = toPascalCase(ast.name);
+  const value = `${toPascalCase(ast.name)}Table`;
 
   const changes = new FileChanges(content);
 
@@ -147,7 +147,7 @@ const dropTable = (
   const changes = new FileChanges(content);
 
   const importPath = getImportPath(filePath, tablePath(ast.name));
-  const tableClassName = toPascalCase(ast.name);
+  const tableClassName = `${toPascalCase(ast.name)}Table`;
   const importNames: string[] = [];
   for (const node of ts.import.iterateWithSource(statements, importPath)) {
     changes.remove(node.pos, node.end);

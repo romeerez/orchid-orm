@@ -48,6 +48,8 @@ const migrationScriptPath = path.join(dbDirPath, 'dbScripts.ts');
 const migrationsPath = path.join(dbDirPath, 'migrations');
 const seedPath = path.join(dbDirPath, 'seed.ts');
 
+console.log = jest.fn();
+
 describe('initOrchidORM', () => {
   beforeEach(jest.clearAllMocks);
 

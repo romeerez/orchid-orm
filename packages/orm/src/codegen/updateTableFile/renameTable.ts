@@ -63,5 +63,5 @@ export const renameTable = async ({
     }
   }
 
-  await fs.writeFile(params.tablePath(ast.to), changes.apply());
+  await fs.writeFile(tablePath, changes.apply());
 };

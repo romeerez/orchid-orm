@@ -4,13 +4,14 @@ import path from 'path';
 import fs from 'fs/promises';
 
 export const asMock = (fn: unknown) => fn as jest.Mock;
-export const tablePath = (table: string) => path.resolve(`tables/${table}.ts`);
+export const tablePath = (table: string) =>
+  path.resolve(`tables/${table}.table.ts`);
 
 const makeAst = () => {
   const addTable: RakeDbAst.Table = {
     type: 'table',
     action: 'create',
-    name: 'table',
+    name: 'some',
     shape: {
       id: columnTypes.serial().primaryKey(),
     },
@@ -26,8 +27,8 @@ const makeAst = () => {
 
   const renameTable: RakeDbAst.RenameTable = {
     type: 'renameTable',
-    from: 'table',
-    to: 'renamedTable',
+    from: 'some',
+    to: 'another',
   };
 
   const tableData = {
@@ -37,7 +38,7 @@ const makeAst = () => {
 
   const changeTable: RakeDbAst.ChangeTable = {
     type: 'changeTable',
-    name: 'table',
+    name: 'some',
     shape: {},
     add: tableData,
     drop: tableData,
