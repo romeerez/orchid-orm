@@ -122,6 +122,12 @@ const createTable = (
   const changes = new FileChanges(content);
 
   const importPath = getImportPath(filePath, tablePath(ast.name));
+
+  const existing = Array.from(
+    ts.import.iterateWithSource(statements, importPath),
+  );
+  if (existing.length) return;
+
   const importPos = ts.import.getEndPos(statements);
   changes.add(
     importPos,

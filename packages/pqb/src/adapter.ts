@@ -60,6 +60,8 @@ export class Adapter {
       if (url.searchParams.get('ssl') === 'true') {
         config.ssl = true;
       }
+      url.searchParams.delete('ssl');
+      config.databaseURL = url.toString();
     }
     this.config = config;
     this.pool = new pg.Pool(config);

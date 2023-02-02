@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.5.17
+
+### Patch Changes
+
+- Improve code generation, fix ssl databaseUrl option
+- Updated dependencies
+  - pqb@0.9.11
+
 ## 1.5.16
 
 ### Patch Changes

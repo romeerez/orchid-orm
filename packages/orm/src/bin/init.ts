@@ -489,7 +489,8 @@ export const seed = async () => {
 };
 
 const greet = () => {
-  console.log(`Thank you for trying Orchid ORM!
+  console.log(`
+Thank you for trying Orchid ORM!
   
 To finish setup, install dependencies:
 
@@ -502,5 +503,6 @@ then create the database:
 
 And run the migrations:
 
-> npm run db migrate`);
+> npm run db migrate
+`);
 };

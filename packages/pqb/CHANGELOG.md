@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.11
+
+### Patch Changes
+
+- Improve code generation, fix ssl databaseUrl option
+
 ## 0.9.10
 
 ### Patch Changes

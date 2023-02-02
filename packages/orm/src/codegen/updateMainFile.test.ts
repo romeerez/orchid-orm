@@ -109,10 +109,10 @@ export const db = orchidORM({}, {
     it('should handle object list without ending coma', async () => {
       asMock(fs.readFile).mockResolvedValue(`
 import { orchidORM } from 'orchid-orm';
-import { Some } from './tables/some';
+import { MyTable } from './tables/my.table';
 
 export const db = orchidORM({}, {
-  some: Some
+  my: MyTable,
 });
 `);
 
@@ -120,14 +120,29 @@ export const db = orchidORM({}, {
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
-import { Some } from './tables/some';
+import { MyTable } from './tables/my.table';
 import { SomeTable } from './tables/some.table';
 
 export const db = orchidORM({}, {
-  some: Some,
+  my: MyTable,
   some: SomeTable,
 });
 `);
+    });
+
+    it('should not add table if it is already added', async () => {
+      asMock(fs.readFile).mockResolvedValue(`
+import { orchidORM } from 'orchid-orm';
+import { SomeTable } from './tables/some.table';
+
+export const db = orchidORM({}, {
+  some: SomeTable
+});
+`);
+
+      await updateMainFile(mainFilePath, tablePath, ast.addTable, options);
+
+      expect(fs.writeFile).not.toBeCalled();
     });
   });
 
