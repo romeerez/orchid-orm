@@ -18,7 +18,7 @@ export * from './then';
 export * from './transaction';
 export * from './union';
 export * from './update';
-export * from './upsert';
+export * from './upsertOrCreate';
 export * from './where';
 export * from './with';
 export * from './raw';

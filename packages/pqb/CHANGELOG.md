@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.12
+
+### Patch Changes
+
+- Add orCreate method
+
 ## 0.9.11
 
 ### Patch Changes

@@ -256,7 +256,7 @@ export class PostTable extends BaseTable {
   table = 'post';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
-    title: t.text(3, 100),
+    title: t.text(3, 100).unique(),
     text: t.text(20, 10000),
     ...t.timestamps(),
   }));
@@ -430,7 +430,7 @@ const createMigrations = async (config: InitConfig) => {
 change(async (db) => {
   await db.createTable('post', (t) => ({
     id: t.serial().primaryKey(),
-    title: t.text(),
+    title: t.text().unique(),
     text: t.text(),
     ...t.timestamps(),
   }));

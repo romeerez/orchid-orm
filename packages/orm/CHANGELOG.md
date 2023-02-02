@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.5.18
+
+### Patch Changes
+
+- Add orCreate method
+- Updated dependencies
+  - pqb@0.9.12
+
 ## 1.5.17
 
 ### Patch Changes

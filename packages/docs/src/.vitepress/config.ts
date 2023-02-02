@@ -52,16 +52,8 @@ export default {
             link: '/guide/query-builder-where'
           },
           {
-            text: 'Create records',
-            link: '/guide/query-builder-create'
-          },
-          {
-            text: 'Update records',
-            link: '/guide/query-builder-update'
-          },
-          {
-            text: 'Delete records',
-            link: '/guide/query-builder-delete'
+            text: 'Create, Update, Delete records',
+            link: '/guide/query-builder-create-update-delete'
           },
           {
             text: 'Aggregate functions',

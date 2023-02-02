@@ -145,3 +145,10 @@ export const singleQuoteArray = (arr: string[]) => {
 export const quoteObjectKey = (s: string) => {
   return /[A-z_]\w*/.test(s) ? s : singleQuote(s);
 };
+
+export const isObjectEmpty = (obj: object) => {
+  for (const _ in obj) {
+    return false;
+  }
+  return true;
+};
