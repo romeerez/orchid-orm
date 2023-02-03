@@ -73,7 +73,7 @@ export const initOrchidORM = async (config: InitConfig) => {
   await setupMainDb(config);
   await setupMigrationScript(config);
   await createMigrations(config);
-  await createSeed();
+  await createSeed(config);
 
   greet();
 };
@@ -473,14 +473,35 @@ const makeFileTimeStamp = (now: Date) => {
     .join('');
 };
 
-const createSeed = async () => {
+const createSeed = async (config: InitConfig) => {
   const filePath = path.join(dirPath, 'seed.ts');
+
+  let content;
+  if (config.demoTables) {
+    content = `await db.post.findBy({ title: 'Sample post' }).orCreate({
+    title: 'Post',
+    text: 'This is a text for a sample post. It contains words, spaces, and punctuation.',
+    comments: {
+      create: [
+        {
+          text: 'Nice post!',
+        },
+        {
+          text: \`Too long, didn't read\`,
+        },
+      ],
+    },
+  });`;
+  } else {
+    content = `// create records here`;
+  }
+
   await fs.writeFile(
     filePath,
     `import { db } from './db';
 
 export const seed = async () => {
-  // create records here
+  ${content}
 
   await db.$close();
 };

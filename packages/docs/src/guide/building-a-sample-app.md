@@ -142,6 +142,8 @@ Of course, you can use `Orchid ORM` with any other framework.
 
 ## setup Orchid ORM
 
+You can follow [quickstart](/guide/quickstart) to initialize the project instead of this section. Here it's described how to set up everything from scratch.
+
 Install `Orchid ORM` dependencies:
 
 ```sh

@@ -1,93 +1,155 @@
 # Quickstart
 
-Install dependencies:
+The ORM is shipped with an automated script to initialize the project.
+Use it to start from scratch, or it can be run inside the existing project, it won't remove any existing files.
 
 ```sh
-npm i dotenv # for loading .env
-npm i -D typescript @types/node
+mkdir project
+cd project
+
+npx orchid-orm
+# or if you're using pnpm
+pnpm dlx orchid-orm
 ```
 
-Orchid ORM dependencies:
-
-```sh
-npm i orchid-orm pqb orchid-orm-schema-to-zod
-# dev dependencies:
-npm i -D rake-db orchid-orm-test-factory
-```
-
-- **orchid-orm**: is responsible for defining tables and relations between them
-- **pqb**: query builder, used by other parts to build chainable query objects
-- **rake-db**: is responsible for migrations
-- **orchid-orm-schema-to-zod**: convert table columns to a Zod schema to use it for validations
-- **orchid-orm-test-factory**: for building mock data in tests
-
-Add `.env` file with database credentials:
+This script will ask a few questions to customize the setup:
 
 ```
-DATABASE_URL=postgres://user:password@localhost:5432/db-name
+Preferred type of returned timestamps:
 ```
 
-For SSL connection to database, you can specify a `ssl` parameter right on this url:
+Here you can choose how timestamps will be returned from a database: as a string, as a number, or as a Date object.
+
+This can be changed later, and this can be overridden for a specific table.
 
 ```
-DATABASE_URL=postgres://user:password@localhost:5432/db-name?ssl=true
+Should the script add a separate database for tests:
 ```
 
-Place a script for `db` somewhere, for example, in `src/scripts/db.ts`:
+Hit `y` if you're going to write integration tests over a real database.
 
-```ts
-// src/scripts/db.ts
-import 'dotenv/config';
-import { rakeDb } from 'rake-db';
-import { appCodeUpdater } from 'orchid-orm';
-
-rakeDb({
-  databaseURL: process.env.DATABASE_URL as string,
-  // ssl alternatively can be specified as an option here:
-  ssl: true,
-}, {
-  migrationsPath: 'migrations',
-  
-  // optionally, for automatic code updating after running migrations:
-  appCodeUpdater: appCodeUpdater({
-    tablePath: (tableName) => `src/app/tables/${tableName}.table.ts`,
-    baseTablePath: 'src/lib/baseTable.ts',
-    baseTableName: 'BaseTable',
-    mainFilePath: 'src/db.ts',
-  }),
-});
+```
+Are you going to use `Zod` for validation?
 ```
 
-Add it to `package.json` scripts section:
+When chosen, table schemas can be used as `Zod` schemas for validation. `orchid-orm` does not perform validation on its own.
 
-```json
+```
+Do you want object factories for writing tests?
+```
+
+This adds a library for generating mock objects from defined tables.
+
+```
+Should the script add demo tables?
+```
+
+Adds two tables for example.
+
+After answering these questions, it will create all the necessary config files.
+
+Check the package.json file:
+
+```js
 {
   "scripts": {
-    "db": "ts-node src/scripts/db.ts"
+    // for running db scripts, like npm run db create, npm run db migrate
+    "db": "ts-node src/db/dbScripts.ts"
+  },
+  "dependencies": {
+    // dotenv loads variables from .env
+    "dotenv": "^16.0.3",
+    // the ORM is responsible for defining tables and relations between them
+    "orchid-orm": "^1.5.18",
+    // query builder, used by other parts to build chainable query objects
+    "pqb": "^0.9.12",
+    // pg is the postgres driver for node.js
+    "pg": "^8.9.0",
+    // convert table columns to a Zod schema to use it for validations
+    "orchid-orm-schema-to-zod": "^0.2.18"
+  },
+  "devDependencies": {
+    // rake-db is a toolkit for migrations
+    "rake-db": "^2.3.17",
+    // for generating mock objects in tests
+    "orchid-orm-test-factory": "^0.2.24",
+    // for the fastest typescript compilation
+    "@swc/core": "^1.3.32",
+    // node.js types
+    "@types/node": "^18.11.18",
+    // for running typescript
+    "ts-node": "^10.9.1",
+    "typescript": "^4.9.5"
   }
 }
 ```
 
-Create databases from the command line:
+Install dependencies (`npm i`).
+
+Let's consider the created structure:
+
+```
+.
+├── src/
+│   └── db/
+│       ├── migrations/ - contains migrations files that can be migrated or rolled back.
+│       │   ├── timestamp_createPost.ts
+│       │   └── timestamp_createComment.ts
+│       ├── tables/ - tables are used in the app, define columns and relations here.
+│       │   ├── comment.table.ts
+│       │   └── post.table.ts
+│       ├── baseTable.ts - for defining column type overrides.
+│       ├── config.ts - database credentials are exported from here.
+│       ├── db.ts - main file for the ORM, connects all tables into one `db` object.
+│       ├── dbScript.ts - script run by `npm run db *command*`.
+│       └── seed.ts - for filling tables with data.
+├── .env - contains database credentials.
+├── .gitignore - .env must be ignored by git.
+├── package.json
+└── tsconfig.json - specifying strict mode is very important.
+```
+
+Change database credentials in the `.env` file:
+
+```
+DATABASE_URL=postgres://user:password@localhost:5432/dbname?ssl=false
+DATABASE_TEST_URL=postgres://user:password@localhost:5432/dbname-test?ssl=false
+```
+
+Create configured databases with this command:
 
 ```sh
 npm run db create
 ```
 
+If you chose to create demo tables, there are migrations files in `src/db/migrations`. Run migrations:
+
+```sh
+npm run db migrate
+```
+
+Run the seeds for demo tables:
+
+```sh
+npm run db seed
+```
+
+The setup is completely ready at this point. For the next steps, create your tables and write queries.
+
 Generate a new migration by running a command:
 
 ```sh
-npm run db g createTable
+npm run db g createSample
 ```
 
-The file with such content will appear in `/migrations` directory:
+The file with such content will appear in the `src/db/migrations` directory:
 
 ```ts
-// src/migrations/*timestamp*_createTable.ts
+// src/db/migrations/*timestamp*_createSample.ts
 import { change } from 'rake-db';
 
 change(async (db) => {
-  await db.createTable('table', (t) => ({
+  await db.createTable('sample', (t) => ({
   }));
 });
 ```
@@ -99,7 +161,7 @@ Add columns to the table:
 import { change } from 'rake-db';
 
 change(async (db) => {
-  await db.createTable('myTable', (t) => ({
+  await db.createTable('sample', (t) => ({
     id: t.serial().primaryKey(),
     text: t.text(),
     ...t.timestamps(),
@@ -113,26 +175,17 @@ Apply migration by running:
 npm run db migrate
 ```
 
-`baseTable.ts` file should have been created automatically with the following content:
-
-```ts
-// src/baseTable.ts
-import { createBaseTable } from 'orchid-orm';
-
-export const BaseTable = createBaseTable();
-```
-
-`src/tables/myTable.table.ts` was created.
+`src/db/tables/sample.table.ts` was created.
 
 TypeScript should highlight `t.text()` because it doesn't have `min` and `max` specified,
 this is needed to prevent unpleasant situations when empty or huge texts are submitted.
 
 ```ts
-// src/tables/myTable.table.ts
+// src/sb/tables/sample.table.ts
 import { BaseTable } from './baseTable'
 
-export class MyTable extends BaseTable {
-  table = 'table'
+export class SampleTable extends BaseTable {
+  table = 'sample'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     // specify min and max length
@@ -142,27 +195,24 @@ export class MyTable extends BaseTable {
 }
 ```
 
-`db.ts` also was created after running migration, add a proper configuration to it:
+`src/db/db.ts` is the main file for the ORM, it connects all tables into one `db` object. Add your new table to it:
 
 ```ts
-// src/db.ts
-import 'dotenv/config'
+// src/db/db.ts
 import { orchidORM } from 'orchid-orm';
-import { Table } from './table'
+import { config } from './config';
+import { PostTable } from './tables/post.table';
+import { CommentTable } from './tables/comment.table';
+import { SampleTable } from './tables/sample.table';
 
-export const db = orchidORM(
-  {
-    databaseURL: process.env.DATABASE_URL as string,
-    // log queries to console
-    log: true,
-  },
-  {
-    table: Table,
-  }
-);
+export const db = orchidORM(config.database, {
+  post: PostTable,
+  comment: CommentTable,
+  sample: SampleTable,
+});
 ```
 
-Voilà! Everything is set up and is usable now.
+Example usage:
 
 ```ts
 // src/hello.ts
@@ -170,24 +220,24 @@ import { db } from './db'
 
 const main = async () => {
   // load all records
-  const records = await db.table
-  
+  const records = await db.sample
+
   // load first record
-  const first = await db.table.take()
-  
+  const first = await db.sample.take()
+
   // select, where, order, limit, offset, etc
-  const result = await db.table
+  const result = await db.sample
     .select('id', 'name')
     .where({ name: 'name' })
     .order({ name: 'DESC' })
     .limit(10)
     .offset(10)
-  
+
   // find by id
-  const recordById = await db.table.find(123)
-  
+  const recordById = await db.sample.find(123)
+
   // find one by conditions
-  const record = await db.table.findBy({ name: 'name' })
+  const record = await db.sample.findBy({ name: 'name' })
 }
 
 main()

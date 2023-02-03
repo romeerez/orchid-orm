@@ -1,9 +1,9 @@
 # Overview
 
 `Orchid ORM` is a library for node.js to help to work with a Postgres database (more databases to come),
-is allows to perform queries in a query builder style, define tables and relations like an ORM.
+allows to perform queries in a query builder style, and defines tables and relations like an ORM.
 
-The main focus is to keep it as powerful as possible, concise and intuitive, performant, and fully type-safe.
+The main focus is to keep it as powerful as possible, concise and intuitive, performant, and completely type-safe.
 
 Node.js already has a lot of ORMs, and query builders, but all of them force compromises.
 

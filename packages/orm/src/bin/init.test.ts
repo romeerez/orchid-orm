@@ -775,5 +775,36 @@ export const seed = async () => {
 };
 `);
     });
+
+    it('should create seed file with sample records when demoTables is set to true', async () => {
+      await initOrchidORM({
+        demoTables: true,
+      });
+
+      const [, content] = asMock(fs.writeFile).mock.calls.find(
+        ([to]) => to === seedPath,
+      );
+      expect(content).toBe(`import { db } from './db';
+
+export const seed = async () => {
+  await db.post.findBy({ title: 'Sample post' }).orCreate({
+    title: 'Post',
+    text: 'This is a text for a sample post. It contains words, spaces, and punctuation.',
+    comments: {
+      create: [
+        {
+          text: 'Nice post!',
+        },
+        {
+          text: \`Too long, didn't read\`,
+        },
+      ],
+    },
+  });
+
+  await db.$close();
+};
+`);
+    });
   });
 });
