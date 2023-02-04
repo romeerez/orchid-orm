@@ -17,6 +17,7 @@ import { raw } from '../common';
 
 describe('column base', () => {
   useTestDatabase();
+  afterAll(db.close);
 
   class Column extends ColumnType {
     dataType = 'test';

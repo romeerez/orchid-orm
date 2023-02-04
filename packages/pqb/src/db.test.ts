@@ -11,6 +11,18 @@ import {
 import { createDb } from './db';
 import { QueryLogger } from './queryMethods';
 
+describe('db connection', () => {
+  it('should be able to open connection after closing it', async () => {
+    const db = createDb(dbOptions);
+
+    await db.close();
+
+    await expect(db.adapter.query('SELECT 1')).resolves.not.toThrow();
+
+    await db.close();
+  });
+});
+
 describe('db', () => {
   useTestDatabase();
 
@@ -162,15 +174,5 @@ describe('db', () => {
       (db.adapter.pool as unknown as { options: Record<string, unknown> })
         .options.ssl,
     ).toBe(true);
-  });
-});
-
-describe('db connection', () => {
-  it('should be able to open connection after closing it', async () => {
-    const db = createDb(dbOptions);
-
-    await db.close();
-
-    await expect(db.adapter.query('SELECT 1')).resolves.not.toThrow();
   });
 });

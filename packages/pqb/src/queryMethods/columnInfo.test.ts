@@ -1,10 +1,13 @@
 import {
+  db,
   expectQueryNotMutated,
   expectSql,
   User,
 } from '../test-utils/test-utils';
 
 describe('columnInfo', () => {
+  afterAll(db.close);
+
   it('should return all columns info', async () => {
     const q = User.all();
 

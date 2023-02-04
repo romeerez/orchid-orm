@@ -27,6 +27,8 @@ const testNumberColumnMethods = (type: NumberBaseColumn, name: string) => {
 };
 
 describe('number columns', () => {
+  afterAll(db.close);
+
   describe('smallint', () => {
     it('should output number', async () => {
       const result = await db.get(

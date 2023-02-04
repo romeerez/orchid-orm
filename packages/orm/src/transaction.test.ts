@@ -4,6 +4,8 @@ import { Client } from 'pg';
 import { noop } from 'pqb';
 
 describe('transaction', () => {
+  afterAll(db.$close);
+
   it('should have override transaction method which implicitly connects tables with a single transaction', async () => {
     const spy = jest.spyOn(Client.prototype, 'query');
 

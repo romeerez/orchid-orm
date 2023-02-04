@@ -2,6 +2,7 @@ import { db, expectSql, now, useTestDatabase } from '../test-utils/test-utils';
 
 describe('timestamps', () => {
   useTestDatabase();
+  afterAll(db.close);
 
   const table = db('user', (t) => ({
     name: t.text().primaryKey(),

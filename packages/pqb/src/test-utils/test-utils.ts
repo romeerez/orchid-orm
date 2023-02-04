@@ -153,5 +153,6 @@ export const useTestDatabase = () => {
   afterEach(rollbackTransaction);
   afterAll(async () => {
     await dbClient.end();
+    await adapter.close();
   });
 };

@@ -2,6 +2,8 @@ import { assertType, db } from '../test-utils/test-utils';
 import { EnumColumn } from './enum';
 
 describe('enum column', () => {
+  afterAll(db.close);
+
   beforeAll(async () => {
     await db.adapter.query(`
           DROP TYPE IF EXISTS mood

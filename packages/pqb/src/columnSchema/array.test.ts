@@ -3,6 +3,8 @@ import { ArrayColumn } from './array';
 import { IntegerColumn } from './number';
 
 describe('array column', () => {
+  afterAll(db.close);
+
   describe('array', () => {
     it('should output nested array of numbers', async () => {
       const result = await db.get(

@@ -49,6 +49,8 @@ const testNumberColumnMethods = (type: TextBaseColumn, name: string) => {
 };
 
 describe('string columns', () => {
+  afterAll(db.close);
+
   describe('text', () => {
     describe('varchar', () => {
       it('should output string', async () => {

@@ -7,6 +7,7 @@ import {
 
 describe('then', () => {
   useTestDatabase();
+  afterAll(db.close);
 
   describe('catch', () => {
     it('should catch error', (done) => {

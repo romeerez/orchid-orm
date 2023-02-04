@@ -18,6 +18,7 @@ import { columnTypes } from './columnTypes';
 
 describe('date time columns', () => {
   useTestDatabase();
+  afterAll(db.close);
 
   describe('date', () => {
     it('should output string', async () => {

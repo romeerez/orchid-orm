@@ -3,6 +3,7 @@ import pg from 'pg';
 
 describe('transaction', () => {
   beforeEach(() => jest.clearAllMocks());
+  afterAll(db.close);
 
   it('should start and commit transaction', async () => {
     const spy = jest.spyOn(pg.Client.prototype, 'query');

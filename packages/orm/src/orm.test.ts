@@ -1,4 +1,4 @@
-import { orchidORM } from './orm';
+import { OrchidORM, orchidORM } from './orm';
 import {
   assertType,
   expectSql,
@@ -10,6 +10,14 @@ import { createBaseTable } from './table';
 
 describe('orm', () => {
   useTestDatabase();
+
+  let db:
+    | OrchidORM<{ user: typeof UserTable; profile: typeof ProfileTable }>
+    | undefined;
+
+  afterEach(async () => {
+    if (db) await db.$close();
+  });
 
   const BaseTable = createBaseTable();
 
@@ -31,7 +39,7 @@ describe('orm', () => {
   }
 
   it('should return object with provided adapter, close and transaction method, tables', () => {
-    const db = orchidORM(pgConfig, {
+    db = orchidORM(pgConfig, {
       user: UserTable,
       profile: ProfileTable,
     });
@@ -45,7 +53,7 @@ describe('orm', () => {
   });
 
   it('should return table which is a queryable interface', async () => {
-    const db = orchidORM(pgConfig, {
+    db = orchidORM(pgConfig, {
       user: UserTable,
       profile: ProfileTable,
     });
@@ -71,7 +79,7 @@ describe('orm', () => {
   });
 
   it('should be able to turn on autoPreparedStatements', () => {
-    const db = orchidORM(
+    db = orchidORM(
       { ...pgConfig, autoPreparedStatements: true },
       {
         user: UserTable,
