@@ -4,6 +4,8 @@ on:
     branches:
     - '*'
     - '!badges'
+  pull_request:
+    types: [opened, synchronize]
 env:
   DATABASE_URL: postgres://postgres:password@localhost:5432/orchid-orm
 jobs:
@@ -28,12 +30,21 @@ jobs:
           - 5432:5432
     
     steps:
-      - uses: actions/checkout@v3
-      
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Cache turbo build setup
+        uses: actions/cache@v3
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
       - uses: pnpm/action-setup@v2
         with:
           version: 7
-      
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
@@ -51,25 +62,8 @@ jobs:
         working-directory: packages/rake-db
         run: pnpm run db migrate
       
-      - name: Test pqb
-        working-directory: packages/pqb
-        run: pnpm test -- --coverage --coverageReporters json-summary
-      
-      - name: Test orchid-orm
-        working-directory: packages/orm
-        run: pnpm test -- --coverage --coverageReporters json-summary
-      
-      - name: Test rake-db
-        working-directory: packages/rake-db
-        run: pnpm test -- --coverage --coverageReporters json-summary
-      
-      - name: Test orchid-orm-schema-to-zod
-        working-directory: packages/schema-to-zod
-        run: pnpm test -- --coverage --coverageReporters json-summary
-      
-      - name: Test orchid-orm-test-factory
-        working-directory: packages/test-factory
-        run: pnpm test -- --coverage --coverageReporters json-summary
+      - name: Run tests
+        run: pnpm test:ci
       
       - name: Get total coverage
         id: coverage
