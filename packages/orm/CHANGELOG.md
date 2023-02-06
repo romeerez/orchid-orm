@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.5.21
+
+### Patch Changes
+
+- Fix baseTablePath in orm codegen
+
 ## 1.5.20
 
 ### Patch Changes

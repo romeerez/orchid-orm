@@ -14,20 +14,21 @@ export type AppCodeUpdaterConfig = {
   mainFilePath: string;
 };
 
-export const appCodeUpdater = (
-  config: SetOptional<AppCodeUpdaterConfig, 'baseTableName'>,
-): AppCodeUpdater => {
+export const appCodeUpdater = ({
+  tablePath,
+  baseTablePath,
+  baseTableName,
+  mainFilePath,
+}: SetOptional<AppCodeUpdaterConfig, 'baseTableName'>): AppCodeUpdater => {
   return async ({ ast, options, basePath, cache: cacheObject }) => {
     const params: AppCodeUpdaterConfig = {
-      ...config,
-      baseTableName: config.baseTableName || 'BaseTable',
       tablePath(name: string) {
-        const file = config.tablePath(name);
-        return path.isAbsolute(file) ? file : path.resolve(basePath, file);
+        const file = tablePath(name);
+        return resolvePath(basePath, file);
       },
-      mainFilePath: path.isAbsolute(config.mainFilePath)
-        ? config.mainFilePath
-        : path.resolve(basePath, config.mainFilePath),
+      baseTablePath: resolvePath(basePath, baseTablePath),
+      baseTableName: baseTableName || 'BaseTable',
+      mainFilePath: resolvePath(basePath, mainFilePath),
     };
 
     const promises: Promise<void>[] = [
@@ -47,3 +48,6 @@ export const appCodeUpdater = (
     await Promise.all(promises);
   };
 };
+
+const resolvePath = (basePath: string, filePath: string) =>
+  path.isAbsolute(filePath) ? filePath : path.resolve(basePath, filePath);

@@ -1,7 +1,7 @@
 import { appCodeUpdater } from './appCodeUpdater';
 import { asMock, ast } from './testUtils';
 import { updateMainFile } from './updateMainFile';
-import * as path from 'path';
+import path from 'path';
 import { updateTableFile } from './updateTableFile/updateTableFile';
 import { createBaseTableFile } from './createBaseTableFile';
 
@@ -47,12 +47,16 @@ describe('appCodeUpdater', () => {
 
     const [table] = asMock(updateTableFile).mock.calls[0];
     expect(table.tablePath('table')).toBe(tablePath);
-    expect(table.baseTablePath).toBe(params.baseTablePath);
+    expect(table.baseTablePath).toBe(
+      path.resolve(__dirname, params.baseTablePath),
+    );
     expect(table.baseTableName).toBe(params.baseTableName);
     expect(table.mainFilePath).toBe(mainFilePath);
 
     const [base] = asMock(createBaseTableFile).mock.calls[0];
-    expect(base.baseTablePath).toBe(params.baseTablePath);
+    expect(base.baseTablePath).toBe(
+      path.resolve(__dirname, params.baseTablePath),
+    );
     expect(base.baseTableName).toBe(params.baseTableName);
   });
 
