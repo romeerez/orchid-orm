@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.5.23
+
+### Patch Changes
+
+- Fix relative path resolution on windows for orm codegen
+
 ## 1.5.22
 
 ### Patch Changes
