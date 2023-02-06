@@ -64,9 +64,14 @@ export const processRakeDbConfig = (
     new Error().stack;
     if (stack) {
       const thisFile = stack[0]?.getFileName();
+      const thisDir = thisFile && path.dirname(thisFile);
       for (const item of stack) {
         let file = item.getFileName();
-        if (!file || file === thisFile || /\bnode_modules\b/.test(file)) {
+        if (
+          !file ||
+          path.dirname(file) === thisDir ||
+          /\bnode_modules\b/.test(file)
+        ) {
           continue;
         }
 

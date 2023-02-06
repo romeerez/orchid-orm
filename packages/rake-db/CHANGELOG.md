@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.3.22
+
+### Patch Changes
+
+- Fix file resolution in CI
+
 ## 2.3.21
 
 ### Patch Changes
