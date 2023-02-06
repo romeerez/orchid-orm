@@ -41,6 +41,7 @@ describe('common', () => {
   describe('processRakeDbConfig', () => {
     it('should return config with defaults', () => {
       const result = processRakeDbConfig({
+        basePath: __dirname,
         migrationsPath: 'custom-path',
       });
 
