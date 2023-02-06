@@ -1,4 +1,4 @@
-import { change } from '../src';
+import { change } from '../../src';
 
 change(async (db) => {
   await db.createTable('chat', (t) => ({

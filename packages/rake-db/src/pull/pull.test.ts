@@ -1,6 +1,6 @@
 import { DbStructure } from './dbStructure';
 import { pullDbStructure } from './pull';
-import { getMigrationConfigWithDefaults } from '../common';
+import { processRakeDbConfig } from '../common';
 import { writeMigrationFile } from '../commands/generate';
 
 jest.mock('./dbStructure', () => {
@@ -76,7 +76,7 @@ describe('pull', () => {
       },
     ];
 
-    const config = getMigrationConfigWithDefaults({
+    const config = processRakeDbConfig({
       migrationsPath: 'migrations',
     });
 

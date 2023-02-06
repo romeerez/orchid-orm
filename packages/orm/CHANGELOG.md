@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.5.20
+
+### Patch Changes
+
+- Relative path in rakeDb config
+
 ## 1.5.19
 
 ### Patch Changes

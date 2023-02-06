@@ -3,6 +3,7 @@ import * as path from 'path';
 import { updateMainFile } from './updateMainFile';
 import { updateTableFile } from './updateTableFile/updateTableFile';
 import { createBaseTableFile } from './createBaseTableFile';
+import { SetOptional } from 'pqb';
 
 export class AppCodeUpdaterError extends Error {}
 
@@ -14,15 +15,21 @@ export type AppCodeUpdaterConfig = {
 };
 
 export const appCodeUpdater = (
-  config: AppCodeUpdaterConfig,
+  config: SetOptional<AppCodeUpdaterConfig, 'baseTableName'>,
 ): AppCodeUpdater => {
-  const params = {
-    ...config,
-    tablePath: (name: string) => path.resolve(config.tablePath(name)),
-    mainFilePath: path.resolve(config.mainFilePath),
-  };
+  return async ({ ast, options, basePath, cache: cacheObject }) => {
+    const params: AppCodeUpdaterConfig = {
+      ...config,
+      baseTableName: config.baseTableName || 'BaseTable',
+      tablePath(name: string) {
+        const file = config.tablePath(name);
+        return path.isAbsolute(file) ? file : path.resolve(basePath, file);
+      },
+      mainFilePath: path.isAbsolute(config.mainFilePath)
+        ? config.mainFilePath
+        : path.resolve(basePath, config.mainFilePath),
+    };
 
-  return async ({ ast, options, cache: cacheObject }) => {
     const promises: Promise<void>[] = [
       updateMainFile(params.mainFilePath, params.tablePath, ast, options),
       updateTableFile({ ...params, ast }),

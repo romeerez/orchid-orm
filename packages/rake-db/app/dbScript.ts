@@ -1,8 +1,8 @@
 import { config } from 'dotenv';
 import path from 'path';
-import { rakeDb } from './src/rakeDb';
+import { rakeDb } from '../src/rakeDb';
 import { AdapterOptions } from 'pqb';
-import { appCodeUpdater } from '../orm/src';
+import { appCodeUpdater } from '../../orm/src';
 
 config({ path: path.resolve('.env.local') });
 config();
@@ -24,10 +24,10 @@ if (databaseURLTest) {
 rakeDb(options, {
   migrationsPath: 'migrations',
   appCodeUpdater: appCodeUpdater({
-    tablePath: (tableName) => `app/tables/${tableName}.ts`,
-    baseTablePath: 'app/lib/baseTable.ts',
+    tablePath: (tableName) => `tables/${tableName}.ts`,
+    baseTablePath: 'lib/baseTable.ts',
     baseTableName: 'BaseTable',
-    mainFilePath: 'app/db.ts',
+    mainFilePath: 'db.ts',
   }),
   useCodeUpdater: false,
 });

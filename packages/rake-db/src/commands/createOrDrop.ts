@@ -34,7 +34,7 @@ const execute = async (
 const createOrDrop = async (
   options: AdapterOptions,
   adminOptions: AdapterOptions,
-  config: RakeDbConfig,
+  config: Pick<RakeDbConfig, 'migrationsTable'>,
   args: {
     sql(params: { database: string; user: string }): string;
     successMessage(params: { database: string }): string;

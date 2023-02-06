@@ -270,12 +270,11 @@ if (config.NODE_ENV !== 'production') {
 
 // pass options and migrationPath to `rakeDb`
 rakeDb(options, {
-  migrationsPath: 'src/migrations',
+  migrationsPath: '../migrations',
   appCodeUpdater: appCodeUpdater({
-    tablePath: (tableName) => `src/app/tables/${tableName}.table.ts`,
-    baseTablePath: 'src/lib/baseTable.ts',
-    baseTableName: 'BaseTable',
-    mainFilePath: 'src/db.ts',
+    tablePath: (tableName) => `../app/tables/${tableName}.table.ts`,
+    baseTablePath: '../lib/baseTable.ts',
+    mainFilePath: '../db.ts',
   }),
 });
 ```

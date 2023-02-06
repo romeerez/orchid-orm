@@ -30,10 +30,15 @@ describe('appCodeUpdater', () => {
   const fn = appCodeUpdater(params);
 
   it('should call table and file updaters with proper arguments', async () => {
-    await fn({ ast: ast.addTable, options: {}, cache: {} });
+    await fn({
+      ast: ast.addTable,
+      options: {},
+      basePath: __dirname,
+      cache: {},
+    });
 
-    const mainFilePath = path.resolve(params.mainFilePath);
-    const tablePath = path.resolve(params.tablePath('table'));
+    const mainFilePath = path.resolve(__dirname, params.mainFilePath);
+    const tablePath = path.resolve(__dirname, params.tablePath('table'));
 
     const main = asMock(updateMainFile).mock.calls[0];
     expect(main[0]).toBe(mainFilePath);
@@ -55,11 +60,11 @@ describe('appCodeUpdater', () => {
     const cache = {};
     expect(createBaseTableFile).not.toBeCalled();
 
-    await fn({ ast: ast.addTable, options: {}, cache });
+    await fn({ ast: ast.addTable, options: {}, basePath: __dirname, cache });
 
     expect(createBaseTableFile).toBeCalledTimes(1);
 
-    await fn({ ast: ast.addTable, options: {}, cache });
+    await fn({ ast: ast.addTable, options: {}, basePath: __dirname, cache });
 
     expect(createBaseTableFile).toBeCalledTimes(1);
   });

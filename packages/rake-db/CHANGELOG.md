@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.3.18
+
+### Patch Changes
+
+- Relative path in rakeDb config
+
 ## 2.3.17
 
 ### Patch Changes

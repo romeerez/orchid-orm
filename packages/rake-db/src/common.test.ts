@@ -2,17 +2,17 @@ import {
   createSchemaMigrations,
   getDatabaseAndUserFromOptions,
   getFirstWordAndRest,
-  getMigrationConfigWithDefaults,
+  processRakeDbConfig,
   getMigrationFiles,
   getTextAfterTo,
   joinColumns,
   joinWords,
-  migrationConfigDefaults,
   quoteWithSchema,
   setAdapterOptions,
   setAdminCredentialsToOptions,
   sortAsc,
   sortDesc,
+  migrationConfigDefaults,
 } from './common';
 import Enquirer from 'enquirer';
 import { Adapter } from 'pqb';
@@ -35,17 +35,20 @@ jest.mock('fs/promises', () => ({
   readdir: jest.fn(),
 }));
 
+const config = { ...migrationConfigDefaults, basePath: __dirname };
+
 describe('common', () => {
-  describe('getMigrationConfigWithDefaults', () => {
+  describe('processRakeDbConfig', () => {
     it('should return config with defaults', () => {
-      const result = getMigrationConfigWithDefaults({
+      const result = processRakeDbConfig({
         migrationsPath: 'custom-path',
       });
 
       expect(result).toEqual({
-        migrationsPath: 'custom-path',
+        basePath: __dirname,
+        migrationsPath: path.resolve(__dirname, 'custom-path'),
         migrationsTable: 'schemaMigrations',
-        requireTs: expect.any(Function),
+        import: expect.any(Function),
         log: true,
         logger: console,
         useCodeUpdater: true,
@@ -179,7 +182,7 @@ describe('common', () => {
     it('should create a "schemaMigrations" table', async () => {
       mockedQuery.mockReturnValueOnce(undefined);
 
-      await createSchemaMigrations(db, migrationConfigDefaults);
+      await createSchemaMigrations(db, config);
 
       expect(mockedQuery.mock.calls).toEqual([
         [`CREATE TABLE "schemaMigrations" ( version TEXT NOT NULL )`],
@@ -191,7 +194,7 @@ describe('common', () => {
     it('should inform if table already exists', async () => {
       mockedQuery.mockRejectedValue({ code: '42P07' });
 
-      await createSchemaMigrations(db, migrationConfigDefaults);
+      await createSchemaMigrations(db, config);
 
       expect(mockedQuery.mock.calls).toEqual([
         [`CREATE TABLE "schemaMigrations" ( version TEXT NOT NULL )`],
@@ -227,10 +230,10 @@ describe('common', () => {
       const files = [`${version}_a.ts`, `${version}_b.ts`, `${version}_c.ts`];
       (readdir as jest.Mock).mockReturnValueOnce(files);
 
-      const result = await getMigrationFiles(migrationConfigDefaults, true);
+      const result = await getMigrationFiles(config, true);
       expect(result).toEqual(
         files.map((file) => ({
-          path: path.join(migrationConfigDefaults.migrationsPath, file),
+          path: path.resolve(config.migrationsPath, file),
           version,
         })),
       );
@@ -239,24 +242,22 @@ describe('common', () => {
     it('should return empty array on error', async () => {
       (readdir as jest.Mock).mockRejectedValue(new Error());
 
-      const result = await getMigrationFiles(migrationConfigDefaults, true);
+      const result = await getMigrationFiles(config, true);
       expect(result).toEqual([]);
     });
 
     it('should throw if file is not a .ts file', async () => {
       (readdir as jest.Mock).mockReturnValueOnce(['file.js']);
 
-      await expect(
-        getMigrationFiles(migrationConfigDefaults, true),
-      ).rejects.toThrow('Only .ts files are supported');
+      await expect(getMigrationFiles(config, true)).rejects.toThrow(
+        'Only .ts files are supported',
+      );
     });
 
     it('should throw on improper version', async () => {
       (readdir as jest.Mock).mockReturnValueOnce(['1234567890_file.ts']);
 
-      await expect(
-        getMigrationFiles(migrationConfigDefaults, true),
-      ).rejects.toThrow(
+      await expect(getMigrationFiles(config, true)).rejects.toThrow(
         'Migration file name should start with 14 digit version',
       );
     });

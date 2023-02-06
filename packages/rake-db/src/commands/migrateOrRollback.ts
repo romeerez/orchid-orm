@@ -23,6 +23,7 @@ import {
   getCurrentChangeCallback,
 } from '../migration/change';
 import { createMigrationInterface } from '../migration/migration';
+import { pathToFileURL } from 'url';
 
 const getDb = (adapter: Adapter) => createDb({ adapter });
 
@@ -123,7 +124,7 @@ const processMigration = async (
     if (callback) {
       change(callback);
     } else {
-      await config.requireTs(file.path);
+      await config.import(pathToFileURL(file.path).toString());
       changeCache[file.path] = getCurrentChangeCallback();
     }
 

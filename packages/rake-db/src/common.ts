@@ -11,10 +11,12 @@ import Enquirer from 'enquirer';
 import path from 'path';
 import { readdir } from 'fs/promises';
 import { RakeDbAst } from './ast';
+import CallSite = NodeJS.CallSite;
 
 type Db = DbResult<DefaultColumnTypes>;
 
 export type RakeDbConfig = {
+  basePath: string;
   migrationsPath: string;
   migrationsTable: string;
   commands: Record<
@@ -25,7 +27,7 @@ export type RakeDbConfig = {
       args: string[],
     ) => Promise<void>
   >;
-  requireTs(path: string): Promise<void>;
+  import(path: string): Promise<void>;
   noPrimaryKey?: NoPrimaryKeyOption;
   appCodeUpdater?: AppCodeUpdater;
   useCodeUpdater?: boolean;
@@ -38,23 +40,56 @@ export type RakeDbConfig = {
 export type AppCodeUpdater = (params: {
   ast: RakeDbAst;
   options: AdapterOptions;
+  basePath: string;
   cache: object;
 }) => Promise<void>;
 
-export const migrationConfigDefaults: RakeDbConfig = {
-  migrationsPath: path.resolve('src', 'db', 'migrations'),
+export const migrationConfigDefaults: Omit<RakeDbConfig, 'basePath'> = {
+  migrationsPath: path.join('src', 'db', 'migrations'),
   migrationsTable: 'schemaMigrations',
   commands: {},
-  requireTs: (path: string) => import(path),
+  import: (path: string) => import(path),
   log: true,
   logger: console,
   useCodeUpdater: true,
 };
 
-export const getMigrationConfigWithDefaults = (
+export const processRakeDbConfig = (
   config: Partial<RakeDbConfig>,
-) => {
-  return { ...migrationConfigDefaults, ...config };
+): RakeDbConfig => {
+  const result = { ...migrationConfigDefaults, ...config };
+
+  if (!result.basePath) {
+    let stack: CallSite[] | undefined;
+    Error.prepareStackTrace = (_, s) => (stack = s);
+    new Error().stack;
+    if (stack) {
+      const thisFile = stack[0]?.getFileName();
+      for (const item of stack) {
+        const file = item.getFileName();
+        if (!file || file === thisFile || /\bnode_modules\b/.test(file)) {
+          continue;
+        }
+        result.basePath = path.dirname(file);
+        break;
+      }
+    }
+
+    if (!result.basePath) {
+      throw new Error(
+        'Failed to determine path to db script. Please set basePath option of rakeDb',
+      );
+    }
+  }
+
+  if (!path.isAbsolute(result.migrationsPath)) {
+    result.migrationsPath = path.resolve(
+      result.basePath,
+      result.migrationsPath,
+    );
+  }
+
+  return result as RakeDbConfig;
 };
 
 export const getDatabaseAndUserFromOptions = (
@@ -140,7 +175,7 @@ export const setAdminCredentialsToOptions = async (
 
 export const createSchemaMigrations = async (
   db: Adapter,
-  config: RakeDbConfig,
+  config: Pick<RakeDbConfig, 'migrationsTable'>,
 ) => {
   try {
     await db.query(
@@ -209,7 +244,7 @@ export const getMigrationFiles = async (
 
   let files: string[];
   try {
-    files = await readdir(path.resolve(migrationsPath));
+    files = await readdir(migrationsPath);
   } catch (_) {
     return [];
   }

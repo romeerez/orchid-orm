@@ -44,17 +44,19 @@ rakeDb(
     ssl: true
   },
   {
-    // relative path:
-    migrationsPath: 'migrations',
+    // relative path to the current file:
+    migrationsPath: '../migrations',
     // it also can be an absolute path:
-    // migrationsPath: path.resolve('..', 'migrations'),
+    // migrationsPath: path.resolve(__dirname, 'migrations'),
     
     // optionally, for automatic code updating after running migrations:
     appCodeUpdater: appCodeUpdater({
-      tablePath: (tableName) => `src/app/tables/${tableName}.table.ts`,
-      baseTablePath: 'src/lib/baseTable.ts',
+      // paths are relative to the current file
+      tablePath: (tableName) => `../tables/${tableName}.table.ts`,
+      baseTablePath: '../lib/baseTable.ts',
+      // baseTableName is optional, BaseTable by default
       baseTableName: 'BaseTable',
-      mainFilePath: 'src/db.ts',
+      mainFilePath: '../db.ts',
     }),
     
     // true by default, whether to use code updater by default
@@ -109,18 +111,21 @@ const rakeDb = async (
 The first is of the same type `AdapterOptions` which is used when configuring the query builder and the ORM.
 Provide an array of such options to migrate two and more databases at the same time, which helps maintain a test database.
 
-The second optional argument of type `MigrationConfig`, here is the type:
+The second optional argument of type `MigrationConfig`, all properties are optional, here is the type:
 
 ```ts
 type MigrationConfig = {
-  // absolute path to migrations directory
-  migrationsPath: string;
+  // path to resolve other relative paths with
+  basePath?: string
+  
+  // path to migrations directory
+  migrationsPath?: string;
   
   // table in your database to store migrated versions
-  migrationsTable: string;
+  migrationsTable?: string;
   
-  // function to require typescript migration file
-  requireTs(path: string): void;
+  // function to import typescript migration file
+  import?(path: string): void;
   
   // specify behavior for what to do when no primary key was defined on a table
   noPrimaryKey?: 'error' | 'warn' | 'ignore';
@@ -137,6 +142,8 @@ type MigrationConfig = {
     ast: RakeDbAst;
     // connection options
     options: AdapterOptions;
+    // to resolve relative paths
+    basePath: string;
     // the same object is passed between various appCodeUpdater calls
     cache: object;
   }): Promise<void>;
@@ -152,11 +159,14 @@ type MigrationConfig = {
 
 To configure logging, see [log option](/guide/query-builder.html#createdb) in the query builder document.
 
+Note that `migrationsPath` can accept an absolute path, or a relative path to the current file.
+
 Defaults are:
 
-- `migrationPath` is `src/migrations`
+- `basePath` is the dir name of the file you're calling `rakeDb` from
+- `migrationPath` is `src/db/migrations`
 - `migrationsTable` is `schemaMigrations`
-- `requireTs` will use a `ts-node` package
+- `import` will use a standard `import` function
 - `noPrimaryKey` is `error`
 - `log` is on
 - `logger` is a standard `console`
@@ -261,7 +271,6 @@ If `options` is an array of multiple database configs, callbacks are run for eac
 
 ```ts
 rakeDb(options, {
-  migrationsPath: 'migrations',
   async afterMigrate(db: Db) {
     const haveRecords = await db('table').exists()
     if (!haveRecords) {

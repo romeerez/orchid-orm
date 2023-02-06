@@ -460,6 +460,7 @@ export const runCodeUpdater = (migration: MigrationBase, ast: RakeDbAst) => {
   return migration.options.appCodeUpdater?.({
     ast,
     options: migration.adapterOptions,
+    basePath: migration.options.basePath,
     cache: migration.appCodeUpdaterCache,
   });
 };

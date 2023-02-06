@@ -4,6 +4,7 @@ import { getMigrationFiles } from '../common';
 import { Adapter, noop, TransactionAdapter } from 'pqb';
 import { change } from '../migration/change';
 import { asMock } from '../test-utils';
+import * as url from 'url';
 
 jest.mock('../common', () => ({
   ...jest.requireActual('../common'),
@@ -33,10 +34,11 @@ Adapter.prototype.transaction = (cb) => {
 const transactionQueryMock = jest.fn();
 TransactionAdapter.prototype.query = transactionQueryMock;
 
-const requireTsMock = jest.fn();
+const importMock = jest.fn();
 const config = {
   ...migrationConfigDefaults,
-  requireTs: requireTsMock,
+  basePath: __dirname,
+  import: importMock,
   log: false,
   logger: {
     log: jest.fn(),
@@ -64,7 +66,7 @@ getMigratedVersionsArrayMock.mockImplementation(() => ({
 describe('migrateOrRollback', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    requireTsMock.mockImplementation(() => undefined);
+    importMock.mockImplementation(() => undefined);
   });
 
   describe('migrate', () => {
@@ -73,6 +75,7 @@ describe('migrateOrRollback', () => {
       migratedVersions = ['1'];
       const conf = {
         ...config,
+        basePath: __dirname,
         beforeMigrate: jest.fn(),
         afterMigrate: jest.fn(),
       };
@@ -84,8 +87,8 @@ describe('migrateOrRollback', () => {
       expect(conf.beforeMigrate).toBeCalled();
       expect(conf.afterMigrate).toBeCalled();
 
-      expect(requireTsMock).toBeCalledWith('file2');
-      expect(requireTsMock).toBeCalledWith('file3');
+      expect(importMock).toBeCalledWith(url.pathToFileURL('file2').toString());
+      expect(importMock).toBeCalledWith(url.pathToFileURL('file3').toString());
 
       expect(transactionQueryMock).toBeCalledWith(
         `INSERT INTO "schemaMigrations" VALUES ('2')`,
@@ -109,7 +112,7 @@ describe('migrateOrRollback', () => {
 
       expect(getMigrationFiles).toBeCalledWith(config, true);
       expect(createSchemaMigrations).toBeCalled();
-      expect(requireTsMock).not.toBeCalled();
+      expect(importMock).not.toBeCalled();
       expect(transactionQueryMock).not.toBeCalled();
       expect(config.logger.log).not.toBeCalled();
     });
@@ -117,7 +120,7 @@ describe('migrateOrRollback', () => {
     it('should call appCodeUpdater only on the first run', async () => {
       migrationFiles = [files[0]];
       migratedVersions = [];
-      requireTsMock.mockImplementationOnce(createTableCallback);
+      importMock.mockImplementationOnce(createTableCallback);
       const appCodeUpdater = jest.fn();
 
       await migrate(
@@ -132,7 +135,7 @@ describe('migrateOrRollback', () => {
     it('should not call appCodeUpdater when useCodeUpdater is set to false in config', async () => {
       migrationFiles = [files[0]];
       migratedVersions = [];
-      requireTsMock.mockImplementation(createTableCallback);
+      importMock.mockImplementation(createTableCallback);
       const appCodeUpdater = jest.fn();
 
       await migrate(
@@ -147,7 +150,7 @@ describe('migrateOrRollback', () => {
     it('should not call appCodeUpdater when having argument --code false', async () => {
       migrationFiles = [files[0]];
       migratedVersions = [];
-      requireTsMock.mockImplementation(createTableCallback);
+      importMock.mockImplementation(createTableCallback);
       const appCodeUpdater = jest.fn();
 
       await migrate(
@@ -162,7 +165,7 @@ describe('migrateOrRollback', () => {
     it('should call appCodeUpdater when having argument --code', async () => {
       migrationFiles = [files[0]];
       migratedVersions = [];
-      requireTsMock.mockImplementation(createTableCallback);
+      importMock.mockImplementation(createTableCallback);
       const appCodeUpdater = jest.fn();
 
       await migrate(
@@ -192,8 +195,8 @@ describe('migrateOrRollback', () => {
 
       expect(getMigrationFiles).toBeCalledWith(conf, false);
 
-      expect(requireTsMock).toBeCalledTimes(1);
-      expect(requireTsMock).toBeCalledWith('file2');
+      expect(importMock).toBeCalledTimes(1);
+      expect(importMock).toBeCalledWith(url.pathToFileURL('file2').toString());
 
       expect(transactionQueryMock).toBeCalledTimes(1);
       expect(transactionQueryMock).toBeCalledWith(
@@ -214,7 +217,7 @@ describe('migrateOrRollback', () => {
 
       expect(getMigrationFiles).toBeCalledWith(config, false);
       expect(createSchemaMigrations).toBeCalled();
-      expect(requireTsMock).not.toBeCalled();
+      expect(importMock).not.toBeCalled();
       expect(transactionQueryMock).not.toBeCalled();
       expect(config.logger.log).not.toBeCalled();
     });

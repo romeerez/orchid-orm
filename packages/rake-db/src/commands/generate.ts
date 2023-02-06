@@ -12,7 +12,7 @@ export const writeMigrationFile = async (
   name: string,
   content: string,
 ) => {
-  await mkdir(path.resolve(config.migrationsPath), { recursive: true });
+  await mkdir(config.migrationsPath, { recursive: true });
 
   const filePath = path.resolve(
     config.migrationsPath,

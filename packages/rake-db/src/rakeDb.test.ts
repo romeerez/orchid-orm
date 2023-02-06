@@ -5,7 +5,7 @@ import { generate } from './commands/generate';
 import { pullDbStructure } from './pull/pull';
 
 jest.mock('./common', () => ({
-  getMigrationConfigWithDefaults: (config: unknown) => config,
+  processRakeDbConfig: (config: unknown) => config,
 }));
 
 jest.mock('./commands/createOrDrop', () => ({
