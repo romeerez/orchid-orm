@@ -54,3 +54,42 @@ html .content-container {
 .VPNavBarSearch .DocSearch-Button-Placeholder {
   color: var(--vp-c-text-2);
 }
+
+.stand-with-ukraine {
+  margin-right: 24px;
+  padding: 8px 62px 8px 12px;
+  background: var(--vp-c-bg-alt);
+  border-radius: 8px;
+  border: 1px solid var(--vp-c-divider-light);
+  position: relative;
+  overflow: hidden;
+}
+
+.stand-with-ukraine .flag {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 48px;
+  opacity: .8;
+}
+
+.stand-with-ukraine .flag::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 50%;
+  background: #005BBB;
+  width: 100%;
+}
+
+.stand-with-ukraine .flag::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  top: 50%;
+  background: #FFD500;
+  width: 100%;
+}

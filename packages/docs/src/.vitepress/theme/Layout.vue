@@ -14,7 +14,7 @@ if (typeof window !== 'undefined') {
   const analyticsId = 'G-PV4PL9TK79'
   gtag('config', analyticsId)
 
-  watch(() => router.route.data.relativePath, (path) => {
+  watch(() => router.route.data.relativePath, () => {
     setTimeout(() => {
       gtag('event', 'page_view', {
         page_title: document.title,
@@ -30,5 +30,15 @@ const { Layout } = DefaultTheme
 </script>
 
 <template>
-  <Layout />
+  <Layout>
+    <template v-slot:nav-bar-content-before>
+      <a
+        href='https://stand-with-ukraine.pp.ua/'
+        class='stand-with-ukraine'
+      >
+        Stand With Ukraine
+        <div class='flag'></div>
+      </a>
+    </template>
+  </Layout>
 </template>
