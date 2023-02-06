@@ -85,10 +85,10 @@ export const db = custom({}, {
     it('should handle object list with elements', async () => {
       asMock(fs.readFile).mockResolvedValue(`
 import { orchidORM } from 'orchid-orm';
-import { Some } from './tables/some';
+import { Other } from './tables/other';
 
 export const db = orchidORM({}, {
-  some: Some,
+  other: Other,
 });
 `);
 
@@ -96,11 +96,11 @@ export const db = orchidORM({}, {
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
-import { Some } from './tables/some';
+import { Other } from './tables/other';
 import { SomeTable } from './tables/some.table';
 
 export const db = orchidORM({}, {
-  some: Some,
+  other: Other,
   some: SomeTable,
 });
 `);
@@ -233,6 +233,21 @@ export const db = orchidORM({}, {
   two,
 });
 `);
+    });
+
+    it('should not insert table if table with same key exists, disregarding the import path', async () => {
+      asMock(fs.readFile).mockResolvedValue(`
+import { orchidORM } from 'orchid-orm';
+import { X } from './x';
+
+export const db = orchidORM({}, {
+  some: X,
+});
+`);
+
+      await updateMainFile(mainFilePath, tablePath, ast.addTable, options);
+
+      expect(fs.writeFile).not.toBeCalled();
     });
   });
 });

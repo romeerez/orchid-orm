@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.5.22
+
+### Patch Changes
+
+- Make codegen to not add table to the main file when the key already exist
+
 ## 1.5.21
 
 ### Patch Changes

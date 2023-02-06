@@ -128,6 +128,12 @@ const createTable = (
   );
   if (existing.length) return;
 
+  for (const prop of object.properties) {
+    if (key === ts.prop.getName(prop)) {
+      return;
+    }
+  }
+
   const importPos = ts.import.getEndPos(statements);
   changes.add(
     importPos,
