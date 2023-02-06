@@ -637,7 +637,7 @@ No matter how it is implemented, it should serve the purposes of:
 
 Usually, out-of-the-box validation utility fails to satisfy all 3 points,
 I'm using a custom utility `routeHandler` to validate parameters and results by using `zod` schemas, [here is the source](https://github.com/romeerez/orchid-orm-examples/blob/main/packages/blog-api/src/lib/routeHandler.ts#L13).
-Not that I recommend using it in your project, as it looks quite messy, so if you know a good library or your framework supports this out-of-the-box use that instead.
+Not that I recommend using it in your project, as it looks quite messy, better to find a good library or a framework for this.
 
 Main point here is that we have `Zod` schemas derived from `Orchid` table classes, and we should use them for validations of our request parameters.
 
