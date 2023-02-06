@@ -66,10 +66,17 @@ export const processRakeDbConfig = (
     if (stack) {
       const thisFile = stack[0]?.getFileName();
       for (const item of stack) {
-        const file = item.getFileName();
+        let file = item.getFileName();
         if (!file || file === thisFile || /\bnode_modules\b/.test(file)) {
           continue;
         }
+
+        // sometimes file can be in format file:///path/to/file.ts, sometimes it's a normal path
+        // casting it to a normal path
+        try {
+          file = new URL(file).pathname;
+        } catch (_) {}
+
         result.basePath = path.dirname(file);
         break;
       }
