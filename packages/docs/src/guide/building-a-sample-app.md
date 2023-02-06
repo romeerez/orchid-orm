@@ -636,7 +636,27 @@ No matter how it is implemented, it should serve the purposes of:
 - it is nice to have response validation in the dev/test environment, so you won't leak sensitive data by accident, and no need to write tedious tests for this
 
 Usually, out-of-the-box validation utility fails to satisfy all 3 points,
-I'm using a custom utility `routeHandler` to validate parameters and results by using `zod` schemas, [here is the source](link to routeHandler).
+I'm using a custom utility `routeHandler` to validate parameters and results by using `zod` schemas, [here is the source](https://github.com/romeerez/orchid-orm-examples/blob/main/packages/blog-api/src/lib/routeHandler.ts#L13).
+Not that I recommend using it in your project, as it looks quite messy, so if you know a good library or your framework supports this out-of-the-box use that instead.
+
+Main point here is that we have `Zod` schemas derived from `Orchid` table classes, and we should use them for validations of our request parameters.
+
+Simple express.js example:
+
+```ts
+import { userSchema } from './user.table';
+
+app.patch('/users/:id', (req, res) => {
+  // picking id from userSchema, it could be an integer or uuid,
+  // we don't have to know that in the controller
+  const { id } = userSchema.pick({ id: true }).parse(req.params)
+  
+  // parsing req.body by using userSchema
+  const data = userSchema.omit({ id: true }).parse(req.body)
+  
+  // using id and data to update user
+})
+```
 
 From our API spec, we can see that both the registration and login endpoint returns the same shape of data: user object and token,
 and it makes sense to reuse the response validator for them. Let's place it in the `user.dto.ts` file (dto stands for Data Transfer Object):
