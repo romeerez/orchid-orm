@@ -124,7 +124,7 @@ const processMigration = async (
     if (callback) {
       change(callback);
     } else {
-      await config.import(pathToFileURL(file.path).toString());
+      await config.import(pathToFileURL(file.path).pathname);
       changeCache[file.path] = getCurrentChangeCallback();
     }
 

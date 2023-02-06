@@ -87,8 +87,8 @@ describe('migrateOrRollback', () => {
       expect(conf.beforeMigrate).toBeCalled();
       expect(conf.afterMigrate).toBeCalled();
 
-      expect(importMock).toBeCalledWith(url.pathToFileURL('file2').toString());
-      expect(importMock).toBeCalledWith(url.pathToFileURL('file3').toString());
+      expect(importMock).toBeCalledWith(url.pathToFileURL('file2').pathname);
+      expect(importMock).toBeCalledWith(url.pathToFileURL('file3').pathname);
 
       expect(transactionQueryMock).toBeCalledWith(
         `INSERT INTO "schemaMigrations" VALUES ('2')`,
@@ -196,7 +196,7 @@ describe('migrateOrRollback', () => {
       expect(getMigrationFiles).toBeCalledWith(conf, false);
 
       expect(importMock).toBeCalledTimes(1);
-      expect(importMock).toBeCalledWith(url.pathToFileURL('file2').toString());
+      expect(importMock).toBeCalledWith(url.pathToFileURL('file2').pathname);
 
       expect(transactionQueryMock).toBeCalledTimes(1);
       expect(transactionQueryMock).toBeCalledWith(

@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.3.19
+
+### Patch Changes
+
+- Fix path resolution
+
 ## 2.3.18
 
 ### Patch Changes
