@@ -11,7 +11,6 @@ import Enquirer from 'enquirer';
 import path from 'path';
 import { readdir } from 'fs/promises';
 import { RakeDbAst } from './ast';
-import CallSite = NodeJS.CallSite;
 
 type Db = DbResult<DefaultColumnTypes>;
 
@@ -60,7 +59,7 @@ export const processRakeDbConfig = (
   const result = { ...migrationConfigDefaults, ...config };
 
   if (!result.basePath) {
-    let stack: CallSite[] | undefined;
+    let stack: NodeJS.CallSite[] | undefined;
     Error.prepareStackTrace = (_, s) => (stack = s);
     new Error().stack;
     if (stack) {
@@ -71,11 +70,15 @@ export const processRakeDbConfig = (
           continue;
         }
 
-        // sometimes file can be in format file:///path/to/file.ts, sometimes it's a normal path
-        // casting it to a normal path
-        try {
-          file = new URL(file).pathname;
-        } catch (_) {}
+        // on Windows with ESM file is file:///C:/path/to/file.ts
+        // it is not a valid URL
+        if (/file:\/\/\/\w+:\//.test(file)) {
+          file = decodeURI(file.slice(8));
+        } else {
+          try {
+            file = new URL(file).pathname;
+          } catch (_) {}
+        }
 
         result.basePath = path.dirname(file);
         break;

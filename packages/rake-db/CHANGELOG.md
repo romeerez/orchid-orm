@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.3.21
+
+### Patch Changes
+
+- Improve windows support for path resolution
+
 ## 2.3.20
 
 ### Patch Changes
