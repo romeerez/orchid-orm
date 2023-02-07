@@ -20,6 +20,7 @@
   },
   "scripts": {
     "test": "jest",
+    "test:ci": "jest --coverage --coverageReporters json-summary",
     "build": "rimraf ./dist/ && rollup -c --rollup.config",
     "prepublishOnly": "pnpm build"
   },
