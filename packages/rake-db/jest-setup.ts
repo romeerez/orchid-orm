@@ -1,3 +1,3 @@
-jest.mock('pqb', () => require('../pqb/src'), {
+jest.mock('pqb', () => require('../qb/pqb/src'), {
   virtual: true,
 });
