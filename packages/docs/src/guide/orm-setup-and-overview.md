@@ -38,7 +38,7 @@ export const db = orchidORM({
   // postgres://user:password@localhost:5432/dbname
   // 
   // ssl option can be specified as a parameter:
-  // postgres://user:password@localhost:5432/dbname
+  // postgres://user:password@localhost:5432/dbname?ssl=true
   databaseURL: process.env.DATABASE_URL,
 
   // ssl can also be specified as an option:

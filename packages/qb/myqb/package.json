@@ -1,7 +1,6 @@
 {
   "name": "myqb",
   "version": "0.0.0",
-  "private": "true",
   "description": "MySQL query builder",
   "homepage": "https://orchid-orm.netlify.app/guide/query-builder-setup.html",
   "repository": {
@@ -20,6 +19,7 @@
   },
   "scripts": {
     "test": "jest",
+    "test:ci": "jest --coverage --coverageReporters json-summary",
     "build": "rimraf ./dist/ && rollup -c --rollup.config",
     "prepublishOnly": "pnpm build"
   },
