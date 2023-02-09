@@ -22,7 +22,7 @@ const calculatePackageCoverage = async (name: string) => {
 
 const main = async () => {
   const values = await Promise.all(
-    ['orm', 'pqb', 'rake-db', 'schema-to-zod', 'test-factory'].map(
+    ['orm', 'qb/pqb', 'rake-db', 'schema-to-zod', 'test-factory'].map(
       calculatePackageCoverage,
     ),
   );
