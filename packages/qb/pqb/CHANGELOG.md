@@ -6,6 +6,12 @@
 
 - Restructure for mysql init
 
+## 0.9.13
+
+### Patch Changes
+
+- Restructure for mysql init
+
 ## 0.9.12
 
 ### Patch Changes
