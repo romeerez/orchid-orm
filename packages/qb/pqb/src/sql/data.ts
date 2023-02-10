@@ -8,7 +8,7 @@ import {
 } from '../queryMethods';
 import { Adapter, QueryResult } from '../adapter';
 import { RelationQueryData, relationQueryKey } from '../relations';
-import { ColumnsShape } from '../columnSchema';
+import { ColumnsShape } from '../columns';
 import { toSqlCacheKey } from './toSql';
 import {
   HavingItem,

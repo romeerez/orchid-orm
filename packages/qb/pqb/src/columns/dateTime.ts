@@ -1,5 +1,5 @@
 import { ColumnData, ColumnType } from './columnType';
-import { Operators } from '../columnsOperators';
+import { Operators } from './operators';
 import { joinTruthy } from '../utils';
 import { dateTypeMethods } from './commonMethods';
 import { assignMethodsToClass } from './utils';

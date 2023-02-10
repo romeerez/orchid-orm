@@ -10,7 +10,7 @@ import {
   UserRecord,
   useTestDatabase,
 } from '../test-utils/test-utils';
-import { DateColumn } from '../columnSchema';
+import { DateColumn } from '../columns';
 
 const insertUserAndProfile = async () => {
   const id = await User.get('id').create(userData);

@@ -13,7 +13,7 @@ import {
   ColumnsObject,
   NullableColumn,
   PluckResultColumnType,
-} from '../columnSchema';
+} from '../columns';
 import { RawExpression } from '../raw';
 import { pushQueryArray } from '../queryDataUtils';
 import { parseRecord } from './then';

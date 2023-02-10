@@ -1,5 +1,5 @@
 import { WithOptions } from '../sql';
-import { ColumnShapeOutput, ColumnsShape, ColumnTypes } from '../columnSchema';
+import { ColumnShapeOutput, ColumnsShape, ColumnTypes } from '../columns';
 import { isRaw, RawExpression } from '../raw';
 import { AddQueryWith, Query } from '../query';
 import { Db } from '../db';

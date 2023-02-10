@@ -1,4 +1,4 @@
-import { Operator, Operators } from '../columnsOperators';
+import { Operator, Operators } from './operators';
 import { JSONTypeAny } from './json';
 import { ColumnsShape } from './columnsSchema';
 import { raw, RawExpression } from '../raw';

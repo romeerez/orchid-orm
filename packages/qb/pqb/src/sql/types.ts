@@ -1,6 +1,6 @@
 import { Query, QueryBase, QueryWithTable, SelectableBase } from '../query';
 import { RawExpression } from '../raw';
-import { ColumnType } from '../columnSchema';
+import { ColumnType } from '../columns';
 import { RelationQuery } from '../relations';
 import { Expression, MaybeArray } from '../utils';
 import { QueryData, SelectQueryData } from './data';

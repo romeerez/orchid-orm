@@ -9,7 +9,7 @@ import {
   NullableColumn,
   NumberColumn,
   StringColumn,
-} from '../columnSchema';
+} from '../columns';
 import {
   BooleanExpression,
   CoalesceString,

@@ -1,5 +1,5 @@
 import { ColumnType } from './columnType';
-import { Operators } from '../columnsOperators';
+import { Operators } from './operators';
 import { Query } from '../query';
 import { CreateCtx, UpdateCtx } from '../queryMethods';
 

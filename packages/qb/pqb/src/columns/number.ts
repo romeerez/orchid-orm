@@ -1,4 +1,4 @@
-import { Operators } from '../columnsOperators';
+import { Operators } from './operators';
 import { ColumnData, ColumnType } from './columnType';
 import { joinTruthy } from '../utils';
 import { assignMethodsToClass } from './utils';

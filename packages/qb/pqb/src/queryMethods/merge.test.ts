@@ -7,7 +7,7 @@ import {
   User,
 } from '../test-utils/test-utils';
 import { QueryReturnType } from '../query';
-import { IntegerColumn, TextColumn } from '../columnSchema';
+import { IntegerColumn, TextColumn } from '../columns';
 import { getValueKey } from './get';
 import { logParamToLogObject } from './log';
 import {

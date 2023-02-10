@@ -30,7 +30,7 @@ import {
 } from '../sql';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { Then } from './then';
-import { BooleanColumn } from '../columnSchema';
+import { BooleanColumn } from '../columns';
 import { Aggregate } from './aggregate';
 import { addParserForSelectItem, Select } from './select';
 import { From } from './from';

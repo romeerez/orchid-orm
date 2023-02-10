@@ -1,5 +1,5 @@
 import { ColumnType, instantiateColumn } from './columnType';
-import { Operators } from '../columnsOperators';
+import { Operators } from './operators';
 import {
   adapter,
   assertType,

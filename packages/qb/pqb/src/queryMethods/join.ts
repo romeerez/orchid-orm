@@ -13,7 +13,7 @@ import { RawExpression } from '../raw';
 import { WhereQueryBuilder } from './where';
 import { Relation, RelationsBase } from '../relations';
 import { QueryData } from '../sql';
-import { ColumnsShape } from '../columnSchema';
+import { ColumnsShape } from '../columns';
 import { StringKey } from '../utils';
 
 type WithSelectable<

@@ -1,4 +1,4 @@
-import { ColumnsShape } from './columnSchema';
+import { ColumnsShape } from './columns';
 
 export class PormError extends Error {}
 

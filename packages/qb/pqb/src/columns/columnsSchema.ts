@@ -1,5 +1,5 @@
 import { ColumnInput, ColumnOutput, ColumnType } from './columnType';
-import { Operators } from '../columnsOperators';
+import { Operators } from './operators';
 import { SetOptional, SomeIsTrue, StringKey } from '../utils';
 
 export type ColumnsShape = Record<string, ColumnType>;

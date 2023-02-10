@@ -1,6 +1,6 @@
 import { AggregateItemOptions, HavingItem } from './types';
 import { getRaw, isRaw, RawExpression } from '../raw';
-import { Operator } from '../columnsOperators';
+import { Operator } from '../columns/operators';
 import { aggregateToSql } from './aggregate';
 import { QueryBase } from '../query';
 import { addValue, q } from './common';

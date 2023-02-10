@@ -1,5 +1,5 @@
 import { Query } from '../query';
-import { ColumnType, IntegerColumn } from '../columnSchema';
+import { ColumnType, IntegerColumn } from '../columns';
 import { SelectAgg, WindowFunctionOptions } from './aggregate';
 import { pushQueryValue } from '../queryDataUtils';
 import { addParserToQuery } from './select';

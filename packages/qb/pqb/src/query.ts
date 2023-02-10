@@ -13,7 +13,7 @@ import {
   ColumnsShape,
   ColumnType,
   ColumnTypesBase,
-} from './columnSchema';
+} from './columns';
 import { AliasOrTable, EmptyObject, Spread, StringKey } from './utils';
 import { RawExpression } from './raw';
 import { Db } from './db';

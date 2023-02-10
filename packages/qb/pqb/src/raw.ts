@@ -1,4 +1,4 @@
-import { ColumnType } from './columnSchema/columnType';
+import { ColumnType } from './columns/columnType';
 import { emptyObject } from './utils';
 
 export type RawExpression<C extends ColumnType = ColumnType> = {

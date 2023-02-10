@@ -1,4 +1,4 @@
-import { db, expectSql, User } from './test-utils/test-utils';
+import { db, expectSql, User } from '../test-utils/test-utils';
 
 describe('operators', () => {
   describe('equals', () => {

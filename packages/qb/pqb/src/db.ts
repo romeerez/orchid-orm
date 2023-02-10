@@ -26,7 +26,7 @@ import {
   getTableData,
   DefaultColumnTypes,
   columnTypes,
-} from './columnSchema';
+} from './columns';
 import { applyMixins, pushOrNewArray, StringKey } from './utils';
 import { QueryError, QueryErrorName } from './errors';
 

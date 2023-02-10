@@ -4,7 +4,7 @@ import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { getClonedQueryData, MaybeArray } from '../utils';
 import { JoinArgs, JoinCallback, JoinCallbackArg } from './join';
 import { RelationsBase } from '../relations';
-import { ColumnsShape } from '../columnSchema';
+import { ColumnsShape } from '../columns';
 import { RawExpression } from '../raw';
 
 export type WhereArg<T extends QueryBase> =

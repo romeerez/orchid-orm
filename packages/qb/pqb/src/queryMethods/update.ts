@@ -13,7 +13,7 @@ import { EmptyObject, MaybeArray, StringKey } from '../utils';
 import { CreateData } from './create';
 import { parseResult, queryMethodByReturnType } from './then';
 import { UpdateQueryData } from '../sql';
-import { ColumnsShape, VirtualColumn } from '../columnSchema';
+import { ColumnsShape, VirtualColumn } from '../columns';
 import { anyShape } from '../db';
 
 export type UpdateData<T extends Query> = {

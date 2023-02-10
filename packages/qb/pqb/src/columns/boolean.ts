@@ -1,5 +1,5 @@
 import { ColumnType } from './columnType';
-import { Operators } from '../columnsOperators';
+import { Operators } from './operators';
 import { Code, columnCode } from './code';
 
 // 1 byte, true or false

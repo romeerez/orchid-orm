@@ -5,7 +5,7 @@ import {
   expectSql,
   User,
 } from '../test-utils/test-utils';
-import { columnTypes } from '../columnSchema';
+import { columnTypes } from '../columns';
 
 describe('with', () => {
   const options: (

@@ -1,5 +1,5 @@
 import { ColumnData, ColumnType } from './columnType';
-import { Operators } from '../columnsOperators';
+import { Operators } from './operators';
 import { assignMethodsToClass } from './utils';
 import { arrayMethods } from './commonMethods';
 import { addCode, Code, columnCode } from './code';

@@ -1,4 +1,4 @@
-import { ColumnType, ColumnTypesBase } from '../columnSchema';
+import { ColumnType, ColumnTypesBase } from '../columns';
 import { Query } from '../query';
 import { RawExpression } from '../raw';
 

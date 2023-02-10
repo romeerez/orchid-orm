@@ -5,7 +5,7 @@ import {
   SetQueryReturnsValueOptional,
 } from '../query';
 import { pushQueryValue } from '../queryDataUtils';
-import { ColumnType, StringColumn } from '../columnSchema';
+import { ColumnType, StringColumn } from '../columns';
 import { JsonItem } from '../sql';
 import { raw } from '../raw';
 import { StringKey } from '../utils';

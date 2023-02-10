@@ -20,7 +20,7 @@ import { WhereArg } from './where';
 import { parseResult, queryMethodByReturnType } from './then';
 import { NotFoundError } from '../errors';
 import { RawExpression } from '../raw';
-import { VirtualColumn } from '../columnSchema';
+import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
 
 export type CreateData<

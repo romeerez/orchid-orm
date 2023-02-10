@@ -1,4 +1,4 @@
-import { ColumnType } from '../columnSchema';
+import { ColumnType } from '../columns';
 import { createDb } from '../db';
 import { adapter, db, expectSql, User } from '../test-utils/test-utils';
 
