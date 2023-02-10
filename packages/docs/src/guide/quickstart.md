@@ -123,12 +123,14 @@ In case of using hosted database, it's already created by provided.
 But if you develop with a local Postgres, create databases with this command:
 
 ```sh
+# command to create a database:
 npm run db create
 ```
 
 If you chose to create demo tables, there are migrations files in `src/db/migrations`. Run migrations:
 
 ```sh
+# command to run migrations (create tables):
 npm run db migrate
 ```
 
