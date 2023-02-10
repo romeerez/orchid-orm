@@ -1,6 +1,6 @@
 {
   "name": "rake-db",
-  "version": "2.3.23",
+  "version": "2.3.24",
   "description": "Migrations tool for Postgresql DB",
   "homepage": "https://orchid-orm.netlify.app/guide/migration-setup-and-overview.html",
   "repository": {
@@ -47,9 +47,9 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
-    "enquirer": "^2.3.6",
     "pluralize": "^8.0.0",
-    "pqb": "workspace:*"
+    "pqb": "workspace:*",
+    "prompts": "^2.4.2"
   },
   "devDependencies": {
     "@swc/core": "^1.2.210",
@@ -58,6 +58,7 @@
     "@types/jest": "^28.1.2",
     "@types/node": "^18.0.1",
     "@types/pluralize": "^0.0.29",
+    "@types/prompts": "^2.4.2",
     "dotenv": "^16.0.3",
     "jest": "^28.1.2",
     "rimraf": "^3.0.2",

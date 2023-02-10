@@ -28,6 +28,11 @@ Adapter.prototype.query = queryMock;
 const logMock = jest.fn();
 console.log = logMock;
 
+const config = {
+  ...migrationConfigDefaults,
+  basePath: __dirname,
+};
+
 describe('createOrDrop', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -37,7 +42,7 @@ describe('createOrDrop', () => {
     it('should create database when user is an admin', async () => {
       queryMock.mockResolvedValueOnce(undefined);
 
-      await createDb(options, migrationConfigDefaults);
+      await createDb(options, config);
 
       expect(queryMock.mock.calls).toEqual([
         [`CREATE DATABASE "dbname" OWNER "user"`],
@@ -53,7 +58,7 @@ describe('createOrDrop', () => {
 
       await createDb(
         [options, { ...options, database: 'dbname-test' }],
-        migrationConfigDefaults,
+        config,
       );
 
       expect(queryMock.mock.calls).toEqual([
@@ -70,7 +75,7 @@ describe('createOrDrop', () => {
     it('should inform if database already exists', async () => {
       queryMock.mockRejectedValueOnce({ code: '42P04' });
 
-      await createDb(options, migrationConfigDefaults);
+      await createDb(options, config);
 
       expect(queryMock.mock.calls).toEqual([
         [`CREATE DATABASE "dbname" OWNER "user"`],
@@ -79,10 +84,27 @@ describe('createOrDrop', () => {
       expect(createSchemaMigrations).toHaveBeenCalled();
     });
 
+    it('should inform if ssl is required', async () => {
+      queryMock.mockRejectedValueOnce({
+        code: 'XX000',
+        message: 'sslmode=require',
+      });
+
+      await createDb(options, config);
+
+      expect(queryMock.mock.calls).toEqual([
+        [`CREATE DATABASE "dbname" OWNER "user"`],
+      ]);
+      expect(logMock.mock.calls).toEqual([
+        ['SSL is required: append ?ssl=true to the database url string'],
+      ]);
+      expect(createSchemaMigrations).not.toHaveBeenCalled();
+    });
+
     it('should ask and use admin credentials when cannot connect', async () => {
       queryMock.mockRejectedValueOnce({ code: '42501' });
 
-      await createDb(options, migrationConfigDefaults);
+      await createDb(options, config);
 
       expect(setAdminCredentialsToOptions).toHaveBeenCalled();
       expect(queryMock.mock.calls).toEqual([
@@ -90,6 +112,9 @@ describe('createOrDrop', () => {
         [`CREATE DATABASE "dbname" OWNER "user"`],
       ]);
       expect(logMock.mock.calls).toEqual([
+        [
+          `Permission denied to create database.\nDon't use this command for database service providers, only for a local db.`,
+        ],
         [`Database dbname successfully created`],
       ]);
       expect(createSchemaMigrations).toHaveBeenCalled();
@@ -132,6 +157,23 @@ describe('createOrDrop', () => {
       expect(logMock.mock.calls).toEqual([[`Database dbname does not exist`]]);
     });
 
+    it('should inform if ssl is required', async () => {
+      queryMock.mockRejectedValueOnce({
+        code: 'XX000',
+        message: 'sslmode=require',
+      });
+
+      await createDb(options, config);
+
+      expect(queryMock.mock.calls).toEqual([
+        [`CREATE DATABASE "dbname" OWNER "user"`],
+      ]);
+      expect(logMock.mock.calls).toEqual([
+        ['SSL is required: append ?ssl=true to the database url string'],
+      ]);
+      expect(createSchemaMigrations).not.toHaveBeenCalled();
+    });
+
     it('should ask and use admin credentials when cannot connect', async () => {
       queryMock.mockRejectedValueOnce({ code: '42501' });
 
@@ -143,6 +185,9 @@ describe('createOrDrop', () => {
         [`DROP DATABASE "dbname"`],
       ]);
       expect(logMock.mock.calls).toEqual([
+        [
+          `Permission denied to drop database.\nDon't use this command for database service providers, only for a local db.`,
+        ],
         [`Database dbname was successfully dropped`],
       ]);
     });
@@ -152,7 +197,7 @@ describe('createOrDrop', () => {
     it('should drop and create database', async () => {
       queryMock.mockResolvedValue(undefined);
 
-      await resetDb(options, migrationConfigDefaults);
+      await resetDb(options, config);
 
       expect(queryMock.mock.calls).toEqual([
         [`DROP DATABASE "dbname"`],

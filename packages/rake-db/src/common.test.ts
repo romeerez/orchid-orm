@@ -14,22 +14,13 @@ import {
   sortDesc,
   migrationConfigDefaults,
 } from './common';
-import Enquirer from 'enquirer';
+import prompts from 'prompts';
 import { Adapter } from 'pqb';
 import { readdir } from 'fs/promises';
 import path from 'path';
+import { asMock } from './test-utils';
 
-jest.mock('enquirer', () => {
-  class Snippet {
-    constructor(public params: Record<string, unknown>) {}
-    run() {}
-  }
-  Snippet.prototype.run = jest.fn();
-
-  return {
-    Snippet,
-  };
-});
+jest.mock('prompts', () => jest.fn());
 
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(),
@@ -126,11 +117,13 @@ describe('common', () => {
 
   describe('setAdminCredentialsToOptions', () => {
     beforeEach(() => {
-      (Enquirer as any).Snippet.prototype.run.mockReturnValueOnce({
-        values: {
-          user: 'admin-user',
-          password: 'admin-password',
-        },
+      asMock(prompts).mockResolvedValueOnce({
+        confirm: true,
+      });
+
+      asMock(prompts).mockResolvedValueOnce({
+        user: 'admin-user',
+        password: 'admin-password',
       });
     });
 

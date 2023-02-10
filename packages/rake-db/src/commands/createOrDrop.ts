@@ -12,16 +12,31 @@ import { migrate } from './migrateOrRollback';
 const execute = async (
   options: AdapterOptions,
   sql: string,
-): Promise<'ok' | 'already' | 'forbidden' | { error: unknown }> => {
+): Promise<
+  'ok' | 'already' | 'forbidden' | 'ssl required' | { error: unknown }
+> => {
   const db = new Adapter(options);
+
   try {
     await db.query(sql);
     return 'ok';
   } catch (error) {
     const err = error as Record<string, unknown>;
+
+    if (
+      typeof err.message === 'string' &&
+      err.message.includes('sslmode=require')
+    ) {
+      return 'ssl required';
+    }
+
     if (err.code === '42P04' || err.code === '3D000') {
       return 'already';
-    } else if (err.code === '42501') {
+    } else if (
+      err.code === '42501' ||
+      (typeof err.message === 'string' &&
+        err.message.includes('password authentication failed'))
+    ) {
       return 'forbidden';
     } else {
       return { error };
@@ -39,7 +54,7 @@ const createOrDrop = async (
     sql(params: { database: string; user: string }): string;
     successMessage(params: { database: string }): string;
     alreadyMessage(params: { database: string }): string;
-    createVersionsTable?: boolean;
+    create?: boolean;
   },
 ) => {
   const params = getDatabaseAndUserFromOptions(options);
@@ -52,19 +67,38 @@ const createOrDrop = async (
     console.log(args.successMessage(params));
   } else if (result === 'already') {
     console.log(args.alreadyMessage(params));
+  } else if (result === 'ssl required') {
+    console.log('SSL is required: append ?ssl=true to the database url string');
+    return;
   } else if (result === 'forbidden') {
-    await createOrDrop(
+    let message = `Permission denied to ${
+      args.create ? 'create' : 'drop'
+    } database.`;
+
+    const host = adminOptions.databaseURL
+      ? new URL(adminOptions.databaseURL).hostname
+      : adminOptions.host;
+
+    const isLocal = host === 'localhost';
+    if (!isLocal) {
+      message += `\nDon't use this command for database service providers, only for a local db.`;
+    }
+
+    console.log(message);
+
+    const updatedOptions = await setAdminCredentialsToOptions(
       options,
-      await setAdminCredentialsToOptions(options),
-      config,
-      args,
+      args.create,
     );
+    if (!updatedOptions) return;
+
+    await createOrDrop(options, updatedOptions, config, args);
     return;
   } else {
     throw result.error;
   }
 
-  if (!args.createVersionsTable) return;
+  if (!args.create) return;
 
   const db = new Adapter(options);
   await createSchemaMigrations(db, config);
@@ -86,7 +120,7 @@ export const createDb = async (
       alreadyMessage({ database }) {
         return `Database ${database} already exists`;
       },
-      createVersionsTable: true,
+      create: true,
     });
   }
 };

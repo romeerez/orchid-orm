@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.3.24
+
+### Patch Changes
+
+- Handle ssl required case in db create; Confirm db creation before asking for creds
+
 ## 2.3.23
 
 ### Patch Changes
