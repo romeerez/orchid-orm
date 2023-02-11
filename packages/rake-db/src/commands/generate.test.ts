@@ -1,5 +1,5 @@
 import { generate } from './generate';
-import { migrationConfigDefaults } from '../common';
+import { migrationConfigDefaults, RakeDbConfig } from '../common';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 
@@ -13,9 +13,14 @@ console.log = logMock;
 
 const migrationsPath = migrationConfigDefaults.migrationsPath;
 
+const config: RakeDbConfig = {
+  ...migrationConfigDefaults,
+  basePath: __dirname,
+};
+
 const testGenerate = async (args: string[], content: string) => {
   const name = args[0];
-  await generate(migrationConfigDefaults, args);
+  await generate(config, args);
 
   expect(mkdir).toHaveBeenCalledWith(migrationsPath, { recursive: true });
 
@@ -32,9 +37,7 @@ describe('generate', () => {
   });
 
   it('should throw if migration name is not provided', async () => {
-    expect(generate(migrationConfigDefaults, [])).rejects.toThrow(
-      'Migration name is missing',
-    );
+    expect(generate(config, [])).rejects.toThrow('Migration name is missing');
   });
 
   it('should create a file for create table migration', async () => {

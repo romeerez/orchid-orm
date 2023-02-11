@@ -18,7 +18,8 @@
     }
   },
   "scripts": {
-    "test": "jest",
+    "test": "jest --watch --verbose false",
+    "check": "jest",
     "test:ci": "jest --coverage --coverageReporters json-summary",
     "build": "rimraf ./dist/ && rollup -c --rollup.config",
     "prepublishOnly": "pnpm build"

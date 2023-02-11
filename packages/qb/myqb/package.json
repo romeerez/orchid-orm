@@ -19,7 +19,8 @@
     }
   },
   "scripts": {
-    "test": "jest",
+    "test": "jest --watch --verbose false",
+    "check": "jest",
     "build": "rimraf ./dist/ && rollup -c --rollup.config",
     "prepublishOnly": "pnpm build"
   },
