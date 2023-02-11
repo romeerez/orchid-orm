@@ -665,12 +665,12 @@ import { config } from './config';
 import { appCodeUpdater } from 'orchid-orm';
 
 rakeDb(config.database, {
-  migrationsPath: 'src/db/migrations',
+  migrationsPath: './migrations',
   appCodeUpdater: appCodeUpdater({
-    tablePath: (tableName) => \`src/db/tables/\${tableName}.table.ts\`,
-    baseTablePath: 'src/db/baseTable.ts',
+    tablePath: (tableName) => \`./tables/\${tableName}.table.ts\`,
+    baseTablePath: './baseTable.ts',
     baseTableName: 'BaseTable',
-    mainFilePath: 'src/db/db.ts',
+    mainFilePath: './db.ts',
   }),
   useCodeUpdater: true, // set to false to disable code updater
   commands: {
@@ -696,12 +696,12 @@ import { config } from './config';
 import { appCodeUpdater } from 'orchid-orm';
 
 rakeDb(config.allDatabases, {
-  migrationsPath: 'src/db/migrations',
+  migrationsPath: './migrations',
   appCodeUpdater: appCodeUpdater({
-    tablePath: (tableName) => \`src/db/tables/\${tableName}.table.ts\`,
-    baseTablePath: 'src/db/baseTable.ts',
+    tablePath: (tableName) => \`./tables/\${tableName}.table.ts\`,
+    baseTablePath: './baseTable.ts',
     baseTableName: 'BaseTable',
-    mainFilePath: 'src/db/db.ts',
+    mainFilePath: './db.ts',
   }),
   useCodeUpdater: true, // set to false to disable code updater
   commands: {
