@@ -97,6 +97,12 @@ export namespace DbStructure {
     name: string;
     version?: string;
   };
+
+  export type Enum = {
+    schemaName: string;
+    name: string;
+    values: string[];
+  };
 }
 
 const filterSchema = (table: string) =>
@@ -386,6 +392,21 @@ ORDER BY trigger_name`,
 FROM pg_extension
 JOIN pg_catalog.pg_namespace n ON n.oid = extnamespace
  AND ${filterSchema('n.nspname')}`,
+    );
+    return rows;
+  }
+
+  async getEnums() {
+    const { rows } = await this.db.query<DbStructure.Enum>(
+      `SELECT
+  n.nspname as "schemaName",
+  t.typname as name,
+  json_agg(e.enumlabel) as values
+FROM pg_type t
+JOIN pg_enum e ON t.oid = e.enumtypid
+JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+WHERE ${filterSchema('n.nspname')}
+GROUP BY n.nspname, t.typname`,
     );
     return rows;
   }

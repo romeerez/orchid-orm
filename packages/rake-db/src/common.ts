@@ -3,6 +3,7 @@ import {
   AdapterOptions,
   DbResult,
   DefaultColumnTypes,
+  EnumColumn,
   NoPrimaryKeyOption,
   QueryLogOptions,
   singleQuote,
@@ -11,6 +12,7 @@ import path from 'path';
 import { readdir } from 'fs/promises';
 import { RakeDbAst } from './ast';
 import prompts from 'prompts';
+import { TableQuery } from './migration/createTable';
 
 type Db = DbResult<DefaultColumnTypes>;
 
@@ -334,4 +336,18 @@ export const quoteSchemaTable = ({
   name: string;
 }) => {
   return singleQuote(schema ? `${schema}.${name}` : name);
+};
+
+export const makePopulateEnumQuery = (item: EnumColumn): TableQuery => {
+  const [schema, name] = getSchemaAndTableFromName(item.enumName);
+  return {
+    text: `SELECT unnest(enum_range(NULL::${quoteWithSchema({
+      schema,
+      name,
+    })}))::text`,
+    then(result) {
+      // populate empty options array with values from db
+      item.options.push(...result.rows.map(([value]) => value));
+    },
+  };
 };

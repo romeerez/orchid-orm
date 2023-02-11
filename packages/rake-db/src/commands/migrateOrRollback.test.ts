@@ -1,4 +1,4 @@
-import { migrate, rollback } from './migrateOrRollback';
+import { changeCache, migrate, rollback } from './migrateOrRollback';
 import { createSchemaMigrations, migrationConfigDefaults } from '../common';
 import { getMigrationFiles } from '../common';
 import { Adapter, noop, TransactionAdapter } from 'pqb';
@@ -33,6 +33,7 @@ Adapter.prototype.transaction = (cb) => {
 
 const transactionQueryMock = jest.fn();
 TransactionAdapter.prototype.query = transactionQueryMock;
+TransactionAdapter.prototype.arrays = transactionQueryMock;
 
 const importMock = jest.fn();
 const config = {
@@ -67,6 +68,9 @@ describe('migrateOrRollback', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     importMock.mockImplementation(() => undefined);
+    for (const key in changeCache) {
+      delete changeCache[key];
+    }
   });
 
   describe('migrate', () => {
@@ -176,6 +180,25 @@ describe('migrateOrRollback', () => {
 
       expect(appCodeUpdater).toBeCalled();
     });
+
+    it('should call multiple change callbacks from top to bottom', async () => {
+      migrationFiles = [files[0]];
+      migratedVersions = [];
+
+      const called: string[] = [];
+      importMock.mockImplementation(() => {
+        change(async () => {
+          called.push('one');
+        });
+        change(async () => {
+          called.push('two');
+        });
+      });
+
+      await migrate(options, config, []);
+
+      expect(called).toEqual(['one', 'two']);
+    });
   });
 
   describe('rollback', () => {
@@ -220,6 +243,25 @@ describe('migrateOrRollback', () => {
       expect(importMock).not.toBeCalled();
       expect(transactionQueryMock).not.toBeCalled();
       expect(config.logger.log).not.toBeCalled();
+    });
+
+    it('should call multiple change callbacks from top to bottom', async () => {
+      migrationFiles = [files[0]];
+      migratedVersions = [files[0].version];
+
+      const called: string[] = [];
+      importMock.mockImplementation(() => {
+        change(async () => {
+          called.push('one');
+        });
+        change(async () => {
+          called.push('two');
+        });
+      });
+
+      await rollback(options, config, []);
+
+      expect(called).toEqual(['two', 'one']);
     });
   });
 });

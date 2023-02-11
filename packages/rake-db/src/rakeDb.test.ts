@@ -3,6 +3,7 @@ import { createDb, dropDb, resetDb } from './commands/createOrDrop';
 import { migrate, rollback } from './commands/migrateOrRollback';
 import { generate } from './commands/generate';
 import { pullDbStructure } from './pull/pull';
+import { RakeDbError } from './errors';
 
 jest.mock('./common', () => ({
   processRakeDbConfig: (config: unknown) => config,
@@ -107,5 +108,24 @@ describe('rakeDb', () => {
     await rakeDb(options, config, ['other']);
 
     expect(log).toBeCalled();
+  });
+
+  it('should log error and exit process with 1 when RakeDbError thrown', async () => {
+    const errorLog = jest.fn();
+    const exit = jest.fn(() => undefined as never);
+    console.error = errorLog;
+    process.exit = exit;
+
+    const err = new RakeDbError('message');
+    const custom = () => {
+      throw err;
+    };
+
+    const conf = { ...config, commands: { custom } };
+
+    await expect(() => rakeDb(options, conf, ['custom'])).rejects.toThrow(err);
+
+    expect(errorLog).toBeCalledWith('message');
+    expect(exit).toBeCalledWith(1);
   });
 });

@@ -6,12 +6,11 @@ import {
   emptyObject,
   TableData,
   RawExpression,
-  raw,
   columnTypes,
-  Sql,
   quote,
   getRaw,
   isRaw,
+  EnumColumn,
 } from 'pqb';
 import {
   ChangeTableCallback,
@@ -23,7 +22,11 @@ import {
   runCodeUpdater,
 } from './migration';
 import { RakeDbAst } from '../ast';
-import { getSchemaAndTableFromName, quoteWithSchema } from '../common';
+import {
+  getSchemaAndTableFromName,
+  makePopulateEnumQuery,
+  quoteWithSchema,
+} from '../common';
 import {
   addColumnComment,
   addColumnIndex,
@@ -33,6 +36,8 @@ import {
   indexesToQuery,
   primaryKeyToSql,
 } from './migrationUtils';
+import { tableMethods } from './tableMethods';
+import { TableQuery } from './createTable';
 
 type ChangeTableData = { add: TableData; drop: TableData };
 const newChangeTableData = (): ChangeTableData => ({
@@ -147,7 +152,7 @@ const columnTypeToColumnChange = (
 
 type TableChangeMethods = typeof tableChangeMethods;
 const tableChangeMethods = {
-  raw: raw,
+  ...tableMethods,
   add,
   drop,
   change(
@@ -216,7 +221,8 @@ export const changeTable = async (
 
   const queries = astToQueries(ast);
   for (const query of queries) {
-    await migration.adapter.query(query);
+    const result = await migration.adapter.arrays(query);
+    query.then?.(result);
   }
 
   await runCodeUpdater(migration, ast);
@@ -285,13 +291,12 @@ type PrimaryKeys = {
   options?: { name?: string };
 };
 
-const astToQueries = (ast: RakeDbAst.ChangeTable): Sql[] => {
-  const result: Sql[] = [];
+const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
+  const queries: TableQuery[] = [];
 
   if (ast.comment !== undefined) {
-    result.push({
+    queries.push({
       text: `COMMENT ON TABLE ${quoteWithSchema(ast)} IS ${quote(ast.comment)}`,
-      values: [],
     });
   }
 
@@ -309,6 +314,13 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): Sql[] => {
   for (const key in ast.shape) {
     const item = ast.shape[key];
 
+    if ('item' in item) {
+      const { item: column } = item;
+      if (column instanceof EnumColumn) {
+        queries.push(makePopulateEnumQuery(column));
+      }
+    }
+
     if (item.type === 'add') {
       if (item.item.isPrimaryKey) {
         addPrimaryKeys.columns.push(key);
@@ -318,6 +330,14 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): Sql[] => {
         dropPrimaryKeys.columns.push(key);
       }
     } else if (item.type === 'change') {
+      if (item.from.column instanceof EnumColumn) {
+        queries.push(makePopulateEnumQuery(item.from.column));
+      }
+
+      if (item.to.column instanceof EnumColumn) {
+        queries.push(makePopulateEnumQuery(item.to.column));
+      }
+
       if (item.from.primaryKey) {
         dropPrimaryKeys.columns.push(key);
         dropPrimaryKeys.change = true;
@@ -530,7 +550,7 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): Sql[] => {
   );
 
   if (alterTable.length) {
-    result.push({
+    queries.push({
       text:
         `ALTER TABLE ${quoteWithSchema(ast)}` +
         `\n  ${alterTable.join(',\n  ')}`,
@@ -538,9 +558,9 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): Sql[] => {
     });
   }
 
-  result.push(...indexesToQuery(false, ast, dropIndexes));
-  result.push(...indexesToQuery(true, ast, addIndexes));
-  result.push(...commentsToQuery(ast, comments));
+  queries.push(...indexesToQuery(false, ast, dropIndexes));
+  queries.push(...indexesToQuery(true, ast, addIndexes));
+  queries.push(...commentsToQuery(ast, comments));
 
-  return result;
+  return queries;
 };

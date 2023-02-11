@@ -1,4 +1,5 @@
 import {
+  asMock,
   expectSql,
   getDb,
   queryMock,
@@ -71,27 +72,8 @@ describe('changeTable', () => {
           dropCascade: t[action](t.text(), { dropMode: 'CASCADE' }),
           nullable: t[action](t.text().nullable()),
           nonNullable: t[action](t.text()),
-          enum: t[action](t.enum('mood')),
           withDefault: t[action](t.boolean().default(false)),
           withDefaultRaw: t[action](t.date().default(t.raw(`now()`))),
-          withIndex: t[action](
-            t.text().index({
-              name: 'indexName',
-              unique: true,
-              using: 'gin',
-              collate: 'utf-8',
-              opclass: 'opclass',
-              order: 'ASC',
-              include: 'id',
-              with: 'fillfactor = 70',
-              tablespace: 'tablespace',
-              where: 'column = 123',
-            }),
-          ),
-          uniqueColumn: t[action](t.text().unique({ dropMode: 'CASCADE' })),
-          columnWithComment: t[action](
-            t.text().comment('this is a column comment'),
-          ),
           varcharWithLength: t[action](t.varchar(20)),
           decimalWithPrecisionAndScale: t[action](t.decimal(10, 5)),
           columnWithCompression: t[action](t.text().compression('compression')),
@@ -116,12 +98,8 @@ describe('changeTable', () => {
               ADD COLUMN "dropCascade" text NOT NULL,
               ADD COLUMN "nullable" text,
               ADD COLUMN "nonNullable" text NOT NULL,
-              ADD COLUMN "enum" "mood" NOT NULL,
               ADD COLUMN "withDefault" boolean NOT NULL DEFAULT false,
               ADD COLUMN "withDefaultRaw" date NOT NULL DEFAULT now(),
-              ADD COLUMN "withIndex" text NOT NULL,
-              ADD COLUMN "uniqueColumn" text NOT NULL,
-              ADD COLUMN "columnWithComment" text NOT NULL,
               ADD COLUMN "varcharWithLength" varchar(20) NOT NULL,
               ADD COLUMN "decimalWithPrecisionAndScale" decimal(10, 5) NOT NULL,
               ADD COLUMN "columnWithCompression" text COMPRESSION compression NOT NULL,
@@ -130,22 +108,6 @@ describe('changeTable', () => {
               ADD COLUMN "createdAt" timestamp NOT NULL DEFAULT now(),
               ADD COLUMN "updatedAt" timestamp NOT NULL DEFAULT now()
           `,
-          toLine(`
-            CREATE UNIQUE INDEX "indexName"
-              ON "table"
-              USING gin
-              ("withIndex" COLLATE 'utf-8' opclass ASC)
-              INCLUDE ("id")
-              WITH (fillfactor = 70)
-              TABLESPACE tablespace
-              WHERE column = 123
-          `),
-          toLine(`
-            CREATE UNIQUE INDEX "table_uniqueColumn_idx"
-              ON "table"
-              ("uniqueColumn")
-          `),
-          `COMMENT ON COLUMN "table"."columnWithComment" IS 'this is a column comment'`,
         ]);
       };
 
@@ -157,12 +119,8 @@ describe('changeTable', () => {
               DROP COLUMN "dropCascade" CASCADE,
               DROP COLUMN "nullable",
               DROP COLUMN "nonNullable",
-              DROP COLUMN "enum",
               DROP COLUMN "withDefault",
               DROP COLUMN "withDefaultRaw",
-              DROP COLUMN "withIndex",
-              DROP COLUMN "uniqueColumn",
-              DROP COLUMN "columnWithComment",
               DROP COLUMN "varcharWithLength",
               DROP COLUMN "decimalWithPrecisionAndScale",
               DROP COLUMN "columnWithCompression",
@@ -171,18 +129,203 @@ describe('changeTable', () => {
               DROP COLUMN "createdAt",
               DROP COLUMN "updatedAt"
           `,
-          toLine(`DROP INDEX "indexName"`),
-          toLine(`DROP INDEX "table_uniqueColumn_idx" CASCADE`),
         ]);
       };
+
+      asMock(queryMock).mockResolvedValue({ rows: [['one'], ['two']] });
 
       await fn();
       (action === 'add' ? expectAddColumns : expectRemoveColumns)();
 
       queryMock.mockClear();
       db.up = false;
+
       await fn();
+
       (action === 'add' ? expectRemoveColumns : expectAddColumns)();
+    });
+
+    it(`should ${action} index`, async () => {
+      const fn = () => {
+        return db.changeTable('table', (t) => ({
+          withIndex: t[action](
+            t.text().index({
+              name: 'indexName',
+              unique: true,
+              using: 'gin',
+              collate: 'utf-8',
+              opclass: 'opclass',
+              order: 'ASC',
+              include: 'id',
+              with: 'fillfactor = 70',
+              tablespace: 'tablespace',
+              where: 'column = 123',
+            }),
+          ),
+        }));
+      };
+
+      const expectAdd = () => {
+        expectSql([
+          `ALTER TABLE "table"
+              ADD COLUMN "withIndex" text NOT NULL`,
+          toLine(`
+              CREATE UNIQUE INDEX "indexName"
+                  ON "table"
+                      USING gin
+                      ("withIndex" COLLATE 'utf-8' opclass ASC)
+                  INCLUDE ("id")
+                  WITH (fillfactor = 70)
+                  TABLESPACE tablespace
+                  WHERE column = 123
+          `),
+        ]);
+      };
+
+      const expectRemove = () => {
+        expectSql([
+          `ALTER TABLE "table"
+              DROP COLUMN "withIndex"`,
+          toLine(`DROP INDEX "indexName"`),
+        ]);
+      };
+
+      asMock(queryMock).mockResolvedValue({ rows: [['one'], ['two']] });
+
+      await fn();
+      (action === 'add' ? expectAdd : expectRemove)();
+
+      queryMock.mockClear();
+      db.up = false;
+
+      await fn();
+
+      (action === 'add' ? expectRemove : expectAdd)();
+    });
+
+    it(`should ${action} unique index`, async () => {
+      const fn = () => {
+        return db.changeTable('table', (t) => ({
+          uniqueColumn: t[action](t.text().unique({ dropMode: 'CASCADE' })),
+        }));
+      };
+
+      const expectAdd = () => {
+        expectSql([
+          `ALTER TABLE "table"
+              ADD COLUMN "uniqueColumn" text NOT NULL`,
+          toLine(`
+            CREATE UNIQUE INDEX "table_uniqueColumn_idx"
+              ON "table"
+              ("uniqueColumn")
+          `),
+        ]);
+      };
+
+      const expectRemove = () => {
+        expectSql([
+          `ALTER TABLE "table"
+              DROP COLUMN "uniqueColumn"`,
+          toLine(`DROP INDEX "table_uniqueColumn_idx" CASCADE`),
+        ]);
+      };
+
+      asMock(queryMock).mockResolvedValue({ rows: [['one'], ['two']] });
+
+      await fn();
+      (action === 'add' ? expectAdd : expectRemove)();
+
+      queryMock.mockClear();
+      db.up = false;
+
+      await fn();
+
+      (action === 'add' ? expectRemove : expectAdd)();
+    });
+
+    it(`should ${action} column comment`, async () => {
+      const fn = () => {
+        return db.changeTable('table', (t) => ({
+          columnWithComment: t[action](
+            t.text().comment('this is a column comment'),
+          ),
+        }));
+      };
+
+      const expectAdd = () => {
+        expectSql([
+          `ALTER TABLE "table"
+            ADD COLUMN "columnWithComment" text NOT NULL`,
+          `COMMENT ON COLUMN "table"."columnWithComment" IS 'this is a column comment'`,
+        ]);
+      };
+
+      const expectRemove = () => {
+        expectSql(
+          `ALTER TABLE "table"
+            DROP COLUMN "columnWithComment"`,
+        );
+      };
+
+      asMock(queryMock).mockResolvedValue({ rows: [['one'], ['two']] });
+
+      await fn();
+      (action === 'add' ? expectAdd : expectRemove)();
+
+      queryMock.mockClear();
+      db.up = false;
+
+      await fn();
+
+      (action === 'add' ? expectRemove : expectAdd)();
+    });
+
+    it(`should ${action} enum`, async () => {
+      const fn = () => {
+        return db.changeTable('table', (t) => ({
+          enum: t[action](t.enum('mood')),
+        }));
+      };
+
+      const expectAdd = () => {
+        expectSql([
+          'SELECT unnest(enum_range(NULL::"mood"))::text',
+          `
+            ALTER TABLE "table"
+              ADD COLUMN "enum" "mood" NOT NULL
+          `,
+        ]);
+      };
+
+      const expectRemove = () => {
+        expectSql([
+          'SELECT unnest(enum_range(NULL::"mood"))::text',
+          `
+            ALTER TABLE "table"
+              DROP COLUMN "enum"
+          `,
+        ]);
+      };
+
+      asMock(queryMock).mockResolvedValue({ rows: [['one'], ['two']] });
+
+      await fn();
+
+      (action === 'add' ? expectAdd : expectRemove)();
+
+      const [{ ast: ast1 }] = asMock(db.options.appCodeUpdater).mock.calls[0];
+      expect(ast1.shape.enum.item.options).toEqual(['one', 'two']);
+
+      queryMock.mockClear();
+      asMock(db.options.appCodeUpdater).mockClear();
+      db.up = false;
+
+      await fn();
+
+      (action === 'add' ? expectRemove : expectAdd)();
+
+      const [{ ast: ast2 }] = asMock(db.options.appCodeUpdater).mock.calls[0];
+      expect(ast2.shape.enum.item.options).toEqual(['one', 'two']);
     });
 
     it(`should ${action} columns with a primary key`, async () => {
@@ -406,7 +549,7 @@ describe('changeTable', () => {
     });
   });
 
-  it('should change column', async () => {
+  describe('column change', () => {
     const fn = () => {
       return db.changeTable('table', (t) => ({
         changeType: t.change(t.integer(), t.text()),
@@ -426,9 +569,23 @@ describe('changeTable', () => {
       }));
     };
 
-    await fn();
-    expectSql([
-      `
+    const enumOne = ['one', 'two'];
+    const enumTwo = ['three', 'four'];
+
+    it('should change column up', async () => {
+      asMock(queryMock).mockResolvedValueOnce({
+        rows: enumOne.map((value) => [value]),
+      });
+      asMock(queryMock).mockResolvedValueOnce({
+        rows: enumTwo.map((value) => [value]),
+      });
+
+      await fn();
+
+      expectSql([
+        'SELECT unnest(enum_range(NULL::"one"))::text',
+        'SELECT unnest(enum_range(NULL::"two"))::text',
+        `
         ALTER TABLE "table"
         ALTER COLUMN "changeType" TYPE text,
         ALTER COLUMN "changeEnum" TYPE "two",
@@ -438,14 +595,30 @@ describe('changeTable', () => {
         ALTER COLUMN "changeNull" DROP NOT NULL,
         ALTER COLUMN "changeCompression" SET COMPRESSION value
       `,
-      `COMMENT ON COLUMN "table"."changeComment" IS 'comment 2'`,
-    ]);
+        `COMMENT ON COLUMN "table"."changeComment" IS 'comment 2'`,
+      ]);
 
-    queryMock.mockClear();
-    db.up = false;
-    await fn();
-    expectSql([
-      `
+      const [{ ast }] = asMock(db.options.appCodeUpdater).mock.calls[0];
+      expect(ast.shape.changeEnum.from.column.options).toEqual(enumOne);
+      expect(ast.shape.changeEnum.to.column.options).toEqual(enumTwo);
+    });
+
+    it('should change column down', async () => {
+      asMock(queryMock).mockResolvedValueOnce({
+        rows: enumTwo.map((value) => [value]),
+      });
+      asMock(queryMock).mockResolvedValueOnce({
+        rows: enumOne.map((value) => [value]),
+      });
+
+      db.up = false;
+
+      await fn();
+
+      expectSql([
+        'SELECT unnest(enum_range(NULL::"two"))::text',
+        'SELECT unnest(enum_range(NULL::"one"))::text',
+        `
         ALTER TABLE "table"
         ALTER COLUMN "changeType" TYPE integer,
         ALTER COLUMN "changeEnum" TYPE "one",
@@ -455,8 +628,13 @@ describe('changeTable', () => {
         ALTER COLUMN "changeNull" SET NOT NULL,
         ALTER COLUMN "changeCompression" SET COMPRESSION DEFAULT
       `,
-      `COMMENT ON COLUMN "table"."changeComment" IS 'comment 1'`,
-    ]);
+        `COMMENT ON COLUMN "table"."changeComment" IS 'comment 1'`,
+      ]);
+
+      const [{ ast }] = asMock(db.options.appCodeUpdater).mock.calls[0];
+      expect(ast.shape.changeEnum.from.column.options).toEqual(enumTwo);
+      expect(ast.shape.changeEnum.to.column.options).toEqual(enumOne);
+    });
   });
 
   it('should add composite primary key via change', async () => {

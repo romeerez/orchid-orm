@@ -24,6 +24,7 @@ export const getDb = () => {
     {},
   );
   db.adapter.query = queryMock;
+  db.adapter.arrays = queryMock;
   return db;
 };
 

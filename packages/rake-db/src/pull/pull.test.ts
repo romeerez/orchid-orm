@@ -95,11 +95,15 @@ describe('pull', () => {
 change(async (db) => {
   await db.createSchema('schema1');
   await db.createSchema('schema2');
+});
 
+change(async (db) => {
   await db.createTable('schema.table1', (t) => ({
     id: t.serial().primaryKey(),
   }));
+});
 
+change(async (db) => {
   await db.createTable('table2', (t) => ({
     text: t.text(),
     ...t.timestamps(),

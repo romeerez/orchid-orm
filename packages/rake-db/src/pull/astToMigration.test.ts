@@ -9,15 +9,46 @@ ${content}
 });
 `;
 
-const tableAst: RakeDbAst.Table = {
+const schema: RakeDbAst.Schema = {
+  type: 'schema',
+  action: 'create',
+  name: 'schemaName',
+};
+
+const extension: RakeDbAst.Extension = {
+  type: 'extension',
+  action: 'create',
+  name: 'extensionName',
+};
+
+const enumType: RakeDbAst.Enum = {
+  type: 'enum',
+  action: 'create',
+  name: 'mood',
+  values: ['sad', 'ok', 'happy'],
+};
+
+const table: RakeDbAst.Table = {
   type: 'table',
   action: 'create',
   schema: 'schema',
   name: 'table',
-  shape: {},
   noPrimaryKey: 'ignore',
   indexes: [],
   foreignKeys: [],
+  shape: {
+    id: columnTypes.serial().primaryKey(),
+  },
+};
+
+const foreignKey: RakeDbAst.ForeignKey = {
+  type: 'foreignKey',
+  action: 'create',
+  tableName: 'table',
+  columns: ['otherId'],
+  fnOrTable: 'otherTable',
+  foreignColumns: ['id'],
+  options: {},
 };
 
 describe('astToMigration', () => {
@@ -29,14 +60,51 @@ describe('astToMigration', () => {
     expect(result).toBe(undefined);
   });
 
-  it('should create schema', () => {
+  it('should put schema, extension, enum to first change, tables to separate changes, foreignKeys in last change', () => {
     const result = astToMigration([
-      {
-        type: 'schema',
-        action: 'create',
-        name: 'schemaName',
-      },
+      schema,
+      extension,
+      enumType,
+      table,
+      { ...table, name: 'other' },
+      foreignKey,
     ]);
+
+    expect(result).toBe(`import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createSchema('schemaName');
+
+  await db.createExtension('extensionName');
+
+  await db.createEnum('mood', ['sad', 'ok', 'happy']);
+});
+
+change(async (db) => {
+  await db.createTable('schema.table', (t) => ({
+    id: t.serial().primaryKey(),
+  }));
+});
+
+change(async (db) => {
+  await db.createTable('schema.other', (t) => ({
+    id: t.serial().primaryKey(),
+  }));
+});
+
+change(async (db) => {
+  await db.addForeignKey(
+    'table',
+    ['otherId'],
+    'otherTable',
+    ['id'],
+  );
+});
+`);
+  });
+
+  it('should create schema', () => {
+    const result = astToMigration([schema]);
 
     expect(result).toBe(template(`  await db.createSchema('schemaName');`));
   });
@@ -44,9 +112,7 @@ describe('astToMigration', () => {
   it('should create extension', () => {
     const result = astToMigration([
       {
-        type: 'extension',
-        action: 'create',
-        name: 'extensionName',
+        ...extension,
         schema: 'schema',
         version: '123',
       },
@@ -56,20 +122,28 @@ describe('astToMigration', () => {
       template(`  await db.createExtension('extensionName', {
     schema: 'schema',
     version: '123',
-  })`),
+  });`),
+    );
+  });
+
+  it('should create enum', () => {
+    const result = astToMigration([
+      {
+        ...enumType,
+        schema: 'schema',
+      },
+    ]);
+
+    expect(result).toBe(
+      template(`  await db.createEnum('mood', ['sad', 'ok', 'happy'], {
+    schema: 'schema',
+  });`),
     );
   });
 
   describe('table', () => {
     it('should create table', () => {
-      const result = astToMigration([
-        {
-          ...tableAst,
-          shape: {
-            id: columnTypes.serial().primaryKey(),
-          },
-        },
-      ]);
+      const result = astToMigration([table]);
 
       expect(result).toBe(
         template(`  await db.createTable('schema.table', (t) => ({
@@ -81,7 +155,7 @@ describe('astToMigration', () => {
     it('should add columns with indexes and foreignKeys', () => {
       const result = astToMigration([
         {
-          ...tableAst,
+          ...table,
           shape: {
             someId: columnTypes
               .integer()
@@ -116,7 +190,7 @@ change(async (db) => {
     it('should add composite primaryKeys, indexes, foreignKeys', () => {
       const result = astToMigration([
         {
-          ...tableAst,
+          ...table,
           shape: {
             id: columnTypes.serial().primaryKey(),
           },
@@ -171,13 +245,8 @@ change(async (db) => {
     it('should add standalone foreignKey', () => {
       const result = astToMigration([
         {
-          type: 'foreignKey',
-          action: 'create',
+          ...foreignKey,
           tableSchema: 'custom',
-          tableName: 'table',
-          columns: ['otherId'],
-          fnOrTable: 'otherTable',
-          foreignColumns: ['id'],
           options: {
             name: 'fkey',
             match: 'FULL',

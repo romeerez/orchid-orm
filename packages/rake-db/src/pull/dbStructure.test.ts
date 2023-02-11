@@ -163,4 +163,18 @@ describe('dbStructure', () => {
       expect(result).toEqual(rows);
     });
   });
+
+  describe('getEnums', () => {
+    it('should return enums', async () => {
+      rows = [
+        {
+          schemaName: 'public',
+          name: 'mood',
+          values: ['sad', 'ok', 'happy'],
+        },
+      ];
+      const result = await db.getEnums();
+      expect(result).toEqual(rows);
+    });
+  });
 });

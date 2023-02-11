@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.3.28
+
+### Patch Changes
+
+- Support enum in rake-db
+
 ## 2.3.26
 
 ### Patch Changes

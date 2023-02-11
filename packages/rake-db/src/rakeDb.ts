@@ -4,6 +4,7 @@ import { migrate, rollback } from './commands/migrateOrRollback';
 import { processRakeDbConfig, RakeDbConfig } from './common';
 import { generate } from './commands/generate';
 import { pullDbStructure } from './pull/pull';
+import { RakeDbError } from './errors';
 
 export const rakeDb = async (
   options: MaybeArray<AdapterOptions>,
@@ -14,24 +15,32 @@ export const rakeDb = async (
 
   const command = args[0]?.split(':')[0];
 
-  if (command === 'create') {
-    await createDb(options, config);
-  } else if (command === 'drop') {
-    await dropDb(options);
-  } else if (command === 'reset') {
-    await resetDb(options, config);
-  } else if (command === 'migrate') {
-    await migrate(options, config, args.slice(1));
-  } else if (command === 'rollback') {
-    await rollback(options, config, args.slice(1));
-  } else if (command === 'g' || command === 'generate') {
-    await generate(config, args.slice(1));
-  } else if (command === 'pull') {
-    await pullDbStructure(toArray(options)[0], config);
-  } else if (config.commands[command]) {
-    await config.commands[command](toArray(options), config, args.slice(1));
-  } else {
-    printHelp();
+  try {
+    if (command === 'create') {
+      await createDb(options, config);
+    } else if (command === 'drop') {
+      await dropDb(options);
+    } else if (command === 'reset') {
+      await resetDb(options, config);
+    } else if (command === 'migrate') {
+      await migrate(options, config, args.slice(1));
+    } else if (command === 'rollback') {
+      await rollback(options, config, args.slice(1));
+    } else if (command === 'g' || command === 'generate') {
+      await generate(config, args.slice(1));
+    } else if (command === 'pull') {
+      await pullDbStructure(toArray(options)[0], config);
+    } else if (config.commands[command]) {
+      await config.commands[command](toArray(options), config, args.slice(1));
+    } else {
+      printHelp();
+    }
+  } catch (err) {
+    if (err instanceof RakeDbError) {
+      console.error(err.message);
+      process.exit(1);
+    }
+    throw err;
   }
 };
 

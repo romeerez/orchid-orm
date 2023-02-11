@@ -15,19 +15,16 @@ import {
   quoteWithSchema,
 } from '../common';
 import {
-  getCurrentPromise,
-  setCurrentMigrationUp,
-  setCurrentMigration,
+  clearChanges,
   ChangeCallback,
-  change,
-  getCurrentChangeCallback,
+  getCurrentChanges,
 } from '../migration/change';
 import { createMigrationInterface } from '../migration/migration';
 import { pathToFileURL } from 'url';
 
 const getDb = (adapter: Adapter) => createDb({ adapter });
 
-const migrateOrRollback = async (
+export const migrateOrRollback = async (
   options: MaybeArray<AdapterOptions>,
   config: RakeDbConfig,
   args: string[],
@@ -99,7 +96,7 @@ const migrateOrRollback = async (
   }
 };
 
-const changeCache: Record<string, ChangeCallback | undefined> = {};
+export const changeCache: Record<string, ChangeCallback[] | undefined> = {};
 
 const processMigration = async (
   db: Adapter,
@@ -117,18 +114,19 @@ const processMigration = async (
       options,
       appCodeUpdaterCache,
     );
-    setCurrentMigration(db);
-    setCurrentMigrationUp(up);
+    clearChanges();
 
-    const callback = changeCache[file.path];
-    if (callback) {
-      change(callback);
-    } else {
+    let changes = changeCache[file.path];
+    if (!changes) {
       await config.import(pathToFileURL(file.path).pathname);
-      changeCache[file.path] = getCurrentChangeCallback();
+      changes = getCurrentChanges();
+      changeCache[file.path] = changes;
     }
 
-    await getCurrentPromise();
+    for (const fn of up ? changes : changes.reverse()) {
+      await fn(db, up);
+    }
+
     await (up ? saveMigratedVersion : removeMigratedVersion)(
       db.adapter,
       file.version,

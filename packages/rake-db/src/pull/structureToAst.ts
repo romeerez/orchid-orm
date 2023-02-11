@@ -32,6 +32,7 @@ type Data = {
   indexes: DbStructure.Index[];
   foreignKeys: DbStructure.ForeignKey[];
   extensions: DbStructure.Extension[];
+  enums: DbStructure.Enum[];
 };
 
 type PendingTables = Record<
@@ -81,6 +82,26 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
 
   const outerFKeys: [DbStructure.ForeignKey, DbStructure.Table][] = [];
 
+  for (const it of data.extensions) {
+    ast.push({
+      type: 'extension',
+      action: 'create',
+      name: it.name,
+      schema: it.schemaName === 'public' ? undefined : it.schemaName,
+      version: it.version,
+    });
+  }
+
+  for (const it of data.enums) {
+    ast.push({
+      type: 'enum',
+      action: 'create',
+      name: it.name,
+      schema: it.schemaName === 'public' ? undefined : it.schemaName,
+      values: it.values,
+    });
+  }
+
   for (const key in pendingTables) {
     const innerFKeys: DbStructure.ForeignKey[] = [];
     const { table } = pendingTables[key];
@@ -110,16 +131,6 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
     });
   }
 
-  for (const it of data.extensions) {
-    ast.push({
-      type: 'extension',
-      action: 'create',
-      name: it.name,
-      schema: it.schemaName === 'public' ? undefined : it.schemaName,
-      version: it.version,
-    });
-  }
-
   return ast;
 };
 
@@ -132,6 +143,7 @@ const getData = async (db: DbStructure): Promise<Data> => {
     indexes,
     foreignKeys,
     extensions,
+    enums,
   ] = await Promise.all([
     db.getSchemas(),
     db.getTables(),
@@ -140,6 +152,7 @@ const getData = async (db: DbStructure): Promise<Data> => {
     db.getIndexes(),
     db.getForeignKeys(),
     db.getExtensions(),
+    db.getEnums(),
   ]);
 
   return {
@@ -150,6 +163,7 @@ const getData = async (db: DbStructure): Promise<Data> => {
     indexes,
     foreignKeys,
     extensions,
+    enums,
   };
 };
 

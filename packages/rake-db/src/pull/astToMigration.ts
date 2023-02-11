@@ -16,30 +16,58 @@ import {
 import { quoteSchemaTable } from '../common';
 
 export const astToMigration = (ast: RakeDbAst[]): string | undefined => {
-  const code: Code[] = [];
+  const first: Code[] = [];
+  const tables: Code[] = [];
+  const foreignKeys: Code[] = [];
   for (const item of ast) {
     if (item.type === 'schema' && item.action === 'create') {
-      code.push(createSchema(item));
+      first.push(createSchema(item));
     } else if (item.type === 'extension' && item.action === 'create') {
-      if (code.length) code.push([]);
-      code.push(...createExtension(item));
+      if (first.length) first.push([]);
+      first.push(...createExtension(item));
+    } else if (item.type === 'enum' && item.action === 'create') {
+      if (first.length) first.push([]);
+      first.push(...createEnum(item));
     } else if (item.type === 'table' && item.action === 'create') {
-      if (code.length) code.push([]);
-      code.push(...createTable(item));
+      tables.push(createTable(item));
     } else if (item.type === 'foreignKey') {
-      if (code.length) code.push([]);
-      code.push(...createForeignKey(item));
+      if (foreignKeys.length) foreignKeys.push([]);
+      foreignKeys.push(...createForeignKey(item));
     }
   }
 
-  if (!code.length) return;
+  if (!first.length && !tables.length && !foreignKeys.length) return;
 
-  return `import { change } from 'rake-db';
+  let code = `import { change } from 'rake-db';
+`;
 
+  if (first.length) {
+    code += `
 change(async (db) => {
-${codeToString(code, '  ', '  ')}
+${codeToString(first, '  ', '  ')}
 });
 `;
+  }
+
+  if (tables.length) {
+    for (const table of tables) {
+      code += `
+change(async (db) => {
+${codeToString(table, '  ', '  ')}
+});
+`;
+    }
+  }
+
+  if (foreignKeys.length) {
+    code += `
+change(async (db) => {
+${codeToString(foreignKeys, '  ', '  ')}
+});
+`;
+  }
+
+  return code;
 };
 
 const createSchema = (ast: RakeDbAst.Schema) => {
@@ -58,7 +86,22 @@ const createExtension = (ast: RakeDbAst.Extension): Code[] => {
     }
     addCode(code, '}');
   }
-  addCode(code, ')');
+  addCode(code, ');');
+  return code;
+};
+
+const createEnum = (ast: RakeDbAst.Enum) => {
+  const code: Code[] = [
+    `await db.createEnum(${singleQuote(ast.name)}, [${ast.values
+      .map(singleQuote)
+      .join(', ')}]`,
+  ];
+  if (ast.schema) {
+    addCode(code, ', {');
+    code.push([`schema: ${singleQuote(ast.schema)},`]);
+    addCode(code, '}');
+  }
+  addCode(code, ');');
   return code;
 };
 

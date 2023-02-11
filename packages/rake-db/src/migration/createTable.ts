@@ -1,12 +1,12 @@
 import {
   ColumnsShape,
   columnTypes,
+  EnumColumn,
   getColumnTypes,
   getTableData,
   NoPrimaryKeyOption,
+  QueryArraysResult,
   quote,
-  raw,
-  Sql,
   TableData,
 } from 'pqb';
 import {
@@ -25,12 +25,22 @@ import {
   indexesToQuery,
   primaryKeyToSql,
 } from './migrationUtils';
-import { getSchemaAndTableFromName, quoteWithSchema } from '../common';
+import {
+  getSchemaAndTableFromName,
+  makePopulateEnumQuery,
+  quoteWithSchema,
+} from '../common';
 import { RakeDbAst } from '../ast';
+import { tableMethods } from './tableMethods';
+import { NoPrimaryKey } from '../errors';
 
-const types = Object.assign(Object.create(columnTypes), {
-  raw,
-});
+const types = Object.assign(Object.create(columnTypes), tableMethods);
+
+export type TableQuery = {
+  text: string;
+  values?: unknown[];
+  then?(result: QueryArraysResult): void;
+};
 
 export const createTable = async (
   migration: MigrationBase,
@@ -53,8 +63,9 @@ export const createTable = async (
   validatePrimaryKey(ast);
 
   const queries = astToQueries(ast);
-  for (const query of queries) {
-    await migration.adapter.query(query);
+  for (const { then, ...query } of queries) {
+    const result = await migration.adapter.arrays(query);
+    then?.(result);
   }
 
   await runCodeUpdater(migration, ast);
@@ -110,26 +121,35 @@ const validatePrimaryKey = (ast: RakeDbAst.Table) => {
     }
 
     if (!hasPrimaryKey) {
-      const message = `Table ${ast.name} has no primary key`;
+      const error = new NoPrimaryKey(
+        `Table ${ast.name} has no primary key.\nYou can suppress this error by setting { noPrimaryKey: true } after a table name.`,
+      );
       if (ast.noPrimaryKey === 'error') {
-        throw new Error(message);
+        throw error;
       } else {
-        console.warn(message);
+        console.warn(error.message);
       }
     }
   }
 };
 
-const astToQueries = (ast: RakeDbAst.Table): Sql[] => {
+const astToQueries = (ast: RakeDbAst.Table): TableQuery[] => {
+  const queries: TableQuery[] = [];
+
+  for (const key in ast.shape) {
+    const item = ast.shape[key];
+    if (!(item instanceof EnumColumn)) continue;
+
+    queries.push(makePopulateEnumQuery(item));
+  }
+
   if (ast.action === 'drop') {
-    return [
-      {
-        text: `DROP TABLE ${quoteWithSchema(ast)}${
-          ast.dropMode ? ` ${ast.dropMode}` : ''
-        }`,
-        values: [],
-      },
-    ];
+    queries.push({
+      text: `DROP TABLE ${quoteWithSchema(ast)}${
+        ast.dropMode ? ` ${ast.dropMode}` : ''
+      }`,
+    });
+    return queries;
   }
 
   const lines: string[] = [];
@@ -154,21 +174,20 @@ const astToQueries = (ast: RakeDbAst.Table): Sql[] => {
 
   indexes.push(...ast.indexes);
 
-  const result: Sql[] = [
+  queries.push(
     {
       text: `CREATE TABLE ${quoteWithSchema(ast)} (${lines.join(',')}\n)`,
       values,
     },
     ...indexesToQuery(true, ast, indexes),
     ...commentsToQuery(ast, comments),
-  ];
+  );
 
   if (ast.comment) {
-    result.push({
+    queries.push({
       text: `COMMENT ON TABLE ${quoteWithSchema(ast)} IS ${quote(ast.comment)}`,
-      values: [],
     });
   }
 
-  return result;
+  return queries;
 };

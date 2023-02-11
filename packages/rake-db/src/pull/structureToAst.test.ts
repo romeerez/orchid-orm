@@ -99,6 +99,12 @@ const extension: DbStructure.Extension = {
   version: '123',
 };
 
+const enumType: DbStructure.Enum = {
+  schemaName: 'public',
+  name: 'mood',
+  values: ['sad', 'ok', 'happy'],
+};
+
 describe('structureToAst', () => {
   it('should add schema except public', async () => {
     const db = new DbStructure(adapter);
@@ -798,6 +804,37 @@ describe('structureToAst', () => {
         action: 'create',
         name: 'name',
         version: '123',
+      });
+    });
+  });
+
+  describe('enum', () => {
+    it('should add enum', async () => {
+      const db = new DbStructure(adapter);
+      db.getEnums = async () => [{ ...enumType, schemaName: 'custom' }];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Enum];
+
+      expect(ast).toEqual({
+        type: 'enum',
+        action: 'create',
+        name: 'mood',
+        schema: 'custom',
+        values: enumType.values,
+      });
+    });
+
+    it('should ignore schema if it is `public`', async () => {
+      const db = new DbStructure(adapter);
+      db.getEnums = async () => [enumType];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Enum];
+
+      expect(ast).toEqual({
+        type: 'enum',
+        action: 'create',
+        name: 'mood',
+        values: enumType.values,
       });
     });
   });
