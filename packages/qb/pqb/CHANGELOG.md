@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.15
+
+### Patch Changes
+
+- Add createEnum and dropEnum to rake-db
+
 ## 0.9.14
 
 ### Patch Changes

@@ -317,8 +317,8 @@ describe('migration', () => {
       } an extension`, async () => {
         const fn = () => {
           return db[action]('extensionName', {
-            ifExists: true,
-            ifNotExists: true,
+            dropIfExists: true,
+            createIfNotExists: true,
             schema: 'schemaName',
             version: '123',
             cascade: true,
@@ -346,6 +346,52 @@ describe('migration', () => {
         queryMock.mockClear();
         await fn();
         (action === 'createExtension'
+          ? expectDropExtension
+          : expectCreateExtension)();
+      });
+    });
+  });
+
+  (['createEnum', 'dropEnum'] as const).forEach((action) => {
+    describe(action, () => {
+      it('should call appCodeUpdater', async () => {
+        await db[action]('enumName', ['one']);
+
+        expect(db.options.appCodeUpdater).toHaveBeenCalled();
+      });
+
+      it(`should ${
+        action === 'createEnum' ? 'add' : 'drop'
+      } an enum`, async () => {
+        const fn = () => {
+          return db[action]('enumName', ['one', 'two'], {
+            dropIfExists: true,
+            schema: 'schemaName',
+            cascade: true,
+          });
+        };
+
+        const expectCreateExtension = () => {
+          expectSql(`
+            CREATE TYPE "schemaName"."enumName" AS ENUM ('one', 'two')
+          `);
+        };
+
+        const expectDropExtension = () => {
+          expectSql(`
+            DROP TYPE IF EXISTS "schemaName"."enumName" CASCADE
+          `);
+        };
+
+        await fn();
+        (action === 'createEnum'
+          ? expectCreateExtension
+          : expectDropExtension)();
+
+        db.up = false;
+        queryMock.mockClear();
+        await fn();
+        (action === 'createEnum'
           ? expectDropExtension
           : expectCreateExtension)();
       });

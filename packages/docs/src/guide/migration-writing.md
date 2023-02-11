@@ -413,6 +413,27 @@ change(async (db) => {
 })
 ```
 
+## createEnum, dropEnum
+
+`createEnum` creates a enum on migrate, drops it on rollback.
+
+`dropEnum` does the opposite.
+
+Third argument for options is optional.
+
+```ts
+import { change } from 'rake-db'
+
+change(async (db) => {
+  await db.createEnum('mood', ['sad', 'ok', 'happy'], {
+    schema: 'schemaName',
+    // following options are used when dropping
+    dropIfExists: true,
+    cascade: true,
+  })
+})
+```
+
 ## createSchema, dropSchema
 
 `createSchema` creates a database schema, and removes it on rollback.

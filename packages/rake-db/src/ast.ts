@@ -15,6 +15,7 @@ export type RakeDbAst =
   | RakeDbAst.RenameTable
   | RakeDbAst.Schema
   | RakeDbAst.Extension
+  | RakeDbAst.Enum
   | RakeDbAst.ForeignKey;
 
 export namespace RakeDbAst {
@@ -101,8 +102,23 @@ export namespace RakeDbAst {
     schema?: string;
     version?: string;
     cascade?: boolean;
-    ifExists?: boolean;
-    ifNotExists?: boolean;
+    createIfNotExists?: boolean;
+    dropIfExists?: boolean;
+  };
+
+  export type Enum = {
+    type: 'enum';
+    action: 'create' | 'drop';
+    schema?: string;
+    name: string;
+    values: string[];
+    cascade?: boolean;
+    dropIfExists?: boolean;
+  };
+
+  export type EnumOptions = {
+    createIfNotExists?: boolean;
+    dropIfExists?: boolean;
   };
 
   export type ForeignKey = {

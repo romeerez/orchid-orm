@@ -57,6 +57,7 @@ const db = getDb();
           id: t.serial().primaryKey(),
           nullable: t.text().nullable(),
           nonNullable: t.text(),
+          enum: t.enum('mood'),
           withDefault: t.boolean().default(false),
           withDefaultRaw: t.date().default(t.raw(`now()`)),
           withIndex: t.text().index({
@@ -94,6 +95,7 @@ const db = getDb();
               "id" serial PRIMARY KEY,
               "nullable" text,
               "nonNullable" text NOT NULL,
+              "enum" "mood" NOT NULL,
               "withDefault" boolean NOT NULL DEFAULT false,
               "withDefaultRaw" date NOT NULL DEFAULT now(),
               "withIndex" text NOT NULL,

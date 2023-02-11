@@ -33,6 +33,24 @@ change(async (db) => {
 })
 ```
 
+## enum
+
+In the migration `enum` takes a single argument for enum name, unlike the `enum` column in the ORM.
+
+To create a new enum type, use `createEnum` before creating a table.
+
+```ts
+import { change } from 'rake-db'
+
+change(async (db) => {
+  await db.createEnum('mood', ['sad', 'ok', 'happy'])
+  
+  await db.createTable('table', (t) => ({
+    mood: t.enum('mood'),
+  }))
+})
+```
+
 ## primaryKey
 
 Mark the column as a primary key. This column type becomes an argument of the `.find` method.

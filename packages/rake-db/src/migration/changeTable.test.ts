@@ -71,6 +71,7 @@ describe('changeTable', () => {
           dropCascade: t[action](t.text(), { dropMode: 'CASCADE' }),
           nullable: t[action](t.text().nullable()),
           nonNullable: t[action](t.text()),
+          enum: t[action](t.enum('mood')),
           withDefault: t[action](t.boolean().default(false)),
           withDefaultRaw: t[action](t.date().default(t.raw(`now()`))),
           withIndex: t[action](
@@ -115,6 +116,7 @@ describe('changeTable', () => {
               ADD COLUMN "dropCascade" text NOT NULL,
               ADD COLUMN "nullable" text,
               ADD COLUMN "nonNullable" text NOT NULL,
+              ADD COLUMN "enum" "mood" NOT NULL,
               ADD COLUMN "withDefault" boolean NOT NULL DEFAULT false,
               ADD COLUMN "withDefaultRaw" date NOT NULL DEFAULT now(),
               ADD COLUMN "withIndex" text NOT NULL,
@@ -155,6 +157,7 @@ describe('changeTable', () => {
               DROP COLUMN "dropCascade" CASCADE,
               DROP COLUMN "nullable",
               DROP COLUMN "nonNullable",
+              DROP COLUMN "enum",
               DROP COLUMN "withDefault",
               DROP COLUMN "withDefaultRaw",
               DROP COLUMN "withIndex",
@@ -407,6 +410,7 @@ describe('changeTable', () => {
     const fn = () => {
       return db.changeTable('table', (t) => ({
         changeType: t.change(t.integer(), t.text()),
+        changeEnum: t.change(t.enum('one'), t.enum('two')),
         changeTypeUsing: t.change(t.integer(), t.text(), {
           usingUp: t.raw('b::text'),
           usingDown: t.raw('b::int'),
@@ -427,6 +431,7 @@ describe('changeTable', () => {
       `
         ALTER TABLE "table"
         ALTER COLUMN "changeType" TYPE text,
+        ALTER COLUMN "changeEnum" TYPE "two",
         ALTER COLUMN "changeTypeUsing" TYPE text USING b::text,
         ALTER COLUMN "changeCollate" TYPE text COLLATE 'fr_FR',
         ALTER COLUMN "changeDefault" SET DEFAULT 'to',
@@ -443,6 +448,7 @@ describe('changeTable', () => {
       `
         ALTER TABLE "table"
         ALTER COLUMN "changeType" TYPE integer,
+        ALTER COLUMN "changeEnum" TYPE "one",
         ALTER COLUMN "changeTypeUsing" TYPE integer USING b::int,
         ALTER COLUMN "changeCollate" TYPE text COLLATE 'de_DE',
         ALTER COLUMN "changeDefault" SET DEFAULT 'from',

@@ -1,6 +1,7 @@
 import { ColumnType } from './columnType';
 import { Operators } from './operators';
 import { Code, columnCode } from './code';
+import { quoteFullColumn } from '../sql/common';
 
 export class EnumColumn<
   U extends string = string,
@@ -23,7 +24,7 @@ export class EnumColumn<
     );
   }
 
-  toSql() {
-    return this.enumName;
+  toSQL() {
+    return quoteFullColumn(this.enumName);
   }
 }

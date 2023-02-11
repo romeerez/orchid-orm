@@ -17,6 +17,8 @@ import {
   createDb,
   DbResult,
   DefaultColumnTypes,
+  EnumColumn,
+  quote,
 } from 'pqb';
 import { createTable } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
@@ -37,9 +39,13 @@ export type TableOptions = {
 
 type TextColumnCreator = () => TextColumn;
 
-export type MigrationColumnTypes = Omit<ColumnTypes, 'text' | 'string'> & {
+export type MigrationColumnTypes = Omit<
+  ColumnTypes,
+  'text' | 'string' | 'enum'
+> & {
   text: TextColumnCreator;
   string: TextColumnCreator;
+  enum: (name: string) => EnumColumn;
 };
 
 export type ColumnsShapeCallback = (
@@ -55,12 +61,6 @@ export type JoinTableOptions = {
   tableName?: string;
   comment?: string;
   dropMode?: DropMode;
-};
-
-export type ExtensionOptions = {
-  schema?: string;
-  version?: string;
-  cascade?: boolean;
 };
 
 export type Migration = DbResult<DefaultColumnTypes> & MigrationBase;
@@ -285,16 +285,35 @@ export class MigrationBase {
 
   createExtension(
     name: string,
-    options: ExtensionOptions & { ifNotExists?: boolean } = {},
+    options: Omit<RakeDbAst.Extension, 'type' | 'action' | 'name'> = {},
   ) {
     return createExtension(this, this.up, name, options);
   }
 
   dropExtension(
     name: string,
-    options: { ifExists?: boolean; cascade?: boolean } = {},
+    options: Omit<
+      RakeDbAst.Extension,
+      'type' | 'action' | 'name' | 'values'
+    > = {},
   ) {
     return createExtension(this, !this.up, name, options);
+  }
+
+  createEnum(
+    name: string,
+    values: string[],
+    options?: Omit<RakeDbAst.Enum, 'type' | 'action' | 'name' | 'values'>,
+  ) {
+    return createEnum(this, this.up, name, values, options);
+  }
+
+  dropEnum(
+    name: string,
+    values: string[],
+    options?: Omit<RakeDbAst.Enum, 'type' | 'action' | 'name' | 'values'>,
+  ) {
+    return createEnum(this, !this.up, name, values, options);
   }
 
   async tableExists(tableName: string) {
@@ -420,9 +439,7 @@ const createExtension = async (
   migration: MigrationBase,
   up: boolean,
   name: string,
-  options: ExtensionOptions & {
-    checkExists?: boolean;
-  },
+  options: Omit<RakeDbAst.Extension, 'type' | 'action' | 'name'>,
 ) => {
   const ast: RakeDbAst.Extension = {
     type: 'extension',
@@ -433,15 +450,50 @@ const createExtension = async (
 
   let query;
   if (ast.action === 'drop') {
-    query = `DROP EXTENSION${ast.ifNotExists ? ' IF EXISTS' : ''} "${
+    query = `DROP EXTENSION${ast.dropIfExists ? ' IF EXISTS' : ''} "${
       ast.name
     }"${ast.cascade ? ' CASCADE' : ''}`;
   } else {
-    query = `CREATE EXTENSION${ast.ifExists ? ' IF NOT EXISTS' : ''} "${
-      ast.name
-    }"${ast.schema ? ` SCHEMA "${ast.schema}"` : ''}${
+    query = `CREATE EXTENSION${
+      ast.createIfNotExists ? ' IF NOT EXISTS' : ''
+    } "${ast.name}"${ast.schema ? ` SCHEMA "${ast.schema}"` : ''}${
       ast.version ? ` VERSION '${ast.version}'` : ''
     }${ast.cascade ? ' CASCADE' : ''}`;
+  }
+
+  await migration.adapter.query(query);
+
+  await runCodeUpdater(migration, ast);
+};
+
+const createEnum = async (
+  migration: MigrationBase,
+  up: boolean,
+  name: string,
+  values: string[],
+  options: Omit<RakeDbAst.Enum, 'type' | 'action' | 'name' | 'values'> = {},
+) => {
+  const [schema, enumName] = getSchemaAndTableFromName(name);
+
+  const ast: RakeDbAst.Enum = {
+    type: 'enum',
+    action: up ? 'create' : 'drop',
+    schema,
+    name: enumName,
+    values,
+    ...options,
+  };
+
+  let query;
+  const quotedName = quoteWithSchema(ast);
+  if (ast.action === 'create') {
+    query = `CREATE TYPE ${quotedName} AS ENUM (${values
+      .map(quote)
+      .join(', ')})`;
+  } else {
+    query = `DROP TYPE${ast.dropIfExists ? ' IF EXISTS' : ''} ${quotedName}${
+      ast.cascade ? ' CASCADE' : ''
+    }`;
   }
 
   await migration.adapter.query(query);
