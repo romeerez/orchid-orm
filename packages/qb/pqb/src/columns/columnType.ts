@@ -1,4 +1,4 @@
-import { Operator, Operators } from './operators';
+import { BaseOperators, Operator } from './operators';
 import { JSONTypeAny } from './json';
 import { ColumnsShape } from './columnsSchema';
 import { raw, RawExpression } from '../raw';
@@ -17,9 +17,10 @@ export type NullableColumn<T extends ColumnType> = Omit<
   type: T['type'] | null;
   inputType: T['inputType'] | null;
   isNullable: true;
-  operators: Omit<T['operators'], 'equals' | 'not'> & {
-    equals: Operator<T['type'] | null>;
-    not: Operator<T['type'] | null>;
+  operators: {
+    [K in keyof T['operators']]: K extends 'equals' | 'not'
+      ? Operator<T['type'] | null>
+      : T['operators'][K];
   };
 };
 
@@ -178,7 +179,7 @@ export const instantiateColumn = (
 
 export abstract class ColumnType<
   Type = unknown,
-  Ops extends Operators = Operators,
+  Ops extends BaseOperators = BaseOperators,
   InputType = Type,
 > {
   abstract dataType: string;
@@ -271,7 +272,7 @@ export abstract class ColumnType<
 
   as<
     T extends ColumnType,
-    C extends ColumnType<T['type'], Operators, T['inputType']>,
+    C extends ColumnType<T['type'], BaseOperators, T['inputType']>,
   >(this: T, column: C): C {
     return addColumnData(this, 'as', column) as unknown as C;
   }

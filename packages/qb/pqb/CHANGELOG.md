@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.14
+
+### Patch Changes
+
+- Fix TS error when using nullable type in migration
+
 ## 0.9.13
 
 ### Patch Changes
