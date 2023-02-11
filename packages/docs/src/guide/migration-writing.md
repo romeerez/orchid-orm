@@ -7,10 +7,34 @@ import { change } from 'rake-db'
 
 change(async (db, up) => {
   if (up) {
-    console.log('migrate is called')
+    console.log('migrate is called');
   } else {
-    console.log('rollback is called')
+    console.log('rollback is called');
   }
+});
+```
+
+A single migration file can have multiple `change`'s.
+
+It's useful when creating a database schema or enum, and then creating a table that depends on it.
+
+When migrating, `change`'s are executed from top to bottom, so the schema and the enum will be created before the table.
+
+On rollback, `change`'s are executed from bottom to top, so the schema and the enum will be dropped **after** the table that is using them.
+
+```ts
+import { change } from 'rake-db'
+
+change(async (db) => {
+  await db.createSchema('custom');
+  await db.createEnum('yearSeason', ['spring', 'summer', 'fall', 'winter']);
+});
+
+change(async (db) => {
+  await db.createTable('custom.table', (t) => ({
+    id: t.serial().primaryKey(),
+    season: t.enum('yearSeason'),
+  }));
 })
 ```
 
@@ -45,7 +69,7 @@ change(async (db, up) => {
     const { rows } = await db.adapter.query({
       text: 'SELECT * FROM languages WHERE name = $1',
       values: ['Ukrainian'],
-    })
+    });
     console.log(rows)
   }
 });
