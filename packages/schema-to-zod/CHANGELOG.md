@@ -1,5 +1,13 @@
 # orchid-orm-schema-to-zod
 
+## 0.2.24
+
+### Patch Changes
+
+- Leave only dist in shipped packages
+- Updated dependencies
+  - pqb@0.9.18
+
 ## 0.2.23
 
 ### Patch Changes

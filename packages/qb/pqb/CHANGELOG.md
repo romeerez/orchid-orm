@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.18
+
+### Patch Changes
+
+- Leave only dist in shipped packages
+
 ## 0.9.17
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm-test-factory",
-  "version": "0.2.35",
+  "version": "0.2.36",
   "description": "Orchid ORM factories for tests",
   "homepage": "https://orchid-orm.netlify.app/guide/orm-test-factories.html",
   "repository": {
@@ -17,6 +17,9 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "test": "jest --watch --verbose false",
     "check": "jest",

@@ -1,6 +1,6 @@
 {
   "name": "rake-db",
-  "version": "2.3.30",
+  "version": "2.3.31",
   "description": "Migrations tool for Postgresql DB",
   "homepage": "https://orchid-orm.netlify.app/guide/migration-setup-and-overview.html",
   "repository": {
@@ -17,6 +17,9 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "db": "ts-node -r tsconfig-paths/register app/dbScript.ts",
     "test": "jest --watch --verbose false",

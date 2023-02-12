@@ -1,6 +1,6 @@
 {
   "name": "pqb",
-  "version": "0.9.17",
+  "version": "0.9.18",
   "description": "Postgres query builder",
   "homepage": "https://orchid-orm.netlify.app/guide/query-builder-setup.html",
   "repository": {
@@ -17,6 +17,9 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "test": "jest --watch --verbose false",
     "check": "jest",

@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.3.31
+
+### Patch Changes
+
+- Leave only dist in shipped packages
+- Updated dependencies
+  - pqb@0.9.18
+
 ## 2.3.30
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "myqb",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "description": "MySQL query builder",
   "homepage": "https://orchid-orm.netlify.app/guide/query-builder-setup.html",
@@ -18,6 +18,9 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "test": "jest --watch --verbose false",
     "check": "jest",

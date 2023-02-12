@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.5.30
+
+### Patch Changes
+
+- Leave only dist in shipped packages
+- Updated dependencies
+  - pqb@0.9.18
+
 ## 1.5.29
 
 ### Patch Changes

@@ -1,22 +1,22 @@
 import { config } from 'dotenv';
 import path from 'path';
-import { rakeDb } from '../src/rakeDb';
+import { rakeDb } from '../src';
 import { AdapterOptions } from 'pqb';
 import { appCodeUpdater } from '../../orm/src';
 
-config({ path: path.resolve('.env.local') });
-config();
+config({ path: path.resolve('..', '..', '.env') });
 
 const options: AdapterOptions[] = [];
 
-const databaseURL = process.env.DATABASE_URL;
+const databaseURL = process.env.PG_URL;
+console.log(process.env.PG_URL);
 if (!databaseURL) {
-  throw new Error('DATABASE_URL is missing in .env');
+  throw new Error('PG_URL is missing in .env');
 }
 
 options.push({ databaseURL });
 
-const databaseURLTest = process.env.DATABASE_URL_TEST;
+const databaseURLTest = process.env.PG_URL_TEST;
 if (databaseURLTest) {
   options.push({ databaseURL: databaseURLTest });
 }

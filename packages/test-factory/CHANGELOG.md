@@ -1,5 +1,15 @@
 # orchid-orm-test-factory
 
+## 0.2.36
+
+### Patch Changes
+
+- Leave only dist in shipped packages
+- Updated dependencies
+  - orchid-orm@1.5.30
+  - pqb@0.9.18
+  - orchid-orm-schema-to-zod@0.2.24
+
 ## 0.2.35
 
 ### Patch Changes

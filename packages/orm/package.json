@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm",
-  "version": "1.5.29",
+  "version": "1.5.30",
   "description": "Postgres ORM",
   "homepage": "https://orchid-orm.netlify.app/guide/orm-setup-and-overview.html",
   "repository": {
@@ -18,6 +18,9 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "test": "jest --watch --verbose false",
     "check": "jest",

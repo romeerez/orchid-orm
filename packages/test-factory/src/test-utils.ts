@@ -73,7 +73,7 @@ export class ProfileTable extends BaseTable {
 }
 
 export const adapter = new Adapter({
-  databaseURL: process.env.DATABASE_URL,
+  databaseURL: process.env.PG_URL,
 });
 
 export const db = orchidORM(

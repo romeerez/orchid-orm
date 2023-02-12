@@ -1,5 +1,5 @@
 import { Adapter } from './adapter';
 
 export const adapter = new Adapter({
-  databaseURL: process.env.DATABASE_URL as string,
+  databaseURL: process.env.MYSQL_URL as string,
 });

@@ -11,7 +11,7 @@ import { MaybeArray, toArray } from '../utils';
 import { Adapter } from '../adapter';
 
 export const dbOptions = {
-  databaseURL: process.env.DATABASE_URL,
+  databaseURL: process.env.PG_URL,
 };
 
 export const dbClient = new Client({ connectionString: dbOptions.databaseURL });
