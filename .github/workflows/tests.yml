@@ -7,7 +7,7 @@ on:
   pull_request:
     types: [opened, synchronize]
 env:
-  DATABASE_URL: postgres://postgres:password@localhost:5432/orchid-orm
+  PG_URL: postgres://postgres:password@localhost:5432/orchid-orm
 jobs:
   test:
     runs-on: ubuntu-latest
