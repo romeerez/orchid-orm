@@ -2,11 +2,11 @@ import {
   AddQuerySelect,
   ColumnParser,
   ColumnsParsers,
+  isQueryReturnsMultipleRows,
   Query,
   QueryBase,
   QueryReturnsAll,
   QuerySelectAll,
-  queryTypeWithLimitOne,
 } from '../query';
 import {
   ArrayOfColumnsObjects,
@@ -16,7 +16,7 @@ import {
 } from '../columns';
 import { RawExpression } from '../raw';
 import { pushQueryArray } from '../queryDataUtils';
-import { parseRecord } from './then';
+import { parseResult } from './then';
 import { QueryData, SelectItem, SelectQueryData } from '../sql';
 import {
   FilterTuple,
@@ -26,6 +26,7 @@ import {
 } from '../utils';
 import { isRequiredRelationKey, Relation } from '../relations';
 import { getValueKey } from './get';
+import { QueryResult } from '../adapter';
 
 export type SelectArg<T extends QueryBase> =
   | StringKey<keyof T['selectable']>
@@ -101,6 +102,13 @@ export const addParserForRawExpression = (
   if (parser) addParserToQuery(q.query, key, parser);
 };
 
+// these are used as a wrapper to pass sub query result to `parseRecord`
+const subQueryResult: QueryResult = {
+  // sub query can't return a rowCount, use -1 as for impossible case
+  rowCount: -1,
+  rows: [],
+};
+
 export const addParserForSelectItem = <T extends Query>(
   q: T,
   as: string | getValueKey | undefined,
@@ -116,13 +124,12 @@ export const addParserForSelectItem = <T extends Query>(
     q.isSubQuery = false;
     const parsers = getQueryParsers(rel);
     if (parsers) {
-      if (queryTypeWithLimitOne[rel.query.returnType]) {
-        addParserToQuery(q.query, key, (item) => parseRecord(parsers, item));
-      } else {
-        addParserToQuery(q.query, key, (items) =>
-          (items as unknown[]).map((item) => parseRecord(parsers, item)),
-        );
-      }
+      addParserToQuery(q.query, key, (item) => {
+        subQueryResult.rows = isQueryReturnsMultipleRows(rel)
+          ? (item as unknown[])
+          : [item];
+        return parseResult(rel, rel.query.returnType || 'all', subQueryResult);
+      });
     }
     return rel;
   } else {

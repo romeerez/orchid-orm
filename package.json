@@ -4,6 +4,7 @@
   "license": "MIT",
   "author": "Roman K",
   "scripts": {
+    "check": "turbo run check",
     "test:ci": "turbo run test:ci --cache-dir=.turbo"
   },
   "devDependencies": {

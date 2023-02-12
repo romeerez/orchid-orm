@@ -179,18 +179,25 @@ Table.select({
   subQueryResult: OtherTable.select('column').take(),
 })
 
-// select raw expression,
-// provide a column type to have a properly typed result:
-import { IntegerColumn } from 'pqb'
-
 Table.select({
   raw: Table.raw((t) => t.integer(), '1 + 2'),
 })
 ```
 
+When you use the ORM and defined relations, `select` can also accept callbacks with related table queries:
+
+```ts
+await db.author.select({
+  allBooks: (q) => q.books,
+  firstBook: (q) => q.books.order({ createdAt: 'ASC' }).take(),
+  booksCount: (q) => q.books.count(),
+})
+```
+
 ## selectAll
 
-For the `SELECT` query all columns will be selected by default, but for `INSERT`, `UPDATE`, and `DELETE` queries by default will be returned rows count.
+When querying the table or creating records, all columns are selected by default,
+but updating and deleting queries are returning affected row counts by default.
 
 Use `selectAll` to select all columns. If the `.select` method was applied before it will be discarded.
 
@@ -198,9 +205,6 @@ Use `selectAll` to select all columns. If the `.select` method was applied befor
 const selectFull = await Table
   .select('id', 'name') // discarded by `selectAll`
   .selectAll()
-
-const createdFull = await Table
-  .create(data)
 
 const updatedFull = await Table
   .selectAll()

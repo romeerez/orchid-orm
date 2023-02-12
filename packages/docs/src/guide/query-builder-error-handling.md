@@ -1,7 +1,11 @@
 # Error handling
 
 Error handling applies to `ORM` as well.
+
 All errors thrown when performing queries are wrapped in the error class specific to the concrete table.
+
+The errors thrown by this library have a property `cause` -
+it is a nested error with a stack trace pointing to the place in your code that started the query.
 
 Error class has the same properties as in error of the `pg` module and additional properties described below:
 

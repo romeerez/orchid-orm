@@ -319,30 +319,6 @@ describe('selectMethods', () => {
       expect((await q.rows())[0][0] instanceof Date).toBe(true);
     });
 
-    it('should parse subquery array columns', async () => {
-      const q = User.select({
-        users: () => User.all(),
-      });
-
-      assertType<Awaited<typeof q>, { users: UserRecord[] }[]>();
-
-      expect((await q.all())[0].users[0].createdAt instanceof Date).toBe(true);
-      expect((await q.take()).users[0].createdAt instanceof Date).toBe(true);
-      expect((await q.rows())[0][0][0].createdAt instanceof Date).toBe(true);
-    });
-
-    it('should parse subquery item columns', async () => {
-      const q = User.select({
-        user: () => User.take(),
-      });
-
-      assertType<Awaited<typeof q>, { user: UserRecord | null }[]>();
-
-      expect((await q.all())[0].user?.createdAt instanceof Date).toBe(true);
-      expect((await q.take()).user?.createdAt instanceof Date).toBe(true);
-      expect((await q.rows())[0][0]?.createdAt instanceof Date).toBe(true);
-    });
-
     it('should parse raw column', async () => {
       const q = User.select({
         date: db.raw(
@@ -356,6 +332,58 @@ describe('selectMethods', () => {
       expect((await q.all())[0].date instanceof Date).toBe(true);
       expect((await q.take()).date instanceof Date).toBe(true);
       expect((await q.rows())[0][0] instanceof Date).toBe(true);
+    });
+
+    describe('sub query', () => {
+      it('should parse subquery array columns', async () => {
+        const q = User.select({
+          users: () => User.all(),
+        });
+
+        assertType<Awaited<typeof q>, { users: UserRecord[] }[]>();
+
+        expect((await q.all())[0].users[0].createdAt instanceof Date).toBe(
+          true,
+        );
+        expect((await q.take()).users[0].createdAt instanceof Date).toBe(true);
+        expect((await q.rows())[0][0][0].createdAt instanceof Date).toBe(true);
+      });
+
+      it('should parse subquery item columns', async () => {
+        const q = User.select({
+          user: () => User.take(),
+        });
+
+        assertType<Awaited<typeof q>, { user: UserRecord | null }[]>();
+
+        expect((await q.all())[0].user?.createdAt instanceof Date).toBe(true);
+        expect((await q.take()).user?.createdAt instanceof Date).toBe(true);
+        expect((await q.rows())[0][0]?.createdAt instanceof Date).toBe(true);
+      });
+
+      it('should parse subquery single value', async () => {
+        const q = User.select({
+          count: () => User.count(),
+        });
+
+        assertType<Awaited<typeof q>, { count: number }[]>();
+
+        expect(typeof (await q.all())[0].count).toBe('number');
+        expect(typeof (await q.take()).count).toBe('number');
+        expect(typeof (await q.rows())[0][0]).toBe('number');
+      });
+
+      it('should parse subquery pluck', async () => {
+        const q = User.select({
+          dates: () => User.pluck('createdAt'),
+        });
+
+        assertType<Awaited<typeof q>, { dates: Date[] }[]>();
+
+        expect((await q.all())[0].dates[0] instanceof Date).toBe(true);
+        expect((await q.take()).dates[0] instanceof Date).toBe(true);
+        expect((await q.rows())[0][0][0] instanceof Date).toBe(true);
+      });
     });
   });
 });

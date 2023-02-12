@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.17
+
+### Patch Changes
+
+- Fix sub query columns parsing
+
 ## 0.9.16
 
 ### Patch Changes
