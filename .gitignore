@@ -3,6 +3,7 @@ gitignored
 roadmap.md
 .env
 .turbo
+coverage
 **/.pnpm-debug.log
 
 # Dependency directories
