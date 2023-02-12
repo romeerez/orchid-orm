@@ -21,7 +21,6 @@ jobs:
         image: postgres
         env:
           POSTGRES_PASSWORD: password
-        # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -34,14 +33,14 @@ jobs:
         image: mysql:latest
         env:
           MYSQL_ROOT_PASSWORD: password
-        ports:
-          - 3306
         options: >-
           --health-cmd="mysqladmin ping"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=3
-    
+        ports:
+          - 3306:3306
+
     steps:
       - name: Check out code
         uses: actions/checkout@v3
