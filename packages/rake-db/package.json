@@ -55,6 +55,7 @@
     "prompts": "^2.4.2"
   },
   "devDependencies": {
-    "@types/prompts": "^2.4.2"
+    "@types/prompts": "^2.4.2",
+    "tsconfig-paths": "^4.1.2"
   }
 }
