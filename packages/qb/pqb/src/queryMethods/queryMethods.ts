@@ -313,7 +313,7 @@ export class QueryMethods {
     query: Q,
     as: As = 't' as As,
   ): SetQueryTableAlias<Q, As> {
-    return query.as(as)._from(this, as) as unknown as SetQueryTableAlias<Q, As>;
+    return query._from(this).as(as) as unknown as SetQueryTableAlias<Q, As>;
   }
 
   order<T extends Query>(this: T, ...args: OrderArg<T>[]): T {

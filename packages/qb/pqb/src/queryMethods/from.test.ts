@@ -6,25 +6,10 @@ import {
 } from '../test-utils/test-utils';
 
 describe('from', () => {
-  it('should accept string parameter', () => {
-    const q = User.all();
-    expectSql(q.from('profile').toSql(), `SELECT * FROM "profile"`);
-    expectQueryNotMutated(q);
-  });
-
-  it('should accept string parameter with respect to `as`', () => {
-    const q = User.all();
-    expectSql(
-      q.as('t').from('profile').toSql(),
-      `SELECT * FROM "profile" AS "t"`,
-    );
-    expectQueryNotMutated(q);
-  });
-
   it('should accept raw parameter', () => {
     const q = User.all();
     expectSql(
-      q.as('t').from(db.raw('profile')).toSql(),
+      q.from(db.raw('profile')).as('t').toSql(),
       `SELECT * FROM profile AS "t"`,
     );
     expectQueryNotMutated(q);
@@ -35,18 +20,6 @@ describe('from', () => {
     expectSql(
       q.select('name').from(User.select('name')).toSql(),
       'SELECT "user"."name" FROM (SELECT "user"."name" FROM "user") AS "user"',
-    );
-    expectQueryNotMutated(q);
-  });
-
-  it('accept `as` parameter', () => {
-    const q = User.all();
-    expectSql(
-      q.select('name').from(User.select('name'), 'wrapped').toSql(),
-      `
-        SELECT "wrapped"."name"
-        FROM (SELECT "user"."name" FROM "user") AS "wrapped"
-      `,
     );
     expectQueryNotMutated(q);
   });
@@ -66,4 +39,11 @@ describe('from', () => {
       'SELECT "user"."id" FROM ONLY "user"',
     );
   });
+
+  it.todo('should apply column types from inner query'); //, () => {
+  // const query = db.from().where({
+  //   alias: { contains: 'name' },
+  // });
+  // query.toSql();
+  // });
 });

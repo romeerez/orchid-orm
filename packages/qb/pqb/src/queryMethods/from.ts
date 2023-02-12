@@ -4,25 +4,29 @@ import { SelectQueryData } from '../sql';
 import { AliasOrTable } from '../utils';
 
 type FromArgs<T extends Query> = [
-  first:
-    | string
-    | Query
-    | RawExpression
-    | Exclude<keyof T['withData'], symbol | number>,
-  second?: string | { as?: string; only?: boolean },
+  first: Query | RawExpression | Exclude<keyof T['withData'], symbol | number>,
+  second?: { only?: boolean },
 ];
 
 type FromResult<
   T extends Query,
   Args extends FromArgs<T>,
-> = Args[1] extends string
-  ? SetQueryTableAlias<T, Args[1]>
-  : Args[1] extends { as: string }
-  ? SetQueryTableAlias<T, Args[1]['as']>
-  : Args[0] extends string
+> = Args[0] extends string
   ? SetQueryTableAlias<T, Args[0]>
   : Args[0] extends Query
-  ? SetQueryTableAlias<T, AliasOrTable<Args[0]>>
+  ? SetQueryTableAlias<
+      Omit<T, 'selectable'> & {
+        selectable: {
+          [K in keyof Args[0]['result']]: K extends string
+            ? {
+                as: K;
+                column: Args[0]['result'][K];
+              }
+            : never;
+        };
+      },
+      AliasOrTable<Args[0]>
+    >
   : T;
 
 export class From {
@@ -38,17 +42,13 @@ export class From {
     ...args: Args
   ): FromResult<T, Args> {
     let as: string | undefined;
-    if (typeof args[1] === 'string') {
-      as = args[1];
-    } else if (typeof args[1] === 'object' && args[1].as) {
-      as = args[1].as;
-    } else if (typeof args[0] === 'string') {
+    if (typeof args[0] === 'string') {
       if (!this.query.as) as = args[0];
     } else if (!isRaw(args[0] as RawExpression)) {
       as = (args[0] as Query).query.as || (args[0] as Query).table;
     }
 
-    if (typeof args[1] === 'object' && 'only' in args[1]) {
+    if (args[1]?.only) {
       (this.query as SelectQueryData).fromOnly = args[1].only;
     }
 

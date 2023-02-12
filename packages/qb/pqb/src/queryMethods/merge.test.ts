@@ -323,8 +323,8 @@ describe('merge queries', () => {
       q2.query.schema = 'b';
       q1.query.as = 'a';
       q2.query.as = 'b';
-      q1.query.from = 'a';
-      q2.query.from = 'b';
+      q1.query.from = db.raw('a');
+      q2.query.from = db.raw('b');
       q1.query.coalesceValue = 'a';
       q2.query.coalesceValue = 'b';
       q1.query.parsers = { [getValueKey]: (x) => x, a: (x) => x };
@@ -416,7 +416,7 @@ describe('merge queries', () => {
       });
       expect(q.schema).toBe('b');
       expect(q.as).toBe('b');
-      expect(q.from).toBe('b');
+      expect(q.from).toEqual(db.raw('b'));
       expect(q.coalesceValue).toBe('b');
       expect(q.parsers).toEqual({
         ...q1.query.parsers,

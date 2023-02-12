@@ -257,13 +257,11 @@ q.with('foo', OtherTable.select('id', 'name'))
   .from('foo');
 ```
 
-Optionally takes a second argument of type `{ as?: string; only?: boolean }`:
+Optionally takes a second argument of type `{ only?: boolean }`:
 ```ts
 Table.from(
   OtherTable.select('foo', 'bar'),
   {
-    as: 'alias', // set FROM source alias
-
     // only is for table inheritance, check Postgres docs for details
     only: true,
   }
