@@ -34,11 +34,11 @@ type Resolve = (result: any) => any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Reject = (error: any) => any;
 
-let temporaryError: Error = undefined as unknown as Error;
+let queryError: Error = undefined as unknown as Error;
 
 export class Then {
   get then() {
-    temporaryError = new Error();
+    queryError = new Error();
     return maybeWrappedThen;
   }
 
@@ -83,7 +83,7 @@ const then = async (
   let logData: unknown | undefined;
 
   // save error to a local variable before async operations
-  const queryError = temporaryError;
+  const localError = queryError;
 
   try {
     let beforeCallbacks: BeforeCallback[] | undefined;
@@ -143,11 +143,13 @@ const then = async (
     if (err instanceof pg.DatabaseError) {
       error = new (q.error as unknown as new () => QueryError)();
       assignError(error, err);
+      error.cause = localError;
     } else {
       error = err;
+      if (error instanceof Error) {
+        error.cause = localError;
+      }
     }
-
-    (error as Error).stack = queryError.stack;
 
     if (q.query.log && sql && logData) {
       q.query.log.onError(error as Error, sql, logData);

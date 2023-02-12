@@ -4,6 +4,7 @@ import {
   User,
   useTestDatabase,
 } from '../test-utils/test-utils';
+import { NotFoundError } from '../errors';
 
 describe('then', () => {
   useTestDatabase();
@@ -15,7 +16,7 @@ describe('then', () => {
         column: db.raw((t) => t.boolean(), 'koko'),
       }).catch((err) => {
         expect(err.message).toBe(`column "koko" does not exist`);
-        expect(err.stack).toContain('then.test.ts');
+        expect(err.cause.stack).toContain('then.test.ts');
         done();
       });
 
@@ -24,13 +25,14 @@ describe('then', () => {
   });
 
   it('should throw NotFoundError with proper stack trace', async () => {
-    let error: unknown | undefined;
+    let error: Error | undefined;
     try {
       await User.take();
     } catch (err) {
-      error = err;
+      error = err as Error;
     }
 
-    expect((error as { stack: string }).stack).toContain('then.test.ts');
+    expect(error instanceof NotFoundError).toBe(true);
+    expect(((error as Error).cause as Error).stack).toContain('then.test.ts');
   });
 });

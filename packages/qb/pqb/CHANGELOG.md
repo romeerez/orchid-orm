@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.16
+
+### Patch Changes
+
+- Store error stack trace in error cause
+
 ## 0.9.15
 
 ### Patch Changes

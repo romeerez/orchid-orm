@@ -18,7 +18,7 @@ describe('errors', () => {
       err = error as Error;
     }
 
-    expect(err?.stack).toContain('errors.test.ts');
+    expect((err?.cause as Error).stack).toContain('errors.test.ts');
   });
 
   it('should have isUnique and column names map when violating unique error over single column', async () => {
