@@ -4,7 +4,8 @@ import { joinTruthy, singleQuote } from '../utils';
 import { NumberBaseColumn } from './number';
 import { assignMethodsToClass } from './utils';
 import { stringTypeMethods } from './commonMethods';
-import { Code, columnCode } from './code';
+import { columnCode } from './code';
+import { Code } from '../../../common/src/columns/code';
 
 export type BaseStringData = ColumnData & {
   min?: number;

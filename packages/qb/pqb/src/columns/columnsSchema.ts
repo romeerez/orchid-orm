@@ -1,12 +1,9 @@
-import { ColumnInput, ColumnOutput, ColumnType } from './columnType';
+import { ColumnType } from './columnType';
 import { Operators } from './operators';
 import { SetOptional, SomeIsTrue, StringKey } from '../utils';
+import { ColumnInput } from '../../../common/src/columns/columnType';
 
 export type ColumnsShape = Record<string, ColumnType>;
-
-export type ColumnShapeOutput<Shape extends ColumnsShape> = {
-  [K in keyof Shape]: ColumnOutput<Shape[K]>;
-};
 
 type OptionalColumnsForInput<Shape extends ColumnsShape> = {
   [K in keyof Shape]: SomeIsTrue<

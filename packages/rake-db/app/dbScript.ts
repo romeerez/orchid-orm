@@ -9,7 +9,6 @@ config({ path: path.resolve('..', '..', '.env') });
 const options: AdapterOptions[] = [];
 
 const databaseURL = process.env.PG_URL;
-console.log(process.env.PG_URL);
 if (!databaseURL) {
   throw new Error('PG_URL is missing in .env');
 }

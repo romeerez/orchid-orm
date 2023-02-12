@@ -12,8 +12,9 @@ import {
 import { createDb } from '../db';
 import { columnTypes } from './columnTypes';
 import { IntegerColumn } from './number';
-import { Code, columnCode } from './code';
+import { columnCode } from './code';
 import { raw } from '../raw';
+import { Code } from '../../../common/src/columns/code';
 
 describe('column base', () => {
   useTestDatabase();

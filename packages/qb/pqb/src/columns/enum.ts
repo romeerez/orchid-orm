@@ -1,7 +1,8 @@
 import { ColumnType } from './columnType';
 import { Operators } from './operators';
-import { Code, columnCode } from './code';
+import { columnCode } from './code';
 import { quoteFullColumn } from '../sql/common';
+import { Code } from '../../../common/src/columns/code';
 
 export class EnumColumn<
   U extends string = string,

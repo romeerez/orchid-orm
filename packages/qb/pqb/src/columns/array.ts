@@ -2,7 +2,8 @@ import { ColumnData, ColumnType } from './columnType';
 import { Operators } from './operators';
 import { assignMethodsToClass } from './utils';
 import { arrayMethods } from './commonMethods';
-import { addCode, Code, columnCode } from './code';
+import { addCode, columnCode } from './code';
+import { Code } from '../../../common/src/columns/code';
 
 export type ArrayData<Item extends ColumnType> = ColumnData & {
   item: Item;

@@ -1,14 +1,13 @@
-import { BaseOperators, Operator } from './operators';
 import { JSONTypeAny } from './json';
 import { ColumnsShape } from './columnsSchema';
 import { raw, RawExpression } from '../raw';
 import { MaybeArray, StringKey } from '../utils';
 import { Query } from '../query';
-import { Code } from './code';
-
-export type ColumnOutput<T extends ColumnType> = T['type'];
-
-export type ColumnInput<T extends ColumnType> = T['inputType'];
+import { BaseOperators, Operator } from '../../../common/src/columns/operators';
+import {
+  ColumnDataBase,
+  ColumnTypeBase,
+} from '../../../common/src/columns/columnType';
 
 export type NullableColumn<T extends ColumnType> = Omit<
   T,
@@ -39,8 +38,7 @@ export type ColumnTypesBase = Record<
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ValidationContext = any;
 
-export type ColumnData = {
-  isNullable?: boolean;
+export type ColumnData = ColumnDataBase & {
   default?: unknown;
   maxChars?: number;
   numericPrecision?: number;
@@ -181,19 +179,7 @@ export abstract class ColumnType<
   Type = unknown,
   Ops extends BaseOperators = BaseOperators,
   InputType = Type,
-> {
-  abstract dataType: string;
-  abstract operators: Ops;
-  abstract toCode(t: string): Code;
-
-  type!: Type;
-  inputType!: InputType;
-  isNullable!: boolean;
-  data = {} as ColumnData;
-  isPrimaryKey = false;
-  isHidden = false;
-  hasDefault = false;
-
+> extends ColumnTypeBase<Type, Ops, InputType, ColumnData> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   encodeFn?: (input: any) => unknown;
   parseFn?: (input: unknown) => unknown;

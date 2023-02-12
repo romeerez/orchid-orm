@@ -2,7 +2,7 @@ import { cloneQueryArrays, QueryData, toSqlCacheKey } from './sql';
 import type { Query, Selectable } from './query';
 import type { ColumnOutput, ColumnType } from './columns';
 import type { RawExpression } from './raw';
-export * from '../../common/utils';
+export * from '../../common/src/utils';
 
 export type SomeIsTrue<T extends unknown[]> = T extends [
   infer Head,

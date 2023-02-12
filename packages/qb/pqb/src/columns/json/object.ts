@@ -6,7 +6,8 @@ import {
   toCode,
 } from './typeBase';
 import { JSONOptional, optional } from './optional';
-import { addCode, Code } from '../code';
+import { addCode } from '../code';
+import { Code } from '../../../../common/src/columns/code';
 
 export type JSONObjectShape = Record<string, JSONTypeAny>;
 

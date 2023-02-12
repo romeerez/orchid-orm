@@ -21,7 +21,8 @@ import {
   union,
   JSONTypeAny,
 } from './json';
-import { Code, columnCode } from './code';
+import { columnCode } from './code';
+import { Code } from '../../../common/src/columns/code';
 
 export * from './json/index';
 

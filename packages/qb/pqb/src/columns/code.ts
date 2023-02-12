@@ -9,8 +9,7 @@ import {
   toArray,
 } from '../utils';
 import { TableData } from './columnTypes';
-
-export type Code = string | Code[];
+import { Code } from '../../../common/src/columns/code';
 
 export const addCode = (code: Code[], add: Code) => {
   if (typeof add === 'object') {

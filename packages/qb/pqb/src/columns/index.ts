@@ -12,3 +12,5 @@ export * from './array';
 export * from './virtual';
 export * from './code';
 export * from './columnsByType';
+export * from '../../../common/src/columns/columnType';
+export * from '../../../common/src/columns/code';

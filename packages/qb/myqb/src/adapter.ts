@@ -5,11 +5,7 @@ import {
   PoolConnection,
   FieldPacket,
 } from 'mysql2/promise';
-
-export interface QueryResultRow {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [column: string]: any;
-}
+import { AdapterBase, QueryResultRow } from '../../common/src/adapter';
 
 export type QueryResult<T extends QueryResultRow> = [
   (T & {
@@ -34,7 +30,7 @@ export type AdapterOptions = Omit<PoolOptions, 'host' | 'user' | 'database'> &
       }
   );
 
-export class Adapter {
+export class Adapter implements AdapterBase {
   pool: Pool;
   config: PoolOptions;
 
@@ -59,12 +55,16 @@ export class Adapter {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async query<T extends QueryResultRow = any>(query: QueryInput) {
+  async query<T extends QueryResultRow = any>(
+    query: QueryInput,
+  ): Promise<QueryResult<T>> {
     return makeQuery<T>(this.pool, query);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async arrays<T extends any[] = any[]>(query: QueryInput) {
+  async arrays<T extends any[] = any[]>(
+    query: QueryInput,
+  ): Promise<QueryResult<T>> {
     return queryArrays<T>(this.pool, query);
   }
 

@@ -29,6 +29,7 @@ import {
 } from './columns';
 import { applyMixins, pushOrNewArray, StringKey } from './utils';
 import { QueryError, QueryErrorName } from './errors';
+import { DbBase } from '../../common/src/db';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
@@ -55,7 +56,8 @@ export interface Db<
   Shape extends ColumnsShape = Record<string, never>,
   Relations extends Query['relations'] = Query['relations'],
   CT extends ColumnTypesBase = DefaultColumnTypes,
-> extends QueryMethods {
+> extends DbBase<Adapter, Table, Shape>,
+    QueryMethods {
   new (
     adapter: Adapter,
     queryBuilder: Db<Table, Shape, Relations, CT>,
@@ -63,15 +65,10 @@ export interface Db<
     shape?: Shape,
     options?: DbTableOptions,
   ): this;
-
-  adapter: Adapter;
-  columns: (keyof ColumnShapeOutput<Shape>)[];
-
   queryBuilder: Db;
   columnTypes: CT;
   whereQueryBuilder: Query['whereQueryBuilder'];
   onQueryBuilder: Query['onQueryBuilder'];
-  table: Table;
   shape: Shape;
   singlePrimaryKey: SinglePrimaryKey<Shape>;
   primaryKeys: Query['primaryKeys'];

@@ -25,6 +25,7 @@
     "test": "jest --watch --verbose false",
     "check": "jest",
     "types": "tsc",
+    "test:ci": "jest --coverage --coverageReporters json-summary",
     "build": "rimraf ./dist/ && rollup -c --rollup.config",
     "prepublishOnly": "pnpm build"
   },

@@ -1,14 +1,12 @@
 import pg, { Pool, PoolClient, PoolConfig } from 'pg';
+import {
+  AdapterBase,
+  QueryInput,
+  QueryResultRow,
+} from '../../common/src/adapter';
 const { types } = pg;
 
-export interface QueryResultRow {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [column: string]: any;
-}
-
 export type TypeParsers = Record<number, (input: string) => unknown>;
-
-export type QueryInput = string | { text: string; values?: unknown[] };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type QueryResult<T extends QueryResultRow = any> = {
@@ -47,7 +45,7 @@ export type AdapterOptions = Omit<PoolConfig, 'types' | 'connectionString'> & {
   databaseURL?: string;
 };
 
-export class Adapter {
+export class Adapter implements AdapterBase {
   types: TypeParsers;
   pool: Pool;
   config: PoolConfig;

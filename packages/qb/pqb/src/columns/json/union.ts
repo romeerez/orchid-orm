@@ -1,5 +1,6 @@
 import { constructType, JSONType, JSONTypeAny, toCode } from './typeBase';
-import { addCode, Code } from '../code';
+import { addCode } from '../code';
+import { Code } from '../../../../common/src/columns/code';
 
 export interface JSONUnion<
   T extends [JSONTypeAny, JSONTypeAny, ...JSONTypeAny[]],

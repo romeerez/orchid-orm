@@ -55,6 +55,7 @@
   "dependencies": {
     "pluralize": "^8.0.0",
     "pqb": "workspace:*",
+    "myqb": "workspace:*",
     "prompts": "^2.4.2"
   },
   "devDependencies": {

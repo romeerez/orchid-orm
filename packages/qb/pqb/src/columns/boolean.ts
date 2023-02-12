@@ -1,6 +1,7 @@
 import { ColumnType } from './columnType';
 import { Operators } from './operators';
-import { Code, columnCode } from './code';
+import { columnCode } from './code';
+import { Code } from '../../../common/src/columns/code';
 
 // 1 byte, true or false
 export class BooleanColumn extends ColumnType<

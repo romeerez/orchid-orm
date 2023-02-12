@@ -4,7 +4,8 @@ import { joinTruthy } from '../utils';
 import { dateTypeMethods } from './commonMethods';
 import { assignMethodsToClass } from './utils';
 import { IntegerColumn } from './number';
-import { Code, columnCode } from './code';
+import { columnCode } from './code';
+import { Code } from '../../../common/src/columns/code';
 
 export type DateColumnData = ColumnData & {
   min?: Date;
