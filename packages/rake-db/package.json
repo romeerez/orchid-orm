@@ -26,22 +26,15 @@
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
-    "build": "rimraf ./dist/ && rollup -c --rollup.config",
+    "build": "rimraf ./dist/ && rollup -c ../../rollup.config",
     "prepublishOnly": "pnpm build"
   },
   "jest": {
     "rootDir": "src",
-    "setupFiles": [
-      "dotenv/config"
-    ],
+    "setupFiles": ["dotenv/config"],
     "globalSetup": "../../../jest-global-setup.ts",
-    "setupFilesAfterEnv": [
-      "../../../jest-setup.ts",
-      "../jest-setup.ts"
-    ],
-    "transform": {
-      "^.+\\.ts$": "@swc/jest"
-    }
+    "setupFilesAfterEnv": ["../../../jest-setup.ts"],
+    "transform": { "^.+\\.ts$": "@swc/jest" }
   },
   "keywords": [
     "postgresql",

@@ -1,10 +1,19 @@
 import { createFactory } from './factory';
-import { assertType, db, User, BaseTable, adapter } from './test-utils';
+import {
+  assertType,
+  db,
+  User,
+  BaseTable,
+  adapter,
+  useTestDatabase,
+} from './test-utils';
 import { z } from 'zod';
 import { orchidORM } from 'orchid-orm';
 import { ColumnsShape, columnTypes, ColumnTypes } from 'pqb';
 
 describe('factory', () => {
+  useTestDatabase();
+
   describe('sequence and sequenceDistance', () => {
     beforeAll(() => {
       process.env.JEST_WORKER_ID = '5';

@@ -32,16 +32,9 @@
   },
   "jest": {
     "rootDir": "src",
-    "setupFiles": [
-      "dotenv/config"
-    ],
-    "setupFilesAfterEnv": [
-      "../../../jest-setup.ts",
-      "../jest-setup.ts"
-    ],
-    "transform": {
-      "^.+\\.ts$": "@swc/jest"
-    }
+    "setupFiles": ["dotenv/config"],
+    "setupFilesAfterEnv": ["../../../jest-setup.ts"],
+    "transform": { "^.+\\.ts$": "@swc/jest" }
   },
   "keywords": [
     "pg",
