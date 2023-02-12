@@ -21,17 +21,20 @@
   "scripts": {
     "test": "jest --watch --verbose false",
     "check": "jest",
+    "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
     "build": "rimraf ./dist/ && rollup -c --rollup.config",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "db": "ts-node src/db/dbScripts.ts"
   },
   "jest": {
+    "rootDir": "src",
     "setupFiles": [
       "dotenv/config"
     ],
     "setupFilesAfterEnv": [
-      "../../jest-setup.ts",
-      "./jest-setup.ts"
+      "../../../jest-setup.ts",
+      "../jest-setup.ts"
     ],
     "transform": {
       "^.+\\.ts$": "@swc/jest"

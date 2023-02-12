@@ -337,7 +337,7 @@ describe('merge queries', () => {
       q2.query.beforeQuery = [() => {}];
       q1.query.log = logParamToLogObject(console, true);
       q2.query.log = logParamToLogObject(console, true);
-      q1.query.logger = { log() {}, error() {} };
+      q1.query.logger = { log() {}, error() {}, warn() {} };
       q2.query.logger = console;
       q1.query.type = 'update';
       q2.query.type = 'insert';

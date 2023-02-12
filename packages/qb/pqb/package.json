@@ -20,17 +20,19 @@
   "scripts": {
     "test": "jest --watch --verbose false",
     "check": "jest",
+    "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
     "build": "rimraf ./dist/ && rollup -c --rollup.config",
     "prepublishOnly": "pnpm build"
   },
   "jest": {
+    "rootDir": "src",
     "setupFiles": [
       "dotenv/config"
     ],
-    "globalSetup": "../../../jest-global-setup.ts",
+    "globalSetup": "../../../../jest-global-setup.ts",
     "setupFilesAfterEnv": [
-      "../../../jest-setup.ts"
+      "../../../../jest-setup.ts"
     ],
     "transform": {
       "^.+\\.ts$": "@swc/jest"
