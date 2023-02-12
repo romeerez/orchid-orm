@@ -44,7 +44,7 @@ export const havingToSql = (
   or.forEach((and) => {
     const ands: string[] = [];
     and.forEach((item) => {
-      if ('prototype' in item || '__table' in item) {
+      if ('prototype' in item || 'baseQuery' in item) {
         const query = item as QueryBase;
         const sql = havingToSql(
           ctx,

@@ -87,7 +87,7 @@ const processWhere = (
     return;
   }
 
-  if ('prototype' in data || '__table' in data) {
+  if ('prototype' in data || 'baseQuery' in data) {
     const query = data as Query;
     const sql = whereToSql(
       ctx,

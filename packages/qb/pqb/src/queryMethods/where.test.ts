@@ -1563,7 +1563,7 @@ export const testJoin = (
       };
     };
 
-    Object.assign(withRelation.__table, {
+    Object.assign(withRelation.baseQuery, {
       relations: {
         message: {
           key: 'message',

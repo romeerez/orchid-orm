@@ -88,18 +88,18 @@ export const createRepo = <T extends Query, Methods extends MethodsBase<T>>(
   const plainMethods = methods.methods;
 
   const repo = (q: Query) => {
-    const proto = Object.create(q.__table);
-    proto.__table = proto;
+    const proto = Object.create(q.baseQuery);
+    proto.baseQuery = proto;
     const result = Object.create(proto);
     result.query = getClonedQueryData(q.query);
 
     if (plainMethods) {
-      Object.assign(proto.__table, plainMethods);
+      Object.assign(proto.baseQuery, plainMethods);
     }
 
     for (const key in queryMethods) {
       const method = queryMethods[key] as (...args: unknown[]) => unknown;
-      (proto.__table as unknown as Record<string, unknown>)[key] = function (
+      (proto.baseQuery as unknown as Record<string, unknown>)[key] = function (
         ...args: unknown[]
       ) {
         return method(this, ...args);

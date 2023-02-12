@@ -117,7 +117,7 @@ export type JoinCallback<
               };
             };
             shape: T['withData'][Arg]['shape'];
-            __table: Query;
+            baseQuery: Query;
             relations: RelationsBase;
             withData: WithDataBase;
           }

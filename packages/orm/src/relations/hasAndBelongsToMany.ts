@@ -107,14 +107,14 @@ export const makeHasAndBelongsToManyMethod = (
   const associationForeignKeyFull = `${joinTable}.${afk}`;
   const associationPrimaryKeyFull = `${getQueryAs(query)}.${apk}`;
 
-  const __table = Object.create(qb.__table);
-  __table.__table = __table;
-  __table.table = joinTable;
-  __table.shape = {
+  const baseQuery = Object.create(qb.baseQuery);
+  baseQuery.baseQuery = baseQuery;
+  baseQuery.table = joinTable;
+  baseQuery.shape = {
     [fk]: table.shape[pk],
     [afk]: query.shape[apk],
   };
-  const subQuery = Object.create(__table);
+  const subQuery = Object.create(baseQuery);
   subQuery.query = { ...subQuery.query };
 
   const state: State = {

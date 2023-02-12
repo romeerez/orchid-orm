@@ -38,7 +38,7 @@ export type QueryBase = {
   clone(): QueryBase;
   selectable: SelectableBase;
   shape: ColumnsShape;
-  __table: Query;
+  baseQuery: Query;
   relations: RelationsBase;
   withData: WithDataBase;
 };

@@ -14,7 +14,7 @@ export function transaction<T extends { $queryBuilder: Db }, Result>(
       const value = this[key];
       if (value instanceof Db) {
         const table = value.transacting(q);
-        table.__table = table;
+        table.baseQuery = table;
         (table as unknown as { db: unknown }).db = orm;
         orm[key] = table;
       } else {

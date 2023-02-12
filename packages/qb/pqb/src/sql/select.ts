@@ -160,7 +160,7 @@ const pushSubQuerySql = (
 
       const cloned = query.clone();
       cloned.query.select = [{ selectAs: { c: first } }] as SelectItem[];
-      query = cloned._wrap(cloned.__table.clone()) as unknown as typeof query;
+      query = cloned._wrap(cloned.baseQuery.clone()) as unknown as typeof query;
       query._getOptional(raw(`COALESCE(json_agg("c"), '[]')`));
       break;
     }
