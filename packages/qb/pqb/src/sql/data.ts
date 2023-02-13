@@ -8,7 +8,7 @@ import {
 } from '../queryMethods';
 import { Adapter, QueryResult } from '../adapter';
 import { RelationQueryData, relationQueryKey } from '../relations';
-import { ColumnsShape } from '../columns';
+import { ColumnShapeBase, ColumnsShape } from '../columns';
 import { toSqlCacheKey } from './toSql';
 import {
   HavingItem,
@@ -28,6 +28,7 @@ import { Expression } from '../utils';
 
 export type CommonQueryData = {
   adapter: Adapter;
+  shape: ColumnShapeBase;
   handleResult(q: Query, result: QueryResult): Promise<unknown>;
   returnType: QueryReturnType;
   [relationQueryKey]?: RelationQueryData;

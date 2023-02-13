@@ -1,6 +1,6 @@
 import { Query, QueryBase, QueryWithTable, SelectableBase } from '../query';
 import { RawExpression } from '../raw';
-import { ColumnType } from '../columns';
+import { ColumnTypeBase } from '../columns';
 import { RelationQuery } from '../relations';
 import { Expression, MaybeArray } from '../utils';
 import { QueryData, SelectQueryData } from './data';
@@ -53,7 +53,7 @@ export type WithOptions = {
 
 export type JsonItem<
   As extends string = string,
-  Type extends ColumnType = ColumnType,
+  Type extends ColumnTypeBase = ColumnTypeBase,
 > = {
   __json:
     | [

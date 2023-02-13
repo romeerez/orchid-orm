@@ -24,6 +24,7 @@ export type MergeQuery<
 };
 
 const mergableObjects: Record<string, boolean> = {
+  shape: true,
   withShapes: true,
   parsers: true,
   defaults: true,

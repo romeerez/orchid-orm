@@ -13,7 +13,7 @@ import { EmptyObject, MaybeArray, StringKey } from '../utils';
 import { CreateData } from './create';
 import { parseResult, queryMethodByReturnType } from './then';
 import { UpdateQueryData } from '../sql';
-import { ColumnsShape, VirtualColumn } from '../columns';
+import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
 
 export type UpdateData<T extends Query> = {
@@ -165,7 +165,7 @@ export class Update {
     const set: Record<string, unknown> = { ...arg };
     pushQueryValue(this, 'updateData', set);
 
-    const { shape } = this as { shape: ColumnsShape };
+    const { shape } = this.query;
 
     const originalReturnType = query.returnType || 'all';
 

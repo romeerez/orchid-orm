@@ -302,7 +302,8 @@ const applyRelation = (
   }
 
   if (data.virtualColumn) {
-    dbTable.shape[relationName] = data.virtualColumn;
+    dbTable.shape[relationName] = dbTable.query.shape[relationName] =
+      data.virtualColumn;
   }
 
   makeRelationQuery(dbTable, definedAs, relationName, data);

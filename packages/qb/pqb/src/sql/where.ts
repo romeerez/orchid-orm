@@ -82,7 +82,7 @@ const processWhere = (
   const prefix = not ? 'NOT ' : '';
 
   if (typeof data === 'function') {
-    const qb = data(new ctx.whereQueryBuilder(table, table.shape));
+    const qb = data(new ctx.whereQueryBuilder(table, table.query.shape));
     pushWhereToSql(ands, ctx, qb, qb.query, quotedAs, not);
     return;
   }
@@ -193,7 +193,7 @@ const processWhere = (
           )}`,
         );
       } else {
-        const column = table.shape[key];
+        const column = table.query.shape[key];
         if (!column) {
           // TODO: custom error classes
           throw new Error(`Unknown column ${key} provided to condition`);

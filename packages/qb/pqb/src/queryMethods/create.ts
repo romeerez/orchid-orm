@@ -181,7 +181,7 @@ const processCreateItem = (
   ctx: CreateCtx,
   encoders: Record<string, Encoder>,
 ) => {
-  const { shape } = q;
+  const { shape } = q.query;
   Object.keys(item).forEach((key) => {
     if (shape[key] instanceof VirtualColumn) {
       (shape[key] as VirtualColumn).create?.(q, ctx, item, rowIndex);

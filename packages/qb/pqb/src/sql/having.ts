@@ -77,7 +77,7 @@ export const havingToSql = (
                     op as keyof AggregateItemOptions,
                   )
                 ) {
-                  const operator = table.shape[column].operators[
+                  const operator = table.query.shape[column].operators[
                     op
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   ] as Operator<any>;

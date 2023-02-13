@@ -9,6 +9,7 @@ import {
 } from './queryMethods';
 import { QueryData } from './sql';
 import {
+  ColumnShapeBase,
   ColumnShapeOutput,
   ColumnsShape,
   ColumnType,
@@ -37,7 +38,7 @@ export type QueryBase = {
   tableAlias?: string;
   clone(): QueryBase;
   selectable: SelectableBase;
-  shape: ColumnsShape;
+  shape: ColumnShapeBase;
   baseQuery: Query;
   relations: RelationsBase;
   withData: WithDataBase;
@@ -128,7 +129,7 @@ export type QueryReturnsAll<T extends QueryReturnType> = (
 
 export type QueryThen<
   ReturnType extends QueryReturnType,
-  Result extends ColumnsShape,
+  Result extends ColumnShapeBase,
 > = QueryReturnsAll<ReturnType> extends true
   ? ThenResult<ColumnShapeOutput<Result>[]>
   : ReturnType extends 'one'
@@ -157,7 +158,7 @@ export type QueryThen<
 
 export type AddQuerySelect<
   T extends Pick<Query, 'hasSelect' | 'result' | 'then' | 'returnType'>,
-  Result extends ColumnsShape,
+  Result extends ColumnShapeBase,
 > = T['hasSelect'] extends true
   ? Omit<T, 'result' | 'then'> & {
       result: Spread<[T['result'], Result]>;

@@ -5,7 +5,7 @@ import {
   SetQueryReturnsValueOptional,
 } from '../query';
 import { pushQueryValue } from '../queryDataUtils';
-import { ColumnType, StringColumn } from '../columns';
+import { ColumnType, ColumnTypeBase, StringColumn } from '../columns';
 import { JsonItem } from '../sql';
 import { raw } from '../raw';
 import { StringKey } from '../utils';
@@ -24,13 +24,13 @@ type JsonSetResult<
   T extends Query,
   Column extends ColumnOrJsonMethod<T>,
   As extends string,
-  Type extends ColumnType = Column extends keyof T['shape']
+  Type extends ColumnTypeBase = Column extends keyof T['shape']
     ? T['shape'][Column]
     : Column extends JsonItem
     ? Column['__json'][2]
     : ColumnType,
 > = JsonItem<As, Type> &
-  (Type extends ColumnType ? AddQuerySelect<T, Record<As, Type>> : T);
+  (Type extends ColumnTypeBase ? AddQuerySelect<T, Record<As, Type>> : T);
 
 type JsonPathQueryResult<
   T extends Query,
@@ -105,7 +105,7 @@ export class Json {
             ? column
             : (column as JsonItem).__json[1]),
         typeof column === 'string'
-          ? this.shape[column]
+          ? this.query.shape[column]
           : (column as JsonItem).__json[2],
         column,
         path,
@@ -162,7 +162,7 @@ export class Json {
             ? column
             : (column as JsonItem).__json[1]),
         typeof column === 'string'
-          ? this.shape[column]
+          ? this.query.shape[column]
           : (column as JsonItem).__json[2],
         column,
         path,
@@ -211,7 +211,7 @@ export class Json {
             ? column
             : (column as JsonItem).__json[1]),
         typeof column === 'string'
-          ? this.shape[column]
+          ? this.query.shape[column]
           : (column as JsonItem).__json[2],
         column,
         path,

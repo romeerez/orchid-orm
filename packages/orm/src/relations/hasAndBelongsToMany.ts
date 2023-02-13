@@ -114,8 +114,11 @@ export const makeHasAndBelongsToManyMethod = (
     [fk]: table.shape[pk],
     [afk]: query.shape[apk],
   };
+  baseQuery.query = {
+    ...baseQuery.query,
+    shape: baseQuery.shape,
+  };
   const subQuery = Object.create(baseQuery);
-  subQuery.query = { ...subQuery.query };
 
   const state: State = {
     relatedTableQuery: query,

@@ -180,12 +180,6 @@ export abstract class ColumnType<
   Ops extends BaseOperators = BaseOperators,
   InputType = Type,
 > extends ColumnTypeBase<Type, Ops, InputType, ColumnData> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  encodeFn?: (input: any) => unknown;
-  parseFn?: (input: unknown) => unknown;
-  // parse item in array:
-  parseItem?: (input: string) => unknown;
-
   chain = [] as ColumnChain;
 
   primaryKey<T extends ColumnType>(this: T): T & { isPrimaryKey: true } {

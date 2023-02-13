@@ -311,6 +311,12 @@ describe('merge queries', () => {
       const q1 = User.clone();
       const q2 = User.clone();
 
+      q1.query.shape = {
+        number: new IntegerColumn(),
+      };
+      q2.query.shape = {
+        string: new TextColumn(),
+      };
       q1.query.inTransaction = false;
       q2.query.inTransaction = true;
       q1.query.wrapInTransaction = false;
@@ -407,6 +413,10 @@ describe('merge queries', () => {
       c2.column = 'name';
 
       const { query: q } = q1.merge(q2);
+      expect(q.shape).toEqual({
+        number: q1.query.shape.number,
+        string: q2.query.shape.string,
+      });
       expect(q.inTransaction).toBe(true);
       expect(q.wrapInTransaction).toBe(true);
       expect(q.throwOnNotFound).toBe(true);

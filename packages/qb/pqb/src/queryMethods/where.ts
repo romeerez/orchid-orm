@@ -4,7 +4,7 @@ import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { getClonedQueryData, MaybeArray } from '../utils';
 import { JoinArgs, JoinCallback, JoinCallbackArg } from './join';
 import { RelationsBase } from '../relations';
-import { ColumnsShape } from '../columns';
+import { ColumnShapeBase } from '../columns';
 import { RawExpression } from '../raw';
 
 export type WhereArg<T extends QueryBase> =
@@ -140,7 +140,7 @@ export const addWhereIn = <T extends QueryBase>(
 export abstract class Where implements QueryBase {
   abstract clone<T extends this>(this: T): T;
   abstract selectable: SelectableBase;
-  abstract shape: ColumnsShape;
+  abstract shape: ColumnShapeBase;
   abstract relations: RelationsBase;
   abstract withData: WithDataBase;
   abstract baseQuery: Query;
@@ -433,17 +433,19 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
   extends Where
   implements QueryBase
 {
-  query = {} as QueryData;
   selectable!: Q['selectable'];
   shape: Q['shape'];
   relations!: Q['relations'];
   baseQuery: Query;
   withData = {};
 
-  constructor(q: QueryBase | string, shape: ColumnsShape) {
+  constructor(q: QueryBase | string, shape: ColumnShapeBase) {
     super();
     this.table = typeof q === 'object' ? q.table : q;
     this.shape = shape;
+    this.query = {
+      shape: shape as ColumnShapeBase,
+    } as QueryData;
     this.baseQuery = this as unknown as Query;
     if (typeof q === 'object' && q.query.as) {
       this.query.as = q.query.as;

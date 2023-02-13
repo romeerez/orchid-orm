@@ -72,7 +72,11 @@ export class With {
     const query = typeof last === 'function' ? last(this.queryBuilder) : last;
 
     const shape =
-      args.length === 4 ? (args[2] as ColumnsShape) : (query as Query).shape;
+      args.length === 4
+        ? (args[2] as ColumnsShape)
+        : isRaw(query)
+        ? args[1]
+        : query.query.shape;
 
     if (options?.columns === true) {
       options = {

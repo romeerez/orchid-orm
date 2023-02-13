@@ -60,7 +60,7 @@ export const processJoinItem = (
 
       if (args[1]) {
         const arg = (args[1] as (q: unknown) => QueryBase)(
-          new ctx.onQueryBuilder(jq, jq.shape, table),
+          new ctx.onQueryBuilder(jq, jq.query.shape, table),
         ).query;
 
         if (arg.and) queryData.and.push(...arg.and);
@@ -119,7 +119,7 @@ const processArgs = (
           throw new Error('Cannot get shape of `with` statement');
         }
       } else {
-        shape = first.shape;
+        shape = first.query.shape;
       }
 
       const jq = arg(new ctx.onQueryBuilder(first, shape, table));

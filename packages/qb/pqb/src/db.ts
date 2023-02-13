@@ -26,6 +26,7 @@ import {
   getTableData,
   DefaultColumnTypes,
   columnTypes,
+  ColumnShapeBase,
 } from './columns';
 import { applyMixins, pushOrNewArray, StringKey } from './utils';
 import { QueryError, QueryErrorName } from './errors';
@@ -135,6 +136,7 @@ export class Db<
     const logger = options.logger || console;
     this.query = {
       adapter,
+      shape: shape as ColumnShapeBase,
       handleResult: handleResult,
       logger,
       log: logParamToLogObject(logger, options.log),
