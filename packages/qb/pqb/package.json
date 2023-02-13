@@ -1,6 +1,6 @@
 {
   "name": "pqb",
-  "version": "0.9.18",
+  "version": "0.9.19",
   "description": "Postgres query builder",
   "homepage": "https://orchid-orm.netlify.app/guide/query-builder-setup.html",
   "repository": {
@@ -30,10 +30,16 @@
   },
   "jest": {
     "rootDir": "src",
-    "setupFiles": ["dotenv/config"],
+    "setupFiles": [
+      "dotenv/config"
+    ],
     "globalSetup": "../../../../jest-global-setup.ts",
-    "setupFilesAfterEnv": ["../../../../jest-setup.ts"],
-    "transform": { "^.+\\.ts$": "@swc/jest" }
+    "setupFilesAfterEnv": [
+      "../../../../jest-setup.ts"
+    ],
+    "transform": {
+      "^.+\\.ts$": "@swc/jest"
+    }
   },
   "keywords": [
     "pg",

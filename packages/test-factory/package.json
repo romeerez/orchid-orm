@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm-test-factory",
-  "version": "0.2.36",
+  "version": "0.2.37",
   "description": "Orchid ORM factories for tests",
   "homepage": "https://orchid-orm.netlify.app/guide/orm-test-factories.html",
   "repository": {
@@ -30,10 +30,16 @@
   },
   "jest": {
     "rootDir": "src",
-    "setupFiles": ["dotenv/config"],
+    "setupFiles": [
+      "dotenv/config"
+    ],
     "globalSetup": "../../../jest-global-setup.ts",
-    "setupFilesAfterEnv": ["../../../jest-setup.ts"],
-    "transform": { "^.+\\.ts$": "@swc/jest" }
+    "setupFilesAfterEnv": [
+      "../../../jest-setup.ts"
+    ],
+    "transform": {
+      "^.+\\.ts$": "@swc/jest"
+    }
   },
   "keywords": [
     "orchid-orm",

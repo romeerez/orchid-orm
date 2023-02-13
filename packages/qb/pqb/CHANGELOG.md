@@ -1,5 +1,12 @@
 # pqb
 
+## 0.9.19
+
+### Patch Changes
+
+- Support from(query) with proper result, operators, parsers
+- aa92f25: Remove `as` argument from `from` method in favor of specific `as` method
+
 ## 0.9.18
 
 ### Patch Changes

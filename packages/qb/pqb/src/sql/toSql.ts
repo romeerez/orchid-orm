@@ -100,7 +100,8 @@ export const makeSql = (
     }
   }
 
-  const quotedAs = table.table && q(query.as || table.table);
+  const quotedAs =
+    (query.as || table.table) && q((query.as || table.table) as string);
 
   sql.push('SELECT');
 

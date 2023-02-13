@@ -354,6 +354,8 @@ describe('merge queries', () => {
       s2.distinct = ['name'];
       s1.fromOnly = false;
       s2.fromOnly = true;
+      s1.joinedShapes = { a: q1.query.shape };
+      s2.joinedShapes = { b: q2.query.shape };
       s1.joinedParsers = { a: q1.query.parsers };
       s2.joinedParsers = { b: q2.query.parsers };
       s1.group = ['a'];
@@ -372,6 +374,8 @@ describe('merge queries', () => {
       s2.offset = 2;
       s1.for = { type: 'UPDATE' };
       s2.for = { type: 'SHARE' };
+      s1[getValueKey] = new IntegerColumn();
+      s2[getValueKey] = new TextColumn();
 
       const i1 = q1.query as unknown as InsertQueryData;
       const i2 = q2.query as unknown as InsertQueryData;
@@ -448,6 +452,10 @@ describe('merge queries', () => {
       const s = q as SelectQueryData;
       expect(s.distinct).toEqual([...s1.distinct, ...s2.distinct]);
       expect(s.fromOnly).toEqual(s2.fromOnly);
+      expect(s.joinedShapes).toEqual({
+        ...s1.joinedShapes,
+        ...s2.joinedShapes,
+      });
       expect(s.joinedParsers).toEqual({
         ...s1.joinedParsers,
         ...s2.joinedParsers,
@@ -460,6 +468,7 @@ describe('merge queries', () => {
       expect(s.limit).toEqual(s2.limit);
       expect(s.offset).toEqual(s2.offset);
       expect(s.for).toEqual(s2.for);
+      expect(s[getValueKey]).toEqual(s2[getValueKey]);
 
       const i = q as InsertQueryData;
       expect(i.columns).toEqual([...i1.columns, ...i2.columns]);

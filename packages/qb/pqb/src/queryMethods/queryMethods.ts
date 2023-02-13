@@ -253,19 +253,16 @@ export class QueryMethods {
 
   as<T extends Query, TableAlias extends string>(
     this: T,
-    tableAlias: TableAlias,
+    as: TableAlias,
   ): SetQueryTableAlias<T, TableAlias> {
-    return this.clone()._as(tableAlias) as unknown as SetQueryTableAlias<
-      T,
-      TableAlias
-    >;
+    return this.clone()._as(as) as unknown as SetQueryTableAlias<T, TableAlias>;
   }
 
   _as<T extends Query, TableAlias extends string>(
     this: T,
-    tableAlias: TableAlias,
+    as: TableAlias,
   ): SetQueryTableAlias<T, TableAlias> {
-    this.query.as = tableAlias;
+    this.query.as = as;
     return this as unknown as SetQueryTableAlias<T, TableAlias>;
   }
 
@@ -313,7 +310,9 @@ export class QueryMethods {
     query: Q,
     as: As = 't' as As,
   ): SetQueryTableAlias<Q, As> {
-    return query._from(this).as(as) as unknown as SetQueryTableAlias<Q, As>;
+    return (query._from(this) as Query)._as(
+      as,
+    ) as unknown as SetQueryTableAlias<Q, As>;
   }
 
   order<T extends Query>(this: T, ...args: OrderArg<T>[]): T {

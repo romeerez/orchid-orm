@@ -10,7 +10,9 @@ import {
   UserRecord,
   useTestDatabase,
 } from '../test-utils/test-utils';
-import { DateColumn } from '../columns';
+import { DateColumn, IntegerColumn, JSONTextColumn } from '../columns';
+import { getShapeFromSelect } from './select';
+import { UnknownColumn } from '../columns/unknown';
 
 const insertUserAndProfile = async () => {
   const id = await User.get('id').create(userData);
@@ -37,6 +39,9 @@ describe('selectMethods', () => {
           SELECT * FROM "user"
         `,
       );
+
+      expect(getShapeFromSelect(query)).toBe(User.shape);
+
       expectQueryNotMutated(q);
     });
 
@@ -52,6 +57,12 @@ describe('selectMethods', () => {
           SELECT "user"."id", "user"."name" FROM "user"
         `,
       );
+
+      expect(getShapeFromSelect(query)).toEqual({
+        id: User.shape.id,
+        name: User.shape.name,
+      });
+
       expectQueryNotMutated(q);
     });
 
@@ -67,6 +78,12 @@ describe('selectMethods', () => {
           SELECT "user"."id", "user"."name" FROM "user"
         `,
       );
+
+      expect(getShapeFromSelect(query)).toEqual({
+        id: User.shape.id,
+        name: User.shape.name,
+      });
+
       expectQueryNotMutated(q);
     });
 
@@ -85,6 +102,12 @@ describe('selectMethods', () => {
           JOIN "profile" ON "profile"."userId" = "user"."id"
         `,
       );
+
+      expect(getShapeFromSelect(query)).toEqual({
+        id: User.shape.id,
+        userId: Profile.shape.userId,
+      });
+
       expectQueryNotMutated(q);
     });
 
@@ -103,6 +126,12 @@ describe('selectMethods', () => {
           JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
         `,
       );
+
+      expect(getShapeFromSelect(query)).toEqual({
+        id: User.shape.id,
+        userId: Profile.shape.userId,
+      });
+
       expectQueryNotMutated(q);
     });
 
@@ -114,6 +143,10 @@ describe('selectMethods', () => {
 
         assertType<Awaited<typeof q>, { createdAt: Date }[]>();
 
+        expect(getShapeFromSelect(q)).toEqual({
+          createdAt: User.shape.createdAt,
+        });
+
         expect((await q.all())[0].createdAt instanceof Date).toBe(true);
         expect((await q.take()).createdAt instanceof Date).toBe(true);
         expect((await q.rows())[0][0] instanceof Date).toBe(true);
@@ -124,6 +157,10 @@ describe('selectMethods', () => {
         const q = User.select('user.createdAt');
 
         assertType<Awaited<typeof q>, { createdAt: Date }[]>();
+
+        expect(getShapeFromSelect(q)).toEqual({
+          createdAt: User.shape.createdAt,
+        });
 
         expect((await q.all())[0].createdAt instanceof Date).toBe(true);
         expect((await q.take()).createdAt instanceof Date).toBe(true);
@@ -137,6 +174,10 @@ describe('selectMethods', () => {
         );
 
         assertType<Awaited<typeof q>, { createdAt: Date }[]>();
+
+        expect(getShapeFromSelect(q)).toEqual({
+          createdAt: User.shape.createdAt,
+        });
 
         expect((await q.all())[0].createdAt instanceof Date).toBe(true);
         expect((await q.take()).createdAt instanceof Date).toBe(true);
@@ -154,6 +195,11 @@ describe('selectMethods', () => {
         Awaited<typeof query>,
         { aliasedId: number; aliasedName: string }[]
       >();
+
+      expect(getShapeFromSelect(query)).toEqual({
+        aliasedId: User.shape.id,
+        aliasedName: User.shape.name,
+      });
 
       expectSql(
         query.toSql(),
@@ -178,6 +224,11 @@ describe('selectMethods', () => {
         { aliasedId: number; aliasedName: string }[]
       >();
 
+      expect(getShapeFromSelect(query)).toEqual({
+        aliasedId: User.shape.id,
+        aliasedName: User.shape.name,
+      });
+
       expectSql(
         query.toSql(),
         `
@@ -199,6 +250,11 @@ describe('selectMethods', () => {
         Awaited<typeof query>,
         { aliasedId: number; aliasedUserId: number }[]
       >();
+
+      expect(getShapeFromSelect(query)).toEqual({
+        aliasedId: User.shape.id,
+        aliasedUserId: Profile.shape.userId,
+      });
 
       expectSql(
         query.toSql(),
@@ -223,6 +279,11 @@ describe('selectMethods', () => {
         { aliasedId: number; aliasedUserId: number }[]
       >();
 
+      expect(getShapeFromSelect(query)).toEqual({
+        aliasedId: User.shape.id,
+        aliasedUserId: Profile.shape.userId,
+      });
+
       expectSql(
         query.toSql(),
         `
@@ -240,6 +301,10 @@ describe('selectMethods', () => {
 
       assertType<Awaited<typeof query>, { one: unknown }[]>();
 
+      expect(getShapeFromSelect(query)).toEqual({
+        one: expect.any(UnknownColumn),
+      });
+
       expectSql(
         query.toSql(),
         `
@@ -254,6 +319,10 @@ describe('selectMethods', () => {
       const query = q.select({ subquery: () => User.all() });
 
       assertType<Awaited<typeof query>, { subquery: UserRecord[] }[]>();
+
+      expect(getShapeFromSelect(query)).toEqual({
+        subquery: expect.any(JSONTextColumn),
+      });
 
       expectSql(
         query.toSql(),
@@ -276,6 +345,8 @@ describe('selectMethods', () => {
 
       assertType<Awaited<typeof query>, UserRecord[]>();
 
+      expect(getShapeFromSelect(query)).toEqual(User.shape);
+
       expectSql(query.toSql(), `SELECT * FROM "user"`);
     });
   });
@@ -290,6 +361,10 @@ describe('selectMethods', () => {
 
       assertType<Awaited<typeof q>, { date: Date }[]>();
 
+      expect(getShapeFromSelect(q)).toEqual({
+        date: User.shape.createdAt,
+      });
+
       expect((await q.all())[0].date instanceof Date).toBe(true);
       expect((await q.take()).date instanceof Date).toBe(true);
       expect((await q.rows())[0][0] instanceof Date).toBe(true);
@@ -302,6 +377,10 @@ describe('selectMethods', () => {
 
       assertType<Awaited<typeof q>, { date: Date }[]>();
 
+      expect(getShapeFromSelect(q)).toEqual({
+        date: User.shape.createdAt,
+      });
+
       expect((await q.all())[0].date instanceof Date).toBe(true);
       expect((await q.take()).date instanceof Date).toBe(true);
       expect((await q.rows())[0][0] instanceof Date).toBe(true);
@@ -313,6 +392,10 @@ describe('selectMethods', () => {
       });
 
       assertType<Awaited<typeof q>, { date: Date }[]>();
+
+      expect(getShapeFromSelect(q)).toEqual({
+        date: User.shape.createdAt,
+      });
 
       expect((await q.all())[0].date instanceof Date).toBe(true);
       expect((await q.take()).date instanceof Date).toBe(true);
@@ -329,6 +412,10 @@ describe('selectMethods', () => {
 
       assertType<Awaited<typeof q>, { date: Date }[]>();
 
+      expect(getShapeFromSelect(q)).toEqual({
+        date: expect.any(DateColumn),
+      });
+
       expect((await q.all())[0].date instanceof Date).toBe(true);
       expect((await q.take()).date instanceof Date).toBe(true);
       expect((await q.rows())[0][0] instanceof Date).toBe(true);
@@ -341,6 +428,10 @@ describe('selectMethods', () => {
         });
 
         assertType<Awaited<typeof q>, { users: UserRecord[] }[]>();
+
+        expect(getShapeFromSelect(q)).toEqual({
+          users: expect.any(JSONTextColumn),
+        });
 
         expect((await q.all())[0].users[0].createdAt instanceof Date).toBe(
           true,
@@ -356,6 +447,10 @@ describe('selectMethods', () => {
 
         assertType<Awaited<typeof q>, { user: UserRecord | null }[]>();
 
+        expect(getShapeFromSelect(q)).toEqual({
+          user: expect.any(JSONTextColumn),
+        });
+
         expect((await q.all())[0].user?.createdAt instanceof Date).toBe(true);
         expect((await q.take()).user?.createdAt instanceof Date).toBe(true);
         expect((await q.rows())[0][0]?.createdAt instanceof Date).toBe(true);
@@ -368,6 +463,10 @@ describe('selectMethods', () => {
 
         assertType<Awaited<typeof q>, { count: number }[]>();
 
+        expect(getShapeFromSelect(q)).toEqual({
+          count: expect.any(IntegerColumn),
+        });
+
         expect(typeof (await q.all())[0].count).toBe('number');
         expect(typeof (await q.take()).count).toBe('number');
         expect(typeof (await q.rows())[0][0]).toBe('number');
@@ -379,6 +478,10 @@ describe('selectMethods', () => {
         });
 
         assertType<Awaited<typeof q>, { dates: Date[] }[]>();
+
+        expect(getShapeFromSelect(q)).toEqual({
+          dates: expect.any(JSONTextColumn),
+        });
 
         expect((await q.all())[0].dates[0] instanceof Date).toBe(true);
         expect((await q.take()).dates[0] instanceof Date).toBe(true);

@@ -1,12 +1,34 @@
-import { Query, SetQueryTableAlias } from '../query';
+import { AddQuerySelect, Query, SetQueryTableAlias } from '../query';
 import { SelectQueryData } from '../sql';
 import { AliasOrTable } from '../utils';
 import { isRaw, RawExpression } from '../../../common/src/raw';
+import { getShapeFromSelect } from './select';
 
 type FromArgs<T extends Query> = [
   first: Query | RawExpression | Exclude<keyof T['withData'], symbol | number>,
   second?: { only?: boolean },
 ];
+
+type SetFromSelectable<T extends Query, Arg extends Query> = Omit<
+  T,
+  'selectable'
+> & {
+  selectable: {
+    [K in keyof Arg['result']]: K extends string
+      ? {
+          as: K;
+          column: Arg['result'][K];
+        }
+      : never;
+  };
+};
+
+type MergeFromResult<T extends Query, Arg extends Query> = AddQuerySelect<
+  Omit<T, 'result'> & {
+    result: Pick<T['result'], keyof Arg['result']>;
+  },
+  Arg['result']
+>;
 
 type FromResult<
   T extends Query,
@@ -15,16 +37,7 @@ type FromResult<
   ? SetQueryTableAlias<T, Args[0]>
   : Args[0] extends Query
   ? SetQueryTableAlias<
-      Omit<T, 'selectable'> & {
-        selectable: {
-          [K in keyof Args[0]['result']]: K extends string
-            ? {
-                as: K;
-                column: Args[0]['result'][K];
-              }
-            : never;
-        };
-      },
+      MergeFromResult<SetFromSelectable<T, Args[0]>, Args[0]>,
       AliasOrTable<Args[0]>
     >
   : T;
@@ -41,19 +54,23 @@ export class From {
     this: T,
     ...args: Args
   ): FromResult<T, Args> {
-    let as: string | undefined;
     if (typeof args[0] === 'string') {
-      if (!this.query.as) as = args[0];
+      this.query.as ||= args[0];
     } else if (!isRaw(args[0] as RawExpression)) {
-      as = (args[0] as Query).query.as || (args[0] as Query).table;
+      const q = args[0] as Query;
+      this.query.as ||= q.query.as || q.table || 't';
+      this.query.shape = getShapeFromSelect(args[0] as Query);
+      this.query.parsers = q.query.parsers;
+    } else {
+      this.query.as ||= 't';
     }
 
     if (args[1]?.only) {
       (this.query as SelectQueryData).fromOnly = args[1].only;
     }
 
-    const q = as ? this._as(as) : this;
-    q.query.from = args[0];
-    return q as unknown as FromResult<T, Args>;
+    this.query.from = args[0];
+
+    return this as unknown as FromResult<T, Args>;
   }
 }

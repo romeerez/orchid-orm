@@ -11,6 +11,8 @@ import {
 import {
   ArrayOfColumnsObjects,
   ColumnsObject,
+  ColumnsShapeBase,
+  JSONTextColumn,
   NullableColumn,
   PluckResultColumnType,
 } from '../columns';
@@ -21,7 +23,8 @@ import { FilterTuple, SimpleSpread, StringKey } from '../utils';
 import { isRequiredRelationKey, Relation } from '../relations';
 import { getValueKey } from './get';
 import { QueryResult } from '../adapter';
-import { RawExpression } from '../../../common/src/raw';
+import { isRaw, RawExpression } from '../../../common/src/raw';
+import { UnknownColumn } from '../columns/unknown';
 
 export type SelectArg<T extends QueryBase> =
   | StringKey<keyof T['selectable']>
@@ -216,6 +219,71 @@ const processSelectAsArg = <T extends Query>(
     selectAs[key] = addParserForSelectItem(q, as, key, arg[key]);
   }
   return { selectAs };
+};
+
+export const getShapeFromSelect = (q: Query) => {
+  const query = q.query as SelectQueryData;
+  const { select, shape } = query;
+  if (!select) {
+    return shape;
+  }
+
+  const result: ColumnsShapeBase = {};
+  for (const item of select) {
+    if (typeof item === 'string') {
+      addColumnToShapeFromSelect(q, item, shape, query, result);
+    } else if ('selectAs' in item) {
+      for (const key in item.selectAs) {
+        const it = item.selectAs[key];
+        if (typeof it === 'string') {
+          addColumnToShapeFromSelect(q, it, shape, query, result, key);
+        } else if (isRaw(it)) {
+          result[key] = it.__column || new UnknownColumn();
+        } else {
+          const { returnType } = it.query;
+          if (returnType === 'value' || returnType === 'valueOrThrow') {
+            const type = (it.query as SelectQueryData)[getValueKey];
+            if (type) result[key] = type;
+          } else {
+            result[key] = new JSONTextColumn();
+          }
+        }
+      }
+    }
+  }
+  return result;
+};
+
+const addColumnToShapeFromSelect = (
+  q: Query,
+  arg: string,
+  shape: ColumnsShapeBase,
+  query: SelectQueryData,
+  result: ColumnsShapeBase,
+  key?: string,
+) => {
+  if ((q.relations as Record<string, Relation>)[arg]) {
+    result[key || arg] = new JSONTextColumn();
+    return;
+  }
+
+  const index = arg.indexOf('.');
+  if (index !== -1) {
+    const table = arg.slice(0, index);
+    const column = arg.slice(index + 1);
+    if (table === (q.query.as || q.table)) {
+      result[key || column] = shape[column];
+    } else {
+      const it = query.joinedShapes?.[table]?.[column];
+      if (it) result[key || column] = it;
+    }
+  } else if (arg === '*') {
+    for (const key in shape) {
+      result[key] = shape[key];
+    }
+  } else {
+    result[key || arg] = shape[arg];
+  }
 };
 
 export class Select {

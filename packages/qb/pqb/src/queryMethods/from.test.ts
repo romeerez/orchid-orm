@@ -1,8 +1,11 @@
 import {
+  assertType,
   db,
   expectQueryNotMutated,
   expectSql,
   User,
+  userData,
+  useTestDatabase,
 } from '../test-utils/test-utils';
 
 describe('from', () => {
@@ -40,10 +43,47 @@ describe('from', () => {
     );
   });
 
-  it.todo('should apply column types from inner query'); //, () => {
-  // const query = db.from().where({
-  //   alias: { contains: 'name' },
-  // });
-  // query.toSql();
-  // });
+  describe('inner query', () => {
+    useTestDatabase();
+    beforeEach(() => User.count().create(userData));
+
+    it('should apply column types from inner query', async () => {
+      const q = db
+        .from(
+          User.select('createdAt', {
+            alias: 'name',
+            count: () => User.count(),
+          }),
+        )
+        .where({
+          alias: { contains: 'name' },
+        });
+
+      assertType<
+        Awaited<typeof q>,
+        { createdAt: Date; alias: string; count: number }[]
+      >();
+
+      expectSql(
+        q.toSql(),
+        `SELECT * FROM (
+        SELECT
+          "user"."createdAt",
+          "user"."name" AS "alias",
+          (SELECT count(*) FROM "user") AS "count"
+        FROM "user"
+      ) AS "user" WHERE "user"."alias" ILIKE '%' || $1 || '%'`,
+        ['name'],
+      );
+
+      const result = await q;
+      expect(result).toEqual([
+        {
+          createdAt: expect.any(Date),
+          alias: 'name',
+          count: 1,
+        },
+      ]);
+    });
+  });
 });

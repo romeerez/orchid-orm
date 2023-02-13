@@ -15,6 +15,7 @@ import { QueryData } from '../sql';
 import { ColumnsShapeBase } from '../columns';
 import { StringKey } from '../utils';
 import { RawExpression } from '../../../common/src/raw';
+import { getShapeFromSelect } from './select';
 
 type WithSelectable<
   T extends QueryBase,
@@ -173,12 +174,13 @@ const _join = <
 ): JoinResult<T, Args> => {
   const first = args[0];
   let joinKey: string | undefined;
+  let shape: ColumnsShapeBase | undefined;
   let parsers: ColumnsParsers | undefined;
 
   if (typeof first === 'object') {
-    const as = first.tableAlias || first.table;
-    if (as) {
-      joinKey = as;
+    joinKey = first.query.as || first.table;
+    if (joinKey) {
+      shape = getShapeFromSelect(first);
       parsers = first.query.parsers;
     }
   } else {
@@ -186,9 +188,10 @@ const _join = <
 
     const relation = (q.relations as Record<string, Relation>)[joinKey];
     if (relation) {
+      shape = getShapeFromSelect(relation.query);
       parsers = relation.query.query.parsers;
     } else {
-      const shape = q.query.withShapes?.[first as string];
+      shape = q.query.withShapes?.[first as string];
       if (shape) {
         parsers = {} as ColumnsParsers;
         for (const key in shape) {
@@ -201,7 +204,8 @@ const _join = <
     }
   }
 
-  if (joinKey && parsers) {
+  if (joinKey) {
+    setQueryObjectValue(q, 'joinedShapes', joinKey, shape);
     setQueryObjectValue(q, 'joinedParsers', joinKey, parsers);
   }
 

@@ -1,5 +1,7 @@
 import { Query, QueryReturnType, QueryThen } from '../query';
 import { Spread } from '../utils';
+import { getValueKey } from './get';
+import { SelectQueryData } from '../sql';
 
 export type MergeQuery<
   T extends Query,
@@ -28,6 +30,7 @@ const mergableObjects: Record<string, boolean> = {
   withShapes: true,
   parsers: true,
   defaults: true,
+  joinedShapes: true,
   joinedParsers: true,
 };
 
@@ -60,6 +63,8 @@ export class MergeQueryMethods {
           break;
       }
     }
+
+    (a as SelectQueryData)[getValueKey] = (b as SelectQueryData)[getValueKey];
 
     if (b.returnType) a.returnType = b.returnType;
 

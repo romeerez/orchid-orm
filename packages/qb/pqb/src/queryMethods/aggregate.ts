@@ -21,7 +21,7 @@ import {
 import { OrderArg, WindowArgDeclaration } from './queryMethods';
 import { WhereArg } from './where';
 import { addParserToQuery } from './select';
-import { SelectItem } from '../sql';
+import { SelectItem, SelectQueryData } from '../sql';
 import { getValueKey } from './get';
 import { raw } from '../../../common/src/raw';
 
@@ -180,6 +180,8 @@ export class Aggregate {
     );
 
     if (columnType?.parseFn) {
+      (this.query as SelectQueryData)[getValueKey] = columnType;
+
       addParserToQuery(this.query, getValueKey, columnType.parseFn);
 
       addParserToQuery(

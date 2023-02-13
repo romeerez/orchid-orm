@@ -19,7 +19,7 @@ export const pushFromAndAs = (
   ctx.sql.push(from);
 
   if (query.as && quotedAs && quotedAs !== from) {
-    ctx.sql.push('AS', quotedAs as string);
+    ctx.sql.push('AS', quotedAs);
   }
 };
 

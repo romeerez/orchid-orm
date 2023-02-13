@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm-schema-to-zod",
-  "version": "0.2.24",
+  "version": "0.2.25",
   "description": "Orchid-ORM columns schema to Zod converter",
   "homepage": "https://orchid-orm.netlify.app/guide/columns-validation-methods.html",
   "repository": {
@@ -30,10 +30,16 @@
   },
   "jest": {
     "rootDir": "src",
-    "setupFiles": ["dotenv/config"],
+    "setupFiles": [
+      "dotenv/config"
+    ],
     "globalSetup": "../../../jest-global-setup.ts",
-    "setupFilesAfterEnv": ["../../../jest-setup.ts"],
-    "transform": { "^.+\\.ts$": "@swc/jest" }
+    "setupFilesAfterEnv": [
+      "../../../jest-setup.ts"
+    ],
+    "transform": {
+      "^.+\\.ts$": "@swc/jest"
+    }
   },
   "keywords": [
     "orchid-orm",

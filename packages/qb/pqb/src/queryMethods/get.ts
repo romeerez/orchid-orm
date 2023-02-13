@@ -6,7 +6,9 @@ import {
 } from '../query';
 import { addParserForRawExpression, processSelectArg } from './select';
 import { StringKey } from '../utils';
-import { isRaw, RawExpression } from '../../../common/src/raw';
+import { RawExpression } from '../../../common/src/raw';
+import { SelectQueryData } from '../sql';
+import { ColumnTypeBase } from '../../../common/src/columns/columnType';
 
 export type GetArg<T extends QueryBase> =
   | StringKey<keyof T['selectable']>
@@ -41,10 +43,25 @@ const _get = <
 ): R extends 'value' ? GetOptionalResult<T, Arg> : GetResult<T, Arg> => {
   q.query.returnType = returnType;
 
-  if (typeof arg === 'object' && isRaw(arg)) {
-    addParserForRawExpression(q, getValueKey, arg);
-    q.query.select = [arg];
-  } else {
+  if (typeof arg === 'string') {
+    let type = q.query.shape[arg] as ColumnTypeBase | undefined;
+    if (type) {
+    } else {
+      const index = arg.indexOf('.');
+      if (index !== -1) {
+        const table = arg.slice(0, index);
+        const column = arg.slice(index + 1);
+
+        if (table === (q.query.as || q.table)) {
+          type = q.query.shape[column];
+        } else {
+          type = (q.query as SelectQueryData).joinedShapes?.[table]?.[column];
+        }
+      }
+    }
+
+    (q.query as SelectQueryData)[getValueKey] = type;
+
     q.query.select = [
       processSelectArg(
         q,
@@ -53,6 +70,10 @@ const _get = <
         getValueKey,
       ),
     ];
+  } else {
+    (q.query as SelectQueryData)[getValueKey] = arg.__column;
+    addParserForRawExpression(q, getValueKey, arg);
+    q.query.select = [arg];
   }
 
   return q as unknown as GetResult<T, Arg> & GetOptionalResult<T, Arg>;

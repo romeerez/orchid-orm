@@ -1,6 +1,6 @@
 {
   "name": "rake-db",
-  "version": "2.3.31",
+  "version": "2.3.32",
   "description": "Migrations tool for Postgresql DB",
   "homepage": "https://orchid-orm.netlify.app/guide/migration-setup-and-overview.html",
   "repository": {
@@ -31,10 +31,16 @@
   },
   "jest": {
     "rootDir": "src",
-    "setupFiles": ["dotenv/config"],
+    "setupFiles": [
+      "dotenv/config"
+    ],
     "globalSetup": "../../../jest-global-setup.ts",
-    "setupFilesAfterEnv": ["../../../jest-setup.ts"],
-    "transform": { "^.+\\.ts$": "@swc/jest" }
+    "setupFilesAfterEnv": [
+      "../../../jest-setup.ts"
+    ],
+    "transform": {
+      "^.+\\.ts$": "@swc/jest"
+    }
   },
   "keywords": [
     "postgresql",

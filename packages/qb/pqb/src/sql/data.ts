@@ -2,12 +2,13 @@ import { ColumnsParsers, Query, QueryReturnType } from '../query';
 import {
   AfterCallback,
   BeforeCallback,
+  getValueKey,
   QueryLogger,
   QueryLogObject,
 } from '../queryMethods';
 import { Adapter, QueryResult } from '../adapter';
 import { RelationQueryData, relationQueryKey } from '../relations';
-import { ColumnsShapeBase, ColumnsShape } from '../columns';
+import { ColumnsShapeBase, ColumnsShape, ColumnTypeBase } from '../columns';
 import { toSqlCacheKey } from './toSql';
 import {
   HavingItem,
@@ -60,6 +61,7 @@ export type SelectQueryData = CommonQueryData & {
   distinct?: Expression[];
   fromOnly?: boolean;
   join?: JoinItem[];
+  joinedShapes?: Record<string, ColumnsShapeBase>;
   joinedParsers?: Record<string, ColumnsParsers>;
   group?: (string | RawExpression)[];
   having?: HavingItem[];
@@ -74,6 +76,8 @@ export type SelectQueryData = CommonQueryData & {
     tableNames?: string[] | RawExpression;
     mode?: 'NO WAIT' | 'SKIP LOCKED';
   };
+  // column type for query with 'value' or 'valueOrThrow' return type
+  [getValueKey]?: ColumnTypeBase;
 };
 
 export type InsertQueryData = CommonQueryData & {
@@ -83,6 +87,7 @@ export type InsertQueryData = CommonQueryData & {
   fromQuery?: Query;
   using?: JoinItem[];
   join?: JoinItem[];
+  joinedShapes?: Record<string, ColumnsShapeBase>;
   joinedParsers?: Record<string, ColumnsParsers>;
   onConflict?:
     | {
@@ -122,6 +127,7 @@ export type UpdateQueryData = CommonQueryData & {
 export type DeleteQueryData = CommonQueryData & {
   type: 'delete';
   join?: JoinItem[];
+  joinedShapes?: Record<string, ColumnsShapeBase>;
   joinedParsers?: Record<string, ColumnsParsers>;
   beforeDelete?: BeforeCallback[];
   afterDelete?: AfterCallback[];

@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm",
-  "version": "1.5.30",
+  "version": "1.5.31",
   "description": "Postgres ORM",
   "homepage": "https://orchid-orm.netlify.app/guide/orm-setup-and-overview.html",
   "repository": {
@@ -32,9 +32,15 @@
   },
   "jest": {
     "rootDir": "src",
-    "setupFiles": ["dotenv/config"],
-    "setupFilesAfterEnv": ["../../../jest-setup.ts"],
-    "transform": { "^.+\\.ts$": "@swc/jest" }
+    "setupFiles": [
+      "dotenv/config"
+    ],
+    "setupFilesAfterEnv": [
+      "../../../jest-setup.ts"
+    ],
+    "transform": {
+      "^.+\\.ts$": "@swc/jest"
+    }
   },
   "keywords": [
     "pg",
