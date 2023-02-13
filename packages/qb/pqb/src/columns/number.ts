@@ -26,7 +26,7 @@ const numberDataToCode = (data: NumberBaseColumn['data']) => {
   return code;
 };
 
-export type NumberColumn = ColumnType<number>;
+export type NumberColumn = ColumnType<number, typeof Operators.number>;
 
 export type NumberColumnData = BaseNumberData;
 

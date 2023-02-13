@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.20
+
+### Patch Changes
+
+- Fix number column operators
+
 ## 0.9.19
 
 ### Patch Changes

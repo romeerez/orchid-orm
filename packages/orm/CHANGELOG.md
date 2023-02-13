@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.5.32
+
+### Patch Changes
+
+- Fix number column operators
+- Updated dependencies
+  - pqb@0.9.20
+
 ## 1.5.31
 
 ### Patch Changes

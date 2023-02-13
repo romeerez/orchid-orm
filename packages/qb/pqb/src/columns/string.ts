@@ -46,7 +46,7 @@ const stringDataToCode = (data: BaseStringData) => {
   return code;
 };
 
-export type StringColumn = ColumnType<string>;
+export type StringColumn = ColumnType<string, typeof Operators.text>;
 
 export type TextColumnData = BaseStringData;
 
