@@ -18,12 +18,7 @@ import { RawExpression } from '../raw';
 import { pushQueryArray } from '../queryDataUtils';
 import { parseResult } from './then';
 import { QueryData, SelectItem, SelectQueryData } from '../sql';
-import {
-  FilterTuple,
-  getQueryParsers,
-  SimpleSpread,
-  StringKey,
-} from '../utils';
+import { FilterTuple, SimpleSpread, StringKey } from '../utils';
 import { isRequiredRelationKey, Relation } from '../relations';
 import { getValueKey } from './get';
 import { QueryResult } from '../adapter';
@@ -122,7 +117,7 @@ export const addParserForSelectItem = <T extends Query>(
     q.isSubQuery = true;
     const rel = arg(q);
     q.isSubQuery = false;
-    const parsers = getQueryParsers(rel);
+    const { parsers } = rel.query;
     if (parsers) {
       addParserToQuery(q.query, key, (item) => {
         subQueryResult.rows = isQueryReturnsMultipleRows(rel)
@@ -139,7 +134,7 @@ export const addParserForSelectItem = <T extends Query>(
       const column = arg.slice(index + 1);
 
       if (table === as) {
-        const parser = q.columnsParsers?.[column];
+        const parser = q.query.parsers?.[column];
         if (parser) addParserToQuery(q.query, key, parser);
       } else {
         const parser = (q.query as SelectQueryData).joinedParsers?.[table]?.[
@@ -148,7 +143,7 @@ export const addParserForSelectItem = <T extends Query>(
         if (parser) addParserToQuery(q.query, key, parser);
       }
     } else {
-      const parser = q.columnsParsers?.[arg];
+      const parser = q.query.parsers?.[arg];
       if (parser) addParserToQuery(q.query, key, parser);
     }
     return arg;
@@ -196,7 +191,7 @@ const processSelectColumnArg = <T extends Query>(
     const column = arg.slice(index + 1);
 
     if (table === as) {
-      const parser = q.columnsParsers?.[column];
+      const parser = q.query.parsers?.[column];
       if (parser) addParserToQuery(q.query, columnAs || column, parser);
     } else {
       const parser = (q.query as SelectQueryData).joinedParsers?.[table]?.[
@@ -205,7 +200,7 @@ const processSelectColumnArg = <T extends Query>(
       if (parser) addParserToQuery(q.query, columnAs || column, parser);
     }
   } else {
-    const parser = q.columnsParsers?.[arg];
+    const parser = q.query.parsers?.[arg];
     if (parser) addParserToQuery(q.query, columnAs || arg, parser);
   }
   return arg;

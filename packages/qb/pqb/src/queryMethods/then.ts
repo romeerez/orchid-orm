@@ -5,7 +5,6 @@ import { CommonQueryData, Sql } from '../sql';
 import { AfterCallback, BeforeCallback } from './callbacks';
 import { getValueKey } from './get';
 import pg from 'pg';
-import { getQueryParsers } from '../utils';
 
 export type ThenResult<Res> = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -192,7 +191,7 @@ export const parseResult = (
       if (q.query.throwOnNotFound && result.rows.length === 0)
         throw new NotFoundError();
 
-      const parsers = getQueryParsers(q);
+      const { parsers } = q.query;
       return parsers
         ? result.rows.map((row) => parseRecord(parsers, row))
         : result.rows;
@@ -201,18 +200,18 @@ export const parseResult = (
       const row = result.rows[0];
       if (!row) return;
 
-      const parsers = getQueryParsers(q);
+      const { parsers } = q.query;
       return parsers ? parseRecord(parsers, row) : row;
     }
     case 'oneOrThrow': {
       const row = result.rows[0];
       if (!row) throw new NotFoundError();
 
-      const parsers = getQueryParsers(q);
+      const { parsers } = q.query;
       return parsers ? parseRecord(parsers, row) : row;
     }
     case 'rows': {
-      const parsers = getQueryParsers(q);
+      const { parsers } = q.query;
       return parsers
         ? parseRows(
             parsers,
@@ -222,7 +221,7 @@ export const parseResult = (
         : result.rows;
     }
     case 'pluck': {
-      const parsers = getQueryParsers(q);
+      const { parsers } = q.query;
       if (parsers?.pluck) {
         return result.rows.map((row) => parsers.pluck(row[0]));
       }
@@ -280,7 +279,7 @@ const parseRows = (
 
 const parseValue = (value: unknown, query: Query) => {
   if (value !== null) {
-    const parsers = getQueryParsers(query);
+    const { parsers } = query.query;
     const parser = parsers?.[getValueKey];
     if (parser) {
       return parser(value);

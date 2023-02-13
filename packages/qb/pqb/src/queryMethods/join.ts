@@ -179,14 +179,14 @@ const _join = <
     const as = first.tableAlias || first.table;
     if (as) {
       joinKey = as;
-      parsers = first.query.parsers || first.columnsParsers;
+      parsers = first.query.parsers;
     }
   } else {
     joinKey = first as string;
 
     const relation = (q.relations as Record<string, Relation>)[joinKey];
     if (relation) {
-      parsers = relation.query.query.parsers || relation.query.columnsParsers;
+      parsers = relation.query.query.parsers;
     } else {
       const shape = q.query.withShapes?.[first as string];
       if (shape) {

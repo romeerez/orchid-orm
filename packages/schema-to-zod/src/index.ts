@@ -78,8 +78,14 @@ type ByteaType = 'bytea';
 type SchemaToZod<
   T extends ColumnType,
   D = T['dataType'],
-> = T['isNullable'] extends true
-  ? z.ZodNullable<SchemaToZod<Omit<T, 'isNullable'> & { isNullable: false }>>
+> = T['data']['isNullable'] extends true
+  ? z.ZodNullable<
+      SchemaToZod<
+        Omit<T, 'data'> & {
+          data: Omit<T['data'], 'isNullable'> & { isNullable: false };
+        }
+      >
+    >
   : D extends NumberType
   ? z.ZodNumber
   : D extends

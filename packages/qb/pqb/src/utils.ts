@@ -72,6 +72,7 @@ export type CoalesceString<
 export const getClonedQueryData = (query: QueryData): QueryData => {
   const cloned = { ...query };
   delete cloned[toSqlCacheKey];
+  if (cloned.parsers) cloned.parsers = { ...cloned.parsers };
   cloneQueryArrays(cloned);
   return cloned as QueryData;
 };
@@ -140,10 +141,6 @@ export const isObjectEmpty = (obj: object) => {
 };
 
 export const EMPTY_OBJECT = {};
-
-export const getQueryParsers = (q: Query) => {
-  return q.query.parsers || q.columnsParsers;
-};
 
 export type AliasOrTable<T extends Pick<Query, 'tableAlias' | 'table'>> =
   T['tableAlias'] extends string

@@ -94,7 +94,6 @@ export interface Db<
   joinedTables: Query['joinedTables'];
   windows: Query['windows'];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
-  columnsParsers?: ColumnsParsers;
   relations: Relations;
   withData: Query['withData'];
   error: new (
@@ -136,6 +135,22 @@ export class Db<
     this.baseQuery = this as Query;
 
     const logger = options.logger || console;
+
+    const parsers = {} as ColumnsParsers;
+    let hasParsers = false;
+    let modifyQuery: ((q: Query) => void)[] | undefined = undefined;
+    for (const key in shape) {
+      const column = shape[key];
+      if (column.parseFn) {
+        hasParsers = true;
+        parsers[key] = column.parseFn;
+      }
+
+      if (column.data.modifyQuery) {
+        modifyQuery = pushOrNewArray(modifyQuery, column.data.modifyQuery);
+      }
+    }
+
     this.query = {
       adapter,
       shape: shape as ColumnsShapeBase,
@@ -143,6 +158,7 @@ export class Db<
       logger,
       log: logParamToLogObject(logger, options.log),
       autoPreparedStatements: options.autoPreparedStatements ?? false,
+      parsers: hasParsers ? parsers : undefined,
     } as QueryData;
 
     if (options?.schema) {
@@ -182,22 +198,6 @@ export class Db<
       this.defaultSelectColumns.length === columns.length
         ? undefined
         : this.defaultSelectColumns;
-
-    const columnsParsers = {} as ColumnsParsers;
-    let hasParsers = false;
-    let modifyQuery: ((q: Query) => void)[] | undefined = undefined;
-    for (const key in shape) {
-      const column = shape[key];
-      if (column.parseFn) {
-        hasParsers = true;
-        columnsParsers[key] = column.parseFn;
-      }
-
-      if (column.data.modifyQuery) {
-        modifyQuery = pushOrNewArray(modifyQuery, column.data.modifyQuery);
-      }
-    }
-    this.columnsParsers = hasParsers ? columnsParsers : undefined;
 
     this.toSql = defaultSelect
       ? function <T extends Query>(this: T, options?: ToSqlOptions): Sql {

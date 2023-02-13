@@ -69,7 +69,6 @@ export type Query = QueryMethods & {
   joinedTables: Record<string, Pick<Query, 'result' | 'tableAlias' | 'table'>>;
   windows: EmptyObject;
   defaultSelectColumns: string[];
-  columnsParsers?: ColumnsParsers;
   relations: RelationsBase;
   withData: WithDataBase;
   error: new (
