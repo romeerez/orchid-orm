@@ -1,5 +1,6 @@
 import { BaseOperators, Operator } from './operators';
 import { Code } from './code';
+import { RawExpression } from '../raw';
 
 // output type of the column
 export type ColumnOutput<T extends ColumnTypeBase> = T['type'];
@@ -13,6 +14,13 @@ export type ColumnsShapeBase = Record<string, ColumnTypeBase>;
 // output of base shape of columns
 export type ColumnShapeOutput<Shape extends ColumnsShapeBase> = {
   [K in keyof Shape]: ColumnOutput<Shape[K]>;
+};
+
+export type PrimaryKeyColumn<T extends ColumnTypeBase> = Omit<T, 'data'> & {
+  data: Omit<T['data'], 'isPrimaryKey' | 'default'> & {
+    isPrimaryKey: true;
+    default: RawExpression;
+  };
 };
 
 export type NullableColumn<T extends ColumnTypeBase> = Omit<
@@ -59,6 +67,35 @@ export type ColumnTypesBase = Record<
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ValidationContext = any;
+
+export const setColumnData = <
+  T extends ColumnTypeBase,
+  K extends keyof T['data'],
+>(
+  q: T,
+  key: K,
+  value: T['data'][K],
+): T => {
+  const cloned = Object.create(q);
+  cloned.data = { ...q.data, [key]: value };
+  return cloned;
+};
+
+export const pushColumnData = <
+  T extends ColumnTypeBase,
+  K extends keyof T['data'],
+>(
+  q: T,
+  key: K,
+  value: unknown,
+) => {
+  const arr = q.data[key as keyof typeof q.data] as unknown[];
+  return setColumnData(
+    q,
+    key,
+    (arr ? [...arr, value] : [value]) as unknown as T['data'][K],
+  );
+};
 
 // base data of column
 export type ColumnDataBase = {

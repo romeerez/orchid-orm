@@ -5,7 +5,7 @@ import { assignMethodsToClass } from './utils';
 import { numberTypeMethods } from './commonMethods';
 import { columnCode } from './code';
 import { Code } from '../../../common/src/columns/code';
-import { RawExpression } from '../raw';
+import { RawExpression } from '../../../common/src/raw';
 
 export type BaseNumberData = ColumnData & {
   lt?: number;

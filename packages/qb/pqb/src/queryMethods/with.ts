@@ -1,10 +1,10 @@
 import { WithOptions } from '../sql';
 import { ColumnShapeOutput, ColumnsShape, ColumnTypes } from '../columns';
-import { isRaw, RawExpression } from '../raw';
 import { AddQueryWith, Query } from '../query';
 import { Db } from '../db';
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
 import { EMPTY_OBJECT } from '../utils';
+import { isRaw, RawExpression } from '../../../common/src/raw';
 
 type WithArgsOptions = Omit<WithOptions, 'columns'> & {
   columns?: boolean | string[];

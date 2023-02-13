@@ -4,8 +4,9 @@ import { QueryBase, QueryWithTable } from '../query';
 import { whereToSql } from './where';
 import { Relation } from '../relations';
 import { ToSqlCtx } from './toSql';
-import { getRaw, isRaw, RawExpression } from '../raw';
+import { getRaw } from '../raw';
 import { QueryData } from './data';
+import { isRaw, RawExpression } from '../../../common/src/raw';
 
 type ItemOf3Or4Length =
   | [

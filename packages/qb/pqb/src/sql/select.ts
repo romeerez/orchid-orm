@@ -1,5 +1,5 @@
 import { JsonItem, SelectFunctionItem, SelectItem } from './types';
-import { getRaw, isRaw, raw } from '../raw';
+import { getRaw } from '../raw';
 import { Query, QueryBase } from '../query';
 import { addValue, q, quoteFullColumn } from './common';
 import { aggregateToSql } from './aggregate';
@@ -8,6 +8,7 @@ import { makeSql, ToSqlCtx } from './toSql';
 import { relationQueryKey } from '../relations';
 import { SelectQueryData } from './data';
 import { Expression } from '../utils';
+import { isRaw, raw } from '../../../common/src/raw';
 
 const jsonColumnOrMethodToSql = (
   column: string | JsonItem,

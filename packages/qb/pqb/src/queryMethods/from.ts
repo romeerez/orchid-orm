@@ -1,7 +1,7 @@
 import { Query, SetQueryTableAlias } from '../query';
-import { isRaw, RawExpression } from '../raw';
 import { SelectQueryData } from '../sql';
 import { AliasOrTable } from '../utils';
+import { isRaw, RawExpression } from '../../../common/src/raw';
 
 type FromArgs<T extends Query> = [
   first: Query | RawExpression | Exclude<keyof T['withData'], symbol | number>,

@@ -1,7 +1,8 @@
 import { Query } from '../query';
 import { addValue } from '../sql/common';
-import { getRaw, isRaw, RawExpression } from '../raw';
+import { getRaw } from '../raw';
 import { createOperator } from '../../../common/src/columns/operators';
+import { isRaw, RawExpression } from '../../../common/src/raw';
 
 const quoteValue = (
   arg: unknown,

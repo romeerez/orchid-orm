@@ -1,6 +1,7 @@
 import { Query } from '../query';
-import { getRaw, isRaw } from '../raw';
+import { getRaw } from '../raw';
 import { Expression } from '../utils';
+import { isRaw } from '../../../common/src/raw';
 
 export const q = (sql: string) => `"${sql}"`;
 

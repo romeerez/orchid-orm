@@ -5,7 +5,7 @@ import { getClonedQueryData, MaybeArray } from '../utils';
 import { JoinArgs, JoinCallback, JoinCallbackArg } from './join';
 import { RelationsBase } from '../relations';
 import { ColumnsShapeBase } from '../columns';
-import { RawExpression } from '../raw';
+import { RawExpression } from '../../../common/src/raw';
 
 export type WhereArg<T extends QueryBase> =
   | (Omit<

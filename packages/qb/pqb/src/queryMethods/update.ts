@@ -1,6 +1,5 @@
 import { Query, QueryReturnsAll, SetQueryReturnsRowCount } from '../query';
 import { pushQueryValue } from '../queryDataUtils';
-import { isRaw, RawExpression } from '../raw';
 import {
   BelongsToRelation,
   HasAndBelongsToManyRelation,
@@ -15,6 +14,7 @@ import { parseResult, queryMethodByReturnType } from './then';
 import { UpdateQueryData } from '../sql';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
+import { isRaw, RawExpression } from '../../../common/src/raw';
 
 export type UpdateData<T extends Query> = {
   [K in keyof T['type']]?: T['type'][K] | RawExpression;

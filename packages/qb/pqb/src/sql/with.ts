@@ -1,7 +1,8 @@
 import { q } from './common';
 import { makeSql, ToSqlCtx } from './toSql';
-import { getRaw, isRaw } from '../raw';
+import { getRaw } from '../raw';
 import { QueryData } from './data';
+import { isRaw } from '../../../common/src/raw';
 
 export const pushWithSql = (
   ctx: ToSqlCtx,

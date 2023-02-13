@@ -4,8 +4,9 @@ import { QueryBase } from '../query';
 import { selectToSql } from './select';
 import { makeSql, ToSqlCtx } from './toSql';
 import { pushQueryValue } from '../queryDataUtils';
-import { getRaw, isRaw, raw } from '../raw';
+import { getRaw } from '../raw';
 import { InsertQueryData, QueryData } from './data';
+import { isRaw, raw } from '../../../common/src/raw';
 
 export const pushInsertSql = (
   ctx: ToSqlCtx,

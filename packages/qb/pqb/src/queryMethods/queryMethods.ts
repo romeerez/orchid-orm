@@ -1,4 +1,3 @@
-import { raw, RawExpression } from '../raw';
 import {
   Query,
   QueryBase,
@@ -55,6 +54,7 @@ import { QueryGet } from './get';
 import { MergeQueryMethods } from './merge';
 import { RawMethods } from './raw';
 import { CopyMethods } from './copy';
+import { RawExpression, raw } from '../../../common/src/raw';
 
 export type WindowArg<T extends Query> = Record<
   string,

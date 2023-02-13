@@ -14,7 +14,6 @@ import {
   NullableColumn,
   PluckResultColumnType,
 } from '../columns';
-import { RawExpression } from '../raw';
 import { pushQueryArray } from '../queryDataUtils';
 import { parseResult } from './then';
 import { QueryData, SelectItem, SelectQueryData } from '../sql';
@@ -22,6 +21,7 @@ import { FilterTuple, SimpleSpread, StringKey } from '../utils';
 import { isRequiredRelationKey, Relation } from '../relations';
 import { getValueKey } from './get';
 import { QueryResult } from '../adapter';
+import { RawExpression } from '../../../common/src/raw';
 
 export type SelectArg<T extends QueryBase> =
   | StringKey<keyof T['selectable']>

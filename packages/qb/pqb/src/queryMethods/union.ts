@@ -1,6 +1,6 @@
 import { Query } from '../query';
 import { pushQueryArray } from '../queryDataUtils';
-import { RawExpression } from '../raw';
+import { RawExpression } from '../../../common/src/raw';
 
 export type UnionArg<T extends Query> =
   | (Omit<Query, 'result'> & { result: T['result'] })

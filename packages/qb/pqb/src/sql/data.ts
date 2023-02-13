@@ -1,4 +1,3 @@
-import { RawExpression } from '../raw';
 import { ColumnsParsers, Query, QueryReturnType } from '../query';
 import {
   AfterCallback,
@@ -25,6 +24,7 @@ import {
   WithItem,
 } from './types';
 import { Expression } from '../utils';
+import { RawExpression } from '../../../common/src/raw';
 
 export type CommonQueryData = {
   adapter: Adapter;

@@ -1,7 +1,8 @@
 import { cloneQueryArrays, QueryData, toSqlCacheKey } from './sql';
 import type { Query, Selectable } from './query';
 import type { ColumnOutput, ColumnType } from './columns';
-import type { RawExpression } from './raw';
+import { ColumnTypeBase } from './columns';
+import { RawExpression } from '../../common/src/raw';
 export * from '../../common/src/utils';
 
 export type SomeIsTrue<T extends unknown[]> = T extends [
@@ -153,10 +154,10 @@ export type StringKey<K extends PropertyKey> = Exclude<K, symbol | number>;
 
 export type Expression<
   T extends Query = Query,
-  C extends ColumnType = ColumnType,
+  C extends ColumnTypeBase = ColumnTypeBase,
 > = StringKey<keyof T['selectable']> | RawExpression<C>;
 
-export type ExpressionOfType<T extends Query, C extends ColumnType, Type> =
+export type ExpressionOfType<T extends Query, C extends ColumnTypeBase, Type> =
   | {
       [K in keyof T['selectable']]: ColumnOutput<
         T['selectable'][K]['column']

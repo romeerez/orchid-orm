@@ -14,12 +14,13 @@ import {
   ColumnsShape,
   ColumnType,
   ColumnTypesBase,
+  ColumnTypeBase,
 } from './columns';
 import { AliasOrTable, EmptyObject, Spread, StringKey } from './utils';
-import { RawExpression } from './raw';
 import { Db } from './db';
 import { RelationQueryBase, RelationsBase } from './relations';
 import { QueryError, QueryErrorName } from './errors';
+import { RawExpression } from '../../common/src/raw';
 
 export type ColumnParser = (input: unknown) => unknown;
 export type ColumnsParsers = Record<string | getValueKey, ColumnParser>;
@@ -200,7 +201,7 @@ export type SetQueryReturnsRows<T extends Query> = SetQueryReturns<T, 'rows'>;
 export type SetQueryReturnsPluck<
   T extends Query,
   S extends keyof T['selectable'] | RawExpression,
-  C extends ColumnType = S extends keyof T['selectable']
+  C extends ColumnTypeBase = S extends keyof T['selectable']
     ? T['selectable'][S]['column']
     : S extends RawExpression
     ? S['__column']
@@ -214,8 +215,8 @@ export type SetQueryReturnsPluck<
 
 export type SetQueryReturnsValueOptional<
   T extends Query,
-  Arg extends Exclude<GetArg<T>, RawExpression> | ColumnType,
-  Column extends ColumnType = Arg extends ColumnType
+  Arg extends Exclude<GetArg<T>, RawExpression> | ColumnTypeBase,
+  Column extends ColumnTypeBase = Arg extends ColumnTypeBase
     ? Arg
     : Arg extends keyof T['selectable']
     ? T['selectable'][Arg]['column']
@@ -231,8 +232,8 @@ export type SetQueryReturnsValueOptional<
 
 export type SetQueryReturnsValue<
   T extends Query,
-  Arg extends Exclude<GetArg<T>, RawExpression> | ColumnType,
-  Column extends ColumnType = Arg extends ColumnType
+  Arg extends Exclude<GetArg<T>, RawExpression> | ColumnTypeBase,
+  Column extends ColumnTypeBase = Arg extends ColumnTypeBase
     ? Arg
     : Arg extends keyof T['selectable']
     ? T['selectable'][Arg]['column']

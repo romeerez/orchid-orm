@@ -4,12 +4,13 @@ import { pushReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
 import { ToSqlCtx } from './toSql';
 import { pushOrNewArray } from '../utils';
-import { getRaw, isRaw } from '../raw';
+import { getRaw } from '../raw';
 import {
   UpdateQueryData,
   UpdateQueryDataItem,
   UpdateQueryDataObject,
 } from './data';
+import { isRaw } from '../../../common/src/raw';
 
 export const pushUpdateSql = (
   ctx: ToSqlCtx,

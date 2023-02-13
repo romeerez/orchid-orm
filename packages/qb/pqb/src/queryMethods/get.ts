@@ -4,9 +4,9 @@ import {
   SetQueryReturnsValue,
   SetQueryReturnsValueOptional,
 } from '../query';
-import { isRaw, RawExpression } from '../raw';
 import { addParserForRawExpression, processSelectArg } from './select';
 import { StringKey } from '../utils';
+import { isRaw, RawExpression } from '../../../common/src/raw';
 
 export type GetArg<T extends QueryBase> =
   | StringKey<keyof T['selectable']>

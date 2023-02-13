@@ -63,7 +63,6 @@ import {
   toArray,
 } from '../utils';
 import { ColumnsShape } from './columnsSchema';
-import { getRawSql, isRaw, raw, RawExpression } from '../raw';
 import {
   QueryData,
   UpdatedAtDataInjector,
@@ -74,6 +73,7 @@ import {
   ColumnTypesBase,
   ColumnWithDefault,
 } from '../../../common/src/columns/columnType';
+import { getRawSql, isRaw, raw, RawExpression } from '../../../common/src/raw';
 
 export type ColumnTypes = typeof columnTypes;
 

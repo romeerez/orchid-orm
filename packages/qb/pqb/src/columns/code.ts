@@ -1,7 +1,7 @@
 import { ColumnsShape } from './columnsSchema';
 import { ColumnChain, ColumnData, ColumnType, ForeignKey } from './columnType';
 import { TimestampColumn } from './dateTime';
-import { getRaw, isRaw } from '../raw';
+import { getRaw } from '../raw';
 import {
   quoteObjectKey,
   singleQuote,
@@ -10,6 +10,7 @@ import {
 } from '../utils';
 import { TableData } from './columnTypes';
 import { Code } from '../../../common/src/columns/code';
+import { isRaw } from '../../../common/src/raw';
 
 export const addCode = (code: Code[], add: Code) => {
   if (typeof add === 'object') {

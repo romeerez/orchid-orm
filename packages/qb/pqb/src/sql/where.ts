@@ -11,8 +11,9 @@ import { addValue, q, qc, quoteFullColumn } from './common';
 import { getQueryAs, MaybeArray, toArray } from '../utils';
 import { processJoinItem } from './join';
 import { makeSql, ToSqlCtx } from './toSql';
-import { getRaw, isRaw, RawExpression } from '../raw';
+import { getRaw } from '../raw';
 import { QueryData } from './data';
+import { isRaw, RawExpression } from '../../../common/src/raw';
 
 export const pushWhereStatementSql = (
   ctx: ToSqlCtx,

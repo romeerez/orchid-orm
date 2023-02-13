@@ -19,9 +19,9 @@ import { InsertQueryData, OnConflictItem, OnConflictMergeUpdate } from '../sql';
 import { WhereArg } from './where';
 import { parseResult, queryMethodByReturnType } from './then';
 import { NotFoundError } from '../errors';
-import { RawExpression } from '../raw';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
+import { RawExpression } from '../../../common/src/raw';
 
 export type CreateData<
   T extends Query,

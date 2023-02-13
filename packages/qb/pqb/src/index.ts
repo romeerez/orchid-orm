@@ -13,3 +13,4 @@ export * from './relations';
 export * from './columns/operators';
 export * from '../../common/src/columns/operators';
 export * from '../../common/src/adapter';
+export * from '../../common/src/raw';

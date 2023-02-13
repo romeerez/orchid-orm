@@ -1,7 +1,8 @@
 import { WindowDeclaration } from './types';
 import { expressionToSql, q } from './common';
 import { orderByToSql } from './orderBy';
-import { getRaw, isRaw, RawExpression } from '../raw';
+import { getRaw } from '../raw';
+import { isRaw, RawExpression } from '../../../common/src/raw';
 
 export const windowToSql = (
   window: string | WindowDeclaration | RawExpression,

@@ -1,12 +1,13 @@
 import { AggregateItem } from './types';
 import { addValue, expressionToSql, q } from './common';
-import { getRaw, isRaw } from '../raw';
+import { getRaw } from '../raw';
 import { windowToSql } from './window';
 import { pushOrderBySql } from './orderBy';
 import { whereToSql } from './where';
 import { QueryBase } from '../query';
 import { ToSqlCtx } from './toSql';
 import { EMPTY_OBJECT, Expression } from '../utils';
+import { isRaw } from '../../../common/src/raw';
 
 export const aggregateToSql = (
   ctx: ToSqlCtx,

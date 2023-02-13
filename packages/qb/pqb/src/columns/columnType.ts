@@ -1,6 +1,5 @@
 import { JSONTypeAny } from './json';
 import { ColumnsShape } from './columnsSchema';
-import { raw, RawExpression } from '../raw';
 import { MaybeArray, StringKey } from '../utils';
 import { Query } from '../query';
 import { BaseOperators } from '../../../common/src/columns/operators';
@@ -10,8 +9,12 @@ import {
   ColumnWithDefault,
   HiddenColumn,
   NullableColumn,
+  PrimaryKeyColumn,
+  pushColumnData,
+  setColumnData,
   ValidationContext,
 } from '../../../common/src/columns/columnType';
+import { raw, RawExpression } from '../../../common/src/raw';
 
 export type ColumnData = ColumnDataBase & {
   maxChars?: number;
@@ -93,29 +96,6 @@ export type ForeignKeyTableWithColumns = new () => {
 export type ColumnNameOfTable<Table extends ForeignKeyTableWithColumns> =
   StringKey<keyof InstanceType<Table>['columns']['shape']>;
 
-const setColumnData = <T extends ColumnType, K extends keyof ColumnData>(
-  q: T,
-  key: K,
-  value: T['data'][K],
-): T => {
-  const cloned = Object.create(q);
-  cloned.data = { ...q.data, [key]: value };
-  return cloned;
-};
-
-const pushColumnData = <T extends ColumnType, K extends keyof ColumnData>(
-  q: T,
-  key: K,
-  value: unknown,
-) => {
-  const arr = q.data[key] as unknown[];
-  return setColumnData(
-    q,
-    key,
-    (arr ? [...arr, value] : [value]) as unknown as undefined,
-  );
-};
-
 export type ColumnChain = (
   | ['transform', (input: unknown, ctx: ValidationContext) => unknown]
   | ['to', (input: unknown) => JSONTypeAny | undefined, JSONTypeAny]
@@ -147,13 +127,6 @@ export const instantiateColumn = (
 
   Object.assign(column.data, data);
   return column as unknown as ColumnType;
-};
-
-export type PrimaryKeyColumn<T extends ColumnTypeBase> = Omit<T, 'data'> & {
-  data: Omit<T['data'], 'isPrimaryKey' | 'default'> & {
-    isPrimaryKey: true;
-    default: RawExpression;
-  };
 };
 
 export abstract class ColumnType<

@@ -1,6 +1,6 @@
 import { ColumnType, ColumnTypesBase } from '../columns';
 import { Query } from '../query';
-import { RawExpression } from '../raw';
+import { RawExpression } from '../../../common/src/raw';
 
 type RawArgs<CT extends ColumnTypesBase, C extends ColumnType> =
   | [column: (types: CT) => C, sql: string, values?: Record<string, unknown>]

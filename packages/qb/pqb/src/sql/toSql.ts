@@ -16,9 +16,10 @@ import { pushTruncateSql } from './truncate';
 import { pushColumnInfoSql } from './columnInfo';
 import { pushOrderBySql } from './orderBy';
 import { OnQueryBuilder, WhereQueryBuilder } from '../queryMethods';
-import { getRaw, isRaw } from '../raw';
+import { getRaw } from '../raw';
 import { QueryData } from './data';
 import { pushCopySql } from './copy';
+import { isRaw } from '../../../common/src/raw';
 
 export type ToSqlCtx = {
   whereQueryBuilder: typeof WhereQueryBuilder;

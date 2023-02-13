@@ -8,7 +8,7 @@ import {
 } from '../sql';
 import { pushQueryArray } from '../queryDataUtils';
 import { Aggregate1ArgumentTypes, AggregateOptions } from './aggregate';
-import { isRaw, RawExpression } from '../raw';
+import { isRaw, RawExpression } from '../../../common/src/raw';
 
 type HavingArgObject<
   T extends Query,

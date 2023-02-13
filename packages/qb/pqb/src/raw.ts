@@ -1,22 +1,5 @@
-import { ColumnType } from './columns/columnType';
 import { emptyObject } from './utils';
-
-export type RawExpression<C extends ColumnType = ColumnType> = {
-  __raw: string;
-  __values?: Record<string, unknown> | false;
-  __column: C;
-};
-
-export const raw = (
-  sql: string,
-  values?: Record<string, unknown> | false,
-): RawExpression =>
-  ({
-    __raw: sql,
-    __values: values,
-  } as RawExpression);
-
-export const isRaw = (obj: object): obj is RawExpression => '__raw' in obj;
+import { RawExpression } from '../../common/src/raw';
 
 const keys: string[] = [];
 export const getRaw = (raw: RawExpression, valuesArray: unknown[]) => {
@@ -50,8 +33,4 @@ export const getRaw = (raw: RawExpression, valuesArray: unknown[]) => {
   }
 
   return arr.join("'");
-};
-
-export const getRawSql = (raw: RawExpression) => {
-  return raw.__raw;
 };

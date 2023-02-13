@@ -1,10 +1,10 @@
-import { raw } from '../raw';
 import { AddQuerySelect, Query, SetQueryReturnsValue } from '../query';
 import { pushQueryValue } from '../queryDataUtils';
 import {
   ArrayColumn,
   BooleanColumn,
   ColumnType,
+  ColumnTypeBase,
   IntegerColumn,
   NullableColumn,
   NumberColumn,
@@ -23,6 +23,7 @@ import { WhereArg } from './where';
 import { addParserToQuery } from './select';
 import { SelectItem } from '../sql';
 import { getValueKey } from './get';
+import { raw } from '../../../common/src/raw';
 
 const allColumns = raw('*');
 
@@ -86,7 +87,7 @@ export type SelectAgg<
   T extends Query,
   Func extends string,
   As extends string | undefined,
-  Value extends ColumnType,
+  Value extends ColumnTypeBase,
 > = AddQuerySelect<T, Record<CoalesceString<As, Func>, Value>>;
 
 type AT1<T extends Query> = Aggregate1ArgumentTypes<T>;
@@ -164,13 +165,13 @@ export class Aggregate {
     T extends Query,
     Func extends string,
     As extends string | undefined,
-    Value extends ColumnType,
+    Value extends ColumnTypeBase,
   >(
     this: T,
     functionName: Func,
     arg: AggregateArg<T>,
     options?: AggregateOptions<T, As>,
-    columnType?: ColumnType,
+    columnType?: ColumnTypeBase,
   ): SelectAgg<T, Func, As, Value> {
     pushQueryValue(
       this,

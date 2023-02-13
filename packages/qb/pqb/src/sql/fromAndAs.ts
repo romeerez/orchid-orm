@@ -2,8 +2,9 @@ import { quoteSchemaAndTable } from './common';
 import { QueryBase } from '../query';
 import { checkIfASimpleQuery } from './types';
 import { makeSql, ToSqlCtx } from './toSql';
-import { getRaw, isRaw } from '../raw';
+import { getRaw } from '../raw';
 import { SelectQueryData } from './data';
+import { isRaw } from '../../../common/src/raw';
 
 export const pushFromAndAs = (
   ctx: ToSqlCtx,

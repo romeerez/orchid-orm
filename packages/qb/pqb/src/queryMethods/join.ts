@@ -9,12 +9,12 @@ import {
   WithDataItem,
 } from '../query';
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
-import { RawExpression } from '../raw';
 import { WhereQueryBuilder } from './where';
 import { Relation, RelationsBase } from '../relations';
 import { QueryData } from '../sql';
 import { ColumnsShapeBase } from '../columns';
 import { StringKey } from '../utils';
+import { RawExpression } from '../../../common/src/raw';
 
 type WithSelectable<
   T extends QueryBase,

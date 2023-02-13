@@ -1,5 +1,5 @@
 import { Query } from '../query';
-import { isRaw } from '../raw';
+import { isRaw } from '../../../common/src/raw';
 
 export type ClearStatement =
   | 'with'
