@@ -19,12 +19,16 @@ import {
 import { pushQueryArray } from '../queryDataUtils';
 import { parseResult } from './then';
 import { QueryData, SelectItem, SelectQueryData } from '../sql';
-import { FilterTuple, SimpleSpread, StringKey } from '../utils';
 import { isRequiredRelationKey, Relation } from '../relations';
 import { getValueKey } from './get';
 import { QueryResult } from '../adapter';
 import { isRaw, RawExpression } from '../../../common/src/raw';
 import { UnknownColumn } from '../columns/unknown';
+import {
+  FilterTuple,
+  SimpleSpread,
+  StringKey,
+} from '../../../common/src/utils';
 
 export type SelectArg<T extends QueryBase> =
   | StringKey<keyof T['selectable']>

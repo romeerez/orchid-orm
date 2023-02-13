@@ -7,8 +7,9 @@ import {
 } from 'pg-transactional-tests';
 import { Client } from 'pg';
 import { quote } from '../quote';
-import { MaybeArray, toArray } from '../utils';
+import { toArray } from '../utils';
 import { Adapter } from '../adapter';
+import { MaybeArray } from '../../../common/src/utils';
 
 export const dbOptions = {
   databaseURL: process.env.PG_URL,

@@ -1,7 +1,7 @@
 import { Query, QueryReturnType, QueryThen } from '../query';
-import { Spread } from '../utils';
 import { getValueKey } from './get';
 import { SelectQueryData } from '../sql';
+import { Spread } from '../../../common/src/utils';
 
 export type MergeQuery<
   T extends Query,

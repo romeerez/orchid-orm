@@ -1,27 +1,7 @@
 import { ColumnType } from './columnType';
 import { Operators } from './operators';
-import { SetOptional, SomeIsTrue, StringKey } from '../utils';
-import { ColumnInput } from '../../../common/src/columns/columnType';
 
 export type ColumnsShape = Record<string, ColumnType>;
-
-type OptionalColumnsForInput<Shape extends ColumnsShape> = {
-  [K in keyof Shape]: SomeIsTrue<
-    [
-      Shape[K]['data']['isNullable'],
-      undefined extends Shape[K]['data']['default'] ? false : true,
-    ]
-  > extends true
-    ? K
-    : never;
-}[keyof Shape];
-
-export type ColumnShapeInput<Shape extends ColumnsShape> = SetOptional<
-  {
-    [K in keyof Shape]: ColumnInput<Shape[K]>;
-  },
-  OptionalColumnsForInput<Shape>
->;
 
 export abstract class ColumnsObject<
   Shape extends ColumnsShape,
@@ -54,23 +34,3 @@ export abstract class ArrayOfColumnsObjects<
 export abstract class PluckResultColumnType<
   C extends ColumnType,
 > extends ColumnType<C['type'][], typeof Operators.any> {}
-
-// resolves in string literal of single primary key
-// if table has two or more primary keys it will resolve in never
-export type SinglePrimaryKey<Shape extends ColumnsShape> = StringKey<
-  {
-    [K in keyof Shape]: Shape[K]['data']['isPrimaryKey'] extends true
-      ? [
-          {
-            [S in keyof Shape]: Shape[S]['data']['isPrimaryKey'] extends true
-              ? S extends K
-                ? never
-                : S
-              : never;
-          }[keyof Shape],
-        ] extends [never]
-        ? K
-        : never
-      : never;
-  }[keyof Shape]
->;

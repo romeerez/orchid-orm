@@ -12,12 +12,7 @@ import {
   SetQueryTableAlias,
   SetQueryWindows,
 } from '../query';
-import {
-  applyMixins,
-  EmptyObject,
-  Expression,
-  getClonedQueryData,
-} from '../utils';
+import { EmptyObject, Expression, getClonedQueryData } from '../utils';
 import {
   SelectItem,
   SelectQueryData,
@@ -55,6 +50,7 @@ import { MergeQueryMethods } from './merge';
 import { RawMethods } from './raw';
 import { CopyMethods } from './copy';
 import { RawExpression, raw } from '../../../common/src/raw';
+import { applyMixins } from '../../../common/src/utils';
 
 export type WindowArg<T extends Query> = Record<
   string,

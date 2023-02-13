@@ -6,13 +6,6 @@ import { AfterCallback, BeforeCallback } from './callbacks';
 import { getValueKey } from './get';
 import pg from 'pg';
 
-export type ThenResult<Res> = (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  resolve?: (value: Res) => any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  reject?: (error: any) => any,
-) => Promise<Res | never>;
-
 export const queryMethodByReturnType: Record<
   QueryReturnType,
   'query' | 'arrays'

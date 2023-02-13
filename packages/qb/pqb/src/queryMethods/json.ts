@@ -7,8 +7,8 @@ import {
 import { pushQueryValue } from '../queryDataUtils';
 import { ColumnType, ColumnTypeBase, StringColumn } from '../columns';
 import { JsonItem } from '../sql';
-import { StringKey } from '../utils';
 import { raw } from '../../../common/src/raw';
+import { StringKey } from '../../../common/src/utils';
 
 type JsonColumnName<T extends Pick<Query, 'selectable'>> = StringKey<
   {

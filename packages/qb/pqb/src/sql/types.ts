@@ -1,9 +1,10 @@
 import { Query, QueryBase, QueryWithTable, SelectableBase } from '../query';
 import { ColumnTypeBase } from '../columns';
 import { RelationQuery } from '../relations';
-import { Expression, MaybeArray } from '../utils';
+import { Expression } from '../utils';
 import { QueryData, SelectQueryData } from './data';
 import { RawExpression } from '../../../common/src/raw';
+import { MaybeArray } from '../../../common/src/utils';
 
 export type Sql = {
   text: string;

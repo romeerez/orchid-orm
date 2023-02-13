@@ -12,7 +12,6 @@ import {
 } from '../columns';
 import {
   BooleanExpression,
-  CoalesceString,
   Expression,
   ExpressionOutput,
   NumberExpression,
@@ -24,6 +23,7 @@ import { addParserToQuery } from './select';
 import { SelectItem, SelectQueryData } from '../sql';
 import { getValueKey } from './get';
 import { raw } from '../../../common/src/raw';
+import { CoalesceString } from '../../../common/src/utils';
 
 const allColumns = raw('*');
 

@@ -13,9 +13,9 @@ import { WhereQueryBuilder } from './where';
 import { Relation, RelationsBase } from '../relations';
 import { QueryData } from '../sql';
 import { ColumnsShapeBase } from '../columns';
-import { StringKey } from '../utils';
 import { RawExpression } from '../../../common/src/raw';
 import { getShapeFromSelect } from './select';
+import { StringKey } from '../../../common/src/utils';
 
 type WithSelectable<
   T extends QueryBase,

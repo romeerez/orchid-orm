@@ -1,6 +1,5 @@
 import { JSONTypeAny } from './json';
 import { ColumnsShape } from './columnsSchema';
-import { MaybeArray, StringKey } from '../utils';
 import { Query } from '../query';
 import { BaseOperators } from '../../../common/src/columns/operators';
 import {
@@ -15,6 +14,7 @@ import {
   ValidationContext,
 } from '../../../common/src/columns/columnType';
 import { raw, RawExpression } from '../../../common/src/raw';
+import { MaybeArray, StringKey } from '../../../common/src/utils';
 
 export type ColumnData = ColumnDataBase & {
   maxChars?: number;

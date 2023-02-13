@@ -1,6 +1,7 @@
 import { BaseOperators, Operator } from './operators';
 import { Code } from './code';
 import { RawExpression } from '../raw';
+import { SetOptional, SomeIsTrue, StringKey } from '../utils';
 
 // output type of the column
 export type ColumnOutput<T extends ColumnTypeBase> = T['type'];
@@ -53,6 +54,24 @@ export type HiddenColumn<T extends ColumnTypeBase> = Omit<T, 'data'> & {
   };
 };
 
+type OptionalColumnsForInput<Shape extends ColumnsShapeBase> = {
+  [K in keyof Shape]: SomeIsTrue<
+    [
+      Shape[K]['data']['isNullable'],
+      undefined extends Shape[K]['data']['default'] ? false : true,
+    ]
+  > extends true
+    ? K
+    : never;
+}[keyof Shape];
+
+export type ColumnShapeInput<Shape extends ColumnsShapeBase> = SetOptional<
+  {
+    [K in keyof Shape]: ColumnInput<Shape[K]>;
+  },
+  OptionalColumnsForInput<Shape>
+>;
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyColumnType = ColumnTypeBase<any, Record<string, Operator<any>>>;
 
@@ -67,6 +86,30 @@ export type ColumnTypesBase = Record<
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ValidationContext = any;
+
+// resolves in string literal of single primary key
+// if table has two or more primary keys it will resolve in never
+export type SinglePrimaryKey<Shape extends ColumnsShapeBase> = StringKey<
+  {
+    [K in keyof Shape]: Shape[K]['data']['isPrimaryKey'] extends true
+      ? [
+          {
+            [S in keyof Shape]: Shape[S]['data']['isPrimaryKey'] extends true
+              ? S extends K
+                ? never
+                : S
+              : never;
+          }[keyof Shape],
+        ] extends [never]
+        ? K
+        : never
+      : never;
+  }[keyof Shape]
+>;
+
+export type DefaultSelectColumns<S extends ColumnsShapeBase> = {
+  [K in keyof S]: S[K]['data']['isHidden'] extends true ? never : K;
+}[StringKey<keyof S>][];
 
 export const setColumnData = <
   T extends ColumnTypeBase,

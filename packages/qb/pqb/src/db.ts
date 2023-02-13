@@ -1,9 +1,4 @@
-import {
-  ColumnsParsers,
-  DefaultSelectColumns,
-  defaultsKey,
-  Query,
-} from './query';
+import { ColumnsParsers, defaultsKey, Query } from './query';
 import {
   QueryMethods,
   handleResult,
@@ -18,7 +13,6 @@ import { AdapterOptions, Adapter } from './adapter';
 import {
   ColumnsShape,
   ColumnShapeOutput,
-  ColumnShapeInput,
   ColumnTypesBase,
   getColumnTypes,
   SinglePrimaryKey,
@@ -27,10 +21,12 @@ import {
   DefaultColumnTypes,
   columnTypes,
   ColumnsShapeBase,
+  DefaultSelectColumns,
 } from './columns';
-import { applyMixins, pushOrNewArray, StringKey } from './utils';
+import { pushOrNewArray } from './utils';
 import { QueryError, QueryErrorName } from './errors';
 import { DbBase } from '../../common/src/db';
+import { StringKey, applyMixins } from '../../common/src/utils';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
@@ -57,7 +53,7 @@ export interface Db<
   Shape extends ColumnsShape = Record<string, never>,
   Relations extends Query['relations'] = Query['relations'],
   CT extends ColumnTypesBase = DefaultColumnTypes,
-> extends DbBase<Adapter, Table, Shape>,
+> extends DbBase<Adapter, Table, Shape, CT>,
     QueryMethods {
   new (
     adapter: Adapter,
@@ -67,16 +63,10 @@ export interface Db<
     options?: DbTableOptions,
   ): this;
   queryBuilder: Db;
-  columnTypes: CT;
   whereQueryBuilder: Query['whereQueryBuilder'];
   onQueryBuilder: Query['onQueryBuilder'];
-  shape: Shape;
-  singlePrimaryKey: SinglePrimaryKey<Shape>;
   primaryKeys: Query['primaryKeys'];
-  type: ColumnShapeOutput<Shape>;
-  inputType: ColumnShapeInput<Shape>;
   query: QueryData;
-  result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
   hasSelect: Query['hasSelect'];
   hasWhere: boolean;
   selectable: { [K in keyof Shape]: { as: K; column: Shape[K] } } & {

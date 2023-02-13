@@ -1,11 +1,11 @@
 import { Operators } from './operators';
 import { ColumnData, ColumnType } from './columnType';
-import { joinTruthy } from '../utils';
 import { assignMethodsToClass } from './utils';
 import { numberTypeMethods } from './commonMethods';
 import { columnCode } from './code';
 import { Code } from '../../../common/src/columns/code';
 import { RawExpression } from '../../../common/src/raw';
+import { joinTruthy } from '../../../common/src/utils';
 
 export type BaseNumberData = ColumnData & {
   lt?: number;

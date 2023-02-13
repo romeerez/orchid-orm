@@ -5,10 +5,10 @@ import {
   SetQueryReturnsValueOptional,
 } from '../query';
 import { addParserForRawExpression, processSelectArg } from './select';
-import { StringKey } from '../utils';
 import { RawExpression } from '../../../common/src/raw';
 import { SelectQueryData } from '../sql';
 import { ColumnTypeBase } from '../../../common/src/columns/columnType';
+import { StringKey } from '../../../common/src/utils';
 
 export type GetArg<T extends QueryBase> =
   | StringKey<keyof T['selectable']>

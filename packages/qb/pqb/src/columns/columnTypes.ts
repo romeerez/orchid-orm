@@ -58,7 +58,6 @@ import {
   emptyObject,
   EmptyObject,
   makeRegexToFindInSql,
-  MaybeArray,
   pushOrNewArrayToObject,
   toArray,
 } from '../utils';
@@ -74,6 +73,7 @@ import {
   ColumnWithDefault,
 } from '../../../common/src/columns/columnType';
 import { getRawSql, isRaw, raw, RawExpression } from '../../../common/src/raw';
+import { MaybeArray } from '../../../common/src/utils';
 
 export type ColumnTypes = typeof columnTypes;
 

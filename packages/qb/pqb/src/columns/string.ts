@@ -1,11 +1,12 @@
 import { ColumnData, ColumnType } from './columnType';
 import { Operators } from './operators';
-import { joinTruthy, singleQuote } from '../utils';
+import { singleQuote } from '../utils';
 import { NumberBaseColumn } from './number';
 import { assignMethodsToClass } from './utils';
 import { stringTypeMethods } from './commonMethods';
 import { columnCode } from './code';
 import { Code } from '../../../common/src/columns/code';
+import { joinTruthy } from '../../../common/src/utils';
 
 export type BaseStringData = ColumnData & {
   min?: number;

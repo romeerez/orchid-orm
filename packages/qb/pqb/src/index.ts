@@ -14,3 +14,5 @@ export * from './columns/operators';
 export * from '../../common/src/columns/operators';
 export * from '../../common/src/adapter';
 export * from '../../common/src/raw';
+export * from '../../common/src/utils';
+export * from '../../common/src/columns/columnType';

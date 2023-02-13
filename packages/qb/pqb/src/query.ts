@@ -1,26 +1,27 @@
 import {
-  QueryMethods,
-  ThenResult,
   ColumnInfo,
-  WhereQueryBuilder,
-  OnQueryBuilder,
   GetArg,
   getValueKey,
+  OnQueryBuilder,
+  QueryMethods,
+  ThenResult,
+  WhereQueryBuilder,
 } from './queryMethods';
 import { QueryData } from './sql';
 import {
-  ColumnsShapeBase,
   ColumnShapeOutput,
   ColumnsShape,
+  ColumnsShapeBase,
   ColumnType,
-  ColumnTypesBase,
   ColumnTypeBase,
+  ColumnTypesBase,
 } from './columns';
-import { AliasOrTable, EmptyObject, Spread, StringKey } from './utils';
+import { AliasOrTable, EmptyObject } from './utils';
 import { Db } from './db';
 import { RelationQueryBase, RelationsBase } from './relations';
 import { QueryError, QueryErrorName } from './errors';
 import { RawExpression } from '../../common/src/raw';
+import { Spread, StringKey } from '../../common/src/utils';
 
 export type ColumnParser = (input: unknown) => unknown;
 export type ColumnsParsers = Record<string | getValueKey, ColumnParser>;
@@ -84,10 +85,6 @@ export type Query = QueryMethods & {
 export type Selectable<T extends QueryBase> = StringKey<keyof T['selectable']>;
 
 export type QueryWithTable = Query & { table: string };
-
-export type DefaultSelectColumns<S extends ColumnsShape> = {
-  [K in keyof S]: S[K]['data']['isHidden'] extends true ? never : K;
-}[StringKey<keyof S>][];
 
 export type QueryReturnType =
   | 'all'
