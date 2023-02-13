@@ -4,7 +4,7 @@ import { AliasOrTable } from '../utils';
 import { isRaw, RawExpression } from '../../../common/src/raw';
 import { getShapeFromSelect } from './select';
 
-type FromArgs<T extends Query> = [
+export type FromArgs<T extends Query> = [
   first: Query | RawExpression | Exclude<keyof T['withData'], symbol | number>,
   second?: { only?: boolean },
 ];
@@ -30,7 +30,7 @@ type MergeFromResult<T extends Query, Arg extends Query> = AddQuerySelect<
   Arg['result']
 >;
 
-type FromResult<
+export type FromResult<
   T extends Query,
   Args extends FromArgs<T>,
 > = Args[0] extends string

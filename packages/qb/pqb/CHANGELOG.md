@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.21
+
+### Patch Changes
+
+- Add method $from to orm
+
 ## 0.9.20
 
 ### Patch Changes

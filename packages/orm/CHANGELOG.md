@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.5.33
+
+### Patch Changes
+
+- Add method $from to orm
+- Updated dependencies
+  - pqb@0.9.21
+
 ## 1.5.32
 
 ### Patch Changes

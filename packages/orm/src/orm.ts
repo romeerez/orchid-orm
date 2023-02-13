@@ -7,6 +7,9 @@ import {
   NoPrimaryKeyOption,
   anyShape,
   DbTableOptions,
+  FromArgs,
+  Query,
+  FromResult,
 } from 'pqb';
 import { DbTable, Table, TableClasses } from './table';
 import { applyRelations } from './relations/relations';
@@ -18,6 +21,7 @@ export type OrchidORM<T extends TableClasses> = {
   $transaction: typeof transaction;
   $adapter: Adapter;
   $queryBuilder: Db;
+  $from<Args extends FromArgs<Query>>(...args: Args): FromResult<Query, Args>;
   $close(): Promise<void>;
 };
 
@@ -56,6 +60,7 @@ export const orchidORM = <T extends TableClasses>(
     $transaction: transaction,
     $adapter: adapter,
     $queryBuilder: qb,
+    $from: (...args: FromArgs<Query>) => qb.from(...args),
     $close: () => adapter.close(),
   } as unknown as OrchidORM<TableClasses>;
 
