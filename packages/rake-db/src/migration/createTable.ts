@@ -81,7 +81,7 @@ const makeAst = (
 ): RakeDbAst.Table => {
   const shapePKeys: string[] = [];
   for (const key in shape) {
-    if (shape[key].isPrimaryKey) {
+    if (shape[key].data.isPrimaryKey) {
       shapePKeys.push(key);
     }
   }
@@ -113,7 +113,7 @@ const validatePrimaryKey = (ast: RakeDbAst.Table) => {
     let hasPrimaryKey = !!ast.primaryKey?.columns?.length;
     if (!hasPrimaryKey) {
       for (const key in ast.shape) {
-        if (ast.shape[key].isPrimaryKey) {
+        if (ast.shape[key].data.isPrimaryKey) {
           hasPrimaryKey = true;
           break;
         }

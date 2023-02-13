@@ -48,7 +48,6 @@ import { ArrayColumn } from './array';
 import {
   ColumnNameOfTable,
   ColumnType,
-  ColumnTypesBase,
   ForeignKeyTable,
   IndexColumnOptions,
   IndexOptions,
@@ -64,13 +63,17 @@ import {
   toArray,
 } from '../utils';
 import { ColumnsShape } from './columnsSchema';
-import { getRawSql, isRaw, raw } from '../raw';
+import { getRawSql, isRaw, raw, RawExpression } from '../raw';
 import {
   QueryData,
   UpdatedAtDataInjector,
   UpdateQueryData,
   UpdateQueryDataItem,
 } from '../sql';
+import {
+  ColumnTypesBase,
+  ColumnWithDefault,
+} from '../../../common/src/columns/columnType';
 
 export type ColumnTypes = typeof columnTypes;
 
@@ -129,8 +132,8 @@ const text = (min: number, max: number) => new TextColumn(min, max);
 function timestamps<T extends ColumnType>(this: {
   timestamp(): T;
 }): {
-  createdAt: T & { hasDefault: true };
-  updatedAt: T & { hasDefault: true };
+  createdAt: ColumnWithDefault<T, RawExpression>;
+  updatedAt: ColumnWithDefault<T, RawExpression>;
 } {
   return {
     createdAt: this.timestamp().default(raw('now()')),

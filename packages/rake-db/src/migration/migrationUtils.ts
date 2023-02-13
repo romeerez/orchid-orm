@@ -32,7 +32,7 @@ export const columnToSql = (
     line.push(`COLLATE ${quote(item.data.collate)}`);
   }
 
-  if (item.isPrimaryKey && !hasMultiplePrimaryKeys) {
+  if (item.data.isPrimaryKey && !hasMultiplePrimaryKeys) {
     line.push('PRIMARY KEY');
   } else if (!item.data.isNullable) {
     line.push('NOT NULL');

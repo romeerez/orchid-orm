@@ -31,8 +31,8 @@ describe('column base', () => {
 
   describe('.primaryKey', () => {
     it('should mark column as a primary key', () => {
-      expect(column.isPrimaryKey).toBe(false);
-      expect(column.primaryKey().isPrimaryKey).toBe(true);
+      expect(column.data.isPrimaryKey).toBe(undefined);
+      expect(column.primaryKey().data.isPrimaryKey).toBe(true);
     });
 
     it('should have toCode', () => {
@@ -79,8 +79,8 @@ describe('column base', () => {
 
   describe('.hidden', () => {
     it('should mark column as hidden', () => {
-      expect(column.isHidden).toBe(false);
-      expect(column.hidden().isHidden).toBe(true);
+      expect(column.data.isHidden).toBe(undefined);
+      expect(column.hidden().data.isHidden).toBe(true);
     });
 
     it('should have toCode', () => {

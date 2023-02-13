@@ -26,7 +26,7 @@ import {
   getTableData,
   DefaultColumnTypes,
   columnTypes,
-  ColumnShapeBase,
+  ColumnsShapeBase,
 } from './columns';
 import { applyMixins, pushOrNewArray, StringKey } from './utils';
 import { QueryError, QueryErrorName } from './errors';
@@ -105,7 +105,9 @@ export interface Db<
   isSubQuery: false;
   [defaultsKey]: Record<
     {
-      [K in keyof Shape]: Shape[K]['hasDefault'] extends true ? K : never;
+      [K in keyof Shape]: undefined extends Shape[K]['data']['default']
+        ? never
+        : K;
     }[keyof Shape],
     true
   >;
@@ -136,7 +138,7 @@ export class Db<
     const logger = options.logger || console;
     this.query = {
       adapter,
-      shape: shape as ColumnShapeBase,
+      shape: shape as ColumnsShapeBase,
       handleResult: handleResult,
       logger,
       log: logParamToLogObject(logger, options.log),
@@ -148,7 +150,7 @@ export class Db<
     }
 
     this.primaryKeys = Object.keys(shape).filter(
-      (key) => shape[key].isPrimaryKey,
+      (key) => shape[key].data.isPrimaryKey,
     );
     const primaryKeysFromData = getTableData().primaryKey?.columns;
     if (primaryKeysFromData) this.primaryKeys.push(...primaryKeysFromData);
@@ -173,7 +175,7 @@ export class Db<
 
     this.columns = columns as (keyof ColumnShapeOutput<Shape>)[];
     this.defaultSelectColumns = columns.filter(
-      (column) => !shape[column as keyof typeof shape].isHidden,
+      (column) => !shape[column as keyof typeof shape].data.isHidden,
     ) as DefaultSelectColumns<Shape>;
 
     const defaultSelect =

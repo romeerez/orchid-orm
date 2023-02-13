@@ -13,7 +13,7 @@ import { RawExpression } from '../raw';
 import { WhereQueryBuilder } from './where';
 import { Relation, RelationsBase } from '../relations';
 import { QueryData } from '../sql';
-import { ColumnShapeBase } from '../columns';
+import { ColumnsShapeBase } from '../columns';
 import { StringKey } from '../utils';
 
 type WithSelectable<
@@ -480,7 +480,7 @@ export class OnQueryBuilder<
 {
   constructor(
     q: QueryBase | string,
-    shape: ColumnShapeBase,
+    shape: ColumnsShapeBase,
     public joinTo: QueryBase,
   ) {
     super(q, shape);

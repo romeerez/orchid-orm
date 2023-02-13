@@ -7,7 +7,10 @@ export type ColumnsShape = Record<string, ColumnType>;
 
 type OptionalColumnsForInput<Shape extends ColumnsShape> = {
   [K in keyof Shape]: SomeIsTrue<
-    [Shape[K]['isNullable'], Shape[K]['hasDefault']]
+    [
+      Shape[K]['data']['isNullable'],
+      undefined extends Shape[K]['data']['default'] ? false : true,
+    ]
   > extends true
     ? K
     : never;
@@ -56,10 +59,10 @@ export abstract class PluckResultColumnType<
 // if table has two or more primary keys it will resolve in never
 export type SinglePrimaryKey<Shape extends ColumnsShape> = StringKey<
   {
-    [K in keyof Shape]: Shape[K]['isPrimaryKey'] extends true
+    [K in keyof Shape]: Shape[K]['data']['isPrimaryKey'] extends true
       ? [
           {
-            [S in keyof Shape]: Shape[S]['isPrimaryKey'] extends true
+            [S in keyof Shape]: Shape[S]['data']['isPrimaryKey'] extends true
               ? S extends K
                 ? never
                 : S

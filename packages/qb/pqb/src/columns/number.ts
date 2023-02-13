@@ -5,6 +5,7 @@ import { assignMethodsToClass } from './utils';
 import { numberTypeMethods } from './commonMethods';
 import { columnCode } from './code';
 import { Code } from '../../../common/src/columns/code';
+import { RawExpression } from '../raw';
 
 export type BaseNumberData = ColumnData & {
   lt?: number;
@@ -28,6 +29,10 @@ const numberDataToCode = (data: NumberBaseColumn['data']) => {
 export type NumberColumn = ColumnType<number>;
 
 export type NumberColumnData = BaseNumberData;
+
+export type SerialColumnData = NumberColumnData & {
+  default: RawExpression;
+};
 
 type NumberMethods = typeof numberTypeMethods;
 
@@ -152,7 +157,9 @@ export class DoublePrecisionColumn extends NumberAsStringBaseColumn {
 export class SmallSerialColumn extends IntegerBaseColumn {
   dataType = 'smallserial' as const;
   parseItem = parseInt;
-  hasDefault = true as const;
+  data = {
+    int: true,
+  } as SerialColumnData;
   toCode(t: string): Code {
     return columnCode(
       this,
@@ -166,7 +173,9 @@ export class SmallSerialColumn extends IntegerBaseColumn {
 export class SerialColumn extends IntegerBaseColumn {
   dataType = 'serial' as const;
   parseItem = parseInt;
-  hasDefault = true as const;
+  data = {
+    int: true,
+  } as SerialColumnData;
   toCode(t: string): Code {
     return columnCode(this, t, `${t}.serial()${numberDataToCode(this.data)}`);
   }
@@ -175,7 +184,7 @@ export class SerialColumn extends IntegerBaseColumn {
 // autoincrementing eight-byte integer
 export class BigSerialColumn extends NumberAsStringBaseColumn {
   dataType = 'bigserial' as const;
-  hasDefault = true as const;
+  data = {} as SerialColumnData;
   toCode(t: string): Code {
     return columnCode(this, t, `${t}.bigSerial()`);
   }

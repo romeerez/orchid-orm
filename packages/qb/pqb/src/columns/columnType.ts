@@ -3,43 +3,17 @@ import { ColumnsShape } from './columnsSchema';
 import { raw, RawExpression } from '../raw';
 import { MaybeArray, StringKey } from '../utils';
 import { Query } from '../query';
-import { BaseOperators, Operator } from '../../../common/src/columns/operators';
+import { BaseOperators } from '../../../common/src/columns/operators';
 import {
   ColumnDataBase,
   ColumnTypeBase,
+  ColumnWithDefault,
+  HiddenColumn,
+  NullableColumn,
+  ValidationContext,
 } from '../../../common/src/columns/columnType';
 
-export type NullableColumn<T extends ColumnType> = Omit<
-  T,
-  'type' | 'inputType' | 'operators'
-> & {
-  type: T['type'] | null;
-  inputType: T['inputType'] | null;
-  isNullable: true;
-  operators: {
-    [K in keyof T['operators']]: K extends 'equals' | 'not'
-      ? Operator<T['type'] | null>
-      : T['operators'][K];
-  };
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyColumnType = ColumnType<any, Record<string, Operator<any>>>;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/ban-types
-export type AnyColumnTypeCreator = (...args: any[]) => AnyColumnType | {};
-
-export type ColumnTypesBase = Record<
-  string,
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  AnyColumnTypeCreator
->;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ValidationContext = any;
-
 export type ColumnData = ColumnDataBase & {
-  default?: unknown;
   maxChars?: number;
   numericPrecision?: number;
   numericScale?: number;
@@ -119,7 +93,7 @@ export type ForeignKeyTableWithColumns = new () => {
 export type ColumnNameOfTable<Table extends ForeignKeyTableWithColumns> =
   StringKey<keyof InstanceType<Table>['columns']['shape']>;
 
-const addColumnData = <T extends ColumnType, K extends keyof ColumnData>(
+const setColumnData = <T extends ColumnType, K extends keyof ColumnData>(
   q: T,
   key: K,
   value: T['data'][K],
@@ -135,7 +109,7 @@ const pushColumnData = <T extends ColumnType, K extends keyof ColumnData>(
   value: unknown,
 ) => {
   const arr = q.data[key] as unknown[];
-  return addColumnData(
+  return setColumnData(
     q,
     key,
     (arr ? [...arr, value] : [value]) as unknown as undefined,
@@ -175,6 +149,13 @@ export const instantiateColumn = (
   return column as unknown as ColumnType;
 };
 
+export type PrimaryKeyColumn<T extends ColumnTypeBase> = Omit<T, 'data'> & {
+  data: Omit<T['data'], 'isPrimaryKey' | 'default'> & {
+    isPrimaryKey: true;
+    default: RawExpression;
+  };
+};
+
 export abstract class ColumnType<
   Type = unknown,
   Ops extends BaseOperators = BaseOperators,
@@ -182,9 +163,12 @@ export abstract class ColumnType<
 > extends ColumnTypeBase<Type, Ops, InputType, ColumnData> {
   chain = [] as ColumnChain;
 
-  primaryKey<T extends ColumnType>(this: T): T & { isPrimaryKey: true } {
-    const cloned = Object.create(this);
-    return Object.assign(cloned, { isPrimaryKey: true as const });
+  primaryKey<T extends ColumnType>(this: T): PrimaryKeyColumn<T> {
+    return setColumnData(
+      this,
+      'isPrimaryKey',
+      true,
+    ) as unknown as PrimaryKeyColumn<T>;
   }
 
   foreignKey<
@@ -219,12 +203,12 @@ export abstract class ColumnType<
     return pushColumnData(this, 'foreignKeys', item);
   }
 
-  hidden<T extends ColumnType>(this: T): T & { isHidden: true } {
-    return Object.assign(Object.create(this), { isHidden: true as const });
+  hidden<T extends ColumnType>(this: T): HiddenColumn<T> {
+    return setColumnData(this, 'isHidden', true) as HiddenColumn<T>;
   }
 
   nullable<T extends ColumnType>(this: T): NullableColumn<T> {
-    return addColumnData(
+    return setColumnData(
       this,
       'isNullable',
       true,
@@ -254,20 +238,22 @@ export abstract class ColumnType<
     T extends ColumnType,
     C extends ColumnType<T['type'], BaseOperators, T['inputType']>,
   >(this: T, column: C): C {
-    return addColumnData(this, 'as', column) as unknown as C;
+    return setColumnData(this, 'as', column) as unknown as C;
   }
 
   toSQL() {
     return this.dataType;
   }
 
-  default<T extends ColumnType>(
+  default<T extends ColumnType, Value extends T['type'] | RawExpression>(
     this: T,
-    value: T['type'] | RawExpression,
-  ): T & { hasDefault: true } {
-    return addColumnData(this, 'default', value as unknown) as T & {
-      hasDefault: true;
-    };
+    value: Value,
+  ): ColumnWithDefault<T, Value> {
+    return setColumnData(
+      this,
+      'default',
+      value as unknown,
+    ) as ColumnWithDefault<T, Value>;
   }
 
   index<T extends ColumnType>(
@@ -285,23 +271,23 @@ export abstract class ColumnType<
   }
 
   comment<T extends ColumnType>(this: T, comment: string): T {
-    return addColumnData(this, 'comment', comment);
+    return setColumnData(this, 'comment', comment);
   }
 
   validationDefault<T extends ColumnType>(this: T, value: T['type']): T {
-    return addColumnData(this, 'validationDefault', value as unknown);
+    return setColumnData(this, 'validationDefault', value as unknown);
   }
 
   compression<T extends ColumnType>(this: T, compression: string): T {
-    return addColumnData(this, 'compression', compression);
+    return setColumnData(this, 'compression', compression);
   }
 
   collate<T extends ColumnType>(this: T, collate: string): T {
-    return addColumnData(this, 'collate', collate);
+    return setColumnData(this, 'collate', collate);
   }
 
   modifyQuery<T extends ColumnType>(this: T, cb: (q: Query) => void): T {
-    return addColumnData(this, 'modifyQuery', cb);
+    return setColumnData(this, 'modifyQuery', cb);
   }
 
   transform<T extends ColumnType, Transformed>(

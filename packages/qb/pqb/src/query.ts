@@ -9,7 +9,7 @@ import {
 } from './queryMethods';
 import { QueryData } from './sql';
 import {
-  ColumnShapeBase,
+  ColumnsShapeBase,
   ColumnShapeOutput,
   ColumnsShape,
   ColumnType,
@@ -38,7 +38,7 @@ export type QueryBase = {
   tableAlias?: string;
   clone(): QueryBase;
   selectable: SelectableBase;
-  shape: ColumnShapeBase;
+  shape: ColumnsShapeBase;
   baseQuery: Query;
   relations: RelationsBase;
   withData: WithDataBase;
@@ -86,7 +86,7 @@ export type Selectable<T extends QueryBase> = StringKey<keyof T['selectable']>;
 export type QueryWithTable = Query & { table: string };
 
 export type DefaultSelectColumns<S extends ColumnsShape> = {
-  [K in keyof S]: S[K]['isHidden'] extends true ? never : K;
+  [K in keyof S]: S[K]['data']['isHidden'] extends true ? never : K;
 }[StringKey<keyof S>][];
 
 export type QueryReturnType =
@@ -129,7 +129,7 @@ export type QueryReturnsAll<T extends QueryReturnType> = (
 
 export type QueryThen<
   ReturnType extends QueryReturnType,
-  Result extends ColumnShapeBase,
+  Result extends ColumnsShapeBase,
 > = QueryReturnsAll<ReturnType> extends true
   ? ThenResult<ColumnShapeOutput<Result>[]>
   : ReturnType extends 'one'
@@ -158,7 +158,7 @@ export type QueryThen<
 
 export type AddQuerySelect<
   T extends Pick<Query, 'hasSelect' | 'result' | 'then' | 'returnType'>,
-  Result extends ColumnShapeBase,
+  Result extends ColumnsShapeBase,
 > = T['hasSelect'] extends true
   ? Omit<T, 'result' | 'then'> & {
       result: Spread<[T['result'], Result]>;

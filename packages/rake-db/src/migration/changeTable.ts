@@ -141,7 +141,7 @@ const columnTypeToColumnChange = (
       column: item,
       type: item.toSQL(),
       nullable: item.data.isNullable,
-      primaryKey: item.isPrimaryKey,
+      primaryKey: item.data.isPrimaryKey,
       ...item.data,
       foreignKeys: foreignKeys as RakeDbAst.ColumnChange['foreignKeys'],
     };
@@ -322,11 +322,11 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
     }
 
     if (item.type === 'add') {
-      if (item.item.isPrimaryKey) {
+      if (item.item.data.isPrimaryKey) {
         addPrimaryKeys.columns.push(key);
       }
     } else if (item.type === 'drop') {
-      if (item.item.isPrimaryKey) {
+      if (item.item.data.isPrimaryKey) {
         dropPrimaryKeys.columns.push(key);
       }
     } else if (item.type === 'change') {

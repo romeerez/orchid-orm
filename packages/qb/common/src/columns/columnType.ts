@@ -1,4 +1,4 @@
-import { BaseOperators } from './operators';
+import { BaseOperators, Operator } from './operators';
 import { Code } from './code';
 
 // output type of the column
@@ -8,16 +8,71 @@ export type ColumnOutput<T extends ColumnTypeBase> = T['type'];
 export type ColumnInput<T extends ColumnTypeBase> = T['inputType'];
 
 // base type of object with columns
-export type ColumnShapeBase = Record<string, ColumnTypeBase>;
+export type ColumnsShapeBase = Record<string, ColumnTypeBase>;
 
 // output of base shape of columns
-export type ColumnShapeOutput<Shape extends ColumnShapeBase> = {
+export type ColumnShapeOutput<Shape extends ColumnsShapeBase> = {
   [K in keyof Shape]: ColumnOutput<Shape[K]>;
 };
 
+export type NullableColumn<T extends ColumnTypeBase> = Omit<
+  T,
+  'type' | 'inputType' | 'data' | 'operators'
+> & {
+  type: T['type'] | null;
+  inputType: T['inputType'] | null;
+  data: Omit<T['data'], 'isNullable'> & {
+    isNullable: true;
+  };
+  operators: {
+    [K in keyof T['operators']]: K extends 'equals' | 'not'
+      ? Operator<T['type'] | null>
+      : T['operators'][K];
+  };
+};
+
+export type ColumnWithDefault<T extends ColumnTypeBase, Value> = Omit<
+  T,
+  'data'
+> & {
+  data: Omit<T['data'], 'default'> & {
+    default: Value;
+  };
+};
+export type HiddenColumn<T extends ColumnTypeBase> = Omit<T, 'data'> & {
+  data: Omit<T['data'], 'isHidden'> & {
+    isHidden: true;
+  };
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyColumnType = ColumnTypeBase<any, Record<string, Operator<any>>>;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/ban-types
+export type AnyColumnTypeCreator = (...args: any[]) => AnyColumnType | {};
+
+export type ColumnTypesBase = Record<
+  string,
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  AnyColumnTypeCreator
+>;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ValidationContext = any;
+
 // base data of column
 export type ColumnDataBase = {
+  // is null value allowed
   isNullable?: boolean;
+
+  // is column a primary key in a database
+  isPrimaryKey?: boolean;
+
+  // if column has a default value, then it can be omitted in `create` method
+  default?: unknown;
+
+  // is column removed from default table selection
+  isHidden?: boolean;
 };
 
 // base column type
@@ -42,20 +97,8 @@ export abstract class ColumnTypeBase<
   // input type
   inputType!: InputType;
 
-  // is null values allowed
-  isNullable!: boolean;
-
   // data of the column that specifies column characteristics and validations
   data = {} as Data;
-
-  // is column a primary key in a database
-  isPrimaryKey = false;
-
-  // is column removed from default table selection
-  isHidden = false;
-
-  // if column has a default value, then it can be omitted in `create` method
-  hasDefault = false;
 
   // encode value passed to `create` to an appropriate value for a database
   encodeFn?: (input: any) => unknown; // eslint-disable-line @typescript-eslint/no-explicit-any

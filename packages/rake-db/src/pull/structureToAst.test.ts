@@ -313,7 +313,7 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
 
       expect(ast.noPrimaryKey).toBe('error');
-      expect(ast.shape.id.isPrimaryKey).toBe(true);
+      expect(ast.shape.id.data.isPrimaryKey).toBe(true);
       expect(ast.primaryKey).toBe(undefined);
     });
 
@@ -328,7 +328,7 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
 
       expect(ast.noPrimaryKey).toBe('error');
-      expect(ast.shape.id.isPrimaryKey).toBe(false);
+      expect(ast.shape.id.data.isPrimaryKey).toBe(undefined);
       expect(ast.primaryKey).toEqual({
         columns: ['id', 'name'],
         options: { name: 'pkey' },
@@ -346,7 +346,7 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
 
       expect(ast.noPrimaryKey).toBe('error');
-      expect(ast.shape.id.isPrimaryKey).toBe(false);
+      expect(ast.shape.id.data.isPrimaryKey).toBe(undefined);
       expect(ast.primaryKey).toEqual({
         columns: ['id', 'name'],
       });

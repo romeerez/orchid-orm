@@ -385,7 +385,7 @@ export const columnIndexesToCode = (
 export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
   code = toArray(code);
 
-  if (type.isPrimaryKey) addCode(code, '.primaryKey()');
+  if (type.data.isPrimaryKey) addCode(code, '.primaryKey()');
 
   if (type.data.foreignKeys) {
     for (const part of columnForeignKeysToCode(type.data.foreignKeys)) {
@@ -393,7 +393,7 @@ export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
     }
   }
 
-  if (type.isHidden) addCode(code, '.hidden()');
+  if (type.data.isHidden) addCode(code, '.hidden()');
 
   if (type.data.isNullable) addCode(code, '.nullable()');
 
