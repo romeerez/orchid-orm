@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.3.33
+
+### Patch Changes
+
+- Remove myqb from rake-db deps
+
 ## 2.3.32
 
 ### Patch Changes

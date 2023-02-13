@@ -94,12 +94,12 @@ importers:
       prompts: ^2.4.2
       tsconfig-paths: ^4.1.2
     dependencies:
-      myqb: link:../qb/myqb
       pluralize: 8.0.0
       pqb: link:../qb/pqb
       prompts: 2.4.2
     devDependencies:
       '@types/prompts': 2.4.2
+      myqb: link:../qb/myqb
       tsconfig-paths: 4.1.2
 
   packages/schema-to-zod:
