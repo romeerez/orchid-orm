@@ -165,6 +165,18 @@ await db.$transaction(async () => {
 })
 ```
 
+## $from
+
+Use `$from` to build a queries around sub queries similar to the following:
+
+```ts
+const subQuery = db.someTable.select('name', {
+  relatedCount: (q) => q.related.count(),
+})
+
+const result = await db.$from(subQuery).where({ relatedCount: { gte: 5 } }).limit(10)
+```
+
 ## $close
 
 Call `$clone` to end a database connection:

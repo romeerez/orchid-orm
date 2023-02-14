@@ -257,12 +257,12 @@ q.with('foo', OtherTable.select('id', 'name'))
   .from('foo');
 ```
 
-Optionally takes a second argument of type `{ only?: boolean }`:
+Optionally takes a second argument of type `{ only?: boolean }`, (see `FROM ONLY` in Postgres docs, this is related to table inheritance).
+
 ```ts
 Table.from(
   OtherTable.select('foo', 'bar'),
   {
-    // only is for table inheritance, check Postgres docs for details
     only: true,
   }
 )
