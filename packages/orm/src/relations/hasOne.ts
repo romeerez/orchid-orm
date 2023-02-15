@@ -247,13 +247,17 @@ const nestedInsert = ({ query, primaryKey, foreignKey }: State) => {
           const data = { [foreignKey]: selfData[primaryKey] };
           return 'connect' in item
             ? (
-                t.where(item.connect) as WhereResult<Query> & {
-                  hasSelect: false;
+                t.where(item.connect) as Omit<Query, 'meta'> & {
+                  meta: Omit<Query['meta'], 'hasSelect' | 'hasWhere'> & {
+                    hasWhere: true;
+                  };
                 }
               )._updateOrThrow(data)
             : (
-                t.where(item.connectOrCreate.where) as WhereResult<Query> & {
-                  hasSelect: false;
+                t.where(item.connectOrCreate.where) as Omit<Query, 'meta'> & {
+                  meta: Omit<Query['meta'], 'hasSelect' | 'hasWhere'> & {
+                    hasWhere: true;
+                  };
                 }
               )._update(data);
         }),
@@ -334,7 +338,7 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
       const { update, create } = params.upsert;
       const updatedIds: unknown[] = await currentRelationsQuery
         ._pluck(foreignKey)
-        ._update<WhereResult<Query & { hasSelect: true }>>(update);
+        ._update<WhereResult<Query & { meta: { hasSelect: true } }>>(update);
 
       if (updatedIds.length < ids.length) {
         await t.createMany(

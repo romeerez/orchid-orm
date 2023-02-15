@@ -247,19 +247,19 @@ export class QueryMethods {
     return addWhere(this, args).takeOptional();
   }
 
-  as<T extends Query, TableAlias extends string>(
+  as<T extends Query, As extends string>(
     this: T,
-    as: TableAlias,
-  ): SetQueryTableAlias<T, TableAlias> {
-    return this.clone()._as(as) as unknown as SetQueryTableAlias<T, TableAlias>;
+    as: As,
+  ): SetQueryTableAlias<T, As> {
+    return this.clone()._as(as) as unknown as SetQueryTableAlias<T, As>;
   }
 
-  _as<T extends Query, TableAlias extends string>(
+  _as<T extends Query, As extends string>(
     this: T,
-    as: TableAlias,
-  ): SetQueryTableAlias<T, TableAlias> {
+    as: As,
+  ): SetQueryTableAlias<T, As> {
     this.query.as = as;
-    return this as unknown as SetQueryTableAlias<T, TableAlias>;
+    return this as unknown as SetQueryTableAlias<T, As>;
   }
 
   withSchema<T extends Query>(this: T, schema: string): T {

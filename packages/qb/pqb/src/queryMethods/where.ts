@@ -7,6 +7,7 @@ import { RelationsBase } from '../relations';
 import { ColumnsShapeBase } from '../columns';
 import { RawExpression } from '../../../common/src/raw';
 import { MaybeArray } from '../../../common/src/utils';
+import { QueryMetaBase } from '../../../common/src/query';
 
 export type WhereArg<T extends QueryBase> =
   | (Omit<
@@ -52,7 +53,9 @@ export type WhereInValues<
       | RawExpression;
 
 export type WhereResult<T extends QueryBase> = T & {
-  hasWhere: true;
+  meta: {
+    hasWhere: true;
+  };
 };
 
 export type WhereInArg<T extends Pick<Query, 'selectable'>> = {
@@ -148,7 +151,7 @@ export abstract class Where implements QueryBase {
 
   query = {} as QueryData;
   table?: string;
-  tableAlias?: string;
+  meta!: QueryMetaBase;
 
   where<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
     return this.clone()._where(...args);

@@ -10,7 +10,7 @@ export type UpsertData<T extends Query> = {
   create: CreateData<T>;
 };
 
-export type UpsertResult<T extends Query> = T['hasSelect'] extends true
+export type UpsertResult<T extends Query> = T['meta']['hasSelect'] extends true
   ? SetQueryReturnsOne<T>
   : SetQueryReturnsVoid<T>;
 

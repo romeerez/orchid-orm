@@ -16,6 +16,7 @@ import { ColumnsShapeBase } from '../columns';
 import { RawExpression } from '../../../common/src/raw';
 import { getShapeFromSelect } from './select';
 import { StringKey } from '../../../common/src/utils';
+import { EmptyObject } from '../utils';
 
 type WithSelectable<
   T extends QueryBase,
@@ -85,8 +86,8 @@ type JoinResult<
       ? T['withData'][A] extends WithDataItem
         ? {
             table: T['withData'][A]['table'];
-            tableAlias: undefined;
             result: T['withData'][A]['shape'];
+            meta: EmptyObject;
           }
         : never
       : never
@@ -109,7 +110,6 @@ export type JoinCallback<
         ? {
             query: QueryData;
             table: T['withData'][Arg]['table'];
-            tableAlias: undefined;
             clone(): QueryBase;
             selectable: {
               [K in keyof T['withData'][Arg]['shape'] as `${T['withData'][Arg]['table']}.${StringKey<K>}`]: {
@@ -121,6 +121,7 @@ export type JoinCallback<
             baseQuery: Query;
             relations: RelationsBase;
             withData: WithDataBase;
+            meta: EmptyObject;
           }
         : never
       : Arg extends Query
@@ -147,8 +148,8 @@ type JoinCallbackResult<
       ? T['withData'][Arg] extends WithDataItem
         ? {
             table: T['withData'][Arg]['table'];
-            tableAlias: undefined;
             result: T['withData'][Arg]['shape'];
+            meta: EmptyObject;
           }
         : never
       : never

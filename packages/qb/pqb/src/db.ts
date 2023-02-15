@@ -67,8 +67,6 @@ export interface Db<
   onQueryBuilder: Query['onQueryBuilder'];
   primaryKeys: Query['primaryKeys'];
   query: QueryData;
-  hasSelect: Query['hasSelect'];
-  hasWhere: boolean;
   selectable: { [K in keyof Shape]: { as: K; column: Shape[K] } } & {
     [K in keyof Shape as `${Table}.${StringKey<K>}`]: {
       as: K;
@@ -79,8 +77,6 @@ export interface Db<
   then: ThenResult<
     Pick<ColumnShapeOutput<Shape>, DefaultSelectColumns<Shape>[number]>[]
   >;
-  // TODO: remove tableAlias
-  tableAlias: undefined;
   joinedTables: Query['joinedTables'];
   windows: Query['windows'];
   defaultSelectColumns: DefaultSelectColumns<Shape>;

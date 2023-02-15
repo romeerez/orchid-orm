@@ -100,8 +100,10 @@ type PrepareRelationQuery<
   RelationName extends PropertyKey,
   Required extends boolean,
   Populate extends string,
-> = Omit<T, 'tableAlias'> & {
-  tableAlias: RelationName extends string ? RelationName : never;
+> = Omit<T, 'meta'> & {
+  meta: Omit<T['meta'], 'as'> & {
+    as: RelationName extends string ? RelationName : never;
+  };
   [isRequiredRelationKey]: Required;
   [relationQueryKey]: RelationQueryData;
 } & { [defaultsKey]: Record<Populate, true> };

@@ -22,6 +22,7 @@ import { RelationQueryBase, RelationsBase } from './relations';
 import { QueryError, QueryErrorName } from './errors';
 import { RawExpression } from '../../common/src/raw';
 import { Spread, StringKey } from '../../common/src/utils';
+import { QueryBaseCommon, QueryCommon } from '../../common/src/query';
 
 export type ColumnParser = (input: unknown) => unknown;
 export type ColumnsParsers = Record<string | getValueKey, ColumnParser>;
@@ -34,10 +35,9 @@ export type SelectableBase = Record<
 export type WithDataItem = { table: string; shape: ColumnsShape };
 export type WithDataBase = Record<never, WithDataItem>;
 
-export type QueryBase = {
+export type QueryBase = QueryBaseCommon & {
   query: QueryData;
   table?: string;
-  tableAlias?: string;
   clone(): QueryBase;
   selectable: SelectableBase;
   shape: ColumnsShapeBase;
@@ -49,38 +49,36 @@ export type QueryBase = {
 export type defaultsKey = typeof defaultsKey;
 export const defaultsKey: unique symbol = Symbol('defaults');
 
-export type Query = QueryMethods & {
-  queryBuilder: Db;
-  columnTypes: ColumnTypesBase;
-  whereQueryBuilder: typeof WhereQueryBuilder;
-  onQueryBuilder: typeof OnQueryBuilder;
-  table?: string;
-  shape: ColumnsShape;
-  singlePrimaryKey: string;
-  primaryKeys: string[];
-  type: Record<string, unknown>;
-  inputType: Record<string, unknown>;
-  query: QueryData;
-  result: ColumnsShape;
-  hasSelect: boolean;
-  hasWhere: boolean;
-  selectable: SelectableBase;
-  returnType: QueryReturnType;
-  then: ThenResult<unknown>;
-  tableAlias: string | undefined;
-  joinedTables: Record<string, Pick<Query, 'result' | 'tableAlias' | 'table'>>;
-  windows: EmptyObject;
-  defaultSelectColumns: string[];
-  relations: RelationsBase;
-  withData: WithDataBase;
-  error: new (
-    message: string,
-    length: number,
-    name: QueryErrorName,
-  ) => QueryError;
-  isSubQuery: boolean;
-  [defaultsKey]: EmptyObject;
-};
+export type Query = QueryCommon &
+  QueryMethods & {
+    queryBuilder: Db;
+    columnTypes: ColumnTypesBase;
+    whereQueryBuilder: typeof WhereQueryBuilder;
+    onQueryBuilder: typeof OnQueryBuilder;
+    table?: string;
+    shape: ColumnsShape;
+    singlePrimaryKey: string;
+    primaryKeys: string[];
+    type: Record<string, unknown>;
+    inputType: Record<string, unknown>;
+    query: QueryData;
+    result: ColumnsShape;
+    selectable: SelectableBase;
+    returnType: QueryReturnType;
+    then: ThenResult<unknown>;
+    joinedTables: Record<string, Pick<Query, 'result' | 'table' | 'meta'>>;
+    windows: EmptyObject;
+    defaultSelectColumns: string[];
+    relations: RelationsBase;
+    withData: WithDataBase;
+    error: new (
+      message: string,
+      length: number,
+      name: QueryErrorName,
+    ) => QueryError;
+    isSubQuery: boolean;
+    [defaultsKey]: EmptyObject;
+  };
 
 export type Selectable<T extends QueryBase> = StringKey<keyof T['selectable']>;
 
@@ -115,7 +113,7 @@ export const isQueryReturnsMultipleRows = (q: Query) =>
 
 export type JoinedTablesBase = Record<
   string,
-  Pick<Query, 'result' | 'tableAlias' | 'table'>
+  Pick<Query, 'result' | 'table' | 'meta'>
 >;
 
 export type QueryReturnsAll<T extends QueryReturnType> = (
@@ -154,24 +152,25 @@ export type QueryThen<
   : never;
 
 export type AddQuerySelect<
-  T extends Pick<Query, 'hasSelect' | 'result' | 'then' | 'returnType'>,
+  T extends Pick<Query, 'result' | 'then' | 'returnType' | 'meta'>,
   Result extends ColumnsShapeBase,
-> = T['hasSelect'] extends true
+> = T['meta']['hasSelect'] extends true
   ? Omit<T, 'result' | 'then'> & {
       result: Spread<[T['result'], Result]>;
       then: QueryThen<T['returnType'], Spread<[T['result'], Result]>>;
     }
   : Omit<T, 'result' | 'then'> & {
-      hasSelect: true;
+      meta: {
+        hasSelect: true;
+      };
       result: Result;
       then: QueryThen<T['returnType'], Result>;
     };
 
-export type QuerySelectAll<T extends Query> = Omit<
-  T,
-  'hasSelect' | 'result' | 'then'
-> & {
-  hasSelect: true;
+export type QuerySelectAll<T extends Query> = Omit<T, 'result' | 'then'> & {
+  meta: {
+    hasSelect: true;
+  };
   result: T['shape'];
   then: QueryThen<T['returnType'], T['shape']>;
 };
@@ -203,8 +202,10 @@ export type SetQueryReturnsPluck<
     : S extends RawExpression
     ? S['__column']
     : never,
-> = Omit<T, 'hasSelect' | 'result' | 'returnType' | 'then'> & {
-  hasSelect: true;
+> = Omit<T, 'result' | 'returnType' | 'then'> & {
+  meta: {
+    hasSelect: true;
+  };
   result: { pluck: C };
   returnType: 'pluck';
   then: ThenResult<C['type'][]>;
@@ -220,8 +221,10 @@ export type SetQueryReturnsValueOptional<
     : Arg extends RelationQueryBase
     ? Arg['result']['value']
     : never,
-> = Omit<T, 'hasSelect' | 'result' | 'returnType' | 'then'> & {
-  hasSelect: true;
+> = Omit<T, 'result' | 'returnType' | 'then'> & {
+  meta: {
+    hasSelect: true;
+  };
   result: { value: Column };
   returnType: 'value';
   then: ThenResult<Column['type'] | undefined>;
@@ -237,8 +240,10 @@ export type SetQueryReturnsValue<
     : Arg extends RelationQueryBase
     ? Arg['result']['value']
     : never,
-> = Omit<T, 'hasSelect' | 'result' | 'returnType' | 'then'> & {
-  hasSelect: true;
+> = Omit<T, 'result' | 'returnType' | 'then'> & {
+  meta: {
+    hasSelect: true;
+  };
   result: { value: Column };
   returnType: 'valueOrThrow';
   then: ThenResult<Column['type']>;
@@ -263,16 +268,18 @@ export type SetQueryReturnsColumnInfo<
   then: ThenResult<Result>;
 };
 
-export type SetQueryTableAlias<
-  T extends Query,
-  TableAlias extends string,
-> = Omit<T, 'tableAlias' | 'selectable'> & {
-  tableAlias: TableAlias;
+export type SetQueryTableAlias<T extends Query, As extends string> = Omit<
+  T,
+  'selectable' | 'meta'
+> & {
+  meta: Omit<T['meta'], 'as'> & {
+    as: As;
+  };
   selectable: Omit<
     T['selectable'],
     `${AliasOrTable<T>}.${StringKey<keyof T['shape']>}`
   > & {
-    [K in keyof T['shape'] as `${TableAlias}.${StringKey<keyof T['shape']>}`]: {
+    [K in keyof T['shape'] as `${As}.${StringKey<keyof T['shape']>}`]: {
       as: K;
       column: T['shape'][K];
     };
@@ -290,7 +297,7 @@ export type SetQueryJoinedTables<
 
 export type AddQueryJoinedTable<
   T extends Query,
-  J extends Pick<Query, 'result' | 'tableAlias' | 'table'>,
+  J extends Pick<Query, 'result' | 'table' | 'meta'>,
 > = SetQueryJoinedTables<
   T,
   T['selectable'] & {

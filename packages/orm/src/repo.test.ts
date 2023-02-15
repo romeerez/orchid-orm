@@ -143,7 +143,7 @@ describe('createRepo', () => {
     const repo = createRepo(db.some, {
       queryWithWhereMethods: {
         one(q) {
-          const hasWhere: true = q.hasWhere;
+          const hasWhere: true = q.meta?.hasWhere;
           return hasWhere;
         },
       },
@@ -165,7 +165,7 @@ describe('createRepo', () => {
       queryOneWithWhereMethods: {
         one(q) {
           const type: Exclude<QueryReturnType, 'all'> = q.returnType;
-          const hasWhere: true = q.hasWhere;
+          const hasWhere: true = q.meta?.hasWhere;
           return [type, hasWhere];
         },
       },

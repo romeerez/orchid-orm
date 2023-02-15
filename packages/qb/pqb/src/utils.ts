@@ -78,9 +78,9 @@ export const isObjectEmpty = (obj: object) => {
 
 export const EMPTY_OBJECT = {};
 
-export type AliasOrTable<T extends Pick<Query, 'tableAlias' | 'table'>> =
-  T['tableAlias'] extends string
-    ? T['tableAlias']
+export type AliasOrTable<T extends Pick<Query, 'table' | 'meta'>> =
+  T['meta']['as'] extends string
+    ? T['meta']['as']
     : T['table'] extends string
     ? T['table']
     : never;

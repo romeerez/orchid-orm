@@ -10,13 +10,15 @@ export type MergeQuery<
     ? T['returnType']
     : Q['returnType'],
 > = Omit<T, 'result' | 'returnType' | 'then'> & {
-  hasSelect: Q['hasSelect'] extends true ? true : T['hasSelect'];
-  hasWhere: Q['hasWhere'] extends true ? true : T['hasWhere'];
-  result: T['hasSelect'] extends true
+  meta: {
+    hasSelect: Q['meta']['hasSelect'];
+    hasWhere: Q['meta']['hasWhere'];
+  };
+  result: T['meta']['hasSelect'] extends true
     ? Spread<[T['result'], Q['result']]>
     : Q['result'];
   returnType: ReturnType;
-  then: T['hasSelect'] extends true
+  then: T['meta']['hasSelect'] extends true
     ? QueryThen<ReturnType, Spread<[T['result'], Q['result']]>>
     : QueryThen<ReturnType, Q['result']>;
   selectable: T['selectable'] & Q['selectable'];

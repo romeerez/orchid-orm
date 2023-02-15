@@ -95,15 +95,15 @@ type UpdateHasAndBelongsToManyData<Rel extends HasAndBelongsToManyRelation> = {
   create?: CreateData<Rel['nestedCreateQuery']>[];
 };
 
-type UpdateArg<T extends Query> = T['hasWhere'] extends true
+type UpdateArg<T extends Query> = T['meta']['hasWhere'] extends true
   ? UpdateData<T>
   : never;
 
-type UpdateRawArg<T extends Query> = T['hasWhere'] extends true
+type UpdateRawArg<T extends Query> = T['meta']['hasWhere'] extends true
   ? RawExpression
   : never;
 
-type UpdateResult<T extends Query> = T['hasSelect'] extends true
+type UpdateResult<T extends Query> = T['meta']['hasSelect'] extends true
   ? T
   : SetQueryReturnsRowCount<T>;
 
