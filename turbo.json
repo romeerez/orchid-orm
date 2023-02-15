@@ -3,6 +3,8 @@
   "pipeline": {
     "check": {},
     "types": {},
-    "test:ci": {}
+    "test:ci": {
+      "outputs": ["coverage/**"]
+    }
   }
 }

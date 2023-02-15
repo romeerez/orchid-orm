@@ -30,6 +30,7 @@
   },
   "jest": {
     "rootDir": "src",
+    "coverageDirectory": "../coverage",
     "setupFiles": [
       "dotenv/config"
     ],
