@@ -141,6 +141,16 @@ describe('join callback with query builder', () => {
       });
     });
 
+    describe('whereIn', () => {
+      // it.only('should allow to specify a column of the main table', () => {
+      //   const q = User.join(Message, (q) =>
+      //     q.whereIn('text', ['text']).whereIn('user.name', ['name']),
+      //   );
+      //
+      //   console.log(q.toSql());
+      // });
+    });
+
     const buildSql = (cb: (q: OnQueryBuilder) => OnQueryBuilder): Sql => {
       return Message.join(User, cb).toSql();
     };

@@ -1623,3 +1623,20 @@ describe('where', () => {
     expectSql(q.toSql(), 'SELECT * FROM "user" WHERE "user"."id" = $1', [1]);
   });
 });
+
+// describe('joined columns', () => {
+//   const joinQuery = User.join(Message, (q) => q.on('authorId', 'id'));
+//   const sql = `SELECT "user".* FROM "user" JOIN "message" ON "message"."authorId" = "user"."id" WHERE `;
+//
+//   it.only('should be available in `where` object', () => {
+//     const q = joinQuery.where({ 'message.id': 1 });
+//
+//     expectSql(q.toSql(), sql + '"message"."id" = $1', [1]);
+//   });
+//
+//   it.only('should be available in `where` object with operator', () => {
+//     const q = joinQuery.where({ 'message.id': { gt: 1 } });
+//
+//     expectSql(q.toSql(), sql + '"message"."id" > $1', [1]);
+//   });
+// });

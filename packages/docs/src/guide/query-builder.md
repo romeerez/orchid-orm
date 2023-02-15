@@ -518,35 +518,42 @@ User.join(Message, (q) =>
 User.join(Message, (q) =>
   // `.orOn` takes the same arguments as `.on` and acts like `.or`:
   q
-    .on('a', 'b') // where a = b
-    .orOn('c', 'd') // or c = d
+    .on('userId', 'id') // where message.userId = user.id
+    .orOn('text', 'name') // or message.text = user.name
 )
 ```
 
 Join query builder supports all `where` methods: `.where`, `.whereIn`, `.whereExists`, and all `.or`, `.not`, and `.orNot` forms.
 
-Important note that this is where methods are applied to the main table we are joining, not to the joining table.
-
-Where conditions in the callback are applied inside of the `JOIN` condition.
+Column names in the where conditions are applied for the joined table, but you can specify a table name to add a condition for the main table.
 
 ```ts
 User.join(Message, (q) =>
   q
-    .on('a', 'b')
-    // this is where methods are for User, not for Message:
-    .where({ name: 'Vasya' })
-    .whereIn('age', [20, 25, 30])
+    .on('userId', 'id')
+    .where({
+      // not prefixed column name is for joined table:
+      text: { startsWith: 'hello' },
+      // specify a table name to set condition on the main table:
+      'user.name': 'Bob',
+    })
+    // id is a column of a joined table Message
+    .whereIn('id', [1, 2, 3])
+    // condition for id of a user
+    .whereIn('user.id', [4, 5, 6])
 )
 ```
 
-To add where conditions on the joining table, add `.where` to the first `.join` argument:
+The query above will generate the following SQL (simplified):
 
-```ts
-// join where message id is 1 and user id is 2
-User.join(
-  Message.where({ id: 1 }),
-  (q) => q.where({ id: 2 })
-)
+```sql
+SELECT * FROM "user"
+JOIN "message"
+  ON "message"."userId" = "user"."id"
+ AND "message"."text" ILIKE 'hello%'
+ AND "user"."name" = 'Bob'
+ AND "message"."id" IN (1, 2, 3)
+ AND "user"."id" IN (4, 5, 6)
 ```
 
 ## group

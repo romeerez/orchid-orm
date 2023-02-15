@@ -20,7 +20,6 @@ import {
   getCurrentChanges,
 } from '../migration/change';
 import { createMigrationInterface } from '../migration/migration';
-import { pathToFileURL } from 'url';
 
 const getDb = (adapter: Adapter) => createDb({ adapter });
 
@@ -118,7 +117,7 @@ const processMigration = async (
 
     let changes = changeCache[file.path];
     if (!changes) {
-      await config.import(pathToFileURL(file.path).pathname);
+      await config.import(file.path);
       changes = getCurrentChanges();
       changeCache[file.path] = changes;
     }

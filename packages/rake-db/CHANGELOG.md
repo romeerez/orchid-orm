@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.3.36
+
+### Patch Changes
+
+- Fix migration path resolution on windows
+
 ## 2.3.35
 
 ### Patch Changes

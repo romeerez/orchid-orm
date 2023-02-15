@@ -4,7 +4,6 @@ import { getMigrationFiles } from '../common';
 import { Adapter, noop, TransactionAdapter } from 'pqb';
 import { change } from '../migration/change';
 import { asMock } from '../test-utils';
-import * as url from 'url';
 
 jest.mock('../common', () => ({
   ...jest.requireActual('../common'),
@@ -91,8 +90,8 @@ describe('migrateOrRollback', () => {
       expect(conf.beforeMigrate).toBeCalled();
       expect(conf.afterMigrate).toBeCalled();
 
-      expect(importMock).toBeCalledWith(url.pathToFileURL('file2').pathname);
-      expect(importMock).toBeCalledWith(url.pathToFileURL('file3').pathname);
+      expect(importMock).toBeCalledWith('file2');
+      expect(importMock).toBeCalledWith('file3');
 
       expect(transactionQueryMock).toBeCalledWith(
         `INSERT INTO "schemaMigrations" VALUES ('2')`,
@@ -219,7 +218,7 @@ describe('migrateOrRollback', () => {
       expect(getMigrationFiles).toBeCalledWith(conf, false);
 
       expect(importMock).toBeCalledTimes(1);
-      expect(importMock).toBeCalledWith(url.pathToFileURL('file2').pathname);
+      expect(importMock).toBeCalledWith('file2');
 
       expect(transactionQueryMock).toBeCalledTimes(1);
       expect(transactionQueryMock).toBeCalledWith(
