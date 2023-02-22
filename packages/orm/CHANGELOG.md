@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.5.34
+
+### Patch Changes
+
+- Fix returning related records in an extra array
+- Updated dependencies
+  - pqb@0.9.22
+
 ## 1.5.33
 
 ### Patch Changes

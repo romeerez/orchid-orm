@@ -234,10 +234,36 @@ describe('hasMany', () => {
     });
 
     describe('select', () => {
-      it('should be selectable', () => {
+      it('should be selectable', async () => {
+        const chatId = await db.chat.get('id').create(chatData);
+        const authorId = await db.user.get('id').create(userData);
+        const messageId = await db.message.get('id').create({
+          chatId,
+          authorId,
+          ...messageData,
+        });
+
         const query = db.user.as('u').select('id', {
           messages: (q) => q.messages.where({ text: 'text' }),
         });
+
+        const result = await query;
+        expect(result).toEqual([
+          {
+            id: authorId,
+            messages: [
+              {
+                id: messageId,
+                authorId,
+                chatId,
+                ...messageData,
+                meta: null,
+                createdAt: expect.any(Date),
+                updatedAt: expect.any(Date),
+              },
+            ],
+          },
+        ]);
 
         assertType<
           Awaited<typeof query>,

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.22
+
+### Patch Changes
+
+- Fix returning related records in an extra array
+
 ## 0.9.21
 
 ### Patch Changes
