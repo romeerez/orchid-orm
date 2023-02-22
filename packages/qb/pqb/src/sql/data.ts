@@ -30,7 +30,11 @@ import { RawExpression } from '../../../common/src/raw';
 export type CommonQueryData = {
   adapter: Adapter;
   shape: ColumnsShapeBase;
-  handleResult(q: Query, result: QueryResult): Promise<unknown>;
+  handleResult(
+    q: Query,
+    result: QueryResult,
+    isSubQuery?: true,
+  ): Promise<unknown>;
   returnType: QueryReturnType;
   [relationQueryKey]?: RelationQueryData;
   inTransaction?: boolean;

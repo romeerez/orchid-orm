@@ -303,11 +303,11 @@ const insert = (
     q.query.fromQuery?.query.returnType === 'oneOrThrow'
   ) {
     const { handleResult } = q.query;
-    q.query.handleResult = async (q, r) => {
+    q.query.handleResult = async (q, r, i) => {
       if (r.rowCount === 0) {
         throw new NotFoundError();
       }
-      return await handleResult(q, r);
+      return await handleResult(q, r, i);
     };
   }
 
@@ -325,8 +325,8 @@ const insert = (
   if (ctx.returnTypeAll) {
     q.query.returnType = 'all';
     const { handleResult } = q.query;
-    q.query.handleResult = async (q, queryResult) => {
-      ctx.resultAll = (await handleResult(q, queryResult)) as Record<
+    q.query.handleResult = async (q, queryResult, i) => {
+      ctx.resultAll = (await handleResult(q, queryResult, i)) as Record<
         string,
         unknown
       >[];

@@ -44,7 +44,7 @@ export class QueryUpsertOrCreate {
     this.query.returnType = 'one';
     this.query.wrapInTransaction = true;
     const { handleResult } = this.query;
-    this.query.handleResult = async (q, queryResult) => {
+    this.query.handleResult = async (q, queryResult, i) => {
       if (queryResult.rowCount === 0) {
         return (q as Query).create(data as CreateData<Query>);
       } else if (queryResult.rowCount > 1) {
@@ -53,7 +53,7 @@ export class QueryUpsertOrCreate {
         );
       }
 
-      return handleResult(q, queryResult);
+      return handleResult(q, queryResult, i);
     };
     return this as unknown as UpsertResult<T>;
   }

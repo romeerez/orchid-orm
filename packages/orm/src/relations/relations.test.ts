@@ -51,16 +51,20 @@ describe('relations', () => {
       authorId,
       ...messageData,
     };
-    await db.message.get('id').createMany([data, data]);
+    const ids = await db.message.pluck('id').createMany([data, data]);
 
     const query = db.user
       .select({
+        ids: (q) => q.messages.pluck('id'),
         dates: (q) => q.messages.pluck('createdAt'),
       })
       .take();
 
     const result = await query;
-    expect(result).toEqual({ dates: [expect.any(Date), expect.any(Date)] });
+    expect(result).toEqual({
+      ids,
+      dates: [expect.any(Date), expect.any(Date)],
+    });
   });
 
   it('should handle sub query pluck with empty results', async () => {

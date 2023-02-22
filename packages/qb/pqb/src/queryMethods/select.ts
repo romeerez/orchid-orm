@@ -16,7 +16,6 @@ import {
   PluckResultColumnType,
 } from '../columns';
 import { pushQueryArray } from '../queryDataUtils';
-import { parseResult } from './then';
 import { QueryData, SelectItem, SelectQueryData } from '../sql';
 import { isRequiredRelationKey, Relation } from '../relations';
 import { getValueKey } from './get';
@@ -28,6 +27,7 @@ import {
   SimpleSpread,
   StringKey,
 } from '../../../common/src/utils';
+import { parseResult } from './then';
 
 export type SelectArg<T extends QueryBase> =
   | StringKey<keyof T['selectable']>
@@ -131,7 +131,7 @@ export const addParserForSelectItem = <T extends Query>(
           t === 'all' || t === 'rows' || t === 'pluck'
             ? (item as unknown[])
             : [item];
-        return parseResult(rel, t, subQueryResult);
+        return parseResult(rel, t, subQueryResult, true);
       });
     }
     return rel;

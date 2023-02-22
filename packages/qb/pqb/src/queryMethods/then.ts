@@ -46,8 +46,9 @@ export class Then {
 export const handleResult: CommonQueryData['handleResult'] = async (
   q,
   result: QueryResult,
+  isSubQuery?: true,
 ) => {
-  return parseResult(q, q.query.returnType || 'all', result);
+  return parseResult(q, q.query.returnType || 'all', result, isSubQuery);
 };
 
 function maybeWrappedThen(this: Query, resolve?: Resolve, reject?: Reject) {
@@ -178,6 +179,7 @@ export const parseResult = (
   q: Query,
   returnType: QueryReturnType | undefined = 'all',
   result: QueryResult,
+  isSubQuery?: boolean,
 ): unknown => {
   switch (returnType) {
     case 'all': {
@@ -216,7 +218,12 @@ export const parseResult = (
     case 'pluck': {
       const { parsers } = q.query;
       if (parsers?.pluck) {
+        if (isSubQuery) {
+          return result.rows.map((row) => parsers.pluck(row));
+        }
         return result.rows.map((row) => parsers.pluck(row[0]));
+      } else if (isSubQuery) {
+        return result.rows;
       }
       return result.rows.map((row) => row[0]);
     }

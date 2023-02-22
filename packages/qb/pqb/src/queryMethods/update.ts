@@ -205,8 +205,8 @@ export class Update {
       query.returnType = 'all';
 
       const { handleResult } = query;
-      query.handleResult = async (q, queryResult) => {
-        ctx.resultAll = (await handleResult(q, queryResult)) as Record<
+      query.handleResult = async (q, queryResult, i) => {
+        ctx.resultAll = (await handleResult(q, queryResult, i)) as Record<
           string,
           unknown
         >[];
