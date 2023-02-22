@@ -2,7 +2,6 @@ import {
   AddQuerySelect,
   ColumnParser,
   ColumnsParsers,
-  isQueryReturnsMultipleRows,
   Query,
   QueryBase,
   QueryReturnsAll,
@@ -127,10 +126,10 @@ export const addParserForSelectItem = <T extends Query>(
     const { parsers } = rel.query;
     if (parsers) {
       addParserToQuery(q.query, key, (item) => {
-        subQueryResult.rows = isQueryReturnsMultipleRows(rel)
-          ? (item as unknown[])
-          : [item];
-        return parseResult(rel, rel.query.returnType || 'all', subQueryResult);
+        const t = rel.query.returnType || 'all';
+        subQueryResult.rows =
+          t === 'all' || t === 'rows' ? (item as unknown[]) : [item];
+        return parseResult(rel, t, subQueryResult);
       });
     }
     return rel;

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.23
+
+### Patch Changes
+
+- Fix returning pluck from sub query
+
 ## 0.9.22
 
 ### Patch Changes

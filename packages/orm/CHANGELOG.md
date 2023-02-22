@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.5.35
+
+### Patch Changes
+
+- Fix returning pluck from sub query
+- Updated dependencies
+  - pqb@0.9.23
+
 ## 1.5.34
 
 ### Patch Changes
