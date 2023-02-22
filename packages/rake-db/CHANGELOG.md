@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.3.37
+
+### Patch Changes
+
+- Fix migrating multiple databases
+
 ## 2.3.36
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 import { Migration } from './migration';
 
-const currentChanges: ChangeCallback[] = [];
+let currentChanges: ChangeCallback[] = [];
 
 export type ChangeCallback = (db: Migration, up: boolean) => Promise<void>;
 
@@ -9,7 +9,7 @@ export const change = (fn: ChangeCallback) => {
 };
 
 export const clearChanges = () => {
-  currentChanges.length = 0;
+  currentChanges = [];
 };
 
 export const getCurrentChanges = () => currentChanges;
