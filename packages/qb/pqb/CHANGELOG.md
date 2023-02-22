@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.24
+
+### Patch Changes
+
+- Fix pluck subquery with empty result
+
 ## 0.9.23
 
 ### Patch Changes

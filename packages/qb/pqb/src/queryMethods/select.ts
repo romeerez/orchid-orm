@@ -128,7 +128,9 @@ export const addParserForSelectItem = <T extends Query>(
       addParserToQuery(q.query, key, (item) => {
         const t = rel.query.returnType || 'all';
         subQueryResult.rows =
-          t === 'all' || t === 'rows' ? (item as unknown[]) : [item];
+          t === 'all' || t === 'rows' || t === 'pluck'
+            ? (item as unknown[])
+            : [item];
         return parseResult(rel, t, subQueryResult);
       });
     }

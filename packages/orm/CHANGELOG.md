@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.5.36
+
+### Patch Changes
+
+- Fix pluck subquery with empty result
+- Updated dependencies
+  - pqb@0.9.24
+
 ## 1.5.35
 
 ### Patch Changes

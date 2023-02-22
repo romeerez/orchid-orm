@@ -46,11 +46,12 @@ describe('relations', () => {
   it('should handle sub query pluck', async () => {
     const chatId = await db.chat.get('id').create(chatData);
     const authorId = await db.user.get('id').create(userData);
-    await db.message.get('id').create({
+    const data = {
       chatId,
       authorId,
       ...messageData,
-    });
+    };
+    await db.message.get('id').createMany([data, data]);
 
     const query = db.user
       .select({
@@ -59,6 +60,19 @@ describe('relations', () => {
       .take();
 
     const result = await query;
-    expect(result).toEqual({ dates: [expect.any(Date)] });
+    expect(result).toEqual({ dates: [expect.any(Date), expect.any(Date)] });
+  });
+
+  it('should handle sub query pluck with empty results', async () => {
+    await db.user.count().create(userData);
+
+    const query = db.user
+      .select({
+        ids: (q) => q.messages.pluck('id'),
+      })
+      .take();
+
+    const result = await query;
+    expect(result).toEqual({ ids: [] });
   });
 });
