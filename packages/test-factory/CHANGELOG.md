@@ -1,5 +1,14 @@
 # orchid-orm-test-factory
 
+## 0.2.42
+
+### Patch Changes
+
+- Change pqb to be a peer dependency in other libs
+- Updated dependencies
+  - orchid-orm@1.5.35
+  - orchid-orm-schema-to-zod@0.2.29
+
 ## 0.2.40
 
 ### Patch Changes

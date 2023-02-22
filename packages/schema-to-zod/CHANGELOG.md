@@ -1,5 +1,11 @@
 # orchid-orm-schema-to-zod
 
+## 0.2.29
+
+### Patch Changes
+
+- Change pqb to be a peer dependency in other libs
+
 ## 0.2.28
 
 ### Patch Changes

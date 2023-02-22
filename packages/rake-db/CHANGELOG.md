@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.3.39
+
+### Patch Changes
+
+- Change pqb to be a peer dependency in other libs
+
 ## 2.3.38
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.5.35
+
+### Patch Changes
+
+- Change pqb to be a peer dependency in other libs
+
 ## 1.5.34
 
 ### Patch Changes

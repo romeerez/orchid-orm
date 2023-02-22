@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm-test-factory",
-  "version": "0.2.41",
+  "version": "0.2.42",
   "description": "Orchid ORM factories for tests",
   "homepage": "https://orchid-orm.netlify.app/guide/orm-test-factories.html",
   "repository": {
@@ -52,9 +52,11 @@
   "dependencies": {
     "@anatine/zod-mock": "^3.6.0",
     "@faker-js/faker": "^7.6.0",
+    "zod": "^3.19.1"
+  },
+  "peerDependencies": {
     "orchid-orm": "workspace:*",
     "orchid-orm-schema-to-zod": "workspace:*",
-    "pqb": "workspace:*",
-    "zod": "^3.19.1"
+    "pqb": "workspace:*"
   }
 }
