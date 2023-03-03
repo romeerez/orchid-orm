@@ -577,13 +577,13 @@ User.join(
 
 It will produce such SQL:
 
-``sql
+```sql
 SELECT * FROM "user"
 JOIN (
   SELECT "t"."id", "t"."userId", "t"."text"
   FROM "message" AS "t"
 ) "t" ON "t"."userId" = "user"."id"
-``
+```
 
 ## group
 
