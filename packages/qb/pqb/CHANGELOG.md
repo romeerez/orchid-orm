@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.27
+
+### Patch Changes
+
+- Add `raw` to column types to use in defaults
+
 ## 0.9.26
 
 ### Patch Changes

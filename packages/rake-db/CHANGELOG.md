@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.3.43
+
+### Patch Changes
+
+- Add `raw` to column types to use in defaults
+- Updated dependencies
+  - pqb@0.9.27
+
 ## 2.3.42
 
 ### Patch Changes
