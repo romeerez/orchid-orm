@@ -62,11 +62,9 @@ importers:
     specifiers:
       '@types/prompts': ^2.4.2
       orchid-orm-schema-to-zod: workspace:*
-      pqb: workspace:*
       prompts: ^2.4.2
       rake-db: workspace:*
     dependencies:
-      pqb: link:../qb/pqb
       prompts: 2.4.2
     devDependencies:
       '@types/prompts': 2.4.2
@@ -90,12 +88,10 @@ importers:
       '@types/prompts': ^2.4.2
       myqb: workspace:*
       pluralize: ^8.0.0
-      pqb: workspace:*
       prompts: ^2.4.2
       tsconfig-paths: ^4.1.2
     dependencies:
       pluralize: 8.0.0
-      pqb: link:../qb/pqb
       prompts: 2.4.2
     devDependencies:
       '@types/prompts': 2.4.2
@@ -104,26 +100,18 @@ importers:
 
   packages/schema-to-zod:
     specifiers:
-      pqb: workspace:*
-      zod: ^3.19.1
+      zod: ^3.19.x
     dependencies:
-      pqb: link:../qb/pqb
       zod: 3.19.1
 
   packages/test-factory:
     specifiers:
       '@anatine/zod-mock': ^3.6.0
       '@faker-js/faker': ^7.6.0
-      orchid-orm: workspace:*
-      orchid-orm-schema-to-zod: workspace:*
-      pqb: workspace:*
       zod: ^3.19.1
     dependencies:
       '@anatine/zod-mock': 3.6.0_@faker-js+faker@7.6.0
       '@faker-js/faker': 7.6.0
-      orchid-orm: link:../orm
-      orchid-orm-schema-to-zod: link:../schema-to-zod
-      pqb: link:../qb/pqb
       zod: 3.19.1
 
 packages:
