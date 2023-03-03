@@ -153,6 +153,9 @@ export type ColumnDataBase = {
 
   // is column removed from default table selection
   isHidden?: boolean;
+
+  // parse and encode a column to use it `as` another column
+  as?: ColumnTypeBase;
 };
 
 // base column type

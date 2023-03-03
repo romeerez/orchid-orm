@@ -3,8 +3,8 @@ import { ColumnShapeOutput, ColumnsShape, ColumnTypes } from '../columns';
 import { AddQueryWith, Query } from '../query';
 import { Db } from '../db';
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
-import { EMPTY_OBJECT } from '../utils';
 import { isRaw, RawExpression } from '../../../common/src/raw';
+import { emptyObject } from '../../../common/src/utils';
 
 type WithArgsOptions = Omit<WithOptions, 'columns'> & {
   columns?: boolean | string[];
@@ -85,7 +85,7 @@ export class With {
       };
     }
 
-    pushQueryValue(this, 'with', [args[0], options || EMPTY_OBJECT, query]);
+    pushQueryValue(this, 'with', [args[0], options || emptyObject, query]);
 
     return setQueryObjectValue(
       this,

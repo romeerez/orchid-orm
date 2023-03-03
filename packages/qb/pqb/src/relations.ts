@@ -1,6 +1,6 @@
 import { defaultsKey, Query, QueryBase, QueryWithTable } from './query';
 import { CreateMethodsNames, DeleteMethodsNames } from './queryMethods';
-import { EmptyObject } from './utils';
+import { EmptyObject } from '../../common/src/utils';
 
 export type BaseRelation = {
   type: string;

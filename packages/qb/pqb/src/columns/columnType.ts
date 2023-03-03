@@ -28,7 +28,6 @@ export type ColumnData = ColumnDataBase & {
   compression?: string;
   foreignKeys?: ForeignKey<string, string[]>[];
   modifyQuery?: (q: Query) => void;
-  as?: ColumnType;
 };
 
 type ForeignKeyMatch = 'FULL' | 'PARTIAL' | 'SIMPLE';

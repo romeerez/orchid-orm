@@ -1,20 +1,12 @@
 import { Operators } from './operators';
 import { ColumnData, ColumnType } from './columnType';
 import { assignMethodsToClass } from './utils';
-import { numberTypeMethods } from './commonMethods';
+import { numberTypeMethods } from '../../../common/src/columns/commonMethods';
 import { columnCode } from './code';
 import { Code } from '../../../common/src/columns/code';
 import { RawExpression } from '../../../common/src/raw';
 import { joinTruthy } from '../../../common/src/utils';
-
-export type BaseNumberData = ColumnData & {
-  lt?: number;
-  lte?: number;
-  gt?: number;
-  gte?: number;
-  multipleOf?: number;
-  int?: boolean;
-};
+import { BaseNumberData } from '../../../common/src/columns/scalarTypes';
 
 const numberDataToCode = (data: NumberBaseColumn['data']) => {
   let code = '';

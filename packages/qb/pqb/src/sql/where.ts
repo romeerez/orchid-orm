@@ -8,13 +8,13 @@ import {
   WhereOnJoinItem,
 } from './types';
 import { addValue, q, qc, quoteFullColumn } from './common';
-import { getQueryAs, toArray } from '../utils';
+import { getQueryAs } from '../utils';
 import { processJoinItem } from './join';
 import { makeSql, ToSqlCtx } from './toSql';
 import { getRaw } from '../raw';
 import { QueryData, SelectQueryData } from './data';
 import { isRaw, RawExpression } from '../../../common/src/raw';
-import { MaybeArray } from '../../../common/src/utils';
+import { MaybeArray, toArray } from '../../../common/src/utils';
 
 export const pushWhereStatementSql = (
   ctx: ToSqlCtx,

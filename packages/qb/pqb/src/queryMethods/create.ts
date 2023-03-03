@@ -14,7 +14,6 @@ import {
   HasOneRelation,
   RelationsBase,
 } from '../relations';
-import { EmptyObject } from '../utils';
 import { InsertQueryData, OnConflictItem, OnConflictMergeUpdate } from '../sql';
 import { WhereArg } from './where';
 import { parseResult, queryMethodByReturnType } from './then';
@@ -22,7 +21,7 @@ import { NotFoundError } from '../errors';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
 import { RawExpression } from '../../../common/src/raw';
-import { SetOptional } from '../../../common/src/utils';
+import { EmptyObject, SetOptional } from '../../../common/src/utils';
 
 export type CreateData<
   T extends Query,

@@ -3,7 +3,6 @@ import { addValue, q, quoteSchemaAndTable } from './common';
 import { pushReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
 import { ToSqlCtx } from './toSql';
-import { pushOrNewArray } from '../utils';
 import { getRaw } from '../raw';
 import {
   UpdateQueryData,
@@ -11,6 +10,7 @@ import {
   UpdateQueryDataObject,
 } from './data';
 import { isRaw } from '../../../common/src/raw';
+import { pushOrNewArray } from '../../../common/src/utils';
 
 export const pushUpdateSql = (
   ctx: ToSqlCtx,

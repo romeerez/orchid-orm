@@ -1,5 +1,5 @@
 import { QueryData } from './sql';
-import { pushOrNewArrayToObject } from './utils';
+import { pushOrNewArrayToObject } from '../../common/src/utils';
 
 export const pushQueryArray = <T extends { query: QueryData }>(
   q: T,

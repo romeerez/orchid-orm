@@ -16,12 +16,12 @@ import {
   ColumnTypeBase,
   ColumnTypesBase,
 } from './columns';
-import { AliasOrTable, EmptyObject } from './utils';
+import { AliasOrTable } from './utils';
 import { Db } from './db';
 import { RelationQueryBase, RelationsBase } from './relations';
 import { QueryError, QueryErrorName } from './errors';
 import { RawExpression } from '../../common/src/raw';
-import { Spread, StringKey } from '../../common/src/utils';
+import { EmptyObject, Spread, StringKey } from '../../common/src/utils';
 import { QueryBaseCommon, QueryCommon } from '../../common/src/query';
 
 export type ColumnParser = (input: unknown) => unknown;

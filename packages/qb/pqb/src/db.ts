@@ -23,10 +23,9 @@ import {
   ColumnsShapeBase,
   DefaultSelectColumns,
 } from './columns';
-import { pushOrNewArray } from './utils';
 import { QueryError, QueryErrorName } from './errors';
 import { DbBase } from '../../common/src/db';
-import { StringKey, applyMixins } from '../../common/src/utils';
+import { StringKey, applyMixins, pushOrNewArray } from '../../common/src/utils';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 

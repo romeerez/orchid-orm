@@ -1,12 +1,14 @@
 import { assertType } from './test-utils/test-utils';
+import { makeRegexToFindInSql } from './utils';
 import {
-  makeRegexToFindInSql,
+  MaybeArray,
   pushOrNewArray,
   pushOrNewArrayToObject,
   quoteObjectKey,
+  SetOptional,
   singleQuote,
-} from './utils';
-import { MaybeArray, SetOptional, SomeIsTrue } from '../../common/src/utils';
+  SomeIsTrue,
+} from '../../common/src/utils';
 
 describe('utils', () => {
   describe('SomeIsTrue', () => {

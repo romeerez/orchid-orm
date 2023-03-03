@@ -1,7 +1,7 @@
 import { constructType, JSONType, Primitive, toCode } from './typeBase';
 import { JSONObject, JSONObjectShape } from './object';
 import { JSONLiteral } from './literal';
-import { singleQuote } from '../../utils';
+import { singleQuote } from '../../../../common/src/utils';
 
 export interface JSONDiscriminatedUnion<
   Discriminator extends string,

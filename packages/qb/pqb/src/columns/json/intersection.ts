@@ -1,6 +1,6 @@
 import { constructType, JSONType, JSONTypeAny, toCode } from './typeBase';
-import { addCode } from '../code';
-import { toArray } from '../../utils';
+import { toArray } from '../../../../common/src/utils';
+import { addCode } from '../../../../common/src/columns/code';
 
 export type JSONIntersection<
   Left extends JSONTypeAny,

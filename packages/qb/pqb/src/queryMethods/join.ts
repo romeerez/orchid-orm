@@ -15,8 +15,7 @@ import { QueryData, SelectQueryData } from '../sql';
 import { ColumnsShapeBase } from '../columns';
 import { RawExpression } from '../../../common/src/raw';
 import { getShapeFromSelect } from './select';
-import { StringKey } from '../../../common/src/utils';
-import { EmptyObject } from '../utils';
+import { EmptyObject, StringKey } from '../../../common/src/utils';
 
 type WithSelectable<
   T extends QueryBase,

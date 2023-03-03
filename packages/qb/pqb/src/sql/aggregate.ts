@@ -6,8 +6,9 @@ import { pushOrderBySql } from './orderBy';
 import { whereToSql } from './where';
 import { QueryBase } from '../query';
 import { ToSqlCtx } from './toSql';
-import { EMPTY_OBJECT, Expression } from '../utils';
+import { Expression } from '../utils';
 import { isRaw } from '../../../common/src/raw';
+import { emptyObject } from '../../../common/src/utils';
 
 export const aggregateToSql = (
   ctx: ToSqlCtx,
@@ -18,7 +19,7 @@ export const aggregateToSql = (
   const sql: string[] = [`${item.function}(`];
   ctx = { ...ctx, sql };
 
-  const options = item.options || EMPTY_OBJECT;
+  const options = item.options || emptyObject;
 
   if (options.distinct && !options.withinGroup) sql.push('DISTINCT ');
 

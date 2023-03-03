@@ -1,16 +1,12 @@
 import { ColumnData, ColumnType } from './columnType';
 import { Operators } from './operators';
-import { dateTypeMethods } from './commonMethods';
+import { dateTypeMethods } from '../../../common/src/columns/commonMethods';
 import { assignMethodsToClass } from './utils';
 import { IntegerColumn } from './number';
 import { columnCode } from './code';
 import { Code } from '../../../common/src/columns/code';
 import { joinTruthy } from '../../../common/src/utils';
-
-export type DateColumnData = ColumnData & {
-  min?: Date;
-  max?: Date;
-};
+import { DateColumnData } from '../../../common/src/columns/scalarTypes';
 
 type DateMethods = typeof dateTypeMethods;
 

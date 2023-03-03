@@ -82,3 +82,58 @@ export function applyMixins(derivedCtor: any, constructors: any[]) {
 export const joinTruthy = (...strings: (string | false | undefined)[]) => {
   return strings.filter((string) => string).join('');
 };
+
+export const toArray = <T>(item: T) =>
+  (Array.isArray(item) ? item : [item]) as unknown as T extends unknown[]
+    ? T
+    : [T];
+
+export const noop = () => {};
+
+export type EmptyObject = typeof emptyObject;
+export const emptyObject = {};
+
+export const pushOrNewArrayToObject = <
+  Obj extends EmptyObject,
+  Key extends keyof Obj,
+>(
+  obj: Obj,
+  key: Key,
+  value: Exclude<Obj[Key], undefined> extends unknown[]
+    ? Exclude<Obj[Key], undefined>[number]
+    : never,
+) => {
+  if (obj[key]) (obj[key] as unknown as unknown[]).push(value);
+  else (obj[key] as unknown as unknown[]) = [value];
+};
+
+export const pushOrNewArray = <Arr extends unknown[]>(
+  arr: Arr | undefined,
+  value: Arr[number],
+): Arr => {
+  if (arr) {
+    arr.push(value);
+    return arr;
+  } else {
+    return [value] as Arr;
+  }
+};
+
+export const singleQuote = (s: string) => {
+  return `'${s.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;
+};
+
+export const singleQuoteArray = (arr: string[]) => {
+  return `[${arr.map(singleQuote).join(', ')}]`;
+};
+
+export const quoteObjectKey = (s: string) => {
+  return /[A-z_]\w*/.test(s) ? s : singleQuote(s);
+};
+
+export const isObjectEmpty = (obj: object) => {
+  for (const _ in obj) {
+    return false;
+  }
+  return true;
+};

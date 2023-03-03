@@ -1,13 +1,15 @@
 import { constructType, JSONType, JSONTypeAny, toCode } from './typeBase';
-import { BaseNumberData } from '../number';
-import { BaseStringData } from '../string';
 import {
   dateTypeMethods,
   numberTypeMethods,
   stringTypeMethods,
-} from '../commonMethods';
-import { DateColumnData } from '../dateTime';
-import { singleQuote } from '../../utils';
+} from '../../../../common/src/columns/commonMethods';
+import { singleQuote } from '../../../../common/src/utils';
+import {
+  BaseNumberData,
+  BaseStringData,
+  DateColumnData,
+} from '../../../../common/src/columns/scalarTypes';
 
 export type JSONAny = JSONTypeAny & {
   dataType: 'any';

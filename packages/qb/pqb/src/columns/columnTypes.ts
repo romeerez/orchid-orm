@@ -54,13 +54,7 @@ import {
   ForeignKeyOptions,
   ForeignKeyTableWithColumns,
 } from './columnType';
-import {
-  emptyObject,
-  EmptyObject,
-  makeRegexToFindInSql,
-  pushOrNewArrayToObject,
-  toArray,
-} from '../utils';
+import { makeRegexToFindInSql } from '../utils';
 import { ColumnsShape } from './columnsSchema';
 import {
   QueryData,
@@ -73,7 +67,13 @@ import {
   ColumnWithDefault,
 } from '../../../common/src/columns/columnType';
 import { getRawSql, isRaw, raw, RawExpression } from '../../../common/src/raw';
-import { MaybeArray } from '../../../common/src/utils';
+import {
+  EmptyObject,
+  emptyObject,
+  MaybeArray,
+  pushOrNewArrayToObject,
+  toArray,
+} from '../../../common/src/utils';
 
 export type ColumnTypes = typeof columnTypes;
 

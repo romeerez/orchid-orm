@@ -2,28 +2,15 @@ import { ColumnsShape } from './columnsSchema';
 import { ColumnChain, ColumnData, ColumnType, ForeignKey } from './columnType';
 import { TimestampColumn } from './dateTime';
 import { getRaw } from '../raw';
+import { TableData } from './columnTypes';
+import { addCode, Code } from '../../../common/src/columns/code';
+import { isRaw } from '../../../common/src/raw';
 import {
   quoteObjectKey,
   singleQuote,
   singleQuoteArray,
   toArray,
-} from '../utils';
-import { TableData } from './columnTypes';
-import { Code } from '../../../common/src/columns/code';
-import { isRaw } from '../../../common/src/raw';
-
-export const addCode = (code: Code[], add: Code) => {
-  if (typeof add === 'object') {
-    code.push(add);
-  } else {
-    const last = code.length - 1;
-    if (typeof code[last] === 'string') {
-      code[last] = code[last] + add;
-    } else {
-      code.push(add);
-    }
-  }
-};
+} from '../../../common/src/utils';
 
 export const codeToString = (
   code: Code,

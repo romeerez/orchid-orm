@@ -8,12 +8,15 @@ import {
 import { JSONNotNullish, JSONNullish, notNullish, nullish } from './nullish';
 import { intersection, JSONIntersection } from './intersection';
 import { array, JSONArray } from './array';
-import { ColumnChain, ColumnData } from '../columnType';
-import { addCode, columnChainToCode } from '../code';
+import { ColumnChain } from '../columnType';
+import { columnChainToCode } from '../code';
 import { union } from './union';
-import { toArray } from '../../utils';
-import { Code } from '../../../../common/src/columns/code';
-import { ValidationContext } from '../../../../common/src/columns/columnType';
+import { addCode, Code } from '../../../../common/src/columns/code';
+import {
+  ColumnDataBase,
+  ValidationContext,
+} from '../../../../common/src/columns/columnType';
+import { toArray } from '../../../../common/src/utils';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type JSONTypeAny = JSONType<any>;
@@ -24,7 +27,7 @@ export type DeepPartial<T extends JSONTypeAny> = ReturnType<
   ? T
   : ReturnType<T['deepPartial']>;
 
-export type JSONTypeData = ColumnData & {
+export type JSONTypeData = ColumnDataBase & {
   optional?: true;
   nullable?: true;
   isDeepPartial?: true;

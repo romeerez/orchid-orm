@@ -6,9 +6,12 @@ import {
   JSONTypeData,
   toCode,
 } from './typeBase';
-import { arrayMethods, ArrayMethods } from '../commonMethods';
-import { toArray } from '../../utils';
-import { addCode } from '../code';
+import {
+  arrayMethods,
+  ArrayMethods,
+} from '../../../../common/src/columns/commonMethods';
+import { toArray } from '../../../../common/src/utils';
+import { addCode } from '../../../../common/src/columns/code';
 
 export type ArrayCardinality = 'many' | 'atLeastOne';
 

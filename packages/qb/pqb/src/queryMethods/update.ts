@@ -8,14 +8,13 @@ import {
   Relation,
 } from '../relations';
 import { WhereArg, WhereResult } from './where';
-import { EmptyObject } from '../utils';
 import { CreateData } from './create';
 import { parseResult, queryMethodByReturnType } from './then';
 import { UpdateQueryData } from '../sql';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
 import { isRaw, RawExpression } from '../../../common/src/raw';
-import { MaybeArray, StringKey } from '../../../common/src/utils';
+import { EmptyObject, MaybeArray, StringKey } from '../../../common/src/utils';
 
 export type UpdateData<T extends Query> = {
   [K in keyof T['type']]?: T['type'][K] | RawExpression;

@@ -5,9 +5,9 @@ import { QueryBase } from '../query';
 import { addValue, q } from './common';
 import { ToSqlCtx } from './toSql';
 import { SelectQueryData } from './data';
-import { EMPTY_OBJECT } from '../utils';
 import { Operator } from '../../../common/src/columns/operators';
 import { isRaw, RawExpression } from '../../../common/src/raw';
+import { emptyObject } from '../../../common/src/utils';
 
 const aggregateOptionNames: (keyof AggregateItemOptions)[] = [
   'distinct',
@@ -117,7 +117,7 @@ export const havingToSql = (
                   {
                     function: key,
                     arg: column,
-                    options: EMPTY_OBJECT,
+                    options: emptyObject,
                   },
                   quotedAs,
                 )} = ${addValue(ctx.values, valueOrOptions)}`,

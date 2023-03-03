@@ -5,7 +5,7 @@ import {
   JSONTypeData,
   toCode,
 } from './typeBase';
-import { toArray } from '../../utils';
+import { toArray } from '../../../../common/src/utils';
 
 export interface JSONLazy<T extends JSONTypeAny>
   extends JSONType<T['type'], 'lazy'> {

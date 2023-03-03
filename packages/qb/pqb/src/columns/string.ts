@@ -1,27 +1,12 @@
 import { ColumnData, ColumnType } from './columnType';
 import { Operators } from './operators';
-import { singleQuote } from '../utils';
 import { NumberBaseColumn } from './number';
 import { assignMethodsToClass } from './utils';
-import { stringTypeMethods } from './commonMethods';
+import { stringTypeMethods } from '../../../common/src/columns/commonMethods';
 import { columnCode } from './code';
 import { Code } from '../../../common/src/columns/code';
-import { joinTruthy } from '../../../common/src/utils';
-
-export type BaseStringData = ColumnData & {
-  min?: number;
-  max?: number;
-  length?: number;
-  email?: boolean;
-  url?: boolean;
-  uuid?: boolean;
-  cuid?: boolean;
-  regex?: RegExp;
-  startsWith?: string;
-  endsWith?: string;
-  trim?: boolean;
-  isNonEmpty?: true;
-};
+import { joinTruthy, singleQuote } from '../../../common/src/utils';
+import { BaseStringData } from '../../../common/src/columns/scalarTypes';
 
 const stringDataToCode = (data: BaseStringData) => {
   let code = '';

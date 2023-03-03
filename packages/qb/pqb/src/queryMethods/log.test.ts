@@ -6,7 +6,7 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { logColors } from './log';
-import { noop } from '../utils';
+import { noop } from '../../../common/src/utils';
 
 describe('query log', () => {
   useTestDatabase();

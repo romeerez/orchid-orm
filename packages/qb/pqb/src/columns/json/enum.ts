@@ -1,5 +1,5 @@
 import { constructType, JSONType, toCode } from './typeBase';
-import { singleQuoteArray } from '../../utils';
+import { singleQuoteArray } from '../../../../common/src/utils';
 
 export interface JSONEnum<
   U extends string = string,

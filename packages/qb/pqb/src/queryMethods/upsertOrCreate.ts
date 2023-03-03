@@ -3,7 +3,7 @@ import { UpdateData } from './update';
 import { CreateData } from './create';
 import { WhereResult } from './where';
 import { MoreThanOneRowError } from '../errors';
-import { isObjectEmpty } from '../utils';
+import { isObjectEmpty } from '../../../common/src/utils';
 
 export type UpsertData<T extends Query> = {
   update: UpdateData<T>;
