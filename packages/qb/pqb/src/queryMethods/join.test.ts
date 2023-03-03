@@ -141,14 +141,110 @@ describe('join callback with query builder', () => {
       });
     });
 
-    describe('whereIn', () => {
-      // it.only('should allow to specify a column of the main table', () => {
-      //   const q = User.join(Message, (q) =>
-      //     q.whereIn('text', ['text']).whereIn('user.name', ['name']),
-      //   );
-      //
-      //   console.log(q.toSql());
-      // });
+    describe('using main table columns', () => {
+      const sql = `SELECT "user".* FROM "user" JOIN "message" ON `;
+
+      it('should use main table column in .where', () => {
+        const q = User.join(Message, (q) => q.where({ 'user.name': 'name' }));
+
+        expectSql(q.toSql(), sql + `"user"."name" = $1`, ['name']);
+      });
+
+      it('should use main table column in .whereNot', () => {
+        const q = User.join(Message, (q) =>
+          q.whereNot({ 'user.name': 'name' }),
+        );
+
+        expectSql(q.toSql(), sql + `NOT "user"."name" = $1`, ['name']);
+      });
+
+      it('should use main table column in .or', () => {
+        const q = User.join(Message, (q) =>
+          q.or({ 'user.name': 'name' }, { 'user.age': 20 }),
+        );
+
+        expectSql(q.toSql(), sql + `"user"."name" = $1 OR "user"."age" = $2`, [
+          'name',
+          20,
+        ]);
+      });
+
+      it('should use main table column in .orNot', () => {
+        const q = User.join(Message, (q) =>
+          q.orNot({ 'user.name': 'name' }, { 'user.age': 20 }),
+        );
+
+        expectSql(
+          q.toSql(),
+          sql + `NOT "user"."name" = $1 OR NOT "user"."age" = $2`,
+          ['name', 20],
+        );
+      });
+
+      it('should use main table column in .whereIn', () => {
+        const q = User.join(Message, (q) => q.whereIn('user.name', ['name']));
+
+        expectSql(q.toSql(), sql + `"user"."name" IN ($1)`, ['name']);
+      });
+
+      it('should use main table column in .orWhereIn', () => {
+        const q = User.join(Message, (q) =>
+          q.where({ 'user.age': 20 }).orWhereIn('user.name', ['name']),
+        );
+
+        expectSql(
+          q.toSql(),
+          sql + `"user"."age" = $1 OR "user"."name" IN ($2)`,
+          [20, 'name'],
+        );
+      });
+
+      it('should use main table column in .whereNotIn', () => {
+        const q = User.join(Message, (q) =>
+          q.whereNotIn('user.name', ['name']),
+        );
+
+        expectSql(q.toSql(), sql + `NOT "user"."name" IN ($1)`, ['name']);
+      });
+
+      it('should use main table column in .orWhereNotIn', () => {
+        const q = User.join(Message, (q) =>
+          q.where({ 'user.age': 20 }).orWhereNotIn('user.name', ['name']),
+        );
+
+        expectSql(
+          q.toSql(),
+          sql + `"user"."age" = $1 OR NOT "user"."name" IN ($2)`,
+          [20, 'name'],
+        );
+      });
+    });
+
+    describe('join sub query', () => {
+      it('should join a sub query', () => {
+        const q = User.join(
+          Message.select('id', 'authorId', 'text').as('t'),
+          true,
+        )
+          .where({
+            't.id': 1,
+          })
+          .select({
+            messageId: 't.id',
+            messageText: 't.text',
+          });
+
+        expectSql(
+          q.toSql(),
+          `
+            SELECT "t"."id" AS "messageId", "t"."text" AS "messageText"
+            FROM "user"
+            JOIN (SELECT "t"."id", "t"."authorId", "t"."text" FROM "message" AS "t") "t" ON true
+            WHERE "t"."id" = $1
+          `,
+          [1],
+        );
+      });
     });
 
     const buildSql = (cb: (q: OnQueryBuilder) => OnQueryBuilder): Sql => {

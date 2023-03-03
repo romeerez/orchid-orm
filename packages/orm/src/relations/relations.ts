@@ -342,7 +342,10 @@ const makeRelationQuery = (
 
       const query = this.isSubQuery
         ? toTable
-        : toTable._whereExists(data.reverseJoin(this, toTable), (q) => q);
+        : toTable._whereExists(
+            this.baseQuery,
+            (q) => data.reverseJoin(this, toTable) as unknown as typeof q,
+          );
 
       query.query[relationQueryKey] = {
         relationName,

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.9.26
+
+### Patch Changes
+
+- Support join subquery
+
 ## 0.9.25
 
 ### Patch Changes

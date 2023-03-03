@@ -12,7 +12,7 @@ import { getQueryAs, toArray } from '../utils';
 import { processJoinItem } from './join';
 import { makeSql, ToSqlCtx } from './toSql';
 import { getRaw } from '../raw';
-import { QueryData } from './data';
+import { QueryData, SelectQueryData } from './data';
 import { isRaw, RawExpression } from '../../../common/src/raw';
 import { MaybeArray } from '../../../common/src/utils';
 
@@ -195,10 +195,27 @@ const processWhere = (
           )}`,
         );
       } else {
-        const column = table.query.shape[key];
-        if (!column) {
-          // TODO: custom error classes
-          throw new Error(`Unknown column ${key} provided to condition`);
+        let column = table.query.shape[key];
+        let quotedColumn: string | undefined;
+        if (column) {
+          quotedColumn = qc(key, quotedAs);
+        } else if (!column) {
+          const index = key.indexOf('.');
+          if (index !== -1) {
+            const joinedTable = key.slice(0, index);
+            const joinedColumn = key.slice(index + 1);
+            column = (table.query as SelectQueryData).joinedShapes?.[
+              joinedTable
+            ]?.[joinedColumn] as typeof column;
+            quotedColumn = qc(joinedColumn, q(joinedTable));
+          } else {
+            quotedColumn = undefined;
+          }
+
+          if (!column || !quotedColumn) {
+            // TODO: custom error classes
+            throw new Error(`Unknown column ${key} provided to condition`);
+          }
         }
 
         for (const op in value) {
@@ -210,7 +227,7 @@ const processWhere = (
 
           ands.push(
             `${prefix}${operator(
-              qc(key, quotedAs),
+              quotedColumn as string,
               value[op as keyof typeof value],
               ctx.values,
             )}`,

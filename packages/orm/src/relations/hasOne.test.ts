@@ -1478,8 +1478,8 @@ describe('hasOne through', () => {
             WHERE "message"."text" = $1
               AND EXISTS (
                 SELECT 1 FROM "user"
-                WHERE "profile"."userId" = "user"."id"
-                  AND "user"."id" = "message"."authorId"
+                WHERE "user"."id" = "message"."authorId"
+                  AND "profile"."userId" = "user"."id"
                 LIMIT 1
               )
             LIMIT 1
@@ -1511,8 +1511,8 @@ describe('hasOne through', () => {
             WHERE "message"."text" = $1
               AND EXISTS (
                 SELECT 1 FROM "user"
-                WHERE "profile"."userId" = "user"."id"
-                  AND "user"."id" = "message"."authorId"
+                WHERE "user"."id" = "message"."authorId"
+                  AND "profile"."userId" = "user"."id"
                 LIMIT 1
               )
             LIMIT 1
@@ -1532,8 +1532,8 @@ describe('hasOne through', () => {
         SELECT * FROM "profile" AS "p"
         WHERE EXISTS (
           SELECT 1 FROM "user"
-          WHERE "p"."userId" = "user"."id"
-            AND "user"."id" = "m"."authorId"
+          WHERE "user"."id" = "m"."authorId"
+            AND "p"."userId" = "user"."id"
           LIMIT 1
         )
       `,
@@ -1549,8 +1549,8 @@ describe('hasOne through', () => {
           SELECT 1 FROM "profile"
           WHERE EXISTS (
             SELECT 1 FROM "user"
-            WHERE "profile"."userId" = "user"."id"
-              AND "user"."id" = "message"."authorId"
+            WHERE "user"."id" = "message"."authorId"
+              AND "profile"."userId" = "user"."id"
             LIMIT 1
           )
           LIMIT 1
@@ -1569,8 +1569,8 @@ describe('hasOne through', () => {
           SELECT 1 FROM "profile"
           WHERE EXISTS (
             SELECT 1 FROM "user"
-            WHERE "profile"."userId" = "user"."id"
-              AND "user"."id" = "m"."authorId"
+            WHERE "user"."id" = "m"."authorId"
+              AND "profile"."userId" = "user"."id"
             LIMIT 1
           )
           AND "profile"."bio" = $1
@@ -1596,8 +1596,8 @@ describe('hasOne through', () => {
         JOIN "profile"
           ON EXISTS (
             SELECT 1 FROM "user"
-            WHERE "profile"."userId" = "user"."id"
-              AND "user"."id" = "m"."authorId"
+            WHERE "user"."id" = "m"."authorId"
+              AND "profile"."userId" = "user"."id"
             LIMIT 1
           )
           AND "profile"."bio" = $1
@@ -1626,8 +1626,8 @@ describe('hasOne through', () => {
                 WHERE "profile"."bio" = $1
                   AND EXISTS (
                         SELECT 1 FROM "user"
-                        WHERE "profile"."userId" = "user"."id"
-                          AND "user"."id" = "m"."authorId"
+                        WHERE "user"."id" = "m"."authorId"
+                          AND "profile"."userId" = "user"."id"
                         LIMIT 1
                       )
                 LIMIT $2
@@ -1655,8 +1655,8 @@ describe('hasOne through', () => {
                 SELECT * FROM "profile"
                 WHERE EXISTS (
                     SELECT 1 FROM "user"
-                    WHERE "profile"."userId" = "user"."id"
-                      AND "user"."id" = "message"."authorId"
+                    WHERE "user"."id" = "message"."authorId"
+                      AND "profile"."userId" = "user"."id"
                     LIMIT 1
                   )
                 LIMIT $1
@@ -1688,8 +1688,8 @@ describe('hasOne through', () => {
               FROM "profile"
               WHERE EXISTS (
                   SELECT 1 FROM "user"
-                  WHERE "profile"."userId" = "user"."id"
-                    AND "user"."id" = "m"."authorId"
+                  WHERE "user"."id" = "m"."authorId"
+                    AND "profile"."userId" = "user"."id"
                   LIMIT 1
                 )
             ), false) AS "hasProfile"

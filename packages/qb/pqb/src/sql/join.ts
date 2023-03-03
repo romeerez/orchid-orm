@@ -81,13 +81,22 @@ export const processJoinItem = (
 
     target = quotedFrom || quoteSchemaAndTable(query.schema, first.table);
 
+    const subQuery = first.toSql({
+      values: ctx.values,
+    });
+
     let joinAs = quotedFrom || q(first.table);
-    if (query.as) {
-      const quoted = q(query.as);
-      if (quoted !== joinAs) {
-        joinAs = quoted;
-        target += ` AS ${quoted}`;
-      }
+
+    const qAs = query.as ? q(query.as) : undefined;
+    const addAs = qAs && qAs !== joinAs;
+
+    if (
+      subQuery.text !== `SELECT * FROM ${target}${addAs ? ` AS ${qAs}` : ''}`
+    ) {
+      target = `(${subQuery.text}) ${qAs || joinAs}`;
+    } else if (addAs) {
+      joinAs = qAs;
+      target += ` AS ${qAs}`;
     }
 
     conditions = processArgs(args, ctx, table, first, joinAs, quotedAs);
@@ -163,12 +172,14 @@ const getConditionsFor3Or4LengthItem = (
 };
 
 const getObjectOrRawConditions = (
-  data: Record<string, string | RawExpression> | RawExpression,
+  data: Record<string, string | RawExpression> | RawExpression | true,
   values: unknown[],
   quotedAs: string | undefined,
   joinAs: string | undefined,
 ): string => {
-  if (isRaw(data)) {
+  if (data === true) {
+    return 'true';
+  } else if (isRaw(data)) {
     return getRaw(data, values);
   } else {
     const pairs: string[] = [];

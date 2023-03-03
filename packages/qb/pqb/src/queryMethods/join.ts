@@ -11,7 +11,7 @@ import {
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
 import { WhereQueryBuilder } from './where';
 import { Relation, RelationsBase } from '../relations';
-import { QueryData } from '../sql';
+import { QueryData, SelectQueryData } from '../sql';
 import { ColumnsShapeBase } from '../columns';
 import { RawExpression } from '../../../common/src/raw';
 import { getShapeFromSelect } from './select';
@@ -69,7 +69,8 @@ export type JoinArgs<
       leftColumn: WithSelectable<T, W> | RawExpression,
       op: string,
       rightColumn: Selectable<T> | RawExpression,
-    ];
+    ]
+  | [query: Q, conditions: true];
 
 type JoinResult<
   T extends Query,
@@ -489,6 +490,9 @@ export class OnQueryBuilder<
     public joinTo: QueryBase,
   ) {
     super(q, shape);
+    (this.query as SelectQueryData).joinedShapes = {
+      [(joinTo.query.as || joinTo.table) as string]: joinTo.shape,
+    };
   }
 
   on<T extends this>(this: T, ...args: OnArgs<T>): T {

@@ -447,8 +447,11 @@ const Message = db('message', (t) => ({
   text: t.text(1, 1000),
 }))
 
-// Join message where authorId = id:
-User.join(Message, 'userId', 'id')
+User
+  // Join message where authorId = id:
+  .join(Message, 'userId', 'id')
+  // after joining a table, we can use it in `where` conditions:
+  .where({ 'message.text': { startsWith: 'Hi' } })
   .select(
     'name', // name is User column, table name may be omitted
     'message.text', // text is the Message column, and the table name is required
@@ -490,6 +493,9 @@ User.join(Message, {
   // value can be a raw expression:
   userId: User.raw('SQL expression'),
 })
+
+// join all records without conditions
+User.join(Message, true)
 ```
 
 `.join` and other join methods can accept a callback with a special query builder:
@@ -555,6 +561,29 @@ JOIN "message"
  AND "message"."id" IN (1, 2, 3)
  AND "user"."id" IN (4, 5, 6)
 ```
+
+The join argument can be a query with `select`, `where`, and other methods. In such case, it will be handled as a sub query:
+
+```ts
+User.join(
+  Message
+    .select('id', 'userId', 'text')
+    .where({ text: { startsWith: 'Hi' } })
+    .as('t'),
+  'userId',
+  'id',
+)
+```
+
+It will produce such SQL:
+
+``sql
+SELECT * FROM "user"
+JOIN (
+  SELECT "t"."id", "t"."userId", "t"."text"
+  FROM "message" AS "t"
+) "t" ON "t"."userId" = "user"."id"
+``
 
 ## group
 

@@ -835,7 +835,6 @@ export const testWhere = (
     });
   });
 
-  // TODO: add tests for methods below
   describe('whereNotIn', () => {
     it('should handle (column, array)', () => {
       expectSql(
@@ -1539,8 +1538,8 @@ export const testJoin = (
 
   it('should use conditions from provided query', () => {
     expectSql(
-      q[join](Message.where({ text: 'text' }), (q) =>
-        q.on('authorId', 'id'),
+      q[join](Message, (q) =>
+        q.on('authorId', 'id').where({ text: 'text' }),
       ).toSql(),
       sql(
         `"message"`,
@@ -1624,19 +1623,1278 @@ describe('where', () => {
   });
 });
 
-// describe('joined columns', () => {
-//   const joinQuery = User.join(Message, (q) => q.on('authorId', 'id'));
-//   const sql = `SELECT "user".* FROM "user" JOIN "message" ON "message"."authorId" = "user"."id" WHERE `;
-//
-//   it.only('should be available in `where` object', () => {
-//     const q = joinQuery.where({ 'message.id': 1 });
-//
-//     expectSql(q.toSql(), sql + '"message"."id" = $1', [1]);
-//   });
-//
-//   it.only('should be available in `where` object with operator', () => {
-//     const q = joinQuery.where({ 'message.id': { gt: 1 } });
-//
-//     expectSql(q.toSql(), sql + '"message"."id" > $1', [1]);
-//   });
-// });
+describe('joined columns', () => {
+  const j = User.join(Message, (q) => q.on('authorId', 'id'));
+  const sql = `SELECT "user".* FROM "user" JOIN "message" ON "message"."authorId" = "user"."id" WHERE `;
+
+  it('should be available in `where` object', () => {
+    const q = j.where({ 'message.id': 1, 'message.text': null });
+
+    expectSql(
+      q.toSql(),
+      sql + '"message"."id" = $1 AND "message"."text" IS NULL',
+      [1],
+    );
+  });
+
+  it('should accept sub query', () => {
+    const q = j.where(
+      { 'message.id': 1 },
+      j.or({ 'message.id': 2 }, { 'message.id': 3, 'message.text': 'text' }),
+    );
+
+    expectSql(
+      q.toSql(),
+      sql +
+        `"message"."id" = $1 AND ("message"."id" = $2 OR "message"."id" = $3 AND "message"."text" = $4)`,
+      [1, 2, 3, 'text'],
+    );
+  });
+
+  it('should handle condition with operator', () => {
+    const q = j.where({ 'message.id': { gt: 1 } });
+
+    expectSql(q.toSql(), sql + '"message"."id" > $1', [1]);
+  });
+
+  it('should handle condition with operator and sub query', () => {
+    const q = j.where({ 'message.id': { in: User.select('id') } });
+
+    expectSql(
+      q.toSql(),
+      sql + `"message"."id" IN (SELECT "user"."id" FROM "user")`,
+    );
+  });
+
+  it('should handle condition with operator and raw', () => {
+    const q = j.where({ 'message.id': { in: db.raw(`(1, 2, 3)`) } });
+
+    expectSql(q.toSql(), sql + `"message"."id" IN (1, 2, 3)`);
+  });
+
+  it('should accept raw sql', () => {
+    const q = j.where({ 'message.id': db.raw(`1 + 2`) });
+
+    expectSql(q.toSql(), sql + `"message"."id" = 1 + 2`);
+  });
+
+  describe('whereNot', () => {
+    it('should handle null value', () => {
+      const qs = [
+        j.where({ NOT: { 'message.id': 1, 'message.text': null } }),
+        j.whereNot({ 'message.id': 1, 'message.text': null }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql + `NOT "message"."id" = $1 AND NOT "message"."text" IS NULL`,
+          [1],
+        );
+      }
+    });
+
+    it('should accept sub query', () => {
+      const qs = [
+        j.where({
+          NOT: [
+            { 'message.id': 1 },
+            j.where({
+              OR: [
+                { 'message.id': 2 },
+                { 'message.id': 3, 'message.text': 'text' },
+              ],
+            }),
+          ],
+        }),
+        j.whereNot(
+          { 'message.id': 1 },
+          j.or(
+            { 'message.id': 2 },
+            { 'message.id': 3, 'message.text': 'text' },
+          ),
+        ),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `NOT "message"."id" = $1 AND NOT (
+            "message"."id" = $2 OR "message"."id" = $3 AND "message"."text" = $4
+          )`,
+          [1, 2, 3, 'text'],
+        );
+      }
+    });
+
+    it('should handle condition with operator', () => {
+      const qs = [
+        j.where({ NOT: { 'message.id': { gt: 20 } } }),
+        j.whereNot({ 'message.id': { gt: 20 } }),
+      ];
+
+      for (const q of qs) {
+        expectSql(q.toSql(), sql + `NOT "message"."id" > $1`, [20]);
+      }
+    });
+
+    it('should handle condition with operator and sub query', () => {
+      const qs = [
+        j.where({ NOT: { 'message.id': { in: User.select('id') } } }),
+        j.whereNot({ 'message.id': { in: User.select('id') } }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql + `NOT "message"."id" IN (SELECT "user"."id" FROM "user")`,
+        );
+      }
+    });
+
+    it('should handle condition with operator and raw', () => {
+      const qs = [
+        j.where({ NOT: { 'message.id': { in: db.raw(`(1, 2, 3)`) } } }),
+        j.whereNot({ 'message.id': { in: db.raw(`(1, 2, 3)`) } }),
+      ];
+
+      for (const q of qs) {
+        expectSql(q.toSql(), sql + `NOT "message"."id" IN (1, 2, 3)`);
+      }
+    });
+
+    it('should accept raw sql', () => {
+      const qs = [
+        j.where({ NOT: { 'message.id': db.raw(`1 + 2`) } }),
+        j.whereNot({ 'message.id': db.raw(`1 + 2`) }),
+      ];
+
+      for (const q of qs) {
+        expectSql(q.toSql(), sql + `NOT "message"."id" = 1 + 2`);
+      }
+    });
+
+    it('should handle sub query builder', () => {
+      const qs = [
+        j.where({
+          NOT: (q) =>
+            q.where({
+              IN: { columns: ['message.id'], values: [[1, 2, 3]] },
+              EXISTS: [User, 'id', 'message.id'],
+            }),
+        }),
+        j.whereNot((q) =>
+          q.where({
+            IN: { columns: ['message.id'], values: [[1, 2, 3]] },
+            EXISTS: [User, 'id', 'message.id'],
+          }),
+        ),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `NOT "message"."id" IN ($1, $2, $3) AND NOT EXISTS (
+            SELECT 1 FROM "user" WHERE "user"."id" = "message"."id" LIMIT 1
+          )`,
+          [1, 2, 3],
+        );
+      }
+    });
+  });
+
+  describe('or', () => {
+    it('should join conditions with or', () => {
+      const qs = [
+        j.where({ OR: [{ 'message.id': 1 }, { 'message.text': 'text' }] }),
+        j.or({ 'message.id': 1 }, { 'message.text': 'text' }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql + `"message"."id" = $1 OR "message"."text" = $2`,
+          [1, 'text'],
+        );
+      }
+    });
+
+    it('should handle sub queries', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { 'message.id': 1 },
+            j.where({ 'message.id': 2 }).and({ 'message.text': 'text' }),
+          ],
+        }),
+        j.or(
+          { 'message.id': 1 },
+          j.where({ 'message.id': 2 }).and({ 'message.text': 'text' }),
+        ),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `"message"."id" = $1 OR ("message"."id" = $2 AND "message"."text" = $3)`,
+          [1, 2, 'text'],
+        );
+      }
+    });
+
+    it('should accept raw sql', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { 'message.id': db.raw(`1 + 2`) },
+            { 'message.text': db.raw(`2 + 3`) },
+          ],
+        }),
+        j.or(
+          { 'message.id': db.raw(`1 + 2`) },
+          { 'message.text': db.raw(`2 + 3`) },
+        ),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql + `"message"."id" = 1 + 2 OR "message"."text" = 2 + 3`,
+        );
+      }
+    });
+  });
+
+  describe('orNot', () => {
+    it('should join conditions with or', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { NOT: { 'message.id': 1 } },
+            { NOT: { 'message.text': 'text' } },
+          ],
+        }),
+        j.orNot({ 'message.id': 1 }, { 'message.text': 'text' }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql + `NOT "message"."id" = $1 OR NOT "message"."text" = $2`,
+          [1, 'text'],
+        );
+      }
+    });
+
+    it('should handle sub queries', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { NOT: { 'message.id': 1 } },
+            {
+              NOT: j.where({ 'message.id': 2 }).and({ 'message.text': 'text' }),
+            },
+          ],
+        }),
+        j.orNot(
+          { 'message.id': 1 },
+          j.where({ 'message.id': 2 }).and({ 'message.text': 'text' }),
+        ),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `NOT "message"."id" = $1 OR NOT ("message"."id" = $2 AND "message"."text" = $3)`,
+          [1, 2, 'text'],
+        );
+      }
+    });
+
+    it('should accept raw sql', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { NOT: { 'message.id': db.raw(`1 + 2`) } },
+            { NOT: { 'message.text': db.raw(`2 + 3`) } },
+          ],
+        }),
+        j.orNot(
+          { 'message.id': db.raw(`1 + 2`) },
+          { 'message.text': db.raw(`2 + 3`) },
+        ),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql + `NOT "message"."id" = 1 + 2 OR NOT "message"."text" = 2 + 3`,
+        );
+      }
+    });
+  });
+
+  describe('whereIn', () => {
+    it('should handle (column, array)', () => {
+      const qs = [
+        j.where({ IN: { columns: ['message.id'], values: [[1, 2, 3]] } }),
+        j.whereIn('message.id', [1, 2, 3]),
+      ];
+
+      for (const q of qs) {
+        expectSql(q.toSql(), sql + `"message"."id" IN ($1, $2, $3)`, [1, 2, 3]);
+      }
+    });
+
+    it('should handle multiple expressions', () => {
+      const qs = [
+        j.where({
+          IN: [
+            { columns: ['message.id'], values: [[1, 2, 3]] },
+            { columns: ['message.text'], values: [['a', 'b', 'c']] },
+          ],
+        }),
+        j.whereIn({
+          'message.id': [1, 2, 3],
+          'message.text': ['a', 'b', 'c'],
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `"message"."id" IN ($1, $2, $3) AND "message"."text" IN ($4, $5, $6)`,
+          [1, 2, 3, 'a', 'b', 'c'],
+        );
+      }
+    });
+
+    it('should handle raw query', () => {
+      const qs = [
+        j.where({
+          IN: { columns: ['message.id'], values: db.raw(`(1, 2, 3)`) },
+        }),
+        j.whereIn('message.id', db.raw(`(1, 2, 3)`)),
+      ];
+
+      for (const q of qs) {
+        expectSql(q.toSql(), sql + `"message"."id" IN (1, 2, 3)`);
+      }
+    });
+
+    it('should handle multiple raw queries', () => {
+      const qs = [
+        j.where({
+          IN: [
+            { columns: ['message.id'], values: db.raw(`(1, 2, 3)`) },
+            { columns: ['message.text'], values: db.raw(`('a', 'b', 'c')`) },
+          ],
+        }),
+        j.whereIn({
+          'message.id': db.raw(`(1, 2, 3)`),
+          'message.text': db.raw(`('a', 'b', 'c')`),
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `"message"."id" IN (1, 2, 3) AND "message"."text" IN ('a', 'b', 'c')`,
+        );
+      }
+    });
+
+    it('should handle sub query', () => {
+      const qs = [
+        j.where({ IN: { columns: ['message.id'], values: User.select('id') } }),
+        j.whereIn('message.id', User.select('id')),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql + `"message"."id" IN (SELECT "user"."id" FROM "user")`,
+        );
+      }
+    });
+
+    it('should handle multiple sub queries', () => {
+      const qs = [
+        j.where({
+          IN: [
+            { columns: ['message.id'], values: User.select('id') },
+            { columns: ['message.text'], values: User.select('name') },
+          ],
+        }),
+        j.whereIn({
+          'message.id': User.select('id'),
+          'message.text': User.select('name'),
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `"message"."id" IN (SELECT "user"."id" FROM "user")
+          AND "message"."text" IN (SELECT "user"."name" FROM "user")`,
+        );
+      }
+    });
+
+    describe('tuple', () => {
+      it('should handle values', () => {
+        const qs = [
+          j.where({
+            IN: {
+              columns: ['message.id', 'message.text'],
+              values: [
+                [1, 'a'],
+                [2, 'b'],
+              ],
+            },
+          }),
+          j.whereIn(
+            ['message.id', 'message.text'],
+            [
+              [1, 'a'],
+              [2, 'b'],
+            ],
+          ),
+        ];
+
+        for (const q of qs) {
+          expectSql(
+            q.toSql(),
+            sql + `("message"."id", "message"."text") IN (($1, $2), ($3, $4))`,
+            [1, 'a', 2, 'b'],
+          );
+        }
+      });
+
+      it('should handle raw query', () => {
+        const qs = [
+          j.where({
+            IN: {
+              columns: ['message.id', 'message.text'],
+              values: db.raw(`((1, 'a'), (2, 'b'))`),
+            },
+          }),
+          j.whereIn(
+            ['message.id', 'message.text'],
+            db.raw(`((1, 'a'), (2, 'b'))`),
+          ),
+        ];
+
+        for (const q of qs) {
+          expectSql(
+            q.toSql(),
+            sql + `("message"."id", "message"."text") IN ((1, 'a'), (2, 'b'))`,
+          );
+        }
+      });
+
+      it('should handle sub query', () => {
+        const qs = [
+          j.where({
+            IN: {
+              columns: ['message.id', 'message.text'],
+              values: User.select('id', 'name'),
+            },
+          }),
+          j.whereIn(['message.id', 'message.text'], User.select('id', 'name')),
+        ];
+
+        for (const q of qs) {
+          expectSql(
+            q.toSql(),
+            sql +
+              `("message"."id", "message"."text") IN (SELECT "user"."id", "user"."name" FROM "user")`,
+          );
+        }
+      });
+    });
+  });
+
+  describe('orWhereIn', () => {
+    it('should handle (column, array)', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { 'message.id': 1 },
+            { IN: { columns: ['message.id'], values: [[1, 2, 3]] } },
+          ],
+        }),
+        j.where({ 'message.id': 1 }).orWhereIn('message.id', [1, 2, 3]),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql + `"message"."id" = $1 OR "message"."id" IN ($2, $3, $4)`,
+          [1, 1, 2, 3],
+        );
+      }
+    });
+
+    it('should handle object of columns and arrays', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { 'message.id': 1 },
+            {
+              IN: [
+                { columns: ['message.id'], values: [[1, 2, 3]] },
+                { columns: ['message.text'], values: [['a', 'b', 'c']] },
+              ],
+            },
+          ],
+        }),
+        j.where({ 'message.id': 1 }).orWhereIn({
+          'message.id': [1, 2, 3],
+          'message.text': ['a', 'b', 'c'],
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `"message"."id" = $1
+          OR "message"."id" IN ($2, $3, $4) AND "message"."text" IN ($5, $6, $7)`,
+          [1, 1, 2, 3, 'a', 'b', 'c'],
+        );
+      }
+    });
+
+    it('should handle raw query', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { 'message.id': 1 },
+            { IN: { columns: ['message.id'], values: db.raw(`(1, 2, 3)`) } },
+          ],
+        }),
+        j.where({ 'message.id': 1 }).orWhereIn({
+          'message.id': db.raw(`(1, 2, 3)`),
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql + `"message"."id" = $1 OR "message"."id" IN (1, 2, 3)`,
+          [1],
+        );
+      }
+    });
+
+    it('should handle multiple raw queries', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { 'message.id': 1 },
+            {
+              IN: [
+                { columns: ['message.id'], values: db.raw(`(1, 2, 3)`) },
+                {
+                  columns: ['message.text'],
+                  values: db.raw(`('a', 'b', 'c')`),
+                },
+              ],
+            },
+          ],
+        }),
+        j.where({ 'message.id': 1 }).orWhereIn({
+          'message.id': db.raw(`(1, 2, 3)`),
+          'message.text': db.raw(`('a', 'b', 'c')`),
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `"message"."id" = $1
+          OR "message"."id" IN (1, 2, 3)
+          AND "message"."text" IN ('a', 'b', 'c')`,
+          [1],
+        );
+      }
+    });
+
+    it('should handle sub query', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { 'message.id': 1 },
+            {
+              IN: { columns: ['message.id'], values: User.select('id') },
+            },
+          ],
+        }),
+        j.where({ 'message.id': 1 }).orWhereIn({
+          'message.id': User.select('id'),
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `"message"."id" = $1 OR "message"."id" IN (SELECT "user"."id" FROM "user")`,
+          [1],
+        );
+      }
+    });
+
+    it('should handle multiple sub queries', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { 'message.id': 1 },
+            {
+              IN: [
+                { columns: ['message.id'], values: User.select('id') },
+                { columns: ['message.text'], values: User.select('name') },
+              ],
+            },
+          ],
+        }),
+        j.where({ 'message.id': 1 }).orWhereIn({
+          'message.id': User.select('id'),
+          'message.text': User.select('name'),
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `"message"."id" = $1
+          OR "message"."id" IN (SELECT "user"."id" FROM "user")
+          AND "message"."text" IN (SELECT "user"."name" FROM "user")`,
+          [1],
+        );
+      }
+    });
+
+    describe('tuple', () => {
+      it('should handle values', () => {
+        const qs = [
+          j.where({
+            OR: [
+              { 'message.id': 1 },
+              {
+                IN: {
+                  columns: ['message.id', 'message.text'],
+                  values: [
+                    [1, 'a'],
+                    [2, 'b'],
+                  ],
+                },
+              },
+            ],
+          }),
+          j.where({ 'message.id': 1 }).orWhereIn(
+            ['message.id', 'message.text'],
+            [
+              [1, 'a'],
+              [2, 'b'],
+            ],
+          ),
+        ];
+
+        for (const q of qs) {
+          expectSql(
+            q.toSql(),
+            sql +
+              `"message"."id" = $1
+            OR ("message"."id", "message"."text") IN (($2, $3), ($4, $5))`,
+            [1, 1, 'a', 2, 'b'],
+          );
+        }
+      });
+
+      it('should handle raw query', () => {
+        const qs = [
+          j.where({
+            OR: [
+              { 'message.id': 1 },
+              {
+                IN: {
+                  columns: ['message.id', 'message.text'],
+                  values: db.raw(`((1, 'a'), (2, 'b'))`),
+                },
+              },
+            ],
+          }),
+          j
+            .where({ 'message.id': 1 })
+            .orWhereIn(
+              ['message.id', 'message.text'],
+              db.raw(`((1, 'a'), (2, 'b'))`),
+            ),
+        ];
+
+        for (const q of qs) {
+          expectSql(
+            q.toSql(),
+            sql +
+              `"message"."id" = $1
+            OR ("message"."id", "message"."text") IN ((1, 'a'), (2, 'b'))`,
+            [1],
+          );
+        }
+      });
+
+      it('should handle sub query', () => {
+        const qs = [
+          j.where({
+            OR: [
+              { 'message.id': 1 },
+              {
+                IN: {
+                  columns: ['message.id', 'message.text'],
+                  values: User.select('id', 'name'),
+                },
+              },
+            ],
+          }),
+          j
+            .where({ 'message.id': 1 })
+            .orWhereIn(
+              ['message.id', 'message.text'],
+              User.select('id', 'name'),
+            ),
+        ];
+
+        for (const q of qs) {
+          expectSql(
+            q.toSql(),
+            sql +
+              `"message"."id" = $1
+            OR ("message"."id", "message"."text")
+            IN (SELECT "user"."id", "user"."name" FROM "user")`,
+            [1],
+          );
+        }
+      });
+    });
+  });
+
+  describe('whereNotIn', () => {
+    it('should handle (column, array)', () => {
+      const qs = [
+        j.where({
+          NOT: { IN: { columns: ['message.id'], values: [[1, 2, 3]] } },
+        }),
+        j.whereNotIn('message.id', [1, 2, 3]),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql + `NOT "message"."id" IN ($1, $2, $3)`,
+          [1, 2, 3],
+        );
+      }
+    });
+
+    it('should handle object of columns and arrays', () => {
+      const qs = [
+        j.where({
+          NOT: {
+            IN: [
+              { columns: ['message.id'], values: [[1, 2, 3]] },
+              { columns: ['message.text'], values: [['a', 'b', 'c']] },
+            ],
+          },
+        }),
+        j.whereNotIn({
+          'message.id': [1, 2, 3],
+          'message.text': ['a', 'b', 'c'],
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `NOT "message"."id" IN ($1, $2, $3)
+          AND NOT "message"."text" IN ($4, $5, $6)`,
+          [1, 2, 3, 'a', 'b', 'c'],
+        );
+      }
+    });
+
+    it('should handle raw query', () => {
+      const qs = [
+        j.where({
+          NOT: { IN: { columns: ['message.id'], values: db.raw(`(1, 2, 3)`) } },
+        }),
+        j.whereNotIn({
+          'message.id': db.raw(`(1, 2, 3)`),
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(q.toSql(), sql + `NOT "message"."id" IN (1, 2, 3)`);
+      }
+    });
+
+    it('should handle multiple raw queries', () => {
+      const qs = [
+        j.where({
+          NOT: {
+            IN: [
+              { columns: ['message.id'], values: db.raw(`(1, 2, 3)`) },
+              { columns: ['message.text'], values: db.raw(`('a', 'b', 'c')`) },
+            ],
+          },
+        }),
+        j.whereNotIn({
+          'message.id': db.raw(`(1, 2, 3)`),
+          'message.text': db.raw(`('a', 'b', 'c')`),
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `NOT "message"."id" IN (1, 2, 3)
+          AND NOT "message"."text" IN ('a', 'b', 'c')`,
+        );
+      }
+    });
+
+    it('should handle sub query', () => {
+      const qs = [
+        j.where({
+          NOT: { IN: { columns: ['message.id'], values: User.select('id') } },
+        }),
+        j.whereNotIn({
+          'message.id': User.select('id'),
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql + `NOT "message"."id" IN (SELECT "user"."id" FROM "user")`,
+        );
+      }
+    });
+
+    it('should handle multiple sub queries', () => {
+      const qs = [
+        j.where({
+          NOT: {
+            IN: [
+              { columns: ['message.id'], values: User.select('id') },
+              { columns: ['message.text'], values: User.select('name') },
+            ],
+          },
+        }),
+        j.whereNotIn({
+          'message.id': User.select('id'),
+          'message.text': User.select('name'),
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `NOT "message"."id" IN (SELECT "user"."id" FROM "user")
+          AND NOT "message"."text" IN (SELECT "user"."name" FROM "user")`,
+        );
+      }
+    });
+
+    describe('tuple', () => {
+      it('should handle values', () => {
+        const qs = [
+          j.where({
+            NOT: {
+              IN: {
+                columns: ['message.id', 'message.text'],
+                values: [
+                  [1, 'a'],
+                  [2, 'b'],
+                ],
+              },
+            },
+          }),
+          j.whereNotIn(
+            ['message.id', 'message.text'],
+            [
+              [1, 'a'],
+              [2, 'b'],
+            ],
+          ),
+        ];
+
+        for (const q of qs) {
+          expectSql(
+            q.toSql(),
+            sql +
+              `NOT ("message"."id", "message"."text") IN (($1, $2), ($3, $4))`,
+            [1, 'a', 2, 'b'],
+          );
+        }
+      });
+
+      it('should handle raw query', () => {
+        const qs = [
+          j.where({
+            NOT: {
+              IN: {
+                columns: ['message.id', 'message.text'],
+                values: db.raw(`((1, 'a'), (2, 'b'))`),
+              },
+            },
+          }),
+          j.whereNotIn(
+            ['message.id', 'message.text'],
+            db.raw(`((1, 'a'), (2, 'b'))`),
+          ),
+        ];
+
+        for (const q of qs) {
+          expectSql(
+            q.toSql(),
+            sql +
+              `NOT ("message"."id", "message"."text") IN ((1, 'a'), (2, 'b'))`,
+          );
+        }
+      });
+
+      it('should handle sub query', () => {
+        const qs = [
+          j.where({
+            NOT: {
+              IN: {
+                columns: ['message.id', 'message.text'],
+                values: User.select('id', 'name'),
+              },
+            },
+          }),
+          j.whereNotIn(
+            ['message.id', 'message.text'],
+            User.select('id', 'name'),
+          ),
+        ];
+
+        for (const q of qs) {
+          expectSql(
+            q.toSql(),
+            sql +
+              `NOT ("message"."id", "message"."text") IN (
+              SELECT "user"."id", "user"."name" FROM "user"
+            )`,
+          );
+        }
+      });
+    });
+  });
+
+  describe('orWhereNotIn', () => {
+    it('should handle (column, array)', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { 'message.id': 1 },
+            { NOT: { IN: { columns: ['message.id'], values: [[1, 2, 3]] } } },
+          ],
+        }),
+        j.where({ 'message.id': 1 }).orWhereNotIn({
+          'message.id': [1, 2, 3],
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql + `"message"."id" = $1 OR NOT "message"."id" IN ($2, $3, $4)`,
+          [1, 1, 2, 3],
+        );
+      }
+    });
+
+    it('should handle object of columns and arrays', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { 'message.id': 1 },
+            {
+              NOT: {
+                IN: [
+                  { columns: ['message.id'], values: [[1, 2, 3]] },
+                  { columns: ['message.text'], values: [['a', 'b', 'c']] },
+                ],
+              },
+            },
+          ],
+        }),
+        j.where({ 'message.id': 1 }).orWhereNotIn({
+          'message.id': [1, 2, 3],
+          'message.text': ['a', 'b', 'c'],
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `"message"."id" = $1
+          OR NOT "message"."id" IN ($2, $3, $4) AND NOT "message"."text" IN ($5, $6, $7)`,
+          [1, 1, 2, 3, 'a', 'b', 'c'],
+        );
+      }
+    });
+
+    it('should handle raw query', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { 'message.id': 1 },
+            {
+              NOT: {
+                IN: {
+                  columns: ['message.id'],
+                  values: db.raw(`(1, 2, 3)`),
+                },
+              },
+            },
+          ],
+        }),
+        j.where({ 'message.id': 1 }).orWhereNotIn({
+          'message.id': db.raw(`(1, 2, 3)`),
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql + `"message"."id" = $1 OR NOT "message"."id" IN (1, 2, 3)`,
+          [1],
+        );
+      }
+    });
+
+    it('should handle multiple raw queries', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { 'message.id': 1 },
+            {
+              NOT: {
+                IN: [
+                  { columns: ['message.id'], values: db.raw(`(1, 2, 3)`) },
+                  {
+                    columns: ['message.text'],
+                    values: db.raw(`('a', 'b', 'c')`),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        j.where({ 'message.id': 1 }).orWhereNotIn({
+          'message.id': db.raw(`(1, 2, 3)`),
+          'message.text': db.raw(`('a', 'b', 'c')`),
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `"message"."id" = $1
+          OR NOT "message"."id" IN (1, 2, 3)
+          AND NOT "message"."text" IN ('a', 'b', 'c')`,
+          [1],
+        );
+      }
+    });
+
+    it('should handle sub query', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { 'message.id': 1 },
+            {
+              NOT: {
+                IN: { columns: ['message.id'], values: User.select('id') },
+              },
+            },
+          ],
+        }),
+        j.where({ 'message.id': 1 }).orWhereNotIn({
+          'message.id': User.select('id'),
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `"message"."id" = $1
+          OR NOT "message"."id" IN (SELECT "user"."id" FROM "user")`,
+          [1],
+        );
+      }
+    });
+
+    it('should handle multiple sub queries', () => {
+      const qs = [
+        j.where({
+          OR: [
+            { 'message.id': 1 },
+            {
+              NOT: {
+                IN: [
+                  { columns: ['message.id'], values: User.select('id') },
+                  { columns: ['message.text'], values: User.select('name') },
+                ],
+              },
+            },
+          ],
+        }),
+        j.where({ 'message.id': 1 }).orWhereNotIn({
+          'message.id': User.select('id'),
+          'message.text': User.select('name'),
+        }),
+      ];
+
+      for (const q of qs) {
+        expectSql(
+          q.toSql(),
+          sql +
+            `"message"."id" = $1
+          OR NOT "message"."id" IN (SELECT "user"."id" FROM "user")
+          AND NOT "message"."text" IN (SELECT "user"."name" FROM "user")`,
+          [1],
+        );
+      }
+    });
+
+    describe('tuple', () => {
+      it('should handle values', () => {
+        const qs = [
+          j.where({
+            OR: [
+              { 'message.id': 1 },
+              {
+                NOT: {
+                  IN: {
+                    columns: ['message.id', 'message.text'],
+                    values: [
+                      [1, 'a'],
+                      [2, 'b'],
+                    ],
+                  },
+                },
+              },
+            ],
+          }),
+          j.where({ 'message.id': 1 }).orWhereNotIn(
+            ['message.id', 'message.text'],
+            [
+              [1, 'a'],
+              [2, 'b'],
+            ],
+          ),
+        ];
+
+        for (const q of qs) {
+          expectSql(
+            q.toSql(),
+            sql +
+              `"message"."id" = $1
+            OR NOT ("message"."id", "message"."text") IN (($2, $3), ($4, $5))`,
+            [1, 1, 'a', 2, 'b'],
+          );
+        }
+      });
+
+      it('should handle raw query', () => {
+        const qs = [
+          j.where({
+            OR: [
+              { 'message.id': 1 },
+              {
+                NOT: {
+                  IN: {
+                    columns: ['message.id', 'message.text'],
+                    values: db.raw(`((1, 'a'), (2, 'b'))`),
+                  },
+                },
+              },
+            ],
+          }),
+          j
+            .where({ 'message.id': 1 })
+            .orWhereNotIn(
+              ['message.id', 'message.text'],
+              db.raw(`((1, 'a'), (2, 'b'))`),
+            ),
+        ];
+
+        for (const q of qs) {
+          expectSql(
+            q.toSql(),
+            sql +
+              `"message"."id" = $1
+            OR NOT ("message"."id", "message"."text") IN ((1, 'a'), (2, 'b'))`,
+            [1],
+          );
+        }
+      });
+
+      it('should handle sub query', () => {
+        const qs = [
+          j.where({
+            OR: [
+              { 'message.id': 1 },
+              {
+                NOT: {
+                  IN: {
+                    columns: ['message.id', 'message.text'],
+                    values: User.select('id', 'name'),
+                  },
+                },
+              },
+            ],
+          }),
+          j
+            .where({ 'message.id': 1 })
+            .orWhereNotIn(
+              ['message.id', 'message.text'],
+              User.select('id', 'name'),
+            ),
+        ];
+
+        for (const q of qs) {
+          expectSql(
+            q.toSql(),
+            sql +
+              `"message"."id" = $1
+            OR NOT ("message"."id", "message"."text") IN (
+              SELECT "user"."id", "user"."name" FROM "user"
+            )`,
+            [1],
+          );
+        }
+      });
+    });
+  });
+});

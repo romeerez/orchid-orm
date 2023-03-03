@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.5.38
+
+### Patch Changes
+
+- Support join subquery
+- Updated dependencies
+  - pqb@0.9.26
+
 ## 1.5.37
 
 ### Patch Changes

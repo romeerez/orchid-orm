@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm",
-  "version": "1.5.37",
+  "version": "1.5.38",
   "description": "Postgres ORM",
   "homepage": "https://orchid-orm.netlify.app/guide/orm-setup-and-overview.html",
   "repository": {

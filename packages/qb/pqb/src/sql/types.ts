@@ -123,7 +123,8 @@ export type JoinItem = {
         conditions:
           | Record<string, string | RawExpression>
           | RawExpression
-          | ((q: unknown) => QueryBase),
+          | ((q: unknown) => QueryBase)
+          | true,
       ]
     | [
         arg: string | QueryWithTable,
