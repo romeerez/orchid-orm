@@ -4,7 +4,7 @@ import { checkIfASimpleQuery } from './types';
 import { makeSql, ToSqlCtx } from './toSql';
 import { getRaw } from '../raw';
 import { SelectQueryData } from './data';
-import { isRaw } from '../../../common/src/raw';
+import { isRaw } from 'orchid-core';
 
 export const pushFromAndAs = (
   ctx: ToSqlCtx,

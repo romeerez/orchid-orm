@@ -1,5 +1,17 @@
 # rake-db
 
+## 2.4.0
+
+### Minor Changes
+
+- Move common code into separate orchid-core package
+
+### Patch Changes
+
+- Updated dependencies
+  - orchid-core@0.1.0
+  - pqb@0.10.0
+
 ## 2.3.44
 
 ### Patch Changes

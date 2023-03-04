@@ -12,10 +12,13 @@ import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
 import { WhereQueryBuilder } from './where';
 import { Relation, RelationsBase } from '../relations';
 import { QueryData, SelectQueryData } from '../sql';
-import { ColumnsShapeBase } from '../columns';
-import { RawExpression } from '../../../common/src/raw';
+import {
+  ColumnsShapeBase,
+  RawExpression,
+  EmptyObject,
+  StringKey,
+} from 'orchid-core';
 import { getShapeFromSelect } from './select';
-import { EmptyObject, StringKey } from '../../../common/src/utils';
 
 type WithSelectable<
   T extends QueryBase,

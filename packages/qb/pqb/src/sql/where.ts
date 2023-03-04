@@ -13,8 +13,7 @@ import { processJoinItem } from './join';
 import { makeSql, ToSqlCtx } from './toSql';
 import { getRaw } from '../raw';
 import { QueryData, SelectQueryData } from './data';
-import { isRaw, RawExpression } from '../../../common/src/raw';
-import { MaybeArray, toArray } from '../../../common/src/utils';
+import { isRaw, RawExpression, MaybeArray, toArray } from 'orchid-core';
 
 export const pushWhereStatementSql = (
   ctx: ToSqlCtx,

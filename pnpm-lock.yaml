@@ -58,14 +58,19 @@ importers:
       turbo: 1.7.3
       typescript: 4.8.4
 
+  packages/core:
+    specifiers: {}
+
   packages/orm:
     specifiers:
       '@types/prompts': ^2.4.2
+      orchid-core: workspace:*
       orchid-orm-schema-to-zod: workspace:*
       pqb: workspace:*
       prompts: ^2.4.2
       rake-db: workspace:*
     dependencies:
+      orchid-core: link:../core
       pqb: link:../qb/pqb
       prompts: 2.4.2
     devDependencies:
@@ -77,23 +82,30 @@ importers:
     specifiers:
       iconv-lite: 0.6.3
       mysql2: ^3.1.1
+      orchid-core: workspace:*
     dependencies:
       mysql2: 3.1.1
+      orchid-core: link:../../core
     devDependencies:
       iconv-lite: 0.6.3
 
   packages/qb/pqb:
-    specifiers: {}
+    specifiers:
+      orchid-core: workspace:*
+    dependencies:
+      orchid-core: link:../../core
 
   packages/rake-db:
     specifiers:
       '@types/prompts': ^2.4.2
       myqb: workspace:*
+      orchid-core: workspace:*
       pluralize: ^8.0.0
       pqb: workspace:*
       prompts: ^2.4.2
       tsconfig-paths: ^4.1.2
     dependencies:
+      orchid-core: link:../core
       pluralize: 8.0.0
       pqb: link:../qb/pqb
       prompts: 2.4.2
@@ -104,9 +116,11 @@ importers:
 
   packages/schema-to-zod:
     specifiers:
+      orchid-core: workspace:*
       pqb: workspace:*
       zod: ^3.19.1
     dependencies:
+      orchid-core: link:../core
       pqb: link:../qb/pqb
       zod: 3.19.1
 
@@ -114,6 +128,7 @@ importers:
     specifiers:
       '@anatine/zod-mock': ^3.6.0
       '@faker-js/faker': ^7.6.0
+      orchid-core: workspace:*
       orchid-orm: workspace:*
       orchid-orm-schema-to-zod: workspace:*
       pqb: workspace:*
@@ -121,6 +136,7 @@ importers:
     dependencies:
       '@anatine/zod-mock': 3.6.0_@faker-js+faker@7.6.0
       '@faker-js/faker': 7.6.0
+      orchid-core: link:../core
       orchid-orm: link:../orm
       orchid-orm-schema-to-zod: link:../schema-to-zod
       pqb: link:../qb/pqb

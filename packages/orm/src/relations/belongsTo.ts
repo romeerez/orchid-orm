@@ -2,9 +2,7 @@ import { Table } from '../table';
 import {
   addQueryOn,
   BelongsToRelation,
-  ColumnTypesBase,
   CreateCtx,
-  emptyObject,
   InsertQueryData,
   isQueryReturnsAll,
   pushQueryValue,
@@ -15,6 +13,7 @@ import {
   WhereArg,
   WhereResult,
 } from 'pqb';
+import { ColumnTypesBase, emptyObject } from 'orchid-core';
 import { RelationData, RelationThunkBase } from './relations';
 import { NestedInsertOneItem, NestedUpdateOneItem } from './utils';
 

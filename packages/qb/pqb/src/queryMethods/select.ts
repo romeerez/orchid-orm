@@ -10,9 +10,7 @@ import {
 import {
   ArrayOfColumnsObjects,
   ColumnsObject,
-  ColumnsShapeBase,
   JSONTextColumn,
-  NullableColumn,
   PluckResultColumnType,
 } from '../columns';
 import { pushQueryArray } from '../queryDataUtils';
@@ -20,14 +18,17 @@ import { QueryData, SelectItem, SelectQueryData } from '../sql';
 import { isRequiredRelationKey, Relation } from '../relations';
 import { getValueKey } from './get';
 import { QueryResult } from '../adapter';
-import { isRaw, RawExpression } from '../../../common/src/raw';
 import { UnknownColumn } from '../columns/unknown';
 import {
   emptyObject,
   FilterTuple,
   SimpleSpread,
   StringKey,
-} from '../../../common/src/utils';
+  isRaw,
+  RawExpression,
+  ColumnsShapeBase,
+  NullableColumn,
+} from 'orchid-core';
 import { parseResult } from './then';
 
 export type SelectArg<T extends QueryBase> =

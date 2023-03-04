@@ -1,10 +1,8 @@
 import { Query, QueryBase, QueryWithTable, SelectableBase } from '../query';
-import { ColumnTypeBase } from '../columns';
 import { RelationQuery } from '../relations';
 import { Expression } from '../utils';
 import { QueryData, SelectQueryData } from './data';
-import { RawExpression } from '../../../common/src/raw';
-import { MaybeArray } from '../../../common/src/utils';
+import { RawExpression, ColumnTypeBase, MaybeArray } from 'orchid-core';
 
 export type Sql = {
   text: string;

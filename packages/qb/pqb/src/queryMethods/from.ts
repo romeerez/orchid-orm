@@ -1,7 +1,7 @@
 import { AddQuerySelect, Query, SetQueryTableAlias } from '../query';
 import { SelectQueryData } from '../sql';
 import { AliasOrTable } from '../utils';
-import { isRaw, RawExpression } from '../../../common/src/raw';
+import { isRaw, RawExpression } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 
 export type FromArgs<T extends Query> = [

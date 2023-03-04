@@ -6,8 +6,8 @@ import {
   EnumColumn,
   NoPrimaryKeyOption,
   QueryLogOptions,
-  singleQuote,
 } from 'pqb';
+import { singleQuote } from 'orchid-core';
 import path from 'path';
 import { readdir } from 'fs/promises';
 import { RakeDbAst } from './ast';

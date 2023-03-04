@@ -5,9 +5,7 @@ import { QueryBase } from '../query';
 import { addValue, q } from './common';
 import { ToSqlCtx } from './toSql';
 import { SelectQueryData } from './data';
-import { Operator } from '../../../common/src/columns/operators';
-import { isRaw, RawExpression } from '../../../common/src/raw';
-import { emptyObject } from '../../../common/src/utils';
+import { Operator, isRaw, RawExpression, emptyObject } from 'orchid-core';
 
 const aggregateOptionNames: (keyof AggregateItemOptions)[] = [
   'distinct',

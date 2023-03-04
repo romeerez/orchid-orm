@@ -1,4 +1,5 @@
-import { ColumnTypesBase, EnumColumn } from 'pqb';
+import { EnumColumn } from 'pqb';
+import { ColumnTypesBase } from 'orchid-core';
 
 export const tableMethods = {
   enum(this: ColumnTypesBase, name: string) {

@@ -49,8 +49,7 @@ import { QueryGet } from './get';
 import { MergeQueryMethods } from './merge';
 import { RawMethods } from './raw';
 import { CopyMethods } from './copy';
-import { RawExpression, raw } from '../../../common/src/raw';
-import { applyMixins, EmptyObject } from '../../../common/src/utils';
+import { RawExpression, raw, applyMixins, EmptyObject } from 'orchid-core';
 
 export type WindowArg<T extends Query> = Record<
   string,

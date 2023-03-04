@@ -1,6 +1,6 @@
 import { Query } from '../query';
 import { SelectQueryData } from '../sql';
-import { RawExpression } from '../../../common/src/raw';
+import { RawExpression } from 'orchid-core';
 
 type ForQueryBuilder<Q extends Query> = Q & {
   noWait<T extends ForQueryBuilder<Q>>(this: T): T;

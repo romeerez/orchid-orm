@@ -12,9 +12,9 @@ import {
   BaseRelation,
   defaultsKey,
   relationQueryKey,
-  EmptyObject,
   VirtualColumn,
 } from 'pqb';
+import { EmptyObject } from 'orchid-core';
 import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
 import {
   HasAndBelongsToMany,

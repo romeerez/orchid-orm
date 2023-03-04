@@ -1,5 +1,5 @@
 import { Query } from '../query';
-import { isRaw } from '../../../common/src/raw';
+import { isRaw } from 'orchid-core';
 
 export type ClearStatement =
   | 'with'

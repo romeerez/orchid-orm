@@ -5,10 +5,9 @@ import {
   SetQueryReturnsValueOptional,
 } from '../query';
 import { pushQueryValue } from '../queryDataUtils';
-import { ColumnType, ColumnTypeBase, StringColumn } from '../columns';
+import { ColumnType, StringColumn } from '../columns';
 import { JsonItem } from '../sql';
-import { raw } from '../../../common/src/raw';
-import { StringKey } from '../../../common/src/utils';
+import { raw, StringKey, ColumnTypeBase } from 'orchid-core';
 
 type JsonColumnName<T extends Pick<Query, 'selectable'>> = StringKey<
   {

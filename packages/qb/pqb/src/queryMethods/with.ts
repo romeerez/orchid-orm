@@ -1,10 +1,14 @@
 import { WithOptions } from '../sql';
-import { ColumnShapeOutput, ColumnsShape, ColumnTypes } from '../columns';
+import { ColumnsShape, ColumnTypes } from '../columns';
 import { AddQueryWith, Query } from '../query';
 import { Db } from '../db';
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
-import { isRaw, RawExpression } from '../../../common/src/raw';
-import { emptyObject } from '../../../common/src/utils';
+import {
+  isRaw,
+  RawExpression,
+  ColumnShapeOutput,
+  emptyObject,
+} from 'orchid-core';
 
 type WithArgsOptions = Omit<WithOptions, 'columns'> & {
   columns?: boolean | string[];

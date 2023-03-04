@@ -163,6 +163,9 @@ export type ColumnDataBase = {
 
   // parse and encode a column to use it `as` another column
   as?: ColumnTypeBase;
+
+  // array of indexes info
+  indexes?: { unique?: boolean }[];
 };
 
 export type ColumnChain = (

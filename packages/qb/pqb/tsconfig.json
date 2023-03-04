@@ -1,7 +1,11 @@
 {
   "extends": "../../../tsconfig.json",
-  "include": ["./src", "../common"],
+  "include": ["./src"],
   "compilerOptions": {
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "orchid-core": ["../../core/src"]
+    }
   }
 }

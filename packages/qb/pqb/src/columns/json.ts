@@ -1,5 +1,6 @@
 import { ColumnData, ColumnType } from './columnType';
 import { Operators } from './operators';
+import { columnCode } from './code';
 import {
   scalarTypes,
   array,
@@ -20,12 +21,9 @@ import {
   tuple,
   union,
   JSONTypeAny,
-} from './json';
-import { columnCode } from './code';
-import { Code } from '../../../common/src/columns/code';
-import { ColumnTypesBase } from '../../../common/src/columns/columnType';
-
-export * from '../../../common/src/columns/json';
+  Code,
+  ColumnTypesBase,
+} from 'orchid-core';
 
 export type JSONTypes = typeof jsonTypes;
 export const jsonTypes = {

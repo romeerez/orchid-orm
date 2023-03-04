@@ -1,18 +1,14 @@
 import { RakeDbAst } from '../ast';
 import {
-  addCode,
-  Code,
   codeToString,
   ColumnType,
   foreignKeyArgsToCode,
   foreignKeyToCode,
   indexToCode,
-  isRaw,
   primaryKeyToCode,
-  quoteObjectKey,
-  singleQuote,
   TimestampColumn,
 } from 'pqb';
+import { addCode, Code, isRaw, quoteObjectKey, singleQuote } from 'orchid-core';
 import { quoteSchemaTable } from '../common';
 
 export const astToMigration = (ast: RakeDbAst[]): string | undefined => {

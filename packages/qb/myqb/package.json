@@ -1,6 +1,6 @@
 {
   "name": "myqb",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "description": "MySQL query builder",
   "homepage": "https://orchid-orm.netlify.app/guide/query-builder-setup.html",
@@ -32,10 +32,16 @@
   "jest": {
     "rootDir": "src",
     "coverageDirectory": "../coverage",
-    "setupFiles": ["dotenv/config"],
+    "setupFiles": [
+      "dotenv/config"
+    ],
     "globalSetup": "../../../../jest-global-setup.ts",
-    "setupFilesAfterEnv": ["../../../../jest-setup.ts"],
-    "transform": { "^.+\\.ts$": "@swc/jest" }
+    "setupFilesAfterEnv": [
+      "../../../../jest-setup.ts"
+    ],
+    "transform": {
+      "^.+\\.ts$": "@swc/jest"
+    }
   },
   "keywords": [
     "mysql",
@@ -44,7 +50,8 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
-    "mysql2": "^3.1.1"
+    "mysql2": "^3.1.1",
+    "orchid-core": "workspace:*"
   },
   "devDependencies": {
     "iconv-lite": "0.6.3"

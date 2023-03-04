@@ -1,6 +1,6 @@
 {
   "name": "pqb",
-  "version": "0.9.27",
+  "version": "0.10.0",
   "description": "Postgres query builder",
   "homepage": "https://orchid-orm.netlify.app/guide/query-builder-setup.html",
   "repository": {
@@ -48,5 +48,8 @@
     "query-builder"
   ],
   "author": "Roman Kushyn",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "orchid-core": "workspace:*"
+  }
 }

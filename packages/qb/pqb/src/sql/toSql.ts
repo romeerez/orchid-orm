@@ -19,7 +19,7 @@ import { OnQueryBuilder, WhereQueryBuilder } from '../queryMethods';
 import { getRaw } from '../raw';
 import { QueryData } from './data';
 import { pushCopySql } from './copy';
-import { isRaw } from '../../../common/src/raw';
+import { isRaw } from 'orchid-core';
 
 export type ToSqlCtx = {
   whereQueryBuilder: typeof WhereQueryBuilder;

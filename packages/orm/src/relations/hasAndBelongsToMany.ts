@@ -1,12 +1,9 @@
 import { RelationData, RelationThunkBase } from './relations';
 import { Table } from '../table';
 import {
-  ColumnTypesBase,
   CreateCtx,
-  emptyObject,
   getQueryAs,
   HasAndBelongsToManyRelation,
-  MaybeArray,
   NotFoundError,
   pushQueryValue,
   Query,
@@ -17,6 +14,7 @@ import {
   WhereArg,
   WhereResult,
 } from 'pqb';
+import { ColumnTypesBase, emptyObject, MaybeArray } from 'orchid-core';
 import { hasRelationHandleCreate, hasRelationHandleUpdate } from './utils';
 import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
 

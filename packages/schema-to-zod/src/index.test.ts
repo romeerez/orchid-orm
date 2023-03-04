@@ -6,14 +6,16 @@ import {
   IntegerColumn,
   jsonTypes,
   TextColumn,
+  VirtualColumn,
+} from 'pqb';
+import {
   JSONType,
   JSONTypeAny,
   JSONDate,
   JSONNumber,
   JSONString,
   JSONArray,
-  VirtualColumn,
-} from 'pqb';
+} from 'orchid-core';
 import { columnToZod, instanceToZod, tableToZod } from './index';
 import { z } from 'zod';
 import { Buffer } from 'node:buffer';
@@ -1275,7 +1277,7 @@ describe('schema to zod', () => {
       const schema = instanceToZod({
         shape: {
           text: t.text(),
-          virtual: new Virtual(),
+          virtual: new Virtual({}),
         },
       });
 
@@ -1283,7 +1285,7 @@ describe('schema to zod', () => {
     });
 
     it('should return ZodNever from columnToZod', () => {
-      const schema = columnToZod(new Virtual());
+      const schema = columnToZod(new Virtual({}));
 
       assertType<typeof schema, z.ZodNever>(true);
 

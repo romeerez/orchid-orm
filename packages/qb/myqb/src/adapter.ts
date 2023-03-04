@@ -5,7 +5,7 @@ import {
   PoolConnection,
   FieldPacket,
 } from 'mysql2/promise';
-import { AdapterBase, QueryResultRow } from '../../common/src/adapter';
+import { AdapterBase, QueryResultRow } from 'orchid-core';
 
 export type QueryResult<T extends QueryResultRow> = [
   (T & {

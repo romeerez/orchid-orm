@@ -1,7 +1,8 @@
 import { changeCache, migrate, rollback } from './migrateOrRollback';
 import { createSchemaMigrations, migrationConfigDefaults } from '../common';
 import { getMigrationFiles } from '../common';
-import { Adapter, noop, TransactionAdapter } from 'pqb';
+import { Adapter, TransactionAdapter } from 'pqb';
+import { noop } from 'orchid-core';
 import { change } from '../migration/change';
 import { asMock } from '../test-utils';
 

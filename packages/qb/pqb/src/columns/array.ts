@@ -1,10 +1,8 @@
 import { ColumnData, ColumnType } from './columnType';
 import { Operators } from './operators';
 import { assignMethodsToClass } from './utils';
-import { arrayMethods } from '../../../common/src/columns/commonMethods';
+import { arrayMethods, addCode, Code, ColumnTypesBase } from 'orchid-core';
 import { columnCode } from './code';
-import { addCode, Code } from '../../../common/src/columns/code';
-import { ColumnTypesBase } from '../../../common/src/columns/columnType';
 
 export type ArrayData<Item extends ColumnType> = ColumnData & {
   item: Item;

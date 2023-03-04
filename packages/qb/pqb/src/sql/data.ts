@@ -8,7 +8,7 @@ import {
 } from '../queryMethods';
 import { Adapter, QueryResult } from '../adapter';
 import { RelationQueryData, relationQueryKey } from '../relations';
-import { ColumnsShapeBase, ColumnsShape, ColumnTypeBase } from '../columns';
+import { ColumnsShape } from '../columns';
 import { toSqlCacheKey } from './toSql';
 import {
   HavingItem,
@@ -25,7 +25,7 @@ import {
   WithItem,
 } from './types';
 import { Expression } from '../utils';
-import { RawExpression } from '../../../common/src/raw';
+import { RawExpression, ColumnsShapeBase, ColumnTypeBase } from 'orchid-core';
 
 export type CommonQueryData = {
   adapter: Adapter;

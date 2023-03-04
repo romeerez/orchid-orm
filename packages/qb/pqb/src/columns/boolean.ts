@@ -1,7 +1,7 @@
 import { ColumnType } from './columnType';
 import { Operators } from './operators';
 import { columnCode } from './code';
-import { Code } from '../../../common/src/columns/code';
+import { Code } from 'orchid-core';
 
 // 1 byte, true or false
 export class BooleanColumn extends ColumnType<

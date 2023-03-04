@@ -1,6 +1,5 @@
 import {
   CreateCtx,
-  MaybeArray,
   pushQueryValue,
   Query,
   QueryBase,
@@ -9,6 +8,7 @@ import {
   UpdateData,
   WhereArg,
 } from 'pqb';
+import { MaybeArray } from 'orchid-core';
 import { HasOneNestedInsert, HasOneNestedUpdate } from './hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
 

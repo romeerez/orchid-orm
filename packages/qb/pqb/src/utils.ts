@@ -1,9 +1,12 @@
 import { cloneQueryArrays, QueryData, toSqlCacheKey } from './sql';
 import type { Query, Selectable } from './query';
-import type { ColumnOutput, ColumnType } from './columns';
-import { ColumnTypeBase } from './columns';
-import { RawExpression } from '../../common/src/raw';
-import { StringKey } from '../../common/src/utils';
+import type { ColumnType } from './columns';
+import type {
+  RawExpression,
+  ColumnOutput,
+  ColumnTypeBase,
+  StringKey,
+} from 'orchid-core';
 
 export const getClonedQueryData = (query: QueryData): QueryData => {
   const cloned = { ...query };

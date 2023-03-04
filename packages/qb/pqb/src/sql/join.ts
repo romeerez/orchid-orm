@@ -6,7 +6,7 @@ import { Relation } from '../relations';
 import { ToSqlCtx } from './toSql';
 import { getRaw } from '../raw';
 import { QueryData } from './data';
-import { isRaw, RawExpression } from '../../../common/src/raw';
+import { isRaw, RawExpression } from 'orchid-core';
 
 type ItemOf3Or4Length =
   | [

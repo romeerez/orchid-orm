@@ -3,10 +3,10 @@ import {
   ColumnType,
   ForeignKeyOptions,
   NoPrimaryKeyOption,
-  RawExpression,
   SingleColumnIndexOptions,
   TableData,
 } from 'pqb';
+import { RawExpression } from 'orchid-core';
 import { DropMode } from './migration/migration';
 
 export type RakeDbAst =

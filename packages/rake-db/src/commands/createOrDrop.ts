@@ -1,4 +1,5 @@
-import { Adapter, AdapterOptions, MaybeArray, toArray } from 'pqb';
+import { Adapter, AdapterOptions } from 'pqb';
+import { MaybeArray, toArray } from 'orchid-core';
 import {
   getDatabaseAndUserFromOptions,
   setAdminCredentialsToOptions,

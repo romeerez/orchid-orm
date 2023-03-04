@@ -1,5 +1,4 @@
-import { RawExpression } from '../../common/src/raw';
-import { emptyObject } from '../../common/src/utils';
+import { RawExpression, emptyObject } from 'orchid-core';
 
 const keys: string[] = [];
 export const getRaw = (raw: RawExpression, valuesArray: unknown[]) => {

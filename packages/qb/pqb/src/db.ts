@@ -2,7 +2,6 @@ import { ColumnsParsers, defaultsKey, Query } from './query';
 import {
   QueryMethods,
   handleResult,
-  ThenResult,
   WhereQueryBuilder,
   OnQueryBuilder,
   logParamToLogObject,
@@ -12,20 +11,25 @@ import { QueryData, SelectQueryData, Sql, ToSqlOptions } from './sql';
 import { AdapterOptions, Adapter } from './adapter';
 import {
   ColumnsShape,
-  ColumnShapeOutput,
-  ColumnTypesBase,
   getColumnTypes,
-  SinglePrimaryKey,
   ColumnType,
   getTableData,
   DefaultColumnTypes,
   columnTypes,
-  ColumnsShapeBase,
-  DefaultSelectColumns,
 } from './columns';
 import { QueryError, QueryErrorName } from './errors';
-import { DbBase } from '../../common/src/db';
-import { StringKey, applyMixins, pushOrNewArray } from '../../common/src/utils';
+import {
+  DbBase,
+  ColumnsShapeBase,
+  DefaultSelectColumns,
+  StringKey,
+  applyMixins,
+  pushOrNewArray,
+  ThenResult,
+  ColumnShapeOutput,
+  ColumnTypesBase,
+  SinglePrimaryKey,
+} from 'orchid-core';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 

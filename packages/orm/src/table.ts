@@ -1,13 +1,12 @@
 import {
-  ColumnShapeOutput,
   ColumnsShape,
   columnTypes,
-  ColumnTypesBase,
   Db,
   DefaultColumnTypes,
   getColumnTypes,
   Query,
 } from 'pqb';
+import { ColumnShapeOutput, ColumnTypesBase } from 'orchid-core';
 import { MapRelations, Relation, RelationThunks } from './relations/relations';
 import { OrchidORM } from './orm';
 

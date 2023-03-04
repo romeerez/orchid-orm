@@ -1,5 +1,5 @@
 import { QueryData } from './sql';
-import { pushOrNewArrayToObject } from '../../common/src/utils';
+import { pushOrNewArrayToObject } from 'orchid-core';
 
 export const pushQueryArray = <T extends { query: QueryData }>(
   q: T,

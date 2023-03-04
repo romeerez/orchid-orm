@@ -1,5 +1,16 @@
 # pqb
 
+## 0.10.0
+
+### Minor Changes
+
+- Move common code into separate orchid-core package
+
+### Patch Changes
+
+- Updated dependencies
+  - orchid-core@0.1.0
+
 ## 0.9.27
 
 ### Patch Changes

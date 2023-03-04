@@ -9,8 +9,7 @@ import {
   UpdateQueryDataItem,
   UpdateQueryDataObject,
 } from './data';
-import { isRaw } from '../../../common/src/raw';
-import { pushOrNewArray } from '../../../common/src/utils';
+import { isRaw, pushOrNewArray } from 'orchid-core';
 
 export const pushUpdateSql = (
   ctx: ToSqlCtx,

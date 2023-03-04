@@ -5,9 +5,9 @@ import {
   ColumnsShape,
   ForeignKeyOptions,
   instantiateColumn,
-  singleQuote,
   TableData,
 } from 'pqb';
+import { singleQuote } from 'orchid-core';
 import { getForeignKeyName, getIndexName } from '../migration/migrationUtils';
 
 const matchMap = {

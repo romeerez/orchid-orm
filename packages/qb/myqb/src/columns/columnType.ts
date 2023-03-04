@@ -1,8 +1,4 @@
-import { BaseOperators } from '../../../common/src/columns/operators';
-import {
-  ColumnDataBase,
-  ColumnTypeBase,
-} from '../../../common/src/columns/columnType';
+import { BaseOperators, ColumnDataBase, ColumnTypeBase } from 'orchid-core';
 
 export type ColumnData = ColumnDataBase;
 

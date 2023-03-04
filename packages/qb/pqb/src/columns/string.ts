@@ -2,12 +2,15 @@ import { ColumnData, ColumnType } from './columnType';
 import { Operators } from './operators';
 import { NumberBaseColumn } from './number';
 import { assignMethodsToClass } from './utils';
-import { stringTypeMethods } from '../../../common/src/columns/commonMethods';
+import {
+  stringTypeMethods,
+  Code,
+  joinTruthy,
+  singleQuote,
+  BaseStringData,
+  ColumnTypesBase,
+} from 'orchid-core';
 import { columnCode } from './code';
-import { Code } from '../../../common/src/columns/code';
-import { joinTruthy, singleQuote } from '../../../common/src/utils';
-import { BaseStringData } from '../../../common/src/columns/scalarTypes';
-import { ColumnTypesBase } from '../../../common/src/columns/columnType';
 
 const stringDataToCode = (data: BaseStringData) => {
   let code = '';

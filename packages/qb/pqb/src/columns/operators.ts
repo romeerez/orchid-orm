@@ -1,8 +1,7 @@
 import { Query } from '../query';
 import { addValue } from '../sql/common';
 import { getRaw } from '../raw';
-import { createOperator } from '../../../common/src/columns/operators';
-import { isRaw, RawExpression } from '../../../common/src/raw';
+import { createOperator, isRaw, RawExpression } from 'orchid-core';
 
 const quoteValue = (
   arg: unknown,

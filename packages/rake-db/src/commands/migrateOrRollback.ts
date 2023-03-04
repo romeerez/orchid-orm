@@ -4,9 +4,8 @@ import {
   createDb,
   DbResult,
   DefaultColumnTypes,
-  MaybeArray,
-  toArray,
 } from 'pqb';
+import { MaybeArray, toArray } from 'orchid-core';
 import {
   createSchemaMigrations,
   getMigrationFiles,

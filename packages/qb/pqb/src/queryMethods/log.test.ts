@@ -6,7 +6,7 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { logColors } from './log';
-import { noop } from '../../../common/src/utils';
+import { noop } from 'orchid-core';
 
 describe('query log', () => {
   useTestDatabase();

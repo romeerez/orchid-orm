@@ -1,4 +1,5 @@
-import { AdapterOptions, MaybeArray, toArray } from 'pqb';
+import { AdapterOptions } from 'pqb';
+import { MaybeArray, toArray } from 'orchid-core';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
 import { migrate, rollback } from './commands/migrateOrRollback';
 import { processRakeDbConfig, RakeDbConfig } from './common';

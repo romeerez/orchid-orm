@@ -7,8 +7,7 @@ import { whereToSql } from './where';
 import { QueryBase } from '../query';
 import { ToSqlCtx } from './toSql';
 import { Expression } from '../utils';
-import { isRaw } from '../../../common/src/raw';
-import { emptyObject } from '../../../common/src/utils';
+import { isRaw, emptyObject } from 'orchid-core';
 
 export const aggregateToSql = (
   ctx: ToSqlCtx,

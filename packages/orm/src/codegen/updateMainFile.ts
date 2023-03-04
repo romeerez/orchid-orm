@@ -7,7 +7,8 @@ import { AppCodeUpdaterError } from './appCodeUpdater';
 import { FileChanges } from './fileChanges';
 import { ts } from './tsUtils';
 import { getImportPath } from './utils';
-import { AdapterOptions, singleQuote } from 'pqb';
+import { AdapterOptions } from 'pqb';
+import { singleQuote } from 'orchid-core';
 
 type Context = {
   filePath: string;

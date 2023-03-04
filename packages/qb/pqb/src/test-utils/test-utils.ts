@@ -8,7 +8,7 @@ import {
 import { Client } from 'pg';
 import { quote } from '../quote';
 import { Adapter } from '../adapter';
-import { MaybeArray, toArray } from '../../../common/src/utils';
+import { MaybeArray, toArray } from 'orchid-core';
 
 export const dbOptions = {
   databaseURL: process.env.PG_URL,

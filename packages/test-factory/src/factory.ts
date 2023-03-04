@@ -2,12 +2,12 @@ import { AnyZodObject, ZodNullable, ZodString, ZodTypeAny } from 'zod';
 import {
   CreateData,
   DateBaseColumn,
-  EmptyObject,
   IntegerBaseColumn,
   NumberBaseColumn,
   Query,
   TextBaseColumn,
 } from 'pqb';
+import { EmptyObject } from 'orchid-core';
 import { instanceToZod, InstanceToZod } from 'orchid-orm-schema-to-zod';
 import { generateMock } from '@anatine/zod-mock';
 

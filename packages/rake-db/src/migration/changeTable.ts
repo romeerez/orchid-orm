@@ -2,16 +2,13 @@ import {
   ColumnType,
   resetTableData,
   getTableData,
-  EmptyObject,
-  emptyObject,
   TableData,
-  RawExpression,
   columnTypes,
   quote,
   getRaw,
-  isRaw,
   EnumColumn,
 } from 'pqb';
+import { EmptyObject, emptyObject, RawExpression, isRaw } from 'orchid-core';
 import {
   ChangeTableCallback,
   ChangeTableOptions,

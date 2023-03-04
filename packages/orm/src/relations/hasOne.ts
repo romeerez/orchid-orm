@@ -1,8 +1,6 @@
 import {
   addQueryOn,
-  ColumnTypesBase,
   CreateCtx,
-  emptyObject,
   getQueryAs,
   HasOneRelation,
   InsertQueryData,
@@ -15,6 +13,7 @@ import {
   WhereArg,
   WhereResult,
 } from 'pqb';
+import { ColumnTypesBase, emptyObject } from 'orchid-core';
 import { Table } from '../table';
 import {
   RelationData,

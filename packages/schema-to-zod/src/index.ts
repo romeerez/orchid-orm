@@ -7,6 +7,9 @@ import {
   JSONColumn,
   NumberColumn,
   TextColumn,
+  VirtualColumn,
+} from 'pqb';
+import {
   JSONTypeAny,
   Primitive,
   JSONArray,
@@ -30,8 +33,7 @@ import {
   JSONIntersection,
   JSONUnion,
   JSONLazy,
-  VirtualColumn,
-} from 'pqb';
+} from 'orchid-core';
 import { z, ZodTypeAny } from 'zod';
 import { Buffer } from 'node:buffer';
 

@@ -6,12 +6,9 @@ import {
   IndexColumnOptions,
   IndexOptions,
   logParamToLogObject,
-  MaybeArray,
-  QueryInput,
   QueryLogObject,
   Sql,
   TransactionAdapter,
-  raw,
   TextColumn,
   AdapterOptions,
   createDb,
@@ -20,6 +17,7 @@ import {
   EnumColumn,
   quote,
 } from 'pqb';
+import { MaybeArray, QueryInput, raw } from 'orchid-core';
 import { createTable } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
 import {

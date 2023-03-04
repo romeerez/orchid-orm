@@ -1,7 +1,7 @@
 import { Query } from '../query';
 import { getRaw } from '../raw';
 import { Expression } from '../utils';
-import { isRaw } from '../../../common/src/raw';
+import { isRaw } from 'orchid-core';
 
 export const q = (sql: string) => `"${sql}"`;
 

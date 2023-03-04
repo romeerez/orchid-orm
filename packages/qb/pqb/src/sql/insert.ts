@@ -6,7 +6,7 @@ import { makeSql, ToSqlCtx } from './toSql';
 import { pushQueryValue } from '../queryDataUtils';
 import { getRaw } from '../raw';
 import { InsertQueryData, QueryData } from './data';
-import { isRaw, raw } from '../../../common/src/raw';
+import { isRaw, raw } from 'orchid-core';
 
 export const pushInsertSql = (
   ctx: ToSqlCtx,

@@ -1,6 +1,6 @@
 import { ColumnType } from './columnType';
 import { Operators } from './operators';
-import { ColumnTypesBase } from '../../../common/src/columns/columnType';
+import { ColumnTypesBase } from 'orchid-core';
 
 export type ColumnsShape = Record<string, ColumnType>;
 

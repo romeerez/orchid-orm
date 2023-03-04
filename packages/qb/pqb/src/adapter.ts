@@ -1,9 +1,5 @@
 import pg, { Pool, PoolClient, PoolConfig } from 'pg';
-import {
-  AdapterBase,
-  QueryInput,
-  QueryResultRow,
-} from '../../common/src/adapter';
+import { AdapterBase, QueryInput, QueryResultRow } from 'orchid-core';
 const { types } = pg;
 
 export type TypeParsers = Record<number, (input: string) => unknown>;

@@ -1,7 +1,7 @@
 import { db } from './test-utils/test-db';
 import { profileData, toLine, userData } from './test-utils/test-utils';
 import { Client } from 'pg';
-import { noop } from 'pqb';
+import { noop } from 'orchid-core';
 
 describe('transaction', () => {
   afterAll(db.$close);

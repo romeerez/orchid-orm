@@ -3,6 +3,10 @@ import path from 'path';
 
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
+jest.mock('orchid-core', () => require('./packages/core/src'), {
+  virtual: true,
+});
+
 jest.mock('orchid-orm', () => require('./packages/orm/src'), {
   virtual: true,
 });

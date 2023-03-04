@@ -43,7 +43,8 @@ import {
 } from './dateTime';
 import { BooleanColumn } from './boolean';
 import { EnumColumn } from './enum';
-import { JSONColumn, JSONTextColumn, JSONTypes, JSONTypeAny } from './json';
+import { JSONColumn, JSONTextColumn, JSONTypes } from './json';
+import { JSONTypeAny } from 'orchid-core';
 import { ArrayColumn } from './array';
 import {
   ColumnNameOfTable,
@@ -63,18 +64,19 @@ import {
   UpdateQueryDataItem,
 } from '../sql';
 import {
+  getRawSql,
+  isRaw,
+  raw,
+  RawExpression,
   ColumnTypesBase,
   ColumnWithDefault,
-} from '../../../common/src/columns/columnType';
-import { getRawSql, isRaw, raw, RawExpression } from '../../../common/src/raw';
-import {
   EmptyObject,
   emptyObject,
   MaybeArray,
   pushOrNewArrayToObject,
   toArray,
-} from '../../../common/src/utils';
-import { name } from '../../../common/src/columns/types';
+  name,
+} from 'orchid-core';
 
 export type ColumnTypes = typeof columnTypes;
 

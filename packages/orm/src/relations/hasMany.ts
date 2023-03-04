@@ -11,7 +11,6 @@ import {
   HasManyRelation,
   CreateData,
   JoinCallback,
-  MaybeArray,
   Query,
   QueryBase,
   toSqlCacheKey,
@@ -22,9 +21,8 @@ import {
   VirtualColumn,
   CreateCtx,
   UpdateCtx,
-  ColumnTypesBase,
-  emptyObject,
 } from 'pqb';
+import { MaybeArray, ColumnTypesBase, emptyObject } from 'orchid-core';
 import {
   getSourceRelation,
   getThroughRelation,

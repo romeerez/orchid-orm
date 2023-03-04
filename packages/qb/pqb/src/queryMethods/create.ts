@@ -20,8 +20,7 @@ import { parseResult, queryMethodByReturnType } from './then';
 import { NotFoundError } from '../errors';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
-import { RawExpression } from '../../../common/src/raw';
-import { EmptyObject, SetOptional } from '../../../common/src/utils';
+import { RawExpression, EmptyObject, SetOptional } from 'orchid-core';
 
 export type CreateData<
   T extends Query,

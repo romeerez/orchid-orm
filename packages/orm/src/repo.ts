@@ -1,5 +1,4 @@
 import {
-  EmptyObject,
   getClonedQueryData,
   MergeQuery,
   Query,
@@ -7,6 +6,7 @@ import {
   SetQueryReturns,
   WhereResult,
 } from 'pqb';
+import { EmptyObject } from 'orchid-core';
 
 export type QueryMethods<T extends Query> = Record<
   string,

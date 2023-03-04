@@ -8,7 +8,7 @@ import { makeSql, ToSqlCtx } from './toSql';
 import { relationQueryKey } from '../relations';
 import { SelectQueryData } from './data';
 import { Expression } from '../utils';
-import { isRaw, raw } from '../../../common/src/raw';
+import { isRaw, raw } from 'orchid-core';
 
 const jsonColumnOrMethodToSql = (
   column: string | JsonItem,

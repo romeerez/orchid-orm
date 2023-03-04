@@ -3,7 +3,7 @@ import { qc } from './common';
 import { ToSqlCtx } from './toSql';
 import { getRaw } from '../raw';
 import { SelectQueryData } from './data';
-import { isRaw } from '../../../common/src/raw';
+import { isRaw } from 'orchid-core';
 
 export const pushOrderBySql = (
   ctx: ToSqlCtx,

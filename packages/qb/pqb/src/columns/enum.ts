@@ -2,8 +2,7 @@ import { ColumnType } from './columnType';
 import { Operators } from './operators';
 import { columnCode } from './code';
 import { quoteFullColumn } from '../sql/common';
-import { Code } from '../../../common/src/columns/code';
-import { ColumnTypesBase } from '../../../common/src/columns/columnType';
+import { Code, ColumnTypesBase } from 'orchid-core';
 
 export class EnumColumn<
   U extends string = string,

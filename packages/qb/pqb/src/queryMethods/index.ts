@@ -22,4 +22,3 @@ export * from './upsertOrCreate';
 export * from './where';
 export * from './with';
 export * from './raw';
-export * from '../../../common/src/queryMethods/then';

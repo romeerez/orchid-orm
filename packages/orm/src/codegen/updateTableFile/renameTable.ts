@@ -5,7 +5,7 @@ import { FileChanges } from '../fileChanges';
 import { ts } from '../tsUtils';
 import { toPascalCase } from '../../utils';
 import { Expression } from 'typescript';
-import { singleQuote } from 'pqb';
+import { singleQuote } from 'orchid-core';
 
 export const renameTable = async ({
   ast,

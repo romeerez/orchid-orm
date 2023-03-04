@@ -2,7 +2,7 @@ import { q } from './common';
 import { makeSql, ToSqlCtx } from './toSql';
 import { getRaw } from '../raw';
 import { QueryData } from './data';
-import { isRaw } from '../../../common/src/raw';
+import { isRaw } from 'orchid-core';
 
 export const pushWithSql = (
   ctx: ToSqlCtx,

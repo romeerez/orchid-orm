@@ -13,8 +13,6 @@ import {
   Statement,
 } from 'typescript';
 import {
-  addCode,
-  Code,
   codeToString,
   columnDefaultArgumentToCode,
   columnForeignKeysToCode,
@@ -25,10 +23,9 @@ import {
   IndexColumnOptions,
   indexToCode,
   primaryKeyToCode,
-  quoteObjectKey,
-  singleQuote,
   TableData,
 } from 'pqb';
+import { addCode, Code, quoteObjectKey, singleQuote } from 'orchid-core';
 import { UpdateTableFileParams } from './updateTableFile';
 
 export const changeTable = async ({

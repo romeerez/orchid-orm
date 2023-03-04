@@ -23,8 +23,8 @@ const calculatePackageCoverage = async (name: string) => {
 const main = async () => {
   const values = await Promise.all(
     [
+      'core',
       'orm',
-      'qb/common',
       'qb/myqb',
       'qb/pqb',
       'rake-db',

@@ -3,12 +3,11 @@ import {
   ForeignKeyTable,
   ForeignKeyOptions,
   getRaw,
-  isRaw,
   quote,
   Sql,
   TableData,
-  toArray,
 } from 'pqb';
+import { isRaw, toArray } from 'orchid-core';
 import { ColumnComment, Migration } from './migration';
 import {
   getSchemaAndTableFromName,

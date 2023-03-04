@@ -4,14 +4,13 @@ import {
   BigSerialColumn,
   DecimalColumn,
   IntegerColumn,
-  isRaw,
-  RawExpression,
   SerialColumn,
   SmallSerialColumn,
   TextColumn,
   TimestampColumn,
   VarCharColumn,
 } from 'pqb';
+import { isRaw, RawExpression } from 'orchid-core';
 import { structureToAst } from './structureToAst';
 import { RakeDbAst } from '../ast';
 import { getIndexName } from '../migration/migrationUtils';

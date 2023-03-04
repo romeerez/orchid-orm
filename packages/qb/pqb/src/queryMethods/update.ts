@@ -13,8 +13,13 @@ import { parseResult, queryMethodByReturnType } from './then';
 import { UpdateQueryData } from '../sql';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
-import { isRaw, RawExpression } from '../../../common/src/raw';
-import { EmptyObject, MaybeArray, StringKey } from '../../../common/src/utils';
+import {
+  isRaw,
+  RawExpression,
+  EmptyObject,
+  MaybeArray,
+  StringKey,
+} from 'orchid-core';
 
 export type UpdateData<T extends Query> = {
   [K in keyof T['type']]?: T['type'][K] | RawExpression;

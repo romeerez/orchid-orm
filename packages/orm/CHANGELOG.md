@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.6.0
+
+### Minor Changes
+
+- Move common code into separate orchid-core package
+
+### Patch Changes
+
+- Updated dependencies
+  - orchid-core@0.1.0
+  - pqb@0.10.0
+
 ## 1.5.39
 
 ### Patch Changes

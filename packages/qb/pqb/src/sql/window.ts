@@ -2,7 +2,7 @@ import { WindowDeclaration } from './types';
 import { expressionToSql, q } from './common';
 import { orderByToSql } from './orderBy';
 import { getRaw } from '../raw';
-import { isRaw, RawExpression } from '../../../common/src/raw';
+import { isRaw, RawExpression } from 'orchid-core';
 
 export const windowToSql = (
   window: string | WindowDeclaration | RawExpression,

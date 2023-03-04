@@ -1,7 +1,7 @@
 import { ColumnsShape } from './columnsSchema';
 import { Query } from '../query';
-import { BaseOperators } from '../../../common/src/columns/operators';
 import {
+  BaseOperators,
   ColumnDataBase,
   ColumnTypeBase,
   ColumnTypesBase,
@@ -12,9 +12,11 @@ import {
   pushColumnData,
   setColumnData,
   ValidationContext,
-} from '../../../common/src/columns/columnType';
-import { raw, RawExpression } from '../../../common/src/raw';
-import { MaybeArray, StringKey } from '../../../common/src/utils';
+  raw,
+  RawExpression,
+  MaybeArray,
+  StringKey,
+} from 'orchid-core';
 
 export type ColumnData = ColumnDataBase & {
   maxChars?: number;

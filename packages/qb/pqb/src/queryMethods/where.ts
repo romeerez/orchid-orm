@@ -4,10 +4,12 @@ import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { getClonedQueryData } from '../utils';
 import { JoinArgs, JoinCallback, JoinCallbackArg } from './join';
 import { RelationsBase } from '../relations';
-import { ColumnsShapeBase } from '../columns';
-import { RawExpression } from '../../../common/src/raw';
-import { MaybeArray } from '../../../common/src/utils';
-import { QueryMetaBase } from '../../../common/src/query';
+import {
+  RawExpression,
+  ColumnsShapeBase,
+  MaybeArray,
+  QueryMetaBase,
+} from 'orchid-core';
 
 export type WhereArg<T extends QueryBase> =
   | (Omit<

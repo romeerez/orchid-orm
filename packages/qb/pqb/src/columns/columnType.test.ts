@@ -13,8 +13,7 @@ import { createDb } from '../db';
 import { columnTypes } from './columnTypes';
 import { IntegerColumn } from './number';
 import { columnCode } from './code';
-import { Code } from '../../../common/src/columns/code';
-import { raw } from '../../../common/src/raw';
+import { Code, raw } from 'orchid-core';
 
 describe('column base', () => {
   useTestDatabase();

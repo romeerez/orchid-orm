@@ -1,5 +1,6 @@
 import { createMigrationInterface, Migration } from './migration/migration';
-import { MaybeArray, toArray, TransactionAdapter } from 'pqb';
+import { TransactionAdapter } from 'pqb';
+import { MaybeArray, toArray } from 'orchid-core';
 
 export const asMock = (fn: unknown) => fn as jest.Mock;
 

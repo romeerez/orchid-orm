@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm",
-  "version": "1.5.39",
+  "version": "1.6.0",
   "description": "Postgres ORM",
   "homepage": "https://orchid-orm.netlify.app/guide/orm-setup-and-overview.html",
   "repository": {
@@ -53,6 +53,7 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
+    "orchid-core": "workspace:*",
     "pqb": "workspace:*",
     "prompts": "^2.4.2"
   },

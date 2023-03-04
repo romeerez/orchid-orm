@@ -3,7 +3,7 @@ import * as path from 'path';
 import { updateMainFile } from './updateMainFile';
 import { updateTableFile } from './updateTableFile/updateTableFile';
 import { createBaseTableFile } from './createBaseTableFile';
-import { SetOptional } from 'pqb';
+import { SetOptional } from 'orchid-core';
 
 export class AppCodeUpdaterError extends Error {}
 

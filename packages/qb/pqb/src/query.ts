@@ -4,25 +4,27 @@ import {
   getValueKey,
   OnQueryBuilder,
   QueryMethods,
-  ThenResult,
   WhereQueryBuilder,
 } from './queryMethods';
 import { QueryData } from './sql';
-import {
-  ColumnShapeOutput,
-  ColumnsShape,
-  ColumnsShapeBase,
-  ColumnType,
-  ColumnTypeBase,
-  ColumnTypesBase,
-} from './columns';
+import { ColumnsShape, ColumnType } from './columns';
 import { AliasOrTable } from './utils';
 import { Db } from './db';
 import { RelationQueryBase, RelationsBase } from './relations';
 import { QueryError, QueryErrorName } from './errors';
-import { RawExpression } from '../../common/src/raw';
-import { EmptyObject, Spread, StringKey } from '../../common/src/utils';
-import { QueryBaseCommon, QueryCommon } from '../../common/src/query';
+import {
+  RawExpression,
+  ColumnTypeBase,
+  ColumnTypesBase,
+  EmptyObject,
+  Spread,
+  StringKey,
+  QueryBaseCommon,
+  QueryCommon,
+  ColumnShapeOutput,
+  ColumnsShapeBase,
+  ThenResult,
+} from 'orchid-core';
 
 export type ColumnParser = (input: unknown) => unknown;
 export type ColumnsParsers = Record<string | getValueKey, ColumnParser>;

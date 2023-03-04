@@ -3,10 +3,10 @@
   "include": ["./src"],
   "compilerOptions": {
     "outDir": "./dist",
-    "noEmit": false,
     "baseUrl": ".",
     "paths": {
-      "pqb": ["../pqb/src"],
+      "orchid-core": ["../core/src"],
+      "pqb": ["../qb/pqb/src"],
       "orchid-orm": ["../orm/src"],
       "orchid-orm-schema-to-zod": ["../schema-to-zod/src"]
     }
