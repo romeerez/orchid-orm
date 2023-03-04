@@ -122,7 +122,7 @@ const processMigration = async (
         await config.import(file.path);
       } catch (err) {
         // throw if unknown error
-        if ((err as { code: string }).code === 'ERR_UNSUPPORTED_ESM_URL_SCHEME')
+        if ((err as { code: string }).code !== 'ERR_UNSUPPORTED_ESM_URL_SCHEME')
           throw err;
 
         // this error happens on windows in ESM mode, try import transformed url
