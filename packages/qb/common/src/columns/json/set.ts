@@ -5,11 +5,8 @@ import {
   JSONTypeData,
   toCode,
 } from './typeBase';
-import {
-  SetMethods,
-  setMethods,
-} from '../../../../common/src/columns/commonMethods';
-import { addCode, Code } from '../../../../common/src/columns/code';
+import { SetMethods, setMethods } from '../commonMethods';
+import { addCode, Code } from '../code';
 
 export interface JSONSet<Value extends JSONTypeAny>
   extends JSONType<Set<Value['type']>, 'set'>,

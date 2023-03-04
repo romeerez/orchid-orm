@@ -3,13 +3,9 @@ import {
   dateTypeMethods,
   numberTypeMethods,
   stringTypeMethods,
-} from '../../../../common/src/columns/commonMethods';
-import { singleQuote } from '../../../../common/src/utils';
-import {
-  BaseNumberData,
-  BaseStringData,
-  DateColumnData,
-} from '../../../../common/src/columns/scalarTypes';
+} from '../commonMethods';
+import { singleQuote } from '../../utils';
+import { BaseNumberData, BaseStringData, DateColumnData } from '../scalarTypes';
 
 export type JSONAny = JSONTypeAny & {
   dataType: 'any';

@@ -1,9 +1,13 @@
 import { ColumnsShape } from './columnsSchema';
-import { ColumnChain, ColumnData, ColumnType, ForeignKey } from './columnType';
+import { ColumnData, ColumnType, ForeignKey } from './columnType';
 import { TimestampColumn } from './dateTime';
 import { getRaw } from '../raw';
 import { TableData } from './columnTypes';
-import { addCode, Code } from '../../../common/src/columns/code';
+import {
+  addCode,
+  Code,
+  columnChainToCode,
+} from '../../../common/src/columns/code';
 import { isRaw } from '../../../common/src/raw';
 import {
   quoteObjectKey,
@@ -242,32 +246,6 @@ export const foreignKeyArgsToCode = (
   }
 
   return args;
-};
-
-export const columnChainToCode = (
-  chain: ColumnChain,
-  t: string,
-  code: Code,
-): Code => {
-  const result = toArray(code) as Code[];
-
-  for (const item of chain) {
-    if (item[0] === 'transform') {
-      addCode(result, `.transform(${item[1].toString()})`);
-    } else if (item[0] === 'to') {
-      addCode(result, `.to(${item[1].toString()}, `);
-      addCode(result, item[2].toCode(t));
-      addCode(result, ')');
-    } else if (item[0] === 'refine') {
-      addCode(result, `.refine(${item[1].toString()})`);
-    } else if (item[0] === 'superRefine') {
-      addCode(result, `.superRefine(${item[1].toString()})`);
-    }
-  }
-
-  return result.length === 1 && typeof result[0] === 'string'
-    ? result[0]
-    : result;
 };
 
 export const columnDefaultArgumentToCode = (value: unknown): string => {

@@ -8,15 +8,10 @@ import {
 import { JSONNotNullish, JSONNullish, notNullish, nullish } from './nullish';
 import { intersection, JSONIntersection } from './intersection';
 import { array, JSONArray } from './array';
-import { ColumnChain } from '../columnType';
-import { columnChainToCode } from '../code';
 import { union } from './union';
-import { addCode, Code } from '../../../../common/src/columns/code';
-import {
-  ColumnDataBase,
-  ValidationContext,
-} from '../../../../common/src/columns/columnType';
-import { toArray } from '../../../../common/src/utils';
+import { addCode, Code, columnChainToCode } from '../code';
+import { ColumnChain, ColumnDataBase, ValidationContext } from '../columnType';
+import { toArray } from '../../utils';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type JSONTypeAny = JSONType<any>;

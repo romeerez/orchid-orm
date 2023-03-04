@@ -2,6 +2,7 @@ import { BaseOperators, Operator } from './operators';
 import { Code } from './code';
 import { RawExpression } from '../raw';
 import { SetOptional, SomeIsTrue, StringKey } from '../utils';
+import { JSONTypeAny } from './json';
 
 // output type of the column
 export type ColumnOutput<T extends ColumnTypeBase> = T['type'];
@@ -158,6 +159,13 @@ export type ColumnDataBase = {
   as?: ColumnTypeBase;
 };
 
+export type ColumnChain = (
+  | ['transform', (input: unknown, ctx: ValidationContext) => unknown]
+  | ['to', (input: unknown) => JSONTypeAny | undefined, JSONTypeAny]
+  | ['refine', (input: unknown) => unknown]
+  | ['superRefine', (input: unknown, ctx: ValidationContext) => unknown]
+)[];
+
 // base column type
 export abstract class ColumnTypeBase<
   Type = unknown,
@@ -182,6 +190,9 @@ export abstract class ColumnTypeBase<
 
   // data of the column that specifies column characteristics and validations
   data = {} as Data;
+
+  // chain of transformations and validations of the column
+  chain = [] as ColumnChain;
 
   // encode value passed to `create` to an appropriate value for a database
   encodeFn?: (input: any) => unknown; // eslint-disable-line @typescript-eslint/no-explicit-any

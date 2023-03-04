@@ -1,5 +1,5 @@
 import { constructType, JSONType, Primitive, toCode } from './typeBase';
-import { singleQuote } from '../../../../common/src/utils';
+import { singleQuote } from '../../utils';
 
 export interface JSONLiteral<T extends Primitive>
   extends JSONType<T, 'literal'> {

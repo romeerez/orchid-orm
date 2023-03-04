@@ -24,7 +24,7 @@ import {
 import { columnCode } from './code';
 import { Code } from '../../../common/src/columns/code';
 
-export * from './json/index';
+export * from '../../../common/src/columns/json';
 
 export type JSONTypes = typeof jsonTypes;
 export const jsonTypes = {

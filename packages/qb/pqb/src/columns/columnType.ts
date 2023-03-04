@@ -1,4 +1,3 @@
-import { JSONTypeAny } from './json';
 import { ColumnsShape } from './columnsSchema';
 import { Query } from '../query';
 import { BaseOperators } from '../../../common/src/columns/operators';
@@ -95,13 +94,6 @@ export type ForeignKeyTableWithColumns = new () => {
 export type ColumnNameOfTable<Table extends ForeignKeyTableWithColumns> =
   StringKey<keyof InstanceType<Table>['columns']['shape']>;
 
-export type ColumnChain = (
-  | ['transform', (input: unknown, ctx: ValidationContext) => unknown]
-  | ['to', (input: unknown) => JSONTypeAny | undefined, JSONTypeAny]
-  | ['refine', (input: unknown) => unknown]
-  | ['superRefine', (input: unknown, ctx: ValidationContext) => unknown]
-)[];
-
 export type ColumnFromDbParams = {
   isNullable?: boolean;
   default?: string;
@@ -133,8 +125,6 @@ export abstract class ColumnType<
   Ops extends BaseOperators = BaseOperators,
   InputType = Type,
 > extends ColumnTypeBase<Type, Ops, InputType, ColumnData> {
-  chain = [] as ColumnChain;
-
   primaryKey<T extends ColumnType>(this: T): PrimaryKeyColumn<T> {
     return setColumnData(
       this,
