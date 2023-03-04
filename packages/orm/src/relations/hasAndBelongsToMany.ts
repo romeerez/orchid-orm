@@ -1,7 +1,9 @@
 import { RelationData, RelationThunkBase } from './relations';
 import { Table } from '../table';
 import {
+  ColumnTypesBase,
   CreateCtx,
+  emptyObject,
   getQueryAs,
   HasAndBelongsToManyRelation,
   MaybeArray,
@@ -53,8 +55,12 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn {
   private readonly nestedInsert: HasManyNestedInsert;
   private readonly nestedUpdate: HasManyNestedUpdate;
 
-  constructor(private key: string, private state: State) {
-    super();
+  constructor(
+    types: ColumnTypesBase,
+    private key: string,
+    private state: State,
+  ) {
+    super(types);
     this.nestedInsert = nestedInsert(state);
     this.nestedUpdate = nestedUpdate(state);
   }
@@ -141,7 +147,11 @@ export const makeHasAndBelongsToManyMethod = (
         }),
       );
     },
-    virtualColumn: new HasAndBelongsToManyVirtualColumn(relationName, state),
+    virtualColumn: new HasAndBelongsToManyVirtualColumn(
+      emptyObject,
+      relationName,
+      state,
+    ),
     // joinQuery can be a property of RelationQuery and be used by whereExists and other stuff which needs it
     // and the chained query itself may be a query around this joinQuery
     joinQuery(fromQuery, toQuery) {

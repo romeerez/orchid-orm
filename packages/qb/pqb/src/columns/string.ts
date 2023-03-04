@@ -7,6 +7,7 @@ import { columnCode } from './code';
 import { Code } from '../../../common/src/columns/code';
 import { joinTruthy, singleQuote } from '../../../common/src/utils';
 import { BaseStringData } from '../../../common/src/columns/scalarTypes';
+import { ColumnTypesBase } from '../../../common/src/columns/columnType';
 
 const stringDataToCode = (data: BaseStringData) => {
   let code = '';
@@ -58,8 +59,8 @@ export abstract class LimitedTextBaseColumn<
 > extends TextBaseColumn {
   data: TextColumnData & { maxChars: Limit };
 
-  constructor(limit?: Limit) {
-    super();
+  constructor(types: ColumnTypesBase, limit?: Limit) {
+    super(types);
 
     this.data = { maxChars: limit } as TextColumnData & { maxChars: Limit };
   }
@@ -108,8 +109,8 @@ export class TextColumn extends TextBaseColumn {
   operators = Operators.text;
   data = {} as TextColumnData & { minArg?: number; maxArg?: number };
 
-  constructor(minArg?: number, maxArg?: number) {
-    super();
+  constructor(types: ColumnTypesBase, minArg?: number, maxArg?: number) {
+    super(types);
     if (minArg !== undefined) {
       this.data.min = this.data.minArg = minArg;
       if (maxArg !== undefined) {
@@ -270,8 +271,8 @@ export class BitColumn<Length extends number> extends ColumnType<
   operators = Operators.text;
   data: ColumnData & { length: Length };
 
-  constructor(length: Length) {
-    super();
+  constructor(types: ColumnTypesBase, length: Length) {
+    super(types);
 
     this.data = { length } as { length: Length };
   }
@@ -296,8 +297,8 @@ export class BitVaryingColumn<
   operators = Operators.text;
   data: ColumnData & { length: Length };
 
-  constructor(length?: Length) {
-    super();
+  constructor(types: ColumnTypesBase, length?: Length) {
+    super(types);
 
     this.data = { length } as { length: Length };
   }

@@ -23,6 +23,7 @@ import {
 } from './json';
 import { columnCode } from './code';
 import { Code } from '../../../common/src/columns/code';
+import { ColumnTypesBase } from '../../../common/src/columns/columnType';
 
 export * from '../../../common/src/columns/json';
 
@@ -56,9 +57,10 @@ export class JSONColumn<
   data: ColumnData & { schema: Type };
 
   constructor(
+    types: ColumnTypesBase,
     schemaOrFn: Type | ((j: JSONTypes) => Type) = scalarTypes.unknown() as Type,
   ) {
-    super();
+    super(types);
 
     const schema =
       typeof schemaOrFn === 'function' ? schemaOrFn(jsonTypes) : schemaOrFn;

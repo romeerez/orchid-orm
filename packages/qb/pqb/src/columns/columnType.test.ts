@@ -27,7 +27,7 @@ describe('column base', () => {
       return columnCode(this, t, `${t}.column()`);
     }
   }
-  const column = new Column();
+  const column = new Column({});
 
   describe('.primaryKey', () => {
     it('should mark column as a primary key', () => {
@@ -44,7 +44,7 @@ describe('column base', () => {
     it('should have toCode', () => {
       class Table {
         table = 'table';
-        columns = { shape: { column: new IntegerColumn() } };
+        columns = { shape: { column: new IntegerColumn({}) } };
       }
 
       expect(column.foreignKey(() => Table, 'column').toCode('t')).toBe(
@@ -418,7 +418,7 @@ describe('column base', () => {
     it('should have toCode', () => {
       expect(
         column
-          .to((s) => parseInt(s as string), new IntegerColumn())
+          .to((s) => parseInt(s as string), new IntegerColumn({}))
           .toCode('t'),
       ).toEqual('t.column().to((s)=>parseInt(s), t.integer())');
     });

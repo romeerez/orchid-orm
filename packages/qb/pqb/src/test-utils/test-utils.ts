@@ -22,7 +22,9 @@ export const db = createDb({
   adapter,
   columnTypes: (t) => ({
     ...t,
-    text: (min = 0, max = Infinity) => t.text(min, max),
+    text(min = 0, max = Infinity) {
+      return t.text(min, max);
+    },
     timestamp() {
       return t.timestamp().parse((input) => new Date(input));
     },

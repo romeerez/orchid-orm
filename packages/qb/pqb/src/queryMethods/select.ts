@@ -23,6 +23,7 @@ import { QueryResult } from '../adapter';
 import { isRaw, RawExpression } from '../../../common/src/raw';
 import { UnknownColumn } from '../columns/unknown';
 import {
+  emptyObject,
   FilterTuple,
   SimpleSpread,
   StringKey,
@@ -243,14 +244,14 @@ export const getShapeFromSelect = (q: Query) => {
         if (typeof it === 'string') {
           addColumnToShapeFromSelect(q, it, shape, query, result, key);
         } else if (isRaw(it)) {
-          result[key] = it.__column || new UnknownColumn();
+          result[key] = it.__column || new UnknownColumn(emptyObject);
         } else {
           const { returnType } = it.query;
           if (returnType === 'value' || returnType === 'valueOrThrow') {
             const type = (it.query as SelectQueryData)[getValueKey];
             if (type) result[key] = type;
           } else {
-            result[key] = new JSONTextColumn();
+            result[key] = new JSONTextColumn(emptyObject);
           }
         }
       }
@@ -268,7 +269,7 @@ const addColumnToShapeFromSelect = (
   key?: string,
 ) => {
   if ((q.relations as Record<string, Relation>)[arg]) {
-    result[key || arg] = new JSONTextColumn();
+    result[key || arg] = new JSONTextColumn(emptyObject);
     return;
   }
 

@@ -19,7 +19,7 @@ const insertUserAndProfile = async () => {
   await Profile.create({ ...profileData, userId: id });
 };
 
-describe('selectMethods', () => {
+describe('select', () => {
   useTestDatabase();
 
   it('table should have all columns selected if select was not applied', () => {
@@ -405,7 +405,7 @@ describe('selectMethods', () => {
     it('should parse raw column', async () => {
       const q = User.select({
         date: db.raw(
-          () => new DateColumn().parse((input) => new Date(input)),
+          () => new DateColumn({}).parse((input) => new Date(input)),
           '"createdAt"',
         ),
       });

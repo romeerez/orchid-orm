@@ -4,6 +4,7 @@ import { BaseOperators } from '../../../common/src/columns/operators';
 import {
   ColumnDataBase,
   ColumnTypeBase,
+  ColumnTypesBase,
   ColumnWithDefault,
   HiddenColumn,
   NullableColumn,
@@ -107,7 +108,9 @@ export const instantiateColumn = (
   klass: new (...args: never[]) => ColumnType,
   params: ColumnFromDbParams,
 ): ColumnType => {
-  const column = new (klass as unknown as new () => ColumnType)();
+  const column = new (klass as unknown as new (
+    types: ColumnTypesBase,
+  ) => ColumnType)({});
 
   let data;
   if (params.default !== null && params.default !== undefined) {

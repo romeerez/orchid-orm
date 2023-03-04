@@ -4,6 +4,7 @@ import { assignMethodsToClass } from './utils';
 import { arrayMethods } from '../../../common/src/columns/commonMethods';
 import { columnCode } from './code';
 import { addCode, Code } from '../../../common/src/columns/code';
+import { ColumnTypesBase } from '../../../common/src/columns/columnType';
 
 export type ArrayData<Item extends ColumnType> = ColumnData & {
   item: Item;
@@ -27,8 +28,8 @@ export class ArrayColumn<Item extends ColumnType> extends ColumnType<
   operators = Operators.array;
   data: ArrayData<Item>;
 
-  constructor(item: Item) {
-    super();
+  constructor(types: ColumnTypesBase, item: Item) {
+    super(types);
 
     this.data = { item };
   }

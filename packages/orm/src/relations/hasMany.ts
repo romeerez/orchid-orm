@@ -22,6 +22,8 @@ import {
   VirtualColumn,
   CreateCtx,
   UpdateCtx,
+  ColumnTypesBase,
+  emptyObject,
 } from 'pqb';
 import {
   getSourceRelation,
@@ -88,8 +90,12 @@ class HasManyVirtualColumn extends VirtualColumn {
   private readonly nestedInsert: HasManyNestedInsert;
   private readonly nestedUpdate: HasManyNestedUpdate;
 
-  constructor(private key: string, private state: State) {
-    super();
+  constructor(
+    types: ColumnTypesBase,
+    private key: string,
+    private state: State,
+  ) {
+    super(types);
     this.nestedInsert = nestedInsert(state);
     this.nestedUpdate = nestedUpdate(state);
   }
@@ -200,7 +206,7 @@ export const makeHasManyMethod = (
       const values = { [foreignKey]: params[primaryKey] };
       return query.where(values)._defaults(values);
     },
-    virtualColumn: new HasManyVirtualColumn(relationName, state),
+    virtualColumn: new HasManyVirtualColumn(emptyObject, relationName, state),
     joinQuery(fromQuery, toQuery) {
       return addQueryOn(toQuery, fromQuery, toQuery, foreignKey, primaryKey);
     },

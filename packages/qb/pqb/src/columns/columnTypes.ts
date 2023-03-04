@@ -74,6 +74,7 @@ import {
   pushOrNewArrayToObject,
   toArray,
 } from '../../../common/src/utils';
+import { name } from '../../../common/src/columns/types';
 
 export type ColumnTypes = typeof columnTypes;
 
@@ -127,7 +128,9 @@ export const getColumnTypes = <
   return fn(types);
 };
 
-const text = (min: number, max: number) => new TextColumn(min, max);
+function text(this: ColumnTypesBase, min: number, max: number) {
+  return new TextColumn(this, min, max);
+}
 
 function timestamps<T extends ColumnType>(this: {
   timestamp(): T;
@@ -171,83 +174,173 @@ const checkIfDataHasUpdatedAt = (data: UpdateQueryDataItem[]) => {
 
 export type DefaultColumnTypes = typeof columnTypes;
 export const columnTypes = {
+  name,
   raw,
-  smallint: () => new SmallIntColumn(),
-  integer: () => new IntegerColumn(),
-  bigint: () => new BigIntColumn(),
-  numeric: <
+  smallint(this: ColumnTypesBase) {
+    return new SmallIntColumn(this);
+  },
+  integer(this: ColumnTypesBase) {
+    return new IntegerColumn(this);
+  },
+  bigint(this: ColumnTypesBase) {
+    return new BigIntColumn(this);
+  },
+  numeric<
     Precision extends number | undefined = undefined,
     Scale extends number | undefined = undefined,
-  >(
-    precision?: Precision,
-    scale?: Scale,
-  ) => new DecimalColumn(precision, scale),
-  decimal: <
+  >(this: ColumnTypesBase, precision?: Precision, scale?: Scale) {
+    return new DecimalColumn(this, precision, scale);
+  },
+  decimal<
     Precision extends number | undefined = undefined,
     Scale extends number | undefined = undefined,
-  >(
-    precision?: Precision,
-    scale?: Scale,
-  ) => new DecimalColumn(precision, scale),
-  real: () => new RealColumn(),
-  doublePrecision: () => new DoublePrecisionColumn(),
-  smallSerial: () => new SmallSerialColumn(),
-  serial: () => new SerialColumn(),
-  bigSerial: () => new BigSerialColumn(),
-  money: () => new MoneyColumn(),
-  varchar: <Limit extends number | undefined = undefined>(limit?: Limit) =>
-    new VarCharColumn(limit),
-  char: <Limit extends number | undefined = undefined>(limit?: Limit) =>
-    new CharColumn(limit),
+  >(this: ColumnTypesBase, precision?: Precision, scale?: Scale) {
+    return new DecimalColumn(this, precision, scale);
+  },
+  real(this: ColumnTypesBase) {
+    return new RealColumn(this);
+  },
+  doublePrecision(this: ColumnTypesBase) {
+    return new DoublePrecisionColumn(this);
+  },
+  smallSerial(this: ColumnTypesBase) {
+    return new SmallSerialColumn(this);
+  },
+  serial(this: ColumnTypesBase) {
+    return new SerialColumn(this);
+  },
+  bigSerial(this: ColumnTypesBase) {
+    return new BigSerialColumn(this);
+  },
+  money(this: ColumnTypesBase) {
+    return new MoneyColumn(this);
+  },
+  varchar<Limit extends number | undefined = undefined>(
+    this: ColumnTypesBase,
+    limit?: Limit,
+  ) {
+    return new VarCharColumn(this, limit);
+  },
+  char<Limit extends number | undefined = undefined>(
+    this: ColumnTypesBase,
+    limit?: Limit,
+  ) {
+    return new CharColumn(this, limit);
+  },
   text,
   string: text,
-  bytea: () => new ByteaColumn(),
-  date: () => new DateColumn(),
-  timestamp: <Precision extends number>(precision?: Precision) =>
-    new TimestampColumn(precision),
-  timestampWithTimeZone: <Precision extends number | undefined = undefined>(
+  bytea(this: ColumnTypesBase) {
+    return new ByteaColumn(this);
+  },
+  date(this: ColumnTypesBase) {
+    return new DateColumn(this);
+  },
+  timestamp<Precision extends number>(
+    this: ColumnTypesBase,
     precision?: Precision,
-  ) => new TimestampWithTimeZoneColumn(precision),
-  time: <Precision extends number | undefined = undefined>(
+  ) {
+    return new TimestampColumn(this, precision);
+  },
+  timestampWithTimeZone<Precision extends number | undefined = undefined>(
+    this: ColumnTypesBase,
     precision?: Precision,
-  ) => new TimeColumn(precision),
-  timeWithTimeZone: <Precision extends number | undefined = undefined>(
+  ) {
+    return new TimestampWithTimeZoneColumn(this, precision);
+  },
+  time<Precision extends number | undefined = undefined>(
+    this: ColumnTypesBase,
     precision?: Precision,
-  ) => new TimeWithTimeZoneColumn(precision),
-  interval: <
+  ) {
+    return new TimeColumn(this, precision);
+  },
+  timeWithTimeZone<Precision extends number | undefined = undefined>(
+    this: ColumnTypesBase,
+    precision?: Precision,
+  ) {
+    return new TimeWithTimeZoneColumn(this, precision);
+  },
+  interval<
     Fields extends string | undefined = undefined,
     Precision extends number | undefined = undefined,
-  >(
-    fields?: Fields,
-    precision?: Precision,
-  ) => new IntervalColumn(fields, precision),
-  boolean: () => new BooleanColumn(),
-  enum: <U extends string, T extends [U, ...U[]]>(dataType: string, type: T) =>
-    new EnumColumn<U, T>(dataType, type),
-  point: () => new PointColumn(),
-  line: () => new LineColumn(),
-  lseg: () => new LsegColumn(),
-  box: () => new BoxColumn(),
-  path: () => new PathColumn(),
-  polygon: () => new PolygonColumn(),
-  circle: () => new CircleColumn(),
-  cidr: () => new CidrColumn(),
-  inet: () => new InetColumn(),
-  macaddr: () => new MacAddrColumn(),
-  macaddr8: () => new MacAddr8Column(),
-  bit: <Length extends number>(length: Length) => new BitColumn(length),
-  bitVarying: <Length extends number | undefined = undefined>(
+  >(this: ColumnTypesBase, fields?: Fields, precision?: Precision) {
+    return new IntervalColumn(this, fields, precision);
+  },
+  boolean(this: ColumnTypesBase) {
+    return new BooleanColumn(this);
+  },
+  enum<U extends string, T extends [U, ...U[]]>(
+    this: ColumnTypesBase,
+    dataType: string,
+    type: T,
+  ) {
+    return new EnumColumn<U, T>(this, dataType, type);
+  },
+  point(this: ColumnTypesBase) {
+    return new PointColumn(this);
+  },
+  line(this: ColumnTypesBase) {
+    return new LineColumn(this);
+  },
+  lseg(this: ColumnTypesBase) {
+    return new LsegColumn(this);
+  },
+  box(this: ColumnTypesBase) {
+    return new BoxColumn(this);
+  },
+  path(this: ColumnTypesBase) {
+    return new PathColumn(this);
+  },
+  polygon(this: ColumnTypesBase) {
+    return new PolygonColumn(this);
+  },
+  circle(this: ColumnTypesBase) {
+    return new CircleColumn(this);
+  },
+  cidr(this: ColumnTypesBase) {
+    return new CidrColumn(this);
+  },
+  inet(this: ColumnTypesBase) {
+    return new InetColumn(this);
+  },
+  macaddr(this: ColumnTypesBase) {
+    return new MacAddrColumn(this);
+  },
+  macaddr8(this: ColumnTypesBase) {
+    return new MacAddr8Column(this);
+  },
+  bit<Length extends number>(this: ColumnTypesBase, length: Length) {
+    return new BitColumn(this, length);
+  },
+  bitVarying<Length extends number | undefined = undefined>(
+    this: ColumnTypesBase,
     length?: Length,
-  ) => new BitVaryingColumn(length),
-  tsvector: () => new TsVectorColumn(),
-  tsquery: () => new TsQueryColumn(),
-  uuid: () => new UUIDColumn(),
-  xml: () => new XMLColumn(),
-  json: <Type extends JSONTypeAny>(
+  ) {
+    return new BitVaryingColumn(this, length);
+  },
+  tsvector(this: ColumnTypesBase) {
+    return new TsVectorColumn(this);
+  },
+  tsquery(this: ColumnTypesBase) {
+    return new TsQueryColumn(this);
+  },
+  uuid(this: ColumnTypesBase) {
+    return new UUIDColumn(this);
+  },
+  xml(this: ColumnTypesBase) {
+    return new XMLColumn(this);
+  },
+  json<Type extends JSONTypeAny>(
+    this: ColumnTypesBase,
     schemaOrFn: Type | ((j: JSONTypes) => Type),
-  ) => new JSONColumn(schemaOrFn),
-  jsonText: () => new JSONTextColumn(),
-  array: <Item extends ColumnType>(item: Item) => new ArrayColumn(item),
+  ) {
+    return new JSONColumn(this, schemaOrFn);
+  },
+  jsonText(this: ColumnTypesBase) {
+    return new JSONTextColumn(this);
+  },
+  array<Item extends ColumnType>(this: ColumnTypesBase, item: Item) {
+    return new ArrayColumn(this, item);
+  },
 
   timestamps,
 

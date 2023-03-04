@@ -3,6 +3,7 @@ import { Operators } from './operators';
 import { columnCode } from './code';
 import { quoteFullColumn } from '../sql/common';
 import { Code } from '../../../common/src/columns/code';
+import { ColumnTypesBase } from '../../../common/src/columns/columnType';
 
 export class EnumColumn<
   U extends string = string,
@@ -11,8 +12,12 @@ export class EnumColumn<
   operators = Operators.any;
   dataType = 'enum';
 
-  constructor(public enumName: string, public options: T) {
-    super();
+  constructor(
+    types: ColumnTypesBase,
+    public enumName: string,
+    public options: T,
+  ) {
+    super(types);
   }
 
   toCode(t: string): Code {

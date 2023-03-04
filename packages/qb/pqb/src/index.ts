@@ -16,3 +16,4 @@ export * from '../../common/src/adapter';
 export * from '../../common/src/raw';
 export * from '../../common/src/utils';
 export * from '../../common/src/columns/columnType';
+export * from '../../common/src/columns/types';

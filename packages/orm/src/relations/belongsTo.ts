@@ -2,7 +2,9 @@ import { Table } from '../table';
 import {
   addQueryOn,
   BelongsToRelation,
+  ColumnTypesBase,
   CreateCtx,
+  emptyObject,
   InsertQueryData,
   isQueryReturnsAll,
   pushQueryValue,
@@ -58,8 +60,12 @@ class BelongsToVirtualColumn extends VirtualColumn {
   private readonly nestedInsert: BelongsToNestedInsert;
   private readonly nestedUpdate: BelongsToNestedUpdate;
 
-  constructor(private key: string, private state: State) {
-    super();
+  constructor(
+    types: ColumnTypesBase,
+    private key: string,
+    private state: State,
+  ) {
+    super(types);
     this.nestedInsert = nestedInsert(this.state);
     this.nestedUpdate = nestedUpdate(this.state);
   }
@@ -138,7 +144,7 @@ export const makeBelongsToMethod = (
     method: (params: Record<string, unknown>) => {
       return query.findBy({ [primaryKey]: params[foreignKey] });
     },
-    virtualColumn: new BelongsToVirtualColumn(relationName, state),
+    virtualColumn: new BelongsToVirtualColumn(emptyObject, relationName, state),
     joinQuery(fromQuery, toQuery) {
       return addQueryOn(toQuery, fromQuery, toQuery, primaryKey, foreignKey);
     },

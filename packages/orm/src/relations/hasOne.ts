@@ -1,6 +1,8 @@
 import {
   addQueryOn,
+  ColumnTypesBase,
   CreateCtx,
+  emptyObject,
   getQueryAs,
   HasOneRelation,
   InsertQueryData,
@@ -85,8 +87,12 @@ class HasOneVirtualColumn extends VirtualColumn {
   private readonly nestedInsert: HasOneNestedInsert;
   private readonly nestedUpdate: HasOneNestedUpdate;
 
-  constructor(private key: string, private state: State) {
-    super();
+  constructor(
+    types: ColumnTypesBase,
+    private key: string,
+    private state: State,
+  ) {
+    super(types);
     this.nestedInsert = nestedInsert(state);
     this.nestedUpdate = nestedUpdate(state);
   }
@@ -201,7 +207,7 @@ export const makeHasOneMethod = (
       const values = { [foreignKey]: params[primaryKey] };
       return query.where(values)._defaults(values);
     },
-    virtualColumn: new HasOneVirtualColumn(relationName, state),
+    virtualColumn: new HasOneVirtualColumn(emptyObject, relationName, state),
     joinQuery(fromQuery, toQuery) {
       return addQueryOn(toQuery, fromQuery, toQuery, foreignKey, primaryKey);
     },

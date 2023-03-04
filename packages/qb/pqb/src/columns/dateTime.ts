@@ -7,6 +7,8 @@ import { columnCode } from './code';
 import { Code } from '../../../common/src/columns/code';
 import { joinTruthy } from '../../../common/src/utils';
 import { DateColumnData } from '../../../common/src/columns/scalarTypes';
+import { nameKey } from '../../../common/src/columns/types';
+import { ColumnTypesBase } from '../../../common/src/columns/columnType';
 
 type DateMethods = typeof dateTypeMethods;
 
@@ -25,7 +27,9 @@ export abstract class DateBaseColumn extends ColumnType<
   asNumber() {
     return this.encode((input: number) => new Date(input))
       .parse(Date.parse)
-      .as(new IntegerColumn() as never) as unknown as IntegerColumn;
+      .as(
+        new IntegerColumn({ [nameKey]: this.data.name }) as never,
+      ) as unknown as IntegerColumn;
   }
 
   asDate<T extends ColumnType>(this: T) {
@@ -57,8 +61,8 @@ export abstract class DateTimeBaseClass<
 > extends DateBaseColumn {
   data: DateColumnData & { dateTimePrecision: Precision };
 
-  constructor(dateTimePrecision?: Precision) {
-    super();
+  constructor(types: ColumnTypesBase, dateTimePrecision?: Precision) {
+    super(types);
 
     this.data = { dateTimePrecision } as DateColumnData & {
       dateTimePrecision: Precision;
@@ -175,8 +179,8 @@ export class IntervalColumn<
   data: ColumnData & { fields: Fields; precision: Precision };
   operators = Operators.date;
 
-  constructor(fields?: Fields, precision?: Precision) {
-    super();
+  constructor(types: ColumnTypesBase, fields?: Fields, precision?: Precision) {
+    super(types);
 
     this.data = { fields, precision } as DateColumnData & {
       fields: Fields;

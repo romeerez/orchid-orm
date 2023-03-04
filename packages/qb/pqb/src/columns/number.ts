@@ -7,6 +7,7 @@ import { Code } from '../../../common/src/columns/code';
 import { RawExpression } from '../../../common/src/raw';
 import { joinTruthy } from '../../../common/src/utils';
 import { BaseNumberData } from '../../../common/src/columns/scalarTypes';
+import { ColumnTypesBase } from '../../../common/src/columns/columnType';
 
 const numberDataToCode = (data: NumberBaseColumn['data']) => {
   let code = '';
@@ -62,8 +63,12 @@ export class DecimalBaseColumn<
   operators = Operators.number;
   dataType = 'decimal' as const;
 
-  constructor(numericPrecision?: Precision, numericScale?: Scale) {
-    super();
+  constructor(
+    types: ColumnTypesBase,
+    numericPrecision?: Precision,
+    numericScale?: Scale,
+  ) {
+    super(types);
 
     this.data = {
       numericPrecision,

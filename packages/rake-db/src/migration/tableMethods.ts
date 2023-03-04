@@ -1,7 +1,8 @@
-import { EnumColumn } from 'pqb';
+import { ColumnTypesBase, EnumColumn } from 'pqb';
 
 export const tableMethods = {
-  enum: (name: string) =>
+  enum(this: ColumnTypesBase, name: string) {
     // empty array will be filled during the migration by querying db
-    new EnumColumn(name, [] as unknown as [string, ...string[]]),
+    return new EnumColumn(this, name, [] as unknown as [string, ...string[]]);
+  },
 };

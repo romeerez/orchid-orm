@@ -3,7 +3,6 @@
   "include": ["./src", "jest-setup.ts", "app"],
   "compilerOptions": {
     "outDir": "./dist",
-    "noEmit": false,
     "baseUrl": ".",
     "paths": {
       "pqb": ["../qb/pqb/src"]

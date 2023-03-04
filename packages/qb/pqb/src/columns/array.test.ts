@@ -9,7 +9,7 @@ describe('array column', () => {
     it('should output nested array of numbers', async () => {
       const result = await db.get(
         db.raw(
-          (t) => new ArrayColumn(new ArrayColumn(t.integer())),
+          (t) => new ArrayColumn({}, new ArrayColumn({}, t.integer())),
           `'{{1, 2, 3}, {4, 5, 6}}'::integer[][]`,
         ),
       );
@@ -24,7 +24,7 @@ describe('array column', () => {
     it('should output nested array of strings', async () => {
       const result = await db.get(
         db.raw(
-          (t) => new ArrayColumn(new ArrayColumn(t.text())),
+          (t) => new ArrayColumn({}, new ArrayColumn({}, t.text())),
           `'{{"a", "b"}, {"c", "d"}}'::text[][]`,
         ),
       );
@@ -39,7 +39,7 @@ describe('array column', () => {
     it('should output nested array of booleans', async () => {
       const result = await db.get(
         db.raw(
-          (t) => new ArrayColumn(new ArrayColumn(t.boolean())),
+          (t) => new ArrayColumn({}, new ArrayColumn({}, t.boolean())),
           `'{{true}, {false}}'::text[][]`,
         ),
       );
@@ -49,7 +49,7 @@ describe('array column', () => {
     });
 
     it('should have toCode', async () => {
-      const column = new ArrayColumn(new IntegerColumn());
+      const column = new ArrayColumn({}, new IntegerColumn({}));
       expect(column.toCode('t')).toBe('t.array(t.integer())');
 
       expect(column.nonEmpty().toCode('t')).toBe(

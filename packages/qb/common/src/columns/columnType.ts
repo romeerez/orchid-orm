@@ -3,6 +3,7 @@ import { Code } from './code';
 import { RawExpression } from '../raw';
 import { SetOptional, SomeIsTrue, StringKey } from '../utils';
 import { JSONTypeAny } from './json';
+import { nameKey } from './types';
 
 // output type of the column
 export type ColumnOutput<T extends ColumnTypeBase> = T['type'];
@@ -83,7 +84,9 @@ export type ColumnTypesBase = Record<
   string,
   // eslint-disable-next-line @typescript-eslint/ban-types
   AnyColumnTypeCreator
->;
+> & {
+  [nameKey]?: string;
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ValidationContext = any;
@@ -143,6 +146,9 @@ export const pushColumnData = <
 
 // base data of column
 export type ColumnDataBase = {
+  // name of the column in the database, if different from the code
+  name?: string;
+
   // is null value allowed
   isNullable?: boolean;
 
@@ -193,6 +199,12 @@ export abstract class ColumnTypeBase<
 
   // chain of transformations and validations of the column
   chain = [] as ColumnChain;
+
+  constructor(types: ColumnTypesBase) {
+    if (types[nameKey]) {
+      this.data.name = types[nameKey];
+    }
+  }
 
   // encode value passed to `create` to an appropriate value for a database
   encodeFn?: (input: any) => unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
