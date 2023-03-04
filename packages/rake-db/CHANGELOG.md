@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.3.44
+
+### Patch Changes
+
+- Fix rake-db import on windows in ESM
+
 ## 2.3.43
 
 ### Patch Changes
