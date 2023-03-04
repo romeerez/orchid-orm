@@ -1,4 +1,4 @@
-# pqb
+# Orchid Core
 
 A query builder core module for Orchid ORM.
 

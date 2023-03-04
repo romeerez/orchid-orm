@@ -1,6 +1,6 @@
 {
   "name": "orchid-core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Orchid ORM core module",
   "homepage": "https://orchid-orm.netlify.app",
   "repository": {
@@ -24,8 +24,9 @@
     "test": "jest --watch --verbose false",
     "check": "jest",
     "types": "tsc",
+    "test:ci": "jest --coverage --coverageReporters json-summary",
     "build": "rimraf ./dist/ && rollup -c ../../rollup.config",
-    "test:ci": "jest --coverage --coverageReporters json-summary"
+    "prepublishOnly": "pnpm build"
   },
   "jest": {
     "rootDir": "src",
