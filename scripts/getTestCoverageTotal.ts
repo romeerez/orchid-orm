@@ -22,9 +22,15 @@ const calculatePackageCoverage = async (name: string) => {
 
 const main = async () => {
   const values = await Promise.all(
-    ['orm', 'qb/pqb', 'rake-db', 'schema-to-zod', 'test-factory'].map(
-      calculatePackageCoverage,
-    ),
+    [
+      'orm',
+      'qb/common',
+      'qb/myqb',
+      'qb/pqb',
+      'rake-db',
+      'schema-to-zod',
+      'test-factory',
+    ].map(calculatePackageCoverage),
   );
   const value = values.reduce((acc, value) => acc + value, 0) / values.length;
   process.stdout.write(`${Math.floor(value * 100) / 100}%`);
