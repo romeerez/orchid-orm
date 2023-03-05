@@ -23,7 +23,7 @@ export class EnumColumn<
     return columnCode(
       this,
       t,
-      `${t}.enum('${this.enumName}', [${this.options
+      `enum('${this.enumName}', [${this.options
         .map((option) => `'${option}'`)
         .join(', ')}])`,
     );

@@ -108,8 +108,13 @@ const createTable = (ast: RakeDbAst.Table) => {
   const hasTimestamps =
     isTimestamp(ast.shape.createdAt) && isTimestamp(ast.shape.updatedAt);
 
+  const hasTimestampsSnake =
+    isTimestamp(ast.shape.created_at) && isTimestamp(ast.shape.updated_at);
+
   for (const key in ast.shape) {
     if (hasTimestamps && (key === 'createdAt' || key === 'updatedAt')) continue;
+    if (hasTimestampsSnake && (key === 'created_at' || key === 'updated_at'))
+      continue;
 
     const line: Code[] = [`${quoteObjectKey(key)}: `];
     for (const part of ast.shape[key].toCode('t')) {
@@ -121,6 +126,10 @@ const createTable = (ast: RakeDbAst.Table) => {
 
   if (hasTimestamps) {
     code.push(['...t.timestamps(),']);
+  }
+
+  if (hasTimestampsSnake) {
+    code.push(['...t.timestampsSnakeCase(),']);
   }
 
   if (ast.primaryKey) {

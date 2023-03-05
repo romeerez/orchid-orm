@@ -5,7 +5,6 @@ import {
   ColumnDataBase,
   ColumnTypeBase,
   ColumnTypesBase,
-  ColumnWithDefault,
   HiddenColumn,
   NullableColumn,
   PrimaryKeyColumn,
@@ -13,9 +12,9 @@ import {
   setColumnData,
   ValidationContext,
   raw,
-  RawExpression,
   MaybeArray,
   StringKey,
+  QueryCommon,
 } from 'orchid-core';
 
 export type ColumnData = ColumnDataBase & {
@@ -29,7 +28,6 @@ export type ColumnData = ColumnDataBase & {
   collate?: string;
   compression?: string;
   foreignKeys?: ForeignKey<string, string[]>[];
-  modifyQuery?: (q: Query) => void;
 };
 
 type ForeignKeyMatch = 'FULL' | 'PARTIAL' | 'SIMPLE';
@@ -212,17 +210,6 @@ export abstract class ColumnType<
     return this.dataType;
   }
 
-  default<T extends ColumnType, Value extends T['type'] | RawExpression>(
-    this: T,
-    value: Value,
-  ): ColumnWithDefault<T, Value> {
-    return setColumnData(
-      this,
-      'default',
-      value as unknown,
-    ) as ColumnWithDefault<T, Value>;
-  }
-
   index<T extends ColumnType>(
     this: T,
     options: Omit<SingleColumnIndexOptions, 'column'> = {},
@@ -254,7 +241,7 @@ export abstract class ColumnType<
   }
 
   modifyQuery<T extends ColumnType>(this: T, cb: (q: Query) => void): T {
-    return setColumnData(this, 'modifyQuery', cb);
+    return setColumnData(this, 'modifyQuery', cb as (q: QueryCommon) => void);
   }
 
   transform<T extends ColumnType, Transformed>(

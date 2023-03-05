@@ -54,6 +54,7 @@ export namespace RakeDbAst {
 
     export type Change = {
       type: 'change';
+      name?: string;
       from: ColumnChange;
       to: ColumnChange;
       using?: RawExpression;

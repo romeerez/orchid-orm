@@ -24,12 +24,11 @@ export class ArrayColumn<Item extends ColumnType> extends ColumnType<
 > {
   dataType = 'array' as const;
   operators = Operators.array;
-  data: ArrayData<Item>;
+  data!: ArrayData<Item>;
 
   constructor(types: ColumnTypesBase, item: Item) {
     super(types);
-
-    this.data = { item };
+    this.data.item = item;
   }
 
   toSQL() {
@@ -37,7 +36,7 @@ export class ArrayColumn<Item extends ColumnType> extends ColumnType<
   }
 
   toCode(this: ArrayColumn<Item>, t: string): Code {
-    const code: Code[] = [`${t}.array(`];
+    const code: Code[] = ['array('];
     addCode(code, this.data.item.toCode(t));
     addCode(code, ')');
 

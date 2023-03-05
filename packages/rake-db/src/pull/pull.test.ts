@@ -2,6 +2,7 @@ import { DbStructure } from './dbStructure';
 import { pullDbStructure } from './pull';
 import { processRakeDbConfig } from '../common';
 import { writeMigrationFile } from '../commands/generate';
+import { asMock } from '../test-utils';
 
 jest.mock('./dbStructure', () => {
   const { DbStructure } = jest.requireActual('./dbStructure');
@@ -50,6 +51,24 @@ describe('pull', () => {
         isNullable: false,
       },
       {
+        schemaName: 'schema',
+        tableName: 'table1',
+        name: 'createdAt',
+        type: 'timestamp',
+        dateTimePrecision: 6,
+        isNullable: false,
+        default: 'now()',
+      },
+      {
+        schemaName: 'schema',
+        tableName: 'table1',
+        name: 'updatedAt',
+        type: 'timestamp',
+        dateTimePrecision: 6,
+        isNullable: false,
+        default: 'now()',
+      },
+      {
         schemaName: 'public',
         tableName: 'table2',
         name: 'text',
@@ -59,7 +78,7 @@ describe('pull', () => {
       {
         schemaName: 'public',
         tableName: 'table2',
-        name: 'createdAt',
+        name: 'created_at',
         type: 'timestamp',
         dateTimePrecision: 6,
         isNullable: false,
@@ -68,7 +87,7 @@ describe('pull', () => {
       {
         schemaName: 'public',
         tableName: 'table2',
-        name: 'updatedAt',
+        name: 'updated_at',
         type: 'timestamp',
         dateTimePrecision: 6,
         isNullable: false,
@@ -87,9 +106,10 @@ describe('pull', () => {
       config,
     );
 
-    expect(writeMigrationFile).toBeCalledWith(
-      config,
-      'pull',
+    const call = asMock(writeMigrationFile).mock.calls[0];
+    expect(call[0]).toBe(config);
+    expect(call[1]).toBe('pull');
+    expect(call[2]).toBe(
       `import { change } from 'rake-db';
 
 change(async (db) => {
@@ -100,13 +120,14 @@ change(async (db) => {
 change(async (db) => {
   await db.createTable('schema.table1', (t) => ({
     id: t.serial().primaryKey(),
+    ...t.timestamps(),
   }));
 });
 
 change(async (db) => {
   await db.createTable('table2', (t) => ({
     text: t.text(),
-    ...t.timestamps(),
+    ...t.timestampsSnakeCase(),
   }));
 });
 `,

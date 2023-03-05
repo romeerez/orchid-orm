@@ -8,7 +8,14 @@ import {
   getRaw,
   EnumColumn,
 } from 'pqb';
-import { EmptyObject, emptyObject, RawExpression, isRaw } from 'orchid-core';
+import {
+  EmptyObject,
+  emptyObject,
+  RawExpression,
+  isRaw,
+  ColumnTypesBase,
+  nameKey,
+} from 'orchid-core';
 import {
   ChangeTableCallback,
   ChangeTableOptions,
@@ -64,15 +71,18 @@ const mergeTableData = (a: TableData, b: TableData) => {
 };
 
 function add(
+  this: ColumnTypesBase,
   item: ColumnType,
   options?: { dropMode?: DropMode },
 ): RakeDbAst.ChangeTableItem.Column;
-function add(emptyObject: EmptyObject): EmptyObject;
+function add(this: ColumnTypesBase, emptyObject: EmptyObject): EmptyObject;
 function add(
+  this: ColumnTypesBase,
   items: Record<string, ColumnType>,
   options?: { dropMode?: DropMode },
 ): Record<string, RakeDbAst.ChangeTableItem.Column>;
 function add(
+  this: ColumnTypesBase,
   item: ColumnType | EmptyObject | Record<string, ColumnType>,
   options?: { dropMode?: DropMode },
 ):
@@ -80,7 +90,15 @@ function add(
   | EmptyObject
   | Record<string, RakeDbAst.ChangeTableItem.Column> {
   if (item instanceof ColumnType) {
-    return { type: 'add', item, dropMode: options?.dropMode };
+    if (this[nameKey]) {
+      item.data.name = this[nameKey];
+    }
+
+    return {
+      type: 'add',
+      item,
+      dropMode: options?.dropMode,
+    };
   } else if (item === emptyObject) {
     mergeTableData(changeTableData.add, getTableData());
     resetTableData();
@@ -98,9 +116,17 @@ function add(
   }
 }
 
-const drop = ((item, options) => {
+const drop = function (item, options) {
   if (item instanceof ColumnType) {
-    return { type: 'drop', item, dropMode: options?.dropMode };
+    if (this[nameKey]) {
+      item.data.name = this[nameKey];
+    }
+
+    return {
+      type: 'drop',
+      item,
+      dropMode: options?.dropMode,
+    };
   } else if (item === emptyObject) {
     mergeTableData(changeTableData.drop, getTableData());
     resetTableData();
@@ -116,7 +142,7 @@ const drop = ((item, options) => {
     }
     return result;
   }
-}) as typeof add;
+} as typeof add;
 
 type Change = RakeDbAst.ChangeTableItem.Change & ChangeOptions;
 
@@ -153,12 +179,14 @@ const tableChangeMethods = {
   add,
   drop,
   change(
+    this: ColumnTypesBase,
     from: ColumnType | Change,
     to: ColumnType | Change,
     options?: ChangeOptions,
   ): Change {
     return {
       type: 'change',
+      name: this[nameKey],
       from: columnTypeToColumnChange(from),
       to: columnTypeToColumnChange(to),
       ...options,
@@ -374,13 +402,15 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
       addColumnIndex(dropIndexes, key, item.item);
 
       alterTable.push(
-        `DROP COLUMN "${key}"${item.dropMode ? ` ${item.dropMode}` : ''}`,
+        `DROP COLUMN "${item.item.data.name || key}"${
+          item.dropMode ? ` ${item.dropMode}` : ''
+        }`,
       );
     } else if (item.type === 'change') {
       const { from, to } = item;
       if (from.type !== to.type || from.collate !== to.collate) {
         alterTable.push(
-          `ALTER COLUMN "${key}" TYPE ${to.type}${
+          `ALTER COLUMN "${item.name || key}" TYPE ${to.type}${
             to.collate ? ` COLLATE ${quote(to.collate)}` : ''
           }${item.using ? ` USING ${getRaw(item.using, values)}` : ''}`,
         );
@@ -395,18 +425,20 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
         const expr =
           value === undefined ? 'DROP DEFAULT' : `SET DEFAULT ${value}`;
 
-        alterTable.push(`ALTER COLUMN "${key}" ${expr}`);
+        alterTable.push(`ALTER COLUMN "${item.name || key}" ${expr}`);
       }
 
       if (from.nullable !== to.nullable) {
         alterTable.push(
-          `ALTER COLUMN "${key}" ${to.nullable ? 'DROP' : 'SET'} NOT NULL`,
+          `ALTER COLUMN "${item.name || key}" ${
+            to.nullable ? 'DROP' : 'SET'
+          } NOT NULL`,
         );
       }
 
       if (from.compression !== to.compression) {
         alterTable.push(
-          `ALTER COLUMN "${key}" SET COMPRESSION ${
+          `ALTER COLUMN "${item.name || key}" SET COMPRESSION ${
             to.compression || 'DEFAULT'
           }`,
         );

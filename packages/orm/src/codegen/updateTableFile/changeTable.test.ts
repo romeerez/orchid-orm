@@ -99,6 +99,38 @@ export class SomeTable extends BaseTable {
 }`);
   });
 
+  it('should add a single column with custom name', async () => {
+    asMock(fs.readFile)
+      .mockResolvedValue(`import { BaseTable } from '../baseTable';
+
+export class SomeTable extends BaseTable {
+  table = 'some';
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+  }));
+}`);
+
+    await updateTableFile({
+      ...params,
+      ast: {
+        ...ast.changeTable,
+        shape: {
+          name: { type: 'add', item: t.name('name').text(1, 10) },
+        },
+      },
+    });
+
+    testWritten(`import { BaseTable } from '../baseTable';
+
+export class SomeTable extends BaseTable {
+  table = 'some';
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+    name: t.name('name').text(1, 10),
+  }));
+}`);
+  });
+
   it('should add multiple column', async () => {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';

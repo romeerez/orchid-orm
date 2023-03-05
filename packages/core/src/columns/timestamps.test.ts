@@ -1,8 +1,7 @@
-import { db, expectSql, now, useTestDatabase } from '../test-utils/test-utils';
+import { db, expectSql, now, useTestDatabase } from '../test-utils';
 
 describe('timestamps', () => {
   useTestDatabase();
-  afterAll(db.close);
 
   const table = db('user', (t) => ({
     name: t.text().primaryKey(),
@@ -16,8 +15,8 @@ describe('timestamps', () => {
     expectSql(
       query.toSql(),
       `
-        UPDATE "user"
-        SET "updatedAt" = now()
+          UPDATE "user"
+          SET "updatedAt" = now()
       `,
     );
   });
@@ -82,4 +81,11 @@ describe('timestamps', () => {
       [now],
     );
   });
+
+  // describe('snake case', () => {
+  //   const table = db('snake', (t) => ({
+  //     name: t.text().primaryKey(),
+  //     ...t.timestamps(),
+  //   }));
+  // })
 });

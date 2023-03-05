@@ -52,7 +52,7 @@ export class JSONColumn<
 > extends ColumnType<Type['type'], typeof Operators.json> {
   dataType = 'jsonb' as const;
   operators = Operators.json;
-  data: ColumnData & { schema: Type };
+  data!: ColumnData & { schema: Type };
 
   constructor(
     types: ColumnTypesBase,
@@ -60,14 +60,13 @@ export class JSONColumn<
   ) {
     super(types);
 
-    const schema =
+    this.data.schema =
       typeof schemaOrFn === 'function' ? schemaOrFn(jsonTypes) : schemaOrFn;
-    this.data = { schema };
   }
 
   toCode(t: string): Code {
     const { schema } = this.data;
-    return columnCode(this, t, `${t}.json((t) => ${schema.toCode('t')})`);
+    return columnCode(this, t, `json((t) => ${schema.toCode('t')})`);
   }
 }
 
@@ -75,6 +74,6 @@ export class JSONTextColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'json' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.jsonText()`);
+    return columnCode(this, t, `jsonText()`);
   }
 }

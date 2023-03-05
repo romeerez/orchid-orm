@@ -4,6 +4,7 @@ import { RawExpression } from '../raw';
 import { SetOptional, SomeIsTrue, StringKey } from '../utils';
 import { JSONTypeAny } from './json';
 import { nameKey } from './types';
+import { QueryCommon } from '../query';
 
 // output type of the column
 export type ColumnOutput<T extends ColumnTypeBase> = T['type'];
@@ -166,6 +167,10 @@ export type ColumnDataBase = {
 
   // array of indexes info
   indexes?: { unique?: boolean }[];
+
+  // hook for modifying base query object of the table
+  // used for automatic updating of `updatedAt`
+  modifyQuery?: (q: QueryCommon) => void;
 };
 
 export type ColumnChain = (
@@ -198,12 +203,13 @@ export abstract class ColumnTypeBase<
   inputType!: InputType;
 
   // data of the column that specifies column characteristics and validations
-  data = {} as Data;
+  data: Data;
 
   // chain of transformations and validations of the column
   chain = [] as ColumnChain;
 
   constructor(types: ColumnTypesBase) {
+    this.data = {} as Data;
     if (types[nameKey]) {
       this.data.name = types[nameKey];
     }
@@ -217,4 +223,15 @@ export abstract class ColumnTypeBase<
 
   // parse value from a database when it is an element of database array type
   parseItem?: (input: string) => unknown;
+
+  default<T extends ColumnTypeBase, Value extends T['type'] | RawExpression>(
+    this: T,
+    value: Value,
+  ): ColumnWithDefault<T, Value> {
+    return setColumnData(
+      this,
+      'default',
+      value as unknown,
+    ) as ColumnWithDefault<T, Value>;
+  }
 }

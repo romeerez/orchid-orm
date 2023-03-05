@@ -58,25 +58,15 @@ import {
 import { makeRegexToFindInSql } from '../utils';
 import { ColumnsShape } from './columnsSchema';
 import {
-  QueryData,
-  UpdatedAtDataInjector,
-  UpdateQueryData,
-  UpdateQueryDataItem,
-} from '../sql';
-import {
-  getRawSql,
-  isRaw,
   raw,
-  RawExpression,
   ColumnTypesBase,
-  ColumnWithDefault,
   EmptyObject,
   emptyObject,
   MaybeArray,
-  pushOrNewArrayToObject,
   toArray,
   name,
 } from 'orchid-core';
+import { makeTimestampsHelpers } from 'orchid-core';
 
 export type ColumnTypes = typeof columnTypes;
 
@@ -133,46 +123,6 @@ export const getColumnTypes = <
 function text(this: ColumnTypesBase, min: number, max: number) {
   return new TextColumn(this, min, max);
 }
-
-function timestamps<T extends ColumnType>(this: {
-  timestamp(): T;
-}): {
-  createdAt: ColumnWithDefault<T, RawExpression>;
-  updatedAt: ColumnWithDefault<T, RawExpression>;
-} {
-  return {
-    createdAt: this.timestamp().default(raw('now()')),
-    updatedAt: this.timestamp()
-      .default(raw('now()'))
-      .modifyQuery(addHookForUpdate),
-  };
-}
-
-const updatedAtRegex = makeRegexToFindInSql('\\bupdatedAt\\b"?\\s*=');
-const updateUpdatedAtItem = raw('"updatedAt" = now()');
-
-const addHookForUpdate = (q: { query: QueryData }) => {
-  pushOrNewArrayToObject(
-    q.query as UpdateQueryData,
-    'updateData',
-    updatedAtInjector,
-  );
-};
-
-const updatedAtInjector: UpdatedAtDataInjector = (data) => {
-  return checkIfDataHasUpdatedAt(data) ? undefined : updateUpdatedAtItem;
-};
-
-const checkIfDataHasUpdatedAt = (data: UpdateQueryDataItem[]) => {
-  return data.some((item) => {
-    if (isRaw(item)) {
-      updatedAtRegex.lastIndex = 0;
-      return updatedAtRegex.test(getRawSql(item));
-    } else {
-      return typeof item !== 'function' && item.updatedAt;
-    }
-  });
-};
 
 export type DefaultColumnTypes = typeof columnTypes;
 export const columnTypes = {
@@ -344,8 +294,6 @@ export const columnTypes = {
     return new ArrayColumn(this, item);
   },
 
-  timestamps,
-
   primaryKey(columns: string[], options?: { name?: string }) {
     tableData.primaryKey = { columns, options };
     return emptyObject;
@@ -383,6 +331,13 @@ export const columnTypes = {
   },
 
   foreignKey,
+
+  ...makeTimestampsHelpers(
+    makeRegexToFindInSql('\\bupdatedAt\\b"?\\s*='),
+    raw('"updatedAt" = now()'),
+    makeRegexToFindInSql('\\bupdated_at\\b"?\\s*='),
+    raw('"updated_at" = now()'),
+  ),
 };
 
 function foreignKey<

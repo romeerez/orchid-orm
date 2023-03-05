@@ -46,5 +46,8 @@
     "query-builder"
   ],
   "author": "Roman Kushyn",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "pqb": "workspace:*"
+  }
 }

@@ -291,6 +291,7 @@ const pushTableAst = (
       );
     }
 
+    delete column.data.name;
     shape[item.name] = column;
   }
 

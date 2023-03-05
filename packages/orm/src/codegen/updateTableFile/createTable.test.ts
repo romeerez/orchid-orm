@@ -2,12 +2,15 @@ import { updateTableFile } from './updateTableFile';
 import { asMock, ast, makeTestWritten, tablePath } from '../testUtils';
 import path from 'path';
 import fs from 'fs/promises';
+import { columnTypes } from 'pqb';
 
 jest.mock('fs/promises', () => ({
   readFile: jest.fn(),
   writeFile: jest.fn(),
   mkdir: jest.fn(),
 }));
+
+const t = columnTypes;
 
 const baseTablePath = path.resolve('baseTable.ts');
 const baseTableName = 'BaseTable';
@@ -62,7 +65,7 @@ describe('createTable', () => {
     );
   });
 
-  it('should add table', async () => {
+  it('should add table with primary key, indexes, foreign keys', async () => {
     await updateTableFile({
       ...params,
       ast: {
@@ -105,6 +108,26 @@ describe('createTable', () => {
         name: 'foreignKeyName',
       },
     ),
+  }`,
+      }),
+    );
+  });
+
+  it('should add table with column with custom name', async () => {
+    await updateTableFile({
+      ...params,
+      ast: {
+        ...ast.addTable,
+        shape: {
+          column: t.name('name').integer(),
+        },
+      },
+    });
+
+    testWritten(
+      template({
+        columns: `{
+    column: t.name('name').integer(),
   }`,
       }),
     );

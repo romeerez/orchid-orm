@@ -23,7 +23,7 @@ export abstract class DateBaseColumn extends ColumnType<
   typeof Operators.date,
   string | Date
 > {
-  data = {} as DateColumnData;
+  data!: DateColumnData;
   operators = Operators.date;
 
   asNumber() {
@@ -54,21 +54,18 @@ const dateDataToCode = (data: DateColumnData) => {
 export class DateColumn extends DateBaseColumn {
   dataType = 'date' as const;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.date()${dateDataToCode(this.data)}`);
+    return columnCode(this, t, `date()${dateDataToCode(this.data)}`);
   }
 }
 
 export abstract class DateTimeBaseClass<
   Precision extends number | undefined = undefined,
 > extends DateBaseColumn {
-  data: DateColumnData & { dateTimePrecision: Precision };
+  data!: DateColumnData & { dateTimePrecision: Precision };
 
   constructor(types: ColumnTypesBase, dateTimePrecision?: Precision) {
     super(types);
-
-    this.data = { dateTimePrecision } as DateColumnData & {
-      dateTimePrecision: Precision;
-    };
+    this.data.dateTimePrecision = dateTimePrecision as Precision;
   }
 
   toSQL() {
@@ -103,7 +100,7 @@ const timestampToCode = <P extends number>(
   return columnCode(
     self,
     t,
-    `${t}.${
+    `${
       self instanceof TimestampColumn ? 'timestamp' : 'timestampWithTimeZone'
     }(${p && p !== 6 ? p : ''})${dateDataToCode(self.data)}`,
   );
@@ -140,7 +137,7 @@ export class TimeColumn<
     return columnCode(
       this,
       t,
-      `${t}.time(${dateTimePrecision || ''})${dateDataToCode(this.data)}`,
+      `time(${dateTimePrecision || ''})${dateDataToCode(this.data)}`,
     );
   }
 }
@@ -156,7 +153,7 @@ export class TimeWithTimeZoneColumn<
     return columnCode(
       this,
       t,
-      `${t}.timeWithTimeZone(${dateTimePrecision || ''})${dateDataToCode(
+      `timeWithTimeZone(${dateTimePrecision || ''})${dateDataToCode(
         this.data,
       )}`,
     );
@@ -178,16 +175,13 @@ export class IntervalColumn<
   Precision extends number | undefined = undefined,
 > extends ColumnType<TimeInterval, typeof Operators.date> {
   dataType = 'interval' as const;
-  data: ColumnData & { fields: Fields; precision: Precision };
+  data!: ColumnData & { fields: Fields; precision: Precision };
   operators = Operators.date;
 
   constructor(types: ColumnTypesBase, fields?: Fields, precision?: Precision) {
     super(types);
-
-    this.data = { fields, precision } as DateColumnData & {
-      fields: Fields;
-      precision: Precision;
-    };
+    this.data.fields = fields as Fields;
+    this.data.precision = precision as Precision;
   }
 
   toCode(t: string): Code {
@@ -195,7 +189,7 @@ export class IntervalColumn<
     return columnCode(
       this,
       t,
-      `${t}.interval(${[fields && `'${fields}'`, precision && String(precision)]
+      `interval(${[fields && `'${fields}'`, precision && String(precision)]
         .filter((part) => part)
         .join(', ')})`,
     );

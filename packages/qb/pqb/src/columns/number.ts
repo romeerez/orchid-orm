@@ -39,21 +39,24 @@ export abstract class NumberBaseColumn extends ColumnType<
   number,
   typeof Operators.number
 > {
-  data = {} as NumberColumnData;
+  data!: NumberColumnData;
   operators = Operators.number;
 }
 
 assignMethodsToClass(NumberBaseColumn, numberTypeMethods);
 
 export abstract class IntegerBaseColumn extends NumberBaseColumn {
-  data = { int: true } as NumberColumnData;
+  data!: NumberColumnData;
+  constructor(types: ColumnTypesBase) {
+    super(types);
+    this.data.int = true;
+  }
 }
 
 export abstract class NumberAsStringBaseColumn extends ColumnType<
   string,
   typeof Operators.number
 > {
-  data = {};
   operators = Operators.number;
 }
 
@@ -61,7 +64,7 @@ export class DecimalBaseColumn<
   Precision extends number | undefined = undefined,
   Scale extends number | undefined = undefined,
 > extends ColumnType<string, typeof Operators.number> {
-  data: ColumnData & { numericPrecision: Precision; numericScale: Scale };
+  data!: ColumnData & { numericPrecision: Precision; numericScale: Scale };
   operators = Operators.number;
   dataType = 'decimal' as const;
 
@@ -71,11 +74,8 @@ export class DecimalBaseColumn<
     numericScale?: Scale,
   ) {
     super(types);
-
-    this.data = {
-      numericPrecision,
-      numericScale,
-    } as { numericPrecision: Precision; numericScale: Scale };
+    this.data.numericPrecision = numericPrecision as Precision;
+    this.data.numericScale = numericScale as Scale;
   }
 
   toCode(t: string): Code {
@@ -83,7 +83,7 @@ export class DecimalBaseColumn<
     return columnCode(
       this,
       t,
-      `${t}.decimal(${numericPrecision || ''}${
+      `decimal(${numericPrecision || ''}${
         numericScale ? `, ${numericScale}` : ''
       })`,
     );
@@ -108,7 +108,7 @@ export class SmallIntColumn extends IntegerBaseColumn {
   dataType = 'smallint' as const;
   parseItem = parseInt;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.smallint()${numberDataToCode(this.data)}`);
+    return columnCode(this, t, `smallint()${numberDataToCode(this.data)}`);
   }
 }
 
@@ -117,7 +117,7 @@ export class IntegerColumn extends IntegerBaseColumn {
   dataType = 'integer' as const;
   parseItem = parseInt;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.integer()${numberDataToCode(this.data)}`);
+    return columnCode(this, t, `integer()${numberDataToCode(this.data)}`);
   }
 }
 
@@ -125,7 +125,7 @@ export class IntegerColumn extends IntegerBaseColumn {
 export class BigIntColumn extends NumberAsStringBaseColumn {
   dataType = 'bigint' as const;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.bigint()`);
+    return columnCode(this, t, `bigint()`);
   }
 }
 
@@ -140,7 +140,7 @@ export class RealColumn extends NumberBaseColumn {
   dataType = 'real' as const;
   parseItem = parseFloat;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.real()${numberDataToCode(this.data)}`);
+    return columnCode(this, t, `real()${numberDataToCode(this.data)}`);
   }
 }
 
@@ -148,7 +148,7 @@ export class RealColumn extends NumberBaseColumn {
 export class DoublePrecisionColumn extends NumberAsStringBaseColumn {
   dataType = 'double precision' as const;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.doublePrecision()`);
+    return columnCode(this, t, `doublePrecision()`);
   }
 }
 
@@ -156,15 +156,15 @@ export class DoublePrecisionColumn extends NumberAsStringBaseColumn {
 export class SmallSerialColumn extends IntegerBaseColumn {
   dataType = 'smallserial' as const;
   parseItem = parseInt;
-  data = {
-    int: true,
-  } as SerialColumnData;
+  data!: SerialColumnData;
+
+  constructor(types: ColumnTypesBase) {
+    super(types);
+    this.data.int = true;
+  }
+
   toCode(t: string): Code {
-    return columnCode(
-      this,
-      t,
-      `${t}.smallSerial()${numberDataToCode(this.data)}`,
-    );
+    return columnCode(this, t, `smallSerial()${numberDataToCode(this.data)}`);
   }
 }
 
@@ -172,19 +172,23 @@ export class SmallSerialColumn extends IntegerBaseColumn {
 export class SerialColumn extends IntegerBaseColumn {
   dataType = 'serial' as const;
   parseItem = parseInt;
-  data = {
-    int: true,
-  } as SerialColumnData;
+  data!: SerialColumnData;
+
+  constructor(types: ColumnTypesBase) {
+    super(types);
+    this.data.int = true;
+  }
+
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.serial()${numberDataToCode(this.data)}`);
+    return columnCode(this, t, `serial()${numberDataToCode(this.data)}`);
   }
 }
 
 // autoincrementing eight-byte integer
 export class BigSerialColumn extends NumberAsStringBaseColumn {
   dataType = 'bigserial' as const;
-  data = {} as SerialColumnData;
+  data!: SerialColumnData;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.bigSerial()`);
+    return columnCode(this, t, `bigSerial()`);
   }
 }

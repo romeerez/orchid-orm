@@ -349,6 +349,17 @@ export const columnIndexesToCode = (
 export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
   code = toArray(code);
 
+  let prepend = `${t}.`;
+  if (type.data.name) {
+    prepend += `name(${singleQuote(type.data.name)}).`;
+  }
+
+  if (typeof code[0] === 'string') {
+    code[0] = `${prepend}${code[0]}`;
+  } else {
+    code[0].unshift(prepend);
+  }
+
   if (type.data.isPrimaryKey) addCode(code, '.primaryKey()');
 
   if (type.data.foreignKeys) {

@@ -21,7 +21,7 @@ export const columnToSql = (
   values: unknown[],
   hasMultiplePrimaryKeys: boolean,
 ): string => {
-  const line = [`"${key}" ${item.toSQL()}`];
+  const line = [`"${item.data.name || key}" ${item.toSQL()}`];
 
   if (item.data.compression) {
     line.push(`COMPRESSION ${item.data.compression}`);

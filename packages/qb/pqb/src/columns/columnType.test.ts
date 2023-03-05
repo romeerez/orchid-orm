@@ -23,7 +23,7 @@ describe('column base', () => {
     dataType = 'test';
     operators = Operators.any;
     toCode(t: string): Code {
-      return columnCode(this, t, `${t}.column()`);
+      return columnCode(this, t, 'column()');
     }
   }
   const column = new Column({});

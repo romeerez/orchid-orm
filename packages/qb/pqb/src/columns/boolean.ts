@@ -12,7 +12,7 @@ export class BooleanColumn extends ColumnType<
   operators = Operators.boolean;
 
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.boolean()`);
+    return columnCode(this, t, 'boolean()');
   }
 
   parseItem = (input: string) => input[0] === 't';

@@ -51,7 +51,7 @@ export abstract class TextBaseColumn extends ColumnType<
   string,
   typeof Operators.text
 > {
-  data = {} as TextColumnData;
+  data!: TextColumnData;
   operators = Operators.text;
 }
 
@@ -60,12 +60,11 @@ assignMethodsToClass(TextBaseColumn, textMethods);
 export abstract class LimitedTextBaseColumn<
   Limit extends number | undefined = undefined,
 > extends TextBaseColumn {
-  data: TextColumnData & { maxChars: Limit };
+  data!: TextColumnData & { maxChars: Limit };
 
   constructor(types: ColumnTypesBase, limit?: Limit) {
     super(types);
-
-    this.data = { maxChars: limit } as TextColumnData & { maxChars: Limit };
+    this.data.maxChars = limit as Limit;
   }
 
   toSQL() {
@@ -86,7 +85,7 @@ export class VarCharColumn<
     return columnCode(
       this,
       t,
-      `${t}.varchar(${maxChars ?? ''})${stringDataToCode(this.data)}`,
+      `varchar(${maxChars ?? ''})${stringDataToCode(this.data)}`,
     );
   }
 }
@@ -101,7 +100,7 @@ export class CharColumn<
     return columnCode(
       this,
       t,
-      `${t}.char(${maxChars ?? ''})${stringDataToCode(this.data)}`,
+      `char(${maxChars ?? ''})${stringDataToCode(this.data)}`,
     );
   }
 }
@@ -110,7 +109,7 @@ export class CharColumn<
 export class TextColumn extends TextBaseColumn {
   dataType = 'text' as const;
   operators = Operators.text;
-  data = {} as TextColumnData & { minArg?: number; maxArg?: number };
+  data!: TextColumnData & { minArg?: number; maxArg?: number };
 
   constructor(types: ColumnTypesBase, minArg?: number, maxArg?: number) {
     super(types);
@@ -133,7 +132,7 @@ export class TextColumn extends TextBaseColumn {
         delete data.max;
       }
     }
-    return columnCode(this, t, `${t}.text(${args})${stringDataToCode(data)}`);
+    return columnCode(this, t, `text(${args})${stringDataToCode(data)}`);
   }
 }
 
@@ -142,7 +141,7 @@ export class ByteaColumn extends ColumnType<Buffer, typeof Operators.text> {
   dataType = 'bytea' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.bytea()`);
+    return columnCode(this, t, `bytea()`);
   }
 }
 
@@ -151,7 +150,7 @@ export class PointColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'point' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.point()`);
+    return columnCode(this, t, `point()`);
   }
 }
 
@@ -160,7 +159,7 @@ export class LineColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'line' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.line()`);
+    return columnCode(this, t, `line()`);
   }
 }
 
@@ -169,7 +168,7 @@ export class LsegColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'lseg' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.lseg()`);
+    return columnCode(this, t, `lseg()`);
   }
 }
 
@@ -178,7 +177,7 @@ export class BoxColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'box' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.box()`);
+    return columnCode(this, t, `box()`);
   }
 }
 
@@ -188,7 +187,7 @@ export class PathColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'path' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.path()`);
+    return columnCode(this, t, `path()`);
   }
 }
 
@@ -197,7 +196,7 @@ export class PolygonColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'polygon' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.polygon()`);
+    return columnCode(this, t, `polygon()`);
   }
 }
 
@@ -206,7 +205,7 @@ export class CircleColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'circle' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.circle()`);
+    return columnCode(this, t, `circle()`);
   }
 }
 
@@ -214,7 +213,7 @@ export class MoneyColumn extends NumberBaseColumn {
   dataType = 'money' as const;
 
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.money()`);
+    return columnCode(this, t, `money()`);
   }
 
   parseFn = Object.assign(
@@ -232,7 +231,7 @@ export class CidrColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'cidr' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.cidr()`);
+    return columnCode(this, t, `cidr()`);
   }
 }
 
@@ -241,7 +240,7 @@ export class InetColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'inet' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.inet()`);
+    return columnCode(this, t, `inet()`);
   }
 }
 
@@ -250,7 +249,7 @@ export class MacAddrColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'macaddr' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.macaddr()`);
+    return columnCode(this, t, `macaddr()`);
   }
 }
 
@@ -259,7 +258,7 @@ export class MacAddr8Column extends ColumnType<string, typeof Operators.text> {
   dataType = 'macaddr8' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.macaddr8()`);
+    return columnCode(this, t, `macaddr8()`);
   }
 }
 
@@ -272,17 +271,16 @@ export class BitColumn<Length extends number> extends ColumnType<
 > {
   dataType = 'bit' as const;
   operators = Operators.text;
-  data: ColumnData & { length: Length };
+  data!: ColumnData & { length: Length };
 
   constructor(types: ColumnTypesBase, length: Length) {
     super(types);
-
-    this.data = { length } as { length: Length };
+    this.data.length = length;
   }
 
   toCode(t: string): Code {
     const { length } = this.data;
-    return columnCode(this, t, `${t}.bit(${length})`);
+    return columnCode(this, t, `bit(${length})`);
   }
 
   toSQL() {
@@ -298,17 +296,17 @@ export class BitVaryingColumn<
 > extends ColumnType<string, typeof Operators.text> {
   dataType = 'bit varying' as const;
   operators = Operators.text;
-  data: ColumnData & { length: Length };
+  data!: ColumnData & { length: Length };
 
   constructor(types: ColumnTypesBase, length?: Length) {
     super(types);
 
-    this.data = { length } as { length: Length };
+    this.data.length = length as Length;
   }
 
   toCode(t: string): Code {
     const { length } = this.data;
-    return columnCode(this, t, `${t}.bitVarying(${length ?? ''})`);
+    return columnCode(this, t, `bitVarying(${length ?? ''})`);
   }
 
   toSQL() {
@@ -324,7 +322,7 @@ export class TsVectorColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'tsvector' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.tsvector()`);
+    return columnCode(this, t, `tsvector()`);
   }
 }
 
@@ -333,7 +331,7 @@ export class TsQueryColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'tsquery' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.tsquery()`);
+    return columnCode(this, t, `tsquery()`);
   }
 }
 
@@ -342,7 +340,7 @@ export class UUIDColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'uuid' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.uuid()`);
+    return columnCode(this, t, `uuid()`);
   }
 }
 
@@ -351,6 +349,6 @@ export class XMLColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'xml' as const;
   operators = Operators.text;
   toCode(t: string): Code {
-    return columnCode(this, t, `${t}.xml()`);
+    return columnCode(this, t, `xml()`);
   }
 }

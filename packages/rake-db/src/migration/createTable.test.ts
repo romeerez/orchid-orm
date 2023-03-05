@@ -80,7 +80,6 @@ const db = getDb();
             where: 'column = 123',
           }),
           uniqueColumn: t.text().unique(),
-          columnWithComment: t.text().comment('this is a column comment'),
           varcharWithLength: t.varchar(20),
           decimalWithPrecisionAndScale: t.decimal(10, 5),
           columnWithCompression: t.text().compression('compression'),
@@ -108,7 +107,6 @@ const db = getDb();
               "withDefaultRaw" date NOT NULL DEFAULT now(),
               "withIndex" text NOT NULL,
               "uniqueColumn" text NOT NULL,
-              "columnWithComment" text NOT NULL,
               "varcharWithLength" varchar(20) NOT NULL,
               "decimalWithPrecisionAndScale" decimal(10, 5) NOT NULL,
               "columnWithCompression" text COMPRESSION compression NOT NULL,
@@ -133,7 +131,6 @@ const db = getDb();
               ON "table"
               ("uniqueColumn")
           `),
-          `COMMENT ON COLUMN "table"."columnWithComment" IS 'this is a column comment'`,
         ]);
       };
 
@@ -164,6 +161,65 @@ const db = getDb();
 
       const [{ ast: ast2 }] = asMock(db.options.appCodeUpdater).mock.calls[0];
       expect(ast2.shape.enum.options).toEqual(['one', 'two']);
+    });
+
+    it('should handle column with explicit name', async () => {
+      const fn = () => {
+        return db[action]('table', (t) => ({
+          columnKey: t.name('columnName').serial().primaryKey(),
+        }));
+      };
+
+      const expectCreate = () => {
+        expectSql(`
+          CREATE TABLE "table" (
+            "columnName" serial PRIMARY KEY
+          )
+        `);
+      };
+
+      const expectDrop = () => {
+        expectSql(`DROP TABLE "table"`);
+      };
+
+      await fn();
+      (action === 'createTable' ? expectCreate : expectDrop)();
+
+      db.up = false;
+      queryMock.mockClear();
+      await fn();
+      (action === 'createTable' ? expectDrop : expectCreate)();
+    });
+
+    it('should handle column comment', async () => {
+      const fn = () => {
+        return db[action]('table', (t) => ({
+          id: t.serial().primaryKey().comment('this is a column comment'),
+        }));
+      };
+
+      const expectCreate = () => {
+        expectSql([
+          `
+            CREATE TABLE "table" (
+              "id" serial PRIMARY KEY
+            )
+          `,
+          `COMMENT ON COLUMN "table"."id" IS 'this is a column comment'`,
+        ]);
+      };
+
+      const expectDrop = () => {
+        expectSql([`DROP TABLE "table"`]);
+      };
+
+      await fn();
+      (action === 'createTable' ? expectCreate : expectDrop)();
+
+      db.up = false;
+      queryMock.mockClear();
+      await fn();
+      (action === 'createTable' ? expectDrop : expectCreate)();
     });
 
     it('should support composite primary key defined on multiple columns', async () => {
