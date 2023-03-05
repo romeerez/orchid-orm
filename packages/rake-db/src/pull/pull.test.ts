@@ -20,10 +20,32 @@ jest.mock('../commands/generate', () => ({
 
 const db = DbStructure.prototype;
 
+let schemas: string[] = [];
+db.getSchemas = async () => schemas;
+
+let tables: DbStructure.Table[] = [];
+db.getTables = async () => tables;
+
+let primaryKeys: DbStructure.PrimaryKey[] = [];
+db.getPrimaryKeys = async () => primaryKeys;
+
+let columns: DbStructure.Column[] = [];
+db.getColumns = async () => columns;
+
 describe('pull', () => {
+  beforeEach(() => {
+    schemas = [];
+    tables = [];
+    primaryKeys = [];
+    columns = [];
+
+    asMock(writeMigrationFile).mockClear();
+  });
+
   it('should get db structure, convert it to ast, generate migrations', async () => {
-    db.getSchemas = async () => ['schema1', 'schema2'];
-    db.getTables = async () => [
+    schemas = ['schema1', 'schema2'];
+
+    tables = [
       {
         schemaName: 'schema',
         name: 'table1',
@@ -33,7 +55,8 @@ describe('pull', () => {
         name: 'table2',
       },
     ];
-    db.getPrimaryKeys = async () => [
+
+    primaryKeys = [
       {
         schemaName: 'schema',
         tableName: 'table1',
@@ -41,7 +64,8 @@ describe('pull', () => {
         columnNames: ['id'],
       },
     ];
-    db.getColumns = async () => [
+
+    columns = [
       {
         schemaName: 'schema',
         tableName: 'table1',
@@ -128,6 +152,62 @@ change(async (db) => {
   await db.createTable('table2', (t) => ({
     text: t.text(),
     ...t.timestampsSnakeCase(),
+  }));
+});
+`,
+    );
+  });
+
+  it('should add simple timestamps when snakeCase: true', async () => {
+    tables = [
+      {
+        schemaName: 'public',
+        name: 'table',
+      },
+    ];
+
+    columns = [
+      {
+        schemaName: 'public',
+        tableName: 'table',
+        name: 'created_at',
+        type: 'timestamp',
+        dateTimePrecision: 6,
+        isNullable: false,
+        default: 'now()',
+      },
+      {
+        schemaName: 'public',
+        tableName: 'table',
+        name: 'updated_at',
+        type: 'timestamp',
+        dateTimePrecision: 6,
+        isNullable: false,
+        default: 'now()',
+      },
+    ];
+
+    const config = processRakeDbConfig({
+      migrationsPath: 'migrations',
+      snakeCase: true,
+    });
+
+    await pullDbStructure(
+      {
+        databaseURL: 'file:path',
+      },
+      config,
+    );
+
+    const call = asMock(writeMigrationFile).mock.calls[0];
+    expect(call[0]).toBe(config);
+    expect(call[1]).toBe('pull');
+    expect(call[2]).toBe(
+      `import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    ...t.timestamps(),
   }));
 });
 `,

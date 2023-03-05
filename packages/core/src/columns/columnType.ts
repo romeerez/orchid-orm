@@ -87,6 +87,8 @@ export type ColumnTypesBase = Record<
   AnyColumnTypeCreator
 > & {
   [nameKey]?: string;
+  // snakeCaseKey may be present, but due to problems with TS it can't be listed here
+  // [snakeCaseKey]?: boolean;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

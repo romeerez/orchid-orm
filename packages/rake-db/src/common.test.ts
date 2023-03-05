@@ -40,6 +40,7 @@ describe('common', () => {
         basePath: __dirname,
         migrationsPath: path.resolve(__dirname, 'custom-path'),
         migrationsTable: 'schemaMigrations',
+        snakeCase: false,
         import: expect.any(Function),
         log: true,
         logger: console,

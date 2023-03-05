@@ -1,6 +1,7 @@
 import { astToMigration } from './astToMigration';
 import { columnTypes } from 'pqb';
 import { RakeDbAst } from '../ast';
+import { processRakeDbConfig } from '../common';
 
 const template = (content: string) => `import { change } from 'rake-db';
 
@@ -51,17 +52,21 @@ const foreignKey: RakeDbAst.ForeignKey = {
   options: {},
 };
 
+const config = processRakeDbConfig({
+  migrationsPath: 'migrations',
+});
+
 describe('astToMigration', () => {
   beforeEach(jest.clearAllMocks);
 
   it('should return undefined when ast is empty', () => {
-    const result = astToMigration([]);
+    const result = astToMigration(config, []);
 
     expect(result).toBe(undefined);
   });
 
   it('should put schema, extension, enum to first change, tables to separate changes, foreignKeys in last change', () => {
-    const result = astToMigration([
+    const result = astToMigration(config, [
       schema,
       extension,
       enumType,
@@ -104,13 +109,13 @@ change(async (db) => {
   });
 
   it('should create schema', () => {
-    const result = astToMigration([schema]);
+    const result = astToMigration(config, [schema]);
 
     expect(result).toBe(template(`  await db.createSchema('schemaName');`));
   });
 
   it('should create extension', () => {
-    const result = astToMigration([
+    const result = astToMigration(config, [
       {
         ...extension,
         schema: 'schema',
@@ -127,7 +132,7 @@ change(async (db) => {
   });
 
   it('should create enum', () => {
-    const result = astToMigration([
+    const result = astToMigration(config, [
       {
         ...enumType,
         schema: 'schema',
@@ -143,7 +148,7 @@ change(async (db) => {
 
   describe('table', () => {
     it('should create table', () => {
-      const result = astToMigration([table]);
+      const result = astToMigration(config, [table]);
 
       expect(result).toBe(
         template(`  await db.createTable('schema.table', (t) => ({
@@ -153,7 +158,7 @@ change(async (db) => {
     });
 
     it('should add columns with indexes and foreignKeys', () => {
-      const result = astToMigration([
+      const result = astToMigration(config, [
         {
           ...table,
           shape: {
@@ -188,7 +193,7 @@ change(async (db) => {
     });
 
     it('should add composite primaryKeys, indexes, foreignKeys', () => {
-      const result = astToMigration([
+      const result = astToMigration(config, [
         {
           ...table,
           shape: {
@@ -243,7 +248,7 @@ change(async (db) => {
 
   describe('foreignKey', () => {
     it('should add standalone foreignKey', () => {
-      const result = astToMigration([
+      const result = astToMigration(config, [
         {
           ...foreignKey,
           tableSchema: 'custom',

@@ -10,6 +10,20 @@ import {
 const db = getDb();
 
 (['createTable', 'dropTable'] as const).forEach((action) => {
+  const testUpAndDown = async (
+    fn: () => Promise<void>,
+    expectUp: () => void,
+    expectDown: () => void,
+  ) => {
+    await fn();
+    (action === 'createTable' ? expectUp : expectDown)();
+
+    db.up = false;
+    queryMock.mockClear();
+    await fn();
+    (action === 'createTable' ? expectDown : expectUp)();
+  };
+
   describe(action, () => {
     beforeEach(resetDb);
 
@@ -163,32 +177,44 @@ const db = getDb();
       expect(ast2.shape.enum.options).toEqual(['one', 'two']);
     });
 
-    it('should handle column with explicit name', async () => {
-      const fn = () => {
-        return db[action]('table', (t) => ({
-          columnKey: t.name('columnName').serial().primaryKey(),
-        }));
-      };
+    it('should add snake case timestamps if config has snakeCase: true', async () => {
+      await testUpAndDown(
+        async () => {
+          db.options.snakeCase = true;
 
-      const expectCreate = () => {
-        expectSql(`
+          await db[action]('table', (t) => ({
+            id: t.serial().primaryKey(),
+            ...t.timestamps(),
+          }));
+
+          db.options.snakeCase = false;
+        },
+        () =>
+          expectSql(`
+          CREATE TABLE "table" (
+            "id" serial PRIMARY KEY,
+            "created_at" timestamp NOT NULL DEFAULT now(),
+            "updated_at" timestamp NOT NULL DEFAULT now()
+          )
+        `),
+        () => expectSql(`DROP TABLE "table"`),
+      );
+    });
+
+    it('should handle column with explicit name', async () => {
+      await testUpAndDown(
+        () =>
+          db[action]('table', (t) => ({
+            columnKey: t.name('columnName').serial().primaryKey(),
+          })),
+        () =>
+          expectSql(`
           CREATE TABLE "table" (
             "columnName" serial PRIMARY KEY
           )
-        `);
-      };
-
-      const expectDrop = () => {
-        expectSql(`DROP TABLE "table"`);
-      };
-
-      await fn();
-      (action === 'createTable' ? expectCreate : expectDrop)();
-
-      db.up = false;
-      queryMock.mockClear();
-      await fn();
-      (action === 'createTable' ? expectDrop : expectCreate)();
+        `),
+        () => expectSql(`DROP TABLE "table"`),
+      );
     });
 
     it('should handle column comment', async () => {

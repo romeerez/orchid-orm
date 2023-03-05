@@ -118,4 +118,32 @@ describe('table', () => {
       );
     });
   });
+
+  describe('snake case timestamps', () => {
+    it('should add timestamps with snake case names when snakeCase option is set to true', () => {
+      const BaseTable = createBaseTable({
+        snakeCase: true,
+      });
+
+      class UserTable extends BaseTable {
+        table = 'user';
+        columns = this.setColumns((t) => ({
+          id: t.serial().primaryKey(),
+          ...t.timestamps(),
+        }));
+      }
+
+      const db = orchidORM(
+        {
+          adapter,
+        },
+        {
+          user: UserTable,
+        },
+      );
+
+      expect(db.user.shape.createdAt.data.name).toBe('created_at');
+      expect(db.user.shape.updatedAt.data.name).toBe('updated_at');
+    });
+  });
 });

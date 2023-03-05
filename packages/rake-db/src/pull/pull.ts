@@ -15,7 +15,7 @@ export const pullDbStructure = async (
 
   await adapter.close();
 
-  const result = astToMigration(ast);
+  const result = astToMigration(config, ast);
   if (!result) return;
 
   await writeMigrationFile(config, 'pull', result);

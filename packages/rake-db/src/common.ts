@@ -20,6 +20,7 @@ export type RakeDbConfig = {
   basePath: string;
   migrationsPath: string;
   migrationsTable: string;
+  snakeCase: boolean;
   commands: Record<
     string,
     (
@@ -48,6 +49,7 @@ export type AppCodeUpdater = (params: {
 export const migrationConfigDefaults: Omit<RakeDbConfig, 'basePath'> = {
   migrationsPath: path.join('src', 'db', 'migrations'),
   migrationsTable: 'schemaMigrations',
+  snakeCase: false,
   commands: {},
   import: (path: string) => import(path),
   log: true,

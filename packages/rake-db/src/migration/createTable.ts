@@ -33,6 +33,7 @@ import {
 import { RakeDbAst } from '../ast';
 import { tableMethods } from './tableMethods';
 import { NoPrimaryKey } from '../errors';
+import { snakeCaseKey } from 'orchid-core';
 
 const types = Object.assign(Object.create(columnTypes), tableMethods);
 
@@ -49,6 +50,7 @@ export const createTable = async (
   options: TableOptions,
   fn: ColumnsShapeCallback,
 ) => {
+  types[snakeCaseKey] = migration.options.snakeCase;
   const shape = getColumnTypes(types, fn);
   const tableData = getTableData();
   const ast = makeAst(

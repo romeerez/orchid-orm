@@ -6,7 +6,7 @@ import {
   getColumnTypes,
   Query,
 } from 'pqb';
-import { ColumnShapeOutput, ColumnTypesBase } from 'orchid-core';
+import { ColumnShapeOutput, ColumnTypesBase, snakeCaseKey } from 'orchid-core';
 import { MapRelations, Relation, RelationThunks } from './relations/relations';
 import { OrchidORM } from './orm';
 
@@ -50,12 +50,17 @@ export type Table = {
 export const createBaseTable = <CT extends ColumnTypesBase>(
   options: {
     columnTypes?: CT | ((t: DefaultColumnTypes) => CT);
+    snakeCase?: boolean;
   } = { columnTypes: columnTypes as unknown as CT },
 ) => {
   const ct =
     typeof options.columnTypes === 'function'
       ? options.columnTypes(columnTypes)
-      : options.columnTypes;
+      : options.columnTypes || columnTypes;
+
+  if (options.snakeCase) {
+    (ct as { [snakeCaseKey]?: boolean })[snakeCaseKey] = true;
+  }
 
   return create(ct as ColumnTypesBase extends CT ? DefaultColumnTypes : CT);
 };

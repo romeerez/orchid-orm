@@ -354,6 +354,32 @@ describe('changeTable', () => {
       );
     });
 
+    it(`should ${action} snake case timestamps if config has snakeCase: true`, async () => {
+      await testUpAndDown(
+        async () => {
+          db.options.snakeCase = true;
+
+          await db.changeTable('table', (t) => ({
+            ...t[action](t.timestamps()),
+          }));
+
+          db.options.snakeCase = false;
+        },
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+              ADD COLUMN "created_at" timestamp NOT NULL DEFAULT now(),
+              ADD COLUMN "updated_at" timestamp NOT NULL DEFAULT now()
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+              DROP COLUMN "created_at",
+              DROP COLUMN "updated_at"
+          `),
+      );
+    });
+
     it(`should ${action} index`, async () => {
       await testUpAndDown(
         () =>

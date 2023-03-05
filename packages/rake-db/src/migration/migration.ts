@@ -55,12 +55,6 @@ export type ChangeTableCallback = (t: TableChanger) => TableChangeData;
 
 export type ColumnComment = { column: string; comment: string | null };
 
-export type JoinTableOptions = {
-  tableName?: string;
-  comment?: string;
-  dropMode?: DropMode;
-};
-
 export type Migration = DbResult<DefaultColumnTypes> & MigrationBase;
 
 export const createMigrationInterface = (
@@ -69,7 +63,7 @@ export const createMigrationInterface = (
   options: RakeDbConfig,
   adapterOptions: AdapterOptions,
   appCodeUpdaterCache: object,
-) => {
+): Migration => {
   const adapter = new TransactionAdapter(tx, tx.client, tx.types);
   const { query, arrays } = adapter;
   const log = logParamToLogObject(options.logger || console, options.log);

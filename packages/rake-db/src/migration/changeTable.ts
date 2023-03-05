@@ -15,6 +15,7 @@ import {
   isRaw,
   ColumnTypesBase,
   nameKey,
+  snakeCaseKey,
 } from 'orchid-core';
 import {
   ChangeTableCallback,
@@ -239,6 +240,8 @@ export const changeTable = async (
 
   const tableChanger = Object.create(columnTypes) as TableChanger;
   Object.assign(tableChanger, tableChangeMethods);
+  (tableChanger as { [snakeCaseKey]?: boolean })[snakeCaseKey] =
+    migration.options.snakeCase;
 
   const changeData = fn?.(tableChanger) || {};
 

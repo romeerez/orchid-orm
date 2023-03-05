@@ -1,6 +1,7 @@
 import { getRawSql, isRaw, raw, RawExpression } from '../raw';
 import { ColumnTypeBase, ColumnWithDefault } from './columnType';
 import { pushOrNewArrayToObject } from '../utils';
+import { snakeCaseKey } from './types';
 
 type Timestamps<T extends ColumnTypeBase> = {
   createdAt: ColumnWithDefault<T, RawExpression>;
@@ -43,8 +44,12 @@ export const makeTimestampsHelpers = (
   };
 
   function timestamps<T extends ColumnTypeBase>(this: {
+    name(name: string): { timestamp(): T };
     timestamp(): T;
   }): Timestamps<T> {
+    if ((this as { [snakeCaseKey]?: boolean })[snakeCaseKey])
+      return timestampsSnakeCase.call(this) as Timestamps<T>;
+
     const updatedAt = this.timestamp().default(raw('now()'));
     updatedAt.data.modifyQuery = addHookForUpdate;
 
@@ -69,14 +74,16 @@ export const makeTimestampsHelpers = (
   };
 
   function timestampsSnakeCase<T extends ColumnTypeBase>(this: {
+    name(name: string): { timestamp(): T };
     timestamp(): T;
   }): Timestamps<T> {
-    const columns = timestamps.call(this);
-    columns.createdAt.data.name = 'created_at';
-    columns.updatedAt.data.name = 'updated_at';
-    columns.updatedAt.data.modifyQuery = addHookForUpdateSnake;
+    const updatedAt = this.name('updated_at').timestamp().default(raw('now()'));
+    updatedAt.data.modifyQuery = addHookForUpdateSnake;
 
-    return columns as Timestamps<T>;
+    return {
+      createdAt: this.name('created_at').timestamp().default(raw('now()')),
+      updatedAt,
+    };
   }
 
   return {

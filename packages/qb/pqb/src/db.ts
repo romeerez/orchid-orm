@@ -29,6 +29,7 @@ import {
   ColumnShapeOutput,
   ColumnTypesBase,
   SinglePrimaryKey,
+  snakeCaseKey,
 } from 'orchid-core';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
@@ -41,6 +42,7 @@ export type DbOptions<CT extends ColumnTypesBase> = (
     columnTypes?: CT | ((t: DefaultColumnTypes) => CT);
     autoPreparedStatements?: boolean;
     noPrimaryKey?: NoPrimaryKeyOption;
+    snakeCase?: boolean;
   };
 
 export type DbTableOptions = {
@@ -242,6 +244,10 @@ export const createDb = <CT extends ColumnTypesBase>({
   };
 
   const ct = typeof ctOrFn === 'function' ? ctOrFn(columnTypes) : ctOrFn;
+
+  if (options.snakeCase) {
+    (ct as { [snakeCaseKey]?: boolean })[snakeCaseKey] = true;
+  }
 
   const qb = new Db(
     adapter,

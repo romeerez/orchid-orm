@@ -17,6 +17,7 @@ export const getDb = () => {
       log: false,
       migrationsPath: 'migrations-path',
       migrationsTable: 'schemaMigrations',
+      snakeCase: false,
       import: require,
       appCodeUpdater: appCodeUpdaterMock,
       commands: {},

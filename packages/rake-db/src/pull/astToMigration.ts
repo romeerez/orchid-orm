@@ -9,9 +9,12 @@ import {
   TimestampColumn,
 } from 'pqb';
 import { addCode, Code, isRaw, quoteObjectKey, singleQuote } from 'orchid-core';
-import { quoteSchemaTable } from '../common';
+import { quoteSchemaTable, RakeDbConfig } from '../common';
 
-export const astToMigration = (ast: RakeDbAst[]): string | undefined => {
+export const astToMigration = (
+  config: RakeDbConfig,
+  ast: RakeDbAst[],
+): string | undefined => {
   const first: Code[] = [];
   const tables: Code[] = [];
   const foreignKeys: Code[] = [];
@@ -25,7 +28,7 @@ export const astToMigration = (ast: RakeDbAst[]): string | undefined => {
       if (first.length) first.push([]);
       first.push(...createEnum(item));
     } else if (item.type === 'table' && item.action === 'create') {
-      tables.push(createTable(item));
+      tables.push(createTable(config, item));
     } else if (item.type === 'foreignKey') {
       if (foreignKeys.length) foreignKeys.push([]);
       foreignKeys.push(...createForeignKey(item));
@@ -101,12 +104,14 @@ const createEnum = (ast: RakeDbAst.Enum) => {
   return code;
 };
 
-const createTable = (ast: RakeDbAst.Table) => {
+const createTable = (config: RakeDbConfig, ast: RakeDbAst.Table) => {
   const code: Code[] = [];
   addCode(code, `await db.createTable(${quoteSchemaTable(ast)}, (t) => ({`);
 
   const hasTimestamps =
-    isTimestamp(ast.shape.createdAt) && isTimestamp(ast.shape.updatedAt);
+    !config.snakeCase &&
+    isTimestamp(ast.shape.createdAt) &&
+    isTimestamp(ast.shape.updatedAt);
 
   const hasTimestampsSnake =
     isTimestamp(ast.shape.created_at) && isTimestamp(ast.shape.updated_at);
@@ -124,11 +129,11 @@ const createTable = (ast: RakeDbAst.Table) => {
     code.push(line);
   }
 
-  if (hasTimestamps) {
+  if (hasTimestamps || (config.snakeCase && hasTimestampsSnake)) {
     code.push(['...t.timestamps(),']);
   }
 
-  if (hasTimestampsSnake) {
+  if (hasTimestampsSnake && !config.snakeCase) {
     code.push(['...t.timestampsSnakeCase(),']);
   }
 
