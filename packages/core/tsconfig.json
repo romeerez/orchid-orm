@@ -2,5 +2,13 @@
   "extends": "../../tsconfig.json",
   "include": [
     "./src"
-  ]
+  ],
+  "compilerOptions": {
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "pqb": ["../qb/pqb/src"],
+      "orchid-core": ["src"]
+    }
+  }
 }

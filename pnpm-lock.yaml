@@ -59,10 +59,7 @@ importers:
       typescript: 4.8.4
 
   packages/core:
-    specifiers:
-      pqb: workspace:*
-    devDependencies:
-      pqb: link:../qb/pqb
+    specifiers: {}
 
   packages/orm:
     specifiers:
