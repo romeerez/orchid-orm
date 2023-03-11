@@ -27,12 +27,12 @@ const db = getDb();
   describe(action, () => {
     beforeEach(resetDb);
 
-    it('should call appCodeUpdater', async () => {
+    it('should push ast to migratedAsts', async () => {
       await db[action]('name', (t) => ({
         id: t.serial().primaryKey(),
       }));
 
-      expect(db.options.appCodeUpdater).toHaveBeenCalled();
+      expect(db.migratedAsts.length).toBe(1);
     });
 
     it(`should ${action} with schema`, async () => {
@@ -163,17 +163,19 @@ const db = getDb();
       await fn();
       (action === 'createTable' ? expectCreateTable : expectDropTable)();
 
-      const [{ ast: ast1 }] = asMock(db.options.appCodeUpdater).mock.calls[0];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [ast1] = db.migratedAsts as any[];
       expect(ast1.shape.enum.options).toEqual(['one', 'two']);
 
       db.up = false;
+      db.migratedAsts.length = 0;
       queryMock.mockClear();
-      asMock(db.options.appCodeUpdater).mockClear();
       asMock(db.adapter.arrays).mockResolvedValueOnce({ rows: enumRows });
       await fn();
       (action === 'createTable' ? expectDropTable : expectCreateTable)();
 
-      const [{ ast: ast2 }] = asMock(db.options.appCodeUpdater).mock.calls[0];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [ast2] = db.migratedAsts as any[];
       expect(ast2.shape.enum.options).toEqual(['one', 'two']);
     });
 

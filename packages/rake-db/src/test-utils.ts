@@ -9,35 +9,28 @@ let db: Migration | undefined;
 export const getDb = () => {
   if (db) return db;
 
-  db = createMigrationInterface(
-    {} as unknown as TransactionAdapter,
-    true,
-    {
-      basePath: __dirname,
-      log: false,
-      migrationsPath: 'migrations-path',
-      migrationsTable: 'schemaMigrations',
-      snakeCase: false,
-      import: require,
-      appCodeUpdater: appCodeUpdaterMock,
-      commands: {},
-    },
-    {},
-    {},
-  );
+  db = createMigrationInterface({} as unknown as TransactionAdapter, true, {
+    basePath: __dirname,
+    log: false,
+    migrationsPath: 'migrations-path',
+    migrationsTable: 'schemaMigrations',
+    snakeCase: false,
+    import: require,
+    commands: {},
+  });
   db.adapter.query = queryMock;
   db.adapter.arrays = queryMock;
   return db;
 };
 
 export const queryMock = jest.fn();
-const appCodeUpdaterMock = jest.fn();
 
 export const resetDb = () => {
   queryMock.mockClear();
   queryMock.mockResolvedValue(undefined);
-  appCodeUpdaterMock.mockClear();
-  getDb().up = true;
+  const db = getDb();
+  db.up = true;
+  db.migratedAsts.length = 0;
 };
 
 export const setDbDown = () => {

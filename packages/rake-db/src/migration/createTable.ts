@@ -13,7 +13,6 @@ import {
   ColumnComment,
   ColumnsShapeCallback,
   MigrationBase,
-  runCodeUpdater,
   TableOptions,
 } from './migration';
 import {
@@ -70,7 +69,7 @@ export const createTable = async (
     then?.(result);
   }
 
-  await runCodeUpdater(migration, ast);
+  migration.migratedAsts.push(ast);
 };
 
 const makeAst = (

@@ -24,7 +24,6 @@ import {
   DropMode,
   MigrationBase,
   MigrationColumnTypes,
-  runCodeUpdater,
 } from './migration';
 import { RakeDbAst } from '../ast';
 import {
@@ -253,7 +252,7 @@ export const changeTable = async (
     query.then?.(result);
   }
 
-  await runCodeUpdater(migration, ast);
+  migration.migratedAsts.push(ast);
 };
 
 const makeAst = (

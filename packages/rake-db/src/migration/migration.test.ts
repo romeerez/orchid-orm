@@ -14,7 +14,7 @@ describe('migration', () => {
     it('should call appCodeUpdater', async () => {
       await db.renameTable('from', 'to');
 
-      expect(db.options.appCodeUpdater).toHaveBeenCalled();
+      expect(db.migratedAsts.length).toBe(1);
     });
 
     it('should rename a table', async () => {
@@ -271,7 +271,7 @@ describe('migration', () => {
       it('should call appCodeUpdater', async () => {
         await db[action]('schemaName');
 
-        expect(db.options.appCodeUpdater).toHaveBeenCalled();
+        expect(db.migratedAsts.length).toBe(1);
       });
 
       it(`should ${
@@ -309,7 +309,7 @@ describe('migration', () => {
       it('should call appCodeUpdater', async () => {
         await db[action]('extensionName');
 
-        expect(db.options.appCodeUpdater).toHaveBeenCalled();
+        expect(db.migratedAsts.length).toBe(1);
       });
 
       it(`should ${
@@ -357,7 +357,7 @@ describe('migration', () => {
       it('should call appCodeUpdater', async () => {
         await db[action]('enumName', ['one']);
 
-        expect(db.options.appCodeUpdater).toHaveBeenCalled();
+        expect(db.migratedAsts.length).toBe(1);
       });
 
       it(`should ${

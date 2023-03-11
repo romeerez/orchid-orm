@@ -10,7 +10,6 @@ import {
   Sql,
   TransactionAdapter,
   TextColumn,
-  AdapterOptions,
   createDb,
   DbResult,
   DefaultColumnTypes,
@@ -61,8 +60,6 @@ export const createMigrationInterface = (
   tx: TransactionAdapter,
   up: boolean,
   options: RakeDbConfig,
-  adapterOptions: AdapterOptions,
-  appCodeUpdaterCache: object,
 ): Migration => {
   const adapter = new TransactionAdapter(tx, tx.client, tx.types);
   const { query, arrays } = adapter;
@@ -84,13 +81,13 @@ export const createMigrationInterface = (
       proto[key as keyof typeof proto];
   }
 
+  db.migratedAsts = [];
+
   return Object.assign(db, {
     adapter,
     log,
     up,
     options,
-    adapterOptions,
-    appCodeUpdaterCache,
   });
 };
 
@@ -99,8 +96,7 @@ export class MigrationBase {
   public log?: QueryLogObject;
   public up!: boolean;
   public options!: RakeDbConfig;
-  public adapterOptions!: AdapterOptions;
-  public appCodeUpdaterCache!: object;
+  public migratedAsts!: RakeDbAst[];
 
   createTable(
     tableName: string,
@@ -174,7 +170,7 @@ export class MigrationBase {
       })}`,
     );
 
-    await runCodeUpdater(this, ast);
+    this.migratedAsts.push(ast);
   }
 
   addColumn(
@@ -424,7 +420,7 @@ const createSchema = async (
     `${ast.action === 'create' ? 'CREATE' : 'DROP'} SCHEMA "${name}"`,
   );
 
-  await runCodeUpdater(migration, ast);
+  migration.migratedAsts.push(ast);
 };
 
 const createExtension = async (
@@ -455,7 +451,7 @@ const createExtension = async (
 
   await migration.adapter.query(query);
 
-  await runCodeUpdater(migration, ast);
+  migration.migratedAsts.push(ast);
 };
 
 const createEnum = async (
@@ -490,7 +486,7 @@ const createEnum = async (
 
   await migration.adapter.query(query);
 
-  await runCodeUpdater(migration, ast);
+  migration.migratedAsts.push(ast);
 };
 
 const queryExists = (
@@ -498,13 +494,4 @@ const queryExists = (
   sql: { text: string; values: unknown[] },
 ) => {
   return db.adapter.query(sql).then(({ rowCount }) => rowCount > 0);
-};
-
-export const runCodeUpdater = (migration: MigrationBase, ast: RakeDbAst) => {
-  return migration.options.appCodeUpdater?.({
-    ast,
-    options: migration.adapterOptions,
-    basePath: migration.options.basePath,
-    cache: migration.appCodeUpdaterCache,
-  });
 };

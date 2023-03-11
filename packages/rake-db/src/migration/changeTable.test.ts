@@ -16,7 +16,7 @@ describe('changeTable', () => {
   it('should call appCodeUpdater', async () => {
     await db.changeTable('name', () => ({}));
 
-    expect(db.options.appCodeUpdater).toHaveBeenCalled();
+    expect(db.migratedAsts.length).toBe(1);
   });
 
   it('should work for table with schema', async () => {
@@ -72,6 +72,7 @@ describe('changeTable', () => {
       (action === 'add' ? expectUp : expectDown)();
 
       db.up = false;
+      db.migratedAsts.length = 0;
       queryMock.mockClear();
       await fn();
       (action === 'add' ? expectDown : expectUp)();
@@ -485,11 +486,10 @@ describe('changeTable', () => {
               ADD COLUMN "enum" "mood" NOT NULL
           `,
           ]);
-          const [{ ast: ast1 }] = asMock(db.options.appCodeUpdater).mock
-            .calls[0];
-          expect(ast1.shape.enum.item.options).toEqual(['one', 'two']);
 
-          asMock(db.options.appCodeUpdater).mockClear();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const [ast1] = db.migratedAsts as any[];
+          expect(ast1.shape.enum.item.options).toEqual(['one', 'two']);
         },
         () => {
           expectSql([
@@ -500,8 +500,8 @@ describe('changeTable', () => {
           `,
           ]);
 
-          const [{ ast: ast2 }] = asMock(db.options.appCodeUpdater).mock
-            .calls[0];
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const [ast2] = db.migratedAsts as any[];
           expect(ast2.shape.enum.item.options).toEqual(['one', 'two']);
         },
       );
@@ -667,6 +667,7 @@ describe('changeTable', () => {
     expectUp();
 
     db.up = false;
+    db.migratedAsts.length = 0;
     queryMock.mockClear();
     await fn();
     expectDown();
@@ -736,7 +737,8 @@ describe('changeTable', () => {
           `,
         ]);
 
-        const [{ ast }] = asMock(db.options.appCodeUpdater).mock.calls[0];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const [ast] = db.migratedAsts as any[];
         expect(ast.shape.changeEnum.from.column.options).toEqual(enumOne);
         expect(ast.shape.changeEnum.to.column.options).toEqual(enumTwo);
 
@@ -746,8 +748,6 @@ describe('changeTable', () => {
         asMock(queryMock).mockResolvedValueOnce({
           rows: enumOne.map((value) => [value]),
         });
-
-        asMock(db.options.appCodeUpdater).mockClear();
       },
       () => {
         expectSql([
@@ -759,7 +759,8 @@ describe('changeTable', () => {
           `,
         ]);
 
-        const [{ ast }] = asMock(db.options.appCodeUpdater).mock.calls[0];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const [ast] = db.migratedAsts as any[];
         expect(ast.shape.changeEnum.from.column.options).toEqual(enumTwo);
         expect(ast.shape.changeEnum.to.column.options).toEqual(enumOne);
       },

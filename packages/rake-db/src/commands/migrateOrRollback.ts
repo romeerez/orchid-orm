@@ -105,14 +105,8 @@ const processMigration = async (
   options: AdapterOptions,
   appCodeUpdaterCache: object,
 ) => {
-  await db.transaction(async (tx) => {
-    const db = createMigrationInterface(
-      tx,
-      up,
-      config,
-      options,
-      appCodeUpdaterCache,
-    );
+  const asts = await db.transaction(async (tx) => {
+    const db = createMigrationInterface(tx, up, config);
     clearChanges();
 
     let changes = changeCache[file.path];
@@ -140,7 +134,18 @@ const processMigration = async (
       file.version,
       config,
     );
+
+    return db.migratedAsts;
   });
+
+  for (const ast of asts) {
+    await config.appCodeUpdater?.({
+      ast,
+      options,
+      basePath: config.basePath,
+      cache: appCodeUpdaterCache,
+    });
+  }
 };
 
 const saveMigratedVersion = async (
