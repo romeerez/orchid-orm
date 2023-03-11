@@ -6,44 +6,69 @@ import {
   userData,
   assertType,
   db,
+  Snake,
 } from '../test-utils/test-utils';
 
 describe('aggregate', () => {
   useTestDatabase();
 
   describe('aggregate options', () => {
-    test('without options', async () => {
+    it('should work without options', async () => {
       expectSql(User.count('*').toSql(), 'SELECT count(*) FROM "user"');
     });
 
-    test('as', () => {
+    it('should support as option', () => {
       const q = User.count('*', { as: 'a' });
       expectSql(q.toSql(), 'SELECT count(*) AS "a" FROM "user"');
     });
 
-    test('distinct', () => {
+    it('should support a column with name', () => {
+      expectSql(
+        Snake.count('snakeName').toSql(),
+        'SELECT count("snake"."snake_name") FROM "snake"',
+      );
+    });
+
+    it('should support distinct option', () => {
       expectSql(
         User.count('name', { distinct: true }).toSql(),
         'SELECT count(DISTINCT "user"."name") FROM "user"',
       );
     });
 
-    test('order', () => {
+    it('should support order', () => {
       expectSql(
         User.count('name', { order: { name: 'DESC' } }).toSql(),
         'SELECT count("user"."name" ORDER BY "user"."name" DESC) FROM "user"',
       );
     });
 
-    test('filter', () => {
+    it('should support order by column with name', () => {
+      expectSql(
+        Snake.count('snakeName', { order: { snakeName: 'DESC' } }).toSql(),
+        'SELECT count("snake"."snake_name" ORDER BY "snake"."snake_name" DESC) FROM "snake"',
+      );
+    });
+
+    it('should support filter', () => {
       expectSql(
         User.count('name', { filter: { age: { not: null } } }).toSql(),
         'SELECT count("user"."name") FILTER (WHERE "user"."age" IS NOT NULL) FROM "user"',
       );
     });
 
+    it('should support filter by column with name', () => {
+      expectSql(
+        Snake.count('snakeName', {
+          filter: { snakeName: { not: 'Bob' } },
+        }).toSql(),
+        'SELECT count("snake"."snake_name") FILTER (WHERE "snake"."snake_name" <> $1) FROM "snake"',
+        ['Bob'],
+      );
+    });
+
     describe('over', () => {
-      test('with column partitionBy', () => {
+      it('should support partitionBy', () => {
         expectSql(
           User.count('name', {
             over: {
@@ -60,7 +85,24 @@ describe('aggregate', () => {
         );
       });
 
-      test('with columns array partitionBy', () => {
+      it('should support partitionBy column with name', () => {
+        expectSql(
+          Snake.count('snakeName', {
+            over: {
+              partitionBy: 'snakeName',
+              order: {
+                snakeName: 'DESC',
+              },
+            },
+          }).toSql(),
+          `
+            SELECT count("snake"."snake_name") OVER (PARTITION BY "snake"."snake_name" ORDER BY "snake"."snake_name" DESC)
+            FROM "snake"
+          `,
+        );
+      });
+
+      it('should support columns array partitionBy', () => {
         expectSql(
           User.count('name', {
             over: {
@@ -76,9 +118,26 @@ describe('aggregate', () => {
           `,
         );
       });
+
+      it('should support partitionBy array of columns with names', () => {
+        expectSql(
+          Snake.count('snakeName', {
+            over: {
+              partitionBy: ['snakeName', 'tailLength'],
+              order: {
+                tailLength: 'DESC',
+              },
+            },
+          }).toSql(),
+          `
+            SELECT count("snake"."snake_name") OVER (PARTITION BY "snake"."snake_name", "snake"."tail_length" ORDER BY "snake"."tail_length" DESC)
+            FROM "snake"
+          `,
+        );
+      });
     });
 
-    test('all options', () => {
+    it('should support all options', () => {
       expectSql(
         User.count('name', {
           as: 'a',
@@ -105,7 +164,7 @@ describe('aggregate', () => {
       );
     });
 
-    test('withinGroup', () => {
+    it('should support withinGroup', () => {
       expectSql(
         User.count('name', {
           distinct: true,

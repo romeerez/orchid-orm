@@ -3,6 +3,8 @@ import {
   expectQueryNotMutated,
   expectSql,
   Profile,
+  Snake,
+  snakeSelectAll,
   User,
   userData,
   useTestDatabase,
@@ -50,6 +52,18 @@ describe('delete', () => {
     expectQueryNotMutated(q);
   });
 
+  it('should delete records, returning named column', async () => {
+    const query = Snake.findBy({ snakeName: 'name' }).get('snakeName').delete();
+    expectSql(
+      query.toSql(),
+      `
+        DELETE FROM "snake" WHERE "snake"."snake_name" = $1
+        RETURNING "snake"."snake_name" AS "snakeName"
+      `,
+      ['name'],
+    );
+  });
+
   it('should delete records, returning deleted rows count', async () => {
     const rowsCount = 3;
 
@@ -85,6 +99,17 @@ describe('delete', () => {
     expectQueryNotMutated(q);
   });
 
+  it('should delete records, returning all named columns', () => {
+    const query = Snake.selectAll().where().delete();
+    expectSql(
+      query.toSql(),
+      `
+        DELETE FROM "snake"
+        RETURNING ${snakeSelectAll}
+      `,
+    );
+  });
+
   it('should delete records, returning specified columns', () => {
     const q = User.all();
 
@@ -98,6 +123,19 @@ describe('delete', () => {
     assertType<Awaited<typeof query>, { id: number; name: string }[]>();
 
     expectQueryNotMutated(q);
+  });
+
+  it('should delete records, returning specified named columns', () => {
+    const query = Snake.select('snakeName', 'tailLength').where().delete();
+    expectSql(
+      query.toSql(),
+      `
+        DELETE FROM "snake"
+        RETURNING
+          "snake"."snake_name" AS "snakeName",
+          "snake"."tail_length" AS "tailLength"
+      `,
+    );
   });
 
   it('should support where and join statements', () => {

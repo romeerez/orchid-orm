@@ -10,6 +10,8 @@ import {
   now,
   assertType,
   UserRecord,
+  Snake,
+  snakeSelectAll,
 } from '../test-utils/test-utils';
 import { NotFoundError } from '../errors';
 
@@ -30,6 +32,7 @@ describe('queryMethods', () => {
   describe('toSql', () => {
     it('generates sql', () => {
       const sql = User.toSql();
+
       expectSql(sql, `SELECT * FROM "user"`);
 
       assertType<typeof sql, { text: string; values: unknown[] }>();
@@ -47,6 +50,7 @@ describe('queryMethods', () => {
       await User.create(userData);
 
       const q = User.all();
+
       expectSql(q.take().toSql(), `SELECT * FROM "user" LIMIT $1`, [1]);
       expectQueryNotMutated(q);
 
@@ -74,6 +78,7 @@ describe('queryMethods', () => {
       await User.create(userData);
 
       const q = User.all();
+
       expectSql(q.takeOptional().toSql(), `SELECT * FROM "user" LIMIT $1`, [1]);
       expectQueryNotMutated(q);
 
@@ -93,6 +98,7 @@ describe('queryMethods', () => {
 
     it('should return undefined if not found', async () => {
       const user = await User.takeOptional();
+
       assertType<typeof user, UserRecord | undefined>();
 
       expect(user).toBe(undefined);
@@ -104,7 +110,9 @@ describe('queryMethods', () => {
       const { rows: expected } = await adapter.arrays({
         text: 'SELECT * FROM "user"',
       });
+
       const received = await User.rows();
+
       expect(received).toEqual(expected);
     });
   });
@@ -118,6 +126,7 @@ describe('queryMethods', () => {
 
     it('should return array of column values, properly parsed', async () => {
       const result = await User.pluck('createdAt');
+
       expect(result).toEqual([now, now, now]);
 
       assertType<typeof result, Date[]>();
@@ -125,6 +134,7 @@ describe('queryMethods', () => {
 
     it('should support raw expression', async () => {
       const result = await User.pluck(db.raw((t) => t.integer(), '123'));
+
       expect(result).toEqual([123, 123, 123]);
 
       assertType<typeof result, number[]>();
@@ -134,6 +144,7 @@ describe('queryMethods', () => {
   describe('exec', () => {
     it('returns nothing', async () => {
       const received = await User.exec();
+
       expect(received).toEqual(undefined);
     });
   });
@@ -141,36 +152,41 @@ describe('queryMethods', () => {
   describe('distinct', () => {
     it('should add distinct without specifying columns', () => {
       const q = User.all();
+
       expectSql(q.distinct().toSql(), 'SELECT DISTINCT * FROM "user"');
+
       expectQueryNotMutated(q);
     });
 
     it('should add distinct on columns', () => {
       const q = User.all();
+
       expectSql(
-        q.distinct('id', 'name').toSql(),
+        q.distinct('id', 'user.name').toSql(),
         `
           SELECT DISTINCT ON ("user"."id", "user"."name") *
           FROM "user"
         `,
       );
+
       expectQueryNotMutated(q);
     });
 
-    it('should add distinct on table.column', () => {
-      const q = User.all();
+    it('should add distinct on named columns', () => {
+      const q = Snake.distinct('snakeName', 'snake.tailLength');
+
       expectSql(
-        q.distinct('user.id', 'user.name').toSql(),
+        q.toSql(),
         `
-          SELECT DISTINCT ON ("user"."id", "user"."name") *
-          FROM "user"
+          SELECT DISTINCT ON ("snake"."snake_name", "snake"."tail_length") ${snakeSelectAll}
+          FROM "snake"
         `,
       );
-      expectQueryNotMutated(q);
     });
 
     it('should add distinct on joined columns', () => {
       const q = User.all();
+
       expectSql(
         q
           .join(Profile, 'profile.userId', '=', 'user.id')
@@ -182,11 +198,29 @@ describe('queryMethods', () => {
           JOIN "profile" ON "profile"."userId" = "user"."id"
         `,
       );
+
       expectQueryNotMutated(q);
+    });
+
+    it('should add distinct on joined named columns', () => {
+      const q = User.join(Snake, 'snake.tailLength', 'user.id').distinct(
+        'user.id',
+        'snake.tailLength',
+      );
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT DISTINCT ON ("user"."id", "snake"."tail_length") "user".*
+          FROM "user"
+          JOIN "snake" ON "snake"."tail_length" = "user"."id"
+        `,
+      );
     });
 
     it('should add distinct on joined columns with alias', () => {
       const q = User.all();
+
       expectSql(
         q
           .join(Profile.as('p'), 'p.userId', '=', 'user.id')
@@ -198,7 +232,24 @@ describe('queryMethods', () => {
           JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
         `,
       );
+
       expectQueryNotMutated(q);
+    });
+
+    it('should add distinct on joined columns with named with alias', () => {
+      const q = User.join(Snake.as('s'), 's.tailLength', 'user.id').distinct(
+        'user.id',
+        's.tailLength',
+      );
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT DISTINCT ON ("user"."id", "s"."tail_length") "user".*
+          FROM "user"
+          JOIN "snake" AS "s" ON "s"."tail_length" = "user"."id"
+        `,
+      );
     });
 
     it('should add distinct on raw sql', () => {
@@ -214,7 +265,7 @@ describe('queryMethods', () => {
   });
 
   describe('find', () => {
-    it('searches one by primary key', () => {
+    it('should find one by primary key', () => {
       const q = User.all();
       const query = q.find(1);
 
@@ -230,6 +281,20 @@ describe('queryMethods', () => {
         [1, 1],
       );
       expectQueryNotMutated(q);
+    });
+
+    it('should find one by named primary key', () => {
+      const q = Snake.find(1);
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT ${snakeSelectAll} FROM "snake"
+          WHERE "snake"."snake_id" = $1
+          LIMIT $2
+        `,
+        [1, 1],
+      );
     });
 
     it('should accept raw sql', () => {
@@ -252,7 +317,7 @@ describe('queryMethods', () => {
   });
 
   describe('findOptional', () => {
-    it('searches one by primary key', () => {
+    it('should find optional one by primary key', () => {
       const q = User.all();
       const query = q.findOptional(1);
 
@@ -268,6 +333,20 @@ describe('queryMethods', () => {
         [1, 1],
       );
       expectQueryNotMutated(q);
+    });
+
+    it('should find optional one by named primary key', () => {
+      const q = Snake.findOptional(1);
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT ${snakeSelectAll} FROM "snake"
+          WHERE "snake"."snake_id" = $1
+          LIMIT $2
+        `,
+        [1, 1],
+      );
     });
 
     it('should accept raw sql', () => {
@@ -290,7 +369,7 @@ describe('queryMethods', () => {
   });
 
   describe('findBy', () => {
-    it('like where but with take', () => {
+    it('should be like where but with take', () => {
       const q = User.all();
       expectSql(
         q.findBy({ name: 's' }).toSql(),
@@ -393,37 +472,70 @@ describe('queryMethods', () => {
   describe('wrap', () => {
     it('should wrap query with another', () => {
       const q = User.all();
+
       expectSql(
         q.select('id').wrap(User.select('id')).toSql(),
         'SELECT "t"."id" FROM (SELECT "user"."id" FROM "user") AS "t"',
       );
+
       expectQueryNotMutated(q);
     });
 
     it('should accept `as` parameter', () => {
       const q = User.all();
+
       expectSql(
         q.select('id').wrap(User.select('id'), 'wrapped').toSql(),
         'SELECT "wrapped"."id" FROM (SELECT "user"."id" FROM "user") AS "wrapped"',
       );
+
       expectQueryNotMutated(q);
+    });
+
+    it('should wrap query with named columns', () => {
+      const q = Snake.select('snakeName').wrap(Snake.select('snakeName'));
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "t"."snakeName"
+          FROM (
+            SELECT "snake"."snake_name" AS "snakeName"
+            FROM "snake"
+          ) AS "t"
+        `,
+      );
     });
   });
 
   describe('group', () => {
-    it('groups by columns', () => {
+    it('should group by columns', () => {
       const q = User.all();
+
       expectSql(
         q.group('id', 'name').toSql(),
         `
-        SELECT * FROM "user"
-        GROUP BY "user"."id", "user"."name"
-      `,
+          SELECT * FROM "user"
+          GROUP BY "user"."id", "user"."name"
+        `,
       );
+
       expectQueryNotMutated(q);
     });
 
-    it('groups by raw sql', () => {
+    it('should group by named columns', () => {
+      const q = Snake.group('snakeName', 'tailLength');
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT ${snakeSelectAll} FROM "snake"
+          GROUP BY "snake"."snake_name", "snake"."tail_length"
+        `,
+      );
+    });
+
+    it('should group by raw sql', () => {
       const q = User.clone();
       const expectedSql = `
         SELECT * FROM "user"
@@ -438,7 +550,7 @@ describe('queryMethods', () => {
   });
 
   describe('window', () => {
-    it('add window which can be used in `over`', () => {
+    it('should add window which can be used in `over`', () => {
       const q = User.all();
 
       expectSql(
@@ -456,11 +568,30 @@ describe('queryMethods', () => {
           })
           .toSql(),
         `
-        SELECT avg("user"."id") OVER "w" FROM "user"
-        WINDOW "w" AS (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
-      `,
+          SELECT avg("user"."id") OVER "w" FROM "user"
+          WINDOW "w" AS (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
+        `,
       );
       expectQueryNotMutated(q);
+    });
+
+    it('should add window partitioned by named columns', () => {
+      const q = Snake.window({
+        w: {
+          partitionBy: 'snakeName',
+          order: {
+            tailLength: 'DESC',
+          },
+        },
+      }).selectAvg('tailLength', { over: 'w' });
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT avg("snake"."tail_length") OVER "w" FROM "snake"
+          WINDOW "w" AS (PARTITION BY "snake"."snake_name" ORDER BY "snake"."tail_length" DESC)
+        `,
+      );
     });
 
     it('adds window with raw sql', () => {
@@ -490,23 +621,37 @@ describe('queryMethods', () => {
       expectSql(
         q.order('id', 'name').toSql(),
         `
-        SELECT * FROM "user"
-        ORDER BY "user"."id" ASC, "user"."name" ASC
-      `,
+          SELECT * FROM "user"
+          ORDER BY "user"."id" ASC, "user"."name" ASC
+        `,
       );
 
       expectQueryNotMutated(q);
     });
 
+    it('should order by named columns', () => {
+      const q = Snake.order('snakeName', 'tailLength');
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT ${snakeSelectAll} FROM "snake"
+          ORDER BY "snake"."snake_name" ASC, "snake"."tail_length" ASC
+        `,
+      );
+    });
+
     it('should handle object parameter', () => {
       const q = User.all();
+
       expectSql(
         q.order({ id: 'ASC', name: 'DESC' }).toSql(),
         `
-        SELECT * FROM "user"
-        ORDER BY "user"."id" ASC, "user"."name" DESC
-      `,
+          SELECT * FROM "user"
+          ORDER BY "user"."id" ASC, "user"."name" DESC
+        `,
       );
+
       expectSql(
         q
           .order({
@@ -515,11 +660,33 @@ describe('queryMethods', () => {
           })
           .toSql(),
         `
-        SELECT * FROM "user"
-        ORDER BY "user"."id" ASC NULLS FIRST, "user"."name" DESC NULLS LAST
-      `,
+          SELECT * FROM "user"
+          ORDER BY "user"."id" ASC NULLS FIRST, "user"."name" DESC NULLS LAST
+        `,
       );
+
       expectQueryNotMutated(q);
+    });
+
+    it('should order by object with named columns', () => {
+      expectSql(
+        Snake.order({ snakeName: 'ASC', tailLength: 'DESC' }).toSql(),
+        `
+          SELECT ${snakeSelectAll} FROM "snake"
+          ORDER BY "snake"."snake_name" ASC, "snake"."tail_length" DESC
+        `,
+      );
+
+      expectSql(
+        Snake.order({
+          snakeName: { dir: 'ASC', nulls: 'FIRST' },
+          tailLength: { dir: 'DESC', nulls: 'LAST' },
+        }).toSql(),
+        `
+          SELECT ${snakeSelectAll} FROM "snake"
+          ORDER BY "snake"."snake_name" ASC NULLS FIRST, "snake"."tail_length" DESC NULLS LAST
+        `,
+      );
     });
 
     it('adds order with raw sql', () => {

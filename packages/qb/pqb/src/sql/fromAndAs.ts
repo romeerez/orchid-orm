@@ -29,27 +29,27 @@ const getFrom = (
   values: unknown[],
 ) => {
   if (query.from) {
-    if (typeof query.from === 'object') {
-      if (isRaw(query.from)) {
-        return getRaw(query.from, values);
+    const { from } = query;
+    if (typeof from === 'object') {
+      if (isRaw(from)) {
+        return getRaw(from, values);
       }
 
-      if (!query.from.table) {
-        const sql = makeSql(query.from, { values });
+      if (!from.table) {
+        const sql = makeSql(from, { values });
         return `(${sql.text})`;
       }
 
-      const q = query.from.query;
       // if query contains more than just schema return (SELECT ...)
-      if (!checkIfASimpleQuery(q)) {
-        const sql = makeSql(query.from, { values });
+      if (!checkIfASimpleQuery(from)) {
+        const sql = makeSql(from, { values });
         return `(${sql.text})`;
       }
 
-      return quoteSchemaAndTable(q.schema, query.from.table);
+      return quoteSchemaAndTable(from.query.schema, from.table);
     }
 
-    return quoteSchemaAndTable(query.schema, query.from);
+    return quoteSchemaAndTable(query.schema, from);
   }
 
   return quoteSchemaAndTable(query.schema, table.table as string);

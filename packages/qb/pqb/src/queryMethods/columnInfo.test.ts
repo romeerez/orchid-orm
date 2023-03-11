@@ -2,6 +2,7 @@ import {
   db,
   expectQueryNotMutated,
   expectSql,
+  Snake,
   User,
 } from '../test-utils/test-utils';
 
@@ -48,5 +49,14 @@ describe('columnInfo', () => {
     });
 
     expectQueryNotMutated(q);
+  });
+
+  it('should return info about column with custom name', async () => {
+    const query = Snake.columnInfo('snakeName');
+    expectSql(
+      query.toSql(),
+      `SELECT * FROM information_schema.columns WHERE table_name = $1 AND table_catalog = current_database() AND table_schema = current_schema() AND column_name = $2`,
+      ['snake', 'snake_name'],
+    );
   });
 });

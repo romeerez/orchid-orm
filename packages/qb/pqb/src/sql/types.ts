@@ -1,7 +1,7 @@
 import { Query, QueryBase, QueryWithTable, SelectableBase } from '../query';
 import { RelationQuery } from '../relations';
 import { Expression } from '../utils';
-import { QueryData, SelectQueryData } from './data';
+import { SelectQueryData } from './data';
 import { RawExpression, ColumnTypeBase, MaybeArray } from 'orchid-core';
 
 export type Sql = {
@@ -10,9 +10,13 @@ export type Sql = {
 };
 
 // used in `from` logic to decide if convert query to sql or just write table name
-export const checkIfASimpleQuery = (q: QueryData) => {
-  if (q.returnType && q.returnType !== 'all') return false;
-  const keys = Object.keys(q) as (keyof SelectQueryData)[];
+export const checkIfASimpleQuery = (q: Query) => {
+  if (
+    (q.query.returnType && q.query.returnType !== 'all') ||
+    q.internal.columnsForSelectAll
+  )
+    return false;
+  const keys = Object.keys(q.query) as (keyof SelectQueryData)[];
   return !keys.some((key) => queryKeysOfNotSimpleQuery.includes(key));
 };
 
@@ -135,6 +139,8 @@ export type JoinItem = {
         op: string,
         rightColumn: string | RawExpression,
       ];
+  // available only for QueryWithTable as first argument
+  isSubQuery: boolean;
 };
 
 export type WhereItem =

@@ -1,4 +1,9 @@
-import { ColumnsParsers, defaultsKey, Query } from './query';
+import {
+  ColumnsParsers,
+  defaultsKey,
+  Query,
+  SelectableFromShape,
+} from './query';
 import {
   QueryMethods,
   handleResult,
@@ -22,7 +27,6 @@ import {
   DbBase,
   ColumnsShapeBase,
   DefaultSelectColumns,
-  StringKey,
   applyMixins,
   pushOrNewArray,
   ThenResult,
@@ -31,6 +35,7 @@ import {
   SinglePrimaryKey,
   snakeCaseKey,
 } from 'orchid-core';
+import { q } from './sql/common';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
@@ -72,12 +77,7 @@ export interface Db<
   onQueryBuilder: Query['onQueryBuilder'];
   primaryKeys: Query['primaryKeys'];
   query: QueryData;
-  selectable: { [K in keyof Shape]: { as: K; column: Shape[K] } } & {
-    [K in keyof Shape as `${Table}.${StringKey<K>}`]: {
-      as: K;
-      column: Shape[K];
-    };
-  };
+  selectable: SelectableFromShape<Shape, Table>;
   returnType: Query['returnType'];
   then: ThenResult<
     Pick<ColumnShapeOutput<Shape>, DefaultSelectColumns<Shape>[number]>[]
@@ -123,6 +123,7 @@ export class Db<
     public columnTypes: CT,
     options: DbTableOptions,
   ) {
+    this.internal = {};
     this.baseQuery = this as Query;
 
     const logger = options.logger || console;
@@ -130,6 +131,7 @@ export class Db<
     const parsers = {} as ColumnsParsers;
     let hasParsers = false;
     let modifyQuery: ((q: Query) => void)[] | undefined = undefined;
+    let hasCustomName = false;
     for (const key in shape) {
       const column = shape[key];
       if (column.parseFn) {
@@ -140,6 +142,19 @@ export class Db<
       if (column.data.modifyQuery) {
         modifyQuery = pushOrNewArray(modifyQuery, column.data.modifyQuery);
       }
+
+      if (column.data.name) hasCustomName = true;
+    }
+
+    if (hasCustomName) {
+      const list: string[] = [];
+      for (const key in shape) {
+        const column = shape[key];
+        list.push(
+          column.data.name ? `${q(column.data.name)} AS ${q(key)}` : q(key),
+        );
+      }
+      this.internal.columnsForSelectAll = list;
     }
 
     this.query = {

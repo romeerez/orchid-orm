@@ -3,7 +3,9 @@ import { pushQueryArray } from '../queryDataUtils';
 import { RawExpression } from 'orchid-core';
 
 export type UnionArg<T extends Query> =
-  | (Omit<Query, 'result'> & { result: T['result'] })
+  | (Omit<Query, 'result'> & {
+      result: { [K in keyof T['result']]: Pick<T['result'][K], 'dataType'> };
+    })
   | RawExpression;
 
 export class Union {

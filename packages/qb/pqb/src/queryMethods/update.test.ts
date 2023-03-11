@@ -3,6 +3,10 @@ import {
   db,
   expectQueryNotMutated,
   expectSql,
+  Snake,
+  snakeData,
+  SnakeRecord,
+  snakeSelectAll,
   User,
   userData,
   UserRecord,
@@ -15,6 +19,11 @@ describe('update', () => {
   const update = {
     name: 'new name',
     password: 'new password',
+  };
+
+  const snakeUpdate = {
+    snakeName: 'new name',
+    tailLength: 10,
   };
 
   it('should not mutate query', () => {
@@ -56,11 +65,6 @@ describe('update', () => {
   it('should update record, returning updated row count', async () => {
     const { id } = await User.select('id').create(userData);
 
-    const update = {
-      name: 'new name',
-      password: 'new password',
-    };
-
     const query = User.where({ id }).update(update);
     expectSql(
       query.toSql(),
@@ -83,13 +87,34 @@ describe('update', () => {
     expect(updated).toMatchObject({ ...userData, ...update });
   });
 
+  it('should update record with named columns, returning updated row count', async () => {
+    const id = await Snake.get('snakeId').create(snakeData);
+
+    const q = Snake.find(id).update(snakeUpdate);
+
+    expectSql(
+      q.toSql(),
+      `
+        UPDATE "snake"
+        SET "snake_name" = $1,
+            "tail_length" = $2,
+            "updated_at" = now()
+        WHERE "snake"."snake_id" = $3
+      `,
+      [snakeUpdate.snakeName, snakeUpdate.tailLength, id],
+    );
+
+    const result = await q;
+    assertType<typeof result, number>();
+
+    expect(result).toBe(1);
+
+    const updated = await Snake.take();
+    expect(updated).toMatchObject({ ...snakeData, ...snakeUpdate });
+  });
+
   it('should update record, returning value', async () => {
     const id = await User.get('id').create(userData);
-
-    const update = {
-      name: 'new name',
-      password: 'new password',
-    };
 
     const query = User.find(id).get('id').update(update);
     expectSql(
@@ -112,6 +137,33 @@ describe('update', () => {
 
     const updated = await User.take();
     expect(updated).toMatchObject({ ...userData, ...update });
+  });
+
+  it('should update record with named columns, returning value', async () => {
+    const id = await Snake.get('snakeId').create(snakeData);
+
+    const q = Snake.find(id).get('snakeId').update(snakeUpdate);
+
+    expectSql(
+      q.toSql(),
+      `
+        UPDATE "snake"
+        SET "snake_name" = $1,
+            "tail_length" = $2,
+            "updated_at" = now()
+        WHERE "snake"."snake_id" = $3
+        RETURNING "snake"."snake_id" AS "snakeId"
+      `,
+      [snakeUpdate.snakeName, snakeUpdate.tailLength, id],
+    );
+
+    const result = await q;
+    assertType<typeof result, number>();
+
+    expect(result).toBe(id);
+
+    const updated = await Snake.take();
+    expect(updated).toMatchObject({ ...snakeData, ...snakeUpdate });
   });
 
   it('should update one record, return selected columns', async () => {
@@ -139,6 +191,35 @@ describe('update', () => {
     expect(updated).toMatchObject({ ...userData, ...update });
   });
 
+  it('should update one record with named columns, return selected columns', async () => {
+    const id = await Snake.get('snakeId').create(snakeData);
+
+    const q = Snake.select('snakeName', 'tailLength')
+      .find(id)
+      .update(snakeUpdate);
+
+    expectSql(
+      q.toSql(),
+      `
+        UPDATE "snake"
+        SET "snake_name" = $1,
+            "tail_length" = $2,
+            "updated_at" = now()
+        WHERE "snake"."snake_id" = $3
+        RETURNING "snake"."snake_name" AS "snakeName", "snake"."tail_length" AS "tailLength"
+      `,
+      [snakeUpdate.snakeName, snakeUpdate.tailLength, id],
+    );
+
+    const result = await q;
+    assertType<typeof result, Pick<SnakeRecord, 'snakeName' | 'tailLength'>>();
+
+    expect(result).toEqual(snakeUpdate);
+
+    const updated = await Snake.take();
+    expect(updated).toMatchObject({ ...snakeData, ...snakeUpdate });
+  });
+
   it('should update one record, return all columns', async () => {
     const id = await User.get('id').create(userData);
 
@@ -164,13 +245,33 @@ describe('update', () => {
     expect(updated).toMatchObject({ ...userData, ...update });
   });
 
+  it('should update one record with named columns, return all columns', async () => {
+    const id = await Snake.get('snakeId').create(snakeData);
+
+    const q = Snake.selectAll().find(id).update(snakeUpdate);
+
+    expectSql(
+      q.toSql(),
+      `
+        UPDATE "snake"
+        SET "snake_name" = $1,
+            "tail_length" = $2,
+            "updated_at" = now()
+        WHERE "snake"."snake_id" = $3
+        RETURNING ${snakeSelectAll}
+      `,
+      [snakeUpdate.snakeName, snakeUpdate.tailLength, id],
+    );
+
+    const result = await q;
+    assertType<typeof result, SnakeRecord>();
+
+    const updated = await Snake.take();
+    expect(updated).toMatchObject({ ...snakeData, ...snakeUpdate });
+  });
+
   it('should update multiple records, returning selected columns', async () => {
     const ids = await User.pluck('id').createMany([userData, userData]);
-
-    const update = {
-      name: 'new name',
-      password: 'new password',
-    };
 
     const query = User.select('id', 'name')
       .where({ id: { in: ids } })
@@ -192,17 +293,42 @@ describe('update', () => {
     const result = await query;
     assertType<typeof result, { id: number; name: string }[]>();
 
-    const updated = await User.take();
-    expect(updated).toMatchObject({ ...userData, ...update });
+    const updated = await User.all();
+    expect(updated).toMatchObject([update, update]);
   });
 
-  it('should update multiple records, returning all columns', async () => {
-    const ids = await User.pluck('id').createMany([userData, userData]);
+  it('should update multiple records with named columns, return selected columns', async () => {
+    const ids = await Snake.pluck('snakeId').createMany([snakeData, snakeData]);
 
-    const update = {
-      name: 'new name',
-      password: 'new password',
-    };
+    const q = Snake.select('snakeName', 'tailLength')
+      .where({ snakeId: { in: ids } })
+      .update(snakeUpdate);
+
+    expectSql(
+      q.toSql(),
+      `
+        UPDATE "snake"
+        SET "snake_name" = $1,
+            "tail_length" = $2,
+            "updated_at" = now()
+        WHERE "snake"."snake_id" IN ($3, $4)
+        RETURNING "snake"."snake_name" AS "snakeName", "snake"."tail_length" AS "tailLength"
+      `,
+      [snakeUpdate.snakeName, snakeUpdate.tailLength, ...ids],
+    );
+
+    const result = await q;
+    assertType<
+      typeof result,
+      Pick<SnakeRecord, 'snakeName' | 'tailLength'>[]
+    >();
+
+    const updated = await Snake.all();
+    expect(updated).toMatchObject([snakeUpdate, snakeUpdate]);
+  });
+
+  it('should update multiple records, return all columns', async () => {
+    const ids = await User.pluck('id').createMany([userData, userData]);
 
     const query = User.selectAll()
       .where({ id: { in: ids } })
@@ -228,6 +354,33 @@ describe('update', () => {
 
     const updated = await User.take();
     expect(updated).toMatchObject({ ...userData, ...update });
+  });
+
+  it('should update multiple records with named columns, return all columns', async () => {
+    const ids = await Snake.pluck('snakeId').createMany([snakeData, snakeData]);
+
+    const q = Snake.selectAll()
+      .where({ snakeId: { in: ids } })
+      .update(snakeUpdate);
+
+    expectSql(
+      q.toSql(),
+      `
+        UPDATE "snake"
+        SET "snake_name" = $1,
+            "tail_length" = $2,
+            "updated_at" = now()
+        WHERE "snake"."snake_id" IN ($3, $4)
+        RETURNING ${snakeSelectAll}
+      `,
+      [snakeUpdate.snakeName, snakeUpdate.tailLength, ...ids],
+    );
+
+    const result = await q;
+    assertType<typeof result, SnakeRecord[]>();
+
+    const updated = await Snake.all();
+    expect(updated).toMatchObject([snakeUpdate, snakeUpdate]);
   });
 
   it('should ignore undefined values, and should not ignore null', () => {
@@ -270,11 +423,6 @@ describe('update', () => {
 
   it('should return one record when searching for one to update', async () => {
     const { id } = await User.select('id').create(userData);
-
-    const update = {
-      name: 'new name',
-      password: 'new password',
-    };
 
     const query = User.selectAll().findBy({ id }).update(update);
     expectSql(
@@ -385,6 +533,23 @@ describe('update', () => {
 
       assertType<Awaited<typeof query>, { id: number }[]>();
     });
+
+    it('should increment named column', () => {
+      const q = Snake.select('snakeId').increment({ tailLength: 3 });
+
+      expectSql(
+        q.toSql(),
+        `
+          UPDATE "snake"
+          SET "tail_length" = "tail_length" + $1,
+              "updated_at" = now()
+          RETURNING "snake"."snake_id" AS "snakeId"
+        `,
+        [3],
+      );
+
+      assertType<Awaited<typeof q>, { snakeId: number }[]>();
+    });
   });
 
   describe('decrement', () => {
@@ -428,6 +593,23 @@ describe('update', () => {
       );
 
       assertType<Awaited<typeof query>, { id: number }[]>();
+    });
+
+    it('should decrement named column', () => {
+      const q = Snake.select('snakeId').decrement({ tailLength: 3 });
+
+      expectSql(
+        q.toSql(),
+        `
+          UPDATE "snake"
+          SET "tail_length" = "tail_length" - $1,
+              "updated_at" = now()
+          RETURNING "snake"."snake_id" AS "snakeId"
+        `,
+        [3],
+      );
+
+      assertType<Awaited<typeof q>, { snakeId: number }[]>();
     });
   });
 

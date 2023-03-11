@@ -1,7 +1,6 @@
 import { ColumnType } from './columnType';
 import { Operators } from './operators';
 import { columnCode } from './code';
-import { quoteFullColumn } from '../sql/common';
 import { Code, ColumnTypesBase } from 'orchid-core';
 
 export class EnumColumn<
@@ -30,6 +29,10 @@ export class EnumColumn<
   }
 
   toSQL() {
-    return quoteFullColumn(this.enumName);
+    const name = this.enumName;
+    const index = name.indexOf('.');
+    return `"${
+      index === -1 ? name : `${name.slice(0, index)}"."${name.slice(index + 1)}`
+    }"`;
   }
 }

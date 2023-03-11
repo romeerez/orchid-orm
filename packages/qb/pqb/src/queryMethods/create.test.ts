@@ -6,6 +6,10 @@ import {
   expectSql,
   Message,
   MessageRecord,
+  Snake,
+  snakeData,
+  SnakeRecord,
+  snakeSelectAll,
   User,
   userData,
   UserRecord,
@@ -37,6 +41,21 @@ describe('create functions', () => {
 
       expectQueryNotMutated(q);
     });
+
+    it('should create with raw sql and list of columns with names', () => {
+      const query = Snake.createRaw({
+        columns: ['snakeName', 'tailLength'],
+        values: db.raw('raw sql'),
+      });
+      expectSql(
+        query.toSql(),
+        `
+          INSERT INTO "snake"("snake_name", "tail_length")
+          VALUES raw sql
+          RETURNING ${snakeSelectAll}
+        `,
+      );
+    });
   });
 
   describe('create', () => {
@@ -65,6 +84,28 @@ describe('create functions', () => {
       expectQueryNotMutated(q);
     });
 
+    it('should create one record with named columns, returning record', async () => {
+      const query = Snake.create(snakeData);
+
+      expectSql(
+        query.toSql(),
+        `
+          INSERT INTO "snake"("snake_name", "tail_length")
+          VALUES ($1, $2)
+          RETURNING ${snakeSelectAll}
+        `,
+        [snakeData.snakeName, snakeData.tailLength],
+      );
+
+      const result = await query;
+      expect(result).toMatchObject(snakeData);
+
+      assertType<typeof result, SnakeRecord>();
+
+      const created = await Snake.take();
+      expect(created).toMatchObject(snakeData);
+    });
+
     it('should create one record, returning value', async () => {
       const q = User.all();
 
@@ -85,6 +126,24 @@ describe('create functions', () => {
       expect(typeof result).toBe('number');
 
       expectQueryNotMutated(q);
+    });
+
+    it('should create one record, returning value from named column', async () => {
+      const query = Snake.get('snakeName').create(snakeData);
+      expectSql(
+        query.toSql(),
+        `
+          INSERT INTO "snake"("snake_name", "tail_length")
+          VALUES ($1, $2)
+          RETURNING "snake"."snake_name" AS "snakeName"
+        `,
+        [snakeData.snakeName, snakeData.tailLength],
+      );
+
+      const result = await query;
+      assertType<typeof result, string>();
+
+      expect(typeof result).toBe('string');
     });
 
     it('should create one record, returning columns', async () => {
@@ -109,6 +168,27 @@ describe('create functions', () => {
       expect(result).toMatchObject(other);
 
       expectQueryNotMutated(q);
+    });
+
+    it('should create one record, returning named columns', async () => {
+      const query = Snake.select('snakeName', 'tailLength').create(snakeData);
+      expectSql(
+        query.toSql(),
+        `
+          INSERT INTO "snake"("snake_name", "tail_length")
+          VALUES ($1, $2)
+          RETURNING "snake"."snake_name" AS "snakeName", "snake"."tail_length" AS "tailLength"
+        `,
+        [snakeData.snakeName, snakeData.tailLength],
+      );
+
+      const result = await query;
+      assertType<
+        typeof result,
+        Pick<SnakeRecord, 'snakeName' | 'tailLength'>
+      >();
+
+      expect(result).toMatchObject(snakeData);
     });
 
     it('should create one record, returning created count', async () => {
@@ -333,6 +413,30 @@ describe('create functions', () => {
       );
     });
 
+    it('should create record from select with named columns', () => {
+      const query = Snake.createFrom(
+        User.find(1).select({ snakeName: 'name' }),
+        {
+          tailLength: 5,
+        },
+      );
+
+      assertType<Awaited<typeof query>, SnakeRecord>();
+
+      expectSql(
+        query.toSql(),
+        `
+          INSERT INTO "snake"("snake_name", "tail_length")
+          SELECT "user"."name" AS "snakeName", $1
+          FROM "user"
+          WHERE "user"."id" = $2
+          LIMIT $3
+          RETURNING ${snakeSelectAll}
+        `,
+        [5, 1, 1],
+      );
+    });
+
     it('should not allow to create from query which returns multiple records', () => {
       expect(() =>
         Message.createFrom(
@@ -430,6 +534,23 @@ describe('create functions', () => {
         expectQueryNotMutated(q);
       });
 
+      it('should accept single named column', () => {
+        const query = Snake.count()
+          .create(snakeData)
+          .onConflict('snakeName')
+          .ignore();
+
+        expectSql(
+          query.toSql(),
+          `
+            INSERT INTO "snake"("snake_name", "tail_length")
+            VALUES ($1, $2)
+            ON CONFLICT ("snake_name") DO NOTHING
+          `,
+          [snakeData.snakeName, snakeData.tailLength],
+        );
+      });
+
       it('should accept multiple columns', () => {
         const q = User.all();
 
@@ -438,6 +559,7 @@ describe('create functions', () => {
           .create(userData)
           .onConflict(['id', 'name'])
           .ignore();
+
         expectSql(
           query.toSql(),
           `
@@ -449,6 +571,23 @@ describe('create functions', () => {
         );
 
         expectQueryNotMutated(q);
+      });
+
+      it('should accept multiple named columns', () => {
+        const query = Snake.count()
+          .create(snakeData)
+          .onConflict(['snakeName', 'tailLength'])
+          .ignore();
+
+        expectSql(
+          query.toSql(),
+          `
+            INSERT INTO "snake"("snake_name", "tail_length")
+            VALUES ($1, $2)
+            ON CONFLICT ("snake_name", "tail_length") DO NOTHING
+          `,
+          [snakeData.snakeName, snakeData.tailLength],
+        );
       });
 
       it('can accept raw query', () => {
@@ -516,6 +655,24 @@ describe('create functions', () => {
         expectQueryNotMutated(q);
       });
 
+      it('should accept single named column', () => {
+        const query = Snake.count()
+          .create(snakeData)
+          .onConflict('snakeName')
+          .merge('snakeName');
+
+        expectSql(
+          query.toSql(),
+          `
+            INSERT INTO "snake"("snake_name", "tail_length")
+            VALUES ($1, $2)
+            ON CONFLICT ("snake_name")
+            DO UPDATE SET "snake_name" = excluded."snake_name"
+          `,
+          [snakeData.snakeName, snakeData.tailLength],
+        );
+      });
+
       it('should accept multiple columns', () => {
         const q = User.all();
 
@@ -541,6 +698,26 @@ describe('create functions', () => {
         expectQueryNotMutated(q);
       });
 
+      it('should accept multiple named columns', () => {
+        const query = Snake.count()
+          .create(snakeData)
+          .onConflict(['snakeName', 'tailLength'])
+          .merge(['snakeName', 'tailLength']);
+
+        expectSql(
+          query.toSql(),
+          `
+            INSERT INTO "snake"("snake_name", "tail_length")
+            VALUES ($1, $2)
+            ON CONFLICT ("snake_name", "tail_length")
+            DO UPDATE SET
+              "snake_name" = excluded."snake_name",
+              "tail_length" = excluded."tail_length"
+          `,
+          [snakeData.snakeName, snakeData.tailLength],
+        );
+      });
+
       it('should accept object with values to update', () => {
         const q = User.all();
 
@@ -562,6 +739,24 @@ describe('create functions', () => {
         );
 
         expectQueryNotMutated(q);
+      });
+
+      it('should accept object with values to update for named column', () => {
+        const query = Snake.count()
+          .create(snakeData)
+          .onConflict('snakeName')
+          .merge({ snakeName: 'new name' });
+
+        expectSql(
+          query.toSql(),
+          `
+            INSERT INTO "snake"("snake_name", "tail_length")
+            VALUES ($1, $2)
+            ON CONFLICT ("snake_name")
+            DO UPDATE SET "snake_name" = $3
+          `,
+          [snakeData.snakeName, snakeData.tailLength, 'new name'],
+        );
       });
 
       it('should accept raw sql', () => {

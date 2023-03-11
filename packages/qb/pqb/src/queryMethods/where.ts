@@ -9,6 +9,8 @@ import {
   ColumnsShapeBase,
   MaybeArray,
   QueryMetaBase,
+  QueryInternal,
+  emptyObject,
 } from 'orchid-core';
 
 export type WhereArg<T extends QueryBase> =
@@ -28,7 +30,9 @@ export type WhereArg<T extends QueryBase> =
         columns: (keyof T['selectable'])[];
         values: unknown[][] | Query | RawExpression;
       }>;
-      EXISTS?: MaybeArray<JoinArgs<T> | JoinCallbackArg<T>>;
+      EXISTS?: MaybeArray<
+        JoinArgs<T> | [JoinCallbackArg<T>, JoinCallback<T, JoinCallbackArg<T>>]
+      >;
     })
   | QueryBase
   | RawExpression
@@ -150,6 +154,7 @@ export abstract class Where implements QueryBase {
   abstract relations: RelationsBase;
   abstract withData: WithDataBase;
   abstract baseQuery: Query;
+  abstract internal: QueryInternal;
 
   query = {} as QueryData;
   table?: string;
@@ -443,7 +448,8 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
   shape: Q['shape'];
   relations!: Q['relations'];
   baseQuery: Query;
-  withData = {};
+  withData = emptyObject;
+  internal = emptyObject;
 
   constructor(q: QueryBase | string, shape: ColumnsShapeBase) {
     super();
@@ -451,6 +457,7 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
     this.shape = shape;
     this.query = {
       shape: shape as ColumnsShapeBase,
+      joinedShapes: typeof q === 'object' ? q.query.joinedShapes : undefined,
     } as QueryData;
     this.baseQuery = this as unknown as Query;
     if (typeof q === 'object' && q.query.as) {

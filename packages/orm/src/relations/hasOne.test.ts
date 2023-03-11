@@ -65,8 +65,8 @@ describe('hasOne', () => {
           SELECT * FROM "profile"
           WHERE EXISTS (
               SELECT 1 FROM "user"
-              WHERE "user"."name" = $1
-                AND "user"."id" = "profile"."userId"
+              WHERE "user"."id" = "profile"."userId"
+                AND "user"."name" = $1
               LIMIT 1
             )
             AND "profile"."bio" = $2
@@ -167,8 +167,8 @@ describe('hasOne', () => {
             DELETE FROM "profile"
             WHERE EXISTS (
                 SELECT 1 FROM "user"
-                WHERE "user"."name" = $1
-                  AND "user"."id" = "profile"."userId"
+                WHERE "user"."id" = "profile"."userId"
+                  AND "user"."name" = $1
                 LIMIT 1
               )
               AND "profile"."bio" = $2
@@ -1475,13 +1475,13 @@ describe('hasOne through', () => {
         SELECT * FROM "profile"
         WHERE EXISTS (
             SELECT 1 FROM "message"
-            WHERE "message"."text" = $1
-              AND EXISTS (
+            WHERE EXISTS (
                 SELECT 1 FROM "user"
                 WHERE "user"."id" = "message"."authorId"
                   AND "profile"."userId" = "user"."id"
                 LIMIT 1
               )
+              AND "message"."text" = $1
             LIMIT 1
           )
           AND "profile"."bio" = $2
@@ -1508,13 +1508,14 @@ describe('hasOne through', () => {
         DELETE FROM "profile"
         WHERE EXISTS (
             SELECT 1 FROM "message"
-            WHERE "message"."text" = $1
-              AND EXISTS (
+            WHERE
+              EXISTS (
                 SELECT 1 FROM "user"
                 WHERE "user"."id" = "message"."authorId"
                   AND "profile"."userId" = "user"."id"
                 LIMIT 1
               )
+              AND "message"."text" = $1
             LIMIT 1
           )
           AND "profile"."bio" = $2

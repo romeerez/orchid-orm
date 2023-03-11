@@ -2,6 +2,7 @@ import {
   assertType,
   expectQueryNotMutated,
   expectSql,
+  Snake,
   User,
   userData,
   useTestDatabase,
@@ -77,6 +78,18 @@ describe('json methods', () => {
         >();
 
         expectQueryNotMutated(q);
+      });
+
+      it('should select json for named column with updated property', () => {
+        const q = Snake.jsonSet('snakeData', ['name'], 'new value');
+        expectSql(
+          q.toSql(),
+          `
+            SELECT jsonb_set("snake"."snake_data", '{name}', $1) AS "snakeData"
+            FROM "snake"
+          `,
+          ['"new value"'],
+        );
       });
 
       it('should accept optional `as`, `createIfMissing`', async () => {
@@ -166,6 +179,19 @@ describe('json methods', () => {
         expectQueryNotMutated(q);
       });
 
+      it('should select json for named column with updated property', () => {
+        const q = Snake.jsonInsert('snakeData', ['tags', 0], 'two');
+
+        expectSql(
+          q.toSql(),
+          `
+            SELECT jsonb_insert("snake"."snake_data", '{tags, 0}', $1) AS "snakeData"
+            FROM "snake"
+          `,
+          ['"two"'],
+        );
+      });
+
       it('should accept optional `as`, `insertAfter`', async () => {
         const q = User.all();
 
@@ -249,6 +275,18 @@ describe('json methods', () => {
         expectQueryNotMutated(q);
       });
 
+      it('should select json for named column with removed property', () => {
+        const q = Snake.jsonRemove('snakeData', ['tags', 0]);
+
+        expectSql(
+          q.toSql(),
+          `
+            SELECT "snake"."snake_data" #- '{tags, 0}' AS "snakeData"
+            FROM "snake"
+          `,
+        );
+      });
+
       it('should accept optional `as`', async () => {
         const q = User.all();
 
@@ -326,6 +364,24 @@ describe('json methods', () => {
         assertType<typeof result.name, string>();
 
         expectQueryNotMutated(q);
+      });
+
+      it('should select json property for named column', () => {
+        const q = Snake.jsonPathQuery(
+          columnTypes.text(0, 100),
+          'snakeData',
+          '$.name',
+          'name',
+        );
+
+        expectSql(
+          q.toSql(),
+          `
+            SELECT jsonb_path_query("snake"."snake_data", $1) AS "name"
+            FROM "snake"
+          `,
+          ['$.name'],
+        );
       });
 
       it('optionally supports vars and silent options', () => {

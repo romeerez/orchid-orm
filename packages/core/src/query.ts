@@ -5,8 +5,13 @@ export type QueryMetaBase = {
   hasWhere?: true;
 };
 
+export type QueryInternal = {
+  columnsForSelectAll?: string[];
+};
+
 export type QueryBaseCommon = {
   meta: QueryMetaBase;
+  internal: QueryInternal;
 };
 
 export type QueryCommon = QueryBaseCommon;

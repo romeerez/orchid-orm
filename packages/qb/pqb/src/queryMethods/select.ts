@@ -28,6 +28,7 @@ import {
   RawExpression,
   ColumnsShapeBase,
   NullableColumn,
+  ColumnTypeBase,
 } from 'orchid-core';
 import { parseResult } from './then';
 
@@ -147,9 +148,7 @@ export const addParserForSelectItem = <T extends Query>(
         const parser = q.query.parsers?.[column];
         if (parser) addParserToQuery(q.query, key, parser);
       } else {
-        const parser = (q.query as SelectQueryData).joinedParsers?.[table]?.[
-          column
-        ];
+        const parser = q.query.joinedParsers?.[table]?.[column];
         if (parser) addParserToQuery(q.query, key, parser);
       }
     } else {
@@ -204,9 +203,7 @@ const processSelectColumnArg = <T extends Query>(
       const parser = q.query.parsers?.[column];
       if (parser) addParserToQuery(q.query, columnAs || column, parser);
     } else {
-      const parser = (q.query as SelectQueryData).joinedParsers?.[table]?.[
-        column
-      ];
+      const parser = q.query.joinedParsers?.[table]?.[column];
       if (parser) addParserToQuery(q.query, columnAs || column, parser);
     }
   } else {
@@ -228,7 +225,9 @@ const processSelectAsArg = <T extends Query>(
   return { selectAs };
 };
 
-export const getShapeFromSelect = (q: Query) => {
+// is mapping result of a query into a columns shape
+// in this way, result of a sub query becomes available outside of it for using in WHERE and other methods
+export const getShapeFromSelect = (q: Query, isSubQuery?: boolean) => {
   const query = q.query as SelectQueryData;
   const { select, shape } = query;
   if (!select) {
@@ -238,12 +237,20 @@ export const getShapeFromSelect = (q: Query) => {
   const result: ColumnsShapeBase = {};
   for (const item of select) {
     if (typeof item === 'string') {
-      addColumnToShapeFromSelect(q, item, shape, query, result);
+      addColumnToShapeFromSelect(q, item, shape, query, result, isSubQuery);
     } else if ('selectAs' in item) {
       for (const key in item.selectAs) {
         const it = item.selectAs[key];
         if (typeof it === 'string') {
-          addColumnToShapeFromSelect(q, it, shape, query, result, key);
+          addColumnToShapeFromSelect(
+            q,
+            it,
+            shape,
+            query,
+            result,
+            isSubQuery,
+            key,
+          );
         } else if (isRaw(it)) {
           result[key] = it.__column || new UnknownColumn(emptyObject);
         } else {
@@ -258,6 +265,7 @@ export const getShapeFromSelect = (q: Query) => {
       }
     }
   }
+
   return result;
 };
 
@@ -267,6 +275,7 @@ const addColumnToShapeFromSelect = (
   shape: ColumnsShapeBase,
   query: SelectQueryData,
   result: ColumnsShapeBase,
+  isSubQuery?: boolean,
   key?: string,
 ) => {
   if ((q.relations as Record<string, Relation>)[arg]) {
@@ -282,15 +291,24 @@ const addColumnToShapeFromSelect = (
       result[key || column] = shape[column];
     } else {
       const it = query.joinedShapes?.[table]?.[column];
-      if (it) result[key || column] = it;
+      if (it) result[key || column] = maybeUnNameColumn(it, isSubQuery);
     }
   } else if (arg === '*') {
     for (const key in shape) {
-      result[key] = shape[key];
+      result[key] = maybeUnNameColumn(shape[key], isSubQuery);
     }
   } else {
-    result[key || arg] = shape[arg];
+    result[key || arg] = maybeUnNameColumn(shape[arg], isSubQuery);
   }
+};
+
+const maybeUnNameColumn = (column: ColumnTypeBase, isSubQuery?: boolean) => {
+  if (!isSubQuery || !column.data.name) return column;
+
+  const cloned = Object.create(column);
+  cloned.data = { ...column.data };
+  delete cloned.data.name;
+  return cloned;
 };
 
 export class Select {

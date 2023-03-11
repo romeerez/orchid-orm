@@ -59,8 +59,8 @@ describe('belongsTo', () => {
           SELECT * FROM "user"
           WHERE EXISTS (
                   SELECT 1 FROM "profile"
-                  WHERE "profile"."bio" = $1
-                    AND "profile"."userId" = "user"."id"
+                  WHERE "profile"."userId" = "user"."id"
+                    AND "profile"."bio" = $1
                   LIMIT 1
                 )
             AND "user"."name" = $2

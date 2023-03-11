@@ -14,8 +14,7 @@ const quoteValue = (
     }
 
     if ('toSql' in arg) {
-      const sql = (arg as Query).toSql({ values });
-      return `(${sql.text})`;
+      return `(${(arg as Query).toSql({ values }).text})`;
     }
 
     if (isRaw(arg)) {

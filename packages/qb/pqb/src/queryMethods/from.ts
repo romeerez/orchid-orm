@@ -1,4 +1,10 @@
-import { AddQuerySelect, Query, SetQueryTableAlias } from '../query';
+import {
+  AddQuerySelect,
+  Query,
+  SelectableFromShape,
+  SetQueryTableAlias,
+  WithDataItem,
+} from '../query';
 import { SelectQueryData } from '../sql';
 import { AliasOrTable } from '../utils';
 import { isRaw, RawExpression } from 'orchid-core';
@@ -33,12 +39,22 @@ type MergeFromResult<T extends Query, Arg extends Query> = AddQuerySelect<
 export type FromResult<
   T extends Query,
   Args extends FromArgs<T>,
-> = Args[0] extends string
-  ? SetQueryTableAlias<T, Args[0]>
-  : Args[0] extends Query
+  Arg = Args[0],
+> = Arg extends string
+  ? T['withData'] extends Record<string, WithDataItem>
+    ? Arg extends keyof T['withData']
+      ? Omit<T, 'meta' | 'selectable'> & {
+          meta: Omit<T['meta'], 'as'> & {
+            as?: string;
+          };
+          selectable: SelectableFromShape<T['withData'][Arg]['shape'], Arg>;
+        }
+      : SetQueryTableAlias<T, Arg>
+    : SetQueryTableAlias<T, Arg>
+  : Arg extends Query
   ? SetQueryTableAlias<
-      MergeFromResult<SetFromSelectable<T, Args[0]>, Args[0]>,
-      AliasOrTable<Args[0]>
+      MergeFromResult<SetFromSelectable<T, Arg>, Arg>,
+      AliasOrTable<Arg>
     >
   : T;
 
@@ -59,7 +75,7 @@ export class From {
     } else if (!isRaw(args[0] as RawExpression)) {
       const q = args[0] as Query;
       this.query.as ||= q.query.as || q.table || 't';
-      this.query.shape = getShapeFromSelect(args[0] as Query);
+      this.query.shape = getShapeFromSelect(args[0] as Query, true);
       this.query.parsers = q.query.parsers;
     } else {
       this.query.as ||= 't';

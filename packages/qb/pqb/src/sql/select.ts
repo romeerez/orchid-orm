@@ -1,9 +1,14 @@
 import { JsonItem, SelectFunctionItem, SelectItem } from './types';
 import { getRaw } from '../raw';
-import { Query, QueryBase } from '../query';
-import { addValue, q, quoteFullColumn } from './common';
+import { Query } from '../query';
+import {
+  addValue,
+  q,
+  revealColumnToSql,
+  revealColumnToSqlWithAs,
+} from './common';
 import { aggregateToSql } from './aggregate';
-import { PormInternalError, UnhandledTypeError } from '../errors';
+import { OrchidInternalError, UnhandledTypeError } from '../errors';
 import { makeSql, ToSqlCtx } from './toSql';
 import { relationQueryKey } from '../relations';
 import { SelectQueryData } from './data';
@@ -11,16 +16,18 @@ import { Expression } from '../utils';
 import { isRaw, raw } from 'orchid-core';
 
 const jsonColumnOrMethodToSql = (
+  table: Query,
   column: string | JsonItem,
   values: unknown[],
   quotedAs?: string,
 ) => {
   return typeof column === 'string'
-    ? quoteFullColumn(column, quotedAs)
-    : jsonToSql(column, values, quotedAs);
+    ? revealColumnToSql(table.query, table.query.shape, column, quotedAs)
+    : jsonToSql(table, column, values, quotedAs);
 };
 
 const jsonToSql = (
+  table: Query,
   item: JsonItem,
   values: unknown[],
   quotedAs?: string,
@@ -29,6 +36,7 @@ const jsonToSql = (
   if (json[0] === 'pathQuery') {
     const [, , , column, path, options] = json;
     return `jsonb_path_query(${jsonColumnOrMethodToSql(
+      table,
       column,
       values,
       quotedAs,
@@ -38,6 +46,7 @@ const jsonToSql = (
   } else if (json[0] === 'set') {
     const [, , , column, path, value, options] = json;
     return `jsonb_set(${jsonColumnOrMethodToSql(
+      table,
       column,
       values,
       quotedAs,
@@ -47,6 +56,7 @@ const jsonToSql = (
   } else if (json[0] === 'insert') {
     const [, , , column, path, value, options] = json;
     return `jsonb_insert(${jsonColumnOrMethodToSql(
+      table,
       column,
       values,
       quotedAs,
@@ -56,6 +66,7 @@ const jsonToSql = (
   } else if (json[0] === 'remove') {
     const [, , , column, path] = json;
     return `${jsonColumnOrMethodToSql(
+      table,
       column,
       values,
       quotedAs,
@@ -66,7 +77,7 @@ const jsonToSql = (
 
 export const pushSelectSql = (
   ctx: ToSqlCtx,
-  table: QueryBase,
+  table: Query,
   query: Pick<SelectQueryData, 'select' | 'join'>,
   quotedAs?: string,
 ) => {
@@ -75,7 +86,7 @@ export const pushSelectSql = (
 
 export const selectToSql = (
   ctx: ToSqlCtx,
-  table: QueryBase,
+  table: Query,
   query: Pick<SelectQueryData, 'select' | 'join'>,
   quotedAs?: string,
 ): string => {
@@ -85,10 +96,8 @@ export const selectToSql = (
       if (typeof item === 'string') {
         list.push(
           item === '*'
-            ? query.join?.length
-              ? `${quotedAs}.*`
-              : '*'
-            : quoteFullColumn(item, quotedAs),
+            ? selectAllSql(table, query, quotedAs)
+            : revealColumnToSqlWithAs(table.query, item, quotedAs),
         );
       } else {
         if ('selectAs' in item) {
@@ -103,13 +112,20 @@ export const selectToSql = (
               }
             } else {
               list.push(
-                `${quoteFullColumn(value as string, quotedAs)} AS ${q(as)}`,
+                `${revealColumnToSql(
+                  table.query,
+                  table.query.shape,
+                  value as string,
+                  quotedAs,
+                )} AS ${q(as)}`,
               );
             }
           }
         } else if ('__json' in item) {
           list.push(
-            `${jsonToSql(item, ctx.values, quotedAs)} AS ${q(item.__json[1])}`,
+            `${jsonToSql(table, item, ctx.values, quotedAs)} AS ${q(
+              item.__json[1],
+            )}`,
           );
         } else if (isRaw(item)) {
           list.push(getRaw(item, ctx.values));
@@ -128,9 +144,21 @@ export const selectToSql = (
       }
     });
     return list.join(', ');
-  } else {
-    return query.join?.length ? `${quotedAs}.*` : '*';
   }
+
+  return selectAllSql(table, query, quotedAs);
+};
+
+export const selectAllSql = (
+  table: Query,
+  query: Pick<SelectQueryData, 'join'>,
+  quotedAs?: string,
+) => {
+  return query.join?.length
+    ? table.internal.columnsForSelectAll
+        ?.map((item) => `${quotedAs}.${item}`)
+        .join(', ') || `${quotedAs}.*`
+    : table.internal.columnsForSelectAll?.join(', ') || '*';
 };
 
 const pushSubQuerySql = (
@@ -156,7 +184,7 @@ const pushSubQuerySql = (
       const { select } = query.query;
       const first = select?.[0];
       if (!select || !first) {
-        throw new PormInternalError(`Nothing was selected for pluck`);
+        throw new OrchidInternalError(`Nothing was selected for pluck`);
       }
 
       const cloned = query.clone();

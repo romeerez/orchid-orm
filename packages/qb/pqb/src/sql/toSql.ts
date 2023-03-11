@@ -1,5 +1,5 @@
 import { Query, queryTypeWithLimitOne } from '../query';
-import { addValue, q, qc } from './common';
+import { addValue, q, revealColumnToSql } from './common';
 import { JoinItem, Sql } from './types';
 import { pushDistinctSql } from './distinct';
 import { pushSelectSql } from './select';
@@ -71,7 +71,7 @@ export const makeSql = (
     if (query.type === 'columnInfo') {
       if (!table.table) throw new Error('Table is missing for truncate');
 
-      pushColumnInfoSql(ctx, table.table, query);
+      pushColumnInfoSql(ctx, table, query);
       return { text: sql.join(' '), values };
     }
 
@@ -106,7 +106,7 @@ export const makeSql = (
   sql.push('SELECT');
 
   if (query.distinct) {
-    pushDistinctSql(ctx, query.distinct, quotedAs);
+    pushDistinctSql(ctx, table, query.distinct, quotedAs);
   }
 
   pushSelectSql(ctx, table, query, quotedAs);
@@ -132,7 +132,12 @@ export const makeSql = (
     const group = query.group.map((item) =>
       typeof item === 'object' && isRaw(item)
         ? getRaw(item, values)
-        : qc(item as string, quotedAs),
+        : revealColumnToSql(
+            table.query,
+            table.query.shape,
+            item as string,
+            quotedAs,
+          ),
     );
     sql.push(`GROUP BY ${group.join(', ')}`);
   }
@@ -145,7 +150,9 @@ export const makeSql = (
     const window: string[] = [];
     query.window.forEach((item) => {
       for (const key in item) {
-        window.push(`${q(key)} AS ${windowToSql(item[key], values, quotedAs)}`);
+        window.push(
+          `${q(key)} AS ${windowToSql(query, item[key], values, quotedAs)}`,
+        );
       }
     });
     sql.push(`WINDOW ${window.join(', ')}`);
@@ -165,7 +172,7 @@ export const makeSql = (
   }
 
   if (query.order) {
-    pushOrderBySql(ctx, quotedAs, query.order);
+    pushOrderBySql(ctx, query, quotedAs, query.order);
   }
 
   const limit = queryTypeWithLimitOne[query.returnType] ? 1 : query.limit;

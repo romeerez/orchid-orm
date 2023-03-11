@@ -2,8 +2,13 @@ import { change } from '../../src';
 
 change(async (db) => {
   await db.createTable('snake', (t) => ({
-    snake_name: t.text().primaryKey(),
+    snakeId: t.name('snake_id').serial().primaryKey(),
+    snake_name: t.text(),
     tailLength: t.name('tail_length').integer(),
+    snakeData: t
+      .name('snake_data')
+      .json((t) => t.any())
+      .nullable(),
     ...t.timestampsSnakeCase(),
   }));
 });

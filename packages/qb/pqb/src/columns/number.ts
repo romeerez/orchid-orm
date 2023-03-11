@@ -154,13 +154,17 @@ export class DoublePrecisionColumn extends NumberAsStringBaseColumn {
 
 // autoincrementing two-byte integer
 export class SmallSerialColumn extends IntegerBaseColumn {
-  dataType = 'smallserial' as const;
+  dataType = 'smallint' as const;
   parseItem = parseInt;
   data!: SerialColumnData;
 
   constructor(types: ColumnTypesBase) {
     super(types);
     this.data.int = true;
+  }
+
+  toSQL() {
+    return 'smallserial';
   }
 
   toCode(t: string): Code {
@@ -170,13 +174,17 @@ export class SmallSerialColumn extends IntegerBaseColumn {
 
 // autoincrementing four-byte integer
 export class SerialColumn extends IntegerBaseColumn {
-  dataType = 'serial' as const;
+  dataType = 'integer' as const;
   parseItem = parseInt;
   data!: SerialColumnData;
 
   constructor(types: ColumnTypesBase) {
     super(types);
     this.data.int = true;
+  }
+
+  toSQL() {
+    return 'serial';
   }
 
   toCode(t: string): Code {
@@ -186,8 +194,13 @@ export class SerialColumn extends IntegerBaseColumn {
 
 // autoincrementing eight-byte integer
 export class BigSerialColumn extends NumberAsStringBaseColumn {
-  dataType = 'bigserial' as const;
+  dataType = 'bigint' as const;
   data!: SerialColumnData;
+
+  toSql() {
+    return 'bigserial';
+  }
+
   toCode(t: string): Code {
     return columnCode(this, t, `bigSerial()`);
   }

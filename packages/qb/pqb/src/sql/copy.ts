@@ -14,7 +14,11 @@ export const pushCopySql = (
   const { sql } = ctx;
   const { copy } = query;
 
-  const columns = copy.columns ? `(${copy.columns.map(q).join(', ')})` : '';
+  const columns = copy.columns
+    ? `(${copy.columns
+        .map((item) => q(query.shape[item]?.data.name || item))
+        .join(', ')})`
+    : '';
 
   const target = 'from' in copy ? copy.from : copy.to;
 

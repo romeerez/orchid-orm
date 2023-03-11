@@ -53,7 +53,7 @@ const _get = <
         if (table === (q.query.as || q.table)) {
           type = q.query.shape[column];
         } else {
-          type = (q.query as SelectQueryData).joinedShapes?.[table]?.[column];
+          type = q.query.joinedShapes?.[table]?.[column];
         }
       }
     }

@@ -71,13 +71,14 @@ describe('hasAndBelongsToMany', () => {
           SELECT * FROM "chat" AS "chats"
           WHERE EXISTS (
               SELECT 1 FROM "user"
-              WHERE "user"."name" = $1
-                AND EXISTS (
+              WHERE
+                EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."chatId" = "chats"."id"
                     AND "chatUser"."userId" = "user"."id"
                   LIMIT 1
                 )
+                AND "user"."name" = $1
               LIMIT 1
             )
             AND "chats"."title" = $2
@@ -130,13 +131,14 @@ describe('hasAndBelongsToMany', () => {
           DELETE FROM "chat" AS "chats"
           WHERE EXISTS (
               SELECT 1 FROM "user"
-              WHERE "user"."name" = $1
-                AND EXISTS (
+              WHERE
+                EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."chatId" = "chats"."id"
                     AND "chatUser"."userId" = "user"."id"
                   LIMIT 1
                 )
+                AND "user"."name" = $1
               LIMIT 1
             )
             AND "chats"."title" = $2

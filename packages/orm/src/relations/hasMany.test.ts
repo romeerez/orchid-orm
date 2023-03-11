@@ -74,8 +74,8 @@ describe('hasMany', () => {
           SELECT * FROM "message" AS "messages"
           WHERE EXISTS (
               SELECT 1 FROM "user"
-              WHERE "user"."name" = $1
-                AND "user"."id" = "messages"."authorId"
+              WHERE "user"."id" = "messages"."authorId"
+                AND "user"."name" = $1
               LIMIT 1
             )
             AND "messages"."text" = $2
@@ -160,8 +160,8 @@ describe('hasMany', () => {
           DELETE FROM "message" AS "messages"
           WHERE EXISTS (
               SELECT 1 FROM "chat"
-              WHERE "chat"."title" = $1
-                AND "chat"."id" = "messages"."chatId"
+              WHERE "chat"."id" = "messages"."chatId"
+                AND "chat"."title" = $1
               LIMIT 1
             )
             AND "messages"."text" = $2
@@ -1901,8 +1901,8 @@ describe('hasMany through', () => {
           SELECT * FROM "chat" AS "chats"
           WHERE EXISTS (
             SELECT 1 FROM "profile"
-            WHERE "profile"."bio" = $1
-              AND EXISTS (
+            WHERE
+              EXISTS (
                 SELECT 1 FROM "user"
                 WHERE "user"."id" = "profile"."userId"
                   AND EXISTS (
@@ -1913,6 +1913,7 @@ describe('hasMany through', () => {
                   )
                 LIMIT 1
               )
+              AND "profile"."bio" = $1
             LIMIT 1
           )
           AND "chats"."title" = $2
@@ -1939,8 +1940,8 @@ describe('hasMany through', () => {
           DELETE FROM "chat" AS "chats"
           WHERE EXISTS (
               SELECT 1 FROM "profile"
-              WHERE "profile"."bio" = $1
-                AND EXISTS (
+              WHERE
+                EXISTS (
                   SELECT 1 FROM "user"
                   WHERE "user"."id" = "profile"."userId"
                     AND EXISTS (
@@ -1951,6 +1952,7 @@ describe('hasMany through', () => {
                     )
                   LIMIT 1
                 )
+                AND "profile"."bio" = $1
               LIMIT 1
             )
             AND "chats"."title" = $2
@@ -2288,8 +2290,8 @@ describe('hasMany through', () => {
           SELECT * FROM "profile" AS "profiles"
           WHERE EXISTS (
             SELECT 1 FROM "chat"
-            WHERE "chat"."title" = $1
-              AND EXISTS (
+            WHERE
+              EXISTS (
                 SELECT 1 FROM "user" AS "users"
                 WHERE EXISTS (
                     SELECT 1 FROM "chatUser"
@@ -2300,6 +2302,7 @@ describe('hasMany through', () => {
                   AND "profiles"."userId" = "users"."id"
                 LIMIT 1
               )
+              AND "chat"."title" = $1
             LIMIT 1
           )
           AND "profiles"."bio" = $2
@@ -2325,8 +2328,8 @@ describe('hasMany through', () => {
           DELETE FROM "profile" AS "profiles"
           WHERE EXISTS (
               SELECT 1 FROM "chat"
-              WHERE "chat"."title" = $1
-                AND EXISTS (
+              WHERE
+                EXISTS (
                   SELECT 1 FROM "user" AS "users"
                   WHERE EXISTS (
                       SELECT 1 FROM "chatUser"
@@ -2337,6 +2340,7 @@ describe('hasMany through', () => {
                     AND "profiles"."userId" = "users"."id"
                   LIMIT 1
                 )
+                AND "chat"."title" = $1
               LIMIT 1
             )
             AND "profiles"."bio" = $2

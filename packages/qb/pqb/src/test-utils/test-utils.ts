@@ -23,10 +23,10 @@ export const db = createDb({
   columnTypes: (t) => ({
     ...t,
     text(min = 0, max = Infinity) {
-      return t.text(min, max);
+      return t.text.call(this, min, max);
     },
     timestamp() {
-      return t.timestamp().parse((input) => new Date(input));
+      return t.timestamp.call(this).parse((input) => new Date(input));
     },
   }),
 });
@@ -81,6 +81,31 @@ export const Message = db('message', (t) => ({
   text: t.text(),
   ...t.timestamps(),
 }));
+
+export type SnakeRecord = typeof Snake['type'];
+export const Snake = db('snake', (t) => ({
+  snakeId: t.name('snake_id').serial().primaryKey(),
+  snakeName: t.name('snake_name').text(),
+  tailLength: t.name('tail_length').integer(),
+  snakeData: t
+    .name('snake_data')
+    .json((j) => j.any())
+    .nullable(),
+  ...t.timestampsSnakeCase(),
+}));
+
+const snakeAllColumns = [
+  '"snake_id" AS "snakeId"',
+  '"snake_name" AS "snakeName"',
+  '"tail_length" AS "tailLength"',
+  '"snake_data" AS "snakeData"',
+  '"created_at" AS "createdAt"',
+  '"updated_at" AS "updatedAt"',
+];
+export const snakeSelectAll = snakeAllColumns.join(', ');
+export const snakeSelectAllWithTable = snakeAllColumns
+  .map((item) => `"snake".${item}`)
+  .join(', ');
 
 export const line = (s: string) =>
   s.trim().replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')');
@@ -148,6 +173,13 @@ export const chatData = {
 export const messageData = {
   text: 'text',
 };
+
+export const snakeData = {
+  snakeName: 'Dave',
+  tailLength: 5,
+};
+
+export const asMock = (fn: unknown) => fn as jest.Mock;
 
 export const useTestDatabase = () => {
   beforeAll(patchPgForTransactions);

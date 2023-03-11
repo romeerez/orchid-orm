@@ -7,6 +7,7 @@ import {
   DefaultSelectColumns,
   SinglePrimaryKey,
 } from './columns/columnType';
+import { QueryInternal } from './query';
 
 export type DbBase<
   Adapter extends AdapterBase,
@@ -23,4 +24,5 @@ export type DbBase<
   type: ColumnShapeOutput<Shape>;
   inputType: ColumnShapeInput<Shape>;
   result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
+  internal: QueryInternal;
 };

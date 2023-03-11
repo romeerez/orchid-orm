@@ -1,6 +1,6 @@
 import { addValue, q } from './common';
 import { pushWhereStatementSql } from './where';
-import { QueryBase } from '../query';
+import { Query } from '../query';
 import { selectToSql } from './select';
 import { makeSql, ToSqlCtx } from './toSql';
 import { pushQueryValue } from '../queryDataUtils';
@@ -10,11 +10,14 @@ import { isRaw, raw } from 'orchid-core';
 
 export const pushInsertSql = (
   ctx: ToSqlCtx,
-  table: QueryBase,
+  table: Query,
   query: InsertQueryData,
   quotedAs: string,
 ) => {
-  const quotedColumns = query.columns.map(q);
+  const { shape } = table.query;
+  const quotedColumns = query.columns.map((item) =>
+    q(shape[item]?.data.name || item),
+  );
 
   ctx.sql.push(`INSERT INTO ${quotedAs}(${quotedColumns.join(', ')})`);
 
@@ -46,9 +49,13 @@ export const pushInsertSql = (
     const { expr, type } = query.onConflict;
     if (expr) {
       if (typeof expr === 'string') {
-        ctx.sql.push(`(${q(expr)})`);
+        ctx.sql.push(`(${q(shape[expr]?.data.name || expr)})`);
       } else if (Array.isArray(expr)) {
-        ctx.sql.push(`(${expr.map(q).join(', ')})`);
+        ctx.sql.push(
+          `(${expr
+            .map((item) => q(shape[item]?.data.name || item))
+            .join(', ')})`,
+        );
       } else {
         ctx.sql.push(getRaw(expr, ctx.values));
       }
@@ -64,17 +71,26 @@ export const pushInsertSql = (
       const { update } = query.onConflict;
       if (update) {
         if (typeof update === 'string') {
-          set = `${q(update)} = excluded.${q(update)}`;
+          const name = q(shape[update]?.data.name || update);
+          set = `${name} = excluded.${name}`;
         } else if (Array.isArray(update)) {
           set = update
-            .map((column) => `${q(column)} = excluded.${q(column)}`)
+            .map((item) => {
+              const name = q(shape[item]?.data.name || item);
+              return `${name} = excluded.${name}`;
+            })
             .join(', ');
         } else if (isRaw(update)) {
           set = getRaw(update, ctx.values);
         } else {
           const arr: string[] = [];
           for (const key in update) {
-            arr.push(`${q(key)} = ${addValue(ctx.values, update[key])}`);
+            arr.push(
+              `${q(shape[key]?.data.name || key)} = ${addValue(
+                ctx.values,
+                update[key],
+              )}`,
+            );
           }
           set = arr.join(', ');
         }
@@ -102,7 +118,7 @@ const encodeRow = (ctx: ToSqlCtx, row: unknown[]) => {
 
 export const pushReturningSql = (
   ctx: ToSqlCtx,
-  table: QueryBase,
+  table: Query,
   query: QueryData,
   quotedAs: string,
 ) => {

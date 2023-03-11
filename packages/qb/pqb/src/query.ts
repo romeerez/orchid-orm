@@ -34,6 +34,16 @@ export type SelectableBase = Record<
   { as: string; column: ColumnType }
 >;
 
+export type SelectableFromShape<
+  Shape extends ColumnsShapeBase,
+  Table extends string | undefined,
+> = { [K in keyof Shape]: { as: K; column: Shape[K] } } & {
+  [K in keyof Shape as `${Table}.${StringKey<K>}`]: {
+    as: K;
+    column: Shape[K];
+  };
+};
+
 export type WithDataItem = { table: string; shape: ColumnsShape };
 export type WithDataBase = Record<never, WithDataItem>;
 

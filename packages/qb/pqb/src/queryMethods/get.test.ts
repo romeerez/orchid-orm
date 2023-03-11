@@ -1,6 +1,8 @@
 import {
   assertType,
   db,
+  Snake,
+  snakeData,
   User,
   userData,
   useTestDatabase,
@@ -19,6 +21,16 @@ describe('get', () => {
       assertType<typeof received, number>();
 
       expect(received).toBe(id);
+    });
+
+    it('should select named column and return a single value', async () => {
+      const { snakeName } = await Snake.select('snakeName').create(snakeData);
+
+      const received = await Snake.get('snakeName');
+
+      assertType<typeof received, string>();
+
+      expect(received).toBe(snakeName);
     });
 
     it('should select raw and return a single value', async () => {
@@ -45,6 +57,16 @@ describe('get', () => {
       assertType<typeof received, number | undefined>();
 
       expect(received).toBe(id);
+    });
+
+    it('should select named column and return a single value when exists', async () => {
+      const { snakeName } = await Snake.select('snakeName').create(snakeData);
+
+      const received = await Snake.getOptional('snakeName');
+
+      assertType<typeof received, string | undefined>();
+
+      expect(received).toBe(snakeName);
     });
 
     it('should select raw and return a single value when exists', async () => {

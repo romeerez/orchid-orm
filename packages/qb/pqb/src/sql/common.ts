@@ -1,7 +1,8 @@
-import { Query } from '../query';
 import { getRaw } from '../raw';
 import { Expression } from '../utils';
-import { isRaw } from 'orchid-core';
+import { QueryData } from './data';
+
+export type ColumnNamesShape = Record<string, { data: { name?: string } }>;
 
 export const q = (sql: string) => `"${sql}"`;
 
@@ -9,25 +10,73 @@ export const q = (sql: string) => `"${sql}"`;
 export const qc = (column: string, quotedAs?: string) =>
   quotedAs ? `${quotedAs}.${q(column)}` : column;
 
-export const quoteFullColumn = (fullColumn: string, quotedAs?: string) => {
-  const index = fullColumn.indexOf('.');
+const getJoinedColumnName = (
+  data: QueryData,
+  shape: ColumnNamesShape,
+  table: string,
+  key: string,
+  isOwnColumn: boolean,
+) =>
+  ((isOwnColumn ? shape[key] : undefined) || data.joinedShapes?.[table]?.[key])
+    ?.data.name;
+
+export const revealColumnToSql = (
+  data: QueryData,
+  shape: ColumnNamesShape,
+  column: string,
+  quotedAs?: string,
+) => {
+  const index = column.indexOf('.');
   if (index !== -1) {
-    return `${q(fullColumn.slice(0, index))}.${q(fullColumn.slice(index + 1))}`;
+    const table = column.slice(0, index);
+    const key = column.slice(index + 1);
+    const quoted = q(table);
+    return `${quoted}.${q(
+      getJoinedColumnName(data, shape, table, key, quoted === quotedAs) || key,
+    )}`;
   } else if (quotedAs) {
-    return `${quotedAs}.${q(fullColumn)}`;
+    return `${quotedAs}.${q(shape[column]?.data.name || column)}`;
   } else {
-    return q(fullColumn);
+    return q(shape[column]?.data.name || column);
   }
 };
 
-export const expressionToSql = <T extends Query>(
-  expr: Expression<T>,
-  values: unknown[],
+export const revealColumnToSqlWithAs = (
+  data: QueryData,
+  column: string,
   quotedAs?: string,
 ) => {
-  return typeof expr === 'object' && isRaw(expr)
-    ? getRaw(expr, values)
-    : quoteFullColumn(expr as string, quotedAs);
+  const index = column.indexOf('.');
+  if (index !== -1) {
+    const table = column.slice(0, index);
+    const key = column.slice(index + 1);
+    const quoted = q(table);
+    const name = getJoinedColumnName(
+      data,
+      data.shape,
+      table,
+      key,
+      quoted === quotedAs,
+    );
+    return `${quoted}.${q(name || key)}${name ? ` AS ${q(key)}` : ''}`;
+  } else {
+    const name = data.shape[column]?.data.name;
+    return `${quotedAs ? `${quotedAs}.` : ''}${q(name || column)}${
+      name ? ` AS ${q(column)}` : ''
+    }`;
+  }
+};
+
+export const rawOrRevealColumnToSql = (
+  data: QueryData,
+  expr: Expression,
+  values: unknown[],
+  quotedAs: string | undefined,
+  shape: ColumnNamesShape = data.shape,
+) => {
+  return typeof expr === 'string'
+    ? revealColumnToSql(data, shape, expr, quotedAs)
+    : getRaw(expr, values);
 };
 
 export const quoteSchemaAndTable = (

@@ -2,6 +2,7 @@ import {
   assertType,
   expectQueryNotMutated,
   expectSql,
+  Snake,
   User,
   userData,
   useTestDatabase,
@@ -43,7 +44,13 @@ describe('window functions', () => {
 
     it(`should perform ${method} query`, () => {
       const q = User.clone();
-      const expectedSql = `SELECT ${functionName}() OVER (PARTITION BY "user"."name" ORDER BY "user"."createdAt" DESC) AS "as" FROM "user"`;
+      const expectedSql = `
+        SELECT ${functionName}() OVER (
+          PARTITION BY "user"."name"
+          ORDER BY "user"."createdAt" DESC
+        ) AS "as" FROM "user"
+      `;
+
       expectSql(
         q[method as 'selectRank']({
           as: 'as',
@@ -60,6 +67,24 @@ describe('window functions', () => {
         order: { createdAt: 'DESC' },
       });
       expectSql(q.toSql({ clearCache: true }), expectedSql);
+    });
+
+    it(`should perform ${method} query for named columns`, () => {
+      const q = Snake[method as 'selectRank']({
+        as: 'as',
+        partitionBy: 'snakeName',
+        order: { tailLength: 'DESC' },
+      });
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT ${functionName}() OVER (
+            PARTITION BY "snake"."snake_name"
+            ORDER BY "snake"."tail_length" DESC
+          ) AS "as" FROM "snake"
+        `,
+      );
     });
   });
 });

@@ -42,6 +42,8 @@ export type CommonQueryData = {
   throwOnNotFound?: boolean;
   with?: WithItem[];
   withShapes?: Record<string, ColumnsShape>;
+  joinedShapes?: Record<string, ColumnsShapeBase>;
+  joinedParsers?: Record<string, ColumnsParsers>;
   schema?: string;
   select?: SelectItem[];
   as?: string;
@@ -65,8 +67,6 @@ export type SelectQueryData = CommonQueryData & {
   distinct?: Expression[];
   fromOnly?: boolean;
   join?: JoinItem[];
-  joinedShapes?: Record<string, ColumnsShapeBase>;
-  joinedParsers?: Record<string, ColumnsParsers>;
   group?: (string | RawExpression)[];
   having?: HavingItem[];
   havingOr?: HavingItem[][];
@@ -91,8 +91,6 @@ export type InsertQueryData = CommonQueryData & {
   fromQuery?: Query;
   using?: JoinItem[];
   join?: JoinItem[];
-  joinedShapes?: Record<string, ColumnsShapeBase>;
-  joinedParsers?: Record<string, ColumnsParsers>;
   onConflict?:
     | {
         type: 'ignore';
@@ -131,8 +129,6 @@ export type UpdateQueryData = CommonQueryData & {
 export type DeleteQueryData = CommonQueryData & {
   type: 'delete';
   join?: JoinItem[];
-  joinedShapes?: Record<string, ColumnsShapeBase>;
-  joinedParsers?: Record<string, ColumnsParsers>;
   beforeDelete?: BeforeCallback[];
   afterDelete?: AfterCallback[];
 };

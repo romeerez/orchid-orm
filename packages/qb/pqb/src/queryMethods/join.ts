@@ -1,6 +1,5 @@
 import {
   AddQueryJoinedTable,
-  ColumnsParsers,
   Query,
   QueryBase,
   Selectable,
@@ -11,14 +10,15 @@ import {
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
 import { WhereQueryBuilder } from './where';
 import { Relation, RelationsBase } from '../relations';
-import { QueryData, SelectQueryData } from '../sql';
+import { QueryData } from '../sql';
 import {
   ColumnsShapeBase,
   RawExpression,
   EmptyObject,
   StringKey,
+  QueryInternal,
 } from 'orchid-core';
-import { getShapeFromSelect } from './select';
+import { _join } from './_join';
 
 type WithSelectable<
   T extends QueryBase,
@@ -74,7 +74,7 @@ export type JoinArgs<
     ]
   | [query: Q, conditions: true];
 
-type JoinResult<
+export type JoinResult<
   T extends Query,
   Args extends JoinArgs<T>,
   A extends Query | keyof T['relations'] = Args[0],
@@ -125,6 +125,7 @@ export type JoinCallback<
             relations: RelationsBase;
             withData: WithDataBase;
             meta: EmptyObject;
+            internal: QueryInternal;
           }
         : never
       : Arg extends Query
@@ -165,58 +166,6 @@ const join = <T extends Query, Args extends JoinArgs<T>>(
   args: Args,
 ): JoinResult<T, Args> => {
   return _join(q.clone() as T, type, args) as unknown as JoinResult<T, Args>;
-};
-
-const _join = <
-  T extends Query,
-  Arg extends JoinCallbackArg<T>,
-  Args extends JoinArgs<T>,
->(
-  q: T,
-  type: string,
-  args: Args | [arg: Arg, cb: JoinCallback<T, Arg>],
-): JoinResult<T, Args> => {
-  const first = args[0];
-  let joinKey: string | undefined;
-  let shape: ColumnsShapeBase | undefined;
-  let parsers: ColumnsParsers | undefined;
-
-  if (typeof first === 'object') {
-    joinKey = first.query.as || first.table;
-    if (joinKey) {
-      shape = getShapeFromSelect(first);
-      parsers = first.query.parsers;
-    }
-  } else {
-    joinKey = first as string;
-
-    const relation = (q.relations as Record<string, Relation>)[joinKey];
-    if (relation) {
-      shape = getShapeFromSelect(relation.query);
-      parsers = relation.query.query.parsers;
-    } else {
-      shape = q.query.withShapes?.[first as string];
-      if (shape) {
-        parsers = {} as ColumnsParsers;
-        for (const key in shape) {
-          const parser = shape[key].parseFn;
-          if (parser) {
-            parsers[key] = parser;
-          }
-        }
-      }
-    }
-  }
-
-  if (joinKey) {
-    setQueryObjectValue(q, 'joinedShapes', joinKey, shape);
-    setQueryObjectValue(q, 'joinedParsers', joinKey, parsers);
-  }
-
-  return pushQueryValue(q, 'join', {
-    type,
-    args,
-  }) as unknown as JoinResult<T, Args>;
 };
 
 export class Join {
@@ -450,13 +399,20 @@ export const pushQueryOrOn: typeof pushQueryOn = (
   return pushQueryValue(q, 'or', [makeOnItem(joinFrom, joinTo, on)]);
 };
 
-export const addQueryOn: typeof pushQueryOrOn = (
-  q,
-  joinFrom,
-  joinTo,
-  ...args
-) => {
-  return pushQueryOn(q.clone() as typeof q, joinFrom, joinTo, ...args);
+export const addQueryOn = <T extends QueryBase>(
+  q: T,
+  joinFrom: QueryBase,
+  joinTo: QueryBase,
+  ...args: OnArgs<QueryBase>
+): T => {
+  const cloned = q.clone() as typeof q;
+  setQueryObjectValue(
+    cloned,
+    'joinedShapes',
+    (joinFrom.query.as || joinFrom.table) as string,
+    joinFrom.query.shape,
+  );
+  return pushQueryOn(cloned, joinFrom, joinTo, ...args);
 };
 
 export const addQueryOrOn: typeof pushQueryOrOn = (
@@ -480,8 +436,8 @@ export class OnQueryBuilder<
     J extends QueryBase = QueryBase,
   >
   extends WhereQueryBuilder<
-    Omit<J, 'selectable'> & {
-      selectable: Omit<S['selectable'], keyof S['shape']> & J['selectable'];
+    J & {
+      selectable: Omit<S['selectable'], keyof S['shape']>;
     }
   >
   implements QueryBase
@@ -492,7 +448,8 @@ export class OnQueryBuilder<
     public joinTo: QueryBase,
   ) {
     super(q, shape);
-    (this.query as SelectQueryData).joinedShapes = {
+    this.query.joinedShapes = {
+      ...joinTo.query.joinedShapes,
       [(joinTo.query.as || joinTo.table) as string]: joinTo.shape,
     };
   }

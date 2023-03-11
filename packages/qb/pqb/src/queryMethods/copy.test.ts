@@ -1,4 +1,9 @@
-import { expectSql, User, useTestDatabase } from '../test-utils/test-utils';
+import {
+  expectSql,
+  Snake,
+  User,
+  useTestDatabase,
+} from '../test-utils/test-utils';
 
 describe('copy', () => {
   useTestDatabase();
@@ -24,7 +29,7 @@ describe('copy', () => {
     ${'from'} | ${'FROM'}
     ${'to'}   | ${'TO'}
   `('$method', ({ method, sql }) => {
-    test(`simple copy ${method}`, () => {
+    it(`should copy ${method}`, () => {
       const q = User.copy({
         [method as 'from']: 'path-to-file',
       });
@@ -32,7 +37,7 @@ describe('copy', () => {
       expectSql(q.toSql(), `COPY "user" ${sql} 'path-to-file'`);
     });
 
-    test(`copy ${method} with options`, () => {
+    it(`should copy ${method} with options`, () => {
       const q = User.copy({
         [method as 'from']: { program: 'program' },
         ...options,
@@ -57,6 +62,18 @@ describe('copy', () => {
           ENCODING 'encoding'
         )
       `,
+      );
+    });
+
+    it(`should copy ${method} with columns with names`, () => {
+      const q = Snake.copy({
+        [method as 'from']: 'path-to-file',
+        columns: ['snakeName', 'tailLength'],
+      });
+
+      expectSql(
+        q.toSql(),
+        `COPY "snake"("snake_name", "tail_length") ${sql} 'path-to-file'`,
       );
     });
   });

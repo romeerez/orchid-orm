@@ -3,6 +3,7 @@ import {
   db,
   expectQueryNotMutated,
   expectSql,
+  Snake,
   User,
 } from '../test-utils/test-utils';
 import { columnTypes } from '../columns';
@@ -194,5 +195,23 @@ describe('with', () => {
     );
 
     expectQueryNotMutated(q);
+  });
+
+  it('should support selecting named columns', () => {
+    const q = User.with('w', Snake.select('snakeName', 'tailLength'))
+      .from('w')
+      .select('snakeName', 'w.tailLength');
+
+    expectSql(
+      q.toSql(),
+      `
+        WITH "w" AS (
+          SELECT "snake"."snake_name" AS "snakeName", "snake"."tail_length" AS "tailLength"
+          FROM "snake"
+        )
+        SELECT "w"."snakeName", "w"."tailLength"
+        FROM "w"
+      `,
+    );
   });
 });

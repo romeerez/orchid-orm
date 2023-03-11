@@ -89,9 +89,9 @@ export class NotFoundError extends PormError {
 
 export class MoreThanOneRowError extends PormError {}
 
-export class PormInternalError extends Error {}
+export class OrchidInternalError extends Error {}
 
-export class UnhandledTypeError extends PormInternalError {
+export class UnhandledTypeError extends OrchidInternalError {
   constructor(value: never) {
     super(`Unhandled type: ${JSON.stringify(value)} received`);
   }

@@ -5,6 +5,8 @@ import {
   expectSql,
   Profile,
   profileData,
+  Snake,
+  snakeSelectAll,
   User,
   userData,
   UserRecord,
@@ -66,6 +68,18 @@ describe('select', () => {
       expectQueryNotMutated(q);
     });
 
+    it('should select named columns', () => {
+      const q = Snake.select('snakeName', 'tailLength');
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "snake"."snake_name" AS "snakeName", "snake"."tail_length" AS "tailLength"
+          FROM "snake"
+        `,
+      );
+    });
+
     it('should select table.column', () => {
       const q = User.all();
       const query = q.select('user.id', 'user.name');
@@ -85,6 +99,18 @@ describe('select', () => {
       });
 
       expectQueryNotMutated(q);
+    });
+
+    it('should select named columns with table', () => {
+      const q = Snake.select('snake.snakeName', 'snake.tailLength');
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "snake"."snake_name" AS "snakeName", "snake"."tail_length" AS "tailLength"
+          FROM "snake"
+        `,
+      );
     });
 
     it('should select joined columns', () => {
@@ -111,6 +137,22 @@ describe('select', () => {
       expectQueryNotMutated(q);
     });
 
+    it('should select named joined columns', () => {
+      const q = User.join(Snake, 'tailLength', 'id').select(
+        'user.id',
+        'snake.snakeName',
+      );
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "user"."id", "snake"."snake_name" AS "snakeName"
+          FROM "user"
+          JOIN "snake" ON "snake"."tail_length" = "user"."id"
+        `,
+      );
+    });
+
     it('should select joined columns with alias', () => {
       const q = User.all();
       const query = q
@@ -133,6 +175,22 @@ describe('select', () => {
       });
 
       expectQueryNotMutated(q);
+    });
+
+    it('should select named joined columns with alias', () => {
+      const q = User.join(Snake.as('s'), 'tailLength', 'id').select(
+        'user.id',
+        's.snakeName',
+      );
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "user"."id", "s"."snake_name" AS "snakeName"
+          FROM "user"
+          JOIN "snake" AS "s" ON "s"."tail_length" = "user"."id"
+        `,
+      );
     });
 
     describe('parse columns', () => {
@@ -211,6 +269,18 @@ describe('select', () => {
       expectQueryNotMutated(q);
     });
 
+    it('should select named columns with aliases', async () => {
+      const q = Snake.select({ name: 'snakeName', length: 'tailLength' });
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "snake"."snake_name" AS "name", "snake"."tail_length" AS "length"
+          FROM "snake"
+        `,
+      );
+    });
+
     it('should select table.column with aliases', () => {
       const q = User.all();
 
@@ -237,6 +307,21 @@ describe('select', () => {
         `,
       );
       expectQueryNotMutated(q);
+    });
+
+    it('should select named columns with table with aliases', async () => {
+      const q = Snake.select({
+        name: 'snake.snakeName',
+        length: 'snake.tailLength',
+      });
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "snake"."snake_name" AS "name", "snake"."tail_length" AS "length"
+          FROM "snake"
+        `,
+      );
     });
 
     it('should select joined columns', () => {
@@ -267,6 +352,22 @@ describe('select', () => {
       expectQueryNotMutated(q);
     });
 
+    it('should select named joined columns with aliases', () => {
+      const q = User.join(Snake, 'tailLength', 'id').select({
+        userId: 'user.id',
+        length: 'snake.tailLength',
+      });
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "user"."id" AS "userId", "snake"."tail_length" AS "length"
+          FROM "user"
+          JOIN "snake" ON "snake"."tail_length" = "user"."id"
+        `,
+      );
+    });
+
     it('should select joined columns with alias', () => {
       const q = User.all();
       const query = q.join(Profile.as('p'), 'p.userId', '=', 'user.id').select({
@@ -295,6 +396,22 @@ describe('select', () => {
       expectQueryNotMutated(q);
     });
 
+    it('should select named joined columns with aliases from aliased join', () => {
+      const q = User.join(Snake.as('s'), 'tailLength', 'id').select({
+        userId: 'user.id',
+        length: 's.tailLength',
+      });
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "user"."id" AS "userId", "s"."tail_length" AS "length"
+          FROM "user"
+          JOIN "snake" AS "s" ON "s"."tail_length" = "user"."id"
+        `,
+      );
+    });
+
     it('can select raw', () => {
       const q = User.all();
       const query = q.select({ one: db.raw('1') });
@@ -314,7 +431,7 @@ describe('select', () => {
       expectQueryNotMutated(q);
     });
 
-    it('can select subquery', () => {
+    it('should select subquery', () => {
       const q = User.all();
       const query = q.select({ subquery: () => User.all() });
 
@@ -337,6 +454,25 @@ describe('select', () => {
       );
       expectQueryNotMutated(q);
     });
+
+    it('should select subquery for named columns', () => {
+      const q = Snake.select({ subquery: () => Snake.all() });
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT
+            (
+              SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
+              FROM (
+                SELECT ${snakeSelectAll}
+                FROM "snake"
+              ) AS "t"
+            ) AS "subquery"
+          FROM "snake"
+        `,
+      );
+    });
   });
 
   describe('selectAll', () => {
@@ -348,6 +484,17 @@ describe('select', () => {
       expect(getShapeFromSelect(query)).toEqual(User.shape);
 
       expectSql(query.toSql(), `SELECT * FROM "user"`);
+    });
+
+    it('should select all named columns', () => {
+      const q = Snake.select('snakeName').selectAll();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT ${snakeSelectAll} FROM "snake"
+        `,
+      );
     });
   });
 

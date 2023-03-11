@@ -1,5 +1,5 @@
 import { AggregateItem } from './types';
-import { addValue, expressionToSql, q } from './common';
+import { addValue, rawOrRevealColumnToSql, q } from './common';
 import { getRaw } from '../raw';
 import { windowToSql } from './window';
 import { pushOrderBySql } from './orderBy';
@@ -25,10 +25,12 @@ export const aggregateToSql = (
   if (typeof item.arg === 'object') {
     if (Array.isArray(item.arg)) {
       sql.push(
-        `${expressionToSql(item.arg[0], ctx.values, quotedAs)}, ${addValue(
+        `${rawOrRevealColumnToSql(
+          table.query,
+          item.arg[0],
           ctx.values,
-          item.arg[1],
-        )}`,
+          quotedAs,
+        )}, ${addValue(ctx.values, item.arg[1])}`,
       );
     } else if (isRaw(item.arg)) {
       sql.push(getRaw(item.arg, ctx.values));
@@ -37,7 +39,8 @@ export const aggregateToSql = (
       for (const key in item.arg) {
         args.push(
           // ::text is needed to bypass "could not determine data type of parameter" postgres error
-          `${addValue(ctx.values, key)}::text, ${expressionToSql(
+          `${addValue(ctx.values, key)}::text, ${rawOrRevealColumnToSql(
+            table.query,
             item.arg[key as keyof typeof item.arg] as unknown as Expression,
             ctx.values,
             quotedAs,
@@ -47,13 +50,15 @@ export const aggregateToSql = (
       sql.push(args.join(', '));
     }
   } else if (item.arg) {
-    sql.push(expressionToSql(item.arg, ctx.values, quotedAs));
+    sql.push(
+      rawOrRevealColumnToSql(table.query, item.arg, ctx.values, quotedAs),
+    );
   }
 
   if (options.withinGroup) sql.push(') WITHIN GROUP (');
   else if (options.order) sql.push(' ');
 
-  if (options.order) pushOrderBySql(ctx, quotedAs, options.order);
+  if (options.order) pushOrderBySql(ctx, table.query, quotedAs, options.order);
 
   sql.push(')');
 
@@ -73,7 +78,9 @@ export const aggregateToSql = (
   }
 
   if (options.over) {
-    sql.push(` OVER ${windowToSql(options.over, ctx.values, quotedAs)}`);
+    sql.push(
+      ` OVER ${windowToSql(table.query, options.over, ctx.values, quotedAs)}`,
+    );
   }
 
   if (options.as) sql.push(` AS ${q(options.as)}`);
