@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.2
+
+### Patch Changes
+
+- Fix creating belongsTo relation when id has no default
+
 ## 0.10.1
 
 ### Patch Changes

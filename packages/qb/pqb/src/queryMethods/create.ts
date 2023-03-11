@@ -53,15 +53,17 @@ type CreateBelongsToData<
   T extends Query,
   Key extends keyof T['relations'],
   Rel extends BelongsToRelation,
+  FKeys = {
+    [K in Rel['options']['foreignKey']]: Rel['options']['foreignKey'] extends keyof T['inputType']
+      ? T['inputType'][Rel['options']['foreignKey']]
+      : never;
+  },
 > =
-  | SetOptional<
-      {
-        [K in Rel['options']['foreignKey']]: Rel['options']['foreignKey'] extends keyof T['inputType']
-          ? T['inputType'][Rel['options']['foreignKey']]
-          : never;
-      },
-      keyof T[defaultsKey]
-    >
+  | {
+      [K in keyof FKeys]: K extends keyof T[defaultsKey]
+        ? { [L in K]?: FKeys[L] }
+        : { [L in K]: FKeys[L] };
+    }[keyof FKeys]
   | {
       [K in Key]:
         | {

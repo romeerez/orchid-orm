@@ -1,4 +1,4 @@
-import { db } from '../test-utils/test-db';
+import { db, pgConfig } from '../test-utils/test-db';
 import {
   assertType,
   chatData,
@@ -10,7 +10,8 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
-import { User } from '../test-utils/test-tables';
+import { BaseTable, User } from '../test-utils/test-tables';
+import { orchidORM } from '../orm';
 
 describe('belongsTo', () => {
   useTestDatabase();
@@ -380,6 +381,69 @@ describe('belongsTo', () => {
           text: 'message 2',
           title: 'chat 2',
           name: 'user 2',
+        });
+      });
+
+      describe('id has no default', () => {
+        // for this issue: https://github.com/romeerez/orchid-orm/issues/34
+        it('should create record with explicitly setting id and foreign key', async () => {
+          const userId = await db.user.get('id').create(userData);
+
+          class UserTable extends BaseTable {
+            table = 'user';
+            columns = this.setColumns((t) => ({
+              id: t.serial().primaryKey(),
+            }));
+          }
+
+          class ProfileTable extends BaseTable {
+            table = 'profile';
+            columns = this.setColumns((t) => ({
+              id: t.serial().primaryKey(),
+              userId: t
+                .integer()
+                .nullable()
+                .foreignKey(() => UserTable, 'id'),
+              ...t.timestamps(),
+              bio: t.text().nullable(),
+            }));
+
+            relations = {
+              user: this.belongsTo(() => UserTable, {
+                required: true,
+                primaryKey: 'id',
+                foreignKey: 'userId',
+              }),
+            };
+          }
+
+          const { profile } = orchidORM(pgConfig, {
+            user: UserTable,
+            profile: ProfileTable,
+          });
+
+          const q = profile.create({
+            id: 1,
+            userId,
+            bio: 'bio',
+          });
+
+          expectSql(
+            q.toSql(),
+            `
+              INSERT INTO "profile"("id", "userId", "bio")
+              VALUES ($1, $2, $3)
+              RETURNING *
+            `,
+            [1, userId, 'bio'],
+          );
+
+          const result = await q;
+          expect(result).toMatchObject({
+            id: 1,
+            userId,
+            bio: 'bio',
+          });
         });
       });
 

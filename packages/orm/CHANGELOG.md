@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.6.2
+
+### Patch Changes
+
+- Fix creating belongsTo relation when id has no default
+- Updated dependencies
+  - pqb@0.10.2
+
 ## 1.6.1
 
 ### Patch Changes
