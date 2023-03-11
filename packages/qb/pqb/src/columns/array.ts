@@ -24,7 +24,7 @@ export class ArrayColumn<Item extends ColumnType> extends ColumnType<
 > {
   dataType = 'array' as const;
   operators = Operators.array;
-  data!: ArrayData<Item>;
+  declare data: ArrayData<Item>;
 
   constructor(types: ColumnTypesBase, item: Item) {
     super(types);

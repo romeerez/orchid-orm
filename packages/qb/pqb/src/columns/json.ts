@@ -52,7 +52,7 @@ export class JSONColumn<
 > extends ColumnType<Type['type'], typeof Operators.json> {
   dataType = 'jsonb' as const;
   operators = Operators.json;
-  data!: ColumnData & { schema: Type };
+  declare data: ColumnData & { schema: Type };
 
   constructor(
     types: ColumnTypesBase,

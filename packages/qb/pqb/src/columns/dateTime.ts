@@ -23,7 +23,7 @@ export abstract class DateBaseColumn extends ColumnType<
   typeof Operators.date,
   string | Date
 > {
-  data!: DateColumnData;
+  declare data: DateColumnData;
   operators = Operators.date;
 
   asNumber() {
@@ -61,7 +61,7 @@ export class DateColumn extends DateBaseColumn {
 export abstract class DateTimeBaseClass<
   Precision extends number | undefined = undefined,
 > extends DateBaseColumn {
-  data!: DateColumnData & { dateTimePrecision: Precision };
+  declare data: DateColumnData & { dateTimePrecision: Precision };
 
   constructor(types: ColumnTypesBase, dateTimePrecision?: Precision) {
     super(types);
@@ -175,7 +175,7 @@ export class IntervalColumn<
   Precision extends number | undefined = undefined,
 > extends ColumnType<TimeInterval, typeof Operators.date> {
   dataType = 'interval' as const;
-  data!: ColumnData & { fields: Fields; precision: Precision };
+  declare data: ColumnData & { fields: Fields; precision: Precision };
   operators = Operators.date;
 
   constructor(types: ColumnTypesBase, fields?: Fields, precision?: Precision) {

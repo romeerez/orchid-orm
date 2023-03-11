@@ -51,7 +51,7 @@ export abstract class TextBaseColumn extends ColumnType<
   string,
   typeof Operators.text
 > {
-  data!: TextColumnData;
+  declare data: TextColumnData;
   operators = Operators.text;
 }
 
@@ -60,7 +60,7 @@ assignMethodsToClass(TextBaseColumn, textMethods);
 export abstract class LimitedTextBaseColumn<
   Limit extends number | undefined = undefined,
 > extends TextBaseColumn {
-  data!: TextColumnData & { maxChars: Limit };
+  declare data: TextColumnData & { maxChars: Limit };
 
   constructor(types: ColumnTypesBase, limit?: Limit) {
     super(types);
@@ -109,7 +109,7 @@ export class CharColumn<
 export class TextColumn extends TextBaseColumn {
   dataType = 'text' as const;
   operators = Operators.text;
-  data!: TextColumnData & { minArg?: number; maxArg?: number };
+  declare data: TextColumnData & { minArg?: number; maxArg?: number };
 
   constructor(types: ColumnTypesBase, minArg?: number, maxArg?: number) {
     super(types);
@@ -271,7 +271,7 @@ export class BitColumn<Length extends number> extends ColumnType<
 > {
   dataType = 'bit' as const;
   operators = Operators.text;
-  data!: ColumnData & { length: Length };
+  declare data: ColumnData & { length: Length };
 
   constructor(types: ColumnTypesBase, length: Length) {
     super(types);
@@ -296,7 +296,7 @@ export class BitVaryingColumn<
 > extends ColumnType<string, typeof Operators.text> {
   dataType = 'bit varying' as const;
   operators = Operators.text;
-  data!: ColumnData & { length: Length };
+  declare data: ColumnData & { length: Length };
 
   constructor(types: ColumnTypesBase, length?: Length) {
     super(types);

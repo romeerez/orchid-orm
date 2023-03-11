@@ -39,14 +39,14 @@ export abstract class NumberBaseColumn extends ColumnType<
   number,
   typeof Operators.number
 > {
-  data!: NumberColumnData;
+  declare data: NumberColumnData;
   operators = Operators.number;
 }
 
 assignMethodsToClass(NumberBaseColumn, numberTypeMethods);
 
 export abstract class IntegerBaseColumn extends NumberBaseColumn {
-  data!: NumberColumnData;
+  declare data: NumberColumnData;
   constructor(types: ColumnTypesBase) {
     super(types);
     this.data.int = true;
@@ -64,7 +64,10 @@ export class DecimalBaseColumn<
   Precision extends number | undefined = undefined,
   Scale extends number | undefined = undefined,
 > extends ColumnType<string, typeof Operators.number> {
-  data!: ColumnData & { numericPrecision: Precision; numericScale: Scale };
+  declare data: ColumnData & {
+    numericPrecision: Precision;
+    numericScale: Scale;
+  };
   operators = Operators.number;
   dataType = 'decimal' as const;
 
@@ -156,7 +159,7 @@ export class DoublePrecisionColumn extends NumberAsStringBaseColumn {
 export class SmallSerialColumn extends IntegerBaseColumn {
   dataType = 'smallint' as const;
   parseItem = parseInt;
-  data!: SerialColumnData;
+  declare data: SerialColumnData;
 
   constructor(types: ColumnTypesBase) {
     super(types);
@@ -176,7 +179,7 @@ export class SmallSerialColumn extends IntegerBaseColumn {
 export class SerialColumn extends IntegerBaseColumn {
   dataType = 'integer' as const;
   parseItem = parseInt;
-  data!: SerialColumnData;
+  declare data: SerialColumnData;
 
   constructor(types: ColumnTypesBase) {
     super(types);
@@ -195,7 +198,7 @@ export class SerialColumn extends IntegerBaseColumn {
 // autoincrementing eight-byte integer
 export class BigSerialColumn extends NumberAsStringBaseColumn {
   dataType = 'bigint' as const;
-  data!: SerialColumnData;
+  declare data: SerialColumnData;
 
   toSql() {
     return 'bigserial';
