@@ -29,7 +29,10 @@ export namespace DbStructure {
     schemaName: string;
     tableName: string;
     name: string;
+    typeSchema: string;
     type: string;
+    // ARRAY for arrays, USER-DEFINED for custom types
+    dataType: string;
     maxChars?: number;
     numericPrecision?: number;
     numericScale?: number;
@@ -101,7 +104,7 @@ export namespace DbStructure {
   export type Enum = {
     schemaName: string;
     name: string;
-    values: string[];
+    values: [string, ...string[]];
   };
 }
 
@@ -186,6 +189,8 @@ WHERE ${filterSchema('n.nspname')}`,
   table_name "tableName",
   column_name "name",
   udt_name "type",
+  udt_schema "typeSchema",
+  data_type "dataType",
   character_maximum_length AS "maxChars",
   numeric_precision AS "numericPrecision",
   numeric_scale AS "numericScale",

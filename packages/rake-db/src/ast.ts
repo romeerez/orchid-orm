@@ -112,7 +112,7 @@ export namespace RakeDbAst {
     action: 'create' | 'drop';
     schema?: string;
     name: string;
-    values: string[];
+    values: [string, ...string[]];
     cascade?: boolean;
     dropIfExists?: boolean;
   };

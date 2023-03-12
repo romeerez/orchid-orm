@@ -311,8 +311,12 @@ describe('column base', () => {
     it('should have toCode', () => {
       expect(column.default(123).toCode('t')).toBe(`t.column().default(123)`);
 
+      expect(column.default('hello').toCode('t')).toBe(
+        `t.column().default('hello')`,
+      );
+
       expect(column.default(raw('sql', { key: 'value' })).toCode('t')).toBe(
-        `t.column().default('sql', {"key":"value"})`,
+        `t.column().default(t.raw('sql', {"key":"value"}))`,
       );
     });
   });

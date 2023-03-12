@@ -1,14 +1,27 @@
 import { DbStructure } from './dbStructure';
 import { RakeDbAst } from '../ast';
 import {
+  ArrayColumn,
+  columnCode,
   columnsByType,
   ColumnsShape,
+  ColumnType,
+  EnumColumn,
   ForeignKeyOptions,
   instantiateColumn,
   TableData,
 } from 'pqb';
-import { singleQuote } from 'orchid-core';
+import { Code, singleQuote } from 'orchid-core';
 import { getForeignKeyName, getIndexName } from '../migration/migrationUtils';
+
+export class RakeDbEnumColumn extends EnumColumn<
+  string,
+  [string, ...string[]]
+> {
+  toCode(t: string): Code {
+    return columnCode(this, t, `enum('${this.enumName}')`);
+  }
+}
 
 const matchMap = {
   s: undefined,
@@ -192,16 +205,14 @@ const getIsSerial = (item: DbStructure.Column) => {
   return false;
 };
 
-const getColumnType = (item: DbStructure.Column, isSerial: boolean) => {
-  if (isSerial) {
-    return item.type === 'int2'
-      ? 'smallserial'
-      : item.type === 'int4'
-      ? 'serial'
-      : 'bigserial';
-  }
+const getColumnType = (type: string, isSerial: boolean) => {
+  if (!isSerial) return type;
 
-  return item.type;
+  return type === 'int2'
+    ? 'smallserial'
+    : type === 'int4'
+    ? 'serial'
+    : 'bigserial';
 };
 
 const pushTableAst = (
@@ -232,12 +243,28 @@ const pushTableAst = (
       item = { ...item, default: undefined };
     }
 
-    const klass = columnsByType[getColumnType(item, isSerial)];
-    if (!klass) {
-      throw new Error(`Column type \`${item.type}\` is not supported`);
+    let column: ColumnType;
+
+    const isArray = item.dataType === 'ARRAY';
+    const type = isArray ? item.type.slice(1) : item.type;
+    const klass = columnsByType[getColumnType(type, isSerial)];
+    if (klass) {
+      column = instantiateColumn(klass, item);
+    } else {
+      const { type, typeSchema } = item;
+      const enumType = data.enums.find(
+        (item) => item.name === type && item.schemaName === typeSchema,
+      );
+      if (!enumType) {
+        throw new Error(
+          `Cannot handle column ${item.schemaName}.${item.tableName}.${item.name}: column type \`${item.type}\` is not supported`,
+        );
+      }
+
+      column = new RakeDbEnumColumn({}, type, enumType.values);
     }
 
-    let column = instantiateColumn(klass, item);
+    if (isArray) column = new ArrayColumn({}, column);
 
     if (
       primaryKey?.columnNames.length === 1 &&

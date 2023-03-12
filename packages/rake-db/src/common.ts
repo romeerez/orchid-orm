@@ -64,8 +64,10 @@ export const processRakeDbConfig = (
 
   if (!result.basePath) {
     let stack: NodeJS.CallSite[] | undefined;
+    const original = Error.prepareStackTrace;
     Error.prepareStackTrace = (_, s) => (stack = s);
     new Error().stack;
+    Error.prepareStackTrace = original;
     if (stack) {
       const thisFile = stack[0]?.getFileName();
       const thisDir = thisFile && path.dirname(thisFile);

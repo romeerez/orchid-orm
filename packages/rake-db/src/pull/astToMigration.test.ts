@@ -2,6 +2,7 @@ import { astToMigration } from './astToMigration';
 import { columnTypes } from 'pqb';
 import { RakeDbAst } from '../ast';
 import { processRakeDbConfig } from '../common';
+import { RakeDbEnumColumn } from './structureToAst';
 
 const template = (content: string) => `import { change } from 'rake-db';
 
@@ -70,7 +71,13 @@ describe('astToMigration', () => {
       schema,
       extension,
       enumType,
-      table,
+      {
+        ...table,
+        shape: {
+          ...table.shape,
+          enum: new RakeDbEnumColumn({}, enumType.name, enumType.values),
+        },
+      },
       { ...table, name: 'other' },
       foreignKey,
     ]);
@@ -88,6 +95,7 @@ change(async (db) => {
 change(async (db) => {
   await db.createTable('schema.table', (t) => ({
     id: t.serial().primaryKey(),
+    enum: t.enum('mood'),
   }));
 });
 

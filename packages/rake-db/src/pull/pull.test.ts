@@ -3,6 +3,13 @@ import { pullDbStructure } from './pull';
 import { processRakeDbConfig } from '../common';
 import { writeMigrationFile } from '../commands/generate';
 import { asMock } from '../test-utils';
+import {
+  createdAtColumn,
+  idColumn,
+  table,
+  textColumn,
+  updatedAtColumn,
+} from './testUtils';
 
 jest.mock('./dbStructure', () => {
   const { DbStructure } = jest.requireActual('./dbStructure');
@@ -67,55 +74,33 @@ describe('pull', () => {
 
     columns = [
       {
+        ...idColumn,
         schemaName: 'schema',
         tableName: 'table1',
-        name: 'id',
-        type: 'int4',
-        default: `nextval('table1_id_seq'::regclass)`,
-        isNullable: false,
       },
       {
+        ...createdAtColumn,
         schemaName: 'schema',
         tableName: 'table1',
-        name: 'createdAt',
-        type: 'timestamp',
-        dateTimePrecision: 6,
-        isNullable: false,
-        default: 'now()',
       },
       {
+        ...updatedAtColumn,
         schemaName: 'schema',
         tableName: 'table1',
-        name: 'updatedAt',
-        type: 'timestamp',
-        dateTimePrecision: 6,
-        isNullable: false,
-        default: 'now()',
       },
       {
-        schemaName: 'public',
+        ...textColumn,
         tableName: 'table2',
-        name: 'text',
-        type: 'text',
-        isNullable: false,
       },
       {
-        schemaName: 'public',
+        ...createdAtColumn,
         tableName: 'table2',
         name: 'created_at',
-        type: 'timestamp',
-        dateTimePrecision: 6,
-        isNullable: false,
-        default: 'now()',
       },
       {
-        schemaName: 'public',
+        ...updatedAtColumn,
         tableName: 'table2',
         name: 'updated_at',
-        type: 'timestamp',
-        dateTimePrecision: 6,
-        isNullable: false,
-        default: 'now()',
       },
     ];
 
@@ -159,31 +144,16 @@ change(async (db) => {
   });
 
   it('should add simple timestamps when snakeCase: true', async () => {
-    tables = [
-      {
-        schemaName: 'public',
-        name: 'table',
-      },
-    ];
+    tables = [table];
 
     columns = [
       {
-        schemaName: 'public',
-        tableName: 'table',
+        ...createdAtColumn,
         name: 'created_at',
-        type: 'timestamp',
-        dateTimePrecision: 6,
-        isNullable: false,
-        default: 'now()',
       },
       {
-        schemaName: 'public',
-        tableName: 'table',
+        ...updatedAtColumn,
         name: 'updated_at',
-        type: 'timestamp',
-        dateTimePrecision: 6,
-        isNullable: false,
-        default: 'now()',
       },
     ];
 

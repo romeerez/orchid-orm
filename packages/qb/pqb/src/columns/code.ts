@@ -246,12 +246,20 @@ export const foreignKeyArgsToCode = (
   return args;
 };
 
-export const columnDefaultArgumentToCode = (value: unknown): string => {
-  return typeof value === 'object' && value && isRaw(value)
-    ? `${singleQuote(value.__raw)}, ${JSON.stringify(value.__values)}`
-    : typeof value === 'string'
-    ? singleQuote(value)
-    : JSON.stringify(value);
+export const columnDefaultArgumentToCode = (
+  t: string,
+  value: unknown,
+): string => {
+  if (typeof value === 'object' && value && isRaw(value)) {
+    const values = value.__values;
+    return `${t}.raw(${singleQuote(value.__raw)}${
+      values ? `, ${JSON.stringify(values)}` : ''
+    })`;
+  } else if (typeof value === 'string') {
+    return singleQuote(value);
+  } else {
+    return JSON.stringify(value);
+  }
 };
 
 export const columnForeignKeysToCode = (
@@ -384,7 +392,7 @@ export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
   if (type.data.default)
     addCode(
       code,
-      `.default(${columnDefaultArgumentToCode(type.data.default)})`,
+      `.default(${columnDefaultArgumentToCode(t, type.data.default)})`,
     );
 
   if (type.data.indexes) {

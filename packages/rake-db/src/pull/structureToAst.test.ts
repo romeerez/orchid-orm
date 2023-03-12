@@ -1,8 +1,10 @@
 import { DbStructure } from './dbStructure';
 import {
   Adapter,
+  ArrayColumn,
   BigSerialColumn,
   DecimalColumn,
+  EnumColumn,
   IntegerColumn,
   SerialColumn,
   SmallSerialColumn,
@@ -14,43 +16,23 @@ import { isRaw, RawExpression } from 'orchid-core';
 import { structureToAst } from './structureToAst';
 import { RakeDbAst } from '../ast';
 import { getIndexName } from '../migration/migrationUtils';
+import {
+  table,
+  intColumn,
+  varCharColumn,
+  decimalColumn,
+  timestampColumn,
+  index,
+  foreignKey,
+  extension,
+  enumType,
+  primaryKey,
+} from './testUtils';
 
 const adapter = new Adapter({ databaseURL: 'file:path' });
 const query = jest.fn().mockImplementation(() => ({ rows: [] }));
 adapter.query = query;
 adapter.arrays = query;
-
-const intColumn: DbStructure.Column = {
-  schemaName: 'public',
-  tableName: 'table',
-  name: 'column',
-  type: 'int4',
-  default: '123',
-  isNullable: false,
-};
-
-const varCharColumn: DbStructure.Column = {
-  ...intColumn,
-  name: 'varchar',
-  type: 'character varying',
-  collation: 'en_US',
-  maxChars: 10,
-};
-
-const decimalColumn: DbStructure.Column = {
-  ...intColumn,
-  name: 'decimal',
-  type: 'decimal',
-  numericPrecision: 10,
-  numericScale: 2,
-};
-
-const timestampColumn: DbStructure.Column = {
-  ...intColumn,
-  name: 'timestamp',
-  type: 'timestamp',
-  dateTimePrecision: 10,
-};
 
 const tableColumns = [
   { ...intColumn, name: 'id' },
@@ -59,50 +41,7 @@ const tableColumns = [
 
 const otherTableColumn = { ...intColumn, tableName: 'otherTable' };
 
-const table = { schemaName: 'public', name: 'table' };
-
 const columns = [...tableColumns, otherTableColumn];
-
-const primaryKey: DbStructure.PrimaryKey = {
-  schemaName: 'public',
-  tableName: 'table',
-  name: 'pkey',
-  columnNames: ['id'],
-};
-
-const index: DbStructure.Index = {
-  schemaName: 'public',
-  tableName: 'table',
-  name: 'index',
-  using: 'btree',
-  isUnique: false,
-  columns: [{ column: 'name' }],
-};
-
-const foreignKey: DbStructure.ForeignKey = {
-  schemaName: 'public',
-  tableName: 'table',
-  foreignTableSchemaName: 'public',
-  foreignTableName: 'otherTable',
-  name: 'fkey',
-  columnNames: ['otherId'],
-  foreignColumnNames: ['id'],
-  match: 'f',
-  onUpdate: 'c',
-  onDelete: 'c',
-};
-
-const extension: DbStructure.Extension = {
-  schemaName: 'public',
-  name: 'name',
-  version: '123',
-};
-
-const enumType: DbStructure.Enum = {
-  schemaName: 'public',
-  name: 'mood',
-  values: ['sad', 'ok', 'happy'],
-};
 
 describe('structureToAst', () => {
   it('should add schema except public', async () => {
@@ -188,6 +127,44 @@ describe('structureToAst', () => {
       expect(ast.noPrimaryKey).toBe('ignore');
       expect(ast.shape.id).toBeInstanceOf(IntegerColumn);
       expect(ast.shape.name).toBeInstanceOf(TextColumn);
+    });
+
+    it('should add array column', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [table];
+      db.getColumns = async () => [
+        {
+          ...intColumn,
+          type: '_int4',
+          dataType: 'ARRAY',
+        },
+      ];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+
+      expect(ast.shape.column).toBeInstanceOf(ArrayColumn);
+      expect(
+        (ast.shape.column as ArrayColumn<IntegerColumn>).data.item,
+      ).toBeInstanceOf(IntegerColumn);
+    });
+
+    it('should support enum column', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [table];
+      db.getEnums = async () => [enumType];
+      db.getColumns = async () => [
+        {
+          ...intColumn,
+          typeSchema: enumType.schemaName,
+          type: enumType.name,
+        },
+      ];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+
+      expect(ast.shape.column).toBeInstanceOf(EnumColumn);
+      expect((ast.shape.column as EnumColumn).enumName).toBe(enumType.name);
+      expect((ast.shape.column as EnumColumn).options).toBe(enumType.values);
     });
 
     it('should wrap column default into raw', async () => {
