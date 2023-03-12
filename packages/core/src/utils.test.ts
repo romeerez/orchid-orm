@@ -1,5 +1,6 @@
 import {
   MaybeArray,
+  pathToLog,
   pushOrNewArray,
   pushOrNewArrayToObject,
   quoteObjectKey,
@@ -8,6 +9,7 @@ import {
   SomeIsTrue,
 } from './utils';
 import { assertType } from './test-utils';
+import url from 'url';
 
 describe('utils', () => {
   describe('SomeIsTrue', () => {
@@ -96,6 +98,19 @@ describe('utils', () => {
     it('should surround a key with special characters with single quotes', () => {
       expect(quoteObjectKey('123')).toBe(`'123'`);
       expect(quoteObjectKey('&')).toBe(`'&'`);
+    });
+  });
+
+  describe('pathToLog', () => {
+    it(`should convert path to file url so it is clickable in my terminal`, () => {
+      expect(pathToLog('path')).toBe(url.pathToFileURL('path').toString());
+    });
+
+    it('should leave path as is on windows because it looks weird when turned to url', () => {
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+      });
+      expect(pathToLog('path')).toBe('path');
     });
   });
 });

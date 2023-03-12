@@ -34,20 +34,18 @@ export const rakeDb = async (
     } else if (config.commands[command]) {
       await config.commands[command](toArray(options), config, args.slice(1));
     } else {
-      printHelp();
+      config.logger?.log(help);
     }
   } catch (err) {
     if (err instanceof RakeDbError) {
-      console.error(err.message);
+      config.logger?.error(err.message);
       process.exit(1);
     }
     throw err;
   }
 };
 
-const printHelp = () =>
-  console.log(
-    `Usage: rake-db [command] [arguments]
+const help = `Usage: rake-db [command] [arguments]
 
 Commands:
   create                  create databases
@@ -81,5 +79,4 @@ Generate arguments:
 
 - other arguments considered as columns with types and optional methods:
   rake-db g createTable id:serial.primaryKey name:text.nullable
-`,
-  );
+`;

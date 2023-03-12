@@ -1,10 +1,14 @@
 import { changeCache, migrate, rollback } from './migrateOrRollback';
-import { createSchemaMigrations, migrationConfigDefaults } from '../common';
-import { getMigrationFiles } from '../common';
+import {
+  createSchemaMigrations,
+  migrationConfigDefaults,
+  getMigrationFiles,
+} from '../common';
 import { Adapter, TransactionAdapter } from 'pqb';
 import { noop } from 'orchid-core';
 import { change } from '../migration/change';
 import { asMock } from '../test-utils';
+import { pathToLog } from 'orchid-core';
 
 jest.mock('../common', () => ({
   ...jest.requireActual('../common'),
@@ -103,8 +107,12 @@ describe('migrateOrRollback', () => {
         undefined,
       );
 
-      expect(config.logger.log).toBeCalledWith('file2 migrated');
-      expect(config.logger.log).toBeCalledWith('file3 migrated');
+      expect(config.logger.log).toBeCalledWith(
+        `Migrated ${pathToLog('file2')}`,
+      );
+      expect(config.logger.log).toBeCalledWith(
+        `Migrated ${pathToLog('file3')}`,
+      );
     });
 
     it('should create migrations table if it not exist', async () => {
@@ -228,7 +236,9 @@ describe('migrateOrRollback', () => {
       );
 
       expect(config.logger.log).toBeCalledTimes(1);
-      expect(config.logger.log).toBeCalledWith('file2 rolled back');
+      expect(config.logger.log).toBeCalledWith(
+        `Rolled back ${pathToLog('file2')}`,
+      );
     });
 
     it('should create migrations table if it not exist', async () => {

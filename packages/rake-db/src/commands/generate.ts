@@ -6,6 +6,7 @@ import {
 } from '../common';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
+import { pathToLog } from 'orchid-core';
 
 export const writeMigrationFile = async (
   config: RakeDbConfig,
@@ -19,7 +20,7 @@ export const writeMigrationFile = async (
     `${makeFileTimeStamp()}_${name}.ts`,
   );
   await writeFile(filePath, content);
-  console.log(`Created ${filePath}`);
+  config.logger?.log(`Created ${pathToLog(filePath)}`);
 };
 
 export const generate = async (config: RakeDbConfig, args: string[]) => {

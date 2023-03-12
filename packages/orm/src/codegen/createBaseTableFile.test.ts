@@ -2,19 +2,29 @@ import path from 'path';
 import { createBaseTableFile } from './createBaseTableFile';
 import fs from 'fs/promises';
 import { asMock } from './testUtils';
+import { pathToLog } from 'orchid-core';
 
 jest.mock('fs/promises', () => ({
   mkdir: jest.fn(),
   writeFile: jest.fn(),
 }));
 
+const log = jest.fn();
 const params = {
   baseTablePath: path.resolve('baseTable.ts'),
   baseTableName: 'CustomName',
+  logger: {
+    ...console,
+    log,
+  },
 };
 
 describe('createBaseTableFile', () => {
-  it('should call mkdir with recursive option', async () => {
+  beforeEach(() => {
+    log.mockClear();
+  });
+
+  it('should call mkdir with recursive option and create a file', async () => {
     asMock(fs.writeFile).mockResolvedValue(null);
 
     await createBaseTableFile(params);
@@ -22,6 +32,9 @@ describe('createBaseTableFile', () => {
     expect(fs.mkdir).toBeCalledWith(path.dirname(params.baseTablePath), {
       recursive: true,
     });
+
+    expect(fs.writeFile).toBeCalled();
+    expect(log).toBeCalledWith(`Created ${pathToLog(params.baseTablePath)}`);
   });
 
   it('should write file with wx flag to not overwrite', async () => {
@@ -31,7 +44,7 @@ describe('createBaseTableFile', () => {
 
     await createBaseTableFile(params);
 
-    expect(asMock(fs.writeFile)).toBeCalledWith(
+    expect(fs.writeFile).toBeCalledWith(
       params.baseTablePath,
       `import { createBaseTable } from 'orchid-orm';
 
@@ -41,6 +54,8 @@ export const ${params.baseTableName} = createBaseTable();
         flag: 'wx',
       },
     );
+
+    expect(log).not.toBeCalled();
   });
 
   it('should throw if error is not EEXIST', async () => {
@@ -49,5 +64,7 @@ export const ${params.baseTableName} = createBaseTable();
     );
 
     await expect(() => createBaseTableFile(params)).rejects.toThrow('custom');
+
+    expect(log).not.toBeCalled();
   });
 });

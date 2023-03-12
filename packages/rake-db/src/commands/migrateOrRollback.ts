@@ -5,7 +5,7 @@ import {
   DbResult,
   DefaultColumnTypes,
 } from 'pqb';
-import { MaybeArray, toArray } from 'orchid-core';
+import { MaybeArray, toArray, pathToLog } from 'orchid-core';
 import {
   createSchemaMigrations,
   getMigrationFiles,
@@ -79,7 +79,10 @@ export const migrateOrRollback = async (
           opts,
           appCodeUpdaterCache,
         );
-        config.logger?.log(`${file.path} ${up ? 'migrated' : 'rolled back'}`);
+
+        config.logger?.log(
+          `${up ? 'Migrated' : 'Rolled back'} ${pathToLog(file.path)}`,
+        );
       }
 
       if (up) {
@@ -144,6 +147,7 @@ const processMigration = async (
       options,
       basePath: config.basePath,
       cache: appCodeUpdaterCache,
+      logger: config.logger,
     });
   }
 };

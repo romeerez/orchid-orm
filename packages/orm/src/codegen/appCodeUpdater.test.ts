@@ -25,6 +25,7 @@ describe('appCodeUpdater', () => {
     baseTablePath: 'baseTable.ts',
     baseTableName: 'BaseTable',
     mainFilePath: 'db.ts',
+    logger: console,
   };
 
   const fn = appCodeUpdater(params);
@@ -35,6 +36,7 @@ describe('appCodeUpdater', () => {
       options: {},
       basePath: __dirname,
       cache: {},
+      logger: console,
     });
 
     const mainFilePath = path.resolve(__dirname, params.mainFilePath);
@@ -64,11 +66,23 @@ describe('appCodeUpdater', () => {
     const cache = {};
     expect(createBaseTableFile).not.toBeCalled();
 
-    await fn({ ast: ast.addTable, options: {}, basePath: __dirname, cache });
+    await fn({
+      ast: ast.addTable,
+      options: {},
+      basePath: __dirname,
+      cache,
+      logger: console,
+    });
 
     expect(createBaseTableFile).toBeCalledTimes(1);
 
-    await fn({ ast: ast.addTable, options: {}, basePath: __dirname, cache });
+    await fn({
+      ast: ast.addTable,
+      options: {},
+      basePath: __dirname,
+      cache,
+      logger: console,
+    });
 
     expect(createBaseTableFile).toBeCalledTimes(1);
   });

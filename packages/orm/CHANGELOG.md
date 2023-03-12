@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.6.3
+
+### Patch Changes
+
+- Add log to appCodeUpdater, change file pathes to urls when logging
+- Updated dependencies
+- Updated dependencies [384fbfc]
+  - orchid-core@0.1.2
+  - pqb@0.10.3
+
 ## 1.6.2
 
 ### Patch Changes

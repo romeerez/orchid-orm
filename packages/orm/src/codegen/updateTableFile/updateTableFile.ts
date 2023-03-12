@@ -2,12 +2,14 @@ import { RakeDbAst } from 'rake-db';
 import { createTable } from './createTable';
 import { changeTable } from './changeTable';
 import { renameTable } from './renameTable';
+import { QueryLogOptions } from 'pqb';
 
 export type UpdateTableFileParams = {
   baseTablePath: string;
   baseTableName: string;
   tablePath: (name: string) => string;
   ast: RakeDbAst;
+  logger?: QueryLogOptions['logger'];
 };
 
 export const updateTableFile = async (params: UpdateTableFileParams) => {

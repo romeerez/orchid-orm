@@ -2,20 +2,24 @@ import { generate } from './generate';
 import { migrationConfigDefaults, RakeDbConfig } from '../common';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
+import { pathToLog } from 'orchid-core';
 
 jest.mock('fs/promises', () => ({
   mkdir: jest.fn(),
   writeFile: jest.fn(),
 }));
 
-const logMock = jest.fn();
-console.log = logMock;
+const log = jest.fn();
 
 const migrationsPath = migrationConfigDefaults.migrationsPath;
 
 const config: RakeDbConfig = {
   ...migrationConfigDefaults,
   basePath: __dirname,
+  logger: {
+    ...console,
+    log,
+  },
 };
 
 const testGenerate = async (args: string[], content: string) => {
@@ -27,7 +31,7 @@ const testGenerate = async (args: string[], content: string) => {
   const filePath = path.resolve(migrationsPath, `20000101000000_${name}.ts`);
   expect(writeFile).toHaveBeenCalledWith(filePath, content);
 
-  expect(logMock.mock.calls).toEqual([[`Created ${filePath}`]]);
+  expect(log.mock.calls).toEqual([[`Created ${pathToLog(filePath)}`]]);
 };
 
 describe('generate', () => {

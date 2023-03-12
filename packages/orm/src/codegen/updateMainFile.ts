@@ -7,8 +7,8 @@ import { AppCodeUpdaterError } from './appCodeUpdater';
 import { FileChanges } from './fileChanges';
 import { ts } from './tsUtils';
 import { getImportPath } from './utils';
-import { AdapterOptions } from 'pqb';
-import { singleQuote } from 'orchid-core';
+import { AdapterOptions, QueryLogOptions } from 'pqb';
+import { singleQuote, pathToLog } from 'orchid-core';
 
 type Context = {
   filePath: string;
@@ -53,6 +53,7 @@ export const updateMainFile = async (
   tablePath: (name: string) => string,
   ast: RakeDbAst,
   options: AdapterOptions,
+  logger: QueryLogOptions['logger'],
 ) => {
   const result = await fs.readFile(filePath, 'utf-8').then(
     (content) => ({ error: undefined, content }),
@@ -110,6 +111,9 @@ export const updateMainFile = async (
     }
 
     await fs.writeFile(filePath, write);
+    logger?.log(
+      `${result.content ? 'Updated' : 'Created'} ${pathToLog(filePath)}`,
+    );
   }
 };
 

@@ -1,3 +1,5 @@
+import url from 'url';
+
 export type StringKey<K extends PropertyKey> = Exclude<K, symbol | number>;
 
 export type SomeIsTrue<T extends unknown[]> = T extends [
@@ -136,4 +138,10 @@ export const isObjectEmpty = (obj: object) => {
     return false;
   }
   return true;
+};
+
+export const pathToLog = (path: string) => {
+  return process.platform === 'win32'
+    ? path
+    : url.pathToFileURL(path).toString();
 };

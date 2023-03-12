@@ -2,6 +2,8 @@ import { updateMainFile } from './updateMainFile';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { asMock, ast, makeTestWritten, tablePath } from './testUtils';
+import { RakeDbAst } from 'rake-db';
+import { pathToLog } from 'orchid-core';
 
 jest.mock('fs/promises', () => ({
   readFile: jest.fn(),
@@ -13,9 +15,19 @@ const mainFilePath = path.resolve('db.ts');
 const testWritten = makeTestWritten(mainFilePath);
 const options = { databaseURL: 'url' };
 
+const log = jest.fn();
+const logger = {
+  ...console,
+  log,
+};
+
+const run = (ast: RakeDbAst) =>
+  updateMainFile(mainFilePath, tablePath, ast, options, logger);
+
 describe('updateMainFile', () => {
   beforeEach(() => {
     jest.resetAllMocks();
+    log.mockClear();
   });
 
   describe('add table', () => {
@@ -24,7 +36,7 @@ describe('updateMainFile', () => {
         Object.assign(new Error(), { code: 'ENOENT' }),
       );
 
-      await updateMainFile(mainFilePath, tablePath, ast.addTable, options);
+      await run(ast.addTable);
 
       expect(asMock(fs.mkdir)).toBeCalledWith(path.dirname(mainFilePath), {
         recursive: true,
@@ -42,6 +54,8 @@ export const db = orchidORM(
   }
 );
 `);
+
+      expect(log).toBeCalledWith(`Created ${pathToLog(mainFilePath)}`);
     });
 
     it('should add table', async () => {
@@ -51,7 +65,7 @@ import { orchidORM } from 'orchid-orm';
 export const db = orchidORM({}, {});
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.addTable, options);
+      await run(ast.addTable);
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
@@ -61,6 +75,8 @@ export const db = orchidORM({}, {
   some: SomeTable,
 });
 `);
+
+      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
     });
 
     it('should handle import as', async () => {
@@ -70,7 +86,7 @@ import { orchidORM as custom } from 'orchid-orm';
 export const db = custom({}, {});
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.addTable, options);
+      await run(ast.addTable);
 
       testWritten(`
 import { orchidORM as custom } from 'orchid-orm';
@@ -80,6 +96,8 @@ export const db = custom({}, {
   some: SomeTable,
 });
 `);
+
+      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
     });
 
     it('should handle object list with elements', async () => {
@@ -92,7 +110,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.addTable, options);
+      await run(ast.addTable);
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
@@ -104,6 +122,8 @@ export const db = orchidORM({}, {
   some: SomeTable,
 });
 `);
+
+      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
     });
 
     it('should handle object list without ending coma', async () => {
@@ -116,7 +136,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.addTable, options);
+      await run(ast.addTable);
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
@@ -128,6 +148,8 @@ export const db = orchidORM({}, {
   some: SomeTable,
 });
 `);
+
+      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
     });
 
     it('should not add table if it is already added', async () => {
@@ -140,9 +162,10 @@ export const db = orchidORM({}, {
 });
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.addTable, options);
+      await run(ast.addTable);
 
       expect(fs.writeFile).not.toBeCalled();
+      expect(log).not.toBeCalled();
     });
   });
 
@@ -157,7 +180,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.dropTable, options);
+      await run(ast.dropTable);
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
@@ -165,6 +188,8 @@ import { orchidORM } from 'orchid-orm';
 export const db = orchidORM({}, {
 });
 `);
+
+      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
     });
 
     it('should remove aliased import', async () => {
@@ -177,7 +202,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.dropTable, options);
+      await run(ast.dropTable);
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
@@ -185,6 +210,8 @@ import { orchidORM } from 'orchid-orm';
 export const db = orchidORM({}, {
 });
 `);
+
+      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
     });
 
     it('should remove short form of key and value', async () => {
@@ -197,7 +224,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.dropTable, options);
+      await run(ast.dropTable);
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
@@ -205,6 +232,8 @@ import { orchidORM } from 'orchid-orm';
 export const db = orchidORM({}, {
 });
 `);
+
+      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
     });
 
     it('should not remove other tables', async () => {
@@ -221,7 +250,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.dropTable, options);
+      await run(ast.dropTable);
 
       testWritten(`
 import { orchidORM } from 'orchid-orm';
@@ -233,6 +262,8 @@ export const db = orchidORM({}, {
   two,
 });
 `);
+
+      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
     });
 
     it('should not insert table if table with same key exists, disregarding the import path', async () => {
@@ -245,9 +276,10 @@ export const db = orchidORM({}, {
 });
 `);
 
-      await updateMainFile(mainFilePath, tablePath, ast.addTable, options);
+      await run(ast.addTable);
 
       expect(fs.writeFile).not.toBeCalled();
+      expect(log).not.toBeCalled();
     });
   });
 });

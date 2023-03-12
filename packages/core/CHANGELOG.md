@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.1.2
+
+### Patch Changes
+
+- Add log to appCodeUpdater, change file pathes to urls when logging
+
 ## 0.1.1
 
 ### Patch Changes

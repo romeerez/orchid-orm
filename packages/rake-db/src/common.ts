@@ -44,6 +44,7 @@ export type AppCodeUpdater = (params: {
   options: AdapterOptions;
   basePath: string;
   cache: object;
+  logger: QueryLogOptions['logger'];
 }) => Promise<void>;
 
 export const migrationConfigDefaults: Omit<RakeDbConfig, 'basePath'> = {
@@ -61,6 +62,10 @@ export const processRakeDbConfig = (
   config: Partial<RakeDbConfig>,
 ): RakeDbConfig => {
   const result = { ...migrationConfigDefaults, ...config };
+
+  if (!result.log) {
+    delete result.logger;
+  }
 
   if (!result.basePath) {
     let stack: NodeJS.CallSite[] | undefined;
@@ -200,7 +205,7 @@ export const setAdminCredentialsToOptions = async (
 
 export const createSchemaMigrations = async (
   db: Adapter,
-  config: Pick<RakeDbConfig, 'migrationsTable'>,
+  config: Pick<RakeDbConfig, 'migrationsTable' | 'logger'>,
 ) => {
   try {
     await db.query(
@@ -208,10 +213,10 @@ export const createSchemaMigrations = async (
         name: config.migrationsTable,
       })} ( version TEXT NOT NULL )`,
     );
-    console.log('Created versions table');
+    config.logger?.log('Created versions table');
   } catch (err) {
     if ((err as Record<string, unknown>).code === '42P07') {
-      console.log('Versions table exists');
+      config.logger?.log('Versions table exists');
     } else {
       throw err;
     }

@@ -1,5 +1,13 @@
 # pqb
 
+## 0.10.3
+
+### Patch Changes
+
+- 384fbfc: Support enum, array columns in db pull
+- Updated dependencies
+  - orchid-core@0.1.2
+
 ## 0.10.2
 
 ### Patch Changes

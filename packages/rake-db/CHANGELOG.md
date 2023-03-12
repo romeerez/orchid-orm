@@ -1,5 +1,17 @@
 # rake-db
 
+## 2.4.3
+
+### Patch Changes
+
+- Add log to appCodeUpdater, change file pathes to urls when logging
+- 2b6dd66: Run appCodeUpdater after commit in migrations
+- 384fbfc: Support enum, array columns in db pull
+- Updated dependencies
+- Updated dependencies [384fbfc]
+  - orchid-core@0.1.2
+  - pqb@0.10.3
+
 ## 2.4.2
 
 ### Patch Changes

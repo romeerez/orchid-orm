@@ -290,7 +290,7 @@ export class MigrationBase {
 
   createEnum(
     name: string,
-    values: string[],
+    values: [string, ...string[]],
     options?: Omit<RakeDbAst.Enum, 'type' | 'action' | 'name' | 'values'>,
   ) {
     return createEnum(this, this.up, name, values, options);
@@ -298,7 +298,7 @@ export class MigrationBase {
 
   dropEnum(
     name: string,
-    values: string[],
+    values: [string, ...string[]],
     options?: Omit<RakeDbAst.Enum, 'type' | 'action' | 'name' | 'values'>,
   ) {
     return createEnum(this, !this.up, name, values, options);
@@ -458,7 +458,7 @@ const createEnum = async (
   migration: MigrationBase,
   up: boolean,
   name: string,
-  values: string[],
+  values: [string, ...string[]],
   options: Omit<RakeDbAst.Enum, 'type' | 'action' | 'name' | 'values'> = {},
 ) => {
   const [schema, enumName] = getSchemaAndTableFromName(name);

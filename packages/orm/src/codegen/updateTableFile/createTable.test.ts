@@ -1,8 +1,9 @@
 import { updateTableFile } from './updateTableFile';
 import { asMock, ast, makeTestWritten, tablePath } from '../testUtils';
-import path from 'path';
+import { resolve, dirname } from 'path';
 import fs from 'fs/promises';
 import { columnTypes } from 'pqb';
+import { pathToLog } from 'orchid-core';
 
 jest.mock('fs/promises', () => ({
   readFile: jest.fn(),
@@ -12,11 +13,22 @@ jest.mock('fs/promises', () => ({
 
 const t = columnTypes;
 
-const baseTablePath = path.resolve('baseTable.ts');
+const baseTablePath = resolve('baseTable.ts');
 const baseTableName = 'BaseTable';
-const params = { baseTablePath, baseTableName, tablePath };
+const log = jest.fn();
+const params = {
+  baseTablePath,
+  baseTableName,
+  tablePath,
+  logger: { ...console, log },
+};
 
-const testWritten = makeTestWritten(tablePath('some'));
+const path = tablePath('some');
+const testWrittenOnly = makeTestWritten(path);
+const testWritten = (content: string) => {
+  testWrittenOnly(content);
+  expect(log).toBeCalledWith(`Created ${pathToLog(path)}`);
+};
 
 const template = ({
   schema,
@@ -51,7 +63,7 @@ describe('createTable', () => {
       },
     });
 
-    expect(asMock(fs.mkdir)).toBeCalledWith(path.dirname(tablePath('some')), {
+    expect(asMock(fs.mkdir)).toBeCalledWith(dirname(tablePath('some')), {
       recursive: true,
     });
 

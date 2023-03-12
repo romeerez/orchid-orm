@@ -50,7 +50,7 @@ const execute = async (
 const createOrDrop = async (
   options: AdapterOptions,
   adminOptions: AdapterOptions,
-  config: Pick<RakeDbConfig, 'migrationsTable'>,
+  config: Pick<RakeDbConfig, 'migrationsTable' | 'logger'>,
   args: {
     sql(params: { database: string; user: string }): string;
     successMessage(params: { database: string }): string;
@@ -65,11 +65,13 @@ const createOrDrop = async (
     args.sql(params),
   );
   if (result === 'ok') {
-    console.log(args.successMessage(params));
+    config.logger?.log(args.successMessage(params));
   } else if (result === 'already') {
-    console.log(args.alreadyMessage(params));
+    config.logger?.log(args.alreadyMessage(params));
   } else if (result === 'ssl required') {
-    console.log('SSL is required: append ?ssl=true to the database url string');
+    config.logger?.log(
+      'SSL is required: append ?ssl=true to the database url string',
+    );
     return;
   } else if (result === 'forbidden') {
     let message = `Permission denied to ${
@@ -85,7 +87,7 @@ const createOrDrop = async (
       message += `\nDon't use this command for database service providers, only for a local db.`;
     }
 
-    console.log(message);
+    config.logger?.log(message);
 
     const updatedOptions = await setAdminCredentialsToOptions(
       options,

@@ -5,10 +5,11 @@ import { FileChanges } from '../fileChanges';
 import { ts } from '../tsUtils';
 import { toPascalCase } from '../../utils';
 import { Expression } from 'typescript';
-import { singleQuote } from 'orchid-core';
+import { singleQuote, pathToLog } from 'orchid-core';
 
 export const renameTable = async ({
   ast,
+  logger,
   ...params
 }: UpdateTableFileParams & { ast: RakeDbAst.RenameTable }) => {
   const tablePath = params.tablePath(ast.from);
@@ -64,4 +65,5 @@ export const renameTable = async ({
   }
 
   await fs.writeFile(tablePath, changes.apply());
+  logger?.log(`Updated ${pathToLog(tablePath)}`);
 };

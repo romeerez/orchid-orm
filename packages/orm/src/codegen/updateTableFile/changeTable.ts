@@ -25,11 +25,18 @@ import {
   primaryKeyToCode,
   TableData,
 } from 'pqb';
-import { addCode, Code, quoteObjectKey, singleQuote } from 'orchid-core';
+import {
+  addCode,
+  Code,
+  quoteObjectKey,
+  singleQuote,
+  pathToLog,
+} from 'orchid-core';
 import { UpdateTableFileParams } from './updateTableFile';
 
 export const changeTable = async ({
   ast,
+  logger,
   ...params
 }: UpdateTableFileParams & { ast: RakeDbAst.ChangeTable }) => {
   const tablePath = params.tablePath(ast.name);
@@ -51,6 +58,7 @@ export const changeTable = async ({
   }
 
   await fs.writeFile(tablePath, changes.apply());
+  logger?.log(`Updated ${pathToLog(tablePath)}`);
 };
 
 function* iterateColumnsShapes(
@@ -280,7 +288,7 @@ const changeColumn = (
 
     let remove = true;
     if (!replaced[key]) {
-      const code = getColumnMethodArgs(to, key as Key);
+      const code = getColumnMethodArgs(t, to, key as Key);
       if (code) {
         changes.replace(
           item.expression.expression.end,
@@ -303,7 +311,7 @@ const changeColumn = (
   for (const key in propsToChange) {
     if (changedProps[key as Key]) continue;
 
-    const code = getColumnMethodArgs(to, key as Key);
+    const code = getColumnMethodArgs(t, to, key as Key);
     if (code) {
       append += codeToString(code, spaces + '  ', '  ').trim();
     }
@@ -358,6 +366,7 @@ const addTableData = ({ add, changes, object, t, spaces }: ChangeContext) => {
 };
 
 const getColumnMethodArgs = (
+  t: string,
   to: RakeDbAst.ChangeTableItem.Change['to'],
   key: keyof RakeDbAst.ChangeTableItem.Change['to'],
 ): Code[] | undefined => {
@@ -377,7 +386,7 @@ const getColumnMethodArgs = (
   if (key === 'collate' || key === 'compression') {
     addCode(code, singleQuote(value as string));
   } else if (key === 'default') {
-    addCode(code, columnDefaultArgumentToCode(value));
+    addCode(code, columnDefaultArgumentToCode(t, value));
   } else if (key !== 'nullable' && key !== 'primaryKey') {
     return;
   }
