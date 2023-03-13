@@ -569,7 +569,7 @@ describe('belongsTo', () => {
 
     describe('connectOrCreate', () => {
       it('should support connect or create', async () => {
-        const chat = await db.chat.select('Id').create({
+        const chat = await db.chat.select('IdOfChat').create({
           ...chatData,
           Title: 'chat',
         });
@@ -595,7 +595,7 @@ describe('belongsTo', () => {
 
         const { Id: messageId, ChatId, AuthorId } = await query;
 
-        expect(ChatId).toBe(chat.Id);
+        expect(ChatId).toBe(chat.IdOfChat);
 
         await checkCreatedResults({
           messageId,
@@ -608,7 +608,7 @@ describe('belongsTo', () => {
       });
 
       it('should support connect or create in batch create', async () => {
-        const chat = await db.chat.select('Id').create({
+        const chat = await db.chat.select('IdOfChat').create({
           ...chatData,
           Title: 'chat 1',
         });
@@ -656,7 +656,7 @@ describe('belongsTo', () => {
 
         const [first, second] = await query;
 
-        expect(first.ChatId).toBe(chat.Id);
+        expect(first.ChatId).toBe(chat.IdOfChat);
         expect(second.AuthorId).toBe(user.Id);
 
         await checkCreatedResults({

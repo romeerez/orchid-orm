@@ -43,7 +43,7 @@ describe('hasMany', () => {
       >();
 
       const userId = await db.user.get('Id').create(userData);
-      const ChatId = await db.chat.get('Id').create(chatData);
+      const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
       await db.message.createMany([
         { ...messageData, AuthorId: userId, ChatId },
@@ -115,9 +115,9 @@ describe('hasMany', () => {
           query.toSql(),
           `
             INSERT INTO "message"("chatId", "text")
-            SELECT "chat"."id" AS "ChatId", $1
+            SELECT "chat"."idOfChat" AS "ChatId", $1
             FROM "chat"
-            WHERE "chat"."id" = $2
+            WHERE "chat"."idOfChat" = $2
             LIMIT $3
             RETURNING ${messageSelectAll}
           `,
@@ -165,7 +165,7 @@ describe('hasMany', () => {
           WHERE EXISTS (
               SELECT 1 FROM "chat"
               WHERE "chat"."title" = $1
-                AND "chat"."id" = "messages"."chatId"
+                AND "chat"."idOfChat" = "messages"."chatId"
               LIMIT 1
             )
             AND "messages"."text" = $2
@@ -240,7 +240,7 @@ describe('hasMany', () => {
 
     describe('select', () => {
       it('should be selectable', async () => {
-        const ChatId = await db.chat.get('Id').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
         const AuthorId = await db.user.get('Id').create(userData);
         const messageId = await db.message.get('Id').create({
           ChatId,
@@ -438,7 +438,7 @@ describe('hasMany', () => {
 
     describe('nested create', () => {
       it('should support create', async () => {
-        const ChatId = await db.chat.get('Id').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
         const user = await db.user.create({
           ...userData,
@@ -472,7 +472,7 @@ describe('hasMany', () => {
       });
 
       it('should support create in batch create', async () => {
-        const ChatId = await db.chat.get('Id').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
         const user = await db.user.createMany([
           {
@@ -552,7 +552,7 @@ describe('hasMany', () => {
         );
 
         it('should invoke callbacks', async () => {
-          const ChatId = await db.chat.get('Id').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
           await db.user.create({
             ...userData,
@@ -571,7 +571,7 @@ describe('hasMany', () => {
         it('should invoke callbacks in a batch create', async () => {
           resetMocks();
 
-          const ChatId = await db.chat.get('Id').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
           await db.user.createMany([
             {
@@ -602,7 +602,7 @@ describe('hasMany', () => {
 
     describe('nested connect', () => {
       it('should support connect', async () => {
-        const ChatId = await db.chat.get('Id').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
         await db.message.createMany([
           {
             ...messageData,
@@ -646,7 +646,7 @@ describe('hasMany', () => {
       });
 
       it('should support connect in batch create', async () => {
-        const ChatId = await db.chat.get('Id').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
         await db.message.createMany([
           {
             ...messageData,
@@ -744,7 +744,7 @@ describe('hasMany', () => {
         );
 
         it('should invoke callbacks', async () => {
-          const ChatId = await db.chat.get('Id').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(chatData);
           const ids = await db.message.pluck('Id').createMany([
             { ...messageData, ChatId },
             { ...messageData, ChatId },
@@ -762,7 +762,7 @@ describe('hasMany', () => {
         });
 
         it('should invoke callbacks in a batch create', async () => {
-          const ChatId = await db.chat.get('Id').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
           const ids = await db.message.pluck('Id').createMany([
             { ...messageData, ChatId },
@@ -796,7 +796,7 @@ describe('hasMany', () => {
 
     describe('connectOrCreate', () => {
       it('should support connect or create', async () => {
-        const ChatId = await db.chat.get('Id').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
         const messageId = await db.message.get('Id').create({
           ...messageData,
           ChatId,
@@ -836,7 +836,7 @@ describe('hasMany', () => {
       });
 
       it('should support connect or create in batch create', async () => {
-        const ChatId = await db.chat.get('Id').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
         const [{ Id: message1Id }, { Id: message4Id }] = await db.message
           .select('Id')
           .createMany([
@@ -935,7 +935,7 @@ describe('hasMany', () => {
         } = useRelationCallback(db.user.relations.messages);
 
         it('should invoke callbacks when connecting', async () => {
-          const ChatId = await db.chat.get('Id').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(chatData);
           const ids = await db.message.pluck('Id').createMany([
             { ...messageData, ChatId },
             { ...messageData, ChatId },
@@ -962,7 +962,7 @@ describe('hasMany', () => {
         });
 
         it('should invoke callbacks when creating', async () => {
-          const ChatId = await db.chat.get('Id').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
           resetMocks();
 
@@ -987,7 +987,7 @@ describe('hasMany', () => {
         });
 
         it('should invoke callbacks in a batch create', async () => {
-          const ChatId = await db.chat.get('Id').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(chatData);
           const ids = await db.message.pluck('Id').createMany([
             { ...messageData, ChatId },
             { ...messageData, ChatId },
@@ -1041,7 +1041,7 @@ describe('hasMany', () => {
     describe('disconnect', () => {
       it('should nullify foreignKey', async () => {
         const ChatId = await db.chat
-          .get('Id')
+          .get('IdOfChat')
           .create({ ...chatData, Title: 'chat 1' });
 
         const UserId = await db.user.get('Id').create({
@@ -1069,7 +1069,7 @@ describe('hasMany', () => {
 
       it('should nullify foreignKey in batch update', async () => {
         const ChatId = await db.chat
-          .get('Id')
+          .get('IdOfChat')
           .create({ ...chatData, Title: 'chat 1' });
 
         const userIds = await db.user.pluck('Id').createMany([
@@ -1118,7 +1118,7 @@ describe('hasMany', () => {
         );
 
         it('should invoke callbacks', async () => {
-          const ChatId = await db.chat.get('Id').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(chatData);
           const UserId = await db.user.get('Id').create({
             ...userData,
             messages: {
@@ -1150,7 +1150,7 @@ describe('hasMany', () => {
         it('should invoke callbacks in a batch update', async () => {
           resetMocks();
 
-          const ChatId = await db.chat.get('Id').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(chatData);
           const ids = await db.user.pluck('Id').createMany([
             {
               ...userData,
@@ -1202,7 +1202,7 @@ describe('hasMany', () => {
 
     describe('set', () => {
       it('should nullify foreignKey of previous related record and set foreignKey to new related record', async () => {
-        const ChatId = await db.chat.get('Id').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
         const id = await db.user.get('Id').create({
           ...userData,
           messages: {
@@ -1247,7 +1247,7 @@ describe('hasMany', () => {
         );
 
         it('should invoke callbacks', async () => {
-          const ChatId = await db.chat.get('Id').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(chatData);
           const id = await db.user.get('Id').create({
             ...userData,
             messages: {
@@ -1278,7 +1278,7 @@ describe('hasMany', () => {
 
     describe('delete', () => {
       it('should delete related records', async () => {
-        const ChatId = await db.chat.get('Id').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
         const Id = await db.user.get('Id').create({
           ...userData,
@@ -1306,7 +1306,7 @@ describe('hasMany', () => {
       });
 
       it('should delete related records in batch update', async () => {
-        const ChatId = await db.chat.get('Id').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
         const userIds = await db.user.pluck('Id').createMany([
           {
@@ -1341,7 +1341,7 @@ describe('hasMany', () => {
       });
 
       it('should ignore empty delete list', async () => {
-        const ChatId = await db.chat.get('Id').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
         const Id = await db.user.get('Id').create({
           ...userData,
@@ -1366,7 +1366,7 @@ describe('hasMany', () => {
         );
 
         it('should invoke callbacks', async () => {
-          const ChatId = await db.chat.get('Id').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(chatData);
           const Id = await db.user.get('Id').create({
             ...userData,
             messages: {
@@ -1391,7 +1391,7 @@ describe('hasMany', () => {
         it('should invoke callbacks in a batch delete', async () => {
           resetMocks();
 
-          const ChatId = await db.chat.get('Id').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(chatData);
           const ids = await db.user.pluck('Id').createMany([
             {
               ...userData,
@@ -1434,7 +1434,7 @@ describe('hasMany', () => {
 
     describe('nested update', () => {
       it('should update related records', async () => {
-        const ChatId = await db.chat.get('Id').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
         const Id = await db.user.get('Id').create({
           ...userData,
@@ -1468,7 +1468,7 @@ describe('hasMany', () => {
       });
 
       it('should update related records in batch update', async () => {
-        const ChatId = await db.chat.get('Id').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
         const userIds = await db.user.pluck('Id').createMany([
           {
@@ -1506,7 +1506,7 @@ describe('hasMany', () => {
       });
 
       it('should ignore empty update where list', async () => {
-        const ChatId = await db.chat.get('Id').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
         const Id = await db.user.get('Id').create({
           ...userData,
@@ -1536,7 +1536,7 @@ describe('hasMany', () => {
         );
 
         it('should invoke callbacks', async () => {
-          const ChatId = await db.chat.get('Id').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(chatData);
           const Id = await db.user.get('Id').create({
             ...userData,
             messages: {
@@ -1566,7 +1566,7 @@ describe('hasMany', () => {
         it('should invoke callbacks in a batch update', async () => {
           resetMocks();
 
-          const ChatId = await db.chat.get('Id').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(chatData);
           const ids = await db.user.pluck('Id').createMany([
             {
               ...userData,
@@ -1614,7 +1614,7 @@ describe('hasMany', () => {
 
     describe('nested create', () => {
       it('should create new related records', async () => {
-        const ChatId = await db.chat.get('Id').create(chatData);
+        const ChatId = await db.chat.get('IdOfChat').create(chatData);
         const user = await db.user.create({ ...userData, Age: 1 });
 
         const updated = await db.user
@@ -1666,7 +1666,7 @@ describe('hasMany', () => {
         );
 
         it('should invoke callbacks', async () => {
-          const ChatId = await db.chat.get('Id').create(chatData);
+          const ChatId = await db.chat.get('IdOfChat').create(chatData);
           const Id = await db.user.get('Id').create({ ...userData, Age: 1 });
 
           await db.user.find(Id).update({
@@ -1880,7 +1880,7 @@ describe('hasMany through', () => {
           SELECT 1 FROM "user"
           WHERE EXISTS (
             SELECT 1 FROM "chatUser"
-            WHERE "chatUser"."chatId" = "chats"."id"
+            WHERE "chatUser"."chatId" = "chats"."idOfChat"
               AND "chatUser"."userId" = "user"."id"
             LIMIT 1
           )
@@ -1908,7 +1908,7 @@ describe('hasMany through', () => {
                 SELECT 1 FROM "user"
                 WHERE EXISTS (
                     SELECT 1 FROM "chatUser"
-                    WHERE "chatUser"."chatId" = "chats"."id"
+                    WHERE "chatUser"."chatId" = "chats"."idOfChat"
                       AND "chatUser"."userId" = "user"."id"
                     LIMIT 1
                   )
@@ -1946,7 +1946,7 @@ describe('hasMany through', () => {
                   SELECT 1 FROM "user"
                   WHERE EXISTS (
                       SELECT 1 FROM "chatUser"
-                      WHERE "chatUser"."chatId" = "chats"."id"
+                      WHERE "chatUser"."chatId" = "chats"."idOfChat"
                         AND "chatUser"."userId" = "user"."id"
                       LIMIT 1
                     )
@@ -1973,7 +1973,7 @@ describe('hasMany through', () => {
             SELECT 1 FROM "user"
             WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chatId" = "c"."id"
+                WHERE "chatUser"."chatId" = "c"."idOfChat"
                   AND "chatUser"."userId" = "user"."id"
                 LIMIT 1
               )
@@ -1995,7 +1995,7 @@ describe('hasMany through', () => {
             SELECT 1 FROM "user"
             WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chatId" = "chats"."id"
+                WHERE "chatUser"."chatId" = "chats"."idOfChat"
                   AND "chatUser"."userId" = "user"."id"
                 LIMIT 1
               )
@@ -2020,7 +2020,7 @@ describe('hasMany through', () => {
             SELECT 1 FROM "user"
             WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chatId" = "chats"."id"
+                WHERE "chatUser"."chatId" = "chats"."idOfChat"
                   AND "chatUser"."userId" = "user"."id"
                 LIMIT 1
               )
@@ -2056,7 +2056,7 @@ describe('hasMany through', () => {
               SELECT 1 FROM "user"
               WHERE EXISTS (
                   SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."chatId" = "chats"."id"
+                  WHERE "chatUser"."chatId" = "chats"."idOfChat"
                     AND "chatUser"."userId" = "user"."id"
                   LIMIT 1
                 )
@@ -2092,7 +2092,7 @@ describe('hasMany through', () => {
                       SELECT 1 FROM "user"
                       WHERE EXISTS (
                           SELECT 1 FROM "chatUser"
-                          WHERE "chatUser"."chatId" = "chats"."id"
+                          WHERE "chatUser"."chatId" = "chats"."idOfChat"
                             AND "chatUser"."userId" = "user"."id"
                           LIMIT 1
                         )
@@ -2126,7 +2126,7 @@ describe('hasMany through', () => {
                       SELECT 1 FROM "user"
                       WHERE EXISTS (
                           SELECT 1 FROM "chatUser"
-                          WHERE "chatUser"."chatId" = "chats"."id"
+                          WHERE "chatUser"."chatId" = "chats"."idOfChat"
                             AND "chatUser"."userId" = "user"."id"
                           LIMIT 1
                         )
@@ -2161,7 +2161,7 @@ describe('hasMany through', () => {
                   SELECT 1 FROM "user"
                   WHERE EXISTS (
                       SELECT 1 FROM "chatUser"
-                      WHERE "chatUser"."chatId" = "chats"."id"
+                      WHERE "chatUser"."chatId" = "chats"."idOfChat"
                         AND "chatUser"."userId" = "user"."id"
                       LIMIT 1
                     )
@@ -2195,7 +2195,7 @@ describe('hasMany through', () => {
                   SELECT 1 FROM "user"
                   WHERE EXISTS (
                       SELECT 1 FROM "chatUser"
-                      WHERE "chatUser"."chatId" = "chats"."id"
+                      WHERE "chatUser"."chatId" = "chats"."idOfChat"
                         AND "chatUser"."userId" = "user"."id"
                       LIMIT 1
                     )
@@ -2228,7 +2228,7 @@ describe('hasMany through', () => {
                 SELECT 1 FROM "user"
                 WHERE EXISTS (
                     SELECT 1 FROM "chatUser"
-                    WHERE "chatUser"."chatId" = "chats"."id"
+                    WHERE "chatUser"."chatId" = "chats"."idOfChat"
                       AND "chatUser"."userId" = "user"."id"
                     LIMIT 1
                   )
@@ -2250,7 +2250,7 @@ describe('hasMany through', () => {
         typeof db.chat.profiles,
         RelationQuery<
           'profiles',
-          { Id: number },
+          { IdOfChat: number },
           never,
           typeof profilesQuery,
           false,
@@ -2259,7 +2259,7 @@ describe('hasMany through', () => {
         >
       >();
 
-      const query = db.chat.profiles({ Id: 1 });
+      const query = db.chat.profiles({ IdOfChat: 1 });
       expectSql(
         query.toSql(),
         `
@@ -2298,7 +2298,7 @@ describe('hasMany through', () => {
                   AND EXISTS (
                     SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."userId" = "users"."id"
-                      AND "chatUser"."chatId" = "chat"."id"
+                      AND "chatUser"."chatId" = "chat"."idOfChat"
                     LIMIT 1
                   )
                 LIMIT 1
@@ -2335,7 +2335,7 @@ describe('hasMany through', () => {
                     AND EXISTS (
                       SELECT 1 FROM "chatUser"
                       WHERE "chatUser"."userId" = "users"."id"
-                        AND "chatUser"."chatId" = "chat"."id"
+                        AND "chatUser"."chatId" = "chat"."idOfChat"
                       LIMIT 1
                     )
                   LIMIT 1
@@ -2361,7 +2361,7 @@ describe('hasMany through', () => {
               AND EXISTS (
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."userId" = "users"."id"
-                  AND "chatUser"."chatId" = "c"."id"
+                  AND "chatUser"."chatId" = "c"."idOfChat"
                 LIMIT 1
               )
             LIMIT 1
@@ -2383,7 +2383,7 @@ describe('hasMany through', () => {
                 AND EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."userId" = "users"."id"
-                    AND "chatUser"."chatId" = "chat"."id"
+                    AND "chatUser"."chatId" = "chat"."idOfChat"
                   LIMIT 1
                 )
               LIMIT 1
@@ -2408,7 +2408,7 @@ describe('hasMany through', () => {
                 AND EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."userId" = "users"."id"
-                    AND "chatUser"."chatId" = "c"."id"
+                    AND "chatUser"."chatId" = "c"."idOfChat"
                   LIMIT 1
                 )
               LIMIT 1
@@ -2444,7 +2444,7 @@ describe('hasMany through', () => {
                 AND EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."userId" = "users"."id"
-                    AND "chatUser"."chatId" = "c"."id"
+                    AND "chatUser"."chatId" = "c"."idOfChat"
                   LIMIT 1
                 )
               LIMIT 1
@@ -2457,20 +2457,20 @@ describe('hasMany through', () => {
 
     describe('select', () => {
       it('should be selectable', () => {
-        const query = db.chat.as('c').select('Id', {
+        const query = db.chat.as('c').select('IdOfChat', {
           profiles: (q) => q.profiles.where({ Bio: 'bio' }),
         });
 
         assertType<
           Awaited<typeof query>,
-          { Id: number; profiles: Profile[] }[]
+          { IdOfChat: number; profiles: Profile[] }[]
         >();
 
         expectSql(
           query.toSql(),
           `
             SELECT
-              "c"."id" AS "Id",
+              "c"."idOfChat" AS "IdOfChat",
               (
                 SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (
@@ -2483,7 +2483,7 @@ describe('hasMany through', () => {
                         AND EXISTS (
                           SELECT 1 FROM "chatUser"
                           WHERE "chatUser"."userId" = "users"."id"
-                            AND "chatUser"."chatId" = "c"."id"
+                            AND "chatUser"."chatId" = "c"."idOfChat"
                           LIMIT 1
                         )
                       LIMIT 1
@@ -2497,18 +2497,18 @@ describe('hasMany through', () => {
       });
 
       it('should be selectable by relation name', () => {
-        const query = db.chat.select('Id', 'profiles');
+        const query = db.chat.select('IdOfChat', 'profiles');
 
         assertType<
           Awaited<typeof query>,
-          { Id: number; profiles: Profile[] }[]
+          { IdOfChat: number; profiles: Profile[] }[]
         >();
 
         expectSql(
           query.toSql(),
           `
             SELECT
-              "chat"."id" AS "Id",
+              "chat"."idOfChat" AS "IdOfChat",
               (
                 SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (
@@ -2520,7 +2520,7 @@ describe('hasMany through', () => {
                       AND EXISTS (
                         SELECT 1 FROM "chatUser"
                         WHERE "chatUser"."userId" = "users"."id"
-                          AND "chatUser"."chatId" = "chat"."id"
+                          AND "chatUser"."chatId" = "chat"."idOfChat"
                         LIMIT 1
                       )
                     LIMIT 1
@@ -2534,20 +2534,20 @@ describe('hasMany through', () => {
       });
 
       it('should allow to select count', () => {
-        const query = db.chat.as('c').select('Id', {
+        const query = db.chat.as('c').select('IdOfChat', {
           profilesCount: (q) => q.profiles.count(),
         });
 
         assertType<
           Awaited<typeof query>,
-          { Id: number; profilesCount: number }[]
+          { IdOfChat: number; profilesCount: number }[]
         >();
 
         expectSql(
           query.toSql(),
           `
             SELECT
-              "c"."id" AS "Id",
+              "c"."idOfChat" AS "IdOfChat",
               (
                 SELECT count(*)
                 FROM "profile" AS "profiles"
@@ -2557,7 +2557,7 @@ describe('hasMany through', () => {
                     AND EXISTS (
                       SELECT 1 FROM "chatUser"
                       WHERE "chatUser"."userId" = "users"."id"
-                        AND "chatUser"."chatId" = "c"."id"
+                        AND "chatUser"."chatId" = "c"."idOfChat"
                       LIMIT 1
                     )
                   LIMIT 1
@@ -2570,20 +2570,20 @@ describe('hasMany through', () => {
       });
 
       it('should allow to pluck values', () => {
-        const query = db.chat.as('c').select('Id', {
+        const query = db.chat.as('c').select('IdOfChat', {
           bios: (q) => q.profiles.pluck('Bio'),
         });
 
         assertType<
           Awaited<typeof query>,
-          { Id: number; bios: (string | null)[] }[]
+          { IdOfChat: number; bios: (string | null)[] }[]
         >();
 
         expectSql(
           query.toSql(),
           `
             SELECT
-              "c"."id" AS "Id",
+              "c"."idOfChat" AS "IdOfChat",
               (
                 SELECT COALESCE(json_agg("c"), '[]')
                 FROM (
@@ -2595,7 +2595,7 @@ describe('hasMany through', () => {
                       AND EXISTS (
                         SELECT 1 FROM "chatUser"
                         WHERE "chatUser"."userId" = "users"."id"
-                          AND "chatUser"."chatId" = "c"."id"
+                          AND "chatUser"."chatId" = "c"."idOfChat"
                         LIMIT 1
                       )
                     LIMIT 1
@@ -2608,20 +2608,20 @@ describe('hasMany through', () => {
       });
 
       it('should handle exists sub query', () => {
-        const query = db.chat.as('c').select('Id', {
+        const query = db.chat.as('c').select('IdOfChat', {
           hasProfiles: (q) => q.profiles.exists(),
         });
 
         assertType<
           Awaited<typeof query>,
-          { Id: number; hasProfiles: boolean }[]
+          { IdOfChat: number; hasProfiles: boolean }[]
         >();
 
         expectSql(
           query.toSql(),
           `
             SELECT
-              "c"."id" AS "Id",
+              "c"."idOfChat" AS "IdOfChat",
               COALESCE((
                 SELECT true
                 FROM "profile" AS "profiles"
@@ -2631,7 +2631,7 @@ describe('hasMany through', () => {
                     AND EXISTS (
                       SELECT 1 FROM "chatUser"
                       WHERE "chatUser"."userId" = "users"."id"
-                        AND "chatUser"."chatId" = "c"."id"
+                        AND "chatUser"."chatId" = "c"."idOfChat"
                       LIMIT 1
                     )
                   LIMIT 1

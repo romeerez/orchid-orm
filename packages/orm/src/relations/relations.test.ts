@@ -46,7 +46,7 @@ describe('relations', () => {
   });
 
   it('should handle sub query pluck', async () => {
-    const ChatId = await db.chat.get('Id').create(chatData);
+    const ChatId = await db.chat.get('IdOfChat').create(chatData);
     const AuthorId = await db.user.get('Id').create(userData);
 
     const data = {

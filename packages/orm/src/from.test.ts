@@ -12,7 +12,7 @@ describe('orm', () => {
   useTestDatabase();
 
   it('should have method `$from` with proper handling of type, where operators, parsers', async () => {
-    const ChatId = await db.chat.get('Id').create(chatData);
+    const ChatId = await db.chat.get('IdOfChat').create(chatData);
     const AuthorId = await db.user.get('Id').create(userData);
     await db.message.count().create({ ...messageData, ChatId, AuthorId });
 

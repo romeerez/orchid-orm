@@ -50,7 +50,7 @@ export class UserTable extends BaseTable {
     chats: this.hasAndBelongsToMany(() => ChatTable, {
       primaryKey: 'Id',
       foreignKey: 'userId',
-      associationPrimaryKey: 'Id',
+      associationPrimaryKey: 'IdOfChat',
       associationForeignKey: 'chatId',
       joinTable: 'chatUser',
     }),
@@ -91,14 +91,15 @@ export type Chat = ChatTable['columns']['type'];
 export class ChatTable extends BaseTable {
   table = 'chat';
   columns = this.setColumns((t) => ({
-    Id: t.name('id').serial().primaryKey(),
+    // a different id name to better test has and belongs to many
+    IdOfChat: t.name('idOfChat').serial().primaryKey(),
     Title: t.name('title').text(),
     ...t.timestamps(),
   }));
 
   relations = {
     users: this.hasAndBelongsToMany(() => UserTable, {
-      primaryKey: 'Id',
+      primaryKey: 'IdOfChat',
       foreignKey: 'chatId',
       associationPrimaryKey: 'Id',
       associationForeignKey: 'userId',
@@ -111,7 +112,7 @@ export class ChatTable extends BaseTable {
     }),
 
     messages: this.hasMany(() => MessageTable, {
-      primaryKey: 'Id',
+      primaryKey: 'IdOfChat',
       foreignKey: 'ChatId',
     }),
   };
@@ -126,7 +127,7 @@ export class MessageTable extends BaseTable {
     ChatId: t
       .name('chatId')
       .integer()
-      .foreignKey(() => ChatTable, 'Id'),
+      .foreignKey(() => ChatTable, 'IdOfChat'),
     AuthorId: t
       .name('authorId')
       .integer()
@@ -143,7 +144,7 @@ export class MessageTable extends BaseTable {
     }),
 
     chat: this.belongsTo(() => ChatTable, {
-      primaryKey: 'Id',
+      primaryKey: 'IdOfChat',
       foreignKey: 'ChatId',
     }),
 
