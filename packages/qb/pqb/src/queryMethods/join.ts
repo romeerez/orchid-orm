@@ -12,7 +12,6 @@ import { WhereQueryBuilder } from './where';
 import { Relation, RelationsBase } from '../relations';
 import { QueryData } from '../sql';
 import {
-  ColumnsShapeBase,
   RawExpression,
   EmptyObject,
   StringKey,
@@ -444,14 +443,10 @@ export class OnQueryBuilder<
 {
   constructor(
     q: QueryBase | string,
-    shape: ColumnsShapeBase,
+    data: Pick<QueryData, 'shape' | 'joinedShapes'>,
     public joinTo: QueryBase,
   ) {
-    super(q, shape);
-    this.query.joinedShapes = {
-      ...joinTo.query.joinedShapes,
-      [(joinTo.query.as || joinTo.table) as string]: joinTo.shape,
-    };
+    super(q, data);
   }
 
   on<T extends this>(this: T, ...args: OnArgs<T>): T {

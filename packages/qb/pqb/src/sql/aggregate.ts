@@ -69,6 +69,8 @@ export const aggregateToSql = (
       {
         and: options.filter ? [options.filter] : undefined,
         or: options.filterOr?.map((item) => [item]),
+        shape: table.query.shape,
+        joinedShapes: table.query.joinedShapes,
       },
       quotedAs,
     );

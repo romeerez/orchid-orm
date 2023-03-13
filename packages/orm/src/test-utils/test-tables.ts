@@ -4,9 +4,11 @@ import { tableToZod } from 'orchid-orm-schema-to-zod';
 export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
     ...t,
-    text: (min = 0, max = Infinity) => t.text(min, max),
+    text(min = 0, max = Infinity) {
+      return t.text.call(this, min, max);
+    },
     timestamp() {
-      return t.timestamp().parse((input) => new Date(input));
+      return t.timestamp.call(this).parse((input) => new Date(input));
     },
   }),
 });
@@ -15,11 +17,12 @@ export type User = UserTable['columns']['type'];
 export class UserTable extends BaseTable {
   table = 'user';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
-    name: t.text(),
-    password: t.text(),
-    picture: t.text().nullable(),
-    data: t
+    Id: t.name('id').serial().primaryKey(),
+    Name: t.name('name').text(),
+    Password: t.name('password').text(),
+    Picture: t.name('picture').text().nullable(),
+    Data: t
+      .name('data')
       .json((j) =>
         j.object({
           name: j.string(),
@@ -27,27 +30,27 @@ export class UserTable extends BaseTable {
         }),
       )
       .nullable(),
-    age: t.integer().nullable(),
-    active: t.boolean().nullable(),
+    Age: t.name('age').integer().nullable(),
+    Active: t.name('active').boolean().nullable(),
     ...t.timestamps(),
   }));
 
   relations = {
     profile: this.hasOne(() => ProfileTable, {
       required: true,
-      primaryKey: 'id',
-      foreignKey: 'userId',
+      primaryKey: 'Id',
+      foreignKey: 'UserId',
     }),
 
     messages: this.hasMany(() => MessageTable, {
-      primaryKey: 'id',
-      foreignKey: 'authorId',
+      primaryKey: 'Id',
+      foreignKey: 'AuthorId',
     }),
 
     chats: this.hasAndBelongsToMany(() => ChatTable, {
-      primaryKey: 'id',
+      primaryKey: 'Id',
       foreignKey: 'userId',
-      associationPrimaryKey: 'id',
+      associationPrimaryKey: 'Id',
       associationForeignKey: 'chatId',
       joinTable: 'chatUser',
     }),
@@ -59,20 +62,21 @@ export type Profile = ProfileTable['columns']['type'];
 export class ProfileTable extends BaseTable {
   table = 'profile';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
-    userId: t
+    Id: t.name('id').serial().primaryKey(),
+    UserId: t
+      .name('userId')
       .integer()
       .nullable()
-      .foreignKey(() => UserTable, 'id'),
-    bio: t.text().nullable(),
+      .foreignKey(() => UserTable, 'Id'),
+    Bio: t.name('bio').text().nullable(),
     ...t.timestamps(),
   }));
 
   relations = {
     user: this.belongsTo(() => UserTable, {
       required: true,
-      primaryKey: 'id',
-      foreignKey: 'userId',
+      primaryKey: 'Id',
+      foreignKey: 'UserId',
     }),
 
     chats: this.hasMany(() => ChatTable, {
@@ -87,16 +91,16 @@ export type Chat = ChatTable['columns']['type'];
 export class ChatTable extends BaseTable {
   table = 'chat';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
-    title: t.text(),
+    Id: t.name('id').serial().primaryKey(),
+    Title: t.name('title').text(),
     ...t.timestamps(),
   }));
 
   relations = {
     users: this.hasAndBelongsToMany(() => UserTable, {
-      primaryKey: 'id',
+      primaryKey: 'Id',
       foreignKey: 'chatId',
-      associationPrimaryKey: 'id',
+      associationPrimaryKey: 'Id',
       associationForeignKey: 'userId',
       joinTable: 'chatUser',
     }),
@@ -107,8 +111,8 @@ export class ChatTable extends BaseTable {
     }),
 
     messages: this.hasMany(() => MessageTable, {
-      primaryKey: 'id',
-      foreignKey: 'chatId',
+      primaryKey: 'Id',
+      foreignKey: 'ChatId',
     }),
   };
 }
@@ -118,25 +122,29 @@ export type Message = MessageTable['columns']['type'];
 export class MessageTable extends BaseTable {
   table = 'message';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
-    chatId: t.integer().foreignKey(() => ChatTable, 'id'),
-    authorId: t
+    Id: t.name('id').serial().primaryKey(),
+    ChatId: t
+      .name('chatId')
+      .integer()
+      .foreignKey(() => ChatTable, 'Id'),
+    AuthorId: t
+      .name('authorId')
       .integer()
       .nullable()
-      .foreignKey(() => UserTable, 'id'),
-    text: t.text(),
+      .foreignKey(() => UserTable, 'Id'),
+    Text: t.name('text').text(),
     ...t.timestamps(),
   }));
 
   relations = {
     user: this.belongsTo(() => UserTable, {
-      primaryKey: 'id',
-      foreignKey: 'authorId',
+      primaryKey: 'Id',
+      foreignKey: 'AuthorId',
     }),
 
     chat: this.belongsTo(() => ChatTable, {
-      primaryKey: 'id',
-      foreignKey: 'chatId',
+      primaryKey: 'Id',
+      foreignKey: 'ChatId',
     }),
 
     profile: this.hasOne(() => ProfileTable, {
@@ -152,16 +160,19 @@ export type Post = PostTable['columns']['type'];
 export class PostTable extends BaseTable {
   table = 'post';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
-    userId: t.integer().foreignKey(() => UserTable, 'id'),
-    title: t.text(),
+    Id: t.name('id').serial().primaryKey(),
+    UserId: t
+      .name('userId')
+      .integer()
+      .foreignKey(() => UserTable, 'Id'),
+    Title: t.name('title').text(),
     ...t.timestamps(),
   }));
 
   relations = {
     postTags: this.hasMany(() => PostTagTable, {
-      primaryKey: 'id',
-      foreignKey: 'postId',
+      primaryKey: 'Id',
+      foreignKey: 'PostId',
     }),
   };
 }
@@ -171,15 +182,21 @@ export type PostTag = PostTagTable['columns']['type'];
 export class PostTagTable extends BaseTable {
   table = 'postTag';
   columns = this.setColumns((t) => ({
-    postId: t.integer().foreignKey(() => PostTable, 'id'),
-    tag: t.text().foreignKey(() => TagTable, 'tag'),
+    PostId: t
+      .name('postId')
+      .integer()
+      .foreignKey(() => PostTable, 'Id'),
+    Tag: t
+      .name('tag')
+      .text()
+      .foreignKey(() => TagTable, 'Tag'),
     ...t.primaryKey(['postId', 'tag']),
   }));
 
   relations = {
     tag: this.belongsTo(() => TagTable, {
-      primaryKey: 'tag',
-      foreignKey: 'tag',
+      primaryKey: 'Tag',
+      foreignKey: 'Tag',
     }),
   };
 }
@@ -189,6 +206,6 @@ export type Tag = TagTable['columns']['type'];
 export class TagTable extends BaseTable {
   table = 'tag';
   columns = this.setColumns((t) => ({
-    tag: t.text().primaryKey(),
+    Tag: t.name('tag').text().primaryKey(),
   }));
 }

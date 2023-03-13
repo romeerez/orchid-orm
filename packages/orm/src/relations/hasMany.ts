@@ -142,13 +142,14 @@ export const makeHasManyMethod = (
     >;
 
     const throughRelation = getThroughRelation(table, through);
-    const throughTable = throughRelation.table.as(through);
     const sourceRelation = getSourceRelation(throughRelation, source);
     const sourceRelationQuery = sourceRelation.query.as(relationName);
     const sourceQuery = sourceRelation.joinQuery(
       throughRelation.query,
       sourceRelationQuery,
     );
+
+    const whereExistsCallback = () => sourceQuery;
 
     return {
       returns: 'many',
@@ -157,37 +158,34 @@ export const makeHasManyMethod = (
           through
         ](params);
 
-        return query.whereExists<Query, Query>(throughTable, (() =>
-          sourceQuery.merge(throughQuery)) as unknown as JoinCallback<
-          Query,
-          Query
-        >);
+        return query.whereExists<Query, Query>(
+          throughQuery,
+          whereExistsCallback as unknown as JoinCallback<Query, Query>,
+        );
       },
       joinQuery(fromQuery, toQuery) {
-        return toQuery.whereExists<Query, Query>(throughTable, (() => {
-          const as = getQueryAs(toQuery);
-          return throughRelation
-            .joinQuery(fromQuery, throughRelation.query)
-            .merge(
-              sourceRelation.joinQuery(
-                throughRelation.query,
-                sourceRelation.query.as(as),
-              ),
+        return toQuery.whereExists<Query, Query>(
+          throughRelation.joinQuery(fromQuery, throughRelation.query),
+          (() => {
+            const as = getQueryAs(toQuery);
+            return sourceRelation.joinQuery(
+              throughRelation.query,
+              sourceRelation.query.as(as),
             );
-        }) as unknown as JoinCallback<Query, Query>);
+          }) as unknown as JoinCallback<Query, Query>,
+        );
       },
       reverseJoin(fromQuery, toQuery) {
-        return fromQuery.whereExists<Query, Query>(throughTable, (() => {
-          const as = getQueryAs(toQuery);
-          return throughRelation
-            .joinQuery(fromQuery, throughRelation.query)
-            .merge(
-              sourceRelation.joinQuery(
-                throughRelation.query,
-                sourceRelation.query.as(as),
-              ),
+        return fromQuery.whereExists<Query, Query>(
+          throughRelation.joinQuery(fromQuery, throughRelation.query),
+          (() => {
+            const as = getQueryAs(toQuery);
+            return sourceRelation.joinQuery(
+              throughRelation.query,
+              sourceRelation.query.as(as),
             );
-        }) as unknown as JoinCallback<Query, Query>);
+          }) as unknown as JoinCallback<Query, Query>,
+        );
       },
       primaryKey: sourceRelation.primaryKey,
     };

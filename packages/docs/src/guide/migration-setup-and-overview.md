@@ -132,6 +132,7 @@ type MigrationConfig = {
   
   // log options, see "log option" in the query builder document
   log?: boolean | Partial<QueryLogObject>;
+  // console by default
   logger?: {
     log(message: string): void;
     error(message: string): void;
@@ -146,6 +147,12 @@ type MigrationConfig = {
     basePath: string;
     // the same object is passed between various appCodeUpdater calls
     cache: object;
+    // the logger object from the above config
+    // if log: false in the above config, logger is undefined
+    logger?: {
+      log(message: string): void;
+      error(message: string): void;
+    };
   }): Promise<void>;
 
   useCodeUpdater?: boolean;

@@ -1,5 +1,11 @@
 import { db } from './test-utils/test-db';
-import { profileData, toLine, userData } from './test-utils/test-utils';
+import {
+  profileData,
+  profileSelectAll,
+  toLine,
+  userData,
+  userSelectAll,
+} from './test-utils/test-utils';
 import { Client } from 'pg';
 import { noop } from 'orchid-core';
 
@@ -26,12 +32,12 @@ describe('transaction', () => {
       toLine(`
         INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
         VALUES ($1, $2, $3, $4)
-        RETURNING *
+        RETURNING ${userSelectAll}
       `),
       toLine(`
         INSERT INTO "profile"("bio", "updatedAt", "createdAt")
         VALUES ($1, $2, $3)
-        RETURNING *
+        RETURNING ${profileSelectAll}
       `),
       'ROLLBACK',
     ]);

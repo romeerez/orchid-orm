@@ -4,9 +4,12 @@ import {
   chatData,
   expectSql,
   messageData,
+  messageSelectAll,
   profileData,
+  profileSelectAll,
   userData,
   useRelationCallback,
+  userSelectAll,
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
@@ -23,13 +26,13 @@ describe('belongsTo', () => {
 
       assertType<
         typeof db.profile.user,
-        RelationQuery<'user', { userId: number | null }, never, UserQuery, true>
+        RelationQuery<'user', { UserId: number | null }, never, UserQuery, true>
       >();
 
-      const userId = await db.user.get('id').create(userData);
+      const UserId = await db.user.get('Id').create(userData);
       const profileId = await db.profile
-        .get('id')
-        .create({ ...profileData, userId });
+        .get('Id')
+        .create({ ...profileData, UserId });
 
       const profile = await db.profile.find(profileId);
       const query = db.profile.user(profile);
@@ -37,11 +40,11 @@ describe('belongsTo', () => {
       expectSql(
         query.toSql(),
         `
-        SELECT * FROM "user"
+        SELECT ${userSelectAll} FROM "user"
         WHERE "user"."id" = $1
         LIMIT $2
       `,
-        [userId, 1],
+        [UserId, 1],
       );
 
       const user = await query;
@@ -51,17 +54,17 @@ describe('belongsTo', () => {
 
     it('should handle chained query', () => {
       const query = db.profile
-        .where({ bio: 'bio' })
-        .user.where({ name: 'name' });
+        .where({ Bio: 'bio' })
+        .user.where({ Name: 'name' });
 
       expectSql(
         query.toSql(),
         `
-          SELECT * FROM "user"
+          SELECT ${userSelectAll} FROM "user"
           WHERE EXISTS (
                   SELECT 1 FROM "profile"
-                  WHERE "profile"."userId" = "user"."id"
-                    AND "profile"."bio" = $1
+                  WHERE "profile"."bio" = $1
+                    AND "profile"."userId" = "user"."id"
                   LIMIT 1
                 )
             AND "user"."name" = $2
@@ -85,7 +88,7 @@ describe('belongsTo', () => {
           .joinQuery(db.profile.as('p'), db.user.as('u'))
           .toSql(),
         `
-          SELECT * FROM "user" AS "u"
+          SELECT ${userSelectAll} FROM "user" AS "u"
           WHERE "u"."id" = "p"."userId"
         `,
       );
@@ -95,7 +98,7 @@ describe('belongsTo', () => {
       expectSql(
         db.profile.whereExists('user').toSql(),
         `
-          SELECT * FROM "profile"
+          SELECT ${profileSelectAll} FROM "profile"
           WHERE EXISTS (
             SELECT 1 FROM "user"
             WHERE "user"."id" = "profile"."userId"
@@ -107,10 +110,10 @@ describe('belongsTo', () => {
       expectSql(
         db.profile
           .as('p')
-          .whereExists('user', (q) => q.where({ name: 'name' }))
+          .whereExists('user', (q) => q.where({ Name: 'name' }))
           .toSql(),
         `
-        SELECT * FROM "profile" AS "p"
+        SELECT ${profileSelectAll} FROM "profile" AS "p"
         WHERE EXISTS (
           SELECT 1 FROM "user"
           WHERE "user"."id" = "p"."userId"
@@ -127,11 +130,11 @@ describe('belongsTo', () => {
         db.message
           .as('m')
           .whereExists('user', (q) =>
-            q.whereExists('profile', (q) => q.where({ bio: 'bio' })),
+            q.whereExists('profile', (q) => q.where({ Bio: 'bio' })),
           )
           .toSql(),
         `
-          SELECT * FROM "message" AS "m"
+          SELECT ${messageSelectAll} FROM "message" AS "m"
           WHERE EXISTS (
             SELECT 1 FROM "user"
             WHERE "user"."id" = "m"."authorId"
@@ -151,18 +154,18 @@ describe('belongsTo', () => {
     it('should be supported in join', () => {
       const query = db.profile
         .as('p')
-        .join('user', (q) => q.where({ name: 'name' }))
-        .select('bio', 'user.name');
+        .join('user', (q) => q.where({ Name: 'name' }))
+        .select('Bio', 'user.Name');
 
       assertType<
         Awaited<typeof query>,
-        { bio: string | null; name: string }[]
+        { Bio: string | null; Name: string }[]
       >();
 
       expectSql(
         query.toSql(),
         `
-        SELECT "p"."bio", "user"."name"
+        SELECT "p"."bio" AS "Bio", "user"."name" AS "Name"
         FROM "profile" AS "p"
         JOIN "user" ON "user"."id" = "p"."userId" AND "user"."name" = $1
       `,
@@ -172,24 +175,25 @@ describe('belongsTo', () => {
 
     describe('select', () => {
       it('should be selectable', async () => {
-        const query = db.profile.as('p').select('id', {
-          user: (q) => q.user.select('id', 'name').where({ name: 'name' }),
+        const query = db.profile.as('p').select('Id', {
+          user: (q) => q.user.select('Id', 'Name').where({ Name: 'name' }),
         });
 
         assertType<
           Awaited<typeof query>,
-          { id: number; user: { id: number; name: string } }[]
+          { Id: number; user: { Id: number; Name: string } }[]
         >();
 
         expectSql(
           query.toSql(),
           `
             SELECT
-              "p"."id",
+              "p"."id" AS "Id",
               (
                 SELECT row_to_json("t".*)
                 FROM (
-                  SELECT "user"."id", "user"."name" FROM "user"
+                  SELECT "user"."id" AS "Id", "user"."name" AS "Name"
+                  FROM "user"
                   WHERE "user"."name" = $1
                     AND "user"."id" = "p"."userId"
                   LIMIT $2
@@ -202,19 +206,19 @@ describe('belongsTo', () => {
       });
 
       it('should be selectable by relation name', async () => {
-        const query = db.profile.select('id', 'user');
+        const query = db.profile.select('Id', 'user');
 
-        assertType<Awaited<typeof query>, { id: number; user: User }[]>();
+        assertType<Awaited<typeof query>, { Id: number; user: User }[]>();
 
         expectSql(
           query.toSql(),
           `
             SELECT
-              "profile"."id",
+              "profile"."id" AS "Id",
               (
                 SELECT row_to_json("t".*)
                 FROM (
-                  SELECT * FROM "user"
+                  SELECT ${userSelectAll} FROM "user"
                   WHERE "user"."id" = "profile"."userId"
                   LIMIT $1
                 ) AS "t"
@@ -226,17 +230,17 @@ describe('belongsTo', () => {
       });
 
       it('should handle exists sub query', async () => {
-        const query = db.profile.as('p').select('id', {
+        const query = db.profile.as('p').select('Id', {
           hasUser: (q) => q.user.exists(),
         });
 
-        assertType<Awaited<typeof query>, { id: number; hasUser: boolean }[]>();
+        assertType<Awaited<typeof query>, { Id: number; hasUser: boolean }[]>();
 
         expectSql(
           query.toSql(),
           `
             SELECT
-              "p"."id",
+              "p"."id" AS "Id",
               COALESCE((
                 SELECT true
                 FROM "user"
@@ -252,112 +256,112 @@ describe('belongsTo', () => {
   describe('create', () => {
     const checkCreatedResults = async ({
       messageId,
-      chatId,
-      authorId,
-      text,
-      title,
-      name,
+      ChatId,
+      AuthorId,
+      Text,
+      Title,
+      Name,
     }: {
       messageId: number;
-      chatId: number;
-      authorId: number | null;
-      text: string;
-      title: string;
-      name: string;
+      ChatId: number;
+      AuthorId: number | null;
+      Text: string;
+      Title: string;
+      Name: string;
     }) => {
       const message = await db.message.find(messageId);
       expect(message).toEqual({
         ...message,
         ...messageData,
-        chatId,
-        authorId,
-        text,
+        ChatId,
+        AuthorId,
+        Text,
       });
 
-      const chat = await db.chat.find(chatId);
+      const chat = await db.chat.find(ChatId);
       expect(chat).toEqual({
         ...chat,
         ...chatData,
-        title,
+        Title,
       });
 
-      if (!authorId) return;
-      const user = await db.user.find(authorId);
+      if (!AuthorId) return;
+      const user = await db.user.find(AuthorId);
       expect(user).toEqual({
         ...user,
         ...userData,
-        active: null,
-        age: null,
-        data: null,
-        picture: null,
-        name,
+        Active: null,
+        Age: null,
+        Data: null,
+        Picture: null,
+        Name,
       });
     };
 
     describe('nested create', () => {
       it('should support create', async () => {
         const {
-          id: messageId,
-          chatId,
-          authorId,
-        } = await db.message.select('id', 'chatId', 'authorId').create({
+          Id: messageId,
+          ChatId,
+          AuthorId,
+        } = await db.message.select('Id', 'ChatId', 'AuthorId').create({
           ...messageData,
-          text: 'message',
+          Text: 'message',
           chat: {
             create: {
               ...chatData,
-              title: 'chat',
+              Title: 'chat',
             },
           },
           user: {
             create: {
               ...userData,
-              name: 'user',
+              Name: 'user',
             },
           },
         });
 
         await checkCreatedResults({
           messageId,
-          chatId,
-          authorId,
-          text: 'message',
-          title: 'chat',
-          name: 'user',
+          ChatId,
+          AuthorId,
+          Text: 'message',
+          Title: 'chat',
+          Name: 'user',
         });
       });
 
       it('should support create in batch create', async () => {
-        const query = db.message.select('id', 'chatId', 'authorId').createMany([
+        const query = db.message.select('Id', 'ChatId', 'AuthorId').createMany([
           {
             ...messageData,
-            text: 'message 1',
+            Text: 'message 1',
             chat: {
               create: {
                 ...chatData,
-                title: 'chat 1',
+                Title: 'chat 1',
               },
             },
             user: {
               create: {
                 ...userData,
-                name: 'user 1',
+                Name: 'user 1',
               },
             },
           },
           {
             ...messageData,
-            text: 'message 2',
+            Text: 'message 2',
             chat: {
               create: {
                 ...chatData,
-                title: 'chat 2',
+                Title: 'chat 2',
               },
             },
             user: {
               create: {
                 ...userData,
-                name: 'user 2',
+                Name: 'user 2',
               },
             },
           },
@@ -366,66 +370,67 @@ describe('belongsTo', () => {
         const [first, second] = await query;
 
         await checkCreatedResults({
-          messageId: first.id,
-          chatId: first.chatId,
-          authorId: first.authorId,
-          text: 'message 1',
-          title: 'chat 1',
-          name: 'user 1',
+          messageId: first.Id,
+          ChatId: first.ChatId,
+          AuthorId: first.AuthorId,
+          Text: 'message 1',
+          Title: 'chat 1',
+          Name: 'user 1',
         });
 
         await checkCreatedResults({
-          messageId: second.id,
-          chatId: second.chatId,
-          authorId: second.authorId,
-          text: 'message 2',
-          title: 'chat 2',
-          name: 'user 2',
+          messageId: second.Id,
+          ChatId: second.ChatId,
+          AuthorId: second.AuthorId,
+          Text: 'message 2',
+          Title: 'chat 2',
+          Name: 'user 2',
         });
       });
 
       describe('id has no default', () => {
         // for this issue: https://github.com/romeerez/orchid-orm/issues/34
         it('should create record with explicitly setting id and foreign key', async () => {
-          const userId = await db.user.get('id').create(userData);
+          const UserId = await db.user.get('Id').create(userData);
 
           class UserTable extends BaseTable {
             table = 'user';
             columns = this.setColumns((t) => ({
-              id: t.serial().primaryKey(),
+              Id: t.name('id').serial().primaryKey(),
             }));
           }
 
           class ProfileTable extends BaseTable {
             table = 'profile';
             columns = this.setColumns((t) => ({
-              id: t.serial().primaryKey(),
-              userId: t
+              Id: t.name('id').serial().primaryKey(),
+              UserId: t
+                .name('userId')
                 .integer()
                 .nullable()
-                .foreignKey(() => UserTable, 'id'),
+                .foreignKey(() => UserTable, 'Id'),
+              Bio: t.name('bio').text().nullable(),
               ...t.timestamps(),
-              bio: t.text().nullable(),
             }));
 
             relations = {
               user: this.belongsTo(() => UserTable, {
                 required: true,
-                primaryKey: 'id',
-                foreignKey: 'userId',
+                primaryKey: 'Id',
+                foreignKey: 'UserId',
               }),
             };
           }
 
-          const { profile } = orchidORM(pgConfig, {
+          const local = orchidORM(pgConfig, {
             user: UserTable,
             profile: ProfileTable,
           });
 
-          const q = profile.create({
-            id: 1,
-            userId,
-            bio: 'bio',
+          const q = local.profile.create({
+            Id: 1,
+            UserId,
+            Bio: 'bio',
           });
 
           expectSql(
@@ -433,17 +438,19 @@ describe('belongsTo', () => {
             `
               INSERT INTO "profile"("id", "userId", "bio")
               VALUES ($1, $2, $3)
-              RETURNING *
+              RETURNING ${profileSelectAll}
             `,
-            [1, userId, 'bio'],
+            [1, UserId, 'bio'],
           );
 
           const result = await q;
           expect(result).toMatchObject({
-            id: 1,
-            userId,
-            bio: 'bio',
+            Id: 1,
+            UserId,
+            Bio: 'bio',
           });
+
+          local.$close();
         });
       });
 
@@ -479,61 +486,61 @@ describe('belongsTo', () => {
 
     describe('connect', () => {
       it('should support connect', async () => {
-        await db.chat.create({ ...chatData, title: 'chat' });
-        await db.user.create({ ...userData, name: 'user' });
+        await db.chat.create({ ...chatData, Title: 'chat' });
+        await db.user.create({ ...userData, Name: 'user' });
 
-        const query = db.message.select('id', 'chatId', 'authorId').create({
+        const query = db.message.select('Id', 'ChatId', 'AuthorId').create({
           ...messageData,
-          text: 'message',
+          Text: 'message',
           chat: {
-            connect: { title: 'chat' },
+            connect: { Title: 'chat' },
           },
           user: {
-            connect: { name: 'user' },
+            connect: { Name: 'user' },
           },
         });
 
-        const { id: messageId, chatId, authorId } = await query;
+        const { Id: messageId, ChatId, AuthorId } = await query;
 
         await checkCreatedResults({
           messageId,
-          chatId,
-          authorId,
-          text: 'message',
-          title: 'chat',
-          name: 'user',
+          ChatId,
+          AuthorId,
+          Text: 'message',
+          Title: 'chat',
+          Name: 'user',
         });
       });
 
       it('should support connect in batch create', async () => {
         await db.chat.createMany([
-          { ...chatData, title: 'chat 1' },
-          { ...chatData, title: 'chat 2' },
+          { ...chatData, Title: 'chat 1' },
+          { ...chatData, Title: 'chat 2' },
         ]);
         await db.user.createMany([
-          { ...userData, name: 'user 1' },
-          { ...userData, name: 'user 2' },
+          { ...userData, Name: 'user 1' },
+          { ...userData, Name: 'user 2' },
         ]);
 
-        const query = db.message.select('id', 'chatId', 'authorId').createMany([
+        const query = db.message.select('Id', 'ChatId', 'AuthorId').createMany([
           {
             ...messageData,
-            text: 'message 1',
+            Text: 'message 1',
             chat: {
-              connect: { title: 'chat 1' },
+              connect: { Title: 'chat 1' },
             },
             user: {
-              connect: { name: 'user 1' },
+              connect: { Name: 'user 1' },
             },
           },
           {
             ...messageData,
-            text: 'message 2',
+            Text: 'message 2',
             chat: {
-              connect: { title: 'chat 2' },
+              connect: { Title: 'chat 2' },
             },
             user: {
-              connect: { name: 'user 2' },
+              connect: { Name: 'user 2' },
             },
           },
         ]);
@@ -541,107 +548,107 @@ describe('belongsTo', () => {
         const [first, second] = await query;
 
         await checkCreatedResults({
-          messageId: first.id,
-          chatId: first.chatId,
-          authorId: first.authorId,
-          text: 'message 1',
-          title: 'chat 1',
-          name: 'user 1',
+          messageId: first.Id,
+          ChatId: first.ChatId,
+          AuthorId: first.AuthorId,
+          Text: 'message 1',
+          Title: 'chat 1',
+          Name: 'user 1',
         });
 
         await checkCreatedResults({
-          messageId: second.id,
-          chatId: second.chatId,
-          authorId: second.authorId,
-          text: 'message 2',
-          title: 'chat 2',
-          name: 'user 2',
+          messageId: second.Id,
+          ChatId: second.ChatId,
+          AuthorId: second.AuthorId,
+          Text: 'message 2',
+          Title: 'chat 2',
+          Name: 'user 2',
         });
       });
     });
 
     describe('connectOrCreate', () => {
       it('should support connect or create', async () => {
-        const chat = await db.chat.select('id').create({
+        const chat = await db.chat.select('Id').create({
           ...chatData,
-          title: 'chat',
+          Title: 'chat',
         });
 
         const query = await db.message
-          .select('id', 'chatId', 'authorId')
+          .select('Id', 'ChatId', 'AuthorId')
           .create({
             ...messageData,
-            text: 'message',
+            Text: 'message',
             chat: {
               connectOrCreate: {
-                where: { title: 'chat' },
-                create: { ...chatData, title: 'chat' },
+                where: { Title: 'chat' },
+                create: { ...chatData, Title: 'chat' },
               },
             },
             user: {
               connectOrCreate: {
-                where: { name: 'user' },
-                create: { ...userData, name: 'user' },
+                where: { Name: 'user' },
+                create: { ...userData, Name: 'user' },
               },
             },
           });
 
-        const { id: messageId, chatId, authorId } = await query;
+        const { Id: messageId, ChatId, AuthorId } = await query;
 
-        expect(chatId).toBe(chat.id);
+        expect(ChatId).toBe(chat.Id);
 
         await checkCreatedResults({
           messageId,
-          chatId,
-          authorId,
-          text: 'message',
-          title: 'chat',
-          name: 'user',
+          ChatId,
+          AuthorId,
+          Text: 'message',
+          Title: 'chat',
+          Name: 'user',
         });
       });
 
       it('should support connect or create in batch create', async () => {
-        const chat = await db.chat.select('id').create({
+        const chat = await db.chat.select('Id').create({
           ...chatData,
-          title: 'chat 1',
+          Title: 'chat 1',
         });
-        const user = await db.user.select('id').create({
+        const user = await db.user.select('Id').create({
           ...userData,
-          name: 'user 2',
+          Name: 'user 2',
         });
 
         const query = await db.message
-          .select('id', 'chatId', 'authorId')
+          .select('Id', 'ChatId', 'AuthorId')
           .createMany([
             {
               ...messageData,
-              text: 'message 1',
+              Text: 'message 1',
               chat: {
                 connectOrCreate: {
-                  where: { title: 'chat 1' },
-                  create: { ...chatData, title: 'chat 1' },
+                  where: { Title: 'chat 1' },
+                  create: { ...chatData, Title: 'chat 1' },
                 },
               },
               user: {
                 connectOrCreate: {
-                  where: { name: 'user 1' },
-                  create: { ...userData, name: 'user 1' },
+                  where: { Name: 'user 1' },
+                  create: { ...userData, Name: 'user 1' },
                 },
               },
             },
             {
               ...messageData,
-              text: 'message 2',
+              Text: 'message 2',
               chat: {
                 connectOrCreate: {
-                  where: { title: 'chat 2' },
-                  create: { ...chatData, title: 'chat 2' },
+                  where: { Title: 'chat 2' },
+                  create: { ...chatData, Title: 'chat 2' },
                 },
               },
               user: {
                 connectOrCreate: {
-                  where: { name: 'user 2' },
-                  create: { ...userData, name: 'user 2' },
+                  where: { Name: 'user 2' },
+                  create: { ...userData, Name: 'user 2' },
                 },
               },
             },
@@ -649,25 +656,25 @@ describe('belongsTo', () => {
 
         const [first, second] = await query;
 
-        expect(first.chatId).toBe(chat.id);
-        expect(second.authorId).toBe(user.id);
+        expect(first.ChatId).toBe(chat.Id);
+        expect(second.AuthorId).toBe(user.Id);
 
         await checkCreatedResults({
-          messageId: first.id,
-          chatId: first.chatId,
-          authorId: first.authorId,
-          text: 'message 1',
-          title: 'chat 1',
-          name: 'user 1',
+          messageId: first.Id,
+          ChatId: first.ChatId,
+          AuthorId: first.AuthorId,
+          Text: 'message 1',
+          Title: 'chat 1',
+          Name: 'user 1',
         });
 
         await checkCreatedResults({
-          messageId: second.id,
-          chatId: second.chatId,
-          authorId: second.authorId,
-          text: 'message 2',
-          title: 'chat 2',
-          name: 'user 2',
+          messageId: second.Id,
+          ChatId: second.ChatId,
+          AuthorId: second.AuthorId,
+          Text: 'message 2',
+          Title: 'chat 2',
+          Name: 'user 2',
         });
       });
 
@@ -680,7 +687,7 @@ describe('belongsTo', () => {
           ...messageData,
           chat: {
             connectOrCreate: {
-              where: { title: 'title' },
+              where: { Title: 'title' },
               create: chatData,
             },
           },
@@ -709,31 +716,31 @@ describe('belongsTo', () => {
     describe('disconnect', () => {
       it('should nullify foreignKey', async () => {
         const id = await db.profile
-          .get('id')
+          .get('Id')
           .create({ ...profileData, user: { create: userData } });
 
         const profile = await db.profile
-          .select('userId')
+          .select('UserId')
           .find(id)
           .update({
-            bio: 'string',
+            Bio: 'string',
             user: { disconnect: true },
           });
 
-        expect(profile.userId).toBe(null);
+        expect(profile.UserId).toBe(null);
       });
 
       it('should nullify foreignKey in batch update', async () => {
-        const ids = await db.profile.pluck('id').createMany([
+        const ids = await db.profile.pluck('Id').createMany([
           { ...profileData, user: { create: userData } },
           { ...profileData, user: { create: userData } },
         ]);
 
         const userIds = await db.profile
-          .pluck('userId')
-          .where({ id: { in: ids } })
+          .pluck('UserId')
+          .where({ Id: { in: ids } })
           .update({
-            bio: 'string',
+            Bio: 'string',
             user: { disconnect: true },
           });
 
@@ -743,8 +750,8 @@ describe('belongsTo', () => {
 
     describe('set', () => {
       it('should set foreignKey of current record with provided primaryKey', async () => {
-        const id = await db.profile.get('id').create(profileData);
-        const user = await db.user.select('id').create(userData);
+        const id = await db.profile.get('Id').create(profileData);
+        const user = await db.user.select('Id').create(userData);
 
         const profile = await db.profile
           .selectAll()
@@ -755,14 +762,14 @@ describe('belongsTo', () => {
             },
           });
 
-        expect(profile.userId).toBe(user.id);
+        expect(profile.UserId).toBe(user.Id);
       });
 
       it('should set foreignKey of current record from found related record', async () => {
-        const id = await db.profile.get('id').create(profileData);
-        const user = await db.user.select('id').create({
+        const id = await db.profile.get('Id').create(profileData);
+        const user = await db.user.select('Id').create({
           ...userData,
-          name: 'user',
+          Name: 'user',
         });
 
         const profile = await db.profile
@@ -770,84 +777,84 @@ describe('belongsTo', () => {
           .find(id)
           .update({
             user: {
-              set: { name: 'user' },
+              set: { Name: 'user' },
             },
           });
 
-        expect(profile.userId).toBe(user.id);
+        expect(profile.UserId).toBe(user.Id);
       });
 
       it('should set foreignKey of current record with provided primaryKey in batch update', async () => {
         const profileIds = await db.profile
-          .pluck('id')
+          .pluck('Id')
           .createMany([profileData, profileData]);
-        const user = await db.user.select('id').create(userData);
+        const user = await db.user.select('Id').create(userData);
 
         const updatedUserIds = await db.profile
-          .pluck('userId')
-          .where({ id: { in: profileIds } })
+          .pluck('UserId')
+          .where({ Id: { in: profileIds } })
           .update({
             user: {
               set: user,
             },
           });
 
-        expect(updatedUserIds).toEqual([user.id, user.id]);
+        expect(updatedUserIds).toEqual([user.Id, user.Id]);
       });
 
       it('should set foreignKey of current record from found related record in batch update', async () => {
         const profileIds = await db.profile
-          .pluck('id')
+          .pluck('Id')
           .createMany([profileData, profileData]);
-        const user = await db.user.select('id').create({
+        const user = await db.user.select('Id').create({
           ...userData,
-          name: 'user',
+          Name: 'user',
         });
 
         const updatedUserIds = await db.profile
-          .pluck('userId')
-          .where({ id: { in: profileIds } })
+          .pluck('UserId')
+          .where({ Id: { in: profileIds } })
           .update({
             user: {
-              set: { name: 'user' },
+              set: { Name: 'user' },
             },
           });
 
-        expect(updatedUserIds).toEqual([user.id, user.id]);
+        expect(updatedUserIds).toEqual([user.Id, user.Id]);
       });
     });
 
     describe('delete', () => {
       it('should nullify foreignKey and delete related record', async () => {
-        const { id, userId } = await db.profile
-          .select('id', 'userId')
+        const { Id, UserId } = await db.profile
+          .select('Id', 'UserId')
           .create({ ...profileData, user: { create: userData } });
 
         const profile = await db.profile
-          .select('userId')
-          .find(id)
+          .select('UserId')
+          .find(Id)
           .update({
             user: {
               delete: true,
             },
           });
 
-        expect(profile.userId).toBe(null);
+        expect(profile.UserId).toBe(null);
 
-        const user = await db.user.findByOptional({ id: userId });
+        const user = await db.user.findByOptional({ Id: UserId });
         expect(user).toBe(undefined);
       });
 
       it('should nullify foreignKey and delete related record in batch update', async () => {
         const user = await db.user.selectAll().create(userData);
-        const profileIds = await db.profile.pluck('id').createMany([
-          { ...profileData, userId: user.id },
-          { ...profileData, userId: user.id },
+        const profileIds = await db.profile.pluck('Id').createMany([
+          { ...profileData, UserId: user.Id },
+          { ...profileData, UserId: user.Id },
         ]);
 
         const updatedUserIds = await db.profile
-          .pluck('userId')
-          .where({ id: { in: profileIds } })
+          .pluck('UserId')
+          .where({ Id: { in: profileIds } })
           .update({
             user: {
               delete: true,
@@ -856,7 +863,7 @@ describe('belongsTo', () => {
 
         expect(updatedUserIds).toEqual([null, null]);
 
-        const deletedUser = await db.user.findOptional(user.id);
+        const deletedUser = await db.user.findOptional(user.Id);
         expect(deletedUser).toBe(undefined);
       });
 
@@ -879,9 +886,9 @@ describe('belongsTo', () => {
         };
 
         it('should invoke callbacks', async () => {
-          const id = await db.profile.get('id').create(profileWithUserData);
+          const Id = await db.profile.get('Id').create(profileWithUserData);
 
-          await db.profile.find(id).update(data);
+          await db.profile.find(Id).update(data);
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
@@ -891,10 +898,10 @@ describe('belongsTo', () => {
           resetMocks();
 
           const ids = await db.profile
-            .pluck('id')
+            .pluck('Id')
             .createMany([profileWithUserData, profileWithUserData]);
 
-          await db.profile.where({ id: { in: ids } }).update(data);
+          await db.profile.where({ Id: { in: ids } }).update(data);
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
@@ -904,43 +911,43 @@ describe('belongsTo', () => {
 
     describe('nested update', () => {
       it('should update related record', async () => {
-        const { id, userId } = await db.profile
-          .select('id', 'userId')
+        const { Id, UserId } = await db.profile
+          .select('Id', 'UserId')
           .create({ ...profileData, user: { create: userData } });
 
         await db.profile
-          .select('userId')
-          .find(id)
+          .select('UserId')
+          .find(Id)
           .update({
             user: {
               update: {
-                name: 'new name',
+                Name: 'new name',
               },
             },
           });
 
-        const user = await db.user.findBy({ id: userId });
-        expect(user.name).toBe('new name');
+        const user = await db.user.findBy({ Id: UserId });
+        expect(user.Name).toBe('new name');
       });
 
       it('should update related records in batch update', async () => {
-        const profiles = await db.profile.select('id', 'userId').createMany([
+        const profiles = await db.profile.select('Id', 'UserId').createMany([
           { ...profileData, user: { create: userData } },
           { ...profileData, user: { create: userData } },
         ]);
 
         await db.profile
-          .where({ id: { in: profiles.map((profile) => profile.id) } })
+          .where({ Id: { in: profiles.map((profile) => profile.Id) } })
           .update({
             user: {
               update: {
-                name: 'new name',
+                Name: 'new name',
               },
             },
           });
 
-        const updatedNames = await db.user.pluck('name').where({
-          id: { in: profiles.map((profile) => profile.userId as number) },
+        const updatedNames = await db.user.pluck('Name').where({
+          Id: { in: profiles.map((profile) => profile.UserId as number) },
         });
         expect(updatedNames).toEqual(['new name', 'new name']);
       });
@@ -960,15 +967,15 @@ describe('belongsTo', () => {
         const data = {
           user: {
             update: {
-              name: 'new name',
+              Name: 'new name',
             },
           },
         };
 
         it('should invoke callbacks', async () => {
-          const id = await db.profile.get('id').create(profileWithUserData);
+          const Id = await db.profile.get('Id').create(profileWithUserData);
 
-          await db.profile.find(id).update(data);
+          await db.profile.find(Id).update(data);
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
@@ -978,10 +985,10 @@ describe('belongsTo', () => {
           resetMocks();
 
           const ids = await db.profile
-            .pluck('id')
+            .pluck('Id')
             .createMany([profileWithUserData, profileWithUserData]);
 
-          await db.profile.where({ id: { in: ids } }).update(data);
+          await db.profile.where({ Id: { in: ids } }).update(data);
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
@@ -998,11 +1005,11 @@ describe('belongsTo', () => {
           },
         });
 
-        await db.profile.find(profile.id).update({
+        await db.profile.find(profile.Id).update({
           user: {
             upsert: {
               update: {
-                name: 'updated',
+                Name: 'updated',
               },
               create: userData,
             },
@@ -1010,7 +1017,7 @@ describe('belongsTo', () => {
         });
 
         const user = await db.profile.user(profile);
-        expect(user.name).toBe('updated');
+        expect(user.Name).toBe('updated');
       });
 
       it('should create related record if it does not exist', async () => {
@@ -1018,37 +1025,37 @@ describe('belongsTo', () => {
 
         const updated = await db.profile
           .selectAll()
-          .find(profile.id)
+          .find(profile.Id)
           .update({
             user: {
               upsert: {
                 update: {
-                  name: 'updated',
+                  Name: 'updated',
                 },
                 create: {
                   ...userData,
-                  name: 'created',
+                  Name: 'created',
                 },
               },
             },
           });
 
         const user = await db.profile.user(updated);
-        expect(user.name).toBe('created');
+        expect(user.Name).toBe('created');
       });
 
       it('should throw in batch update', () => {
         expect(() =>
-          db.profile.where({ id: 1 }).update({
+          db.profile.where({ Id: 1 }).update({
             user: {
               // @ts-expect-error not allows in batch update
               upsert: {
                 update: {
-                  name: 'updated',
+                  Name: 'updated',
                 },
                 create: {
                   ...userData,
-                  name: 'created',
+                  Name: 'created',
                 },
               },
             },
@@ -1069,7 +1076,7 @@ describe('belongsTo', () => {
           user: {
             upsert: {
               update: {
-                name: 'new name',
+                Name: 'new name',
               },
               create: userData,
             },
@@ -1077,7 +1084,7 @@ describe('belongsTo', () => {
         };
 
         it('should invoke update callbacks when updating', async () => {
-          const id = await db.profile.get('id').create({
+          const Id = await db.profile.get('Id').create({
             ...profileData,
             user: {
               create: userData,
@@ -1086,7 +1093,7 @@ describe('belongsTo', () => {
 
           resetMocks();
 
-          await db.profile.find(id).update(data);
+          await db.profile.find(Id).update(data);
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
@@ -1097,9 +1104,9 @@ describe('belongsTo', () => {
         it('should invoke create callbacks when creating', async () => {
           resetMocks();
 
-          const id = await db.profile.get('id').create(profileData);
+          const Id = await db.profile.get('Id').create(profileData);
 
-          await db.profile.find(id).update(data);
+          await db.profile.find(Id).update(data);
 
           expect(beforeUpdate).not.toBeCalled();
           expect(afterUpdate).not.toBeCalled();
@@ -1112,7 +1119,7 @@ describe('belongsTo', () => {
     describe('nested create', () => {
       it('should create new related record and update foreignKey', async () => {
         const profileId = await db.profile
-          .get('id')
+          .get('Id')
           .create({ ...profileData, user: { create: userData } });
 
         const updated = await db.profile
@@ -1120,32 +1127,32 @@ describe('belongsTo', () => {
           .find(profileId)
           .update({
             user: {
-              create: { ...userData, name: 'created' },
+              create: { ...userData, Name: 'created' },
             },
           });
 
         const user = await db.profile.user(updated);
-        expect(user.name).toBe('created');
+        expect(user.Name).toBe('created');
       });
 
       it('should create new related record and update foreignKey in batch update', async () => {
         const profileIds = await db.profile
-          .pluck('id')
+          .pluck('Id')
           .createMany([profileData, profileData]);
 
         const updatedUserIds = await db.profile
-          .pluck('userId')
-          .where({ id: { in: profileIds } })
+          .pluck('UserId')
+          .where({ Id: { in: profileIds } })
           .update({
             user: {
-              create: { ...userData, name: 'created' },
+              create: { ...userData, Name: 'created' },
             },
           });
 
         expect(updatedUserIds[0]).toBe(updatedUserIds[1]);
 
         const user = await db.user.find(updatedUserIds[0] as number);
-        expect(user.name).toBe('created');
+        expect(user.Name).toBe('created');
       });
 
       describe('relation callbacks', () => {
@@ -1160,9 +1167,9 @@ describe('belongsTo', () => {
         };
 
         it('should invoke callbacks', async () => {
-          const id = await db.profile.get('id').create(profileData);
+          const Id = await db.profile.get('Id').create(profileData);
 
-          await db.profile.find(id).update(data);
+          await db.profile.find(Id).update(data);
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -1170,12 +1177,12 @@ describe('belongsTo', () => {
 
         it('should invoke callbacks in a batch update', async () => {
           const ids = await db.profile
-            .pluck('id')
+            .pluck('Id')
             .createMany([profileData, profileData]);
 
           resetMocks();
 
-          await db.profile.where({ id: { in: ids } }).update(data);
+          await db.profile.where({ Id: { in: ids } }).update(data);
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);

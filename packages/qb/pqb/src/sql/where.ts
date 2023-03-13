@@ -24,7 +24,7 @@ import {
 export const pushWhereStatementSql = (
   ctx: ToSqlCtx,
   table: QueryBase,
-  query: Pick<QueryData, 'and' | 'or'>,
+  query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   quotedAs?: string,
 ) => {
   const res = whereToSql(ctx, table, query, quotedAs, false);
@@ -37,7 +37,7 @@ export const pushWhereToSql = (
   sql: string[],
   ctx: ToSqlCtx,
   table: QueryBase,
-  query: Pick<QueryData, 'and' | 'or'>,
+  query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   quotedAs?: string,
   not?: boolean,
 ) => {
@@ -50,17 +50,18 @@ export const pushWhereToSql = (
 export const whereToSql = (
   ctx: ToSqlCtx,
   table: QueryBase,
-  query: Pick<QueryData, 'and' | 'or'>,
+  query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   quotedAs?: string,
   not?: boolean,
 ): string | undefined => {
+  // console.log('whereToSql', !!query.joinedShapes?.chat);
   if (query.or) {
     const ors = query.and ? [query.and, ...query.or] : query.or;
     return ors
-      .map((and) => processAnds(and, ctx, table, quotedAs, not))
+      .map((and) => processAnds(and, ctx, table, query, quotedAs, not))
       .join(' OR ');
   } else if (query.and) {
-    return processAnds(query.and, ctx, table, quotedAs, not);
+    return processAnds(query.and, ctx, table, query, quotedAs, not);
   } else {
     return undefined;
   }
@@ -70,11 +71,15 @@ const processAnds = (
   and: WhereItem[],
   ctx: ToSqlCtx,
   table: QueryBase,
+  query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   quotedAs?: string,
   not?: boolean,
 ): string => {
+  // console.log('processAnds', !!query.joinedShapes?.chat);
   const ands: string[] = [];
-  and.forEach((data) => processWhere(ands, ctx, table, data, quotedAs, not));
+  and.forEach((data) =>
+    processWhere(ands, ctx, table, query, data, quotedAs, not),
+  );
   return ands.join(' AND ');
 };
 
@@ -82,14 +87,17 @@ const processWhere = (
   ands: string[],
   ctx: ToSqlCtx,
   table: QueryBase,
+  query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   data: WhereItem,
   quotedAs?: string,
   not?: boolean,
 ) => {
   const prefix = not ? 'NOT ' : '';
 
+  // console.log('processWhere', !!query.joinedShapes?.chat, data);
+
   if (typeof data === 'function') {
-    const qb = data(new ctx.whereQueryBuilder(table, table.query.shape));
+    const qb = data(new ctx.whereQueryBuilder(table, query));
     pushWhereToSql(ands, ctx, qb, qb.query, quotedAs, not);
     return;
   }
@@ -117,20 +125,18 @@ const processWhere = (
     const value = (data as Record<string, unknown>)[key];
     if (key === 'AND') {
       const arr = toArray(value as MaybeArray<WhereItem>);
-      ands.push(processAnds(arr, ctx, table, quotedAs, not));
+      ands.push(processAnds(arr, ctx, table, query, quotedAs, not));
     } else if (key === 'OR') {
       const arr = (value as MaybeArray<WhereItem>[]).map(toArray);
       ands.push(
         arr
-          .map((and) => processAnds(and, ctx, table, quotedAs, not))
+          .map((and) => processAnds(and, ctx, table, query, quotedAs, not))
           .join(' OR '),
       );
     } else if (key === 'NOT') {
       const arr = toArray(value as MaybeArray<WhereItem>);
-      ands.push(processAnds(arr, ctx, table, quotedAs, !not));
+      ands.push(processAnds(arr, ctx, table, query, quotedAs, !not));
     } else if (key === 'ON') {
-      const { query } = table;
-
       if (Array.isArray(value)) {
         const item = value as WhereJsonPathEqualsItem;
         const leftColumn = revealColumnToSql(
@@ -163,7 +169,7 @@ const processWhere = (
         const item = value as WhereOnItem;
         const leftColumn = revealColumnToSql(
           query,
-          table.shape,
+          query.shape,
           item.on[0],
           q(getJoinItemSource(item.joinFrom)),
         );
@@ -188,7 +194,7 @@ const processWhere = (
       }
     } else if (key === 'IN') {
       toArray(value as MaybeArray<WhereInItem>).forEach((item) => {
-        pushIn(table, ands, prefix, quotedAs, ctx.values, item);
+        pushIn(query, ands, prefix, quotedAs, ctx.values, item);
       });
     } else if (key === 'EXISTS') {
       const joinItems = Array.isArray((value as unknown[])[0])
@@ -201,6 +207,7 @@ const processWhere = (
         const { target, conditions } = processJoinItem(
           ctx,
           table,
+          query,
           {
             args,
             isSubQuery:
@@ -218,14 +225,14 @@ const processWhere = (
       if (isRaw(value)) {
         ands.push(
           `${prefix}${revealColumnToSql(
-            table.query,
-            table.shape,
+            query,
+            query.shape,
             key,
             quotedAs,
           )} = ${getRaw(value, ctx.values)}`,
         );
       } else {
-        let column = table.query.shape[key];
+        let column = query.shape[key];
         let quotedColumn: string | undefined;
         if (column) {
           quotedColumn = qc(column.data.name || key, quotedAs);
@@ -234,7 +241,7 @@ const processWhere = (
           if (index !== -1) {
             const joinedTable = key.slice(0, index);
             const joinedColumn = key.slice(index + 1);
-            column = table.query.joinedShapes?.[joinedTable]?.[
+            column = query.joinedShapes?.[joinedTable]?.[
               joinedColumn
             ] as typeof column;
             quotedColumn = qc(
@@ -269,12 +276,9 @@ const processWhere = (
       }
     } else {
       ands.push(
-        `${prefix}${revealColumnToSql(
-          table.query,
-          table.shape,
-          key,
-          quotedAs,
-        )} ${value === null ? 'IS NULL' : `= ${addValue(ctx.values, value)}`}`,
+        `${prefix}${revealColumnToSql(query, query.shape, key, quotedAs)} ${
+          value === null ? 'IS NULL' : `= ${addValue(ctx.values, value)}`
+        }`,
       );
     }
   }
@@ -285,7 +289,7 @@ const getJoinItemSource = (joinItem: WhereOnJoinItem) => {
 };
 
 const pushIn = (
-  table: QueryBase,
+  query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   ands: string[],
   prefix: string,
   quotedAs: string | undefined,
@@ -313,9 +317,7 @@ const pushIn = (
   }
 
   const columnsSql = arg.columns
-    .map((column) =>
-      revealColumnToSql(table.query, table.shape, column, quotedAs),
-    )
+    .map((column) => revealColumnToSql(query, query.shape, column, quotedAs))
     .join(', ');
 
   ands.push(

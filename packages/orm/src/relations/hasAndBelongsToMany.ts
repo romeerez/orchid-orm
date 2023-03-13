@@ -1,6 +1,7 @@
 import { RelationData, RelationThunkBase } from './relations';
 import { Table } from '../table';
 import {
+  ColumnType,
   CreateCtx,
   getQueryAs,
   HasAndBelongsToManyRelation,
@@ -92,6 +93,14 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn {
   }
 }
 
+const removeColumnName = (column: ColumnType) => {
+  if (!column.data.name) return column;
+
+  const cloned = Object.create(column);
+  cloned.data = { ...column.data, name: undefined };
+  return cloned;
+};
+
 export const makeHasAndBelongsToManyMethod = (
   table: Query,
   qb: Query,
@@ -115,8 +124,8 @@ export const makeHasAndBelongsToManyMethod = (
   baseQuery.baseQuery = baseQuery;
   baseQuery.table = joinTable;
   baseQuery.shape = {
-    [fk]: table.shape[pk],
-    [afk]: query.shape[apk],
+    [fk]: removeColumnName(table.shape[pk]),
+    [afk]: removeColumnName(query.shape[apk]),
   };
   baseQuery.query = {
     ...baseQuery.query,
@@ -153,16 +162,22 @@ export const makeHasAndBelongsToManyMethod = (
     // joinQuery can be a property of RelationQuery and be used by whereExists and other stuff which needs it
     // and the chained query itself may be a query around this joinQuery
     joinQuery(fromQuery, toQuery) {
-      return toQuery.whereExists(subQuery, (q) =>
+      const join = toQuery.whereExists(subQuery, (q) =>
         q
-          ._on(associationForeignKeyFull, `${getQueryAs(toQuery)}.${pk}`)
+          ._on(associationForeignKeyFull, `${getQueryAs(toQuery)}.${apk}`)
           ._on(foreignKeyFull, `${getQueryAs(fromQuery)}.${pk}`),
       );
+      join.query.joinedShapes = {
+        ...join.query.joinedShapes,
+        [(fromQuery.query.as || fromQuery.table) as string]:
+          fromQuery.query.shape,
+      };
+      return join;
     },
     reverseJoin(fromQuery, toQuery) {
       return fromQuery.whereExists(subQuery, (q) =>
         q
-          ._on(associationForeignKeyFull, `${getQueryAs(toQuery)}.${pk}`)
+          ._on(associationForeignKeyFull, `${getQueryAs(toQuery)}.${apk}`)
           ._on(foreignKeyFull, `${getQueryAs(fromQuery)}.${pk}`),
       );
     },

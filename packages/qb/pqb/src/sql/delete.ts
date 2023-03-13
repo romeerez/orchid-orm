@@ -22,7 +22,7 @@ export const pushDeleteSql = (
   let conditions: string | undefined;
   if (query.join?.length) {
     const items = query.join.map((item) =>
-      processJoinItem(ctx, table, item, quotedAs),
+      processJoinItem(ctx, table, query, item, quotedAs),
     );
 
     ctx.sql.push(`USING ${items.map((item) => item.target).join(', ')}`);

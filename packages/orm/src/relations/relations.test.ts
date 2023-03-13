@@ -3,6 +3,8 @@ import {
   chatData,
   expectSql,
   messageData,
+  messageSelectAll,
+  profileSelectAll,
   userData,
   useTestDatabase,
 } from '../test-utils/test-utils';
@@ -12,8 +14,8 @@ describe('relations', () => {
 
   it('should select multiple relations', () => {
     const query = db.user.select({
-      profile: (q) => q.profile.where({ bio: 'bio' }),
-      messages: (q) => q.messages.where({ text: 'text' }),
+      profile: (q) => q.profile.where({ Bio: 'bio' }),
+      messages: (q) => q.messages.where({ Text: 'text' }),
     });
 
     expectSql(
@@ -23,7 +25,7 @@ describe('relations', () => {
           (
             SELECT row_to_json("t".*)
             FROM (
-              SELECT * FROM "profile"
+              SELECT ${profileSelectAll} FROM "profile"
               WHERE "profile"."bio" = $1
                 AND "profile"."userId" = "user"."id"
               LIMIT $2
@@ -32,7 +34,7 @@ describe('relations', () => {
           (
             SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
             FROM (
-              SELECT * FROM "message" AS "messages"
+              SELECT ${messageSelectAll} FROM "message" AS "messages"
               WHERE "messages"."text" = $3
                 AND "messages"."authorId" = "user"."id"
             ) AS "t"
@@ -44,18 +46,20 @@ describe('relations', () => {
   });
 
   it('should handle sub query pluck', async () => {
-    const chatId = await db.chat.get('id').create(chatData);
-    const authorId = await db.user.get('id').create(userData);
+    const ChatId = await db.chat.get('Id').create(chatData);
+    const AuthorId = await db.user.get('Id').create(userData);
+
     const data = {
-      chatId,
-      authorId,
+      ChatId,
+      AuthorId,
       ...messageData,
     };
-    const ids = await db.message.pluck('id').createMany([data, data]);
+
+    const ids = await db.message.pluck('Id').createMany([data, data]);
 
     const query = db.user
       .select({
-        ids: (q) => q.messages.pluck('id'),
+        ids: (q) => q.messages.pluck('Id'),
         dates: (q) => q.messages.pluck('createdAt'),
       })
       .take();
@@ -72,7 +76,7 @@ describe('relations', () => {
 
     const query = db.user
       .select({
-        ids: (q) => q.messages.pluck('id'),
+        ids: (q) => q.messages.pluck('Id'),
       })
       .take();
 

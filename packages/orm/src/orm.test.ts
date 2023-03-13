@@ -2,7 +2,6 @@ import { OrchidORM, orchidORM } from './orm';
 import {
   assertType,
   expectSql,
-  userData,
   useTestDatabase,
 } from './test-utils/test-utils';
 import { pgConfig } from './test-utils/test-db';
@@ -58,7 +57,10 @@ describe('orm', () => {
       profile: ProfileTable,
     });
 
-    const { id, name } = await local.user.create(userData);
+    const { id, name } = await local.user.create({
+      name: 'name',
+      password: 'password',
+    });
 
     const query = local.user.select('id', 'name').where({ id: { gt: 0 } });
 

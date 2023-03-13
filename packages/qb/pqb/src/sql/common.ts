@@ -11,7 +11,7 @@ export const qc = (column: string, quotedAs?: string) =>
   quotedAs ? `${quotedAs}.${q(column)}` : column;
 
 const getJoinedColumnName = (
-  data: QueryData,
+  data: Pick<QueryData, 'joinedShapes'>,
   shape: ColumnNamesShape,
   table: string,
   key: string,
@@ -21,7 +21,7 @@ const getJoinedColumnName = (
     ?.data.name;
 
 export const revealColumnToSql = (
-  data: QueryData,
+  data: Pick<QueryData, 'joinedShapes'>,
   shape: ColumnNamesShape,
   column: string,
   quotedAs?: string,
@@ -68,7 +68,7 @@ export const revealColumnToSqlWithAs = (
 };
 
 export const rawOrRevealColumnToSql = (
-  data: QueryData,
+  data: Pick<QueryData, 'shape' | 'joinedShapes'>,
   expr: Expression,
   values: unknown[],
   quotedAs: string | undefined,

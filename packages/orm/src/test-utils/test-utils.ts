@@ -6,6 +6,16 @@ import {
 import { db } from './test-db';
 import { DeleteQueryData, InsertQueryData, Query, UpdateQueryData } from 'pqb';
 
+export const userSelectAll = db.user.internal.columnsForSelectAll!.join(', ');
+
+export const profileSelectAll =
+  db.profile.internal.columnsForSelectAll!.join(', ');
+
+export const messageSelectAll =
+  db.message.internal.columnsForSelectAll!.join(', ');
+
+export const chatSelectAll = db.chat.internal.columnsForSelectAll!.join(', ');
+
 type AssertEqual<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]
     ? true
@@ -36,26 +46,26 @@ export const toLine = (s: string) => {
 
 export const now = new Date();
 export const userData = {
-  name: 'name',
-  password: 'password',
+  Name: 'name',
+  Password: 'password',
   updatedAt: now,
   createdAt: now,
 };
 
 export const profileData = {
-  bio: 'bio',
+  Bio: 'bio',
   updatedAt: now,
   createdAt: now,
 };
 
 export const chatData = {
-  title: 'chat',
+  Title: 'chat',
   updatedAt: now,
   createdAt: now,
 };
 
 export const messageData = {
-  text: 'text',
+  Text: 'text',
   updatedAt: now,
   createdAt: now,
 };

@@ -451,13 +451,16 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
   withData = emptyObject;
   internal = emptyObject;
 
-  constructor(q: QueryBase | string, shape: ColumnsShapeBase) {
+  constructor(
+    q: QueryBase | string,
+    { shape, joinedShapes }: Pick<QueryData, 'shape' | 'joinedShapes'>,
+  ) {
     super();
     this.table = typeof q === 'object' ? q.table : q;
     this.shape = shape;
     this.query = {
       shape: shape as ColumnsShapeBase,
-      joinedShapes: typeof q === 'object' ? q.query.joinedShapes : undefined,
+      joinedShapes,
     } as QueryData;
     this.baseQuery = this as unknown as Query;
     if (typeof q === 'object' && q.query.as) {

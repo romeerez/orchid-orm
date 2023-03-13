@@ -35,6 +35,7 @@ type ItemOf3Or4Length =
 export const processJoinItem = (
   ctx: ToSqlCtx,
   table: QueryBase,
+  query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   item: Pick<JoinItem, 'args' | 'isSubQuery'>,
   quotedAs: string | undefined,
 ): { target: string; conditions?: string } => {
@@ -52,33 +53,34 @@ export const processJoinItem = (
       } = (table.relations as Record<string, Relation>)[first];
 
       const jq = joinQuery(table, toQuery);
-      const { query } = jq;
-
-      query.joinedShapes = {
-        ...table.query.joinedShapes,
-        [(table.query.as || table.table) as string]: table.shape,
-      };
+      const { query: j } = jq;
 
       const tableName = (
-        typeof query.from === 'string' ? query.from : jq.table
+        typeof j.from === 'string' ? j.from : jq.table
       ) as string;
 
-      target = quoteSchemaAndTable(query.schema, tableName);
+      target = quoteSchemaAndTable(j.schema, tableName);
 
-      const as = query.as || key;
+      const as = j.as || key;
       const joinAs = q(as as string);
       if (as !== tableName) {
         target += ` AS ${joinAs}`;
       }
 
       const queryData = {
-        and: query.and ? [...query.and] : [],
-        or: query.or ? [...query.or] : [],
+        shape: j.shape,
+        joinedShapes: {
+          ...query.joinedShapes,
+          ...j.joinedShapes,
+          [(table.query.as || table.table) as string]: table.shape,
+        },
+        and: j.and ? [...j.and] : [],
+        or: j.or ? [...j.or] : [],
       };
 
       if (args[1]) {
         const arg = (args[1] as (q: unknown) => QueryBase)(
-          new ctx.onQueryBuilder(jq, jq.query.shape, table),
+          new ctx.onQueryBuilder(jq, j, table),
         ).query;
 
         if (arg.and) queryData.and.push(...arg.and);
@@ -89,12 +91,13 @@ export const processJoinItem = (
     } else {
       target = q(first);
       const joinShape = (
-        table.query.joinedShapes as Record<string, ColumnsShapeBase>
+        query.joinedShapes as Record<string, ColumnsShapeBase>
       )[first];
       conditions = processArgs(
         args,
         ctx,
         table,
+        query,
         first,
         target,
         joinShape,
@@ -102,16 +105,16 @@ export const processJoinItem = (
       );
     }
   } else {
-    const query = first.query;
+    const joinQuery = first.query;
 
     const quotedFrom =
-      typeof query.from === 'string' ? q(query.from) : undefined;
+      typeof joinQuery.from === 'string' ? q(joinQuery.from) : undefined;
 
-    target = quotedFrom || quoteSchemaAndTable(query.schema, first.table);
+    target = quotedFrom || quoteSchemaAndTable(joinQuery.schema, first.table);
 
     let joinAs = quotedFrom || q(first.table);
 
-    const qAs = query.as ? q(query.as) : undefined;
+    const qAs = joinQuery.as ? q(joinQuery.as) : undefined;
     const addAs = qAs && qAs !== joinAs;
 
     let joinedShape: ColumnsShapeBase;
@@ -138,6 +141,7 @@ export const processJoinItem = (
       args,
       ctx,
       table,
+      query,
       first,
       joinAs,
       joinedShape,
@@ -146,7 +150,19 @@ export const processJoinItem = (
 
     // if it's a sub query, WHERE conditions are already in the sub query
     if (!item.isSubQuery) {
-      const whereSql = whereToSql(ctx, table, query, joinAs);
+      const whereSql = whereToSql(
+        ctx,
+        first,
+        {
+          ...joinQuery,
+          joinedShapes: {
+            ...query.joinedShapes,
+            ...joinQuery.joinedShapes,
+            [(table.query.as || table.table) as string]: table.query.shape,
+          },
+        },
+        joinAs,
+      );
       if (whereSql) {
         if (conditions) conditions += ` AND ${whereSql}`;
         else conditions = whereSql;
@@ -161,6 +177,7 @@ const processArgs = (
   args: JoinItem['args'],
   ctx: ToSqlCtx,
   table: QueryBase,
+  query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   first: string | QueryWithTable,
   joinAs: string,
   joinShape: ColumnNamesShape,
@@ -169,21 +186,38 @@ const processArgs = (
   if (args.length === 2) {
     const arg = args[1];
     if (typeof arg === 'function') {
-      let shape;
+      const joinedShapes = {
+        ...query.joinedShapes,
+        [(table.query.as || table.table) as string]: table.shape,
+      };
+
+      let q;
       if (typeof first === 'string') {
-        shape = table.query.withShapes?.[first];
+        const shape = table.query.withShapes?.[first];
         if (!shape) {
           throw new Error('Cannot get shape of `with` statement');
         }
+        q = { shape, joinedShapes };
       } else {
-        shape = first.query.shape;
+        q = {
+          ...first.query,
+          joinedShapes: { ...first.query.joinedShapes, ...joinedShapes },
+        };
       }
 
-      const jq = arg(new ctx.onQueryBuilder(first, shape, table));
+      const jq = arg(new ctx.onQueryBuilder(first, q, table));
+
+      if (jq.query.joinedShapes !== joinedShapes) {
+        jq.query.joinedShapes = {
+          ...jq.query.joinedShapes,
+          ...joinedShapes,
+        };
+      }
+
       return whereToSql(ctx, jq, jq.query, joinAs);
     } else {
       return getObjectOrRawConditions(
-        table.query,
+        query,
         arg,
         ctx.values,
         quotedAs,
@@ -193,7 +227,7 @@ const processArgs = (
     }
   } else if (args.length >= 3) {
     return getConditionsFor3Or4LengthItem(
-      table.query,
+      query,
       joinAs,
       ctx.values,
       quotedAs,
@@ -206,7 +240,7 @@ const processArgs = (
 };
 
 const getConditionsFor3Or4LengthItem = (
-  query: QueryData,
+  query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   target: string,
   values: unknown[],
   quotedAs: string | undefined,
@@ -234,7 +268,7 @@ const getConditionsFor3Or4LengthItem = (
 };
 
 const getObjectOrRawConditions = (
-  query: QueryData,
+  query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   data: Record<string, string | RawExpression> | RawExpression | true,
   values: unknown[],
   quotedAs: string | undefined,
@@ -275,7 +309,13 @@ export const pushJoinSql = (
   quotedAs?: string,
 ) => {
   query.join.forEach((item) => {
-    const { target, conditions } = processJoinItem(ctx, table, item, quotedAs);
+    const { target, conditions } = processJoinItem(
+      ctx,
+      table,
+      query,
+      item,
+      quotedAs,
+    );
 
     ctx.sql.push(item.type, target);
     if (conditions) ctx.sql.push('ON', conditions);
@@ -289,6 +329,8 @@ const skipQueryKeysForSubQuery: Record<string, boolean> = {
   as: true,
   and: true,
   or: true,
+  returnType: true,
+  joinedShapes: true,
 };
 
 export const getIsJoinSubQuery = (query: QueryData, baseQuery: QueryData) => {
