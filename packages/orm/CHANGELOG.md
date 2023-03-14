@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.6.5
+
+### Patch Changes
+
+- Choose project path in init script
+
 ## 1.6.4
 
 ### Patch Changes

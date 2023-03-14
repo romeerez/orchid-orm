@@ -1,9 +1,10 @@
 import fs from 'fs/promises';
-import path from 'path';
+import { resolve, join } from 'path';
 import https from 'https';
 import prompts from 'prompts';
 
 export type InitConfig = {
+  path: string;
   testDatabase?: boolean;
   addSchemaToZod?: boolean;
   addTestFactory?: boolean;
@@ -13,10 +14,14 @@ export type InitConfig = {
 
 type DependencyKind = 'dependencies' | 'devDependencies';
 
-const dirPath = path.resolve(process.cwd(), 'src', 'db');
-
 export const askOrchidORMConfig = async () => {
   const response = await prompts([
+    {
+      type: 'text',
+      name: 'path',
+      message: 'Where would you like to install Orchid ORM?',
+      initial: '.',
+    },
     {
       type: 'select',
       name: 'timestamp',
@@ -61,19 +66,22 @@ export const askOrchidORMConfig = async () => {
 };
 
 export const initOrchidORM = async (config: InitConfig) => {
+  config.path = resolve(config.path);
+  const dirPath = join(config.path, 'src', 'db');
+
   await fs.mkdir(dirPath, { recursive: true });
 
   await setupPackageJson(config);
-  await setupTSConfig();
+  await setupTSConfig(config);
   await setupEnv(config);
-  await setupGitIgnore();
-  await setupBaseTable(config);
-  await setupTables(config);
-  await setupConfig(config);
-  await setupMainDb(config);
-  await setupMigrationScript(config);
-  await createMigrations(config);
-  await createSeed(config);
+  await setupGitIgnore(config);
+  await setupBaseTable(config, dirPath);
+  await setupTables(config, dirPath);
+  await setupConfig(config, dirPath);
+  await setupMainDb(config, dirPath);
+  await setupMigrationScript(config, dirPath);
+  await createMigrations(config, dirPath);
+  await createSeed(config, dirPath);
 
   greet();
 };
@@ -103,7 +111,7 @@ const setupPackageJson = async (config: InitConfig) => {
     (kind === 'dependencies' ? deps : devDeps)[key] = version;
   }
 
-  const packageJsonPath = path.resolve(process.cwd(), 'package.json');
+  const packageJsonPath = join(config.path, 'package.json');
   const content = await readFileSafe(packageJsonPath);
   const json = content ? JSON.parse(content) : {};
 
@@ -152,8 +160,8 @@ const readFileSafe = async (path: string) => {
   }
 };
 
-const setupTSConfig = async () => {
-  const tsConfigPath = path.resolve(process.cwd(), 'tsconfig.json');
+const setupTSConfig = async (config: InitConfig) => {
+  const tsConfigPath = join(config.path, 'tsconfig.json');
   const content = await readFileSafe(tsConfigPath);
   const json = content ? JSON.parse(content) : {};
   if (!json['ts-node']) {
@@ -170,7 +178,7 @@ const setupTSConfig = async () => {
 };
 
 const setupEnv = async (config: InitConfig) => {
-  const envPath = path.resolve(process.cwd(), '.env');
+  const envPath = join(config.path, '.env');
   let content = ((await readFileSafe(envPath)) || '').trim();
   let changed = false;
 
@@ -189,8 +197,8 @@ const setupEnv = async (config: InitConfig) => {
   }
 };
 
-const setupGitIgnore = async () => {
-  const gitignorePath = path.resolve(process.cwd(), '.gitignore');
+const setupGitIgnore = async (config: InitConfig) => {
+  const gitignorePath = join(config.path, '.gitignore');
   let content = ((await readFileSafe(gitignorePath)) || '').trim();
   let changed = false;
 
@@ -209,8 +217,8 @@ const setupGitIgnore = async () => {
   }
 };
 
-const setupBaseTable = async (config: InitConfig) => {
-  const filePath = path.join(dirPath, 'baseTable.ts');
+const setupBaseTable = async (config: InitConfig, dirPath: string) => {
+  const filePath = join(dirPath, 'baseTable.ts');
 
   let content = `import { createBaseTable } from 'orchid-orm';
 
@@ -236,14 +244,14 @@ export const BaseTable = createBaseTable({
   await fs.writeFile(filePath, content);
 };
 
-const setupTables = async (config: InitConfig) => {
+const setupTables = async (config: InitConfig, dirPath: string) => {
   if (!config.demoTables) return;
 
-  const tablesDir = path.join(dirPath, 'tables');
+  const tablesDir = join(dirPath, 'tables');
   await fs.mkdir(tablesDir, { recursive: true });
 
   await fs.writeFile(
-    path.join(tablesDir, 'post.table.ts'),
+    join(tablesDir, 'post.table.ts'),
     `import { BaseTable } from '../baseTable';
 import { CommentTable } from './comment.table';
 ${
@@ -276,7 +284,7 @@ ${
   );
 
   await fs.writeFile(
-    path.join(tablesDir, 'comment.table.ts'),
+    join(tablesDir, 'comment.table.ts'),
     `import { BaseTable } from '../baseTable';
 import { PostTable } from './post.table';
 ${
@@ -312,8 +320,8 @@ ${
   );
 };
 
-const setupConfig = async (config: InitConfig) => {
-  const configPath = path.join(dirPath, 'config.ts');
+const setupConfig = async (config: InitConfig, dirPath: string) => {
+  const configPath = join(dirPath, 'config.ts');
 
   let content = `import 'dotenv/config';
 
@@ -359,7 +367,7 @@ export const config = {`;
   await fs.writeFile(configPath, content);
 };
 
-const setupMainDb = async (config: InitConfig) => {
+const setupMainDb = async (config: InitConfig, dirPath: string) => {
   let imports = '';
   let tables = '';
   if (config.demoTables) {
@@ -371,7 +379,7 @@ import { CommentTable } from './tables/comment.table';`;
   comment: CommentTable,`;
   }
 
-  const dbPath = path.join(dirPath, 'db.ts');
+  const dbPath = join(dirPath, 'db.ts');
   await fs.writeFile(
     dbPath,
     `import { orchidORM } from 'orchid-orm';
@@ -383,8 +391,8 @@ export const db = orchidORM(config.database, {${tables}
   );
 };
 
-const setupMigrationScript = async (config: InitConfig) => {
-  const filePath = path.join(dirPath, 'dbScripts.ts');
+const setupMigrationScript = async (config: InitConfig, dirPath: string) => {
+  const filePath = join(dirPath, 'dbScripts.ts');
   await fs.writeFile(
     filePath,
     `import { rakeDb } from 'rake-db';
@@ -411,15 +419,15 @@ rakeDb(${config.testDatabase ? 'config.allDatabases' : 'config.database'}, {
   );
 };
 
-const createMigrations = async (config: InitConfig) => {
-  const migrationsPath = path.join(dirPath, 'migrations');
+const createMigrations = async (config: InitConfig, dirPath: string) => {
+  const migrationsPath = join(dirPath, 'migrations');
   await fs.mkdir(migrationsPath);
 
   if (!config.demoTables) return;
 
   const now = new Date();
 
-  const postPath = path.join(
+  const postPath = join(
     migrationsPath,
     `${makeFileTimeStamp(now)}_createPost.ts`,
   );
@@ -440,7 +448,7 @@ change(async (db) => {
 
   now.setTime(now.getTime() + 1000);
 
-  const commentPath = path.join(
+  const commentPath = join(
     migrationsPath,
     `${makeFileTimeStamp(now)}_createComment.ts`,
   );
@@ -473,8 +481,8 @@ const makeFileTimeStamp = (now: Date) => {
     .join('');
 };
 
-const createSeed = async (config: InitConfig) => {
-  const filePath = path.join(dirPath, 'seed.ts');
+const createSeed = async (config: InitConfig, dirPath: string) => {
+  const filePath = join(dirPath, 'seed.ts');
 
   let content;
   if (config.demoTables) {

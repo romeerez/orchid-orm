@@ -1,7 +1,7 @@
 import { initOrchidORM } from './init';
 import fs from 'fs/promises';
 import { asMock } from '../codegen/testUtils';
-import path from 'path';
+import { resolve, join } from 'path';
 
 jest.mock('https', () => ({
   get(
@@ -33,20 +33,25 @@ class EnoentError extends Error {
   code = 'ENOENT';
 }
 
-const packageJSONPath = path.resolve(process.cwd(), 'package.json');
-const tsConfigPath = path.resolve(process.cwd(), 'tsconfig.json');
-const envPath = path.resolve(process.cwd(), '.env');
-const gitignorePath = path.resolve(process.cwd(), '.gitignore');
-const dbDirPath = path.resolve(process.cwd(), 'src', 'db');
-const baseTablePath = path.resolve(dbDirPath, 'baseTable.ts');
-const tablesDir = path.resolve(dbDirPath, 'tables');
-const postTablePath = path.resolve(tablesDir, 'post.table.ts');
-const commentTablePath = path.resolve(tablesDir, 'comment.table.ts');
-const configPath = path.join(dbDirPath, 'config.ts');
-const dbPath = path.join(dbDirPath, 'db.ts');
-const migrationScriptPath = path.join(dbDirPath, 'dbScripts.ts');
-const migrationsPath = path.join(dbDirPath, 'migrations');
-const seedPath = path.join(dbDirPath, 'seed.ts');
+const config = {
+  path: 'project',
+};
+
+const path = resolve(config.path);
+const packageJSONPath = join(path, 'package.json');
+const tsConfigPath = join(path, 'tsconfig.json');
+const envPath = join(path, '.env');
+const gitignorePath = join(path, '.gitignore');
+const dbDirPath = join(path, 'src', 'db');
+const baseTablePath = join(dbDirPath, 'baseTable.ts');
+const tablesDir = join(dbDirPath, 'tables');
+const postTablePath = join(tablesDir, 'post.table.ts');
+const commentTablePath = join(tablesDir, 'comment.table.ts');
+const configPath = join(dbDirPath, 'config.ts');
+const dbPath = join(dbDirPath, 'db.ts');
+const migrationScriptPath = join(dbDirPath, 'dbScripts.ts');
+const migrationsPath = join(dbDirPath, 'migrations');
+const seedPath = join(dbDirPath, 'seed.ts');
 
 console.log = jest.fn();
 
@@ -54,7 +59,7 @@ describe('initOrchidORM', () => {
   beforeEach(jest.clearAllMocks);
 
   it('should create db directory', async () => {
-    await initOrchidORM({});
+    await initOrchidORM(config);
 
     expect(fs.mkdir).toBeCalledWith(dbDirPath, { recursive: true });
   });
@@ -109,7 +114,7 @@ describe('initOrchidORM', () => {
         }
       });
 
-      await initOrchidORM({});
+      await initOrchidORM(config);
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === packageJSONPath,
@@ -125,6 +130,7 @@ describe('initOrchidORM', () => {
       });
 
       await initOrchidORM({
+        ...config,
         addSchemaToZod: true,
         addTestFactory: true,
       });
@@ -144,6 +150,7 @@ describe('initOrchidORM', () => {
       });
 
       await initOrchidORM({
+        ...config,
         addSchemaToZod: true,
         addTestFactory: true,
       });
@@ -173,6 +180,7 @@ describe('initOrchidORM', () => {
       });
 
       await initOrchidORM({
+        ...config,
         addSchemaToZod: true,
         addTestFactory: true,
       });
@@ -211,7 +219,7 @@ describe('initOrchidORM', () => {
 
   describe('tsconfig.json', () => {
     it('should create tsconfig.json if not not exist', async () => {
-      await initOrchidORM({});
+      await initOrchidORM(config);
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === tsConfigPath,
@@ -235,7 +243,7 @@ describe('initOrchidORM', () => {
         return;
       });
 
-      await initOrchidORM({});
+      await initOrchidORM(config);
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === tsConfigPath,
@@ -261,7 +269,7 @@ describe('initOrchidORM', () => {
         }
       });
 
-      await initOrchidORM({});
+      await initOrchidORM(config);
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === envPath,
@@ -279,7 +287,7 @@ describe('initOrchidORM', () => {
         return '';
       });
 
-      await initOrchidORM({});
+      await initOrchidORM(config);
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === envPath,
@@ -298,6 +306,7 @@ DATABASE_URL=postgres://user:password@localhost:5432/dbname?ssl=false
       });
 
       await initOrchidORM({
+        ...config,
         testDatabase: true,
       });
 
@@ -319,7 +328,7 @@ DATABASE_TEST_URL=postgres://user:password@localhost:5432/dbname-test?ssl=false
         }
       });
 
-      await initOrchidORM({});
+      await initOrchidORM(config);
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === gitignorePath,
@@ -337,7 +346,7 @@ DATABASE_TEST_URL=postgres://user:password@localhost:5432/dbname-test?ssl=false
         return;
       });
 
-      await initOrchidORM({});
+      await initOrchidORM(config);
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === gitignorePath,
@@ -351,7 +360,7 @@ ko
 
   describe('baseTable', () => {
     it('should create base table', async () => {
-      await initOrchidORM({});
+      await initOrchidORM(config);
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === baseTablePath,
@@ -369,6 +378,7 @@ export const BaseTable = createBaseTable({
 
     it('should create base table with timestamp as date', async () => {
       await initOrchidORM({
+        ...config,
         timestamp: 'date',
       });
 
@@ -390,6 +400,7 @@ export const BaseTable = createBaseTable({
 
     it('should create base table with timestamp as number', async () => {
       await initOrchidORM({
+        ...config,
         timestamp: 'number',
       });
 
@@ -412,13 +423,14 @@ export const BaseTable = createBaseTable({
 
   describe('tables', () => {
     it('should do nothing if demoTables is not specified', async () => {
-      await initOrchidORM({});
+      await initOrchidORM(config);
 
       expect(fs.mkdir).not.toBeCalledWith(tablesDir, { recursive: true });
     });
 
     it('should create tables dir', async () => {
       await initOrchidORM({
+        ...config,
         demoTables: true,
       });
 
@@ -427,6 +439,7 @@ export const BaseTable = createBaseTable({
 
     it('should create post table', async () => {
       await initOrchidORM({
+        ...config,
         demoTables: true,
       });
 
@@ -458,6 +471,7 @@ export class PostTable extends BaseTable {
 
     it('should create post table with zod schema', async () => {
       await initOrchidORM({
+        ...config,
         demoTables: true,
         addSchemaToZod: true,
       });
@@ -493,6 +507,7 @@ export const postSchema = tableToZod(PostTable);
 
     it('should create comment table', async () => {
       await initOrchidORM({
+        ...config,
         demoTables: true,
       });
 
@@ -527,6 +542,7 @@ export class CommentTable extends BaseTable {
 
     it('should create post table with zod schema', async () => {
       await initOrchidORM({
+        ...config,
         demoTables: true,
         addSchemaToZod: true,
       });
@@ -566,7 +582,7 @@ export const commentSchema = tableToZod(CommentTable);
 
   describe('config', () => {
     it('should create config file', async () => {
-      await initOrchidORM({});
+      await initOrchidORM(config);
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === configPath,
@@ -586,6 +602,7 @@ export const config = {
 
     it('should add test database config if specified', async () => {
       await initOrchidORM({
+        ...config,
         testDatabase: true,
       });
 
@@ -619,7 +636,7 @@ export const config = {
 
   describe('db.ts', () => {
     it('should create db.ts', async () => {
-      await initOrchidORM({});
+      await initOrchidORM(config);
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === dbPath,
@@ -634,6 +651,7 @@ export const db = orchidORM(config.database, {
 
     it('should create db.ts with demo tables', async () => {
       await initOrchidORM({
+        ...config,
         demoTables: true,
       });
 
@@ -655,7 +673,7 @@ export const db = orchidORM(config.database, {
 
   describe('migrationScript', () => {
     it('should create script', async () => {
-      await initOrchidORM({});
+      await initOrchidORM(config);
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === migrationScriptPath,
@@ -685,6 +703,7 @@ rakeDb(config.database, {
 
     it('should create script with multiple databases', async () => {
       await initOrchidORM({
+        ...config,
         testDatabase: true,
       });
 
@@ -717,13 +736,14 @@ rakeDb(config.allDatabases, {
 
   describe('migrations', () => {
     it('should create migrations directory', async () => {
-      await initOrchidORM({});
+      await initOrchidORM(config);
 
       expect(fs.mkdir).toBeCalledWith(migrationsPath);
     });
 
     it('should create migrations if demoTables specified', async () => {
       await initOrchidORM({
+        ...config,
         demoTables: true,
       });
 
@@ -761,7 +781,7 @@ change(async (db) => {
 
   describe('seed', () => {
     it('should create seed file', async () => {
-      await initOrchidORM({});
+      await initOrchidORM(config);
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === seedPath,
@@ -778,6 +798,7 @@ export const seed = async () => {
 
     it('should create seed file with sample records when demoTables is set to true', async () => {
       await initOrchidORM({
+        path,
         demoTables: true,
       });
 
