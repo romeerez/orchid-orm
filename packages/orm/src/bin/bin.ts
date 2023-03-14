@@ -1,3 +1,5 @@
 import { askOrchidORMConfig, initOrchidORM } from './init';
 
-askOrchidORMConfig().then(initOrchidORM);
+askOrchidORMConfig().then((config) => {
+  if (config) initOrchidORM(config);
+});

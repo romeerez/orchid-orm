@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.6.6
+
+### Patch Changes
+
+- Handle cancel in init script
+
 ## 1.6.5
 
 ### Patch Changes

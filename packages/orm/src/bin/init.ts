@@ -15,54 +15,63 @@ export type InitConfig = {
 type DependencyKind = 'dependencies' | 'devDependencies';
 
 export const askOrchidORMConfig = async () => {
-  const response = await prompts([
-    {
-      type: 'text',
-      name: 'path',
-      message: 'Where would you like to install Orchid ORM?',
-      initial: '.',
-    },
-    {
-      type: 'select',
-      name: 'timestamp',
-      message: 'Preferred type of returned timestamps:',
-      choices: [
-        {
-          title: 'string (as returned from db)',
-        },
-        {
-          title: 'number (epoch)',
-          value: 'number',
-        },
-        {
-          title: 'Date object',
-          value: 'date',
-        },
-      ],
-    },
-    {
-      type: 'confirm',
-      name: 'testDatabase',
-      message: 'Should I add a separate database for tests?',
-    },
-    {
-      type: 'confirm',
-      name: 'addSchemaToZod',
-      message: 'Are you going to use Zod for validation?',
-    },
-    {
-      type: 'confirm',
-      name: 'addTestFactory',
-      message: 'Do you want object factories for writing tests?',
-    },
-    {
-      type: 'confirm',
-      name: 'demoTables',
-      message: 'Should I add demo tables?',
-    },
-  ]);
+  let cancelled = false;
 
-  return response as InitConfig;
+  const response = await prompts(
+    [
+      {
+        type: 'text',
+        name: 'path',
+        message: 'Where would you like to install Orchid ORM?',
+        initial: '.',
+      },
+      {
+        type: 'select',
+        name: 'timestamp',
+        message: 'Preferred type of returned timestamps:',
+        choices: [
+          {
+            title: 'string (as returned from db)',
+          },
+          {
+            title: 'number (epoch)',
+            value: 'number',
+          },
+          {
+            title: 'Date object',
+            value: 'date',
+          },
+        ],
+      },
+      {
+        type: 'confirm',
+        name: 'testDatabase',
+        message: 'Should I add a separate database for tests?',
+      },
+      {
+        type: 'confirm',
+        name: 'addSchemaToZod',
+        message: 'Are you going to use Zod for validation?',
+      },
+      {
+        type: 'confirm',
+        name: 'addTestFactory',
+        message: 'Do you want object factories for writing tests?',
+      },
+      {
+        type: 'confirm',
+        name: 'demoTables',
+        message: 'Should I add demo tables?',
+      },
+    ],
+    {
+      onCancel() {
+        cancelled = true;
+      },
+    },
+  );
+
+  return cancelled ? undefined : (response as InitConfig);
 };
 
 export const initOrchidORM = async (config: InitConfig) => {
