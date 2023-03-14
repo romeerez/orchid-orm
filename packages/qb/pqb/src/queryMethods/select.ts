@@ -41,7 +41,9 @@ export type SelectArg<T extends QueryBase> =
 
 type SelectAsArg<T extends QueryBase> = Record<
   string,
-  StringKey<keyof T['selectable']> | RawExpression | ((q: T) => Query)
+  | StringKey<keyof T['selectable']>
+  | RawExpression
+  | ((q: T) => Query | RawExpression)
 >;
 
 type SelectResult<
@@ -73,6 +75,8 @@ type SelectResult<
       ? T['selectable'][SelectAsArgs[K]]['column']
       : SelectAsArgs[K] extends RawExpression
       ? SelectAsArgs[K]['__column']
+      : SelectAsArgs[K] extends (q: T) => RawExpression
+      ? ReturnType<SelectAsArgs[K]>['__column']
       : SelectAsArgs[K] extends (q: T) => Query
       ? SelectSubQueryResult<ReturnType<SelectAsArgs[K]>>
       : SelectAsArgs[K] extends ((q: T) => Query) | RawExpression
@@ -117,7 +121,10 @@ export const addParserForSelectItem = <T extends Query>(
   q: T,
   as: string | getValueKey | undefined,
   key: string,
-  arg: StringKey<keyof T['selectable']> | RawExpression | ((q: T) => Query),
+  arg:
+    | StringKey<keyof T['selectable']>
+    | RawExpression
+    | ((q: T) => Query | RawExpression),
 ): string | RawExpression | Query => {
   if (typeof arg === 'object') {
     addParserForRawExpression(q, key, arg);
@@ -126,16 +133,20 @@ export const addParserForSelectItem = <T extends Query>(
     q.isSubQuery = true;
     const rel = arg(q);
     q.isSubQuery = false;
-    const { parsers } = rel.query;
-    if (parsers) {
-      addParserToQuery(q.query, key, (item) => {
-        const t = rel.query.returnType || 'all';
-        subQueryResult.rows =
-          t === 'all' || t === 'rows' || t === 'pluck'
-            ? (item as unknown[])
-            : [item];
-        return parseResult(rel, t, subQueryResult, true);
-      });
+    if (isRaw(rel)) {
+      addParserForRawExpression(q, key, rel);
+    } else {
+      const { parsers } = rel.query;
+      if (parsers) {
+        addParserToQuery(q.query, key, (item) => {
+          const t = rel.query.returnType || 'all';
+          subQueryResult.rows =
+            t === 'all' || t === 'rows' || t === 'pluck'
+              ? (item as unknown[])
+              : [item];
+          return parseResult(rel, t, subQueryResult, true);
+        });
+      }
     }
     return rel;
   } else {

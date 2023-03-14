@@ -412,7 +412,7 @@ describe('select', () => {
       );
     });
 
-    it('can select raw', () => {
+    it('should accept raw', () => {
       const q = User.all();
       const query = q.select({ one: db.raw('1') });
 
@@ -429,6 +429,25 @@ describe('select', () => {
         `,
       );
       expectQueryNotMutated(q);
+    });
+
+    it('should accept raw in a callback', () => {
+      const query = User.select({
+        one: (q) => q.raw((t) => t.integer(), '1'),
+      });
+
+      assertType<Awaited<typeof query>, { one: number }[]>();
+
+      expect(getShapeFromSelect(query)).toEqual({
+        one: expect.any(IntegerColumn),
+      });
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT 1 AS "one" FROM "user"
+        `,
+      );
     });
 
     it('should select subquery', () => {

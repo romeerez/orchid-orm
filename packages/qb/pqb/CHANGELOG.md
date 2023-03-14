@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.5
+
+### Patch Changes
+
+- Support raw in a callback in a select
+
 ## 0.10.4
 
 ### Patch Changes

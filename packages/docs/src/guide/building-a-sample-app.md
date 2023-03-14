@@ -1651,17 +1651,18 @@ export const listArticlesRoute = routeHandler(
           // `pluck` method collects a column into an array
           // order is ASC by default
           tags: (q) => q.tags.order('name').pluck('name'),
-          favorited: currentUserId
-            // if currentUserId is defined, return exists query
-            ? (q) => q.favorites.where({ userId: currentUserId }).exists()
-            // if no currentUserId, return raw 'false' SQL of boolean type
-            : db.article.raw((t) => t.boolean(), 'false'),
+          favorited: (q) =>
+            currentUserId
+              // if currentUserId is defined, return exists query
+              ? q.favorites.where({ userId: currentUserId }).exists()
+              // if no currentUserId, return raw 'false' SQL of boolean type
+              : q.raw((t) => t.boolean(), 'false'),
           author: (q) =>
             q.author.select('username', {
               // we load the following similar to the favorited above
               following: currentUserId
                 ? (q) => q.follows.where({ followerId: currentUserId }).exists()
-                : db.article.raw((t) => t.boolean(), 'false'),
+                : q.raw((t) => t.boolean(), 'false'),
             }),
         }
       )
@@ -1795,7 +1796,7 @@ export const userRepo = createRepo(db.user, {
       return q.select('username', {
         following: currentUserId
           ? (q) => q.follows.where({ followerId: currentUserId }).exists()
-          : db.article.raw((t) => t.boolean(), 'false'),
+          : q.raw((t) => t.boolean(), 'false'),
       });
     },
   },
@@ -1854,7 +1855,7 @@ export const articleRepo = createRepo(db.article, {
           tags: (q) => q.tags.order('name').pluck('name'),
           favorited: currentUserId
             ? (q) => q.favorites.where({ userId: currentUserId }).exists()
-            : db.article.raw((t) => t.boolean(), 'false'),
+            : q.raw((t) => t.boolean(), 'false'),
           author: (q) => userRepo(q.author).selectDto(currentUserId),
         }
       );
@@ -1911,7 +1912,7 @@ export const articleRepo = createRepo(db.article, {
           tags: (q) => q.tags.order('name').pluck('name'),
           favorited: currentUserId
             ? (q) => q.favorites.where({ userId: currentUserId }).exists()
-            : db.article.raw((t) => t.boolean(), 'false'),
+            : q.raw((t) => t.boolean(), 'false'),
           author: (q) => userRepo(q.author).selectDto(currentUserId),
         }
       );
@@ -2522,10 +2523,10 @@ It is not possible to use one method from another due to some TS limitations, so
 
 // define selectFavorite as a standalone function to use in multiple methods:
 const selectFavorited = (currentUserId: number | undefined) => {
-  return currentUserId
-    ? (q: typeof db.article) =>
-      q.favorites.where({ userId: currentUserId }).exists()
-    : db.article.raw((t) => t.boolean(), 'false');
+  return (q: typeof db.article) =>
+    currentUserId
+      ? q.favorites.where({ userId: currentUserId }).exists()
+      : q.raw((t) => t.boolean(), 'false');
 };
 
 export const articleRepo = createRepo(db.article, {

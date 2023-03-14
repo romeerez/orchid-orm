@@ -179,8 +179,14 @@ Table.select({
   subQueryResult: OtherTable.select('column').take(),
 })
 
+// select raw SQL value, the first argument of `raw` is a column type, it is used for return type of the query
 Table.select({
   raw: Table.raw((t) => t.integer(), '1 + 2'),
+})
+
+// same raw SQL query as above, but raw value is returned from a callback
+Table.select({
+  raw: (q) => q.raw((t) => t.integer(), '1 + 2'),
 })
 ```
 
