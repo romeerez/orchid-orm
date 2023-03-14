@@ -28,7 +28,7 @@ export const BaseTable = createBaseTable({
 
 export type User = UserTable['columns']['type'];
 class UserTable extends BaseTable {
-  table = 'user';
+  readonly table = 'user';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     name: t.text(),
@@ -57,7 +57,7 @@ class UserTable extends BaseTable {
 }
 
 export class ProfileTable extends BaseTable {
-  table = 'profile';
+  readonly table = 'profile';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     userId: t

@@ -42,7 +42,7 @@ describe('column base', () => {
   describe('.foreignKey', () => {
     it('should have toCode', () => {
       class Table {
-        table = 'table';
+        readonly table = 'table';
         columns = { shape: { column: new IntegerColumn({}) } };
       }
 

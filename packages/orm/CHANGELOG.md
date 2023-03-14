@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.6.4
+
+### Patch Changes
+
+- Use readonly for table in the table class
+- Updated dependencies
+  - pqb@0.10.4
+
 ## 1.6.3
 
 ### Patch Changes

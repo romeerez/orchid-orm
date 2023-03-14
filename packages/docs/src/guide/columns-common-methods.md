@@ -100,7 +100,7 @@ When mutating a query in this callback, the changes will be applied to all futur
 
 ```ts
 export class SomeTable extends BaseTable {
-  table = 'someTable';
+  readonly table = 'someTable';
   columns = this.setColumns((t) => ({
     name: t.text(3, 100).modifyQuery((table) => {
       // table argument is the query interface of SomeTable

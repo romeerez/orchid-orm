@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.4
+
+### Patch Changes
+
+- Use readonly for table in the table class
+
 ## 0.10.3
 
 ### Patch Changes

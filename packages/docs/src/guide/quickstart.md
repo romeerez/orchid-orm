@@ -191,7 +191,7 @@ this is needed to prevent unpleasant situations when empty or huge texts are sub
 import { BaseTable } from './baseTable'
 
 export class SampleTable extends BaseTable {
-  table = 'sample'
+  readonly table = 'sample'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     // specify min and max length

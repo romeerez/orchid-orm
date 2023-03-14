@@ -438,7 +438,7 @@ import { CommentTable } from './comment.table';
 
 export type Post = PostTable['columns']['type'];
 export class PostTable extends BaseTable {
-  table = 'post';
+  readonly table = 'post';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     title: t.text(3, 100).unique(),
@@ -471,7 +471,7 @@ import { tableToZod } from 'orchid-orm-schema-to-zod';
 
 export type Post = PostTable['columns']['type'];
 export class PostTable extends BaseTable {
-  table = 'post';
+  readonly table = 'post';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     title: t.text(3, 100).unique(),
@@ -504,7 +504,7 @@ import { PostTable } from './post.table';
 
 export type Comment = CommentTable['columns']['type'];
 export class CommentTable extends BaseTable {
-  table = 'comment';
+  readonly table = 'comment';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     postId: t
@@ -540,7 +540,7 @@ import { tableToZod } from 'orchid-orm-schema-to-zod';
 
 export type Comment = CommentTable['columns']['type'];
 export class CommentTable extends BaseTable {
-  table = 'comment';
+  readonly table = 'comment';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     postId: t

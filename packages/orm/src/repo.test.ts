@@ -8,7 +8,7 @@ import { createRepo } from './repo';
 const BaseTable = createBaseTable();
 
 class SomeTable extends BaseTable {
-  table = 'someTable';
+  readonly table = 'someTable';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     name: t.text(0, 100),
@@ -23,7 +23,7 @@ class SomeTable extends BaseTable {
 }
 
 class OtherTable extends BaseTable {
-  table = 'otherTable';
+  readonly table = 'otherTable';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     someId: t.integer().foreignKey(() => SomeTable, 'id'),
@@ -43,7 +43,7 @@ class OtherTable extends BaseTable {
 }
 
 class AnotherTable extends BaseTable {
-  table = 'another';
+  readonly table = 'another';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
   }));

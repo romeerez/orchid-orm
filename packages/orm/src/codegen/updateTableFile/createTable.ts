@@ -21,7 +21,7 @@ export const createTable = async ({
     props.push(`schema = ${singleQuote(ast.schema)};`);
   }
 
-  props.push(`table = ${singleQuote(ast.name)};`);
+  props.push(`readonly table = ${singleQuote(ast.name)};`);
 
   if (ast.noPrimaryKey === 'ignore') {
     props.push('noPrimaryKey = true;');

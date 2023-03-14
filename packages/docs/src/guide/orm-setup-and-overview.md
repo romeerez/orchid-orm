@@ -82,6 +82,8 @@ Tables are defined as classes with two required properties:
 
 `table` is a table name and `columns` is for defining table column types (see [Columns schema](/guide/columns-overview) document for details).
 
+Note that the `table` property is marked as `readonly`, this is needed for TypeScript to check the usage of the table in queries.
+
 ```ts
 // import BaseTable from a file from the previous step:
 import { BaseTable } from './baseTable'
@@ -89,7 +91,7 @@ import { BaseTable } from './baseTable'
 // export type of User object:
 export type User = UserTable['columns']['type']
 export class UserTable extends BaseTable {
-  table = 'user';
+  readonly table = 'user';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     name: t.text(3, 100),
@@ -131,7 +133,7 @@ For the case when the table should not have a primary key, you can override `noP
 import { BaseTable } from './baseTable'
 
 export class NoPrimaryKeyTable extends BaseTable {
-  table = 'table';
+  readonly table = 'table';
   noPrimaryKey = true; // set to `true` to ignore absence of primary key
   columns = this.setColumns((t) => ({
     // ...no primary key defined

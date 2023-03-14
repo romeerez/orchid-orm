@@ -24,7 +24,7 @@ import { tableToZod } from 'orchid-orm-schema-to-zod';
 import { BaseTable } from './baseTable'
 
 export class SomeTable extends BaseTable {
-  table = 'table';
+  readonly table = 'table';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     name: t.text(3, 100),
@@ -56,7 +56,7 @@ Set default value or a function, in the case of a function it's called on each v
 
 ```ts
 class SomeTable extends BaseTable {
-  table = 'table'
+  readonly table = 'table'
   columns = this.setColumns((t) => ({
     column: t.text(1, 100).validationDefault('default value'),
     dateColumn: t.date().validationDefault(() => new Date()),
@@ -70,7 +70,7 @@ Transform value with a custom function. Returned type of value becomes a type of
 
 ```ts
 class SomeTable extends BaseTable {
-  table = 'table'
+  readonly table = 'table'
   columns = this.setColumns((t) => ({
     // reverse a string during validation
     column: t.text(1, 100).transform((val) => val.split('').reverse().join(''))
@@ -84,7 +84,7 @@ Similar to the `.preprocess` function of Zod, it allows the transformation of on
 
 ```ts
 class SomeTable extends BaseTable {
-  table = 'table'
+  readonly table = 'table'
   columns = this.setColumns((t) => ({
     // transform text to integer
     column: t.text(1, 100).to((val) => parseInt(val), t.integer())
@@ -98,7 +98,7 @@ Return the truthy value when the input is okay, and return the falsy value to pr
 
 ```ts
 class SomeTable extends BaseTable {
-  table = 'table'
+  readonly table = 'table'
   columns = this.setColumns((t) => ({
     // will produce an error when the value is not 'something'
     column: t.text(1, 100).refine((val) => val === 'something')
@@ -112,7 +112,7 @@ Add a custom check with access to the validation context, see the `.superRefine`
 
 ```ts
 class SomeTable extends BaseTable {
-  table = 'table'
+  readonly table = 'table'
   columns = this.setColumns((t) => ({
     column: t.text(1, 100).superRefine((val, ctx) => {
       if (val.length > 3) {
@@ -135,7 +135,7 @@ Numeric columns `smallint`, `integer`, `numeric`, `decimal`, `real`, `smallSeria
 
 ```ts
 class SomeTable extends BaseTable {
-  table = 'table'
+  readonly table = 'table'
   columns = this.setColumns((t) => ({
     number: t.integer()
       .lt(number) // must be lower than number
@@ -160,7 +160,7 @@ Text columns `varchar`, `char`, and `text` have such validation methods:
 
 ```ts
 class SomeTable extends BaseTable {
-  table = 'table'
+  readonly table = 'table'
   columns = this.setColumns((t) => ({
     number: t.integer()
       .email() // validate email
@@ -179,7 +179,7 @@ Array columns have such validation methods:
 
 ```ts
 class SomeTable extends BaseTable {
-  table = 'table'
+  readonly table = 'table'
   columns = this.setColumns((t) => ({
     number: t.integer()
       .nonEmpty() // require at least one element

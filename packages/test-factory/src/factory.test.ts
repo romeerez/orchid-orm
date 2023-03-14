@@ -90,7 +90,7 @@ describe('factory', () => {
 
     it('should respect max which is set on column', () => {
       class ProfileTable extends BaseTable {
-        table = 'profile';
+        readonly table = 'profile';
         columns = this.setColumns((t) => ({
           id: t.serial().primaryKey(),
           bio: t.text().min(100).max(120),
@@ -295,7 +295,7 @@ describe('factory', () => {
   describe('unique columns', () => {
     const makeTable = <T extends ColumnsShape>(fn: (t: ColumnTypes) => T) => {
       return class extends BaseTable {
-        table = 'table';
+        readonly table = 'table';
         columns = this.setColumns((t) => ({
           id: t.serial().primaryKey(),
           ...fn(columnTypes),

@@ -394,14 +394,14 @@ describe('belongsTo', () => {
           const UserId = await db.user.get('Id').create(userData);
 
           class UserTable extends BaseTable {
-            table = 'user';
+            readonly table = 'user';
             columns = this.setColumns((t) => ({
               Id: t.name('id').serial().primaryKey(),
             }));
           }
 
           class ProfileTable extends BaseTable {
-            table = 'profile';
+            readonly table = 'profile';
             columns = this.setColumns((t) => ({
               Id: t.name('id').serial().primaryKey(),
               UserId: t

@@ -54,15 +54,15 @@ Other ORMs take different ways of defining models:
 - `Prisma` has its language for defining schema, which requires recompiling it to TS on each change.
 - `Sequelize` was designed for JS, and it takes a lot of boilerplate for TS.
 - `Objection` was designed for JS, and it won't let TS autocomplete or check relation names or columns in your queries.
-- `TypeORM`, and `MikroORM` models rely on decorators and require specific typescript settings.
-- `DeepKit` hacks the compiler entirely, and it simply didn't work for me with strange errors.
+- `TypeORM`, and `MikroORM` models rely on experimental TS decorators and require specific typescript settings.
+- `DeepKit` hacks the TS compiler entirely.
 
 With `Orchid ORM` you write table classes in a such way:
 
 ```ts
 export type User = UserTable['columns']['type']
 export class UserTable extends BaseTable {
-  table = 'user';
+  readonly table = 'user';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     name: t.text(3, 30), // 3 characters minimum, 30 maximum
@@ -85,7 +85,7 @@ There is no additional language to use and recompile, no decorators, no TS compi
 
 Different ORMs enforce different problems when there is a need to customize a query.
 
-- In `Prisma` you have to rewrite a full query to raw SQL even if a small part of `WHERE` statement requires a custom condition
+- In `Prisma` you have to rewrite a full query to raw SQL even if a small part of `WHERE` statement requires a custom piece SQL that's not officially supported by `Prisma`.
 - `Sequelize` result type is always a full record, even if you selected only specific columns, the type doesn't know whether you included a relation or not
 - `TypeORM`, and `MikroORM` offers you to use a very limited ORM interface for simple queries (with the same problem as in `Sequelize`), and to use a query builder for more complex queries which won't be type-safe.
 - `Objection` is easier for writing queries, but it is not type-safe.

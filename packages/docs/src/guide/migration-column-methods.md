@@ -120,14 +120,14 @@ In the ORM specify a function returning a table class instead of a name:
 
 ```ts
 export class SomeTable extends BaseTable {
-  table = 'someTable';
+  readonly table = 'someTable';
   columns = this.setColumns((t) => ({
     otherTableId: t.integer().foreignKey(() => OtherTable, 'id'),
   }))
 }
 
 export class OtherTable extends BaseTable {
-  table = 'otherTable'
+  readonly table = 'otherTable'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
   }))

@@ -418,7 +418,7 @@ Check `src/app/tables/user.table.ts` - it should have the following content:
 import { BaseTable } from '../../lib/baseTable';
 
 export class User extends BaseTable {
-  table = 'user';
+  readonly table = 'user';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     username: t.text().unique(),
@@ -443,7 +443,7 @@ import { BaseTable } from '../../lib/baseTable';
 import { tableToZod } from 'orchid-orm-schema-to-zod';
 
 export class UserTable extends BaseTable {
-  table = 'user';
+  readonly table = 'user';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     // min length is still 3, as defined in BaseTable configuration, overriding max value here
@@ -903,7 +903,7 @@ import { BaseTable } from '../../lib/baseTable';
 import { UserTable } from './user.table';
 
 export class UserFollowTable extends BaseTable {
-  table = 'userFollow';
+  readonly table = 'userFollow';
   columns = this.setColumns((t) => ({
     // in the migration we have a string argument for the foreign table
     // in the model it can be a string as well, or as a callback with table class
@@ -1193,7 +1193,7 @@ import { tableToZod } from 'orchid-orm-schema-to-zod';
 import { ArticleTagTable } from './articleTag.table';
 
 export class TagTable extends BaseTable {
-  table = 'tag';
+  readonly table = 'tag';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     name: t.text().min(3).max(20),
@@ -1223,7 +1223,7 @@ import { BaseTable } from '../../lib/baseTable';
 import { TagTable } from '../tag/tag.table';
 
 export class ArticleTagTable extends BaseTable {
-  table = 'articleTag';
+  readonly table = 'articleTag';
   columns = this.setColumns((t) => ({
     articleId: t.integer().foreignKey('article', 'id'),
     tagId: t.integer().foreignKey('tag', 'id'),
@@ -1247,7 +1247,7 @@ Article favorite table:
 import { BaseTable } from '../../lib/baseTable';
 
 export class ArticleFavoriteTable extends BaseTable {
-  table = 'articleFavorite';
+  readonly table = 'articleFavorite';
   columns = this.setColumns((t) => ({
     userId: t.integer().foreignKey('user', 'id'),
     articleId: t.integer().foreignKey('article', 'id'),
@@ -1268,7 +1268,7 @@ import { ArticleFavoriteTable } from './articleFavorite.table';
 import { tableToZod } from 'orchid-orm-schema-to-zod';
 
 export class ArticleTable extends BaseTable {
-  table = 'article';
+  readonly table = 'article';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     userId: t.integer().foreignKey('user', 'id').index(),

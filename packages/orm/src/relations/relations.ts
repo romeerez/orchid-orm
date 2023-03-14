@@ -13,8 +13,9 @@ import {
   defaultsKey,
   relationQueryKey,
   VirtualColumn,
+  SetQueryTableAlias,
 } from 'pqb';
-import { EmptyObject } from 'orchid-core';
+import { EmptyObject, StringKey } from 'orchid-core';
 import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
 import {
   HasAndBelongsToMany,
@@ -47,8 +48,11 @@ export type RelationData = {
 export type Relation<
   T extends Table,
   Relations extends RelationThunks,
-  K extends keyof Relations,
-  M extends Query = DbTable<ReturnType<Relations[K]['fn']>>,
+  K extends StringKey<keyof Relations>,
+  M extends Query = SetQueryTableAlias<
+    DbTable<ReturnType<Relations[K]['fn']>>,
+    K
+  >,
   Info extends RelationInfo = RelationInfo<T, Relations, Relations[K]>,
 > = {
   type: Relations[K]['type'];

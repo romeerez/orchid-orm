@@ -253,7 +253,7 @@ ${
 }
 export type Post = PostTable['columns']['type'];
 export class PostTable extends BaseTable {
-  table = 'post';
+  readonly table = 'post';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     title: t.text(3, 100).unique(),
@@ -286,7 +286,7 @@ ${
 }
 export type Comment = CommentTable['columns']['type'];
 export class CommentTable extends BaseTable {
-  table = 'comment';
+  readonly table = 'comment';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     postId: t

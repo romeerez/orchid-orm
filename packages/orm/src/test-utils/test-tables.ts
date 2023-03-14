@@ -15,7 +15,7 @@ export const BaseTable = createBaseTable({
 
 export type User = UserTable['columns']['type'];
 export class UserTable extends BaseTable {
-  table = 'user';
+  readonly table = 'user';
   columns = this.setColumns((t) => ({
     Id: t.name('id').serial().primaryKey(),
     Name: t.name('name').text(),
@@ -60,7 +60,7 @@ export const UserSchema = tableToZod(UserTable);
 
 export type Profile = ProfileTable['columns']['type'];
 export class ProfileTable extends BaseTable {
-  table = 'profile';
+  readonly table = 'profile';
   columns = this.setColumns((t) => ({
     Id: t.name('id').serial().primaryKey(),
     UserId: t
@@ -89,7 +89,7 @@ export const ProfileSchema = tableToZod(ProfileTable);
 
 export type Chat = ChatTable['columns']['type'];
 export class ChatTable extends BaseTable {
-  table = 'chat';
+  readonly table = 'chat';
   columns = this.setColumns((t) => ({
     // a different id name to better test has and belongs to many
     IdOfChat: t.name('idOfChat').serial().primaryKey(),
@@ -121,7 +121,7 @@ export const ChatSchema = tableToZod(ChatTable);
 
 export type Message = MessageTable['columns']['type'];
 export class MessageTable extends BaseTable {
-  table = 'message';
+  readonly table = 'message';
   columns = this.setColumns((t) => ({
     Id: t.name('id').serial().primaryKey(),
     ChatId: t
@@ -159,7 +159,7 @@ export const MessageSchema = tableToZod(MessageTable);
 
 export type Post = PostTable['columns']['type'];
 export class PostTable extends BaseTable {
-  table = 'post';
+  readonly table = 'post';
   columns = this.setColumns((t) => ({
     Id: t.name('id').serial().primaryKey(),
     UserId: t
@@ -181,7 +181,7 @@ export const PostSchema = tableToZod(PostTable);
 
 export type PostTag = PostTagTable['columns']['type'];
 export class PostTagTable extends BaseTable {
-  table = 'postTag';
+  readonly table = 'postTag';
   columns = this.setColumns((t) => ({
     PostId: t
       .name('postId')
@@ -205,7 +205,7 @@ export const PostTagSchema = tableToZod(PostTagTable);
 
 export type Tag = TagTable['columns']['type'];
 export class TagTable extends BaseTable {
-  table = 'tag';
+  readonly table = 'tag';
   columns = this.setColumns((t) => ({
     Tag: t.name('tag').text().primaryKey(),
   }));

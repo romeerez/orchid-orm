@@ -6,7 +6,12 @@ import {
   getColumnTypes,
   Query,
 } from 'pqb';
-import { ColumnShapeOutput, ColumnTypesBase, snakeCaseKey } from 'orchid-core';
+import {
+  ColumnShapeOutput,
+  ColumnTypesBase,
+  snakeCaseKey,
+  StringKey,
+} from 'orchid-core';
 import { MapRelations, Relation, RelationThunks } from './relations/relations';
 import { OrchidORM } from './orm';
 
@@ -20,7 +25,11 @@ export type TableToDb<T extends Table> = Db<
   'relations' extends keyof T
     ? T['relations'] extends RelationThunks
       ? {
-          [K in keyof T['relations']]: Relation<T, T['relations'], K>;
+          [K in StringKey<keyof T['relations']>]: Relation<
+            T,
+            T['relations'],
+            K
+          >;
         }
       : Query['relations']
     : Query['relations'],

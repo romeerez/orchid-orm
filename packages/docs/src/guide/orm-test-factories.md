@@ -222,7 +222,7 @@ Example:
 
 ```ts
 class SomeTable extends BaseTable {
-  table = 'table'
+  readonly table = 'table'
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     text: t.text(5, 1000).unique(),

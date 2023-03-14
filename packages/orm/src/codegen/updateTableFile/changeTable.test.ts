@@ -42,7 +42,7 @@ const change = (
 });
 
 class Table {
-  table = 'some';
+  readonly table = 'some';
 }
 
 describe('updateTableFile', () => {
@@ -55,7 +55,7 @@ describe('updateTableFile', () => {
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({}));
 }`);
 
@@ -72,7 +72,7 @@ export class SomeTable extends BaseTable {
     testWritten(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     name: t.text(1, 10),
   }));
@@ -84,7 +84,7 @@ export class SomeTable extends BaseTable {
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
   }));
@@ -103,7 +103,7 @@ export class SomeTable extends BaseTable {
     testWritten(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     name: t.text(1, 10),
@@ -116,7 +116,7 @@ export class SomeTable extends BaseTable {
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
   }));
@@ -135,7 +135,7 @@ export class SomeTable extends BaseTable {
     testWritten(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     name: t.name('name').text(1, 10),
@@ -148,7 +148,7 @@ export class SomeTable extends BaseTable {
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
   }));
@@ -168,7 +168,7 @@ export class SomeTable extends BaseTable {
     testWritten(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     name: t.text(1, 10),
@@ -182,7 +182,7 @@ export class SomeTable extends BaseTable {
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey()
   }));
@@ -202,7 +202,7 @@ export class SomeTable extends BaseTable {
     testWritten(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     name: t.text(1, 10),
@@ -216,7 +216,7 @@ export class SomeTable extends BaseTable {
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     name: t.text(),
@@ -237,7 +237,7 @@ export class SomeTable extends BaseTable {
     testWritten(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     active: t.boolean(),
@@ -250,7 +250,7 @@ export class SomeTable extends BaseTable {
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     name: t.text(),
@@ -270,7 +270,7 @@ export class SomeTable extends BaseTable {
     testWritten(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
   }));
@@ -282,7 +282,7 @@ export class SomeTable extends BaseTable {
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     name: t.integer(),
   }));
@@ -308,7 +308,7 @@ export class SomeTable extends BaseTable {
     testWritten(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     name: t.text(1, 10),
   }));
@@ -320,7 +320,7 @@ export class SomeTable extends BaseTable {
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     changeCollate: t.text().collate('one'),
     addCollate: t.text(),
@@ -363,7 +363,7 @@ export class SomeTable extends BaseTable {
     testWritten(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     changeCollate: t.text().collate('two'),
     addCollate: t.text().collate('two'),
@@ -386,7 +386,7 @@ export class SomeTable extends BaseTable {
     const result = `import { BaseTable } from '../baseTable';
  
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     ...t.primaryKey(['one', 'two'], { name: 'name' }),
   }));
@@ -405,7 +405,7 @@ export class SomeTable extends BaseTable {
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
  
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     ...t.primaryKey(['foo', 'bar'], { name: 'baz' }),
   }));
@@ -427,7 +427,7 @@ export class SomeTable extends BaseTable {
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
  
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
   }));
 }`);
@@ -450,7 +450,7 @@ export class SomeTable extends BaseTable {
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     name: t.text().index({ order: 'one' }).index({ collate: 'en_US' })
   }));
@@ -473,7 +473,7 @@ export class SomeTable extends BaseTable {
       testWritten(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     name: t.text().index({
       order: 'two',
@@ -489,7 +489,7 @@ export class SomeTable extends BaseTable {
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     name: t.text(),
   }));
@@ -512,7 +512,7 @@ export class SomeTable extends BaseTable {
       testWritten(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     name: t.text().index({
       order: 'two',
@@ -526,7 +526,7 @@ export class SomeTable extends BaseTable {
     const result = `import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     ...t.index(['6']),
     ...t.index(['7', '8']),
@@ -568,7 +568,7 @@ export class SomeTable extends BaseTable {
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     ...t.index('1'),
     ...t.index(['2', '3']),
@@ -609,7 +609,7 @@ export class SomeTable extends BaseTable {
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
   }));
 }`);
@@ -632,7 +632,7 @@ export class SomeTable extends BaseTable {
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     name: t.text().foreignKey('a', 'b').foreignKey('c', 'd')
   }));
@@ -665,7 +665,7 @@ export class SomeTable extends BaseTable {
       testWritten(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     name: t.text().foreignKey('e', 'f').foreignKey('g', 'h'),
   }));
@@ -677,7 +677,7 @@ export class SomeTable extends BaseTable {
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     name: t.text(),
   }));
@@ -705,7 +705,7 @@ export class SomeTable extends BaseTable {
       testWritten(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     name: t.text().foreignKey('e', 'f').foreignKey('g', 'h'),
   }));
@@ -715,7 +715,7 @@ export class SomeTable extends BaseTable {
     const result = `import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     ...t.foreignKey(
       ['7'],
@@ -769,7 +769,7 @@ export class SomeTable extends BaseTable {
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
     ...t.foreignKey(
       ['1'],
@@ -829,7 +829,7 @@ export class SomeTable extends BaseTable {
         .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({
   }));
 }`);

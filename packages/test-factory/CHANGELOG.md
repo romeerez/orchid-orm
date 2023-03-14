@@ -1,5 +1,15 @@
 # orchid-orm-test-factory
 
+## 0.3.4
+
+### Patch Changes
+
+- Use readonly for table in the table class
+- Updated dependencies
+  - orchid-orm@1.6.4
+  - pqb@0.10.4
+  - orchid-orm-schema-to-zod@0.3.4
+
 ## 0.3.3
 
 ### Patch Changes

@@ -41,7 +41,7 @@ const template = ({
 }) => `import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  ${schema ? `schema = '${schema}';\n  ` : ''}table = 'some';${
+  ${schema ? `schema = '${schema}';\n  ` : ''}readonly table = 'some';${
   noPrimaryKey ? '\n  noPrimaryKey = true;' : ''
 }
   columns = this.setColumns((t) => (${columns}));

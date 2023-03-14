@@ -25,7 +25,7 @@ When using ORM, define columns in such way:
 import { BaseTable } from './baseTable'
 
 export class SomeTable extends BaseTable {
-  table = 'someTable';
+  readonly table = 'someTable';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     name: t.text(3, 100),
@@ -80,7 +80,7 @@ Different types of columns support different operations in `where` conditions:
 
 ```ts
 export class SomeTable extends BaseTable {
-  table = 'someTable';
+  readonly table = 'someTable';
   columns = this.setColumns((t) => ({
     name: t.text(3, 100),
     age: t.integer(),
@@ -119,7 +119,7 @@ With such config, all text columns will be validated to have at least 3 and at m
 
 ```ts
 export class SomeTable extends BaseTable {
-  table = 'someTable';
+  readonly table = 'someTable';
   columns = this.setColumns((t) => ({
     id: t.serial().primaryKey(),
     // name will be validated to have at least 3 and at most 100 chars

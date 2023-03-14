@@ -20,7 +20,7 @@ describe('table', () => {
       const type = new Type({});
       const BaseTable = createBaseTable({ columnTypes: { type: () => type } });
       class UserTable extends BaseTable {
-        table = 'user';
+        readonly table = 'user';
         columns = this.setColumns((t) => ({
           id: t.type().primaryKey(),
           createdAt: t.type(),
@@ -44,7 +44,7 @@ describe('table', () => {
 
       const BaseTable = createBaseTable();
       class UserTable extends BaseTable {
-        table = 'user';
+        readonly table = 'user';
         columns = this.setColumns((t) => ({
           id: t.serial().primaryKey(),
           createdAt: t.timestamp(),
@@ -77,7 +77,7 @@ describe('table', () => {
       });
 
       class UserTable extends BaseTable {
-        table = 'user';
+        readonly table = 'user';
         columns = this.setColumns((t) => ({
           id: t.serial().primaryKey(),
           createdAt: t.timestamp(),
@@ -101,7 +101,7 @@ describe('table', () => {
   describe('noPrimaryKey', () => {
     it('should allow to the table to not have a primary key', () => {
       class UserTable extends BaseTable {
-        table = 'user';
+        readonly table = 'user';
         noPrimaryKey = true;
         columns = this.setColumns((t) => ({
           name: t.text(),
@@ -126,7 +126,7 @@ describe('table', () => {
       });
 
       class UserTable extends BaseTable {
-        table = 'user';
+        readonly table = 'user';
         columns = this.setColumns((t) => ({
           id: t.serial().primaryKey(),
           ...t.timestamps(),

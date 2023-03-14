@@ -37,7 +37,7 @@ describe('renameTable', () => {
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({}));
 }`);
 
@@ -49,7 +49,7 @@ export class SomeTable extends BaseTable {
     testWritten(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'another';
+  readonly table = 'another';
   columns = this.setColumns((t) => ({}));
 }`);
   });
@@ -60,7 +60,7 @@ export class SomeTable extends BaseTable {
 
 export class SomeTable extends BaseTable {
   schema = 'one';
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({}));
 }`);
 
@@ -77,7 +77,7 @@ export class SomeTable extends BaseTable {
 
 export class SomeTable extends BaseTable {
   schema = 'two';
-  table = 'another';
+  readonly table = 'another';
   columns = this.setColumns((t) => ({}));
 }`);
   });
@@ -88,7 +88,7 @@ export class SomeTable extends BaseTable {
 
 export class SomeTable extends BaseTable {
   schema = 'one';
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({}));
 }`);
 
@@ -103,7 +103,7 @@ export class SomeTable extends BaseTable {
     testWritten(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'another';
+  readonly table = 'another';
   columns = this.setColumns((t) => ({}));
 }`);
   });
@@ -113,7 +113,7 @@ export class SomeTable extends BaseTable {
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
 export class SomeTable extends BaseTable {
-  table = 'some';
+  readonly table = 'some';
   columns = this.setColumns((t) => ({}));
 }`);
 
@@ -129,7 +129,7 @@ export class SomeTable extends BaseTable {
 
 export class SomeTable extends BaseTable {
   schema = 'schema';
-  table = 'another';
+  readonly table = 'another';
   columns = this.setColumns((t) => ({}));
 }`);
   });
