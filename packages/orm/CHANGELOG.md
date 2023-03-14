@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.6.7
+
+### Patch Changes
+
+- Show current path as a hint in init script
+
 ## 1.6.6
 
 ### Patch Changes

@@ -4,15 +4,18 @@ The ORM is shipped with an automated script to initialize the project.
 Use it to start from scratch, or it can be run inside the existing project, it won't remove any existing files.
 
 ```sh
-mkdir project
-cd project
-
 npx orchid-orm
 # or if you're using pnpm
 pnpm dlx orchid-orm
 ```
 
 This script will ask a few questions to customize the setup:
+
+```
+Where would you like to install Orchid ORM?
+```
+
+Press enter to init in the current directory, or specify a path. It will create directories recursively unless they exist.
 
 ```
 Preferred type of returned timestamps:

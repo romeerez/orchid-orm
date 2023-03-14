@@ -23,7 +23,7 @@ export const askOrchidORMConfig = async () => {
         type: 'text',
         name: 'path',
         message: 'Where would you like to install Orchid ORM?',
-        initial: '.',
+        initial: process.cwd(),
       },
       {
         type: 'select',
