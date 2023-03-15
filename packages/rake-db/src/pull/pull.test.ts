@@ -104,8 +104,11 @@ describe('pull', () => {
       },
     ];
 
+    const appCodeUpdater = jest.fn();
+
     const config = processRakeDbConfig({
       migrationsPath: 'migrations',
+      appCodeUpdater,
     });
 
     await pullDbStructure(
@@ -141,6 +144,9 @@ change(async (db) => {
 });
 `,
     );
+
+    // 4 = 2 schemas + 2 tables
+    expect(appCodeUpdater).toBeCalledTimes(4);
   });
 
   it('should add simple timestamps when snakeCase: true', async () => {
@@ -157,9 +163,11 @@ change(async (db) => {
       },
     ];
 
+    const appCodeUpdater = jest.fn();
     const config = processRakeDbConfig({
       migrationsPath: 'migrations',
       snakeCase: true,
+      appCodeUpdater,
     });
 
     await pullDbStructure(
@@ -182,5 +190,7 @@ change(async (db) => {
 });
 `,
     );
+
+    expect(appCodeUpdater).toBeCalledTimes(1);
   });
 });

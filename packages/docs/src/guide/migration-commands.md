@@ -23,10 +23,13 @@ npm run db pull
 
 This will create a single migration file with all the tables and columns.
 
+If `appCodeUpdater` is configured in `rake-db` config file, it will also generate project files.
+
 Currently, it supports generating code to create:
 
 - schemas
 - tables
+- enums
 - columns with all possible column options
 - primary keys
 - foreign keys

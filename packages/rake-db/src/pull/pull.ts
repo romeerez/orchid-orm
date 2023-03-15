@@ -19,4 +19,15 @@ export const pullDbStructure = async (
   if (!result) return;
 
   await writeMigrationFile(config, 'pull', result);
+
+  const cache = {};
+  for (const item of ast) {
+    await config?.appCodeUpdater?.({
+      ast: item,
+      options,
+      basePath: config.basePath,
+      cache,
+      logger: config.logger,
+    });
+  }
 };

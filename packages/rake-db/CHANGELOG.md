@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.4.6
+
+### Patch Changes
+
+- Run appCodeUpdater after db pull
+
 ## 2.4.5
 
 ### Patch Changes
