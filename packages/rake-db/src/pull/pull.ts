@@ -3,7 +3,8 @@ import { Adapter, AdapterOptions } from 'pqb';
 import { DbStructure } from './dbStructure';
 import { structureToAst } from './structureToAst';
 import { astToMigration } from './astToMigration';
-import { writeMigrationFile } from '../commands/generate';
+import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
+import { saveMigratedVersion } from '../migration/manageMigratedVersions';
 
 export const pullDbStructure = async (
   options: AdapterOptions,
@@ -18,7 +19,10 @@ export const pullDbStructure = async (
   const result = astToMigration(config, ast);
   if (!result) return;
 
-  await writeMigrationFile(config, 'pull', result);
+  const version = makeFileTimeStamp();
+  await writeMigrationFile(config, version, 'pull', result);
+
+  await saveMigratedVersion(adapter, version, config);
 
   const cache = {};
   for (const item of ast) {

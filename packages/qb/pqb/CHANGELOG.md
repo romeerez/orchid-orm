@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.6
+
+### Patch Changes
+
+- Improve .unique code gen, save migration verion after db pull
+
 ## 0.10.5
 
 ### Patch Changes

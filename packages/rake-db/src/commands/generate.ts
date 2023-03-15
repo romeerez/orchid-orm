@@ -10,15 +10,13 @@ import { pathToLog } from 'orchid-core';
 
 export const writeMigrationFile = async (
   config: RakeDbConfig,
+  version: string,
   name: string,
   content: string,
 ) => {
   await mkdir(config.migrationsPath, { recursive: true });
 
-  const filePath = path.resolve(
-    config.migrationsPath,
-    `${makeFileTimeStamp()}_${name}.ts`,
-  );
+  const filePath = path.resolve(config.migrationsPath, `${version}_${name}.ts`);
   await writeFile(filePath, content);
   config.logger?.log(`Created ${pathToLog(filePath)}`);
 };
@@ -27,10 +25,16 @@ export const generate = async (config: RakeDbConfig, args: string[]) => {
   const name = args[0];
   if (!name) throw new Error('Migration name is missing');
 
-  await writeMigrationFile(config, name, makeContent(name, args.slice(1)));
+  const version = makeFileTimeStamp();
+  await writeMigrationFile(
+    config,
+    version,
+    name,
+    makeContent(name, args.slice(1)),
+  );
 };
 
-const makeFileTimeStamp = () => {
+export const makeFileTimeStamp = () => {
   const now = new Date();
   return [
     now.getUTCFullYear(),

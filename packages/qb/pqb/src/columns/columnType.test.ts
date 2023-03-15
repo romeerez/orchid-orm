@@ -359,6 +359,38 @@ describe('column base', () => {
     it('should have toCode', () => {
       expect(column.unique().toCode('t')).toBe('t.column().unique()');
     });
+
+    it('should handle options', () => {
+      expect(
+        column
+          .unique({
+            collate: 'collate',
+            opclass: 'opclass',
+            order: 'order',
+            name: 'name',
+            using: 'using',
+            include: 'include',
+            with: 'with',
+            tablespace: 'tablespace',
+            where: 'where',
+          })
+          .toCode('t'),
+      ).toEqual([
+        't.column().unique({',
+        [
+          `collate: 'collate',`,
+          `opclass: 'opclass',`,
+          `order: 'order',`,
+          `name: 'name',`,
+          `using: 'using',`,
+          `include: 'include',`,
+          `with: 'with',`,
+          `tablespace: 'tablespace',`,
+          `where: 'where',`,
+        ],
+        '})',
+      ]);
+    });
   });
 
   describe('comment', () => {

@@ -5,21 +5,20 @@ import {
   DbResult,
   DefaultColumnTypes,
 } from 'pqb';
-import { MaybeArray, toArray, pathToLog } from 'orchid-core';
+import { MaybeArray, pathToLog, toArray } from 'orchid-core';
+import { getMigrationFiles, MigrationFile, RakeDbConfig } from '../common';
 import {
-  createSchemaMigrations,
-  getMigrationFiles,
-  RakeDbConfig,
-  MigrationFile,
-  quoteWithSchema,
-} from '../common';
-import {
-  clearChanges,
   ChangeCallback,
+  clearChanges,
   getCurrentChanges,
 } from '../migration/change';
 import { createMigrationInterface } from '../migration/migration';
 import * as url from 'url';
+import {
+  getMigratedVersionsMap,
+  removeMigratedVersion,
+  saveMigratedVersion,
+} from '../migration/manageMigratedVersions';
 
 const getDb = (adapter: Adapter) => createDb({ adapter });
 
@@ -149,48 +148,6 @@ const processMigration = async (
       cache: appCodeUpdaterCache,
       logger: config.logger,
     });
-  }
-};
-
-const saveMigratedVersion = async (
-  db: Adapter,
-  version: string,
-  config: RakeDbConfig,
-) => {
-  await db.query(
-    `INSERT INTO ${quoteWithSchema({
-      name: config.migrationsTable,
-    })} VALUES ('${version}')`,
-  );
-};
-
-const removeMigratedVersion = async (
-  db: Adapter,
-  version: string,
-  config: RakeDbConfig,
-) => {
-  await db.query(
-    `DELETE FROM ${quoteWithSchema({
-      name: config.migrationsTable,
-    })} WHERE version = '${version}'`,
-  );
-};
-
-const getMigratedVersionsMap = async (
-  db: Adapter,
-  config: RakeDbConfig,
-): Promise<Record<string, boolean>> => {
-  try {
-    const result = await db.arrays<[string]>(
-      `SELECT * FROM ${quoteWithSchema({ name: config.migrationsTable })}`,
-    );
-    return Object.fromEntries(result.rows.map((row) => [row[0], true]));
-  } catch (err) {
-    if ((err as Record<string, unknown>).code === '42P01') {
-      await createSchemaMigrations(db, config);
-      return {};
-    }
-    throw err;
   }
 };
 

@@ -1,7 +1,7 @@
 import { DbStructure } from './dbStructure';
 import { pullDbStructure } from './pull';
 import { processRakeDbConfig } from '../common';
-import { writeMigrationFile } from '../commands/generate';
+import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
 import { asMock } from '../test-utils';
 import {
   createdAtColumn,
@@ -10,6 +10,7 @@ import {
   textColumn,
   updatedAtColumn,
 } from './testUtils';
+import { saveMigratedVersion } from '../migration/manageMigratedVersions';
 
 jest.mock('./dbStructure', () => {
   const { DbStructure } = jest.requireActual('./dbStructure');
@@ -22,7 +23,12 @@ jest.mock('./dbStructure', () => {
 });
 
 jest.mock('../commands/generate', () => ({
+  makeFileTimeStamp: jest.fn(),
   writeMigrationFile: jest.fn(),
+}));
+
+jest.mock('../migration/manageMigratedVersions', () => ({
+  saveMigratedVersion: jest.fn(),
 }));
 
 const db = DbStructure.prototype;
@@ -46,7 +52,7 @@ describe('pull', () => {
     primaryKeys = [];
     columns = [];
 
-    asMock(writeMigrationFile).mockClear();
+    jest.clearAllMocks();
   });
 
   it('should get db structure, convert it to ast, generate migrations', async () => {
@@ -104,6 +110,8 @@ describe('pull', () => {
       },
     ];
 
+    asMock(makeFileTimeStamp).mockReturnValue('timestamp');
+
     const appCodeUpdater = jest.fn();
 
     const config = processRakeDbConfig({
@@ -120,8 +128,9 @@ describe('pull', () => {
 
     const call = asMock(writeMigrationFile).mock.calls[0];
     expect(call[0]).toBe(config);
-    expect(call[1]).toBe('pull');
-    expect(call[2]).toBe(
+    expect(call[1]).toBe('timestamp');
+    expect(call[2]).toBe('pull');
+    expect(call[3]).toBe(
       `import { change } from 'rake-db';
 
 change(async (db) => {
@@ -145,6 +154,12 @@ change(async (db) => {
 `,
     );
 
+    expect(saveMigratedVersion).toBeCalledWith(
+      expect.any(Object),
+      'timestamp',
+      config,
+    );
+
     // 4 = 2 schemas + 2 tables
     expect(appCodeUpdater).toBeCalledTimes(4);
   });
@@ -163,7 +178,10 @@ change(async (db) => {
       },
     ];
 
+    asMock(makeFileTimeStamp).mockReturnValue('timestamp');
+
     const appCodeUpdater = jest.fn();
+
     const config = processRakeDbConfig({
       migrationsPath: 'migrations',
       snakeCase: true,
@@ -179,8 +197,9 @@ change(async (db) => {
 
     const call = asMock(writeMigrationFile).mock.calls[0];
     expect(call[0]).toBe(config);
-    expect(call[1]).toBe('pull');
-    expect(call[2]).toBe(
+    expect(call[1]).toBe('timestamp');
+    expect(call[2]).toBe('pull');
+    expect(call[3]).toBe(
       `import { change } from 'rake-db';
 
 change(async (db) => {
@@ -189,6 +208,12 @@ change(async (db) => {
   }));
 });
 `,
+    );
+
+    expect(saveMigratedVersion).toBeCalledWith(
+      expect.any(Object),
+      'timestamp',
+      config,
     );
 
     expect(appCodeUpdater).toBeCalledTimes(1);

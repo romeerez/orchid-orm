@@ -319,34 +319,30 @@ export const columnIndexesToCode = (
   for (const index of indexes) {
     addCode(code, `.${index.unique ? 'unique' : 'index'}(`);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for (const key in index) {
-      if (key === 'unique') continue;
+    const arr: string[] = [];
 
-      const arr: string[] = [];
+    if (index.collate) arr.push(`collate: ${singleQuote(index.collate)},`);
+    if (index.opclass) arr.push(`opclass: ${singleQuote(index.opclass)},`);
+    if (index.order) arr.push(`order: ${singleQuote(index.order)},`);
+    if (index.name) arr.push(`name: ${singleQuote(index.name)},`);
+    if (index.using) arr.push(`using: ${singleQuote(index.using)},`);
+    if (index.include)
+      arr.push(
+        `include: ${
+          typeof index.include === 'string'
+            ? singleQuote(index.include)
+            : `[${index.include.map(singleQuote).join(', ')}]`
+        },`,
+      );
+    if (index.with) arr.push(`with: ${singleQuote(index.with)},`);
+    if (index.tablespace)
+      arr.push(`tablespace: ${singleQuote(index.tablespace)},`);
+    if (index.where) arr.push(`where: ${singleQuote(index.where)},`);
 
-      if (index.collate) arr.push(`collate: ${singleQuote(index.collate)},`);
-      if (index.opclass) arr.push(`opclass: ${singleQuote(index.opclass)},`);
-      if (index.order) arr.push(`order: ${singleQuote(index.order)},`);
-      if (index.name) arr.push(`name: ${singleQuote(index.name)},`);
-      if (index.using) arr.push(`using: ${singleQuote(index.using)},`);
-      if (index.include)
-        arr.push(
-          `include: ${
-            typeof index.include === 'string'
-              ? singleQuote(index.include)
-              : `[${index.include.map(singleQuote).join(', ')}]`
-          },`,
-        );
-      if (index.with) arr.push(`with: ${singleQuote(index.with)},`);
-      if (index.tablespace)
-        arr.push(`tablespace: ${singleQuote(index.tablespace)},`);
-      if (index.where) arr.push(`where: ${singleQuote(index.where)},`);
-
+    if (arr.length) {
       addCode(code, '{');
       addCode(code, arr);
       addCode(code, '}');
-      break;
     }
 
     addCode(code, ')');
