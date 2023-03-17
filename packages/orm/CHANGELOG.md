@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.6.10
+
+### Patch Changes
+
+- Make swc optional in init
+
 ## 1.6.9
 
 ### Patch Changes

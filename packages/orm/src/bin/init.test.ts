@@ -1,7 +1,8 @@
-import { initOrchidORM } from './init';
+import { askOrchidORMConfig, initOrchidORM } from './init';
 import fs from 'fs/promises';
 import { asMock } from '../codegen/testUtils';
 import { resolve, join } from 'path';
+import prompts from 'prompts';
 
 jest.mock('https', () => ({
   get(
@@ -29,12 +30,15 @@ jest.mock('fs/promises', () => ({
   mkdir: jest.fn(),
 }));
 
+jest.mock('prompts', () => jest.fn());
+
 class EnoentError extends Error {
   code = 'ENOENT';
 }
 
 const config = {
   path: 'project',
+  hasTsConfig: true,
 };
 
 const path = resolve(config.path);
@@ -55,6 +59,66 @@ const seedPath = join(dbDirPath, 'seed.ts');
 
 console.log = jest.fn();
 
+describe('askOrchidORMConfig', () => {
+  beforeEach(jest.clearAllMocks);
+
+  it('should ask about swc if no tsconfig', async () => {
+    asMock(prompts).mockResolvedValueOnce({ ...config });
+    asMock(prompts).mockResolvedValueOnce({ swc: true });
+    asMock(fs.readFile).mockRejectedValue({ code: 'ENOENT' });
+
+    const res = await askOrchidORMConfig();
+
+    expect(prompts).toBeCalledTimes(2);
+    expect(res?.swc).toBe(true);
+  });
+
+  it('should not ask about swc if has tsconfig', async () => {
+    asMock(prompts).mockResolvedValueOnce({ ...config });
+    asMock(fs.readFile).mockResolvedValue('tsconfig content');
+
+    const res = await askOrchidORMConfig();
+    console.log(res);
+
+    expect(prompts).toBeCalledTimes(1);
+    expect(res?.swc).toBe(undefined);
+  });
+
+  it('should return undefined if cancelled in first prompts', async () => {
+    asMock(fs.readFile).mockRejectedValue({ code: 'ENOENT' });
+
+    asMock(prompts).mockImplementation(
+      (_: unknown, opts: { onCancel(): void }) => {
+        opts.onCancel();
+      },
+    );
+
+    const res = await askOrchidORMConfig();
+
+    expect(prompts).toBeCalledTimes(1);
+    expect(res).toBe(undefined);
+  });
+
+  it('should return undefined if cancelled in second prompts', async () => {
+    asMock(fs.readFile).mockRejectedValue({ code: 'ENOENT' });
+
+    let time = 1;
+    asMock(prompts).mockImplementation(
+      (_: unknown, opts: { onCancel(): void }) => {
+        if (time++ === 1) return config;
+
+        opts.onCancel();
+        return;
+      },
+    );
+
+    const res = await askOrchidORMConfig();
+
+    expect(prompts).toBeCalledTimes(2);
+    expect(res).toBe(undefined);
+  });
+});
+
 describe('initOrchidORM', () => {
   beforeEach(jest.clearAllMocks);
 
@@ -65,7 +129,15 @@ describe('initOrchidORM', () => {
   });
 
   describe('package.json', () => {
-    const packageJSONWithoutAdditional = `{
+    const packageJSON = ({
+      schemaToZod,
+      testFactory,
+      swc,
+    }: {
+      schemaToZod?: boolean;
+      testFactory?: boolean;
+      swc?: boolean;
+    }) => `{
   "scripts": {
     "db": "ts-node src/db/dbScripts.ts"
   },
@@ -73,33 +145,25 @@ describe('initOrchidORM', () => {
     "dotenv": "^1.2.3",
     "orchid-orm": "^1.2.3",
     "pqb": "^1.2.3",
-    "pg": "^1.2.3"
+    "pg": "^1.2.3"${
+      schemaToZod
+        ? `,
+    "orchid-orm-schema-to-zod": "^1.2.3"`
+        : ''
+    }
   },
   "devDependencies": {
-    "rake-db": "^1.2.3",
-    "@swc/core": "^1.2.3",
-    "@types/node": "^1.2.3",
-    "ts-node": "^1.2.3",
-    "typescript": "^1.2.3"
-  }
-}
-`;
-
-    const fullPackageJSON = `{
-  "scripts": {
-    "db": "ts-node src/db/dbScripts.ts"
-  },
-  "dependencies": {
-    "dotenv": "^1.2.3",
-    "orchid-orm": "^1.2.3",
-    "pqb": "^1.2.3",
-    "pg": "^1.2.3",
-    "orchid-orm-schema-to-zod": "^1.2.3"
-  },
-  "devDependencies": {
-    "rake-db": "^1.2.3",
-    "orchid-orm-test-factory": "^1.2.3",
-    "@swc/core": "^1.2.3",
+    "rake-db": "^1.2.3",${
+      testFactory
+        ? `
+    "orchid-orm-test-factory": "^1.2.3",`
+        : ''
+    }${
+      swc
+        ? `
+    "@swc/core": "^1.2.3",`
+        : ''
+    }
     "@types/node": "^1.2.3",
     "ts-node": "^1.2.3",
     "typescript": "^1.2.3"
@@ -119,7 +183,7 @@ describe('initOrchidORM', () => {
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === packageJSONPath,
       );
-      expect(content).toBe(packageJSONWithoutAdditional);
+      expect(content).toBe(packageJSON({}));
     });
 
     it('should create package.json with additional deps if not exist', async () => {
@@ -133,12 +197,19 @@ describe('initOrchidORM', () => {
         ...config,
         addSchemaToZod: true,
         addTestFactory: true,
+        swc: true,
       });
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === packageJSONPath,
       );
-      expect(content).toBe(fullPackageJSON);
+      expect(content).toBe(
+        packageJSON({
+          schemaToZod: true,
+          testFactory: true,
+          swc: true,
+        }),
+      );
     });
 
     it('should add scripts, dependencies and devDependencies if they are not present in package.json', async () => {
@@ -153,12 +224,19 @@ describe('initOrchidORM', () => {
         ...config,
         addSchemaToZod: true,
         addTestFactory: true,
+        swc: true,
       });
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === packageJSONPath,
       );
-      expect(content).toBe(fullPackageJSON);
+      expect(content).toBe(
+        packageJSON({
+          schemaToZod: true,
+          testFactory: true,
+          swc: true,
+        }),
+      );
     });
 
     it('should insert scripts and dependencies', async () => {
@@ -183,6 +261,7 @@ describe('initOrchidORM', () => {
         ...config,
         addSchemaToZod: true,
         addTestFactory: true,
+        swc: true,
       });
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
@@ -219,7 +298,21 @@ describe('initOrchidORM', () => {
 
   describe('tsconfig.json', () => {
     it('should create tsconfig.json if not not exist', async () => {
-      await initOrchidORM(config);
+      await initOrchidORM({ ...config, hasTsConfig: false });
+
+      const [, content] = asMock(fs.writeFile).mock.calls.find(
+        ([to]) => to === tsConfigPath,
+      );
+      expect(content).toBe(`{
+  "compilerOptions": {
+    "strict": true
+  }
+}
+`);
+    });
+
+    it('should create tsconfig.json with swc when is is true and config does not exist', async () => {
+      await initOrchidORM({ ...config, swc: true, hasTsConfig: false });
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === tsConfigPath,
@@ -235,29 +328,10 @@ describe('initOrchidORM', () => {
 `);
     });
 
-    it('should update tsconfig.json if it exists', async () => {
-      asMock(fs.readFile).mockImplementation((path: string) => {
-        if (path.endsWith('tsconfig.json')) {
-          return `{"compilerOptions":{"ko":"ko"}}`;
-        }
-        return;
-      });
+    it('should not change tsconfig.json if it exists', async () => {
+      await initOrchidORM({ ...config, hasTsConfig: true });
 
-      await initOrchidORM(config);
-
-      const [, content] = asMock(fs.writeFile).mock.calls.find(
-        ([to]) => to === tsConfigPath,
-      );
-      expect(content).toBe(`{
-  "compilerOptions": {
-    "ko": "ko",
-    "strict": true
-  },
-  "ts-node": {
-    "swc": true
-  }
-}
-`);
+      expect(fs.writeFile).not.toBeCalledWith(tsConfigPath, expect.any(String));
     });
   });
 
@@ -799,6 +873,7 @@ export const seed = async () => {
     it('should create seed file with sample records when demoTables is set to true', async () => {
       await initOrchidORM({
         path,
+        hasTsConfig: true,
         demoTables: true,
       });
 

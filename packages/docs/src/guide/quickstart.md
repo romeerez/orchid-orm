@@ -4,9 +4,9 @@ The ORM is shipped with an automated script to initialize the project.
 Use it to start from scratch, or it can be run inside the existing project, it won't remove any existing files.
 
 ```sh
-npx orchid-orm
+npx orchid-orm@latest
 # or if you're using pnpm
-pnpm dlx orchid-orm
+pnpm dlx orchid-orm@latest
 ```
 
 This script will ask a few questions to customize the setup:
@@ -48,6 +48,12 @@ Should the script add demo tables?
 ```
 
 Adds two tables for example.
+
+```
+Let's add fast TS compiler swc?
+```
+
+It's only asked when initializing a new project (when no `tsconfig.json` found), this will add [swc](https://swc.rs/) compiler to a `package.json` and to `tsconfig.json`.
 
 After answering these questions, it will create all the necessary config files.
 

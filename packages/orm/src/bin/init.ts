@@ -5,11 +5,13 @@ import prompts from 'prompts';
 
 export type InitConfig = {
   path: string;
+  hasTsConfig: boolean;
   testDatabase?: boolean;
   addSchemaToZod?: boolean;
   addTestFactory?: boolean;
   demoTables?: boolean;
   timestamp?: 'date' | 'number';
+  swc?: boolean;
 };
 
 type DependencyKind = 'dependencies' | 'devDependencies';
@@ -71,7 +73,35 @@ export const askOrchidORMConfig = async () => {
     },
   );
 
-  return cancelled ? undefined : (response as InitConfig);
+  if (cancelled) return;
+
+  const tsConfigPath = join(response.path, 'tsconfig.json');
+  const hasTsConfig = await readFileSafe(tsConfigPath);
+  (response as InitConfig).hasTsConfig = !!hasTsConfig;
+
+  if (!hasTsConfig) {
+    const res = await prompts(
+      [
+        {
+          type: 'confirm',
+          name: 'swc',
+          initial: true,
+          message: `Let's add fast TS compiler swc?`,
+        },
+      ],
+      {
+        onCancel() {
+          cancelled = true;
+        },
+      },
+    );
+
+    if (cancelled) return;
+
+    (response as InitConfig).swc = res.swc;
+  }
+
+  return response as InitConfig;
 };
 
 export const initOrchidORM = async (config: InitConfig) => {
@@ -106,7 +136,7 @@ const setupPackageJson = async (config: InitConfig) => {
     getLatestPackageVersion('rake-db', 'devDependencies'),
     config.addTestFactory &&
       getLatestPackageVersion('orchid-orm-test-factory', 'devDependencies'),
-    getLatestPackageVersion('@swc/core', 'devDependencies'),
+    config.swc && getLatestPackageVersion('@swc/core', 'devDependencies'),
     getLatestPackageVersion('@types/node', 'devDependencies'),
     getLatestPackageVersion('ts-node', 'devDependencies'),
     getLatestPackageVersion('typescript', 'devDependencies'),
@@ -170,20 +200,25 @@ const readFileSafe = async (path: string) => {
 };
 
 const setupTSConfig = async (config: InitConfig) => {
+  if (config.hasTsConfig) return;
+
   const tsConfigPath = join(config.path, 'tsconfig.json');
-  const content = await readFileSafe(tsConfigPath);
-  const json = content ? JSON.parse(content) : {};
-  if (!json['ts-node']) {
-    json['ts-node'] = {};
+  await fs.writeFile(
+    tsConfigPath,
+    `{${
+      config.swc
+        ? `
+  "ts-node": {
+    "swc": true
+  },`
+        : ''
+    }
+  "compilerOptions": {
+    "strict": true
   }
-  if (!json['ts-node'].swc) {
-    json['ts-node'].swc = true;
-  }
-  if (!json.compilerOptions?.strict) {
-    if (!json.compilerOptions) json.compilerOptions = {};
-    json.compilerOptions.strict = true;
-    await fs.writeFile(tsConfigPath, `${JSON.stringify(json, null, '  ')}\n`);
-  }
+}
+`,
+  );
 };
 
 const setupEnv = async (config: InitConfig) => {
