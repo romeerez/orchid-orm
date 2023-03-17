@@ -35,14 +35,15 @@
 <style scoped>
   .container {
     text-align: center;
+    padding: 0 20px;
   }
 
   .title {
-    margin: 60px 0;
+    margin: 32px 0 16px;
+    font-size: 52px;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 72px;
     font-weight: bold;
     color: #c04c8b;
     line-height: 1;
@@ -52,19 +53,18 @@
   }
 
   .text {
-    line-height: 1.5;
-    font-size: 36px;
+    line-height: 1.3;
+    font-size: 28px;
     font-weight: 800;
   }
 
   .list {
-    margin-top: 40px;
     display: inline-block;
     text-align: left;
   }
 
   .list li {
-    margin: 8px 0;
+    margin: 16px 0;
   }
 
   .link {
@@ -74,19 +74,31 @@
     transition: color .25s;
   }
 
-  .code {
-    border-radius: 4px;
-    padding: 3px 6px;
-    color: var(--vp-c-text-code);
-    background-color: var(--vp-c-bg-mute);
-    transition: color .5s, background-color .5s;
-  }
-
   .buttons {
-    margin-top: 40px;
+    margin-top: 12px;
   }
 
   .buttons a:first-child {
     margin-right: 16px;
+  }
+
+  @media (min-width: 480px) {
+    .title {
+      margin: 60px 0;
+      font-size: 72px;
+    }
+
+    .text {
+      line-height: 1.5;
+      font-size: 36px;
+    }
+
+    .list, .buttons {
+      margin-top: 40px;
+    }
+
+    .list li {
+      margin: 8px 0;
+    }
   }
 </style>

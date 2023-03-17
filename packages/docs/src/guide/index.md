@@ -33,7 +33,7 @@ accessing record data through getters/setters also takes some CPU time,
 serializing records to JSON would require a separate step.
 Only when selecting all columns it is possible to instantiate properly,
 because the table class requires all columns to be defined.
-So, the in author's opinion, Active Record pattern only complicates things and takes away a bit of performance.
+So, in author's opinion, Active Record pattern only complicates things and takes away a bit of performance.
 
 For the same reasons, Data Mapper pattern, Unit of Work, and Data encapsulation are not included, therefore,
 `Orchid ORM` is not an ORM in a traditional OOP sense.

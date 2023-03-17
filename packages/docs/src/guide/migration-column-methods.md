@@ -1,8 +1,9 @@
 # migration column methods
 
-The following methods do not affect validation (except some), parsing, or encoding columns, they only have an effect when used in the migration.
+The following methods do not affect validation, parsing, or encoding columns.
+They only have an effect when used in the migration.
 
-Even though they do not affect the application code, you still can copy code from migration to table definition for explicitness, to see database specifics in the table file.
+Even though they do not affect the application code, you still can copy code from migration to table definition for explicitness, to see database specifics in a table file.
 
 ## default
 
@@ -21,7 +22,7 @@ change(async (db) => {
 
 ## nullable
 
-By default `NOT NULL` is added to every column, use `nullable` to prevent this.
+By default, `NOT NULL` is added to every column. Use `nullable` to prevent this:
 
 ```ts
 import { change } from 'rake-db'

@@ -15,23 +15,6 @@ html:not(.dark) {
   --vp-c-bg-alt: #eaedef;
 }
 
-@media (min-width: 960px) {
-  html:not(.dark) .VPNavBar.has-sidebar .content {
-    background-color: rgba(0, 0, 0, 0.02);
-  }
-
-  html:not(.dark) .VPNav.no-sidebar {
-    background-color: rgba(0, 0, 0, 0.02);
-  }
-}
-
-@media (min-width: 1440px) {
-  .VPSidebar {
-    min-width: var(--vp-sidebar-width);
-    padding-left: max(calc((100% - (var(--vp-layout-max-width) - 64px)) / 2), 32px) !important;
-  }
-}
-
 html.dark {
   --vp-c-text-1: rgba(216, 212, 221, 0.87);
 }
@@ -40,29 +23,41 @@ html .content-container {
   max-width: 788px !important;
 }
 
-.VPNavBarSearch {
-  background: var(--vp-c-bg);
-  border: 1px solid var(--vp-c-divider-light);
-  border-radius: 12px;
-  margin-right: 24px;
+.VPHome {
+  padding-bottom: 24px !important;
 }
 
-.VPNavBarSearch .DocSearch-Button {
-  height: 42px;
-}
-
-.VPNavBarSearch .DocSearch-Button-Placeholder {
-  color: var(--vp-c-text-2);
+/* hide INFO title in ::: info blocks */
+.custom-block-title {
+  display: none;
 }
 
 .stand-with-ukraine {
-  margin-right: 24px;
-  padding: 8px 62px 8px 12px;
+  margin-right: 16px;
+  padding: 0 16px 0 12px;
   background: var(--vp-c-bg-alt);
   border-radius: 8px;
   border: 1px solid var(--vp-c-divider-light);
   position: relative;
   overflow: hidden;
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.stand-with-ukraine .text {
+  position: relative;
+  z-index: 1;
+}
+
+.stand-with-ukraine .stand-with {
+  color: #FFD500;
+  display: block;
+}
+
+.stand-with-ukraine .Ukraine {
+  color: #005BBB;
+  font-weight: bold;
 }
 
 .stand-with-ukraine .flag {
@@ -70,8 +65,8 @@ html .content-container {
   top: 0;
   right: 0;
   bottom: 0;
-  width: 48px;
   opacity: .8;
+  width: 100%;
 }
 
 .stand-with-ukraine .flag::before {
@@ -92,4 +87,86 @@ html .content-container {
   top: 50%;
   background: #FFD500;
   width: 100%;
+}
+
+.VPNavBarSearch .search {
+  margin-right: 16px;
+}
+
+.VPNavBarSearch {
+  background: var(--vp-c-bg);
+  border: 1px solid var(--vp-c-divider-light);
+  border-radius: 12px;
+  padding-left: 0;
+}
+
+.VPNavBarSearch .DocSearch-Button {
+  height: 42px;
+}
+
+.VPNavBarSearch .DocSearch-Button-Placeholder {
+  color: var(--vp-c-text-2);
+}
+
+.DocSearch-Button-Keys {
+  display: none;
+}
+
+@media (min-width: 530px) {
+  .stand-with-ukraine {
+    font-size: 16px;
+    margin-right: 24px;
+    padding-right: 62px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    text-align: left;
+    line-height: inherit;
+  }
+
+  .stand-with-ukraine .stand-with, .stand-with-ukraine .Ukraine {
+    color: inherit;
+  }
+
+  .stand-with-ukraine .stand-with {
+    display: inline;
+  }
+
+  .stand-with-ukraine .Ukraine {
+    font-weight: normal;
+  }
+
+  .stand-with-ukraine .flag {
+    width: 48px;
+  }
+
+  .VPNavBarSearch .search {
+    margin-right: 24px;
+  }
+}
+
+@media (min-width: 768px) {
+  .VPNavBarSearch {
+    padding-left: 16px;
+  }
+
+  .DocSearch-Button-Keys {
+    display: flex;
+  }
+}
+
+@media (min-width: 960px) {
+  html:not(.dark) .VPNavBar.has-sidebar .content {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+
+  html:not(.dark) .VPNav.no-sidebar {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+}
+
+@media (min-width: 1440px) {
+  .VPSidebar {
+    min-width: var(--vp-sidebar-width);
+    padding-left: max(calc((100% - (var(--vp-layout-max-width) - 64px)) / 2), 32px) !important;
+  }
 }

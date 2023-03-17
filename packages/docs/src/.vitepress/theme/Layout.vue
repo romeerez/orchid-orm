@@ -36,8 +36,11 @@ const { Layout } = DefaultTheme
         href='https://stand-with-ukraine.pp.ua/'
         class='stand-with-ukraine'
       >
-        Stand With Ukraine
         <div class='flag'></div>
+        <div class='text'>
+          <span class='stand-with'>Stand With </span>
+          <span class='Ukraine'>Ukraine</span>
+        </div>
       </a>
     </template>
   </Layout>

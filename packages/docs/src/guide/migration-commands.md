@@ -1,6 +1,6 @@
 # Migration commands
 
-After the migration tool, `rake-db`, was set and configured, you can use it from a command line.
+After the migration tool, `rake-db`, was [set and configured](/guide/migration-setup-and-overview#setup), you can use it from a command line.
 
 ## create and drop a database
 
@@ -12,6 +12,14 @@ npm run db drop
 ```
 
 These commands will ask for a database administrator username and password.
+
+## reset a database
+
+`reset` is a shortcut command to drop, create and migrate.
+
+```sh
+npm run db reset
+```
 
 ## pull
 
@@ -35,20 +43,14 @@ Currently, it supports generating code to create:
 - foreign keys
 - indexes
 
-## reset a database
-
-`reset` is a shortcut command to drop, create and migrate.
-
-```sh
-npm run db reset
-```
-
 ## generate migration
 
-Generate a new migration file, use the `generate` command is aliased with `g`:
+Generate a new migration file by using `g` command (`g` is an alias for `generate`):
 
 ```sh
 npm run db g migrationName
+# or
+pnpm db g migrationName
 ```
 
 If the migration name matches one of the known patterns, it will generate a template:
@@ -105,7 +107,7 @@ The rollback command will revert one last applied migration:
 npm run db rollback
 ```
 
-Pass a number to revert multiple last applied migrations, or pass 'all' to revert all of them:
+Pass a number to revert multiple last applied migrations, or pass `all` to revert all of them:
 
 ```sh
 npm run db rollback 3
@@ -119,13 +121,11 @@ npm run db rollback all
 ```ts
 import { rakeDb } from 'rake-db'
 import { createDb } from 'pqb'
-
-const dbConfig = {
-  databaseUrl: 'postgres://...'
-}
+import { config } from './config'
 
 rakeDb(
-  dbConfig,
+  // config may have array of databases, for dev and for test
+  config.databases,
   {
     commands: {
       async custom(dbConfigs, config, args) {

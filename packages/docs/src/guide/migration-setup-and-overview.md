@@ -2,47 +2,80 @@
 
 Migrations allow you to evolve your database schema over time. This migration toolkit has several benefits over writing raw SQL migrations or using other tools:
 
-- write migrations in TypeScript
+- write migrations in TypeScript, that enables performing insert queries and having any logic
 - write only code to create or add something, and it will be automatically possible to undo the migration
 - it shares the same column types library as the ORM, which allows you to write a `createTable` migration and copy-paste columns to your table class
+- optionally, automatically updating table files of ORM after running a migration, instead of copy-pasting
 
 ## setup
 
-Install this tool by running:
+It is already set up if you ran `npx orchid-orm@latest` command from a [quickstart](/guide/quickstart).
+
+Install this migration tool by running:
 
 ```sh
 npm i -D rake-db
 ```
 
-Add a script file somewhere to your project, and ensure it's located in one of `include` locations of your `tsconfig.json`.
-
-For example, it could be located in `scripts/db.ts` in your project.
+::: info
+`rake-db` is named after a command in Ruby on Rails because took some inspiration from it.
+:::
 
 Since the configuration is done in a regular TypeScript, it's possible to perform any logic and use any configuration tools to specify database connection options.
 
-In the following example, `dotenv` is used and configured to first get env variables from `.env.local` and then to get them from the `.env` file.
+We suggest to keep database configuration options exported from a separate file, so it can be used both by migration tool and by `db` instance in a project.
+
+Example structure (it's created automatically if you follow [quickstart](/guide/quickstart)):
+
+```
+.
+└── src/
+    └── db/
+        ├── migrations/ - contains migrations files that can be migrated or rolled back.
+        │   ├── timestamp_createPost.ts
+        │   └── timestamp_createComment.ts
+        ├── config.ts - database credentials are exported from here.
+        ├── db.ts - main file for the ORM, connects all tables into one `db` object.
+        ├── dbScript.ts - script run by `npm run db *command*`.
+        └── seed.ts - for filling tables with data.
+```
+
+Export database options:
+
+In this example, `dotenv` is used and configured to first get env variables from `.env.local` and then to get them from the `.env` file.
 
 ```ts
-// scripts/db.ts
+// db/config.ts
+
 import { config } from 'dotenv'
 import path from 'path'
-import { rakeDb } from 'rake-db'
-import { appCodeUpdater } from 'orchid-orm';
 
 config({ path: path.resolve(process.cwd(), '.env.local') })
 config()
 
-const databaseURL = process.env.DATABASE_URL;
-if (!databaseURL) {
-  throw new Error('DATABASE_URL is missing in .env');
-}
+const database = {
+  databaseURL: process.env.DATABASE_URL,
+  // ssl option can be set here or as a URL parameter on databaseURL
+  ssl: true
+};
+if (!database.databaseURL) throw new Error('DATABASE_URL is missing in .env');
+
+export const config = {
+  database,
+};
+```
+
+Configure a `db` script:
+
+```ts
+// scripts/db.ts
+
+import { rakeDb } from 'rake-db';
+import { appCodeUpdater } from 'orchid-orm';
+import { config } from './config';
 
 rakeDb(
-  {
-    databaseURL,
-    // ssl option can be set here or as a URL parameter on databaseURL
-    ssl: true
-  },
+  config.database,
   {
     // relative path to the current file:
     migrationsPath: '../migrations',
@@ -53,10 +86,10 @@ rakeDb(
     appCodeUpdater: appCodeUpdater({
       // paths are relative to the current file
       tablePath: (tableName) => `../tables/${tableName}.table.ts`,
-      baseTablePath: '../lib/baseTable.ts',
+      baseTablePath: './baseTable.ts',
       // baseTableName is optional, BaseTable by default
       baseTableName: 'BaseTable',
-      mainFilePath: '../db.ts',
+      mainFilePath: './db.ts',
     }),
     
     // true by default, whether to use code updater by default
@@ -68,8 +101,8 @@ rakeDb(
       // config is the config of `rakeDb` (that contains migrationPath, appCodeUpdater, etc)
       // args of type string[] is an array of command line arguments startring after the command name
       async seed(dbOptions, config, args) {
-        const { run } = await import('../db/seed')
-        await run()
+        const { seed } = await import('./seed')
+        await seed()
       }
     }
   },
@@ -81,7 +114,7 @@ Add the `db` script to your `package.json`:
 ```json
 {
   "scripts": {
-    "db": "ts-node scripts/db.ts"
+    "db": "ts-node src/db/dbScripts.ts"
   }
 }
 ```
@@ -90,7 +123,7 @@ And now it's possible to use it from a command line:
 
 ```sh
 npm run db g createSomeTable
-pnpm run db g createSomeTable
+pnpm db g createSomeTable
 yarn db g createSomeTable
 ```
 
@@ -132,7 +165,7 @@ type MigrationConfig = {
   
   // log options, see "log option" in the query builder document
   log?: boolean | Partial<QueryLogObject>;
-  // console by default
+  // standard console by default
   logger?: {
     log(message: string): void;
     error(message: string): void;
@@ -174,10 +207,10 @@ Defaults are:
 - `migrationPath` is `src/db/migrations`
 - `migrationsTable` is `schemaMigrations`
 - `import` will use a standard `import` function
-- `noPrimaryKey` is `error`
+- `noPrimaryKey` is `error`, it'll bite if you accidentally forgot to add a primary key to a new table
 - `log` is on
 - `logger` is a standard `console`
-- `useCodeUpdater` is `true`
+- `useCodeUpdater` is `true`, but it won't run anything if you don't specify `appCodeUpdater` config
 
 The third optional argument of `rakeDb` is an array of strings from the command line, by default it will use `process.argv` to get the arguments, but you can override it by passing arguments manually.
 
@@ -208,7 +241,7 @@ What `appCodeUpdater` does:
 - changes `table` and `schema` property in the table file when renaming a table
 - removes table entry from `db` file when dropping a table
 
-`appCodeUpdater` does not delete or rename existing files, because it is better to be done manually.
+`appCodeUpdater` does **not** delete or rename existing files, because it is better to be done manually.
 A modern editor will update all file usage in imports across the project when renaming a file or an exported class.
 
 ## seeds
@@ -220,12 +253,10 @@ but you can import `db` object from where it's defined in your app.
 
 ```ts
 // db/seed.ts
-import { createDb, AdapterOptions } from 'pqb'
+import { db } from './db';
 
-export const run = async (options: AdapterOptions) => {
-  const db = createDb(options)
-  
-  await db('table').createMany([
+export const seed = async () => {
+  await db.table.createMany([
     { name: 'record 1' },
     { name: 'record 2' },
   ])
@@ -234,36 +265,31 @@ export const run = async (options: AdapterOptions) => {
 }
 ```
 
-Set up a script for seeding data via a custom command of `rake-db` as follows:
+Add a custom command to `rake-db` config:
 
 ```ts
-// scripts/db.ts
-import { rakeDb } from 'rake-db'
-import { createDb } from 'pqb'
+// db/dbScript
 
-rakeDb(
-  {
-    databaseURL: 'postgres://...',
-  },
-  {
-    commands: {
-      async seed(options) {
-        // there can be multiple databases, so `options` is an array
-        // here we want to seed only the first database:
-        const devDbOptions = options[0]
-        
-        const { run } = await import('../db/seed')
-        await run(devDbOptions)
-      },
-    }
+// ...snip imports
+
+rakeDb(config.database, {
+  // ...other options
+  
+  commands: {
+    async seed(options) {
+      const { seed } = await import('./seed')
+      await seed()
+    },
   }
-)
+})
 ```
 
 Run the seeds with the command:
 
 ```sh
 npm run db seed
+# or
+pnpm db seed
 ```
 
 ## before and after callbacks
