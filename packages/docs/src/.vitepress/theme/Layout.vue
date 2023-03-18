@@ -3,7 +3,10 @@ import DefaultTheme from 'vitepress/theme'
 import { useRouter } from 'vitepress';
 import { watch } from "vue";
 
-if (!localStorage.getItem('vitepress-theme-appearance')) {
+// localStorage and window are not available during the build
+const isBuild = typeof window === 'undefined'
+
+if (!isBuild && !localStorage.getItem('vitepress-theme-appearance')) {
   document.documentElement.classList.add('dark')
   localStorage.setItem('vitepress-theme-appearance', 'dark')
 }
@@ -11,7 +14,7 @@ if (!localStorage.getItem('vitepress-theme-appearance')) {
 const router = useRouter();
 
 // Only run this on the client. Not during build.
-if (typeof window !== 'undefined') {
+if (!isBuild) {
   window.dataLayer = window.dataLayer || []
   function gtag(){ dataLayer.push(arguments) }
   gtag('js', new Date())
