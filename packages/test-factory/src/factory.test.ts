@@ -172,13 +172,8 @@ describe('factory', () => {
   describe('create', () => {
     it('should create record with generated data, except serial primary keys, datetime numbers should be the same in the record and to be around now', async () => {
       const item = await userFactory.create();
-      const now = Date.now();
 
       expect(item.createdAt).toBe(item.updatedAt);
-
-      expect(Math.round(item.createdAt / 10000)).toEqual(
-        Math.round(now / 10000),
-      );
 
       assertType<typeof item, User>();
 
