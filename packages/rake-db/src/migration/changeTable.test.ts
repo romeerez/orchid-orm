@@ -546,6 +546,25 @@ describe('changeTable', () => {
       );
     });
 
+    it(`should ${action} custom column type`, async () => {
+      await testUpAndDown(
+        () =>
+          db.changeTable('table', (t) => ({
+            column: t[action](t.type('customType')),
+          })),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+              ADD COLUMN "column" "customType" NOT NULL
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+              DROP COLUMN "column"
+          `),
+      );
+    });
+
     it(`should ${action} domain column`, async () => {
       await testUpAndDown(
         () =>
@@ -737,18 +756,21 @@ describe('changeTable', () => {
         db.changeTable('table', (t) => ({
           changeType: t.change(t.integer(), t.text()),
           changeDomainType: t.change(t.domain('one'), t.domain('two')),
+          changeCustomType: t.change(t.type('one'), t.type('two')),
         })),
       () =>
         expectSql(`
           ALTER TABLE "table"
             ALTER COLUMN "changeType" TYPE text,
-            ALTER COLUMN "changeDomainType" TYPE "two"
+            ALTER COLUMN "changeDomainType" TYPE "two",
+            ALTER COLUMN "changeCustomType" TYPE "two"
         `),
       () =>
         expectSql(`
           ALTER TABLE "table"
             ALTER COLUMN "changeType" TYPE integer,
-            ALTER COLUMN "changeDomainType" TYPE "one"
+            ALTER COLUMN "changeDomainType" TYPE "one",
+            ALTER COLUMN "changeCustomType" TYPE "one"
         `),
     );
   });

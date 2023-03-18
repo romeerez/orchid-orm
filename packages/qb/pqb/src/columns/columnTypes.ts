@@ -67,7 +67,7 @@ import {
   name,
 } from 'orchid-core';
 import { makeTimestampsHelpers } from 'orchid-core';
-import { DomainColumn } from './domain';
+import { CustomTypeColumn, DomainColumn } from './customType';
 
 export type ColumnTypes = typeof columnTypes;
 
@@ -293,6 +293,9 @@ export const columnTypes = {
   },
   array<Item extends ColumnType>(this: ColumnTypesBase, item: Item) {
     return new ArrayColumn(this, item);
+  },
+  type(this: ColumnTypesBase, dataType: string) {
+    return new CustomTypeColumn(this, dataType);
   },
   domain(this: ColumnTypesBase, dataType: string) {
     return new DomainColumn(this, dataType);

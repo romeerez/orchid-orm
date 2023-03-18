@@ -121,12 +121,13 @@ describe('factory', () => {
       expect(data.bio.length).toBeLessThanOrEqual(500);
     });
 
-    it('should support domain column', () => {
+    it('should support domain and custom type columns', () => {
       class UserTable extends BaseTable {
         readonly table = 'user';
         columns = this.setColumns((t) => ({
           id: t.serial().primaryKey(),
           name: t.domain('domainName').as(t.integer()),
+          password: t.type('customType').as(t.integer()),
         }));
       }
 
@@ -141,6 +142,7 @@ describe('factory', () => {
       expect(data).toEqual({
         id: expect.any(Number),
         name: expect.any(Number),
+        password: expect.any(Number),
       });
     });
   });

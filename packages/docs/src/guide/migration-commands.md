@@ -44,6 +44,26 @@ Currently, it supports generating code to create:
 - indexes
 - domain types
 
+If column type is a custom one defined by user, or if it is not supported yet, `db pull` will log a warning and output the column as follows:
+
+```ts
+await db.createTable('table', (t) => ({
+  column: t.type('unsupported_type'),
+}))
+```
+
+It works, just when using `t.type` in the application to define a column, you need to use `as` method to treat it as another column:
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    // treat unsupported type as text
+    column: t.type('unsupported_type').as(t.text()),
+  }));
+}
+```
+
 ## generate migration
 
 Generate a new migration file by using `g` command (`g` is an alias for `generate`):

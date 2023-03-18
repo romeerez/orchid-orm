@@ -274,11 +274,19 @@ t.uuid() // -> string, example: a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11
 t.array(item: ColumnType) // -> array of argument type
 ```
 
+## unsupported types
+
+For user-defined custom types, or if some database type is not supported yet, use `type` and `as` to treat this column as other type:
+
+```ts
+t.type('type_name').as(t.integer())
+```
+
 ## domain
 
 Domain is a custom database type that allows to predefine a `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
 
-It's based on other type, that you need to specify in `as`, and it will acts just like the specified type in queries:
+In same way as with `type`, specify `as(otherType)` to treat this column in queries as the other type:
 
 ```ts
 t.domain('domainName').as(t.integer())

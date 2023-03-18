@@ -133,6 +133,7 @@ describe('createTable', () => {
         shape: {
           column: t.name('name').integer(),
           domain: t.domain('domainName').as(t.integer()),
+          custom: t.type('customType').as(t.integer()),
         },
       },
     });
@@ -142,6 +143,7 @@ describe('createTable', () => {
         columns: `{
     column: t.name('name').integer(),
     domain: t.domain('domainName').as(t.integer()),
+    custom: t.type('customType').as(t.integer()),
   }`,
       }),
     );

@@ -6,7 +6,7 @@ export * from './number';
 export * from './string';
 export * from './dateTime';
 export * from './boolean';
-export * from './domain';
+export * from './customType';
 export * from './enum';
 export * from './json';
 export * from './array';

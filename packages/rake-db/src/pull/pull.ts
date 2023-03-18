@@ -12,7 +12,7 @@ export const pullDbStructure = async (
 ) => {
   const adapter = new Adapter(options);
   const db = new DbStructure(adapter);
-  const ast = await structureToAst(db);
+  const ast = await structureToAst(config, db);
 
   await adapter.close();
 

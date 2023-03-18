@@ -110,6 +110,14 @@ describe('pull', () => {
         typeSchema: 'schema',
       },
       {
+        ...idColumn,
+        schemaName: 'schema',
+        tableName: 'table1',
+        name: 'customTypeColumn',
+        type: 'customType',
+        typeSchema: 'schema',
+      },
+      {
         ...createdAtColumn,
         schemaName: 'schema',
         tableName: 'table1',
@@ -147,10 +155,15 @@ describe('pull', () => {
     asMock(makeFileTimeStamp).mockReturnValue('timestamp');
 
     const appCodeUpdater = jest.fn();
+    const warn = jest.fn();
 
     const config = processRakeDbConfig({
       migrationsPath: 'migrations',
       appCodeUpdater,
+      logger: {
+        ...console,
+        warn,
+      },
     });
 
     await pullDbStructure(
@@ -178,6 +191,7 @@ change(async (db) => {
   await db.createTable('schema.table1', (t) => ({
     id: t.serial().primaryKey(),
     domainColumn: t.domain('domain').as(t.integer()),
+    customTypeColumn: t.type('customType'),
     ...t.timestamps(),
   }));
 });
@@ -199,6 +213,9 @@ change(async (db) => {
 
     // 5 = 2 schemas + 1 domain + 2 tables
     expect(appCodeUpdater).toBeCalledTimes(5);
+
+    const message = warn.mock.calls[0][0];
+    expect(message).toContain('unsupported type `customType`');
   });
 
   it('should add simple timestamps when snakeCase: true', async () => {

@@ -2,6 +2,7 @@ import {
   ArrayColumn,
   ColumnType,
   columnTypes,
+  CustomTypeColumn,
   DateColumn,
   DomainColumn,
   IntegerColumn,
@@ -1297,9 +1298,24 @@ describe('schema to zod', () => {
   });
 
   describe('domain', () => {
-    it('should convert it to base column', () => {
+    it('should convert it to a base column', () => {
       const schema = columnToZod(
         new DomainColumn({}, 'domainName').as(new IntegerColumn({})),
+      );
+
+      assertType<typeof schema, z.ZodNumber>(true);
+
+      expect(schema.parse(123)).toBe(123);
+      expect(() => schema.parse('string')).toThrow(
+        'Expected number, received string',
+      );
+    });
+  });
+
+  describe('custom type', () => {
+    it('should convert it to a base column', () => {
+      const schema = columnToZod(
+        new CustomTypeColumn({}, 'customType').as(new IntegerColumn({})),
       );
 
       assertType<typeof schema, z.ZodNumber>(true);

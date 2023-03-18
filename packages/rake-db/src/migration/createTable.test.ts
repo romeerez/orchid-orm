@@ -443,6 +443,26 @@ const db = getDb();
     it('should support domain column', async () => {
       await db[action]('table', (t) => ({
         id: t.serial().primaryKey(),
+        column: t.type('customType'),
+      }));
+
+      if (action === 'createTable') {
+        expectSql(`
+          CREATE TABLE "table" (
+            "id" serial PRIMARY KEY,
+            "column" "customType" NOT NULL
+          )
+        `);
+      } else {
+        expectSql(`
+          DROP TABLE "table"
+        `);
+      }
+    });
+
+    it('should support domain column', async () => {
+      await db[action]('table', (t) => ({
+        id: t.serial().primaryKey(),
         domainColumn: t.domain('domainName'),
       }));
 

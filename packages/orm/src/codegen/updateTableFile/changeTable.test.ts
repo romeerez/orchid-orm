@@ -162,6 +162,7 @@ export class SomeTable extends BaseTable {
           name: { type: 'add', item: t.text(1, 10) },
           active: { type: 'add', item: t.boolean() },
           domain: { type: 'add', item: t.domain('name').as(t.integer()) },
+          custom: { type: 'add', item: t.type('customType').as(t.integer()) },
         },
       },
     });
@@ -175,6 +176,7 @@ export class SomeTable extends BaseTable {
     name: t.text(1, 10),
     active: t.boolean(),
     domain: t.domain('name').as(t.integer()),
+    custom: t.type('customType').as(t.integer()),
   }));
 }`);
   });

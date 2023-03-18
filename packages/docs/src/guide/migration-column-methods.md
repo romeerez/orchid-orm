@@ -364,15 +364,31 @@ change(async (db) => {
 })
 ```
 
+## unsupported types
+
+For user-defined types or for types that are not supported yet, use `type`:
+
+When using `type` to define columns in application, you need to also specify `as` so application knows the actual type behind the domain.
+
+In migration, `as` won't have effect.
+
+```ts
+import { change } from 'rake-db'
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    name: t.type('type_name'),
+  }))
+})
+```
+
 ## domain
 
 Domain is a custom database type that allows to predefine a `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
 
 Before adding a domain column, create the domain type itself, see [create domain](/guide/migration-writing.html#createdomain-dropdomain).
 
-When using `domain` to define columns in application, you need to also specify `as` so application knows the actual type behind the domain.
-
-In migration, `as` won't have effect.
+`as` works exactly like as when using `type`, it has no effect in the migration.
 
 ```ts
 import { change } from 'rake-db'
