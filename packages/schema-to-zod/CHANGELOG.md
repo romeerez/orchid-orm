@@ -1,5 +1,13 @@
 # orchid-orm-schema-to-zod
 
+## 0.3.9
+
+### Patch Changes
+
+- 8d35851: Handle unsupported types
+- Updated dependencies [8d35851]
+  - pqb@0.10.9
+
 ## 0.3.8
 
 ### Patch Changes

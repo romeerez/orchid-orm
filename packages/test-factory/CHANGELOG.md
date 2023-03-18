@@ -1,5 +1,15 @@
 # orchid-orm-test-factory
 
+## 0.3.13
+
+### Patch Changes
+
+- 8d35851: Handle unsupported types
+- Updated dependencies [8d35851]
+  - orchid-orm@1.6.13
+  - pqb@0.10.9
+  - orchid-orm-schema-to-zod@0.3.9
+
 ## 0.3.12
 
 ### Patch Changes

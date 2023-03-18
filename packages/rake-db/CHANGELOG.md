@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.4.10
+
+### Patch Changes
+
+- 8d35851: Handle unsupported types
+- Updated dependencies [8d35851]
+  - pqb@0.10.9
+
 ## 2.4.9
 
 ### Patch Changes

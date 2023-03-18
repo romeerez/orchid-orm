@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.9
+
+### Patch Changes
+
+- 8d35851: Handle unsupported types
+
 ## 0.10.8
 
 ### Patch Changes
