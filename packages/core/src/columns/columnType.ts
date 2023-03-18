@@ -173,6 +173,9 @@ export type ColumnDataBase = {
   // hook for modifying base query object of the table
   // used for automatic updating of `updatedAt`
   modifyQuery?: (q: QueryCommon) => void;
+
+  // raw database check expression
+  check?: RawExpression;
 };
 
 export type ColumnChain = (
@@ -226,6 +229,7 @@ export abstract class ColumnTypeBase<
   // parse value from a database when it is an element of database array type
   parseItem?: (input: string) => unknown;
 
+  // set default to the column
   default<T extends ColumnTypeBase, Value extends T['type'] | RawExpression>(
     this: T,
     value: Value,
@@ -235,5 +239,10 @@ export abstract class ColumnTypeBase<
       'default',
       value as unknown,
     ) as ColumnWithDefault<T, Value>;
+  }
+
+  // set raw database check to the column
+  check<T extends ColumnTypeBase>(this: T, value: RawExpression): T {
+    return setColumnData(this, 'check', value);
   }
 }

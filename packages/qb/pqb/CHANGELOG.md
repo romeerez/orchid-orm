@@ -1,5 +1,13 @@
 # pqb
 
+## 0.10.7
+
+### Patch Changes
+
+- Support database CHECK validation
+- Updated dependencies
+  - orchid-core@0.1.3
+
 ## 0.10.6
 
 ### Patch Changes

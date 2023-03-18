@@ -179,7 +179,7 @@ const db = getDb();
       expect(ast2.shape.enum.options).toEqual(['one', 'two']);
     });
 
-    it('should add snake case timestamps if config has snakeCase: true', async () => {
+    it(`should ${action} snake case timestamps if config has snakeCase: true`, async () => {
       await testUpAndDown(
         async () => {
           db.options.snakeCase = true;
@@ -409,6 +409,28 @@ const db = getDb();
             "id" serial PRIMARY KEY,
             "name" text NOT NULL,
             ${expectedConstraint}
+          )
+        `);
+      } else {
+        expectSql(`
+          DROP TABLE "table"
+        `);
+      }
+    });
+
+    it('should support database check on the column', async () => {
+      await db[action]('table', (t) => ({
+        id: t.serial().primaryKey(),
+        columnWithCheck: t
+          .text()
+          .check(t.raw('length("columnWithCheck") > 10')),
+      }));
+
+      if (action === 'createTable') {
+        expectSql(`
+          CREATE TABLE "table" (
+            "id" serial PRIMARY KEY,
+            "columnWithCheck" text NOT NULL CHECK (length("columnWithCheck") > 10)
           )
         `);
       } else {

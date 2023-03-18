@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.6.11
+
+### Patch Changes
+
+- Support database CHECK validation
+- Updated dependencies
+  - orchid-core@0.1.3
+  - pqb@0.10.7
+
 ## 1.6.10
 
 ### Patch Changes

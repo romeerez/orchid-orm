@@ -179,4 +179,25 @@ describe('dbStructure', () => {
       expect(result).toEqual(rows);
     });
   });
+
+  describe('getChecks', () => {
+    it('should return checks', async () => {
+      rows = [
+        {
+          schemaName: 'public',
+          tableName: 'table',
+          name: 'checkName',
+          columnNames: ['one', 'two'],
+          expression: `(one < 1 AND two > 2)`,
+        },
+      ];
+      const result = await db.getChecks();
+      expect(result).toEqual([
+        {
+          ...rows[0],
+          expression: `one < 1 AND two > 2`,
+        },
+      ]);
+    });
+  });
 });

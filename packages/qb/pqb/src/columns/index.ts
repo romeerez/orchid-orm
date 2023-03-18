@@ -9,6 +9,7 @@ export * from './boolean';
 export * from './enum';
 export * from './json';
 export * from './array';
+export * from './unknown';
 export * from './virtual';
 export * from './code';
 export * from './columnsByType';

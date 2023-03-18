@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.4.8
+
+### Patch Changes
+
+- Support database CHECK validation
+- Updated dependencies
+  - orchid-core@0.1.3
+  - pqb@0.10.7
+
 ## 2.4.7
 
 ### Patch Changes

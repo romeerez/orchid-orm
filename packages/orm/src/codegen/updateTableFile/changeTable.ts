@@ -14,6 +14,7 @@ import {
 } from 'typescript';
 import {
   codeToString,
+  columnCheckToCode,
   columnDefaultArgumentToCode,
   columnForeignKeysToCode,
   columnIndexesToCode,
@@ -31,6 +32,7 @@ import {
   quoteObjectKey,
   singleQuote,
   pathToLog,
+  RawExpression,
 } from 'orchid-core';
 import { UpdateTableFileParams } from './updateTableFile';
 
@@ -379,6 +381,10 @@ const getColumnMethodArgs = (
 
   if (key === 'foreignKeys') {
     return columnForeignKeysToCode(value as ForeignKey<string, string[]>[]);
+  }
+
+  if (key === 'check') {
+    return [columnCheckToCode(t, value as RawExpression)];
   }
 
   const code = [`.${key}(`];

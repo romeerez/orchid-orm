@@ -113,3 +113,11 @@ export const primaryKey: DbStructure.PrimaryKey = {
   name: 'pkey',
   columnNames: ['id'],
 };
+
+export const check: DbStructure.Check = {
+  schemaName: 'public',
+  tableName: 'table',
+  name: 'table_column_check',
+  columnNames: ['column'],
+  expression: 'column > 10',
+};

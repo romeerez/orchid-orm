@@ -4,6 +4,7 @@ import { processRakeDbConfig } from '../common';
 import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
 import { asMock } from '../test-utils';
 import {
+  check,
   createdAtColumn,
   idColumn,
   table,
@@ -45,12 +46,16 @@ db.getPrimaryKeys = async () => primaryKeys;
 let columns: DbStructure.Column[] = [];
 db.getColumns = async () => columns;
 
+let checks: DbStructure.Check[] = [];
+db.getChecks = async () => checks;
+
 describe('pull', () => {
   beforeEach(() => {
     schemas = [];
     tables = [];
     primaryKeys = [];
     columns = [];
+    checks = [];
 
     jest.clearAllMocks();
   });
@@ -110,6 +115,15 @@ describe('pull', () => {
       },
     ];
 
+    checks = [
+      {
+        ...check,
+        tableName: 'table2',
+        columnNames: ['text'],
+        expression: 'length(text) > 5',
+      },
+    ];
+
     asMock(makeFileTimeStamp).mockReturnValue('timestamp');
 
     const appCodeUpdater = jest.fn();
@@ -147,7 +161,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable('table2', (t) => ({
-    text: t.text(),
+    text: t.text().check(t.raw('length(text) > 5')),
     ...t.timestampsSnakeCase(),
   }));
 });

@@ -106,6 +106,14 @@ export namespace DbStructure {
     name: string;
     values: [string, ...string[]];
   };
+
+  export type Check = {
+    schemaName: string;
+    tableName: string;
+    name: string;
+    columnNames: [string, ...string[]];
+    expression: string;
+  };
 }
 
 const filterSchema = (table: string) =>
@@ -413,6 +421,37 @@ JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
 WHERE ${filterSchema('n.nspname')}
 GROUP BY n.nspname, t.typname`,
     );
+    return rows;
+  }
+
+  async getChecks() {
+    const { rows } = await this.db.query<DbStructure.Check>(`SELECT
+  s.nspname AS "schemaName",
+  t.relname AS "tableName",
+  c.conname AS "name",
+  (
+    SELECT json_agg(ccu.column_name)
+    FROM information_schema.constraint_column_usage ccu
+    WHERE ccu.constraint_name = c.conname
+      AND ccu.table_schema = cs.nspname
+  ) AS "columnNames",
+  pg_get_expr(conbin, conrelid) AS "expression"
+FROM pg_catalog.pg_constraint c
+JOIN pg_class t ON t.oid = conrelid
+JOIN pg_catalog.pg_namespace s ON s.oid = t.relnamespace
+JOIN pg_catalog.pg_namespace cs ON cs.oid = c.connamespace
+WHERE contype = 'c'
+ORDER BY c.conname`);
+
+    for (const row of rows) {
+      if (
+        row.expression[0] === '(' &&
+        row.expression[row.expression.length - 1] === ')'
+      ) {
+        row.expression = row.expression.slice(1, -1);
+      }
+    }
+
     return rows;
   }
 }

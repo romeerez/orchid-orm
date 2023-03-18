@@ -37,6 +37,10 @@ export const columnToSql = (
     line.push('NOT NULL');
   }
 
+  if (item.data.check) {
+    line.push(`CHECK (${getRaw(item.data.check, values)})`);
+  }
+
   if (item.data.default !== undefined) {
     if (
       typeof item.data.default === 'object' &&

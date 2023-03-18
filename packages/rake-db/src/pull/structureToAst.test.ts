@@ -12,7 +12,7 @@ import {
   TimestampColumn,
   VarCharColumn,
 } from 'pqb';
-import { isRaw, RawExpression } from 'orchid-core';
+import { isRaw, raw, RawExpression } from 'orchid-core';
 import { structureToAst } from './structureToAst';
 import { RakeDbAst } from '../ast';
 import { getIndexName } from '../migration/migrationUtils';
@@ -27,6 +27,7 @@ import {
   extension,
   enumType,
   primaryKey,
+  check,
 } from './testUtils';
 
 const adapter = new Adapter({ databaseURL: 'file:path' });
@@ -165,6 +166,17 @@ describe('structureToAst', () => {
       expect(ast.shape.column).toBeInstanceOf(EnumColumn);
       expect((ast.shape.column as EnumColumn).enumName).toBe(enumType.name);
       expect((ast.shape.column as EnumColumn).options).toBe(enumType.values);
+    });
+
+    it('should support column with check', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [table];
+      db.getChecks = async () => [check];
+      db.getColumns = async () => [intColumn];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+
+      expect(ast.shape.column.data.check).toEqual(raw(check.expression));
     });
 
     it('should wrap column default into raw', async () => {

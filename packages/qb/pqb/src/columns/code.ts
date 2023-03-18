@@ -9,6 +9,7 @@ import {
   columnChainToCode,
   isRaw,
   quoteObjectKey,
+  RawExpression,
   singleQuote,
   singleQuoteArray,
   toArray,
@@ -251,15 +252,19 @@ export const columnDefaultArgumentToCode = (
   value: unknown,
 ): string => {
   if (typeof value === 'object' && value && isRaw(value)) {
-    const values = value.__values;
-    return `${t}.raw(${singleQuote(value.__raw)}${
-      values ? `, ${JSON.stringify(values)}` : ''
-    })`;
+    return rawToCode(t, value);
   } else if (typeof value === 'string') {
     return singleQuote(value);
   } else {
     return JSON.stringify(value);
   }
+};
+
+export const rawToCode = (t: string, raw: RawExpression): string => {
+  const values = raw.__values;
+  return `${t}.raw(${singleQuote(raw.__raw)}${
+    values ? `, ${JSON.stringify(values)}` : ''
+  })`;
 };
 
 export const columnForeignKeysToCode = (
@@ -350,6 +355,10 @@ export const columnIndexesToCode = (
   return code;
 };
 
+export const columnCheckToCode = (t: string, check: RawExpression): string => {
+  return `.check(${rawToCode(t, check)})`;
+};
+
 export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
   code = toArray(code);
 
@@ -399,6 +408,10 @@ export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
 
   if (type.data.comment)
     addCode(code, `.comment(${singleQuote(type.data.comment)})`);
+
+  if (type.data.check) {
+    addCode(code, columnCheckToCode(t, type.data.check));
+  }
 
   const { validationDefault } = type.data;
   if (validationDefault) {

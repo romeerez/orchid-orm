@@ -75,6 +75,7 @@ export namespace RakeDbAst {
     comment?: string | null;
     compression?: string;
     primaryKey?: boolean;
+    check?: RawExpression;
     foreignKeys?: ({
       table: string;
       columns: string[];

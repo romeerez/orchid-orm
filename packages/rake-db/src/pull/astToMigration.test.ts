@@ -3,6 +3,7 @@ import { columnTypes } from 'pqb';
 import { RakeDbAst } from '../ast';
 import { processRakeDbConfig } from '../common';
 import { RakeDbEnumColumn } from './structureToAst';
+import { raw } from 'orchid-core';
 
 const template = (content: string) => `import { change } from 'rake-db';
 
@@ -283,6 +284,28 @@ change(async (db) => {
     },
   );`),
       );
+    });
+  });
+
+  describe('check', () => {
+    it('should add column check', () => {
+      const result = astToMigration(config, [
+        {
+          ...table,
+          shape: {
+            id: table.shape.id.check(raw('column > 10')),
+          },
+        },
+      ]);
+
+      expect(result).toBe(`import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createTable('schema.table', (t) => ({
+    id: t.serial().primaryKey().check(t.raw('column > 10')),
+  }));
+});
+`);
     });
   });
 });

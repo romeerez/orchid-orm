@@ -4,7 +4,7 @@ import { updateTableFile } from './updateTableFile';
 import { resolve } from 'path';
 import { columnTypes, newTableData, TableData } from 'pqb';
 import { RakeDbAst } from 'rake-db';
-import { pathToLog } from 'orchid-core';
+import { pathToLog, raw } from 'orchid-core';
 
 jest.mock('fs/promises', () => ({
   mkdir: jest.fn(),
@@ -843,6 +843,83 @@ export class SomeTable extends BaseTable {
       });
 
       testWritten(result);
+    });
+  });
+
+  describe('column check', () => {
+    it('should add column with check', async () => {
+      asMock(fs.readFile)
+        .mockResolvedValue(`import { BaseTable } from '../baseTable';
+
+export class SomeTable extends BaseTable {
+  readonly table = 'some';
+  columns = this.setColumns((t) => ({}));
+}`);
+
+      await updateTableFile({
+        ...params,
+        ast: {
+          ...ast.changeTable,
+          shape: {
+            name: { type: 'add', item: t.text(1, 10).check(t.raw('check')) },
+          },
+        },
+      });
+
+      testWritten(`import { BaseTable } from '../baseTable';
+
+export class SomeTable extends BaseTable {
+  readonly table = 'some';
+  columns = this.setColumns((t) => ({
+    name: t.text(1, 10).check(t.raw('check')),
+  }));
+}`);
+    });
+
+    it('should change column check', async () => {
+      asMock(fs.readFile)
+        .mockResolvedValue(`import { BaseTable } from '../baseTable';
+
+export class SomeTable extends BaseTable {
+  readonly table = 'some';
+  columns = this.setColumns((t) => ({
+    add: t.text(),
+    remove: t.text().check(t.raw('remove check')),
+  }));
+}`);
+
+      await updateTableFile({
+        ...params,
+        ast: {
+          ...ast.changeTable,
+          shape: {
+            add: {
+              type: 'change',
+              from: {},
+              to: {
+                check: raw('add check'),
+              },
+            },
+            remove: {
+              type: 'change',
+              from: {
+                check: raw('remove check'),
+              },
+              to: {},
+            },
+          },
+        },
+      });
+
+      testWritten(`import { BaseTable } from '../baseTable';
+
+export class SomeTable extends BaseTable {
+  readonly table = 'some';
+  columns = this.setColumns((t) => ({
+    add: t.text().check(t.raw('add check')),
+    remove: t.text(),
+  }));
+}`);
     });
   });
 });

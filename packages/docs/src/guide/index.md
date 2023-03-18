@@ -40,7 +40,7 @@ For the same reasons, Data Mapper pattern, Unit of Work, and Data encapsulation 
 
 ## Comparison with other database tools
 
-Before building yet another ORM I researched existing ones and wrote an [article](https://romeerez.hashnode.dev/nodejs-orms-overview-and-comparison#heading-typeorm) about it. And I concluded that there is not a single ORM that can satisfy the typical needs of a TS node.js project. And that's why `Orchid ORM` was born because an alternative is needed.
+Before building yet another ORM I researched existing ones and wrote an [article](https://romeerez.hashnode.dev/nodejs-orms-overview-and-comparison) about it. And I concluded that there is not a single ORM that can satisfy the typical needs of a TS node.js project. And that's why `Orchid ORM` was born because an alternative is needed.
 
 If all the ORMs feel limiting and messy, you may want to try using query builders or raw SQL instead, but they bring their disadvantages:
 

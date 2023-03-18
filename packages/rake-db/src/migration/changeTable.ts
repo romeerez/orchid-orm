@@ -7,6 +7,7 @@ import {
   quote,
   getRaw,
   EnumColumn,
+  UnknownColumn,
 } from 'pqb';
 import {
   EmptyObject,
@@ -90,15 +91,7 @@ function add(
   | EmptyObject
   | Record<string, RakeDbAst.ChangeTableItem.Column> {
   if (item instanceof ColumnType) {
-    if (this[nameKey]) {
-      item.data.name = this[nameKey];
-    }
-
-    return {
-      type: 'add',
-      item,
-      dropMode: options?.dropMode,
-    };
+    return addOrDrop(this, 'add', item, options);
   } else if (item === emptyObject) {
     mergeTableData(changeTableData.add, getTableData());
     resetTableData();
@@ -118,15 +111,7 @@ function add(
 
 const drop = function (item, options) {
   if (item instanceof ColumnType) {
-    if (this[nameKey]) {
-      item.data.name = this[nameKey];
-    }
-
-    return {
-      type: 'drop',
-      item,
-      dropMode: options?.dropMode,
-    };
+    return addOrDrop(this, 'drop', item, options);
   } else if (item === emptyObject) {
     mergeTableData(changeTableData.drop, getTableData());
     resetTableData();
@@ -143,6 +128,45 @@ const drop = function (item, options) {
     return result;
   }
 } as typeof add;
+
+const addOrDrop = (
+  types: ColumnTypesBase,
+  type: 'add' | 'drop',
+  item: ColumnType,
+  options?: { dropMode?: DropMode },
+): RakeDbAst.ChangeTableItem => {
+  if (types[nameKey]) {
+    item.data.name = types[nameKey];
+  }
+
+  if (item instanceof UnknownColumn) {
+    const empty = columnTypeToColumnChange({
+      type: 'change',
+      from: {},
+      to: {},
+    });
+    const add = columnTypeToColumnChange({
+      type: 'change',
+      from: {},
+      to: {
+        check: item.data.check,
+      },
+    });
+
+    return {
+      type: 'change',
+      from: type === 'add' ? empty : add,
+      to: type === 'add' ? add : empty,
+      ...options,
+    };
+  }
+
+  return {
+    type,
+    item,
+    dropMode: options?.dropMode,
+  };
+};
 
 type Change = RakeDbAst.ChangeTableItem.Change & ChangeOptions;
 
@@ -389,13 +413,14 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
     const item = ast.shape[key];
 
     if (item.type === 'add') {
-      addColumnIndex(addIndexes, key, item.item);
-      addColumnComment(comments, key, item.item);
+      const column = item.item;
+      addColumnIndex(addIndexes, key, column);
+      addColumnComment(comments, key, column);
 
       alterTable.push(
         `ADD COLUMN ${columnToSql(
           key,
-          item.item,
+          column,
           values,
           addPrimaryKeys.columns.length > 1,
         )}`,
@@ -410,7 +435,7 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
       );
     } else if (item.type === 'change') {
       const { from, to } = item;
-      if (from.type !== to.type || from.collate !== to.collate) {
+      if (to.type && (from.type !== to.type || from.collate !== to.collate)) {
         alterTable.push(
           `ALTER COLUMN "${item.name || key}" TYPE ${to.type}${
             to.collate ? ` COLLATE ${quote(to.collate)}` : ''
@@ -444,6 +469,18 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
             to.compression || 'DEFAULT'
           }`,
         );
+      }
+
+      if (from.check !== to.check) {
+        const name = `${ast.name}_${item.name || key}_check`;
+        if (from.check) {
+          alterTable.push(`DROP CONSTRAINT "${name}"`);
+        }
+        if (to.check) {
+          alterTable.push(
+            `ADD CONSTRAINT "${name}"\n    CHECK (${getRaw(to.check, values)})`,
+          );
+        }
       }
 
       const foreignKeysLen = Math.max(

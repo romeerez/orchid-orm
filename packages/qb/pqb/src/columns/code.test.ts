@@ -236,5 +236,19 @@ bool: t.boolean(),
         `.trim(),
       );
     });
+
+    it('should add check', () => {
+      const code = columnsShapeToCode(
+        {
+          column: t.integer().check(t.raw('column > 10')),
+        },
+        tableData,
+        't',
+      );
+
+      expect(code).toEqual([
+        `column: t.integer().check(t.raw('column > 10')),`,
+      ]);
+    });
   });
 });

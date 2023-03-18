@@ -7,59 +7,88 @@ All the following methods are available in any kind of column.
 Mark the column as a primary key. This column type becomes an argument of the `.find` method. So if the primary key is of `serial` type, `.find` will accept the number, or if the primary key is of `UUID` type, `.find` will expect a string.
 
 ```ts
-const someTable = db('someTable', (t) => ({
-  id: t.serial().primaryKey(),
-}))
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    id: t.serial().primaryKey(),
+  }));
+}
 
-someTable.find(1)
+// primary key can be used by `find` later:
+db.table.find(1)
 ```
 
-## hidden
+## default
 
-Remove the column from the default selection. For example, the password of the user may be marked as hidden, and then this column won't load by default, only when specifically listed in `.select`.
+Set a default value to a column. Columns that have defaults become optional when creating a record.
 
-Caution: `.hidden` functionality is not tested yet very well, to be done.
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    // values as defaults:
+    int: t.integer().default(123),
+    text: t.text().default('text'),
+    
+    // raw SQL default:
+    timestamp: t.timestamp().default(t.raw('now()')),
+  }));
+}
+```
 
 ## nullable
 
-Mark the column as nullable, by default it's not:
+Use `nullable` to mark the column as nullable. By default, all columns are required.
+
+Nullable columns are optional when creating records.
 
 ```ts
-const someTable = db('someTable', (t) => ({
-  column: t.integer().nullable(),
-}))
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    name: t.integer().nullable(),
+  }));
+}
 ```
 
 ## encode
 
-Process value for the column when creating or updating.
+Set a custom function to process value for the column when creating or updating a record.
 
 The type of `input` argument will be used as the type of the column when creating and updating.
 
 ```ts
-const someTable = db('someTable', (t) => ({
-  column: t.text(3, 100).encode((input: boolean | number | string) => String(input))
-}))
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    // encode boolean, number, or string to text before saving
+    column: t.text(3, 100).encode((input: boolean | number | string) => String(input))
+  }));
+}
 
 // numbers and booleans will be converted to a string:
-await someTable.create({ column: 123 })
-await someTable.create({ column: true })
-await someTable.where({ column: 'true' }).update({ column: false })
+await db.table.create({ column: 123 })
+await db.table.create({ column: true })
+await db.table.where({ column: 'true' }).update({ column: false })
 ```
 
 ## parse
 
-Process value when loading it from a database.
+Set a custom function to process value when loading it from a database.
 
 The type of input is the type of column before `.parse`, the resulting type will replace the type of column.
 
 ```ts
-const someTable = db('someTable', (t) => ({
-  column: t.text(3, 100).parse((input) => parseInt(input))
-}))
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    // parse text to integer
+    column: t.text(3, 100).parse((input) => parseInt(input))
+  }));
+}
 
 // column will be parsed to a number
-const value: number = await someTable.get('column')
+const value: number = await db.table.get('column')
 ```
 
 ## as
@@ -71,7 +100,7 @@ Before calling `.as` need to use `.encode` with the input of the same type as th
 and `.parse` which returns the correct type.
 
 ```ts
-// column as the same type as t.integer()
+// column has the same type as t.integer()
 const column = t.text(1, 100)
   .encode((input: number) => input)
   .parse((text) => parseInt(text))
@@ -84,7 +113,7 @@ Adds `createdAt` and `updatedAt` columns of type `timestamp` (without time zone)
 
 The `timestamps` function is using `timestamp` internally. If `timestamp` is overridden to be parsed into `Date`, so will do `timestamps`.
 
-`updatedAt` adds a hook to refresh its date on every `update` query, unless you specify the `updatedAt` value explicitly in the update.
+`updatedAt` adds a hook to refresh its date on every `update` query, unless you set `updatedAt` explicitly when updating a record.
 
 ```ts
 const someTable = db('someTable', (t) => ({
@@ -109,6 +138,12 @@ export class SomeTable extends BaseTable {
 }
 ```
 
+## hidden
+
+Remove the column from the default selection. For example, the password of the user may be marked as hidden, and then this column won't load by default, only when specifically listed in `.select`.
+
+Caution: `.hidden` functionality is not tested yet very well, to be done.
+
 ## methods for migration
 
-Column methods such as `default`, `foreignKey`, `index`, `unique` and others have effects only when used in migrations, read more about it in [migration column methods](/guide/migration-column-methods) document.
+Column methods such as `foreignKey`, `index`, `unique`, `comment` and others have effects only when used in migrations, read more about it in [migration column methods](/guide/migration-column-methods) document.

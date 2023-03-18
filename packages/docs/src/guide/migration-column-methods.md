@@ -7,7 +7,7 @@ Even though they do not affect the application code, you still can copy code fro
 
 ## default
 
-The default value is used only in the migration to set a default on a database level. Value can be a raw SQL.
+Set a default value for a column on a database level. Value can be a raw SQL.
 
 ```ts
 import { change } from 'rake-db'
@@ -302,6 +302,21 @@ import { change } from 'rake-db'
 change(async (db) => {
   await db.createTable('table', (t) => ({
     ...t.timestamps(),
+  }))
+})
+```
+
+## check
+
+Set a database-level validation check to a column. `check` accepts a raw SQL.
+
+```ts
+import { change } from 'rake-db'
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    // validate rank to be from 1 to 10
+    rank: t.integer().check(t.raw('1 >= "rank" AND "rank" <= 10'))
   }))
 })
 ```

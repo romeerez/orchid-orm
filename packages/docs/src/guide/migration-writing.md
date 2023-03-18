@@ -18,9 +18,9 @@ A single migration file can have multiple `change`'s.
 
 It's useful when creating a database schema or enum, and then creating a table that depends on it.
 
-When migrating, `change`'s are executed from top to bottom, so the schema and the enum will be created before the table.
+When migrating, `change`s are executed from top to bottom, so the schema and the enum will be created before the table.
 
-On rollback, `change`'s are executed from bottom to top, so the schema and the enum will be dropped **after** the table that is using them.
+On rollback, `change`s are executed from bottom to top, so the schema and the enum will be dropped **after** the table that is using them.
 
 ```ts
 import { change } from 'rake-db'
@@ -153,9 +153,9 @@ The callback of the `changeTable` is different from `createTable` in the way tha
 
 ## add, drop
 
-`add` will add a column on migrating, and remove it on rollback.
+`add` will add a column (or a check) on migrating, and remove it on rollback.
 
-`drop` will remove the column on migrating, and add it on rollback.
+`drop` will remove a column (or a check) on migrating, and add it on rollback.
 
 The column in `add` or `drop` can have all the same methods as when creating a table, such methods as `index`, `unique`, and `foreignKey`.
 
@@ -166,8 +166,17 @@ import { change } from 'rake-db'
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
+    // add column
     column1: t.add(t.text()),
+    
+    // remove column
     column2: t.drop(t.boolean()),
+    
+    // add a check to the column
+    column3: t.add(t.check(t.raw(`column3 > 5`))),
+    
+    // remove a check from the column
+    column4: t.drop(t.check(t.raw(`column4 > 5`))),
     
     // add composite primary key:
     ...t.add(t.primaryKey(['foo', 'bar'])),
@@ -195,7 +204,9 @@ change(async (db) => {
 
 ## change
 
-Takes an array of two columns, on migrating it will change the column to the second element, and on rollback will change the column to the first element.
+Takes an array of two columns (or checks).
+When migrating, it will change the column to the second element,
+and when doing rollback will change the column to the first element.
 
 Dropping or creating a primary key on multiple columns is allowed.
 
@@ -310,6 +321,13 @@ change(async (db) => {
           name: 'otherForeignKeyName',
         }),
     ),
+    
+    column17: t.change(
+      // change from this check:
+      t.check(t.raw('column17 > 5')),
+      // to this check:
+      t.check(t.raw('column17 < 10')),
+    )
   }))
 })
 ```

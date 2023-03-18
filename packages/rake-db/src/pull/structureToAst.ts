@@ -11,7 +11,7 @@ import {
   instantiateColumn,
   TableData,
 } from 'pqb';
-import { Code, singleQuote } from 'orchid-core';
+import { Code, raw, singleQuote } from 'orchid-core';
 import { getForeignKeyName, getIndexName } from '../migration/migrationUtils';
 
 export class RakeDbEnumColumn extends EnumColumn<
@@ -46,6 +46,7 @@ type Data = {
   foreignKeys: DbStructure.ForeignKey[];
   extensions: DbStructure.Extension[];
   enums: DbStructure.Enum[];
+  checks: DbStructure.Check[];
 };
 
 type PendingTables = Record<
@@ -157,6 +158,7 @@ const getData = async (db: DbStructure): Promise<Data> => {
     foreignKeys,
     extensions,
     enums,
+    checks,
   ] = await Promise.all([
     db.getSchemas(),
     db.getTables(),
@@ -166,6 +168,7 @@ const getData = async (db: DbStructure): Promise<Data> => {
     db.getForeignKeys(),
     db.getExtensions(),
     db.getEnums(),
+    db.getChecks(),
   ]);
 
   return {
@@ -177,6 +180,7 @@ const getData = async (db: DbStructure): Promise<Data> => {
     foreignKeys,
     extensions,
     enums,
+    checks,
   };
 };
 
@@ -235,6 +239,13 @@ const pushTableAst = (
   const primaryKey = data.primaryKeys.find(belongsToTable);
   const tableIndexes = data.indexes.filter(belongsToTable);
   const tableForeignKeys = innerFKeys.filter(belongsToTable);
+
+  const columnChecks: Record<string, DbStructure.Check> = {};
+  for (const check of data.checks) {
+    if (check.columnNames.length === 1) {
+      columnChecks[check.columnNames[0]] = check;
+    }
+  }
 
   const shape: ColumnsShape = {};
   for (let item of columns) {
@@ -316,6 +327,11 @@ const pushTableAst = (
           onDelete: fkeyActionMap[foreignKey.onDelete],
         } as ForeignKeyOptions,
       );
+    }
+
+    const check = columnChecks[item.name];
+    if (check) {
+      column.data.check = raw(check.expression);
     }
 
     delete column.data.name;

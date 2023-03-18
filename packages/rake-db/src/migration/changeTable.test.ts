@@ -507,6 +507,45 @@ describe('changeTable', () => {
       );
     });
 
+    it(`should ${action} column with check`, async () => {
+      await testUpAndDown(
+        () =>
+          db.changeTable('table', (t) => ({
+            column: t[action](t.text().check(t.raw(`length(column) > 10`))),
+          })),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+              ADD COLUMN "column" text NOT NULL CHECK (length(column) > 10)
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+              DROP COLUMN "column"
+          `),
+      );
+    });
+
+    it(`should ${action} column check`, async () => {
+      await testUpAndDown(
+        () =>
+          db.changeTable('table', (t) => ({
+            column: t[action](t.check(t.raw(`length(column) > 10`))),
+          })),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+              ADD CONSTRAINT "table_column_check"
+              CHECK (length(column) > 10)
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+              DROP CONSTRAINT "table_column_check"
+          `),
+      );
+    });
+
     it(`should ${action} columns with a primary key`, async () => {
       await testUpAndDown(
         () =>
@@ -764,6 +803,32 @@ describe('changeTable', () => {
         expect(ast.shape.changeEnum.from.column.options).toEqual(enumTwo);
         expect(ast.shape.changeEnum.to.column.options).toEqual(enumOne);
       },
+    );
+  });
+
+  it('should change column check', async () => {
+    await testUpAndDown(
+      () =>
+        db.changeTable('table', (t) => ({
+          column: t.change(
+            t.check(t.raw('length(column) < 20')),
+            t.check(t.raw('length(column) > 10')),
+          ),
+        })),
+      () =>
+        expectSql(`
+          ALTER TABLE "table"
+            DROP CONSTRAINT "table_column_check",
+            ADD CONSTRAINT "table_column_check"
+            CHECK (length(column) > 10)
+        `),
+      () =>
+        expectSql(`
+          ALTER TABLE "table"
+            DROP CONSTRAINT "table_column_check",
+            ADD CONSTRAINT "table_column_check"
+            CHECK (length(column) < 20)
+        `),
     );
   });
 
