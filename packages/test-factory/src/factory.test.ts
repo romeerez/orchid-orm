@@ -120,6 +120,29 @@ describe('factory', () => {
 
       expect(data.bio.length).toBeLessThanOrEqual(500);
     });
+
+    it('should support domain column', () => {
+      class UserTable extends BaseTable {
+        readonly table = 'user';
+        columns = this.setColumns((t) => ({
+          id: t.serial().primaryKey(),
+          name: t.domain('domainName').as(t.integer()),
+        }));
+      }
+
+      const db = orchidORM(adapter, {
+        user: UserTable,
+      });
+
+      const factory = createFactory(db.user);
+
+      const data = factory.build();
+
+      expect(data).toEqual({
+        id: expect.any(Number),
+        name: expect.any(Number),
+      });
+    });
   });
 
   describe('omit', () => {

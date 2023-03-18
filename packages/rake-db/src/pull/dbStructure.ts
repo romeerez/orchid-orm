@@ -114,6 +114,22 @@ export namespace DbStructure {
     columnNames: [string, ...string[]];
     expression: string;
   };
+
+  export type Domain = {
+    schemaName: string;
+    name: string;
+    type: string;
+    typeSchema: string;
+    isArray: boolean;
+    notNull: boolean;
+    maxChars?: number;
+    numericPrecision?: number;
+    numericScale?: number;
+    dateTimePrecision?: number;
+    collation?: string;
+    default?: string;
+    check?: string;
+  };
 }
 
 const filterSchema = (table: string) =>
@@ -451,6 +467,40 @@ ORDER BY c.conname`);
         row.expression = row.expression.slice(1, -1);
       }
     }
+
+    return rows;
+  }
+
+  async getDomains() {
+    const { rows } = await this.db.query<DbStructure.Domain>(`SELECT
+  n.nspname AS "schemaName",
+  d.typname AS "name",
+  t.typname AS "type",
+  s.nspname AS "typeSchema",
+  .typnotnull AS "notNull",
+  d.typcategory = 'A' AS "isArray",
+  character_maximum_length AS "maxChars",
+  numeric_precision AS "numericPrecision",
+  numeric_scale AS "numericScale",
+  datetime_precision AS "dateTimePrecision",
+  collation_name AS "collation",
+  domain_default AS "default",
+  pg_get_expr(conbin, conrelid) AS "expression"
+FROM pg_catalog.pg_type d
+JOIN pg_catalog.pg_namespace n ON n.oid = d.typnamespace
+JOIN information_schema.domains i
+  ON i.domain_schema = nspname
+ AND i.domain_name = d.typname
+JOIN pg_catalog.pg_type t
+  ON (
+    CASE WHEN d.typcategory = 'A'
+      THEN t.typarray
+      ELSE t.oid
+    END
+  ) = d.typbasetype
+JOIN pg_catalog.pg_namespace s ON s.oid = t.typnamespace
+LEFT JOIN pg_catalog.pg_constraint c ON c.contypid = d.oid
+WHERE d.typtype = 'd' AND ${filterSchema('n.nspname')}`);
 
     return rows;
   }

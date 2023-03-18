@@ -354,7 +354,7 @@ describe('migration', () => {
 
   (['createEnum', 'dropEnum'] as const).forEach((action) => {
     describe(action, () => {
-      it('should call appCodeUpdater', async () => {
+      it('should push ast', async () => {
         await db[action]('enumName', ['one']);
 
         expect(db.migratedAsts.length).toBe(1);
@@ -364,9 +364,8 @@ describe('migration', () => {
         action === 'createEnum' ? 'add' : 'drop'
       } an enum`, async () => {
         const fn = () => {
-          return db[action]('enumName', ['one', 'two'], {
+          return db[action]('schemaName.enumName', ['one', 'two'], {
             dropIfExists: true,
-            schema: 'schemaName',
             cascade: true,
           });
         };
@@ -394,6 +393,51 @@ describe('migration', () => {
         (action === 'createEnum'
           ? expectDropExtension
           : expectCreateExtension)();
+      });
+    });
+  });
+
+  (['createDomain', 'dropDomain'] as const).forEach((action) => {
+    describe(action, () => {
+      it('should push ast', async () => {
+        await db[action]('domain', (t) => t.integer());
+
+        expect(db.migratedAsts.length).toBe(1);
+      });
+
+      it(`should ${action} domain`, async () => {
+        const fn = () => {
+          return db[action]('schema.domain', (t) => t.integer(), {
+            collation: 'C',
+            notNull: true,
+            default: db.raw('123'),
+            check: db.raw('VALUE = 42'),
+            cascade: true,
+          });
+        };
+
+        const expectUp = () => {
+          expectSql(`
+            CREATE DOMAIN "schema"."domain" AS integer
+            COLLATION 'C'
+            DEFAULT 123
+            NOT NULL CHECK VALUE = 42
+          `);
+        };
+
+        const expectDown = () => {
+          expectSql(`
+            DROP DOMAIN "schema"."domain" CASCADE
+          `);
+        };
+
+        await fn();
+        (action === 'createDomain' ? expectUp : expectDown)();
+
+        db.up = false;
+        queryMock.mockClear();
+        await fn();
+        (action === 'createDomain' ? expectDown : expectUp)();
       });
     });
   });

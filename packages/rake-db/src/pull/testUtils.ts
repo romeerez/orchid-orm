@@ -121,3 +121,12 @@ export const check: DbStructure.Check = {
   columnNames: ['column'],
   expression: 'column > 10',
 };
+
+export const domain: DbStructure.Domain = {
+  schemaName: 'public',
+  name: 'domain',
+  type: 'int4',
+  typeSchema: 'pg_catalog',
+  notNull: false,
+  isArray: false,
+};

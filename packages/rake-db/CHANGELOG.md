@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.4.9
+
+### Patch Changes
+
+- Support domain types
+- Updated dependencies
+  - orchid-core@0.1.4
+  - pqb@0.10.8
+
 ## 2.4.8
 
 ### Patch Changes

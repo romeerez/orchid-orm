@@ -3,9 +3,11 @@ import { RakeDbAst } from '../ast';
 import {
   ArrayColumn,
   columnCode,
+  ColumnFromDbParams,
   columnsByType,
   ColumnsShape,
   ColumnType,
+  DomainColumn,
   EnumColumn,
   ForeignKeyOptions,
   instantiateColumn,
@@ -47,7 +49,10 @@ type Data = {
   extensions: DbStructure.Extension[];
   enums: DbStructure.Enum[];
   checks: DbStructure.Check[];
+  domains: DbStructure.Domain[];
 };
+
+type Domains = Record<string, ColumnType>;
 
 type PendingTables = Record<
   string,
@@ -87,10 +92,22 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
     pendingTables[key] = { table, dependsOn };
   }
 
+  const domains: Domains = {};
+  for (const it of data.domains) {
+    domains[`${it.schemaName}.${it.name}`] = getColumn(data, domains, {
+      schemaName: it.schemaName,
+      name: it.name,
+      type: it.type,
+      typeSchema: it.typeSchema,
+      isArray: it.isArray,
+      isSerial: false,
+    });
+  }
+
   for (const key in pendingTables) {
     const { table, dependsOn } = pendingTables[key];
     if (!dependsOn.size) {
-      pushTableAst(ast, data, table, pendingTables);
+      pushTableAst(ast, data, domains, table, pendingTables);
     }
   }
 
@@ -116,6 +133,20 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
     });
   }
 
+  for (const it of data.domains) {
+    ast.push({
+      type: 'domain',
+      action: 'create',
+      schema: it.schemaName === 'public' ? undefined : it.schemaName,
+      name: it.name,
+      baseType: domains[`${it.schemaName}.${it.name}`],
+      notNull: it.notNull,
+      collation: it.collation,
+      default: it.default ? raw(it.default) : undefined,
+      check: it.check ? raw(it.check) : undefined,
+    });
+  }
+
   for (const key in pendingTables) {
     const innerFKeys: DbStructure.ForeignKey[] = [];
     const { table } = pendingTables[key];
@@ -132,7 +163,7 @@ export const structureToAst = async (db: DbStructure): Promise<RakeDbAst[]> => {
       }
     }
 
-    pushTableAst(ast, data, table, pendingTables, innerFKeys);
+    pushTableAst(ast, data, domains, table, pendingTables, innerFKeys);
   }
 
   for (const [fkey, table] of outerFKeys) {
@@ -159,6 +190,7 @@ const getData = async (db: DbStructure): Promise<Data> => {
     extensions,
     enums,
     checks,
+    domains,
   ] = await Promise.all([
     db.getSchemas(),
     db.getTables(),
@@ -169,6 +201,7 @@ const getData = async (db: DbStructure): Promise<Data> => {
     db.getExtensions(),
     db.getEnums(),
     db.getChecks(),
+    db.getDomains(),
   ]);
 
   return {
@@ -181,6 +214,7 @@ const getData = async (db: DbStructure): Promise<Data> => {
     extensions,
     enums,
     checks,
+    domains,
   };
 };
 
@@ -209,6 +243,56 @@ const getIsSerial = (item: DbStructure.Column) => {
   return false;
 };
 
+const getColumn = (
+  data: Data,
+  domains: Domains,
+  {
+    schemaName,
+    tableName,
+    name,
+    type,
+    typeSchema,
+    isArray,
+    isSerial,
+    ...params
+  }: {
+    schemaName: string;
+    tableName?: string;
+    name: string;
+    type: string;
+    typeSchema: string;
+    isArray: boolean;
+    isSerial: boolean;
+  } & ColumnFromDbParams,
+) => {
+  let column: ColumnType;
+
+  const klass = columnsByType[getColumnType(type, isSerial)];
+  if (klass) {
+    column = instantiateColumn(klass, params);
+  } else {
+    const domainColumn = domains[`${typeSchema}.${type}`];
+    if (domainColumn) {
+      column = new DomainColumn({}, type).as(domainColumn);
+    } else {
+      const enumType = data.enums.find(
+        (item) => item.name === type && item.schemaName === typeSchema,
+      );
+      if (!enumType) {
+        throw new Error(
+          `Cannot handle ${tableName ? 'column' : 'domain'} ${schemaName}${
+            tableName ? `.${tableName}` : ''
+          }.${name}: column type \`${type}\` is not supported`,
+        );
+      }
+
+      column = new RakeDbEnumColumn({}, type, enumType.values);
+    }
+  }
+
+  return isArray ? new ArrayColumn({}, column) : column;
+};
+
 const getColumnType = (type: string, isSerial: boolean) => {
   if (!isSerial) return type;
 
@@ -222,6 +306,7 @@ const getColumnType = (type: string, isSerial: boolean) => {
 const pushTableAst = (
   ast: RakeDbAst[],
   data: Data,
+  domains: Domains,
   table: DbStructure.Table,
   pendingTables: PendingTables,
   innerFKeys = data.foreignKeys,
@@ -254,28 +339,14 @@ const pushTableAst = (
       item = { ...item, default: undefined };
     }
 
-    let column: ColumnType;
-
     const isArray = item.dataType === 'ARRAY';
-    const type = isArray ? item.type.slice(1) : item.type;
-    const klass = columnsByType[getColumnType(type, isSerial)];
-    if (klass) {
-      column = instantiateColumn(klass, item);
-    } else {
-      const { type, typeSchema } = item;
-      const enumType = data.enums.find(
-        (item) => item.name === type && item.schemaName === typeSchema,
-      );
-      if (!enumType) {
-        throw new Error(
-          `Cannot handle column ${item.schemaName}.${item.tableName}.${item.name}: column type \`${item.type}\` is not supported`,
-        );
-      }
 
-      column = new RakeDbEnumColumn({}, type, enumType.values);
-    }
-
-    if (isArray) column = new ArrayColumn({}, column);
+    let column = getColumn(data, domains, {
+      ...item,
+      type: isArray ? item.type.slice(1) : item.type,
+      isArray,
+      isSerial,
+    });
 
     if (
       primaryKey?.columnNames.length === 1 &&
@@ -392,7 +463,7 @@ const pushTableAst = (
   for (const otherKey in pendingTables) {
     const item = pendingTables[otherKey];
     if (item.dependsOn.delete(key) && item.dependsOn.size === 0) {
-      pushTableAst(ast, data, item.table, pendingTables);
+      pushTableAst(ast, data, domains, item.table, pendingTables);
     }
   }
 };

@@ -467,9 +467,11 @@ Third argument for options is optional.
 import { change } from 'rake-db'
 
 change(async (db) => {
-  await db.createEnum('mood', ['sad', 'ok', 'happy'], {
-    schema: 'schemaName',
-    // following options are used when dropping
+  await db.createEnum('number', ['one', 'two', 'three']);
+  
+  // use `schemaName.enumName` format to specify a schema
+  await db.createEnum('customSchema.mood', ['sad', 'ok', 'happy'], {
+    // following options are used when dropping enum
     dropIfExists: true,
     cascade: true,
   })
@@ -501,6 +503,34 @@ import { change } from 'rake-db'
 
 change(async (db) => {
   await db.createExtension('pg_trgm')
+})
+```
+
+## createDomain, dropDomain
+
+Domain is a custom database type that allows to predefine a `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
+
+`createDomain` and `dropDomain` take a domain name as first argument, callback returning inner column type as a second, and optional object with parameters as third.
+
+```ts
+import { change } from 'rake-db'
+
+change(async (db) => {
+  await db.createDomain('domainName', (t) => t.integer(), {
+    check: db.raw('value = 42'),
+  })
+  
+  // use `schemaName.domainName` format to specify a schema
+  await db.createDomain('schemaName.domainName', (t) => t.text(), {
+    // unlike columns, domain is nullable by default, use notNull when needed:
+    notNull: true,
+    collation: 'C',
+    default: db.raw(`'default text'`),
+    check: db.raw('length(value) > 10'),
+    
+    // cascade is used when dropping domain
+    cascade: true,
+  })
 })
 ```
 

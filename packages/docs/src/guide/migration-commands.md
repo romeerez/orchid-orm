@@ -42,6 +42,7 @@ Currently, it supports generating code to create:
 - primary keys
 - foreign keys
 - indexes
+- domain types
 
 ## generate migration
 

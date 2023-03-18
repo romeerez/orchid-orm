@@ -15,8 +15,10 @@ import {
   DefaultColumnTypes,
   EnumColumn,
   quote,
+  columnTypes,
+  getRaw,
 } from 'pqb';
-import { MaybeArray, QueryInput, raw } from 'orchid-core';
+import { MaybeArray, QueryInput, raw, singleQuote } from 'orchid-core';
 import { createTable } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
 import {
@@ -25,6 +27,7 @@ import {
   getSchemaAndTableFromName,
 } from '../common';
 import { RakeDbAst } from '../ast';
+import { columnTypeToSql } from './migrationUtils';
 
 export type DropMode = 'CASCADE' | 'RESTRICT';
 
@@ -291,7 +294,10 @@ export class MigrationBase {
   createEnum(
     name: string,
     values: [string, ...string[]],
-    options?: Omit<RakeDbAst.Enum, 'type' | 'action' | 'name' | 'values'>,
+    options?: Omit<
+      RakeDbAst.Enum,
+      'type' | 'action' | 'name' | 'values' | 'schema'
+    >,
   ) {
     return createEnum(this, this.up, name, values, options);
   }
@@ -299,9 +305,34 @@ export class MigrationBase {
   dropEnum(
     name: string,
     values: [string, ...string[]],
-    options?: Omit<RakeDbAst.Enum, 'type' | 'action' | 'name' | 'values'>,
+    options?: Omit<
+      RakeDbAst.Enum,
+      'type' | 'action' | 'name' | 'values' | 'schema'
+    >,
   ) {
     return createEnum(this, !this.up, name, values, options);
+  }
+
+  createDomain(
+    name: string,
+    fn: (t: ColumnTypes) => ColumnType,
+    options?: Omit<
+      RakeDbAst.Domain,
+      'type' | 'action' | 'schema' | 'name' | 'baseType'
+    >,
+  ) {
+    return createDomain(this, this.up, name, fn, options);
+  }
+
+  dropDomain(
+    name: string,
+    fn: (t: ColumnTypes) => ColumnType,
+    options?: Omit<
+      RakeDbAst.Domain,
+      'type' | 'action' | 'schema' | 'name' | 'baseType'
+    >,
+  ) {
+    return createDomain(this, !this.up, name, fn, options);
   }
 
   async tableExists(tableName: string) {
@@ -459,7 +490,10 @@ const createEnum = async (
   up: boolean,
   name: string,
   values: [string, ...string[]],
-  options: Omit<RakeDbAst.Enum, 'type' | 'action' | 'name' | 'values'> = {},
+  options: Omit<
+    RakeDbAst.Enum,
+    'type' | 'action' | 'name' | 'values' | 'schema'
+  > = {},
 ) => {
   const [schema, enumName] = getSchemaAndTableFromName(name);
 
@@ -485,6 +519,59 @@ const createEnum = async (
   }
 
   await migration.adapter.query(query);
+
+  migration.migratedAsts.push(ast);
+};
+
+const createDomain = async (
+  migration: MigrationBase,
+  up: boolean,
+  name: string,
+  fn: (t: ColumnTypes) => ColumnType,
+  options?: Omit<
+    RakeDbAst.Domain,
+    'type' | 'action' | 'schema' | 'name' | 'baseType'
+  >,
+) => {
+  const [schema, domainName] = getSchemaAndTableFromName(name);
+
+  const ast: RakeDbAst.Domain = {
+    type: 'domain',
+    action: up ? 'create' : 'drop',
+    schema,
+    name: domainName,
+    baseType: fn(columnTypes),
+    ...options,
+  };
+
+  let query;
+  const values: unknown[] = [];
+  const quotedName = quoteWithSchema(ast);
+  if (ast.action === 'create') {
+    query = `CREATE DOMAIN ${quotedName} AS ${columnTypeToSql(ast.baseType)}${
+      ast.collation
+        ? `
+COLLATION ${singleQuote(ast.collation)}`
+        : ''
+    }${
+      ast.default
+        ? `
+DEFAULT ${getRaw(ast.default, values)}`
+        : ''
+    }${ast.notNull || ast.check ? '\n' : ''}${[
+      ast.notNull && 'NOT NULL',
+      ast.check && `CHECK ${getRaw(ast.check, values)}`,
+    ]
+      .filter(Boolean)
+      .join(' ')}`;
+  } else {
+    query = `DROP DOMAIN ${quotedName}${ast.cascade ? ' CASCADE' : ''}`;
+  }
+
+  await migration.adapter.query({
+    text: query,
+    values,
+  });
 
   migration.migratedAsts.push(ast);
 };

@@ -44,6 +44,18 @@ const table: RakeDbAst.Table = {
   },
 };
 
+const domain: RakeDbAst.Domain = {
+  type: 'domain',
+  action: 'create',
+  schema: 'schema',
+  name: 'domainName',
+  baseType: columnTypes.integer(),
+  notNull: true,
+  collation: 'C',
+  default: raw('123'),
+  check: raw('VALUE = 42'),
+};
+
 const foreignKey: RakeDbAst.ForeignKey = {
   type: 'foreignKey',
   action: 'create',
@@ -149,9 +161,7 @@ change(async (db) => {
     ]);
 
     expect(result).toBe(
-      template(`  await db.createEnum('mood', ['sad', 'ok', 'happy'], {
-    schema: 'schema',
-  });`),
+      template(`  await db.createEnum('schema.mood', ['sad', 'ok', 'happy']);`),
     );
   });
 
@@ -304,6 +314,24 @@ change(async (db) => {
   await db.createTable('schema.table', (t) => ({
     id: t.serial().primaryKey().check(t.raw('column > 10')),
   }));
+});
+`);
+    });
+  });
+
+  describe('domain', () => {
+    it('should add domain', () => {
+      const result = astToMigration(config, [domain]);
+
+      expect(result).toBe(`import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createDomain('schema.domainName', (t) => t.integer(), {
+    notNull: true,
+    collation: 'C',
+    default: db.raw('123'),
+    check: db.raw('VALUE = 42'),
+  });
 });
 `);
     });

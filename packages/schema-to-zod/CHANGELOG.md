@@ -1,5 +1,14 @@
 # orchid-orm-schema-to-zod
 
+## 0.3.8
+
+### Patch Changes
+
+- Support domain types
+- Updated dependencies
+  - orchid-core@0.1.4
+  - pqb@0.10.8
+
 ## 0.3.7
 
 ### Patch Changes

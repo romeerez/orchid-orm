@@ -200,4 +200,25 @@ describe('dbStructure', () => {
       ]);
     });
   });
+
+  describe('getDomains', () => {
+    it('should return domains', async () => {
+      rows = [
+        {
+          schemaName: 'public',
+          tableName: 'table',
+          name: 'domain',
+          type: 'int4',
+          typeSchema: 'pg_catalog',
+          notNull: false,
+          isArray: true,
+          default: '123',
+          check: 'VALUE > 3',
+        },
+      ];
+
+      const result = await db.getDomains();
+      expect(result).toEqual(rows);
+    });
+  });
 });

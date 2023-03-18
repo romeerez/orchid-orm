@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.6.12
+
+### Patch Changes
+
+- Support domain types
+- Updated dependencies
+  - orchid-core@0.1.4
+  - pqb@0.10.8
+
 ## 1.6.11
 
 ### Patch Changes

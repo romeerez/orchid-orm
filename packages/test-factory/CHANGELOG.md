@@ -1,5 +1,16 @@
 # orchid-orm-test-factory
 
+## 0.3.12
+
+### Patch Changes
+
+- Support domain types
+- Updated dependencies
+  - orchid-core@0.1.4
+  - orchid-orm@1.6.12
+  - pqb@0.10.8
+  - orchid-orm-schema-to-zod@0.3.8
+
 ## 0.3.11
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 # Column types
 
-## Numeric types
+## numeric
 
 As not all database numeric types can fit into JS number type, some types will be returned as a string.
 
@@ -69,7 +69,7 @@ db.someTable.where({
 })
 ```
 
-## Text types
+## text
 
 Use `t.text(min, max)` type as a go-to for strings, other types are for special cases.
 
@@ -114,7 +114,7 @@ db.someTable.where({
 })
 ```
 
-## Binary data type
+## binary
 
 The bytea data type allows storage of binary strings, it is returned as a node.js Buffer object.
 
@@ -122,7 +122,7 @@ The bytea data type allows storage of binary strings, it is returned as a node.j
 t.bytea() // -> Buffer
 ```
 
-## Date/Time types
+## date and time
 
 ```ts
 // 4 bytes date (no time of day)
@@ -165,7 +165,7 @@ type Interval = {
 const result: Interval = await Table.get('intervalColumn')
 ```
 
-## Boolean type
+## boolean
 
 Boolean returns `true` or `false`.
 
@@ -174,7 +174,7 @@ Boolean returns `true` or `false`.
 t.boolean() // -> boolean
 ```
 
-## Enum type
+## enum
 
 Create the enum database type:
 
@@ -190,7 +190,7 @@ Define enum, first argument is the name of an enum in the database, second is an
 t.enum('mood', ['sad', 'ok', 'happy']); // -> outputs Mood type
 ```
 
-## Geometric types
+## geometry
 
 Geometric types are not parsed and returned as strings as the database returns them.
 
@@ -218,7 +218,7 @@ t.polygon() // -> string
 t.circle() // -> string
 ```
 
-## Network address types
+## network addresses
 
 ```ts
 // CIDR    7 or 19 bytes  IPv4 and IPv6 networks
@@ -234,7 +234,7 @@ t.macaddr() // -> string, example: 08:00:2b:01:02:03
 t.macaddr8() // -> string, example: 08:00:2b:ff:fe:01:02:03
 ```
 
-## Bit string types
+## bit string
 
 it strings are strings of 1's and 0's. They can be used to store or visualize bit masks.
 
@@ -248,7 +248,7 @@ t.bit() // -> string
 t.bitVarying() // -> string
 ```
 
-## Text search types
+## full text search
 
 ```ts
 // A tsvector value is a sorted list of distinct lexemes
@@ -258,7 +258,7 @@ t.tsvector() // -> string
 t.tsquery() // -> string
 ```
 
-## UUID type
+## UUID
 
 The data type uuid stores Universally Unique Identifiers (UUID).
 
@@ -267,19 +267,35 @@ The data type uuid stores Universally Unique Identifiers (UUID).
 t.uuid() // -> string, example: a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11
 ```
 
-## Array type
+## array
 
 ```ts
 // array of another column type
 t.array(item: ColumnType) // -> array of argument type
 ```
 
-## Other column types
+## domain
+
+Domain is a custom database type that allows to predefine a `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
+
+It's based on other type, that you need to specify in `as`, and it will acts just like the specified type in queries:
 
 ```ts
-// for currency amount (8 bytes)
-t.money() // -> string, example: '$12.34'
+t.domain('domainName').as(t.integer())
+```
 
-// XML data type can be used to store XML data
+## money
+
+For currency amount (8 bytes)
+
+```ts
+t.money() // -> string, example: '$12.34'
+```
+
+## xml
+
+XML data type can be used to store XML data
+
+```ts
 t.xml() // -> string
 ```

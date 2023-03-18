@@ -440,6 +440,26 @@ const db = getDb();
       }
     });
 
+    it('should support domain column', async () => {
+      await db[action]('table', (t) => ({
+        id: t.serial().primaryKey(),
+        domainColumn: t.domain('domainName'),
+      }));
+
+      if (action === 'createTable') {
+        expectSql(`
+          CREATE TABLE "table" (
+            "id" serial PRIMARY KEY,
+            "domainColumn" "domainName" NOT NULL
+          )
+        `);
+      } else {
+        expectSql(`
+          DROP TABLE "table"
+        `);
+      }
+    });
+
     describe('noPrimaryKey', () => {
       const { warn } = console;
       afterAll(() => {

@@ -16,6 +16,7 @@ export type RakeDbAst =
   | RakeDbAst.Schema
   | RakeDbAst.Extension
   | RakeDbAst.Enum
+  | RakeDbAst.Domain
   | RakeDbAst.ForeignKey;
 
 export namespace RakeDbAst {
@@ -116,6 +117,19 @@ export namespace RakeDbAst {
     values: [string, ...string[]];
     cascade?: boolean;
     dropIfExists?: boolean;
+  };
+
+  export type Domain = {
+    type: 'domain';
+    action: 'create' | 'drop';
+    schema?: string;
+    name: string;
+    baseType: ColumnType;
+    notNull?: boolean;
+    collation?: string;
+    default?: RawExpression;
+    check?: RawExpression;
+    cascade?: boolean;
   };
 
   export type EnumOptions = {

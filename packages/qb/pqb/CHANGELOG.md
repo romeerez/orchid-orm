@@ -1,5 +1,13 @@
 # pqb
 
+## 0.10.8
+
+### Patch Changes
+
+- Support domain types
+- Updated dependencies
+  - orchid-core@0.1.4
+
 ## 0.10.7
 
 ### Patch Changes

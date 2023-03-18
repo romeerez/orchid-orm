@@ -3,6 +3,7 @@ import {
   ColumnType,
   columnTypes,
   DateColumn,
+  DomainColumn,
   IntegerColumn,
   jsonTypes,
   TextColumn,
@@ -1291,6 +1292,21 @@ describe('schema to zod', () => {
 
       expect(() => schema.parse(123)).toThrow(
         'Expected never, received number',
+      );
+    });
+  });
+
+  describe('domain', () => {
+    it('should convert it to base column', () => {
+      const schema = columnToZod(
+        new DomainColumn({}, 'domainName').as(new IntegerColumn({})),
+      );
+
+      assertType<typeof schema, z.ZodNumber>(true);
+
+      expect(schema.parse(123)).toBe(123);
+      expect(() => schema.parse('string')).toThrow(
+        'Expected number, received string',
       );
     });
   });

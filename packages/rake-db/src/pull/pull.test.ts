@@ -6,6 +6,7 @@ import { asMock } from '../test-utils';
 import {
   check,
   createdAtColumn,
+  domain,
   idColumn,
   table,
   textColumn,
@@ -37,6 +38,9 @@ const db = DbStructure.prototype;
 let schemas: string[] = [];
 db.getSchemas = async () => schemas;
 
+let domains: DbStructure.Domain[] = [];
+db.getDomains = async () => domains;
+
 let tables: DbStructure.Table[] = [];
 db.getTables = async () => tables;
 
@@ -52,6 +56,7 @@ db.getChecks = async () => checks;
 describe('pull', () => {
   beforeEach(() => {
     schemas = [];
+    domains = [];
     tables = [];
     primaryKeys = [];
     columns = [];
@@ -62,6 +67,13 @@ describe('pull', () => {
 
   it('should get db structure, convert it to ast, generate migrations', async () => {
     schemas = ['schema1', 'schema2'];
+
+    domains = [
+      {
+        ...domain,
+        schemaName: 'schema',
+      },
+    ];
 
     tables = [
       {
@@ -88,6 +100,14 @@ describe('pull', () => {
         ...idColumn,
         schemaName: 'schema',
         tableName: 'table1',
+      },
+      {
+        ...idColumn,
+        schemaName: 'schema',
+        tableName: 'table1',
+        name: 'domainColumn',
+        type: domain.name,
+        typeSchema: 'schema',
       },
       {
         ...createdAtColumn,
@@ -150,11 +170,14 @@ describe('pull', () => {
 change(async (db) => {
   await db.createSchema('schema1');
   await db.createSchema('schema2');
+
+  await db.createDomain('schema.domain', (t) => t.integer());
 });
 
 change(async (db) => {
   await db.createTable('schema.table1', (t) => ({
     id: t.serial().primaryKey(),
+    domainColumn: t.domain('domain').as(t.integer()),
     ...t.timestamps(),
   }));
 });
@@ -174,8 +197,8 @@ change(async (db) => {
       config,
     );
 
-    // 4 = 2 schemas + 2 tables
-    expect(appCodeUpdater).toBeCalledTimes(4);
+    // 5 = 2 schemas + 1 domain + 2 tables
+    expect(appCodeUpdater).toBeCalledTimes(5);
   });
 
   it('should add simple timestamps when snakeCase: true', async () => {

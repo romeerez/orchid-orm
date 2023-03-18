@@ -546,6 +546,25 @@ describe('changeTable', () => {
       );
     });
 
+    it(`should ${action} domain column`, async () => {
+      await testUpAndDown(
+        () =>
+          db.changeTable('table', (t) => ({
+            column: t[action](t.domain('domainName')),
+          })),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+              ADD COLUMN "column" "domainName" NOT NULL
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+              DROP COLUMN "column"
+          `),
+      );
+    });
+
     it(`should ${action} columns with a primary key`, async () => {
       await testUpAndDown(
         () =>
@@ -717,16 +736,19 @@ describe('changeTable', () => {
       () =>
         db.changeTable('table', (t) => ({
           changeType: t.change(t.integer(), t.text()),
+          changeDomainType: t.change(t.domain('one'), t.domain('two')),
         })),
       () =>
         expectSql(`
           ALTER TABLE "table"
-            ALTER COLUMN "changeType" TYPE text
+            ALTER COLUMN "changeType" TYPE text,
+            ALTER COLUMN "changeDomainType" TYPE "two"
         `),
       () =>
         expectSql(`
           ALTER TABLE "table"
-            ALTER COLUMN "changeType" TYPE integer
+            ALTER COLUMN "changeType" TYPE integer,
+            ALTER COLUMN "changeDomainType" TYPE "one"
         `),
     );
   });

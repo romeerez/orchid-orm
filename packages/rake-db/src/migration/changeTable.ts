@@ -436,8 +436,13 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
     } else if (item.type === 'change') {
       const { from, to } = item;
       if (to.type && (from.type !== to.type || from.collate !== to.collate)) {
+        const type =
+          !to.column || to.column.data.isOfCustomType
+            ? `"${to.type}"`
+            : to.type;
+
         alterTable.push(
-          `ALTER COLUMN "${item.name || key}" TYPE ${to.type}${
+          `ALTER COLUMN "${item.name || key}" TYPE ${type}${
             to.collate ? ` COLLATE ${quote(to.collate)}` : ''
           }${item.using ? ` USING ${getRaw(item.using, values)}` : ''}`,
         );

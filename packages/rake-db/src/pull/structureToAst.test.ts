@@ -4,6 +4,7 @@ import {
   ArrayColumn,
   BigSerialColumn,
   DecimalColumn,
+  DomainColumn,
   EnumColumn,
   IntegerColumn,
   SerialColumn,
@@ -28,6 +29,7 @@ import {
   enumType,
   primaryKey,
   check,
+  domain,
 } from './testUtils';
 
 const adapter = new Adapter({ databaseURL: 'file:path' });
@@ -177,6 +179,21 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
 
       expect(ast.shape.column.data.check).toEqual(raw(check.expression));
+    });
+
+    it('should support column of domain type', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [table];
+      db.getDomains = async () => [domain];
+      db.getColumns = async () => [
+        { ...intColumn, type: domain.name, typeSchema: domain.schemaName },
+      ];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Table];
+
+      expect(ast.shape.column).toBeInstanceOf(DomainColumn);
+      expect(ast.shape.column.dataType).toBe(domain.name);
+      expect(ast.shape.column.data.as).toBeInstanceOf(IntegerColumn);
     });
 
     it('should wrap column default into raw', async () => {
@@ -824,6 +841,45 @@ describe('structureToAst', () => {
         name: 'mood',
         values: enumType.values,
       });
+    });
+  });
+
+  describe('domain', () => {
+    it('should add domain', async () => {
+      const db = new DbStructure(adapter);
+      db.getDomains = async () => [
+        {
+          ...domain,
+          schemaName: 'custom',
+          notNull: true,
+          collation: 'C',
+          default: '123',
+          check: 'VALUE = 42',
+        },
+      ];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Domain];
+
+      expect(ast).toEqual({
+        type: 'domain',
+        action: 'create',
+        schema: 'custom',
+        name: domain.name,
+        baseType: expect.any(IntegerColumn),
+        notNull: true,
+        collation: 'C',
+        default: raw('123'),
+        check: raw('VALUE = 42'),
+      });
+    });
+
+    it('should ignore schema if it is `public`', async () => {
+      const db = new DbStructure(adapter);
+      db.getDomains = async () => [domain];
+
+      const [ast] = (await structureToAst(db)) as [RakeDbAst.Domain];
+
+      expect(ast.schema).toBe(undefined);
     });
   });
 });

@@ -1,9 +1,10 @@
 # migration column methods
 
-The following methods do not affect validation, parsing, or encoding columns.
-They only have an effect when used in the migration.
+All the methods described in [columns methods](/guide/columns-common-methods) still applies in migrations,
+to add or change columns with specific types.
 
-Even though they do not affect the application code, you still can copy code from migration to table definition for explicitness, to see database specifics in a table file.
+This document describes common methods like `default`, `nullable`, `primaryKey` that have effect in both application code and migration,
+in methods like `check`, `comment`, `collate` that only have effect in migrations.
 
 ## default
 
@@ -359,6 +360,26 @@ import { change } from 'rake-db'
 change(async (db) => {
   await db.createTable('table', (t) => ({
     name: t.text().collate('es_ES'),
+  }))
+})
+```
+
+## domain
+
+Domain is a custom database type that allows to predefine a `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
+
+Before adding a domain column, create the domain type itself, see [create domain](/guide/migration-writing.html#createdomain-dropdomain).
+
+When using `domain` to define columns in application, you need to also specify `as` so application knows the actual type behind the domain.
+
+In migration, `as` won't have effect.
+
+```ts
+import { change } from 'rake-db'
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    name: t.domain('domainName'),
   }))
 })
 ```

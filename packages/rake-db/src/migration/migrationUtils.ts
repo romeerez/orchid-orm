@@ -15,13 +15,17 @@ import {
   quoteWithSchema,
 } from '../common';
 
+export const columnTypeToSql = (item: ColumnType) => {
+  return item.data.isOfCustomType ? `"${item.toSQL()}"` : item.toSQL();
+};
+
 export const columnToSql = (
   key: string,
   item: ColumnType,
   values: unknown[],
   hasMultiplePrimaryKeys: boolean,
 ): string => {
-  const line = [`"${item.data.name || key}" ${item.toSQL()}`];
+  const line = [`"${item.data.name || key}" ${columnTypeToSql(item)}`];
 
   if (item.data.compression) {
     line.push(`COMPRESSION ${item.data.compression}`);

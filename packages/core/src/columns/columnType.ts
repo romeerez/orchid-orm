@@ -176,6 +176,9 @@ export type ColumnDataBase = {
 
   // raw database check expression
   check?: RawExpression;
+
+  // if the column is of domain or other user-defined type
+  isOfCustomType?: boolean;
 };
 
 export type ColumnChain = (

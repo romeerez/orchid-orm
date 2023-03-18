@@ -6,6 +6,7 @@ import {
   foreignKeyToCode,
   indexToCode,
   primaryKeyToCode,
+  rawToCode,
   TimestampColumn,
 } from 'pqb';
 import { addCode, Code, isRaw, quoteObjectKey, singleQuote } from 'orchid-core';
@@ -26,7 +27,10 @@ export const astToMigration = (
       first.push(...createExtension(item));
     } else if (item.type === 'enum' && item.action === 'create') {
       if (first.length) first.push([]);
-      first.push(...createEnum(item));
+      first.push(createEnum(item));
+    } else if (item.type === 'domain' && item.action === 'create') {
+      if (first.length) first.push([]);
+      first.push(...createDomain(item));
     } else if (item.type === 'table' && item.action === 'create') {
       tables.push(createTable(config, item));
     } else if (item.type === 'foreignKey') {
@@ -90,16 +94,30 @@ const createExtension = (ast: RakeDbAst.Extension): Code[] => {
 };
 
 const createEnum = (ast: RakeDbAst.Enum) => {
+  return `await db.createEnum(${quoteSchemaTable(ast)}, [${ast.values
+    .map(singleQuote)
+    .join(', ')}]);`;
+};
+
+const createDomain = (ast: RakeDbAst.Domain) => {
   const code: Code[] = [
-    `await db.createEnum(${singleQuote(ast.name)}, [${ast.values
-      .map(singleQuote)
-      .join(', ')}]`,
+    `await db.createDomain(${quoteSchemaTable(
+      ast,
+    )}, (t) => ${ast.baseType.toCode('t')}`,
   ];
-  if (ast.schema) {
+
+  if (ast.notNull || ast.collation || ast.default || ast.check) {
+    const props: Code[] = [];
+    if (ast.notNull) props.push(`notNull: true,`);
+    if (ast.collation) props.push(`collation: ${singleQuote(ast.collation)},`);
+    if (ast.default) props.push(`default: ${rawToCode('db', ast.default)},`);
+    if (ast.check) props.push(`check: ${rawToCode('db', ast.check)},`);
+
     addCode(code, ', {');
-    code.push([`schema: ${singleQuote(ast.schema)},`]);
+    code.push(props);
     addCode(code, '}');
   }
+
   addCode(code, ');');
   return code;
 };

@@ -143,7 +143,7 @@ export class SomeTable extends BaseTable {
 }`);
   });
 
-  it('should add multiple column', async () => {
+  it('should add multiple columns', async () => {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
@@ -161,6 +161,7 @@ export class SomeTable extends BaseTable {
         shape: {
           name: { type: 'add', item: t.text(1, 10) },
           active: { type: 'add', item: t.boolean() },
+          domain: { type: 'add', item: t.domain('name').as(t.integer()) },
         },
       },
     });
@@ -173,6 +174,7 @@ export class SomeTable extends BaseTable {
     id: t.serial().primaryKey(),
     name: t.text(1, 10),
     active: t.boolean(),
+    domain: t.domain('name').as(t.integer()),
   }));
 }`);
   });

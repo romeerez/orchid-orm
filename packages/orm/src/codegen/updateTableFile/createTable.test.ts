@@ -125,13 +125,14 @@ describe('createTable', () => {
     );
   });
 
-  it('should add table with column with custom name', async () => {
+  it('should add table with columns', async () => {
     await updateTableFile({
       ...params,
       ast: {
         ...ast.addTable,
         shape: {
           column: t.name('name').integer(),
+          domain: t.domain('domainName').as(t.integer()),
         },
       },
     });
@@ -140,6 +141,7 @@ describe('createTable', () => {
       template({
         columns: `{
     column: t.name('name').integer(),
+    domain: t.domain('domainName').as(t.integer()),
   }`,
       }),
     );
