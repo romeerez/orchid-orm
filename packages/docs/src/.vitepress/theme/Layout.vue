@@ -3,6 +3,11 @@ import DefaultTheme from 'vitepress/theme'
 import { useRouter } from 'vitepress';
 import { watch } from "vue";
 
+if (!localStorage.getItem('vitepress-theme-appearance')) {
+  document.documentElement.classList.add('dark')
+  localStorage.setItem('vitepress-theme-appearance', 'dark')
+}
+
 const router = useRouter();
 
 // Only run this on the client. Not during build.
