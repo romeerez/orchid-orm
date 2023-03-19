@@ -22,6 +22,10 @@ db.table.find(1)
 
 Set a default value to a column. Columns that have defaults become optional when creating a record.
 
+If you provide a value or a raw SQL, such default should be set on the column in migration to be applied on a database level.
+
+Or you can specify a callback that returns a value. This function will be called for each creating record. Such a default won't be applied to a database.
+
 ```ts
 export class Table extends BaseTable {
   readonly table = 'table';
@@ -32,6 +36,9 @@ export class Table extends BaseTable {
     
     // raw SQL default:
     timestamp: t.timestamp().default(t.raw('now()')),
+    
+    // runtime default, each new records gets a new random value:
+    random: t.float().default(() => Math.random()),
   }));
 }
 ```

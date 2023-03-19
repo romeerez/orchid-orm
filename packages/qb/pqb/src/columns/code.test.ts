@@ -1,5 +1,6 @@
-import { codeToString, columnsShapeToCode } from './code';
+import { columnsShapeToCode } from './code';
 import { columnTypes } from './columnTypes';
+import { codeToString } from 'orchid-core';
 
 const t = columnTypes;
 

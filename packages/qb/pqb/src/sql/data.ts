@@ -25,7 +25,12 @@ import {
   WithItem,
 } from './types';
 import { Expression } from '../utils';
-import { RawExpression, ColumnsShapeBase, ColumnTypeBase } from 'orchid-core';
+import {
+  RawExpression,
+  ColumnsShapeBase,
+  ColumnTypeBase,
+  MaybeArray,
+} from 'orchid-core';
 
 export type CommonQueryData = {
   adapter: Adapter;
@@ -87,8 +92,13 @@ export type SelectQueryData = CommonQueryData & {
 export type InsertQueryData = CommonQueryData & {
   type: 'insert';
   columns: string[];
-  values: unknown[][] | RawExpression;
-  fromQuery?: Query;
+  values:
+    | unknown[][]
+    | MaybeArray<RawExpression>
+    | {
+        from: Query;
+        values?: unknown[][];
+      };
   using?: JoinItem[];
   join?: JoinItem[];
   onConflict?:

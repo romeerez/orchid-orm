@@ -1,15 +1,21 @@
 import { RakeDbAst } from '../ast';
 import {
-  codeToString,
   ColumnType,
   foreignKeyArgsToCode,
   foreignKeyToCode,
   indexToCode,
   primaryKeyToCode,
-  rawToCode,
   TimestampColumn,
 } from 'pqb';
-import { addCode, Code, isRaw, quoteObjectKey, singleQuote } from 'orchid-core';
+import {
+  addCode,
+  Code,
+  codeToString,
+  isRaw,
+  quoteObjectKey,
+  rawToCode,
+  singleQuote,
+} from 'orchid-core';
 import { quoteSchemaTable, RakeDbConfig } from '../common';
 
 export const astToMigration = (

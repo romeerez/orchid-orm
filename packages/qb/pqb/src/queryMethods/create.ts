@@ -145,7 +145,15 @@ type CreateManyResult<T extends Query> = T extends { isCount: true }
   ? SetQueryReturnsAll<T>
   : T;
 
-type CreateRawData = { columns: string[]; values: RawExpression };
+type CreateRawData<T extends Query> = {
+  columns: (keyof T['shape'])[];
+  values: RawExpression;
+};
+
+type CreateManyRawData<T extends Query> = {
+  columns: (keyof T['shape'])[];
+  values: RawExpression[];
+};
 
 type OnConflictArg<T extends Query> =
   | keyof T['shape']
@@ -170,7 +178,7 @@ const handleSelect = (q: Query) => {
 
   if (isCount) {
     q.query.select = undefined;
-  } else if (isCount || !q.query.select) {
+  } else if (!q.query.select) {
     q.query.select = ['*'];
   }
 };
@@ -278,7 +286,7 @@ const insert = (
     values,
   }: {
     columns: string[];
-    values: unknown[][] | RawExpression;
+    values: InsertQueryData['values'];
   },
   returnType: QueryReturnType,
   ctx?: CreateCtx,
@@ -300,7 +308,7 @@ const insert = (
 
   if (
     returnType === 'oneOrThrow' ||
-    q.query.fromQuery?.query.returnType === 'oneOrThrow'
+    (values as { from?: Query }).from?.query.returnType === 'oneOrThrow'
   ) {
     const { handleResult } = q.query;
     q.query.handleResult = async (q, r, i) => {
@@ -348,6 +356,60 @@ const insert = (
   return q;
 };
 
+const getFromSelectColumns = (
+  from: Query,
+  obj?: { columns: string[] },
+  many?: boolean,
+) => {
+  if (!many && !queryTypeWithLimitOne[from.query.returnType]) {
+    throw new Error(
+      'Cannot create based on a query which returns multiple records',
+    );
+  }
+
+  const queryColumns: string[] = [];
+  from.query.select?.forEach((item) => {
+    if (typeof item === 'string') {
+      const index = item.indexOf('.');
+      queryColumns.push(index === -1 ? item : item.slice(index + 1));
+    } else if ('selectAs' in item) {
+      queryColumns.push(...Object.keys(item.selectAs));
+    }
+  });
+
+  if (obj?.columns) {
+    queryColumns.push(...obj.columns);
+  }
+
+  return queryColumns;
+};
+
+const createFromQuery = <
+  T extends Query,
+  Q extends Query,
+  Many extends boolean,
+>(
+  q: T,
+  from: Q,
+  many: Many,
+  data?: Omit<CreateData<T>, keyof Q['result']>,
+): Many extends true ? CreateManyResult<T> : CreateResult<T> => {
+  handleSelect(q);
+
+  const ctx = createCtx();
+
+  const obj = data && handleOneData(q, data, ctx);
+
+  const columns = getFromSelectColumns(from, obj, many);
+
+  return insert(
+    q,
+    { columns, values: { from, values: obj?.values } },
+    getSingleReturnType(q),
+    ctx,
+  ) as Many extends true ? CreateManyResult<T> : CreateResult<T>;
+};
+
 export type CreateMethodsNames =
   | 'create'
   | '_create'
@@ -364,40 +426,20 @@ export class Create {
   }
   _create<T extends Query>(this: T, data: CreateData<T>): CreateResult<T> {
     handleSelect(this);
-
     const ctx = createCtx();
+    const obj = handleOneData(this, data, ctx) as {
+      columns: string[];
+      values: InsertQueryData['values'];
+    };
 
-    const obj = handleOneData(this, data, ctx);
-    let { columns } = obj;
-
-    const { fromQuery } = this.query as InsertQueryData;
-    if (fromQuery) {
-      if (!queryTypeWithLimitOne[fromQuery.query.returnType]) {
-        throw new Error(
-          'Cannot create based on a query which returns multiple records',
-        );
-      }
-
-      const queryColumns: string[] = [];
-      fromQuery.query.select?.forEach((item) => {
-        if (typeof item === 'string') {
-          const index = item.indexOf('.');
-          queryColumns.push(index === -1 ? item : item.slice(index + 1));
-        } else if ('selectAs' in item) {
-          queryColumns.push(...Object.keys(item.selectAs));
-        }
-      });
-
-      queryColumns.push(...columns);
-      columns = queryColumns;
+    const values = (this.query as InsertQueryData).values;
+    if (values && 'from' in values) {
+      obj.columns = getFromSelectColumns(values.from, obj);
+      values.values = obj.values as unknown[][];
+      obj.values = values;
     }
 
-    return insert(
-      this,
-      { columns, values: obj.values },
-      getSingleReturnType(this),
-      ctx,
-    ) as CreateResult<T>;
+    return insert(this, obj, getSingleReturnType(this), ctx) as CreateResult<T>;
   }
 
   createMany<T extends Query>(
@@ -420,18 +462,37 @@ export class Create {
     ) as CreateManyResult<T>;
   }
 
-  createRaw<T extends Query>(
-    this: T,
-    data: CreateRawData,
-  ): CreateManyResult<T> {
+  createRaw<T extends Query>(this: T, data: CreateRawData<T>): CreateResult<T> {
     return this.clone()._createRaw(data);
   }
   _createRaw<T extends Query>(
     this: T,
-    data: CreateRawData,
+    data: CreateRawData<T>,
+  ): CreateResult<T> {
+    handleSelect(this);
+    return insert(
+      this,
+      data as { columns: string[]; values: RawExpression },
+      getSingleReturnType(this),
+    ) as CreateResult<T>;
+  }
+
+  createManyRaw<T extends Query>(
+    this: T,
+    data: CreateManyRawData<T>,
+  ): CreateManyResult<T> {
+    return this.clone()._createManyRaw(data);
+  }
+  _createManyRaw<T extends Query>(
+    this: T,
+    data: CreateManyRawData<T>,
   ): CreateManyResult<T> {
     handleSelect(this);
-    return insert(this, data, getManyReturnType(this)) as CreateManyResult<T>;
+    return insert(
+      this,
+      data as { columns: string[]; values: RawExpression[] },
+      getSingleReturnType(this),
+    ) as CreateManyResult<T>;
   }
 
   createFrom<
@@ -440,8 +501,8 @@ export class Create {
   >(
     this: T,
     query: Q,
-    data: Omit<CreateData<T>, keyof Q['result']>,
-  ): SetQueryReturnsOne<T> {
+    data?: Omit<CreateData<T>, keyof Q['result']>,
+  ): CreateResult<T> {
     return this.clone()._createFrom(query, data);
   }
   _createFrom<
@@ -450,10 +511,22 @@ export class Create {
   >(
     this: T,
     query: Q,
-    data: Omit<CreateData<T>, keyof Q['result']>,
+    data?: Omit<CreateData<T>, keyof Q['result']>,
   ): CreateResult<T> {
-    (this.query as InsertQueryData).fromQuery = query;
-    return this._create(data as CreateData<T>);
+    return createFromQuery(this, query, false, data);
+  }
+
+  createManyFrom<T extends Query, Q extends Query>(
+    this: T,
+    query: Q,
+  ): CreateManyResult<T> {
+    return this.clone()._createManyFrom(query);
+  }
+  _createManyFrom<T extends Query, Q extends Query>(
+    this: T,
+    query: Q,
+  ): CreateManyResult<T> {
+    return createFromQuery(this, query, true);
   }
 
   defaults<T extends Query, Data extends Partial<CreateData<T>>>(

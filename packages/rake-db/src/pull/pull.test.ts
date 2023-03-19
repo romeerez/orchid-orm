@@ -219,8 +219,7 @@ change(async (db) => {
     expect(appCodeUpdater).toBeCalledTimes(5);
 
     expect(warn).toBeCalledWith(`Found unsupported types:
-customType is used for column schema.table1.customTypeColumn
-
+- customType is used for column schema.table1.customTypeColumn
 Append \`as\` method manually to this column to treat it as other column type`);
 
     expect(log).toBeCalledWith('Database pulled successfully');
@@ -264,9 +263,8 @@ Append \`as\` method manually to this column to treat it as other column type`);
     );
 
     expect(warn).toBeCalledWith(`Found unsupported types:
-unknown1 is used for column public.table.column1
-unknown2 is used for column public.table.column2
-
+- unknown1 is used for column public.table.column1
+- unknown2 is used for column public.table.column2
 Append \`as\` method manually to these columns to treat them as other column type`);
 
     expect(log).toBeCalledWith('Database pulled successfully');

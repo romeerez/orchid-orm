@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.6.15
+
+### Patch Changes
+
+- Support runtime default; Add createManyRaw and createManyFrom
+- Updated dependencies
+  - orchid-core@0.1.5
+  - pqb@0.10.11
+
 ## 1.6.14
 
 ### Patch Changes

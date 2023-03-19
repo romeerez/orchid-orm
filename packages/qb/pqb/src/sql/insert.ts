@@ -6,7 +6,7 @@ import { makeSql, ToSqlCtx } from './toSql';
 import { pushQueryValue } from '../queryDataUtils';
 import { getRaw } from '../raw';
 import { InsertQueryData, QueryData } from './data';
-import { isRaw, raw } from 'orchid-core';
+import { isRaw, raw, RawExpression } from 'orchid-core';
 
 export const pushInsertSql = (
   ctx: ToSqlCtx,
@@ -15,31 +15,75 @@ export const pushInsertSql = (
   quotedAs: string,
 ) => {
   const { shape } = table.query;
-  const quotedColumns = query.columns.map((item) =>
-    q(shape[item]?.data.name || item),
+
+  const quotedColumns = query.columns.map((key) =>
+    q(shape[key]?.data.name || key),
   );
+
+  let runtimeDefaults: (() => unknown)[] | undefined;
+  if (table.internal.runtimeDefaultColumns) {
+    runtimeDefaults = [];
+    for (const key of table.internal.runtimeDefaultColumns) {
+      if (!query.columns.includes(key)) {
+        const column = shape[key];
+        quotedColumns.push(q(column.data.name || key));
+        runtimeDefaults.push(column.data.default as () => unknown);
+      }
+    }
+  }
 
   ctx.sql.push(`INSERT INTO ${quotedAs}(${quotedColumns.join(', ')})`);
 
-  if (query.fromQuery) {
-    const q = query.fromQuery.clone();
+  if ('from' in query.values) {
+    const { from, values } = query.values;
+    const q = from.clone();
 
-    pushQueryValue(
-      q,
-      'select',
-      isRaw(query.values)
-        ? query.values
-        : raw(encodeRow(ctx, query.values[0]), false),
-    );
+    if (values) {
+      pushQueryValue(
+        q,
+        'select',
+        raw(encodeRow(ctx, values[0], runtimeDefaults), false),
+      );
+    }
 
     ctx.sql.push(makeSql(q, { values: ctx.values }).text);
+  } else if (isRaw(query.values)) {
+    let valuesSql = getRaw(query.values, ctx.values);
+
+    if (runtimeDefaults) {
+      valuesSql += `, ${runtimeDefaults
+        .map((fn) => addValue(ctx.values, fn()))
+        .join(', ')}`;
+    }
+
+    ctx.sql.push(`VALUES (${valuesSql})`);
+  } else if (isRaw(query.values[0])) {
+    let sql;
+
+    if (runtimeDefaults) {
+      const { values } = ctx;
+      sql = (query.values as RawExpression[])
+        .map(
+          (raw) =>
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            `(${getRaw(raw, values)}, ${runtimeDefaults!
+              .map((fn) => addValue(values, fn()))
+              .join(', ')})`,
+        )
+        .join(', ');
+    } else {
+      const { values } = ctx;
+      sql = (query.values as RawExpression[])
+        .map((raw) => `(${getRaw(raw, values)})`)
+        .join(', ');
+    }
+
+    ctx.sql.push(`VALUES ${sql}`);
   } else {
     ctx.sql.push(
-      `VALUES ${
-        isRaw(query.values)
-          ? getRaw(query.values, ctx.values)
-          : query.values.map((row) => `(${encodeRow(ctx, row)})`).join(', ')
-      }`,
+      `VALUES ${(query.values as unknown[][])
+        .map((row) => `(${encodeRow(ctx, row, runtimeDefaults)})`)
+        .join(', ')}`,
     );
   }
 
@@ -108,12 +152,22 @@ export const pushInsertSql = (
   pushReturningSql(ctx, table, query, quotedAs);
 };
 
-const encodeRow = (ctx: ToSqlCtx, row: unknown[]) => {
-  return row
-    .map((value) =>
-      value === undefined ? 'DEFAULT' : addValue(ctx.values, value),
-    )
-    .join(', ');
+const encodeRow = (
+  ctx: ToSqlCtx,
+  row: unknown[],
+  runtimeDefaults?: (() => unknown)[],
+) => {
+  const arr = row.map((value) =>
+    value === undefined ? 'DEFAULT' : addValue(ctx.values, value),
+  );
+
+  if (runtimeDefaults) {
+    for (const fn of runtimeDefaults) {
+      arr.push(addValue(ctx.values, fn()));
+    }
+  }
+
+  return arr.join(', ');
 };
 
 export const pushReturningSql = (

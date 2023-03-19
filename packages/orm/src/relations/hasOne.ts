@@ -216,7 +216,7 @@ export const makeHasOneMethod = (
       return (query) => {
         const fromQuery = query.clone();
         fromQuery.query.select = fromQuerySelect;
-        (relationQuery.query as InsertQueryData).fromQuery = fromQuery;
+        (relationQuery.query as InsertQueryData).values = { from: fromQuery };
       };
     },
   };

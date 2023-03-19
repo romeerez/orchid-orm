@@ -10,6 +10,8 @@ in methods like `check`, `comment`, `collate` that only have effect in migration
 
 Set a default value for a column on a database level. Value can be a raw SQL.
 
+`default` can accept a callback when used in ORM table, but it's not applicable in migrations.
+
 ```ts
 import { change } from 'rake-db'
 

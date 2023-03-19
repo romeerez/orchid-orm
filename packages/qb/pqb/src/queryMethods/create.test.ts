@@ -17,6 +17,12 @@ import {
 } from '../test-utils/test-utils';
 import { OnConflictQueryBuilder } from './create';
 
+const RuntimeDefaultTable = db('user', (t) => ({
+  id: t.serial().primaryKey(),
+  name: t.text().default(() => 'runtime text'),
+  password: t.text(),
+}));
+
 describe('create functions', () => {
   useTestDatabase();
 
@@ -28,18 +34,36 @@ describe('create functions', () => {
         columns: ['name', 'password'],
         values: db.raw('raw sql'),
       });
+
       expectSql(
         query.toSql(),
         `
           INSERT INTO "user"("name", "password")
-          VALUES raw sql
+          VALUES (raw sql)
           RETURNING *
         `,
       );
 
-      assertType<Awaited<typeof query>, UserRecord[]>();
+      assertType<Awaited<typeof query>, UserRecord>();
 
       expectQueryNotMutated(q);
+    });
+
+    it('should add runtime default', () => {
+      const q = RuntimeDefaultTable.createRaw({
+        columns: ['password'],
+        values: db.raw(`'password'`),
+      });
+
+      expectSql(
+        q.toSql(),
+        `
+          INSERT INTO "user"("password", "name")
+          VALUES ('password', $1)
+          RETURNING *
+        `,
+        ['runtime text'],
+      );
     });
 
     it('should create with raw sql and list of columns with names', () => {
@@ -51,7 +75,62 @@ describe('create functions', () => {
         query.toSql(),
         `
           INSERT INTO "snake"("snake_name", "tail_length")
-          VALUES raw sql
+          VALUES (raw sql)
+          RETURNING ${snakeSelectAll}
+        `,
+      );
+    });
+  });
+
+  describe('createManyRaw', () => {
+    it('should create with raw sql and list of columns', () => {
+      const q = User.all();
+
+      const query = q.createManyRaw({
+        columns: ['name', 'password'],
+        values: [db.raw('sql1'), db.raw('sql2')],
+      });
+      expectSql(
+        query.toSql(),
+        `
+          INSERT INTO "user"("name", "password")
+          VALUES (sql1), (sql2)
+          RETURNING *
+        `,
+      );
+
+      assertType<Awaited<typeof query>, UserRecord[]>();
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should add runtime default', () => {
+      const q = RuntimeDefaultTable.createManyRaw({
+        columns: ['password'],
+        values: [db.raw(`'pw1'`), db.raw(`'pw2'`)],
+      });
+
+      expectSql(
+        q.toSql(),
+        `
+          INSERT INTO "user"("password", "name")
+          VALUES ('pw1', $1), ('pw2', $2)
+          RETURNING *
+        `,
+        ['runtime text', 'runtime text'],
+      );
+    });
+
+    it('should create with raw sql and list of columns with names', () => {
+      const query = Snake.createManyRaw({
+        columns: ['snakeName', 'tailLength'],
+        values: [db.raw('sql1'), db.raw('sql2')],
+      });
+      expectSql(
+        query.toSql(),
+        `
+          INSERT INTO "snake"("snake_name", "tail_length")
+          VALUES (sql1), (sql2)
           RETURNING ${snakeSelectAll}
         `,
       );
@@ -213,7 +292,7 @@ describe('create functions', () => {
     });
 
     it('should create record with provided defaults', () => {
-      const query = User.defaults({
+      const q = User.defaults({
         name: 'name',
         password: 'password',
       }).create({
@@ -221,7 +300,7 @@ describe('create functions', () => {
       });
 
       expectSql(
-        query.toSql(),
+        q.toSql(),
         `
           INSERT INTO "user"("name", "password")
           VALUES ($1, $2)
@@ -232,20 +311,36 @@ describe('create functions', () => {
     });
 
     it('should strip unknown keys', () => {
-      const query = User.create({
+      const q = User.create({
         name: 'name',
         password: 'password',
         unknown: 'should be stripped',
       } as unknown as UserRecord);
 
       expectSql(
-        query.toSql(),
+        q.toSql(),
         `
           INSERT INTO "user"("name", "password")
           VALUES ($1, $2)
           RETURNING *
         `,
         ['name', 'password'],
+      );
+    });
+
+    it('should create record with runtime default', () => {
+      const q = RuntimeDefaultTable.create({
+        password: 'password',
+      });
+
+      expectSql(
+        q.toSql(),
+        `
+          INSERT INTO "user"("password", "name")
+          VALUES ($1, $2)
+          RETURNING *
+        `,
+        ['password', 'runtime text'],
       );
     });
   });
@@ -364,6 +459,27 @@ describe('create functions', () => {
       expectQueryNotMutated(q);
     });
 
+    it('should create many records with runtime default', () => {
+      const q = RuntimeDefaultTable.createMany([
+        {
+          password: 'one',
+        },
+        {
+          password: 'two',
+        },
+      ]);
+
+      expectSql(
+        q.toSql(),
+        `
+          INSERT INTO "user"("password", "name")
+          VALUES ($1, $2), ($3, $4)
+          RETURNING *
+        `,
+        ['one', 'runtime text', 'two', 'runtime text'],
+      );
+    });
+
     it('should strip unknown keys', () => {
       const query = User.createMany([
         {
@@ -391,6 +507,25 @@ describe('create functions', () => {
   });
 
   describe('createFrom', () => {
+    it('should create records without additional data', () => {
+      const q = Message.createFrom(Chat.find(1).select({ chatId: 'id' }));
+
+      assertType<Awaited<typeof q>, MessageRecord>();
+
+      expectSql(
+        q.toSql(),
+        `
+          INSERT INTO "message"("chatId")
+          SELECT "chat"."id" AS "chatId"
+          FROM "chat"
+          WHERE "chat"."id" = $1
+          LIMIT $2
+          RETURNING *
+        `,
+        [1, 1],
+      );
+    });
+
     it('should create record from select', () => {
       const query = Message.createFrom(Chat.find(1).select({ chatId: 'id' }), {
         authorId: 1,
@@ -437,6 +572,28 @@ describe('create functions', () => {
       );
     });
 
+    it('should add runtime defaults', () => {
+      const q = RuntimeDefaultTable.createFrom(
+        User.find(123).select('password'),
+        {
+          id: 456,
+        },
+      );
+
+      expectSql(
+        q.toSql(),
+        `
+          INSERT INTO "user"("password", "id", "name")
+          SELECT "user"."password", $1, $2
+          FROM "user"
+          WHERE "user"."id" = $3
+          LIMIT $4
+          RETURNING *
+        `,
+        [456, 'runtime text', 123, 1],
+      );
+    });
+
     it('should not allow to create from query which returns multiple records', () => {
       expect(() =>
         Message.createFrom(
@@ -449,6 +606,48 @@ describe('create functions', () => {
         ),
       ).toThrow(
         'Cannot create based on a query which returns multiple records',
+      );
+    });
+  });
+
+  describe('createManyFrom', () => {
+    it('should create records from select', () => {
+      const query = Message.createManyFrom(
+        Chat.where({ title: 'title' }).select({ chatId: 'id' }),
+      );
+
+      assertType<Awaited<typeof query>, MessageRecord[]>();
+
+      expectSql(
+        query.toSql(),
+        `
+          INSERT INTO "message"("chatId")
+          SELECT "chat"."id" AS "chatId"
+          FROM "chat"
+          WHERE "chat"."title" = $1
+          RETURNING *
+        `,
+        ['title'],
+      );
+    });
+
+    it('should create record from select with named columns', () => {
+      const query = Snake.createManyFrom(
+        User.where({ name: 'name' }).select({ snakeName: 'name' }),
+      );
+
+      assertType<Awaited<typeof query>, SnakeRecord[]>();
+
+      expectSql(
+        query.toSql(),
+        `
+          INSERT INTO "snake"("snake_name")
+          SELECT "user"."name" AS "snakeName"
+          FROM "user"
+          WHERE "user"."name" = $1
+          RETURNING ${snakeSelectAll}
+        `,
+        ['name'],
       );
     });
   });

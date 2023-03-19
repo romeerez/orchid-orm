@@ -72,6 +72,8 @@ export class UserTable extends BaseTable {
   }))
   
   relations = {
+    // User has one Profile, user.id -> profile.userId
+    // there are also belongsTo, hasMany, hasAndBelongsToMany
     profile: this.hasOne(() => ProfileTable, {
       required: true,
       primaryKey: 'id',
@@ -88,6 +90,7 @@ Different ORMs enforce different problems when there is a need to customize a qu
 - In `Prisma` you have to rewrite a full query to raw SQL even if a small part of `WHERE` statement requires a custom piece SQL that's not officially supported by `Prisma`.
 - `Sequelize` result type is always a full record, even if you selected only specific columns, the type doesn't know whether you included a relation or not
 - `TypeORM`, and `MikroORM` offers you to use a very limited ORM interface for simple queries (with the same problem as in `Sequelize`), and to use a query builder for more complex queries which won't be type-safe.
+- `MikroORM` started supporting partial result type in recent versions, but accessing nested records has jQuery-like syntax.
 - `Objection` is easier for writing queries, but it is not type-safe.
 
 `Orchid ORM` queries have no such problems, it is designed to build complex queries with relations and keep track of all the types:

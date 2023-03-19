@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.1.5
+
+### Patch Changes
+
+- Support runtime default; Add createManyRaw and createManyFrom
+
 ## 0.1.4
 
 ### Patch Changes

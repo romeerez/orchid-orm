@@ -7,6 +7,7 @@ export type QueryMetaBase = {
 
 export type QueryInternal = {
   columnsForSelectAll?: string[];
+  runtimeDefaultColumns?: string[];
 };
 
 export type QueryBaseCommon = {

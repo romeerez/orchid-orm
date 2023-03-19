@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.4.15
+
+### Patch Changes
+
+- Support runtime default; Add createManyRaw and createManyFrom
+- Updated dependencies
+  - orchid-core@0.1.5
+  - pqb@0.10.11
+
 ## 2.4.14
 
 ### Patch Changes

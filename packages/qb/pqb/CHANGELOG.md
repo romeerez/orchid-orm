@@ -1,5 +1,13 @@
 # pqb
 
+## 0.10.11
+
+### Patch Changes
+
+- Support runtime default; Add createManyRaw and createManyFrom
+- Updated dependencies
+  - orchid-core@0.1.5
+
 ## 0.10.10
 
 ### Patch Changes

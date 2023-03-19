@@ -144,6 +144,12 @@ export class Db<
       }
 
       if (column.data.name) hasCustomName = true;
+
+      if (typeof column.data.default === 'function') {
+        const arr = this.internal.runtimeDefaultColumns;
+        if (!arr) this.internal.runtimeDefaultColumns = [key];
+        else arr.push(key);
+      }
     }
 
     if (hasCustomName) {

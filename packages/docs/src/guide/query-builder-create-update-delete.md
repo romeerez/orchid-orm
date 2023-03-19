@@ -1,68 +1,105 @@
-# Create, update, and delete record
+# Create, update, and delete records
 
-## create, createMany, createRaw
-
-`create` will create one record:
-
-```ts
-const createdRecord = await Table.create({
-  name: 'John', password: '1234'
-})
-```
-
-`createMany` will create a batch of records:
-
-In case one of the objects has fewer fields, the `DEFAULT` SQL keyword will be placed in its place in the `VALUES` statement.
-
-```ts
-const createdRecords = await Table.createMany([
-  { name: 'John', password: '1234' },
-  { name: 'Peter', password: '4321' }
-])
-```
-
-`createRaw` is for creating records with a raw expression:
-
-```ts
-const createdRecords = await Table.createRaw({
-  columns: ['name', 'password'],
-  values: Table.raw(`raw expression for VALUES`)
-})
-```
+By default, all create methods will return a full record.
 
 `beforeCreate` and `afterCreate` callbacks are supported for creating, see [callbacks](#callbacks).
 
-By default, all create methods will return a full record.
+`create*` methods require columns that are not nullable and don't have a default.
 
 Place `.select`, or `.get` before `.create` to specify returning columns:
 
 ```ts
+// to return only `id`, use get('id')
 const id: number = await Table.get('id').create(data)
 
 // returns a single object when creating a single record
 const objectWithId: { id: number } = await Table.select('id').create(data)
 
 // returns an array of objects when creating multiple
-const arrayOfIds: { id: number }[] = await Table.select('id').createMany([one, two])
+const objects: { id: number }[] = await Table.select('id').createMany([one, two])
 
 // returns an array of objects as well for raw values:
-const arrayOfIds2 = await Table.select('id').createRaw({
+const objects2: { id: number }[] = await Table.select('id').createRaw({
   columns: ['name', 'password'],
-  values: Table.raw(`raw expression for VALUES`)
+  values: Table.raw(`'Joe', 'asdfqwer'`)
+})
+```
+
+## create
+
+`create` will create one record.
+
+```ts
+const oneRecord = await Table.create({
+  name: 'John',
+  password: '1234'
+})
+```
+
+## createMany
+
+`createMany` will create a batch of records.
+
+In case one of the objects has fewer fields, the `DEFAULT` SQL keyword will be placed in its place in the `VALUES` statement.
+
+```ts
+const manyRecords = await Table.createMany([
+  { key: 'value', otherKey: 'other value' },
+  { key: 'value' } // default will be used for `otherKey`
+])
+```
+
+## createRaw
+
+`createRaw` is for creating one record with a raw expression.
+
+Provided SQL will be wrapped into parens for a single `VALUES` record.
+
+If the table has a column with runtime defaults (defined with callbacks), the value will be appended to your SQL.
+
+```ts
+const oneRecord = await Table.createRaw({
+  columns: ['name', 'amount'],
+  values: Table.raw(`'name', random()`)
+})
+```
+
+## createManyRaw
+
+`createRaw` is for creating many record with raw expressions.
+
+Takes array of SQL expressions, each of them will be wrapped into parens for `VALUES` records.
+
+If the table has a column with runtime defaults (defined with callbacks), function will be called for each SQL and the value will be appended.
+
+```ts
+const manyRecords = await Table.createManyRaw({
+  columns: ['name', 'amount'],
+  values: [
+    Table.raw(`'one', 2`),
+    Table.raw(`'three', 4`),
+  ],
 })
 ```
 
 ## createFrom
 
+This method is for creating a single record, for batch creating see `createManyFrom`.
+
 `createFrom` is to perform the `INSERT ... SELECT ...` SQL statement, it does select and insert in a single query.
 
-The first argument is a query, this query should search for one record by using `find`, `take`, or similar.
+The first argument is a query for a **single** record, it should have `find`, `take`, or similar.
 
-The second argument is data which will be merged with columns returned from the select query.
+The second optional argument is a data which will be merged with columns returned from the select query.
+
+Columns with runtime defaults (defined with a callback) are supported here.
+The value for such a column will be injected unless selected from a related table or provided in a data object.
 
 ```ts
-await Table.createFrom(
-  RelatedTable.select({ relatedId: 'id' }).find(1),
+const oneRecord = await Table.createFrom(
+  // In the select, key is a related table column, value is a column to insert as
+  RelatedTable.select({ relatedId: 'id' }).findBy({ key: 'value' }),
+  // optional argument:
   {
     key: 'value',
   }
@@ -73,8 +110,23 @@ The query above will produce such SQL:
 
 ```sql
 INSERT INTO "table"("relatedId", "key")
-SELECT "relatedTable"."id" AS "relatedId", 'value' FROM "relatedTable"
+SELECT "relatedTable"."id" AS "relatedId", 'value'
+FROM "relatedTable"
+WHERE "relatedTable"."key" = 'value'
+LIMIT 1
 RETURNING *
+```
+
+## createManyFrom
+
+Similar to `createFrom`, but intended to create many records.
+
+Unlike `createFrom`, it doesn't accept second argument with data, and runtime defaults cannot work with it.
+
+```ts
+const manyRecords = await Table.createManyFrom(
+  RelatedTable.select({ relatedId: 'id' }).where({ key: 'value' }),
+)
 ```
 
 ## orCreate
@@ -279,14 +331,14 @@ Table.defaults({
 
 `.update` takes an object with columns and values to update records.
 
-By default `.update` will return a count of created records.
+By default, `.update` will return a count of updated records.
 
 Place `.select`, `.selectAll`, or `.get` before `.update` to specify returning columns.
 
 You need to provide `.where`, `.findBy`, or `.find` conditions before calling `.update`.
 To ensure that the whole table won't be updated by accident, updating without where conditions will result in TypeScript and runtime errors.
 
-To update the table without conditions use `where` method without arguments:
+If you need to update ALL records, use `where` method without arguments:
 
 ```ts
 await Table.where().update({ name: 'new name' })

@@ -45,11 +45,11 @@ export const pullDbStructure = async (
       `Found unsupported types:\n${unsupportedEntries
         .map(([type, columns]) => {
           count += columns.length;
-          return `${type} is used for column${
+          return `- ${type} is used for column${
             columns.length > 1 ? 's' : ''
           } ${columns.join(', ')}`;
         })
-        .join('\n')}\n\nAppend \`as\` method manually to ${
+        .join('\n')}\nAppend \`as\` method manually to ${
         count > 1 ? 'these' : 'this'
       } column${count > 1 ? 's' : ''} to treat ${
         count > 1 ? 'them' : 'it'
@@ -58,4 +58,5 @@ export const pullDbStructure = async (
   }
 
   config.logger?.log('Database pulled successfully');
+  adapter.close();
 };

@@ -20,6 +20,7 @@ export type ColumnShapeOutput<Shape extends ColumnsShapeBase> = {
   [K in keyof Shape]: ColumnOutput<Shape[K]>;
 };
 
+// marks the column as a primary
 export type PrimaryKeyColumn<T extends ColumnTypeBase> = Omit<T, 'data'> & {
   data: Omit<T['data'], 'isPrimaryKey' | 'default'> & {
     isPrimaryKey: true;
@@ -27,6 +28,7 @@ export type PrimaryKeyColumn<T extends ColumnTypeBase> = Omit<T, 'data'> & {
   };
 };
 
+// marks the column as a nullable, adds `null` type to `type` and `inputType`
 export type NullableColumn<T extends ColumnTypeBase> = Omit<
   T,
   'type' | 'inputType' | 'data' | 'operators'
@@ -37,12 +39,14 @@ export type NullableColumn<T extends ColumnTypeBase> = Omit<
     isNullable: true;
   };
   operators: {
+    // allow `null` in .where({ column: { equals: null } }) and the same for `not`
     [K in keyof T['operators']]: K extends 'equals' | 'not'
       ? Operator<T['type'] | null>
       : T['operators'][K];
   };
 };
 
+// adds default type to the column
 export type ColumnWithDefault<T extends ColumnTypeBase, Value> = Omit<
   T,
   'data'
@@ -51,12 +55,15 @@ export type ColumnWithDefault<T extends ColumnTypeBase, Value> = Omit<
     default: Value;
   };
 };
+
+// marks the column as hidden
 export type HiddenColumn<T extends ColumnTypeBase> = Omit<T, 'data'> & {
   data: Omit<T['data'], 'isHidden'> & {
     isHidden: true;
   };
 };
 
+// get union of column names (ex. 'col1' | 'col2' | 'col3') where column is nullable or has a default
 type OptionalColumnsForInput<Shape extends ColumnsShapeBase> = {
   [K in keyof Shape]: SomeIsTrue<
     [
@@ -68,6 +75,7 @@ type OptionalColumnsForInput<Shape extends ColumnsShapeBase> = {
     : never;
 }[keyof Shape];
 
+// get columns object type where nullable columns or columns with a default are optional
 export type ColumnShapeInput<Shape extends ColumnsShapeBase> = SetOptional<
   {
     [K in keyof Shape]: ColumnInput<Shape[K]>;
@@ -233,10 +241,10 @@ export abstract class ColumnTypeBase<
   parseItem?: (input: string) => unknown;
 
   // set default to the column
-  default<T extends ColumnTypeBase, Value extends T['type'] | RawExpression>(
-    this: T,
-    value: Value,
-  ): ColumnWithDefault<T, Value> {
+  default<
+    T extends ColumnTypeBase,
+    Value extends T['type'] | RawExpression | (() => T['type']),
+  >(this: T, value: Value): ColumnWithDefault<T, Value> {
     return setColumnData(
       this,
       'default',

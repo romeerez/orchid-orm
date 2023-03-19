@@ -13,9 +13,7 @@ import {
   Statement,
 } from 'typescript';
 import {
-  codeToString,
   columnCheckToCode,
-  columnDefaultArgumentToCode,
   columnForeignKeysToCode,
   columnIndexesToCode,
   ColumnType,
@@ -33,6 +31,8 @@ import {
   singleQuote,
   pathToLog,
   RawExpression,
+  codeToString,
+  columnDefaultArgumentToCode,
 } from 'orchid-core';
 import { UpdateTableFileParams } from './updateTableFile';
 

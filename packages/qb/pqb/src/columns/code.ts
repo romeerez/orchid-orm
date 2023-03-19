@@ -1,41 +1,24 @@
-import { ColumnsShape } from './columnsSchema';
 import { ColumnData, ColumnType, ForeignKey } from './columnType';
-import { TimestampColumn } from './dateTime';
 import { getRaw } from '../raw';
 import { TableData } from './columnTypes';
 import {
   addCode,
   Code,
   columnChainToCode,
+  columnDefaultArgumentToCode,
+  ColumnsShapeBase,
+  ColumnTypeBase,
   isRaw,
   quoteObjectKey,
   RawExpression,
+  rawToCode,
   singleQuote,
   singleQuoteArray,
   toArray,
 } from 'orchid-core';
 
-export const codeToString = (
-  code: Code,
-  tabs: string,
-  shift: string,
-): string => {
-  if (typeof code === 'string') return `${tabs}${code}`;
-
-  const lines: string[] = [];
-  for (const item of code) {
-    if (typeof item === 'string') {
-      lines.push(`${tabs}${item}`);
-    } else {
-      lines.push(codeToString(item, tabs + shift, shift));
-    }
-  }
-
-  return lines.length ? lines.join('\n') : '';
-};
-
-const isDefaultTimeStamp = (item: ColumnType) => {
-  if (!(item instanceof TimestampColumn)) return false;
+const isDefaultTimeStamp = (item: ColumnTypeBase) => {
+  if (item.dataType !== 'timestamp') return false;
 
   const def = item.data.default;
   return def && isRaw(def) && getRaw(def, []) === 'now()';
@@ -63,7 +46,7 @@ const combineCodeElements = (input: Code): Code => {
 };
 
 export const columnsShapeToCode = (
-  shape: ColumnsShape,
+  shape: ColumnsShapeBase,
   tableData: TableData,
   t: string,
 ): Code[] => {
@@ -247,26 +230,6 @@ export const foreignKeyArgsToCode = (
   return args;
 };
 
-export const columnDefaultArgumentToCode = (
-  t: string,
-  value: unknown,
-): string => {
-  if (typeof value === 'object' && value && isRaw(value)) {
-    return rawToCode(t, value);
-  } else if (typeof value === 'string') {
-    return singleQuote(value);
-  } else {
-    return JSON.stringify(value);
-  }
-};
-
-export const rawToCode = (t: string, raw: RawExpression): string => {
-  const values = raw.__values;
-  return `${t}.raw(${singleQuote(raw.__raw)}${
-    values ? `, ${JSON.stringify(values)}` : ''
-  })`;
-};
-
 export const columnForeignKeysToCode = (
   foreignKeys: ForeignKey<string, string[]>[],
 ): Code[] => {
@@ -394,11 +357,12 @@ export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
 
   if (type.data.as) addCode(code, `.as(${type.data.as.toCode(t)})`);
 
-  if (type.data.default)
+  if (type.data.default) {
     addCode(
       code,
       `.default(${columnDefaultArgumentToCode(t, type.data.default)})`,
     );
+  }
 
   if (type.data.indexes) {
     for (const part of columnIndexesToCode(type.data.indexes)) {
