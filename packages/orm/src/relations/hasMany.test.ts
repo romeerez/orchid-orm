@@ -294,18 +294,15 @@ describe('hasMany', () => {
       });
 
       it('should be selectable by relation name', () => {
-        const query = db.user.select('Id', 'messages');
+        const query = db.user.select('*', 'messages');
 
-        assertType<
-          Awaited<typeof query>,
-          { Id: number; messages: Message[] }[]
-        >();
+        assertType<Awaited<typeof query>, (User & { messages: Message[] })[]>();
 
         expectSql(
           query.toSql(),
           `
             SELECT
-              "user"."id" AS "Id",
+              ${userSelectAll},
               (
                 SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (
@@ -2108,15 +2105,15 @@ describe('hasMany through', () => {
       });
 
       it('should be selectable by relation name', () => {
-        const query = db.profile.select('Id', 'chats');
+        const query = db.profile.select('*', 'chats');
 
-        assertType<Awaited<typeof query>, { Id: number; chats: Chat[] }[]>();
+        assertType<Awaited<typeof query>, (Profile & { chats: Chat[] })[]>();
 
         expectSql(
           query.toSql(),
           `
             SELECT
-              "profile"."id" AS "Id",
+              ${profileSelectAll},
               (
                 SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (
@@ -2497,18 +2494,15 @@ describe('hasMany through', () => {
       });
 
       it('should be selectable by relation name', () => {
-        const query = db.chat.select('IdOfChat', 'profiles');
+        const query = db.chat.select('*', 'profiles');
 
-        assertType<
-          Awaited<typeof query>,
-          { IdOfChat: number; profiles: Profile[] }[]
-        >();
+        assertType<Awaited<typeof query>, (Chat & { profiles: Profile[] })[]>();
 
         expectSql(
           query.toSql(),
           `
             SELECT
-              "chat"."idOfChat" AS "IdOfChat",
+              ${chatSelectAll},
               (
                 SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (

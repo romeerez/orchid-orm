@@ -11,7 +11,7 @@ import {
   userSelectAll,
   useTestDatabase,
 } from '../test-utils/test-utils';
-import { User, Profile, BaseTable } from '../test-utils/test-tables';
+import { User, Profile, BaseTable, Message } from '../test-utils/test-tables';
 import { RelationQuery } from 'pqb';
 import { orchidORM } from '../orm';
 
@@ -276,15 +276,15 @@ describe('hasOne', () => {
       });
 
       it('should be selectable by relation name', () => {
-        const query = db.user.select('Id', 'profile');
+        const query = db.user.select('*', 'profile');
 
-        assertType<Awaited<typeof query>, { Id: number; profile: Profile }[]>();
+        assertType<Awaited<typeof query>, (User & { profile: Profile })[]>();
 
         expectSql(
           query.toSql(),
           `
             SELECT
-              "user"."id" AS "Id",
+              ${userSelectAll},
               (
                 SELECT row_to_json("t".*) 
                 FROM (
@@ -1655,15 +1655,15 @@ describe('hasOne through', () => {
     });
 
     it('should be selectable by relation name', () => {
-      const query = db.message.select('Id', 'profile');
+      const query = db.message.select('*', 'profile');
 
-      assertType<Awaited<typeof query>, { Id: number; profile: Profile }[]>();
+      assertType<Awaited<typeof query>, (Message & { profile: Profile })[]>();
 
       expectSql(
         query.toSql(),
         `
           SELECT
-            "message"."id" AS "Id",
+            ${messageSelectAll},
             (
               SELECT row_to_json("t".*)
               FROM (

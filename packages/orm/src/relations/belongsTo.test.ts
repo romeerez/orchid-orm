@@ -13,7 +13,7 @@ import {
   useTestDatabase,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
-import { BaseTable, User } from '../test-utils/test-tables';
+import { BaseTable, Profile, User } from '../test-utils/test-tables';
 import { orchidORM } from '../orm';
 
 describe('belongsTo', () => {
@@ -206,15 +206,15 @@ describe('belongsTo', () => {
       });
 
       it('should be selectable by relation name', async () => {
-        const query = db.profile.select('Id', 'user');
+        const query = db.profile.select('*', 'user');
 
-        assertType<Awaited<typeof query>, { Id: number; user: User }[]>();
+        assertType<Awaited<typeof query>, (Profile & { user: User })[]>();
 
         expectSql(
           query.toSql(),
           `
             SELECT
-              "profile"."id" AS "Id",
+              ${profileSelectAll},
               (
                 SELECT row_to_json("t".*)
                 FROM (

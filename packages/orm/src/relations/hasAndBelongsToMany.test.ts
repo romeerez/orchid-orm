@@ -272,15 +272,15 @@ describe('hasAndBelongsToMany', () => {
       });
 
       it('should be selectable by relation name', () => {
-        const query = db.user.select('Id', 'chats');
+        const query = db.user.select('*', 'chats');
 
-        assertType<Awaited<typeof query>, { Id: number; chats: Chat[] }[]>();
+        assertType<Awaited<typeof query>, (User & { chats: Chat[] })[]>();
 
         expectSql(
           query.toSql(),
           `
             SELECT
-              "user"."id" AS "Id",
+              ${userSelectAll},
               (
                 SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
                 FROM (

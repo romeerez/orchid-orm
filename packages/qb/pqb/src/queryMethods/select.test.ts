@@ -3,10 +3,12 @@ import {
   db,
   expectQueryNotMutated,
   expectSql,
+  Message,
   Profile,
   profileData,
   Snake,
   snakeSelectAll,
+  snakeSelectAllWithTable,
   User,
   userData,
   UserRecord,
@@ -29,6 +31,34 @@ describe('select', () => {
   });
 
   describe('select', () => {
+    it('should select all columns with a *', () => {
+      const query = User.join(Message, 'authorId', 'id').select('*');
+
+      assertType<Awaited<typeof query>, UserRecord[]>();
+
+      expect(getShapeFromSelect(query)).toEqual(User.shape);
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT "user".* FROM "user"
+          JOIN "message" ON "message"."authorId" = "user"."id"
+        `,
+      );
+    });
+
+    it('should select all named columns with a *', () => {
+      const q = Snake.join(Message, 'authorId', 'tailLength').select('*');
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT ${snakeSelectAllWithTable} FROM "snake"
+          JOIN "message" ON "message"."authorId" = "snake"."tail_length"
+        `,
+      );
+    });
+
     it('should have no effect if no columns provided', () => {
       const q = User.all();
       const query = q.select();

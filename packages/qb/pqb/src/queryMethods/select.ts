@@ -5,7 +5,6 @@ import {
   Query,
   QueryBase,
   QueryReturnsAll,
-  QuerySelectAll,
 } from '../query';
 import {
   ArrayOfColumnsObjects,
@@ -29,10 +28,12 @@ import {
   ColumnsShapeBase,
   NullableColumn,
   ColumnTypeBase,
+  EmptyObject,
 } from 'orchid-core';
 import { parseResult } from './then';
 
 export type SelectArg<T extends QueryBase> =
+  | '*'
   | StringKey<keyof T['selectable']>
   | (T['relations'] extends Record<string, Relation>
       ? StringKey<keyof T['relations']>
@@ -52,7 +53,7 @@ type SelectResult<
   SelectAsArgs = SimpleSpread<FilterTuple<Args, SelectAsArg<T>>>,
 > = AddQuerySelect<
   T,
-  {
+  ('*' extends Args[number] ? T['shape'] : EmptyObject) & {
     [Arg in Args[number] as Arg extends keyof T['selectable']
       ? T['selectable'][Arg]['as']
       : Arg extends keyof T['relations']
@@ -348,12 +349,12 @@ export class Select {
     ) as unknown as SelectResult<T, K>;
   }
 
-  selectAll<T extends Query>(this: T): QuerySelectAll<T> {
+  selectAll<T extends Query>(this: T): SelectResult<T, ['*']> {
     return this.clone()._selectAll();
   }
 
-  _selectAll<T extends Query>(this: T): QuerySelectAll<T> {
+  _selectAll<T extends Query>(this: T): SelectResult<T, ['*']> {
     this.query.select = ['*'];
-    return this as unknown as QuerySelectAll<T>;
+    return this as unknown as SelectResult<T, ['*']>;
   }
 }

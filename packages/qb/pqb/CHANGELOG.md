@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.12
+
+### Patch Changes
+
+- Support selecting \*
+
 ## 0.10.11
 
 ### Patch Changes

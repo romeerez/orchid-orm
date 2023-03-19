@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.6.16
+
+### Patch Changes
+
+- Support selecting \*
+- Updated dependencies
+  - pqb@0.10.12
+
 ## 1.6.15
 
 ### Patch Changes
