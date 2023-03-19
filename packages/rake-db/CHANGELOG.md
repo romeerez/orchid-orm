@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.4.12
+
+### Patch Changes
+
+- Fix pulling domain column
+
 ## 2.4.11
 
 ### Patch Changes
