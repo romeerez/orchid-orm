@@ -10,7 +10,7 @@ export const column: Omit<DbStructure.Column, 'type'> = {
   tableName: 'table',
   name: 'column',
   typeSchema: 'pg_catalog',
-  dataType: 'dataType',
+  isArray: false,
   isNullable: false,
 };
 
@@ -20,7 +20,7 @@ export const intColumn: DbStructure.Column = {
   name: 'column',
   typeSchema: 'pg_catalog',
   type: 'int4',
-  dataType: 'integer',
+  isArray: false,
   default: '123',
   isNullable: false,
 };
@@ -35,7 +35,7 @@ export const textColumn: DbStructure.Column = {
   ...column,
   name: 'text',
   type: 'text',
-  dataType: 'text',
+  isArray: false,
 };
 
 export const varCharColumn: DbStructure.Column = {

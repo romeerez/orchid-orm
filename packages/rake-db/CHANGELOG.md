@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.4.13
+
+### Patch Changes
+
+- Improve handling of array and domains in db pull
+
 ## 2.4.12
 
 ### Patch Changes

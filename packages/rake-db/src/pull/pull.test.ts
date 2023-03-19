@@ -108,6 +108,7 @@ describe('pull', () => {
         name: 'domainColumn',
         type: domain.name,
         typeSchema: 'schema',
+        isArray: true,
       },
       {
         ...idColumn,
@@ -190,7 +191,7 @@ change(async (db) => {
 change(async (db) => {
   await db.createTable('schema.table1', (t) => ({
     id: t.serial().primaryKey(),
-    domainColumn: t.domain('domain').as(t.integer()),
+    domainColumn: t.array(t.domain('domain').as(t.integer())),
     customTypeColumn: t.type('customType'),
     ...t.timestamps(),
   }));

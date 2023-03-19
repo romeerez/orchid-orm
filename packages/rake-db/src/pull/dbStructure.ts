@@ -31,8 +31,7 @@ export namespace DbStructure {
     name: string;
     typeSchema: string;
     type: string;
-    // ARRAY for arrays, USER-DEFINED for custom types
-    dataType: string;
+    isArray: boolean;
     maxChars?: number;
     numericPrecision?: number;
     numericScale?: number;
@@ -212,9 +211,9 @@ WHERE ${filterSchema('n.nspname')}`,
   table_schema "schemaName",
   table_name "tableName",
   column_name "name",
-  COALESCE(domain_name, udt_name) "type",
-  COALESCE(domain_schema, udt_schema) "typeSchema",
-  data_type "dataType",
+  typname "type",
+  n.nspname "typeSchema",
+  data_type = 'ARRAY' "isArray",
   character_maximum_length AS "maxChars",
   numeric_precision AS "numericPrecision",
   numeric_scale AS "numericScale",
@@ -225,15 +224,23 @@ WHERE ${filterSchema('n.nspname')}`,
   NULLIF(a.attcompression, '') AS compression,
   pgd.description AS "comment"
 FROM information_schema.columns c
-LEFT JOIN pg_catalog.pg_statio_all_tables AS st
+JOIN pg_catalog.pg_statio_all_tables st
   ON c.table_schema = st.schemaname
  AND c.table_name = st.relname
 LEFT JOIN pg_catalog.pg_description pgd
   ON pgd.objoid = st.relid
  AND pgd.objsubid = c.ordinal_position
-LEFT JOIN pg_catalog.pg_attribute a
+JOIN pg_catalog.pg_attribute a
   ON a.attrelid = st.relid
  AND a.attnum = c.ordinal_position
+JOIN pg_catalog.pg_type t
+  ON (
+       CASE WHEN data_type = 'ARRAY'
+         THEN typarray
+         ELSE oid
+       END
+     ) = atttypid
+JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
 WHERE ${filterSchema('table_schema')}
 ORDER BY c.ordinal_position`,
     );

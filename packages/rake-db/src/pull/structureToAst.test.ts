@@ -146,8 +146,8 @@ describe('structureToAst', () => {
       db.getColumns = async () => [
         {
           ...intColumn,
-          type: '_int4',
-          dataType: 'ARRAY',
+          type: 'int4',
+          isArray: true,
         },
       ];
 
@@ -208,14 +208,22 @@ describe('structureToAst', () => {
       db.getTables = async () => [table];
       db.getDomains = async () => [domain];
       db.getColumns = async () => [
-        { ...intColumn, type: domain.name, typeSchema: domain.schemaName },
+        {
+          ...intColumn,
+          type: domain.name,
+          typeSchema: domain.schemaName,
+          isArray: true,
+        },
       ];
 
       const [ast] = (await structureToAst(config, db)) as [RakeDbAst.Table];
 
-      expect(ast.shape.column).toBeInstanceOf(DomainColumn);
-      expect(ast.shape.column.dataType).toBe(domain.name);
-      expect(ast.shape.column.data.as).toBeInstanceOf(IntegerColumn);
+      const array = ast.shape.column;
+      expect(array).toBeInstanceOf(ArrayColumn);
+
+      const column = (array as ArrayColumn<DomainColumn>).data.item;
+      expect(column.dataType).toBe(domain.name);
+      expect(column.data.as).toBeInstanceOf(IntegerColumn);
     });
 
     it('should wrap column default into raw', async () => {

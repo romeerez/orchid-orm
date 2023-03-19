@@ -348,12 +348,10 @@ const pushTableAst = (
       item = { ...item, default: undefined };
     }
 
-    const isArray = item.dataType === 'ARRAY';
-
     let column = getColumn(config, data, domains, {
       ...item,
-      type: isArray ? item.type.slice(1) : item.type,
-      isArray,
+      type: item.type,
+      isArray: item.isArray,
       isSerial,
     });
 
