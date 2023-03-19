@@ -99,8 +99,8 @@ const booksWithAuthor: Book & { author: Author } = await db.book
   .select('*', 'author')
   .take();
 
-const authorWithBooks: Author & { books: Book[] } = await db.book
-  .select('*', 'author')
+const authorWithBooks: Author & { books: Book[] } = await db.author
+  .select('*', 'books')
   .take();
 ```
 
