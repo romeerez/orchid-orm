@@ -1047,7 +1047,7 @@ export const followUserRoute = routeHandler(
 );
 ```
 
-`getCurrentUserId` is a function to get the user id from the `JWT` token, leaving it beyond this tutorial, here is its [source](link to the user.service).
+`getCurrentUserId` is a function to get the user id from the `JWT` token, leaving it beyond this tutorial, here is its [source](https://github.com/romeerez/orchid-orm-examples/blob/main/packages/blog-api/src/app/user/user.service.ts#L4).
 
 After defining the `follows` relation in the user table, `db.user` receives a `follows` property which allows doing different queries, and the code above shows the use of such chained `create` method.
 
