@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.4.11
+
+### Patch Changes
+
+- Fix db pull
+
 ## 2.4.10
 
 ### Patch Changes

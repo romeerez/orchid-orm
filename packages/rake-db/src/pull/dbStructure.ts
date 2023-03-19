@@ -477,7 +477,7 @@ ORDER BY c.conname`);
   d.typname AS "name",
   t.typname AS "type",
   s.nspname AS "typeSchema",
-  .typnotnull AS "notNull",
+  d.typnotnull AS "notNull",
   d.typcategory = 'A' AS "isArray",
   character_maximum_length AS "maxChars",
   numeric_precision AS "numericPrecision",
