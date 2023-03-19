@@ -12,7 +12,9 @@ export const pullDbStructure = async (
 ) => {
   const adapter = new Adapter(options);
   const db = new DbStructure(adapter);
-  const ast = await structureToAst(config, db);
+  const unsupportedTypes: Record<string, string[]> = {};
+
+  const ast = await structureToAst(unsupportedTypes, db);
 
   await adapter.close();
 
@@ -34,4 +36,26 @@ export const pullDbStructure = async (
       logger: config.logger,
     });
   }
+
+  const unsupportedEntries = Object.entries(unsupportedTypes);
+  const len = unsupportedEntries.length;
+  if (len) {
+    let count = 0;
+    config.logger?.warn(
+      `Found unsupported types:\n${unsupportedEntries
+        .map(([type, columns]) => {
+          count += columns.length;
+          return `${type} is used for column${
+            columns.length > 1 ? 's' : ''
+          } ${columns.join(', ')}`;
+        })
+        .join('\n')}\n\nAppend \`as\` method manually to ${
+        count > 1 ? 'these' : 'this'
+      } column${count > 1 ? 's' : ''} to treat ${
+        count > 1 ? 'them' : 'it'
+      } as other column type`,
+    );
+  }
+
+  config.logger?.log('Database pulled successfully');
 };

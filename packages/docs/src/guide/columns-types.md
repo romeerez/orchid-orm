@@ -114,6 +114,38 @@ db.someTable.where({
 })
 ```
 
+## citext
+
+[citext](https://www.postgresql.org/docs/current/citext.html) is a database type that behaves almost exactly like `text`,
+but is case-insensitive in all operations.
+
+To use it, first enable `citext` extension, create migration:
+
+```sh
+npm run db g enableCitext
+```
+
+```ts
+import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createExtension('citext');
+});
+```
+
+```sh
+npm run db migrate
+```
+
+And now `citext` is available and can be used just as a `text` type.
+
+It requires `min` and `max`, but can be [overridden](/guide/columns-overview.html#override-column-types) in the same way as the `text`.
+
+```ts
+// text variable unlimited length
+t.citext(min: number, max: number) // -> string
+```
+
 ## binary
 
 The bytea data type allows storage of binary strings, it is returned as a node.js Buffer object.

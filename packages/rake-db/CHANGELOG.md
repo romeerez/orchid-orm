@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.4.14
+
+### Patch Changes
+
+- Add citext
+- Updated dependencies
+  - pqb@0.10.10
+
 ## 2.4.13
 
 ### Patch Changes

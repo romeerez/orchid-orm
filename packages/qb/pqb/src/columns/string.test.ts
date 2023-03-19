@@ -7,6 +7,7 @@ import {
   CharColumn,
   CidrColumn,
   CircleColumn,
+  CitextColumn,
   InetColumn,
   LineColumn,
   LsegColumn,
@@ -25,7 +26,7 @@ import {
   XMLColumn,
 } from './string';
 
-const testNumberColumnMethods = (type: TextBaseColumn, name: string) => {
+const testStringColumnMethods = (type: TextBaseColumn, name: string) => {
   expect(type.nonEmpty().toCode('t')).toBe(`t.${name}().nonEmpty()`);
 
   expect(
@@ -66,7 +67,7 @@ describe('string columns', () => {
         expect(new VarCharColumn({}).toCode('t')).toBe('t.varchar()');
         expect(new VarCharColumn({}, 5).toCode('t')).toBe('t.varchar(5)');
 
-        testNumberColumnMethods(new VarCharColumn({}), 'varchar');
+        testStringColumnMethods(new VarCharColumn({}), 'varchar');
       });
     });
 
@@ -84,7 +85,7 @@ describe('string columns', () => {
         expect(new CharColumn({}).toCode('t')).toBe('t.char()');
         expect(new CharColumn({}, 5).toCode('t')).toBe('t.char(5)');
 
-        testNumberColumnMethods(new CharColumn({}), 'char');
+        testStringColumnMethods(new CharColumn({}), 'char');
       });
     });
 
@@ -104,7 +105,27 @@ describe('string columns', () => {
         expect(new TextColumn({}, 1).toCode('t')).toBe('t.text(1)');
         expect(new TextColumn({}, 1, 2).toCode('t')).toBe('t.text(1, 2)');
 
-        testNumberColumnMethods(new TextColumn({}), 'text');
+        testStringColumnMethods(new TextColumn({}), 'text');
+      });
+    });
+
+    describe('citext', () => {
+      it('should output string', async () => {
+        const result = await db.get(
+          db.raw(() => new CitextColumn({}), `'text'::citext`),
+        );
+        expect(result).toBe('text');
+
+        assertType<typeof result, string>();
+      });
+
+      it('should have toCode', () => {
+        expect(new CitextColumn({}).toCode('t')).toBe('t.citext()');
+
+        expect(new CitextColumn({}, 1).toCode('t')).toBe('t.citext(1)');
+        expect(new CitextColumn({}, 1, 2).toCode('t')).toBe('t.citext(1, 2)');
+
+        testStringColumnMethods(new CitextColumn({}), 'citext');
       });
     });
   });

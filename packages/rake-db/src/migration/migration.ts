@@ -45,6 +45,7 @@ export type MigrationColumnTypes = Omit<
 > & {
   text: TextColumnCreator;
   string: TextColumnCreator;
+  citext: TextColumnCreator;
   enum: (name: string) => EnumColumn;
 };
 

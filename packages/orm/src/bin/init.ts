@@ -1,5 +1,5 @@
 import fs from 'fs/promises';
-import { resolve, join } from 'path';
+import { resolve, join, relative } from 'path';
 import https from 'https';
 import prompts from 'prompts';
 
@@ -122,7 +122,7 @@ export const initOrchidORM = async (config: InitConfig) => {
   await createMigrations(config, dirPath);
   await createSeed(config, dirPath);
 
-  greet();
+  greet(config);
 };
 
 const setupPackageJson = async (config: InitConfig) => {
@@ -561,12 +561,21 @@ export const seed = async () => {
   );
 };
 
-const greet = () => {
+const greet = (config: InitConfig) => {
+  const relativePath = relative(process.cwd(), config.path);
+
   console.log(`
 Thank you for trying Orchid ORM!
   
-To finish setup, install dependencies:
-
+To finish setup,${
+    relativePath ? ` cd to the project and` : ''
+  } install dependencies:
+${
+  relativePath
+    ? `
+> cd ${relativePath}`
+    : ''
+}
 > npm i
 
 Enter the correct database credentials to the .env file,

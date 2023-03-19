@@ -39,7 +39,9 @@ const db = createDb({
   columnTypes: (t) => ({
     ...t,
     // by default timestamp is returned as a stirng, override to a number
-    timestamp: () => t.timestamp().asNumber(),
+    timestamp() {
+      return t.timestamp.call(this).asNumber()
+    },
   }),
 
   // option to create named prepared statements implicitly, false by default

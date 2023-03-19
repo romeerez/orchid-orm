@@ -57,7 +57,8 @@ const migrationScriptPath = join(dbDirPath, 'dbScripts.ts');
 const migrationsPath = join(dbDirPath, 'migrations');
 const seedPath = join(dbDirPath, 'seed.ts');
 
-console.log = jest.fn();
+const log = jest.fn();
+console.log = log;
 
 describe('askOrchidORMConfig', () => {
   beforeEach(jest.clearAllMocks);
@@ -901,6 +902,24 @@ export const seed = async () => {
   await db.$close();
 };
 `);
+    });
+  });
+
+  describe('success message', () => {
+    it('should log `cd project` when user specified a path', async () => {
+      await initOrchidORM(config);
+
+      const message = log.mock.calls[0][0];
+      expect(message).toContain('cd to the project');
+      expect(message).toContain('> cd project');
+    });
+
+    it('should log `cd project` when user specified a path', async () => {
+      await initOrchidORM({ ...config, path: process.cwd() });
+
+      const message = log.mock.calls[0][0];
+      expect(message).not.toContain('cd to the project');
+      expect(message).not.toContain('> cd project');
     });
   });
 });

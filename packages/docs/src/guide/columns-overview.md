@@ -106,11 +106,15 @@ It is possible to override the parsing of columns returned from the database.
 
 `text` method requires `min` and `max` parameters, you can override it to use defaults:
 
+Note that column depends on passing `this`, so need to call it with `.call(this)`.
+
 ```ts
 export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
     ...t,
-    text: (min = 3, max = 100) => t.text(min, max),
+    text(min = 3, max = 100) {
+      return t.text.call(this, min, max)
+    },
   }),
 })
 ```
@@ -145,7 +149,7 @@ export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
     ...t,
     timestamp() {
-      return t.timestamp()
+      return t.timestamp.call(this)
         .encode((input: number) => new Date(input))
         .parse((input) => new Date(input))
         .as(t.integer())
@@ -164,7 +168,7 @@ const db = createDb({
   columnTypes: (t) => ({
     ...t,
     timestamp() {
-      return t.timestamp()
+      return t.timestamp.call(this)
         .encode((input: number) => new Date(input))
         .parse((input) => new Date(input))
         .as(t.integer())
@@ -186,7 +190,7 @@ export const BaseTable = createBaseTable({
     ...t,
     timestamp() {
       // or use `.asDate()` to work with Date objects
-      return t.timestamp().asNumber()
+      return t.timestamp.call(this).asNumber()
     },
   }),
 })

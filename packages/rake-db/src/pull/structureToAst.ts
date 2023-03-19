@@ -16,7 +16,6 @@ import {
 } from 'pqb';
 import { Code, raw, singleQuote } from 'orchid-core';
 import { getForeignKeyName, getIndexName } from '../migration/migrationUtils';
-import { RakeDbConfig } from '../common';
 
 export class RakeDbEnumColumn extends EnumColumn<
   string,
@@ -62,7 +61,7 @@ type PendingTables = Record<
 >;
 
 export const structureToAst = async (
-  config: Pick<RakeDbConfig, 'logger'>,
+  unsupportedTypes: Record<string, string[]>,
   db: DbStructure,
 ): Promise<RakeDbAst[]> => {
   const ast: RakeDbAst[] = [];
@@ -99,20 +98,25 @@ export const structureToAst = async (
 
   const domains: Domains = {};
   for (const it of data.domains) {
-    domains[`${it.schemaName}.${it.name}`] = getColumn(config, data, domains, {
-      schemaName: it.schemaName,
-      name: it.name,
-      type: it.type,
-      typeSchema: it.typeSchema,
-      isArray: it.isArray,
-      isSerial: false,
-    });
+    domains[`${it.schemaName}.${it.name}`] = getColumn(
+      unsupportedTypes,
+      data,
+      domains,
+      {
+        schemaName: it.schemaName,
+        name: it.name,
+        type: it.type,
+        typeSchema: it.typeSchema,
+        isArray: it.isArray,
+        isSerial: false,
+      },
+    );
   }
 
   for (const key in pendingTables) {
     const { table, dependsOn } = pendingTables[key];
     if (!dependsOn.size) {
-      pushTableAst(config, ast, data, domains, table, pendingTables);
+      pushTableAst(unsupportedTypes, ast, data, domains, table, pendingTables);
     }
   }
 
@@ -168,7 +172,15 @@ export const structureToAst = async (
       }
     }
 
-    pushTableAst(config, ast, data, domains, table, pendingTables, innerFKeys);
+    pushTableAst(
+      unsupportedTypes,
+      ast,
+      data,
+      domains,
+      table,
+      pendingTables,
+      innerFKeys,
+    );
   }
 
   for (const [fkey, table] of outerFKeys) {
@@ -249,7 +261,7 @@ const getIsSerial = (item: DbStructure.Column) => {
 };
 
 const getColumn = (
-  config: Pick<RakeDbConfig, 'logger'>,
+  unsupportedTypes: Record<string, string[]>,
   data: Data,
   domains: Domains,
   {
@@ -289,10 +301,8 @@ const getColumn = (
       } else {
         column = new CustomTypeColumn({}, type);
 
-        config.logger?.warn(
-          `${tableName ? 'Column' : 'Domain'} ${schemaName}${
-            tableName ? `.${tableName}` : ''
-          }.${name} has unsupported type \`${type}\`, append \`as\` method manually to it to treat it as other column type`,
+        (unsupportedTypes[type] ??= []).push(
+          `${schemaName}${tableName ? `.${tableName}` : ''}.${name}`,
         );
       }
     }
@@ -312,7 +322,7 @@ const getColumnType = (type: string, isSerial: boolean) => {
 };
 
 const pushTableAst = (
-  config: Pick<RakeDbConfig, 'logger'>,
+  unsupportedTypes: Record<string, string[]>,
   ast: RakeDbAst[],
   data: Data,
   domains: Domains,
@@ -348,7 +358,7 @@ const pushTableAst = (
       item = { ...item, default: undefined };
     }
 
-    let column = getColumn(config, data, domains, {
+    let column = getColumn(unsupportedTypes, data, domains, {
       ...item,
       type: item.type,
       isArray: item.isArray,
@@ -470,7 +480,14 @@ const pushTableAst = (
   for (const otherKey in pendingTables) {
     const item = pendingTables[otherKey];
     if (item.dependsOn.delete(key) && item.dependsOn.size === 0) {
-      pushTableAst(config, ast, data, domains, item.table, pendingTables);
+      pushTableAst(
+        unsupportedTypes,
+        ast,
+        data,
+        domains,
+        item.table,
+        pendingTables,
+      );
     }
   }
 };

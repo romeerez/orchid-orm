@@ -5,6 +5,7 @@ import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
 import { asMock } from '../test-utils';
 import {
   check,
+  column,
   createdAtColumn,
   domain,
   idColumn,
@@ -157,6 +158,7 @@ describe('pull', () => {
 
     const appCodeUpdater = jest.fn();
     const warn = jest.fn();
+    const log = jest.fn();
 
     const config = processRakeDbConfig({
       migrationsPath: 'migrations',
@@ -164,6 +166,7 @@ describe('pull', () => {
       logger: {
         ...console,
         warn,
+        log,
       },
     });
 
@@ -215,8 +218,58 @@ change(async (db) => {
     // 5 = 2 schemas + 1 domain + 2 tables
     expect(appCodeUpdater).toBeCalledTimes(5);
 
-    const message = warn.mock.calls[0][0];
-    expect(message).toContain('unsupported type `customType`');
+    expect(warn).toBeCalledWith(`Found unsupported types:
+customType is used for column schema.table1.customTypeColumn
+
+Append \`as\` method manually to this column to treat it as other column type`);
+
+    expect(log).toBeCalledWith('Database pulled successfully');
+  });
+
+  it('should pluralize warning when many columns have unknown types', async () => {
+    tables = [table];
+
+    columns = [
+      {
+        ...column,
+        name: 'column1',
+        type: 'unknown1',
+      },
+      {
+        ...column,
+        name: 'column2',
+        type: 'unknown2',
+      },
+    ];
+
+    asMock(makeFileTimeStamp).mockReturnValue('timestamp');
+
+    const warn = jest.fn();
+    const log = jest.fn();
+
+    const config = processRakeDbConfig({
+      migrationsPath: 'migrations',
+      logger: {
+        ...console,
+        warn,
+        log,
+      },
+    });
+
+    await pullDbStructure(
+      {
+        databaseURL: 'file:path',
+      },
+      config,
+    );
+
+    expect(warn).toBeCalledWith(`Found unsupported types:
+unknown1 is used for column public.table.column1
+unknown2 is used for column public.table.column2
+
+Append \`as\` method manually to these columns to treat them as other column type`);
+
+    expect(log).toBeCalledWith('Database pulled successfully');
   });
 
   it('should add simple timestamps when snakeCase: true', async () => {
@@ -237,10 +290,16 @@ change(async (db) => {
 
     const appCodeUpdater = jest.fn();
 
+    const log = jest.fn();
+
     const config = processRakeDbConfig({
       migrationsPath: 'migrations',
       snakeCase: true,
       appCodeUpdater,
+      logger: {
+        ...console,
+        log,
+      },
     });
 
     await pullDbStructure(
@@ -272,5 +331,7 @@ change(async (db) => {
     );
 
     expect(appCodeUpdater).toBeCalledTimes(1);
+
+    expect(log).toBeCalledWith('Database pulled successfully');
   });
 });

@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.6.14
+
+### Patch Changes
+
+- Add citext
+- Updated dependencies
+  - pqb@0.10.10
+
 ## 1.6.13
 
 ### Patch Changes

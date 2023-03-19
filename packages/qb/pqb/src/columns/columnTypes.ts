@@ -32,6 +32,7 @@ import {
   UUIDColumn,
   VarCharColumn,
   XMLColumn,
+  CitextColumn,
 } from './string';
 import {
   DateColumn,
@@ -182,6 +183,9 @@ export const columnTypes = {
   },
   text,
   string: text,
+  citext(this: ColumnTypesBase, min: number, max: number) {
+    return new CitextColumn(this, min, max);
+  },
   bytea(this: ColumnTypesBase) {
     return new ByteaColumn(this);
   },

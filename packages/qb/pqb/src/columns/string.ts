@@ -105,34 +105,54 @@ export class CharColumn<
   }
 }
 
+const setTextColumnData = (
+  column: { data: TextColumnData & { minArg?: number; maxArg?: number } },
+  minArg?: number,
+  maxArg?: number,
+) => {
+  if (minArg !== undefined) {
+    column.data.min = column.data.minArg = minArg;
+    if (maxArg !== undefined) {
+      column.data.max = column.data.maxArg = maxArg;
+    }
+  }
+};
+
+const textColumnToCode = (
+  column: TextBaseColumn & {
+    data: TextColumnData & { minArg?: number; maxArg?: number };
+  },
+  t: string,
+) => {
+  const data = { ...column.data };
+  let args = '';
+  if (data.minArg !== undefined && data.min === data.minArg) {
+    args += data.minArg;
+    delete data.min;
+    if (data.maxArg !== undefined && data.max === data.maxArg) {
+      args += `, ${data.maxArg}`;
+      delete data.max;
+    }
+  }
+  return columnCode(
+    column,
+    t,
+    `${column.dataType}(${args})${stringDataToCode(data)}`,
+  );
+};
+
 // text	variable unlimited length
 export class TextColumn extends TextBaseColumn {
   dataType = 'text' as const;
-  operators = Operators.text;
   declare data: TextColumnData & { minArg?: number; maxArg?: number };
 
   constructor(types: ColumnTypesBase, minArg?: number, maxArg?: number) {
     super(types);
-    if (minArg !== undefined) {
-      this.data.min = this.data.minArg = minArg;
-      if (maxArg !== undefined) {
-        this.data.max = this.data.maxArg = maxArg;
-      }
-    }
+    setTextColumnData(this, minArg, maxArg);
   }
 
   toCode(t: string): Code {
-    const data = { ...this.data };
-    let args = '';
-    if (data.minArg !== undefined && data.min === data.minArg) {
-      args += data.minArg;
-      delete data.min;
-      if (data.maxArg !== undefined && data.max === data.maxArg) {
-        args += `, ${data.maxArg}`;
-        delete data.max;
-      }
-    }
-    return columnCode(this, t, `text(${args})${stringDataToCode(data)}`);
+    return textColumnToCode(this, t);
   }
 }
 
@@ -350,5 +370,20 @@ export class XMLColumn extends ColumnType<string, typeof Operators.text> {
   operators = Operators.text;
   toCode(t: string): Code {
     return columnCode(this, t, `xml()`);
+  }
+}
+
+// citext is a postgres extension
+export class CitextColumn extends TextBaseColumn {
+  dataType = 'citext' as const;
+  declare data: TextColumnData & { minArg?: number; maxArg?: number };
+
+  constructor(types: ColumnTypesBase, minArg?: number, maxArg?: number) {
+    super(types);
+    setTextColumnData(this, minArg, maxArg);
+  }
+
+  toCode(t: string): Code {
+    return textColumnToCode(this, t);
   }
 }

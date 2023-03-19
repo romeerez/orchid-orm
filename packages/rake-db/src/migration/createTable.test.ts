@@ -79,6 +79,7 @@ const db = getDb();
           nullable: t.text().nullable(),
           nonNullable: t.text(),
           enum: t.enum('mood'),
+          citext: t.citext(),
           withDefault: t.boolean().default(false),
           withDefaultRaw: t.date().default(t.raw(`now()`)),
           withIndex: t.text().index({
@@ -117,6 +118,7 @@ const db = getDb();
               "nullable" text,
               "nonNullable" text NOT NULL,
               "enum" "mood" NOT NULL,
+              "citext" citext NOT NULL,
               "withDefault" boolean NOT NULL DEFAULT false,
               "withDefaultRaw" date NOT NULL DEFAULT now(),
               "withIndex" text NOT NULL,

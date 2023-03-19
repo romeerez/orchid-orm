@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.10
+
+### Patch Changes
+
+- Add citext
+
 ## 0.10.9
 
 ### Patch Changes
