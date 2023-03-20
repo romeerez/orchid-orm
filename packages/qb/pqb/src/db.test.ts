@@ -175,4 +175,75 @@ describe('db', () => {
         .options.ssl,
     ).toBe(true);
   });
+
+  describe('snakeCase option', () => {
+    it('should set column names to snake case, respecting existing names', () => {
+      const db = createDb({
+        ...dbOptions,
+        snakeCase: true,
+      });
+
+      const table = db('table', (t) => ({
+        id: t.serial().primaryKey(),
+        camelCase: t.name('camelCase').integer(),
+        snakeCase: t.integer(),
+        ...t.timestamps(),
+      }));
+
+      const q = table.select(
+        'camelCase',
+        'snakeCase',
+        'updatedAt',
+        'createdAt',
+      );
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT
+            "table"."camelCase",
+            "table"."snake_case" AS "snakeCase",
+            "table"."updated_at" AS "updatedAt",
+            "table"."created_at" AS "createdAt"
+          FROM "table"
+        `,
+      );
+    });
+
+    it('should override db snakeCase with table snakeCase', () => {
+      const db = createDb(dbOptions);
+
+      const table = db(
+        'table',
+        (t) => ({
+          id: t.serial().primaryKey(),
+          camelCase: t.name('camelCase').integer(),
+          snakeCase: t.integer(),
+          ...t.timestamps(),
+        }),
+        {
+          snakeCase: true,
+        },
+      );
+
+      const q = table.select(
+        'camelCase',
+        'snakeCase',
+        'updatedAt',
+        'createdAt',
+      );
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT
+            "table"."camelCase",
+            "table"."snake_case" AS "snakeCase",
+            "table"."updated_at" AS "updatedAt",
+            "table"."created_at" AS "createdAt"
+          FROM "table"
+        `,
+      );
+    });
+  });
 });

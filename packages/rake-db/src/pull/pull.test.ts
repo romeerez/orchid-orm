@@ -9,6 +9,7 @@ import {
   createdAtColumn,
   domain,
   idColumn,
+  intColumn,
   table,
   textColumn,
   updatedAtColumn,
@@ -106,6 +107,13 @@ describe('pull', () => {
         ...idColumn,
         schemaName: 'schema',
         tableName: 'table1',
+        name: 'column_name',
+        default: undefined,
+      },
+      {
+        ...idColumn,
+        schemaName: 'schema',
+        tableName: 'table1',
         name: 'domainColumn',
         type: domain.name,
         typeSchema: 'schema',
@@ -194,6 +202,7 @@ change(async (db) => {
 change(async (db) => {
   await db.createTable('schema.table1', (t) => ({
     id: t.serial().primaryKey(),
+    columnName: t.name('column_name').integer(),
     domainColumn: t.array(t.domain('domain').as(t.integer())),
     customTypeColumn: t.type('customType'),
     ...t.timestamps(),
@@ -270,10 +279,20 @@ Append \`as\` method manually to these columns to treat them as other column typ
     expect(log).toBeCalledWith('Database pulled successfully');
   });
 
-  it('should add simple timestamps when snakeCase: true', async () => {
+  it(`should add simple timestamps and do not add name('snake_case'), but add name('camelCase') when snakeCase: true`, async () => {
     tables = [table];
 
     columns = [
+      {
+        ...intColumn,
+        name: 'snake_case',
+        default: undefined,
+      },
+      {
+        ...intColumn,
+        name: 'camelCase',
+        default: undefined,
+      },
       {
         ...createdAtColumn,
         name: 'created_at',
@@ -316,6 +335,8 @@ Append \`as\` method manually to these columns to treat them as other column typ
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
+    snakeCase: t.integer(),
+    camelCase: t.name('camelCase').integer(),
     ...t.timestamps(),
   }));
 });

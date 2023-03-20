@@ -25,11 +25,11 @@ export const getDb = () => {
 
 export const queryMock = jest.fn();
 
-export const resetDb = () => {
+export const resetDb = (up = true) => {
   queryMock.mockClear();
   queryMock.mockResolvedValue(undefined);
   const db = getDb();
-  db.up = true;
+  db.up = up;
   db.migratedAsts.length = 0;
 };
 
@@ -56,4 +56,36 @@ export const expectSql = (sql: MaybeArray<string>) => {
       ),
     ),
   ).toEqual(toArray(sql).map(trim));
+};
+
+export const makeTestUpAndDown = <
+  Up extends string,
+  Down extends string | undefined = undefined,
+>(
+  up: Up,
+  down?: Down,
+) => {
+  return async (
+    fn: (action: Up | Down) => Promise<void>,
+    expectUp: () => void,
+    expectDown: () => void,
+  ) => {
+    resetDb(true);
+    await fn(up);
+    expectUp();
+
+    resetDb(false);
+    await fn(up);
+    expectDown();
+
+    if (down) {
+      resetDb(true);
+      await fn(down);
+      expectDown();
+
+      resetDb(false);
+      await fn(down);
+      expectUp();
+    }
+  };
 };

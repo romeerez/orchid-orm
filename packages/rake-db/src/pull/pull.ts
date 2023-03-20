@@ -1,7 +1,7 @@
 import { RakeDbConfig } from '../common';
 import { Adapter, AdapterOptions } from 'pqb';
 import { DbStructure } from './dbStructure';
-import { structureToAst } from './structureToAst';
+import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { astToMigration } from './astToMigration';
 import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
@@ -12,9 +12,13 @@ export const pullDbStructure = async (
 ) => {
   const adapter = new Adapter(options);
   const db = new DbStructure(adapter);
-  const unsupportedTypes: Record<string, string[]> = {};
 
-  const ast = await structureToAst(unsupportedTypes, db);
+  const ctx: StructureToAstCtx = {
+    unsupportedTypes: {},
+    snakeCase: config.snakeCase,
+  };
+
+  const ast = await structureToAst(ctx, db);
 
   await adapter.close();
 
@@ -37,7 +41,7 @@ export const pullDbStructure = async (
     });
   }
 
-  const unsupportedEntries = Object.entries(unsupportedTypes);
+  const unsupportedEntries = Object.entries(ctx.unsupportedTypes);
   const len = unsupportedEntries.length;
   if (len) {
     let count = 0;

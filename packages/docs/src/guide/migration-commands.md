@@ -44,6 +44,65 @@ Currently, it supports generating code to create:
 - indexes
 - domain types
 
+Assuming we have two tables in a database, one with camelCase columns and the other with snake_case:
+
+```sql
+CREATE TABLE "camel" (
+  "id" serial PRIMARY KEY,
+  "camelCaseColumn" text NOT NULL,
+  "createdAt" timestamp DEFAULT now(),
+  "updatedAt" timestamp DEFAULT now()
+);
+
+CREATE TABLE "snake" (
+  "id" serial PRIMARY KEY,
+  "snake_case_column" text NOT NULL,
+  "created_at" timestamp DEFAULT now(),
+  "updated_at" timestamp DEFAULT now()
+);
+```
+
+When snakeCase is `false` (default), `db pull` will produce the following migration, where snake_case columns are explicitly named and `timestampsSnakeCase` is used:
+
+```ts
+import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createTable('camel', (t) => ({
+    id: t.serial().primaryKey(),
+    camelCaseColumn: t.text(),
+    ...t.timestamps(),
+  }));
+  
+  await db.createTable('snake', (t) => ({
+    id: t.serial().primaryKey(),
+    snakeCaseColumn: t.name('snake_case_column').text(),
+    ...t.timestampsSnakeCase(),
+  }))
+});
+```
+
+When snakeCase is `true`, `db pull` will produce the following migration, this time camelCase columns are explicitly named, and timestamps have no shortcut:
+
+```ts
+import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createTable('camel', (t) => ({
+    id: t.serial().primaryKey(),
+    camelCaseColumn: t.name('camelCaseColumn').text(),
+    createdAt: t.name('createdAt').timestamp().default(t.raw('now()')),
+    updatedAt: t.name('updatedAt').timestamp().default(t.raw('now()')),
+  }));
+
+  await db.createTable('snake', (t) => ({
+    id: t.serial().primaryKey(),
+    snakeCaseColumn: t.text(),
+    ...t.timestamps(),
+  }))
+});
+```
+
 If column type is a custom one defined by user, or if it is not supported yet, `db pull` will log a warning and output the column as follows:
 
 ```ts

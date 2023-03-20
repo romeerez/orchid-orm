@@ -34,6 +34,7 @@ import {
   ColumnTypesBase,
   SinglePrimaryKey,
   snakeCaseKey,
+  toSnakeCase,
 } from 'orchid-core';
 import { q } from './sql/common';
 
@@ -56,6 +57,7 @@ export type DbTableOptions = {
   // true by default
   autoPreparedStatements?: boolean;
   noPrimaryKey?: NoPrimaryKeyOption;
+  snakeCase?: boolean;
 } & QueryLogOptions;
 
 export interface Db<
@@ -132,6 +134,7 @@ export class Db<
     let hasParsers = false;
     let modifyQuery: ((q: Query) => void)[] | undefined = undefined;
     let hasCustomName = false;
+    const { snakeCase } = options;
     for (const key in shape) {
       const column = shape[key];
       if (column.parseFn) {
@@ -143,7 +146,15 @@ export class Db<
         modifyQuery = pushOrNewArray(modifyQuery, column.data.modifyQuery);
       }
 
-      if (column.data.name) hasCustomName = true;
+      if (column.data.name) {
+        hasCustomName = true;
+      } else if (snakeCase) {
+        const snakeName = toSnakeCase(key);
+        if (snakeName !== key) {
+          hasCustomName = true;
+          column.data.name = snakeName;
+        }
+      }
 
       if (typeof column.data.default === 'function') {
         const arr = this.internal.runtimeDefaultColumns;
@@ -254,6 +265,7 @@ export const createDb = <CT extends ColumnTypesBase>({
   log,
   logger,
   columnTypes: ctOrFn = columnTypes as unknown as CT,
+  snakeCase,
   ...options
 }: DbOptions<CT>): DbResult<CT> => {
   const adapter = 'adapter' in options ? options.adapter : new Adapter(options);
@@ -262,11 +274,12 @@ export const createDb = <CT extends ColumnTypesBase>({
     logger,
     autoPreparedStatements: options.autoPreparedStatements ?? false,
     noPrimaryKey: options.noPrimaryKey ?? 'error',
+    snakeCase,
   };
 
   const ct = typeof ctOrFn === 'function' ? ctOrFn(columnTypes) : ctOrFn;
 
-  if (options.snakeCase) {
+  if (snakeCase) {
     (ct as { [snakeCaseKey]?: boolean })[snakeCaseKey] = true;
   }
 

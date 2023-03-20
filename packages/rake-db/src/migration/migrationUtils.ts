@@ -7,7 +7,7 @@ import {
   Sql,
   TableData,
 } from 'pqb';
-import { isRaw, toArray } from 'orchid-core';
+import { isRaw, toArray, toSnakeCase } from 'orchid-core';
 import { ColumnComment, Migration } from './migration';
 import {
   getSchemaAndTableFromName,
@@ -19,13 +19,22 @@ export const columnTypeToSql = (item: ColumnType) => {
   return item.data.isOfCustomType ? `"${item.toSQL()}"` : item.toSQL();
 };
 
-export const columnToSql = (
+export const getColumnName = (
+  item: { data: { name?: string } },
   key: string,
+  snakeCase: boolean | undefined,
+) => {
+  return item.data.name || (snakeCase ? toSnakeCase(key) : key);
+};
+
+export const columnToSql = (
+  name: string,
   item: ColumnType,
   values: unknown[],
   hasMultiplePrimaryKeys: boolean,
+  snakeCase: boolean | undefined,
 ): string => {
-  const line = [`"${item.data.name || key}" ${columnTypeToSql(item)}`];
+  const line = [`"${name}" ${columnTypeToSql(item)}`];
 
   if (item.data.compression) {
     line.push(`COMPRESSION ${item.data.compression}`);
@@ -68,7 +77,15 @@ export const columnToSql = (
         line.push(`CONSTRAINT "${foreignKey.name}"`);
       }
 
-      line.push(referencesToSql(schema, table, foreignKey.columns, foreignKey));
+      line.push(
+        referencesToSql(
+          schema,
+          table,
+          foreignKey.columns,
+          foreignKey,
+          snakeCase,
+        ),
+      );
     }
   }
 
@@ -77,13 +94,13 @@ export const columnToSql = (
 
 export const addColumnIndex = (
   indexes: TableData.Index[],
-  key: string,
+  name: string,
   item: ColumnType,
 ) => {
   if (item.data.indexes) {
     indexes.push(
       ...item.data.indexes.map((index) => ({
-        columns: [{ ...index, column: key }],
+        columns: [{ ...index, column: name }],
         options: index,
       })),
     );
@@ -92,11 +109,11 @@ export const addColumnIndex = (
 
 export const addColumnComment = (
   comments: ColumnComment[],
-  key: string,
+  name: string,
   item: ColumnType,
 ) => {
   if (item.data.comment) {
-    comments.push({ column: key, comment: item.data.comment });
+    comments.push({ column: name, comment: item.data.comment });
   }
 };
 
@@ -119,6 +136,7 @@ export const constraintToSql = (
   { name }: { schema?: string; name: string },
   up: boolean,
   foreignKey: TableData['foreignKeys'][number],
+  snakeCase: boolean | undefined,
 ) => {
   const constraintName =
     foreignKey.options.name || getForeignKeyName(name, foreignKey.columns);
@@ -136,6 +154,7 @@ export const constraintToSql = (
     table,
     foreignKey.foreignColumns,
     foreignKey.options,
+    snakeCase,
   )}`;
 };
 
@@ -144,10 +163,11 @@ export const referencesToSql = (
   table: string,
   columns: string[],
   foreignKey: Pick<ForeignKeyOptions, 'match' | 'onDelete' | 'onUpdate'>,
+  snakeCase: boolean | undefined,
 ) => {
   const sql: string[] = [
     `REFERENCES ${quoteWithSchema({ schema, name: table })}(${joinColumns(
-      columns,
+      snakeCase ? columns.map(toSnakeCase) : columns,
     )})`,
   ];
 

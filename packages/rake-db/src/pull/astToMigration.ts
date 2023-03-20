@@ -132,18 +132,31 @@ const createTable = (config: RakeDbConfig, ast: RakeDbAst.Table) => {
   const code: Code[] = [];
   addCode(code, `await db.createTable(${quoteSchemaTable(ast)}, (t) => ({`);
 
-  const hasTimestamps =
-    !config.snakeCase &&
-    isTimestamp(ast.shape.createdAt) &&
-    isTimestamp(ast.shape.updatedAt);
+  let hasTimestamps =
+    isTimestamp(ast.shape.createdAt) && isTimestamp(ast.shape.updatedAt);
 
-  const hasTimestampsSnake =
-    isTimestamp(ast.shape.created_at) && isTimestamp(ast.shape.updated_at);
+  const camelCaseTimestamps =
+    !config.snakeCase &&
+    hasTimestamps &&
+    !ast.shape.createdAt?.data.name &&
+    !ast.shape.updatedAt?.data.name;
+
+  const snakeCaseTimestamps =
+    hasTimestamps &&
+    !camelCaseTimestamps &&
+    ((!config.snakeCase &&
+      ast.shape.createdAt?.data.name === 'created_at' &&
+      ast.shape.updatedAt?.data.name === 'updated_at') ||
+      (config.snakeCase &&
+        !ast.shape.createdAt?.data.name &&
+        !ast.shape.updatedAt?.data.name));
+
+  if (!camelCaseTimestamps && !snakeCaseTimestamps) {
+    hasTimestamps = false;
+  }
 
   for (const key in ast.shape) {
     if (hasTimestamps && (key === 'createdAt' || key === 'updatedAt')) continue;
-    if (hasTimestampsSnake && (key === 'created_at' || key === 'updated_at'))
-      continue;
 
     const line: Code[] = [`${quoteObjectKey(key)}: `];
     for (const part of ast.shape[key].toCode('t')) {
@@ -153,12 +166,14 @@ const createTable = (config: RakeDbConfig, ast: RakeDbAst.Table) => {
     code.push(line);
   }
 
-  if (hasTimestamps || (config.snakeCase && hasTimestampsSnake)) {
-    code.push(['...t.timestamps(),']);
-  }
-
-  if (hasTimestampsSnake && !config.snakeCase) {
-    code.push(['...t.timestampsSnakeCase(),']);
+  if (hasTimestamps) {
+    code.push([
+      `...t.${
+        camelCaseTimestamps || config.snakeCase
+          ? 'timestamps'
+          : 'timestampsSnakeCase'
+      }(),`,
+    ]);
   }
 
   if (ast.primaryKey) {

@@ -32,6 +32,9 @@ const db = createDb({
   // ssl can also be specified as an option:
   ssl: true,
   
+  // set `snakeCase` to true and all columns will be translated to snake_case
+  // snakeCase: true,
+  
   // option for logging, false by default
   log: true,
   
@@ -64,6 +67,43 @@ const db = createDb(
     log: true,
   }
 )
+```
+
+## snakeCase
+
+By default, all column names are expected to be named in camelCase.
+
+If only some columns are named in snake_case, you can use `name` method to indicate it:
+
+```ts
+const table = db('table', (t) => ({
+  id: t.serial().primaryKey(),
+  camelCase: t.integer(),
+  snakeCase: t.name('snake_case').integer(),
+}))
+
+// all columns are available by a camelCase name,
+// even though `snakeCase` has a diferent name in the database
+const records = await table.select('camelCase', 'snakeCase')
+```
+
+Set `snakeCase` to `true` if you want all columns to be translated automatically into a snake_case.
+
+Column name can still be overridden with a `name` method.
+
+```ts
+const db = createDb({
+  // ...other options
+  snakeCase: true
+})
+
+const Table = db('table', (t) => ({
+  id: t.serial().primaryKey(),
+  // camelCase column requires an explicit name
+  camelCase: t.name('camelCase').integer(),
+  // snakeCase is snakerized automatically when generating SQL
+  snakeCase: t.integer(),
+}))
 ```
 
 ## log option
@@ -195,6 +235,7 @@ const Table = db('table', (t) => ({ ...columns }), {
   log: true, // boolean or object described `createdDb` section
   logger: { ... }, // override logger
   noPrimaryKey: 'ignore', // override noPrimaryKey
+  snakeCase: true, // override snakeCase
 })
 ```
 

@@ -58,11 +58,13 @@ export const revealColumnToSqlWithAs = (
       key,
       quoted === quotedAs,
     );
-    return `${quoted}.${q(name || key)}${name ? ` AS ${q(key)}` : ''}`;
+    return `${quoted}.${q(name || key)}${
+      name && name !== key ? ` AS ${q(key)}` : ''
+    }`;
   } else {
     const name = data.shape[column]?.data.name;
     return `${quotedAs ? `${quotedAs}.` : ''}${q(name || column)}${
-      name ? ` AS ${q(column)}` : ''
+      name && name !== column ? ` AS ${q(column)}` : ''
     }`;
   }
 };

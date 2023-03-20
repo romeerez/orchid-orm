@@ -17,6 +17,7 @@ import {
   ColumnTypesBase,
   nameKey,
   snakeCaseKey,
+  toSnakeCase,
 } from 'orchid-core';
 import {
   ChangeTableCallback,
@@ -38,6 +39,7 @@ import {
   columnToSql,
   commentsToQuery,
   constraintToSql,
+  getColumnName,
   indexesToQuery,
   primaryKeyToSql,
 } from './migrationUtils';
@@ -263,14 +265,17 @@ export const changeTable = async (
 
   const tableChanger = Object.create(columnTypes) as TableChanger;
   Object.assign(tableChanger, tableChangeMethods);
-  (tableChanger as { [snakeCaseKey]?: boolean })[snakeCaseKey] =
-    migration.options.snakeCase;
+
+  const snakeCase =
+    'snakeCase' in options ? options.snakeCase : migration.options.snakeCase;
+
+  (tableChanger as { [snakeCaseKey]?: boolean })[snakeCaseKey] = snakeCase;
 
   const changeData = fn?.(tableChanger) || {};
 
   const ast = makeAst(up, tableName, changeData, changeTableData, options);
 
-  const queries = astToQueries(ast);
+  const queries = astToQueries(ast, snakeCase);
   for (const query of queries) {
     const result = await migration.adapter.arrays(query);
     query.then?.(result);
@@ -342,7 +347,10 @@ type PrimaryKeys = {
   options?: { name?: string };
 };
 
-const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
+const astToQueries = (
+  ast: RakeDbAst.ChangeTable,
+  snakeCase?: boolean,
+): TableQuery[] => {
   const queries: TableQuery[] = [];
 
   if (ast.comment !== undefined) {
@@ -351,16 +359,13 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
     });
   }
 
-  const addPrimaryKeys: PrimaryKeys = ast.add.primaryKey
-    ? { ...ast.add.primaryKey }
-    : {
-        columns: [],
-      };
-  const dropPrimaryKeys: PrimaryKeys = ast.drop.primaryKey
-    ? { ...ast.drop.primaryKey }
-    : {
-        columns: [],
-      };
+  const addPrimaryKeys: PrimaryKeys = {
+    columns: [],
+  };
+
+  const dropPrimaryKeys: PrimaryKeys = {
+    columns: [],
+  };
 
   for (const key in ast.shape) {
     const item = ast.shape[key];
@@ -374,11 +379,11 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
 
     if (item.type === 'add') {
       if (item.item.data.isPrimaryKey) {
-        addPrimaryKeys.columns.push(key);
+        addPrimaryKeys.columns.push(getColumnName(item.item, key, snakeCase));
       }
     } else if (item.type === 'drop') {
       if (item.item.data.isPrimaryKey) {
-        dropPrimaryKeys.columns.push(key);
+        dropPrimaryKeys.columns.push(getColumnName(item.item, key, snakeCase));
       }
     } else if (item.type === 'change') {
       if (item.from.column instanceof EnumColumn) {
@@ -390,23 +395,61 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
       }
 
       if (item.from.primaryKey) {
-        dropPrimaryKeys.columns.push(key);
+        dropPrimaryKeys.columns.push(
+          item.from.column
+            ? getColumnName(item.from.column, key, snakeCase)
+            : snakeCase
+            ? toSnakeCase(key)
+            : key,
+        );
         dropPrimaryKeys.change = true;
       }
 
       if (item.to.primaryKey) {
-        addPrimaryKeys.columns.push(key);
+        addPrimaryKeys.columns.push(
+          item.to.column
+            ? getColumnName(item.to.column, key, snakeCase)
+            : snakeCase
+            ? toSnakeCase(key)
+            : key,
+        );
         addPrimaryKeys.change = true;
       }
     }
   }
 
+  if (ast.add.primaryKey) {
+    addPrimaryKeys.options = ast.add.primaryKey.options;
+    addPrimaryKeys.columns.push(...ast.add.primaryKey.columns);
+  }
+
+  if (ast.drop.primaryKey) {
+    dropPrimaryKeys.options = ast.drop.primaryKey.options;
+    dropPrimaryKeys.columns.push(...ast.drop.primaryKey.columns);
+  }
+
   const alterTable: string[] = [];
   const values: unknown[] = [];
-  const addIndexes: TableData.Index[] = [...ast.add.indexes];
-  const dropIndexes: TableData.Index[] = [...ast.drop.indexes];
-  const addForeignKeys: TableData.ForeignKey[] = [...ast.add.foreignKeys];
-  const dropForeignKeys: TableData.ForeignKey[] = [...ast.drop.foreignKeys];
+  const addIndexes: TableData.Index[] = mapIndexesForSnakeCase(
+    ast.add.indexes,
+    snakeCase,
+  );
+
+  const dropIndexes: TableData.Index[] = mapIndexesForSnakeCase(
+    ast.drop.indexes,
+    snakeCase,
+  );
+
+  const addForeignKeys: TableData.ForeignKey[] = mapForeignKeysForSnakeCase(
+    ast.add.foreignKeys,
+    snakeCase,
+  );
+
+  const dropForeignKeys: TableData.ForeignKey[] = mapForeignKeysForSnakeCase(
+    ast.drop.foreignKeys,
+    snakeCase,
+  );
+
   const comments: ColumnComment[] = [];
 
   for (const key in ast.shape) {
@@ -414,27 +457,30 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
 
     if (item.type === 'add') {
       const column = item.item;
-      addColumnIndex(addIndexes, key, column);
-      addColumnComment(comments, key, column);
+      const name = getColumnName(column, key, snakeCase);
+      addColumnIndex(addIndexes, name, column);
+      addColumnComment(comments, name, column);
 
       alterTable.push(
         `ADD COLUMN ${columnToSql(
-          key,
+          name,
           column,
           values,
           addPrimaryKeys.columns.length > 1,
+          snakeCase,
         )}`,
       );
     } else if (item.type === 'drop') {
-      addColumnIndex(dropIndexes, key, item.item);
+      const name = getColumnName(item.item, key, snakeCase);
+      addColumnIndex(dropIndexes, name, item.item);
 
       alterTable.push(
-        `DROP COLUMN "${item.item.data.name || key}"${
-          item.dropMode ? ` ${item.dropMode}` : ''
-        }`,
+        `DROP COLUMN "${name}"${item.dropMode ? ` ${item.dropMode}` : ''}`,
       );
     } else if (item.type === 'change') {
       const { from, to } = item;
+      const name = getChangeColumnName(item, key, snakeCase);
+
       if (to.type && (from.type !== to.type || from.collate !== to.collate)) {
         const type =
           !to.column || to.column.data.isOfCustomType
@@ -442,7 +488,7 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
             : to.type;
 
         alterTable.push(
-          `ALTER COLUMN "${item.name || key}" TYPE ${type}${
+          `ALTER COLUMN "${name}" TYPE ${type}${
             to.collate ? ` COLLATE ${quote(to.collate)}` : ''
           }${item.using ? ` USING ${getRaw(item.using, values)}` : ''}`,
         );
@@ -457,33 +503,34 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
         const expr =
           value === undefined ? 'DROP DEFAULT' : `SET DEFAULT ${value}`;
 
-        alterTable.push(`ALTER COLUMN "${item.name || key}" ${expr}`);
+        alterTable.push(`ALTER COLUMN "${name}" ${expr}`);
       }
 
       if (from.nullable !== to.nullable) {
         alterTable.push(
-          `ALTER COLUMN "${item.name || key}" ${
-            to.nullable ? 'DROP' : 'SET'
-          } NOT NULL`,
+          `ALTER COLUMN "${name}" ${to.nullable ? 'DROP' : 'SET'} NOT NULL`,
         );
       }
 
       if (from.compression !== to.compression) {
         alterTable.push(
-          `ALTER COLUMN "${item.name || key}" SET COMPRESSION ${
+          `ALTER COLUMN "${name}" SET COMPRESSION ${
             to.compression || 'DEFAULT'
           }`,
         );
       }
 
       if (from.check !== to.check) {
-        const name = `${ast.name}_${item.name || key}_check`;
+        const checkName = `${ast.name}_${name}_check`;
         if (from.check) {
-          alterTable.push(`DROP CONSTRAINT "${name}"`);
+          alterTable.push(`DROP CONSTRAINT "${checkName}"`);
         }
         if (to.check) {
           alterTable.push(
-            `ADD CONSTRAINT "${name}"\n    CHECK (${getRaw(to.check, values)})`,
+            `ADD CONSTRAINT "${checkName}"\n    CHECK (${getRaw(
+              to.check,
+              values,
+            )})`,
           );
         }
       }
@@ -510,18 +557,22 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
         ) {
           if (fromFkey) {
             dropForeignKeys.push({
-              columns: [key],
+              columns: [name],
               fnOrTable: fromFkey.table,
-              foreignColumns: fromFkey.columns,
+              foreignColumns: snakeCase
+                ? fromFkey.columns.map(toSnakeCase)
+                : fromFkey.columns,
               options: fromFkey,
             });
           }
 
           if (toFkey) {
             addForeignKeys.push({
-              columns: [key],
+              columns: [name],
               fnOrTable: toFkey.table,
-              foreignColumns: toFkey.columns,
+              foreignColumns: snakeCase
+                ? toFkey.columns.map(toSnakeCase)
+                : toFkey.columns,
               options: toFkey,
             });
           }
@@ -559,7 +610,7 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
             dropIndexes.push({
               columns: [
                 {
-                  column: key,
+                  column: name,
                   ...fromIndex,
                 },
               ],
@@ -571,7 +622,7 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
             addIndexes.push({
               columns: [
                 {
-                  column: key,
+                  column: name,
                   ...toIndex,
                 },
               ],
@@ -582,10 +633,14 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
       }
 
       if (from.comment !== to.comment) {
-        comments.push({ column: key, comment: to.comment || null });
+        comments.push({ column: name, comment: to.comment || null });
       }
     } else if (item.type === 'rename') {
-      alterTable.push(`RENAME COLUMN "${key}" TO "${item.name}"`);
+      alterTable.push(
+        `RENAME COLUMN "${snakeCase ? toSnakeCase(key) : key}" TO "${
+          snakeCase ? toSnakeCase(item.name) : item.name
+        }"`,
+      );
     }
   }
 
@@ -602,7 +657,8 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
 
   prependAlterTable.push(
     ...dropForeignKeys.map(
-      (foreignKey) => `\n DROP ${constraintToSql(ast, false, foreignKey)}`,
+      (foreignKey) =>
+        `\n DROP ${constraintToSql(ast, false, foreignKey, snakeCase)}`,
     ),
   );
 
@@ -613,12 +669,22 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
     addPrimaryKeys.change ||
     addPrimaryKeys.columns.length > 1
   ) {
-    alterTable.push(`ADD ${primaryKeyToSql(addPrimaryKeys)}`);
+    alterTable.push(
+      `ADD ${primaryKeyToSql(
+        snakeCase
+          ? {
+              options: addPrimaryKeys.options,
+              columns: addPrimaryKeys.columns.map(toSnakeCase),
+            }
+          : addPrimaryKeys,
+      )}`,
+    );
   }
 
   alterTable.push(
     ...addForeignKeys.map(
-      (foreignKey) => `\n ADD ${constraintToSql(ast, true, foreignKey)}`,
+      (foreignKey) =>
+        `\n ADD ${constraintToSql(ast, true, foreignKey, snakeCase)}`,
     ),
   );
 
@@ -636,4 +702,47 @@ const astToQueries = (ast: RakeDbAst.ChangeTable): TableQuery[] => {
   queries.push(...commentsToQuery(ast, comments));
 
   return queries;
+};
+
+const getChangeColumnName = (
+  change: RakeDbAst.ChangeTableItem.Change,
+  key: string,
+  snakeCase?: boolean,
+) => {
+  return (
+    change.name ||
+    (change.to.column
+      ? getColumnName(change.to.column, key, snakeCase)
+      : snakeCase
+      ? toSnakeCase(key)
+      : key)
+  );
+};
+
+const mapIndexesForSnakeCase = (
+  indexes: TableData.Index[],
+  snakeCase?: boolean,
+): TableData.Index[] => {
+  return indexes.map((index) => ({
+    options: index.options,
+    columns: snakeCase
+      ? index.columns.map((item) =>
+          'column' in item
+            ? { ...item, column: toSnakeCase(item.column) }
+            : item,
+        )
+      : index.columns,
+  }));
+};
+
+const mapForeignKeysForSnakeCase = (
+  foreignKeys: TableData.ForeignKey[],
+  snakeCase?: boolean,
+): TableData.ForeignKey[] => {
+  return foreignKeys.map((foreignKey) => ({
+    ...foreignKey,
+    columns: snakeCase
+      ? foreignKey.columns.map(toSnakeCase)
+      : foreignKey.columns,
+  }));
 };

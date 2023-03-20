@@ -58,6 +58,19 @@ export class Table extends BaseTable {
 }
 ```
 
+## name
+
+To specify a real name of column in a database:
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    nameInApp: t.name('name_in_database').integer(),
+  }));
+}
+```
+
 ## encode
 
 Set a custom function to process value for the column when creating or updating a record.

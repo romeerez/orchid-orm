@@ -93,13 +93,15 @@ Alternatively, use `t.primaryKey([column1, column2, ...columns])` to specify the
 
 By default, Postgres will name an underlying constraint as `${table name}_pkey`, and override the name by passing a second argument `{ name: 'customName' }`.
 
+Note how `name` column has `different_name` name: `primaryKey` is accepting a column key and will use an underlying name.
+
 ```ts
 import { change } from 'rake-db'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
     id: t.integer(),
-    name: t.text(),
+    name: t.name('different_name').text(),
     active: t.boolean(),
     ...t.primaryKey(['id', 'name', 'active'], { name: 'tablePkeyName' }),
   }))
@@ -109,6 +111,8 @@ change(async (db) => {
 ## foreignKey
 
 Set the foreignKey for the column.
+
+In `snakeCase` mode, columns of both tables are translated to a snake_case.
 
 ```ts
 import { change } from 'rake-db'
@@ -267,13 +271,15 @@ type IndexOptions = {
 
 Example:
 
+Note how `name` column has a `different_name` name, but it's been referenced by a key name in the index.
+
 ```ts
 import { change } from 'rake-db'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
     id: t.serial().primaryKey(),
-    name: t.text(),
+    name: t.name('different_name').text(),
     ...t.index(['id', { column: 'name', order: 'ASC' }], { name: 'indexName' }),
   }))
 })
@@ -305,6 +311,21 @@ import { change } from 'rake-db'
 change(async (db) => {
   await db.createTable('table', (t) => ({
     ...t.timestamps(),
+  }))
+})
+```
+
+## timestampsSnakeCase
+
+This method is for the case when `snakeCase` is not set or `false`, but for some reason you need timestamps named as `updated_at` and `created_at`.
+
+```ts
+import { change } from 'rake-db'
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    // adds updated_at and created_at
+    ...t.timestampsSnakeCase(),
   }))
 })
 ```

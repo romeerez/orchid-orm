@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.6.17
+
+### Patch Changes
+
+- Support snakeCase option
+- Updated dependencies
+  - orchid-core@0.1.6
+  - pqb@0.10.13
+
 ## 1.6.16
 
 ### Patch Changes

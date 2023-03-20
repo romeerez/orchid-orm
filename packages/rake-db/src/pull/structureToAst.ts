@@ -14,7 +14,7 @@ import {
   instantiateColumn,
   TableData,
 } from 'pqb';
-import { Code, raw, singleQuote } from 'orchid-core';
+import { Code, raw, singleQuote, toCamelCase, toSnakeCase } from 'orchid-core';
 import { getForeignKeyName, getIndexName } from '../migration/migrationUtils';
 
 export class RakeDbEnumColumn extends EnumColumn<
@@ -60,8 +60,13 @@ type PendingTables = Record<
   { table: DbStructure.Table; dependsOn: Set<string> }
 >;
 
+export type StructureToAstCtx = {
+  snakeCase?: boolean;
+  unsupportedTypes: Record<string, string[]>;
+};
+
 export const structureToAst = async (
-  unsupportedTypes: Record<string, string[]>,
+  ctx: StructureToAstCtx,
   db: DbStructure,
 ): Promise<RakeDbAst[]> => {
   const ast: RakeDbAst[] = [];
@@ -98,25 +103,20 @@ export const structureToAst = async (
 
   const domains: Domains = {};
   for (const it of data.domains) {
-    domains[`${it.schemaName}.${it.name}`] = getColumn(
-      unsupportedTypes,
-      data,
-      domains,
-      {
-        schemaName: it.schemaName,
-        name: it.name,
-        type: it.type,
-        typeSchema: it.typeSchema,
-        isArray: it.isArray,
-        isSerial: false,
-      },
-    );
+    domains[`${it.schemaName}.${it.name}`] = getColumn(ctx, data, domains, {
+      schemaName: it.schemaName,
+      name: it.name,
+      type: it.type,
+      typeSchema: it.typeSchema,
+      isArray: it.isArray,
+      isSerial: false,
+    });
   }
 
   for (const key in pendingTables) {
     const { table, dependsOn } = pendingTables[key];
     if (!dependsOn.size) {
-      pushTableAst(unsupportedTypes, ast, data, domains, table, pendingTables);
+      pushTableAst(ctx, ast, data, domains, table, pendingTables);
     }
   }
 
@@ -172,15 +172,7 @@ export const structureToAst = async (
       }
     }
 
-    pushTableAst(
-      unsupportedTypes,
-      ast,
-      data,
-      domains,
-      table,
-      pendingTables,
-      innerFKeys,
-    );
+    pushTableAst(ctx, ast, data, domains, table, pendingTables, innerFKeys);
   }
 
   for (const [fkey, table] of outerFKeys) {
@@ -261,7 +253,7 @@ const getIsSerial = (item: DbStructure.Column) => {
 };
 
 const getColumn = (
-  unsupportedTypes: Record<string, string[]>,
+  ctx: StructureToAstCtx,
   data: Data,
   domains: Domains,
   {
@@ -301,7 +293,7 @@ const getColumn = (
       } else {
         column = new CustomTypeColumn({}, type);
 
-        (unsupportedTypes[type] ??= []).push(
+        (ctx.unsupportedTypes[type] ??= []).push(
           `${schemaName}${tableName ? `.${tableName}` : ''}.${name}`,
         );
       }
@@ -322,7 +314,7 @@ const getColumnType = (type: string, isSerial: boolean) => {
 };
 
 const pushTableAst = (
-  unsupportedTypes: Record<string, string[]>,
+  ctx: StructureToAstCtx,
   ast: RakeDbAst[],
   data: Data,
   domains: Domains,
@@ -358,7 +350,7 @@ const pushTableAst = (
       item = { ...item, default: undefined };
     }
 
-    let column = getColumn(unsupportedTypes, data, domains, {
+    let column = getColumn(ctx, data, domains, {
       ...item,
       type: item.type,
       isArray: item.isArray,
@@ -422,8 +414,17 @@ const pushTableAst = (
       column.data.check = raw(check.expression);
     }
 
-    delete column.data.name;
-    shape[item.name] = column;
+    const camelCaseName = toCamelCase(item.name);
+
+    if (ctx.snakeCase) {
+      const snakeCaseName = toSnakeCase(camelCaseName);
+
+      column.data.name = snakeCaseName === item.name ? undefined : item.name;
+    } else {
+      column.data.name = camelCaseName === item.name ? undefined : item.name;
+    }
+
+    shape[camelCaseName] = column;
   }
 
   ast.push({
@@ -480,14 +481,7 @@ const pushTableAst = (
   for (const otherKey in pendingTables) {
     const item = pendingTables[otherKey];
     if (item.dependsOn.delete(key) && item.dependsOn.size === 0) {
-      pushTableAst(
-        unsupportedTypes,
-        ast,
-        data,
-        domains,
-        item.table,
-        pendingTables,
-      );
+      pushTableAst(ctx, ast, data, domains, item.table, pendingTables);
     }
   }
 };

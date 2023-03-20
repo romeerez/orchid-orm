@@ -145,3 +145,14 @@ export const pathToLog = (path: string) => {
     ? path
     : url.pathToFileURL(path).toString();
 };
+
+export const toCamelCase = (str: string) => {
+  return str
+    .replace(/^_+/, '')
+    .replace(/_+./, (a) => a[a.length - 1].toUpperCase())
+    .replace(/_+$/, '');
+};
+
+export const toSnakeCase = (str: string) => {
+  return str.replace(/[A-Z]/g, (a) => `_${a.toLowerCase()}`);
+};

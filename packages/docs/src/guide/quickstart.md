@@ -136,6 +136,27 @@ But if you develop with a local Postgres, create databases with this command:
 npm run db create
 ```
 
+By default, camelCase naming is used for columns in a database.
+If you prefer snake_case, set `snakeCase: true` option in `src/db/dbScript.ts` and `src/db/baseTable.ts`:
+
+```ts
+// src/db/baseTable.ts
+
+export const BaseTable = createBaseTable({
+  snakeCase: true,
+  // ...snip
+});
+```
+
+```ts
+// src/db/dbScript.ts
+
+rakeDb(config.database, {
+  snakeCase: true
+  // ...other options
+});
+```
+
 If you chose to create demo tables, there are migrations files in `src/db/migrations`. Run migrations:
 
 ```sh
@@ -210,7 +231,7 @@ export class SampleTable extends BaseTable {
 }
 ```
 
-`src/db/db.ts` is the main file for the ORM, it connects all tables into one `db` object. Add your new table to it:
+`src/db/db.ts` is the main file for the ORM, it connects all tables into one `db` object.
 
 ```ts
 // src/db/db.ts

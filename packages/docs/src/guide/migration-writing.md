@@ -1,5 +1,7 @@
 # Writing a migration
 
+All column names will be translated to snake_case if `snakeCase` option is set to true in `rakeDb` options.
+
 Use a `change` function for changing the database schema, it accepts a callback with `db` and optionally you can use a second argument `up` to know if it is an up migration or down.
 
 ```ts
@@ -96,6 +98,9 @@ type TableOptions = {
   // by default, it will throw an error when the table has no primary key
   // set `noPrimaryKey` to `true` to bypass it
   noPrimaryKey?: boolean;
+  
+  // override rakeDb `snakeCase` option for only this table
+  snakeCase?: boolean;
 }
 ```
 
@@ -146,6 +151,9 @@ type ChangeTableOptions = {
       [string, string]
     | // remove a comment on both migrate and rollback
       null
+  
+  // override rakeDb `snakeCase` option for only this table
+  snakeCase?: boolean;
 }
 ```
 
@@ -551,6 +559,8 @@ change(async (db) => {
 ## columnExists
 
 Returns boolean to know if a column exists:
+
+Note that when `snakeCase` option is set to true, this method won't translate column to snake case, unlike other parts.
 
 ```ts
 import { change } from 'rake-db'

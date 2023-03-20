@@ -1,5 +1,13 @@
 # pqb
 
+## 0.10.13
+
+### Patch Changes
+
+- Support snakeCase option
+- Updated dependencies
+  - orchid-core@0.1.6
+
 ## 0.10.12
 
 ### Patch Changes

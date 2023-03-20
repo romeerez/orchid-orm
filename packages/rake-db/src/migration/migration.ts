@@ -35,6 +35,7 @@ export type TableOptions = {
   dropMode?: DropMode;
   comment?: string;
   noPrimaryKey?: boolean;
+  snakeCase?: boolean;
 };
 
 type TextColumnCreator = () => TextColumn;
@@ -53,7 +54,11 @@ export type ColumnsShapeCallback = (
   t: MigrationColumnTypes & { raw: typeof raw },
 ) => ColumnsShape;
 
-export type ChangeTableOptions = { comment?: string | [string, string] | null };
+export type ChangeTableOptions = {
+  snakeCase?: boolean;
+  comment?: string | [string, string] | null;
+};
+
 export type ChangeTableCallback = (t: TableChanger) => TableChangeData;
 
 export type ColumnComment = { column: string; comment: string | null };

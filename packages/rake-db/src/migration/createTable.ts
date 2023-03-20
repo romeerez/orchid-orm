@@ -21,6 +21,7 @@ import {
   columnToSql,
   commentsToQuery,
   constraintToSql,
+  getColumnName,
   indexesToQuery,
   primaryKeyToSql,
 } from './migrationUtils';
@@ -49,7 +50,11 @@ export const createTable = async (
   options: TableOptions,
   fn: ColumnsShapeCallback,
 ) => {
-  types[snakeCaseKey] = migration.options.snakeCase;
+  const snakeCase =
+    'snakeCase' in options ? options.snakeCase : migration.options.snakeCase;
+
+  types[snakeCaseKey] = snakeCase;
+
   const shape = getColumnTypes(types, fn);
   const tableData = getTableData();
   const ast = makeAst(
@@ -63,7 +68,7 @@ export const createTable = async (
 
   validatePrimaryKey(ast);
 
-  const queries = astToQueries(ast);
+  const queries = astToQueries(ast, snakeCase);
   for (const { then, ...query } of queries) {
     const result = await migration.adapter.arrays(query);
     then?.(result);
@@ -82,13 +87,13 @@ const makeAst = (
 ): RakeDbAst.Table => {
   const shapePKeys: string[] = [];
   for (const key in shape) {
-    if (shape[key].data.isPrimaryKey) {
+    const column = shape[key];
+    if (column.data.isPrimaryKey) {
       shapePKeys.push(key);
     }
   }
 
-  const primaryKey = tableData.primaryKey;
-
+  const { primaryKey } = tableData;
   const [schema, table] = getSchemaAndTableFromName(tableName);
 
   return {
@@ -134,11 +139,15 @@ const validatePrimaryKey = (ast: RakeDbAst.Table) => {
   }
 };
 
-const astToQueries = (ast: RakeDbAst.Table): TableQuery[] => {
+const astToQueries = (
+  ast: RakeDbAst.Table,
+  snakeCase?: boolean,
+): TableQuery[] => {
   const queries: TableQuery[] = [];
+  const { shape } = ast;
 
-  for (const key in ast.shape) {
-    const item = ast.shape[key];
+  for (const key in shape) {
+    const item = shape[key];
     if (!(item instanceof EnumColumn)) continue;
 
     queries.push(makePopulateEnumQuery(item));
@@ -158,22 +167,56 @@ const astToQueries = (ast: RakeDbAst.Table): TableQuery[] => {
   const indexes: TableData.Index[] = [];
   const comments: ColumnComment[] = [];
 
-  for (const key in ast.shape) {
-    const item = ast.shape[key];
-    addColumnIndex(indexes, key, item);
-    addColumnComment(comments, key, item);
-    lines.push(`\n  ${columnToSql(key, item, values, !!ast.primaryKey)}`);
+  for (const key in shape) {
+    const item = shape[key];
+    const name = getColumnName(item, key, snakeCase);
+    addColumnIndex(indexes, name, item);
+    addColumnComment(comments, name, item);
+    lines.push(
+      `\n  ${columnToSql(name, item, values, !!ast.primaryKey, snakeCase)}`,
+    );
   }
 
   if (ast.primaryKey) {
-    lines.push(`\n  ${primaryKeyToSql(ast.primaryKey)}`);
+    lines.push(
+      `\n  ${primaryKeyToSql({
+        options: ast.primaryKey.options,
+        columns: ast.primaryKey.columns.map((key) =>
+          getColumnName(shape[key], key, snakeCase),
+        ),
+      })}`,
+    );
   }
 
   ast.foreignKeys.forEach((foreignKey) => {
-    lines.push(`\n  ${constraintToSql(ast, true, foreignKey)}`);
+    lines.push(
+      `\n  ${constraintToSql(
+        ast,
+        true,
+        {
+          ...foreignKey,
+          columns: foreignKey.columns.map((column) =>
+            getColumnName(shape[column], column, snakeCase),
+          ),
+        },
+        snakeCase,
+      )}`,
+    );
   });
 
-  indexes.push(...ast.indexes);
+  indexes.push(
+    ...ast.indexes.map((index) => ({
+      ...index,
+      columns: index.columns.map((item) => ({
+        ...item,
+        ...('column' in item
+          ? {
+              column: getColumnName(shape[item.column], item.column, snakeCase),
+            }
+          : {}),
+      })),
+    })),
+  );
 
   queries.push(
     {

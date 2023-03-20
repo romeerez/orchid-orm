@@ -1,189 +1,360 @@
-import {
-  asMock,
-  expectSql,
-  getDb,
-  queryMock,
-  resetDb,
-  toLine,
-} from '../test-utils';
+import { asMock, expectSql, getDb, resetDb, toLine } from '../test-utils';
 
 const db = getDb();
 
-(['createTable', 'dropTable'] as const).forEach((action) => {
-  const testUpAndDown = async (
-    fn: () => Promise<void>,
-    expectUp: () => void,
-    expectDown: () => void,
-  ) => {
-    await fn();
-    (action === 'createTable' ? expectUp : expectDown)();
+const testUpAndDown = async (
+  fn: (action: 'createTable' | 'dropTable') => Promise<void> | void,
+  expectUp?: () => void,
+  expectDown: () => void = () => expectSql(`DROP TABLE "table"`),
+) => {
+  resetDb(true);
+  await fn('createTable');
+  expectUp?.();
 
-    db.up = false;
-    queryMock.mockClear();
-    await fn();
-    (action === 'createTable' ? expectDown : expectUp)();
-  };
+  resetDb(false);
+  await fn('createTable');
+  expectUp && expectDown();
 
-  describe(action, () => {
-    beforeEach(resetDb);
+  resetDb(true);
 
-    it('should push ast to migratedAsts', async () => {
-      await db[action]('name', (t) => ({
-        id: t.serial().primaryKey(),
-      }));
+  await fn('dropTable');
+  expectUp && expectDown();
 
-      expect(db.migratedAsts.length).toBe(1);
-    });
+  resetDb(false);
+  await fn('dropTable');
+  expectUp?.();
+};
 
-    it(`should ${action} with schema`, async () => {
-      await db[action]('schema.name', (t) => ({ id: t.serial().primaryKey() }));
+describe('create and drop table', () => {
+  beforeEach(() => {
+    db.options.snakeCase = false;
+  });
 
-      if (action === 'createTable') {
+  it('should push ast to migratedAsts', async () => {
+    await testUpAndDown(
+      (action) =>
+        db[action]('name', (t) => ({
+          id: t.serial().primaryKey(),
+        })),
+      () => expect(db.migratedAsts.length).toBe(1),
+      () => expect(db.migratedAsts.length).toBe(1),
+    );
+  });
+
+  it('should handle table with schema', async () => {
+    await testUpAndDown(
+      (action) =>
+        db[action]('schema.name', (t) => ({ id: t.serial().primaryKey() })),
+      () =>
         expectSql(`
-          CREATE TABLE "schema"."name" (
-            "id" serial PRIMARY KEY
-          )
-        `);
-      } else {
-        expectSql(`
-          DROP TABLE "schema"."name"
-        `);
-      }
-    });
-
-    it(`should ${action} with comment`, async () => {
-      await db[action]('name', { comment: 'this is a table comment' }, (t) => ({
-        id: t.serial().primaryKey(),
-      }));
-
-      if (action === 'createTable') {
-        expectSql([
-          `
-            CREATE TABLE "name" (
+            CREATE TABLE "schema"."name" (
               "id" serial PRIMARY KEY
             )
-          `,
-          `COMMENT ON TABLE "name" IS 'this is a table comment'`,
-        ]);
-      } else {
+          `),
+      () =>
         expectSql(`
-          DROP TABLE "name"
-        `);
-      }
+            DROP TABLE "schema"."name"
+          `),
+    );
+  });
+
+  it('should handle table with comment', async () => {
+    await testUpAndDown(
+      (action) =>
+        db[action]('table', { comment: 'this is a table comment' }, (t) => ({
+          id: t.serial().primaryKey(),
+        })),
+      () =>
+        expectSql([
+          `
+              CREATE TABLE "table" (
+                "id" serial PRIMARY KEY
+              )
+            `,
+          `COMMENT ON TABLE "table" IS 'this is a table comment'`,
+        ]),
+    );
+  });
+
+  it('should support drop table cascade', async () => {
+    await testUpAndDown(
+      (action) =>
+        db[action]('table', { dropMode: 'CASCADE' }, (t) => ({
+          id: t.serial().primaryKey(),
+        })),
+      () =>
+        expectSql(`
+          CREATE TABLE "table" (
+            "id" serial PRIMARY KEY
+          )
+        `),
+      () =>
+        expectSql(`
+          DROP TABLE "table" CASCADE
+        `),
+    );
+  });
+
+  describe('columns', () => {
+    it('should handle table columns', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.serial().primaryKey(),
+            nullable: t.text().nullable(),
+            nonNullable: t.text(),
+            citext: t.citext(),
+            varcharWithLength: t.varchar(20),
+            decimalWithPrecisionAndScale: t.decimal(10, 5),
+            columnWithCompression: t.text().compression('compression'),
+            columnWithCollate: t.text().collate('utf-8'),
+          })),
+        () => {
+          expectSql(
+            `
+            CREATE TABLE "table" (
+              "id" serial PRIMARY KEY,
+              "nullable" text,
+              "nonNullable" text NOT NULL,
+              "citext" citext NOT NULL,
+              "varcharWithLength" varchar(20) NOT NULL,
+              "decimalWithPrecisionAndScale" decimal(10, 5) NOT NULL,
+              "columnWithCompression" text COMPRESSION compression NOT NULL,
+              "columnWithCollate" text COLLATE 'utf-8' NOT NULL
+            )
+          `,
+          );
+        },
+        () => {
+          expectSql(
+            `
+            DROP TABLE "table"
+          `,
+          );
+        },
+      );
     });
 
-    it(`should ${action} and revert on rollback`, async () => {
-      const fn = () => {
-        return db[action]('table', { dropMode: 'CASCADE' }, (t) => ({
-          id: t.serial().primaryKey(),
-          nullable: t.text().nullable(),
-          nonNullable: t.text(),
-          enum: t.enum('mood'),
-          citext: t.citext(),
-          withDefault: t.boolean().default(false),
-          withDefaultRaw: t.date().default(t.raw(`now()`)),
-          withIndex: t.text().index({
-            name: 'indexName',
-            unique: true,
-            using: 'gin',
-            collate: 'utf-8',
-            opclass: 'opclass',
-            order: 'ASC',
-            include: 'id',
-            with: 'fillfactor = 70',
-            tablespace: 'tablespace',
-            where: 'column = 123',
-          }),
-          uniqueColumn: t.text().unique(),
-          varcharWithLength: t.varchar(20),
-          decimalWithPrecisionAndScale: t.decimal(10, 5),
-          columnWithCompression: t.text().compression('compression'),
-          columnWithCollate: t.text().collate('utf-8'),
-          columnWithForeignKey: t.integer().foreignKey('table', 'column', {
-            name: 'fkeyConstraint',
-            match: 'FULL',
-            onUpdate: 'CASCADE',
-            onDelete: 'CASCADE',
-          }),
-          ...t.timestamps(),
-        }));
-      };
+    it('should handle columns in snakeCase mode', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', { snakeCase: true }, (t) => ({
+            id: t.serial().primaryKey(),
+            columnName: t.text(),
+          })),
+        () =>
+          expectSql(`
+            CREATE TABLE "table" (
+              "id" serial PRIMARY KEY,
+              "column_name" text NOT NULL
+            )
+          `),
+      );
+    });
+  });
 
-      const expectCreateTable = () => {
+  it('should handle enum column', async () => {
+    const enumRows = [['one'], ['two']];
+
+    await testUpAndDown(
+      (action) => {
+        asMock(db.adapter.arrays).mockResolvedValueOnce({ rows: enumRows });
+
+        return db[action]('table', (t) => ({
+          id: t.serial().primaryKey(),
+          enum: t.enum('mood'),
+        }));
+      },
+      () => {
         expectSql([
           'SELECT unnest(enum_range(NULL::"mood"))::text',
           `
             CREATE TABLE "table" (
               "id" serial PRIMARY KEY,
-              "nullable" text,
-              "nonNullable" text NOT NULL,
-              "enum" "mood" NOT NULL,
-              "citext" citext NOT NULL,
-              "withDefault" boolean NOT NULL DEFAULT false,
-              "withDefaultRaw" date NOT NULL DEFAULT now(),
-              "withIndex" text NOT NULL,
-              "uniqueColumn" text NOT NULL,
-              "varcharWithLength" varchar(20) NOT NULL,
-              "decimalWithPrecisionAndScale" decimal(10, 5) NOT NULL,
-              "columnWithCompression" text COMPRESSION compression NOT NULL,
-              "columnWithCollate" text COLLATE 'utf-8' NOT NULL,
-              "columnWithForeignKey" integer NOT NULL CONSTRAINT "fkeyConstraint" REFERENCES "table"("column") MATCH FULL ON DELETE CASCADE ON UPDATE CASCADE,
-              "createdAt" timestamp NOT NULL DEFAULT now(),
-              "updatedAt" timestamp NOT NULL DEFAULT now()
+              "enum" "mood" NOT NULL
             )
           `,
-          toLine(`
-            CREATE UNIQUE INDEX "indexName"
-              ON "table"
-              USING gin
-              ("withIndex" COLLATE 'utf-8' opclass ASC)
-              INCLUDE ("id")
-              WITH (fillfactor = 70)
-              TABLESPACE tablespace
-              WHERE column = 123
-          `),
-          toLine(`
-            CREATE UNIQUE INDEX "table_uniqueColumn_idx"
-              ON "table"
-              ("uniqueColumn")
-          `),
         ]);
-      };
-
-      const expectDropTable = () => {
+      },
+      () => {
         expectSql([
           'SELECT unnest(enum_range(NULL::"mood"))::text',
           `
-            DROP TABLE "table" CASCADE
+            DROP TABLE "table"
           `,
         ]);
-      };
+      },
+    );
+  });
 
-      const enumRows = [['one'], ['two']];
-      asMock(db.adapter.arrays).mockResolvedValueOnce({ rows: enumRows });
+  it('should handle columns with defaults', async () => {
+    await testUpAndDown(
+      (action) =>
+        db[action]('table', (t) => ({
+          id: t.serial().primaryKey(),
+          withDefault: t.boolean().default(false),
+          withDefaultRaw: t.date().default(t.raw(`now()`)),
+        })),
+      () =>
+        expectSql(
+          `
+            CREATE TABLE "table" (
+              "id" serial PRIMARY KEY,
+              "withDefault" boolean NOT NULL DEFAULT false,
+              "withDefaultRaw" date NOT NULL DEFAULT now()
+            )
+          `,
+        ),
+    );
+  });
 
-      await fn();
-      (action === 'createTable' ? expectCreateTable : expectDropTable)();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const [ast1] = db.migratedAsts as any[];
-      expect(ast1.shape.enum.options).toEqual(['one', 'two']);
-
-      db.up = false;
-      db.migratedAsts.length = 0;
-      queryMock.mockClear();
-      asMock(db.adapter.arrays).mockResolvedValueOnce({ rows: enumRows });
-      await fn();
-      (action === 'createTable' ? expectDropTable : expectCreateTable)();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const [ast2] = db.migratedAsts as any[];
-      expect(ast2.shape.enum.options).toEqual(['one', 'two']);
+  describe('indexes', () => {
+    it('should handle indexes', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.serial().primaryKey(),
+            withIndex: t.text().index({
+              name: 'indexName',
+              unique: true,
+              using: 'gin',
+              collate: 'utf-8',
+              opclass: 'opclass',
+              order: 'ASC',
+              include: 'id',
+              with: 'fillfactor = 70',
+              tablespace: 'tablespace',
+              where: 'column = 123',
+            }),
+            uniqueColumn: t.text().unique(),
+          })),
+        () =>
+          expectSql([
+            `
+              CREATE TABLE "table" (
+                "id" serial PRIMARY KEY,
+                "withIndex" text NOT NULL,
+                "uniqueColumn" text NOT NULL
+              )
+            `,
+            toLine(`
+              CREATE UNIQUE INDEX "indexName"
+                ON "table"
+                USING gin
+                ("withIndex" COLLATE 'utf-8' opclass ASC)
+                INCLUDE ("id")
+                WITH (fillfactor = 70)
+                TABLESPACE tablespace
+                WHERE column = 123
+            `),
+            toLine(`
+              CREATE UNIQUE INDEX "table_uniqueColumn_idx"
+                ON "table"
+                ("uniqueColumn")
+            `),
+          ]),
+      );
     });
 
-    it(`should ${action} snake case timestamps if config has snakeCase: true`, async () => {
+    it('should handle indexes in snakeCase mode', async () => {
+      db.options.snakeCase = true;
+
       await testUpAndDown(
-        async () => {
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.serial().primaryKey(),
+            withIndex: t.text().index(),
+            uniqueColumn: t.text().unique(),
+          })),
+        () =>
+          expectSql([
+            `
+              CREATE TABLE "table" (
+                "id" serial PRIMARY KEY,
+                "with_index" text NOT NULL,
+                "unique_column" text NOT NULL
+              )
+            `,
+            toLine(`
+              CREATE INDEX "table_with_index_idx" ON "table" ("with_index")
+            `),
+            toLine(`
+              CREATE UNIQUE INDEX "table_unique_column_idx" ON "table" ("unique_column")
+            `),
+          ]),
+      );
+    });
+  });
+
+  describe('foreign key', () => {
+    it('should handle columns with foreign key', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.serial().primaryKey(),
+            columnWithForeignKey: t.integer().foreignKey('table', 'column', {
+              name: 'fkeyConstraint',
+              match: 'FULL',
+              onUpdate: 'CASCADE',
+              onDelete: 'CASCADE',
+            }),
+          })),
+        () =>
+          expectSql(
+            `
+              CREATE TABLE "table" (
+                "id" serial PRIMARY KEY,
+                "columnWithForeignKey" integer NOT NULL CONSTRAINT "fkeyConstraint" REFERENCES "table"("column") MATCH FULL ON DELETE CASCADE ON UPDATE CASCADE
+              )
+            `,
+          ),
+      );
+    });
+
+    it('should handle column with foreign key in snakeCase mode', async () => {
+      db.options.snakeCase = true;
+
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.serial().primaryKey(),
+            columnWithForeignKey: t
+              .integer()
+              .foreignKey('table', 'otherColumn'),
+          })),
+        () =>
+          expectSql(`
+              CREATE TABLE "table" (
+                "id" serial PRIMARY KEY,
+                "column_with_foreign_key" integer NOT NULL REFERENCES "table"("other_column")
+              )
+          `),
+      );
+    });
+  });
+
+  describe('timestamps', () => {
+    it('should handle timestamps', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.serial().primaryKey(),
+            ...t.timestamps(),
+          })),
+        () =>
+          expectSql(`
+            CREATE TABLE "table" (
+              "id" serial PRIMARY KEY,
+              "createdAt" timestamp NOT NULL DEFAULT now(),
+              "updatedAt" timestamp NOT NULL DEFAULT now()
+            )
+          `),
+      );
+    });
+
+    it('should handle timestamps in snake case mode', async () => {
+      await testUpAndDown(
+        async (action) => {
           db.options.snakeCase = true;
 
           await db[action]('table', (t) => ({
@@ -201,309 +372,415 @@ const db = getDb();
             "updated_at" timestamp NOT NULL DEFAULT now()
           )
         `),
-        () => expectSql(`DROP TABLE "table"`),
       );
     });
+  });
 
-    it('should handle column with explicit name', async () => {
-      await testUpAndDown(
-        () =>
-          db[action]('table', (t) => ({
-            columnKey: t.name('columnName').serial().primaryKey(),
-          })),
-        () =>
-          expectSql(`
+  it('should handle column with explicit name', async () => {
+    await testUpAndDown(
+      (action) =>
+        db[action]('table', (t) => ({
+          columnKey: t.name('its_a_columnName').serial().primaryKey(),
+        })),
+      () =>
+        expectSql(`
           CREATE TABLE "table" (
-            "columnName" serial PRIMARY KEY
+            "its_a_columnName" serial PRIMARY KEY
           )
         `),
-        () => expectSql(`DROP TABLE "table"`),
-      );
-    });
+    );
+  });
 
+  describe('column comment', () => {
     it('should handle column comment', async () => {
-      const fn = () => {
-        return db[action]('table', (t) => ({
-          id: t.serial().primaryKey().comment('this is a column comment'),
-        }));
-      };
-
-      const expectCreate = () => {
-        expectSql([
-          `
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.serial().primaryKey().comment('this is a column comment'),
+          })),
+        () =>
+          expectSql([
+            `
             CREATE TABLE "table" (
               "id" serial PRIMARY KEY
             )
           `,
-          `COMMENT ON COLUMN "table"."id" IS 'this is a column comment'`,
-        ]);
-      };
-
-      const expectDrop = () => {
-        expectSql([`DROP TABLE "table"`]);
-      };
-
-      await fn();
-      (action === 'createTable' ? expectCreate : expectDrop)();
-
-      db.up = false;
-      queryMock.mockClear();
-      await fn();
-      (action === 'createTable' ? expectDrop : expectCreate)();
+            `COMMENT ON COLUMN "table"."id" IS 'this is a column comment'`,
+          ]),
+      );
     });
 
+    it('should handle column comment in snakeCase mode', async () => {
+      db.options.snakeCase = true;
+
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            columnName: t
+              .serial()
+              .primaryKey()
+              .comment('this is a column comment'),
+          })),
+        () =>
+          expectSql([
+            `
+            CREATE TABLE "table" (
+              "column_name" serial PRIMARY KEY
+            )
+          `,
+            `COMMENT ON COLUMN "table"."column_name" IS 'this is a column comment'`,
+          ]),
+      );
+    });
+  });
+
+  describe('composite primary key', () => {
     it('should support composite primary key defined on multiple columns', async () => {
-      await db[action]('table', (t) => ({
-        id: t.integer().primaryKey(),
-        name: t.text().primaryKey(),
-        active: t.boolean().primaryKey(),
-      }));
-
-      if (action === 'createTable') {
-        expectSql(`
-          CREATE TABLE "table" (
-            "id" integer NOT NULL,
-            "name" text NOT NULL,
-            "active" boolean NOT NULL,
-            PRIMARY KEY ("id", "name", "active")
-          )
-        `);
-      } else {
-        expectSql(`
-          DROP TABLE "table"
-        `);
-      }
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.integer().primaryKey(),
+            name: t.text().primaryKey(),
+            active: t.boolean().primaryKey(),
+          })),
+        () =>
+          expectSql(`
+            CREATE TABLE "table" (
+              "id" integer NOT NULL,
+              "name" text NOT NULL,
+              "active" boolean NOT NULL,
+              PRIMARY KEY ("id", "name", "active")
+            )
+          `),
+      );
     });
 
-    it('should support composite primary key', async () => {
-      await db[action]('table', (t) => ({
-        id: t.integer(),
-        name: t.text(),
-        active: t.boolean(),
-        ...t.primaryKey(['id', 'name', 'active']),
-      }));
-
-      if (action === 'createTable') {
-        expectSql(`
+    it('should support composite primary key defined on table', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.integer(),
+            name: t.text(),
+            active: t.boolean(),
+            ...t.primaryKey(['id', 'name', 'active']),
+          })),
+        () =>
+          expectSql(`
           CREATE TABLE "table" (
             "id" integer NOT NULL,
             "name" text NOT NULL,
             "active" boolean NOT NULL,
             PRIMARY KEY ("id", "name", "active")
           )
-        `);
-      } else {
-        expectSql(`
-          DROP TABLE "table"
-        `);
-      }
+        `),
+      );
     });
 
     it('should support composite primary key with constraint name', async () => {
-      await db[action]('table', (t) => ({
-        id: t.integer(),
-        name: t.text(),
-        active: t.boolean(),
-        ...t.primaryKey(['id', 'name', 'active'], { name: 'primaryKeyName' }),
-      }));
-
-      if (action === 'createTable') {
-        expectSql(`
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.integer(),
+            name: t.text(),
+            active: t.boolean(),
+            ...t.primaryKey(['id', 'name', 'active'], {
+              name: 'primaryKeyName',
+            }),
+          })),
+        () =>
+          expectSql(`
           CREATE TABLE "table" (
             "id" integer NOT NULL,
             "name" text NOT NULL,
             "active" boolean NOT NULL,
             CONSTRAINT "primaryKeyName" PRIMARY KEY ("id", "name", "active")
           )
-        `);
-      } else {
-        expectSql(`
-          DROP TABLE "table"
-        `);
-      }
+        `),
+      );
     });
 
-    it('should support composite index', async () => {
-      await db[action]('table', (t) => ({
-        id: t.serial().primaryKey(),
-        name: t.text(),
-        ...t.index(['id', { column: 'name', order: 'DESC' }], {
-          name: 'compositeIndexOnTable',
-        }),
-      }));
-
-      if (action === 'createTable') {
-        expectSql([
-          `
+    it('should support composite primary key defined on table and multiple columns', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.integer().primaryKey(),
+            name: t.text().primaryKey(),
+            active: t.boolean().primaryKey(),
+            another: t.date(),
+            one: t.decimal(),
+            ...t.primaryKey(['another', 'one']),
+          })),
+        () =>
+          expectSql(`
             CREATE TABLE "table" (
-              "id" serial PRIMARY KEY,
-              "name" text NOT NULL
+              "id" integer NOT NULL,
+              "name" text NOT NULL,
+              "active" boolean NOT NULL,
+              "another" date NOT NULL,
+              "one" decimal NOT NULL,
+              PRIMARY KEY ("id", "name", "active", "another", "one")
             )
-          `,
-          `
-            CREATE INDEX "compositeIndexOnTable" ON "table" ("id", "name" DESC)
-          `,
-        ]);
-      } else {
-        expectSql(`
-          DROP TABLE "table"
-        `);
-      }
+          `),
+      );
+    });
+
+    it('should support composite primary key defined on multiple columns', async () => {
+      db.options.snakeCase = true;
+
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            idColumn: t.integer().primaryKey(),
+            nameColumn: t.text().primaryKey(),
+            activeColumn: t.boolean().primaryKey(),
+            anotherColumn: t.date(),
+            oneColumn: t.decimal(),
+            ...t.primaryKey(['anotherColumn', 'oneColumn']),
+          })),
+        () =>
+          expectSql(`
+            CREATE TABLE "table" (
+              "id_column" integer NOT NULL,
+              "name_column" text NOT NULL,
+              "active_column" boolean NOT NULL,
+              "another_column" date NOT NULL,
+              "one_column" decimal NOT NULL,
+              PRIMARY KEY ("id_column", "name_column", "active_column", "another_column", "one_column")
+            )
+          `),
+      );
+    });
+  });
+
+  describe('composite index', () => {
+    it('should support composite index', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.serial().primaryKey(),
+            name: t.text(),
+            ...t.index(['id', { column: 'name', order: 'DESC' }], {
+              name: 'compositeIndexOnTable',
+            }),
+          })),
+        () =>
+          expectSql([
+            `
+              CREATE TABLE "table" (
+                "id" serial PRIMARY KEY,
+                "name" text NOT NULL
+              )
+            `,
+            `
+              CREATE INDEX "compositeIndexOnTable" ON "table" ("id", "name" DESC)
+            `,
+          ]),
+      );
     });
 
     it('should support composite unique index', async () => {
-      await db[action]('table', (t) => ({
-        id: t.serial().primaryKey(),
-        name: t.text(),
-        ...t.unique(['id', { column: 'name', order: 'DESC' }], {
-          name: 'compositeIndexOnTable',
-        }),
-      }));
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.serial().primaryKey(),
+            name: t.text(),
+            ...t.unique(['id', { column: 'name', order: 'DESC' }], {
+              name: 'compositeIndexOnTable',
+            }),
+          })),
+        () =>
+          expectSql([
+            `
+              CREATE TABLE "table" (
+                "id" serial PRIMARY KEY,
+                "name" text NOT NULL
+              )
+            `,
+            `
+              CREATE UNIQUE INDEX "compositeIndexOnTable" ON "table" ("id", "name" DESC)
+            `,
+          ]),
+      );
+    });
 
-      if (action === 'createTable') {
-        expectSql([
-          `
+    it('should support composite index and composite unique index in snakeCase mode', async () => {
+      db.options.snakeCase = true;
+
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            idColumn: t.serial().primaryKey(),
+            nameColumn: t.text(),
+            ...t.index(['idColumn', { column: 'nameColumn', order: 'DESC' }]),
+            ...t.unique(['idColumn', { column: 'nameColumn', order: 'DESC' }]),
+          })),
+        () =>
+          expectSql([
+            `
+              CREATE TABLE "table" (
+                "id_column" serial PRIMARY KEY,
+                "name_column" text NOT NULL
+              )
+            `,
+            `
+              CREATE INDEX "table_id_column_name_column_idx" ON "table" ("id_column", "name_column" DESC)
+            `,
+            `
+              CREATE UNIQUE INDEX "table_id_column_name_column_idx" ON "table" ("id_column", "name_column" DESC)
+            `,
+          ]),
+      );
+    });
+  });
+
+  describe('composite foreign key', () => {
+    it('should support composite foreign key', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.serial().primaryKey(),
+            name: t.text(),
+            ...t.foreignKey(
+              ['id', 'name'],
+              'otherTable',
+              ['foreignId', 'foreignName'],
+              {
+                name: 'constraintName',
+                match: 'FULL',
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
+              },
+            ),
+          })),
+        () => {
+          expectSql(`
             CREATE TABLE "table" (
               "id" serial PRIMARY KEY,
-              "name" text NOT NULL
+              "name" text NOT NULL,
+              ${toLine(`
+                CONSTRAINT "constraintName"
+                  FOREIGN KEY ("id", "name")
+                  REFERENCES "otherTable"("foreignId", "foreignName")
+                  MATCH FULL
+                  ON DELETE CASCADE
+                  ON UPDATE CASCADE
+              `)}
             )
-          `,
-          `
-            CREATE UNIQUE INDEX "compositeIndexOnTable" ON "table" ("id", "name" DESC)
-          `,
-        ]);
-      } else {
-        expectSql(`
-          DROP TABLE "table"
-        `);
-      }
+          `);
+        },
+      );
     });
 
-    it('should support composite foreign key', async () => {
-      await db[action]('table', (t) => ({
-        id: t.serial().primaryKey(),
-        name: t.text(),
-        ...t.foreignKey(
-          ['id', 'name'],
-          'otherTable',
-          ['foreignId', 'foreignName'],
-          {
-            name: 'constraintName',
-            match: 'FULL',
-            onUpdate: 'CASCADE',
-            onDelete: 'CASCADE',
-          },
-        ),
-      }));
+    it('should support composite foreign key in snakeCase mode', async () => {
+      db.options.snakeCase = true;
 
-      if (action === 'createTable') {
-        const expectedConstraint = toLine(`
-          CONSTRAINT "constraintName"
-            FOREIGN KEY ("id", "name")
-            REFERENCES "otherTable"("foreignId", "foreignName")
-            MATCH FULL
-            ON DELETE CASCADE
-            ON UPDATE CASCADE
-        `);
-
-        expectSql(`
-          CREATE TABLE "table" (
-            "id" serial PRIMARY KEY,
-            "name" text NOT NULL,
-            ${expectedConstraint}
-          )
-        `);
-      } else {
-        expectSql(`
-          DROP TABLE "table"
-        `);
-      }
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            idColumn: t.serial().primaryKey(),
+            nameColumn: t.text(),
+            ...t.foreignKey(['idColumn', 'nameColumn'], 'otherTable', [
+              'foreignId',
+              'foreignName',
+            ]),
+          })),
+        () => {
+          expectSql(`
+            CREATE TABLE "table" (
+              "id_column" serial PRIMARY KEY,
+              "name_column" text NOT NULL,
+              ${toLine(`
+                CONSTRAINT "table_id_column_name_column_fkey"
+                  FOREIGN KEY ("id_column", "name_column")
+                  REFERENCES "otherTable"("foreign_id", "foreign_name")
+              `)}
+            )
+          `);
+        },
+      );
     });
+  });
 
-    it('should support database check on the column', async () => {
-      await db[action]('table', (t) => ({
-        id: t.serial().primaryKey(),
-        columnWithCheck: t
-          .text()
-          .check(t.raw('length("columnWithCheck") > 10')),
-      }));
-
-      if (action === 'createTable') {
+  it('should support database check on the column', async () => {
+    await testUpAndDown(
+      (action) =>
+        db[action]('table', (t) => ({
+          id: t.serial().primaryKey(),
+          columnWithCheck: t
+            .text()
+            .check(t.raw('length("columnWithCheck") > 10')),
+        })),
+      () =>
         expectSql(`
           CREATE TABLE "table" (
             "id" serial PRIMARY KEY,
             "columnWithCheck" text NOT NULL CHECK (length("columnWithCheck") > 10)
           )
-        `);
-      } else {
-        expectSql(`
-          DROP TABLE "table"
-        `);
-      }
-    });
+        `),
+    );
+  });
 
-    it('should support domain column', async () => {
-      await db[action]('table', (t) => ({
-        id: t.serial().primaryKey(),
-        column: t.type('customType'),
-      }));
-
-      if (action === 'createTable') {
+  it('should support column of custom type', async () => {
+    await testUpAndDown(
+      (action) =>
+        db[action]('table', (t) => ({
+          id: t.serial().primaryKey(),
+          column: t.type('customType'),
+        })),
+      () =>
         expectSql(`
           CREATE TABLE "table" (
             "id" serial PRIMARY KEY,
             "column" "customType" NOT NULL
           )
-        `);
-      } else {
-        expectSql(`
-          DROP TABLE "table"
-        `);
-      }
-    });
+        `),
+    );
+  });
 
-    it('should support domain column', async () => {
-      await db[action]('table', (t) => ({
-        id: t.serial().primaryKey(),
-        domainColumn: t.domain('domainName'),
-      }));
-
-      if (action === 'createTable') {
+  it('should support domain column', async () => {
+    await testUpAndDown(
+      (action) =>
+        db[action]('table', (t) => ({
+          id: t.serial().primaryKey(),
+          domainColumn: t.domain('domainName'),
+        })),
+      () =>
         expectSql(`
           CREATE TABLE "table" (
             "id" serial PRIMARY KEY,
             "domainColumn" "domainName" NOT NULL
           )
-        `);
-      } else {
-        expectSql(`
-          DROP TABLE "table"
-        `);
-      }
+        `),
+    );
+  });
+
+  describe('noPrimaryKey', () => {
+    const { warn } = console;
+    afterAll(() => {
+      db.options.noPrimaryKey = undefined;
+      console.warn = warn;
     });
 
-    describe('noPrimaryKey', () => {
-      const { warn } = console;
-      afterAll(() => {
-        db.options.noPrimaryKey = undefined;
-        console.warn = warn;
-      });
-
-      it('should throw by default when no primary key', async () => {
-        await expect(() => db[action]('table', () => ({}))).rejects.toThrow(
+    it('should throw by default when no primary key', async () => {
+      await testUpAndDown((action) =>
+        expect(() => db[action]('table', () => ({}))).rejects.toThrow(
           'Table table has no primary key.\nYou can suppress this error by setting { noPrimaryKey: true } after a table name.',
-        );
-      });
+        ),
+      );
+    });
 
-      it('should throw when no primary key and noPrimaryKey is set to `error`', async () => {
+    it('should throw when no primary key and noPrimaryKey is set to `error`', async () => {
+      await testUpAndDown((action) => {
         db.options.noPrimaryKey = 'error';
 
-        await expect(() => db[action]('table', () => ({}))).rejects.toThrow(
+        return expect(() => db[action]('table', () => ({}))).rejects.toThrow(
           'Table table has no primary key.\nYou can suppress this error by setting { noPrimaryKey: true } after a table name.',
         );
       });
+    });
 
-      it('should warn when no primary key and noPrimaryKey is set to `warning`', async () => {
+    it('should warn when no primary key and noPrimaryKey is set to `warning`', async () => {
+      await testUpAndDown((action) => {
         console.warn = jest.fn();
         db.options.noPrimaryKey = 'warning';
 
@@ -513,14 +790,18 @@ const db = getDb();
           'Table table has no primary key.\nYou can suppress this error by setting { noPrimaryKey: true } after a table name.',
         );
       });
+    });
 
-      it('should not throw when no primary key and noPrimaryKey is set to `ignore`', async () => {
+    it('should not throw when no primary key and noPrimaryKey is set to `ignore`', async () => {
+      await testUpAndDown((action) => {
         db.options.noPrimaryKey = 'ignore';
 
         expect(() => db[action]('table', () => ({}))).not.toThrow();
       });
+    });
 
-      it(`should not throw if option is set to \`true\` as a ${action} option`, async () => {
+    it(`should not throw if option is set to \`true\` as a option`, async () => {
+      await testUpAndDown((action) => {
         db.options.noPrimaryKey = 'error';
 
         expect(() =>

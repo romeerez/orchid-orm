@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.4.17
+
+### Patch Changes
+
+- Support snakeCase option
+- Updated dependencies
+  - orchid-core@0.1.6
+  - pqb@0.10.13
+
 ## 2.4.16
 
 ### Patch Changes

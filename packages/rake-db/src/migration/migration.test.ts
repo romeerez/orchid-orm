@@ -1,4 +1,11 @@
-import { expectSql, getDb, queryMock, resetDb, toLine } from '../test-utils';
+import {
+  expectSql,
+  getDb,
+  makeTestUpAndDown,
+  queryMock,
+  resetDb,
+  toLine,
+} from '../test-utils';
 
 const db = getDb();
 
@@ -8,7 +15,10 @@ jest.mock('./migrationUtils', () => ({
 }));
 
 describe('migration', () => {
-  beforeEach(resetDb);
+  beforeEach(() => {
+    resetDb();
+    db.options.snakeCase = false;
+  });
 
   describe('renameTable', () => {
     it('should call appCodeUpdater', async () => {
@@ -54,85 +64,92 @@ describe('migration', () => {
       `);
   });
 
-  (['addColumn', 'dropColumn'] as const).forEach((action) => {
-    describe(action, () => {
-      it(`should use changeTable to ${
-        action === 'addColumn' ? 'add' : 'drop'
-      } a column`, async () => {
-        const fn = () => {
-          return db[action]('table', 'column', (t) => t.text());
-        };
+  describe('addColumn and dropColumn', () => {
+    const testUpAndDown = makeTestUpAndDown('addColumn', 'dropColumn');
 
-        const expectAddColumn = () => {
+    it('should use changeTable to add and drop a column', async () => {
+      await testUpAndDown(
+        (action) => db[action]('table', 'column', (t) => t.text()),
+        () =>
           expectSql(`
             ALTER TABLE "table"
             ADD COLUMN "column" text NOT NULL
-          `);
-        };
-
-        const expectDropColumn = () => {
+          `),
+        () =>
           expectSql(`
             ALTER TABLE "table"
             DROP COLUMN "column"
-          `);
-        };
+          `),
+      );
+    });
 
-        await fn();
-        (action === 'addColumn' ? expectAddColumn : expectDropColumn)();
+    it('should use changeTable to add and drop a column in snakeCase mode', async () => {
+      db.options.snakeCase = true;
 
-        db.up = false;
-        queryMock.mockClear();
-        await fn();
-        (action === 'addColumn' ? expectDropColumn : expectAddColumn)();
-      });
+      await testUpAndDown(
+        (action) => db[action]('table', 'columnName', (t) => t.text()),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+            ADD COLUMN "column_name" text NOT NULL
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+            DROP COLUMN "column_name"
+          `),
+      );
     });
   });
 
-  (['addIndex', 'dropIndex'] as const).forEach((action) => {
-    describe(action, () => {
-      it(`should use changeTable to ${
-        action === 'addIndex' ? 'add' : 'drop'
-      } an index`, async () => {
-        const fn = () => {
-          return db[action](
-            'table',
-            ['id', { column: 'name', order: 'DESC' }],
-            {
-              name: 'indexName',
-            },
-          );
-        };
+  describe('addIndex and dropIndex', () => {
+    const testUpAndDown = makeTestUpAndDown('addIndex', 'dropIndex');
 
-        const expectAddIndex = () => {
+    it('should use changeTable to add and drop an index', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', ['id', { column: 'name', order: 'DESC' }], {
+            name: 'indexName',
+          }),
+        () =>
           expectSql(`
             CREATE INDEX "indexName" ON "table" ("id", "name" DESC)
-          `);
-        };
-
-        const expectDropIndex = () => {
+          `),
+        () =>
           expectSql(`
             DROP INDEX "indexName"
-          `);
-        };
+          `),
+      );
+    });
 
-        await fn();
-        (action === 'addIndex' ? expectAddIndex : expectDropIndex)();
+    it('should use changeTable to add and drop an index in snakeCase mode', async () => {
+      db.options.snakeCase = true;
 
-        db.up = false;
-        queryMock.mockClear();
-        await fn();
-        (action === 'addIndex' ? expectDropIndex : expectAddIndex)();
-      });
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', [
+            'idColumn',
+            { column: 'nameColumn', order: 'DESC' },
+          ]),
+        () =>
+          expectSql(`
+            CREATE INDEX "table_id_column_name_column_idx" ON "table" ("id_column", "name_column" DESC)
+          `),
+        () =>
+          expectSql(`
+            DROP INDEX "table_id_column_name_column_idx"
+          `),
+      );
     });
   });
 
-  (['addForeignKey', 'dropForeignKey'] as const).forEach((action) => {
-    describe(action, () => {
-      it(`should use changeTable to ${
-        action === 'addForeignKey' ? 'add' : 'drop'
-      } a foreignKey`, async () => {
-        const fn = () => {
-          return db[action](
+  describe('addForeignKey and dropForeignKey', () => {
+    const testUpAndDown = makeTestUpAndDown('addForeignKey', 'dropForeignKey');
+
+    it('should use changeTable to add and drop a foreignKey', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action](
             'table',
             ['id', 'name'],
             'otherTable',
@@ -144,301 +161,271 @@ describe('migration', () => {
               onDelete: 'CASCADE',
               dropMode: 'CASCADE',
             },
-          );
-        };
-
-        const expectAddForeignKey = () => {
-          const expectedConstraint = toLine(`
-            ADD CONSTRAINT "constraintName"
-              FOREIGN KEY ("id", "name")
-              REFERENCES "otherTable"("foreignId", "foreignName")
-              MATCH FULL
-              ON DELETE CASCADE
-              ON UPDATE CASCADE
-          `);
+          ),
+        () =>
           expectSql(`
             ALTER TABLE "table"
-            ${expectedConstraint}
-          `);
-        };
-
-        const expectDropForeignKey = () => {
+            ${toLine(`
+              ADD CONSTRAINT "constraintName"
+                FOREIGN KEY ("id", "name")
+                REFERENCES "otherTable"("foreignId", "foreignName")
+                MATCH FULL
+                ON DELETE CASCADE
+                ON UPDATE CASCADE
+            `)}
+          `),
+        () =>
           expectSql(`
             ALTER TABLE "table"
             DROP CONSTRAINT "constraintName" CASCADE
-          `);
-        };
+          `),
+      );
+    });
 
-        await fn();
-        (action === 'addForeignKey'
-          ? expectAddForeignKey
-          : expectDropForeignKey)();
+    it('should use changeTable to add and drop a foreignKey in snakeCase mode', async () => {
+      db.options.snakeCase = true;
 
-        db.up = false;
-        queryMock.mockClear();
-        await fn();
-        (action === 'addForeignKey'
-          ? expectDropForeignKey
-          : expectAddForeignKey)();
-      });
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', ['idColumn', 'nameColumn'], 'otherTable', [
+            'foreignId',
+            'foreignName',
+          ]),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+            ${toLine(`
+              ADD CONSTRAINT "table_id_column_name_column_fkey"
+                FOREIGN KEY ("id_column", "name_column")
+                REFERENCES "otherTable"("foreign_id", "foreign_name")
+            `)}
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+            DROP CONSTRAINT "table_id_column_name_column_fkey"
+          `),
+      );
     });
   });
 
-  (['addPrimaryKey', 'dropPrimaryKey'] as const).forEach((action) => {
-    describe(action, () => {
-      it(`should use changeTable to ${
-        action === 'addPrimaryKey' ? 'add' : 'drop'
-      } primary key`, async () => {
-        const fn = () => {
-          return db[action]('table', ['id', 'name']);
-        };
+  describe('addPrimaryKey and dropPrimaryKey', () => {
+    const testUpAndDown = makeTestUpAndDown('addPrimaryKey', 'dropPrimaryKey');
 
-        const expectAddPrimaryKey = () => {
+    it('should use changeTable to add and drop primary key', async () => {
+      await testUpAndDown(
+        (action) => db[action]('table', ['id', 'name']),
+        () =>
           expectSql(`
             ALTER TABLE "table"
             ADD PRIMARY KEY ("id", "name")
-          `);
-        };
-
-        const expectDropPrimaryKey = () => {
+          `),
+        () =>
           expectSql(`
             ALTER TABLE "table"
             DROP CONSTRAINT "table_pkey"
-          `);
-        };
+          `),
+      );
+    });
 
-        await fn();
-        (action === 'addPrimaryKey'
-          ? expectAddPrimaryKey
-          : expectDropPrimaryKey)();
-
-        db.up = false;
-        queryMock.mockClear();
-        await fn();
-        (action === 'addPrimaryKey'
-          ? expectDropPrimaryKey
-          : expectAddPrimaryKey)();
-      });
-
-      it('should use changeTable to add primary key with constraint name', async () => {
-        const fn = () => {
-          return db.addPrimaryKey('table', ['id', 'name'], {
+    it('should use changeTable to add and drop primary key with constraint name', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', ['id', 'name'], {
             name: 'primaryKeyName',
-          });
-        };
+          }),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+            ADD CONSTRAINT "primaryKeyName" PRIMARY KEY ("id", "name")
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+            DROP CONSTRAINT "primaryKeyName"
+          `),
+      );
+    });
 
-        await fn();
-        expectSql(`
-          ALTER TABLE "table"
-          ADD CONSTRAINT "primaryKeyName" PRIMARY KEY ("id", "name")
-        `);
+    it('should use changeTable to add and drop primary key in snakeCase mode', async () => {
+      db.options.snakeCase = true;
 
-        db.up = false;
-        queryMock.mockClear();
-        await fn();
-        expectSql(`
-          ALTER TABLE "table"
-          DROP CONSTRAINT "primaryKeyName"
-        `);
-      });
+      await testUpAndDown(
+        (action) => db[action]('table', ['idColumn', 'nameColumn']),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+            ADD PRIMARY KEY ("id_column", "name_column")
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+            DROP CONSTRAINT "table_pkey"
+          `),
+      );
     });
   });
 
   describe('renameColumn', () => {
+    const testUpAndDown = makeTestUpAndDown('renameColumn');
+
     it('should use changeTable to rename a column', async () => {
-      const fn = () => {
-        return db.renameColumn('table', 'from', 'to');
-      };
+      await testUpAndDown(
+        () => db.renameColumn('table', 'from', 'to'),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+            RENAME COLUMN "from" TO "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+            RENAME COLUMN "to" TO "from"
+          `),
+      );
+    });
 
-      await fn();
-      expectSql(`
-        ALTER TABLE "table"
-        RENAME COLUMN "from" TO "to"
-      `);
+    it('should use changeTable to rename a column in snakeCase mode', async () => {
+      db.options.snakeCase = true;
 
-      db.up = false;
-      queryMock.mockClear();
-      await fn();
-      expectSql(`
-        ALTER TABLE "table"
-        RENAME COLUMN "to" TO "from"
-      `);
+      await testUpAndDown(
+        () => db.renameColumn('table', 'fromColumn', 'toColumn'),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+            RENAME COLUMN "from_column" TO "to_column"
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+            RENAME COLUMN "to_column" TO "from_column"
+          `),
+      );
     });
   });
 
-  (['createSchema', 'dropSchema'] as const).forEach((action) => {
-    describe(action, () => {
-      it('should call appCodeUpdater', async () => {
-        await db[action]('schemaName');
+  describe('createSchema and dropSchema', () => {
+    const testUpAndDown = makeTestUpAndDown('createSchema', 'dropSchema');
 
-        expect(db.migratedAsts.length).toBe(1);
-      });
+    it('should call appCodeUpdater', async () => {
+      await testUpAndDown(
+        (action) => db[action]('schemaName'),
+        () => expect(db.migratedAsts.length).toBe(1),
+        () => expect(db.migratedAsts.length).toBe(1),
+      );
+    });
 
-      it(`should ${
-        action === 'createSchema' ? 'add' : 'drop'
-      } a schema`, async () => {
-        const fn = () => {
-          return db[action]('schemaName');
-        };
-
-        const expectCreateSchema = () => {
+    it(`should add and drop a schema`, async () => {
+      await testUpAndDown(
+        (action) => db[action]('schemaName'),
+        () =>
           expectSql(`
             CREATE SCHEMA "schemaName"
-          `);
-        };
-
-        const expectDropSchema = () => {
+          `),
+        () =>
           expectSql(`
             DROP SCHEMA "schemaName"
-          `);
-        };
-
-        await fn();
-        (action === 'createSchema' ? expectCreateSchema : expectDropSchema)();
-
-        db.up = false;
-        queryMock.mockClear();
-        await fn();
-        (action === 'createSchema' ? expectDropSchema : expectCreateSchema)();
-      });
+          `),
+      );
     });
   });
 
-  (['createExtension', 'dropExtension'] as const).forEach((action) => {
-    describe(action, () => {
-      it('should call appCodeUpdater', async () => {
-        await db[action]('extensionName');
+  describe('createExtension and dropExtension', () => {
+    const testUpAndDown = makeTestUpAndDown('createExtension', 'dropExtension');
 
-        expect(db.migratedAsts.length).toBe(1);
-      });
+    it('should call appCodeUpdater', async () => {
+      await testUpAndDown(
+        (action) => db[action]('extensionName'),
+        () => expect(db.migratedAsts.length).toBe(1),
+        () => expect(db.migratedAsts.length).toBe(1),
+      );
+    });
 
-      it(`should ${
-        action === 'createExtension' ? 'add' : 'drop'
-      } an extension`, async () => {
-        const fn = () => {
-          return db[action]('extensionName', {
+    it(`should add and drop an extension`, async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('extensionName', {
             dropIfExists: true,
             createIfNotExists: true,
             schema: 'schemaName',
             version: '123',
             cascade: true,
-          });
-        };
-
-        const expectCreateExtension = () => {
+          }),
+        () =>
           expectSql(`
             CREATE EXTENSION IF NOT EXISTS "extensionName" SCHEMA "schemaName" VERSION '123' CASCADE
-          `);
-        };
-
-        const expectDropExtension = () => {
+          `),
+        () =>
           expectSql(`
             DROP EXTENSION IF EXISTS "extensionName" CASCADE
-          `);
-        };
-
-        await fn();
-        (action === 'createExtension'
-          ? expectCreateExtension
-          : expectDropExtension)();
-
-        db.up = false;
-        queryMock.mockClear();
-        await fn();
-        (action === 'createExtension'
-          ? expectDropExtension
-          : expectCreateExtension)();
-      });
+          `),
+      );
     });
   });
 
-  (['createEnum', 'dropEnum'] as const).forEach((action) => {
-    describe(action, () => {
-      it('should push ast', async () => {
-        await db[action]('enumName', ['one']);
+  describe('createEnum and dropEnum', () => {
+    const testUpAndDown = makeTestUpAndDown('createEnum', 'dropEnum');
 
-        expect(db.migratedAsts.length).toBe(1);
-      });
+    it('should push ast', async () => {
+      await testUpAndDown(
+        (action) => db[action]('enumName', ['one']),
+        () => expect(db.migratedAsts.length).toBe(1),
+        () => expect(db.migratedAsts.length).toBe(1),
+      );
+    });
 
-      it(`should ${
-        action === 'createEnum' ? 'add' : 'drop'
-      } an enum`, async () => {
-        const fn = () => {
-          return db[action]('schemaName.enumName', ['one', 'two'], {
+    it(`should add and drop an enum`, async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('schemaName.enumName', ['one', 'two'], {
             dropIfExists: true,
             cascade: true,
-          });
-        };
-
-        const expectCreateExtension = () => {
+          }),
+        () =>
           expectSql(`
             CREATE TYPE "schemaName"."enumName" AS ENUM ('one', 'two')
-          `);
-        };
-
-        const expectDropExtension = () => {
+          `),
+        () =>
           expectSql(`
             DROP TYPE IF EXISTS "schemaName"."enumName" CASCADE
-          `);
-        };
-
-        await fn();
-        (action === 'createEnum'
-          ? expectCreateExtension
-          : expectDropExtension)();
-
-        db.up = false;
-        queryMock.mockClear();
-        await fn();
-        (action === 'createEnum'
-          ? expectDropExtension
-          : expectCreateExtension)();
-      });
+          `),
+      );
     });
   });
 
-  (['createDomain', 'dropDomain'] as const).forEach((action) => {
-    describe(action, () => {
-      it('should push ast', async () => {
-        await db[action]('domain', (t) => t.integer());
+  describe('createDomain and dropDomain', () => {
+    const testUpAndDown = makeTestUpAndDown('createDomain', 'dropDomain');
 
-        expect(db.migratedAsts.length).toBe(1);
-      });
+    it('should push ast', async () => {
+      await testUpAndDown(
+        (action) => db[action]('domain', (t) => t.integer()),
+        () => expect(db.migratedAsts.length).toBe(1),
+        () => expect(db.migratedAsts.length).toBe(1),
+      );
+    });
 
-      it(`should ${action} domain`, async () => {
-        const fn = () => {
-          return db[action]('schema.domain', (t) => t.integer(), {
+    it(`should create and drop domain`, async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('schema.domain', (t) => t.integer(), {
             collation: 'C',
             notNull: true,
             default: db.raw('123'),
             check: db.raw('VALUE = 42'),
             cascade: true,
-          });
-        };
-
-        const expectUp = () => {
+          }),
+        () =>
           expectSql(`
             CREATE DOMAIN "schema"."domain" AS integer
             COLLATION 'C'
             DEFAULT 123
             NOT NULL CHECK VALUE = 42
-          `);
-        };
-
-        const expectDown = () => {
+          `),
+        () =>
           expectSql(`
             DROP DOMAIN "schema"."domain" CASCADE
-          `);
-        };
-
-        await fn();
-        (action === 'createDomain' ? expectUp : expectDown)();
-
-        db.up = false;
-        queryMock.mockClear();
-        await fn();
-        (action === 'createDomain' ? expectDown : expectUp)();
-      });
+          `),
+      );
     });
   });
 

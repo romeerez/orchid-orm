@@ -69,6 +69,9 @@ Optionally, you can customize column types behavior here for all future tables:
 import { createBaseTable } from 'orchid-orm'
 
 export const BaseTable = createBaseTable({
+  // set to true if columns in database are in snake_case
+  snakeCase: true,
+  
   columnTypes: (t) => ({
     // by default timestamp is returned as a stirng, override to a number
     timestamp() {
@@ -77,6 +80,8 @@ export const BaseTable = createBaseTable({
   }),
 })
 ```
+
+See [query builder setup](/guide/query-builder-setup.html#snakecase) for `snakeCase` option.
 
 See [column types document](/guide/columns-overview.html#override-column-types) for details of customizing columns.
 
@@ -127,6 +132,22 @@ Don't use table classes directly, this won't work:
 ```ts
 // error
 await UserTable.findBy({ name: 'John' })
+```
+
+`snakeCase` can be overridden for a table:
+
+```ts
+import { BaseTable } from './baseTable'
+
+export class SnakeCaseTable extends BaseTable {
+  readonly table = 'table';
+  // override snakeCase:
+  snakeCase = true;
+  columns = this.setColumns((t) => ({
+    // snake_column in db
+    snakeColumn: t.text(),
+  }))
+}
 ```
 
 For the case when the table should not have a primary key, you can override `noPrimaryKey` by setting a property to the table:

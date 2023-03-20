@@ -119,8 +119,8 @@ describe('table', () => {
     });
   });
 
-  describe('snake case timestamps', () => {
-    it('should add timestamps with snake case names when snakeCase option is set to true', () => {
+  describe('snake case', () => {
+    it('should translate columns to snake case, use snake case timestamps, with respect to existing names', () => {
       const BaseTable = createBaseTable({
         snakeCase: true,
       });
@@ -129,6 +129,8 @@ describe('table', () => {
         readonly table = 'user';
         columns = this.setColumns((t) => ({
           id: t.serial().primaryKey(),
+          camelCase: t.name('camelCase').integer(),
+          snakeCase: t.integer(),
           ...t.timestamps(),
         }));
       }
@@ -142,6 +144,37 @@ describe('table', () => {
         },
       );
 
+      expect(db.user.shape.camelCase.data.name).toBe('camelCase');
+      expect(db.user.shape.snakeCase.data.name).toBe('snake_case');
+      expect(db.user.shape.createdAt.data.name).toBe('created_at');
+      expect(db.user.shape.updatedAt.data.name).toBe('updated_at');
+    });
+
+    it('should add timestamps with snake case names when snakeCase option is set to true on the table class', () => {
+      const BaseTable = createBaseTable();
+
+      class UserTable extends BaseTable {
+        readonly table = 'user';
+        snakeCase = true;
+        columns = this.setColumns((t) => ({
+          id: t.serial().primaryKey(),
+          camelCase: t.name('camelCase').integer(),
+          snakeCase: t.integer(),
+          ...t.timestamps(),
+        }));
+      }
+
+      const db = orchidORM(
+        {
+          adapter,
+        },
+        {
+          user: UserTable,
+        },
+      );
+
+      expect(db.user.shape.camelCase.data.name).toBe('camelCase');
+      expect(db.user.shape.snakeCase.data.name).toBe('snake_case');
       expect(db.user.shape.createdAt.data.name).toBe('created_at');
       expect(db.user.shape.updatedAt.data.name).toBe('updated_at');
     });

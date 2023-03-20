@@ -1,6 +1,6 @@
 import {
   ColumnsShape,
-  columnTypes,
+  columnTypes as defaultColumnTypes,
   Db,
   DefaultColumnTypes,
   getColumnTypes,
@@ -11,6 +11,7 @@ import {
   ColumnTypesBase,
   snakeCaseKey,
   StringKey,
+  toSnakeCase,
 } from 'orchid-core';
 import { MapRelations, Relation, RelationThunks } from './relations/relations';
 import { OrchidORM } from './orm';
@@ -57,30 +58,36 @@ export type Table = {
 };
 
 export const createBaseTable = <CT extends ColumnTypesBase>(
-  options: {
+  {
+    columnTypes,
+    snakeCase,
+  }: {
     columnTypes?: CT | ((t: DefaultColumnTypes) => CT);
     snakeCase?: boolean;
-  } = { columnTypes: columnTypes as unknown as CT },
+  } = { columnTypes: defaultColumnTypes as unknown as CT },
 ) => {
   const ct =
-    typeof options.columnTypes === 'function'
-      ? options.columnTypes(columnTypes)
-      : options.columnTypes || columnTypes;
+    typeof columnTypes === 'function'
+      ? columnTypes(defaultColumnTypes)
+      : columnTypes || defaultColumnTypes;
 
-  if (options.snakeCase) {
-    (ct as { [snakeCaseKey]?: boolean })[snakeCaseKey] = true;
-  }
-
-  return create(ct as ColumnTypesBase extends CT ? DefaultColumnTypes : CT);
+  return create(
+    ct as ColumnTypesBase extends CT ? DefaultColumnTypes : CT,
+    snakeCase,
+  );
 };
 
-const create = <CT extends ColumnTypesBase>(columnTypes: CT) => {
+const create = <CT extends ColumnTypesBase>(
+  columnTypes: CT,
+  snakeCase?: boolean,
+) => {
   return class BaseTable {
     table!: string;
     columns!: TableConfig;
     schema?: string;
     columnTypes: CT;
     noPrimaryKey?: boolean;
+    snakeCase = snakeCase;
 
     constructor() {
       this.columnTypes = columnTypes;
@@ -89,7 +96,22 @@ const create = <CT extends ColumnTypesBase>(columnTypes: CT) => {
     setColumns = <T extends ColumnsShape>(
       fn: (t: CT) => T,
     ): { shape: T; type: ColumnShapeOutput<T> } => {
+      (columnTypes as { [snakeCaseKey]?: boolean })[snakeCaseKey] =
+        this.snakeCase;
+
       const shape = getColumnTypes(columnTypes, fn);
+
+      if (this.snakeCase) {
+        for (const key in shape) {
+          const column = shape[key];
+          if (column.data.name) continue;
+
+          const snakeName = toSnakeCase(key);
+          if (snakeName !== key) {
+            column.data.name = snakeName;
+          }
+        }
+      }
 
       return {
         shape,

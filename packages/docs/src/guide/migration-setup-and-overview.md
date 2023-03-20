@@ -68,7 +68,7 @@ export const config = {
 Configure a `db` script:
 
 ```ts
-// scripts/db.ts
+// db/dbScript.ts
 
 import { rakeDb } from 'rake-db';
 import { appCodeUpdater } from 'orchid-orm';
@@ -81,6 +81,9 @@ rakeDb(
     migrationsPath: '../migrations',
     // it also can be an absolute path:
     // migrationsPath: path.resolve(__dirname, 'migrations'),
+    
+    // set `snakeCase: true` for a database with snake_cased names:
+    // snakeCase: true,
     
     // optionally, for automatic code updating after running migrations:
     appCodeUpdater: appCodeUpdater({
@@ -157,6 +160,10 @@ type MigrationConfig = {
   // table in your database to store migrated versions
   migrationsTable?: string;
   
+  // set to true to have all columns named in camelCase in the app, but in snake_case in the db
+  // by default, camelCase is expected in both app and db
+  snakeCase?: boolean;
+  
   // function to import typescript migration file
   import?(path: string): void;
   
@@ -197,7 +204,7 @@ type MigrationConfig = {
 }
 ```
 
-To configure logging, see [log option](/guide/query-builder.html#createdb) in the query builder document.
+To configure logging, see [log option](/guide/query-builder-setup.html#log-option) in the query builder document.
 
 Note that `migrationsPath` can accept an absolute path, or a relative path to the current file.
 
@@ -206,6 +213,7 @@ Defaults are:
 - `basePath` is the dir name of the file you're calling `rakeDb` from
 - `migrationPath` is `src/db/migrations`
 - `migrationsTable` is `schemaMigrations`
+- `snakeCase` is `false`, so camelCase is expected in both the app and the database
 - `import` will use a standard `import` function
 - `noPrimaryKey` is `error`, it'll bite if you accidentally forgot to add a primary key to a new table
 - `log` is on
@@ -213,6 +221,14 @@ Defaults are:
 - `useCodeUpdater` is `true`, but it won't run anything if you don't specify `appCodeUpdater` config
 
 The third optional argument of `rakeDb` is an array of strings from the command line, by default it will use `process.argv` to get the arguments, but you can override it by passing arguments manually.
+
+## snakeCase
+
+By default, this option is `false` and camelCase is expected in a database, change it to `true` if all or most of the columns in your database are in snake_case.
+
+When `snakeCase` is `true`, all column names in migrations will be translated into snake_case automatically.
+
+It changes behavior of `db pull` command at handling column names and timestamps, see [db pull](/guide/migration-commands#pull) for details.
 
 ## appCodeUpdater
 
