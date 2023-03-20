@@ -10,6 +10,8 @@ import {
   CustomTypeColumn,
   DomainColumn,
   EnumColumn,
+  ForeignKeyAction,
+  ForeignKeyMatch,
   ForeignKeyOptions,
   instantiateColumn,
   TableData,
@@ -26,13 +28,13 @@ export class RakeDbEnumColumn extends EnumColumn<
   }
 }
 
-const matchMap = {
+const matchMap: Record<string, undefined | ForeignKeyMatch> = {
   s: undefined,
   f: 'FULL',
   p: 'PARTIAL',
 };
 
-const fkeyActionMap = {
+const fkeyActionMap: Record<string, undefined | ForeignKeyAction> = {
   a: undefined, // default
   r: 'RESTRICT',
   c: 'CASCADE',
@@ -488,18 +490,29 @@ const pushTableAst = (
 
 const foreignKeyToAst = (
   fkey: DbStructure.ForeignKey,
-): TableData.ForeignKey => ({
-  columns: fkey.columnNames,
-  fnOrTable: fkey.foreignTableName,
-  foreignColumns: fkey.foreignColumnNames,
-  options: {
-    name:
-      fkey.name &&
-      fkey.name !== getForeignKeyName(fkey.tableName, fkey.columnNames)
-        ? fkey.name
-        : undefined,
-    match: matchMap[fkey.match],
-    onUpdate: fkeyActionMap[fkey.onUpdate],
-    onDelete: fkeyActionMap[fkey.onDelete],
-  } as ForeignKeyOptions,
-});
+): TableData.ForeignKey => {
+  const result: TableData.ForeignKey = {
+    columns: fkey.columnNames,
+    fnOrTable: fkey.foreignTableName,
+    foreignColumns: fkey.foreignColumnNames,
+    options: {},
+  };
+
+  if (
+    fkey.name &&
+    fkey.name !== getForeignKeyName(fkey.tableName, fkey.columnNames)
+  ) {
+    result.options.name = fkey.name;
+  }
+
+  const match = matchMap[fkey.match];
+  if (match) result.options.match = match;
+
+  const onUpdate = fkeyActionMap[fkey.onUpdate];
+  if (onUpdate) result.options.onUpdate = onUpdate;
+
+  const onDelete = fkeyActionMap[fkey.onDelete];
+  if (onDelete) result.options.onDelete = onDelete;
+
+  return result;
+};

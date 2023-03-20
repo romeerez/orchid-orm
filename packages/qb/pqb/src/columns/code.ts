@@ -9,6 +9,7 @@ import {
   ColumnsShapeBase,
   ColumnTypeBase,
   isRaw,
+  objectHasValues,
   quoteObjectKey,
   RawExpression,
   rawToCode,
@@ -106,15 +107,27 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
 
   code.push(`...${t}.index(`);
 
-  const columnsMultiline = index.columns.some(
-    (column) => Object.keys(column).length > 1 || 'expression' in column,
-  );
+  const columnsMultiline = index.columns.some((column) => {
+    for (const key in column) {
+      if (key !== 'column' && column[key as keyof typeof column] !== undefined)
+        return true;
+    }
+    return false;
+  });
   if (columnsMultiline) {
     const objects: Code[] = [];
 
     for (const column of index.columns) {
       const expr = 'column' in column ? column.column : column.expression;
-      if (Object.keys(column).length === 1) {
+
+      let hasOptions = false;
+      for (const key in column) {
+        if (key !== 'column' && key !== 'expression') {
+          hasOptions = true;
+        }
+      }
+
+      if (!hasOptions) {
         objects.push(`${singleQuote(expr)},`);
       } else {
         const props: Code[] = [
@@ -146,8 +159,7 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
     );
   }
 
-  const optionsKeys = Object.keys(index.options);
-  const hasOptions = optionsKeys.length > 0;
+  const hasOptions = objectHasValues(index.options);
   if (hasOptions) {
     if (columnsMultiline) {
       const columns = code[code.length - 1] as string[];
@@ -158,7 +170,7 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
     }
 
     const options: string[] = [];
-    for (const key of optionsKeys) {
+    for (const key in index.options) {
       const value = index.options[key as keyof typeof index.options];
       if (value === null || value === undefined) continue;
 
@@ -215,14 +227,11 @@ export const foreignKeyArgsToCode = (
   args.push(`${singleQuoteArray(foreignKey.foreignColumns)},`);
 
   const { options } = foreignKey;
-  if (Object.keys(foreignKey.options).length > 0) {
+  if (objectHasValues(foreignKey.options)) {
     const lines: string[] = [];
     for (const key in foreignKey.options) {
-      lines.push(
-        `${key}: ${singleQuote(
-          options[key as keyof typeof options] as string,
-        )},`,
-      );
+      const value = options[key as keyof typeof options];
+      if (value) lines.push(`${key}: ${singleQuote(value)},`);
     }
     args.push('{', lines, '},');
   }

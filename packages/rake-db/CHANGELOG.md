@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.4.18
+
+### Patch Changes
+
+- Fix handling undefined values in foreign key when pulling db
+- Updated dependencies
+  - orchid-core@0.1.7
+  - pqb@0.10.14
+
 ## 2.4.17
 
 ### Patch Changes

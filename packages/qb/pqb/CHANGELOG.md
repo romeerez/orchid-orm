@@ -1,5 +1,13 @@
 # pqb
 
+## 0.10.14
+
+### Patch Changes
+
+- Fix handling undefined values in foreign key when pulling db
+- Updated dependencies
+  - orchid-core@0.1.7
+
 ## 0.10.13
 
 ### Patch Changes

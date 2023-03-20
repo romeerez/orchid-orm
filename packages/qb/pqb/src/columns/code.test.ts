@@ -182,6 +182,47 @@ bool: t.boolean(),
       );
     });
 
+    it('should add indexes ignoring options when all option values are undefined', () => {
+      const code = columnsShapeToCode(
+        {},
+        {
+          ...tableData,
+          indexes: [
+            {
+              columns: [
+                {
+                  column: 'id',
+                  collate: undefined,
+                  opclass: undefined,
+                  order: undefined,
+                },
+                {
+                  column: 'bool',
+                },
+              ],
+              options: {
+                name: undefined,
+                unique: undefined,
+                using: undefined,
+                include: undefined,
+                with: undefined,
+                tablespace: undefined,
+                where: undefined,
+                dropMode: undefined,
+              },
+            },
+          ],
+        },
+        't',
+      );
+
+      expect(codeToString(code, '', '  ')).toBe(
+        `
+...t.index(['id', 'bool']),
+        `.trim(),
+      );
+    });
+
     it('should add foreignKeys', () => {
       class Table {
         table = 'table';
@@ -233,6 +274,51 @@ bool: t.boolean(),
     onDelete: 'CASCADE',
     dropMode: 'CASCADE',
   },
+),
+        `.trim(),
+      );
+    });
+
+    it('should ignore options if all options are undefined', () => {
+      const code = columnsShapeToCode(
+        {},
+        {
+          ...tableData,
+          foreignKeys: [
+            {
+              columns: ['oneId'],
+              fnOrTable: 'table',
+              foreignColumns: ['twoId'],
+              options: {},
+            },
+            {
+              columns: ['oneId', 'twoId'],
+              fnOrTable: 'otherTable',
+              foreignColumns: ['threeId', 'fourId'],
+              options: {
+                name: undefined,
+                match: undefined,
+                onUpdate: undefined,
+                onDelete: undefined,
+                dropMode: undefined,
+              },
+            },
+          ],
+        },
+        't',
+      );
+
+      expect(codeToString(code, '', '  ')).toBe(
+        `
+...t.foreignKey(
+  ['oneId'],
+  'table',
+  ['twoId'],
+),
+...t.foreignKey(
+  ['oneId', 'twoId'],
+  'otherTable',
+  ['threeId', 'fourId'],
 ),
         `.trim(),
       );

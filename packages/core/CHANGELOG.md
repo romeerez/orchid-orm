@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.1.7
+
+### Patch Changes
+
+- Fix handling undefined values in foreign key when pulling db
+
 ## 0.1.6
 
 ### Patch Changes

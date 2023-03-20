@@ -134,10 +134,17 @@ export const quoteObjectKey = (s: string) => {
 };
 
 export const isObjectEmpty = (obj: object) => {
-  for (const _ in obj) {
-    return false;
+  for (const key in obj) {
+    if (obj[key as keyof typeof obj] !== undefined) return false;
   }
   return true;
+};
+
+export const objectHasValues = (obj: object) => {
+  for (const key in obj) {
+    if (obj[key as keyof typeof obj] !== undefined) return true;
+  }
+  return false;
 };
 
 export const pathToLog = (path: string) => {
@@ -148,9 +155,9 @@ export const pathToLog = (path: string) => {
 
 export const toCamelCase = (str: string) => {
   return str
-    .replace(/^_+/, '')
-    .replace(/_+./, (a) => a[a.length - 1].toUpperCase())
-    .replace(/_+$/, '');
+    .replace(/^_+/g, '')
+    .replace(/_+./g, (a) => a[a.length - 1].toUpperCase())
+    .replace(/_+$/g, '');
 };
 
 export const toSnakeCase = (str: string) => {

@@ -30,9 +30,9 @@ export type ColumnData = ColumnDataBase & {
   foreignKeys?: ForeignKey<string, string[]>[];
 };
 
-type ForeignKeyMatch = 'FULL' | 'PARTIAL' | 'SIMPLE';
+export type ForeignKeyMatch = 'FULL' | 'PARTIAL' | 'SIMPLE';
 
-type ForeignKeyAction =
+export type ForeignKeyAction =
   | 'NO ACTION'
   | 'RESTRICT'
   | 'CASCADE'
