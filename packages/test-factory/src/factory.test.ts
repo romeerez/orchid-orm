@@ -324,7 +324,7 @@ describe('factory', () => {
     };
 
     const min = 29;
-    const max = 30;
+    const max = 1;
     const gt = 10;
     const gte = 10;
 
