@@ -7,6 +7,8 @@ import {
 } from './typeBase';
 import { JSONOptional, optional } from './optional';
 import { addCode, Code } from '../code';
+import { MessageParam } from '../commonMethods';
+import { singleQuote } from '../../utils';
 
 export type JSONObjectShape = Record<string, JSONTypeAny>;
 
@@ -110,7 +112,7 @@ export interface JSONObject<
     Catchall
   >;
   passthrough(): JSONObject<T, 'passthrough', Catchall>;
-  strict(): JSONObject<T, 'strict', Catchall>;
+  strict(params?: MessageParam): JSONObject<T, 'strict', Catchall>;
   strip(): JSONObject<T, 'strip', Catchall>;
   catchAll<C extends JSONTypeAny>(type: C): JSONObject<T, UnknownKeys, C>;
 }
@@ -138,7 +140,8 @@ export const object = <
       if (this.unknownKeys === 'passthrough') {
         addCode(code, '.passthrough()');
       } else if (this.unknownKeys === 'strict') {
-        addCode(code, '.strict()');
+        const error = this.data.errors?.strict;
+        addCode(code, `.strict(${error ? singleQuote(error) : ''})`);
       }
 
       if (this.catchAllType) {
@@ -208,10 +211,17 @@ export const object = <
         unknownKeys: 'passthrough',
       } as JSONObject<T, 'passthrough', Catchall>;
     },
-    strict(this: JSONObject<T, UnknownKeys, Catchall>) {
+    strict(this: JSONObject<T, UnknownKeys, Catchall>, params?: MessageParam) {
       return {
         ...this,
         unknownKeys: 'strict',
+        data: {
+          ...this.data,
+          errors: {
+            ...this.data.errors,
+            strict: typeof params === 'string' ? params : params?.message,
+          },
+        },
       } as JSONObject<T, 'strict', Catchall>;
     },
     strip(this: JSONObject<T, UnknownKeys, Catchall>) {

@@ -1,5 +1,14 @@
 # orchid-orm-schema-to-zod
 
+## 0.3.15
+
+### Patch Changes
+
+- Support validation error messages
+- Updated dependencies
+  - orchid-core@0.1.8
+  - pqb@0.10.15
+
 ## 0.3.14
 
 ### Patch Changes

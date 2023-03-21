@@ -6,7 +6,7 @@ For `json` use `t.jsonText()`:
 
 ```ts
 const someTable = db('someTable', (t) => ({
-  data: t.jsonText() // -> string
+  data: t.jsonText() // -> JSON string
 }))
 ```
 
@@ -22,6 +22,8 @@ const someTable = db('someTable', (t) => ({
   }))
 }))
 ```
+
+Error messages described in [validation docs](/guide/column-validation-methods.html#errors) are working in the same way for nested JSON schemas.
 
 Text type columns support the following `where` operators:
 
@@ -66,7 +68,7 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-`number` and `bigint` types can be chained with the following validation methods:
+`number` and `bigint` types can be chained with the the same methods as numeric columns:
 
 ```ts
 const someTable = db('someTable', (t) => ({
@@ -84,22 +86,38 @@ const someTable = db('someTable', (t) => ({
       .nonPositive() // must be lower than or equal to 0
       .multipleOf(number) // must be a multiple of the number
       .step(number) // alias for .multipleOf
+      .finite() // not Infinity
+      .safe() // equivalient to .lte(Number.MAX_SAFE_INTEGER)
   }))
 }))
 ```
 
-`string` type can be chained with the following validation methods:
+`string` type can be chained with the methods as text columns:
 
 ```ts
 const someTable = db('someTable', (t) => ({
   data: t.json((t) => ({
     string: t.string()
-      .email() // validate email
-      .url() // validate url
-      .uuid() // validate uuid
-      .cuid() // validate cuid
-      .regex(/regex/) // validate string using a RegExp
-      .trim() // trim string when validating
+      .nonEmpty() // equivalent for .min(1)
+      .min(1)
+      .max(10)
+      .length(5)
+      .email()
+      .url()
+      .emoji()
+      .uuid()
+      .cuid()
+      .cuid2()
+      .ulid()
+      .datetime({ offset: true, precision: 5 }) // see Zod docs for details
+      .ip({ version: 'v4' }) // v4, v6 or don't pass the parameter for both
+      .regex(/regex/)
+      .includes('str')
+      .startsWith('str')
+      .endsWith('str')
+      .trim()
+      .toLowerCase()
+      .toUpperCase()
   }))
 }))
 ```
@@ -257,10 +275,12 @@ const someTable = db('someTable', (t) => ({
 
 Add a custom check for the value, validation will fail when a falsy value is returned:
 
+Optionally takes error message.
+
 ```ts
 const someTable = db('someTable', (t) => ({
   data: t.json((t) => ({
-    refinedString: t.string().refine((val) => val.length <= 255)
+    refinedString: t.string().refine((val) => val.length <= 255, 'error message')
   }))
 }))
 ```

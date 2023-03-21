@@ -6,35 +6,11 @@ import {
   stringTypeMethods,
   Code,
   joinTruthy,
-  singleQuote,
   BaseStringData,
   ColumnTypesBase,
+  stringDataToCode,
 } from 'orchid-core';
 import { columnCode } from './code';
-
-const stringDataToCode = (data: BaseStringData) => {
-  let code = '';
-
-  const { min, isNonEmpty } = data;
-
-  if (min !== undefined && (!isNonEmpty || (isNonEmpty && min !== 1)))
-    code += `.min(${min})`;
-
-  if (data.max !== undefined) code += `.max(${data.max})`;
-  if (data.length !== undefined) code += `.length(${data.length})`;
-  if (data.email !== undefined) code += `.email()`;
-  if (data.url !== undefined) code += `.url()`;
-  if (data.uuid !== undefined) code += `.uuid()`;
-  if (data.cuid !== undefined) code += `.cuid()`;
-  if (data.regex) code += `.regex(${data.regex.toString()})`;
-  if (data.startsWith !== undefined)
-    code += `.startsWith(${singleQuote(data.startsWith)})`;
-  if (data.endsWith !== undefined)
-    code += `.endsWith(${singleQuote(data.endsWith)})`;
-  if (data.cuid !== undefined) code += `.trim()`;
-
-  return code;
-};
 
 export type StringColumn = ColumnType<string, typeof Operators.text>;
 

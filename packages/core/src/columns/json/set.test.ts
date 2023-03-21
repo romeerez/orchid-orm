@@ -11,12 +11,21 @@ describe('set', () => {
       't.set(t.number().optional())',
     );
 
-    expect(set(number()).nonEmpty().toCode('t')).toBe(
-      't.set(t.number()).nonEmpty()',
+    expect(set(number()).nonEmpty('nonEmpty message').toCode('t')).toBe(
+      `t.set(t.number()).nonEmpty('nonEmpty message')`,
     );
 
-    expect(set(number()).min(1).max(10).size(15).toCode('t')).toBe(
-      't.set(t.number()).min(1).max(10).size(15)',
+    expect(
+      set(number())
+        .min(1, 'min message')
+        .max(10, 'max message')
+        .size(15, 'size message')
+        .toCode('t'),
+    ).toBe(
+      `t.set(t.number())` +
+        `.min(1, 'min message')` +
+        `.max(10, 'max message')` +
+        `.size(15, 'size message')`,
     );
   });
 });

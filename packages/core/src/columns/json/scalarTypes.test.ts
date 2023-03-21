@@ -44,27 +44,48 @@ describe('scalarTypes', () => {
       expect(
         scalarTypes
           .number()
-          .lt(1)
-          .lte(2)
-          .gt(3)
-          .gte(4)
-          .multipleOf(5)
-          .int()
+          .gt(1, 'gt message')
+          .gte(2, 'gte message')
+          .lt(3, 'lt message')
+          .lte(4, 'lte message')
+          .multipleOf(5, 'step message')
+          .int('int message')
           .toCode('t'),
-      ).toBe('t.number().min(4).gt(3).max(2).lt(1).step(5).int()');
+      ).toBe(
+        `t.number()` +
+          `.gt(1, 'gt message')` +
+          `.min(2, 'gte message')` +
+          `.lt(3, 'lt message')` +
+          `.max(4, 'lte message')` +
+          `.step(5, 'step message')` +
+          `.int('int message')`,
+      );
 
       expect(
         scalarTypes
           .number()
-          .positive()
-          .nonNegative()
-          .negative()
-          .nonPositive()
+          .positive('positive message')
+          .nonNegative('nonNegative message')
+          .negative('negative message')
+          .nonPositive('nonPositive message')
           .toCode('t'),
-      ).toBe('t.number().min(0).gt(0).max(0).lt(0)');
+      ).toBe(
+        `t.number()` +
+          `.gt(0, 'positive message')` +
+          `.min(0, 'nonNegative message')` +
+          `.lt(0, 'negative message')` +
+          `.max(0, 'nonPositive message')`,
+      );
 
-      expect(scalarTypes.number().min(1).max(2).step(3).toCode('t')).toBe(
-        't.number().min(1).max(2).step(3)',
+      expect(
+        scalarTypes
+          .number()
+          .min(1, 'min message')
+          .max(2, 'max message')
+          .step(3, 'step message')
+          .toCode('t'),
+      ).toBe(
+        `t.number().min(1, 'min message').max(2, 'max message').step(3, 'step message')`,
       );
     });
   });
@@ -75,8 +96,16 @@ describe('scalarTypes', () => {
 
       const now = new Date();
       const s = now.toISOString();
-      expect(scalarTypes.date().min(now).max(now).toCode('t')).toBe(
-        `t.date().min(new Date('${s}')).max(new Date('${s}'))`,
+      expect(
+        scalarTypes
+          .date()
+          .min(now, 'min message')
+          .max(now, 'max message')
+          .toCode('t'),
+      ).toBe(
+        `t.date()` +
+          `.min(new Date('${s}'), 'min message')` +
+          `.max(new Date('${s}'), 'max message')`,
       );
     });
   });
@@ -85,30 +114,54 @@ describe('scalarTypes', () => {
     it('should have toCode', () => {
       expect(scalarTypes.string().toCode('t')).toBe('t.string()');
 
-      expect(scalarTypes.string().nonEmpty().toCode('t')).toBe(
-        't.string().nonEmpty()',
-      );
+      expect(
+        scalarTypes.string().nonEmpty('nonEmpty message').toCode('t'),
+      ).toBe("t.string().nonEmpty('nonEmpty message')");
 
       expect(
         scalarTypes
           .string()
-          .min(1)
-          .max(10)
-          .length(15)
-          .email()
-          .url()
-          .uuid()
-          .cuid()
-          .startsWith('start')
-          .endsWith('end')
+          .min(1, 'min message')
+          .max(10, 'max message')
+          .length(15, 'length message')
+          .email('email message')
+          .url('url message')
+          .emoji('emoji message')
+          .uuid('uuid message')
+          .cuid('cuid message')
+          .cuid2('cuid2 message')
+          .ulid('ulid message')
+          .datetime({ offset: true, precision: 5, message: 'datetime message' })
+          .ip({ version: 'v4', message: 'ip message' })
+          .regex(/\d+/g, 'regex message')
+          .includes('includes', 'includes message')
+          .startsWith('start', 'startsWith message')
+          .endsWith('end', 'endsWith message')
           .trim()
+          .toLowerCase()
+          .toUpperCase()
           .toCode('t'),
       ).toBe(
-        `t.string().min(1).max(10).length(15).email().url().uuid().cuid().startsWith('start').endsWith('end').trim()`,
-      );
-
-      expect(scalarTypes.string().regex(/\d+/g).toCode('t')).toBe(
-        `t.string().regex(/\\d+/g)`,
+        `t.string()` +
+          `.min(1, 'min message')` +
+          `.max(10, 'max message')` +
+          `.length(15, 'length message')` +
+          `.email('email message')` +
+          `.url('url message')` +
+          `.emoji('emoji message')` +
+          `.uuid('uuid message')` +
+          `.cuid('cuid message')` +
+          `.cuid2('cuid2 message')` +
+          `.ulid('ulid message')` +
+          `.regex(/\\d+/g, 'regex message')` +
+          ".includes('includes', 'includes message')" +
+          ".startsWith('start', 'startsWith message')" +
+          ".endsWith('end', 'endsWith message')" +
+          `.datetime({ offset: true, precision: 5, message: 'datetime message' })` +
+          `.ip({ version: 'v4', message: 'ip message' })` +
+          '.trim()' +
+          '.toLowerCase()' +
+          '.toUpperCase()',
       );
     });
   });

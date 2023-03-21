@@ -13,13 +13,31 @@ import {
 } from './number';
 
 const testNumberColumnMethods = (type: NumberBaseColumn, name: string) => {
-  expect(type.lt(1).lte(2).gt(3).gte(4).multipleOf(5).toCode('t')).toBe(
-    `t.${name}().min(4).gt(3).max(2).lt(1).step(5)`,
+  expect(
+    type
+      .lt(1, 'lt message')
+      .lte(2, 'lte message')
+      .gt(3, 'gt message')
+      .gte(4, 'gte message')
+      .step(5, 'step message')
+      .finite('finite message')
+      .safe('safe message')
+      .toCode('t'),
+  ).toBe(
+    `t.${name}()` +
+      ".gt(3, 'gt message')" +
+      ".min(4, 'gte message')" +
+      ".lt(1, 'lt message')" +
+      ".max(2, 'lte message')" +
+      ".step(5, 'step message')" +
+      ".finite('finite message')" +
+      ".safe('safe message')",
   );
 
-  expect(
-    type.positive().nonNegative().negative().nonPositive().toCode('t'),
-  ).toBe(`t.${name}().min(0).gt(0).max(0).lt(0)`);
+  expect(type.positive().toCode('t')).toBe(`t.${name}().gt(0)`);
+  expect(type.nonNegative().toCode('t')).toBe(`t.${name}().min(0)`);
+  expect(type.negative().toCode('t')).toBe(`t.${name}().lt(0)`);
+  expect(type.nonPositive().toCode('t')).toBe(`t.${name}().max(0)`);
 
   expect(type.min(1).max(2).step(3).toCode('t')).toBe(
     `t.${name}().min(1).max(2).step(3)`,

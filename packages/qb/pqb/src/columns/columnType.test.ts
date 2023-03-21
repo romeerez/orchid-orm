@@ -15,7 +15,7 @@ import { IntegerColumn } from './number';
 import { columnCode } from './code';
 import { Code, raw } from 'orchid-core';
 
-describe('column base', () => {
+describe('column type', () => {
   useTestDatabase();
   afterAll(db.close);
 
@@ -461,9 +461,11 @@ describe('column base', () => {
 
   describe('refine', () => {
     it('should have toCode', () => {
-      expect(column.refine((s) => (s as string).length > 0).toCode('t')).toBe(
-        't.column().refine((s)=>s.length > 0)',
-      );
+      expect(
+        column
+          .refine((s) => (s as string).length > 0, 'refine message')
+          .toCode('t'),
+      ).toBe(`t.column().refine((s)=>s.length > 0, 'refine message')`);
     });
   });
 

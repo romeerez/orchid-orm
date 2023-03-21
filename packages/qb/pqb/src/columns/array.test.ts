@@ -52,12 +52,21 @@ describe('array column', () => {
       const column = new ArrayColumn({}, new IntegerColumn({}));
       expect(column.toCode('t')).toBe('t.array(t.integer())');
 
-      expect(column.nonEmpty().toCode('t')).toBe(
-        't.array(t.integer()).nonEmpty()',
+      expect(column.nonEmpty('nonEmpty message').toCode('t')).toBe(
+        `t.array(t.integer()).nonEmpty('nonEmpty message')`,
       );
 
-      expect(column.min(1).max(10).length(15).toCode('t')).toBe(
-        't.array(t.integer()).min(1).max(10).length(15)',
+      expect(
+        column
+          .min(1, 'min message')
+          .max(10, 'max message')
+          .length(15, 'length message')
+          .toCode('t'),
+      ).toBe(
+        `t.array(t.integer())` +
+          `.min(1, 'min message')` +
+          `.max(10, 'max message')` +
+          `.length(15, 'length message')`,
       );
     });
   });

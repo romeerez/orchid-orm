@@ -7,6 +7,7 @@ import {
   DateColumnData,
   nameKey,
   ColumnTypesBase,
+  dateDataToCode,
 } from 'orchid-core';
 import { assignMethodsToClass } from './utils';
 import { IntegerColumn } from './number';
@@ -40,15 +41,6 @@ export abstract class DateBaseColumn extends ColumnType<
 }
 
 assignMethodsToClass(DateBaseColumn, dateTypeMethods);
-
-const dateDataToCode = (data: DateColumnData) => {
-  let code = '';
-
-  if (data.min) code += `.min(new Date('${data.min.toISOString()}'))`;
-  if (data.max) code += `.max(new Date('${data.max.toISOString()}'))`;
-
-  return code;
-};
 
 // date	4 bytes	date (no time of day)	4713 BC	5874897 AD 1 day
 export class DateColumn extends DateBaseColumn {

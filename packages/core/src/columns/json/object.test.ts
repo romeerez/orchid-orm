@@ -68,6 +68,12 @@ describe('object', () => {
       '}).strict()',
     ]);
 
+    expect(object(shape).strict('strict message').toCode('t')).toEqual([
+      't.object({',
+      ['key: t.string(),'],
+      `}).strict('strict message')`,
+    ]);
+
     expect(object(shape).catchAll(scalarTypes.string()).toCode('t')).toEqual([
       't.object({',
       ['key: t.string(),'],

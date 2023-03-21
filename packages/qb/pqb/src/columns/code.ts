@@ -1,11 +1,11 @@
 import { ColumnData, ColumnType, ForeignKey } from './columnType';
-import { getRaw } from '../raw';
 import { TableData } from './columnTypes';
 import {
   addCode,
   Code,
   columnChainToCode,
   columnDefaultArgumentToCode,
+  columnErrorMessagesToCode,
   ColumnsShapeBase,
   ColumnTypeBase,
   isRaw,
@@ -22,7 +22,7 @@ const isDefaultTimeStamp = (item: ColumnTypeBase) => {
   if (item.dataType !== 'timestamp') return false;
 
   const def = item.data.default;
-  return def && isRaw(def) && getRaw(def, []) === 'now()';
+  return def && isRaw(def) && def.__raw === 'now()';
 };
 
 const combineCodeElements = (input: Code): Code => {
@@ -357,8 +357,6 @@ export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
 
   if (type.data.isNullable) addCode(code, '.nullable()');
 
-  if ('isNonEmpty' in type.data) addCode(code, '.nonEmpty()');
-
   if (type.encodeFn) addCode(code, `.encode(${type.encodeFn.toString()})`);
 
   if (type.parseFn && !('hideFromCode' in type.parseFn))
@@ -384,6 +382,12 @@ export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
 
   if (type.data.check) {
     addCode(code, columnCheckToCode(t, type.data.check));
+  }
+
+  if (type.data.errors) {
+    for (const part of columnErrorMessagesToCode(type.data.errors)) {
+      addCode(code, part);
+    }
   }
 
   const { validationDefault } = type.data;

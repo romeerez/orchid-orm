@@ -15,6 +15,7 @@ import {
   MaybeArray,
   StringKey,
   QueryCommon,
+  MessageParam,
 } from 'orchid-core';
 
 export type ColumnData = ColumnDataBase & {
@@ -266,9 +267,21 @@ export abstract class ColumnType<
   refine<T extends ColumnType, RefinedOutput extends T['type']>(
     this: T,
     check: (arg: T['type']) => unknown,
+    params?: MessageParam,
   ): T & { type: RefinedOutput } {
     const cloned = Object.create(this);
-    cloned.chain = [...this.chain, ['refine', check]];
+    cloned.chain = [...this.chain, ['refine', check, cloned]];
+
+    if (typeof params === 'string' || params?.message) {
+      cloned.data = {
+        ...this.data,
+        errors: {
+          ...this.data.errors,
+          refine: typeof params === 'string' ? params : params.message,
+        },
+      };
+    }
+
     return cloned as T & { type: RefinedOutput };
   }
 

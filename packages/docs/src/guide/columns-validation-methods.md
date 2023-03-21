@@ -6,7 +6,7 @@ ORM and query builder do not perform validation because it's expected that data 
 
 You can convert the column schema into a validation schema with the use of an additional package.
 
-Column methods described in this section do **not** affect parsing or encoding when getting data from db or creating,
+Column methods described in this section have **no** effect on parsing, or encoding values, or tables schema in migrations,
 they only have an effect after converting to validation schema and using it in a controller or elsewhere.
 
 For now, only conversion to [Zod](https://github.com/colinhacks/zod) is supported.
@@ -48,6 +48,60 @@ export const updateSomeItemController = (req: Request) => {
   const dataForUpdate = updateSomeItemSchema.parse(req.body)
   // ...do something with dataForUpdate
 }
+```
+
+## errors
+
+`errors` allows to specify two following validation messages:
+
+```ts
+t.text().errors({
+  required: 'This column is required',
+  invalidType: 'This column must be an integer',
+})
+```
+
+It will be converted into `Zod`'s messages:
+
+```ts
+z.string({
+  required_error: 'This column is required',
+  invalid_type_error: 'This column must be an integer',
+});
+```
+
+Each validation method can accept an error message as a string:
+
+```ts
+t.text().min(5, 'Must be 5 or more characters long');
+t.text().max(5, 'Must be 5 or fewer characters long');
+t.text().length(5, 'Must be exactly 5 characters long');
+t.text().email('Invalid email address');
+t.text().url('Invalid url');
+t.text().emoji('Contains non-emoji characters');
+t.text().uuid('Invalid UUID');
+t.text().includes("tuna", 'Must include tuna');
+t.text().startsWith("https://", 'Must provide secure URL');
+t.text().endsWith(".com", 'Only .com domains allowed');
+```
+
+Except for `text().datetime()` and `text().ip()`:
+
+these methods can have their own parameters, so the error message is passed in object.
+
+```ts
+t.text().datetime({ message: 'Invalid datetime string! Must be UTC.' });
+t.text().ip({ message: 'Invalid IP address' });
+```
+
+Error messages are supported for a JSON schema as well:
+
+```ts
+t.json((j) => ({
+  one: j.string().errors({ required: 'One is required' }).min(5, 'Must be 5 or more characters long'),
+  two: j.string().errors({ invalidType: 'Two should be a string' }).max(5, 'Must be 5 or fewer characters long'),
+  three: j.string().length(5, 'Must be exactly 5 characters long'),
+}))
 ```
 
 ## validationDefault
@@ -96,12 +150,14 @@ class SomeTable extends BaseTable {
 
 Return the truthy value when the input is okay, and return the falsy value to produce an error.
 
+Optionally takes error message parameter.
+
 ```ts
 class SomeTable extends BaseTable {
   readonly table = 'table'
   columns = this.setColumns((t) => ({
     // will produce an error when the value is not 'something'
-    column: t.text(1, 100).refine((val) => val === 'something')
+    column: t.text(1, 100).refine((val) => val === 'something', 'error message')
   }))
 }
 ```
@@ -150,6 +206,8 @@ class SomeTable extends BaseTable {
       .nonPositive() // must be lower than or equal to 0
       .multipleOf(number) // must be a multiple of the number
       .step(number) // alias for .multipleOf
+      .finite() // useful only for `numeric`, `decimal`, `real`, because Infinity won't pass integer check
+      .safe() // equivalient to .lte(Number.MAX_SAFE_INTEGER)
   }))
 }
 ```
@@ -162,13 +220,27 @@ Text columns `varchar`, `char`, and `text` have such validation methods:
 class SomeTable extends BaseTable {
   readonly table = 'table'
   columns = this.setColumns((t) => ({
-    number: t.integer()
-      .email() // validate email
-      .url() // validate url
-      .uuid() // validate uuid
-      .cuid() // validate cuid
-      .regex(/regex/) // validate string using a RegExp
-      .trim() // trim string when validating
+    number: t.text()
+      .nonEmpty() // equivalent for .min(1)
+      .min(1)
+      .max(10)
+      .length(5)
+      .email()
+      .url()
+      .emoji()
+      .uuid()
+      .cuid()
+      .cuid2()
+      .ulid()
+      .datetime({ offset: true, precision: 5 }) // see Zod docs for details
+      .ip({ version: 'v4' }) // v4, v6 or don't pass the parameter for both
+      .regex(/regex/)
+      .includes('str')
+      .startsWith('str')
+      .endsWith('str')
+      .trim()
+      .toLowerCase()
+      .toUpperCase()
   }))
 }
 ```

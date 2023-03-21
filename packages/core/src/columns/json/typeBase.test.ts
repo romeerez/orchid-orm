@@ -1,4 +1,5 @@
 import { scalarTypes } from './scalarTypes';
+import { codeToString } from 'orchid-core';
 
 const { string, number } = scalarTypes;
 
@@ -111,7 +112,27 @@ describe('typeBase', () => {
 
   describe('array', () => {
     it('should have toCode', () => {
-      expect(string().array().toCode('t')).toEqual('t.string().array()');
+      expect(string().array().toCode('t')).toBe('t.string().array()');
+    });
+  });
+
+  describe('errors', () => {
+    it('should have toCode', () => {
+      expect(
+        codeToString(
+          string()
+            .errors({
+              required: 'required message',
+              invalidType: 'invalidType message',
+            })
+            .toCode('t'),
+          '',
+          '  ',
+        ),
+      ).toBe(`t.string().errors({
+  required: 'required message',
+  invalidType: 'invalidType message',
+})`);
     });
   });
 });

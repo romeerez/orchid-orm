@@ -6,12 +6,12 @@ import { singleQuote } from '../../utils';
 export interface JSONDiscriminatedUnion<
   Discriminator extends string,
   DiscriminatorValue extends Primitive,
-  Option extends JSONDiscriminatedObject<Discriminator, DiscriminatorValue>,
-> extends JSONType<Option['type'], 'discriminatedUnion'> {
+  Options extends JSONDiscriminatedObject<Discriminator, DiscriminatorValue>[],
+> extends JSONType<Options[number]['type'], 'discriminatedUnion'> {
   discriminator: Discriminator;
   discriminatorValue: DiscriminatorValue;
-  options: Map<DiscriminatorValue, Option>;
-  _option: Option;
+  options: Map<DiscriminatorValue, Options[number]>;
+  _options: Options;
   // WON'T DO: gave up on deepPartial type
   // deepPartial(): JSONDiscriminatedUnion<
   //   Discriminator,
@@ -57,7 +57,7 @@ export const discriminatedUnion = <
 >(
   discriminator: Discriminator,
   options: Types,
-): JSONDiscriminatedUnion<Discriminator, DiscriminatorValue, Types[number]> => {
+): JSONDiscriminatedUnion<Discriminator, DiscriminatorValue, Types> => {
   const optionsMap: Map<DiscriminatorValue, Types[number]> = new Map();
 
   options.forEach((option) => {
@@ -66,18 +66,18 @@ export const discriminatedUnion = <
   });
 
   return constructType<
-    JSONDiscriminatedUnion<Discriminator, DiscriminatorValue, Types[number]>
+    JSONDiscriminatedUnion<Discriminator, DiscriminatorValue, Types>
   >({
     dataType: 'discriminatedUnion',
     discriminator,
     discriminatorValue: undefined as unknown as DiscriminatorValue,
     options: optionsMap,
-    _option: undefined as unknown as Types[number],
+    _options: undefined as unknown as Types,
     toCode(
       this: JSONDiscriminatedUnion<
         string,
         Primitive,
-        JSONDiscriminatedObject<Discriminator, DiscriminatorValue>
+        JSONDiscriminatedObject<Discriminator, DiscriminatorValue>[]
       >,
       t: string,
     ) {
@@ -88,11 +88,7 @@ export const discriminatedUnion = <
       ]);
     },
     deepPartial(
-      this: JSONDiscriminatedUnion<
-        Discriminator,
-        DiscriminatorValue,
-        Types[number]
-      >,
+      this: JSONDiscriminatedUnion<Discriminator, DiscriminatorValue, Types>,
     ) {
       const newOptionsMap: Map<DiscriminatorValue, Types[number]> = new Map();
 

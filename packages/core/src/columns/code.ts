@@ -1,6 +1,18 @@
 import { singleQuote, toArray } from '../utils';
-import { ColumnChain } from './columnType';
+import { ColumnChain, ColumnDataBase } from './columnType';
 import { isRaw, RawExpression } from '../raw';
+import {
+  arrayMethodNames,
+  ArrayMethodsData,
+  BaseNumberData,
+  BaseStringData,
+  DateColumnData,
+  dateMethodNames,
+  methodNamesOfSet,
+  MethodsDataOfSet,
+  numberMethodNames,
+  stringMethodNames,
+} from './columnDataTypes';
 
 export type Code = string | Code[];
 
@@ -32,7 +44,13 @@ export const columnChainToCode = (
       addCode(result, item[2].toCode(t));
       addCode(result, ')');
     } else if (item[0] === 'refine') {
-      addCode(result, `.refine(${item[1].toString()})`);
+      const message = item[2].data.errors?.refine;
+      addCode(
+        result,
+        `.refine(${item[1].toString()}${
+          message ? `, ${singleQuote(message)}` : ''
+        })`,
+      );
     } else if (item[0] === 'superRefine') {
       addCode(result, `.superRefine(${item[1].toString()})`);
     }
@@ -82,4 +100,111 @@ export const rawToCode = (t: string, raw: RawExpression): string => {
   return `${t}.raw(${singleQuote(raw.__raw)}${
     values ? `, ${JSON.stringify(values)}` : ''
   })`;
+};
+
+export const columnMethodsToCode = <T extends ColumnDataBase>(
+  methodNames: (keyof T)[],
+  skip?: Record<string, true>,
+  aliases?: Record<string, string>,
+) => {
+  return (data: T, skipLocal?: Record<string, true>) => {
+    return methodNames
+      .map((key) =>
+        (skipLocal || skip)?.[key as string] ||
+        (key === 'min' &&
+          (data as { nonEmpty?: boolean }).nonEmpty &&
+          (data as { min?: number }).min === 1)
+          ? ''
+          : columnMethodToCode(data, key, aliases?.[key as string]),
+      )
+      .join('');
+  };
+};
+
+const columnMethodToCode = <T extends ColumnDataBase, K extends keyof T>(
+  data: T,
+  key: K,
+  name: string = key as string,
+): string => {
+  const param = data[key];
+  if (param === undefined) return '';
+
+  const error = data.errors?.[key === 'nonEmpty' ? 'min' : (key as string)];
+
+  let params;
+  if (typeof param === 'object' && param && param?.constructor === Object) {
+    const props: string[] = [];
+    for (const key in param) {
+      if (key === 'message') continue;
+
+      const value = (param as T)[key as keyof T];
+      if (value !== undefined) {
+        props.push(
+          `${key}: ${typeof value === 'string' ? singleQuote(value) : value}`,
+        );
+      }
+    }
+
+    if (error) props.push(`message: ${singleQuote(error)}`);
+
+    params = props.length ? `{ ${props.join(', ')} }` : '';
+  } else {
+    params =
+      param === true
+        ? ''
+        : typeof param === 'string'
+        ? singleQuote(param)
+        : param instanceof Date
+        ? `new Date('${param.toISOString()}')`
+        : param;
+
+    if (error) {
+      if (param !== true) params += ', ';
+      params += singleQuote(error);
+    }
+  }
+
+  return `.${name}(${params})`;
+};
+
+export const stringDataToCode =
+  columnMethodsToCode<BaseStringData>(stringMethodNames);
+
+export const numberDataToCode = columnMethodsToCode<BaseNumberData>(
+  numberMethodNames,
+  { int: true },
+  { lte: 'max', gte: 'min' },
+);
+
+export const dateDataToCode =
+  columnMethodsToCode<DateColumnData>(dateMethodNames);
+
+export const arrayDataToCode =
+  columnMethodsToCode<ArrayMethodsData>(arrayMethodNames);
+
+export const dataOfSetToCode =
+  columnMethodsToCode<MethodsDataOfSet>(methodNamesOfSet);
+
+export const columnErrorMessagesToCode = (
+  errors: Record<string, string>,
+): Code => {
+  const props: Code[] = [];
+
+  if (errors.required) {
+    props.push(`required: ${singleQuote(errors.required)},`);
+  }
+
+  if (errors.invalidType) {
+    props.push(`invalidType: ${singleQuote(errors.invalidType)},`);
+  }
+
+  const code: Code[] = [];
+
+  if (!props.length) return code;
+
+  addCode(code, '.errors({');
+  code.push(props);
+  addCode(code, '})');
+
+  return code;
 };

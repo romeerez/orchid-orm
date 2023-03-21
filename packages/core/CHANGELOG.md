@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.1.8
+
+### Patch Changes
+
+- Support validation error messages
+
 ## 0.1.7
 
 ### Patch Changes

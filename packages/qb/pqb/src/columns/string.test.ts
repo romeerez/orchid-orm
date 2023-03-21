@@ -31,22 +31,48 @@ const testStringColumnMethods = (type: TextBaseColumn, name: string) => {
 
   expect(
     type
-      .min(1)
-      .max(10)
-      .length(15)
-      .email()
-      .url()
-      .uuid()
-      .cuid()
-      .startsWith('start')
-      .endsWith('end')
+      .min(1, 'min message')
+      .max(10, 'max message')
+      .length(15, 'length message')
+      .email('email message')
+      .url('url message')
+      .emoji('emoji message')
+      .uuid('uuid message')
+      .cuid('cuid message')
+      .cuid2('cuid2 message')
+      .ulid('ulid message')
+      .datetime({ offset: true, precision: 5, message: 'datetime message' })
+      .ip({ version: 'v4', message: 'ip message' })
+      .regex(/\d+/g, 'regex message')
+      .includes('includes', 'includes message')
+      .startsWith('start', 'startsWith message')
+      .endsWith('end', 'endsWith message')
       .trim()
+      .toLowerCase()
+      .toUpperCase()
       .toCode('t'),
   ).toBe(
-    `t.${name}().min(1).max(10).length(15).email().url().uuid().cuid().startsWith('start').endsWith('end').trim()`,
+    `t.${name}()` +
+      `.min(1, 'min message')` +
+      `.max(10, 'max message')` +
+      `.length(15, 'length message')` +
+      `.email('email message')` +
+      `.url('url message')` +
+      `.emoji('emoji message')` +
+      `.uuid('uuid message')` +
+      `.cuid('cuid message')` +
+      `.cuid2('cuid2 message')` +
+      `.ulid('ulid message')` +
+      `.regex(/\\d+/g, 'regex message')` +
+      ".includes('includes', 'includes message')" +
+      ".startsWith('start', 'startsWith message')" +
+      ".endsWith('end', 'endsWith message')" +
+      `.datetime({ offset: true, precision: 5, message: 'datetime message' })` +
+      `.ip({ version: 'v4', message: 'ip message' })` +
+      '.trim()' +
+      '.toLowerCase()' +
+      '.toUpperCase()',
   );
-
-  expect(type.regex(/\d+/g).toCode('t')).toBe(`t.${name}().regex(/\\d+/g)`);
 };
 
 describe('string columns', () => {

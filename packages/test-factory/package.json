@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm-test-factory",
-  "version": "0.3.18",
+  "version": "0.3.19",
   "description": "Orchid ORM factories for tests",
   "homepage": "https://orchid-orm.netlify.app/guide/orm-test-factories.html",
   "repository": {
@@ -56,6 +56,6 @@
     "orchid-orm-schema-to-zod": "workspace:*",
     "orchid-core": "workspace:*",
     "pqb": "workspace:*",
-    "zod": "^3.19.1"
+    "zod": "^3.21.4"
   }
 }

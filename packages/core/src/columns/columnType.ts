@@ -187,12 +187,15 @@ export type ColumnDataBase = {
 
   // if the column is of domain or other user-defined type
   isOfCustomType?: boolean;
+
+  // error messages: key is camelCased version of Zod, like invalidType, and the value is the message
+  errors?: Record<string, string>;
 };
 
 export type ColumnChain = (
   | ['transform', (input: unknown, ctx: ValidationContext) => unknown]
   | ['to', (input: unknown) => JSONTypeAny | undefined, JSONTypeAny]
-  | ['refine', (input: unknown) => unknown]
+  | ['refine', (input: unknown) => unknown, ColumnTypeBase | JSONTypeAny]
   | ['superRefine', (input: unknown, ctx: ValidationContext) => unknown]
 )[];
 
@@ -255,5 +258,18 @@ export abstract class ColumnTypeBase<
   // set raw database check to the column
   check<T extends ColumnTypeBase>(this: T, value: RawExpression): T {
     return setColumnData(this, 'check', value);
+  }
+
+  // set error messages
+  errors<T extends ColumnTypeBase>(
+    this: T,
+    errorMessages: { [K in 'required' | 'invalidType']?: string },
+  ): T {
+    const { errors } = this.data;
+    return setColumnData(
+      this,
+      'errors',
+      errors ? { ...errors, ...errorMessages } : errorMessages,
+    );
   }
 }

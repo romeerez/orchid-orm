@@ -46,6 +46,23 @@ const columnOrJsonToZod = (type: any): z.ZodTypeAny => {
     : columnToZod(t.json(() => type));
 };
 
+const testTypeMethod = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type: any,
+  method: string,
+  value: unknown,
+  error: string,
+  ...args: unknown[]
+) => {
+  expect(() => columnOrJsonToZod(type[method](...args)).parse(value)).toThrow(
+    error,
+  );
+
+  expect(() =>
+    columnOrJsonToZod(type[method](...args, 'custom')).parse(value),
+  ).toThrow('custom');
+};
+
 describe('table to zod', () => {
   it('should convert a table to a zod validation schema', () => {
     const table = class Table {
@@ -58,6 +75,7 @@ describe('table to zod', () => {
     };
 
     const result = tableToZod(table);
+
     assertType<
       typeof result,
       z.ZodObject<{ id: z.ZodNumber; name: z.ZodNullable<z.ZodString> }>
@@ -65,6 +83,7 @@ describe('table to zod', () => {
 
     expect(result.parse({ id: 1, name: 'name' })).toEqual({
       id: 1,
+
       name: 'name',
     });
 
@@ -146,6 +165,13 @@ describe('schema to zod', () => {
         t.json((t) => t.string().refine((val) => val !== 'val')),
       );
       expect(() => type.parse('val')).toThrow('Invalid input');
+    });
+
+    it('should support custom message', () => {
+      const type = columnToZod(
+        t.text().refine((val) => val !== 'val', 'custom message'),
+      );
+      expect(() => type.parse('val')).toThrow('custom message');
     });
   });
 
@@ -239,52 +265,76 @@ describe('schema to zod', () => {
       );
     }
 
-    expect(() => columnOrJsonToZod(type.lt(5)).parse(10)).toThrow(
-      'Number must be less than 5',
-    );
+    testTypeMethod(type, 'lt', 10, 'Number must be less than 5', 5);
 
-    expect(() => columnOrJsonToZod(type.lte(5)).parse(10)).toThrow(
+    testTypeMethod(
+      type,
+      'lte',
+      10,
       'Number must be less than or equal to 5',
+      5,
     );
 
-    expect(() => columnOrJsonToZod(type.max(5)).parse(10)).toThrow(
+    testTypeMethod(
+      type,
+      'max',
+      10,
       'Number must be less than or equal to 5',
+      5,
     );
 
-    expect(() => columnOrJsonToZod(type.gt(5)).parse(0)).toThrow(
-      'Number must be greater than 5',
-    );
+    testTypeMethod(type, 'gt', 0, 'Number must be greater than 5', 5);
 
-    expect(() => columnOrJsonToZod(type.gte(5)).parse(0)).toThrow(
+    testTypeMethod(
+      type,
+      'gte',
+      0,
       'Number must be greater than or equal to 5',
+      5,
     );
 
-    expect(() => columnOrJsonToZod(type.min(5)).parse(0)).toThrow(
+    testTypeMethod(
+      type,
+      'min',
+      0,
       'Number must be greater than or equal to 5',
+      5,
     );
 
-    expect(() => columnOrJsonToZod(type.positive()).parse(-1)).toThrow(
-      'Number must be greater than 0',
-    );
+    testTypeMethod(type, 'positive', -1, 'Number must be greater than 0');
 
-    expect(() => columnOrJsonToZod(type.nonNegative()).parse(-1)).toThrow(
+    testTypeMethod(
+      type,
+      'nonNegative',
+      -1,
       'Number must be greater than or equal to 0',
     );
 
-    expect(() => columnOrJsonToZod(type.negative()).parse(0)).toThrow(
-      'Number must be less than 0',
-    );
+    testTypeMethod(type, 'negative', 0, 'Number must be less than 0');
 
-    expect(() => columnOrJsonToZod(type.nonPositive()).parse(1)).toThrow(
+    testTypeMethod(
+      type,
+      'nonPositive',
+      1,
       'Number must be less than or equal to 0',
     );
 
-    expect(() => columnOrJsonToZod(type.multipleOf(5)).parse(3)).toThrow(
-      'Number must be a multiple of 5',
-    );
+    testTypeMethod(type, 'multipleOf', 3, 'Number must be a multiple of 5', 5);
 
-    expect(() => columnOrJsonToZod(type.step(5)).parse(3)).toThrow(
-      'Number must be a multiple of 5',
+    testTypeMethod(type, 'step', 3, 'Number must be a multiple of 5', 5);
+
+    // remove int check before checking for infinity
+    expect(
+      () => ((type.data as { int?: boolean }).int = undefined),
+    ).not.toThrow();
+
+    testTypeMethod(type, 'finite', Infinity, 'Number must be finite');
+
+    testTypeMethod(
+      type,
+      'safe',
+      Number.MAX_SAFE_INTEGER + 1,
+      `Number must be less than or equal to ${Number.MAX_SAFE_INTEGER}`,
     );
   };
 
@@ -350,43 +400,74 @@ describe('schema to zod', () => {
   >(true);
 
   const testStringMethods = (type: TextColumn | JSONString) => {
-    expect(() => columnOrJsonToZod(type.min(1)).parse('')).toThrow(
+    testTypeMethod(
+      type,
+      'min',
+      '',
+      'String must contain at least 1 character(s)',
+      1,
+    );
+
+    testTypeMethod(
+      type,
+      'max',
+      '123',
+      'String must contain at most 1 character(s)',
+      1,
+    );
+
+    testTypeMethod(
+      type,
+      'length',
+      '',
+      'String must contain exactly 1 character(s)',
+      1,
+    );
+
+    testTypeMethod(
+      type,
+      'length',
+      '123',
+      'String must contain exactly 1 character(s)',
+      1,
+    );
+
+    testTypeMethod(type, 'email', 'invalid', 'Invalid email');
+
+    testTypeMethod(type, 'url', 'invalid', 'Invalid url');
+
+    testTypeMethod(type, 'emoji', 'invalid', 'Invalid emoji');
+
+    testTypeMethod(type, 'uuid', 'invalid', 'Invalid uuid');
+
+    testTypeMethod(type, 'cuid', '', 'Invalid cuid');
+
+    testTypeMethod(type, 'ulid', 'invalid', 'Invalid ulid');
+
+    testTypeMethod(
+      type,
+      'nonEmpty',
+      '',
       'String must contain at least 1 character(s)',
     );
 
-    expect(() => columnOrJsonToZod(type.max(1)).parse('123')).toThrow(
-      'String must contain at most 1 character(s)',
-    );
+    testTypeMethod(type, 'regex', 'invalid', 'Invalid', /\d+/);
 
-    expect(() => columnOrJsonToZod(type.length(1)).parse('')).toThrow(
-      'String must contain at least 1 character(s)',
-    );
+    testTypeMethod(type, 'includes', 'invalid', 'Invalid', 'koko');
 
-    expect(() => columnOrJsonToZod(type.length(1)).parse('123')).toThrow(
-      'String must contain at most 1 character(s)',
-    );
+    testTypeMethod(type, 'startsWith', 'invalid', 'Invalid', 'koko');
 
-    expect(() => columnOrJsonToZod(type.email()).parse('invalid')).toThrow(
-      'Invalid email',
-    );
+    testTypeMethod(type, 'endsWith', 'invalid', 'Invalid', 'koko');
 
-    expect(() => columnOrJsonToZod(type.url()).parse('invalid')).toThrow(
-      'Invalid url',
-    );
+    testTypeMethod(type, 'datetime', 'invalid', 'Invalid');
 
-    expect(() => columnOrJsonToZod(type.uuid()).parse('invalid')).toThrow(
-      'Invalid uuid',
-    );
-
-    expect(() => columnOrJsonToZod(type.cuid()).parse('invalid')).toThrow(
-      'Invalid cuid',
-    );
+    testTypeMethod(type, 'ip', 'invalid', 'Invalid');
 
     expect(columnOrJsonToZod(type.trim()).parse('  trimmed  ')).toBe('trimmed');
 
-    expect(() => columnOrJsonToZod(type.nonEmpty()).parse('')).toThrow(
-      'String must contain at least 1 character(s)',
-    );
+    expect(columnOrJsonToZod(type.toLowerCase()).parse('DOWN')).toBe('down');
+
+    expect(columnOrJsonToZod(type.toUpperCase()).parse('up')).toBe('UP');
   };
 
   describe.each(['varchar', 'char', 'text', 'string'])('%s', (method) => {
@@ -405,11 +486,11 @@ describe('schema to zod', () => {
         const schema = columnToZod(t[method as 'varchar'](3));
 
         expect(() => schema.parse('')).toThrow(
-          'String must contain at least 3 character(s)',
+          'String must contain exactly 3 character(s)',
         );
 
         expect(() => schema.parse('1234')).toThrow(
-          'String must contain at most 3 character(s)',
+          'String must contain exactly 3 character(s)',
         );
       });
     }
@@ -446,8 +527,20 @@ describe('schema to zod', () => {
     ).toThrow('Date must be greater than or equal to');
 
     expect(() =>
+      columnOrJsonToZod(
+        type.min(new Date(now.getTime() + 100), 'custom'),
+      ).parse(now),
+    ).toThrow('custom');
+
+    expect(() =>
       columnOrJsonToZod(type.max(new Date(now.getTime() - 100))).parse(now),
     ).toThrow('Date must be smaller than or equal to');
+
+    expect(() =>
+      columnOrJsonToZod(
+        type.max(new Date(now.getTime() - 100), 'custom'),
+      ).parse(now),
+    ).toThrow('custom');
   };
 
   describe.each(['date', 'timestamp', 'timestampWithTimeZone'])(
@@ -656,23 +749,42 @@ describe('schema to zod', () => {
   const testArrayMethods = (
     type: ArrayColumn<ColumnType> | JSONArray<JSONTypeAny>,
   ) => {
-    expect(() => columnOrJsonToZod(type.min(1)).parse([])).toThrow(
+    testTypeMethod(
+      type,
+      'min',
+      [],
       'Array must contain at least 1 element(s)',
+      1,
     );
 
-    expect(() => columnOrJsonToZod(type.max(1)).parse([1, 2])).toThrow(
+    testTypeMethod(
+      type,
+      'max',
+      [1, 2],
       'Array must contain at most 1 element(s)',
+      1,
     );
 
-    expect(() => columnOrJsonToZod(type.length(1)).parse([])).toThrow(
-      'Array must contain at least 1 element(s)',
+    testTypeMethod(
+      type,
+      'length',
+      [],
+      'Array must contain exactly 1 element(s)',
+      1,
     );
 
-    expect(() => columnOrJsonToZod(type.length(1)).parse([1, 2])).toThrow(
-      'Array must contain at most 1 element(s)',
+    testTypeMethod(
+      type,
+      'length',
+      [1, 2],
+      'Array must contain exactly 1 element(s)',
+      1,
     );
 
-    expect(() => columnOrJsonToZod(type.nonEmpty()).parse([])).toThrow(
+    testTypeMethod(
+      type,
+      'nonEmpty',
+      [],
       'Array must contain at least 1 element(s)',
     );
   };
@@ -693,6 +805,32 @@ describe('schema to zod', () => {
       );
 
       testArrayMethods(t.array(t.integer()));
+    });
+  });
+
+  describe('error messages', () => {
+    it('should support `required_error`', () => {
+      const schema = columnToZod(
+        t.text().errors({
+          required: 'custom message',
+        }),
+      );
+
+      assertType<typeof schema, z.ZodString>(true);
+
+      expect(() => schema.parse(undefined)).toThrow('custom message');
+    });
+
+    it('should support `invalid_type_error`', () => {
+      const schema = columnToZod(
+        t.text().errors({
+          invalidType: 'custom message',
+        }),
+      );
+
+      assertType<typeof schema, z.ZodString>(true);
+
+      expect(() => schema.parse(123)).toThrow('custom message');
     });
   });
 
@@ -950,25 +1088,46 @@ describe('schema to zod', () => {
         );
 
         const type = jsonTypes.set(jsonTypes.number());
+
         expect(() => columnOrJsonToZod(type.min(1)).parse(new Set())).toThrow(
           'Invalid input',
         );
 
         expect(() =>
+          columnOrJsonToZod(type.min(1, 'custom')).parse(new Set()),
+        ).toThrow('custom');
+
+        expect(() =>
           columnOrJsonToZod(type.max(1)).parse(new Set([1, 2])),
         ).toThrow('Invalid input');
+
+        expect(() =>
+          columnOrJsonToZod(type.max(1, 'custom')).parse(new Set([1, 2])),
+        ).toThrow('custom');
 
         expect(() => columnOrJsonToZod(type.size(1)).parse(new Set())).toThrow(
           'Invalid input',
         );
 
         expect(() =>
+          columnOrJsonToZod(type.size(1, 'custom')).parse(new Set()),
+        ).toThrow('custom');
+
+        expect(() =>
           columnOrJsonToZod(type.size(1)).parse(new Set([1, 2])),
         ).toThrow('Invalid input');
 
         expect(() =>
+          columnOrJsonToZod(type.size(1, 'custom')).parse(new Set([1, 2])),
+        ).toThrow('custom');
+
+        expect(() =>
           columnOrJsonToZod(type.nonEmpty()).parse(new Set()),
         ).toThrow('Invalid input');
+
+        expect(() =>
+          columnOrJsonToZod(type.nonEmpty('custom')).parse(new Set()),
+        ).toThrow('custom');
       });
     });
 
@@ -1058,7 +1217,10 @@ describe('schema to zod', () => {
           t.json((t) => t.object({ key: t.number() })),
         );
 
-        assertType<typeof schema, z.ZodObject<{ key: z.ZodNumber }>>(true);
+        assertType<
+          typeof schema,
+          z.ZodObject<{ key: z.ZodNumber }, 'strip', z.ZodTypeAny>
+        >(true);
 
         expect(schema.parse({ key: 123 })).toEqual({ key: 123 });
 
@@ -1154,8 +1316,16 @@ describe('schema to zod', () => {
         assertType<
           typeof schema,
           z.ZodIntersection<
-            z.ZodObject<{ a: z.ZodString; b: z.ZodNumber }>,
-            z.ZodObject<{ a: z.ZodString; c: z.ZodNumber }>
+            z.ZodObject<
+              { a: z.ZodString; b: z.ZodNumber },
+              'strip',
+              z.ZodTypeAny
+            >,
+            z.ZodObject<
+              { a: z.ZodString; c: z.ZodNumber },
+              'strip',
+              z.ZodTypeAny
+            >
           >
         >(true);
 
@@ -1199,9 +1369,10 @@ describe('schema to zod', () => {
           typeof schema,
           z.ZodDiscriminatedUnion<
             'type',
-            z.Primitive,
-            | z.ZodObject<{ type: z.ZodLiteral<'a'>; a: z.ZodString }>
-            | z.ZodObject<{ type: z.ZodLiteral<'b'>; b: z.ZodNumber }>
+            [
+              z.ZodObject<{ type: z.ZodLiteral<'a'>; a: z.ZodString }>,
+              z.ZodObject<{ type: z.ZodLiteral<'b'>; b: z.ZodNumber }>,
+            ]
           >
         >(true);
 
@@ -1245,6 +1416,36 @@ describe('schema to zod', () => {
         expect(() =>
           schema.parse({ name: 'name', subCategories: [{ name: 'name' }] }),
         ).toThrow('Required');
+      });
+    });
+
+    describe('error messages', () => {
+      it('should support `required_error`', () => {
+        const schema = columnToZod(
+          t.json((j) =>
+            j.string().errors({
+              required: 'custom message',
+            }),
+          ),
+        );
+
+        assertType<typeof schema, z.ZodString>(true);
+
+        expect(() => schema.parse(undefined)).toThrow('custom message');
+      });
+
+      it('should support `invalid_type_error`', () => {
+        const schema = columnToZod(
+          t.json((j) =>
+            j.string().errors({
+              invalidType: 'custom message',
+            }),
+          ),
+        );
+
+        assertType<typeof schema, z.ZodString>(true);
+
+        expect(() => schema.parse(123)).toThrow('custom message');
       });
     });
   });

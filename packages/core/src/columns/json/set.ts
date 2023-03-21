@@ -6,16 +6,13 @@ import {
   toCode,
 } from './typeBase';
 import { SetMethods, setMethods } from '../commonMethods';
-import { addCode, Code } from '../code';
+import { addCode, Code, dataOfSetToCode } from '../code';
+import { MethodsDataOfSet } from '../columnDataTypes';
 
 export interface JSONSet<Value extends JSONTypeAny>
   extends JSONType<Set<Value['type']>, 'set'>,
     SetMethods {
-  data: JSONTypeData & {
-    min?: number;
-    max?: number;
-    size?: number;
-  };
+  data: JSONTypeData & MethodsDataOfSet;
   valueType: Value;
   deepPartial(): JSONSet<ReturnType<Value['deepPartial']>>;
 }
@@ -27,17 +24,7 @@ export const set = <Value extends JSONTypeAny>(valueType: Value) => {
     toCode(this: JSONSet<Value>, t: string) {
       const code: Code[] = [`${t}.set(`];
       addCode(code, this.valueType.toCode(t));
-      addCode(code, ')');
-
-      const { min, max, size, isNonEmpty } = this.data;
-
-      if (min !== undefined && (!isNonEmpty || (isNonEmpty && min !== 1)))
-        addCode(code, `.min(${min})`);
-
-      if (max !== undefined) addCode(code, `.max(${max})`);
-
-      if (size !== undefined) addCode(code, `.size(${size})`);
-
+      addCode(code, `)${dataOfSetToCode(this.data)}`);
       return toCode(this, t, code);
     },
     deepPartial(this: JSONSet<Value>) {

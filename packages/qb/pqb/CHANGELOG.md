@@ -1,5 +1,13 @@
 # pqb
 
+## 0.10.15
+
+### Patch Changes
+
+- Support validation error messages
+- Updated dependencies
+  - orchid-core@0.1.8
+
 ## 0.10.14
 
 ### Patch Changes

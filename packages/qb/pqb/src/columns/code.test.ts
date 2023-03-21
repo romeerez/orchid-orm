@@ -337,5 +337,28 @@ bool: t.boolean(),
         `column: t.integer().check(t.raw('column > 10')),`,
       ]);
     });
+
+    describe('error messages', () => {
+      it('should support error messages', () => {
+        const code = codeToString(
+          t
+            .integer()
+            .errors({
+              required: 'column is required',
+              invalidType: 'column must be a number',
+            })
+            .toCode('t'),
+          '',
+          '  ',
+        );
+
+        expect(code).toBe(
+          `t.integer().errors({
+  required: 'column is required',
+  invalidType: 'column must be a number',
+})`,
+        );
+      });
+    });
   });
 });

@@ -1,16 +1,21 @@
 import { ColumnData, ColumnType } from './columnType';
 import { Operators } from './operators';
 import { assignMethodsToClass } from './utils';
-import { arrayMethods, addCode, Code, ColumnTypesBase } from 'orchid-core';
+import {
+  arrayMethods,
+  addCode,
+  Code,
+  ColumnTypesBase,
+  ColumnTypeBase,
+  ArrayMethodsData,
+  arrayDataToCode,
+} from 'orchid-core';
 import { columnCode } from './code';
 
-export type ArrayData<Item extends ColumnType> = ColumnData & {
-  item: Item;
-  min?: number;
-  max?: number;
-  length?: number;
-  isNonEmpty?: true;
-};
+export type ArrayData<Item extends ColumnTypeBase> = ColumnData &
+  ArrayMethodsData & {
+    item: Item;
+  };
 
 type ArrayMethods = typeof arrayMethods;
 
@@ -38,17 +43,7 @@ export class ArrayColumn<Item extends ColumnType> extends ColumnType<
   toCode(this: ArrayColumn<Item>, t: string): Code {
     const code: Code[] = ['array('];
     addCode(code, this.data.item.toCode(t));
-    addCode(code, ')');
-
-    const { min, max, length, isNonEmpty } = this.data;
-
-    if (min !== undefined && (!isNonEmpty || (isNonEmpty && min !== 1)))
-      addCode(code, `.min(${min})`);
-
-    if (max !== undefined) addCode(code, `.max(${max})`);
-
-    if (length !== undefined) addCode(code, `.length(${length})`);
-
+    addCode(code, `)${arrayDataToCode(this.data)}`);
     return columnCode(this, t, code);
   }
 

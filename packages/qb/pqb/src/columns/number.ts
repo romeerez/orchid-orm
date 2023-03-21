@@ -8,18 +8,9 @@ import {
   joinTruthy,
   BaseNumberData,
   ColumnTypesBase,
+  numberDataToCode,
 } from 'orchid-core';
 import { columnCode } from './code';
-
-const numberDataToCode = (data: NumberBaseColumn['data']) => {
-  let code = '';
-  if (data.gte !== undefined) code += `.min(${data.gte})`;
-  if (data.gt !== undefined) code += `.gt(${data.gt})`;
-  if (data.lte !== undefined) code += `.max(${data.lte})`;
-  if (data.lt !== undefined) code += `.lt(${data.lt})`;
-  if (data.multipleOf !== undefined) code += `.step(${data.multipleOf})`;
-  return code;
-};
 
 export type NumberColumn = ColumnType<number, typeof Operators.number>;
 

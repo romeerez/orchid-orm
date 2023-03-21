@@ -13,7 +13,7 @@ const someTable = db('someTable', (t) => ({
   id: t.serial().primaryKey(),
   name: t.text(3, 100),
   active: t.boolean(),
-  description: t.text(10, 1000).optional(),
+  description: t.text(10, 1000).nullable(),
   ...t.timestamps(),
 }))
 ```
@@ -30,13 +30,13 @@ export class SomeTable extends BaseTable {
     id: t.serial().primaryKey(),
     name: t.text(3, 100),
     active: t.boolean(),
-    description: t.text(10, 1000).optional(),
+    description: t.text(10, 1000).nullable(),
     ...t.timestamps(),
   }))
 }
 ```
 
-Note that all columns are **required** by default, use `.optional()` to mark them as nullable.
+Note that all columns are **non-nullable** by default, use `.nullable()` to mark them as nullable.
 
 ## Column types
 

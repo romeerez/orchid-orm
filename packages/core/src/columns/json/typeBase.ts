@@ -9,7 +9,12 @@ import { JSONNotNullish, JSONNullish, notNullish, nullish } from './nullish';
 import { intersection, JSONIntersection } from './intersection';
 import { array, JSONArray } from './array';
 import { union } from './union';
-import { addCode, Code, columnChainToCode } from '../code';
+import {
+  addCode,
+  Code,
+  columnChainToCode,
+  columnErrorMessagesToCode,
+} from '../code';
 import { ColumnChain, ColumnDataBase, ValidationContext } from '../columnType';
 import { toArray } from '../../utils';
 
@@ -89,6 +94,11 @@ export type JSONType<Type, DataType extends string = string> = {
   ): JSONNotNullish<T>;
 
   array<T extends JSONTypeAny>(this: T): JSONArray<T>;
+
+  errors<T extends JSONTypeAny>(
+    this: T,
+    errorMessages: { [K in 'required' | 'invalidType']?: string },
+  ): T;
 };
 
 export const toCode = (type: JSONTypeAny, t: string, code: Code) => {
@@ -108,6 +118,12 @@ export const toCode = (type: JSONTypeAny, t: string, code: Code) => {
 
   if (type.data.isNonEmpty) {
     addCode(code, '.nonEmpty()');
+  }
+
+  if (type.data.errors) {
+    for (const part of columnErrorMessagesToCode(type.data.errors)) {
+      addCode(code, part);
+    }
   }
 
   if (type.data.default) {
@@ -178,10 +194,9 @@ const baseTypeMethods: JSONTypeAny = {
   },
 
   refine(check) {
-    return {
-      ...this,
-      chain: [...this.chain, ['refine', check]],
-    };
+    const cloned = { ...this };
+    cloned.chain = [...this.chain, ['refine', check, cloned]];
+    return cloned;
   },
 
   superRefine(check) {
@@ -208,6 +223,13 @@ const baseTypeMethods: JSONTypeAny = {
 
   array() {
     return array(this);
+  },
+
+  errors(errorMessages) {
+    return {
+      ...this,
+      data: { ...this.data, errors: { ...this.data.errors, ...errorMessages } },
+    };
   },
 };
 

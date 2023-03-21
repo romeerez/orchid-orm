@@ -36,8 +36,12 @@ describe('date time columns', () => {
 
       const now = new Date();
       const s = now.toISOString();
-      expect(column.min(now).max(now).toCode('t')).toBe(
-        `t.date().min(new Date('${s}')).max(new Date('${s}'))`,
+      expect(
+        column.min(now, 'min message').max(now, 'max message').toCode('t'),
+      ).toBe(
+        `t.date()` +
+          `.min(new Date('${s}'), 'min message')` +
+          `.max(new Date('${s}'), 'max message')`,
       );
     });
   });
@@ -64,8 +68,15 @@ describe('date time columns', () => {
 
       const now = new Date();
       const s = now.toISOString();
-      expect(new TimestampColumn({}).min(now).max(now).toCode('t')).toBe(
-        `t.timestamp().min(new Date('${s}')).max(new Date('${s}'))`,
+      expect(
+        new TimestampColumn({})
+          .min(now, 'min message')
+          .max(now, 'max message')
+          .toCode('t'),
+      ).toBe(
+        `t.timestamp()` +
+          `.min(new Date('${s}'), 'min message')` +
+          `.max(new Date('${s}'), 'max message')`,
       );
     });
   });
@@ -99,9 +110,14 @@ describe('date time columns', () => {
       const now = new Date();
       const s = now.toISOString();
       expect(
-        new TimestampWithTimeZoneColumn({}).min(now).max(now).toCode('t'),
+        new TimestampWithTimeZoneColumn({})
+          .min(now, 'min message')
+          .max(now, 'max message')
+          .toCode('t'),
       ).toBe(
-        `t.timestampWithTimeZone().min(new Date('${s}')).max(new Date('${s}'))`,
+        `t.timestampWithTimeZone()` +
+          `.min(new Date('${s}'), 'min message')` +
+          `.max(new Date('${s}'), 'max message')`,
       );
     });
   });
@@ -122,8 +138,15 @@ describe('date time columns', () => {
 
       const now = new Date();
       const s = now.toISOString();
-      expect(new TimeColumn({}).min(now).max(now).toCode('t')).toBe(
-        `t.time().min(new Date('${s}')).max(new Date('${s}'))`,
+      expect(
+        new TimeColumn({})
+          .min(now, 'min message')
+          .max(now, 'max message')
+          .toCode('t'),
+      ).toBe(
+        `t.time()` +
+          `.min(new Date('${s}'), 'min message')` +
+          `.max(new Date('${s}'), 'max message')`,
       );
     });
   });
@@ -151,8 +174,15 @@ describe('date time columns', () => {
 
       const now = new Date();
       const s = now.toISOString();
-      expect(new TimeWithTimeZoneColumn({}).min(now).max(now).toCode('t')).toBe(
-        `t.timeWithTimeZone().min(new Date('${s}')).max(new Date('${s}'))`,
+      expect(
+        new TimeWithTimeZoneColumn({})
+          .min(now, 'min message')
+          .max(now, 'max message')
+          .toCode('t'),
+      ).toBe(
+        `t.timeWithTimeZone()` +
+          `.min(new Date('${s}'), 'min message')` +
+          `.max(new Date('${s}'), 'max message')`,
       );
     });
   });
