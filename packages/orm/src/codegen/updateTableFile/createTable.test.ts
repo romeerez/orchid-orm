@@ -23,7 +23,7 @@ const params = {
   logger: { ...console, log },
 };
 
-const path = tablePath('some');
+const path = tablePath('fooBar');
 const testWrittenOnly = makeTestWritten(path);
 const testWritten = (content: string) => {
   testWrittenOnly(content);
@@ -40,8 +40,8 @@ const template = ({
   noPrimaryKey?: boolean;
 }) => `import { BaseTable } from '../baseTable';
 
-export class SomeTable extends BaseTable {
-  ${schema ? `schema = '${schema}';\n  ` : ''}readonly table = 'some';${
+export class FooBarTable extends BaseTable {
+  ${schema ? `schema = '${schema}';\n  ` : ''}readonly table = 'foo_bar';${
   noPrimaryKey ? '\n  noPrimaryKey = true;' : ''
 }
   columns = this.setColumns((t) => (${columns}));
@@ -63,7 +63,7 @@ describe('createTable', () => {
       },
     });
 
-    expect(asMock(fs.mkdir)).toBeCalledWith(dirname(tablePath('some')), {
+    expect(asMock(fs.mkdir)).toBeCalledWith(dirname(tablePath('fooBar')), {
       recursive: true,
     });
 
@@ -95,7 +95,7 @@ describe('createTable', () => {
         foreignKeys: [
           {
             columns: ['one', 'two'],
-            fnOrTable: 'some',
+            fnOrTable: 'fooBar',
             foreignColumns: ['three', 'four'],
             options: { name: 'foreignKeyName' },
           },
@@ -114,7 +114,7 @@ describe('createTable', () => {
     }),
     ...t.foreignKey(
       ['one', 'two'],
-      'some',
+      'fooBar',
       ['three', 'four'],
       {
         name: 'foreignKeyName',

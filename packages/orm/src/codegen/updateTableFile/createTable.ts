@@ -1,8 +1,14 @@
 import { RakeDbAst } from 'rake-db';
 import { getImportPath } from '../utils';
 import { columnsShapeToCode } from 'pqb';
-import { Code, singleQuote, pathToLog, codeToString } from 'orchid-core';
-import { toPascalCase } from '../../utils';
+import {
+  Code,
+  singleQuote,
+  pathToLog,
+  codeToString,
+  toCamelCase,
+  toPascalCase,
+} from 'orchid-core';
 import fs from 'fs/promises';
 import { UpdateTableFileParams } from './updateTableFile';
 import path from 'path';
@@ -12,7 +18,7 @@ export const createTable = async ({
   logger,
   ...params
 }: UpdateTableFileParams & { ast: RakeDbAst.Table }) => {
-  const tablePath = params.tablePath(ast.name);
+  const tablePath = params.tablePath(toCamelCase(ast.name));
   const baseTablePath = getImportPath(tablePath, params.baseTablePath);
 
   const props: Code[] = [];

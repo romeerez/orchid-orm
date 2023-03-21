@@ -160,6 +160,11 @@ export const toCamelCase = (str: string) => {
     .replace(/_+$/g, '');
 };
 
+export const toPascalCase = (str: string) => {
+  const camel = toCamelCase(str);
+  return camel[0].toUpperCase() + camel.slice(1);
+};
+
 export const toSnakeCase = (str: string) => {
   return str.replace(/[A-Z]/g, (a) => `_${a.toLowerCase()}`);
 };

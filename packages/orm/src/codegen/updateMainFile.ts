@@ -2,13 +2,12 @@ import { RakeDbAst } from 'rake-db';
 import fs from 'fs/promises';
 import path from 'path';
 import { NodeArray, ObjectLiteralExpression, Statement } from 'typescript';
-import { toCamelCase, toPascalCase } from '../utils';
 import { AppCodeUpdaterError } from './appCodeUpdater';
 import { FileChanges } from './fileChanges';
 import { ts } from './tsUtils';
 import { getImportPath } from './utils';
 import { AdapterOptions, QueryLogOptions } from 'pqb';
-import { singleQuote, pathToLog } from 'orchid-core';
+import { singleQuote, pathToLog, toCamelCase, toPascalCase } from 'orchid-core';
 
 type Context = {
   filePath: string;
@@ -126,7 +125,7 @@ const createTable = (
 
   const changes = new FileChanges(content);
 
-  const importPath = getImportPath(filePath, tablePath(ast.name));
+  const importPath = getImportPath(filePath, tablePath(toCamelCase(ast.name)));
 
   const existing = Array.from(
     ts.import.iterateWithSource(statements, importPath),
@@ -163,7 +162,7 @@ const dropTable = (
 ) => {
   const changes = new FileChanges(content);
 
-  const importPath = getImportPath(filePath, tablePath(ast.name));
+  const importPath = getImportPath(filePath, tablePath(toCamelCase(ast.name)));
   const tableClassName = `${toPascalCase(ast.name)}Table`;
   const importNames: string[] = [];
   for (const node of ts.import.iterateWithSource(statements, importPath)) {

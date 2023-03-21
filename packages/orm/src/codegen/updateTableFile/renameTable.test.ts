@@ -20,7 +20,7 @@ const params = {
   logger: { ...console, log },
 };
 
-const path = tablePath('some');
+const path = tablePath('fooBar');
 const testWrittenOnly = makeTestWritten(path);
 const testWritten = (content: string) => {
   testWrittenOnly(content);
@@ -36,8 +36,8 @@ describe('renameTable', () => {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class SomeTable extends BaseTable {
-  readonly table = 'some';
+export class FooBarTable extends BaseTable {
+  readonly table = 'foo_bar';
   columns = this.setColumns((t) => ({}));
 }`);
 
@@ -48,8 +48,8 @@ export class SomeTable extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class SomeTable extends BaseTable {
-  readonly table = 'another';
+export class FooBarTable extends BaseTable {
+  readonly table = 'bip_bop';
   columns = this.setColumns((t) => ({}));
 }`);
   });
@@ -58,9 +58,9 @@ export class SomeTable extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class SomeTable extends BaseTable {
+export class FooBarTable extends BaseTable {
   schema = 'one';
-  readonly table = 'some';
+  readonly table = 'foo_bar';
   columns = this.setColumns((t) => ({}));
 }`);
 
@@ -75,9 +75,9 @@ export class SomeTable extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class SomeTable extends BaseTable {
+export class FooBarTable extends BaseTable {
   schema = 'two';
-  readonly table = 'another';
+  readonly table = 'bip_bop';
   columns = this.setColumns((t) => ({}));
 }`);
   });
@@ -86,9 +86,9 @@ export class SomeTable extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class SomeTable extends BaseTable {
+export class FooBarTable extends BaseTable {
   schema = 'one';
-  readonly table = 'some';
+  readonly table = 'foo_bar';
   columns = this.setColumns((t) => ({}));
 }`);
 
@@ -102,8 +102,8 @@ export class SomeTable extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class SomeTable extends BaseTable {
-  readonly table = 'another';
+export class FooBarTable extends BaseTable {
+  readonly table = 'bip_bop';
   columns = this.setColumns((t) => ({}));
 }`);
   });
@@ -112,8 +112,8 @@ export class SomeTable extends BaseTable {
     asMock(fs.readFile)
       .mockResolvedValue(`import { BaseTable } from '../baseTable';
 
-export class SomeTable extends BaseTable {
-  readonly table = 'some';
+export class FooBarTable extends BaseTable {
+  readonly table = 'foo_bar';
   columns = this.setColumns((t) => ({}));
 }`);
 
@@ -127,9 +127,9 @@ export class SomeTable extends BaseTable {
 
     testWritten(`import { BaseTable } from '../baseTable';
 
-export class SomeTable extends BaseTable {
+export class FooBarTable extends BaseTable {
   schema = 'schema';
-  readonly table = 'another';
+  readonly table = 'bip_bop';
   columns = this.setColumns((t) => ({}));
 }`);
   });

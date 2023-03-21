@@ -3,16 +3,15 @@ import { RakeDbAst } from 'rake-db';
 import fs from 'fs/promises';
 import { FileChanges } from '../fileChanges';
 import { ts } from '../tsUtils';
-import { toPascalCase } from '../../utils';
 import { Expression } from 'typescript';
-import { singleQuote, pathToLog } from 'orchid-core';
+import { singleQuote, pathToLog, toCamelCase, toPascalCase } from 'orchid-core';
 
 export const renameTable = async ({
   ast,
   logger,
   ...params
 }: UpdateTableFileParams & { ast: RakeDbAst.RenameTable }) => {
-  const tablePath = params.tablePath(ast.from);
+  const tablePath = params.tablePath(toCamelCase(ast.from));
   const content = await fs.readFile(tablePath, 'utf-8').catch(() => undefined);
   if (!content) return;
 

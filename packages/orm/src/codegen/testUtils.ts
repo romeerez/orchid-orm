@@ -11,7 +11,7 @@ const makeAst = () => {
   const addTable: RakeDbAst.Table = {
     type: 'table',
     action: 'create',
-    name: 'some',
+    name: 'foo_bar',
     shape: {
       id: columnTypes.serial().primaryKey(),
     },
@@ -27,8 +27,8 @@ const makeAst = () => {
 
   const renameTable: RakeDbAst.RenameTable = {
     type: 'renameTable',
-    from: 'some',
-    to: 'another',
+    from: 'foo_bar',
+    to: 'bip_bop',
   };
 
   const tableData = {
@@ -38,7 +38,7 @@ const makeAst = () => {
 
   const changeTable: RakeDbAst.ChangeTable = {
     type: 'changeTable',
-    name: 'some',
+    name: 'foo_bar',
     shape: {},
     add: tableData,
     drop: tableData,

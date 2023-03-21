@@ -2,7 +2,6 @@ import { RakeDbAst } from 'rake-db';
 import fs from 'fs/promises';
 import { FileChanges } from '../fileChanges';
 import { ts } from '../tsUtils';
-import { toPascalCase } from '../../utils';
 import {
   CallExpression,
   Expression,
@@ -33,6 +32,8 @@ import {
   RawExpression,
   codeToString,
   columnDefaultArgumentToCode,
+  toCamelCase,
+  toPascalCase,
 } from 'orchid-core';
 import { UpdateTableFileParams } from './updateTableFile';
 
@@ -41,7 +42,7 @@ export const changeTable = async ({
   logger,
   ...params
 }: UpdateTableFileParams & { ast: RakeDbAst.ChangeTable }) => {
-  const tablePath = params.tablePath(ast.name);
+  const tablePath = params.tablePath(toCamelCase(ast.name));
   const content = await fs.readFile(tablePath, 'utf-8').catch(() => undefined);
   if (!content) return;
 
