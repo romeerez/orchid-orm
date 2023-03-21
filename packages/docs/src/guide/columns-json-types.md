@@ -23,7 +23,7 @@ const someTable = db('someTable', (t) => ({
 }))
 ```
 
-Error messages described in [validation docs](/guide/column-validation-methods.html#errors) are working in the same way for nested JSON schemas.
+Error messages described in [validation docs](/guide/columns-validation-methods.html#errors) are working in the same way for nested JSON schemas.
 
 Text type columns support the following `where` operators:
 
