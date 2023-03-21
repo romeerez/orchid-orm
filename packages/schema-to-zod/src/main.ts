@@ -268,10 +268,9 @@ const typeHandler = <Type extends ColumnType | JSONTypeAny>(
   fn: (column: Type, errors?: Record<string, string>) => z.ZodTypeAny,
 ) => {
   return (column: ColumnType | JSONTypeAny) => {
+    let type = fn(column as Type, column.data.errors);
+
     const { errors } = column.data;
-
-    let type = fn(column as Type, errors);
-
     const { required_error, invalid_type_error } = {
       required_error: errors?.required,
       invalid_type_error: errors?.invalidType,
@@ -509,6 +508,7 @@ const handleArray = typeHandler(
 
 const handleJson = typeHandler((column: JSONColumn) => {
   const type = column.data.schema;
+  column.data.errors = column.data.schema.data.errors;
   return jsonItemToZod(type);
 });
 

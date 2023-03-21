@@ -1,5 +1,11 @@
 # orchid-orm-schema-to-zod
 
+## 0.3.16
+
+### Patch Changes
+
+- Fix setting json type validation errors
+
 ## 0.3.15
 
 ### Patch Changes
