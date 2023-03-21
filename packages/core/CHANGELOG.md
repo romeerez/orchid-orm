@@ -1,5 +1,12 @@
 # orchid-core
 
+## 0.1.9
+
+### Patch Changes
+
+- Fix generating enum column from db pull to ORM
+- c8df1f9: Fix camelCase and PascalCase table names in codegen
+
 ## 0.1.8
 
 ### Patch Changes

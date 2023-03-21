@@ -159,7 +159,7 @@ const createTable = (config: RakeDbConfig, ast: RakeDbAst.Table) => {
     if (hasTimestamps && (key === 'createdAt' || key === 'updatedAt')) continue;
 
     const line: Code[] = [`${quoteObjectKey(key)}: `];
-    for (const part of ast.shape[key].toCode('t')) {
+    for (const part of ast.shape[key].toCode('t', true)) {
       addCode(line, part);
     }
     addCode(line, ',');

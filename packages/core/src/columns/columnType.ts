@@ -213,7 +213,7 @@ export abstract class ColumnTypeBase<
   abstract operators: Ops;
 
   // turn the column into TS code, used for code generation
-  abstract toCode(t: string): Code;
+  abstract toCode(t: string, migration?: boolean): Code;
 
   // output type
   type!: Type;

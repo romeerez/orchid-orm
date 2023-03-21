@@ -1,6 +1,6 @@
 import { DbStructure } from './dbStructure';
 import { pullDbStructure } from './pull';
-import { processRakeDbConfig } from '../common';
+import { processRakeDbConfig, RakeDbConfig } from '../common';
 import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
 import { asMock } from '../test-utils';
 import {
@@ -8,6 +8,7 @@ import {
   column,
   createdAtColumn,
   domain,
+  enumType,
   idColumn,
   intColumn,
   table,
@@ -46,6 +47,9 @@ db.getDomains = async () => domains;
 let tables: DbStructure.Table[] = [];
 db.getTables = async () => tables;
 
+let enums: DbStructure.Enum[] = [];
+db.getEnums = async () => enums;
+
 let primaryKeys: DbStructure.PrimaryKey[] = [];
 db.getPrimaryKeys = async () => primaryKeys;
 
@@ -55,16 +59,67 @@ db.getColumns = async () => columns;
 let checks: DbStructure.Check[] = [];
 db.getChecks = async () => checks;
 
+asMock(makeFileTimeStamp).mockReturnValue('timestamp');
+
+const appCodeUpdater = jest.fn();
+const warn = jest.fn();
+const log = jest.fn();
+
+const options = { databaseURL: 'file:path' };
+
+const makeConfig = (config: Partial<RakeDbConfig> = {}) =>
+  processRakeDbConfig({
+    appCodeUpdater,
+    logger: {
+      ...console,
+      warn,
+      log,
+    },
+    ...config,
+  });
+
+const config = makeConfig();
+
+const expectWritten = (expected: string) => {
+  const call = asMock(writeMigrationFile).mock.calls[0];
+  expect(call[3]).toBe(expected);
+};
+
 describe('pull', () => {
   beforeEach(() => {
     schemas = [];
     domains = [];
     tables = [];
+    enums = [];
     primaryKeys = [];
     columns = [];
     checks = [];
 
     jest.clearAllMocks();
+  });
+
+  it('should log success message', async () => {
+    tables = [
+      {
+        schemaName: 'schema',
+        name: 'table',
+      },
+    ];
+
+    await pullDbStructure(options, makeConfig());
+
+    expect(log).toBeCalledWith('Database pulled successfully');
+  });
+
+  it('should write migration file with correct arguments', async () => {
+    tables = [table];
+
+    await pullDbStructure(options, config);
+
+    const call = asMock(writeMigrationFile).mock.calls[0];
+    expect(call[0]).toBe(config);
+    expect(call[1]).toBe('timestamp');
+    expect(call[2]).toBe('pull');
   });
 
   it('should get db structure, convert it to ast, generate migrations', async () => {
@@ -162,34 +217,9 @@ describe('pull', () => {
       },
     ];
 
-    asMock(makeFileTimeStamp).mockReturnValue('timestamp');
+    await pullDbStructure(options, config);
 
-    const appCodeUpdater = jest.fn();
-    const warn = jest.fn();
-    const log = jest.fn();
-
-    const config = processRakeDbConfig({
-      migrationsPath: 'migrations',
-      appCodeUpdater,
-      logger: {
-        ...console,
-        warn,
-        log,
-      },
-    });
-
-    await pullDbStructure(
-      {
-        databaseURL: 'file:path',
-      },
-      config,
-    );
-
-    const call = asMock(writeMigrationFile).mock.calls[0];
-    expect(call[0]).toBe(config);
-    expect(call[1]).toBe('timestamp');
-    expect(call[2]).toBe('pull');
-    expect(call[3]).toBe(
+    expectWritten(
       `import { change } from 'rake-db';
 
 change(async (db) => {
@@ -230,8 +260,6 @@ change(async (db) => {
     expect(warn).toBeCalledWith(`Found unsupported types:
 - customType is used for column schema.table1.customTypeColumn
 Append \`as\` method manually to this column to treat it as other column type`);
-
-    expect(log).toBeCalledWith('Database pulled successfully');
   });
 
   it('should pluralize warning when many columns have unknown types', async () => {
@@ -250,26 +278,7 @@ Append \`as\` method manually to this column to treat it as other column type`);
       },
     ];
 
-    asMock(makeFileTimeStamp).mockReturnValue('timestamp');
-
-    const warn = jest.fn();
-    const log = jest.fn();
-
-    const config = processRakeDbConfig({
-      migrationsPath: 'migrations',
-      logger: {
-        ...console,
-        warn,
-        log,
-      },
-    });
-
-    await pullDbStructure(
-      {
-        databaseURL: 'file:path',
-      },
-      config,
-    );
+    await pullDbStructure(options, config);
 
     expect(warn).toBeCalledWith(`Found unsupported types:
 - unknown1 is used for column public.table.column1
@@ -303,34 +312,11 @@ Append \`as\` method manually to these columns to treat them as other column typ
       },
     ];
 
-    asMock(makeFileTimeStamp).mockReturnValue('timestamp');
+    const config = makeConfig({ snakeCase: true });
 
-    const appCodeUpdater = jest.fn();
+    await pullDbStructure(options, config);
 
-    const log = jest.fn();
-
-    const config = processRakeDbConfig({
-      migrationsPath: 'migrations',
-      snakeCase: true,
-      appCodeUpdater,
-      logger: {
-        ...console,
-        log,
-      },
-    });
-
-    await pullDbStructure(
-      {
-        databaseURL: 'file:path',
-      },
-      config,
-    );
-
-    const call = asMock(writeMigrationFile).mock.calls[0];
-    expect(call[0]).toBe(config);
-    expect(call[1]).toBe('timestamp');
-    expect(call[2]).toBe('pull');
-    expect(call[3]).toBe(
+    expectWritten(
       `import { change } from 'rake-db';
 
 change(async (db) => {
@@ -350,7 +336,37 @@ change(async (db) => {
     );
 
     expect(appCodeUpdater).toBeCalledTimes(1);
+  });
 
-    expect(log).toBeCalledWith('Database pulled successfully');
+  it('should handle enum', async () => {
+    tables = [table];
+    enums = [enumType];
+    columns = [
+      {
+        ...textColumn,
+        type: enumType.name,
+        typeSchema: enumType.schemaName,
+      },
+    ];
+
+    await pullDbStructure(
+      {
+        databaseURL: 'file:path',
+      },
+      makeConfig(),
+    );
+
+    expectWritten(`import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createEnum('mood', ['sad', 'ok', 'happy']);
+});
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    text: t.enum('mood'),
+  }));
+});
+`);
   });
 });

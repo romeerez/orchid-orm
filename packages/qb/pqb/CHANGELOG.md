@@ -1,5 +1,14 @@
 # pqb
 
+## 0.10.16
+
+### Patch Changes
+
+- Fix generating enum column from db pull to ORM
+- Updated dependencies
+- Updated dependencies [c8df1f9]
+  - orchid-core@0.1.9
+
 ## 0.10.15
 
 ### Patch Changes

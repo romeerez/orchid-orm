@@ -18,14 +18,11 @@ export class EnumColumn<
     super(types);
   }
 
-  toCode(t: string): Code {
-    return columnCode(
-      this,
-      t,
-      `enum('${this.enumName}', [${this.options
-        .map((option) => `'${option}'`)
-        .join(', ')}])`,
-    );
+  toCode(t: string, migration?: boolean): Code {
+    const options = migration
+      ? ''
+      : `, [${this.options.map((option) => `'${option}'`).join(', ')}]`;
+    return columnCode(this, t, `enum('${this.enumName}'${options})`);
   }
 
   toSQL() {

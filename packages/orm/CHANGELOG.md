@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.6.20
+
+### Patch Changes
+
+- c8df1f9: Fix camelCase and PascalCase table names in codegen
+- Updated dependencies
+- Updated dependencies [c8df1f9]
+  - orchid-core@0.1.9
+  - pqb@0.10.16
+
 ## 1.6.19
 
 ### Patch Changes

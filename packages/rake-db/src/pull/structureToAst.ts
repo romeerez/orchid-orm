@@ -2,7 +2,6 @@ import { DbStructure } from './dbStructure';
 import { RakeDbAst } from '../ast';
 import {
   ArrayColumn,
-  columnCode,
   ColumnFromDbParams,
   columnsByType,
   ColumnsShape,
@@ -16,17 +15,8 @@ import {
   instantiateColumn,
   TableData,
 } from 'pqb';
-import { Code, raw, singleQuote, toCamelCase, toSnakeCase } from 'orchid-core';
+import { raw, singleQuote, toCamelCase, toSnakeCase } from 'orchid-core';
 import { getForeignKeyName, getIndexName } from '../migration/migrationUtils';
-
-export class RakeDbEnumColumn extends EnumColumn<
-  string,
-  [string, ...string[]]
-> {
-  toCode(t: string): Code {
-    return columnCode(this, t, `enum('${this.enumName}')`);
-  }
-}
 
 const matchMap: Record<string, undefined | ForeignKeyMatch> = {
   s: undefined,
@@ -291,7 +281,7 @@ const getColumn = (
         (item) => item.name === type && item.schemaName === typeSchema,
       );
       if (enumType) {
-        column = new RakeDbEnumColumn({}, type, enumType.values);
+        column = new EnumColumn({}, type, enumType.values);
       } else {
         column = new CustomTypeColumn({}, type);
 

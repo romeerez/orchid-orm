@@ -1,8 +1,7 @@
 import { astToMigration } from './astToMigration';
-import { columnTypes } from 'pqb';
+import { columnTypes, EnumColumn } from 'pqb';
 import { RakeDbAst } from '../ast';
 import { processRakeDbConfig } from '../common';
-import { RakeDbEnumColumn } from './structureToAst';
 import { raw } from 'orchid-core';
 
 const template = (content: string) => `import { change } from 'rake-db';
@@ -88,7 +87,7 @@ describe('astToMigration', () => {
         ...table,
         shape: {
           ...table.shape,
-          enum: new RakeDbEnumColumn({}, enumType.name, enumType.values),
+          enum: new EnumColumn({}, enumType.name, enumType.values),
         },
       },
       { ...table, name: 'other' },

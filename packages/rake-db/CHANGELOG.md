@@ -1,5 +1,15 @@
 # rake-db
 
+## 2.4.20
+
+### Patch Changes
+
+- Fix generating enum column from db pull to ORM
+- Updated dependencies
+- Updated dependencies [c8df1f9]
+  - orchid-core@0.1.9
+  - pqb@0.10.16
+
 ## 2.4.19
 
 ### Patch Changes
