@@ -7,6 +7,7 @@ import { pushQueryValue } from '../queryDataUtils';
 import { getRaw } from '../raw';
 import { InsertQueryData, QueryData } from './data';
 import { isRaw, raw, RawExpression } from 'orchid-core';
+import { ColumnData } from '../columns';
 
 export const pushInsertSql = (
   ctx: ToSqlCtx,
@@ -103,8 +104,30 @@ export const pushInsertSql = (
       } else {
         ctx.sql.push(getRaw(expr, ctx.values));
       }
-    } else {
-      ctx.sql.push(`(${quotedColumns.join(', ')})`);
+    } else if (type === 'merge') {
+      // TODO: optimize, unique columns could be stored in Query.internal
+      // consider saving a cache of columns for this case into Query.internal
+
+      const { indexes } = table.internal;
+
+      const quotedUniques = query.columns.reduce((arr: string[], key, i) => {
+        const unique =
+          // check column index
+          (shape[key]?.data as ColumnData).indexes?.some(
+            (index) => index.unique,
+          ) ||
+          // check table composite indexes
+          indexes.some((index) =>
+            index.columns.some(
+              (item) => 'column' in item && item.column === key,
+            ),
+          );
+
+        if (unique) arr.push(quotedColumns[i]);
+        return arr;
+      }, []);
+
+      ctx.sql.push(`(${quotedUniques.join(', ')})`);
     }
 
     if (type === 'ignore') {

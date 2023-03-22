@@ -1,5 +1,13 @@
 # pqb
 
+## 0.10.17
+
+### Patch Changes
+
+- Improve onConflict without argument behavior
+- Updated dependencies
+  - orchid-core@0.1.10
+
 ## 0.10.16
 
 ### Patch Changes

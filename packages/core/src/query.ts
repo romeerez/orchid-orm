@@ -8,6 +8,10 @@ export type QueryMetaBase = {
 export type QueryInternal = {
   columnsForSelectAll?: string[];
   runtimeDefaultColumns?: string[];
+  indexes: {
+    columns: ({ column: string } | { expression: string })[];
+    options: { unique?: boolean };
+  }[];
 };
 
 export type QueryBaseCommon = {

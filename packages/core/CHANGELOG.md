@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.1.10
+
+### Patch Changes
+
+- Improve onConflict without argument behavior
+
 ## 0.1.9
 
 ### Patch Changes

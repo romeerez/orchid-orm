@@ -38,7 +38,7 @@ export class Table extends BaseTable {
     timestamp: t.timestamp().default(t.raw('now()')),
     
     // runtime default, each new records gets a new random value:
-    random: t.float().default(() => Math.random()),
+    random: t.numeric().default(() => Math.random()),
   }));
 }
 ```
@@ -158,12 +158,14 @@ export class SomeTable extends BaseTable {
 }
 ```
 
-## hidden
-
-Remove the column from the default selection. For example, the password of the user may be marked as hidden, and then this column won't load by default, only when specifically listed in `.select`.
-
-Caution: `.hidden` functionality is not tested yet very well, to be done.
-
 ## methods for migration
 
 Column methods such as `foreignKey`, `index`, `unique`, `comment` and others have effects only when used in migrations, read more about it in [migration column methods](/guide/migration-column-methods) document.
+
+## hidden
+
+::: danger
+This feature is in a draft state
+:::
+
+Remove the column from the default selection. For example, the password of the user may be marked as hidden, and then this column won't load by default, only when specifically listed in `.select`.

@@ -686,8 +686,7 @@ describe('create functions', () => {
         `
             INSERT INTO "user"("name", "password")
             VALUES ($1, $2)
-            ON CONFLICT ("name")
-            DO NOTHING
+            ON CONFLICT ("name") DO NOTHING
             WHERE "user"."name" = $3
             RETURNING "user"."id"
           `,
@@ -698,7 +697,7 @@ describe('create functions', () => {
     });
 
     describe('ignore', () => {
-      it('should set `ON CONFLICT` to all columns if no arguments provided', () => {
+      it('should perform `ON CONFLICT` without a target', () => {
         const q = User.all();
 
         const query = q.count().create(userData).onConflict().ignore();
@@ -707,8 +706,7 @@ describe('create functions', () => {
           `
             INSERT INTO "user"("name", "password")
             VALUES ($1, $2)
-            ON CONFLICT ("name", "password")
-            DO NOTHING
+            ON CONFLICT DO NOTHING
           `,
           ['name', 'password'],
         );
@@ -812,21 +810,34 @@ describe('create functions', () => {
     });
 
     describe('merge', () => {
-      it('should update all columns when calling without arguments', () => {
+      it('should automatically list all unique columns when calling without arguments', () => {
+        const User = db('user', (t) => ({
+          id: t.serial().primaryKey(),
+          name: t.text().unique(),
+          password: t.text(),
+          age: t.integer().nullable(),
+          ...t.unique(['password']),
+        }));
+
         const q = User.all();
 
-        const query = q.count().create(userData).onConflict().merge();
+        const query = q
+          .count()
+          .create({ ...userData, age: 20 })
+          .onConflict()
+          .merge();
         expectSql(
           query.toSql(),
           `
-            INSERT INTO "user"("name", "password")
-            VALUES ($1, $2)
+            INSERT INTO "user"("name", "password", "age")
+            VALUES ($1, $2, $3)
             ON CONFLICT ("name", "password")
             DO UPDATE SET
               "name" = excluded."name",
-              "password" = excluded."password"
+              "password" = excluded."password",
+              "age" = excluded."age"
           `,
-          ['name', 'password'],
+          ['name', 'password', 20],
         );
 
         expectQueryNotMutated(q);

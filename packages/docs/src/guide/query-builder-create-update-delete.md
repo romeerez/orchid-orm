@@ -162,6 +162,9 @@ Using this method you can change this behavior to either silently ignore the err
 or to update the existing row with new data (perform an "UPSERT") by using .onConflict().merge().
 
 ```ts
+// leave without argument to ignore or merge on any conflict
+Target.create(data).onConflict().ignore()
+
 // single column:
 Table.create(data).onConfict('email')
 
@@ -202,6 +205,8 @@ Modifies a create query, and causes it to be silently dropped without an error i
 
 Adds the `ON CONFLICT (columns) DO NOTHING` clause to the insert statement.
 
+It produces `ON CONFLICT DO NOTHING` when no `onConflict` argument provided.
+
 ```ts
 Table
   .create({
@@ -220,7 +225,8 @@ Modifies a create query, to turn it into an 'upsert' operation.
 
 Adds an `ON CONFLICT (columns) DO UPDATE` clause to the insert statement.
 
-By default, it merges all columns.
+When no `onConflict` argument provided,
+it will automatically collect all table columns that have unique index and use them as a conflict target.
 
 ```ts
 Table

@@ -125,7 +125,10 @@ export class Db<
     public columnTypes: CT,
     options: DbTableOptions,
   ) {
-    this.internal = {};
+    const tableData = getTableData();
+    this.internal = {
+      indexes: tableData.indexes,
+    };
     this.baseQuery = this as Query;
 
     const logger = options.logger || console;
