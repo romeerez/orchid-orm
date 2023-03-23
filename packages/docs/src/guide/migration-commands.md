@@ -125,12 +125,12 @@ export class Table extends BaseTable {
 
 ## generate migration
 
-Generate a new migration file by using `g` command (`g` is an alias for `generate`):
+Generate a new migration file by using `new` command:
 
 ```sh
-npm run db g migrationName
+npm run db new migrationName
 # or
-pnpm db g migrationName
+pnpm db new migrationName
 ```
 
 If the migration name matches one of the known patterns, it will generate a template:
@@ -150,7 +150,7 @@ When passing an argument, put a column definition into quotes.
 Example:
 
 ```sh
-npm run db g createTodo id:serial.primaryKey 'name:varchar(50)' description:text.nullable
+npm run db new createTodo id:serial.primaryKey 'name:varchar(50)' description:text.nullable
 ```
 
 Will generate such a migration:
@@ -167,7 +167,7 @@ change(async (db) => {
 });
 ```
 
-## migrate and rollback
+## migrate
 
 Migrate command will run all not applied yet migrations, sequentially in order:
 
@@ -181,6 +181,8 @@ Pass a number to migrate only this specific number of migrations:
 npm run db migrate 3
 ```
 
+## rollback
+
 The rollback command will revert one last applied migration:
 
 ```sh
@@ -192,6 +194,20 @@ Pass a number to revert multiple last applied migrations, or pass `all` to rever
 ```sh
 npm run db rollback 3
 npm run db rollback all
+```
+
+## redo
+
+Shortcut for `rollback` + `migrate`. It is useful when you edit a migration and want to reapply it.
+
+By default, rolls back and migrate one migration. Pass a number to re-run multiple file.
+
+```sh
+# redo one last migration:
+npm run db redo
+
+# redo 3 last migrations:
+npm run db redo 3
 ```
 
 ## custom commands

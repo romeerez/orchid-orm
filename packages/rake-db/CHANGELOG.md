@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.4.22
+
+### Patch Changes
+
+- Add `db redo` command, rename `db g` to `db new`
+
 ## 2.4.21
 
 ### Patch Changes

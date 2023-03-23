@@ -1,7 +1,7 @@
 import { AdapterOptions } from 'pqb';
 import { MaybeArray, toArray } from 'orchid-core';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
-import { migrate, rollback } from './commands/migrateOrRollback';
+import { migrate, redo, rollback } from './commands/migrateOrRollback';
 import { processRakeDbConfig, RakeDbConfig } from './common';
 import { generate } from './commands/generate';
 import { pullDbStructure } from './pull/pull';
@@ -27,7 +27,9 @@ export const rakeDb = async (
       await migrate(options, config, args.slice(1));
     } else if (command === 'rollback') {
       await rollback(options, config, args.slice(1));
-    } else if (command === 'g' || command === 'generate') {
+    } else if (command === 'redo') {
+      await redo(options, config, args.slice(1));
+    } else if (command === 'new') {
       await generate(config, args.slice(1));
     } else if (command === 'pull') {
       await pullDbStructure(toArray(options)[0], config);
@@ -51,9 +53,10 @@ Commands:
   create                  create databases
   drop                    drop databases
   reset                   drop, create and migrate databases
-  g, generate             generate migration file, see below
+  new                     create new migration file, see below
   migrate                 migrate pending migrations
   rollback                rollback the last migrated
+  redo                    rollback and migrate
   no or unknown command   prints this message
   
 Migrate arguments:
@@ -69,7 +72,7 @@ Migrate and rollback common arguments:
   --code                  run code updater, overrides \`useCodeUpdater\` option
   --code false            do not run code updater
   
-Generate arguments:
+New migration file arguments:
 - (required) first argument is migration name
   * create*               template for create table
   * change*               template for change table
@@ -78,5 +81,5 @@ Generate arguments:
   * drop*                 template for drop table
 
 - other arguments considered as columns with types and optional methods:
-  rake-db g createTable id:serial.primaryKey name:text.nullable
+  rake-db new createTable id:serial.primaryKey name:text.nullable
 `;

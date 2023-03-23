@@ -368,7 +368,7 @@ Some column methods have an effect only in migration, some methods are for valid
 Generate a new migration file by running:
 
 ```sh
-npm run db g createUser
+npm run db new createUser
 ```
 
 In the newly added file such content appears:
@@ -875,7 +875,7 @@ export const routes = async (app: FastifyInstance) => {
 Add a migration:
 
 ```sh
-npm run db g createUserFollow
+npm run db new createUserFollow
 ```
 
 ```ts
@@ -1114,10 +1114,10 @@ export const routes = async (app: FastifyInstance) => {
 Create migration files:
 
 ```sh
-npm run db g createArticle
-npm run db g createTag
-npm run db g createArticleTag
-npm run db g createArticleFavorite
+npm run db new createArticle
+npm run db new createTag
+npm run db new createArticleTag
+npm run db new createArticleFavorite
 ```
 
 Article table migration:

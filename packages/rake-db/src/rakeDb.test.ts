@@ -73,14 +73,8 @@ describe('rakeDb', () => {
     expect(rollback).toBeCalledWith(options, config, ['arg']);
   });
 
-  it('should support generate command', async () => {
-    await rakeDb(options, config, ['g', 'arg']);
-
-    expect(generate).toBeCalledWith(config, ['arg']);
-
-    jest.clearAllMocks();
-
-    await rakeDb(options, config, ['generate', 'arg']);
+  it('should support new command', async () => {
+    await rakeDb(options, config, ['new', 'arg']);
 
     expect(generate).toBeCalledWith(config, ['arg']);
   });

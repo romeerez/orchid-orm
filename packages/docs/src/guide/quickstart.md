@@ -175,7 +175,7 @@ The setup is completely ready at this point. For the next steps, create your tab
 Generate a new migration by running a command:
 
 ```sh
-npm run db g createSample
+npm run db new createSample
 ```
 
 The file with such content will appear in the `src/db/migrations` directory:

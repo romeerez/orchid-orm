@@ -162,3 +162,12 @@ export const rollback = (
   config: RakeDbConfig,
   args: string[] = [],
 ) => migrateOrRollback(options, config, args, false);
+
+export const redo = async (
+  options: MaybeArray<AdapterOptions>,
+  config: RakeDbConfig,
+  args: string[] = [],
+) => {
+  await migrateOrRollback(options, config, args, false);
+  await migrateOrRollback(options, config, args, true);
+};

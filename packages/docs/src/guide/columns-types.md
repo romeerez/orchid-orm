@@ -122,7 +122,7 @@ but is case-insensitive in all operations.
 To use it, first enable `citext` extension, create migration:
 
 ```sh
-npm run db g enableCitext
+npm run db new enableCitext
 ```
 
 ```ts

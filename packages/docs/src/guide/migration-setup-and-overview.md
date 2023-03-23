@@ -125,9 +125,9 @@ Add the `db` script to your `package.json`:
 And now it's possible to use it from a command line:
 
 ```sh
-npm run db g createSomeTable
-pnpm db g createSomeTable
-yarn db g createSomeTable
+npm run db new createSomeTable
+pnpm db new createSomeTable
+yarn db new createSomeTable
 ```
 
 ## rakeDb
