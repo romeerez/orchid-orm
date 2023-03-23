@@ -440,6 +440,10 @@ export abstract class Where implements QueryBase {
   }
 }
 
+const emptyInternal: QueryInternal = {
+  indexes: [],
+};
+
 export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
   extends Where
   implements QueryBase
@@ -449,7 +453,7 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
   relations!: Q['relations'];
   baseQuery: Query;
   withData = emptyObject;
-  internal = emptyObject;
+  internal = emptyInternal;
 
   constructor(
     q: QueryBase | string,

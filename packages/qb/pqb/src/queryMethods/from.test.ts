@@ -48,16 +48,14 @@ describe('from', () => {
     beforeEach(() => User.count().create(userData));
 
     it('should apply column types from inner query', async () => {
-      const q = db
-        .from(
-          User.select('createdAt', {
-            alias: 'name',
-            count: () => User.count(),
-          }),
-        )
-        .where({
-          alias: { contains: 'name' },
-        });
+      const inner = User.select('createdAt', {
+        alias: 'name',
+        count: () => User.count(),
+      });
+
+      const q = db.from(inner).where({
+        alias: { contains: 'name' },
+      });
 
       assertType<
         Awaited<typeof q>,

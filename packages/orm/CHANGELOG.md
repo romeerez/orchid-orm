@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.6.22
+
+### Patch Changes
+
+- Improve select and from types
+- Updated dependencies
+  - pqb@0.10.18
+
 ## 1.6.21
 
 ### Patch Changes

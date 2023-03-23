@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.18
+
+### Patch Changes
+
+- Improve select and from types
+
 ## 0.10.17
 
 ### Patch Changes

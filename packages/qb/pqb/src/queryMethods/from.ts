@@ -1,6 +1,7 @@
 import {
-  AddQuerySelect,
   Query,
+  QueryThen,
+  SelectableBase,
   SelectableFromShape,
   SetQueryTableAlias,
   WithDataItem,
@@ -14,27 +15,6 @@ export type FromArgs<T extends Query> = [
   first: Query | RawExpression | Exclude<keyof T['withData'], symbol | number>,
   second?: { only?: boolean },
 ];
-
-type SetFromSelectable<T extends Query, Arg extends Query> = Omit<
-  T,
-  'selectable'
-> & {
-  selectable: {
-    [K in keyof Arg['result']]: K extends string
-      ? {
-          as: K;
-          column: Arg['result'][K];
-        }
-      : never;
-  };
-};
-
-type MergeFromResult<T extends Query, Arg extends Query> = AddQuerySelect<
-  Omit<T, 'result'> & {
-    result: Pick<T['result'], keyof Arg['result']>;
-  },
-  Arg['result']
->;
 
 export type FromResult<
   T extends Query,
@@ -52,11 +32,31 @@ export type FromResult<
       : SetQueryTableAlias<T, Arg>
     : SetQueryTableAlias<T, Arg>
   : Arg extends Query
-  ? SetQueryTableAlias<
-      MergeFromResult<SetFromSelectable<T, Arg>, Arg>,
-      AliasOrTable<Arg>
-    >
+  ? FromQueryResult<T, Arg>
   : T;
+
+type FromQueryResult<
+  T extends Query,
+  Q extends Query,
+  Selectable extends SelectableBase = {
+    [K in keyof Q['result']]: K extends string
+      ? {
+          as: K;
+          column: Q['result'][K];
+        }
+      : never;
+  },
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? Omit<T['meta'], 'hasSelect' | 'as'> & { as: AliasOrTable<Q> }
+    : K extends 'selectable'
+    ? Selectable
+    : K extends 'result' | 'shape'
+    ? Q['result']
+    : K extends 'then'
+    ? QueryThen<T['returnType'], Q['result']>
+    : T[K];
+};
 
 export class From {
   from<T extends Query, Args extends FromArgs<T>>(

@@ -159,17 +159,30 @@ export type AddQuerySelect<
   T extends Pick<Query, 'result' | 'then' | 'returnType' | 'meta'>,
   Result extends ColumnsShapeBase,
 > = T['meta']['hasSelect'] extends true
-  ? Omit<T, 'result' | 'then'> & {
-      result: Spread<[T['result'], Result]>;
-      then: QueryThen<T['returnType'], Spread<[T['result'], Result]>>;
-    }
-  : Omit<T, 'result' | 'then'> & {
-      meta: {
-        hasSelect: true;
-      };
-      result: Result;
-      then: QueryThen<T['returnType'], Result>;
+  ? MergeSelect<T, Result>
+  : {
+      [K in keyof T]: K extends 'meta'
+        ? T['meta'] & { hasSelect: true }
+        : K extends 'result'
+        ? Result
+        : K extends 'then'
+        ? QueryThen<T['returnType'], Result>
+        : T[K];
     };
+
+type MergeSelect<
+  T extends Pick<Query, 'result' | 'then' | 'returnType' | 'meta'>,
+  Result extends ColumnsShapeBase,
+  Merged extends ColumnsShapeBase = {
+    [K in keyof T['result']]: K extends keyof Result ? unknown : T['result'][K];
+  } & Result,
+> = {
+  [K in keyof T]: K extends 'result'
+    ? Merged
+    : K extends 'then'
+    ? QueryThen<T['returnType'], Merged>
+    : T[K];
+};
 
 export type SetQueryReturns<T extends Query, R extends QueryReturnType> = Omit<
   T,

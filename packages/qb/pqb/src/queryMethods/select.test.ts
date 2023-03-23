@@ -26,6 +26,16 @@ const insertUserAndProfile = async () => {
 describe('select', () => {
   useTestDatabase();
 
+  it('should combine multiple selects and give proper types', () => {
+    const query = User.select('id').select({
+      count: () => User.count(),
+    });
+
+    const q = User.from(query).selectAll();
+
+    assertType<Awaited<typeof q>, { id: number; count: number }[]>();
+  });
+
   it('table should have all columns selected if select was not applied', () => {
     assertType<Awaited<typeof User>, UserRecord[]>();
   });

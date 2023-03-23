@@ -16,16 +16,14 @@ describe('orm', () => {
     const AuthorId = await db.user.get('Id').create(userData);
     await db.message.count().create({ ...messageData, ChatId, AuthorId });
 
-    const q = db
-      .$from(
-        db.user.select('createdAt', {
-          alias: 'Name',
-          messagesCount: (q) => q.messages.count(),
-        }),
-      )
-      .where({
-        messagesCount: { gte: 1 },
-      });
+    const inner = db.user.select('createdAt', {
+      alias: 'Name',
+      messagesCount: (q) => q.messages.count(),
+    });
+
+    const q = db.$from(inner).where({
+      messagesCount: { gte: 1 },
+    });
 
     assertType<
       Awaited<typeof q>,

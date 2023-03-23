@@ -20,8 +20,6 @@ import { QueryResult } from '../adapter';
 import { UnknownColumn } from '../columns/unknown';
 import {
   emptyObject,
-  FilterTuple,
-  SimpleSpread,
   StringKey,
   isRaw,
   RawExpression,
@@ -40,55 +38,80 @@ export type SelectArg<T extends QueryBase> =
       : never)
   | SelectAsArg<T>;
 
-type SelectAsArg<T extends QueryBase> = Record<
-  string,
+type SelectAsArg<T extends QueryBase> = Record<string, SelectAsValue<T>>;
+
+type SelectAsValue<T extends QueryBase> =
   | StringKey<keyof T['selectable']>
   | RawExpression
-  | ((q: T) => Query | RawExpression)
->;
+  | ((q: T) => Query)
+  | ((q: T) => RawExpression);
 
 type SelectResult<
   T extends Query,
   Args extends SelectArg<T>[],
-  SelectAsArgs = SimpleSpread<FilterTuple<Args, SelectAsArg<T>>>,
+  SelectAllResult extends ColumnsShapeBase = '*' extends Args[number]
+    ? T['shape']
+    : EmptyObject,
+  SelectStringsResult extends ColumnsShapeBase = SelectStringArgsResult<
+    T,
+    Args
+  >,
+  SelectAsResult extends ColumnsShapeBase = SpreadSelectArgs<T, Args>,
 > = AddQuerySelect<
   T,
-  ('*' extends Args[number] ? T['shape'] : EmptyObject) & {
-    [Arg in Args[number] as Arg extends keyof T['selectable']
-      ? T['selectable'][Arg]['as']
-      : Arg extends keyof T['relations']
-      ? Arg
-      : never]: Arg extends keyof T['selectable']
-      ? T['selectable'][Arg]['column']
-      : T['relations'] extends Record<string, Relation>
-      ? Arg extends keyof T['relations']
-        ? T['relations'][Arg]['returns'] extends 'many'
-          ? ArrayOfColumnsObjects<T['relations'][Arg]['table']['result']>
-          : T['relations'][Arg]['options']['required'] extends true
-          ? ColumnsObject<T['relations'][Arg]['table']['result']>
-          : NullableColumn<
-              ColumnsObject<T['relations'][Arg]['table']['result']>
-            >
-        : never
-      : never;
-  } & {
-    [K in keyof SelectAsArgs]: SelectAsArgs[K] extends keyof T['selectable']
-      ? T['selectable'][SelectAsArgs[K]]['column']
-      : SelectAsArgs[K] extends RawExpression
-      ? SelectAsArgs[K]['__column']
-      : SelectAsArgs[K] extends (q: T) => RawExpression
-      ? ReturnType<SelectAsArgs[K]>['__column']
-      : SelectAsArgs[K] extends (q: T) => Query
-      ? SelectSubQueryResult<ReturnType<SelectAsArgs[K]>>
-      : SelectAsArgs[K] extends ((q: T) => Query) | RawExpression
-      ?
-          | SelectSubQueryResult<
-              ReturnType<Exclude<SelectAsArgs[K], RawExpression>>
-            >
-          | Exclude<SelectAsArgs[K], (q: T) => Query>['__column']
-      : never;
-  }
+  SelectAllResult & {
+    [K in keyof SelectStringsResult]: K extends keyof SelectAsResult
+      ? unknown
+      : SelectStringsResult[K];
+  } & SelectAsResult
 >;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SpreadSelectArgs<T extends Query, Args extends [...any]> = Args extends [
+  infer L,
+  ...infer R,
+]
+  ? L extends SelectAsArg<T>
+    ? SelectAsResult<T, L> & SpreadSelectArgs<T, R>
+    : SpreadSelectArgs<T, R>
+  : EmptyObject;
+
+type SelectStringArgsResult<T extends Query, Args extends SelectArg<T>[]> = {
+  [Arg in Args[number] as Arg extends keyof T['selectable']
+    ? T['selectable'][Arg]['as']
+    : Arg extends keyof T['relations']
+    ? Arg
+    : never]: Arg extends keyof T['selectable']
+    ? T['selectable'][Arg]['column']
+    : T['relations'] extends Record<string, Relation>
+    ? Arg extends keyof T['relations']
+      ? T['relations'][Arg]['returns'] extends 'many'
+        ? ArrayOfColumnsObjects<T['relations'][Arg]['table']['result']>
+        : T['relations'][Arg]['options']['required'] extends true
+        ? ColumnsObject<T['relations'][Arg]['table']['result']>
+        : NullableColumn<ColumnsObject<T['relations'][Arg]['table']['result']>>
+      : never
+    : never;
+};
+
+type SelectAsResult<T extends Query, Arg extends SelectAsArg<T>> = {
+  [K in keyof Arg]: SelectAsValueResult<T, Arg[K]>;
+};
+
+type SelectAsValueResult<
+  T extends Query,
+  Arg extends SelectAsValue<T>,
+> = Arg extends keyof T['selectable']
+  ? T['selectable'][Arg]['column']
+  : Arg extends RawExpression
+  ? Arg['__column']
+  : Arg extends (q: T) => infer R
+  ? R extends Query
+    ? SelectSubQueryResult<R>
+    : R extends RawExpression
+    ? R['__column']
+    : never
+  : never;
 
 type SelectSubQueryResult<
   Arg extends Query & { [isRequiredRelationKey]?: boolean },
