@@ -1,5 +1,13 @@
 # pqb
 
+## 0.10.19
+
+### Patch Changes
+
+- Improve join arg types
+- Updated dependencies
+  - orchid-core@0.1.11
+
 ## 0.10.18
 
 ### Patch Changes

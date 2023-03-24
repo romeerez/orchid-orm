@@ -527,7 +527,9 @@ describe('create functions', () => {
     });
 
     it('should create record from select', () => {
-      const query = Message.createFrom(Chat.find(1).select({ chatId: 'id' }), {
+      const chat = Chat.find(1).select({ chatId: 'id' });
+
+      const query = Message.createFrom(chat, {
         authorId: 1,
         text: 'text',
       });
@@ -549,12 +551,11 @@ describe('create functions', () => {
     });
 
     it('should create record from select with named columns', () => {
-      const query = Snake.createFrom(
-        User.find(1).select({ snakeName: 'name' }),
-        {
-          tailLength: 5,
-        },
-      );
+      const user = User.find(1).select({ snakeName: 'name' });
+
+      const query = Snake.createFrom(user, {
+        tailLength: 5,
+      });
 
       assertType<Awaited<typeof query>, SnakeRecord>();
 

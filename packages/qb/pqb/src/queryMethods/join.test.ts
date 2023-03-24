@@ -21,6 +21,10 @@ jest.mock('./_join', () => {
   };
 });
 
+it('should not accept wrong column as join arg', () => {
+  User.join(Message, 'message.id', 'user.id');
+});
+
 describe('join', () => {
   testJoin({
     method: 'join',

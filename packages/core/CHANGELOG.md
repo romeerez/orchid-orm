@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.1.11
+
+### Patch Changes
+
+- Improve join arg types
+
 ## 0.1.10
 
 ### Patch Changes

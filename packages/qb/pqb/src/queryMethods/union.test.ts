@@ -12,10 +12,8 @@ import {
     it(`should add ${what}`, () => {
       const q = User.all();
       let query = q.select('id');
-      query = query[what as 'union']([
-        Snake.select({ id: 'tailLength' }),
-        db.raw('SELECT 1'),
-      ]);
+      const snake = Snake.select({ id: 'tailLength' });
+      query = query[what as 'union']([snake, db.raw('SELECT 1')]);
       query = query[
         (what + 'All') as 'unionAll' | 'intersectAll' | 'exceptAll'
       ]([db.raw('SELECT 2')], true);

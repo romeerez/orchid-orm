@@ -2,7 +2,7 @@ import { Query, QueryBase, SelectableBase, WithDataBase } from '../query';
 import { ColumnOperators, QueryData } from '../sql';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { getClonedQueryData } from '../utils';
-import { JoinArgs, JoinCallback, JoinCallbackArg } from './join';
+import { JoinArgs, JoinCallback, JoinFirstArg } from './join';
 import { RelationsBase } from '../relations';
 import {
   RawExpression,
@@ -31,7 +31,8 @@ export type WhereArg<T extends QueryBase> =
         values: unknown[][] | Query | RawExpression;
       }>;
       EXISTS?: MaybeArray<
-        JoinArgs<T> | [JoinCallbackArg<T>, JoinCallback<T, JoinCallbackArg<T>>]
+        | [JoinFirstArg<T>, ...JoinArgs<T, Query>]
+        | [JoinFirstArg<T>, JoinCallback<T, JoinFirstArg<T>>]
       >;
     })
   | QueryBase
@@ -331,24 +332,26 @@ export abstract class Where implements QueryBase {
     return addWhereIn(this, false, arg, values, true);
   }
 
-  whereExists<T extends Where, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): WhereResult<T>;
-  whereExists<T extends Where, Arg extends JoinCallbackArg<T>>(
+  whereExists<
+    T extends Where,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
+  whereExists<T extends Where, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  whereExists(...args: any) {
-    return this.clone()._whereExists(...args);
+  whereExists(arg: any, ...args: any) {
+    return this.clone()._whereExists(arg, ...args);
   }
-  _whereExists<T extends Where, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): WhereResult<T>;
-  _whereExists<T extends Where, Arg extends JoinCallbackArg<T>>(
+  _whereExists<
+    T extends Where,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
+  _whereExists<T extends Where, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -358,24 +361,26 @@ export abstract class Where implements QueryBase {
     return this._where({ EXISTS: args });
   }
 
-  orWhereExists<T extends Where, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): WhereResult<T>;
-  orWhereExists<T extends Where, Arg extends JoinCallbackArg<T>>(
+  orWhereExists<
+    T extends Where,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
+  orWhereExists<T extends Where, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  orWhereExists(...args: any) {
-    return this.clone()._orWhereExists(...args);
+  orWhereExists(arg: any, ...args: any) {
+    return this.clone()._orWhereExists(arg, ...args);
   }
-  _orWhereExists<T extends Where, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): WhereResult<T>;
-  _orWhereExists<T extends Where, Arg extends JoinCallbackArg<T>>(
+  _orWhereExists<
+    T extends Where,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
+  _orWhereExists<T extends Where, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -385,24 +390,26 @@ export abstract class Where implements QueryBase {
     return this._or({ EXISTS: args });
   }
 
-  whereNotExists<T extends Where, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): WhereResult<T>;
-  whereNotExists<T extends Where, Arg extends JoinCallbackArg<T>>(
+  whereNotExists<
+    T extends Where,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
+  whereNotExists<T extends Where, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  whereNotExists(...args: any) {
-    return this.clone()._whereNotExists(...args);
+  whereNotExists(arg: any, ...args: any) {
+    return this.clone()._whereNotExists(arg, ...args);
   }
-  _whereNotExists<T extends Where, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): WhereResult<T>;
-  _whereNotExists<T extends Where, Arg extends JoinCallbackArg<T>>(
+  _whereNotExists<
+    T extends Where,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
+  _whereNotExists<T extends Where, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -412,24 +419,26 @@ export abstract class Where implements QueryBase {
     return this._whereNot({ EXISTS: args });
   }
 
-  orWhereNotExists<T extends Where, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): WhereResult<T>;
-  orWhereNotExists<T extends Where, Arg extends JoinCallbackArg<T>>(
+  orWhereNotExists<
+    T extends Where,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
+  orWhereNotExists<T extends Where, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  orWhereNotExists(...args: any) {
-    return this.clone()._orWhereNotExists(...args);
+  orWhereNotExists(arg: any, ...args: any) {
+    return this.clone()._orWhereNotExists(arg, ...args);
   }
-  _orWhereNotExists<T extends Where, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): WhereResult<T>;
-  _orWhereNotExists<T extends Where, Arg extends JoinCallbackArg<T>>(
+  _orWhereNotExists<
+    T extends Where,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
+  _orWhereNotExists<T extends Where, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,

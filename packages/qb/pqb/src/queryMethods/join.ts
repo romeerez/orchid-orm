@@ -16,8 +16,10 @@ import {
   EmptyObject,
   StringKey,
   QueryInternal,
+  EmptyTuple,
 } from 'orchid-core';
 import { _join } from './_join';
+import { AliasOrTable } from '../utils';
 
 type WithSelectable<
   T extends QueryBase,
@@ -30,65 +32,76 @@ type WithSelectable<
         >}`
   : never;
 
+export type JoinFirstArg<T extends QueryBase> =
+  | Query
+  | keyof T['relations']
+  | keyof T['withData'];
+
 export type JoinArgs<
   T extends QueryBase,
-  Q extends Query = Query,
-  R extends keyof T['relations'] = keyof T['relations'],
-  W extends keyof T['withData'] = keyof T['withData'],
+  Arg extends JoinFirstArg<T>,
+> = Arg extends Query
+  ? JoinQueryArgs<T, Arg>
+  : Arg extends keyof T['relations']
+  ? EmptyTuple
+  : Arg extends keyof T['withData']
+  ? JoinWithArgs<T, Arg>
+  : never;
+
+type JoinQueryArgs<
+  T extends QueryBase,
+  Q extends Query,
+  JoinSelectable extends PropertyKey =
+    | keyof Q['result']
+    | `${AliasOrTable<Q>}.${StringKey<keyof Q['result']>}`,
 > =
-  | [relation: R]
   | [
-      query: Q,
       conditions:
-        | Record<Selectable<Q>, Selectable<T> | RawExpression>
+        | Record<JoinSelectable, Selectable<T> | RawExpression>
         | RawExpression,
     ]
   | [
-      withAlias: W,
+      leftColumn: JoinSelectable | RawExpression,
+      rightColumn: Selectable<T> | RawExpression,
+    ]
+  | [
+      leftColumn: JoinSelectable | RawExpression,
+      op: string,
+      rightColumn: Selectable<T> | RawExpression,
+    ]
+  | [conditions: true];
+
+type JoinWithArgs<T extends QueryBase, W extends keyof T['withData']> =
+  | [
       conditions:
         | Record<WithSelectable<T, W>, Selectable<T> | RawExpression>
         | RawExpression,
     ]
   | [
-      query: Q,
-      leftColumn: Selectable<Q> | RawExpression,
-      rightColumn: Selectable<T> | RawExpression,
-    ]
-  | [
-      withAlias: W,
       leftColumn: WithSelectable<T, W> | RawExpression,
       rightColumn: Selectable<T> | RawExpression,
     ]
   | [
-      query: Q,
-      leftColumn: Selectable<Q> | RawExpression,
-      op: string,
-      rightColumn: Selectable<T> | RawExpression,
-    ]
-  | [
-      withAlias: W,
       leftColumn: WithSelectable<T, W> | RawExpression,
       op: string,
       rightColumn: Selectable<T> | RawExpression,
-    ]
-  | [query: Q, conditions: true];
+    ];
 
 export type JoinResult<
   T extends Query,
-  Args extends JoinArgs<T>,
-  A extends Query | keyof T['relations'] = Args[0],
+  Arg extends JoinFirstArg<T>,
 > = AddQueryJoinedTable<
   T,
-  A extends Query
-    ? A
+  Arg extends Query
+    ? Arg
     : T['relations'] extends Record<string, Relation>
-    ? A extends keyof T['relations']
-      ? T['relations'][A]['table']
-      : A extends keyof T['withData']
-      ? T['withData'][A] extends WithDataItem
+    ? Arg extends keyof T['relations']
+      ? T['relations'][Arg]['table']
+      : Arg extends keyof T['withData']
+      ? T['withData'][Arg] extends WithDataItem
         ? {
-            table: T['withData'][A]['table'];
-            result: T['withData'][A]['shape'];
+            table: T['withData'][Arg]['table'];
+            result: T['withData'][Arg]['shape'];
             meta: EmptyObject;
           }
         : never
@@ -96,15 +109,7 @@ export type JoinResult<
     : never
 >;
 
-export type JoinCallbackArg<T extends QueryBase> =
-  | Query
-  | keyof T['withData']
-  | keyof T['relations'];
-
-export type JoinCallback<
-  T extends QueryBase,
-  Arg extends JoinCallbackArg<T>,
-> = (
+export type JoinCallback<T extends QueryBase, Arg extends JoinFirstArg<T>> = (
   q: OnQueryBuilder<
     T,
     Arg extends keyof T['withData']
@@ -139,7 +144,7 @@ export type JoinCallback<
 
 type JoinCallbackResult<
   T extends Query,
-  Arg extends JoinCallbackArg<T>,
+  Arg extends JoinFirstArg<T>,
 > = AddQueryJoinedTable<
   T,
   Arg extends Query
@@ -159,20 +164,25 @@ type JoinCallbackResult<
     : never
 >;
 
-const join = <T extends Query, Args extends JoinArgs<T>>(
+const join = <
+  T extends Query,
+  Arg extends JoinFirstArg<T>,
+  Args extends JoinArgs<T, Arg>,
+>(
   q: T,
   type: string,
-  args: Args,
-): JoinResult<T, Args> => {
-  return _join(q.clone() as T, type, args) as unknown as JoinResult<T, Args>;
+  args: [arg: Arg, ...args: Args] | [arg: Arg, cb: JoinCallback<T, Arg>],
+): JoinResult<T, Arg> => {
+  return _join(q.clone() as T, type, args) as unknown as JoinResult<T, Arg>;
 };
 
 export class Join {
-  join<T extends Query, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): JoinResult<T, Args>;
-  join<T extends Query, Arg extends JoinCallbackArg<T>>(
+  join<
+    T extends Query,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg>;
+  join<T extends Query, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -181,11 +191,12 @@ export class Join {
   join(this: Query, ...args: any) {
     return join(this, 'JOIN', args);
   }
-  _join<T extends Query, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): JoinResult<T, Args>;
-  _join<T extends Query, Arg extends JoinCallbackArg<T>>(
+  _join<
+    T extends Query,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg>;
+  _join<T extends Query, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -195,11 +206,12 @@ export class Join {
     return _join(this, 'JOIN', args);
   }
 
-  innerJoin<T extends Query, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): JoinResult<T, Args>;
-  innerJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+  innerJoin<
+    T extends Query,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg>;
+  innerJoin<T extends Query, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -208,11 +220,12 @@ export class Join {
   innerJoin(this: Query, ...args: any) {
     return join(this, 'INNER JOIN', args);
   }
-  _innerJoin<T extends Query, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): JoinResult<T, Args>;
-  _innerJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+  _innerJoin<
+    T extends Query,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg>;
+  _innerJoin<T extends Query, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -222,11 +235,12 @@ export class Join {
     return _join(this, 'INNER JOIN', args);
   }
 
-  leftJoin<T extends Query, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): JoinResult<T, Args>;
-  leftJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+  leftJoin<
+    T extends Query,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg>;
+  leftJoin<T extends Query, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -235,11 +249,12 @@ export class Join {
   leftJoin(this: Query, ...args: any) {
     return join(this, 'LEFT JOIN', args);
   }
-  _leftJoin<T extends Query, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): JoinResult<T, Args>;
-  _leftJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+  _leftJoin<
+    T extends Query,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg>;
+  _leftJoin<T extends Query, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -249,11 +264,12 @@ export class Join {
     return _join(this, 'LEFT JOIN', args);
   }
 
-  leftOuterJoin<T extends Query, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): JoinResult<T, Args>;
-  leftOuterJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+  leftOuterJoin<
+    T extends Query,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg>;
+  leftOuterJoin<T extends Query, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -262,11 +278,12 @@ export class Join {
   leftOuterJoin(this: Query, ...args: any) {
     return join(this, 'LEFT OUTER JOIN', args);
   }
-  _leftOuterJoin<T extends Query, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): JoinResult<T, Args>;
-  _leftOuterJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+  _leftOuterJoin<
+    T extends Query,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg>;
+  _leftOuterJoin<T extends Query, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -276,11 +293,12 @@ export class Join {
     return _join(this, 'LEFT OUTER JOIN', args);
   }
 
-  rightJoin<T extends Query, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): JoinResult<T, Args>;
-  rightJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+  rightJoin<
+    T extends Query,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg>;
+  rightJoin<T extends Query, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -289,11 +307,12 @@ export class Join {
   rightJoin(this: Query, ...args: any) {
     return join(this, 'RIGHT JOIN', args);
   }
-  _rightJoin<T extends Query, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): JoinResult<T, Args>;
-  _rightJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+  _rightJoin<
+    T extends Query,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg>;
+  _rightJoin<T extends Query, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -303,11 +322,12 @@ export class Join {
     return _join(this, 'RIGHT JOIN', args);
   }
 
-  rightOuterJoin<T extends Query, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): JoinResult<T, Args>;
-  rightOuterJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+  rightOuterJoin<
+    T extends Query,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg>;
+  rightOuterJoin<T extends Query, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -316,11 +336,12 @@ export class Join {
   rightOuterJoin(this: Query, ...args: any) {
     return join(this, 'RIGHT OUTER JOIN', args);
   }
-  _rightOuterJoin<T extends Query, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): JoinResult<T, Args>;
-  _rightOuterJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+  _rightOuterJoin<
+    T extends Query,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg>;
+  _rightOuterJoin<T extends Query, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -330,11 +351,12 @@ export class Join {
     return _join(this, 'RIGHT OUTER JOIN', args);
   }
 
-  fullOuterJoin<T extends Query, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): JoinResult<T, Args>;
-  fullOuterJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+  fullOuterJoin<
+    T extends Query,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg>;
+  fullOuterJoin<T extends Query, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
@@ -343,11 +365,12 @@ export class Join {
   fullOuterJoin(this: Query, ...args: any) {
     return join(this, 'FULL OUTER JOIN', args);
   }
-  _fullOuterJoin<T extends Query, Args extends JoinArgs<T>>(
-    this: T,
-    ...args: Args
-  ): JoinResult<T, Args>;
-  _fullOuterJoin<T extends Query, Arg extends JoinCallbackArg<T>>(
+  _fullOuterJoin<
+    T extends Query,
+    Arg extends JoinFirstArg<T>,
+    Args extends JoinArgs<T, Arg>,
+  >(this: T, arg: Arg, ...args: Args): JoinResult<T, Arg>;
+  _fullOuterJoin<T extends Query, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,

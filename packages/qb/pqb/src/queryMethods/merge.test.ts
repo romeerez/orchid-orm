@@ -91,7 +91,7 @@ describe('merge queries', () => {
 
   describe('join', () => {
     it('should keep join from left and have joined table in selectable if right query does not have it', () => {
-      const joined = User.join(Message, 'userId', 'id');
+      const joined = User.join(Message, 'authorId', 'id');
 
       const q = joined.merge(User);
 
@@ -102,13 +102,13 @@ describe('merge queries', () => {
         q.toSql(),
         `
           SELECT "user".* FROM "user"
-          JOIN "message" ON "message"."userId" = "user"."id"
+          JOIN "message" ON "message"."authorId" = "user"."id"
         `,
       );
     });
 
     it('should use join from right and have joined table in selectable when left query does not have it', () => {
-      const joined = User.join(Message, 'userId', 'id');
+      const joined = User.join(Message, 'authorId', 'id');
 
       const q = User.merge(joined);
 
@@ -119,13 +119,13 @@ describe('merge queries', () => {
         q.toSql(),
         `
           SELECT "user".* FROM "user"
-          JOIN "message" ON "message"."userId" = "user"."id"
+          JOIN "message" ON "message"."authorId" = "user"."id"
         `,
       );
     });
 
     it('should merge joins when both have it', () => {
-      const left = User.join(Message, 'userId', 'id');
+      const left = User.join(Message, 'authorId', 'id');
       const right = User.join(Profile, 'userId', 'id');
 
       const q = left.merge(right);
@@ -143,7 +143,7 @@ describe('merge queries', () => {
         q.toSql(),
         `
           SELECT "user".* FROM "user"
-          JOIN "message" ON "message"."userId" = "user"."id"
+          JOIN "message" ON "message"."authorId" = "user"."id"
           JOIN "profile" ON "profile"."userId" = "user"."id"
         `,
       );

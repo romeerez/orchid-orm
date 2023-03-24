@@ -4,17 +4,17 @@ import { getIsJoinSubQuery } from '../sql/join';
 import { getShapeFromSelect } from './select';
 import { Relation } from '../relations';
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
-import { JoinArgs, JoinCallback, JoinCallbackArg, JoinResult } from './join';
+import { JoinArgs, JoinCallback, JoinFirstArg, JoinResult } from './join';
 
 export const _join = <
   T extends Query,
-  Arg extends JoinCallbackArg<T>,
-  Args extends JoinArgs<T>,
+  Arg extends JoinFirstArg<T>,
+  Args extends JoinArgs<T, Arg>,
 >(
   q: T,
   type: string,
-  args: Args | [arg: Arg, cb: JoinCallback<T, Arg>],
-): JoinResult<T, Args> => {
+  args: [arg: Arg, ...args: Args] | [arg: Arg, cb: JoinCallback<T, Arg>],
+): JoinResult<T, Arg> => {
   const first = args[0];
   let joinKey: string | undefined;
   let shape: ColumnsShapeBase | undefined;
@@ -59,5 +59,5 @@ export const _join = <
     type,
     args,
     isSubQuery,
-  }) as unknown as JoinResult<T, Args>;
+  }) as unknown as JoinResult<T, Arg>;
 };

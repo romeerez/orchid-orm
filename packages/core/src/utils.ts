@@ -95,6 +95,8 @@ export const noop = () => {};
 export type EmptyObject = typeof emptyObject;
 export const emptyObject = {};
 
+export type EmptyTuple = [];
+
 export const pushOrNewArrayToObject = <
   Obj extends EmptyObject,
   Key extends keyof Obj,

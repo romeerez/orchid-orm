@@ -60,21 +60,20 @@ Table.where({ id: 1 }, Table.where({ name: 'John' }), Table.raw('a = b'))
 
 The object passed to `.where` can contain special keys, each of the keys corresponds to its own method and takes the same value as the type of argument of the method.
 
-For example, the key `EXISTS` is for the `WHERE EXISTS` SQL statement, code below will find posts where at least one comment exists:
+For example:
 
 ```ts
-Post.where({
-  EXISTS: [Comment, 'postId', 'id']
+Table.where({
+  NOT: { key: 'value' },
+  OR: [{ name: 'a' }, { name: 'b' }],
+  IN: { columns: ['id', 'name'], values: [[1, 'a'], [2, 'b']] },
 })
 ```
 
-The same query may be achieved with the method `whereExists`:
+Using methods instead of this is a shorter and cleaner way, but in some cases, such object keys way may be more convenient.
 
-```ts
-Post.whereExists(Comment, 'postId', 'id')
-```
-
-Using methods is a shorter and cleaner way, but in some cases, such object keys way may be more convenient.
+Currently `EXISTS` key is not type safe, so it cannot check if specified columns really belongs to a target table,
+better to use `whereExists` method instead that does the checks.
 
 ```ts
 Table.where({
