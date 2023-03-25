@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.22
+
+### Patch Changes
+
+- Support schema connection option
+
 ## 0.10.21
 
 ### Patch Changes

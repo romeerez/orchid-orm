@@ -813,7 +813,7 @@ rakeDb(config.allDatabases, {
     it('should create migrations directory', async () => {
       await initOrchidORM(config);
 
-      expect(fs.mkdir).toBeCalledWith(migrationsPath);
+      expect(fs.mkdir).toBeCalledWith(migrationsPath, { recursive: true });
     });
 
     it('should create migrations if demoTables specified', async () => {

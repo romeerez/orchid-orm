@@ -22,18 +22,15 @@ For all connection options see: [client options](https://node-postgres.com/api/c
 import { createDb } from 'pqb'
 
 const db = createDb({
-  // databaseURL has the following format:
-  // postgres://user:password@localhost:5432/dbname
-  // 
-  // ssl option can be specified as a parameter:
-  // postgres://user:password@localhost:5432/dbname?ssl=true
+  // details for databaseURL are below
   databaseURL: process.env.DATABASE_URL,
   
-  // ssl can also be specified as an option:
+  // ssl and schema can be set here or as a databaseURL parameters:
   ssl: true,
+  schema: 'my_schema',
   
   // set `snakeCase` to true and all columns will be translated to snake_case
-  // snakeCase: true,
+  snakeCase: true,
   
   // option for logging, false by default
   log: true,
@@ -68,6 +65,23 @@ const db = createDb(
   }
 )
 ```
+
+## databaseURL
+
+`databaseURL` has the following format:
+
+```
+postgres://user:password@localhost:5432/dbname
+```
+
+`schema` and `ssl` option can be specified as a parameter:
+
+```
+postgres://user:password@localhost:5432/dbname?schema=my_schema&ssl=true
+```
+
+If `schema` is set and is different from `public`,
+the `SET search_path = schema` query will be performed before the first query run per each database connection.
 
 ## snakeCase
 

@@ -21,6 +21,29 @@ describe('db connection', () => {
 
     await db.close();
   });
+
+  it('should support setting a default schema via url parameters', async () => {
+    const db = createDb({
+      ...dbOptions,
+      databaseURL: dbOptions.databaseURL + '?schema=geo',
+    });
+
+    await db('city');
+
+    await db.close();
+  });
+
+  it('should support setting a default schema via config', async () => {
+    const db = createDb({
+      ...dbOptions,
+      databaseURL: dbOptions.databaseURL,
+      schema: 'geo',
+    });
+
+    await db('city');
+
+    await db.close();
+  });
 });
 
 describe('db', () => {

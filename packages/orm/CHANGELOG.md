@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.6.26
+
+### Patch Changes
+
+- Support schema connection option
+- Updated dependencies
+  - pqb@0.10.22
+
 ## 1.6.25
 
 ### Patch Changes

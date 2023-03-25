@@ -20,7 +20,7 @@ npm i orchid-orm
 
 The first argument is a connection options object, for all connection options see: [client options](https://node-postgres.com/api/client) + [pool options](https://node-postgres.com/api/pool).
 
-Connection options may include `log` and `logger`, see [createDb](/guide/query-builder.html#createDb) for details.
+Connection options are the same as for the query builder, see [createDb](/guide/query-builder.html#createDb) for details.
 
 The second argument is an object where keys are names and values are table classes (see next section for defining a table class).
 
@@ -34,19 +34,13 @@ import { UserTable } from './tables/user'
 import { MessageTable } from './tables/message'
 
 export const db = orchidORM({
-  // databaseURL has the following format:
-  // postgres://user:password@localhost:5432/dbname
-  // 
-  // ssl option can be specified as a parameter:
-  // postgres://user:password@localhost:5432/dbname?ssl=true
+  // the same options as in a query builder setup
   databaseURL: process.env.DATABASE_URL,
-
-  // ssl can also be specified as an option:
   ssl: true,
-  
-  log: true, // option for logging, false by default
-  autoPreparedStatements: true, // see in query builder setup docs, false by default
-  noPrimaryKey: 'ignore', // see in query builder setup docs, 'error' by default
+  schema: 'my_schema',
+  log: true,
+  autoPreparedStatements: true,
+  noPrimaryKey: 'ignore',
 }, {
   user: UserTable,
   message: MessageTable,

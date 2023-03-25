@@ -36,45 +36,66 @@ for (const key in types.builtins) {
 
 const returnArg = (arg: unknown) => arg;
 
-export type AdapterOptions = Omit<PoolConfig, 'types' | 'connectionString'> & {
-  types?: TypeParsers;
+export type AdapterConfig = Omit<PoolConfig, 'types' | 'connectionString'> & {
+  schema?: string;
   databaseURL?: string;
+};
+
+export type AdapterOptions = AdapterConfig & {
+  types?: TypeParsers;
 };
 
 export class Adapter implements AdapterBase {
   types: TypeParsers;
   pool: Pool;
   config: PoolConfig;
+  schema?: string;
 
   constructor({ types = defaultTypeParsers, ...config }: AdapterOptions) {
     this.types = types;
+
+    let schema = config.schema;
     if (config.databaseURL) {
-      (config as PoolConfig).connectionString = config.databaseURL;
       const url = new URL(config.databaseURL);
-      if (url.searchParams.get('ssl') === 'true') {
+
+      const ssl = url.searchParams.get('ssl');
+
+      if (ssl === 'false') {
+        url.searchParams.delete('ssl');
+      } else if (!config.ssl && ssl === 'true') {
         config.ssl = true;
       }
-      url.searchParams.delete('ssl');
+
+      if (!schema) {
+        schema = url.searchParams.get('schema') || undefined;
+      }
+
       config.databaseURL = url.toString();
+      (config as PoolConfig).connectionString = config.databaseURL;
     }
+
+    if (schema) this.schema = schema === 'public' ? undefined : schema;
+
     this.config = config;
     this.pool = new pg.Pool(config);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async query<T extends QueryResultRow = any>(
+  query<T extends QueryResultRow = any>(
     query: QueryInput,
     types?: TypeParsers,
   ): Promise<QueryResult<T>> {
-    return performQuery<T>(this.pool, query, types);
+    return performQuery(this.pool, query, types, this.schema) as Promise<
+      QueryResult<T>
+    >;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async arrays<R extends any[] = any[]>(
+  arrays<R extends any[] = any[]>(
     query: QueryInput,
     types?: TypeParsers,
   ): Promise<QueryArraysResult<R>> {
-    return performQueryArrays<R>(this.pool, query, types);
+    return performQuery(this.pool, query, types, this.schema, 'array');
   }
 
   async transaction<Result>(
@@ -82,15 +103,16 @@ export class Adapter implements AdapterBase {
   ): Promise<Result> {
     const client = await this.pool.connect();
     try {
-      await performQuery(client, { text: 'BEGIN' }, this.types);
+      await setSearchPath(client, this.schema);
+      await performQueryOnClient(client, { text: 'BEGIN' }, this.types);
       let result;
       try {
         result = await cb(new TransactionAdapter(this, client, this.types));
       } catch (err) {
-        await performQuery(client, { text: 'ROLLBACK' }, this.types);
+        await performQueryOnClient(client, { text: 'ROLLBACK' }, this.types);
         throw err;
       }
-      await performQuery(client, { text: 'COMMIT' }, this.types);
+      await performQueryOnClient(client, { text: 'COMMIT' }, this.types);
       return result;
     } finally {
       client.release();
@@ -110,34 +132,42 @@ const defaultTypesConfig = {
   },
 };
 
-const performQuery = <T extends QueryResultRow>(
-  pool: Pool | PoolClient,
-  query: QueryInput,
-  types?: TypeParsers,
-) => {
-  return pool.query<T>({
-    text: typeof query === 'string' ? query : query.text,
-    values: typeof query === 'string' ? undefined : query.values,
-    types: types
-      ? {
-          getTypeParser(id: number) {
-            return types[id] || returnArg;
-          },
-        }
-      : defaultTypesConfig,
-  });
+type ConnectionSchema = { connection: { schema?: string } };
+
+const setSearchPath = (client: PoolClient, schema?: string) => {
+  if ((client as unknown as ConnectionSchema).connection.schema !== schema) {
+    (client as unknown as ConnectionSchema).connection.schema = schema;
+    return client.query(`SET search_path = ${schema || 'public'}`);
+  }
+  return;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const performQueryArrays = <T extends any[] = any[]>(
-  pool: Pool | PoolClient,
+const performQuery = async (
+  pool: Pool,
   query: QueryInput,
   types?: TypeParsers,
+  schema?: string,
+  rowMode?: 'array',
 ) => {
-  return pool.query<T>({
+  const client = await pool.connect();
+  try {
+    await setSearchPath(client, schema);
+    return await performQueryOnClient(client, query, types, rowMode);
+  } finally {
+    client.release();
+  }
+};
+
+const performQueryOnClient = (
+  client: PoolClient,
+  query: QueryInput,
+  types?: TypeParsers,
+  rowMode?: 'array',
+) => {
+  const params = {
     text: typeof query === 'string' ? query : query.text,
     values: typeof query === 'string' ? undefined : query.values,
-    rowMode: 'array',
+    rowMode,
     types: types
       ? {
           getTypeParser(id: number) {
@@ -145,7 +175,9 @@ const performQueryArrays = <T extends any[] = any[]>(
           },
         }
       : defaultTypesConfig,
-  });
+  };
+
+  return client.query(params);
 };
 
 export class TransactionAdapter implements Adapter {
@@ -166,7 +198,7 @@ export class TransactionAdapter implements Adapter {
     query: QueryInput,
     types?: TypeParsers,
   ): Promise<QueryResult<T>> {
-    return await performQuery<T>(this.client, query, types);
+    return await performQueryOnClient(this.client, query, types);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -174,7 +206,7 @@ export class TransactionAdapter implements Adapter {
     query: QueryInput,
     types?: TypeParsers,
   ): Promise<QueryArraysResult<R>> {
-    return await performQueryArrays<R>(this.client, query, types);
+    return await performQueryOnClient(this.client, query, types, 'array');
   }
 
   async transaction<Result>(

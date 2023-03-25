@@ -243,7 +243,9 @@ export class Db<
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     this.error = class extends QueryError {
-      query = self;
+      constructor(message?: string) {
+        super(self, message);
+      }
     };
   }
 

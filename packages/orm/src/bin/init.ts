@@ -465,7 +465,7 @@ rakeDb(${config.testDatabase ? 'config.allDatabases' : 'config.database'}, {
 
 const createMigrations = async (config: InitConfig, dirPath: string) => {
   const migrationsPath = join(dirPath, 'migrations');
-  await fs.mkdir(migrationsPath);
+  await fs.mkdir(migrationsPath, { recursive: true });
 
   if (!config.demoTables) return;
 
