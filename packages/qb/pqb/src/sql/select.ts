@@ -8,7 +8,7 @@ import {
   revealColumnToSqlWithAs,
 } from './common';
 import { aggregateToSql } from './aggregate';
-import { OrchidInternalError, UnhandledTypeError } from '../errors';
+import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
 import { makeSql, ToSqlCtx } from './toSql';
 import { relationQueryKey } from '../relations';
 import { SelectQueryData } from './data';
@@ -184,7 +184,10 @@ const pushSubQuerySql = (
       const { select } = query.query;
       const first = select?.[0];
       if (!select || !first) {
-        throw new OrchidInternalError(`Nothing was selected for pluck`);
+        throw new OrchidOrmInternalError(
+          query,
+          `Nothing was selected for pluck`,
+        );
       }
 
       const cloned = query.clone();
@@ -200,7 +203,7 @@ const pushSubQuerySql = (
     case 'void':
       break;
     default:
-      throw new UnhandledTypeError(returnType);
+      throw new UnhandledTypeError(query, returnType);
   }
 
   let subQuerySql = `(${makeSql(query, { values }).text})`;

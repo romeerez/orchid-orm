@@ -49,6 +49,7 @@ export class QueryUpsertOrCreate {
         return (q as Query).create(data as CreateData<Query>);
       } else if (queryResult.rowCount > 1) {
         throw new MoreThanOneRowError(
+          q,
           `Only one row was expected to find, found ${queryResult.rowCount} rows.`,
         );
       }

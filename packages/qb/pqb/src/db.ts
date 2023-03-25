@@ -37,6 +37,7 @@ import {
   toSnakeCase,
 } from 'orchid-core';
 import { q } from './sql/common';
+import { inspect } from 'util';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
@@ -239,7 +240,15 @@ export class Db<
 
     modifyQuery?.forEach((cb) => cb(this));
 
-    this.error = class extends QueryError {};
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this;
+    this.error = class extends QueryError {
+      query = self;
+    };
+  }
+
+  [inspect.custom]() {
+    return `QueryObject<${this.table}>`;
   }
 }
 

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.21
+
+### Patch Changes
+
+- Improve error classes
+
 ## 0.10.20
 
 ### Patch Changes

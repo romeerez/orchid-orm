@@ -313,7 +313,7 @@ const insert = (
     const { handleResult } = q.query;
     q.query.handleResult = async (q, r, i) => {
       if (r.rowCount === 0) {
-        throw new NotFoundError();
+        throw new NotFoundError(q);
       }
       return await handleResult(q, r, i);
     };

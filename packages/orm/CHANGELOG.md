@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.6.25
+
+### Patch Changes
+
+- Improve error classes
+- Updated dependencies
+  - pqb@0.10.21
+
 ## 1.6.24
 
 ### Patch Changes

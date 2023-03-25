@@ -204,7 +204,7 @@ export const makeHasAndBelongsToManyMethod = (
             );
 
           if (createdCount === 0) {
-            throw new NotFoundError();
+            throw new NotFoundError(fromQuery);
           }
         },
       );

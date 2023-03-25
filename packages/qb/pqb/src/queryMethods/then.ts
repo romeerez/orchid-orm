@@ -184,7 +184,7 @@ export const parseResult = (
   switch (returnType) {
     case 'all': {
       if (q.query.throwOnNotFound && result.rows.length === 0)
-        throw new NotFoundError();
+        throw new NotFoundError(q);
 
       const { parsers } = q.query;
       return parsers
@@ -200,7 +200,7 @@ export const parseResult = (
     }
     case 'oneOrThrow': {
       const row = result.rows[0];
-      if (!row) throw new NotFoundError();
+      if (!row) throw new NotFoundError(q);
 
       const { parsers } = q.query;
       return parsers ? parseRecord(parsers, row) : row;
@@ -235,12 +235,12 @@ export const parseResult = (
     }
     case 'valueOrThrow': {
       const value = result.rows[0]?.[0];
-      if (value === undefined) throw new NotFoundError();
+      if (value === undefined) throw new NotFoundError(q);
       return parseValue(value, q);
     }
     case 'rowCount': {
       if (q.query.throwOnNotFound && result.rowCount === 0) {
-        throw new NotFoundError();
+        throw new NotFoundError(q);
       }
       return result.rowCount;
     }

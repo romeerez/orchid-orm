@@ -1,6 +1,21 @@
 import { ColumnsShape } from './columns';
+import { Query } from './query';
 
-export class PormError extends Error {}
+export abstract class OrchidOrmError extends Error {
+  abstract query: Query;
+}
+
+export class NotFoundError extends OrchidOrmError {
+  constructor(public query: Query, message = 'Record is not found') {
+    super(message);
+  }
+}
+
+export class OrchidOrmInternalError extends Error {
+  constructor(public query: Query, message?: string) {
+    super(message);
+  }
+}
 
 export type QueryErrorName =
   | 'parseComplete'
@@ -31,9 +46,9 @@ export type QueryErrorName =
   | 'error'
   | 'notice';
 
-export class QueryError<
+export abstract class QueryError<
   T extends { shape: ColumnsShape } = { shape: ColumnsShape },
-> extends Error {
+> extends OrchidOrmInternalError {
   message!: string;
   name!: QueryErrorName;
   stack: string | undefined;
@@ -81,18 +96,14 @@ export class QueryError<
   }
 }
 
-export class NotFoundError extends PormError {
-  constructor(message = 'Record is not found') {
-    super(message);
+export class MoreThanOneRowError extends OrchidOrmInternalError {
+  constructor(query: Query, message?: string) {
+    super(query, message);
   }
 }
 
-export class MoreThanOneRowError extends PormError {}
-
-export class OrchidInternalError extends Error {}
-
-export class UnhandledTypeError extends OrchidInternalError {
-  constructor(value: never) {
-    super(`Unhandled type: ${JSON.stringify(value)} received`);
+export class UnhandledTypeError extends OrchidOrmInternalError {
+  constructor(public query: Query, value: never) {
+    super(query, `Unhandled type: ${JSON.stringify(value)} received`);
   }
 }
