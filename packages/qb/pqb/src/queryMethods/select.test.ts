@@ -26,6 +26,18 @@ const insertUserAndProfile = async () => {
 describe('select', () => {
   useTestDatabase();
 
+  // testing this issue: https://github.com/romeerez/orchid-orm/issues/45
+  it('should handle nested sub selects', async () => {
+    await User.create(userData);
+
+    await User.select({
+      author: () =>
+        User.select({
+          count: () => User.count(),
+        }).takeOptional(),
+    });
+  });
+
   it('should combine multiple selects and give proper types', () => {
     const query = User.select('id').select({
       count: () => User.count(),

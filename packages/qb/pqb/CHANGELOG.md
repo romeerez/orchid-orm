@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.20
+
+### Patch Changes
+
+- Fix selecting value in a sub select
+
 ## 0.10.19
 
 ### Patch Changes
