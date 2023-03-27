@@ -209,6 +209,8 @@ type IndexOptions = {
   name?: string;
   // is it a unique index
   unique?: boolean;
+  // NULLS NOT DISTINCT: availabe in Postgres 15+, makes sense only for unique index
+  nullsNotDistinct?: true;
   // index algorithm to use such as GIST, GIN
   using?: string;
   // specify collation:
@@ -262,6 +264,7 @@ type IndexOptions = {
   unique?: boolean;
   using?: string;
   include?: MaybeArray<string>;
+  nullsNotDistinct?: true;
   with?: string;
   tablespace?: string;
   where?: string;
@@ -439,7 +442,7 @@ change(async (db) => {
 })
 ```
 
-# constraint
+## constraint
 
 `rake-db` supports placing a database check and a foreign key on a single constraint:
 

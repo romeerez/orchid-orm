@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.4.32
+
+### Patch Changes
+
+- Support NULLS NOT DISTINCT for unique index
+- Updated dependencies
+  - pqb@0.10.27
+
 ## 2.4.31
 
 ### Patch Changes

@@ -359,6 +359,7 @@ export const columnIndexesToCode = (
             : `[${index.include.map(singleQuote).join(', ')}]`
         },`,
       );
+    if (index.nullsNotDistinct) arr.push(`nullsNotDistinct: true,`);
     if (index.with) arr.push(`with: ${singleQuote(index.with)},`);
     if (index.tablespace)
       arr.push(`tablespace: ${singleQuote(index.tablespace)},`);

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.27
+
+### Patch Changes
+
+- Support NULLS NOT DISTINCT for unique index
+
 ## 0.10.26
 
 ### Patch Changes

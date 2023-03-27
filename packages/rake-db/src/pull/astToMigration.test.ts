@@ -192,7 +192,7 @@ change(async (db) => {
           shape: {
             someId: columnTypes
               .integer()
-              .unique({ name: 'indexName' })
+              .unique({ name: 'indexName', nullsNotDistinct: true })
               .foreignKey('otherTable', 'otherId', {
                 name: 'fkey',
                 match: 'FULL',
@@ -214,6 +214,7 @@ change(async (db) => {
       onDelete: 'CASCADE',
     }).unique({
       name: 'indexName',
+      nullsNotDistinct: true,
     }),
   }));
 });
@@ -231,7 +232,7 @@ change(async (db) => {
           indexes: [
             {
               columns: [{ column: 'id' }, { column: 'name' }],
-              options: { name: 'index', unique: true },
+              options: { name: 'index', unique: true, nullsNotDistinct: true },
             },
           ],
           constraints: [
@@ -259,6 +260,7 @@ change(async (db) => {
     ...t.index(['id', 'name'], {
       name: 'index',
       unique: true,
+      nullsNotDistinct: true,
     }),
     ...t.foreignKey(
       ['id', 'name'],

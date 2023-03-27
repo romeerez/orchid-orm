@@ -111,10 +111,12 @@ describe('migration', () => {
         (action) =>
           db[action]('table', ['id', { column: 'name', order: 'DESC' }], {
             name: 'indexName',
+            unique: true,
+            nullsNotDistinct: true,
           }),
         () =>
           expectSql(`
-            CREATE INDEX "indexName" ON "table" ("id", "name" DESC)
+            CREATE UNIQUE INDEX "indexName" ON "table" ("id", "name" DESC) NULLS NOT DISTINCT
           `),
         () =>
           expectSql(`
@@ -128,13 +130,23 @@ describe('migration', () => {
 
       await testUpAndDown(
         (action) =>
-          db[action]('table', [
-            'idColumn',
-            { column: 'nameColumn', order: 'DESC' },
-          ]),
+          db[action](
+            'table',
+            [
+              'idColumn',
+              {
+                column: 'nameColumn',
+                order: 'DESC',
+              },
+            ],
+            {
+              unique: true,
+              nullsNotDistinct: true,
+            },
+          ),
         () =>
           expectSql(`
-            CREATE INDEX "table_id_column_name_column_idx" ON "table" ("id_column", "name_column" DESC)
+            CREATE UNIQUE INDEX "table_id_column_name_column_idx" ON "table" ("id_column", "name_column" DESC) NULLS NOT DISTINCT
           `),
         () =>
           expectSql(`

@@ -75,6 +75,7 @@ export type IndexColumnOptions = (
 export type IndexOptions = {
   name?: string;
   unique?: boolean;
+  nullsNotDistinct?: boolean;
   using?: string;
   include?: MaybeArray<string>;
   with?: string;

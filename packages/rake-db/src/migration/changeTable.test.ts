@@ -409,6 +409,7 @@ describe('changeTable', () => {
                 t.text().index({
                   name: 'indexName',
                   unique: true,
+                  nullsNotDistinct: true,
                   using: 'gin',
                   collate: 'utf-8',
                   opclass: 'opclass',
@@ -429,6 +430,7 @@ describe('changeTable', () => {
                   ON "table"
                   USING gin ("withIndex" COLLATE 'utf-8' opclass ASC)
                   INCLUDE ("id")
+                  NULLS NOT DISTINCT
                   WITH (fillfactor = 70)
                   TABLESPACE tablespace
                   WHERE column = 123
@@ -447,7 +449,11 @@ describe('changeTable', () => {
         await testUpAndDown(
           (action) =>
             db.changeTable('table', (t) => ({
-              uniqueColumn: t[action](t.text().unique({ dropMode: 'CASCADE' })),
+              uniqueColumn: t[action](
+                t
+                  .text()
+                  .unique({ dropMode: 'CASCADE', nullsNotDistinct: true }),
+              ),
             })),
           () =>
             expectSql([
@@ -455,8 +461,7 @@ describe('changeTable', () => {
               ADD COLUMN "uniqueColumn" text NOT NULL`,
               toLine(`
             CREATE UNIQUE INDEX "table_uniqueColumn_idx"
-              ON "table"
-              ("uniqueColumn")
+              ON "table" ("uniqueColumn") NULLS NOT DISTINCT
           `),
             ]),
           () =>
@@ -753,14 +758,18 @@ describe('changeTable', () => {
               ...t[action](
                 t.unique(['id', { column: 'name', order: 'DESC' }], {
                   name: 'compositeIndexOnTable',
+                  nullsNotDistinct: true,
                   dropMode: 'CASCADE',
                 }),
               ),
             })),
           () =>
-            expectSql(`
-              CREATE UNIQUE INDEX "compositeIndexOnTable" ON "table" ("id", "name" DESC)
+            expectSql(
+              toLine(`
+              CREATE UNIQUE INDEX "compositeIndexOnTable"
+                ON "table" ("id", "name" DESC) NULLS NOT DISTINCT
             `),
+            ),
           () =>
             expectSql(`
               DROP INDEX "compositeIndexOnTable" CASCADE
@@ -778,7 +787,18 @@ describe('changeTable', () => {
                 t.index(['idColumn', { column: 'nameColumn', order: 'DESC' }]),
               ),
               ...t[action](
-                t.unique(['idColumn', { column: 'nameColumn', order: 'DESC' }]),
+                t.unique(
+                  [
+                    'idColumn',
+                    {
+                      column: 'nameColumn',
+                      order: 'DESC',
+                    },
+                  ],
+                  {
+                    nullsNotDistinct: true,
+                  },
+                ),
               ),
             })),
           () =>
@@ -786,9 +806,10 @@ describe('changeTable', () => {
               `
                 CREATE INDEX "table_id_column_name_column_idx" ON "table" ("id_column", "name_column" DESC)
               `,
-              `
-                CREATE UNIQUE INDEX "table_id_column_name_column_idx" ON "table" ("id_column", "name_column" DESC)
-              `,
+              toLine(`
+                CREATE UNIQUE INDEX "table_id_column_name_column_idx"
+                  ON "table" ("id_column", "name_column" DESC) NULLS NOT DISTINCT
+              `),
             ]),
           () =>
             expectSql([
@@ -1718,6 +1739,7 @@ describe('changeTable', () => {
                   opclass: 'opclass',
                   order: 'order',
                   unique: true,
+                  nullsNotDistinct: true,
                   using: 'using',
                   include: ['a', 'b'],
                   with: 'with',
@@ -1730,7 +1752,16 @@ describe('changeTable', () => {
           () =>
             expectSql([
               `CREATE INDEX "table_addIndex_idx" ON "table" ("addIndex")`,
-              `CREATE UNIQUE INDEX "table_addIndexWithOptions_idx" ON "table" USING using ("addIndexWithOptions" COLLATE 'collate' opclass order) INCLUDE ("a", "b") WITH (with) TABLESPACE tablespace WHERE where`,
+              toLine(`
+                CREATE UNIQUE INDEX "table_addIndexWithOptions_idx"
+                  ON "table"
+                  USING using ("addIndexWithOptions" COLLATE 'collate' opclass order)
+                  INCLUDE ("a", "b")
+                  NULLS NOT DISTINCT
+                  WITH (with)
+                  TABLESPACE tablespace
+                  WHERE where
+              `),
             ]),
           () =>
             expectSql([
@@ -1767,6 +1798,7 @@ describe('changeTable', () => {
                   opclass: 'opclass',
                   order: 'order',
                   unique: true,
+                  nullsNotDistinct: true,
                   using: 'using',
                   include: ['a', 'b'],
                   with: 'with',
@@ -1785,7 +1817,16 @@ describe('changeTable', () => {
           () =>
             expectSql([
               `CREATE INDEX "table_removeIndex_idx" ON "table" ("removeIndex")`,
-              `CREATE UNIQUE INDEX "table_removeIndexWithOptions_idx" ON "table" USING using ("removeIndexWithOptions" COLLATE 'collate' opclass order) INCLUDE ("a", "b") WITH (with) TABLESPACE tablespace WHERE where`,
+              toLine(`
+                CREATE UNIQUE INDEX "table_removeIndexWithOptions_idx"
+                  ON "table"
+                  USING using ("removeIndexWithOptions" COLLATE 'collate' opclass order)
+                  INCLUDE ("a", "b")
+                  NULLS NOT DISTINCT
+                  WITH (with)
+                  TABLESPACE tablespace
+                  WHERE where
+              `),
             ]),
         );
       });
@@ -1817,6 +1858,7 @@ describe('changeTable', () => {
                   opclass: 'from',
                   order: 'from',
                   unique: false,
+                  nullsNotDistinct: false,
                   using: 'from',
                   include: ['a', 'b'],
                   with: 'from',
@@ -1830,6 +1872,7 @@ describe('changeTable', () => {
                   opclass: 'to',
                   order: 'to',
                   unique: true,
+                  nullsNotDistinct: true,
                   using: 'to',
                   include: ['c', 'd'],
                   with: 'to',
@@ -1842,12 +1885,29 @@ describe('changeTable', () => {
           () =>
             expectSql([
               `DROP INDEX "from" CASCADE`,
-              `CREATE UNIQUE INDEX "to" ON "table" USING to ("changeIndex" COLLATE 'to' to to) INCLUDE ("c", "d") WITH (to) TABLESPACE to WHERE to`,
+              toLine(`
+                CREATE UNIQUE INDEX "to"
+                  ON "table"
+                  USING to ("changeIndex" COLLATE 'to' to to)
+                  INCLUDE ("c", "d")
+                  NULLS NOT DISTINCT
+                  WITH (to)
+                  TABLESPACE to
+                  WHERE to
+              `),
             ]),
           () =>
             expectSql([
               `DROP INDEX "to" RESTRICT`,
-              `CREATE INDEX "from" ON "table" USING from ("changeIndex" COLLATE 'from' from from) INCLUDE ("a", "b") WITH (from) TABLESPACE from WHERE from`,
+              toLine(`
+                CREATE INDEX "from"
+                  ON "table"
+                  USING from ("changeIndex" COLLATE 'from' from from)
+                  INCLUDE ("a", "b")
+                  WITH (from)
+                  TABLESPACE from
+                  WHERE from
+              `),
             ]),
         );
       });

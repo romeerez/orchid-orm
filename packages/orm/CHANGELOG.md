@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.6.31
+
+### Patch Changes
+
+- Support NULLS NOT DISTINCT for unique index
+- Updated dependencies
+  - pqb@0.10.27
+
 ## 1.6.30
 
 ### Patch Changes

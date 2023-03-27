@@ -217,6 +217,7 @@ describe('create and drop table', () => {
             withIndex: t.text().index({
               name: 'indexName',
               unique: true,
+              nullsNotDistinct: true,
               using: 'gin',
               collate: 'utf-8',
               opclass: 'opclass',
@@ -226,7 +227,7 @@ describe('create and drop table', () => {
               tablespace: 'tablespace',
               where: 'column = 123',
             }),
-            uniqueColumn: t.text().unique(),
+            uniqueColumn: t.text().unique({ nullsNotDistinct: true }),
           })),
         () =>
           expectSql([
@@ -243,14 +244,14 @@ describe('create and drop table', () => {
                 USING gin
                 ("withIndex" COLLATE 'utf-8' opclass ASC)
                 INCLUDE ("id")
+                NULLS NOT DISTINCT
                 WITH (fillfactor = 70)
                 TABLESPACE tablespace
                 WHERE column = 123
             `),
             toLine(`
               CREATE UNIQUE INDEX "table_uniqueColumn_idx"
-                ON "table"
-                ("uniqueColumn")
+                ON "table" ("uniqueColumn") NULLS NOT DISTINCT
             `),
           ]),
       );
@@ -514,6 +515,7 @@ describe('create and drop table', () => {
             name: t.text(),
             ...t.index(['id', { column: 'name', order: 'DESC' }], {
               name: 'compositeIndexOnTable',
+              nullsNotDistinct: true,
             }),
           })),
         () =>
@@ -525,7 +527,7 @@ describe('create and drop table', () => {
               )
             `,
             `
-              CREATE INDEX "compositeIndexOnTable" ON "table" ("id", "name" DESC)
+              CREATE INDEX "compositeIndexOnTable" ON "table" ("id", "name" DESC) NULLS NOT DISTINCT
             `,
           ]),
       );
@@ -539,6 +541,7 @@ describe('create and drop table', () => {
             name: t.text(),
             ...t.unique(['id', { column: 'name', order: 'DESC' }], {
               name: 'compositeIndexOnTable',
+              nullsNotDistinct: true,
             }),
           })),
         () =>
@@ -550,7 +553,7 @@ describe('create and drop table', () => {
               )
             `,
             `
-              CREATE UNIQUE INDEX "compositeIndexOnTable" ON "table" ("id", "name" DESC)
+              CREATE UNIQUE INDEX "compositeIndexOnTable" ON "table" ("id", "name" DESC) NULLS NOT DISTINCT
             `,
           ]),
       );

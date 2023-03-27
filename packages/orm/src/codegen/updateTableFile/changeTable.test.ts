@@ -370,7 +370,12 @@ describe('updateTableFile', () => {
             name: {
               type: 'change',
               from: { indexes: [{ order: 'one' }, { collate: 'en_US' }] },
-              to: { indexes: [{ order: 'two' }, { collate: 'en_UK' }] },
+              to: {
+                indexes: [
+                  { order: 'two' },
+                  { collate: 'en_UK', unique: true, nullsNotDistinct: true },
+                ],
+              },
             },
           },
         },
@@ -380,8 +385,9 @@ describe('updateTableFile', () => {
         template(`
     name: t.text().index({
       order: 'two',
-    }).index({
+    }).unique({
       collate: 'en_UK',
+      nullsNotDistinct: true,
     }),
 `),
       );
@@ -398,7 +404,12 @@ describe('updateTableFile', () => {
             name: {
               type: 'change',
               from: {},
-              to: { indexes: [{ order: 'two' }, { collate: 'fr_FR' }] },
+              to: {
+                indexes: [
+                  { order: 'two' },
+                  { collate: 'fr_FR', unique: true, nullsNotDistinct: true },
+                ],
+              },
             },
           },
         },
@@ -408,8 +419,9 @@ describe('updateTableFile', () => {
         template(`
     name: t.text().index({
       order: 'two',
-    }).index({
+    }).unique({
       collate: 'fr_FR',
+      nullsNotDistinct: true,
     }),
 `),
       );

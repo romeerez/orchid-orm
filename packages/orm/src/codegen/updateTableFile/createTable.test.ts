@@ -89,7 +89,11 @@ describe('createTable', () => {
         indexes: [
           {
             columns: [{ column: 'one' }, { column: 'two' }],
-            options: { name: 'indexName', unique: true },
+            options: {
+              name: 'indexName',
+              unique: true,
+              nullsNotDistinct: true,
+            },
           },
         ],
         constraints: [
@@ -125,6 +129,7 @@ describe('createTable', () => {
     ...t.index(['one', 'two'], {
       name: 'indexName',
       unique: true,
+      nullsNotDistinct: true,
     }),
     ...t.foreignKey(
       ['one', 'two'],

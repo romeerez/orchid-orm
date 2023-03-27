@@ -55,6 +55,7 @@ export namespace DbStructure {
       order?: string;
     })[];
     include?: string[];
+    nullsNotDistinct?: boolean;
     with?: string;
     tablespace?: string;
     where?: string;
@@ -320,6 +321,7 @@ ORDER BY c.ordinal_position`,
     )
     FROM unnest(i.indkey[indnkeyatts:]) AS j(e)
   ) AS "include",
+  (to_jsonb(i.*)->'indnullsnotdistinct')::bool AS "nullsNotDistinct",
   NULLIF(pg_catalog.array_to_string(
     ic.reloptions || array(SELECT 'toast.' || x FROM pg_catalog.unnest(tc.reloptions) x),
     ', '

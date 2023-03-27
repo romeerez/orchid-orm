@@ -408,13 +408,14 @@ describe('structureToAst', () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [table];
       db.getColumns = async () => columns;
-      db.getIndexes = async () => [index];
+      db.getIndexes = async () => [{ ...index, nullsNotDistinct: true }];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
       expect(ast.shape.name.data.indexes).toEqual([
         {
           name: 'index',
           unique: false,
+          nullsNotDistinct: true,
         },
       ]);
       expect(ast.indexes).toHaveLength(0);
@@ -446,6 +447,7 @@ describe('structureToAst', () => {
           ...index,
           using: 'gist',
           isUnique: true,
+          nullsNotDistinct: true,
           columns: [
             {
               column: 'name',
@@ -471,6 +473,7 @@ describe('structureToAst', () => {
           opclass: 'varchar_ops',
           order: 'DESC',
           include: ['id'],
+          nullsNotDistinct: true,
           with: 'fillfactor=80',
           tablespace: 'tablespace',
           where: 'condition',
@@ -489,6 +492,7 @@ describe('structureToAst', () => {
           ...index,
           columns: [{ column: 'id' }, { column: 'name' }],
           isUnique: true,
+          nullsNotDistinct: true,
         },
       ];
 
@@ -501,7 +505,7 @@ describe('structureToAst', () => {
         },
         {
           columns: [{ column: 'id' }, { column: 'name' }],
-          options: { name: 'index', unique: true },
+          options: { name: 'index', unique: true, nullsNotDistinct: true },
         },
       ]);
     });
@@ -539,6 +543,7 @@ describe('structureToAst', () => {
           ...index,
           using: 'gist',
           isUnique: true,
+          nullsNotDistinct: true,
           columns: [
             {
               expression: 'lower(name)',
@@ -570,6 +575,7 @@ describe('structureToAst', () => {
             name: 'index',
             using: 'gist',
             unique: true,
+            nullsNotDistinct: true,
             include: ['id'],
             with: 'fillfactor=80',
             tablespace: 'tablespace',

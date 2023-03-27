@@ -279,6 +279,10 @@ export const indexesToQuery = (
       );
     }
 
+    if (options.nullsNotDistinct) {
+      sql.push(`NULLS NOT DISTINCT`);
+    }
+
     if (options.with) {
       sql.push(`WITH (${options.with})`);
     }
