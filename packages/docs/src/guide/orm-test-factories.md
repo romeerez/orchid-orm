@@ -46,6 +46,64 @@ const userFactory = createFactory(db.user, {
 })
 ```
 
+## example
+
+This example is extracted from [building a sample app](/guide/building-a-sample-app.html), you can find more tests examples in this doc.
+
+Here were are using `build` to build parameters for a test request, and `create` to create records for testing how unique violations are handled.
+
+```ts
+export const userFactory = createFactory(db.user);
+
+describe('registration', () => {
+  const params = userFactory.pick({
+    username: true,
+    email: true,
+    password: true,
+  });
+  
+  it('should register a new user', async () => {
+    // buid a new random user data:
+    const data = params.build();
+
+    // testRequest may be a wrapper around light-my-request, axios, supertest
+    // perform a POST request to /users with the data:
+    const res = await testRequest.post('/users', data);
+    
+    const json = res.json();
+    
+    // expect response to have the same data as we sent:
+    expect(json).toMatchObject({
+      username: data.username,
+      email: data.email,
+    });
+    
+    // expect database to have a newly registered user with proper fields:
+    const savedUser = await db.user.findBy({ username: data.username });
+    expect(savedUser).toMatchObject({
+      username: data.username,
+      email: data.email,
+    });
+  })
+  
+  it('should return error when username is taken', async () => {
+    // build a new random user data:
+    const data = params.build();
+    
+    // create a new user with a random data, but this specific username:
+    await userFactory.create({ username: data.username });
+
+    const res = await testRequest.post('/users', data);
+
+    // expect response to be failed with a message:
+    expect(res.statusCode).toBe(400)
+    expect(res.json()).toMatchObject({
+      message: 'Username is already taken',
+    });
+  });
+})
+```
+
 ## setup
 
 Install this library:
