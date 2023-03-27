@@ -104,11 +104,9 @@ describe('migrateOrRollback', () => {
 
       expect(transactionQueryMock).toBeCalledWith(
         `INSERT INTO "schemaMigrations" VALUES ('2')`,
-        undefined,
       );
       expect(transactionQueryMock).toBeCalledWith(
         `INSERT INTO "schemaMigrations" VALUES ('3')`,
-        undefined,
       );
 
       expect(config.logger.log).toBeCalledWith(
@@ -236,7 +234,6 @@ describe('migrateOrRollback', () => {
       expect(transactionQueryMock).toBeCalledTimes(1);
       expect(transactionQueryMock).toBeCalledWith(
         `DELETE FROM "schemaMigrations" WHERE version = '2'`,
-        undefined,
       );
 
       expect(config.logger.log).toBeCalledTimes(1);

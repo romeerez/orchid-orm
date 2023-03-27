@@ -4,13 +4,14 @@ import {
   quoteWithSchema,
   RakeDbConfig,
 } from '../common';
+import { SilentQueries } from './migration';
 
 export const saveMigratedVersion = async (
-  db: Adapter,
+  db: SilentQueries,
   version: string,
   config: RakeDbConfig,
-) => {
-  await db.query(
+): Promise<void> => {
+  await db.silentArrays(
     `INSERT INTO ${quoteWithSchema({
       name: config.migrationsTable,
     })} VALUES ('${version}')`,
@@ -18,11 +19,11 @@ export const saveMigratedVersion = async (
 };
 
 export const removeMigratedVersion = async (
-  db: Adapter,
+  db: SilentQueries,
   version: string,
   config: RakeDbConfig,
 ) => {
-  await db.query(
+  await db.silentArrays(
     `DELETE FROM ${quoteWithSchema({
       name: config.migrationsTable,
     })} WHERE version = '${version}'`,

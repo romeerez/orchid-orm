@@ -17,6 +17,7 @@ import {
   quote,
   columnTypes,
   getRaw,
+  Adapter,
 } from 'pqb';
 import {
   MaybeArray,
@@ -69,7 +70,16 @@ export type ChangeTableCallback = (t: TableChanger) => TableChangeData;
 
 export type ColumnComment = { column: string; comment: string | null };
 
-export type Migration = DbResult<DefaultColumnTypes> & MigrationBase;
+export type SilentQueries = {
+  // query without logging
+  silentQuery: Adapter['query'];
+  silentArrays: Adapter['arrays'];
+};
+
+export type Migration = DbResult<DefaultColumnTypes> &
+  MigrationBase & {
+    adapter: SilentQueries;
+  };
 
 type ConstraintArg = {
   name?: string;
@@ -99,6 +109,8 @@ export const createMigrationInterface = (
   adapter.arrays = ((q, types) => {
     return wrapWithLog(log, q, () => arrays.call(adapter, q, types));
   }) as typeof adapter.arrays;
+
+  Object.assign(adapter, { silentQuery: query, silentArrays: arrays });
 
   const db = createDb({ adapter }) as unknown as Migration;
 

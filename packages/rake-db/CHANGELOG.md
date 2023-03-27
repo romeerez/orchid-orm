@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.4.33
+
+### Patch Changes
+
+- Hide internal query log in migrations
+
 ## 2.4.32
 
 ### Patch Changes
