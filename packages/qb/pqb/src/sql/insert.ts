@@ -117,7 +117,7 @@ export const pushInsertSql = (
             (index) => index.unique,
           ) ||
           // check table composite indexes
-          indexes.some((index) =>
+          indexes?.some((index) =>
             index.columns.some(
               (item) => 'column' in item && item.column === key,
             ),

@@ -12,11 +12,12 @@ import {
   ForeignKeyAction,
   ForeignKeyMatch,
   ForeignKeyOptions,
+  getConstraintKind,
   instantiateColumn,
   TableData,
 } from 'pqb';
 import { raw, singleQuote, toCamelCase, toSnakeCase } from 'orchid-core';
-import { getForeignKeyName, getIndexName } from '../migration/migrationUtils';
+import { getConstraintName, getIndexName } from '../migration/migrationUtils';
 
 const matchMap: Record<string, undefined | ForeignKeyMatch> = {
   s: undefined,
@@ -36,12 +37,10 @@ type Data = {
   schemas: string[];
   tables: DbStructure.Table[];
   columns: DbStructure.Column[];
-  primaryKeys: DbStructure.PrimaryKey[];
+  constraints: DbStructure.Constraint[];
   indexes: DbStructure.Index[];
-  foreignKeys: DbStructure.ForeignKey[];
   extensions: DbStructure.Extension[];
   enums: DbStructure.Enum[];
-  checks: DbStructure.Check[];
   domains: DbStructure.Domain[];
 };
 
@@ -80,11 +79,16 @@ export const structureToAst = async (
     const key = `${table.schemaName}.${table.name}`;
     const dependsOn = new Set<string>();
 
-    for (const fk of data.foreignKeys) {
-      if (fk.schemaName !== table.schemaName || fk.tableName !== table.name)
+    for (const fk of data.constraints) {
+      const { references } = fk;
+      if (
+        !references ||
+        fk.schemaName !== table.schemaName ||
+        fk.tableName !== table.name
+      )
         continue;
 
-      const otherKey = `${fk.foreignTableSchemaName}.${fk.foreignTableName}`;
+      const otherKey = `${references.foreignSchema}.${references.foreignTable}`;
       if (otherKey !== key) {
         dependsOn.add(otherKey);
       }
@@ -112,7 +116,7 @@ export const structureToAst = async (
     }
   }
 
-  const outerFKeys: [DbStructure.ForeignKey, DbStructure.Table][] = [];
+  const outerConstraints: [DbStructure.Constraint, DbStructure.Table][] = [];
 
   for (const it of data.extensions) {
     ast.push({
@@ -149,28 +153,39 @@ export const structureToAst = async (
   }
 
   for (const key in pendingTables) {
-    const innerFKeys: DbStructure.ForeignKey[] = [];
+    const innerConstraints: DbStructure.Constraint[] = [];
     const { table } = pendingTables[key];
 
-    for (const fkey of data.foreignKeys) {
+    for (const fkey of data.constraints) {
       if (fkey.schemaName !== table.schemaName || fkey.tableName !== table.name)
         continue;
 
-      const otherKey = `${fkey.foreignTableSchemaName}.${fkey.foreignTableName}`;
-      if (!pendingTables[otherKey] || otherKey === key) {
-        innerFKeys.push(fkey);
+      const otherKey =
+        fkey.references &&
+        `${fkey.references.foreignSchema}.${fkey.references.foreignTable}`;
+
+      if (!otherKey || !pendingTables[otherKey] || otherKey === key) {
+        innerConstraints.push(fkey);
       } else {
-        outerFKeys.push([fkey, table]);
+        outerConstraints.push([fkey, table]);
       }
     }
 
-    pushTableAst(ctx, ast, data, domains, table, pendingTables, innerFKeys);
+    pushTableAst(
+      ctx,
+      ast,
+      data,
+      domains,
+      table,
+      pendingTables,
+      innerConstraints,
+    );
   }
 
-  for (const [fkey, table] of outerFKeys) {
+  for (const [fkey, table] of outerConstraints) {
     ast.push({
-      ...foreignKeyToAst(fkey),
-      type: 'foreignKey',
+      ...constraintToAst(fkey),
+      type: 'constraint',
       action: 'create',
       tableSchema: table.schemaName === 'public' ? undefined : table.schemaName,
       tableName: fkey.tableName,
@@ -185,23 +200,19 @@ const getData = async (db: DbStructure): Promise<Data> => {
     schemas,
     tables,
     columns,
-    primaryKeys,
+    constraints,
     indexes,
-    foreignKeys,
     extensions,
     enums,
-    checks,
     domains,
   ] = await Promise.all([
     db.getSchemas(),
     db.getTables(),
     db.getColumns(),
-    db.getPrimaryKeys(),
+    db.getConstraints(),
     db.getIndexes(),
-    db.getForeignKeys(),
     db.getExtensions(),
     db.getEnums(),
-    db.getChecks(),
     db.getDomains(),
   ]);
 
@@ -209,12 +220,10 @@ const getData = async (db: DbStructure): Promise<Data> => {
     schemas,
     tables,
     columns,
-    primaryKeys,
+    constraints,
     indexes,
-    foreignKeys,
     extensions,
     enums,
-    checks,
     domains,
   };
 };
@@ -312,28 +321,78 @@ const pushTableAst = (
   domains: Domains,
   table: DbStructure.Table,
   pendingTables: PendingTables,
-  innerFKeys = data.foreignKeys,
+  innerConstraints = data.constraints,
 ) => {
-  const { schemaName, name } = table;
+  const { schemaName, name: tableName } = table;
 
   const key = `${schemaName}.${table.name}`;
   delete pendingTables[key];
 
-  if (name === 'schemaMigrations') return;
+  if (tableName === 'schemaMigrations') return;
 
-  const belongsToTable = makeBelongsToTable(schemaName, name);
+  const belongsToTable = makeBelongsToTable(schemaName, tableName);
 
   const columns = data.columns.filter(belongsToTable);
-  const primaryKey = data.primaryKeys.find(belongsToTable);
-  const tableIndexes = data.indexes.filter(belongsToTable);
-  const tableForeignKeys = innerFKeys.filter(belongsToTable);
 
-  const columnChecks: Record<string, DbStructure.Check> = {};
-  for (const check of data.checks) {
-    if (check.columnNames.length === 1) {
-      columnChecks[check.columnNames[0]] = check;
-    }
+  let primaryKey: { columns: string[]; name?: string } | undefined;
+  for (const item of data.constraints) {
+    if (belongsToTable(item) && item.primaryKey)
+      primaryKey = { columns: item.primaryKey, name: item.name };
   }
+
+  const tableIndexes = data.indexes.filter(belongsToTable);
+
+  const tableConstraints = innerConstraints.reduce<TableData.Constraint[]>(
+    (acc, item) => {
+      const { references, check } = item;
+      if (
+        belongsToTable(item) &&
+        (references || (check && !isColumnCheck(item)))
+      ) {
+        const constraint: TableData.Constraint = {
+          references: references
+            ? {
+                columns: references.columns,
+                fnOrTable: getReferencesTable(references),
+                foreignColumns: references.foreignColumns,
+                options: {
+                  match: matchMap[references.match],
+                  onUpdate: fkeyActionMap[references.onUpdate],
+                  onDelete: fkeyActionMap[references.onDelete],
+                },
+              }
+            : undefined,
+          check: check ? raw(check.expression) : undefined,
+        };
+
+        const name =
+          item.name && item.name !== getConstraintName(tableName, constraint)
+            ? item.name
+            : undefined;
+
+        if (name) {
+          constraint.name = name;
+          if (constraint.references?.options) {
+            constraint.references.options.name = name;
+          }
+        }
+
+        acc.push(constraint);
+      }
+      return acc;
+    },
+    [],
+  );
+
+  const columnChecks = innerConstraints.reduce<Record<string, string>>(
+    (acc, item) => {
+      if (belongsToTable(item) && isColumnCheck(item)) {
+        acc[item.check.columns[0]] = item.check.expression;
+      }
+      return acc;
+    },
+    {},
+  );
 
   const shape: ColumnsShape = {};
   for (let item of columns) {
@@ -350,8 +409,8 @@ const pushTableAst = (
     });
 
     if (
-      primaryKey?.columnNames.length === 1 &&
-      primaryKey?.columnNames[0] === item.name
+      primaryKey?.columns?.length === 1 &&
+      primaryKey?.columns[0] === item.name
     ) {
       column = column.primaryKey();
     }
@@ -369,7 +428,7 @@ const pushTableAst = (
         opclass: options.opclass,
         order: options.order,
         name:
-          index.name !== getIndexName(name, index.columns)
+          index.name !== getIndexName(tableName, index.columns)
             ? index.name
             : undefined,
         using: index.using === 'btree' ? undefined : index.using,
@@ -381,29 +440,19 @@ const pushTableAst = (
       });
     }
 
-    const foreignKeys = tableForeignKeys.filter(
-      (it) => it.columnNames.length === 1 && it.columnNames[0] === item.name,
-    );
-    for (const foreignKey of foreignKeys) {
+    for (const it of tableConstraints) {
+      if (!isColumnFkey(it) || it.references.columns[0] !== item.name) continue;
+
       column = column.foreignKey(
-        foreignKey.foreignTableName,
-        foreignKey.foreignColumnNames[0],
-        {
-          name:
-            foreignKey.name &&
-            foreignKey.name !== getForeignKeyName(name, foreignKey.columnNames)
-              ? foreignKey.name
-              : undefined,
-          match: matchMap[foreignKey.match],
-          onUpdate: fkeyActionMap[foreignKey.onUpdate],
-          onDelete: fkeyActionMap[foreignKey.onDelete],
-        } as ForeignKeyOptions,
+        it.references.fnOrTable as string,
+        it.references.foreignColumns[0],
+        it.references.options,
       );
     }
 
     const check = columnChecks[item.name];
     if (check) {
-      column.data.check = raw(check.expression);
+      column.data.check = raw(check);
     }
 
     const camelCaseName = toCamelCase(item.name);
@@ -424,15 +473,15 @@ const pushTableAst = (
     action: 'create',
     schema: schemaName === 'public' ? undefined : schemaName,
     comment: table.comment,
-    name: name,
+    name: tableName,
     shape,
     noPrimaryKey: primaryKey ? 'error' : 'ignore',
     primaryKey:
-      primaryKey && primaryKey.columnNames.length > 1
+      primaryKey && primaryKey.columns.length > 1
         ? {
-            columns: primaryKey.columnNames,
+            columns: primaryKey.columns,
             options:
-              primaryKey.name === `${name}_pkey`
+              primaryKey.name === `${tableName}_pkey`
                 ? undefined
                 : { name: primaryKey.name },
           }
@@ -454,7 +503,7 @@ const pushTableAst = (
         })),
         options: {
           name:
-            index.name !== getIndexName(name, index.columns)
+            index.name !== getIndexName(tableName, index.columns)
               ? index.name
               : undefined,
           using: index.using === 'btree' ? undefined : index.using,
@@ -465,9 +514,9 @@ const pushTableAst = (
           where: index.where,
         },
       })),
-    foreignKeys: tableForeignKeys
-      .filter((it) => it.columnNames.length > 1)
-      .map(foreignKeyToAst),
+    constraints: tableConstraints.filter(
+      (it) => getConstraintKind(it) === 'constraint' || !isColumnFkey(it),
+    ),
   });
 
   for (const otherKey in pendingTables) {
@@ -478,31 +527,62 @@ const pushTableAst = (
   }
 };
 
-const foreignKeyToAst = (
-  fkey: DbStructure.ForeignKey,
-): TableData.ForeignKey => {
-  const result: TableData.ForeignKey = {
-    columns: fkey.columnNames,
-    fnOrTable: fkey.foreignTableName,
-    foreignColumns: fkey.foreignColumnNames,
-    options: {},
-  };
+const constraintToAst = (
+  item: DbStructure.Constraint,
+): TableData.Constraint => {
+  const result: TableData.Constraint = {};
 
-  if (
-    fkey.name &&
-    fkey.name !== getForeignKeyName(fkey.tableName, fkey.columnNames)
-  ) {
-    result.options.name = fkey.name;
+  const { references, check } = item;
+
+  if (references) {
+    const options: ForeignKeyOptions = {};
+    result.references = {
+      columns: references.columns,
+      fnOrTable: getReferencesTable(references),
+      foreignColumns: references.foreignColumns,
+      options,
+    };
+
+    const match = matchMap[references.match];
+    if (match) options.match = match;
+
+    const onUpdate = fkeyActionMap[references.onUpdate];
+    if (onUpdate) options.onUpdate = onUpdate;
+
+    const onDelete = fkeyActionMap[references.onDelete];
+    if (onDelete) options.onDelete = onDelete;
   }
 
-  const match = matchMap[fkey.match];
-  if (match) result.options.match = match;
+  if (check) {
+    result.check = raw(check.expression);
+  }
 
-  const onUpdate = fkeyActionMap[fkey.onUpdate];
-  if (onUpdate) result.options.onUpdate = onUpdate;
-
-  const onDelete = fkeyActionMap[fkey.onDelete];
-  if (onDelete) result.options.onDelete = onDelete;
+  if (item.name && item.name !== getConstraintName(item.tableName, result)) {
+    result.name = item.name;
+    if (result.references?.options) {
+      result.references.options.name = item.name;
+    }
+  }
 
   return result;
+};
+
+const getReferencesTable = (references: DbStructure.References) => {
+  return references.foreignSchema !== 'public'
+    ? `${references.foreignSchema}.${references.foreignTable}`
+    : references.foreignTable;
+};
+
+const isColumnCheck = (
+  it: DbStructure.Constraint,
+): it is DbStructure.Constraint & {
+  check: DbStructure.Check & { columns: string[] };
+} => {
+  return !it.references && it.check?.columns?.length === 1;
+};
+
+const isColumnFkey = (
+  it: TableData.Constraint,
+): it is TableData.Constraint & { references: TableData.References } => {
+  return !it.check && it.references?.columns.length === 1;
 };

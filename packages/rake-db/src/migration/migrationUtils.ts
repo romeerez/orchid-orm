@@ -1,13 +1,12 @@
 import {
   ColumnType,
   ForeignKeyTable,
-  ForeignKeyOptions,
   getRaw,
   quote,
   Sql,
   TableData,
 } from 'pqb';
-import { isRaw, toArray, toSnakeCase } from 'orchid-core';
+import { isRaw, RawExpression, toArray, toSnakeCase } from 'orchid-core';
 import { ColumnComment, Migration } from './migration';
 import {
   getSchemaAndTableFromName,
@@ -51,7 +50,7 @@ export const columnToSql = (
   }
 
   if (item.data.check) {
-    line.push(`CHECK (${getRaw(item.data.check, values)})`);
+    line.push(checkToSql(item.data.check, values));
   }
 
   if (item.data.default !== undefined) {
@@ -69,20 +68,18 @@ export const columnToSql = (
   const { foreignKeys } = item.data;
   if (foreignKeys) {
     for (const foreignKey of foreignKeys) {
-      const [schema, table] = getForeignKeyTable(
-        'fn' in foreignKey ? foreignKey.fn : foreignKey.table,
-      );
-
       if (foreignKey.name) {
         line.push(`CONSTRAINT "${foreignKey.name}"`);
       }
 
       line.push(
         referencesToSql(
-          schema,
-          table,
-          foreignKey.columns,
-          foreignKey,
+          {
+            columns: foreignKey.columns,
+            fnOrTable: 'fn' in foreignKey ? foreignKey.fn : foreignKey.table,
+            foreignColumns: foreignKey.columns,
+            options: foreignKey,
+          },
           snakeCase,
         ),
       );
@@ -128,59 +125,79 @@ export const getForeignKeyTable = (
   return [item.schema, item.table];
 };
 
-export const getForeignKeyName = (table: string, columns: string[]) => {
-  return `${table}_${columns.join('_')}_fkey`;
+export const getConstraintName = (
+  table: string,
+  constraint: TableData.Constraint,
+) => {
+  if (constraint.references)
+    return `${table}_${constraint.references.columns.join('_')}_fkey`;
+  if (constraint.check) return `${table}_check`;
+  return `${table}_constraint`;
 };
 
 export const constraintToSql = (
   { name }: { schema?: string; name: string },
   up: boolean,
-  foreignKey: TableData['foreignKeys'][number],
+  constraint: TableData.Constraint,
+  values: unknown[],
   snakeCase: boolean | undefined,
 ) => {
-  const constraintName =
-    foreignKey.options.name || getForeignKeyName(name, foreignKey.columns);
+  const constraintName = constraint.name || getConstraintName(name, constraint);
 
   if (!up) {
-    const { dropMode } = foreignKey.options;
+    const { dropMode } = constraint;
     return `CONSTRAINT "${constraintName}"${dropMode ? ` ${dropMode}` : ''}`;
   }
 
-  const [schema, table] = getForeignKeyTable(foreignKey.fnOrTable);
-  return `CONSTRAINT "${constraintName}" FOREIGN KEY (${joinColumns(
-    foreignKey.columns,
-  )}) ${referencesToSql(
-    schema,
-    table,
-    foreignKey.foreignColumns,
-    foreignKey.options,
+  const sql = [`CONSTRAINT "${constraintName}"`];
+
+  if (constraint.references) {
+    sql.push(foreignKeyToSql(constraint.references, snakeCase));
+  }
+
+  if (constraint.check) {
+    sql.push(checkToSql(constraint.check, values));
+  }
+
+  return sql.join(' ');
+};
+
+const checkToSql = (check: RawExpression, values: unknown[]) => {
+  return `CHECK (${getRaw(check, values)})`;
+};
+
+const foreignKeyToSql = (item: TableData.References, snakeCase?: boolean) => {
+  return `FOREIGN KEY (${joinColumns(item.columns)}) ${referencesToSql(
+    item,
     snakeCase,
   )}`;
 };
 
 export const referencesToSql = (
-  schema: string | undefined,
-  table: string,
-  columns: string[],
-  foreignKey: Pick<ForeignKeyOptions, 'match' | 'onDelete' | 'onUpdate'>,
+  references: TableData.References,
   snakeCase: boolean | undefined,
 ) => {
+  const [schema, table] = getForeignKeyTable(references.fnOrTable);
+
   const sql: string[] = [
     `REFERENCES ${quoteWithSchema({ schema, name: table })}(${joinColumns(
-      snakeCase ? columns.map(toSnakeCase) : columns,
+      snakeCase
+        ? references.foreignColumns.map(toSnakeCase)
+        : references.foreignColumns,
     )})`,
   ];
 
-  if (foreignKey.match) {
-    sql.push(`MATCH ${foreignKey.match.toUpperCase()}`);
+  const { options } = references;
+  if (options?.match) {
+    sql.push(`MATCH ${options?.match.toUpperCase()}`);
   }
 
-  if (foreignKey.onDelete) {
-    sql.push(`ON DELETE ${foreignKey.onDelete.toUpperCase()}`);
+  if (options?.onDelete) {
+    sql.push(`ON DELETE ${options?.onDelete.toUpperCase()}`);
   }
 
-  if (foreignKey.onUpdate) {
-    sql.push(`ON UPDATE ${foreignKey.onUpdate.toUpperCase()}`);
+  if (options?.onUpdate) {
+    sql.push(`ON UPDATE ${options?.onUpdate.toUpperCase()}`);
   }
 
   return sql.join(' ');

@@ -142,7 +142,8 @@ export const isObjectEmpty = (obj: object) => {
   return true;
 };
 
-export const objectHasValues = (obj: object) => {
+export const objectHasValues = (obj?: object) => {
+  if (!obj) return false;
   for (const key in obj) {
     if (obj[key as keyof typeof obj] !== undefined) return true;
   }

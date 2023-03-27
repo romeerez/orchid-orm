@@ -48,8 +48,8 @@ import { TableQuery } from './createTable';
 
 type ChangeTableData = { add: TableData; drop: TableData };
 const newChangeTableData = (): ChangeTableData => ({
-  add: { indexes: [], foreignKeys: [] },
-  drop: { indexes: [], foreignKeys: [] },
+  add: {},
+  drop: {},
 });
 
 let changeTableData = newChangeTableData();
@@ -69,8 +69,8 @@ const mergeTableData = (a: TableData, b: TableData) => {
       };
     }
   }
-  a.indexes = [...a.indexes, ...b.indexes];
-  a.foreignKeys = [...a.foreignKeys, ...b.foreignKeys];
+  a.indexes = [...(a.indexes || []), ...(b.indexes || [])];
+  a.constraints = [...(a.constraints || []), ...(b.constraints || [])];
 };
 
 function add(
@@ -259,7 +259,7 @@ export const changeTable = async (
   tableName: string,
   options: ChangeTableOptions,
   fn?: ChangeTableCallback,
-) => {
+): Promise<void> => {
   resetTableData();
   resetChangeTableData();
 
@@ -430,23 +430,17 @@ const astToQueries = (
 
   const alterTable: string[] = [];
   const values: unknown[] = [];
-  const addIndexes: TableData.Index[] = mapIndexesForSnakeCase(
-    ast.add.indexes,
+  const addIndexes = mapIndexesForSnakeCase(ast.add.indexes, snakeCase);
+
+  const dropIndexes = mapIndexesForSnakeCase(ast.drop.indexes, snakeCase);
+
+  const addConstraints = mapConstraintsToSnakeCase(
+    ast.add.constraints,
     snakeCase,
   );
 
-  const dropIndexes: TableData.Index[] = mapIndexesForSnakeCase(
-    ast.drop.indexes,
-    snakeCase,
-  );
-
-  const addForeignKeys: TableData.ForeignKey[] = mapForeignKeysForSnakeCase(
-    ast.add.foreignKeys,
-    snakeCase,
-  );
-
-  const dropForeignKeys: TableData.ForeignKey[] = mapForeignKeysForSnakeCase(
-    ast.drop.foreignKeys,
+  const dropConstraints = mapConstraintsToSnakeCase(
+    ast.drop.constraints,
     snakeCase,
   );
 
@@ -556,24 +550,32 @@ const astToQueries = (
             fromFkey.columns.join(',') !== toFkey.columns.join(','))
         ) {
           if (fromFkey) {
-            dropForeignKeys.push({
-              columns: [name],
-              fnOrTable: fromFkey.table,
-              foreignColumns: snakeCase
-                ? fromFkey.columns.map(toSnakeCase)
-                : fromFkey.columns,
-              options: fromFkey,
+            dropConstraints.push({
+              name: fromFkey.name,
+              dropMode: fromFkey.dropMode,
+              references: {
+                columns: [name],
+                fnOrTable: fromFkey.table,
+                foreignColumns: snakeCase
+                  ? fromFkey.columns.map(toSnakeCase)
+                  : fromFkey.columns,
+                options: fromFkey,
+              },
             });
           }
 
           if (toFkey) {
-            addForeignKeys.push({
-              columns: [name],
-              fnOrTable: toFkey.table,
-              foreignColumns: snakeCase
-                ? toFkey.columns.map(toSnakeCase)
-                : toFkey.columns,
-              options: toFkey,
+            addConstraints.push({
+              name: toFkey.name,
+              dropMode: toFkey.dropMode,
+              references: {
+                columns: [name],
+                fnOrTable: toFkey.table,
+                foreignColumns: snakeCase
+                  ? toFkey.columns.map(toSnakeCase)
+                  : toFkey.columns,
+                options: toFkey,
+              },
             });
           }
         }
@@ -656,9 +658,9 @@ const astToQueries = (
   }
 
   prependAlterTable.push(
-    ...dropForeignKeys.map(
+    ...dropConstraints.map(
       (foreignKey) =>
-        `\n DROP ${constraintToSql(ast, false, foreignKey, snakeCase)}`,
+        `\n DROP ${constraintToSql(ast, false, foreignKey, values, snakeCase)}`,
     ),
   );
 
@@ -682,9 +684,9 @@ const astToQueries = (
   }
 
   alterTable.push(
-    ...addForeignKeys.map(
+    ...addConstraints.map(
       (foreignKey) =>
-        `\n ADD ${constraintToSql(ast, true, foreignKey, snakeCase)}`,
+        `\n ADD ${constraintToSql(ast, true, foreignKey, values, snakeCase)}`,
     ),
   );
 
@@ -720,29 +722,38 @@ const getChangeColumnName = (
 };
 
 const mapIndexesForSnakeCase = (
-  indexes: TableData.Index[],
+  indexes?: TableData.Index[],
   snakeCase?: boolean,
 ): TableData.Index[] => {
-  return indexes.map((index) => ({
-    options: index.options,
-    columns: snakeCase
-      ? index.columns.map((item) =>
-          'column' in item
-            ? { ...item, column: toSnakeCase(item.column) }
-            : item,
-        )
-      : index.columns,
-  }));
+  return (
+    indexes?.map((index) => ({
+      options: index.options,
+      columns: snakeCase
+        ? index.columns.map((item) =>
+            'column' in item
+              ? { ...item, column: toSnakeCase(item.column) }
+              : item,
+          )
+        : index.columns,
+    })) || []
+  );
 };
 
-const mapForeignKeysForSnakeCase = (
-  foreignKeys: TableData.ForeignKey[],
+const mapConstraintsToSnakeCase = (
+  foreignKeys?: TableData.Constraint[],
   snakeCase?: boolean,
-): TableData.ForeignKey[] => {
-  return foreignKeys.map((foreignKey) => ({
-    ...foreignKey,
-    columns: snakeCase
-      ? foreignKey.columns.map(toSnakeCase)
-      : foreignKey.columns,
-  }));
+): TableData.Constraint[] => {
+  return (
+    foreignKeys?.map((item) => ({
+      ...item,
+      references: item.references
+        ? snakeCase
+          ? {
+              ...item.references,
+              columns: item.references.columns.map(toSnakeCase),
+            }
+          : item.references
+        : undefined,
+    })) || []
+  );
 };

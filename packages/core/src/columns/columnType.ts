@@ -87,7 +87,7 @@ export type ColumnShapeInput<Shape extends ColumnsShapeBase> = SetOptional<
 export type AnyColumnType = ColumnTypeBase<any, Record<string, Operator<any>>>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/ban-types
-export type AnyColumnTypeCreator = (...args: any[]) => AnyColumnType | {};
+export type AnyColumnTypeCreator = (...args: any) => AnyColumnType | {};
 
 export type ColumnTypesBase = Record<
   string,

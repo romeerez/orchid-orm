@@ -1,11 +1,13 @@
 import { RakeDbAst } from '../ast';
 import {
   ColumnType,
-  foreignKeyArgsToCode,
-  foreignKeyToCode,
+  referencesArgsToCode,
+  constraintToCode,
   indexToCode,
   primaryKeyToCode,
   TimestampColumn,
+  getConstraintKind,
+  constraintPropsToCode,
 } from 'pqb';
 import {
   addCode,
@@ -24,7 +26,7 @@ export const astToMigration = (
 ): string | undefined => {
   const first: Code[] = [];
   const tables: Code[] = [];
-  const foreignKeys: Code[] = [];
+  const constraints: Code[] = [];
   for (const item of ast) {
     if (item.type === 'schema' && item.action === 'create') {
       first.push(createSchema(item));
@@ -39,13 +41,13 @@ export const astToMigration = (
       first.push(...createDomain(item));
     } else if (item.type === 'table' && item.action === 'create') {
       tables.push(createTable(config, item));
-    } else if (item.type === 'foreignKey') {
-      if (foreignKeys.length) foreignKeys.push([]);
-      foreignKeys.push(...createForeignKey(item));
+    } else if (item.type === 'constraint') {
+      if (constraints.length) constraints.push([]);
+      constraints.push(...createConstraint(item));
     }
   }
 
-  if (!first.length && !tables.length && !foreignKeys.length) return;
+  if (!first.length && !tables.length && !constraints.length) return;
 
   let code = `import { change } from 'rake-db';
 `;
@@ -68,10 +70,10 @@ ${codeToString(table, '  ', '  ')}
     }
   }
 
-  if (foreignKeys.length) {
+  if (constraints.length) {
     code += `
 change(async (db) => {
-${codeToString(foreignKeys, '  ', '  ')}
+${codeToString(constraints, '  ', '  ')}
 });
 `;
   }
@@ -180,12 +182,16 @@ const createTable = (config: RakeDbConfig, ast: RakeDbAst.Table) => {
     code.push([primaryKeyToCode(ast.primaryKey, 't')]);
   }
 
-  for (const index of ast.indexes) {
-    code.push(indexToCode(index, 't'));
+  if (ast.indexes) {
+    for (const index of ast.indexes) {
+      code.push(indexToCode(index, 't'));
+    }
   }
 
-  for (const foreignKey of ast.foreignKeys) {
-    code.push(foreignKeyToCode(foreignKey, 't'));
+  if (ast.constraints) {
+    for (const constraint of ast.constraints) {
+      code.push(constraintToCode(constraint, 't'));
+    }
   }
 
   addCode(code, '}));');
@@ -207,16 +213,28 @@ const isTimestamp = (column?: ColumnType) => {
   );
 };
 
-const createForeignKey = (item: RakeDbAst.ForeignKey): Code[] => {
+const createConstraint = (item: RakeDbAst.Constraint): Code => {
+  const kind = getConstraintKind(item);
+  const table = quoteSchemaTable({
+    schema: item.tableSchema,
+    name: item.tableName,
+  });
+
+  if (kind === 'foreignKey' && item.references) {
+    return [
+      `await db.addForeignKey(`,
+      [`${table},`, ...referencesArgsToCode(item.references, item.name)],
+      ');',
+    ];
+  }
+
+  if (kind === 'check' && item.check) {
+    return [`await db.addCheck(${table}, ${rawToCode('t', item.check)});`];
+  }
+
   return [
-    `await db.addForeignKey(`,
-    [
-      `${quoteSchemaTable({
-        schema: item.tableSchema,
-        name: item.tableName,
-      })},`,
-      ...foreignKeyArgsToCode(item),
-    ],
-    ');',
+    `await db.addConstraint(${table}, {`,
+    constraintPropsToCode('t', item),
+    '});',
   ];
 };

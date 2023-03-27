@@ -42,13 +42,15 @@ export type ForeignKeyAction =
 
 export type ForeignKey<Table extends string, Columns extends string[]> = (
   | {
-      fn(): new () => { table: Table };
+      fn(): new () => { table: Table; columns: { shape: ColumnsShape } };
     }
   | {
       table: Table;
     }
 ) & {
   columns: Columns;
+  name?: string;
+  dropMode?: DropMode;
 } & ForeignKeyOptions;
 
 export type DropMode = 'CASCADE' | 'RESTRICT';
@@ -86,15 +88,12 @@ export type SingleColumnIndexOptions = IndexColumnOptions & IndexOptions;
 export type ForeignKeyTable = new () => {
   schema?: string;
   table: string;
-};
-
-export type ForeignKeyTableWithColumns = new () => {
-  table: string;
   columns: { shape: ColumnsShape };
 };
 
-export type ColumnNameOfTable<Table extends ForeignKeyTableWithColumns> =
-  StringKey<keyof InstanceType<Table>['columns']['shape']>;
+export type ColumnNameOfTable<Table extends ForeignKeyTable> = StringKey<
+  keyof InstanceType<Table>['columns']['shape']
+>;
 
 export type ColumnFromDbParams = {
   isNullable?: boolean;
@@ -139,7 +138,7 @@ export abstract class ColumnType<
 
   foreignKey<
     T extends ColumnType,
-    Table extends ForeignKeyTableWithColumns,
+    Table extends ForeignKeyTable,
     Column extends ColumnNameOfTable<Table>,
   >(
     this: T,

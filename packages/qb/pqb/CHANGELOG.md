@@ -1,5 +1,13 @@
 # pqb
 
+## 0.10.23
+
+### Patch Changes
+
+- Support db table checks and constraints
+- Updated dependencies
+  - orchid-core@0.1.12
+
 ## 0.10.22
 
 ### Patch Changes

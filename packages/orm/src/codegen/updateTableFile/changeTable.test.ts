@@ -43,7 +43,20 @@ const change = (
 
 class Table {
   readonly table = 'foo_bar';
+  columns = { shape: {} };
 }
+
+const template = (
+  columns?: string,
+  { asIs }: { asIs?: boolean } = {},
+) => `import { BaseTable } from '../baseTable';
+
+export class FooBarTable extends BaseTable {
+  readonly table = 'foo_bar';
+  columns = this.setColumns((t) => ({${
+    columns ? (asIs ? columns : `\n    ${columns.trim()}\n  `) : ''
+  }}));
+}`;
 
 describe('updateTableFile', () => {
   beforeEach(() => {
@@ -51,13 +64,7 @@ describe('updateTableFile', () => {
   });
 
   it('should add a single column into empty columns list', async () => {
-    asMock(fs.readFile)
-      .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({}));
-}`);
+    asMock(fs.readFile).mockResolvedValue(template());
 
     await updateTableFile({
       ...params,
@@ -69,26 +76,13 @@ export class FooBarTable extends BaseTable {
       },
     });
 
-    testWritten(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    name: t.text(1, 10),
-  }));
-}`);
+    testWritten(template(`name: t.text(1, 10),`));
   });
 
   it('should add a single column', async () => {
-    asMock(fs.readFile)
-      .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
-  }));
-}`);
+    asMock(fs.readFile).mockResolvedValue(
+      template(`id: t.serial().primaryKey(),`),
+    );
 
     await updateTableFile({
       ...params,
@@ -100,27 +94,18 @@ export class FooBarTable extends BaseTable {
       },
     });
 
-    testWritten(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+    testWritten(
+      template(`
     id: t.serial().primaryKey(),
     name: t.text(1, 10),
-  }));
-}`);
+`),
+    );
   });
 
   it('should add a single column with custom name', async () => {
-    asMock(fs.readFile)
-      .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
-  }));
-}`);
+    asMock(fs.readFile).mockResolvedValue(
+      template(`id: t.serial().primaryKey(),`),
+    );
 
     await updateTableFile({
       ...params,
@@ -132,27 +117,18 @@ export class FooBarTable extends BaseTable {
       },
     });
 
-    testWritten(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+    testWritten(
+      template(`
     id: t.serial().primaryKey(),
     name: t.name('name').text(1, 10),
-  }));
-}`);
+`),
+    );
   });
 
   it('should add multiple columns', async () => {
-    asMock(fs.readFile)
-      .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
-  }));
-}`);
+    asMock(fs.readFile).mockResolvedValue(
+      template(`id: t.serial().primaryKey(),`),
+    );
 
     await updateTableFile({
       ...params,
@@ -167,30 +143,21 @@ export class FooBarTable extends BaseTable {
       },
     });
 
-    testWritten(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+    testWritten(
+      template(`
     id: t.serial().primaryKey(),
     name: t.text(1, 10),
     active: t.boolean(),
     domain: t.domain('name').as(t.integer()),
     custom: t.type('customType').as(t.integer()),
-  }));
-}`);
+`),
+    );
   });
 
   it('should insert ending comma before adding', async () => {
-    asMock(fs.readFile)
-      .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey()
-  }));
-}`);
+    asMock(fs.readFile).mockResolvedValue(
+      template(`id: t.serial().primaryKey()`),
+    );
 
     await updateTableFile({
       ...params,
@@ -203,30 +170,23 @@ export class FooBarTable extends BaseTable {
       },
     });
 
-    testWritten(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+    testWritten(
+      template(`
     id: t.serial().primaryKey(),
     name: t.text(1, 10),
     active: t.boolean(),
-  }));
-}`);
+`),
+    );
   });
 
   it('should drop column', async () => {
-    asMock(fs.readFile)
-      .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+    asMock(fs.readFile).mockResolvedValue(
+      template(`
     id: t.serial().primaryKey(),
     name: t.text(),
     active: t.boolean(),
-  }));
-}`);
+`),
+    );
 
     await updateTableFile({
       ...params,
@@ -238,28 +198,21 @@ export class FooBarTable extends BaseTable {
       },
     });
 
-    testWritten(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+    testWritten(
+      template(`
     id: t.serial().primaryKey(),
     active: t.boolean(),
-  }));
-}`);
+`),
+    );
   });
 
   it('should drop column at the end', async () => {
-    asMock(fs.readFile)
-      .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+    asMock(fs.readFile).mockResolvedValue(
+      template(`
     id: t.serial().primaryKey(),
     name: t.text(),
-  }));
-}`);
+`),
+    );
 
     await updateTableFile({
       ...params,
@@ -271,26 +224,11 @@ export class FooBarTable extends BaseTable {
       },
     });
 
-    testWritten(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
-  }));
-}`);
+    testWritten(template(`id: t.serial().primaryKey(),`));
   });
 
   it('should change column type', async () => {
-    asMock(fs.readFile)
-      .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    name: t.integer(),
-  }));
-}`);
+    asMock(fs.readFile).mockResolvedValue(template(`name: t.integer(),`));
 
     await updateTableFile({
       ...params,
@@ -309,23 +247,12 @@ export class FooBarTable extends BaseTable {
       },
     });
 
-    testWritten(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    name: t.text(1, 10),
-  }));
-}`);
+    testWritten(template(`name: t.text(1, 10),`));
   });
 
   it('should change properties', async () => {
-    asMock(fs.readFile)
-      .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+    asMock(fs.readFile).mockResolvedValue(
+      template(`
     changeCollate: t.text().collate('one'),
     addCollate: t.text(),
     dropCollate: t.text().collate('one'),
@@ -339,8 +266,8 @@ export class FooBarTable extends BaseTable {
     dropCompression: t.text().compression('one'),
     addPrimaryKey: t.text(),
     dropPrimaryKey: t.text().primaryKey(),
-  }));
-}`);
+`),
+    );
 
     await updateTableFile({
       ...params,
@@ -364,11 +291,8 @@ export class FooBarTable extends BaseTable {
       },
     });
 
-    testWritten(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+    testWritten(
+      template(`
     changeCollate: t.text().collate('two'),
     addCollate: t.text().collate('two'),
     dropCollate: t.text(),
@@ -382,19 +306,14 @@ export class FooBarTable extends BaseTable {
     dropCompression: t.text(),
     addPrimaryKey: t.text().primaryKey(),
     dropPrimaryKey: t.text(),
-  }));
-}`);
+`),
+    );
   });
 
   describe('primaryKey', () => {
-    const result = `import { BaseTable } from '../baseTable';
- 
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    ...t.primaryKey(['one', 'two'], { name: 'name' }),
-  }));
-}`;
+    const result = template(
+      `...t.primaryKey(['one', 'two'], { name: 'name' }),`,
+    );
 
     const add = {
       ...tableData,
@@ -405,15 +324,9 @@ export class FooBarTable extends BaseTable {
     };
 
     it('should change primaryKey', async () => {
-      asMock(fs.readFile)
-        .mockResolvedValue(`import { BaseTable } from '../baseTable';
- 
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    ...t.primaryKey(['foo', 'bar'], { name: 'baz' }),
-  }));
-}`);
+      asMock(fs.readFile).mockResolvedValue(
+        template(`...t.primaryKey(['foo', 'bar'], { name: 'baz' }),`),
+      );
 
       await updateTableFile({
         ...params,
@@ -427,14 +340,7 @@ export class FooBarTable extends BaseTable {
     });
 
     it('should add primaryKey', async () => {
-      asMock(fs.readFile)
-        .mockResolvedValue(`import { BaseTable } from '../baseTable';
- 
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-  }));
-}`);
+      asMock(fs.readFile).mockResolvedValue(template(`\n  `, { asIs: true }));
 
       await updateTableFile({
         ...params,
@@ -450,15 +356,11 @@ export class FooBarTable extends BaseTable {
 
   describe('indexes', () => {
     it('should change column indexes', async () => {
-      asMock(fs.readFile)
-        .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    name: t.text().index({ order: 'one' }).index({ collate: 'en_US' })
-  }));
-}`);
+      asMock(fs.readFile).mockResolvedValue(
+        template(
+          `name: t.text().index({ order: 'one' }).index({ collate: 'en_US' })`,
+        ),
+      );
 
       await updateTableFile({
         ...params,
@@ -474,30 +376,19 @@ export class FooBarTable extends BaseTable {
         },
       });
 
-      testWritten(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+      testWritten(
+        template(`
     name: t.text().index({
       order: 'two',
     }).index({
       collate: 'en_UK',
     }),
-  }));
-}`);
+`),
+      );
     });
 
     it('should add column indexes', async () => {
-      asMock(fs.readFile)
-        .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    name: t.text(),
-  }));
-}`);
+      asMock(fs.readFile).mockResolvedValue(template(`name: t.text(),`));
 
       await updateTableFile({
         ...params,
@@ -513,25 +404,18 @@ export class FooBarTable extends BaseTable {
         },
       });
 
-      testWritten(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+      testWritten(
+        template(`
     name: t.text().index({
       order: 'two',
     }).index({
       collate: 'fr_FR',
     }),
-  }));
-}`);
+`),
+      );
     });
 
-    const result = `import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+    const result = template(`
     ...t.index(['6']),
     ...t.index(['7', '8']),
     ...t.index(
@@ -546,8 +430,7 @@ export class FooBarTable extends BaseTable {
         name: 'newName',
       },
     ),
-  }));
-}`;
+`);
 
     const add = {
       ...tableData,
@@ -568,17 +451,13 @@ export class FooBarTable extends BaseTable {
     };
 
     it('should change indexes', async () => {
-      asMock(fs.readFile)
-        .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+      asMock(fs.readFile).mockResolvedValue(
+        template(`
     ...t.index('1'),
     ...t.index(['2', '3']),
     ...t.index(['4', { column: '5', order: 'order' }], { name: 'indexName' }),
-  }));
-}`);
+`),
+      );
 
       await updateTableFile({
         ...params,
@@ -609,14 +488,7 @@ export class FooBarTable extends BaseTable {
     });
 
     it('should add indexes', async () => {
-      asMock(fs.readFile)
-        .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-  }));
-}`);
+      asMock(fs.readFile).mockResolvedValue(template(`\n  `, { asIs: true }));
 
       await updateTableFile({
         ...params,
@@ -628,19 +500,40 @@ export class FooBarTable extends BaseTable {
 
       testWritten(result);
     });
+
+    it('should add column indexes', async () => {
+      asMock(fs.readFile).mockResolvedValue(template(`name: t.text(),`));
+
+      await updateTableFile({
+        ...params,
+        ast: {
+          ...ast.changeTable,
+          shape: {
+            name: {
+              type: 'change',
+              from: {},
+              to: {
+                foreignKeys: [
+                  { table: 'e', columns: ['f'] },
+                  { table: 'g', columns: ['h'] },
+                ],
+              },
+            },
+          },
+        },
+      });
+
+      testWritten(
+        template(`name: t.text().foreignKey('e', 'f').foreignKey('g', 'h'),`),
+      );
+    });
   });
 
   describe('foreignKeys', () => {
     it('should change column foreignKeys', async () => {
-      asMock(fs.readFile)
-        .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    name: t.text().foreignKey('a', 'b').foreignKey('c', 'd')
-  }));
-}`);
+      asMock(fs.readFile).mockResolvedValue(
+        template(`name: t.text().foreignKey('a', 'b').foreignKey('c', 'd')`),
+      );
 
       await updateTableFile({
         ...params,
@@ -666,61 +559,12 @@ export class FooBarTable extends BaseTable {
         },
       });
 
-      testWritten(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    name: t.text().foreignKey('e', 'f').foreignKey('g', 'h'),
-  }));
-}`);
+      testWritten(
+        template(`name: t.text().foreignKey('e', 'f').foreignKey('g', 'h'),`),
+      );
     });
 
-    it('should add column indexes', async () => {
-      asMock(fs.readFile)
-        .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    name: t.text(),
-  }));
-}`);
-
-      await updateTableFile({
-        ...params,
-        ast: {
-          ...ast.changeTable,
-          shape: {
-            name: {
-              type: 'change',
-              from: {},
-              to: {
-                foreignKeys: [
-                  { table: 'e', columns: ['f'] },
-                  { table: 'g', columns: ['h'] },
-                ],
-              },
-            },
-          },
-        },
-      });
-
-      testWritten(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    name: t.text().foreignKey('e', 'f').foreignKey('g', 'h'),
-  }));
-}`);
-    });
-
-    const result = `import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+    const result = template(`
     ...t.foreignKey(
       ['7'],
       'foo_bar',
@@ -740,41 +584,40 @@ export class FooBarTable extends BaseTable {
         onUpdate: 'NO ACTION',
       },
     ),
-  }));
-}`;
+`);
 
-    const add = {
+    const add: TableData = {
       ...tableData,
-      foreignKeys: [
+      constraints: [
         {
-          columns: ['7'],
-          fnOrTable: 'foo_bar',
-          foreignColumns: ['8'],
-          options: {
-            name: 'first',
-            match: 'PARTIAL',
+          references: {
+            columns: ['7'],
+            fnOrTable: 'foo_bar',
+            foreignColumns: ['8'],
+            options: {
+              name: 'first',
+              match: 'PARTIAL',
+            },
           },
         },
         {
-          columns: ['9', '10'],
-          fnOrTable: () => Table,
-          foreignColumns: ['11', '12'],
-          options: {
-            name: 'second',
-            match: 'SIMPLE',
-            onUpdate: 'NO ACTION',
+          references: {
+            columns: ['9', '10'],
+            fnOrTable: () => Table,
+            foreignColumns: ['11', '12'],
+            options: {
+              name: 'second',
+              match: 'SIMPLE',
+              onUpdate: 'NO ACTION',
+            },
           },
         },
       ],
     };
 
     it('should change foreignKeys', async () => {
-      asMock(fs.readFile)
-        .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+      asMock(fs.readFile).mockResolvedValue(
+        template(`
     ...t.foreignKey(
       ['1'],
       () => Table,
@@ -791,8 +634,8 @@ export class FooBarTable extends BaseTable {
         onDelete: 'CASCADE',
       },
     ),
-  }));
-}`);
+`),
+      );
 
       await updateTableFile({
         ...params,
@@ -800,23 +643,27 @@ export class FooBarTable extends BaseTable {
           ...ast.changeTable,
           drop: {
             ...tableData,
-            foreignKeys: [
+            constraints: [
               {
-                columns: ['1'],
-                fnOrTable: () => Table,
-                foreignColumns: ['2'],
-                options: {},
+                references: {
+                  columns: ['1'],
+                  fnOrTable: () => Table,
+                  foreignColumns: ['2'],
+                  options: {},
+                },
               },
               {
-                columns: ['3', '4'],
-                fnOrTable: 'foo_bar',
-                foreignColumns: ['5', '6'],
-                options: {
-                  name: 'foreignKeyName',
-                  match: 'FULL',
-                  onUpdate: 'CASCADE',
-                  onDelete: 'CASCADE',
-                  dropMode: 'CASCADE',
+                references: {
+                  columns: ['3', '4'],
+                  fnOrTable: 'foo_bar',
+                  foreignColumns: ['5', '6'],
+                  options: {
+                    name: 'foreignKeyName',
+                    match: 'FULL',
+                    onUpdate: 'CASCADE',
+                    onDelete: 'CASCADE',
+                    dropMode: 'CASCADE',
+                  },
                 },
               },
             ],
@@ -829,14 +676,7 @@ export class FooBarTable extends BaseTable {
     });
 
     it('should add foreignKeys', async () => {
-      asMock(fs.readFile)
-        .mockResolvedValue(`import { BaseTable } from '../baseTable';
-
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-  }));
-}`);
+      asMock(fs.readFile).mockResolvedValue(template(`\n  `, { asIs: true }));
 
       await updateTableFile({
         ...params,
@@ -850,80 +690,244 @@ export class FooBarTable extends BaseTable {
     });
   });
 
-  describe('column check', () => {
-    it('should add column with check', async () => {
-      asMock(fs.readFile)
-        .mockResolvedValue(`import { BaseTable } from '../baseTable';
+  describe('check', () => {
+    describe('table check', () => {
+      it('should add table check', async () => {
+        asMock(fs.readFile).mockResolvedValue(template(`\n  `, { asIs: true }));
 
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({}));
-}`);
-
-      await updateTableFile({
-        ...params,
-        ast: {
-          ...ast.changeTable,
-          shape: {
-            name: { type: 'add', item: t.text(1, 10).check(t.raw('check')) },
+        await updateTableFile({
+          ...params,
+          ast: {
+            ...ast.changeTable,
+            add: {
+              constraints: [
+                {
+                  check: raw('sql'),
+                },
+              ],
+            },
           },
-        },
+        });
+
+        testWritten(
+          template(`
+  ...t.check(t.raw('sql')),
+        `),
+        );
       });
 
-      testWritten(`import { BaseTable } from '../baseTable';
+      it('should change table check', async () => {
+        asMock(fs.readFile).mockResolvedValue(
+          template(`
+  ...t.check(t.raw('from')),
+`),
+        );
 
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    name: t.text(1, 10).check(t.raw('check')),
-  }));
-}`);
+        await updateTableFile({
+          ...params,
+          ast: {
+            ...ast.changeTable,
+            drop: {
+              constraints: [
+                {
+                  check: raw('from'),
+                },
+              ],
+            },
+            add: {
+              constraints: [
+                {
+                  check: raw('to'),
+                },
+              ],
+            },
+          },
+        });
+
+        testWritten(
+          template(`
+  ...t.check(t.raw('to')),
+        `),
+        );
+      });
     });
 
-    it('should change column check', async () => {
-      asMock(fs.readFile)
-        .mockResolvedValue(`import { BaseTable } from '../baseTable';
+    describe('column check', () => {
+      it('should add column with check', async () => {
+        asMock(fs.readFile).mockResolvedValue(template());
 
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
+        await updateTableFile({
+          ...params,
+          ast: {
+            ...ast.changeTable,
+            shape: {
+              name: { type: 'add', item: t.text(1, 10).check(t.raw('check')) },
+            },
+          },
+        });
+
+        testWritten(template(`name: t.text(1, 10).check(t.raw('check')),`));
+      });
+
+      it('should change column check', async () => {
+        asMock(fs.readFile).mockResolvedValue(
+          template(`
     add: t.text(),
     remove: t.text().check(t.raw('remove check')),
-  }));
-}`);
+`),
+        );
+
+        await updateTableFile({
+          ...params,
+          ast: {
+            ...ast.changeTable,
+            shape: {
+              add: {
+                type: 'change',
+                from: {},
+                to: {
+                  check: raw('add check'),
+                },
+              },
+              remove: {
+                type: 'change',
+                from: {
+                  check: raw('remove check'),
+                },
+                to: {},
+              },
+            },
+          },
+        });
+
+        testWritten(
+          template(`
+    add: t.text().check(t.raw('add check')),
+    remove: t.text(),
+`),
+        );
+      });
+    });
+  });
+
+  describe('constraint', () => {
+    it('should add constraint', async () => {
+      asMock(fs.readFile).mockResolvedValue(template(`\n  `, { asIs: true }));
 
       await updateTableFile({
         ...params,
         ast: {
           ...ast.changeTable,
-          shape: {
-            add: {
-              type: 'change',
-              from: {},
-              to: {
-                check: raw('add check'),
+          add: {
+            constraints: [
+              {
+                name: 'name',
+                check: raw('sql'),
+                references: {
+                  columns: ['a', 'b'],
+                  fnOrTable: 'table',
+                  foreignColumns: ['c', 'd'],
+                  options: {
+                    match: 'SIMPLE',
+                  },
+                },
               },
-            },
-            remove: {
-              type: 'change',
-              from: {
-                check: raw('remove check'),
-              },
-              to: {},
-            },
+            ],
           },
         },
       });
 
-      testWritten(`import { BaseTable } from '../baseTable';
+      testWritten(
+        template(`
+  ...t.constraint({
+      name: 'name',
+      references: [
+        ['a', 'b'],
+        'table',
+        ['c', 'd'],
+        {
+          match: 'SIMPLE',
+        },
+      ],
+      check: t.raw('sql'),
+    }),
+        `),
+      );
+    });
 
-export class FooBarTable extends BaseTable {
-  readonly table = 'foo_bar';
-  columns = this.setColumns((t) => ({
-    add: t.text().check(t.raw('add check')),
-    remove: t.text(),
-  }));
-}`);
+    it('should change constraint', async () => {
+      asMock(fs.readFile).mockResolvedValue(
+        template(`
+  ...t.constraint({
+      name: 'name',
+      references: [
+        ['a', 'b'],
+        'table',
+        ['c', 'd'],
+        {
+          match: 'SIMPLE',
+        },
+      ],
+      check: t.raw('sql'),
+    }),
+`),
+      );
+
+      await updateTableFile({
+        ...params,
+        ast: {
+          ...ast.changeTable,
+          drop: {
+            constraints: [
+              {
+                name: 'name',
+                check: raw('sql'),
+                references: {
+                  columns: ['a', 'b'],
+                  fnOrTable: 'table',
+                  foreignColumns: ['c', 'd'],
+                  options: {
+                    match: 'SIMPLE',
+                  },
+                },
+              },
+            ],
+          },
+          add: {
+            constraints: [
+              {
+                name: 'updated',
+                check: raw('updated'),
+                references: {
+                  columns: ['e', 'f'],
+                  fnOrTable: 'updated',
+                  foreignColumns: ['g', 'h'],
+                  options: {
+                    match: 'FULL',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      });
+
+      testWritten(
+        template(`
+  ...t.constraint({
+      name: 'updated',
+      references: [
+        ['e', 'f'],
+        'updated',
+        ['g', 'h'],
+        {
+          match: 'FULL',
+        },
+      ],
+      check: t.raw('updated'),
+    }),
+      `),
+      );
     });
   });
 });

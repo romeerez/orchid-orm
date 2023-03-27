@@ -17,7 +17,7 @@ import {
   columnIndexesToCode,
   ColumnType,
   ForeignKey,
-  foreignKeyToCode,
+  constraintToCode,
   IndexColumnOptions,
   indexToCode,
   primaryKeyToCode,
@@ -34,6 +34,7 @@ import {
   columnDefaultArgumentToCode,
   toCamelCase,
   toPascalCase,
+  emptyObject,
 } from 'orchid-core';
 import { UpdateTableFileParams } from './updateTableFile';
 
@@ -213,7 +214,11 @@ const applySchemaChanges = (context: ChangeContext) => {
       } else if (name === 'index') {
         dropMatchingIndexes(context, prop, i, call, drop.indexes);
       } else if (name === 'foreignKey') {
-        dropMatchingForeignKey(context, prop, i, call, drop.foreignKeys);
+        dropMatchingForeignKey(context, prop, i, call, drop.constraints);
+      } else if (name === 'check') {
+        dropMatchingCheck(context, prop, i, call, drop.constraints);
+      } else if (name === 'constraint') {
+        dropMatchingConstraint(context, prop, i, call, drop.constraints);
       }
     } else if (ts.is.propertyAssignment(prop)) {
       const name = ts.prop.getName(prop);
@@ -358,13 +363,17 @@ const addTableData = ({ add, changes, object, t, spaces }: ChangeContext) => {
     );
     changes.add(end, `  ${code.trim()}\n${spaces}`);
   }
-  for (const item of add.indexes) {
-    const code = codeToString(indexToCode(item, t), spaces + '  ', '  ');
-    changes.add(end, `  ${code.trim()}\n${spaces}`);
+  if (add.indexes) {
+    for (const item of add.indexes) {
+      const code = codeToString(indexToCode(item, t), spaces + '  ', '  ');
+      changes.add(end, `  ${code.trim()}\n${spaces}`);
+    }
   }
-  for (const item of add.foreignKeys) {
-    const code = codeToString(foreignKeyToCode(item, t), spaces + '  ', '  ');
-    changes.add(end, `  ${code.trim()}\n${spaces}`);
+  if (add.constraints) {
+    for (const item of add.constraints) {
+      const code = codeToString(constraintToCode(item, t), spaces + '  ', '  ');
+      changes.add(end, `  ${code.trim()}\n${spaces}`);
+    }
   }
 };
 
@@ -407,9 +416,9 @@ const dropMatchingIndexes = (
   prop: ObjectLiteralElementLike,
   i: number,
   call: CallExpression,
-  items: TableData.Index[],
+  items?: TableData.Index[],
 ) => {
-  if (!items.length) return;
+  if (!items?.length) return;
 
   const [columnsNode, optionsNode] = call.arguments;
   const columns: Record<string, string | number>[] = [];
@@ -448,12 +457,23 @@ const dropMatchingForeignKey = (
   prop: ObjectLiteralElementLike,
   i: number,
   call: CallExpression,
-  items: TableData.ForeignKey[],
+  items?: TableData.Constraint[],
 ) => {
-  if (!items.length) return;
+  if (!items?.length) return;
 
-  const { arguments: args } = call;
+  const existing = parseReferencesArgs(context, call.arguments);
+  if (!existing) return;
 
+  for (const item of items) {
+    if (compareReferences(existing, item.references))
+      removeProp(context, prop, i);
+  }
+};
+
+const parseReferencesArgs = (
+  context: ChangeContext,
+  args: NodeArray<Expression>,
+) => {
   const columns = collectStringArrayFromCode(args[0]);
   if (!columns) return;
 
@@ -475,18 +495,116 @@ const dropMatchingForeignKey = (
   const options =
     (ts.is.objectLiteral(args[3]) && collectObjectFromCode(args[3])) || {};
 
-  for (const item of items) {
-    const itemOptions = item.options;
-    delete itemOptions.dropMode;
+  return { columns, fnOrTable, foreignColumns, options };
+};
 
-    if (
-      deepCompare(columns, item.columns) &&
-      deepCompare(fnOrTable, item.fnOrTable.toString()) &&
-      deepCompare(foreignColumns, item.foreignColumns) &&
-      deepCompare(options, itemOptions)
-    ) {
+const compareReferences = (
+  existing?: TableData.References,
+  item?: TableData.References,
+) => {
+  if (!item) return;
+
+  const itemOptions = item.options ? { ...item.options } : undefined;
+  if (itemOptions) {
+    delete itemOptions.dropMode;
+  }
+
+  return (
+    deepCompare(existing?.columns, item?.columns) &&
+    deepCompare(existing?.fnOrTable, item?.fnOrTable.toString()) &&
+    deepCompare(existing?.foreignColumns, item?.foreignColumns) &&
+    deepCompare(existing?.options, itemOptions)
+  );
+};
+
+const dropMatchingCheck = (
+  context: ChangeContext,
+  prop: ObjectLiteralElementLike,
+  i: number,
+  call: CallExpression,
+  items?: TableData.Constraint[],
+) => {
+  if (!items?.length) return;
+
+  const sql = parseCheckArg(context, call.arguments[0]);
+
+  for (const item of items) {
+    const { check } = item;
+    if (!check) continue;
+
+    if (check.__raw === sql) {
       removeProp(context, prop, i);
     }
+  }
+};
+
+const parseCheckArg = (context: ChangeContext, arg: Expression) => {
+  if (!arg || !ts.is.call(arg)) return;
+
+  const { expression } = arg;
+  if (
+    !ts.is.propertyAccess(expression) ||
+    !ts.is.identifier(expression.expression) ||
+    expression.expression.escapedText !== context.t ||
+    expression.name.escapedText !== 'raw'
+  )
+    return;
+
+  const [sqlArg] = arg.arguments;
+  if (!sqlArg || !ts.is.stringLiteral(sqlArg)) return;
+
+  return sqlArg.text;
+};
+
+const dropMatchingConstraint = (
+  context: ChangeContext,
+  prop: ObjectLiteralElementLike,
+  i: number,
+  call: CallExpression,
+  items?: TableData.Constraint[],
+) => {
+  if (!items?.length) return;
+
+  const {
+    arguments: [arg],
+  } = call;
+
+  if (!arg || !ts.is.objectLiteral(arg)) return;
+
+  const existing: Omit<TableData.Constraint, 'check'> & { check?: string } = {};
+  for (const prop of arg.properties) {
+    if (!ts.is.propertyAssignment(prop)) return;
+    const name = ts.prop.getName(prop);
+    if (!name) return;
+
+    const init = prop.initializer;
+
+    if (name === 'name') {
+      if (!ts.is.stringLiteral(init)) return;
+
+      existing.name = init.text;
+    } else if (name === 'references') {
+      if (!ts.is.arrayLiteral(init)) return;
+
+      const refs = parseReferencesArgs(context, init.elements);
+      if (!refs) return;
+
+      existing.references = refs;
+    } else if (name === 'check') {
+      existing.check = parseCheckArg(context, init);
+    }
+  }
+
+  for (const item of items) {
+    if (existing.name !== item.name) continue;
+    if (existing.check !== item.check?.__raw) continue;
+    if (
+      (existing.references || item.references) &&
+      !compareReferences(existing.references, item.references)
+    )
+      continue;
+
+    removeProp(context, prop, i);
   }
 };
 
@@ -520,7 +638,15 @@ const collectObjectFromCode = (node: ObjectLiteralExpression) => {
 };
 
 const deepCompare = (a: unknown, b: unknown): boolean => {
-  if (typeof a !== typeof b) return false;
+  if (typeof a !== typeof b) {
+    if (a === undefined && typeof b === 'object') {
+      a = emptyObject;
+    } else if (typeof a === 'object' && b === undefined) {
+      b = emptyObject;
+    } else {
+      return false;
+    }
+  }
   if (a === b) return true;
   if (typeof a === 'object') {
     if (a === null) return b === null;
@@ -528,7 +654,7 @@ const deepCompare = (a: unknown, b: unknown): boolean => {
     if (Array.isArray(a)) {
       if (!Array.isArray(b) || a.length !== b.length) return false;
 
-      return a.every((item, i) => deepCompare(item, b[i]));
+      return a.every((item, i) => deepCompare(item, (b as unknown[])[i]));
     }
 
     for (const key in a) {

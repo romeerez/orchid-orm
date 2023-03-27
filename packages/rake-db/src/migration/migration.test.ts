@@ -6,6 +6,7 @@ import {
   resetDb,
   toLine,
 } from '../test-utils';
+import { raw } from 'orchid-core';
 
 const db = getDb();
 
@@ -204,6 +205,69 @@ describe('migration', () => {
           expectSql(`
             ALTER TABLE "table"
             DROP CONSTRAINT "table_id_column_name_column_fkey"
+          `),
+      );
+    });
+  });
+
+  describe('addCheck and dropCheck', () => {
+    const testUpAndDown = makeTestUpAndDown('addCheck', 'dropCheck');
+
+    it('should use changeTable to add and drop a check', async () => {
+      await testUpAndDown(
+        (action) => db[action]('table', raw('check')),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+              ADD CONSTRAINT "table_check" CHECK (check)
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+              DROP CONSTRAINT "table_check"
+          `),
+      );
+    });
+  });
+
+  describe('addConstraint and dropConstraint', () => {
+    const testUpAndDown = makeTestUpAndDown('addConstraint', 'dropConstraint');
+
+    it('should use changeTable to add and drop a foreignKey', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', {
+            name: 'constraint',
+            references: [
+              ['id', 'name'],
+              'otherTable',
+              ['foreignId', 'foreignName'],
+              {
+                match: 'FULL',
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
+              },
+            ],
+            check: raw('check'),
+            dropMode: 'CASCADE',
+          }),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+            ${toLine(`
+              ADD CONSTRAINT "constraint"
+                FOREIGN KEY ("id", "name")
+                REFERENCES "otherTable"("foreignId", "foreignName")
+                MATCH FULL
+                ON DELETE CASCADE
+                ON UPDATE CASCADE
+                CHECK (check)
+            `)}
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "table"
+            DROP CONSTRAINT "constraint" CASCADE
           `),
       );
     });

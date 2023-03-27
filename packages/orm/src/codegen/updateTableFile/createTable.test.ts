@@ -3,7 +3,7 @@ import { asMock, ast, makeTestWritten, tablePath } from '../testUtils';
 import { resolve, dirname } from 'path';
 import fs from 'fs/promises';
 import { columnTypes } from 'pqb';
-import { pathToLog } from 'orchid-core';
+import { pathToLog, raw } from 'orchid-core';
 
 jest.mock('fs/promises', () => ({
   readFile: jest.fn(),
@@ -77,7 +77,7 @@ describe('createTable', () => {
     );
   });
 
-  it('should add table with primary key, indexes, foreign keys', async () => {
+  it('should add table with primary key, indexes, foreign keys, checks, constraints', async () => {
     await updateTableFile({
       ...params,
       ast: {
@@ -92,12 +92,26 @@ describe('createTable', () => {
             options: { name: 'indexName', unique: true },
           },
         ],
-        foreignKeys: [
+        constraints: [
           {
-            columns: ['one', 'two'],
-            fnOrTable: 'fooBar',
-            foreignColumns: ['three', 'four'],
-            options: { name: 'foreignKeyName' },
+            references: {
+              columns: ['one', 'two'],
+              fnOrTable: 'fooBar',
+              foreignColumns: ['three', 'four'],
+              options: { name: 'foreignKeyName' },
+            },
+          },
+          {
+            check: raw('check'),
+          },
+          {
+            name: 'constraint',
+            references: {
+              columns: ['one', 'two'],
+              fnOrTable: 'fooBar',
+              foreignColumns: ['three', 'four'],
+            },
+            check: raw('check'),
           },
         ],
       },
@@ -120,6 +134,16 @@ describe('createTable', () => {
         name: 'foreignKeyName',
       },
     ),
+    ...t.check(t.raw('check')),
+    ...t.constraint({
+      name: 'constraint',
+      references: [
+        ['one', 'two'],
+        'fooBar',
+        ['three', 'four'],
+      ],
+      check: t.raw('check'),
+    }),
   }`,
       }),
     );

@@ -1,6 +1,6 @@
 import { columnsShapeToCode } from './code';
 import { columnTypes } from './columnTypes';
-import { codeToString } from 'orchid-core';
+import { codeToString, raw } from 'orchid-core';
 
 const t = columnTypes;
 
@@ -36,10 +36,7 @@ describe('code', () => {
   });
 
   describe('columnsShapeToCode', () => {
-    const tableData = {
-      indexes: [],
-      foreignKeys: [],
-    };
+    const tableData = {};
 
     it('should convert columns shape to code', () => {
       const code = columnsShapeToCode(
@@ -223,41 +220,84 @@ bool: t.boolean(),
       );
     });
 
-    it('should add foreignKeys', () => {
-      class Table {
-        table = 'table';
-      }
-
-      const code = columnsShapeToCode(
-        {},
-        {
-          ...tableData,
-          foreignKeys: [
+    describe('constraints', () => {
+      describe('constraint', () => {
+        it('should add constraint when more than one option is provided', () => {
+          const code = columnsShapeToCode(
+            {},
             {
-              columns: ['oneId'],
-              fnOrTable: 'table',
-              foreignColumns: ['twoId'],
-              options: {},
+              ...tableData,
+              constraints: [
+                {
+                  references: {
+                    columns: ['oneId'],
+                    fnOrTable: 'table',
+                    foreignColumns: ['twoId'],
+                    options: {},
+                  },
+                  check: raw('sql'),
+                },
+              ],
             },
-            {
-              columns: ['oneId', 'twoId'],
-              fnOrTable: () => Table,
-              foreignColumns: ['threeId', 'fourId'],
-              options: {
-                name: 'name',
-                match: 'FULL',
-                onUpdate: 'CASCADE',
-                onDelete: 'CASCADE',
-                dropMode: 'CASCADE',
-              },
-            },
-          ],
-        },
-        't',
-      );
+            't',
+          );
 
-      expect(codeToString(code, '', '  ')).toBe(
-        `
+          expect(codeToString(code, '', '  ')).toBe(
+            `
+...t.constraint({
+  references: [
+    ['oneId'],
+    'table',
+    ['twoId'],
+  ],
+  check: t.raw('sql'),
+}),
+`.trim(),
+          );
+        });
+      });
+
+      describe('foreignKeys', () => {
+        it('should add foreignKeys', () => {
+          class Table {
+            table = 'table';
+            columns = { shape: {} };
+          }
+
+          const code = columnsShapeToCode(
+            {},
+            {
+              ...tableData,
+              constraints: [
+                {
+                  references: {
+                    columns: ['oneId'],
+                    fnOrTable: 'table',
+                    foreignColumns: ['twoId'],
+                    options: {},
+                  },
+                },
+                {
+                  references: {
+                    columns: ['oneId', 'twoId'],
+                    fnOrTable: () => Table,
+                    foreignColumns: ['threeId', 'fourId'],
+                    options: {
+                      name: 'name',
+                      match: 'FULL',
+                      onUpdate: 'CASCADE',
+                      onDelete: 'CASCADE',
+                      dropMode: 'CASCADE',
+                    },
+                  },
+                },
+              ],
+            },
+            't',
+          );
+
+          expect(codeToString(code, '', '  ')).toBe(
+            `
 ...t.foreignKey(
   ['oneId'],
   'table',
@@ -276,40 +316,44 @@ bool: t.boolean(),
   },
 ),
         `.trim(),
-      );
-    });
+          );
+        });
 
-    it('should ignore options if all options are undefined', () => {
-      const code = columnsShapeToCode(
-        {},
-        {
-          ...tableData,
-          foreignKeys: [
+        it('should ignore options if all options are undefined', () => {
+          const code = columnsShapeToCode(
+            {},
             {
-              columns: ['oneId'],
-              fnOrTable: 'table',
-              foreignColumns: ['twoId'],
-              options: {},
+              ...tableData,
+              constraints: [
+                {
+                  references: {
+                    columns: ['oneId'],
+                    fnOrTable: 'table',
+                    foreignColumns: ['twoId'],
+                    options: {},
+                  },
+                },
+                {
+                  references: {
+                    columns: ['oneId', 'twoId'],
+                    fnOrTable: 'otherTable',
+                    foreignColumns: ['threeId', 'fourId'],
+                    options: {
+                      name: undefined,
+                      match: undefined,
+                      onUpdate: undefined,
+                      onDelete: undefined,
+                      dropMode: undefined,
+                    },
+                  },
+                },
+              ],
             },
-            {
-              columns: ['oneId', 'twoId'],
-              fnOrTable: 'otherTable',
-              foreignColumns: ['threeId', 'fourId'],
-              options: {
-                name: undefined,
-                match: undefined,
-                onUpdate: undefined,
-                onDelete: undefined,
-                dropMode: undefined,
-              },
-            },
-          ],
-        },
-        't',
-      );
+            't',
+          );
 
-      expect(codeToString(code, '', '  ')).toBe(
-        `
+          expect(codeToString(code, '', '  ')).toBe(
+            `
 ...t.foreignKey(
   ['oneId'],
   'table',
@@ -321,10 +365,33 @@ bool: t.boolean(),
   ['threeId', 'fourId'],
 ),
         `.trim(),
-      );
+          );
+        });
+      });
+
+      describe('check', () => {
+        it('should add table check', () => {
+          const code = columnsShapeToCode(
+            {},
+            {
+              ...tableData,
+              constraints: [
+                {
+                  check: raw('sql'),
+                },
+              ],
+            },
+            't',
+          );
+
+          expect(codeToString(code, '', '  ')).toBe(
+            `...t.check(t.raw('sql')),`.trim(),
+          );
+        });
+      });
     });
 
-    it('should add check', () => {
+    it('should add column check', () => {
       const code = columnsShapeToCode(
         {
           column: t.integer().check(t.raw('column > 10')),

@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.4.28
+
+### Patch Changes
+
+- Support db table checks and constraints
+- Updated dependencies
+  - orchid-core@0.1.12
+  - pqb@0.10.23
+
 ## 2.4.27
 
 ### Patch Changes

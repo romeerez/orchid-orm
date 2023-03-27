@@ -63,24 +63,28 @@ export namespace DbStructure {
   // a = no action, r = restrict, c = cascade, n = set null, d = set default
   type ForeignKeyAction = 'a' | 'r' | 'c' | 'n' | 'd';
 
-  export type ForeignKey = {
+  export type Constraint = {
     schemaName: string;
     tableName: string;
-    foreignTableSchemaName: string;
-    foreignTableName: string;
     name: string;
-    columnNames: string[];
-    foreignColumnNames: string[];
+    primaryKey?: string[];
+    references?: References;
+    check?: Check;
+  };
+
+  export type References = {
+    foreignSchema: string;
+    foreignTable: string;
+    columns: string[];
+    foreignColumns: string[];
     match: 'f' | 'p' | 's'; // FULL | PARTIAL | SIMPLE
     onUpdate: ForeignKeyAction;
     onDelete: ForeignKeyAction;
   };
 
-  export type PrimaryKey = {
-    schemaName: string;
-    tableName: string;
-    name: string;
-    columnNames: string[];
+  export type Check = {
+    columns?: string[];
+    expression: string;
   };
 
   export type Trigger = {
@@ -104,14 +108,6 @@ export namespace DbStructure {
     schemaName: string;
     name: string;
     values: [string, ...string[]];
-  };
-
-  export type Check = {
-    schemaName: string;
-    tableName: string;
-    name: string;
-    columnNames: [string, ...string[]];
-    expression: string;
   };
 
   export type Domain = {
@@ -348,55 +344,75 @@ ORDER BY ic.relname`,
     return rows;
   }
 
-  async getForeignKeys() {
-    const { rows } = await this.db.query<DbStructure.ForeignKey>(
+  async getConstraints() {
+    const { rows } = await this.db.query<DbStructure.Constraint>(
       `SELECT
   s.nspname AS "schemaName",
   t.relname AS "tableName",
-  fs.nspname AS "foreignTableSchemaName",
-  ft.relname AS "foreignTableName",
   c.conname AS "name",
   (
     SELECT json_agg(ccu.column_name)
-    FROM information_schema.key_column_usage ccu
-    WHERE ccu.constraint_name = c.conname
-      AND ccu.table_schema = cs.nspname
-  ) AS "columnNames",
-  (
-    SELECT json_agg(ccu.column_name)
     FROM information_schema.constraint_column_usage ccu
-    WHERE ccu.constraint_name = c.conname
-      AND ccu.table_schema = cs.nspname
-  ) AS "foreignColumnNames",
-  c.confmatchtype AS match,
-  c.confupdtype AS "onUpdate",
-  c.confdeltype AS "onDelete"
+    WHERE contype = 'p'
+      AND ccu.constraint_name = c.conname
+      AND ccu.table_schema = s.nspname
+  ) AS "primaryKey",
+  (
+    SELECT
+      json_build_object(
+        'foreignSchema',
+        fs.nspname,
+        'foreignTable',
+        ft.relname,
+        'columns',
+        (
+          SELECT json_agg(ccu.column_name)
+          FROM information_schema.key_column_usage ccu
+          WHERE ccu.constraint_name = c.conname
+            AND ccu.table_schema = cs.nspname
+        ),
+        'foreignColumns',
+        (
+          SELECT json_agg(ccu.column_name)
+          FROM information_schema.constraint_column_usage ccu
+          WHERE ccu.constraint_name = c.conname
+            AND ccu.table_schema = cs.nspname
+        ),
+        'match',
+        c.confmatchtype,
+        'onUpdate',
+        c.confupdtype,
+        'onDelete',
+        c.confdeltype
+      )
+    FROM pg_class ft
+    JOIN pg_catalog.pg_namespace fs ON fs.oid = ft.relnamespace
+    JOIN pg_catalog.pg_namespace cs ON cs.oid = c.connamespace
+    WHERE contype = 'f' AND ft.oid = confrelid
+  ) AS "references",
+  (
+    SELECT
+      CASE conbin IS NULL
+      WHEN false THEN
+        json_build_object(
+          'columns',
+          json_agg(ccu.column_name),
+          'expression',
+          pg_get_expr(conbin, conrelid)
+        )
+      END
+    FROM information_schema.constraint_column_usage ccu
+    WHERE conbin IS NOT NULL
+      AND ccu.constraint_name = c.conname
+      AND ccu.table_schema = s.nspname
+  ) AS "check"
 FROM pg_catalog.pg_constraint c
 JOIN pg_class t ON t.oid = conrelid
-JOIN pg_catalog.pg_namespace s ON s.oid = t.relnamespace
-JOIN pg_class ft ON ft.oid = confrelid
-JOIN pg_catalog.pg_namespace fs ON fs.oid = ft.relnamespace
-JOIN pg_catalog.pg_namespace cs ON cs.oid = c.connamespace
-WHERE contype = 'f'
+JOIN pg_catalog.pg_namespace s
+  ON s.oid = t.relnamespace
+ AND contype IN ('p', 'f', 'c')
+ AND ${filterSchema('s.nspname')}
 ORDER BY c.conname`,
-    );
-    return rows;
-  }
-
-  async getPrimaryKeys() {
-    const { rows } = await this.db.query<DbStructure.PrimaryKey>(
-      `SELECT tc.table_schema AS "schemaName",
-  tc.table_name AS "tableName",
-  tc.constraint_name AS "name",
-  json_agg(ccu.column_name) "columnNames"
-FROM information_schema.table_constraints tc
-JOIN information_schema.constraint_column_usage ccu
-  ON ccu.constraint_name = tc.constraint_name
- AND ccu.table_schema = tc.table_schema
-WHERE tc.constraint_type = 'PRIMARY KEY'
-  AND ${filterSchema('tc.table_schema')}
-GROUP BY "schemaName", "tableName", "name"
-ORDER BY "name"`,
     );
     return rows;
   }
@@ -444,37 +460,6 @@ JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
 WHERE ${filterSchema('n.nspname')}
 GROUP BY n.nspname, t.typname`,
     );
-    return rows;
-  }
-
-  async getChecks() {
-    const { rows } = await this.db.query<DbStructure.Check>(`SELECT
-  s.nspname AS "schemaName",
-  t.relname AS "tableName",
-  c.conname AS "name",
-  (
-    SELECT json_agg(ccu.column_name)
-    FROM information_schema.constraint_column_usage ccu
-    WHERE ccu.constraint_name = c.conname
-      AND ccu.table_schema = cs.nspname
-  ) AS "columnNames",
-  pg_get_expr(conbin, conrelid) AS "expression"
-FROM pg_catalog.pg_constraint c
-JOIN pg_class t ON t.oid = conrelid
-JOIN pg_catalog.pg_namespace s ON s.oid = t.relnamespace
-JOIN pg_catalog.pg_namespace cs ON cs.oid = c.connamespace
-WHERE contype = 'c'
-ORDER BY c.conname`);
-
-    for (const row of rows) {
-      if (
-        row.expression[0] === '(' &&
-        row.expression[row.expression.length - 1] === ')'
-      ) {
-        row.expression = row.expression.slice(1, -1);
-      }
-    }
-
     return rows;
   }
 

@@ -45,11 +45,13 @@ describe('changeTable', () => {
         })),
       () =>
         expectSql(`
-          ALTER TABLE "schema"."table"\nADD COLUMN "column" text NOT NULL
+          ALTER TABLE "schema"."table"
+            ADD COLUMN "column" text NOT NULL
         `),
       () =>
         expectSql(`
-          ALTER TABLE "schema"."table"\nDROP COLUMN "column"
+          ALTER TABLE "schema"."table"
+            DROP COLUMN "column"
         `),
     );
   });
@@ -578,45 +580,6 @@ describe('changeTable', () => {
       );
     });
 
-    it('should handle column with check', async () => {
-      await testUpAndDown(
-        (action) =>
-          db.changeTable('table', (t) => ({
-            column: t[action](t.text().check(t.raw(`length(column) > 10`))),
-          })),
-        () =>
-          expectSql(`
-            ALTER TABLE "table"
-              ADD COLUMN "column" text NOT NULL CHECK (length(column) > 10)
-          `),
-        () =>
-          expectSql(`
-            ALTER TABLE "table"
-              DROP COLUMN "column"
-          `),
-      );
-    });
-
-    it('should handle column check', async () => {
-      await testUpAndDown(
-        (action) =>
-          db.changeTable('table', (t) => ({
-            column: t[action](t.check(t.raw(`length(column) > 10`))),
-          })),
-        () =>
-          expectSql(`
-            ALTER TABLE "table"
-              ADD CONSTRAINT "table_column_check"
-              CHECK (length(column) > 10)
-          `),
-        () =>
-          expectSql(`
-            ALTER TABLE "table"
-              DROP CONSTRAINT "table_column_check"
-          `),
-      );
-    });
-
     it('should handle custom column type', async () => {
       await testUpAndDown(
         (action) =>
@@ -910,6 +873,91 @@ describe('changeTable', () => {
         );
       });
     });
+
+    describe('check', () => {
+      it('should handle column with check', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              column: t[action](t.text().check(t.raw(`length(column) > 10`))),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                ADD COLUMN "column" text NOT NULL CHECK (length(column) > 10)
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP COLUMN "column"
+            `),
+        );
+      });
+
+      it('should handle table check', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              ...t[action](t.check(t.raw('sql'))),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                ADD CONSTRAINT "table_check" CHECK (sql)
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "table_check"
+            `),
+        );
+      });
+    });
+
+    describe('constraint', () => {
+      it('should handle constraint', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              ...t[action](
+                t.constraint({
+                  name: 'constraintName',
+                  dropMode: 'CASCADE',
+                  references: [
+                    ['id'],
+                    'otherTable',
+                    ['otherId'],
+                    {
+                      match: 'FULL',
+                      onUpdate: 'CASCADE',
+                      onDelete: 'CASCADE',
+                    },
+                  ],
+                  check: t.raw('check'),
+                }),
+              ),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+              ${toLine(`
+                ADD CONSTRAINT "constraintName"
+                  FOREIGN KEY ("id")
+                  REFERENCES "otherTable"("otherId")
+                  MATCH FULL
+                  ON DELETE CASCADE
+                  ON UPDATE CASCADE
+                  CHECK (check)
+              `)}
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "constraintName" CASCADE
+            `),
+        );
+      });
+    });
   });
 
   describe('change', () => {
@@ -1056,30 +1104,32 @@ describe('changeTable', () => {
       );
     });
 
-    it('should change column check', async () => {
-      await testUpAndDown(
-        () =>
-          db.changeTable('table', (t) => ({
-            column: t.change(
-              t.check(t.raw('length(column) < 20')),
-              t.check(t.raw('length(column) > 10')),
-            ),
-          })),
-        () =>
-          expectSql(`
-          ALTER TABLE "table"
-            DROP CONSTRAINT "table_column_check",
-            ADD CONSTRAINT "table_column_check"
-            CHECK (length(column) > 10)
-        `),
-        () =>
-          expectSql(`
-          ALTER TABLE "table"
-            DROP CONSTRAINT "table_column_check",
-            ADD CONSTRAINT "table_column_check"
-            CHECK (length(column) < 20)
-        `),
-      );
+    describe('check', () => {
+      it('should change column check', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              column: t.change(
+                t.text().check(t.raw('length(column) < 20')),
+                t.text().check(t.raw('length(column) > 10')),
+              ),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "table_column_check",
+                ADD CONSTRAINT "table_column_check"
+                CHECK (length(column) > 10)
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "table_column_check",
+                ADD CONSTRAINT "table_column_check"
+                CHECK (length(column) < 20)
+            `),
+        );
+      });
     });
 
     it('should change column collate', async () => {

@@ -286,53 +286,6 @@ describe('create and drop table', () => {
     });
   });
 
-  describe('foreign key', () => {
-    it('should handle columns with foreign key', async () => {
-      await testUpAndDown(
-        (action) =>
-          db[action]('table', (t) => ({
-            id: t.serial().primaryKey(),
-            columnWithForeignKey: t.integer().foreignKey('table', 'column', {
-              name: 'fkeyConstraint',
-              match: 'FULL',
-              onUpdate: 'CASCADE',
-              onDelete: 'CASCADE',
-            }),
-          })),
-        () =>
-          expectSql(
-            `
-              CREATE TABLE "table" (
-                "id" serial PRIMARY KEY,
-                "columnWithForeignKey" integer NOT NULL CONSTRAINT "fkeyConstraint" REFERENCES "table"("column") MATCH FULL ON DELETE CASCADE ON UPDATE CASCADE
-              )
-            `,
-          ),
-      );
-    });
-
-    it('should handle column with foreign key in snakeCase mode', async () => {
-      db.options.snakeCase = true;
-
-      await testUpAndDown(
-        (action) =>
-          db[action]('table', (t) => ({
-            id: t.serial().primaryKey(),
-            columnWithForeignKey: t
-              .integer()
-              .foreignKey('table', 'otherColumn'),
-          })),
-        () =>
-          expectSql(`
-              CREATE TABLE "table" (
-                "id" serial PRIMARY KEY,
-                "column_with_foreign_key" integer NOT NULL REFERENCES "table"("other_column")
-              )
-          `),
-      );
-    });
-  });
-
   describe('timestamps', () => {
     it('should handle timestamps', async () => {
       await testUpAndDown(
@@ -633,7 +586,52 @@ describe('create and drop table', () => {
     });
   });
 
-  describe('composite foreign key', () => {
+  describe('foreign key', () => {
+    it('should handle columns with foreign key', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.serial().primaryKey(),
+            columnWithForeignKey: t.integer().foreignKey('table', 'column', {
+              name: 'fkeyConstraint',
+              match: 'FULL',
+              onUpdate: 'CASCADE',
+              onDelete: 'CASCADE',
+            }),
+          })),
+        () =>
+          expectSql(
+            `
+              CREATE TABLE "table" (
+                "id" serial PRIMARY KEY,
+                "columnWithForeignKey" integer NOT NULL CONSTRAINT "fkeyConstraint" REFERENCES "table"("column") MATCH FULL ON DELETE CASCADE ON UPDATE CASCADE
+              )
+            `,
+          ),
+      );
+    });
+
+    it('should handle column with foreign key in snakeCase mode', async () => {
+      db.options.snakeCase = true;
+
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.serial().primaryKey(),
+            columnWithForeignKey: t
+              .integer()
+              .foreignKey('table', 'otherColumn'),
+          })),
+        () =>
+          expectSql(`
+              CREATE TABLE "table" (
+                "id" serial PRIMARY KEY,
+                "column_with_foreign_key" integer NOT NULL REFERENCES "table"("other_column")
+              )
+          `),
+      );
+    });
+
     it('should support composite foreign key', async () => {
       await testUpAndDown(
         (action) =>
@@ -701,23 +699,78 @@ describe('create and drop table', () => {
     });
   });
 
-  it('should support database check on the column', async () => {
-    await testUpAndDown(
-      (action) =>
-        db[action]('table', (t) => ({
-          id: t.serial().primaryKey(),
-          columnWithCheck: t
-            .text()
-            .check(t.raw('length("columnWithCheck") > 10')),
-        })),
-      () =>
-        expectSql(`
-          CREATE TABLE "table" (
-            "id" serial PRIMARY KEY,
-            "columnWithCheck" text NOT NULL CHECK (length("columnWithCheck") > 10)
-          )
-        `),
-    );
+  describe('check', () => {
+    it('should support database check on the column', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.serial().primaryKey(),
+            columnWithCheck: t
+              .text()
+              .check(t.raw('length("columnWithCheck") > 10')),
+          })),
+        () =>
+          expectSql(`
+            CREATE TABLE "table" (
+              "id" serial PRIMARY KEY,
+              "columnWithCheck" text NOT NULL CHECK (length("columnWithCheck") > 10)
+            )
+          `),
+      );
+    });
+
+    it('should support database check on the table', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.serial().primaryKey(),
+            ...t.check(t.raw('sql')),
+          })),
+        () =>
+          expectSql(`
+            CREATE TABLE "table" (
+              "id" serial PRIMARY KEY,
+              CONSTRAINT "table_check" CHECK (sql)
+            )
+          `),
+      );
+    });
+  });
+
+  describe('constraint', () => {
+    it('should support constraint', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('table', (t) => ({
+            id: t.serial().primaryKey(),
+            ...t.constraint({
+              name: 'constraintName',
+              check: t.raw('sql'),
+              references: [
+                ['id'],
+                'otherTable',
+                ['otherId'],
+                {
+                  match: 'FULL',
+                  onUpdate: 'CASCADE',
+                  onDelete: 'CASCADE',
+                },
+              ],
+            }),
+          })),
+        () =>
+          expectSql(
+            `
+            CREATE TABLE "table" (
+              "id" serial PRIMARY KEY,
+              CONSTRAINT "constraintName" ` +
+              `FOREIGN KEY ("id") REFERENCES "otherTable"("otherId") MATCH FULL ON DELETE CASCADE ON UPDATE CASCADE ` +
+              `CHECK (sql)
+            )
+          `,
+          ),
+      );
+    });
   });
 
   it('should support column of custom type', async () => {

@@ -17,7 +17,7 @@ export type RakeDbAst =
   | RakeDbAst.Extension
   | RakeDbAst.Enum
   | RakeDbAst.Domain
-  | RakeDbAst.ForeignKey;
+  | RakeDbAst.Constraint;
 
 export namespace RakeDbAst {
   export type Table = {
@@ -137,10 +137,10 @@ export namespace RakeDbAst {
     dropIfExists?: boolean;
   };
 
-  export type ForeignKey = {
-    type: 'foreignKey';
+  export type Constraint = {
+    type: 'constraint';
     action: 'create';
     tableSchema?: string;
     tableName: string;
-  } & TableData.ForeignKey;
+  } & TableData.Constraint;
 }

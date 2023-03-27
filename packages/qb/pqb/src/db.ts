@@ -127,9 +127,7 @@ export class Db<
     options: DbTableOptions,
   ) {
     const tableData = getTableData();
-    this.internal = {
-      indexes: tableData.indexes,
-    };
+    this.internal = { ...tableData };
     this.baseQuery = this as Query;
 
     const logger = options.logger || console;

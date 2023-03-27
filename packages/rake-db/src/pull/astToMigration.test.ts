@@ -1,5 +1,5 @@
 import { astToMigration } from './astToMigration';
-import { columnTypes, EnumColumn } from 'pqb';
+import { columnTypes, EnumColumn, TableData } from 'pqb';
 import { RakeDbAst } from '../ast';
 import { processRakeDbConfig } from '../common';
 import { raw } from 'orchid-core';
@@ -37,7 +37,7 @@ const table: RakeDbAst.Table = {
   name: 'table',
   noPrimaryKey: 'ignore',
   indexes: [],
-  foreignKeys: [],
+  constraints: [],
   shape: {
     id: columnTypes.serial().primaryKey(),
   },
@@ -55,14 +55,24 @@ const domain: RakeDbAst.Domain = {
   check: raw('VALUE = 42'),
 };
 
-const foreignKey: RakeDbAst.ForeignKey = {
-  type: 'foreignKey',
+const foreignKey: RakeDbAst.Constraint & { references: TableData.References } =
+  {
+    type: 'constraint',
+    action: 'create',
+    tableName: 'table',
+    references: {
+      columns: ['otherId'],
+      fnOrTable: 'otherTable',
+      foreignColumns: ['id'],
+      options: {},
+    },
+  };
+
+const check: RakeDbAst.Constraint & { check: TableData.Check } = {
+  type: 'constraint',
   action: 'create',
   tableName: 'table',
-  columns: ['otherId'],
-  fnOrTable: 'otherTable',
-  foreignColumns: ['id'],
-  options: {},
+  check: raw('sql'),
 };
 
 const config = processRakeDbConfig({
@@ -224,16 +234,18 @@ change(async (db) => {
               options: { name: 'index', unique: true },
             },
           ],
-          foreignKeys: [
+          constraints: [
             {
-              columns: ['id', 'name'],
-              fnOrTable: 'otherTable',
-              foreignColumns: ['otherId', 'otherName'],
-              options: {
-                name: 'fkey',
-                match: 'FULL',
-                onUpdate: 'CASCADE',
-                onDelete: 'CASCADE',
+              references: {
+                columns: ['id', 'name'],
+                fnOrTable: 'otherTable',
+                foreignColumns: ['otherId', 'otherName'],
+                options: {
+                  name: 'fkey',
+                  match: 'FULL',
+                  onUpdate: 'CASCADE',
+                  onDelete: 'CASCADE',
+                },
               },
             },
           ],
@@ -270,11 +282,14 @@ change(async (db) => {
         {
           ...foreignKey,
           tableSchema: 'custom',
-          options: {
-            name: 'fkey',
-            match: 'FULL',
-            onUpdate: 'CASCADE',
-            onDelete: 'CASCADE',
+          name: 'fkey',
+          references: {
+            ...foreignKey.references,
+            options: {
+              match: 'FULL',
+              onUpdate: 'CASCADE',
+              onDelete: 'CASCADE',
+            },
           },
         },
       ]);
@@ -315,6 +330,75 @@ change(async (db) => {
   }));
 });
 `);
+    });
+
+    it('should add table check', () => {
+      const result = astToMigration(config, [
+        {
+          ...table,
+          constraints: [
+            {
+              check: raw('sql'),
+            },
+          ],
+        },
+      ]);
+
+      expect(result).toBe(`import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createTable('schema.table', (t) => ({
+    id: t.serial().primaryKey(),
+    ...t.check(t.raw('sql')),
+  }));
+});
+`);
+    });
+
+    it('should add check', () => {
+      const result = astToMigration(config, [check]);
+
+      expect(result).toBe(
+        template(`  await db.addCheck('table', t.raw('sql'));`),
+      );
+    });
+  });
+
+  describe('constraint', () => {
+    it('should add table constraint', () => {
+      const result = astToMigration(config, [
+        {
+          ...foreignKey,
+          tableSchema: 'custom',
+          name: 'constraint',
+          check: raw('sql'),
+          references: {
+            ...foreignKey.references,
+            options: {
+              match: 'FULL',
+              onUpdate: 'CASCADE',
+              onDelete: 'CASCADE',
+            },
+          },
+        },
+      ]);
+
+      expect(result).toBe(
+        template(`  await db.addConstraint('custom.table', {
+    name: 'constraint',
+    references: [
+      ['otherId'],
+      'otherTable',
+      ['id'],
+      {
+        match: 'FULL',
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
+      },
+    ],
+    check: t.raw('sql'),
+  });`),
+      );
     });
   });
 

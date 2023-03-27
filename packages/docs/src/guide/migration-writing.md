@@ -5,7 +5,7 @@ All column names will be translated to snake_case if `snakeCase` option is set t
 Use a `change` function for changing the database schema, it accepts a callback with `db` and optionally you can use a second argument `up` to know if it is an up migration or down.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db, up) => {
   if (up) {
@@ -25,7 +25,7 @@ When migrating, `change`s are executed from top to bottom, so the schema and the
 On rollback, `change`s are executed from bottom to top, so the schema and the enum will be dropped **after** the table that is using them.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
   await db.createSchema('custom');
@@ -37,7 +37,7 @@ change(async (db) => {
     id: t.serial().primaryKey(),
     season: t.enum('yearSeason'),
   }));
-})
+});
 ```
 
 `db` is an extended query builder, so it has [all the same methods](/guide/query-builder) as a query builder and additional specific methods such as `createTable`, `changeTable`, and others.
@@ -72,7 +72,7 @@ change(async (db, up) => {
       text: 'SELECT * FROM languages WHERE name = $1',
       values: ['Ukrainian'],
     });
-    console.log(rows)
+    console.log(rows);
   }
 });
 ```
@@ -107,7 +107,7 @@ type TableOptions = {
 Example:
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
   // call `createTable` with options
@@ -120,8 +120,8 @@ change(async (db) => {
     },
     (t) => ({
       // ...
-    })
-  )
+    }),
+  );
   
   // call without options
   await db.createTable('user', (t) => ({
@@ -130,8 +130,8 @@ change(async (db) => {
     name: t.text(),
     active: t.boolean().nullable(),
     ...t.timestamps(),
-  }))
-})
+  }));
+});
 ```
 
 ## changeTable
@@ -170,7 +170,7 @@ The column in `add` or `drop` can have all the same methods as when creating a t
 Supports adding a composite primary key, foreign key, and index, and all the same as when creating a table.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
@@ -200,14 +200,32 @@ change(async (db) => {
       t.foreignKey(
         ['foo', 'bar'],
         'otherTable',
-        ['otherFoo', 'otherBar']
-      )
+        ['otherFoo', 'otherBar'],
+      ),
+    ),
+    
+    // add a table check
+    ...t.add(
+      t.check(t.raw('column3 > column4')),
+    ),
+    
+    // add a constraint
+    ...t.add(
+      t.constraint({
+        name: 'constraintName',
+        check: t.raw('column3 < 20'),
+        foreignKey: [
+          ['foo', 'bar'],
+          'otherTable',
+          ['otherFoo', 'otherBar'],
+        ]
+      })
     ),
     
     // add timestamps:
     ...t.add(t.timestamps()),
-  }))
-})
+  }));
+});
 ```
 
 ## change
@@ -223,7 +241,7 @@ Index options are listed [here](/guide/migration-column-methods.html#index).
 Foreign key options are listed [here](/guide/migration-column-methods.html#foreignkey).
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
@@ -335,9 +353,9 @@ change(async (db) => {
       t.check(t.raw('column17 > 5')),
       // to this check:
       t.check(t.raw('column17 < 10')),
-    )
-  }))
-})
+    ),
+  }));
+});
 ```
 
 ## rename
@@ -350,8 +368,8 @@ import { change } from 'rake-db'
 change(async (db) => {
   await db.changeTable('table', (t) => ({
     oldColumnName: t.rename('newColumnName'),
-  }))
-})
+  }));
+});
 ```
 
 ## renameTable
@@ -359,11 +377,11 @@ change(async (db) => {
 Rename a table:
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
-  await db.renameTable('oldTableName', 'newTableName')
-})
+  await db.renameTable('oldTableName', 'newTableName');
+});
 ```
 
 ## addColumn, dropColumn
@@ -373,13 +391,13 @@ Add a column to the table on migrating, and remove it on rollback.
 `dropColumn` takes the same arguments, removes a column on migrate, and adds it on rollback.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
   await db.addColumn('tableName', 'columnName', (t) =>
     t.integer().index().nullable()
-  )
-})
+  );
+});
 ```
 
 ## addIndex, dropIndex
@@ -400,8 +418,8 @@ change(async (db) => {
     {
       name: 'indexName',
     }
-  )
-})
+  );
+});
 ```
 
 ## addForeignKey, dropForeignKey
@@ -413,7 +431,7 @@ Add a foreign key to a table on migrating, and remove it on rollback.
 The first argument is the table name, other arguments are the same as in [composite foreign key](#composite-foreign-key).
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
   await db.addForeignKey(
@@ -427,8 +445,8 @@ change(async (db) => {
       onUpdate: 'RESTRICT',
       onDelete: 'CASCADE',
     }
-  )
-})
+  );
+});
 ```
 
 ## addPrimaryKey, dropPrimaryKey
@@ -440,15 +458,49 @@ Add a primary key to a table on migrate, and remove it on rollback.
 The first argument is the table name, other arguments are the same as in [composite primary key](#composite-primary-key).
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
   await db.addPrimaryKey(
     'tableName',
     ['id', 'name'],
     { name: 'tablePkeyName' },
-  )
-})
+  );
+});
+```
+
+## addCheck, dropCheck
+
+Add or drop a check for multiple columns.
+
+```ts
+import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.addCheck('tableName', t.raw('column > 123'));
+});
+```
+
+## addCheck, dropCheck
+
+Add or drop a constraint with check and a foreign key references.
+
+See foreign key details in [foreign key](/guide/migration-column-methods.html#composite-foreign-key).
+
+```ts
+import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.addConstraint('tableName', {
+    name: 'constraintName',
+    check: db.raw('column > 123'),
+    references: [
+      ['id', 'name'],
+      'otherTable',
+      ['otherId', 'otherName'],
+    ],
+  });
+});
 ```
 
 ## renameColumn
@@ -456,11 +508,11 @@ change(async (db) => {
 Rename a column:
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
-  await db.renameColumn('tableName', 'oldColumnName', 'newColumnName')
-})
+  await db.renameColumn('tableName', 'oldColumnName', 'newColumnName');
+});
 ```
 
 ## createEnum, dropEnum
@@ -472,7 +524,7 @@ change(async (db) => {
 Third argument for options is optional.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
   await db.createEnum('number', ['one', 'two', 'three']);
@@ -482,8 +534,8 @@ change(async (db) => {
     // following options are used when dropping enum
     dropIfExists: true,
     cascade: true,
-  })
-})
+  });
+});
 ```
 
 ## createSchema, dropSchema
@@ -493,11 +545,11 @@ change(async (db) => {
 `dropSchema` takes the same arguments, removes schema on migration, and adds it on rollback.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
-  await db.createSchema('schemaName')
-})
+  await db.createSchema('schemaName');
+});
 ```
 
 ## createExtension, dropExtension
@@ -507,11 +559,11 @@ change(async (db) => {
 `dropExtension` takes the same arguments, removes the extension on migrate, and adds it on rollback.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
-  await db.createExtension('pg_trgm')
-})
+  await db.createExtension('pg_trgm');
+});
 ```
 
 ## createDomain, dropDomain
@@ -521,12 +573,12 @@ Domain is a custom database type that allows to predefine a `NOT NULL` and a `CH
 `createDomain` and `dropDomain` take a domain name as first argument, callback returning inner column type as a second, and optional object with parameters as third.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
   await db.createDomain('domainName', (t) => t.integer(), {
     check: db.raw('value = 42'),
-  })
+  });
   
   // use `schemaName.domainName` format to specify a schema
   await db.createDomain('schemaName.domainName', (t) => t.text(), {
@@ -538,7 +590,7 @@ change(async (db) => {
     
     // cascade is used when dropping domain
     cascade: true,
-  })
+  });
 })
 ```
 
@@ -547,13 +599,13 @@ change(async (db) => {
 Returns boolean to know if table exists:
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
   if (await db.tableExists('tableName')) {
     // ...do something
   }
-})
+});
 ```
 
 ## columnExists
@@ -563,13 +615,13 @@ Returns boolean to know if a column exists:
 Note that when `snakeCase` option is set to true, this method won't translate column to snake case, unlike other parts.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
   if (await db.columnExists('tableName', 'columnName')) {
     // ...do something
   }
-})
+});
 ```
 
 ## constraintExists
@@ -577,11 +629,11 @@ change(async (db) => {
 Returns boolean to know if constraint exists:
 
 ```ts
-import { change } from 'rake-db'
+import { change } from 'rake-db';
 
 change(async (db) => {
   if (await db.constraintExists('constraintName')) {
     // ...do something
   }
-})
+});
 ```

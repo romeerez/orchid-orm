@@ -1,6 +1,6 @@
 {
   "name": "myqb",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "private": true,
   "description": "MySQL query builder",
   "homepage": "https://orchid-orm.netlify.app/guide/query-builder-setup.html",

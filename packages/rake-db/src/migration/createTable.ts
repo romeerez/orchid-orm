@@ -188,24 +188,30 @@ const astToQueries = (
     );
   }
 
-  ast.foreignKeys.forEach((foreignKey) => {
+  ast.constraints?.forEach((item) => {
     lines.push(
       `\n  ${constraintToSql(
         ast,
         true,
         {
-          ...foreignKey,
-          columns: foreignKey.columns.map((column) =>
-            getColumnName(shape[column], column, snakeCase),
-          ),
+          ...item,
+          references: item.references
+            ? {
+                ...item.references,
+                columns: item.references.columns.map((column) =>
+                  getColumnName(shape[column], column, snakeCase),
+                ),
+              }
+            : undefined,
         },
+        values,
         snakeCase,
       )}`,
     );
   });
 
   indexes.push(
-    ...ast.indexes.map((index) => ({
+    ...(ast.indexes?.map((index) => ({
       ...index,
       columns: index.columns.map((item) => ({
         ...item,
@@ -215,7 +221,7 @@ const astToQueries = (
             }
           : {}),
       })),
-    })),
+    })) || []),
   );
 
   queries.push(

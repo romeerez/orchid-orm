@@ -16,8 +16,6 @@ const makeAst = () => {
       id: columnTypes.serial().primaryKey(),
     },
     noPrimaryKey: 'error',
-    indexes: [],
-    foreignKeys: [],
   };
 
   const dropTable: RakeDbAst.Table = {

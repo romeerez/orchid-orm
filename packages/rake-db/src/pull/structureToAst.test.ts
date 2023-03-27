@@ -94,7 +94,7 @@ describe('structureToAst', () => {
           shape: {},
           noPrimaryKey: 'ignore',
           indexes: [],
-          foreignKeys: [],
+          constraints: [],
         },
       ]);
     });
@@ -114,7 +114,7 @@ describe('structureToAst', () => {
           shape: {},
           noPrimaryKey: 'ignore',
           indexes: [],
-          foreignKeys: [],
+          constraints: [],
         },
       ]);
     });
@@ -195,12 +195,12 @@ describe('structureToAst', () => {
     it('should support column with check', async () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [table];
-      db.getChecks = async () => [check];
+      db.getConstraints = async () => [check];
       db.getColumns = async () => [intColumn];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
-      expect(ast.shape.column.data.check).toEqual(raw(check.expression));
+      expect(ast.shape.column.data.check).toEqual(raw(check.check.expression));
     });
 
     it('should support column of custom type', async () => {
@@ -360,7 +360,7 @@ describe('structureToAst', () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [table];
       db.getColumns = async () => columns;
-      db.getPrimaryKeys = async () => [primaryKey];
+      db.getConstraints = async () => [primaryKey];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
@@ -373,8 +373,8 @@ describe('structureToAst', () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [table];
       db.getColumns = async () => columns;
-      db.getPrimaryKeys = async () => [
-        { ...primaryKey, columnNames: ['id', 'name'] },
+      db.getConstraints = async () => [
+        { ...primaryKey, primaryKey: ['id', 'name'] },
       ];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
@@ -391,8 +391,8 @@ describe('structureToAst', () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [table];
       db.getColumns = async () => columns;
-      db.getPrimaryKeys = async () => [
-        { ...primaryKey, columnNames: ['id', 'name'], name: 'table_pkey' },
+      db.getConstraints = async () => [
+        { ...primaryKey, primaryKey: ['id', 'name'], name: 'table_pkey' },
       ];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
@@ -589,8 +589,12 @@ describe('structureToAst', () => {
         ...columns,
         { ...intColumn, name: 'otherId', tableName: 'table2' },
       ];
-      db.getForeignKeys = async () => [
-        { ...foreignKey, tableName: 'table2', foreignTableName: 'table1' },
+      db.getConstraints = async () => [
+        {
+          ...foreignKey,
+          tableName: 'table2',
+          references: { ...foreignKey.references, foreignTable: 'table1' },
+        },
       ];
 
       const [, ast] = (await structureToAst(ctx, db)) as RakeDbAst.Table[];
@@ -605,7 +609,7 @@ describe('structureToAst', () => {
           onDelete: 'CASCADE',
         },
       ]);
-      expect(ast.foreignKeys).toHaveLength(0);
+      expect(ast.constraints).toHaveLength(0);
     });
 
     it('should ignore standard foreign key name', async () => {
@@ -617,12 +621,15 @@ describe('structureToAst', () => {
       db.getColumns = async () => [
         { ...intColumn, name: 'otherId', tableName: 'table2' },
       ];
-      db.getForeignKeys = async () => [
+      db.getConstraints = async () => [
         {
           ...foreignKey,
-          name: `table2_otherId_fkey`,
           tableName: 'table2',
-          foreignTableName: 'table1',
+          name: `table2_otherId_fkey`,
+          references: {
+            ...foreignKey.references,
+            foreignTable: 'table1',
+          },
         },
       ];
 
@@ -637,7 +644,7 @@ describe('structureToAst', () => {
           onDelete: 'CASCADE',
         },
       ]);
-      expect(ast.foreignKeys).toHaveLength(0);
+      expect(ast.constraints).toHaveLength(0);
     });
 
     it('should add composite foreign key', async () => {
@@ -649,29 +656,35 @@ describe('structureToAst', () => {
       db.getColumns = async () => [
         { ...intColumn, name: 'otherId', tableName: 'table2' },
       ];
-      db.getForeignKeys = async () => [
+      db.getConstraints = async () => [
         {
           ...foreignKey,
           tableName: 'table2',
-          columnNames: ['name', 'otherId'],
-          foreignTableName: 'table1',
-          foreignColumnNames: ['name', 'id'],
+          references: {
+            ...foreignKey.references,
+            columns: ['name', 'id'],
+            foreignTable: 'table1',
+            foreignColumns: ['otherName', 'otherId'],
+          },
         },
       ];
 
       const [, ast] = (await structureToAst(ctx, db)) as RakeDbAst.Table[];
 
       expect(ast.shape.otherId.data.foreignKeys).toBe(undefined);
-      expect(ast.foreignKeys).toEqual([
+      expect(ast.constraints).toEqual([
         {
-          columns: ['name', 'otherId'],
-          fnOrTable: 'table1',
-          foreignColumns: ['name', 'id'],
-          options: {
-            name: 'fkey',
-            match: 'FULL',
-            onUpdate: 'CASCADE',
-            onDelete: 'CASCADE',
+          name: 'fkey',
+          references: {
+            columns: ['name', 'id'],
+            fnOrTable: 'table1',
+            foreignColumns: ['otherName', 'otherId'],
+            options: {
+              match: 'FULL',
+              name: 'fkey',
+              onDelete: 'CASCADE',
+              onUpdate: 'CASCADE',
+            },
           },
         },
       ]);
@@ -686,29 +699,34 @@ describe('structureToAst', () => {
       db.getColumns = async () => [
         { ...intColumn, name: 'otherId', tableName: 'table2' },
       ];
-      db.getForeignKeys = async () => [
+      db.getConstraints = async () => [
         {
           ...foreignKey,
           tableName: 'table2',
-          foreignTableName: 'table1',
-          columnNames: ['name', 'otherId'],
-          foreignColumnNames: ['name', 'id'],
           name: 'table2_name_otherId_fkey',
+          references: {
+            ...foreignKey.references,
+            foreignTable: 'table1',
+            columns: ['name', 'otherId'],
+            foreignColumns: ['name', 'id'],
+          },
         },
       ];
 
       const [, ast] = (await structureToAst(ctx, db)) as RakeDbAst.Table[];
 
       expect(ast.shape.otherId.data.foreignKeys).toBe(undefined);
-      expect(ast.foreignKeys).toEqual([
+      expect(ast.constraints).toEqual([
         {
-          columns: ['name', 'otherId'],
-          fnOrTable: 'table1',
-          foreignColumns: ['name', 'id'],
-          options: {
-            match: 'FULL',
-            onUpdate: 'CASCADE',
-            onDelete: 'CASCADE',
+          references: {
+            columns: ['name', 'otherId'],
+            fnOrTable: 'table1',
+            foreignColumns: ['name', 'id'],
+            options: {
+              match: 'FULL',
+              onUpdate: 'CASCADE',
+              onDelete: 'CASCADE',
+            },
           },
         },
       ]);
@@ -726,18 +744,24 @@ describe('structureToAst', () => {
         { ...intColumn, name: 'table1Id', tableName: 'fkTable' },
         { ...intColumn, name: 'table2Id', tableName: 'fkTable' },
       ];
-      db.getForeignKeys = async () => [
+      db.getConstraints = async () => [
         {
           ...foreignKey,
           tableName: 'fkTable',
-          columnNames: ['table1Id'],
-          foreignTableName: 'table1',
+          references: {
+            ...foreignKey.references,
+            columns: ['table1Id'],
+            foreignTable: 'table1',
+          },
         },
         {
           ...foreignKey,
           tableName: 'fkTable',
-          columnNames: ['table2Id'],
-          foreignTableName: 'table2',
+          references: {
+            ...foreignKey.references,
+            columns: ['table2Id'],
+            foreignTable: 'table2',
+          },
         },
       ];
 
@@ -752,16 +776,19 @@ describe('structureToAst', () => {
       expect(otherTable.name).toBe('otherTable');
     });
 
-    it('should add foreign key to a same table', async () => {
+    it('should add foreign key to the same table', async () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [table];
       db.getColumns = async () => [intColumn];
-      db.getForeignKeys = async () => [
+      db.getConstraints = async () => [
         {
           ...foreignKey,
           tableName: table.name,
-          columnNames: [intColumn.name],
-          foreignTableName: table.name,
+          references: {
+            ...foreignKey.references,
+            columns: [intColumn.name],
+            foreignTable: table.name,
+          },
         },
       ];
 
@@ -780,18 +807,24 @@ describe('structureToAst', () => {
         { ...intColumn, tableName: 'table1' },
         { ...intColumn, tableName: 'table2' },
       ];
-      db.getForeignKeys = async () => [
+      db.getConstraints = async () => [
         {
           ...foreignKey,
           tableName: 'table1',
-          columnNames: [intColumn.name],
-          foreignTableName: 'table2',
+          references: {
+            ...foreignKey.references,
+            columns: [intColumn.name],
+            foreignTable: 'table2',
+          },
         },
         {
           ...foreignKey,
           tableName: 'table2',
-          columnNames: [intColumn.name],
-          foreignTableName: 'table1',
+          references: {
+            ...foreignKey.references,
+            columns: [intColumn.name],
+            foreignTable: 'table1',
+          },
         },
       ];
 
@@ -815,19 +848,64 @@ describe('structureToAst', () => {
       ]);
 
       expect(fkey).toEqual({
-        type: 'foreignKey',
+        type: 'constraint',
         action: 'create',
         tableName: 'table1',
-        columns: ['column'],
-        fnOrTable: 'table2',
-        foreignColumns: ['id'],
-        options: {
-          match: 'FULL',
-          name: 'fkey',
-          onDelete: 'CASCADE',
-          onUpdate: 'CASCADE',
+        name: 'fkey',
+        references: {
+          columns: ['column'],
+          fnOrTable: 'table2',
+          foreignColumns: ['id'],
+          options: {
+            match: 'FULL',
+            name: 'fkey',
+            onDelete: 'CASCADE',
+            onUpdate: 'CASCADE',
+          },
         },
       });
+    });
+  });
+
+  describe('constraint', () => {
+    it('should add constraint with references and check', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [table];
+      db.getConstraints = async () => [
+        {
+          schemaName: table.schemaName,
+          tableName: table.name,
+          name: 'constraintName',
+          references: {
+            ...foreignKey.references,
+            columns: ['id', 'name'],
+            foreignColumns: ['foreignId', 'foreignName'],
+          },
+          check: {
+            expression: 'check',
+          },
+        },
+      ];
+
+      const [ast] = (await structureToAst(ctx, db)) as RakeDbAst.Table[];
+
+      expect(ast.constraints).toEqual([
+        {
+          name: 'constraintName',
+          references: {
+            columns: ['id', 'name'],
+            foreignColumns: ['foreignId', 'foreignName'],
+            fnOrTable: foreignKey.references.foreignTable,
+            options: {
+              name: 'constraintName',
+              match: 'FULL',
+              onUpdate: 'CASCADE',
+              onDelete: 'CASCADE',
+            },
+          },
+          check: raw('check'),
+        },
+      ]);
     });
   });
 

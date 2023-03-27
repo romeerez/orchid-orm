@@ -45,7 +45,7 @@ import {
 import { BooleanColumn } from './boolean';
 import { EnumColumn } from './enum';
 import { JSONColumn, JSONTextColumn, JSONTypes } from './json';
-import { JSONTypeAny } from 'orchid-core';
+import { JSONTypeAny, RawExpression } from 'orchid-core';
 import { ArrayColumn } from './array';
 import {
   ColumnNameOfTable,
@@ -54,7 +54,7 @@ import {
   IndexColumnOptions,
   IndexOptions,
   ForeignKeyOptions,
-  ForeignKeyTableWithColumns,
+  DropMode,
 } from './columnType';
 import { makeRegexToFindInSql } from '../utils';
 import { ColumnsShape } from './columnsSchema';
@@ -74,8 +74,8 @@ export type ColumnTypes = typeof columnTypes;
 
 export type TableData = {
   primaryKey?: TableData.PrimaryKey;
-  indexes: TableData.Index[];
-  foreignKeys: TableData.ForeignKey[];
+  indexes?: TableData.Index[];
+  constraints?: TableData.Constraint[];
 };
 
 export namespace TableData {
@@ -89,18 +89,39 @@ export namespace TableData {
     options: IndexOptions;
   };
 
-  export type ForeignKey = {
+  export type Constraint = {
+    name?: string;
+    references?: References;
+    check?: Check;
+    dropMode?: DropMode;
+  };
+
+  export type References = {
     columns: string[];
     fnOrTable: (() => ForeignKeyTable) | string;
     foreignColumns: string[];
-    options: ForeignKeyOptions;
+    options?: ForeignKeyOptions;
   };
+
+  export type Check = RawExpression;
 }
 
-export const newTableData = (): TableData => ({
-  indexes: [],
-  foreignKeys: [],
-});
+export const getConstraintKind = (
+  it: TableData.Constraint,
+): 'constraint' | 'foreignKey' | 'check' => {
+  let num = 0;
+  for (const key in it) {
+    if (
+      (key === 'references' || key === 'check') &&
+      it[key as keyof typeof it] !== undefined
+    ) {
+      num++;
+    }
+  }
+  return num === 1 ? (it.references ? 'foreignKey' : 'check') : 'constraint';
+};
+
+export const newTableData = (): TableData => ({});
 
 let tableData: TableData = newTableData();
 
@@ -321,7 +342,7 @@ export const columnTypes = {
       options,
     };
 
-    tableData.indexes.push(index);
+    (tableData.indexes ??= []).push(index);
     return emptyObject;
   },
 
@@ -336,12 +357,84 @@ export const columnTypes = {
       options: { ...options, unique: true },
     };
 
-    tableData.indexes.push(index);
+    (tableData.indexes ??= []).push(index);
 
     return emptyObject;
   },
 
-  foreignKey,
+  constraint<
+    Table extends (() => ForeignKeyTable) | string,
+    Columns extends Table extends () => ForeignKeyTable
+      ? [
+          ColumnNameOfTable<ReturnType<Table>>,
+          ...ColumnNameOfTable<ReturnType<Table>>[],
+        ]
+      : [string, ...string[]],
+  >({
+    name,
+    references,
+    check,
+    dropMode,
+  }: {
+    name?: string;
+    references?: [
+      columns: string[],
+      fnOrTable: Table,
+      foreignColumns: Columns,
+      options?: ForeignKeyOptions,
+    ];
+    check?: RawExpression;
+    dropMode?: DropMode;
+  }): EmptyObject {
+    (tableData.constraints ??= []).push({
+      name,
+      references: references
+        ? {
+            columns: references[0],
+            fnOrTable: references[1],
+            foreignColumns: references[2],
+            options: references[3],
+          }
+        : undefined,
+      check,
+      dropMode,
+    });
+    return emptyObject;
+  },
+
+  foreignKey<
+    Table extends (() => ForeignKeyTable) | string,
+    Columns extends Table extends () => ForeignKeyTable
+      ? [
+          ColumnNameOfTable<ReturnType<Table>>,
+          ...ColumnNameOfTable<ReturnType<Table>>[],
+        ]
+      : [string, ...string[]],
+  >(
+    columns: string[],
+    fnOrTable: Table,
+    foreignColumns: Columns,
+    options?: ForeignKeyOptions & { name?: string; dropMode?: DropMode },
+  ): EmptyObject {
+    (tableData.constraints ??= []).push({
+      name: options?.name,
+      references: {
+        columns,
+        fnOrTable,
+        foreignColumns,
+        options,
+      },
+      dropMode: options?.dropMode,
+    });
+    return emptyObject;
+  },
+
+  check(check: RawExpression): EmptyObject {
+    (tableData.constraints ??= []).push({
+      check,
+    });
+    return emptyObject;
+  },
 
   ...makeTimestampsHelpers(
     makeRegexToFindInSql('\\bupdatedAt\\b"?\\s*='),
@@ -350,38 +443,3 @@ export const columnTypes = {
     raw('"updated_at" = now()'),
   ),
 };
-
-function foreignKey<
-  Table extends ForeignKeyTableWithColumns,
-  Columns extends [ColumnNameOfTable<Table>, ...ColumnNameOfTable<Table>[]],
->(
-  columns: string[],
-  fn: () => Table,
-  foreignColumns: Columns,
-  options?: ForeignKeyOptions,
-): EmptyObject;
-function foreignKey<
-  Table extends string,
-  Columns extends [string, ...string[]],
->(
-  columns: string[],
-  table: Table,
-  foreignColumns: Columns,
-  options?: ForeignKeyOptions,
-): EmptyObject;
-function foreignKey(
-  columns: string[],
-  fnOrTable: (() => ForeignKeyTable) | string,
-  foreignColumns: string[],
-  options: ForeignKeyOptions = {},
-) {
-  const foreignKey = {
-    columns,
-    fnOrTable,
-    foreignColumns,
-    options,
-  };
-
-  tableData.foreignKeys.push(foreignKey);
-  return emptyObject;
-}

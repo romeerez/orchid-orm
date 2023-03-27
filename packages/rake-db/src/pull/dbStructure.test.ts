@@ -97,38 +97,30 @@ describe('dbStructure', () => {
     });
   });
 
-  describe('getForeignKeys', () => {
-    it('should return foreignKeys', async () => {
-      rows = [
-        {
-          schemaName: 'public',
-          tableName: 'table',
-          foreignTableSchemaName: 'public',
-          foreignTableName: 'foreignTable',
-          name: 'name',
-          columnNames: ['column'],
-          foreignColumnNames: ['foreignColumn'],
-          match: 's',
-          onUpdate: 'a',
-          onDelete: 'a',
-        },
-      ];
-      const result = await db.getForeignKeys();
-      expect(result).toEqual(rows);
-    });
-  });
-
-  describe('getPrimaryKeys', () => {
+  describe('getConstraints', () => {
     it('should return constraints', async () => {
       rows = [
         {
           schemaName: 'public',
           tableName: 'table',
           name: 'name',
-          columnNames: ['id'],
+          primaryKey: ['id'],
+          references: {
+            foreignSchema: 'public',
+            foreignTable: 'foreignTable',
+            columns: ['column'],
+            foreignColumns: ['foreignColumn'],
+            match: 'f',
+            onUpdate: 'a',
+            onDelete: 'a',
+          },
+          check: {
+            columns: ['column'],
+            expression: 'sql',
+          },
         },
       ];
-      const result = await db.getPrimaryKeys();
+      const result = await db.getConstraints();
       expect(result).toEqual(rows);
     });
   });
@@ -177,27 +169,6 @@ describe('dbStructure', () => {
       ];
       const result = await db.getEnums();
       expect(result).toEqual(rows);
-    });
-  });
-
-  describe('getChecks', () => {
-    it('should return checks', async () => {
-      rows = [
-        {
-          schemaName: 'public',
-          tableName: 'table',
-          name: 'checkName',
-          columnNames: ['one', 'two'],
-          expression: `(one < 1 AND two > 2)`,
-        },
-      ];
-      const result = await db.getChecks();
-      expect(result).toEqual([
-        {
-          ...rows[0],
-          expression: `one < 1 AND two > 2`,
-        },
-      ]);
     });
   });
 

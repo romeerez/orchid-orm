@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.6.27
+
+### Patch Changes
+
+- Support db table checks and constraints
+- Updated dependencies
+  - orchid-core@0.1.12
+  - pqb@0.10.23
+
 ## 1.6.26
 
 ### Patch Changes

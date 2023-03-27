@@ -18,7 +18,13 @@ import {
   columnTypes,
   getRaw,
 } from 'pqb';
-import { MaybeArray, QueryInput, raw, singleQuote } from 'orchid-core';
+import {
+  MaybeArray,
+  QueryInput,
+  raw,
+  RawExpression,
+  singleQuote,
+} from 'orchid-core';
 import { createTable } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
 import {
@@ -64,6 +70,18 @@ export type ChangeTableCallback = (t: TableChanger) => TableChangeData;
 export type ColumnComment = { column: string; comment: string | null };
 
 export type Migration = DbResult<DefaultColumnTypes> & MigrationBase;
+
+type ConstraintArg = {
+  name?: string;
+  references?: [
+    columns: [string, ...string[]],
+    table: string,
+    foreignColumn: [string, ...string[]],
+    options: Omit<ForeignKeyOptions, 'name' | 'dropMode'>,
+  ];
+  check?: RawExpression;
+  dropMode?: DropMode;
+};
 
 export const createMigrationInterface = (
   tx: TransactionAdapter,
@@ -266,6 +284,22 @@ export class MigrationBase {
     return addPrimaryKey(this, !this.up, tableName, columns, options);
   }
 
+  addCheck(tableName: string, check: RawExpression) {
+    return addCheck(this, this.up, tableName, check);
+  }
+
+  dropCheck(tableName: string, check: RawExpression) {
+    return addCheck(this, !this.up, tableName, check);
+  }
+
+  addConstraint(tableName: string, constraint: ConstraintArg) {
+    return addConstraint(this, this.up, tableName, constraint);
+  }
+
+  dropConstraint(tableName: string, constraint: ConstraintArg) {
+    return addConstraint(this, !this.up, tableName, constraint);
+  }
+
   renameColumn(tableName: string, from: string, to: string) {
     return this.changeTable(tableName, (t) => ({
       [from]: t.rename(to),
@@ -398,7 +432,7 @@ const addColumn = (
   tableName: string,
   columnName: string,
   fn: (t: MigrationColumnTypes) => ColumnType,
-) => {
+): Promise<void> => {
   return changeTable(migration, up, tableName, {}, (t) => ({
     [columnName]: t.add(fn(t)),
   }));
@@ -410,7 +444,7 @@ const addIndex = (
   tableName: string,
   columns: MaybeArray<string | IndexColumnOptions>,
   options?: IndexOptions,
-) => {
+): Promise<void> => {
   return changeTable(migration, up, tableName, {}, (t) => ({
     ...t.add(t.index(columns, options)),
   }));
@@ -424,7 +458,7 @@ const addForeignKey = (
   foreignTable: string,
   foreignColumns: [string, ...string[]],
   options?: ForeignKeyOptions,
-) => {
+): Promise<void> => {
   return changeTable(migration, up, tableName, {}, (t) => ({
     ...t.add(t.foreignKey(columns, foreignTable, foreignColumns, options)),
   }));
@@ -436,9 +470,31 @@ const addPrimaryKey = (
   tableName: string,
   columns: string[],
   options?: { name?: string },
-) => {
+): Promise<void> => {
   return changeTable(migration, up, tableName, {}, (t) => ({
     ...t.add(t.primaryKey(columns, options)),
+  }));
+};
+
+const addCheck = (
+  migration: MigrationBase,
+  up: boolean,
+  tableName: string,
+  check: RawExpression,
+): Promise<void> => {
+  return changeTable(migration, up, tableName, {}, (t) => ({
+    ...t.add(t.check(check)),
+  }));
+};
+
+const addConstraint = (
+  migration: MigrationBase,
+  up: boolean,
+  tableName: string,
+  constraint: ConstraintArg,
+): Promise<void> => {
+  return changeTable(migration, up, tableName, {}, (t) => ({
+    ...t.add(t.constraint(constraint)),
   }));
 };
 
@@ -446,7 +502,7 @@ const createSchema = async (
   migration: MigrationBase,
   up: boolean,
   name: string,
-) => {
+): Promise<void> => {
   const ast: RakeDbAst.Schema = {
     type: 'schema',
     action: up ? 'create' : 'drop',
@@ -465,7 +521,7 @@ const createExtension = async (
   up: boolean,
   name: string,
   options: Omit<RakeDbAst.Extension, 'type' | 'action' | 'name'>,
-) => {
+): Promise<void> => {
   const ast: RakeDbAst.Extension = {
     type: 'extension',
     action: up ? 'create' : 'drop',
@@ -500,7 +556,7 @@ const createEnum = async (
     RakeDbAst.Enum,
     'type' | 'action' | 'name' | 'values' | 'schema'
   > = {},
-) => {
+): Promise<void> => {
   const [schema, enumName] = getSchemaAndTableFromName(name);
 
   const ast: RakeDbAst.Enum = {
@@ -538,7 +594,7 @@ const createDomain = async (
     RakeDbAst.Domain,
     'type' | 'action' | 'schema' | 'name' | 'baseType'
   >,
-) => {
+): Promise<void> => {
   const [schema, domainName] = getSchemaAndTableFromName(name);
 
   const ast: RakeDbAst.Domain = {
@@ -585,6 +641,6 @@ DEFAULT ${getRaw(ast.default, values)}`
 const queryExists = (
   db: MigrationBase,
   sql: { text: string; values: unknown[] },
-) => {
+): Promise<boolean> => {
   return db.adapter.query(sql).then(({ rowCount }) => rowCount > 0);
 };

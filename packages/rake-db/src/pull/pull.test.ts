@@ -9,6 +9,7 @@ import {
   createdAtColumn,
   domain,
   enumType,
+  foreignKey,
   idColumn,
   intColumn,
   table,
@@ -50,14 +51,11 @@ db.getTables = async () => tables;
 let enums: DbStructure.Enum[] = [];
 db.getEnums = async () => enums;
 
-let primaryKeys: DbStructure.PrimaryKey[] = [];
-db.getPrimaryKeys = async () => primaryKeys;
+let constraints: DbStructure.Constraint[] = [];
+db.getConstraints = async () => constraints;
 
 let columns: DbStructure.Column[] = [];
 db.getColumns = async () => columns;
-
-let checks: DbStructure.Check[] = [];
-db.getChecks = async () => checks;
 
 asMock(makeFileTimeStamp).mockReturnValue('timestamp');
 
@@ -91,9 +89,8 @@ describe('pull', () => {
     domains = [];
     tables = [];
     enums = [];
-    primaryKeys = [];
+    constraints = [];
     columns = [];
-    checks = [];
 
     jest.clearAllMocks();
   });
@@ -143,18 +140,10 @@ describe('pull', () => {
       },
     ];
 
-    primaryKeys = [
-      {
-        schemaName: 'schema',
-        tableName: 'table1',
-        name: 'table1_pkey',
-        columnNames: ['id'],
-      },
-    ];
-
     columns = [
       {
         ...idColumn,
+        default: idColumn.default?.replace('table', 'table1'),
         schemaName: 'schema',
         tableName: 'table1',
       },
@@ -193,6 +182,11 @@ describe('pull', () => {
         tableName: 'table1',
       },
       {
+        ...idColumn,
+        tableName: 'table2',
+        default: idColumn.default?.replace('table', 'table2'),
+      },
+      {
         ...textColumn,
         tableName: 'table2',
       },
@@ -208,12 +202,57 @@ describe('pull', () => {
       },
     ];
 
-    checks = [
+    constraints = [
+      {
+        schemaName: 'schema',
+        tableName: 'table1',
+        name: 'table1_pkey',
+        primaryKey: ['id'],
+      },
+      {
+        schemaName: 'public',
+        tableName: 'table2',
+        name: 'table2_pkey',
+        primaryKey: ['id'],
+      },
       {
         ...check,
         tableName: 'table2',
-        columnNames: ['text'],
-        expression: 'length(text) > 5',
+        check: {
+          columns: ['text'],
+          expression: 'length(text) > 5',
+        },
+      },
+      {
+        ...check,
+        tableName: 'table2',
+        check: {
+          columns: ['one', 'two'],
+          expression: 'table check',
+        },
+      },
+      {
+        ...foreignKey,
+        tableName: 'table2',
+        references: {
+          ...foreignKey.references,
+          columns: ['id', 'text'],
+          foreignSchema: 'schema',
+          foreignTable: 'table1',
+          foreignColumns: ['id', 'name'],
+        },
+      },
+      {
+        ...foreignKey,
+        ...check,
+        tableName: 'table2',
+        references: {
+          ...foreignKey.references,
+          columns: ['id', 'text'],
+          foreignSchema: 'schema',
+          foreignTable: 'table1',
+          foreignColumns: ['id', 'name'],
+        },
       },
     ];
 
@@ -241,8 +280,35 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable('table2', (t) => ({
+    id: t.serial().primaryKey(),
     text: t.text().check(t.raw('length(text) > 5')),
     ...t.timestampsSnakeCase(),
+    ...t.check(t.raw('table check')),
+    ...t.foreignKey(
+      ['id', 'text'],
+      'schema.table1',
+      ['id', 'name'],
+      {
+        name: 'fkey',
+        match: 'FULL',
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
+      },
+    ),
+    ...t.constraint({
+      name: 'table_column_check',
+      references: [
+        ['id', 'text'],
+        'schema.table1',
+        ['id', 'name'],
+        {
+          match: 'FULL',
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE',
+        },
+      ],
+      check: t.raw('column > 10'),
+    }),
   }));
 });
 `,

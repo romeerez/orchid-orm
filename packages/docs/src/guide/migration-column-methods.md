@@ -345,6 +345,22 @@ change(async (db) => {
 })
 ```
 
+## multi-column check
+
+Define a check for multiple column by using a spread syntax:
+
+```ts
+import { change } from 'rake-db'
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    a: t.integer(),
+    b: t.integer(),
+    ...t.check(t.raw('a < b'))
+  }))
+})
+```
+
 ## comment
 
 Add database comment to the column.
@@ -419,6 +435,33 @@ import { change } from 'rake-db'
 change(async (db) => {
   await db.createTable('table', (t) => ({
     name: t.domain('domainName'),
+  }))
+})
+```
+
+# constraint
+
+`rake-db` supports placing a database check and a foreign key on a single constraint:
+
+```ts
+import { change } from 'rake-db'
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    one: t.integer(),
+    two: t.text(),
+    ...t.constraint({
+      name: 'constraintName',
+      check: t.raw('one > 5'),
+      references: [
+        ['one', 'two'], // this table columns
+        'otherTable', // foreign table name
+        ['otherOne', 'otherTwo'], // foreign columns
+        { // see foreignKey above for options
+          match: 'FULL',
+        }
+      ],
+    }),
   }))
 })
 ```

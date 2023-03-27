@@ -1,5 +1,5 @@
 import { ColumnData, ColumnType, ForeignKey } from './columnType';
-import { TableData } from './columnTypes';
+import { getConstraintKind, TableData } from './columnTypes';
 import {
   addCode,
   Code,
@@ -75,17 +75,21 @@ export const columnsShapeToCode = (
     code.push(`...${t}.timestamps(),`);
   }
 
-  const { primaryKey, indexes, foreignKeys } = tableData;
+  const { primaryKey, indexes, constraints } = tableData;
   if (primaryKey) {
     code.push(primaryKeyToCode(primaryKey, t));
   }
 
-  for (const index of indexes) {
-    code.push(...indexToCode(index, t));
+  if (indexes) {
+    for (const index of indexes) {
+      code.push(...indexToCode(index, t));
+    }
   }
 
-  for (const foreignKey of foreignKeys) {
-    code.push(...foreignKeyToCode(foreignKey, t));
+  if (constraints) {
+    for (const item of constraints) {
+      code.push(...constraintToCode(item, t));
+    }
   }
 
   return code;
@@ -202,34 +206,78 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
   return code;
 };
 
-export const foreignKeyToCode = (
-  foreignKey: TableData.ForeignKey,
+export const constraintToCode = (
+  item: TableData.Constraint,
   t: string,
-): Code[] => {
-  return [`...${t}.foreignKey(`, foreignKeyArgsToCode(foreignKey), '),'];
+): Code => {
+  const kind = getConstraintKind(item);
+
+  if (kind === 'foreignKey' && item.references) {
+    return [
+      `...${t}.foreignKey(`,
+      referencesArgsToCode(item.references, item.name),
+      '),',
+    ];
+  } else if (kind === 'check' && item.check) {
+    return [`...${t}.check(${rawToCode(t, item.check)}),`];
+  } else {
+    return [`...${t}.constraint({`, constraintPropsToCode(t, item), '}),'];
+  }
 };
 
-export const foreignKeyArgsToCode = (
-  foreignKey: TableData.ForeignKey,
+export const constraintPropsToCode = (
+  t: string,
+  item: TableData.Constraint,
+): Code[] => {
+  const props: Code[] = [];
+
+  if (item.name) {
+    props.push(`name: ${singleQuote(item.name)},`);
+  }
+
+  if (item.references) {
+    props.push(
+      `references: [`,
+      referencesArgsToCode(item.references, false),
+      '],',
+    );
+  }
+
+  if (item.check) {
+    props.push(`check: ${rawToCode(t, item.check)},`);
+  }
+
+  return props;
+};
+
+export const referencesArgsToCode = (
+  {
+    columns,
+    fnOrTable,
+    foreignColumns,
+    options,
+  }: Exclude<TableData.Constraint['references'], undefined>,
+  name: string | false = options?.name || false,
 ): Code[] => {
   const args: Code[] = [];
 
-  args.push(`${singleQuoteArray(foreignKey.columns)},`);
+  args.push(`${singleQuoteArray(columns)},`);
 
   args.push(
     `${
-      typeof foreignKey.fnOrTable === 'string'
-        ? singleQuote(foreignKey.fnOrTable)
-        : foreignKey.fnOrTable.toString()
+      typeof fnOrTable === 'string'
+        ? singleQuote(fnOrTable)
+        : fnOrTable.toString()
     },`,
   );
 
-  args.push(`${singleQuoteArray(foreignKey.foreignColumns)},`);
+  args.push(`${singleQuoteArray(foreignColumns)},`);
 
-  const { options } = foreignKey;
-  if (objectHasValues(foreignKey.options)) {
+  if (objectHasValues(options) || name) {
     const lines: string[] = [];
-    for (const key in foreignKey.options) {
+    if (name) lines.push(`name: ${singleQuote(name)},`);
+    for (const key in options) {
+      if (key === 'name') continue;
       const value = options[key as keyof typeof options];
       if (value) lines.push(`${key}: ${singleQuote(value)},`);
     }

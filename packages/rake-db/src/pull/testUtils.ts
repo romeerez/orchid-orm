@@ -28,7 +28,7 @@ export const intColumn: DbStructure.Column = {
 export const idColumn: DbStructure.Column = {
   ...intColumn,
   name: 'id',
-  default: `nextval('table1_id_seq'::regclass)`,
+  default: `nextval('table_id_seq'::regclass)`,
 };
 
 export const textColumn: DbStructure.Column = {
@@ -82,17 +82,21 @@ export const index: DbStructure.Index = {
   columns: [{ column: 'name' }],
 };
 
-export const foreignKey: DbStructure.ForeignKey = {
+export const foreignKey: DbStructure.Constraint & {
+  references: DbStructure.References;
+} = {
   schemaName: 'public',
   tableName: 'table',
-  foreignTableSchemaName: 'public',
-  foreignTableName: 'otherTable',
   name: 'fkey',
-  columnNames: ['otherId'],
-  foreignColumnNames: ['id'],
-  match: 'f',
-  onUpdate: 'c',
-  onDelete: 'c',
+  references: {
+    foreignSchema: 'public',
+    foreignTable: 'otherTable',
+    columns: ['otherId'],
+    foreignColumns: ['id'],
+    match: 'f',
+    onUpdate: 'c',
+    onDelete: 'c',
+  },
 };
 
 export const extension: DbStructure.Extension = {
@@ -107,19 +111,21 @@ export const enumType: DbStructure.Enum = {
   values: ['sad', 'ok', 'happy'],
 };
 
-export const primaryKey: DbStructure.PrimaryKey = {
+export const primaryKey: DbStructure.Constraint = {
   schemaName: 'public',
   tableName: 'table',
   name: 'pkey',
-  columnNames: ['id'],
+  primaryKey: ['id'],
 };
 
-export const check: DbStructure.Check = {
+export const check: DbStructure.Constraint & { check: DbStructure.Check } = {
   schemaName: 'public',
   tableName: 'table',
   name: 'table_column_check',
-  columnNames: ['column'],
-  expression: 'column > 10',
+  check: {
+    columns: ['column'],
+    expression: 'column > 10',
+  },
 };
 
 export const domain: DbStructure.Domain = {

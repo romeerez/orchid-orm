@@ -28,16 +28,15 @@ We suggest to keep database configuration options exported from a separate file,
 Example structure (it's created automatically if you follow [quickstart](/guide/quickstart)):
 
 ```
-.
-└── src/
-    └── db/
-        ├── migrations/ - contains migrations files that can be migrated or rolled back.
-        │   ├── timestamp_createPost.ts
-        │   └── timestamp_createComment.ts
-        ├── config.ts - database credentials are exported from here.
-        ├── db.ts - main file for the ORM, connects all tables into one `db` object.
-        ├── dbScript.ts - script run by `npm run db *command*`.
-        └── seed.ts - for filling tables with data.
+src/
+└── db/
+    ├── migrations/ - contains migrations files that can be migrated or rolled back.
+    │   ├── timestamp_createPost.ts
+    │   └── timestamp_createComment.ts
+    ├── config.ts - database credentials are exported from here.
+    ├── db.ts - main file for the ORM, connects all tables into one `db` object.
+    ├── dbScript.ts - script run by `npm run db *command*`.
+    └── seed.ts - for filling tables with data.
 ```
 
 Export database options:
