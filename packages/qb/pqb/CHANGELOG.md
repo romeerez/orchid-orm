@@ -1,5 +1,13 @@
 # pqb
 
+## 0.10.24
+
+### Patch Changes
+
+- Remove undefined and void from json schema
+- Updated dependencies
+  - orchid-core@0.1.13
+
 ## 0.10.23
 
 ### Patch Changes

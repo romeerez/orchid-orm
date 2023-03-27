@@ -157,12 +157,8 @@ type JsonToZod<T extends JSONTypeAny, D = T['dataType']> = T extends {
   ? z.ZodNumber
   : D extends 'string'
   ? z.ZodString
-  : D extends 'undefined'
-  ? z.ZodUndefined
   : D extends 'unknown'
   ? z.ZodUnknown
-  : D extends 'void'
-  ? z.ZodVoid
   : T extends JSONArray<infer U>
   ? z.ZodArray<JsonToZod<U>>
   : T extends JSONEnum<string, infer U>
@@ -575,11 +571,7 @@ const handleNever = typeHandler(() => z.never());
 
 const handleNull = typeHandler(() => z.null());
 
-const handleUndefined = typeHandler(() => z.undefined());
-
 const handleUnknown = typeHandler(() => z.unknown());
-
-const handleVoid = typeHandler(() => z.void());
 
 const handleInstanceOf = typeHandler(
   (type: JSONInstanceOf<new () => EmptyObject>) => z.instanceof(type.class),
@@ -694,9 +686,7 @@ const jsonConverters: Record<string, (type: JSONTypeAny) => z.ZodType> = {
   null: handleNull,
   number: handleNumber,
   string: handleString,
-  undefined: handleUndefined,
   unknown: handleUnknown,
-  void: handleVoid,
   array: handleArray,
   enum: handleEnum,
   instanceOf: handleInstanceOf,

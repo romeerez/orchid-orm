@@ -166,21 +166,9 @@ describe('scalarTypes', () => {
     });
   });
 
-  describe('undefined', () => {
-    it('should have toCode', () => {
-      expect(scalarTypes.undefined().toCode('t')).toBe('t.undefined()');
-    });
-  });
-
   describe('unknown', () => {
     it('should have toCode', () => {
       expect(scalarTypes.unknown().toCode('t')).toBe('t.unknown()');
-    });
-  });
-
-  describe('void', () => {
-    it('should have toCode', () => {
-      expect(scalarTypes.void().toCode('t')).toBe('t.void()');
     });
   });
 });

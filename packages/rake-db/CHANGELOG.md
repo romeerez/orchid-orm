@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.4.29
+
+### Patch Changes
+
+- Remove undefined and void from json schema
+- Updated dependencies
+  - orchid-core@0.1.13
+  - pqb@0.10.24
+
 ## 2.4.28
 
 ### Patch Changes

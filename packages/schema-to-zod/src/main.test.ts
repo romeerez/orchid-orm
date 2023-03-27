@@ -958,20 +958,6 @@ describe('schema to zod', () => {
       });
     });
 
-    describe('undefined', () => {
-      it('should parse a undefined', () => {
-        const schema = columnToZod(t.json((t) => t.undefined()));
-
-        assertType<typeof schema, z.ZodUndefined>(true);
-
-        expect(schema.parse(undefined)).toBe(undefined);
-
-        expect(() => schema.parse(123)).toThrow(
-          'Expected undefined, received number',
-        );
-      });
-    });
-
     describe('unknown', () => {
       it('should parse unknown', () => {
         const schema = columnToZod(t.json((t) => t.unknown()));
@@ -979,20 +965,6 @@ describe('schema to zod', () => {
         assertType<typeof schema, z.ZodUnknown>(true);
 
         expect(schema.parse(123)).toBe(123);
-      });
-    });
-
-    describe('void', () => {
-      it('should parse void', () => {
-        const schema = columnToZod(t.json((t) => t.void()));
-
-        assertType<typeof schema, z.ZodVoid>(true);
-
-        expect(schema.parse(undefined)).toBe(undefined);
-
-        expect(() => schema.parse(123)).toThrow(
-          'Expected void, received number',
-        );
       });
     });
 

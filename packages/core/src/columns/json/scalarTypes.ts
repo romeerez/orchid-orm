@@ -139,32 +139,12 @@ const string = () => {
   return constructType<JSONString>(stringMethods);
 };
 
-export type JSONUndefined = JSONType<undefined, 'undefined'>;
-const undefinedType = () => {
-  return constructType<JSONUndefined>({
-    dataType: 'undefined',
-    toCode(this: JSONUndefined, t: string) {
-      return toCode(this, t, `${t}.undefined()`);
-    },
-  });
-};
-
 export type JSONUnknown = JSONType<unknown, 'unknown'>;
 const unknown = () => {
   return constructType<JSONUnknown>({
     dataType: 'unknown',
     toCode(this: JSONUnknown, t: string) {
       return toCode(this, t, `${t}.unknown()`);
-    },
-  });
-};
-
-export type JSONVoid = JSONType<void, 'void'>;
-const voidType = () => {
-  return constructType<JSONVoid>({
-    dataType: 'void',
-    toCode(this: JSONVoid, t: string) {
-      return toCode(this, t, `${t}.void()`);
     },
   });
 };
@@ -179,7 +159,5 @@ export const scalarTypes = {
   null: nullType,
   number,
   string,
-  undefined: undefinedType,
   unknown,
-  void: voidType,
 };

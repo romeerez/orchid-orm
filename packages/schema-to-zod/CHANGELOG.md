@@ -1,5 +1,14 @@
 # orchid-orm-schema-to-zod
 
+## 0.3.25
+
+### Patch Changes
+
+- Remove undefined and void from json schema
+- Updated dependencies
+  - orchid-core@0.1.13
+  - pqb@0.10.24
+
 ## 0.3.24
 
 ### Patch Changes

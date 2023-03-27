@@ -1,5 +1,13 @@
 # myqb
 
+## 0.1.13
+
+### Patch Changes
+
+- Remove undefined and void from json schema
+- Updated dependencies
+  - orchid-core@0.1.13
+
 ## 0.1.12
 
 ### Patch Changes

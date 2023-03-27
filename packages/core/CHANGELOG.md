@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.1.13
+
+### Patch Changes
+
+- Remove undefined and void from json schema
+
 ## 0.1.12
 
 ### Patch Changes

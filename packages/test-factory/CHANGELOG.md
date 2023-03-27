@@ -1,5 +1,16 @@
 # orchid-orm-test-factory
 
+## 0.3.29
+
+### Patch Changes
+
+- Remove undefined and void from json schema
+- Updated dependencies
+  - orchid-core@0.1.13
+  - orchid-orm@1.6.28
+  - pqb@0.10.24
+  - orchid-orm-schema-to-zod@0.3.25
+
 ## 0.3.28
 
 ### Patch Changes
