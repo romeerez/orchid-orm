@@ -1,4 +1,5 @@
 import {
+  expectSql,
   Message,
   Profile,
   Snake,
@@ -52,6 +53,11 @@ describe('andNot', () => {
 });
 
 describe('where', () => {
+  it('should ignore undefined values', () => {
+    const q = User.where({ name: undefined });
+    expectSql(q.toSql(), `SELECT * FROM "user"`);
+  });
+
   testWhere((cb) => cb(User.all()).toSql(), `SELECT * FROM "user" WHERE`, {
     model: User,
     pkey: 'id',

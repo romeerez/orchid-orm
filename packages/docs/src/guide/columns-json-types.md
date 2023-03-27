@@ -59,11 +59,9 @@ const someTable = db('someTable', (t) => ({
     bigint: t.bigint(), // -> bigint
     null: t.null(), // -> null
     date: t.date(), // -> Date
-    undefined: t.undefined(), // -> undefined
     never: t.never(), // -> never
     any: t.any(), // -> any
     unknown: t.unknown(), // -> unknown
-    void: t.void(), // -> void
   }))
 }))
 ```

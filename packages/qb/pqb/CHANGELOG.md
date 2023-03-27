@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.25
+
+### Patch Changes
+
+- Ignore undefined where values
+
 ## 0.10.24
 
 ### Patch Changes

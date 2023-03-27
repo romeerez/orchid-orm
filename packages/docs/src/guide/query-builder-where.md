@@ -24,6 +24,20 @@ Table.where({
 
 ```
 
+`undefined` values are ignored, so you can supply a partial object with conditions:
+
+```ts
+type Params = {
+  // allow providing exact age, or lower or greate than
+  age?: number | { lt?: number; gt?: number }
+}
+
+const loadRecords = async (params: Params) => {
+  // this will load all records if params is an empty object
+  const records = await Table.where(params)
+}
+```
+
 `.where` can accept other queries and merge their conditions:
 
 ```ts
@@ -137,7 +151,7 @@ WHERE id = 1 AND color = 'red'
 
 The `find` method is available only for tables which has exactly one primary key.
 
-Find record by id, throw `NotFoundError` if not found:
+Find record by id, throw [NotFoundError](/guide/query-builder-error-handling.html) if not found:
 
 ```ts
 await Table.find(1)

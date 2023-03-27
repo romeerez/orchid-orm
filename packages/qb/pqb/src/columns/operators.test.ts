@@ -1,6 +1,11 @@
 import { db, expectSql, User } from '../test-utils/test-utils';
 
 describe('operators', () => {
+  it('should ignore undefined values', () => {
+    const q = User.where({ name: { equals: undefined } });
+    expectSql(q.toSql(), `SELECT * FROM "user"`);
+  });
+
   describe('equals', () => {
     it('should handle value', () => {
       expectSql(

@@ -54,7 +54,6 @@ export const whereToSql = (
   quotedAs?: string,
   not?: boolean,
 ): string | undefined => {
-  // console.log('whereToSql', !!query.joinedShapes?.chat);
   if (query.or) {
     const ors = query.and ? [query.and, ...query.or] : query.or;
     return ors
@@ -75,7 +74,6 @@ const processAnds = (
   quotedAs?: string,
   not?: boolean,
 ): string => {
-  // console.log('processAnds', !!query.joinedShapes?.chat);
   const ands: string[] = [];
   and.forEach((data) =>
     processWhere(ands, ctx, table, query, data, quotedAs, not),
@@ -93,8 +91,6 @@ const processWhere = (
   not?: boolean,
 ) => {
   const prefix = not ? 'NOT ' : '';
-
-  // console.log('processWhere', !!query.joinedShapes?.chat, data);
 
   if (typeof data === 'function') {
     const qb = data(new ctx.whereQueryBuilder(table, query));
@@ -123,6 +119,8 @@ const processWhere = (
 
   for (const key in data) {
     const value = (data as Record<string, unknown>)[key];
+    if (value === undefined) continue;
+
     if (key === 'AND') {
       const arr = toArray(value as MaybeArray<WhereItem>);
       ands.push(processAnds(arr, ctx, table, query, quotedAs, not));
@@ -264,6 +262,8 @@ const processWhere = (
             // TODO: custom error classes
             throw new Error(`Unknown operator ${op} provided to condition`);
           }
+
+          if (value[op as keyof typeof value] === undefined) continue;
 
           ands.push(
             `${prefix}${operator(
