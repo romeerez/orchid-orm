@@ -618,10 +618,7 @@ Table.order({
   id: 'ASC', // or DESC
 
   // to set nulls order:
-  name: {
-    dir: 'ASC', // or DESC
-    nulls: 'FIRST', // or LAST
-  },
+  name: 'ASC NULLS FIRST',
 }, Table.raw('raw sql'))
 ```
 

@@ -126,10 +126,8 @@ type AggregateOptions = {
 
   order?:
     | {
-    columnName:
-      | 'ASC' | 'DESC'
-      | { dir: 'ASC' | 'DESC', nulls: 'FIRST' | 'LAST' }
-  }
+        [columnName]: 'ASC' | 'DESC' | 'ASC NULLS FIRST' | 'DESC NULLS LAST'
+      }
     | RawExpression;
 }
 ```

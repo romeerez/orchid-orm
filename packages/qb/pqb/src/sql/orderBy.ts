@@ -35,17 +35,7 @@ export const orderByToSql = (
   const sql: string[] = [];
   for (const key in order) {
     const value = order[key];
-    if (typeof value === 'string') {
-      sql.push(
-        `${revealColumnToSql(data, data.shape, key, quotedAs)} ${value}`,
-      );
-    } else if (value) {
-      sql.push(
-        `${revealColumnToSql(data, data.shape, key, quotedAs)} ${
-          value.dir
-        } NULLS ${value.nulls}`,
-      );
-    }
+    sql.push(`${revealColumnToSql(data, data.shape, key, quotedAs)} ${value}`);
   }
   return sql.join(', ');
 };

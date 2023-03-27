@@ -655,8 +655,8 @@ describe('queryMethods', () => {
       expectSql(
         q
           .order({
-            id: { dir: 'ASC', nulls: 'FIRST' },
-            name: { dir: 'DESC', nulls: 'LAST' },
+            id: 'ASC NULLS FIRST',
+            name: 'DESC NULLS LAST',
           })
           .toSql(),
         `
@@ -679,8 +679,8 @@ describe('queryMethods', () => {
 
       expectSql(
         Snake.order({
-          snakeName: { dir: 'ASC', nulls: 'FIRST' },
-          tailLength: { dir: 'DESC', nulls: 'LAST' },
+          snakeName: 'ASC NULLS FIRST',
+          tailLength: 'DESC NULLS LAST',
         }).toSql(),
         `
           SELECT ${snakeSelectAll} FROM "snake"

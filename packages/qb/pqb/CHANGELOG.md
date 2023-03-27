@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.26
+
+### Patch Changes
+
+- Change setting order nulls first/last
+
 ## 0.10.25
 
 ### Patch Changes

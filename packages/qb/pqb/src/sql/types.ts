@@ -199,12 +199,9 @@ export type AggregateItemOptions = {
   window?: WindowItem;
 };
 
-export type SortDir = 'ASC' | 'DESC';
+export type SortDir = 'ASC' | 'DESC' | 'ASC NULLS FIRST' | 'DESC NULLS LAST';
 
-export type OrderItem =
-  | string
-  | Record<string, SortDir | { dir: SortDir; nulls: 'FIRST' | 'LAST' }>
-  | RawExpression;
+export type OrderItem = string | Record<string, SortDir> | RawExpression;
 
 export type AggregateItemArg =
   | Expression
