@@ -299,7 +299,7 @@ The data type uuid stores Universally Unique Identifiers (UUID).
 t.uuid() // -> string, example: a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11
 ```
 
-When using it as a primary key, it will automatically get a [gen_random_uuid](97ba9e78-7510-415a-9c03-23d440aec443) default.
+When using it as a primary key, it will automatically get a [gen_random_uuid](https://www.postgresql.org/docs/current/functions-uuid.html) default.
 
 ```ts
 export class Table extends BaseTable {
