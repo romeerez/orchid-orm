@@ -57,6 +57,8 @@ Provided SQL will be wrapped into parens for a single `VALUES` record.
 
 If the table has a column with runtime defaults (defined with callbacks), the value will be appended to your SQL.
 
+`columns` are type-checked to contain all required columns.
+
 ```ts
 const oneRecord = await Table.createRaw({
   columns: ['name', 'amount'],
@@ -71,6 +73,8 @@ const oneRecord = await Table.createRaw({
 Takes array of SQL expressions, each of them will be wrapped into parens for `VALUES` records.
 
 If the table has a column with runtime defaults (defined with callbacks), function will be called for each SQL and the value will be appended.
+
+`columns` are type-checked to contain all required columns.
 
 ```ts
 const manyRecords = await Table.createManyRaw({

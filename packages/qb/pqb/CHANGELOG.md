@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.28
+
+### Patch Changes
+
+- Type-check required columns in createRaw
+
 ## 0.10.27
 
 ### Patch Changes

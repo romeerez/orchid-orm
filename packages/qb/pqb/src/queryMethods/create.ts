@@ -20,12 +20,16 @@ import { parseResult, queryMethodByReturnType } from './then';
 import { NotFoundError } from '../errors';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
-import { RawExpression, EmptyObject, SetOptional } from 'orchid-core';
+import {
+  RawExpression,
+  EmptyObject,
+  SetOptional,
+  StringKey,
+} from 'orchid-core';
 
 export type CreateData<
   T extends Query,
-  DefaultKeys extends PropertyKey = keyof T[defaultsKey],
-  Data = SetOptional<T['inputType'], DefaultKeys>,
+  Data = SetOptional<T['inputType'], keyof T[defaultsKey]>,
 > = [keyof T['relations']] extends [never]
   ? Data
   : OmitBelongsToForeignKeys<T['relations'], Data> & CreateRelationData<T>;
@@ -154,6 +158,28 @@ type CreateManyRawData<T extends Query> = {
   columns: (keyof T['shape'])[];
   values: RawExpression[];
 };
+
+type RawRequiredColumns<T extends Query> = {
+  [K in keyof T['inputType'] as K extends keyof T[defaultsKey]
+    ? never
+    : null extends T['inputType'][K]
+    ? never
+    : undefined extends T['inputType'][K]
+    ? never
+    : K]: true;
+};
+
+type CreateRawArgs<
+  T extends Query,
+  Arg extends { columns: (keyof T['shape'])[] },
+> = keyof RawRequiredColumns<T> extends Arg['columns'][number]
+  ? [data: Arg]
+  : [
+      `Missing required columns: ${Exclude<
+        StringKey<keyof RawRequiredColumns<T>>,
+        Arg['columns'][number]
+      >}`,
+    ];
 
 type OnConflictArg<T extends Query> =
   | keyof T['shape']
@@ -462,35 +488,40 @@ export class Create {
     ) as CreateManyResult<T>;
   }
 
-  createRaw<T extends Query>(this: T, data: CreateRawData<T>): CreateResult<T> {
-    return this.clone()._createRaw(data);
-  }
-  _createRaw<T extends Query>(
+  createRaw<T extends Query, Arg extends CreateRawData<T>>(
     this: T,
-    data: CreateRawData<T>,
+    ...args: CreateRawArgs<T, Arg>
+  ): CreateResult<T> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.clone()._createRaw(args[0] as any);
+  }
+  _createRaw<T extends Query, Arg extends CreateRawData<T>>(
+    this: T,
+    ...args: CreateRawArgs<T, Arg>
   ): CreateResult<T> {
     handleSelect(this);
     return insert(
       this,
-      data as { columns: string[]; values: RawExpression },
+      args[0] as { columns: string[]; values: RawExpression },
       getSingleReturnType(this),
     ) as CreateResult<T>;
   }
 
-  createManyRaw<T extends Query>(
+  createManyRaw<T extends Query, Arg extends CreateManyRawData<T>>(
     this: T,
-    data: CreateManyRawData<T>,
+    ...args: CreateRawArgs<T, Arg>
   ): CreateManyResult<T> {
-    return this.clone()._createManyRaw(data);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.clone()._createManyRaw(args[0] as any);
   }
-  _createManyRaw<T extends Query>(
+  _createManyRaw<T extends Query, Arg extends CreateManyRawData<T>>(
     this: T,
-    data: CreateManyRawData<T>,
+    ...args: CreateRawArgs<T, Arg>
   ): CreateManyResult<T> {
     handleSelect(this);
     return insert(
       this,
-      data as { columns: string[]; values: RawExpression[] },
+      args[0] as { columns: string[]; values: RawExpression[] },
       getSingleReturnType(this),
     ) as CreateManyResult<T>;
   }
