@@ -246,7 +246,7 @@ export abstract class ColumnTypeBase<
   // set default to the column
   default<
     T extends ColumnTypeBase,
-    Value extends T['type'] | RawExpression | (() => T['type']),
+    Value extends T['type'] | null | RawExpression | (() => T['type']),
   >(this: T, value: Value): ColumnWithDefault<T, Value> {
     return setColumnData(
       this,

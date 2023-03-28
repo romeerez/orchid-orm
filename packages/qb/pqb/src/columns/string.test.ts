@@ -25,6 +25,7 @@ import {
   VarCharColumn,
   XMLColumn,
 } from './string';
+import { raw } from 'orchid-core';
 
 const testStringColumnMethods = (type: TextBaseColumn, name: string) => {
   expect(type.nonEmpty().toCode('t')).toBe(`t.${name}().nonEmpty()`);
@@ -431,6 +432,26 @@ describe('string columns', () => {
 
     it('should have toCode', () => {
       expect(new UUIDColumn({}).toCode('t')).toBe('t.uuid()');
+    });
+
+    describe('primaryKey', () => {
+      it('should have a default function to generate uuid', () => {
+        const column = new UUIDColumn({}).primaryKey();
+
+        expect(column.data.default).toEqual(raw('gen_random_uuid()'));
+      });
+
+      it('should not reveal default when converting to code', () => {
+        const column = new UUIDColumn({}).primaryKey();
+
+        expect(column.toCode('t')).toEqual('t.uuid().primaryKey()');
+      });
+
+      it('should not change default if it is set by user', () => {
+        const column = new UUIDColumn({}).default('hi').primaryKey();
+
+        expect(column.data.default).toBe('hi');
+      });
     });
   });
 

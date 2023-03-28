@@ -4,18 +4,23 @@ All the following methods are available in any kind of column.
 
 ## primaryKey
 
-Mark the column as a primary key. This column type becomes an argument of the `.find` method. So if the primary key is of `serial` type, `.find` will accept the number, or if the primary key is of `UUID` type, `.find` will expect a string.
+Mark the column as a primary key.
+This column type becomes an argument of the `.find` method.
+So if the primary key is of `serial` type, `.find` will accept the number,
+or if the primary key is of `UUID` type, `.find` will expect a string.
+
+Using `primaryKey` on a `uuid` column will automatically add a [gen_random_uuid](https://www.postgresql.org/docs/current/functions-uuid.html) default.
 
 ```ts
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.uuid().primaryKey(),
   }));
 }
 
 // primary key can be used by `find` later:
-db.table.find(1)
+db.table.find('97ba9e78-7510-415a-9c03-23d440aec443')
 ```
 
 ## default

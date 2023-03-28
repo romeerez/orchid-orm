@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.4.35
+
+### Patch Changes
+
+- Use gen_random_uuid as a default uuid default
+- Updated dependencies
+  - orchid-core@0.1.14
+  - pqb@0.10.29
+
 ## 2.4.34
 
 ### Patch Changes

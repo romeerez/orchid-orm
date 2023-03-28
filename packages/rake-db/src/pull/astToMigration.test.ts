@@ -1,5 +1,5 @@
 import { astToMigration } from './astToMigration';
-import { columnTypes, EnumColumn, TableData } from 'pqb';
+import { columnTypes, EnumColumn, TableData, UUIDColumn } from 'pqb';
 import { RakeDbAst } from '../ast';
 import { processRakeDbConfig } from '../common';
 import { raw } from 'orchid-core';
@@ -96,7 +96,7 @@ describe('astToMigration', () => {
       {
         ...table,
         shape: {
-          ...table.shape,
+          id: new UUIDColumn({}).primaryKey(),
           enum: new EnumColumn({}, enumType.name, enumType.values),
         },
       },
@@ -116,7 +116,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable('schema.table', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.uuid().primaryKey(),
     enum: t.enum('mood'),
   }));
 });

@@ -380,12 +380,17 @@ export const columnCheckToCode = (t: string, check: RawExpression): string => {
   return `.check(${rawToCode(t, check)})`;
 };
 
-export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
+export const columnCode = (
+  type: ColumnType,
+  t: string,
+  code: Code,
+  data = type.data,
+): Code => {
   code = toArray(code);
 
   let prepend = `${t}.`;
-  if (type.data.name) {
-    prepend += `name(${singleQuote(type.data.name)}).`;
+  if (data.name) {
+    prepend += `name(${singleQuote(data.name)}).`;
   }
 
   if (typeof code[0] === 'string') {
@@ -394,52 +399,48 @@ export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
     code[0].unshift(prepend);
   }
 
-  if (type.data.isPrimaryKey) addCode(code, '.primaryKey()');
+  if (data.isPrimaryKey) addCode(code, '.primaryKey()');
 
-  if (type.data.foreignKeys) {
-    for (const part of columnForeignKeysToCode(type.data.foreignKeys)) {
+  if (data.foreignKeys) {
+    for (const part of columnForeignKeysToCode(data.foreignKeys)) {
       addCode(code, part);
     }
   }
 
-  if (type.data.isHidden) addCode(code, '.hidden()');
+  if (data.isHidden) addCode(code, '.hidden()');
 
-  if (type.data.isNullable) addCode(code, '.nullable()');
+  if (data.isNullable) addCode(code, '.nullable()');
 
   if (type.encodeFn) addCode(code, `.encode(${type.encodeFn.toString()})`);
 
   if (type.parseFn && !('hideFromCode' in type.parseFn))
     addCode(code, `.parse(${type.parseFn.toString()})`);
 
-  if (type.data.as) addCode(code, `.as(${type.data.as.toCode(t)})`);
+  if (data.as) addCode(code, `.as(${data.as.toCode(t)})`);
 
-  if (type.data.default) {
-    addCode(
-      code,
-      `.default(${columnDefaultArgumentToCode(t, type.data.default)})`,
-    );
+  if (data.default !== undefined && data.default !== null) {
+    addCode(code, `.default(${columnDefaultArgumentToCode(t, data.default)})`);
   }
 
-  if (type.data.indexes) {
-    for (const part of columnIndexesToCode(type.data.indexes)) {
+  if (data.indexes) {
+    for (const part of columnIndexesToCode(data.indexes)) {
       addCode(code, part);
     }
   }
 
-  if (type.data.comment)
-    addCode(code, `.comment(${singleQuote(type.data.comment)})`);
+  if (data.comment) addCode(code, `.comment(${singleQuote(data.comment)})`);
 
-  if (type.data.check) {
-    addCode(code, columnCheckToCode(t, type.data.check));
+  if (data.check) {
+    addCode(code, columnCheckToCode(t, data.check));
   }
 
-  if (type.data.errors) {
-    for (const part of columnErrorMessagesToCode(type.data.errors)) {
+  if (data.errors) {
+    for (const part of columnErrorMessagesToCode(data.errors)) {
       addCode(code, part);
     }
   }
 
-  const { validationDefault } = type.data;
+  const { validationDefault } = data;
   if (validationDefault) {
     addCode(
       code,
@@ -453,14 +454,13 @@ export const columnCode = (type: ColumnType, t: string, code: Code): Code => {
     );
   }
 
-  if (type.data.compression)
-    addCode(code, `.compression(${singleQuote(type.data.compression)})`);
+  if (data.compression)
+    addCode(code, `.compression(${singleQuote(data.compression)})`);
 
-  if (type.data.collate)
-    addCode(code, `.collate(${singleQuote(type.data.collate)})`);
+  if (data.collate) addCode(code, `.collate(${singleQuote(data.collate)})`);
 
-  if (type.data.modifyQuery)
-    addCode(code, `.modifyQuery(${type.data.modifyQuery.toString()})`);
+  if (data.modifyQuery)
+    addCode(code, `.modifyQuery(${data.modifyQuery.toString()})`);
 
   return columnChainToCode(type.chain, t, code);
 };

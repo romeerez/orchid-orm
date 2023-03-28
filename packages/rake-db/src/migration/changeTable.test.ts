@@ -41,17 +41,17 @@ describe('changeTable', () => {
     await testUpAndDown(
       () =>
         db.changeTable('schema.table', (t) => ({
-          column: t.add(t.text()),
+          id: t.add(t.uuid().primaryKey()),
         })),
       () =>
         expectSql(`
           ALTER TABLE "schema"."table"
-            ADD COLUMN "column" text NOT NULL
+            ADD COLUMN "id" uuid PRIMARY KEY DEFAULT gen_random_uuid()
         `),
       () =>
         expectSql(`
           ALTER TABLE "schema"."table"
-            DROP COLUMN "column"
+            DROP COLUMN "id"
         `),
     );
   });

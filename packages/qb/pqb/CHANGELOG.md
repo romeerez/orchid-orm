@@ -1,5 +1,13 @@
 # pqb
 
+## 0.10.29
+
+### Patch Changes
+
+- Use gen_random_uuid as a default uuid default
+- Updated dependencies
+  - orchid-core@0.1.14
+
 ## 0.10.28
 
 ### Patch Changes

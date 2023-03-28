@@ -9,6 +9,9 @@ import {
   BaseStringData,
   ColumnTypesBase,
   stringDataToCode,
+  PrimaryKeyColumn,
+  raw,
+  RawExpression,
 } from 'orchid-core';
 import { columnCode } from './code';
 
@@ -331,12 +334,30 @@ export class TsQueryColumn extends ColumnType<string, typeof Operators.text> {
   }
 }
 
+const uuidDefault = raw('gen_random_uuid()');
+
 // uuid stores Universally Unique Identifiers (UUID)
 export class UUIDColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'uuid' as const;
   operators = Operators.text;
+
+  primaryKey<T extends ColumnType>(this: T): PrimaryKeyColumn<T> {
+    const column = super.primaryKey();
+    if (!column.data.default) column.data.default = uuidDefault;
+    return column as unknown as PrimaryKeyColumn<T>;
+  }
+
   toCode(t: string): Code {
-    return columnCode(this, t, `uuid()`);
+    const { data } = this;
+    return columnCode(
+      this,
+      t,
+      `uuid()`,
+      typeof data.default === 'object' &&
+        (data.default as RawExpression).__raw === uuidDefault.__raw
+        ? { ...data, default: undefined }
+        : data,
+    );
   }
 }
 

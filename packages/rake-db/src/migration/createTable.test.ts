@@ -44,11 +44,11 @@ describe('create and drop table', () => {
   it('should handle table with schema', async () => {
     await testUpAndDown(
       (action) =>
-        db[action]('schema.name', (t) => ({ id: t.serial().primaryKey() })),
+        db[action]('schema.name', (t) => ({ id: t.uuid().primaryKey() })),
       () =>
         expectSql(`
             CREATE TABLE "schema"."name" (
-              "id" serial PRIMARY KEY
+              "id" uuid PRIMARY KEY DEFAULT gen_random_uuid()
             )
           `),
       () =>
