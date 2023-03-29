@@ -43,6 +43,7 @@ Currently, it supports generating code to create:
 - foreign keys
 - indexes
 - domain types
+- the defaults `current_timestamp`, `transaction_timestamp()` are simplified to the equivalent `now()`
 
 Assuming we have two tables in a database, one with camelCase columns and the other with snake_case:
 

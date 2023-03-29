@@ -255,6 +255,24 @@ describe('structureToAst', () => {
       expect((def as RawExpression).__raw).toBe('now()');
     });
 
+    it('should replace current_timestamp and transaction_timestamp() with now() in timestamp default', async () => {
+      const db = new DbStructure(adapter);
+      db.getTables = async () => [table];
+      db.getColumns = async () => [
+        { ...timestampColumn, name: 'one', default: 'current_timestamp' },
+        { ...timestampColumn, name: 'two', default: 'transaction_timestamp()' },
+        { ...timestampColumn, name: 'three', default: 'now()' },
+      ];
+
+      const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
+
+      expect((ast.shape.one.data.default as RawExpression).__raw).toBe('now()');
+      expect((ast.shape.two.data.default as RawExpression).__raw).toBe('now()');
+      expect((ast.shape.three.data.default as RawExpression).__raw).toBe(
+        'now()',
+      );
+    });
+
     describe('serial column', () => {
       it('should add serial column based on various default values', async () => {
         const db = new DbStructure(adapter);

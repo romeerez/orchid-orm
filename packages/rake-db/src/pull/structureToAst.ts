@@ -14,6 +14,7 @@ import {
   ForeignKeyOptions,
   getConstraintKind,
   instantiateColumn,
+  simplifyColumnDefault,
   TableData,
 } from 'pqb';
 import { raw, singleQuote, toCamelCase, toSnakeCase } from 'orchid-core';
@@ -147,7 +148,7 @@ export const structureToAst = async (
       baseType: domains[`${it.schemaName}.${it.name}`],
       notNull: it.notNull,
       collation: it.collation,
-      default: it.default ? raw(it.default) : undefined,
+      default: simplifyColumnDefault(it.default),
       check: it.check ? raw(it.check) : undefined,
     });
   }

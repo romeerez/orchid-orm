@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.4.37
+
+### Patch Changes
+
+- Simplify current_timestamp, transaction_timestamp() to the equivalent now() in db pull
+- Updated dependencies
+  - pqb@0.10.30
+
 ## 2.4.36
 
 ### Patch Changes

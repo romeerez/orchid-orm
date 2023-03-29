@@ -11,11 +11,11 @@ import {
   pushColumnData,
   setColumnData,
   ValidationContext,
-  raw,
   MaybeArray,
   StringKey,
   QueryCommon,
   MessageParam,
+  raw,
 } from 'orchid-core';
 
 export type ColumnData = ColumnDataBase & {
@@ -105,6 +105,19 @@ export type ColumnFromDbParams = {
   dateTimePrecision?: number;
 };
 
+const knownDefaults: Record<string, string> = {
+  current_timestamp: 'now()',
+  'transaction_timestamp()': 'now()',
+};
+
+export const simplifyColumnDefault = (value?: string) => {
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase();
+    return raw(knownDefaults[lower] || value);
+  }
+  return;
+};
+
 export const instantiateColumn = (
   klass: new (...args: never[]) => ColumnType,
   params: ColumnFromDbParams,
@@ -113,14 +126,10 @@ export const instantiateColumn = (
     types: ColumnTypesBase,
   ) => ColumnType)({});
 
-  let data;
-  if (params.default !== null && params.default !== undefined) {
-    data = { ...params, default: raw(params.default) };
-  } else {
-    data = params;
-  }
-
-  Object.assign(column.data, data);
+  Object.assign(column.data, {
+    ...params,
+    default: simplifyColumnDefault(params.default),
+  });
   return column as unknown as ColumnType;
 };
 

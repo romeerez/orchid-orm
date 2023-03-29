@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.30
+
+### Patch Changes
+
+- Simplify current_timestamp, transaction_timestamp() to the equivalent now() in db pull
+
 ## 0.10.29
 
 ### Patch Changes

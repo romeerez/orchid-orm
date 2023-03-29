@@ -175,11 +175,13 @@ describe('pull', () => {
         ...createdAtColumn,
         schemaName: 'schema',
         tableName: 'table1',
+        default: 'Current_Timestamp',
       },
       {
         ...updatedAtColumn,
         schemaName: 'schema',
         tableName: 'table1',
+        default: 'transaction_timestamp()',
       },
       {
         ...idColumn,
@@ -194,11 +196,13 @@ describe('pull', () => {
         ...createdAtColumn,
         tableName: 'table2',
         name: 'created_at',
+        default: 'Current_Timestamp',
       },
       {
         ...updatedAtColumn,
         tableName: 'table2',
         name: 'updated_at',
+        default: 'transaction_timestamp()',
       },
     ];
 
