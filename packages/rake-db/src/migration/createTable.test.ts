@@ -1,9 +1,10 @@
 import { asMock, expectSql, getDb, resetDb, toLine } from '../test-utils';
+import { Db } from 'pqb';
 
 const db = getDb();
 
 const testUpAndDown = async (
-  fn: (action: 'createTable' | 'dropTable') => Promise<void> | void,
+  fn: (action: 'createTable' | 'dropTable') => Promise<unknown> | void,
   expectUp?: () => void,
   expectDown: () => void = () => expectSql(`DROP TABLE "table"`),
 ) => {
@@ -93,6 +94,17 @@ describe('create and drop table', () => {
           DROP TABLE "table" CASCADE
         `),
     );
+  });
+
+  it('should return a table db interface', async () => {
+    await testUpAndDown(async (action) => {
+      const { table } = await db[action]('table', (t) => ({
+        id: t.serial().primaryKey(),
+        name: t.text(),
+      }));
+
+      expect(table).toBeInstanceOf(Db);
+    });
   });
 
   describe('columns', () => {

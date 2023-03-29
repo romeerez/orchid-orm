@@ -1,6 +1,7 @@
 import {
   ColumnsShape,
   columnTypes,
+  Db,
   EnumColumn,
   getColumnTypes,
   getTableData,
@@ -12,6 +13,7 @@ import {
 import {
   ColumnComment,
   ColumnsShapeCallback,
+  Migration,
   MigrationBase,
   TableOptions,
 } from './migration';
@@ -43,13 +45,23 @@ export type TableQuery = {
   then?(result: QueryArraysResult): void;
 };
 
-export const createTable = async (
+export type CreateTableResult<
+  Table extends string,
+  Shape extends ColumnsShape,
+> = {
+  table: Db<Table, Shape>;
+};
+
+export const createTable = async <
+  Table extends string,
+  Shape extends ColumnsShape,
+>(
   migration: MigrationBase,
   up: boolean,
-  tableName: string,
+  tableName: Table,
   options: TableOptions,
-  fn: ColumnsShapeCallback,
-) => {
+  fn: ColumnsShapeCallback<Shape>,
+): Promise<CreateTableResult<Table, Shape>> => {
   const snakeCase =
     'snakeCase' in options ? options.snakeCase : migration.options.snakeCase;
 
@@ -75,6 +87,17 @@ export const createTable = async (
   }
 
   migration.migratedAsts.push(ast);
+
+  let table: Db<Table, Shape> | undefined;
+
+  return {
+    get table(): Db<Table, Shape> {
+      return (table ??= (migration as unknown as Migration)(tableName, shape, {
+        noPrimaryKey: options.noPrimaryKey ? 'ignore' : undefined,
+        snakeCase: options.snakeCase,
+      }) as unknown as Db<Table, Shape>);
+    },
+  };
 };
 
 const makeAst = (

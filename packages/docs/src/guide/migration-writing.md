@@ -48,7 +48,7 @@ Example of creating a table and populating it with values:
 import { change } from '../src';
 
 change(async (db, up) => {
-  await db.createTable('languages', (t) => ({
+  const { table } = await db.createTable('languages', (t) => ({
     id: t.serial().primaryKey(),
     name: t.string().unique(),
     code: t.string().unique(),
@@ -56,15 +56,14 @@ change(async (db, up) => {
 
   // it's important to use this `up` check to not run the queries on rollback
   if (up) {
-    const data: { code: string; name: string }[] = [
+    // TS knows the column types, so this will be type-checked:
+    await table.createMany([
       { name: 'Ukrainian', code: 'ua' },
       { name: 'English', code: 'en' },
       { name: 'Polish', code: 'pl' },
       { name: 'Belarusian', code: 'be' },
       { name: 'French', code: 'fr' },
-    ];
-
-    await db('languages').createMany(data);
+    ]);
 
     // use db.adapter.query to perform raw SQL queries
     // the query function is the same as in node-postgres library
@@ -84,6 +83,8 @@ change(async (db, up) => {
 `dropTable` accepts the same arguments, it will drop the table when migrating and create a table when rolling back.
 
 When creating a table within a specific schema, write the table name with schema name: `'schemaName.tableName'`.
+
+Returns object `{ table: TableInterface }` that allows to insert records right after creating a table.
 
 Options are:
 
@@ -109,7 +110,7 @@ Example:
 ```ts
 import { change } from 'rake-db';
 
-change(async (db) => {
+change(async (db, up) => {
   // call `createTable` with options
   await db.createTable(
     'table',
@@ -124,13 +125,19 @@ change(async (db) => {
   );
   
   // call without options
-  await db.createTable('user', (t) => ({
+  const { table } = await db.createTable('user', (t) => ({
     id: t.serial().primaryKey(),
     email: t.text().unique(),
     name: t.text(),
     active: t.boolean().nullable(),
     ...t.timestamps(),
   }));
+  
+  // create records only when migrating up
+  if (up) {
+    // table is a db table interface, all query methods are available
+    await table.createMany([ ...data ])
+  }
 });
 ```
 

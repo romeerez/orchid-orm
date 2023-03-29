@@ -26,7 +26,7 @@ import {
   RawExpression,
   singleQuote,
 } from 'orchid-core';
-import { createTable } from './createTable';
+import { createTable, CreateTableResult } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';
 import {
   RakeDbConfig,
@@ -57,9 +57,9 @@ export type MigrationColumnTypes = Omit<
   enum: (name: string) => EnumColumn;
 };
 
-export type ColumnsShapeCallback = (
+export type ColumnsShapeCallback<Shape extends ColumnsShape = ColumnsShape> = (
   t: MigrationColumnTypes & { raw: typeof raw },
-) => ColumnsShape;
+) => Shape;
 
 export type ChangeTableOptions = {
   snakeCase?: boolean;
@@ -137,34 +137,42 @@ export class MigrationBase {
   public options!: RakeDbConfig;
   public migratedAsts!: RakeDbAst[];
 
-  createTable(
-    tableName: string,
+  createTable<Table extends string, Shape extends ColumnsShape>(
+    tableName: Table,
     options: TableOptions,
-    fn: ColumnsShapeCallback,
-  ): Promise<void>;
-  createTable(tableName: string, fn: ColumnsShapeCallback): Promise<void>;
+    fn: ColumnsShapeCallback<Shape>,
+  ): Promise<CreateTableResult<Table, Shape>>;
+  createTable<Table extends string, Shape extends ColumnsShape>(
+    tableName: Table,
+    fn: ColumnsShapeCallback<Shape>,
+  ): Promise<CreateTableResult<Table, Shape>>;
   createTable(
     tableName: string,
     cbOrOptions: ColumnsShapeCallback | TableOptions,
     cb?: ColumnsShapeCallback,
-  ): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<any> {
     const options = typeof cbOrOptions === 'function' ? {} : cbOrOptions;
     const fn = (cb || cbOrOptions) as ColumnsShapeCallback;
 
     return createTable(this, this.up, tableName, options, fn);
   }
 
-  dropTable(
-    tableName: string,
+  dropTable<Table extends string, Shape extends ColumnsShape>(
+    tableName: Table,
     options: TableOptions,
-    fn: ColumnsShapeCallback,
-  ): Promise<void>;
-  dropTable(tableName: string, fn: ColumnsShapeCallback): Promise<void>;
+    fn: ColumnsShapeCallback<Shape>,
+  ): Promise<CreateTableResult<Table, Shape>>;
+  dropTable<Table extends string, Shape extends ColumnsShape>(
+    tableName: Table,
+    fn: ColumnsShapeCallback<Shape>,
+  ): Promise<CreateTableResult<Table, Shape>>;
   dropTable(
     tableName: string,
     cbOrOptions: ColumnsShapeCallback | TableOptions,
     cb?: ColumnsShapeCallback,
-  ) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<any> {
     const options = typeof cbOrOptions === 'function' ? {} : cbOrOptions;
     const fn = (cb || cbOrOptions) as ColumnsShapeCallback;
 

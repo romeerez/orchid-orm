@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.4.36
+
+### Patch Changes
+
+- Return table interface from createTable
+
 ## 2.4.35
 
 ### Patch Changes
