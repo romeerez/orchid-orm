@@ -13,12 +13,13 @@ import {
   addCode,
 } from 'orchid-core';
 import { columnCode, identityToCode } from './code';
-import { TableData } from './columnTypes';
-import Identity = TableData.Identity;
+import type { TableData } from './columnTypes';
 
 export type NumberColumn = ColumnType<number, typeof Operators.number>;
 
-export type NumberColumnData = BaseNumberData & { identity: Identity };
+export type NumberColumnData = BaseNumberData & {
+  identity: TableData.Identity;
+};
 
 export type SerialColumnData = NumberColumnData & {
   default: RawExpression;
@@ -124,7 +125,7 @@ export class SmallIntColumn extends IntegerBaseColumn {
     return intToCode(this, t);
   }
 
-  identity<T extends ColumnType>(this: T, options: Identity = {}): T {
+  identity<T extends ColumnType>(this: T, options: TableData.Identity = {}): T {
     return setColumnData(this, 'identity', options);
   }
 }
@@ -137,7 +138,7 @@ export class IntegerColumn extends IntegerBaseColumn {
     return intToCode(this, t);
   }
 
-  identity<T extends ColumnType>(this: T, options: Identity = {}): T {
+  identity<T extends ColumnType>(this: T, options: TableData.Identity = {}): T {
     return setColumnData(this, 'identity', options);
   }
 }
@@ -149,7 +150,7 @@ export class BigIntColumn extends NumberAsStringBaseColumn {
     return intToCode(this, t);
   }
 
-  identity<T extends ColumnType>(this: T, options: Identity = {}): T {
+  identity<T extends ColumnType>(this: T, options: TableData.Identity = {}): T {
     return setColumnData(this, 'identity', options);
   }
 }
