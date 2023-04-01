@@ -5,9 +5,9 @@ import {
   constraintToCode,
   indexToCode,
   primaryKeyToCode,
-  TimestampColumn,
   getConstraintKind,
   constraintPropsToCode,
+  TimestampTzColumn,
 } from 'pqb';
 import {
   addCode,
@@ -204,7 +204,7 @@ const isTimestamp = (column?: ColumnType) => {
 
   const { default: def } = column.data;
   return (
-    column instanceof TimestampColumn &&
+    column instanceof TimestampTzColumn &&
     !column.data.isNullable &&
     def &&
     typeof def === 'object' &&

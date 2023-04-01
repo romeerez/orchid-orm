@@ -66,7 +66,7 @@ export const decimalColumn: DbStructure.Column = {
 export const timestampColumn: DbStructure.Column = {
   ...intColumn,
   name: 'timestamp',
-  type: 'timestamp',
+  type: 'timestamptz',
   dateTimePrecision: 10,
 };
 

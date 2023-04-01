@@ -65,7 +65,7 @@ import { createBaseTable } from 'orchid-orm'
 export const BaseTable = createBaseTable({
   // set to true if columns in database are in snake_case
   snakeCase: true,
-  
+
   columnTypes: (t) => ({
     // by default timestamp is returned as a stirng, override to a number
     timestamp() {

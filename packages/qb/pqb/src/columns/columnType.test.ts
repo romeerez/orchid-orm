@@ -178,7 +178,7 @@ describe('column type', () => {
 
         const UserWithPlainTimestamp = db('user', (t) => ({
           id: t.serial().primaryKey(),
-          createdAt: t.timestamp(),
+          createdAt: t.timestampWithoutTimeZone(),
         }));
 
         expect(typeof (await UserWithPlainTimestamp.take()).createdAt).toBe(
@@ -197,13 +197,13 @@ describe('column type', () => {
 
   describe('as', () => {
     const numberTimestamp = columnTypes
-      .timestamp()
+      .timestampWithoutTimeZone()
       .encode((input: number) => new Date(input))
       .parse(Date.parse)
       .as(columnTypes.integer());
 
     const dateTimestamp = columnTypes
-      .timestamp()
+      .timestampWithoutTimeZone()
       .parse((input) => new Date(input));
 
     const db = createDb({
@@ -232,18 +232,21 @@ describe('column type', () => {
 
     it('should accept only column of same type and input type', () => {
       columnTypes
-        .timestamp()
+        .timestampWithoutTimeZone()
         .encode((input: number) => input.toString())
         // @ts-expect-error should have both encode and parse with matching types
         .as(columnTypes.integer());
 
       // @ts-expect-error should have both encode and parse with matching types
-      columnTypes.timestamp().parse(Date.parse).as(columnTypes.integer());
+      columnTypes
+        .timestampWithoutTimeZone()
+        .parse(Date.parse)
+        .as(columnTypes.integer());
     });
 
     it('should return same column with `as` property in data', () => {
       const timestamp = columnTypes
-        .timestamp()
+        .timestampWithoutTimeZone()
         .encode((input: number) => new Date(input))
         .parse(Date.parse);
 

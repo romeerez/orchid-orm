@@ -41,8 +41,8 @@ export const db = createDb({
     text(min = 0, max = Infinity) {
       return t.text(min, max);
     },
-    timestamp() {
-      return t.timestamp().parse((input) => new Date(input));
+    timestampWithoutTimeZone() {
+      return t.timestampWithoutTimeZone().parse((input) => new Date(input));
     },
   }),
 });

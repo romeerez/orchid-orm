@@ -69,7 +69,7 @@ export abstract class DateTimeBaseClass<
   }
 }
 
-export abstract class DateTimeWithTimeZoneBaseClass<
+export abstract class DateTimeTzBaseClass<
   Precision extends number | undefined = undefined,
 > extends DateTimeBaseClass<Precision> {
   abstract baseDataType: string;
@@ -85,7 +85,7 @@ export abstract class DateTimeWithTimeZoneBaseClass<
 }
 
 const timestampToCode = <P extends number>(
-  self: TimestampColumn<P> | TimestampWithTimeZoneColumn<P>,
+  self: TimestampColumn<P> | TimestampTzColumn<P>,
   t: string,
 ) => {
   const { dateTimePrecision: p } = self.data;
@@ -109,10 +109,10 @@ export class TimestampColumn<
 }
 
 // timestamp [ (p) ] with time zone	8 bytes	both date and time, with time zone	4713 BC	294276 AD	1 microsecond
-export class TimestampWithTimeZoneColumn<
+export class TimestampTzColumn<
   Precision extends number,
-> extends DateTimeWithTimeZoneBaseClass<Precision> {
-  dataType = 'timestamp with time zone' as const;
+> extends DateTimeTzBaseClass<Precision> {
+  dataType = 'timestamptz' as const;
   baseDataType = 'timestamp' as const;
   toCode(t: string): Code {
     return timestampToCode(this, t);
@@ -130,24 +130,6 @@ export class TimeColumn<
       this,
       t,
       `time(${dateTimePrecision || ''})${dateDataToCode(this.data)}`,
-    );
-  }
-}
-
-// time [ (p) ] with time zone	12 bytes	time of day (no date), with time zone	00:00:00+1559	24:00:00-1559	1 microsecond
-export class TimeWithTimeZoneColumn<
-  Precision extends number | undefined = undefined,
-> extends DateTimeWithTimeZoneBaseClass<Precision> {
-  dataType = 'time with time zone' as const;
-  baseDataType = 'time' as const;
-  toCode(t: string): Code {
-    const { dateTimePrecision } = this.data;
-    return columnCode(
-      this,
-      t,
-      `timeWithTimeZone(${dateTimePrecision || ''})${dateDataToCode(
-        this.data,
-      )}`,
     );
   }
 }

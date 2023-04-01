@@ -41,7 +41,7 @@ import {
   IntervalColumn,
   TimeColumn,
   TimestampColumn,
-  TimeWithTimeZoneColumn,
+  TimestampTzColumn,
 } from './dateTime';
 
 export const columnsByType: Record<
@@ -86,11 +86,9 @@ export const columnsByType: Record<
   'time without time zone': TimeColumn,
   timestamp: TimestampColumn,
   'timestamp without time zone': TimestampColumn,
-  timestamptz: TimeWithTimeZoneColumn,
-  'timestamp with time zone': TimeWithTimeZoneColumn,
+  timestamptz: TimestampTzColumn,
+  'timestamp with time zone': TimestampTzColumn,
   interval: IntervalColumn,
-  timetz: TimeWithTimeZoneColumn,
-  'time with time zone': TimeWithTimeZoneColumn,
   bit: BitColumn,
   varbit: BitVaryingColumn,
   'bit varying': BitVaryingColumn,

@@ -11,8 +11,7 @@ import {
   TimeColumn,
   TimeInterval,
   TimestampColumn,
-  TimestampWithTimeZoneColumn,
-  TimeWithTimeZoneColumn,
+  TimestampTzColumn,
 } from './dateTime';
 import { columnTypes } from './columnTypes';
 
@@ -85,7 +84,7 @@ describe('date time columns', () => {
     it('should output string', async () => {
       const result = await db.get(
         db.raw(
-          () => new TimestampWithTimeZoneColumn({}),
+          () => new TimestampTzColumn({}),
           `'1999-01-08 04:05:06 +0'::timestamptz AT TIME ZONE 'UTC'`,
         ),
       );
@@ -95,22 +94,22 @@ describe('date time columns', () => {
     });
 
     it('should have toCode, ignore default precision', () => {
-      expect(new TimestampWithTimeZoneColumn({}).toCode('t')).toBe(
+      expect(new TimestampTzColumn({}).toCode('t')).toBe(
         't.timestampWithTimeZone()',
       );
 
-      expect(new TimestampWithTimeZoneColumn({}, 6).toCode('t')).toBe(
+      expect(new TimestampTzColumn({}, 6).toCode('t')).toBe(
         't.timestampWithTimeZone()',
       );
 
-      expect(new TimestampWithTimeZoneColumn({}, 10).toCode('t')).toBe(
+      expect(new TimestampTzColumn({}, 10).toCode('t')).toBe(
         't.timestampWithTimeZone(10)',
       );
 
       const now = new Date();
       const s = now.toISOString();
       expect(
-        new TimestampWithTimeZoneColumn({})
+        new TimestampTzColumn({})
           .min(now, 'min message')
           .max(now, 'max message')
           .toCode('t'),
@@ -145,42 +144,6 @@ describe('date time columns', () => {
           .toCode('t'),
       ).toBe(
         `t.time()` +
-          `.min(new Date('${s}'), 'min message')` +
-          `.max(new Date('${s}'), 'max message')`,
-      );
-    });
-  });
-
-  describe('time with time zone', () => {
-    it('should output string', async () => {
-      const result = await db.get(
-        db.raw(
-          () => new TimeWithTimeZoneColumn({}),
-          `'12:00 +0'::timetz AT TIME ZONE 'UTC'`,
-        ),
-      );
-      expect(result).toBe('12:00:00+00');
-
-      assertType<typeof result, string>();
-    });
-
-    it('should have toCode', () => {
-      expect(new TimeWithTimeZoneColumn({}).toCode('t')).toBe(
-        't.timeWithTimeZone()',
-      );
-      expect(new TimeWithTimeZoneColumn({}, 10).toCode('t')).toBe(
-        't.timeWithTimeZone(10)',
-      );
-
-      const now = new Date();
-      const s = now.toISOString();
-      expect(
-        new TimeWithTimeZoneColumn({})
-          .min(now, 'min message')
-          .max(now, 'max message')
-          .toCode('t'),
-      ).toBe(
-        `t.timeWithTimeZone()` +
           `.min(new Date('${s}'), 'min message')` +
           `.max(new Date('${s}'), 'max message')`,
       );
@@ -286,8 +249,8 @@ describe('date time columns', () => {
         id: t.serial().primaryKey(),
         name: t.text(),
         password: t.text(),
-        createdAt: columnTypes.timestamp().asDate(),
-        updatedAt: columnTypes.timestamp().asDate(),
+        createdAt: columnTypes.timestampWithoutTimeZone().asDate(),
+        updatedAt: columnTypes.timestampWithoutTimeZone().asDate(),
       }));
 
       const now = new Date();

@@ -1,5 +1,13 @@
 # pqb
 
+## 0.10.33
+
+### Patch Changes
+
+- Favor timestamptz over timestamp
+- Updated dependencies
+  - orchid-core@0.1.16
+
 ## 0.10.32
 
 ### Patch Changes

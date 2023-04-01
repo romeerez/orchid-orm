@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.1.16
+
+### Patch Changes
+
+- Favor timestamptz over timestamp
+
 ## 0.1.15
 
 ### Patch Changes

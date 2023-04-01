@@ -163,21 +163,20 @@ t.bytea() // -> Buffer
 // 4 bytes date (no time of day)
 t.date() // -> string
 
-// timestamp [ (p) ] [ without time zone ] 8 bytes both date and time (no time zone) 4713 BC 294276 AD 1 microsecond
+// timestamp [ (p) ] with time zone    8 bytes    both date and time, with time zone 4713 BC    294276 AD  1 microsecond
 t.timestamp(precision?: number) // -> string
 
-// timestamp [ (p) ] with time zone    8 bytes    both date and time, with time zone 4713 BC    294276 AD  1 microsecond
-t.timestampWithTimeZone(precision?: number) // -> string
+// timestamp [ (p) ] [ without time zone ] 8 bytes both date and time (no time zone) 4713 BC 294276 AD 1 microsecond
+t.timestampWithoutTimeZone(precision?: number) // -> string
 
 // time [ (p) ] [ without time zone ]  8 bytes    time of day (no date)  00:00:00   24:00:00   1 microsecond
 t.time(precision?: number) // -> string
 
-// time [ (p) ] with time zone 12 bytes   time of day (no date), with time zone  00:00:00+1559  24:00:00-1559  1 microsecond
-t.timeWithTimeZone(precision?: number) // -> string
-
 // interval [ fields ] [ (p) ] 16 bytes   time interval  -178000000 years   178000000 years    1 microsecond
 t.interval(fields?: string, precision?: number) // -> PostgresInterval object
 ```
+
+Time with time zone is not included because it's discouraged [by Postgres docs](https://wiki.postgresql.org/wiki/Don%27t_Do_This#Don.27t_use_timetz).
 
 The `interval` type takes two optional parameters:
 

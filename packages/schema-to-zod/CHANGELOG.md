@@ -1,5 +1,14 @@
 # orchid-orm-schema-to-zod
 
+## 0.3.34
+
+### Patch Changes
+
+- Favor timestamptz over timestamp
+- Updated dependencies
+  - orchid-core@0.1.16
+  - pqb@0.10.33
+
 ## 0.3.33
 
 ### Patch Changes

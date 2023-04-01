@@ -55,7 +55,7 @@ type BigIntType =
 
 type StringType = 'varchar' | 'char' | 'text' | 'string' | 'xml' | 'json';
 
-type DateTimeType = 'date' | 'timestamp' | 'timestamp with time zone';
+type DateTimeType = 'date' | 'timestamp' | 'timestamptz';
 
 type TimeType = 'time' | 'time with time zone';
 
@@ -535,9 +535,9 @@ const converters: Record<string, (column: ColumnType) => z.ZodType> = {
   bytea: handleBuffer,
   date: handleDate,
   timestamp: handleDate,
-  'timestamp with time zone': handleDate,
+  timestamptz: handleDate,
   time: handleTime,
-  'time with time zone': handleTime,
+  timetz: handleTime,
   interval: handleInterval,
   boolean: handleBoolean,
   enum: handleEnum,

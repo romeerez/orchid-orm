@@ -38,10 +38,10 @@ export class Table extends BaseTable {
     // values as defaults:
     int: t.integer().default(123),
     text: t.text().default('text'),
-    
+
     // raw SQL default:
     timestamp: t.timestamp().default(t.raw('now()')),
-    
+
     // runtime default, each new records gets a new random value:
     random: t.numeric().default(() => Math.random()),
   }));
@@ -177,7 +177,9 @@ const column = t.text(1, 100)
 
 ## timestamps
 
-Adds `createdAt` and `updatedAt` columns of type `timestamp` (without time zone) with default SQL `now()`.
+Adds `createdAt` and `updatedAt` columns of type `timestamp` (with time zone) with default SQL `now()`.
+
+Timestamp with timezone is preferred over the one without time zone because it's suggested so [by Postgres docs](https://wiki.postgresql.org/wiki/Don%27t_Do_This#Don.27t_use_timestamp_.28without_time_zone.29).
 
 The `timestamps` function is using `timestamp` internally. If `timestamp` is overridden to be parsed into `Date`, so will do `timestamps`.
 

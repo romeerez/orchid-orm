@@ -86,7 +86,7 @@ describe('db', () => {
       const db = createDb({ adapter });
       const table = db('user', (t) => ({
         id: t.serial().primaryKey(),
-        createdAt: t.timestamp(),
+        createdAt: t.timestampWithoutTimeZone(),
       }));
 
       const result = await table.take().get('createdAt');

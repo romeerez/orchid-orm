@@ -19,7 +19,7 @@ import {
 } from 'orchid-core';
 
 const isDefaultTimeStamp = (item: ColumnTypeBase) => {
-  if (item.dataType !== 'timestamp') return false;
+  if (item.dataType !== 'timestamptz') return false;
 
   const def = item.data.default;
   return def && isRaw(def) && def.__raw === 'now()';

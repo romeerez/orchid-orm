@@ -11,7 +11,7 @@ import {
   SerialColumn,
   SmallSerialColumn,
   TextColumn,
-  TimestampColumn,
+  TimestampTzColumn,
   VarCharColumn,
 } from 'pqb';
 import { isRaw, raw, RawExpression } from 'orchid-core';
@@ -369,7 +369,7 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
       const column = ast.shape[timestampColumn.name];
-      expect(column).toBeInstanceOf(TimestampColumn);
+      expect(column).toBeInstanceOf(TimestampTzColumn);
       expect(column.data.dateTimePrecision).toBe(
         timestampColumn.dateTimePrecision,
       );

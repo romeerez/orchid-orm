@@ -512,8 +512,8 @@ describe('schema to zod', () => {
   });
 
   const date = columnToZod(t.date());
-  const timestamp = columnToZod(t.timestamp());
-  const timestampWithTimeZone = columnToZod(t.timestampWithTimeZone());
+  const timestamp = columnToZod(t.timestampWithoutTimeZone());
+  const timestampWithTimeZone = columnToZod(t.timestamp());
   assertType<
     typeof date | typeof timestamp | typeof timestampWithTimeZone,
     z.ZodDate
@@ -543,7 +543,7 @@ describe('schema to zod', () => {
     ).toThrow('custom');
   };
 
-  describe.each(['date', 'timestamp', 'timestampWithTimeZone'])(
+  describe.each(['date', 'timestampWithoutTimeZone', 'timestamp'])(
     '%s',
     (method) => {
       it('should parse from string to a Date', () => {
@@ -569,14 +569,13 @@ describe('schema to zod', () => {
   );
 
   const time = columnToZod(t.time());
-  const timeWithTimeZone = columnToZod(t.timeWithTimeZone());
-  assertType<typeof time | typeof timeWithTimeZone, z.ZodString>(true);
+  assertType<typeof time, z.ZodString>(true);
 
-  describe.each(['time', 'timeWithTimeZone'])('%s', (method) => {
+  describe('time', () => {
     it('should validate and parse to a string', () => {
-      const schema = columnToZod(t[method as 'time']());
+      const schema = columnToZod(t.time());
 
-      const input = method === 'time' ? '12:12:12' : '12:12:12.1234 +00:00';
+      const input = '12:12:12';
       expect(schema.parse(input)).toBe(input);
 
       expect(() => schema.parse('malformed')).toThrow('Invalid time');
@@ -1426,7 +1425,7 @@ describe('schema to zod', () => {
     it('should convert one type to the same schema as another type', () => {
       const timestampAsInteger = columnToZod(
         t
-          .timestamp()
+          .timestampWithoutTimeZone()
           .encode((input: number) => new Date(input))
           .parse(Date.parse)
           .as(t.integer()),
@@ -1436,7 +1435,7 @@ describe('schema to zod', () => {
       expect(timestampAsInteger.parse(123)).toBe(123);
 
       const timestampAsDate = columnToZod(
-        t.timestamp().parse((string) => new Date(string)),
+        t.timestampWithoutTimeZone().parse((string) => new Date(string)),
       );
 
       assertType<typeof timestampAsDate, z.ZodDate>(true);

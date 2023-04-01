@@ -24,17 +24,17 @@ import { createDb } from 'pqb'
 const db = createDb({
   // details for databaseURL are below
   databaseURL: process.env.DATABASE_URL,
-  
+
   // ssl and schema can be set here or as a databaseURL parameters:
   ssl: true,
   schema: 'my_schema',
-  
+
   // set `snakeCase` to true and all columns will be translated to snake_case
   snakeCase: true,
-  
+
   // option for logging, false by default
   log: true,
-  
+
   // optionally, you can customize column types behavior
   columnTypes: (t) => ({
     ...t,
@@ -46,7 +46,7 @@ const db = createDb({
 
   // option to create named prepared statements implicitly, false by default
   autoPreparedStatements: true,
-  
+
   // handle case when there is no primary key on a table, 'error' is default
   // 'error' | 'warning' | 'ignore'
   noPrimaryKey: 'ignore',

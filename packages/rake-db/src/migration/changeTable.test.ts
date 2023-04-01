@@ -383,8 +383,8 @@ describe('changeTable', () => {
           () =>
             expectSql(`
               ALTER TABLE "table"
-                ADD COLUMN "createdAt" timestamp NOT NULL DEFAULT now(),
-                ADD COLUMN "updatedAt" timestamp NOT NULL DEFAULT now()
+                ADD COLUMN "createdAt" timestamp with time zone NOT NULL DEFAULT now(),
+                ADD COLUMN "updatedAt" timestamp with time zone NOT NULL DEFAULT now()
             `),
           () =>
             expectSql(`
@@ -406,8 +406,8 @@ describe('changeTable', () => {
           () =>
             expectSql(`
               ALTER TABLE "table"
-                ADD COLUMN "created_at" timestamp NOT NULL DEFAULT now(),
-                ADD COLUMN "updated_at" timestamp NOT NULL DEFAULT now()
+                ADD COLUMN "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+                ADD COLUMN "updated_at" timestamp with time zone NOT NULL DEFAULT now()
             `),
           () =>
             expectSql(`

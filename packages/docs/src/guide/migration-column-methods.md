@@ -306,7 +306,7 @@ change(async (db) => {
 
 ## timestamps
 
-Adds `createdAt` and `updatedAt` columns of type `timestamp` (without time zone) with default SQL `now()`.
+Adds `createdAt` and `updatedAt` columns of type `timestamp` (with time zone) with default SQL `now()`.
 
 ```ts
 import { change } from 'rake-db'
