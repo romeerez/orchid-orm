@@ -94,7 +94,7 @@ export type User = UserTable['columns']['type']
 export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(3, 100),
     password: t.text(8, 200),
     ...t.timestamps(),

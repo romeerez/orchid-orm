@@ -17,6 +17,7 @@ import {
   MessageParam,
   raw,
 } from 'orchid-core';
+import { TableData } from './columnTypes';
 
 export type ColumnData = ColumnDataBase & {
   maxChars?: number;
@@ -29,6 +30,7 @@ export type ColumnData = ColumnDataBase & {
   collate?: string;
   compression?: string;
   foreignKeys?: ForeignKey<string, string[]>[];
+  identity?: TableData.Identity;
 };
 
 export type ForeignKeyMatch = 'FULL' | 'PARTIAL' | 'SIMPLE';

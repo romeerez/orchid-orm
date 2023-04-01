@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.6.35
+
+### Patch Changes
+
+- Support identity columns
+- Updated dependencies
+  - orchid-core@0.1.15
+  - pqb@0.10.31
+
 ## 1.6.34
 
 ### Patch Changes

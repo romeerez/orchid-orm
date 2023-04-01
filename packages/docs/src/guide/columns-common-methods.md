@@ -6,7 +6,7 @@ All the following methods are available in any kind of column.
 
 Mark the column as a primary key.
 This column type becomes an argument of the `.find` method.
-So if the primary key is of `serial` type, `.find` will accept the number,
+So if the primary key is of `integer` type (`identity` or `serial`), `.find` will accept the number,
 or if the primary key is of `UUID` type, `.find` will expect a string.
 
 Using `primaryKey` on a `uuid` column will automatically add a [gen_random_uuid](https://www.postgresql.org/docs/current/functions-uuid.html) default.
@@ -60,6 +60,49 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     name: t.integer().nullable(),
   }));
+}
+```
+
+## identity
+
+Available for `smallint`, `integer`, `bigint`.
+
+It's almost identical to using `serial`, but `serial` is [officially discouraged](https://wiki.postgresql.org/wiki/Don%27t_Do_This#Don.27t_use_serial) by Postgres team,
+and `identity` is suggested as a preferred autoincrementing type.
+
+`t.identity()` is a shortcut for `t.integer().identity()`.
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    small: t.smallint().identity(),
+    int: t.identity(),
+    alsoInt: t.integer().identity(),
+    big: t.bigint().identity(),
+  }));
+}
+```
+
+Postgres supports identity kind `BY DEFAULT` and `ALWAYS`.
+Identity `BY DEFAULT` is allowed to be set manually when creating and updating records, while `ALWAYS` is disallowed.
+
+`Orchid ORM` decided to use `BY DEFAULT` by default in case you ever wish to set the id manually.
+
+Supported options:
+
+```ts
+type IdentityOptions = {
+  // false by default, set to true for GENERATE ALWAYS
+  always?: boolean;
+  
+  // identity sequence options, check postgres docs for details:
+  incrementBy?: number;
+  startWith?: number;
+  min?: number;
+  max?: number;
+  cache?: number;
+  cycle?: boolean;
 }
 ```
 

@@ -82,6 +82,7 @@ export namespace RakeDbAst {
       columns: string[];
     } & ForeignKeyOptions)[];
     indexes?: Omit<SingleColumnIndexOptions, 'column' | 'expression'>[];
+    identity?: TableData.Identity;
   };
 
   export type RenameTable = {

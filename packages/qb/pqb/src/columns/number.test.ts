@@ -1,16 +1,8 @@
 import { assertType, db } from '../test-utils/test-utils';
-import {
-  BigIntColumn,
-  BigSerialColumn,
-  DecimalColumn,
-  DoublePrecisionColumn,
-  IntegerColumn,
-  NumberBaseColumn,
-  RealColumn,
-  SerialColumn,
-  SmallIntColumn,
-  SmallSerialColumn,
-} from './number';
+import { NumberBaseColumn } from './number';
+import { columnTypes } from './columnTypes';
+
+const t = columnTypes;
 
 const testNumberColumnMethods = (type: NumberBaseColumn, name: string) => {
   expect(
@@ -49,89 +41,103 @@ describe('number columns', () => {
 
   describe('smallint', () => {
     it('should output number', async () => {
-      const result = await db.get(
-        db.raw(() => new SmallIntColumn({}), '1::smallint'),
-      );
+      const result = await db.get(db.raw(() => t.smallint(), '1::smallint'));
       expect(result).toBe(1);
 
       assertType<typeof result, number>();
     });
 
     it('should have toCode', () => {
-      expect(new SmallIntColumn({}).toCode('t')).toBe('t.smallint()');
+      expect(t.smallint().toCode('t')).toBe('t.smallint()');
 
-      testNumberColumnMethods(new SmallIntColumn({}), 'smallint');
+      testNumberColumnMethods(t.smallint(), 'smallint');
+    });
+
+    it('should have toCode with identity', () => {
+      const code = t.smallint().identity({ always: true }).toCode('t');
+
+      expect(code).toEqual([
+        't.smallint().identity({',
+        ['always: true,'],
+        '})',
+      ]);
     });
   });
 
   describe('integer', () => {
     it('should output number', async () => {
-      const result = await db.get(
-        db.raw(() => new IntegerColumn({}), '1::integer'),
-      );
+      const result = await db.get(db.raw(() => t.integer(), '1::integer'));
       expect(result).toBe(1);
 
       assertType<typeof result, number>();
     });
 
     it('should have toCode', () => {
-      expect(new IntegerColumn({}).toCode('t')).toBe('t.integer()');
+      expect(t.integer().toCode('t')).toBe('t.integer()');
 
-      testNumberColumnMethods(new IntegerColumn({}), 'integer');
+      testNumberColumnMethods(t.integer(), 'integer');
+    });
+
+    it('should have toCode with identity', () => {
+      const code = t.identity({ always: true }).toCode('t');
+
+      expect(code).toEqual(['t.identity({', ['always: true,'], '})']);
     });
   });
 
   describe('bigint', () => {
     it('should output string', async () => {
-      const result = await db.get(
-        db.raw(() => new BigIntColumn({}), '1::bigint'),
-      );
+      const result = await db.get(db.raw(() => t.bigint(), '1::bigint'));
       expect(result).toBe('1');
 
       assertType<typeof result, string>();
     });
 
     it('should have toCode', () => {
-      expect(new BigIntColumn({}).toCode('t')).toBe('t.bigint()');
+      expect(t.bigint().toCode('t')).toBe('t.bigint()');
+    });
+
+    it('should have toCode with identity', () => {
+      const code = t.bigint().identity({ always: true }).toCode('t');
+
+      expect(code).toEqual(['t.bigint().identity({', ['always: true,'], '})']);
     });
   });
 
   describe('decimal', () => {
     it('should output string', async () => {
-      const result = await db.get(
-        db.raw(() => new DecimalColumn({}), '1::decimal'),
-      );
+      const result = await db.get(db.raw(() => t.decimal(), '1::decimal'));
       expect(result).toBe('1');
 
       assertType<typeof result, string>();
     });
 
     it('should have toCode', () => {
-      expect(new DecimalColumn({}).toCode('t')).toBe('t.decimal()');
-      expect(new DecimalColumn({}, 1).toCode('t')).toBe('t.decimal(1)');
-      expect(new DecimalColumn({}, 1, 2).toCode('t')).toBe('t.decimal(1, 2)');
+      expect(t.decimal().toCode('t')).toBe('t.decimal()');
+      expect(t.decimal(1).toCode('t')).toBe('t.decimal(1)');
+      expect(t.decimal(1, 2).toCode('t')).toBe('t.decimal(1, 2)');
     });
   });
 
   describe('real', () => {
     it('should output number', async () => {
-      const result = await db.get(db.raw(() => new RealColumn({}), '1::real'));
+      const result = await db.get(db.raw(() => t.real(), '1::real'));
       expect(result).toBe(1);
 
       assertType<typeof result, number>();
     });
 
     it('should have toCode', () => {
-      expect(new RealColumn({}).toCode('t')).toBe('t.real()');
+      expect(t.real().toCode('t')).toBe('t.real()');
 
-      testNumberColumnMethods(new RealColumn({}), 'real');
+      testNumberColumnMethods(t.real(), 'real');
     });
   });
 
   describe('doublePrecision', () => {
     it('should output number', async () => {
       const result = await db.get(
-        db.raw(() => new DoublePrecisionColumn({}), '1::double precision'),
+        db.raw(() => t.doublePrecision(), '1::double precision'),
       );
       expect(result).toBe(1);
 
@@ -139,58 +145,50 @@ describe('number columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(new DoublePrecisionColumn({}).toCode('t')).toBe(
-        't.doublePrecision()',
-      );
+      expect(t.doublePrecision().toCode('t')).toBe('t.doublePrecision()');
     });
   });
 
   describe('smallSerial', () => {
     it('should output number', async () => {
-      const result = await db.get(
-        db.raw(() => new SmallSerialColumn({}), '1::smallint'),
-      );
+      const result = await db.get(db.raw(() => t.smallSerial(), '1::smallint'));
       expect(result).toBe(1);
 
       assertType<typeof result, number>();
     });
 
     it('should have toCode', () => {
-      expect(new SmallSerialColumn({}).toCode('t')).toBe('t.smallSerial()');
+      expect(t.smallSerial().toCode('t')).toBe('t.smallSerial()');
 
-      testNumberColumnMethods(new SmallSerialColumn({}), 'smallSerial');
+      testNumberColumnMethods(t.smallSerial(), 'smallSerial');
     });
   });
 
   describe('serial', () => {
     it('should output number', async () => {
-      const result = await db.get(
-        db.raw(() => new SerialColumn({}), '1::integer'),
-      );
+      const result = await db.get(db.raw(() => t.serial(), '1::integer'));
       expect(result).toBe(1);
 
       assertType<typeof result, number>();
     });
 
     it('should have toCode', () => {
-      expect(new SerialColumn({}).toCode('t')).toBe('t.serial()');
+      expect(t.serial().toCode('t')).toBe('t.serial()');
 
-      testNumberColumnMethods(new SerialColumn({}), 'serial');
+      testNumberColumnMethods(t.serial(), 'serial');
     });
   });
 
   describe('bigSerial', () => {
     it('should output string', async () => {
-      const result = await db.get(
-        db.raw(() => new BigSerialColumn({}), '1::bigint'),
-      );
+      const result = await db.get(db.raw(() => t.bigSerial(), '1::bigint'));
       expect(result).toBe('1');
 
       assertType<typeof result, string>();
     });
 
     it('should have toCode', () => {
-      expect(new BigSerialColumn({}).toCode('t')).toBe('t.bigSerial()');
+      expect(t.bigSerial().toCode('t')).toBe('t.bigSerial()');
     });
   });
 });

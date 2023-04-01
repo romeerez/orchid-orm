@@ -380,6 +380,36 @@ export const columnCheckToCode = (t: string, check: RawExpression): string => {
   return `.check(${rawToCode(t, check)})`;
 };
 
+export const identityToCode = (
+  identity: TableData.Identity,
+  dataType?: string,
+) => {
+  const code: Code[] = [];
+
+  if (dataType === 'integer') {
+    code.push(`identity(`);
+  } else {
+    code.push(`${dataType}().identity(`);
+  }
+
+  const props: string[] = [];
+  if (identity.always) props.push(`always: true,`);
+  if (identity.incrementBy) props.push(`incrementBy: ${identity.incrementBy},`);
+  if (identity.startWith) props.push(`startWith: ${identity.startWith},`);
+  if (identity.min) props.push(`min: ${identity.min},`);
+  if (identity.max) props.push(`max: ${identity.max},`);
+  if (identity.cache) props.push(`cache: ${identity.cache},`);
+
+  if (props.length) {
+    addCode(code, '{');
+    code.push(props, '}');
+  }
+
+  addCode(code, ')');
+
+  return code;
+};
+
 export const columnCode = (
   type: ColumnType,
   t: string,

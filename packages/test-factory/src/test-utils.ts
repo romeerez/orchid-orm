@@ -30,7 +30,7 @@ export type User = UserTable['columns']['type'];
 class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(),
     password: t.text(),
     picture: t.text().nullable(),
@@ -59,7 +59,7 @@ class UserTable extends BaseTable {
 export class ProfileTable extends BaseTable {
   readonly table = 'profile';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     userId: t
       .integer()
       .nullable()

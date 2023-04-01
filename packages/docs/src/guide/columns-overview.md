@@ -10,7 +10,7 @@ import { createDb } from 'pqb'
 const db = createDb(...options)
 
 const someTable = db('someTable', (t) => ({
-  id: t.serial().primaryKey(),
+  id: t.identity().primaryKey(),
   name: t.text(3, 100),
   active: t.boolean(),
   description: t.text(10, 1000).nullable(),
@@ -27,7 +27,7 @@ import { BaseTable } from './baseTable'
 export class SomeTable extends BaseTable {
   readonly table = 'someTable';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(3, 100),
     active: t.boolean(),
     description: t.text(10, 1000).nullable(),
@@ -125,7 +125,7 @@ With such config, all text columns will be validated to have at least 3 and at m
 export class SomeTable extends BaseTable {
   readonly table = 'someTable';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     // name will be validated to have at least 3 and at most 100 chars
     name: t.text(),
     // override min

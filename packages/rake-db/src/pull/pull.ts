@@ -27,7 +27,11 @@ export const pullDbStructure = async (
   const version = makeFileTimeStamp();
   await writeMigrationFile(config, version, 'pull', result);
 
-  await saveMigratedVersion(adapter, version, config);
+  const silentQueries = Object.assign(adapter, {
+    silentQuery: adapter.query,
+    silentArrays: adapter.arrays,
+  });
+  await saveMigratedVersion(silentQueries, version, config);
 
   const cache = {};
   for (const item of ast) {

@@ -46,7 +46,7 @@ describe('table', () => {
       class UserTable extends BaseTable {
         readonly table = 'user';
         columns = this.setColumns((t) => ({
-          id: t.serial().primaryKey(),
+          id: t.identity().primaryKey(),
           createdAt: t.timestamp(),
         }));
       }
@@ -69,7 +69,7 @@ describe('table', () => {
 
       const BaseTable = createBaseTable({
         columnTypes: (t) => ({
-          serial: t.serial,
+          identity: t.identity,
           timestamp() {
             return t.timestamp().parse((input) => new Date(input));
           },
@@ -79,7 +79,7 @@ describe('table', () => {
       class UserTable extends BaseTable {
         readonly table = 'user';
         columns = this.setColumns((t) => ({
-          id: t.serial().primaryKey(),
+          id: t.identity().primaryKey(),
           createdAt: t.timestamp(),
         }));
       }
@@ -128,7 +128,7 @@ describe('table', () => {
       class UserTable extends BaseTable {
         readonly table = 'user';
         columns = this.setColumns((t) => ({
-          id: t.serial().primaryKey(),
+          id: t.identity().primaryKey(),
           camelCase: t.name('camelCase').integer(),
           snakeCase: t.integer(),
           ...t.timestamps(),
@@ -157,7 +157,7 @@ describe('table', () => {
         readonly table = 'user';
         snakeCase = true;
         columns = this.setColumns((t) => ({
-          id: t.serial().primaryKey(),
+          id: t.identity().primaryKey(),
           camelCase: t.name('camelCase').integer(),
           snakeCase: t.integer(),
           ...t.timestamps(),

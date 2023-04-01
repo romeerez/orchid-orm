@@ -34,7 +34,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable('custom.table', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     season: t.enum('yearSeason'),
   }));
 });
@@ -49,7 +49,7 @@ import { change } from '../src';
 
 change(async (db, up) => {
   const { table } = await db.createTable('languages', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.string().unique(),
     code: t.string().unique(),
   }));
@@ -126,7 +126,7 @@ change(async (db, up) => {
   
   // call without options
   const { table } = await db.createTable('user', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     email: t.text().unique(),
     name: t.text(),
     active: t.boolean().nullable(),

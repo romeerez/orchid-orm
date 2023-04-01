@@ -124,7 +124,7 @@ describe('createTable', () => {
     testWritten(
       template({
         columns: `{
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     ...t.primaryKey(['one', 'two'], { name: 'name' }),
     ...t.index(['one', 'two'], {
       name: 'indexName',
@@ -188,7 +188,7 @@ describe('createTable', () => {
       template({
         noPrimaryKey: true,
         columns: `{
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
   }`,
       }),
     );

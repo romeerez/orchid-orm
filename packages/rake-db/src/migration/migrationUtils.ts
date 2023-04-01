@@ -7,7 +7,7 @@ import {
   TableData,
 } from 'pqb';
 import { isRaw, RawExpression, toArray, toSnakeCase } from 'orchid-core';
-import { ColumnComment, Migration } from './migration';
+import { ColumnComment } from './migration';
 import {
   getSchemaAndTableFromName,
   joinColumns,
@@ -41,6 +41,10 @@ export const columnToSql = (
 
   if (item.data.collate) {
     line.push(`COLLATE ${quote(item.data.collate)}`);
+  }
+
+  if (item.data.identity) {
+    line.push(identityToSql(item.data.identity));
   }
 
   if (item.data.isPrimaryKey && !hasMultiplePrimaryKeys) {
@@ -86,6 +90,30 @@ export const columnToSql = (
     }
   }
 
+  return line.join(' ');
+};
+
+export const identityToSql = (identity: TableData.Identity) => {
+  const options = sequenceOptionsToSql(identity);
+  return `GENERATED ${identity.always ? 'ALWAYS' : 'BY DEFAULT'} AS IDENTITY${
+    options ? ` (${options})` : ''
+  }`;
+};
+
+const sequenceOptionsToSql = (item: TableData.SequenceOptions) => {
+  const line: string[] = [];
+  if (item.dataType) line.push(`AS ${item.dataType}`);
+  if (item.incrementBy !== undefined)
+    line.push(`INCREMENT BY ${item.incrementBy}`);
+  if (item.min !== undefined) line.push(`MINVALUE ${item.min}`);
+  if (item.max !== undefined) line.push(`MAXVALUE ${item.max}`);
+  if (item.startWith !== undefined) line.push(`START WITH ${item.startWith}`);
+  if (item.cache !== undefined) line.push(`CACHE ${item.cache}`);
+  if (item.cycle) line.push(`CYCLE`);
+  if (item.ownedBy) {
+    const [schema, table] = getSchemaAndTableFromName(item.ownedBy);
+    line.push(`OWNED BY ${quoteWithSchema({ schema, name: table })}`);
+  }
   return line.join(' ');
 };
 
@@ -326,30 +354,4 @@ export const primaryKeyToSql = (
   return `${name ? `CONSTRAINT "${name}" ` : ''}PRIMARY KEY (${joinColumns(
     primaryKey.columns,
   )})`;
-};
-
-export const getPrimaryKeysOfTable = async (
-  db: Migration,
-  tableName: string,
-): Promise<{ name: string; type: string }[]> => {
-  const { rows } = await db.adapter.query<{ name: string; type: string }>(
-    {
-      text: `SELECT
-  pg_attribute.attname AS name,
-  format_type(pg_attribute.atttypid, pg_attribute.atttypmod) AS type
-FROM pg_index, pg_class, pg_attribute, pg_namespace
-WHERE
-  pg_class.oid = $1::regclass AND
-  indrelid = pg_class.oid AND
-  nspname = 'public' AND
-  pg_class.relnamespace = pg_namespace.oid AND
-  pg_attribute.attrelid = pg_class.oid AND
-  pg_attribute.attnum = any(pg_index.indkey) AND
-  indisprimary`,
-      values: [tableName],
-    },
-    db.adapter.types,
-  );
-
-  return rows;
 };

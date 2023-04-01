@@ -2,7 +2,7 @@ import { change } from '../../src';
 
 change(async (db) => {
   await db.createTable('message', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     chatId: t.integer().foreignKey('chat', 'idOfChat').index(),
     authorId: t.integer().foreignKey('user', 'id').nullable().index(),
     text: t.text(),

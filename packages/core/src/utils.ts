@@ -171,3 +171,44 @@ export const toPascalCase = (str: string) => {
 export const toSnakeCase = (str: string) => {
   return str.replace(/[A-Z]/g, (a) => `_${a.toLowerCase()}`);
 };
+
+// undefined and empty object are considered to be equal
+export const deepCompare = (a: unknown, b: unknown): boolean => {
+  if (a === b) return true;
+
+  if (typeof a !== typeof b) {
+    if (a === undefined && typeof b === 'object') {
+      a = emptyObject;
+    } else if (typeof a === 'object' && b === undefined) {
+      b = emptyObject;
+    } else {
+      return false;
+    }
+  }
+
+  if (typeof a === 'object') {
+    if (a === null) return b === null;
+
+    if (Array.isArray(a)) {
+      if (!Array.isArray(b) || a.length !== b.length) return false;
+
+      return a.every((item, i) => deepCompare(item, (b as unknown[])[i]));
+    }
+
+    for (const key in a) {
+      if (
+        !deepCompare(
+          (a as Record<string, unknown>)[key],
+          (b as Record<string, unknown>)[key],
+        )
+      )
+        return false;
+    }
+
+    for (const key in b as Record<string, unknown>) {
+      if (!(key in a)) return false;
+    }
+  }
+
+  return true;
+};

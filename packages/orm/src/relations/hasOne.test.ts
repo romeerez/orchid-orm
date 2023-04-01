@@ -1271,7 +1271,7 @@ describe('hasOne through', () => {
     class Post extends BaseTable {
       table = 'post';
       columns = this.setColumns((t) => ({
-        Id: t.name('id').serial().primaryKey(),
+        Id: t.name('id').identity().primaryKey(),
       }));
 
       relations = {
@@ -1290,7 +1290,7 @@ describe('hasOne through', () => {
     class Tag extends BaseTable {
       table = 'tag';
       columns = this.setColumns((t) => ({
-        Id: t.name('id').serial().primaryKey(),
+        Id: t.name('id').identity().primaryKey(),
       }));
 
       relations = {
@@ -1353,7 +1353,7 @@ describe('hasOne through', () => {
     class Post extends BaseTable {
       table = 'post';
       columns = this.setColumns((t) => ({
-        Id: t.name('id').serial().primaryKey(),
+        Id: t.name('id').identity().primaryKey(),
       }));
 
       relations = {
@@ -1367,7 +1367,7 @@ describe('hasOne through', () => {
     class Tag extends BaseTable {
       table = 'tag';
       columns = this.setColumns((t) => ({
-        Id: t.name('id').serial().primaryKey(),
+        Id: t.name('id').identity().primaryKey(),
       }));
     }
 
@@ -1391,7 +1391,7 @@ describe('hasOne through', () => {
     class Post extends BaseTable {
       table = 'post';
       columns = this.setColumns((t) => ({
-        Id: t.name('id').serial().primaryKey(),
+        Id: t.name('id').identity().primaryKey(),
       }));
 
       relations = {
@@ -1410,7 +1410,7 @@ describe('hasOne through', () => {
     class Tag extends BaseTable {
       table = 'tag';
       columns = this.setColumns((t) => ({
-        Id: t.name('id').serial().primaryKey(),
+        Id: t.name('id').identity().primaryKey(),
       }));
     }
 

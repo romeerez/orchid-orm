@@ -18,6 +18,7 @@ import {
   nameKey,
   snakeCaseKey,
   toSnakeCase,
+  deepCompare,
 } from 'orchid-core';
 import {
   ChangeTableCallback,
@@ -40,6 +41,7 @@ import {
   commentsToQuery,
   constraintToSql,
   getColumnName,
+  identityToSql,
   indexesToQuery,
   primaryKeyToSql,
 } from './migrationUtils';
@@ -485,6 +487,17 @@ const astToQueries = (
           `ALTER COLUMN "${name}" TYPE ${type}${
             to.collate ? ` COLLATE ${quote(to.collate)}` : ''
           }${item.using ? ` USING ${getRaw(item.using, values)}` : ''}`,
+        );
+      }
+
+      if (
+        typeof from.identity !== typeof to.identity ||
+        !deepCompare(from.identity, to.identity)
+      ) {
+        alterTable.push(
+          `ALTER COLUMN "${name}" ${
+            to.identity ? `ADD ${identityToSql(to.identity)}` : `DROP IDENTITY`
+          }`,
         );
       }
 

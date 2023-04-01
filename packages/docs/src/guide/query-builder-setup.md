@@ -91,7 +91,7 @@ If only some columns are named in snake_case, you can use `name` method to indic
 
 ```ts
 const table = db('table', (t) => ({
-  id: t.serial().primaryKey(),
+  id: t.identity().primaryKey(),
   camelCase: t.integer(),
   snakeCase: t.name('snake_case').integer(),
 }))
@@ -112,7 +112,7 @@ const db = createDb({
 })
 
 const Table = db('table', (t) => ({
-  id: t.serial().primaryKey(),
+  id: t.identity().primaryKey(),
   // camelCase column requires an explicit name
   camelCase: t.name('camelCase').integer(),
   // snakeCase is snakerized automatically when generating SQL
@@ -231,7 +231,7 @@ Make a queryable object by calling `db` with a table name and schema definition.
 const db = createDb(options)
 
 export const User = db('user', (t) => ({
-  id: t.serial().primaryKey(),
+  id: t.identity().primaryKey(),
   name: t.text(3, 100),
   password: t.text(8, 200),
   age: t.integer().nullable(),
@@ -269,7 +269,7 @@ The database schema for the table can be optionally specified in a third argumen
 const Country = db(
   'country',
   (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(3, 100),
   }),
   {

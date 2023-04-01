@@ -25,6 +25,15 @@ export const intColumn: DbStructure.Column = {
   isNullable: false,
 };
 
+export const identityColumn: DbStructure.Column = {
+  ...column,
+  name: 'identity',
+  type: 'integer',
+  identity: {
+    always: false,
+  },
+};
+
 export const idColumn: DbStructure.Column = {
   ...intColumn,
   name: 'id',

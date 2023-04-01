@@ -222,7 +222,9 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
   }
 
   factory.table.primaryKeys.forEach((key) => {
-    if (factory.table.shape[key].dataType.includes('serial')) {
+    const item = factory.table.shape[key];
+
+    if (item.data.identity || item.dataType.includes('serial')) {
       delete pick[key];
     }
   });

@@ -1688,7 +1688,7 @@ describe('hasMany through', () => {
     class Post extends BaseTable {
       table = 'post';
       columns = this.setColumns((t) => ({
-        Id: t.serial().primaryKey(),
+        Id: t.identity().primaryKey(),
       }));
 
       relations = {
@@ -1707,7 +1707,7 @@ describe('hasMany through', () => {
     class Tag extends BaseTable {
       table = 'tag';
       columns = this.setColumns((t) => ({
-        Id: t.serial().primaryKey(),
+        Id: t.identity().primaryKey(),
       }));
 
       relations = {
@@ -1764,7 +1764,7 @@ describe('hasMany through', () => {
     class Post extends BaseTable {
       table = 'post';
       columns = this.setColumns((t) => ({
-        Id: t.serial().primaryKey(),
+        Id: t.identity().primaryKey(),
       }));
 
       relations = {
@@ -1778,7 +1778,7 @@ describe('hasMany through', () => {
     class Tag extends BaseTable {
       table = 'tag';
       columns = this.setColumns((t) => ({
-        Id: t.serial().primaryKey(),
+        Id: t.identity().primaryKey(),
       }));
     }
 
@@ -1802,7 +1802,7 @@ describe('hasMany through', () => {
     class Post extends BaseTable {
       table = 'post';
       columns = this.setColumns((t) => ({
-        Id: t.serial().primaryKey(),
+        Id: t.identity().primaryKey(),
       }));
 
       relations = {
@@ -1821,7 +1821,7 @@ describe('hasMany through', () => {
     class Tag extends BaseTable {
       table = 'tag';
       columns = this.setColumns((t) => ({
-        Id: t.serial().primaryKey(),
+        Id: t.identity().primaryKey(),
       }));
     }
 

@@ -198,7 +198,7 @@ import { change } from 'rake-db';
 
 change(async (db) => {
   await db.createTable('sample', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     text: t.text(),
     ...t.timestamps(),
   }));
@@ -223,7 +223,7 @@ import { BaseTable } from './baseTable'
 export class SampleTable extends BaseTable {
   readonly table = 'sample'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     // specify min and max length
     text: t.text(1, 10000),
     ...t.timestamps(),

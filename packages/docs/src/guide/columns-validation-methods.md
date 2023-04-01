@@ -26,7 +26,7 @@ import { BaseTable } from './baseTable'
 export class SomeTable extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(3, 100),
   }))
 }

@@ -9,12 +9,16 @@ import {
   BaseNumberData,
   ColumnTypesBase,
   numberDataToCode,
+  setColumnData,
+  addCode,
 } from 'orchid-core';
-import { columnCode } from './code';
+import { columnCode, identityToCode } from './code';
+import { TableData } from './columnTypes';
+import Identity = TableData.Identity;
 
 export type NumberColumn = ColumnType<number, typeof Operators.number>;
 
-export type NumberColumnData = BaseNumberData;
+export type NumberColumnData = BaseNumberData & { identity: Identity };
 
 export type SerialColumnData = NumberColumnData & {
   default: RawExpression;
@@ -49,6 +53,7 @@ export abstract class NumberAsStringBaseColumn extends ColumnType<
   typeof Operators.number
 > {
   operators = Operators.number;
+  declare data: ColumnData;
 }
 
 export class DecimalBaseColumn<
@@ -97,12 +102,30 @@ export class DecimalBaseColumn<
   }
 }
 
+const intToCode = (column: ColumnType, t: string): Code => {
+  let code: Code[];
+
+  if (column.data.identity) {
+    code = identityToCode(column.data.identity, column.dataType);
+  } else {
+    code = [`${column.dataType}()`];
+  }
+
+  addCode(code, numberDataToCode(column.data));
+
+  return columnCode(column, t, code);
+};
+
 // signed two-byte integer
 export class SmallIntColumn extends IntegerBaseColumn {
   dataType = 'smallint' as const;
   parseItem = parseInt;
   toCode(t: string): Code {
-    return columnCode(this, t, `smallint()${numberDataToCode(this.data)}`);
+    return intToCode(this, t);
+  }
+
+  identity<T extends ColumnType>(this: T, options: Identity = {}): T {
+    return setColumnData(this, 'identity', options);
   }
 }
 
@@ -111,7 +134,11 @@ export class IntegerColumn extends IntegerBaseColumn {
   dataType = 'integer' as const;
   parseItem = parseInt;
   toCode(t: string): Code {
-    return columnCode(this, t, `integer()${numberDataToCode(this.data)}`);
+    return intToCode(this, t);
+  }
+
+  identity<T extends ColumnType>(this: T, options: Identity = {}): T {
+    return setColumnData(this, 'identity', options);
   }
 }
 
@@ -119,7 +146,11 @@ export class IntegerColumn extends IntegerBaseColumn {
 export class BigIntColumn extends NumberAsStringBaseColumn {
   dataType = 'bigint' as const;
   toCode(t: string): Code {
-    return columnCode(this, t, `bigint()`);
+    return intToCode(this, t);
+  }
+
+  identity<T extends ColumnType>(this: T, options: Identity = {}): T {
+    return setColumnData(this, 'identity', options);
   }
 }
 

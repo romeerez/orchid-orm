@@ -92,7 +92,7 @@ describe('factory', () => {
       class ProfileTable extends BaseTable {
         readonly table = 'profile';
         columns = this.setColumns((t) => ({
-          id: t.serial().primaryKey(),
+          id: t.identity().primaryKey(),
           bio: t.text().min(100).max(120),
         }));
       }
@@ -125,7 +125,7 @@ describe('factory', () => {
       class UserTable extends BaseTable {
         readonly table = 'user';
         columns = this.setColumns((t) => ({
-          id: t.serial().primaryKey(),
+          id: t.identity().primaryKey(),
           name: t.domain('domainName').as(t.integer()),
           password: t.type('customType').as(t.integer()),
         }));
@@ -172,7 +172,7 @@ describe('factory', () => {
   });
 
   describe('create', () => {
-    it('should create record with generated data, except serial primary keys, datetime numbers should be the same in the record and to be around now', async () => {
+    it('should create record with generated data, except identity primary keys, datetime numbers should be the same in the record and to be around now', async () => {
       const item = await userFactory.create();
 
       expect(item.createdAt).toBe(item.updatedAt);
@@ -317,7 +317,7 @@ describe('factory', () => {
       return class extends BaseTable {
         readonly table = 'table';
         columns = this.setColumns((t) => ({
-          id: t.serial().primaryKey(),
+          id: t.identity().primaryKey(),
           ...fn(columnTypes),
         }));
       };

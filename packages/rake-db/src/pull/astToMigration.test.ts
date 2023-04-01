@@ -39,7 +39,7 @@ const table: RakeDbAst.Table = {
   indexes: [],
   constraints: [],
   shape: {
-    id: columnTypes.serial().primaryKey(),
+    id: columnTypes.identity().primaryKey(),
   },
 };
 
@@ -123,7 +123,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable('schema.other', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
   }));
 });
 
@@ -180,7 +180,7 @@ change(async (db) => {
 
       expect(result).toBe(
         template(`  await db.createTable('schema.table', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
   }));`),
       );
     });
@@ -226,7 +226,7 @@ change(async (db) => {
         {
           ...table,
           shape: {
-            id: columnTypes.serial().primaryKey(),
+            id: columnTypes.identity().primaryKey(),
           },
           primaryKey: { columns: ['id', 'name'], options: { name: 'pkey' } },
           indexes: [
@@ -255,7 +255,7 @@ change(async (db) => {
 
       expect(result).toBe(
         template(`  await db.createTable('schema.table', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     ...t.primaryKey(['id', 'name'], { name: 'pkey' }),
     ...t.index(['id', 'name'], {
       name: 'index',
@@ -328,7 +328,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable('schema.table', (t) => ({
-    id: t.serial().primaryKey().check(t.raw('column > 10')),
+    id: t.identity().primaryKey().check(t.raw('column > 10')),
   }));
 });
 `);
@@ -350,7 +350,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable('schema.table', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     ...t.check(t.raw('sql')),
   }));
 });
@@ -417,6 +417,45 @@ change(async (db) => {
     default: db.raw('123'),
     check: db.raw('VALUE = 42'),
   });
+});
+`);
+    });
+  });
+
+  describe('identity', () => {
+    it('should add identity columns', () => {
+      const result = astToMigration(config, [
+        {
+          ...table,
+          shape: {
+            identity: columnTypes.smallint().identity(),
+            identityAlways: columnTypes.identity({
+              always: true,
+              incrementBy: 2,
+              startWith: 3,
+              min: 4,
+              max: 5,
+              cache: 6,
+              cycle: true,
+            }),
+          },
+        },
+      ]);
+
+      expect(result).toBe(`import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createTable('schema.table', (t) => ({
+    identity: t.smallint().identity(),
+    identityAlways: t.identity({
+      always: true,
+      incrementBy: 2,
+      startWith: 3,
+      min: 4,
+      max: 5,
+      cache: 6,
+    }),
+  }));
 });
 `);
     });

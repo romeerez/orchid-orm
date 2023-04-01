@@ -229,8 +229,8 @@ and you can use all the nested create methods available for this table.
 
 In contrast to `build`, additional properties are not allowed here, only the columns of the table.
 
-The `create` method will automatically look for serial primary keys in the table to omit it from being generated,
-so the natural sequence of `t.serial().primaryKey()` columns will be preserved.
+The `create` method will automatically look for identity and serial primary keys in the table to omit it from being generated,
+so the natural sequence of `t.identity().primaryKey()` columns will be preserved.
 
 ```ts
 // create a user with a profile (user hasOne profile) and genres (user hasMany genres)
@@ -282,7 +282,7 @@ Example:
 class SomeTable extends BaseTable {
   readonly table = 'table'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     text: t.text(5, 1000).unique(),
     email: t.text(3, 100).email().unique(),
     url: t.text(10, 200).url().unique(),

@@ -41,6 +41,15 @@ export namespace DbStructure {
     collation?: string;
     compression?: 'p' | 'l'; // p for pglz, l for lz4
     comment?: string;
+    identity?: {
+      always: boolean;
+      start?: number;
+      increment?: number;
+      min?: number;
+      max?: number;
+      cache?: number;
+      cycle?: boolean;
+    };
   };
 
   export type Index = {
@@ -205,41 +214,83 @@ WHERE ${filterSchema('n.nspname')}`,
   async getColumns() {
     const { rows } = await this.db.query<DbStructure.Column>(
       `SELECT
-  table_schema "schemaName",
-  table_name "tableName",
-  column_name "name",
-  typname "type",
-  n.nspname "typeSchema",
-  data_type = 'ARRAY' "isArray",
-  character_maximum_length AS "maxChars",
-  numeric_precision AS "numericPrecision",
-  numeric_scale AS "numericScale",
-  datetime_precision AS "dateTimePrecision",
-  column_default "default",
-  is_nullable::boolean "isNullable",
-  collation_name AS "collation",
+  nc.nspname AS "schemaName",
+  c.relname AS "tableName",
+  a.attname AS "name",
+  COALESCE(et.typname, t.typname) AS "type",
+  tn.nspname AS "typeSchema",
+  et.typname IS NOT NULL AS "isArray",
+  information_schema._pg_char_max_length(
+    information_schema._pg_truetypid(a, t),
+    information_schema._pg_truetypmod(a, t)
+  ) AS "maxChars",
+  information_schema._pg_numeric_precision(
+    information_schema._pg_truetypid(a, t),
+    information_schema._pg_truetypmod(a, t)
+  ) AS "numericPrecision",
+  information_schema._pg_numeric_scale(
+    information_schema._pg_truetypid(a, t),
+    information_schema._pg_truetypmod(a, t)
+  ) AS "numericScale",
+  information_schema._pg_datetime_precision(
+    information_schema._pg_truetypid(a, t),
+    information_schema._pg_truetypmod(a, t)
+  ) AS "datetimePrecision",
+  CAST(
+    CASE WHEN a.attgenerated = ''
+      THEN pg_get_expr(ad.adbin, ad.adrelid)
+    END AS information_schema.character_data
+  ) AS "default",
+  NOT (a.attnotnull OR (t.typtype = 'd' AND t.typnotnull)) AS "isNullable",
+  co.collname AS "collation",
   NULLIF(a.attcompression, '') AS compression,
-  pgd.description AS "comment"
-FROM information_schema.columns c
-JOIN pg_catalog.pg_statio_all_tables st
-  ON c.table_schema = st.schemaname
- AND c.table_name = st.relname
+  pgd.description AS "comment",
+  (
+    CASE WHEN a.attidentity IN ('a', 'd') THEN (
+      json_build_object(
+        'always',
+        a.attidentity = 'a',
+        'start',
+        seq.seqstart,
+        'increment',
+        seq.seqincrement,
+        'min',
+        nullif(seq.seqmin, 1),
+        'max',
+        nullif(seq.seqmax, (
+          CASE COALESCE(et.typname, t.typname)
+            WHEN 'int2' THEN 32767
+            WHEN 'int4' THEN 2147483647
+            WHEN 'int8' THEN 9223372036854775807
+            ELSE NULL
+            END
+          )),
+        'cache',
+        seq.seqcache,
+        'cycle',
+        seq.seqcycle
+      )
+    ) END
+  ) "identity"
+FROM pg_attribute a
+LEFT JOIN pg_attrdef ad ON a.attrelid = ad.adrelid AND a.attnum = ad.adnum
+JOIN pg_class c ON a.attrelid = c.oid
+JOIN pg_namespace nc ON c.relnamespace = nc.oid
+JOIN pg_type t ON a.atttypid = t.oid
+LEFT JOIN pg_type et ON t.typelem = et.oid
+JOIN pg_namespace tn ON tn.oid = t.typnamespace
+LEFT JOIN (pg_collation co JOIN pg_namespace nco ON (co.collnamespace = nco.oid))
+  ON a.attcollation = co.oid AND (nco.nspname, co.collname) <> ('pg_catalog', 'default')
 LEFT JOIN pg_catalog.pg_description pgd
-  ON pgd.objoid = st.relid
- AND pgd.objsubid = c.ordinal_position
-JOIN pg_catalog.pg_attribute a
-  ON a.attrelid = st.relid
- AND a.attnum = c.ordinal_position
-JOIN pg_catalog.pg_type t
-  ON (
-       CASE WHEN data_type = 'ARRAY'
-         THEN typarray
-         ELSE oid
-       END
-     ) = atttypid
-JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
-WHERE ${filterSchema('table_schema')}
-ORDER BY c.ordinal_position`,
+  ON pgd.objoid = a.attrelid
+ AND pgd.objsubid = a.attnum
+LEFT JOIN (pg_depend dep JOIN pg_sequence seq ON (dep.classid = 'pg_class'::regclass AND dep.objid = seq.seqrelid AND dep.deptype = 'i'))
+  ON (dep.refclassid = 'pg_class'::regclass AND dep.refobjid = c.oid AND dep.refobjsubid = a.attnum)
+WHERE a.attnum > 0
+  AND NOT a.attisdropped
+  AND c.relkind IN ('r', 'v', 'f', 'p')
+  AND ${filterSchema('nc.nspname')}
+ORDER BY a.attnum`,
     );
     return rows;
   }

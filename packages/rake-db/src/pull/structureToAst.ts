@@ -409,6 +409,11 @@ const pushTableAst = (
       isSerial,
     });
 
+    if (item.identity) {
+      column.data.identity = item.identity;
+      if (!item.identity.always) delete column.data.identity?.always;
+    }
+
     if (
       primaryKey?.columns?.length === 1 &&
       primaryKey?.columns[0] === item.name

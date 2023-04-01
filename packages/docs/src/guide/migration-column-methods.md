@@ -58,7 +58,7 @@ change(async (db) => {
 ## primaryKey
 
 Mark the column as a primary key. This column type becomes an argument of the `.find` method.
-So if the primary key is of `serial` type, `.find` will accept the number,
+So if the primary key is of `integer` type, `.find` will accept the number,
 or if the primary key is of `uuid` type, `.find` will expect a string.
 
 ```ts
@@ -66,7 +66,7 @@ import { change } from 'rake-db'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
   }))
 })
 ```
@@ -82,7 +82,7 @@ import { change } from 'rake-db'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text().primaryKey(),
     active: t.boolean().primaryKey(),
   }))
@@ -137,7 +137,7 @@ export class SomeTable extends BaseTable {
 export class OtherTable extends BaseTable {
   readonly table = 'otherTable'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
   }))
 }
 ```
@@ -281,7 +281,7 @@ import { change } from 'rake-db'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.name('different_name').text(),
     ...t.index(['id', { column: 'name', order: 'ASC' }], { name: 'indexName' }),
   }))
@@ -297,7 +297,7 @@ import { change } from 'rake-db'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(),
     ...t.unique(['id', 'name']),
   }))

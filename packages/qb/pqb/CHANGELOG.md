@@ -1,5 +1,13 @@
 # pqb
 
+## 0.10.31
+
+### Patch Changes
+
+- Support identity columns
+- Updated dependencies
+  - orchid-core@0.1.15
+
 ## 0.10.30
 
 ### Patch Changes

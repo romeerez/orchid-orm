@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.1.15
+
+### Patch Changes
+
+- Support identity columns
+
 ## 0.1.14
 
 ### Patch Changes

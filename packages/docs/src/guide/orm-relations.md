@@ -15,7 +15,7 @@ export type User = UserTable['columns']['type']
 export class UserTable extends BaseTable {
   readonly table = 'user'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
   }))
   
   relations = {
@@ -35,7 +35,7 @@ export type Profile = ProfileTable['columns']['type']
 export class ProfileTable extends BaseTable {
   readonly table = 'profile'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     userId: t.integer(),
   }))
 
@@ -62,7 +62,7 @@ export type Author = AuthorTable['columns']['type']
 export class AuthorTable extends BaseTable {
   readonly table = 'author'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(3, 100),
   }))
 }
@@ -71,7 +71,7 @@ export type Book = BookTable['columns']['type']
 export class BookTable extends BaseTable {
   readonly table = 'book'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     title: t.text(5, 100),
     // book has a column pointing to the author table
     authorId: t.integer(),
@@ -105,7 +105,7 @@ export type Supplier = SupplierTable['columns']['type']
 export class SupplierTable extends BaseTable {
   readonly table = 'supplier'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     brand: t.text(2, 30),
     // here are no reference columns for an Account
   }))
@@ -126,7 +126,7 @@ export type Account = AccountTable['columns']['type']
 export class AccountTable extends BaseTable {
   readonly table = 'account'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(3, 100),
     // Account has a column pointing to Supplier:
     supplierId: t.integer(),
@@ -150,7 +150,7 @@ export type Supplier = SupplierTable['columns']['type']
 export class SupplierTable extends BaseTable {
   readonly table = 'supplier'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     brand: t.text(2, 30),
   }))
 
@@ -175,7 +175,7 @@ export type Account = AccountTable['columns']['type']
 export class AccountTable extends BaseTable {
   readonly table = 'account'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(3, 100),
     // Account has a column pointing to Supplier:
     supplierId: t.integer(),
@@ -194,7 +194,7 @@ export type AccountHistory = AccountHistoryTable['columns']['type']
 export class AccountHistoryTable extends BaseTable {
   readonly table = 'accountHistory'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     data: t.text(0, 1000),
     // column pointing to the Account
     accountId: t.integer(),
@@ -225,7 +225,7 @@ export type Author = AuthorTable['columns']['type']
 export class AuthorTable extends BaseTable {
   readonly table = 'author'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(3, 100),
   }))
   
@@ -243,7 +243,7 @@ export type Book = BookTable['columns']['type']
 export class BookTable extends BaseTable {
   readonly table = 'book'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     title: t.text(3, 100),
     // book has a column pointing to the author table
     authorId: t.integer(),
@@ -267,7 +267,7 @@ export type Physician = PhysicianTable['columns']['type']
 export class PhysicianTable extends BaseTable {
   readonly table = 'physician'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(3, 100),
   }))
 
@@ -292,7 +292,7 @@ export type Appointment = AppointmentTable['columns']['type']
 export class AppointmentTable extends BaseTable {
   readonly table = 'appointment'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     appointmentDate: t.datetime(),
     // column references physician:
     physicianId: t.integer(),
@@ -317,7 +317,7 @@ export type Patient = PatientTable['columns']['type']
 export class PatientTable extends BaseTable {
   readonly table = 'patient'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(3, 100),
   }))
   
@@ -351,7 +351,7 @@ export type Post = PostTable['columns']['type']
 export class PostTable extends BaseTable {
   readonly table = 'post'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     title: t.text(5, 100),
   }))
 
@@ -375,7 +375,7 @@ export type Tag = TagTable['columns']['type']
 export class TagTable extends BaseTable {
   readonly table = 'tag'
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(3, 100),
   }))
 

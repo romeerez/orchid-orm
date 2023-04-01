@@ -304,12 +304,12 @@ import { createDb } from 'pqb'
 const db = createDb(options)
 
 const Catalogue = db('catalogue', () => ({
-  id: t.serial().primaryKey(),
+  id: t.identity().primaryKey(),
   name: t.text(3, 100),
 }))
 
 const Book = db('book', () => ({
-  id: t.serial().primaryKey(),
+  id: t.identity().primaryKey(),
   title: t.text(5, 100),
   catalogueId: t.integer(),
 }))
@@ -443,7 +443,7 @@ Several methods are provided that assist in building joins, and they all take th
 ```ts
 // Our main table is the User
 const User = db('user', (t) => ({
-  id: t.serial().primaryKey(),
+  id: t.identity().primaryKey(),
   name: t.text(3, 100),
 }))
 

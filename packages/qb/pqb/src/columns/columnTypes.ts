@@ -17,11 +17,12 @@ import {
   CharColumn,
   CidrColumn,
   CircleColumn,
+  CitextColumn,
   InetColumn,
   LineColumn,
   LsegColumn,
-  MacAddrColumn,
   MacAddr8Column,
+  MacAddrColumn,
   MoneyColumn,
   PathColumn,
   PointColumn,
@@ -32,7 +33,6 @@ import {
   UUIDColumn,
   VarCharColumn,
   XMLColumn,
-  CitextColumn,
 } from './string';
 import {
   DateColumn,
@@ -45,29 +45,30 @@ import {
 import { BooleanColumn } from './boolean';
 import { EnumColumn } from './enum';
 import { JSONColumn, JSONTextColumn, JSONTypes } from './json';
-import { JSONTypeAny, RawExpression } from 'orchid-core';
+import {
+  ColumnTypesBase,
+  EmptyObject,
+  emptyObject,
+  JSONTypeAny,
+  makeTimestampsHelpers,
+  MaybeArray,
+  name,
+  raw,
+  RawExpression,
+  toArray,
+} from 'orchid-core';
 import { ArrayColumn } from './array';
 import {
   ColumnNameOfTable,
   ColumnType,
+  DropMode,
   ForeignKeyTable,
   IndexColumnOptions,
   IndexOptions,
   ForeignKeyOptions,
-  DropMode,
 } from './columnType';
 import { makeRegexToFindInSql } from '../utils';
 import { ColumnsShape } from './columnsSchema';
-import {
-  raw,
-  ColumnTypesBase,
-  EmptyObject,
-  emptyObject,
-  MaybeArray,
-  toArray,
-  name,
-} from 'orchid-core';
-import { makeTimestampsHelpers } from 'orchid-core';
 import { CustomTypeColumn, DomainColumn } from './customType';
 
 export type ColumnTypes = typeof columnTypes;
@@ -91,10 +92,13 @@ export namespace TableData {
 
   export type Constraint = {
     name?: string;
-    references?: References;
     check?: Check;
+    identity?: Identity;
+    references?: References;
     dropMode?: DropMode;
   };
+
+  export type Check = RawExpression;
 
   export type References = {
     columns: string[];
@@ -103,7 +107,20 @@ export namespace TableData {
     options?: ForeignKeyOptions;
   };
 
-  export type Check = RawExpression;
+  export type Identity = {
+    always?: boolean;
+  } & Omit<SequenceOptions, 'dataType' | 'ownedBy'>;
+
+  export type SequenceOptions = {
+    dataType?: 'smallint' | 'integer' | 'bigint';
+    incrementBy?: number;
+    startWith?: number;
+    min?: number;
+    max?: number;
+    cache?: number;
+    cycle?: boolean;
+    ownedBy?: string;
+  };
 }
 
 export const getConstraintKind = (
@@ -177,6 +194,9 @@ export const columnTypes = {
   },
   doublePrecision(this: ColumnTypesBase) {
     return new DoublePrecisionColumn(this);
+  },
+  identity(this: ColumnTypesBase, options?: TableData.Identity) {
+    return new IntegerColumn(this).identity(options);
   },
   smallSerial(this: ColumnTypesBase) {
     return new SmallSerialColumn(this);

@@ -31,6 +31,7 @@ import {
   primaryKey,
   check,
   domain,
+  identityColumn,
 } from './testUtils';
 
 const adapter = new Adapter({ databaseURL: 'file:path' });
@@ -887,6 +888,50 @@ describe('structureToAst', () => {
             onUpdate: 'CASCADE',
           },
         },
+      });
+    });
+
+    describe('identity', () => {
+      it('should add `as default` identity', async () => {
+        const db = new DbStructure(adapter);
+        db.getTables = async () => [table];
+        db.getColumns = async () => [identityColumn];
+
+        const [{ shape }] = (await structureToAst(
+          ctx,
+          db,
+        )) as RakeDbAst.Table[];
+
+        expect(shape.identity.data.identity).toEqual({});
+      });
+
+      it('should add `always` identity with options', async () => {
+        const db = new DbStructure(adapter);
+        db.getTables = async () => [table];
+
+        const options = {
+          always: true,
+          start: 2,
+          increment: 3,
+          min: 4,
+          max: 5,
+          cache: 6,
+          cycle: true,
+        };
+
+        db.getColumns = async () => [
+          {
+            ...identityColumn,
+            identity: options,
+          },
+        ];
+
+        const [{ shape }] = (await structureToAst(
+          ctx,
+          db,
+        )) as RakeDbAst.Table[];
+
+        expect(shape.identity.data.identity).toEqual(options);
       });
     });
   });

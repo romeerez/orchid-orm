@@ -11,6 +11,7 @@ import {
   enumType,
   foreignKey,
   idColumn,
+  identityColumn,
   intColumn,
   table,
   textColumn,
@@ -142,8 +143,8 @@ describe('pull', () => {
 
     columns = [
       {
-        ...idColumn,
-        default: idColumn.default?.replace('table', 'table1'),
+        ...identityColumn,
+        name: 'id',
         schemaName: 'schema',
         tableName: 'table1',
       },
@@ -184,9 +185,9 @@ describe('pull', () => {
         default: 'transaction_timestamp()',
       },
       {
-        ...idColumn,
+        ...identityColumn,
+        name: 'id',
         tableName: 'table2',
-        default: idColumn.default?.replace('table', 'table2'),
       },
       {
         ...textColumn,
@@ -274,7 +275,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable('schema.table1', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     columnName: t.name('column_name').integer(),
     domainColumn: t.array(t.domain('domain').as(t.integer())),
     customTypeColumn: t.type('customType'),
@@ -284,7 +285,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable('table2', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     text: t.text().check(t.raw('length(text) > 5')),
     ...t.timestampsSnakeCase(),
     ...t.check(t.raw('table check')),

@@ -81,7 +81,7 @@ describe('updateTableFile', () => {
 
   it('should add a single column', async () => {
     asMock(fs.readFile).mockResolvedValue(
-      template(`id: t.serial().primaryKey(),`),
+      template(`id: t.identity().primaryKey(),`),
     );
 
     await updateTableFile({
@@ -96,7 +96,7 @@ describe('updateTableFile', () => {
 
     testWritten(
       template(`
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(1, 10),
 `),
     );
@@ -104,7 +104,7 @@ describe('updateTableFile', () => {
 
   it('should add a single column with custom name', async () => {
     asMock(fs.readFile).mockResolvedValue(
-      template(`id: t.serial().primaryKey(),`),
+      template(`id: t.identity().primaryKey(),`),
     );
 
     await updateTableFile({
@@ -119,7 +119,7 @@ describe('updateTableFile', () => {
 
     testWritten(
       template(`
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.name('name').text(1, 10),
 `),
     );
@@ -127,7 +127,7 @@ describe('updateTableFile', () => {
 
   it('should add multiple columns', async () => {
     asMock(fs.readFile).mockResolvedValue(
-      template(`id: t.serial().primaryKey(),`),
+      template(`id: t.identity().primaryKey(),`),
     );
 
     await updateTableFile({
@@ -145,7 +145,7 @@ describe('updateTableFile', () => {
 
     testWritten(
       template(`
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(1, 10),
     active: t.boolean(),
     domain: t.domain('name').as(t.integer()),
@@ -156,7 +156,7 @@ describe('updateTableFile', () => {
 
   it('should insert ending comma before adding', async () => {
     asMock(fs.readFile).mockResolvedValue(
-      template(`id: t.serial().primaryKey()`),
+      template(`id: t.identity().primaryKey()`),
     );
 
     await updateTableFile({
@@ -172,7 +172,7 @@ describe('updateTableFile', () => {
 
     testWritten(
       template(`
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(1, 10),
     active: t.boolean(),
 `),
@@ -182,7 +182,7 @@ describe('updateTableFile', () => {
   it('should drop column', async () => {
     asMock(fs.readFile).mockResolvedValue(
       template(`
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(),
     active: t.boolean(),
 `),
@@ -200,7 +200,7 @@ describe('updateTableFile', () => {
 
     testWritten(
       template(`
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     active: t.boolean(),
 `),
     );
@@ -209,7 +209,7 @@ describe('updateTableFile', () => {
   it('should drop column at the end', async () => {
     asMock(fs.readFile).mockResolvedValue(
       template(`
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(),
 `),
     );
@@ -224,7 +224,7 @@ describe('updateTableFile', () => {
       },
     });
 
-    testWritten(template(`id: t.serial().primaryKey(),`));
+    testWritten(template(`id: t.identity().primaryKey(),`));
   });
 
   it('should change column type', async () => {
@@ -253,20 +253,23 @@ describe('updateTableFile', () => {
   it('should change properties', async () => {
     asMock(fs.readFile).mockResolvedValue(
       template(`
-    changeCollate: t.text().collate('one'),
-    addCollate: t.text(),
-    dropCollate: t.text().collate('one'),
-    changeDefault: t.text().default('one'),
-    addDefault: t.text(),
-    dropDefault: t.text().default('one'),
-    addNullable: t.text(),
-    dropNullable: t.text().nullable(),
-    changeCompression: t.text().compression('one'),
-    addCompression: t.text(),
-    dropCompression: t.text().compression('one'),
-    addPrimaryKey: t.text(),
-    dropPrimaryKey: t.text().primaryKey(),
-`),
+        changeCollate: t.text().collate('one'),
+        addCollate: t.text(),
+        dropCollate: t.text().collate('one'),
+        changeDefault: t.text().default('one'),
+        addDefault: t.text(),
+        dropDefault: t.text().default('one'),
+        addNullable: t.text(),
+        dropNullable: t.text().nullable(),
+        changeCompression: t.text().compression('one'),
+        addCompression: t.text(),
+        dropCompression: t.text().compression('one'),
+        addPrimaryKey: t.text(),
+        dropPrimaryKey: t.text().primaryKey(),
+        addIdentity: t.integer(),
+        changeIdentity: t.identity(),
+        dropIdentity: t.identity(),
+    `),
     );
 
     await updateTableFile({
@@ -287,25 +290,47 @@ describe('updateTableFile', () => {
           dropCompression: change({ from: { compression: 'two' } }),
           addPrimaryKey: change({ to: { primaryKey: true } }),
           dropPrimaryKey: change({ from: { primaryKey: true } }),
+          addIdentity: change({
+            from: { type: 'integer' },
+            to: { type: 'integer', identity: {}, column: t.identity() },
+          }),
+          changeIdentity: change({
+            from: { type: 'integer', identity: {} },
+            to: {
+              type: 'integer',
+              identity: { always: true, startWith: 5 },
+              column: t.identity(),
+            },
+          }),
+          dropIdentity: change({
+            from: { type: 'integer', identity: {} },
+            to: { type: 'integer' },
+          }),
         },
       },
     });
 
     testWritten(
       template(`
-    changeCollate: t.text().collate('two'),
-    addCollate: t.text().collate('two'),
-    dropCollate: t.text(),
-    changeDefault: t.text().default('two'),
-    addDefault: t.text().default('two'),
-    dropDefault: t.text(),
-    addNullable: t.text().nullable(),
-    dropNullable: t.text(),
-    changeCompression: t.text().compression('two'),
-    addCompression: t.text().compression('two'),
-    dropCompression: t.text(),
-    addPrimaryKey: t.text().primaryKey(),
-    dropPrimaryKey: t.text(),
+        changeCollate: t.text().collate('two'),
+        addCollate: t.text().collate('two'),
+        dropCollate: t.text(),
+        changeDefault: t.text().default('two'),
+        addDefault: t.text().default('two'),
+        dropDefault: t.text(),
+        addNullable: t.text().nullable(),
+        dropNullable: t.text(),
+        changeCompression: t.text().compression('two'),
+        addCompression: t.text().compression('two'),
+        dropCompression: t.text(),
+        addPrimaryKey: t.text().primaryKey(),
+        dropPrimaryKey: t.text(),
+        addIdentity: t.identity(),
+        changeIdentity: t.identity({
+      always: true,
+      startWith: 5,
+    }),
+        dropIdentity: t.integer(),
 `),
     );
   });

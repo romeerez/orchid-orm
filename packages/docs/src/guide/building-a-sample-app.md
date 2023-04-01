@@ -353,7 +353,7 @@ Add it to `package.json` "jest" section:
 ## user endpoints
 
 Usually, each table should have a primary key column.
-We will use `t.serial().primaryKey()` for this purpose, it is an autoincrementing integer type.
+We will use `t.identity().primaryKey()` for this purpose, it is an autoincrementing integer type.
 Another available option for primary keys is to use `t.uuid().primaryKey()`.
 
 It is a good idea to have `createdAt` and `updatedAt` columns in every table, even if it is not asked in the requirements,
@@ -390,7 +390,7 @@ import { change } from 'rake-db';
 
 change(async (db) => {
   await db.createTable('user', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     username: t.text().unique(),
     email: t.text().unique(),
     password: t.text(),
@@ -424,7 +424,7 @@ import { BaseTable } from '../../lib/baseTable';
 export class User extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     username: t.text().unique(),
     email: t.text().unique(),
     password: t.text(),
@@ -449,7 +449,7 @@ import { tableToZod } from 'orchid-orm-schema-to-zod';
 export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     // min length is still 3, as defined in BaseTable configuration, overriding max value here
     username: t.text().unique().max(30),
     email: t.text().unique().email(),
@@ -1128,7 +1128,7 @@ import { change } from 'rake-db';
 
 change(async (db) => {
   await db.createTable('article', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     userId: t.integer().foreignKey('user', 'id').index(),
     slug: t.text().unique(),
     title: t.text(),
@@ -1147,7 +1147,7 @@ import { change } from 'rake-db';
 
 change(async (db) => {
   await db.createTable('tag', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(),
     ...t.timestamps(),
   }));
@@ -1199,7 +1199,7 @@ import { ArticleTagTable } from './articleTag.table';
 export class TagTable extends BaseTable {
   readonly table = 'tag';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text().min(3).max(20),
     ...t.timestamps(),
   }));
@@ -1274,7 +1274,7 @@ import { tableToZod } from 'orchid-orm-schema-to-zod';
 export class ArticleTable extends BaseTable {
   readonly table = 'article';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     userId: t.integer().foreignKey('user', 'id').index(),
     // it is important to set `min` and `max` for text fields
     // to make sure that the user won't submit empty strings or billion chars long strings:

@@ -396,14 +396,14 @@ describe('belongsTo', () => {
           class UserTable extends BaseTable {
             readonly table = 'user';
             columns = this.setColumns((t) => ({
-              Id: t.name('id').serial().primaryKey(),
+              Id: t.name('id').identity().primaryKey(),
             }));
           }
 
           class ProfileTable extends BaseTable {
             readonly table = 'profile';
             columns = this.setColumns((t) => ({
-              Id: t.name('id').serial().primaryKey(),
+              Id: t.name('id').identity().primaryKey(),
               UserId: t
                 .name('userId')
                 .integer()

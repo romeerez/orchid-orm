@@ -528,7 +528,7 @@ export type Post = PostTable['columns']['type'];
 export class PostTable extends BaseTable {
   readonly table = 'post';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     title: t.text(3, 100).unique(),
     text: t.text(20, 10000),
     ...t.timestamps(),
@@ -562,7 +562,7 @@ export type Post = PostTable['columns']['type'];
 export class PostTable extends BaseTable {
   readonly table = 'post';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     title: t.text(3, 100).unique(),
     text: t.text(20, 10000),
     ...t.timestamps(),
@@ -596,7 +596,7 @@ export type Comment = CommentTable['columns']['type'];
 export class CommentTable extends BaseTable {
   readonly table = 'comment';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     postId: t
       .integer()
       .foreignKey(() => PostTable, 'id')
@@ -633,7 +633,7 @@ export type Comment = CommentTable['columns']['type'];
 export class CommentTable extends BaseTable {
   readonly table = 'comment';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     postId: t
       .integer()
       .foreignKey(() => PostTable, 'id')
@@ -829,7 +829,7 @@ rakeDb(config.allDatabases, {
 
 change(async (db) => {
   await db.createTable('post', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     title: t.text().unique(),
     text: t.text(),
     ...t.timestamps(),
@@ -844,7 +844,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable('comment', (t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     postId: t.integer().foreignKey('post', 'id').index(),
     text: t.text(),
     ...t.timestamps(),

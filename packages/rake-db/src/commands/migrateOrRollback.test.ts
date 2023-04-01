@@ -57,7 +57,7 @@ const config = {
 const createTableCallback = () => {
   change(async (db) => {
     await db.createTable('table', (t) => ({
-      id: t.serial().primaryKey(),
+      id: t.identity().primaryKey(),
     }));
   });
 };

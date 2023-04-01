@@ -1,5 +1,16 @@
 # orchid-orm-test-factory
 
+## 0.3.36
+
+### Patch Changes
+
+- Support identity columns
+- Updated dependencies
+  - orchid-core@0.1.15
+  - orchid-orm@1.6.35
+  - pqb@0.10.31
+  - orchid-orm-schema-to-zod@0.3.32
+
 ## 0.3.35
 
 ### Patch Changes

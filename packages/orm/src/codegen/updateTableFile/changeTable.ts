@@ -16,8 +16,9 @@ import {
   columnForeignKeysToCode,
   columnIndexesToCode,
   ColumnType,
-  ForeignKey,
   constraintToCode,
+  ForeignKey,
+  identityToCode,
   IndexColumnOptions,
   indexToCode,
   primaryKeyToCode,
@@ -26,15 +27,15 @@ import {
 import {
   addCode,
   Code,
-  quoteObjectKey,
-  singleQuote,
-  pathToLog,
-  RawExpression,
   codeToString,
   columnDefaultArgumentToCode,
+  deepCompare,
+  pathToLog,
+  quoteObjectKey,
+  RawExpression,
+  singleQuote,
   toCamelCase,
   toPascalCase,
-  emptyObject,
 } from 'orchid-core';
 import { UpdateTableFileParams } from './updateTableFile';
 
@@ -251,7 +252,10 @@ const changeColumn = (
   prop: PropertyAssignment,
 ) => {
   const { from, to } = changeItem;
-  if (from.type !== to.type && to.column) {
+  if (
+    (from.type !== to.type || !!from.identity !== !!to.identity) &&
+    to.column
+  ) {
     changes.replace(
       prop.initializer.pos,
       prop.end,
@@ -296,7 +300,12 @@ const changeColumn = (
 
     let remove = true;
     if (!replaced[key]) {
-      const code = getColumnMethodArgs(t, to, key as Key);
+      let code = getColumnMethodArgs(t, to, key as Key, to.type);
+
+      if (!code && key === 'identity' && to.type) {
+        code = [`.${to.type}()`];
+      }
+
       if (code) {
         changes.replace(
           item.expression.expression.end,
@@ -381,6 +390,7 @@ const getColumnMethodArgs = (
   t: string,
   to: RakeDbAst.ChangeTableItem.Change['to'],
   key: keyof RakeDbAst.ChangeTableItem.Change['to'],
+  dataType?: string,
 ): Code[] | undefined => {
   const value = to[key];
   if (!value) return;
@@ -395,6 +405,12 @@ const getColumnMethodArgs = (
 
   if (key === 'check') {
     return [columnCheckToCode(t, value as RawExpression)];
+  }
+
+  if (key === 'identity') {
+    const code = identityToCode(value as TableData.Identity, dataType);
+    code[0] = `.${code[0]}`;
+    return code;
   }
 
   const code = [`.${key}(`];
@@ -635,41 +651,4 @@ const collectObjectFromCode = (node: ObjectLiteralExpression) => {
     }
   }
   return object;
-};
-
-const deepCompare = (a: unknown, b: unknown): boolean => {
-  if (typeof a !== typeof b) {
-    if (a === undefined && typeof b === 'object') {
-      a = emptyObject;
-    } else if (typeof a === 'object' && b === undefined) {
-      b = emptyObject;
-    } else {
-      return false;
-    }
-  }
-  if (a === b) return true;
-  if (typeof a === 'object') {
-    if (a === null) return b === null;
-
-    if (Array.isArray(a)) {
-      if (!Array.isArray(b) || a.length !== b.length) return false;
-
-      return a.every((item, i) => deepCompare(item, (b as unknown[])[i]));
-    }
-
-    for (const key in a) {
-      if (
-        !deepCompare(
-          (a as Record<string, unknown>)[key],
-          (b as Record<string, unknown>)[key],
-        )
-      )
-        return false;
-    }
-
-    for (const key in b as Record<string, unknown>) {
-      if (!(key in a)) return false;
-    }
-  }
-  return true;
 };

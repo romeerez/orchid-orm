@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.4.38
+
+### Patch Changes
+
+- Support identity columns
+- Updated dependencies
+  - orchid-core@0.1.15
+  - pqb@0.10.31
+
 ## 2.4.37
 
 ### Patch Changes

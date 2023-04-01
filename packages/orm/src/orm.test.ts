@@ -24,7 +24,7 @@ describe('orm', () => {
   class UserTable extends BaseTable {
     readonly table = 'user';
     columns = this.setColumns((t) => ({
-      id: t.serial().primaryKey(),
+      id: t.identity().primaryKey(),
       name: t.text(1, 10),
       password: t.text(1, 10),
     }));
@@ -33,7 +33,7 @@ describe('orm', () => {
   class ProfileTable extends BaseTable {
     readonly table = 'profile';
     columns = this.setColumns((t) => ({
-      id: t.serial().primaryKey(),
+      id: t.identity().primaryKey(),
     }));
   }
 

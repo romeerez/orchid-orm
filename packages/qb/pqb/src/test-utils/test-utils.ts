@@ -33,7 +33,7 @@ export const db = createDb({
 
 export type UserRecord = typeof User['type'];
 export const User = db('user', (t) => ({
-  id: t.serial().primaryKey(),
+  id: t.identity().primaryKey(),
   name: t.text(),
   password: t.text(),
   picture: t.text().nullable(),
@@ -52,20 +52,20 @@ export const User = db('user', (t) => ({
 
 export type ProfileRecord = typeof Profile['type'];
 export const Profile = db('profile', (t) => ({
-  id: t.serial().primaryKey(),
+  id: t.identity().primaryKey(),
   userId: t.integer().foreignKey('user', 'id'),
   bio: t.text().nullable(),
   ...t.timestamps(),
 }));
 
 export const Chat = db('chat', (t) => ({
-  id: t.serial().primaryKey(),
+  id: t.identity().primaryKey(),
   title: t.text(),
   ...t.timestamps(),
 }));
 
 export const UniqueTable = db('uniqueTable', (t) => ({
-  id: t.serial().primaryKey(),
+  id: t.identity().primaryKey(),
   one: t.text().unique().primaryKey(),
   two: t.integer().unique(),
   thirdColumn: t.text(),
@@ -75,7 +75,7 @@ export const UniqueTable = db('uniqueTable', (t) => ({
 
 export type MessageRecord = typeof Message['type'];
 export const Message = db('message', (t) => ({
-  id: t.serial().primaryKey(),
+  id: t.identity().primaryKey(),
   chatId: t.integer().foreignKey('chat', 'id'),
   authorId: t.integer().foreignKey('user', 'id'),
   text: t.text(),
@@ -84,7 +84,7 @@ export const Message = db('message', (t) => ({
 
 export type SnakeRecord = typeof Snake['type'];
 export const Snake = db('snake', (t) => ({
-  snakeId: t.name('snake_id').serial().primaryKey(),
+  snakeId: t.name('snake_id').identity().primaryKey(),
   snakeName: t.name('snake_name').text(),
   tailLength: t.name('tail_length').integer(),
   snakeData: t

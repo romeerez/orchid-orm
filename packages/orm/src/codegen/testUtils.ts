@@ -13,7 +13,7 @@ const makeAst = () => {
     action: 'create',
     name: 'foo_bar',
     shape: {
-      id: columnTypes.serial().primaryKey(),
+      id: columnTypes.identity().primaryKey(),
     },
     noPrimaryKey: 'error',
   };

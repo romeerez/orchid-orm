@@ -10,7 +10,7 @@ const BaseTable = createBaseTable();
 class SomeTable extends BaseTable {
   readonly table = 'someTable';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     name: t.text(0, 100),
   }));
 
@@ -25,7 +25,7 @@ class SomeTable extends BaseTable {
 class OtherTable extends BaseTable {
   readonly table = 'otherTable';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
     someId: t.integer().foreignKey(() => SomeTable, 'id'),
     anotherId: t.integer().foreignKey(() => AnotherTable, 'id'),
   }));
@@ -45,7 +45,7 @@ class OtherTable extends BaseTable {
 class AnotherTable extends BaseTable {
   readonly table = 'another';
   columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
+    id: t.identity().primaryKey(),
   }));
 }
 

@@ -17,7 +17,7 @@ export type User = UserTable['columns']['type'];
 export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
-    Id: t.name('id').serial().primaryKey(),
+    Id: t.name('id').identity().primaryKey(),
     Name: t.name('name').text(),
     Password: t.name('password').text(),
     Picture: t.name('picture').text().nullable(),
@@ -62,7 +62,7 @@ export type Profile = ProfileTable['columns']['type'];
 export class ProfileTable extends BaseTable {
   readonly table = 'profile';
   columns = this.setColumns((t) => ({
-    Id: t.name('id').serial().primaryKey(),
+    Id: t.name('id').identity().primaryKey(),
     UserId: t
       .name('userId')
       .integer()
@@ -92,7 +92,7 @@ export class ChatTable extends BaseTable {
   readonly table = 'chat';
   columns = this.setColumns((t) => ({
     // a different id name to better test has and belongs to many
-    IdOfChat: t.name('idOfChat').serial().primaryKey(),
+    IdOfChat: t.name('idOfChat').identity().primaryKey(),
     Title: t.name('title').text(),
     ...t.timestamps(),
   }));
@@ -123,7 +123,7 @@ export type Message = MessageTable['columns']['type'];
 export class MessageTable extends BaseTable {
   readonly table = 'message';
   columns = this.setColumns((t) => ({
-    Id: t.name('id').serial().primaryKey(),
+    Id: t.name('id').identity().primaryKey(),
     ChatId: t
       .name('chatId')
       .integer()
@@ -161,7 +161,7 @@ export type Post = PostTable['columns']['type'];
 export class PostTable extends BaseTable {
   readonly table = 'post';
   columns = this.setColumns((t) => ({
-    Id: t.name('id').serial().primaryKey(),
+    Id: t.name('id').identity().primaryKey(),
     UserId: t
       .name('userId')
       .integer()
