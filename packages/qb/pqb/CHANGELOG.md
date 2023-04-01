@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.32
+
+### Patch Changes
+
+- Support conditional sub query result
+
 ## 0.10.31
 
 ### Patch Changes

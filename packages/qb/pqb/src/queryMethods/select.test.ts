@@ -376,6 +376,16 @@ describe('select', () => {
       );
     });
 
+    it('should support conditional query or raw expression', async () => {
+      const condition = true;
+      const q = User.select({
+        key: (q) =>
+          condition ? q.exists() : q.raw((t) => t.boolean(), 'false'),
+      });
+
+      assertType<Awaited<typeof q>, { key: boolean }[]>();
+    });
+
     it('should select joined columns', () => {
       const q = User.all();
       const query = q.join(Profile, 'profile.userId', '=', 'user.id').select({

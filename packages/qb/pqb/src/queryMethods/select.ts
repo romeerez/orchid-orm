@@ -44,7 +44,8 @@ type SelectAsValue<T extends QueryBase> =
   | StringKey<keyof T['selectable']>
   | RawExpression
   | ((q: T) => Query)
-  | ((q: T) => RawExpression);
+  | ((q: T) => RawExpression)
+  | ((q: T) => Query | RawExpression);
 
 type SelectResult<
   T extends Query,
@@ -110,6 +111,10 @@ type SelectAsValueResult<
     ? SelectSubQueryResult<R>
     : R extends RawExpression
     ? R['__column']
+    : R extends Query | RawExpression
+    ?
+        | SelectSubQueryResult<Exclude<R, RawExpression>>
+        | Exclude<R, Query>['__column']
     : never
   : never;
 
