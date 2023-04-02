@@ -19,7 +19,6 @@ import {
 } from 'pqb';
 import { raw, singleQuote, toCamelCase, toSnakeCase } from 'orchid-core';
 import { getConstraintName, getIndexName } from '../migration/migrationUtils';
-import ViewOptions = RakeDbAst.ViewOptions;
 
 const matchMap: Record<string, undefined | ForeignKeyMatch> = {
   s: undefined,
@@ -544,7 +543,7 @@ const viewToAst = (
 ): RakeDbAst.View => {
   const shape = makeColumnsShape(ctx, data, domains, view.name, view.columns);
 
-  const options: ViewOptions = {};
+  const options: RakeDbAst.ViewOptions = {};
   if (view.isRecursive) options.recursive = true;
 
   if (view.with) {
