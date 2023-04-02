@@ -17,7 +17,6 @@ const testUpAndDown = async (
   expectUp && expectDown();
 
   resetDb(true);
-
   await fn('dropTable');
   expectUp && expectDown();
 

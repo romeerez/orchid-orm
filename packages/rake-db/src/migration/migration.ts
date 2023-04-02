@@ -20,6 +20,7 @@ import {
   Adapter,
 } from 'pqb';
 import {
+  emptyObject,
   MaybeArray,
   QueryInput,
   raw,
@@ -35,6 +36,7 @@ import {
 } from '../common';
 import { RakeDbAst } from '../ast';
 import { columnTypeToSql } from './migrationUtils';
+import { createView } from './createView';
 
 export type DropMode = 'CASCADE' | 'RESTRICT';
 
@@ -393,6 +395,42 @@ export class MigrationBase {
     >,
   ) {
     return createDomain(this, !this.up, name, fn, options);
+  }
+
+  createView(
+    name: string,
+    options: RakeDbAst.ViewOptions,
+    sql: string | RawExpression,
+  ): Promise<void>;
+  createView(name: string, sql: string | RawExpression): Promise<void>;
+  createView(name: string, ...args: unknown[]): Promise<void> {
+    const [options, sql] = args.length === 2 ? args : [emptyObject, args[0]];
+
+    return createView(
+      this,
+      this.up,
+      name,
+      options as RakeDbAst.ViewOptions,
+      sql as string | RawExpression,
+    );
+  }
+
+  dropView(
+    name: string,
+    options: RakeDbAst.ViewOptions,
+    sql: string | RawExpression,
+  ): Promise<void>;
+  dropView(name: string, sql: string | RawExpression): Promise<void>;
+  dropView(name: string, ...args: unknown[]): Promise<void> {
+    const [options, sql] = args.length === 2 ? args : [emptyObject, args[0]];
+
+    return createView(
+      this,
+      !this.up,
+      name,
+      options as RakeDbAst.ViewOptions,
+      sql as string | RawExpression,
+    );
   }
 
   async tableExists(tableName: string) {

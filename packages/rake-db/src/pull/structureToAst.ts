@@ -19,6 +19,7 @@ import {
 } from 'pqb';
 import { raw, singleQuote, toCamelCase, toSnakeCase } from 'orchid-core';
 import { getConstraintName, getIndexName } from '../migration/migrationUtils';
+import ViewOptions = RakeDbAst.ViewOptions;
 
 const matchMap: Record<string, undefined | ForeignKeyMatch> = {
   s: undefined,
@@ -37,6 +38,7 @@ const fkeyActionMap: Record<string, undefined | ForeignKeyAction> = {
 type Data = {
   schemas: string[];
   tables: DbStructure.Table[];
+  views: DbStructure.View[];
   columns: DbStructure.Column[];
   constraints: DbStructure.Constraint[];
   indexes: DbStructure.Index[];
@@ -193,6 +195,10 @@ export const structureToAst = async (
     });
   }
 
+  for (const view of data.views) {
+    ast.push(viewToAst(ctx, data, domains, view));
+  }
+
   return ast;
 };
 
@@ -200,6 +206,7 @@ const getData = async (db: DbStructure): Promise<Data> => {
   const [
     schemas,
     tables,
+    views,
     columns,
     constraints,
     indexes,
@@ -209,6 +216,7 @@ const getData = async (db: DbStructure): Promise<Data> => {
   ] = await Promise.all([
     db.getSchemas(),
     db.getTables(),
+    db.getViews(),
     db.getColumns(),
     db.getConstraints(),
     db.getIndexes(),
@@ -220,6 +228,7 @@ const getData = async (db: DbStructure): Promise<Data> => {
   return {
     schemas,
     tables,
+    views,
     columns,
     constraints,
     indexes,
@@ -395,85 +404,17 @@ const pushTableAst = (
     {},
   );
 
-  const shape: ColumnsShape = {};
-  for (let item of columns) {
-    const isSerial = getIsSerial(item);
-    if (isSerial) {
-      item = { ...item, default: undefined };
-    }
-
-    let column = getColumn(ctx, data, domains, {
-      ...item,
-      type: item.type,
-      isArray: item.isArray,
-      isSerial,
-    });
-
-    if (item.identity) {
-      column.data.identity = item.identity;
-      if (!item.identity.always) delete column.data.identity?.always;
-    }
-
-    if (
-      primaryKey?.columns?.length === 1 &&
-      primaryKey?.columns[0] === item.name
-    ) {
-      column = column.primaryKey();
-    }
-
-    const indexes = tableIndexes.filter(
-      (it) =>
-        it.columns.length === 1 &&
-        'column' in it.columns[0] &&
-        it.columns[0].column === item.name,
-    );
-    for (const index of indexes) {
-      const options = index.columns[0];
-      column = column.index({
-        collate: options.collate,
-        opclass: options.opclass,
-        order: options.order,
-        name:
-          index.name !== getIndexName(tableName, index.columns)
-            ? index.name
-            : undefined,
-        using: index.using === 'btree' ? undefined : index.using,
-        unique: index.isUnique,
-        include: index.include,
-        nullsNotDistinct: index.nullsNotDistinct,
-        with: index.with,
-        tablespace: index.tablespace,
-        where: index.where,
-      });
-    }
-
-    for (const it of tableConstraints) {
-      if (!isColumnFkey(it) || it.references.columns[0] !== item.name) continue;
-
-      column = column.foreignKey(
-        it.references.fnOrTable as string,
-        it.references.foreignColumns[0],
-        it.references.options,
-      );
-    }
-
-    const check = columnChecks[item.name];
-    if (check) {
-      column.data.check = raw(check);
-    }
-
-    const camelCaseName = toCamelCase(item.name);
-
-    if (ctx.snakeCase) {
-      const snakeCaseName = toSnakeCase(camelCaseName);
-
-      column.data.name = snakeCaseName === item.name ? undefined : item.name;
-    } else {
-      column.data.name = camelCaseName === item.name ? undefined : item.name;
-    }
-
-    shape[camelCaseName] = column;
-  }
+  const shape = makeColumnsShape(
+    ctx,
+    data,
+    domains,
+    tableName,
+    columns,
+    primaryKey,
+    tableIndexes,
+    tableConstraints,
+    columnChecks,
+  );
 
   ast.push({
     type: 'table',
@@ -593,4 +534,136 @@ const isColumnFkey = (
   it: TableData.Constraint,
 ): it is TableData.Constraint & { references: TableData.References } => {
   return !it.check && it.references?.columns.length === 1;
+};
+
+const viewToAst = (
+  ctx: StructureToAstCtx,
+  data: Data,
+  domains: Domains,
+  view: DbStructure.View,
+): RakeDbAst.View => {
+  const shape = makeColumnsShape(ctx, data, domains, view.name, view.columns);
+
+  const options: ViewOptions = {};
+  if (view.isRecursive) options.recursive = true;
+
+  if (view.with) {
+    const withOptions: Record<string, unknown> = {};
+    options.with = withOptions;
+    for (const pair of view.with) {
+      const [key, value] = pair.split('=');
+      withOptions[toCamelCase(key) as 'checkOption'] =
+        value === 'true' ? true : value === 'false' ? false : value;
+    }
+  }
+
+  return {
+    type: 'view',
+    action: 'create',
+    schema: view.schemaName === 'public' ? undefined : view.schemaName,
+    name: view.name,
+    shape,
+    sql: raw(view.sql),
+    options,
+  };
+};
+
+const makeColumnsShape = (
+  ctx: StructureToAstCtx,
+  data: Data,
+  domains: Domains,
+  tableName: string,
+  columns: DbStructure.Column[],
+  primaryKey?: { columns: string[]; name?: string },
+  indexes?: DbStructure.Index[],
+  constraints?: TableData.Constraint[],
+  checks?: Record<string, string>,
+): ColumnsShape => {
+  const shape: ColumnsShape = {};
+
+  for (let item of columns) {
+    const isSerial = getIsSerial(item);
+    if (isSerial) {
+      item = { ...item, default: undefined };
+    }
+
+    let column = getColumn(ctx, data, domains, {
+      ...item,
+      type: item.type,
+      isArray: item.isArray,
+      isSerial,
+    });
+
+    if (item.identity) {
+      column.data.identity = item.identity;
+      if (!item.identity.always) delete column.data.identity?.always;
+    }
+
+    if (
+      primaryKey?.columns?.length === 1 &&
+      primaryKey?.columns[0] === item.name
+    ) {
+      column = column.primaryKey();
+    }
+
+    if (indexes) {
+      const columnIndexes = indexes.filter(
+        (it) =>
+          it.columns.length === 1 &&
+          'column' in it.columns[0] &&
+          it.columns[0].column === item.name,
+      );
+      for (const index of columnIndexes) {
+        const options = index.columns[0];
+        column = column.index({
+          collate: options.collate,
+          opclass: options.opclass,
+          order: options.order,
+          name:
+            index.name !== getIndexName(tableName, index.columns)
+              ? index.name
+              : undefined,
+          using: index.using === 'btree' ? undefined : index.using,
+          unique: index.isUnique,
+          include: index.include,
+          nullsNotDistinct: index.nullsNotDistinct,
+          with: index.with,
+          tablespace: index.tablespace,
+          where: index.where,
+        });
+      }
+    }
+
+    if (constraints) {
+      for (const it of constraints) {
+        if (!isColumnFkey(it) || it.references.columns[0] !== item.name)
+          continue;
+
+        column = column.foreignKey(
+          it.references.fnOrTable as string,
+          it.references.foreignColumns[0],
+          it.references.options,
+        );
+      }
+    }
+
+    const check = checks?.[item.name];
+    if (check) {
+      column.data.check = raw(check);
+    }
+
+    const camelCaseName = toCamelCase(item.name);
+
+    if (ctx.snakeCase) {
+      const snakeCaseName = toSnakeCase(camelCaseName);
+
+      column.data.name = snakeCaseName === item.name ? undefined : item.name;
+    } else {
+      column.data.name = camelCaseName === item.name ? undefined : item.name;
+    }
+
+    shape[camelCaseName] = column;
+  }
+
+  return shape;
 };

@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.4.41
+
+### Patch Changes
+
+- Initial support for db views
+- Updated dependencies
+  - orchid-core@0.1.17
+  - pqb@0.10.34
+
 ## 2.4.40
 
 ### Patch Changes

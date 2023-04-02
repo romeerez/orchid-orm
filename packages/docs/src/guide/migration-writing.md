@@ -601,6 +601,59 @@ change(async (db) => {
 })
 ```
 
+## createView, dropView
+
+Create and drop database views.
+
+Provide SQL as a string or via `db.raw` that can accept variables.
+
+```ts
+import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createView('simpleView', `
+    SELECT a.one, b.two
+    FROM a
+    JOIN b ON b."aId" = a.id
+  `);
+  
+  // view can accept db.raw with variables in such way:
+  await db.createView('viewWithVariables', db.raw(`
+    SELECT * FROM a WHERE key = $key
+  `, {
+    key: 'value'
+  }))
+
+  // view with options
+  await db.createView(
+    'schemaName.recursiveView',
+    {
+      // createOrReplace has effect when creating the view
+      createOrReplace: true,
+      
+      // dropIfExists and dropMode have effect when dropping the view
+      dropIfExists: true,
+      dropMode: 'CASCADE',
+      
+      // for details, check Postgres docs for CREATE VIEW,
+      // these options are matching CREATE VIEW options
+      temporary: true,
+      recursive: true,
+      columns: ['n'],
+      with: {
+        checkOption: 'LOCAL', // or 'CASCADED'
+        securityBarrier: true,
+        securityInvoker: true,
+      },
+    }, `
+      VALUES (1)
+      UNION ALL
+      SELECT n + 1 FROM "schemaName"."recursiveView" WHERE n < 100;
+    `
+  );
+})
+```
+
 ## tableExists
 
 Returns boolean to know if table exists:

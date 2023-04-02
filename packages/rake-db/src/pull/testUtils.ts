@@ -145,3 +145,16 @@ export const domain: DbStructure.Domain = {
   notNull: false,
   isArray: false,
 };
+
+export const view: DbStructure.View = {
+  schemaName: 'custom',
+  name: 'view',
+  isRecursive: true,
+  with: [
+    'check_option=LOCAL',
+    'security_barrier=true',
+    'security_invoker=true',
+  ],
+  columns: [intColumn],
+  sql: 'sql',
+};

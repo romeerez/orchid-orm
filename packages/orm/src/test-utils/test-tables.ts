@@ -210,3 +210,25 @@ export class TagTable extends BaseTable {
     Tag: t.name('tag').text().primaryKey(),
   }));
 }
+
+export class ActiveUserWithProfile extends BaseTable {
+  readonly table = 'activeUserWithProfile';
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    name: t.text(),
+    bio: t.text().nullable(),
+    password: t.text(),
+    picture: t.text().nullable(),
+    data: t
+      .json((j) =>
+        j.object({
+          name: j.string(),
+          tags: j.string().array(),
+        }),
+      )
+      .nullable(),
+    age: t.integer().nullable(),
+    active: t.boolean().nullable(),
+    ...t.timestamps(),
+  }));
+}

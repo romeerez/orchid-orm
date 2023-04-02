@@ -59,11 +59,17 @@ describe('date time columns', () => {
     });
 
     it('should have toCode, ignore default precision', () => {
-      expect(new TimestampColumn({}).toCode('t')).toBe('t.timestamp()');
+      expect(new TimestampColumn({}).toCode('t')).toBe(
+        't.timestampWithoutTimeZone()',
+      );
 
-      expect(new TimestampColumn({}, 10).toCode('t')).toBe('t.timestamp(10)');
+      expect(new TimestampColumn({}, 10).toCode('t')).toBe(
+        't.timestampWithoutTimeZone(10)',
+      );
 
-      expect(new TimestampColumn({}, 6).toCode('t')).toBe('t.timestamp()');
+      expect(new TimestampColumn({}, 6).toCode('t')).toBe(
+        't.timestampWithoutTimeZone()',
+      );
 
       const now = new Date();
       const s = now.toISOString();
@@ -73,7 +79,7 @@ describe('date time columns', () => {
           .max(now, 'max message')
           .toCode('t'),
       ).toBe(
-        `t.timestamp()` +
+        `t.timestampWithoutTimeZone()` +
           `.min(new Date('${s}'), 'min message')` +
           `.max(new Date('${s}'), 'max message')`,
       );
@@ -94,17 +100,11 @@ describe('date time columns', () => {
     });
 
     it('should have toCode, ignore default precision', () => {
-      expect(new TimestampTzColumn({}).toCode('t')).toBe(
-        't.timestampWithTimeZone()',
-      );
+      expect(new TimestampTzColumn({}).toCode('t')).toBe('t.timestamp()');
 
-      expect(new TimestampTzColumn({}, 6).toCode('t')).toBe(
-        't.timestampWithTimeZone()',
-      );
+      expect(new TimestampTzColumn({}, 6).toCode('t')).toBe('t.timestamp()');
 
-      expect(new TimestampTzColumn({}, 10).toCode('t')).toBe(
-        't.timestampWithTimeZone(10)',
-      );
+      expect(new TimestampTzColumn({}, 10).toCode('t')).toBe('t.timestamp(10)');
 
       const now = new Date();
       const s = now.toISOString();
@@ -114,7 +114,7 @@ describe('date time columns', () => {
           .max(now, 'max message')
           .toCode('t'),
       ).toBe(
-        `t.timestampWithTimeZone()` +
+        `t.timestamp()` +
           `.min(new Date('${s}'), 'min message')` +
           `.max(new Date('${s}'), 'max message')`,
       );

@@ -11,6 +11,7 @@ import {
 } from 'pqb';
 import {
   addCode,
+  backtickQuote,
   Code,
   codeToString,
   isRaw,
@@ -25,7 +26,7 @@ export const astToMigration = (
   ast: RakeDbAst[],
 ): string | undefined => {
   const first: Code[] = [];
-  const tables: Code[] = [];
+  const tablesAndViews: Code[] = [];
   const constraints: Code[] = [];
   for (const item of ast) {
     if (item.type === 'schema' && item.action === 'create') {
@@ -40,14 +41,16 @@ export const astToMigration = (
       if (first.length) first.push([]);
       first.push(...createDomain(item));
     } else if (item.type === 'table' && item.action === 'create') {
-      tables.push(createTable(config, item));
+      tablesAndViews.push(createTable(config, item));
+    } else if (item.type === 'view' && item.action === 'create') {
+      tablesAndViews.push(createView(item));
     } else if (item.type === 'constraint') {
       if (constraints.length) constraints.push([]);
       constraints.push(...createConstraint(item));
     }
   }
 
-  if (!first.length && !tables.length && !constraints.length) return;
+  if (!first.length && !tablesAndViews.length && !constraints.length) return;
 
   let code = `import { change } from 'rake-db';
 `;
@@ -60,8 +63,8 @@ ${codeToString(first, '  ', '  ')}
 `;
   }
 
-  if (tables.length) {
-    for (const table of tables) {
+  if (tablesAndViews.length) {
+    for (const table of tablesAndViews) {
       code += `
 change(async (db) => {
 ${codeToString(table, '  ', '  ')}
@@ -237,4 +240,34 @@ const createConstraint = (item: RakeDbAst.Constraint): Code => {
     constraintPropsToCode('t', item),
     '});',
   ];
+};
+
+const createView = (ast: RakeDbAst.View) => {
+  const code: Code[] = [`await db.createView(${quoteSchemaTable(ast)}`];
+
+  const options: Code[] = [];
+  if (ast.options.recursive) options.push('recursive: true,');
+
+  const w = ast.options.with;
+  if (w?.checkOption) options.push(`checkOption: '${w.checkOption}',`);
+  if (w?.securityBarrier)
+    options.push(`securityBarrier: ${w.securityBarrier},`);
+  if (w?.securityInvoker)
+    options.push(`securityInvoker: ${w.securityInvoker},`);
+
+  if (options.length) {
+    addCode(code, ', {');
+    code.push(options, '}');
+  }
+
+  addCode(code, ', ');
+
+  if (!ast.sql.__values) {
+    addCode(code, backtickQuote(ast.sql.__raw));
+  } else {
+    addCode(code, rawToCode('db', ast.sql));
+  }
+
+  addCode(code, ');');
+  return code;
 };

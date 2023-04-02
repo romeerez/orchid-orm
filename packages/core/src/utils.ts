@@ -127,6 +127,10 @@ export const singleQuote = (s: string) => {
   return `'${s.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;
 };
 
+export const backtickQuote = (s: string) => {
+  return `\`${s.replaceAll('\\', '\\\\').replaceAll('`', '\\`')}\``;
+};
+
 export const singleQuoteArray = (arr: string[]) => {
   return `[${arr.map(singleQuote).join(', ')}]`;
 };

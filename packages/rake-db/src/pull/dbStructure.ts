@@ -10,6 +10,10 @@ export namespace DbStructure {
   export type View = {
     schemaName: string;
     name: string;
+    isRecursive: boolean;
+    with?: string[]; // ['check_option=LOCAL', 'security_barrier=true']
+    columns: Column[];
+    sql: string;
   };
 
   export type Procedure = {
@@ -140,82 +144,19 @@ export namespace DbStructure {
 const filterSchema = (table: string) =>
   `${table} !~ '^pg_' AND ${table} != 'information_schema'`;
 
-export class DbStructure {
-  constructor(private db: Adapter) {}
-
-  async getSchemas(): Promise<string[]> {
-    const { rows } = await this.db.arrays<[string]>(
-      `SELECT n.nspname "name"
-FROM pg_catalog.pg_namespace n
-WHERE ${filterSchema('n.nspname')}
-ORDER BY "name"`,
-    );
-    return rows.flat();
-  }
-
-  async getTables() {
-    const { rows } = await this.db.query<DbStructure.Table>(
-      `SELECT
-  nspname AS "schemaName",
-  relname AS "name",
-  obj_description(c.oid) AS comment
-FROM pg_class c
-JOIN pg_catalog.pg_namespace n ON n.oid = relnamespace
-WHERE relkind = 'r'
-  AND ${filterSchema('nspname')}
-ORDER BY relname`,
-    );
-    return rows;
-  }
-
-  async getViews() {
-    const { rows } = await this.db.query<DbStructure.View[]>(
-      `SELECT
-  table_schema "schemaName",
-  table_name "name"
-FROM information_schema.tables
-WHERE table_type = 'VIEW'
-  AND ${filterSchema('table_schema')}
-ORDER BY table_name`,
-    );
-    return rows;
-  }
-
-  async getProcedures() {
-    const { rows } = await this.db.query<DbStructure.Procedure[]>(
-      `SELECT
-  n.nspname AS "schemaName",
-  proname AS name,
-  proretset AS "returnSet",
-  (
-    SELECT typname FROM pg_type WHERE oid = prorettype
-  ) AS "returnType",
-  prokind AS "kind",
-  coalesce((
-    SELECT true FROM information_schema.triggers
-    WHERE n.nspname = trigger_schema AND trigger_name = proname
-    LIMIT 1
-  ), false) AS "isTrigger",
-  coalesce((
-    SELECT json_agg(pg_type.typname)
-    FROM unnest(coalesce(proallargtypes, proargtypes)) typeId
-    JOIN pg_type ON pg_type.oid = typeId
-  ), '[]') AS "types",
-  coalesce(to_json(proallargtypes::int[]), to_json(proargtypes::int[])) AS "argTypes",
-  coalesce(to_json(proargmodes), '[]') AS "argModes",
-  to_json(proargnames) AS "argNames"
-FROM pg_proc p
-JOIN pg_namespace n ON p.pronamespace = n.oid
-WHERE ${filterSchema('n.nspname')}`,
-    );
-    return rows;
-  }
-
-  async getColumns() {
-    const { rows } = await this.db.query<DbStructure.Column>(
-      `SELECT
-  nc.nspname AS "schemaName",
-  c.relname AS "tableName",
+const columnsSql = ({
+  schema,
+  table,
+  join = '',
+  where,
+}: {
+  schema: string;
+  table: string;
+  join?: string;
+  where: string;
+}) => `SELECT
+  ${schema}.nspname AS "schemaName",
+  ${table}.relname AS "tableName",
   a.attname AS "name",
   COALESCE(et.typname, t.typname) AS "type",
   tn.nspname AS "typeSchema",
@@ -273,9 +214,8 @@ WHERE ${filterSchema('n.nspname')}`,
     ) END
   ) "identity"
 FROM pg_attribute a
+${join}
 LEFT JOIN pg_attrdef ad ON a.attrelid = ad.adrelid AND a.attnum = ad.adnum
-JOIN pg_class c ON a.attrelid = c.oid
-JOIN pg_namespace nc ON c.relnamespace = nc.oid
 JOIN pg_type t ON a.atttypid = t.oid
 LEFT JOIN pg_type et ON t.typelem = et.oid
 JOIN pg_namespace tn ON tn.oid = t.typnamespace
@@ -285,12 +225,103 @@ LEFT JOIN pg_catalog.pg_description pgd
   ON pgd.objoid = a.attrelid
  AND pgd.objsubid = a.attnum
 LEFT JOIN (pg_depend dep JOIN pg_sequence seq ON (dep.classid = 'pg_class'::regclass AND dep.objid = seq.seqrelid AND dep.deptype = 'i'))
-  ON (dep.refclassid = 'pg_class'::regclass AND dep.refobjid = c.oid AND dep.refobjsubid = a.attnum)
+  ON (dep.refclassid = 'pg_class'::regclass AND dep.refobjid = ${table}.oid AND dep.refobjsubid = a.attnum)
 WHERE a.attnum > 0
   AND NOT a.attisdropped
-  AND c.relkind IN ('r', 'v', 'f', 'p')
-  AND ${filterSchema('nc.nspname')}
-ORDER BY a.attnum`,
+  AND ${where}
+ORDER BY a.attnum`;
+
+export class DbStructure {
+  constructor(private db: Adapter) {}
+
+  async getSchemas(): Promise<string[]> {
+    const { rows } = await this.db.arrays<[string]>(
+      `SELECT n.nspname "name"
+FROM pg_catalog.pg_namespace n
+WHERE ${filterSchema('n.nspname')}
+ORDER BY "name"`,
+    );
+    return rows.flat();
+  }
+
+  async getTables() {
+    const { rows } = await this.db.query<DbStructure.Table>(
+      `SELECT
+  nspname AS "schemaName",
+  relname AS "name",
+  obj_description(c.oid) AS comment
+FROM pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid = relnamespace
+WHERE relkind = 'r'
+  AND ${filterSchema('nspname')}
+ORDER BY relname`,
+    );
+    return rows;
+  }
+
+  async getViews() {
+    const { rows } = await this.db.query<DbStructure.View>(
+      `SELECT
+  nc.nspname AS "schemaName",
+  c.relname AS "name",
+  right(substring(r.ev_action from ':hasRecursive \w'), 1)::bool AS "isRecursive",
+  array_to_json(c.reloptions) AS "with",
+  (SELECT coalesce(json_agg(t), '[]') FROM (${columnsSql({
+    schema: 'nc',
+    table: 'c',
+    where: 'a.attrelid = c.oid',
+  })}) t) AS "columns",
+  pg_get_viewdef(c.oid) AS "sql"
+FROM pg_namespace nc
+JOIN pg_class c
+  ON nc.oid = c.relnamespace
+ AND c.relkind = 'v'
+ AND c.relpersistence != 't'
+JOIN pg_rewrite r ON r.ev_class = c.oid
+WHERE ${filterSchema('nc.nspname')}
+ORDER BY c.relname`,
+    );
+    return rows;
+  }
+
+  async getProcedures() {
+    const { rows } = await this.db.query<DbStructure.Procedure[]>(
+      `SELECT
+  n.nspname AS "schemaName",
+  proname AS name,
+  proretset AS "returnSet",
+  (
+    SELECT typname FROM pg_type WHERE oid = prorettype
+  ) AS "returnType",
+  prokind AS "kind",
+  coalesce((
+    SELECT true FROM information_schema.triggers
+    WHERE n.nspname = trigger_schema AND trigger_name = proname
+    LIMIT 1
+  ), false) AS "isTrigger",
+  coalesce((
+    SELECT json_agg(pg_type.typname)
+    FROM unnest(coalesce(proallargtypes, proargtypes)) typeId
+    JOIN pg_type ON pg_type.oid = typeId
+  ), '[]') AS "types",
+  coalesce(to_json(proallargtypes::int[]), to_json(proargtypes::int[])) AS "argTypes",
+  coalesce(to_json(proargmodes), '[]') AS "argModes",
+  to_json(proargnames) AS "argNames"
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE ${filterSchema('n.nspname')}`,
+    );
+    return rows;
+  }
+
+  async getColumns() {
+    const { rows } = await this.db.query<DbStructure.Column>(
+      columnsSql({
+        schema: 'nc',
+        table: 'c',
+        join: `JOIN pg_class c ON a.attrelid = c.oid AND c.relkind = 'r' JOIN pg_namespace nc ON nc.oid = c.relnamespace`,
+        where: filterSchema('nc.nspname'),
+      }),
     );
     return rows;
   }

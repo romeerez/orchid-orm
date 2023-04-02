@@ -32,6 +32,7 @@ import {
   check,
   domain,
   identityColumn,
+  view,
 } from './testUtils';
 
 const adapter = new Adapter({ databaseURL: 'file:path' });
@@ -1076,6 +1077,26 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Domain];
 
       expect(ast.schema).toBe(undefined);
+    });
+  });
+
+  describe('view', () => {
+    it('should add view', async () => {
+      const db = new DbStructure(adapter);
+      db.getViews = async () => [view];
+
+      const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.View];
+
+      expect(ast.type).toBe('view');
+      expect(ast.action).toBe('create');
+      expect(ast.schema).toBe('custom');
+      expect(ast.options.recursive).toBe(true);
+      expect(ast.options.with?.checkOption).toBe('LOCAL');
+      expect(ast.options.with?.securityBarrier).toBe(true);
+      expect(ast.options.with?.securityInvoker).toBe(true);
+
+      const column = ast.shape[intColumn.name];
+      expect(column.dataType).toBe('integer');
     });
   });
 });

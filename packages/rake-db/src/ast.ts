@@ -17,7 +17,8 @@ export type RakeDbAst =
   | RakeDbAst.Extension
   | RakeDbAst.Enum
   | RakeDbAst.Domain
-  | RakeDbAst.Constraint;
+  | RakeDbAst.Constraint
+  | RakeDbAst.View;
 
 export namespace RakeDbAst {
   export type Table = {
@@ -144,4 +145,28 @@ export namespace RakeDbAst {
     tableSchema?: string;
     tableName: string;
   } & TableData.Constraint;
+
+  export type View = {
+    type: 'view';
+    action: 'create' | 'drop';
+    schema?: string;
+    name: string;
+    shape: ColumnsShape;
+    sql: RawExpression;
+    options: ViewOptions;
+  };
+
+  export type ViewOptions = {
+    createOrReplace?: boolean;
+    dropIfExists?: boolean;
+    dropMode?: DropMode;
+    temporary?: boolean;
+    recursive?: boolean;
+    columns?: string[];
+    with?: {
+      checkOption?: 'LOCAL' | 'CASCADED';
+      securityBarrier?: boolean;
+      securityInvoker?: boolean;
+    };
+  };
 }

@@ -1,5 +1,13 @@
 # pqb
 
+## 0.10.34
+
+### Patch Changes
+
+- Initial support for db views
+- Updated dependencies
+  - orchid-core@0.1.17
+
 ## 0.10.33
 
 ### Patch Changes

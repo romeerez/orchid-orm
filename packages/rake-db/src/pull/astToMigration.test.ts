@@ -79,6 +79,25 @@ const config = processRakeDbConfig({
   migrationsPath: 'migrations',
 });
 
+const view: RakeDbAst.View = {
+  type: 'view',
+  action: 'create',
+  schema: 'custom',
+  name: 'view',
+  shape: {
+    id: columnTypes.integer(),
+  },
+  sql: raw('sql'),
+  options: {
+    recursive: true,
+    with: {
+      checkOption: 'LOCAL',
+      securityBarrier: true,
+      securityInvoker: true,
+    },
+  },
+};
+
 describe('astToMigration', () => {
   beforeEach(jest.clearAllMocks);
 
@@ -456,6 +475,42 @@ change(async (db) => {
       cache: 6,
     }),
   }));
+});
+`);
+    });
+  });
+
+  describe('view', () => {
+    it('should create view', () => {
+      const result = astToMigration(config, [view]);
+
+      expect(result).toBe(`import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createView('custom.view', {
+    recursive: true,
+    checkOption: 'LOCAL',
+    securityBarrier: true,
+    securityInvoker: true,
+  }, \`sql\`);
+});
+`);
+    });
+
+    it('should create view with sql values', () => {
+      const result = astToMigration(config, [
+        { ...view, sql: raw('$a', { a: 1 }) },
+      ]);
+
+      expect(result).toBe(`import { change } from 'rake-db';
+
+change(async (db) => {
+  await db.createView('custom.view', {
+    recursive: true,
+    checkOption: 'LOCAL',
+    securityBarrier: true,
+    securityInvoker: true,
+  }, db.raw('$a', {"a":1}));
 });
 `);
     });

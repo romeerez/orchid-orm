@@ -1,5 +1,6 @@
 import { orchidORM } from '../orm';
 import {
+  ActiveUserWithProfile,
   ChatTable,
   MessageTable,
   PostTable,
@@ -26,6 +27,7 @@ export const db = orchidORM(
     post: PostTable,
     postTag: PostTagTable,
     tag: TagTable,
+    activeUserWithProfile: ActiveUserWithProfile,
   },
 );
 

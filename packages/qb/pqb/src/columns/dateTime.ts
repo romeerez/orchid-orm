@@ -93,7 +93,7 @@ const timestampToCode = <P extends number>(
     self,
     t,
     `${
-      self instanceof TimestampColumn ? 'timestamp' : 'timestampWithTimeZone'
+      self instanceof TimestampColumn ? 'timestampWithoutTimeZone' : 'timestamp'
     }(${p && p !== 6 ? p : ''})${dateDataToCode(self.data)}`,
   );
 };

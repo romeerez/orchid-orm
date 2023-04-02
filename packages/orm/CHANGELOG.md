@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.6.38
+
+### Patch Changes
+
+- Initial support for db views
+- Updated dependencies
+  - orchid-core@0.1.17
+  - pqb@0.10.34
+
 ## 1.6.37
 
 ### Patch Changes

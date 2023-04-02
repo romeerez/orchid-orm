@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.1.17
+
+### Patch Changes
+
+- Initial support for db views
+
 ## 0.1.16
 
 ### Patch Changes
