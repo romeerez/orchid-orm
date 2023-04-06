@@ -1,7 +1,6 @@
 import {
   Query,
   QueryBase,
-  Selectable,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
   SetQueryReturnsOneOptional,
@@ -66,10 +65,21 @@ type WindowResult<T extends Query, W extends WindowArg<T>> = SetQueryWindows<
   Record<keyof W, true>
 >;
 
-export type OrderArg<T extends Query> =
-  | keyof T['selectable']
+export type OrderArg<
+  T extends Query,
+  Key extends PropertyKey =
+    | keyof T['selectable']
+    | {
+        [K in keyof T['result']]: T['result'][K]['dataType'] extends
+          | 'array'
+          | 'object'
+          ? never
+          : K;
+      }[keyof T['result']],
+> =
+  | Key
   | {
-      [K in Selectable<T>]?: SortDir;
+      [K in Key]?: SortDir;
     }
   | RawExpression;
 

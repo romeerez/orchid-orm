@@ -700,6 +700,33 @@ describe('queryMethods', () => {
       );
       expectQueryNotMutated(q);
     });
+
+    it('should be able to order by a selected value in a sub-query', () => {
+      const q = User.select({
+        count: () => User.count(),
+      }).order('count');
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT (SELECT count(*) FROM "user") AS "count"
+          FROM "user"
+          ORDER BY "count" ASC
+        `,
+      );
+    });
+
+    it('should disallow ordering by sub-selected json object or arrays', () => {
+      User.select({
+        obj: () => User.take(),
+        // @ts-expect-error should disallow ordering by object
+      }).order('obj');
+
+      User.select({
+        arr: () => User.all(),
+        // @ts-expect-error should disallow ordering by array
+      }).order('arr');
+    });
   });
 
   describe('limit', () => {

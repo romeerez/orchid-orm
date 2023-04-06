@@ -57,7 +57,9 @@ describe('query log', () => {
       logger,
     });
 
-    await db('user').where({ name: 'name' });
+    await db('user', (t) => ({
+      name: t.text(1, 2).primaryKey(),
+    })).where({ name: 'name' });
 
     expect(logger.log.mock.calls).toEqual([
       [
@@ -85,7 +87,9 @@ describe('query log', () => {
       logger,
     });
 
-    await db('user').where({ name: 'name' });
+    await db('user', (t) => ({
+      name: t.text(1, 2).primaryKey(),
+    })).where({ name: 'name' });
 
     expect(logger.log.mock.calls).toEqual([
       [`(1s 1.0ms) SELECT * FROM "user" WHERE "user"."name" = $1 ['name']`],
@@ -110,9 +114,9 @@ describe('query log', () => {
     expect(logger.error.mock.calls).toEqual([
       [
         `${logColors.boldMagenta('(1s 1.0ms)')} ${logColors.boldRed(
-          `SELECT * FROM "user" WHERE "user"."wrongColumn" = $1`,
+          `SELECT * FROM "user" WHERE "wrongColumn" = $1`,
         )} ${logColors.boldYellow(`['value']`)} ${logColors.boldRed(
-          'Error: column user.wrongColumn does not exist',
+          'Error: column "wrongColumn" does not exist',
         )}`,
       ],
     ]);
@@ -139,7 +143,7 @@ describe('query log', () => {
 
     expect(logger.error.mock.calls).toEqual([
       [
-        `(1s 1.0ms) SELECT * FROM "user" WHERE "user"."wrongColumn" = $1 ['value'] Error: column user.wrongColumn does not exist`,
+        `(1s 1.0ms) SELECT * FROM "user" WHERE "wrongColumn" = $1 ['value'] Error: column "wrongColumn" does not exist`,
       ],
     ]);
   });

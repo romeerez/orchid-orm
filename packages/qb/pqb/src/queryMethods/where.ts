@@ -12,6 +12,9 @@ import {
   QueryInternal,
   emptyObject,
 } from 'orchid-core';
+import { getIsJoinSubQuery } from '../sql/join';
+import { getShapeFromSelect } from './select';
+import { ColumnsShape } from '../columns';
 
 export type WhereArg<T extends QueryBase> =
   | (Omit<
@@ -30,10 +33,6 @@ export type WhereArg<T extends QueryBase> =
         columns: (keyof T['selectable'])[];
         values: unknown[][] | Query | RawExpression;
       }>;
-      EXISTS?: MaybeArray<
-        | [JoinFirstArg<T>, ...JoinArgs<T, Query>]
-        | [JoinFirstArg<T>, JoinCallback<T, JoinFirstArg<T>>]
-      >;
     })
   | QueryBase
   | RawExpression
@@ -146,6 +145,28 @@ export const addWhereIn = <T extends QueryBase>(
   }
 
   return q as unknown as WhereResult<T>;
+};
+
+const existsArgs = (args: [JoinFirstArg<Query>, ...JoinArgs<Query, Query>]) => {
+  const q = args[0];
+
+  let isSubQuery;
+  if (typeof q === 'object') {
+    isSubQuery = getIsJoinSubQuery(q.query, q.baseQuery.query);
+    if (isSubQuery) {
+      args[0] = q.clone();
+      args[0].shape = getShapeFromSelect(q, true) as ColumnsShape;
+    }
+  } else {
+    isSubQuery = false;
+  }
+
+  return {
+    EXISTS: {
+      args,
+      isSubQuery,
+    },
+  } as never;
 };
 
 export abstract class Where implements QueryBase {
@@ -332,11 +353,11 @@ export abstract class Where implements QueryBase {
     return addWhereIn(this, false, arg, values, true);
   }
 
-  whereExists<
-    T extends Where,
-    Arg extends JoinFirstArg<T>,
-    Args extends JoinArgs<T, Arg>,
-  >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
+  whereExists<T extends Where, Arg extends JoinFirstArg<T>>(
+    this: T,
+    arg: Arg,
+    ...args: JoinArgs<T, Arg>
+  ): WhereResult<T>;
   whereExists<T extends Where, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
@@ -346,11 +367,11 @@ export abstract class Where implements QueryBase {
   whereExists(arg: any, ...args: any) {
     return this.clone()._whereExists(arg, ...args);
   }
-  _whereExists<
-    T extends Where,
-    Arg extends JoinFirstArg<T>,
-    Args extends JoinArgs<T, Arg>,
-  >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
+  _whereExists<T extends Where, Arg extends JoinFirstArg<T>>(
+    this: T,
+    arg: Arg,
+    ...args: JoinArgs<T, Arg>
+  ): WhereResult<T>;
   _whereExists<T extends Where, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
@@ -358,7 +379,7 @@ export abstract class Where implements QueryBase {
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _whereExists(this: Where, ...args: any) {
-    return this._where({ EXISTS: args });
+    return this._where(existsArgs(args));
   }
 
   orWhereExists<
@@ -387,7 +408,7 @@ export abstract class Where implements QueryBase {
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _orWhereExists(this: Where, ...args: any) {
-    return this._or({ EXISTS: args });
+    return this._or(existsArgs(args));
   }
 
   whereNotExists<
@@ -416,7 +437,7 @@ export abstract class Where implements QueryBase {
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _whereNotExists(this: Where, ...args: any) {
-    return this._whereNot({ EXISTS: args });
+    return this._whereNot(existsArgs(args));
   }
 
   orWhereNotExists<
@@ -445,7 +466,7 @@ export abstract class Where implements QueryBase {
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _orWhereNotExists(this: Where, ...args: any) {
-    return this._orNot({ EXISTS: args });
+    return this._orNot(existsArgs(args));
   }
 }
 

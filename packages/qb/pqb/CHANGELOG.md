@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.35
+
+### Patch Changes
+
+- Allow ordering by a sub-query in select
+
 ## 0.10.34
 
 ### Patch Changes

@@ -237,10 +237,10 @@ describe('column type', () => {
         // @ts-expect-error should have both encode and parse with matching types
         .as(columnTypes.integer());
 
-      // @ts-expect-error should have both encode and parse with matching types
       columnTypes
         .timestampWithoutTimeZone()
         .parse(Date.parse)
+        // @ts-expect-error should have both encode and parse with matching types
         .as(columnTypes.integer());
     });
 

@@ -48,28 +48,26 @@ export type JoinArgs<
   ? JoinWithArgs<T, Arg>
   : never;
 
-type JoinQueryArgs<
-  T extends QueryBase,
-  Q extends Query,
-  JoinSelectable extends PropertyKey =
-    | keyof Q['result']
-    | `${AliasOrTable<Q>}.${StringKey<keyof Q['result']>}`,
-> =
+type JoinSelectable<Q extends Query> =
+  | keyof Q['result']
+  | `${AliasOrTable<Q>}.${StringKey<keyof Q['result']>}`;
+
+type JoinQueryArgs<T extends QueryBase, Q extends Query> =
   | [
       conditions:
-        | Record<JoinSelectable, Selectable<T> | RawExpression>
-        | RawExpression,
+        | Record<JoinSelectable<Q>, Selectable<T> | RawExpression>
+        | RawExpression
+        | true,
     ]
   | [
-      leftColumn: JoinSelectable | RawExpression,
+      leftColumn: JoinSelectable<Q> | RawExpression,
       rightColumn: Selectable<T> | RawExpression,
     ]
   | [
-      leftColumn: JoinSelectable | RawExpression,
+      leftColumn: JoinSelectable<Q> | RawExpression,
       op: string,
       rightColumn: Selectable<T> | RawExpression,
-    ]
-  | [conditions: true];
+    ];
 
 type JoinWithArgs<T extends QueryBase, W extends keyof T['withData']> =
   | [

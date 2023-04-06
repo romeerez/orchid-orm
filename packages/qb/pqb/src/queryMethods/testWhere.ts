@@ -227,22 +227,11 @@ export const testWhere = (
 
     it('should handle sub query builder', () => {
       expectSql(
-        [
-          buildSql((q) =>
-            q.where({
-              NOT: (q) =>
-                q.where({
-                  IN: { columns: [pkey], values: [[1, 2, 3]] },
-                  EXISTS: [model, pkey, pkey],
-                }),
-            }),
+        buildSql((q) =>
+          q.whereNot((q) =>
+            q.whereIn(pkey, [1, 2, 3]).whereExists(model, pkey, pkey),
           ),
-          buildSql((q) =>
-            q.whereNot((q) =>
-              q.whereIn(pkey, [1, 2, 3]).whereExists(model, pkey, pkey),
-            ),
-          ),
-        ],
+        ),
         `
           ${startSql}
           NOT ${pkeySql} IN ($1, $2, $3)

@@ -50,7 +50,12 @@ describe('db', () => {
   useTestDatabase();
 
   it('supports table without schema', () => {
-    const table = db('table');
+    const table = db('table', (t) => ({
+      id: t.identity().primaryKey(),
+      name: t.text(),
+      foo: t.text(),
+    }));
+
     const query = table.select('id', 'name').where({ foo: 'bar' });
     expectSql(
       query.toSql(),

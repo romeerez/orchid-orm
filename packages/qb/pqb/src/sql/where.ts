@@ -9,7 +9,7 @@ import {
 } from './types';
 import { addValue, q, qc, revealColumnToSql } from './common';
 import { getQueryAs } from '../utils';
-import { getIsJoinSubQuery, processJoinItem } from './join';
+import { processJoinItem } from './join';
 import { makeSql, ToSqlCtx } from './toSql';
 import { getRaw } from '../raw';
 import { QueryData } from './data';
@@ -199,26 +199,21 @@ const processWhere = (
         ? value
         : [value];
 
-      (joinItems as JoinItem['args'][]).forEach((args) => {
-        const q = args[0];
-
-        const { target, conditions } = processJoinItem(
-          ctx,
-          table,
-          query,
-          {
+      (joinItems as { args: JoinItem['args']; isSubQuery: boolean }[]).forEach(
+        (args) => {
+          const { target, conditions } = processJoinItem(
+            ctx,
+            table,
+            query,
             args,
-            isSubQuery:
-              typeof q === 'object' &&
-              getIsJoinSubQuery(q.query, q.baseQuery.query),
-          },
-          quotedAs,
-        );
+            quotedAs,
+          );
 
-        ands.push(
-          `${prefix}EXISTS (SELECT 1 FROM ${target} WHERE ${conditions} LIMIT 1)`,
-        );
-      });
+          ands.push(
+            `${prefix}EXISTS (SELECT 1 FROM ${target} WHERE ${conditions} LIMIT 1)`,
+          );
+        },
+      );
     } else if (typeof value === 'object' && value !== null) {
       if (isRaw(value)) {
         ands.push(

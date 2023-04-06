@@ -619,7 +619,28 @@ Table.order({
 
   // to set nulls order:
   name: 'ASC NULLS FIRST',
-}, Table.raw('raw sql'))
+  age: 'DESC NULLS LAST',
+})
+
+// order by raw expression:
+Table.order(Table.raw('raw sql'))
+```
+
+`order` can refer to the values returned from `select` sub-queries (unlike `where` which cannot).
+So you can select a count of related records and order by it.
+
+For example, `comment` has many `likes`.
+We are selecting few columns of `comment`, selecting `likesCount` by a sub-query in a select, and ordering comments by likes count:
+
+```ts
+db.comment.select(
+  'title', 'content',
+  {
+    likesCount: (q) => q.likes.count(),
+  },
+).order({
+  likesCount: 'DESC',
+})
 ```
 
 ## having, havingOr

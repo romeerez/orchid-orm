@@ -86,9 +86,6 @@ Table.where({
 
 Using methods instead of this is a shorter and cleaner way, but in some cases, such object keys way may be more convenient.
 
-Currently `EXISTS` key is not type safe, so it cannot check if specified columns really belongs to a target table,
-better to use `whereExists` method instead that does the checks.
-
 ```ts
 Table.where({
   // see .whereNot
@@ -109,14 +106,6 @@ Table.where({
     { columns: ['id', 'name'], values: [[1, 'a'], [2, 'b']] },
     { columns: ['someColumn'], values: [['foo', 'bar']] },
   ],
-
-  // see .whereExists
-  EXISTS: [OtherTable, 'someId', 'id'],
-  // can be an array:
-  EXISTS: [
-    [SomeTable, 'someId', 'id'],
-    [AnotherTable, 'anotherId', 'id'],
-  ]
 })
 ```
 

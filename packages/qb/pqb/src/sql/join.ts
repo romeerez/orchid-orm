@@ -12,12 +12,7 @@ import { Relation } from '../relations';
 import { ToSqlCtx } from './toSql';
 import { getRaw } from '../raw';
 import { QueryData } from './data';
-import {
-  ColumnsShapeBase,
-  emptyObject,
-  isRaw,
-  RawExpression,
-} from 'orchid-core';
+import { ColumnsShapeBase, isRaw, RawExpression } from 'orchid-core';
 
 type ItemOf3Or4Length =
   | [
@@ -117,7 +112,7 @@ export const processJoinItem = (
     const qAs = joinQuery.as ? q(joinQuery.as) : undefined;
     const addAs = qAs && qAs !== joinAs;
 
-    let joinedShape: ColumnsShapeBase;
+    const joinedShape = first.shape;
     if (item.isSubQuery) {
       const subQuery = first.toSql({
         values: ctx.values,
@@ -125,12 +120,7 @@ export const processJoinItem = (
 
       target = `(${subQuery.text}) ${qAs || joinAs}`;
       if (addAs) joinAs = qAs;
-
-      // if it is a sub query, the columns name are revealed inside, and then addressed directly by the keys
-      joinedShape = emptyObject;
     } else {
-      joinedShape = first.shape;
-
       if (addAs) {
         joinAs = qAs;
         target += ` AS ${qAs}`;

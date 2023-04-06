@@ -5,6 +5,7 @@ import { getShapeFromSelect } from './select';
 import { Relation } from '../relations';
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
 import { JoinArgs, JoinCallback, JoinFirstArg, JoinResult } from './join';
+import { ColumnsShape } from '../columns';
 
 export const _join = <
   T extends Query,
@@ -28,6 +29,11 @@ export const _join = <
     if (joinKey) {
       shape = getShapeFromSelect(first, isSubQuery);
       parsers = first.query.parsers;
+
+      if (isSubQuery) {
+        args[0] = first.clone() as Arg;
+        (args[0] as Query).shape = shape as ColumnsShape;
+      }
     }
   } else {
     joinKey = first as string;
