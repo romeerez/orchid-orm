@@ -13,13 +13,13 @@ import {
 } from 'typescript';
 import {
   columnCheckToCode,
+  ColumnData,
   columnForeignKeysToCode,
   columnIndexesToCode,
   ColumnType,
   constraintToCode,
   ForeignKey,
   identityToCode,
-  IndexColumnOptions,
   indexToCode,
   primaryKeyToCode,
   TableData,
@@ -396,7 +396,9 @@ const getColumnMethodArgs = (
   if (!value) return;
 
   if (key === 'indexes') {
-    return columnIndexesToCode(value as IndexColumnOptions[]);
+    return columnIndexesToCode(
+      value as Exclude<ColumnData['indexes'], undefined>,
+    );
   }
 
   if (key === 'foreignKeys') {

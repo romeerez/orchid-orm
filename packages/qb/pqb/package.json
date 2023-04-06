@@ -1,6 +1,6 @@
 {
   "name": "pqb",
-  "version": "0.10.35",
+  "version": "0.10.36",
   "description": "Postgres query builder",
   "homepage": "https://orchid-orm.netlify.app/guide/query-builder-setup.html",
   "repository": {
@@ -25,7 +25,7 @@
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
-    "build": "rimraf ./dist/ && rollup -c ../../../rollup.config",
+    "build": "rimraf ./dist/ && rollup -c ../../../rollup.config.mjs",
     "prepublishOnly": "pnpm build"
   },
   "jest": {

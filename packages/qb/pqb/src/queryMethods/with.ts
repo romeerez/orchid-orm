@@ -33,7 +33,9 @@ type WithShape<Args extends WithArgs> = Args[1] extends Query
   : Args[2] extends ColumnsShape
   ? Args[2]
   : Args[2] extends (t: ColumnTypes) => ColumnsShape
-  ? ReturnType<Args[2]>
+  ? ReturnType<Args[2]> extends ColumnsShape
+    ? ReturnType<Args[2]>
+    : never
   : never;
 
 type WithResult<

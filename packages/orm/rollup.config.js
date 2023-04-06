@@ -1,4 +1,4 @@
-import config from '../../rollup.config';
+import config from '../../rollup.config.mjs';
 import esbuild from 'rollup-plugin-esbuild';
 
 export default [

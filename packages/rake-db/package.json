@@ -1,6 +1,6 @@
 {
   "name": "rake-db",
-  "version": "2.4.42",
+  "version": "2.4.43",
   "description": "Migrations tool for Postgresql DB",
   "homepage": "https://orchid-orm.netlify.app/guide/migration-setup-and-overview.html",
   "repository": {
@@ -26,7 +26,7 @@
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
-    "build": "rimraf ./dist/ && rollup -c ../../rollup.config",
+    "build": "rimraf ./dist/ && rollup -c ../../rollup.config.mjs",
     "prepublishOnly": "pnpm build"
   },
   "jest": {

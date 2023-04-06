@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm",
-  "version": "1.6.39",
+  "version": "1.6.40",
   "description": "Postgres ORM",
   "homepage": "https://orchid-orm.netlify.app/guide/orm-setup-and-overview.html",
   "repository": {
@@ -26,7 +26,7 @@
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
-    "build": "rimraf ./dist/ && rollup -c --rollup.config",
+    "build": "rimraf ./dist/ && rollup -c ../../rollup.config.mjs",
     "prepublishOnly": "pnpm build",
     "db": "ts-node src/db/dbScripts.ts"
   },

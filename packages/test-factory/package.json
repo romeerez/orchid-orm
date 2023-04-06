@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm-test-factory",
-  "version": "0.3.40",
+  "version": "0.3.41",
   "description": "Orchid ORM factories for tests",
   "homepage": "https://orchid-orm.netlify.app/guide/orm-test-factories.html",
   "repository": {
@@ -25,7 +25,7 @@
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
-    "build": "rimraf ./dist/ && rollup -c ../../rollup.config",
+    "build": "rimraf ./dist/ && rollup -c ../../rollup.config.mjs",
     "prepublishOnly": "pnpm build"
   },
   "jest": {

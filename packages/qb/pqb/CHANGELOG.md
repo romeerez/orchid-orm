@@ -1,5 +1,11 @@
 # pqb
 
+## 0.10.36
+
+### Patch Changes
+
+- Update dependencies
+
 ## 0.10.35
 
 ### Patch Changes

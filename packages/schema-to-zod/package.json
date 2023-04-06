@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm-schema-to-zod",
-  "version": "0.3.36",
+  "version": "0.3.37",
   "description": "Orchid-ORM columns schema to Zod converter",
   "homepage": "https://orchid-orm.netlify.app/guide/columns-validation-methods.html",
   "repository": {
@@ -25,7 +25,7 @@
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
-    "build": "rimraf ./dist/ && rollup -c ../../rollup.config",
+    "build": "rimraf ./dist/ && rollup -c ../../rollup.config.mjs",
     "prepublishOnly": "pnpm build"
   },
   "jest": {
