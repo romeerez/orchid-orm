@@ -24,7 +24,7 @@ describe('with', () => {
   const getExpectedWithSql = (
     sql: string,
     columns: string[],
-    opts: typeof options[number],
+    opts: (typeof options)[number],
   ) => {
     return `
         WITH${opts?.recursive ? ' RECURSIVE' : ''} "withAlias"${

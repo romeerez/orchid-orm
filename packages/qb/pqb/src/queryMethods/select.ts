@@ -1,10 +1,10 @@
 import {
-  AddQuerySelect,
   ColumnParser,
   ColumnsParsers,
   Query,
   QueryBase,
   QueryReturnsAll,
+  QueryThen,
 } from '../query';
 import {
   ArrayOfColumnsObjects,
@@ -50,22 +50,39 @@ type SelectAsValue<T extends QueryBase> =
 type SelectResult<
   T extends Query,
   Args extends SelectArg<T>[],
-  SelectAllResult extends ColumnsShapeBase = '*' extends Args[number]
-    ? T['shape']
-    : EmptyObject,
   SelectStringsResult extends ColumnsShapeBase = SelectStringArgsResult<
     T,
     Args
   >,
+  StringsKeys extends keyof SelectStringsResult = keyof SelectStringsResult,
   SelectAsResult extends ColumnsShapeBase = SpreadSelectArgs<T, Args>,
-> = AddQuerySelect<
-  T,
-  SelectAllResult & {
-    [K in keyof SelectStringsResult]: K extends keyof SelectAsResult
-      ? unknown
-      : SelectStringsResult[K];
-  } & SelectAsResult
->;
+  AsKeys extends keyof SelectAsResult = keyof SelectAsResult,
+  ResultKeys extends keyof T['result'] = T['meta']['hasSelect'] extends true
+    ? keyof T['result']
+    : never,
+  ShapeKeys extends keyof T['shape'] = '*' extends Args[number]
+    ? keyof T['shape']
+    : never,
+  Result extends ColumnsShapeBase = {
+    [K in StringsKeys | AsKeys | ResultKeys | ShapeKeys]: K extends StringsKeys
+      ? SelectStringsResult[K]
+      : K extends AsKeys
+      ? SelectAsResult[K]
+      : K extends ResultKeys
+      ? T['result'][K]
+      : K extends ShapeKeys
+      ? T['shape'][K]
+      : never;
+  },
+> = (T['meta']['hasSelect'] extends true
+  ? unknown
+  : { meta: { hasSelect: true } }) & {
+  [K in keyof T]: K extends 'result'
+    ? Result
+    : K extends 'then'
+    ? QueryThen<T['returnType'], Result>
+    : T[K];
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SpreadSelectArgs<T extends Query, Args extends [...any]> = Args extends [
