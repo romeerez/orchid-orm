@@ -38,7 +38,6 @@ type Data = {
   schemas: string[];
   tables: DbStructure.Table[];
   views: DbStructure.View[];
-  columns: DbStructure.Column[];
   constraints: DbStructure.Constraint[];
   indexes: DbStructure.Index[];
   extensions: DbStructure.Extension[];
@@ -56,6 +55,7 @@ type PendingTables = Record<
 export type StructureToAstCtx = {
   snakeCase?: boolean;
   unsupportedTypes: Record<string, string[]>;
+  currentSchema: string;
 };
 
 export const structureToAst = async (
@@ -125,7 +125,7 @@ export const structureToAst = async (
       type: 'extension',
       action: 'create',
       name: it.name,
-      schema: it.schemaName === 'public' ? undefined : it.schemaName,
+      schema: it.schemaName === ctx.currentSchema ? undefined : it.schemaName,
       version: it.version,
     });
   }
@@ -135,7 +135,7 @@ export const structureToAst = async (
       type: 'enum',
       action: 'create',
       name: it.name,
-      schema: it.schemaName === 'public' ? undefined : it.schemaName,
+      schema: it.schemaName === ctx.currentSchema ? undefined : it.schemaName,
       values: it.values,
     });
   }
@@ -144,7 +144,7 @@ export const structureToAst = async (
     ast.push({
       type: 'domain',
       action: 'create',
-      schema: it.schemaName === 'public' ? undefined : it.schemaName,
+      schema: it.schemaName === ctx.currentSchema ? undefined : it.schemaName,
       name: it.name,
       baseType: domains[`${it.schemaName}.${it.name}`],
       notNull: it.notNull,
@@ -186,10 +186,11 @@ export const structureToAst = async (
 
   for (const [fkey, table] of outerConstraints) {
     ast.push({
-      ...constraintToAst(fkey),
+      ...constraintToAst(ctx, fkey),
       type: 'constraint',
       action: 'create',
-      tableSchema: table.schemaName === 'public' ? undefined : table.schemaName,
+      tableSchema:
+        table.schemaName === ctx.currentSchema ? undefined : table.schemaName,
       tableName: fkey.tableName,
     });
   }
@@ -206,7 +207,6 @@ const getData = async (db: DbStructure): Promise<Data> => {
     schemas,
     tables,
     views,
-    columns,
     constraints,
     indexes,
     extensions,
@@ -216,7 +216,6 @@ const getData = async (db: DbStructure): Promise<Data> => {
     db.getSchemas(),
     db.getTables(),
     db.getViews(),
-    db.getColumns(),
     db.getConstraints(),
     db.getIndexes(),
     db.getExtensions(),
@@ -228,7 +227,6 @@ const getData = async (db: DbStructure): Promise<Data> => {
     schemas,
     tables,
     views,
-    columns,
     constraints,
     indexes,
     extensions,
@@ -332,7 +330,7 @@ const pushTableAst = (
   pendingTables: PendingTables,
   innerConstraints = data.constraints,
 ) => {
-  const { schemaName, name: tableName } = table;
+  const { schemaName, name: tableName, columns } = table;
 
   const key = `${schemaName}.${table.name}`;
   delete pendingTables[key];
@@ -340,8 +338,6 @@ const pushTableAst = (
   if (tableName === 'schemaMigrations') return;
 
   const belongsToTable = makeBelongsToTable(schemaName, tableName);
-
-  const columns = data.columns.filter(belongsToTable);
 
   let primaryKey: { columns: string[]; name?: string } | undefined;
   for (const item of data.constraints) {
@@ -362,7 +358,7 @@ const pushTableAst = (
           references: references
             ? {
                 columns: references.columns,
-                fnOrTable: getReferencesTable(references),
+                fnOrTable: getReferencesTable(ctx, references),
                 foreignColumns: references.foreignColumns,
                 options: {
                   match: matchMap[references.match],
@@ -418,7 +414,7 @@ const pushTableAst = (
   ast.push({
     type: 'table',
     action: 'create',
-    schema: schemaName === 'public' ? undefined : schemaName,
+    schema: schemaName === ctx.currentSchema ? undefined : schemaName,
     comment: table.comment,
     name: tableName,
     shape,
@@ -476,6 +472,7 @@ const pushTableAst = (
 };
 
 const constraintToAst = (
+  ctx: StructureToAstCtx,
   item: DbStructure.Constraint,
 ): TableData.Constraint => {
   const result: TableData.Constraint = {};
@@ -486,7 +483,7 @@ const constraintToAst = (
     const options: ForeignKeyOptions = {};
     result.references = {
       columns: references.columns,
-      fnOrTable: getReferencesTable(references),
+      fnOrTable: getReferencesTable(ctx, references),
       foreignColumns: references.foreignColumns,
       options,
     };
@@ -515,8 +512,11 @@ const constraintToAst = (
   return result;
 };
 
-const getReferencesTable = (references: DbStructure.References) => {
-  return references.foreignSchema !== 'public'
+const getReferencesTable = (
+  ctx: StructureToAstCtx,
+  references: DbStructure.References,
+) => {
+  return references.foreignSchema !== ctx.currentSchema
     ? `${references.foreignSchema}.${references.foreignTable}`
     : references.foreignTable;
 };
@@ -559,7 +559,7 @@ const viewToAst = (
   return {
     type: 'view',
     action: 'create',
-    schema: view.schemaName === 'public' ? undefined : view.schemaName,
+    schema: view.schemaName === ctx.currentSchema ? undefined : view.schemaName,
     name: view.name,
     shape,
     sql: raw(view.sql),

@@ -55,9 +55,6 @@ db.getEnums = async () => enums;
 let constraints: DbStructure.Constraint[] = [];
 db.getConstraints = async () => constraints;
 
-let columns: DbStructure.Column[] = [];
-db.getColumns = async () => columns;
-
 asMock(makeFileTimeStamp).mockReturnValue('timestamp');
 
 const appCodeUpdater = jest.fn();
@@ -91,7 +88,6 @@ describe('pull', () => {
     tables = [];
     enums = [];
     constraints = [];
-    columns = [];
 
     jest.clearAllMocks();
   });
@@ -101,6 +97,7 @@ describe('pull', () => {
       {
         schemaName: 'schema',
         name: 'table',
+        columns: [],
       },
     ];
 
@@ -134,76 +131,77 @@ describe('pull', () => {
       {
         schemaName: 'schema',
         name: 'table1',
+        columns: [
+          {
+            ...identityColumn,
+            name: 'id',
+            schemaName: 'schema',
+            tableName: 'table1',
+          },
+          {
+            ...idColumn,
+            schemaName: 'schema',
+            tableName: 'table1',
+            name: 'column_name',
+            default: undefined,
+          },
+          {
+            ...idColumn,
+            schemaName: 'schema',
+            tableName: 'table1',
+            name: 'domainColumn',
+            type: domain.name,
+            typeSchema: 'schema',
+            isArray: true,
+          },
+          {
+            ...idColumn,
+            schemaName: 'schema',
+            tableName: 'table1',
+            name: 'customTypeColumn',
+            type: 'customType',
+            typeSchema: 'schema',
+          },
+          {
+            ...createdAtColumn,
+            schemaName: 'schema',
+            tableName: 'table1',
+            default: 'Current_Timestamp',
+          },
+          {
+            ...updatedAtColumn,
+            schemaName: 'schema',
+            tableName: 'table1',
+            default: 'transaction_timestamp()',
+          },
+        ],
       },
       {
         schemaName: 'public',
         name: 'table2',
-      },
-    ];
-
-    columns = [
-      {
-        ...identityColumn,
-        name: 'id',
-        schemaName: 'schema',
-        tableName: 'table1',
-      },
-      {
-        ...idColumn,
-        schemaName: 'schema',
-        tableName: 'table1',
-        name: 'column_name',
-        default: undefined,
-      },
-      {
-        ...idColumn,
-        schemaName: 'schema',
-        tableName: 'table1',
-        name: 'domainColumn',
-        type: domain.name,
-        typeSchema: 'schema',
-        isArray: true,
-      },
-      {
-        ...idColumn,
-        schemaName: 'schema',
-        tableName: 'table1',
-        name: 'customTypeColumn',
-        type: 'customType',
-        typeSchema: 'schema',
-      },
-      {
-        ...createdAtColumn,
-        schemaName: 'schema',
-        tableName: 'table1',
-        default: 'Current_Timestamp',
-      },
-      {
-        ...updatedAtColumn,
-        schemaName: 'schema',
-        tableName: 'table1',
-        default: 'transaction_timestamp()',
-      },
-      {
-        ...identityColumn,
-        name: 'id',
-        tableName: 'table2',
-      },
-      {
-        ...textColumn,
-        tableName: 'table2',
-      },
-      {
-        ...createdAtColumn,
-        tableName: 'table2',
-        name: 'created_at',
-        default: 'Current_Timestamp',
-      },
-      {
-        ...updatedAtColumn,
-        tableName: 'table2',
-        name: 'updated_at',
-        default: 'transaction_timestamp()',
+        columns: [
+          {
+            ...identityColumn,
+            name: 'id',
+            tableName: 'table2',
+          },
+          {
+            ...textColumn,
+            tableName: 'table2',
+          },
+          {
+            ...createdAtColumn,
+            tableName: 'table2',
+            name: 'created_at',
+            default: 'Current_Timestamp',
+          },
+          {
+            ...updatedAtColumn,
+            tableName: 'table2',
+            name: 'updated_at',
+            default: 'transaction_timestamp()',
+          },
+        ],
       },
     ];
 
@@ -334,18 +332,21 @@ Append \`as\` method manually to this column to treat it as other column type`);
   });
 
   it('should pluralize warning when many columns have unknown types', async () => {
-    tables = [table];
-
-    columns = [
+    tables = [
       {
-        ...column,
-        name: 'column1',
-        type: 'unknown1',
-      },
-      {
-        ...column,
-        name: 'column2',
-        type: 'unknown2',
+        ...table,
+        columns: [
+          {
+            ...column,
+            name: 'column1',
+            type: 'unknown1',
+          },
+          {
+            ...column,
+            name: 'column2',
+            type: 'unknown2',
+          },
+        ],
       },
     ];
 
@@ -360,26 +361,29 @@ Append \`as\` method manually to these columns to treat them as other column typ
   });
 
   it(`should add simple timestamps and do not add name('snake_case'), but add name('camelCase') when snakeCase: true`, async () => {
-    tables = [table];
-
-    columns = [
+    tables = [
       {
-        ...intColumn,
-        name: 'snake_case',
-        default: undefined,
-      },
-      {
-        ...intColumn,
-        name: 'camelCase',
-        default: undefined,
-      },
-      {
-        ...createdAtColumn,
-        name: 'created_at',
-      },
-      {
-        ...updatedAtColumn,
-        name: 'updated_at',
+        ...table,
+        columns: [
+          {
+            ...intColumn,
+            name: 'snake_case',
+            default: undefined,
+          },
+          {
+            ...intColumn,
+            name: 'camelCase',
+            default: undefined,
+          },
+          {
+            ...createdAtColumn,
+            name: 'created_at',
+          },
+          {
+            ...updatedAtColumn,
+            name: 'updated_at',
+          },
+        ],
       },
     ];
 
@@ -410,15 +414,19 @@ change(async (db) => {
   });
 
   it('should handle enum', async () => {
-    tables = [table];
-    enums = [enumType];
-    columns = [
+    tables = [
       {
-        ...textColumn,
-        type: enumType.name,
-        typeSchema: enumType.schemaName,
+        ...table,
+        columns: [
+          {
+            ...textColumn,
+            type: enumType.name,
+            typeSchema: enumType.schemaName,
+          },
+        ],
       },
     ];
+    enums = [enumType];
 
     await pullDbStructure(
       {

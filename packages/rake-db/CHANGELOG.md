@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.4.44
+
+### Patch Changes
+
+- Better support for custom schema in rake-db
+
 ## 2.4.43
 
 ### Patch Changes

@@ -5,6 +5,7 @@ export namespace DbStructure {
     schemaName: string;
     name: string;
     comment?: string;
+    columns: Column[];
   };
 
   export type View = {
@@ -249,7 +250,12 @@ ORDER BY "name"`,
       `SELECT
   nspname AS "schemaName",
   relname AS "name",
-  obj_description(c.oid) AS comment
+  obj_description(c.oid) AS comment,
+  (SELECT coalesce(json_agg(t), '[]') FROM (${columnsSql({
+    schema: 'n',
+    table: 'c',
+    where: 'a.attrelid = c.oid',
+  })}) t) AS "columns"
 FROM pg_class c
 JOIN pg_catalog.pg_namespace n ON n.oid = relnamespace
 WHERE relkind = 'r'
@@ -310,18 +316,6 @@ ORDER BY c.relname`,
 FROM pg_proc p
 JOIN pg_namespace n ON p.pronamespace = n.oid
 WHERE ${filterSchema('n.nspname')}`,
-    );
-    return rows;
-  }
-
-  async getColumns() {
-    const { rows } = await this.db.query<DbStructure.Column>(
-      columnsSql({
-        schema: 'nc',
-        table: 'c',
-        join: `JOIN pg_class c ON a.attrelid = c.oid AND c.relkind = 'r' JOIN pg_namespace nc ON nc.oid = c.relnamespace`,
-        where: filterSchema('nc.nspname'),
-      }),
     );
     return rows;
   }

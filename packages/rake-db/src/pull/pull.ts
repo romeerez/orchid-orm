@@ -11,11 +11,13 @@ export const pullDbStructure = async (
   config: RakeDbConfig,
 ) => {
   const adapter = new Adapter(options);
+  const currentSchema = adapter.schema || 'public';
   const db = new DbStructure(adapter);
 
   const ctx: StructureToAstCtx = {
     unsupportedTypes: {},
     snakeCase: config.snakeCase,
+    currentSchema,
   };
 
   const ast = await structureToAst(ctx, db);

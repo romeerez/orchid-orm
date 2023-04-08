@@ -40,18 +40,15 @@ const query = jest.fn().mockImplementation(() => ({ rows: [] }));
 adapter.query = query;
 adapter.arrays = query;
 
-const tableColumns = [
+const columns = [
   { ...intColumn, name: 'id' },
   { ...intColumn, name: 'name', type: 'text' },
 ];
 
-const otherTableColumn = { ...intColumn, tableName: 'otherTable' };
-
-const columns = [...tableColumns, otherTableColumn];
-
 const ctx: StructureToAstCtx = {
   unsupportedTypes: {},
   snakeCase: false,
+  currentSchema: 'custom',
 };
 
 describe('structureToAst', () => {
@@ -82,7 +79,12 @@ describe('structureToAst', () => {
     it('should add table', async () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [
-        { schemaName: 'public', name: 'table', comment: 'comment' },
+        {
+          schemaName: 'public',
+          name: 'table',
+          comment: 'comment',
+          columns: [],
+        },
       ];
 
       const ast = await structureToAst(ctx, db);
@@ -91,6 +93,7 @@ describe('structureToAst', () => {
         {
           type: 'table',
           action: 'create',
+          schema: 'public',
           name: 'table',
           comment: 'comment',
           shape: {},
@@ -101,9 +104,11 @@ describe('structureToAst', () => {
       ]);
     });
 
-    it('should add table with schema', async () => {
+    it('should ignore current schema', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [{ schemaName: 'custom', name: 'table' }];
+      db.getTables = async () => [
+        { schemaName: 'custom', name: 'table', columns: [] },
+      ];
 
       const ast = await structureToAst(ctx, db);
 
@@ -111,7 +116,6 @@ describe('structureToAst', () => {
         {
           type: 'table',
           action: 'create',
-          schema: 'custom',
           name: 'table',
           shape: {},
           noPrimaryKey: 'ignore',
@@ -124,7 +128,7 @@ describe('structureToAst', () => {
     it('should ignore schemaMigrations table', async () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [
-        { schemaName: 'public', name: 'schemaMigrations' },
+        { schemaName: 'public', name: 'schemaMigrations', columns: [] },
       ];
 
       const ast = await structureToAst(ctx, db);
@@ -134,12 +138,11 @@ describe('structureToAst', () => {
 
     it('should add columns', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => columns;
+      db.getTables = async () => [{ ...table, columns }];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
-      expect(Object.keys(ast.shape).length).toBe(tableColumns.length);
+      expect(Object.keys(ast.shape).length).toBe(columns.length);
       expect(ast.noPrimaryKey).toBe('ignore');
       expect(ast.shape.id).toBeInstanceOf(IntegerColumn);
       expect(ast.shape.name).toBeInstanceOf(TextColumn);
@@ -147,8 +150,9 @@ describe('structureToAst', () => {
 
     it('should rename column to camelCase and save original name in data.name', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => [{ ...intColumn, name: '__column__name__' }];
+      db.getTables = async () => [
+        { ...table, columns: [{ ...intColumn, name: '__column__name__' }] },
+      ];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
@@ -158,12 +162,16 @@ describe('structureToAst', () => {
 
     it('should add array column', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => [
+      db.getTables = async () => [
         {
-          ...intColumn,
-          type: 'int4',
-          isArray: true,
+          ...table,
+          columns: [
+            {
+              ...intColumn,
+              type: 'int4',
+              isArray: true,
+            },
+          ],
         },
       ];
 
@@ -177,15 +185,19 @@ describe('structureToAst', () => {
 
     it('should support enum column', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getEnums = async () => [enumType];
-      db.getColumns = async () => [
+      db.getTables = async () => [
         {
-          ...intColumn,
-          typeSchema: enumType.schemaName,
-          type: enumType.name,
+          ...table,
+          columns: [
+            {
+              ...intColumn,
+              typeSchema: enumType.schemaName,
+              type: enumType.name,
+            },
+          ],
         },
       ];
+      db.getEnums = async () => [enumType];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
@@ -196,9 +208,13 @@ describe('structureToAst', () => {
 
     it('should support column with check', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
+      db.getTables = async () => [
+        {
+          ...table,
+          columns: [intColumn],
+        },
+      ];
       db.getConstraints = async () => [check];
-      db.getColumns = async () => [intColumn];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
@@ -207,8 +223,12 @@ describe('structureToAst', () => {
 
     it('should support column of custom type', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => [{ ...intColumn, type: 'customType' }];
+      db.getTables = async () => [
+        {
+          ...table,
+          columns: [{ ...intColumn, type: 'customType' }],
+        },
+      ];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
@@ -224,16 +244,20 @@ describe('structureToAst', () => {
 
     it('should support column of domain type', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getDomains = async () => [domain];
-      db.getColumns = async () => [
+      db.getTables = async () => [
         {
-          ...intColumn,
-          type: domain.name,
-          typeSchema: domain.schemaName,
-          isArray: true,
+          ...table,
+          columns: [
+            {
+              ...intColumn,
+              type: domain.name,
+              typeSchema: domain.schemaName,
+              isArray: true,
+            },
+          ],
         },
       ];
+      db.getDomains = async () => [domain];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
@@ -247,8 +271,12 @@ describe('structureToAst', () => {
 
     it('should wrap column default into raw', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => [{ ...timestampColumn, default: 'now()' }];
+      db.getTables = async () => [
+        {
+          ...table,
+          columns: [{ ...timestampColumn, default: 'now()' }],
+        },
+      ];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
@@ -259,11 +287,19 @@ describe('structureToAst', () => {
 
     it('should replace current_timestamp and transaction_timestamp() with now() in timestamp default', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => [
-        { ...timestampColumn, name: 'one', default: 'current_timestamp' },
-        { ...timestampColumn, name: 'two', default: 'transaction_timestamp()' },
-        { ...timestampColumn, name: 'three', default: 'now()' },
+      db.getTables = async () => [
+        {
+          ...table,
+          columns: [
+            { ...timestampColumn, name: 'one', default: 'current_timestamp' },
+            {
+              ...timestampColumn,
+              name: 'two',
+              default: 'transaction_timestamp()',
+            },
+            { ...timestampColumn, name: 'three', default: 'now()' },
+          ],
+        },
       ];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
@@ -278,7 +314,12 @@ describe('structureToAst', () => {
     describe('serial column', () => {
       it('should add serial column based on various default values', async () => {
         const db = new DbStructure(adapter);
-        db.getTables = async () => [{ schemaName: 'schema', name: 'table' }];
+        const table: DbStructure.Table = {
+          schemaName: 'schema',
+          name: 'table',
+          columns: [],
+        };
+        db.getTables = async () => [table];
 
         const defaults = [
           `nextval('table_id_seq'::regclass)`,
@@ -290,7 +331,7 @@ describe('structureToAst', () => {
         ];
 
         for (const def of defaults) {
-          db.getColumns = async () => [
+          table.columns = [
             {
               ...intColumn,
               name: 'id',
@@ -309,7 +350,12 @@ describe('structureToAst', () => {
 
       it('should support smallserial, serial, and bigserial', async () => {
         const db = new DbStructure(adapter);
-        db.getTables = async () => [{ schemaName: 'schema', name: 'table' }];
+        const table: DbStructure.Table = {
+          schemaName: 'schema',
+          name: 'table',
+          columns: [],
+        };
+        db.getTables = async () => [table];
 
         const types = [
           ['int2', SmallSerialColumn],
@@ -318,7 +364,7 @@ describe('structureToAst', () => {
         ] as const;
 
         for (const [type, Column] of types) {
-          db.getColumns = async () => [
+          table.columns = [
             {
               ...intColumn,
               type,
@@ -339,8 +385,7 @@ describe('structureToAst', () => {
 
     it('should set maxChars to char column', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => [varCharColumn];
+      db.getTables = async () => [{ ...table, columns: [varCharColumn] }];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
@@ -351,8 +396,7 @@ describe('structureToAst', () => {
 
     it('should set numericPrecision and numericScale to decimal column', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => [decimalColumn];
+      db.getTables = async () => [{ ...table, columns: [decimalColumn] }];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
@@ -364,8 +408,7 @@ describe('structureToAst', () => {
 
     it('should set dateTimePrecision to timestamp column', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => [timestampColumn];
+      db.getTables = async () => [{ ...table, columns: [timestampColumn] }];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
@@ -378,8 +421,7 @@ describe('structureToAst', () => {
 
     it('should set primaryKey to column', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => columns;
+      db.getTables = async () => [{ ...table, columns }];
       db.getConstraints = async () => [primaryKey];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
@@ -391,8 +433,7 @@ describe('structureToAst', () => {
 
     it('should add composite primary key', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => columns;
+      db.getTables = async () => [{ ...table, columns }];
       db.getConstraints = async () => [
         { ...primaryKey, primaryKey: ['id', 'name'] },
       ];
@@ -409,8 +450,7 @@ describe('structureToAst', () => {
 
     it('should ignore primary key name if it is standard', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => columns;
+      db.getTables = async () => [{ ...table, columns }];
       db.getConstraints = async () => [
         { ...primaryKey, primaryKey: ['id', 'name'], name: 'table_pkey' },
       ];
@@ -426,8 +466,7 @@ describe('structureToAst', () => {
 
     it('should add index to column', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => columns;
+      db.getTables = async () => [{ ...table, columns }];
       db.getIndexes = async () => [{ ...index, nullsNotDistinct: true }];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
@@ -443,8 +482,7 @@ describe('structureToAst', () => {
 
     it('should ignore standard index name', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => columns;
+      db.getTables = async () => [{ ...table, columns }];
       db.getIndexes = async () => [
         { ...index, name: getIndexName(table.name, index.columns) },
       ];
@@ -460,8 +498,7 @@ describe('structureToAst', () => {
 
     it('should set index options to column index', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => columns;
+      db.getTables = async () => [{ ...table, columns }];
       db.getIndexes = async () => [
         {
           ...index,
@@ -504,8 +541,7 @@ describe('structureToAst', () => {
 
     it('should add composite indexes to the table', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => columns;
+      db.getTables = async () => [{ ...table, columns }];
       db.getIndexes = async () => [
         { ...index, columns: [{ column: 'id' }, { column: 'name' }] },
         {
@@ -532,8 +568,7 @@ describe('structureToAst', () => {
 
     it('should ignore standard index name in composite index', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => columns;
+      db.getTables = async () => [{ ...table, columns }];
 
       const indexColumns = [{ column: 'id' }, { column: 'name' }];
       db.getIndexes = async () => [
@@ -556,8 +591,7 @@ describe('structureToAst', () => {
 
     it('should add index with expression and options to the table', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => columns;
+      db.getTables = async () => [{ ...table, columns }];
       db.getIndexes = async () => [
         {
           ...index,
@@ -609,11 +643,11 @@ describe('structureToAst', () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [
         { ...table, name: 'table1' },
-        { ...table, name: 'table2' },
-      ];
-      db.getColumns = async () => [
-        ...columns,
-        { ...intColumn, name: 'otherId', tableName: 'table2' },
+        {
+          ...table,
+          name: 'table2',
+          columns: [{ ...intColumn, name: 'otherId', tableName: 'table2' }],
+        },
       ];
       db.getConstraints = async () => [
         {
@@ -629,7 +663,7 @@ describe('structureToAst', () => {
         {
           columns: ['id'],
           name: 'fkey',
-          table: 'table1',
+          table: 'public.table1',
           match: 'FULL',
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
@@ -642,10 +676,11 @@ describe('structureToAst', () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [
         { ...table, name: 'table1' },
-        { ...table, name: 'table2' },
-      ];
-      db.getColumns = async () => [
-        { ...intColumn, name: 'otherId', tableName: 'table2' },
+        {
+          ...table,
+          name: 'table2',
+          columns: [{ ...intColumn, name: 'otherId', tableName: 'table2' }],
+        },
       ];
       db.getConstraints = async () => [
         {
@@ -664,7 +699,7 @@ describe('structureToAst', () => {
       expect(ast.shape.otherId.data.foreignKeys).toEqual([
         {
           columns: ['id'],
-          table: 'table1',
+          table: 'public.table1',
           match: 'FULL',
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
@@ -677,10 +712,11 @@ describe('structureToAst', () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [
         { ...table, name: 'table1' },
-        { ...table, name: 'table2' },
-      ];
-      db.getColumns = async () => [
-        { ...intColumn, name: 'otherId', tableName: 'table2' },
+        {
+          ...table,
+          name: 'table2',
+          columns: [{ ...intColumn, name: 'otherId', tableName: 'table2' }],
+        },
       ];
       db.getConstraints = async () => [
         {
@@ -703,7 +739,7 @@ describe('structureToAst', () => {
           name: 'fkey',
           references: {
             columns: ['name', 'id'],
-            fnOrTable: 'table1',
+            fnOrTable: 'public.table1',
             foreignColumns: ['otherName', 'otherId'],
             options: {
               match: 'FULL',
@@ -720,10 +756,11 @@ describe('structureToAst', () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [
         { ...table, name: 'table1' },
-        { ...table, name: 'table2' },
-      ];
-      db.getColumns = async () => [
-        { ...intColumn, name: 'otherId', tableName: 'table2' },
+        {
+          ...table,
+          name: 'table2',
+          columns: [{ ...intColumn, name: 'otherId', tableName: 'table2' }],
+        },
       ];
       db.getConstraints = async () => [
         {
@@ -746,7 +783,7 @@ describe('structureToAst', () => {
         {
           references: {
             columns: ['name', 'otherId'],
-            fnOrTable: 'table1',
+            fnOrTable: 'public.table1',
             foreignColumns: ['name', 'id'],
             options: {
               match: 'FULL',
@@ -761,14 +798,17 @@ describe('structureToAst', () => {
     it('should have referenced table before the table with foreign key', async () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [
-        { ...table, name: 'fkTable' },
+        {
+          ...table,
+          name: 'fkTable',
+          columns: [
+            { ...intColumn, name: 'table1Id', tableName: 'fkTable' },
+            { ...intColumn, name: 'table2Id', tableName: 'fkTable' },
+          ],
+        },
         { ...table, name: 'table1' },
         { ...table, name: 'table2' },
         { ...table, name: 'otherTable' },
-      ];
-      db.getColumns = async () => [
-        { ...intColumn, name: 'table1Id', tableName: 'fkTable' },
-        { ...intColumn, name: 'table2Id', tableName: 'fkTable' },
       ];
       db.getConstraints = async () => [
         {
@@ -804,8 +844,7 @@ describe('structureToAst', () => {
 
     it('should add foreign key to the same table', async () => {
       const db = new DbStructure(adapter);
-      db.getTables = async () => [table];
-      db.getColumns = async () => [intColumn];
+      db.getTables = async () => [{ ...table, columns: [intColumn] }];
       db.getConstraints = async () => [
         {
           ...foreignKey,
@@ -826,12 +865,16 @@ describe('structureToAst', () => {
     it('should add standalone foreign key when it is recursive', async () => {
       const db = new DbStructure(adapter);
       db.getTables = async () => [
-        { ...table, name: 'table1' },
-        { ...table, name: 'table2' },
-      ];
-      db.getColumns = async () => [
-        { ...intColumn, tableName: 'table1' },
-        { ...intColumn, tableName: 'table2' },
+        {
+          ...table,
+          name: 'table1',
+          columns: [{ ...intColumn, tableName: 'table1' }],
+        },
+        {
+          ...table,
+          name: 'table2',
+          columns: [{ ...intColumn, tableName: 'table2' }],
+        },
       ];
       db.getConstraints = async () => [
         {
@@ -864,7 +907,7 @@ describe('structureToAst', () => {
       expect(table2.name).toBe('table2');
       expect(table2.shape[intColumn.name].data.foreignKeys).toEqual([
         {
-          table: 'table1',
+          table: 'public.table1',
           columns: ['id'],
           match: 'FULL',
           name: 'fkey',
@@ -877,10 +920,11 @@ describe('structureToAst', () => {
         type: 'constraint',
         action: 'create',
         tableName: 'table1',
+        tableSchema: 'public',
         name: 'fkey',
         references: {
           columns: ['column'],
-          fnOrTable: 'table2',
+          fnOrTable: 'public.table2',
           foreignColumns: ['id'],
           options: {
             match: 'FULL',
@@ -895,8 +939,7 @@ describe('structureToAst', () => {
     describe('identity', () => {
       it('should add `as default` identity', async () => {
         const db = new DbStructure(adapter);
-        db.getTables = async () => [table];
-        db.getColumns = async () => [identityColumn];
+        db.getTables = async () => [{ ...table, columns: [identityColumn] }];
 
         const [{ shape }] = (await structureToAst(
           ctx,
@@ -908,7 +951,6 @@ describe('structureToAst', () => {
 
       it('should add `always` identity with options', async () => {
         const db = new DbStructure(adapter);
-        db.getTables = async () => [table];
 
         const options = {
           always: true,
@@ -920,10 +962,15 @@ describe('structureToAst', () => {
           cycle: true,
         };
 
-        db.getColumns = async () => [
+        db.getTables = async () => [
           {
-            ...identityColumn,
-            identity: options,
+            ...table,
+            columns: [
+              {
+                ...identityColumn,
+                identity: options,
+              },
+            ],
           },
         ];
 
@@ -965,7 +1012,7 @@ describe('structureToAst', () => {
           references: {
             columns: ['id', 'name'],
             foreignColumns: ['foreignId', 'foreignName'],
-            fnOrTable: foreignKey.references.foreignTable,
+            fnOrTable: `public.${foreignKey.references.foreignTable}`,
             options: {
               name: 'constraintName',
               match: 'FULL',
@@ -990,12 +1037,11 @@ describe('structureToAst', () => {
         type: 'extension',
         action: 'create',
         name: 'name',
-        schema: 'custom',
         version: '123',
       });
     });
 
-    it('should ignore schema if it is `public`', async () => {
+    it('should not ignore schema if it is not current schema', async () => {
       const db = new DbStructure(adapter);
       db.getExtensions = async () => [extension];
 
@@ -1004,6 +1050,7 @@ describe('structureToAst', () => {
       expect(ast).toEqual({
         type: 'extension',
         action: 'create',
+        schema: 'public',
         name: 'name',
         version: '123',
       });
@@ -1021,12 +1068,11 @@ describe('structureToAst', () => {
         type: 'enum',
         action: 'create',
         name: 'mood',
-        schema: 'custom',
         values: enumType.values,
       });
     });
 
-    it('should ignore schema if it is `public`', async () => {
+    it('should not ignore schema if it is not a current schema', async () => {
       const db = new DbStructure(adapter);
       db.getEnums = async () => [enumType];
 
@@ -1035,6 +1081,7 @@ describe('structureToAst', () => {
       expect(ast).toEqual({
         type: 'enum',
         action: 'create',
+        schema: 'public',
         name: 'mood',
         values: enumType.values,
       });
@@ -1060,7 +1107,6 @@ describe('structureToAst', () => {
       expect(ast).toEqual({
         type: 'domain',
         action: 'create',
-        schema: 'custom',
         name: domain.name,
         baseType: expect.any(IntegerColumn),
         notNull: true,
@@ -1070,13 +1116,13 @@ describe('structureToAst', () => {
       });
     });
 
-    it('should ignore schema if it is `public`', async () => {
+    it('should not ignore schema if it not current schema', async () => {
       const db = new DbStructure(adapter);
       db.getDomains = async () => [domain];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Domain];
 
-      expect(ast.schema).toBe(undefined);
+      expect(ast.schema).toBe('public');
     });
   });
 
@@ -1089,7 +1135,7 @@ describe('structureToAst', () => {
 
       expect(ast.type).toBe('view');
       expect(ast.action).toBe('create');
-      expect(ast.schema).toBe('custom');
+      expect(ast.schema).toBe(undefined);
       expect(ast.options.recursive).toBe(true);
       expect(ast.options.with?.checkOption).toBe('LOCAL');
       expect(ast.options.with?.securityBarrier).toBe(true);

@@ -14,7 +14,6 @@ describe('dbStructure', () => {
     await Promise.all([
       db.getSchemas(),
       db.getViews(),
-      db.getColumns(),
       db.getIndexes(),
       db.getConstraints(),
       db.getExtensions(),

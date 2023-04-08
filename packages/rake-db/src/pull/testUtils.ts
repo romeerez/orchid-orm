@@ -3,6 +3,7 @@ import { DbStructure } from './dbStructure';
 export const table: DbStructure.Table = {
   schemaName: 'public',
   name: 'table',
+  columns: [],
 };
 
 export const column: Omit<DbStructure.Column, 'type'> = {
