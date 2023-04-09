@@ -13,9 +13,10 @@ import {
   sortAsc,
   sortDesc,
   migrationConfigDefaults,
+  RakeDbConfig,
 } from './common';
 import prompts from 'prompts';
-import { Adapter } from 'pqb';
+import { Adapter, columnTypes } from 'pqb';
 import { readdir } from 'fs/promises';
 import path from 'path';
 import { asMock } from './test-utils';
@@ -26,18 +27,26 @@ jest.mock('fs/promises', () => ({
   readdir: jest.fn(),
 }));
 
-const config = { ...migrationConfigDefaults, basePath: __dirname };
+const config: RakeDbConfig = {
+  ...migrationConfigDefaults,
+  basePath: __dirname,
+  dbScript: 'dbScript.ts',
+  columnTypes,
+};
 
 describe('common', () => {
   describe('processRakeDbConfig', () => {
     it('should return config with defaults', () => {
       const result = processRakeDbConfig({
         basePath: __dirname,
+        dbScript: 'dbScript.ts',
         migrationsPath: 'custom-path',
       });
 
       expect(result).toEqual({
         basePath: __dirname,
+        dbScript: 'dbScript.ts',
+        columnTypes,
         migrationsPath: path.resolve(__dirname, 'custom-path'),
         migrationsTable: 'schemaMigrations',
         snakeCase: false,

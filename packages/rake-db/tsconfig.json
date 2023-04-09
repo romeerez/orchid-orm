@@ -6,7 +6,8 @@
     "baseUrl": ".",
     "paths": {
       "orchid-core": ["../core/src"],
-      "pqb": ["../qb/pqb/src"]
+      "pqb": ["../qb/pqb/src"],
+      "orchid-orm": ["../orm/src"]
     }
   }
 }

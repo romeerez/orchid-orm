@@ -753,11 +753,13 @@ export const db = orchidORM(config.database, {
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === migrationScriptPath,
       );
-      expect(content).toBe(`import { rakeDb } from 'rake-db';
-import { config } from './config';
+      expect(content).toBe(`import { makeChange, rakeDb } from 'rake-db';
 import { appCodeUpdater } from 'orchid-orm';
+import { config } from './config';
+import { BaseTable } from './baseTable.ts';
 
-rakeDb(config.database, {
+export const change = rakeDb(config.database, {
+  baseTable: BaseTable,
   migrationsPath: './migrations',
   appCodeUpdater: appCodeUpdater({
     tablePath: (tableName) => \`./tables/\${tableName}.table.ts\`,
@@ -785,11 +787,13 @@ rakeDb(config.database, {
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === migrationScriptPath,
       );
-      expect(content).toBe(`import { rakeDb } from 'rake-db';
-import { config } from './config';
+      expect(content).toBe(`import { makeChange, rakeDb } from 'rake-db';
 import { appCodeUpdater } from 'orchid-orm';
+import { config } from './config';
+import { BaseTable } from './baseTable.ts';
 
-rakeDb(config.allDatabases, {
+export const change = rakeDb(config.allDatabases, {
+  baseTable: BaseTable,
   migrationsPath: './migrations',
   appCodeUpdater: appCodeUpdater({
     tablePath: (tableName) => \`./tables/\${tableName}.table.ts\`,
@@ -825,7 +829,7 @@ rakeDb(config.allDatabases, {
       const [, post] = asMock(fs.writeFile).mock.calls.find(([to]) =>
         to.endsWith('createPost.ts'),
       );
-      expect(post).toBe(`import { change } from 'rake-db';
+      expect(post).toBe(`import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createTable('post', (t) => ({
@@ -840,7 +844,7 @@ change(async (db) => {
       const [, comment] = asMock(fs.writeFile).mock.calls.find(([to]) =>
         to.endsWith('createComment.ts'),
       );
-      expect(comment).toBe(`import { change } from 'rake-db';
+      expect(comment).toBe(`import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createTable('comment', (t) => ({

@@ -5,9 +5,14 @@ import { NodeArray, ObjectLiteralExpression, Statement } from 'typescript';
 import { AppCodeUpdaterError } from './appCodeUpdater';
 import { FileChanges } from './fileChanges';
 import { ts } from './tsUtils';
-import { getImportPath } from './utils';
 import { AdapterOptions, QueryLogOptions } from 'pqb';
-import { singleQuote, pathToLog, toCamelCase, toPascalCase } from 'orchid-core';
+import {
+  singleQuote,
+  pathToLog,
+  toCamelCase,
+  toPascalCase,
+  getImportPath,
+} from 'orchid-core';
 
 type Context = {
   filePath: string;

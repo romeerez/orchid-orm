@@ -3,6 +3,7 @@ import { migrationConfigDefaults, RakeDbConfig } from '../common';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { pathToLog } from 'orchid-core';
+import { columnTypes } from 'pqb';
 
 jest.mock('fs/promises', () => ({
   mkdir: jest.fn(),
@@ -15,7 +16,9 @@ const migrationsPath = migrationConfigDefaults.migrationsPath;
 
 const config: RakeDbConfig = {
   ...migrationConfigDefaults,
-  basePath: __dirname,
+  basePath: path.join(migrationsPath, '..'),
+  dbScript: 'dbScript.ts',
+  columnTypes,
   logger: {
     ...console,
     log,
@@ -47,7 +50,7 @@ describe('generate', () => {
   it('should create a file for create table migration', async () => {
     await testGenerate(
       ['createTable'],
-      `import { change } from 'rake-db';
+      `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -61,7 +64,7 @@ change(async (db) => {
   it('should create a file to change migration', async () => {
     await testGenerate(
       ['changeTable'],
-      `import { change } from 'rake-db';
+      `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
@@ -75,7 +78,7 @@ change(async (db) => {
   it('should create a file for add columns migration', async () => {
     await testGenerate(
       ['addColumns'],
-      `import { change } from 'rake-db';
+      `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.changeTable(tableName, (t) => ({
@@ -89,7 +92,7 @@ change(async (db) => {
   it('should create a file for add columns migration with table', async () => {
     await testGenerate(
       ['addColumnsToTable'],
-      `import { change } from 'rake-db';
+      `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
@@ -103,7 +106,7 @@ change(async (db) => {
   it('should create a file for remove columns migration with table', async () => {
     await testGenerate(
       ['removeColumnsFromTable'],
-      `import { change } from 'rake-db';
+      `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
@@ -117,7 +120,7 @@ change(async (db) => {
   it('should create a file for drop table migration', async () => {
     await testGenerate(
       ['dropTable', 'id:integer.primaryKey', 'name:varchar(20).nullable'],
-      `import { change } from 'rake-db';
+      `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.dropTable('table', (t) => ({

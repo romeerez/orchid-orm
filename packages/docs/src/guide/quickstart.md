@@ -127,9 +127,7 @@ DATABASE_TEST_URL=postgres://user:password@localhost:5432/dbname-test?ssl=false
 
 If you're using a hosted database, change `ssl` to true in the above config.
 
-In case of using hosted database, it's already created by provided.
-
-But if you develop with a local Postgres, create databases with this command:
+In case of using hosted database, it's already created by provided, but if you develop with a local Postgres, create databases with this command:
 
 ```sh
 # command to create a database:
@@ -151,7 +149,7 @@ export const BaseTable = createBaseTable({
 ```ts
 // src/db/dbScript.ts
 
-rakeDb(config.database, {
+export const change = rakeDb(config.database, {
   snakeCase: true
   // ...other options
 });
@@ -182,7 +180,7 @@ The file with such content will appear in the `src/db/migrations` directory:
 
 ```ts
 // src/db/migrations/*timestamp*_createSample.ts
-import { change } from 'rake-db';
+import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createTable('sample', (t) => ({
@@ -194,7 +192,7 @@ Add columns to the table:
 
 ```ts
 // src/migrations/*timestamp*_createTable.ts
-import { change } from 'rake-db';
+import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createTable('sample', (t) => ({

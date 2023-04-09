@@ -33,6 +33,7 @@ src/
     ├── migrations/ - contains migrations files that can be migrated or rolled back.
     │   ├── timestamp_createPost.ts
     │   └── timestamp_createComment.ts
+    ├── baseTable.ts - for defining column type overrides.
     ├── config.ts - database credentials are exported from here.
     ├── db.ts - main file for the ORM, connects all tables into one `db` object.
     ├── dbScript.ts - script run by `npm run db *command*`.
@@ -73,7 +74,7 @@ import { rakeDb } from 'rake-db';
 import { appCodeUpdater } from 'orchid-orm';
 import { config } from './config';
 
-rakeDb(
+export const change = rakeDb(
   config.database,
   {
     // relative path to the current file:
@@ -150,18 +151,26 @@ The second optional argument of type `MigrationConfig`, all properties are optio
 
 ```ts
 type MigrationConfig = {
-  // path to resolve other relative paths with
+  // columnTypes and snakeCase can be applied form ORM's BaseTable
+  baseTable?: BaseTable,
+  // or it can be set manually:
+  columnTypes?: (t) => ({
+    // the same columnTypes config as in BaseTable definition
+  }),
+  // set to true to have all columns named in camelCase in the app, but in snake_case in the db
+  // by default, camelCase is expected in both app and db
+  snakeCase?: boolean;
+  
+  // basePath and dbScript are determined automatically
+  // basePath is a dir name of the file which calls `rakeDb`, and dbScript is a name of this file
   basePath?: string
+  dbScript?: string
   
   // path to migrations directory
   migrationsPath?: string;
   
   // table in your database to store migrated versions
   migrationsTable?: string;
-  
-  // set to true to have all columns named in camelCase in the app, but in snake_case in the db
-  // by default, camelCase is expected in both app and db
-  snakeCase?: boolean;
   
   // function to import typescript migration file
   import?(path: string): void;
@@ -287,7 +296,7 @@ Add a custom command to `rake-db` config:
 
 // ...snip imports
 
-rakeDb(config.database, {
+export const change = rakeDb(config.database, {
   // ...other options
   
   commands: {
@@ -318,7 +327,7 @@ Example: each time when `npm run db migrate` is run, after the migration was suc
 If `options` is an array of multiple database configs, callbacks are run for each of the databases.
 
 ```ts
-rakeDb(options, {
+export const change = rakeDb(options, {
   async afterMigrate(db: Db) {
     const haveRecords = await db('table').exists()
     if (!haveRecords) {

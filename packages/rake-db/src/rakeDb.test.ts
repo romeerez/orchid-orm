@@ -44,43 +44,43 @@ const config = {
 
 describe('rakeDb', () => {
   it('should support create command', async () => {
-    await rakeDb(options, config, ['create']);
+    await rakeDb(options, config, ['create']).promise;
 
     expect(createDb).toBeCalledWith(options, config);
   });
 
   it('should support drop command', async () => {
-    await rakeDb(options, config, ['drop']);
+    await rakeDb(options, config, ['drop']).promise;
 
     expect(dropDb).toBeCalledWith(options);
   });
 
   it('should support reset command', async () => {
-    await rakeDb(options, config, ['reset']);
+    await rakeDb(options, config, ['reset']).promise;
 
     expect(resetDb).toBeCalledWith(options, config);
   });
 
   it('should support migrate command', async () => {
-    await rakeDb(options, config, ['migrate', 'arg']);
+    await rakeDb(options, config, ['migrate', 'arg']).promise;
 
     expect(migrate).toBeCalledWith(options, config, ['arg']);
   });
 
   it('should support rollback command', async () => {
-    await rakeDb(options, config, ['rollback', 'arg']);
+    await rakeDb(options, config, ['rollback', 'arg']).promise;
 
     expect(rollback).toBeCalledWith(options, config, ['arg']);
   });
 
   it('should support new command', async () => {
-    await rakeDb(options, config, ['new', 'arg']);
+    await rakeDb(options, config, ['new', 'arg']).promise;
 
     expect(generate).toBeCalledWith(config, ['arg']);
   });
 
   it('should support pull command', async () => {
-    await rakeDb(options, config, ['pull']);
+    await rakeDb(options, config, ['pull']).promise;
 
     expect(pullDbStructure).toBeCalledWith(options[0], config);
   });
@@ -90,7 +90,7 @@ describe('rakeDb', () => {
 
     const conf = { ...config, commands: { custom } };
 
-    await rakeDb(options, conf, ['custom', 'arg']);
+    await rakeDb(options, conf, ['custom', 'arg']).promise;
 
     expect(custom).toBeCalledWith(options, conf, ['arg']);
   });
@@ -98,9 +98,8 @@ describe('rakeDb', () => {
   it('should log help when other command is sent', async () => {
     const log = jest.fn();
 
-    await rakeDb(options, { ...config, logger: { ...console, log } }, [
-      'other',
-    ]);
+    await rakeDb(options, { ...config, logger: { ...console, log } }, ['other'])
+      .promise;
 
     expect(log).toBeCalled();
   });
@@ -121,7 +120,9 @@ describe('rakeDb', () => {
       commands: { custom },
     };
 
-    await expect(() => rakeDb(options, conf, ['custom'])).rejects.toThrow(err);
+    await expect(
+      () => rakeDb(options, conf, ['custom']).promise,
+    ).rejects.toThrow(err);
 
     expect(errorLog).toBeCalledWith('message');
     expect(exit).toBeCalledWith(1);

@@ -81,13 +81,13 @@ const create = <CT extends ColumnTypesBase>(
   columnTypes: CT,
   snakeCase?: boolean,
 ) => {
-  return class BaseTable {
+  const base = class BaseTable {
     table!: string;
     columns!: TableConfig;
     schema?: string;
-    columnTypes: CT;
     noPrimaryKey?: boolean;
     snakeCase = snakeCase;
+    columnTypes: CT;
 
     constructor() {
       this.columnTypes = columnTypes;
@@ -216,4 +216,8 @@ const create = <CT extends ColumnTypesBase>(
       };
     }
   };
+
+  base.prototype.columnTypes = columnTypes;
+
+  return base;
 };

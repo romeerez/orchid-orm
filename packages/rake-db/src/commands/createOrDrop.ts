@@ -1,5 +1,5 @@
 import { Adapter, AdapterOptions } from 'pqb';
-import { MaybeArray, toArray } from 'orchid-core';
+import { ColumnTypesBase, MaybeArray, toArray } from 'orchid-core';
 import {
   getDatabaseAndUserFromOptions,
   setAdminCredentialsToOptions,
@@ -125,9 +125,9 @@ const createOrDrop = async (
   await db.close();
 };
 
-export const createDb = async (
+export const createDb = async <CT extends ColumnTypesBase>(
   arg: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig,
+  config: RakeDbConfig<CT>,
 ) => {
   for (const options of toArray(arg)) {
     await createOrDrop(options, options, config, {
@@ -161,9 +161,9 @@ export const dropDb = async (arg: MaybeArray<AdapterOptions>) => {
   }
 };
 
-export const resetDb = async (
+export const resetDb = async <CT extends ColumnTypesBase>(
   arg: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig,
+  config: RakeDbConfig<CT>,
 ) => {
   await dropDb(arg);
   await createDb(arg, config);

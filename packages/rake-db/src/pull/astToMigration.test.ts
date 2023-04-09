@@ -4,7 +4,7 @@ import { RakeDbAst } from '../ast';
 import { processRakeDbConfig } from '../common';
 import { raw } from 'orchid-core';
 
-const template = (content: string) => `import { change } from 'rake-db';
+const template = (content: string) => `import { change } from '../dbScript';
 
 change(async (db) => {
 ${content}
@@ -98,6 +98,13 @@ const view: RakeDbAst.View = {
   },
 };
 
+const expectResult = (
+  result: ((importPath: string) => string) | undefined,
+  expected: string,
+) => {
+  expect(result?.('../dbScript')).toBe(expected);
+};
+
 describe('astToMigration', () => {
   beforeEach(jest.clearAllMocks);
 
@@ -123,7 +130,9 @@ describe('astToMigration', () => {
       foreignKey,
     ]);
 
-    expect(result).toBe(`import { change } from 'rake-db';
+    expectResult(
+      result,
+      `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createSchema('schemaName');
@@ -154,13 +163,14 @@ change(async (db) => {
     ['id'],
   );
 });
-`);
+`,
+    );
   });
 
   it('should create schema', () => {
     const result = astToMigration(config, [schema]);
 
-    expect(result).toBe(template(`  await db.createSchema('schemaName');`));
+    expectResult(result, template(`  await db.createSchema('schemaName');`));
   });
 
   it('should create extension', () => {
@@ -172,7 +182,8 @@ change(async (db) => {
       },
     ]);
 
-    expect(result).toBe(
+    expectResult(
+      result,
       template(`  await db.createExtension('extensionName', {
     schema: 'schema',
     version: '123',
@@ -188,7 +199,8 @@ change(async (db) => {
       },
     ]);
 
-    expect(result).toBe(
+    expectResult(
+      result,
       template(`  await db.createEnum('schema.mood', ['sad', 'ok', 'happy']);`),
     );
   });
@@ -197,7 +209,8 @@ change(async (db) => {
     it('should create table', () => {
       const result = astToMigration(config, [table]);
 
-      expect(result).toBe(
+      expectResult(
+        result,
         template(`  await db.createTable('schema.table', (t) => ({
     id: t.identity().primaryKey(),
   }));`),
@@ -222,7 +235,9 @@ change(async (db) => {
         },
       ]);
 
-      expect(result).toBe(`import { change } from 'rake-db';
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createTable('schema.table', (t) => ({
@@ -237,7 +252,8 @@ change(async (db) => {
     }),
   }));
 });
-`);
+`,
+      );
     });
 
     it('should add composite primaryKeys, indexes, foreignKeys', () => {
@@ -272,7 +288,8 @@ change(async (db) => {
         },
       ]);
 
-      expect(result).toBe(
+      expectResult(
+        result,
         template(`  await db.createTable('schema.table', (t) => ({
     id: t.identity().primaryKey(),
     ...t.primaryKey(['id', 'name'], { name: 'pkey' }),
@@ -315,7 +332,8 @@ change(async (db) => {
         },
       ]);
 
-      expect(result).toBe(
+      expectResult(
+        result,
         template(`  await db.addForeignKey(
     'custom.table',
     ['otherId'],
@@ -343,14 +361,17 @@ change(async (db) => {
         },
       ]);
 
-      expect(result).toBe(`import { change } from 'rake-db';
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createTable('schema.table', (t) => ({
     id: t.identity().primaryKey().check(t.raw('column > 10')),
   }));
 });
-`);
+`,
+      );
     });
 
     it('should add table check', () => {
@@ -365,7 +386,9 @@ change(async (db) => {
         },
       ]);
 
-      expect(result).toBe(`import { change } from 'rake-db';
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createTable('schema.table', (t) => ({
@@ -373,13 +396,15 @@ change(async (db) => {
     ...t.check(t.raw('sql')),
   }));
 });
-`);
+`,
+      );
     });
 
     it('should add check', () => {
       const result = astToMigration(config, [check]);
 
-      expect(result).toBe(
+      expectResult(
+        result,
         template(`  await db.addCheck('table', t.raw('sql'));`),
       );
     });
@@ -404,7 +429,8 @@ change(async (db) => {
         },
       ]);
 
-      expect(result).toBe(
+      expectResult(
+        result,
         template(`  await db.addConstraint('custom.table', {
     name: 'constraint',
     references: [
@@ -427,7 +453,9 @@ change(async (db) => {
     it('should add domain', () => {
       const result = astToMigration(config, [domain]);
 
-      expect(result).toBe(`import { change } from 'rake-db';
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createDomain('schema.domainName', (t) => t.integer(), {
@@ -437,7 +465,8 @@ change(async (db) => {
     check: db.raw('VALUE = 42'),
   });
 });
-`);
+`,
+      );
     });
   });
 
@@ -461,7 +490,9 @@ change(async (db) => {
         },
       ]);
 
-      expect(result).toBe(`import { change } from 'rake-db';
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createTable('schema.table', (t) => ({
@@ -476,7 +507,8 @@ change(async (db) => {
     }),
   }));
 });
-`);
+`,
+      );
     });
   });
 
@@ -484,7 +516,9 @@ change(async (db) => {
     it('should create view', () => {
       const result = astToMigration(config, [view]);
 
-      expect(result).toBe(`import { change } from 'rake-db';
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createView('custom.view', {
@@ -494,7 +528,8 @@ change(async (db) => {
     securityInvoker: true,
   }, \`sql\`);
 });
-`);
+`,
+      );
     });
 
     it('should create view with sql values', () => {
@@ -502,7 +537,9 @@ change(async (db) => {
         { ...view, sql: raw('$a', { a: 1 }) },
       ]);
 
-      expect(result).toBe(`import { change } from 'rake-db';
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createView('custom.view', {
@@ -512,7 +549,8 @@ change(async (db) => {
     securityInvoker: true,
   }, db.raw('$a', {"a":1}));
 });
-`);
+`,
+      );
     });
   });
 });

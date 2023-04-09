@@ -6,26 +6,34 @@ import {
 } from '../common';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
-import { pathToLog } from 'orchid-core';
+import { ColumnTypesBase, getImportPath, pathToLog } from 'orchid-core';
 
-export const writeMigrationFile = async (
-  config: RakeDbConfig,
+export const writeMigrationFile = async <CT extends ColumnTypesBase>(
+  config: RakeDbConfig<CT>,
   version: string,
   name: string,
-  content: string,
+  content: (importPath: string, name: string) => string,
 ) => {
   await mkdir(config.migrationsPath, { recursive: true });
 
   const filePath = path.resolve(config.migrationsPath, `${version}_${name}.ts`);
-  await writeFile(filePath, content);
+  const importPath = getImportPath(
+    filePath,
+    path.join(config.basePath, config.dbScript),
+  );
+
+  await writeFile(filePath, content(importPath, name));
   config.logger?.log(`Created ${pathToLog(filePath)}`);
 };
 
-export const generate = async (config: RakeDbConfig, [name]: string[]) => {
+export const generate = async <CT extends ColumnTypesBase>(
+  config: RakeDbConfig<CT>,
+  [name]: string[],
+): Promise<void> => {
   if (!name) throw new Error('Migration name is missing');
 
   const version = makeFileTimeStamp();
-  await writeMigrationFile(config, version, name, makeContent(name));
+  await writeMigrationFile(config, version, name, makeContent);
 };
 
 export const makeFileTimeStamp = () => {
@@ -42,8 +50,8 @@ export const makeFileTimeStamp = () => {
     .join('');
 };
 
-const makeContent = (name: string): string => {
-  let content = `import { change } from 'rake-db';\n\nchange(async (db) => {`;
+const makeContent = (importPath: string, name: string): string => {
+  let content = `import { change } from '${importPath}';\n\nchange(async (db) => {`;
 
   const [first, rest] = getFirstWordAndRest(name);
   if (rest) {

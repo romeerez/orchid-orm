@@ -3,13 +3,19 @@ import {
   createSchemaMigrations,
   migrationConfigDefaults,
   getMigrationFiles,
+  RakeDbConfig,
 } from '../common';
-import { Adapter, TransactionAdapter } from 'pqb';
+import {
+  Adapter,
+  columnTypes,
+  DefaultColumnTypes,
+  TransactionAdapter,
+} from 'pqb';
 import { noop } from 'orchid-core';
-import { change } from '../migration/change';
 import { asMock } from '../test-utils';
 import { pathToLog } from 'orchid-core';
 import { RakeDbAst } from '../ast';
+import { ChangeCallback, pushChange } from '../migration/change';
 
 jest.mock('../common', () => ({
   ...jest.requireActual('../common'),
@@ -42,9 +48,11 @@ TransactionAdapter.prototype.query = transactionQueryMock;
 TransactionAdapter.prototype.arrays = transactionQueryMock;
 
 const importMock = jest.fn();
-const config = {
+const config: RakeDbConfig = {
   ...migrationConfigDefaults,
   basePath: __dirname,
+  dbScript: 'dbScript.ts',
+  columnTypes,
   import: importMock,
   log: false,
   logger: {
@@ -52,6 +60,10 @@ const config = {
     error: noop,
     warn: noop,
   },
+};
+
+const change = (fn: ChangeCallback<DefaultColumnTypes>) => {
+  pushChange(fn as unknown as ChangeCallback);
 };
 
 const createTableCallback = () => {
@@ -109,10 +121,10 @@ describe('migrateOrRollback', () => {
         `INSERT INTO "schemaMigrations" VALUES ('3')`,
       );
 
-      expect(config.logger.log).toBeCalledWith(
+      expect(config.logger?.log).toBeCalledWith(
         `Migrated ${pathToLog('file2')}`,
       );
-      expect(config.logger.log).toBeCalledWith(
+      expect(config.logger?.log).toBeCalledWith(
         `Migrated ${pathToLog('file3')}`,
       );
     });
@@ -128,7 +140,7 @@ describe('migrateOrRollback', () => {
       expect(createSchemaMigrations).toBeCalled();
       expect(importMock).not.toBeCalled();
       expect(transactionQueryMock).not.toBeCalled();
-      expect(config.logger.log).not.toBeCalled();
+      expect(config.logger?.log).not.toBeCalled();
     });
 
     it('should call appCodeUpdater only for the first db options', async () => {
@@ -236,8 +248,8 @@ describe('migrateOrRollback', () => {
         `DELETE FROM "schemaMigrations" WHERE version = '2'`,
       );
 
-      expect(config.logger.log).toBeCalledTimes(1);
-      expect(config.logger.log).toBeCalledWith(
+      expect(config.logger?.log).toBeCalledTimes(1);
+      expect(config.logger?.log).toBeCalledWith(
         `Rolled back ${pathToLog('file2')}`,
       );
     });
@@ -253,7 +265,7 @@ describe('migrateOrRollback', () => {
       expect(createSchemaMigrations).toBeCalled();
       expect(importMock).not.toBeCalled();
       expect(transactionQueryMock).not.toBeCalled();
-      expect(config.logger.log).not.toBeCalled();
+      expect(config.logger?.log).not.toBeCalled();
     });
 
     it('should call multiple change callbacks from top to bottom', async () => {
@@ -341,7 +353,7 @@ describe('migrateOrRollback', () => {
         `INSERT INTO "schemaMigrations" VALUES ('3')`,
       ]);
 
-      expect(config.logger.log.mock.calls).toEqual([
+      expect(asMock(config.logger?.log).mock.calls).toEqual([
         [`Rolled back ${pathToLog('file3')}`],
         [`Rolled back ${pathToLog('file2')}`],
         [`Migrated ${pathToLog('file2')}`],
@@ -366,7 +378,7 @@ describe('migrateOrRollback', () => {
         ['1'],
       );
 
-      expect(config.logger.log.mock.calls).toEqual([
+      expect(asMock(config.logger?.log).mock.calls).toEqual([
         [`Rolled back ${pathToLog('file2')}`],
         [`Migrated ${pathToLog('file2')}`],
       ]);

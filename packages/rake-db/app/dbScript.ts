@@ -2,7 +2,8 @@ import { config } from 'dotenv';
 import path from 'path';
 import { rakeDb } from '../src';
 import { AdapterOptions } from 'pqb';
-import { appCodeUpdater } from '../../orm/src';
+import { appCodeUpdater } from 'orchid-orm';
+import { BaseTable } from './baseTable';
 
 config({ path: path.resolve('..', '..', '.env') });
 
@@ -20,13 +21,14 @@ if (databaseURLTest) {
   options.push({ databaseURL: databaseURLTest });
 }
 
-rakeDb(options, {
+export const change = rakeDb(options, {
+  baseTable: BaseTable,
   migrationsPath: 'migrations',
   appCodeUpdater: appCodeUpdater({
     tablePath: (tableName) => `tables/${tableName}.ts`,
-    baseTablePath: 'lib/baseTable.ts',
+    baseTablePath: './baseTable.ts',
     baseTableName: 'BaseTable',
     mainFilePath: 'db.ts',
   }),
-  useCodeUpdater: false,
+  useCodeUpdater: true,
 });

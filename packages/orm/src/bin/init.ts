@@ -439,11 +439,15 @@ const setupMigrationScript = async (config: InitConfig, dirPath: string) => {
   const filePath = join(dirPath, 'dbScripts.ts');
   await fs.writeFile(
     filePath,
-    `import { rakeDb } from 'rake-db';
-import { config } from './config';
+    `import { makeChange, rakeDb } from 'rake-db';
 import { appCodeUpdater } from 'orchid-orm';
+import { config } from './config';
+import { BaseTable } from './baseTable.ts';
 
-rakeDb(${config.testDatabase ? 'config.allDatabases' : 'config.database'}, {
+export const change = rakeDb(${
+      config.testDatabase ? 'config.allDatabases' : 'config.database'
+    }, {
+  baseTable: BaseTable,
   migrationsPath: './migrations',
   appCodeUpdater: appCodeUpdater({
     tablePath: (tableName) => \`./tables/\${tableName}.table.ts\`,
@@ -477,7 +481,7 @@ const createMigrations = async (config: InitConfig, dirPath: string) => {
   );
   await fs.writeFile(
     postPath,
-    `import { change } from 'rake-db';
+    `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createTable('post', (t) => ({
@@ -498,7 +502,7 @@ change(async (db) => {
   );
   await fs.writeFile(
     commentPath,
-    `import { change } from 'rake-db';
+    `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createTable('comment', (t) => ({

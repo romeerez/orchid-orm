@@ -5,11 +5,12 @@ import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { astToMigration } from './astToMigration';
 import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
+import { ColumnTypesBase } from 'orchid-core';
 
-export const pullDbStructure = async (
+export const pullDbStructure = async <CT extends ColumnTypesBase>(
   options: AdapterOptions,
-  config: RakeDbConfig,
-) => {
+  config: RakeDbConfig<CT>,
+): Promise<void> => {
   const adapter = new Adapter(options);
   const currentSchema = adapter.schema || 'public';
   const db = new DbStructure(adapter);

@@ -1,6 +1,5 @@
 import {
   ColumnsShape,
-  columnTypes,
   Db,
   EnumColumn,
   getColumnTypes,
@@ -35,9 +34,7 @@ import {
 import { RakeDbAst } from '../ast';
 import { tableMethods } from './tableMethods';
 import { NoPrimaryKey } from '../errors';
-import { snakeCaseKey } from 'orchid-core';
-
-const types = Object.assign(Object.create(columnTypes), tableMethods);
+import { ColumnTypesBase, snakeCaseKey } from 'orchid-core';
 
 export type TableQuery = {
   text: string;
@@ -53,18 +50,23 @@ export type CreateTableResult<
 };
 
 export const createTable = async <
+  CT extends ColumnTypesBase,
   Table extends string,
   Shape extends ColumnsShape,
 >(
-  migration: MigrationBase,
+  migration: MigrationBase<CT>,
   up: boolean,
   tableName: Table,
   options: TableOptions,
-  fn: ColumnsShapeCallback<Shape>,
+  fn: ColumnsShapeCallback<CT, Shape>,
 ): Promise<CreateTableResult<Table, Shape>> => {
   const snakeCase =
     'snakeCase' in options ? options.snakeCase : migration.options.snakeCase;
 
+  const types = Object.assign(
+    Object.create(migration.columnTypes),
+    tableMethods,
+  );
   types[snakeCaseKey] = snakeCase;
 
   const shape = getColumnTypes(types, fn);

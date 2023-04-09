@@ -1,19 +1,36 @@
-import { AdapterOptions } from 'pqb';
-import { MaybeArray, toArray } from 'orchid-core';
+import { AdapterOptions, DefaultColumnTypes } from 'pqb';
+import { ColumnTypesBase, MaybeArray, toArray } from 'orchid-core';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
 import { migrate, redo, rollback } from './commands/migrateOrRollback';
-import { processRakeDbConfig, RakeDbConfig } from './common';
+import { InputRakeDbConfig, processRakeDbConfig, RakeDbConfig } from './common';
 import { generate } from './commands/generate';
 import { pullDbStructure } from './pull/pull';
 import { RakeDbError } from './errors';
+import { ChangeCallback, pushChange } from './migration/change';
 
-export const rakeDb = async (
+export const rakeDb = <CT extends ColumnTypesBase = DefaultColumnTypes>(
   options: MaybeArray<AdapterOptions>,
-  partialConfig: Partial<RakeDbConfig> = {},
+  partialConfig: InputRakeDbConfig<CT> = {},
   args: string[] = process.argv.slice(2),
-) => {
+): ((fn: ChangeCallback<CT>) => void) & { promise: Promise<void> } => {
   const config = processRakeDbConfig(partialConfig);
+  const promise = runCommand(options, config, args);
 
+  return Object.assign(
+    (fn: ChangeCallback<CT>) => {
+      pushChange(fn as unknown as ChangeCallback);
+    },
+    {
+      promise,
+    },
+  );
+};
+
+const runCommand = async <CT extends ColumnTypesBase = DefaultColumnTypes>(
+  options: MaybeArray<AdapterOptions>,
+  config: RakeDbConfig<CT>,
+  args: string[] = process.argv.slice(2),
+): Promise<void> => {
   const command = args[0]?.split(':')[0];
 
   try {

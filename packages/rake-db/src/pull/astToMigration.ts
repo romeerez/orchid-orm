@@ -14,6 +14,7 @@ import {
   backtickQuote,
   Code,
   codeToString,
+  ColumnTypesBase,
   isRaw,
   quoteObjectKey,
   rawToCode,
@@ -21,10 +22,10 @@ import {
 } from 'orchid-core';
 import { quoteSchemaTable, RakeDbConfig } from '../common';
 
-export const astToMigration = (
-  config: RakeDbConfig,
+export const astToMigration = <CT extends ColumnTypesBase>(
+  config: RakeDbConfig<CT>,
   ast: RakeDbAst[],
-): string | undefined => {
+): ((importPath: string) => string) | undefined => {
   const first: Code[] = [];
   const tablesAndViews: Code[] = [];
   const constraints: Code[] = [];
@@ -52,8 +53,7 @@ export const astToMigration = (
 
   if (!first.length && !tablesAndViews.length && !constraints.length) return;
 
-  let code = `import { change } from 'rake-db';
-`;
+  let code = '';
 
   if (first.length) {
     code += `
@@ -81,7 +81,7 @@ ${codeToString(constraints, '  ', '  ')}
 `;
   }
 
-  return code;
+  return (importPath) => `import { change } from '${importPath}';\n${code}`;
 };
 
 const createSchema = (ast: RakeDbAst.Schema) => {
@@ -133,7 +133,10 @@ const createDomain = (ast: RakeDbAst.Domain) => {
   return code;
 };
 
-const createTable = (config: RakeDbConfig, ast: RakeDbAst.Table) => {
+const createTable = <CT extends ColumnTypesBase>(
+  config: RakeDbConfig<CT>,
+  ast: RakeDbAst.Table,
+) => {
   const code: Code[] = [];
   addCode(code, `await db.createTable(${quoteSchemaTable(ast)}, (t) => ({`);
 

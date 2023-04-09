@@ -129,7 +129,7 @@ npm run db new enableCitext
 ```
 
 ```ts
-import { change } from 'rake-db';
+import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createExtension('citext');

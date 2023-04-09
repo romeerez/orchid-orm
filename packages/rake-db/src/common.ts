@@ -1,13 +1,14 @@
 import {
   Adapter,
   AdapterOptions,
+  columnTypes as defaultColumnTypes,
   DbResult,
   DefaultColumnTypes,
   EnumColumn,
   NoPrimaryKeyOption,
   QueryLogOptions,
 } from 'pqb';
-import { singleQuote } from 'orchid-core';
+import { ColumnTypesBase, singleQuote } from 'orchid-core';
 import path from 'path';
 import { readdir } from 'fs/promises';
 import { RakeDbAst } from './ast';
@@ -16,8 +17,22 @@ import { TableQuery } from './migration/createTable';
 
 type Db = DbResult<DefaultColumnTypes>;
 
-export type RakeDbConfig = {
+export type InputRakeDbConfig<CT extends ColumnTypesBase> = Partial<
+  Omit<RakeDbConfig<CT>, 'columnTypes'>
+> &
+  (
+    | {
+        columnTypes?: CT | ((t: DefaultColumnTypes) => CT);
+      }
+    | {
+        baseTable?: new () => { columnTypes: CT; snakeCase?: boolean };
+      }
+  );
+
+export type RakeDbConfig<CT extends ColumnTypesBase = DefaultColumnTypes> = {
+  columnTypes: CT;
   basePath: string;
+  dbScript: string;
   migrationsPath: string;
   migrationsTable: string;
   snakeCase: boolean;
@@ -25,7 +40,7 @@ export type RakeDbConfig = {
     string,
     (
       options: AdapterOptions[],
-      config: RakeDbConfig,
+      config: RakeDbConfig<CT>,
       args: string[],
     ) => Promise<void>
   >;
@@ -47,7 +62,10 @@ export type AppCodeUpdater = (params: {
   logger: QueryLogOptions['logger'];
 }) => Promise<void>;
 
-export const migrationConfigDefaults: Omit<RakeDbConfig, 'basePath'> = {
+export const migrationConfigDefaults: Omit<
+  RakeDbConfig,
+  'basePath' | 'dbScript' | 'columnTypes'
+> = {
   migrationsPath: path.join('src', 'db', 'migrations'),
   migrationsTable: 'schemaMigrations',
   snakeCase: false,
@@ -58,16 +76,16 @@ export const migrationConfigDefaults: Omit<RakeDbConfig, 'basePath'> = {
   useCodeUpdater: true,
 };
 
-export const processRakeDbConfig = (
-  config: Partial<RakeDbConfig>,
-): RakeDbConfig => {
-  const result = { ...migrationConfigDefaults, ...config };
+export const processRakeDbConfig = <CT extends ColumnTypesBase>(
+  config: InputRakeDbConfig<CT>,
+): RakeDbConfig<CT> => {
+  const result = { ...migrationConfigDefaults, ...config } as RakeDbConfig<CT>;
 
   if (!result.log) {
     delete result.logger;
   }
 
-  if (!result.basePath) {
+  if (!result.basePath || !result.dbScript) {
     let stack: NodeJS.CallSite[] | undefined;
     const original = Error.prepareStackTrace;
     Error.prepareStackTrace = (_, s) => (stack = s);
@@ -97,6 +115,7 @@ export const processRakeDbConfig = (
         }
 
         result.basePath = path.dirname(file);
+        result.dbScript = path.basename(file);
         break;
       }
     }
@@ -115,7 +134,19 @@ export const processRakeDbConfig = (
     );
   }
 
-  return result as RakeDbConfig;
+  if ('baseTable' in config) {
+    const proto = config.baseTable?.prototype;
+    result.columnTypes = proto.columnTypes || defaultColumnTypes;
+    if (proto.snakeCase) result.snakeCase = true;
+  } else {
+    result.columnTypes = (('columnTypes' in config &&
+      (typeof config.columnTypes === 'function'
+        ? config.columnTypes(defaultColumnTypes)
+        : config.columnTypes)) ||
+      defaultColumnTypes) as CT;
+  }
+
+  return result as RakeDbConfig<CT>;
 };
 
 export const getDatabaseAndUserFromOptions = (
@@ -266,8 +297,8 @@ export type MigrationFile = {
   version: string;
 };
 
-export const getMigrationFiles = async (
-  config: RakeDbConfig,
+export const getMigrationFiles = async <CT extends ColumnTypesBase>(
+  config: RakeDbConfig<CT>,
   up: boolean,
 ): Promise<MigrationFile[]> => {
   const { migrationsPath } = config;

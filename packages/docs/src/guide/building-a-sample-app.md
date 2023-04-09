@@ -260,6 +260,7 @@ import path from 'path';
 import { rakeDb } from 'rake-db';
 import { config } from '../config';
 import { appCodeUpdater } from 'orchid-orm';
+import { BaseTable } from '../lib/baseTable';
 
 const options = [{ databaseURL: config.DATABASE_URL }];
 
@@ -273,7 +274,8 @@ if (config.NODE_ENV !== 'production') {
 }
 
 // pass options and migrationPath to `rakeDb`
-rakeDb(options, {
+export const change = rakeDb(options, {
+  baseTable: BaseTable,
   migrationsPath: '../migrations',
   appCodeUpdater: appCodeUpdater({
     tablePath: (tableName) => `../app/tables/${tableName}.table.ts`,
@@ -375,7 +377,7 @@ In the newly added file such content appears:
 
 ```ts
 // src/migrations/*timestamp*_createUser.ts
-import { change } from 'rake-db';
+import { change } from '../scripts/db';
 
 change(async (db) => {
   await db.createTable('user', (t) => ({
@@ -386,7 +388,7 @@ change(async (db) => {
 Add user columns and timestamps:
 
 ```ts
-import { change } from 'rake-db';
+import { change } from '../scripts/db';
 
 change(async (db) => {
   await db.createTable('user', (t) => ({
@@ -880,7 +882,7 @@ npm run db new createUserFollow
 
 ```ts
 // src/migrations/*timestamp*_createUserFollow.ts
-import { change } from 'rake-db';
+import { change } from '../scripts/db';
 
 change(async (db) => {
   await db.createTable('userFollow', (t) => ({
@@ -1124,7 +1126,7 @@ Article table migration:
 
 ```ts
 // src/migrations/*timestamp*_createArticle.ts
-import { change } from 'rake-db';
+import { change } from '../scripts/db';
 
 change(async (db) => {
   await db.createTable('article', (t) => ({
@@ -1143,7 +1145,7 @@ Tag table migration:
 
 ```ts
 // src/migrations/*timestamp*_createTag.ts
-import { change } from 'rake-db';
+import { change } from '../scripts/db';
 
 change(async (db) => {
   await db.createTable('tag', (t) => ({
@@ -1158,7 +1160,7 @@ Article tag join table migration:
 
 ```ts
 // src/migrations/*timestamp*_createArticleTag.ts
-import { change } from 'rake-db';
+import { change } from '../scripts/db';
 
 change(async (db) => {
   await db.createTable('articleTag', (t) => ({
@@ -1173,7 +1175,7 @@ Article favorite join table migration:
 
 ```ts
 // src/migrations/*timestamp*_createArticleFavorite.ts
-import { change } from 'rake-db';
+import { change } from '../scripts/db';
 
 change(async (db) => {
   await db.createTable('articleFavorite', (t) => ({

@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.8.0
+
+### Minor Changes
+
+- Support overriden column types in rake-db
+
+### Patch Changes
+
+- Updated dependencies
+  - orchid-core@0.3.0
+  - pqb@0.11.1
+
 ## 1.7.0
 
 ### Minor Changes

@@ -3,7 +3,6 @@ import {
   resetTableData,
   getTableData,
   TableData,
-  columnTypes,
   quote,
   getRaw,
   EnumColumn,
@@ -245,7 +244,8 @@ const tableChangeMethods = {
   },
 };
 
-export type TableChanger = MigrationColumnTypes & TableChangeMethods;
+export type TableChanger<CT extends ColumnTypesBase> =
+  MigrationColumnTypes<CT> & TableChangeMethods;
 
 export type TableChangeData = Record<
   string,
@@ -255,17 +255,17 @@ export type TableChangeData = Record<
   | EmptyObject
 >;
 
-export const changeTable = async (
-  migration: MigrationBase,
+export const changeTable = async <CT extends ColumnTypesBase>(
+  migration: MigrationBase<CT>,
   up: boolean,
   tableName: string,
   options: ChangeTableOptions,
-  fn?: ChangeTableCallback,
+  fn?: ChangeTableCallback<CT>,
 ): Promise<void> => {
   resetTableData();
   resetChangeTableData();
 
-  const tableChanger = Object.create(columnTypes) as TableChanger;
+  const tableChanger = Object.create(migration.columnTypes) as TableChanger<CT>;
   Object.assign(tableChanger, tableChangeMethods);
 
   const snakeCase =

@@ -1,7 +1,6 @@
 import {
   ColumnsShape,
   ColumnType,
-  ColumnTypes,
   ForeignKeyOptions,
   IndexColumnOptions,
   IndexOptions,
@@ -11,14 +10,14 @@ import {
   TextColumn,
   createDb,
   DbResult,
-  DefaultColumnTypes,
   EnumColumn,
   quote,
-  columnTypes,
   getRaw,
   Adapter,
+  DefaultColumnTypes,
 } from 'pqb';
 import {
+  ColumnTypesBase,
   emptyObject,
   MaybeArray,
   QueryInput,
@@ -49,8 +48,8 @@ export type TableOptions = {
 
 type TextColumnCreator = () => TextColumn;
 
-export type MigrationColumnTypes = Omit<
-  ColumnTypes,
+export type MigrationColumnTypes<CT extends ColumnTypesBase> = Omit<
+  CT,
   'text' | 'string' | 'enum'
 > & {
   text: TextColumnCreator;
@@ -59,16 +58,19 @@ export type MigrationColumnTypes = Omit<
   enum: (name: string) => EnumColumn;
 };
 
-export type ColumnsShapeCallback<Shape extends ColumnsShape = ColumnsShape> = (
-  t: MigrationColumnTypes & { raw: typeof raw },
-) => Shape;
+export type ColumnsShapeCallback<
+  CT extends ColumnTypesBase,
+  Shape extends ColumnsShape = ColumnsShape,
+> = (t: MigrationColumnTypes<CT> & { raw: typeof raw }) => Shape;
 
 export type ChangeTableOptions = {
   snakeCase?: boolean;
   comment?: string | [string, string] | null;
 };
 
-export type ChangeTableCallback = (t: TableChanger) => TableChangeData;
+export type ChangeTableCallback<CT extends ColumnTypesBase> = (
+  t: TableChanger<CT>,
+) => TableChangeData;
 
 export type ColumnComment = { column: string; comment: string | null };
 
@@ -78,10 +80,11 @@ export type SilentQueries = {
   silentArrays: Adapter['arrays'];
 };
 
-export type Migration = DbResult<DefaultColumnTypes> &
-  MigrationBase & {
-    adapter: SilentQueries;
-  };
+export type Migration<CT extends ColumnTypesBase = DefaultColumnTypes> =
+  DbResult<CT> &
+    MigrationBase<CT> & {
+      adapter: SilentQueries;
+    };
 
 type ConstraintArg = {
   name?: string;
@@ -95,14 +98,14 @@ type ConstraintArg = {
   dropMode?: DropMode;
 };
 
-export const createMigrationInterface = (
+export const createMigrationInterface = <CT extends ColumnTypesBase>(
   tx: TransactionAdapter,
   up: boolean,
-  options: RakeDbConfig,
+  config: RakeDbConfig<CT>,
 ): Migration => {
   const adapter = new TransactionAdapter(tx, tx.client, tx.types);
   const { query, arrays } = adapter;
-  const log = logParamToLogObject(options.logger || console, options.log);
+  const log = logParamToLogObject(config.logger || console, config.log);
 
   adapter.query = ((q, types) => {
     return wrapWithLog(log, q, () => query.call(adapter, q, types));
@@ -114,7 +117,10 @@ export const createMigrationInterface = (
 
   Object.assign(adapter, { silentQuery: query, silentArrays: arrays });
 
-  const db = createDb({ adapter }) as unknown as Migration;
+  const db = createDb({
+    adapter,
+    columnTypes: config.columnTypes,
+  }) as unknown as Migration;
 
   const { prototype: proto } = MigrationBase;
   for (const key of Object.getOwnPropertyNames(proto)) {
@@ -128,34 +134,35 @@ export const createMigrationInterface = (
     adapter,
     log,
     up,
-    options,
+    options: config,
   });
 };
 
-export class MigrationBase {
+export class MigrationBase<CT extends ColumnTypesBase> {
   public adapter!: TransactionAdapter;
   public log?: QueryLogObject;
   public up!: boolean;
   public options!: RakeDbConfig;
   public migratedAsts!: RakeDbAst[];
+  public columnTypes!: CT;
 
   createTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
     options: TableOptions,
-    fn: ColumnsShapeCallback<Shape>,
+    fn: ColumnsShapeCallback<CT, Shape>,
   ): Promise<CreateTableResult<Table, Shape>>;
   createTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
-    fn: ColumnsShapeCallback<Shape>,
+    fn: ColumnsShapeCallback<CT, Shape>,
   ): Promise<CreateTableResult<Table, Shape>>;
-  createTable(
-    tableName: string,
-    cbOrOptions: ColumnsShapeCallback | TableOptions,
-    cb?: ColumnsShapeCallback,
+  createTable<Table extends string, Shape extends ColumnsShape>(
+    tableName: Table,
+    cbOrOptions: ColumnsShapeCallback<CT, Shape> | TableOptions,
+    cb?: ColumnsShapeCallback<CT, Shape>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     const options = typeof cbOrOptions === 'function' ? {} : cbOrOptions;
-    const fn = (cb || cbOrOptions) as ColumnsShapeCallback;
+    const fn = (cb || cbOrOptions) as ColumnsShapeCallback<CT, Shape>;
 
     return createTable(this, this.up, tableName, options, fn);
   }
@@ -163,20 +170,20 @@ export class MigrationBase {
   dropTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
     options: TableOptions,
-    fn: ColumnsShapeCallback<Shape>,
+    fn: ColumnsShapeCallback<CT, Shape>,
   ): Promise<CreateTableResult<Table, Shape>>;
   dropTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
-    fn: ColumnsShapeCallback<Shape>,
+    fn: ColumnsShapeCallback<CT, Shape>,
   ): Promise<CreateTableResult<Table, Shape>>;
-  dropTable(
-    tableName: string,
-    cbOrOptions: ColumnsShapeCallback | TableOptions,
-    cb?: ColumnsShapeCallback,
+  dropTable<Table extends string, Shape extends ColumnsShape>(
+    tableName: Table,
+    cbOrOptions: ColumnsShapeCallback<CT, Shape> | TableOptions,
+    cb?: ColumnsShapeCallback<CT, Shape>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     const options = typeof cbOrOptions === 'function' ? {} : cbOrOptions;
-    const fn = (cb || cbOrOptions) as ColumnsShapeCallback;
+    const fn = (cb || cbOrOptions) as ColumnsShapeCallback<CT, Shape>;
 
     return createTable(this, !this.up, tableName, options, fn);
   }
@@ -184,14 +191,14 @@ export class MigrationBase {
   changeTable(
     tableName: string,
     options: ChangeTableOptions,
-    fn?: ChangeTableCallback,
+    fn?: ChangeTableCallback<CT>,
   ): Promise<void>;
-  changeTable(tableName: string, fn: ChangeTableCallback): Promise<void>;
+  changeTable(tableName: string, fn: ChangeTableCallback<CT>): Promise<void>;
   changeTable(
     tableName: string,
-    cbOrOptions: ChangeTableCallback | ChangeTableOptions,
-    cb?: ChangeTableCallback,
-  ) {
+    cbOrOptions: ChangeTableCallback<CT> | ChangeTableOptions,
+    cb?: ChangeTableCallback<CT>,
+  ): Promise<void> {
     const [fn, options] =
       typeof cbOrOptions === 'function' ? [cbOrOptions, {}] : [cb, cbOrOptions];
 
@@ -225,16 +232,16 @@ export class MigrationBase {
   addColumn(
     tableName: string,
     columnName: string,
-    fn: (t: MigrationColumnTypes) => ColumnType,
-  ) {
+    fn: (t: MigrationColumnTypes<CT>) => ColumnType,
+  ): Promise<void> {
     return addColumn(this, this.up, tableName, columnName, fn);
   }
 
   dropColumn(
     tableName: string,
     columnName: string,
-    fn: (t: MigrationColumnTypes) => ColumnType,
-  ) {
+    fn: (t: MigrationColumnTypes<CT>) => ColumnType,
+  ): Promise<void> {
     return addColumn(this, !this.up, tableName, columnName, fn);
   }
 
@@ -242,7 +249,7 @@ export class MigrationBase {
     tableName: string,
     columns: MaybeArray<string | IndexColumnOptions>,
     options?: IndexOptions,
-  ) {
+  ): Promise<void> {
     return addIndex(this, this.up, tableName, columns, options);
   }
 
@@ -250,7 +257,7 @@ export class MigrationBase {
     tableName: string,
     columns: MaybeArray<string | IndexColumnOptions>,
     options?: IndexOptions,
-  ) {
+  ): Promise<void> {
     return addIndex(this, !this.up, tableName, columns, options);
   }
 
@@ -260,7 +267,7 @@ export class MigrationBase {
     foreignTable: string,
     foreignColumns: [string, ...string[]],
     options?: ForeignKeyOptions,
-  ) {
+  ): Promise<void> {
     return addForeignKey(
       this,
       this.up,
@@ -278,7 +285,7 @@ export class MigrationBase {
     foreignTable: string,
     foreignColumns: [string, ...string[]],
     options?: ForeignKeyOptions,
-  ) {
+  ): Promise<void> {
     return addForeignKey(
       this,
       !this.up,
@@ -294,7 +301,7 @@ export class MigrationBase {
     tableName: string,
     columns: string[],
     options?: { name?: string },
-  ) {
+  ): Promise<void> {
     return addPrimaryKey(this, this.up, tableName, columns, options);
   }
 
@@ -302,44 +309,44 @@ export class MigrationBase {
     tableName: string,
     columns: string[],
     options?: { name?: string },
-  ) {
+  ): Promise<void> {
     return addPrimaryKey(this, !this.up, tableName, columns, options);
   }
 
-  addCheck(tableName: string, check: RawExpression) {
+  addCheck(tableName: string, check: RawExpression): Promise<void> {
     return addCheck(this, this.up, tableName, check);
   }
 
-  dropCheck(tableName: string, check: RawExpression) {
+  dropCheck(tableName: string, check: RawExpression): Promise<void> {
     return addCheck(this, !this.up, tableName, check);
   }
 
-  addConstraint(tableName: string, constraint: ConstraintArg) {
+  addConstraint(tableName: string, constraint: ConstraintArg): Promise<void> {
     return addConstraint(this, this.up, tableName, constraint);
   }
 
-  dropConstraint(tableName: string, constraint: ConstraintArg) {
+  dropConstraint(tableName: string, constraint: ConstraintArg): Promise<void> {
     return addConstraint(this, !this.up, tableName, constraint);
   }
 
-  renameColumn(tableName: string, from: string, to: string) {
+  renameColumn(tableName: string, from: string, to: string): Promise<void> {
     return this.changeTable(tableName, (t) => ({
       [from]: t.rename(to),
     }));
   }
 
-  createSchema(schemaName: string) {
+  createSchema(schemaName: string): Promise<void> {
     return createSchema(this, this.up, schemaName);
   }
 
-  dropSchema(schemaName: string) {
+  dropSchema(schemaName: string): Promise<void> {
     return createSchema(this, !this.up, schemaName);
   }
 
   createExtension(
     name: string,
     options: Omit<RakeDbAst.Extension, 'type' | 'action' | 'name'> = {},
-  ) {
+  ): Promise<void> {
     return createExtension(this, this.up, name, options);
   }
 
@@ -349,7 +356,7 @@ export class MigrationBase {
       RakeDbAst.Extension,
       'type' | 'action' | 'name' | 'values'
     > = {},
-  ) {
+  ): Promise<void> {
     return createExtension(this, !this.up, name, options);
   }
 
@@ -360,7 +367,7 @@ export class MigrationBase {
       RakeDbAst.Enum,
       'type' | 'action' | 'name' | 'values' | 'schema'
     >,
-  ) {
+  ): Promise<void> {
     return createEnum(this, this.up, name, values, options);
   }
 
@@ -371,29 +378,29 @@ export class MigrationBase {
       RakeDbAst.Enum,
       'type' | 'action' | 'name' | 'values' | 'schema'
     >,
-  ) {
+  ): Promise<void> {
     return createEnum(this, !this.up, name, values, options);
   }
 
   createDomain(
     name: string,
-    fn: (t: ColumnTypes) => ColumnType,
+    fn: (t: CT) => ColumnType,
     options?: Omit<
       RakeDbAst.Domain,
       'type' | 'action' | 'schema' | 'name' | 'baseType'
     >,
-  ) {
+  ): Promise<void> {
     return createDomain(this, this.up, name, fn, options);
   }
 
   dropDomain(
     name: string,
-    fn: (t: ColumnTypes) => ColumnType,
+    fn: (t: CT) => ColumnType,
     options?: Omit<
       RakeDbAst.Domain,
       'type' | 'action' | 'schema' | 'name' | 'baseType'
     >,
-  ) {
+  ): Promise<void> {
     return createDomain(this, !this.up, name, fn, options);
   }
 
@@ -433,7 +440,7 @@ export class MigrationBase {
     );
   }
 
-  async tableExists(tableName: string) {
+  async tableExists(tableName: string): Promise<boolean> {
     return queryExists(this, {
       text: `SELECT 1 FROM "information_schema"."tables" WHERE "table_name" = $1`,
       values: [tableName],
@@ -484,20 +491,20 @@ const wrapWithLog = async <Result>(
   }
 };
 
-const addColumn = (
-  migration: MigrationBase,
+const addColumn = <CT extends ColumnTypesBase>(
+  migration: MigrationBase<CT>,
   up: boolean,
   tableName: string,
   columnName: string,
-  fn: (t: MigrationColumnTypes) => ColumnType,
+  fn: (t: MigrationColumnTypes<CT>) => ColumnType,
 ): Promise<void> => {
   return changeTable(migration, up, tableName, {}, (t) => ({
     [columnName]: t.add(fn(t)),
   }));
 };
 
-const addIndex = (
-  migration: MigrationBase,
+const addIndex = <CT extends ColumnTypesBase>(
+  migration: MigrationBase<CT>,
   up: boolean,
   tableName: string,
   columns: MaybeArray<string | IndexColumnOptions>,
@@ -508,8 +515,8 @@ const addIndex = (
   }));
 };
 
-const addForeignKey = (
-  migration: MigrationBase,
+const addForeignKey = <CT extends ColumnTypesBase>(
+  migration: MigrationBase<CT>,
   up: boolean,
   tableName: string,
   columns: [string, ...string[]],
@@ -522,8 +529,8 @@ const addForeignKey = (
   }));
 };
 
-const addPrimaryKey = (
-  migration: MigrationBase,
+const addPrimaryKey = <CT extends ColumnTypesBase>(
+  migration: MigrationBase<CT>,
   up: boolean,
   tableName: string,
   columns: string[],
@@ -534,8 +541,8 @@ const addPrimaryKey = (
   }));
 };
 
-const addCheck = (
-  migration: MigrationBase,
+const addCheck = <CT extends ColumnTypesBase>(
+  migration: MigrationBase<CT>,
   up: boolean,
   tableName: string,
   check: RawExpression,
@@ -545,8 +552,8 @@ const addCheck = (
   }));
 };
 
-const addConstraint = (
-  migration: MigrationBase,
+const addConstraint = <CT extends ColumnTypesBase>(
+  migration: MigrationBase<CT>,
   up: boolean,
   tableName: string,
   constraint: ConstraintArg,
@@ -556,8 +563,8 @@ const addConstraint = (
   }));
 };
 
-const createSchema = async (
-  migration: MigrationBase,
+const createSchema = async <CT extends ColumnTypesBase>(
+  migration: MigrationBase<CT>,
   up: boolean,
   name: string,
 ): Promise<void> => {
@@ -574,8 +581,8 @@ const createSchema = async (
   migration.migratedAsts.push(ast);
 };
 
-const createExtension = async (
-  migration: MigrationBase,
+const createExtension = async <CT extends ColumnTypesBase>(
+  migration: MigrationBase<CT>,
   up: boolean,
   name: string,
   options: Omit<RakeDbAst.Extension, 'type' | 'action' | 'name'>,
@@ -605,8 +612,8 @@ const createExtension = async (
   migration.migratedAsts.push(ast);
 };
 
-const createEnum = async (
-  migration: MigrationBase,
+const createEnum = async <CT extends ColumnTypesBase>(
+  migration: MigrationBase<CT>,
   up: boolean,
   name: string,
   values: [string, ...string[]],
@@ -643,11 +650,11 @@ const createEnum = async (
   migration.migratedAsts.push(ast);
 };
 
-const createDomain = async (
-  migration: MigrationBase,
+const createDomain = async <CT extends ColumnTypesBase>(
+  migration: MigrationBase<CT>,
   up: boolean,
   name: string,
-  fn: (t: ColumnTypes) => ColumnType,
+  fn: (t: CT) => ColumnType,
   options?: Omit<
     RakeDbAst.Domain,
     'type' | 'action' | 'schema' | 'name' | 'baseType'
@@ -660,7 +667,7 @@ const createDomain = async (
     action: up ? 'create' : 'drop',
     schema,
     name: domainName,
-    baseType: fn(columnTypes),
+    baseType: fn(migration.columnTypes),
     ...options,
   };
 
@@ -696,8 +703,8 @@ DEFAULT ${getRaw(ast.default, values)}`
   migration.migratedAsts.push(ast);
 };
 
-const queryExists = (
-  db: MigrationBase,
+const queryExists = <CT extends ColumnTypesBase>(
+  db: MigrationBase<CT>,
   sql: { text: string; values: unknown[] },
 ): Promise<boolean> => {
   return db.adapter.query(sql).then(({ rowCount }) => rowCount > 0);

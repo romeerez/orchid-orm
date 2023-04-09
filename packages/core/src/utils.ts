@@ -1,4 +1,5 @@
 import url from 'url';
+import path from 'path';
 
 export type StringKey<K extends PropertyKey> = Exclude<K, symbol | number>;
 
@@ -216,4 +217,16 @@ export const deepCompare = (a: unknown, b: unknown): boolean => {
   }
 
   return true;
+};
+
+export const getImportPath = (from: string, to: string) => {
+  const rel = path
+    .relative(path.dirname(from), to)
+    .split(path.sep)
+    .join(path.posix.sep);
+
+  const importPath =
+    rel.startsWith('./') || rel.startsWith('../') ? rel : `./${rel}`;
+
+  return importPath.replace(/\.[tj]s$/, '');
 };

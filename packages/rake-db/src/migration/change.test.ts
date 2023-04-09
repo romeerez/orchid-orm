@@ -1,16 +1,10 @@
-import { change, clearChanges, getCurrentChanges } from './change';
+import { clearChanges, getCurrentChanges, pushChange } from './change';
 
 describe('change', () => {
-  const fn = async () => {};
-
-  it('should push callback to currentChanges', () => {
-    change(fn);
-    expect(getCurrentChanges()).toEqual([fn]);
-  });
-
-  it('should clear changes', () => {
-    getCurrentChanges().push(fn);
+  it('should push, get and clear changes', () => {
+    pushChange(async () => {});
+    expect(getCurrentChanges().length).toBe(1);
     clearChanges();
-    expect(getCurrentChanges()).toEqual([]);
+    expect(getCurrentChanges().length).toBe(0);
   });
 });

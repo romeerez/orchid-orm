@@ -1,5 +1,4 @@
 import { RakeDbAst } from 'rake-db';
-import { getImportPath } from '../utils';
 import { columnsShapeToCode } from 'pqb';
 import {
   Code,
@@ -8,6 +7,7 @@ import {
   codeToString,
   toCamelCase,
   toPascalCase,
+  getImportPath,
 } from 'orchid-core';
 import fs from 'fs/promises';
 import { UpdateTableFileParams } from './updateTableFile';

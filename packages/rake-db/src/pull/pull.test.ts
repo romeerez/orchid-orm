@@ -76,7 +76,7 @@ const config = makeConfig();
 
 const expectWritten = (expected: string) => {
   const call = asMock(writeMigrationFile).mock.calls[0];
-  expect(call[3]).toBe(expected);
+  expect(call[3]('../dbScript')).toBe(expected);
 };
 
 describe('pull', () => {
@@ -260,7 +260,7 @@ describe('pull', () => {
     await pullDbStructure(options, config);
 
     expectWritten(
-      `import { change } from 'rake-db';
+      `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createSchema('schema1');
@@ -390,7 +390,7 @@ Append \`as\` method manually to these columns to treat them as other column typ
     await pullDbStructure(options, config);
 
     expectWritten(
-      `import { change } from 'rake-db';
+      `import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -433,7 +433,7 @@ change(async (db) => {
       makeConfig(),
     );
 
-    expectWritten(`import { change } from 'rake-db';
+    expectWritten(`import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createEnum('mood', ['sad', 'ok', 'happy']);

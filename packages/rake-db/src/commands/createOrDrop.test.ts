@@ -1,8 +1,9 @@
 import { createDb, dropDb, resetDb } from './createOrDrop';
-import { Adapter } from 'pqb';
+import { Adapter, columnTypes } from 'pqb';
 import {
   createSchemaMigrations,
   migrationConfigDefaults,
+  RakeDbConfig,
   setAdminCredentialsToOptions,
 } from '../common';
 import { migrate } from './migrateOrRollback';
@@ -28,9 +29,11 @@ Adapter.prototype.query = queryMock;
 const logMock = jest.fn();
 console.log = logMock;
 
-const config = {
+const config: RakeDbConfig = {
   ...migrationConfigDefaults,
   basePath: __dirname,
+  dbScript: 'dbScript.ts',
+  columnTypes,
 };
 
 describe('createOrDrop', () => {

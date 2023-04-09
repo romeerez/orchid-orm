@@ -1,5 +1,5 @@
 import { createMigrationInterface, Migration } from './migration/migration';
-import { TransactionAdapter } from 'pqb';
+import { columnTypes, TransactionAdapter } from 'pqb';
 import { MaybeArray, toArray } from 'orchid-core';
 
 export const asMock = (fn: unknown) => fn as jest.Mock;
@@ -11,6 +11,8 @@ export const getDb = () => {
 
   db = createMigrationInterface({} as unknown as TransactionAdapter, true, {
     basePath: __dirname,
+    dbScript: 'dbScript.ts',
+    columnTypes,
     log: false,
     migrationsPath: 'migrations-path',
     migrationsTable: 'schemaMigrations',

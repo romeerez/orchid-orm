@@ -1,8 +1,8 @@
-import { change } from '../../src';
+import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createTable('user', (t) => ({
-    id: t.identity().primaryKey(),
+    id: t.id(),
     name: t.text(),
     password: t.text(),
     picture: t.text().nullable(),

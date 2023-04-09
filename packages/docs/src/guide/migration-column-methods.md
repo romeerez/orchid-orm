@@ -13,7 +13,7 @@ Set a default value for a column on a database level. Value can be a raw SQL.
 `default` can accept a callback when used in ORM table, but it's not applicable in migrations.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -28,7 +28,7 @@ change(async (db) => {
 By default, `NOT NULL` is added to every column. Use `nullable` to prevent this:
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -44,7 +44,7 @@ In the migration `enum` takes a single argument for enum name, unlike the `enum`
 To create a new enum type, use `createEnum` before creating a table.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createEnum('mood', ['sad', 'ok', 'happy'])
@@ -62,7 +62,7 @@ So if the primary key is of `integer` type, `.find` will accept the number,
 or if the primary key is of `uuid` type, `.find` will expect a string.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -78,7 +78,7 @@ Specify `primaryKey` on multiple columns to have a composite primary key. `.find
 Composite key is useful when defining a join table which is designed to connect other tables. 
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -96,7 +96,7 @@ By default, Postgres will name an underlying constraint as `${table name}_pkey`,
 Note how `name` column has `different_name` name: `primaryKey` is accepting a column key and will use an underlying name.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -115,7 +115,7 @@ Set the foreignKey for the column.
 In `snakeCase` mode, columns of both tables are translated to a snake_case.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -165,7 +165,7 @@ The first argument is an array of columns in the current table, the second argum
 Options are the same as in a single-column foreign key.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -191,7 +191,7 @@ change(async (db) => {
 Add an index to the column.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -277,7 +277,7 @@ Example:
 Note how `name` column has a `different_name` name, but it's been referenced by a key name in the index.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -293,7 +293,7 @@ change(async (db) => {
 Shortcut for `t.index([...columns], { ...options, unique: true })`
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -309,7 +309,7 @@ change(async (db) => {
 Adds `createdAt` and `updatedAt` columns of type `timestamp` (with time zone) with default SQL `now()`.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -323,7 +323,7 @@ change(async (db) => {
 This method is for the case when `snakeCase` is not set or `false`, but for some reason you need timestamps named as `updated_at` and `created_at`.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -338,7 +338,7 @@ change(async (db) => {
 Set a database-level validation check to a column. `check` accepts a raw SQL.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -353,7 +353,7 @@ change(async (db) => {
 Define a check for multiple column by using a spread syntax:
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -369,7 +369,7 @@ change(async (db) => {
 Add database comment to the column.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -383,7 +383,7 @@ change(async (db) => {
 Set compression for the column, see Postgres docs for it.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -397,7 +397,7 @@ change(async (db) => {
 Set collation for the column.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -415,7 +415,7 @@ When using `type` to define columns in application, you need to also specify `as
 In migration, `as` won't have effect.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -433,7 +433,7 @@ Before adding a domain column, create the domain type itself, see [create domain
 `as` works exactly like as when using `type`, it has no effect in the migration.
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -447,7 +447,7 @@ change(async (db) => {
 `rake-db` supports placing a database check and a foreign key on a single constraint:
 
 ```ts
-import { change } from 'rake-db'
+import { change } from '../dbScript'
 
 change(async (db) => {
   await db.createTable('table', (t) => ({

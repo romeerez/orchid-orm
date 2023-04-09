@@ -5,7 +5,13 @@ import {
   DbResult,
   DefaultColumnTypes,
 } from 'pqb';
-import { emptyArray, MaybeArray, pathToLog, toArray } from 'orchid-core';
+import {
+  ColumnTypesBase,
+  emptyArray,
+  MaybeArray,
+  pathToLog,
+  toArray,
+} from 'orchid-core';
 import { getMigrationFiles, MigrationFile, RakeDbConfig } from '../common';
 import {
   ChangeCallback,
@@ -22,12 +28,12 @@ import {
 
 const getDb = (adapter: Adapter) => createDb({ adapter });
 
-export const migrateOrRollback = async (
+export const migrateOrRollback = async <CT extends ColumnTypesBase>(
   options: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig,
+  config: RakeDbConfig<CT>,
   args: string[],
   up: boolean,
-) => {
+): Promise<void> => {
   config = { ...config };
   const files = await getMigrationFiles(config, up);
 
@@ -104,16 +110,15 @@ const begin = {
   values: emptyArray,
 };
 
-const processMigration = async (
+const processMigration = async <CT extends ColumnTypesBase>(
   db: Adapter,
   up: boolean,
   file: MigrationFile,
-  config: RakeDbConfig,
+  config: RakeDbConfig<CT>,
   options: AdapterOptions,
   appCodeUpdaterCache: object,
 ) => {
   const asts = await db.transaction(begin, async (tx) => {
-    const db = createMigrationInterface(tx, up, config);
     clearChanges();
 
     let changes = changeCache[file.path];
@@ -131,6 +136,8 @@ const processMigration = async (
       changes = getCurrentChanges();
       changeCache[file.path] = changes;
     }
+
+    const db = createMigrationInterface(tx, up, config);
 
     for (const fn of up ? changes : changes.reverse()) {
       await fn(db, up);
@@ -156,23 +163,23 @@ const processMigration = async (
   }
 };
 
-export const migrate = (
+export const migrate = <CT extends ColumnTypesBase>(
   options: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig,
+  config: RakeDbConfig<CT>,
   args: string[] = [],
-) => migrateOrRollback(options, config, args, true);
+): Promise<void> => migrateOrRollback(options, config, args, true);
 
-export const rollback = (
+export const rollback = <CT extends ColumnTypesBase>(
   options: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig,
+  config: RakeDbConfig<CT>,
   args: string[] = [],
-) => migrateOrRollback(options, config, args, false);
+): Promise<void> => migrateOrRollback(options, config, args, false);
 
-export const redo = async (
+export const redo = async <CT extends ColumnTypesBase>(
   options: MaybeArray<AdapterOptions>,
-  config: RakeDbConfig,
+  config: RakeDbConfig<CT>,
   args: string[] = [],
-) => {
+): Promise<void> => {
   await migrateOrRollback(options, config, args, false);
   await migrateOrRollback(options, config, args, true);
 };

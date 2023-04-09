@@ -5,11 +5,12 @@ import {
   RakeDbConfig,
 } from '../common';
 import { SilentQueries } from './migration';
+import { ColumnTypesBase } from 'orchid-core';
 
-export const saveMigratedVersion = async (
+export const saveMigratedVersion = async <CT extends ColumnTypesBase>(
   db: SilentQueries,
   version: string,
-  config: RakeDbConfig,
+  config: RakeDbConfig<CT>,
 ): Promise<void> => {
   await db.silentArrays(
     `INSERT INTO ${quoteWithSchema({
@@ -18,10 +19,10 @@ export const saveMigratedVersion = async (
   );
 };
 
-export const removeMigratedVersion = async (
+export const removeMigratedVersion = async <CT extends ColumnTypesBase>(
   db: SilentQueries,
   version: string,
-  config: RakeDbConfig,
+  config: RakeDbConfig<CT>,
 ) => {
   await db.silentArrays(
     `DELETE FROM ${quoteWithSchema({
@@ -30,9 +31,9 @@ export const removeMigratedVersion = async (
   );
 };
 
-export const getMigratedVersionsMap = async (
+export const getMigratedVersionsMap = async <CT extends ColumnTypesBase>(
   db: Adapter,
-  config: RakeDbConfig,
+  config: RakeDbConfig<CT>,
 ): Promise<Record<string, boolean>> => {
   try {
     const result = await db.arrays<[string]>(
