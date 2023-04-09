@@ -12,8 +12,7 @@ describe('dbStructure', () => {
 
   it('should perform working queries', async () => {
     await Promise.all([
-      db.getSchemas(),
-      db.getViews(),
+      db.getStructure(),
       db.getIndexes(),
       db.getConstraints(),
       db.getExtensions(),

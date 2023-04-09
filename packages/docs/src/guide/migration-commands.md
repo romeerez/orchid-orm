@@ -11,8 +11,7 @@ npm run db create
 npm run db drop
 ```
 
-Unless you superuser credentials are specified on the `databaseURL`,
-these commands will ask for a database administrator username and password.
+Unless `databaseURL` contains db superuser credentials, these commands will ask for a database administrator username and password.
 
 If a custom `schema` is chosen for a connection, `db create` will also try to create this schema (won't fail if it is already exists).
 
@@ -138,39 +137,15 @@ npm run db new migrationName
 pnpm db new migrationName
 ```
 
+Migration name can be an any string in any case, it should be descriptive for the team.
+
 If the migration name matches one of the known patterns, it will generate a template:
 
-- `create${table name}` for creating a new table
-- `drop${table name}` for dropping a table
-- `change${table name}` for changing a table
-- `add${any string}To${table name}` for adding columns to a table
-- `remove${any string}From${table name}` for removing columns from a table
-
-When using the `create`, `drop`, `add...to`, and `remove...from` names you can also specify columns in a command line to be added to a generated migration.
-
-Specify a column by writing a column name, then a column type separated with `:`, column type can accept an argument `(arg)`, then optionally specify a methods chain such as `.primaryKey`, `.nullable`, methods can have arguments too.
-
-When passing an argument, put a column definition into quotes.
-
-Example:
-
-```sh
-npm run db new createTodo id:identity.primaryKey 'name:varchar(50)' description:text.nullable
-```
-
-Will generate such a migration:
-
-```ts
-import { change } from 'rake-db';
-
-change(async (db) => {
-  await db.createTable('todo', (t) => ({
-    id: t.identity().primaryKey(),
-    name: t.varchar(50),
-    description: t.text().nullable(),
-  }));
-});
-```
+- `create[table]` to create a new table, example: `createProduct`
+- `drop[table]` to drop a table, example: `dropProduct`
+- `change[table]` to change a table, example: `changeProduct`
+- `add[something]To[table]` to add columns to a table, example: `addDetailsToProduct`
+- `remove[something]From[table]` to remove columns from a table, ex.: `removeDetailsFromProduct`
 
 ## migrate
 

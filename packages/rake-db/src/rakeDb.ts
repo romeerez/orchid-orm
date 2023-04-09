@@ -49,6 +49,9 @@ export const rakeDb = async (
 
 const help = `Usage: rake-db [command] [arguments]
 
+See documentation at:
+https://orchid-orm.netlify.app/guide/migration-commands.html
+
 Commands:
   create                  create databases
   drop                    drop databases
@@ -71,15 +74,4 @@ Rollback arguments:
 Migrate and rollback common arguments:
   --code                  run code updater, overrides \`useCodeUpdater\` option
   --code false            do not run code updater
-  
-New migration file arguments:
-- (required) first argument is migration name
-  * create*               template for create table
-  * change*               template for change table
-  * add*To*               template for add columns
-  * remove*From*          template for remove columns
-  * drop*                 template for drop table
-
-- other arguments considered as columns with types and optional methods:
-  rake-db new createTable id:serial.primaryKey name:text.nullable
 `;

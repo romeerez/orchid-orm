@@ -41,13 +41,11 @@ jest.mock('../migration/manageMigratedVersions', () => ({
 const db = DbStructure.prototype;
 
 let schemas: string[] = [];
-db.getSchemas = async () => schemas;
+let tables: DbStructure.Table[] = [];
+db.getStructure = async () => ({ schemas, tables, views: [] });
 
 let domains: DbStructure.Domain[] = [];
 db.getDomains = async () => domains;
-
-let tables: DbStructure.Table[] = [];
-db.getTables = async () => tables;
 
 let enums: DbStructure.Enum[] = [];
 db.getEnums = async () => enums;

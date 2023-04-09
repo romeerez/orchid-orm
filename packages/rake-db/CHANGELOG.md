@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.6.0
+
+### Minor Changes
+
+- Remove cli columns parsing when generating new migration
+
 ## 2.5.0
 
 ### Minor Changes

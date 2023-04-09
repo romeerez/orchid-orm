@@ -145,6 +145,9 @@ export namespace DbStructure {
 const filterSchema = (table: string) =>
   `${table} !~ '^pg_' AND ${table} != 'information_schema'`;
 
+const jsonAgg = (sql: string, as: string) =>
+  `(SELECT coalesce(json_agg(t.*), '[]') FROM (${sql}) t) AS "${as}"`;
+
 const columnsSql = ({
   schema,
   table,
@@ -232,22 +235,11 @@ WHERE a.attnum > 0
   AND ${where}
 ORDER BY a.attnum`;
 
-export class DbStructure {
-  constructor(private db: Adapter) {}
-
-  async getSchemas(): Promise<string[]> {
-    const { rows } = await this.db.arrays<[string]>(
-      `SELECT n.nspname "name"
+const schemasSql = `SELECT coalesce(json_agg(nspname ORDER BY nspname), '[]')
 FROM pg_catalog.pg_namespace n
-WHERE ${filterSchema('n.nspname')}
-ORDER BY "name"`,
-    );
-    return rows.flat();
-  }
+WHERE ${filterSchema('nspname')}`;
 
-  async getTables() {
-    const { rows } = await this.db.query<DbStructure.Table>(
-      `SELECT
+const tablesSql = `SELECT
   nspname AS "schemaName",
   relname AS "name",
   obj_description(c.oid) AS comment,
@@ -260,14 +252,9 @@ FROM pg_class c
 JOIN pg_catalog.pg_namespace n ON n.oid = relnamespace
 WHERE relkind = 'r'
   AND ${filterSchema('nspname')}
-ORDER BY relname`,
-    );
-    return rows;
-  }
+ORDER BY relname`;
 
-  async getViews() {
-    const { rows } = await this.db.query<DbStructure.View>(
-      `SELECT
+const viewsSql = `SELECT
   nc.nspname AS "schemaName",
   c.relname AS "name",
   right(substring(r.ev_action from ':hasRecursive \w'), 1)::bool AS "isRecursive",
@@ -285,39 +272,53 @@ JOIN pg_class c
  AND c.relpersistence != 't'
 JOIN pg_rewrite r ON r.ev_class = c.oid
 WHERE ${filterSchema('nc.nspname')}
-ORDER BY c.relname`,
-    );
-    return rows;
-  }
+ORDER BY c.relname`;
 
-  async getProcedures() {
-    const { rows } = await this.db.query<DbStructure.Procedure[]>(
-      `SELECT
-  n.nspname AS "schemaName",
-  proname AS name,
-  proretset AS "returnSet",
-  (
-    SELECT typname FROM pg_type WHERE oid = prorettype
-  ) AS "returnType",
-  prokind AS "kind",
-  coalesce((
-    SELECT true FROM information_schema.triggers
-    WHERE n.nspname = trigger_schema AND trigger_name = proname
-    LIMIT 1
-  ), false) AS "isTrigger",
-  coalesce((
-    SELECT json_agg(pg_type.typname)
-    FROM unnest(coalesce(proallargtypes, proargtypes)) typeId
-    JOIN pg_type ON pg_type.oid = typeId
-  ), '[]') AS "types",
-  coalesce(to_json(proallargtypes::int[]), to_json(proargtypes::int[])) AS "argTypes",
-  coalesce(to_json(proargmodes), '[]') AS "argModes",
-  to_json(proargnames) AS "argNames"
-FROM pg_proc p
-JOIN pg_namespace n ON p.pronamespace = n.oid
-WHERE ${filterSchema('n.nspname')}`,
-    );
-    return rows;
+// procedures
+// `SELECT
+//   n.nspname AS "schemaName",
+//   proname AS name,
+//   proretset AS "returnSet",
+//   (
+//     SELECT typname FROM pg_type WHERE oid = prorettype
+//   ) AS "returnType",
+//   prokind AS "kind",
+//   coalesce((
+//     SELECT true FROM information_schema.triggers
+//     WHERE n.nspname = trigger_schema AND trigger_name = proname
+//     LIMIT 1
+//   ), false) AS "isTrigger",
+//   coalesce((
+//     SELECT json_agg(pg_type.typname)
+//     FROM unnest(coalesce(proallargtypes, proargtypes)) typeId
+//     JOIN pg_type ON pg_type.oid = typeId
+//   ), '[]') AS "types",
+//   coalesce(to_json(proallargtypes::int[]), to_json(proargtypes::int[])) AS "argTypes",
+//   coalesce(to_json(proargmodes), '[]') AS "argModes",
+//   to_json(proargnames) AS "argNames"
+// FROM pg_proc p
+// JOIN pg_namespace n ON p.pronamespace = n.oid
+// WHERE ${filterSchema('n.nspname')}`
+
+const sql = `SELECT (${schemasSql}) AS "schemas", ${jsonAgg(
+  tablesSql,
+  'tables',
+)}, ${jsonAgg(viewsSql, 'views')}`;
+
+type Structure = {
+  schemas: string[];
+  tables: DbStructure.Table[];
+  views: DbStructure.View[];
+};
+
+export class DbStructure {
+  constructor(private db: Adapter) {}
+
+  async getStructure(): Promise<Structure> {
+    const {
+      rows: [structure],
+    } = await this.db.query<Structure>(sql);
+    return structure;
   }
 
   async getIndexes() {

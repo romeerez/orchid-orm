@@ -204,18 +204,14 @@ export const structureToAst = async (
 
 const getData = async (db: DbStructure): Promise<Data> => {
   const [
-    schemas,
-    tables,
-    views,
+    { schemas, tables, views },
     constraints,
     indexes,
     extensions,
     enums,
     domains,
   ] = await Promise.all([
-    db.getSchemas(),
-    db.getTables(),
-    db.getViews(),
+    db.getStructure(),
     db.getConstraints(),
     db.getIndexes(),
     db.getExtensions(),

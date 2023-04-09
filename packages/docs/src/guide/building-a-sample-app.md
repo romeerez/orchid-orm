@@ -2251,14 +2251,13 @@ export const updateArticleRoute = routeHandler(
 
     return db.$transaction(async (db) => {
       const { slug } = req.params;
-      
-      // assigning repo to local variable to not repeat it
-      const repo = articleRepo(db.article);
 
       // retrieve required fields and the current tags of article
-      const article = await repo.findBy({ slug }).select('id', 'userId', {
-        tags: (q) => q.tags.select('id', 'name'),
-      });
+      const article = await articleRepo
+        .findBy({ slug })
+        .select('id', 'userId', {
+          tags: (q) => q.tags.select('id', 'name'),
+        });
 
       if (article.userId !== currentUserId) {
         throw new UnauthorizedError();
@@ -2266,13 +2265,13 @@ export const updateArticleRoute = routeHandler(
 
       const { tags, favorite, ...params } = req.body;
 
-      await repo
+      await articleRepo
         .find(article.id)
         .update(params)
         // updateTags is a repo method, see below
         .updateTags(article.tags, tags);
 
-      return await repo.selectDto(currentUserId).find(article.id);
+      return await articleRepo.selectDto(currentUserId).find(article.id);
     });
   }
 );
