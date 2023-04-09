@@ -12,7 +12,7 @@ import {
   logParamToLogObject,
   QueryLogOptions,
 } from './queryMethods';
-import { QueryData, SelectQueryData, Sql, ToSqlOptions } from './sql';
+import { QueryData, SelectQueryData, ToSqlOptions } from './sql';
 import { AdapterOptions, Adapter } from './adapter';
 import {
   ColumnsShape,
@@ -35,9 +35,12 @@ import {
   SinglePrimaryKey,
   snakeCaseKey,
   toSnakeCase,
+  AdapterBase,
+  Sql,
 } from 'orchid-core';
 import { q } from './sql/common';
 import { inspect } from 'util';
+import { AsyncLocalStorage } from 'node:async_hooks';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
@@ -124,10 +127,11 @@ export class Db<
     public table: Table = undefined as Table,
     public shape: Shape = anyShape as Shape,
     public columnTypes: CT,
+    transactionStorage: AsyncLocalStorage<AdapterBase>,
     options: DbTableOptions,
   ) {
     const tableData = getTableData();
-    this.internal = { ...tableData };
+    this.internal = { ...tableData, transactionStorage };
     this.baseQuery = this as Query;
 
     const logger = options.logger || console;
@@ -295,12 +299,15 @@ export const createDb = <CT extends ColumnTypesBase>({
     (ct as { [snakeCaseKey]?: boolean })[snakeCaseKey] = true;
   }
 
+  const transactionStorage = new AsyncLocalStorage<AdapterBase>();
+
   const qb = new Db(
     adapter,
     undefined as unknown as Db,
     undefined,
     anyShape,
     ct,
+    transactionStorage,
     commonOptions,
   );
   qb.queryBuilder = qb as unknown as Db;
@@ -317,6 +324,7 @@ export const createDb = <CT extends ColumnTypesBase>({
         table as Table,
         typeof shape === 'function' ? getColumnTypes(ct, shape) : shape,
         ct,
+        transactionStorage,
         { ...commonOptions, ...options },
       );
     },

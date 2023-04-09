@@ -10,8 +10,9 @@ import {
   chatSelectAll,
   userSelectAll,
 } from '../test-utils/test-utils';
-import { RelationQuery, Sql, TransactionAdapter } from 'pqb';
+import { RelationQuery, TransactionAdapter } from 'pqb';
 import { Chat, User } from '../test-utils/test-tables';
+import { Sql } from 'orchid-core';
 
 describe('hasAndBelongsToMany', () => {
   useTestDatabase();

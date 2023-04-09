@@ -1,66 +1,92 @@
 import { Query } from '../query';
-
-const beginSql = {
-  text: 'BEGIN',
-  values: [],
-};
+import { emptyArray, emptyObject } from 'orchid-core';
 
 const commitSql = {
   text: 'COMMIT',
-  values: [],
+  values: emptyArray,
 };
 
 const rollbackSql = {
   text: 'ROLLBACK',
-  values: [],
+  values: emptyArray,
+};
+
+export type IsolationLevel =
+  | 'SERIALIZABLE'
+  | 'REPEATABLE READ'
+  | 'READ COMMITTED'
+  | 'READ UNCOMMITTED';
+
+export type TransactionOptions = {
+  level: IsolationLevel;
+  readOnly?: boolean;
+  deferrable?: boolean;
 };
 
 export class Transaction {
+  transaction<T extends Query, Result>(
+    this: T,
+    cb: () => Promise<Result>,
+  ): Promise<Result>;
+  transaction<T extends Query, Result>(
+    this: T,
+    options: IsolationLevel | TransactionOptions,
+    cb: () => Promise<Result>,
+  ): Promise<Result>;
   async transaction<T extends Query, Result>(
     this: T,
-    cb: (query: T) => Promise<Result>,
+    cbOrOptions: IsolationLevel | TransactionOptions | (() => Promise<Result>),
+    cb?: () => Promise<Result>,
   ): Promise<Result> {
+    let options: TransactionOptions;
+    let fn: () => Promise<Result>;
+    if (typeof cbOrOptions === 'function') {
+      options = emptyObject as TransactionOptions;
+      fn = cbOrOptions;
+    } else {
+      options =
+        typeof cbOrOptions === 'object' ? cbOrOptions : { level: cbOrOptions };
+      fn = cb as () => Promise<Result>;
+    }
+
+    const beginSql = {
+      text: `BEGIN${options.level ? ` ISOLATION LEVEL ${options.level}` : ''}${
+        options.readOnly !== undefined
+          ? ` READ ${options.readOnly ? 'ONLY' : 'WRITE'}`
+          : ''
+      }${
+        options.deferrable !== undefined
+          ? ` ${options.deferrable ? '' : 'NOT '}DEFERRABLE`
+          : ''
+      }`,
+      values: emptyArray,
+    };
+
     const log = this.query.log;
     let logData: unknown | undefined;
     if (log) {
       logData = log.beforeQuery(beginSql);
     }
-    const t = this.query.adapter.transaction((adapter) => {
+
+    const t = this.query.adapter.transaction(beginSql, (adapter) => {
       if (log) {
         log.afterQuery(beginSql, logData);
       }
 
-      const q = this.clone();
-      q.query.adapter = adapter;
-      q.query.inTransaction = true;
-
       if (log) {
         logData = log.beforeQuery(commitSql);
       }
-      return cb(q);
+
+      return this.internal.transactionStorage.run(adapter, fn);
     });
 
     if (log) {
       t.then(
-        () => {
-          log.afterQuery(commitSql, logData);
-        },
-        () => {
-          log.afterQuery(rollbackSql, logData);
-        },
+        () => log.afterQuery(commitSql, logData),
+        () => log.afterQuery(rollbackSql, logData),
       );
     }
 
     return t;
-  }
-
-  transacting<T extends Query>(this: T, query: Query): T {
-    return this.clone()._transacting(query);
-  }
-
-  _transacting<T extends Query>(this: T, query: Query): T {
-    this.query.adapter = query.query.adapter;
-    this.query.inTransaction = true;
-    return this;
   }
 }

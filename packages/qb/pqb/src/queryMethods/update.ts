@@ -218,7 +218,7 @@ export class Update {
         if (ctx.updateLater) {
           await Promise.all(ctx.updateLaterPromises as Promise<void>[]);
 
-          const t = this.baseQuery.clone().transacting(q);
+          const t = this.baseQuery.clone();
           const keys = this.primaryKeys;
           (
             t._whereIn as unknown as (

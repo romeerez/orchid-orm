@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.7.0
+
+### Minor Changes
+
+- Implicitly pass transaction object by using AsyncLocalStorage
+
+### Patch Changes
+
+- Updated dependencies
+  - pqb@0.11.0
+  - orchid-core@0.2.0
+
 ## 1.6.40
 
 ### Patch Changes

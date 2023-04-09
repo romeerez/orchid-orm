@@ -5,7 +5,7 @@ import {
   DbResult,
   DefaultColumnTypes,
 } from 'pqb';
-import { MaybeArray, pathToLog, toArray } from 'orchid-core';
+import { emptyArray, MaybeArray, pathToLog, toArray } from 'orchid-core';
 import { getMigrationFiles, MigrationFile, RakeDbConfig } from '../common';
 import {
   ChangeCallback,
@@ -99,6 +99,11 @@ export const migrateOrRollback = async (
 
 export const changeCache: Record<string, ChangeCallback[] | undefined> = {};
 
+const begin = {
+  text: 'BEGIN',
+  values: emptyArray,
+};
+
 const processMigration = async (
   db: Adapter,
   up: boolean,
@@ -107,7 +112,7 @@ const processMigration = async (
   options: AdapterOptions,
   appCodeUpdaterCache: object,
 ) => {
-  const asts = await db.transaction(async (tx) => {
+  const asts = await db.transaction(begin, async (tx) => {
     const db = createMigrationInterface(tx, up, config);
     clearChanges();
 

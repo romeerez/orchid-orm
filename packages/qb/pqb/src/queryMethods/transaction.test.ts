@@ -1,4 +1,4 @@
-import { db, User } from '../test-utils/test-utils';
+import { db } from '../test-utils/test-utils';
 import pg from 'pg';
 
 describe('transaction', () => {
@@ -8,9 +8,7 @@ describe('transaction', () => {
   it('should start and commit transaction', async () => {
     const spy = jest.spyOn(pg.Client.prototype, 'query');
 
-    const result = await db.transaction(async (db) => {
-      expect(db.query.inTransaction).toBe(true);
-
+    const result = await db.transaction(async () => {
       const {
         rows: [{ a }],
       } = await db.query.adapter.query('SELECT 1 AS a');
@@ -49,19 +47,38 @@ describe('transaction', () => {
     ).toEqual(['BEGIN', 'ROLLBACK']);
   });
 
-  describe('transacting', () => {
-    it('should use provided adapter to perform queries', async () => {
-      const spy = jest.spyOn(pg.Client.prototype, 'query');
+  it('should accept isolation level and options', async () => {
+    const spy = jest.spyOn(pg.Client.prototype, 'query');
 
-      await db.transaction(async (trx) => {
-        return User.transacting(trx).all();
-      });
+    await db.transaction('REPEATABLE READ', async () => {});
+    await db.transaction(
+      {
+        level: 'READ COMMITTED',
+        readOnly: false,
+        deferrable: false,
+      },
+      async () => {},
+    );
+    await db.transaction(
+      {
+        level: 'READ UNCOMMITTED',
+        readOnly: true,
+        deferrable: true,
+      },
+      async () => {},
+    );
 
-      expect(
-        spy.mock.calls.map(
-          (call) => (call[0] as unknown as { text: string }).text,
-        ),
-      ).toEqual(['BEGIN', 'SELECT * FROM "user"', 'COMMIT']);
-    });
+    expect(
+      spy.mock.calls.map(
+        (call) => (call[0] as unknown as { text: string }).text,
+      ),
+    ).toEqual([
+      'BEGIN ISOLATION LEVEL REPEATABLE READ',
+      'COMMIT',
+      'BEGIN ISOLATION LEVEL READ COMMITTED READ WRITE NOT DEFERRABLE',
+      'COMMIT',
+      'BEGIN ISOLATION LEVEL READ UNCOMMITTED READ ONLY DEFERRABLE',
+      'COMMIT',
+    ]);
   });
 });

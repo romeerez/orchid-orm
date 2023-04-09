@@ -17,7 +17,6 @@ import {
   OnConflictMergeUpdate,
   OrderItem,
   SelectItem,
-  Sql,
   UnionItem,
   UnionKind,
   WhereItem,
@@ -30,6 +29,7 @@ import {
   ColumnsShapeBase,
   ColumnTypeBase,
   MaybeArray,
+  Sql,
 } from 'orchid-core';
 
 export type CommonQueryData = {
@@ -42,7 +42,6 @@ export type CommonQueryData = {
   ): Promise<unknown>;
   returnType: QueryReturnType;
   [relationQueryKey]?: RelationQueryData;
-  inTransaction?: boolean;
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
   with?: WithItem[];

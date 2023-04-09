@@ -1,6 +1,6 @@
 import { Query, queryTypeWithLimitOne } from '../query';
 import { addValue, q, revealColumnToSql } from './common';
-import { JoinItem, Sql } from './types';
+import { JoinItem } from './types';
 import { pushDistinctSql } from './distinct';
 import { pushSelectSql } from './select';
 import { windowToSql } from './window';
@@ -19,7 +19,7 @@ import { OnQueryBuilder, WhereQueryBuilder } from '../queryMethods';
 import { getRaw } from '../raw';
 import { QueryData } from './data';
 import { pushCopySql } from './copy';
-import { isRaw } from 'orchid-core';
+import { isRaw, Sql } from 'orchid-core';
 
 export type ToSqlCtx = {
   whereQueryBuilder: typeof WhereQueryBuilder;

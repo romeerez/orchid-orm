@@ -33,7 +33,7 @@ const queryMock = jest.fn();
 Adapter.prototype.query = queryMock;
 queryMock.mockImplementation(() => undefined);
 
-Adapter.prototype.transaction = (cb) => {
+Adapter.prototype.transaction = (_, cb) => {
   return cb({} as unknown as TransactionAdapter);
 };
 

@@ -1,5 +1,5 @@
 import pg, { Pool, PoolClient, PoolConfig } from 'pg';
-import { AdapterBase, QueryInput, QueryResultRow } from 'orchid-core';
+import { AdapterBase, QueryInput, QueryResultRow, Sql } from 'orchid-core';
 const { types } = pg;
 
 export type TypeParsers = Record<number, (input: string) => unknown>;
@@ -99,12 +99,13 @@ export class Adapter implements AdapterBase {
   }
 
   async transaction<Result>(
+    begin: Sql,
     cb: (adapter: TransactionAdapter) => Promise<Result>,
   ): Promise<Result> {
     const client = await this.pool.connect();
     try {
       await setSearchPath(client, this.schema);
-      await performQueryOnClient(client, { text: 'BEGIN' }, this.types);
+      await performQueryOnClient(client, begin, this.types);
       let result;
       try {
         result = await cb(new TransactionAdapter(this, client, this.types));
@@ -210,6 +211,7 @@ export class TransactionAdapter implements Adapter {
   }
 
   async transaction<Result>(
+    _: Sql,
     cb: (adapter: TransactionAdapter) => Promise<Result>,
   ): Promise<Result> {
     return await cb(this);

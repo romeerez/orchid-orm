@@ -16,7 +16,7 @@ describe('transaction', () => {
     const spy = jest.spyOn(Client.prototype, 'query');
 
     await db
-      .$transaction(async (db) => {
+      .$transaction(async () => {
         await db.user.create(userData);
         await db.profile.create(profileData);
         throw new Error('Throw error to rollback');
@@ -41,13 +41,5 @@ describe('transaction', () => {
       `),
       'ROLLBACK',
     ]);
-  });
-
-  it('should throw error if argument is forgotten', async () => {
-    expect(() =>
-      db.$transaction(async () => {
-        // noop
-      }),
-    ).toThrow('Argument of $transaction callback should be used');
   });
 });

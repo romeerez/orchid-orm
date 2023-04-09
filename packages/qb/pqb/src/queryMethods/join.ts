@@ -463,7 +463,7 @@ export class OnQueryBuilder<
   implements QueryBase
 {
   constructor(
-    q: QueryBase | string,
+    q: QueryBase,
     data: Pick<QueryData, 'shape' | 'joinedShapes'>,
     public joinTo: QueryBase,
   ) {

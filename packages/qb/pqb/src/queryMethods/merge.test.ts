@@ -66,7 +66,7 @@ describe('merge queries', () => {
     it('should use right where when left has no where', () => {
       const q = User.merge(User.where({ id: 1 }));
 
-      assertType<typeof q['meta']['hasWhere'], true>();
+      assertType<(typeof q)['meta']['hasWhere'], true>();
 
       expectSql(q.toSql(), `SELECT * FROM "user" WHERE "user"."id" = $1`, [1]);
     });
@@ -76,7 +76,7 @@ describe('merge queries', () => {
         User.where({ id: 2 }),
       );
 
-      assertType<typeof q['meta']['hasWhere'], true>();
+      assertType<(typeof q)['meta']['hasWhere'], true>();
 
       expectSql(
         q.toSql(),
@@ -317,8 +317,6 @@ describe('merge queries', () => {
       q2.query.shape = {
         string: new TextColumn({}),
       };
-      q1.query.inTransaction = false;
-      q2.query.inTransaction = true;
       q1.query.wrapInTransaction = false;
       q2.query.wrapInTransaction = true;
       q1.query.throwOnNotFound = false;
@@ -421,7 +419,6 @@ describe('merge queries', () => {
         number: q1.query.shape.number,
         string: q2.query.shape.string,
       });
-      expect(q.inTransaction).toBe(true);
       expect(q.wrapInTransaction).toBe(true);
       expect(q.throwOnNotFound).toBe(true);
       expect(q.withShapes).toEqual({

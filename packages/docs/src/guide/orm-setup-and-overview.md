@@ -158,32 +158,6 @@ export class NoPrimaryKeyTable extends BaseTable {
 }
 ```
 
-## $transaction
-
-Use `.$transaction` to wrap multiple database modification queries into a single transaction.
-
-The first argument of callback is a copy of your main orchid-orm instance, but every table interface on it is patched to use a transaction.
-
-```ts
-const { someId, otherId } = await db.$transaction(async (db) => {
-  await db.someTable.where(...conditions).update(...data)
-  await db.anotherTable.where(...conditions).delete()
-  const someId = await db.someTable.get('id').create(...data)
-  const otherId = await db.otherTable.get('id').create(...data)
-  
-  return { someId, otherId }
-})
-```
-
-Be careful to use `db` from the callback argument, and not the main instance.
-
-```ts
-// mistake: someTable won't use a transaction because the argument was forgotten.
-await db.$transaction(async () => {
-  await db.someTable.create(...data)
-})
-```
-
 ## $from
 
 Use `$from` to build a queries around sub queries similar to the following:

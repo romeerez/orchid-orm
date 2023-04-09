@@ -2083,7 +2083,7 @@ export const createArticleRoute = routeHandler(
     const currentUserId = getCurrentUserId(req);
 
     // wrap creating an article and retrieving it to the transaction
-    return db.$transaction(async (db) => {
+    return db.$transaction(async () => {
       const { tags, ...params } = req.body;
 
       const articleId = await db.article.get('id').create({
@@ -2102,7 +2102,7 @@ export const createArticleRoute = routeHandler(
         },
       });
 
-      return articleRepo(db.article).selectDto(currentUserId).find(articleId);
+      return articleRepo.selectDto(currentUserId).find(articleId);
     });
   }
 );
@@ -2110,11 +2110,6 @@ export const createArticleRoute = routeHandler(
 
 This example demonstrates the use of nested `create` with nested `connectOrCreate`:
 it will try to find a tag by name and will create a tag only if not found.
-
-Notice that `articleRepo` is wrapping `db.article`: it must be so when using the repository inside a transaction.
-By default, the repo will use a default connection, so it will try to perform a query outside of a transaction.
-Luckily, `pg-transactional-tests` will catch this mistake when running tests,
-the test will hang when trying to use more than 1 connection.
 
 Register this controller in the router:
 
@@ -2275,7 +2270,7 @@ export const updateArticleRoute = routeHandler(
         .find(article.id)
         .update(params)
         // updateTags is a repo method, see below
-        .updateTags(db.tag, article.tags, tags);
+        .updateTags(article.tags, tags);
 
       return await repo.selectDto(currentUserId).find(article.id);
     });
@@ -2346,8 +2341,6 @@ export const articleRepo = createRepo(db.article, {
   queryOneWithWhereMethods: {
     async updateTags(
       q,
-      // first argument is a queryable instance of the tag
-      tag: typeof db.tag,
       // tags which article is connected to at the moment
       currentTags: { id: number; name: string }[],
       // tag names from user parameters to use for the article
@@ -2381,18 +2374,15 @@ export const articleRepo = createRepo(db.article, {
 
       if (removeTagIds.length) {
         // `deleteUnused` will be defined in a tag repo
-        await tagRepo(tag).whereIn('id', removeTagIds).deleteUnused();
+        await tagRepo.whereIn('id', removeTagIds).deleteUnused();
       }
     },
   },
 })
 ```
 
-The first parameter is `tag` from `db.tag` (see in article controller).
-We import `db.tag` directly here because it is important to use `db` from the callback of the transaction.
-
-Another thing to point out here, this method doesn't return a query object, so it cannot be chained.
-This is a limitation for the case when you want to await a query inside of the method.
+This method doesn't return a query object, so it cannot be chained.
+This is a limitation for the case when you want to await a query inside the method of repo.
 
 `deleteUnused` is not complex and could be inlined, but it feels good to move the code to places where it feels like home.
 It is not a concern of the article to know what an unused tag is, it is a concern of a tag, so it belongs to the tag repo:
@@ -2707,7 +2697,7 @@ export const deleteArticleRoute = routeHandler(
     const { slug } = req.params;
 
     // wrapping in the transaction to search for an article and delete it in a single transaction
-    await db.$transaction(async (db) => {
+    await db.$transaction(async () => {
       const article = await db.article
         .select('id', 'userId', {
           tagIds: (q) => q.tags.pluck('id'),
@@ -2732,7 +2722,7 @@ export const deleteArticleRoute = routeHandler(
 
       if (article.tagIds.length) {
         // tag repo with `deleteUnused` was defined before, at the step of updating the article
-        await tagRepo(db.tag).whereIn('id', article.tagIds).deleteUnused();
+        await tagRepo.whereIn('id', article.tagIds).deleteUnused();
       }
     });
   }

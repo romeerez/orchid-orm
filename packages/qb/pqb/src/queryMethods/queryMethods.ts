@@ -16,7 +16,6 @@ import {
   SelectItem,
   SelectQueryData,
   SortDir,
-  Sql,
   toSql,
   ToSqlOptions,
   TruncateQueryData,
@@ -48,7 +47,7 @@ import { QueryGet } from './get';
 import { MergeQueryMethods } from './merge';
 import { RawMethods } from './raw';
 import { CopyMethods } from './copy';
-import { RawExpression, raw, applyMixins, EmptyObject } from 'orchid-core';
+import { RawExpression, raw, applyMixins, EmptyObject, Sql } from 'orchid-core';
 
 export type WindowArg<T extends Query> = Record<
   string,

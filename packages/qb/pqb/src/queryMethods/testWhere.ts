@@ -1,7 +1,7 @@
 import { Query } from '../query';
 import { db, expectSql } from '../test-utils/test-utils';
-import { Sql } from '../sql';
 import { testJoin } from './testJoin';
+import { Sql } from 'orchid-core';
 
 export const columnSqlForTest = ({ shape, table }: Query, key: string) => {
   const index = key.indexOf('.');

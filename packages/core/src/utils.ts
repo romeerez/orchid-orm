@@ -96,6 +96,7 @@ export type EmptyObject = typeof emptyObject;
 export const emptyObject = {};
 
 export type EmptyTuple = [];
+export const emptyArray = [];
 
 export const pushOrNewArrayToObject = <
   Obj extends EmptyObject,

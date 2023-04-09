@@ -240,7 +240,7 @@ const getWhereForNestedUpdate = (
 };
 
 const nestedInsert = ({ query, primaryKey, foreignKey }: State) => {
-  return (async (q, data) => {
+  return (async (_, data) => {
     const connect = data.filter(
       (
         item,
@@ -250,7 +250,7 @@ const nestedInsert = ({ query, primaryKey, foreignKey }: State) => {
       ] => Boolean(item[1].connect),
     );
 
-    const t = query.transacting(q);
+    const t = query.clone();
 
     if (connect.length) {
       await Promise.all(
@@ -347,7 +347,7 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
       throw new Error(`\`${key}\` option is not allowed in a batch update`);
     }
 
-    const t = query.transacting(q);
+    const t = query.clone();
     if (params.create) {
       await t._count()._createMany(
         params.create.map((create) => ({

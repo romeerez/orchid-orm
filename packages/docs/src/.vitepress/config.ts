@@ -60,6 +60,10 @@ export default {
             link: '/guide/query-builder-create-update-delete',
           },
           {
+            text: 'Transactions',
+            link: '/guide/query-builder-transactions',
+          },
+          {
             text: 'Aggregate functions',
             link: '/guide/query-builder-aggregate',
           },

@@ -7,7 +7,6 @@ import {
   IndexOptions,
   logParamToLogObject,
   QueryLogObject,
-  Sql,
   TransactionAdapter,
   TextColumn,
   createDb,
@@ -26,6 +25,7 @@ import {
   raw,
   RawExpression,
   singleQuote,
+  Sql,
 } from 'orchid-core';
 import { createTable, CreateTableResult } from './createTable';
 import { changeTable, TableChangeData, TableChanger } from './changeTable';

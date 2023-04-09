@@ -188,20 +188,17 @@ export const makeHasAndBelongsToManyMethod = (
       pushQueryValue(
         relationQuery,
         'afterCreate',
-        async (q: Query, result: Record<string, unknown>) => {
+        async (_: Query, result: Record<string, unknown>) => {
           const fromQuery = ref.query.clone();
           fromQuery.query.select = [{ selectAs: { [fk]: pk } }];
 
-          const createdCount = await subQuery
-            .transacting(q)
-            .count()
-            ._createFrom(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              fromQuery as any,
-              {
-                [afk]: result[apk],
-              } as never,
-            );
+          const createdCount = await subQuery.count()._createFrom(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            fromQuery as any,
+            {
+              [afk]: result[apk],
+            } as never,
+          );
 
           if (createdCount === 0) {
             throw new NotFoundError(fromQuery);
@@ -218,11 +215,10 @@ export const makeHasAndBelongsToManyMethod = (
 
 const queryJoinTable = (
   state: State,
-  q: Query,
   data: Record<string, unknown>[],
   conditions?: MaybeArray<WhereArg<Query>>,
 ) => {
-  const t = state.joinTableQuery.transacting(q);
+  const t = state.joinTableQuery.clone();
   const where: WhereArg<Query> = {
     [state.foreignKey]: { in: data.map((item) => item[state.primaryKey]) },
   };
@@ -242,12 +238,11 @@ const queryJoinTable = (
 
 const queryRelatedTable = (
   query: Query,
-  q: Query,
   conditions: MaybeArray<WhereArg<Query>>,
 ) => {
-  return query
-    .transacting(q)
-    ._where<Query>(Array.isArray(conditions) ? { OR: conditions } : conditions);
+  return query.where<Query>(
+    Array.isArray(conditions) ? { OR: conditions } : conditions,
+  );
 };
 
 const insertToJoinTable = (
@@ -274,7 +269,7 @@ const nestedInsert = ({
   associationPrimaryKey,
   associationForeignKey,
 }: State) => {
-  return (async (q, data) => {
+  return (async (_, data) => {
     const connect = data.filter(
       (
         item,
@@ -286,7 +281,7 @@ const nestedInsert = ({
       ] => Boolean(item[1].connect),
     );
 
-    const t = relatedTableQuery.transacting(q);
+    const t = relatedTableQuery.clone();
 
     let connected: Record<string, unknown>[];
     if (connect.length) {
@@ -408,30 +403,26 @@ const nestedInsert = ({
       }
     });
 
-    await joinTableQuery
-      .transacting(q)
-      ._count()
-      ._createMany(
-        allKeys.flatMap(([selfData, relationKeys]) => {
-          const selfKey = selfData[primaryKey];
-          return relationKeys.map((relationData) => ({
-            [foreignKey]: selfKey,
-            [associationForeignKey]: relationData[associationPrimaryKey],
-          }));
-        }),
-      );
+    await joinTableQuery.count()._createMany(
+      allKeys.flatMap(([selfData, relationKeys]) => {
+        const selfKey = selfData[primaryKey];
+        return relationKeys.map((relationData) => ({
+          [foreignKey]: selfKey,
+          [associationForeignKey]: relationData[associationPrimaryKey],
+        }));
+      }),
+    );
   }) as HasManyNestedInsert;
 };
 
 const nestedUpdate = (state: State) => {
-  return (async (q, data, params) => {
+  return (async (_, data, params) => {
     if (params.create) {
       const ids = await state.relatedTableQuery
-        .transacting(q)
-        ._pluck(state.associationPrimaryKey)
+        .pluck(state.associationPrimaryKey)
         ._createMany(params.create);
 
-      await state.joinTableQuery.transacting(q)._createMany(
+      await state.joinTableQuery.createMany(
         data.flatMap((item) =>
           ids.map((id) => ({
             [state.foreignKey]: item[state.primaryKey],
@@ -444,8 +435,7 @@ const nestedUpdate = (state: State) => {
     if (params.update) {
       await (
         state.relatedTableQuery
-          .transacting(q)
-          ._whereExists(state.joinTableQuery, (q) =>
+          .whereExists(state.joinTableQuery, (q) =>
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (q as any)
               ._on(
@@ -468,27 +458,26 @@ const nestedUpdate = (state: State) => {
     }
 
     if (params.disconnect) {
-      await queryJoinTable(state, q, data, params.disconnect)._delete();
+      await queryJoinTable(state, data, params.disconnect)._delete();
     }
 
     if (params.delete) {
-      const j = queryJoinTable(state, q, data, params.delete);
+      const j = queryJoinTable(state, data, params.delete);
 
       const ids = await j._pluck(state.associationForeignKey)._delete();
 
-      await queryRelatedTable(state.relatedTableQuery, q, {
+      await queryRelatedTable(state.relatedTableQuery, {
         [state.associationPrimaryKey]: { in: ids },
       })._delete();
     }
 
     if (params.set) {
-      const j = queryJoinTable(state, q, data);
+      const j = queryJoinTable(state, data);
       await j._delete();
       delete j.query[toSqlCacheKey];
 
       const ids = await queryRelatedTable(
         state.relatedTableQuery,
-        q,
         params.set,
       )._pluck(state.associationPrimaryKey);
 

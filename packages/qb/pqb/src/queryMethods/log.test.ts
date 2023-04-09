@@ -165,8 +165,8 @@ describe('query log', () => {
       logger,
     });
 
-    await db.transaction(async (q) => {
-      await db('user').transacting(q).create(userData);
+    await db.transaction(async () => {
+      await db('user').create(userData);
     });
 
     expect(logger.log.mock.calls).toEqual([
@@ -194,8 +194,8 @@ describe('query log', () => {
     });
 
     await expect(
-      db.transaction(async (q) => {
-        await db('user').transacting(q).create({ name: 'name' });
+      db.transaction(async () => {
+        await db('user').create({ name: 'name' });
       }),
     ).rejects.toThrow();
 

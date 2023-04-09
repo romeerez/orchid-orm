@@ -1,7 +1,7 @@
 import { MigrationBase } from './migration';
-import { raw, RawExpression, singleQuote } from 'orchid-core';
+import { raw, RawExpression, singleQuote, Sql } from 'orchid-core';
 import { RakeDbAst } from '../ast';
-import { getRaw, Sql } from 'pqb';
+import { getRaw } from 'pqb';
 
 export const createView = async (
   migration: MigrationBase,

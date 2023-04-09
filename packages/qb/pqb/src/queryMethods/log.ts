@@ -1,6 +1,6 @@
 import { Query } from '../query';
-import { Sql } from '../sql';
 import { quote } from '../quote';
+import { Sql } from 'orchid-core';
 
 export type QueryLogObject = {
   colors: boolean;

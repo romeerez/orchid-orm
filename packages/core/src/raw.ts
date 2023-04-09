@@ -1,4 +1,10 @@
 import { ColumnTypeBase } from './columns/columnType';
+
+export type Sql = {
+  text: string;
+  values: unknown[];
+};
+
 export type RawExpression<C extends ColumnTypeBase = ColumnTypeBase> = {
   __raw: string;
   __values?: Record<string, unknown> | false;

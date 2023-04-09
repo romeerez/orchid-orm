@@ -1,6 +1,7 @@
 import { Adapter } from './adapter';
 import { adapter } from './test-utils';
 import * as mysql from 'mysql2';
+import { emptyArray } from 'orchid-core';
 
 const { Connection } = mysql as unknown as {
   Connection: { prototype: mysql.Connection };
@@ -39,14 +40,20 @@ describe('adapter', () => {
     it('should have query and arrays in transaction, commit successful transaction', async () => {
       const query = jest.spyOn(Connection.prototype, 'query');
 
-      const result = await adapter.transaction(async (t) => {
-        const [[{ 1: one }]] = await t.query('SELECT 1');
-        const [[[two]]] = await t.arrays('SELECT 2');
-        return one + two;
-      });
+      const result = await adapter.transaction(
+        { text: 'BEGIN', values: emptyArray },
+        async (t) => {
+          const [[{ 1: one }]] = await t.query('SELECT 1');
+          const [[[two]]] = await t.arrays('SELECT 2');
+          return one + two;
+        },
+      );
 
       expect(result).toBe(3);
-      expect(query).toBeCalledWith({ sql: 'BEGIN' }, expect.any(Function));
+      expect(query).toBeCalledWith(
+        { sql: 'BEGIN', values: emptyArray },
+        expect.any(Function),
+      );
       expect(query).toBeCalledWith({ sql: 'SELECT 1' }, expect.any(Function));
       expect(query).toBeCalledWith(
         { sql: 'SELECT 2', rowsAsArray: true },
@@ -60,12 +67,15 @@ describe('adapter', () => {
       const err = new Error('error');
 
       await expect(() =>
-        adapter.transaction(() => {
+        adapter.transaction({ text: 'BEGIN', values: emptyArray }, () => {
           throw err;
         }),
       ).rejects.toThrow(err);
 
-      expect(query).toBeCalledWith({ sql: 'BEGIN' }, expect.any(Function));
+      expect(query).toBeCalledWith(
+        { sql: 'BEGIN', values: emptyArray },
+        expect.any(Function),
+      );
       expect(query).toBeCalledWith({ sql: 'ROLLBACK' }, expect.any(Function));
     });
   });

@@ -11,7 +11,10 @@ npm run db create
 npm run db drop
 ```
 
-These commands will ask for a database administrator username and password.
+Unless you superuser credentials are specified on the `databaseURL`,
+these commands will ask for a database administrator username and password.
+
+If a custom `schema` is chosen for a connection, `db create` will also try to create this schema (won't fail if it is already exists).
 
 ## reset a database
 

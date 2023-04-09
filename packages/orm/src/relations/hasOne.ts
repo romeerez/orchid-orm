@@ -223,7 +223,7 @@ export const makeHasOneMethod = (
 };
 
 const nestedInsert = ({ query, primaryKey, foreignKey }: State) => {
-  return (async (q, data) => {
+  return (async (_, data) => {
     const connect = data.filter(
       (
         item,
@@ -243,7 +243,7 @@ const nestedInsert = ({ query, primaryKey, foreignKey }: State) => {
       ] => Boolean(item[1].connect || item[1].connectOrCreate),
     );
 
-    const t = query.transacting(q);
+    const t = query.clone();
 
     let connected: number[];
     if (connect.length) {
@@ -315,7 +315,7 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
       throw new Error(`\`${key}\` option is not allowed in a batch update`);
     }
 
-    const t = query.transacting(q);
+    const t = query.clone();
     const ids = data.map((item) => item[primaryKey]);
     const currentRelationsQuery = t.where({
       [foreignKey]: { in: ids },

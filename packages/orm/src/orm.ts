@@ -14,6 +14,8 @@ import {
 import { DbTable, Table, TableClasses } from './table';
 import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { AdapterBase } from 'orchid-core';
 
 export type OrchidORM<T extends TableClasses> = {
   [K in keyof T]: DbTable<T[K]>;
@@ -46,12 +48,16 @@ export const orchidORM = <T extends TableClasses>(
     autoPreparedStatements,
     noPrimaryKey,
   };
+
+  const transactionStorage = new AsyncLocalStorage<AdapterBase>();
+
   const qb = new Db(
     adapter,
     undefined as unknown as Db,
     undefined,
     anyShape,
     columnTypes,
+    transactionStorage,
     commonOptions,
   );
   qb.queryBuilder = qb as unknown as Db;
@@ -88,6 +94,7 @@ export const orchidORM = <T extends TableClasses>(
       table.table,
       table.columns.shape,
       table.columnTypes,
+      transactionStorage,
       options,
     );
 

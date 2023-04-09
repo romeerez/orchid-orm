@@ -1,10 +1,11 @@
 import { ColumnsParsers, Query, QueryReturnType } from '../query';
 import { NotFoundError, QueryError } from '../errors';
 import { QueryArraysResult, QueryResult } from '../adapter';
-import { CommonQueryData, Sql } from '../sql';
+import { CommonQueryData } from '../sql';
 import { AfterCallback, BeforeCallback } from './callbacks';
 import { getValueKey } from './get';
 import pg from 'pg';
+import { AdapterBase, Sql } from 'orchid-core';
 
 export const queryMethodByReturnType: Record<
   QueryReturnType,
@@ -52,12 +53,18 @@ export const handleResult: CommonQueryData['handleResult'] = async (
 };
 
 function maybeWrappedThen(this: Query, resolve?: Resolve, reject?: Reject) {
-  if (this.query.wrapInTransaction && !this.query.inTransaction) {
+  const adapter = this.internal.transactionStorage.getStore();
+  if (this.query.wrapInTransaction && !adapter) {
     return this.transaction(
-      (q) => new Promise((resolve, reject) => then(q, resolve, reject)),
+      () =>
+        new Promise((resolve, reject) => {
+          const adapter =
+            this.internal.transactionStorage.getStore() as AdapterBase;
+          return then(this, adapter, resolve, reject);
+        }),
     ).then(resolve, reject);
   } else {
-    return then(this, resolve, reject);
+    return then(this, adapter || this.query.adapter, resolve, reject);
   }
 }
 
@@ -66,6 +73,7 @@ let nameI = 0;
 
 const then = async (
   q: Query,
+  adapter: AdapterBase,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   resolve?: (result: any) => any,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -110,9 +118,9 @@ const then = async (
       logData = q.query.log.beforeQuery(sql);
     }
 
-    const queryResult = await q.query.adapter[
+    const queryResult = (await adapter[
       queryMethodByReturnType[q.query.returnType || 'all'] as 'query'
-    ](sql);
+    ](sql)) as QueryResult;
 
     if (q.query.log) {
       q.query.log.afterQuery(sql, logData);

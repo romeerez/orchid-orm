@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.2.0
+
+### Minor Changes
+
+- Implicitly pass transaction object by using AsyncLocalStorage
+
 ## 0.1.17
 
 ### Patch Changes

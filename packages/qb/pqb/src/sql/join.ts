@@ -11,7 +11,7 @@ import { whereToSql } from './where';
 import { Relation } from '../relations';
 import { ToSqlCtx } from './toSql';
 import { getRaw } from '../raw';
-import { QueryData } from './data';
+import { QueryData, SelectQueryData } from './data';
 import { ColumnsShapeBase, isRaw, RawExpression } from 'orchid-core';
 
 type ItemOf3Or4Length =
@@ -181,21 +181,34 @@ const processArgs = (
         [(table.query.as || table.table) as string]: table.shape,
       };
 
-      let q;
+      let q: QueryBase;
+      let data;
       if (typeof first === 'string') {
-        const shape = table.query.withShapes?.[first];
+        const name = first;
+        const query = table.query;
+        const shape = query.withShapes?.[name];
         if (!shape) {
           throw new Error('Cannot get shape of `with` statement');
         }
-        q = { shape, joinedShapes };
+        q = Object.create(table);
+        q.query = {
+          type: undefined,
+          shape,
+          adapter: query.adapter,
+          handleResult: query.handleResult,
+          returnType: 'all',
+          logger: query.logger,
+        } as SelectQueryData;
+        data = { shape, joinedShapes };
       } else {
-        q = {
+        q = first;
+        data = {
           ...first.query,
           joinedShapes: { ...first.query.joinedShapes, ...joinedShapes },
         };
       }
 
-      const jq = arg(new ctx.onQueryBuilder(first, q, table));
+      const jq = arg(new ctx.onQueryBuilder(q, data, table));
 
       if (jq.query.joinedShapes !== joinedShapes) {
         jq.query.joinedShapes = {

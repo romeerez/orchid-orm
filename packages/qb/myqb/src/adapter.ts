@@ -5,7 +5,7 @@ import {
   PoolConnection,
   FieldPacket,
 } from 'mysql2/promise';
-import { AdapterBase, QueryResultRow } from 'orchid-core';
+import { AdapterBase, QueryResultRow, Sql } from 'orchid-core';
 
 export type QueryResult<T extends QueryResultRow> = [
   (T & {
@@ -69,11 +69,12 @@ export class Adapter implements AdapterBase {
   }
 
   async transaction<Result>(
+    begin: Sql,
     cb: (adapter: TransactionAdapter) => Promise<Result>,
   ): Promise<Result> {
     const client = await this.pool.getConnection();
     try {
-      await makeQuery(client, 'BEGIN');
+      await makeQuery(client, begin);
       let result;
       try {
         result = await cb(new TransactionAdapter(this, client));
@@ -151,6 +152,7 @@ export class TransactionAdapter implements Adapter {
   }
 
   async transaction<Result>(
+    _: Sql,
     cb: (adapter: TransactionAdapter) => Promise<Result>,
   ): Promise<Result> {
     return await cb(this);

@@ -470,10 +470,6 @@ export abstract class Where implements QueryBase {
   }
 }
 
-const emptyInternal: QueryInternal = {
-  indexes: [],
-};
-
 export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
   extends Where
   implements QueryBase
@@ -483,13 +479,14 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
   relations!: Q['relations'];
   baseQuery: Query;
   withData = emptyObject;
-  internal = emptyInternal;
+  internal: Q['internal'];
 
   constructor(
-    q: QueryBase | string,
+    q: QueryBase,
     { shape, joinedShapes }: Pick<QueryData, 'shape' | 'joinedShapes'>,
   ) {
     super();
+    this.internal = q.internal;
     this.table = typeof q === 'object' ? q.table : q;
     this.shape = shape;
     this.query = {

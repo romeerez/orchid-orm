@@ -155,7 +155,7 @@ export const makeBelongsToMethod = (
 };
 
 const nestedInsert = ({ query, primaryKey }: State) => {
-  return (async (q, data) => {
+  return (async (_, data) => {
     const connectOrCreate = data.filter(
       (
         item,
@@ -167,7 +167,7 @@ const nestedInsert = ({ query, primaryKey }: State) => {
       } => Boolean(item.connectOrCreate),
     );
 
-    const t = query.transacting(q);
+    const t = query.clone();
 
     let connectOrCreated: unknown[];
     if (connectOrCreate.length) {
@@ -261,18 +261,12 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
           update[foreignKey] =
             params.set[primaryKey as keyof typeof params.set];
         } else {
-          update[foreignKey] = await query
-            .transacting(q)
-            ._findBy(params.set)
-            ._get(primaryKey);
+          update[foreignKey] = await query.findBy(params.set)._get(primaryKey);
         }
       } else if (params.create) {
-        update[foreignKey] = await query
-          .transacting(q)
-          ._get(primaryKey)
-          ._create(params.create);
+        update[foreignKey] = await query.get(primaryKey)._create(params.create);
       } else if (params.delete) {
-        const selectQuery = q.transacting(q);
+        const selectQuery = q.clone();
         selectQuery.query.type = undefined;
         idForDelete = await selectQuery._getOptional(foreignKey);
         update[foreignKey] = null;
@@ -305,14 +299,12 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
         const id = data[0][foreignKey];
         if (id !== null) {
           await query
-            .transacting(q)
-            ._findBy({ [primaryKey]: id })
+            .findBy({ [primaryKey]: id })
             ._update<WhereResult<Query>>(upsert.update);
         } else {
           (state.updateLaterPromises as Promise<void>[]).push(
             query
-              .transacting(q)
-              ._select(primaryKey)
+              .select(primaryKey)
               ._create(upsert.create)
               .then((result) => {
                 (state.updateLater as Record<string, unknown>)[foreignKey] = (
@@ -325,7 +317,7 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
         return data;
       };
     } else if (params.delete || params.update) {
-      q._afterQuery(async (q, data) => {
+      q._afterQuery(async (_, data) => {
         const id = params.delete
           ? idForDelete
           : Array.isArray(data)
@@ -339,7 +331,7 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
           : (data as Record<string, unknown>)[foreignKey];
 
         if (id !== undefined && id !== null) {
-          const t = query.transacting(q)._findBy({
+          const t = query.findBy({
             [primaryKey]: id,
           });
 
