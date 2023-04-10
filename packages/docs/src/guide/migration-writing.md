@@ -40,7 +40,7 @@ change(async (db) => {
 });
 ```
 
-`db` is an extended query builder, so it has [all the same methods](/guide/query-builder) as a query builder and additional specific methods such as `createTable`, `changeTable`, and others.
+`db` is an extended query builder, so it has [all the same methods](/guide/query-methods) as a query builder and additional specific methods such as `createTable`, `changeTable`, and others.
 
 Example of creating a table and populating it with values:
 

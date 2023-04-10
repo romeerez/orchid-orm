@@ -5,7 +5,7 @@
 Constructing `WHERE` conditions:
 
 ```ts
-Table.where({
+db.table.where({
   // column of the current table
   name: 'John',
 
@@ -19,7 +19,7 @@ Table.where({
   },
 
   // where column equals to raw SQL
-  column: Table.raw('raw expression')
+  column: db.table.raw('raw expression')
 })
 
 ```
@@ -34,29 +34,29 @@ type Params = {
 
 const loadRecords = async (params: Params) => {
   // this will load all records if params is an empty object
-  const records = await Table.where(params)
+  const records = await db.table.where(params)
 }
 ```
 
 `.where` can accept other queries and merge their conditions:
 
 ```ts
-const otherQuery = Table.where({ name: 'John' })
+const otherQuery = db.table.where({ name: 'John' })
 
-Table.where({ id: 1 }, otherQuery)
+db.table.where({ id: 1 }, otherQuery)
 // this will produce WHERE "table"."id" = 1 AND "table"."name' = 'John'
 ```
 
 `.where` supports raw argument:
 
 ```ts
-Table.where(Table.raw('a = b'))
+db.table.where(db.table.raw('a = b'))
 ```
 
 `.where` can accept a callback with a specific query builder containing all "where" methods such as `.where`, `.or`, `.whereNot`, `.whereIn`, `.whereExists`:
 
 ```ts
-Table.where((q) =>
+db.table.where((q) =>
   q.where({ name: 'Name' })
     .or({ id: 1 }, { id: 2 })
     .whereIn('letter', ['a', 'b', 'c'])
@@ -67,7 +67,7 @@ Table.where((q) =>
 `.where` can accept multiple arguments, conditions are joined with `AND`:
 
 ```ts
-Table.where({ id: 1 }, Table.where({ name: 'John' }), Table.raw('a = b'))
+db.table.where({ id: 1 }, db.table.where({ name: 'John' }), db.table.raw('a = b'))
 ```
 
 ### where special keys
@@ -77,7 +77,7 @@ The object passed to `.where` can contain special keys, each of the keys corresp
 For example:
 
 ```ts
-Table.where({
+db.table.where({
   NOT: { key: 'value' },
   OR: [{ name: 'a' }, { name: 'b' }],
   IN: { columns: ['id', 'name'], values: [[1, 'a'], [2, 'b']] },
@@ -87,7 +87,7 @@ Table.where({
 Using methods instead of this is a shorter and cleaner way, but in some cases, such object keys way may be more convenient.
 
 ```ts
-Table.where({
+db.table.where({
   // see .whereNot
   NOT: { id: 1 },
   // can be an array:
@@ -114,7 +114,7 @@ Table.where({
 `.and` is an alias for `.where` to make it closer to SQL:
 
 ```ts
-Table.where({ id: 1 }).and({ name: 'John' })
+db.table.where({ id: 1 }).and({ name: 'John' })
 ```
 
 ## or
@@ -126,7 +126,7 @@ Columns in single arguments are still joined with `AND`.
 The database is processing `AND` before `OR`, so this should be intuitively clear.
 
 ```ts
-Table.or({ id: 1, color: 'red' }, { id: 2, color: 'blue' })
+db.table.or({ id: 1, color: 'red' }, { id: 2, color: 'blue' })
 ````
 
 This query will produce such SQL (simplified):
@@ -143,7 +143,7 @@ The `find` method is available only for tables which has exactly one primary key
 Find record by id, throw [NotFoundError](/guide/query-builder-error-handling.html) if not found:
 
 ```ts
-await Table.find(1)
+await db.table.find(1)
 ```
 
 ## findOptional
@@ -151,7 +151,7 @@ await Table.find(1)
 Find record by id, returns `undefined` when not found:
 
 ```ts
-await Table.findOptional(1)
+await db.table.findOptional(1)
 ```
 
 ## findBy
@@ -159,9 +159,9 @@ await Table.findOptional(1)
 `.findBy` Takes the same arguments as `.where` and returns a single record, throwing `NotFoundError` if not found.
 
 ```ts
-Table.findBy(...conditions)
+db.table.findBy(...conditions)
 // is equivalent to:
-Table.where(...conditions).take()
+db.table.where(...conditions).take()
 ```
 
 ## findOptional
@@ -169,9 +169,9 @@ Table.where(...conditions).take()
 `.findOptional` Takes the same arguments as `.where` and returns a single record, returns `undefined` when not found:
 
 ```ts
-Table.findOptional(...conditions)
+db.table.findOptional(...conditions)
 // is equivalent to:
-Table.where(...conditions).takeOptional()
+db.table.where(...conditions).takeOptional()
 ```
 
 ## whereNot
@@ -180,7 +180,7 @@ Table.where(...conditions).takeOptional()
 
 ```ts
 // find records of different colors than red
-Table.whereNot({ color: 'red' })
+db.table.whereNot({ color: 'red' })
 ```
 
 ## andNot
@@ -200,15 +200,15 @@ Table.whereNot({ color: 'red' })
 When used with a single column it works equivalent to the `in` column operator:
 
 ```ts
-Table.whereIn('column', [1, 2, 3])
+db.table.whereIn('column', [1, 2, 3])
 // the same as:
-Table.where({ column: [1, 2, 3] })
+db.table.where({ column: [1, 2, 3] })
 ```
 
 `.whereIn` can support a tuple of columns, that's what the `in` operator cannot support:
 
 ```ts
-Table.whereIn(
+db.table.whereIn(
   ['id', 'name'],
   [[1, 'Alice'], [2, 'Bob']],
 )
@@ -217,7 +217,7 @@ Table.whereIn(
 It supports sub query which should return records with columns of the same type:
 
 ```ts
-Table.whereIn(
+db.table.whereIn(
   ['id', 'name'],
   OtherTable.select('id', 'name'),
 )
@@ -226,9 +226,9 @@ Table.whereIn(
 It supports raw query:
 
 ```ts
-Table.whereIn(
+db.table.whereIn(
   ['id', 'name'],
-  Table.raw(`((1, 'one'), (2, 'two'))`)
+  db.table.raw(`((1, 'one'), (2, 'two'))`)
 )
 ```
 
@@ -255,7 +255,7 @@ Use `.exists()` to check if there is at least one record-matching condition.
 It will discard previous `.select` statements if any. Returns a boolean.
 
 ```ts
-const exists: boolean = await Table.where(...conditions).exists()
+const exists: boolean = await db.table.where(...conditions).exists()
 ```
 
 ## column operators
@@ -267,7 +267,7 @@ Different types of columns support different sets of operators.
 All column operators can take a value of the same type as the column, a sub-query, or a raw expression:
 
 ```ts
-Table.where({
+db.table.where({
   numericColumn: {
     // lower than 5
     lt: 5,
@@ -276,7 +276,7 @@ Table.where({
     lt: OtherTable.select('someNumber').take(),
 
     // raw expression produces WHERE "numericColumn" < "otherColumn" + 10
-    lt: Table.raw('"otherColumn" + 10')
+    lt: db.table.raw('"otherColumn" + 10')
   }
 })
 ```
@@ -286,7 +286,7 @@ Table.where({
 `equals` is a simple `=` operator, it may be useful for comparing column value with JSON object:
 
 ```ts
-Table.where({
+db.table.where({
   // this will fail because an object with operators is expected
   jsonColumn: someObject,
 
@@ -298,7 +298,7 @@ Table.where({
 `not` is `!=` (or `<>`) not equal operator:
 
 ```ts
-Table.where({
+db.table.where({
   anyColumn: { not: value }
 })
 ```
@@ -308,14 +308,14 @@ Table.where({
 Takes an array of the same type as a column, a sub-query that returns a list of values, or a raw expression that returns a list.
 
 ```ts
-Table.where({
+db.table.where({
   column: {
     in: ['a', 'b', 'c'],
 
     // WHERE "column" IN (SELECT "column" FROM "otherTable")
     in: OtherTable.select('column'),
 
-    in: Table.raw("('a', 'b')")
+    in: db.table.raw("('a', 'b')")
   }
 })
 ```
@@ -335,7 +335,7 @@ To compare numbers, dates, and times.
 `gte` is for `>=` (greater than or equal)
 
 ```ts
-Table.where({
+db.table.where({
   numericColumn: {
     gt: 5,
     lt: 10,
@@ -356,7 +356,7 @@ Table.where({
 Both elements can be of the same type as a column, a sub-query, or a raw query.
 
 ```ts
-Table.where({
+db.table.where({
   column: {
     // simple values
     between: [1, 10],
@@ -364,7 +364,7 @@ Table.where({
     // sub-query and raw expression
     between: [
       OtherTable.select('column').take(),
-      Table.raw('2 + 2'),
+      db.table.raw('2 + 2'),
     ],
   }
 })
@@ -379,7 +379,7 @@ For `text`, `char`, `varchar`, and `json` columns.
 Takes a string, or sub-query returning string, or raw expression as well as other operators.
 
 ```ts
-Table.where({
+db.table.where({
   textColumn: {
     // WHERE "textColumn" LIKE '%string%'
     contains: 'string',
@@ -406,7 +406,7 @@ For the `jsonb` column, note that the `json` type has text operators instead.
 Value can be of any type to compare with JSON value, or it can be a sub-query or a raw expression.
 
 ```ts
-Table.where({
+db.table.where({
   jsonbColumn: {
     jsonPath: [
       '$.name', // first element is JSON path
@@ -424,7 +424,7 @@ For instance, it is true if the column has JSON `{ "a": 1, "b": 2 }` and provide
 Takes the value of any type, or sub query which returns a single value, or a raw expression.
 
 ```ts
-Table.where({
+db.table.where({
   jsonbColumn: {
     jsonSupersetOf: { a: 1 },
   }
@@ -438,7 +438,7 @@ For instance, it is true if the column has JSON `{ "a": 1 }` and provided value 
 Takes the value of any type, or sub query which returns a single value, or a raw expression.
 
 ```ts
-Table.where({
+db.table.where({
   jsonbColumn: {
     jsonSupersetOf: { a: 1 },
   }

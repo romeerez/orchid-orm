@@ -212,7 +212,7 @@ type MigrationConfig = {
 }
 ```
 
-To configure logging, see [log option](/guide/query-builder-setup.html#log-option) in the query builder document.
+To configure logging, see [log option](/guide/orm-and-query-builder#log-option) in the query builder document.
 
 Note that `migrationsPath` can accept an absolute path, or a relative path to the current file.
 

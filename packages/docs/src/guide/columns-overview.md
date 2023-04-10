@@ -1,40 +1,6 @@
 # Columns schema overview
 
-Columns schema is used in both the query builder and the ORM to store information about table columns, to make querying type-safe, and to add additional features for querying.
-
-When using query-builder as a standalone, define columns in such way:
-
-```ts
-import { createDb } from 'pqb'
-
-const db = createDb(...options)
-
-const someTable = db('someTable', (t) => ({
-  id: t.identity().primaryKey(),
-  name: t.text(3, 100),
-  active: t.boolean(),
-  description: t.text(10, 1000).nullable(),
-  ...t.timestamps(),
-}))
-```
-
-When using ORM, define columns in such way:
-
-```ts
-// see ORM docs about defining BaseTable
-import { BaseTable } from './baseTable'
-
-export class SomeTable extends BaseTable {
-  readonly table = 'someTable';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    name: t.text(3, 100),
-    active: t.boolean(),
-    description: t.text(10, 1000).nullable(),
-    ...t.timestamps(),
-  }))
-}
-```
+Columns schema stores information about table columns to make querying type-safe, and to add additional features for querying.
 
 Note that all columns are **non-nullable** by default, use `.nullable()` to mark them as nullable.
 
@@ -48,14 +14,14 @@ For example, `timestamp` will be returned as a string by default (this may be ov
 
 ```ts
 // get createdAt field from the first table record
-const createdAt: string = await Table.get('createdAt')
+const createdAt: string = await db.table.get('createdAt')
 
-await Table.create({
+await db.table.create({
   // Date is fine
   createdAt: new Date(),
 })
 
-await Table.create({
+await db.table.create({
   // string in ISO format is fine as well
   createdAt: new Date().toISOString(),
 })
@@ -98,6 +64,55 @@ db.someTable.where({
     gte: 18,
   },
 })
+```
+
+## Add custom columns
+
+It's possible to define custom columns, they can have some special behavior or meaning, or just for simplicity.
+
+For example, we can add `id` column which would be an alias to `identity().primaryKey()` or `uuid().primaryKey()`:
+
+```ts
+export const BaseTable = createBaseTable({
+  columnTypes: (t) => ({
+    ...t,
+    // for autoincementing integer ID:
+    id() {
+      return t.identity.call(this).primaryKey();
+    },
+    // or, for UUID:
+    id() {
+      return t.uuid.call(this).primaryKey();
+    },
+  }),
+});
+```
+
+Or maybe you'd like to have a `cuid` type of ID, generating new values on JS side:
+
+```ts
+import { generateCUID } from 'some-lib'
+
+export const BaseTable = createBaseTable({
+  columnTypes: (t) => ({
+    ...t,
+    id() {
+      return t.varchar(36).primaryKey().default(() => generateCUID());
+    },
+  }),
+});
+```
+
+And then we can use custom columns on our tables just as well as predefined ones:
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    // custom column
+    id: t.id(),
+  }));
+}
 ```
 
 ## Override column types
@@ -146,25 +161,6 @@ and to parse the date to the number when returning from a database:
 
 ```ts
 export const BaseTable = createBaseTable({
-  columnTypes: (t) => ({
-    ...t,
-    timestamp() {
-      return t.timestamp.call(this)
-        .encode((input: number) => new Date(input))
-        .parse((input) => new Date(input))
-        .as(t.integer())
-    },
-  }),
-})
-```
-
-Similarly, for query builder:
-
-```ts
-import { createDb } from 'pqb'
-
-const db = createDb({
-  databaseURL: process.env.DATABASE_URL,
   columnTypes: (t) => ({
     ...t,
     timestamp() {

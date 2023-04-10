@@ -41,15 +41,15 @@ export default {
         ],
       },
       {
-        text: 'Query builder',
+        text: 'ORM and query builder',
         items: [
           {
             text: 'Setup and overview',
-            link: '/guide/query-builder-setup',
+            link: '/guide/orm-and-query-builder',
           },
           {
             text: 'Query methods',
-            link: '/guide/query-builder',
+            link: '/guide/query-methods',
           },
           {
             text: 'Where conditions',
@@ -84,10 +84,6 @@ export default {
       {
         text: 'ORM',
         items: [
-          {
-            text: 'Setup and overview',
-            link: '/guide/orm-setup-and-overview',
-          },
           {
             text: 'Modeling relations',
             link: '/guide/orm-relations',

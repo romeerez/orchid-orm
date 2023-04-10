@@ -10,18 +10,18 @@ Place `.select`, or `.get` before `.create` to specify returning columns:
 
 ```ts
 // to return only `id`, use get('id')
-const id: number = await Table.get('id').create(data)
+const id: number = await db.table.get('id').create(data)
 
 // returns a single object when creating a single record
-const objectWithId: { id: number } = await Table.select('id').create(data)
+const objectWithId: { id: number } = await db.table.select('id').create(data)
 
 // returns an array of objects when creating multiple
-const objects: { id: number }[] = await Table.select('id').createMany([one, two])
+const objects: { id: number }[] = await db.table.select('id').createMany([one, two])
 
 // returns an array of objects as well for raw values:
-const objects2: { id: number }[] = await Table.select('id').createRaw({
+const objects2: { id: number }[] = await db.table.select('id').createRaw({
   columns: ['name', 'password'],
-  values: Table.raw(`'Joe', 'asdfqwer'`)
+  values: db.table.raw(`'Joe', 'asdfqwer'`)
 })
 ```
 
@@ -30,7 +30,7 @@ const objects2: { id: number }[] = await Table.select('id').createRaw({
 `create` will create one record.
 
 ```ts
-const oneRecord = await Table.create({
+const oneRecord = await db.table.create({
   name: 'John',
   password: '1234'
 })
@@ -43,7 +43,7 @@ const oneRecord = await Table.create({
 In case one of the objects has fewer fields, the `DEFAULT` SQL keyword will be placed in its place in the `VALUES` statement.
 
 ```ts
-const manyRecords = await Table.createMany([
+const manyRecords = await db.table.createMany([
   { key: 'value', otherKey: 'other value' },
   { key: 'value' } // default will be used for `otherKey`
 ])
@@ -60,9 +60,9 @@ If the table has a column with runtime defaults (defined with callbacks), the va
 `columns` are type-checked to contain all required columns.
 
 ```ts
-const oneRecord = await Table.createRaw({
+const oneRecord = await db.table.createRaw({
   columns: ['name', 'amount'],
-  values: Table.raw(`'name', random()`)
+  values: db.table.raw(`'name', random()`)
 })
 ```
 
@@ -77,11 +77,11 @@ If the table has a column with runtime defaults (defined with callbacks), functi
 `columns` are type-checked to contain all required columns.
 
 ```ts
-const manyRecords = await Table.createManyRaw({
+const manyRecords = await db.table.createManyRaw({
   columns: ['name', 'amount'],
   values: [
-    Table.raw(`'one', 2`),
-    Table.raw(`'three', 4`),
+    db.table.raw(`'one', 2`),
+    db.table.raw(`'three', 4`),
   ],
 })
 ```
@@ -100,7 +100,7 @@ Columns with runtime defaults (defined with a callback) are supported here.
 The value for such a column will be injected unless selected from a related table or provided in a data object.
 
 ```ts
-const oneRecord = await Table.createFrom(
+const oneRecord = await db.table.createFrom(
   // In the select, key is a related table column, value is a column to insert as
   RelatedTable.select({ relatedId: 'id' }).findBy({ key: 'value' }),
   // optional argument:
@@ -128,7 +128,7 @@ Similar to `createFrom`, but intended to create many records.
 Unlike `createFrom`, it doesn't accept second argument with data, and runtime defaults cannot work with it.
 
 ```ts
-const manyRecords = await Table.createManyFrom(
+const manyRecords = await db.table.createManyFrom(
   RelatedTable.select({ relatedId: 'id' }).where({ key: 'value' }),
 )
 ```
@@ -170,31 +170,31 @@ or to update the existing row with new data (perform an "UPSERT") by using .onCo
 Target.create(data).onConflict().ignore()
 
 // single column:
-Table.create(data).onConfict('email')
+db.table.create(data).onConfict('email')
 
 // array of columns:
-Table.create(data).onConfict(['email', 'name'])
+db.table.create(data).onConfict(['email', 'name'])
 
 // raw expression:
-Table.create(data).onConfict(Table.raw('(email) where condition'))
+db.table.create(data).onConfict(db.table.raw('(email) where condition'))
 ```
 
 ::: info
 The column(s) specified by this method must either be the table's PRIMARY KEY or have a UNIQUE index on them, or the query will fail to execute.
 When specifying multiple columns, they must be a composite PRIMARY KEY or have a composite UNIQUE index.
 
-You can use the Table.raw(...) function in onConflict.
+You can use the db.table.raw(...) function in onConflict.
 It can be useful to specify a condition when you have a partial index:
 
 ```ts
-Table
+db.table
   .create({
     email: "ignore@example.com",
     name: "John Doe",
     active: true
   })
   // ignore only on email conflict and active is true.
-  .onConflict(Table.raw('(email) where active'))
+  .onConflict(db.table.raw('(email) where active'))
   .ignore()
 ```
 :::
@@ -212,7 +212,7 @@ Adds the `ON CONFLICT (columns) DO NOTHING` clause to the insert statement.
 It produces `ON CONFLICT DO NOTHING` when no `onConflict` argument provided.
 
 ```ts
-Table
+db.table
   .create({
     email: "ignore@example.com",
     name: "John Doe"
@@ -233,7 +233,7 @@ When no `onConflict` argument provided,
 it will automatically collect all table columns that have unique index and use them as a conflict target.
 
 ```ts
-Table
+db.table
   .create({
     email: "ignore@example.com",
     name: "John Doe"
@@ -245,7 +245,7 @@ Table
 This also works with batch creates:
 
 ```ts
-Table
+db.table
   .createMany([
     { email: "john@example.com", name: "John Doe" },
     { email: "jane@example.com", name: "Jane Doe" },
@@ -261,7 +261,7 @@ For example, you may want to set a `createdAt` column when creating but would pr
 ```ts
 const timestamp = Date.now();
 
-Table
+db.table
   .create({
     email: "ignore@example.com",
     name: "John Doe",
@@ -282,7 +282,7 @@ For example, you may want to change a value if the row already exists:
 ```ts
 const timestamp = Date.now();
 
-Table
+db.table
   .create({
     email: "ignore@example.com",
     name: "John Doe",
@@ -300,7 +300,7 @@ It is also possible to add a WHERE clause to conditionally update only the match
 ```ts
 const timestamp = Date.now();
 
-Table
+db.table
   .create({
     email: "ignore@example.com",
     name: "John Doe",
@@ -318,7 +318,7 @@ Table
 `.merge` also accepts raw expression:
 
 ```ts
-Table.create(data).onConflict().merge(Table.raw('raw SQL expression'))
+db.table.create(data).onConflict().merge(db.table.raw('raw SQL expression'))
 ```
 
 ## defaults
@@ -329,7 +329,7 @@ Columns provided in `.defaults` are marked as optional in the following `.create
 
 ```ts
 // Will use firstName from defaults and lastName from create argument:
-Table.defaults({
+db.table.defaults({
   firstName: 'first name',
   lastName: 'last name',
 }).create({
@@ -351,7 +351,7 @@ To ensure that the whole table won't be updated by accident, updating without wh
 If you need to update ALL records, use `where` method without arguments:
 
 ```ts
-await Table.where().update({ name: 'new name' })
+await db.table.where().update({ name: 'new name' })
 ```
 
 If `.select` and `.where` were specified before the update it will return an array of updated records.
@@ -359,19 +359,19 @@ If `.select` and `.where` were specified before the update it will return an arr
 If `.select` and `.take`, `.find`, or similar were specified before the update it will return one updated record.
 
 ```ts
-const updatedCount = await Table.where({ name: 'old name' }).update({ name: 'new name' })
+const updatedCount = await db.table.where({ name: 'old name' }).update({ name: 'new name' })
 
-const id = await Table
+const id = await db.table
   .find(1)
   .get('id')
   .update({ name: 'new name' })
 
-const oneFullRecord = await Table
+const oneFullRecord = await db.table
   .selectAll()
   .find(1)
   .update({ name: 'new name' })
 
-const recordsArray = await Table
+const recordsArray = await db.table
   .select('id', 'name')
   .where({ id: 1 })
   .update({ name: 'new name' })
@@ -379,7 +379,7 @@ const recordsArray = await Table
 
 `null` value will set a column to `NULL`, and the `undefined` value will be skipped:
 ```ts
-Table.findBy({ id: 1 }).update({
+db.table.findBy({ id: 1 }).update({
   name: null, // updates to null
   age: undefined, // skipped, no effect
 })
@@ -395,8 +395,8 @@ it returns an updated count by default,
 you can customize returning data by using `select`.
 
 ```ts
-const updatedCount = await Table.find(1).updateRaw(
-  Table.raw(`name = $name`, { name: 'name' })
+const updatedCount = await db.table.find(1).updateRaw(
+  db.table.raw(`name = $name`, { name: 'name' })
 )
 ```
 
@@ -409,10 +409,10 @@ import { NotFoundError } from 'pqb'
 
 try {
   // updatedCount is guaranteed to be greater than 0
-  const updatedCount = await Table.where(conditions).updateOrThrow({ name: 'name' })
+  const updatedCount = await db.table.where(conditions).updateOrThrow({ name: 'name' })
 
   // updatedRecords is guaranteed to be a non-empty array
-  const updatedRecords = await Table.where(conditions).select('id')
+  const updatedRecords = await db.table.where(conditions).select('id')
     .updateOrThrow({ name: 'name' })
 } catch (err) {
   if (err instanceof NotFoundError) {
@@ -457,14 +457,14 @@ Increments a column value by the specified amount. Optionally takes `returning` 
 
 ```ts
 // increment numericColumn column by 1, return updated records
-const result = await Table
+const result = await db.table
   .selectAll()
   .where(...conditions)
   .increment('numericColumn')
 
 
 // increment someColumn by 5 and otherColumn by 10, return updated records
-const result2 = await Table
+const result2 = await db.table
   .selectAll()
   .where(...conditions)
   .increment({
@@ -480,13 +480,13 @@ Decrements a column value by the specified amount. Optionally takes `returning` 
 
 ```ts
 // decrement numericColumn column by 1, return updated records
-const result = await Table
+const result = await db.table
   .selectAll()
   .where(...conditions)
   .decrement('numericColumn')
 
 // decrement someColumn by 5 and otherColumn by 10, return updated records
-const result2 = await Table
+const result2 = await db.table
   .selectAll()
   .where(...conditions)
   .decrement({
@@ -511,29 +511,29 @@ To prevent accidental deletion of all records, deleting without where will resul
 To delete all records without conditions add an empty `where`:
 
 ```ts
-await Table.where().delete()
+await db.table.where().delete()
 ```
 
 ```ts
 // deletedCount is the number of deleted records
-const deletedCount = await Table
+const deletedCount = await db.table
   .where(...conditions)
   .delete()
 
 // returns a single value, throws if not found
-const id: number | undefined = await Table
+const id: number | undefined = await db.table
   .findBy(...conditions)
   .get('id')
   .delete()
 
 // returns an array of records with specified columns
-const deletedRecord = await Table
+const deletedRecord = await db.table
   .select('id', 'name', 'age')
   .where(...conditions)
   .delete()
 
 // returns an array of fully deleted records
-const deletedUsersFull = await Table
+const deletedUsersFull = await db.table
   .selectAll()
   .where(...conditions)
   .delete()
@@ -543,7 +543,7 @@ const deletedUsersFull = await Table
 
 ```ts
 // delete all users who have corresponding profile records:
-Table
+db.table
   .join(Profile, 'profile.userId', 'user.id')
   .where()
   .delete()

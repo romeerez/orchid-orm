@@ -186,9 +186,12 @@ The `timestamps` function is using `timestamp` internally. If `timestamp` is ove
 `updatedAt` adds a hook to refresh its date on every `update` query, unless you set `updatedAt` explicitly when updating a record.
 
 ```ts
-const someTable = db('someTable', (t) => ({
-  ...t.timestamps()
-}))
+export class SomeTable extends BaseTable {
+  readonly table = 'someTable';
+  columns = this.setColumns((t) => ({
+    ...t.timestamps(),
+  }));
+}
 ```
 
 ## modifyQuery

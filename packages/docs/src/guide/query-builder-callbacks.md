@@ -21,7 +21,7 @@ If the query has both `beforeQuery` and `beforeCreate`, `beforeCreate` will run 
 If the query has both `afterQuery` and `afterCreate`, `afterCreate` will run last.
 
 ```ts
-await Table
+await db.table
   .beforeQuery(() => console.log('before query'))
   .afterQuery((_, data) => console.log('after query', data))
   .all()
@@ -32,7 +32,7 @@ await Table
 `beforeCreate` and `afterCreate` callbacks will run only on the `create` query:
 
 ```ts
-await Table
+await db.table
   .beforeCreate(() => console.log('before create'))
   .afterCreate((_, data) => console.log('after create', data))
   .create(data)
@@ -43,7 +43,7 @@ await Table
 `beforeUpdate` and `afterUpdate` callbacks will run only on the update query:
 
 ```ts
-await Table
+await db.table
   .beforeUpdate(() => console.log('before update'))
   .afterUpdate((_, data) => console.log('after update', data))
   .where({ ...conditions })
@@ -55,7 +55,7 @@ await Table
 `beforeDelete` and `afterDelete` callbacks will run only on the delete query:
 
 ```ts
-await Table
+await db.table
   .beforeDelete(() => console.log('before delete'))
   .afterDelete((_, data) => console.log('after delete', data))
   .where({ ...conditions })

@@ -282,10 +282,14 @@ export const change = rakeDb(options, {
     baseTablePath: '../lib/baseTable.ts',
     mainFilePath: '../db.ts',
   }),
+  import: (path) => import(path),
 });
 ```
 
 `appCodeUpdater` is optional. When configured, this will automatically add and update table files in the project.
+
+Normally, rake-db can import migrations without problems,
+but if you see `ts-node` error that it cannot import a migration, add the `import` function as above.
 
 Add the script to `package.json` scripts section:
 

@@ -26,29 +26,29 @@ type WithOptions = {
 };
 
 // accepts columns shape and a raw expression:
-Table.with(
+db.table.with(
   'alias',
   {
     id: columnTypes.integer(),
     name: columnTypes.text(3, 100),
   },
-  Table.raw('SELECT id, name FROM "someTable"'),
+  db.table.raw('SELECT id, name FROM "someTable"'),
 )
 
 // accepts query:
-Table.with(
+db.table.with(
   'alias',
-  Table.all(),
+  db.table.all(),
 )
 
 // accepts a callback for a query builder:
-Table.with(
+db.table.with(
   'alias',
-  (qb) => qb.select({ one: Table.raw((t) => t.integer(), '1') }),
+  (qb) => qb.select({ one: db.table.raw((t) => t.integer(), '1') }),
 )
 
 // All mentioned forms can accept options as a second argument:
-Table.with(
+db.table.with(
   'alias',
   {
     recursive: true,
@@ -60,13 +60,13 @@ Table.with(
 
 Defined `WITH` table can be used in `.from` or `.join` with all the type safeness:
 ```ts
-Table
-  .with('alias', Table.all())
+db.table
+  .with('alias', db.table.all())
   .from('alias')
   .select('alias.id')
 
-Table
-  .with('alias', Table.all())
+db.table
+  .with('alias', db.table.all())
   .join('alias', 'alias.id', 'user.id')
   .select('alias.id')
 ```
@@ -79,7 +79,7 @@ Though this method can be used to set the schema right when building the query,
 it's better to specify schema when calling `db(table, () => columns, { schema: string })`
 
 ```ts
-Table.withSchema('customSchema').select('id')
+db.table.withSchema('customSchema').select('id')
 ```
 
 Resulting SQL:
@@ -121,7 +121,7 @@ type AggregateOptions = {
   // set select alias
   as?: string;
 
-  // Expression can be a table column name or Table.raw()
+  // Expression can be a table column name or db.table.raw()
   partitionBy?: Expression | Expression[];
 
   order?:
@@ -140,7 +140,7 @@ Returns the number of the current row within its partition, counting from 1.
 
 ```ts
 // result is of type Array<{ id: number, rowNumber: number }>
-const result = await Table
+const result = await db.table
   .select('id')
   .selectRowNumber({
     as: 'rowNumber',
@@ -157,7 +157,7 @@ Returns the rank of the current row, with gaps; that is, the row_number of the f
 
 ```ts
 // result is of type Array<{ id: number, rank: number }>
-const result = await Table
+const result = await db.table
   .select('id')
   .selectRank({
     as: 'rank',
@@ -174,7 +174,7 @@ Returns the rank of the current row, without gaps; this function effectively cou
 
 ```ts
 // result is of type Array<{ id: number, denseRank: number }>
-const result = await Table
+const result = await db.table
   .select('id')
   .selectDenseRank({
     as: 'denseRank',
@@ -191,7 +191,7 @@ Returns the relative rank of the current row, that is (rank - 1) / (total partit
 
 ```ts
 // result is of type Array<{ id: number, percentRank: number }>
-const result = await Table
+const result = await db.table
   .select('id')
   .selectPercentRank({
     as: 'percentRank',
@@ -208,7 +208,7 @@ Returns the cumulative distribution, that is (number of partition rows preceding
 
 ```ts
 // result is of type Array<{ id: number, cumeDist: number }>
-const result = await Table
+const result = await db.table
   .select('id')
   .selectCumeDist({
     as: 'cumeDist',
@@ -230,10 +230,10 @@ type ColumnInfo = {
 }
 
 // columnInfo has type Record<string, ColumnInfo>, where string is name of columns
-const columnInfo = await Table.columnInfo()
+const columnInfo = await db.table.columnInfo()
 
 // singleColumnInfo has the type ColumnInfo
-const singleColumnInfo = await Table.columnInfo('name')
+const singleColumnInfo = await db.table.columnInfo('name')
 ```
 
 ## copy
@@ -275,7 +275,7 @@ export type CopyOptions<Column = string> = {
 Example usage:
 
 ```ts
-await Table.copy({
+await db.table.copy({
   columns: ['id', 'title', 'description'],
   from: 'path-to-file'
 })
@@ -287,7 +287,7 @@ Selects a value from JSON data using a JSON path.
 ```ts
 import { columnTypes } from 'pqb'
 
-Table.jsonPathQuery(
+db.table.jsonPathQuery(
   columnTypes.text(3, 100), // type of the value
   'data', // name of the JSON column
   '$.name', // JSON path
@@ -304,10 +304,10 @@ Table.jsonPathQuery(
 
 Nested JSON operations can be used in place of JSON column name:
 ```ts
-Table.jsonPathQuery(
+db.table.jsonPathQuery(
   columnTypes.text(3, 100),
   // Available: .jsonSet, .jsonInsert, .jsonRemove
-  Table.jsonSet('data', ['key'], 'value'),
+  db.table.jsonSet('data', ['key'], 'value'),
   '$.name',
   'name',
 )
@@ -318,7 +318,7 @@ Table.jsonPathQuery(
 Return a JSON value/object/array where a given value is set at the given path.
 The path is an array of keys to access the value.
 ```ts
-const result = await Table
+const result = await db.table
   .jsonSet('data', ['name'], 'new value')
   .take()
 
@@ -327,7 +327,7 @@ expect(result.data).toEqual({ name: 'new value' })
 
 Optionally takes parameters of type `{ as?: string, createIfMissing?: boolean }`
 ```ts
-await Table.jsonSet(
+await db.table.jsonSet(
   'data',
   ['name'],
   'new value',
@@ -343,7 +343,7 @@ await Table.jsonSet(
 Return a JSON value/object/array where a given value is inserted at the given JSON path. Value can be a single value or JSON object. If a value exists at the given path, the value is not replaced.
 ```ts
 // imagine user has data = { tags: ['two'] }
-const result = await Table
+const result = await db.table
   .jsonInsert('data', ['tags', 0], 'one')
   .take()
 
@@ -354,7 +354,7 @@ expect(result.data).toEqual({ tags: ['one', 'two'] })
 Optionally takes parameters of type `{ as?: string, insertAfter?: boolean }`
 ```ts
 // imagine user has data = { tags: ['one'] }
-const result = await Table
+const result = await db.table
   .jsonInsert(
     'data',
     ['tags', 0],
@@ -375,7 +375,7 @@ expect(result.alias).toEqual({ tags: ['one', 'two'] })
 Return a JSON value/object/array where a given value is removed at the given JSON path.
 ```ts
 // imagine a user has data = { tags: ['one', 'two'] }
-const result = await Table
+const result = await db.table
   .jsonRemove(
     'data',
     ['tags', 0],
