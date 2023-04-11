@@ -16,6 +16,8 @@ import {
   QueryCommon,
   MessageParam,
   raw,
+  EncodeColumn,
+  ParseColumn,
 } from 'orchid-core';
 import { TableData } from './columnTypes';
 
@@ -195,20 +197,20 @@ export abstract class ColumnType<
   encode<T extends ColumnType, Input>(
     this: T,
     fn: (input: Input) => unknown,
-  ): Omit<T, 'inputType'> & { inputType: Input } {
+  ): EncodeColumn<T, Input> {
     return Object.assign(Object.create(this), {
       encodeFn: fn,
-    }) as unknown as Omit<T, 'inputType'> & { inputType: Input };
+    }) as unknown as EncodeColumn<T, Input>;
   }
 
   parse<T extends ColumnType, Output>(
     this: T,
     fn: (input: T['type']) => Output,
-  ): Omit<T, 'type'> & { type: Output } {
+  ): ParseColumn<T, Output> {
     return Object.assign(Object.create(this), {
       parseFn: fn,
       parseItem: fn,
-    }) as unknown as Omit<T, 'type'> & { type: Output };
+    }) as unknown as ParseColumn<T, Output>;
   }
 
   as<

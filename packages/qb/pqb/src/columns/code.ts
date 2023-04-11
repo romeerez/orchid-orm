@@ -415,6 +415,7 @@ export const columnCode = (
   t: string,
   code: Code,
   data = type.data,
+  skip?: Record<'encodeFn', unknown>,
 ): Code => {
   code = toArray(code);
 
@@ -441,7 +442,8 @@ export const columnCode = (
 
   if (data.isNullable) addCode(code, '.nullable()');
 
-  if (type.encodeFn) addCode(code, `.encode(${type.encodeFn.toString()})`);
+  if (type.encodeFn && type.encodeFn !== skip?.encodeFn)
+    addCode(code, `.encode(${type.encodeFn.toString()})`);
 
   if (type.parseFn && !('hideFromCode' in type.parseFn))
     addCode(code, `.parse(${type.parseFn.toString()})`);

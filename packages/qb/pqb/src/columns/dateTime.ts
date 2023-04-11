@@ -8,6 +8,8 @@ import {
   nameKey,
   ColumnTypesBase,
   dateDataToCode,
+  EncodeColumn,
+  ParseColumn,
 } from 'orchid-core';
 import { assignMethodsToClass } from './utils';
 import { IntegerColumn } from './number';
@@ -16,26 +18,31 @@ import { columnCode } from './code';
 type DateMethods = typeof dateTypeMethods;
 
 export interface DateBaseColumn
-  extends ColumnType<string, typeof Operators.date, string | Date>,
+  extends ColumnType<string, typeof Operators.date, string | number | Date>,
     DateMethods {}
+
+const dateTimeEncode = (input: string | number | Date) => {
+  return typeof input === 'object' ? input : new Date(input);
+};
+
+const skip = { encodeFn: dateTimeEncode };
 
 export abstract class DateBaseColumn extends ColumnType<
   string,
   typeof Operators.date,
-  string | Date
+  string | number | Date
 > {
   declare data: DateColumnData;
   operators = Operators.date;
+  encodeFn = dateTimeEncode;
 
   asNumber() {
-    return this.encode((input: number) => new Date(input))
-      .parse(Date.parse)
-      .as(
-        new IntegerColumn({ [nameKey]: this.data.name }) as never,
-      ) as unknown as IntegerColumn;
+    return this.parse(Date.parse).as(
+      new IntegerColumn({ [nameKey]: this.data.name }) as never,
+    ) as unknown as EncodeColumn<IntegerColumn, string | number | Date>;
   }
 
-  asDate<T extends ColumnType>(this: T) {
+  asDate<T extends ColumnType>(this: T): ParseColumn<T, Date> {
     return this.parse((input) => new Date(input as string));
   }
 }
@@ -46,7 +53,13 @@ assignMethodsToClass(DateBaseColumn, dateTypeMethods);
 export class DateColumn extends DateBaseColumn {
   dataType = 'date' as const;
   toCode(t: string): Code {
-    return columnCode(this, t, `date()${dateDataToCode(this.data)}`);
+    return columnCode(
+      this,
+      t,
+      `date()${dateDataToCode(this.data)}`,
+      this.data,
+      skip,
+    );
   }
 }
 
@@ -95,6 +108,8 @@ const timestampToCode = <P extends number>(
     `${
       self instanceof TimestampColumn ? 'timestampWithoutTimeZone' : 'timestamp'
     }(${p && p !== 6 ? p : ''})${dateDataToCode(self.data)}`,
+    self.data,
+    skip,
   );
 };
 
@@ -130,6 +145,8 @@ export class TimeColumn<
       this,
       t,
       `time(${dateTimePrecision || ''})${dateDataToCode(this.data)}`,
+      this.data,
+      skip,
     );
   }
 }
@@ -166,6 +183,8 @@ export class IntervalColumn<
       `interval(${[fields && `'${fields}'`, precision && String(precision)]
         .filter((part) => part)
         .join(', ')})`,
+      this.data,
+      skip,
     );
   }
 

@@ -46,6 +46,14 @@ export type NullableColumn<T extends ColumnTypeBase> = Omit<
   };
 };
 
+export type EncodeColumn<T extends ColumnTypeBase, Input> = {
+  [K in keyof T]: K extends 'inputType' ? Input : T[K];
+};
+
+export type ParseColumn<T extends ColumnTypeBase, Output> = {
+  [K in keyof T]: K extends 'type' ? Output : T[K];
+};
+
 // adds default type to the column
 export type ColumnWithDefault<T extends ColumnTypeBase, Value> = Omit<
   T,

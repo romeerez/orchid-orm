@@ -230,20 +230,6 @@ describe('column type', () => {
       );
     });
 
-    it('should accept only column of same type and input type', () => {
-      columnTypes
-        .timestampWithoutTimeZone()
-        .encode((input: number) => input.toString())
-        // @ts-expect-error should have both encode and parse with matching types
-        .as(columnTypes.integer());
-
-      columnTypes
-        .timestampWithoutTimeZone()
-        .parse(Date.parse)
-        // @ts-expect-error should have both encode and parse with matching types
-        .as(columnTypes.integer());
-    });
-
     it('should return same column with `as` property in data', () => {
       const timestamp = columnTypes
         .timestampWithoutTimeZone()

@@ -14,6 +14,20 @@ import {
   TimestampTzColumn,
 } from './dateTime';
 import { columnTypes } from './columnTypes';
+import { ColumnType } from './columnType';
+
+const t = columnTypes;
+
+const testTimestampInput = (column: ColumnType) => {
+  const date = new Date();
+  const string = date.toISOString();
+  expect((column.encodeFn?.(string) as Date).toISOString()).toBe(string);
+
+  const number = date.getTime();
+  expect((column.encodeFn?.(number) as Date).getTime()).toBe(number);
+
+  expect(column.encodeFn?.(date) as Date).toBe(date);
+};
 
 describe('date time columns', () => {
   useTestDatabase();
@@ -45,11 +59,15 @@ describe('date time columns', () => {
     });
   });
 
-  describe('timestamp', () => {
+  describe('timestamp without time zone', () => {
+    it('should accept string, number, and Date', async () => {
+      testTimestampInput(t.timestampWithoutTimeZone());
+    });
+
     it('should output string', async () => {
       const result = await db.get(
         db.raw(
-          () => new TimestampColumn({}),
+          () => t.timestampWithoutTimeZone(),
           `'1999-01-08 04:05:06'::timestamp`,
         ),
       );
@@ -87,6 +105,10 @@ describe('date time columns', () => {
   });
 
   describe('timestamp with time zone', () => {
+    it('should accept string, number, and Date', async () => {
+      testTimestampInput(t.timestamp());
+    });
+
     it('should output string', async () => {
       const result = await db.get(
         db.raw(
@@ -182,6 +204,11 @@ describe('date time columns', () => {
   });
 
   describe('asNumber', () => {
+    it('should accept string, number, and Date', () => {
+      const { inputType } = t.timestamp().asNumber();
+      assertType<typeof inputType, string | number | Date>();
+    });
+
     it('should parse and encode timestamp as a number', async () => {
       const UserWithNumberTimestamp = db('user', (t) => ({
         id: t.serial().primaryKey(),
@@ -238,19 +265,23 @@ describe('date time columns', () => {
   });
 
   describe('asDate', () => {
+    it('should accept string, number, and Date', () => {
+      const { inputType } = t.timestamp().asDate();
+      assertType<typeof inputType, string | number | Date>();
+    });
+
     it('should parse and encode timestamp as a number', async () => {
-      columnTypes
-        .text(0, 100)
+      t.text(0, 100)
         .encode((input: number) => input)
         .parse((text) => parseInt(text))
-        .as(columnTypes.integer());
+        .as(t.integer());
 
       const UserWithNumberTimestamp = db('user', (t) => ({
         id: t.serial().primaryKey(),
         name: t.text(),
         password: t.text(),
-        createdAt: columnTypes.timestampWithoutTimeZone().asDate(),
-        updatedAt: columnTypes.timestampWithoutTimeZone().asDate(),
+        createdAt: t.timestampWithoutTimeZone().asDate(),
+        updatedAt: t.timestampWithoutTimeZone().asDate(),
       }));
 
       const now = new Date();

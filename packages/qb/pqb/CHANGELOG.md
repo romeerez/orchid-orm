@@ -1,5 +1,13 @@
 # pqb
 
+## 0.11.2
+
+### Patch Changes
+
+- Accept string, number, Date in date time columns
+- Updated dependencies
+  - orchid-core@0.3.1
+
 ## 0.11.1
 
 ### Patch Changes
