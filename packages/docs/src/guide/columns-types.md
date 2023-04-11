@@ -171,12 +171,55 @@ t.timestampWithoutTimeZone(precision?: number) // -> string
 
 // time [ (p) ] [ without time zone ]  8 bytes    time of day (no date)  00:00:00   24:00:00   1 microsecond
 t.time(precision?: number) // -> string
-
-// interval [ fields ] [ (p) ] 16 bytes   time interval  -178000000 years   178000000 years    1 microsecond
-t.interval(fields?: string, precision?: number) // -> PostgresInterval object
 ```
 
 Time with time zone is not included because it's discouraged [by Postgres docs](https://wiki.postgresql.org/wiki/Don%27t_Do_This#Don.27t_use_timetz).
+
+`date`, `timestamp`, and `timestampWithoutTimeZone` can be customized with methods `asNumber` and `asDate` to parse database values into number and JS Date object respectively.
+
+```ts
+export const BaseTable = createBaseTable({
+  columnTypes: (t) => ({
+    ...t,
+    timestamp() {
+      // or use `.asDate()` to work with Date objects
+      return t.timestamp.call(this).asNumber()
+    },
+  }),
+})
+
+// timestamp columns now are returned as numbers, or as Date objects if you choose `asDate`:
+const { updatedAt, createdAt } = await db.table.take()
+```
+
+When filtering by timestamp fields, creating or updating records, you can use dates encoded as strings, numbers or Date objects:
+
+```ts
+// filter, update, create with a Date object:
+const date = new Date();
+db.table.where({ createdAt: date })
+db.table.find(id).update({ ...data, createdAt: date })
+db.table.create({ ...data, createdAt: date })
+
+// filter, update, create with a ISO encoded date string
+const string = new Date().toISOString()
+db.table.where({ createdAt: string })
+db.table.find(id).update({ ...data, createdAt: string })
+db.table.create({ ...data, createdAt: string })
+
+// filter, update, create with a number retrieved from `getTime`
+const number = new Date().getTime()
+db.table.where({ createdAt: number })
+db.table.find(id).update({ ...data, createdAt: number })
+db.table.create({ ...data, createdAt: number })
+```
+
+## interval
+
+```ts
+// interval [ fields ] [ (p) ] 16 bytes   time interval  -178000000 years   178000000 years    1 microsecond
+t.interval(fields?: string, precision?: number) // -> PostgresInterval object
+```
 
 The `interval` type takes two optional parameters:
 
