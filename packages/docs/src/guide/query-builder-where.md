@@ -164,12 +164,12 @@ db.table.findBy(...conditions)
 db.table.where(...conditions).take()
 ```
 
-## findOptional
+## findByOptional
 
-`.findOptional` Takes the same arguments as `.where` and returns a single record, returns `undefined` when not found:
+`.findByOptional` Takes the same arguments as `.where` and returns a single record, returns `undefined` when not found:
 
 ```ts
-db.table.findOptional(...conditions)
+db.table.findByOptional(...conditions)
 // is equivalent to:
 db.table.where(...conditions).takeOptional()
 ```
