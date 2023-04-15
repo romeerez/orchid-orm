@@ -70,7 +70,15 @@ export const migrationConfigDefaults: Omit<
   migrationsTable: 'schemaMigrations',
   snakeCase: false,
   commands: {},
-  import: (path: string) => import(path),
+  import: (path: string) => {
+    return import(path).catch((err) => {
+      if (err.code === 'ERR_UNKNOWN_FILE_EXTENSION') {
+        require(path);
+      } else {
+        throw err;
+      }
+    });
+  },
   log: true,
   logger: console,
   useCodeUpdater: true,

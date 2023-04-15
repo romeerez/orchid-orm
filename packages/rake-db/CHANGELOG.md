@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.7.2
+
+### Patch Changes
+
+- Fix import error
+
 ## 2.7.1
 
 ### Patch Changes
