@@ -16,10 +16,12 @@ const baseTablePath = resolve('baseTable.ts');
 const baseTableName = 'BaseTable';
 const log = jest.fn();
 const params = {
-  baseTablePath,
-  baseTableName,
   tablePath,
   logger: { ...console, log },
+  baseTable: {
+    filePath: baseTablePath,
+    name: baseTableName,
+  },
 };
 const t = columnTypes;
 

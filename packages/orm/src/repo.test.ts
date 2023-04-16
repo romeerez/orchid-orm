@@ -1,11 +1,9 @@
 import { orchidORM } from './orm';
 import { pgConfig } from './test-utils/test-db';
-import { createBaseTable } from './table';
 import { assertType, expectSql } from './test-utils/test-utils';
 import { QueryReturnType } from 'pqb';
 import { createRepo } from './repo';
-
-const BaseTable = createBaseTable();
+import { BaseTable } from './test-utils/test-tables';
 
 class SomeTable extends BaseTable {
   readonly table = 'someTable';

@@ -22,10 +22,13 @@ describe('appCodeUpdater', () => {
 
   const params = {
     tablePath: (table: string) => `tables/${table}.ts`,
-    baseTablePath: 'baseTable.ts',
-    baseTableName: 'BaseTable',
     mainFilePath: 'db.ts',
     logger: console,
+  };
+
+  const baseTable = {
+    filePath: 'baseTable.ts',
+    name: 'BaseTable',
   };
 
   const fn = appCodeUpdater(params);
@@ -37,6 +40,7 @@ describe('appCodeUpdater', () => {
       basePath: __dirname,
       cache: {},
       logger: console,
+      baseTable,
     });
 
     const mainFilePath = path.resolve(__dirname, params.mainFilePath);
@@ -49,17 +53,11 @@ describe('appCodeUpdater', () => {
 
     const [table] = asMock(updateTableFile).mock.calls[0];
     expect(table.tablePath('table')).toBe(tablePath);
-    expect(table.baseTablePath).toBe(
-      path.resolve(__dirname, params.baseTablePath),
-    );
-    expect(table.baseTableName).toBe(params.baseTableName);
+    expect(table.baseTable).toBe(baseTable);
     expect(table.mainFilePath).toBe(mainFilePath);
 
     const [base] = asMock(createBaseTableFile).mock.calls[0];
-    expect(base.baseTablePath).toBe(
-      path.resolve(__dirname, params.baseTablePath),
-    );
-    expect(base.baseTableName).toBe(params.baseTableName);
+    expect(base.baseTable).toBe(baseTable);
   });
 
   it('should call createBaseTable only on first call', async () => {
@@ -72,6 +70,7 @@ describe('appCodeUpdater', () => {
       basePath: __dirname,
       cache,
       logger: console,
+      baseTable,
     });
 
     expect(createBaseTableFile).toBeCalledTimes(1);
@@ -82,6 +81,7 @@ describe('appCodeUpdater', () => {
       basePath: __dirname,
       cache,
       logger: console,
+      baseTable,
     });
 
     expect(createBaseTableFile).toBeCalledTimes(1);

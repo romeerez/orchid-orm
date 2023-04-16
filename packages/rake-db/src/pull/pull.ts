@@ -44,6 +44,8 @@ export const pullDbStructure = async <CT extends ColumnTypesBase>(
       basePath: config.basePath,
       cache,
       logger: config.logger,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      baseTable: config.baseTable!,
     });
   }
 

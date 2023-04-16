@@ -11,8 +11,10 @@ jest.mock('fs/promises', () => ({
 
 const log = jest.fn();
 const params = {
-  baseTablePath: path.resolve('baseTable.ts'),
-  baseTableName: 'CustomName',
+  baseTable: {
+    filePath: path.resolve('baseTable.ts'),
+    name: 'CustomName',
+  },
   logger: {
     ...console,
     log,
@@ -29,12 +31,14 @@ describe('createBaseTableFile', () => {
 
     await createBaseTableFile(params);
 
-    expect(fs.mkdir).toBeCalledWith(path.dirname(params.baseTablePath), {
+    expect(fs.mkdir).toBeCalledWith(path.dirname(params.baseTable.filePath), {
       recursive: true,
     });
 
     expect(fs.writeFile).toBeCalled();
-    expect(log).toBeCalledWith(`Created ${pathToLog(params.baseTablePath)}`);
+    expect(log).toBeCalledWith(
+      `Created ${pathToLog(params.baseTable.filePath)}`,
+    );
   });
 
   it('should write file with wx flag to not overwrite', async () => {
@@ -45,10 +49,10 @@ describe('createBaseTableFile', () => {
     await createBaseTableFile(params);
 
     expect(fs.writeFile).toBeCalledWith(
-      params.baseTablePath,
+      params.baseTable.filePath,
       `import { createBaseTable } from 'orchid-orm';
 
-export const ${params.baseTableName} = createBaseTable();
+export const ${params.baseTable.name} = createBaseTable();
 `,
       {
         flag: 'wx',

@@ -14,6 +14,7 @@ import {
   sortDesc,
   migrationConfigDefaults,
   RakeDbConfig,
+  AppCodeUpdater,
 } from './common';
 import prompts from 'prompts';
 import { Adapter, columnTypes } from 'pqb';
@@ -56,6 +57,16 @@ describe('common', () => {
         useCodeUpdater: true,
         commands: {},
       });
+    });
+
+    it('should throw if appCodeUpdater is provided but baseTable is not', () => {
+      expect(() =>
+        processRakeDbConfig({
+          appCodeUpdater: {} as unknown as AppCodeUpdater,
+        }),
+      ).toThrow(
+        '`baseTable` option is required in `rakeDb` for `appCodeUpdater`',
+      );
     });
   });
 

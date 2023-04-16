@@ -12,14 +12,18 @@ import {
 import fs from 'fs/promises';
 import { UpdateTableFileParams } from './updateTableFile';
 import path from 'path';
+import { BaseTableParam } from '../appCodeUpdater';
 
 export const createTable = async ({
   ast,
   logger,
   ...params
-}: UpdateTableFileParams & { ast: RakeDbAst.Table }) => {
+}: UpdateTableFileParams & {
+  ast: RakeDbAst.Table;
+  baseTable: BaseTableParam;
+}) => {
   const tablePath = params.tablePath(toCamelCase(ast.name));
-  const baseTablePath = getImportPath(tablePath, params.baseTablePath);
+  const baseTablePath = getImportPath(tablePath, params.baseTable.filePath);
 
   const props: Code[] = [];
 
@@ -40,9 +44,9 @@ export const createTable = async ({
   );
 
   const code: Code[] = [
-    `import { ${params.baseTableName} } from '${baseTablePath}';\n`,
+    `import { ${params.baseTable.name} } from '${baseTablePath}';\n`,
     `export class ${toPascalCase(ast.name)}Table extends ${
-      params.baseTableName
+      params.baseTable.name
     } {`,
     props,
     '}\n',

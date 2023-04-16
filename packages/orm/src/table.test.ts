@@ -4,9 +4,40 @@ import { adapter, db } from './test-utils/test-db';
 import { assertType, userData, useTestDatabase } from './test-utils/test-utils';
 import { ColumnType, Operators } from 'pqb';
 import { BaseTable } from './test-utils/test-tables';
+import path from 'path';
+import { asMock } from './codegen/testUtils';
+import { getCallerFilePath } from 'orchid-core';
+
+jest.mock('orchid-core', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const path = require('path');
+  const actual = jest.requireActual('../../core/src');
+  return {
+    ...actual,
+    getCallerFilePath: jest.fn(() =>
+      path.join(__dirname, 'test-utils', 'test-tables.ts'),
+    ),
+  };
+});
 
 describe('table', () => {
   useTestDatabase();
+
+  it('should have a name', () => {
+    expect(BaseTable.name).toBe('BaseTable');
+  });
+
+  it('should have a filePath to indicate where is it defined', () => {
+    expect(BaseTable.filePath).toBe(
+      path.join(__dirname, 'test-utils', 'test-tables.ts'),
+    );
+  });
+
+  it('should throw if cannot determine file path', () => {
+    asMock(getCallerFilePath).mockReturnValueOnce(undefined);
+
+    expect(() => createBaseTable()).toThrow('Failed to determine file path');
+  });
 
   describe('overriding column types', () => {
     it('should have .raw with overridden types', () => {

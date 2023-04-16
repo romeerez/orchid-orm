@@ -5,7 +5,7 @@ import {
   useTestDatabase,
 } from './test-utils/test-utils';
 import { pgConfig } from './test-utils/test-db';
-import { createBaseTable } from './table';
+import { BaseTable } from './test-utils/test-tables';
 
 describe('orm', () => {
   useTestDatabase();
@@ -17,8 +17,6 @@ describe('orm', () => {
   afterEach(async () => {
     if (local) await local.$close();
   });
-
-  const BaseTable = createBaseTable();
 
   type User = UserTable['columns']['type'];
   class UserTable extends BaseTable {

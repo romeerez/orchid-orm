@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.9.0
+
+### Minor Changes
+
+- Change appCodeUpdater config to take path and name of the base table from baseTable option
+
+### Patch Changes
+
+- Updated dependencies
+  - orchid-core@0.4.0
+  - pqb@0.11.3
+
 ## 1.8.1
 
 ### Patch Changes

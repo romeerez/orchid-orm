@@ -1,5 +1,17 @@
 # rake-db
 
+## 2.8.0
+
+### Minor Changes
+
+- Change appCodeUpdater config to take path and name of the base table from baseTable option
+
+### Patch Changes
+
+- Updated dependencies
+  - orchid-core@0.4.0
+  - pqb@0.11.3
+
 ## 2.7.2
 
 ### Patch Changes

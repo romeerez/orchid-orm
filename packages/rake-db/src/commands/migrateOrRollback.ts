@@ -159,6 +159,8 @@ const processMigration = async <CT extends ColumnTypesBase>(
       basePath: config.basePath,
       cache: appCodeUpdaterCache,
       logger: config.logger,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      baseTable: config.baseTable!,
     });
   }
 };

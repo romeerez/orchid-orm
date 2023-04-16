@@ -1,5 +1,5 @@
 import url from 'url';
-import path from 'path';
+import path from 'node:path';
 
 export type StringKey<K extends PropertyKey> = Exclude<K, symbol | number>;
 
@@ -229,4 +229,42 @@ export const getImportPath = (from: string, to: string) => {
     rel.startsWith('./') || rel.startsWith('../') ? rel : `./${rel}`;
 
   return importPath.replace(/\.[tj]s$/, '');
+};
+
+export const getCallerFilePath = (): string | undefined => {
+  let stack: NodeJS.CallSite[] | undefined;
+  const original = Error.prepareStackTrace;
+  Error.prepareStackTrace = (_, s) => (stack = s);
+  new Error().stack;
+  Error.prepareStackTrace = original;
+
+  if (stack) {
+    const libFile = stack[1]?.getFileName();
+    const libDir = libFile && path.dirname(libFile);
+    for (let i = 2; i < stack.length; i++) {
+      const item = stack[i];
+      let file = item.getFileName();
+      if (
+        !file ||
+        path.dirname(file) === libDir ||
+        /\bnode_modules\b/.test(file)
+      ) {
+        continue;
+      }
+
+      // on Windows with ESM file is file:///C:/path/to/file.ts
+      // it is not a valid URL
+      if (/file:\/\/\/\w+:\//.test(file)) {
+        file = decodeURI(file.slice(8));
+      } else {
+        try {
+          file = new URL(file).pathname;
+        } catch (_) {}
+      }
+
+      return file;
+    }
+  }
+
+  return;
 };

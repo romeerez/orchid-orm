@@ -8,7 +8,7 @@ import {
   NoPrimaryKeyOption,
   QueryLogOptions,
 } from 'pqb';
-import { ColumnTypesBase, singleQuote } from 'orchid-core';
+import { ColumnTypesBase, getCallerFilePath, singleQuote } from 'orchid-core';
 import path from 'path';
 import { readdir } from 'fs/promises';
 import { RakeDbAst } from './ast';
@@ -16,6 +16,16 @@ import prompts from 'prompts';
 import { TableQuery } from './migration/createTable';
 
 type Db = DbResult<DefaultColumnTypes>;
+
+type BaseTable<CT extends ColumnTypesBase> = {
+  name: string;
+  filePath: string;
+
+  new (): {
+    columnTypes: CT;
+    snakeCase?: boolean;
+  };
+};
 
 export type InputRakeDbConfig<CT extends ColumnTypesBase> = Partial<
   Omit<RakeDbConfig<CT>, 'columnTypes'>
@@ -25,7 +35,7 @@ export type InputRakeDbConfig<CT extends ColumnTypesBase> = Partial<
         columnTypes?: CT | ((t: DefaultColumnTypes) => CT);
       }
     | {
-        baseTable?: new () => { columnTypes: CT; snakeCase?: boolean };
+        baseTable?: BaseTable<CT>;
       }
   );
 
@@ -46,6 +56,7 @@ export type RakeDbConfig<CT extends ColumnTypesBase = DefaultColumnTypes> = {
   >;
   import(path: string): Promise<void>;
   noPrimaryKey?: NoPrimaryKeyOption;
+  baseTable?: BaseTable<CT>;
   appCodeUpdater?: AppCodeUpdater;
   useCodeUpdater?: boolean;
   beforeMigrate?(db: Db): Promise<void>;
@@ -60,6 +71,7 @@ export type AppCodeUpdater = (params: {
   basePath: string;
   cache: object;
   logger: QueryLogOptions['logger'];
+  baseTable: { filePath: string; name: string };
 }) => Promise<void>;
 
 export const migrationConfigDefaults: Omit<
@@ -89,50 +101,29 @@ export const processRakeDbConfig = <CT extends ColumnTypesBase>(
 ): RakeDbConfig<CT> => {
   const result = { ...migrationConfigDefaults, ...config } as RakeDbConfig<CT>;
 
+  if (
+    config.appCodeUpdater &&
+    (!('baseTable' in config) || !config.baseTable)
+  ) {
+    throw new Error(
+      '`baseTable` option is required in `rakeDb` for `appCodeUpdater`',
+    );
+  }
+
   if (!result.log) {
     delete result.logger;
   }
 
   if (!result.basePath || !result.dbScript) {
-    let stack: NodeJS.CallSite[] | undefined;
-    const original = Error.prepareStackTrace;
-    Error.prepareStackTrace = (_, s) => (stack = s);
-    new Error().stack;
-    Error.prepareStackTrace = original;
-    if (stack) {
-      const thisFile = stack[0]?.getFileName();
-      const thisDir = thisFile && path.dirname(thisFile);
-      for (const item of stack) {
-        let file = item.getFileName();
-        if (
-          !file ||
-          path.dirname(file) === thisDir ||
-          /\bnode_modules\b/.test(file)
-        ) {
-          continue;
-        }
-
-        // on Windows with ESM file is file:///C:/path/to/file.ts
-        // it is not a valid URL
-        if (/file:\/\/\/\w+:\//.test(file)) {
-          file = decodeURI(file.slice(8));
-        } else {
-          try {
-            file = new URL(file).pathname;
-          } catch (_) {}
-        }
-
-        result.basePath = path.dirname(file);
-        result.dbScript = path.basename(file);
-        break;
-      }
-    }
-
-    if (!result.basePath) {
+    const filePath = getCallerFilePath();
+    if (!filePath) {
       throw new Error(
         'Failed to determine path to db script. Please set basePath option of rakeDb',
       );
     }
+
+    result.basePath = path.dirname(filePath);
+    result.dbScript = path.basename(filePath);
   }
 
   if (!path.isAbsolute(result.migrationsPath)) {

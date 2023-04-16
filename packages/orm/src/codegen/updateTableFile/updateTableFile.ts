@@ -3,10 +3,10 @@ import { createTable } from './createTable';
 import { changeTable } from './changeTable';
 import { renameTable } from './renameTable';
 import { QueryLogOptions } from 'pqb';
+import { BaseTableParam } from '../appCodeUpdater';
 
 export type UpdateTableFileParams = {
-  baseTablePath: string;
-  baseTableName: string;
+  baseTable: BaseTableParam;
   tablePath: (name: string) => string;
   ast: RakeDbAst;
   logger?: QueryLogOptions['logger'];

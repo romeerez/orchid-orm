@@ -18,6 +18,7 @@ import {
   updatedAtColumn,
 } from './testUtils';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
+import { columnTypes, DefaultColumnTypes } from 'pqb';
 
 jest.mock('./dbStructure', () => {
   const { DbStructure } = jest.requireActual('./dbStructure');
@@ -61,8 +62,16 @@ const log = jest.fn();
 
 const options = { databaseURL: 'file:path' };
 
+class BaseTable {
+  static filePath = 'path';
+  columnTypes!: DefaultColumnTypes;
+  snakeCase?: boolean;
+}
+BaseTable.prototype.columnTypes = columnTypes;
+
 const makeConfig = (config: Partial<RakeDbConfig> = {}) =>
   processRakeDbConfig({
+    baseTable: BaseTable,
     appCodeUpdater,
     logger: {
       ...console,

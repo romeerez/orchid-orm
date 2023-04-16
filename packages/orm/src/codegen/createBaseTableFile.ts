@@ -1,33 +1,31 @@
-import { AppCodeUpdaterConfig } from './appCodeUpdater';
+import { AppCodeUpdaterConfig, BaseTableParam } from './appCodeUpdater';
 import fs from 'fs/promises';
 import path from 'path';
 import { pathToLog } from 'orchid-core';
 
-type CreateBaseTableFileParams = Pick<
-  AppCodeUpdaterConfig,
-  'baseTablePath' | 'baseTableName' | 'logger'
->;
+type CreateBaseTableFileParams = Pick<AppCodeUpdaterConfig, 'logger'> & {
+  baseTable: BaseTableParam;
+};
 
 export const createBaseTableFile = async ({
-  baseTableName,
-  baseTablePath,
+  baseTable,
   logger,
 }: CreateBaseTableFileParams) => {
-  await fs.mkdir(path.dirname(baseTablePath), { recursive: true });
+  await fs.mkdir(path.dirname(baseTable.filePath), { recursive: true });
 
   await fs
     .writeFile(
-      baseTablePath,
+      baseTable.filePath,
       `import { createBaseTable } from 'orchid-orm';
 
-export const ${baseTableName} = createBaseTable();
+export const ${baseTable.name} = createBaseTable();
 `,
       {
         flag: 'wx',
       },
     )
     .then(() => {
-      logger?.log(`Created ${pathToLog(baseTablePath)}`);
+      logger?.log(`Created ${pathToLog(baseTable.filePath)}`);
     })
     .catch((err) => {
       if (err.code === 'EEXIST') return;

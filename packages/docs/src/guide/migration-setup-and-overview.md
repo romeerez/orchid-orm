@@ -73,6 +73,7 @@ Configure a `db` script:
 import { rakeDb } from 'rake-db';
 import { appCodeUpdater } from 'orchid-orm';
 import { config } from './config';
+import { BaseTable } from './baseTable';
 
 export const change = rakeDb(
   config.database,
@@ -81,23 +82,21 @@ export const change = rakeDb(
     migrationsPath: '../migrations',
     // it also can be an absolute path:
     // migrationsPath: path.resolve(__dirname, 'migrations'),
-    
-    // set `snakeCase: true` for a database with snake_cased names:
-    // snakeCase: true,
-    
+
+    // column type overrides and snakeCase option will be taken from the BaseTable:
+    baseTable: BaseTable,
+
     // optionally, for automatic code updating after running migrations:
+    // baseTable is required when setting appCodeUpdater
     appCodeUpdater: appCodeUpdater({
       // paths are relative to the current file
       tablePath: (tableName) => `../tables/${tableName}.table.ts`,
-      baseTablePath: './baseTable.ts',
-      // baseTableName is optional, BaseTable by default
-      baseTableName: 'BaseTable',
       mainFilePath: './db.ts',
     }),
-    
+
     // true by default, whether to use code updater by default
     useCodeUpdater: false,
-    
+
     // custom commands can be defined as follows:
     commands: {
       // dbOptions is an array of database configs

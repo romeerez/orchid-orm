@@ -9,6 +9,7 @@ import {
 import {
   ColumnShapeOutput,
   ColumnTypesBase,
+  getCallerFilePath,
   snakeCaseKey,
   StringKey,
   toSnakeCase,
@@ -61,9 +62,11 @@ export const createBaseTable = <CT extends ColumnTypesBase>(
   {
     columnTypes,
     snakeCase,
+    filePath,
   }: {
     columnTypes?: CT | ((t: DefaultColumnTypes) => CT);
     snakeCase?: boolean;
+    filePath?: string;
   } = { columnTypes: defaultColumnTypes as unknown as CT },
 ) => {
   const ct =
@@ -71,17 +74,28 @@ export const createBaseTable = <CT extends ColumnTypesBase>(
       ? columnTypes(defaultColumnTypes)
       : columnTypes || defaultColumnTypes;
 
+  filePath ??= getCallerFilePath();
+  if (!filePath) {
+    throw new Error(
+      `Failed to determine file path of a base table. Please set the \`filePath\` option of \`createBaseTable\` manually.`,
+    );
+  }
+
   return create(
     ct as ColumnTypesBase extends CT ? DefaultColumnTypes : CT,
+    filePath,
     snakeCase,
   );
 };
 
 const create = <CT extends ColumnTypesBase>(
   columnTypes: CT,
+  filePath: string,
   snakeCase?: boolean,
 ) => {
   const base = class BaseTable {
+    static filePath = filePath;
+
     table!: string;
     columns!: TableConfig;
     schema?: string;

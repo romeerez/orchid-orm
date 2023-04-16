@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.4.0
+
+### Minor Changes
+
+- Change appCodeUpdater config to take path and name of the base table from baseTable option
+
 ## 0.3.1
 
 ### Patch Changes
