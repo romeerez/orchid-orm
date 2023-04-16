@@ -1,5 +1,11 @@
 # orchid-orm-schema-to-zod
 
+## 0.3.41
+
+### Patch Changes
+
+- Support numbers for timestamps in converted schema-to-zod
+
 ## 0.3.40
 
 ### Patch Changes

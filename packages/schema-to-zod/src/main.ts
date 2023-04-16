@@ -436,7 +436,8 @@ const handleDate = typeHandler((column: DateColumn | JSONDate, errors) => {
   });
 
   return z.preprocess(
-    (val) => (typeof val === 'string' ? new Date(val) : val),
+    (val) =>
+      typeof val === 'string' || typeof val === 'number' ? new Date(val) : val,
     type,
   );
 });

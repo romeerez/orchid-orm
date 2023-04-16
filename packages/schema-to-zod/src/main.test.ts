@@ -546,23 +546,31 @@ describe('schema to zod', () => {
   describe.each(['date', 'timestampWithoutTimeZone', 'timestamp'])(
     '%s',
     (method) => {
-      it('should parse from string to a Date', () => {
-        const schema = columnToZod(t[method as 'date']());
+      const schema = columnToZod(t[method as 'date']());
+      assertType<typeof schema, z.ZodDate>(true);
 
+      it('should parse from string to a Date', () => {
         const date = new Date(2000, 0, 1, 0, 0, 0, 0);
-        expect(schema.parse(date)).toEqual(date);
+        expect(schema.parse(date.toISOString())).toEqual(date);
 
         expect(() => schema.parse('malformed')).toThrow('Invalid date');
       });
 
+      it('should parse from number to a Date', () => {
+        const date = new Date(2000, 0, 1, 0, 0, 0, 0);
+        expect(schema.parse(date.getTime())).toEqual(date);
+
+        expect(() => schema.parse(new Date(NaN))).toThrow('Invalid date');
+      });
+
       it('should parse from Date to a Date', () => {
-        const schema = columnToZod(t[method as 'date']());
-
-        assertType<typeof schema, z.ZodDate>(true);
-
         const date = new Date(2000, 0, 1, 0, 0, 0, 0);
         expect(schema.parse(date)).toEqual(date);
 
+        expect(() => schema.parse(new Date(NaN))).toThrow('Invalid date');
+      });
+
+      it('should support date methods', () => {
         testDateMethods(t[method as 'date']());
       });
     },
@@ -594,9 +602,10 @@ describe('schema to zod', () => {
         seconds: 1,
       };
 
-      assertType<ReturnType<typeof schema['parse']>, Partial<typeof interval>>(
-        true,
-      );
+      assertType<
+        ReturnType<(typeof schema)['parse']>,
+        Partial<typeof interval>
+      >(true);
 
       expect(schema.parse(interval)).toEqual(interval);
 
