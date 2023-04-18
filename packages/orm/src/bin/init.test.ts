@@ -53,7 +53,7 @@ const postTablePath = join(tablesDir, 'post.table.ts');
 const commentTablePath = join(tablesDir, 'comment.table.ts');
 const configPath = join(dbDirPath, 'config.ts');
 const dbPath = join(dbDirPath, 'db.ts');
-const migrationScriptPath = join(dbDirPath, 'dbScripts.ts');
+const migrationScriptPath = join(dbDirPath, 'dbScript.ts');
 const migrationsPath = join(dbDirPath, 'migrations');
 const seedPath = join(dbDirPath, 'seed.ts');
 
@@ -140,7 +140,7 @@ describe('initOrchidORM', () => {
       swc?: boolean;
     }) => `{
   "scripts": {
-    "db": "ts-node src/db/dbScripts.ts"
+    "db": "ts-node src/db/dbScript.ts"
   },
   "dependencies": {
     "dotenv": "^1.2.3",
@@ -272,7 +272,7 @@ describe('initOrchidORM', () => {
         `{
   "scripts": {
     "ko": "ko",
-    "db": "ts-node src/db/dbScripts.ts"
+    "db": "ts-node src/db/dbScript.ts"
   },
   "dependencies": {
     "ko": "ko",
@@ -753,10 +753,10 @@ export const db = orchidORM(config.database, {
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === migrationScriptPath,
       );
-      expect(content).toBe(`import { makeChange, rakeDb } from 'rake-db';
+      expect(content).toBe(`import { rakeDb } from 'rake-db';
 import { appCodeUpdater } from 'orchid-orm';
 import { config } from './config';
-import { BaseTable } from './baseTable.ts';
+import { BaseTable } from './baseTable';
 
 export const change = rakeDb(config.database, {
   baseTable: BaseTable,
@@ -785,10 +785,10 @@ export const change = rakeDb(config.database, {
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === migrationScriptPath,
       );
-      expect(content).toBe(`import { makeChange, rakeDb } from 'rake-db';
+      expect(content).toBe(`import { rakeDb } from 'rake-db';
 import { appCodeUpdater } from 'orchid-orm';
 import { config } from './config';
-import { BaseTable } from './baseTable.ts';
+import { BaseTable } from './baseTable';
 
 export const change = rakeDb(config.allDatabases, {
   baseTable: BaseTable,

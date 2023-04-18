@@ -116,7 +116,7 @@ Add the `db` script to your `package.json`:
 ```json
 {
   "scripts": {
-    "db": "ts-node src/db/dbScripts.ts"
+    "db": "ts-node src/db/dbScript.ts"
   }
 }
 ```

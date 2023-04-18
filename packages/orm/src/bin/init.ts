@@ -155,7 +155,7 @@ const setupPackageJson = async (config: InitConfig) => {
   const json = content ? JSON.parse(content) : {};
 
   if (!json.scripts) json.scripts = {};
-  json.scripts.db = 'ts-node src/db/dbScripts.ts';
+  json.scripts.db = 'ts-node src/db/dbScript.ts';
 
   if (!json.dependencies) json.dependencies = {};
 
@@ -436,13 +436,13 @@ export const db = orchidORM(config.database, {${tables}
 };
 
 const setupMigrationScript = async (config: InitConfig, dirPath: string) => {
-  const filePath = join(dirPath, 'dbScripts.ts');
+  const filePath = join(dirPath, 'dbScript.ts');
   await fs.writeFile(
     filePath,
-    `import { makeChange, rakeDb } from 'rake-db';
+    `import { rakeDb } from 'rake-db';
 import { appCodeUpdater } from 'orchid-orm';
 import { config } from './config';
-import { BaseTable } from './baseTable.ts';
+import { BaseTable } from './baseTable';
 
 export const change = rakeDb(${
       config.testDatabase ? 'config.allDatabases' : 'config.database'

@@ -63,7 +63,7 @@ Check the package.json file:
 {
   "scripts": {
     // for running db scripts, like npm run db create, npm run db migrate
-    "db": "ts-node src/db/dbScripts.ts"
+    "db": "ts-node src/db/dbScript.ts"
   },
   "dependencies": {
     // dotenv loads variables from .env
