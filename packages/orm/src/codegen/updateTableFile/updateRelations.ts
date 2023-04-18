@@ -16,7 +16,7 @@ import {
   NodeArray,
   Statement,
 } from 'typescript';
-import { plural } from 'pluralize';
+import { pluralize } from 'inflection';
 
 export type UpdateRelationsParams = {
   relations: AppCodeUpdaterRelations;
@@ -158,7 +158,7 @@ const checkRelation = (rel: AppCodeUpdaterRelation): boolean => {
 };
 
 const makeRelationName = (rel: AppCodeUpdaterRelation): string => {
-  return plural(
+  return pluralize(
     rel.className[0].toLowerCase() +
       rel.className.slice(1).replace(/Table$/, ''),
   );

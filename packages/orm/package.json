@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "description": "Postgres ORM",
   "homepage": "https://orchid-orm.netlify.app/guide/orm-setup-and-overview.html",
   "repository": {
@@ -53,14 +53,14 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
+    "inflection": "*",
     "orchid-core": "workspace:*",
     "pqb": "workspace:*",
-    "prompts": "^2.4.2",
-    "pluralize": "*"
+    "prompts": "^2.4.2"
   },
   "devDependencies": {
-    "@types/prompts": "^2.4.2",
     "@types/pluralize": "*",
+    "@types/prompts": "^2.4.2",
     "orchid-orm-schema-to-zod": "workspace:*",
     "rake-db": "workspace:*"
   },

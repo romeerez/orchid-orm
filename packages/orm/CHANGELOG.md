@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.9.4
+
+### Patch Changes
+
+- Replace pluralize with inflection for es module support
+
 ## 1.9.3
 
 ### Patch Changes
