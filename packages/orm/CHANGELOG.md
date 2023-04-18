@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.9.1
+
+### Patch Changes
+
+- Fix orchid-orm init
+
 ## 1.9.0
 
 ### Minor Changes
