@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.8.2
+
+### Patch Changes
+
+- Remove unneeded dependencies
+
 ## 2.8.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.9.5
+
+### Patch Changes
+
+- Remove unneeded dependencies
+
 ## 1.9.4
 
 ### Patch Changes
