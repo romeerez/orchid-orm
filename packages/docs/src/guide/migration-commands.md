@@ -44,6 +44,7 @@ Currently, it supports generating code to create:
 - primary keys
 - foreign keys
 - indexes
+- defines `belongsTo` and `hasOne` relations by analyzing foreign keys
 - domain types
 - views
 - the defaults `current_timestamp`, `transaction_timestamp()` are simplified to the equivalent `now()`

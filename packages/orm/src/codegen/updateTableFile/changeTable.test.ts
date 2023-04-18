@@ -1,7 +1,12 @@
 import fs from 'fs/promises';
-import { asMock, ast, makeTestWritten, tablePath } from '../testUtils';
+import {
+  asMock,
+  ast,
+  makeTestWritten,
+  tablePath,
+  updateTableFileParams,
+} from '../testUtils';
 import { updateTableFile } from './updateTableFile';
-import { resolve } from 'path';
 import { columnTypes, newTableData, TableData } from 'pqb';
 import { RakeDbAst } from 'rake-db';
 import { pathToLog, raw } from 'orchid-core';
@@ -12,24 +17,15 @@ jest.mock('fs/promises', () => ({
   writeFile: jest.fn(),
 }));
 
-const baseTablePath = resolve('baseTable.ts');
-const baseTableName = 'BaseTable';
-const log = jest.fn();
-const params = {
-  tablePath,
-  logger: { ...console, log },
-  baseTable: {
-    filePath: baseTablePath,
-    name: baseTableName,
-  },
-};
+const params = updateTableFileParams;
+
 const t = columnTypes;
 
 const path = tablePath('fooBar');
 const testWrittenOnly = makeTestWritten(path);
 const testWritten = (content: string) => {
   testWrittenOnly(content);
-  expect(log).toBeCalledWith(`Updated ${pathToLog(path)}`);
+  expect(params.logger.log).toBeCalledWith(`Updated ${pathToLog(path)}`);
 };
 
 const tableData = newTableData();

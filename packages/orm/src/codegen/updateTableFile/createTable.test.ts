@@ -1,6 +1,12 @@
 import { updateTableFile } from './updateTableFile';
-import { asMock, ast, makeTestWritten, tablePath } from '../testUtils';
-import { resolve, dirname } from 'path';
+import {
+  asMock,
+  ast,
+  makeTestWritten,
+  tablePath,
+  updateTableFileParams,
+} from '../testUtils';
+import { dirname } from 'path';
 import fs from 'fs/promises';
 import { columnTypes } from 'pqb';
 import { pathToLog, raw } from 'orchid-core';
@@ -13,46 +19,51 @@ jest.mock('fs/promises', () => ({
 
 const t = columnTypes;
 
-const baseTablePath = resolve('baseTable.ts');
-const baseTableName = 'BaseTable';
-const log = jest.fn();
-const params = {
-  tablePath,
-  logger: { ...console, log },
-  baseTable: {
-    filePath: baseTablePath,
-    name: baseTableName,
-  },
-};
+const params = updateTableFileParams;
 
 const path = tablePath('fooBar');
 const testWrittenOnly = makeTestWritten(path);
 const testWritten = (content: string) => {
   testWrittenOnly(content);
-  expect(log).toBeCalledWith(`Created ${pathToLog(path)}`);
+  expect(params.logger.log).toBeCalledWith(`Created ${pathToLog(path)}`);
 };
 
 const template = ({
+  imports,
   schema,
   columns,
   noPrimaryKey,
+  relations,
 }: {
+  imports?: string[];
   schema?: string;
   columns: string;
   noPrimaryKey?: boolean;
-}) => `import { BaseTable } from '../baseTable';
+  relations?: string;
+}) => `import { BaseTable } from '../baseTable';${
+  imports ? `\n${imports.join('\n')}` : ''
+}
 
 export class FooBarTable extends BaseTable {
   ${schema ? `schema = '${schema}';\n  ` : ''}readonly table = 'foo_bar';${
   noPrimaryKey ? '\n  noPrimaryKey = true;' : ''
 }
-  columns = this.setColumns((t) => (${columns}));
+  columns = this.setColumns((t) => (${columns}));${
+  relations
+    ? `
+  
+  relations = {
+    ${relations.trim()}
+  };`
+    : ''
+}
 }
 `;
 
 describe('createTable', () => {
   beforeEach(() => {
     jest.resetAllMocks();
+    params.clearTables();
   });
 
   it('should add table', async () => {
@@ -62,6 +73,14 @@ describe('createTable', () => {
         ...ast.addTable,
         schema: 'schema',
         shape: {},
+      },
+    });
+
+    expect(params.tables).toEqual({
+      [ast.addTable.name]: {
+        key: 'fooBar',
+        name: 'FooBarTable',
+        path: tablePath('fooBar'),
       },
     });
 
@@ -205,5 +224,56 @@ describe('createTable', () => {
 
     const [, , options] = asMock(fs.writeFile).mock.calls[0];
     expect(options).toEqual({ flag: 'wx' });
+  });
+
+  describe('relations', () => {
+    describe('belongsTo', () => {
+      it('should add relation if table has a foreign key to another table', async () => {
+        params.tables.other = {
+          key: 'other',
+          name: 'OtherTable',
+          path: params.tablePath('other'),
+        };
+
+        await updateTableFile({
+          ...params,
+          ast: {
+            ...ast.addTable,
+            shape: {
+              otherId: t.integer().foreignKey('other', 'id'),
+            },
+          },
+        });
+
+        expect(params.relations).toEqual({
+          other: {
+            path: params.tables.other.path,
+            relations: [
+              {
+                kind: 'hasMany',
+                columns: ['id'],
+                className: 'FooBarTable',
+                path: params.tablePath('fooBar'),
+                foreignColumns: ['otherId'],
+              },
+            ],
+          },
+        });
+
+        testWritten(
+          template({
+            imports: [`import { OtherTable } from './other.table';`],
+            columns: `{
+    otherId: t.integer().foreignKey('other', 'id'),
+  }`,
+            relations: `
+    other: this.belongsTo(() => OtherTable, {
+      primaryKey: 'id',
+      foreignKey: 'otherId',
+    }),`,
+          }),
+        );
+      });
+    });
   });
 });

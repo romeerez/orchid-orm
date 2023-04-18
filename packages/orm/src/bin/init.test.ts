@@ -763,7 +763,7 @@ export const change = rakeDb(config.database, {
   migrationsPath: './migrations',
   appCodeUpdater: appCodeUpdater({
     tablePath: (tableName) => \`./tables/\${tableName}.table.ts\`,
-    mainFilePath: './db.ts',
+    ormPath: './db.ts',
   }),
   useCodeUpdater: true, // set to false to disable code updater
   commands: {
@@ -795,7 +795,7 @@ export const change = rakeDb(config.allDatabases, {
   migrationsPath: './migrations',
   appCodeUpdater: appCodeUpdater({
     tablePath: (tableName) => \`./tables/\${tableName}.table.ts\`,
-    mainFilePath: './db.ts',
+    ormPath: './db.ts',
   }),
   useCodeUpdater: true, // set to false to disable code updater
   commands: {

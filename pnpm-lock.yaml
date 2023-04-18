@@ -63,17 +63,21 @@ importers:
 
   packages/orm:
     specifiers:
+      '@types/pluralize': '*'
       '@types/prompts': ^2.4.2
       orchid-core: workspace:*
       orchid-orm-schema-to-zod: workspace:*
+      pluralize: '*'
       pqb: workspace:*
       prompts: ^2.4.2
       rake-db: workspace:*
     dependencies:
       orchid-core: link:../core
+      pluralize: 8.0.0
       pqb: link:../qb/pqb
       prompts: 2.4.2
     devDependencies:
+      '@types/pluralize': 0.0.29
       '@types/prompts': 2.4.2
       orchid-orm-schema-to-zod: link:../schema-to-zod
       rake-db: link:../rake-db
@@ -1582,6 +1586,10 @@ packages:
       '@types/node': 18.15.11
       pg-protocol: 1.5.0
       pg-types: 2.2.0
+    dev: true
+
+  /@types/pluralize/0.0.29:
+    resolution: {integrity: sha512-BYOID+l2Aco2nBik+iYS4SZX0Lf20KPILP5RGmM1IgzdwNdTs0eebiFriOPcej1sX9mLnSoiNte5zcFxssgpGA==}
     dev: true
 
   /@types/prettier/2.7.1:

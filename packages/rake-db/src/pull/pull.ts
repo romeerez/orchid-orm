@@ -38,7 +38,7 @@ export const pullDbStructure = async <CT extends ColumnTypesBase>(
 
   const cache = {};
   for (const item of ast) {
-    await config?.appCodeUpdater?.({
+    await config?.appCodeUpdater?.process({
       ast: item,
       options,
       basePath: config.basePath,
@@ -48,6 +48,15 @@ export const pullDbStructure = async <CT extends ColumnTypesBase>(
       baseTable: config.baseTable!,
     });
   }
+
+  await config?.appCodeUpdater?.afterAll({
+    options,
+    basePath: config.basePath,
+    cache,
+    logger: config.logger,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    baseTable: config.baseTable!,
+  });
 
   const unsupportedEntries = Object.entries(ctx.unsupportedTypes);
   const len = unsupportedEntries.length;

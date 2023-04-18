@@ -3,13 +3,22 @@ import { createTable } from './createTable';
 import { changeTable } from './changeTable';
 import { renameTable } from './renameTable';
 import { QueryLogOptions } from 'pqb';
-import { BaseTableParam } from '../appCodeUpdater';
+import {
+  AppCodeUpdaterTables,
+  AppCodeUpdaterRelations,
+  BaseTableParam,
+  AppCodeUpdaterGetTable,
+} from '../appCodeUpdater';
+import { handleForeignKey } from './handleForeignKey';
 
 export type UpdateTableFileParams = {
   baseTable: BaseTableParam;
   tablePath: (name: string) => string;
   ast: RakeDbAst;
   logger?: QueryLogOptions['logger'];
+  getTable: AppCodeUpdaterGetTable;
+  relations: AppCodeUpdaterRelations;
+  tables: AppCodeUpdaterTables;
 };
 
 export const updateTableFile = async (params: UpdateTableFileParams) => {
@@ -20,5 +29,17 @@ export const updateTableFile = async (params: UpdateTableFileParams) => {
     await changeTable({ ...params, ast });
   } else if (ast.type === 'renameTable') {
     await renameTable({ ...params, ast });
+  } else if (ast.type === 'constraint' && ast.references) {
+    const ref = ast.references;
+    if (typeof ref.fnOrTable === 'string') {
+      await handleForeignKey({
+        getTable: params.getTable,
+        relations: params.relations,
+        tableName: ast.tableName,
+        columns: ref.columns,
+        foreignTableName: ref.fnOrTable,
+        foreignColumns: ref.foreignColumns,
+      });
+    }
   }
 };

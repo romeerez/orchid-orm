@@ -96,6 +96,15 @@ export const migrateOrRollback = async <CT extends ColumnTypesBase>(
         await config.afterRollback?.((db ??= getDb(adapter)));
       }
     } finally {
+      await config.appCodeUpdater?.afterAll({
+        options: opts,
+        basePath: config.basePath,
+        cache: appCodeUpdaterCache,
+        logger: config.logger,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        baseTable: config.baseTable!,
+      });
+
       await adapter.close();
     }
     // use appCodeUpdater only for the first provided options
@@ -153,7 +162,7 @@ const processMigration = async <CT extends ColumnTypesBase>(
   });
 
   for (const ast of asts) {
-    await config.appCodeUpdater?.({
+    await config.appCodeUpdater?.process({
       ast,
       options,
       basePath: config.basePath,

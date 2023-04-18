@@ -1,6 +1,6 @@
 import { DbStructure } from './dbStructure';
 import { pullDbStructure } from './pull';
-import { processRakeDbConfig, RakeDbConfig } from '../common';
+import { AppCodeUpdater, processRakeDbConfig, RakeDbConfig } from '../common';
 import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
 import { asMock } from '../test-utils';
 import {
@@ -56,7 +56,10 @@ db.getConstraints = async () => constraints;
 
 asMock(makeFileTimeStamp).mockReturnValue('timestamp');
 
-const appCodeUpdater = jest.fn();
+const appCodeUpdater: AppCodeUpdater = {
+  process: jest.fn(),
+  afterAll: jest.fn(),
+};
 const warn = jest.fn();
 const log = jest.fn();
 
@@ -331,7 +334,8 @@ change(async (db) => {
     );
 
     // 5 = 2 schemas + 1 domain + 2 tables
-    expect(appCodeUpdater).toBeCalledTimes(5);
+    expect(appCodeUpdater.process).toBeCalledTimes(5);
+    expect(appCodeUpdater.afterAll).toBeCalledTimes(1);
 
     expect(warn).toBeCalledWith(`Found unsupported types:
 - customType is used for column schema.table1.customTypeColumn
@@ -417,7 +421,8 @@ change(async (db) => {
       config,
     );
 
-    expect(appCodeUpdater).toBeCalledTimes(1);
+    expect(appCodeUpdater.process).toBeCalledTimes(1);
+    expect(appCodeUpdater.afterAll).toBeCalledTimes(1);
   });
 
   it('should handle enum', async () => {

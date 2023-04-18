@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.9.3
+
+### Patch Changes
+
+- Automaticly define relations from db pull or after running migrations
+
 ## 1.9.2
 
 ### Patch Changes

@@ -1,6 +1,11 @@
 import { updateTableFile } from './updateTableFile';
-import { asMock, ast, makeTestWritten, tablePath } from '../testUtils';
-import { resolve } from 'path';
+import {
+  asMock,
+  ast,
+  makeTestWritten,
+  tablePath,
+  updateTableFileParams,
+} from '../testUtils';
 import fs from 'fs/promises';
 import { pathToLog } from 'orchid-core';
 
@@ -10,23 +15,13 @@ jest.mock('fs/promises', () => ({
   writeFile: jest.fn(),
 }));
 
-const baseTablePath = resolve('baseTable.ts');
-const baseTableName = 'BaseTable';
-const log = jest.fn();
-const params = {
-  tablePath,
-  logger: { ...console, log },
-  baseTable: {
-    filePath: baseTablePath,
-    name: baseTableName,
-  },
-};
+const params = updateTableFileParams;
 
 const path = tablePath('fooBar');
 const testWrittenOnly = makeTestWritten(path);
 const testWritten = (content: string) => {
   testWrittenOnly(content);
-  expect(log).toBeCalledWith(`Updated ${pathToLog(path)}`);
+  expect(params.logger.log).toBeCalledWith(`Updated ${pathToLog(path)}`);
 };
 
 describe('renameTable', () => {

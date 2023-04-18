@@ -1,5 +1,5 @@
 import { RakeDbAst } from 'rake-db';
-import { columnsShapeToCode } from 'pqb';
+import { columnsShapeToCode, ColumnType } from 'pqb';
 import {
   Code,
   singleQuote,
@@ -12,18 +12,36 @@ import {
 import fs from 'fs/promises';
 import { UpdateTableFileParams } from './updateTableFile';
 import path from 'path';
-import { BaseTableParam } from '../appCodeUpdater';
+import {
+  AppCodeUpdaterRelations,
+  AppCodeUpdaterGetTable,
+} from '../appCodeUpdater';
+import { handleForeignKey } from './handleForeignKey';
 
 export const createTable = async ({
   ast,
   logger,
+  getTable,
+  relations,
+  tables,
   ...params
 }: UpdateTableFileParams & {
   ast: RakeDbAst.Table;
-  baseTable: BaseTableParam;
 }) => {
-  const tablePath = params.tablePath(toCamelCase(ast.name));
+  const key = toCamelCase(ast.name);
+  const tablePath = params.tablePath(key);
   const baseTablePath = getImportPath(tablePath, params.baseTable.filePath);
+  const className = `${toPascalCase(ast.name)}Table`;
+
+  tables[ast.name] = {
+    key,
+    name: className,
+    path: tablePath,
+  };
+
+  const imports: Record<string, string> = {
+    [baseTablePath]: params.baseTable.name,
+  };
 
   const props: Code[] = [];
 
@@ -43,11 +61,24 @@ export const createTable = async ({
     '}));',
   );
 
+  const relCode = await getRelations(
+    ast,
+    getTable,
+    tablePath,
+    imports,
+    relations,
+    ast.name,
+  );
+  if (relCode) {
+    props.push('', ...relCode);
+  }
+
   const code: Code[] = [
-    `import { ${params.baseTable.name} } from '${baseTablePath}';\n`,
-    `export class ${toPascalCase(ast.name)}Table extends ${
-      params.baseTable.name
-    } {`,
+    ...Object.entries(imports).map(
+      ([from, name]) => `import { ${name} } from '${from}';`,
+    ),
+    '',
+    `export class ${className} extends ${params.baseTable.name} {`,
     props,
     '}\n',
   ];
@@ -61,4 +92,76 @@ export const createTable = async ({
       throw err;
     }
   }
+};
+
+const getRelations = async (
+  ast: RakeDbAst.Table,
+  getTable: AppCodeUpdaterGetTable,
+  tablePath: string,
+  imports: Record<string, string>,
+  relations: AppCodeUpdaterRelations,
+  tableName: string,
+): Promise<Code[] | undefined> => {
+  const refs: { table: string; columns: string[]; foreignColumns: string[] }[] =
+    [];
+
+  for (const key in ast.shape) {
+    const item = ast.shape[key];
+    if (!(item instanceof ColumnType) || !item.data.foreignKeys) continue;
+
+    for (const fkey of item.data.foreignKeys) {
+      if ('table' in fkey) {
+        refs.push({
+          table: fkey.table,
+          columns: [key],
+          foreignColumns: fkey.columns,
+        });
+      }
+    }
+  }
+
+  if (ast.constraints) {
+    for (const { references: ref } of ast.constraints) {
+      if (ref && typeof ref.fnOrTable === 'string') {
+        refs.push({
+          table: ref.fnOrTable,
+          columns: ref.columns,
+          foreignColumns: ref.foreignColumns,
+        });
+      }
+    }
+  }
+
+  if (!refs.length) return;
+
+  const code: Code[] = [];
+
+  for (const ref of refs) {
+    const { columns, foreignColumns } = ref;
+    if (columns.length > 1 || foreignColumns.length > 1) continue;
+
+    const info = await getTable(ref.table);
+    if (!info) continue;
+
+    const path = getImportPath(tablePath, info.path);
+    imports[path] = info.name;
+
+    code.push(
+      `${info.key}: this.belongsTo(() => ${info.name}, {`,
+      [`primaryKey: '${foreignColumns[0]}',`, `foreignKey: '${columns[0]}',`],
+      '}),',
+    );
+
+    await handleForeignKey({
+      getTable,
+      relations,
+      tableName,
+      columns: ref.columns,
+      foreignTableName: ref.table,
+      foreignColumns: ref.foreignColumns,
+      skipBelongsTo: true,
+    });
+  }
+
+  return code.length ? ['relations = {', code, '};'] : undefined;
 };

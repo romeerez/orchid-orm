@@ -17,7 +17,7 @@ import { transaction } from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { AdapterBase } from 'orchid-core';
 
-export type OrchidORM<T extends TableClasses> = {
+export type OrchidORM<T extends TableClasses = TableClasses> = {
   [K in keyof T]: DbTable<T[K]>;
 } & {
   $transaction: typeof transaction;
@@ -100,6 +100,8 @@ export const orchidORM = <T extends TableClasses>(
 
     (dbTable as unknown as { definedAs: string }).definedAs = key;
     (dbTable as unknown as { db: unknown }).db = result;
+    (dbTable as unknown as { filePath: string }).filePath = table.filePath;
+    (dbTable as unknown as { name: string }).name = table.constructor.name;
 
     (result as Record<string, unknown>)[key] = dbTable;
   }

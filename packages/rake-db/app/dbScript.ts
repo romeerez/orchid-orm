@@ -26,7 +26,7 @@ export const change = rakeDb(options, {
   migrationsPath: 'migrations',
   appCodeUpdater: appCodeUpdater({
     tablePath: (tableName) => `tables/${tableName}.ts`,
-    mainFilePath: 'db.ts',
+    ormPath: 'db.ts',
   }),
-  useCodeUpdater: false,
+  useCodeUpdater: true,
 });

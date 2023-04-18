@@ -7,6 +7,7 @@ import { BaseTable } from './test-utils/test-tables';
 
 class SomeTable extends BaseTable {
   readonly table = 'someTable';
+  filePath = 'repo.test.ts';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     name: t.text(0, 100),
@@ -22,6 +23,7 @@ class SomeTable extends BaseTable {
 
 class OtherTable extends BaseTable {
   readonly table = 'otherTable';
+  filePath = 'repo.test.ts';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     someId: t.integer().foreignKey(() => SomeTable, 'id'),
@@ -42,6 +44,7 @@ class OtherTable extends BaseTable {
 
 class AnotherTable extends BaseTable {
   readonly table = 'another';
+  filePath = 'repo.test.ts';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
   }));

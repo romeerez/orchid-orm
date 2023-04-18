@@ -11,8 +11,8 @@ jest.mock('fs/promises', () => ({
   mkdir: jest.fn(),
 }));
 
-const mainFilePath = path.resolve('db.ts');
-const testWritten = makeTestWritten(mainFilePath);
+const ormPath = path.resolve('db.ts');
+const testWritten = makeTestWritten(ormPath);
 const options = { databaseURL: 'url' };
 
 const log = jest.fn();
@@ -22,7 +22,7 @@ const logger = {
 };
 
 const run = (ast: RakeDbAst) =>
-  updateMainFile(mainFilePath, tablePath, ast, options, logger);
+  updateMainFile(ormPath, tablePath, ast, options, logger);
 
 describe('updateMainFile', () => {
   beforeEach(() => {
@@ -38,7 +38,7 @@ describe('updateMainFile', () => {
 
       await run(ast.addTable);
 
-      expect(asMock(fs.mkdir)).toBeCalledWith(path.dirname(mainFilePath), {
+      expect(asMock(fs.mkdir)).toBeCalledWith(path.dirname(ormPath), {
         recursive: true,
       });
 
@@ -55,7 +55,7 @@ export const db = orchidORM(
 );
 `);
 
-      expect(log).toBeCalledWith(`Created ${pathToLog(mainFilePath)}`);
+      expect(log).toBeCalledWith(`Created ${pathToLog(ormPath)}`);
     });
 
     it('should add table', async () => {
@@ -76,7 +76,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
+      expect(log).toBeCalledWith(`Updated ${pathToLog(ormPath)}`);
     });
 
     it('should handle import as', async () => {
@@ -97,7 +97,7 @@ export const db = custom({}, {
 });
 `);
 
-      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
+      expect(log).toBeCalledWith(`Updated ${pathToLog(ormPath)}`);
     });
 
     it('should handle object list with elements', async () => {
@@ -123,7 +123,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
+      expect(log).toBeCalledWith(`Updated ${pathToLog(ormPath)}`);
     });
 
     it('should handle object list without ending coma', async () => {
@@ -149,7 +149,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
+      expect(log).toBeCalledWith(`Updated ${pathToLog(ormPath)}`);
     });
 
     it('should not add table if it is already added', async () => {
@@ -189,7 +189,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
+      expect(log).toBeCalledWith(`Updated ${pathToLog(ormPath)}`);
     });
 
     it('should remove aliased import', async () => {
@@ -211,7 +211,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
+      expect(log).toBeCalledWith(`Updated ${pathToLog(ormPath)}`);
     });
 
     it('should remove short form of key and value', async () => {
@@ -233,7 +233,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
+      expect(log).toBeCalledWith(`Updated ${pathToLog(ormPath)}`);
     });
 
     it('should not remove other tables', async () => {
@@ -263,7 +263,7 @@ export const db = orchidORM({}, {
 });
 `);
 
-      expect(log).toBeCalledWith(`Updated ${pathToLog(mainFilePath)}`);
+      expect(log).toBeCalledWith(`Updated ${pathToLog(ormPath)}`);
     });
 
     it('should not insert table if table with same key exists, disregarding the import path', async () => {

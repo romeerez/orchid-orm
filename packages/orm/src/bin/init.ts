@@ -451,7 +451,7 @@ export const change = rakeDb(${
   migrationsPath: './migrations',
   appCodeUpdater: appCodeUpdater({
     tablePath: (tableName) => \`./tables/\${tableName}.table.ts\`,
-    mainFilePath: './db.ts',
+    ormPath: './db.ts',
   }),
   useCodeUpdater: true, // set to false to disable code updater
   commands: {

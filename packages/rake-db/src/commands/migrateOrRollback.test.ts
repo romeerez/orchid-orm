@@ -4,6 +4,7 @@ import {
   migrationConfigDefaults,
   getMigrationFiles,
   RakeDbConfig,
+  AppCodeUpdater,
 } from '../common';
 import {
   Adapter,
@@ -84,6 +85,11 @@ getMigratedVersionsArrayMock.mockImplementation(() => ({
   rows: migratedVersions.map((version) => [version]),
 }));
 
+const appCodeUpdater: AppCodeUpdater = {
+  process: jest.fn(),
+  afterAll: jest.fn(),
+};
+
 describe('migrateOrRollback', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -147,7 +153,6 @@ describe('migrateOrRollback', () => {
       migrationFiles = [files[0]];
       migratedVersions = [];
       importMock.mockImplementationOnce(createTableCallback);
-      const appCodeUpdater = jest.fn();
 
       await migrate(
         [options, options],
@@ -155,14 +160,14 @@ describe('migrateOrRollback', () => {
         [],
       );
 
-      expect(appCodeUpdater).toBeCalledTimes(1);
+      expect(appCodeUpdater.process).toBeCalledTimes(1);
+      expect(appCodeUpdater.afterAll).toBeCalledTimes(1);
     });
 
     it('should not call appCodeUpdater when useCodeUpdater is set to false in config', async () => {
       migrationFiles = [files[0]];
       migratedVersions = [];
       importMock.mockImplementation(createTableCallback);
-      const appCodeUpdater = jest.fn();
 
       await migrate(
         options,
@@ -170,14 +175,14 @@ describe('migrateOrRollback', () => {
         [],
       );
 
-      expect(appCodeUpdater).not.toBeCalled();
+      expect(appCodeUpdater.process).not.toBeCalled();
+      expect(appCodeUpdater.afterAll).not.toBeCalled();
     });
 
     it('should not call appCodeUpdater when having argument --code false', async () => {
       migrationFiles = [files[0]];
       migratedVersions = [];
       importMock.mockImplementation(createTableCallback);
-      const appCodeUpdater = jest.fn();
 
       await migrate(
         options,
@@ -185,14 +190,14 @@ describe('migrateOrRollback', () => {
         ['--code', 'false'],
       );
 
-      expect(appCodeUpdater).not.toBeCalled();
+      expect(appCodeUpdater.process).not.toBeCalled();
+      expect(appCodeUpdater.afterAll).not.toBeCalled();
     });
 
     it('should call appCodeUpdater when having argument --code', async () => {
       migrationFiles = [files[0]];
       migratedVersions = [];
       importMock.mockImplementation(createTableCallback);
-      const appCodeUpdater = jest.fn();
 
       await migrate(
         options,
@@ -200,7 +205,8 @@ describe('migrateOrRollback', () => {
         ['--code'],
       );
 
-      expect(appCodeUpdater).toBeCalled();
+      expect(appCodeUpdater.process).toBeCalled();
+      expect(appCodeUpdater.afterAll).toBeCalled();
     });
 
     it('should call multiple change callbacks from top to bottom', async () => {
@@ -293,8 +299,6 @@ describe('migrateOrRollback', () => {
       migrationFiles = files;
       migratedVersions = files.slice(0, 3).map((file) => file.version);
 
-      const appCodeUpdater = jest.fn();
-
       const callbackCalls: string[] = [];
       const conf = {
         ...config,
@@ -360,7 +364,8 @@ describe('migrateOrRollback', () => {
         [`Migrated ${pathToLog('file3')}`],
       ]);
 
-      expect(appCodeUpdater).toBeCalledTimes(4);
+      expect(appCodeUpdater.process).toBeCalledTimes(4);
+      expect(appCodeUpdater.afterAll).toBeCalledTimes(2);
     });
 
     it('should migrate just one if number argument is not provided', async () => {

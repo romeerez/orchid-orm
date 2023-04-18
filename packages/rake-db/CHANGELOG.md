@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.8.1
+
+### Patch Changes
+
+- Automaticly define relations from db pull or after running migrations
+
 ## 2.8.0
 
 ### Minor Changes

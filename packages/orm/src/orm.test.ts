@@ -21,6 +21,7 @@ describe('orm', () => {
   type User = UserTable['columns']['type'];
   class UserTable extends BaseTable {
     readonly table = 'user';
+    filePath = 'orm.test.ts';
     columns = this.setColumns((t) => ({
       id: t.identity().primaryKey(),
       name: t.text(1, 10),
@@ -30,6 +31,7 @@ describe('orm', () => {
 
   class ProfileTable extends BaseTable {
     readonly table = 'profile';
+    filePath = 'orm.test.ts';
     columns = this.setColumns((t) => ({
       id: t.identity().primaryKey(),
     }));

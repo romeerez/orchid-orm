@@ -36,7 +36,7 @@ export type TableToDb<T extends Table> = Db<
       : Query['relations']
     : Query['relations'],
   T['columnTypes']
-> & { definedAs: string; db: OrchidORM<TableClasses> };
+> & { definedAs: string; db: OrchidORM; filePath: string; name: string };
 
 export type DbTable<T extends TableClass> = TableToDb<InstanceType<T>> &
   Omit<MapRelations<InstanceType<T>>, keyof Query>;
@@ -56,6 +56,7 @@ export type Table = {
   schema?: string;
   columnTypes: ColumnTypesBase;
   noPrimaryKey?: boolean;
+  filePath: string;
 };
 
 export const createBaseTable = <CT extends ColumnTypesBase>(
@@ -102,14 +103,26 @@ const create = <CT extends ColumnTypesBase>(
     noPrimaryKey?: boolean;
     snakeCase = snakeCase;
     columnTypes: CT;
+    filePath!: string;
 
     constructor() {
       this.columnTypes = columnTypes;
     }
 
-    setColumns = <T extends ColumnsShape>(
+    setColumns<T extends ColumnsShape>(
       fn: (t: CT) => T,
-    ): { shape: T; type: ColumnShapeOutput<T> } => {
+    ): { shape: T; type: ColumnShapeOutput<T> } {
+      if (!this.filePath) {
+        const filePath = getCallerFilePath();
+        if (!filePath) {
+          throw new Error(
+            `Failed to determine file path for table ${this.constructor.name}. Please set \`filePath\` property manually`,
+          );
+        }
+
+        this.filePath = filePath;
+      }
+
       (columnTypes as { [snakeCaseKey]?: boolean })[snakeCaseKey] =
         this.snakeCase;
 
@@ -131,7 +144,7 @@ const create = <CT extends ColumnTypesBase>(
         shape,
         type: undefined as unknown as ColumnShapeOutput<T>,
       };
-    };
+    }
 
     belongsTo<
       Self extends this,

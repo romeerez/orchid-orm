@@ -65,14 +65,18 @@ export type RakeDbConfig<CT extends ColumnTypesBase = DefaultColumnTypes> = {
   afterRollback?(db: Db): Promise<void>;
 } & QueryLogOptions;
 
-export type AppCodeUpdater = (params: {
-  ast: RakeDbAst;
+export type AppCodeUpdaterParams = {
   options: AdapterOptions;
   basePath: string;
   cache: object;
   logger: QueryLogOptions['logger'];
   baseTable: { filePath: string; name: string };
-}) => Promise<void>;
+};
+
+export type AppCodeUpdater = {
+  process(params: AppCodeUpdaterParams & { ast: RakeDbAst }): Promise<void>;
+  afterAll(params: AppCodeUpdaterParams): Promise<void>;
+};
 
 export const migrationConfigDefaults: Omit<
   RakeDbConfig,

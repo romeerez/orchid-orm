@@ -91,7 +91,7 @@ export const change = rakeDb(
     appCodeUpdater: appCodeUpdater({
       // paths are relative to the current file
       tablePath: (tableName) => `../tables/${tableName}.table.ts`,
-      mainFilePath: './db.ts',
+      ormPath: './db.ts',
     }),
 
     // true by default, whether to use code updater by default

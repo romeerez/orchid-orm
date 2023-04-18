@@ -6,5 +6,8 @@ export const BaseTable = createBaseTable({
     id() {
       return t.identity.call(this).primaryKey();
     },
+    text(min = 0, max = Infinity) {
+      return t.text.call(this, min, max);
+    },
   }),
 });
