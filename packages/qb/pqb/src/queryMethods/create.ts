@@ -373,7 +373,7 @@ const insert = (
         );
       }
 
-      return parseResult(q, returnType, queryResult);
+      return parseResult(q, q.query.parsers, returnType, queryResult);
     };
   } else {
     q.query.returnType = returnType;

@@ -245,7 +245,7 @@ export class Update {
 
         q.query.returnType = originalReturnType;
 
-        return parseResult(q, originalReturnType, queryResult);
+        return parseResult(q, q.query.parsers, originalReturnType, queryResult);
       };
     }
 

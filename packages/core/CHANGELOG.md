@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.4.1
+
+### Patch Changes
+
+- Support selecting full joined record
+
 ## 0.4.0
 
 ### Minor Changes

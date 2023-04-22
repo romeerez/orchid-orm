@@ -9,7 +9,10 @@ export type MergeQuery<
   ReturnType extends QueryReturnType = QueryReturnType extends Q['returnType']
     ? T['returnType']
     : Q['returnType'],
-> = Omit<T, 'result' | 'returnType' | 'then'> & {
+> = Omit<
+  T,
+  'result' | 'returnType' | 'then' | 'selectable' | 'windows' | 'withData'
+> & {
   meta: {
     hasSelect: Q['meta']['hasSelect'];
     hasWhere: Q['meta']['hasWhere'];
@@ -22,7 +25,6 @@ export type MergeQuery<
     ? QueryThen<ReturnType, Spread<[T['result'], Q['result']]>>
     : QueryThen<ReturnType, Q['result']>;
   selectable: T['selectable'] & Q['selectable'];
-  joinedTables: T['joinedTables'] & Q['joinedTables'];
   windows: T['windows'] & Q['windows'];
   withData: T['withData'] & Q['withData'];
 };

@@ -61,6 +61,8 @@ export const revealColumnToSqlWithAs = (
     return `${quoted}.${q(name || key)}${
       name && name !== key ? ` AS ${q(key)}` : ''
     }`;
+  } else if (data.joinedShapes?.[column]) {
+    return `row_to_json("${column}".*) "${column}"`;
   } else {
     const name = data.shape[column]?.data.name;
     return `${quotedAs ? `${quotedAs}.` : ''}${q(name || column)}${

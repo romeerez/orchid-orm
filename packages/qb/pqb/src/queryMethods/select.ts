@@ -193,7 +193,7 @@ export const addParserForSelectItem = <T extends Query>(
               ? [item]
               : (item as unknown[]);
 
-          return parseResult(rel, t, subQueryResult, true);
+          return parseResult(rel, rel.query.parsers, t, subQueryResult, true);
         });
       }
     }
@@ -235,7 +235,16 @@ export const processSelectArg = <T extends Query>(
   columnAs?: string | getValueKey,
 ): SelectItem => {
   if (typeof arg === 'string') {
-    if ((q.relations as Record<string, Relation>)[arg]) {
+    if (q.query.joinedShapes?.[arg]) {
+      const parsers = q.query.joinedParsers?.[arg];
+      if (parsers) {
+        addParserToQuery(q.query, arg, (item) => {
+          subQueryResult.rows = [item];
+          return parseResult(q, parsers, 'one', subQueryResult, true);
+        });
+      }
+      return arg;
+    } else if ((q.relations as Record<string, Relation>)[arg]) {
       const rel = (q.relations as Record<string, Relation>)[arg];
       arg = {
         [arg]: () => rel.joinQuery(q, rel.query),

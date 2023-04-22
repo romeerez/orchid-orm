@@ -1,5 +1,13 @@
 # pqb
 
+## 0.11.4
+
+### Patch Changes
+
+- Support selecting full joined record
+- Updated dependencies
+  - orchid-core@0.4.1
+
 ## 0.11.3
 
 ### Patch Changes

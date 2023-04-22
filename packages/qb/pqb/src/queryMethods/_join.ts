@@ -9,13 +9,15 @@ import { ColumnsShape } from '../columns';
 
 export const _join = <
   T extends Query,
+  Require extends boolean,
   Arg extends JoinFirstArg<T>,
   Args extends JoinArgs<T, Arg>,
 >(
   q: T,
+  require: Require,
   type: string,
   args: [arg: Arg, ...args: Args] | [arg: Arg, cb: JoinCallback<T, Arg>],
-): JoinResult<T, Arg> => {
+): JoinResult<T, Require, Arg> => {
   const first = args[0];
   let joinKey: string | undefined;
   let shape: ColumnsShapeBase | undefined;
@@ -45,6 +47,9 @@ export const _join = <
     } else {
       shape = q.query.withShapes?.[joinKey];
       if (shape) {
+        // clone the shape to mutate it below, in other cases the shape is newly created
+        if (!require) shape = { ...shape };
+
         parsers = {} as ColumnsParsers;
         for (const key in shape) {
           const parser = shape[key].parseFn;
@@ -57,6 +62,14 @@ export const _join = <
   }
 
   if (joinKey) {
+    if (!require && shape) {
+      for (const key in shape) {
+        if (!shape[key].data.isNullable) {
+          shape[key] = shape[key].nullable();
+        }
+      }
+    }
+
     setQueryObjectValue(q, 'joinedShapes', joinKey, shape);
     setQueryObjectValue(q, 'joinedParsers', joinKey, parsers);
   }
@@ -65,5 +78,5 @@ export const _join = <
     type,
     args,
     isSubQuery,
-  }) as unknown as JoinResult<T, Arg>;
+  }) as unknown as JoinResult<T, Require, Arg>;
 };

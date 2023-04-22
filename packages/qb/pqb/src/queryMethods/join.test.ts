@@ -62,15 +62,12 @@ describe('join to table with named columns', () => {
 });
 
 describe.each`
-  method              | sql
-  ${'join'}           | ${'JOIN'}
-  ${'innerJoin'}      | ${'INNER JOIN'}
-  ${'leftJoin'}       | ${'LEFT JOIN'}
-  ${'leftOuterJoin'}  | ${'LEFT OUTER JOIN'}
-  ${'rightJoin'}      | ${'RIGHT JOIN'}
-  ${'rightOuterJoin'} | ${'RIGHT OUTER JOIN'}
-  ${'fullOuterJoin'}  | ${'FULL OUTER JOIN'}
-`('$method', ({ method, sql }) => {
+  method         | require  | sql
+  ${'join'}      | ${true}  | ${'JOIN'}
+  ${'leftJoin'}  | ${false} | ${'LEFT JOIN'}
+  ${'rightJoin'} | ${true}  | ${'RIGHT JOIN'}
+  ${'fullJoin'}  | ${false} | ${'FULL JOIN'}
+`('$method', ({ method, require, sql }) => {
   it('should call _join with proper join type', () => {
     asMock(_join).mockClear();
 
@@ -81,7 +78,7 @@ describe.each`
 
     q[method as 'join'](...args);
 
-    expect(_join).toBeCalledWith(q, sql, args);
+    expect(_join).toBeCalledWith(q, require, sql, args);
   });
 });
 

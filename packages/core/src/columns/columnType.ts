@@ -280,4 +280,12 @@ export abstract class ColumnTypeBase<
       errors ? { ...errors, ...errorMessages } : errorMessages,
     );
   }
+
+  nullable<T extends ColumnTypeBase>(this: T): NullableColumn<T> {
+    return setColumnData(
+      this,
+      'isNullable',
+      true,
+    ) as unknown as NullableColumn<T>;
+  }
 }

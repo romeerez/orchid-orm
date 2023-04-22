@@ -44,12 +44,18 @@ export class Then {
   }
 }
 
-export const handleResult: CommonQueryData['handleResult'] = async (
+export const handleResult: CommonQueryData['handleResult'] = (
   q,
   result: QueryResult,
   isSubQuery?: true,
 ) => {
-  return parseResult(q, q.query.returnType || 'all', result, isSubQuery);
+  return parseResult(
+    q,
+    q.query.parsers,
+    q.query.returnType || 'all',
+    result,
+    isSubQuery,
+  );
 };
 
 function maybeWrappedThen(this: Query, resolve?: Resolve, reject?: Reject) {
@@ -185,6 +191,7 @@ const assignError = (to: QueryError, from: pg.DatabaseError) => {
 
 export const parseResult = (
   q: Query,
+  parsers: ColumnsParsers | undefined,
   returnType: QueryReturnType | undefined = 'all',
   result: QueryResult,
   isSubQuery?: boolean,
@@ -194,7 +201,6 @@ export const parseResult = (
       if (q.query.throwOnNotFound && result.rows.length === 0)
         throw new NotFoundError(q);
 
-      const { parsers } = q.query;
       return parsers
         ? result.rows.map((row) => parseRecord(parsers, row))
         : result.rows;
@@ -203,18 +209,15 @@ export const parseResult = (
       const row = result.rows[0];
       if (!row) return;
 
-      const { parsers } = q.query;
       return parsers ? parseRecord(parsers, row) : row;
     }
     case 'oneOrThrow': {
       const row = result.rows[0];
       if (!row) throw new NotFoundError(q);
 
-      const { parsers } = q.query;
       return parsers ? parseRecord(parsers, row) : row;
     }
     case 'rows': {
-      const { parsers } = q.query;
       return parsers
         ? parseRows(
             parsers,
@@ -224,7 +227,6 @@ export const parseResult = (
         : result.rows;
     }
     case 'pluck': {
-      const { parsers } = q.query;
       if (parsers?.pluck) {
         if (isSubQuery) {
           return result.rows.map((row) => parsers.pluck(row));
@@ -238,13 +240,13 @@ export const parseResult = (
     case 'value': {
       const value = result.rows[0]?.[0];
       return value !== undefined
-        ? parseValue(value, q)
+        ? parseValue(value, parsers)
         : q.query.notFoundDefault;
     }
     case 'valueOrThrow': {
       const value = result.rows[0]?.[0];
       if (value === undefined) throw new NotFoundError(q);
-      return parseValue(value, q);
+      return parseValue(value, parsers);
     }
     case 'rowCount': {
       if (q.query.throwOnNotFound && result.rowCount === 0) {
@@ -285,9 +287,8 @@ const parseRows = (
   return rows;
 };
 
-const parseValue = (value: unknown, query: Query) => {
+const parseValue = (value: unknown, parsers?: ColumnsParsers) => {
   if (value !== null) {
-    const { parsers } = query.query;
     const parser = parsers?.[getValueKey];
     if (parser) {
       return parser(value);

@@ -11,8 +11,8 @@ import { whereToSql } from './where';
 import { Relation } from '../relations';
 import { ToSqlCtx } from './toSql';
 import { getRaw } from '../raw';
-import { QueryData, SelectQueryData } from './data';
-import { ColumnsShapeBase, isRaw, RawExpression } from 'orchid-core';
+import { JoinedShapes, QueryData, SelectQueryData } from './data';
+import { isRaw, RawExpression } from 'orchid-core';
 
 type ItemOf3Or4Length =
   | [
@@ -85,9 +85,7 @@ export const processJoinItem = (
       conditions = whereToSql(ctx, jq, queryData, joinAs);
     } else {
       target = q(first);
-      const joinShape = (
-        query.joinedShapes as Record<string, ColumnsShapeBase>
-      )[first];
+      const joinShape = (query.joinedShapes as JoinedShapes)[first];
       conditions = processArgs(
         args,
         ctx,

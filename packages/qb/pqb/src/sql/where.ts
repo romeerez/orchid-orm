@@ -12,14 +12,8 @@ import { getQueryAs } from '../utils';
 import { processJoinItem } from './join';
 import { makeSql, ToSqlCtx } from './toSql';
 import { getRaw } from '../raw';
-import { QueryData } from './data';
-import {
-  isRaw,
-  RawExpression,
-  MaybeArray,
-  toArray,
-  ColumnsShapeBase,
-} from 'orchid-core';
+import { JoinedShapes, QueryData } from './data';
+import { isRaw, RawExpression, MaybeArray, toArray } from 'orchid-core';
 
 export const pushWhereStatementSql = (
   ctx: ToSqlCtx,
@@ -173,9 +167,7 @@ const processWhere = (
         );
 
         const joinTo = getJoinItemSource(item.joinTo);
-        const joinedShape = (
-          query.joinedShapes as Record<string, ColumnsShapeBase>
-        )[joinTo];
+        const joinedShape = (query.joinedShapes as JoinedShapes)[joinTo];
 
         const [op, rightColumn] =
           item.on.length === 2

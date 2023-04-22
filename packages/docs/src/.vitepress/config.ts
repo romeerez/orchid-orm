@@ -56,6 +56,10 @@ export default {
             link: '/guide/query-builder-where',
           },
           {
+            text: 'Join',
+            link: '/guide/join',
+          },
+          {
             text: 'Create, Update, Delete',
             link: '/guide/query-builder-create-update-delete',
           },

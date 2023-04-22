@@ -6,7 +6,6 @@ import {
   ColumnTypeBase,
   ColumnTypesBase,
   HiddenColumn,
-  NullableColumn,
   PrimaryKeyColumn,
   pushColumnData,
   setColumnData,
@@ -184,14 +183,6 @@ export abstract class ColumnType<
 
   hidden<T extends ColumnType>(this: T): HiddenColumn<T> {
     return setColumnData(this, 'isHidden', true) as HiddenColumn<T>;
-  }
-
-  nullable<T extends ColumnType>(this: T): NullableColumn<T> {
-    return setColumnData(
-      this,
-      'isNullable',
-      true,
-    ) as unknown as NullableColumn<T>;
   }
 
   encode<T extends ColumnType, Input>(

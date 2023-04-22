@@ -6,6 +6,7 @@ import {
   Message,
   Profile,
   profileData,
+  ProfileRecord,
   Snake,
   snakeSelectAll,
   snakeSelectAllWithTable,
@@ -189,6 +190,33 @@ describe('select', () => {
       expectQueryNotMutated(q);
     });
 
+    it('should select left joined columns as optional', () => {
+      const q = User.leftJoin(Profile, 'profile.userId', 'user.id').select(
+        'user.id',
+        'profile.userId',
+      );
+
+      assertType<Awaited<typeof q>, { id: number; userId: number | null }[]>();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "user"."id", "profile"."userId" FROM "user"
+          LEFT JOIN "profile" ON "profile"."userId" = "user"."id"
+        `,
+      );
+
+      expect(q.query.joinedShapes).toEqual({
+        profile: {
+          id: Profile.shape.id.nullable(),
+          userId: Profile.shape.userId.nullable(),
+          bio: Profile.shape.bio.nullable(),
+          createdAt: Profile.shape.createdAt.nullable(),
+          updatedAt: Profile.shape.updatedAt.nullable(),
+        },
+      });
+    });
+
     it('should select named joined columns', () => {
       const q = User.join(Snake, 'tailLength', 'id').select(
         'user.id',
@@ -245,7 +273,75 @@ describe('select', () => {
       );
     });
 
-    describe('parse columns', () => {
+    it('should select joined table as json', async () => {
+      await insertUserAndProfile();
+
+      const q = User.join(Profile.as('p'), 'p.userId', 'user.id')
+        .select('p')
+        .where({
+          'p.bio': profileData.bio,
+        });
+
+      assertType<Awaited<typeof q>, { p: ProfileRecord }[]>();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT row_to_json("p".*) "p"
+          FROM "user"
+          JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+          WHERE "p"."bio" = $1
+        `,
+        [profileData.bio],
+      );
+
+      const data = await q;
+      expect(data).toEqual([
+        {
+          p: {
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            bio: profileData.bio,
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
+          },
+        },
+      ]);
+    });
+
+    it('should select left joined table as json', async () => {
+      await insertUserAndProfile();
+
+      const q = User.leftJoin(Profile.as('p'), 'p.userId', 'user.id').select(
+        'p',
+      );
+
+      assertType<Awaited<typeof q>, { p: ProfileRecord | null }[]>();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT row_to_json("p".*) "p"
+          FROM "user"
+          LEFT JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+        `,
+      );
+
+      const data = await q;
+      expect(data).toEqual([
+        {
+          p: {
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            bio: profileData.bio,
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
+          },
+        },
+      ]);
+    });
+
+    describe('loading records', () => {
       beforeEach(insertUserAndProfile);
 
       it('should parse columns of the table', async () => {

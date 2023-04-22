@@ -32,6 +32,8 @@ import {
   Sql,
 } from 'orchid-core';
 
+export type JoinedShapes = Record<string, ColumnsShapeBase>;
+
 export type CommonQueryData = {
   adapter: Adapter;
   shape: ColumnsShapeBase;
@@ -39,14 +41,14 @@ export type CommonQueryData = {
     q: Query,
     result: QueryResult,
     isSubQuery?: true,
-  ): Promise<unknown>;
+  ): Promise<unknown> | unknown;
   returnType: QueryReturnType;
   [relationQueryKey]?: RelationQueryData;
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
   with?: WithItem[];
   withShapes?: Record<string, ColumnsShape>;
-  joinedShapes?: Record<string, ColumnsShapeBase>;
+  joinedShapes?: JoinedShapes;
   joinedParsers?: Record<string, ColumnsParsers>;
   schema?: string;
   select?: SelectItem[];

@@ -78,7 +78,6 @@ export type Query = QueryCommon &
     selectable: SelectableBase;
     returnType: QueryReturnType;
     then: ThenResult<unknown>;
-    joinedTables: Record<string, Pick<Query, 'result' | 'table' | 'meta'>>;
     windows: EmptyObject;
     defaultSelectColumns: string[];
     relations: RelationsBase;
@@ -114,11 +113,6 @@ export const queryTypeWithLimitOne = {
 
 export const isQueryReturnsAll = (q: Query) =>
   !q.query.returnType || q.query.returnType === 'all';
-
-export type JoinedTablesBase = Record<
-  string,
-  Pick<Query, 'result' | 'table' | 'meta'>
->;
 
 export type QueryReturnsAll<T extends QueryReturnType> = (
   QueryReturnType extends T ? 'all' : T
@@ -277,48 +271,23 @@ export type SetQueryReturnsColumnInfo<
   then: ThenResult<Result>;
 };
 
-export type SetQueryTableAlias<T extends Query, As extends string> = Omit<
-  T,
-  'selectable' | 'meta'
-> & {
-  meta: Omit<T['meta'], 'as'> & {
-    as: As;
-  };
-  selectable: Omit<
-    T['selectable'],
-    `${AliasOrTable<T>}.${StringKey<keyof T['shape']>}`
-  > & {
-    [K in keyof T['shape'] as `${As}.${StringKey<keyof T['shape']>}`]: {
-      as: K;
-      column: T['shape'][K];
-    };
-  };
+export type SetQueryTableAlias<T extends Query, As extends string> = {
+  [K in keyof T]: K extends 'selectable'
+    ? Omit<
+        T['selectable'],
+        `${AliasOrTable<T>}.${StringKey<keyof T['shape']>}`
+      > & {
+        [K in keyof T['shape'] as `${As}.${StringKey<keyof T['shape']>}`]: {
+          as: K;
+          column: T['shape'][K];
+        };
+      }
+    : K extends 'meta'
+    ? Omit<T['meta'], 'as'> & {
+        as: As;
+      }
+    : T[K];
 };
-
-export type SetQueryJoinedTables<
-  T extends Query,
-  Selectable extends Record<string, { as: string; column: ColumnType }>,
-  JoinedTables extends JoinedTablesBase,
-> = Omit<T, 'selectable' | 'joinedTables'> & {
-  selectable: Selectable;
-  joinedTables: JoinedTables;
-};
-
-export type AddQueryJoinedTable<
-  T extends Query,
-  J extends Pick<Query, 'result' | 'table' | 'meta'>,
-> = SetQueryJoinedTables<
-  T,
-  T['selectable'] & {
-    [K in keyof J['result'] as `${AliasOrTable<J>}.${StringKey<K>}`]: {
-      as: K;
-      column: J['result'][K];
-    };
-  },
-  string extends keyof T['joinedTables']
-    ? Record<AliasOrTable<J>, J>
-    : Spread<[T['joinedTables'], Record<AliasOrTable<J>, J>]>
->;
 
 export type SetQueryWith<
   T extends Query,

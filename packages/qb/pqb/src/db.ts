@@ -88,7 +88,6 @@ export interface Db<
   then: ThenResult<
     Pick<ColumnShapeOutput<Shape>, DefaultSelectColumns<Shape>[number]>[]
   >;
-  joinedTables: Query['joinedTables'];
   windows: Query['windows'];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
   relations: Relations;
@@ -183,7 +182,7 @@ export class Db<
     this.query = {
       adapter,
       shape: shape as ColumnsShapeBase,
-      handleResult: handleResult,
+      handleResult,
       logger,
       log: logParamToLogObject(logger, options.log),
       autoPreparedStatements: options.autoPreparedStatements ?? false,
