@@ -74,15 +74,26 @@ const result = await db.user.join('messages')
 const ok: { name: string, messages: { id: number, text: string } }[] = result
 ```
 
-The query above may result in the following records, multiple rows have the same user name:
+`select` can accept an object where key is a new alias and the value refers to the joined table:
 
-| name   | messages                           |
+```ts
+const result = await db.user.join('messages')
+  .where({ 'messages.text': { startsWith: 'Hi' } })
+  .select('name', { msg: 'messages' })
+
+// result has the following type:
+const ok: { name: string, msg: { id: number, text: string } }[] = result
+```
+
+The query above may result in the following records, multiple rows have the name of the same user:
+
+| name   | msg                                |
 |--------|------------------------------------|
 | user 1 | ```{ id: 1, text: 'message 1' }``` |
 | user 1 | ```{ id: 2, text: 'message 2' }``` |
 | user 1 | ```{ id: 3, text: 'message 3' }``` |
 
-If relation wasn't defined, specify columns for the join.
+If relation wasn't defined, provide a `db.table` instance and specify columns for the join.
 Joined table can be references from `where` and `select` by a table name.
 
 ```ts
@@ -104,6 +115,17 @@ Joined table can have an alias for referencing it further:
 db.user.join(db.message.as('m'), 'message.userId', 'user.id')
   .where({ 'm.text': { startsWith: 'Hi' } })
   .select('name', 'm.text')
+```
+
+Joined table can be selected as an object as well as the relation join above:
+
+```ts
+const result = await db.user.join(db.message.as('m'), 'message.userId', 'user.id')
+  .where({ 'm.text': { startsWith: 'Hi' } })
+  .select('name', { msg: 'm' })
+
+// result has the following type:
+const ok: { name: string, msg: { id: number, text: string } }[] = result
 ```
 
 You can provide a custom comparison operator
@@ -234,6 +256,10 @@ Works just like `join`, except for result type that may have `null`:
 const result = await db.user.leftJoin('messages')
   .select('name', 'messages.text')
 
+// the same query, but joining table explicitly
+const result2: typeof result = await db.user.leftJoin(db.message, 'userId', 'id')
+  .select('name', 'message.text')
+
 // result has the following type:
 const ok: { name: string, text: string | null }[] = result
 ```
@@ -242,30 +268,34 @@ const ok: { name: string, text: string | null }[] = result
 
 `rightJoin` is a method for SQL `RIGHT JOIN`, which is equivalent to `RIGHT OUTER JOIN`.
 
+Takes the same arguments as `json`.
+
 It will load all records from the joining table, and fill the main table columns with `null` when no match is found.
 
-Works just like `join`, except that it can return `null` for main table columns. It is not reflected in TS type yet, to be done.
+The columns of the table you're joining to are becoming nullable when using `rightJoin`.
 
 ```ts
 const result = await db.user.rightJoin('messages')
   .select('name', 'messages.text')
 
-// name actually can be null if there is a message without a matching user
-const ok: { name: string, text: string }[] = result
+// even though name is not a nullable column, it becomes nullable after using rightJoin
+const ok: { name: string | null, text: string }[] = result
 ```
 
 ## fullJoin
 
 `fullJoin` is a method for SQL `FULL JOIN`, which is equivalent to `FULL OUTER JOIN`.
 
+Takes the same arguments as `json`.
+
 It will load all records from the joining table, both sides of the join may result in `null` values when there is no match.
 
-Works just like `join`, except that it can return `null` for both tables columns. It is not fully reflected in TS type yet, to be done.
+All columns become nullable after using `fullJoin`.
 
 ```ts
 const result = await db.user.rightJoin('messages')
   .select('name', 'messages.text')
 
-// name also can be null if there is a message without a matching user
-const ok: { name: string, text: string | null }[] = result
+// all columns can be null
+const ok: { name: string | null, text: string | null }[] = result
 ```

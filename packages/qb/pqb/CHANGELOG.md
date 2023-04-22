@@ -1,5 +1,11 @@
 # pqb
 
+## 0.11.6
+
+### Patch Changes
+
+- Support selecting joined table with alias
+
 ## 0.11.5
 
 ### Patch Changes

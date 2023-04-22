@@ -33,6 +33,7 @@ import {
 } from 'orchid-core';
 
 export type JoinedShapes = Record<string, ColumnsShapeBase>;
+export type JoinedParsers = Record<string, ColumnsParsers>;
 
 export type CommonQueryData = {
   adapter: Adapter;
@@ -46,7 +47,7 @@ export type CommonQueryData = {
   with?: WithItem[];
   withShapes?: Record<string, ColumnsShape>;
   joinedShapes?: JoinedShapes;
-  joinedParsers?: Record<string, ColumnsParsers>;
+  joinedParsers?: JoinedParsers;
   schema?: string;
   select?: SelectItem[];
   as?: string;

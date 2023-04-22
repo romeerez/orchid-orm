@@ -9,15 +9,16 @@ import { ColumnsShape } from '../columns';
 
 export const _join = <
   T extends Query,
-  Require extends boolean,
+  RequireJoined extends boolean,
+  RequireMain extends boolean,
   Arg extends JoinFirstArg<T>,
   Args extends JoinArgs<T, Arg>,
 >(
   q: T,
-  require: Require,
+  require: RequireJoined,
   type: string,
   args: [arg: Arg, ...args: Args] | [arg: Arg, cb: JoinCallback<T, Arg>],
-): JoinResult<T, Require, Arg> => {
+): JoinResult<T, RequireJoined, RequireMain, Arg> => {
   const first = args[0];
   let joinKey: string | undefined;
   let shape: ColumnsShapeBase | undefined;
@@ -78,5 +79,5 @@ export const _join = <
     type,
     args,
     isSubQuery,
-  }) as unknown as JoinResult<T, Require, Arg>;
+  }) as unknown as JoinResult<T, RequireJoined, RequireMain, Arg>;
 };

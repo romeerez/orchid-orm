@@ -309,6 +309,44 @@ describe('select', () => {
       ]);
     });
 
+    it('should select joined table as json with alias', async () => {
+      await insertUserAndProfile();
+
+      const q = User.join(Profile.as('p'), 'p.userId', 'user.id')
+        .select({
+          profile: 'p',
+        })
+        .where({
+          'p.bio': profileData.bio,
+        });
+
+      assertType<Awaited<typeof q>, { profile: ProfileRecord }[]>();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT row_to_json("p".*) AS "profile"
+          FROM "user"
+          JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+          WHERE "p"."bio" = $1
+        `,
+        [profileData.bio],
+      );
+
+      const data = await q;
+      expect(data).toEqual([
+        {
+          profile: {
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            bio: profileData.bio,
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
+          },
+        },
+      ]);
+    });
+
     it('should select left joined table as json', async () => {
       await insertUserAndProfile();
 
@@ -339,6 +377,122 @@ describe('select', () => {
           },
         },
       ]);
+    });
+
+    it('should select left joined table as json with alias', async () => {
+      await insertUserAndProfile();
+
+      const q = User.leftJoin(Profile.as('p'), 'p.userId', 'user.id').select({
+        profile: 'p',
+      });
+
+      assertType<Awaited<typeof q>, { profile: ProfileRecord | null }[]>();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT row_to_json("p".*) AS "profile"
+          FROM "user"
+          LEFT JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+        `,
+      );
+
+      const data = await q;
+      expect(data).toEqual([
+        {
+          profile: {
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            bio: profileData.bio,
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
+          },
+        },
+      ]);
+    });
+
+    it('should select right joined table as json', () => {
+      const q = User.rightJoin(Profile.as('p'), 'p.userId', 'user.id').select(
+        'name',
+        'p',
+      );
+
+      assertType<
+        Awaited<typeof q>,
+        { name: string | null; p: ProfileRecord }[]
+      >();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "user"."name", row_to_json("p".*) "p"
+          FROM "user"
+          RIGHT JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+        `,
+      );
+    });
+
+    it('should select right joined table as json with alias', () => {
+      const q = User.rightJoin(Profile.as('p'), 'p.userId', 'user.id').select(
+        'name',
+        { profile: 'p' },
+      );
+
+      assertType<
+        Awaited<typeof q>,
+        { name: string | null; profile: ProfileRecord }[]
+      >();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "user"."name", row_to_json("p".*) AS "profile"
+          FROM "user"
+          RIGHT JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+        `,
+      );
+    });
+
+    it('should select full joined table as json', () => {
+      const q = User.fullJoin(Profile.as('p'), 'p.userId', 'user.id').select(
+        'name',
+        'p',
+      );
+
+      assertType<
+        Awaited<typeof q>,
+        { name: string | null; p: ProfileRecord | null }[]
+      >();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "user"."name", row_to_json("p".*) "p"
+          FROM "user"
+          FULL JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+        `,
+      );
+    });
+
+    it('should select full joined table as json with alias', () => {
+      const q = User.fullJoin(Profile.as('p'), 'p.userId', 'user.id').select(
+        'name',
+        { profile: 'p' },
+      );
+
+      assertType<
+        Awaited<typeof q>,
+        { name: string | null; profile: ProfileRecord | null }[]
+      >();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "user"."name", row_to_json("p".*) AS "profile"
+          FROM "user"
+          FULL JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
+        `,
+      );
     });
 
     describe('loading records', () => {

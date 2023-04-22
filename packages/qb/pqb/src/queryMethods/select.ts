@@ -13,7 +13,7 @@ import {
   PluckResultColumnType,
 } from '../columns';
 import { pushQueryArray } from '../queryDataUtils';
-import { QueryData, SelectItem, SelectQueryData } from '../sql';
+import { JoinedParsers, QueryData, SelectItem, SelectQueryData } from '../sql';
 import { isRequiredRelationKey, Relation } from '../relations';
 import { getValueKey } from './get';
 import { QueryResult } from '../adapter';
@@ -162,6 +162,20 @@ const subQueryResult: QueryResult = {
   rows: [],
 };
 
+const addParsersForSelectJoined = (q: Query, arg: string, as = arg) => {
+  const parsers = (q.query.joinedParsers as JoinedParsers)[arg];
+  if (parsers) {
+    addParserToQuery(q.query, as, (item) => {
+      subQueryResult.rows = [item];
+      const type = q.query.returnType;
+      q.query.returnType = 'one';
+      const res = q.query.handleResult(q, subQueryResult, true);
+      q.query.returnType = type;
+      return res;
+    });
+  }
+};
+
 export const addParserForSelectItem = <T extends Query>(
   q: T,
   as: string | getValueKey | undefined,
@@ -198,22 +212,27 @@ export const addParserForSelectItem = <T extends Query>(
     }
     return rel;
   } else {
-    const index = arg.indexOf('.');
-    if (index !== -1) {
-      const table = arg.slice(0, index);
-      const column = arg.slice(index + 1);
+    if (q.query.joinedShapes?.[arg]) {
+      addParsersForSelectJoined(q, arg, key);
+    } else {
+      const index = arg.indexOf('.');
+      if (index !== -1) {
+        const table = arg.slice(0, index);
+        const column = arg.slice(index + 1);
 
-      if (table === as) {
-        const parser = q.query.parsers?.[column];
-        if (parser) addParserToQuery(q.query, key, parser);
+        if (table === as) {
+          const parser = q.query.parsers?.[column];
+          if (parser) addParserToQuery(q.query, key, parser);
+        } else {
+          const parser = q.query.joinedParsers?.[table]?.[column];
+          if (parser) addParserToQuery(q.query, key, parser);
+        }
       } else {
-        const parser = q.query.joinedParsers?.[table]?.[column];
+        const parser = q.query.parsers?.[arg];
         if (parser) addParserToQuery(q.query, key, parser);
       }
-    } else {
-      const parser = q.query.parsers?.[arg];
-      if (parser) addParserToQuery(q.query, key, parser);
     }
+
     return arg;
   }
 };
@@ -235,17 +254,7 @@ export const processSelectArg = <T extends Query>(
 ): SelectItem => {
   if (typeof arg === 'string') {
     if (q.query.joinedShapes?.[arg]) {
-      const parsers = q.query.joinedParsers?.[arg];
-      if (parsers) {
-        addParserToQuery(q.query, arg, (item) => {
-          subQueryResult.rows = [item];
-          const type = q.query.returnType;
-          q.query.returnType = 'one';
-          const res = q.query.handleResult(q, subQueryResult, true);
-          q.query.returnType = type;
-          return res;
-        });
-      }
+      addParsersForSelectJoined(q, arg);
       return arg;
     } else if ((q.relations as Record<string, Relation>)[arg]) {
       const rel = (q.relations as Record<string, Relation>)[arg];

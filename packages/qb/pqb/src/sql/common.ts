@@ -34,6 +34,8 @@ export const revealColumnToSql = (
     return `${quoted}.${q(
       getJoinedColumnName(data, shape, table, key, quoted === quotedAs) || key,
     )}`;
+  } else if (data.joinedShapes?.[column]) {
+    return `row_to_json("${column}".*)`;
   } else if (quotedAs && shape[column]) {
     return `${quotedAs}.${q(shape[column].data.name || column)}`;
   } else {
