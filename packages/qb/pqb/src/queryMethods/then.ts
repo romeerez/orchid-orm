@@ -128,13 +128,17 @@ const then = async (
       queryMethodByReturnType[q.query.returnType || 'all'] as 'query'
     ](sql)) as QueryResult;
 
+    if (q.query.patchResult) {
+      await q.query.patchResult(queryResult);
+    }
+
     if (q.query.log) {
       q.query.log.afterQuery(sql, logData);
       // set sql to be undefined to prevent logging on error in case if afterCallbacks throws
       sql = undefined;
     }
 
-    const result = await q.query.handleResult(q, queryResult);
+    const result = q.query.handleResult(q, queryResult);
 
     if (afterCallbacks || q.query.afterQuery) {
       await Promise.all(

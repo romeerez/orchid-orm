@@ -16,7 +16,7 @@ import {
 } from '../relations';
 import { InsertQueryData, OnConflictItem, OnConflictMergeUpdate } from '../sql';
 import { WhereArg } from './where';
-import { parseResult, queryMethodByReturnType } from './then';
+import { queryMethodByReturnType } from './then';
 import { NotFoundError } from '../errors';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
@@ -337,11 +337,11 @@ const insert = (
     (values as { from?: Query }).from?.query.returnType === 'oneOrThrow'
   ) {
     const { handleResult } = q.query;
-    q.query.handleResult = async (q, r, i) => {
+    q.query.handleResult = (q, r, s) => {
       if (r.rowCount === 0) {
         throw new NotFoundError(q);
       }
-      return await handleResult(q, r, i);
+      return handleResult(q, r, s);
     };
   }
 
@@ -359,8 +359,8 @@ const insert = (
   if (ctx.returnTypeAll) {
     q.query.returnType = 'all';
     const { handleResult } = q.query;
-    q.query.handleResult = async (q, queryResult, i) => {
-      ctx.resultAll = (await handleResult(q, queryResult, i)) as Record<
+    q.query.handleResult = (q, queryResult, s) => {
+      ctx.resultAll = handleResult(q, queryResult, s) as Record<
         string,
         unknown
       >[];
@@ -373,7 +373,8 @@ const insert = (
         );
       }
 
-      return parseResult(q, q.query.parsers, returnType, queryResult);
+      q.query.returnType = returnType;
+      return handleResult(q, queryResult, s);
     };
   } else {
     q.query.returnType = returnType;

@@ -28,7 +28,6 @@ import {
   ColumnTypeBase,
   EmptyObject,
 } from 'orchid-core';
-import { parseResult } from './then';
 
 export type SelectArg<T extends QueryBase> =
   | '*'
@@ -193,7 +192,7 @@ export const addParserForSelectItem = <T extends Query>(
               ? [item]
               : (item as unknown[]);
 
-          return parseResult(rel, rel.query.parsers, t, subQueryResult, true);
+          return rel.query.handleResult(rel, subQueryResult, true);
         });
       }
     }
@@ -240,7 +239,11 @@ export const processSelectArg = <T extends Query>(
       if (parsers) {
         addParserToQuery(q.query, arg, (item) => {
           subQueryResult.rows = [item];
-          return parseResult(q, parsers, 'one', subQueryResult, true);
+          const type = q.query.returnType;
+          q.query.returnType = 'one';
+          const res = q.query.handleResult(q, subQueryResult, true);
+          q.query.returnType = type;
+          return res;
         });
       }
       return arg;

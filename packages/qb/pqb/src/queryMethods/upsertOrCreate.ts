@@ -43,18 +43,32 @@ export class QueryUpsertOrCreate {
   ): UpsertResult<T> {
     this.query.returnType = 'one';
     this.query.wrapInTransaction = true;
+
     const { handleResult } = this.query;
-    this.query.handleResult = (q, queryResult, i) => {
+    let result: unknown;
+    let created = false;
+    this.query.handleResult = (q, r, s) => {
+      return created ? result : handleResult(q, r, s);
+    };
+
+    this.query.patchResult = async (queryResult) => {
       if (queryResult.rowCount === 0) {
-        return (q as Query).create(data as CreateData<Query>);
+        const inner = (this as Query).create(data as CreateData<Query>);
+        const { handleResult } = inner.query;
+        inner.query.handleResult = (q, r, s) => {
+          queryResult = r;
+          const res = handleResult(q, r, s);
+          result = res;
+          return res;
+        };
+        await inner;
+        created = true;
       } else if (queryResult.rowCount > 1) {
         throw new MoreThanOneRowError(
-          q,
+          this,
           `Only one row was expected to find, found ${queryResult.rowCount} rows.`,
         );
       }
-
-      return handleResult(q, queryResult, i);
     };
     return this as unknown as UpsertResult<T>;
   }

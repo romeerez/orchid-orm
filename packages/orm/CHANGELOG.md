@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.9.7
+
+### Patch Changes
+
+- Change result handling to a sync function as optimization
+- Updated dependencies
+  - pqb@0.11.5
+
 ## 1.9.6
 
 ### Patch Changes

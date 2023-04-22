@@ -9,7 +9,7 @@ import {
 } from '../relations';
 import { WhereArg, WhereResult } from './where';
 import { CreateData } from './create';
-import { parseResult, queryMethodByReturnType } from './then';
+import { queryMethodByReturnType } from './then';
 import { UpdateQueryData } from '../sql';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
@@ -20,6 +20,7 @@ import {
   MaybeArray,
   StringKey,
 } from 'orchid-core';
+import { QueryResult } from '../adapter';
 
 export type UpdateData<T extends Query> = {
   [K in keyof T['type']]?: T['type'][K] | RawExpression;
@@ -117,10 +118,10 @@ type ChangeCountArg<T extends Query> =
 
 export type UpdateCtx = {
   willSetKeys?: true;
-  updateLater?: Record<string, unknown>;
-  updateLaterPromises?: Promise<void>[];
   returnTypeAll?: true;
   resultAll: Record<string, unknown>[];
+  queries?: ((queryResult: QueryResult) => Promise<void>)[];
+  updateData?: Record<string, unknown>;
 };
 
 const applyCountChange = <T extends Query>(
@@ -195,45 +196,50 @@ export class Update {
       delete query.type;
     }
 
-    if (ctx.updateLater) {
-      if (!query.select?.includes('*')) {
-        this.primaryKeys.forEach((key) => {
-          if (!query.select?.includes(key)) {
-            this._select(key as StringKey<keyof T['selectable']>);
-          }
-        });
-      }
-    }
-
-    if (ctx.updateLater || ctx.returnTypeAll) {
+    const { queries } = ctx;
+    if (queries || ctx.returnTypeAll) {
       query.returnType = 'all';
 
+      if (queries) {
+        if (!query.select?.includes('*')) {
+          this.primaryKeys.forEach((key) => {
+            if (!query.select?.includes(key)) {
+              this._select(key as StringKey<keyof T['selectable']>);
+            }
+          });
+        }
+
+        query.patchResult = async (queryResult) => {
+          await Promise.all(queries.map((fn) => fn(queryResult)));
+
+          if (ctx.updateData) {
+            const t = this.baseQuery.clone();
+            const keys = this.primaryKeys;
+            (
+              t._whereIn as unknown as (
+                keys: string[],
+                values: unknown[][],
+              ) => Query
+            )(
+              keys,
+              queryResult.rows.map((item) => keys.map((key) => item[key])),
+            );
+
+            await (t as WhereResult<Query>)._update(ctx.updateData);
+
+            for (const row of queryResult.rows) {
+              Object.assign(row, ctx.updateData);
+            }
+          }
+        };
+      }
+
       const { handleResult } = query;
-      query.handleResult = async (q, queryResult, i) => {
-        ctx.resultAll = (await handleResult(q, queryResult, i)) as Record<
+      query.handleResult = (q, queryResult, s) => {
+        ctx.resultAll = handleResult(q, queryResult) as Record<
           string,
           unknown
         >[];
-
-        if (ctx.updateLater) {
-          await Promise.all(ctx.updateLaterPromises as Promise<void>[]);
-
-          const t = this.baseQuery.clone();
-          const keys = this.primaryKeys;
-          (
-            t._whereIn as unknown as (
-              keys: string[],
-              values: unknown[][],
-            ) => Query
-          )(
-            keys,
-            ctx.resultAll.map((item) => keys.map((key) => item[key])),
-          );
-
-          await (t as WhereResult<Query>)._update(ctx.updateLater);
-
-          ctx.resultAll.forEach((item) => Object.assign(item, ctx.updateLater));
-        }
 
         if (queryMethodByReturnType[originalReturnType] === 'arrays') {
           queryResult.rows.forEach(
@@ -245,7 +251,7 @@ export class Update {
 
         q.query.returnType = originalReturnType;
 
-        return parseResult(q, q.query.parsers, originalReturnType, queryResult);
+        return handleResult(q, queryResult, s);
       };
     }
 

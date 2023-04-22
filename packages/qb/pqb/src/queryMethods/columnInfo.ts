@@ -43,7 +43,7 @@ export class ColumnInfoMethods {
       (this.query as ColumnInfoQueryData).column = column as string;
     }
 
-    this.query.handleResult = async (_, result) => {
+    this.query.handleResult = (_, result) => {
       if (column) {
         return rowToColumnInfo(result.rows[0]);
       } else {

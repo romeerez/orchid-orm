@@ -8,6 +8,7 @@ import {
   pushQueryValue,
   Query,
   QueryBase,
+  QueryResult,
   UpdateCtx,
   VirtualColumn,
   WhereArg,
@@ -50,8 +51,8 @@ type BelongsToNestedUpdate = (
   update: Record<string, unknown>,
   params: NestedUpdateOneItem,
   state: {
-    updateLater?: Record<string, unknown>;
-    updateLaterPromises?: Promise<void>[];
+    queries?: ((queryResult: QueryResult) => Promise<void>)[];
+    updateData?: Record<string, unknown>;
   },
 ) => boolean;
 
@@ -284,38 +285,18 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
     }
 
     if (upsert) {
-      if (!state.updateLater) {
-        state.updateLater = {};
-        state.updateLaterPromises = [];
-      }
-
-      const { handleResult } = q.query;
-      q.query.handleResult = async (q, queryResult) => {
-        const data = (await handleResult(q, queryResult)) as Record<
-          string,
-          unknown
-        >[];
-
-        const id = data[0][foreignKey];
+      (state.queries ??= []).push(async (queryResult) => {
+        const id = queryResult.rows[0][foreignKey];
         if (id !== null) {
           await query
             .findBy({ [primaryKey]: id })
             ._update<WhereResult<Query>>(upsert.update);
         } else {
-          (state.updateLaterPromises as Promise<void>[]).push(
-            query
-              .select(primaryKey)
-              ._create(upsert.create)
-              .then((result) => {
-                (state.updateLater as Record<string, unknown>)[foreignKey] = (
-                  result as Record<string, unknown>
-                )[primaryKey];
-              }) as unknown as Promise<void>,
-          );
-        }
+          const result = await query.select(primaryKey)._create(upsert.create);
 
-        return data;
-      };
+          (state.updateData ??= {})[foreignKey] = result[primaryKey];
+        }
+      });
     } else if (params.delete || params.update) {
       q._afterQuery(async (_, data) => {
         const id = params.delete

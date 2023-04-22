@@ -37,11 +37,8 @@ export type JoinedShapes = Record<string, ColumnsShapeBase>;
 export type CommonQueryData = {
   adapter: Adapter;
   shape: ColumnsShapeBase;
-  handleResult(
-    q: Query,
-    result: QueryResult,
-    isSubQuery?: true,
-  ): Promise<unknown> | unknown;
+  patchResult?(queryResult: QueryResult): Promise<void>;
+  handleResult(q: Query, result: QueryResult, isSubQuery?: true): unknown;
   returnType: QueryReturnType;
   [relationQueryKey]?: RelationQueryData;
   wrapInTransaction?: boolean;
