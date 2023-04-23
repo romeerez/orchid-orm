@@ -1,5 +1,11 @@
 # pqb
 
+## 0.11.8
+
+### Patch Changes
+
+- Fix update method type to accept values by 'inputType' of the column instead of 'type'
+
 ## 0.11.7
 
 ### Patch Changes

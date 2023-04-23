@@ -23,7 +23,7 @@ import {
 import { QueryResult } from '../adapter';
 
 export type UpdateData<T extends Query> = {
-  [K in keyof T['type']]?: T['type'][K] | RawExpression;
+  [K in keyof T['inputType']]?: T['inputType'][K] | RawExpression;
 } & (T['relations'] extends Record<string, Relation>
   ? {
       [K in keyof T['relations']]?: T['relations'][K] extends BelongsToRelation
