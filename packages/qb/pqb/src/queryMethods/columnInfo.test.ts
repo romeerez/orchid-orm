@@ -1,13 +1,8 @@
-import {
-  db,
-  expectQueryNotMutated,
-  expectSql,
-  Snake,
-  User,
-} from '../test-utils/test-utils';
+import { expectQueryNotMutated, Snake, User } from '../test-utils/test-utils';
+import { expectSql, testDb } from 'test-utils';
 
 describe('columnInfo', () => {
-  afterAll(db.close);
+  afterAll(testDb.close);
 
   it('should return all columns info', async () => {
     const q = User.all();

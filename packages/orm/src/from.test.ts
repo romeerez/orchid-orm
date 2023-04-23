@@ -1,12 +1,5 @@
-import {
-  assertType,
-  chatData,
-  expectSql,
-  messageData,
-  userData,
-  useTestDatabase,
-} from './test-utils/test-utils';
-import { db } from './test-utils/test-db';
+import { assertType, expectSql, useTestDatabase } from 'test-utils';
+import { chatData, db, messageData, userData } from './test-utils/test-utils';
 
 describe('orm', () => {
   useTestDatabase();

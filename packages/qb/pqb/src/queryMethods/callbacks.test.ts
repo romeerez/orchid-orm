@@ -1,4 +1,5 @@
-import { User, userData, useTestDatabase } from '../test-utils/test-utils';
+import { User, userData } from '../test-utils/test-utils';
+import { useTestDatabase } from 'test-utils';
 
 describe('callbacks', () => {
   useTestDatabase();

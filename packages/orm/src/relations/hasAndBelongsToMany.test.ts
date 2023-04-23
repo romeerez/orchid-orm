@@ -1,18 +1,16 @@
-import { db } from '../test-utils/test-db';
+import { RelationQuery, TransactionAdapter } from 'pqb';
 import {
+  Chat,
   chatData,
-  expectSql,
-  userData,
-  useTestDatabase,
-  now,
-  assertType,
-  useRelationCallback,
   chatSelectAll,
+  db,
+  User,
+  userData,
+  useRelationCallback,
   userSelectAll,
 } from '../test-utils/test-utils';
-import { RelationQuery, TransactionAdapter } from 'pqb';
-import { Chat, User } from '../test-utils/test-tables';
 import { Sql } from 'orchid-core';
+import { assertType, expectSql, now, useTestDatabase } from 'test-utils';
 
 describe('hasAndBelongsToMany', () => {
   useTestDatabase();

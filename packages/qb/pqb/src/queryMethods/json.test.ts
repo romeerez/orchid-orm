@@ -1,13 +1,11 @@
 import {
-  assertType,
   expectQueryNotMutated,
-  expectSql,
   Snake,
   User,
   userData,
-  useTestDatabase,
 } from '../test-utils/test-utils';
 import { columnTypes } from '../columns';
+import { assertType, expectSql, useTestDatabase } from 'test-utils';
 
 describe('json methods', () => {
   useTestDatabase();

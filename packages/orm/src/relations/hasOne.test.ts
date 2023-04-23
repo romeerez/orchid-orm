@@ -1,19 +1,25 @@
-import { db, pgConfig } from '../test-utils/test-db';
 import {
-  assertType,
-  chatData,
-  expectSql,
-  messageSelectAll,
-  profileData,
-  profileSelectAll,
-  userData,
+  User,
+  Profile,
+  BaseTable,
+  Message,
+  db,
   useRelationCallback,
+  chatData,
+  profileData,
+  userData,
+  messageSelectAll,
+  profileSelectAll,
   userSelectAll,
-  useTestDatabase,
 } from '../test-utils/test-utils';
-import { User, Profile, BaseTable, Message } from '../test-utils/test-tables';
 import { RelationQuery } from 'pqb';
 import { orchidORM } from '../orm';
+import {
+  assertType,
+  expectSql,
+  testDbOptions,
+  useTestDatabase,
+} from 'test-utils';
 
 describe('hasOne', () => {
   useTestDatabase();
@@ -1359,7 +1365,7 @@ describe('hasOne through', () => {
 
     const db = orchidORM(
       {
-        ...pgConfig,
+        ...testDbOptions,
         log: false,
       },
       {
@@ -1398,7 +1404,7 @@ describe('hasOne through', () => {
     expect(() => {
       orchidORM(
         {
-          ...pgConfig,
+          ...testDbOptions,
           log: false,
         },
         {
@@ -1456,7 +1462,7 @@ describe('hasOne through', () => {
     expect(() => {
       orchidORM(
         {
-          ...pgConfig,
+          ...testDbOptions,
           log: false,
         },
         {

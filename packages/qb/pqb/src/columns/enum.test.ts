@@ -1,14 +1,14 @@
-import { assertType, db } from '../test-utils/test-utils';
 import { EnumColumn } from './enum';
+import { assertType, testDb } from 'test-utils';
 
 describe('enum column', () => {
-  afterAll(db.close);
+  afterAll(testDb.close);
 
   beforeAll(async () => {
-    await db.adapter.query(`
+    await testDb.adapter.query(`
           DROP TYPE IF EXISTS mood
         `);
-    await db.adapter.query(`
+    await testDb.adapter.query(`
           CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');
         `);
   });
@@ -16,8 +16,8 @@ describe('enum column', () => {
   type MoodUnion = 'sad' | 'ok' | 'happy';
 
   it('should output proper union', async () => {
-    const result = await db.get(
-      db.raw(
+    const result = await testDb.get(
+      testDb.raw(
         () => new EnumColumn({}, 'mood', ['sad', 'ok', 'happy']),
         `'happy'::mood`,
       ),

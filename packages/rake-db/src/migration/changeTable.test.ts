@@ -1,5 +1,4 @@
 import {
-  asMock,
   expectSql,
   getDb,
   makeTestUpAndDown,
@@ -7,6 +6,7 @@ import {
   resetDb,
   toLine,
 } from '../test-utils';
+import { asMock } from 'test-utils';
 
 const db = getDb();
 

@@ -26,3 +26,7 @@ jest.mock(
     virtual: true,
   },
 );
+
+jest.mock('test-utils', () => require('./packages/test-utils/src'), {
+  virtual: true,
+});

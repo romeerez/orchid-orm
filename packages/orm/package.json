@@ -61,7 +61,8 @@
   "devDependencies": {
     "@types/prompts": "^2.4.2",
     "orchid-orm-schema-to-zod": "workspace:*",
-    "rake-db": "workspace:*"
+    "rake-db": "workspace:*",
+    "test-utils": "workspace:*"
   },
   "peerDependencies": {
     "typescript": "*"

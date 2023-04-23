@@ -1,5 +1,6 @@
-import { asMock, expectSql, getDb, resetDb, toLine } from '../test-utils';
+import { expectSql, getDb, resetDb, toLine } from '../test-utils';
 import { Db } from 'pqb';
+import { asMock } from 'test-utils';
 
 const db = getDb();
 

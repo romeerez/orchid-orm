@@ -1,11 +1,11 @@
 import { OrchidORM, orchidORM } from './orm';
+import { BaseTable } from './test-utils/test-utils';
 import {
   assertType,
   expectSql,
+  testDbOptions,
   useTestDatabase,
-} from './test-utils/test-utils';
-import { pgConfig } from './test-utils/test-db';
-import { BaseTable } from './test-utils/test-tables';
+} from 'test-utils';
 
 describe('orm', () => {
   useTestDatabase();
@@ -38,7 +38,7 @@ describe('orm', () => {
   }
 
   it('should return object with provided adapter, close and transaction method, tables', () => {
-    local = orchidORM(pgConfig, {
+    local = orchidORM(testDbOptions, {
       user: UserTable,
       profile: ProfileTable,
     });
@@ -52,7 +52,7 @@ describe('orm', () => {
   });
 
   it('should return table which is a queryable interface', async () => {
-    local = orchidORM(pgConfig, {
+    local = orchidORM(testDbOptions, {
       user: UserTable,
       profile: ProfileTable,
     });
@@ -82,7 +82,7 @@ describe('orm', () => {
 
   it('should be able to turn on autoPreparedStatements', () => {
     local = orchidORM(
-      { ...pgConfig, autoPreparedStatements: true },
+      { ...testDbOptions, autoPreparedStatements: true },
       {
         user: UserTable,
         profile: ProfileTable,

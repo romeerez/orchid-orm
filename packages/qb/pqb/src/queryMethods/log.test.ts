@@ -1,25 +1,21 @@
 import { createDb } from '../db';
-import {
-  adapter,
-  dbOptions,
-  userData,
-  useTestDatabase,
-} from '../test-utils/test-utils';
+import { userData } from '../test-utils/test-utils';
 import { logColors } from './log';
 import { noop } from 'orchid-core';
+import { testAdapter, testDbOptions, useTestDatabase } from 'test-utils';
 
 describe('query log', () => {
   useTestDatabase();
 
   it('should not have `log` query object by default', () => {
-    const db = createDb(dbOptions);
+    const db = createDb(testDbOptions);
 
     expect(db('user').query.log).toBe(undefined);
   });
 
   it('should set `log` query object when configuring db instance', () => {
     const db = createDb({
-      ...dbOptions,
+      ...testDbOptions,
       log: true,
     });
 
@@ -27,14 +23,14 @@ describe('query log', () => {
   });
 
   it('should set `log` query object for a table', () => {
-    const db = createDb(dbOptions);
+    const db = createDb(testDbOptions);
     const table = db('user', undefined, { log: true });
 
     expect(table.query.log).toBeTruthy();
   });
 
   it('should set `log` query object with query method', () => {
-    const db = createDb(dbOptions);
+    const db = createDb(testDbOptions);
     const table = db('user');
 
     expect(table.log().query.log).toBeTruthy();
@@ -52,7 +48,7 @@ describe('query log', () => {
     };
 
     const db = createDb({
-      adapter,
+      adapter: testAdapter,
       log: true,
       logger,
     });
@@ -82,7 +78,7 @@ describe('query log', () => {
     };
 
     const db = createDb({
-      adapter,
+      adapter: testAdapter,
       log: { colors: false },
       logger,
     });
@@ -107,7 +103,7 @@ describe('query log', () => {
       warn: noop,
     };
 
-    const db = createDb({ adapter, log: true, logger });
+    const db = createDb({ adapter: testAdapter, log: true, logger });
 
     await db('user').where({ wrongColumn: 'value' }).then(noop, noop);
 
@@ -134,7 +130,7 @@ describe('query log', () => {
     };
 
     const db = createDb({
-      adapter,
+      adapter: testAdapter,
       log: { colors: false },
       logger,
     });
@@ -160,7 +156,7 @@ describe('query log', () => {
     };
 
     const db = createDb({
-      adapter,
+      adapter: testAdapter,
       log: { colors: false },
       logger,
     });
@@ -188,7 +184,7 @@ describe('query log', () => {
     };
 
     const db = createDb({
-      adapter,
+      adapter: testAdapter,
       log: { colors: false },
       logger,
     });

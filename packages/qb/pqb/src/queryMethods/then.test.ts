@@ -1,19 +1,15 @@
-import {
-  assertType,
-  db,
-  User,
-  useTestDatabase,
-} from '../test-utils/test-utils';
+import { User } from '../test-utils/test-utils';
 import { NotFoundError } from '../errors';
+import { assertType, testDb, useTestDatabase } from 'test-utils';
 
 describe('then', () => {
   useTestDatabase();
-  afterAll(db.close);
+  afterAll(testDb.close);
 
   describe('catch', () => {
     it('should catch error', (done) => {
       const query = User.select({
-        column: db.raw((t) => t.boolean(), 'koko'),
+        column: testDb.raw((t) => t.boolean(), 'koko'),
       }).catch((err) => {
         expect(err.message).toBe(`column "koko" does not exist`);
         expect(err.cause.stack).toContain('then.test.ts');

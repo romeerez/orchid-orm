@@ -1,9 +1,5 @@
-import {
-  expectSql,
-  Snake,
-  User,
-  useTestDatabase,
-} from '../test-utils/test-utils';
+import { Snake, User } from '../test-utils/test-utils';
+import { expectSql, useTestDatabase } from 'test-utils';
 
 describe('copy', () => {
   useTestDatabase();

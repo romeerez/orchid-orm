@@ -1,7 +1,5 @@
 import {
-  asMock,
   expectQueryNotMutated,
-  expectSql,
   Message,
   Snake,
   snakeSelectAll,
@@ -12,6 +10,7 @@ import { OnQueryBuilder } from './join';
 import { _join } from './_join';
 import { testWhere, testWhereExists } from './testWhere';
 import { testJoin } from './testJoin';
+import { asMock, expectSql } from 'test-utils';
 
 jest.mock('./_join', () => {
   const { _join } = jest.requireActual('./_join');

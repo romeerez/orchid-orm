@@ -1,15 +1,13 @@
 import {
-  assertType,
   Chat,
   chatData,
-  expectSql,
   Message,
   messageData,
   MessageRecord,
   User,
   userData,
-  useTestDatabase,
 } from '../test-utils/test-utils';
+import { assertType, expectSql, useTestDatabase } from 'test-utils';
 
 const insertUserAndMessage = async () => {
   const authorId = await User.get('id').create(userData);

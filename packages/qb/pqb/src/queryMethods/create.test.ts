@@ -1,9 +1,6 @@
 import {
-  assertType,
   Chat,
-  db,
   expectQueryNotMutated,
-  expectSql,
   Message,
   MessageRecord,
   Snake,
@@ -13,11 +10,11 @@ import {
   User,
   userData,
   UserRecord,
-  useTestDatabase,
 } from '../test-utils/test-utils';
 import { OnConflictQueryBuilder } from './create';
+import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 
-const RuntimeDefaultTable = db('user', (t) => ({
+const RuntimeDefaultTable = testDb('user', (t) => ({
   id: t.serial().primaryKey(),
   name: t.text().default(() => 'runtime text'),
   password: t.text(),
@@ -32,7 +29,7 @@ describe('create functions', () => {
 
       const query = q.createRaw({
         columns: ['name', 'password'],
-        values: db.raw('raw sql'),
+        values: testDb.raw('raw sql'),
       });
 
       expectSql(
@@ -52,7 +49,7 @@ describe('create functions', () => {
     it('should add runtime default', () => {
       const q = RuntimeDefaultTable.createRaw({
         columns: ['password'],
-        values: db.raw(`'password'`),
+        values: testDb.raw(`'password'`),
       });
 
       expectSql(
@@ -69,7 +66,7 @@ describe('create functions', () => {
     it('should create with raw sql and list of columns with names', () => {
       const query = Snake.createRaw({
         columns: ['snakeName', 'tailLength'],
-        values: db.raw('raw sql'),
+        values: testDb.raw('raw sql'),
       });
       expectSql(
         query.toSql(),
@@ -88,7 +85,7 @@ describe('create functions', () => {
 
       const query = q.createManyRaw({
         columns: ['name', 'password'],
-        values: [db.raw('sql1'), db.raw('sql2')],
+        values: [testDb.raw('sql1'), testDb.raw('sql2')],
       });
       expectSql(
         query.toSql(),
@@ -107,7 +104,7 @@ describe('create functions', () => {
     it('should add runtime default', () => {
       const q = RuntimeDefaultTable.createManyRaw({
         columns: ['password'],
-        values: [db.raw(`'pw1'`), db.raw(`'pw2'`)],
+        values: [testDb.raw(`'pw1'`), testDb.raw(`'pw2'`)],
       });
 
       expectSql(
@@ -124,7 +121,7 @@ describe('create functions', () => {
     it('should create with raw sql and list of columns with names', () => {
       const query = Snake.createManyRaw({
         columns: ['snakeName', 'tailLength'],
-        values: [db.raw('sql1'), db.raw('sql2')],
+        values: [testDb.raw('sql1'), testDb.raw('sql2')],
       });
       expectSql(
         query.toSql(),
@@ -794,7 +791,7 @@ describe('create functions', () => {
         const query = q
           .count()
           .create(userData)
-          .onConflict(db.raw('raw query'))
+          .onConflict(testDb.raw('raw query'))
           .ignore();
         expectSql(
           query.toSql(),
@@ -812,7 +809,7 @@ describe('create functions', () => {
 
     describe('merge', () => {
       it('should automatically list all unique columns when calling without arguments', () => {
-        const User = db('user', (t) => ({
+        const User = testDb('user', (t) => ({
           id: t.serial().primaryKey(),
           name: t.text().unique(),
           password: t.text(),
@@ -976,8 +973,8 @@ describe('create functions', () => {
         const query = q
           .count()
           .create(userData)
-          .onConflict(db.raw('on conflict raw'))
-          .merge(db.raw('merge raw'));
+          .onConflict(testDb.raw('on conflict raw'))
+          .merge(testDb.raw('merge raw'));
 
         expectSql(
           query.toSql(),

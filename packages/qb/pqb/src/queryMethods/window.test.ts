@@ -1,12 +1,10 @@
 import {
-  assertType,
   expectQueryNotMutated,
-  expectSql,
   Snake,
   User,
   userData,
-  useTestDatabase,
 } from '../test-utils/test-utils';
+import { assertType, expectSql, useTestDatabase } from 'test-utils';
 
 describe('window functions', () => {
   useTestDatabase();

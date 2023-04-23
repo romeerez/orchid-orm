@@ -1,10 +1,10 @@
-import { db, expectSql, now, useTestDatabase } from '../test-utils';
 import { createDb } from 'pqb';
+import { expectSql, now, testDb, useTestDatabase } from 'test-utils';
 
 describe('timestamps', () => {
   useTestDatabase();
 
-  const table = db('user', (t) => ({
+  const table = testDb('user', (t) => ({
     name: t.text().primaryKey(),
     ...t.timestamps(),
   }));
@@ -39,7 +39,7 @@ describe('timestamps', () => {
   it('should update updatedAt when updating with raw sql', async () => {
     const query = table
       .where()
-      .updateRaw(db.raw('name = $name', { name: 'name' }));
+      .updateRaw(testDb.raw('name = $name', { name: 'name' }));
 
     await query;
 
@@ -54,7 +54,9 @@ describe('timestamps', () => {
   });
 
   it('should update updatedAt when updating with raw sql which has updatedAt somewhere but not in set', async () => {
-    const query = table.where().updateRaw(db.raw('"createdAt" = "updatedAt"'));
+    const query = table
+      .where()
+      .updateRaw(testDb.raw('"createdAt" = "updatedAt"'));
     await query;
 
     expectSql(
@@ -69,7 +71,7 @@ describe('timestamps', () => {
   it('should not update updatedAt column when updating with raw sql which contains `updatedAt = `', async () => {
     const query = table
       .where()
-      .updateRaw(db.raw('"updatedAt" = $time', { time: now }));
+      .updateRaw(testDb.raw('"updatedAt" = $time', { time: now }));
 
     await query;
 

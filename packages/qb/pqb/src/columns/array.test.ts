@@ -1,14 +1,14 @@
-import { assertType, db } from '../test-utils/test-utils';
 import { ArrayColumn } from './array';
 import { IntegerColumn } from './number';
+import { assertType, testDb } from 'test-utils';
 
 describe('array column', () => {
-  afterAll(db.close);
+  afterAll(testDb.close);
 
   describe('array', () => {
     it('should output nested array of numbers', async () => {
-      const result = await db.get(
-        db.raw(
+      const result = await testDb.get(
+        testDb.raw(
           (t) => new ArrayColumn({}, new ArrayColumn({}, t.integer())),
           `'{{1, 2, 3}, {4, 5, 6}}'::integer[][]`,
         ),
@@ -22,8 +22,8 @@ describe('array column', () => {
     });
 
     it('should output nested array of strings', async () => {
-      const result = await db.get(
-        db.raw(
+      const result = await testDb.get(
+        testDb.raw(
           (t) => new ArrayColumn({}, new ArrayColumn({}, t.text())),
           `'{{"a", "b"}, {"c", "d"}}'::text[][]`,
         ),
@@ -37,8 +37,8 @@ describe('array column', () => {
     });
 
     it('should output nested array of booleans', async () => {
-      const result = await db.get(
-        db.raw(
+      const result = await testDb.get(
+        testDb.raw(
           (t) => new ArrayColumn({}, new ArrayColumn({}, t.boolean())),
           `'{{true}, {false}}'::text[][]`,
         ),

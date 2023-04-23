@@ -1,18 +1,15 @@
 import {
-  assertType,
-  db,
   expectQueryNotMutated,
-  expectSql,
   User,
   userData,
-  useTestDatabase,
 } from '../test-utils/test-utils';
+import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 
 describe('from', () => {
   it('should accept raw parameter', () => {
     const q = User.all();
     expectSql(
-      q.from(db.raw('profile')).as('t').toSql(),
+      q.from(testDb.raw('profile')).as('t').toSql(),
       `SELECT * FROM profile AS "t"`,
     );
     expectQueryNotMutated(q);
@@ -53,7 +50,7 @@ describe('from', () => {
         count: () => User.count(),
       });
 
-      const q = db.from(inner).where({
+      const q = testDb.from(inner).where({
         alias: { contains: 'name' },
       });
 

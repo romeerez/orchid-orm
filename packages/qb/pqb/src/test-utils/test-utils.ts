@@ -1,38 +1,9 @@
 import { Query } from '../query';
-import { createDb } from '../db';
-import {
-  patchPgForTransactions,
-  rollbackTransaction,
-  startTransaction,
-} from 'pg-transactional-tests';
-import { Client } from 'pg';
 import { quote } from '../quote';
-import { Adapter } from '../adapter';
-import { MaybeArray, toArray } from 'orchid-core';
-
-export const dbOptions = {
-  databaseURL: process.env.PG_URL,
-};
-
-export const dbClient = new Client({ connectionString: dbOptions.databaseURL });
-
-export const adapter = new Adapter(dbOptions);
-
-export const db = createDb({
-  adapter,
-  columnTypes: (t) => ({
-    ...t,
-    text(min = 0, max = Infinity) {
-      return t.text.call(this, min, max);
-    },
-    timestamp() {
-      return t.timestamp.call(this).parse((input) => new Date(input));
-    },
-  }),
-});
+import { expectSql, testDb, testDbClient } from 'test-utils';
 
 export type UserRecord = (typeof User)['type'];
-export const User = db('user', (t) => ({
+export const User = testDb('user', (t) => ({
   id: t.identity().primaryKey(),
   name: t.text(),
   password: t.text(),
@@ -51,20 +22,20 @@ export const User = db('user', (t) => ({
 }));
 
 export type ProfileRecord = (typeof Profile)['type'];
-export const Profile = db('profile', (t) => ({
+export const Profile = testDb('profile', (t) => ({
   id: t.identity().primaryKey(),
   userId: t.integer().foreignKey('user', 'id'),
   bio: t.text().nullable(),
   ...t.timestamps(),
 }));
 
-export const Chat = db('chat', (t) => ({
+export const Chat = testDb('chat', (t) => ({
   idOfChat: t.identity().primaryKey(),
   title: t.text(),
   ...t.timestamps(),
 }));
 
-export const UniqueTable = db('uniqueTable', (t) => ({
+export const UniqueTable = testDb('uniqueTable', (t) => ({
   id: t.identity().primaryKey(),
   one: t.text().unique().primaryKey(),
   two: t.integer().unique(),
@@ -74,7 +45,7 @@ export const UniqueTable = db('uniqueTable', (t) => ({
 }));
 
 export type MessageRecord = (typeof Message)['type'];
-export const Message = db('message', (t) => ({
+export const Message = testDb('message', (t) => ({
   id: t.identity().primaryKey(),
   chatId: t.integer().foreignKey('chat', 'id'),
   authorId: t.integer().foreignKey('user', 'id'),
@@ -84,7 +55,7 @@ export const Message = db('message', (t) => ({
 }));
 
 export type SnakeRecord = (typeof Snake)['type'];
-export const Snake = db('snake', (t) => ({
+export const Snake = testDb('snake', (t) => ({
   snakeId: t.name('snake_id').identity().primaryKey(),
   snakeName: t.name('snake_name').text(),
   tailLength: t.name('tail_length').integer(),
@@ -108,34 +79,8 @@ export const snakeSelectAllWithTable = snakeAllColumns
   .map((item) => `"snake".${item}`)
   .join(', ');
 
-export const line = (s: string) =>
-  s.trim().replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')');
-
-export const expectSql = (
-  sql: MaybeArray<{ text: string; values: unknown[] }>,
-  text: string,
-  values: unknown[] = [],
-) => {
-  toArray(sql).forEach((item) => {
-    expect(item.text).toBe(line(text));
-    expect(item.values).toEqual(values);
-  });
-};
-
 export const expectQueryNotMutated = (q: Query) => {
   expectSql(q.toSql(), `SELECT * FROM "${q.table}"`);
-};
-
-type AssertEqual<T, Expected> = [T] extends [Expected]
-  ? [Expected] extends [T]
-    ? true
-    : false
-  : false;
-
-export const assertType = <T, Expected>(
-  ..._: AssertEqual<T, Expected> extends true ? [] : ['invalid type']
-) => {
-  // noop
 };
 
 export const insert = async <
@@ -145,7 +90,7 @@ export const insert = async <
   record: T,
 ): Promise<T> => {
   const columns = Object.keys(record);
-  const result = await dbClient.query<{ id: number }>(
+  const result = await testDbClient.query<{ id: number }>(
     `INSERT INTO "${table}"(${columns
       .map((column) => `"${column}"`)
       .join(', ')}) VALUES (${columns
@@ -157,7 +102,6 @@ export const insert = async <
   return record;
 };
 
-export const now = new Date();
 export const userData = {
   name: 'name',
   password: 'password',
@@ -178,16 +122,4 @@ export const messageData = {
 export const snakeData = {
   snakeName: 'Dave',
   tailLength: 5,
-};
-
-export const asMock = (fn: unknown) => fn as jest.Mock;
-
-export const useTestDatabase = () => {
-  beforeAll(patchPgForTransactions);
-  beforeEach(startTransaction);
-  afterEach(rollbackTransaction);
-  afterAll(async () => {
-    await dbClient.end();
-    await adapter.close();
-  });
 };

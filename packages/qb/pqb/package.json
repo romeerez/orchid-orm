@@ -51,5 +51,8 @@
   "license": "ISC",
   "dependencies": {
     "orchid-core": "workspace:*"
+  },
+  "devDependencies": {
+    "test-utils": "workspace:*"
   }
 }

@@ -13,10 +13,10 @@ import {
   TransactionAdapter,
 } from 'pqb';
 import { noop } from 'orchid-core';
-import { asMock } from '../test-utils';
 import { pathToLog } from 'orchid-core';
 import { RakeDbAst } from '../ast';
 import { ChangeCallback, pushChange } from '../migration/change';
+import { asMock } from 'test-utils';
 
 jest.mock('../common', () => ({
   ...jest.requireActual('../common'),

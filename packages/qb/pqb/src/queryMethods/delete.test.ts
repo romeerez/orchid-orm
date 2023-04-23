@@ -1,15 +1,13 @@
 import {
-  assertType,
   expectQueryNotMutated,
-  expectSql,
   Profile,
   Snake,
   snakeSelectAll,
   User,
   userData,
-  useTestDatabase,
 } from '../test-utils/test-utils';
 import { DeleteQueryData } from '../sql';
+import { assertType, expectSql, useTestDatabase } from 'test-utils';
 
 describe('delete', () => {
   useTestDatabase();
@@ -94,7 +92,7 @@ describe('delete', () => {
       [1],
     );
 
-    assertType<Awaited<typeof query>, typeof User['type'][]>();
+    assertType<Awaited<typeof query>, (typeof User)['type'][]>();
 
     expectQueryNotMutated(q);
   });
@@ -158,7 +156,7 @@ describe('delete', () => {
       [1],
     );
 
-    assertType<Awaited<typeof query>, typeof User['type'][]>();
+    assertType<Awaited<typeof query>, (typeof User)['type'][]>();
 
     expectQueryNotMutated(q);
   });

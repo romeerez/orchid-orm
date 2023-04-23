@@ -2,10 +2,10 @@
   "extends": "../../../tsconfig.json",
   "include": ["./src"],
   "compilerOptions": {
-    "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
-      "orchid-core": ["../../core/src"]
+      "orchid-core": ["../../core/src"],
+      "test-utils": ["../../test-utils/src"]
     }
   }
 }

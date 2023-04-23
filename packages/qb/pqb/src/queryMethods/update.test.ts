@@ -1,8 +1,5 @@
 import {
-  assertType,
-  db,
   expectQueryNotMutated,
-  expectSql,
   Snake,
   snakeData,
   SnakeRecord,
@@ -10,8 +7,8 @@ import {
   User,
   userData,
   UserRecord,
-  useTestDatabase,
 } from '../test-utils/test-utils';
+import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 
 describe('update', () => {
   useTestDatabase();
@@ -45,7 +42,7 @@ describe('update', () => {
     const count = 2;
     const users = await User.select('id').createMany([userData, userData]);
 
-    const query = User.or(...users).updateRaw(db.raw(`name = 'name'`));
+    const query = User.or(...users).updateRaw(testDb.raw(`name = 'name'`));
     expectSql(
       query.toSql(),
       `
@@ -350,7 +347,7 @@ describe('update', () => {
     const result = await query;
     expect(result[0]).toMatchObject({ ...userData, ...update });
 
-    assertType<typeof result, typeof User['type'][]>();
+    assertType<typeof result, (typeof User)['type'][]>();
 
     const updated = await User.take();
     expect(updated).toMatchObject({ ...userData, ...update });
@@ -406,7 +403,7 @@ describe('update', () => {
 
   it('should support raw sql as a value', () => {
     const query = User.where({ id: 1 }).update({
-      name: db.raw(`'raw sql'`),
+      name: testDb.raw(`'raw sql'`),
     });
     expectSql(
       query.toSql(),

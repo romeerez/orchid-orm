@@ -1,9 +1,5 @@
-import {
-  profileData,
-  userData,
-  useTestDatabase,
-} from './test-utils/test-utils';
-import { db } from './test-utils/test-db';
+import { useTestDatabase } from 'test-utils';
+import { db, profileData, userData } from './test-utils/test-utils';
 
 describe('view', () => {
   useTestDatabase();

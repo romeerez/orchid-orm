@@ -1,9 +1,8 @@
 import { orchidORM } from './orm';
-import { pgConfig } from './test-utils/test-db';
-import { assertType, expectSql } from './test-utils/test-utils';
 import { QueryReturnType } from 'pqb';
 import { createRepo } from './repo';
-import { BaseTable } from './test-utils/test-tables';
+import { BaseTable } from './test-utils/test-utils';
+import { assertType, expectSql, testDbOptions } from 'test-utils';
 
 class SomeTable extends BaseTable {
   readonly table = 'someTable';
@@ -50,7 +49,7 @@ class AnotherTable extends BaseTable {
   }));
 }
 
-const db = orchidORM(pgConfig, {
+const db = orchidORM(testDbOptions, {
   some: SomeTable,
   other: OtherTable,
   another: AnotherTable,

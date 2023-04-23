@@ -1,19 +1,21 @@
 import {
   expectQueryNotMutated,
-  adapter,
   User,
   Profile,
-  useTestDatabase,
-  db,
-  expectSql,
   userData,
-  now,
-  assertType,
   UserRecord,
   Snake,
   snakeSelectAll,
 } from '../test-utils/test-utils';
 import { NotFoundError } from '../errors';
+import {
+  assertType,
+  expectSql,
+  now,
+  testAdapter,
+  testDb,
+  useTestDatabase,
+} from 'test-utils';
 
 describe('queryMethods', () => {
   useTestDatabase();
@@ -54,7 +56,7 @@ describe('queryMethods', () => {
       expectSql(q.take().toSql(), `SELECT * FROM "user" LIMIT $1`, [1]);
       expectQueryNotMutated(q);
 
-      const expected = await adapter
+      const expected = await testAdapter
         .query('SELECT * FROM "user" LIMIT 1')
         .then((res) => res.rows[0]);
 
@@ -82,7 +84,7 @@ describe('queryMethods', () => {
       expectSql(q.takeOptional().toSql(), `SELECT * FROM "user" LIMIT $1`, [1]);
       expectQueryNotMutated(q);
 
-      const expected = await adapter
+      const expected = await testAdapter
         .query('SELECT * FROM "user" LIMIT 1')
         .then((res) => res.rows[0]);
 
@@ -107,7 +109,7 @@ describe('queryMethods', () => {
 
   describe('rows', () => {
     it('returns array of rows', async () => {
-      const { rows: expected } = await adapter.arrays({
+      const { rows: expected } = await testAdapter.arrays({
         text: 'SELECT * FROM "user"',
       });
 
@@ -133,7 +135,7 @@ describe('queryMethods', () => {
     });
 
     it('should support raw expression', async () => {
-      const result = await User.pluck(db.raw((t) => t.integer(), '123'));
+      const result = await User.pluck(testDb.raw((t) => t.integer(), '123'));
 
       expect(result).toEqual([123, 123, 123]);
 
@@ -255,7 +257,7 @@ describe('queryMethods', () => {
     it('should add distinct on raw sql', () => {
       const q = User.all();
       expectSql(
-        q.distinct(db.raw('"user".id')).toSql(),
+        q.distinct(testDb.raw('"user".id')).toSql(),
         `
           SELECT DISTINCT ON ("user".id) * FROM "user"
         `,
@@ -299,7 +301,7 @@ describe('queryMethods', () => {
 
     it('should accept raw sql', () => {
       const q = User.all();
-      const query = q.find(db.raw('$a + $b', { a: 1, b: 2 }));
+      const query = q.find(testDb.raw('$a + $b', { a: 1, b: 2 }));
 
       assertType<Awaited<typeof query>, UserRecord>();
 
@@ -351,7 +353,7 @@ describe('queryMethods', () => {
 
     it('should accept raw sql', () => {
       const q = User.all();
-      const query = q.findOptional(db.raw('$a + $b', { a: 1, b: 2 }));
+      const query = q.findOptional(testDb.raw('$a + $b', { a: 1, b: 2 }));
 
       assertType<Awaited<typeof query>, UserRecord | undefined>();
 
@@ -382,7 +384,7 @@ describe('queryMethods', () => {
     it('should accept raw', () => {
       const q = User.all();
       expectSql(
-        q.findBy({ name: db.raw(`'string'`) }).toSql(),
+        q.findBy({ name: testDb.raw(`'string'`) }).toSql(),
         `SELECT * FROM "user" WHERE "user"."name" = 'string' LIMIT $1`,
         [1],
       );
@@ -407,7 +409,7 @@ describe('queryMethods', () => {
 
     it('should accept raw', () => {
       const q = User.all();
-      const query = q.findByOptional({ name: db.raw(`'string'`) });
+      const query = q.findByOptional({ name: testDb.raw(`'string'`) });
 
       assertType<Awaited<typeof query>, UserRecord | undefined>();
 
@@ -433,7 +435,7 @@ describe('queryMethods', () => {
 
   describe('withSchema', () => {
     it('prefixes table with schema', () => {
-      const Country = db(
+      const Country = testDb(
         'country',
         (t) => ({
           id: t.serial().primaryKey(),
@@ -444,7 +446,7 @@ describe('queryMethods', () => {
         },
       );
 
-      const City = db('city', (t) => ({
+      const City = testDb('city', (t) => ({
         id: t.serial().primaryKey(),
         name: t.text(),
         countryId: t.integer(),
@@ -541,10 +543,13 @@ describe('queryMethods', () => {
         SELECT * FROM "user"
         GROUP BY id, name
       `;
-      expectSql(q.group(db.raw('id'), db.raw('name')).toSql(), expectedSql);
+      expectSql(
+        q.group(testDb.raw('id'), testDb.raw('name')).toSql(),
+        expectedSql,
+      );
       expectQueryNotMutated(q);
 
-      q._group(db.raw('id'), db.raw('name'));
+      q._group(testDb.raw('id'), testDb.raw('name'));
       expectSql(q.toSql({ clearCache: true }), expectedSql);
     });
   });
@@ -600,7 +605,7 @@ describe('queryMethods', () => {
       const windowSql = 'PARTITION BY id ORDER BY name DESC';
       expectSql(
         q
-          .window({ w: db.raw(windowSql) })
+          .window({ w: testDb.raw(windowSql) })
           .selectAvg('id', {
             over: 'w',
           })
@@ -692,7 +697,7 @@ describe('queryMethods', () => {
     it('adds order with raw sql', () => {
       const q = User.all();
       expectSql(
-        q.order(db.raw('id ASC NULLS FIRST')).toSql(),
+        q.order(testDb.raw('id ASC NULLS FIRST')).toSql(),
         `
         SELECT * FROM "user"
         ORDER BY id ASC NULLS FIRST

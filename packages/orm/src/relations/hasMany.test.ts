@@ -1,17 +1,3 @@
-import { db, pgConfig } from '../test-utils/test-db';
-import {
-  assertType,
-  chatData,
-  chatSelectAll,
-  expectSql,
-  messageData,
-  messageSelectAll,
-  profileSelectAll,
-  userData,
-  useRelationCallback,
-  userSelectAll,
-  useTestDatabase,
-} from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
 import {
   Chat,
@@ -19,8 +5,23 @@ import {
   BaseTable,
   Profile,
   User,
-} from '../test-utils/test-tables';
+  db,
+  useRelationCallback,
+  messageData,
+  chatData,
+  userData,
+  chatSelectAll,
+  messageSelectAll,
+  profileSelectAll,
+  userSelectAll,
+} from '../test-utils/test-utils';
 import { orchidORM } from '../orm';
+import {
+  assertType,
+  expectSql,
+  testDbOptions,
+  useTestDatabase,
+} from 'test-utils';
 
 describe('hasMany', () => {
   useTestDatabase();
@@ -1767,7 +1768,7 @@ describe('hasMany through', () => {
 
     const db = orchidORM(
       {
-        ...pgConfig,
+        ...testDbOptions,
         log: false,
       },
       {
@@ -1806,7 +1807,7 @@ describe('hasMany through', () => {
     expect(() => {
       orchidORM(
         {
-          ...pgConfig,
+          ...testDbOptions,
           log: false,
         },
         {
@@ -1858,7 +1859,7 @@ describe('hasMany through', () => {
     expect(() => {
       orchidORM(
         {
-          ...pgConfig,
+          ...testDbOptions,
           log: false,
         },
         {

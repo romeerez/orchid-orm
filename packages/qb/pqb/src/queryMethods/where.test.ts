@@ -1,5 +1,4 @@
 import {
-  expectSql,
   Message,
   Profile,
   Snake,
@@ -7,6 +6,7 @@ import {
   User,
 } from '../test-utils/test-utils';
 import { testWhere, testWhereExists } from './testWhere';
+import { expectSql } from 'test-utils';
 
 describe('and', () => {
   const [where, _where] = [User.where, User._where];

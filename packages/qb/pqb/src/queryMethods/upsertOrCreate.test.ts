@@ -1,10 +1,5 @@
-import {
-  assertType,
-  db,
-  User,
-  userData,
-  useTestDatabase,
-} from '../test-utils/test-utils';
+import { User, userData } from '../test-utils/test-utils';
+import { assertType, testDb, useTestDatabase } from 'test-utils';
 
 describe('upsertOrCreate', () => {
   useTestDatabase();
@@ -48,7 +43,7 @@ describe('upsertOrCreate', () => {
     });
 
     describe('empty update', () => {
-      const UserWithoutTimestamps = db('user', (t) => ({
+      const UserWithoutTimestamps = testDb('user', (t) => ({
         id: t.serial().primaryKey(),
         name: t.text(),
         password: t.text(),

@@ -1,20 +1,20 @@
-import { db } from '../test-utils/test-utils';
 import pg from 'pg';
+import { testDb } from 'test-utils';
 
 describe('transaction', () => {
   beforeEach(() => jest.clearAllMocks());
-  afterAll(db.close);
+  afterAll(testDb.close);
 
   it('should start and commit transaction', async () => {
     const spy = jest.spyOn(pg.Client.prototype, 'query');
 
-    const result = await db.transaction(async () => {
+    const result = await testDb.transaction(async () => {
       const {
         rows: [{ a }],
-      } = await db.query.adapter.query('SELECT 1 AS a');
+      } = await testDb.query.adapter.query('SELECT 1 AS a');
       const {
         rows: [{ b }],
-      } = await db.query.adapter.query('SELECT 2 AS b');
+      } = await testDb.query.adapter.query('SELECT 2 AS b');
       return a + b;
     });
 
@@ -32,7 +32,7 @@ describe('transaction', () => {
 
     let error: Error | undefined;
 
-    await db
+    await testDb
       .transaction(async () => {
         throw new Error('error');
       })
@@ -50,8 +50,8 @@ describe('transaction', () => {
   it('should accept isolation level and options', async () => {
     const spy = jest.spyOn(pg.Client.prototype, 'query');
 
-    await db.transaction('REPEATABLE READ', async () => {});
-    await db.transaction(
+    await testDb.transaction('REPEATABLE READ', async () => {});
+    await testDb.transaction(
       {
         level: 'READ COMMITTED',
         readOnly: false,
@@ -59,7 +59,7 @@ describe('transaction', () => {
       },
       async () => {},
     );
-    await db.transaction(
+    await testDb.transaction(
       {
         level: 'READ UNCOMMITTED',
         readOnly: true,

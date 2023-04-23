@@ -1,11 +1,10 @@
 import {
-  db,
   expectQueryNotMutated,
-  expectSql,
   Snake,
   snakeSelectAll,
   User,
 } from '../test-utils/test-utils';
+import { expectSql, testDb } from 'test-utils';
 
 describe('having', () => {
   it('should support { count: value } object', () => {
@@ -320,12 +319,12 @@ describe('having', () => {
     `;
 
     expectSql(
-      q.having(db.raw('count(*) = 1'), db.raw('sum(id) = 2')).toSql(),
+      q.having(testDb.raw('count(*) = 1'), testDb.raw('sum(id) = 2')).toSql(),
       expectedSql,
     );
     expectQueryNotMutated(q);
 
-    q._having(db.raw('count(*) = 1'), db.raw('sum(id) = 2'));
+    q._having(testDb.raw('count(*) = 1'), testDb.raw('sum(id) = 2'));
     expectSql(q.toSql({ clearCache: true }), expectedSql);
   });
 
@@ -360,7 +359,10 @@ describe('having', () => {
       const q = User.all();
       expectSql(
         q
-          .havingOr(db.raw('count(*) = 1 + 2'), db.raw('count(*) = 2 + 3'))
+          .havingOr(
+            testDb.raw('count(*) = 1 + 2'),
+            testDb.raw('count(*) = 2 + 3'),
+          )
           .toSql(),
         `
         SELECT * FROM "user"

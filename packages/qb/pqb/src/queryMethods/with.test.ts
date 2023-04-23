@@ -1,15 +1,13 @@
 import { WithOptions } from '../sql';
 import {
-  assertType,
-  db,
   expectQueryNotMutated,
-  expectSql,
   Profile,
   ProfileRecord,
   Snake,
   User,
 } from '../test-utils/test-utils';
 import { columnTypes } from '../columns';
+import { assertType, expectSql, testDb } from 'test-utils';
 
 describe('with', () => {
   const options: (
@@ -62,7 +60,7 @@ describe('with', () => {
       const args: Parameters<typeof q.with> = [
         'withAlias',
         columnShape,
-        db.raw(`(VALUES (1, 'two')) t(one, two)`),
+        testDb.raw(`(VALUES (1, 'two')) t(one, two)`),
       ];
 
       if (options) {
@@ -117,7 +115,7 @@ describe('with', () => {
     options.forEach((options) => {
       const args: Parameters<typeof q.with> = [
         'withAlias',
-        (qb) => qb.select({ one: db.raw((t) => t.integer(), '1') }),
+        (qb) => qb.select({ one: testDb.raw((t) => t.integer(), '1') }),
       ];
 
       if (options) {
@@ -158,7 +156,7 @@ describe('with', () => {
 
     const received3 = q
       .with('withAlias', User.all())
-      .join('withAlias', db.raw(`"withAlias"."id" = "user"."id"`))
+      .join('withAlias', testDb.raw(`"withAlias"."id" = "user"."id"`))
       .select('withAlias.id')
       .toSql();
 

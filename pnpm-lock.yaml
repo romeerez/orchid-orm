@@ -59,7 +59,10 @@ importers:
       typescript: 5.0.3
 
   packages/core:
-    specifiers: {}
+    specifiers:
+      test-utils: workspace:*
+    devDependencies:
+      test-utils: link:../test-utils
 
   packages/orm:
     specifiers:
@@ -70,6 +73,7 @@ importers:
       pqb: workspace:*
       prompts: ^2.4.2
       rake-db: workspace:*
+      test-utils: workspace:*
     dependencies:
       inflection: 2.0.1
       orchid-core: link:../core
@@ -79,6 +83,7 @@ importers:
       '@types/prompts': 2.4.2
       orchid-orm-schema-to-zod: link:../schema-to-zod
       rake-db: link:../rake-db
+      test-utils: link:../test-utils
 
   packages/qb/myqb:
     specifiers:
@@ -94,8 +99,11 @@ importers:
   packages/qb/pqb:
     specifiers:
       orchid-core: workspace:*
+      test-utils: workspace:*
     dependencies:
       orchid-core: link:../../core
+    devDependencies:
+      test-utils: link:../../test-utils
 
   packages/rake-db:
     specifiers:
@@ -103,6 +111,7 @@ importers:
       orchid-core: workspace:*
       pqb: workspace:*
       prompts: ^2.4.2
+      test-utils: workspace:*
       tsconfig-paths: ^4.1.2
     dependencies:
       orchid-core: link:../core
@@ -110,17 +119,21 @@ importers:
       prompts: 2.4.2
     devDependencies:
       '@types/prompts': 2.4.2
+      test-utils: link:../test-utils
       tsconfig-paths: 4.1.2
 
   packages/schema-to-zod:
     specifiers:
       orchid-core: workspace:*
       pqb: workspace:*
+      test-utils: workspace:*
       zod: ^3.21.4
     dependencies:
       orchid-core: link:../core
       pqb: link:../qb/pqb
       zod: 3.21.4
+    devDependencies:
+      test-utils: link:../test-utils
 
   packages/test-factory:
     specifiers:
@@ -130,6 +143,7 @@ importers:
       orchid-orm: workspace:*
       orchid-orm-schema-to-zod: workspace:*
       pqb: workspace:*
+      test-utils: workspace:*
       zod: ^3.21.4
     dependencies:
       '@anatine/zod-mock': 3.6.0_@faker-js+faker@7.6.0
@@ -139,6 +153,11 @@ importers:
       orchid-orm-schema-to-zod: link:../schema-to-zod
       pqb: link:../qb/pqb
       zod: 3.21.4
+    devDependencies:
+      test-utils: link:../test-utils
+
+  packages/test-utils:
+    specifiers: {}
 
 packages:
 

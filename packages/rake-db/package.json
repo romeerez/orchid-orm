@@ -59,6 +59,7 @@
   },
   "devDependencies": {
     "@types/prompts": "^2.4.2",
-    "tsconfig-paths": "^4.1.2"
+    "tsconfig-paths": "^4.1.2",
+    "test-utils": "workspace:*"
   }
 }

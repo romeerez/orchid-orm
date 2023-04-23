@@ -1,17 +1,21 @@
-import { assertType, db } from '../test-utils/test-utils';
 import { CustomTypeColumn, DomainColumn } from './customType';
+import { assertType, testDb } from 'test-utils';
 
 describe('custom type column', () => {
   it('should output value of `as` type', () => {
-    const string = db.get(db.raw((t) => t.type('name').as(t.text()), 'sql'));
+    const string = testDb.get(
+      testDb.raw((t) => t.type('name').as(t.text()), 'sql'),
+    );
     assertType<Awaited<typeof string>, string>();
 
-    const number = db.get(db.raw((t) => t.type('name').as(t.integer()), 'sql'));
+    const number = testDb.get(
+      testDb.raw((t) => t.type('name').as(t.integer()), 'sql'),
+    );
     assertType<Awaited<typeof number>, number>();
   });
 
   it('should accept value of `as` type', () => {
-    const table = db('table', (t) => ({
+    const table = testDb('table', (t) => ({
       string: t.type('domainName').as(t.text()).primaryKey(),
       number: t.type('domainName').as(t.integer()),
     }));

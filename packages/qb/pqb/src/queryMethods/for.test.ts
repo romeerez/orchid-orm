@@ -1,8 +1,5 @@
-import {
-  expectQueryNotMutated,
-  expectSql,
-  User,
-} from '../test-utils/test-utils';
+import { expectQueryNotMutated, User } from '../test-utils/test-utils';
+import { expectSql } from 'test-utils';
 
 describe('for', () => {
   describe.each`

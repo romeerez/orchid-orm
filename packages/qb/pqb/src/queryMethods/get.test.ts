@@ -1,13 +1,6 @@
-import {
-  assertType,
-  db,
-  Snake,
-  snakeData,
-  User,
-  userData,
-  useTestDatabase,
-} from '../test-utils/test-utils';
+import { Snake, snakeData, User, userData } from '../test-utils/test-utils';
 import { NotFoundError } from '../errors';
+import { assertType, testDb, useTestDatabase } from 'test-utils';
 
 describe('get', () => {
   useTestDatabase();
@@ -35,7 +28,7 @@ describe('get', () => {
 
     it('should select raw and return a single value', async () => {
       const received = await User.get(
-        db.raw((t) => t.integer(), 'count(*)::int'),
+        testDb.raw((t) => t.integer(), 'count(*)::int'),
       );
 
       assertType<typeof received, number>();
@@ -71,7 +64,7 @@ describe('get', () => {
 
     it('should select raw and return a single value when exists', async () => {
       const received = await User.getOptional(
-        db.raw((t) => t.integer(), 'count(*)::int'),
+        testDb.raw((t) => t.integer(), 'count(*)::int'),
       );
 
       assertType<typeof received, number | undefined>();

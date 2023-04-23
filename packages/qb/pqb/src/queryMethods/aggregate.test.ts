@@ -1,13 +1,10 @@
 import {
   User,
   expectQueryNotMutated,
-  expectSql,
-  useTestDatabase,
   userData,
-  assertType,
-  db,
   Snake,
 } from '../test-utils/test-utils';
+import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 
 describe('aggregate', () => {
   useTestDatabase();
@@ -399,7 +396,10 @@ describe('aggregate', () => {
 
     it('should support raw sql parameter', () => {
       const q = User.all();
-      expectSql(q[method as 'count'](db.raw('name')).toSql(), getSql('name'));
+      expectSql(
+        q[method as 'count'](testDb.raw('name')).toSql(),
+        getSql('name'),
+      );
       expectQueryNotMutated(q);
     });
 
@@ -418,7 +418,7 @@ describe('aggregate', () => {
       const q = User.all();
       const expectedSql = getSql('name', 'name');
       expectSql(
-        q[selectMethod as 'selectCount'](db.raw('name'), {
+        q[selectMethod as 'selectCount'](testDb.raw('name'), {
           as: 'name',
         }).toSql(),
         expectedSql,
@@ -497,7 +497,7 @@ describe('aggregate', () => {
       const q = User.clone();
       expectSql(
         q[method as 'jsonObjectAgg']({
-          alias: db.raw('name'),
+          alias: testDb.raw('name'),
         }).toSql(),
         `SELECT ${functionName}($1::text, name) FROM "user"`,
         ['alias'],
@@ -524,7 +524,7 @@ describe('aggregate', () => {
       const expectedSql = `SELECT ${functionName}($1::text, name) AS "name" FROM "user"`;
       expectSql(
         q[selectMethod as 'jsonObjectAgg'](
-          { alias: db.raw('name') },
+          { alias: testDb.raw('name') },
           { as: 'name' },
         ).toSql(),
         expectedSql,
@@ -586,7 +586,7 @@ describe('aggregate', () => {
     it('should support raw sql parameter', async () => {
       const q = User.all();
       expectSql(
-        q.stringAgg(db.raw('name'), ' & ').toSql(),
+        q.stringAgg(testDb.raw('name'), ' & ').toSql(),
         `SELECT string_agg(name, $1) FROM "user"`,
         [' & '],
       );
@@ -608,7 +608,7 @@ describe('aggregate', () => {
       const q = User.all();
       const expectedSql = `SELECT string_agg(name, $1) AS "name" FROM "user"`;
       expectSql(
-        q.stringAgg(db.raw('name'), ' & ', { as: 'name' }).toSql(),
+        q.stringAgg(testDb.raw('name'), ' & ', { as: 'name' }).toSql(),
         expectedSql,
         [' & '],
       );

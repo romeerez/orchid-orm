@@ -9,7 +9,8 @@
       "orchid-core": ["../core/src"],
       "pqb": ["../qb/pqb/src"],
       "rake-db": ["../rake-db/src"],
-      "orchid-orm-schema-to-zod": ["../schema-to-zod/src"]
+      "orchid-orm-schema-to-zod": ["../schema-to-zod/src"],
+      "test-utils": ["../test-utils/src"]
     }
   }
 }

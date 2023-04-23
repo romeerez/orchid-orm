@@ -54,5 +54,8 @@
     "orchid-core": "workspace:*",
     "pqb": "workspace:*",
     "zod": "^3.21.4"
+  },
+  "devDependencies": {
+    "test-utils": "workspace:*"
   }
 }

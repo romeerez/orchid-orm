@@ -1,12 +1,11 @@
 import { createBaseTable } from './table';
 import { orchidORM } from './orm';
-import { adapter, db } from './test-utils/test-db';
-import { assertType, userData, useTestDatabase } from './test-utils/test-utils';
 import { ColumnType, Operators } from 'pqb';
-import { BaseTable } from './test-utils/test-tables';
+import { BaseTable, db, userData } from './test-utils/test-utils';
 import path from 'path';
 import { asMock } from './codegen/testUtils';
 import { getCallerFilePath } from 'orchid-core';
+import { assertType, testAdapter, useTestDatabase } from 'test-utils';
 
 jest.mock('orchid-core', () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -59,7 +58,7 @@ describe('table', () => {
       }
 
       const { user } = orchidORM(
-        { adapter },
+        { adapter: testAdapter },
         {
           user: UserTable,
         },
@@ -83,7 +82,7 @@ describe('table', () => {
       }
 
       const { user } = orchidORM(
-        { adapter },
+        { adapter: testAdapter },
         {
           user: UserTable,
         },
@@ -116,7 +115,7 @@ describe('table', () => {
       }
 
       const { user } = orchidORM(
-        { adapter },
+        { adapter: testAdapter },
         {
           user: UserTable,
         },
@@ -141,7 +140,7 @@ describe('table', () => {
 
       orchidORM(
         {
-          adapter,
+          adapter: testAdapter,
         },
         {
           user: UserTable,
@@ -168,7 +167,7 @@ describe('table', () => {
 
       const db = orchidORM(
         {
-          adapter,
+          adapter: testAdapter,
         },
         {
           user: UserTable,
@@ -197,7 +196,7 @@ describe('table', () => {
 
       const db = orchidORM(
         {
-          adapter,
+          adapter: testAdapter,
         },
         {
           user: UserTable,

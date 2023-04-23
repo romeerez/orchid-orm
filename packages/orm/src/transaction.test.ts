@@ -1,13 +1,13 @@
-import { db } from './test-utils/test-db';
+import { Client } from 'pg';
+import { noop } from 'orchid-core';
+import { line } from 'test-utils';
 import {
+  db,
   profileData,
   profileSelectAll,
-  toLine,
   userData,
   userSelectAll,
 } from './test-utils/test-utils';
-import { Client } from 'pg';
-import { noop } from 'orchid-core';
 
 describe('transaction', () => {
   afterAll(db.$close);
@@ -29,12 +29,12 @@ describe('transaction', () => {
       ),
     ).toEqual([
       'BEGIN',
-      toLine(`
+      line(`
         INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
         VALUES ($1, $2, $3, $4)
         RETURNING ${userSelectAll}
       `),
-      toLine(`
+      line(`
         INSERT INTO "profile"("bio", "updatedAt", "createdAt")
         VALUES ($1, $2, $3)
         RETURNING ${profileSelectAll}

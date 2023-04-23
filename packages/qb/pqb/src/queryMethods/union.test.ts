@@ -1,10 +1,5 @@
-import {
-  db,
-  expectQueryNotMutated,
-  expectSql,
-  Snake,
-  User,
-} from '../test-utils/test-utils';
+import { expectQueryNotMutated, Snake, User } from '../test-utils/test-utils';
+import { expectSql, testDb } from 'test-utils';
 
 ['union', 'intersect', 'except'].forEach((what) => {
   const upper = what.toUpperCase();
@@ -13,10 +8,10 @@ import {
       const q = User.all();
       let query = q.select('id');
       const snake = Snake.select({ id: 'tailLength' });
-      query = query[what as 'union']([snake, db.raw('SELECT 1')]);
+      query = query[what as 'union']([snake, testDb.raw('SELECT 1')]);
       query = query[
         (what + 'All') as 'unionAll' | 'intersectAll' | 'exceptAll'
-      ]([db.raw('SELECT 2')], true);
+      ]([testDb.raw('SELECT 2')], true);
 
       const wrapped = query.wrap(User.select('id'));
 
@@ -40,7 +35,7 @@ import {
 
     it('has modifier', () => {
       const q = User.select('id');
-      q[`_${what}` as '_union']([db.raw('SELECT 1')]);
+      q[`_${what}` as '_union']([testDb.raw('SELECT 1')]);
       expectSql(
         q.toSql(),
         `
@@ -49,7 +44,7 @@ import {
           SELECT 1
         `,
       );
-      q[`_${what}All` as '_unionAll']([db.raw('SELECT 2')], true);
+      q[`_${what}All` as '_unionAll']([testDb.raw('SELECT 2')], true);
       expectSql(
         q.toSql({ clearCache: true }),
         `

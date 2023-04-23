@@ -2,8 +2,6 @@ import { createMigrationInterface, Migration } from './migration/migration';
 import { columnTypes, TransactionAdapter } from 'pqb';
 import { MaybeArray, toArray } from 'orchid-core';
 
-export const asMock = (fn: unknown) => fn as jest.Mock;
-
 let db: Migration | undefined;
 
 export const getDb = () => {
@@ -33,11 +31,6 @@ export const resetDb = (up = true) => {
   const db = getDb();
   db.up = up;
   db.migratedAsts.length = 0;
-};
-
-export const setDbDown = () => {
-  getDb().up = false;
-  queryMock.mockClear();
 };
 
 export const trim = (s: string) => {

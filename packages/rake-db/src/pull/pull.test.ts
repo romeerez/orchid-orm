@@ -2,7 +2,6 @@ import { DbStructure } from './dbStructure';
 import { pullDbStructure } from './pull';
 import { AppCodeUpdater, processRakeDbConfig, RakeDbConfig } from '../common';
 import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
-import { asMock } from '../test-utils';
 import {
   check,
   column,
@@ -19,6 +18,7 @@ import {
 } from './testUtils';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
 import { columnTypes, DefaultColumnTypes } from 'pqb';
+import { asMock } from 'test-utils';
 
 jest.mock('./dbStructure', () => {
   const { DbStructure } = jest.requireActual('./dbStructure');

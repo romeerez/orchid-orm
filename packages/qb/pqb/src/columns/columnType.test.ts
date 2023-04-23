@@ -1,23 +1,22 @@
 import { ColumnType, instantiateColumn } from './columnType';
 import { Operators } from './operators';
-import {
-  adapter,
-  assertType,
-  db,
-  expectSql,
-  User,
-  userData,
-  useTestDatabase,
-} from '../test-utils/test-utils';
+import { User, userData } from '../test-utils/test-utils';
 import { createDb } from '../db';
 import { columnTypes } from './columnTypes';
 import { IntegerColumn } from './number';
 import { columnCode } from './code';
 import { Code, raw } from 'orchid-core';
+import {
+  assertType,
+  expectSql,
+  testAdapter,
+  testDb,
+  useTestDatabase,
+} from 'test-utils';
 
 describe('column type', () => {
   useTestDatabase();
-  afterAll(db.close);
+  afterAll(testDb.close);
 
   class Column extends ColumnType {
     dataType = 'test';
@@ -87,7 +86,7 @@ describe('column type', () => {
     });
 
     test('table with hidden column should omit from select it by default', () => {
-      const User = db('user', (t) => ({
+      const User = testDb('user', (t) => ({
         id: t.serial().primaryKey(),
         name: t.text(),
         password: t.text().hidden(),
@@ -106,7 +105,7 @@ describe('column type', () => {
     });
 
     test('table with hidden column still allows to select it', () => {
-      const User = db('user', (t) => ({
+      const User = testDb('user', (t) => ({
         id: t.serial().primaryKey(),
         name: t.text(),
         password: t.text().hidden(),
@@ -174,7 +173,7 @@ describe('column type', () => {
       });
 
       it('should return column data as returned from db if not set', async () => {
-        const db = createDb({ adapter });
+        const db = createDb({ adapter: testAdapter });
 
         const UserWithPlainTimestamp = db('user', (t) => ({
           id: t.serial().primaryKey(),
@@ -207,7 +206,7 @@ describe('column type', () => {
       .parse((input) => new Date(input));
 
     const db = createDb({
-      adapter,
+      adapter: testAdapter,
       columnTypes: (t) => ({
         ...t,
         text: (min = 0, max = Infinity) => t.text(min, max),

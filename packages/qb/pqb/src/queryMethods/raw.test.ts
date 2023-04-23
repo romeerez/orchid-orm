@@ -1,12 +1,13 @@
 import { ColumnType } from '../columns';
 import { createDb } from '../db';
-import { adapter, db, expectSql, User } from '../test-utils/test-utils';
+import { User } from '../test-utils/test-utils';
+import { expectSql, testAdapter, testDb } from 'test-utils';
 
 describe('raw', () => {
   it('should use column types in callback from a db instance', () => {
     const type = {} as unknown as ColumnType;
     const db = createDb({
-      adapter,
+      adapter: testAdapter,
       columnTypes: {
         type: () => type,
       },
@@ -19,7 +20,7 @@ describe('raw', () => {
 
   it('should replace values started with $', () => {
     const query = User.where(
-      db.raw('a = $a AND b = $B AND c = $a1B2', {
+      testDb.raw('a = $a AND b = $B AND c = $a1B2', {
         a: 1,
         B: 'b',
         a1B2: true,
@@ -35,7 +36,7 @@ describe('raw', () => {
 
   it('should not replace values inside string literals', () => {
     const query = User.where(
-      db.raw(`foo = $foo AND bar = '$bar''$bar' AND baz = $baz`, {
+      testDb.raw(`foo = $foo AND bar = '$bar''$bar' AND baz = $baz`, {
         foo: 1,
         baz: true,
       }),
@@ -49,13 +50,13 @@ describe('raw', () => {
   });
 
   it('should throw when variable in the query is not provided', () => {
-    const query = User.where(db.raw(`a = $a AND b = $b`, { a: 1 }));
+    const query = User.where(testDb.raw(`a = $a AND b = $b`, { a: 1 }));
 
     expect(() => query.toSql()).toThrow('Query variable `b` is not provided');
   });
 
   it('should throw when variable in the object is not used by the query', () => {
-    const query = User.where(db.raw(`a = $a`, { a: 1, b: 'b' }));
+    const query = User.where(testDb.raw(`a = $a`, { a: 1, b: 'b' }));
 
     expect(() => query.toSql()).toThrow('Query variable `b` is unused');
   });

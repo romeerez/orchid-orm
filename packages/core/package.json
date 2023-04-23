@@ -42,9 +42,9 @@
       "^.+\\.ts$": "@swc/jest"
     }
   },
-  "keywords": [
-    "query-builder"
-  ],
   "author": "Roman Kushyn",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "test-utils": "workspace:*"
+  }
 }

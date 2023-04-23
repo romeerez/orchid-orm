@@ -8,8 +8,8 @@ import {
   singleQuote,
   SomeIsTrue,
 } from './utils';
-import { assertType } from './test-utils';
 import url from 'url';
+import { assertType } from 'test-utils';
 
 describe('utils', () => {
   describe('SomeIsTrue', () => {

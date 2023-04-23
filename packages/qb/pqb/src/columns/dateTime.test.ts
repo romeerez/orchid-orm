@@ -1,10 +1,4 @@
-import {
-  assertType,
-  db,
-  expectSql,
-  userData,
-  useTestDatabase,
-} from '../test-utils/test-utils';
+import { userData } from '../test-utils/test-utils';
 import {
   DateColumn,
   IntervalColumn,
@@ -15,6 +9,7 @@ import {
 } from './dateTime';
 import { columnTypes } from './columnTypes';
 import { ColumnType } from './columnType';
+import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 
 const t = columnTypes;
 
@@ -31,12 +26,12 @@ const testTimestampInput = (column: ColumnType) => {
 
 describe('date time columns', () => {
   useTestDatabase();
-  afterAll(db.close);
+  afterAll(testDb.close);
 
   describe('date', () => {
     it('should output string', async () => {
-      const result = await db.get(
-        db.raw(() => new DateColumn({}), `'1999-01-08'::date`),
+      const result = await testDb.get(
+        testDb.raw(() => new DateColumn({}), `'1999-01-08'::date`),
       );
       expect(result).toBe('1999-01-08');
 
@@ -65,8 +60,8 @@ describe('date time columns', () => {
     });
 
     it('should output string', async () => {
-      const result = await db.get(
-        db.raw(
+      const result = await testDb.get(
+        testDb.raw(
           () => t.timestampWithoutTimeZone(),
           `'1999-01-08 04:05:06'::timestamp`,
         ),
@@ -110,8 +105,8 @@ describe('date time columns', () => {
     });
 
     it('should output string', async () => {
-      const result = await db.get(
-        db.raw(
+      const result = await testDb.get(
+        testDb.raw(
           () => new TimestampTzColumn({}),
           `'1999-01-08 04:05:06 +0'::timestamptz AT TIME ZONE 'UTC'`,
         ),
@@ -145,8 +140,8 @@ describe('date time columns', () => {
 
   describe('time', () => {
     it('should output string', async () => {
-      const result = await db.get(
-        db.raw(() => new TimeColumn({}), `'12:00'::time`),
+      const result = await testDb.get(
+        testDb.raw(() => new TimeColumn({}), `'12:00'::time`),
       );
       expect(result).toBe('12:00:00');
 
@@ -174,8 +169,8 @@ describe('date time columns', () => {
 
   describe('interval', () => {
     it('should output string', async () => {
-      const result = await db.get(
-        db.raw(
+      const result = await testDb.get(
+        testDb.raw(
           () => new IntervalColumn({}),
           `'1 year 2 months 3 days 4 hours 5 minutes 6 seconds'::interval`,
         ),
@@ -210,7 +205,7 @@ describe('date time columns', () => {
     });
 
     it('should parse and encode timestamp as a number', async () => {
-      const UserWithNumberTimestamp = db('user', (t) => ({
+      const UserWithNumberTimestamp = testDb('user', (t) => ({
         id: t.serial().primaryKey(),
         name: t.text(),
         password: t.text(),
@@ -276,7 +271,7 @@ describe('date time columns', () => {
         .parse((text) => parseInt(text))
         .as(t.integer());
 
-      const UserWithNumberTimestamp = db('user', (t) => ({
+      const UserWithNumberTimestamp = testDb('user', (t) => ({
         id: t.serial().primaryKey(),
         name: t.text(),
         password: t.text(),

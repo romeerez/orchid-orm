@@ -1,12 +1,11 @@
-import { db } from '../test-utils/test-db';
+import { expectSql, useTestDatabase } from 'test-utils';
 import {
   chatData,
-  expectSql,
+  db,
   messageData,
   messageSelectAll,
   profileSelectAll,
   userData,
-  useTestDatabase,
 } from '../test-utils/test-utils';
 
 describe('relations', () => {

@@ -1,10 +1,10 @@
-import { adapter } from './test-utils/test-utils';
+import { testAdapter } from 'test-utils';
 
 describe('adapter', () => {
   it('should run query and close connection by calling .close()', async () => {
-    const result = await adapter.query('SELECT 1 as num');
+    const result = await testAdapter.query('SELECT 1 as num');
     expect(result.rows).toEqual([{ num: 1 }]);
 
-    await adapter.close();
+    await testAdapter.close();
   });
 });

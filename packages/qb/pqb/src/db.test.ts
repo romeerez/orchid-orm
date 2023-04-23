@@ -1,19 +1,18 @@
-import {
-  adapter,
-  assertType,
-  db,
-  dbOptions,
-  expectSql,
-  User,
-  userData,
-  useTestDatabase,
-} from './test-utils/test-utils';
+import { User, userData } from './test-utils/test-utils';
 import { createDb } from './db';
 import { QueryLogger } from './queryMethods';
+import {
+  assertType,
+  expectSql,
+  testAdapter,
+  testDb,
+  testDbOptions,
+  useTestDatabase,
+} from 'test-utils';
 
 describe('db connection', () => {
   it('should be able to open connection after closing it', async () => {
-    const db = createDb(dbOptions);
+    const db = createDb(testDbOptions);
 
     await db.close();
 
@@ -24,8 +23,8 @@ describe('db connection', () => {
 
   it('should support setting a default schema via url parameters', async () => {
     const db = createDb({
-      ...dbOptions,
-      databaseURL: dbOptions.databaseURL + '?schema=geo',
+      ...testDbOptions,
+      databaseURL: testDbOptions.databaseURL + '?schema=geo',
     });
 
     await db('city');
@@ -35,8 +34,8 @@ describe('db connection', () => {
 
   it('should support setting a default schema via config', async () => {
     const db = createDb({
-      ...dbOptions,
-      databaseURL: dbOptions.databaseURL,
+      ...testDbOptions,
+      databaseURL: testDbOptions.databaseURL,
       schema: 'geo',
     });
 
@@ -50,7 +49,7 @@ describe('db', () => {
   useTestDatabase();
 
   it('supports table without schema', () => {
-    const table = db('table', (t) => ({
+    const table = testDb('table', (t) => ({
       id: t.identity().primaryKey(),
       name: t.text(),
       foo: t.text(),
@@ -69,7 +68,7 @@ describe('db', () => {
 
   describe('primaryKeys', () => {
     it('should collect primary keys from schema', () => {
-      const table = db('table', (t) => ({
+      const table = testDb('table', (t) => ({
         id: t.serial().primaryKey(),
         name: t.text().primaryKey(),
       }));
@@ -77,7 +76,7 @@ describe('db', () => {
     });
 
     it('should set primary keys from primaryKey in schema', () => {
-      const table = db('table', (t) => ({
+      const table = testDb('table', (t) => ({
         ...t.primaryKey(['id', 'name']),
       }));
       expect(table.primaryKeys).toEqual(['id', 'name']);
@@ -88,7 +87,7 @@ describe('db', () => {
     it('should return date as string by default', async () => {
       await User.create(userData);
 
-      const db = createDb({ adapter });
+      const db = createDb({ adapter: testAdapter });
       const table = db('user', (t) => ({
         id: t.serial().primaryKey(),
         createdAt: t.timestampWithoutTimeZone(),
@@ -104,7 +103,7 @@ describe('db', () => {
       await User.create(userData);
 
       const db = createDb({
-        adapter,
+        adapter: testAdapter,
         columnTypes: (t) => ({
           serial: t.serial,
           timestamp() {
@@ -127,7 +126,7 @@ describe('db', () => {
 
   describe('autoPreparedStatements', () => {
     it('should be false by default', () => {
-      const db = createDb({ adapter });
+      const db = createDb({ adapter: testAdapter });
 
       const table = db('table');
       expect(table.query.autoPreparedStatements).toBe(false);
@@ -136,7 +135,7 @@ describe('db', () => {
 
   describe('noPrimaryKey', () => {
     it('should throw error when no primary key by default', () => {
-      const db = createDb({ adapter });
+      const db = createDb({ adapter: testAdapter });
 
       expect(() =>
         db('table', (t) => ({
@@ -146,7 +145,7 @@ describe('db', () => {
     });
 
     it('should throw error when no primary key when noPrimaryKey is set to `error`', () => {
-      const db = createDb({ adapter, noPrimaryKey: 'error' });
+      const db = createDb({ adapter: testAdapter, noPrimaryKey: 'error' });
 
       expect(() =>
         db('table', (t) => ({
@@ -156,7 +155,7 @@ describe('db', () => {
     });
 
     it('should not throw when no column shape is provided', () => {
-      const db = createDb({ adapter });
+      const db = createDb({ adapter: testAdapter });
 
       expect(() => db('table')).not.toThrow();
     });
@@ -164,7 +163,7 @@ describe('db', () => {
     it('should warn when no primary key and noPrimaryKey is set to `warning`', () => {
       const logger = { warn: jest.fn() };
       const db = createDb({
-        adapter,
+        adapter: testAdapter,
         noPrimaryKey: 'warning',
         logger: logger as unknown as QueryLogger,
       });
@@ -179,7 +178,7 @@ describe('db', () => {
     it('should do nothing when no primary key and noPrimaryKey is set to `ignore`', () => {
       const logger = { warn: jest.fn() };
       const db = createDb({
-        adapter,
+        adapter: testAdapter,
         noPrimaryKey: 'ignore',
         logger: logger as unknown as QueryLogger,
       });
@@ -194,8 +193,8 @@ describe('db', () => {
 
   it('should use ssl when ssl=true query parameter provided on a databaseUrl option', () => {
     const db = createDb({
-      ...dbOptions,
-      databaseURL: dbOptions.databaseURL + '?ssl=true',
+      ...testDbOptions,
+      databaseURL: testDbOptions.databaseURL + '?ssl=true',
     });
 
     expect(
@@ -207,7 +206,7 @@ describe('db', () => {
   describe('snakeCase option', () => {
     it('should set column names to snake case, respecting existing names', () => {
       const db = createDb({
-        ...dbOptions,
+        ...testDbOptions,
         snakeCase: true,
       });
 
@@ -239,7 +238,7 @@ describe('db', () => {
     });
 
     it('should override db snakeCase with table snakeCase', () => {
-      const db = createDb(dbOptions);
+      const db = createDb(testDbOptions);
 
       const table = db(
         'table',

@@ -1,11 +1,13 @@
-import { assertType, db } from '../test-utils/test-utils';
 import { BooleanColumn } from './boolean';
+import { assertType, testDb } from 'test-utils';
 
 describe('boolean column', () => {
-  afterAll(db.close);
+  afterAll(testDb.close);
 
   it('should output boolean', async () => {
-    const result = await db.get(db.raw(() => new BooleanColumn({}), `true`));
+    const result = await testDb.get(
+      testDb.raw(() => new BooleanColumn({}), `true`),
+    );
     expect(result).toBe(true);
 
     assertType<typeof result, boolean>();

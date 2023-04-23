@@ -1,8 +1,5 @@
 import {
-  assertType,
-  db,
   expectQueryNotMutated,
-  expectSql,
   Message,
   Profile,
   profileData,
@@ -13,11 +10,11 @@ import {
   User,
   userData,
   UserRecord,
-  useTestDatabase,
 } from '../test-utils/test-utils';
 import { DateColumn, IntegerColumn, JSONTextColumn } from '../columns';
 import { getShapeFromSelect } from './select';
 import { UnknownColumn } from '../columns/unknown';
+import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 
 const insertUserAndProfile = async () => {
   const id = await User.get('id').create(userData);
@@ -716,7 +713,7 @@ describe('select', () => {
 
     it('should accept raw', () => {
       const q = User.all();
-      const query = q.select({ one: db.raw('1') });
+      const query = q.select({ one: testDb.raw('1') });
 
       assertType<Awaited<typeof query>, { one: unknown }[]>();
 
@@ -872,7 +869,7 @@ describe('select', () => {
 
     it('should parse raw column', async () => {
       const q = User.select({
-        date: db.raw(
+        date: testDb.raw(
           () => new DateColumn({}).parse((input) => new Date(input)),
           '"createdAt"',
         ),

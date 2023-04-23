@@ -1,15 +1,9 @@
 import { createFactory } from './factory';
-import {
-  assertType,
-  db,
-  User,
-  BaseTable,
-  adapter,
-  useTestDatabase,
-} from './test-utils';
+import { db, User, BaseTable } from './test-utils';
 import { z } from 'zod';
 import { orchidORM } from 'orchid-orm';
 import { ColumnsShape, columnTypes, ColumnTypes } from 'pqb';
+import { assertType, testAdapter, useTestDatabase } from 'test-utils';
 
 describe('factory', () => {
   useTestDatabase();
@@ -99,7 +93,7 @@ describe('factory', () => {
 
       const db = orchidORM(
         {
-          adapter,
+          adapter: testAdapter,
         },
         {
           profile: ProfileTable,
@@ -131,7 +125,7 @@ describe('factory', () => {
         }));
       }
 
-      const db = orchidORM(adapter, {
+      const db = orchidORM(testAdapter, {
         user: UserTable,
       });
 
@@ -330,7 +324,7 @@ describe('factory', () => {
 
     const db = orchidORM(
       {
-        adapter,
+        adapter: testAdapter,
         log: false,
       },
       {

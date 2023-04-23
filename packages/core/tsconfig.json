@@ -8,7 +8,8 @@
     "baseUrl": ".",
     "paths": {
       "pqb": ["../qb/pqb/src"],
-      "orchid-core": ["src"]
+      "orchid-core": ["src"],
+      "test-utils": ["../test-utils/src"]
     }
   }
 }

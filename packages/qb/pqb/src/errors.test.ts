@@ -1,10 +1,6 @@
-import {
-  db,
-  UniqueTable,
-  User,
-  useTestDatabase,
-} from './test-utils/test-utils';
+import { UniqueTable, User } from './test-utils/test-utils';
 import { QueryError } from './errors';
+import { testDb, useTestDatabase } from 'test-utils';
 
 describe('errors', () => {
   useTestDatabase();
@@ -13,7 +9,7 @@ describe('errors', () => {
     let err: Error | undefined;
 
     try {
-      await User.select({ column: db.raw((t) => t.boolean(), 'koko') });
+      await User.select({ column: testDb.raw((t) => t.boolean(), 'koko') });
     } catch (error) {
       err = error as Error;
     }

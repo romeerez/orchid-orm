@@ -1,20 +1,25 @@
-import { db, pgConfig } from '../test-utils/test-db';
+import { RelationQuery } from 'pqb';
 import {
-  assertType,
+  BaseTable,
   chatData,
-  expectSql,
+  db,
   messageData,
   messageSelectAll,
+  Profile,
   profileData,
   profileSelectAll,
+  User,
   userData,
   useRelationCallback,
   userSelectAll,
-  useTestDatabase,
 } from '../test-utils/test-utils';
-import { RelationQuery } from 'pqb';
-import { BaseTable, Profile, User } from '../test-utils/test-tables';
 import { orchidORM } from '../orm';
+import {
+  assertType,
+  expectSql,
+  testDbOptions,
+  useTestDatabase,
+} from 'test-utils';
 
 describe('belongsTo', () => {
   useTestDatabase();
@@ -443,7 +448,7 @@ describe('belongsTo', () => {
             };
           }
 
-          const local = orchidORM(pgConfig, {
+          const local = orchidORM(testDbOptions, {
             user: UserTable,
             profile: ProfileTable,
           });

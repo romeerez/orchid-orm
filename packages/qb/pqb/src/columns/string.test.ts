@@ -1,4 +1,3 @@
-import { assertType, db } from '../test-utils/test-utils';
 import {
   BitColumn,
   BitVaryingColumn,
@@ -26,6 +25,7 @@ import {
   XMLColumn,
 } from './string';
 import { raw } from 'orchid-core';
+import { assertType, testDb } from 'test-utils';
 
 const testStringColumnMethods = (type: TextBaseColumn, name: string) => {
   expect(type.nonEmpty().toCode('t')).toBe(`t.${name}().nonEmpty()`);
@@ -77,13 +77,13 @@ const testStringColumnMethods = (type: TextBaseColumn, name: string) => {
 };
 
 describe('string columns', () => {
-  afterAll(db.close);
+  afterAll(testDb.close);
 
   describe('text', () => {
     describe('varchar', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new VarCharColumn({}, 4), `'text'::varchar(4)`),
+        const result = await testDb.get(
+          testDb.raw(() => new VarCharColumn({}, 4), `'text'::varchar(4)`),
         );
         expect(result).toBe('text');
 
@@ -100,8 +100,8 @@ describe('string columns', () => {
 
     describe('char', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new CharColumn({}, 4), `'text'::char(4)`),
+        const result = await testDb.get(
+          testDb.raw(() => new CharColumn({}, 4), `'text'::char(4)`),
         );
         expect(result).toBe('text');
 
@@ -118,8 +118,8 @@ describe('string columns', () => {
 
     describe('text', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new TextColumn({}), `'text'::text`),
+        const result = await testDb.get(
+          testDb.raw(() => new TextColumn({}), `'text'::text`),
         );
         expect(result).toBe('text');
 
@@ -138,8 +138,8 @@ describe('string columns', () => {
 
     describe('citext', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new CitextColumn({}), `'text'::citext`),
+        const result = await testDb.get(
+          testDb.raw(() => new CitextColumn({}), `'text'::citext`),
         );
         expect(result).toBe('text');
 
@@ -160,8 +160,8 @@ describe('string columns', () => {
   describe('binary', () => {
     describe('bytea', () => {
       it('should output Buffer', async () => {
-        const result = await db.get(
-          db.raw(() => new ByteaColumn({}), `'text'::bytea`),
+        const result = await testDb.get(
+          testDb.raw(() => new ByteaColumn({}), `'text'::bytea`),
         );
         expect(result instanceof Buffer).toBe(true);
         expect(result.toString()).toBe('text');
@@ -178,8 +178,8 @@ describe('string columns', () => {
   describe('geometric types', () => {
     describe('point', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new PointColumn({}), `'(1, 2)'::point`),
+        const result = await testDb.get(
+          testDb.raw(() => new PointColumn({}), `'(1, 2)'::point`),
         );
         expect(result).toBe('(1,2)');
 
@@ -193,8 +193,8 @@ describe('string columns', () => {
 
     describe('line', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new LineColumn({}), `'{1, 2, 3}'::line`),
+        const result = await testDb.get(
+          testDb.raw(() => new LineColumn({}), `'{1, 2, 3}'::line`),
         );
         expect(result).toBe('{1,2,3}');
 
@@ -208,8 +208,8 @@ describe('string columns', () => {
 
     describe('lseg', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new LsegColumn({}), `'[(1, 2), (3, 4)]'::lseg`),
+        const result = await testDb.get(
+          testDb.raw(() => new LsegColumn({}), `'[(1, 2), (3, 4)]'::lseg`),
         );
         expect(result).toBe('[(1,2),(3,4)]');
 
@@ -223,8 +223,8 @@ describe('string columns', () => {
 
     describe('box', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new BoxColumn({}), `'((3, 4), (1, 2))'::box`),
+        const result = await testDb.get(
+          testDb.raw(() => new BoxColumn({}), `'((3, 4), (1, 2))'::box`),
         );
         expect(result).toBe('(3,4),(1,2)');
 
@@ -238,8 +238,8 @@ describe('string columns', () => {
 
     describe('path', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new PathColumn({}), `'((1, 2), (3, 4))'::path`),
+        const result = await testDb.get(
+          testDb.raw(() => new PathColumn({}), `'((1, 2), (3, 4))'::path`),
         );
         expect(result).toBe('((1,2),(3,4))');
 
@@ -253,8 +253,11 @@ describe('string columns', () => {
 
     describe('polygon', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new PolygonColumn({}), `'((1, 2), (3, 4))'::polygon`),
+        const result = await testDb.get(
+          testDb.raw(
+            () => new PolygonColumn({}),
+            `'((1, 2), (3, 4))'::polygon`,
+          ),
         );
         expect(result).toBe('((1,2),(3,4))');
 
@@ -268,8 +271,8 @@ describe('string columns', () => {
 
     describe('circle', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new CircleColumn({}), `'<(1,2),3>'::circle`),
+        const result = await testDb.get(
+          testDb.raw(() => new CircleColumn({}), `'<(1,2),3>'::circle`),
         );
         expect(result).toBe('<(1,2),3>');
 
@@ -285,8 +288,8 @@ describe('string columns', () => {
   describe('network address types', () => {
     describe('cidr', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new CidrColumn({}), `'192.168.100.128/25'::cidr`),
+        const result = await testDb.get(
+          testDb.raw(() => new CidrColumn({}), `'192.168.100.128/25'::cidr`),
         );
         expect(result).toBe('192.168.100.128/25');
 
@@ -300,8 +303,8 @@ describe('string columns', () => {
 
     describe('inet', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new InetColumn({}), `'192.168.100.128/25'::inet`),
+        const result = await testDb.get(
+          testDb.raw(() => new InetColumn({}), `'192.168.100.128/25'::inet`),
         );
         expect(result).toBe('192.168.100.128/25');
 
@@ -315,8 +318,11 @@ describe('string columns', () => {
 
     describe('macaddr', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new MacAddrColumn({}), `'08:00:2b:01:02:03'::macaddr`),
+        const result = await testDb.get(
+          testDb.raw(
+            () => new MacAddrColumn({}),
+            `'08:00:2b:01:02:03'::macaddr`,
+          ),
         );
         expect(result).toBe('08:00:2b:01:02:03');
 
@@ -330,8 +336,8 @@ describe('string columns', () => {
 
     describe('macaddr8', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(
+        const result = await testDb.get(
+          testDb.raw(
             () => new MacAddr8Column({}),
             `'08:00:2b:ff:fe:01:02:03'::macaddr8`,
           ),
@@ -350,8 +356,8 @@ describe('string columns', () => {
   describe('bit string types', () => {
     describe('bit', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new BitColumn({}, 3), `B'101'`),
+        const result = await testDb.get(
+          testDb.raw(() => new BitColumn({}, 3), `B'101'`),
         );
         expect(result).toBe('101');
 
@@ -365,8 +371,8 @@ describe('string columns', () => {
 
     describe('bit varying', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new BitVaryingColumn({}), `'10101'::bit varying(5)`),
+        const result = await testDb.get(
+          testDb.raw(() => new BitVaryingColumn({}), `'10101'::bit varying(5)`),
         );
         expect(result).toBe('10101');
 
@@ -383,8 +389,8 @@ describe('string columns', () => {
   describe('text search types', () => {
     describe('tsvector', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(
+        const result = await testDb.get(
+          testDb.raw(
             () => new TsVectorColumn({}),
             `'a fat cat sat on a mat and ate a fat rat'::tsvector`,
           ),
@@ -403,8 +409,8 @@ describe('string columns', () => {
 
     describe('tsquery', () => {
       it('should output string', async () => {
-        const result = await db.get(
-          db.raw(() => new TsQueryColumn({}), `'fat & rat'::tsquery`),
+        const result = await testDb.get(
+          testDb.raw(() => new TsQueryColumn({}), `'fat & rat'::tsquery`),
         );
         expect(result).toBe(`'fat' & 'rat'`);
 
@@ -419,8 +425,8 @@ describe('string columns', () => {
 
   describe('uuid', () => {
     it('should output string', async () => {
-      const result = await db.get(
-        db.raw(
+      const result = await testDb.get(
+        testDb.raw(
           () => new UUIDColumn({}),
           `'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid`,
         ),
@@ -457,8 +463,8 @@ describe('string columns', () => {
 
   describe('xml', () => {
     it('should output string', async () => {
-      const result = await db.get(
-        db.raw(() => new XMLColumn({}), `'<xml></xml>'::xml`),
+      const result = await testDb.get(
+        testDb.raw(() => new XMLColumn({}), `'<xml></xml>'::xml`),
       );
       expect(result).toBe('<xml></xml>');
 
@@ -472,8 +478,8 @@ describe('string columns', () => {
 
   describe('money', () => {
     it('should output number', async () => {
-      const result = await db.get(
-        db.raw(() => new MoneyColumn({}), `'1234567890.42'::money`),
+      const result = await testDb.get(
+        testDb.raw(() => new MoneyColumn({}), `'1234567890.42'::money`),
       );
       expect(result).toBe(1234567890.42);
 

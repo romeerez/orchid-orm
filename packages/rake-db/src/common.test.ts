@@ -20,7 +20,7 @@ import prompts from 'prompts';
 import { Adapter, columnTypes } from 'pqb';
 import { readdir } from 'fs/promises';
 import path from 'path';
-import { asMock } from './test-utils';
+import { asMock } from 'test-utils';
 
 jest.mock('prompts', () => jest.fn());
 
