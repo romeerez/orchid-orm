@@ -53,6 +53,7 @@ export type QueryBase = QueryBaseCommon & {
   clone(): QueryBase;
   selectable: SelectableBase;
   shape: ColumnsShapeBase;
+  result: ColumnsShape;
   baseQuery: Query;
   relations: RelationsBase;
   withData: WithDataBase;

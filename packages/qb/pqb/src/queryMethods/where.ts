@@ -181,6 +181,7 @@ export abstract class Where implements QueryBase {
   query = {} as QueryData;
   table?: string;
   meta!: QueryMetaBase;
+  result!: ColumnsShape;
 
   where<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
     return this.clone()._where(...args);
@@ -480,6 +481,7 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
   baseQuery: Query;
   withData = emptyObject;
   internal: Q['internal'];
+  declare result: Q['result'];
 
   constructor(
     q: QueryBase,

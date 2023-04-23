@@ -238,6 +238,27 @@ describe('hasMany', () => {
       );
     });
 
+    it('should be supported in joinLateral', () => {
+      const q = db.user
+        .joinLateral('messages', (q) => q)
+        .select('Name', { message: 'messages' });
+
+      assertType<Awaited<typeof q>, { Name: string; message: Message }[]>();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "user"."name" AS "Name", row_to_json("messages".*) AS "message"
+          FROM "user"
+          JOIN LATERAL (
+            SELECT ${messageSelectAll}
+            FROM "message" AS "messages"
+            WHERE "messages"."authorId" = "user"."id"
+          ) "messages" ON true
+        `,
+      );
+    });
+
     describe('select', () => {
       it('should be selectable', async () => {
         const ChatId = await db.chat.get('IdOfChat').create(chatData);
@@ -2066,6 +2087,39 @@ describe('hasMany through', () => {
       );
     });
 
+    it('should be supported in joinLateral', () => {
+      const q = db.profile
+        .joinLateral('chats', (q) => q)
+        .select('Bio', { chat: 'chats' });
+
+      assertType<Awaited<typeof q>, { Bio: string | null; chat: Chat }[]>();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "profile"."bio" AS "Bio", row_to_json("chats".*) AS "chat"
+          FROM "profile"
+          JOIN LATERAL (
+            SELECT ${chatSelectAll}
+            FROM "chat" AS "chats"
+            WHERE EXISTS (
+                SELECT 1
+                FROM "user"
+                WHERE EXISTS (
+                  SELECT 1
+                  FROM "chatUser"
+                  WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                    AND "chatUser"."userId" = "user"."id"
+                  LIMIT 1
+                )
+                AND "user"."id" = "profile"."userId"
+              LIMIT 1
+            )
+          ) "chats" ON true
+        `,
+      );
+    });
+
     describe('select', () => {
       it('should be selectable', () => {
         const query = db.profile.as('p').select('Id', {
@@ -2449,6 +2503,39 @@ describe('hasMany through', () => {
             AND "profiles"."bio" = $1
         `,
         ['bio'],
+      );
+    });
+
+    it('should be supported in joinLateral', () => {
+      const q = db.chat
+        .joinLateral('profiles', (q) => q)
+        .select('Title', { profile: 'profiles' });
+
+      assertType<Awaited<typeof q>, { Title: string; profile: Profile }[]>();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "chat"."title" AS "Title", row_to_json("profiles".*) AS "profile"
+          FROM "chat"
+          JOIN LATERAL (
+            SELECT ${profileSelectAll}
+            FROM "profile" AS "profiles"
+            WHERE EXISTS (
+              SELECT 1
+              FROM "user" AS "users"
+              WHERE "profiles"."userId" = "users"."id"
+                AND EXISTS (
+                  SELECT 1
+                  FROM "chatUser"
+                  WHERE "chatUser"."userId" = "users"."id"
+                    AND "chatUser"."chatId" = "chat"."idOfChat"
+                  LIMIT 1
+                )
+              LIMIT 1
+            )
+          ) "profiles" ON true
+        `,
       );
     });
 

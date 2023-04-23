@@ -1,5 +1,11 @@
 # pqb
 
+## 0.11.7
+
+### Patch Changes
+
+- Support joinLateral
+
 ## 0.11.6
 
 ### Patch Changes

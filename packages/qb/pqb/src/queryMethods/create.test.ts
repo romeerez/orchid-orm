@@ -449,7 +449,7 @@ describe('create functions', () => {
         expect(item).toMatchObject(arr[i]);
       });
 
-      assertType<typeof result, typeof User['type'][]>();
+      assertType<typeof result, (typeof User)['type'][]>();
 
       const inserted = await User.all();
       inserted.forEach((item, i) => {
@@ -508,7 +508,7 @@ describe('create functions', () => {
 
   describe('createFrom', () => {
     it('should create records without additional data', () => {
-      const q = Message.createFrom(Chat.find(1).select({ chatId: 'id' }));
+      const q = Message.createFrom(Chat.find(1).select({ chatId: 'idOfChat' }));
 
       assertType<Awaited<typeof q>, MessageRecord>();
 
@@ -516,9 +516,9 @@ describe('create functions', () => {
         q.toSql(),
         `
           INSERT INTO "message"("chatId")
-          SELECT "chat"."id" AS "chatId"
+          SELECT "chat"."idOfChat" AS "chatId"
           FROM "chat"
-          WHERE "chat"."id" = $1
+          WHERE "chat"."idOfChat" = $1
           LIMIT $2
           RETURNING *
         `,
@@ -527,7 +527,7 @@ describe('create functions', () => {
     });
 
     it('should create record from select', () => {
-      const chat = Chat.find(1).select({ chatId: 'id' });
+      const chat = Chat.find(1).select({ chatId: 'idOfChat' });
 
       const query = Message.createFrom(chat, {
         authorId: 1,
@@ -540,9 +540,9 @@ describe('create functions', () => {
         query.toSql(),
         `
           INSERT INTO "message"("chatId", "authorId", "text")
-          SELECT "chat"."id" AS "chatId", $1, $2
+          SELECT "chat"."idOfChat" AS "chatId", $1, $2
           FROM "chat"
-          WHERE "chat"."id" = $3
+          WHERE "chat"."idOfChat" = $3
           LIMIT $4
           RETURNING *
         `,
@@ -614,7 +614,7 @@ describe('create functions', () => {
   describe('createManyFrom', () => {
     it('should create records from select', () => {
       const query = Message.createManyFrom(
-        Chat.where({ title: 'title' }).select({ chatId: 'id' }),
+        Chat.where({ title: 'title' }).select({ chatId: 'idOfChat' }),
       );
 
       assertType<Awaited<typeof query>, MessageRecord[]>();
@@ -623,7 +623,7 @@ describe('create functions', () => {
         query.toSql(),
         `
           INSERT INTO "message"("chatId")
-          SELECT "chat"."id" AS "chatId"
+          SELECT "chat"."idOfChat" AS "chatId"
           FROM "chat"
           WHERE "chat"."title" = $1
           RETURNING *

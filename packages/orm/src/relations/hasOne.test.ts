@@ -238,12 +238,36 @@ describe('hasOne', () => {
       expectSql(
         query.toSql(),
         `
-        SELECT "u"."name" AS "Name", "profile"."bio" AS "Bio" FROM "user" AS "u"
+        SELECT "u"."name" AS "Name", "profile"."bio" AS "Bio"
+        FROM "user" AS "u"
         JOIN "profile"
           ON "profile"."userId" = "u"."id"
          AND "profile"."bio" = $1
       `,
         ['bio'],
+      );
+    });
+
+    it('should be supported in joinLateral', () => {
+      const q = db.user
+        .joinLateral('profile', (q) => q)
+        .select('Name', 'profile');
+
+      assertType<Awaited<typeof q>, { Name: string; profile: Profile }[]>();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "user"."name" AS "Name", row_to_json("profile".*) "profile"
+          FROM "user"
+          JOIN LATERAL (
+            SELECT ${profileSelectAll}
+            FROM "profile"
+            WHERE "profile"."userId" = "user"."id"
+            LIMIT $1
+          ) "profile" ON true
+        `,
+        [1],
       );
     });
 
@@ -1607,7 +1631,8 @@ describe('hasOne through', () => {
     expectSql(
       query.toSql(),
       `
-        SELECT "m"."text" AS "Text", "profile"."bio" AS "Bio" FROM "message" AS "m"
+        SELECT "m"."text" AS "Text", "profile"."bio" AS "Bio"
+        FROM "message" AS "m"
         JOIN "profile"
           ON EXISTS (
             SELECT 1 FROM "user"
@@ -1618,6 +1643,35 @@ describe('hasOne through', () => {
           AND "profile"."bio" = $1
       `,
       ['bio'],
+    );
+  });
+
+  it('should be supported in joinLateral', () => {
+    const q = db.message
+      .joinLateral('profile', (q) => q)
+      .select('Text', 'profile');
+
+    assertType<Awaited<typeof q>, { Text: string; profile: Profile }[]>();
+
+    expectSql(
+      q.toSql(),
+      `
+        SELECT "message"."text" AS "Text", row_to_json("profile".*) "profile"
+        FROM "message"
+        JOIN LATERAL (
+          SELECT ${profileSelectAll}
+          FROM "profile"
+          WHERE EXISTS (
+            SELECT 1
+            FROM "user"
+            WHERE "profile"."userId" = "user"."id"
+              AND "user"."id" = "message"."authorId"
+            LIMIT 1
+          )
+          LIMIT $1
+        ) "profile" ON true
+      `,
+      [1],
     );
   });
 

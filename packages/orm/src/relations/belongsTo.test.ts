@@ -173,6 +173,27 @@ describe('belongsTo', () => {
       );
     });
 
+    it('should be supported in joinLateral', () => {
+      const q = db.profile.joinLateral('user', (q) => q).select('Bio', 'user');
+
+      assertType<Awaited<typeof q>, { Bio: string | null; user: User }[]>();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "profile"."bio" AS "Bio", row_to_json("user".*) "user"
+          FROM "profile"
+          JOIN LATERAL (
+            SELECT ${userSelectAll}
+            FROM "user"
+            WHERE "user"."id" = "profile"."userId"
+            LIMIT $1
+          ) "user" ON true
+        `,
+        [1],
+      );
+    });
+
     describe('select', () => {
       it('should be selectable', async () => {
         const query = db.profile.as('p').select('Id', {

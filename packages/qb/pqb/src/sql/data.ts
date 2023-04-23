@@ -1,4 +1,4 @@
-import { ColumnsParsers, Query, QueryReturnType } from '../query';
+import { ColumnsParsers, Query, QueryBase, QueryReturnType } from '../query';
 import {
   AfterCallback,
   BeforeCallback,
@@ -46,6 +46,7 @@ export type CommonQueryData = {
   throwOnNotFound?: boolean;
   with?: WithItem[];
   withShapes?: Record<string, ColumnsShape>;
+  joinTo?: QueryBase;
   joinedShapes?: JoinedShapes;
   joinedParsers?: JoinedParsers;
   schema?: string;

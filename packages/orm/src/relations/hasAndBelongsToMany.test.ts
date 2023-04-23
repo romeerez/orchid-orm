@@ -233,6 +233,33 @@ describe('hasAndBelongsToMany', () => {
       );
     });
 
+    it('should be supported in joinLateral', () => {
+      const q = db.user
+        .joinLateral('chats', (q) => q)
+        .select('Name', { chat: 'chats' });
+
+      assertType<Awaited<typeof q>, { Name: string; chat: Chat }[]>();
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT "user"."name" AS "Name", row_to_json("chats".*) AS "chat"
+          FROM "user"
+          JOIN LATERAL (
+            SELECT ${chatSelectAll}
+            FROM "chat" AS "chats"
+            WHERE EXISTS (
+              SELECT 1
+              FROM "chatUser"
+              WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                AND "chatUser"."userId" = "user"."id"
+              LIMIT 1
+            )
+          ) "chats" ON true
+        `,
+      );
+    });
+
     describe('select', () => {
       it('should be selectable', () => {
         const query = db.user.as('u').select('Id', {

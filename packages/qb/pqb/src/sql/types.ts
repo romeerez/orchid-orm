@@ -111,7 +111,9 @@ export type SelectFunctionItem = {
   as?: string;
 };
 
-export type JoinItem = {
+export type JoinItem = SimpleJoinItem | JoinLateralItem;
+
+export type SimpleJoinItem = {
   type: string;
   args:
     | [relation: string]
@@ -138,6 +140,8 @@ export type JoinItem = {
   isSubQuery: boolean;
 };
 
+export type JoinLateralItem = [type: string, joined: Query];
+
 export type WhereItem =
   | (Omit<
       Record<
@@ -152,7 +156,7 @@ export type WhereItem =
       AND?: MaybeArray<WhereItem>;
       OR?: MaybeArray<WhereItem>[];
       IN?: MaybeArray<WhereInItem>;
-      EXISTS?: MaybeArray<JoinItem['args']>;
+      EXISTS?: MaybeArray<SimpleJoinItem['args']>;
       ON?: WhereOnItem | WhereJsonPathEqualsItem;
     })
   | ((q: unknown) => QueryBase)

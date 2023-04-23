@@ -26,7 +26,7 @@ import { BooleanColumn } from '../columns';
 import { Aggregate } from './aggregate';
 import { addParserForSelectItem, Select } from './select';
 import { From } from './from';
-import { Join } from './join';
+import { Join, OnQueryBuilder } from './join';
 import { With } from './with';
 import { Union } from './union';
 import { Json } from './json';
@@ -96,7 +96,7 @@ export interface QueryMethods
     Transaction,
     For,
     ColumnInfoMethods,
-    Where,
+    Omit<Where, 'result'>,
     Clear,
     Having,
     Window,
@@ -382,6 +382,7 @@ applyMixins(QueryMethods, [
   Select,
   From,
   Join,
+  OnQueryBuilder,
   With,
   Union,
   Json,

@@ -308,7 +308,7 @@ const processSelectAsArg = <T extends Query>(
 
 // is mapping result of a query into a columns shape
 // in this way, result of a sub query becomes available outside of it for using in WHERE and other methods
-export const getShapeFromSelect = (q: Query, isSubQuery?: boolean) => {
+export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
   const query = q.query as SelectQueryData;
   const { select, shape } = query;
   if (!select) {
@@ -351,7 +351,7 @@ export const getShapeFromSelect = (q: Query, isSubQuery?: boolean) => {
 };
 
 const addColumnToShapeFromSelect = (
-  q: Query,
+  q: QueryBase,
   arg: string,
   shape: ColumnsShapeBase,
   query: SelectQueryData,

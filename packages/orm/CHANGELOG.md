@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.9.9
+
+### Patch Changes
+
+- Support joinLateral
+- Updated dependencies
+  - pqb@0.11.7
+
 ## 1.9.8
 
 ### Patch Changes

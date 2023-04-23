@@ -1,6 +1,6 @@
 import { Query, QueryBase } from '../query';
 import {
-  JoinItem,
+  SimpleJoinItem,
   WhereInItem,
   WhereItem,
   WhereJsonPathEqualsItem,
@@ -191,21 +191,21 @@ const processWhere = (
         ? value
         : [value];
 
-      (joinItems as { args: JoinItem['args']; isSubQuery: boolean }[]).forEach(
-        (args) => {
-          const { target, conditions } = processJoinItem(
-            ctx,
-            table,
-            query,
-            args,
-            quotedAs,
-          );
+      (
+        joinItems as { args: SimpleJoinItem['args']; isSubQuery: boolean }[]
+      ).forEach((args) => {
+        const { target, conditions } = processJoinItem(
+          ctx,
+          table,
+          query,
+          args,
+          quotedAs,
+        );
 
-          ands.push(
-            `${prefix}EXISTS (SELECT 1 FROM ${target} WHERE ${conditions} LIMIT 1)`,
-          );
-        },
-      );
+        ands.push(
+          `${prefix}EXISTS (SELECT 1 FROM ${target} WHERE ${conditions} LIMIT 1)`,
+        );
+      });
     } else if (typeof value === 'object' && value !== null) {
       if (isRaw(value)) {
         ands.push(

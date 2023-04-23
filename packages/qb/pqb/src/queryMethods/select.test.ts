@@ -205,16 +205,6 @@ describe('select', () => {
           LEFT JOIN "profile" ON "profile"."userId" = "user"."id"
         `,
       );
-
-      expect(q.query.joinedShapes).toEqual({
-        profile: {
-          id: Profile.shape.id.nullable(),
-          userId: Profile.shape.userId.nullable(),
-          bio: Profile.shape.bio.nullable(),
-          createdAt: Profile.shape.createdAt.nullable(),
-          updatedAt: Profile.shape.updatedAt.nullable(),
-        },
-      });
     });
 
     it('should select named joined columns', () => {

@@ -1,8 +1,11 @@
 import { WithOptions } from '../sql';
 import {
+  assertType,
   db,
   expectQueryNotMutated,
   expectSql,
+  Profile,
+  ProfileRecord,
   Snake,
   User,
 } from '../test-utils/test-utils';
@@ -138,7 +141,7 @@ describe('with', () => {
     expectQueryNotMutated(q);
   });
 
-  it('can be referenced in .join', () => {
+  it('should be usable in join', () => {
     const q = User.all();
 
     const received1 = q
@@ -179,6 +182,38 @@ describe('with', () => {
     expectSql(received4, expected);
 
     expectQueryNotMutated(q);
+  });
+
+  it('should be usable in joinLateral', () => {
+    const q = User.with('withAlias', Profile.all())
+      .joinLateral('withAlias', (q) =>
+        q.on('userId', 'user.id').where({ bio: 'bio' }),
+      )
+      .select('name', 'withAlias');
+
+    assertType<
+      Awaited<typeof q>,
+      { name: string; withAlias: ProfileRecord }[]
+    >();
+
+    expectSql(
+      q.toSql(),
+      `
+        WITH "withAlias" AS (
+          SELECT *
+          FROM "profile"
+        )
+        SELECT "user"."name", row_to_json("withAlias".*) "withAlias"
+        FROM "user"
+        JOIN LATERAL (
+          SELECT *
+          FROM "withAlias"
+          WHERE "withAlias"."userId" = "user"."id"
+            AND "withAlias"."bio" = $1
+        ) "withAlias" ON true
+      `,
+      ['bio'],
+    );
   });
 
   it('can be used in .from', () => {

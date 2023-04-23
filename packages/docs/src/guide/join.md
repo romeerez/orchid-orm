@@ -27,6 +27,7 @@ export class MessageTable extends BaseTable {
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     text: t.text(),
+    ...t.timestamps(),
   }))
 
   relations = {
@@ -71,7 +72,11 @@ const result = await db.user.join('messages')
   .select('name', 'messages')
 
 // result has the following type:
-const ok: { name: string, messages: { id: number, text: string } }[] = result
+const ok: {
+  name: string,
+  // full message is included:
+  messages: { id: number, text: string, updatedAt: Date, createdAt: Date }
+}[] = result
 ```
 
 `select` can accept an object where key is a new alias and the value refers to the joined table:
@@ -82,7 +87,11 @@ const result = await db.user.join('messages')
   .select('name', { msg: 'messages' })
 
 // result has the following type:
-const ok: { name: string, msg: { id: number, text: string } }[] = result
+const ok: {
+  name: string,
+  // full message is included as msg:
+  msg: { id: number, text: string, updatedAt: Date, createdAt: Date }
+}[] = result
 ```
 
 The query above may result in the following records, multiple rows have the name of the same user:
@@ -125,7 +134,11 @@ const result = await db.user.join(db.message.as('m'), 'message.userId', 'user.id
   .select('name', { msg: 'm' })
 
 // result has the following type:
-const ok: { name: string, msg: { id: number, text: string } }[] = result
+const ok: {
+  name: string,
+  // full message is included as msg:
+  msg: { id: number, text: string, updatedAt: Date, createdAt: Date }
+}[] = result
 ```
 
 You can provide a custom comparison operator
@@ -244,6 +257,69 @@ JOIN (
 ) "t" ON "t"."userId" = "user"."id"
 ```
 
+## joinLateral
+
+`joinLateral` allows joining a table with a sub-query that can reference the main table of current query and the other joined tables.
+
+Regular `JOIN` also can have a sub-query in its definition, but it cannot reference other tables of this query.
+
+`JOIN LATERAL` of Postgres can have conditions in the `ON` statement, but `Orchid ORM` decided that there are no useful use-cases for such conditions, and it is only building a sub-query.
+
+First argument is the other table you want to join, or a name of relation, or a name of `with` defined table.
+
+Second argument is a callback where you can reference other tables using `on` and `orOn`, select columns, do `where` conditions, and use any other query methods to build a sub-query.
+
+```ts
+// joinLateral a Message table, alias it as `m`
+// without aliasing you can refer to the message by a table name
+User.joinLateral(Message.as('m'), (q) =>
+  q
+    // select message columns
+    .select('text')
+    // join the message to the user, column names can be prefixed with table names
+    .on('authorId', 'id')
+    // message columns are available without prefixing,
+    // outer table columns are available with a table name
+    .where({ text: 'some text', 'user.name': 'name' })
+    .order({ createdAt: 'DESC' }),
+)
+  // only selected message columns are available in select and where
+  .select('id', 'name', 'm.text')
+  .where({ 'm.text': messageData.text });
+```
+
+As well as simple `join`, `joinLateral` can select an object of full joined record:
+
+```ts
+// join by relation name
+const result = await User.joinLateral('messages', (q) =>
+  q.as('message') // alias to 'message'
+).select('name', 'message')
+
+// result has the following type:
+const ok: {
+  name: string,
+  // full message is included:
+  message: { id: number, text: string, updatedAt: Date, createdAt: Date }
+}[] = result
+```
+
+`message` can be aliased in the `select` as well as with simple `join`:
+
+```ts
+// join by relation name
+const result = await User.joinLateral('messages', (q) =>
+  q.as('message') // alias to 'message'
+).select('name', { msg: 'message' })
+
+// result has the following type:
+const ok: {
+  name: string,
+  // full message is included as msg:
+  msg: { id: number, text: string, updatedAt: Date, createdAt: Date }
+}[] = result
+```
+
 ## leftJoin
 
 `leftJoin` is a method for SQL `LEFT JOIN`, which is equivalent to `OUTER JOIN`, `LEFT OUTER JOIN`.
@@ -259,6 +335,19 @@ const result = await db.user.leftJoin('messages')
 // the same query, but joining table explicitly
 const result2: typeof result = await db.user.leftJoin(db.message, 'userId', 'id')
   .select('name', 'message.text')
+
+// result has the following type:
+const ok: { name: string, text: string | null }[] = result
+```
+
+## leftJoinLateral
+
+The same as `joinLateral`, but when no records found for the join it will result in `null`:
+
+```ts
+const result = await db.user.leftJoinLateral('messages', (q) =>
+  q.as('message')
+).select('name', 'message.text')
 
 // result has the following type:
 const ok: { name: string, text: string | null }[] = result

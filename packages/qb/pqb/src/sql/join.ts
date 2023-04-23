@@ -5,7 +5,7 @@ import {
   rawOrRevealColumnToSql,
   revealColumnToSql,
 } from './common';
-import { JoinItem } from './types';
+import { JoinItem, SimpleJoinItem } from './types';
 import { QueryBase, QueryWithTable } from '../query';
 import { whereToSql } from './where';
 import { Relation } from '../relations';
@@ -13,6 +13,7 @@ import { ToSqlCtx } from './toSql';
 import { getRaw } from '../raw';
 import { JoinedShapes, QueryData, SelectQueryData } from './data';
 import { isRaw, RawExpression } from 'orchid-core';
+import { getQueryAs } from '../utils';
 
 type ItemOf3Or4Length =
   | [
@@ -31,7 +32,7 @@ export const processJoinItem = (
   ctx: ToSqlCtx,
   table: QueryBase,
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
-  item: Pick<JoinItem, 'args' | 'isSubQuery'>,
+  item: Pick<SimpleJoinItem, 'args' | 'isSubQuery'>,
   quotedAs: string | undefined,
 ): { target: string; conditions?: string } => {
   let target: string;
@@ -162,7 +163,7 @@ export const processJoinItem = (
 };
 
 const processArgs = (
-  args: JoinItem['args'],
+  args: SimpleJoinItem['args'],
   ctx: ToSqlCtx,
   table: QueryBase,
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
@@ -310,16 +311,23 @@ export const pushJoinSql = (
   quotedAs?: string,
 ) => {
   query.join.forEach((item) => {
-    const { target, conditions } = processJoinItem(
-      ctx,
-      table,
-      query,
-      item,
-      quotedAs,
-    );
+    if (Array.isArray(item)) {
+      const q = item[1];
+      ctx.sql.push(
+        `${item[0]} LATERAL (${q.toSql(ctx).text}) "${getQueryAs(q)}" ON true`,
+      );
+    } else {
+      const { target, conditions } = processJoinItem(
+        ctx,
+        table,
+        query,
+        item,
+        quotedAs,
+      );
 
-    ctx.sql.push(item.type, target);
-    if (conditions) ctx.sql.push('ON', conditions);
+      ctx.sql.push(item.type, target);
+      if (conditions) ctx.sql.push('ON', conditions);
+    }
   });
 };
 

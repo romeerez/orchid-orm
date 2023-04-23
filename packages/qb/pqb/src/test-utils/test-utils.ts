@@ -59,7 +59,7 @@ export const Profile = db('profile', (t) => ({
 }));
 
 export const Chat = db('chat', (t) => ({
-  id: t.identity().primaryKey(),
+  idOfChat: t.identity().primaryKey(),
   title: t.text(),
   ...t.timestamps(),
 }));
@@ -79,6 +79,7 @@ export const Message = db('message', (t) => ({
   chatId: t.integer().foreignKey('chat', 'id'),
   authorId: t.integer().foreignKey('user', 'id'),
   text: t.text(),
+  meta: t.json((t) => t.any()).nullable(),
   ...t.timestamps(),
 }));
 
