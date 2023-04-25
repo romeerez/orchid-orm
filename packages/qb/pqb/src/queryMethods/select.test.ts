@@ -870,7 +870,7 @@ describe('select', () => {
     it('should parse raw column', async () => {
       const q = User.select({
         date: testDb.raw(
-          () => new DateColumn({}).parse((input) => new Date(input)),
+          () => new DateColumn().parse((input) => new Date(input)),
           '"createdAt"',
         ),
       });

@@ -5,7 +5,6 @@ import {
   arrayMethods,
   addCode,
   Code,
-  ColumnTypesBase,
   ColumnTypeBase,
   ArrayMethodsData,
   arrayDataToCode,
@@ -31,8 +30,8 @@ export class ArrayColumn<Item extends ColumnType> extends ColumnType<
   operators = Operators.array;
   declare data: ArrayData<Item>;
 
-  constructor(types: ColumnTypesBase, item: Item) {
-    super(types);
+  constructor(item: Item) {
+    super();
     this.data.item = item;
   }
 

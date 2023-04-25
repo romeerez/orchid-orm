@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.4.2
+
+### Patch Changes
+
+- Make passing this not required when customizing column types
+
 ## 0.4.1
 
 ### Patch Changes

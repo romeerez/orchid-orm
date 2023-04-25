@@ -19,7 +19,6 @@ import { getValueKey } from './get';
 import { QueryResult } from '../adapter';
 import { UnknownColumn } from '../columns/unknown';
 import {
-  emptyObject,
   StringKey,
   isRaw,
   RawExpression,
@@ -333,14 +332,14 @@ export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
             key,
           );
         } else if (isRaw(it)) {
-          result[key] = it.__column || new UnknownColumn(emptyObject);
+          result[key] = it.__column || new UnknownColumn();
         } else {
           const { returnType } = it.query;
           if (returnType === 'value' || returnType === 'valueOrThrow') {
             const type = (it.query as SelectQueryData)[getValueKey];
             if (type) result[key] = type;
           } else {
-            result[key] = new JSONTextColumn(emptyObject);
+            result[key] = new JSONTextColumn();
           }
         }
       }
@@ -360,7 +359,7 @@ const addColumnToShapeFromSelect = (
   key?: string,
 ) => {
   if ((q.relations as Record<string, Relation>)[arg]) {
-    result[key || arg] = new JSONTextColumn(emptyObject);
+    result[key || arg] = new JSONTextColumn();
     return;
   }
 

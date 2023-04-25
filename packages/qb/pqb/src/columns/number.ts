@@ -7,7 +7,6 @@ import {
   RawExpression,
   joinTruthy,
   BaseNumberData,
-  ColumnTypesBase,
   numberDataToCode,
   setColumnData,
   addCode,
@@ -43,8 +42,8 @@ assignMethodsToClass(NumberBaseColumn, numberTypeMethods);
 
 export abstract class IntegerBaseColumn extends NumberBaseColumn {
   declare data: NumberColumnData;
-  constructor(types: ColumnTypesBase) {
-    super(types);
+  constructor() {
+    super();
     this.data.int = true;
   }
 }
@@ -68,12 +67,8 @@ export class DecimalBaseColumn<
   operators = Operators.number;
   dataType = 'decimal' as const;
 
-  constructor(
-    types: ColumnTypesBase,
-    numericPrecision?: Precision,
-    numericScale?: Scale,
-  ) {
-    super(types);
+  constructor(numericPrecision?: Precision, numericScale?: Scale) {
+    super();
     this.data.numericPrecision = numericPrecision as Precision;
     this.data.numericScale = numericScale as Scale;
   }
@@ -184,8 +179,8 @@ export class SmallSerialColumn extends IntegerBaseColumn {
   parseItem = parseInt;
   declare data: SerialColumnData;
 
-  constructor(types: ColumnTypesBase) {
-    super(types);
+  constructor() {
+    super();
     this.data.int = true;
   }
 
@@ -204,8 +199,8 @@ export class SerialColumn extends IntegerBaseColumn {
   parseItem = parseInt;
   declare data: SerialColumnData;
 
-  constructor(types: ColumnTypesBase) {
-    super(types);
+  constructor() {
+    super();
     this.data.int = true;
   }
 

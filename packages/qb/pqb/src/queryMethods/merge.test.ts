@@ -300,17 +300,17 @@ describe('merge queries', () => {
       const q2 = User.clone();
 
       q1.query.shape = {
-        number: new IntegerColumn({}),
+        number: new IntegerColumn(),
       };
       q2.query.shape = {
-        string: new TextColumn({}),
+        string: new TextColumn(),
       };
       q1.query.wrapInTransaction = false;
       q2.query.wrapInTransaction = true;
       q1.query.throwOnNotFound = false;
       q2.query.throwOnNotFound = true;
-      q1.query.withShapes = { a: { id: new IntegerColumn({}) } };
-      q2.query.withShapes = { b: { name: new TextColumn({}) } };
+      q1.query.withShapes = { a: { id: new IntegerColumn() } };
+      q2.query.withShapes = { b: { name: new TextColumn() } };
       q1.query.schema = 'a';
       q2.query.schema = 'b';
       q1.query.as = 'a';
@@ -360,8 +360,8 @@ describe('merge queries', () => {
       s2.offset = 2;
       s1.for = { type: 'UPDATE' };
       s2.for = { type: 'SHARE' };
-      s1[getValueKey] = new IntegerColumn({});
-      s2[getValueKey] = new TextColumn({});
+      s1[getValueKey] = new IntegerColumn();
+      s2[getValueKey] = new TextColumn();
 
       const i1 = q1.query as unknown as InsertQueryData;
       const i2 = q2.query as unknown as InsertQueryData;

@@ -1,6 +1,6 @@
 import { ColumnType } from './columnType';
 import { Operators } from './operators';
-import { Code, ColumnTypesBase, singleQuote } from 'orchid-core';
+import { Code, singleQuote } from 'orchid-core';
 import { columnCode } from './code';
 
 // for a user-defined type, or for unsupported yet type from some module
@@ -10,8 +10,8 @@ export class CustomTypeColumn extends ColumnType<
 > {
   operators = Operators.any;
 
-  constructor(types: ColumnTypesBase, public dataType: string) {
-    super(types);
+  constructor(public dataType: string) {
+    super();
     this.data.isOfCustomType = true;
   }
 

@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.9.11
+
+### Patch Changes
+
+- Make passing this not required when customizing column types
+- Updated dependencies
+  - pqb@0.11.9
+  - orchid-core@0.4.2
+
 ## 1.9.10
 
 ### Patch Changes

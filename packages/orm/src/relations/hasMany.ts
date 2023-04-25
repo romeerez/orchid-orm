@@ -22,7 +22,7 @@ import {
   CreateCtx,
   UpdateCtx,
 } from 'pqb';
-import { MaybeArray, ColumnTypesBase, emptyObject } from 'orchid-core';
+import { MaybeArray } from 'orchid-core';
 import {
   getSourceRelation,
   getThroughRelation,
@@ -88,12 +88,8 @@ class HasManyVirtualColumn extends VirtualColumn {
   private readonly nestedInsert: HasManyNestedInsert;
   private readonly nestedUpdate: HasManyNestedUpdate;
 
-  constructor(
-    types: ColumnTypesBase,
-    private key: string,
-    private state: State,
-  ) {
-    super(types);
+  constructor(private key: string, private state: State) {
+    super();
     this.nestedInsert = nestedInsert(state);
     this.nestedUpdate = nestedUpdate(state);
   }
@@ -202,7 +198,7 @@ export const makeHasManyMethod = (
       const values = { [foreignKey]: params[primaryKey] };
       return query.where(values)._defaults(values);
     },
-    virtualColumn: new HasManyVirtualColumn(emptyObject, relationName, state),
+    virtualColumn: new HasManyVirtualColumn(relationName, state),
     joinQuery(fromQuery, toQuery) {
       return addQueryOn(toQuery, fromQuery, toQuery, foreignKey, primaryKey);
     },

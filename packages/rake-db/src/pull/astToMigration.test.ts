@@ -122,8 +122,8 @@ describe('astToMigration', () => {
       {
         ...table,
         shape: {
-          id: new UUIDColumn({}).primaryKey(),
-          enum: new EnumColumn({}, enumType.name, enumType.values),
+          id: new UUIDColumn().primaryKey(),
+          enum: new EnumColumn(enumType.name, enumType.values),
         },
       },
       { ...table, name: 'other' },

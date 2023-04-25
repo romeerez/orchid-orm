@@ -7,6 +7,7 @@ import {
   getRaw,
   EnumColumn,
   UnknownColumn,
+  columnTypes,
 } from 'pqb';
 import {
   EmptyObject,
@@ -14,10 +15,10 @@ import {
   RawExpression,
   isRaw,
   ColumnTypesBase,
-  nameKey,
   snakeCaseKey,
   toSnakeCase,
   deepCompare,
+  consumeColumnName,
 } from 'orchid-core';
 import {
   ChangeTableCallback,
@@ -75,18 +76,15 @@ const mergeTableData = (a: TableData, b: TableData) => {
 };
 
 function add(
-  this: ColumnTypesBase,
   item: ColumnType,
   options?: { dropMode?: DropMode },
 ): RakeDbAst.ChangeTableItem.Column;
-function add(this: ColumnTypesBase, emptyObject: EmptyObject): EmptyObject;
+function add(emptyObject: EmptyObject): EmptyObject;
 function add(
-  this: ColumnTypesBase,
   items: Record<string, ColumnType>,
   options?: { dropMode?: DropMode },
 ): Record<string, RakeDbAst.ChangeTableItem.Column>;
 function add(
-  this: ColumnTypesBase,
   item: ColumnType | EmptyObject | Record<string, ColumnType>,
   options?: { dropMode?: DropMode },
 ):
@@ -94,7 +92,7 @@ function add(
   | EmptyObject
   | Record<string, RakeDbAst.ChangeTableItem.Column> {
   if (item instanceof ColumnType) {
-    return addOrDrop(this, 'add', item, options);
+    return addOrDrop('add', item, options);
   } else if (item === emptyObject) {
     mergeTableData(changeTableData.add, getTableData());
     resetTableData();
@@ -114,7 +112,7 @@ function add(
 
 const drop = function (item, options) {
   if (item instanceof ColumnType) {
-    return addOrDrop(this, 'drop', item, options);
+    return addOrDrop('drop', item, options);
   } else if (item === emptyObject) {
     mergeTableData(changeTableData.drop, getTableData());
     resetTableData();
@@ -133,13 +131,13 @@ const drop = function (item, options) {
 } as typeof add;
 
 const addOrDrop = (
-  types: ColumnTypesBase,
   type: 'add' | 'drop',
   item: ColumnType,
   options?: { dropMode?: DropMode },
 ): RakeDbAst.ChangeTableItem => {
-  if (types[nameKey]) {
-    item.data.name = types[nameKey];
+  const name = consumeColumnName();
+  if (name) {
+    item.data.name = name;
   }
 
   if (item instanceof UnknownColumn) {
@@ -200,9 +198,16 @@ const columnTypeToColumnChange = (
   return item.to;
 };
 
+const nameKey = Symbol('name');
+
 type TableChangeMethods = typeof tableChangeMethods;
 const tableChangeMethods = {
   ...tableMethods,
+  name(this: ColumnTypesBase, name: string) {
+    const types = Object.create(columnTypes.name.call(this, name));
+    types[nameKey] = name;
+    return types;
+  },
   add,
   drop,
   change(
@@ -213,7 +218,7 @@ const tableChangeMethods = {
   ): Change {
     return {
       type: 'change',
-      name: this[nameKey],
+      name: (this as { [nameKey]?: string })[nameKey],
       from: columnTypeToColumnChange(from),
       to: columnTypeToColumnChange(to),
       ...options,

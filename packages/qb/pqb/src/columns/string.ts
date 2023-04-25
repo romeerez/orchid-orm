@@ -7,7 +7,6 @@ import {
   Code,
   joinTruthy,
   BaseStringData,
-  ColumnTypesBase,
   stringDataToCode,
   PrimaryKeyColumn,
   raw,
@@ -41,8 +40,8 @@ export abstract class LimitedTextBaseColumn<
 > extends TextBaseColumn {
   declare data: TextColumnData & { maxChars: Limit };
 
-  constructor(types: ColumnTypesBase, limit?: Limit) {
-    super(types);
+  constructor(limit?: Limit) {
+    super();
     this.data.maxChars = limit as Limit;
   }
 
@@ -125,8 +124,8 @@ export class TextColumn extends TextBaseColumn {
   dataType = 'text' as const;
   declare data: TextColumnData & { minArg?: number; maxArg?: number };
 
-  constructor(types: ColumnTypesBase, minArg?: number, maxArg?: number) {
-    super(types);
+  constructor(minArg?: number, maxArg?: number) {
+    super();
     setTextColumnData(this, minArg, maxArg);
   }
 
@@ -272,8 +271,8 @@ export class BitColumn<Length extends number> extends ColumnType<
   operators = Operators.text;
   declare data: ColumnData & { length: Length };
 
-  constructor(types: ColumnTypesBase, length: Length) {
-    super(types);
+  constructor(length: Length) {
+    super();
     this.data.length = length;
   }
 
@@ -297,9 +296,8 @@ export class BitVaryingColumn<
   operators = Operators.text;
   declare data: ColumnData & { length: Length };
 
-  constructor(types: ColumnTypesBase, length?: Length) {
-    super(types);
-
+  constructor(length?: Length) {
+    super();
     this.data.length = length as Length;
   }
 
@@ -375,8 +373,8 @@ export class CitextColumn extends TextBaseColumn {
   dataType = 'citext' as const;
   declare data: TextColumnData & { minArg?: number; maxArg?: number };
 
-  constructor(types: ColumnTypesBase, minArg?: number, maxArg?: number) {
-    super(types);
+  constructor(minArg?: number, maxArg?: number) {
+    super();
     setTextColumnData(this, minArg, maxArg);
   }
 

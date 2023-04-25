@@ -1449,7 +1449,7 @@ describe('schema to zod', () => {
       const schema = instanceToZod({
         shape: {
           text: t.text(),
-          virtual: new Virtual({}),
+          virtual: new Virtual(),
         },
       });
 
@@ -1457,7 +1457,7 @@ describe('schema to zod', () => {
     });
 
     it('should return ZodNever from columnToZod', () => {
-      const schema = columnToZod(new Virtual({}));
+      const schema = columnToZod(new Virtual());
 
       assertType<typeof schema, z.ZodNever>();
 
@@ -1470,7 +1470,7 @@ describe('schema to zod', () => {
   describe('domain', () => {
     it('should convert it to a base column', () => {
       const schema = columnToZod(
-        new DomainColumn({}, 'domainName').as(new IntegerColumn({})),
+        new DomainColumn('domainName').as(new IntegerColumn()),
       );
 
       assertType<typeof schema, z.ZodNumber>();
@@ -1485,7 +1485,7 @@ describe('schema to zod', () => {
   describe('custom type', () => {
     it('should convert it to a base column', () => {
       const schema = columnToZod(
-        new CustomTypeColumn({}, 'customType').as(new IntegerColumn({})),
+        new CustomTypeColumn('customType').as(new IntegerColumn()),
       );
 
       assertType<typeof schema, z.ZodNumber>();

@@ -27,12 +27,12 @@ describe('custom type column', () => {
   });
 
   it('should have toCode', () => {
-    expect(new CustomTypeColumn({}, 'name').toCode('t')).toBe(`t.type('name')`);
+    expect(new CustomTypeColumn('name').toCode('t')).toBe(`t.type('name')`);
   });
 });
 
 describe('domain column', () => {
   it('should have toCode', () => {
-    expect(new DomainColumn({}, 'name').toCode('t')).toBe(`t.domain('name')`);
+    expect(new DomainColumn('name').toCode('t')).toBe(`t.domain('name')`);
   });
 });

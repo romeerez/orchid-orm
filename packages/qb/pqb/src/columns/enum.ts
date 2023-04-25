@@ -1,7 +1,7 @@
 import { ColumnType } from './columnType';
 import { Operators } from './operators';
 import { columnCode } from './code';
-import { Code, ColumnTypesBase } from 'orchid-core';
+import { Code } from 'orchid-core';
 
 export class EnumColumn<
   U extends string = string,
@@ -10,12 +10,8 @@ export class EnumColumn<
   operators = Operators.any;
   dataType = 'enum';
 
-  constructor(
-    types: ColumnTypesBase,
-    public enumName: string,
-    public options: T,
-  ) {
-    super(types);
+  constructor(public enumName: string, public options: T) {
+    super();
   }
 
   toCode(t: string, migration?: boolean): Code {

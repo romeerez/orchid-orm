@@ -13,7 +13,6 @@ import {
   WhereArg,
   WhereResult,
 } from 'pqb';
-import { ColumnTypesBase, emptyObject } from 'orchid-core';
 import { Table } from '../table';
 import {
   RelationData,
@@ -86,12 +85,8 @@ class HasOneVirtualColumn extends VirtualColumn {
   private readonly nestedInsert: HasOneNestedInsert;
   private readonly nestedUpdate: HasOneNestedUpdate;
 
-  constructor(
-    types: ColumnTypesBase,
-    private key: string,
-    private state: State,
-  ) {
-    super(types);
+  constructor(private key: string, private state: State) {
+    super();
     this.nestedInsert = nestedInsert(state);
     this.nestedUpdate = nestedUpdate(state);
   }
@@ -204,7 +199,7 @@ export const makeHasOneMethod = (
       const values = { [foreignKey]: params[primaryKey] };
       return query.where(values)._defaults(values);
     },
-    virtualColumn: new HasOneVirtualColumn(emptyObject, relationName, state),
+    virtualColumn: new HasOneVirtualColumn(relationName, state),
     joinQuery(fromQuery, toQuery) {
       return addQueryOn(toQuery, fromQuery, toQuery, foreignKey, primaryKey);
     },

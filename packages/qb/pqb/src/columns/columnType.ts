@@ -4,7 +4,6 @@ import {
   BaseOperators,
   ColumnDataBase,
   ColumnTypeBase,
-  ColumnTypesBase,
   HiddenColumn,
   PrimaryKeyColumn,
   pushColumnData,
@@ -125,9 +124,7 @@ export const instantiateColumn = (
   klass: new (...args: never[]) => ColumnType,
   params: ColumnFromDbParams,
 ): ColumnType => {
-  const column = new (klass as unknown as new (
-    types: ColumnTypesBase,
-  ) => ColumnType)({});
+  const column = new (klass as unknown as new () => ColumnType)();
 
   Object.assign(column.data, {
     ...params,

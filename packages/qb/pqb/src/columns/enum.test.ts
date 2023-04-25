@@ -18,7 +18,7 @@ describe('enum column', () => {
   it('should output proper union', async () => {
     const result = await testDb.get(
       testDb.raw(
-        () => new EnumColumn({}, 'mood', ['sad', 'ok', 'happy']),
+        () => new EnumColumn('mood', ['sad', 'ok', 'happy']),
         `'happy'::mood`,
       ),
     );
@@ -28,7 +28,7 @@ describe('enum column', () => {
   });
 
   it('should have toCode', () => {
-    expect(new EnumColumn({}, 'mood', ['sad', 'ok', 'happy']).toCode('t')).toBe(
+    expect(new EnumColumn('mood', ['sad', 'ok', 'happy']).toCode('t')).toBe(
       `t.enum('mood', ['sad', 'ok', 'happy'])`,
     );
   });

@@ -31,7 +31,7 @@ describe('date time columns', () => {
   describe('date', () => {
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.raw(() => new DateColumn({}), `'1999-01-08'::date`),
+        testDb.raw(() => new DateColumn(), `'1999-01-08'::date`),
       );
       expect(result).toBe('1999-01-08');
 
@@ -39,7 +39,7 @@ describe('date time columns', () => {
     });
 
     it('should have toCode', () => {
-      const column = new DateColumn({});
+      const column = new DateColumn();
       expect(column.toCode('t')).toBe('t.date()');
 
       const now = new Date();
@@ -72,22 +72,22 @@ describe('date time columns', () => {
     });
 
     it('should have toCode, ignore default precision', () => {
-      expect(new TimestampColumn({}).toCode('t')).toBe(
+      expect(new TimestampColumn().toCode('t')).toBe(
         't.timestampWithoutTimeZone()',
       );
 
-      expect(new TimestampColumn({}, 10).toCode('t')).toBe(
+      expect(new TimestampColumn(10).toCode('t')).toBe(
         't.timestampWithoutTimeZone(10)',
       );
 
-      expect(new TimestampColumn({}, 6).toCode('t')).toBe(
+      expect(new TimestampColumn(6).toCode('t')).toBe(
         't.timestampWithoutTimeZone()',
       );
 
       const now = new Date();
       const s = now.toISOString();
       expect(
-        new TimestampColumn({})
+        new TimestampColumn()
           .min(now, 'min message')
           .max(now, 'max message')
           .toCode('t'),
@@ -107,7 +107,7 @@ describe('date time columns', () => {
     it('should output string', async () => {
       const result = await testDb.get(
         testDb.raw(
-          () => new TimestampTzColumn({}),
+          () => new TimestampTzColumn(),
           `'1999-01-08 04:05:06 +0'::timestamptz AT TIME ZONE 'UTC'`,
         ),
       );
@@ -117,16 +117,16 @@ describe('date time columns', () => {
     });
 
     it('should have toCode, ignore default precision', () => {
-      expect(new TimestampTzColumn({}).toCode('t')).toBe('t.timestamp()');
+      expect(new TimestampTzColumn().toCode('t')).toBe('t.timestamp()');
 
-      expect(new TimestampTzColumn({}, 6).toCode('t')).toBe('t.timestamp()');
+      expect(new TimestampTzColumn(6).toCode('t')).toBe('t.timestamp()');
 
-      expect(new TimestampTzColumn({}, 10).toCode('t')).toBe('t.timestamp(10)');
+      expect(new TimestampTzColumn(10).toCode('t')).toBe('t.timestamp(10)');
 
       const now = new Date();
       const s = now.toISOString();
       expect(
-        new TimestampTzColumn({})
+        new TimestampTzColumn()
           .min(now, 'min message')
           .max(now, 'max message')
           .toCode('t'),
@@ -141,7 +141,7 @@ describe('date time columns', () => {
   describe('time', () => {
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.raw(() => new TimeColumn({}), `'12:00'::time`),
+        testDb.raw(() => new TimeColumn(), `'12:00'::time`),
       );
       expect(result).toBe('12:00:00');
 
@@ -149,13 +149,13 @@ describe('date time columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(new TimeColumn({}).toCode('t')).toBe('t.time()');
-      expect(new TimeColumn({}, 10).toCode('t')).toBe('t.time(10)');
+      expect(new TimeColumn().toCode('t')).toBe('t.time()');
+      expect(new TimeColumn(10).toCode('t')).toBe('t.time(10)');
 
       const now = new Date();
       const s = now.toISOString();
       expect(
-        new TimeColumn({})
+        new TimeColumn()
           .min(now, 'min message')
           .max(now, 'max message')
           .toCode('t'),
@@ -171,7 +171,7 @@ describe('date time columns', () => {
     it('should output string', async () => {
       const result = await testDb.get(
         testDb.raw(
-          () => new IntervalColumn({}),
+          () => new IntervalColumn(),
           `'1 year 2 months 3 days 4 hours 5 minutes 6 seconds'::interval`,
         ),
       );
@@ -188,11 +188,11 @@ describe('date time columns', () => {
     });
 
     it('should have toCode', () => {
-      expect(new IntervalColumn({}).toCode('t')).toBe('t.interval()');
-      expect(new IntervalColumn({}, 'fields').toCode('t')).toBe(
+      expect(new IntervalColumn().toCode('t')).toBe('t.interval()');
+      expect(new IntervalColumn('fields').toCode('t')).toBe(
         "t.interval('fields')",
       );
-      expect(new IntervalColumn({}, 'fields', 10).toCode('t')).toBe(
+      expect(new IntervalColumn('fields', 10).toCode('t')).toBe(
         "t.interval('fields', 10)",
       );
     });

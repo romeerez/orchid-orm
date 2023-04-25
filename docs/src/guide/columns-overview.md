@@ -77,13 +77,9 @@ export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
     ...t,
     // for autoincementing integer ID:
-    id() {
-      return t.identity.call(this).primaryKey();
-    },
+    id: () => t.identity().primaryKey(),
     // or, for UUID:
-    id() {
-      return t.uuid.call(this).primaryKey();
-    },
+    id: () => t.uuid().primaryKey(),
   }),
 });
 ```
@@ -121,15 +117,11 @@ It is possible to override the parsing of columns returned from the database.
 
 `text` method requires `min` and `max` parameters, you can override it to use defaults:
 
-Note that column depends on passing `this`, so need to call it with `.call(this)`.
-
 ```ts
 export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
     ...t,
-    text(min = 3, max = 100) {
-      return t.text.call(this, min, max)
-    },
+    text: (min = 3, max = 100) => t.text(min, max),
   }),
 })
 ```
@@ -164,7 +156,7 @@ export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
     ...t,
     timestamp() {
-      return t.timestamp.call(this)
+      return t.timestamp
         .encode((input: number) => new Date(input))
         .parse((input) => new Date(input))
         .as(t.integer())
@@ -184,10 +176,8 @@ however, for the specific case of overriding timestamp, there are predefined sho
 export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
     ...t,
-    timestamp() {
-      // or use `.asDate()` to work with Date objects
-      return t.timestamp.call(this).asNumber()
-    },
+    // or use `.asDate()` to work with Date objects
+    timestamp: () => t.timestamp().asNumber(),
   }),
 })
 ```

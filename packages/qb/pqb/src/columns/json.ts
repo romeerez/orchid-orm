@@ -22,7 +22,6 @@ import {
   union,
   JSONTypeAny,
   Code,
-  ColumnTypesBase,
 } from 'orchid-core';
 
 export type JSONTypes = typeof jsonTypes;
@@ -55,10 +54,9 @@ export class JSONColumn<
   declare data: ColumnData & { schema: Type };
 
   constructor(
-    types: ColumnTypesBase,
     schemaOrFn: Type | ((j: JSONTypes) => Type) = scalarTypes.unknown() as Type,
   ) {
-    super(types);
+    super();
 
     this.data.schema =
       typeof schemaOrFn === 'function' ? schemaOrFn(jsonTypes) : schemaOrFn;

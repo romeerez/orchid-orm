@@ -1,6 +1,5 @@
 import { ColumnType } from './columnType';
 import { Operators } from './operators';
-import { ColumnTypesBase } from 'orchid-core';
 
 export type ColumnsShape = Record<string, ColumnType>;
 
@@ -13,8 +12,8 @@ export abstract class ColumnsObject<
   dataType = 'object' as const;
   operators = Operators.any;
 
-  constructor(types: ColumnTypesBase, public shape: Shape) {
-    super(types);
+  constructor(public shape: Shape) {
+    super();
   }
 }
 
@@ -27,8 +26,8 @@ export abstract class ArrayOfColumnsObjects<
   dataType = 'array' as const;
   operators = Operators.any;
 
-  constructor(types: ColumnTypesBase, public shape: Shape) {
-    super(types);
+  constructor(public shape: Shape) {
+    super();
   }
 }
 

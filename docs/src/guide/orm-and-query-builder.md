@@ -85,9 +85,7 @@ export const BaseTable = createBaseTable({
 
   columnTypes: (t) => ({
     // by default timestamp is returned as a stirng, override to a number
-    timestamp() {
-      return t.timestamp.call(this).asNumber()
-    },
+    timestamp: () => t.timestamp().asNumber(),
   }),
 });
 ```
@@ -182,9 +180,7 @@ const db = createDb({
   // override column types:
   columnTypes: (t) => ({
     // by default timestamp is returned as a stirng, override to a number
-    timestamp() {
-      return t.timestamp.call(this).asNumber()
-    },
+    timestamp: () => t.timestamp().asNumber(),
   }),
 })
 

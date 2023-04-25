@@ -287,15 +287,15 @@ const getColumn = (
   } else {
     const domainColumn = domains[`${typeSchema}.${type}`];
     if (domainColumn) {
-      column = new DomainColumn({}, type).as(domainColumn);
+      column = new DomainColumn(type).as(domainColumn);
     } else {
       const enumType = data.enums.find(
         (item) => item.name === type && item.schemaName === typeSchema,
       );
       if (enumType) {
-        column = new EnumColumn({}, type, enumType.values);
+        column = new EnumColumn(type, enumType.values);
       } else {
-        column = new CustomTypeColumn({}, type);
+        column = new CustomTypeColumn(type);
 
         (ctx.unsupportedTypes[type] ??= []).push(
           `${schemaName}${tableName ? `.${tableName}` : ''}.${name}`,
@@ -304,7 +304,7 @@ const getColumn = (
     }
   }
 
-  return isArray ? new ArrayColumn({}, column) : column;
+  return isArray ? new ArrayColumn(column) : column;
 };
 
 const getColumnType = (type: string, isSerial: boolean) => {
@@ -652,9 +652,9 @@ const makeColumnsShape = (
     if (ctx.snakeCase) {
       const snakeCaseName = toSnakeCase(camelCaseName);
 
-      column.data.name = snakeCaseName === item.name ? undefined : item.name;
-    } else {
-      column.data.name = camelCaseName === item.name ? undefined : item.name;
+      if (snakeCaseName !== item.name) column.data.name = item.name;
+    } else if (camelCaseName !== item.name) {
+      column.data.name = item.name;
     }
 
     shape[camelCaseName] = column;

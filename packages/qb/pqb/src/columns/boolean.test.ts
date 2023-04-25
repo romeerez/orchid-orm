@@ -6,7 +6,7 @@ describe('boolean column', () => {
 
   it('should output boolean', async () => {
     const result = await testDb.get(
-      testDb.raw(() => new BooleanColumn({}), `true`),
+      testDb.raw(() => new BooleanColumn(), `true`),
     );
     expect(result).toBe(true);
 
@@ -14,7 +14,7 @@ describe('boolean column', () => {
   });
 
   it('should have toCode', () => {
-    const column = new BooleanColumn({});
+    const column = new BooleanColumn();
 
     expect(column.toCode('t')).toBe('t.boolean()');
   });

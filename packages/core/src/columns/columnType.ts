@@ -3,7 +3,6 @@ import { Code } from './code';
 import { RawExpression } from '../raw';
 import { SetOptional, SomeIsTrue, StringKey } from '../utils';
 import { JSONTypeAny } from './json';
-import { nameKey } from './types';
 import { QueryCommon } from '../query';
 
 // output type of the column
@@ -102,7 +101,6 @@ export type ColumnTypesBase = Record<
   // eslint-disable-next-line @typescript-eslint/ban-types
   AnyColumnTypeCreator
 > & {
-  [nameKey]?: string;
   // snakeCaseKey may be present, but due to problems with TS it can't be listed here
   // [snakeCaseKey]?: boolean;
 };
@@ -207,6 +205,18 @@ export type ColumnChain = (
   | ['superRefine', (input: unknown, ctx: ValidationContext) => unknown]
 )[];
 
+let currentName: string | undefined;
+export function name<T extends ColumnTypesBase>(this: T, name: string): T {
+  currentName = name;
+  return this;
+}
+
+export const consumeColumnName = () => {
+  const name = currentName;
+  currentName = undefined;
+  return name;
+};
+
 // base column type
 export abstract class ColumnTypeBase<
   Type = unknown,
@@ -235,10 +245,11 @@ export abstract class ColumnTypeBase<
   // chain of transformations and validations of the column
   chain = [] as ColumnChain;
 
-  constructor(types: ColumnTypesBase) {
+  constructor() {
     this.data = {} as Data;
-    if (types[nameKey]) {
-      this.data.name = types[nameKey];
+    const name = consumeColumnName();
+    if (name) {
+      this.data.name = name;
     }
   }
 

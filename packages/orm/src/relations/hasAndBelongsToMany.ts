@@ -15,7 +15,7 @@ import {
   WhereArg,
   WhereResult,
 } from 'pqb';
-import { ColumnTypesBase, emptyObject, MaybeArray } from 'orchid-core';
+import { MaybeArray } from 'orchid-core';
 import { hasRelationHandleCreate, hasRelationHandleUpdate } from './utils';
 import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
 
@@ -54,12 +54,8 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn {
   private readonly nestedInsert: HasManyNestedInsert;
   private readonly nestedUpdate: HasManyNestedUpdate;
 
-  constructor(
-    types: ColumnTypesBase,
-    private key: string,
-    private state: State,
-  ) {
-    super(types);
+  constructor(private key: string, private state: State) {
+    super();
     this.nestedInsert = nestedInsert(state);
     this.nestedUpdate = nestedUpdate(state);
   }
@@ -154,11 +150,7 @@ export const makeHasAndBelongsToManyMethod = (
         }),
       );
     },
-    virtualColumn: new HasAndBelongsToManyVirtualColumn(
-      emptyObject,
-      relationName,
-      state,
-    ),
+    virtualColumn: new HasAndBelongsToManyVirtualColumn(relationName, state),
     // joinQuery can be a property of RelationQuery and be used by whereExists and other stuff which needs it
     // and the chained query itself may be a query around this joinQuery
     joinQuery(fromQuery, toQuery) {

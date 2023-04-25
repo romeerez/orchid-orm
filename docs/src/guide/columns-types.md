@@ -181,10 +181,8 @@ Time with time zone is not included because it's discouraged [by Postgres docs](
 export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
     ...t,
-    timestamp() {
-      // or use `.asDate()` to work with Date objects
-      return t.timestamp.call(this).asNumber()
-    },
+    // or use `.asDate()` to work with Date objects
+    timestamp: () => t.timestamp().asNumber(),
   }),
 })
 

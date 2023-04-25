@@ -121,11 +121,11 @@ const buildAggregateSelectItem = <T extends Query>(
   };
 };
 
-const parseIntColumn = new IntegerColumn({}).parse((input) =>
+const parseIntColumn = new IntegerColumn().parse((input) =>
   parseInt(input as unknown as string),
 );
 
-const parseIntOrNullColumn = new IntegerColumn({}).parse((input) =>
+const parseIntOrNullColumn = new IntegerColumn().parse((input) =>
   input === null ? null : parseInt(input as unknown as string),
 );
 

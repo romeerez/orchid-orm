@@ -47,7 +47,7 @@ describe('table', () => {
           return '';
         }
       }
-      const type = new Type({});
+      const type = new Type();
       const BaseTable = createBaseTable({ columnTypes: { type: () => type } });
       class UserTable extends BaseTable {
         readonly table = 'user';

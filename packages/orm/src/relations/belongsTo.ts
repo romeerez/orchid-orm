@@ -14,7 +14,6 @@ import {
   WhereArg,
   WhereResult,
 } from 'pqb';
-import { ColumnTypesBase, emptyObject } from 'orchid-core';
 import { RelationData, RelationThunkBase } from './relations';
 import { NestedInsertOneItem, NestedUpdateOneItem } from './utils';
 
@@ -60,12 +59,8 @@ class BelongsToVirtualColumn extends VirtualColumn {
   private readonly nestedInsert: BelongsToNestedInsert;
   private readonly nestedUpdate: BelongsToNestedUpdate;
 
-  constructor(
-    types: ColumnTypesBase,
-    private key: string,
-    private state: State,
-  ) {
-    super(types);
+  constructor(private key: string, private state: State) {
+    super();
     this.nestedInsert = nestedInsert(this.state);
     this.nestedUpdate = nestedUpdate(this.state);
   }
@@ -144,7 +139,7 @@ export const makeBelongsToMethod = (
     method: (params: Record<string, unknown>) => {
       return query.findBy({ [primaryKey]: params[foreignKey] });
     },
-    virtualColumn: new BelongsToVirtualColumn(emptyObject, relationName, state),
+    virtualColumn: new BelongsToVirtualColumn(relationName, state),
     joinQuery(fromQuery, toQuery) {
       return addQueryOn(toQuery, fromQuery, toQuery, primaryKey, foreignKey);
     },

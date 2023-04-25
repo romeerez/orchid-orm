@@ -159,184 +159,163 @@ export const getColumnTypes = <
   return fn(types);
 };
 
-function text(this: ColumnTypesBase, min: number, max: number) {
-  return new TextColumn(this, min, max);
+function text(min: number, max: number) {
+  return new TextColumn(min, max);
 }
 
 export type DefaultColumnTypes = typeof columnTypes;
 export const columnTypes = {
   name,
   raw,
-  smallint(this: ColumnTypesBase) {
-    return new SmallIntColumn(this);
+  smallint() {
+    return new SmallIntColumn();
   },
-  integer(this: ColumnTypesBase) {
-    return new IntegerColumn(this);
+  integer() {
+    return new IntegerColumn();
   },
-  bigint(this: ColumnTypesBase) {
-    return new BigIntColumn(this);
+  bigint() {
+    return new BigIntColumn();
   },
   numeric<
     Precision extends number | undefined = undefined,
     Scale extends number | undefined = undefined,
-  >(this: ColumnTypesBase, precision?: Precision, scale?: Scale) {
-    return new DecimalColumn(this, precision, scale);
+  >(precision?: Precision, scale?: Scale) {
+    return new DecimalColumn(precision, scale);
   },
   decimal<
     Precision extends number | undefined = undefined,
     Scale extends number | undefined = undefined,
-  >(this: ColumnTypesBase, precision?: Precision, scale?: Scale) {
-    return new DecimalColumn(this, precision, scale);
+  >(precision?: Precision, scale?: Scale) {
+    return new DecimalColumn(precision, scale);
   },
-  real(this: ColumnTypesBase) {
-    return new RealColumn(this);
+  real() {
+    return new RealColumn();
   },
-  doublePrecision(this: ColumnTypesBase) {
-    return new DoublePrecisionColumn(this);
+  doublePrecision() {
+    return new DoublePrecisionColumn();
   },
-  identity(this: ColumnTypesBase, options?: TableData.Identity) {
-    return new IntegerColumn(this).identity(options);
+  identity(options?: TableData.Identity) {
+    return new IntegerColumn().identity(options);
   },
-  smallSerial(this: ColumnTypesBase) {
-    return new SmallSerialColumn(this);
+  smallSerial() {
+    return new SmallSerialColumn();
   },
-  serial(this: ColumnTypesBase) {
-    return new SerialColumn(this);
+  serial() {
+    return new SerialColumn();
   },
-  bigSerial(this: ColumnTypesBase) {
-    return new BigSerialColumn(this);
+  bigSerial() {
+    return new BigSerialColumn();
   },
-  money(this: ColumnTypesBase) {
-    return new MoneyColumn(this);
+  money() {
+    return new MoneyColumn();
   },
-  varchar<Limit extends number | undefined = undefined>(
-    this: ColumnTypesBase,
-    limit?: Limit,
-  ) {
-    return new VarCharColumn(this, limit);
+  varchar<Limit extends number | undefined = undefined>(limit?: Limit) {
+    return new VarCharColumn(limit);
   },
-  char<Limit extends number | undefined = undefined>(
-    this: ColumnTypesBase,
-    limit?: Limit,
-  ) {
-    return new CharColumn(this, limit);
+  char<Limit extends number | undefined = undefined>(limit?: Limit) {
+    return new CharColumn(limit);
   },
   text,
   string: text,
-  citext(this: ColumnTypesBase, min: number, max: number) {
-    return new CitextColumn(this, min, max);
+  citext(min: number, max: number) {
+    return new CitextColumn(min, max);
   },
-  bytea(this: ColumnTypesBase) {
-    return new ByteaColumn(this);
+  bytea() {
+    return new ByteaColumn();
   },
-  date(this: ColumnTypesBase) {
-    return new DateColumn(this);
+  date() {
+    return new DateColumn();
   },
-  timestampWithoutTimeZone<Precision extends number>(
-    this: ColumnTypesBase,
-    precision?: Precision,
-  ) {
-    return new TimestampColumn(this, precision);
+  timestampWithoutTimeZone<Precision extends number>(precision?: Precision) {
+    return new TimestampColumn(precision);
   },
   timestamp<Precision extends number | undefined = undefined>(
-    this: ColumnTypesBase,
     precision?: Precision,
   ) {
-    return new TimestampTzColumn(this, precision);
+    return new TimestampTzColumn(precision);
   },
   time<Precision extends number | undefined = undefined>(
-    this: ColumnTypesBase,
     precision?: Precision,
   ) {
-    return new TimeColumn(this, precision);
+    return new TimeColumn(precision);
   },
   interval<
     Fields extends string | undefined = undefined,
     Precision extends number | undefined = undefined,
-  >(this: ColumnTypesBase, fields?: Fields, precision?: Precision) {
-    return new IntervalColumn(this, fields, precision);
+  >(fields?: Fields, precision?: Precision) {
+    return new IntervalColumn(fields, precision);
   },
-  boolean(this: ColumnTypesBase) {
-    return new BooleanColumn(this);
+  boolean() {
+    return new BooleanColumn();
   },
-  enum<U extends string, T extends [U, ...U[]]>(
-    this: ColumnTypesBase,
-    dataType: string,
-    type: T,
-  ) {
-    return new EnumColumn<U, T>(this, dataType, type);
+  enum<U extends string, T extends [U, ...U[]]>(dataType: string, type: T) {
+    return new EnumColumn<U, T>(dataType, type);
   },
-  point(this: ColumnTypesBase) {
-    return new PointColumn(this);
+  point() {
+    return new PointColumn();
   },
-  line(this: ColumnTypesBase) {
-    return new LineColumn(this);
+  line() {
+    return new LineColumn();
   },
-  lseg(this: ColumnTypesBase) {
-    return new LsegColumn(this);
+  lseg() {
+    return new LsegColumn();
   },
-  box(this: ColumnTypesBase) {
-    return new BoxColumn(this);
+  box() {
+    return new BoxColumn();
   },
-  path(this: ColumnTypesBase) {
-    return new PathColumn(this);
+  path() {
+    return new PathColumn();
   },
-  polygon(this: ColumnTypesBase) {
-    return new PolygonColumn(this);
+  polygon() {
+    return new PolygonColumn();
   },
-  circle(this: ColumnTypesBase) {
-    return new CircleColumn(this);
+  circle() {
+    return new CircleColumn();
   },
-  cidr(this: ColumnTypesBase) {
-    return new CidrColumn(this);
+  cidr() {
+    return new CidrColumn();
   },
-  inet(this: ColumnTypesBase) {
-    return new InetColumn(this);
+  inet() {
+    return new InetColumn();
   },
-  macaddr(this: ColumnTypesBase) {
-    return new MacAddrColumn(this);
+  macaddr() {
+    return new MacAddrColumn();
   },
-  macaddr8(this: ColumnTypesBase) {
-    return new MacAddr8Column(this);
+  macaddr8() {
+    return new MacAddr8Column();
   },
-  bit<Length extends number>(this: ColumnTypesBase, length: Length) {
-    return new BitColumn(this, length);
+  bit<Length extends number>(length: Length) {
+    return new BitColumn(length);
   },
-  bitVarying<Length extends number | undefined = undefined>(
-    this: ColumnTypesBase,
-    length?: Length,
-  ) {
-    return new BitVaryingColumn(this, length);
+  bitVarying<Length extends number | undefined = undefined>(length?: Length) {
+    return new BitVaryingColumn(length);
   },
-  tsvector(this: ColumnTypesBase) {
-    return new TsVectorColumn(this);
+  tsvector() {
+    return new TsVectorColumn();
   },
-  tsquery(this: ColumnTypesBase) {
-    return new TsQueryColumn(this);
+  tsquery() {
+    return new TsQueryColumn();
   },
-  uuid(this: ColumnTypesBase) {
-    return new UUIDColumn(this);
+  uuid() {
+    return new UUIDColumn();
   },
-  xml(this: ColumnTypesBase) {
-    return new XMLColumn(this);
+  xml() {
+    return new XMLColumn();
   },
-  json<Type extends JSONTypeAny>(
-    this: ColumnTypesBase,
-    schemaOrFn: Type | ((j: JSONTypes) => Type),
-  ) {
-    return new JSONColumn(this, schemaOrFn);
+  json<Type extends JSONTypeAny>(schemaOrFn: Type | ((j: JSONTypes) => Type)) {
+    return new JSONColumn(schemaOrFn);
   },
-  jsonText(this: ColumnTypesBase) {
-    return new JSONTextColumn(this);
+  jsonText() {
+    return new JSONTextColumn();
   },
-  array<Item extends ColumnType>(this: ColumnTypesBase, item: Item) {
-    return new ArrayColumn(this, item);
+  array<Item extends ColumnType>(item: Item) {
+    return new ArrayColumn(item);
   },
-  type(this: ColumnTypesBase, dataType: string) {
-    return new CustomTypeColumn(this, dataType);
+  type(dataType: string) {
+    return new CustomTypeColumn(dataType);
   },
-  domain(this: ColumnTypesBase, dataType: string) {
-    return new DomainColumn(this, dataType);
+  domain(dataType: string) {
+    return new DomainColumn(dataType);
   },
 
   primaryKey(columns: string[], options?: { name?: string }) {

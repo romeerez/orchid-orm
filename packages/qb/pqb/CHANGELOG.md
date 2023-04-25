@@ -1,5 +1,13 @@
 # pqb
 
+## 0.11.9
+
+### Patch Changes
+
+- Make passing this not required when customizing column types
+- Updated dependencies
+  - orchid-core@0.4.2
+
 ## 0.11.8
 
 ### Patch Changes

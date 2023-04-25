@@ -3,7 +3,7 @@ import { JSONColumn, JSONTextColumn } from './json';
 describe('json columns', () => {
   describe('json', () => {
     it('should have toCode', () => {
-      expect(new JSONColumn({}, (t) => t.string()).toCode('t')).toBe(
+      expect(new JSONColumn((t) => t.string()).toCode('t')).toBe(
         't.json((t) => t.string())',
       );
     });
@@ -11,7 +11,7 @@ describe('json columns', () => {
 
   describe('jsonText', () => {
     it('should have toCode', () => {
-      expect(new JSONTextColumn({}).toCode('t')).toBe('t.jsonText()');
+      expect(new JSONTextColumn().toCode('t')).toBe('t.jsonText()');
     });
   });
 });

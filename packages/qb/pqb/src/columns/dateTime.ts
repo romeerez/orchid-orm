@@ -5,8 +5,6 @@ import {
   Code,
   joinTruthy,
   DateColumnData,
-  nameKey,
-  ColumnTypesBase,
   dateDataToCode,
   EncodeColumn,
   ParseColumn,
@@ -38,7 +36,7 @@ export abstract class DateBaseColumn extends ColumnType<
 
   asNumber() {
     return this.parse(Date.parse).as(
-      new IntegerColumn({ [nameKey]: this.data.name }) as never,
+      new IntegerColumn() as never,
     ) as unknown as EncodeColumn<IntegerColumn, string | number | Date>;
   }
 
@@ -68,8 +66,8 @@ export abstract class DateTimeBaseClass<
 > extends DateBaseColumn {
   declare data: DateColumnData & { dateTimePrecision: Precision };
 
-  constructor(types: ColumnTypesBase, dateTimePrecision?: Precision) {
-    super(types);
+  constructor(dateTimePrecision?: Precision) {
+    super();
     this.data.dateTimePrecision = dateTimePrecision as Precision;
   }
 
@@ -169,8 +167,8 @@ export class IntervalColumn<
   declare data: ColumnData & { fields: Fields; precision: Precision };
   operators = Operators.date;
 
-  constructor(types: ColumnTypesBase, fields?: Fields, precision?: Precision) {
-    super(types);
+  constructor(fields?: Fields, precision?: Precision) {
+    super();
     this.data.fields = fields as Fields;
     this.data.precision = precision as Precision;
   }
