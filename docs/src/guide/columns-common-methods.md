@@ -20,7 +20,7 @@ export class Table extends BaseTable {
 }
 
 // primary key can be used by `find` later:
-db.table.find('97ba9e78-7510-415a-9c03-23d440aec443')
+db.table.find('97ba9e78-7510-415a-9c03-23d440aec443');
 ```
 
 ## default
@@ -95,7 +95,7 @@ Supported options:
 type IdentityOptions = {
   // false by default, set to true for GENERATE ALWAYS
   always?: boolean;
-  
+
   // identity sequence options, check postgres docs for details:
   incrementBy?: number;
   startWith?: number;
@@ -103,7 +103,7 @@ type IdentityOptions = {
   max?: number;
   cache?: number;
   cycle?: boolean;
-}
+};
 ```
 
 ## name
@@ -130,14 +130,16 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     // encode boolean, number, or string to text before saving
-    column: t.text(3, 100).encode((input: boolean | number | string) => String(input))
+    column: t
+      .text(3, 100)
+      .encode((input: boolean | number | string) => String(input)),
   }));
 }
 
 // numbers and booleans will be converted to a string:
-await db.table.create({ column: 123 })
-await db.table.create({ column: true })
-await db.table.where({ column: 'true' }).update({ column: false })
+await db.table.create({ column: 123 });
+await db.table.create({ column: true });
+await db.table.where({ column: 'true' }).update({ column: false });
 ```
 
 ## parse
@@ -151,12 +153,12 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     // parse text to integer
-    column: t.text(3, 100).parse((input) => parseInt(input))
+    column: t.text(3, 100).parse((input) => parseInt(input)),
   }));
 }
 
 // column will be parsed to a number
-const value: number = await db.table.get('column')
+const value: number = await db.table.get('column');
 ```
 
 ## as
@@ -169,10 +171,11 @@ and `.parse` which returns the correct type.
 
 ```ts
 // column has the same type as t.integer()
-const column = t.text(1, 100)
+const column = t
+  .text(1, 100)
   .encode((input: number) => input)
   .parse((text) => parseInt(text))
-  .as(t.integer())
+  .as(t.integer());
 ```
 
 ## timestamps
@@ -207,7 +210,7 @@ export class SomeTable extends BaseTable {
     name: t.text(3, 100).modifyQuery((table) => {
       // table argument is the query interface of SomeTable
     }),
-  }))
+  }));
 }
 ```
 

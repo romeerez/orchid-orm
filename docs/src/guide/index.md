@@ -17,15 +17,15 @@ ORMs in OOP languages make it so all the records loaded from the database are in
 and it is allowed to call methods on these instances, this is called Active Record pattern. For example:
 
 ```ts
-const post = await Post.findBy({ id: 123 })
-await post.update({ title: 'new title' })
+const post = await Post.findBy({ id: 123 });
+await post.update({ title: 'new title' });
 ```
 
 Orchid ORM is designed with different goals, so the records are returned as a plain objects, for example:
 
 ```ts
-const post = await Post.findBy({ id: 123 })
-await Post.update(post, { title: 'new title' })
+const post = await Post.findBy({ id: 123 });
+await Post.update(post, { title: 'new title' });
 ```
 
 This is done because instantiating records consumes some CPU time,
@@ -60,7 +60,7 @@ Other ORMs take different ways of defining models:
 With `Orchid ORM` you write table classes in a such way:
 
 ```ts
-export type User = UserTable['columns']['type']
+export type User = UserTable['columns']['type'];
 export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
@@ -69,8 +69,8 @@ export class UserTable extends BaseTable {
     password: t.text(8, 200),
     // adds createdAt and updatedAt with defaults:
     ...t.timestamps(),
-  }))
-  
+  }));
+
   relations = {
     // User has one Profile, user.id -> profile.userId
     // there are also belongsTo, hasMany, hasAndBelongsToMany
@@ -79,7 +79,7 @@ export class UserTable extends BaseTable {
       primaryKey: 'id',
       foreignKey: 'userId',
     }),
-  }
+  };
 }
 ```
 
@@ -108,7 +108,7 @@ const posts = await db.post
 
     // select the number of post comments:
     commentsCount: (q) => q.comments.count(),
-  })
+  });
 ```
 
 `Orchid ORM` allows you to define custom chainable methods (via [repository](/guide/orm-repo)) to write clean abstract queries like:
@@ -119,5 +119,5 @@ const posts = await postRepo
   .search('word')
   .filterByTags(['tag 1', 'tag 2'])
   .orderByPopularity()
-  .limit(20)
+  .limit(20);
 ```

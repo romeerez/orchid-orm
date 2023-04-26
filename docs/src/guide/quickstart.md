@@ -150,7 +150,7 @@ export const BaseTable = createBaseTable({
 // src/db/dbScript.ts
 
 export const change = rakeDb(config.database, {
-  snakeCase: true
+  snakeCase: true,
   // ...other options
 });
 ```
@@ -183,8 +183,7 @@ The file with such content will appear in the `src/db/migrations` directory:
 import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.createTable('sample', (t) => ({
-  }));
+  await db.createTable('sample', (t) => ({}));
 });
 ```
 
@@ -216,16 +215,16 @@ this is needed to prevent unpleasant situations when empty or huge texts are sub
 
 ```ts
 // src/sb/tables/sample.table.ts
-import { BaseTable } from './baseTable'
+import { BaseTable } from './baseTable';
 
 export class SampleTable extends BaseTable {
-  readonly table = 'sample'
+  readonly table = 'sample';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     // specify min and max length
     text: t.text(1, 10000),
     ...t.timestamps(),
-  }))
+  }));
 }
 ```
 
@@ -250,14 +249,14 @@ Example usage:
 
 ```ts
 // src/hello.ts
-import { db } from './db'
+import { db } from './db';
 
 const main = async () => {
   // load all records
-  const records = await db.sample
+  const records = await db.sample;
 
   // load first record
-  const first = await db.sample.take()
+  const first = await db.sample.take();
 
   // select, where, order, limit, offset, etc
   const result = await db.sample
@@ -265,14 +264,14 @@ const main = async () => {
     .where({ name: 'name' })
     .order({ name: 'DESC' })
     .limit(10)
-    .offset(10)
+    .offset(10);
 
   // find by id
-  const recordById = await db.sample.find(123)
+  const recordById = await db.sample.find(123);
 
   // find one by conditions
-  const record = await db.sample.findBy({ name: 'name' })
-}
+  const record = await db.sample.findBy({ name: 'name' });
+};
 
-main()
+main();
 ```

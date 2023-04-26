@@ -92,8 +92,7 @@ await db.post
     lastComments: (q) =>
       q.comments
         .select('id', 'text', {
-          author: (q) =>
-            q.author.select('id', 'firstName', 'lastName'),
+          author: (q) => q.author.select('id', 'firstName', 'lastName'),
         })
         .order({ createdAt: 'DESC' })
         .limit(commentsPerPost),

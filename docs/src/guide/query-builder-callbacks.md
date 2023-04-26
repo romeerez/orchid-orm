@@ -6,10 +6,10 @@ Callbacks are executed concurrently by using `Promise.all` under the hood.
 
 ```ts
 // query is a query object
-type BeforeCallback = (query: Query) => void | Promise<void>
+type BeforeCallback = (query: Query) => void | Promise<void>;
 
 // query is a query object, data is the result of the query
-type AfterCallback = (query: Query, data: unknown) => void | Promise<void>
+type AfterCallback = (query: Query, data: unknown) => void | Promise<void>;
 ```
 
 ## beforeQuery, afterQuery
@@ -24,7 +24,7 @@ If the query has both `afterQuery` and `afterCreate`, `afterCreate` will run las
 await db.table
   .beforeQuery(() => console.log('before query'))
   .afterQuery((_, data) => console.log('after query', data))
-  .all()
+  .all();
 ```
 
 ## beforeCreate, afterCreate
@@ -35,7 +35,7 @@ await db.table
 await db.table
   .beforeCreate(() => console.log('before create'))
   .afterCreate((_, data) => console.log('after create', data))
-  .create(data)
+  .create(data);
 ```
 
 ## beforeUpdate, afterUpdate
@@ -47,7 +47,7 @@ await db.table
   .beforeUpdate(() => console.log('before update'))
   .afterUpdate((_, data) => console.log('after update', data))
   .where({ ...conditions })
-  .update({ key: 'value' })
+  .update({ key: 'value' });
 ```
 
 ## beforeDelete, afterDelete
@@ -59,5 +59,5 @@ await db.table
   .beforeDelete(() => console.log('before delete'))
   .afterDelete((_, data) => console.log('after delete', data))
   .where({ ...conditions })
-  .delete()
+  .delete();
 ```

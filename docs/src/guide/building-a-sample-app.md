@@ -15,93 +15,101 @@ Full code is available [here](https://github.com/romeerez/orchid-orm-examples/tr
 ## API routes
 
 - **POST** `/users`: register new user
-    * JSON payload:
-        - **username**: string
-        - **email**: string
-        - **password**: string
-    * Responds with user object and auth token
+
+  - JSON payload:
+    - **username**: string
+    - **email**: string
+    - **password**: string
+  - Responds with user object and auth token
 
 - **POST** `/users/auth`: login
-    * JSON payload:
-        - **email**: string
-        - **password**: string
-    * Responds with user object and auth token
+
+  - JSON payload:
+    - **email**: string
+    - **password**: string
+  - Responds with user object and auth token
 
 - **POST** `/users/:username/follow`: follow a user
-    * No payload and no response needed
+
+  - No payload and no response needed
 
 - **DELETE** `/users/:username/follow`: unfollow a user
-    * No payload and no response needed
+
+  - No payload and no response needed
 
 - **GET** `/articles`: get a list of articles
-    * URI params:
-        - **author**: filter articles by the username of the author
-        - **tag**: filter articles by tag
-        - **feed**: list articles only from authors which the current user is following
-        - **favorite**: list only articles favorited by the current user
-        - **limit**: limit articles
-        - **offset**: offset articles
-    * Responds with article data
+
+  - URI params:
+    - **author**: filter articles by the username of the author
+    - **tag**: filter articles by tag
+    - **feed**: list articles only from authors which the current user is following
+    - **favorite**: list only articles favorited by the current user
+    - **limit**: limit articles
+    - **offset**: offset articles
+  - Responds with article data
 
 - **POST** `/articles`: create a new article
-    * JSON payload:
-        - **slug**: string
-        - **title**: string
-        - **body**: string
-        - **tags**: array of strings
-    * Responds with article data
+
+  - JSON payload:
+    - **slug**: string
+    - **title**: string
+    - **body**: string
+    - **tags**: array of strings
+  - Responds with article data
 
 - **PATCH** `/articles/:slug`: update article
-    * JSON payload:
-        - **slug**?: string
-        - **title**?: string
-        - **body**?: string
-        - **tags**?: array of strings
-    * Responds with article data
+
+  - JSON payload:
+    - **slug**?: string
+    - **title**?: string
+    - **body**?: string
+    - **tags**?: array of strings
+  - Responds with article data
 
 - **POST** `/articles/:slug/favorite`
-    * JSON payload:
-        - **favorite**: true to make favorite, false to un-favorite the article
-    * No response is needed
+
+  - JSON payload:
+    - **favorite**: true to make favorite, false to un-favorite the article
+  - No response is needed
 
 - **DELETE** `/articles/:slug`: delete article
-    * No response is needed
+  - No response is needed
 
 Register and login responses should be of the following type:
 
 ```ts
 type AuthResponse = {
   user: {
-    id: number
-    username: string
-    email: string
-  }
-  token: string
-}
+    id: number;
+    username: string;
+    email: string;
+  };
+  token: string;
+};
 ```
 
 ```ts
 type ArticleResponse = {
-  slug: string
-  title: string
-  body: string
+  slug: string;
+  title: string;
+  body: string;
   // how much users have favorited this article
-  favoritesCount: number
+  favoritesCount: number;
   // whether requesting user has favorited this article
-  favorited: boolean
-  tags: string[]
+  favorited: boolean;
+  tags: string[];
   author: {
-    username: string
+    username: string;
     // following means if the user who performs the request is following this user
-    following: boolean
-  }
-  
+    following: boolean;
+  };
+
   // Postgres is returning dates in such format: `2022-11-04 10:53:02.129306 +00:00`
   // but this format is not supported by all browsers
   // As a bonus, both transferring and parsing date as an epoch number is more efficient, so let's use numbers for dates:
-  createdAt: number
-  udpatedAt: number
-}
+  createdAt: number;
+  udpatedAt: number;
+};
 ```
 
 ## initialize the project
@@ -217,7 +225,7 @@ export const db = orchidORM(
   },
   {
     // tables will be listed here
-  }
+  },
 );
 ```
 
@@ -340,9 +348,7 @@ Add it to `package.json` "jest" section:
 ```json
 {
   "jest": {
-    "setupFilesAfterEnv": [
-      "./jest-setup.ts"
-    ]
+    "setupFilesAfterEnv": ["./jest-setup.ts"]
   }
 }
 ```
@@ -375,8 +381,7 @@ In the newly added file such content appears:
 import { change } from '../scripts/db';
 
 change(async (db) => {
-  await db.createTable('user', (t) => ({
-  }));
+  await db.createTable('user', (t) => ({}));
 });
 ```
 
@@ -466,7 +471,7 @@ Consider the `email` column:
 ```ts
 t.text() // this is a column type
   .unique() // mark the column as `unique`, this is used by migration and by test factory
-  .email() // validates email
+  .email(); // validates email
 ```
 
 Now that we have table class, and it is registered in `db.ts`, we can write queries like `db.user.count()`, `db.user.select(...)`, and many others.
@@ -508,7 +513,7 @@ describe('user controller', () => {
       const res = await testRequest.post('/users', data);
 
       // ensure that response has a correct data
-      const json = res.json()
+      const json = res.json();
       expect(json).toMatchObject({
         user: {
           username: data.username,
@@ -573,12 +578,10 @@ Add `JWT_SECRET` to the `.env` file and `config.ts`:
 ```ts
 // src/config.ts
 
-const env = z
-  .object({
-    // ...snip
-    JWT_SECRET: z.string(),
-  })
-
+const env = z.object({
+  // ...snip
+  JWT_SECRET: z.string(),
+});
 ```
 
 Here are utility functions for JSON web tokens:
@@ -610,7 +613,7 @@ export const encryptPassword = async (password: string): Promise<string> => {
 
 export const comparePassword = async (
   password: string,
-  encrypted: string
+  encrypted: string,
 ): Promise<boolean> => {
   return await compare(password, encrypted);
 };
@@ -621,11 +624,11 @@ Now that we have `verifyToken` and `comparePassword`, we can use them in the tes
 ```ts
 it('should register a new user, save it with hashed password, return a user and a token', async () => {
   // ...snip
-  
+
   expect(verifyToken(json.token)).toMatchObject({ id: savedUser.id });
-  
+
   expect(comparePassword(data.password, savedUser.password));
-})
+});
 ```
 
 Every node.js framework and even specific project usually have own custom way of validating request parameters,
@@ -650,13 +653,13 @@ import { userSchema } from './user.table';
 app.patch('/users/:id', (req, res) => {
   // picking id from userSchema, it could be an integer or uuid,
   // we don't have to know that in the controller
-  const { id } = userSchema.pick({ id: true }).parse(req.params)
-  
+  const { id } = userSchema.pick({ id: true }).parse(req.params);
+
   // parsing req.body by using userSchema
-  const data = userSchema.omit({ id: true }).parse(req.body)
-  
+  const data = userSchema.omit({ id: true }).parse(req.body);
+
   // using id and data to update user
-})
+});
 ```
 
 From our API spec, we can see that both the registration and login endpoint returns the same shape of data: user object and token,
@@ -721,7 +724,7 @@ export const registerUserRoute = routeHandler(
       }
       throw err;
     }
-  }
+  },
 );
 ```
 
@@ -846,7 +849,7 @@ export const loginUser = routeHandler(
       user: omit(user, 'password'),
       token: createToken({ id: user.id }),
     };
-  }
+  },
 );
 ```
 
@@ -926,7 +929,7 @@ import { UserFollowTable } from './userFollow.table';
 
 export class UserTable extends BaseTable {
   // ...snip
-  
+
   relations = {
     follows: this.hasMany(() => UserFollowTable, {
       primaryKey: 'id',
@@ -946,77 +949,72 @@ Tests for the follow/unfollow endpoints:
 ```ts
 // src/app/user/user.controller.test.ts
 
-  describe('POST /users/:username/follow', () => {
-    it('should follow a user', async () => {
-      // create a user to perform the request from
-      const currentUser = await userFactory.create();
-      // create a user to follow
-      const userToFollow = await userFactory.create();
+describe('POST /users/:username/follow', () => {
+  it('should follow a user', async () => {
+    // create a user to perform the request from
+    const currentUser = await userFactory.create();
+    // create a user to follow
+    const userToFollow = await userFactory.create();
 
-      // perform request as a provided user
-      await testRequest
-        .as(currentUser)
-        .post(`/users/${userToFollow.username}/follow`);
+    // perform request as a provided user
+    await testRequest
+      .as(currentUser)
+      .post(`/users/${userToFollow.username}/follow`);
 
-      
-      // check that the userFollow record exists in the database
-      const follows = await db.userFollow.where({
+    // check that the userFollow record exists in the database
+    const follows = await db.userFollow.where({
+      followingId: userToFollow.id,
+    });
+    expect(follows).toEqual([
+      {
+        followerId: currentUser.id,
         followingId: userToFollow.id,
-      });
-      expect(follows).toEqual([
-        {
-          followerId: currentUser.id,
-          followingId: userToFollow.id,
-        },
-      ]);
-    });
-
-    it('should return not found error when no user found by username', async () => {
-      const currentUser = await userFactory.create();
-
-      const res = await testRequest
-        .as(currentUser)
-        .post(`/users/lalala/follow`);
-
-      expect(res.json()).toEqual({
-        message: 'Record is not found',
-      });
-    });
+      },
+    ]);
   });
 
-  describe('DELETE /users/:username/follow', () => {
-    it('should unfollow a user', async () => {
-      const currentUser = await userFactory.create();
-      const userToFollow = await userFactory.create({
-        follows: { create: [{ followerId: currentUser.id }] },
-      });
+  it('should return not found error when no user found by username', async () => {
+    const currentUser = await userFactory.create();
 
-      await testRequest
-        .as(currentUser)
-        .delete(`/users/${userToFollow.username}/follow`);
+    const res = await testRequest.as(currentUser).post(`/users/lalala/follow`);
 
-      const follows = await db.userFollow.where({
-        followingId: userToFollow.id,
-      });
-      expect(follows).toEqual([]);
-    });
-
-    it('should return not found error when no user found by username', async () => {
-      const currentUser = await userFactory.create();
-
-      const res = await testRequest
-        .as(currentUser)
-        .post(`/users/lalala/follow`);
-
-      // check that such userFollow record doesn't exist
-      const exists = await db.userFollow
-        .where({
-          followingId: userToFollow.id,
-        })
-        .exists();
-      expect(exists).toEqual(false);
+    expect(res.json()).toEqual({
+      message: 'Record is not found',
     });
   });
+});
+
+describe('DELETE /users/:username/follow', () => {
+  it('should unfollow a user', async () => {
+    const currentUser = await userFactory.create();
+    const userToFollow = await userFactory.create({
+      follows: { create: [{ followerId: currentUser.id }] },
+    });
+
+    await testRequest
+      .as(currentUser)
+      .delete(`/users/${userToFollow.username}/follow`);
+
+    const follows = await db.userFollow.where({
+      followingId: userToFollow.id,
+    });
+    expect(follows).toEqual([]);
+  });
+
+  it('should return not found error when no user found by username', async () => {
+    const currentUser = await userFactory.create();
+
+    const res = await testRequest.as(currentUser).post(`/users/lalala/follow`);
+
+    // check that such userFollow record doesn't exist
+    const exists = await db.userFollow
+      .where({
+        followingId: userToFollow.id,
+      })
+      .exists();
+    expect(exists).toEqual(false);
+  });
+});
 ```
 
 Follow user controller:
@@ -1040,7 +1038,7 @@ export const followUserRoute = routeHandler(
       .follows.create({
         followerId: userId,
       });
-  }
+  },
 );
 ```
 
@@ -1084,7 +1082,7 @@ export const unfollowUserRoute = routeHandler(
         followerId: userId,
       })
       .delete();
-  }
+  },
 );
 ```
 
@@ -1465,7 +1463,7 @@ describe('article controller', () => {
             query: {
               feed: 'true',
             },
-          })
+          }),
         );
 
         it('should return articles from followed authors for authorized user', async () => {
@@ -1500,7 +1498,7 @@ describe('article controller', () => {
           expect(data).toMatchObject(
             expectedArticles
               .reverse()
-              .map((article) => ({ slug: article.slug }))
+              .map((article) => ({ slug: article.slug })),
           );
         });
       });
@@ -1511,7 +1509,7 @@ describe('article controller', () => {
             query: {
               favorite: 'true',
             },
-          })
+          }),
         );
 
         it('should returns only articles favorited by current user', async () => {
@@ -1540,7 +1538,7 @@ describe('article controller', () => {
           expect(data).toMatchObject(
             favoritedArticles
               .reverse()
-              .map((article) => ({ slug: article.slug }))
+              .map((article) => ({ slug: article.slug })),
           );
         });
       });
@@ -1556,7 +1554,7 @@ Note that all nested create code of the `userFactory` and `articleFactory` is al
 ```ts
 // src/lib/test/testUtils.ts
 export const itShouldRequireAuth = (
-  req: () => Promise<{ statusCode: number; json(): unknown }>
+  req: () => Promise<{ statusCode: number; json(): unknown }>,
 ) => {
   it('should require authorization', async () => {
     const res = await req();
@@ -1604,9 +1602,9 @@ export const articleDto = articleSchema
         .and(
           z.object({
             following: z.boolean(),
-          })
+          }),
         ),
-    })
+    }),
   );
 ```
 
@@ -1654,10 +1652,10 @@ export const listArticlesRoute = routeHandler(
           tags: (q) => q.tags.order('name').pluck('name'),
           favorited: (q) =>
             currentUserId
-              // if currentUserId is defined, return exists query
-              ? q.favorites.where({ userId: currentUserId }).exists()
-              // if no currentUserId, return raw 'false' SQL of boolean type
-              : q.raw((t) => t.boolean(), 'false'),
+              ? // if currentUserId is defined, return exists query
+                q.favorites.where({ userId: currentUserId }).exists()
+              : // if no currentUserId, return raw 'false' SQL of boolean type
+                q.raw((t) => t.boolean(), 'false'),
           author: (q) =>
             q.author.select('username', {
               // we load the following similar to the favorited above
@@ -1665,7 +1663,7 @@ export const listArticlesRoute = routeHandler(
                 ? (q) => q.follows.where({ followerId: currentUserId }).exists()
                 : q.raw((t) => t.boolean(), 'false'),
             }),
-        }
+        },
       )
       .order({
         createdAt: 'DESC',
@@ -1678,13 +1676,13 @@ export const listArticlesRoute = routeHandler(
     // filtering articles by author, tag, and other relations by using `whereExists`
     if (req.query.author) {
       query = query.whereExists('author', (q) =>
-        q.where({ username: req.query.author })
+        q.where({ username: req.query.author }),
       );
     }
 
     if (req.query.tag) {
       query = query.whereExists('tags', (q) =>
-        q.where({ name: req.query.tag })
+        q.where({ name: req.query.tag }),
       );
     }
 
@@ -1695,21 +1693,21 @@ export const listArticlesRoute = routeHandler(
         query = query.whereExists('author', (q) =>
           // `whereExists` can be nested to filter by the relation of the relation
           q.whereExists('follows', (q) =>
-            q.where({ followerId: currentUserId })
-          )
+            q.where({ followerId: currentUserId }),
+          ),
         );
       }
 
       if (req.query.favorite) {
         query = query.whereExists('favorites', (q) =>
-          q.where({ userId: currentUserId })
+          q.where({ userId: currentUserId }),
         );
       }
     }
 
     // query is Promise-like and will be awaited automatically
     return query;
-  }
+  },
 );
 ```
 
@@ -1765,7 +1763,7 @@ export const articleDto = articleSchema
       //     })
       //   ),
       author: userDto,
-    })
+    }),
   );
 ```
 
@@ -1780,7 +1778,7 @@ export const userDto = userSchema
   .and(
     z.object({
       following: z.boolean(),
-    })
+    }),
   );
 ```
 
@@ -1813,18 +1811,17 @@ import { userRepo } from '../user/user.repo';
 export const listArticlesRoute = routeHandler(
   // ...snip
   (req) => {
-    let query = db.article
-      .select(
+    let query = db.article.select(
+      // ...snip
+      {
         // ...snip
-        {
-          // ...snip
-          author: (q) => userRepo(q.author).selectDto(currentUserId),
-        }
-      )
-    
+        author: (q) => userRepo(q.author).selectDto(currentUserId),
+      },
+    );
+
     // ...snip
-  }
-)
+  },
+);
 ```
 
 Note that in the `user.repo.ts` the `selectDto` has two arguments: first is a user query, and second is `currentUserId`.
@@ -1858,7 +1855,7 @@ export const articleRepo = createRepo(db.article, {
             ? (q) => q.favorites.where({ userId: currentUserId }).exists()
             : q.raw((t) => t.boolean(), 'false'),
           author: (q) => userRepo(q.author).selectDto(currentUserId),
-        }
+        },
       );
     },
   },
@@ -1885,10 +1882,10 @@ export const listArticlesRoute = routeHandler(
       })
       .limit(req.query.limit)
       .offset(req.query.offset);
-    
+
     // ...snip
-  }
-)
+  },
+);
 ```
 
 Let's move all article filtering logic into repo methods:
@@ -1915,7 +1912,7 @@ export const articleRepo = createRepo(db.article, {
             ? (q) => q.favorites.where({ userId: currentUserId }).exists()
             : q.raw((t) => t.boolean(), 'false'),
           author: (q) => userRepo(q.author).selectDto(currentUserId),
-        }
+        },
       );
     },
     filterByAuthorUsername(q, username: string) {
@@ -1926,12 +1923,12 @@ export const articleRepo = createRepo(db.article, {
     },
     filterForUserFeed(q, currentUserId: number) {
       return q.whereExists('author', (q) =>
-        q.whereExists('follows', (q) => q.where({ followerId: currentUserId }))
+        q.whereExists('follows', (q) => q.where({ followerId: currentUserId })),
       );
     },
     filterFavorite(q, currentUserId: number) {
       return q.whereExists('favorites', (q) =>
-        q.where({ userId: currentUserId })
+        q.where({ userId: currentUserId }),
       );
     },
   },
@@ -1978,7 +1975,7 @@ export const listArticlesRoute = routeHandler(
     }
 
     return query;
-  }
+  },
 );
 ```
 
@@ -2009,7 +2006,7 @@ describe('article controller', () => {
       testRequest.post('/articles', {
         ...params,
         tags: [],
-      })
+      }),
     );
 
     it('should create article without tags, return articleDto', async () => {
@@ -2058,7 +2055,7 @@ describe('article controller', () => {
       ]);
     });
   });
-})
+});
 ```
 
 Implementation of the controller:
@@ -2101,7 +2098,7 @@ export const createArticleRoute = routeHandler(
 
       return articleRepo.selectDto(currentUserId).find(articleId);
     });
-  }
+  },
 );
 ```
 
@@ -2145,7 +2142,7 @@ describe('article controller', () => {
 
     // this test helper was defined earlier
     itShouldRequireAuth(() =>
-      testRequest.patch('/articles/article-slug', params)
+      testRequest.patch('/articles/article-slug', params),
     );
 
     it('should return unauthorized error when trying to update article of other user', async () => {
@@ -2179,7 +2176,7 @@ describe('article controller', () => {
 
     it('should set new tags to article, create new tags, delete not used tags', async () => {
       const [currentUser, otherAuthor] = await userFactory.createList(2);
-      
+
       const article = await articleFactory.create({
         userId: currentUser.id,
         articleTags: {
@@ -2219,7 +2216,7 @@ describe('article controller', () => {
       expect(allTagNames).not.toContain('one');
     });
   });
-})
+});
 ```
 
 Controller:
@@ -2270,7 +2267,7 @@ export const updateArticleRoute = routeHandler(
 
       return await articleRepo.selectDto(currentUserId).find(article.id);
     });
-  }
+  },
 );
 ```
 
@@ -2290,7 +2287,7 @@ export const articleRepo = createRepo(db.article, {
       // TODO
     },
   },
-})
+});
 ```
 
 All previous repo methods were placed under `queryMethods`, but here we place it under the `queryOneWithWhereMethods`.
@@ -2302,9 +2299,9 @@ It is forbidden to create related records from the query which returns multiple 
 // will result in a TS error
 db.article.where({ id: { in: [1, 2, 3] } }).update({
   articleTags: {
-    create: { ...someData }
-  }
-})
+    create: { ...someData },
+  },
+});
 ```
 
 This code not only creates new `articleTags` but also connects them to the article.
@@ -2316,7 +2313,7 @@ Also, the `update` query must be applied only after we pass search conditions, t
 
 ```ts
 // will result in TS error
-db.article.update({ ...data })
+db.article.update({ ...data });
 ```
 
 That's why the type of `q` have to indicate it has some search statements.
@@ -2340,16 +2337,16 @@ export const articleRepo = createRepo(db.article, {
       // tags which article is connected to at the moment
       currentTags: { id: number; name: string }[],
       // tag names from user parameters to use for the article
-      tags?: string[]
+      tags?: string[],
     ) {
       const currentTagNames = currentTags.map(({ name }) => name);
       const addTagNames = tags?.filter(
-        (name) => !currentTagNames.includes(name)
+        (name) => !currentTagNames.includes(name),
       );
       const removeTagIds = tags
         ? currentTags
-          .filter(({ name }) => !tags.includes(name))
-          .map((tag) => tag.id)
+            .filter(({ name }) => !tags.includes(name))
+            .map((tag) => tag.id)
         : [];
 
       await q.update({
@@ -2374,7 +2371,7 @@ export const articleRepo = createRepo(db.article, {
       }
     },
   },
-})
+});
 ```
 
 This method doesn't return a query object, so it cannot be chained.
@@ -2501,7 +2498,7 @@ describe('article controller', () => {
       expect(res.statusCode).toBe(200);
     });
   });
-})
+});
 ```
 
 Define `.selectFavorite` to use in this test and the controller later:
@@ -2534,7 +2531,7 @@ export const articleRepo = createRepo(db.article, {
           // use selectFavorited from above
           favorited: selectFavorited(currentUserId),
           author: (q) => userRepo(q.author).selectDto(currentUserId),
-        }
+        },
       );
     },
     selectFavorited(q, currentUserId: number | undefined) {
@@ -2543,7 +2540,7 @@ export const articleRepo = createRepo(db.article, {
     // ...snip
   },
   // ...snip
-})
+});
 ```
 
 Controller code:
@@ -2565,7 +2562,7 @@ export const toggleArticleFavoriteRoute = routeHandler(
 
     // assign favorites query to a variable to use it for different queries later:
     const favoritesQuery = db.article.findBy({ slug }).favorites;
-    
+
     if (favorite) {
       try {
         await favoritesQuery.create({
@@ -2585,7 +2582,7 @@ export const toggleArticleFavoriteRoute = routeHandler(
         })
         .delete();
     }
-  }
+  },
 );
 ```
 
@@ -2674,7 +2671,7 @@ describe('article controller', () => {
       expect(allTagNames).toEqual(['two', 'three']);
     });
   });
-})
+});
 ```
 
 Controller code:
@@ -2721,6 +2718,6 @@ export const deleteArticleRoute = routeHandler(
         await tagRepo.whereIn('id', article.tagIds).deleteUnused();
       }
     });
-  }
+  },
 );
 ```

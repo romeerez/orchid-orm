@@ -19,58 +19,58 @@ This is the only ORM error that can be safely exposed to users.
 Here is how centralized error handler may look like:
 
 ```ts
-import { ZodError } from 'zod'
-import { NotFoundError } from 'orchid-orm'
+import { ZodError } from 'zod';
+import { NotFoundError } from 'orchid-orm';
 
 // generic error class that the code of your app will use to throw errors
 export class AppError extends Error {
   constructor(message?: string) {
-    super(message)
+    super(message);
   }
 }
 
 // more specific error classes extends AppError
 export class SomeSpecificError extends AppError {
-  message = 'some specific error happened'
+  message = 'some specific error happened';
 }
 
 export const performSomeAction = () => {
   // when the error can be exposed to user, use AppError
-  throw new AppError('Oops')
-  
+  throw new AppError('Oops');
+
   // otherwise, a standard Error
-  throw new Error('Internal error')
-}
+  throw new Error('Internal error');
+};
 
 // express.js error handler
 app.use((err, req, res, next) => {
   // log the error
-  console.error(err)
+  console.error(err);
 
   // instanceof AppError means that it can be exposed to user
   if (err instanceof AppError) {
     // client never cares about error status, let it be 400 for all kinds of AppError
     return res.status(400).send({
       error: err.message,
-    })
+    });
   }
-  
+
   // default message is: Record is not found
   if (err instanceof NotFoundError) {
     return res.status(400).send({
       error: err.message,
-    })
+    });
   }
 
   // catch validation errors
   if (err instanceof ZodError) {
     return res.status(400).send({
       // serialize validation error somehow
-    })
+    });
   }
-  
-  res.status(500).send('Something broke!')
-})
+
+  res.status(500).send('Something broke!');
+});
 ```
 
 ::: info
@@ -106,7 +106,7 @@ Or, instead, just one query is enough, we only need to handle the error:
 
 ```ts
 try {
-  await db.table.create(...data)
+  await db.table.create(...data);
 } catch (error) {
   if (error instanceof db.table.error) {
     // `isUnique` in case of a unique violation error,
@@ -115,16 +115,16 @@ try {
       // columns have type { [column name]?: true }
       // use it to determine which columns have failed uniqueness
       if (error.columns.username) {
-        throw new Error('Username is already taken')
+        throw new Error('Username is already taken');
       }
       if (error.columns.email) {
-        throw new Error('Email is already taken')
+        throw new Error('Email is already taken');
       }
     }
   }
-  
+
   // rethrow the error if it is not recognized
-  throw error
+  throw error;
 }
 ```
 
