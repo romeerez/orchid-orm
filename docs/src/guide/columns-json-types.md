@@ -19,12 +19,14 @@ For `jsonb` use `t.json((t) => jsonSchema)` - it takes a schema, and adds additi
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      age: t.number(),
-      name: t.string(),
-      description: t.string().optional(),
-      tags: t.string().array(),
-    })),
+    data: t.json((t) =>
+      t.object({
+        age: t.number(),
+        name: t.string(),
+        description: t.string().optional(),
+        tags: t.string().array(),
+      }),
+    ),
   }));
 }
 ```
@@ -58,19 +60,21 @@ The basic types are:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      number: t.number(), // -> number
-      nan: t.nan(), // -> number, for a NaN value
-      string: t.string(), // -> string
-      literal: t.literal('value'), // -> type of literal
-      boolean: t.boolean(), // -> boolean
-      bigint: t.bigint(), // -> bigint
-      null: t.null(), // -> null
-      date: t.date(), // -> Date
-      never: t.never(), // -> never
-      any: t.any(), // -> any
-      unknown: t.unknown(), // -> unknown
-    })),
+    data: t.json((t) =>
+      t.object({
+        number: t.number(), // -> number
+        nan: t.nan(), // -> number, for a NaN value
+        string: t.string(), // -> string
+        literal: t.literal('value'), // -> type of literal
+        boolean: t.boolean(), // -> boolean
+        bigint: t.bigint(), // -> bigint
+        null: t.null(), // -> null
+        date: t.date(), // -> Date
+        never: t.never(), // -> never
+        any: t.any(), // -> any
+        unknown: t.unknown(), // -> unknown
+      }),
+    ),
   }));
 }
 ```
@@ -81,24 +85,26 @@ export class Table extends BaseTable {
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      number: t
-        .number()
-        .lt(number) // must be lower than number
-        .lte(number) // must be lower than or equal to the number
-        .max(number) // alias for .lte
-        .gt(number) // must be greater than number
-        .gte(number) // must be greater than or equal to the number
-        .min(number) // alias for .gte
-        .positive() // must be greater than 0
-        .nonNegative() // must be greater than or equal to 0
-        .negative() // must be lower than 0
-        .nonPositive() // must be lower than or equal to 0
-        .multipleOf(number) // must be a multiple of the number
-        .step(number) // alias for .multipleOf
-        .finite() // not Infinity
-        .safe(), // equivalient to .lte(Number.MAX_SAFE_INTEGER)
-    })),
+    data: t.json((t) =>
+      t.object({
+        number: t
+          .number()
+          .lt(number) // must be lower than number
+          .lte(number) // must be lower than or equal to the number
+          .max(number) // alias for .lte
+          .gt(number) // must be greater than number
+          .gte(number) // must be greater than or equal to the number
+          .min(number) // alias for .gte
+          .positive() // must be greater than 0
+          .nonNegative() // must be greater than or equal to 0
+          .negative() // must be lower than 0
+          .nonPositive() // must be lower than or equal to 0
+          .multipleOf(number) // must be a multiple of the number
+          .step(number) // alias for .multipleOf
+          .finite() // not Infinity
+          .safe(), // equivalient to .lte(Number.MAX_SAFE_INTEGER)
+      }),
+    ),
   }));
 }
 ```
@@ -109,30 +115,32 @@ export class Table extends BaseTable {
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      string: t
-        .string()
-        .nonEmpty() // equivalent for .min(1)
-        .min(1)
-        .max(10)
-        .length(5)
-        .email()
-        .url()
-        .emoji()
-        .uuid()
-        .cuid()
-        .cuid2()
-        .ulid()
-        .datetime({ offset: true, precision: 5 }) // see Zod docs for details
-        .ip({ version: 'v4' }) // v4, v6 or don't pass the parameter for both
-        .regex(/regex/)
-        .includes('str')
-        .startsWith('str')
-        .endsWith('str')
-        .trim()
-        .toLowerCase()
-        .toUpperCase(),
-    })),
+    data: t.json((t) =>
+      t.object({
+        string: t
+          .string()
+          .nonEmpty() // equivalent for .min(1)
+          .min(1)
+          .max(10)
+          .length(5)
+          .email()
+          .url()
+          .emoji()
+          .uuid()
+          .cuid()
+          .cuid2()
+          .ulid()
+          .datetime({ offset: true, precision: 5 }) // see Zod docs for details
+          .ip({ version: 'v4' }) // v4, v6 or don't pass the parameter for both
+          .regex(/regex/)
+          .includes('str')
+          .startsWith('str')
+          .endsWith('str')
+          .trim()
+          .toLowerCase()
+          .toUpperCase(),
+      }),
+    ),
   }));
 }
 ```
@@ -145,9 +153,11 @@ By default, all types are required. Append `.optional()` so the value may omit f
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      optionalNumber: t.number().optional(),
-    })),
+    data: t.json((t) =>
+      t.object({
+        optionalNumber: t.number().optional(),
+      }),
+    ),
   }));
 }
 ```
@@ -158,9 +168,11 @@ To require optional value back:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      requiredNumber: t.number().optional().required(),
-    })),
+    data: t.json((t) =>
+      t.object({
+        requiredNumber: t.number().optional().required(),
+      }),
+    ),
   }));
 }
 ```
@@ -171,9 +183,11 @@ Allow `null` value:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      nullableNumber: t.number().nullable(),
-    })),
+    data: t.json((t) =>
+      t.object({
+        nullableNumber: t.number().nullable(),
+      }),
+    ),
   }));
 }
 ```
@@ -184,9 +198,11 @@ Turn back to non-nullable:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      nonNullableNumber: t.number().nullable().nonNullable(),
-    })),
+    data: t.json((t) =>
+      t.object({
+        nonNullableNumber: t.number().nullable().nonNullable(),
+      }),
+    ),
   }));
 }
 ```
@@ -197,9 +213,11 @@ export class Table extends BaseTable {
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      nullishNumber: t.number().nullish(),
-    })),
+    data: t.json((t) =>
+      t.object({
+        nullishNumber: t.number().nullish(),
+      }),
+    ),
   }));
 }
 ```
@@ -210,9 +228,11 @@ Turn back to required and non-nullable:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      nonNullishNumber: t.number().nullish().nonNullish(),
-    })),
+    data: t.json((t) =>
+      t.object({
+        nonNullishNumber: t.number().nullish().nonNullish(),
+      }),
+    ),
   }));
 }
 ```
@@ -225,10 +245,12 @@ Set a default value that will be returned in case input is `null` or `undefined`
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      defautedNumber: t.number().default(123),
-      defautedRandom: t.number().default(() => Math.random()),
-    })),
+    data: t.json((t) =>
+      t.object({
+        defautedNumber: t.number().default(123),
+        defautedRandom: t.number().default(() => Math.random()),
+      }),
+    ),
   }));
 }
 ```
@@ -239,13 +261,15 @@ export class Table extends BaseTable {
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // string | number
-      stringOrNumber: t.string().or(t.number()),
+    data: t.json((t) =>
+      t.object({
+        // string | number
+        stringOrNumber: t.string().or(t.number()),
 
-      // equivalent to
-      stringOrNumber2: t.union([t.string(), t.number()]),
-    })),
+        // equivalent to
+        stringOrNumber2: t.union([t.string(), t.number()]),
+      }),
+    ),
   }));
 }
 ```
@@ -256,16 +280,18 @@ export class Table extends BaseTable {
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // { name: string } & { age: number }
-      obj: t.object({ name: t.string() }).and(t.object({ age: t.number() })),
+    data: t.json((t) =>
+      t.object({
+        // { name: string } & { age: number }
+        obj: t.object({ name: t.string() }).and(t.object({ age: t.number() })),
 
-      // equivalent to
-      obj2: t.intersection(
-        t.object({ name: t.string() }),
-        t.object({ age: t.number() }),
-      ),
-    })),
+        // equivalent to
+        obj2: t.intersection(
+          t.object({ name: t.string() }),
+          t.object({ age: t.number() }),
+        ),
+      }),
+    ),
   }));
 }
 ```
@@ -278,13 +304,15 @@ For a composite type such as `array`, `object`, `record`, `map`, `set`, and some
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // object with optional `name`:
-      deepPartialObject: t.object({ name: t.string() }).deepPartial(),
+    data: t.json((t) =>
+      t.object({
+        // object with optional `name`:
+        deepPartialObject: t.object({ name: t.string() }).deepPartial(),
 
-      // array of objects with optional `name`:
-      deepPartialArray: t.object({ name: t.string() }).array().deepPartial(),
-    })),
+        // array of objects with optional `name`:
+        deepPartialArray: t.object({ name: t.string() }).array().deepPartial(),
+      }),
+    ),
   }));
 }
 ```
@@ -298,11 +326,13 @@ For example, reverse a string:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      reverseString: t
-        .string()
-        .transform((input) => input.split('').reverse().join('')),
-    })),
+    data: t.json((t) =>
+      t.object({
+        reverseString: t
+          .string()
+          .transform((input) => input.split('').reverse().join('')),
+      }),
+    ),
   }));
 }
 ```
@@ -315,12 +345,14 @@ In the following example, the string will be transformed into a number, and the 
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      stringToNumber: t
-        .string()
-        .to((input) => parseInt(input), t.number())
-        .lte(10),
-    })),
+    data: t.json((t) =>
+      t.object({
+        stringToNumber: t
+          .string()
+          .to((input) => parseInt(input), t.number())
+          .lte(10),
+      }),
+    ),
   }));
 }
 ```
@@ -335,11 +367,13 @@ Optionally takes error message.
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      refinedString: t
-        .string()
-        .refine((val) => val.length <= 255, 'error message'),
-    })),
+    data: t.json((t) =>
+      t.object({
+        refinedString: t
+          .string()
+          .refine((val) => val.length <= 255, 'error message'),
+      }),
+    ),
   }));
 }
 ```
@@ -360,19 +394,23 @@ import { z, RefinementCtx } from 'zod';
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      superRefinedString: t.string().superRefine((val, ctx: RefinementCtx) => {
-        if (val.length > 3) {
-          ctx.addIssue({
-            code: t.ZodIssueCode.too_big,
-            maximum: 3,
-            type: 'array',
-            inclusive: true,
-            message: 'Too many items 😡',
-          });
-        }
+    data: t.json((t) =>
+      t.object({
+        superRefinedString: t
+          .string()
+          .superRefine((val, ctx: RefinementCtx) => {
+            if (val.length > 3) {
+              ctx.addIssue({
+                code: t.ZodIssueCode.too_big,
+                maximum: 3,
+                type: 'array',
+                inclusive: true,
+                message: 'Too many items 😡',
+              });
+            }
+          }),
       }),
-    })),
+    ),
   }));
 }
 ```
@@ -385,13 +423,15 @@ Every type has the`.array()` method to wrap it into the array:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // array of numbers
-      arrayOfNumbers: t.number().array(),
+    data: t.json((t) =>
+      t.object({
+        // array of numbers
+        arrayOfNumbers: t.number().array(),
 
-      // is equivalent to:
-      arrayOfNumbers2: t.array(t.number()),
-    })),
+        // is equivalent to:
+        arrayOfNumbers2: t.array(t.number()),
+      }),
+    ),
   }));
 }
 ```
@@ -402,15 +442,17 @@ The `array` type can be chained with the following validation methods:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      arrayOfNumbers: t
-        .number()
-        .array()
-        .nonEmpty() // require at least one element
-        .min(number) // set minimum array length
-        .max(number) // set maximum array length
-        .length(number), // set exact array length
-    })),
+    data: t.json((t) =>
+      t.object({
+        arrayOfNumbers: t
+          .number()
+          .array()
+          .nonEmpty() // require at least one element
+          .min(number) // set minimum array length
+          .max(number) // set maximum array length
+          .length(number), // set exact array length
+      }),
+    ),
   }));
 }
 ```
@@ -421,14 +463,14 @@ export class Table extends BaseTable {
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // all properties are required by default
-      // type will be { name: string, age: number }
-      object: t.object({
+    data: t.json((t) =>
+      t.object({
+        // all properties are required by default
+        // type will be { name: string, age: number }
         name: t.string(),
         age: t.number(),
       }),
-    })),
+    ),
   }));
 }
 ```
@@ -441,10 +483,12 @@ You can add additional fields to an object schema with the `.extend` method.
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // type will be { one: number, two: string }
-      extendObject: t.object({ one: t.number() }).extend({ two: t.string() }),
-    })),
+    data: t.json((t) =>
+      t.object({
+        // type will be { one: number, two: string }
+        extendObject: t.object({ one: t.number() }).extend({ two: t.string() }),
+      }),
+    ),
   }));
 }
 ```
@@ -457,12 +501,14 @@ Merge two object types into one:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // type will be { one: number, two: string }
-      mergeObject: t
-        .object({ one: t.number() })
-        .merge(t.object({ two: t.string() })),
-    })),
+    data: t.json((t) =>
+      t.object({
+        // type will be { one: number, two: string }
+        mergeObject: t
+          .object({ one: t.number() })
+          .merge(t.object({ two: t.string() })),
+      }),
+    ),
   }));
 }
 ```
@@ -475,12 +521,14 @@ To only keep certain keys, use `.pick`:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // type will be { one: number, two: number }
-      pickObject: t
-        .object({ one: t.number(), two: t.number(), three: t.number() })
-        .pick('one', 'two'),
-    })),
+    data: t.json((t) =>
+      t.object({
+        // type will be { one: number, two: number }
+        pickObject: t
+          .object({ one: t.number(), two: t.number(), three: t.number() })
+          .pick('one', 'two'),
+      }),
+    ),
   }));
 }
 ```
@@ -493,12 +541,14 @@ To remove certain keys, use `.omit`:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // type will be { three: number }
-      omitObject: t
-        .object({ one: t.number(), two: t.number(), three: t.number() })
-        .omit('one', 'two'),
-    })),
+    data: t.json((t) =>
+      t.object({
+        // type will be { three: number }
+        omitObject: t
+          .object({ one: t.number(), two: t.number(), three: t.number() })
+          .omit('one', 'two'),
+      }),
+    ),
   }));
 }
 ```
@@ -511,10 +561,12 @@ The .partial method makes all properties optional:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // type will be { one?: number, two?: number }
-      partialObject: t.object({ one: t.number(), two: t.number() }).partial(),
-    })),
+    data: t.json((t) =>
+      t.object({
+        // type will be { one?: number, two?: number }
+        partialObject: t.object({ one: t.number(), two: t.number() }).partial(),
+      }),
+    ),
   }));
 }
 ```
@@ -525,10 +577,14 @@ You can also specify which properties to make optional:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // type will be { one?: number, two: number }
-      partialOne: t.object({ one: t.number(), two: t.number() }).partial('one'),
-    })),
+    data: t.json((t) =>
+      t.object({
+        // type will be { one?: number, two: number }
+        partialOne: t
+          .object({ one: t.number(), two: t.number() })
+          .partial('one'),
+      }),
+    ),
   }));
 }
 ```
@@ -543,10 +599,12 @@ Instead, if you want to pass through unknown keys, use `.passthrough()`.
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // will validate only `one` key and preserve all other keys when parsing
-      object: t.object({ one: t.number() }).passthrough(),
-    })),
+    data: t.json((t) =>
+      t.object({
+        // will validate only `one` key and preserve all other keys when parsing
+        object: t.object({ one: t.number() }).passthrough(),
+      }),
+    ),
   }));
 }
 ```
@@ -561,10 +619,12 @@ You can disallow unknown keys with `.strict()`. If there are any unknown keys in
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // will throw if unknown keys will be found during parsing
-      object: t.object({ one: t.number() }).strict(),
-    })),
+    data: t.json((t) =>
+      t.object({
+        // will throw if unknown keys will be found during parsing
+        object: t.object({ one: t.number() }).strict(),
+      }),
+    ),
   }));
 }
 ```
@@ -581,10 +641,12 @@ You can pass a "catchall" schema into an object schema. All unknown keys will be
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // check `name` to be a string and all other keys to have numbers
-      object: t.object({ name: t.string() }).catchall(t.number()),
-    })),
+    data: t.json((t) =>
+      t.object({
+        // check `name` to be a string and all other keys to have numbers
+        object: t.object({ name: t.string() }).catchall(t.number()),
+      }),
+    ),
   }));
 }
 ```
@@ -599,10 +661,12 @@ If you want to validate the values of an object against some schema but don't ca
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // type will be { [k: string]: number }
-      record: t.record(t.number()),
-    })),
+    data: t.json((t) =>
+      t.object({
+        // type will be { [k: string]: number }
+        record: t.record(t.number()),
+      }),
+    ),
   }));
 }
 ```
@@ -613,9 +677,11 @@ If you want to validate both the keys and the values, use `t.record(keyType, val
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      record: t.record(t.string().min(1), t.number()),
-    })),
+    data: t.json((t) =>
+      t.object({
+        record: t.record(t.string().min(1), t.number()),
+      }),
+    ),
   }));
 }
 ```
@@ -628,16 +694,18 @@ Tuples have a fixed number of elements and each element can have a different typ
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // type will be [string, number, { pointsScored: number }]
-      tuple: t.tuple([
-        t.string(),
-        t.number(),
-        t.object({
-          pointsScored: t.number(),
-        }),
-      ]),
-    })),
+    data: t.json((t) =>
+      t.object({
+        // type will be [string, number, { pointsScored: number }]
+        tuple: t.tuple([
+          t.string(),
+          t.number(),
+          t.object({
+            pointsScored: t.number(),
+          }),
+        ]),
+      }),
+    ),
   }));
 }
 ```
@@ -648,10 +716,12 @@ A variadic ("rest") argument can be added with the `.rest` method.
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      // type will be [string, ...number]
-      tupleWithRest: t.tuple([t.string()]).rest(t.number()),
-    })),
+    data: t.json((t) =>
+      t.object({
+        // type will be [string, ...number]
+        tupleWithRest: t.tuple([t.string()]).rest(t.number()),
+      }),
+    ),
   }));
 }
 ```
@@ -664,9 +734,11 @@ export class Table extends BaseTable {
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      enum: t.enum(['Salmon', 'Tuna', 'Trout']),
-    })),
+    data: t.json((t) =>
+      t.object({
+        enum: t.enum(['Salmon', 'Tuna', 'Trout']),
+      }),
+    ),
   }));
 }
 ```
@@ -679,9 +751,11 @@ const VALUES = ['Salmon', 'Tuna', 'Trout'] as const;
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      enum: t.enum(VALUES),
-    })),
+    data: t.json((t) =>
+      t.object({
+        enum: t.enum(VALUES),
+      }),
+    ),
   }));
 }
 ```
@@ -700,9 +774,11 @@ enum Fruits {
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      enum: t.nativeEnum(Fruits),
-    })),
+    data: t.json((t) =>
+      t.object({
+        enum: t.nativeEnum(Fruits),
+      }),
+    ),
   }));
 }
 ```
@@ -717,14 +793,16 @@ The advantage is in the more efficient evaluation and more human-friendly errors
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      object: t
-        .discriminatedUnion('type', [
-          t.object({ type: t.literal('a'), a: t.string() }),
-          t.object({ type: t.literal('b'), b: t.string() }),
-        ])
-        .parse({ type: 'a', a: 'abc' }),
-    })),
+    data: t.json((t) =>
+      t.object({
+        object: t
+          .discriminatedUnion('type', [
+            t.object({ type: t.literal('a'), a: t.string() }),
+            t.object({ type: t.literal('b'), b: t.string() }),
+          ])
+          .parse({ type: 'a', a: 'abc' }),
+      }),
+    ),
   }));
 }
 ```
@@ -737,9 +815,11 @@ For JS `Map` type which can use any type of keys to access values:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      map: t.map(t.string(), t.number()),
-    })),
+    data: t.json((t) =>
+      t.object({
+        map: t.map(t.string(), t.number()),
+      }),
+    ),
   }));
 }
 ```
@@ -752,9 +832,11 @@ For the JS `Set` type which holds a unique set of elements:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      set: t.set(t.number()),
-    })),
+    data: t.json((t) =>
+      t.object({
+        set: t.set(t.number()),
+      }),
+    ),
   }));
 }
 ```
@@ -771,9 +853,11 @@ class Test {
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      object: t.instanceof(Test),
-    })),
+    data: t.json((t) =>
+      t.object({
+        object: t.instanceof(Test),
+      }),
+    ),
   }));
 }
 ```
@@ -800,10 +884,12 @@ const Category: JSONType<Category> = t.lazy(() =>
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.json((t) => ({
-      name: t.string(),
-      category: Category,
-    })),
+    data: t.json((t) =>
+      t.object({
+        name: t.string(),
+        category: Category,
+      }),
+    ),
   }));
 }
 ```
