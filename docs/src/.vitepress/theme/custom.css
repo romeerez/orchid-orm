@@ -1,5 +1,7 @@
 :root {
-  --vp-c-font-family-base: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  --vp-c-font-family-base: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans',
+    'Helvetica Neue', sans-serif;
   --vp-c-brand: #9d69d1;
   --vp-c-brand-dark: #b469ff;
   --vp-button-brand-bg: #b469ff;
@@ -51,12 +53,12 @@ html .content-container {
 }
 
 .stand-with-ukraine .stand-with {
-  color: #FFD500;
+  color: #ffd500;
   display: block;
 }
 
 .stand-with-ukraine .Ukraine {
-  color: #005BBB;
+  color: #005bbb;
   font-weight: bold;
 }
 
@@ -65,7 +67,7 @@ html .content-container {
   top: 0;
   right: 0;
   bottom: 0;
-  opacity: .8;
+  opacity: 0.8;
   width: 100%;
 }
 
@@ -75,7 +77,7 @@ html .content-container {
   top: 0;
   right: 0;
   bottom: 50%;
-  background: #005BBB;
+  background: #005bbb;
   width: 100%;
 }
 
@@ -85,7 +87,7 @@ html .content-container {
   bottom: 0;
   right: 0;
   top: 50%;
-  background: #FFD500;
+  background: #ffd500;
   width: 100%;
 }
 
@@ -123,7 +125,8 @@ html .content-container {
     line-height: inherit;
   }
 
-  .stand-with-ukraine .stand-with, .stand-with-ukraine .Ukraine {
+  .stand-with-ukraine .stand-with,
+  .stand-with-ukraine .Ukraine {
     color: inherit;
   }
 
@@ -167,6 +170,9 @@ html .content-container {
 @media (min-width: 1440px) {
   .VPSidebar {
     min-width: var(--vp-sidebar-width);
-    padding-left: max(calc((100% - (var(--vp-layout-max-width) - 64px)) / 2), 32px) !important;
+    padding-left: max(
+      calc((100% - (var(--vp-layout-max-width) - 64px)) / 2),
+      32px
+    ) !important;
   }
 }
