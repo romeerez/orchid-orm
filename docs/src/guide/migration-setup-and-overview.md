@@ -47,16 +47,16 @@ In this example, `dotenv` is used and configured to first get env variables from
 ```ts
 // db/config.ts
 
-import { config } from 'dotenv'
-import path from 'path'
+import { config } from 'dotenv';
+import path from 'path';
 
-config({ path: path.resolve(process.cwd(), '.env.local') })
-config()
+config({ path: path.resolve(process.cwd(), '.env.local') });
+config();
 
 const database = {
   databaseURL: process.env.DATABASE_URL,
   // ssl option can be set here or as a URL parameter on databaseURL
-  ssl: true
+  ssl: true,
 };
 if (!database.databaseURL) throw new Error('DATABASE_URL is missing in .env');
 
@@ -75,40 +75,37 @@ import { appCodeUpdater } from 'orchid-orm';
 import { config } from './config';
 import { BaseTable } from './baseTable';
 
-export const change = rakeDb(
-  config.database,
-  {
-    // relative path to the current file:
-    migrationsPath: '../migrations',
-    // it also can be an absolute path:
-    // migrationsPath: path.resolve(__dirname, 'migrations'),
+export const change = rakeDb(config.database, {
+  // relative path to the current file:
+  migrationsPath: '../migrations',
+  // it also can be an absolute path:
+  // migrationsPath: path.resolve(__dirname, 'migrations'),
 
-    // column type overrides and snakeCase option will be taken from the BaseTable:
-    baseTable: BaseTable,
+  // column type overrides and snakeCase option will be taken from the BaseTable:
+  baseTable: BaseTable,
 
-    // optionally, for automatic code updating after running migrations:
-    // baseTable is required when setting appCodeUpdater
-    appCodeUpdater: appCodeUpdater({
-      // paths are relative to the current file
-      tablePath: (tableName) => `../tables/${tableName}.table.ts`,
-      ormPath: './db.ts',
-    }),
+  // optionally, for automatic code updating after running migrations:
+  // baseTable is required when setting appCodeUpdater
+  appCodeUpdater: appCodeUpdater({
+    // paths are relative to the current file
+    tablePath: (tableName) => `../tables/${tableName}.table.ts`,
+    ormPath: './db.ts',
+  }),
 
-    // true by default, whether to use code updater by default
-    useCodeUpdater: false,
+  // true by default, whether to use code updater by default
+  useCodeUpdater: false,
 
-    // custom commands can be defined as follows:
-    commands: {
-      // dbOptions is an array of database configs
-      // config is the config of `rakeDb` (that contains migrationPath, appCodeUpdater, etc)
-      // args of type string[] is an array of command line arguments startring after the command name
-      async seed(dbOptions, config, args) {
-        const { seed } = await import('./seed')
-        await seed()
-      }
-    }
+  // custom commands can be defined as follows:
+  commands: {
+    // dbOptions is an array of database configs
+    // config is the config of `rakeDb` (that contains migrationPath, appCodeUpdater, etc)
+    // args of type string[] is an array of command line arguments startring after the command name
+    async seed(dbOptions, config, args) {
+      const { seed } = await import('./seed');
+      await seed();
+    },
   },
-);
+});
 ```
 
 Add the `db` script to your `package.json`:
@@ -140,7 +137,7 @@ const rakeDb = async (
   args: string[] = process.argv.slice(2),
 ) => {
   // ...
-}
+};
 ```
 
 The first is of the same type `AdapterOptions` which is used when configuring the query builder and the ORM.
@@ -151,32 +148,32 @@ The second optional argument of type `MigrationConfig`, all properties are optio
 ```ts
 type MigrationConfig = {
   // columnTypes and snakeCase can be applied form ORM's BaseTable
-  baseTable?: BaseTable,
+  baseTable?: BaseTable;
   // or it can be set manually:
-  columnTypes?: (t) => ({
+  columnTypes?: (t) => {
     // the same columnTypes config as in BaseTable definition
-  }),
+  };
   // set to true to have all columns named in camelCase in the app, but in snake_case in the db
   // by default, camelCase is expected in both app and db
   snakeCase?: boolean;
-  
+
   // basePath and dbScript are determined automatically
   // basePath is a dir name of the file which calls `rakeDb`, and dbScript is a name of this file
-  basePath?: string
-  dbScript?: string
-  
+  basePath?: string;
+  dbScript?: string;
+
   // path to migrations directory
   migrationsPath?: string;
-  
+
   // table in your database to store migrated versions
   migrationsTable?: string;
-  
+
   // function to import typescript migration file
   import?(path: string): void;
-  
+
   // specify behavior for what to do when no primary key was defined on a table
   noPrimaryKey?: 'error' | 'warn' | 'ignore';
-  
+
   // log options, see "log option" in the query builder document
   log?: boolean | Partial<QueryLogObject>;
   // standard console by default
@@ -203,12 +200,12 @@ type MigrationConfig = {
   }): Promise<void>;
 
   useCodeUpdater?: boolean;
-  
+
   beforeMigrate?(db: Db): Promise<void>;
   afterMigrate?(db: Db): Promise<void>;
   beforeRollback?(db: Db): Promise<void>;
   afterRollback?(db: Db): Promise<void>;
-}
+};
 ```
 
 To configure logging, see [log option](/guide/orm-and-query-builder#log-option) in the query builder document.
@@ -279,13 +276,10 @@ but you can import `db` object from where it's defined in your app.
 import { db } from './db';
 
 export const seed = async () => {
-  await db.table.createMany([
-    { name: 'record 1' },
-    { name: 'record 2' },
-  ])
-  
-  await db.close()
-}
+  await db.table.createMany([{ name: 'record 1' }, { name: 'record 2' }]);
+
+  await db.close();
+};
 ```
 
 Add a custom command to `rake-db` config:
@@ -297,14 +291,14 @@ Add a custom command to `rake-db` config:
 
 export const change = rakeDb(config.database, {
   // ...other options
-  
+
   commands: {
     async seed(options) {
-      const { seed } = await import('./seed')
-      await seed()
+      const { seed } = await import('./seed');
+      await seed();
     },
-  }
-})
+  },
+});
 ```
 
 Run the seeds with the command:
@@ -328,14 +322,14 @@ If `options` is an array of multiple database configs, callbacks are run for eac
 ```ts
 export const change = rakeDb(options, {
   async afterMigrate(db: Db) {
-    const haveRecords = await db('table').exists()
+    const haveRecords = await db('table').exists();
     if (!haveRecords) {
       await db('table').createMany([
         { name: 'one' },
         { name: 'two' },
         { name: 'three' },
-      ])
+      ]);
     }
   },
-})
+});
 ```

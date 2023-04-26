@@ -14,17 +14,17 @@ For example, `timestamp` will be returned as a string by default (this may be ov
 
 ```ts
 // get createdAt field from the first table record
-const createdAt: string = await db.table.get('createdAt')
+const createdAt: string = await db.table.get('createdAt');
 
 await db.table.create({
   // Date is fine
   createdAt: new Date(),
-})
+});
 
 await db.table.create({
   // string in ISO format is fine as well
   createdAt: new Date().toISOString(),
-})
+});
 ```
 
 All column types support the following operators in `where` conditions:
@@ -38,8 +38,8 @@ db.someTable.where({
     not: value,
     in: [value1, value2, value3],
     notIn: [value1, value2, value3],
-  }
-})
+  },
+});
 ```
 
 Different types of columns support different operations in `where` conditions:
@@ -50,20 +50,20 @@ export class SomeTable extends BaseTable {
   columns = this.setColumns((t) => ({
     name: t.text(3, 100),
     age: t.integer(),
-  }))
+  }));
 }
 
 // When querying this table:
 db.someTable.where({
   name: {
     // contains is available for strings
-    contains: 'x'
+    contains: 'x',
   },
   age: {
     // gte is available for numbers
     gte: 18,
   },
-})
+});
 ```
 
 ## Add custom columns
@@ -87,13 +87,16 @@ export const BaseTable = createBaseTable({
 Or maybe you'd like to have a `cuid` type of ID, generating new values on JS side:
 
 ```ts
-import { generateCUID } from 'some-lib'
+import { generateCUID } from 'some-lib';
 
 export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
     ...t,
     id() {
-      return t.varchar(36).primaryKey().default(() => generateCUID());
+      return t
+        .varchar(36)
+        .primaryKey()
+        .default(() => generateCUID());
     },
   }),
 });
@@ -123,7 +126,7 @@ export const BaseTable = createBaseTable({
     ...t,
     text: (min = 3, max = 100) => t.text(min, max),
   }),
-})
+});
 ```
 
 With such config, all text columns will be validated to have at least 3 and at most 100 characters:
@@ -139,7 +142,7 @@ export class SomeTable extends BaseTable {
     password: t.text().min(8),
     // override max
     bio: t.text().max(1000),
-  }))
+  }));
 }
 ```
 
@@ -159,10 +162,10 @@ export const BaseTable = createBaseTable({
       return t.timestamp
         .encode((input: number) => new Date(input))
         .parse((input) => new Date(input))
-        .as(t.integer())
+        .as(t.integer());
     },
   }),
-})
+});
 ```
 
 The examples above demonstrate how to override column types in principle,
@@ -179,5 +182,5 @@ export const BaseTable = createBaseTable({
     // or use `.asDate()` to work with Date objects
     timestamp: () => t.timestamp().asNumber(),
   }),
-})
+});
 ```

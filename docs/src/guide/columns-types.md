@@ -44,13 +44,13 @@ As listed in code comments above, `bigint`, `numeric`, `decimal`, and `bigSerial
 You can set up parsing to a `number` type, (remember this can cause bugs on large numbers):
 
 ```ts
-t.bigint().parse(parseInt)
+t.bigint().parse(parseInt);
 ```
 
 Or `bigint` Postgres type can be parsed to `bigint` JavaScript type, but be aware that such values should be explicitly turned to a string when preparing JSON response:
 
 ```ts
-t.bigint().parse(BigInt)
+t.bigint().parse(BigInt);
 ```
 
 Numeric-type columns support the following `where` operators:
@@ -67,9 +67,9 @@ db.someTable.where({
     // greater than or equal to
     gte: value,
     // between x and y
-    between: [x, y]
-  }
-})
+    between: [x, y],
+  },
+});
 ```
 
 ## text
@@ -113,8 +113,8 @@ db.someTable.where({
     endsWith: 'string',
     // LIKE '%string'
     endsWithSensitive: 'string',
-  }
-})
+  },
+});
 ```
 
 ## citext
@@ -154,7 +154,7 @@ t.citext(min: number, max: number) // -> string
 The bytea data type allows storage of binary strings, it is returned as a node.js Buffer object.
 
 ```ts
-t.bytea() // -> Buffer
+t.bytea(); // -> Buffer
 ```
 
 ## date and time
@@ -184,10 +184,10 @@ export const BaseTable = createBaseTable({
     // or use `.asDate()` to work with Date objects
     timestamp: () => t.timestamp().asNumber(),
   }),
-})
+});
 
 // timestamp columns now are returned as numbers, or as Date objects if you choose `asDate`:
-const { updatedAt, createdAt } = await db.table.take()
+const { updatedAt, createdAt } = await db.table.take();
 ```
 
 When filtering by timestamp fields, creating or updating records, you can use dates encoded as strings, numbers or Date objects:
@@ -195,21 +195,21 @@ When filtering by timestamp fields, creating or updating records, you can use da
 ```ts
 // filter, update, create with a Date object:
 const date = new Date();
-db.table.where({ createdAt: date })
-db.table.find(id).update({ ...data, createdAt: date })
-db.table.create({ ...data, createdAt: date })
+db.table.where({ createdAt: date });
+db.table.find(id).update({ ...data, createdAt: date });
+db.table.create({ ...data, createdAt: date });
 
 // filter, update, create with a ISO encoded date string
-const string = new Date().toISOString()
-db.table.where({ createdAt: string })
-db.table.find(id).update({ ...data, createdAt: string })
-db.table.create({ ...data, createdAt: string })
+const string = new Date().toISOString();
+db.table.where({ createdAt: string });
+db.table.find(id).update({ ...data, createdAt: string });
+db.table.create({ ...data, createdAt: string });
 
 // filter, update, create with a number retrieved from `getTime`
-const number = new Date().getTime()
-db.table.where({ createdAt: number })
-db.table.find(id).update({ ...data, createdAt: number })
-db.table.create({ ...data, createdAt: number })
+const number = new Date().getTime();
+db.table.where({ createdAt: number });
+db.table.find(id).update({ ...data, createdAt: number });
+db.table.create({ ...data, createdAt: number });
 ```
 
 ## interval
@@ -235,9 +235,9 @@ type Interval = {
   hours?: number;
   minutes?: number;
   seconds?: number;
-}
+};
 
-const result: Interval = await Table.get('intervalColumn')
+const result: Interval = await Table.get('intervalColumn');
 ```
 
 ## boolean
@@ -246,7 +246,7 @@ Boolean returns `true` or `false`.
 
 ```ts
 // 1 byte, true or false
-t.boolean() // -> boolean
+t.boolean(); // -> boolean
 ```
 
 ## enum
@@ -256,7 +256,7 @@ Create the enum database type:
 ```ts
 await db.adapter.query(`
   CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');
-`)
+`);
 ```
 
 Define enum, first argument is the name of an enum in the database, second is an array of possible values:
@@ -271,42 +271,42 @@ Geometric types are not parsed and returned as strings as the database returns t
 
 ```ts
 // point   16 bytes   Point on a plane   (x,y)
-t.point() // -> string
+t.point(); // -> string
 
 // line    32 bytes   Infinite line  {A,B,C}
-t.line() // -> string
+t.line(); // -> string
 
 // lseg    32 bytes   Finite line segment    [(x1,y1),(x2,y2)]
-t.lseg() // -> string
+t.lseg(); // -> string
 
 // box 32 bytes   Rectangular box    ((x1,y1),(x2,y2))
-t.box() // -> string
+t.box(); // -> string
 
 // path    16+16n bytes   Closed path (similar to polygon)   ((x1,y1),...)
 // path    16+16n bytes   Open path  [(x1,y1),...]
-t.path() // -> string
+t.path(); // -> string
 
 // polygon 40+16n bytes   Polygon (similar to closed path)   ((x1,y1),...)
-t.polygon() // -> string
+t.polygon(); // -> string
 
 // circle  24 bytes   Circle <(x,y),r> (center point and radius)
-t.circle() // -> string
+t.circle(); // -> string
 ```
 
 ## network addresses
 
 ```ts
 // CIDR    7 or 19 bytes  IPv4 and IPv6 networks
-t.cidr() // -> string, example: 192.168.100.128/25
+t.cidr(); // -> string, example: 192.168.100.128/25
 
 // inet    7 or 19 bytes  IPv4 and IPv6 hosts and networks
-t.inet() // -> string, example: 192.168.100.128/25
+t.inet(); // -> string, example: 192.168.100.128/25
 
 // macaddr 6 bytes    MAC addresses
-t.macaddr() // -> string, example: 08:00:2b:01:02:03
+t.macaddr(); // -> string, example: 08:00:2b:01:02:03
 
 // macaddr8    8 bytes    MAC addresses (EUI-64 format)
-t.macaddr8() // -> string, example: 08:00:2b:ff:fe:01:02:03
+t.macaddr8(); // -> string, example: 08:00:2b:ff:fe:01:02:03
 ```
 
 ## bit string
@@ -317,20 +317,20 @@ it strings are strings of 1's and 0's. They can be used to store or visualize bi
 // Bit strings are strings of 1's and 0's.
 // They can be used to store or visualize bit masks.
 // There are two SQL bit types: bit(n) and bit varying(n), where n is a positive integer.
-t.bit() // -> string
+t.bit(); // -> string
 
 // bit varying(n), where n is a positive integer
-t.bitVarying() // -> string
+t.bitVarying(); // -> string
 ```
 
 ## full text search
 
 ```ts
 // A tsvector value is a sorted list of distinct lexemes
-t.tsvector() // -> string
+t.tsvector(); // -> string
 
 // A tsquery value stores lexemes that are to be searched for
-t.tsquery() // -> string
+t.tsquery(); // -> string
 ```
 
 ## UUID
@@ -339,7 +339,7 @@ The data type uuid stores Universally Unique Identifiers (UUID).
 
 ```ts
 // UUID stores Universally Unique Identifiers (UUID)
-t.uuid() // -> string, example: a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11
+t.uuid(); // -> string, example: a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11
 ```
 
 When using it as a primary key, it will automatically get a [gen_random_uuid](https://www.postgresql.org/docs/current/functions-uuid.html) default.
@@ -354,7 +354,7 @@ export class Table extends BaseTable {
 }
 
 // id is generated in the database
-db.table.create({ name: 'Joe' })
+db.table.create({ name: 'Joe' });
 ```
 
 If you'd like to use a different default, `primaryKey` will respect it:
@@ -363,13 +363,16 @@ If you'd like to use a different default, `primaryKey` will respect it:
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    id: t.uuid().default(() => makeOwnUUID()).primaryKey(),
+    id: t
+      .uuid()
+      .default(() => makeOwnUUID())
+      .primaryKey(),
     name: t.text(),
   }));
 }
 
 // custom function will be used for the id
-db.table.create({ name: 'Joe' })
+db.table.create({ name: 'Joe' });
 ```
 
 ## array
@@ -384,7 +387,7 @@ t.array(item: ColumnType) // -> array of argument type
 For user-defined custom types, or if some database type is not supported yet, use `type` and `as` to treat this column as other type:
 
 ```ts
-t.type('type_name').as(t.integer())
+t.type('type_name').as(t.integer());
 ```
 
 ## domain
@@ -394,7 +397,7 @@ Domain is a custom database type that allows to predefine a `NOT NULL` and a `CH
 In same way as with `type`, specify `as(otherType)` to treat this column in queries as the other type:
 
 ```ts
-t.domain('domainName').as(t.integer())
+t.domain('domainName').as(t.integer());
 ```
 
 ## money
@@ -402,7 +405,7 @@ t.domain('domainName').as(t.integer())
 For currency amount (8 bytes)
 
 ```ts
-t.money() // -> string, example: '$12.34'
+t.money(); // -> string, example: '$12.34'
 ```
 
 ## xml
@@ -410,5 +413,5 @@ t.money() // -> string, example: '$12.34'
 XML data type can be used to store XML data
 
 ```ts
-t.xml() // -> string
+t.xml(); // -> string
 ```

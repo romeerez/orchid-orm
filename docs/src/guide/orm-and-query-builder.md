@@ -32,23 +32,26 @@ import { orchidORM } from 'orchid-orm';
 import { UserTable } from './tables/user';
 import { MessageTable } from './tables/message';
 
-export const db = orchidORM({
-  // details for databaseURL are below
-  databaseURL: process.env.DATABASE_URL,
+export const db = orchidORM(
+  {
+    // details for databaseURL are below
+    databaseURL: process.env.DATABASE_URL,
 
-  // ssl and schema can be set here or as a databaseURL parameters:
-  ssl: true,
-  schema: 'my_schema',
+    // ssl and schema can be set here or as a databaseURL parameters:
+    ssl: true,
+    schema: 'my_schema',
 
-  // option for logging, false by default
-  log: true,
+    // option for logging, false by default
+    log: true,
 
-  // option to create named prepared statements implicitly, false by default
-  autoPreparedStatements: true,
-}, {
-  user: UserTable,
-  message: MessageTable,
-});
+    // option to create named prepared statements implicitly, false by default
+    autoPreparedStatements: true,
+  },
+  {
+    user: UserTable,
+    message: MessageTable,
+  },
+);
 ```
 
 If needed, you can pass `Adapter` instance instead of connection options:
@@ -56,12 +59,15 @@ If needed, you can pass `Adapter` instance instead of connection options:
 ```ts
 import { orchidORM } from 'orchid-orm';
 
-export const db = orchidORM({
-  adapter: new Adapter({ databaseURL: process.env.DATABASE_URL }),
-  log: true,
-}, {
-  // ...tables
-});
+export const db = orchidORM(
+  {
+    adapter: new Adapter({ databaseURL: process.env.DATABASE_URL }),
+    log: true,
+  },
+  {
+    // ...tables
+  },
+);
 ```
 
 ## defining a base table
@@ -120,31 +126,35 @@ After defining the table place it in the main `db` file as in [setup](#setup) st
 ```ts
 import { UserTable } from './tables/user';
 
-export const db = orchidORM({
-  databaseURL: process.env.DATABASE_URL,
-}, {
-  user: UserTable,
-});
+export const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+  },
+  {
+    user: UserTable,
+  },
+);
 ```
 
 And now it's available for querying:
 
 ```ts
-import { db } from './db'
+import { db } from './db';
 
-const user = await db.user.findBy({ name: 'John' })
+const user = await db.user.findBy({ name: 'John' });
 ```
 
 Don't use table classes directly, this won't work:
+
 ```ts
 // error
-await UserTable.findBy({ name: 'John' })
+await UserTable.findBy({ name: 'John' });
 ```
 
 `snakeCase` can be overridden for a table:
 
 ```ts
-import { BaseTable } from './baseTable'
+import { BaseTable } from './baseTable';
 
 export class SnakeCaseTable extends BaseTable {
   readonly table = 'table';
@@ -153,12 +163,12 @@ export class SnakeCaseTable extends BaseTable {
   columns = this.setColumns((t) => ({
     // snake_column in db
     snakeColumn: t.text(),
-  }))
+  }));
 }
 ```
 
 ## createDb
- 
+
 For the case of using the query builder as a standalone tool, use `createDb` from `pqb` package.
 
 As `Orchid ORM` focuses on ORM usage, docs examples mostly demonstrates how to work with ORM-defined tables,
@@ -167,13 +177,13 @@ but everything that's not related to table relations should also work with `pqb`
 It is accepting the same options as `orchidORM` + options of `createBaseTable`:
 
 ```ts
-import { createDb } from 'pqb'
+import { createDb } from 'pqb';
 
 const db = createDb({
   // db connection options
   databaseURL: process.env.DATABASE_URL,
   log: true,
-  
+
   // columns in db are in snake case:
   snakeCase: true,
 
@@ -182,8 +192,7 @@ const db = createDb({
     // by default timestamp is returned as a stirng, override to a number
     timestamp: () => t.timestamp().asNumber(),
   }),
-})
-
+});
 ```
 
 After `db` is defined, construct queryable tables in such way:
@@ -204,7 +213,7 @@ Now the `User` can be used for making type-safe queries:
 const users = await User.select('id', 'name') // only known columns are allowed
   .where({ age: { gte: 20 } }) // gte is available only on the numeric field, and the only number is allowed
   .order({ createdAt: 'DESC' }) // type safe as well
-  .limit(10)
+  .limit(10);
 
 // users array has a proper type of Array<{ id: number, name: string }>
 ```
@@ -250,7 +259,7 @@ If only some columns are named in snake_case, you can use `name` method to indic
 import { BaseTable } from './baseTable';
 
 class Table extends BaseTable {
-  readonly table = 'table'
+  readonly table = 'table';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     camelCase: t.integer(),
@@ -260,7 +269,7 @@ class Table extends BaseTable {
 
 // all columns are available by a camelCase name,
 // even though `snakeCase` has a diferent name in the database
-const records = await table.select('camelCase', 'snakeCase')
+const records = await table.select('camelCase', 'snakeCase');
 ```
 
 Set `snakeCase` to `true` if you want all columns to be translated automatically into a snake_case.
@@ -275,7 +284,7 @@ export const BaseTable = createBaseTable({
 });
 
 class Table extends BaseTable {
-  readonly table = 'table'
+  readonly table = 'table';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     // camelCase column requires an explicit name
@@ -286,7 +295,7 @@ class Table extends BaseTable {
 }
 
 // result is the same as before
-const records = await table.select('camelCase', 'snakeCase')
+const records = await table.select('camelCase', 'snakeCase');
 ```
 
 ## log option
@@ -296,38 +305,41 @@ The `log` option is false by default, `true` or custom object can be provided:
 ```ts
 type LogOption = {
   // for colorful log, true by default
-  colors?: boolean,
-  
+  colors?: boolean;
+
   // callback to run before query
   // Query is a query object, sql is { text: string, values: unknown[] }
   // returned value will be passed to afterQuery and onError
   beforeQuery?(sql: Sql): unknown;
-  
+
   // callback to run after query, logData is data returned by beforeQuery
   afterQuery?(sql: Sql, logData: unknown): void;
-  
+
   // callback to run in case of error
   onError?(error: Error, sql: Sql, logData: unknown): void;
-}
+};
 ```
 
 The log will use `console.log` and `console.error` by default, it can be overridden by passing the `logger` option:
 
 ```ts
-export const db = orchidORM({
-  databaseURL: process.env.DATABASE_URL,
-  log: true,
-  logger: {
-    log(message: string): void {
-      // ...
+export const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    log: true,
+    logger: {
+      log(message: string): void {
+        // ...
+      },
+      error(message: string): void {
+        // ...
+      },
     },
-    error(message: string): void {
-      // ...
-    },
-  }
-}, {
-  // ...tables
-})
+  },
+  {
+    // ...tables
+  },
+);
 ```
 
 ## autoPreparedStatements option
@@ -347,14 +359,14 @@ If you forgot to define a primary key, ORM will send a friendly remained by thro
 Disable the check for a specific table by setting `noPrimaryKey` property:
 
 ```ts
-import { BaseTable } from './baseTable'
+import { BaseTable } from './baseTable';
 
 export class NoPrimaryKeyTable extends BaseTable {
   readonly table = 'table';
   noPrimaryKey = true; // set to `true` to ignore absence of primary key
   columns = this.setColumns((t) => ({
     // ...no primary key defined
-  }))
+  }));
 }
 ```
 
@@ -364,20 +376,26 @@ Or, you can override this behavior for all tables by placing `noPrimaryKey` opti
 
 ```ts
 // ignore absence of primary keys for all tables
-const db = orchidORM({
-  databaseURL: process.env.DATABASE_URL,
-  noPrimaryKey: 'ignore',
-}, {
-  // ...tables
-})
+const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    noPrimaryKey: 'ignore',
+  },
+  {
+    // ...tables
+  },
+);
 
 // print a warning for all tables without primary key
-const db2 = orchidORM({
-  databaseURL: process.env.DATABASE_URL,
-  noPrimaryKey: 'warning',
-}, {
-  // ...tables
-})
+const db2 = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    noPrimaryKey: 'warning',
+  },
+  {
+    // ...tables
+  },
+);
 ```
 
 ## $from
@@ -387,9 +405,12 @@ Use `$from` to build a queries around sub queries similar to the following:
 ```ts
 const subQuery = db.someTable.select('name', {
   relatedCount: (q) => q.related.count(),
-})
+});
 
-const result = await db.$from(subQuery).where({ relatedCount: { gte: 5 } }).limit(10)
+const result = await db
+  .$from(subQuery)
+  .where({ relatedCount: { gte: 5 } })
+  .limit(10);
 ```
 
 For a standalone query builder, the method is `from`.
@@ -399,7 +420,7 @@ For a standalone query builder, the method is `from`.
 Call `$clone` to end a database connection:
 
 ```ts
-await db.$close()
+await db.$close();
 ```
 
 For a standalone query builder, the method is `close`.

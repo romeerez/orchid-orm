@@ -12,32 +12,34 @@ Also, we want to have a search on users by checking if the substring contains `f
 We can define a repository in such ways:
 
 ```ts
-import { createRepo } from 'orchid-orm'
-import { db } from '../path-to-db'
-import { User } from './user.table'
-import { followRepo } from './follow.repo'
+import { createRepo } from 'orchid-orm';
+import { db } from '../path-to-db';
+import { User } from './user.table';
+import { followRepo } from './follow.repo';
 
 export const userRepo = createRepo(db.user, {
   queryMethods: {
     selectForList(q, currentUser: User) {
       return q.select('id', 'firstName', 'lastName', 'picture', {
         followed: (q) => followRepo(q.followers).isFollowedBy(currentUser),
-      })
+      });
     },
     search(q, query: string) {
-      return q.or({
+      return q.or(
+        {
           firstName: {
-            contains: query
+            contains: query,
           },
         },
         {
           lastName: {
-            contains: query
+            contains: query,
           },
-        })
+        },
+      );
     },
-  }
-})
+  },
+});
 ```
 
 The first argument of `createRepo` is a `db.user`, it will be used by default when using `userRepo` to perform queries.
@@ -59,10 +61,10 @@ const users = await userRepo
   .search(query)
   .order({ createdAt: 'DESC' })
   .limit(20)
-  .offset(20)
+  .offset(20);
 
 // response returned from the repo is typed properly
-users[0].followed // boolean
+users[0].followed; // boolean
 ```
 
 All methods became chainable, first argument `q` is injected automatically under the hood.
@@ -74,10 +76,10 @@ Need to be careful when using repositories inside of transactions:
 ```ts
 await db.$transaction(async (db) => {
   // wrong: userRepo is using a main `db` by default
-  await userRepo.search(query)
+  await userRepo.search(query);
   // need to provide `db.user` explicitly:
-  await userRepo(db.user).search(query)
-})
+  await userRepo(db.user).search(query);
+});
 ```
 
 Currently, it is not possible to use one method of the same repo in another method due to TypeScript limitations,
@@ -87,8 +89,8 @@ but you can extract a function for this purpose:
 const selectFollowing = (q: typeof db.user, currentUser: User) => {
   return q.select({
     following: (q) => followRepo(q.followers).isFollowedBy(currentUser),
-  })
-}
+  });
+};
 
 export const userRepo = createRepo(db.user, {
   queryMethods: {
@@ -96,16 +98,23 @@ export const userRepo = createRepo(db.user, {
       return selectFollowing(
         q.select('id', 'firstName', 'lastName', 'picture'),
         currentUser,
-      )
+      );
     },
     selectForView(q, currentUser: User) {
       return selectFollowing(
-        q.select('id', 'firstName', 'lastName', 'picture', 'bio', 'someOtherFields'),
+        q.select(
+          'id',
+          'firstName',
+          'lastName',
+          'picture',
+          'bio',
+          'someOtherFields',
+        ),
         currentUser,
-      )
+      );
     },
   },
-})
+});
 ```
 
 ## Kinds of methods
@@ -117,8 +126,8 @@ export const repo = createRepo(db.table, {
   queryMethods: {
     queryMethod(q) {
       // q can be any query
-      return q.select(...columns)
-    }
+      return q.select(...columns);
+    },
   },
   queryOneMethods: {
     // q is a query which is searching for one record
@@ -126,9 +135,9 @@ export const repo = createRepo(db.table, {
       return q.where(...conditions).update({
         relation: {
           // nested create is only available when searching for one record
-          create: { ...relationData }
-        }
-      })
+          create: { ...relationData },
+        },
+      });
     },
   },
   queryWithWhereMethods: {
@@ -136,8 +145,8 @@ export const repo = createRepo(db.table, {
     queryWithWhereMethod(q) {
       // .delete() method requires `where`
       // to not delete all records by mistake
-      return q.delete()
-    }
+      return q.delete();
+    },
   },
   queryOneWithWhereMethods: {
     // q is a query with `where` conditions which returns one record
@@ -147,41 +156,41 @@ export const repo = createRepo(db.table, {
       return q.update({
         relation: {
           // nested create is only available when searching for one record
-          create: { ...relationData }
-        }
-      })
-    }
+          create: { ...relationData },
+        },
+      });
+    },
   },
   methods: {
     // no query parameter, a simple method
     simpleMethod(a: number, b: number) {
-      return a + b
+      return a + b;
     },
-  }
-})
+  },
+});
 ```
 
 When using these methods, TypeScript will check if the query satisfies the method parameter:
 
 ```ts
 // `queryMethods` is available for any kind of query
-repo.queryMethod()
+repo.queryMethod();
 
 // TS error
-repo.queryOneMethod()
+repo.queryOneMethod();
 // OK
-repo.find(1).queryOneMethod()
+repo.find(1).queryOneMethod();
 
 // TS error
-repo.queryWithWhereMethod()
+repo.queryWithWhereMethod();
 // OK
-repo.where(...conditions).queryWithWhereMethod()
+repo.where(...conditions).queryWithWhereMethod();
 
 // TS error
-repo.queryOneWithWhereMethod()
+repo.queryOneWithWhereMethod();
 // OK: find returns one and adds conditions
-repo.find(1).queryWithWhereMethod()
+repo.find(1).queryWithWhereMethod();
 
 // OK
-repo.simpleMethod(1, 1)
+repo.simpleMethod(1, 1);
 ```

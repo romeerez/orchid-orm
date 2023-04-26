@@ -33,19 +33,15 @@ db.table.with(
     name: columnTypes.text(3, 100),
   },
   db.table.raw('SELECT id, name FROM "someTable"'),
-)
+);
 
 // accepts query:
-db.table.with(
-  'alias',
-  db.table.all(),
-)
+db.table.with('alias', db.table.all());
 
 // accepts a callback for a query builder:
-db.table.with(
-  'alias',
-  (qb) => qb.select({ one: db.table.raw((t) => t.integer(), '1') }),
-)
+db.table.with('alias', (qb) =>
+  qb.select({ one: db.table.raw((t) => t.integer(), '1') }),
+);
 
 // All mentioned forms can accept options as a second argument:
 db.table.with(
@@ -55,20 +51,18 @@ db.table.with(
     materialized: true,
   },
   rawOrQueryOrCallback,
-)
+);
 ```
 
 Defined `WITH` table can be used in `.from` or `.join` with all the type safeness:
+
 ```ts
-db.table
-  .with('alias', db.table.all())
-  .from('alias')
-  .select('alias.id')
+db.table.with('alias', db.table.all()).from('alias').select('alias.id');
 
 db.table
   .with('alias', db.table.all())
   .join('alias', 'alias.id', 'user.id')
-  .select('alias.id')
+  .select('alias.id');
 ```
 
 ## withSchema
@@ -79,7 +73,7 @@ Though this method can be used to set the schema right when building the query,
 it's better to specify schema when calling `db(table, () => columns, { schema: string })`
 
 ```ts
-db.table.withSchema('customSchema').select('id')
+db.table.withSchema('customSchema').select('id');
 ```
 
 Resulting SQL:
@@ -91,16 +85,15 @@ SELECT "user"."id" FROM "customSchema"."user"
 ## union, unionAll, intersect, intersectAll, except, exceptAll
 
 Creates a union query, taking an array or a list of callbacks, builders, or raw statements to build the union statement, with optional boolean `wrap`. If the `wrap` parameter is true, the queries will be individually wrapped in parentheses.
+
 ```ts
-SomeTable
-  .select('id', 'name')
-  .union(
-    [
-      OtherTable.select('id', 'name'),
-      SomeTable.raw(`SELECT id, name FROM "thirdTable"`)
-    ],
-    true, // optional wrap parameter
-  )
+SomeTable.select('id', 'name').union(
+  [
+    OtherTable.select('id', 'name'),
+    SomeTable.raw(`SELECT id, name FROM "thirdTable"`),
+  ],
+  true, // optional wrap parameter
+);
 // Other methods takes the same arguments,
 // they are different by SQL keyword:
 // .unionAll(...)
@@ -126,10 +119,10 @@ type AggregateOptions = {
 
   order?:
     | {
-        [columnName]: 'ASC' | 'DESC' | 'ASC NULLS FIRST' | 'DESC NULLS LAST'
+        [columnName]: 'ASC' | 'DESC' | 'ASC NULLS FIRST' | 'DESC NULLS LAST';
       }
     | RawExpression;
-}
+};
 ```
 
 ### selectRowNumber
@@ -140,13 +133,11 @@ Returns the number of the current row within its partition, counting from 1.
 
 ```ts
 // result is of type Array<{ id: number, rowNumber: number }>
-const result = await db.table
-  .select('id')
-  .selectRowNumber({
-    as: 'rowNumber',
-    partitionBy: 'someColumn',
-    order: { createdAt: 'ASC' }
-  })
+const result = await db.table.select('id').selectRowNumber({
+  as: 'rowNumber',
+  partitionBy: 'someColumn',
+  order: { createdAt: 'ASC' },
+});
 ```
 
 ### selectRank
@@ -157,13 +148,11 @@ Returns the rank of the current row, with gaps; that is, the row_number of the f
 
 ```ts
 // result is of type Array<{ id: number, rank: number }>
-const result = await db.table
-  .select('id')
-  .selectRank({
-    as: 'rank',
-    partitionBy: 'someColumn',
-    order: { createdAt: 'ASC' }
-  })
+const result = await db.table.select('id').selectRank({
+  as: 'rank',
+  partitionBy: 'someColumn',
+  order: { createdAt: 'ASC' },
+});
 ```
 
 ### selectDenseRank
@@ -174,13 +163,11 @@ Returns the rank of the current row, without gaps; this function effectively cou
 
 ```ts
 // result is of type Array<{ id: number, denseRank: number }>
-const result = await db.table
-  .select('id')
-  .selectDenseRank({
-    as: 'denseRank',
-    partitionBy: 'someColumn',
-    order: { createdAt: 'ASC' }
-  })
+const result = await db.table.select('id').selectDenseRank({
+  as: 'denseRank',
+  partitionBy: 'someColumn',
+  order: { createdAt: 'ASC' },
+});
 ```
 
 ### selectPercentRank
@@ -191,13 +178,11 @@ Returns the relative rank of the current row, that is (rank - 1) / (total partit
 
 ```ts
 // result is of type Array<{ id: number, percentRank: number }>
-const result = await db.table
-  .select('id')
-  .selectPercentRank({
-    as: 'percentRank',
-    partitionBy: 'someColumn',
-    order: { createdAt: 'ASC' }
-  })
+const result = await db.table.select('id').selectPercentRank({
+  as: 'percentRank',
+  partitionBy: 'someColumn',
+  order: { createdAt: 'ASC' },
+});
 ```
 
 ### selectCumeDist
@@ -208,13 +193,11 @@ Returns the cumulative distribution, that is (number of partition rows preceding
 
 ```ts
 // result is of type Array<{ id: number, cumeDist: number }>
-const result = await db.table
-  .select('id')
-  .selectCumeDist({
-    as: 'cumeDist',
-    partitionBy: 'someColumn',
-    order: { createdAt: 'ASC' }
-  })
+const result = await db.table.select('id').selectCumeDist({
+  as: 'cumeDist',
+  partitionBy: 'someColumn',
+  order: { createdAt: 'ASC' },
+});
 ```
 
 ## columnInfo
@@ -227,13 +210,13 @@ type ColumnInfo = {
   type: string; // the column type
   maxLength: number | null; // the max length set for the column, present on string types
   nullable: boolean; // whether the column may be null
-}
+};
 
 // columnInfo has type Record<string, ColumnInfo>, where string is name of columns
-const columnInfo = await db.table.columnInfo()
+const columnInfo = await db.table.columnInfo();
 
 // singleColumnInfo has the type ColumnInfo
-const singleColumnInfo = await db.table.columnInfo('name')
+const singleColumnInfo = await db.table.columnInfo('name');
 ```
 
 ## copy
@@ -277,15 +260,16 @@ Example usage:
 ```ts
 await db.table.copy({
   columns: ['id', 'title', 'description'],
-  from: 'path-to-file'
-})
+  from: 'path-to-file',
+});
 ```
 
 ## jsonPathQuery
 
 Selects a value from JSON data using a JSON path.
+
 ```ts
-import { columnTypes } from 'pqb'
+import { columnTypes } from 'pqb';
 
 db.table.jsonPathQuery(
   columnTypes.text(3, 100), // type of the value
@@ -298,11 +282,12 @@ db.table.jsonPathQuery(
   {
     vars: 'vars',
     silent: true,
-  }
+  },
 );
 ```
 
 Nested JSON operations can be used in place of JSON column name:
+
 ```ts
 db.table.jsonPathQuery(
   columnTypes.text(3, 100),
@@ -310,69 +295,60 @@ db.table.jsonPathQuery(
   db.table.jsonSet('data', ['key'], 'value'),
   '$.name',
   'name',
-)
+);
 ```
 
 ## jsonSet
 
 Return a JSON value/object/array where a given value is set at the given path.
 The path is an array of keys to access the value.
-```ts
-const result = await db.table
-  .jsonSet('data', ['name'], 'new value')
-  .take()
 
-expect(result.data).toEqual({ name: 'new value' })
+```ts
+const result = await db.table.jsonSet('data', ['name'], 'new value').take();
+
+expect(result.data).toEqual({ name: 'new value' });
 ```
 
 Optionally takes parameters of type `{ as?: string, createIfMissing?: boolean }`
+
 ```ts
-await db.table.jsonSet(
-  'data',
-  ['name'],
-  'new value',
-  {
-    as: 'alias', // select data as `alias`
-    createIfMissing: true, // ignored if missing by default
-  }
-)
+await db.table.jsonSet('data', ['name'], 'new value', {
+  as: 'alias', // select data as `alias`
+  createIfMissing: true, // ignored if missing by default
+});
 ```
 
 ## jsonInsert
 
 Return a JSON value/object/array where a given value is inserted at the given JSON path. Value can be a single value or JSON object. If a value exists at the given path, the value is not replaced.
+
 ```ts
 // imagine user has data = { tags: ['two'] }
-const result = await db.table
-  .jsonInsert('data', ['tags', 0], 'one')
-  .take()
+const result = await db.table.jsonInsert('data', ['tags', 0], 'one').take();
 
 // 'one' is inserted to 0 position
-expect(result.data).toEqual({ tags: ['one', 'two'] })
+expect(result.data).toEqual({ tags: ['one', 'two'] });
 ```
 
 Optionally takes parameters of type `{ as?: string, insertAfter?: boolean }`
+
 ```ts
 // imagine user has data = { tags: ['one'] }
 const result = await db.table
-  .jsonInsert(
-    'data',
-    ['tags', 0],
-    'two',
-    {
-      as: 'alias', // select as an alias
-      insertAfter: true // insert after specified position
-    },
-  )
-  .take()
+  .jsonInsert('data', ['tags', 0], 'two', {
+    as: 'alias', // select as an alias
+    insertAfter: true, // insert after specified position
+  })
+  .take();
 
 // 'one' is inserted to 0 position
-expect(result.alias).toEqual({ tags: ['one', 'two'] })
+expect(result.alias).toEqual({ tags: ['one', 'two'] });
 ```
 
 ## jsonRemove
 
 Return a JSON value/object/array where a given value is removed at the given JSON path.
+
 ```ts
 // imagine a user has data = { tags: ['one', 'two'] }
 const result = await db.table
@@ -382,9 +358,9 @@ const result = await db.table
     // optional parameters:
     {
       as: 'alias', // select as an alias
-    }
+    },
   )
   .take();
 
-expect(result.alias).toEqual({ tags: ['two'] })
+expect(result.alias).toEqual({ tags: ['two'] });
 ```

@@ -21,33 +21,33 @@ Use the `tableToZod` utility to get a validation schema from a table class:
 
 ```ts
 import { tableToZod } from 'orchid-orm-schema-to-zod';
-import { BaseTable } from './baseTable'
+import { BaseTable } from './baseTable';
 
 export class SomeTable extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     name: t.text(3, 100),
-  }))
+  }));
 }
 
-export const SomeTableSchema = tableToZod(SomeTable)
+export const SomeTableSchema = tableToZod(SomeTable);
 ```
 
 Later in the code which is receiving user input, you can use this schema for validation:
 
 ```ts
-import { Request } from 'express' // express is for example
-import { SomeTableSchema } from './some.table'
+import { Request } from 'express'; // express is for example
+import { SomeTableSchema } from './some.table';
 
 // id is omitted because it's not needed in the update:
-const updateSomeItemSchema = SomeTableSchema.omit('id')
+const updateSomeItemSchema = SomeTableSchema.omit('id');
 
 export const updateSomeItemController = (req: Request) => {
   // dataForUpdate has a proper TS type and it is validated
-  const dataForUpdate = updateSomeItemSchema.parse(req.body)
+  const dataForUpdate = updateSomeItemSchema.parse(req.body);
   // ...do something with dataForUpdate
-}
+};
 ```
 
 ## errors
@@ -58,7 +58,7 @@ export const updateSomeItemController = (req: Request) => {
 t.text().errors({
   required: 'This column is required',
   invalidType: 'This column must be an integer',
-})
+});
 ```
 
 It will be converted into `Zod`'s messages:
@@ -80,9 +80,9 @@ t.text().email('Invalid email address');
 t.text().url('Invalid url');
 t.text().emoji('Contains non-emoji characters');
 t.text().uuid('Invalid UUID');
-t.text().includes("tuna", 'Must include tuna');
-t.text().startsWith("https://", 'Must provide secure URL');
-t.text().endsWith(".com", 'Only .com domains allowed');
+t.text().includes('tuna', 'Must include tuna');
+t.text().startsWith('https://', 'Must provide secure URL');
+t.text().endsWith('.com', 'Only .com domains allowed');
 ```
 
 Except for `text().datetime()` and `text().ip()`:
@@ -98,10 +98,16 @@ Error messages are supported for a JSON schema as well:
 
 ```ts
 t.json((j) => ({
-  one: j.string().errors({ required: 'One is required' }).min(5, 'Must be 5 or more characters long'),
-  two: j.string().errors({ invalidType: 'Two should be a string' }).max(5, 'Must be 5 or fewer characters long'),
+  one: j
+    .string()
+    .errors({ required: 'One is required' })
+    .min(5, 'Must be 5 or more characters long'),
+  two: j
+    .string()
+    .errors({ invalidType: 'Two should be a string' })
+    .max(5, 'Must be 5 or fewer characters long'),
   three: j.string().length(5, 'Must be exactly 5 characters long'),
-}))
+}));
 ```
 
 ## validationDefault
@@ -110,11 +116,11 @@ Set default value or a function, in the case of a function it's called on each v
 
 ```ts
 class SomeTable extends BaseTable {
-  readonly table = 'table'
+  readonly table = 'table';
   columns = this.setColumns((t) => ({
     column: t.text(1, 100).validationDefault('default value'),
     dateColumn: t.date().validationDefault(() => new Date()),
-  }))
+  }));
 }
 ```
 
@@ -124,11 +130,11 @@ Transform value with a custom function. Returned type of value becomes a type of
 
 ```ts
 class SomeTable extends BaseTable {
-  readonly table = 'table'
+  readonly table = 'table';
   columns = this.setColumns((t) => ({
     // reverse a string during validation
-    column: t.text(1, 100).transform((val) => val.split('').reverse().join(''))
-  }))
+    column: t.text(1, 100).transform((val) => val.split('').reverse().join('')),
+  }));
 }
 ```
 
@@ -138,11 +144,11 @@ Similar to the `.preprocess` function of Zod, it allows the transformation of on
 
 ```ts
 class SomeTable extends BaseTable {
-  readonly table = 'table'
+  readonly table = 'table';
   columns = this.setColumns((t) => ({
     // transform text to integer
-    column: t.text(1, 100).to((val) => parseInt(val), t.integer())
-  }))
+    column: t.text(1, 100).to((val) => parseInt(val), t.integer()),
+  }));
 }
 ```
 
@@ -154,11 +160,13 @@ Optionally takes error message parameter.
 
 ```ts
 class SomeTable extends BaseTable {
-  readonly table = 'table'
+  readonly table = 'table';
   columns = this.setColumns((t) => ({
     // will produce an error when the value is not 'something'
-    column: t.text(1, 100).refine((val) => val === 'something', 'error message')
-  }))
+    column: t
+      .text(1, 100)
+      .refine((val) => val === 'something', 'error message'),
+  }));
 }
 ```
 
@@ -168,7 +176,7 @@ Add a custom check with access to the validation context, see the `.superRefine`
 
 ```ts
 class SomeTable extends BaseTable {
-  readonly table = 'table'
+  readonly table = 'table';
   columns = this.setColumns((t) => ({
     column: t.text(1, 100).superRefine((val, ctx) => {
       if (val.length > 3) {
@@ -180,8 +188,8 @@ class SomeTable extends BaseTable {
           message: 'Too many items 😡',
         });
       }
-    })
-  }))
+    }),
+  }));
 }
 ```
 
@@ -191,9 +199,10 @@ Numeric columns `smallint`, `integer`, `numeric`, `decimal`, `real`, `smallSeria
 
 ```ts
 class SomeTable extends BaseTable {
-  readonly table = 'table'
+  readonly table = 'table';
   columns = this.setColumns((t) => ({
-    number: t.integer()
+    number: t
+      .integer()
       .lt(number) // must be lower than number
       .lte(number) // must be lower than or equal to the number
       .max(number) // alias for .lte
@@ -207,8 +216,8 @@ class SomeTable extends BaseTable {
       .multipleOf(number) // must be a multiple of the number
       .step(number) // alias for .multipleOf
       .finite() // useful only for `numeric`, `decimal`, `real`, because Infinity won't pass integer check
-      .safe() // equivalient to .lte(Number.MAX_SAFE_INTEGER)
-  }))
+      .safe(), // equivalient to .lte(Number.MAX_SAFE_INTEGER)
+  }));
 }
 ```
 
@@ -218,9 +227,10 @@ Text columns `varchar`, `char`, and `text` have such validation methods:
 
 ```ts
 class SomeTable extends BaseTable {
-  readonly table = 'table'
+  readonly table = 'table';
   columns = this.setColumns((t) => ({
-    number: t.text()
+    number: t
+      .text()
       .nonEmpty() // equivalent for .min(1)
       .min(1)
       .max(10)
@@ -240,8 +250,8 @@ class SomeTable extends BaseTable {
       .endsWith('str')
       .trim()
       .toLowerCase()
-      .toUpperCase()
-  }))
+      .toUpperCase(),
+  }));
 }
 ```
 
@@ -251,13 +261,14 @@ Array columns have such validation methods:
 
 ```ts
 class SomeTable extends BaseTable {
-  readonly table = 'table'
+  readonly table = 'table';
   columns = this.setColumns((t) => ({
-    number: t.integer()
+    number: t
+      .integer()
       .nonEmpty() // require at least one element
       .min(number) // set minimum array length
       .max(number) // set maximum array length
-      .length(number) // set exact array length
-  }))
+      .length(number), // set exact array length
+  }));
 }
 ```

@@ -92,17 +92,17 @@ Options are:
 type TableOptions = {
   // used when reverting a `createTable`
   dropMode?: 'CASCADE' | 'RESTRICT';
-  
+
   // add a database comment on the table
   comment?: string;
-  
+
   // by default, it will throw an error when the table has no primary key
   // set `noPrimaryKey` to `true` to bypass it
   noPrimaryKey?: boolean;
-  
+
   // override rakeDb `snakeCase` option for only this table
   snakeCase?: boolean;
-}
+};
 ```
 
 Example:
@@ -123,7 +123,7 @@ change(async (db, up) => {
       // ...
     }),
   );
-  
+
   // call without options
   const { table } = await db.createTable('user', (t) => ({
     id: t.identity().primaryKey(),
@@ -132,11 +132,11 @@ change(async (db, up) => {
     active: t.boolean().nullable(),
     ...t.timestamps(),
   }));
-  
+
   // create records only when migrating up
   if (up) {
     // table is a db table interface, all query methods are available
-    await table.createMany([ ...data ])
+    await table.createMany([...data]);
   }
 });
 ```
@@ -153,15 +153,13 @@ Options are:
 type ChangeTableOptions = {
   comment?:
     | // add a comment to the table on migrating, remove a comment on rollback
-      string
-    | // change comment from first to second on migrating, from second to first on rollback
-      [string, string]
-    | // remove a comment on both migrate and rollback
-      null
-  
+    string // change comment from first to second on migrating, from second to first on rollback
+    | [string, string] // remove a comment on both migrate and rollback
+    | null;
+
   // override rakeDb `snakeCase` option for only this table
   snakeCase?: boolean;
-}
+};
 ```
 
 The callback of the `changeTable` is different from `createTable` in the way that it expects columns to be wrapped in change methods such as `add`, `drop`, and `change`.
@@ -183,52 +181,42 @@ change(async (db) => {
   await db.changeTable('table', (t) => ({
     // add column
     column1: t.add(t.text()),
-    
+
     // remove column
     column2: t.drop(t.boolean()),
-    
+
     // add a check to the column
     column3: t.add(t.check(t.raw(`column3 > 5`))),
-    
+
     // remove a check from the column
     column4: t.drop(t.check(t.raw(`column4 > 5`))),
-    
+
     // add composite primary key:
     ...t.add(t.primaryKey(['foo', 'bar'])),
-    
+
     // add composite index:
     ...t.add(t.index(['foo', 'bar'])),
-    
+
     // add composite unique index:
     ...t.add(t.unique(['foo', 'bar'])),
-    
+
     // add composite foreign key:
     ...t.add(
-      t.foreignKey(
-        ['foo', 'bar'],
-        'otherTable',
-        ['otherFoo', 'otherBar'],
-      ),
+      t.foreignKey(['foo', 'bar'], 'otherTable', ['otherFoo', 'otherBar']),
     ),
-    
+
     // add a table check
-    ...t.add(
-      t.check(t.raw('column3 > column4')),
-    ),
-    
+    ...t.add(t.check(t.raw('column3 > column4'))),
+
     // add a constraint
     ...t.add(
       t.constraint({
         name: 'constraintName',
         check: t.raw('column3 < 20'),
-        foreignKey: [
-          ['foo', 'bar'],
-          'otherTable',
-          ['otherFoo', 'otherBar'],
-        ]
-      })
+        foreignKey: [['foo', 'bar'], 'otherTable', ['otherFoo', 'otherBar']],
+      }),
     ),
-    
+
     // add timestamps:
     ...t.add(t.timestamps()),
   }));
@@ -254,32 +242,32 @@ change(async (db) => {
   await db.changeTable('table', (t) => ({
     // change column type from integer to string
     column1: t.change(t.integer(), t.string()),
-    
+
     // change column type using SQL expression to convert data
     column2: t.change(t.integer(), t.string(), {
       usingUp: t.raw('column2::text'),
       usingDown: t.raw('column2::integer'),
     }),
-    
+
     // change column default
     column3: t.change(t.default(1), t.default(2)),
-    
+
     // change column default with raw SQL
     column4: t.change(t.default(t.raw('2 + 2')), t.default(t.raw('3 + 3'))),
-    
+
     // change column to be nullable or non-nullable
     column5: t.change(t.nonNullable(), t.nullable()),
     column6: t.change(t.nullable(), t.nonNullable()),
-    
+
     // change column comment
     column7: t.change(t.comment('from comment'), t.comment('to comment')),
-    
+
     // add index
     column8: t.change(t.integer(), t.integer().index()),
-    
+
     // remove index
     column9: t.change(t.integer().index(), t.integer()),
-    
+
     // change index
     column10: t.change(
       t.integer().index({
@@ -287,33 +275,27 @@ change(async (db) => {
       }),
       t.integer().index({
         // index options to be applied when migrating up
-      })
+      }),
     ),
-    
+
     // add primary key
-    column11: t.change(
-      t.integer(),
-      t.integer().primaryKey()
-    ),
-    
+    column11: t.change(t.integer(), t.integer().primaryKey()),
+
     // drop primary key
-    column12: t.change(
-      t.integer().primaryKey(),
-      t.integer(),
-    ),
-    
+    column12: t.change(t.integer().primaryKey(), t.integer()),
+
     // add foreign key
     column13: t.change(
       t.integer(),
       t.integer().foreignKey('otherTable', 'otherTableId'),
     ),
-    
+
     // remove foreign key
     column14: t.change(
       t.integer().foreignKey('otherTable', 'otherTableId'),
       t.integer(),
     ),
-    
+
     // change foreign key
     column15: t.change(
       t.integer().foreignKey('oneTable', 'oneColumn', {
@@ -334,7 +316,8 @@ change(async (db) => {
 
     // change various column properties at once
     column16: t.change(
-      t.integer()
+      t
+        .integer()
         .collate('de_DE')
         .default(123)
         .comprssion('pglz')
@@ -343,7 +326,8 @@ change(async (db) => {
         .foreignKey('oneTable', 'oneColumn', {
           name: 'oneForeignKeyName',
         }),
-      t.text()
+      t
+        .text()
         .collate('es_ES')
         .default('123')
         .compression('lz4')
@@ -354,7 +338,7 @@ change(async (db) => {
           name: 'otherForeignKeyName',
         }),
     ),
-    
+
     column17: t.change(
       // change from this check:
       t.check(t.raw('column17 > 5')),
@@ -370,7 +354,7 @@ change(async (db) => {
 Rename a column:
 
 ```ts
-import { change } from '../dbScript'
+import { change } from '../dbScript';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
@@ -402,7 +386,7 @@ import { change } from '../dbScript';
 
 change(async (db) => {
   await db.addColumn('tableName', 'columnName', (t) =>
-    t.integer().index().nullable()
+    t.integer().index().nullable(),
   );
 });
 ```
@@ -416,7 +400,7 @@ Add an index to the table on migrating, and remove it on rollback.
 The first argument is the table name, other arguments are the same as in [composite index](#composite-index).
 
 ```ts
-import { change } from '../dbScript'
+import { change } from '../dbScript';
 
 change(async (db) => {
   await db.addIndex(
@@ -424,7 +408,7 @@ change(async (db) => {
     ['column1', { column: 'column2', order: 'DESC' }],
     {
       name: 'indexName',
-    }
+    },
   );
 });
 ```
@@ -451,7 +435,7 @@ change(async (db) => {
       match: 'FULL',
       onUpdate: 'RESTRICT',
       onDelete: 'CASCADE',
-    }
+    },
   );
 });
 ```
@@ -468,11 +452,9 @@ The first argument is the table name, other arguments are the same as in [compos
 import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.addPrimaryKey(
-    'tableName',
-    ['id', 'name'],
-    { name: 'tablePkeyName' },
-  );
+  await db.addPrimaryKey('tableName', ['id', 'name'], {
+    name: 'tablePkeyName',
+  });
 });
 ```
 
@@ -501,11 +483,7 @@ change(async (db) => {
   await db.addConstraint('tableName', {
     name: 'constraintName',
     check: db.raw('column > 123'),
-    references: [
-      ['id', 'name'],
-      'otherTable',
-      ['otherId', 'otherName'],
-    ],
+    references: [['id', 'name'], 'otherTable', ['otherId', 'otherName']],
   });
 });
 ```
@@ -535,7 +513,7 @@ import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createEnum('number', ['one', 'two', 'three']);
-  
+
   // use `schemaName.enumName` format to specify a schema
   await db.createEnum('customSchema.mood', ['sad', 'ok', 'happy'], {
     // following options are used when dropping enum
@@ -586,7 +564,7 @@ change(async (db) => {
   await db.createDomain('domainName', (t) => t.integer(), {
     check: db.raw('value = 42'),
   });
-  
+
   // use `schemaName.domainName` format to specify a schema
   await db.createDomain('schemaName.domainName', (t) => t.text(), {
     // unlike columns, domain is nullable by default, use notNull when needed:
@@ -594,11 +572,11 @@ change(async (db) => {
     collation: 'C',
     default: db.raw(`'default text'`),
     check: db.raw('length(value) > 10'),
-    
+
     // cascade is used when dropping domain
     cascade: true,
   });
-})
+});
 ```
 
 ## createView, dropView
@@ -611,18 +589,27 @@ Provide SQL as a string or via `db.raw` that can accept variables.
 import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.createView('simpleView', `
+  await db.createView(
+    'simpleView',
+    `
     SELECT a.one, b.two
     FROM a
     JOIN b ON b."aId" = a.id
-  `);
-  
+  `,
+  );
+
   // view can accept db.raw with variables in such way:
-  await db.createView('viewWithVariables', db.raw(`
+  await db.createView(
+    'viewWithVariables',
+    db.raw(
+      `
     SELECT * FROM a WHERE key = $key
-  `, {
-    key: 'value'
-  }))
+  `,
+      {
+        key: 'value',
+      },
+    ),
+  );
 
   // view with options
   await db.createView(
@@ -630,11 +617,11 @@ change(async (db) => {
     {
       // createOrReplace has effect when creating the view
       createOrReplace: true,
-      
+
       // dropIfExists and dropMode have effect when dropping the view
       dropIfExists: true,
       dropMode: 'CASCADE',
-      
+
       // for details, check Postgres docs for CREATE VIEW,
       // these options are matching CREATE VIEW options
       temporary: true,
@@ -645,13 +632,14 @@ change(async (db) => {
         securityBarrier: true,
         securityInvoker: true,
       },
-    }, `
+    },
+    `
       VALUES (1)
       UNION ALL
       SELECT n + 1 FROM "schemaName"."recursiveView" WHERE n < 100;
-    `
+    `,
   );
-})
+});
 ```
 
 ## tableExists

@@ -10,19 +10,21 @@ Place `.select`, or `.get` before `.create` to specify returning columns:
 
 ```ts
 // to return only `id`, use get('id')
-const id: number = await db.table.get('id').create(data)
+const id: number = await db.table.get('id').create(data);
 
 // returns a single object when creating a single record
-const objectWithId: { id: number } = await db.table.select('id').create(data)
+const objectWithId: { id: number } = await db.table.select('id').create(data);
 
 // returns an array of objects when creating multiple
-const objects: { id: number }[] = await db.table.select('id').createMany([one, two])
+const objects: { id: number }[] = await db.table
+  .select('id')
+  .createMany([one, two]);
 
 // returns an array of objects as well for raw values:
 const objects2: { id: number }[] = await db.table.select('id').createRaw({
   columns: ['name', 'password'],
-  values: db.table.raw(`'Joe', 'asdfqwer'`)
-})
+  values: db.table.raw(`'Joe', 'asdfqwer'`),
+});
 ```
 
 ## create
@@ -32,8 +34,8 @@ const objects2: { id: number }[] = await db.table.select('id').createRaw({
 ```ts
 const oneRecord = await db.table.create({
   name: 'John',
-  password: '1234'
-})
+  password: '1234',
+});
 ```
 
 ## createMany
@@ -45,8 +47,8 @@ In case one of the objects has fewer fields, the `DEFAULT` SQL keyword will be p
 ```ts
 const manyRecords = await db.table.createMany([
   { key: 'value', otherKey: 'other value' },
-  { key: 'value' } // default will be used for `otherKey`
-])
+  { key: 'value' }, // default will be used for `otherKey`
+]);
 ```
 
 ## createRaw
@@ -62,8 +64,8 @@ If the table has a column with runtime defaults (defined with callbacks), the va
 ```ts
 const oneRecord = await db.table.createRaw({
   columns: ['name', 'amount'],
-  values: db.table.raw(`'name', random()`)
-})
+  values: db.table.raw(`'name', random()`),
+});
 ```
 
 ## createManyRaw
@@ -79,11 +81,8 @@ If the table has a column with runtime defaults (defined with callbacks), functi
 ```ts
 const manyRecords = await db.table.createManyRaw({
   columns: ['name', 'amount'],
-  values: [
-    db.table.raw(`'one', 2`),
-    db.table.raw(`'three', 4`),
-  ],
-})
+  values: [db.table.raw(`'one', 2`), db.table.raw(`'three', 4`)],
+});
 ```
 
 ## createFrom
@@ -106,8 +105,8 @@ const oneRecord = await db.table.createFrom(
   // optional argument:
   {
     key: 'value',
-  }
-)
+  },
+);
 ```
 
 The query above will produce such SQL:
@@ -130,7 +129,7 @@ Unlike `createFrom`, it doesn't accept second argument with data, and runtime de
 ```ts
 const manyRecords = await db.table.createManyFrom(
   RelatedTable.select({ relatedId: 'id' }).where({ key: 'value' }),
-)
+);
 ```
 
 ## orCreate
@@ -146,13 +145,10 @@ It is accepting the same argument as `create` commands.
 By default, it is not returning columns, place `.get`, `.select`, or `.selectAll` before `.orCreate` to specify returning columns.
 
 ```ts
-const user = await User
-  .selectAll()
-  .find({ email: 'some@email.com' })
-  .orCreate({
-    email: 'some@email.com',
-    name: 'created user'
-  })
+const user = await User.selectAll().find({ email: 'some@email.com' }).orCreate({
+  email: 'some@email.com',
+  name: 'created user',
+});
 ```
 
 ## onConflict
@@ -167,16 +163,16 @@ or to update the existing row with new data (perform an "UPSERT") by using .onCo
 
 ```ts
 // leave without argument to ignore or merge on any conflict
-Target.create(data).onConflict().ignore()
+Target.create(data).onConflict().ignore();
 
 // single column:
-db.table.create(data).onConfict('email')
+db.table.create(data).onConfict('email');
 
 // array of columns:
-db.table.create(data).onConfict(['email', 'name'])
+db.table.create(data).onConfict(['email', 'name']);
 
 // raw expression:
-db.table.create(data).onConfict(db.table.raw('(email) where condition'))
+db.table.create(data).onConfict(db.table.raw('(email) where condition'));
 ```
 
 ::: info
@@ -189,14 +185,15 @@ It can be useful to specify a condition when you have a partial index:
 ```ts
 db.table
   .create({
-    email: "ignore@example.com",
-    name: "John Doe",
-    active: true
+    email: 'ignore@example.com',
+    name: 'John Doe',
+    active: true,
   })
   // ignore only on email conflict and active is true.
   .onConflict(db.table.raw('(email) where active'))
-  .ignore()
+  .ignore();
 ```
+
 :::
 
 See the documentation on the .ignore() and .merge() methods for more details.
@@ -214,11 +211,11 @@ It produces `ON CONFLICT DO NOTHING` when no `onConflict` argument provided.
 ```ts
 db.table
   .create({
-    email: "ignore@example.com",
-    name: "John Doe"
+    email: 'ignore@example.com',
+    name: 'John Doe',
   })
   .onConflict('email')
-  .ignore()
+  .ignore();
 ```
 
 ## merge
@@ -235,11 +232,11 @@ it will automatically collect all table columns that have unique index and use t
 ```ts
 db.table
   .create({
-    email: "ignore@example.com",
-    name: "John Doe"
+    email: 'ignore@example.com',
+    name: 'John Doe',
   })
   .onConflict('email')
-  .merge()
+  .merge();
 ```
 
 This also works with batch creates:
@@ -247,12 +244,12 @@ This also works with batch creates:
 ```ts
 db.table
   .createMany([
-    { email: "john@example.com", name: "John Doe" },
-    { email: "jane@example.com", name: "Jane Doe" },
-    { email: "alex@example.com", name: "Alex Doe" },
+    { email: 'john@example.com', name: 'John Doe' },
+    { email: 'jane@example.com', name: 'Jane Doe' },
+    { email: 'alex@example.com', name: 'Alex Doe' },
   ])
   .onConflict('email')
-  .merge()
+  .merge();
 ```
 
 It is also possible to specify a subset of the columns to merge when a conflict occurs.
@@ -263,8 +260,8 @@ const timestamp = Date.now();
 
 db.table
   .create({
-    email: "ignore@example.com",
-    name: "John Doe",
+    email: 'ignore@example.com',
+    name: 'John Doe',
     createdAt: timestamp,
     updatedAt: timestamp,
   })
@@ -272,7 +269,7 @@ db.table
   // string argument for a single column:
   .merge('email')
   // array of strings for multiple columns:
-  .merge(['email', 'name', 'updatedAt'])
+  .merge(['email', 'name', 'updatedAt']);
 ```
 
 It is also possible to specify data to update separately from the data to create.
@@ -284,15 +281,15 @@ const timestamp = Date.now();
 
 db.table
   .create({
-    email: "ignore@example.com",
-    name: "John Doe",
+    email: 'ignore@example.com',
+    name: 'John Doe',
     createdAt: timestamp,
     updatedAt: timestamp,
   })
   .onConflict('email')
   .merge({
-    name: "John Doe The Second",
-  })
+    name: 'John Doe The Second',
+  });
 ```
 
 It is also possible to add a WHERE clause to conditionally update only the matching rows:
@@ -302,23 +299,23 @@ const timestamp = Date.now();
 
 db.table
   .create({
-    email: "ignore@example.com",
-    name: "John Doe",
+    email: 'ignore@example.com',
+    name: 'John Doe',
     createdAt: timestamp,
     updatedAt: timestamp,
   })
   .onConflict('email')
   .merge({
-    name: "John Doe",
+    name: 'John Doe',
     updatedAt: timestamp,
   })
-  .where({ updatedAt: { lt: timestamp } })
+  .where({ updatedAt: { lt: timestamp } });
 ```
 
 `.merge` also accepts raw expression:
 
 ```ts
-db.table.create(data).onConflict().merge(db.table.raw('raw SQL expression'))
+db.table.create(data).onConflict().merge(db.table.raw('raw SQL expression'));
 ```
 
 ## defaults
@@ -329,12 +326,14 @@ Columns provided in `.defaults` are marked as optional in the following `.create
 
 ```ts
 // Will use firstName from defaults and lastName from create argument:
-db.table.defaults({
-  firstName: 'first name',
-  lastName: 'last name',
-}).create({
-  lastName: 'override the last name'
-})
+db.table
+  .defaults({
+    firstName: 'first name',
+    lastName: 'last name',
+  })
+  .create({
+    lastName: 'override the last name',
+  });
 ```
 
 ## update
@@ -351,7 +350,7 @@ To ensure that the whole table won't be updated by accident, updating without wh
 If you need to update ALL records, use `where` method without arguments:
 
 ```ts
-await db.table.where().update({ name: 'new name' })
+await db.table.where().update({ name: 'new name' });
 ```
 
 If `.select` and `.where` were specified before the update it will return an array of updated records.
@@ -359,30 +358,30 @@ If `.select` and `.where` were specified before the update it will return an arr
 If `.select` and `.take`, `.find`, or similar were specified before the update it will return one updated record.
 
 ```ts
-const updatedCount = await db.table.where({ name: 'old name' }).update({ name: 'new name' })
+const updatedCount = await db.table
+  .where({ name: 'old name' })
+  .update({ name: 'new name' });
 
-const id = await db.table
-  .find(1)
-  .get('id')
-  .update({ name: 'new name' })
+const id = await db.table.find(1).get('id').update({ name: 'new name' });
 
 const oneFullRecord = await db.table
   .selectAll()
   .find(1)
-  .update({ name: 'new name' })
+  .update({ name: 'new name' });
 
 const recordsArray = await db.table
   .select('id', 'name')
   .where({ id: 1 })
-  .update({ name: 'new name' })
+  .update({ name: 'new name' });
 ```
 
 `null` value will set a column to `NULL`, and the `undefined` value will be skipped:
+
 ```ts
 db.table.findBy({ id: 1 }).update({
   name: null, // updates to null
   age: undefined, // skipped, no effect
-})
+});
 ```
 
 ## updateRaw
@@ -395,9 +394,9 @@ it returns an updated count by default,
 you can customize returning data by using `select`.
 
 ```ts
-const updatedCount = await db.table.find(1).updateRaw(
-  db.table.raw(`name = $name`, { name: 'name' })
-)
+const updatedCount = await db.table
+  .find(1)
+  .updateRaw(db.table.raw(`name = $name`, { name: 'name' }));
 ```
 
 ## updateOrThrow
@@ -405,15 +404,19 @@ const updatedCount = await db.table.find(1).updateRaw(
 To make sure that at least one row was updated use `updateOrThrow`:
 
 ```ts
-import { NotFoundError } from 'pqb'
+import { NotFoundError } from 'pqb';
 
 try {
   // updatedCount is guaranteed to be greater than 0
-  const updatedCount = await db.table.where(conditions).updateOrThrow({ name: 'name' })
+  const updatedCount = await db.table
+    .where(conditions)
+    .updateOrThrow({ name: 'name' });
 
   // updatedRecords is guaranteed to be a non-empty array
-  const updatedRecords = await db.table.where(conditions).select('id')
-    .updateOrThrow({ name: 'name' })
+  const updatedRecords = await db.table
+    .where(conditions)
+    .select('id')
+    .updateOrThrow({ name: 'name' });
 } catch (err) {
   if (err instanceof NotFoundError) {
     // handle error
@@ -436,8 +439,7 @@ In case more than one row was updated, it will throw `MoreThanOneRowError` and t
 Not returning a value by default, place `.select` or `.selectAll` before `.upsert` to specify returning columns.
 
 ```ts
-const user = await User
-  .selectAll()
+const user = await User.selectAll()
   .find({ email: 'some@email.com' })
   .upsert({
     update: {
@@ -445,23 +447,21 @@ const user = await User
     },
     create: {
       email: 'some@email.com',
-      name: 'created user'
+      name: 'created user',
     },
-  })
+  });
 ```
 
 ## increment
 
 Increments a column value by the specified amount. Optionally takes `returning` argument.
 
-
 ```ts
 // increment numericColumn column by 1, return updated records
 const result = await db.table
   .selectAll()
   .where(...conditions)
-  .increment('numericColumn')
-
+  .increment('numericColumn');
 
 // increment someColumn by 5 and otherColumn by 10, return updated records
 const result2 = await db.table
@@ -470,20 +470,19 @@ const result2 = await db.table
   .increment({
     someColumn: 5,
     otherColumn: 10,
-  })
+  });
 ```
 
 ## decrement
 
 Decrements a column value by the specified amount. Optionally takes `returning` argument.
 
-
 ```ts
 // decrement numericColumn column by 1, return updated records
 const result = await db.table
   .selectAll()
   .where(...conditions)
-  .decrement('numericColumn')
+  .decrement('numericColumn');
 
 // decrement someColumn by 5 and otherColumn by 10, return updated records
 const result2 = await db.table
@@ -492,7 +491,7 @@ const result2 = await db.table
   .decrement({
     someColumn: 5,
     otherColumn: 10,
-  })
+  });
 ```
 
 ## del / delete
@@ -511,40 +510,35 @@ To prevent accidental deletion of all records, deleting without where will resul
 To delete all records without conditions add an empty `where`:
 
 ```ts
-await db.table.where().delete()
+await db.table.where().delete();
 ```
 
 ```ts
 // deletedCount is the number of deleted records
-const deletedCount = await db.table
-  .where(...conditions)
-  .delete()
+const deletedCount = await db.table.where(...conditions).delete();
 
 // returns a single value, throws if not found
 const id: number | undefined = await db.table
   .findBy(...conditions)
   .get('id')
-  .delete()
+  .delete();
 
 // returns an array of records with specified columns
 const deletedRecord = await db.table
   .select('id', 'name', 'age')
   .where(...conditions)
-  .delete()
+  .delete();
 
 // returns an array of fully deleted records
 const deletedUsersFull = await db.table
   .selectAll()
   .where(...conditions)
-  .delete()
+  .delete();
 ```
 
 `.delete` supports joining, under the hood the join is transformed to `USING` and `WHERE` statements:
 
 ```ts
 // delete all users who have corresponding profile records:
-db.table
-  .join(Profile, 'profile.userId', 'user.id')
-  .where()
-  .delete()
+db.table.join(Profile, 'profile.userId', 'user.id').where().delete();
 ```

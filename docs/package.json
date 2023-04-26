@@ -5,7 +5,9 @@
   "scripts": {
     "start": "vitepress dev src",
     "build": "vitepress build src",
-    "serve": "vitepress serve src"
+    "serve": "vitepress serve src",
+    "format": "prettier . --check",
+    "format:fix": "prettier . --write"
   },
   "author": "Roman Kushyn",
   "license": "ISC",

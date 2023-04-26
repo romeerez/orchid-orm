@@ -11,30 +11,34 @@ In Orchid ORM the method is `$transaction`, when using `pqb` on its own it is `t
 Let's consider the case of transferring money from one user to another:
 
 ```ts
-export const transferMoney = async (fromId: number, toId: number, amount: number) => {
+export const transferMoney = async (
+  fromId: number,
+  toId: number,
+  amount: number,
+) => {
   try {
     // db.$transaction returns data that is returned from the callback
     // result here is senderRemainder
     const result = await db.$transaction(async () => {
-      const sender = await db.user.find(fromId)
-      const senderRemainder = sender.balance - amount
+      const sender = await db.user.find(fromId);
+      const senderRemainder = sender.balance - amount;
       if (senderRemainder < 0) {
-        throw new Error('Sender does not have enough money')
+        throw new Error('Sender does not have enough money');
       }
-      
+
       await db.user.find(fromId).decrement({
         balance: amount,
-      })
+      });
       await db.user.find(toId).increment({
         balance: amount,
-      })
-      
-      return senderRemainder
-    })
+      });
+
+      return senderRemainder;
+    });
   } catch (error) {
     // handle transaction error
   }
-}
+};
 ```
 
 It performs 3 queries in a single transaction: load sender record, decrement sender's balance, increment receiver's balance.
@@ -57,11 +61,11 @@ type IsolationLevel =
   | 'SERIALIZABLE'
   | 'REPEATABLE READ'
   | 'READ COMMITTED'
-  | 'READ UNCOMMITTED'
+  | 'READ UNCOMMITTED';
 
 db.$transaction('REPEATABLE READ', async () => {
   // ...
-})
+});
 ```
 
 ## read only, deferrable
@@ -71,14 +75,17 @@ Transactions in Postgres can accept `READ WRITE` | `READ ONLY` and `[ NOT ] DEFE
 You can set it by passing such object:
 
 ```ts
-db.$transaction({
-  // optionally, you can set level here:
-  // level: 'REPEATABLE READ',
-  readOnly: true,
-  deferrable: true,
-}, async () => {
-  // ...
-})
+db.$transaction(
+  {
+    // optionally, you can set level here:
+    // level: 'REPEATABLE READ',
+    readOnly: true,
+    deferrable: true,
+  },
+  async () => {
+    // ...
+  },
+);
 ```
 
 ## forUpdate
@@ -87,11 +94,11 @@ To be used in select queries inside the transaction adds the `FOR UPDATE` table 
 
 ```ts
 await db.$transaction(async () => {
-  await db.table.forUpdate()
+  await db.table.forUpdate();
 
   // Can specify columns for the lock (FOR UPDATE OF column list)
-  await db.table.forUpdate(['someColumn', 'otherColumn'])
-})
+  await db.table.forUpdate(['someColumn', 'otherColumn']);
+});
 ```
 
 ## forNoKeyUpdate
@@ -100,11 +107,11 @@ To be used in select queries inside the transaction adds the `FOR NO KEY UPDATE`
 
 ```ts
 await db.$transaction(async () => {
-  await db.table.forUpdate()
+  await db.table.forUpdate();
 
   // Can specify columns for the lock (FOR NO KEY UPDATE OF column list)
-  await db.table.forNoKeyUpdate(['someColumn', 'otherColumn'])
-})
+  await db.table.forNoKeyUpdate(['someColumn', 'otherColumn']);
+});
 ```
 
 ## forShare
@@ -113,11 +120,11 @@ To be used in select queries inside the transaction adds the `FOR SHARE` table l
 
 ```ts
 await db.$transaction(async () => {
-  await db.table.forUpdate()
+  await db.table.forUpdate();
 
   // Can specify columns for the lock (FOR SHARE OF column list)
-  await db.table.forShare(['someColumn', 'otherColumn'])
-})
+  await db.table.forShare(['someColumn', 'otherColumn']);
+});
 ```
 
 ## forKeyShare
@@ -126,11 +133,11 @@ To be used in select queries inside the transaction adds the `FOR KEY SHARE` tab
 
 ```ts
 await db.$transaction(async () => {
-  await db.table.forUpdate()
+  await db.table.forUpdate();
 
   // Can specify columns for the lock (FOR KEY SHARE OF column list)
-  await db.table.forKeyShare(['someColumn', 'otherColumn'])
-})
+  await db.table.forKeyShare(['someColumn', 'otherColumn']);
+});
 ```
 
 ## skipLocked
@@ -139,8 +146,8 @@ This method can be used after a lock mode has been specified with either `forUpd
 
 ```ts
 await db.$transaction(async () => {
-  await db.table.forUpdate().skipLocked()
-})
+  await db.table.forUpdate().skipLocked();
+});
 ```
 
 ## noWait
@@ -149,6 +156,6 @@ This method can be used after a lock mode has been specified with either forUpda
 
 ```ts
 await db.$transaction(async () => {
-  await db.table.forUpdate().noWait()
-})
+  await db.table.forUpdate().noWait();
+});
 ```
