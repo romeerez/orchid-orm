@@ -19,9 +19,8 @@ db.table.where({
   },
 
   // where column equals to raw SQL
-  column: db.table.raw('raw expression')
-})
-
+  column: db.table.raw('raw expression'),
+});
 ```
 
 `undefined` values are ignored, so you can supply a partial object with conditions:
@@ -29,45 +28,50 @@ db.table.where({
 ```ts
 type Params = {
   // allow providing exact age, or lower or greate than
-  age?: number | { lt?: number; gt?: number }
-}
+  age?: number | { lt?: number; gt?: number };
+};
 
 const loadRecords = async (params: Params) => {
   // this will load all records if params is an empty object
-  const records = await db.table.where(params)
-}
+  const records = await db.table.where(params);
+};
 ```
 
 `.where` can accept other queries and merge their conditions:
 
 ```ts
-const otherQuery = db.table.where({ name: 'John' })
+const otherQuery = db.table.where({ name: 'John' });
 
-db.table.where({ id: 1 }, otherQuery)
+db.table.where({ id: 1 }, otherQuery);
 // this will produce WHERE "table"."id" = 1 AND "table"."name' = 'John'
 ```
 
 `.where` supports raw argument:
 
 ```ts
-db.table.where(db.table.raw('a = b'))
+db.table.where(db.table.raw('a = b'));
 ```
 
 `.where` can accept a callback with a specific query builder containing all "where" methods such as `.where`, `.or`, `.whereNot`, `.whereIn`, `.whereExists`:
 
 ```ts
 db.table.where((q) =>
-  q.where({ name: 'Name' })
+  q
+    .where({ name: 'Name' })
     .or({ id: 1 }, { id: 2 })
     .whereIn('letter', ['a', 'b', 'c'])
-    .whereExists(Message, 'authorId', 'id')
-)
+    .whereExists(Message, 'authorId', 'id'),
+);
 ```
 
 `.where` can accept multiple arguments, conditions are joined with `AND`:
 
 ```ts
-db.table.where({ id: 1 }, db.table.where({ name: 'John' }), db.table.raw('a = b'))
+db.table.where(
+  { id: 1 },
+  db.table.where({ name: 'John' }),
+  db.table.raw('a = b'),
+);
 ```
 
 ### where special keys
@@ -80,8 +84,14 @@ For example:
 db.table.where({
   NOT: { key: 'value' },
   OR: [{ name: 'a' }, { name: 'b' }],
-  IN: { columns: ['id', 'name'], values: [[1, 'a'], [2, 'b']] },
-})
+  IN: {
+    columns: ['id', 'name'],
+    values: [
+      [1, 'a'],
+      [2, 'b'],
+    ],
+  },
+});
 ```
 
 Using methods instead of this is a shorter and cleaner way, but in some cases, such object keys way may be more convenient.
@@ -97,16 +107,31 @@ db.table.where({
   OR: [{ name: 'a' }, { name: 'b' }],
   // can be an array:
   // this will give id = 1 AND id = 2 OR id = 3 AND id = 4
-  OR: [[{ id: 1 }, { id: 2 }], [{ id: 3 }, { id: 4 }]],
+  OR: [
+    [{ id: 1 }, { id: 2 }],
+    [{ id: 3 }, { id: 4 }],
+  ],
 
   // see .in, the key syntax requires an object with columns and values
-  IN: { columns: ['id', 'name'], values: [[1, 'a'], [2, 'b']] },
+  IN: {
+    columns: ['id', 'name'],
+    values: [
+      [1, 'a'],
+      [2, 'b'],
+    ],
+  },
   // can be an array:
   IN: [
-    { columns: ['id', 'name'], values: [[1, 'a'], [2, 'b']] },
+    {
+      columns: ['id', 'name'],
+      values: [
+        [1, 'a'],
+        [2, 'b'],
+      ],
+    },
     { columns: ['someColumn'], values: [['foo', 'bar']] },
   ],
-})
+});
 ```
 
 ## and
@@ -114,7 +139,7 @@ db.table.where({
 `.and` is an alias for `.where` to make it closer to SQL:
 
 ```ts
-db.table.where({ id: 1 }).and({ name: 'John' })
+db.table.where({ id: 1 }).and({ name: 'John' });
 ```
 
 ## or
@@ -126,10 +151,11 @@ Columns in single arguments are still joined with `AND`.
 The database is processing `AND` before `OR`, so this should be intuitively clear.
 
 ```ts
-db.table.or({ id: 1, color: 'red' }, { id: 2, color: 'blue' })
-````
+db.table.or({ id: 1, color: 'red' }, { id: 2, color: 'blue' });
+```
 
 This query will produce such SQL (simplified):
+
 ```sql
 SELECT * FROM "table"
 WHERE id = 1 AND color = 'red'
@@ -143,7 +169,7 @@ The `find` method is available only for tables which has exactly one primary key
 Find record by id, throw [NotFoundError](/guide/query-builder-error-handling.html) if not found:
 
 ```ts
-await db.table.find(1)
+await db.table.find(1);
 ```
 
 ## findOptional
@@ -151,7 +177,7 @@ await db.table.find(1)
 Find record by id, returns `undefined` when not found:
 
 ```ts
-await db.table.findOptional(1)
+await db.table.findOptional(1);
 ```
 
 ## findBy
@@ -159,9 +185,9 @@ await db.table.findOptional(1)
 `.findBy` Takes the same arguments as `.where` and returns a single record, throwing `NotFoundError` if not found.
 
 ```ts
-db.table.findBy(...conditions)
+db.table.findBy(...conditions);
 // is equivalent to:
-db.table.where(...conditions).take()
+db.table.where(...conditions).take();
 ```
 
 ## findByOptional
@@ -169,9 +195,9 @@ db.table.where(...conditions).take()
 `.findByOptional` Takes the same arguments as `.where` and returns a single record, returns `undefined` when not found:
 
 ```ts
-db.table.findByOptional(...conditions)
+db.table.findByOptional(...conditions);
 // is equivalent to:
-db.table.where(...conditions).takeOptional()
+db.table.where(...conditions).takeOptional();
 ```
 
 ## whereNot
@@ -180,7 +206,7 @@ db.table.where(...conditions).takeOptional()
 
 ```ts
 // find records of different colors than red
-db.table.whereNot({ color: 'red' })
+db.table.whereNot({ color: 'red' });
 ```
 
 ## andNot
@@ -200,9 +226,9 @@ db.table.whereNot({ color: 'red' })
 When used with a single column it works equivalent to the `in` column operator:
 
 ```ts
-db.table.whereIn('column', [1, 2, 3])
+db.table.whereIn('column', [1, 2, 3]);
 // the same as:
-db.table.where({ column: [1, 2, 3] })
+db.table.where({ column: [1, 2, 3] });
 ```
 
 `.whereIn` can support a tuple of columns, that's what the `in` operator cannot support:
@@ -210,26 +236,23 @@ db.table.where({ column: [1, 2, 3] })
 ```ts
 db.table.whereIn(
   ['id', 'name'],
-  [[1, 'Alice'], [2, 'Bob']],
-)
+  [
+    [1, 'Alice'],
+    [2, 'Bob'],
+  ],
+);
 ```
 
 It supports sub query which should return records with columns of the same type:
 
 ```ts
-db.table.whereIn(
-  ['id', 'name'],
-  OtherTable.select('id', 'name'),
-)
+db.table.whereIn(['id', 'name'], OtherTable.select('id', 'name'));
 ```
 
 It supports raw query:
 
 ```ts
-db.table.whereIn(
-  ['id', 'name'],
-  db.table.raw(`((1, 'one'), (2, 'two'))`)
-)
+db.table.whereIn(['id', 'name'], db.table.raw(`((1, 'one'), (2, 'two'))`));
 ```
 
 ## whereExists, orWhereExists, whereNotExists, orWhereNotExists
@@ -241,11 +264,9 @@ This method is accepting the same arguments as `.join`, see the [join](#join) se
 `.orWhereExists` acts as `.or`, `.whereNotExists` acts as `.whereNot`, and `.orWhereNotExists` acts as `.orNot`.
 
 ```ts
-User.whereExists(Account, 'account.id', 'user.id')
+User.whereExists(Account, 'account.id', 'user.id');
 
-User.whereExists(Account, (q) =>
-  q.on('account.id', '=', 'user.id')
-)
+User.whereExists(Account, (q) => q.on('account.id', '=', 'user.id'));
 ```
 
 ## exists
@@ -255,7 +276,7 @@ Use `.exists()` to check if there is at least one record-matching condition.
 It will discard previous `.select` statements if any. Returns a boolean.
 
 ```ts
-const exists: boolean = await db.table.where(...conditions).exists()
+const exists: boolean = await db.table.where(...conditions).exists();
 ```
 
 ## column operators
@@ -276,9 +297,9 @@ db.table.where({
     lt: OtherTable.select('someNumber').take(),
 
     // raw expression produces WHERE "numericColumn" < "otherColumn" + 10
-    lt: db.table.raw('"otherColumn" + 10')
-  }
-})
+    lt: db.table.raw('"otherColumn" + 10'),
+  },
+});
 ```
 
 ### Any type of column operators
@@ -292,15 +313,15 @@ db.table.where({
 
   // use this instead:
   jsonColumn: { equals: someObject },
-})
+});
 ```
 
 `not` is `!=` (or `<>`) not equal operator:
 
 ```ts
 db.table.where({
-  anyColumn: { not: value }
-})
+  anyColumn: { not: value },
+});
 ```
 
 `in` is for the `IN` operator to check if the column value is included in a list of values.
@@ -315,9 +336,9 @@ db.table.where({
     // WHERE "column" IN (SELECT "column" FROM "otherTable")
     in: OtherTable.select('column'),
 
-    in: db.table.raw("('a', 'b')")
-  }
-})
+    in: db.table.raw("('a', 'b')"),
+  },
+});
 ```
 
 `notIn` is for the `NOT IN` operator, and takes the same arguments as `in`
@@ -342,13 +363,13 @@ db.table.where({
   },
 
   date: {
-    lte: new Date()
+    lte: new Date(),
   },
 
   time: {
     gte: new Date(),
   },
-})
+});
 ```
 
 `between` also works with numeric, dates, and time columns, it takes an array of two elements.
@@ -362,12 +383,9 @@ db.table.where({
     between: [1, 10],
 
     // sub-query and raw expression
-    between: [
-      OtherTable.select('column').take(),
-      db.table.raw('2 + 2'),
-    ],
-  }
-})
+    between: [OtherTable.select('column').take(), db.table.raw('2 + 2')],
+  },
+});
 ```
 
 ### Text column operators
@@ -393,8 +411,8 @@ db.table.where({
     endsWith: 'string',
     // WHERE "textColumn" ILIKE '%string'
     endsWithInsensitive: 'string',
-  }
-})
+  },
+});
 ```
 
 ### JSONB column operators
@@ -411,10 +429,10 @@ db.table.where({
     jsonPath: [
       '$.name', // first element is JSON path
       '=', // second argument is comparison operator
-      'value' // third argument is a value to compare with
-    ]
-  }
-})
+      'value', // third argument is a value to compare with
+    ],
+  },
+});
 ```
 
 `jsonSupersetOf`: check if the column value is a superset of provided value.
@@ -427,8 +445,8 @@ Takes the value of any type, or sub query which returns a single value, or a raw
 db.table.where({
   jsonbColumn: {
     jsonSupersetOf: { a: 1 },
-  }
-})
+  },
+});
 ```
 
 `jsonSubsetOf`: check if the column value is a subset of provided value.
@@ -441,6 +459,6 @@ Takes the value of any type, or sub query which returns a single value, or a raw
 db.table.where({
   jsonbColumn: {
     jsonSupersetOf: { a: 1 },
-  }
-})
+  },
+});
 ```

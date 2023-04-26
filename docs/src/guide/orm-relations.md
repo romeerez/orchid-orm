@@ -8,36 +8,36 @@ Two tables can have a relation with each other without circular dependency probl
 
 ```ts
 // user.table.ts
-import { BaseTable } from './baseTable'
-import { ProfileTable } from './profile.table'
+import { BaseTable } from './baseTable';
+import { ProfileTable } from './profile.table';
 
-export type User = UserTable['columns']['type']
+export type User = UserTable['columns']['type'];
 export class UserTable extends BaseTable {
-  readonly table = 'user'
+  readonly table = 'user';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
-  }))
-  
+  }));
+
   relations = {
     profile: this.hasOne(() => ProfileTable, {
       required: true,
       primaryKey: 'id',
       foreignKey: 'userId',
     }),
-  }
+  };
 }
 
 // profile.table.ts
-import { BaseTable } from './baseTable'
-import { UserTable } from './user.table'
+import { BaseTable } from './baseTable';
+import { UserTable } from './user.table';
 
-export type Profile = ProfileTable['columns']['type']
+export type Profile = ProfileTable['columns']['type'];
 export class ProfileTable extends BaseTable {
-  readonly table = 'profile'
+  readonly table = 'profile';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     userId: t.integer(),
-  }))
+  }));
 
   relations = {
     profile: this.hasOne(() => UserTable, {
@@ -45,7 +45,7 @@ export class ProfileTable extends BaseTable {
       primaryKey: 'id',
       foreignKey: 'userId',
     }),
-  }
+  };
 }
 ```
 
@@ -56,27 +56,27 @@ export class ProfileTable extends BaseTable {
 For example, `Book` belongs to `Author`:
 
 ```ts
-import { BaseTable } from './baseTable'
+import { BaseTable } from './baseTable';
 
-export type Author = AuthorTable['columns']['type']
+export type Author = AuthorTable['columns']['type'];
 export class AuthorTable extends BaseTable {
-  readonly table = 'author'
+  readonly table = 'author';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     name: t.text(3, 100),
-  }))
+  }));
 }
 
-export type Book = BookTable['columns']['type']
+export type Book = BookTable['columns']['type'];
 export class BookTable extends BaseTable {
-  readonly table = 'book'
+  readonly table = 'book';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     title: t.text(5, 100),
     // book has a column pointing to the author table
     authorId: t.integer(),
-  }))
-  
+  }));
+
   relations = {
     author: this.belongsTo(() => AuthorTable, {
       // required is affecting on TS type of returned record
@@ -85,8 +85,8 @@ export class BookTable extends BaseTable {
       primaryKey: 'id',
       // foreignKey is a column of Book to use
       foreignKey: 'authorId',
-    })
-  }
+    }),
+  };
 }
 ```
 
@@ -99,16 +99,16 @@ This association adds all the same queries and abilities as `belongsTo`, only di
 For example, if each supplier in your application has only one account, you'd declare the supplier table like this:
 
 ```ts
-import { BaseTable } from './baseTable'
+import { BaseTable } from './baseTable';
 
-export type Supplier = SupplierTable['columns']['type']
+export type Supplier = SupplierTable['columns']['type'];
 export class SupplierTable extends BaseTable {
-  readonly table = 'supplier'
+  readonly table = 'supplier';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     brand: t.text(2, 30),
     // here are no reference columns for an Account
-  }))
+  }));
 
   relations = {
     account: this.hasOne(() => AccountTable, {
@@ -118,19 +118,19 @@ export class SupplierTable extends BaseTable {
       primaryKey: 'id',
       // foreignKey is a column of Account to connect with
       foreignKey: 'supplierId',
-    })
-  }
+    }),
+  };
 }
 
-export type Account = AccountTable['columns']['type']
+export type Account = AccountTable['columns']['type'];
 export class AccountTable extends BaseTable {
-  readonly table = 'account'
+  readonly table = 'account';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     name: t.text(3, 100),
     // Account has a column pointing to Supplier:
     supplierId: t.integer(),
-  }))
+  }));
 }
 ```
 
@@ -144,15 +144,15 @@ This association indicates that the declaring table can be matched with one inst
 For example, if each supplier has one account, and each account is associated with one account history, then the supplier table could look like this:
 
 ```ts
-import { BaseTable } from './baseTable'
+import { BaseTable } from './baseTable';
 
-export type Supplier = SupplierTable['columns']['type']
+export type Supplier = SupplierTable['columns']['type'];
 export class SupplierTable extends BaseTable {
-  readonly table = 'supplier'
+  readonly table = 'supplier';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     brand: t.text(2, 30),
-  }))
+  }));
 
   relations = {
     account: this.hasOne(() => AccountTable, {
@@ -160,7 +160,7 @@ export class SupplierTable extends BaseTable {
       primaryKey: 'id',
       foreignKey: 'supplierId',
     }),
-    
+
     accountHistory: this.hasOne(() => AccountTable, {
       required: true,
       // previously defined relation name
@@ -168,37 +168,37 @@ export class SupplierTable extends BaseTable {
       // name of relation in Account table
       source: 'accountHistory',
     }),
-  }
+  };
 }
 
-export type Account = AccountTable['columns']['type']
+export type Account = AccountTable['columns']['type'];
 export class AccountTable extends BaseTable {
-  readonly table = 'account'
+  readonly table = 'account';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     name: t.text(3, 100),
     // Account has a column pointing to Supplier:
     supplierId: t.integer(),
-  }))
-  
+  }));
+
   relations = {
     accountHistory: this.hasOne(() => AccountHistoryTable, {
       required: true,
       primaryKey: 'id',
       foreignKey: 'accountId',
     }),
-  }
+  };
 }
 
-export type AccountHistory = AccountHistoryTable['columns']['type']
+export type AccountHistory = AccountHistoryTable['columns']['type'];
 export class AccountHistoryTable extends BaseTable {
-  readonly table = 'accountHistory'
+  readonly table = 'accountHistory';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     data: t.text(0, 1000),
     // column pointing to the Account
     accountId: t.integer(),
-  }))
+  }));
 
   relations = {
     account: this.belongsTo(() => AccountTable, {
@@ -206,7 +206,7 @@ export class AccountHistoryTable extends BaseTable {
       primaryKey: 'id',
       foreignKey: 'accountId',
     }),
-  }
+  };
 }
 ```
 
@@ -219,35 +219,35 @@ This association indicates that each instance of the table has zero or more inst
 For example, in an application containing authors and books, the author table could be declared like this:
 
 ```ts
-import { BaseTable } from './baseTable'
+import { BaseTable } from './baseTable';
 
-export type Author = AuthorTable['columns']['type']
+export type Author = AuthorTable['columns']['type'];
 export class AuthorTable extends BaseTable {
-  readonly table = 'author'
+  readonly table = 'author';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     name: t.text(3, 100),
-  }))
-  
+  }));
+
   relations = {
     books: this.hasMany(() => BookTable, {
       // primaryKey is a column of Author to use
       primaryKey: 'id',
       // foreignKey is a column of Book to connect with
       foreignKey: 'authorId',
-    })
-  }
+    }),
+  };
 }
 
-export type Book = BookTable['columns']['type']
+export type Book = BookTable['columns']['type'];
 export class BookTable extends BaseTable {
-  readonly table = 'book'
+  readonly table = 'book';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     title: t.text(3, 100),
     // book has a column pointing to the author table
     authorId: t.integer(),
-  }))
+  }));
 }
 ```
 
@@ -261,15 +261,15 @@ This association indicates that the declaring table can be matched with zero or 
 For example, consider a medical practice where patients make appointments to see physicians. The relevant association declarations could look like this:
 
 ```ts
-import { BaseTable } from './baseTable'
+import { BaseTable } from './baseTable';
 
-export type Physician = PhysicianTable['columns']['type']
+export type Physician = PhysicianTable['columns']['type'];
 export class PhysicianTable extends BaseTable {
-  readonly table = 'physician'
+  readonly table = 'physician';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     name: t.text(3, 100),
-  }))
+  }));
 
   relations = {
     appointments: this.hasMany(() => AppointmentTable, {
@@ -278,19 +278,19 @@ export class PhysicianTable extends BaseTable {
       // foreignKey is a column of Appointment to connect with
       foreignKey: 'authorId',
     }),
-    
+
     patients: this.hasMany(() => PatienTable, {
       // previously defined relation name
       through: 'appointments',
       // name of relation in Appointment table
       source: 'patient',
     }),
-  }
+  };
 }
 
-export type Appointment = AppointmentTable['columns']['type']
+export type Appointment = AppointmentTable['columns']['type'];
 export class AppointmentTable extends BaseTable {
-  readonly table = 'appointment'
+  readonly table = 'appointment';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     appointmentDate: t.datetime(),
@@ -298,42 +298,42 @@ export class AppointmentTable extends BaseTable {
     physicianId: t.integer(),
     // column references patient:
     patientId: t.integer(),
-  }))
-  
+  }));
+
   relations = {
     physician: this.belongsTo(() => PhysicianTable, {
       primaryKey: 'id',
       foreignKey: 'physycianId',
     }),
-    
+
     patient: this.belongsTo(() => PatientTable, {
       primaryKey: 'id',
       foreignKey: 'patientId',
     }),
-  }
+  };
 }
 
-export type Patient = PatientTable['columns']['type']
+export type Patient = PatientTable['columns']['type'];
 export class PatientTable extends BaseTable {
-  readonly table = 'patient'
+  readonly table = 'patient';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     name: t.text(3, 100),
-  }))
-  
+  }));
+
   relations = {
     appointments: this.hasMany(() => AppointmentTable, {
       primaryKey: 'id',
       foreignKey: 'patientId',
     }),
-    
+
     physicians: this.hasMany(() => PhysicianTable, {
       // previously defined relation name
       through: 'appointments',
       // name of relation in Appointment table
       source: 'physician',
-    })
-  }
+    }),
+  };
 }
 ```
 
@@ -345,15 +345,15 @@ This association indicates that each instance of the declaring table refers to z
 For example, if your application includes posts and tags, with each post having many tags and each tag appearing in many posts, you could declare the tables this way:
 
 ```ts
-import { BaseTable } from './baseTable'
+import { BaseTable } from './baseTable';
 
-export type Post = PostTable['columns']['type']
+export type Post = PostTable['columns']['type'];
 export class PostTable extends BaseTable {
-  readonly table = 'post'
+  readonly table = 'post';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     title: t.text(5, 100),
-  }))
+  }));
 
   relations = {
     tags: this.hasAndBelongsToMany(() => TagTable, {
@@ -367,17 +367,17 @@ export class PostTable extends BaseTable {
       associationForeignKey: 'tagId',
       // joinTable is a connection table between this and related tables
       joinTable: 'postTag',
-    })
-  }
+    }),
+  };
 }
 
-export type Tag = TagTable['columns']['type']
+export type Tag = TagTable['columns']['type'];
 export class TagTable extends BaseTable {
-  readonly table = 'tag'
+  readonly table = 'tag';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     name: t.text(3, 100),
-  }))
+  }));
 
   relations = {
     posts: this.hasAndBelongsToMany(() => PostTable, {
@@ -386,7 +386,7 @@ export class TagTable extends BaseTable {
       associationPrimaryKey: 'id',
       associationForeignKey: 'postId',
       joinTable: 'postTag',
-    })
-  }
+    }),
+  };
 }
 ```

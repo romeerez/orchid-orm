@@ -25,10 +25,10 @@ type AggregateOptions = {
   withinGroup?: boolean;
 
   // defines OVER clause.
-  // Can be the name of a window defined by calling the .window() method, 
+  // Can be the name of a window defined by calling the .window() method,
   // or object the same as the .window() method takes to define a window.
-  over?: WindowName | WindowArg
-}
+  over?: WindowName | WindowArg;
+};
 ```
 
 ## count, selectCount
@@ -37,13 +37,13 @@ Performs count, returns number:
 
 ```ts
 // count all:
-const number = db.table.count()
+const number = db.table.count();
 
 // count where a column is not NULL:
-db.table.count('name')
+db.table.count('name');
 
 // see options above:
-db.table.count('*', aggregateOptions)
+db.table.count('*', aggregateOptions);
 ```
 
 `selectCount` supports the same parameters as `count`, used with `group`.
@@ -52,11 +52,7 @@ Select count among other fields:
 
 ```ts
 // record contains both id and count
-const record = db.table
-  .select('id')
-  .selectCount()
-  .group('id')
-  .take()
+const record = db.table.select('id').selectCount().group('id').take();
 ```
 
 ## min, selectMin
@@ -64,7 +60,7 @@ const record = db.table
 Gets the minimum value for the specified column, returns number or `null`.
 
 ```ts
-const numberOrNull = db.table.min('numericColumn', aggregateOptions)
+const numberOrNull = db.table.min('numericColumn', aggregateOptions);
 ```
 
 `selectMin` supports the same parameters as `min`, used with `group`.
@@ -77,7 +73,7 @@ const record = db.table
   .select('id')
   .selectMin('numericColumn')
   .group('id')
-  .take()
+  .take();
 ```
 
 ## max, selectMax
@@ -85,7 +81,7 @@ const record = db.table
 Gets the maximum value for the specified column, returns number or `null`.
 
 ```ts
-const numberOrNull = db.table.max('numericColumn', aggregateOptions)
+const numberOrNull = db.table.max('numericColumn', aggregateOptions);
 ```
 
 `selectMax` supports the same parameters as `max`, used with `group`.
@@ -98,7 +94,7 @@ const record = db.table
   .select('id')
   .selectMax('numericColumn')
   .group('id')
-  .take()
+  .take();
 ```
 
 ## sum, selectSum
@@ -106,7 +102,7 @@ const record = db.table
 Retrieve the sum of the values of a given column, returns number or `null`.
 
 ```ts
-const numberOrNull = db.table.sum('numericColumn', aggregateOptions)
+const numberOrNull = db.table.sum('numericColumn', aggregateOptions);
 ```
 
 `selectSum` supports the same parameters as `sum`, used with `group`.
@@ -119,7 +115,7 @@ const record = db.table
   .select('id')
   .selectSum('numericColumn')
   .group('id')
-  .take()
+  .take();
 ```
 
 ## avg, selectAvg
@@ -127,7 +123,7 @@ const record = db.table
 Retrieve the average of the values, and returns a number or `null`.
 
 ```ts
-const numberOrNull = db.table.avg('numericColumn', aggregateOptions)
+const numberOrNull = db.table.avg('numericColumn', aggregateOptions);
 ```
 
 `selectAvg` supports the same parameters as `avg`, used with `group`.
@@ -140,7 +136,7 @@ const record = db.table
   .select('id')
   .selectAvg('numericColumn')
   .group('id')
-  .take()
+  .take();
 ```
 
 ## bitAnd, selectBitAnd
@@ -148,7 +144,7 @@ const record = db.table
 Bitwise and aggregation, return `number` or `null`
 
 ```ts
-const numberOrNull = db.table.bitAnd('numericColumn', aggregateOptions)
+const numberOrNull = db.table.bitAnd('numericColumn', aggregateOptions);
 ```
 
 `selectBitAnd` supports the same parameters as `bitAnd`, used with `group`.
@@ -161,7 +157,7 @@ const record = db.table
   .select('id')
   .selectBitAnd('numericColumn')
   .group('id')
-  .take()
+  .take();
 ```
 
 ## bitOr, selectBitOr
@@ -169,7 +165,7 @@ const record = db.table
 Bitwise or aggregation returns `number` or `null`
 
 ```ts
-const numberOrNull = db.table.bitOr('numericColumn', aggregateOptions)
+const numberOrNull = db.table.bitOr('numericColumn', aggregateOptions);
 ```
 
 `selectBitOr` supports the same parameters as `bitOr`, used with `group`.
@@ -182,7 +178,7 @@ const record = db.table
   .select('id')
   .selectBitOr('numericColumn')
   .group('id')
-  .take()
+  .take();
 ```
 
 ## boolAnd, selectBoolAnd
@@ -190,7 +186,7 @@ const record = db.table
 Aggregate booleans with and logic returns `boolean` or `null`
 
 ```ts
-const booleanOrNull = db.table.boolAnd('booleanColumn', aggregateOptions)
+const booleanOrNull = db.table.boolAnd('booleanColumn', aggregateOptions);
 ```
 
 `selectBoolAnd` supports the same parameters as `boolAnd`, used with `group`.
@@ -203,7 +199,7 @@ const record = db.table
   .select('id')
   .selectBoolAnd('booleanColumn')
   .group('id')
-  .take()
+  .take();
 ```
 
 ## boolOr, selectBoolOr
@@ -211,7 +207,7 @@ const record = db.table
 Aggregate booleans with or logic returns `boolean` or `null`
 
 ```ts
-const booleanOrNull = db.table.boolOr('booleanColumn', aggregateOptions)
+const booleanOrNull = db.table.boolOr('booleanColumn', aggregateOptions);
 ```
 
 `selectBoolOr` supports the same parameters as `boolOr`, used with `group`.
@@ -224,7 +220,7 @@ const record = db.table
   .select('id')
   .selectBoolOr('booleanColumn')
   .group('id')
-  .take()
+  .take();
 ```
 
 ## every, selectEvery
@@ -239,10 +235,10 @@ Aggregate values into an array return array column values or `null`.
 
 ```ts
 // ids have type number[] | null
-const idsOrNull = db.table.jsonAgg('id', aggregateOptions)
+const idsOrNull = db.table.jsonAgg('id', aggregateOptions);
 
 // names have type string[] | null
-const namesOrNull = db.table.jsonbAgg('name', aggregateOptions)
+const namesOrNull = db.table.jsonbAgg('name', aggregateOptions);
 ```
 
 `selectJsonAgg` supports the same parameters as `jsonAgg`, used with `group`.
@@ -253,7 +249,7 @@ const record = db.table
   .select('id')
   .selectJsonAgg('id', { as: 'ids' })
   .group('id')
-  .take()
+  .take();
 ```
 
 ## jsonObjectAgg, selectJsonObjectAgg, jsonbObjectAgg, selectJsonbObjectAgg
@@ -266,10 +262,13 @@ It does the construction of JSON objects, keys are provided strings and values c
 import { TextColumn } from './string';
 
 // object have type { nameAlias: string, foo: string } | null
-const object = db.table.jsonAgg({
-  nameAlias: 'name',
-  foo: db.table.raw((t) => t.text(3, 100), '"bar" || "baz"')
-}, aggregateOptions)
+const object = db.table.jsonAgg(
+  {
+    nameAlias: 'name',
+    foo: db.table.raw((t) => t.text(3, 100), '"bar" || "baz"'),
+  },
+  aggregateOptions,
+);
 ```
 
 `selectJsonObjectAgg` supports the same parameters as `jsonObjectAgg`, used with `group`.
@@ -280,7 +279,7 @@ const record = db.table
   .select('id')
   .selectJsonObjectAgg({ nameAlias: 'name' }, { as: 'object' })
   .group('id')
-  .take()
+  .take();
 ```
 
 ## stringAgg, selectStringAgg
@@ -288,7 +287,7 @@ const record = db.table
 It performs the joining of a string using a delimiter and returns `string` or `null`.
 
 ```ts
-const stringOrNull = db.table.stringAgg('name', ', ', aggregateOptions)
+const stringOrNull = db.table.stringAgg('name', ', ', aggregateOptions);
 ```
 
 `selectStringAgg` supports the same parameters as `stringAgg`, used with `group`.
@@ -299,7 +298,7 @@ const record = db.table
   .select('id')
   .selectStringAgg('name', ', ', aggregateOptions)
   .group('id')
-  .take()
+  .take();
 ```
 
 ## xmlAgg, selectXmlAgg
@@ -310,16 +309,15 @@ The argument is a column of XML type, that returns a `string` or `null`.
 
 ```ts
 // xml is of type string | null
-const xml = await LegacyTable.xmlAgg('xmlColumn', aggregateOptions)
+const xml = await LegacyTable.xmlAgg('xmlColumn', aggregateOptions);
 ```
 
 `selectXmlAgg` supports the same parameters as `xmlAgg`, used with `group`.
 
 ```ts
 // record contains both id and xmlData
-const record = LegacyTable
-  .select('id')
+const record = LegacyTable.select('id')
   .selectJsonAgg('xmlColumn', { as: 'xmlData' })
   .group('id')
-  .take()
+  .take();
 ```

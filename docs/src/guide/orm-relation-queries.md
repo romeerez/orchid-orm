@@ -5,60 +5,65 @@ Here is how to load related records by using a record object (supported by all k
 The resulting record of the `belongsTo` and `hasOne` relation can be undefined if the `required` option was not set in the table class.
 
 ```ts
-const book = await db.book.find(1)
+const book = await db.book.find(1);
 
 // type of argument is { authorId: number }
-const author = await db.book.author(book)
+const author = await db.book.author(book);
 
 // type of argument is { id: number }
-const books = await db.author.books(author)
+const books = await db.author.books(author);
 
 // additional query methods can be applied:
-const partialAuthor = await db.book.author(book).select('id', 'name')
+const partialAuthor = await db.book.author(book).select('id', 'name');
 
-const countBooks: number = await db.author.books(author)
-  .where({ title: 'Kobzar' }).count()
+const countBooks: number = await db.author
+  .books(author)
+  .where({ title: 'Kobzar' })
+  .count();
 
-const authorHasBooks: boolean = await db.author.books(author).exists()
+const authorHasBooks: boolean = await db.author.books(author).exists();
 ```
 
 It's possible to chain relations query without providing a loaded record (supported by all kinds of relations):
 
 ```ts
 // find book and load author:
-const author = await db.book.find(1).author
+const author = await db.book.find(1).author;
 
 // find many books and load their authors:
-const manyAuthors = await db.book.where({ id: { in: [1, 2, 3] } }).author
+const manyAuthors = await db.book.where({ id: { in: [1, 2, 3] } }).author;
 
 // filter both books and the authors and load authors in one query:
-const filteredAuthors = await db.book.where({ booksCondition: '...' })
-  .author.where({ authorCondition: '...' })
+const filteredAuthors = await db.book
+  .where({ booksCondition: '...' })
+  .author.where({ authorCondition: '...' });
 
 // find the author and load their books:
-const booksFromOneAuthor = await db.author.find(1).books
+const booksFromOneAuthor = await db.author.find(1).books;
 
 // find many authors and load their books:
-const booksFromManyAuthors = await db.author.where({ id: { in: [1, 2, 3] } }).books
+const booksFromManyAuthors = await db.author.where({ id: { in: [1, 2, 3] } })
+  .books;
 
 // filter both authors and books and load books in one query:
-const filteredBooks = await db.author.where({ authorCondition: '...' })
-  .books.where({ booksCondition: '...' })
+const filteredBooks = await db.author
+  .where({ authorCondition: '...' })
+  .books.where({ booksCondition: '...' });
 ```
 
 The relation can be used in `.whereExists` (supported by all kinds of relations):
 
 ```ts
 // load books which have author
-await db.book.whereExists('author')
+await db.book.whereExists('author');
 
 // load authors which have books
-await db.authors.whereExists('book')
+await db.authors.whereExists('book');
 
 // additional query methods can be applied in a callback:
 await db.book.whereExists('author', (q) =>
-  q.where({ 'author.name': 'Olexiy' })
-)
+  q.where({ 'author.name': 'Olexiy' }),
+);
 ```
 
 The relation can be used in `.join`.
@@ -71,15 +76,15 @@ await db.book.join('author').select(
   'title',
   // select the column of a joined table
   'author.name',
-)
+);
 
 // author name will be repeated for each book title:
-await db.author.join('books').select('name', 'books.title')
+await db.author.join('books').select('name', 'books.title');
 
 // additional query methods can be applied in a callback:
-await db.book.join('author', (q) =>
-  q.where({ 'author.name': 'Olexiy' })
-).select('title', 'author.name')
+await db.book
+  .join('author', (q) => q.where({ 'author.name': 'Olexiy' }))
+  .select('title', 'author.name');
 ```
 
 The relation can be loaded using `.select` and related records will be added to each record.
@@ -94,7 +99,7 @@ Use the name of relation to load full records:
 
 ```ts
 // if the `required` option is not set in the table class,
-// type of author will be Author | null 
+// type of author will be Author | null
 const booksWithAuthor: Book & { author: Author } = await db.book
   .select('*', 'author')
   .take();
@@ -109,78 +114,71 @@ a relation can be selected by adding a callback to the select list:
 
 ```ts
 type BookResult = {
-  id: number
-  title: string
+  id: number;
+  title: string;
   author: {
-    id: number
-    name: number
-  }
-}
+    id: number;
+    name: number;
+  };
+};
 
-const bookWithAuthor: BookResult = await db.book.select(
-  'id',
-  'title',
-  {
+const bookWithAuthor: BookResult = await db.book
+  .select('id', 'title', {
     author: (q) => q.author.select('id', 'name'),
-  },
-).take()
+  })
+  .take();
 
 type AuthorResult = {
-  id: number
-  name: string
+  id: number;
+  name: string;
   books: {
-    id: number
-    title: string[]
-  }
-}
+    id: number;
+    title: string[];
+  };
+};
 
-const authorWithBooks: AuthorResult = await db.author.select(
-  'id',
-  'name',
-  {
-    books: (q) => q.books
-      .select('id', 'title')
-      .where(...conditions)
-      .order('title')
-      .limit(5),
-  }
-).take()
+const authorWithBooks: AuthorResult = await db.author
+  .select('id', 'name', {
+    books: (q) =>
+      q.books
+        .select('id', 'title')
+        .where(...conditions)
+        .order('title')
+        .limit(5),
+  })
+  .take();
 ```
 
 All relations are supporting `exists` in select (get a boolean to know whether related records exist or not):
 
 ```ts
 type Result = {
-  id: number
-  hasTags: boolean
-  hasSpecificTag: boolean
-}
+  id: number;
+  hasTags: boolean;
+  hasSpecificTag: boolean;
+};
 
-const result: Result = await db.post.select(
-  'id',
-  {
-    hasTags: (q) => q.tags.exists(),
-    hasSpecificTag: (q) => q.tags.where({ name: 'specific' }).exists(),
-  }
-)
+const result: Result = await db.post.select('id', {
+  hasTags: (q) => q.tags.exists(),
+  hasSpecificTag: (q) => q.tags.where({ name: 'specific' }).exists(),
+});
 ```
 
 For `hasMany` and `hasAndBelongsToMany` the select can handle aggregation queries such as `count`, `min`, `max`, `sum`, and `avg`:
 
 ```ts
 type Result = {
-  id: number
-  tagsCount: number
-  tagsCommaSeparated: string
-}
+  id: number;
+  tagsCount: number;
+  tagsCommaSeparated: string;
+};
 
-const result: Result = await db.post.select(
-  'id',
-  {
+const result: Result = await db.post
+  .select('id', {
     tagsCount: (q) => q.tags.count(),
     tagsCommaSeparated: (q) => q.tags.stringAgg('name', ', '),
-  }
-).take()
+  })
+  .take();
 ```
 
 ## create update delete
@@ -202,13 +200,13 @@ It is possible to chain querying of the table with the creating of its relation,
 
 ```ts
 await db.author.find(1).books.create({
-  title: 'Book title'
-})
+  title: 'Book title',
+});
 
 // post hasAndBelongsToMany tags
 await db.post.find(1).tags.create({
-  name: 'tag name'
-})
+  name: 'tag name',
+});
 ```
 
 This is possible for `hasOne`, `hasMany`, and `hasAndBelongsToMany`, but this is disabled for `belongsTo` and `hasOne`/`hasMany` with the `through` option.
@@ -224,15 +222,17 @@ in the case when a record is not found by the condition it will throw `NotFoundE
 
 ```ts
 // will throw if no post with such a title
-await db.post.findBy({ title: 'non-existing' })
-  .tags.create({ name: 'tag name' })
+await db.post
+  .findBy({ title: 'non-existing' })
+  .tags.create({ name: 'tag name' });
 
 // will throw either
-const tag = await db.post.findByOptional({ title: 'non-existing' })
-  .tags.create({ name: 'tag name' })
+const tag = await db.post
+  .findByOptional({ title: 'non-existing' })
+  .tags.create({ name: 'tag name' });
 
 // we can be sure that the tag is always returned
-tag.name
+tag.name;
 ```
 
 If you want `undefined` to be returned instead of throwing `NotFoundError`,
@@ -242,15 +242,21 @@ use `takeOptional()` to get `RecordType | undefined`, or `count()` to get 0 for 
 to make sure we're not creating hanging records not connected to other records.
 
 ```ts
-const tagOrUndefined = await db.author.findByOptional({ name: 'Author name' })
-  .books.takeOptional().create({ name: 'Book title' })
+const tagOrUndefined = await db.author
+  .findByOptional({ name: 'Author name' })
+  .books.takeOptional()
+  .create({ name: 'Book title' });
 
-const createdCount = await db.author.findByOptional({ name: 'Author name' })
-  .books.count().create({ name: 'Book title' })
+const createdCount = await db.author
+  .findByOptional({ name: 'Author name' })
+  .books.count()
+  .create({ name: 'Book title' });
 
 // hasAndBelongsToMany will throw when not found anyway:
-await db.post.findByOptional({ title: 'Post title' })
-  .tags.takeOptional().create({ name: 'tag name' })
+await db.post
+  .findByOptional({ title: 'Post title' })
+  .tags.takeOptional()
+  .create({ name: 'tag name' });
 ```
 
 ## delete from relation query
@@ -262,15 +268,17 @@ This is supported for all kinds of relations only except `belongsTo`.
 ```ts
 // delete all books of the author
 // `delete` method requires where statement, empty where is here as a sanity check
-await db.author.find(1).books.where().delete()
+await db.author.find(1).books.where().delete();
 
 // delete specific books of specific authors
-await db.author.where({ name: 'author name' })
-  .books.where({ title: 'book title' }).delete()
+await db.author
+  .where({ name: 'author name' })
+  .books.where({ title: 'book title' })
+  .delete();
 
 // TypeScript will highlight the `delete` method
 // because deleting a `belongsTo` relation is not allowed
-await db.book.find(1).author.delete()
+await db.book.find(1).author.delete();
 ```
 
 ## nested create
@@ -292,20 +300,16 @@ const book = await db.book.create({
   author: {
     create: {
       name: 'Author',
-    }
-  }
-})
+    },
+  },
+});
 
 const author = await db.author.create({
   name: 'Author',
   books: {
-    create: [
-      { title: 'Book 1' },
-      { title: 'Book 2' },
-      { title: 'Book 3' },
-    ],
+    create: [{ title: 'Book 1' }, { title: 'Book 2' }, { title: 'Book 3' }],
   },
-})
+});
 
 // post hasMany tags through postTags
 // we cannot create tags directly
@@ -322,7 +326,7 @@ const post = await db.post.create({
       },
     ],
   },
-})
+});
 ```
 
 Nested create is supported when creating many as well:
@@ -334,18 +338,18 @@ const books = await db.book.createMany([
     author: {
       create: {
         name: 'Author 1',
-      }
-    }
+      },
+    },
   },
   {
     title: 'Book 2',
     author: {
       create: {
         name: 'Author 2',
-      }
-    }
+      },
+    },
   },
-])
+]);
 ```
 
 ## create from update
@@ -366,27 +370,21 @@ await db.book.find(1).update({
       name: 'new author',
     },
   },
-})
+});
 
 await db.author.find(1).update({
   name: 'update author name',
   books: {
-    create: [
-      { title: 'new book 1' },
-      { title: 'new book 2' },
-    ],
+    create: [{ title: 'new book 1' }, { title: 'new book 2' }],
   },
-})
+});
 
 // this will connect all 3 posts with 2 tags
 await db.post.where({ id: { in: [1, 2, 3] } }).update({
   tags: {
-    create: [
-      { name: 'new tag 1' },
-      { name: 'new tag 2' },
-    ]
-  }
-})
+    create: [{ name: 'new tag 1' }, { name: 'new tag 2' }],
+  },
+});
 ```
 
 For `belongsTo` when updating multiple records, the `create` option will connect the new record with all updating records:
@@ -400,7 +398,7 @@ await db.book.where({ id: { in: [1, 2, 3] } }).update({
       name: 'new author',
     },
   },
-})
+});
 ```
 
 ## connect related records
@@ -417,9 +415,9 @@ const book = await db.book.create({
   author: {
     connect: {
       name: 'Author',
-    }
-  }
-})
+    },
+  },
+});
 
 const author = await db.author.create({
   name: 'Author name',
@@ -431,9 +429,9 @@ const author = await db.author.create({
       {
         title: 'Book 2',
       },
-    ]
-  }
-})
+    ],
+  },
+});
 ```
 
 ## connect or create
@@ -454,10 +452,10 @@ const result = await db.book.create({
       },
       create: {
         name: 'Author',
-      }
-    }
-  }
-})
+      },
+    },
+  },
+});
 ```
 
 `hasMany` and `hasAndBelongsToMany` relations are accepting an array of `{ where: ..., create ... }`:
@@ -475,9 +473,9 @@ const result = await db.author.create({
         where: { title: 'Book 2' },
         create: { title: 'Book 2' },
       },
-    ]
-  }
-})
+    ],
+  },
+});
 ```
 
 ## disconnect related records
@@ -493,7 +491,7 @@ await db.book.where({ title: 'book title' }).update({
   author: {
     disconnect: true,
   },
-})
+});
 ```
 
 `hasMany` and `hasAndBelongsToMany` relations are accepting filter conditions.
@@ -505,7 +503,7 @@ await db.post.where({ title: 'post title' }).update({
       name: 'some tag',
     },
   },
-})
+});
 ```
 
 It may be an array of conditions:
@@ -515,12 +513,9 @@ Each provided condition may match 0 or more related records, there is no check t
 ```ts
 await db.post.where({ title: 'post title' }).update({
   tags: {
-    disconnect: [
-      { id: 1 },
-      { id: 2 },
-    ],
+    disconnect: [{ id: 1 }, { id: 2 }],
   },
-})
+});
 ```
 
 ## set related records
@@ -534,42 +529,42 @@ For `hasOne` and `hasMany`, if there was a related record before the update, its
 In the `hasAndBelongsToMany` relation this will delete all previous rows of the join table and create new ones.
 
 ```ts
-const author = await db.author.find(1)
+const author = await db.author.find(1);
 
 // this will update the book with the author's id from the given object
 await db.book.find(1).update({
   author: {
     set: author,
   },
-})
+});
 
 // this will find the first author with given conditions to use their id
 await db.book.find(2).update({
   author: {
-    set: { name: 'author name' }
+    set: { name: 'author name' },
   },
-})
+});
 
 // TypeScript error because of the need to use `findBy` instead of `where`:
 await db.author.where({ id: 1 }).update({
   books: {
-    set: { id: 1 }
-  }
-})
+    set: { id: 1 },
+  },
+});
 
 await db.author.find(1).update({
   books: {
     // all found books with such titles will be connected to the author
-    set: { title: 'book title' }
-  }
-})
+    set: { title: 'book title' },
+  },
+});
 
 await db.author.find(1).update({
   books: {
     // array of conditions can be provided:
-    set: [{ id: 1 }, { id: 2 }]
-  }
-})
+    set: [{ id: 1 }, { id: 2 }],
+  },
+});
 ```
 
 ## delete related records
@@ -587,21 +582,21 @@ await db.book.find(1).update({
   author: {
     delete: true,
   },
-})
+});
 
 await db.author.find(1).update({
   account: {
     // delete author book by conditions
-    delete: { title: 'book title' }
+    delete: { title: 'book title' },
   },
-})
+});
 
 await db.author.find(1).update({
   account: {
     // array of conditions:
-    delete: [{ id: 1 }, { id: 2 }]
+    delete: [{ id: 1 }, { id: 2 }],
   },
-})
+});
 ```
 
 ## nested update
@@ -619,7 +614,7 @@ await db.book.find(1).update({
       name: 'new name',
     },
   },
-})
+});
 
 await db.author.find(1).update({
   books: {
@@ -630,9 +625,9 @@ await db.author.find(1).update({
       data: {
         title: 'new book title',
       },
-    }
+    },
   },
-})
+});
 ```
 
 When updating multiple records, all their related records will be updated:
@@ -644,7 +639,7 @@ await db.book.where({ id: { in: [1, 2, 3] } }).update({
       name: 'new name',
     },
   },
-})
+});
 
 await db.author.where({ id: [1, 2, 3] }).update({
   books: {
@@ -654,10 +649,10 @@ await db.author.where({ id: [1, 2, 3] }).update({
       },
       data: {
         title: 'new book title',
-      }
-    }
+      },
+    },
   },
-})
+});
 ```
 
 ## upsert: update or insert
@@ -677,9 +672,9 @@ await db.book.find(1).update({
       },
       create: {
         name: 'new name',
-        email: 'some@email.com'
-      }
+        email: 'some@email.com',
+      },
     },
-  }
-})
+  },
+});
 ```

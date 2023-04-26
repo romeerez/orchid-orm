@@ -78,12 +78,12 @@ change(async (db) => {
     camelCaseColumn: t.text(),
     ...t.timestamps(),
   }));
-  
+
   await db.createTable('snake', (t) => ({
     id: t.identity().primaryKey(),
     snakeCaseColumn: t.name('snake_case_column').text(),
     ...t.timestampsSnakeCase(),
-  }))
+  }));
 });
 ```
 
@@ -104,7 +104,7 @@ change(async (db) => {
     id: t.identity().primaryKey(),
     snakeCaseColumn: t.text(),
     ...t.timestamps(),
-  }))
+  }));
 });
 ```
 
@@ -113,7 +113,7 @@ If column type is a custom one defined by user, or if it is not supported yet, `
 ```ts
 await db.createTable('table', (t) => ({
   column: t.type('unsupported_type'),
-}))
+}));
 ```
 
 It works, just when using `t.type` in the application to define a column, you need to use `as` method to treat it as another column:
@@ -196,9 +196,9 @@ npm run db redo 3
 `rakeDb` allows to specify your own functions for a custom commands:
 
 ```ts
-import { rakeDb } from 'rake-db'
-import { createDb } from 'pqb'
-import { config } from './config'
+import { rakeDb } from 'rake-db';
+import { createDb } from 'pqb';
+import { config } from './config';
 
 export const change = rakeDb(
   // config may have array of databases, for dev and for test
@@ -208,22 +208,22 @@ export const change = rakeDb(
       async custom(dbConfigs, config, args) {
         // dbConfig is array of provided database configs
         for (const dbConfig of dbConfigs) {
-          const db = createDb(dbConfig)
-          
+          const db = createDb(dbConfig);
+
           // perform some query
-          await db('table').insert(someData)
-          
+          await db('table').insert(someData);
+
           // closing db after using it
-          await db.close()
+          await db.close();
         }
-        
+
         // config is this config object we're inside
-        config.commands.custom // this is a function we're inside of
-        
+        config.commands.custom; // this is a function we're inside of
+
         // command line arguments of type string[]
-        console.log(args)
-      }
-    }
+        console.log(args);
+      },
+    },
   },
 );
 ```

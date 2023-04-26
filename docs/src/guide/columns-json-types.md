@@ -40,14 +40,14 @@ db.someTable.where({
     // second is a compare operator,
     // third value can be of any type, or a subquery, or a raw query
     jsonPath: ['$.name', '=', value],
-    
+
     // check if the JSON value in the column is a superset of the provided value
     jsonSupersetOf: { key: 'value' },
-    
+
     // check if the JSON value in the column is a subset of the provided value
     jsonSubsetOf: { key: 'value' },
-  }
-})
+  },
+});
 ```
 
 ## basic JSON types
@@ -82,7 +82,8 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      number: t.number()
+      number: t
+        .number()
         .lt(number) // must be lower than number
         .lte(number) // must be lower than or equal to the number
         .max(number) // alias for .lte
@@ -96,7 +97,7 @@ export class Table extends BaseTable {
         .multipleOf(number) // must be a multiple of the number
         .step(number) // alias for .multipleOf
         .finite() // not Infinity
-        .safe() // equivalient to .lte(Number.MAX_SAFE_INTEGER)
+        .safe(), // equivalient to .lte(Number.MAX_SAFE_INTEGER)
     })),
   }));
 }
@@ -109,7 +110,8 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      string: t.string()
+      string: t
+        .string()
         .nonEmpty() // equivalent for .min(1)
         .min(1)
         .max(10)
@@ -129,7 +131,7 @@ export class Table extends BaseTable {
         .endsWith('str')
         .trim()
         .toLowerCase()
-        .toUpperCase()
+        .toUpperCase(),
     })),
   }));
 }
@@ -144,7 +146,7 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      optionalNumber: t.number().optional()
+      optionalNumber: t.number().optional(),
     })),
   }));
 }
@@ -157,7 +159,7 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      requiredNumber: t.number().optional().required()
+      requiredNumber: t.number().optional().required(),
     })),
   }));
 }
@@ -170,7 +172,7 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      nullableNumber: t.number().nullable()
+      nullableNumber: t.number().nullable(),
     })),
   }));
 }
@@ -183,7 +185,7 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      nonNullableNumber: t.number().nullable().nonNullable()
+      nonNullableNumber: t.number().nullable().nonNullable(),
     })),
   }));
 }
@@ -196,7 +198,7 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      nullishNumber: t.number().nullish()
+      nullishNumber: t.number().nullish(),
     })),
   }));
 }
@@ -209,7 +211,7 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      nonNullishNumber: t.number().nullish().nonNullish()
+      nonNullishNumber: t.number().nullish().nonNullish(),
     })),
   }));
 }
@@ -226,7 +228,7 @@ export class Table extends BaseTable {
     data: t.json((t) => ({
       defautedNumber: t.number().default(123),
       defautedRandom: t.number().default(() => Math.random()),
-    }))
+    })),
   }));
 }
 ```
@@ -259,7 +261,10 @@ export class Table extends BaseTable {
       obj: t.object({ name: t.string() }).and(t.object({ age: t.number() })),
 
       // equivalent to
-      obj2: t.intersection(t.object({ name: t.string() }), t.object({ age: t.number() })),
+      obj2: t.intersection(
+        t.object({ name: t.string() }),
+        t.object({ age: t.number() }),
+      ),
     })),
   }));
 }
@@ -294,7 +299,9 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      reverseString: t.string().transform((input) => input.split('').reverse().join(''))
+      reverseString: t
+        .string()
+        .transform((input) => input.split('').reverse().join('')),
     })),
   }));
 }
@@ -309,12 +316,10 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      stringToNumber: t.string()
-        .to(
-          (input) => parseInt(input),
-          t.number()
-        )
-        .lte(10)
+      stringToNumber: t
+        .string()
+        .to((input) => parseInt(input), t.number())
+        .lte(10),
     })),
   }));
 }
@@ -331,7 +336,9 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      refinedString: t.string().refine((val) => val.length <= 255, 'error message')
+      refinedString: t
+        .string()
+        .refine((val) => val.length <= 255, 'error message'),
     })),
   }));
 }
@@ -348,7 +355,7 @@ Refer to [Zod document](https://github.com/colinhacks/zod#superrefine) for it.
 This library is designed to support Zod and later other validation libraries, so the `ctx` has type `any` and needs to be explicitly typed with the correct type of chosen lib:
 
 ```ts
-import { z, RefinementCtx } from 'zod'
+import { z, RefinementCtx } from 'zod';
 
 export class Table extends BaseTable {
   readonly table = 'table';
@@ -359,9 +366,9 @@ export class Table extends BaseTable {
           ctx.addIssue({
             code: t.ZodIssueCode.too_big,
             maximum: 3,
-            type: "array",
+            type: 'array',
             inclusive: true,
-            message: "Too many items 😡",
+            message: 'Too many items 😡',
           });
         }
       }),
@@ -396,11 +403,13 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      arrayOfNumbers: t.number().array()
+      arrayOfNumbers: t
+        .number()
+        .array()
         .nonEmpty() // require at least one element
         .min(number) // set minimum array length
         .max(number) // set maximum array length
-        .length(number) // set exact array length
+        .length(number), // set exact array length
     })),
   }));
 }
@@ -434,8 +443,7 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
       // type will be { one: number, two: string }
-      extendObject: t.object({ one: t.number() })
-        .extend({ two: t.string() }),
+      extendObject: t.object({ one: t.number() }).extend({ two: t.string() }),
     })),
   }));
 }
@@ -451,7 +459,8 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
       // type will be { one: number, two: string }
-      mergeObject: t.object({ one: t.number() })
+      mergeObject: t
+        .object({ one: t.number() })
         .merge(t.object({ two: t.string() })),
     })),
   }));
@@ -468,8 +477,9 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
       // type will be { one: number, two: number }
-      pickObject: t.object({ one: t.number(), two: t.number(), three: t.number() })
-        .pick('one', 'two')
+      pickObject: t
+        .object({ one: t.number(), two: t.number(), three: t.number() })
+        .pick('one', 'two'),
     })),
   }));
 }
@@ -485,8 +495,9 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
       // type will be { three: number }
-      omitObject: t.object({ one: t.number(), two: t.number(), three: t.number() })
-        .omit('one', 'two')
+      omitObject: t
+        .object({ one: t.number(), two: t.number(), three: t.number() })
+        .omit('one', 'two'),
     })),
   }));
 }
@@ -502,7 +513,7 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
       // type will be { one?: number, two?: number }
-      partialObject: t.object({ one: t.number(), two: t.number() }).partial()
+      partialObject: t.object({ one: t.number(), two: t.number() }).partial(),
     })),
   }));
 }
@@ -516,7 +527,7 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
       // type will be { one?: number, two: number }
-      partialOne: t.object({ one: t.number(), two: t.number() }).partial('one')
+      partialOne: t.object({ one: t.number(), two: t.number() }).partial('one'),
     })),
   }));
 }
@@ -534,7 +545,7 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
       // will validate only `one` key and preserve all other keys when parsing
-      object: t.object({ one: t.number() }).passthrough()
+      object: t.object({ one: t.number() }).passthrough(),
     })),
   }));
 }
@@ -552,7 +563,7 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
       // will throw if unknown keys will be found during parsing
-      object: t.object({ one: t.number() }).strict()
+      object: t.object({ one: t.number() }).strict(),
     })),
   }));
 }
@@ -590,7 +601,7 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
       // type will be { [k: string]: number }
-      record: t.record(t.number())
+      record: t.record(t.number()),
     })),
   }));
 }
@@ -618,7 +629,7 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      // type will be [string, number, { pointsScored: number }] 
+      // type will be [string, number, { pointsScored: number }]
       tuple: t.tuple([
         t.string(),
         t.number(),
@@ -654,7 +665,7 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      enum: t.enum(["Salmon", "Tuna", "Trout"]),
+      enum: t.enum(['Salmon', 'Tuna', 'Trout']),
     })),
   }));
 }
@@ -663,13 +674,13 @@ export class Table extends BaseTable {
 Alternatively, use `as const` to define your enum values as a tuple of strings:
 
 ```ts
-const VALUES = ["Salmon", "Tuna", "Trout"] as const;
+const VALUES = ['Salmon', 'Tuna', 'Trout'] as const;
 
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      enum: t.enum(VALUES)
+      enum: t.enum(VALUES),
     })),
   }));
 }
@@ -690,7 +701,7 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
-      enum: t.nativeEnum(Fruits)
+      enum: t.nativeEnum(Fruits),
     })),
   }));
 }
@@ -708,11 +719,11 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     data: t.json((t) => ({
       object: t
-        .discriminatedUnion("type", [
-          t.object({ type: t.literal("a"), a: t.string() }),
-          t.object({ type: t.literal("b"), b: t.string() }),
+        .discriminatedUnion('type', [
+          t.object({ type: t.literal('a'), a: t.string() }),
+          t.object({ type: t.literal('b'), b: t.string() }),
         ])
-        .parse({ type: "a", a: "abc" }),
+        .parse({ type: 'a', a: 'abc' }),
     })),
   }));
 }
@@ -772,7 +783,7 @@ export class Table extends BaseTable {
 You can define a recursive schema, but because of a limitation of TypeScript, their type can't be statically inferred. Instead, you'll need to define the type definition manually, and provide it as a "type hint".
 
 ```ts
-import { JSONType, jsonTypes as t } from 'pqb'
+import { JSONType, jsonTypes as t } from 'pqb';
 
 interface Category {
   name: string;
@@ -783,7 +794,7 @@ const Category: JSONType<Category> = t.lazy(() =>
   t.object({
     name: t.string(),
     subCategories: t.array(Category),
-  })
+  }),
 );
 
 export class Table extends BaseTable {
