@@ -97,17 +97,19 @@ t.text().ip({ message: 'Invalid IP address' });
 Error messages are supported for a JSON schema as well:
 
 ```ts
-t.json((j) => ({
-  one: j
-    .string()
-    .errors({ required: 'One is required' })
-    .min(5, 'Must be 5 or more characters long'),
-  two: j
-    .string()
-    .errors({ invalidType: 'Two should be a string' })
-    .max(5, 'Must be 5 or fewer characters long'),
-  three: j.string().length(5, 'Must be exactly 5 characters long'),
-}));
+t.json((j) =>
+  j.object({
+    one: j
+      .string()
+      .errors({ required: 'One is required' })
+      .min(5, 'Must be 5 or more characters long'),
+    two: j
+      .string()
+      .errors({ invalidType: 'Two should be a string' })
+      .max(5, 'Must be 5 or fewer characters long'),
+    three: j.string().length(5, 'Must be exactly 5 characters long'),
+  }),
+);
 ```
 
 ## validationDefault
