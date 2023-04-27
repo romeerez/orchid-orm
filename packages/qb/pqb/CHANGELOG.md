@@ -1,5 +1,13 @@
 # pqb
 
+## 0.11.11
+
+### Patch Changes
+
+- Rename timestampWithoutTimezone to timestampNoTZ; Add methods for it
+- Updated dependencies
+  - orchid-core@0.4.4
+
 ## 0.11.10
 
 ### Patch Changes

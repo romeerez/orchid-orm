@@ -197,6 +197,19 @@ export class SomeTable extends BaseTable {
 }
 ```
 
+## timestampsNoTZ
+
+The same as `timestamps`, but without a time zone.
+
+## timestampsSnakeCase
+
+The same as `timestamps`, but when `snakeCase` option is not set or is `false`,
+this will point `updatedAt` and `createdAt` fields to `updated_at` and `created_at` database columns.
+
+## timestampsNoTZSnakeCase
+
+The same as `timestampsSnakeCase`, but without a time zone.
+
 ## modifyQuery
 
 Specify a callback that can modify a table class.

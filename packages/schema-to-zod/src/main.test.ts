@@ -502,7 +502,7 @@ describe('schema to zod', () => {
   });
 
   const date = columnToZod(t.date());
-  const timestamp = columnToZod(t.timestampWithoutTimeZone());
+  const timestamp = columnToZod(t.timestampNoTZ());
   const timestampWithTimeZone = columnToZod(t.timestamp());
   assertType<
     typeof date | typeof timestamp | typeof timestampWithTimeZone,
@@ -533,38 +533,35 @@ describe('schema to zod', () => {
     ).toThrow('custom');
   };
 
-  describe.each(['date', 'timestampWithoutTimeZone', 'timestamp'])(
-    '%s',
-    (method) => {
-      const schema = columnToZod(t[method as 'date']());
-      assertType<typeof schema, z.ZodDate>();
+  describe.each(['date', 'timestampNoTZ', 'timestamp'])('%s', (method) => {
+    const schema = columnToZod(t[method as 'date']());
+    assertType<typeof schema, z.ZodDate>();
 
-      it('should parse from string to a Date', () => {
-        const date = new Date(2000, 0, 1, 0, 0, 0, 0);
-        expect(schema.parse(date.toISOString())).toEqual(date);
+    it('should parse from string to a Date', () => {
+      const date = new Date(2000, 0, 1, 0, 0, 0, 0);
+      expect(schema.parse(date.toISOString())).toEqual(date);
 
-        expect(() => schema.parse('malformed')).toThrow('Invalid date');
-      });
+      expect(() => schema.parse('malformed')).toThrow('Invalid date');
+    });
 
-      it('should parse from number to a Date', () => {
-        const date = new Date(2000, 0, 1, 0, 0, 0, 0);
-        expect(schema.parse(date.getTime())).toEqual(date);
+    it('should parse from number to a Date', () => {
+      const date = new Date(2000, 0, 1, 0, 0, 0, 0);
+      expect(schema.parse(date.getTime())).toEqual(date);
 
-        expect(() => schema.parse(new Date(NaN))).toThrow('Invalid date');
-      });
+      expect(() => schema.parse(new Date(NaN))).toThrow('Invalid date');
+    });
 
-      it('should parse from Date to a Date', () => {
-        const date = new Date(2000, 0, 1, 0, 0, 0, 0);
-        expect(schema.parse(date)).toEqual(date);
+    it('should parse from Date to a Date', () => {
+      const date = new Date(2000, 0, 1, 0, 0, 0, 0);
+      expect(schema.parse(date)).toEqual(date);
 
-        expect(() => schema.parse(new Date(NaN))).toThrow('Invalid date');
-      });
+      expect(() => schema.parse(new Date(NaN))).toThrow('Invalid date');
+    });
 
-      it('should support date methods', () => {
-        testDateMethods(t[method as 'date']());
-      });
-    },
-  );
+    it('should support date methods', () => {
+      testDateMethods(t[method as 'date']());
+    });
+  });
 
   const time = columnToZod(t.time());
   assertType<typeof time, z.ZodString>();
@@ -1423,7 +1420,7 @@ describe('schema to zod', () => {
     it('should convert one type to the same schema as another type', () => {
       const timestampAsInteger = columnToZod(
         t
-          .timestampWithoutTimeZone()
+          .timestampNoTZ()
           .encode((input: number) => new Date(input))
           .parse(Date.parse)
           .as(t.integer()),
@@ -1433,7 +1430,7 @@ describe('schema to zod', () => {
       expect(timestampAsInteger.parse(123)).toBe(123);
 
       const timestampAsDate = columnToZod(
-        t.timestampWithoutTimeZone().parse((string) => new Date(string)),
+        t.timestampNoTZ().parse((string) => new Date(string)),
       );
 
       assertType<typeof timestampAsDate, z.ZodDate>();

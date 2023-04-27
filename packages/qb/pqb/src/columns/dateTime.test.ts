@@ -5,7 +5,7 @@ import {
   TimeColumn,
   TimeInterval,
   TimestampColumn,
-  TimestampTzColumn,
+  TimestampTZColumn,
 } from './dateTime';
 import { columnTypes } from './columnTypes';
 import { ColumnType } from './columnType';
@@ -56,15 +56,12 @@ describe('date time columns', () => {
 
   describe('timestamp without time zone', () => {
     it('should accept string, number, and Date', async () => {
-      testTimestampInput(t.timestampWithoutTimeZone());
+      testTimestampInput(t.timestampNoTZ());
     });
 
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.raw(
-          () => t.timestampWithoutTimeZone(),
-          `'1999-01-08 04:05:06'::timestamp`,
-        ),
+        testDb.raw(() => t.timestampNoTZ(), `'1999-01-08 04:05:06'::timestamp`),
       );
       expect(result).toBe('1999-01-08 04:05:06');
 
@@ -72,17 +69,11 @@ describe('date time columns', () => {
     });
 
     it('should have toCode, ignore default precision', () => {
-      expect(new TimestampColumn().toCode('t')).toBe(
-        't.timestampWithoutTimeZone()',
-      );
+      expect(new TimestampColumn().toCode('t')).toBe('t.timestampNoTZ()');
 
-      expect(new TimestampColumn(10).toCode('t')).toBe(
-        't.timestampWithoutTimeZone(10)',
-      );
+      expect(new TimestampColumn(10).toCode('t')).toBe('t.timestampNoTZ(10)');
 
-      expect(new TimestampColumn(6).toCode('t')).toBe(
-        't.timestampWithoutTimeZone()',
-      );
+      expect(new TimestampColumn(6).toCode('t')).toBe('t.timestampNoTZ()');
 
       const now = new Date();
       const s = now.toISOString();
@@ -92,7 +83,7 @@ describe('date time columns', () => {
           .max(now, 'max message')
           .toCode('t'),
       ).toBe(
-        `t.timestampWithoutTimeZone()` +
+        `t.timestampNoTZ()` +
           `.min(new Date('${s}'), 'min message')` +
           `.max(new Date('${s}'), 'max message')`,
       );
@@ -107,7 +98,7 @@ describe('date time columns', () => {
     it('should output string', async () => {
       const result = await testDb.get(
         testDb.raw(
-          () => new TimestampTzColumn(),
+          () => new TimestampTZColumn(),
           `'1999-01-08 04:05:06 +0'::timestamptz AT TIME ZONE 'UTC'`,
         ),
       );
@@ -117,16 +108,16 @@ describe('date time columns', () => {
     });
 
     it('should have toCode, ignore default precision', () => {
-      expect(new TimestampTzColumn().toCode('t')).toBe('t.timestamp()');
+      expect(new TimestampTZColumn().toCode('t')).toBe('t.timestamp()');
 
-      expect(new TimestampTzColumn(6).toCode('t')).toBe('t.timestamp()');
+      expect(new TimestampTZColumn(6).toCode('t')).toBe('t.timestamp()');
 
-      expect(new TimestampTzColumn(10).toCode('t')).toBe('t.timestamp(10)');
+      expect(new TimestampTZColumn(10).toCode('t')).toBe('t.timestamp(10)');
 
       const now = new Date();
       const s = now.toISOString();
       expect(
-        new TimestampTzColumn()
+        new TimestampTZColumn()
           .min(now, 'min message')
           .max(now, 'max message')
           .toCode('t'),
@@ -275,8 +266,8 @@ describe('date time columns', () => {
         id: t.serial().primaryKey(),
         name: t.text(),
         password: t.text(),
-        createdAt: t.timestampWithoutTimeZone().asDate(),
-        updatedAt: t.timestampWithoutTimeZone().asDate(),
+        createdAt: t.timestampNoTZ().asDate(),
+        updatedAt: t.timestampNoTZ().asDate(),
       }));
 
       const now = new Date();

@@ -39,7 +39,7 @@ import {
   IntervalColumn,
   TimeColumn,
   TimestampColumn,
-  TimestampTzColumn,
+  TimestampTZColumn,
 } from './dateTime';
 import { BooleanColumn } from './boolean';
 import { EnumColumn } from './enum';
@@ -226,13 +226,13 @@ export const columnTypes = {
   date() {
     return new DateColumn();
   },
-  timestampWithoutTimeZone<Precision extends number>(precision?: Precision) {
+  timestampNoTZ<Precision extends number>(precision?: Precision) {
     return new TimestampColumn(precision);
   },
   timestamp<Precision extends number | undefined = undefined>(
     precision?: Precision,
   ) {
-    return new TimestampTzColumn(precision);
+    return new TimestampTZColumn(precision);
   },
   time<Precision extends number | undefined = undefined>(
     precision?: Precision,

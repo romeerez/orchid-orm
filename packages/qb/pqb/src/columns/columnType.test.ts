@@ -177,7 +177,7 @@ describe('column type', () => {
 
         const UserWithPlainTimestamp = db('user', (t) => ({
           id: t.serial().primaryKey(),
-          createdAt: t.timestampWithoutTimeZone(),
+          createdAt: t.timestampNoTZ(),
         }));
 
         expect(typeof (await UserWithPlainTimestamp.take()).createdAt).toBe(
@@ -196,13 +196,13 @@ describe('column type', () => {
 
   describe('as', () => {
     const numberTimestamp = columnTypes
-      .timestampWithoutTimeZone()
+      .timestampNoTZ()
       .encode((input: number) => new Date(input))
       .parse(Date.parse)
       .as(columnTypes.integer());
 
     const dateTimestamp = columnTypes
-      .timestampWithoutTimeZone()
+      .timestampNoTZ()
       .parse((input) => new Date(input));
 
     const db = createDb({
@@ -231,7 +231,7 @@ describe('column type', () => {
 
     it('should return same column with `as` property in data', () => {
       const timestamp = columnTypes
-        .timestampWithoutTimeZone()
+        .timestampNoTZ()
         .encode((input: number) => new Date(input))
         .parse(Date.parse);
 

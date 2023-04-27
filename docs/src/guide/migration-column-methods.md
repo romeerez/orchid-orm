@@ -318,6 +318,10 @@ change(async (db) => {
 });
 ```
 
+## timestampsNoTZ
+
+The same as `timestamps`, but without a time zone.
+
 ## timestampsSnakeCase
 
 This method is for the case when `snakeCase` is not set or `false`, but for some reason you need timestamps named as `updated_at` and `created_at`.
@@ -332,6 +336,10 @@ change(async (db) => {
   }));
 });
 ```
+
+## timestampsNoTZSnakeCase
+
+The same as `timestampsSnakeCase`, but without a time zone.
 
 ## check
 

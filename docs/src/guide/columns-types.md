@@ -167,7 +167,7 @@ t.date() // -> string
 t.timestamp(precision?: number) // -> string
 
 // timestamp [ (p) ] [ without time zone ] 8 bytes both date and time (no time zone) 4713 BC 294276 AD 1 microsecond
-t.timestampWithoutTimeZone(precision?: number) // -> string
+t.timestampNoTZ(precision?: number) // -> string
 
 // time [ (p) ] [ without time zone ]  8 bytes    time of day (no date)  00:00:00   24:00:00   1 microsecond
 t.time(precision?: number) // -> string
@@ -175,7 +175,7 @@ t.time(precision?: number) // -> string
 
 Time with time zone is not included because it's discouraged [by Postgres docs](https://wiki.postgresql.org/wiki/Don%27t_Do_This#Don.27t_use_timetz).
 
-`date`, `timestamp`, and `timestampWithoutTimeZone` can be customized with methods `asNumber` and `asDate` to parse database values into number and JS Date object respectively.
+`date`, `timestamp`, and `timestampNoTZ` can be customized with methods `asNumber` and `asDate` to parse database values into number and JS Date object respectively.
 
 ```ts
 export const BaseTable = createBaseTable({

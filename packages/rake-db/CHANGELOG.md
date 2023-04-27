@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.8.10
+
+### Patch Changes
+
+- Rename timestampWithoutTimezone to timestampNoTZ; Add methods for it
+- Updated dependencies
+  - pqb@0.11.11
+  - orchid-core@0.4.4
+
 ## 2.8.9
 
 ### Patch Changes

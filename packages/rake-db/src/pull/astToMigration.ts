@@ -7,7 +7,8 @@ import {
   primaryKeyToCode,
   getConstraintKind,
   constraintPropsToCode,
-  TimestampTzColumn,
+  TimestampTZColumn,
+  TimestampColumn,
 } from 'pqb';
 import {
   addCode,
@@ -140,31 +141,16 @@ const createTable = <CT extends ColumnTypesBase>(
   const code: Code[] = [];
   addCode(code, `await db.createTable(${quoteSchemaTable(ast)}, (t) => ({`);
 
-  let hasTimestamps =
-    isTimestamp(ast.shape.createdAt) && isTimestamp(ast.shape.updatedAt);
-
-  const camelCaseTimestamps =
-    !config.snakeCase &&
-    hasTimestamps &&
-    !ast.shape.createdAt?.data.name &&
-    !ast.shape.updatedAt?.data.name;
-
-  const snakeCaseTimestamps =
-    hasTimestamps &&
-    !camelCaseTimestamps &&
-    ((!config.snakeCase &&
-      ast.shape.createdAt?.data.name === 'created_at' &&
-      ast.shape.updatedAt?.data.name === 'updated_at') ||
-      (config.snakeCase &&
-        !ast.shape.createdAt?.data.name &&
-        !ast.shape.updatedAt?.data.name));
-
-  if (!camelCaseTimestamps && !snakeCaseTimestamps) {
-    hasTimestamps = false;
-  }
+  const timestamps = getTimestampsInfo(config, ast, TimestampTZColumn);
+  const timestampsNoTZ = getTimestampsInfo(config, ast, TimestampTZColumn);
+  const hasAnyTimestamps =
+    timestamps.hasTimestamps || timestampsNoTZ.hasTimestamps;
+  const hasAnyCamelCaseTimestamps =
+    timestamps.camelCaseTimestamps || timestampsNoTZ.camelCaseTimestamps;
 
   for (const key in ast.shape) {
-    if (hasTimestamps && (key === 'createdAt' || key === 'updatedAt')) continue;
+    if (hasAnyTimestamps && (key === 'createdAt' || key === 'updatedAt'))
+      continue;
 
     const line: Code[] = [`${quoteObjectKey(key)}: `];
     for (const part of ast.shape[key].toCode('t', true)) {
@@ -174,12 +160,12 @@ const createTable = <CT extends ColumnTypesBase>(
     code.push(line);
   }
 
-  if (hasTimestamps) {
+  if (hasAnyTimestamps) {
+    const key = timestamps.hasTimestamps ? 'timestamps' : 'timestampsNoTZ';
+
     code.push([
       `...t.${
-        camelCaseTimestamps || config.snakeCase
-          ? 'timestamps'
-          : 'timestampsSnakeCase'
+        hasAnyCamelCaseTimestamps || config.snakeCase ? key : `${key}SnakeCase`
       }(),`,
     ]);
   }
@@ -205,18 +191,57 @@ const createTable = <CT extends ColumnTypesBase>(
   return code;
 };
 
-const isTimestamp = (column?: ColumnType) => {
+const isTimestamp = (
+  column: ColumnType | undefined,
+  type: typeof TimestampTZColumn<number> | typeof TimestampColumn<number>,
+) => {
   if (!column) return false;
 
   const { default: def } = column.data;
   return (
-    column instanceof TimestampTzColumn &&
+    column instanceof type &&
     !column.data.isNullable &&
     def &&
     typeof def === 'object' &&
     isRaw(def) &&
     def.__raw === 'now()'
   );
+};
+
+const getTimestampsInfo = <CT extends ColumnTypesBase>(
+  config: RakeDbConfig<CT>,
+  ast: RakeDbAst.Table,
+  type: typeof TimestampTZColumn<number> | typeof TimestampColumn<number>,
+) => {
+  let hasTimestamps =
+    isTimestamp(ast.shape.createdAt, type) &&
+    isTimestamp(ast.shape.updatedAt, type);
+
+  const camelCaseTimestamps =
+    !config.snakeCase &&
+    hasTimestamps &&
+    !ast.shape.createdAt?.data.name &&
+    !ast.shape.updatedAt?.data.name;
+
+  const snakeCaseTimestamps =
+    hasTimestamps &&
+    !camelCaseTimestamps &&
+    ((!config.snakeCase &&
+      ast.shape.createdAt?.data.name === 'created_at' &&
+      ast.shape.updatedAt?.data.name === 'updated_at') ||
+      (config.snakeCase &&
+        !ast.shape.createdAt?.data.name &&
+        !ast.shape.updatedAt?.data.name));
+
+  if (!camelCaseTimestamps && !snakeCaseTimestamps) {
+    hasTimestamps = false;
+  }
+
+  return {
+    hasTimestamps,
+    camelCaseTimestamps,
+    snakeCaseTimestamps,
+  };
 };
 
 const createConstraint = (item: RakeDbAst.Constraint): Code => {

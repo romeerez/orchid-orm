@@ -49,6 +49,8 @@ Currently, it supports generating code to create:
 - views
 - the defaults `current_timestamp`, `transaction_timestamp()` are simplified to the equivalent `now()`
 
+### How `updatedAt` and `createdAt` timestamps are handled
+
 Assuming we have two tables in a database, one with camelCase columns and the other with snake_case:
 
 ```sql
@@ -107,6 +109,10 @@ change(async (db) => {
   }));
 });
 ```
+
+If timestamps in your database don't have a time zone, all the above works as well, but will use `timestampNoTZ` and `timestampNoTZSnakeCase` instead.
+
+### Custom and unknown columns
 
 If column type is a custom one defined by user, or if it is not supported yet, `db pull` will log a warning and output the column as follows:
 

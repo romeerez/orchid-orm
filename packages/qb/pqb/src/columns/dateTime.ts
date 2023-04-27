@@ -96,16 +96,16 @@ export abstract class DateTimeTzBaseClass<
 }
 
 const timestampToCode = <P extends number>(
-  self: TimestampColumn<P> | TimestampTzColumn<P>,
+  self: TimestampColumn<P> | TimestampTZColumn<P>,
   t: string,
 ) => {
   const { dateTimePrecision: p } = self.data;
   return columnCode(
     self,
     t,
-    `${
-      self instanceof TimestampColumn ? 'timestampWithoutTimeZone' : 'timestamp'
-    }(${p && p !== 6 ? p : ''})${dateDataToCode(self.data)}`,
+    `${self instanceof TimestampColumn ? 'timestampNoTZ' : 'timestamp'}(${
+      p && p !== 6 ? p : ''
+    })${dateDataToCode(self.data)}`,
     self.data,
     skip,
   );
@@ -122,7 +122,7 @@ export class TimestampColumn<
 }
 
 // timestamp [ (p) ] with time zone	8 bytes	both date and time, with time zone	4713 BC	294276 AD	1 microsecond
-export class TimestampTzColumn<
+export class TimestampTZColumn<
   Precision extends number,
 > extends DateTimeTzBaseClass<Precision> {
   dataType = 'timestamptz' as const;

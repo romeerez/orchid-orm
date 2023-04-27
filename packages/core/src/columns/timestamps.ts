@@ -43,22 +43,6 @@ export const makeTimestampsHelpers = (
     );
   };
 
-  function timestamps<T extends ColumnTypeBase>(this: {
-    name(name: string): { timestamp(): T };
-    timestamp(): T;
-  }): Timestamps<T> {
-    if ((this as { [snakeCaseKey]?: boolean })[snakeCaseKey])
-      return timestampsSnakeCase.call(this) as Timestamps<T>;
-
-    const updatedAt = this.timestamp().default(raw('now()'));
-    updatedAt.data.modifyQuery = addHookForUpdate;
-
-    return {
-      createdAt: this.timestamp().default(raw('now()')),
-      updatedAt,
-    };
-  }
-
   const updatedAtInjectorSnake = makeInjector(
     updatedAtRegexSnake,
     updateUpdatedAtItemSnake,
@@ -73,21 +57,68 @@ export const makeTimestampsHelpers = (
     );
   };
 
-  function timestampsSnakeCase<T extends ColumnTypeBase>(this: {
-    name(name: string): { timestamp(): T };
-    timestamp(): T;
-  }): Timestamps<T> {
-    const updatedAt = this.name('updated_at').timestamp().default(raw('now()'));
-    updatedAt.data.modifyQuery = addHookForUpdateSnake;
-
-    return {
-      createdAt: this.name('created_at').timestamp().default(raw('now()')),
-      updatedAt,
-    };
-  }
-
   return {
-    timestamps,
-    timestampsSnakeCase,
+    timestamps<T extends ColumnTypeBase>(this: {
+      name(name: string): { timestamp(): T };
+      timestamp(): T;
+      timestampsSnakeCase(): Timestamps<T>;
+    }): Timestamps<T> {
+      if ((this as { [snakeCaseKey]?: boolean })[snakeCaseKey])
+        return this.timestampsSnakeCase();
+
+      const updatedAt = this.timestamp().default(raw('now()'));
+      updatedAt.data.modifyQuery = addHookForUpdate;
+
+      return {
+        createdAt: this.timestamp().default(raw('now()')),
+        updatedAt,
+      };
+    },
+    timestampsSnakeCase<T extends ColumnTypeBase>(this: {
+      name(name: string): { timestamp(): T };
+      timestamp(): T;
+    }): Timestamps<T> {
+      const updatedAt = this.name('updated_at')
+        .timestamp()
+        .default(raw('now()'));
+      updatedAt.data.modifyQuery = addHookForUpdateSnake;
+
+      return {
+        createdAt: this.name('created_at').timestamp().default(raw('now()')),
+        updatedAt,
+      };
+    },
+    timestampsNoTZ<T extends ColumnTypeBase>(this: {
+      name(name: string): { timestampNoTZ(): T };
+      timestampNoTZ(): T;
+      timestampsNoTZSnakeCase(): Timestamps<T>;
+    }): Timestamps<T> {
+      if ((this as { [snakeCaseKey]?: boolean })[snakeCaseKey])
+        return this.timestampsNoTZSnakeCase();
+
+      const updatedAt = this.timestampNoTZ().default(raw('now()'));
+      updatedAt.data.modifyQuery = addHookForUpdate;
+
+      return {
+        createdAt: this.timestampNoTZ().default(raw('now()')),
+        updatedAt,
+      };
+    },
+    timestampsNoTZSnakeCase<T extends ColumnTypeBase>(this: {
+      name(name: string): { timestampNoTZ(): T };
+      timestampNoTZ(): T;
+    }): Timestamps<T> {
+      const updatedAt = this.name('updated_at')
+        .timestampNoTZ()
+        .default(raw('now()'));
+      updatedAt.data.modifyQuery = addHookForUpdateSnake;
+
+      return {
+        createdAt: this.name('created_at')
+          .timestampNoTZ()
+          .default(raw('now()')),
+        updatedAt,
+      };
+    },
   };
 };
