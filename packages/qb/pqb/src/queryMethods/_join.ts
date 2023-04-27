@@ -1,4 +1,4 @@
-import { ColumnsParsers, Query, QueryBase } from '../query';
+import { ColumnsParsers, Query } from '../query';
 import { ColumnsShapeBase } from 'orchid-core';
 import { getIsJoinSubQuery } from '../sql/join';
 import { getShapeFromSelect } from './select';
@@ -14,6 +14,7 @@ import {
 } from './join';
 import { ColumnsShape } from '../columns';
 import { getQueryAs } from '../utils';
+import { QueryBase } from '../queryBase';
 
 export const _join = <
   T extends Query,
@@ -27,11 +28,23 @@ export const _join = <
   type: string,
   args: [arg: Arg, ...args: Args] | [arg: Arg, cb: JoinCallback<T, Arg>],
 ): JoinResult<T, Arg, RequireJoined, RequireMain> => {
-  const first = args[0];
   let joinKey: string | undefined;
   let shape: ColumnsShapeBase | undefined;
   let parsers: ColumnsParsers | undefined;
   let isSubQuery = false;
+
+  if (typeof args[0] === 'function') {
+    args[0] = (args[0] as (q: Record<string, Query>) => Arg)(
+      q.relationsQueries,
+    );
+    (
+      args[0] as unknown as { joinQueryAfterCallback: unknown }
+    ).joinQueryAfterCallback = (
+      args[0] as unknown as { joinQuery: unknown }
+    ).joinQuery;
+  }
+
+  const first = args[0];
 
   if (typeof first === 'object') {
     isSubQuery = getIsJoinSubQuery(first.query, first.baseQuery.query);

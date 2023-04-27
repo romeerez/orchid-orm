@@ -14,6 +14,10 @@ export type DbBase<
   Table extends string | undefined,
   Shape extends ColumnsShapeBase,
   CT extends ColumnTypesBase,
+  Result extends ColumnsShapeBase = Pick<
+    Shape,
+    DefaultSelectColumns<Shape>[number]
+  >,
 > = {
   adapter: Adapter;
   table: Table;
@@ -23,6 +27,6 @@ export type DbBase<
   singlePrimaryKey: SinglePrimaryKey<Shape>;
   type: ColumnShapeOutput<Shape>;
   inputType: ColumnShapeInput<Shape>;
-  result: Pick<Shape, DefaultSelectColumns<Shape>[number]>;
+  result: Result;
   internal: QueryInternal;
 };

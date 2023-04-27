@@ -1,8 +1,9 @@
-import { Query, QueryBase, QueryWithTable, SelectableBase } from '../query';
+import { Query, QueryWithTable, SelectableBase } from '../query';
 import { RelationQuery } from '../relations';
 import { Expression } from '../utils';
 import { SelectQueryData } from './data';
 import { ColumnTypeBase, MaybeArray, RawExpression } from 'orchid-core';
+import { QueryBase } from '../queryBase';
 
 // used in `from` logic to decide if convert query to sql or just write table name
 export const checkIfASimpleQuery = (q: Query) => {

@@ -1,4 +1,4 @@
-import { Query, QueryBase } from '../query';
+import { Query } from '../query';
 import {
   SimpleJoinItem,
   WhereInItem,
@@ -14,6 +14,7 @@ import { makeSql, ToSqlCtx } from './toSql';
 import { getRaw } from '../raw';
 import { JoinedShapes, QueryData } from './data';
 import { isRaw, RawExpression, MaybeArray, toArray } from 'orchid-core';
+import { QueryBase } from '../queryBase';
 
 export const pushWhereStatementSql = (
   ctx: ToSqlCtx,
@@ -206,7 +207,11 @@ const processWhere = (
           `${prefix}EXISTS (SELECT 1 FROM ${target} WHERE ${conditions} LIMIT 1)`,
         );
       });
-    } else if (typeof value === 'object' && value !== null) {
+    } else if (
+      typeof value === 'object' &&
+      value &&
+      value.constructor === Object
+    ) {
       if (isRaw(value)) {
         ands.push(
           `${prefix}${revealColumnToSql(

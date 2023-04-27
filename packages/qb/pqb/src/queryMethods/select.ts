@@ -2,7 +2,6 @@ import {
   ColumnParser,
   ColumnsParsers,
   Query,
-  QueryBase,
   QueryReturnsAll,
   QueryThen,
 } from '../query';
@@ -27,6 +26,7 @@ import {
   ColumnTypeBase,
   EmptyObject,
 } from 'orchid-core';
+import { QueryBase } from '../queryBase';
 
 export type SelectArg<T extends QueryBase> =
   | '*'

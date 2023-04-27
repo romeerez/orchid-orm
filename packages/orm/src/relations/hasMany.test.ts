@@ -239,6 +239,31 @@ describe('hasMany', () => {
       );
     });
 
+    it('should be supported in join with a callback', () => {
+      const query = db.user
+        .as('u')
+        .join(
+          (q) => q.messages.as('m').where({ ChatId: 123 }),
+          (q) => q.where({ Text: 'text' }),
+        )
+        .select('Name', 'm.Text');
+
+      assertType<Awaited<typeof query>, { Name: string; Text: string }[]>();
+
+      expectSql(
+        query.toSql(),
+        `
+        SELECT "u"."name" AS "Name", "m"."text" AS "Text"
+        FROM "user" AS "u"
+        JOIN "message" AS "m"
+          ON "m"."text" = $1
+         AND "m"."chatId" = $2
+         AND "m"."authorId" = "u"."id"
+      `,
+        ['text', 123],
+      );
+    });
+
     it('should be supported in joinLateral', () => {
       const q = db.user
         .joinLateral('messages', (q) => q)
@@ -2088,6 +2113,46 @@ describe('hasMany through', () => {
       );
     });
 
+    it('should be supported in join with a callback', () => {
+      const now = new Date();
+
+      const query = db.profile
+        .as('p')
+        .join(
+          (q) => q.chats.as('c').where({ updatedAt: now }),
+          (q) => q.where({ Title: 'title' }),
+        )
+        .select('Bio', 'c.Title');
+
+      assertType<
+        Awaited<typeof query>,
+        { Bio: string | null; Title: string }[]
+      >();
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT "p"."bio" AS "Bio", "c"."title" AS "Title"
+          FROM "profile" AS "p"
+          JOIN "chat" AS "c"
+            ON "c"."title" = $1
+            AND "c"."updatedAt" = $2
+            AND EXISTS (
+              SELECT 1 FROM "user"
+              WHERE EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."chatId" = "c"."idOfChat"
+                    AND "chatUser"."userId" = "user"."id"
+                  LIMIT 1
+                )
+                AND "user"."id" = "p"."userId"
+              LIMIT 1
+            )
+        `,
+        ['title', now],
+      );
+    });
+
     it('should be supported in joinLateral', () => {
       const q = db.profile
         .joinLateral('chats', (q) => q)
@@ -2504,6 +2569,44 @@ describe('hasMany through', () => {
             AND "profiles"."bio" = $1
         `,
         ['bio'],
+      );
+    });
+
+    it('should be supported in join with a callback', () => {
+      const query = db.chat
+        .as('c')
+        .join(
+          (q) => q.profiles.as('p').where({ UserId: 123 }),
+          (q) => q.where({ Bio: 'bio' }),
+        )
+        .select('Title', 'p.Bio');
+
+      assertType<
+        Awaited<typeof query>,
+        { Title: string; Bio: string | null }[]
+      >();
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT "c"."title" AS "Title", "p"."bio" AS "Bio"
+          FROM "chat" AS "c"
+          JOIN "profile" AS "p"
+            ON "p"."bio" = $1
+            AND "p"."userId" = $2
+            AND EXISTS (
+              SELECT 1 FROM "user" AS "users"
+              WHERE "p"."userId" = "users"."id"
+                AND EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."userId" = "users"."id"
+                    AND "chatUser"."chatId" = "c"."idOfChat"
+                  LIMIT 1
+                )
+              LIMIT 1
+            )
+        `,
+        ['bio', 123],
       );
     });
 

@@ -1,11 +1,11 @@
 import { AggregateItemOptions, HavingItem } from './types';
 import { getRaw } from '../raw';
 import { aggregateToSql } from './aggregate';
-import { QueryBase } from '../query';
 import { addValue, q } from './common';
 import { ToSqlCtx } from './toSql';
 import { SelectQueryData } from './data';
 import { Operator, isRaw, RawExpression, emptyObject } from 'orchid-core';
+import { QueryBase } from '../queryBase';
 
 const aggregateOptionNames: (keyof AggregateItemOptions)[] = [
   'distinct',

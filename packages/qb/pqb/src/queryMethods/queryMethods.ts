@@ -1,6 +1,5 @@
 import {
   Query,
-  QueryBase,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
   SetQueryReturnsOneOptional,
@@ -11,7 +10,7 @@ import {
   SetQueryTableAlias,
   SetQueryWindows,
 } from '../query';
-import { Expression, getClonedQueryData } from '../utils';
+import { Expression } from '../utils';
 import {
   SelectItem,
   SelectQueryData,
@@ -48,6 +47,8 @@ import { MergeQueryMethods } from './merge';
 import { RawMethods } from './raw';
 import { CopyMethods } from './copy';
 import { RawExpression, raw, applyMixins, EmptyObject, Sql } from 'orchid-core';
+import { AsMethods } from './as';
+import { QueryBase } from '../queryBase';
 
 export type WindowArg<T extends Query> = Record<
   string,
@@ -83,7 +84,8 @@ export type OrderArg<
   | RawExpression;
 
 export interface QueryMethods
-  extends Aggregate,
+  extends Omit<AsMethods, 'result'>,
+    Aggregate,
     Select,
     From,
     Join,
@@ -175,12 +177,6 @@ export class QueryMethods {
     return this as unknown as SetQueryReturnsVoid<T>;
   }
 
-  clone<T extends QueryBase>(this: T): T {
-    const cloned = Object.create(this.baseQuery);
-    cloned.query = getClonedQueryData(this.query);
-    return cloned;
-  }
-
   toSql(this: Query, options?: ToSqlOptions): Sql {
     return toSql(this, options);
   }
@@ -251,21 +247,6 @@ export class QueryMethods {
     ...args: WhereArg<T>[]
   ): SetQueryReturnsOneOptional<WhereResult<T>> {
     return addWhere(this, args).takeOptional();
-  }
-
-  as<T extends Query, As extends string>(
-    this: T,
-    as: As,
-  ): SetQueryTableAlias<T, As> {
-    return this.clone()._as(as) as unknown as SetQueryTableAlias<T, As>;
-  }
-
-  _as<T extends Query, As extends string>(
-    this: T,
-    as: As,
-  ): SetQueryTableAlias<T, As> {
-    this.query.as = as;
-    return this as unknown as SetQueryTableAlias<T, As>;
   }
 
   withSchema<T extends Query>(this: T, schema: string): T {
@@ -378,6 +359,8 @@ export class QueryMethods {
 }
 
 applyMixins(QueryMethods, [
+  QueryBase,
+  AsMethods,
   Aggregate,
   Select,
   From,

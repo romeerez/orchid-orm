@@ -1,12 +1,12 @@
 import {
   Query,
-  QueryBase,
   SetQueryReturnsValue,
   SetQueryReturnsValueOptional,
 } from '../query';
 import { addParserForRawExpression, processSelectArg } from './select';
 import { RawExpression, ColumnTypeBase, StringKey } from 'orchid-core';
 import { SelectQueryData } from '../sql';
+import { QueryBase } from '../queryBase';
 
 export type GetArg<T extends QueryBase> =
   | StringKey<keyof T['selectable']>

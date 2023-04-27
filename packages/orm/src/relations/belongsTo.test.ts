@@ -178,6 +178,32 @@ describe('belongsTo', () => {
       );
     });
 
+    it('should be supported in join with a callback', () => {
+      const query = db.profile
+        .as('p')
+        .join(
+          (q) => q.user.as('u').where({ Age: 20 }),
+          (q) => q.where({ Name: 'name' }),
+        )
+        .select('Bio', 'u.Name');
+
+      assertType<
+        Awaited<typeof query>,
+        { Bio: string | null; Name: string }[]
+      >();
+
+      expectSql(
+        query.toSql(),
+        `
+        SELECT "p"."bio" AS "Bio", "u"."name" AS "Name"
+        FROM "profile" AS "p"
+        JOIN "user" AS "u"
+          ON "u"."name" = $1 AND "u"."age" = $2 AND "u"."id" = "p"."userId"
+      `,
+        ['name', 20],
+      );
+    });
+
     it('should be supported in joinLateral', () => {
       const q = db.profile.joinLateral('user', (q) => q).select('Bio', 'user');
 

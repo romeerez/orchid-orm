@@ -1,20 +1,17 @@
-import { Query, QueryBase, SelectableBase, WithDataBase } from '../query';
+import { Query } from '../query';
 import { ColumnOperators, QueryData } from '../sql';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
-import { getClonedQueryData } from '../utils';
 import { JoinArgs, JoinCallback, JoinFirstArg } from './join';
-import { RelationsBase } from '../relations';
 import {
   RawExpression,
   ColumnsShapeBase,
   MaybeArray,
-  QueryMetaBase,
-  QueryInternal,
   emptyObject,
 } from 'orchid-core';
 import { getIsJoinSubQuery } from '../sql/join';
 import { getShapeFromSelect } from './select';
 import { ColumnsShape } from '../columns';
+import { QueryBase } from '../queryBase';
 
 export type WhereArg<T extends QueryBase> =
   | (Omit<
@@ -169,20 +166,7 @@ const existsArgs = (args: [JoinFirstArg<Query>, ...JoinArgs<Query, Query>]) => {
   } as never;
 };
 
-export abstract class Where implements QueryBase {
-  abstract clone<T extends this>(this: T): T;
-  abstract selectable: SelectableBase;
-  abstract shape: ColumnsShapeBase;
-  abstract relations: RelationsBase;
-  abstract withData: WithDataBase;
-  abstract baseQuery: Query;
-  abstract internal: QueryInternal;
-
-  query = {} as QueryData;
-  table?: string;
-  meta!: QueryMetaBase;
-  result!: ColumnsShape;
-
+export abstract class Where extends QueryBase {
   where<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
     return this.clone()._where(...args);
   }
@@ -475,13 +459,13 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
   extends Where
   implements QueryBase
 {
-  selectable!: Q['selectable'];
+  declare selectable: Q['selectable'];
+  declare relations: Q['relations'];
+  declare result: Q['result'];
   shape: Q['shape'];
-  relations!: Q['relations'];
   baseQuery: Query;
   withData = emptyObject;
   internal: Q['internal'];
-  declare result: Q['result'];
 
   constructor(
     q: QueryBase,
@@ -499,11 +483,5 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
     if (typeof q === 'object' && q.query.as) {
       this.query.as = q.query.as;
     }
-  }
-
-  clone<T extends this>(this: T): T {
-    const cloned = Object.create(this.baseQuery);
-    cloned.query = getClonedQueryData(this.query);
-    return cloned as unknown as T;
   }
 }

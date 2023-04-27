@@ -4,7 +4,6 @@ import { DbTable, Table, TableClass, TableClasses } from '../table';
 import { OrchidORM } from '../orm';
 import {
   Query,
-  QueryWithTable,
   RelationQuery,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
@@ -268,10 +267,11 @@ const applyRelation = (
   { relationName, relation, dbTable, otherDbTable }: ApplyRelationData,
   delayedRelations: DelayedRelations,
 ) => {
+  const baseQuery = Object.create(otherDbTable);
+  baseQuery.baseQuery = baseQuery;
+
   const query = (
-    relation.options.scope
-      ? relation.options.scope(otherDbTable)
-      : (otherDbTable as unknown as QueryWithTable)
+    relation.options.scope ? relation.options.scope(baseQuery) : baseQuery
   ).as(relationName);
 
   const definedAs = (query as unknown as { definedAs?: string }).definedAs;
@@ -312,6 +312,8 @@ const applyRelation = (
 
   makeRelationQuery(dbTable, definedAs, relationName, data);
 
+  baseQuery.joinQuery = data.joinQuery;
+
   (dbTable.relations as Record<string, unknown>)[relationName] = {
     type,
     key: relationName,
@@ -321,6 +323,8 @@ const applyRelation = (
     primaryKey: data.primaryKey,
     options: relation.options,
   };
+
+  dbTable.relationsQueries[relationName] = query;
 
   const tableRelations = delayedRelations.get(dbTable);
   if (!tableRelations) return;

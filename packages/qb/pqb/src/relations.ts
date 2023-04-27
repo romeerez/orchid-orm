@@ -1,6 +1,7 @@
-import { defaultsKey, Query, QueryBase, QueryWithTable } from './query';
+import { defaultsKey, Query, QueryWithTable } from './query';
 import { CreateMethodsNames, DeleteMethodsNames } from './queryMethods';
 import { EmptyObject } from 'orchid-core';
+import { QueryBase } from './queryBase';
 
 export type BaseRelation = {
   type: string;

@@ -254,6 +254,34 @@ describe('hasOne', () => {
       );
     });
 
+    it('should be supported in join with a callback', () => {
+      const query = db.user
+        .as('u')
+        .join(
+          (q) => q.profile.as('p').where({ UserId: 123 }),
+          (q) => q.where({ Bio: 'bio' }),
+        )
+        .select('Name', 'p.Bio');
+
+      assertType<
+        Awaited<typeof query>,
+        { Name: string; Bio: string | null }[]
+      >();
+
+      expectSql(
+        query.toSql(),
+        `
+        SELECT "u"."name" AS "Name", "p"."bio" AS "Bio"
+        FROM "user" AS "u"
+        JOIN "profile" AS "p"
+         ON "p"."bio" = $1
+         AND "p"."userId" = $2
+         AND "p"."userId" = "u"."id"
+      `,
+        ['bio', 123],
+      );
+    });
+
     it('should be supported in joinLateral', () => {
       const q = db.user
         .joinLateral('profile', (q) => q)
@@ -1649,6 +1677,36 @@ describe('hasOne through', () => {
           AND "profile"."bio" = $1
       `,
       ['bio'],
+    );
+  });
+
+  it('should be supported in join with a callback', () => {
+    const query = db.message
+      .as('m')
+      .join(
+        (q) => q.profile.as('p').where({ UserId: 123 }),
+        (q) => q.where({ Bio: 'bio' }),
+      )
+      .select('Text', 'p.Bio');
+
+    assertType<Awaited<typeof query>, { Text: string; Bio: string | null }[]>();
+
+    expectSql(
+      query.toSql(),
+      `
+        SELECT "m"."text" AS "Text", "p"."bio" AS "Bio"
+        FROM "message" AS "m"
+        JOIN "profile" AS "p"
+          ON "p"."bio" = $1
+         AND "p"."userId" = $2
+         AND EXISTS (
+            SELECT 1 FROM "user"
+            WHERE "p"."userId" = "user"."id"
+              AND "user"."id" = "m"."authorId"
+            LIMIT 1
+          )
+      `,
+      ['bio', 123],
     );
   });
 

@@ -45,6 +45,8 @@ export class MessageTable extends BaseTable {
 
 When no matching record is found, it will skip records of the main table.
 
+### join relation
+
 When relations are defined between the tables, you can join them by a relation name.
 Joined table can be references from `where` and `select` by a relation name.
 
@@ -62,7 +64,27 @@ const result = await db.user
 const ok: { name: string; text: string }[] = result;
 ```
 
-Instead of selecting joined table columns individually, you can select a full joined table.
+The first argument can also be a callback, where instead of relation name as a string we're picking it as a property of `q`.
+In such a way, we can alias the relation with `as`, add `where` conditions, use other query methods.
+
+```ts
+const result = await db.user.join((q) => q.messages.as('m').where({ text: 'some text' }))
+```
+
+Optionally, you can pass a second callback argument, it makes `on` and `orOn` methods available.
+
+But remember that when joining a relation, the needed `ON` conditions are already handled automatically.
+
+```ts
+const result = await db.user.join(
+  (q) => q.messages.as('m'),
+  (q) => q
+    .on('text', 'name') // additionally, match message with user name
+    .where({ text: 'some text' }), // you can add `where` in a second callback as well.
+)
+```
+
+### Selecting full joined table
 
 It works just fine for `1:1` (`belongsTo`, `hasOne`) relations, but may be unexpected for `1:M` or `M:M` (`hasMany`, `hasAndBelongsToMany`) relations.
 For any kind of relation, it results in one main table record with data of exactly one joined table record, i.e. joined records **won't** be collected into arrays.
@@ -104,6 +126,8 @@ The query above may result in the following records, multiple rows have the name
 | user 1 | `{ id: 1, text: 'message 1' }` |
 | user 1 | `{ id: 2, text: 'message 2' }` |
 | user 1 | `{ id: 3, text: 'message 3' }` |
+
+### join table
 
 If relation wasn't defined, provide a `db.table` instance and specify columns for the join.
 Joined table can be references from `where` and `select` by a table name.

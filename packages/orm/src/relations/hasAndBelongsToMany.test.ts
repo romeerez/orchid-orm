@@ -231,6 +231,38 @@ describe('hasAndBelongsToMany', () => {
       );
     });
 
+    it('should be supported in join with a callback', () => {
+      const now = new Date();
+
+      const query = db.user
+        .as('u')
+        .join(
+          (q) => q.chats.as('c').where({ updatedAt: now }),
+          (q) => q.where({ Title: 'title' }),
+        )
+        .select('Name', 'c.Title');
+
+      assertType<Awaited<typeof query>, { Name: string; Title: string }[]>();
+
+      expectSql(
+        query.toSql(),
+        `
+        SELECT "u"."name" AS "Name", "c"."title" AS "Title"
+        FROM "user" AS "u"
+        JOIN "chat" AS "c"
+          ON "c"."title" = $1
+          AND "c"."updatedAt" = $2
+          AND EXISTS (
+            SELECT 1 FROM "chatUser"
+            WHERE "chatUser"."chatId" = "c"."idOfChat"
+              AND "chatUser"."userId" = "u"."id"
+            LIMIT 1
+          )
+      `,
+        ['title', now],
+      );
+    });
+
     it('should be supported in joinLateral', () => {
       const q = db.user
         .joinLateral('chats', (q) => q)

@@ -1,4 +1,4 @@
-import { ColumnsParsers, Query, QueryBase, QueryReturnType } from '../query';
+import { ColumnsParsers, Query, QueryReturnType } from '../query';
 import {
   AfterCallback,
   BeforeCallback,
@@ -31,6 +31,7 @@ import {
   MaybeArray,
   Sql,
 } from 'orchid-core';
+import { QueryBase } from '../queryBase';
 
 export type JoinedShapes = Record<string, ColumnsShapeBase>;
 export type JoinedParsers = Record<string, ColumnsParsers>;

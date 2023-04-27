@@ -91,6 +91,7 @@ export interface Db<
   windows: Query['windows'];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
   relations: Relations;
+  relationsQueries: Record<string, Query>;
   withData: Query['withData'];
   error: new (
     message: string,
@@ -238,6 +239,7 @@ export class Db<
       : toSql;
 
     this.relations = {} as Relations;
+    this.relationsQueries = {};
 
     modifyQuery?.forEach((cb) => cb(this));
 

@@ -6,7 +6,7 @@ import {
   revealColumnToSql,
 } from './common';
 import { JoinItem, SimpleJoinItem } from './types';
-import { QueryBase, QueryWithTable } from '../query';
+import { Query, QueryWithTable } from '../query';
 import { whereToSql } from './where';
 import { Relation } from '../relations';
 import { ToSqlCtx } from './toSql';
@@ -14,6 +14,8 @@ import { getRaw } from '../raw';
 import { JoinedShapes, QueryData, SelectQueryData } from './data';
 import { isRaw, RawExpression } from 'orchid-core';
 import { getQueryAs } from '../utils';
+import { pushQueryArray } from '../queryDataUtils';
+import { QueryBase } from '../queryBase';
 
 type ItemOf3Or4Length =
   | [
@@ -167,7 +169,11 @@ const processArgs = (
   ctx: ToSqlCtx,
   table: QueryBase,
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
-  first: string | QueryWithTable,
+  first:
+    | string
+    | (QueryWithTable & {
+        joinQueryAfterCallback?(fromQuery: Query, toQuery: Query): Query;
+      }),
   joinAs: string,
   joinShape: ColumnNamesShape,
   quotedAs?: string,
@@ -201,6 +207,22 @@ const processArgs = (
         data = { shape, joinedShapes };
       } else {
         q = first;
+
+        if (first.joinQueryAfterCallback) {
+          let base = q.baseQuery;
+          if (q.query.as) {
+            base = base.as(q.query.as);
+          }
+
+          const { query } = first.joinQueryAfterCallback(table as Query, base);
+          if (query.and) {
+            pushQueryArray(q, 'and', query.and);
+          }
+          if (query.or) {
+            pushQueryArray(q, 'or', query.or);
+          }
+        }
+
         data = {
           ...first.query,
           joinedShapes: { ...first.query.joinedShapes, ...joinedShapes },

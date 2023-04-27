@@ -4,10 +4,10 @@ import { getRaw } from '../raw';
 import { windowToSql } from './window';
 import { pushOrderBySql } from './orderBy';
 import { whereToSql } from './where';
-import { QueryBase } from '../query';
 import { ToSqlCtx } from './toSql';
 import { Expression } from '../utils';
 import { isRaw, emptyObject } from 'orchid-core';
+import { QueryBase } from '../queryBase';
 
 export const aggregateToSql = (
   ctx: ToSqlCtx,

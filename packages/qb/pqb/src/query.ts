@@ -13,18 +13,18 @@ import { Db } from './db';
 import { RelationQueryBase, RelationsBase } from './relations';
 import { QueryError, QueryErrorName } from './errors';
 import {
-  RawExpression,
+  ColumnShapeOutput,
+  ColumnsShapeBase,
   ColumnTypeBase,
   ColumnTypesBase,
   EmptyObject,
+  QueryCommon,
+  RawExpression,
   Spread,
   StringKey,
-  QueryBaseCommon,
-  QueryCommon,
-  ColumnShapeOutput,
-  ColumnsShapeBase,
   ThenResult,
 } from 'orchid-core';
+import { QueryBase } from './queryBase';
 
 export type ColumnParser = (input: unknown) => unknown;
 export type ColumnsParsers = Record<string | getValueKey, ColumnParser>;
@@ -46,18 +46,6 @@ export type SelectableFromShape<
 
 export type WithDataItem = { table: string; shape: ColumnsShape };
 export type WithDataBase = Record<never, WithDataItem>;
-
-export type QueryBase = QueryBaseCommon & {
-  query: QueryData;
-  table?: string;
-  clone(): QueryBase;
-  selectable: SelectableBase;
-  shape: ColumnsShapeBase;
-  result: ColumnsShape;
-  baseQuery: Query;
-  relations: RelationsBase;
-  withData: WithDataBase;
-};
 
 export type defaultsKey = typeof defaultsKey;
 export const defaultsKey: unique symbol = Symbol('defaults');
@@ -82,6 +70,7 @@ export type Query = QueryCommon &
     windows: EmptyObject;
     defaultSelectColumns: string[];
     relations: RelationsBase;
+    relationsQueries: Record<string, Query>;
     withData: WithDataBase;
     error: new (
       message: string,
@@ -272,7 +261,12 @@ export type SetQueryReturnsColumnInfo<
   then: ThenResult<Result>;
 };
 
-export type SetQueryTableAlias<T extends Query, As extends string> = {
+export type SetQueryTableAlias<
+  T extends Pick<Query, 'selectable' | 'table' | 'meta'> & {
+    shape: ColumnsShapeBase;
+  },
+  As extends string,
+> = {
   [K in keyof T]: K extends 'selectable'
     ? Omit<
         T['selectable'],

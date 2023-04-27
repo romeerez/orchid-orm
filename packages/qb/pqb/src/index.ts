@@ -11,3 +11,4 @@ export * from './queryDataUtils';
 export * from './errors';
 export * from './relations';
 export * from './columns/operators';
+export { QueryBase } from './queryBase';

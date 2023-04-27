@@ -1,10 +1,10 @@
 import { quoteSchemaAndTable } from './common';
-import { QueryBase } from '../query';
 import { checkIfASimpleQuery } from './types';
 import { makeSql, ToSqlCtx } from './toSql';
 import { getRaw } from '../raw';
 import { SelectQueryData } from './data';
 import { isRaw } from 'orchid-core';
+import { QueryBase } from '../queryBase';
 
 export const pushFromAndAs = (
   ctx: ToSqlCtx,

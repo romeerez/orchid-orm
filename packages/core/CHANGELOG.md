@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.4.3
+
+### Patch Changes
+
+- Support joining a relation with a callback
+
 ## 0.4.2
 
 ### Patch Changes

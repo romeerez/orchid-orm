@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.9.12
+
+### Patch Changes
+
+- Support joining a relation with a callback
+- Updated dependencies
+  - pqb@0.11.10
+  - orchid-core@0.4.3
+
 ## 1.9.11
 
 ### Patch Changes
