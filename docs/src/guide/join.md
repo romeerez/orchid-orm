@@ -1,6 +1,6 @@
 # Joins
 
-`join` methods allows to join other tables, relations by name, [with](/guide/query-builder-advanced#with) statements, sub queries.
+`join` methods allows to join other tables, relations by name, [with](/guide/advanced-queries#with) statements, sub queries.
 
 All the `join` methods accept the same arguments, but returning type is different because with `join` it's guaranteed to load joined table, and with `leftJoin` the joined table columns may be `NULL` when no matching record was found.
 

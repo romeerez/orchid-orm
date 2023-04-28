@@ -8,12 +8,13 @@ import {
   userData,
   useRelationCallback,
   userSelectAll,
+  useTestORM,
 } from '../test-utils/test-utils';
 import { Sql } from 'orchid-core';
-import { assertType, expectSql, now, useTestDatabase } from 'test-utils';
+import { assertType, expectSql, now } from 'test-utils';
 
 describe('hasAndBelongsToMany', () => {
-  useTestDatabase();
+  useTestORM();
 
   describe('querying', () => {
     it('should have method to query related data', async () => {
@@ -442,10 +443,6 @@ describe('hasAndBelongsToMany', () => {
   });
 
   describe('create', () => {
-    afterEach(() => {
-      jest.clearAllMocks();
-    });
-
     const checkUserAndChats = ({
       user,
       chats,
@@ -501,6 +498,7 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
+        jest.clearAllMocks();
         const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
         const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
 
@@ -581,6 +579,7 @@ describe('hasAndBelongsToMany', () => {
           },
         ]);
 
+        jest.clearAllMocks();
         const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
         const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
 
@@ -705,6 +704,7 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
+        jest.clearAllMocks();
         const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
         const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
 
@@ -792,6 +792,7 @@ describe('hasAndBelongsToMany', () => {
           },
         ]);
 
+        jest.clearAllMocks();
         const querySpy = jest.spyOn(TransactionAdapter.prototype, 'query');
         const arraysSpy = jest.spyOn(TransactionAdapter.prototype, 'arrays');
 

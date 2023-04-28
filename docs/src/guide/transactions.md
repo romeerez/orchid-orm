@@ -101,6 +101,109 @@ await db.$transaction(async () => {
 
 If the error in the inner transaction is not caught, all nested transactions are rolled back and aborted.
 
+## testTransaction
+
+`Orchid ORM` has a special utility to wrap your tests in transactions which are rolled back after each test.
+This allows to keep the database state unchanged between test runs.
+In such way, tests runs very fast, because data is never saved to disc, all data changes are handled by Postgres in memory.
+
+Create a separate file for test utilities, let's say it is located in `src/lib/test-utils.ts`, and export such "hook":
+
+```ts
+// src/lib/test-utils.ts
+import { testTransaction } from 'orchid-orm';
+import { db } from './path-to-your-db';
+
+export const useTestDatabase = () => {
+  beforeAll(async () => {
+    await testTransaction.start(db);
+  });
+
+  beforeEach(async () => {
+    await testTransaction.start(db);
+  });
+
+  afterEach(async () => {
+    await testTransaction.rollback(db);
+  });
+
+  afterAll(async () => {
+    await testTransaction.close(db);
+  });
+};
+```
+
+- `testTransaction.start` starts a new transaction
+- `testTransaction.rollback` performs a rollback
+- `testTransaction.close` performs a rollback, when called for a top-level transaction it will close `db`.
+
+Now, we can use it in our tests in such way:
+
+```ts
+import { useTestDatabase } from '../lib/test-utils';
+import { db } from '../path-to-your-db';
+
+describe('title', () => {
+  useTestDatabase();
+
+  it('should create a record', async () => {
+    await db.table.create({ ...data });
+
+    const count = await db.table.count();
+    // record was successfully created:
+    expect(count).toBe(1);
+  });
+
+  it('should run a nested transaction', async () => {
+    // the record from the previous test disappeared
+    expect(await db.table.count()).toBe(0);
+    
+    // nested transactions works just fine
+    await db.$transaction(async () => {
+      await db.table.create({ ...data });
+    });
+    
+    // record in a nested transaction was saved and is available until the end of this `it` test block
+    const count = await db.table.count();
+    expect(count).toBe(1);
+  });
+});
+```
+
+Additionally, you can use `useTestDatabase` in the nested `describe` to have a data created only in the scope of this `describe`:
+
+```ts
+import { useTestDatabase } from './test-utils';
+
+describe('outer', () => {
+  useTestDatabase();
+  
+  it('should have no records', async () => {
+    expect(await db.table.count()).toBe(0);
+  });
+  
+  describe('inner', () => {
+    useTestDatabase();
+    
+    beforeAll(async () => {
+      await db.table.create(...data)
+    });
+    
+    // all `it` block in the inner describe will have a created record in the db
+    it('should have the created record', async () => {
+      expect(await db.table.count(1)).toBe(1);
+    });
+  })
+  
+  // data was cleared in the end of inner describe
+  it('should have no records again', async () => {
+    expect(await db.table.count()).toBe(0);
+  });
+});
+```
+
+Check out [test factories](/guide/test-factories), a perfect pair with `testTransaction` to use for testing.
+
 ## isolation level
 
 By default, transaction isolation level is `SERIALIZABLE`, it is the strictest level and suites most cases.

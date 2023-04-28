@@ -1,6 +1,6 @@
 # migration column methods
 
-All the methods described in [columns methods](/guide/columns-common-methods) still applies in migrations,
+All the methods described in [columns methods](/guide/common-column-methods) still applies in migrations,
 to add or change columns with specific types.
 
 This document describes common methods like `default`, `nullable`, `primaryKey` that have effect in both application code and migration,

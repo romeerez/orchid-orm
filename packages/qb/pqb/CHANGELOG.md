@@ -1,5 +1,13 @@
 # pqb
 
+## 0.11.12
+
+### Patch Changes
+
+- cfdc2bb: Support nested transactions
+- Add testTransaction utility for tests
+  - orchid-core@0.4.4
+
 ## 0.11.11
 
 ### Patch Changes

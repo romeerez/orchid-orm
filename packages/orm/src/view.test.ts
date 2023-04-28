@@ -1,8 +1,7 @@
-import { useTestDatabase } from 'test-utils';
-import { db, profileData, userData } from './test-utils/test-utils';
+import { db, profileData, userData, useTestORM } from './test-utils/test-utils';
 
 describe('view', () => {
-  useTestDatabase();
+  useTestORM();
 
   it('should be queryable just as normal table', async () => {
     await db.user.createMany([

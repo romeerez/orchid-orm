@@ -1,4 +1,4 @@
-import { expectSql, useTestDatabase } from 'test-utils';
+import { expectSql } from 'test-utils';
 import {
   chatData,
   db,
@@ -6,10 +6,11 @@ import {
   messageSelectAll,
   profileSelectAll,
   userData,
+  useTestORM,
 } from '../test-utils/test-utils';
 
 describe('relations', () => {
-  useTestDatabase();
+  useTestORM();
 
   it('should select multiple relations', () => {
     const query = db.user.select({

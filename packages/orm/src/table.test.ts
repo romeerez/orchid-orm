@@ -1,11 +1,11 @@
 import { createBaseTable } from './table';
 import { orchidORM } from './orm';
 import { ColumnType, Operators } from 'pqb';
-import { BaseTable, db, userData } from './test-utils/test-utils';
+import { BaseTable, db, userData, useTestORM } from './test-utils/test-utils';
 import path from 'path';
 import { asMock } from './codegen/testUtils';
 import { getCallerFilePath } from 'orchid-core';
-import { assertType, testAdapter, useTestDatabase } from 'test-utils';
+import { assertType, testAdapter } from 'test-utils';
 
 jest.mock('orchid-core', () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -20,7 +20,7 @@ jest.mock('orchid-core', () => {
 });
 
 describe('table', () => {
-  useTestDatabase();
+  useTestORM();
 
   it('should have a name', () => {
     expect(BaseTable.name).toBe('BaseTable');

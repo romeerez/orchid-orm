@@ -1,22 +1,9 @@
-import { OrchidORM, orchidORM } from './orm';
-import { BaseTable } from './test-utils/test-utils';
-import {
-  assertType,
-  expectSql,
-  testDbOptions,
-  useTestDatabase,
-} from 'test-utils';
+import { orchidORM } from './orm';
+import { BaseTable, db, useTestORM } from './test-utils/test-utils';
+import { assertType, expectSql } from 'test-utils';
 
 describe('orm', () => {
-  useTestDatabase();
-
-  let local:
-    | OrchidORM<{ user: typeof UserTable; profile: typeof ProfileTable }>
-    | undefined;
-
-  afterEach(async () => {
-    if (local) await local.$close();
-  });
+  useTestORM();
 
   type User = UserTable['columns']['type'];
   class UserTable extends BaseTable {
@@ -38,10 +25,13 @@ describe('orm', () => {
   }
 
   it('should return object with provided adapter, close and transaction method, tables', () => {
-    local = orchidORM(testDbOptions, {
-      user: UserTable,
-      profile: ProfileTable,
-    });
+    const local = orchidORM(
+      { db: db.$queryBuilder },
+      {
+        user: UserTable,
+        profile: ProfileTable,
+      },
+    );
 
     expect('$adapter' in local).toBe(true);
     expect(local.$close).toBeInstanceOf(Function);
@@ -52,10 +42,13 @@ describe('orm', () => {
   });
 
   it('should return table which is a queryable interface', async () => {
-    local = orchidORM(testDbOptions, {
-      user: UserTable,
-      profile: ProfileTable,
-    });
+    const local = orchidORM(
+      { db: db.$queryBuilder },
+      {
+        user: UserTable,
+        profile: ProfileTable,
+      },
+    );
 
     const { id, name } = await local.user.create({
       name: 'name',
@@ -81,8 +74,8 @@ describe('orm', () => {
   });
 
   it('should be able to turn on autoPreparedStatements', () => {
-    local = orchidORM(
-      { ...testDbOptions, autoPreparedStatements: true },
+    const local = orchidORM(
+      { db: db.$queryBuilder, autoPreparedStatements: true },
       {
         user: UserTable,
         profile: ProfileTable,

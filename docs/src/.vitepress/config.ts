@@ -53,7 +53,7 @@ export default {
           },
           {
             text: 'Where conditions',
-            link: '/guide/query-builder-where',
+            link: '/guide/where',
           },
           {
             text: 'Join',
@@ -61,7 +61,7 @@ export default {
           },
           {
             text: 'Create, Update, Delete',
-            link: '/guide/query-builder-create-update-delete',
+            link: '/guide/create-update-delete',
           },
           {
             text: 'Transactions',
@@ -69,19 +69,19 @@ export default {
           },
           {
             text: 'Aggregate functions',
-            link: '/guide/query-builder-aggregate',
+            link: '/guide/aggregate',
           },
           {
             text: 'Advanced methods',
-            link: '/guide/query-builder-advanced',
+            link: '/guide/advanced-queries',
           },
           {
             text: 'Callbacks',
-            link: '/guide/query-builder-callbacks',
+            link: '/guide/callbacks',
           },
           {
             text: 'Error handling',
-            link: '/guide/query-builder-error-handling',
+            link: '/guide/error-handling',
           },
         ],
       },
@@ -90,19 +90,19 @@ export default {
         items: [
           {
             text: 'Modeling relations',
-            link: '/guide/orm-relations',
+            link: '/guide/relations',
           },
           {
             text: 'Relation queries',
-            link: '/guide/orm-relation-queries',
+            link: '/guide/relation-queries',
           },
           {
             text: 'Repository',
-            link: '/guide/orm-repo',
+            link: '/guide/repo',
           },
           {
             text: 'Test factories',
-            link: '/guide/orm-test-factories',
+            link: '/guide/test-factories',
           },
         ],
       },
@@ -115,7 +115,7 @@ export default {
           },
           {
             text: 'Common methods',
-            link: '/guide/columns-common-methods',
+            link: '/guide/common-column-methods',
           },
           {
             text: 'Validation methods',

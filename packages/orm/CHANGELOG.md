@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.9.14
+
+### Patch Changes
+
+- Add testTransaction utility for tests
+- Updated dependencies [cfdc2bb]
+- Updated dependencies
+  - pqb@0.11.12
+  - orchid-core@0.4.4
+
 ## 1.9.13
 
 ### Patch Changes

@@ -11,18 +11,14 @@ import {
   messageSelectAll,
   profileSelectAll,
   userSelectAll,
+  useTestORM,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
 import { orchidORM } from '../orm';
-import {
-  assertType,
-  expectSql,
-  testDbOptions,
-  useTestDatabase,
-} from 'test-utils';
+import { assertType, expectSql } from 'test-utils';
 
 describe('hasOne', () => {
-  useTestDatabase();
+  useTestORM();
 
   describe('querying', () => {
     it('should have method to query related data', async () => {
@@ -1391,9 +1387,9 @@ describe('hasOne through', () => {
       };
     }
 
-    const db = orchidORM(
+    const local = orchidORM(
       {
-        ...testDbOptions,
+        db: db.$queryBuilder,
         log: false,
       },
       {
@@ -1403,8 +1399,8 @@ describe('hasOne through', () => {
       },
     );
 
-    expect(Object.keys(db.post.relations)).toEqual(['postTag', 'tag']);
-    expect(Object.keys(db.tag.relations)).toEqual(['postTag', 'post']);
+    expect(Object.keys(local.post.relations)).toEqual(['postTag', 'tag']);
+    expect(Object.keys(local.tag.relations)).toEqual(['postTag', 'post']);
   });
 
   it('should throw if through relation is not defined', () => {
@@ -1432,7 +1428,7 @@ describe('hasOne through', () => {
     expect(() => {
       orchidORM(
         {
-          ...testDbOptions,
+          db: db.$queryBuilder,
           log: false,
         },
         {
@@ -1490,7 +1486,7 @@ describe('hasOne through', () => {
     expect(() => {
       orchidORM(
         {
-          ...testDbOptions,
+          db: db.$queryBuilder,
           log: false,
         },
         {

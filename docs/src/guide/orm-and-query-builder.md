@@ -4,7 +4,7 @@
 
 The query builder is for building and executing SQL queries, such as `select`, `create`, `update`, and `delete`.
 
-ORM allows defining `belongsTo`, `hasMany` and [other relations](/guide/orm-relations.html), select and join them, create/update/delete records together with their related records and [more](/guide/orm-relation-queries.html).
+ORM allows defining `belongsTo`, `hasMany` and [other relations](/guide/relations.html), select and join them, create/update/delete records together with their related records and [more](/guide/relation-queries.html).
 
 ## setup
 

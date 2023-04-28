@@ -34,14 +34,13 @@ export const orchidORM = <T extends TableClasses>(
     autoPreparedStatements,
     noPrimaryKey = 'error',
     ...options
-  }: ({ adapter: Adapter } | Omit<AdapterOptions, 'log'>) &
+  }: ({ db: Query } | { adapter: Adapter } | Omit<AdapterOptions, 'log'>) &
     QueryLogOptions & {
       autoPreparedStatements?: boolean;
       noPrimaryKey?: NoPrimaryKeyOption;
     },
   tables: T,
 ): OrchidORM<T> => {
-  const adapter = 'adapter' in options ? options.adapter : new Adapter(options);
   const commonOptions = {
     log,
     logger,
@@ -49,18 +48,29 @@ export const orchidORM = <T extends TableClasses>(
     noPrimaryKey,
   };
 
-  const transactionStorage = new AsyncLocalStorage<AdapterBase>();
+  let adapter: Adapter;
+  let transactionStorage;
+  let qb: Query;
+  if ('db' in options) {
+    adapter = options.db.query.adapter;
+    transactionStorage = options.db.internal.transactionStorage;
+    qb = options.db.queryBuilder;
+  } else {
+    adapter = 'adapter' in options ? options.adapter : new Adapter(options);
 
-  const qb = new Db(
-    adapter,
-    undefined as unknown as Db,
-    undefined,
-    anyShape,
-    columnTypes,
-    transactionStorage,
-    commonOptions,
-  );
-  qb.queryBuilder = qb as unknown as Db;
+    transactionStorage = new AsyncLocalStorage<AdapterBase>();
+
+    qb = new Db(
+      adapter,
+      undefined as unknown as Db,
+      undefined,
+      anyShape,
+      columnTypes,
+      transactionStorage,
+      commonOptions,
+    );
+    qb.queryBuilder = qb as unknown as Db;
+  }
 
   const result = {
     $transaction: transaction,
@@ -68,7 +78,7 @@ export const orchidORM = <T extends TableClasses>(
     $queryBuilder: qb,
     $from: (...args: FromArgs<Query>) => qb.from(...args),
     $close: () => adapter.close(),
-  } as unknown as OrchidORM<TableClasses>;
+  } as unknown as OrchidORM;
 
   const tableInstances: Record<string, Table> = {};
 

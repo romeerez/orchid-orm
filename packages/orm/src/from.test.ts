@@ -1,8 +1,14 @@
-import { assertType, expectSql, useTestDatabase } from 'test-utils';
-import { chatData, db, messageData, userData } from './test-utils/test-utils';
+import { assertType, expectSql } from 'test-utils';
+import {
+  chatData,
+  db,
+  messageData,
+  userData,
+  useTestORM,
+} from './test-utils/test-utils';
 
 describe('orm', () => {
-  useTestDatabase();
+  useTestORM();
 
   it('should have method `$from` with proper handling of type, where operators, parsers', async () => {
     const ChatId = await db.chat.get('IdOfChat').create(chatData);

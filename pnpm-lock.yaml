@@ -19,8 +19,7 @@ importers:
       eslint-config-prettier: ^8.8.0
       eslint-plugin-prettier: ^4.2.1
       jest: ^29.5.0
-      pg: ^8.7.3
-      pg-transactional-tests: ^1.0.7
+      pg: ^8.10.0
       prettier: ^2.8.7
       rimraf: ^4.4.1
       rollup: ^3.20.2
@@ -46,8 +45,7 @@ importers:
       eslint-config-prettier: 8.8.0_eslint@8.37.0
       eslint-plugin-prettier: 4.2.1_ybb3aapb7235womryl2tm5ze2u
       jest: 29.5.0_rrli7kzx2akox3oq6aahu3rvje
-      pg: 8.8.0
-      pg-transactional-tests: 1.0.7_pg@8.8.0
+      pg: 8.10.0
       prettier: 2.8.7
       rimraf: 4.4.1
       rollup: 3.20.2
@@ -4136,24 +4134,20 @@ packages:
     engines: {node: '>=4.0.0'}
     dev: true
 
-  /pg-pool/3.5.2_pg@8.8.0:
-    resolution: {integrity: sha512-His3Fh17Z4eg7oANLob6ZvH8xIVen3phEZh2QuyrIl4dQSDVEabNducv6ysROKpDNPSD+12tONZVWfSgMvDD9w==}
+  /pg-pool/3.6.0_pg@8.10.0:
+    resolution: {integrity: sha512-clFRf2ksqd+F497kWFyM21tMjeikn60oGDmqMT8UBrynEwVEX/5R5xd2sdvdo1cZCFlguORNpVuqxIj+aK4cfQ==}
     peerDependencies:
       pg: '>=8.0'
     dependencies:
-      pg: 8.8.0
+      pg: 8.10.0
     dev: true
 
   /pg-protocol/1.5.0:
     resolution: {integrity: sha512-muRttij7H8TqRNu/DxrAJQITO4Ac7RmX3Klyr/9mJEOBeIpgnF8f9jAfRz5d3XwQZl5qBjF9gLsUtMPJE0vezQ==}
     dev: true
 
-  /pg-transactional-tests/1.0.7_pg@8.8.0:
-    resolution: {integrity: sha512-gM9QzzM/Dhb7wtwm6JHt3cm+Ibs18Yc30evukYWodQcnT4JXTMY0P5hyZ4+cMAX/P4S9sTiqDGkeQW0FxyBzBQ==}
-    peerDependencies:
-      pg: '*'
-    dependencies:
-      pg: 8.8.0
+  /pg-protocol/1.6.0:
+    resolution: {integrity: sha512-M+PDm637OY5WM307051+bsDia5Xej6d9IR4GwJse1qA1DIhiKlksvrneZOYQq42OM+spubpcNYEo2FcKQrDk+Q==}
     dev: true
 
   /pg-types/2.2.0:
@@ -4167,8 +4161,8 @@ packages:
       postgres-interval: 1.2.0
     dev: true
 
-  /pg/8.8.0:
-    resolution: {integrity: sha512-UXYN0ziKj+AeNNP7VDMwrehpACThH7LUl/p8TDFpEUuSejCUIwGSfxpHsPvtM6/WXFy6SU4E5RG4IJV/TZAGjw==}
+  /pg/8.10.0:
+    resolution: {integrity: sha512-ke7o7qSTMb47iwzOSaZMfeR7xToFdkE71ifIipOAAaLIM0DYzfOAXlgFFmYUIE2BcJtvnVlGCID84ZzCegE8CQ==}
     engines: {node: '>= 8.0.0'}
     peerDependencies:
       pg-native: '>=3.0.1'
@@ -4179,8 +4173,8 @@ packages:
       buffer-writer: 2.0.0
       packet-reader: 1.0.0
       pg-connection-string: 2.5.0
-      pg-pool: 3.5.2_pg@8.8.0
-      pg-protocol: 1.5.0
+      pg-pool: 3.6.0_pg@8.10.0
+      pg-protocol: 1.6.0
       pg-types: 2.2.0
       pgpass: 1.0.5
     dev: true

@@ -166,7 +166,7 @@ WHERE id = 1 AND color = 'red'
 
 The `find` method is available only for tables which has exactly one primary key.
 
-Find record by id, throw [NotFoundError](/guide/query-builder-error-handling.html) if not found:
+Find record by id, throw [NotFoundError](/guide/error-handling.html) if not found:
 
 ```ts
 await db.table.find(1);

@@ -1,11 +1,11 @@
 import { Client } from 'pg';
-import { Adapter, columnTypes, createDb } from '../../qb/pqb/src';
-import { MaybeArray, toArray } from 'orchid-core';
 import {
-  patchPgForTransactions,
-  rollbackTransaction,
-  startTransaction,
-} from 'pg-transactional-tests';
+  Adapter,
+  columnTypes,
+  createDb,
+  testTransaction,
+} from '../../qb/pqb/src';
+import { MaybeArray, toArray } from 'orchid-core';
 
 export const testDbOptions = {
   databaseURL: process.env.PG_URL,
@@ -66,11 +66,19 @@ export const now = new Date();
 export const asMock = (fn: unknown) => fn as jest.Mock;
 
 export const useTestDatabase = () => {
-  beforeAll(patchPgForTransactions);
-  beforeEach(startTransaction);
-  afterEach(rollbackTransaction);
+  beforeAll(async () => {
+    await testTransaction.start(testDb);
+  });
+
+  beforeEach(async () => {
+    await testTransaction.start(testDb);
+  });
+
+  afterEach(async () => {
+    await testTransaction.rollback(testDb);
+  });
+
   afterAll(async () => {
-    await testDbClient.end();
-    await testAdapter.close();
+    await testTransaction.close(testDb);
   });
 };

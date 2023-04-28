@@ -1,5 +1,15 @@
 # rake-db
 
+## 2.8.11
+
+### Patch Changes
+
+- Add testTransaction utility for tests
+- Updated dependencies [cfdc2bb]
+- Updated dependencies
+  - pqb@0.11.12
+  - orchid-core@0.4.4
+
 ## 2.8.10
 
 ### Patch Changes

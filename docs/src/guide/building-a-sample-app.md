@@ -162,12 +162,6 @@ npm i -D rake-db orchid-orm-test-factory
 
 See details for each dependency in a [Quickstart](/guide/quickstart).
 
-Let's also install an additional tool for tests, it will wrap each test in a transaction, so we won't have to clean the db manually:
-
-```sh
-npm i -D pg pg-transactional-tests
-```
-
 Place database URLs to .env.local file (which should be listed in .gitignore), one database for development and a second for tests:
 
 ```text
@@ -321,25 +315,27 @@ So we can see it created two databases.
 Each of them has a special table to track which migrations were already applied and which were not.
 
 Add a `jest-setup.ts` to the root of the project.
-This will make every test case that makes db queries wrapped in a transaction with rollback,
-so every change will seamlessly disappear.
+
+The following makes every test case that makes db queries wrapped in a transaction with rollback, so that every change will seamlessly disappear.
 
 ```ts
-import {
-  patchPgForTransactions,
-  startTransaction,
-  rollbackTransaction,
-} from 'pg-transactional-tests';
+import { testTransaction } from 'orchid-orm';
 import { db } from './src/db';
 
-patchPgForTransactions();
+beforeAll(async () => {
+  await testTransaction.start(db);
+});
 
-beforeAll(startTransaction);
-beforeEach(startTransaction);
-afterEach(rollbackTransaction);
+beforeEach(async () => {
+  await testTransaction.start(db);
+});
+
+afterEach(async () => {
+  await testTransaction.rollback(db);
+});
+
 afterAll(async () => {
-  await rollbackTransaction();
-  await db.$close();
+  await testTransaction.close(db);
 });
 ```
 
@@ -566,8 +562,6 @@ describe('user controller', () => {
 `testRequest` is a custom helper around `app.inject` from fastify to perform a fake request without the app running.
 
 `express` doesn't have such tools and can be tested with real requests, it's recommended to use `axios` for this purpose.
-
-We can freely create database records thanks to `pg-transactional-tests` which was configured earlier in a `jest-setup.ts`.
 
 ## register user endpoint
 

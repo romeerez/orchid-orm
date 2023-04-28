@@ -2,7 +2,13 @@ import { createBaseTable } from '../table';
 import { tableToZod } from 'orchid-orm-schema-to-zod';
 import { now, testAdapter, testColumnTypes } from 'test-utils';
 import { orchidORM } from '../orm';
-import { DeleteQueryData, InsertQueryData, Query, UpdateQueryData } from 'pqb';
+import {
+  DeleteQueryData,
+  InsertQueryData,
+  Query,
+  testTransaction,
+  UpdateQueryData,
+} from 'pqb';
 
 export const BaseTable = createBaseTable({
   columnTypes: testColumnTypes,
@@ -327,4 +333,22 @@ export const useRelationCallback = (rel: { query: Query }) => {
       afterDelete.mockReset();
     },
   };
+};
+
+export const useTestORM = () => {
+  beforeAll(async () => {
+    await testTransaction.start(db);
+  });
+
+  beforeEach(async () => {
+    await testTransaction.start(db);
+  });
+
+  afterEach(async () => {
+    await testTransaction.rollback(db);
+  });
+
+  afterAll(async () => {
+    await testTransaction.close(db);
+  });
 };

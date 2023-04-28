@@ -111,7 +111,7 @@ const posts = await db.post
   });
 ```
 
-`Orchid ORM` allows you to define custom chainable methods (via [repository](/guide/orm-repo)) to write clean abstract queries like:
+`Orchid ORM` allows you to define custom chainable methods (via [repository](/guide/repo)) to write clean abstract queries like:
 
 ```ts
 const posts = await postRepo

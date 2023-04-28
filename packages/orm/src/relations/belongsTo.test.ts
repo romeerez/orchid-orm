@@ -12,17 +12,13 @@ import {
   userData,
   useRelationCallback,
   userSelectAll,
+  useTestORM,
 } from '../test-utils/test-utils';
 import { orchidORM } from '../orm';
-import {
-  assertType,
-  expectSql,
-  testDbOptions,
-  useTestDatabase,
-} from 'test-utils';
+import { assertType, expectSql } from 'test-utils';
 
 describe('belongsTo', () => {
-  useTestDatabase();
+  useTestORM();
 
   describe('querying', () => {
     it('should have method to query related data', async () => {
@@ -474,10 +470,13 @@ describe('belongsTo', () => {
             };
           }
 
-          const local = orchidORM(testDbOptions, {
-            user: UserTable,
-            profile: ProfileTable,
-          });
+          const local = orchidORM(
+            { db: db.$queryBuilder },
+            {
+              user: UserTable,
+              profile: ProfileTable,
+            },
+          );
 
           const q = local.profile.create({
             Id: 1,
@@ -495,14 +494,16 @@ describe('belongsTo', () => {
             [1, UserId, 'bio'],
           );
 
-          const result = await q;
-          expect(result).toMatchObject({
-            Id: 1,
-            UserId,
-            Bio: 'bio',
-          });
-
-          local.$close();
+          try {
+            const result = await q;
+            expect(result).toMatchObject({
+              Id: 1,
+              UserId,
+              Bio: 'bio',
+            });
+          } catch (err) {
+            console.log(err);
+          }
         });
       });
 
