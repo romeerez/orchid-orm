@@ -1,4 +1,4 @@
-import pg from 'pg';
+import pg, { Client } from 'pg';
 import { testDb } from 'test-utils';
 
 describe('transaction', () => {
@@ -79,6 +79,55 @@ describe('transaction', () => {
       'COMMIT',
       'BEGIN ISOLATION LEVEL READ UNCOMMITTED READ ONLY DEFERRABLE',
       'COMMIT',
+    ]);
+  });
+
+  it('should run a nested transaction with SAVEPOINT and RELEASE SAVEPOINT', async () => {
+    const query = jest.spyOn(Client.prototype, 'query');
+
+    const result = await testDb.transaction(
+      async () =>
+        await testDb.transaction(async () =>
+          testDb.queryBuilder.get(testDb.raw('123')),
+        ),
+    );
+
+    expect(result).toBe(123);
+
+    expect(
+      query.mock.calls.map(
+        (call) => (call[0] as unknown as { text: string }).text,
+      ),
+    ).toEqual([
+      'BEGIN',
+      'SAVEPOINT "1"',
+      'SELECT 123',
+      'RELEASE SAVEPOINT "1"',
+      'COMMIT',
+    ]);
+  });
+
+  it('should rollback a nested transaction with ROLLBACK TO SAVEPOINT', async () => {
+    const query = jest.spyOn(Client.prototype, 'query');
+
+    await expect(() =>
+      testDb.transaction(
+        async () =>
+          await testDb.transaction(async () => {
+            throw new Error('error');
+          }),
+      ),
+    ).rejects.toThrow('error');
+
+    expect(
+      query.mock.calls.map(
+        (call) => (call[0] as unknown as { text: string }).text,
+      ),
+    ).toEqual([
+      'BEGIN',
+      'SAVEPOINT "1"',
+      'ROLLBACK TO SAVEPOINT "1"',
+      'ROLLBACK',
     ]);
   });
 });

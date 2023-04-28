@@ -49,11 +49,63 @@ In such case, the transaction will be rolled back and no changes will be applied
 Internally, ORM relies on [AsyncLocalStorage](https://nodejs.org/api/async_context.html#class-asynclocalstorage) feature of node.js,
 it allows passing the transaction object implicitly. So that any query that is done inside of callback, will run inside a transaction.
 
+## nested transactions
+
+Transactions can be nested one in another.
+The top level transaction is the real one,
+and the nested ones are emulated with [savepoint](https://www.postgresql.org/docs/current/sql-savepoint.html) instead of `BEGIN`
+and [release savepoint](https://www.postgresql.org/docs/current/sql-release-savepoint.html) instead of `COMMIT`.
+
+```ts
+const result = await db.$transaction(async () => {
+  await db.table.create(...one);
+  
+  const result = await db.$transaction(async () => {
+    await db.table.create(...two)
+    return 123;
+  });
+  
+  await db.table.create(...three);
+  
+  return result;
+});
+
+// result is returned from the inner transaction
+result === 123;
+```
+
+If the inner transaction throws an error, and it is caught by `try/catch` of outer transaction,
+it performs [rollback to savepoint](https://www.postgresql.org/docs/current/sql-rollback-to.html)
+and the outer transaction can continue:
+
+```ts
+class CustomError extends Error {}
+
+await db.$transaction(async () => {
+  try {
+    await db.$transaction(async () => {
+      throw new CustomError()
+    })
+  } catch (err) {
+    if (err instanceof CustomError) {
+      // ignore this error
+      return;
+    }
+    throw err;
+  }
+  
+  // this transaction can continue
+  await db.table.create(...data)
+})
+```
+
+If the error in the inner transaction is not caught, all nested transactions are rolled back and aborted.
+
 ## isolation level
 
 By default, transaction isolation level is `SERIALIZABLE`, it is the strictest level and suites most cases.
 
-You can choose other level by passing it as a string to `$transaction`:
+You can choose other level by passing it as a string to `$transaction` (this is ignored for nested transactions):
 
 ```ts
 // allowed levels:
@@ -72,7 +124,7 @@ db.$transaction('REPEATABLE READ', async () => {
 
 Transactions in Postgres can accept `READ WRITE` | `READ ONLY` and `[ NOT ] DEFERRABLE` options ([Postgres docs](https://www.postgresql.org/docs/current/sql-set-transaction.html)).
 
-You can set it by passing such object:
+You can set it by passing such object (this is ignored for nested transactions):
 
 ```ts
 db.$transaction(

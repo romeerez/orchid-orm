@@ -65,7 +65,7 @@ export default {
           },
           {
             text: 'Transactions',
-            link: '/guide/query-builder-transactions',
+            link: '/guide/transactions',
           },
           {
             text: 'Aggregate functions',
