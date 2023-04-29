@@ -1,4 +1,4 @@
-import { defaultsKey, Query, QueryWithTable } from './query';
+import { Query, QueryWithTable } from './query';
 import { CreateMethodsNames, DeleteMethodsNames } from './queryMethods';
 import { EmptyObject } from 'orchid-core';
 import { QueryBase } from './queryBase';
@@ -104,10 +104,11 @@ type PrepareRelationQuery<
 > = Omit<T, 'meta'> & {
   meta: Omit<T['meta'], 'as'> & {
     as: RelationName extends string ? RelationName : never;
+    defaults: Record<Populate, true>;
   };
   [isRequiredRelationKey]: Required;
   [relationQueryKey]: RelationQueryData;
-} & { [defaultsKey]: Record<Populate, true> };
+};
 
 export type RelationQuery<
   Name extends PropertyKey = string,

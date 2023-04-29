@@ -13,10 +13,7 @@ export type MergeQuery<
   T,
   'result' | 'returnType' | 'then' | 'selectable' | 'windows' | 'withData'
 > & {
-  meta: {
-    hasSelect: Q['meta']['hasSelect'];
-    hasWhere: Q['meta']['hasWhere'];
-  };
+  meta: Q['meta'];
   result: T['meta']['hasSelect'] extends true
     ? Spread<[T['result'], Q['result']]>
     : Q['result'];

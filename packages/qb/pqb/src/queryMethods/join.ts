@@ -12,11 +12,11 @@ import { Relation, RelationsBase } from '../relations';
 import { QueryData } from '../sql';
 import {
   RawExpression,
-  EmptyObject,
   StringKey,
   QueryInternal,
   EmptyTuple,
   NullableColumn,
+  QueryMetaBase,
 } from 'orchid-core';
 import { _join, _joinLateral } from './_join';
 import { AliasOrTable } from '../utils';
@@ -93,8 +93,8 @@ export type JoinResult<
   Arg extends JoinFirstArg<T>,
   RequireJoined extends boolean,
   RequireMain extends boolean,
-  Cb extends (q: never) => { meta: { as?: string } } = () => {
-    meta: EmptyObject;
+  Cb extends (q: never) => { meta: QueryMetaBase } = () => {
+    meta: QueryMetaBase;
   },
   J extends Pick<Query, 'result' | 'table' | 'meta'> = Arg extends Query
     ? Arg
@@ -108,7 +108,7 @@ export type JoinResult<
         ? {
             table: T['withData'][Arg]['table'];
             result: T['withData'][Arg]['shape'];
-            meta: EmptyObject;
+            meta: QueryMetaBase;
           }
         : never
       : never
@@ -130,7 +130,7 @@ export type JoinLateralResult<
   Selectable extends SelectableBase = JoinResultSelectable<
     R,
     RequireJoined,
-    { meta: EmptyObject }
+    { meta: QueryMetaBase }
   >,
 > = RequireMain extends true
   ? JoinAddSelectable<T, Selectable>
@@ -139,11 +139,11 @@ export type JoinLateralResult<
 type JoinResultSelectable<
   J extends Pick<Query, 'result' | 'table' | 'meta'>,
   RequireJoined extends boolean,
-  CbResult extends { meta: { as?: string } },
+  CbResult extends { meta: QueryMetaBase },
   Result extends ColumnsShape = RequireJoined extends true
     ? J['result']
     : { [K in keyof J['result']]: NullableColumn<J['result'][K]> },
-  As extends string = CbResult extends { meta: { as: string } }
+  As extends string = CbResult extends { meta: QueryMetaBase & { as: string } }
     ? CbResult['meta']['as']
     : AliasOrTable<J>,
 > = {
@@ -205,7 +205,7 @@ type JoinWithArgToQuery<
   baseQuery: Query;
   relations: RelationsBase;
   withData: WithDataBase;
-  meta: EmptyObject;
+  meta: QueryMetaBase;
   internal: QueryInternal;
 };
 

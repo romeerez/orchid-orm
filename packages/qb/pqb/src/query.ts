@@ -47,9 +47,6 @@ export type SelectableFromShape<
 export type WithDataItem = { table: string; shape: ColumnsShape };
 export type WithDataBase = Record<never, WithDataItem>;
 
-export type defaultsKey = typeof defaultsKey;
-export const defaultsKey: unique symbol = Symbol('defaults');
-
 export type Query = QueryCommon &
   QueryMethods & {
     queryBuilder: Db;
@@ -78,7 +75,6 @@ export type Query = QueryCommon &
       name: QueryErrorName,
     ) => QueryError;
     isSubQuery: boolean;
-    [defaultsKey]: EmptyObject;
   };
 
 export type Selectable<T extends QueryBase> = StringKey<keyof T['selectable']>;

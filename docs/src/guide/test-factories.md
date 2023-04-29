@@ -2,24 +2,18 @@
 
 `Orchid ORM` ecosystem offers a library for setting up JavaScript objects, to use these objects in tests.
 
-Install as dev dependency:
-
-```sh
-npm i -D orchid-orm-test-factory
-```
-
 It is producing objects of the shape defined by your table columns.
 
 Under the hood, it is using [@anatine/zod-mock](https://github.com/anatine/zod-plugins/tree/main/packages/zod-mock)
 to create and fill the object with random values. Random values are produced by [faker.js](https://www.npmjs.com/package/@faker-js/faker).
 
 ```ts
-import { createFactory } from 'orchid-orm-test-factory';
+import { ormFactory } from 'orchid-orm-test-factory';
 import { db } from '../path-to-db';
 
-const userFactory = createFactory(db.user);
+const factory = ormFactory(db);
 
-const user = userFactory.build();
+const user = factory.user.build();
 // user is an object with random values, like:
 // {
 //   id: 89613,
@@ -27,8 +21,14 @@ const user = userFactory.build();
 //   password: 'MHDDzAPYHzuklCN',
 // }
 
-const createdUser = await userFactory.create();
 // save the user with random values to the database
+const createdUser = await factory.user.create();
+
+// create many users with specific emails
+const manyUsers = await factory.user.createMany(
+  { email: 'one@email.com' },
+  { email: 'two@email.com' },
+)
 ```
 
 Both `build` and `create` methods will especially handle the timestamp field:
@@ -44,25 +44,28 @@ By default, all text columns will be limited to generate 1000-character long str
 You can override the maximum limit by specifying `maxTextLength`:
 
 ```ts
-import { createFactory } from 'orchid-orm-test-factory';
+import { ormFactory } from 'orchid-orm-test-factory';
 import { db } from '../path-to-db';
 
-const userFactory = createFactory(db.user, {
+const factory = ormFactory(db, {
   maxTextLength: 123,
 });
 ```
 
 ## example
 
-This example is extracted from [building a sample app](/guide/building-a-sample-app.html), you can find more tests examples in this doc.
+This example is extracted from [building a sample app](/guide/building-a-sample-app.html), you can find more test examples in that doc.
 
-Here were are using `build` to build parameters for a test request, and `create` to create records for testing how unique violations are handled.
+Here we are using `build` to build parameters for a test request, and `create` to create records for testing how unique violations are handled.
 
 ```ts
-export const userFactory = createFactory(db.user);
+import { ormFactory } from 'orchid-orm-test-factory';
+import { db } from '../path-to-db';
+
+const factory = ormFactory(db);
 
 describe('registration', () => {
-  const params = userFactory.pick({
+  const params = factory.user.pick({
     username: true,
     email: true,
     password: true,
@@ -97,7 +100,7 @@ describe('registration', () => {
     const data = params.build();
 
     // create a new user with a random data, but this specific username:
-    await userFactory.create({ username: data.username });
+    await factory.user.create({ username: data.username });
 
     const res = await testRequest.post('/users', data);
 
@@ -115,10 +118,18 @@ describe('registration', () => {
 Install this library:
 
 ```sh
-npm i orchid-orm-test-factory
+npm i -D orchid-orm-test-factory
 ```
 
-Factory cannot be in the same file as the table class, place it somewhere else, for example, you can have a file `src/utils/test-factories.ts` and have factories for all tables in one place.
+Export `factory` from some file where you have utilities for tests:
+
+```ts
+// src/utils/test-utils.ts
+import { ormFactory } from 'orchid-orm-test-factory';
+import { db } from '../path-to-db';
+
+export const factory = ormFactory(db);
+```
 
 ## sequence
 
@@ -127,7 +138,7 @@ Internally the factory keeps a `sequence` number which is increased by 1 for eac
 The sequence can be used when overriding field values with custom functions:
 
 ```ts
-const records = factory.buildList(3, {
+const records = factory.user.buildList(3, {
   id: (sequence) => sequence,
   email: (sequence) => `email-${sequence}@mail.com`,
 });
@@ -145,10 +156,10 @@ In such a way, the first suite sequence will start from 1, the second suite sequ
 `sequenceDistance` for the described equation can be overridden:
 
 ```ts
-import { createFactory } from 'orchid-orm-test-factory';
+import { ormFactory } from 'orchid-orm-test-factory';
 import { db } from '../path-to-db';
 
-const userFactory = createFactory(db.user, {
+const factory = ormFactory(db, {
   sequenceDistance: 123456,
 });
 ```
@@ -156,13 +167,13 @@ const userFactory = createFactory(db.user, {
 For other test frameworks which are running suites in parallel provide `sequence` manually when creating a factory:
 
 ```ts
-import { createFactory } from 'orchid-orm-test-factory';
+import { ormFactory } from 'orchid-orm-test-factory';
 import { db } from '../path-to-db';
 
 // use VITEST_POOL_ID for vitest framework, this env var behaves like JEST_WORKER_ID in jest
 const workerId = parseInt(process.env.VITEST_POOL_ID as string);
 
-const userFactory = createFactory(db.user, {
+const factory = ormFactory(db, {
   sequence: (workerId - 1) * 1000 + 1,
 });
 ```
@@ -172,18 +183,18 @@ const userFactory = createFactory(db.user, {
 Build a new object with the same structure as your table filled with random data:
 
 ```ts
-import { createFactory } from 'orchid-orm-test-factory';
+import { ormFactory } from 'orchid-orm-test-factory';
 import { db } from '../path-to-db';
 
-const userFactory = createFactory(db.user);
+const factory = ormFactory(db);
 
-const user = userFactory.build();
+const user = factory.user.build();
 ```
 
 Optionally you can pass specific data to `build`:
 
 ```ts
-const specificUser = userFactory.build({
+const specificUser = factory.user.build({
   name: 'James',
   age: 30,
 });
@@ -192,7 +203,7 @@ const specificUser = userFactory.build({
 You can provide a function to generate new value:
 
 ```ts
-const user = userFactory.build({
+const user = factory.user.build({
   randomNumber: () => Math.random(),
 });
 ```
@@ -200,9 +211,28 @@ const user = userFactory.build({
 It's possible to provide extra data, which is not defined by table columns:
 
 ```ts
-const user = userFactory.build({
+const user = factory.user.build({
   customField: 'someValue',
 });
+```
+
+## buildMany
+
+Build multiple records with `buildMany`. It is accepting the same parameters as `build`, but can accept multiple arguments.
+
+```ts
+const [user1, user2, user3] = factory.user.buildMany(
+  // empty: all data is generated
+  {},
+  // override data
+  {
+    name: 'James',
+  },
+  // return dynamic value from a function
+  {
+    age: () => Math.ceil(Math.random() * 100),
+  },
+);
 ```
 
 ## buildList
@@ -210,13 +240,13 @@ const user = userFactory.build({
 Build an array of objects, and provide a number for how many objects are needed:
 
 ```ts
-const arrayOfUsers = userFactory.buildList(5);
+const arrayOfUsers = factory.user.buildList(5);
 ```
 
 The optional second argument is the same as in `build`:
 
 ```ts
-const arrayOfCustomizedUsers = userFactory.build(5, {
+const arrayOfCustomizedUsers = factory.user.build(5, {
   // each user in the array will have their random number
   randomNumber: () => Math.random(),
 });
@@ -227,7 +257,7 @@ const arrayOfCustomizedUsers = userFactory.build(5, {
 `create` is saving record to the database and returns the result:
 
 ```ts
-const user = await userFactory.create();
+const user = await factory.user.create();
 ```
 
 In the argument, you can provide values for columns, functions to generate values,
@@ -240,9 +270,9 @@ so the natural sequence of `t.identity().primaryKey()` columns will be preserved
 
 ```ts
 // create a user with a profile (user hasOne profile) and genres (user hasMany genres)
-const customizedUser = await userFactory.create({
+const customizedUser = await factory.user.create({
   name: 'Mikael',
-  age: () => 48,
+  age: () => 49,
   profile: {
     create: {
       bio: 'Eros Ramazzotti of Sweden',
@@ -261,18 +291,37 @@ const customizedUser = await userFactory.create({
 });
 ```
 
-# createList
+## createMany
+
+Create multiple records at once with `createMany`, it executes a single `INSERT` statement.
+
+```ts
+const [user1, user2, user3] = await factory.user.createMany(
+  // empty: all data is generated
+  {},
+  // override data
+  {
+    name: 'James',
+  },
+  // return dynamic value from a function
+  {
+    age: () => Math.ceil(Math.random() * 100),
+  },
+)
+```
+
+## createList
 
 Create an array of records, and provide a number for how many objects are needed:
 
 ```ts
-const users = await userFactory.createList(5);
+const users = await factory.user.createList(5);
 ```
 
 The optional second argument is the same as in `create`:
 
 ```ts
-const arrayOfCustomizedUsers = await userFactory.create(5, {
+const arrayOfCustomizedUsers = await factory.user.create(5, {
   // each user in the array will have their random number
   randomNumber: () => Math.random(),
 });
@@ -307,27 +356,27 @@ const db = createDb(
   },
 );
 
-const factory = createFactory(db.table);
+const factory = ormFactory(db);
 
 // sequence is starting from 1
 
 // text columns are prefixed with sequence and a space:
-factory.text; // '1 random text'
+factory.user.text; // '1 random text'
 
 // email is prefixed with a sequence and a dash:
-factory.email; // '1-random@email.com'
+factory.user.email; // '1-random@email.com'
 
 // URL is prefixed with https:// + sequence and a dash
-factory.url; // 'https://1-random.url/'
+factory.user.url; // 'https://1-random.url/'
 
 // number is set to sequence
-factory.number; // 1
+factory.user.number; // 1
 
 // number with `.gt` is set to sequence + gt value
-factory.greaterThan10; // 11
+factory.user.greaterThan10; // 11
 
 // number with `.gte` is set to sequence + gt value - 1
-factory.greaterThan10; // 10
+factory.user.greaterThan10; // 10
 ```
 
 `.max` and `.length` text column methods are taken into account to not exceed the limit when prefixing the value.
@@ -337,7 +386,7 @@ factory.greaterThan10; // 10
 Omit some fields before building an object. Only for the `build` method, `create` will ignore it.
 
 ```ts
-const partialUser = await userFactory.omit({ id: true, name: true }).build();
+const partialUser = await factory.user.omit({ id: true, name: true }).build();
 // partialUser has everything except id and name
 ```
 
@@ -346,7 +395,7 @@ const partialUser = await userFactory.omit({ id: true, name: true }).build();
 Pick specific fields before building an object. Only for the `build` method, `create` will ignore it.
 
 ```ts
-const partialUser = await userFactory.pick({ id: true, name: true }).build();
+const partialUser = await factory.user.pick({ id: true, name: true }).build();
 // partialUser has only id and name
 ```
 
@@ -357,9 +406,9 @@ Set custom data before building or creating an object.
 It takes the same argument as a `build`.
 
 ```ts
-const user = userFactory.set({ name: 'Vasya' }).build();
+const user = factory.user.set({ name: 'Vasya' }).build();
 
-const createdUser = await userFactory.set({ name: 'Vasya' }).create();
+const createdUser = await factory.user.set({ name: 'Vasya' }).create();
 ```
 
 ## extend
@@ -367,7 +416,7 @@ const createdUser = await userFactory.set({ name: 'Vasya' }).create();
 It is possible to extend a factory with custom methods:
 
 ```ts
-class UserFactory extends createFactory(db.user).extend() {
+class UserFactory extends factory.user.extend() {
   specificUser(age: number) {
     // can call other methods
     return this.otherMethod().set({

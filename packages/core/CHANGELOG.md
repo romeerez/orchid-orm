@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.4.5
+
+### Patch Changes
+
+- Change `createFactory` to `tableFactory` and `ormFactory`; Add factory.buildMany and factory.createMany
+
 ## 0.4.4
 
 ### Patch Changes

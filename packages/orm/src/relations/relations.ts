@@ -9,7 +9,6 @@ import {
   SetQueryReturnsOne,
   SetQueryReturnsOneOptional,
   BaseRelation,
-  defaultsKey,
   relationQueryKey,
   VirtualColumn,
   SetQueryTableAlias,
@@ -64,7 +63,7 @@ export type Relation<
   nestedCreateQuery: [Info['populate']] extends [never]
     ? M
     : M & {
-        [defaultsKey]: Record<Info['populate'], true>;
+        meta: { defaults: Record<Info['populate'], true> };
       };
   primaryKey: string;
   options: Relations[K]['options'];

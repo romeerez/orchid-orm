@@ -191,10 +191,12 @@ const makeBuild = <T extends TestFactory, Data extends BuildArg<T>>(
 
   const setUniqueValues = makeSetUniqueValues(uniqueFields, allData);
 
-  return () => {
+  return (arg?: BuildArg<T>) => {
+    const data = arg ? { ...allData, ...arg } : allData;
+
     const result = generateMock(schema) as Record<string, unknown>;
-    for (const key in allData) {
-      const value = (allData as Record<string, unknown>)[key];
+    for (const key in data) {
+      const value = (data as Record<string, unknown>)[key];
       if (typeof value === 'function') {
         result[key] = value(factory.sequence);
       } else {
@@ -248,11 +250,23 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
   const pickedSchema = factory.schema.pick(pick);
   const setUniqueValues = makeSetUniqueValues(uniqueFields, allData);
 
-  return () => {
+  return (arg?: CreateArg<T>) => {
     Object.assign(result, generateMock(pickedSchema));
 
-    for (const key in fns) {
-      result[key] = fns[key](factory.sequence);
+    if (arg) {
+      for (const key in arg) {
+        if (typeof arg[key] === 'function') {
+          result[key] = (arg[key] as (sequence: number) => unknown)(
+            factory.sequence,
+          );
+        } else {
+          result[key] = arg[key];
+        }
+      }
+    } else {
+      for (const key in fns) {
+        result[key] = fns[key](factory.sequence);
+      }
     }
 
     setUniqueValues(result, factory.sequence);
@@ -360,6 +374,21 @@ export class TestFactory<
     return [...Array(qty)].map(build);
   }
 
+  buildMany<T extends this, Args extends BuildArg<T>[]>(
+    this: T,
+    ...arr: Args
+  ): { [I in keyof Args]: BuildResult<T, Args[I]> } {
+    const build = makeBuild(
+      this,
+      this.data,
+      this.omitValues,
+      this.pickValues,
+      this.uniqueFields,
+    );
+
+    return arr.map(build) as { [I in keyof Args]: BuildResult<T, Args[I]> };
+  }
+
   async create<T extends this, Data extends CreateArg<T>>(
     this: T,
     data?: Data,
@@ -374,8 +403,19 @@ export class TestFactory<
     data?: Data,
   ): Promise<CreateResult<T>[]> {
     const getData = processCreateData(this, this.data, this.uniqueFields, data);
-    const arr = [...Array(qty)].map(getData);
+    const arr = [...Array(qty)].map(() => getData());
     return (await this.table.createMany(arr)) as CreateResult<T>[];
+  }
+
+  async createMany<T extends this, Args extends CreateArg<T>[]>(
+    this: T,
+    ...arr: Args
+  ): Promise<{ [K in keyof Args]: CreateResult<T> }> {
+    const getData = processCreateData(this, this.data, this.uniqueFields);
+    const data = arr.map(getData);
+    return (await this.table.createMany(data)) as Promise<{
+      [K in keyof Args]: CreateResult<T>;
+    }>;
   }
 
   extend<T extends this>(this: T): new () => TestFactory<Q, Schema, Type> {
@@ -391,10 +431,10 @@ export class TestFactory<
 
 const nowString = new Date().toISOString();
 
-export const createFactory = <T extends Query>(
+export const tableFactory = <T extends Query>(
   table: T,
   options?: FactoryOptions,
-) => {
+): TestFactory<T, InstanceToZod<T>, T['type']> => {
   const schema = instanceToZod(table);
 
   const data: Record<string, unknown> = {};
@@ -463,4 +503,34 @@ export const createFactory = <T extends Query>(
     data,
     options,
   );
+};
+
+type ORMFactory<T> = {
+  [K in keyof T]: T[K] extends Query & { definedAs: string }
+    ? TestFactory<T[K], InstanceToZod<T[K]>, T[K]['type']>
+    : never;
+};
+
+export const ormFactory = <T>(
+  orm: T,
+  options?: FactoryOptions,
+): ORMFactory<T> => {
+  const factory = {} as ORMFactory<T>;
+  const defined: Record<string, unknown> = {};
+
+  for (const key in orm) {
+    const table = orm[key];
+    if (table && typeof table === 'object' && 'definedAs' in table) {
+      Object.defineProperty(factory, key, {
+        get() {
+          return (defined[key] ??= tableFactory(
+            table as unknown as Query,
+            options,
+          ));
+        },
+      });
+    }
+  }
+
+  return factory;
 };

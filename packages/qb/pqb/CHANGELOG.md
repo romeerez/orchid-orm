@@ -1,5 +1,14 @@
 # pqb
 
+## 0.11.13
+
+### Patch Changes
+
+- Change `createFactory` to `tableFactory` and `ormFactory`; Add factory.buildMany and factory.createMany
+- 96504ef: Support `as` in joinLateral relation
+- Updated dependencies
+  - orchid-core@0.4.5
+
 ## 0.11.12
 
 ### Patch Changes

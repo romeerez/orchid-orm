@@ -1,5 +1,17 @@
 # orchid-orm-test-factory
 
+## 0.3.61
+
+### Patch Changes
+
+- Change `createFactory` to `tableFactory` and `ormFactory`; Add factory.buildMany and factory.createMany
+- Updated dependencies
+- Updated dependencies [96504ef]
+  - pqb@0.11.13
+  - orchid-core@0.4.5
+  - orchid-orm@1.9.15
+  - orchid-orm-schema-to-zod@0.3.52
+
 ## 0.3.60
 
 ### Patch Changes

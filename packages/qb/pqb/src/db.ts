@@ -1,9 +1,4 @@
-import {
-  ColumnsParsers,
-  defaultsKey,
-  Query,
-  SelectableFromShape,
-} from './query';
+import { ColumnsParsers, Query, SelectableFromShape } from './query';
 import {
   QueryMethods,
   handleResult,
@@ -99,14 +94,16 @@ export interface Db<
     name: QueryErrorName,
   ) => QueryError<this>;
   isSubQuery: false;
-  [defaultsKey]: Record<
-    {
-      [K in keyof Shape]: undefined extends Shape[K]['data']['default']
-        ? never
-        : K;
-    }[keyof Shape],
-    true
-  >;
+  meta: {
+    defaults: Record<
+      {
+        [K in keyof Shape]: undefined extends Shape[K]['data']['default']
+          ? never
+          : K;
+      }[keyof Shape],
+      true
+    >;
+  };
 }
 
 export const anyShape = {} as Record<string, ColumnType>;

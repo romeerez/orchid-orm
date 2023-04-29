@@ -1,5 +1,4 @@
 import {
-  defaultsKey,
   Query,
   QueryReturnsAll,
   QueryReturnType,
@@ -29,7 +28,7 @@ import {
 
 export type CreateData<
   T extends Query,
-  Data = SetOptional<T['inputType'], keyof T[defaultsKey]>,
+  Data = SetOptional<T['inputType'], keyof T['meta']['defaults']>,
 > = [keyof T['relations']] extends [never]
   ? Data
   : OmitBelongsToForeignKeys<T['relations'], Data> & CreateRelationData<T>;
@@ -64,7 +63,7 @@ type CreateBelongsToData<
   },
 > =
   | {
-      [K in keyof FKeys]: K extends keyof T[defaultsKey]
+      [K in keyof FKeys]: K extends keyof T['meta']['defaults']
         ? { [L in K]?: FKeys[L] }
         : { [L in K]: FKeys[L] };
     }[keyof FKeys]
@@ -160,7 +159,7 @@ type CreateManyRawData<T extends Query> = {
 };
 
 type RawRequiredColumns<T extends Query> = {
-  [K in keyof T['inputType'] as K extends keyof T[defaultsKey]
+  [K in keyof T['inputType'] as K extends keyof T['meta']['defaults']
     ? never
     : null extends T['inputType'][K]
     ? never
@@ -565,16 +564,18 @@ export class Create {
     this: T,
     data: Data,
   ): T & {
-    [defaultsKey]: Record<keyof Data, true>;
+    meta: {
+      defaults: Record<keyof Data, true>;
+    };
   } {
     return (this.clone() as T)._defaults(data);
   }
   _defaults<T extends Query, Data extends Partial<CreateData<T>>>(
     this: T,
     data: Data,
-  ): T & { [defaultsKey]: Record<keyof Data, true> } {
+  ): T & { meta: { defaults: Record<keyof Data, true> } } {
     this.query.defaults = data;
-    return this as T & { [defaultsKey]: Record<keyof Data, true> };
+    return this as T & { meta: { defaults: Record<keyof Data, true> } };
   }
 
   onConflict<T extends Query, Arg extends OnConflictArg<T>>(

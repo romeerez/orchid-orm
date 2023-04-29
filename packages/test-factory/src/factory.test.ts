@@ -1,4 +1,4 @@
-import { createFactory } from './factory';
+import { ormFactory, tableFactory } from './factory';
 import { db, User, BaseTable } from './test-utils';
 import { z } from 'zod';
 import { orchidORM } from 'orchid-orm';
@@ -18,38 +18,38 @@ describe('factory', () => {
     });
 
     it('should depend on process.env.JEST_WORKER_ID when it is defined', () => {
-      const factory = createFactory(db.user);
+      const factory = tableFactory(db.user);
       expect(factory.sequence).toBe(4001);
     });
 
     it('should allow to override sequence', () => {
-      const factory = createFactory(db.user, {
+      const factory = tableFactory(db.user, {
         sequence: 123,
       });
       expect(factory.sequence).toBe(123);
     });
 
     it('should allow to override sequence distance', () => {
-      const factory = createFactory(db.user, {
+      const factory = tableFactory(db.user, {
         sequenceDistance: 100,
       });
       expect(factory.sequence).toBe(401);
     });
   });
 
-  const userFactory = createFactory(db.user);
+  const factory = ormFactory(db);
 
   describe('build', () => {
     it('should build an object for the table', () => {
-      const data = userFactory.build();
+      const data = factory.user.build();
 
       assertType<typeof data, User>();
 
-      expect(() => userFactory.schema.parse(data)).not.toThrow();
+      expect(() => factory.user.schema.parse(data)).not.toThrow();
     });
 
     it('should accept data with values to override result', () => {
-      const data = userFactory.build({
+      const data = factory.user.build({
         age: 18,
         name: 'name',
         extra: true,
@@ -64,7 +64,7 @@ describe('factory', () => {
     });
 
     it('should accept data with functions to override result', () => {
-      const data = userFactory.build({
+      const data = factory.user.build({
         age: () => 18,
         name: () => 'name',
         extra: () => true,
@@ -76,8 +76,7 @@ describe('factory', () => {
     });
 
     it('should limit long strings with 1000 by default', () => {
-      const profileFactory = createFactory(db.profile);
-      const data = profileFactory.build();
+      const data = factory.profile.build();
 
       expect(data.bio.length).toBeLessThanOrEqual(1000);
     });
@@ -100,14 +99,14 @@ describe('factory', () => {
         },
       );
 
-      const profileFactory = createFactory(db.profile);
+      const profileFactory = tableFactory(db.profile);
       const data = profileFactory.build();
 
       expect(data.bio.length).toBeLessThanOrEqual(120);
     });
 
     it('should allow to override maxTextLength', () => {
-      const profileFactory = createFactory(db.profile, {
+      const profileFactory = tableFactory(db.profile, {
         maxTextLength: 500,
       });
       const data = profileFactory.build();
@@ -129,7 +128,7 @@ describe('factory', () => {
         user: UserTable,
       });
 
-      const factory = createFactory(db.user);
+      const factory = tableFactory(db.user);
 
       const data = factory.build();
 
@@ -141,43 +140,152 @@ describe('factory', () => {
     });
   });
 
+  describe('buildList', () => {
+    it('should build a list of objects', () => {
+      const arr = factory.user.buildList(2);
+
+      assertType<typeof arr, User[]>();
+
+      expect(() =>
+        arr.forEach((item) => factory.user.schema.parse(item)),
+      ).not.toThrow();
+    });
+
+    it('should allow overriding data', () => {
+      const arr = factory.user.buildList(2, {
+        age: 18,
+        name: 'name',
+        extra: true,
+      });
+
+      assertType<
+        typeof arr,
+        Array<User & { name: 'name'; age: 18; extra: boolean }>
+      >();
+
+      expect(arr).toMatchObject([
+        { age: 18, name: 'name', extra: true },
+        { age: 18, name: 'name', extra: true },
+      ]);
+    });
+
+    it('should accept data with functions to override result', () => {
+      const arr = factory.user.buildList(2, {
+        age: () => 18,
+        name: () => 'name',
+        extra: () => true,
+      });
+
+      assertType<typeof arr, Array<User & { age: number; extra: true }>>();
+
+      expect(arr).toMatchObject([
+        { age: 18, name: 'name', extra: true },
+        { age: 18, name: 'name', extra: true },
+      ]);
+    });
+  });
+
+  describe('buildMany', () => {
+    it('should build multiple objects', () => {
+      const arr = factory.user.buildMany({}, {});
+
+      assertType<typeof arr, [User, User]>();
+
+      expect(() =>
+        arr.forEach((item) => factory.user.schema.parse(item)),
+      ).not.toThrow();
+    });
+
+    it('should allow overriding data', () => {
+      const input = [
+        {
+          age: 18,
+          name: 'one',
+          extra: false,
+        },
+        {
+          age: 25,
+          name: 'two',
+          extra: true,
+        },
+      ] as const;
+
+      const arr = factory.user.buildMany(...input);
+
+      assertType<
+        typeof arr,
+        [User & (typeof input)[0], User & (typeof input)[1]]
+      >();
+
+      expect(arr).toMatchObject(input);
+    });
+
+    it('should accept data with functions to override result', () => {
+      const arr = factory.user.buildMany(
+        {
+          age: () => 18,
+          name: () => 'one',
+          extra: () => false,
+        },
+        {
+          age: () => 25,
+          name: () => 'two',
+          extra: () => true,
+        },
+      );
+
+      assertType<
+        typeof arr,
+        [
+          User & { age: number; name: string; extra: false },
+          User & { age: number; name: string; extra: true },
+        ]
+      >();
+
+      expect(arr).toMatchObject([
+        { age: 18, name: 'one', extra: false },
+        { age: 25, name: 'two', extra: true },
+      ]);
+    });
+  });
+
   describe('omit', () => {
     it('should allow to build data with omitted fields', () => {
-      const data = userFactory.omit({ id: true, name: true }).build();
+      const data = factory.user.omit({ id: true, name: true }).build();
 
       assertType<typeof data, Omit<User, 'id' | 'name'>>();
 
       expect(() =>
-        userFactory.schema.strict().omit({ id: true, name: true }).parse(data),
+        factory.user.schema.strict().omit({ id: true, name: true }).parse(data),
       ).not.toThrow();
     });
   });
 
   describe('pick', () => {
     it('should allow to build data with picked fields', () => {
-      const data = userFactory.pick({ id: true, name: true }).build();
+      const data = factory.user.pick({ id: true, name: true }).build();
 
       assertType<typeof data, Pick<User, 'id' | 'name'>>();
 
       expect(() =>
-        userFactory.schema.strict().pick({ id: true, name: true }).parse(data),
+        factory.user.schema.strict().pick({ id: true, name: true }).parse(data),
       ).not.toThrow();
     });
   });
 
   describe('create', () => {
     it('should create record with generated data, except identity primary keys, datetime numbers should be the same in the record and to be around now', async () => {
-      const item = await userFactory.create();
+      const item = await factory.user.create();
 
       expect(item.createdAt).toBe(item.updatedAt);
 
       assertType<typeof item, User>();
 
-      expect(() => userFactory.schema.parse(item)).not.toThrow();
+      expect(() => factory.user.schema.parse(item)).not.toThrow();
     });
 
     it('should create record with overridden data', async () => {
-      const item = await userFactory.create({ name: 'name' });
+      const item = await factory.user.create({ name: 'name' });
 
       assertType<typeof item, User>();
 
@@ -185,7 +293,7 @@ describe('factory', () => {
     });
 
     it('should create record with nested create', async () => {
-      const user = await userFactory.create({
+      const user = await factory.user.create({
         profile: {
           create: {
             bio: 'bio',
@@ -199,7 +307,7 @@ describe('factory', () => {
 
   describe('createList', () => {
     it('should create a list of records, datetime numbers should be the same in one record and increase for each next record', async () => {
-      const items = await userFactory.createList(2);
+      const items = await factory.user.createList(2);
 
       assertType<typeof items, User[]>();
 
@@ -210,11 +318,11 @@ describe('factory', () => {
 
       expect(items[0].createdAt).toBeLessThan(items[1].createdAt);
 
-      expect(() => z.array(userFactory.schema).parse(items)).not.toThrow();
+      expect(() => z.array(factory.user.schema).parse(items)).not.toThrow();
     });
 
     it('should create a list of records with overridden data', async () => {
-      const items = await userFactory.createList(2, { name: 'name' });
+      const items = await factory.user.createList(2, { name: 'name' });
 
       assertType<typeof items, User[]>();
 
@@ -222,9 +330,51 @@ describe('factory', () => {
     });
   });
 
+  describe('createMany', () => {
+    it('should create many records with generated data', async () => {
+      const arr = await factory.user.createMany({}, {});
+
+      assertType<typeof arr, [User, User]>();
+
+      expect(() =>
+        arr.forEach((item) => factory.user.schema.parse(item)),
+      ).not.toThrow();
+    });
+
+    it('should create many records with overridden data', async () => {
+      const arr = await factory.user.createMany(
+        {
+          name: 'one',
+        },
+        {
+          name: 'two',
+        },
+      );
+
+      assertType<typeof arr, [User, User]>();
+
+      expect(arr.map((it) => it.name)).toEqual(['one', 'two']);
+    });
+
+    it('should override data with functions', async () => {
+      const arr = await factory.user.createMany(
+        {
+          name: () => 'one',
+        },
+        {
+          name: () => 'two',
+        },
+      );
+
+      assertType<typeof arr, [User, User]>();
+
+      expect(arr.map((it) => it.name)).toEqual(['one', 'two']);
+    });
+  });
+
   describe('set', () => {
     it('should set data to override result and work with build', () => {
-      const data = userFactory
+      const data = factory.user
         .set({
           age: 18,
         })
@@ -238,7 +388,7 @@ describe('factory', () => {
     });
 
     it('should set data to override result and work with buildList', () => {
-      const arr = userFactory
+      const arr = factory.user
         .set({
           age: 18,
         })
@@ -250,26 +400,26 @@ describe('factory', () => {
     });
 
     it('should set data to override result and work with create', async () => {
-      const item = await userFactory.set({ age: 18 }).create();
+      const item = await factory.user.set({ age: 18 }).create();
 
       assertType<typeof item, User>();
 
-      expect(() => userFactory.schema.parse(item)).not.toThrow();
+      expect(() => factory.user.schema.parse(item)).not.toThrow();
       expect(item.age).toBe(18);
     });
 
     it('should set data to override result and work with createList', async () => {
-      const items = await userFactory.set({ age: 18 }).createList(2);
+      const items = await factory.user.set({ age: 18 }).createList(2);
 
       assertType<typeof items, User[]>();
 
-      expect(() => z.array(userFactory.schema).parse(items)).not.toThrow();
+      expect(() => z.array(factory.user.schema).parse(items)).not.toThrow();
       expect(items.map((item) => item.age)).toEqual([18, 18]);
     });
   });
 
   describe('custom methods', () => {
-    class ExtendedFactory extends createFactory(db.user).extend() {
+    class ExtendedFactory extends tableFactory(db.user).extend() {
       specificUser(age: number) {
         return this.otherMethod().set({
           age,
@@ -343,14 +493,14 @@ describe('factory', () => {
       },
     );
 
-    const textFactory = createFactory(db.text);
-    const emailFactory = createFactory(db.email);
-    const urlFactory = createFactory(db.url);
-    const maxFactory = createFactory(db.max);
-    const lengthFactory = createFactory(db.length);
-    const numberFactory = createFactory(db.number);
-    const gtFactory = createFactory(db.gt);
-    const gteFactory = createFactory(db.gte);
+    const textFactory = tableFactory(db.text);
+    const emailFactory = tableFactory(db.email);
+    const urlFactory = tableFactory(db.url);
+    const maxFactory = tableFactory(db.max);
+    const lengthFactory = tableFactory(db.length);
+    const numberFactory = tableFactory(db.number);
+    const gtFactory = tableFactory(db.gt);
+    const gteFactory = tableFactory(db.gte);
 
     it('should prefix unique text column with sequence and space', () => {
       textFactory.sequence = 42;
