@@ -2,6 +2,12 @@
 
 `Orchid ORM` ecosystem offers a library for setting up JavaScript objects, to use these objects in tests.
 
+Install as dev dependency:
+
+```sh
+npm i -D orchid-orm-test-factory
+```
+
 It is producing objects of the shape defined by your table columns.
 
 Under the hood, it is using [@anatine/zod-mock](https://github.com/anatine/zod-plugins/tree/main/packages/zod-mock)

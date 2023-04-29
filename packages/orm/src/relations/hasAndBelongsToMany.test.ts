@@ -266,28 +266,32 @@ describe('hasAndBelongsToMany', () => {
 
     it('should be supported in joinLateral', () => {
       const q = db.user
-        .joinLateral('chats', (q) => q)
-        .select('Name', { chat: 'chats' });
+        .joinLateral('chats', (q) => q.as('c').where({ Title: 'one' }))
+        .where({ 'c.Title': 'two' })
+        .select('Name', { chat: 'c' });
 
       assertType<Awaited<typeof q>, { Name: string; chat: Chat }[]>();
 
       expectSql(
         q.toSql(),
         `
-          SELECT "user"."name" AS "Name", row_to_json("chats".*) AS "chat"
+          SELECT "user"."name" AS "Name", row_to_json("c".*) AS "chat"
           FROM "user"
           JOIN LATERAL (
             SELECT ${chatSelectAll}
-            FROM "chat" AS "chats"
-            WHERE EXISTS (
-              SELECT 1
-              FROM "chatUser"
-              WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                AND "chatUser"."userId" = "user"."id"
-              LIMIT 1
-            )
-          ) "chats" ON true
+            FROM "chat" AS "c"
+            WHERE "c"."title" = $1
+              AND EXISTS (
+                SELECT 1
+                FROM "chatUser"
+                WHERE "chatUser"."chatId" = "c"."idOfChat"
+                  AND "chatUser"."userId" = "user"."id"
+                LIMIT 1
+              )
+          ) "c" ON true
+          WHERE "c"."title" = $2
         `,
+        ['one', 'two'],
       );
     });
 

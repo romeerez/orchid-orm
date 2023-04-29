@@ -262,22 +262,25 @@ describe('hasMany', () => {
 
     it('should be supported in joinLateral', () => {
       const q = db.user
-        .joinLateral('messages', (q) => q)
-        .select('Name', { message: 'messages' });
+        .joinLateral('messages', (q) => q.as('m').where({ Text: 'one' }))
+        .where({ 'm.Text': 'two' })
+        .select('Name', { message: 'm' });
 
       assertType<Awaited<typeof q>, { Name: string; message: Message }[]>();
 
       expectSql(
         q.toSql(),
         `
-          SELECT "user"."name" AS "Name", row_to_json("messages".*) AS "message"
+          SELECT "user"."name" AS "Name", row_to_json("m".*) AS "message"
           FROM "user"
           JOIN LATERAL (
             SELECT ${messageSelectAll}
-            FROM "message" AS "messages"
-            WHERE "messages"."authorId" = "user"."id"
-          ) "messages" ON true
+            FROM "message" AS "m"
+            WHERE "m"."text" = $1 AND "m"."authorId" = "user"."id"
+          ) "m" ON true
+          WHERE "m"."text" = $2
         `,
+        ['one', 'two'],
       );
     });
 
@@ -2151,34 +2154,39 @@ describe('hasMany through', () => {
 
     it('should be supported in joinLateral', () => {
       const q = db.profile
-        .joinLateral('chats', (q) => q)
-        .select('Bio', { chat: 'chats' });
+        .joinLateral('chats', (q) => q.as('c').where({ Title: 'one' }))
+        .where({ 'c.Title': 'two' })
+        .select('Bio', { chat: 'c' });
 
       assertType<Awaited<typeof q>, { Bio: string | null; chat: Chat }[]>();
 
       expectSql(
         q.toSql(),
         `
-          SELECT "profile"."bio" AS "Bio", row_to_json("chats".*) AS "chat"
+          SELECT "profile"."bio" AS "Bio", row_to_json("c".*) AS "chat"
           FROM "profile"
           JOIN LATERAL (
             SELECT ${chatSelectAll}
-            FROM "chat" AS "chats"
-            WHERE EXISTS (
+            FROM "chat" AS "c"
+            WHERE "c"."title" = $1
+              AND EXISTS (
                 SELECT 1
                 FROM "user"
-                WHERE EXISTS (
-                  SELECT 1
-                  FROM "chatUser"
-                  WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                    AND "chatUser"."userId" = "user"."id"
-                  LIMIT 1
-                )
-                AND "user"."id" = "profile"."userId"
-              LIMIT 1
-            )
-          ) "chats" ON true
+                WHERE 
+                  EXISTS (
+                    SELECT 1
+                    FROM "chatUser"
+                    WHERE "chatUser"."chatId" = "c"."idOfChat"
+                      AND "chatUser"."userId" = "user"."id"
+                    LIMIT 1
+                  )
+                  AND "user"."id" = "profile"."userId"
+                LIMIT 1
+              )
+          ) "c" ON true
+          WHERE "c"."title" = $2
         `,
+        ['one', 'two'],
       );
     });
 
@@ -2608,34 +2616,38 @@ describe('hasMany through', () => {
 
     it('should be supported in joinLateral', () => {
       const q = db.chat
-        .joinLateral('profiles', (q) => q)
-        .select('Title', { profile: 'profiles' });
+        .joinLateral('profiles', (q) => q.as('p').where({ Bio: 'one' }))
+        .where({ 'p.Bio': 'two' })
+        .select('Title', { profile: 'p' });
 
       assertType<Awaited<typeof q>, { Title: string; profile: Profile }[]>();
 
       expectSql(
         q.toSql(),
         `
-          SELECT "chat"."title" AS "Title", row_to_json("profiles".*) AS "profile"
+          SELECT "chat"."title" AS "Title", row_to_json("p".*) AS "profile"
           FROM "chat"
           JOIN LATERAL (
             SELECT ${profileSelectAll}
-            FROM "profile" AS "profiles"
-            WHERE EXISTS (
-              SELECT 1
-              FROM "user" AS "users"
-              WHERE "profiles"."userId" = "users"."id"
-                AND EXISTS (
-                  SELECT 1
-                  FROM "chatUser"
-                  WHERE "chatUser"."userId" = "users"."id"
-                    AND "chatUser"."chatId" = "chat"."idOfChat"
-                  LIMIT 1
-                )
-              LIMIT 1
-            )
-          ) "profiles" ON true
+            FROM "profile" AS "p"
+            WHERE "p"."bio" = $1
+              AND EXISTS (
+                SELECT 1
+                FROM "user" AS "users"
+                WHERE "p"."userId" = "users"."id"
+                  AND EXISTS (
+                    SELECT 1
+                    FROM "chatUser"
+                    WHERE "chatUser"."userId" = "users"."id"
+                      AND "chatUser"."chatId" = "chat"."idOfChat"
+                    LIMIT 1
+                  )
+                LIMIT 1
+              )
+          ) "p" ON true
+          WHERE "p"."bio" = $2
         `,
+        ['one', 'two'],
       );
     });
 

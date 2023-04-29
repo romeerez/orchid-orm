@@ -107,10 +107,11 @@ export const _joinLateral = <
   arg: Arg,
   cb: JoinLateralCallback<T, Arg, R>,
 ): JoinLateralResult<T, R, RequireJoined, RequireMain> => {
+  let relation: Relation | undefined;
   if (typeof arg === 'string') {
-    const relation = (q.relations as Record<string, Relation>)[arg];
+    relation = (q.relations as Record<string, Relation>)[arg];
     if (relation) {
-      arg = relation.joinQuery(q, relation.query) as Arg;
+      arg = relation.query as Arg;
     } else {
       const shape = q.query.withShapes?.[arg];
       if (shape) {
@@ -130,7 +131,11 @@ export const _joinLateral = <
   const query = arg as Query;
   query.query.joinTo = q;
   (query.query.joinedShapes ??= {})[getQueryAs(q)] = q.query.shape;
-  const result = cb(query as never);
+  let result = cb(query as never);
+
+  if (relation) {
+    result = relation.joinQuery(q, result as unknown as Query) as unknown as R;
+  }
 
   const joinKey = result.query.as || result.table;
   if (joinKey) {

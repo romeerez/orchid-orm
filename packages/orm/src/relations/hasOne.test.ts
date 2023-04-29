@@ -280,24 +280,26 @@ describe('hasOne', () => {
 
     it('should be supported in joinLateral', () => {
       const q = db.user
-        .joinLateral('profile', (q) => q)
-        .select('Name', 'profile');
+        .joinLateral('profile', (q) => q.as('p').where({ Bio: 'one' }))
+        .where({ 'p.Bio': 'two' })
+        .select('Name', 'p');
 
-      assertType<Awaited<typeof q>, { Name: string; profile: Profile }[]>();
+      assertType<Awaited<typeof q>, { Name: string; p: Profile }[]>();
 
       expectSql(
         q.toSql(),
         `
-          SELECT "user"."name" AS "Name", row_to_json("profile".*) "profile"
+          SELECT "user"."name" AS "Name", row_to_json("p".*) "p"
           FROM "user"
           JOIN LATERAL (
             SELECT ${profileSelectAll}
-            FROM "profile"
-            WHERE "profile"."userId" = "user"."id"
-            LIMIT $1
-          ) "profile" ON true
+            FROM "profile" AS "p"
+            WHERE "p"."bio" = $1 AND "p"."userId" = "user"."id"
+            LIMIT $2
+          ) "p" ON true
+          WHERE "p"."bio" = $3
         `,
-        [1],
+        ['one', 1, 'two'],
       );
     });
 
@@ -1708,30 +1710,33 @@ describe('hasOne through', () => {
 
   it('should be supported in joinLateral', () => {
     const q = db.message
-      .joinLateral('profile', (q) => q)
-      .select('Text', 'profile');
+      .joinLateral('profile', (q) => q.as('p').where({ Bio: 'one' }))
+      .where({ 'p.Bio': 'two' })
+      .select('Text', 'p');
 
-    assertType<Awaited<typeof q>, { Text: string; profile: Profile }[]>();
+    assertType<Awaited<typeof q>, { Text: string; p: Profile }[]>();
 
     expectSql(
       q.toSql(),
       `
-        SELECT "message"."text" AS "Text", row_to_json("profile".*) "profile"
+        SELECT "message"."text" AS "Text", row_to_json("p".*) "p"
         FROM "message"
         JOIN LATERAL (
           SELECT ${profileSelectAll}
-          FROM "profile"
-          WHERE EXISTS (
+          FROM "profile" AS "p"
+          WHERE "p"."bio" = $1
+            AND EXISTS (
             SELECT 1
             FROM "user"
-            WHERE "profile"."userId" = "user"."id"
+            WHERE "p"."userId" = "user"."id"
               AND "user"."id" = "message"."authorId"
             LIMIT 1
           )
-          LIMIT $1
-        ) "profile" ON true
+          LIMIT $2
+        ) "p" ON true
+        WHERE "p"."bio" = $3
       `,
-      [1],
+      ['one', 1, 'two'],
     );
   });
 

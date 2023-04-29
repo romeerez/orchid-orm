@@ -201,23 +201,27 @@ describe('belongsTo', () => {
     });
 
     it('should be supported in joinLateral', () => {
-      const q = db.profile.joinLateral('user', (q) => q).select('Bio', 'user');
+      const q = db.profile
+        .joinLateral('user', (q) => q.as('u').where({ Name: 'one' }))
+        .where({ 'u.Name': 'two' })
+        .select('Bio', 'u');
 
-      assertType<Awaited<typeof q>, { Bio: string | null; user: User }[]>();
+      assertType<Awaited<typeof q>, { Bio: string | null; u: User }[]>();
 
       expectSql(
         q.toSql(),
         `
-          SELECT "profile"."bio" AS "Bio", row_to_json("user".*) "user"
+          SELECT "profile"."bio" AS "Bio", row_to_json("u".*) "u"
           FROM "profile"
           JOIN LATERAL (
             SELECT ${userSelectAll}
-            FROM "user"
-            WHERE "user"."id" = "profile"."userId"
-            LIMIT $1
-          ) "user" ON true
+            FROM "user" AS "u"
+            WHERE "u"."name" = $1 AND "u"."id" = "profile"."userId"
+            LIMIT $2
+          ) "u" ON true
+          WHERE "u"."name" = $3
         `,
-        [1],
+        ['one', 1, 'two'],
       );
     });
 
