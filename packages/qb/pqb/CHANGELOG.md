@@ -1,5 +1,11 @@
 # pqb
 
+## 0.11.15
+
+### Patch Changes
+
+- Fix selecting relation pluck with query methods like orderBy
+
 ## 0.11.14
 
 ### Patch Changes

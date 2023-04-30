@@ -383,9 +383,12 @@ describe('hasMany', () => {
             COALESCE("texts".r, '[]') "texts"
           FROM "user" AS "u"
           LEFT JOIN LATERAL (
-            SELECT json_agg("texts"."text") r
-            FROM "message" AS "texts"
-            WHERE "texts"."authorId" = "u"."id"
+            SELECT json_agg("t"."Text") r
+            FROM (
+              SELECT "texts"."text" AS "Text"
+              FROM "message" AS "texts"
+              WHERE "texts"."authorId" = "u"."id"
+            ) AS "t"
           ) "texts" ON true
         `,
       );
@@ -2259,19 +2262,22 @@ describe('hasMany through', () => {
             COALESCE("titles".r, '[]') "titles"
           FROM "profile" AS "p"
           LEFT JOIN LATERAL (
-            SELECT json_agg("titles"."title") r
-            FROM "chat" AS "titles"
-            WHERE EXISTS (
-              SELECT 1 FROM "user"
+            SELECT json_agg("t"."Title") r
+            FROM (
+              SELECT "titles"."title" AS "Title"
+              FROM "chat" AS "titles"
               WHERE EXISTS (
-                SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chatId" = "titles"."idOfChat"
-                  AND "chatUser"."userId" = "user"."id"
+                SELECT 1 FROM "user"
+                WHERE EXISTS (
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."chatId" = "titles"."idOfChat"
+                    AND "chatUser"."userId" = "user"."id"
+                  LIMIT 1
+                )
+                AND "user"."id" = "p"."userId"
                 LIMIT 1
               )
-              AND "user"."id" = "p"."userId"
-              LIMIT 1
-            )
+            ) AS "t"
           ) "titles" ON true
         `,
       );
@@ -2696,19 +2702,22 @@ describe('hasMany through', () => {
               COALESCE("bios".r, '[]') "bios"
             FROM "chat" AS "c"
             LEFT JOIN LATERAL (
-              SELECT json_agg("bios"."bio") r
-              FROM "profile" AS "bios"
-              WHERE EXISTS (
-                SELECT 1 FROM "user" AS "users"
-                WHERE "bios"."userId" = "users"."id"
-                AND EXISTS (
-                    SELECT 1 FROM "chatUser"
-                    WHERE "chatUser"."userId" = "users"."id"
-                      AND "chatUser"."chatId" = "c"."idOfChat"
-                    LIMIT 1
-                  )
-                LIMIT 1
-              )
+              SELECT json_agg("t"."Bio") r
+              FROM (
+                SELECT "bios"."bio" AS "Bio"
+                FROM "profile" AS "bios"
+                WHERE EXISTS (
+                  SELECT 1 FROM "user" AS "users"
+                  WHERE "bios"."userId" = "users"."id"
+                  AND EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."userId" = "users"."id"
+                        AND "chatUser"."chatId" = "c"."idOfChat"
+                      LIMIT 1
+                    )
+                  LIMIT 1
+                )
+              ) AS "t"
             ) "bios" ON true
           `,
         );

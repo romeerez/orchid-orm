@@ -379,14 +379,17 @@ describe('hasAndBelongsToMany', () => {
             COALESCE("titles".r, '[]') "titles"
           FROM "user" AS "u"
           LEFT JOIN LATERAL (
-            SELECT json_agg("titles"."title") r
-            FROM "chat" AS "titles"
-            WHERE EXISTS (
-              SELECT 1 FROM "chatUser"
-              WHERE "chatUser"."chatId" = "titles"."idOfChat"
-                AND "chatUser"."userId" = "u"."id"
-              LIMIT 1
-            )
+            SELECT json_agg("t"."Title") r
+            FROM (
+              SELECT "titles"."title" AS "Title"
+              FROM "chat" AS "titles"
+              WHERE EXISTS (
+                SELECT 1 FROM "chatUser"
+                WHERE "chatUser"."chatId" = "titles"."idOfChat"
+                  AND "chatUser"."userId" = "u"."id"
+                LIMIT 1
+              )
+            ) AS "t"
           ) "titles" ON true
         `,
       );

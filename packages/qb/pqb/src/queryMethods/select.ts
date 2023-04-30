@@ -263,7 +263,9 @@ export const processSelectArg = <T extends Query>(
           query = value.json(false);
           value.query.coalesceValue = raw("'[]'");
         } else if (returnType === 'pluck') {
-          query = value.jsonAgg(value.query.select[0]);
+          query = value
+            .wrap(value.baseQuery.clone())
+            ._jsonAgg(value.query.select[0]);
           value.query.coalesceValue = raw("'[]'");
         } else {
           query = value;

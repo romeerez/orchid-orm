@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.9.17
+
+### Patch Changes
+
+- Fix selecting relation pluck with query methods like orderBy
+- Updated dependencies
+  - pqb@0.11.15
+
 ## 1.9.16
 
 ### Patch Changes
