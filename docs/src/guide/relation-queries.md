@@ -87,7 +87,7 @@ await db.book
   .select('title', 'author.name');
 ```
 
-The relation can be loaded using `.select` and related records will be added to each record.
+The relation can be loaded by placing a callback in `.select`, related records will be added to each record.
 
 `belongsTo` and `hasOne` will add an object (can be `null` if not found).
 
@@ -95,22 +95,7 @@ The relation can be loaded using `.select` and related records will be added to 
 
 For `hasMany` and `hasAndBelongsToMany` this works better than `join` because it won't lead to duplicative data.
 
-Use the name of relation to load full records:
-
-```ts
-// if the `required` option is not set in the table class,
-// type of author will be Author | null
-const booksWithAuthor: Book & { author: Author } = await db.book
-  .select('*', 'author')
-  .take();
-
-const authorWithBooks: Author & { books: Book[] } = await db.author
-  .select('*', 'books')
-  .take();
-```
-
-To load specific fields or to apply `where`, `order`, `limit`, and other methods,
-a relation can be selected by adding a callback to the select list:
+Inside the callback, you can set `select`, `where`, `order`, `limit`, and other methods for the relation.
 
 ```ts
 type BookResult = {

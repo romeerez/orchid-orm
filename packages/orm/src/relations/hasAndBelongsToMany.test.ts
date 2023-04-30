@@ -333,33 +333,6 @@ describe('hasAndBelongsToMany', () => {
           ['title'],
         );
       });
-
-      it('should be selectable by relation name', () => {
-        const query = db.user.select('*', 'chats');
-
-        assertType<Awaited<typeof query>, (User & { chats: Chat[] })[]>();
-
-        expectSql(
-          query.toSql(),
-          `
-            SELECT
-              ${userSelectAll},
-              (
-                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
-                FROM (
-                  SELECT ${chatSelectAll} FROM "chat" AS "chats"
-                  WHERE EXISTS (
-                    SELECT 1 FROM "chatUser"
-                    WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                      AND "chatUser"."userId" = "user"."id"
-                    LIMIT 1
-                  )
-                ) AS "t"
-              ) AS "chats"
-            FROM "user"
-          `,
-        );
-      });
     });
 
     it('should allow to select count', () => {

@@ -31,9 +31,6 @@ import { QueryBase } from '../queryBase';
 export type SelectArg<T extends QueryBase> =
   | '*'
   | StringKey<keyof T['selectable']>
-  | (T['relations'] extends Record<string, Relation>
-      ? StringKey<keyof T['relations']>
-      : never)
   | SelectAsArg<T>;
 
 type SelectAsArg<T extends QueryBase> = Record<string, SelectAsValue<T>>;
@@ -95,18 +92,8 @@ type SpreadSelectArgs<T extends Query, Args extends [...any]> = Args extends [
 type SelectStringArgsResult<T extends Query, Args extends SelectArg<T>[]> = {
   [Arg in Args[number] as Arg extends keyof T['selectable']
     ? T['selectable'][Arg]['as']
-    : Arg extends keyof T['relations']
-    ? Arg
     : never]: Arg extends keyof T['selectable']
     ? T['selectable'][Arg]['column']
-    : T['relations'] extends Record<string, Relation>
-    ? Arg extends keyof T['relations']
-      ? T['relations'][Arg]['returns'] extends 'many'
-        ? ArrayOfColumnsObjects<T['relations'][Arg]['table']['result']>
-        : T['relations'][Arg]['options']['required'] extends true
-        ? ColumnsObject<T['relations'][Arg]['table']['result']>
-        : NullableColumn<ColumnsObject<T['relations'][Arg]['table']['result']>>
-      : never
     : never;
 };
 
@@ -255,11 +242,6 @@ export const processSelectArg = <T extends Query>(
     if (q.query.joinedShapes?.[arg]) {
       addParsersForSelectJoined(q, arg);
       return arg;
-    } else if ((q.relations as Record<string, Relation>)[arg]) {
-      const rel = (q.relations as Record<string, Relation>)[arg];
-      arg = {
-        [arg]: () => rel.joinQuery(q, rel.query),
-      };
     } else {
       return processSelectColumnArg(q, arg, as, columnAs);
     }

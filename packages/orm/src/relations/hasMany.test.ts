@@ -338,28 +338,6 @@ describe('hasMany', () => {
           ['text'],
         );
       });
-
-      it('should be selectable by relation name', () => {
-        const query = db.user.select('*', 'messages');
-
-        assertType<Awaited<typeof query>, (User & { messages: Message[] })[]>();
-
-        expectSql(
-          query.toSql(),
-          `
-            SELECT
-              ${userSelectAll},
-              (
-                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
-                FROM (
-                  SELECT ${messageSelectAll} FROM "message" AS "messages"
-                  WHERE "messages"."authorId" = "user"."id"
-                ) AS "t"
-              ) AS "messages"
-            FROM "user"
-          `,
-        );
-      });
     });
 
     it('should allow to select count', () => {
@@ -2227,40 +2205,6 @@ describe('hasMany through', () => {
           ['title'],
         );
       });
-
-      it('should be selectable by relation name', () => {
-        const query = db.profile.select('*', 'chats');
-
-        assertType<Awaited<typeof query>, (Profile & { chats: Chat[] })[]>();
-
-        expectSql(
-          query.toSql(),
-          `
-            SELECT
-              ${profileSelectAll},
-              (
-                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
-                FROM (
-                  SELECT ${chatSelectAll}
-                  FROM "chat" AS "chats"
-                  WHERE EXISTS (
-                      SELECT 1 FROM "user"
-                      WHERE EXISTS (
-                          SELECT 1 FROM "chatUser"
-                          WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                            AND "chatUser"."userId" = "user"."id"
-                          LIMIT 1
-                        )
-                        AND "user"."id" = "profile"."userId"
-                      LIMIT 1
-                    )
-                ) AS "t"
-              ) AS "chats"
-            FROM "profile"
-          `,
-          [],
-        );
-      });
     });
 
     it('should allow to select count', () => {
@@ -2689,40 +2633,6 @@ describe('hasMany through', () => {
             FROM "chat" AS "c"
           `,
           ['bio'],
-        );
-      });
-
-      it('should be selectable by relation name', () => {
-        const query = db.chat.select('*', 'profiles');
-
-        assertType<Awaited<typeof query>, (Chat & { profiles: Profile[] })[]>();
-
-        expectSql(
-          query.toSql(),
-          `
-            SELECT
-              ${chatSelectAll},
-              (
-                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
-                FROM (
-                  SELECT ${profileSelectAll}
-                  FROM "profile" AS "profiles"
-                  WHERE EXISTS (
-                    SELECT 1 FROM "user" AS "users"
-                    WHERE "profiles"."userId" = "users"."id"
-                      AND EXISTS (
-                        SELECT 1 FROM "chatUser"
-                        WHERE "chatUser"."userId" = "users"."id"
-                          AND "chatUser"."chatId" = "chat"."idOfChat"
-                        LIMIT 1
-                      )
-                    LIMIT 1
-                  )
-                ) AS "t"
-              ) AS "profiles"
-            FROM "chat"
-          `,
-          [],
         );
       });
 

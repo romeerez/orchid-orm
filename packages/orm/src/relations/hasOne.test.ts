@@ -2,7 +2,6 @@ import {
   User,
   Profile,
   BaseTable,
-  Message,
   db,
   useRelationCallback,
   chatData,
@@ -328,30 +327,6 @@ describe('hasOne', () => {
             FROM "user" AS "u"
           `,
           ['bio', 1],
-        );
-      });
-
-      it('should be selectable by relation name', () => {
-        const query = db.user.select('*', 'profile');
-
-        assertType<Awaited<typeof query>, (User & { profile: Profile })[]>();
-
-        expectSql(
-          query.toSql(),
-          `
-            SELECT
-              ${userSelectAll},
-              (
-                SELECT row_to_json("t".*) 
-                FROM (
-                  SELECT ${profileSelectAll} FROM "profile"
-                  WHERE "profile"."userId" = "user"."id"
-                  LIMIT $1
-                ) AS "t"
-              ) AS "profile"
-            FROM "user"
-          `,
-          [1],
         );
       });
 
@@ -1770,35 +1745,6 @@ describe('hasOne through', () => {
           FROM "message" AS "m"
         `,
         ['bio', 1],
-      );
-    });
-
-    it('should be selectable by relation name', () => {
-      const query = db.message.select('*', 'profile');
-
-      assertType<Awaited<typeof query>, (Message & { profile: Profile })[]>();
-
-      expectSql(
-        query.toSql(),
-        `
-          SELECT
-            ${messageSelectAll},
-            (
-              SELECT row_to_json("t".*)
-              FROM (
-                SELECT ${profileSelectAll} FROM "profile"
-                WHERE EXISTS (
-                    SELECT 1 FROM "user"
-                    WHERE "profile"."userId" = "user"."id"
-                      AND "user"."id" = "message"."authorId"
-                    LIMIT 1
-                  )
-                LIMIT $1
-              ) AS "t"
-            ) AS "profile"
-          FROM "message"
-        `,
-        [1],
       );
     });
 

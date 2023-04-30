@@ -5,7 +5,6 @@ import {
   db,
   messageData,
   messageSelectAll,
-  Profile,
   profileData,
   profileSelectAll,
   User,
@@ -254,30 +253,6 @@ describe('belongsTo', () => {
             FROM "profile" AS "p"
           `,
           ['name', 1],
-        );
-      });
-
-      it('should be selectable by relation name', async () => {
-        const query = db.profile.select('*', 'user');
-
-        assertType<Awaited<typeof query>, (Profile & { user: User })[]>();
-
-        expectSql(
-          query.toSql(),
-          `
-            SELECT
-              ${profileSelectAll},
-              (
-                SELECT row_to_json("t".*)
-                FROM (
-                  SELECT ${userSelectAll} FROM "user"
-                  WHERE "user"."id" = "profile"."userId"
-                  LIMIT $1
-                ) AS "t"
-              ) AS "user"
-            FROM "profile"
-          `,
-          [1],
         );
       });
 
