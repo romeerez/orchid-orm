@@ -2,13 +2,7 @@ import { createBaseTable } from '../table';
 import { tableToZod } from 'orchid-orm-schema-to-zod';
 import { now, testAdapter, testColumnTypes } from 'test-utils';
 import { orchidORM } from '../orm';
-import {
-  DeleteQueryData,
-  InsertQueryData,
-  Query,
-  testTransaction,
-  UpdateQueryData,
-} from 'pqb';
+import { Query, testTransaction } from 'pqb';
 
 export const BaseTable = createBaseTable({
   columnTypes: testColumnTypes,
@@ -293,28 +287,25 @@ export const useRelationCallback = (rel: { query: Query }) => {
   const afterUpdate = jest.fn();
   const beforeDelete = jest.fn();
   const afterDelete = jest.fn();
-  const relQuery = rel.query;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const q = rel.query.query as any;
 
   beforeAll(() => {
-    relQuery._beforeCreate(beforeCreate);
-    relQuery._afterCreate(afterCreate);
-    relQuery._beforeUpdate(beforeUpdate);
-    relQuery._afterUpdate(afterUpdate);
-    relQuery._beforeDelete(beforeDelete);
-    relQuery._afterDelete(afterDelete);
+    q.beforeCreate = [beforeCreate];
+    q.afterCreate = [afterCreate];
+    q.beforeUpdate = [beforeUpdate];
+    q.afterUpdate = [afterUpdate];
+    q.beforeDelete = [beforeDelete];
+    q.afterDelete = [afterDelete];
   });
 
   afterAll(() => {
-    let q;
-    q = relQuery.query as InsertQueryData;
-    q.beforeCreate?.pop();
-    q.afterCreate?.pop();
-    q = relQuery.query as UpdateQueryData;
-    q.beforeUpdate?.pop();
-    q.afterUpdate?.pop();
-    q = relQuery.query as DeleteQueryData;
-    q.beforeDelete?.pop();
-    q.afterDelete?.pop();
+    delete q.beforeCreate;
+    delete q.afterCreate;
+    delete q.beforeUpdate;
+    delete q.afterUpdate;
+    delete q.beforeDelete;
+    delete q.afterDelete;
   });
 
   return {

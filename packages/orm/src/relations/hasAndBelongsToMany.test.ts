@@ -312,23 +312,24 @@ describe('hasAndBelongsToMany', () => {
           `
             SELECT
               "u"."id" AS "Id",
-              (
-                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
-                FROM (
-                  SELECT
-                    "chats"."idOfChat" AS "IdOfChat",
-                    "chats"."title" AS "Title"
-                  FROM "chat" AS "chats"
-                  WHERE "chats"."title" = $1
-                    AND EXISTS (
-                      SELECT 1 FROM "chatUser"
-                      WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                        AND "chatUser"."userId" = "u"."id"
-                      LIMIT 1
-                    )
-                ) AS "t"
-              ) AS "chats"
+              COALESCE("chats".r, '[]') "chats"
             FROM "user" AS "u"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT
+                  "chats"."idOfChat" AS "IdOfChat",
+                  "chats"."title" AS "Title"
+                FROM "chat" AS "chats"
+                WHERE "chats"."title" = $1
+                  AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                      AND "chatUser"."userId" = "u"."id"
+                    LIMIT 1
+                  )
+              ) AS "t"
+            ) "chats" ON true
           `,
           ['title'],
         );
@@ -347,16 +348,18 @@ describe('hasAndBelongsToMany', () => {
         `
           SELECT
             "u"."id" AS "Id",
-            (
-              SELECT count(*) FROM "chat" AS "chats"
-              WHERE EXISTS (
-                SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                  AND "chatUser"."userId" = "u"."id"
-                LIMIT 1
-              )
-            ) AS "chatsCount"
+            "chatsCount".r "chatsCount"
           FROM "user" AS "u"
+          LEFT JOIN LATERAL (
+            SELECT count(*) r
+            FROM "chat" AS "chatsCount"
+            WHERE EXISTS (
+              SELECT 1 FROM "chatUser"
+              WHERE "chatUser"."chatId" = "chatsCount"."idOfChat"
+                AND "chatUser"."userId" = "u"."id"
+              LIMIT 1
+            )
+          ) "chatsCount" ON true
         `,
       );
     });
@@ -373,20 +376,18 @@ describe('hasAndBelongsToMany', () => {
         `
           SELECT
             "u"."id" AS "Id",
-            (
-              SELECT COALESCE(json_agg("c"), '[]')
-              FROM (
-                SELECT "chats"."title" AS "c"
-                FROM "chat" AS "chats"
-                WHERE EXISTS (
-                  SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                    AND "chatUser"."userId" = "u"."id"
-                  LIMIT 1
-                )
-              ) AS "t"
-            ) AS "titles"
+            COALESCE("titles".r, '[]') "titles"
           FROM "user" AS "u"
+          LEFT JOIN LATERAL (
+            SELECT json_agg("titles"."title") r
+            FROM "chat" AS "titles"
+            WHERE EXISTS (
+              SELECT 1 FROM "chatUser"
+              WHERE "chatUser"."chatId" = "titles"."idOfChat"
+                AND "chatUser"."userId" = "u"."id"
+              LIMIT 1
+            )
+          ) "titles" ON true
         `,
       );
     });
@@ -403,17 +404,18 @@ describe('hasAndBelongsToMany', () => {
         `
           SELECT
             "u"."id" AS "Id",
-            COALESCE((
-              SELECT true
-              FROM "chat" AS "chats"
-              WHERE EXISTS (
-                SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                  AND "chatUser"."userId" = "u"."id"
-                LIMIT 1
-              )
-            ), false) AS "hasChats"
+            COALESCE("hasChats".r, false) "hasChats"
           FROM "user" AS "u"
+          LEFT JOIN LATERAL (
+            SELECT true r
+            FROM "chat" AS "hasChats"
+            WHERE EXISTS (
+              SELECT 1 FROM "chatUser"
+              WHERE "chatUser"."chatId" = "hasChats"."idOfChat"
+                AND "chatUser"."userId" = "u"."id"
+              LIMIT 1
+            )
+          ) "hasChats" ON true
         `,
       );
     });

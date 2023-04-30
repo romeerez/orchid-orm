@@ -106,6 +106,7 @@ export const _joinLateral = <
   type: string,
   arg: Arg,
   cb: JoinLateralCallback<T, Arg, R>,
+  as?: string,
 ): JoinLateralResult<T, R, RequireJoined, RequireMain> => {
   let relation: Relation | undefined;
   if (typeof arg === 'string') {
@@ -144,7 +145,7 @@ export const _joinLateral = <
     setQueryObjectValue(q, 'joinedParsers', joinKey, result.query.parsers);
   }
 
-  return pushQueryValue(q, 'join', [type, result]) as JoinLateralResult<
+  return pushQueryValue(q, 'join', [type, result, as]) as JoinLateralResult<
     T,
     R,
     RequireJoined,

@@ -302,6 +302,7 @@ const applyRelation = (
 
   if (data.returns === 'one') {
     query._take();
+    query.query.returnsOne = true;
   }
 
   if (data.virtualColumn) {
@@ -309,7 +310,7 @@ const applyRelation = (
       data.virtualColumn;
   }
 
-  makeRelationQuery(dbTable, definedAs, relationName, data);
+  makeRelationQuery(dbTable, relationName, data, query);
 
   baseQuery.joinQuery = data.joinQuery;
 
@@ -335,17 +336,13 @@ const applyRelation = (
 
 const makeRelationQuery = (
   table: Query,
-  definedAs: string,
   relationName: string,
   data: RelationData,
+  q: Query,
 ) => {
   Object.defineProperty(table, relationName, {
     get() {
-      const toTable = this.db[definedAs].as(relationName) as Query;
-
-      if (data.returns === 'one') {
-        toTable._take();
-      }
+      const toTable = q.clone();
 
       const query = this.isSubQuery
         ? toTable

@@ -335,9 +335,14 @@ export const pushJoinSql = (
   query.join.forEach((item) => {
     if (Array.isArray(item)) {
       const q = item[1];
+      const { aliasValue } = ctx;
+      ctx.aliasValue = true;
       ctx.sql.push(
-        `${item[0]} LATERAL (${q.toSql(ctx).text}) "${getQueryAs(q)}" ON true`,
+        `${item[0]} LATERAL (${q.toSql(ctx).text}) "${
+          item[2] || getQueryAs(q)
+        }" ON true`,
       );
+      ctx.aliasValue = aliasValue;
     } else {
       const { target, conditions } = processJoinItem(
         ctx,
@@ -362,6 +367,7 @@ const skipQueryKeysForSubQuery: Record<string, boolean> = {
   or: true,
   returnType: true,
   joinedShapes: true,
+  returnsOne: true,
 };
 
 export const getIsJoinSubQuery = (query: QueryData, baseQuery: QueryData) => {

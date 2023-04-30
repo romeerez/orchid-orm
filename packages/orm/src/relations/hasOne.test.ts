@@ -48,9 +48,8 @@ describe('hasOne', () => {
         `
         SELECT ${profileSelectAll} FROM "profile"
         WHERE "profile"."userId" = $1
-        LIMIT $2
       `,
-        [UserId, 1],
+        [UserId],
       );
 
       const profile = await query;
@@ -74,9 +73,8 @@ describe('hasOne', () => {
               LIMIT 1
             )
             AND "profile"."bio" = $2
-          LIMIT $3
         `,
-        ['name', 'bio', 1],
+        ['name', 'bio'],
       );
     });
 
@@ -294,11 +292,10 @@ describe('hasOne', () => {
             SELECT ${profileSelectAll}
             FROM "profile" AS "p"
             WHERE "p"."bio" = $1 AND "p"."userId" = "user"."id"
-            LIMIT $2
           ) "p" ON true
-          WHERE "p"."bio" = $3
+          WHERE "p"."bio" = $2
         `,
-        ['one', 1, 'two'],
+        ['one', 'two'],
       );
     });
 
@@ -315,18 +312,16 @@ describe('hasOne', () => {
           `
             SELECT
               "u"."id" AS "Id",
-              (
-                SELECT row_to_json("t".*)
-                FROM (
-                  SELECT ${profileSelectAll} FROM "profile"
-                  WHERE "profile"."bio" = $1
-                    AND "profile"."userId" = "u"."id"
-                  LIMIT $2
-                ) AS "t"
-              ) AS "profile"
+              row_to_json("profile".*) "profile"
             FROM "user" AS "u"
+            LEFT JOIN LATERAL (
+              SELECT ${profileSelectAll}
+              FROM "profile"
+              WHERE "profile"."bio" = $1
+                AND "profile"."userId" = "u"."id"
+            ) "profile" ON true
           `,
-          ['bio', 1],
+          ['bio'],
         );
       });
 
@@ -345,12 +340,13 @@ describe('hasOne', () => {
           `
             SELECT
               "u"."id" AS "Id",
-              COALESCE((
-                SELECT true
-                FROM "profile"
-                WHERE "profile"."userId" = "u"."id"
-              ), false) AS "hasProfile"
+              COALESCE("hasProfile".r, false) "hasProfile"
             FROM "user" AS "u"
+            LEFT JOIN LATERAL (
+              SELECT true r
+              FROM "profile" AS "hasProfile"
+              WHERE "hasProfile"."userId" = "u"."id"
+            ) "hasProfile" ON true
           `,
         );
       });
@@ -1504,9 +1500,8 @@ describe('hasOne through', () => {
             AND "user"."id" = $1
           LIMIT 1
         )
-        LIMIT $2
       `,
-      [1, 1],
+      [1],
     );
   });
 
@@ -1531,9 +1526,8 @@ describe('hasOne through', () => {
             LIMIT 1
           )
           AND "profile"."bio" = $2
-        LIMIT $3
       `,
-      ['text', 'bio', 1],
+      ['text', 'bio'],
     );
   });
 
@@ -1707,11 +1701,10 @@ describe('hasOne through', () => {
               AND "user"."id" = "message"."authorId"
             LIMIT 1
           )
-          LIMIT $2
         ) "p" ON true
-        WHERE "p"."bio" = $3
+        WHERE "p"."bio" = $2
       `,
-      ['one', 1, 'two'],
+      ['one', 'two'],
     );
   });
 
@@ -1728,23 +1721,20 @@ describe('hasOne through', () => {
         `
           SELECT
             "m"."id" AS "Id",
-            (
-              SELECT row_to_json("t".*)
-              FROM (
-                SELECT ${profileSelectAll} FROM "profile"
-                WHERE "profile"."bio" = $1
-                  AND EXISTS (
-                        SELECT 1 FROM "user"
-                        WHERE "profile"."userId" = "user"."id"
-                          AND "user"."id" = "m"."authorId"
-                        LIMIT 1
-                      )
-                LIMIT $2
-              ) AS "t"
-            ) AS "profile"
+            row_to_json("profile".*) "profile"
           FROM "message" AS "m"
+          LEFT JOIN LATERAL (
+            SELECT ${profileSelectAll} FROM "profile"
+            WHERE "profile"."bio" = $1
+              AND EXISTS (
+                SELECT 1 FROM "user"
+                WHERE "profile"."userId" = "user"."id"
+                AND "user"."id" = "m"."authorId"
+                LIMIT 1
+              )
+          ) "profile" ON true
         `,
-        ['bio', 1],
+        ['bio'],
       );
     });
 
@@ -1763,17 +1753,18 @@ describe('hasOne through', () => {
         `
           SELECT
             "m"."id" AS "Id",
-            COALESCE((
-              SELECT true
-              FROM "profile"
-              WHERE EXISTS (
-                  SELECT 1 FROM "user"
-                  WHERE "profile"."userId" = "user"."id"
-                    AND "user"."id" = "m"."authorId"
-                  LIMIT 1
-                )
-            ), false) AS "hasProfile"
+            COALESCE("hasProfile".r, false) "hasProfile"
           FROM "message" AS "m"
+          LEFT JOIN LATERAL (
+            SELECT true r
+            FROM "profile" AS "hasProfile"
+            WHERE EXISTS (
+              SELECT 1 FROM "user"
+              WHERE "hasProfile"."userId" = "user"."id"
+              AND "user"."id" = "m"."authorId"
+              LIMIT 1
+            )
+          ) "hasProfile" ON true
         `,
       );
     });

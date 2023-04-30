@@ -79,6 +79,7 @@ export type SelectQueryData = CommonQueryData & {
   window?: WindowItem[];
   union?: { arg: UnionItem; kind: UnionKind; wrap?: boolean }[];
   order?: OrderItem[];
+  returnsOne?: true;
   limit?: number;
   offset?: number;
   for?: {

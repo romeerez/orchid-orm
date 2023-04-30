@@ -10,9 +10,8 @@ import {
 import { aggregateToSql } from './aggregate';
 import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
 import { makeSql, ToSqlCtx } from './toSql';
-import { relationQueryKey } from '../relations';
 import { SelectQueryData } from './data';
-import { Expression } from '../utils';
+import { Expression, getQueryAs } from '../utils';
 import { isRaw, raw } from 'orchid-core';
 
 const jsonColumnOrMethodToSql = (
@@ -92,7 +91,7 @@ export const selectToSql = (
 ): string => {
   if (query.select) {
     const list: string[] = [];
-    query.select.forEach((item) => {
+    for (const item of query.select) {
       if (typeof item === 'string') {
         list.push(
           item === '*'
@@ -128,7 +127,8 @@ export const selectToSql = (
             )}`,
           );
         } else if (isRaw(item)) {
-          list.push(getRaw(item, ctx.values));
+          const sql = getRaw(item, ctx.values);
+          list.push(ctx.aliasValue ? `${sql} r` : sql);
         } else if ('arguments' in item) {
           list.push(
             `${(item as SelectFunctionItem).function}(${selectToSql(
@@ -139,10 +139,11 @@ export const selectToSql = (
             )})${item.as ? ` AS ${q((item as { as: string }).as)}` : ''}`,
           );
         } else {
-          list.push(aggregateToSql(ctx, table, item, quotedAs));
+          const sql = aggregateToSql(ctx, table, item, quotedAs);
+          list.push(ctx.aliasValue ? `${sql} r` : sql);
         }
       }
-    });
+    }
     return list.join(', ');
   }
 
@@ -169,9 +170,28 @@ const pushSubQuerySql = (
 ) => {
   const { returnType = 'all' } = query.query;
 
-  const rel = query.query[relationQueryKey];
-  if (rel) {
-    query = rel.joinQuery(rel.sourceQuery, query);
+  if ((query.query as unknown as { joinedForSelect: true }).joinedForSelect) {
+    let sql;
+    switch (returnType) {
+      case 'one':
+      case 'oneOrThrow':
+        sql = `row_to_json("${getQueryAs(query)}".*)`;
+        break;
+      case 'all':
+      case 'pluck':
+      case 'value':
+      case 'valueOrThrow':
+      case 'rows':
+        sql = `"${getQueryAs(query)}".r`;
+        break;
+      case 'rowCount':
+      case 'void':
+        return;
+      default:
+        throw new UnhandledTypeError(query, returnType);
+    }
+    if (sql) list.push(`${coalesce(query, values, sql)} ${q(as)}`);
+    return;
   }
 
   switch (returnType) {
@@ -196,9 +216,9 @@ const pushSubQuerySql = (
       query._getOptional(raw(`COALESCE(json_agg("c"), '[]')`));
       break;
     }
-    case 'rows':
     case 'value':
     case 'valueOrThrow':
+    case 'rows':
     case 'rowCount':
     case 'void':
       break;
@@ -206,7 +226,14 @@ const pushSubQuerySql = (
       throw new UnhandledTypeError(query, returnType);
   }
 
-  let subQuerySql = `(${makeSql(query, { values }).text})`;
+  list.push(
+    `${coalesce(query, values, `(${makeSql(query, { values }).text})`)} AS ${q(
+      as,
+    )}`,
+  );
+};
+
+const coalesce = (query: Query, values: unknown[], sql: string) => {
   const { coalesceValue } = query.query;
   if (coalesceValue !== undefined) {
     let value;
@@ -220,7 +247,8 @@ const pushSubQuerySql = (
       values.push(coalesceValue);
       value = `$${values.length}`;
     }
-    subQuerySql = `COALESCE(${subQuerySql}, ${value})`;
+    return `COALESCE(${sql}, ${value})`;
   }
-  list.push(`${subQuerySql} AS ${q(as)}`);
+
+  return sql;
 };

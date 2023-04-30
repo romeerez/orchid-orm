@@ -46,12 +46,14 @@ type JsonPathQueryResult<
 export class Json {
   json<T extends Query>(
     this: T,
+    coalesce?: boolean,
   ): SetQueryReturnsValueOptional<T, StringColumn> {
-    return this.clone()._json();
+    return this.clone()._json(coalesce);
   }
 
   _json<T extends Query>(
     this: T,
+    coalesce?: boolean,
   ): SetQueryReturnsValueOptional<T, StringColumn> {
     const q = this._wrap(this.baseQuery.clone()) as T;
     // json_agg is used instead of jsonb_agg because it is 2x faster, according to my benchmarks
@@ -59,7 +61,9 @@ export class Json {
       raw(
         queryTypeWithLimitOne[this.query.returnType]
           ? `row_to_json("t".*)`
-          : `COALESCE(json_agg(row_to_json("t".*)), '[]')`,
+          : coalesce !== false
+          ? `COALESCE(json_agg(row_to_json("t".*)), '[]')`
+          : 'json_agg(row_to_json("t".*))',
       ),
     );
     return q as unknown as SetQueryReturnsValueOptional<T, StringColumn>;

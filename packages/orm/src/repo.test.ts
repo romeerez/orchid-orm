@@ -103,19 +103,16 @@ describe('createRepo', () => {
         `
           SELECT
             "otherTable"."id",
-            (
-              SELECT row_to_json("t".*)
-              FROM (
-                SELECT "some"."id", "some"."name"
-                FROM "someTable" AS "some"
-                WHERE "some"."id" = $1
-                  AND "some"."id" = "otherTable"."someId"
-                LIMIT $2
-              ) AS "t"
-            ) AS "some"
+            row_to_json("some".*) "some"
           FROM "otherTable"
+          LEFT JOIN LATERAL (
+            SELECT "some"."id", "some"."name"
+            FROM "someTable" AS "some"
+            WHERE "some"."id" = $1
+              AND "some"."id" = "otherTable"."someId"
+          ) "some" ON true
         `,
-        [123, 1],
+        [123],
       );
     });
   });

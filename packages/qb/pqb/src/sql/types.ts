@@ -141,7 +141,7 @@ export type SimpleJoinItem = {
   isSubQuery: boolean;
 };
 
-export type JoinLateralItem = [type: string, joined: Query];
+export type JoinLateralItem = [type: string, joined: Query, as?: string];
 
 export type WhereItem =
   | (Omit<

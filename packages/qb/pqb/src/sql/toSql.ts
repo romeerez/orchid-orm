@@ -26,6 +26,8 @@ export type ToSqlCtx = {
   onQueryBuilder: typeof OnQueryBuilder;
   sql: string[];
   values: unknown[];
+  // selected value in JOIN LATERAL will have an alias to reference it from SELECT
+  aliasValue?: true;
 };
 
 export type toSqlCacheKey = typeof toSqlCacheKey;
@@ -36,6 +38,10 @@ export type ToSqlOptions = {
   values?: unknown[];
 };
 
+type ToSqlOptionsInternal = ToSqlOptions & {
+  aliasValue?: true;
+};
+
 export const toSql = (table: Query, options?: ToSqlOptions): Sql => {
   return (
     (!options?.clearCache && table.query[toSqlCacheKey]) ||
@@ -43,17 +49,16 @@ export const toSql = (table: Query, options?: ToSqlOptions): Sql => {
   );
 };
 
-export const makeSql = (
-  table: Query,
-  { values = [] }: ToSqlOptions = {},
-): Sql => {
+export const makeSql = (table: Query, options?: ToSqlOptionsInternal): Sql => {
   const query = table.query;
   const sql: string[] = [];
+  const values = options?.values || [];
   const ctx: ToSqlCtx = {
     whereQueryBuilder: table.whereQueryBuilder,
     onQueryBuilder: table.onQueryBuilder,
     sql,
     values,
+    aliasValue: options?.aliasValue,
   };
 
   if (query.with) {
@@ -175,9 +180,11 @@ export const makeSql = (
     pushOrderBySql(ctx, query, quotedAs, query.order);
   }
 
-  const limit = queryTypeWithLimitOne[query.returnType] ? 1 : query.limit;
-  if (limit) {
-    sql.push(`LIMIT ${addValue(values, limit)}`);
+  if (!query.returnsOne) {
+    const limit = queryTypeWithLimitOne[query.returnType] ? 1 : query.limit;
+    if (limit) {
+      sql.push(`LIMIT ${addValue(values, limit)}`);
+    }
   }
 
   if (query.offset) {

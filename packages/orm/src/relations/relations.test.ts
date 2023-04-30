@@ -22,26 +22,24 @@ describe('relations', () => {
       query.toSql(),
       `
         SELECT
-          (
-            SELECT row_to_json("t".*)
-            FROM (
-              SELECT ${profileSelectAll} FROM "profile"
-              WHERE "profile"."bio" = $1
-                AND "profile"."userId" = "user"."id"
-              LIMIT $2
-            ) AS "t"
-          ) AS "profile",
-          (
-            SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
-            FROM (
-              SELECT ${messageSelectAll} FROM "message" AS "messages"
-              WHERE "messages"."text" = $3
-                AND "messages"."authorId" = "user"."id"
-            ) AS "t"
-          ) AS "messages"
+          row_to_json("profile".*) "profile",
+          COALESCE("messages".r, '[]') "messages"
         FROM "user"
+        LEFT JOIN LATERAL (
+          SELECT ${profileSelectAll} FROM "profile"
+          WHERE "profile"."bio" = $1
+            AND "profile"."userId" = "user"."id"
+        ) "profile" ON true
+        LEFT JOIN LATERAL (
+          SELECT json_agg(row_to_json("t".*)) r
+          FROM (
+            SELECT ${messageSelectAll} FROM "message" AS "messages"
+            WHERE "messages"."text" = $2
+              AND "messages"."authorId" = "user"."id"
+          ) AS "t"
+        ) "messages" ON true
       `,
-      ['bio', 1, 'text'],
+      ['bio', 'text'],
     );
   });
 

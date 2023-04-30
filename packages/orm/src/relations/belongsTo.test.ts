@@ -42,9 +42,8 @@ describe('belongsTo', () => {
         `
         SELECT ${userSelectAll} FROM "user"
         WHERE "user"."id" = $1
-        LIMIT $2
       `,
-        [UserId, 1],
+        [UserId],
       );
 
       const user = await query;
@@ -57,20 +56,21 @@ describe('belongsTo', () => {
         .where({ Bio: 'bio' })
         .user.where({ Name: 'name' });
 
+      assertType<Awaited<typeof query>, User>();
+
       expectSql(
         query.toSql(),
         `
           SELECT ${userSelectAll} FROM "user"
           WHERE EXISTS (
-                  SELECT 1 FROM "profile"
-                  WHERE "profile"."bio" = $1
-                    AND "profile"."userId" = "user"."id"
-                  LIMIT 1
-                )
+              SELECT 1 FROM "profile"
+              WHERE "profile"."bio" = $1
+                AND "profile"."userId" = "user"."id"
+              LIMIT 1
+            )
             AND "user"."name" = $2
-          LIMIT $3
         `,
-        ['bio', 'name', 1],
+        ['bio', 'name'],
       );
     });
 
@@ -216,18 +216,18 @@ describe('belongsTo', () => {
             SELECT ${userSelectAll}
             FROM "user" AS "u"
             WHERE "u"."name" = $1 AND "u"."id" = "profile"."userId"
-            LIMIT $2
           ) "u" ON true
-          WHERE "u"."name" = $3
+          WHERE "u"."name" = $2
         `,
-        ['one', 1, 'two'],
+        ['one', 'two'],
       );
     });
 
     describe('select', () => {
       it('should be selectable', async () => {
         const query = db.profile.as('p').select('Id', {
-          user: (q) => q.user.select('Id', 'Name').where({ Name: 'name' }),
+          user: (q) =>
+            q.user.as('u').select('Id', 'Name').where({ Name: 'name' }),
         });
 
         assertType<
@@ -240,19 +240,16 @@ describe('belongsTo', () => {
           `
             SELECT
               "p"."id" AS "Id",
-              (
-                SELECT row_to_json("t".*)
-                FROM (
-                  SELECT "user"."id" AS "Id", "user"."name" AS "Name"
-                  FROM "user"
-                  WHERE "user"."name" = $1
-                    AND "user"."id" = "p"."userId"
-                  LIMIT $2
-                ) AS "t"
-              ) AS "user"
+              row_to_json("user".*) "user"
             FROM "profile" AS "p"
+            LEFT JOIN LATERAL (
+              SELECT "user"."id" AS "Id", "user"."name" AS "Name"
+              FROM "user"
+              WHERE "user"."name" = $1
+                AND "user"."id" = "p"."userId"
+            ) "user" ON true
           `,
-          ['name', 1],
+          ['name'],
         );
       });
 
@@ -268,12 +265,13 @@ describe('belongsTo', () => {
           `
             SELECT
               "p"."id" AS "Id",
-              COALESCE((
-                SELECT true
-                FROM "user"
-                WHERE "user"."id" = "p"."userId"
-              ), false) AS "hasUser"
+              COALESCE("hasUser".r, false) "hasUser"
             FROM "profile" AS "p"
+            LEFT JOIN LATERAL (
+              SELECT true r
+              FROM "user" AS "hasUser"
+              WHERE "hasUser"."id" = "p"."userId"
+            ) "hasUser" ON true
           `,
         );
       });
@@ -473,16 +471,12 @@ describe('belongsTo', () => {
             [1, UserId, 'bio'],
           );
 
-          try {
-            const result = await q;
-            expect(result).toMatchObject({
-              Id: 1,
-              UserId,
-              Bio: 'bio',
-            });
-          } catch (err) {
-            console.log(err);
-          }
+          const result = await q;
+          expect(result).toMatchObject({
+            Id: 1,
+            UserId,
+            Bio: 'bio',
+          });
         });
       });
 

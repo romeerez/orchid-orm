@@ -325,15 +325,17 @@ describe('hasMany', () => {
           `
             SELECT
               "u"."id" AS "Id",
-              (
-                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
-                FROM (
-                  SELECT ${messageSelectAll} FROM "message" AS "messages"
-                  WHERE "messages"."text" = $1
-                    AND "messages"."authorId" = "u"."id"
-                ) AS "t"
-              ) AS "messages"
+              COALESCE("messages".r, '[]') "messages"
             FROM "user" AS "u"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT ${messageSelectAll}
+                FROM "message" AS "messages"
+                WHERE "messages"."text" = $1
+                  AND "messages"."authorId" = "u"."id"
+              ) AS "t"
+            ) "messages" ON true
           `,
           ['text'],
         );
@@ -355,11 +357,13 @@ describe('hasMany', () => {
         `
           SELECT
             "u"."id" AS "Id",
-            (
-              SELECT count(*) FROM "message" AS "messages"
-              WHERE "messages"."authorId" = "u"."id"
-            ) AS "messagesCount"
+            "messagesCount".r "messagesCount"
           FROM "user" AS "u"
+          LEFT JOIN LATERAL (
+            SELECT count(*) r
+            FROM "message" AS "messagesCount"
+            WHERE "messagesCount"."authorId" = "u"."id"
+          ) "messagesCount" ON true
         `,
       );
     });
@@ -376,15 +380,13 @@ describe('hasMany', () => {
         `
           SELECT
             "u"."id" AS "Id",
-            (
-              SELECT COALESCE(json_agg("c"), '[]')
-              FROM (
-                SELECT "messages"."text" AS "c"
-                FROM "message" AS "messages"
-                WHERE "messages"."authorId" = "u"."id"
-              ) AS "t"
-            ) AS "texts"
+            COALESCE("texts".r, '[]') "texts"
           FROM "user" AS "u"
+          LEFT JOIN LATERAL (
+            SELECT json_agg("texts"."text") r
+            FROM "message" AS "texts"
+            WHERE "texts"."authorId" = "u"."id"
+          ) "texts" ON true
         `,
       );
     });
@@ -404,12 +406,13 @@ describe('hasMany', () => {
         `
           SELECT
             "u"."id" AS "Id",
-            COALESCE((
-              SELECT true
-              FROM "message" AS "messages"
-              WHERE "messages"."authorId" = "u"."id"
-            ), false) AS "hasMessages"
+            COALESCE("hasMessages".r, false) "hasMessages"
           FROM "user" AS "u"
+          LEFT JOIN LATERAL (
+            SELECT true r
+            FROM "message" AS "hasMessages"
+            WHERE "hasMessages"."authorId" = "u"."id"
+          ) "hasMessages" ON true
         `,
       );
     });
@@ -2181,26 +2184,27 @@ describe('hasMany through', () => {
           `
             SELECT
               "p"."id" AS "Id",
-              (
-                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
-                FROM (
-                  SELECT ${chatSelectAll}
-                  FROM "chat" AS "chats"
-                  WHERE "chats"."title" = $1
-                    AND EXISTS (
-                      SELECT 1 FROM "user"
-                      WHERE EXISTS (
-                          SELECT 1 FROM "chatUser"
-                          WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                            AND "chatUser"."userId" = "user"."id"
-                          LIMIT 1
-                        )
-                        AND "user"."id" = "p"."userId"
+              COALESCE("chats".r, '[]') "chats"
+            FROM "profile" AS "p"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT ${chatSelectAll}
+                FROM "chat" AS "chats"
+                WHERE "chats"."title" = $1
+                  AND EXISTS (
+                    SELECT 1 FROM "user"
+                    WHERE EXISTS (
+                      SELECT 1 FROM "chatUser"
+                      WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                        AND "chatUser"."userId" = "user"."id"
                       LIMIT 1
                     )
-                ) AS "t"
-              ) AS "chats"
-            FROM "profile" AS "p"
+                  AND "user"."id" = "p"."userId"
+                  LIMIT 1
+                )
+              ) AS "t"  
+            ) "chats" ON true
           `,
           ['title'],
         );
@@ -2219,22 +2223,23 @@ describe('hasMany through', () => {
         `
           SELECT
             "p"."id" AS "Id",
-            (
-              SELECT count(*)
-              FROM "chat" AS "chats"
-              WHERE EXISTS (
-                  SELECT 1 FROM "user"
-                  WHERE EXISTS (
-                      SELECT 1 FROM "chatUser"
-                      WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                        AND "chatUser"."userId" = "user"."id"
-                      LIMIT 1
-                    )
-                    AND "user"."id" = "p"."userId"
-                  LIMIT 1
-                )
-            ) AS "chatsCount"
+            "chatsCount".r "chatsCount"
           FROM "profile" AS "p"
+          LEFT JOIN LATERAL (
+            SELECT count(*) r
+            FROM "chat" AS "chatsCount"
+            WHERE EXISTS (
+              SELECT 1 FROM "user"
+              WHERE EXISTS (
+                SELECT 1 FROM "chatUser"
+                WHERE "chatUser"."chatId" = "chatsCount"."idOfChat"
+                  AND "chatUser"."userId" = "user"."id"
+                LIMIT 1
+              )
+              AND "user"."id" = "p"."userId"
+              LIMIT 1
+            )
+          ) "chatsCount" ON true
         `,
       );
     });
@@ -2251,25 +2256,23 @@ describe('hasMany through', () => {
         `
           SELECT
             "p"."id" AS "Id",
-            (
-              SELECT COALESCE(json_agg("c"), '[]')
-              FROM (
-                SELECT "chats"."title" AS "c"
-                FROM "chat" AS "chats"
-                WHERE EXISTS (
-                  SELECT 1 FROM "user"
-                  WHERE EXISTS (
-                      SELECT 1 FROM "chatUser"
-                      WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                        AND "chatUser"."userId" = "user"."id"
-                      LIMIT 1
-                    )
-                    AND "user"."id" = "p"."userId"
-                  LIMIT 1
-                )
-              ) AS "t"
-            ) AS "titles"
+            COALESCE("titles".r, '[]') "titles"
           FROM "profile" AS "p"
+          LEFT JOIN LATERAL (
+            SELECT json_agg("titles"."title") r
+            FROM "chat" AS "titles"
+            WHERE EXISTS (
+              SELECT 1 FROM "user"
+              WHERE EXISTS (
+                SELECT 1 FROM "chatUser"
+                WHERE "chatUser"."chatId" = "titles"."idOfChat"
+                  AND "chatUser"."userId" = "user"."id"
+                LIMIT 1
+              )
+              AND "user"."id" = "p"."userId"
+              LIMIT 1
+            )
+          ) "titles" ON true
         `,
       );
     });
@@ -2286,22 +2289,23 @@ describe('hasMany through', () => {
         `
           SELECT
             "p"."id" AS "Id",
-            COALESCE((
-              SELECT true
-              FROM "chat" AS "chats"
-              WHERE EXISTS (
+            COALESCE("hasChats".r, false) "hasChats"
+          FROM "profile" AS "p"
+          LEFT JOIN LATERAL (
+            SELECT true r
+            FROM "chat" AS "hasChats"
+            WHERE EXISTS (
                 SELECT 1 FROM "user"
                 WHERE EXISTS (
-                    SELECT 1 FROM "chatUser"
-                    WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                      AND "chatUser"."userId" = "user"."id"
-                    LIMIT 1
-                  )
-                  AND "user"."id" = "p"."userId"
-                LIMIT 1
+                  SELECT 1 FROM "chatUser"
+                  WHERE "chatUser"."chatId" = "hasChats"."idOfChat"
+                    AND "chatUser"."userId" = "user"."id"
+                  LIMIT 1
               )
-            ), false) AS "hasChats"
-          FROM "profile" AS "p"
+              AND "user"."id" = "p"."userId"
+              LIMIT 1
+            )
+          ) "hasChats" ON true
         `,
       );
     });
@@ -2611,26 +2615,27 @@ describe('hasMany through', () => {
           `
             SELECT
               "c"."idOfChat" AS "IdOfChat",
-              (
-                SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
-                FROM (
-                  SELECT ${profileSelectAll}
-                  FROM "profile" AS "profiles"
-                  WHERE "profiles"."bio" = $1
-                    AND EXISTS (
-                      SELECT 1 FROM "user" AS "users"
-                      WHERE "profiles"."userId" = "users"."id"
-                        AND EXISTS (
-                          SELECT 1 FROM "chatUser"
-                          WHERE "chatUser"."userId" = "users"."id"
-                            AND "chatUser"."chatId" = "c"."idOfChat"
-                          LIMIT 1
-                        )
-                      LIMIT 1
-                    )
-                ) AS "t"
-              ) AS "profiles"
+              COALESCE("profiles".r, '[]') "profiles"
             FROM "chat" AS "c"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT ${profileSelectAll}
+                FROM "profile" AS "profiles"
+                WHERE "profiles"."bio" = $1
+                  AND EXISTS (
+                        SELECT 1 FROM "user" AS "users"
+                        WHERE "profiles"."userId" = "users"."id"
+                          AND EXISTS (
+                                SELECT 1 FROM "chatUser"
+                                WHERE "chatUser"."userId" = "users"."id"
+                                  AND "chatUser"."chatId" = "c"."idOfChat"
+                                LIMIT 1
+                            )
+                        LIMIT 1
+                    )
+              ) AS "t"
+            ) "profiles" ON true
           `,
           ['bio'],
         );
@@ -2651,22 +2656,23 @@ describe('hasMany through', () => {
           `
             SELECT
               "c"."idOfChat" AS "IdOfChat",
-              (
-                SELECT count(*)
-                FROM "profile" AS "profiles"
-                WHERE EXISTS (
-                  SELECT 1 FROM "user" AS "users"
-                  WHERE "profiles"."userId" = "users"."id"
-                    AND EXISTS (
-                      SELECT 1 FROM "chatUser"
-                      WHERE "chatUser"."userId" = "users"."id"
-                        AND "chatUser"."chatId" = "c"."idOfChat"
-                      LIMIT 1
-                    )
-                  LIMIT 1
-                )
-              ) AS "profilesCount"
+              "profilesCount".r "profilesCount"
             FROM "chat" AS "c"
+            LEFT JOIN LATERAL (
+              SELECT count(*) r
+              FROM "profile" AS "profilesCount"
+              WHERE EXISTS (
+                SELECT 1 FROM "user" AS "users"
+                WHERE "profilesCount"."userId" = "users"."id"
+                  AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."userId" = "users"."id"
+                      AND "chatUser"."chatId" = "c"."idOfChat"
+                    LIMIT 1
+                  )
+                LIMIT 1
+              )
+            ) "profilesCount" ON true
           `,
           [],
         );
@@ -2687,25 +2693,23 @@ describe('hasMany through', () => {
           `
             SELECT
               "c"."idOfChat" AS "IdOfChat",
-              (
-                SELECT COALESCE(json_agg("c"), '[]')
-                FROM (
-                  SELECT "profiles"."bio" AS "c"
-                  FROM "profile" AS "profiles"
-                  WHERE EXISTS (
-                    SELECT 1 FROM "user" AS "users"
-                    WHERE "profiles"."userId" = "users"."id"
-                      AND EXISTS (
-                        SELECT 1 FROM "chatUser"
-                        WHERE "chatUser"."userId" = "users"."id"
-                          AND "chatUser"."chatId" = "c"."idOfChat"
-                        LIMIT 1
-                      )
+              COALESCE("bios".r, '[]') "bios"
+            FROM "chat" AS "c"
+            LEFT JOIN LATERAL (
+              SELECT json_agg("bios"."bio") r
+              FROM "profile" AS "bios"
+              WHERE EXISTS (
+                SELECT 1 FROM "user" AS "users"
+                WHERE "bios"."userId" = "users"."id"
+                AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."userId" = "users"."id"
+                      AND "chatUser"."chatId" = "c"."idOfChat"
                     LIMIT 1
                   )
-                ) AS "t"
-              ) AS "bios"
-            FROM "chat" AS "c"
+                LIMIT 1
+              )
+            ) "bios" ON true
           `,
         );
       });
@@ -2725,22 +2729,24 @@ describe('hasMany through', () => {
           `
             SELECT
               "c"."idOfChat" AS "IdOfChat",
-              COALESCE((
-                SELECT true
-                FROM "profile" AS "profiles"
-                WHERE EXISTS (
-                  SELECT 1 FROM "user" AS "users"
-                  WHERE "profiles"."userId" = "users"."id"
-                    AND EXISTS (
-                      SELECT 1 FROM "chatUser"
-                      WHERE "chatUser"."userId" = "users"."id"
-                        AND "chatUser"."chatId" = "c"."idOfChat"
-                      LIMIT 1
-                    )
-                  LIMIT 1
-                )
-              ), false) AS "hasProfiles"
+              COALESCE("hasProfiles".r, false) "hasProfiles"
             FROM "chat" AS "c"
+            LEFT JOIN LATERAL (
+              SELECT true r
+              FROM "profile" AS "hasProfiles"
+              WHERE EXISTS (
+                SELECT 1
+                FROM "user" AS "users"
+                WHERE "hasProfiles"."userId" = "users"."id"
+                  AND EXISTS (
+                    SELECT 1 FROM "chatUser"
+                    WHERE "chatUser"."userId" = "users"."id"
+                      AND "chatUser"."chatId" = "c"."idOfChat"
+                    LIMIT 1
+                  )
+                LIMIT 1
+              )
+            ) "hasProfiles" ON true
           `,
         );
       });

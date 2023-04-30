@@ -1,13 +1,13 @@
-import { RawExpression, emptyObject } from 'orchid-core';
+import { RawExpression } from 'orchid-core';
 
 const keys: string[] = [];
 export const getRaw = (raw: RawExpression, valuesArray: unknown[]) => {
-  if (raw.__values === false) {
+  if (!raw.__values) {
     return raw.__raw;
   }
 
   const arr = raw.__raw.split("'");
-  const values = (raw.__values || emptyObject) as Record<string, unknown>;
+  const values = raw.__values as Record<string, unknown>;
   const len = arr.length;
   keys.length = 0;
   for (let i = 0; i < len; i += 2) {

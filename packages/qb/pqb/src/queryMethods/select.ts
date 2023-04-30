@@ -25,8 +25,10 @@ import {
   NullableColumn,
   ColumnTypeBase,
   EmptyObject,
+  raw,
 } from 'orchid-core';
 import { QueryBase } from '../queryBase';
+import { _joinLateral } from './_join';
 
 export type SelectArg<T extends QueryBase> =
   | '*'
@@ -166,25 +168,16 @@ export const addParserForSelectItem = <T extends Query>(
   q: T,
   as: string | getValueKey | undefined,
   key: string,
-  arg:
-    | StringKey<keyof T['selectable']>
-    | RawExpression
-    | ((q: T) => Query | RawExpression),
+  arg: StringKey<keyof T['selectable']> | RawExpression | Query,
 ): string | RawExpression | Query => {
   if (typeof arg === 'object') {
-    addParserForRawExpression(q, key, arg);
-    return arg;
-  } else if (typeof arg === 'function') {
-    q.isSubQuery = true;
-    const rel = arg(q);
-    q.isSubQuery = false;
-    if (isRaw(rel)) {
-      addParserForRawExpression(q, key, rel);
+    if (isRaw(arg)) {
+      addParserForRawExpression(q, key, arg);
     } else {
-      const { parsers } = rel.query;
+      const { parsers } = arg.query;
       if (parsers) {
         addParserToQuery(q.query, key, (item) => {
-          const t = rel.query.returnType || 'all';
+          const t = arg.query.returnType || 'all';
           subQueryResult.rows =
             t === 'value' || t === 'valueOrThrow'
               ? [[item]]
@@ -192,11 +185,11 @@ export const addParserForSelectItem = <T extends Query>(
               ? [item]
               : (item as unknown[]);
 
-          return rel.query.handleResult(rel, subQueryResult, true);
+          return arg.query.handleResult(arg, subQueryResult, true);
         });
       }
     }
-    return rel;
+    return arg;
   } else {
     if (q.query.joinedShapes?.[arg]) {
       addParsersForSelectJoined(q, arg, key);
@@ -247,7 +240,43 @@ export const processSelectArg = <T extends Query>(
     }
   }
 
-  return processSelectAsArg(q, arg, as);
+  const selectAs: Record<string, string | Query | RawExpression> = {};
+
+  for (const key in arg as SelectAsArg<T>) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let value = (arg as SelectAsArg<T>)[key] as any;
+
+    if (typeof value === 'function') {
+      const { isSubQuery } = q;
+      q.isSubQuery = true;
+      value = value(q);
+      q.isSubQuery = isSubQuery;
+
+      if (!isRaw(value) && value.joinQuery) {
+        value.query.as = key;
+        value = value.joinQuery(q, value);
+        value.query.joinedForSelect = true;
+
+        let query;
+        const returnType = value.query.returnType;
+        if (!returnType || returnType === 'all') {
+          query = value.json(false);
+          value.query.coalesceValue = raw("'[]'");
+        } else if (returnType === 'pluck') {
+          query = value.jsonAgg(value.query.select[0]);
+          value.query.coalesceValue = raw("'[]'");
+        } else {
+          query = value;
+        }
+
+        _joinLateral(q, 'LEFT JOIN', query, (q) => q, key);
+      }
+    }
+
+    selectAs[key] = addParserForSelectItem(q, as, key, value);
+  }
+
+  return { selectAs };
 };
 
 const processSelectColumnArg = <T extends Query>(
@@ -273,18 +302,6 @@ const processSelectColumnArg = <T extends Query>(
     if (parser) addParserToQuery(q.query, columnAs || arg, parser);
   }
   return arg;
-};
-
-const processSelectAsArg = <T extends Query>(
-  q: T,
-  arg: SelectAsArg<T>,
-  as?: string,
-): SelectItem => {
-  const selectAs: Record<string, string | Query | RawExpression> = {};
-  for (const key in arg) {
-    selectAs[key] = addParserForSelectItem(q, as, key, arg[key]);
-  }
-  return { selectAs };
 };
 
 // is mapping result of a query into a columns shape

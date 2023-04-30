@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.9.16
+
+### Patch Changes
+
+- Handle releations selects with `JOIN LATERAL` internally
+- dfc2b87: Remove ability to select a relation with a string in `select` because it may be confusing
+- Updated dependencies
+- Updated dependencies [dfc2b87]
+  - pqb@0.11.14
+
 ## 1.9.15
 
 ### Patch Changes
