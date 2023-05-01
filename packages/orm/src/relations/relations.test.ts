@@ -4,6 +4,7 @@ import {
   db,
   messageData,
   messageSelectAll,
+  profileData,
   profileSelectAll,
   userData,
   useTestORM,
@@ -80,5 +81,66 @@ describe('relations', () => {
 
     const result = await query;
     expect(result).toEqual({ ids: [] });
+  });
+
+  it('should load nested relations, parse columns correctly', async () => {
+    await db.message.create({
+      ...messageData,
+      chat: {
+        create: chatData,
+      },
+      user: {
+        create: {
+          ...userData,
+          profile: {
+            create: profileData,
+          },
+        },
+      },
+    });
+
+    const q = db.message.select('createdAt', {
+      chatUser: (q) =>
+        q.user.select('createdAt', {
+          userProfile: (q) => q.profile.select('createdAt'),
+        }),
+    });
+
+    expectSql(
+      q.toSql(),
+      `
+        SELECT
+          "message"."createdAt",
+          row_to_json("chatUser".*) "chatUser"
+        FROM "message"
+        LEFT JOIN LATERAL (
+          SELECT
+            "chatUser"."createdAt",
+            row_to_json("userProfile".*) "userProfile"
+          FROM "user" AS "chatUser"
+          LEFT JOIN LATERAL (
+            SELECT
+              "userProfile"."createdAt"
+            FROM "profile" AS "userProfile"
+            WHERE "userProfile"."userId" = "chatUser"."id"
+          ) "userProfile" ON true
+          WHERE "chatUser"."id" = "message"."authorId"
+        ) "chatUser" ON true
+      `,
+      [],
+    );
+
+    const res = await q;
+    expect(res).toEqual([
+      {
+        createdAt: expect.any(Date),
+        chatUser: {
+          createdAt: expect.any(Date),
+          userProfile: {
+            createdAt: expect.any(Date),
+          },
+        },
+      },
+    ]);
   });
 });

@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.9.18
+
+### Patch Changes
+
+- Fix selecting nested relations
+- Updated dependencies
+  - pqb@0.11.16
+
 ## 1.9.17
 
 ### Patch Changes

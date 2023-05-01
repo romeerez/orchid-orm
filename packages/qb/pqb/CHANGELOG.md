@@ -1,5 +1,11 @@
 # pqb
 
+## 0.11.16
+
+### Patch Changes
+
+- Fix selecting nested relations
+
 ## 0.11.15
 
 ### Patch Changes

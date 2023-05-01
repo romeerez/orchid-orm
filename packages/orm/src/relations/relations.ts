@@ -343,6 +343,9 @@ const makeRelationQuery = (
   Object.defineProperty(table, relationName, {
     get() {
       const toTable = q.clone();
+      if (this.query.joinRelationAs) {
+        toTable._as(this.query.joinRelationAs);
+      }
 
       const query = this.isSubQuery
         ? toTable

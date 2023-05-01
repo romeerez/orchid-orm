@@ -249,11 +249,11 @@ export const processSelectArg = <T extends Query>(
     if (typeof value === 'function') {
       const { isSubQuery } = q;
       q.isSubQuery = true;
+      q.query.joinRelationAs = key;
       value = value(q);
       q.isSubQuery = isSubQuery;
 
       if (!isRaw(value) && value.joinQuery) {
-        value.query.as = key;
         value = value.joinQuery(q, value);
         value.query.joinedForSelect = true;
 

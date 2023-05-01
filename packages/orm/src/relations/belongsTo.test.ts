@@ -226,8 +226,7 @@ describe('belongsTo', () => {
     describe('select', () => {
       it('should be selectable', async () => {
         const query = db.profile.as('p').select('Id', {
-          user: (q) =>
-            q.user.as('u').select('Id', 'Name').where({ Name: 'name' }),
+          user: (q) => q.user.select('Id', 'Name').where({ Name: 'name' }),
         });
 
         assertType<
