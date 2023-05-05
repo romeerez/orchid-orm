@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.9.20
+
+### Patch Changes
+
+- Fix selecting a plain value from a sub query in select
+- Updated dependencies
+  - pqb@0.11.18
+
 ## 1.9.19
 
 ### Patch Changes

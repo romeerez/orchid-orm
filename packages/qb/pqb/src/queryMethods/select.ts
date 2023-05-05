@@ -267,6 +267,17 @@ export const processSelectArg = <T extends Query>(
             ._jsonAgg(value.query.select[0]);
           value.query.coalesceValue = raw("'[]'");
         } else {
+          if (
+            (returnType === 'value' || returnType === 'valueOrThrow') &&
+            value.query.select
+          ) {
+            if (typeof value.query.select[0] === 'string') {
+              value.query.select[0] = {
+                selectAs: { r: value.query.select[0] },
+              };
+            }
+          }
+
           query = value;
         }
 

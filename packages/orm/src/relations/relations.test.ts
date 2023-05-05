@@ -168,4 +168,28 @@ describe('relations', () => {
       `,
     );
   });
+
+  it('should select and order by relation value', () => {
+    const q = db.user
+      .select({
+        bio: (q) => q.profile.get('Bio'),
+      })
+      .order({ bio: 'DESC' });
+
+    assertType<Awaited<typeof q>, { bio: string | null }[]>();
+
+    expectSql(
+      q.toSql(),
+      `
+        SELECT "bio".r "bio"
+        FROM "user"
+        LEFT JOIN LATERAL (
+          SELECT "profile"."bio" AS "r"
+          FROM "profile"
+          WHERE "profile"."userId" = "user"."id"
+        ) "bio" ON true
+        ORDER BY "bio".r DESC
+      `,
+    );
+  });
 });

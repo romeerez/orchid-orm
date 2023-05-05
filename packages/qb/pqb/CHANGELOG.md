@@ -1,5 +1,11 @@
 # pqb
 
+## 0.11.18
+
+### Patch Changes
+
+- Fix selecting a plain value from a sub query in select
+
 ## 0.11.17
 
 ### Patch Changes
