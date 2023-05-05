@@ -1,4 +1,4 @@
-import { expectSql } from 'test-utils';
+import { assertType, expectSql } from 'test-utils';
 import {
   chatData,
   db,
@@ -102,7 +102,8 @@ describe('relations', () => {
     const q = db.message.select('createdAt', {
       chatUser: (q) =>
         q.user.select('createdAt', {
-          userProfile: (q) => q.profile.select('createdAt'),
+          userProfile: (q) =>
+            q.profile.as('p').where({ Bio: 'bio' }).select('createdAt'),
         }),
     });
 
@@ -115,19 +116,19 @@ describe('relations', () => {
         FROM "message"
         LEFT JOIN LATERAL (
           SELECT
-            "chatUser"."createdAt",
+            "user"."createdAt",
             row_to_json("userProfile".*) "userProfile"
-          FROM "user" AS "chatUser"
+          FROM "user"
           LEFT JOIN LATERAL (
             SELECT
-              "userProfile"."createdAt"
-            FROM "profile" AS "userProfile"
-            WHERE "userProfile"."userId" = "chatUser"."id"
+              "p"."createdAt"
+            FROM "profile" AS "p"
+            WHERE "p"."bio" = $1 AND "p"."userId" = "user"."id"
           ) "userProfile" ON true
-          WHERE "chatUser"."id" = "message"."authorId"
+          WHERE "user"."id" = "message"."authorId"
         ) "chatUser" ON true
       `,
-      [],
+      ['bio'],
     );
 
     const res = await q;
@@ -142,5 +143,29 @@ describe('relations', () => {
         },
       },
     ]);
+  });
+
+  it('should select and order by relation count', () => {
+    const q = db.user
+      .select({
+        messagesCount: (q) => q.messages.count(),
+      })
+      .order({ messagesCount: 'DESC' });
+
+    assertType<Awaited<typeof q>, { messagesCount: number }[]>();
+
+    expectSql(
+      q.toSql(),
+      `
+        SELECT "messagesCount".r "messagesCount"
+        FROM "user"
+        LEFT JOIN LATERAL (
+          SELECT count(*) r
+          FROM "message" AS "messages"
+          WHERE "messages"."authorId" = "user"."id"
+        ) "messagesCount" ON true
+        ORDER BY "messagesCount".r DESC
+      `,
+    );
   });
 });

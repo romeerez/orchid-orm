@@ -50,7 +50,7 @@ export type CommonQueryData = {
   joinTo?: QueryBase;
   joinedShapes?: JoinedShapes;
   joinedParsers?: JoinedParsers;
-  joinRelationAs?: string;
+  joinedForSelect?: string;
   schema?: string;
   select?: SelectItem[];
   as?: string;

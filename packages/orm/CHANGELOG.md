@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.9.19
+
+### Patch Changes
+
+- Fix aliasing relation sub queries in select; Fix ordering by selected value
+- Updated dependencies
+  - pqb@0.11.17
+
 ## 1.9.18
 
 ### Patch Changes

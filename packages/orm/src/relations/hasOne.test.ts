@@ -344,8 +344,8 @@ describe('hasOne', () => {
             FROM "user" AS "u"
             LEFT JOIN LATERAL (
               SELECT true r
-              FROM "profile" AS "hasProfile"
-              WHERE "hasProfile"."userId" = "u"."id"
+              FROM "profile"
+              WHERE "profile"."userId" = "u"."id"
             ) "hasProfile" ON true
           `,
         );
@@ -1757,10 +1757,10 @@ describe('hasOne through', () => {
           FROM "message" AS "m"
           LEFT JOIN LATERAL (
             SELECT true r
-            FROM "profile" AS "hasProfile"
+            FROM "profile"
             WHERE EXISTS (
               SELECT 1 FROM "user"
-              WHERE "hasProfile"."userId" = "user"."id"
+              WHERE "profile"."userId" = "user"."id"
               AND "user"."id" = "m"."authorId"
               LIMIT 1
             )

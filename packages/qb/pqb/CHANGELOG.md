@@ -1,5 +1,11 @@
 # pqb
 
+## 0.11.17
+
+### Patch Changes
+
+- Fix aliasing relation sub queries in select; Fix ordering by selected value
+
 ## 0.11.16
 
 ### Patch Changes

@@ -11,7 +11,7 @@ import { aggregateToSql } from './aggregate';
 import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
 import { makeSql, ToSqlCtx } from './toSql';
 import { SelectQueryData } from './data';
-import { Expression, getQueryAs } from '../utils';
+import { Expression } from '../utils';
 import { isRaw, raw } from 'orchid-core';
 
 const jsonColumnOrMethodToSql = (
@@ -96,7 +96,7 @@ export const selectToSql = (
         list.push(
           item === '*'
             ? selectAllSql(table, query, quotedAs)
-            : revealColumnToSqlWithAs(table.query, item, quotedAs),
+            : revealColumnToSqlWithAs(table.query, item, quotedAs, true),
         );
       } else {
         if ('selectAs' in item) {
@@ -116,6 +116,7 @@ export const selectToSql = (
                   table.query.shape,
                   value as string,
                   quotedAs,
+                  true,
                 )} AS ${q(as)}`,
               );
             }
@@ -170,19 +171,19 @@ const pushSubQuerySql = (
 ) => {
   const { returnType = 'all' } = query.query;
 
-  if ((query.query as unknown as { joinedForSelect: true }).joinedForSelect) {
+  if (query.query.joinedForSelect) {
     let sql;
     switch (returnType) {
       case 'one':
       case 'oneOrThrow':
-        sql = `row_to_json("${getQueryAs(query)}".*)`;
+        sql = `row_to_json("${query.query.joinedForSelect}".*)`;
         break;
       case 'all':
       case 'pluck':
       case 'value':
       case 'valueOrThrow':
       case 'rows':
-        sql = `"${getQueryAs(query)}".r`;
+        sql = `"${query.query.joinedForSelect}".r`;
         break;
       case 'rowCount':
       case 'void':

@@ -138,7 +138,7 @@ export const _joinLateral = <
     result = relation.joinQuery(q, result as unknown as Query) as unknown as R;
   }
 
-  const joinKey = result.query.as || result.table;
+  const joinKey = as || result.query.as || result.table;
   if (joinKey) {
     const shape = getShapeFromSelect(result, true);
     setQueryObjectValue(q, 'joinedShapes', joinKey, shape);

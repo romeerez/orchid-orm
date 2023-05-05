@@ -268,8 +268,8 @@ describe('belongsTo', () => {
             FROM "profile" AS "p"
             LEFT JOIN LATERAL (
               SELECT true r
-              FROM "user" AS "hasUser"
-              WHERE "hasUser"."id" = "p"."userId"
+              FROM "user"
+              WHERE "user"."id" = "p"."userId"
             ) "hasUser" ON true
           `,
         );

@@ -361,8 +361,8 @@ describe('hasMany', () => {
           FROM "user" AS "u"
           LEFT JOIN LATERAL (
             SELECT count(*) r
-            FROM "message" AS "messagesCount"
-            WHERE "messagesCount"."authorId" = "u"."id"
+            FROM "message" AS "messages"
+            WHERE "messages"."authorId" = "u"."id"
           ) "messagesCount" ON true
         `,
       );
@@ -385,9 +385,9 @@ describe('hasMany', () => {
           LEFT JOIN LATERAL (
             SELECT json_agg("t"."Text") r
             FROM (
-              SELECT "texts"."text" AS "Text"
-              FROM "message" AS "texts"
-              WHERE "texts"."authorId" = "u"."id"
+              SELECT "messages"."text" AS "Text"
+              FROM "message" AS "messages"
+              WHERE "messages"."authorId" = "u"."id"
             ) AS "t"
           ) "texts" ON true
         `,
@@ -413,8 +413,8 @@ describe('hasMany', () => {
           FROM "user" AS "u"
           LEFT JOIN LATERAL (
             SELECT true r
-            FROM "message" AS "hasMessages"
-            WHERE "hasMessages"."authorId" = "u"."id"
+            FROM "message" AS "messages"
+            WHERE "messages"."authorId" = "u"."id"
           ) "hasMessages" ON true
         `,
       );
@@ -2230,12 +2230,12 @@ describe('hasMany through', () => {
           FROM "profile" AS "p"
           LEFT JOIN LATERAL (
             SELECT count(*) r
-            FROM "chat" AS "chatsCount"
+            FROM "chat" AS "chats"
             WHERE EXISTS (
               SELECT 1 FROM "user"
               WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chatId" = "chatsCount"."idOfChat"
+                WHERE "chatUser"."chatId" = "chats"."idOfChat"
                   AND "chatUser"."userId" = "user"."id"
                 LIMIT 1
               )
@@ -2264,13 +2264,13 @@ describe('hasMany through', () => {
           LEFT JOIN LATERAL (
             SELECT json_agg("t"."Title") r
             FROM (
-              SELECT "titles"."title" AS "Title"
-              FROM "chat" AS "titles"
+              SELECT "chats"."title" AS "Title"
+              FROM "chat" AS "chats"
               WHERE EXISTS (
                 SELECT 1 FROM "user"
                 WHERE EXISTS (
                   SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."chatId" = "titles"."idOfChat"
+                  WHERE "chatUser"."chatId" = "chats"."idOfChat"
                     AND "chatUser"."userId" = "user"."id"
                   LIMIT 1
                 )
@@ -2299,12 +2299,12 @@ describe('hasMany through', () => {
           FROM "profile" AS "p"
           LEFT JOIN LATERAL (
             SELECT true r
-            FROM "chat" AS "hasChats"
+            FROM "chat" AS "chats"
             WHERE EXISTS (
                 SELECT 1 FROM "user"
                 WHERE EXISTS (
                   SELECT 1 FROM "chatUser"
-                  WHERE "chatUser"."chatId" = "hasChats"."idOfChat"
+                  WHERE "chatUser"."chatId" = "chats"."idOfChat"
                     AND "chatUser"."userId" = "user"."id"
                   LIMIT 1
               )
@@ -2666,10 +2666,10 @@ describe('hasMany through', () => {
             FROM "chat" AS "c"
             LEFT JOIN LATERAL (
               SELECT count(*) r
-              FROM "profile" AS "profilesCount"
+              FROM "profile" AS "profiles"
               WHERE EXISTS (
                 SELECT 1 FROM "user" AS "users"
-                WHERE "profilesCount"."userId" = "users"."id"
+                WHERE "profiles"."userId" = "users"."id"
                   AND EXISTS (
                     SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."userId" = "users"."id"
@@ -2704,11 +2704,11 @@ describe('hasMany through', () => {
             LEFT JOIN LATERAL (
               SELECT json_agg("t"."Bio") r
               FROM (
-                SELECT "bios"."bio" AS "Bio"
-                FROM "profile" AS "bios"
+                SELECT "profiles"."bio" AS "Bio"
+                FROM "profile" AS "profiles"
                 WHERE EXISTS (
                   SELECT 1 FROM "user" AS "users"
-                  WHERE "bios"."userId" = "users"."id"
+                  WHERE "profiles"."userId" = "users"."id"
                   AND EXISTS (
                       SELECT 1 FROM "chatUser"
                       WHERE "chatUser"."userId" = "users"."id"
@@ -2742,11 +2742,11 @@ describe('hasMany through', () => {
             FROM "chat" AS "c"
             LEFT JOIN LATERAL (
               SELECT true r
-              FROM "profile" AS "hasProfiles"
+              FROM "profile" AS "profiles"
               WHERE EXISTS (
                 SELECT 1
                 FROM "user" AS "users"
-                WHERE "hasProfiles"."userId" = "users"."id"
+                WHERE "profiles"."userId" = "users"."id"
                   AND EXISTS (
                     SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."userId" = "users"."id"

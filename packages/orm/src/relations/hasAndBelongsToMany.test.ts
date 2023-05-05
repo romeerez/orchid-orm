@@ -352,10 +352,10 @@ describe('hasAndBelongsToMany', () => {
           FROM "user" AS "u"
           LEFT JOIN LATERAL (
             SELECT count(*) r
-            FROM "chat" AS "chatsCount"
+            FROM "chat" AS "chats"
             WHERE EXISTS (
               SELECT 1 FROM "chatUser"
-              WHERE "chatUser"."chatId" = "chatsCount"."idOfChat"
+              WHERE "chatUser"."chatId" = "chats"."idOfChat"
                 AND "chatUser"."userId" = "u"."id"
               LIMIT 1
             )
@@ -381,11 +381,11 @@ describe('hasAndBelongsToMany', () => {
           LEFT JOIN LATERAL (
             SELECT json_agg("t"."Title") r
             FROM (
-              SELECT "titles"."title" AS "Title"
-              FROM "chat" AS "titles"
+              SELECT "chats"."title" AS "Title"
+              FROM "chat" AS "chats"
               WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
-                WHERE "chatUser"."chatId" = "titles"."idOfChat"
+                WHERE "chatUser"."chatId" = "chats"."idOfChat"
                   AND "chatUser"."userId" = "u"."id"
                 LIMIT 1
               )
@@ -411,10 +411,10 @@ describe('hasAndBelongsToMany', () => {
           FROM "user" AS "u"
           LEFT JOIN LATERAL (
             SELECT true r
-            FROM "chat" AS "hasChats"
+            FROM "chat" AS "chats"
             WHERE EXISTS (
               SELECT 1 FROM "chatUser"
-              WHERE "chatUser"."chatId" = "hasChats"."idOfChat"
+              WHERE "chatUser"."chatId" = "chats"."idOfChat"
                 AND "chatUser"."userId" = "u"."id"
               LIMIT 1
             )

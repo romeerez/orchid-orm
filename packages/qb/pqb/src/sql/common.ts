@@ -25,6 +25,7 @@ export const revealColumnToSql = (
   shape: ColumnNamesShape,
   column: string,
   quotedAs?: string,
+  select?: true,
 ) => {
   const index = column.indexOf('.');
   if (index !== -1) {
@@ -35,7 +36,7 @@ export const revealColumnToSql = (
       getJoinedColumnName(data, shape, table, key, quoted === quotedAs) || key,
     )}`;
   } else if (data.joinedShapes?.[column]) {
-    return `row_to_json("${column}".*)`;
+    return select ? `row_to_json("${column}".*)` : `"${column}".r`;
   } else if (quotedAs && shape[column]) {
     return `${quotedAs}.${q(shape[column].data.name || column)}`;
   } else {
@@ -47,6 +48,7 @@ export const revealColumnToSqlWithAs = (
   data: QueryData,
   column: string,
   quotedAs?: string,
+  select?: true,
 ) => {
   const index = column.indexOf('.');
   if (index !== -1) {
@@ -64,7 +66,9 @@ export const revealColumnToSqlWithAs = (
       name && name !== key ? ` AS ${q(key)}` : ''
     }`;
   } else if (data.joinedShapes?.[column]) {
-    return `row_to_json("${column}".*) "${column}"`;
+    return select
+      ? `row_to_json("${column}".*) "${column}"`
+      : `"${column}".r "${column}"`;
   } else {
     const name = data.shape[column]?.data.name;
     return `${quotedAs ? `${quotedAs}.` : ''}${q(name || column)}${
@@ -79,9 +83,10 @@ export const rawOrRevealColumnToSql = (
   values: unknown[],
   quotedAs: string | undefined,
   shape: ColumnNamesShape = data.shape,
+  select?: true,
 ) => {
   return typeof expr === 'string'
-    ? revealColumnToSql(data, shape, expr, quotedAs)
+    ? revealColumnToSql(data, shape, expr, quotedAs, select)
     : getRaw(expr, values);
 };
 
