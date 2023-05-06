@@ -1069,6 +1069,30 @@ describe('belongsTo', () => {
         expect(user.Name).toBe('created');
       });
 
+      it('should create related record if it does not exist with a data from a callback', async () => {
+        const profile = await db.profile.create(profileData);
+
+        const updated = await db.profile
+          .selectAll()
+          .find(profile.Id)
+          .update({
+            user: {
+              upsert: {
+                update: {
+                  Name: 'updated',
+                },
+                create: () => ({
+                  ...userData,
+                  Name: 'created',
+                }),
+              },
+            },
+          });
+
+        const user = await db.profile.user(updated);
+        expect(user.Name).toBe('created');
+      });
+
       it('should throw in batch update', () => {
         expect(() =>
           db.profile.where({ Id: 1 }).update({

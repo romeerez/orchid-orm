@@ -341,11 +341,13 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
         ._update<WhereResult<Query & { meta: { hasSelect: true } }>>(update);
 
       if (updatedIds.length < ids.length) {
+        const data = typeof create === 'function' ? create() : create;
+
         await t.createMany(
           ids
             .filter((id) => !updatedIds.includes(id))
             .map((id) => ({
-              ...create,
+              ...data,
               [foreignKey]: id,
             })),
         );

@@ -287,7 +287,11 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
             .findBy({ [primaryKey]: id })
             ._update<WhereResult<Query>>(upsert.update);
         } else {
-          const result = await query.select(primaryKey)._create(upsert.create);
+          const data =
+            typeof upsert.create === 'function'
+              ? upsert.create()
+              : upsert.create;
+          const result = await query.select(primaryKey)._create(data);
 
           (state.updateData ??= {})[foreignKey] = result[primaryKey];
         }

@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.9.22
+
+### Patch Changes
+
+- Support returning data from a callback for creating record in `upsert`, `orCreate`
+- e8a863d: Support `.join()` on relations to have JOIN LATERAL instead of LEFT JOIN LATERAL
+- Updated dependencies
+- Updated dependencies [e8a863d]
+  - pqb@0.11.20
+
 ## 1.9.21
 
 ### Patch Changes

@@ -680,3 +680,21 @@ await db.book.find(1).update({
   },
 });
 ```
+
+`create` data may return from a callback, it will be called only if related record wasn't found for update:
+
+```ts
+await db.book.find(1).update({
+  author: {
+    upsert: {
+      update: {
+        name: 'new name',
+      },
+      create: () => ({
+        name: 'new name',
+        email: 'some@email.com',
+      }),
+    },
+  },
+});
+```

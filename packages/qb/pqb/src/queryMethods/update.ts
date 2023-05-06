@@ -53,7 +53,9 @@ type UpdateBelongsToData<T extends Query, Rel extends BelongsToRelation> =
       : {
           upsert: {
             update: UpdateData<Rel['table']>;
-            create: CreateData<Rel['nestedCreateQuery']>;
+            create:
+              | CreateData<Rel['nestedCreateQuery']>
+              | (() => CreateData<Rel['nestedCreateQuery']>);
           };
         });
 
@@ -68,7 +70,9 @@ type UpdateHasOneData<T extends Query, Rel extends HasOneRelation> =
           | {
               upsert: {
                 update: UpdateData<Rel['table']>;
-                create: CreateData<Rel['nestedCreateQuery']>;
+                create:
+                  | CreateData<Rel['nestedCreateQuery']>
+                  | (() => CreateData<Rel['nestedCreateQuery']>);
               };
             }
           | {

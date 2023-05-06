@@ -1150,6 +1150,27 @@ describe('hasOne', () => {
           expect(profile.Bio).toBe('created');
         });
 
+        it('should create related record if it does not exists with a data from a callback', async () => {
+          const user = await db.user.create(userData);
+
+          await db.user.find(user.Id).update({
+            profile: {
+              upsert: {
+                update: {
+                  Bio: 'updated',
+                },
+                create: () => ({
+                  ...profileData,
+                  Bio: 'created',
+                }),
+              },
+            },
+          });
+
+          const profile = await db.user.profile(user);
+          expect(profile.Bio).toBe('created');
+        });
+
         it('should throw in batch update', async () => {
           const query = db.user.where({ Id: { in: [1, 2, 3] } }).update({
             profile: {

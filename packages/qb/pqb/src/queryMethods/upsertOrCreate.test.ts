@@ -6,12 +6,12 @@ describe('upsertOrCreate', () => {
 
   describe('upsert', () => {
     it('should return void by default', () => {
-      const query = User.find(1).upsert({
+      const q = User.find(1).upsert({
         update: { name: 'name' },
         create: userData,
       });
 
-      assertType<Awaited<typeof query>, void>();
+      assertType<Awaited<typeof q>, void>();
     });
 
     it('should update record if exists', async () => {
@@ -37,6 +37,19 @@ describe('upsertOrCreate', () => {
             name: 'updated',
           },
           create: { ...userData, name: 'created' },
+        });
+
+      expect(user.name).toBe('created');
+    });
+
+    it('should create record if not exists with a data from a callback', async () => {
+      const user = await User.selectAll()
+        .find(123)
+        .upsert({
+          update: {
+            name: 'updated',
+          },
+          create: () => ({ ...userData, name: 'created' }),
         });
 
       expect(user.name).toBe('created');
@@ -121,6 +134,17 @@ describe('upsertOrCreate', () => {
           ...userData,
           name: 'created',
         });
+
+      expect(user.name).toBe('created');
+    });
+
+    it('should create record if not exists with data from a callback', async () => {
+      const user = await User.selectAll()
+        .find(123)
+        .orCreate(() => ({
+          ...userData,
+          name: 'created',
+        }));
 
       expect(user.name).toBe('created');
     });

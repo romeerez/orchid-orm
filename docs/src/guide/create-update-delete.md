@@ -151,6 +151,17 @@ const user = await User.selectAll().find({ email: 'some@email.com' }).orCreate({
 });
 ```
 
+The data may be returned from a function, it won't be called if the record was found:
+
+```ts
+const user = await User.selectAll().find({ email: 'some@email.com' }).orCreate(
+  () => ({
+    email: 'some@email.com',
+    name: 'created user',
+  }),
+);
+```
+
 ## onConflict
 
 A modifier for creating queries that specify alternative behavior in the case of a conflict.
@@ -449,6 +460,22 @@ const user = await User.selectAll()
       email: 'some@email.com',
       name: 'created user',
     },
+  });
+```
+
+The data for `create` may be returned from a function, it won't be called if a record was updated:
+
+```ts
+const user = await User.selectAll()
+  .find({ email: 'some@email.com' })
+  .upsert({
+    update: {
+      name: 'updated user',
+    },
+    create: () => ({
+      email: 'some@email.com',
+      name: 'created user',
+    }),
   });
 ```
 

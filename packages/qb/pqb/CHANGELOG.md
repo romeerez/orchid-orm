@@ -1,5 +1,12 @@
 # pqb
 
+## 0.11.20
+
+### Patch Changes
+
+- Support returning data from a callback for creating record in `upsert`, `orCreate`
+- e8a863d: Support `.join()` on relations to have JOIN LATERAL instead of LEFT JOIN LATERAL
+
 ## 0.11.19
 
 ### Patch Changes

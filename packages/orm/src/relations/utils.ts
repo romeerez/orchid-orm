@@ -39,7 +39,7 @@ export type NestedUpdateOneItem = {
   update?: UpdateData<Query>;
   upsert?: {
     update: UpdateData<Query>;
-    create: Record<string, unknown>;
+    create: Record<string, unknown> | (() => Record<string, unknown>);
   };
   create: Record<string, unknown>;
 };
