@@ -128,4 +128,8 @@ export type RelationQuery<
       : {
           [K in DeleteMethodsNames]: never;
         }),
-> = ((params: Params) => Q) & Q;
+> = ((params: Params) => Q) &
+  Q & {
+    // INNER JOIN the current relation instead of the default OUTER behavior
+    join<T extends Query>(this: T): T;
+  };

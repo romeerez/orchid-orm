@@ -281,7 +281,13 @@ export const processSelectArg = <T extends Query>(
           query = value;
         }
 
-        _joinLateral(q, 'LEFT JOIN', query, (q) => q, key);
+        _joinLateral(
+          q,
+          value.query.innerJoinLateral ? 'JOIN' : 'LEFT JOIN',
+          query,
+          (q) => q,
+          key,
+        );
       }
     }
 

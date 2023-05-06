@@ -166,6 +166,23 @@ const result: Result = await db.post
   .take();
 ```
 
+As described in [join: select relation](/guide/join.html#select-relation),
+you can set empty `.join` on the relation
+if you want to filter out main table records that don't have a matching relation:
+
+```ts
+// load only those authors who have at least one book that is published after 2000
+// with a books that are published after 2000
+await db.author.select({
+  books: (q) => q.books.join().where({ yearPublished: { gte: 2000 } }),
+})
+
+// load only books of female authors
+await db.books.select({
+  author: (q) => q.author.join().where({ gender: 'female' }),
+})
+```
+
 ## create update delete
 
 `Orchid ORM` makes it very easy to do modifications of related records,

@@ -4,6 +4,7 @@ import {
   db,
   messageData,
   messageSelectAll,
+  Profile,
   profileData,
   profileSelectAll,
   userData,
@@ -189,6 +190,27 @@ describe('relations', () => {
           WHERE "profile"."userId" = "user"."id"
         ) "bio" ON true
         ORDER BY "bio".r DESC
+      `,
+    );
+  });
+
+  it('should support join() when selecting relation for an INNER join', () => {
+    const q = db.user.select({
+      profile: (q) => q.profile.join(),
+    });
+
+    assertType<Awaited<typeof q>, { profile: Profile }[]>();
+
+    expectSql(
+      q.toSql(),
+      `
+        SELECT row_to_json("profile".*) "profile"
+        FROM "user"
+        JOIN LATERAL (
+          SELECT ${profileSelectAll}
+          FROM "profile"
+          WHERE "profile"."userId" = "user"."id"
+        ) "profile" ON true
       `,
     );
   });

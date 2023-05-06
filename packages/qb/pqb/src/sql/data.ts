@@ -51,6 +51,7 @@ export type CommonQueryData = {
   joinedShapes?: JoinedShapes;
   joinedParsers?: JoinedParsers;
   joinedForSelect?: string;
+  innerJoinLateral?: true;
   schema?: string;
   select?: SelectItem[];
   as?: string;

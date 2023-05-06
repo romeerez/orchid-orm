@@ -314,6 +314,17 @@ const applyRelation = (
 
   baseQuery.joinQuery = data.joinQuery;
 
+  const { join: originalJoin } = baseQuery;
+  baseQuery.join = function (...args: unknown[]) {
+    if (args.length) {
+      return originalJoin.apply(this, args);
+    } else {
+      const q = this.clone();
+      q.query.innerJoinLateral = true;
+      return q;
+    }
+  };
+
   (dbTable.relations as Record<string, unknown>)[relationName] = {
     type,
     key: relationName,
