@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.9.21
+
+### Patch Changes
+
+- Allow to customize timestamp default value with `nowSQL` option of base table
+- Updated dependencies
+  - pqb@0.11.19
+  - orchid-core@0.4.6
+
 ## 1.9.20
 
 ### Patch Changes

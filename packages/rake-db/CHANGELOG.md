@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.8.18
+
+### Patch Changes
+
+- Allow to customize timestamp default value with `nowSQL` option of base table
+- Updated dependencies
+  - pqb@0.11.19
+  - orchid-core@0.4.6
+
 ## 2.8.17
 
 ### Patch Changes

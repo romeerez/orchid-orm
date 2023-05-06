@@ -128,10 +128,12 @@ export type SinglePrimaryKey<Shape extends ColumnsShapeBase> = StringKey<
   }[keyof Shape]
 >;
 
+// type of columns selected by default, `hidden` columns are omitted
 export type DefaultSelectColumns<S extends ColumnsShapeBase> = {
   [K in keyof S]: S[K]['data']['isHidden'] extends true ? never : K;
 }[StringKey<keyof S>][];
 
+// clone column type and set data to it
 export const setColumnData = <
   T extends ColumnTypeBase,
   K extends keyof T['data'],
@@ -145,6 +147,7 @@ export const setColumnData = <
   return cloned;
 };
 
+// clone column type and push data to array property of it
 export const pushColumnData = <
   T extends ColumnTypeBase,
   K extends keyof T['data'],
@@ -198,6 +201,7 @@ export type ColumnDataBase = {
   errors?: Record<string, string>;
 };
 
+// chain of column refinements and transformations
 export type ColumnChain = (
   | ['transform', (input: unknown, ctx: ValidationContext) => unknown]
   | ['to', (input: unknown) => JSONTypeAny | undefined, JSONTypeAny]
@@ -205,16 +209,39 @@ export type ColumnChain = (
   | ['superRefine', (input: unknown, ctx: ValidationContext) => unknown]
 )[];
 
+// current name of the column, set by `name` method
 let currentName: string | undefined;
+
+// set current name of the column
 export function name<T extends ColumnTypesBase>(this: T, name: string): T {
   currentName = name;
   return this;
 }
 
+// consume column name: reset current name and return the value it contained
 export const consumeColumnName = () => {
   const name = currentName;
   currentName = undefined;
   return name;
+};
+
+// by default, updatedAt and createdAt timestamps are defaulted to now()
+const defaultNowFn = 'now()';
+
+// stores SQL to use as default for updatedAt and createdAt
+let currentNowFn = defaultNowFn;
+
+// change default SQL for updatedAt and createdAt
+export const setDefaultNowFn = (sql: string) => {
+  currentNowFn = sql;
+};
+
+// get default SQL for updatedAt and createdAt
+export const getDefaultNowFn = () => currentNowFn;
+
+// reset default SQL for updatedAt and createdAt to now()
+export const resetDefaultNowFn = () => {
+  currentNowFn = defaultNowFn;
 };
 
 // base column type
@@ -292,6 +319,7 @@ export abstract class ColumnTypeBase<
     );
   }
 
+  // mark the column as nullable
   nullable<T extends ColumnTypeBase>(this: T): NullableColumn<T> {
     return setColumnData(
       this,

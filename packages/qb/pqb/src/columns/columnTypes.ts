@@ -54,6 +54,7 @@ import {
   name,
   raw,
   RawExpression,
+  setDefaultNowFn,
   toArray,
 } from 'orchid-core';
 import { ArrayColumn } from './array';
@@ -153,8 +154,11 @@ export const getColumnTypes = <
 >(
   types: CT,
   fn: (t: CT) => Shape,
+  nowSQL: string | undefined,
   data: TableData = newTableData(),
 ) => {
+  if (nowSQL) setDefaultNowFn(nowSQL);
+
   resetTableData(data);
   return fn(types);
 };
@@ -430,8 +434,8 @@ export const columnTypes = {
 
   ...makeTimestampsHelpers(
     makeRegexToFindInSql('\\bupdatedAt\\b"?\\s*='),
-    raw('"updatedAt" = now()'),
+    '"updatedAt"',
     makeRegexToFindInSql('\\bupdated_at\\b"?\\s*='),
-    raw('"updated_at" = now()'),
+    '"updated_at"',
   ),
 };

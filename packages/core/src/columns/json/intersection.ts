@@ -2,6 +2,7 @@ import { constructType, JSONType, JSONTypeAny, toCode } from './typeBase';
 import { toArray } from '../../utils';
 import { addCode } from '../code';
 
+// intersection of two JSON types
 export type JSONIntersection<
   Left extends JSONTypeAny,
   Right extends JSONTypeAny,
@@ -10,6 +11,7 @@ export type JSONIntersection<
   right: Right;
 };
 
+// constructor of JSON type intersection
 export const intersection = <
   Left extends JSONTypeAny,
   Right extends JSONTypeAny,

@@ -69,7 +69,7 @@ export const createTable = async <
   );
   types[snakeCaseKey] = snakeCase;
 
-  const shape = getColumnTypes(types, fn);
+  const shape = getColumnTypes(types, fn, migration.options.baseTable?.nowSQL);
   const tableData = getTableData();
   const ast = makeAst(
     up,

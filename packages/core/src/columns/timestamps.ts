@@ -1,5 +1,9 @@
 import { getRawSql, isRaw, raw, RawExpression } from '../raw';
-import { ColumnTypeBase, ColumnWithDefault } from './columnType';
+import {
+  ColumnTypeBase,
+  ColumnWithDefault,
+  getDefaultNowFn,
+} from './columnType';
 import { pushOrNewArrayToObject } from '../utils';
 import { snakeCaseKey } from './types';
 
@@ -25,17 +29,17 @@ const makeInjector =
 
 export const makeTimestampsHelpers = (
   updatedAtRegex: RegExp,
-  updateUpdatedAtItem: RawExpression,
+  quotedUpdatedAt: string,
   updatedAtRegexSnake: RegExp,
-  updateUpdatedAtItemSnake: RawExpression,
+  quotedUpdatedAtSnakeCase: string,
 ) => {
-  const updatedAtInjector = makeInjector(
-    updatedAtRegex,
-    updateUpdatedAtItem,
-    'updatedAt',
-  );
+  const addHookForUpdate = (now: string) => (q: unknown) => {
+    const updatedAtInjector = makeInjector(
+      updatedAtRegex,
+      raw(`${quotedUpdatedAt} = ${now}`),
+      'updatedAt',
+    );
 
-  const addHookForUpdate = (q: unknown) => {
     pushOrNewArrayToObject(
       (q as { query: Record<string, (typeof updatedAtInjector)[]> }).query,
       'updateData',
@@ -43,13 +47,13 @@ export const makeTimestampsHelpers = (
     );
   };
 
-  const updatedAtInjectorSnake = makeInjector(
-    updatedAtRegexSnake,
-    updateUpdatedAtItemSnake,
-    'updated_at',
-  );
+  const addHookForUpdateSnake = (now: string) => (q: unknown) => {
+    const updatedAtInjectorSnake = makeInjector(
+      updatedAtRegexSnake,
+      raw(`${quotedUpdatedAtSnakeCase} = ${now}`),
+      'updated_at',
+    );
 
-  const addHookForUpdateSnake = (q: unknown) => {
     pushOrNewArrayToObject(
       (q as { query: Record<string, (typeof updatedAtInjectorSnake)[]> }).query,
       'updateData',
@@ -66,11 +70,13 @@ export const makeTimestampsHelpers = (
       if ((this as { [snakeCaseKey]?: boolean })[snakeCaseKey])
         return this.timestampsSnakeCase();
 
-      const updatedAt = this.timestamp().default(raw('now()'));
-      updatedAt.data.modifyQuery = addHookForUpdate;
+      const now = getDefaultNowFn();
+      const nowRaw = raw(now);
+      const updatedAt = this.timestamp().default(nowRaw);
+      updatedAt.data.modifyQuery = addHookForUpdate(now);
 
       return {
-        createdAt: this.timestamp().default(raw('now()')),
+        createdAt: this.timestamp().default(nowRaw),
         updatedAt,
       };
     },
@@ -78,13 +84,13 @@ export const makeTimestampsHelpers = (
       name(name: string): { timestamp(): T };
       timestamp(): T;
     }): Timestamps<T> {
-      const updatedAt = this.name('updated_at')
-        .timestamp()
-        .default(raw('now()'));
-      updatedAt.data.modifyQuery = addHookForUpdateSnake;
+      const now = getDefaultNowFn();
+      const nowRaw = raw(now);
+      const updatedAt = this.name('updated_at').timestamp().default(nowRaw);
+      updatedAt.data.modifyQuery = addHookForUpdateSnake(now);
 
       return {
-        createdAt: this.name('created_at').timestamp().default(raw('now()')),
+        createdAt: this.name('created_at').timestamp().default(nowRaw),
         updatedAt,
       };
     },
@@ -96,11 +102,13 @@ export const makeTimestampsHelpers = (
       if ((this as { [snakeCaseKey]?: boolean })[snakeCaseKey])
         return this.timestampsNoTZSnakeCase();
 
-      const updatedAt = this.timestampNoTZ().default(raw('now()'));
-      updatedAt.data.modifyQuery = addHookForUpdate;
+      const now = getDefaultNowFn();
+      const nowRaw = raw(now);
+      const updatedAt = this.timestampNoTZ().default(nowRaw);
+      updatedAt.data.modifyQuery = addHookForUpdate(now);
 
       return {
-        createdAt: this.timestampNoTZ().default(raw('now()')),
+        createdAt: this.timestampNoTZ().default(nowRaw),
         updatedAt,
       };
     },
@@ -108,15 +116,13 @@ export const makeTimestampsHelpers = (
       name(name: string): { timestampNoTZ(): T };
       timestampNoTZ(): T;
     }): Timestamps<T> {
-      const updatedAt = this.name('updated_at')
-        .timestampNoTZ()
-        .default(raw('now()'));
-      updatedAt.data.modifyQuery = addHookForUpdateSnake;
+      const now = getDefaultNowFn();
+      const nowRaw = raw(now);
+      const updatedAt = this.name('updated_at').timestampNoTZ().default(nowRaw);
+      updatedAt.data.modifyQuery = addHookForUpdateSnake(now);
 
       return {
-        createdAt: this.name('created_at')
-          .timestampNoTZ()
-          .default(raw('now()')),
+        createdAt: this.name('created_at').timestampNoTZ().default(nowRaw),
         updatedAt,
       };
     },

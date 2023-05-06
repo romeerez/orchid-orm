@@ -10,8 +10,10 @@ import { arrayMethods, ArrayMethods } from '../commonMethods';
 import { toArray } from '../../utils';
 import { addCode, arrayDataToCode } from '../code';
 
+// 'many' is when elements count does not matter, 'atLeastOne' to require at least one element
 export type ArrayCardinality = 'many' | 'atLeastOne';
 
+// get output type of array JSON type
 type ArrayOutputType<
   T extends JSONTypeAny,
   Cardinality extends ArrayCardinality = 'many',
@@ -19,6 +21,7 @@ type ArrayOutputType<
   ? [T['type'], ...T['type'][]]
   : T['type'][];
 
+// Array JSON type
 export interface JSONArray<
   Type extends JSONTypeAny,
   Cardinality extends ArrayCardinality = 'many',
@@ -35,6 +38,7 @@ export interface JSONArray<
   ): JSONArray<DeepPartial<Type>, Cardinality>;
 }
 
+// Array JSON type constructor
 export const array = <Type extends JSONTypeAny>(
   element: Type,
 ): JSONArray<Type> => {

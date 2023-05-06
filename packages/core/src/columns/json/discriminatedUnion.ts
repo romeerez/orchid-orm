@@ -3,6 +3,7 @@ import { JSONObject, JSONObjectShape } from './object';
 import { JSONLiteral } from './literal';
 import { singleQuote } from '../../utils';
 
+// JSON type for the union of objects, where object type is determined by a specific key
 export interface JSONDiscriminatedUnion<
   Discriminator extends string,
   DiscriminatorValue extends Primitive,
@@ -37,6 +38,7 @@ export interface JSONDiscriminatedUnion<
   // >;
 }
 
+// type for a single object in a discriminated union
 export type JSONDiscriminatedObject<
   Discriminator extends string,
   DiscriminatorValue extends Primitive,
@@ -46,6 +48,7 @@ export type JSONDiscriminatedObject<
   any
 >;
 
+// Discriminated union constructor
 export const discriminatedUnion = <
   Discriminator extends string,
   DiscriminatorValue extends Primitive,

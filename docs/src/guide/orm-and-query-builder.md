@@ -167,6 +167,29 @@ export class SnakeCaseTable extends BaseTable {
 }
 ```
 
+### nowSQL option
+
+For the specific case you can use `nowSQL` option to specify SQL for a current time.
+
+If you're using `timestamp` and not `timestampNoTZ` there is no problem,
+or if you're using `timestampNoTZ` in a database where time zone is UTC there is also no problem,
+but if you're using `timestampNoTZ` in a database with a different time zone,
+and you still want `updatedAt` and `createdAt` columns to automatically be saved with a current time in UTC,
+you can specify the `nowSQL` for the base table:
+
+```ts
+import { createBaseTable } from 'orchid-orm';
+
+export const BaseTable = createBaseTable({
+  nowSql: `now() AT TIME ZONE 'UTC'`,
+  
+  // ...other options
+});
+```
+
+By default, `Orchid ORM` is using `now()` for a timestamp value of `updatedAt` and `createdAt`, in the example above we
+override it to `now() AT TIME ZONE 'UTC'` so it produces UTC timestamp for `timestampNoTZ` columns even in database in different time zone.
+
 ## createDb
 
 For the case of using the query builder as a standalone tool, use `createDb` from `pqb` package.
@@ -186,6 +209,9 @@ const db = createDb({
 
   // columns in db are in snake case:
   snakeCase: true,
+  
+  // override default SQL for timestamp, see `nowSQL` above
+  nowSql: `now() AT TIME ZONE 'UTC'`,
 
   // override column types:
   columnTypes: (t) => ({

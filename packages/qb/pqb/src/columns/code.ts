@@ -22,7 +22,7 @@ const isDefaultTimeStamp = (item: ColumnTypeBase) => {
   if (item.dataType !== 'timestamptz') return false;
 
   const def = item.data.default;
-  return def && isRaw(def) && def.__raw === 'now()';
+  return def && isRaw(def) && def.__raw.startsWith('now()');
 };
 
 const combineCodeElements = (input: Code): Code => {

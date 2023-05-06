@@ -1,5 +1,6 @@
 import { constructType, JSONType, toCode } from './typeBase';
 
+// JSON type for native TS Enum
 export interface JSONNativeEnum<T extends EnumLike>
   extends JSONType<T[keyof T], 'nativeEnum'> {
   dataType: 'nativeEnum';
@@ -7,8 +8,10 @@ export interface JSONNativeEnum<T extends EnumLike>
   options: (number | string)[];
 }
 
+// type for native enum
 export type EnumLike = { [k: string]: string | number; [nu: number]: string };
 
+// Filter native enum values: filter out number values, filter out duplicates
 export const getValidEnumValues = (obj: EnumLike) => {
   const values: (number | string)[] = [];
   Object.keys(obj).forEach((k) => {
@@ -19,6 +22,7 @@ export const getValidEnumValues = (obj: EnumLike) => {
   return values;
 };
 
+// constructor for JSON native enum type
 export const nativeEnum = <T extends EnumLike>(givenEnum: T) => {
   const options = getValidEnumValues(givenEnum);
 

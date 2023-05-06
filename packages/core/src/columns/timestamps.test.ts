@@ -1,5 +1,9 @@
 import { createDb } from 'pqb';
 import { expectSql, now, testDb, useTestDatabase } from 'test-utils';
+import { setDefaultNowFn } from 'orchid-core';
+
+// now() should be customizable: https://github.com/romeerez/orchid-orm/issues/71
+setDefaultNowFn('custom_now()');
 
 describe('timestamps methods', () => {
   useTestDatabase();
@@ -10,25 +14,23 @@ describe('timestamps methods', () => {
       ...t[key as 'timestamps'](),
     }));
 
-    it('should update updatedAt column when updating', async () => {
-      const query = table.where().update({});
-      await query;
+    it('should update updatedAt column when updating', () => {
+      const q = table.where().update({});
 
       expectSql(
-        query.toSql(),
+        q.toSql(),
         `
           UPDATE "user"
-          SET "updatedAt" = now()
+          SET "updatedAt" = custom_now()
       `,
       );
     });
 
-    it('should not update updatedAt column when updating it via object', async () => {
-      const query = table.where().update({ updatedAt: now });
-      await query;
+    it('should not update updatedAt column when updating it via object', () => {
+      const q = table.where().update({ updatedAt: now });
 
       expectSql(
-        query.toSql(),
+        q.toSql(),
         `
         UPDATE "user"
         SET "updatedAt" = $1
@@ -37,47 +39,42 @@ describe('timestamps methods', () => {
       );
     });
 
-    it('should update updatedAt when updating with raw sql', async () => {
-      const query = table
+    it('should update updatedAt when updating with raw sql', () => {
+      const q = table
         .where()
         .updateRaw(testDb.raw('name = $name', { name: 'name' }));
 
-      await query;
-
       expectSql(
-        query.toSql(),
+        q.toSql(),
         `
         UPDATE "user"
-        SET name = $1, "updatedAt" = now()
+        SET name = $1, "updatedAt" = custom_now()
       `,
         ['name'],
       );
     });
 
-    it('should update updatedAt when updating with raw sql which has updatedAt somewhere but not in set', async () => {
-      const query = table
+    it('should update updatedAt when updating with raw sql which has updatedAt somewhere but not in set', () => {
+      const q = table
         .where()
         .updateRaw(testDb.raw('"createdAt" = "updatedAt"'));
-      await query;
 
       expectSql(
-        query.toSql(),
+        q.toSql(),
         `
         UPDATE "user"
-        SET "createdAt" = "updatedAt", "updatedAt" = now()
+        SET "createdAt" = "updatedAt", "updatedAt" = custom_now()
       `,
       );
     });
 
-    it('should not update updatedAt column when updating with raw sql which contains `updatedAt = `', async () => {
-      const query = table
+    it('should not update updatedAt column when updating with raw sql which contains `updatedAt = `', () => {
+      const q = table
         .where()
         .updateRaw(testDb.raw('"updatedAt" = $time', { time: now }));
 
-      await query;
-
       expectSql(
-        query.toSql(),
+        q.toSql(),
         `
         UPDATE "user"
         SET "updatedAt" = $1

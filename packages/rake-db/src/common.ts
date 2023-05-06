@@ -20,6 +20,7 @@ type Db = DbResult<DefaultColumnTypes>;
 type BaseTable<CT extends ColumnTypesBase> = {
   name: string;
   filePath: string;
+  nowSQL?: string;
 
   new (): {
     columnTypes: CT;

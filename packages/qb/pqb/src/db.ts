@@ -44,10 +44,15 @@ export type DbOptions<CT extends ColumnTypesBase> = (
   | Omit<AdapterOptions, 'log'>
 ) &
   QueryLogOptions & {
+    // concrete column types or a callback for overriding standard column types
+    // this types will be used in tables to define their columns
     columnTypes?: CT | ((t: DefaultColumnTypes) => CT);
     autoPreparedStatements?: boolean;
     noPrimaryKey?: NoPrimaryKeyOption;
+    // when set to true, all columns will be translated to `snake_case` when querying database
     snakeCase?: boolean;
+    // if `now()` for some reason doesn't suite your timestamps, provide a custom SQL for it
+    nowSQL?: string;
   };
 
 export type DbTableOptions = {
@@ -280,6 +285,7 @@ export const createDb = <CT extends ColumnTypesBase>({
   logger,
   columnTypes: ctOrFn = columnTypes as unknown as CT,
   snakeCase,
+  nowSQL,
   ...options
 }: DbOptions<CT>): DbResult<CT> => {
   const adapter = 'adapter' in options ? options.adapter : new Adapter(options);
@@ -320,7 +326,7 @@ export const createDb = <CT extends ColumnTypesBase>({
         adapter,
         qb as unknown as Db,
         table as Table,
-        typeof shape === 'function' ? getColumnTypes(ct, shape) : shape,
+        typeof shape === 'function' ? getColumnTypes(ct, shape, nowSQL) : shape,
         ct,
         transactionStorage,
         { ...commonOptions, ...options },

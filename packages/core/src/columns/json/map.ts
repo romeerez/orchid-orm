@@ -6,6 +6,7 @@ import {
   toCode,
 } from './typeBase';
 
+// JSON type for ES6 Map (probably will be removed as it doesn't make sense for JSON)
 export interface JSONMap<Key extends JSONTypeAny, Value extends JSONTypeAny>
   extends JSONType<Map<Key['type'], Value['type']>, 'map'> {
   data: JSONTypeData & {
@@ -19,6 +20,7 @@ export interface JSONMap<Key extends JSONTypeAny, Value extends JSONTypeAny>
   >;
 }
 
+// ES6 Map JSON type constructor
 export const map = <Key extends JSONTypeAny, Value extends JSONTypeAny>(
   keyType: Key,
   valueType: Value,

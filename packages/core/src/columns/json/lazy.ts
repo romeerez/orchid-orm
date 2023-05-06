@@ -7,6 +7,7 @@ import {
 } from './typeBase';
 import { toArray } from '../../utils';
 
+// JSON type wrapper for recursive cases
 export interface JSONLazy<T extends JSONTypeAny>
   extends JSONType<T['type'], 'lazy'> {
   data: JSONTypeData & {
@@ -17,6 +18,7 @@ export interface JSONLazy<T extends JSONTypeAny>
   deepPartial(): JSONLazy<ReturnType<T['deepPartial']>>;
 }
 
+// constructor of lazy JSON type
 export const lazy = <T extends JSONTypeAny>(fn: () => T): JSONLazy<T> => {
   return constructType<JSONLazy<T>>({
     dataType: 'lazy',
