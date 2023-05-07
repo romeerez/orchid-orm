@@ -322,25 +322,27 @@ export const getMigrationFiles = async <CT extends ColumnTypesBase>(
   }
 
   const sort = up ? sortAsc : sortDesc;
-  return sort(files).map((file) => {
-    if (!file.endsWith('.ts')) {
-      throw new Error(
-        `Only .ts files are supported for migration, received: ${file}`,
-      );
-    }
+  return sort(files.filter((file) => path.basename(file).includes('.'))).map(
+    (file) => {
+      if (!file.endsWith('.ts')) {
+        throw new Error(
+          `Only .ts files are supported for migration, received: ${file}`,
+        );
+      }
 
-    const timestampMatch = file.match(/^(\d{14})\D/);
-    if (!timestampMatch) {
-      throw new Error(
-        `Migration file name should start with 14 digit version, received ${file}`,
-      );
-    }
+      const timestampMatch = file.match(/^(\d{14})\D/);
+      if (!timestampMatch) {
+        throw new Error(
+          `Migration file name should start with 14 digit version, received ${file}`,
+        );
+      }
 
-    return {
-      path: path.resolve(migrationsPath, file),
-      version: timestampMatch[1],
-    };
-  });
+      return {
+        path: path.resolve(migrationsPath, file),
+        version: timestampMatch[1],
+      };
+    },
+  );
 };
 
 export const sortAsc = (arr: string[]) => arr.sort();

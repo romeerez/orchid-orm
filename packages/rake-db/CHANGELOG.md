@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.8.21
+
+### Patch Changes
+
+- Ignore directories in migrations dir when migrating
+
 ## 2.8.20
 
 ### Patch Changes

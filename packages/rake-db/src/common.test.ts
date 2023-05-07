@@ -254,6 +254,13 @@ describe('common', () => {
       expect(result).toEqual([]);
     });
 
+    it('should skip files (or dirs) without extension', async () => {
+      (readdir as jest.Mock).mockRejectedValue(['dir']);
+
+      const result = await getMigrationFiles(config, true);
+      expect(result).toEqual([]);
+    });
+
     it('should throw if file is not a .ts file', async () => {
       (readdir as jest.Mock).mockReturnValueOnce(['file.js']);
 
