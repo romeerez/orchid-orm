@@ -1,9 +1,11 @@
 import { rakeDb } from './rakeDb';
 import { createDb, dropDb, resetDb } from './commands/createOrDrop';
-import { migrate, rollback } from './commands/migrateOrRollback';
+import { migrate, redo, rollback } from './commands/migrateOrRollback';
 import { generate } from './commands/generate';
 import { pullDbStructure } from './pull/pull';
 import { RakeDbError } from './errors';
+import { runRecurrentMigrations } from './commands/recurrent';
+import { asMock } from 'test-utils';
 
 jest.mock('./common', () => ({
   processRakeDbConfig: (config: unknown) => config,
@@ -18,10 +20,15 @@ jest.mock('./commands/createOrDrop', () => ({
 jest.mock('./commands/migrateOrRollback', () => ({
   migrate: jest.fn(),
   rollback: jest.fn(),
+  redo: jest.fn(),
 }));
 
 jest.mock('./commands/generate', () => ({
   generate: jest.fn(),
+}));
+
+jest.mock('./commands/recurrent', () => ({
+  runRecurrentMigrations: jest.fn(),
 }));
 
 jest.mock('./pull/pull', () => ({
@@ -43,6 +50,8 @@ const config = {
 };
 
 describe('rakeDb', () => {
+  beforeEach(() => jest.clearAllMocks());
+
   it('should support create command', async () => {
     await rakeDb(options, config, ['create']).promise;
 
@@ -52,7 +61,7 @@ describe('rakeDb', () => {
   it('should support drop command', async () => {
     await rakeDb(options, config, ['drop']).promise;
 
-    expect(dropDb).toBeCalledWith(options);
+    expect(dropDb).toBeCalledWith(options, config);
   });
 
   it('should support reset command', async () => {
@@ -61,16 +70,35 @@ describe('rakeDb', () => {
     expect(resetDb).toBeCalledWith(options, config);
   });
 
-  it('should support migrate command', async () => {
+  it('should run migrations and recurrent on `migrate` command', async () => {
     await rakeDb(options, config, ['migrate', 'arg']).promise;
 
     expect(migrate).toBeCalledWith(options, config, ['arg']);
+    expect(runRecurrentMigrations).toBeCalledWith(options, config);
   });
 
-  it('should support rollback command', async () => {
-    await rakeDb(options, config, ['rollback', 'arg']).promise;
+  it('should run migrations without recurrent on `up` command', async () => {
+    await rakeDb(options, config, ['up', 'arg']).promise;
 
-    expect(rollback).toBeCalledWith(options, config, ['arg']);
+    expect(migrate).toBeCalledWith(options, config, ['arg']);
+    expect(runRecurrentMigrations).not.toBeCalled();
+  });
+
+  it('should run rollback on `rollback` and `down` commands', async () => {
+    await rakeDb(options, config, ['rollback', 'arg']).promise;
+    await rakeDb(options, config, ['down', 'arg']).promise;
+
+    expect(asMock(rollback).mock.calls).toEqual([
+      [options, config, ['arg']],
+      [options, config, ['arg']],
+    ]);
+  });
+
+  it('should run redo and recurrent on `redo` command', async () => {
+    await rakeDb(options, config, ['redo', 'arg']).promise;
+
+    expect(redo).toBeCalledWith(options, config, ['arg']);
+    expect(runRecurrentMigrations).toBeCalledWith(options, config);
   });
 
   it('should support new command', async () => {
@@ -83,6 +111,16 @@ describe('rakeDb', () => {
     await rakeDb(options, config, ['pull']).promise;
 
     expect(pullDbStructure).toBeCalledWith(options[0], config);
+  });
+
+  it('should call recurrent migration by `rec` and `recurrent` command', async () => {
+    await rakeDb(options, config, ['rec']).promise;
+    await rakeDb(options, config, ['recurrent']).promise;
+
+    expect(asMock(runRecurrentMigrations).mock.calls).toEqual([
+      [options, config],
+      [options, config],
+    ]);
   });
 
   it('should call a custom command', async () => {

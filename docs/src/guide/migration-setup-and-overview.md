@@ -31,6 +31,8 @@ Example structure (it's created automatically if you follow [quickstart](/guide/
 src/
 └── db/
     ├── migrations/ - contains migrations files that can be migrated or rolled back.
+    │   ├── recurrent/ - optional: sql files for triggers and functions
+    │   │   └── my-function.sql - sql file containing CREATE OR REPLACE
     │   ├── timestamp_createPost.ts
     │   └── timestamp_createComment.ts
     ├── baseTable.ts - for defining column type overrides.
@@ -80,7 +82,7 @@ export const change = rakeDb(config.database, {
   migrationsPath: '../migrations',
   // it also can be an absolute path:
   // migrationsPath: path.resolve(__dirname, 'migrations'),
-
+  
   // column type overrides and snakeCase option will be taken from the BaseTable:
   baseTable: BaseTable,
 
@@ -164,6 +166,10 @@ type MigrationConfig = {
 
   // path to migrations directory
   migrationsPath?: string;
+  
+  // path to recurrent migrations directory
+  // migrationsPath + '/recurrent' is the default
+  recurrentPath?: string;
 
   // table in your database to store migrated versions
   migrationsTable?: string;
@@ -216,6 +222,7 @@ Defaults are:
 
 - `basePath` is the dir name of the file you're calling `rakeDb` from
 - `migrationPath` is `src/db/migrations`
+- `recurrentPath` is `src/db/migrations/recurrent` (directory doesn't have to exist if don't need it)
 - `migrationsTable` is `schemaMigrations`
 - `snakeCase` is `false`, so camelCase is expected in both the app and the database
 - `import` will use a standard `import` function
@@ -307,6 +314,39 @@ Run the seeds with the command:
 npm run db seed
 # or
 pnpm db seed
+```
+
+## recurrent migrations
+
+Recurrent migrations are useful when you want to update SQL functions, triggers, and other database items regularly.
+
+This feature is optional, it's not required to have a `recurrent` directory.
+
+For example, store `add` SQL function into `src/db/migrations/recurrent/add.sql`:
+
+```sql
+CREATE OR REPLACE FUNCTION add(integer, integer) RETURNS integer
+  AS 'select $1 + $2;'
+  LANGUAGE SQL
+  IMMUTABLE
+RETURNS NULL ON NULL INPUT;
+```
+
+When you run the command `recurrent` (aliased as `rec`), `rake-db` will recursively scan the `recurrent` directory and execute all sql files in parallel.
+
+As they are executed in parallel, if one functions depends on the other better place it in a single sql file.
+
+As it is scanned recursively, you can structure `recurrent` directory as it feels better, for example:
+
+```
+src/
+└── db/
+    └── migrations/
+        └── recurrent/
+            ├── functions/
+            │   └── my-function.sql
+            └── triggers/
+                └── my-trigger.sql
 ```
 
 ## before and after callbacks

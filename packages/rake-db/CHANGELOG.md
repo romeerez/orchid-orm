@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.8.20
+
+### Patch Changes
+
+- Add recurrent migrations
+
 ## 2.8.19
 
 ### Patch Changes

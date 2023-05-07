@@ -1,12 +1,12 @@
 import { createDb, dropDb, resetDb } from './createOrDrop';
-import { Adapter, columnTypes } from 'pqb';
+import { Adapter } from 'pqb';
 import {
   createSchemaMigrations,
-  migrationConfigDefaults,
-  RakeDbConfig,
   setAdminCredentialsToOptions,
 } from '../common';
 import { migrate } from './migrateOrRollback';
+import { testConfig } from '../rake-db.test-utils';
+import { asMock } from 'test-utils';
 
 jest.mock('../common', () => ({
   ...jest.requireActual('../common'),
@@ -26,15 +26,8 @@ const options = { database: 'dbname', user: 'user', password: 'password' };
 const queryMock = jest.fn();
 Adapter.prototype.query = queryMock;
 
-const logMock = jest.fn();
-console.log = logMock;
-
-const config: RakeDbConfig = {
-  ...migrationConfigDefaults,
-  basePath: __dirname,
-  dbScript: 'dbScript.ts',
-  columnTypes,
-};
+const config = testConfig;
+const logMock = asMock(testConfig.logger.log);
 
 describe('createOrDrop', () => {
   beforeEach(() => {
@@ -159,7 +152,7 @@ describe('createOrDrop', () => {
     it('should drop database when user is an admin', async () => {
       queryMock.mockResolvedValueOnce(undefined);
 
-      await dropDb(options);
+      await dropDb(options, config);
 
       expect(queryMock.mock.calls).toEqual([[`DROP DATABASE "dbname"`]]);
       expect(logMock.mock.calls).toEqual([
@@ -170,7 +163,7 @@ describe('createOrDrop', () => {
     it('should drop databases for each provided option', async () => {
       queryMock.mockResolvedValue(undefined);
 
-      await dropDb([options, { ...options, database: 'dbname-test' }]);
+      await dropDb([options, { ...options, database: 'dbname-test' }], config);
 
       expect(queryMock.mock.calls).toEqual([
         [`DROP DATABASE "dbname"`],
@@ -185,7 +178,7 @@ describe('createOrDrop', () => {
     it('should inform if database does not exist', async () => {
       queryMock.mockRejectedValueOnce({ code: '3D000' });
 
-      await dropDb(options);
+      await dropDb(options, config);
 
       expect(queryMock.mock.calls).toEqual([[`DROP DATABASE "dbname"`]]);
       expect(logMock.mock.calls).toEqual([[`Database dbname does not exist`]]);
@@ -211,7 +204,7 @@ describe('createOrDrop', () => {
     it('should ask and use admin credentials when cannot connect', async () => {
       queryMock.mockRejectedValueOnce({ code: '42501' });
 
-      await dropDb(options);
+      await dropDb(options, config);
 
       expect(setAdminCredentialsToOptions).toHaveBeenCalled();
       expect(queryMock.mock.calls).toEqual([

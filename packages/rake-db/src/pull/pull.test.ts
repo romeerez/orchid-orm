@@ -15,7 +15,7 @@ import {
   table,
   textColumn,
   updatedAtColumn,
-} from './testUtils';
+} from './pull.test-utils';
 import { saveMigratedVersion } from '../migration/manageMigratedVersions';
 import { columnTypes, DefaultColumnTypes } from 'pqb';
 import { asMock } from 'test-utils';

@@ -33,7 +33,7 @@ import {
   domain,
   identityColumn,
   view,
-} from './testUtils';
+} from './pull.test-utils';
 
 const adapter = new Adapter({ databaseURL: 'file:path' });
 const query = jest.fn().mockImplementation(() => ({ rows: [] }));

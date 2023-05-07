@@ -1,23 +1,40 @@
 import { createMigrationInterface, Migration } from './migration/migration';
-import { columnTypes, TransactionAdapter } from 'pqb';
-import { MaybeArray, toArray } from 'orchid-core';
+import { columnTypes, QueryLogger, TransactionAdapter } from 'pqb';
+import { MaybeArray, noop, toArray } from 'orchid-core';
+import { migrationConfigDefaults, RakeDbConfig } from './common';
+import { join } from 'path';
 
 let db: Migration | undefined;
+
+export const testMigrationsPath = 'migrations-path';
+
+export const testConfig: RakeDbConfig & { logger: QueryLogger } = {
+  ...migrationConfigDefaults,
+  basePath: __dirname,
+  dbScript: 'dbScript.ts',
+  columnTypes,
+  log: false,
+  logger: {
+    log: jest.fn(),
+    error: noop,
+    warn: noop,
+  },
+  migrationsPath: testMigrationsPath,
+  recurrentPath: join(testMigrationsPath, 'recurrent'),
+  migrationsTable: 'schemaMigrations',
+  snakeCase: false,
+  import: require,
+  commands: {},
+};
 
 export const getDb = () => {
   if (db) return db;
 
-  db = createMigrationInterface({} as unknown as TransactionAdapter, true, {
-    basePath: __dirname,
-    dbScript: 'dbScript.ts',
-    columnTypes,
-    log: false,
-    migrationsPath: 'migrations-path',
-    migrationsTable: 'schemaMigrations',
-    snakeCase: false,
-    import: require,
-    commands: {},
-  });
+  db = createMigrationInterface(
+    {} as unknown as TransactionAdapter,
+    true,
+    testConfig,
+  );
   db.adapter.query = queryMock;
   db.adapter.arrays = queryMock;
   return db;

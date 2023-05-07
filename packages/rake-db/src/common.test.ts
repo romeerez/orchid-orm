@@ -12,8 +12,6 @@ import {
   setAdminCredentialsToOptions,
   sortAsc,
   sortDesc,
-  migrationConfigDefaults,
-  RakeDbConfig,
   AppCodeUpdater,
 } from './common';
 import prompts from 'prompts';
@@ -21,6 +19,7 @@ import { Adapter, columnTypes } from 'pqb';
 import { readdir } from 'fs/promises';
 import path from 'path';
 import { asMock } from 'test-utils';
+import { testConfig } from './rake-db.test-utils';
 
 jest.mock('prompts', () => jest.fn());
 
@@ -28,12 +27,7 @@ jest.mock('fs/promises', () => ({
   readdir: jest.fn(),
 }));
 
-const config: RakeDbConfig = {
-  ...migrationConfigDefaults,
-  basePath: __dirname,
-  dbScript: 'dbScript.ts',
-  columnTypes,
-};
+const config = testConfig;
 
 describe('common', () => {
   describe('processRakeDbConfig', () => {
@@ -44,11 +38,14 @@ describe('common', () => {
         migrationsPath: 'custom-path',
       });
 
+      const migrationsPath = path.resolve(__dirname, 'custom-path');
+
       expect(result).toEqual({
         basePath: __dirname,
         dbScript: 'dbScript.ts',
         columnTypes,
-        migrationsPath: path.resolve(__dirname, 'custom-path'),
+        migrationsPath,
+        recurrentPath: path.join(migrationsPath, 'recurrent'),
         migrationsTable: 'schemaMigrations',
         snakeCase: false,
         import: expect.any(Function),
@@ -175,8 +172,6 @@ describe('common', () => {
   });
 
   describe('createSchemaMigrations', () => {
-    const log = console.log;
-    const mockedLog = jest.fn();
     const mockedQuery = jest.fn();
 
     const db = new Adapter({
@@ -184,14 +179,8 @@ describe('common', () => {
     });
     db.query = mockedQuery;
 
-    beforeAll(() => {
-      console.log = mockedLog;
-    });
     beforeEach(() => {
       jest.clearAllMocks();
-    });
-    afterAll(() => {
-      console.log = log;
     });
 
     it('should create a "schemaMigrations" table', async () => {
@@ -203,7 +192,9 @@ describe('common', () => {
         [`CREATE TABLE "schemaMigrations" ( version TEXT NOT NULL )`],
       ]);
 
-      expect(mockedLog.mock.calls).toEqual([['Created versions table']]);
+      expect(asMock(testConfig.logger.log).mock.calls).toEqual([
+        ['Created versions table'],
+      ]);
     });
 
     it('should inform if table already exists', async () => {
@@ -215,7 +206,9 @@ describe('common', () => {
         [`CREATE TABLE "schemaMigrations" ( version TEXT NOT NULL )`],
       ]);
 
-      expect(mockedLog.mock.calls).toEqual([['Versions table exists']]);
+      expect(asMock(testConfig.logger.log).mock.calls).toEqual([
+        ['Versions table exists'],
+      ]);
     });
   });
 

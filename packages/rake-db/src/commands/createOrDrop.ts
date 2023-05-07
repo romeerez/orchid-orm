@@ -6,7 +6,6 @@ import {
   setAdapterOptions,
   createSchemaMigrations,
   RakeDbConfig,
-  migrationConfigDefaults,
 } from '../common';
 import { migrate } from './migrateOrRollback';
 
@@ -145,9 +144,12 @@ export const createDb = async <CT extends ColumnTypesBase>(
   }
 };
 
-export const dropDb = async (arg: MaybeArray<AdapterOptions>) => {
+export const dropDb = async <CT extends ColumnTypesBase>(
+  arg: MaybeArray<AdapterOptions>,
+  config: RakeDbConfig<CT>,
+) => {
   for (const options of toArray(arg)) {
-    await createOrDrop(options, options, migrationConfigDefaults, {
+    await createOrDrop(options, options, config, {
       sql({ database }) {
         return `DROP DATABASE "${database}"`;
       },
@@ -165,7 +167,7 @@ export const resetDb = async <CT extends ColumnTypesBase>(
   arg: MaybeArray<AdapterOptions>,
   config: RakeDbConfig<CT>,
 ) => {
-  await dropDb(arg);
+  await dropDb(arg, config);
   await createDb(arg, config);
   await migrate(arg, config);
 };

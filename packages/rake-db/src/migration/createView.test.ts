@@ -1,4 +1,4 @@
-import { expectSql, getDb, resetDb, toLine } from '../test-utils';
+import { expectSql, getDb, resetDb, toLine } from '../rake-db.test-utils';
 
 const db = getDb();
 

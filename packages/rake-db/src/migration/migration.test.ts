@@ -5,7 +5,7 @@ import {
   queryMock,
   resetDb,
   toLine,
-} from '../test-utils';
+} from '../rake-db.test-utils';
 import { raw } from 'orchid-core';
 
 const db = getDb();

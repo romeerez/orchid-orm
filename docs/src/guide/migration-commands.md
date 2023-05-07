@@ -156,7 +156,8 @@ If the migration name matches one of the known patterns, it will generate a temp
 
 ## migrate
 
-Migrate command will run all not applied yet migrations, sequentially in order:
+Migrate command will run all not applied yet migrations, sequentially in order.
+After applying migrations, it will also run `recurrent` migrations if they exist.
 
 ```sh
 npm run db migrate
@@ -168,12 +169,18 @@ Pass a number to migrate only this specific number of migrations:
 npm run db migrate 3
 ```
 
-## rollback
+## up
 
-The rollback command will revert one last applied migration:
+The same as `migrate`, but it won't run `recurrent` migrations.
+
+## rollback, down
+
+The rollback command will revert one last applied migration. `down` is an alias.
 
 ```sh
 npm run db rollback
+# or
+npm run db down
 ```
 
 Pass a number to revert multiple last applied migrations, or pass `all` to revert all of them:
@@ -189,12 +196,30 @@ Shortcut for `rollback` + `migrate`. It is useful when you edit a migration and 
 
 By default, rolls back and migrate one migration. Pass a number to re-run multiple file.
 
+Will run `recurrent` migrations if any exist.
+
 ```sh
 # redo one last migration:
 npm run db redo
 
 # redo 3 last migrations:
 npm run db redo 3
+```
+
+## recurrent, rec
+
+`recurrent` migrations are `SQL` files that have `SQL` functions, triggers, etc.
+
+`rec` is an alias.
+
+All `sql` files in the recurrent directory (by default `src/db/migrations/recurrent`)
+will be executed in parallel
+when running this command, and also after running `migrate` or `redo` commands.
+
+```sh
+npm run recurrent
+# or
+npm run rec
 ```
 
 ## custom commands

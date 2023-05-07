@@ -1,22 +1,15 @@
 import { changeCache, migrate, redo, rollback } from './migrateOrRollback';
 import {
   createSchemaMigrations,
-  migrationConfigDefaults,
   getMigrationFiles,
-  RakeDbConfig,
   AppCodeUpdater,
 } from '../common';
-import {
-  Adapter,
-  columnTypes,
-  DefaultColumnTypes,
-  TransactionAdapter,
-} from 'pqb';
-import { noop } from 'orchid-core';
+import { Adapter, DefaultColumnTypes, TransactionAdapter } from 'pqb';
 import { pathToLog } from 'orchid-core';
 import { RakeDbAst } from '../ast';
 import { ChangeCallback, pushChange } from '../migration/change';
 import { asMock } from 'test-utils';
+import { testConfig } from '../rake-db.test-utils';
 
 jest.mock('../common', () => ({
   ...jest.requireActual('../common'),
@@ -49,18 +42,9 @@ TransactionAdapter.prototype.query = transactionQueryMock;
 TransactionAdapter.prototype.arrays = transactionQueryMock;
 
 const importMock = jest.fn();
-const config: RakeDbConfig = {
-  ...migrationConfigDefaults,
-  basePath: __dirname,
-  dbScript: 'dbScript.ts',
-  columnTypes,
+const config = {
+  ...testConfig,
   import: importMock,
-  log: false,
-  logger: {
-    log: jest.fn(),
-    error: noop,
-    warn: noop,
-  },
 };
 
 const change = (fn: ChangeCallback<DefaultColumnTypes>) => {

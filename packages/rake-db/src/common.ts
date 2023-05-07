@@ -45,6 +45,7 @@ export type RakeDbConfig<CT extends ColumnTypesBase = DefaultColumnTypes> = {
   basePath: string;
   dbScript: string;
   migrationsPath: string;
+  recurrentPath: string;
   migrationsTable: string;
   snakeCase: boolean;
   commands: Record<
@@ -81,7 +82,7 @@ export type AppCodeUpdater = {
 
 export const migrationConfigDefaults: Omit<
   RakeDbConfig,
-  'basePath' | 'dbScript' | 'columnTypes'
+  'basePath' | 'dbScript' | 'columnTypes' | 'recurrentPath'
 > = {
   migrationsPath: path.join('src', 'db', 'migrations'),
   migrationsTable: 'schemaMigrations',
@@ -105,6 +106,8 @@ export const processRakeDbConfig = <CT extends ColumnTypesBase>(
   config: InputRakeDbConfig<CT>,
 ): RakeDbConfig<CT> => {
   const result = { ...migrationConfigDefaults, ...config } as RakeDbConfig<CT>;
+  if (!result.recurrentPath)
+    result.recurrentPath = path.join(result.migrationsPath, 'recurrent');
 
   if (
     config.appCodeUpdater &&
@@ -136,6 +139,10 @@ export const processRakeDbConfig = <CT extends ColumnTypesBase>(
       result.basePath,
       result.migrationsPath,
     );
+  }
+
+  if (!path.isAbsolute(result.recurrentPath)) {
+    result.recurrentPath = path.resolve(result.basePath, result.recurrentPath);
   }
 
   if ('baseTable' in config) {

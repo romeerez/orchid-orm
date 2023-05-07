@@ -7,6 +7,7 @@ import { generate } from './commands/generate';
 import { pullDbStructure } from './pull/pull';
 import { RakeDbError } from './errors';
 import { ChangeCallback, pushChange } from './migration/change';
+import { runRecurrentMigrations } from './commands/recurrent';
 
 export const rakeDb = <CT extends ColumnTypesBase = DefaultColumnTypes>(
   options: MaybeArray<AdapterOptions>,
@@ -31,29 +32,38 @@ const runCommand = async <CT extends ColumnTypesBase = DefaultColumnTypes>(
   config: RakeDbConfig<CT>,
   args: string[] = process.argv.slice(2),
 ): Promise<void> => {
-  const command = args[0]?.split(':')[0];
+  const arg = args[0]?.split(':')[0];
 
   try {
-    if (command === 'create') {
+    if (arg === 'create') {
       await createDb(options, config);
-    } else if (command === 'drop') {
-      await dropDb(options);
-    } else if (command === 'reset') {
+    } else if (arg === 'drop') {
+      await dropDb(options, config);
+    } else if (arg === 'reset') {
       await resetDb(options, config);
-    } else if (command === 'migrate') {
+    } else if (arg === 'up' || arg === 'migrate') {
       await migrate(options, config, args.slice(1));
-    } else if (command === 'rollback') {
+    } else if (arg === 'down' || arg === 'rollback') {
       await rollback(options, config, args.slice(1));
-    } else if (command === 'redo') {
+    } else if (arg === 'redo') {
       await redo(options, config, args.slice(1));
-    } else if (command === 'new') {
+    } else if (arg === 'new') {
       await generate(config, args.slice(1));
-    } else if (command === 'pull') {
+    } else if (arg === 'pull') {
       await pullDbStructure(toArray(options)[0], config);
-    } else if (config.commands[command]) {
-      await config.commands[command](toArray(options), config, args.slice(1));
-    } else {
+    } else if (config.commands[arg]) {
+      await config.commands[arg](toArray(options), config, args.slice(1));
+    } else if (arg !== 'rec' && arg !== 'recurrent') {
       config.logger?.log(help);
+    }
+
+    if (
+      arg === 'migrate' ||
+      arg === 'rec' ||
+      arg === 'recurrent' ||
+      arg === 'redo'
+    ) {
+      await runRecurrentMigrations(options, config);
     }
   } catch (err) {
     if (err instanceof RakeDbError) {
@@ -74,9 +84,11 @@ Commands:
   drop                    drop databases
   reset                   drop, create and migrate databases
   new                     create new migration file, see below
-  migrate                 migrate pending migrations
-  rollback                rollback the last migrated
-  redo                    rollback and migrate
+  migrate                 migrate pending migrations, run recurrent
+  up                      migrate pending migrations, don't run recurrent
+  rollback or down        rollback the last migrated
+  redo                    rollback and migrate, run recurrent
+  rec or recurrent        run recurrent migrations
   no or unknown command   prints this message
   
 Migrate arguments:
