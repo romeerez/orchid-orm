@@ -73,7 +73,7 @@ Configure a `db` script:
 // db/dbScript.ts
 
 import { rakeDb } from 'rake-db';
-import { appCodeUpdater } from 'orchid-orm';
+import { appCodeUpdater } from 'orchid-orm/codegen';
 import { config } from './config';
 import { BaseTable } from './baseTable';
 

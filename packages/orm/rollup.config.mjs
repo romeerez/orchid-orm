@@ -1,8 +1,10 @@
 import config from '../../rollup.config.mjs';
 import esbuild from 'rollup-plugin-esbuild';
+import { rollupExportFile } from '../../rollup.utils.mjs';
 
 export default [
   ...config,
+  ...rollupExportFile('src/codegen/index', 'dist/codegen'),
   {
     input: 'src/bin/bin.ts',
     plugins: [esbuild()],

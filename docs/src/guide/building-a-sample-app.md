@@ -257,7 +257,7 @@ Create a script that we will use from a terminal to generate and run migrations:
 import path from 'path';
 import { rakeDb } from 'rake-db';
 import { config } from '../config';
-import { appCodeUpdater } from 'orchid-orm';
+import { appCodeUpdater } from 'orchid-orm/codegen';
 import { BaseTable } from '../lib/baseTable';
 
 const options = [{ databaseURL: config.DATABASE_URL }];

@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 import path from 'path';
 import { rakeDb } from '../src';
 import { AdapterOptions } from 'pqb';
-import { appCodeUpdater } from 'orchid-orm';
+import { appCodeUpdater } from 'orchid-orm/codegen';
 import { BaseTable } from './baseTable';
 
 config({ path: path.resolve('..', '..', '.env') });

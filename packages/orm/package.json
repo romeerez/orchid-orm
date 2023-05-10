@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm",
-  "version": "1.9.22",
+  "version": "1.9.23",
   "description": "Postgres ORM",
   "homepage": "https://orchid-orm.netlify.app/guide/orm-setup-and-overview.html",
   "repository": {
@@ -16,6 +16,11 @@
       "require": "./dist/index.js",
       "import": "./dist/index.mjs",
       "types": "./dist/index.d.ts"
+    },
+    "codegen": {
+      "require": "./dist/codegen.js",
+      "import": "./dist/codegen.mjs",
+      "types": "./dist/codegen.d.ts"
     }
   },
   "files": [

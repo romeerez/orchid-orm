@@ -754,7 +754,7 @@ export const db = orchidORM(config.database, {
         ([to]) => to === migrationScriptPath,
       );
       expect(content).toBe(`import { rakeDb } from 'rake-db';
-import { appCodeUpdater } from 'orchid-orm';
+import { appCodeUpdater } from 'orchid-orm/codegen';
 import { config } from './config';
 import { BaseTable } from './baseTable';
 
@@ -786,7 +786,7 @@ export const change = rakeDb(config.database, {
         ([to]) => to === migrationScriptPath,
       );
       expect(content).toBe(`import { rakeDb } from 'rake-db';
-import { appCodeUpdater } from 'orchid-orm';
+import { appCodeUpdater } from 'orchid-orm/codegen';
 import { config } from './config';
 import { BaseTable } from './baseTable';
 

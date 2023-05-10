@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.8.22
+
+### Patch Changes
+
+- Move ORM codegen module to a separate bundle
+
 ## 2.8.21
 
 ### Patch Changes

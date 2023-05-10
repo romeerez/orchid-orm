@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.9.23
+
+### Patch Changes
+
+- Move ORM codegen module to a separate bundle
+
 ## 1.9.22
 
 ### Patch Changes

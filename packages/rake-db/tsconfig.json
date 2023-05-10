@@ -7,6 +7,7 @@
     "paths": {
       "orchid-core": ["../core/src"],
       "pqb": ["../qb/pqb/src"],
+      "orchid-orm/codegen": ["../orm/src/codegen"],
       "orchid-orm": ["../orm/src"],
       "test-utils": ["../test-utils/src"]
     }

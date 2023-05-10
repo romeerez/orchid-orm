@@ -440,7 +440,7 @@ const setupMigrationScript = async (config: InitConfig, dirPath: string) => {
   await fs.writeFile(
     filePath,
     `import { rakeDb } from 'rake-db';
-import { appCodeUpdater } from 'orchid-orm';
+import { appCodeUpdater } from 'orchid-orm/codegen';
 import { config } from './config';
 import { BaseTable } from './baseTable';
 
