@@ -40,7 +40,7 @@ export const createTable = async ({
   };
 
   const imports: Record<string, string> = {
-    [baseTablePath]: params.baseTable.name,
+    [baseTablePath]: params.baseTable.exportAs,
   };
 
   const props: Code[] = [];
@@ -78,7 +78,7 @@ export const createTable = async ({
       ([from, name]) => `import { ${name} } from '${from}';`,
     ),
     '',
-    `export class ${className} extends ${params.baseTable.name} {`,
+    `export class ${className} extends ${params.baseTable.exportAs} {`,
     props,
     '}\n',
   ];

@@ -18,7 +18,7 @@ export const createBaseTableFile = async ({
       baseTable.filePath,
       `import { createBaseTable } from 'orchid-orm';
 
-export const ${baseTable.name} = createBaseTable();
+export const ${baseTable.exportAs} = createBaseTable();
 `,
       {
         flag: 'wx',

@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.9.26
+
+### Patch Changes
+
+- Fix importing of ORM in the ORM codegen
+
 ## 1.9.25
 
 ### Patch Changes

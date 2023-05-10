@@ -34,7 +34,7 @@ describe('appCodeUpdater', () => {
 
   const baseTable = {
     filePath: 'baseTable.ts',
-    name: 'BaseTable',
+    exportAs: 'BaseTable',
   };
 
   const fn = appCodeUpdater(params);

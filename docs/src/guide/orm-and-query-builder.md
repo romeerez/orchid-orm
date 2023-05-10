@@ -93,6 +93,10 @@ export const BaseTable = createBaseTable({
     // by default timestamp is returned as a stirng, override to a number
     timestamp: () => t.timestamp().asNumber(),
   }),
+  
+  // export name of the base table, by default it is BaseTable
+  // this is needed for a code generation, when you're using `appCodeUpdater` in `rakeDb`
+  exportAs: 'BaseTable',
 });
 ```
 

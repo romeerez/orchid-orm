@@ -22,8 +22,15 @@ jest.mock('orchid-core', () => {
 describe('table', () => {
   useTestORM();
 
-  it('should have a name', () => {
-    expect(BaseTable.name).toBe('BaseTable');
+  it('should have `exportAs`', () => {
+    expect(BaseTable.exportAs).toBe('BaseTable');
+  });
+
+  it('should allow to customize a name', () => {
+    const base = createBaseTable({
+      exportAs: 'custom',
+    });
+    expect(base.exportAs).toBe('custom');
   });
 
   it('should have a filePath to indicate where is it defined', () => {

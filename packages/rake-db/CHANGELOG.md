@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.8.23
+
+### Patch Changes
+
+- Fix importing of ORM in the ORM codegen
+
 ## 2.8.22
 
 ### Patch Changes

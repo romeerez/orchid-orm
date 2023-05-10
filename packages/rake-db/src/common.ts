@@ -18,7 +18,7 @@ import { TableQuery } from './migration/createTable';
 type Db = DbResult<DefaultColumnTypes>;
 
 type BaseTable<CT extends ColumnTypesBase> = {
-  name: string;
+  exportAs: string;
   filePath: string;
   nowSQL?: string;
 
@@ -72,7 +72,7 @@ export type AppCodeUpdaterParams = {
   basePath: string;
   cache: object;
   logger: QueryLogOptions['logger'];
-  baseTable: { filePath: string; name: string };
+  baseTable: { filePath: string; exportAs: string };
 };
 
 export type AppCodeUpdater = {

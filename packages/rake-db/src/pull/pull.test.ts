@@ -67,6 +67,7 @@ const options = { databaseURL: 'file:path' };
 
 class BaseTable {
   static filePath = 'path';
+  static exportAs = 'BaseTable';
   columnTypes!: DefaultColumnTypes;
   snakeCase?: boolean;
 }

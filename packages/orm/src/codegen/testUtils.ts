@@ -23,7 +23,7 @@ export const updateTableFileParams: Omit<UpdateTableFileParams, 'ast'> & {
   logger: testLogger,
   baseTable: {
     filePath: baseTablePath,
-    name: baseTableName,
+    exportAs: baseTableName,
   },
   async getTable(name) {
     return updateTableFileParams.tables[name];

@@ -18,7 +18,7 @@ export type AppCodeUpdaterConfig = {
 
 export type BaseTableParam = {
   filePath: string;
-  name: string;
+  exportAs: string;
 };
 
 export type AppCodeUpdaterRelations = {
@@ -63,7 +63,15 @@ const makeGetTable = (
     if (tables[tableName]) return tables[tableName];
 
     if (!orm) {
-      orm = (await import(path))[ormExportedAs];
+      const mod = await import(path).catch((err) => {
+        if (err.code === 'ERR_UNKNOWN_FILE_EXTENSION') {
+          return require(path);
+        } else {
+          throw err;
+        }
+      });
+
+      orm = mod[ormExportedAs];
       if (!orm) {
         throw new Error(`ORM is not exported as ${ormExportedAs} from ${path}`);
       }

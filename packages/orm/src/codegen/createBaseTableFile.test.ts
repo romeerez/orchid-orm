@@ -13,7 +13,7 @@ const log = jest.fn();
 const params = {
   baseTable: {
     filePath: path.resolve('baseTable.ts'),
-    name: 'CustomName',
+    exportAs: 'CustomName',
   },
   logger: {
     ...console,
@@ -52,7 +52,7 @@ describe('createBaseTableFile', () => {
       params.baseTable.filePath,
       `import { createBaseTable } from 'orchid-orm';
 
-export const ${params.baseTable.name} = createBaseTable();
+export const ${params.baseTable.exportAs} = createBaseTable();
 `,
       {
         flag: 'wx',

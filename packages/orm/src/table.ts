@@ -76,6 +76,7 @@ export const createBaseTable = <CT extends ColumnTypesBase>(
     snakeCase,
     filePath,
     nowSQL,
+    exportAs,
   }: {
     // concrete column types or a callback for overriding standard column types
     // this types will be used in tables to define their columns
@@ -87,6 +88,8 @@ export const createBaseTable = <CT extends ColumnTypesBase>(
     filePath?: string;
     // if `now()` for some reason doesn't suite your timestamps, provide a custom SQL for it
     nowSQL?: string;
+    // export name of the base table, by default it is BaseTable
+    exportAs?: string;
   } = { columnTypes: defaultColumnTypes as unknown as CT },
 ) => {
   const ct =
@@ -106,6 +109,7 @@ export const createBaseTable = <CT extends ColumnTypesBase>(
     filePath,
     snakeCase,
     nowSQL,
+    exportAs,
   );
 };
 
@@ -114,10 +118,12 @@ const create = <CT extends ColumnTypesBase>(
   filePath: string,
   snakeCase?: boolean,
   nowSQL?: string,
+  exportAs = 'BaseTable',
 ) => {
   const base = class BaseTable {
     static filePath = filePath;
     static nowSQL = nowSQL;
+    static exportAs = exportAs;
 
     table!: string;
     columns!: ColumnsConfig;
