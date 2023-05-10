@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.9.25
+
+### Patch Changes
+
+- Fix exporting codegen from the ORM
+
 ## 1.9.24
 
 ### Patch Changes

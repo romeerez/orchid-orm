@@ -4,7 +4,7 @@ import { rollupExportFile } from '../../rollup.utils.mjs';
 
 export default [
   ...config,
-  ...rollupExportFile('src/codegen/index', 'dist/codegen'),
+  ...rollupExportFile('src/codegen/index', 'codegen/index'),
   {
     input: 'src/bin/bin.ts',
     plugins: [esbuild()],

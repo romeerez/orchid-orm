@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm",
-  "version": "1.9.24",
+  "version": "1.9.25",
   "description": "Postgres ORM",
   "homepage": "https://orchid-orm.netlify.app/guide/orm-setup-and-overview.html",
   "repository": {
@@ -18,20 +18,21 @@
       "types": "./dist/index.d.ts"
     },
     "./codegen": {
-      "require": "./dist/codegen.js",
-      "import": "./dist/codegen.mjs",
-      "types": "./dist/codegen.d.ts"
+      "require": "./codegen/index.js",
+      "import": "./codegen/index.mjs",
+      "types": "./codegen/index.d.ts"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "codegen"
   ],
   "scripts": {
     "test": "jest --watch --verbose false",
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
-    "build": "rimraf ./dist/ && rollup -c ./rollup.config.mjs",
+    "build": "rimraf ./dist/ ./codegen/ && rollup -c ./rollup.config.mjs",
     "prepublishOnly": "pnpm build",
     "db": "ts-node src/db/dbScripts.ts"
   },
