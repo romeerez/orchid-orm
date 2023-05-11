@@ -46,6 +46,7 @@ export const pullDbStructure = async <CT extends ColumnTypesBase>(
       logger: config.logger,
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       baseTable: config.baseTable!,
+      import: config.import,
     });
   }
 
@@ -56,6 +57,7 @@ export const pullDbStructure = async <CT extends ColumnTypesBase>(
     logger: config.logger,
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     baseTable: config.baseTable!,
+    import: config.import,
   });
 
   const unsupportedEntries = Object.entries(ctx.unsupportedTypes);

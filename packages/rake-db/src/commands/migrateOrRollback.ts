@@ -103,6 +103,7 @@ export const migrateOrRollback = async <CT extends ColumnTypesBase>(
         logger: config.logger,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         baseTable: config.baseTable!,
+        import: config.import,
       });
 
       await adapter.close();
@@ -170,6 +171,7 @@ const processMigration = async <CT extends ColumnTypesBase>(
       logger: config.logger,
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       baseTable: config.baseTable!,
+      import: config.import,
     });
   }
 };

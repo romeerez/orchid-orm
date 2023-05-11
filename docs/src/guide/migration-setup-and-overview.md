@@ -128,6 +128,21 @@ pnpm db new createSomeTable
 yarn db new createSomeTable
 ```
 
+## ReferenceError: require is not defined
+
+If you encounter the error `ReferenceError: require is not defined`,
+it means you're running on ESM and your node.js runner could not import `ts` migration.
+
+This may happen with `ts-node/esm`, `vite`.
+
+To resolve it, simply add the `import` function to the `rakeDb` config:
+
+```ts
+export const change = rakeDb(config.database, {
+  import: (path) => import(path),
+});
+```
+
 ## rakeDb
 
 `rakeDb` function in the setup script takes connection options, migration config, and command line arguments:

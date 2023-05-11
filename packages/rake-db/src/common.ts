@@ -56,7 +56,7 @@ export type RakeDbConfig<CT extends ColumnTypesBase = DefaultColumnTypes> = {
       args: string[],
     ) => Promise<void>
   >;
-  import(path: string): Promise<void>;
+  import(path: string): Promise<unknown>;
   noPrimaryKey?: NoPrimaryKeyOption;
   baseTable?: BaseTable<CT>;
   appCodeUpdater?: AppCodeUpdater;
@@ -73,6 +73,7 @@ export type AppCodeUpdaterParams = {
   cache: object;
   logger: QueryLogOptions['logger'];
   baseTable: { filePath: string; exportAs: string };
+  import(path: string): Promise<unknown>;
 };
 
 export type AppCodeUpdater = {

@@ -66,6 +66,12 @@ All tests are done locally on a laptop with Intel Core i7 10 Gen of U-series, Ma
 
 All the code with instruction is in the [repo here](https://github.com/romeerez/orchid-orm-examples/tree/main/packages/benchmarks).
 
+:::warning
+Treat these benchmarks as approximate and outdated (captured in Feb 2023), Orchid ORM and competitors changed since then.
+
+Better benchmarks with a use of isolated Docker instances per ORM, with ops/s instead of ms results, are to be done yet.
+:::
+
 Tested against `Prisma` and `Sequelize`, which are probably the most popular node.js ORMs.
 
 `kysely` included out of curiosity, it was interesting how it handles more complex cases. Didn't figure out how to make nested select or insert with `kysely` though.

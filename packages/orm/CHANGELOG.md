@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.9.27
+
+### Patch Changes
+
+- Support ESM in ORM codegen
+
 ## 1.9.26
 
 ### Patch Changes

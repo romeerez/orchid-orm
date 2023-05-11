@@ -56,6 +56,7 @@ const makeGetTable = (
   path: string,
   ormExportedAs: string,
   tables: AppCodeUpdaterTables,
+  imp: (path: string) => Promise<unknown>,
 ): AppCodeUpdaterGetTable => {
   let orm: OrchidORM | undefined;
 
@@ -63,13 +64,13 @@ const makeGetTable = (
     if (tables[tableName]) return tables[tableName];
 
     if (!orm) {
-      const mod = await import(path).catch((err) => {
+      const mod = (await imp(path).catch((err) => {
         if (err.code === 'ERR_UNKNOWN_FILE_EXTENSION') {
           return require(path);
         } else {
           throw err;
         }
-      });
+      })) as Record<string, OrchidORM>;
 
       orm = mod[ormExportedAs];
       if (!orm) {
@@ -103,14 +104,7 @@ export const appCodeUpdater = ({
   ormPath,
   ormExportedAs = 'db',
 }: AppCodeUpdaterConfig): AppCodeUpdater => ({
-  async process({
-    ast,
-    options,
-    basePath,
-    cache: cacheObject,
-    logger,
-    baseTable,
-  }) {
+  async process({ ast, options, basePath, logger, baseTable, ...config }) {
     const params: AppCodeUpdaterConfig = {
       tablePath(name: string) {
         const file = tablePath(name);
@@ -121,7 +115,7 @@ export const appCodeUpdater = ({
       logger,
     };
 
-    const cache = cacheObject as {
+    const cache = config.cache as {
       createdBaseTable?: true;
       relations?: AppCodeUpdaterRelations;
       tables?: AppCodeUpdaterTables;
@@ -130,7 +124,12 @@ export const appCodeUpdater = ({
     cache.relations ??= {};
     cache.tables ??= {};
 
-    const getTable = makeGetTable(params.ormPath, ormExportedAs, cache.tables);
+    const getTable = makeGetTable(
+      params.ormPath,
+      ormExportedAs,
+      cache.tables,
+      config.import,
+    );
 
     const promises: Promise<void>[] = [
       updateMainFile(params.ormPath, params.tablePath, ast, options, logger),

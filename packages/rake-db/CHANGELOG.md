@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.8.24
+
+### Patch Changes
+
+- Support ESM in ORM codegen
+
 ## 2.8.23
 
 ### Patch Changes

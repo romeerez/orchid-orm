@@ -1,7 +1,9 @@
 # Quickstart
 
-The ORM is shipped with an automated script to initialize the project.
+Orchid ORM has a script to initialize the project with a command-line prompts.
 Use it to start from scratch, or it can be run inside the existing project, it won't remove any existing files.
+
+## init script
 
 ```sh
 npx orchid-orm@latest
@@ -57,7 +59,9 @@ It's only asked when initializing a new project (when no `tsconfig.json` found),
 
 After answering these questions, it will create all the necessary config files.
 
-Check the package.json file:
+## package.json
+
+After running the script, check if the package.json file looks well, and install dependencies (`npm i`) :
 
 ```js
 {
@@ -93,9 +97,48 @@ Check the package.json file:
 }
 ```
 
-Install dependencies (`npm i`).
+## ES modules
 
-Let's consider the created structure:
+Note the `db` script: it is for running migrations, and it's being launched with `ts-node`.
+
+If you'd like to use `ts-node` in ES modules mode (it works, but outputs experimental warning), change the script to:
+
+```json
+{
+  "scripts": {
+    "db": "node --loader ts-node/esm src/db/dbScript.ts"
+  }
+}
+```
+
+If you'd like to use `vite-node` instead, which works in ES modules mode by default, install `vite-node` and change the script to:
+
+```json
+{
+  "scripts": {
+    "db": "vite-node src/db/dbScript.ts --"
+  }
+}
+```
+
+Note the double-dash at the end - it is needed.
+
+If, during init script, you opted for `swc` compiler - it's no longer needed, remove `swc` from dependencies and from `tsconfig.json`.
+
+To use `vite` you also need to add the following line to `dbScript.ts`:
+
+```ts
+// src/db/dbScript.ts
+
+export const change = rakeDb(config.database, {
+  // add this line:
+  import: (path: string) => import(path),
+});
+```
+
+## structure
+
+Consider the created structure:
 
 ```
 .
@@ -117,6 +160,8 @@ Let's consider the created structure:
 ├── package.json
 └── tsconfig.json - specifying strict mode is very important.
 ```
+
+## database setup
 
 Change database credentials in the `.env` file:
 
@@ -208,7 +253,9 @@ Apply migration by running:
 npm run db migrate
 ```
 
-`src/db/tables/sample.table.ts` was created.
+## defining tables
+
+`src/db/tables/sample.table.ts` was created after running a migration.
 
 TypeScript should highlight `t.text()` because it doesn't have `min` and `max` specified,
 this is needed to prevent unpleasant situations when empty or huge texts are submitted.
@@ -245,7 +292,7 @@ export const db = orchidORM(config.database, {
 });
 ```
 
-Example usage:
+## example usage
 
 ```ts
 // src/hello.ts
