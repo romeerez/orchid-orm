@@ -131,8 +131,17 @@ export const appCodeUpdater = ({
       config.import,
     );
 
+    // updateMainFile should run before the rest to insert new tables into the orm instance
+    // the orm instance will be loaded later for relations
+    await updateMainFile(
+      params.ormPath,
+      params.tablePath,
+      ast,
+      options,
+      logger,
+    );
+
     const promises: Promise<void>[] = [
-      updateMainFile(params.ormPath, params.tablePath, ast, options, logger),
       updateTableFile({
         ...params,
         ast,
