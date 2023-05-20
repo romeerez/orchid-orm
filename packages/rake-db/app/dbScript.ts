@@ -28,5 +28,5 @@ export const change = rakeDb(options, {
     tablePath: (tableName) => `tables/${tableName}.ts`,
     ormPath: 'db.ts',
   }),
-  useCodeUpdater: true,
+  useCodeUpdater: false,
 });

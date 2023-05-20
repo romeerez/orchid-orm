@@ -289,7 +289,7 @@ describe('hasAndBelongsToMany', () => {
                 LIMIT 1
               )
           ) "c" ON true
-          WHERE "c"."title" = $2
+          WHERE "c"."Title" = $2
         `,
         ['one', 'two'],
       );

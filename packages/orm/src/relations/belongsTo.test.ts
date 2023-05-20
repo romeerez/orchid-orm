@@ -217,7 +217,7 @@ describe('belongsTo', () => {
             FROM "user" AS "u"
             WHERE "u"."name" = $1 AND "u"."id" = "profile"."userId"
           ) "u" ON true
-          WHERE "u"."name" = $2
+          WHERE "u"."Name" = $2
         `,
         ['one', 'two'],
       );
@@ -225,9 +225,12 @@ describe('belongsTo', () => {
 
     describe('select', () => {
       it('should be selectable', async () => {
-        const query = db.profile.as('p').select('Id', {
-          user: (q) => q.user.select('Id', 'Name').where({ Name: 'name' }),
-        });
+        const query = db.profile
+          .as('p')
+          .select('Id', {
+            user: (q) => q.user.select('Id', 'Name').where({ Name: 'name' }),
+          })
+          .order('user.Name');
 
         assertType<
           Awaited<typeof query>,
@@ -247,6 +250,7 @@ describe('belongsTo', () => {
               WHERE "user"."name" = $1
                 AND "user"."id" = "p"."userId"
             ) "user" ON true
+            ORDER BY "user"."Name" ASC
           `,
           ['name'],
         );

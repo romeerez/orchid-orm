@@ -278,7 +278,7 @@ describe('hasMany', () => {
             FROM "message" AS "m"
             WHERE "m"."text" = $1 AND "m"."authorId" = "user"."id"
           ) "m" ON true
-          WHERE "m"."text" = $2
+          WHERE "m"."Text" = $2
         `,
         ['one', 'two'],
       );
@@ -2168,7 +2168,7 @@ describe('hasMany through', () => {
                 LIMIT 1
               )
           ) "c" ON true
-          WHERE "c"."title" = $2
+          WHERE "c"."Title" = $2
         `,
         ['one', 'two'],
       );
@@ -2599,7 +2599,7 @@ describe('hasMany through', () => {
                 LIMIT 1
               )
           ) "p" ON true
-          WHERE "p"."bio" = $2
+          WHERE "p"."Bio" = $2
         `,
         ['one', 'two'],
       );

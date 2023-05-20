@@ -12,10 +12,10 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     outputs:
       coverage: ${{ steps.coverage.outputs.COVERAGE }}
-    
+
     services:
       postgres:
         image: postgres
@@ -62,23 +62,24 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
-      
+
       - name: Install dependencies
         run: pnpm install
-      
+
       - name: Create database
         working-directory: packages/rake-db
         run: pnpm run db create
-      
+
       - name: Run migrations
         working-directory: packages/rake-db
         run: pnpm run db migrate
-      
+
       - name: Run tests
         run: pnpm test:ci
-      
+
       - name: Get total coverage
         id: coverage
+        if: ${{ github.ref == 'refs/heads/main' }}
         run: echo "COVERAGE=$(./node_modules/.bin/ts-node scripts/getTestCoverageTotal.ts)" >> $GITHUB_OUTPUT
 
   badge:
@@ -90,7 +91,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           ref: badges
-    
+
       - name: Generate the badge SVG image
         uses: emibcn/badge-action@v1
         id: badge
@@ -99,7 +100,7 @@ jobs:
           status: ${{ needs.test.outputs.COVERAGE }}
           color: 'green'
           path: coverage-badge.svg
-    
+
       - name: Upload badge as artifact
         uses: actions/upload-artifact@v2
         with:
@@ -114,7 +115,7 @@ jobs:
           
           # Will give error if badge did not changed
           git commit -m "Update coverage badge" || true
-      
+
       - name: Push badge commit
         uses: ad-m/github-push-action@master
         if: ${{ success() }}

@@ -4,5 +4,9 @@ export * from './commands/migrateOrRollback';
 export * from './migration/migration';
 export { rakeDb } from './rakeDb';
 export * from './ast';
-export type { RakeDbConfig, AppCodeUpdater } from './common';
+export type {
+  RakeDbConfig,
+  AppCodeUpdater,
+  AppCodeUpdaterParams,
+} from './common';
 export * from './migration/manageMigratedVersions';

@@ -5,6 +5,7 @@ import path from 'path';
 import { updateTableFile } from './updateTableFile/updateTableFile';
 import { createBaseTableFile } from './createBaseTableFile';
 import { updateRelations } from './updateTableFile/updateRelations';
+import { AppCodeUpdaterParams } from 'rake-db';
 
 jest.mock('./updateMainFile', () => ({
   updateMainFile: jest.fn(),
@@ -29,24 +30,29 @@ const params: AppCodeUpdaterConfig = {
   ormExportedAs: 'db',
 };
 
+const baseTable = {
+  filePath: 'baseTable.ts',
+  exportAs: 'BaseTable',
+};
+
+const args: AppCodeUpdaterParams = {
+  options: {},
+  basePath: __dirname,
+  cache: {},
+  logger: console,
+  baseTable,
+  import: (path) => import(path),
+};
+
 describe('appCodeUpdater', () => {
   beforeEach(jest.clearAllMocks);
-
-  const baseTable = {
-    filePath: 'baseTable.ts',
-    exportAs: 'BaseTable',
-  };
 
   const fn = appCodeUpdater(params);
 
   it('should call table and file updaters with proper arguments', async () => {
     await fn.process({
+      ...args,
       ast: ast.addTable,
-      options: {},
-      basePath: __dirname,
-      cache: {},
-      logger: console,
-      baseTable,
     });
 
     const ormPath = path.resolve(__dirname, params.ormPath);
@@ -71,23 +77,17 @@ describe('appCodeUpdater', () => {
     expect(createBaseTableFile).not.toBeCalled();
 
     await fn.process({
+      ...args,
       ast: ast.addTable,
-      options: {},
-      basePath: __dirname,
       cache,
-      logger: console,
-      baseTable,
     });
 
     expect(createBaseTableFile).toBeCalledTimes(1);
 
     await fn.process({
+      ...args,
       ast: ast.addTable,
-      options: {},
-      basePath: __dirname,
       cache,
-      logger: console,
-      baseTable,
     });
 
     expect(createBaseTableFile).toBeCalledTimes(1);
@@ -96,13 +96,7 @@ describe('appCodeUpdater', () => {
   it('should call updateRelations in afterAll', async () => {
     const relations = {};
 
-    await fn.afterAll({
-      options: {},
-      basePath: __dirname,
-      cache: { relations },
-      logger: console,
-      baseTable,
-    });
+    await fn.afterAll(args);
 
     expect(updateRelations).toBeCalledWith({
       relations,

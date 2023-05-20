@@ -293,7 +293,7 @@ describe('hasOne', () => {
             FROM "profile" AS "p"
             WHERE "p"."bio" = $1 AND "p"."userId" = "user"."id"
           ) "p" ON true
-          WHERE "p"."bio" = $2
+          WHERE "p"."Bio" = $2
         `,
         ['one', 'two'],
       );
@@ -301,9 +301,12 @@ describe('hasOne', () => {
 
     describe('select', () => {
       it('should be selectable', () => {
-        const query = db.user.as('u').select('Id', {
-          profile: (q) => q.profile.where({ Bio: 'bio' }),
-        });
+        const query = db.user
+          .as('u')
+          .select('Id', {
+            profile: (q) => q.profile.where({ Bio: 'bio' }),
+          })
+          .order('profile.Bio');
 
         assertType<Awaited<typeof query>, { Id: number; profile: Profile }[]>();
 
@@ -320,6 +323,7 @@ describe('hasOne', () => {
               WHERE "profile"."bio" = $1
                 AND "profile"."userId" = "u"."id"
             ) "profile" ON true
+            ORDER BY "profile"."Bio" ASC
           `,
           ['bio'],
         );
@@ -1723,7 +1727,7 @@ describe('hasOne through', () => {
             LIMIT 1
           )
         ) "p" ON true
-        WHERE "p"."bio" = $2
+        WHERE "p"."Bio" = $2
       `,
       ['one', 'two'],
     );
