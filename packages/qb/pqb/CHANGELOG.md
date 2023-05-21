@@ -1,5 +1,12 @@
 # pqb
 
+## 0.11.23
+
+### Patch Changes
+
+- Updated dependencies [9610b44]
+  - orchid-core@0.4.8
+
 ## 0.11.22
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.4.8
+
+### Patch Changes
+
+- 9610b44: Add code comments
+
 ## 0.4.7
 
 ### Patch Changes
