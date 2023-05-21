@@ -1,6 +1,6 @@
 import { NumberBaseColumn } from './number';
 import { columnTypes } from './columnTypes';
-import { assertType, testDb } from 'test-utils';
+import { assertType, expectSql, testDb } from 'test-utils';
 
 const t = columnTypes;
 
@@ -107,6 +107,30 @@ describe('number columns', () => {
       const code = t.bigint().identity({ always: true }).toCode('t');
 
       expect(code).toEqual(['t.bigint().identity({', ['always: true,'], '})']);
+    });
+  });
+
+  describe('identity', () => {
+    it('should be optional when creating a record', () => {
+      const table = testDb(
+        'table',
+        (t) => ({
+          one: t.smallint().identity(),
+          two: t.identity(),
+          three: t.bigint().identity(),
+        }),
+        {
+          noPrimaryKey: 'ignore',
+        },
+      );
+
+      const q = table.create({});
+      expectSql(
+        q.toSql(),
+        `
+          INSERT INTO "table"("one") VALUES (DEFAULT) RETURNING *
+        `,
+      );
     });
   });
 

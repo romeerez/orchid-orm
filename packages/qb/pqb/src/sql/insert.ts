@@ -9,6 +9,9 @@ import { InsertQueryData, QueryData } from './data';
 import { isRaw, raw, RawExpression } from 'orchid-core';
 import { ColumnData } from '../columns';
 
+// reuse array for the columns list
+const quotedColumns: string[] = [];
+
 export const pushInsertSql = (
   ctx: ToSqlCtx,
   table: Query,
@@ -17,15 +20,17 @@ export const pushInsertSql = (
 ) => {
   const { shape } = table.query;
 
-  const quotedColumns = query.columns.map((key) =>
-    q(shape[key]?.data.name || key),
-  );
+  const { columns } = query;
+  quotedColumns.length = columns.length;
+  for (let i = 0, len = columns.length; i < len; i++) {
+    quotedColumns[i] = q(shape[columns[i]]?.data.name || columns[i]);
+  }
 
   let runtimeDefaults: (() => unknown)[] | undefined;
   if (table.internal.runtimeDefaultColumns) {
     runtimeDefaults = [];
     for (const key of table.internal.runtimeDefaultColumns) {
-      if (!query.columns.includes(key)) {
+      if (!columns.includes(key)) {
         const column = shape[key];
         quotedColumns.push(q(column.data.name || key));
         runtimeDefaults.push(column.data.default as () => unknown);
@@ -33,23 +38,34 @@ export const pushInsertSql = (
     }
   }
 
+  let values = query.values;
+  if (quotedColumns.length === 0) {
+    const key = Object.keys(table.shape)[0];
+    const column = table.shape[key];
+    quotedColumns[0] = q(column?.data.name || key);
+
+    if (Array.isArray(values) && Array.isArray(values[0])) {
+      values = [[undefined]];
+    }
+  }
+
   ctx.sql.push(`INSERT INTO ${quotedAs}(${quotedColumns.join(', ')})`);
 
-  if ('from' in query.values) {
-    const { from, values } = query.values;
+  if ('from' in values) {
+    const { from, values: v } = values;
     const q = from.clone();
 
-    if (values) {
+    if (v) {
       pushQueryValue(
         q,
         'select',
-        raw(encodeRow(ctx, values[0], runtimeDefaults), false),
+        raw(encodeRow(ctx, v[0], runtimeDefaults), false),
       );
     }
 
     ctx.sql.push(makeSql(q, { values: ctx.values }).text);
-  } else if (isRaw(query.values)) {
-    let valuesSql = getRaw(query.values, ctx.values);
+  } else if (isRaw(values)) {
+    let valuesSql = getRaw(values, ctx.values);
 
     if (runtimeDefaults) {
       valuesSql += `, ${runtimeDefaults
@@ -58,31 +74,31 @@ export const pushInsertSql = (
     }
 
     ctx.sql.push(`VALUES (${valuesSql})`);
-  } else if (isRaw(query.values[0])) {
+  } else if (isRaw(values[0])) {
     let sql;
 
     if (runtimeDefaults) {
-      const { values } = ctx;
-      sql = (query.values as RawExpression[])
+      const { values: v } = ctx;
+      sql = (values as RawExpression[])
         .map(
           (raw) =>
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            `(${getRaw(raw, values)}, ${runtimeDefaults!
-              .map((fn) => addValue(values, fn()))
+            `(${getRaw(raw, v)}, ${runtimeDefaults!
+              .map((fn) => addValue(v, fn()))
               .join(', ')})`,
         )
         .join(', ');
     } else {
-      const { values } = ctx;
-      sql = (query.values as RawExpression[])
-        .map((raw) => `(${getRaw(raw, values)})`)
+      const { values: v } = ctx;
+      sql = (values as RawExpression[])
+        .map((raw) => `(${getRaw(raw, v)})`)
         .join(', ');
     }
 
     ctx.sql.push(`VALUES ${sql}`);
   } else {
     ctx.sql.push(
-      `VALUES ${(query.values as unknown[][])
+      `VALUES ${(values as unknown[][])
         .map((row) => `(${encodeRow(ctx, row, runtimeDefaults)})`)
         .join(', ')}`,
     );
@@ -110,7 +126,7 @@ export const pushInsertSql = (
 
       const { indexes } = table.internal;
 
-      const quotedUniques = query.columns.reduce((arr: string[], key, i) => {
+      const quotedUniques = columns.reduce((arr: string[], key, i) => {
         const unique =
           // check column index
           (shape[key]?.data as ColumnData).indexes?.some(

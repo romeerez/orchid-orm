@@ -10,6 +10,8 @@ import {
   numberDataToCode,
   setColumnData,
   addCode,
+  ColumnWithDefault,
+  ColumnTypeBase,
 } from 'orchid-core';
 import { columnCode, identityToCode } from './code';
 import type { TableData } from './columnTypes';
@@ -112,6 +114,11 @@ const intToCode = (column: ColumnType, t: string): Code => {
   return columnCode(column, t, code);
 };
 
+export type IdentityColumn<T extends ColumnTypeBase> = ColumnWithDefault<
+  T,
+  RawExpression
+>;
+
 // signed two-byte integer
 export class SmallIntColumn extends IntegerBaseColumn {
   dataType = 'smallint' as const;
@@ -120,8 +127,11 @@ export class SmallIntColumn extends IntegerBaseColumn {
     return intToCode(this, t);
   }
 
-  identity<T extends ColumnType>(this: T, options: TableData.Identity = {}): T {
-    return setColumnData(this, 'identity', options);
+  identity<T extends ColumnType>(
+    this: T,
+    options: TableData.Identity = {},
+  ): IdentityColumn<T> {
+    return setColumnData(this, 'identity', options) as IdentityColumn<T>;
   }
 }
 
@@ -133,8 +143,11 @@ export class IntegerColumn extends IntegerBaseColumn {
     return intToCode(this, t);
   }
 
-  identity<T extends ColumnType>(this: T, options: TableData.Identity = {}): T {
-    return setColumnData(this, 'identity', options);
+  identity<T extends ColumnType>(
+    this: T,
+    options: TableData.Identity = {},
+  ): IdentityColumn<T> {
+    return setColumnData(this, 'identity', options) as IdentityColumn<T>;
   }
 }
 
@@ -145,8 +158,11 @@ export class BigIntColumn extends NumberAsStringBaseColumn {
     return intToCode(this, t);
   }
 
-  identity<T extends ColumnType>(this: T, options: TableData.Identity = {}): T {
-    return setColumnData(this, 'identity', options);
+  identity<T extends ColumnType>(
+    this: T,
+    options: TableData.Identity = {},
+  ): IdentityColumn<T> {
+    return setColumnData(this, 'identity', options) as IdentityColumn<T>;
   }
 }
 
