@@ -1,11 +1,13 @@
 {
-  "name": "top-level-package.json-is-for-eslint-and-prettier-only",
+  "description": "Top level package.json is for eslint and prettier only",
+  "private": true,
   "version": "0.0.0",
   "license": "MIT",
   "author": "Roman K",
   "scripts": {
     "check": "turbo run check",
-    "test:ci": "turbo run test:ci --cache-dir=.turbo"
+    "test:ci": "turbo run test:ci --cache-dir=.turbo",
+    "publish:ci": "changeset tag && pnpm publish -r"
   },
   "devDependencies": {
     "turbo": "^1.8.8",

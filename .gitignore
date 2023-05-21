@@ -5,7 +5,11 @@ roadmap.md
 .turbo
 coverage
 dist
-**/.pnpm-debug.log
+coverage-summary.json
+.pnpm-debug.log
+
+# created in CI
+.pnpm-store/
 
 # Dependency directories
 node_modules/

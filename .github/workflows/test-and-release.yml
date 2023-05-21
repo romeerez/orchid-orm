@@ -1,4 +1,5 @@
-name: tests
+name: Test and Release
+
 on:
   push:
     branches:
@@ -6,11 +7,14 @@ on:
     - '!badges'
   pull_request:
     types: [opened, synchronize]
+
 env:
   PG_URL: postgres://postgres:password@localhost:5432/orchid-orm
   MYSQL_URL: mysql://root:password@localhost:3306/mysql
+  PNPM_CACHE_FOLDER: .pnpm-store
+
 jobs:
-  test:
+  test-and-release:
     runs-on: ubuntu-latest
 
     outputs:
@@ -44,6 +48,9 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v3
+        with:
+          # fetch all history to get the tags needed for `changeset tag` command when publishing
+          fetch-depth: 0
 
       - name: Cache turbo build setup
         uses: actions/cache@v3
@@ -63,6 +70,9 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
 
+      - name: Setup pnpm config
+        run: pnpm config set store-dir $PNPM_CACHE_FOLDER
+
       - name: Install dependencies
         run: pnpm install
 
@@ -77,15 +87,33 @@ jobs:
       - name: Run tests
         run: pnpm test:ci
 
+      - name: Creating .npmrc
+        if: github.ref == 'refs/heads/main'
+        run: |
+          cat << EOF > "$HOME/.npmrc"
+            //registry.npmjs.org/:_authToken=$NPM_TOKEN
+          EOF
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Release
+        if: github.ref == 'refs/heads/main'
+        uses: changesets/action@v1
+        with:
+          publish: pnpm publish:ci
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Get total coverage
         id: coverage
-        if: ${{ github.ref == 'refs/heads/main' }}
+        if: github.ref == 'refs/heads/main'
         run: echo "COVERAGE=$(./node_modules/.bin/ts-node scripts/getTestCoverageTotal.ts)" >> $GITHUB_OUTPUT
 
   badge:
     name: Generate badge image with test coverage value
-    needs: test
-    if: ${{ github.ref == 'refs/heads/main' }}
+    needs: test-and-release
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -118,7 +146,7 @@ jobs:
 
       - name: Push badge commit
         uses: ad-m/github-push-action@master
-        if: ${{ success() }}
+        if: success()
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: badges
