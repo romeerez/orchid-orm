@@ -185,7 +185,7 @@ you can specify the `nowSQL` for the base table:
 import { createBaseTable } from 'orchid-orm';
 
 export const BaseTable = createBaseTable({
-  nowSql: `now() AT TIME ZONE 'UTC'`,
+  nowSQL: `now() AT TIME ZONE 'UTC'`,
   
   // ...other options
 });
@@ -215,7 +215,7 @@ const db = createDb({
   snakeCase: true,
   
   // override default SQL for timestamp, see `nowSQL` above
-  nowSql: `now() AT TIME ZONE 'UTC'`,
+  nowSQL: `now() AT TIME ZONE 'UTC'`,
 
   // override column types:
   columnTypes: (t) => ({

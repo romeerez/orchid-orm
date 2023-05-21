@@ -233,7 +233,7 @@ let currentNowFn = defaultNowFn;
 
 // change default SQL for updatedAt and createdAt
 export const setDefaultNowFn = (sql: string) => {
-  currentNowFn = sql;
+  currentNowFn = `(${sql})`; // sql should be wrapped into parenthesis to work properly in migrations
 };
 
 // get default SQL for updatedAt and createdAt

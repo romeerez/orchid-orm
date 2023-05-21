@@ -5,7 +5,7 @@ import { BaseTable, db, userData, useTestORM } from './test-utils/test-utils';
 import path from 'path';
 import { asMock } from './codegen/testUtils';
 import { getCallerFilePath } from 'orchid-core';
-import { assertType, testAdapter } from 'test-utils';
+import { assertType, expectSql, testAdapter } from 'test-utils';
 
 jest.mock('orchid-core', () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -214,6 +214,37 @@ describe('table', () => {
       expect(db.user.shape.snakeCase.data.name).toBe('snake_case');
       expect(db.user.shape.createdAt.data.name).toBe('created_at');
       expect(db.user.shape.updatedAt.data.name).toBe('updated_at');
+    });
+  });
+
+  describe('nowSQL', () => {
+    it('should produce custom SQL for timestamps when updating', () => {
+      const BaseTable = createBaseTable({
+        nowSQL: `now() AT TIME ZONE 'UTC'`,
+      });
+
+      class UserTable extends BaseTable {
+        readonly table = 'user';
+        columns = this.setColumns((t) => ({
+          id: t.identity().primaryKey(),
+          ...t.timestamps(),
+        }));
+      }
+
+      const { user } = orchidORM(
+        { adapter: testAdapter },
+        {
+          user: UserTable,
+        },
+      );
+
+      expectSql(
+        user.find(1).update({}).toSql(),
+        `
+          UPDATE "user" SET "updatedAt" = (now() AT TIME ZONE 'UTC') WHERE "user"."id" = $1
+        `,
+        [1],
+      );
     });
   });
 });

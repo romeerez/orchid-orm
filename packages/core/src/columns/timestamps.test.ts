@@ -21,7 +21,7 @@ describe('timestamps methods', () => {
         q.toSql(),
         `
           UPDATE "user"
-          SET "updatedAt" = custom_now()
+          SET "updatedAt" = (custom_now())
       `,
       );
     });
@@ -48,7 +48,7 @@ describe('timestamps methods', () => {
         q.toSql(),
         `
         UPDATE "user"
-        SET name = $1, "updatedAt" = custom_now()
+        SET name = $1, "updatedAt" = (custom_now())
       `,
         ['name'],
       );
@@ -63,7 +63,7 @@ describe('timestamps methods', () => {
         q.toSql(),
         `
         UPDATE "user"
-        SET "createdAt" = "updatedAt", "updatedAt" = custom_now()
+        SET "createdAt" = "updatedAt", "updatedAt" = (custom_now())
       `,
       );
     });
