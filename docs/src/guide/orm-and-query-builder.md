@@ -90,7 +90,7 @@ export const BaseTable = createBaseTable({
   snakeCase: true,
 
   columnTypes: (t) => ({
-    // by default timestamp is returned as a stirng, override to a number
+    // by default timestamp is returned as a string, override to a number
     timestamp: () => t.timestamp().asNumber(),
   }),
   
@@ -196,7 +196,7 @@ const db = createDb({
 
   // override column types:
   columnTypes: (t) => ({
-    // by default timestamp is returned as a stirng, override to a number
+    // by default timestamp is returned as a string, override to a number
     timestamp: () => t.timestamp().asNumber(),
   }),
 });
