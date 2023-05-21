@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.4.7
+
+### Patch Changes
+
+- 23d8a2a: Fix `nowSQL` to be wrapped into parens automatically
+
 ## 0.4.6
 
 ### Patch Changes

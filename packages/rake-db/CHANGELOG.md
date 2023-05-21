@@ -1,5 +1,18 @@
 # rake-db
 
+## 2.8.25
+
+### Patch Changes
+
+- 64353f7: Make identity column optional when creating
+- 63934b5: Fix ordering and using where for the column of selected relation
+- 23d8a2a: Fix `nowSQL` to be wrapped into parens automatically
+- Updated dependencies [64353f7]
+- Updated dependencies [63934b5]
+- Updated dependencies [23d8a2a]
+  - pqb@0.11.21
+  - orchid-core@0.4.7
+
 ## 2.8.24
 
 ### Patch Changes

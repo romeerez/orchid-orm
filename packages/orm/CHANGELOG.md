@@ -1,5 +1,19 @@
 # orchid-orm
 
+## 1.9.28
+
+### Patch Changes
+
+- 64353f7: Make identity column optional when creating
+- 63934b5: Fix ordering and using where for the column of selected relation
+- 5046e74: Fix codegen for relations when re-appliying migrations
+- 23d8a2a: Fix `nowSQL` to be wrapped into parens automatically
+- Updated dependencies [64353f7]
+- Updated dependencies [63934b5]
+- Updated dependencies [23d8a2a]
+  - pqb@0.11.21
+  - orchid-core@0.4.7
+
 ## 1.9.27
 
 ### Patch Changes
