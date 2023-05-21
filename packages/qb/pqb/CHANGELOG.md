@@ -1,5 +1,11 @@
 # pqb
 
+## 0.11.22
+
+### Patch Changes
+
+- c7298d6: Throw when passing null or undefined to the find method
+
 ## 0.11.21
 
 ### Patch Changes
