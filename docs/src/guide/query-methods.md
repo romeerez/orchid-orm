@@ -213,6 +213,18 @@ await db.author.select({
 });
 ```
 
+When you're selecting a relation that's connected via `belongsTo` or `hasOne`, it becomes available to use in `order` or in `where`:
+
+```ts
+// select books with their authors included, order by author name and filter by author column:
+await db.books
+  .select({
+    author: (q) => q.author,
+  })
+  .order('author.name')
+  .where({ 'author.isPopular': true })
+```
+
 ## selectAll
 
 When querying the table or creating records, all columns are selected by default,
