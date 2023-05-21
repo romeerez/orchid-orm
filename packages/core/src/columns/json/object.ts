@@ -10,41 +10,56 @@ import { addCode, Code } from '../code';
 import { MessageParam } from '../commonMethods';
 import { singleQuote } from '../../utils';
 
+// base type for JSON object shape
 export type JSONObjectShape = Record<string, JSONTypeAny>;
 
+// JSON object mode
+// `strip` is a default, remove unknown properties
+// `passthrough` will preserve unknown properties
+// `strict` will throw error when meet unknown properties
 export type UnknownKeysParam = 'passthrough' | 'strict' | 'strip';
 
+// make all object properties to be optional
 type FullyPartial<T extends JSONObjectShape> = {
   [K in keyof T]: JSONOptional<T[K]>;
 };
 
+// make the given object properties to be optional
 type PartiallyPartial<T extends JSONObjectShape, P extends keyof T> = {
   [K in keyof T]: K extends P ? JSONOptional<T[K]> : T[K];
 };
 
+// not sure why is this needed, copied from Zod
 export type identity<T> = T;
 
+// not sure why is this needed, copied from Zod
 export type flatten<T extends object> = identity<{ [k in keyof T]: T[k] }>;
 
+// get the keys of object properties that can be undefined
 type optionalKeys<T extends object> = {
   [k in keyof T]: undefined extends T[k] ? k : never;
 }[keyof T];
 
+// get the keys of object properties that cannot be undefined
 type requiredKeys<T extends object> = {
   [k in keyof T]: undefined extends T[k] ? never : k;
 }[keyof T];
 
+// not sure why is this needed, copied from Zod
 export type addQuestionMarks<T extends object> = Partial<
   Pick<T, optionalKeys<T>>
 > &
   Pick<T, requiredKeys<T>>;
 
+// not sure why is this needed, copied from Zod
 export type baseObjectOutputType<Shape extends JSONObjectShape> = flatten<
   addQuestionMarks<{
     [k in keyof Shape]: Shape[k]['type'];
   }>
 >;
 
+// get the output type of JSON object shape
+// when Catchall is JSONTypeAny, resulting type will have { [K: string]: any } signature
 type ObjectOutputType<
   Shape extends JSONObjectShape,
   Catchall extends JSONTypeAny,
@@ -52,6 +67,7 @@ type ObjectOutputType<
   ? baseObjectOutputType<Shape>
   : flatten<baseObjectOutputType<Shape> & { [k: string]: Catchall['type'] }>;
 
+// strict equal of two types
 export type IsEqual<T, U> = (<G>() => G extends T ? 1 : 2) extends <
   G,
 >() => G extends U ? 1 : 2

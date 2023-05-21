@@ -1,5 +1,8 @@
 name: Test and Release
 
+# limit CI to run one workflow per branch at a time to prevent any race conditions
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
 on:
   push:
     branches:
@@ -86,6 +89,24 @@ jobs:
 
       - name: Run tests
         run: pnpm test:ci
+
+      # This step will run changeset version, setting the step output to if there were changesets found
+      - name: Version command
+        if: github.ref == 'refs/heads/main'
+        id: version
+        run: |
+          echo ::set-output name=changes::$(pnpm changeset version 2>&1 | grep -q 'No unreleased changesets found' && echo 'false' || echo 'true')
+
+      # Push the updated package.json, and CHANGESET.md files
+      # the || echo 'No changes' is to ignore errors from git when trying to commit and there are no changes
+      - name: Push changes
+        if: ${{ github.ref == 'refs/heads/main' && steps.version.outputs.changes == 'true' }}
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add -A
+          git commit -m "Version packages" || echo "No changes to commit"
+          git push
 
       - name: Creating .npmrc
         if: github.ref == 'refs/heads/main'
