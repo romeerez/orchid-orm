@@ -289,7 +289,3 @@ export type AddQueryWith<
   T extends Query,
   With extends WithDataItem,
 > = SetQueryWith<T, Spread<[T['withData'], { [K in With['table']]: With }]>>;
-
-export type SetQueryWindows<T extends Query, W extends EmptyObject> = T & {
-  windows: W;
-};

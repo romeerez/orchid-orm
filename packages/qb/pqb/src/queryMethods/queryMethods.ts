@@ -8,7 +8,6 @@ import {
   SetQueryReturnsValue,
   SetQueryReturnsVoid,
   SetQueryTableAlias,
-  SetQueryWindows,
 } from '../query';
 import { Expression } from '../utils';
 import {
@@ -49,21 +48,26 @@ import { CopyMethods } from './copy';
 import { RawExpression, raw, applyMixins, EmptyObject, Sql } from 'orchid-core';
 import { AsMethods } from './as';
 import { QueryBase } from '../queryBase';
+import { OrchidOrmInternalError } from '../errors';
 
+// argument of the window method
+// it is an object where keys are name of windows
+// and values can be a window options or a raw SQL
 export type WindowArg<T extends Query> = Record<
   string,
   WindowArgDeclaration<T> | RawExpression
 >;
 
+// SQL window options to specify partitionBy and order of the window
 export type WindowArgDeclaration<T extends Query = Query> = {
   partitionBy?: Expression<T> | Expression<T>[];
   order?: OrderArg<T>;
 };
 
-type WindowResult<T extends Query, W extends WindowArg<T>> = SetQueryWindows<
-  T,
-  Record<keyof W, true>
->;
+// add new windows to a query
+type WindowResult<T extends Query, W extends WindowArg<T>> = T & {
+  windows: Record<keyof W, true>;
+};
 
 export type OrderArg<
   T extends Query,
@@ -200,6 +204,13 @@ export class QueryMethods {
     this: T,
     value: T['shape'][T['singlePrimaryKey']]['type'] | RawExpression,
   ): SetQueryReturnsOne<WhereResult<T>> {
+    if (value === null || value === undefined) {
+      throw new OrchidOrmInternalError(
+        this,
+        `${value} is not allowed in the find method`,
+      );
+    }
+
     return this._where({
       [this.singlePrimaryKey]: value,
     } as WhereArg<T>)._take();

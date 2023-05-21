@@ -316,6 +316,12 @@ describe('queryMethods', () => {
       );
       expectQueryNotMutated(q);
     });
+
+    it.each([undefined, null])('should throw if %s is passed', (value) => {
+      expect(() => User.find(value as unknown as number)).toThrow(
+        `${value} is not allowed in the find method`,
+      );
+    });
   });
 
   describe('findOptional', () => {
