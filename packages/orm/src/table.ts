@@ -1,4 +1,9 @@
 import {
+  addQueryHook,
+  AfterHook,
+  AfterHookKey,
+  BeforeHook,
+  BeforeHookKey,
   ColumnsShape,
   columnTypes as defaultColumnTypes,
   Db,
@@ -63,10 +68,25 @@ type ScopeFn<Related extends TableClass, Scope extends Query> = (
 export type Table = {
   table: string;
   columns: ColumnsConfig;
+  hooks?: TableHooks;
   schema?: string;
   columnTypes: ColumnTypesBase;
   noPrimaryKey?: boolean;
   filePath: string;
+};
+
+export type TableHooks = { [K in BeforeHookKey]?: BeforeHook } & {
+  [K in AfterHookKey]?: AfterHook;
+};
+
+export const addTableHooks = (table: Query, hooks: TableHooks) => {
+  for (const key in hooks) {
+    addQueryHook(
+      table.baseQuery,
+      key as BeforeHookKey,
+      hooks[key as BeforeHookKey] as BeforeHook,
+    );
+  }
 };
 
 // base table constructor
@@ -132,6 +152,11 @@ const create = <CT extends ColumnTypesBase>(
     snakeCase = snakeCase;
     columnTypes: CT;
     filePath!: string;
+
+    callbacks?: TableHooks;
+    setHooks(callbacks: TableHooks): TableHooks {
+      return callbacks;
+    }
 
     constructor() {
       this.columnTypes = columnTypes;

@@ -1,4 +1,4 @@
-import { createBaseTable } from './table';
+import { addTableHooks, createBaseTable } from './table';
 import { orchidORM } from './orm';
 import { ColumnType, Operators } from 'pqb';
 import { BaseTable, db, userData, useTestORM } from './test-utils/test-utils';
@@ -245,6 +245,92 @@ describe('table', () => {
         `,
         [1],
       );
+    });
+  });
+
+  describe('hooks', () => {
+    it('should save hooks defined in the table into the baseQuery', async () => {
+      const hooks = {
+        beforeQuery: () => {},
+        afterQuery: () => {},
+        beforeCreate: () => {},
+        afterCreate: () => {},
+        beforeUpdate: () => {},
+        afterUpdate: () => {},
+        beforeDelete: () => {},
+        afterDelete: () => {},
+        beforeSave: () => {},
+        afterSave: () => {},
+      };
+
+      class Table extends BaseTable {
+        readonly table = 'table';
+        columns = this.setColumns((t) => ({
+          id: t.identity().primaryKey(),
+        }));
+
+        hooks = this.setHooks(hooks);
+      }
+
+      const { table } = orchidORM(
+        { adapter: testAdapter },
+        {
+          table: Table,
+        },
+      );
+
+      expect(table.baseQuery.query).toMatchObject({
+        beforeQuery: [hooks.beforeQuery],
+        afterQuery: [hooks.afterQuery],
+        beforeCreate: [hooks.beforeCreate, hooks.beforeSave],
+        afterCreate: [hooks.afterCreate, hooks.afterSave],
+        beforeUpdate: [hooks.beforeUpdate, hooks.beforeSave],
+        afterUpdate: [hooks.afterUpdate, hooks.afterSave],
+        beforeDelete: [hooks.beforeDelete],
+        afterDelete: [hooks.afterDelete],
+      });
+    });
+
+    it('should save provided hooks into the baseQuery by using addTableHooks', async () => {
+      const hooks = {
+        beforeQuery: () => {},
+        afterQuery: () => {},
+        beforeCreate: () => {},
+        afterCreate: () => {},
+        beforeUpdate: () => {},
+        afterUpdate: () => {},
+        beforeDelete: () => {},
+        afterDelete: () => {},
+        beforeSave: () => {},
+        afterSave: () => {},
+      };
+
+      class Table extends BaseTable {
+        readonly table = 'table';
+        columns = this.setColumns((t) => ({
+          id: t.identity().primaryKey(),
+        }));
+      }
+
+      const { table } = orchidORM(
+        { adapter: testAdapter },
+        {
+          table: Table,
+        },
+      );
+
+      addTableHooks(table, hooks);
+
+      expect(table.baseQuery.query).toMatchObject({
+        beforeQuery: [hooks.beforeQuery],
+        afterQuery: [hooks.afterQuery],
+        beforeCreate: [hooks.beforeCreate, hooks.beforeSave],
+        afterCreate: [hooks.afterCreate, hooks.afterSave],
+        beforeUpdate: [hooks.beforeUpdate, hooks.beforeSave],
+        afterUpdate: [hooks.afterUpdate, hooks.afterSave],
+        beforeDelete: [hooks.beforeDelete],
+        afterDelete: [hooks.afterDelete],
+      });
     });
   });
 });

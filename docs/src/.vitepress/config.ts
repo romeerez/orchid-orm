@@ -76,8 +76,8 @@ export default {
             link: '/guide/advanced-queries',
           },
           {
-            text: 'Callbacks',
-            link: '/guide/callbacks',
+            text: 'Lifecycle hooks',
+            link: '/guide/hooks',
           },
           {
             text: 'Error handling',

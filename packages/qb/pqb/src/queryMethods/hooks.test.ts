@@ -1,11 +1,11 @@
 import { User, userData } from '../test-utils/test-utils';
 import { useTestDatabase } from 'test-utils';
 
-describe('callbacks', () => {
+describe('hooks', () => {
   useTestDatabase();
 
   describe('beforeQuery', () => {
-    it('should run callback before query', async () => {
+    it('should run a hook before query', async () => {
       const fn = jest.fn();
       const query = User.beforeQuery(fn);
       await query;
@@ -15,7 +15,7 @@ describe('callbacks', () => {
   });
 
   describe('afterQuery', () => {
-    it('should run callback after query', async () => {
+    it('should run a hook after query', async () => {
       const fn = jest.fn();
       const query = User.afterQuery(fn).count();
       const result = await query;
@@ -25,7 +25,7 @@ describe('callbacks', () => {
   });
 
   describe('beforeCreate', () => {
-    it('should run callback before create', async () => {
+    it('should run a hook before create', async () => {
       const fn = jest.fn();
       const query = User.beforeCreate(fn).create(userData);
       await query;
@@ -35,7 +35,7 @@ describe('callbacks', () => {
   });
 
   describe('afterCreate', () => {
-    it('should run callback after create', async () => {
+    it('should run a hook after create', async () => {
       const fn = jest.fn();
       const query = User.afterCreate(fn).select('id').create(userData);
       const result = await query;
@@ -45,7 +45,7 @@ describe('callbacks', () => {
   });
 
   describe('beforeUpdate', () => {
-    it('should run callback before update', async () => {
+    it('should run a hook before update', async () => {
       const fn = jest.fn();
       const query = User.beforeUpdate(fn)
         .where({ id: 1 })
@@ -57,7 +57,7 @@ describe('callbacks', () => {
   });
 
   describe('afterUpdate', () => {
-    it('should run callback after update', async () => {
+    it('should run a hook after update', async () => {
       const fn = jest.fn();
       const query = User.afterUpdate(fn)
         .where({ id: 1 })
@@ -68,8 +68,41 @@ describe('callbacks', () => {
     });
   });
 
+  describe('beforeSave', () => {
+    it('should run a hook before update and create', async () => {
+      const fn = jest.fn();
+      const q = User.beforeSave(fn);
+
+      const update = q.where({ id: 1 }).update({ name: 'name' });
+      await update;
+
+      const create = q.create(userData);
+      await create;
+
+      expect(fn.mock.calls).toEqual([[update], [create]]);
+    });
+  });
+
+  describe('afterSave', () => {
+    it('should run a hook after update and create', async () => {
+      const fn = jest.fn();
+      const q = User.afterSave(fn);
+
+      const update = q.where({ id: 1 }).update({ name: 'name' });
+      const updateResult = await update;
+
+      const create = q.create(userData);
+      const createResult = await create;
+
+      expect(fn.mock.calls).toEqual([
+        [update, updateResult],
+        [create, createResult],
+      ]);
+    });
+  });
+
   describe('beforeDelete', () => {
-    it('should run callback before delete', async () => {
+    it('should run a hook before delete', async () => {
       const fn = jest.fn();
       const query = User.beforeDelete(fn).where({ id: 1 }).delete();
       await query;
@@ -79,7 +112,7 @@ describe('callbacks', () => {
   });
 
   describe('afterDelete', () => {
-    it('should run callback after delete', async () => {
+    it('should run a hook after delete', async () => {
       const fn = jest.fn();
       const query = User.afterDelete(fn).where({ id: 1 }).delete();
       const result = await query;

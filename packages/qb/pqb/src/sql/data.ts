@@ -1,7 +1,7 @@
 import { ColumnsParsers, Query, QueryReturnType } from '../query';
 import {
-  AfterCallback,
-  BeforeCallback,
+  AfterHook,
+  BeforeHook,
   getValueKey,
   QueryLogger,
   QueryLogObject,
@@ -62,8 +62,8 @@ export type CommonQueryData = {
   parsers?: ColumnsParsers;
   notFoundDefault?: unknown;
   defaults?: Record<string, unknown>;
-  beforeQuery?: BeforeCallback[];
-  afterQuery?: AfterCallback[];
+  beforeQuery?: BeforeHook[];
+  afterQuery?: AfterHook[];
   log?: QueryLogObject;
   logger: QueryLogger;
   autoPreparedStatements?: boolean;
@@ -115,8 +115,8 @@ export type InsertQueryData = CommonQueryData & {
         expr?: OnConflictItem;
         update?: OnConflictMergeUpdate;
       };
-  beforeCreate?: BeforeCallback[];
-  afterCreate?: AfterCallback[];
+  beforeCreate?: BeforeHook[];
+  afterCreate?: AfterHook[];
 };
 
 export type UpdateQueryDataObject = Record<
@@ -136,15 +136,15 @@ export type UpdateQueryDataItem =
 export type UpdateQueryData = CommonQueryData & {
   type: 'update';
   updateData: UpdateQueryDataItem[];
-  beforeUpdate?: BeforeCallback[];
-  afterUpdate?: AfterCallback[];
+  beforeUpdate?: BeforeHook[];
+  afterUpdate?: AfterHook[];
 };
 
 export type DeleteQueryData = CommonQueryData & {
   type: 'delete';
   join?: JoinItem[];
-  beforeDelete?: BeforeCallback[];
-  afterDelete?: AfterCallback[];
+  beforeDelete?: BeforeHook[];
+  afterDelete?: AfterHook[];
 };
 
 export type TruncateQueryData = CommonQueryData & {

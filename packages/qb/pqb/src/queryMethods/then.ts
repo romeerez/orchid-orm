@@ -2,7 +2,7 @@ import { ColumnsParsers, Query, QueryReturnType } from '../query';
 import { NotFoundError, QueryError } from '../errors';
 import { QueryArraysResult, QueryResult } from '../adapter';
 import { CommonQueryData } from '../sql';
-import { AfterCallback, BeforeCallback } from './callbacks';
+import { AfterHook, BeforeHook } from './hooks';
 import { getValueKey } from './get';
 import pg from 'pg';
 import { AdapterBase, Sql } from 'orchid-core';
@@ -93,22 +93,22 @@ const then = async (
   const localError = queryError;
 
   try {
-    let beforeCallbacks: BeforeCallback[] | undefined;
-    let afterCallbacks: AfterCallback[] | undefined;
+    let beforeHooks: BeforeHook[] | undefined;
+    let afterHooks: AfterHook[] | undefined;
     if (q.query.type === 'insert') {
-      beforeCallbacks = q.query.beforeCreate;
-      afterCallbacks = q.query.afterCreate;
+      beforeHooks = q.query.beforeCreate;
+      afterHooks = q.query.afterCreate;
     } else if (q.query.type === 'update') {
-      beforeCallbacks = q.query.beforeUpdate;
-      afterCallbacks = q.query.afterUpdate;
+      beforeHooks = q.query.beforeUpdate;
+      afterHooks = q.query.afterUpdate;
     } else if (q.query.type === 'delete') {
-      beforeCallbacks = q.query.beforeDelete;
-      afterCallbacks = q.query.afterDelete;
+      beforeHooks = q.query.beforeDelete;
+      afterHooks = q.query.afterDelete;
     }
 
-    if (beforeCallbacks || q.query.beforeQuery) {
+    if (beforeHooks || q.query.beforeQuery) {
       await Promise.all(
-        getCallbacks(beforeCallbacks, q.query.beforeQuery).map((cb) => cb(q)),
+        getHooks(beforeHooks, q.query.beforeQuery).map((cb) => cb(q)),
       );
     }
 
@@ -134,15 +134,15 @@ const then = async (
 
     if (q.query.log) {
       q.query.log.afterQuery(sql, logData);
-      // set sql to be undefined to prevent logging on error in case if afterCallbacks throws
+      // set sql to be undefined to prevent logging on error in case if afterHooks throws
       sql = undefined;
     }
 
     const result = q.query.handleResult(q, queryResult);
 
-    if (afterCallbacks || q.query.afterQuery) {
+    if (afterHooks || q.query.afterQuery) {
       await Promise.all(
-        getCallbacks(q.query.afterQuery, afterCallbacks).map((query) =>
+        getHooks(q.query.afterQuery, afterHooks).map((query) =>
           query(q, result),
         ),
       );
@@ -301,7 +301,7 @@ const parseValue = (value: unknown, parsers?: ColumnsParsers) => {
   return value;
 };
 
-const getCallbacks = <T extends BeforeCallback[] | AfterCallback[]>(
+const getHooks = <T extends BeforeHook[] | AfterHook[]>(
   first?: T,
   second?: T,
 ): T => {

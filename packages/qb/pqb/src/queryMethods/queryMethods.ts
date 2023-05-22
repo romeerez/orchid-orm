@@ -39,7 +39,7 @@ import { Clear } from './clear';
 import { Having } from './having';
 import { Window } from './window';
 import { QueryLog } from './log';
-import { QueryCallbacks } from './callbacks';
+import { QueryHooks } from './hooks';
 import { QueryUpsertOrCreate } from './upsertOrCreate';
 import { QueryGet } from './get';
 import { MergeQueryMethods } from './merge';
@@ -108,7 +108,7 @@ export interface QueryMethods
     Window,
     Then,
     QueryLog,
-    QueryCallbacks,
+    QueryHooks,
     QueryUpsertOrCreate,
     QueryGet,
     MergeQueryMethods,
@@ -392,7 +392,7 @@ applyMixins(QueryMethods, [
   Window,
   Then,
   QueryLog,
-  QueryCallbacks,
+  QueryHooks,
   QueryUpsertOrCreate,
   QueryGet,
   MergeQueryMethods,

@@ -1,17 +1,17 @@
 import {
   Adapter,
-  Db,
   AdapterOptions,
-  QueryLogOptions,
-  columnTypes,
-  NoPrimaryKeyOption,
   anyShape,
+  columnTypes,
+  Db,
   DbTableOptions,
   FromArgs,
-  Query,
   FromResult,
+  NoPrimaryKeyOption,
+  Query,
+  QueryLogOptions,
 } from 'pqb';
-import { DbTable, Table, TableClasses } from './table';
+import { addTableHooks, DbTable, Table, TableClasses } from './table';
 import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -112,6 +112,8 @@ export const orchidORM = <T extends TableClasses>(
     (dbTable as unknown as { db: unknown }).db = result;
     (dbTable as unknown as { filePath: string }).filePath = table.filePath;
     (dbTable as unknown as { name: string }).name = table.constructor.name;
+
+    if (table.hooks) addTableHooks(dbTable, table.hooks);
 
     (result as Record<string, unknown>)[key] = dbTable;
   }
