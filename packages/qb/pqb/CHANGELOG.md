@@ -1,5 +1,11 @@
 # pqb
 
+## 0.11.24
+
+### Patch Changes
+
+- 83d8eed: Support defining hooks on tables (#83)
+
 ## 0.11.23
 
 ### Patch Changes

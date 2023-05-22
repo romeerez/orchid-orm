@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.9.31
+
+### Patch Changes
+
+- 83d8eed: Support defining hooks on tables (#83)
+- Updated dependencies [83d8eed]
+  - pqb@0.11.24
+
 ## 1.9.30
 
 ### Patch Changes
