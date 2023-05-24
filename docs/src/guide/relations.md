@@ -40,7 +40,7 @@ export class ProfileTable extends BaseTable {
   }));
 
   relations = {
-    profile: this.hasOne(() => UserTable, {
+    profile: this.belongsTo(() => UserTable, {
       required: true,
       primaryKey: 'id',
       foreignKey: 'userId',
