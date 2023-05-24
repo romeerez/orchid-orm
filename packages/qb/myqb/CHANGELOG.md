@@ -1,5 +1,11 @@
 # myqb
 
+## 0.2.12
+
+### Patch Changes
+
+- a33d1a1: Update docs links in README.md and in package.json
+
 ## 0.2.11
 
 ### Patch Changes

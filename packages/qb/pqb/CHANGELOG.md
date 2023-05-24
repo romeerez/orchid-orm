@@ -1,5 +1,11 @@
 # pqb
 
+## 0.11.25
+
+### Patch Changes
+
+- a33d1a1: Update docs links in README.md and in package.json
+
 ## 0.11.24
 
 ### Patch Changes

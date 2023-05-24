@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.9.32
+
+### Patch Changes
+
+- a33d1a1: Update docs links in README.md and in package.json
+- Updated dependencies [a33d1a1]
+  - pqb@0.11.25
+
 ## 1.9.31
 
 ### Patch Changes

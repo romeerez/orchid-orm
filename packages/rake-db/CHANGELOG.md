@@ -1,5 +1,12 @@
 # rake-db
 
+## 2.8.29
+
+### Patch Changes
+
+- Updated dependencies [a33d1a1]
+  - pqb@0.11.25
+
 ## 2.8.28
 
 ### Patch Changes
