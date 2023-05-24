@@ -2,7 +2,7 @@
   "name": "pqb",
   "version": "0.11.24",
   "description": "Postgres query builder",
-  "homepage": "https://orchid-orm.netlify.app/guide/query-builder-setup.html",
+  "homepage": "https://orchid-orm.netlify.app/guide/orm-and-query-builder.html",
   "repository": {
     "type": "git",
     "url": "https://github.com/romeerez/orchid-orm/tree/main/packages/qb/pqb"

@@ -3,7 +3,6 @@
   "version": "0.2.11",
   "private": true,
   "description": "MySQL query builder",
-  "homepage": "https://orchid-orm.netlify.app/guide/query-builder-setup.html",
   "repository": {
     "type": "git",
     "url": "https://github.com/romeerez/orchid-orm/tree/main/packages/qb/myqb"

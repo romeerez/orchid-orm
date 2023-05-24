@@ -2,7 +2,7 @@
   "name": "orchid-orm",
   "version": "1.9.31",
   "description": "Postgres ORM",
-  "homepage": "https://orchid-orm.netlify.app/guide/orm-setup-and-overview.html",
+  "homepage": "https://orchid-orm.netlify.app/guide/orm-and-query-builder.html",
   "repository": {
     "type": "git",
     "url": "https://github.com/romeerez/orchid-orm/tree/main/packages/orm"
