@@ -2,7 +2,7 @@
 
 # Orchid ORM
 
-![tests](https://github.com/romeerez/orchid-orm/actions/workflows/tests.yml/badge.svg)
+![tests](https://github.com/romeerez/orchid-orm/actions/workflows/test-and-release.yml/badge.svg)
 ![coverage](https://raw.githubusercontent.com/romeerez/orchid-orm/badges/coverage-badge.svg)
 [![Discord](https://img.shields.io/discord/1072299783340953671)](https://discord.gg/95pa6FpBB9)
 

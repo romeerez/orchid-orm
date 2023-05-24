@@ -146,7 +146,7 @@ jobs:
         id: badge
         with:
           label: 'test coverage'
-          status: ${{ needs.test.outputs.COVERAGE }}
+          status: ${{ needs.test-and-release.outputs.COVERAGE }}
           color: 'green'
           path: coverage-badge.svg
 
