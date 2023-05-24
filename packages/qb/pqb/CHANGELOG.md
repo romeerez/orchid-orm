@@ -1,5 +1,11 @@
 # pqb
 
+## 0.11.26
+
+### Patch Changes
+
+- 2e8e2a3: Support $ syntax in raw method for column names
+
 ## 0.11.25
 
 ### Patch Changes
