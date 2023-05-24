@@ -1,5 +1,5 @@
 import { AggregateItemOptions, HavingItem } from './types';
-import { getRaw } from '../raw';
+import { getRaw } from './raw';
 import { aggregateToSql } from './aggregate';
 import { addValue, q } from './common';
 import { ToSqlCtx } from './toSql';

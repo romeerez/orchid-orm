@@ -148,6 +148,32 @@ const result: { num: number }[] = await db.table.select({
 });
 ```
 
+Use double dollar `$$` syntax to quote the column names. The column name will be quoted in the SQL, don't quote it manually.
+
+```ts
+const result: { num: number }[] = await db.table.select({
+  num: db.table.raw((t) => t.integer(), '$$column + $add', {
+    // will be quoted into "amount"
+    column: 'amount',
+    add: 123,
+  }),
+});
+```
+
+Column name may contain `.` to have a table name and a column name.
+
+```ts
+const result: { num: number }[] = await db.table
+  .join('otherTable', 'otherTable.id', 'table.otherId')
+  .select({
+    num: db.table.raw((t) => t.integer(), '$$column + $add', {
+      // will be quoted into "otherTable"."amount"
+      column: 'otherTable.amount',
+      add: 123,
+    }),
+  });
+```
+
 Inserting values directly into the query is not correct, as it opens the door for possible SQL injections:
 
 ```ts
@@ -164,7 +190,7 @@ When using raw SQL in a `where` statement or in any other place which does not a
 
 ```ts
 const result = await db.table.where(
-  db.table.raw('someColumn = $value', { value: 123 }),
+  db.table.raw('$$column = $value', { column: 'column', value: 123 }),
 );
 ```
 
@@ -222,7 +248,7 @@ await db.books
     author: (q) => q.author,
   })
   .order('author.name')
-  .where({ 'author.isPopular': true })
+  .where({ 'author.isPopular': true });
 ```
 
 ## selectAll

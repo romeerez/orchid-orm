@@ -1,7 +1,7 @@
 import { quoteSchemaAndTable } from './common';
 import { checkIfASimpleQuery } from './types';
 import { makeSql, ToSqlCtx } from './toSql';
-import { getRaw } from '../raw';
+import { getRaw } from './raw';
 import { SelectQueryData } from './data';
 import { isRaw } from 'orchid-core';
 import { QueryBase } from '../queryBase';

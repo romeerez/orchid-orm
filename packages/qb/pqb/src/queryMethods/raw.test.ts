@@ -19,7 +19,7 @@ describe('raw', () => {
   });
 
   it('should replace values started with $', () => {
-    const query = User.where(
+    const q = User.where(
       testDb.raw('a = $a AND b = $B AND c = $a1B2', {
         a: 1,
         B: 'b',
@@ -28,10 +28,26 @@ describe('raw', () => {
     );
 
     expectSql(
-      query.toSql(),
+      q.toSql(),
       `SELECT * FROM "user" WHERE (a = $1 AND b = $2 AND c = $3)`,
       [1, 'b', true],
     );
+  });
+
+  it('should replace column literals started with $$', () => {
+    const q = User.where(testDb.raw('$$a = $b', { a: 'name', b: 'value' }));
+
+    expectSql(q.toSql(), `SELECT * FROM "user" WHERE ("name" = $1)`, ['value']);
+  });
+
+  it('should replace column literals with table started with $$', () => {
+    const q = User.where(
+      testDb.raw('$$a = $b', { a: 'user.name', b: 'value' }),
+    );
+
+    expectSql(q.toSql(), `SELECT * FROM "user" WHERE ("user"."name" = $1)`, [
+      'value',
+    ]);
   });
 
   it('should not replace values inside string literals', () => {
@@ -50,14 +66,14 @@ describe('raw', () => {
   });
 
   it('should throw when variable in the query is not provided', () => {
-    const query = User.where(testDb.raw(`a = $a AND b = $b`, { a: 1 }));
+    const q = User.where(testDb.raw(`a = $a AND b = $b`, { a: 1 }));
 
-    expect(() => query.toSql()).toThrow('Query variable `b` is not provided');
+    expect(() => q.toSql()).toThrow('Query variable `b` is not provided');
   });
 
   it('should throw when variable in the object is not used by the query', () => {
-    const query = User.where(testDb.raw(`a = $a`, { a: 1, b: 'b' }));
+    const q = User.where(testDb.raw(`a = $a`, { a: 1, b: 'b' }));
 
-    expect(() => query.toSql()).toThrow('Query variable `b` is unused');
+    expect(() => q.toSql()).toThrow('Query variable `b` is unused');
   });
 });

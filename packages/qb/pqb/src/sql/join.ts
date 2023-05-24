@@ -10,7 +10,7 @@ import { Query, QueryWithTable } from '../query';
 import { whereToSql } from './where';
 import { Relation } from '../relations';
 import { ToSqlCtx } from './toSql';
-import { getRaw } from '../raw';
+import { getRaw } from './raw';
 import { JoinedShapes, QueryData, SelectQueryData } from './data';
 import { isRaw, RawExpression } from 'orchid-core';
 import { getQueryAs } from '../utils';
