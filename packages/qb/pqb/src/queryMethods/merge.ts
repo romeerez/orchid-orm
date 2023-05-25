@@ -1,7 +1,7 @@
-import { Query, QueryReturnType, QueryThen } from '../query';
+import { Query, QueryReturnType, GetQueryResult } from '../query';
 import { getValueKey } from './get';
 import { SelectQueryData } from '../sql';
-import { Spread } from 'orchid-core';
+import { QueryCatch, QueryThen, Spread } from 'orchid-core';
 
 export type MergeQuery<
   T extends Query,
@@ -9,18 +9,26 @@ export type MergeQuery<
   ReturnType extends QueryReturnType = QueryReturnType extends Q['returnType']
     ? T['returnType']
     : Q['returnType'],
+  Data = T['meta']['hasSelect'] extends true
+    ? GetQueryResult<ReturnType, Spread<[T['result'], Q['result']]>>
+    : GetQueryResult<ReturnType, Q['result']>,
 > = Omit<
   T,
-  'result' | 'returnType' | 'then' | 'selectable' | 'windows' | 'withData'
+  | 'result'
+  | 'returnType'
+  | 'then'
+  | 'catch'
+  | 'selectable'
+  | 'windows'
+  | 'withData'
 > & {
   meta: Q['meta'];
   result: T['meta']['hasSelect'] extends true
     ? Spread<[T['result'], Q['result']]>
     : Q['result'];
   returnType: ReturnType;
-  then: T['meta']['hasSelect'] extends true
-    ? QueryThen<ReturnType, Spread<[T['result'], Q['result']]>>
-    : QueryThen<ReturnType, Q['result']>;
+  then: QueryThen<Data>;
+  catch: QueryCatch<Data>;
   selectable: T['selectable'] & Q['selectable'];
   windows: T['windows'] & Q['windows'];
   withData: T['withData'] & Q['withData'];

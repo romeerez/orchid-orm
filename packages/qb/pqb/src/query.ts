@@ -22,7 +22,8 @@ import {
   RawExpression,
   Spread,
   StringKey,
-  ThenResult,
+  QueryThen,
+  QueryCatch,
 } from 'orchid-core';
 import { QueryBase } from './queryBase';
 
@@ -63,7 +64,8 @@ export type Query = QueryCommon &
     result: ColumnsShapeBase;
     selectable: SelectableBase;
     returnType: QueryReturnType;
-    then: ThenResult<unknown>;
+    then: QueryThen<unknown>;
+    catch: QueryCatch<unknown>;
     windows: EmptyObject;
     defaultSelectColumns: string[];
     relations: RelationsBase;
@@ -106,53 +108,47 @@ export type QueryReturnsAll<T extends QueryReturnType> = (
   ? true
   : false;
 
-export type QueryThen<
+export type GetQueryResult<
   ReturnType extends QueryReturnType,
   Result extends ColumnsShapeBase,
 > = QueryReturnsAll<ReturnType> extends true
-  ? ThenResult<ColumnShapeOutput<Result>[]>
+  ? ColumnShapeOutput<Result>[]
   : ReturnType extends 'one'
-  ? ThenResult<ColumnShapeOutput<Result> | undefined>
+  ? ColumnShapeOutput<Result> | undefined
   : ReturnType extends 'oneOrThrow'
-  ? ThenResult<ColumnShapeOutput<Result>>
+  ? ColumnShapeOutput<Result>
   : ReturnType extends 'value'
   ? Result extends { value: ColumnType }
-    ? ThenResult<Result['value']['type'] | undefined>
+    ? Result['value']['type'] | undefined
     : never
   : ReturnType extends 'valueOrThrow'
   ? Result extends { value: ColumnType }
-    ? ThenResult<Result['value']['type']>
+    ? Result['value']['type']
     : never
   : ReturnType extends 'rows'
-  ? ThenResult<ColumnShapeOutput<Result>[keyof Result][][]>
+  ? ColumnShapeOutput<Result>[keyof Result][][]
   : ReturnType extends 'pluck'
   ? Result extends { pluck: ColumnType }
-    ? ThenResult<Result['pluck']['type'][]>
+    ? Result['pluck']['type'][]
     : never
   : ReturnType extends 'rowCount'
-  ? ThenResult<number>
+  ? number
   : ReturnType extends 'void'
-  ? ThenResult<void>
+  ? void
   : never;
 
 export type AddQuerySelect<
   T extends Pick<Query, 'result' | 'then' | 'returnType' | 'meta'>,
   Result extends ColumnsShapeBase,
+  Data = GetQueryResult<T['returnType'], Result>,
 > = T['meta']['hasSelect'] extends true
-  ? MergeSelect<T, Result>
-  : {
-      [K in keyof T]: K extends 'meta'
-        ? T['meta'] & { hasSelect: true }
-        : K extends 'result'
-        ? Result
-        : K extends 'then'
-        ? QueryThen<T['returnType'], Result>
-        : T[K];
-    };
+  ? MergeSelect<T, Result, Data>
+  : SetSelect<T, Result, Data>;
 
 type MergeSelect<
   T extends Pick<Query, 'result' | 'then' | 'returnType' | 'meta'>,
   Result extends ColumnsShapeBase,
+  Data,
   Merged extends ColumnsShapeBase = {
     [K in keyof T['result']]: K extends keyof Result ? unknown : T['result'][K];
   } & Result,
@@ -160,14 +156,41 @@ type MergeSelect<
   [K in keyof T]: K extends 'result'
     ? Merged
     : K extends 'then'
-    ? QueryThen<T['returnType'], Merged>
+    ? QueryThen<Data>
+    : K extends 'catch'
+    ? QueryCatch<Data>
     : T[K];
 };
 
-export type SetQueryReturns<T extends Query, R extends QueryReturnType> = Omit<
-  T,
-  'returnType' | 'then'
-> & { returnType: R; then: QueryThen<R, T['result']> };
+type SetSelect<
+  T extends Pick<Query, 'result' | 'then' | 'returnType' | 'meta'>,
+  Result extends ColumnsShapeBase,
+  Data,
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? T['meta'] & { hasSelect: true }
+    : K extends 'result'
+    ? Result
+    : K extends 'then'
+    ? QueryThen<Data>
+    : K extends 'catch'
+    ? QueryCatch<Data>
+    : T[K];
+};
+
+export type SetQueryReturns<
+  T extends Query,
+  R extends QueryReturnType,
+  Data = GetQueryResult<R, T['result']>,
+> = {
+  [K in keyof T]: K extends 'returnType'
+    ? R
+    : K extends 'then'
+    ? QueryThen<Data>
+    : K extends 'catch'
+    ? QueryCatch<Data>
+    : T[K];
+};
 
 export type SetQueryReturnsAll<T extends Query> = SetQueryReturns<T, 'all'>;
 
@@ -191,13 +214,14 @@ export type SetQueryReturnsPluck<
     : S extends RawExpression
     ? S['__column']
     : never,
-> = Omit<T, 'result' | 'returnType' | 'then'> & {
+> = Omit<T, 'result' | 'returnType' | 'then' | 'catch'> & {
   meta: {
     hasSelect: true;
   };
   result: { pluck: C };
   returnType: 'pluck';
-  then: ThenResult<C['type'][]>;
+  then: QueryThen<C['type'][]>;
+  catch: QueryCatch<C['type'][]>;
 };
 
 export type SetQueryReturnsValueOptional<
@@ -210,13 +234,14 @@ export type SetQueryReturnsValueOptional<
     : Arg extends RelationQueryBase
     ? Arg['result']['value']
     : never,
-> = Omit<T, 'result' | 'returnType' | 'then'> & {
+> = Omit<T, 'result' | 'returnType' | 'then' | 'catch'> & {
   meta: {
     hasSelect: true;
   };
   result: { value: Column };
   returnType: 'value';
-  then: ThenResult<Column['type'] | undefined>;
+  then: QueryThen<Column['type'] | undefined>;
+  catch: QueryThen<Column['type'] | undefined>;
 };
 
 export type SetQueryReturnsValue<
@@ -229,13 +254,14 @@ export type SetQueryReturnsValue<
     : Arg extends RelationQueryBase
     ? Arg['result']['value']
     : never,
-> = Omit<T, 'result' | 'returnType' | 'then'> & {
+> = Omit<T, 'result' | 'returnType' | 'then' | 'catch'> & {
   meta: {
     hasSelect: true;
   };
   result: { value: Column };
   returnType: 'valueOrThrow';
-  then: ThenResult<Column['type']>;
+  then: QueryThen<Column['type']>;
+  catch: QueryCatch<Column['type']>;
 };
 
 export type SetQueryReturnsRowCount<T extends Query> = SetQueryReturns<
@@ -251,10 +277,11 @@ export type SetQueryReturnsColumnInfo<
   Result = Column extends keyof T['shape']
     ? ColumnInfo
     : Record<keyof T['shape'], ColumnInfo>,
-> = Omit<T, 'result' | 'returnType' | 'then'> & {
+> = Omit<T, 'result' | 'returnType' | 'then' | 'catch'> & {
   result: { value: ColumnType<Result> };
   returnType: 'value';
-  then: ThenResult<Result>;
+  then: QueryThen<Result>;
+  catch: QueryCatch<Result>;
 };
 
 export type SetQueryTableAlias<

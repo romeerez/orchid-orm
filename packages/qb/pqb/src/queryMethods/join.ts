@@ -1,6 +1,6 @@
 import {
   Query,
-  QueryThen,
+  GetQueryResult,
   Selectable,
   SelectableBase,
   WithDataBase,
@@ -18,6 +18,8 @@ import {
   NullableColumn,
   QueryMetaBase,
   ColumnsShapeBase,
+  QueryThen,
+  QueryCatch,
 } from 'orchid-core';
 import { _join, _joinLateral } from './_join';
 import { AliasOrTable } from '../utils';
@@ -171,6 +173,7 @@ type JoinOptionalMain<
   Result extends ColumnsShapeBase = {
     [K in keyof T['result']]: NullableColumn<T['result'][K]>;
   },
+  Data = GetQueryResult<T['returnType'], Result>,
 > = {
   [K in keyof T]: K extends 'selectable'
     ? {
@@ -182,7 +185,9 @@ type JoinOptionalMain<
     : K extends 'result'
     ? Result
     : K extends 'then'
-    ? QueryThen<T['returnType'], Result>
+    ? QueryThen<Data>
+    : K extends 'catch'
+    ? QueryCatch<Data>
     : T[K];
 };
 

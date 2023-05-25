@@ -24,7 +24,6 @@ import {
   DefaultSelectColumns,
   applyMixins,
   pushOrNewArray,
-  ThenResult,
   ColumnShapeOutput,
   ColumnTypesBase,
   SinglePrimaryKey,
@@ -32,6 +31,8 @@ import {
   toSnakeCase,
   AdapterBase,
   Sql,
+  QueryThen,
+  QueryCatch,
 } from 'orchid-core';
 import { q } from './sql/common';
 import { inspect } from 'util';
@@ -69,6 +70,7 @@ export interface Db<
   Shape extends ColumnsShape = Record<string, never>,
   Relations extends Query['relations'] = Query['relations'],
   CT extends ColumnTypesBase = DefaultColumnTypes,
+  Data = Pick<ColumnShapeOutput<Shape>, DefaultSelectColumns<Shape>[number]>[],
 > extends DbBase<Adapter, Table, Shape, CT>,
     QueryMethods {
   new (
@@ -85,9 +87,8 @@ export interface Db<
   query: QueryData;
   selectable: SelectableFromShape<Shape, Table>;
   returnType: Query['returnType'];
-  then: ThenResult<
-    Pick<ColumnShapeOutput<Shape>, DefaultSelectColumns<Shape>[number]>[]
-  >;
+  then: QueryThen<Data>;
+  catch: QueryCatch<Data>;
   windows: Query['windows'];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
   relations: Relations;

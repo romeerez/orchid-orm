@@ -35,11 +35,8 @@ export class Then {
     return maybeWrappedThen;
   }
 
-  async catch<T extends Query, Result>(
-    this: T,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    fn: (reason: any) => Result | PromiseLike<Result>,
-  ): Promise<ReturnType<T['then']> | Result> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  catch(this: Query, fn: (reason: any) => unknown) {
     return this.then(undefined, fn);
   }
 }
@@ -84,8 +81,7 @@ const then = async (
   resolve?: (result: any) => any,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   reject?: (error: any) => any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Promise<any> => {
+): Promise<unknown> => {
   let sql: (Sql & { name?: string }) | undefined;
   let logData: unknown | undefined;
 
@@ -148,7 +144,7 @@ const then = async (
       );
     }
 
-    resolve?.(result);
+    return resolve?.(result);
   } catch (err) {
     let error;
     if (err instanceof pg.DatabaseError) {
@@ -165,7 +161,7 @@ const then = async (
     if (q.query.log && sql && logData) {
       q.query.log.onError(error as Error, sql, logData);
     }
-    reject?.(error);
+    return reject?.(error);
   }
 };
 

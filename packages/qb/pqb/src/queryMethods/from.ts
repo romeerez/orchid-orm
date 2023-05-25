@@ -1,6 +1,6 @@
 import {
   Query,
-  QueryThen,
+  GetQueryResult,
   SelectableBase,
   SelectableFromShape,
   SetQueryTableAlias,
@@ -8,7 +8,7 @@ import {
 } from '../query';
 import { SelectQueryData } from '../sql';
 import { AliasOrTable } from '../utils';
-import { isRaw, raw, RawExpression } from 'orchid-core';
+import { isRaw, QueryCatch, QueryThen, raw, RawExpression } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 
 export type FromArgs<T extends Query> =
@@ -55,6 +55,7 @@ type FromQueryResult<
         }
       : never;
   },
+  Data = GetQueryResult<T['returnType'], Q['result']>,
 > = {
   [K in keyof T]: K extends 'meta'
     ? Omit<T['meta'], 'hasSelect' | 'as'> & { as: AliasOrTable<Q> }
@@ -63,7 +64,9 @@ type FromQueryResult<
     : K extends 'result' | 'shape'
     ? Q['result']
     : K extends 'then'
-    ? QueryThen<T['returnType'], Q['result']>
+    ? QueryThen<Data>
+    : K extends 'catch'
+    ? QueryCatch<Data>
     : T[K];
 };
 

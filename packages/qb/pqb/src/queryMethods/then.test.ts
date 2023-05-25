@@ -8,7 +8,7 @@ describe('then', () => {
 
   describe('catch', () => {
     it('should catch error', (done) => {
-      const query = User.select({
+      const q = User.select({
         column: testDb.sql((t) => t.boolean())`koko`,
       }).catch((err) => {
         expect(err.message).toBe(`column "koko" does not exist`);
@@ -16,7 +16,7 @@ describe('then', () => {
         done();
       });
 
-      assertType<Awaited<typeof query>, { column: boolean }[] | void>();
+      assertType<Awaited<typeof q>, { column: boolean }[] | void>();
     });
   });
 
@@ -30,5 +30,19 @@ describe('then', () => {
 
     expect(error instanceof NotFoundError).toBe(true);
     expect(((error as Error).cause as Error).stack).toContain('then.test.ts');
+  });
+
+  it('should handle .then callback properly', async () => {
+    let isThenCalled = false;
+
+    const len = await User.select('id').then((x) => {
+      isThenCalled = true;
+      return x.length;
+    });
+
+    assertType<typeof len, number>();
+
+    expect(isThenCalled).toBe(true);
+    expect(len).toBe(0);
   });
 });

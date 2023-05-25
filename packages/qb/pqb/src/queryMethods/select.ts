@@ -3,7 +3,7 @@ import {
   ColumnsParsers,
   Query,
   QueryReturnsAll,
-  QueryThen,
+  GetQueryResult,
   SelectableBase,
 } from '../query';
 import {
@@ -28,6 +28,8 @@ import {
   EmptyObject,
   raw,
   setColumnData,
+  QueryThen,
+  QueryCatch,
 } from 'orchid-core';
 import { QueryBase } from '../queryBase';
 import { _joinLateral } from './_join';
@@ -101,13 +103,16 @@ type SelectResult<
       ? T['shape'][K]
       : never;
   },
+  Data = GetQueryResult<T['returnType'], Result>,
 > = (T['meta']['hasSelect'] extends true
   ? unknown
   : { meta: { hasSelect: true } }) & {
   [K in keyof T]: K extends 'result'
     ? Result
     : K extends 'then'
-    ? QueryThen<T['returnType'], Result>
+    ? QueryThen<Data>
+    : K extends 'catch'
+    ? QueryCatch<Data>
     : K extends 'selectable'
     ? SelectAsResult[1]
     : T[K];
