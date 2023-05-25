@@ -88,7 +88,7 @@ describe('transaction', () => {
     const result = await testDb.transaction(
       async () =>
         await testDb.transaction(async () =>
-          testDb.queryBuilder.get(testDb.raw('123')),
+          testDb.queryBuilder.get(testDb.sql`123`),
         ),
     );
 

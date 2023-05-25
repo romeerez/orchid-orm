@@ -1,7 +1,7 @@
 import { WindowDeclaration } from './types';
 import { q, rawOrRevealColumnToSql } from './common';
 import { orderByToSql } from './orderBy';
-import { getRaw } from './raw';
+import { getRaw } from './rawSql';
 import { isRaw, RawExpression } from 'orchid-core';
 import { QueryData } from './data';
 

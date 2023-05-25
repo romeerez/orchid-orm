@@ -252,7 +252,7 @@ bool: t.boolean(),
     'table',
     ['twoId'],
   ],
-  check: t.raw('sql'),
+  check: t.sql({"raw":"sql"}),
 }),
 `.trim(),
           );
@@ -387,7 +387,7 @@ bool: t.boolean(),
           );
 
           expect(codeToString(code, '', '  ')).toBe(
-            `...t.check(t.raw('sql')),`.trim(),
+            `...t.check(t.sql({"raw":"sql"})),`.trim(),
           );
         });
       });
@@ -396,14 +396,14 @@ bool: t.boolean(),
     it('should add column check', () => {
       const code = columnsShapeToCode(
         {
-          column: t.integer().check(t.raw('column > 10')),
+          column: t.integer().check(t.sql`column > ${10}`),
         },
         tableData,
         't',
       );
 
       expect(code).toEqual([
-        `column: t.integer().check(t.raw('column > 10')),`,
+        `column: t.integer().check(t.sql\`column > \${10}\`),`,
       ]);
     });
 

@@ -11,7 +11,7 @@ import { addValue, q, qc, revealColumnToSql } from './common';
 import { getQueryAs } from '../utils';
 import { processJoinItem } from './join';
 import { makeSql, ToSqlCtx } from './toSql';
-import { getRaw } from './raw';
+import { getRaw } from './rawSql';
 import { JoinedShapes, QueryData } from './data';
 import { isRaw, RawExpression, MaybeArray, toArray } from 'orchid-core';
 import { QueryBase } from '../queryBase';

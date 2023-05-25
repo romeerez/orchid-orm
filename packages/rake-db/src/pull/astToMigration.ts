@@ -291,7 +291,21 @@ const createView = (ast: RakeDbAst.View) => {
   addCode(code, ', ');
 
   if (!ast.sql.__values) {
-    addCode(code, backtickQuote(ast.sql.__raw));
+    const raw = ast.sql.__raw;
+    let sql;
+    if (typeof raw === 'string') {
+      sql = raw;
+    } else {
+      sql = '';
+      const parts = raw[0];
+      const last = parts.length - 1;
+      for (let i = 0; i < last; i++) {
+        sql += parts[i] + `\${${raw[i + 1]}}`;
+      }
+      sql += parts[last];
+    }
+
+    addCode(code, backtickQuote(sql));
   } else {
     addCode(code, rawToCode('db', ast.sql));
   }

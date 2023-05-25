@@ -1,6 +1,5 @@
 import { cloneQueryArrays, QueryData, toSqlCacheKey } from './sql';
 import type { Query, Selectable } from './query';
-import type { ColumnType } from './columns';
 import type {
   RawExpression,
   ColumnOutput,
@@ -48,17 +47,17 @@ export type ExpressionOfType<T extends Query, C extends ColumnTypeBase, Type> =
 
 export type NumberExpression<
   T extends Query,
-  C extends ColumnType = ColumnType,
+  C extends ColumnTypeBase = ColumnTypeBase,
 > = ExpressionOfType<T, C, number>;
 
 export type StringExpression<
   T extends Query,
-  C extends ColumnType = ColumnType,
+  C extends ColumnTypeBase = ColumnTypeBase,
 > = ExpressionOfType<T, C, string>;
 
 export type BooleanExpression<
   T extends Query,
-  C extends ColumnType = ColumnType,
+  C extends ColumnTypeBase = ColumnTypeBase,
 > = ExpressionOfType<T, C, boolean>;
 
 export type ExpressionOutput<
@@ -66,6 +65,6 @@ export type ExpressionOutput<
   Expr extends Expression<T>,
 > = Expr extends keyof T['selectable']
   ? T['selectable'][Expr]['column']
-  : Expr extends RawExpression<infer ColumnType>
-  ? ColumnType
+  : Expr extends RawExpression<infer ColumnTypeBase>
+  ? ColumnTypeBase
   : never;

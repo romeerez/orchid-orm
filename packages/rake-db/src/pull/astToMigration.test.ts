@@ -367,7 +367,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable('schema.table', (t) => ({
-    id: t.identity().primaryKey().check(t.raw('column > 10')),
+    id: t.identity().primaryKey().check(t.sql({"raw":"column > 10"})),
   }));
 });
 `,
@@ -393,7 +393,7 @@ change(async (db) => {
 change(async (db) => {
   await db.createTable('schema.table', (t) => ({
     id: t.identity().primaryKey(),
-    ...t.check(t.raw('sql')),
+    ...t.check(t.sql({"raw":"sql"})),
   }));
 });
 `,
@@ -405,7 +405,7 @@ change(async (db) => {
 
       expectResult(
         result,
-        template(`  await db.addCheck('table', t.raw('sql'));`),
+        template(`  await db.addCheck('table', t.sql({"raw":"sql"}));`),
       );
     });
   });
@@ -443,7 +443,7 @@ change(async (db) => {
         onDelete: 'CASCADE',
       },
     ],
-    check: t.raw('sql'),
+    check: t.sql({"raw":"sql"}),
   });`),
       );
     });
@@ -461,8 +461,8 @@ change(async (db) => {
   await db.createDomain('schema.domainName', (t) => t.integer(), {
     notNull: true,
     collation: 'C',
-    default: db.raw('123'),
-    check: db.raw('VALUE = 42'),
+    default: db.sql({"raw":"123"}),
+    check: db.sql({"raw":"VALUE = 42"}),
   });
 });
 `,
@@ -547,7 +547,7 @@ change(async (db) => {
     checkOption: 'LOCAL',
     securityBarrier: true,
     securityInvoker: true,
-  }, db.raw('$a', {"a":1}));
+  }, db.sql({"values":{"a":1},"raw":"$a"}));
 });
 `,
       );

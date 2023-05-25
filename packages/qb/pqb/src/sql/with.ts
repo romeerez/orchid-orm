@@ -1,6 +1,6 @@
 import { q } from './common';
 import { makeSql, ToSqlCtx } from './toSql';
-import { getRaw } from './raw';
+import { getRaw } from './rawSql';
 import { QueryData } from './data';
 import { isRaw } from 'orchid-core';
 

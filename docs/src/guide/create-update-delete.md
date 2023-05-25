@@ -23,7 +23,7 @@ const objects: { id: number }[] = await db.table
 // returns an array of objects as well for raw values:
 const objects2: { id: number }[] = await db.table.select('id').createRaw({
   columns: ['name', 'password'],
-  values: db.table.raw(`'Joe', 'asdfqwer'`),
+  values: db.table.sql`'Joe', 'asdfqwer'`,
 });
 ```
 
@@ -64,7 +64,7 @@ If the table has a column with runtime defaults (defined with callbacks), the va
 ```ts
 const oneRecord = await db.table.createRaw({
   columns: ['name', 'amount'],
-  values: db.table.raw(`'name', random()`),
+  values: db.table.sql`'name', random()`,
 });
 ```
 
@@ -81,7 +81,7 @@ If the table has a column with runtime defaults (defined with callbacks), functi
 ```ts
 const manyRecords = await db.table.createManyRaw({
   columns: ['name', 'amount'],
-  values: [db.table.raw(`'one', 2`), db.table.raw(`'three', 4`)],
+  values: [db.table.sql`'one', 2`, db.table.sql`'three', 4`],
 });
 ```
 
@@ -154,12 +154,12 @@ const user = await User.selectAll().find({ email: 'some@email.com' }).orCreate({
 The data may be returned from a function, it won't be called if the record was found:
 
 ```ts
-const user = await User.selectAll().find({ email: 'some@email.com' }).orCreate(
-  () => ({
+const user = await User.selectAll()
+  .find({ email: 'some@email.com' })
+  .orCreate(() => ({
     email: 'some@email.com',
     name: 'created user',
-  }),
-);
+  }));
 ```
 
 ## onConflict
@@ -183,14 +183,14 @@ db.table.create(data).onConfict('email');
 db.table.create(data).onConfict(['email', 'name']);
 
 // raw expression:
-db.table.create(data).onConfict(db.table.raw('(email) where condition'));
+db.table.create(data).onConfict(db.table.sql`(email) where condition`);
 ```
 
 ::: info
 The column(s) specified by this method must either be the table's PRIMARY KEY or have a UNIQUE index on them, or the query will fail to execute.
 When specifying multiple columns, they must be a composite PRIMARY KEY or have a composite UNIQUE index.
 
-You can use the db.table.raw(...) function in onConflict.
+You can use the db.table.sql function in onConflict.
 It can be useful to specify a condition when you have a partial index:
 
 ```ts
@@ -201,7 +201,7 @@ db.table
     active: true,
   })
   // ignore only on email conflict and active is true.
-  .onConflict(db.table.raw('(email) where active'))
+  .onConflict(db.table.sql`(email) where active`)
   .ignore();
 ```
 
@@ -326,7 +326,10 @@ db.table
 `.merge` also accepts raw expression:
 
 ```ts
-db.table.create(data).onConflict().merge(db.table.raw('raw SQL expression'));
+db.table
+  .create(data)
+  .onConflict()
+  .merge(db.table.sql`raw SQL expression`);
 ```
 
 ## defaults
@@ -405,9 +408,10 @@ it returns an updated count by default,
 you can customize returning data by using `select`.
 
 ```ts
+const value = 'new name';
 const updatedCount = await db.table
   .find(1)
-  .updateRaw(db.table.raw(`name = $name`, { name: 'name' }));
+  .updateRaw(db.table.sql`name = ${value}`);
 ```
 
 ## updateOrThrow

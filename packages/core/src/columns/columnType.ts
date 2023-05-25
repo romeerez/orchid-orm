@@ -260,6 +260,9 @@ export abstract class ColumnTypeBase<
   // turn the column into TS code, used for code generation
   abstract toCode(t: string, migration?: boolean): Code;
 
+  // format the column into the database type
+  abstract toSQL(): string;
+
   // output type
   type!: Type;
 

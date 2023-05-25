@@ -32,7 +32,7 @@ db.table.with(
     id: columnTypes.integer(),
     name: columnTypes.text(3, 100),
   },
-  db.table.raw('SELECT id, name FROM "someTable"'),
+  db.table.sql`SELECT id, name FROM "someTable"`,
 );
 
 // accepts query:
@@ -40,7 +40,7 @@ db.table.with('alias', db.table.all());
 
 // accepts a callback for a query builder:
 db.table.with('alias', (qb) =>
-  qb.select({ one: db.table.raw((t) => t.integer(), '1') }),
+  qb.select({ one: db.table.sql((t) => t.integer())`1` }),
 );
 
 // All mentioned forms can accept options as a second argument:
@@ -90,7 +90,7 @@ Creates a union query, taking an array or a list of callbacks, builders, or raw 
 SomeTable.select('id', 'name').union(
   [
     OtherTable.select('id', 'name'),
-    SomeTable.raw(`SELECT id, name FROM "thirdTable"`),
+    SomeTable.sql`SELECT id, name FROM "thirdTable"`,
   ],
   true, // optional wrap parameter
 );
@@ -114,7 +114,7 @@ type AggregateOptions = {
   // set select alias
   as?: string;
 
-  // Expression can be a table column name or db.table.raw()
+  // Expression can be a table column name or db.table.sql
   partitionBy?: Expression | Expression[];
 
   order?:

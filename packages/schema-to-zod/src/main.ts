@@ -34,6 +34,7 @@ import {
   JSONUnion,
   JSONLazy,
   EmptyObject,
+  ColumnTypeBase,
 } from 'orchid-core';
 import { z, ZodErrorMap, ZodTypeAny } from 'zod';
 import { Buffer } from 'node:buffer';
@@ -79,7 +80,7 @@ type UUIDType = 'uuid';
 type ByteaType = 'bytea';
 
 type SchemaToZod<
-  T extends ColumnType,
+  T extends ColumnTypeBase,
   D = T['dataType'],
 > = T['data']['isNullable'] extends true
   ? z.ZodNullable<

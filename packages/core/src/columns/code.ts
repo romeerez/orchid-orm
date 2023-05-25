@@ -96,10 +96,37 @@ export const columnDefaultArgumentToCode = (
 };
 
 export const rawToCode = (t: string, raw: RawExpression): string => {
+  const sql = raw.__raw;
   const values = raw.__values;
-  return `${t}.raw(${singleQuote(raw.__raw)}${
-    values ? `, ${JSON.stringify(values)}` : ''
-  })`;
+
+  let code = `${t}.sql`;
+
+  if (typeof sql === 'string' || values) code += '(';
+
+  if (values || typeof sql === 'string') {
+    const obj: { values?: Record<string, unknown> | false; raw?: string } = {
+      values,
+    };
+    if (typeof sql === 'string') obj.raw = sql;
+    code += `${JSON.stringify(obj)}`;
+  }
+
+  if (typeof sql === 'string' || values) code += ')';
+
+  if (typeof sql !== 'string') {
+    code += '`';
+
+    const parts = sql[0];
+    let i = 0;
+    for (let last = parts.length - 1; i < last; i++) {
+      code += parts[i] + `\${${sql[i + 1]}}`;
+    }
+    code += parts[i];
+
+    code += '`';
+  }
+
+  return code;
 };
 
 export const columnMethodsToCode = <T extends ColumnDataBase>(

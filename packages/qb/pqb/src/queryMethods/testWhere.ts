@@ -106,7 +106,7 @@ export const testWhere = (
 
     it('should handle condition with operator and raw', () => {
       expectSql(
-        buildSql((q) => q.where({ [pkey]: { in: testDb.raw('(1, 2, 3)') } })),
+        buildSql((q) => q.where({ [pkey]: { in: testDb.sql`(1, 2, 3)` } })),
         `
               ${startSql}
               ${pkeySql} IN (1, 2, 3)
@@ -116,10 +116,20 @@ export const testWhere = (
 
     it('should accept raw sql', () => {
       expectSql(
-        buildSql((q) => q.where({ [pkey]: testDb.raw('1 + 2') })),
+        buildSql((q) => q.where({ [pkey]: testDb.sql`1 + 2` })),
         `
               ${startSql} ${pkeySql} = 1 + 2
             `,
+      );
+    });
+
+    it('should accept raw sql with template', () => {
+      expectSql(
+        buildSql((q) => q.where`column = ${123}`),
+        `
+              ${startSql} (column = $1)
+            `,
+        [123],
       );
     });
   });
@@ -202,10 +212,10 @@ export const testWhere = (
       expectSql(
         [
           buildSql((q) =>
-            q.where({ NOT: { [pkey]: { in: testDb.raw('(1, 2, 3)') } } }),
+            q.where({ NOT: { [pkey]: { in: testDb.sql`(1, 2, 3)` } } }),
           ),
           buildSql((q) =>
-            q.whereNot({ [pkey]: { in: testDb.raw('(1, 2, 3)') } }),
+            q.whereNot({ [pkey]: { in: testDb.sql`(1, 2, 3)` } }),
           ),
         ],
         `
@@ -218,8 +228,8 @@ export const testWhere = (
     it('should accept raw sql', () => {
       expectSql(
         [
-          buildSql((q) => q.where({ NOT: { [pkey]: testDb.raw('1 + 2') } })),
-          buildSql((q) => q.whereNot({ [pkey]: testDb.raw('1 + 2') })),
+          buildSql((q) => q.where({ NOT: { [pkey]: testDb.sql`1 + 2` } })),
+          buildSql((q) => q.whereNot({ [pkey]: testDb.sql`1 + 2` })),
         ],
         `
             ${startSql} NOT ${pkeySql} = 1 + 2
@@ -240,6 +250,16 @@ export const testWhere = (
           AND NOT EXISTS (SELECT 1 FROM "${table}" WHERE ${pkeySql} = ${pkeySql} LIMIT 1)
         `,
         [1, 2, 3],
+      );
+    });
+
+    it('should accept raw sql with template', () => {
+      expectSql(
+        buildSql((q) => q.whereNot`column = ${123}`),
+        `
+              ${startSql} NOT (column = $1)
+            `,
+        [123],
       );
     });
   });
@@ -291,16 +311,13 @@ export const testWhere = (
           buildSql((q) =>
             q.where({
               OR: [
-                { [pkey]: testDb.raw('1 + 2') },
-                { [text]: testDb.raw('2 + 3') },
+                { [pkey]: testDb.sql`1 + 2` },
+                { [text]: testDb.sql`2 + 3` },
               ],
             }),
           ),
           buildSql((q) =>
-            q.or(
-              { [pkey]: testDb.raw('1 + 2') },
-              { [text]: testDb.raw('2 + 3') },
-            ),
+            q.or({ [pkey]: testDb.sql`1 + 2` }, { [text]: testDb.sql`2 + 3` }),
           ),
         ],
         `
@@ -364,15 +381,15 @@ export const testWhere = (
           buildSql((q) =>
             q.where({
               OR: [
-                { NOT: { [pkey]: testDb.raw('1 + 2') } },
-                { NOT: { [text]: testDb.raw('2 + 3') } },
+                { NOT: { [pkey]: testDb.sql`1 + 2` } },
+                { NOT: { [text]: testDb.sql`2 + 3` } },
               ],
             }),
           ),
           buildSql((q) =>
             q.orNot(
-              { [pkey]: testDb.raw('1 + 2') },
-              { [text]: testDb.raw('2 + 3') },
+              { [pkey]: testDb.sql`1 + 2` },
+              { [text]: testDb.sql`2 + 3` },
             ),
           ),
         ],
@@ -433,10 +450,10 @@ export const testWhere = (
         [
           buildSql((q) =>
             q.where({
-              IN: { columns: [pkey], values: testDb.raw('(1, 2, 3)') },
+              IN: { columns: [pkey], values: testDb.sql`(1, 2, 3)` },
             }),
           ),
-          buildSql((q) => q.whereIn(pkey, testDb.raw('(1, 2, 3)'))),
+          buildSql((q) => q.whereIn(pkey, testDb.sql`(1, 2, 3)`)),
         ],
         `
             ${startSql}
@@ -449,15 +466,15 @@ export const testWhere = (
           buildSql((q) =>
             q.where({
               IN: [
-                { columns: [pkey], values: testDb.raw('(1, 2, 3)') },
-                { columns: [text], values: testDb.raw(`('a', 'b', 'c')`) },
+                { columns: [pkey], values: testDb.sql`(1, 2, 3)` },
+                { columns: [text], values: testDb.sql`('a', 'b', 'c')` },
               ],
             }),
           ),
           buildSql((q) =>
             q.whereIn({
-              [pkey]: testDb.raw('(1, 2, 3)'),
-              [text]: testDb.raw(`('a', 'b', 'c')`),
+              [pkey]: testDb.sql`(1, 2, 3)`,
+              [text]: testDb.sql`('a', 'b', 'c')`,
             }),
           ),
         ],
@@ -550,12 +567,12 @@ export const testWhere = (
               q.where({
                 IN: {
                   columns: [pkey, text],
-                  values: testDb.raw(`((1, 'a'), (2, 'b'))`),
+                  values: testDb.sql`((1, 'a'), (2, 'b'))`,
                 },
               }),
             ),
             buildSql((q) =>
-              q.whereIn([pkey, text], testDb.raw(`((1, 'a'), (2, 'b'))`)),
+              q.whereIn([pkey, text], testDb.sql`((1, 'a'), (2, 'b'))`),
             ),
           ],
           `
@@ -651,14 +668,12 @@ export const testWhere = (
             q.where({
               OR: [
                 { [pkey]: 1 },
-                { IN: { columns: [pkey], values: testDb.raw('(1, 2, 3)') } },
+                { IN: { columns: [pkey], values: testDb.sql`(1, 2, 3)` } },
               ],
             }),
           ),
           buildSql((q) =>
-            q
-              .where({ [pkey]: 1 })
-              .orWhereIn({ [pkey]: testDb.raw('(1, 2, 3)') }),
+            q.where({ [pkey]: 1 }).orWhereIn({ [pkey]: testDb.sql`(1, 2, 3)` }),
           ),
         ],
         `
@@ -676,8 +691,8 @@ export const testWhere = (
                 { [pkey]: 1 },
                 {
                   IN: [
-                    { columns: [pkey], values: testDb.raw('(1, 2, 3)') },
-                    { columns: [text], values: testDb.raw(`('a', 'b', 'c')`) },
+                    { columns: [pkey], values: testDb.sql`(1, 2, 3)` },
+                    { columns: [text], values: testDb.sql`('a', 'b', 'c')` },
                   ],
                 },
               ],
@@ -685,8 +700,8 @@ export const testWhere = (
           ),
           buildSql((q) =>
             q.where({ [pkey]: 1 }).orWhereIn({
-              [pkey]: testDb.raw('(1, 2, 3)'),
-              [text]: testDb.raw(`('a', 'b', 'c')`),
+              [pkey]: testDb.sql`(1, 2, 3)`,
+              [text]: testDb.sql`('a', 'b', 'c')`,
             }),
           ),
         ],
@@ -806,7 +821,7 @@ export const testWhere = (
                   {
                     IN: {
                       columns: [pkey, text],
-                      values: testDb.raw(`((1, 'a'), (2, 'b'))`),
+                      values: testDb.sql`((1, 'a'), (2, 'b'))`,
                     },
                   },
                 ],
@@ -815,7 +830,7 @@ export const testWhere = (
             buildSql((q) =>
               q
                 .where({ [pkey]: 1 })
-                .orWhereIn([pkey, text], testDb.raw(`((1, 'a'), (2, 'b'))`)),
+                .orWhereIn([pkey, text], testDb.sql`((1, 'a'), (2, 'b'))`),
             ),
           ],
           `
@@ -912,12 +927,12 @@ export const testWhere = (
         [
           buildSql((q) =>
             q.where({
-              NOT: { IN: { columns: [pkey], values: testDb.raw('(1, 2, 3)') } },
+              NOT: { IN: { columns: [pkey], values: testDb.sql`(1, 2, 3)` } },
             }),
           ),
           buildSql((q) =>
             q.whereNotIn({
-              [pkey]: testDb.raw('(1, 2, 3)'),
+              [pkey]: testDb.sql`(1, 2, 3)`,
             }),
           ),
         ],
@@ -933,16 +948,16 @@ export const testWhere = (
             q.where({
               NOT: {
                 IN: [
-                  { columns: [pkey], values: testDb.raw('(1, 2, 3)') },
-                  { columns: [text], values: testDb.raw(`('a', 'b', 'c')`) },
+                  { columns: [pkey], values: testDb.sql`(1, 2, 3)` },
+                  { columns: [text], values: testDb.sql`('a', 'b', 'c')` },
                 ],
               },
             }),
           ),
           buildSql((q) =>
             q.whereNotIn({
-              [pkey]: testDb.raw('(1, 2, 3)'),
-              [text]: testDb.raw(`('a', 'b', 'c')`),
+              [pkey]: testDb.sql`(1, 2, 3)`,
+              [text]: testDb.sql`('a', 'b', 'c')`,
             }),
           ),
         ],
@@ -1044,13 +1059,13 @@ export const testWhere = (
                 NOT: {
                   IN: {
                     columns: [pkey, text],
-                    values: testDb.raw(`((1, 'a'), (2, 'b'))`),
+                    values: testDb.sql`((1, 'a'), (2, 'b'))`,
                   },
                 },
               }),
             ),
             buildSql((q) =>
-              q.whereNotIn([pkey, text], testDb.raw(`((1, 'a'), (2, 'b'))`)),
+              q.whereNotIn([pkey, text], testDb.sql`((1, 'a'), (2, 'b'))`),
             ),
           ],
           `
@@ -1156,7 +1171,7 @@ export const testWhere = (
                 { [pkey]: 1 },
                 {
                   NOT: {
-                    IN: { columns: [pkey], values: testDb.raw('(1, 2, 3)') },
+                    IN: { columns: [pkey], values: testDb.sql`(1, 2, 3)` },
                   },
                 },
               ],
@@ -1164,7 +1179,7 @@ export const testWhere = (
           ),
           buildSql((q) =>
             q.where({ [pkey]: 1 }).orWhereNotIn({
-              [pkey]: testDb.raw('(1, 2, 3)'),
+              [pkey]: testDb.sql`(1, 2, 3)`,
             }),
           ),
         ],
@@ -1184,10 +1199,10 @@ export const testWhere = (
                 {
                   NOT: {
                     IN: [
-                      { columns: [pkey], values: testDb.raw('(1, 2, 3)') },
+                      { columns: [pkey], values: testDb.sql`(1, 2, 3)` },
                       {
                         columns: [text],
-                        values: testDb.raw(`('a', 'b', 'c')`),
+                        values: testDb.sql`('a', 'b', 'c')`,
                       },
                     ],
                   },
@@ -1197,8 +1212,8 @@ export const testWhere = (
           ),
           buildSql((q) =>
             q.where({ [pkey]: 1 }).orWhereNotIn({
-              [pkey]: testDb.raw('(1, 2, 3)'),
-              [text]: testDb.raw(`('a', 'b', 'c')`),
+              [pkey]: testDb.sql`(1, 2, 3)`,
+              [text]: testDb.sql`('a', 'b', 'c')`,
             }),
           ),
         ],
@@ -1327,7 +1342,7 @@ export const testWhere = (
                     NOT: {
                       IN: {
                         columns: [pkey, text],
-                        values: testDb.raw(`((1, 'a'), (2, 'b'))`),
+                        values: testDb.sql`((1, 'a'), (2, 'b'))`,
                       },
                     },
                   },
@@ -1337,7 +1352,7 @@ export const testWhere = (
             buildSql((q) =>
               q
                 .where({ [pkey]: 1 })
-                .orWhereNotIn([pkey, text], testDb.raw(`((1, 'a'), (2, 'b'))`)),
+                .orWhereNotIn([pkey, text], testDb.sql`((1, 'a'), (2, 'b'))`),
             ),
           ],
           `

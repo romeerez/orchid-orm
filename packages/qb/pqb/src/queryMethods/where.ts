@@ -7,6 +7,7 @@ import {
   ColumnsShapeBase,
   MaybeArray,
   emptyObject,
+  raw,
 } from 'orchid-core';
 import { getIsJoinSubQuery } from '../sql/join';
 import { getShapeFromSelect } from './select';
@@ -34,6 +35,10 @@ export type WhereArg<T extends QueryBase> =
   | QueryBase
   | RawExpression
   | ((q: WhereQueryBuilder<T>) => WhereQueryBuilder);
+
+export type WhereArgs<T extends QueryBase> =
+  | WhereArg<T>[]
+  | [TemplateStringsArray, ...unknown[]];
 
 export type WhereInColumn<T extends QueryBase> =
   | keyof T['selectable']
@@ -70,15 +75,27 @@ export type WhereInArg<T extends Pick<Query, 'selectable'>> = {
 
 export const addWhere = <T extends Where>(
   q: T,
-  args: WhereArg<T>[],
+  args: WhereArgs<T>,
 ): WhereResult<T> => {
+  if (Array.isArray(args[0])) {
+    return pushQueryValue(
+      q,
+      'and',
+      raw(args as [TemplateStringsArray, ...unknown[]]),
+    ) as unknown as WhereResult<T>;
+  }
   return pushQueryArray(q, 'and', args) as unknown as WhereResult<T>;
 };
 
 export const addWhereNot = <T extends QueryBase>(
   q: T,
-  args: WhereArg<T>[],
+  args: WhereArgs<T>,
 ): WhereResult<T> => {
+  if (Array.isArray(args[0])) {
+    return pushQueryValue(q, 'and', {
+      NOT: raw(args as [TemplateStringsArray, ...unknown[]]),
+    }) as unknown as WhereResult<T>;
+  }
   return pushQueryValue(q, 'and', {
     NOT: args,
   }) as unknown as WhereResult<T>;
@@ -167,35 +184,35 @@ const existsArgs = (args: [JoinFirstArg<Query>, ...JoinArgs<Query, Query>]) => {
 };
 
 export abstract class Where extends QueryBase {
-  where<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
+  where<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
     return this.clone()._where(...args);
   }
 
-  _where<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
+  _where<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
     return addWhere(this, args);
   }
 
-  whereNot<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
+  whereNot<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
     return this.clone()._whereNot(...args);
   }
 
-  _whereNot<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
+  _whereNot<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
     return addWhereNot(this, args);
   }
 
-  and<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
+  and<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
     return this.where(...args);
   }
 
-  _and<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
+  _and<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
     return this._where(...args);
   }
 
-  andNot<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
+  andNot<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
     return this.whereNot(...args);
   }
 
-  _andNot<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
+  _andNot<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
     return this._whereNot(...args);
   }
 

@@ -231,7 +231,7 @@ describe('changeTable', () => {
       await testUpAndDown(
         (action) =>
           db.changeTable('table', (t) => ({
-            withDefaultRaw: t[action](t.date().default(t.raw(`now()`))),
+            withDefaultRaw: t[action](t.date().default(t.sql(`now()`))),
           })),
         () =>
           expectSql(`
@@ -919,7 +919,7 @@ describe('changeTable', () => {
         await testUpAndDown(
           (action) =>
             db.changeTable('table', (t) => ({
-              column: t[action](t.text().check(t.raw(`length(column) > 10`))),
+              column: t[action](t.text().check(t.sql(`length(column) > 10`))),
             })),
           () =>
             expectSql(`
@@ -938,7 +938,7 @@ describe('changeTable', () => {
         await testUpAndDown(
           (action) =>
             db.changeTable('table', (t) => ({
-              ...t[action](t.check(t.raw('sql'))),
+              ...t[action](t.check(t.sql('sql'))),
             })),
           () =>
             expectSql(`
@@ -973,7 +973,7 @@ describe('changeTable', () => {
                       onDelete: 'CASCADE',
                     },
                   ],
-                  check: t.raw('check'),
+                  check: t.sql('check'),
                 }),
               ),
             })),
@@ -1072,8 +1072,8 @@ describe('changeTable', () => {
           () =>
             db.changeTable('table', (t) => ({
               changeTypeUsing: t.change(t.integer(), t.text(), {
-                usingUp: t.raw('b::text'),
-                usingDown: t.raw('b::int'),
+                usingUp: t.sql('b::text'),
+                usingDown: t.sql('b::int'),
               }),
             })),
           () =>
@@ -1171,8 +1171,8 @@ describe('changeTable', () => {
           () =>
             db.changeTable('table', (t) => ({
               column: t.change(
-                t.text().check(t.raw('length(column) < 20')),
-                t.text().check(t.raw('length(column) > 10')),
+                t.text().check(t.sql('length(column) < 20')),
+                t.text().check(t.sql('length(column) > 10')),
               ),
             })),
           () =>
@@ -1221,7 +1221,7 @@ describe('changeTable', () => {
           db.changeTable('table', (t) => ({
             changeDefault: t.change(
               t.default('from'),
-              t.default(t.raw("'to'")),
+              t.default(t.sql("'to'")),
             ),
           })),
         () =>
@@ -1243,7 +1243,7 @@ describe('changeTable', () => {
           db.changeTable('table', (t) => ({
             changeDefault: t
               .name('name')
-              .change(t.default('from'), t.default(t.raw("'to'"))),
+              .change(t.default('from'), t.default(t.sql("'to'"))),
           })),
         () =>
           expectSql(`
@@ -1266,7 +1266,7 @@ describe('changeTable', () => {
           db.changeTable('table', (t) => ({
             changeDefault: t.change(
               t.default('from'),
-              t.default(t.raw("'to'")),
+              t.default(t.sql("'to'")),
             ),
           })),
         () =>

@@ -265,7 +265,7 @@ import { TextColumn } from './string';
 const object = db.table.jsonAgg(
   {
     nameAlias: 'name',
-    foo: db.table.raw((t) => t.text(3, 100), '"bar" || "baz"'),
+    foo: db.table.sql((t) => t.text(3, 100))`"bar" || "baz"`,
   },
   aggregateOptions,
 );

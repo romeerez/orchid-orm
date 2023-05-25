@@ -29,7 +29,7 @@ describe('create functions', () => {
 
       const query = q.createRaw({
         columns: ['name', 'password'],
-        values: testDb.raw('raw sql'),
+        values: testDb.sql`raw sql`,
       });
 
       expectSql(
@@ -49,7 +49,7 @@ describe('create functions', () => {
     it('should add runtime default', () => {
       const q = RuntimeDefaultTable.createRaw({
         columns: ['password'],
-        values: testDb.raw(`'password'`),
+        values: testDb.sql`'password'`,
       });
 
       expectSql(
@@ -66,7 +66,7 @@ describe('create functions', () => {
     it('should create with raw sql and list of columns with names', () => {
       const query = Snake.createRaw({
         columns: ['snakeName', 'tailLength'],
-        values: testDb.raw('raw sql'),
+        values: testDb.sql`raw sql`,
       });
       expectSql(
         query.toSql(),
@@ -85,7 +85,7 @@ describe('create functions', () => {
 
       const query = q.createManyRaw({
         columns: ['name', 'password'],
-        values: [testDb.raw('sql1'), testDb.raw('sql2')],
+        values: [testDb.sql`sql1`, testDb.sql`sql2`],
       });
       expectSql(
         query.toSql(),
@@ -104,7 +104,7 @@ describe('create functions', () => {
     it('should add runtime default', () => {
       const q = RuntimeDefaultTable.createManyRaw({
         columns: ['password'],
-        values: [testDb.raw(`'pw1'`), testDb.raw(`'pw2'`)],
+        values: [testDb.sql`'pw1'`, testDb.sql`'pw2'`],
       });
 
       expectSql(
@@ -121,7 +121,7 @@ describe('create functions', () => {
     it('should create with raw sql and list of columns with names', () => {
       const query = Snake.createManyRaw({
         columns: ['snakeName', 'tailLength'],
-        values: [testDb.raw('sql1'), testDb.raw('sql2')],
+        values: [testDb.sql`sql1`, testDb.sql`sql2`],
       });
       expectSql(
         query.toSql(),
@@ -791,7 +791,7 @@ describe('create functions', () => {
         const query = q
           .count()
           .create(userData)
-          .onConflict(testDb.raw('raw query'))
+          .onConflict(testDb.sql`raw query`)
           .ignore();
         expectSql(
           query.toSql(),
@@ -973,8 +973,8 @@ describe('create functions', () => {
         const query = q
           .count()
           .create(userData)
-          .onConflict(testDb.raw('on conflict raw'))
-          .merge(testDb.raw('merge raw'));
+          .onConflict(testDb.sql`on conflict raw`)
+          .merge(testDb.sql`merge raw`);
 
         expectSql(
           query.toSql(),

@@ -8,7 +8,6 @@ import {
 } from 'orchid-core';
 import { RelationsBase } from './relations';
 import { getClonedQueryData } from './utils';
-import { ColumnsShape } from './columns';
 
 export abstract class QueryBase implements QueryBaseCommon {
   clone<T extends QueryBase>(this: T): T {
@@ -16,7 +15,7 @@ export abstract class QueryBase implements QueryBaseCommon {
     cloned.query = getClonedQueryData(this.query);
     return cloned;
   }
-  abstract result: ColumnsShape;
+  abstract result: ColumnsShapeBase;
   query = {} as QueryData;
   table?: string;
   selectable!: SelectableBase;

@@ -14,7 +14,7 @@ describe('columnDefaultArgumentToCode', () => {
   it('should handle raw SQL', () => {
     expect(
       columnDefaultArgumentToCode('t', raw('sql = $key', { key: 'value' })),
-    ).toBe(`t.raw('sql = $key', {"key":"value"})`);
+    ).toBe(`t.sql({"values":{"key":"value"},"raw":"sql = $key"})`);
   });
 
   it('should stringify function', () => {

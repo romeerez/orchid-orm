@@ -396,10 +396,7 @@ describe('aggregate', () => {
 
     it('should support raw sql parameter', () => {
       const q = User.all();
-      expectSql(
-        q[method as 'count'](testDb.raw('name')).toSql(),
-        getSql('name'),
-      );
+      expectSql(q[method as 'count'](testDb.sql`name`).toSql(), getSql('name'));
       expectQueryNotMutated(q);
     });
 
@@ -418,7 +415,7 @@ describe('aggregate', () => {
       const q = User.all();
       const expectedSql = getSql('name', 'name');
       expectSql(
-        q[selectMethod as 'selectCount'](testDb.raw('name'), {
+        q[selectMethod as 'selectCount'](testDb.sql`name`, {
           as: 'name',
         }).toSql(),
         expectedSql,
@@ -497,7 +494,7 @@ describe('aggregate', () => {
       const q = User.clone();
       expectSql(
         q[method as 'jsonObjectAgg']({
-          alias: testDb.raw('name'),
+          alias: testDb.sql`name`,
         }).toSql(),
         `SELECT ${functionName}($1::text, name) FROM "user"`,
         ['alias'],
@@ -524,7 +521,7 @@ describe('aggregate', () => {
       const expectedSql = `SELECT ${functionName}($1::text, name) AS "name" FROM "user"`;
       expectSql(
         q[selectMethod as 'jsonObjectAgg'](
-          { alias: testDb.raw('name') },
+          { alias: testDb.sql`name` },
           { as: 'name' },
         ).toSql(),
         expectedSql,
@@ -586,7 +583,7 @@ describe('aggregate', () => {
     it('should support raw sql parameter', async () => {
       const q = User.all();
       expectSql(
-        q.stringAgg(testDb.raw('name'), ' & ').toSql(),
+        q.stringAgg(testDb.sql`name`, ' & ').toSql(),
         `SELECT string_agg(name, $1) FROM "user"`,
         [' & '],
       );
@@ -608,7 +605,7 @@ describe('aggregate', () => {
       const q = User.all();
       const expectedSql = `SELECT string_agg(name, $1) AS "name" FROM "user"`;
       expectSql(
-        q.stringAgg(testDb.raw('name'), ' & ', { as: 'name' }).toSql(),
+        q.stringAgg(testDb.sql`name`, ' & ', { as: 'name' }).toSql(),
         expectedSql,
         [' & '],
       );

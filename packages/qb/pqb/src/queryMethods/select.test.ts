@@ -616,8 +616,7 @@ describe('select', () => {
     it('should support conditional query or raw expression', async () => {
       const condition = true;
       const q = User.select({
-        key: (q) =>
-          condition ? q.exists() : q.raw((t) => t.boolean(), 'false'),
+        key: (q) => (condition ? q.exists() : q.sql((t) => t.boolean())`false`),
       });
 
       assertType<Awaited<typeof q>, { key: boolean }[]>();
@@ -713,7 +712,7 @@ describe('select', () => {
 
     it('should accept raw', () => {
       const q = User.all();
-      const query = q.select({ one: testDb.raw('1') });
+      const query = q.select({ one: testDb.sql`1` });
 
       assertType<Awaited<typeof query>, { one: unknown }[]>();
 
@@ -732,7 +731,7 @@ describe('select', () => {
 
     it('should accept raw in a callback', () => {
       const query = User.select({
-        one: (q) => q.raw((t) => t.integer(), '1'),
+        one: (q) => q.sql((t) => t.integer())`1`,
       });
 
       assertType<Awaited<typeof query>, { one: number }[]>();
@@ -869,10 +868,9 @@ describe('select', () => {
 
     it('should parse raw column', async () => {
       const q = User.select({
-        date: testDb.raw(
-          () => new DateColumn().parse((input) => new Date(input)),
-          '"createdAt"',
-        ),
+        date: testDb.sql(() =>
+          new DateColumn().parse((input) => new Date(input)),
+        )`"createdAt"`,
       });
 
       assertType<Awaited<typeof q>, { date: Date }[]>();

@@ -55,7 +55,7 @@ export class Json {
     this: T,
     coalesce?: boolean,
   ): SetQueryReturnsValueOptional<T, StringColumn> {
-    const q = this._wrap(this.baseQuery.clone()) as T;
+    const q = this._wrap(this.baseQuery.clone()) as unknown as T;
     // json_agg is used instead of jsonb_agg because it is 2x faster, according to my benchmarks
     q._getOptional(
       raw(

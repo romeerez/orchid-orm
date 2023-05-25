@@ -186,10 +186,10 @@ change(async (db) => {
     column2: t.drop(t.boolean()),
 
     // add a check to the column
-    column3: t.add(t.check(t.raw(`column3 > 5`))),
+    column3: t.add(t.check(t.sql`column3 > 5`)),
 
     // remove a check from the column
-    column4: t.drop(t.check(t.raw(`column4 > 5`))),
+    column4: t.drop(t.check(t.sql`column4 > 5`)),
 
     // add composite primary key:
     ...t.add(t.primaryKey(['foo', 'bar'])),
@@ -206,13 +206,13 @@ change(async (db) => {
     ),
 
     // add a table check
-    ...t.add(t.check(t.raw('column3 > column4'))),
+    ...t.add(t.check(t.sql`column3 > column4`)),
 
     // add a constraint
     ...t.add(
       t.constraint({
         name: 'constraintName',
-        check: t.raw('column3 < 20'),
+        check: t.sql`column3 < 20`,
         foreignKey: [['foo', 'bar'], 'otherTable', ['otherFoo', 'otherBar']],
       }),
     ),
@@ -245,15 +245,15 @@ change(async (db) => {
 
     // change column type using SQL expression to convert data
     column2: t.change(t.integer(), t.string(), {
-      usingUp: t.raw('column2::text'),
-      usingDown: t.raw('column2::integer'),
+      usingUp: t.sql`column2::text`,
+      usingDown: t.sql`column2::integer`,
     }),
 
     // change column default
     column3: t.change(t.default(1), t.default(2)),
 
     // change column default with raw SQL
-    column4: t.change(t.default(t.raw('2 + 2')), t.default(t.raw('3 + 3'))),
+    column4: t.change(t.default(t.sql`2 + 2`), t.default(t.sql`3 + 3`)),
 
     // change column to be nullable or non-nullable
     column5: t.change(t.nonNullable(), t.nullable()),
@@ -341,9 +341,9 @@ change(async (db) => {
 
     column17: t.change(
       // change from this check:
-      t.check(t.raw('column17 > 5')),
+      t.check(t.sql`column17 > 5`),
       // to this check:
-      t.check(t.raw('column17 < 10')),
+      t.check(t.sql`column17 < 10`),
     ),
   }));
 });
@@ -466,7 +466,7 @@ Add or drop a check for multiple columns.
 import { change } from '../dbScript';
 
 change(async (db) => {
-  await db.addCheck('tableName', t.raw('column > 123'));
+  await db.addCheck('tableName', t.sql`column > 123`);
 });
 ```
 
@@ -482,7 +482,7 @@ import { change } from '../dbScript';
 change(async (db) => {
   await db.addConstraint('tableName', {
     name: 'constraintName',
-    check: db.raw('column > 123'),
+    check: db.sql`column > 123`,
     references: [['id', 'name'], 'otherTable', ['otherId', 'otherName']],
   });
 });
@@ -562,7 +562,7 @@ import { change } from '../dbScript';
 
 change(async (db) => {
   await db.createDomain('domainName', (t) => t.integer(), {
-    check: db.raw('value = 42'),
+    check: db.sql`value = 42`,
   });
 
   // use `schemaName.domainName` format to specify a schema
@@ -570,8 +570,8 @@ change(async (db) => {
     // unlike columns, domain is nullable by default, use notNull when needed:
     notNull: true,
     collation: 'C',
-    default: db.raw(`'default text'`),
-    check: db.raw('length(value) > 10'),
+    default: db.sql`'default text'`,
+    check: db.sql`length(value) > 10`,
 
     // cascade is used when dropping domain
     cascade: true,
@@ -583,7 +583,7 @@ change(async (db) => {
 
 Create and drop database views.
 
-Provide SQL as a string or via `db.raw` that can accept variables.
+Provide SQL as a string or via `db.sql` that can accept variables.
 
 ```ts
 import { change } from '../dbScript';
@@ -598,17 +598,13 @@ change(async (db) => {
   `,
   );
 
-  // view can accept db.raw with variables in such way:
+  // view can accept db.sql with variables in such way:
+  const value = 'some value';
   await db.createView(
     'viewWithVariables',
-    db.raw(
-      `
-    SELECT * FROM a WHERE key = $key
-  `,
-      {
-        key: 'value',
-      },
-    ),
+    db.sql`
+      SELECT * FROM a WHERE key = ${value}
+    `,
   );
 
   // view with options

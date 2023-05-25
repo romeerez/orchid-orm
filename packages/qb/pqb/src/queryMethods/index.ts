@@ -21,4 +21,4 @@ export * from './update';
 export * from './upsertOrCreate';
 export * from './where';
 export * from './with';
-export * from './raw';
+export * from './rawSql';

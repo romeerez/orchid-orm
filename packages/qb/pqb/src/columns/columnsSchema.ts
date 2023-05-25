@@ -1,10 +1,11 @@
 import { ColumnType } from './columnType';
 import { Operators } from './operators';
+import { ColumnsShapeBase, ColumnTypeBase } from 'orchid-core';
 
 export type ColumnsShape = Record<string, ColumnType>;
 
 export abstract class ColumnsObject<
-  Shape extends ColumnsShape,
+  Shape extends ColumnsShapeBase,
 > extends ColumnType<
   { [K in keyof Shape]: Shape[K]['type'] },
   typeof Operators.any
@@ -18,7 +19,7 @@ export abstract class ColumnsObject<
 }
 
 export abstract class ArrayOfColumnsObjects<
-  Shape extends ColumnsShape,
+  Shape extends ColumnsShapeBase,
 > extends ColumnType<
   { [K in keyof Shape]: Shape[K]['type'] }[],
   typeof Operators.any
@@ -32,5 +33,5 @@ export abstract class ArrayOfColumnsObjects<
 }
 
 export abstract class PluckResultColumnType<
-  C extends ColumnType,
-> extends ColumnType<C['type'][], typeof Operators.any> {}
+  C extends ColumnTypeBase,
+> extends ColumnTypeBase<C['type'][], typeof Operators.any> {}

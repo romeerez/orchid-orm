@@ -46,7 +46,7 @@ describe('table', () => {
   });
 
   describe('overriding column types', () => {
-    it('should have .raw with overridden types', () => {
+    it('should have .sql with overridden types', () => {
       class Type extends ColumnType {
         dataType = 'type';
         operators = Operators.any;
@@ -71,7 +71,7 @@ describe('table', () => {
         },
       );
 
-      const value = user.raw((t) => t.type(), '');
+      const value = user.sql((t) => t.type())``;
 
       expect(value.__column).toBe(type);
     });

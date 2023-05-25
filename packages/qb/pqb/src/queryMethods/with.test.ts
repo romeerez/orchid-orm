@@ -60,7 +60,7 @@ describe('with', () => {
       const args: Parameters<typeof q.with> = [
         'withAlias',
         columnShape,
-        testDb.raw(`(VALUES (1, 'two')) t(one, two)`),
+        testDb.sql`(VALUES (1, 'two')) t(one, two)`,
       ];
 
       if (options) {
@@ -115,7 +115,7 @@ describe('with', () => {
     options.forEach((options) => {
       const args: Parameters<typeof q.with> = [
         'withAlias',
-        (qb) => qb.select({ one: testDb.raw((t) => t.integer(), '1') }),
+        (qb) => qb.select({ one: testDb.sql((t) => t.integer())`1` }),
       ];
 
       if (options) {
@@ -156,7 +156,7 @@ describe('with', () => {
 
     const received3 = q
       .with('withAlias', User.all())
-      .join('withAlias', testDb.raw(`"withAlias"."id" = "user"."id"`))
+      .join('withAlias', testDb.sql`"withAlias"."id" = "user"."id"`)
       .select('withAlias.id')
       .toSql();
 

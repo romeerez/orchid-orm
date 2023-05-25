@@ -1,5 +1,5 @@
 import { JsonItem, SelectFunctionItem, SelectItem } from './types';
-import { getRaw } from './raw';
+import { getRaw } from './rawSql';
 import { Query } from '../query';
 import {
   addValue,

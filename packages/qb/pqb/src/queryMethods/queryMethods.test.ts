@@ -135,7 +135,7 @@ describe('queryMethods', () => {
     });
 
     it('should support raw expression', async () => {
-      const result = await User.pluck(testDb.raw((t) => t.integer(), '123'));
+      const result = await User.pluck(testDb.sql((t) => t.integer())`123`);
 
       expect(result).toEqual([123, 123, 123]);
 
@@ -257,7 +257,7 @@ describe('queryMethods', () => {
     it('should add distinct on raw sql', () => {
       const q = User.all();
       expectSql(
-        q.distinct(testDb.raw('"user".id')).toSql(),
+        q.distinct(testDb.sql`"user".id`).toSql(),
         `
           SELECT DISTINCT ON ("user".id) * FROM "user"
         `,
@@ -301,7 +301,25 @@ describe('queryMethods', () => {
 
     it('should accept raw sql', () => {
       const q = User.all();
-      const query = q.find(testDb.raw('$a + $b', { a: 1, b: 2 }));
+      const query = q.find(testDb.sql({ values: { a: 1, b: 2 } })`$a + $b`);
+
+      assertType<Awaited<typeof query>, UserRecord>();
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT * FROM "user"
+          WHERE "user"."id" = $1 + $2
+          LIMIT $3
+        `,
+        [1, 2, 1],
+      );
+      expectQueryNotMutated(q);
+    });
+
+    it('should accept raw sql with template literal', () => {
+      const q = User.all();
+      const query = q.find`${1} + ${2}`;
 
       assertType<Awaited<typeof query>, UserRecord>();
 
@@ -359,7 +377,27 @@ describe('queryMethods', () => {
 
     it('should accept raw sql', () => {
       const q = User.all();
-      const query = q.findOptional(testDb.raw('$a + $b', { a: 1, b: 2 }));
+      const query = q.findOptional(
+        testDb.sql({ values: { a: 1, b: 2 } })`$a + $b`,
+      );
+
+      assertType<Awaited<typeof query>, UserRecord | undefined>();
+
+      expectSql(
+        query.toSql(),
+        `
+          SELECT * FROM "user"
+          WHERE "user"."id" = $1 + $2
+          LIMIT $3
+        `,
+        [1, 2, 1],
+      );
+      expectQueryNotMutated(q);
+    });
+
+    it('should accept raw sql with template literal', () => {
+      const q = User.all();
+      const query = q.findOptional(testDb.sql`${1} + ${2}`);
 
       assertType<Awaited<typeof query>, UserRecord | undefined>();
 
@@ -390,7 +428,7 @@ describe('queryMethods', () => {
     it('should accept raw', () => {
       const q = User.all();
       expectSql(
-        q.findBy({ name: testDb.raw(`'string'`) }).toSql(),
+        q.findBy({ name: testDb.sql`'string'` }).toSql(),
         `SELECT * FROM "user" WHERE "user"."name" = 'string' LIMIT $1`,
         [1],
       );
@@ -415,7 +453,7 @@ describe('queryMethods', () => {
 
     it('should accept raw', () => {
       const q = User.all();
-      const query = q.findByOptional({ name: testDb.raw(`'string'`) });
+      const query = q.findByOptional({ name: testDb.sql`'string'` });
 
       assertType<Awaited<typeof query>, UserRecord | undefined>();
 
@@ -549,13 +587,10 @@ describe('queryMethods', () => {
         SELECT * FROM "user"
         GROUP BY id, name
       `;
-      expectSql(
-        q.group(testDb.raw('id'), testDb.raw('name')).toSql(),
-        expectedSql,
-      );
+      expectSql(q.group(testDb.sql`id`, testDb.sql`name`).toSql(), expectedSql);
       expectQueryNotMutated(q);
 
-      q._group(testDb.raw('id'), testDb.raw('name'));
+      q._group(testDb.sql`id`, testDb.sql`name`);
       expectSql(q.toSql({ clearCache: true }), expectedSql);
     });
   });
@@ -611,7 +646,7 @@ describe('queryMethods', () => {
       const windowSql = 'PARTITION BY id ORDER BY name DESC';
       expectSql(
         q
-          .window({ w: testDb.raw(windowSql) })
+          .window({ w: testDb.sql({ raw: windowSql }) })
           .selectAvg('id', {
             over: 'w',
           })
@@ -703,7 +738,19 @@ describe('queryMethods', () => {
     it('adds order with raw sql', () => {
       const q = User.all();
       expectSql(
-        q.order(testDb.raw('id ASC NULLS FIRST')).toSql(),
+        q.order(testDb.sql`id ASC NULLS FIRST`).toSql(),
+        `
+        SELECT * FROM "user"
+        ORDER BY id ASC NULLS FIRST
+      `,
+      );
+      expectQueryNotMutated(q);
+    });
+
+    it('adds order with raw sql template literal', () => {
+      const q = User.all();
+      expectSql(
+        q.order`id ASC NULLS FIRST`.toSql(),
         `
         SELECT * FROM "user"
         ORDER BY id ASC NULLS FIRST

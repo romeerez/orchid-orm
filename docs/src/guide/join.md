@@ -237,7 +237,7 @@ Join can accept raw SQL for the `ON` part of join:
 ```ts
 db.user.join(
   db.message,
-  db.user.raw('lower("message"."text") = lower("user"."name")'),
+  db.user.sql`lower("message"."text") = lower("user"."name")`
 );
 ```
 
@@ -246,16 +246,16 @@ Join can accept raw SQL instead of columns:
 ```ts
 db.user.join(
   db.message,
-  db.user.raw('lower("message"."text")'),
-  db.user.raw('lower("user"."name")'),
+  db.user.sql`lower("message"."text")`,
+  db.user.sql`lower("user"."name")`,
 );
 
 // with operator:
 db.user.join(
   db.message,
-  db.user.raw('lower("message"."text")'),
+  db.user.sql`lower("message"."text")`,
   '!=',
-  db.user.raw('lower("user"."name")'),
+  db.user.sql`lower("user"."name")`,
 );
 ```
 
@@ -269,7 +269,7 @@ db.user.join(db.message, {
   'message.userId': 'user.id',
 
   // value can be a raw expression:
-  text: db.user.raw('lower("user"."name")'),
+  text: db.user.sql`lower("user"."name")`,
 });
 ```
 

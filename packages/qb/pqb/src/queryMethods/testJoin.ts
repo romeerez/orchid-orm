@@ -107,8 +107,8 @@ export const testJoin = ({
     expectSql(
       joinTo[join](
         joinTarget,
-        testDb.raw(`${fkeySql}`),
-        testDb.raw(`${pkeySql}`),
+        testDb.sql({ raw: `${fkeySql}` }),
+        testDb.sql({ raw: `${pkeySql}` }),
       ).toSql(),
       sql(`"${joinTable}"`, `${fkeySql} = ${pkeySql}`),
       values,
@@ -116,8 +116,8 @@ export const testJoin = ({
     expectSql(
       joinTo[join](
         joinTarget.as('as'),
-        testDb.raw(`${asFkeySql}`),
-        testDb.raw(`${pkeySql}`),
+        testDb.sql({ raw: `${asFkeySql}` }),
+        testDb.sql({ raw: `${pkeySql}` }),
       ).toSql(),
       sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
@@ -129,9 +129,9 @@ export const testJoin = ({
     expectSql(
       joinTo[join](
         joinTarget,
-        testDb.raw(`${fkeySql}`),
+        testDb.sql({ raw: `${fkeySql}` }),
         '=',
-        testDb.raw(`${pkeySql}`),
+        testDb.sql({ raw: `${pkeySql}` }),
       ).toSql(),
       sql(`"${joinTable}"`, `${fkeySql} = ${pkeySql}`),
       values,
@@ -139,9 +139,9 @@ export const testJoin = ({
     expectSql(
       joinTo[join](
         joinTarget.as('as'),
-        testDb.raw(`${asFkeySql}`),
+        testDb.sql({ raw: `${asFkeySql}` }),
         '=',
-        testDb.raw(`${pkeySql}`),
+        testDb.sql({ raw: `${pkeySql}` }),
       ).toSql(),
       sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
@@ -166,14 +166,14 @@ export const testJoin = ({
   it('should accept object of columns with raw value', () => {
     expectSql(
       joinTo[join](joinTarget, {
-        [fkey]: testDb.raw(`${pkeySql}`),
+        [fkey]: testDb.sql({ raw: `${pkeySql}` }),
       }).toSql(),
       sql(`"${joinTable}"`, `${fkeySql} = ${pkeySql}`),
       values,
     );
     expectSql(
       joinTo[join](joinTarget.as('as'), {
-        [fkey]: testDb.raw(`${pkeySql}`),
+        [fkey]: testDb.sql({ raw: `${pkeySql}` }),
       }).toSql(),
       sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
@@ -185,7 +185,7 @@ export const testJoin = ({
     expectSql(
       joinTo[join](
         joinTarget,
-        testDb.raw(`"${fkeySql}" = "${table}".${pkey}`),
+        testDb.sql({ raw: `"${fkeySql}" = "${table}".${pkey}` }),
       ).toSql(),
       sql(`"${joinTable}"`, `"${fkeySql}" = "${table}".${pkey}`),
       values,
@@ -193,7 +193,7 @@ export const testJoin = ({
     expectSql(
       joinTo[join](
         joinTarget.as('as'),
-        testDb.raw(`"${fkeySql}" = "${table}".${pkey}`),
+        testDb.sql({ raw: `"${fkeySql}" = "${table}".${pkey}` }),
       ).toSql(),
       sql(`"${joinTable}" AS "as"`, `"${fkeySql}" = "${table}".${pkey}`),
       values,

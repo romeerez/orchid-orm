@@ -8,7 +8,7 @@ import {
 } from '../sql';
 import { pushQueryArray } from '../queryDataUtils';
 import { Aggregate1ArgumentTypes, AggregateOptions } from './aggregate';
-import { isRaw, RawExpression } from 'orchid-core';
+import { isRaw, raw, RawExpression } from 'orchid-core';
 
 type HavingArgObject<
   T extends Query,
@@ -28,6 +28,10 @@ export type HavingArg<T extends Query = Query> =
   | Query
   | RawExpression;
 
+export type HavingArgs<T extends Query> =
+  | [...args: HavingArg<T>[]]
+  | [TemplateStringsArray, ...unknown[]];
+
 const processHavingArg = <T extends Query>(arg: HavingArg<T>): HavingItem => {
   if ('baseQuery' in arg || isRaw(arg)) {
     return arg;
@@ -40,7 +44,7 @@ const processHavingArg = <T extends Query>(arg: HavingArg<T>): HavingItem => {
     for (const fn in arg) {
       const data = arg[fn as keyof typeof arg];
       if (typeof data === 'object') {
-        processed[fn] = { ...data } as typeof processed[string];
+        processed[fn] = { ...data } as (typeof processed)[string];
         for (const column in data) {
           const value = data[column as keyof typeof data];
 
@@ -72,28 +76,39 @@ const processHavingArg = <T extends Query>(arg: HavingArg<T>): HavingItem => {
   }
 };
 
+const processHavingArgs = <T extends Query>(
+  args: HavingArgs<T>,
+  processArg: (arg: HavingArg<T>) => HavingItem | HavingItem[],
+): (HavingItem | HavingItem[])[] => {
+  if (Array.isArray(args[0])) {
+    return [processArg(raw(args as [TemplateStringsArray, ...unknown[]]))];
+  } else {
+    return args.map((arg) => processArg(arg as HavingArg<T>));
+  }
+};
+
 export class Having {
-  having<T extends Query>(this: T, ...args: HavingArg<T>[]): T {
+  having<T extends Query>(this: T, ...args: HavingArgs<T>): T {
     return this.clone()._having(...args);
   }
 
-  _having<T extends Query>(this: T, ...args: HavingArg<T>[]): T {
+  _having<T extends Query>(this: T, ...args: HavingArgs<T>): T {
     return pushQueryArray(
       this,
       'having',
-      args.map((arg) => processHavingArg(arg)),
+      processHavingArgs(args, processHavingArg),
     );
   }
 
-  havingOr<T extends Query>(this: T, ...args: HavingArg<T>[]): T {
+  havingOr<T extends Query>(this: T, ...args: HavingArgs<T>): T {
     return this.clone()._havingOr(...args);
   }
 
-  _havingOr<T extends Query>(this: T, ...args: HavingArg<T>[]): T {
+  _havingOr<T extends Query>(this: T, ...args: HavingArgs<T>): T {
     return pushQueryArray(
       this,
       'havingOr',
-      args.map((arg) => [processHavingArg(arg)]),
+      processHavingArgs(args, (arg) => [processHavingArg(arg)]),
     );
   }
 }

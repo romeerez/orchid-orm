@@ -315,8 +315,8 @@ describe('merge queries', () => {
       q2.query.schema = 'b';
       q1.query.as = 'a';
       q2.query.as = 'b';
-      q1.query.from = testDb.raw('a');
-      q2.query.from = testDb.raw('b');
+      q1.query.from = testDb.sql`a`;
+      q2.query.from = testDb.sql`b`;
       q1.query.coalesceValue = 'a';
       q2.query.coalesceValue = 'b';
       q1.query.parsers = { [getValueKey]: (x) => x, a: (x) => x };
@@ -350,8 +350,8 @@ describe('merge queries', () => {
       s2.having = [{ b: { b: 2 } }];
       s1.havingOr = [[{ a: { a: 1 } }]];
       s2.havingOr = [[{ b: { b: 2 } }]];
-      s1.union = [{ arg: testDb.raw('a'), kind: 'UNION' }];
-      s2.union = [{ arg: testDb.raw('b'), kind: 'EXCEPT' }];
+      s1.union = [{ arg: testDb.sql`a`, kind: 'UNION' }];
+      s2.union = [{ arg: testDb.sql`b`, kind: 'EXCEPT' }];
       s1.order = [{ id: 'ASC' }];
       s2.order = [{ name: 'DESC' }];
       s1.limit = 1;
@@ -415,7 +415,7 @@ describe('merge queries', () => {
       });
       expect(q.schema).toBe('b');
       expect(q.as).toBe('b');
-      expect(q.from).toEqual(testDb.raw('b'));
+      expect(q.from).toEqual(testDb.sql`b`);
       expect(q.coalesceValue).toBe('b');
       expect(q.parsers).toEqual({
         ...q1.query.parsers,

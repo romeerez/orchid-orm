@@ -1,7 +1,7 @@
 import { OrderItem } from './types';
 import { revealColumnToSql } from './common';
 import { ToSqlCtx } from './toSql';
-import { getRaw } from './raw';
+import { getRaw } from './rawSql';
 import { QueryData, SelectQueryData } from './data';
 import { isRaw } from 'orchid-core';
 

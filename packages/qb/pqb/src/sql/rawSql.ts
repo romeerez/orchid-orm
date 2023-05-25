@@ -1,17 +1,43 @@
 import { RawExpression } from 'orchid-core';
 
 const used: string[] = [];
+const literalValues: number[] = [];
 export const getRaw = (raw: RawExpression, valuesArray: unknown[]) => {
-  if (!raw.__values) {
-    return raw.__raw;
+  let sql;
+  const isLiteral = typeof raw.__raw !== 'string';
+  const values = raw.__values as Record<string, unknown>;
+
+  if (isLiteral) {
+    sql = '';
+    const values = raw.__raw;
+    const parts = values[0];
+    literalValues.length = 0;
+
+    let i = 0;
+    for (let last = parts.length - 1; i < last; i++) {
+      valuesArray.push(values[i + 1]);
+      sql += parts[i];
+
+      if (values) literalValues.push(sql.length);
+
+      sql += `$${valuesArray.length}`;
+    }
+    sql += parts[i];
+  } else {
+    sql = raw.__raw as string;
   }
 
-  const arr = raw.__raw.split("'");
-  const values = raw.__values as Record<string, unknown>;
+  if (!values) {
+    return sql;
+  }
+
+  const arr = sql.split("'");
   const len = arr.length;
   used.length = 0;
   for (let i = 0; i < len; i += 2) {
-    arr[i] = arr[i].replace(/\$\$?(\w+)/g, (match, key) => {
+    arr[i] = arr[i].replace(/\$\$?(\w+)/g, (match, key, i) => {
+      if (isLiteral && literalValues.includes(i)) return match;
+
       const value = values[key];
       if (value === undefined) {
         throw new Error(`Query variable \`${key}\` is not provided`);

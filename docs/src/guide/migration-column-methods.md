@@ -18,7 +18,7 @@ import { change } from '../dbScript';
 change(async (db) => {
   await db.createTable('table', (t) => ({
     active: t.boolean().default(false),
-    date: t.date().default(t.raw('now()')),
+    date: t.date().default(t.sql`now()`),
   }));
 });
 ```
@@ -351,7 +351,7 @@ import { change } from '../dbScript';
 change(async (db) => {
   await db.createTable('table', (t) => ({
     // validate rank to be from 1 to 10
-    rank: t.integer().check(t.raw('1 >= "rank" AND "rank" <= 10')),
+    rank: t.integer().check(t.sql`1 >= "rank" AND "rank" <= 10`),
   }));
 });
 ```
@@ -367,7 +367,7 @@ change(async (db) => {
   await db.createTable('table', (t) => ({
     a: t.integer(),
     b: t.integer(),
-    ...t.check(t.raw('a < b')),
+    ...t.check(t.sql`a < b`),
   }));
 });
 ```
@@ -463,7 +463,7 @@ change(async (db) => {
     two: t.text(),
     ...t.constraint({
       name: 'constraintName',
-      check: t.raw('one > 5'),
+      check: t.sql`one > 5`,
       references: [
         ['one', 'two'], // this table columns
         'otherTable', // foreign table name

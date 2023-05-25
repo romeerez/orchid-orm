@@ -15,7 +15,7 @@ describe('testTransaction', () => {
   it('should handle failed transactions', async () => {
     await expect(() =>
       testDb.transaction(async () => {
-        await User.get(User.raw('wrong'));
+        await User.get(User.sql`wrong`);
       }),
     ).rejects.toThrow(`column "wrong" does not exist`);
   });

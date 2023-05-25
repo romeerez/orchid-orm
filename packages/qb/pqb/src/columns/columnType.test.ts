@@ -304,7 +304,7 @@ describe('column type', () => {
       );
 
       expect(column.default(raw('sql', { key: 'value' })).toCode('t')).toBe(
-        `t.column().default(t.raw('sql', {"key":"value"}))`,
+        `t.column().default(t.sql({"values":{"key":"value"},"raw":"sql"}))`,
       );
     });
   });

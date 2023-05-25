@@ -3,7 +3,7 @@ import { addValue, q, quoteSchemaAndTable } from './common';
 import { pushReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
 import { ToSqlCtx } from './toSql';
-import { getRaw } from './raw';
+import { getRaw } from './rawSql';
 import {
   UpdateQueryData,
   UpdateQueryDataItem,

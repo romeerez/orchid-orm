@@ -98,8 +98,14 @@ change(async (db) => {
   await db.createTable('camel', (t) => ({
     id: t.identity().primaryKey(),
     camelCaseColumn: t.name('camelCaseColumn').text(),
-    createdAt: t.name('createdAt').timestamp().default(t.raw('now()')),
-    updatedAt: t.name('updatedAt').timestamp().default(t.raw('now()')),
+    createdAt: t
+      .name('createdAt')
+      .timestamp()
+      .default(t.sql`now()`),
+    updatedAt: t
+      .name('updatedAt')
+      .timestamp()
+      .default(t.sql`now()`),
   }));
 
   await db.createTable('snake', (t) => ({

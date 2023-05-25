@@ -100,7 +100,7 @@ import { NumberColumn } from 'pqb';
 const firstName: string = await db.table.get('name');
 
 const rawResult: number = await db.table.get(
-  db.table.raw((t) => t.integer(), '1 + 1'),
+  db.table.sql((t) => t.integer())`1 + 1`,
 );
 ```
 
@@ -124,74 +124,103 @@ const records = db.table
   .all();
 ```
 
-## raw
+## raw sql
 
-When there is a need to use a piece of raw SQL, use the `raw` method.
+When there is a need to use a piece of raw SQL, use the `sql` method.
 
-When it is needed to select a value with raw SQL, the first argument is a callback with type.
-The inferred type will be used for the query result.
+To select with a raw SQL, need to specify a column type as a first argument, so the TS could use it to guess the result type of the query:
 
 ```ts
 const result: { num: number }[] = await db.table.select({
-  num: db.table.raw((t) => t.integer(), '1 + 2'),
+  num: db.table.sql((t) => t.integer())`
+    random() * 100
+  `,
 });
 ```
 
-When you need to have variables inside a SQL query, name them in the format `$name` and provide an object with values:
+Other than for select, the column type can be omitted:
 
 ```ts
-const result: { num: number }[] = await db.table.select({
-  num: db.table.raw((t) => t.integer(), '$a + $b', {
-    a: 1,
-    b: 2,
+await db.table.where(db.table.sql`
+  "someValue" = random() * 100
+`);
+```
+
+Interpolating values in template literals is completely safe:
+
+```ts
+// get value from user-provided params
+const { value } = req.params;
+
+// SQL injection is prevented by a library, this is safe:
+await db.table.where(db.table.sql`
+  column = ${value}
+`);
+```
+
+SQL can be passed with a simple string, it's important to note that this is not safe to interpolate values in it.
+
+```ts
+// no interpolation is okay
+await db.table.where(db.table.sql({ raw: 'column = random() * 100' }));
+
+// get value from user-provided params
+const { value } = req.params;
+
+// this is NOT safe, SQL injection is possible:
+await db.table.where(db.table.sql({ raw: `column = random() * ${value}` }));
+```
+
+To inject values into `raw` SQL strings, define it with `$` in the string and provide `values` object.
+
+Use `$$` to provide column or/and table name. Column names will be quoted so don't quote them manually.
+
+```ts
+// get value from user-provided params
+const { value } = req.params;
+
+// this is SAFE, SQL injection are prevented:
+await db.table.where(
+  db.table.sql({
+    values: {
+      column: 'someTable.someColumn', // or simply 'column'
+      one: value,
+      two: 123,
+    },
+    raw: '$$column = random() * $value',
   }),
-});
-```
-
-Use double dollar `$$` syntax to quote the column names. The column name will be quoted in the SQL, don't quote it manually.
-
-```ts
-const result: { num: number }[] = await db.table.select({
-  num: db.table.raw((t) => t.integer(), '$$column + $add', {
-    // will be quoted into "amount"
-    column: 'amount',
-    add: 123,
-  }),
-});
-```
-
-Column name may contain `.` to have a table name and a column name.
-
-```ts
-const result: { num: number }[] = await db.table
-  .join('otherTable', 'otherTable.id', 'table.otherId')
-  .select({
-    num: db.table.raw((t) => t.integer(), '$$column + $add', {
-      // will be quoted into "otherTable"."amount"
-      column: 'otherTable.amount',
-      add: 123,
-    }),
-  });
-```
-
-Inserting values directly into the query is not correct, as it opens the door for possible SQL injections:
-
-```ts
-// request params values may contain SQL injections:
-const { a, b } = req.params;
-
-await db.table.select({
-  // do NOT do it this way:
-  value: db.table.raw((t) => t.integer(), `${a} + ${b}`),
-});
-```
-
-When using raw SQL in a `where` statement or in any other place which does not affect the query result, omit the first type argument, and provide only SQL:
-
-```ts
-const result = await db.table.where(
-  db.table.raw('$$column = $value', { column: 'column', value: 123 }),
 );
+```
+
+Summarizing:
+
+```ts
+// simplest form:
+db.table`key = ${value}`;
+
+// with column type for select:
+db.table((t) => t.boolean())`key = ${value}`;
+
+// raw SQL string, not allowed to interpolate:
+db.table({ raw: 'random()' });
+
+// with values:
+db.table({
+  values: {
+    column: 'columnName',
+    one: 1,
+    two: 2,
+  },
+  raw: '$$columnName = $one + $two',
+});
+
+// with column type for select:
+db.table((t) => t.decimal(), { raw: 'random()' });
+
+// combine values and template literal:
+db.table({ values: { one: 1, two: 2 } })`
+  ($one + $two) / $one
+`;
 ```
 
 ## select
@@ -220,12 +249,12 @@ db.table.select({
 
 // select raw SQL value, the first argument of `raw` is a column type, it is used for return type of the query
 db.table.select({
-  raw: db.table.raw((t) => t.integer(), '1 + 2'),
+  raw: db.table.sql((t) => t.integer())`1 + 2`,
 });
 
 // same raw SQL query as above, but raw value is returned from a callback
 db.table.select({
-  raw: (q) => q.raw((t) => t.integer(), '1 + 2'),
+  raw: (q) => q.sql((t) => t.integer())`1 + 2`,
 });
 ```
 
@@ -280,7 +309,7 @@ Can accept column names or raw expressions to place it to `DISTINCT ON (...)`:
 
 ```ts
 // Distinct on the name and raw SQL
-db.table.distinct('name', db.table.raw('raw sql')).select('id', 'name');
+db.table.distinct('name', db.table.sql`raw sql`).select('id', 'name');
 ```
 
 ## as
@@ -302,8 +331,12 @@ Set the `FROM` value, by default the table name is used.
 // accepts sub-query:
 db.table.from(Otherdb.table.select('foo', 'bar'));
 
-// accepts raw query:
-db.table.from(db.table.raw('raw sql expression'));
+// accepts raw sql by template literal:
+const value = 123;
+db.table.from`value = ${value}`;
+
+// accepts raw sql:
+db.table.from(db.table.sql`value = ${value}`);
 
 // accepts alias of `WITH` expression:
 q.with('foo', Otherdb.table.select('id', 'name')).from('foo');
@@ -384,8 +417,10 @@ db.table.order({
   age: 'DESC NULLS LAST',
 });
 
-// order by raw expression:
-db.table.order(db.table.raw('raw sql'));
+// order by raw SQL expression:
+db.table.order`raw sql`;
+// or
+db.table.order(db.table.sql`raw sql`);
 ```
 
 `order` can refer to the values returned from `select` sub-queries (unlike `where` which cannot).
@@ -530,10 +565,9 @@ db.table.having({
 
 ```sql
 SELECT * FROM "table"
-HAVING
-                count(column) FILTER (
-            WHERE id < 10 OR id = 15 OR id > 20
-            ) = 10
+HAVING count(column) FILTER (
+         WHERE id < 10 OR id = 15 OR id > 20
+       ) = 10
 ```
 
 The `withinGroup` option is for the `WITHIN GROUP` SQL statement.
@@ -560,7 +594,10 @@ HAVING count(column) WITHIN GROUP (ORDER name ASC) = 10
 The `.having` method supports raw SQL:
 
 ```ts
-db.table.having(db.table.raw('raw SQL'));
+db.table.having`raw SQL`;
+
+// or
+db.table.having(db.table.sql`raw SQL`);
 ```
 
 `.havingOr` takes the same arguments as `.having`, but joins them with `OR`:

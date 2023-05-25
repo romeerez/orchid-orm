@@ -6,13 +6,13 @@ export type Sql = {
 };
 
 export type RawExpression<C extends ColumnTypeBase = ColumnTypeBase> = {
-  __raw: string;
+  __raw: string | [TemplateStringsArray, ...unknown[]];
   __values?: Record<string, unknown> | false;
   __column: C;
 };
 
 export const raw = (
-  sql: string,
+  sql: string | [TemplateStringsArray, ...unknown[]],
   values?: Record<string, unknown> | false,
 ): RawExpression =>
   ({

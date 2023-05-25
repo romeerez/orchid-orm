@@ -17,10 +17,11 @@ import {
   EmptyTuple,
   NullableColumn,
   QueryMetaBase,
+  ColumnsShapeBase,
 } from 'orchid-core';
 import { _join, _joinLateral } from './_join';
 import { AliasOrTable } from '../utils';
-import { ColumnsObject, ColumnsShape } from '../columns';
+import { ColumnsObject } from '../columns';
 import { QueryBase } from '../queryBase';
 
 type WithSelectable<
@@ -140,7 +141,7 @@ type JoinResultSelectable<
   J extends Pick<Query, 'result' | 'table' | 'meta'>,
   RequireJoined extends boolean,
   CbResult extends { meta: QueryMetaBase },
-  Result extends ColumnsShape = RequireJoined extends true
+  Result extends ColumnsShapeBase = RequireJoined extends true
     ? J['result']
     : { [K in keyof J['result']]: NullableColumn<J['result'][K]> },
   As extends string = CbResult extends { meta: QueryMetaBase & { as: string } }
@@ -167,7 +168,7 @@ type JoinAddSelectable<T extends Query, Selectable extends SelectableBase> = {
 type JoinOptionalMain<
   T extends Query,
   Selectable extends SelectableBase,
-  Result extends ColumnsShape = {
+  Result extends ColumnsShapeBase = {
     [K in keyof T['result']]: NullableColumn<T['result'][K]>;
   },
 > = {

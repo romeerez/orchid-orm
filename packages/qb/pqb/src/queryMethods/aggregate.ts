@@ -52,7 +52,7 @@ export type AggregateOptions<
 // only such one argument methods are available in .having method
 export type Aggregate1ArgumentTypes<
   T extends Query = Query,
-  C extends ColumnType = ColumnType,
+  C extends ColumnTypeBase = ColumnTypeBase,
 > = {
   count: Expression<T, C>;
   avg: NumberExpression<T, C>;

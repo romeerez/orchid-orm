@@ -319,12 +319,13 @@ describe('having', () => {
     `;
 
     expectSql(
-      q.having(testDb.raw('count(*) = 1'), testDb.raw('sum(id) = 2')).toSql(),
+      q.having(testDb.sql`count(*) = 1`, testDb.sql`sum(id) = 2`).toSql(),
       expectedSql,
     );
+    expectSql(q.having`count(*) = 1 AND sum(id) = 2`.toSql(), expectedSql);
     expectQueryNotMutated(q);
 
-    q._having(testDb.raw('count(*) = 1'), testDb.raw('sum(id) = 2'));
+    q._having`count(*) = 1 AND sum(id) = 2`;
     expectSql(q.toSql({ clearCache: true }), expectedSql);
   });
 
@@ -359,10 +360,7 @@ describe('having', () => {
       const q = User.all();
       expectSql(
         q
-          .havingOr(
-            testDb.raw('count(*) = 1 + 2'),
-            testDb.raw('count(*) = 2 + 3'),
-          )
+          .havingOr(testDb.sql`count(*) = 1 + 2`, testDb.sql`count(*) = 2 + 3`)
           .toSql(),
         `
         SELECT * FROM "user"

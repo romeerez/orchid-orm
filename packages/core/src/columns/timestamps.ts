@@ -18,7 +18,12 @@ const makeInjector =
     const alreadyUpdatesUpdatedAt = data.some((item) => {
       if (isRaw(item)) {
         updatedAtRegex.lastIndex = 0;
-        return updatedAtRegex.test(getRawSql(item));
+        const sql = getRawSql(item);
+        return updatedAtRegex.test(
+          typeof sql === 'string'
+            ? sql
+            : (sql[0] as unknown as string[]).join(''),
+        );
       } else {
         return typeof item !== 'function' && item[key];
       }

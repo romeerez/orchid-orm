@@ -156,6 +156,8 @@ export const ts = {
     getName({ name }: { name?: PropertyName }) {
       if (ts.is.identifier(name)) {
         return name.escapedText;
+      } else if (name && 'text' in name) {
+        return name.text;
       } else {
         return name?.getText();
       }

@@ -167,10 +167,40 @@ function text(min: number, max: number) {
   return new TextColumn(min, max);
 }
 
+function sql(sql: TemplateStringsArray, ...values: unknown[]): RawExpression;
+function sql(sql: string): RawExpression;
+function sql(values: Record<string, unknown>, sql: string): RawExpression;
+function sql(
+  values: Record<string, unknown>,
+): (...sql: [TemplateStringsArray, ...unknown[]]) => RawExpression;
+function sql(
+  ...args:
+    | [sql: TemplateStringsArray, ...values: unknown[]]
+    | [sql: string]
+    | [values: Record<string, unknown>, sql?: string]
+):
+  | ((...sql: [TemplateStringsArray, ...unknown[]]) => RawExpression)
+  | RawExpression {
+  const arg = args[0];
+  if (Array.isArray(arg)) {
+    return raw(args as [TemplateStringsArray, ...unknown[]]);
+  }
+
+  if (typeof args[0] === 'string') {
+    return raw(args[0] as string);
+  }
+
+  if (args[1] !== undefined) {
+    return raw(args[1] as string, arg as Record<string, unknown>);
+  }
+
+  return (...args) => raw(args, arg as Record<string, unknown>);
+}
+
 export type DefaultColumnTypes = typeof columnTypes;
 export const columnTypes = {
   name,
-  raw,
+  sql,
   smallint() {
     return new SmallIntColumn();
   },

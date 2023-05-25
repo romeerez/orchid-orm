@@ -18,11 +18,11 @@ export type ArrayData<Item extends ColumnTypeBase> = ColumnData &
 
 type ArrayMethods = typeof arrayMethods;
 
-export interface ArrayColumn<Item extends ColumnType>
+export interface ArrayColumn<Item extends ColumnTypeBase>
   extends ColumnType<Item['type'][], typeof Operators.array>,
     ArrayMethods {}
 
-export class ArrayColumn<Item extends ColumnType> extends ColumnType<
+export class ArrayColumn<Item extends ColumnTypeBase> extends ColumnType<
   Item['type'][],
   typeof Operators.array
 > {
@@ -71,7 +71,7 @@ const parseArray = (
   len: number,
   entries: unknown[],
   nested: boolean,
-  item: ColumnType,
+  item: ColumnTypeBase,
 ): number => {
   if (input[0] === '[') {
     while (pos < len) {
@@ -138,7 +138,7 @@ const pushEntry = (
   start: number,
   pos: number,
   entries: unknown[],
-  item: ColumnType,
+  item: ColumnTypeBase,
 ) => {
   let entry: unknown = input.slice(start, pos - 1);
   if (entry === 'NULL') {

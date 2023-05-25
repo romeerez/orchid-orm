@@ -40,7 +40,7 @@ export class Table extends BaseTable {
     text: t.text().default('text'),
 
     // raw SQL default:
-    timestamp: t.timestamp().default(t.raw('now()')),
+    timestamp: t.timestamp().default(t.sql`now()`),
 
     // runtime default, each new records gets a new random value:
     random: t.numeric().default(() => Math.random()),

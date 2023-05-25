@@ -160,7 +160,7 @@ describe('createTable', () => {
         name: 'foreignKeyName',
       },
     ),
-    ...t.check(t.raw('check')),
+    ...t.check(t.sql({"raw":"check"})),
     ...t.constraint({
       name: 'constraint',
       references: [
@@ -168,7 +168,7 @@ describe('createTable', () => {
         'fooBar',
         ['three', 'four'],
       ],
-      check: t.raw('check'),
+      check: t.sql({"raw":"check"}),
     }),
   }`,
       }),

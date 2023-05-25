@@ -8,31 +8,40 @@ import {
 } from '../query';
 import { SelectQueryData } from '../sql';
 import { AliasOrTable } from '../utils';
-import { isRaw, RawExpression } from 'orchid-core';
+import { isRaw, raw, RawExpression } from 'orchid-core';
 import { getShapeFromSelect } from './select';
 
-export type FromArgs<T extends Query> = [
-  first: Query | RawExpression | Exclude<keyof T['withData'], symbol | number>,
-  second?: { only?: boolean },
-];
+export type FromArgs<T extends Query> =
+  | [
+      first:
+        | Query
+        | RawExpression
+        | Exclude<keyof T['withData'], symbol | number>,
+      second?: { only?: boolean },
+    ]
+  | [TemplateStringsArray, ...unknown[]];
 
 export type FromResult<
   T extends Query,
   Args extends FromArgs<T>,
-  Arg = Args[0],
-> = Arg extends string
+> = Args extends TemplateStringsArray
+  ? T
+  : Args[0] extends string
   ? T['withData'] extends Record<string, WithDataItem>
-    ? Arg extends keyof T['withData']
+    ? Args[0] extends keyof T['withData']
       ? Omit<T, 'meta' | 'selectable'> & {
           meta: Omit<T['meta'], 'as'> & {
             as?: string;
           };
-          selectable: SelectableFromShape<T['withData'][Arg]['shape'], Arg>;
+          selectable: SelectableFromShape<
+            T['withData'][Args[0]]['shape'],
+            Args[0]
+          >;
         }
-      : SetQueryTableAlias<T, Arg>
-    : SetQueryTableAlias<T, Arg>
-  : Arg extends Query
-  ? FromQueryResult<T, Arg>
+      : SetQueryTableAlias<T, Args[0]>
+    : SetQueryTableAlias<T, Args[0]>
+  : Args[0] extends Query
+  ? FromQueryResult<T, Args[0]>
   : T;
 
 type FromQueryResult<
@@ -70,6 +79,12 @@ export class From {
     this: T,
     ...args: Args
   ): FromResult<T, Args> {
+    if (Array.isArray(args[0])) {
+      return this._from(
+        raw(args as [TemplateStringsArray, ...unknown[]]),
+      ) as FromResult<T, Args>;
+    }
+
     if (typeof args[0] === 'string') {
       this.query.as ||= args[0];
     } else if (!isRaw(args[0] as RawExpression)) {
@@ -81,11 +96,12 @@ export class From {
       this.query.as ||= 't';
     }
 
-    if (args[1]?.only) {
-      (this.query as SelectQueryData).fromOnly = args[1].only;
+    const options = args[1] as { only?: boolean } | undefined;
+    if (options?.only) {
+      (this.query as SelectQueryData).fromOnly = options.only;
     }
 
-    this.query.from = args[0];
+    this.query.from = args[0] as Query;
 
     return this as unknown as FromResult<T, Args>;
   }

@@ -42,7 +42,7 @@ describe('update', () => {
     const count = 2;
     const users = await User.select('id').createMany([userData, userData]);
 
-    const query = User.or(...users).updateRaw(testDb.raw(`name = 'name'`));
+    const query = User.or(...users).updateRaw(testDb.sql`name = 'name'`);
     expectSql(
       query.toSql(),
       `
@@ -403,7 +403,7 @@ describe('update', () => {
 
   it('should support raw sql as a value', () => {
     const query = User.where({ id: 1 }).update({
-      name: testDb.raw(`'raw sql'`),
+      name: testDb.sql`'raw sql'`,
     });
     expectSql(
       query.toSql(),

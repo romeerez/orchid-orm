@@ -8,10 +8,9 @@ describe('array column', () => {
   describe('array', () => {
     it('should output nested array of numbers', async () => {
       const result = await testDb.get(
-        testDb.raw(
+        testDb.sql(
           (t) => new ArrayColumn(new ArrayColumn(t.integer())),
-          `'{{1, 2, 3}, {4, 5, 6}}'::integer[][]`,
-        ),
+        )`'{{1, 2, 3}, {4, 5, 6}}'::integer[][]`,
       );
       expect(result).toEqual([
         [1, 2, 3],
@@ -23,10 +22,9 @@ describe('array column', () => {
 
     it('should output nested array of strings', async () => {
       const result = await testDb.get(
-        testDb.raw(
+        testDb.sql(
           (t) => new ArrayColumn(new ArrayColumn(t.text())),
-          `'{{"a", "b"}, {"c", "d"}}'::text[][]`,
-        ),
+        )`'{{"a", "b"}, {"c", "d"}}'::text[][]`,
       );
       expect(result).toEqual([
         ['a', 'b'],
@@ -38,10 +36,9 @@ describe('array column', () => {
 
     it('should output nested array of booleans', async () => {
       const result = await testDb.get(
-        testDb.raw(
+        testDb.sql(
           (t) => new ArrayColumn(new ArrayColumn(t.boolean())),
-          `'{{true}, {false}}'::text[][]`,
-        ),
+        )`'{{true}, {false}}'::text[][]`,
       );
       expect(result).toEqual([[true], [false]]);
 

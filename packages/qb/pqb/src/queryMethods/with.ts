@@ -1,5 +1,5 @@
 import { WithOptions } from '../sql';
-import { ColumnsShape, ColumnTypes } from '../columns';
+import { ColumnTypes } from '../columns';
 import { AddQueryWith, Query } from '../query';
 import { Db } from '../db';
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
@@ -8,6 +8,7 @@ import {
   RawExpression,
   ColumnShapeOutput,
   emptyObject,
+  ColumnsShapeBase,
 } from 'orchid-core';
 
 type WithArgsOptions = Omit<WithOptions, 'columns'> & {
@@ -15,8 +16,8 @@ type WithArgsOptions = Omit<WithOptions, 'columns'> & {
 };
 
 type WithArgs =
-  | [string, ColumnsShape, RawExpression]
-  | [string, WithArgsOptions, ColumnsShape, RawExpression]
+  | [string, ColumnsShapeBase, RawExpression]
+  | [string, WithArgsOptions, ColumnsShapeBase, RawExpression]
   | [string, Query | ((qb: Db) => Query)]
   | [string, WithArgsOptions, Query | ((qb: Db) => Query)];
 
@@ -28,12 +29,12 @@ type WithShape<Args extends WithArgs> = Args[1] extends Query
   ? Args[2]['result']
   : Args[2] extends (qb: Db) => Query
   ? ReturnType<Args[2]>['result']
-  : Args[1] extends ColumnsShape
+  : Args[1] extends ColumnsShapeBase
   ? Args[1]
-  : Args[2] extends ColumnsShape
+  : Args[2] extends ColumnsShapeBase
   ? Args[2]
-  : Args[2] extends (t: ColumnTypes) => ColumnsShape
-  ? ReturnType<Args[2]> extends ColumnsShape
+  : Args[2] extends (t: ColumnTypes) => ColumnsShapeBase
+  ? ReturnType<Args[2]> extends ColumnsShapeBase
     ? ReturnType<Args[2]>
     : never
   : never;
@@ -41,7 +42,7 @@ type WithShape<Args extends WithArgs> = Args[1] extends Query
 type WithResult<
   T extends Query,
   Args extends WithArgs,
-  Shape extends ColumnsShape,
+  Shape extends ColumnsShapeBase,
 > = AddQueryWith<
   T,
   {
@@ -55,7 +56,7 @@ export class With {
   with<
     T extends Query,
     Args extends WithArgs,
-    Shape extends ColumnsShape = WithShape<Args>,
+    Shape extends ColumnsShapeBase = WithShape<Args>,
   >(this: T, ...args: Args): WithResult<T, Args, Shape> {
     return this.clone()._with<T, Args, Shape>(...args);
   }
@@ -63,7 +64,7 @@ export class With {
   _with<
     T extends Query,
     Args extends WithArgs,
-    Shape extends ColumnsShape = WithShape<Args>,
+    Shape extends ColumnsShapeBase = WithShape<Args>,
   >(this: T, ...args: Args): WithResult<T, Args, Shape> {
     let options =
       (args.length === 3 && !isRaw(args[2])) || args.length === 4
@@ -79,7 +80,7 @@ export class With {
 
     const shape =
       args.length === 4
-        ? (args[2] as ColumnsShape)
+        ? (args[2] as ColumnsShapeBase)
         : isRaw(query)
         ? args[1]
         : query.query.shape;

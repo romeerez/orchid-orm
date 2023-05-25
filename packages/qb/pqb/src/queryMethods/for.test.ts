@@ -30,7 +30,7 @@ describe('for', () => {
     it('should accept raw sql', () => {
       const q = User.all();
       expectSql(
-        q[method as 'forUpdate'](User.raw('raw sql')).toSql(),
+        q[method as 'forUpdate'](User.sql`raw sql`).toSql(),
         `SELECT * FROM "user" FOR ${sql} OF raw sql`,
       );
       expectQueryNotMutated(q);

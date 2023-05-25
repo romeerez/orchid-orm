@@ -28,7 +28,7 @@ describe('get', () => {
 
     it('should select raw and return a single value', async () => {
       const received = await User.get(
-        testDb.raw((t) => t.integer(), 'count(*)::int'),
+        testDb.sql((t) => t.integer())`count(*)::int`,
       );
 
       assertType<typeof received, number>();
@@ -64,7 +64,7 @@ describe('get', () => {
 
     it('should select raw and return a single value when exists', async () => {
       const received = await User.getOptional(
-        testDb.raw((t) => t.integer(), 'count(*)::int'),
+        testDb.sql((t) => t.integer())`count(*)::int`,
       );
 
       assertType<typeof received, number | undefined>();

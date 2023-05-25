@@ -283,7 +283,7 @@ describe('create and drop table', () => {
         db[action]('table', (t) => ({
           id: t.identity().primaryKey(),
           withDefault: t.boolean().default(false),
-          withDefaultRaw: t.date().default(t.raw(`now()`)),
+          withDefaultRaw: t.date().default(t.sql(`now()`)),
         })),
       () =>
         expectSql(
@@ -825,7 +825,7 @@ describe('create and drop table', () => {
             id: t.identity().primaryKey(),
             columnWithCheck: t
               .text()
-              .check(t.raw('length("columnWithCheck") > 10')),
+              .check(t.sql('length("columnWithCheck") > 10')),
           })),
         () =>
           expectSql(`
@@ -842,7 +842,7 @@ describe('create and drop table', () => {
         (action) =>
           db[action]('table', (t) => ({
             id: t.identity().primaryKey(),
-            ...t.check(t.raw('sql')),
+            ...t.check(t.sql('sql')),
           })),
         () =>
           expectSql(`
@@ -863,7 +863,7 @@ describe('create and drop table', () => {
             id: t.identity().primaryKey(),
             ...t.constraint({
               name: 'constraintName',
-              check: t.raw('sql'),
+              check: t.sql('sql'),
               references: [
                 ['id'],
                 'otherTable',

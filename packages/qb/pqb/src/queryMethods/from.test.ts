@@ -9,8 +9,8 @@ describe('from', () => {
   it('should accept raw parameter', () => {
     const q = User.all();
     expectSql(
-      q.from(testDb.raw('profile')).as('t').toSql(),
-      `SELECT * FROM profile AS "t"`,
+      q.from`(SELECT * FROM profile)`.as('t').toSql(),
+      `SELECT * FROM (SELECT * FROM profile) AS "t"`,
     );
     expectQueryNotMutated(q);
   });

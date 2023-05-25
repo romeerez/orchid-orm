@@ -1,6 +1,6 @@
 import { AggregateItem } from './types';
 import { addValue, rawOrRevealColumnToSql, q } from './common';
-import { getRaw } from './raw';
+import { getRaw } from './rawSql';
 import { windowToSql } from './window';
 import { pushOrderBySql } from './orderBy';
 import { whereToSql } from './where';

@@ -43,7 +43,7 @@ import { QueryHooks } from './hooks';
 import { QueryUpsertOrCreate } from './upsertOrCreate';
 import { QueryGet } from './get';
 import { MergeQueryMethods } from './merge';
-import { RawMethods } from './raw';
+import { RawSqlMethods } from './rawSql';
 import { CopyMethods } from './copy';
 import { RawExpression, raw, applyMixins, EmptyObject, Sql } from 'orchid-core';
 import { AsMethods } from './as';
@@ -87,6 +87,14 @@ export type OrderArg<
     }
   | RawExpression;
 
+export type OrderArgs<T extends Query> =
+  | OrderArg<T>[]
+  | [TemplateStringsArray, ...unknown[]];
+
+type FindArgs<T extends Query> =
+  | [T['shape'][T['singlePrimaryKey']]['type'] | RawExpression]
+  | [TemplateStringsArray, ...unknown[]];
+
 export interface QueryMethods
   extends Omit<AsMethods, 'result'>,
     Aggregate,
@@ -112,7 +120,7 @@ export interface QueryMethods
     QueryUpsertOrCreate,
     QueryGet,
     MergeQueryMethods,
-    RawMethods,
+    RawSqlMethods,
     CopyMethods {}
 
 export class QueryMethods {
@@ -195,15 +203,20 @@ export class QueryMethods {
 
   find<T extends Query>(
     this: T,
-    value: T['shape'][T['singlePrimaryKey']]['type'] | RawExpression,
+    ...args: FindArgs<T>
   ): SetQueryReturnsOne<WhereResult<T>> {
-    return this.clone()._find(value);
+    return this.clone()._find(...args);
   }
 
   _find<T extends Query>(
     this: T,
-    value: T['shape'][T['singlePrimaryKey']]['type'] | RawExpression,
+    ...args: FindArgs<T>
   ): SetQueryReturnsOne<WhereResult<T>> {
+    const [value] = args;
+    if (Array.isArray(value)) {
+      return this._find(raw(args as [TemplateStringsArray, ...unknown[]]));
+    }
+
     if (value === null || value === undefined) {
       throw new OrchidOrmInternalError(
         this,
@@ -218,17 +231,17 @@ export class QueryMethods {
 
   findOptional<T extends Query>(
     this: T,
-    value: T['shape'][T['singlePrimaryKey']]['type'] | RawExpression,
+    ...args: FindArgs<T>
   ): SetQueryReturnsOneOptional<WhereResult<T>> {
-    return this.clone()._findOptional(value);
+    return this.clone()._findOptional(...args);
   }
 
   _findOptional<T extends Query>(
     this: T,
-    value: T['shape'][T['singlePrimaryKey']]['type'] | RawExpression,
+    ...args: FindArgs<T>
   ): SetQueryReturnsOneOptional<WhereResult<T>> {
     return this._find(
-      value,
+      ...args,
     ).takeOptional() as unknown as SetQueryReturnsOneOptional<WhereResult<T>>;
   }
 
@@ -309,11 +322,14 @@ export class QueryMethods {
     ) as unknown as SetQueryTableAlias<Q, As>;
   }
 
-  order<T extends Query>(this: T, ...args: OrderArg<T>[]): T {
+  order<T extends Query>(this: T, ...args: OrderArgs<T>): T {
     return this.clone()._order(...args);
   }
 
-  _order<T extends Query>(this: T, ...args: OrderArg<T>[]): T {
+  _order<T extends Query>(this: T, ...args: OrderArgs<T>): T {
+    if (Array.isArray(args[0])) {
+      return this._order(raw(args as [TemplateStringsArray, ...unknown[]]));
+    }
     return pushQueryArray(this, 'order', args);
   }
 
@@ -340,7 +356,7 @@ export class QueryMethods {
   }
 
   _exists<T extends Query>(this: T): SetQueryReturnsValue<T, BooleanColumn> {
-    const q = this._getOptional(this.raw<Query, BooleanColumn>('true'));
+    const q = this._getOptional(raw('true'));
     q.query.notFoundDefault = false;
     q.query.coalesceValue = raw('false');
     return q as unknown as SetQueryReturnsValue<T, BooleanColumn>;
@@ -396,6 +412,6 @@ applyMixins(QueryMethods, [
   QueryUpsertOrCreate,
   QueryGet,
   MergeQueryMethods,
-  RawMethods,
+  RawSqlMethods,
   CopyMethods,
 ]);

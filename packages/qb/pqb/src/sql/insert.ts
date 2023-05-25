@@ -4,7 +4,7 @@ import { Query } from '../query';
 import { selectToSql } from './select';
 import { makeSql, ToSqlCtx } from './toSql';
 import { pushQueryValue } from '../queryDataUtils';
-import { getRaw } from './raw';
+import { getRaw } from './rawSql';
 import { InsertQueryData, QueryData } from './data';
 import { isRaw, raw, RawExpression } from 'orchid-core';
 import { ColumnData } from '../columns';

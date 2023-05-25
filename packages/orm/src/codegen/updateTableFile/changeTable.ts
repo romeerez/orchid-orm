@@ -564,14 +564,26 @@ const parseCheckArg = (context: ChangeContext, arg: Expression) => {
     !ts.is.propertyAccess(expression) ||
     !ts.is.identifier(expression.expression) ||
     expression.expression.escapedText !== context.t ||
-    expression.name.escapedText !== 'raw'
+    expression.name.escapedText !== 'sql'
   )
     return;
 
-  const [sqlArg] = arg.arguments;
-  if (!sqlArg || !ts.is.stringLiteral(sqlArg)) return;
+  const [obj] = arg.arguments;
+  if (!obj || !ts.is.objectLiteral(obj)) return;
 
-  return sqlArg.text;
+  for (const prop of obj.properties) {
+    if (!ts.is.propertyAssignment(prop)) continue;
+
+    const name = ts.prop.getName(prop);
+    if (name !== 'raw') continue;
+
+    const init = prop.initializer;
+    if (!ts.is.stringLiteral(init) || !('text' in init)) continue;
+
+    return init.text;
+  }
+
+  return;
 };
 
 const dropMatchingConstraint = (

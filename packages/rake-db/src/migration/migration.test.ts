@@ -486,8 +486,8 @@ describe('migration', () => {
           db[action]('schema.domain', (t) => t.integer(), {
             collation: 'C',
             notNull: true,
-            default: db.raw('123'),
-            check: db.raw('VALUE = 42'),
+            default: db.sql`123`,
+            check: db.sql`VALUE = 42`,
             cascade: true,
           }),
         () =>

@@ -19,7 +19,7 @@ db.table.where({
   },
 
   // where column equals to raw SQL
-  column: db.table.raw('raw expression'),
+  column: db.table.sql`raw expression`,
 });
 ```
 
@@ -46,10 +46,12 @@ db.table.where({ id: 1 }, otherQuery);
 // this will produce WHERE "table"."id" = 1 AND "table"."name' = 'John'
 ```
 
-`.where` supports raw argument:
+`.where` supports raw SQL:
 
 ```ts
-db.table.where(db.table.raw('a = b'));
+db.table.where`a = b`;
+// or
+db.table.where(db.table.sql`a = b`);
 ```
 
 `.where` can accept a callback with a specific query builder containing all "where" methods such as `.where`, `.or`, `.whereNot`, `.whereIn`, `.whereExists`:
@@ -70,7 +72,7 @@ db.table.where((q) =>
 db.table.where(
   { id: 1 },
   db.table.where({ name: 'John' }),
-  db.table.raw('a = b'),
+  db.table.sql`a = b`,
 );
 ```
 
@@ -252,7 +254,7 @@ db.table.whereIn(['id', 'name'], OtherTable.select('id', 'name'));
 It supports raw query:
 
 ```ts
-db.table.whereIn(['id', 'name'], db.table.raw(`((1, 'one'), (2, 'two'))`));
+db.table.whereIn(['id', 'name'], db.table.sql`((1, 'one'), (2, 'two'))`);
 ```
 
 ## whereExists, orWhereExists, whereNotExists, orWhereNotExists
@@ -297,7 +299,7 @@ db.table.where({
     lt: OtherTable.select('someNumber').take(),
 
     // raw expression produces WHERE "numericColumn" < "otherColumn" + 10
-    lt: db.table.raw('"otherColumn" + 10'),
+    lt: db.table.sql`"otherColumn" + 10`,
   },
 });
 ```
@@ -336,7 +338,7 @@ db.table.where({
     // WHERE "column" IN (SELECT "column" FROM "otherTable")
     in: OtherTable.select('column'),
 
-    in: db.table.raw("('a', 'b')"),
+    in: db.table.sql`('a', 'b')`,
   },
 });
 ```
@@ -383,7 +385,7 @@ db.table.where({
     between: [1, 10],
 
     // sub-query and raw expression
-    between: [OtherTable.select('column').take(), db.table.raw('2 + 2')],
+    between: [OtherTable.select('column').take(), db.table.sql`2 + 2`],
   },
 });
 ```

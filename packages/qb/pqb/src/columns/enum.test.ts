@@ -17,10 +17,9 @@ describe('enum column', () => {
 
   it('should output proper union', async () => {
     const result = await testDb.get(
-      testDb.raw(
+      testDb.sql(
         () => new EnumColumn('mood', ['sad', 'ok', 'happy']),
-        `'happy'::mood`,
-      ),
+      )`'happy'::mood`,
     );
     expect(result).toBe('happy');
 

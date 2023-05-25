@@ -746,7 +746,7 @@ describe('updateTableFile', () => {
 
         testWritten(
           template(`
-  ...t.check(t.raw('sql')),
+  ...t.check(t.sql({"raw":"sql"})),
         `),
         );
       });
@@ -754,7 +754,7 @@ describe('updateTableFile', () => {
       it('should change table check', async () => {
         asMock(fs.readFile).mockResolvedValue(
           template(`
-  ...t.check(t.raw('from')),
+  ...t.check(t.sql({"raw":"from"})),
 `),
         );
 
@@ -781,7 +781,7 @@ describe('updateTableFile', () => {
 
         testWritten(
           template(`
-  ...t.check(t.raw('to')),
+  ...t.check(t.sql({"raw":"to"})),
         `),
         );
       });
@@ -796,19 +796,21 @@ describe('updateTableFile', () => {
           ast: {
             ...ast.changeTable,
             shape: {
-              name: { type: 'add', item: t.text(1, 10).check(t.raw('check')) },
+              name: { type: 'add', item: t.text(1, 10).check(t.sql('check')) },
             },
           },
         });
 
-        testWritten(template(`name: t.text(1, 10).check(t.raw('check')),`));
+        testWritten(
+          template(`name: t.text(1, 10).check(t.sql({"raw":"check"})),`),
+        );
       });
 
       it('should change column check', async () => {
         asMock(fs.readFile).mockResolvedValue(
           template(`
     add: t.text(),
-    remove: t.text().check(t.raw('remove check')),
+    remove: t.text().check(t.sql({"raw":"remove check"})),
 `),
         );
 
@@ -837,7 +839,7 @@ describe('updateTableFile', () => {
 
         testWritten(
           template(`
-    add: t.text().check(t.raw('add check')),
+    add: t.text().check(t.sql({"raw":"add check"})),
     remove: t.text(),
 `),
         );
@@ -884,7 +886,7 @@ describe('updateTableFile', () => {
           match: 'SIMPLE',
         },
       ],
-      check: t.raw('sql'),
+      check: t.sql({"raw":"sql"}),
     }),
         `),
       );
@@ -903,7 +905,7 @@ describe('updateTableFile', () => {
           match: 'SIMPLE',
         },
       ],
-      check: t.raw('sql'),
+      check: t.sql({"raw":"sql"}),
     }),
 `),
       );
@@ -959,7 +961,7 @@ describe('updateTableFile', () => {
           match: 'FULL',
         },
       ],
-      check: t.raw('updated'),
+      check: t.sql({"raw":"updated"}),
     }),
       `),
       );

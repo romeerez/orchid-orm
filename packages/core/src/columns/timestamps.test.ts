@@ -42,7 +42,7 @@ describe('timestamps methods', () => {
     it('should update updatedAt when updating with raw sql', () => {
       const q = table
         .where()
-        .updateRaw(testDb.raw('name = $name', { name: 'name' }));
+        .updateRaw(testDb.sql({ values: { name: 'name' } })`name = $name`);
 
       expectSql(
         q.toSql(),
@@ -55,9 +55,7 @@ describe('timestamps methods', () => {
     });
 
     it('should update updatedAt when updating with raw sql which has updatedAt somewhere but not in set', () => {
-      const q = table
-        .where()
-        .updateRaw(testDb.raw('"createdAt" = "updatedAt"'));
+      const q = table.where().updateRaw(testDb.sql`"createdAt" = "updatedAt"`);
 
       expectSql(
         q.toSql(),
@@ -71,7 +69,7 @@ describe('timestamps methods', () => {
     it('should not update updatedAt column when updating with raw sql which contains `updatedAt = `', () => {
       const q = table
         .where()
-        .updateRaw(testDb.raw('"updatedAt" = $time', { time: now }));
+        .updateRaw(testDb.sql({ values: { time: now } })`"updatedAt" = $time`);
 
       expectSql(
         q.toSql(),

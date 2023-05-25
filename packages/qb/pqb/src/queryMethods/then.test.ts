@@ -9,7 +9,7 @@ describe('then', () => {
   describe('catch', () => {
     it('should catch error', (done) => {
       const query = User.select({
-        column: testDb.raw((t) => t.boolean(), 'koko'),
+        column: testDb.sql((t) => t.boolean())`koko`,
       }).catch((err) => {
         expect(err.message).toBe(`column "koko" does not exist`);
         expect(err.cause.stack).toContain('then.test.ts');

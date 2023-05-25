@@ -295,9 +295,9 @@ change(async (db) => {
 change(async (db) => {
   await db.createTable('table2', (t) => ({
     id: t.identity().primaryKey(),
-    text: t.text().check(t.raw('length(text) > 5')),
+    text: t.text().check(t.sql({"raw":"length(text) > 5"})),
     ...t.timestampsSnakeCase(),
-    ...t.check(t.raw('table check')),
+    ...t.check(t.sql({"raw":"table check"})),
     ...t.foreignKey(
       ['id', 'text'],
       'schema.table1',
@@ -321,7 +321,7 @@ change(async (db) => {
           onDelete: 'CASCADE',
         },
       ],
-      check: t.raw('column > 10'),
+      check: t.sql({"raw":"column > 10"}),
     }),
   }));
 });

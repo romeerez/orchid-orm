@@ -31,7 +31,7 @@ export type ColumnsParsers = Record<string | getValueKey, ColumnParser>;
 
 export type SelectableBase = Record<
   PropertyKey,
-  { as: string; column: ColumnType }
+  { as: string; column: ColumnTypeBase }
 >;
 
 export type SelectableFromShape<
@@ -44,7 +44,7 @@ export type SelectableFromShape<
   };
 };
 
-export type WithDataItem = { table: string; shape: ColumnsShape };
+export type WithDataItem = { table: string; shape: ColumnsShapeBase };
 export type WithDataBase = Record<never, WithDataItem>;
 
 export type Query = QueryCommon &
@@ -60,7 +60,7 @@ export type Query = QueryCommon &
     type: Record<string, unknown>;
     inputType: Record<string, unknown>;
     query: QueryData;
-    result: ColumnsShape;
+    result: ColumnsShapeBase;
     selectable: SelectableBase;
     returnType: QueryReturnType;
     then: ThenResult<unknown>;
