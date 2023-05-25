@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.9.34
+
+### Patch Changes
+
+- 4287137: Add `sql` method to accept raw SQL via template literals
+- Updated dependencies [4287137]
+  - pqb@0.11.27
+  - orchid-core@0.4.9
+
 ## 1.9.33
 
 ### Patch Changes

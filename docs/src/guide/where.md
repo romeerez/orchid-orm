@@ -167,11 +167,19 @@ WHERE id = 1 AND color = 'red'
 ## find
 
 The `find` method is available only for tables which has exactly one primary key.
+And also it can accept raw SQL template literal, then the primary key is not required.
 
 Find record by id, throw [NotFoundError](/guide/error-handling.html) if not found:
 
 ```ts
 await db.table.find(1);
+```
+
+```ts
+await db.user.find`
+  age = ${age} AND
+  name = ${name}
+`;
 ```
 
 ## findOptional
