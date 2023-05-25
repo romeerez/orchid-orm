@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.4.10
+
+### Patch Changes
+
+- 0535450: Fix `then` and `catch` methods
+
 ## 0.4.9
 
 ### Patch Changes

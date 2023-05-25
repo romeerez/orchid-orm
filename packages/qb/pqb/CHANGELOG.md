@@ -1,5 +1,13 @@
 # pqb
 
+## 0.11.28
+
+### Patch Changes
+
+- 0535450: Fix `then` and `catch` methods
+- Updated dependencies [0535450]
+  - orchid-core@0.4.10
+
 ## 0.11.27
 
 ### Patch Changes
