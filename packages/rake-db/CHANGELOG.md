@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.8.31
+
+### Patch Changes
+
+- 4287137: Add `sql` method to accept raw SQL via template literals
+- Updated dependencies [4287137]
+  - pqb@0.11.27
+  - orchid-core@0.4.9
+
 ## 2.8.30
 
 ### Patch Changes

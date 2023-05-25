@@ -1,5 +1,13 @@
 # pqb
 
+## 0.11.27
+
+### Patch Changes
+
+- 4287137: Add `sql` method to accept raw SQL via template literals
+- Updated dependencies [4287137]
+  - orchid-core@0.4.9
+
 ## 0.11.26
 
 ### Patch Changes
