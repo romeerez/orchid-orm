@@ -1,5 +1,13 @@
 # pqb
 
+## 0.11.29
+
+### Patch Changes
+
+- 4893640: Rename addParserToQuery to setParserToQuery, add overrideParserInQuery (#92)
+- Updated dependencies [4893640]
+  - orchid-core@0.4.11
+
 ## 0.11.28
 
 ### Patch Changes

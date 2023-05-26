@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.4.11
+
+### Patch Changes
+
+- 4893640: Rename addParserToQuery to setParserToQuery, add overrideParserInQuery (#92)
+
 ## 0.4.10
 
 ### Patch Changes
