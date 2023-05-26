@@ -1,9 +1,7 @@
 import {
-  ColumnParser,
-  ColumnsParsers,
+  GetQueryResult,
   Query,
   QueryReturnsAll,
-  GetQueryResult,
   SelectableBase,
 } from '../query';
 import {
@@ -13,23 +11,24 @@ import {
   PluckResultColumnType,
 } from '../columns';
 import { pushQueryArray } from '../queryDataUtils';
-import { JoinedParsers, QueryData, SelectItem, SelectQueryData } from '../sql';
+import { JoinedParsers, SelectItem, SelectQueryData } from '../sql';
 import { isRequiredRelationKey, Relation } from '../relations';
-import { getValueKey } from './get';
 import { QueryResult } from '../adapter';
 import { UnknownColumn } from '../columns/unknown';
 import {
-  StringKey,
-  isRaw,
-  RawExpression,
   ColumnsShapeBase,
-  NullableColumn,
   ColumnTypeBase,
   EmptyObject,
-  raw,
-  setColumnData,
-  QueryThen,
+  getValueKey,
+  isRaw,
+  NullableColumn,
   QueryCatch,
+  QueryThen,
+  raw,
+  RawExpression,
+  setColumnData,
+  setParserToQuery,
+  StringKey,
 } from 'orchid-core';
 import { QueryBase } from '../queryBase';
 import { _joinLateral } from './_join';
@@ -214,7 +213,7 @@ export const addParserForRawExpression = (
   raw: RawExpression,
 ) => {
   const parser = raw.__column?.parseFn;
-  if (parser) addParserToQuery(q.query, key, parser);
+  if (parser) setParserToQuery(q.query, key, parser);
 };
 
 // these are used as a wrapper to pass sub query result to `parseRecord`
@@ -228,7 +227,7 @@ const subQueryResult: QueryResult = {
 const addParsersForSelectJoined = (q: Query, arg: string, as = arg) => {
   const parsers = (q.query.joinedParsers as JoinedParsers)[arg];
   if (parsers) {
-    addParserToQuery(q.query, as, (item) => {
+    setParserToQuery(q.query, as, (item) => {
       subQueryResult.rows = [item];
       const type = q.query.returnType;
       q.query.returnType = 'one';
@@ -252,7 +251,7 @@ export const addParserForSelectItem = <T extends Query>(
     } else {
       const { parsers } = arg.query;
       if (parsers) {
-        addParserToQuery(q.query, key, (item) => {
+        setParserToQuery(q.query, key, (item) => {
           const t = arg.query.returnType || 'all';
           subQueryResult.rows =
             t === 'value' || t === 'valueOrThrow'
@@ -277,29 +276,19 @@ export const addParserForSelectItem = <T extends Query>(
 
         if (table === as) {
           const parser = q.query.parsers?.[column];
-          if (parser) addParserToQuery(q.query, key, parser);
+          if (parser) setParserToQuery(q.query, key, parser);
         } else {
           const parser = q.query.joinedParsers?.[table]?.[column];
-          if (parser) addParserToQuery(q.query, key, parser);
+          if (parser) setParserToQuery(q.query, key, parser);
         }
       } else {
         const parser = q.query.parsers?.[arg];
-        if (parser) addParserToQuery(q.query, key, parser);
+        if (parser) setParserToQuery(q.query, key, parser);
       }
     }
 
     return arg;
   }
-};
-
-// generic utility to add a parser to the query object
-export const addParserToQuery = (
-  query: QueryData,
-  key: string | getValueKey,
-  parser: ColumnParser,
-) => {
-  if (query.parsers) query.parsers[key] = parser;
-  else query.parsers = { [key]: parser } as ColumnsParsers;
 };
 
 // process select argument: add parsers, join relations when needed
@@ -390,14 +379,14 @@ const processSelectColumnArg = <T extends Query>(
 
     if (table === as) {
       const parser = q.query.parsers?.[column];
-      if (parser) addParserToQuery(q.query, columnAs || column, parser);
+      if (parser) setParserToQuery(q.query, columnAs || column, parser);
     } else {
       const parser = q.query.joinedParsers?.[table]?.[column];
-      if (parser) addParserToQuery(q.query, columnAs || column, parser);
+      if (parser) setParserToQuery(q.query, columnAs || column, parser);
     }
   } else {
     const parser = q.query.parsers?.[arg];
-    if (parser) addParserToQuery(q.query, columnAs || arg, parser);
+    if (parser) setParserToQuery(q.query, columnAs || arg, parser);
   }
   return arg;
 };
@@ -505,6 +494,62 @@ const maybeUnNameColumn = (column: ColumnTypeBase, isSubQuery?: boolean) => {
 };
 
 export class Select {
+  /**
+   * Takes a list of columns to be selected, and by default, the query builder will select all columns of the table.
+   *
+   * Pass an object to select columns with aliases. Keys of the object are column aliases, value can be a column name, sub-query, or raw expression.
+   *
+   * ```ts
+   * // select columns of the table:
+   * db.table.select('id', 'name', { idAlias: 'id' });
+   *
+   * // accepts columns with table names:
+   * db.table.select('user.id', 'user.name', { nameAlias: 'user.name' });
+   *
+   * // table name may refer to the current table or a joined table:
+   * db.table
+   *   .join(Message, 'authorId', 'id')
+   *   .select('user.name', 'message.text', { textAlias: 'message.text' });
+   *
+   * // select value from the sub-query,
+   * // this sub-query should return a single record and a single column:
+   * db.table.select({
+   *   subQueryResult: Otherdb.table.select('column').take(),
+   * });
+   *
+   * // select raw SQL value, the first argument of `raw` is a column type, it is used for return type of the query
+   * db.table.select({
+   *   raw: db.table.sql((t) => t.integer())`1 + 2`,
+   * });
+   *
+   * // same raw SQL query as above, but raw value is returned from a callback
+   * db.table.select({
+   *   raw: (q) => q.sql((t) => t.integer())`1 + 2`,
+   * });
+   * ```
+   *
+   * When you use the ORM and defined relations, `select` can also accept callbacks with related table queries:
+   *
+   * ```ts
+   * await db.author.select({
+   *   allBooks: (q) => q.books,
+   *   firstBook: (q) => q.books.order({ createdAt: 'ASC' }).take(),
+   *   booksCount: (q) => q.books.count(),
+   * });
+   * ```
+   *
+   * When you're selecting a relation that's connected via `belongsTo` or `hasOne`, it becomes available to use in `order` or in `where`:
+   *
+   * ```ts
+   * // select books with their authors included, order by author name and filter by author column:
+   * await db.books
+   *   .select({
+   *     author: (q) => q.author,
+   *   })
+   *   .order('author.name')
+   *   .where({ 'author.isPopular': true });
+   * ```
+   */
   select<T extends Query, K extends SelectArg<T>[]>(
     this: T,
     ...args: K
@@ -530,6 +575,22 @@ export class Select {
     ) as unknown as SelectResult<T, K>;
   }
 
+  /**
+   * When querying the table or creating records, all columns are selected by default,
+   * but updating and deleting queries are returning affected row counts by default.
+   *
+   * Use `selectAll` to select all columns. If the `.select` method was applied before it will be discarded.
+   *
+   * ```ts
+   * const selectFull = await db.table
+   *   .select('id', 'name') // discarded by `selectAll`
+   *   .selectAll();
+   *
+   * const updatedFull = await db.table.selectAll().where(conditions).update(data);
+   *
+   * const deletedFull = await db.table.selectAll().where(conditions).delete();
+   * ```
+   */
   selectAll<T extends Query>(this: T): SelectResult<T, ['*']> {
     return this.clone()._selectAll();
   }

@@ -1,7 +1,6 @@
 import { Query, QueryReturnType, GetQueryResult } from '../query';
-import { getValueKey } from './get';
 import { SelectQueryData } from '../sql';
-import { QueryCatch, QueryThen, Spread } from 'orchid-core';
+import { getValueKey, QueryCatch, QueryThen, Spread } from 'orchid-core';
 
 export type MergeQuery<
   T extends Query,

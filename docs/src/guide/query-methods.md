@@ -225,6 +225,8 @@ db.table({ values: { one: 1, two: 2 } })`
 
 ## select
 
+[//]: # 'has JSDoc'
+
 Takes a list of columns to be selected, and by default, the query builder will select all columns of the table.
 
 Pass an object to select columns with aliases. Keys of the object are column aliases, value can be a column name, sub-query, or raw expression.
@@ -281,6 +283,8 @@ await db.books
 ```
 
 ## selectAll
+
+[//]: # 'has JSDoc'
 
 When querying the table or creating records, all columns are selected by default,
 but updating and deleting queries are returning affected row counts by default.

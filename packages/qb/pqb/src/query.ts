@@ -1,7 +1,6 @@
 import {
   ColumnInfo,
   GetArg,
-  getValueKey,
   OnQueryBuilder,
   QueryMethods,
   WhereQueryBuilder,
@@ -18,17 +17,14 @@ import {
   ColumnTypeBase,
   ColumnTypesBase,
   EmptyObject,
+  QueryCatch,
   QueryCommon,
+  QueryThen,
   RawExpression,
   Spread,
   StringKey,
-  QueryThen,
-  QueryCatch,
 } from 'orchid-core';
 import { QueryBase } from './queryBase';
-
-export type ColumnParser = (input: unknown) => unknown;
-export type ColumnsParsers = Record<string | getValueKey, ColumnParser>;
 
 export type SelectableBase = Record<
   PropertyKey,

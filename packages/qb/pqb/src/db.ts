@@ -1,4 +1,4 @@
-import { ColumnsParsers, Query, SelectableFromShape } from './query';
+import { Query, SelectableFromShape } from './query';
 import {
   QueryMethods,
   handleResult,
@@ -33,6 +33,7 @@ import {
   Sql,
   QueryThen,
   QueryCatch,
+  ColumnsParsers,
 } from 'orchid-core';
 import { q } from './sql/common';
 import { inspect } from 'util';

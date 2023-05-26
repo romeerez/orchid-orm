@@ -1,5 +1,5 @@
-import { ColumnsParsers, Query } from '../query';
-import { ColumnsShapeBase } from 'orchid-core';
+import { Query } from '../query';
+import { ColumnsParsers, ColumnsShapeBase } from 'orchid-core';
 import { getIsJoinSubQuery } from '../sql/join';
 import { getShapeFromSelect } from './select';
 import { Relation } from '../relations';

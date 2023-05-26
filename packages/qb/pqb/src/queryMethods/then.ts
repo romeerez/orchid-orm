@@ -1,11 +1,16 @@
-import { ColumnsParsers, Query, QueryReturnType } from '../query';
+import { Query, QueryReturnType } from '../query';
 import { NotFoundError, QueryError } from '../errors';
 import { QueryArraysResult, QueryResult } from '../adapter';
 import { CommonQueryData } from '../sql';
 import { AfterHook, BeforeHook } from './hooks';
-import { getValueKey } from './get';
 import pg from 'pg';
-import { AdapterBase, Sql } from 'orchid-core';
+import {
+  AdapterBase,
+  ColumnParser,
+  ColumnsParsers,
+  getValueKey,
+  Sql,
+} from 'orchid-core';
 
 export const queryMethodByReturnType: Record<
   QueryReturnType,
@@ -227,11 +232,9 @@ export const parseResult = (
         : result.rows;
     }
     case 'pluck': {
-      if (parsers?.pluck) {
-        if (isSubQuery) {
-          return result.rows.map((row) => parsers.pluck(row));
-        }
-        return result.rows.map((row) => parsers.pluck(row[0]));
+      const pluck = parsers?.pluck;
+      if (pluck) {
+        return result.rows.map(isSubQuery ? pluck : (row) => pluck(row[0]));
       } else if (isSubQuery) {
         return result.rows;
       }
@@ -264,7 +267,7 @@ export const parseResult = (
 export const parseRecord = (parsers: ColumnsParsers, row: any) => {
   for (const key in parsers) {
     if (row[key] !== null && row[key] !== undefined) {
-      row[key] = parsers[key](row[key]);
+      row[key] = (parsers[key] as ColumnParser)(row[key]);
     }
   }
   return row;

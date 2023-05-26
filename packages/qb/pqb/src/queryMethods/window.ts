@@ -2,7 +2,7 @@ import { Query } from '../query';
 import { ColumnType, IntegerColumn } from '../columns';
 import { SelectAgg, WindowFunctionOptions } from './aggregate';
 import { pushQueryValue } from '../queryDataUtils';
-import { addParserToQuery } from './select';
+import { setParserToQuery } from 'orchid-core';
 
 const selectWindowFunction = <
   T extends Query,
@@ -24,7 +24,7 @@ const selectWindowFunction = <
   });
 
   if (parse) {
-    addParserToQuery(self.query, options.as || functionName, parse);
+    setParserToQuery(self.query, options.as || functionName, parse);
   }
 
   return self as unknown as SelectAgg<T, Func, As, Value>;

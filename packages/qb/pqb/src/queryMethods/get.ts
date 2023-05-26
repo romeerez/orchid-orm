@@ -4,7 +4,12 @@ import {
   SetQueryReturnsValueOptional,
 } from '../query';
 import { addParserForRawExpression, processSelectArg } from './select';
-import { RawExpression, ColumnTypeBase, StringKey } from 'orchid-core';
+import {
+  ColumnTypeBase,
+  getValueKey,
+  RawExpression,
+  StringKey,
+} from 'orchid-core';
 import { SelectQueryData } from '../sql';
 import { QueryBase } from '../queryBase';
 
@@ -26,9 +31,6 @@ type GetOptionalResult<
   T extends Query,
   Arg extends GetArg<T>,
 > = SetQueryReturnsValueOptional<T, UnwrapRaw<T, Arg>>;
-
-export type getValueKey = typeof getValueKey;
-export const getValueKey = Symbol('get');
 
 const _get = <
   T extends Query,
