@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.4.12
+
+### Patch Changes
+
+- e9a4095: Change column.parse function to also process null values
+
 ## 0.4.11
 
 ### Patch Changes

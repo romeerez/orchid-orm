@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.8.34
+
+### Patch Changes
+
+- e9a4095: Change column.parse function to also process null values
+- Updated dependencies [e9a4095]
+  - pqb@0.11.30
+  - orchid-core@0.4.12
+
 ## 2.8.33
 
 ### Patch Changes

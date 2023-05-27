@@ -1,5 +1,13 @@
 # pqb
 
+## 0.11.30
+
+### Patch Changes
+
+- e9a4095: Change column.parse function to also process null values
+- Updated dependencies [e9a4095]
+  - orchid-core@0.4.12
+
 ## 0.11.29
 
 ### Patch Changes
