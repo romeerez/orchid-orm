@@ -50,7 +50,8 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "dependencies": {
-    "orchid-core": "workspace:*"
+    "orchid-core": "workspace:*",
+    "pg": "^8.6.0"
   },
   "devDependencies": {
     "test-utils": "workspace:*"

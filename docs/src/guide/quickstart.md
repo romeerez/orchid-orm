@@ -76,8 +76,6 @@ After running the script, check if the package.json file looks well, and install
     "orchid-orm": "^1.5.18",
     // query builder, used by other parts to build chainable query objects
     "pqb": "^0.9.12",
-    // pg is the postgres driver for node.js
-    "pg": "^8.9.0",
     // convert table columns to a Zod schema to use it for validations
     "orchid-orm-schema-to-zod": "^0.2.18"
   },
