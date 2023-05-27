@@ -1,4 +1,4 @@
-import { createBaseTable, orchidORM } from 'orchid-orm';
+import { createBaseTable, orchidORM, TableType } from 'orchid-orm';
 import { testAdapter } from 'test-utils';
 
 export const BaseTable = createBaseTable({
@@ -9,7 +9,7 @@ export const BaseTable = createBaseTable({
   }),
 });
 
-export type User = UserTable['columns']['type'];
+export type User = TableType<UserTable>;
 class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({

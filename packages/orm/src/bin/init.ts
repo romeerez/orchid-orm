@@ -296,14 +296,15 @@ const setupTables = async (config: InitConfig, dirPath: string) => {
 
   await fs.writeFile(
     join(tablesDir, 'post.table.ts'),
-    `import { BaseTable } from '../baseTable';
+    `import { TableType } from 'orchid-orm';
+import { BaseTable } from '../baseTable';
 import { CommentTable } from './comment.table';
 ${
   config.addSchemaToZod
     ? `import { tableToZod } from 'orchid-orm-schema-to-zod';\n`
     : ''
 }
-export type Post = PostTable['columns']['type'];
+export type Post = TableType<PostTable>;
 export class PostTable extends BaseTable {
   readonly table = 'post';
   columns = this.setColumns((t) => ({
@@ -329,14 +330,15 @@ ${
 
   await fs.writeFile(
     join(tablesDir, 'comment.table.ts'),
-    `import { BaseTable } from '../baseTable';
+    `import { TableType } from 'orchid-orm';
+import { BaseTable } from '../baseTable';
 import { PostTable } from './post.table';
 ${
   config.addSchemaToZod
     ? `import { tableToZod } from 'orchid-orm-schema-to-zod';\n`
     : ''
 }
-export type Comment = CommentTable['columns']['type'];
+export type Comment = TableType<CommentTable>;
 export class CommentTable extends BaseTable {
   readonly table = 'comment';
   columns = this.setColumns((t) => ({

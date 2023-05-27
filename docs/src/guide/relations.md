@@ -8,10 +8,11 @@ Two tables can have a relation with each other without circular dependency probl
 
 ```ts
 // user.table.ts
+import { TableType } from 'orchid-orm';
 import { BaseTable } from './baseTable';
 import { ProfileTable } from './profile.table';
 
-export type User = UserTable['columns']['type'];
+export type User = TableType<UserTable>;
 export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
@@ -26,12 +27,15 @@ export class UserTable extends BaseTable {
     }),
   };
 }
+```
 
+```ts
 // profile.table.ts
+import { TableType } from 'orchid-orm';
 import { BaseTable } from './baseTable';
 import { UserTable } from './user.table';
 
-export type Profile = ProfileTable['columns']['type'];
+export type Profile = TableType<ProfileTable>;
 export class ProfileTable extends BaseTable {
   readonly table = 'profile';
   columns = this.setColumns((t) => ({
@@ -56,9 +60,10 @@ export class ProfileTable extends BaseTable {
 For example, `Book` belongs to `Author`:
 
 ```ts
+import { TableType } from 'orchid-orm';
 import { BaseTable } from './baseTable';
 
-export type Author = AuthorTable['columns']['type'];
+export type Author = TableType<AuthorTable>;
 export class AuthorTable extends BaseTable {
   readonly table = 'author';
   columns = this.setColumns((t) => ({
@@ -67,7 +72,7 @@ export class AuthorTable extends BaseTable {
   }));
 }
 
-export type Book = BookTable['columns']['type'];
+export type Book = TableType<BookTable>;
 export class BookTable extends BaseTable {
   readonly table = 'book';
   columns = this.setColumns((t) => ({
@@ -99,9 +104,10 @@ This association adds all the same queries and abilities as `belongsTo`, only di
 For example, if each supplier in your application has only one account, you'd declare the supplier table like this:
 
 ```ts
+import { TableType } from 'orchid-orm';
 import { BaseTable } from './baseTable';
 
-export type Supplier = SupplierTable['columns']['type'];
+export type Supplier = TableType<SupplierTable>;
 export class SupplierTable extends BaseTable {
   readonly table = 'supplier';
   columns = this.setColumns((t) => ({
@@ -122,7 +128,7 @@ export class SupplierTable extends BaseTable {
   };
 }
 
-export type Account = AccountTable['columns']['type'];
+export type Account = TableType<AccountTable>;
 export class AccountTable extends BaseTable {
   readonly table = 'account';
   columns = this.setColumns((t) => ({
@@ -144,9 +150,10 @@ This association indicates that the declaring table can be matched with one inst
 For example, if each supplier has one account, and each account is associated with one account history, then the supplier table could look like this:
 
 ```ts
+import { TableType } from 'orchid-orm';
 import { BaseTable } from './baseTable';
 
-export type Supplier = SupplierTable['columns']['type'];
+export type Supplier = TableType<SupplierTable>;
 export class SupplierTable extends BaseTable {
   readonly table = 'supplier';
   columns = this.setColumns((t) => ({
@@ -171,7 +178,7 @@ export class SupplierTable extends BaseTable {
   };
 }
 
-export type Account = AccountTable['columns']['type'];
+export type Account = TableType<AccountTable>;
 export class AccountTable extends BaseTable {
   readonly table = 'account';
   columns = this.setColumns((t) => ({
@@ -190,7 +197,7 @@ export class AccountTable extends BaseTable {
   };
 }
 
-export type AccountHistory = AccountHistoryTable['columns']['type'];
+export type AccountHistory = TableType<AccountHistoryTable>;
 export class AccountHistoryTable extends BaseTable {
   readonly table = 'accountHistory';
   columns = this.setColumns((t) => ({
@@ -219,9 +226,10 @@ This association indicates that each instance of the table has zero or more inst
 For example, in an application containing authors and books, the author table could be declared like this:
 
 ```ts
+import { TableType } from 'orchid-orm';
 import { BaseTable } from './baseTable';
 
-export type Author = AuthorTable['columns']['type'];
+export type Author = TableType<AuthorTable>;
 export class AuthorTable extends BaseTable {
   readonly table = 'author';
   columns = this.setColumns((t) => ({
@@ -239,7 +247,7 @@ export class AuthorTable extends BaseTable {
   };
 }
 
-export type Book = BookTable['columns']['type'];
+export type Book = TableType<BookTable>;
 export class BookTable extends BaseTable {
   readonly table = 'book';
   columns = this.setColumns((t) => ({
@@ -261,9 +269,10 @@ This association indicates that the declaring table can be matched with zero or 
 For example, consider a medical practice where patients make appointments to see physicians. The relevant association declarations could look like this:
 
 ```ts
+import { TableType } from 'orchid-orm';
 import { BaseTable } from './baseTable';
 
-export type Physician = PhysicianTable['columns']['type'];
+export type Physician = TableType<PhysicianTable>;
 export class PhysicianTable extends BaseTable {
   readonly table = 'physician';
   columns = this.setColumns((t) => ({
@@ -288,7 +297,7 @@ export class PhysicianTable extends BaseTable {
   };
 }
 
-export type Appointment = AppointmentTable['columns']['type'];
+export type Appointment = TableType<AppointmentTable>;
 export class AppointmentTable extends BaseTable {
   readonly table = 'appointment';
   columns = this.setColumns((t) => ({
@@ -313,7 +322,7 @@ export class AppointmentTable extends BaseTable {
   };
 }
 
-export type Patient = PatientTable['columns']['type'];
+export type Patient = TableType<PatientTable>;
 export class PatientTable extends BaseTable {
   readonly table = 'patient';
   columns = this.setColumns((t) => ({
@@ -345,9 +354,10 @@ This association indicates that each instance of the declaring table refers to z
 For example, if your application includes posts and tags, with each post having many tags and each tag appearing in many posts, you could declare the tables this way:
 
 ```ts
+import { TableType } from 'orchid-orm';
 import { BaseTable } from './baseTable';
 
-export type Post = PostTable['columns']['type'];
+export type Post = TableType<PostTable>;
 export class PostTable extends BaseTable {
   readonly table = 'post';
   columns = this.setColumns((t) => ({
@@ -371,7 +381,7 @@ export class PostTable extends BaseTable {
   };
 }
 
-export type Tag = TagTable['columns']['type'];
+export type Tag = TableType<TagTable>;
 export class TagTable extends BaseTable {
   readonly table = 'tag';
   columns = this.setColumns((t) => ({

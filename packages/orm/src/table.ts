@@ -75,6 +75,9 @@ export type Table = {
   filePath: string;
 };
 
+// get the type of table columns
+export type TableType<T extends Pick<Table, 'columns'>> = T['columns']['type'];
+
 export type TableHooks = { [K in BeforeHookKey]?: BeforeHook } & {
   [K in AfterHookKey]?: AfterHook;
 };

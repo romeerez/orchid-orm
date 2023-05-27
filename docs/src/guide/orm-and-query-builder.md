@@ -93,7 +93,7 @@ export const BaseTable = createBaseTable({
     // by default timestamp is returned as a string, override to a number
     timestamp: () => t.timestamp().asNumber(),
   }),
-  
+
   // export name of the base table, by default it is BaseTable
   // this is needed for a code generation, when you're using `appCodeUpdater` in `rakeDb`
   exportAs: 'BaseTable',
@@ -109,11 +109,12 @@ Tables are defined as classes `table` and `columns` required properties:
 Note that the `table` property is marked as `readonly`, this is needed for TypeScript to check the usage of the table in queries.
 
 ```ts
+import { TableType } from 'orchid-orm';
 // import BaseTable from a file from the previous step:
 import { BaseTable } from './baseTable';
 
 // export type of User object:
-export type User = UserTable['columns']['type'];
+export type User = TableType<UserTable>;
 export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
@@ -190,7 +191,7 @@ const db = createDb({
 
   // columns in db are in snake case:
   snakeCase: true,
-  
+
   // override default SQL for timestamp, see `nowSQL` above
   nowSQL: `now() AT TIME ZONE 'UTC'`,
 
@@ -364,12 +365,13 @@ import { createBaseTable } from 'orchid-orm';
 
 export const BaseTable = createBaseTable({
   nowSQL: `now() AT TIME ZONE 'UTC'`,
-  
+
   // ...other options
 });
 ```
 
 This value is used:
+
 - for `updatedAt` column when updating a record
 - for the default value `updatedAt` and `createdAt` columns in a database, applied in the migrations
 

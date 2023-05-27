@@ -521,10 +521,11 @@ export const BaseTable = createBaseTable({
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === postTablePath,
       );
-      expect(content).toBe(`import { BaseTable } from '../baseTable';
+      expect(content).toBe(`import { TableType } from 'orchid-orm';
+import { BaseTable } from '../baseTable';
 import { CommentTable } from './comment.table';
 
-export type Post = PostTable['columns']['type'];
+export type Post = TableType<PostTable>;
 export class PostTable extends BaseTable {
   readonly table = 'post';
   columns = this.setColumns((t) => ({
@@ -554,11 +555,12 @@ export class PostTable extends BaseTable {
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === postTablePath,
       );
-      expect(content).toBe(`import { BaseTable } from '../baseTable';
+      expect(content).toBe(`import { TableType } from 'orchid-orm';
+import { BaseTable } from '../baseTable';
 import { CommentTable } from './comment.table';
 import { tableToZod } from 'orchid-orm-schema-to-zod';
 
-export type Post = PostTable['columns']['type'];
+export type Post = TableType<PostTable>;
 export class PostTable extends BaseTable {
   readonly table = 'post';
   columns = this.setColumns((t) => ({
@@ -589,10 +591,11 @@ export const postSchema = tableToZod(PostTable);
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === commentTablePath,
       );
-      expect(content).toBe(`import { BaseTable } from '../baseTable';
+      expect(content).toBe(`import { TableType } from 'orchid-orm';
+import { BaseTable } from '../baseTable';
 import { PostTable } from './post.table';
 
-export type Comment = CommentTable['columns']['type'];
+export type Comment = TableType<CommentTable>;
 export class CommentTable extends BaseTable {
   readonly table = 'comment';
   columns = this.setColumns((t) => ({
@@ -625,11 +628,12 @@ export class CommentTable extends BaseTable {
       const [, content] = asMock(fs.writeFile).mock.calls.find(
         ([to]) => to === commentTablePath,
       );
-      expect(content).toBe(`import { BaseTable } from '../baseTable';
+      expect(content).toBe(`import { TableType } from 'orchid-orm';
+import { BaseTable } from '../baseTable';
 import { PostTable } from './post.table';
 import { tableToZod } from 'orchid-orm-schema-to-zod';
 
-export type Comment = CommentTable['columns']['type'];
+export type Comment = TableType<CommentTable>;
 export class CommentTable extends BaseTable {
   readonly table = 'comment';
   columns = this.setColumns((t) => ({

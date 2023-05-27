@@ -1,4 +1,4 @@
-import { createBaseTable } from '../table';
+import { createBaseTable, TableType } from '../table';
 import { tableToZod } from 'orchid-orm-schema-to-zod';
 import { now, testAdapter, testColumnTypes } from 'test-utils';
 import { orchidORM } from '../orm';
@@ -8,7 +8,7 @@ export const BaseTable = createBaseTable({
   columnTypes: testColumnTypes,
 });
 
-export type User = UserTable['columns']['type'];
+export type User = TableType<UserTable>;
 export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
@@ -53,7 +53,7 @@ export class UserTable extends BaseTable {
 }
 export const UserSchema = tableToZod(UserTable);
 
-export type Profile = ProfileTable['columns']['type'];
+export type Profile = TableType<ProfileTable>;
 export class ProfileTable extends BaseTable {
   readonly table = 'profile';
   columns = this.setColumns((t) => ({
@@ -82,7 +82,7 @@ export class ProfileTable extends BaseTable {
 }
 export const ProfileSchema = tableToZod(ProfileTable);
 
-export type Chat = ChatTable['columns']['type'];
+export type Chat = TableType<ChatTable>;
 export class ChatTable extends BaseTable {
   readonly table = 'chat';
   columns = this.setColumns((t) => ({
@@ -114,7 +114,7 @@ export class ChatTable extends BaseTable {
 }
 export const ChatSchema = tableToZod(ChatTable);
 
-export type Message = MessageTable['columns']['type'];
+export type Message = TableType<MessageTable>;
 export class MessageTable extends BaseTable {
   readonly table = 'message';
   columns = this.setColumns((t) => ({
@@ -152,7 +152,7 @@ export class MessageTable extends BaseTable {
 }
 export const MessageSchema = tableToZod(MessageTable);
 
-export type Post = PostTable['columns']['type'];
+export type Post = TableType<PostTable>;
 export class PostTable extends BaseTable {
   readonly table = 'post';
   columns = this.setColumns((t) => ({
@@ -174,7 +174,7 @@ export class PostTable extends BaseTable {
 }
 export const PostSchema = tableToZod(PostTable);
 
-export type PostTag = PostTagTable['columns']['type'];
+export type PostTag = TableType<PostTagTable>;
 export class PostTagTable extends BaseTable {
   readonly table = 'postTag';
   columns = this.setColumns((t) => ({
@@ -198,7 +198,7 @@ export class PostTagTable extends BaseTable {
 }
 export const PostTagSchema = tableToZod(PostTagTable);
 
-export type Tag = TagTable['columns']['type'];
+export type Tag = TableType<TagTable>;
 export class TagTable extends BaseTable {
   readonly table = 'tag';
   columns = this.setColumns((t) => ({

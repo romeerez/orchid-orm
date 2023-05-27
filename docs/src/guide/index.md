@@ -60,7 +60,7 @@ Other ORMs take different ways of defining models:
 With `Orchid ORM` you write table classes in a such way:
 
 ```ts
-export type User = UserTable['columns']['type'];
+export type User = TableType<UserTable>;
 export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
