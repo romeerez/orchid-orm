@@ -83,14 +83,14 @@ await db.$transaction(async (db) => {
 ```
 
 Currently, it is not possible to use one method of the same repo in another method due to TypeScript limitations,
-but you can extract a function for this purpose:
+but you can extract a function for this purpose with a user of [makeHelper](/guide/query-methods#makeHelper):
 
 ```ts
-const selectFollowing = (q: typeof db.user, currentUser: User) => {
-  return q.select({
+const selectFollowing = db.user.makeHelper((q, currentUser: User) =>
+  q.select({
     following: (q) => followRepo(q.followers).isFollowedBy(currentUser),
-  });
-};
+  }),
+);
 
 export const userRepo = createRepo(db.user, {
   queryMethods: {

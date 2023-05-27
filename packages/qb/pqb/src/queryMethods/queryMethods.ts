@@ -42,10 +42,18 @@ import { QueryLog } from './log';
 import { QueryHooks } from './hooks';
 import { QueryUpsertOrCreate } from './upsertOrCreate';
 import { QueryGet } from './get';
-import { MergeQueryMethods } from './merge';
+import { MergeQuery, MergeQueryMethods } from './merge';
 import { RawSqlMethods } from './rawSql';
 import { CopyMethods } from './copy';
-import { RawExpression, raw, applyMixins, EmptyObject, Sql } from 'orchid-core';
+import {
+  RawExpression,
+  raw,
+  applyMixins,
+  EmptyObject,
+  Sql,
+  QueryThen,
+  ColumnsShapeBase,
+} from 'orchid-core';
 import { AsMethods } from './as';
 import { QueryBase } from '../queryBase';
 import { OrchidOrmInternalError } from '../errors';
@@ -94,6 +102,19 @@ export type OrderArgs<T extends Query> =
 type FindArgs<T extends Query> =
   | [T['shape'][T['singlePrimaryKey']]['type'] | RawExpression]
   | [TemplateStringsArray, ...unknown[]];
+
+type QueryHelper<T extends Query, Args extends unknown[], Result> = <
+  Q extends {
+    [K in keyof T]: K extends 'then'
+      ? QueryThen<unknown>
+      : K extends 'result'
+      ? ColumnsShapeBase
+      : T[K];
+  },
+>(
+  q: Q,
+  ...args: Args
+) => Result extends Query ? MergeQuery<Q, Result> : Result;
 
 export interface QueryMethods
   extends Omit<AsMethods, 'result'>,
@@ -382,6 +403,50 @@ export class QueryMethods {
       q.cascade = true;
     }
     return this._exec();
+  }
+
+  /**
+   * Use `makeHelper` to make a query helper - a function where you can modify the query, and reuse this function across different places.
+   *
+   * ```ts
+   * const defaultAuthorSelect = db.author.makeHelper((q) => {
+   *   return q.select('firstName', 'lastName');
+   * });
+   *
+   * // this will select id, firstName, lastName with a correct TS type
+   * // and return a single record
+   * const result = await defaultAuthorSelect(db.author.select('id').find(1));
+   * ```
+   *
+   * Such helper is available for relation queries inside `select`:
+   *
+   * ```ts
+   * await db.book.select({
+   *   author: (book) => defaultAuthorSelect(book.author),
+   * });
+   * ```
+   *
+   * Helper can accept additional arguments:
+   *
+   * ```ts
+   * const selectFollowing = db.user.makeHelper((q, currentUser: { id: number }) => {
+   *   return q.select({
+   *     following: (q) =>
+   *       q.followers.where({ followerId: currentUser.id }).exists(),
+   *   });
+   * });
+   *
+   * // select some columns and the `following` boolean field from users
+   * await selectFollowing(db.user.select('id', 'name'), currentUser);
+   * ```
+   *
+   * @param fn - helper function
+   */
+  makeHelper<T extends Query, Args extends unknown[], Result>(
+    this: T,
+    fn: (q: T, ...args: Args) => Result,
+  ): QueryHelper<T, Args, Result> {
+    return fn as unknown as QueryHelper<T, Args, Result>;
   }
 }
 

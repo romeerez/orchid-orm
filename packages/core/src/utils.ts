@@ -45,13 +45,18 @@ export type Spread<A extends readonly [...any]> = A extends [
   ? SpreadTwo<L, Spread<R>>
   : unknown;
 
-export type SimpleSpread<A extends readonly [...any]> = A extends [
-  infer L,
-  ...infer R,
-]
-  ? L & SimpleSpread<R>
-  : // eslint-disable-next-line @typescript-eslint/ban-types
-    {};
+// simple merge two objects
+// when they have common keys, the value of the second object will be used
+export type MergeObjects<
+  A extends Record<string, unknown>,
+  B extends Record<string, unknown>,
+> = {
+  [K in keyof A | keyof B]: K extends keyof B
+    ? B[K]
+    : K extends keyof A
+    ? A[K]
+    : never;
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type FilterTuple<T extends readonly any[], E> = T extends [

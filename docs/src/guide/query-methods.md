@@ -670,6 +670,44 @@ Main info such as table name, and column types, will not be overridden by `.merg
 but all other query data will be merged if possible (`select`, `where`, `join`, `with`, and many others),
 or will be used from provided query argument if not possible to merge (`as`, `onConflict`, returning one or many).
 
+## makeHelper
+
+[//]: # 'has JSDoc'
+
+Use `makeHelper` to make a query helper - a function where you can modify the query, and reuse this function across different places.
+
+```ts
+const defaultAuthorSelect = db.author.makeHelper((q) => {
+  return q.select('firstName', 'lastName');
+});
+
+// this will select id, firstName, lastName with a correct TS type
+// and return a single record
+const result = await defaultAuthorSelect(db.author.select('id').find(1));
+```
+
+Such helper is available for relation queries inside `select`:
+
+```ts
+await db.book.select({
+  author: (book) => defaultAuthorSelect(book.author),
+});
+```
+
+Helper can accept additional arguments:
+
+```ts
+const selectFollowing = db.user.makeHelper((q, currentUser: { id: number }) => {
+  return q.select({
+    following: (q) =>
+      q.followers.where({ followerId: currentUser.id }).exists(),
+  });
+});
+
+// select some columns and the `following` boolean field from users
+await selectFollowing(db.user.select('id', 'name'), currentUser);
+```
+
 ## toSql
 
 Call `toSql` on a query to get an object with a `text` SQL string and a `values` array of binding values:

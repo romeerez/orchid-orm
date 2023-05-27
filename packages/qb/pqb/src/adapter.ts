@@ -85,9 +85,12 @@ export class Adapter implements AdapterBase {
     query: QueryInput,
     types?: TypeParsers,
   ): Promise<QueryResult<T>> {
-    return performQuery(this.pool, query, types, this.schema) as Promise<
-      QueryResult<T>
-    >;
+    return performQuery(
+      this.pool,
+      query,
+      types,
+      this.schema,
+    ) as unknown as Promise<QueryResult<T>>;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -95,7 +98,13 @@ export class Adapter implements AdapterBase {
     query: QueryInput,
     types?: TypeParsers,
   ): Promise<QueryArraysResult<R>> {
-    return performQuery(this.pool, query, types, this.schema, 'array');
+    return performQuery(
+      this.pool,
+      query,
+      types,
+      this.schema,
+      'array',
+    ) as unknown as Promise<QueryArraysResult<R>>;
   }
 
   async transaction<Result>(
@@ -178,7 +187,8 @@ const performQueryOnClient = (
       : defaultTypesConfig,
   };
 
-  return client.query(params);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return client.query(params as any);
 };
 
 export class TransactionAdapter implements Adapter {

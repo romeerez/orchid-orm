@@ -849,4 +849,14 @@ describe('queryMethods', () => {
       expectQueryNotMutated(q);
     });
   });
+
+  describe('makeHelper', () => {
+    it('should make a query helper', () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const fn = User.makeHelper((q, _: boolean) => q.select('id'));
+      const q = fn(User.select('name'), true);
+
+      assertType<Awaited<typeof q>, { id: number; name: string }[]>();
+    });
+  });
 });

@@ -1,6 +1,12 @@
 import { Query, QueryReturnType, GetQueryResult } from '../query';
 import { SelectQueryData } from '../sql';
-import { getValueKey, QueryCatch, QueryThen, Spread } from 'orchid-core';
+import {
+  ColumnsShapeBase,
+  getValueKey,
+  MergeObjects,
+  QueryCatch,
+  QueryThen,
+} from 'orchid-core';
 
 export type MergeQuery<
   T extends Query,
@@ -8,29 +14,36 @@ export type MergeQuery<
   ReturnType extends QueryReturnType = QueryReturnType extends Q['returnType']
     ? T['returnType']
     : Q['returnType'],
-  Data = T['meta']['hasSelect'] extends true
-    ? GetQueryResult<ReturnType, Spread<[T['result'], Q['result']]>>
-    : GetQueryResult<ReturnType, Q['result']>,
-> = Omit<
-  T,
-  | 'result'
-  | 'returnType'
-  | 'then'
-  | 'catch'
-  | 'selectable'
-  | 'windows'
-  | 'withData'
-> & {
-  meta: Q['meta'];
-  result: T['meta']['hasSelect'] extends true
-    ? Spread<[T['result'], Q['result']]>
-    : Q['result'];
-  returnType: ReturnType;
-  then: QueryThen<Data>;
-  catch: QueryCatch<Data>;
-  selectable: T['selectable'] & Q['selectable'];
-  windows: T['windows'] & Q['windows'];
-  withData: T['withData'] & Q['withData'];
+  Result extends ColumnsShapeBase = T['meta']['hasSelect'] extends true
+    ? Q['meta']['hasSelect'] extends true
+      ? {
+          [K in
+            | keyof T['result']
+            | keyof Q['result']]: K extends keyof Q['result']
+            ? Q['result'][K]
+            : T['result'][K];
+        }
+      : T['result']
+    : Q['result'],
+  Data = GetQueryResult<ReturnType, Result>,
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? MergeObjects<T['meta'], Q['meta']>
+    : K extends 'result'
+    ? Result
+    : K extends 'returnType'
+    ? ReturnType
+    : K extends 'then'
+    ? QueryThen<Data>
+    : K extends 'catch'
+    ? QueryCatch<Data>
+    : K extends 'selectable'
+    ? T['selectable'] & Q['selectable']
+    : K extends 'windows'
+    ? MergeObjects<T['windows'], Q['windows']>
+    : K extends 'withData'
+    ? MergeObjects<T['withData'], Q['withData']>
+    : T[K];
 };
 
 const mergableObjects: Record<string, boolean> = {

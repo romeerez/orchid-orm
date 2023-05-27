@@ -214,4 +214,14 @@ describe('relations', () => {
       `,
     );
   });
+
+  it('should fit into `makeHelper` function', async () => {
+    const fn = db.user.makeHelper((arg) => arg.select('Name'));
+
+    const first = fn(db.user.select('Id'));
+    assertType<Awaited<typeof first>, { Id: number; Name: string }[]>();
+
+    const second = fn(db.profile.user.select('Id'));
+    assertType<Awaited<typeof second>, { Id: number; Name: string }>();
+  });
 });
