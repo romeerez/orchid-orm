@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.9.39
+
+### Patch Changes
+
+- ee740c6: Add TableType utility (#95)
+
 ## 1.9.38
 
 ### Patch Changes

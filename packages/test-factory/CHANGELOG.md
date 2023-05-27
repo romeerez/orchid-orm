@@ -1,5 +1,13 @@
 # orchid-orm-test-factory
 
+## 0.3.85
+
+### Patch Changes
+
+- ee740c6: Add TableType utility (#95)
+- Updated dependencies [ee740c6]
+  - orchid-orm@1.9.39
+
 ## 0.3.84
 
 ### Patch Changes
