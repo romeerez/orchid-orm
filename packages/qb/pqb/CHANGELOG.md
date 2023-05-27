@@ -1,5 +1,11 @@
 # pqb
 
+## 0.11.31
+
+### Patch Changes
+
+- 8ae4fe3: Add pg dependency to pqb
+
 ## 0.11.30
 
 ### Patch Changes
