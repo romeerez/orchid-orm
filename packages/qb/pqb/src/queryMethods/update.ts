@@ -240,21 +240,27 @@ export class Update {
 
       const { handleResult } = query;
       query.handleResult = (q, queryResult, s) => {
+        // handleResult is mutating queryResult.rows
+        // we're using twice here: first, for ctx.resultAll that's used in relations
+        // and second time to parse result that user is expecting, so the rows are cloned
+        const originalRows = queryResult.rows;
+        queryResult.rows = [...originalRows];
         ctx.resultAll = handleResult(q, queryResult) as Record<
           string,
           unknown
         >[];
 
         if (queryMethodByReturnType[originalReturnType] === 'arrays') {
-          queryResult.rows.forEach(
+          originalRows.forEach(
             (row, i) =>
-              ((queryResult.rows as unknown as unknown[][])[i] =
+              ((originalRows as unknown as unknown[][])[i] =
                 Object.values(row)),
           );
         }
 
         q.query.returnType = originalReturnType;
 
+        queryResult.rows = originalRows;
         return handleResult(q, queryResult, s);
       };
     }

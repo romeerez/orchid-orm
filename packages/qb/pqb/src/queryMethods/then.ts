@@ -206,9 +206,13 @@ export const parseResult = (
       if (q.query.throwOnNotFound && result.rows.length === 0)
         throw new NotFoundError(q);
 
-      return parsers
-        ? result.rows.map((row) => parseRecord(parsers, row))
-        : result.rows;
+      const { rows } = result;
+      if (parsers) {
+        for (const row of rows) {
+          parseRecord(parsers, row);
+        }
+      }
+      return rows;
     }
     case 'one': {
       const row = result.rows[0];
@@ -266,7 +270,7 @@ export const parseResult = (
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const parseRecord = (parsers: ColumnsParsers, row: any) => {
   for (const key in parsers) {
-    if (row[key] !== null && row[key] !== undefined) {
+    if (key in row) {
       row[key] = (parsers[key] as ColumnParser)(row[key]);
     }
   }
@@ -279,25 +283,20 @@ const parseRows = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   rows: any[],
 ) => {
-  fields.forEach((field, i) => {
-    const parser = parsers[field.name];
+  for (let i = fields.length - 1; i >= 0; i--) {
+    const parser = parsers[fields[i].name];
     if (parser) {
-      rows.forEach((row) => {
+      for (const row of rows) {
         row[i] = parser(row[i]);
-      });
+      }
     }
-  });
+  }
   return rows;
 };
 
 const parseValue = (value: unknown, parsers?: ColumnsParsers) => {
-  if (value !== null) {
-    const parser = parsers?.[getValueKey];
-    if (parser) {
-      return parser(value);
-    }
-  }
-  return value;
+  const parser = parsers?.[getValueKey];
+  return parser ? parser(value) : value;
 };
 
 const getHooks = <T extends BeforeHook[] | AfterHook[]>(

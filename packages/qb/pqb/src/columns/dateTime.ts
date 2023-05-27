@@ -1,30 +1,41 @@
 import { ColumnData, ColumnType } from './columnType';
 import { Operators } from './operators';
 import {
-  dateTypeMethods,
   Code,
-  joinTruthy,
   DateColumnData,
   dateDataToCode,
+  DateTypeMethods,
+  dateTypeMethods,
   EncodeColumn,
+  joinTruthy,
   ParseColumn,
 } from 'orchid-core';
 import { assignMethodsToClass } from './utils';
 import { IntegerColumn } from './number';
 import { columnCode } from './code';
 
-type DateMethods = typeof dateTypeMethods;
-
+// common interface for Date and DateTime columns
 export interface DateBaseColumn
   extends ColumnType<string, typeof Operators.date, string | number | Date>,
-    DateMethods {}
+    DateTypeMethods {}
 
+// encode string, number, or Date to a Date object,
 const dateTimeEncode = (input: string | number | Date) => {
   return typeof input === 'object' ? input : new Date(input);
 };
 
-const skip = { encodeFn: dateTimeEncode };
+// when generating code, don't output `encodeFn` because it is a default
+const skipDateMethodsFromToCode = { encodeFn: dateTimeEncode };
 
+// parse a date string to number, with respect to null
+const parseToNumber = (value: unknown) =>
+  value ? Date.parse(value as string) : value;
+
+// parse a date string to date object, with respect to null
+const parseToDate = (value: unknown) =>
+  value ? new Date(value as string) : value;
+
+// common class for Date and DateTime columns
 export abstract class DateBaseColumn extends ColumnType<
   string,
   typeof Operators.date,
@@ -35,13 +46,13 @@ export abstract class DateBaseColumn extends ColumnType<
   encodeFn = dateTimeEncode;
 
   asNumber() {
-    return this.parse(Date.parse).as(
+    return this.parse(parseToNumber).as(
       new IntegerColumn() as never,
     ) as unknown as EncodeColumn<IntegerColumn, string | number | Date>;
   }
 
   asDate<T extends ColumnType>(this: T): ParseColumn<T, Date> {
-    return this.parse((input) => new Date(input as string));
+    return this.parse(parseToDate) as ParseColumn<T, Date>;
   }
 }
 
@@ -56,7 +67,7 @@ export class DateColumn extends DateBaseColumn {
       t,
       `date()${dateDataToCode(this.data)}`,
       this.data,
-      skip,
+      skipDateMethodsFromToCode,
     );
   }
 }
@@ -107,7 +118,7 @@ const timestampToCode = <P extends number>(
       p && p !== 6 ? p : ''
     })${dateDataToCode(self.data)}`,
     self.data,
-    skip,
+    skipDateMethodsFromToCode,
   );
 };
 
@@ -144,7 +155,7 @@ export class TimeColumn<
       t,
       `time(${dateTimePrecision || ''})${dateDataToCode(this.data)}`,
       this.data,
-      skip,
+      skipDateMethodsFromToCode,
     );
   }
 }
@@ -182,7 +193,7 @@ export class IntervalColumn<
         .filter((part) => part)
         .join(', ')})`,
       this.data,
-      skip,
+      skipDateMethodsFromToCode,
     );
   }
 

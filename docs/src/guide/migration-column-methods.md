@@ -343,6 +343,8 @@ The same as `timestampsSnakeCase`, but without a time zone.
 
 ## check
 
+[//]: # 'has JSDoc'
+
 Set a database-level validation check to a column. `check` accepts a raw SQL.
 
 ```ts

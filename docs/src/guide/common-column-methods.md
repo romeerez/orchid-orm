@@ -25,6 +25,8 @@ db.table.find('97ba9e78-7510-415a-9c03-23d440aec443');
 
 ## default
 
+[//]: # 'has JSDoc'
+
 Set a default value to a column. Columns that have defaults become optional when creating a record.
 
 If you provide a value or a raw SQL, such default should be set on the column in migration to be applied on a database level.
@@ -49,6 +51,8 @@ export class Table extends BaseTable {
 ```
 
 ## nullable
+
+[//]: # 'has JSDoc'
 
 Use `nullable` to mark the column as nullable. By default, all columns are required.
 
@@ -121,6 +125,8 @@ export class Table extends BaseTable {
 
 ## encode
 
+[//]: # 'has JSDoc'
+
 Set a custom function to process value for the column when creating or updating a record.
 
 The type of `input` argument will be used as the type of the column when creating and updating.
@@ -144,7 +150,9 @@ await db.table.where({ column: 'true' }).update({ column: false });
 
 ## parse
 
-Set a custom function to process value when loading it from a database.
+[//]: # 'has JSDoc'
+
+Set a custom function to process value after loading it from a database.
 
 The type of input is the type of column before `.parse`, the resulting type will replace the type of column.
 
@@ -161,7 +169,26 @@ export class Table extends BaseTable {
 const value: number = await db.table.get('column');
 ```
 
+If the column is `nullable`, the `input` type will also have `null` and you should handle this case.
+This allows using `parse` to set a default value after loading from the database.
+
+```ts
+export class Table extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    // return a default image URL if it is null
+    // this allows to change the defaultImageURL without modifying a database
+    imageURL: t
+      .text(5, 300)
+      .nullable()
+      .parse((url) => url ?? defaultImageURL),
+  }));
+}
+```
+
 ## as
+
+[//]: # 'has JSDoc'
 
 This method changes a column type without modifying its behavior.
 This is needed when converting columns to a validation schema, the converter will pick a different type specified by `.as`.
@@ -232,6 +259,8 @@ export class SomeTable extends BaseTable {
 Column methods such as `foreignKey`, `index`, `unique`, `comment` and others have effects only when used in migrations, read more about it in [migration column methods](/guide/migration-column-methods) document.
 
 ## hidden
+
+[//]: # 'has JSDoc'
 
 ::: danger
 This feature is in a draft state

@@ -3,19 +3,17 @@ import { Query } from '../query';
 import {
   BaseOperators,
   ColumnDataBase,
+  ColumnNameOfTable,
   ColumnTypeBase,
-  HiddenColumn,
+  ForeignKeyTable,
+  MaybeArray,
+  MessageParam,
   PrimaryKeyColumn,
   pushColumnData,
+  QueryCommon,
+  raw,
   setColumnData,
   ValidationContext,
-  MaybeArray,
-  StringKey,
-  QueryCommon,
-  MessageParam,
-  raw,
-  EncodeColumn,
-  ParseColumn,
 } from 'orchid-core';
 import { TableData } from './columnTypes';
 
@@ -87,16 +85,6 @@ export type IndexOptions = {
 };
 
 export type SingleColumnIndexOptions = IndexColumnOptions & IndexOptions;
-
-export type ForeignKeyTable = new () => {
-  schema?: string;
-  table: string;
-  columns: { shape: ColumnsShape };
-};
-
-export type ColumnNameOfTable<Table extends ForeignKeyTable> = StringKey<
-  keyof InstanceType<Table>['columns']['shape']
->;
 
 export type ColumnFromDbParams = {
   isNullable?: boolean;
@@ -176,36 +164,6 @@ export abstract class ColumnType<
         ? { table: fnOrTable, columns: [column], ...options }
         : { fn: fnOrTable, columns: [column], ...options };
     return pushColumnData(this, 'foreignKeys', item);
-  }
-
-  hidden<T extends ColumnType>(this: T): HiddenColumn<T> {
-    return setColumnData(this, 'isHidden', true) as HiddenColumn<T>;
-  }
-
-  encode<T extends ColumnType, Input>(
-    this: T,
-    fn: (input: Input) => unknown,
-  ): EncodeColumn<T, Input> {
-    return Object.assign(Object.create(this), {
-      encodeFn: fn,
-    }) as unknown as EncodeColumn<T, Input>;
-  }
-
-  parse<T extends ColumnType, Output>(
-    this: T,
-    fn: (input: T['type']) => Output,
-  ): ParseColumn<T, Output> {
-    return Object.assign(Object.create(this), {
-      parseFn: fn,
-      parseItem: fn,
-    }) as unknown as ParseColumn<T, Output>;
-  }
-
-  as<
-    T extends ColumnType,
-    C extends ColumnType<T['type'], BaseOperators, T['inputType']>,
-  >(this: T, column: C): C {
-    return setColumnData(this, 'as', column) as unknown as C;
   }
 
   toSQL() {

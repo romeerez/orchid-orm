@@ -320,6 +320,7 @@ export const numberTypeMethods = {
   },
 };
 
+export type DateTypeMethods = typeof dateTypeMethods;
 export const dateTypeMethods = {
   min<T extends { data: { min?: Date } }, Value extends Date>(
     this: T,

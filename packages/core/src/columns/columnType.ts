@@ -45,10 +45,12 @@ export type NullableColumn<T extends ColumnTypeBase> = Omit<
   };
 };
 
+// change the input type of the column
 export type EncodeColumn<T extends ColumnTypeBase, Input> = {
   [K in keyof T]: K extends 'inputType' ? Input : T[K];
 };
 
+// change the output type of the column
 export type ParseColumn<T extends ColumnTypeBase, Output> = {
   [K in keyof T]: K extends 'type' ? Output : T[K];
 };
@@ -132,6 +134,18 @@ export type SinglePrimaryKey<Shape extends ColumnsShapeBase> = StringKey<
 export type DefaultSelectColumns<S extends ColumnsShapeBase> = {
   [K in keyof S]: S[K]['data']['isHidden'] extends true ? never : K;
 }[StringKey<keyof S>][];
+
+// minimal table class type to use in the foreign key option
+export type ForeignKeyTable = new () => {
+  schema?: string;
+  table: string;
+  columns: { shape: ColumnsShapeBase };
+};
+
+// string union of available column names of the table
+export type ColumnNameOfTable<Table extends ForeignKeyTable> = StringKey<
+  keyof InstanceType<Table>['columns']['shape']
+>;
 
 // clone column type and set data to it
 export const setColumnData = <
@@ -292,7 +306,32 @@ export abstract class ColumnTypeBase<
   // parse value from a database when it is an element of database array type
   parseItem?: (input: string) => unknown;
 
-  // set default to the column
+  /**
+   * Set a default value to a column. Columns that have defaults become optional when creating a record.
+   *
+   * If you provide a value or a raw SQL, such default should be set on the column in migration to be applied on a database level.
+   *
+   * Or you can specify a callback that returns a value. This function will be called for each creating record. Such a default won't be applied to a database.
+   *
+   * ```ts
+   * export class Table extends BaseTable {
+   *   readonly table = 'table';
+   *   columns = this.setColumns((t) => ({
+   *     // values as defaults:
+   *     int: t.integer().default(123),
+   *     text: t.text().default('text'),
+   *
+   *     // raw SQL default:
+   *     timestamp: t.timestamp().default(t.sql`now()`),
+   *
+   *     // runtime default, each new records gets a new random value:
+   *     random: t.numeric().default(() => Math.random()),
+   *   }));
+   * }
+   * ```
+   *
+   * @param value - default value or a function returning a value
+   */
   default<
     T extends ColumnTypeBase,
     Value extends T['type'] | null | RawExpression | (() => T['type']),
@@ -304,12 +343,89 @@ export abstract class ColumnTypeBase<
     ) as ColumnWithDefault<T, Value>;
   }
 
-  // set raw database check to the column
+  /**
+   * Set a database-level validation check to a column. `check` accepts a raw SQL.
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.createTable('table', (t) => ({
+   *     // validate rank to be from 1 to 10
+   *     rank: t.integer().check(t.sql`1 >= "rank" AND "rank" <= 10`),
+   *   }));
+   * });
+   * ```
+   *
+   * @param value - raw SQL expression
+   */
   check<T extends ColumnTypeBase>(this: T, value: RawExpression): T {
     return setColumnData(this, 'check', value);
   }
 
-  // set error messages
+  /**
+   * `errors` allows to specify two following validation messages:
+   *
+   * ```ts
+   * t.text().errors({
+   *   required: 'This column is required',
+   *   invalidType: 'This column must be an integer',
+   * });
+   * ```
+   *
+   * It will be converted into `Zod`'s messages:
+   *
+   * ```ts
+   * z.string({
+   *   required_error: 'This column is required',
+   *   invalid_type_error: 'This column must be an integer',
+   * });
+   * ```
+   *
+   * Each validation method can accept an error message as a string:
+   *
+   * ```ts
+   * t.text().min(5, 'Must be 5 or more characters long');
+   * t.text().max(5, 'Must be 5 or fewer characters long');
+   * t.text().length(5, 'Must be exactly 5 characters long');
+   * t.text().email('Invalid email address');
+   * t.text().url('Invalid url');
+   * t.text().emoji('Contains non-emoji characters');
+   * t.text().uuid('Invalid UUID');
+   * t.text().includes('tuna', 'Must include tuna');
+   * t.text().startsWith('https://', 'Must provide secure URL');
+   * t.text().endsWith('.com', 'Only .com domains allowed');
+   * ```
+   *
+   * Except for `text().datetime()` and `text().ip()`:
+   *
+   * these methods can have their own parameters, so the error message is passed in object.
+   *
+   * ```ts
+   * t.text().datetime({ message: 'Invalid datetime string! Must be UTC.' });
+   * t.text().ip({ message: 'Invalid IP address' });
+   * ```
+   *
+   * Error messages are supported for a JSON schema as well:
+   *
+   * ```ts
+   * t.json((j) =>
+   *   j.object({
+   *     one: j
+   *       .string()
+   *       .errors({ required: 'One is required' })
+   *       .min(5, 'Must be 5 or more characters long'),
+   *     two: j
+   *       .string()
+   *       .errors({ invalidType: 'Two should be a string' })
+   *       .max(5, 'Must be 5 or fewer characters long'),
+   *     three: j.string().length(5, 'Must be exactly 5 characters long'),
+   *   }),
+   * );
+   * ```
+   *
+   * @param errorMessages - object, key is either 'required' or 'invalidType', value is an error message
+   */
   errors<T extends ColumnTypeBase>(
     this: T,
     errorMessages: { [K in 'required' | 'invalidType']?: string },
@@ -322,12 +438,139 @@ export abstract class ColumnTypeBase<
     );
   }
 
-  // mark the column as nullable
+  /**
+   * Use `nullable` to mark the column as nullable. By default, all columns are required.
+   *
+   * Nullable columns are optional when creating records.
+   *
+   * ```ts
+   * export class Table extends BaseTable {
+   *   readonly table = 'table';
+   *   columns = this.setColumns((t) => ({
+   *     name: t.integer().nullable(),
+   *   }));
+   * }
+   * ```
+   */
   nullable<T extends ColumnTypeBase>(this: T): NullableColumn<T> {
     return setColumnData(
       this,
       'isNullable',
       true,
     ) as unknown as NullableColumn<T>;
+  }
+
+  /**
+   * This method changes a column type without modifying its behavior.
+   * This is needed when converting columns to a validation schema, the converter will pick a different type specified by `.as`.
+   *
+   * Before calling `.as` need to use `.encode` with the input of the same type as the input of the target column,
+   * and `.parse` which returns the correct type.
+   *
+   * ```ts
+   * // column has the same type as t.integer()
+   * const column = t
+   *   .text(1, 100)
+   *   .encode((input: number) => input)
+   *   .parse((text) => parseInt(text))
+   *   .as(t.integer());
+   * ```
+   *
+   * @param column - other column type to inherit from
+   */
+  as<
+    T extends ColumnTypeBase,
+    C extends ColumnTypeBase<T['type'], BaseOperators, T['inputType']>,
+  >(this: T, column: C): C {
+    return setColumnData(this, 'as', column) as unknown as C;
+  }
+
+  /**
+   * Set a custom function to process value for the column when creating or updating a record.
+   *
+   * The type of `input` argument will be used as the type of the column when creating and updating.
+   *
+   * ```ts
+   * export class Table extends BaseTable {
+   *   readonly table = 'table';
+   *   columns = this.setColumns((t) => ({
+   *     // encode boolean, number, or string to text before saving
+   *     column: t
+   *       .text(3, 100)
+   *       .encode((input: boolean | number | string) => String(input)),
+   *   }));
+   * }
+   *
+   * // numbers and booleans will be converted to a string:
+   * await db.table.create({ column: 123 });
+   * await db.table.create({ column: true });
+   * await db.table.where({ column: 'true' }).update({ column: false });
+   * ```
+   *
+   * @param fn - function to encode value for a database, argument type is specified by you, return type must be compatible with a database
+   */
+  encode<T extends ColumnTypeBase, Input>(
+    this: T,
+    fn: (input: Input) => unknown,
+  ): EncodeColumn<T, Input> {
+    return Object.assign(Object.create(this), {
+      encodeFn: fn,
+    }) as unknown as EncodeColumn<T, Input>;
+  }
+
+  /**
+   * Set a custom function to process value after loading it from a database.
+   *
+   * The type of input is the type of column before `.parse`, the resulting type will replace the type of column.
+   *
+   * ```ts
+   * export class Table extends BaseTable {
+   *   readonly table = 'table';
+   *   columns = this.setColumns((t) => ({
+   *     // parse text to integer
+   *     column: t.text(3, 100).parse((input) => parseInt(input)),
+   *   }));
+   * }
+   *
+   * // column will be parsed to a number
+   * const value: number = await db.table.get('column');
+   * ```
+   *
+   * If the column is `nullable`, the `input` type will also have `null` and you should handle this case.
+   * This allows using `parse` to set a default value after loading from the database.
+   *
+   * ```ts
+   * export class Table extends BaseTable {
+   *   readonly table = 'table';
+   *   columns = this.setColumns((t) => ({
+   *     // return a default image URL if it is null
+   *     // this allows to change the defaultImageURL without modifying a database
+   *     imageURL: t
+   *       .text(5, 300)
+   *       .nullable()
+   *       .parse((url) => url ?? defaultImageURL),
+   *   }));
+   * }
+   * ```
+   *
+   * @param fn - function to parse a value from the database, argument is the type of this column, return type is up to you
+   */
+  parse<T extends ColumnTypeBase, Output>(
+    this: T,
+    fn: (input: T['type']) => Output,
+  ): ParseColumn<T, Output> {
+    return Object.assign(Object.create(this), {
+      parseFn: fn,
+      parseItem: fn,
+    }) as unknown as ParseColumn<T, Output>;
+  }
+
+  /**
+   * @deprecated this feature is in a draft state
+   *
+   * Remove the column from the default selection. For example, the password of the user may be marked as hidden, and then this column won't load by default, only when specifically listed in `.select`.
+   */
+  hidden<T extends ColumnTypeBase>(this: T): HiddenColumn<T> {
+    return setColumnData(this, 'isHidden', true) as HiddenColumn<T>;
   }
 }

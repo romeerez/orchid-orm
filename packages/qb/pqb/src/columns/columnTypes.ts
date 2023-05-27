@@ -45,9 +45,11 @@ import { BooleanColumn } from './boolean';
 import { EnumColumn } from './enum';
 import { JSONColumn, JSONTextColumn, JSONTypes } from './json';
 import {
+  ColumnNameOfTable,
   ColumnTypesBase,
   EmptyObject,
   emptyObject,
+  ForeignKeyTable,
   JSONTypeAny,
   makeTimestampsHelpers,
   MaybeArray,
@@ -59,10 +61,8 @@ import {
 } from 'orchid-core';
 import { ArrayColumn } from './array';
 import {
-  ColumnNameOfTable,
   ColumnType,
   DropMode,
-  ForeignKeyTable,
   IndexColumnOptions,
   IndexOptions,
   ForeignKeyOptions,

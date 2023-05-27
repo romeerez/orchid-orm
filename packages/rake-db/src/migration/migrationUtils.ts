@@ -1,5 +1,12 @@
-import { ColumnType, ForeignKeyTable, getRaw, quote, TableData } from 'pqb';
-import { isRaw, RawExpression, Sql, toArray, toSnakeCase } from 'orchid-core';
+import { ColumnType, getRaw, quote, TableData } from 'pqb';
+import {
+  ForeignKeyTable,
+  isRaw,
+  RawExpression,
+  Sql,
+  toArray,
+  toSnakeCase,
+} from 'orchid-core';
 import { ColumnComment } from './migration';
 import {
   getSchemaAndTableFromName,

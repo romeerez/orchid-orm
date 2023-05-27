@@ -359,20 +359,25 @@ const insert = (
     q.query.returnType = 'all';
     const { handleResult } = q.query;
     q.query.handleResult = (q, queryResult, s) => {
+      // handleResult is mutating queryResult.rows
+      // we're using twice here: first, for ctx.resultAll that's used in relations
+      // and second time to parse result that user is expecting, so the rows are cloned
+      const originalRows = queryResult.rows;
+      queryResult.rows = [...originalRows];
       ctx.resultAll = handleResult(q, queryResult, s) as Record<
         string,
         unknown
       >[];
 
       if (queryMethodByReturnType[returnType] === 'arrays') {
-        queryResult.rows.forEach(
+        originalRows.forEach(
           (row, i) =>
-            ((queryResult.rows as unknown as unknown[][])[i] =
-              Object.values(row)),
+            ((originalRows as unknown as unknown[][])[i] = Object.values(row)),
         );
       }
 
       q.query.returnType = returnType;
+      queryResult.rows = originalRows;
       return handleResult(q, queryResult, s);
     };
   } else {
