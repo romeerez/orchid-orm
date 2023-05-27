@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.9.40
+
+### Patch Changes
+
+- 2881707: Add `makeHelper` function to define query helper
+- Updated dependencies [2881707]
+  - pqb@0.11.32
+  - orchid-core@0.4.13
+
 ## 1.9.39
 
 ### Patch Changes

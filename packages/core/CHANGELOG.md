@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.4.13
+
+### Patch Changes
+
+- 2881707: Add `makeHelper` function to define query helper
+
 ## 0.4.12
 
 ### Patch Changes

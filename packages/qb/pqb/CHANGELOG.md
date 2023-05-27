@@ -1,5 +1,13 @@
 # pqb
 
+## 0.11.32
+
+### Patch Changes
+
+- 2881707: Add `makeHelper` function to define query helper
+- Updated dependencies [2881707]
+  - orchid-core@0.4.13
+
 ## 0.11.31
 
 ### Patch Changes
