@@ -166,6 +166,8 @@ const result: Result = await db.post
   .take();
 ```
 
+### select relation with a strict join
+
 As described in [join: select relation](/guide/join.html#select-relation),
 you can set empty `.join` on the relation
 if you want to filter out main table records that don't have a matching relation:
@@ -175,12 +177,54 @@ if you want to filter out main table records that don't have a matching relation
 // with a books that are published after 2000
 await db.author.select({
   books: (q) => q.books.join().where({ yearPublished: { gte: 2000 } }),
-})
+});
 
 // load only books of female authors
 await db.books.select({
   author: (q) => q.author.join().where({ gender: 'female' }),
-})
+});
+```
+
+### selecting the same table
+
+It's possible to make such a nested select where the same table is being referenced twice on different levels.
+For example, posts has and belongs to many tags. For some reason, we want to select posts, their tags, the posts of the tags, and the tags of those posts.
+
+```ts
+// select posts
+await db.post.select('*', {
+  tags: (q) =>
+    // select tags
+    q.tags.select('*', {
+      posts: (q) =>
+        // select posts of the tags
+        q.posts.select('*', {
+          // select tags of the deeper posts
+          tags: (q) => q.tags,
+        }),
+    }),
+});
+```
+
+Internally, the deeper tags are joined as `tags2`, and the deeper posts are joined as `posts2` to avoid naming collisions,
+but this is resolved internally, and you don't have to worry about it.
+
+You can add `where` conditions for the selected relation after selecting it,
+but this is only available for `belongsTo` and `hasOne` relation.
+
+Because in `hasMany` and `hasAndBelongsToMany` relation is loaded as a JSON array, it can't accept conditions after being selected.
+
+In the following example, inner author table internally is aliased as `author2`, and the condition `author.name` is automatically replaced with `author2.name`.
+
+```ts
+await db.author.select('*', {
+  books: (q) =>
+    q.books
+      .select({
+        author: (q) => q.author,
+      })
+      .where({ 'author.name': 'Jack London' }),
+});
 ```
 
 ## create update delete

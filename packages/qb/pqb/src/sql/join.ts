@@ -13,7 +13,6 @@ import { ToSqlCtx } from './toSql';
 import { getRaw } from './rawSql';
 import { JoinedShapes, QueryData, SelectQueryData } from './data';
 import { isRaw, RawExpression } from 'orchid-core';
-import { getQueryAs } from '../utils';
 import { pushQueryArray } from '../queryDataUtils';
 import { QueryBase } from '../queryBase';
 
@@ -337,9 +336,10 @@ export const pushJoinSql = (
       const q = item[1];
       const { aliasValue } = ctx;
       ctx.aliasValue = true;
+      const as = item[2];
       ctx.sql.push(
         `${item[0]} LATERAL (${q.toSql(ctx).text}) "${
-          item[2] || getQueryAs(q)
+          query.joinOverrides?.[as] || as
         }" ON true`,
       );
       ctx.aliasValue = aliasValue;

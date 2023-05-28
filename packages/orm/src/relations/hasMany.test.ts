@@ -419,6 +419,47 @@ describe('hasMany', () => {
         `,
       );
     });
+
+    it('should support recurring select', () => {
+      const q = db.user.select({
+        messages: (q) =>
+          q.messages.select({
+            user: (q) =>
+              q.user.select({
+                messages: (q) => q.messages,
+              }),
+          }),
+      });
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT COALESCE("messages".r, '[]') "messages"
+          FROM "user"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json("t".*)) r
+            FROM (
+              SELECT row_to_json("user2".*) "user"
+              FROM "message" AS "messages"
+              LEFT JOIN LATERAL (
+                SELECT COALESCE("messages2".r, '[]') "messages"
+                FROM "user"
+                LEFT JOIN LATERAL (
+                  SELECT json_agg(row_to_json("t".*)) r
+                  FROM (
+                    SELECT ${messageSelectAll}
+                    FROM "message" AS "messages"
+                    WHERE "messages"."authorId" = "user"."id"
+                  ) AS "t"
+                ) "messages2" ON true
+                WHERE "user"."id" = "messages"."authorId"
+              ) "user2" ON true
+              WHERE "messages"."authorId" = "user"."id"
+            ) AS "t"
+          ) "messages" ON true
+        `,
+      );
+    });
   });
 
   describe('create', () => {
@@ -2315,6 +2356,85 @@ describe('hasMany through', () => {
         `,
       );
     });
+
+    it('should support recurring select', () => {
+      const q = db.profile.select({
+        chats: (q) =>
+          q.chats.select({
+            profiles: (q) =>
+              q.profiles.select({
+                chats: (q) => q.chats,
+              }),
+          }),
+      });
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT COALESCE("chats".r, '[]') "chats"
+          FROM "profile"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json("t".*)) r
+            FROM (
+              SELECT COALESCE("profiles".r, '[]') "profiles"
+              FROM "chat" AS "chats"
+              LEFT JOIN LATERAL (
+                SELECT json_agg(row_to_json("t".*)) r
+                FROM (
+                  SELECT COALESCE("chats2".r, '[]') "chats"
+                  FROM "profile" AS "profiles"
+                  LEFT JOIN LATERAL (
+                    SELECT json_agg(row_to_json("t".*)) r
+                    FROM (
+                      SELECT ${chatSelectAll}
+                      FROM "chat" AS "chats"
+                      WHERE EXISTS (
+                        SELECT 1
+                        FROM "user"
+                        WHERE EXISTS (
+                            SELECT 1
+                            FROM "chatUser"
+                            WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                              AND "chatUser"."userId" = "user"."id"
+                            LIMIT 1
+                          )
+                          AND "user"."id" = "profiles"."userId"
+                        LIMIT 1
+                      )
+                    ) AS "t"
+                  ) "chats2" ON true
+                  WHERE EXISTS (
+                    SELECT 1
+                    FROM "user" AS "users"
+                    WHERE "profiles"."userId" = "users"."id"
+                      AND EXISTS (
+                        SELECT 1
+                        FROM "chatUser"
+                        WHERE "chatUser"."userId" = "users"."id"
+                          AND "chatUser"."chatId" = "chats"."idOfChat"
+                        LIMIT 1
+                      )
+                    LIMIT 1
+                  )
+                ) AS "t"
+              ) "profiles" ON true
+              WHERE EXISTS (
+                SELECT 1
+                FROM "user"
+                WHERE EXISTS (
+                  SELECT 1
+                  FROM "chatUser"
+                  WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                    AND "chatUser"."userId" = "user"."id"
+                  LIMIT 1
+                ) AND "user"."id" = "profile"."userId"
+                LIMIT 1
+              )
+            ) AS "t"
+          ) "chats" ON true
+        `,
+      );
+    });
   });
 
   describe('through hasOne', () => {
@@ -2756,6 +2876,85 @@ describe('hasMany through', () => {
                 LIMIT 1
               )
             ) "hasProfiles" ON true
+          `,
+        );
+      });
+
+      it('should support recurring select', () => {
+        const q = db.chat.select({
+          profiles: (q) =>
+            q.profiles.select({
+              chats: (q) =>
+                q.chats.select({
+                  profiles: (q) => q.profiles,
+                }),
+            }),
+        });
+
+        expectSql(
+          q.toSql(),
+          `
+            SELECT COALESCE("profiles".r, '[]') "profiles"
+            FROM "chat"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT COALESCE("chats".r, '[]') "chats"
+                FROM "profile" AS "profiles"
+                LEFT JOIN LATERAL (
+                  SELECT json_agg(row_to_json("t".*)) r
+                  FROM (
+                    SELECT COALESCE("profiles2".r, '[]') "profiles"
+                    FROM "chat" AS "chats"
+                    LEFT JOIN LATERAL (
+                      SELECT json_agg(row_to_json("t".*)) r
+                      FROM (
+                        SELECT ${profileSelectAll}
+                        FROM "profile" AS "profiles"
+                        WHERE EXISTS (
+                          SELECT 1
+                          FROM "user" AS "users"
+                          WHERE "profiles"."userId" = "users"."id"
+                          AND EXISTS (
+                            SELECT 1
+                            FROM "chatUser"
+                            WHERE "chatUser"."userId" = "users"."id"
+                              AND "chatUser"."chatId" = "chats"."idOfChat"
+                            LIMIT 1
+                          )
+                        LIMIT 1
+                      )
+                    ) AS "t"
+                  ) "profiles2" ON true
+                  WHERE EXISTS (
+                    SELECT 1
+                    FROM "user"
+                    WHERE EXISTS (
+                      SELECT 1
+                      FROM "chatUser"
+                      WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                        AND "chatUser"."userId" = "user"."id"
+                      LIMIT 1
+                    ) AND "user"."id" = "profiles"."userId"
+                    LIMIT 1
+                  )
+                ) AS "t"
+              ) "chats" ON true
+                WHERE EXISTS (
+                  SELECT 1
+                  FROM "user" AS "users"
+                  WHERE "profiles"."userId" = "users"."id"
+                    AND EXISTS (
+                      SELECT 1
+                      FROM "chatUser"
+                      WHERE "chatUser"."userId" = "users"."id"
+                        AND "chatUser"."chatId" = "chat"."idOfChat"
+                      LIMIT 1
+                    )
+                  LIMIT 1
+                )
+              ) AS "t"
+            ) "profiles" ON true
           `,
         );
       });

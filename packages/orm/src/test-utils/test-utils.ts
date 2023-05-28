@@ -78,6 +78,11 @@ export class ProfileTable extends BaseTable {
       through: 'user',
       source: 'chats',
     }),
+
+    messages: this.hasMany(() => MessageTable, {
+      through: 'user',
+      source: 'messages',
+    }),
   };
 }
 export const ProfileSchema = tableToZod(ProfileTable);

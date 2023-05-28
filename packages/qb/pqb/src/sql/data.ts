@@ -36,6 +36,7 @@ import { QueryBase } from '../queryBase';
 
 export type JoinedShapes = Record<string, ColumnsShapeBase>;
 export type JoinedParsers = Record<string, ColumnsParsers>;
+export type JoinOverrides = Record<string, string>;
 
 export type CommonQueryData = {
   adapter: Adapter;
@@ -53,6 +54,7 @@ export type CommonQueryData = {
   joinedParsers?: JoinedParsers;
   joinedForSelect?: string;
   innerJoinLateral?: true;
+  joinOverrides?: JoinOverrides;
   schema?: string;
   select?: SelectItem[];
   as?: string;

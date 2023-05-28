@@ -422,6 +422,68 @@ describe('hasAndBelongsToMany', () => {
         `,
       );
     });
+
+    it('should support recurring select', () => {
+      const q = db.user.select({
+        chats: (q) =>
+          q.chats.select({
+            users: (q) =>
+              q.users.select({
+                chats: (q) => q.chats,
+              }),
+          }),
+      });
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT COALESCE("chats".r, '[]') "chats"
+          FROM "user"
+          LEFT JOIN LATERAL (
+            SELECT json_agg(row_to_json("t".*)) r
+            FROM (
+              SELECT COALESCE("users".r, '[]') "users"
+              FROM "chat" AS "chats"
+              LEFT JOIN LATERAL (
+                SELECT json_agg(row_to_json("t".*)) r
+                FROM (
+                  SELECT COALESCE("chats2".r, '[]') "chats"
+                  FROM "user" AS "users"
+                  LEFT JOIN LATERAL (
+                    SELECT json_agg(row_to_json("t".*)) r
+                    FROM (
+                      SELECT ${chatSelectAll}
+                      FROM "chat" AS "chats"
+                      WHERE EXISTS (
+                        SELECT 1
+                        FROM "chatUser"
+                        WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                          AND "chatUser"."userId" = "users"."id"
+                        LIMIT 1
+                      )
+                    ) AS "t"
+                  ) "chats2" ON true
+                  WHERE EXISTS (
+                    SELECT 1
+                    FROM "chatUser"
+                    WHERE "chatUser"."userId" = "users"."id"
+                      AND "chatUser"."chatId" = "chats"."idOfChat"
+                    LIMIT 1
+                  )
+                ) AS "t"
+              ) "users" ON true
+              WHERE EXISTS (
+                SELECT 1
+                FROM "chatUser"
+                WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                  AND "chatUser"."userId" = "user"."id"
+                LIMIT 1
+              )
+            ) AS "t"
+          ) "chats" ON true
+        `,
+      );
+    });
   });
 
   describe('create', () => {

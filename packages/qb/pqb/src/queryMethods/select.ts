@@ -321,7 +321,6 @@ export const processSelectArg = <T extends Query>(
 
       if (!isRaw(value) && value.joinQuery) {
         value = value.joinQuery(q, value);
-        value.query.joinedForSelect = key;
 
         let query;
         const returnType = value.query.returnType;
@@ -347,6 +346,20 @@ export const processSelectArg = <T extends Query>(
 
           query = value;
         }
+
+        let asOverride = key;
+
+        let suffix: string | number = '';
+        if (value.query.joinedShapes?.[key]) {
+          suffix = 2;
+          const joinOverrides = (q.query.joinOverrides ??= {});
+          while (joinOverrides[(asOverride = `${key}${suffix}`)]) {
+            suffix++;
+          }
+          joinOverrides[key] = asOverride;
+        }
+
+        value.query.joinedForSelect = asOverride;
 
         _joinLateral(
           q,

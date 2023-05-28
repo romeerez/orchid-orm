@@ -12,6 +12,7 @@ import {
   relationQueryKey,
   VirtualColumn,
   SetQueryTableAlias,
+  getQueryAs,
 } from 'pqb';
 import { EmptyObject, StringKey } from 'orchid-core';
 import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
@@ -361,6 +362,11 @@ const makeRelationQuery = (
             this.baseQuery,
             (q) => data.reverseJoin(this, toTable) as unknown as typeof q,
           );
+
+      query.query.joinedShapes = {
+        [getQueryAs(this)]: this.query.shape,
+        ...this.query.joinedShapes,
+      };
 
       query.query[relationQueryKey] = {
         relationName,

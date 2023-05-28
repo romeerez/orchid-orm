@@ -145,10 +145,9 @@ export const _joinLateral = <
     setQueryObjectValue(q, 'joinedParsers', joinKey, result.query.parsers);
   }
 
-  return pushQueryValue(q, 'join', [type, result, as]) as JoinLateralResult<
-    T,
-    R,
-    RequireJoined,
-    RequireMain
-  >;
+  return pushQueryValue(q, 'join', [
+    type,
+    result,
+    as || getQueryAs(result),
+  ]) as JoinLateralResult<T, R, RequireJoined, RequireMain>;
 };

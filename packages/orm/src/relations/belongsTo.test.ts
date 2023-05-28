@@ -278,6 +278,44 @@ describe('belongsTo', () => {
           `,
         );
       });
+
+      it('should support recurring select', async () => {
+        const q = db.profile.select({
+          user: (q) =>
+            q.user.select({
+              profile: (q) =>
+                q.profile
+                  .select({
+                    user: (q) => q.user,
+                  })
+                  .where({ 'user.Name': 'name' }),
+            }),
+        });
+
+        expectSql(
+          q.toSql(),
+          `
+            SELECT row_to_json("user".*) "user"
+            FROM "profile"
+            LEFT JOIN LATERAL (
+              SELECT row_to_json("profile2".*) "profile"
+              FROM "user"
+              LEFT JOIN LATERAL (
+                SELECT row_to_json("user2".*) "user"
+                FROM "profile"
+                LEFT JOIN LATERAL (
+                  SELECT ${userSelectAll}
+                  FROM "user"
+                  WHERE "user"."id" = "profile"."userId"
+                ) "user2" ON true
+                WHERE "user2"."Name" = $1 AND "profile"."userId" = "user"."id"
+              ) "profile2" ON true
+              WHERE "user"."id" = "profile"."userId"
+            ) "user" ON true
+          `,
+          ['name'],
+        );
+      });
     });
   });
 

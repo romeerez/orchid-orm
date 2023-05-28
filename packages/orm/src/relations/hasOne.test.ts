@@ -16,9 +16,9 @@ import { RelationQuery } from 'pqb';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
 
-describe('hasOne', () => {
-  useTestORM();
+useTestORM();
 
+describe('hasOne', () => {
   describe('querying', () => {
     it('should have method to query related data', async () => {
       const profileQuery = db.profile.take();
@@ -352,6 +352,45 @@ describe('hasOne', () => {
               WHERE "profile"."userId" = "u"."id"
             ) "hasProfile" ON true
           `,
+        );
+      });
+
+      it('should support recurring select', () => {
+        const q = db.user.select({
+          profile: (q) =>
+            q.profile.select({
+              user: (q) =>
+                q.user
+                  .select({
+                    profile: (q) => q.profile,
+                  })
+                  .where({ 'profile.Bio': 'bio' }),
+            }),
+        });
+
+        expectSql(
+          q.toSql(),
+          `
+            SELECT row_to_json("profile".*) "profile"
+            FROM "user"
+            LEFT JOIN LATERAL (
+              SELECT row_to_json("user2".*) "user"
+              FROM "profile"
+              LEFT JOIN LATERAL (
+                SELECT row_to_json("profile2".*) "profile"
+                FROM "user"
+                LEFT JOIN LATERAL (
+                  SELECT ${profileSelectAll}
+                  FROM "profile"
+                  WHERE "profile"."userId" = "user"."id"
+                ) "profile2" ON true
+                WHERE "profile2"."Bio" = $1
+                  AND "user"."id" = "profile"."userId"
+              ) "user2" ON true
+              WHERE "profile"."userId" = "user"."id"
+            ) "profile" ON true
+          `,
+          ['bio'],
         );
       });
     });
@@ -1791,6 +1830,66 @@ describe('hasOne through', () => {
             )
           ) "hasProfile" ON true
         `,
+      );
+    });
+
+    it('should support recurring select', async () => {
+      const q = db.message.select({
+        profile: (q) =>
+          q.profile.select({
+            messages: (q) =>
+              q.messages
+                .select({
+                  profile: (q) => q.profile,
+                })
+                .where({ 'profile.Bio': 'bio' }),
+          }),
+      });
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT row_to_json("profile".*) "profile"
+          FROM "message"
+          LEFT JOIN LATERAL (
+            SELECT COALESCE("messages".r, '[]') "messages"
+            FROM "profile"
+            LEFT JOIN LATERAL (
+              SELECT json_agg(row_to_json("t".*)) r
+              FROM (
+                SELECT row_to_json("profile2".*) "profile"
+                FROM "message" AS "messages"
+                LEFT JOIN LATERAL (
+                  SELECT ${profileSelectAll}
+                  FROM "profile"
+                  WHERE EXISTS (
+                    SELECT 1
+                    FROM "user"
+                    WHERE "profile"."userId" = "user"."id"
+                      AND "user"."id" = "messages"."authorId"
+                    LIMIT 1
+                  )
+                ) "profile2" ON true
+                WHERE "profile2"."Bio" = $1
+                  AND EXISTS (
+                    SELECT 1
+                    FROM "user"
+                    WHERE "messages"."authorId" = "user"."id"
+                      AND "user"."id" = "profile"."userId"
+                    LIMIT 1
+                  )
+              ) AS "t"
+            ) "messages" ON true
+            WHERE EXISTS (
+              SELECT 1
+              FROM "user"
+              WHERE "profile"."userId" = "user"."id"
+                AND "user"."id" = "message"."authorId"
+              LIMIT 1
+            )
+          ) "profile" ON true
+        `,
+        ['bio'],
       );
     });
   });
