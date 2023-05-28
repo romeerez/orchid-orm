@@ -1,5 +1,11 @@
 # pqb
 
+## 0.11.33
+
+### Patch Changes
+
+- 275cc73: Support nested select of the same table as above
+
 ## 0.11.32
 
 ### Patch Changes

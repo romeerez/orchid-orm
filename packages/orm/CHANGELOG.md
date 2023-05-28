@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.9.41
+
+### Patch Changes
+
+- 275cc73: Support nested select of the same table as above
+- Updated dependencies [275cc73]
+  - pqb@0.11.33
+
 ## 1.9.40
 
 ### Patch Changes
