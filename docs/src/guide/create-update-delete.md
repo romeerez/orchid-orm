@@ -48,9 +48,6 @@ await db.table.create({
   // query that returns a single value
   // returning multiple values will result in Postgres error
   column2: db.otherTable.get('someColumn').take(),
-
-  // select a single value from a related record
-  column3: (q) => q.relatedTable.get('someColumn'),
 });
 ```
 
