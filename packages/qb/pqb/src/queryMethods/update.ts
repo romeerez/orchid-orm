@@ -19,11 +19,13 @@ import {
   EmptyObject,
   MaybeArray,
   StringKey,
+  raw,
+  QueryThen,
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
 
 export type UpdateData<T extends Query> = {
-  [K in keyof T['inputType']]?: T['inputType'][K] | RawExpression;
+  [K in keyof T['inputType']]?: UpdateColumn<T, K>;
 } & (T['relations'] extends Record<string, Relation>
   ? {
       [K in keyof T['relations']]?: T['relations'][K] extends BelongsToRelation
@@ -39,6 +41,16 @@ export type UpdateData<T extends Query> = {
   : EmptyObject) & {
     __raw?: never; // forbid RawExpression argument
   };
+
+type UpdateColumn<
+  T extends Query,
+  Key extends keyof T['inputType'],
+  SubQuery = {
+    [K in keyof Query]: K extends 'then'
+      ? QueryThen<T['inputType'][Key]>
+      : Query[K];
+  },
+> = T['inputType'][Key] | RawExpression | SubQuery | ((q: T) => SubQuery);
 
 type UpdateBelongsToData<T extends Query, Rel extends BelongsToRelation> =
   | { disconnect: boolean }
@@ -108,8 +120,8 @@ type UpdateArg<T extends Query> = T['meta']['hasWhere'] extends true
   ? UpdateData<T>
   : never;
 
-type UpdateRawArg<T extends Query> = T['meta']['hasWhere'] extends true
-  ? RawExpression
+type UpdateRawArgs<T extends Query> = T['meta']['hasWhere'] extends true
+  ? [sql: RawExpression] | [TemplateStringsArray, ...unknown[]]
   : never;
 
 type UpdateResult<T extends Query> = T['meta']['hasSelect'] extends true
@@ -165,6 +177,76 @@ const update = <T extends Query>(q: T): UpdateResult<T> => {
 };
 
 export class Update {
+  /**
+   * `.update` takes an object with columns and values to update records.
+   *
+   * By default, `.update` will return a count of updated records.
+   *
+   * Place `.select`, `.selectAll`, or `.get` before `.update` to specify returning columns.
+   *
+   * You need to provide `.where`, `.findBy`, or `.find` conditions before calling `.update`.
+   * To ensure that the whole table won't be updated by accident, updating without where conditions will result in TypeScript and runtime errors.
+   *
+   * If you need to update ALL records, use `where` method without arguments:
+   *
+   * ```ts
+   * await db.table.where().update({ name: 'new name' });
+   * ```
+   *
+   * If `.select` and `.where` were specified before the update it will return an array of updated records.
+   *
+   * If `.select` and `.take`, `.find`, or similar were specified before the update it will return one updated record.
+   *
+   * For a column value you can provide a specific value, raw SQL, a query object that returns a single value, or a callback with a sub-query.
+   *
+   * ```ts
+   * // returns number of updated records by default
+   * const updatedCount = await db.table
+   *   .where({ name: 'old name' })
+   *   .update({ name: 'new name' });
+   *
+   * // returning only `id`
+   * const id = await db.table.find(1).get('id').update({ name: 'new name' });
+   *
+   * // `selectAll` + `find` will return a full record
+   * const oneFullRecord = await db.table
+   *   .selectAll()
+   *   .find(1)
+   *   .update({ name: 'new name' });
+   *
+   * // `selectAll` + `where` will return array of full records
+   * const recordsArray = await db.table
+   *   .select('id', 'name')
+   *   .where({ id: 1 })
+   *   .update({ name: 'new name' });
+   *
+   * await db.table.where({ ...conditions }).update({
+   *   // set the column to a specific value
+   *   column1: 123,
+   *
+   *   // use raw SQL to update the column
+   *   column2: db.table.sql`2 + 2`,
+   *
+   *   // use query that returns a single value
+   *   // returning multiple values will result in PostgreSQL error
+   *   column3: db.otherTable.get('someColumn').take(),
+   *
+   *   // select a single value from a related record
+   *   column4: (q) => q.relatedTable.get('someColumn'),
+   * });
+   * ```
+   *
+   * `null` value will set a column to `NULL`, but the `undefined` value will be ignored:
+   *
+   * ```ts
+   * db.table.findBy({ id: 1 }).update({
+   *   name: null, // updates to null
+   *   age: undefined, // skipped, no effect
+   * });
+   * ```
+   *
+   * @param arg - data to update records with, may have specific values, raw SQL, queries, or callbacks with sub-queries.
+   */
   update<T extends Query>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
     const q = this.clone() as T;
     return q._update(arg);
@@ -191,8 +273,14 @@ export class Update {
       } else if (!shape[key] && shape !== anyShape) {
         delete set[key];
       } else {
-        const encode = shape[key].encodeFn;
-        if (encode) set[key] = encode(set[key]);
+        const value = set[key];
+        if (
+          typeof value !== 'function' &&
+          (typeof value !== 'object' || !value || !isRaw(value))
+        ) {
+          const encode = shape[key].encodeFn;
+          if (encode) set[key] = encode(value);
+        }
       }
     }
 
@@ -268,15 +356,71 @@ export class Update {
     return update(this);
   }
 
-  updateRaw<T extends Query>(this: T, arg: UpdateRawArg<T>): UpdateResult<T> {
+  /**
+   * `updateRaw` is for updating records with raw expression.
+   *
+   * The behavior is the same as a regular `update` method has:
+   * `find` or `where` must precede calling this method,
+   * it returns an updated count by default,
+   * you can customize returning data by using `select`.
+   *
+   * ```ts
+   * const value = 'new name';
+   *
+   * // update with SQL template string
+   * const updatedCount = await db.table.find(1).updateRaw`name = ${value}`;
+   *
+   * // or update with `sql` function:
+   * await db.table.find(1).updateRaw(db.table.sql`name = ${value}`);
+   * ```
+   * @param args - raw SQL via a template string or by using a `sql` method
+   */
+  updateRaw<T extends Query>(
+    this: T,
+    ...args: UpdateRawArgs<T>
+  ): UpdateResult<T> {
     const q = this.clone() as T;
-    return q._updateRaw(arg);
+    return q._updateRaw(...args);
   }
-  _updateRaw<T extends Query>(this: T, arg: UpdateRawArg<T>): UpdateResult<T> {
-    pushQueryValue(this, 'updateData', arg);
+  _updateRaw<T extends Query>(
+    this: T,
+    ...args: UpdateRawArgs<T>
+  ): UpdateResult<T> {
+    if (Array.isArray(args[0])) {
+      const sql = raw(args as [TemplateStringsArray, ...unknown[]]);
+      return (this as T & { meta: { hasWhere: true } })._updateRaw(sql);
+    }
+
+    pushQueryValue(this, 'updateData', args[0]);
     return update(this);
   }
 
+  /**
+   * To make sure that at least one row was updated use `updateOrThrow`:
+   *
+   * ```ts
+   * import { NotFoundError } from 'pqb';
+   *
+   * try {
+   *   // updatedCount is guaranteed to be greater than 0
+   *   const updatedCount = await db.table
+   *     .where(conditions)
+   *     .updateOrThrow({ name: 'name' });
+   *
+   *   // updatedRecords is guaranteed to be a non-empty array
+   *   const updatedRecords = await db.table
+   *     .where(conditions)
+   *     .select('id')
+   *     .updateOrThrow({ name: 'name' });
+   * } catch (err) {
+   *   if (err instanceof NotFoundError) {
+   *     // handle error
+   *   }
+   * }
+   * ```
+   *
+   * @param arg - data to update records with, may have specific values, raw SQL, queries, or callbacks with sub-queries.
+   */
   updateOrThrow<T extends Query>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
     const q = this.clone() as T;
     return q._updateOrThrow(arg);
@@ -287,6 +431,28 @@ export class Update {
     return this._update(arg);
   }
 
+  /**
+   * Increments a column value by the specified amount. Optionally takes `returning` argument.
+   *
+   * ```ts
+   * // increment numericColumn column by 1, return updated records
+   * const result = await db.table
+   *   .selectAll()
+   *   .where(...conditions)
+   *   .increment('numericColumn');
+   *
+   * // increment someColumn by 5 and otherColumn by 10, return updated records
+   * const result2 = await db.table
+   *   .selectAll()
+   *   .where(...conditions)
+   *   .increment({
+   *     someColumn: 5,
+   *     otherColumn: 10,
+   *   });
+   * ```
+   *
+   * @param data - name of the column to increment, or an object with columns and values to add
+   */
   increment<T extends Query>(
     this: T,
     data: ChangeCountArg<T>,
@@ -301,6 +467,28 @@ export class Update {
     return applyCountChange(this, '+', data);
   }
 
+  /**
+   * Decrements a column value by the specified amount. Optionally takes `returning` argument.
+   *
+   * ```ts
+   * // decrement numericColumn column by 1, return updated records
+   * const result = await db.table
+   *   .selectAll()
+   *   .where(...conditions)
+   *   .decrement('numericColumn');
+   *
+   * // decrement someColumn by 5 and otherColumn by 10, return updated records
+   * const result2 = await db.table
+   *   .selectAll()
+   *   .where(...conditions)
+   *   .decrement({
+   *     someColumn: 5,
+   *     otherColumn: 10,
+   *   });
+   * ```
+   *
+   * @param data - name of the column to decrement, or an object with columns and values to subtract
+   */
   decrement<T extends Query>(
     this: T,
     data: ChangeCountArg<T>,

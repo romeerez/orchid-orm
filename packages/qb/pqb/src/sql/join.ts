@@ -77,7 +77,7 @@ export const processJoinItem = (
 
       if (args[1]) {
         const arg = (args[1] as (q: unknown) => QueryBase)(
-          new ctx.onQueryBuilder(jq, j, table),
+          new ctx.queryBuilder.onQueryBuilder(jq, j, table),
         ).query;
 
         if (arg.and) queryData.and.push(...arg.and);
@@ -228,7 +228,7 @@ const processArgs = (
         };
       }
 
-      const jq = arg(new ctx.onQueryBuilder(q, data, table));
+      const jq = arg(new ctx.queryBuilder.onQueryBuilder(q, data, table));
 
       if (jq.query.joinedShapes !== joinedShapes) {
         jq.query.joinedShapes = {

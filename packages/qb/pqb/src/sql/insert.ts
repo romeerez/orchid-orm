@@ -1,4 +1,4 @@
-import { addValue, q } from './common';
+import { addValue } from './common';
 import { pushWhereStatementSql } from './where';
 import { Query } from '../query';
 import { selectToSql } from './select';
@@ -8,31 +8,33 @@ import { getRaw } from './rawSql';
 import { InsertQueryData, QueryData } from './data';
 import { isRaw, raw, RawExpression } from 'orchid-core';
 import { ColumnData } from '../columns';
+import { joinSubQuery, resolveSubQueryCallback } from '../utils';
+import { Db } from '../db';
 
 // reuse array for the columns list
 const quotedColumns: string[] = [];
 
 export const pushInsertSql = (
   ctx: ToSqlCtx,
-  table: Query,
+  q: Query,
   query: InsertQueryData,
   quotedAs: string,
 ) => {
-  const { shape } = table.query;
+  const { shape } = q.query;
 
   const { columns } = query;
   quotedColumns.length = columns.length;
   for (let i = 0, len = columns.length; i < len; i++) {
-    quotedColumns[i] = q(shape[columns[i]]?.data.name || columns[i]);
+    quotedColumns[i] = `"${shape[columns[i]]?.data.name || columns[i]}"`;
   }
 
   let runtimeDefaults: (() => unknown)[] | undefined;
-  if (table.internal.runtimeDefaultColumns) {
+  if (q.internal.runtimeDefaultColumns) {
     runtimeDefaults = [];
-    for (const key of table.internal.runtimeDefaultColumns) {
+    for (const key of q.internal.runtimeDefaultColumns) {
       if (!columns.includes(key)) {
         const column = shape[key];
-        quotedColumns.push(q(column.data.name || key));
+        quotedColumns.push(`"${column.data.name || key}"`);
         runtimeDefaults.push(column.data.default as () => unknown);
       }
     }
@@ -40,9 +42,9 @@ export const pushInsertSql = (
 
   let values = query.values;
   if (quotedColumns.length === 0) {
-    const key = Object.keys(table.shape)[0];
-    const column = table.shape[key];
-    quotedColumns[0] = q(column?.data.name || key);
+    const key = Object.keys(q.shape)[0];
+    const column = q.shape[key];
+    quotedColumns[0] = `"${column?.data.name || key}"`;
 
     if (Array.isArray(values) && Array.isArray(values[0])) {
       values = [[undefined]];
@@ -50,6 +52,8 @@ export const pushInsertSql = (
   }
 
   ctx.sql.push(`INSERT INTO ${quotedAs}(${quotedColumns.join(', ')})`);
+
+  const QueryClass = ctx.queryBuilder.constructor as Db;
 
   if ('from' in values) {
     const { from, values: v } = values;
@@ -59,7 +63,7 @@ export const pushInsertSql = (
       pushQueryValue(
         q,
         'select',
-        raw(encodeRow(ctx, v[0], runtimeDefaults), false),
+        raw(encodeRow(ctx, q, QueryClass, v[0], runtimeDefaults), false),
       );
     }
 
@@ -98,9 +102,13 @@ export const pushInsertSql = (
     ctx.sql.push(`VALUES ${sql}`);
   } else {
     ctx.sql.push(
-      `VALUES ${(values as unknown[][])
-        .map((row) => `(${encodeRow(ctx, row, runtimeDefaults)})`)
-        .join(', ')}`,
+      `VALUES ${(values as unknown[][]).reduce(
+        (sql, row, i) =>
+          sql +
+          (i ? ', ' : '') +
+          `(${encodeRow(ctx, q, QueryClass, row, runtimeDefaults)})`,
+        '',
+      )}`,
     );
   }
 
@@ -110,12 +118,14 @@ export const pushInsertSql = (
     const { expr, type } = query.onConflict;
     if (expr) {
       if (typeof expr === 'string') {
-        ctx.sql.push(`(${q(shape[expr]?.data.name || expr)})`);
+        ctx.sql.push(`("${shape[expr]?.data.name || expr}")`);
       } else if (Array.isArray(expr)) {
         ctx.sql.push(
-          `(${expr
-            .map((item) => q(shape[item]?.data.name || item))
-            .join(', ')})`,
+          `(${expr.reduce(
+            (sql, item, i) =>
+              sql + (i ? ', ' : '') + `"${shape[item]?.data.name || item}"`,
+            '',
+          )})`,
         );
       } else {
         ctx.sql.push(getRaw(expr, ctx.values));
@@ -124,7 +134,7 @@ export const pushInsertSql = (
       // TODO: optimize, unique columns could be stored in Query.internal
       // consider saving a cache of columns for this case into Query.internal
 
-      const { indexes } = table.internal;
+      const { indexes } = q.internal;
 
       const quotedUniques = columns.reduce((arr: string[], key, i) => {
         const unique =
@@ -154,22 +164,20 @@ export const pushInsertSql = (
       const { update } = query.onConflict;
       if (update) {
         if (typeof update === 'string') {
-          const name = q(shape[update]?.data.name || update);
-          set = `${name} = excluded.${name}`;
+          const name = shape[update]?.data.name || update;
+          set = `"${name}" = excluded."${name}"`;
         } else if (Array.isArray(update)) {
-          set = update
-            .map((item) => {
-              const name = q(shape[item]?.data.name || item);
-              return `${name} = excluded.${name}`;
-            })
-            .join(', ');
+          set = update.reduce((sql, item, i) => {
+            const name = shape[item]?.data.name || item;
+            return sql + (i ? ', ' : '') + `"${name}" = excluded."${name}"`;
+          }, '');
         } else if (isRaw(update)) {
           set = getRaw(update, ctx.values);
         } else {
           const arr: string[] = [];
           for (const key in update) {
             arr.push(
-              `${q(shape[key]?.data.name || key)} = ${addValue(
+              `"${shape[key]?.data.name || key}" = ${addValue(
                 ctx.values,
                 update[key],
               )}`,
@@ -187,18 +195,28 @@ export const pushInsertSql = (
     }
   }
 
-  pushWhereStatementSql(ctx, table, query, quotedAs);
-  pushReturningSql(ctx, table, query, quotedAs);
+  pushWhereStatementSql(ctx, q, query, quotedAs);
+  pushReturningSql(ctx, q, query, quotedAs);
 };
 
 const encodeRow = (
   ctx: ToSqlCtx,
+  q: Query,
+  QueryClass: Db,
   row: unknown[],
   runtimeDefaults?: (() => unknown)[],
 ) => {
-  const arr = row.map((value) =>
-    value === undefined ? 'DEFAULT' : addValue(ctx.values, value),
-  );
+  const arr = row.map((value) => {
+    if (typeof value === 'function') {
+      value = resolveSubQueryCallback(q, value as (q: Query) => Query);
+    }
+
+    if (value && typeof value === 'object' && value instanceof QueryClass) {
+      return `(${joinSubQuery(q, value as Query).toSql(ctx).text})`;
+    }
+
+    return value === undefined ? 'DEFAULT' : addValue(ctx.values, value);
+  });
 
   if (runtimeDefaults) {
     for (const fn of runtimeDefaults) {

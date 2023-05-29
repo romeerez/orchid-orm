@@ -1,5 +1,5 @@
 import { Query } from '../query';
-import { addValue, q, quoteSchemaAndTable } from './common';
+import { addValue, quoteSchemaAndTable } from './common';
 import { pushReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
 import { ToSqlCtx } from './toSql';
@@ -10,6 +10,8 @@ import {
   UpdateQueryDataObject,
 } from './data';
 import { isRaw, pushOrNewArray } from 'orchid-core';
+import { Db } from '../db';
+import { joinSubQuery, resolveSubQueryCallback } from '../utils';
 
 export const pushUpdateSql = (
   ctx: ToSqlCtx,
@@ -41,29 +43,33 @@ const processData = (
   data: UpdateQueryDataItem[],
 ) => {
   let append: UpdateQueryDataItem[] | undefined;
-  data.forEach((item) => {
+  const QueryClass = ctx.queryBuilder.constructor as Db;
+  const { values } = ctx;
+
+  for (const item of data) {
     if (typeof item === 'function') {
       const result = item(data);
       if (result) append = pushOrNewArray(append, result);
     } else if (isRaw(item)) {
-      set.push(getRaw(item, ctx.values));
+      set.push(getRaw(item, values));
     } else {
       const shape = table.query.shape;
       for (const key in item) {
         const value = item[key];
-        if (value !== undefined) {
-          set.push(
-            `${q(shape[key].data.name || key)} = ${processValue(
-              table,
-              ctx.values,
-              key,
-              value,
-            )}`,
-          );
-        }
+        if (value === undefined) continue;
+
+        set.push(
+          `"${shape[key].data.name || key}" = ${processValue(
+            table,
+            values,
+            QueryClass,
+            key,
+            value,
+          )}`,
+        );
       }
     }
-  });
+  }
 
   if (append) processData(ctx, table, set, append);
 };
@@ -71,14 +77,21 @@ const processData = (
 const processValue = (
   table: Query,
   values: unknown[],
+  QueryClass: Db,
   key: string,
   value: UpdateQueryDataObject[string],
 ) => {
+  if (typeof value === 'function') {
+    value = resolveSubQueryCallback(table, value as (q: Query) => Query);
+  }
+
   if (value && typeof value === 'object') {
     if (isRaw(value)) {
       return getRaw(value, values);
+    } else if (value instanceof QueryClass) {
+      return `(${joinSubQuery(table, value as Query).toSql({ values }).text})`;
     } else if ('op' in value && 'arg' in value) {
-      return `${q(table.query.shape[key].data.name || key)} ${
+      return `"${table.query.shape[key].data.name || key}" ${
         (value as { op: string }).op
       } ${addValue(values, (value as { arg: unknown }).arg)}`;
     }

@@ -32,6 +32,7 @@ import {
 } from 'orchid-core';
 import { QueryBase } from '../queryBase';
 import { _joinLateral } from './_join';
+import { resolveSubQueryCallback } from '../utils';
 
 // .select method argument
 export type SelectArg<T extends QueryBase> =
@@ -314,10 +315,7 @@ export const processSelectArg = <T extends Query>(
     let value = (arg as SelectAsArg<T>)[key] as any;
 
     if (typeof value === 'function') {
-      const { isSubQuery } = q;
-      q.isSubQuery = true;
-      value = value(q);
-      q.isSubQuery = isSubQuery;
+      value = resolveSubQueryCallback(q, value);
 
       if (!isRaw(value) && value.joinQuery) {
         value = value.joinQuery(q, value);

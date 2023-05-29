@@ -23,6 +23,51 @@ export type UpsertThis = WhereResult<Query> & {
 };
 
 export class QueryUpsertOrCreate {
+  /**
+   * `.upsert` tries to update one record, and it will perform create in case a record was not found.
+   *
+   * It will implicitly wrap queries in a transaction if it was not wrapped yet.
+   *
+   * `.find` or `.findBy` must precede `.upsert` because it does not work with multiple updates.
+   *
+   * In case more than one row was updated, it will throw `MoreThanOneRowError` and the transaction will be rolled back.
+   *
+   * `update` and `create` properties are accepting the same type of objects as the `update` and `create` commands.
+   *
+   * Not returning a value by default, place `.select` or `.selectAll` before `.upsert` to specify returning columns.
+   *
+   * ```ts
+   * const user = await User.selectAll()
+   *   .find({ email: 'some@email.com' })
+   *   .upsert({
+   *     update: {
+   *       name: 'updated user',
+   *     },
+   *     create: {
+   *       email: 'some@email.com',
+   *       name: 'created user',
+   *     },
+   *   });
+   * ```
+   *
+   * The data for `create` may be returned from a function, it won't be called if a record was updated:
+   *
+   * ```ts
+   * const user = await User.selectAll()
+   *   .find({ email: 'some@email.com' })
+   *   .upsert({
+   *     update: {
+   *       name: 'updated user',
+   *     },
+   *     create: () => ({
+   *       email: 'some@email.com',
+   *       name: 'created user',
+   *     }),
+   *   });
+   * ```
+   *
+   * @param data - `update` property for the data to update, `create` property for the data to create
+   */
   upsert<T extends UpsertThis>(this: T, data: UpsertData<T>): UpsertResult<T> {
     return this.clone()._upsert(data);
   }
@@ -34,6 +79,37 @@ export class QueryUpsertOrCreate {
     return this._orCreate(data.create);
   }
 
+  /**
+   * `.orCreate` creates a record only if it was not found by conditions.
+   *
+   * It will implicitly wrap queries in a transaction if it was not wrapped yet.
+   *
+   * `.find` or `.findBy` must precede `.orCreate`.
+   *
+   * It is accepting the same argument as `create` commands.
+   *
+   * By default, it is not returning columns, place `.get`, `.select`, or `.selectAll` before `.orCreate` to specify returning columns.
+   *
+   * ```ts
+   * const user = await User.selectAll().find({ email: 'some@email.com' }).orCreate({
+   *   email: 'some@email.com',
+   *   name: 'created user',
+   * });
+   * ```
+   *
+   * The data may be returned from a function, it won't be called if the record was found:
+   *
+   * ```ts
+   * const user = await User.selectAll()
+   *   .find({ email: 'some@email.com' })
+   *   .orCreate(() => ({
+   *     email: 'some@email.com',
+   *     name: 'created user',
+   *   }));
+   * ```
+   *
+   * @param data - the same data as for `create`, it may be returned from a callback
+   */
   orCreate<T extends UpsertThis>(
     this: T,
     data: UpsertCreateArg<T>,

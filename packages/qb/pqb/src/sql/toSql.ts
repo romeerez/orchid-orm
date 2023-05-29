@@ -15,15 +15,14 @@ import { pushDeleteSql } from './delete';
 import { pushTruncateSql } from './truncate';
 import { pushColumnInfoSql } from './columnInfo';
 import { pushOrderBySql } from './orderBy';
-import { OnQueryBuilder, WhereQueryBuilder } from '../queryMethods';
 import { getRaw } from './rawSql';
 import { QueryData } from './data';
 import { pushCopySql } from './copy';
 import { isRaw, Sql } from 'orchid-core';
+import { Db } from '../db';
 
 export type ToSqlCtx = {
-  whereQueryBuilder: typeof WhereQueryBuilder;
-  onQueryBuilder: typeof OnQueryBuilder;
+  queryBuilder: Db;
   sql: string[];
   values: unknown[];
   // selected value in JOIN LATERAL will have an alias to reference it from SELECT
@@ -54,8 +53,7 @@ export const makeSql = (table: Query, options?: ToSqlOptionsInternal): Sql => {
   const sql: string[] = [];
   const values = options?.values || [];
   const ctx: ToSqlCtx = {
-    whereQueryBuilder: table.whereQueryBuilder,
-    onQueryBuilder: table.onQueryBuilder,
+    queryBuilder: table.queryBuilder,
     sql,
     values,
     aliasValue: options?.aliasValue,

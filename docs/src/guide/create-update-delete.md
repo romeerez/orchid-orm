@@ -29,18 +29,38 @@ const objects2: { id: number }[] = await db.table.select('id').createRaw({
 
 ## create
 
+[//]: # 'has JSDoc'
+
 `create` will create one record.
+
+Each column may accept a specific value, a raw SQL, or a query that returns a single value.
 
 ```ts
 const oneRecord = await db.table.create({
   name: 'John',
   password: '1234',
 });
+
+await db.table.create({
+  // raw SQL
+  column1: db.table.sql`'John' | 'Doe'`,
+
+  // query that returns a single value
+  // returning multiple values will result in Postgres error
+  column2: db.otherTable.get('someColumn').take(),
+
+  // select a single value from a related record
+  column3: (q) => q.relatedTable.get('someColumn'),
+});
 ```
 
 ## createMany
 
+[//]: # 'has JSDoc'
+
 `createMany` will create a batch of records.
+
+Each column may be set with a specific value, a raw SQL, or a query, the same as in [create](#create).
 
 In case one of the objects has fewer fields, the `DEFAULT` SQL keyword will be placed in its place in the `VALUES` statement.
 
@@ -52,6 +72,8 @@ const manyRecords = await db.table.createMany([
 ```
 
 ## createRaw
+
+[//]: # 'has JSDoc'
 
 `createRaw` is for creating one record with a raw expression.
 
@@ -70,6 +92,8 @@ const oneRecord = await db.table.createRaw({
 
 ## createManyRaw
 
+[//]: # 'has JSDoc'
+
 `createRaw` is for creating many record with raw expressions.
 
 Takes array of SQL expressions, each of them will be wrapped into parens for `VALUES` records.
@@ -87,6 +111,8 @@ const manyRecords = await db.table.createManyRaw({
 
 ## createFrom
 
+[//]: # 'has JSDoc'
+
 This method is for creating a single record, for batch creating see `createManyFrom`.
 
 `createFrom` is to perform the `INSERT ... SELECT ...` SQL statement, it does select and insert in a single query.
@@ -94,6 +120,8 @@ This method is for creating a single record, for batch creating see `createManyF
 The first argument is a query for a **single** record, it should have `find`, `take`, or similar.
 
 The second optional argument is a data which will be merged with columns returned from the select query.
+
+The data for the second argument is the same as in [create](#create) and [createMany](#createMany).
 
 Columns with runtime defaults (defined with a callback) are supported here.
 The value for such a column will be injected unless selected from a related table or provided in a data object.
@@ -122,6 +150,8 @@ RETURNING *
 
 ## createManyFrom
 
+[//]: # 'has JSDoc'
+
 Similar to `createFrom`, but intended to create many records.
 
 Unlike `createFrom`, it doesn't accept second argument with data, and runtime defaults cannot work with it.
@@ -133,6 +163,8 @@ const manyRecords = await db.table.createManyFrom(
 ```
 
 ## orCreate
+
+[//]: # 'has JSDoc'
 
 `.orCreate` creates a record only if it was not found by conditions.
 
@@ -163,6 +195,8 @@ const user = await User.selectAll()
 ```
 
 ## onConflict
+
+[//]: # 'has JSDoc'
 
 A modifier for creating queries that specify alternative behavior in the case of a conflict.
 A conflict occurs when a table has a `PRIMARY KEY` or a `UNIQUE` index on a column
@@ -211,6 +245,8 @@ See the documentation on the .ignore() and .merge() methods for more details.
 
 ## ignore
 
+[//]: # 'has JSDoc'
+
 Available only after `.onConflict`.
 
 Modifies a create query, and causes it to be silently dropped without an error if a conflict occurs.
@@ -230,6 +266,8 @@ db.table
 ```
 
 ## merge
+
+[//]: # 'has JSDoc'
 
 Available only after `.onConflict`.
 
@@ -334,9 +372,14 @@ db.table
 
 ## defaults
 
+[//]: # 'has JSDoc'
+
 `.defaults` allows setting values that will be used later in `.create`.
 
-Columns provided in `.defaults` are marked as optional in the following `.create`.
+Columns provided in `.defaults` are marked as optional in the following `.create`. `defaults`
+
+Default data is the same as in [create](#create) and [createMany](#createMany),
+so you can provide a raw SQL, or a query.
 
 ```ts
 // Will use firstName from defaults and lastName from create argument:
@@ -351,6 +394,8 @@ db.table
 ```
 
 ## update
+
+[//]: # 'has JSDoc'
 
 `.update` takes an object with columns and values to update records.
 
@@ -371,25 +416,46 @@ If `.select` and `.where` were specified before the update it will return an arr
 
 If `.select` and `.take`, `.find`, or similar were specified before the update it will return one updated record.
 
+For a column value you can provide a specific value, raw SQL, a query object that returns a single value, or a callback with a sub-query.
+
 ```ts
+// returns number of updated records by default
 const updatedCount = await db.table
   .where({ name: 'old name' })
   .update({ name: 'new name' });
 
+// returning only `id`
 const id = await db.table.find(1).get('id').update({ name: 'new name' });
 
+// `selectAll` + `find` will return a full record
 const oneFullRecord = await db.table
   .selectAll()
   .find(1)
   .update({ name: 'new name' });
 
+// `selectAll` + `where` will return array of full records
 const recordsArray = await db.table
   .select('id', 'name')
   .where({ id: 1 })
   .update({ name: 'new name' });
+
+await db.table.where({ ...conditions }).update({
+  // set the column to a specific value
+  column1: 123,
+
+  // use raw SQL to update the column
+  column2: db.table.sql`2 + 2`,
+
+  // use query that returns a single value
+  // returning multiple values will result in PostgreSQL error
+  column3: db.otherTable.get('someColumn').take(),
+
+  // select a single value from a related record
+  column4: (q) => q.relatedTable.get('someColumn'),
+});
 ```
 
-`null` value will set a column to `NULL`, and the `undefined` value will be skipped:
+`null` value will set a column to `NULL`, but the `undefined` value will be ignored:
 
 ```ts
 db.table.findBy({ id: 1 }).update({
@@ -400,6 +466,8 @@ db.table.findBy({ id: 1 }).update({
 
 ## updateRaw
 
+[//]: # 'has JSDoc'
+
 `updateRaw` is for updating records with raw expression.
 
 The behavior is the same as a regular `update` method has:
@@ -409,12 +477,17 @@ you can customize returning data by using `select`.
 
 ```ts
 const value = 'new name';
-const updatedCount = await db.table
-  .find(1)
-  .updateRaw(db.table.sql`name = ${value}`);
+
+// update with SQL template string
+const updatedCount = await db.table.find(1).updateRaw`name = ${value}`;
+
+// or update with `sql` function:
+await db.table.find(1).updateRaw(db.table.sql`name = ${value}`);
 ```
 
 ## updateOrThrow
+
+[//]: # 'has JSDoc'
 
 To make sure that at least one row was updated use `updateOrThrow`:
 
@@ -440,6 +513,8 @@ try {
 ```
 
 ## upsert
+
+[//]: # 'has JSDoc'
 
 `.upsert` tries to update one record, and it will perform create in case a record was not found.
 
@@ -485,6 +560,8 @@ const user = await User.selectAll()
 
 ## increment
 
+[//]: # 'has JSDoc'
+
 Increments a column value by the specified amount. Optionally takes `returning` argument.
 
 ```ts
@@ -505,6 +582,8 @@ const result2 = await db.table
 ```
 
 ## decrement
+
+[//]: # 'has JSDoc'
 
 Decrements a column value by the specified amount. Optionally takes `returning` argument.
 
@@ -527,11 +606,13 @@ const result2 = await db.table
 
 ## del / delete
 
-Aliased to `del` as `delete` is a reserved word in JavaScript,
-this method deletes one or more rows,
-based on other conditions specified in the query.
+[//]: # 'has JSDoc'
 
-By default `.delete` will return a count of deleted records.
+It is aliased to `del` because `delete` is a reserved word in JavaScript.
+
+This method deletes one or more rows, based on other conditions specified in the query.
+
+By default, `.delete` will return a count of deleted records.
 
 Place `.select`, `.selectAll`, or `.get` before `.delete` to specify returning columns.
 

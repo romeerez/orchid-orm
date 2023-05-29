@@ -59,6 +59,18 @@ describe('update', () => {
     expect(result).toBe(count);
   });
 
+  it('should accept template string for `updateRaw`', () => {
+    const q = User.where().updateRaw`name = ${'name'}`;
+    expectSql(
+      q.toSql(),
+      `
+        UPDATE "user"
+        SET name = $1, "updatedAt" = now()
+      `,
+      ['name'],
+    );
+  });
+
   it('should update record, returning updated row count', async () => {
     const { id } = await User.select('id').create(userData);
 
@@ -442,13 +454,43 @@ describe('update', () => {
   });
 
   it('should throw when searching for one to update and it is not found', async () => {
-    const query = User.selectAll()
-      .findBy({ id: 1 })
-      .update({ name: 'new name' });
+    const q = User.selectAll().findBy({ id: 1 }).update({ name: 'new name' });
 
-    assertType<Awaited<typeof query>, typeof User.type>();
+    assertType<Awaited<typeof q>, typeof User.type>();
 
-    await expect(query).rejects.toThrow();
+    await expect(q).rejects.toThrow();
+  });
+
+  it('should update column with a sub query result', () => {
+    const q = User.where().update({
+      name: User.get('name'),
+    });
+
+    expectSql(
+      q.toSql(),
+      `
+        UPDATE "user"
+        SET
+          "name" = (SELECT "user"."name" FROM "user"),
+          "updatedAt" = now()
+      `,
+    );
+  });
+
+  it('should update column with a sub query callback', async () => {
+    const q = User.where().update({
+      name: (q) => (q.baseQuery as typeof q).get('name'),
+    });
+
+    expectSql(
+      q.toSql(),
+      `
+        UPDATE "user"
+        SET
+          "name" = (SELECT "user"."name" FROM "user"),
+          "updatedAt" = now()
+      `,
+    );
   });
 
   describe('updateOrThrow', () => {

@@ -393,6 +393,26 @@ describe('hasOne', () => {
           ['bio'],
         );
       });
+
+      it('should be selectable for update', () => {
+        const q = db.profile.where().update({
+          Bio: (q) => q.user.get('Name'),
+        });
+
+        expectSql(
+          q.toSql(),
+          `
+            UPDATE "profile"
+            SET
+              "bio" = (
+                SELECT "user"."name" AS "Name"
+                FROM "user"
+                WHERE "user"."id" = "profile"."userId"
+              ),
+              "updatedAt" = now()
+          `,
+        );
+      });
     });
 
     describe('create', () => {

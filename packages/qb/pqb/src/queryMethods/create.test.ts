@@ -340,6 +340,23 @@ describe('create functions', () => {
         ['password', 'runtime text'],
       );
     });
+
+    it('should create record with a sub query result for the column value', () => {
+      const q = User.create({
+        name: User.get('name'),
+        password: 'password',
+      });
+
+      expectSql(
+        q.toSql(),
+        `
+          INSERT INTO "user"("name", "password")
+          VALUES ((SELECT "user"."name" FROM "user"), $1)
+          RETURNING *
+        `,
+        ['password'],
+      );
+    });
   });
 
   describe('createMany', () => {
@@ -499,6 +516,25 @@ describe('create functions', () => {
           RETURNING *
         `,
         ['name', 'password', 'name', 'password'],
+      );
+    });
+
+    it('should create records with a sub query result for the column value', () => {
+      const q = User.createMany([
+        {
+          name: User.get('name'),
+          password: 'password',
+        },
+      ]);
+
+      expectSql(
+        q.toSql(),
+        `
+          INSERT INTO "user"("name", "password")
+          VALUES ((SELECT "user"."name" FROM "user"), $1)
+          RETURNING *
+        `,
+        ['password'],
       );
     });
   });

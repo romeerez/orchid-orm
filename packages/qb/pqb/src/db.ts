@@ -122,9 +122,6 @@ export class Db<
   CT extends ColumnTypesBase = DefaultColumnTypes,
 > implements Query
 {
-  whereQueryBuilder = WhereQueryBuilder;
-  onQueryBuilder = OnQueryBuilder;
-
   constructor(
     public adapter: Adapter,
     public queryBuilder: Db,
@@ -263,6 +260,8 @@ export class Db<
 
 applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
+Db.prototype.whereQueryBuilder = WhereQueryBuilder;
+Db.prototype.onQueryBuilder = OnQueryBuilder;
 
 export type DbResult<CT extends ColumnTypesBase> = Db<
   string,

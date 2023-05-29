@@ -88,7 +88,7 @@ const processWhere = (
   const prefix = not ? 'NOT ' : '';
 
   if (typeof data === 'function') {
-    const qb = data(new ctx.whereQueryBuilder(table, query));
+    const qb = data(new ctx.queryBuilder.whereQueryBuilder(table, query));
     pushWhereToSql(ands, ctx, qb, qb.query, quotedAs, not);
     return;
   }
@@ -188,13 +188,11 @@ const processWhere = (
         pushIn(query, ands, prefix, quotedAs, ctx.values, item);
       });
     } else if (key === 'EXISTS') {
-      const joinItems = Array.isArray((value as unknown[])[0])
-        ? value
-        : [value];
+      const joinItems = (
+        Array.isArray((value as unknown[])[0]) ? value : [value]
+      ) as { args: SimpleJoinItem['args']; isSubQuery: boolean }[];
 
-      (
-        joinItems as { args: SimpleJoinItem['args']; isSubQuery: boolean }[]
-      ).forEach((args) => {
+      for (const args of joinItems) {
         const { target, conditions } = processJoinItem(
           ctx,
           table,
@@ -206,7 +204,7 @@ const processWhere = (
         ands.push(
           `${prefix}EXISTS (SELECT 1 FROM ${target} WHERE ${conditions} LIMIT 1)`,
         );
-      });
+      }
     } else if (
       typeof value === 'object' &&
       value &&
