@@ -1,5 +1,11 @@
 # pqb
 
+## 0.11.34
+
+### Patch Changes
+
+- d8bc7cf: Support sub-queries for updating and deleting records (#105)'
+
 ## 0.11.33
 
 ### Patch Changes

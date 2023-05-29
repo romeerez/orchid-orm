@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.9.42
+
+### Patch Changes
+
+- d8bc7cf: Support sub-queries for updating and deleting records (#105)'
+- Updated dependencies [d8bc7cf]
+  - pqb@0.11.34
+
 ## 1.9.41
 
 ### Patch Changes
