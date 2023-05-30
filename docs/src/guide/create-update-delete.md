@@ -47,7 +47,7 @@ await db.table.create({
 
   // query that returns a single value
   // returning multiple values will result in Postgres error
-  column2: db.otherTable.get('someColumn').take(),
+  column2: db.otherTable.get('someColumn'),
 });
 ```
 
@@ -444,8 +444,8 @@ await db.table.where({ ...conditions }).update({
   column2: db.table.sql`2 + 2`,
 
   // use query that returns a single value
-  // returning multiple values will result in PostgreSQL error
-  column3: db.otherTable.get('someColumn').take(),
+  // returning multiple values will result in Postgres error
+  column3: db.otherTable.get('someColumn'),
 
   // select a single value from a related record
   column4: (q) => q.relatedTable.get('someColumn'),

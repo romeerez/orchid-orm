@@ -471,7 +471,7 @@ describe('update', () => {
       `
         UPDATE "user"
         SET
-          "name" = (SELECT "user"."name" FROM "user"),
+          "name" = (SELECT "user"."name" FROM "user" LIMIT 1),
           "updatedAt" = now()
       `,
     );
@@ -487,7 +487,7 @@ describe('update', () => {
       `
         UPDATE "user"
         SET
-          "name" = (SELECT "user"."name" FROM "user"),
+          "name" = (SELECT "user"."name" FROM "user" LIMIT 1),
           "updatedAt" = now()
       `,
     );

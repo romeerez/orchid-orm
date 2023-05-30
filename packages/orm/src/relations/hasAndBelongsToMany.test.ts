@@ -418,6 +418,7 @@ describe('hasAndBelongsToMany', () => {
                 AND "chatUser"."userId" = "u"."id"
               LIMIT 1
             )
+            LIMIT 1
           ) "hasChats" ON true
         `,
       );
@@ -781,9 +782,9 @@ describe('hasAndBelongsToMany', () => {
             SELECT "chats"."idOfChat" AS "IdOfChat"
             FROM "chat" AS "chats"
             WHERE "chats"."title" = $1
-            LIMIT $2
+            LIMIT 1
           `,
-            [`chat ${i + 1}`, 1],
+            [`chat ${i + 1}`],
           );
         });
 
@@ -866,9 +867,9 @@ describe('hasAndBelongsToMany', () => {
             SELECT "chats"."idOfChat" AS "IdOfChat"
             FROM "chat" AS "chats"
             WHERE "chats"."title" = $1
-            LIMIT $2
+            LIMIT 1
           `,
-            [`chat ${i + 1}`, 1],
+            [`chat ${i + 1}`],
           );
         });
 

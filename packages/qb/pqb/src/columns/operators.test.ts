@@ -24,9 +24,8 @@ describe('operators', () => {
         User.where({ name: { equals: User.select('name').take() } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" = (SELECT "user"."name" FROM "user" LIMIT $1)
+          WHERE "user"."name" = (SELECT "user"."name" FROM "user" LIMIT 1)
         `,
-        [1],
       );
     });
 
@@ -58,9 +57,8 @@ describe('operators', () => {
         User.where({ name: { not: User.select('name').take() } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" <> (SELECT "user"."name" FROM "user" LIMIT $1)
+          WHERE "user"."name" <> (SELECT "user"."name" FROM "user" LIMIT 1)
         `,
-        [1],
       );
     });
 
@@ -158,9 +156,8 @@ describe('operators', () => {
         User.where({ id: { lt: User.select('id').take() } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."id" < (SELECT "user"."id" FROM "user" LIMIT $1)
+          WHERE "user"."id" < (SELECT "user"."id" FROM "user" LIMIT 1)
         `,
-        [1],
       );
     });
 
@@ -192,9 +189,8 @@ describe('operators', () => {
         User.where({ id: { lte: User.select('id').take() } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."id" <= (SELECT "user"."id" FROM "user" LIMIT $1)
+          WHERE "user"."id" <= (SELECT "user"."id" FROM "user" LIMIT 1)
         `,
-        [1],
       );
     });
 
@@ -226,9 +222,8 @@ describe('operators', () => {
         User.where({ id: { gt: User.select('id').take() } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."id" > (SELECT "user"."id" FROM "user" LIMIT $1)
+          WHERE "user"."id" > (SELECT "user"."id" FROM "user" LIMIT 1)
         `,
-        [1],
       );
     });
 
@@ -260,9 +255,8 @@ describe('operators', () => {
         User.where({ id: { gte: User.select('id').take() } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."id" >= (SELECT "user"."id" FROM "user" LIMIT $1)
+          WHERE "user"."id" >= (SELECT "user"."id" FROM "user" LIMIT 1)
         `,
-        [1],
       );
     });
 
@@ -294,9 +288,8 @@ describe('operators', () => {
         User.where({ name: { contains: User.select('name').take() } }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" ILIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
+          WHERE "user"."name" ILIKE '%' || (SELECT "user"."name" FROM "user" LIMIT 1) || '%'
         `,
-        [1],
       );
     });
 
@@ -330,9 +323,8 @@ describe('operators', () => {
         }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" LIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
+          WHERE "user"."name" LIKE '%' || (SELECT "user"."name" FROM "user" LIMIT 1) || '%'
         `,
-        [1],
       );
     });
 
@@ -366,9 +358,8 @@ describe('operators', () => {
         }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" ILIKE (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
+          WHERE "user"."name" ILIKE (SELECT "user"."name" FROM "user" LIMIT 1) || '%'
         `,
-        [1],
       );
     });
 
@@ -402,9 +393,8 @@ describe('operators', () => {
         }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" LIKE (SELECT "user"."name" FROM "user" LIMIT $1) || '%'
+          WHERE "user"."name" LIKE (SELECT "user"."name" FROM "user" LIMIT 1) || '%'
         `,
-        [1],
       );
     });
 
@@ -440,9 +430,8 @@ describe('operators', () => {
         }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" ILIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1)
+          WHERE "user"."name" ILIKE '%' || (SELECT "user"."name" FROM "user" LIMIT 1)
         `,
-        [1],
       );
     });
 
@@ -476,9 +465,8 @@ describe('operators', () => {
         }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."name" LIKE '%' || (SELECT "user"."name" FROM "user" LIMIT $1)
+          WHERE "user"."name" LIKE '%' || (SELECT "user"."name" FROM "user" LIMIT 1)
         `,
-        [1],
       );
     });
 
@@ -513,10 +501,9 @@ describe('operators', () => {
         `
           SELECT * FROM "user"
           WHERE "user"."id"
-          BETWEEN (SELECT "user"."id" FROM "user" LIMIT $1)
-              AND (SELECT "user"."id" FROM "user" LIMIT $2)
+          BETWEEN (SELECT "user"."id" FROM "user" LIMIT 1)
+              AND (SELECT "user"."id" FROM "user" LIMIT 1)
         `,
-        [1, 1],
       );
     });
 
@@ -553,10 +540,9 @@ describe('operators', () => {
         `
           SELECT * FROM "user"
           WHERE jsonb_path_query_first("user"."data", '$.name') #>> '{}' = (
-            SELECT "user"."name" FROM "user" LIMIT $1
+            SELECT "user"."name" FROM "user" LIMIT 1
           )
         `,
-        [1],
       );
     });
 
@@ -596,9 +582,8 @@ describe('operators', () => {
         }).toSql(),
         `
           SELECT * FROM "user"
-          WHERE "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT $1)
+          WHERE "user"."data" ${sql} (SELECT "user"."data" FROM "user" LIMIT 1)
         `,
-        [1],
       );
     });
 

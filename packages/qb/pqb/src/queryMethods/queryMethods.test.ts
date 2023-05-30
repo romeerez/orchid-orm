@@ -53,7 +53,7 @@ describe('queryMethods', () => {
 
       const q = User.all();
 
-      expectSql(q.take().toSql(), `SELECT * FROM "user" LIMIT $1`, [1]);
+      expectSql(q.take().toSql(), `SELECT * FROM "user" LIMIT 1`);
       expectQueryNotMutated(q);
 
       const expected = await testAdapter
@@ -81,7 +81,7 @@ describe('queryMethods', () => {
 
       const q = User.all();
 
-      expectSql(q.takeOptional().toSql(), `SELECT * FROM "user" LIMIT $1`, [1]);
+      expectSql(q.takeOptional().toSql(), `SELECT * FROM "user" LIMIT 1`);
       expectQueryNotMutated(q);
 
       const expected = await testAdapter
@@ -278,9 +278,9 @@ describe('queryMethods', () => {
         `
             SELECT * FROM "user"
             WHERE "user"."id" = $1
-            LIMIT $2
+            LIMIT 1
         `,
-        [1, 1],
+        [1],
       );
       expectQueryNotMutated(q);
     });
@@ -293,9 +293,9 @@ describe('queryMethods', () => {
         `
           SELECT ${snakeSelectAll} FROM "snake"
           WHERE "snake"."snake_id" = $1
-          LIMIT $2
+          LIMIT 1
         `,
-        [1, 1],
+        [1],
       );
     });
 
@@ -310,9 +310,9 @@ describe('queryMethods', () => {
         `
           SELECT * FROM "user"
           WHERE "user"."id" = $1 + $2
-          LIMIT $3
+          LIMIT 1
         `,
-        [1, 2, 1],
+        [1, 2],
       );
       expectQueryNotMutated(q);
     });
@@ -328,9 +328,9 @@ describe('queryMethods', () => {
         `
           SELECT * FROM "user"
           WHERE "user"."id" = $1 + $2
-          LIMIT $3
+          LIMIT 1
         `,
-        [1, 2, 1],
+        [1, 2],
       );
       expectQueryNotMutated(q);
     });
@@ -354,9 +354,9 @@ describe('queryMethods', () => {
         `
             SELECT * FROM "user"
             WHERE "user"."id" = $1
-            LIMIT $2
+            LIMIT 1
         `,
-        [1, 1],
+        [1],
       );
       expectQueryNotMutated(q);
     });
@@ -369,9 +369,9 @@ describe('queryMethods', () => {
         `
           SELECT ${snakeSelectAll} FROM "snake"
           WHERE "snake"."snake_id" = $1
-          LIMIT $2
+          LIMIT 1
         `,
-        [1, 1],
+        [1],
       );
     });
 
@@ -388,9 +388,9 @@ describe('queryMethods', () => {
         `
           SELECT * FROM "user"
           WHERE "user"."id" = $1 + $2
-          LIMIT $3
+          LIMIT 1
         `,
-        [1, 2, 1],
+        [1, 2],
       );
       expectQueryNotMutated(q);
     });
@@ -406,9 +406,9 @@ describe('queryMethods', () => {
         `
           SELECT * FROM "user"
           WHERE "user"."id" = $1 + $2
-          LIMIT $3
+          LIMIT 1
         `,
-        [1, 2, 1],
+        [1, 2],
       );
       expectQueryNotMutated(q);
     });
@@ -419,8 +419,8 @@ describe('queryMethods', () => {
       const q = User.all();
       expectSql(
         q.findBy({ name: 's' }).toSql(),
-        `SELECT * FROM "user" WHERE "user"."name" = $1 LIMIT $2`,
-        ['s', 1],
+        `SELECT * FROM "user" WHERE "user"."name" = $1 LIMIT 1`,
+        ['s'],
       );
       expectQueryNotMutated(q);
     });
@@ -429,8 +429,7 @@ describe('queryMethods', () => {
       const q = User.all();
       expectSql(
         q.findBy({ name: testDb.sql`'string'` }).toSql(),
-        `SELECT * FROM "user" WHERE "user"."name" = 'string' LIMIT $1`,
-        [1],
+        `SELECT * FROM "user" WHERE "user"."name" = 'string' LIMIT 1`,
       );
       expectQueryNotMutated(q);
     });
@@ -445,8 +444,8 @@ describe('queryMethods', () => {
 
       expectSql(
         query.toSql(),
-        `SELECT * FROM "user" WHERE "user"."name" = $1 LIMIT $2`,
-        ['s', 1],
+        `SELECT * FROM "user" WHERE "user"."name" = $1 LIMIT 1`,
+        ['s'],
       );
       expectQueryNotMutated(q);
     });
@@ -459,8 +458,7 @@ describe('queryMethods', () => {
 
       expectSql(
         query.toSql(),
-        `SELECT * FROM "user" WHERE "user"."name" = 'string' LIMIT $1`,
-        [1],
+        `SELECT * FROM "user" WHERE "user"."name" = 'string' LIMIT 1`,
       );
       expectQueryNotMutated(q);
     });
@@ -827,7 +825,7 @@ describe('queryMethods', () => {
 
       expect(await query).toBe(true);
 
-      expectSql(query.toSql(), 'SELECT true FROM "user"');
+      expectSql(query.toSql(), 'SELECT true FROM "user" LIMIT 1');
 
       expectQueryNotMutated(q);
     });

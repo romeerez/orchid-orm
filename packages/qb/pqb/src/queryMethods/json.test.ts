@@ -36,10 +36,10 @@ describe('json methods', () => {
           FROM (
             SELECT * FROM "user"
             WHERE "user"."id" = $1
-            LIMIT $2
+            LIMIT 1
           ) AS "t"
         `,
-        [1, 1],
+        [1],
       );
       expectQueryNotMutated(q);
     });

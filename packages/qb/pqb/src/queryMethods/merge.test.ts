@@ -44,7 +44,7 @@ describe('merge queries', () => {
 
       assertType<typeof q.returnType, 'oneOrThrow'>();
 
-      expectSql(q.toSql(), `SELECT * FROM "user" LIMIT $1`, [1]);
+      expectSql(q.toSql(), `SELECT * FROM "user" LIMIT 1`);
     });
 
     it('should prefer right return type', () => {

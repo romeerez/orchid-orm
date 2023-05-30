@@ -1,11 +1,11 @@
 import {
   Query,
   SetQueryReturnsAll,
+  SetQueryReturnsColumn,
   SetQueryReturnsOne,
   SetQueryReturnsOneOptional,
   SetQueryReturnsPluck,
   SetQueryReturnsRows,
-  SetQueryReturnsValue,
   SetQueryReturnsVoid,
   SetQueryTableAlias,
 } from '../query';
@@ -148,49 +148,96 @@ export class QueryMethods {
   windows!: EmptyObject;
   baseQuery!: Query;
 
+  /**
+   * `.all` is a default behavior, that returns an array of objects:
+   *
+   * ```ts
+   * const records = db.table
+   *   .take() // .take() will be overridden by .all()
+   *   .all();
+   * ```
+   */
   all<T extends Query>(this: T): SetQueryReturnsAll<T> {
     return this.clone()._all();
   }
-
   _all<T extends Query>(this: T): SetQueryReturnsAll<T> {
     this.query.returnType = 'all';
     return this as unknown as SetQueryReturnsAll<T>;
   }
 
+  /**
+   * Takes a single record, adds `LIMIT 1`.
+   * Throws when not found.
+   *
+   * ```ts
+   * const result: TableType = await db.table.where({ key: 'value' }).take();
+   * ```
+   */
   take<T extends Query>(this: T): SetQueryReturnsOne<T> {
     return this.clone()._take();
   }
-
   _take<T extends Query>(this: T): SetQueryReturnsOne<T> {
     this.query.returnType = 'oneOrThrow';
     return this as unknown as SetQueryReturnsOne<T>;
   }
 
+  /**
+   * Takes a single record, adds `LIMIT 1`.
+   * Returns `undefined` when not found.
+   *
+   * ```ts
+   * const result: TableType | undefined = await db.table
+   *   .where({ key: 'value' })
+   *   .takeOptional();
+   * ```
+   */
   takeOptional<T extends Query>(this: T): SetQueryReturnsOneOptional<T> {
     return this.clone()._takeOptional();
   }
-
   _takeOptional<T extends Query>(this: T): SetQueryReturnsOneOptional<T> {
     this.query.returnType = 'one';
     return this as unknown as SetQueryReturnsOneOptional<T>;
   }
 
+  /**
+   * `.rows` returns an array of arrays without field names:
+   *
+   * ```ts
+   * const rows: Array<Array<number | string>> = await db.table
+   *   .select('id', 'name')
+   *   .rows();
+   *
+   * rows.forEach((row) => {
+   *   // row is array of column values
+   *   row.forEach((value) => {
+   *     // value is an id or a name
+   *   });
+   * });
+   * ```
+   */
   rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
     return this.clone()._rows();
   }
-
   _rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
     this.query.returnType = 'rows';
     return this as unknown as SetQueryReturnsRows<T>;
   }
 
+  /**
+   * `.pluck` returns a single array of a single selected column values:
+   *
+   * ```ts
+   * const ids = await db.table.select('id').pluck();
+   * // ids are an array of all users' id like [1, 2, 3]
+   * ```
+   * @param select - column name or a raw SQL
+   */
   pluck<T extends Query, S extends Expression<T>>(
     this: T,
     select: S,
   ): SetQueryReturnsPluck<T, S> {
     return this.clone()._pluck(select);
   }
-
   _pluck<T extends Query, S extends Expression<T>>(
     this: T,
     select: S,
@@ -201,10 +248,16 @@ export class QueryMethods {
     return this as unknown as SetQueryReturnsPluck<T, S>;
   }
 
+  /**
+   * `.exec` won't parse the response at all, and returns undefined:
+   *
+   * ```ts
+   * const nothing = await db.table.take().exec();
+   * ```
+   */
   exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {
     return this.clone()._exec();
   }
-
   _exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {
     this.query.returnType = 'void';
     return this as unknown as SetQueryReturnsVoid<T>;
@@ -217,18 +270,26 @@ export class QueryMethods {
   distinct<T extends Query>(this: T, ...columns: Expression<T>[]): T {
     return this.clone()._distinct(...columns);
   }
-
   _distinct<T extends Query>(this: T, ...columns: Expression<T>[]): T {
     return pushQueryArray(this, 'distinct', columns as string[]);
   }
 
+  /**
+   * Find a single record by the primary key (id), adds `LIMIT 1`.
+   * Throws when not found.
+   *
+   * ```ts
+   * const result: TableType = await db.table.find(123);
+   * ```
+   *
+   * @param args - primary key value to find by
+   */
   find<T extends Query>(
     this: T,
     ...args: FindArgs<T>
   ): SetQueryReturnsOne<WhereResult<T>> {
     return this.clone()._find(...args);
   }
-
   _find<T extends Query>(
     this: T,
     ...args: FindArgs<T>
@@ -250,13 +311,22 @@ export class QueryMethods {
     } as WhereArg<T>)._take();
   }
 
+  /**
+   * Find a single record by the primary key (id), adds `LIMIT 1`.
+   * Returns `undefined` when not found.
+   *
+   * ```ts
+   * const result: TableType | undefined = await db.table.find(123);
+   * ```
+   *
+   * @param args - primary key value to find by
+   */
   findOptional<T extends Query>(
     this: T,
     ...args: FindArgs<T>
   ): SetQueryReturnsOneOptional<WhereResult<T>> {
     return this.clone()._findOptional(...args);
   }
-
   _findOptional<T extends Query>(
     this: T,
     ...args: FindArgs<T>
@@ -266,13 +336,24 @@ export class QueryMethods {
     ).takeOptional() as unknown as SetQueryReturnsOneOptional<WhereResult<T>>;
   }
 
+  /**
+   * The same as `where(conditions).take()`, it will filter records and add a `LIMIT 1`.
+   * Throws when not found.
+   *
+   * ```ts
+   * const result: TableType = await db.table.findBy({
+   *   key: 'value',
+   * });
+   * ```
+   *
+   * @param args - `where` conditions
+   */
   findBy<T extends Query>(
     this: T,
     ...args: WhereArg<T>[]
   ): SetQueryReturnsOne<WhereResult<T>> {
     return this.clone()._findBy(...args);
   }
-
   _findBy<T extends Query>(
     this: T,
     ...args: WhereArg<T>[]
@@ -280,13 +361,24 @@ export class QueryMethods {
     return addWhere(this, args).take();
   }
 
+  /**
+   * The same as `where(conditions).takeOptional()`, it will filter records and add a `LIMIT 1`.
+   * Returns `undefined` when not found.
+   *
+   * ```ts
+   * const result: TableType | undefined = await db.table.findByOptional({
+   *   key: 'value',
+   * });
+   * ```
+   *
+   * @param args - `where` conditions
+   */
   findByOptional<T extends Query>(
     this: T,
     ...args: WhereArg<T>[]
   ): SetQueryReturnsOneOptional<WhereResult<T>> {
     return this.clone()._findByOptional(...args);
   }
-
   _findByOptional<T extends Query>(
     this: T,
     ...args: WhereArg<T>[]
@@ -297,7 +389,6 @@ export class QueryMethods {
   withSchema<T extends Query>(this: T, schema: string): T {
     return this.clone()._withSchema(schema);
   }
-
   _withSchema<T extends Query>(this: T, schema: string): T {
     this.query.schema = schema;
     return this;
@@ -306,7 +397,6 @@ export class QueryMethods {
   group<T extends Query>(this: T, ...columns: Expression<T>[]): T {
     return this.clone()._group(...columns);
   }
-
   _group<T extends Query>(this: T, ...columns: Expression<T>[]): T {
     return pushQueryArray(this, 'group', columns);
   }
@@ -317,7 +407,6 @@ export class QueryMethods {
   ): WindowResult<T, W> {
     return this.clone()._window(arg);
   }
-
   _window<T extends Query, W extends WindowArg<T>>(
     this: T,
     arg: W,
@@ -332,7 +421,6 @@ export class QueryMethods {
   ): SetQueryTableAlias<Q, As> {
     return this.clone()._wrap(query, as);
   }
-
   _wrap<T extends Query, Q extends Query, As extends string = 't'>(
     this: T,
     query: Q,
@@ -346,7 +434,6 @@ export class QueryMethods {
   order<T extends Query>(this: T, ...args: OrderArgs<T>): T {
     return this.clone()._order(...args);
   }
-
   _order<T extends Query>(this: T, ...args: OrderArgs<T>): T {
     if (Array.isArray(args[0])) {
       return this._order(raw(args as [TemplateStringsArray, ...unknown[]]));
@@ -357,7 +444,6 @@ export class QueryMethods {
   limit<T extends Query>(this: T, arg: number | undefined): T {
     return this.clone()._limit(arg);
   }
-
   _limit<T extends Query>(this: T, arg: number | undefined): T {
     (this.query as SelectQueryData).limit = arg;
     return this;
@@ -366,21 +452,19 @@ export class QueryMethods {
   offset<T extends Query>(this: T, arg: number | undefined): T {
     return this.clone()._offset(arg);
   }
-
   _offset<T extends Query>(this: T, arg: number | undefined): T {
     (this.query as SelectQueryData).offset = arg;
     return this;
   }
 
-  exists<T extends Query>(this: T): SetQueryReturnsValue<T, BooleanColumn> {
+  exists<T extends Query>(this: T): SetQueryReturnsColumn<T, BooleanColumn> {
     return this.clone()._exists();
   }
-
-  _exists<T extends Query>(this: T): SetQueryReturnsValue<T, BooleanColumn> {
+  _exists<T extends Query>(this: T): SetQueryReturnsColumn<T, BooleanColumn> {
     const q = this._getOptional(raw('true'));
     q.query.notFoundDefault = false;
     q.query.coalesceValue = raw('false');
-    return q as unknown as SetQueryReturnsValue<T, BooleanColumn>;
+    return q as unknown as SetQueryReturnsColumn<T, BooleanColumn>;
   }
 
   truncate<T extends Query>(
@@ -389,7 +473,6 @@ export class QueryMethods {
   ): SetQueryReturnsVoid<T> {
     return this.clone()._truncate(options);
   }
-
   _truncate<T extends Query>(
     this: T,
     options?: { restartIdentity?: boolean; cascade?: boolean },

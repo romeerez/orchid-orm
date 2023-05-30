@@ -179,9 +179,10 @@ export const makeSql = (table: Query, options?: ToSqlOptionsInternal): Sql => {
   }
 
   if (!query.returnsOne) {
-    const limit = queryTypeWithLimitOne[query.returnType] ? 1 : query.limit;
-    if (limit) {
-      sql.push(`LIMIT ${addValue(values, limit)}`);
+    if (queryTypeWithLimitOne[query.returnType]) {
+      sql.push(`LIMIT 1`);
+    } else if (query.limit) {
+      sql.push(`LIMIT ${addValue(values, query.limit)}`);
     }
   }
 

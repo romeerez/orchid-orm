@@ -122,10 +122,10 @@ describe('hasOne', () => {
             SELECT "user"."id" AS "UserId", $1
             FROM "user"
             WHERE "user"."id" = $2
-            LIMIT $3
+            LIMIT 1
             RETURNING ${profileSelectAll}
           `,
-          ['bio', 1, 1],
+          ['bio', 1],
         );
       });
 

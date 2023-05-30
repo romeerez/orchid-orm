@@ -351,7 +351,7 @@ describe('create functions', () => {
         q.toSql(),
         `
           INSERT INTO "user"("name", "password")
-          VALUES ((SELECT "user"."name" FROM "user"), $1)
+          VALUES ((SELECT "user"."name" FROM "user" LIMIT 1), $1)
           RETURNING *
         `,
         ['password'],
@@ -531,7 +531,7 @@ describe('create functions', () => {
         q.toSql(),
         `
           INSERT INTO "user"("name", "password")
-          VALUES ((SELECT "user"."name" FROM "user"), $1)
+          VALUES ((SELECT "user"."name" FROM "user" LIMIT 1), $1)
           RETURNING *
         `,
         ['password'],
@@ -552,10 +552,10 @@ describe('create functions', () => {
           SELECT "chat"."idOfChat" AS "chatId"
           FROM "chat"
           WHERE "chat"."idOfChat" = $1
-          LIMIT $2
+          LIMIT 1
           RETURNING *
         `,
-        [1, 1],
+        [1],
       );
     });
 
@@ -576,10 +576,10 @@ describe('create functions', () => {
           SELECT "chat"."idOfChat" AS "chatId", $1, $2
           FROM "chat"
           WHERE "chat"."idOfChat" = $3
-          LIMIT $4
+          LIMIT 1
           RETURNING *
         `,
-        [1, 'text', 1, 1],
+        [1, 'text', 1],
       );
     });
 
@@ -599,10 +599,10 @@ describe('create functions', () => {
           SELECT "user"."name" AS "snakeName", $1
           FROM "user"
           WHERE "user"."id" = $2
-          LIMIT $3
+          LIMIT 1
           RETURNING ${snakeSelectAll}
         `,
-        [5, 1, 1],
+        [5, 1],
       );
     });
 
@@ -621,10 +621,10 @@ describe('create functions', () => {
           SELECT "user"."password", $1, $2
           FROM "user"
           WHERE "user"."id" = $3
-          LIMIT $4
+          LIMIT 1
           RETURNING *
         `,
-        [456, 'runtime text', 123, 1],
+        [456, 'runtime text', 123],
       );
     });
 

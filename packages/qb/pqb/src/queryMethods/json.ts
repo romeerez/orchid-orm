@@ -2,11 +2,11 @@ import {
   AddQuerySelect,
   Query,
   queryTypeWithLimitOne,
-  SetQueryReturnsValueOptional,
+  SetQueryReturnsColumnOptional,
 } from '../query';
 import { pushQueryValue } from '../queryDataUtils';
 import { ColumnType, StringColumn } from '../columns';
-import { JsonItem } from '../sql';
+import { JsonItem, SelectQueryData } from '../sql';
 import { raw, StringKey, ColumnTypeBase } from 'orchid-core';
 
 type JsonColumnName<T extends Pick<Query, 'selectable'>> = StringKey<
@@ -47,14 +47,14 @@ export class Json {
   json<T extends Query>(
     this: T,
     coalesce?: boolean,
-  ): SetQueryReturnsValueOptional<T, StringColumn> {
+  ): SetQueryReturnsColumnOptional<T, StringColumn> {
     return this.clone()._json(coalesce);
   }
 
   _json<T extends Query>(
     this: T,
     coalesce?: boolean,
-  ): SetQueryReturnsValueOptional<T, StringColumn> {
+  ): SetQueryReturnsColumnOptional<T, StringColumn> {
     const q = this._wrap(this.baseQuery.clone()) as unknown as T;
     // json_agg is used instead of jsonb_agg because it is 2x faster, according to my benchmarks
     q._getOptional(
@@ -66,7 +66,11 @@ export class Json {
           : 'json_agg(row_to_json("t".*))',
       ),
     );
-    return q as unknown as SetQueryReturnsValueOptional<T, StringColumn>;
+
+    // to skip LIMIT 1
+    (q.query as SelectQueryData).returnsOne = true;
+
+    return q as unknown as SetQueryReturnsColumnOptional<T, StringColumn>;
   }
 
   jsonSet<

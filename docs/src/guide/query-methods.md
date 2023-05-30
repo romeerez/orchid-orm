@@ -33,63 +33,120 @@ const results = await query;
 
 Mutating methods started with `_` are used internally, however, their use is not recommended because it would be easier to make mistakes, code will be less obvious.
 
-## querying multiple records, single, arrays, values
+## NotFoundError handling
 
-Query methods are building blocks for a query chain, and when a query is a ready use `await` to get all records:
+When we search for a single record, and it is not found, it can either throw an error, or return `undefined`.
+
+Unlike other database libraries, `Orchid ORM` decided to throw errors by default when using methods `take`, `find`, `findBy`, `get` and the record is not found.
+It is a [good practice](https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/errorhandling/centralizedhandling.md) to catch common errors in a centralized place (see [global error handling](/guide/error-handling.html#global-error-handling)), and this allows for a more concise code.
+
+If it's more suitable to get the `undefined` value instead of throwing, use `takeOptional`, `findOptional`, `findByOptional`, `getOptional` instead.
+
+## take
+
+[//]: # 'has JSDoc'
+
+Takes a single record, adds `LIMIT 1`.
+Throws when not found.
 
 ```ts
-const records: { id: number; name: string }[] = await db.table.select(
-  'id',
-  'name',
-);
+const result: TableType = await db.table.where({ key: 'value' }).take();
 ```
 
-`.take()` to get only one record, it will add `LIMIT 1` to the query and will throw `NotFoundError` when not found.
+## takeOptional
 
-`.find(id)` and `.findBy(conditions)` also returns one record.
+[//]: # 'has JSDoc'
+
+Takes a single record, adds `LIMIT 1`.
+Returns `undefined` when not found.
 
 ```ts
-import { NotFoundError } from 'pqb';
-
-try {
-  // take one record:
-  const takenRecord = await db.table.take();
-
-  const foundById = await db.table.find(1);
-
-  const foundByConditions = await db.table.findBy({ email: 'some@email.com' });
-} catch (err) {
-  if (err instanceof NotFoundError) {
-    // handle error
-  }
-}
+const result: TableType | undefined = await db.table
+  .where({ key: 'value' })
+  .takeOptional();
 ```
 
-`.takeOptional()` to get one record or `undefined` when not found.
+## find
 
-`.findOptional(id)` and `.findByOptional(conditions)` also returns one record or `undefined`.
+[//]: # 'has JSDoc'
+
+Find a single record by the primary key (id), adds `LIMIT 1`.
+Throws when not found.
 
 ```ts
-const recordOrUndefined = await db.table.takeOptional();
+const result: TableType = await db.table.find(123);
 ```
 
-`.rows` returns an array of rows without field names:
+## findOptional
+
+[//]: # 'has JSDoc'
+
+Find a single record by the primary key (id), adds `LIMIT 1`.
+Returns `undefined` when not found.
 
 ```ts
-const rows = await db.table.rows();
+const result: TableType | undefined = await db.table.find(123);
+```
+
+## findBy
+
+[//]: # 'has JSDoc'
+
+The same as `where(conditions).take()`, it will filter records and add a `LIMIT 1`.
+Throws when not found.
+
+```ts
+const result: TableType = await db.table.findBy({
+  key: 'value',
+});
+```
+
+## findByOptional
+
+[//]: # 'has JSDoc'
+
+The same as `where(conditions).takeOptional()`, it will filter records and add a `LIMIT 1`.
+Returns `undefined` when not found.
+
+```ts
+const result: TableType | undefined = await db.table.findByOptional({
+  key: 'value',
+});
+```
+
+## rows
+
+[//]: # 'has JSDoc'
+
+`.rows` returns an array of arrays without field names:
+
+```ts
+const rows: Array<Array<number | string>> = await db.table
+  .select('id', 'name')
+  .rows();
+
 rows.forEach((row) => {
+  // row is array of column values
   row.forEach((value) => {
-    // ...
+    // value is an id or a name
   });
 });
 ```
 
-`.pluck` returns an array of values:
+## pluck
+
+[//]: # 'has JSDoc'
+
+`.pluck` returns a single array of a single selected column values:
 
 ```ts
-const ids = await db.table.select('id').pluck();
-// ids are an array of all users' id
+const ids = await db.table.pluck('id');
+// ids are an array of all users' id like [1, 2, 3]
 ```
+
+## get
+
+[//]: # 'has JSDoc'
 
 `.get` returns a single value, it will add `LIMIT 1` to the query, and accepts a column name or a raw expression.
 It will throw `NotFoundError` when not found.
@@ -104,17 +161,29 @@ const rawResult: number = await db.table.get(
 );
 ```
 
+## getOptional
+
+[//]: # 'has JSDoc'
+
 `.getOptional` returns a single value or undefined when not found:
 
 ```ts
 const firstName: string | undefined = await db.table.getOptional('name');
 ```
 
+## exec
+
+[//]: # 'has JSDoc'
+
 `.exec` won't parse the response at all, and returns undefined:
 
 ```ts
 const nothing = await db.table.take().exec();
 ```
+
+## all
+
+[//]: # 'has JSdoc'
 
 `.all` is a default behavior, that returns an array of objects:
 

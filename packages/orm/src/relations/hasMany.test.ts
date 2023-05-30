@@ -115,10 +115,10 @@ describe('hasMany', () => {
             SELECT "chat"."idOfChat" AS "ChatId", $1
             FROM "chat"
             WHERE "chat"."idOfChat" = $2
-            LIMIT $3
+            LIMIT 1
             RETURNING ${messageSelectAll}
           `,
-          ['text', 1, 1],
+          ['text', 1],
         );
       });
 
@@ -415,6 +415,7 @@ describe('hasMany', () => {
             SELECT true r
             FROM "message" AS "messages"
             WHERE "messages"."authorId" = "u"."id"
+            LIMIT 1
           ) "hasMessages" ON true
         `,
       );
@@ -2352,6 +2353,7 @@ describe('hasMany through', () => {
               AND "user"."id" = "p"."userId"
               LIMIT 1
             )
+            LIMIT 1
           ) "hasChats" ON true
         `,
       );
@@ -2875,6 +2877,7 @@ describe('hasMany through', () => {
                   )
                 LIMIT 1
               )
+              LIMIT 1
             ) "hasProfiles" ON true
           `,
         );

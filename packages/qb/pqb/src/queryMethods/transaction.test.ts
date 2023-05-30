@@ -101,7 +101,7 @@ describe('transaction', () => {
     ).toEqual([
       'BEGIN',
       'SAVEPOINT "1"',
-      'SELECT 123',
+      'SELECT 123 LIMIT 1',
       'RELEASE SAVEPOINT "1"',
       'COMMIT',
     ]);

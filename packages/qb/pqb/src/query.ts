@@ -1,6 +1,6 @@
 import {
   ColumnInfo,
-  GetArg,
+  GetStringArg,
   OnQueryBuilder,
   QueryMethods,
   WhereQueryBuilder,
@@ -93,6 +93,8 @@ export type QueryReturnType =
 export const queryTypeWithLimitOne = {
   one: true,
   oneOrThrow: true,
+  value: true,
+  valueOrThrow: true,
 } as Record<QueryReturnType, true | undefined>;
 
 export const isQueryReturnsAll = (q: Query) =>
@@ -222,42 +224,47 @@ export type SetQueryReturnsPluck<
 
 export type SetQueryReturnsValueOptional<
   T extends Query,
-  Arg extends Exclude<GetArg<T>, RawExpression> | ColumnTypeBase,
-  Column extends ColumnTypeBase = Arg extends ColumnTypeBase
-    ? Arg
-    : Arg extends keyof T['selectable']
-    ? T['selectable'][Arg]['column']
-    : Arg extends RelationQueryBase
-    ? Arg['result']['value']
-    : never,
-> = Omit<T, 'result' | 'returnType' | 'then' | 'catch'> & {
-  meta: {
-    hasSelect: true;
-  };
-  result: { value: Column };
-  returnType: 'value';
-  then: QueryThen<Column['type'] | undefined>;
-  catch: QueryThen<Column['type'] | undefined>;
-};
+  Arg extends GetStringArg<T>,
+> = SetQueryReturnsValue<T, Arg, 'value'>;
 
 export type SetQueryReturnsValue<
   T extends Query,
-  Arg extends Exclude<GetArg<T>, RawExpression> | ColumnTypeBase,
-  Column extends ColumnTypeBase = Arg extends ColumnTypeBase
-    ? Arg
-    : Arg extends keyof T['selectable']
+  Arg extends GetStringArg<T>,
+  ReturnType extends 'value' | 'valueOrThrow' = 'valueOrThrow',
+> = SetQueryReturnsColumn<
+  T,
+  Arg extends keyof T['selectable']
     ? T['selectable'][Arg]['column']
     : Arg extends RelationQueryBase
     ? Arg['result']['value']
     : never,
-> = Omit<T, 'result' | 'returnType' | 'then' | 'catch'> & {
-  meta: {
-    hasSelect: true;
-  };
-  result: { value: Column };
-  returnType: 'valueOrThrow';
-  then: QueryThen<Column['type']>;
-  catch: QueryCatch<Column['type']>;
+  ReturnType
+>;
+
+export type SetQueryReturnsColumnOptional<
+  T extends QueryBase,
+  Column extends ColumnTypeBase,
+> = SetQueryReturnsColumn<T, Column, 'value'>;
+
+export type SetQueryReturnsColumn<
+  T extends QueryBase,
+  Column extends ColumnTypeBase,
+  ReturnType extends 'value' | 'valueOrThrow' = 'valueOrThrow',
+  Data = ReturnType extends 'value'
+    ? Column['type'] | undefined
+    : Column['type'],
+> = {
+  [K in keyof T]: K extends 'meta'
+    ? T['meta'] & { hasSelect: true }
+    : K extends 'result'
+    ? { value: Column }
+    : K extends 'returnType'
+    ? ReturnType
+    : K extends 'then'
+    ? QueryThen<Data>
+    : K extends 'catch'
+    ? QueryCatch<Data>
+    : T[K];
 };
 
 export type SetQueryReturnsRowCount<T extends Query> = SetQueryReturns<

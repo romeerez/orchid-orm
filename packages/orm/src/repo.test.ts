@@ -82,9 +82,9 @@ describe('createRepo', () => {
           SELECT "someTable"."id", "someTable"."name"
           FROM "someTable"
           WHERE "someTable"."id" = $1
-          LIMIT $2
+          LIMIT 1
         `,
-        [123, 1],
+        [123],
       );
     });
 
