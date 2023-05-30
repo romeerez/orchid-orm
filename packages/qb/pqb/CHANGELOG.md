@@ -1,5 +1,11 @@
 # pqb
 
+## 0.11.35
+
+### Patch Changes
+
+- 31e7d23: Add `LIMIT 1` for `get` queries
+
 ## 0.11.34
 
 ### Patch Changes
