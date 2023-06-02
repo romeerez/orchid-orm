@@ -31,6 +31,13 @@ export const revealColumnToSql = (
   if (index !== -1) {
     const table = column.slice(0, index);
     const key = column.slice(index + 1);
+    if (key === '*') {
+      if (data.joinedShapes?.[table]) {
+        return select ? `row_to_json("${table}".*)` : `"${table}".r`;
+      }
+      return column;
+    }
+
     const tableName = data.joinOverrides?.[table] || table;
     return `"${tableName}"."${
       getJoinedColumnName(
@@ -41,7 +48,7 @@ export const revealColumnToSql = (
         `"${table}"` === quotedAs,
       ) || key
     }"`;
-  } else if (data.joinedShapes?.[column]) {
+  } else if (!select && data.joinedShapes?.[column]) {
     return select ? `row_to_json("${column}".*)` : `"${column}".r`;
   } else if (quotedAs && shape[column]) {
     return `${quotedAs}.${q(shape[column].data.name || column)}`;
@@ -60,6 +67,15 @@ export const revealColumnToSqlWithAs = (
   if (index !== -1) {
     const table = column.slice(0, index);
     const key = column.slice(index + 1);
+    if (key === '*') {
+      if (data.joinedShapes?.[table]) {
+        return select
+          ? `row_to_json("${table}".*) "${table}"`
+          : `"${table}".r "${table}"`;
+      }
+      return column;
+    }
+
     const tableName = data.joinOverrides?.[table] || table;
     const name = getJoinedColumnName(
       data,
@@ -71,7 +87,7 @@ export const revealColumnToSqlWithAs = (
     return `"${tableName}"."${name || key}"${
       name && name !== key ? ` AS "${key}"` : ''
     }`;
-  } else if (data.joinedShapes?.[column]) {
+  } else if (!select && data.joinedShapes?.[column]) {
     return select
       ? `row_to_json("${column}".*) "${column}"`
       : `"${column}".r "${column}"`;

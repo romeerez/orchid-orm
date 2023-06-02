@@ -187,7 +187,7 @@ describe('with', () => {
       .joinLateral('withAlias', (q) =>
         q.on('userId', 'user.id').where({ bio: 'bio' }),
       )
-      .select('name', 'withAlias');
+      .select('name', 'withAlias.*');
 
     assertType<
       Awaited<typeof q>,

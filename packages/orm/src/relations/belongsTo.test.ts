@@ -203,7 +203,7 @@ describe('belongsTo', () => {
       const q = db.profile
         .joinLateral('user', (q) => q.as('u').where({ Name: 'one' }))
         .where({ 'u.Name': 'two' })
-        .select('Bio', 'u');
+        .select('Bio', 'u.*');
 
       assertType<Awaited<typeof q>, { Bio: string | null; u: User }[]>();
 

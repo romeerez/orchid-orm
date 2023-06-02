@@ -279,7 +279,7 @@ describe('hasOne', () => {
       const q = db.user
         .joinLateral('profile', (q) => q.as('p').where({ Bio: 'one' }))
         .where({ 'p.Bio': 'two' })
-        .select('Name', 'p');
+        .select('Name', 'p.*');
 
       assertType<Awaited<typeof q>, { Name: string; p: Profile }[]>();
 
@@ -1765,7 +1765,7 @@ describe('hasOne through', () => {
     const q = db.message
       .joinLateral('profile', (q) => q.as('p').where({ Bio: 'one' }))
       .where({ 'p.Bio': 'two' })
-      .select('Text', 'p');
+      .select('Text', 'p.*');
 
     assertType<Awaited<typeof q>, { Text: string; p: Profile }[]>();
 

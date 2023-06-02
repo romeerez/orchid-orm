@@ -264,7 +264,7 @@ describe('hasMany', () => {
       const q = db.user
         .joinLateral('messages', (q) => q.as('m').where({ Text: 'one' }))
         .where({ 'm.Text': 'two' })
-        .select('Name', { message: 'm' });
+        .select('Name', { message: 'm.*' });
 
       assertType<Awaited<typeof q>, { Name: string; message: Message }[]>();
 
@@ -2182,7 +2182,7 @@ describe('hasMany through', () => {
       const q = db.profile
         .joinLateral('chats', (q) => q.as('c').where({ Title: 'one' }))
         .where({ 'c.Title': 'two' })
-        .select('Bio', { chat: 'c' });
+        .select('Bio', { chat: 'c.*' });
 
       assertType<Awaited<typeof q>, { Bio: string | null; chat: Chat }[]>();
 
@@ -2694,7 +2694,7 @@ describe('hasMany through', () => {
       const q = db.chat
         .joinLateral('profiles', (q) => q.as('p').where({ Bio: 'one' }))
         .where({ 'p.Bio': 'two' })
-        .select('Title', { profile: 'p' });
+        .select('Title', { profile: 'p.*' });
 
       assertType<Awaited<typeof q>, { Title: string; profile: Profile }[]>();
 

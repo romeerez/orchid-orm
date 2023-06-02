@@ -155,7 +155,7 @@ type JoinResultSelectable<
     column: Result[K];
   };
 } & {
-  [K in As]: {
+  [K in As as `${As}.*`]: {
     as: K;
     column: RequireJoined extends true
       ? ColumnsObject<J['result']>

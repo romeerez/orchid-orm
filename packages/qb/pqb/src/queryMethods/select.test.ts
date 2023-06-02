@@ -264,7 +264,7 @@ describe('select', () => {
       await insertUserAndProfile();
 
       const q = User.join(Profile.as('p'), 'p.userId', 'user.id')
-        .select('p')
+        .select('p.*')
         .where({
           'p.bio': profileData.bio,
         });
@@ -301,7 +301,7 @@ describe('select', () => {
 
       const q = User.join(Profile.as('p'), 'p.userId', 'user.id')
         .select({
-          profile: 'p',
+          profile: 'p.*',
         })
         .where({
           'p.bio': profileData.bio,
@@ -338,7 +338,7 @@ describe('select', () => {
       await insertUserAndProfile();
 
       const q = User.leftJoin(Profile.as('p'), 'p.userId', 'user.id').select(
-        'p',
+        'p.*',
       );
 
       assertType<Awaited<typeof q>, { p: ProfileRecord | null }[]>();
@@ -370,7 +370,7 @@ describe('select', () => {
       await insertUserAndProfile();
 
       const q = User.leftJoin(Profile.as('p'), 'p.userId', 'user.id').select({
-        profile: 'p',
+        profile: 'p.*',
       });
 
       assertType<Awaited<typeof q>, { profile: ProfileRecord | null }[]>();
@@ -401,7 +401,7 @@ describe('select', () => {
     it('should select right joined table as json', () => {
       const q = User.rightJoin(Profile.as('p'), 'p.userId', 'user.id').select(
         'name',
-        'p',
+        'p.*',
       );
 
       assertType<
@@ -422,7 +422,7 @@ describe('select', () => {
     it('should select right joined table as json with alias', () => {
       const q = User.rightJoin(Profile.as('p'), 'p.userId', 'user.id').select(
         'name',
-        { profile: 'p' },
+        { profile: 'p.*' },
       );
 
       assertType<
@@ -443,7 +443,7 @@ describe('select', () => {
     it('should select full joined table as json', () => {
       const q = User.fullJoin(Profile.as('p'), 'p.userId', 'user.id').select(
         'name',
-        'p',
+        'p.*',
       );
 
       assertType<
@@ -464,7 +464,7 @@ describe('select', () => {
     it('should select full joined table as json with alias', () => {
       const q = User.fullJoin(Profile.as('p'), 'p.userId', 'user.id').select(
         'name',
-        { profile: 'p' },
+        { profile: 'p.*' },
       );
 
       assertType<

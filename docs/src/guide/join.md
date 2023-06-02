@@ -13,11 +13,13 @@ await db.user.select('name', {
 
 // select posts with counts of comments, order by comments count
 // result type is Array<Post & { commentsCount: number }>
-await db.post.select('*', {
-  commentsCount: (q) => q.comments.count(),
-}).order({
-  commentsCount: 'DESC'
-});
+await db.post
+  .select('*', {
+    commentsCount: (q) => q.comments.count(),
+  })
+  .order({
+    commentsCount: 'DESC',
+  });
 
 // select authors with array of their book titles
 // result type is Array<Author & { books: string[] }>
@@ -34,12 +36,12 @@ If you want to load only users that have profiles, and filter out the rest, add 
 // load only users who have a profile
 await db.user.select('*', {
   profile: (q) => q.profile.join(),
-})
+});
 
 // load only users who have a specific profile
 await db.user.select('*', {
   profile: (q) => q.profile.join().where({ age: { gt: 20 } }),
-})
+});
 ```
 
 You can also use this `.join()` method on the one-to-many relations, and records with empty array will be filtered out:
@@ -49,9 +51,8 @@ You can also use this `.join()` method on the one-to-many relations, and records
 // result type is Array<Post & { tags: Tag[] }>
 db.post.select('*', {
   tags: (q) => q.tags.join(),
-})
+});
 ```
-
 
 # Joins
 
@@ -123,7 +124,9 @@ The first argument can also be a callback, where instead of relation name as a s
 In such a way, we can alias the relation with `as`, add `where` conditions, use other query methods.
 
 ```ts
-const result = await db.user.join((q) => q.messages.as('m').where({ text: 'some text' }))
+const result = await db.user.join((q) =>
+  q.messages.as('m').where({ text: 'some text' }),
+);
 ```
 
 Optionally, you can pass a second callback argument, it makes `on` and `orOn` methods available.
@@ -133,22 +136,39 @@ But remember that when joining a relation, the needed `ON` conditions are alread
 ```ts
 const result = await db.user.join(
   (q) => q.messages.as('m'),
-  (q) => q
-    .on('text', 'name') // additionally, match message with user name
-    .where({ text: 'some text' }), // you can add `where` in a second callback as well.
-)
+  (q) =>
+    q
+      .on('text', 'name') // additionally, match message with user name
+      .where({ text: 'some text' }), // you can add `where` in a second callback as well.
+);
 ```
 
-### Selecting full joined table
+### Selecting full joined records
 
-It works just fine for `1:1` (`belongsTo`, `hasOne`) relations, but may be unexpected for `1:M` or `M:M` (`hasMany`, `hasAndBelongsToMany`) relations.
-For any kind of relation, it results in one main table record with data of exactly one joined table record, i.e. joined records **won't** be collected into arrays.
+`select` supports selecting a full record of a previously joined table by passing a table name with `.*` at the end:
+
+```ts
+const result = await db.book.join('author').select('title', {
+  author: 'author.*',
+});
+
+// result has the following type:
+const ok: {
+  // title of the book
+  title: string;
+  // a full author record is included:
+  author: { id: number; name: string; updatedAt: Date; createdAt: Date };
+}[] = result;
+```
+
+It works fine for `1:1` (`belongsTo`, `hasOne`) relations, but it may have an unexpected result for `1:M` or `M:M` (`hasMany`, `hasAndBelongsToMany`) relations.
+For any kind of relation, it results in one main table record with data of exactly one joined table record, i.e. when selecting in this way, the records **won't** be collected into arrays.
 
 ```ts
 const result = await db.user
   .join('messages')
   .where({ 'messages.text': { startsWith: 'Hi' } })
-  .select('name', 'messages');
+  .select('name', { messages: 'messages.*' });
 
 // result has the following type:
 const ok: {
@@ -158,23 +178,7 @@ const ok: {
 }[] = result;
 ```
 
-`select` can accept an object where key is a new alias and the value refers to the joined table:
-
-```ts
-const result = await db.user
-  .join('messages')
-  .where({ 'messages.text': { startsWith: 'Hi' } })
-  .select('name', { msg: 'messages' });
-
-// result has the following type:
-const ok: {
-  name: string;
-  // full message is included as msg:
-  msg: { id: number; text: string; updatedAt: Date; createdAt: Date };
-}[] = result;
-```
-
-The query above may result in the following records, multiple rows have the name of the same user:
+Because it's a one-to-many relation, one user has many messages, the user data will be duplicated for different messages data:
 
 | name   | msg                            |
 | ------ | ------------------------------ |
@@ -216,7 +220,7 @@ Joined table can be selected as an object as well as the relation join above:
 const result = await db.user
   .join(db.message.as('m'), 'message.userId', 'user.id')
   .where({ 'm.text': { startsWith: 'Hi' } })
-  .select('name', { msg: 'm' });
+  .select('name', { msg: 'm.*' });
 
 // result has the following type:
 const ok: {
@@ -237,7 +241,7 @@ Join can accept raw SQL for the `ON` part of join:
 ```ts
 db.user.join(
   db.message,
-  db.user.sql`lower("message"."text") = lower("user"."name")`
+  db.user.sql`lower("message"."text") = lower("user"."name")`,
 );
 ```
 
@@ -394,7 +398,7 @@ As well as simple `join`, `joinLateral` can select an object of full joined reco
 const result = await User.joinLateral(
   'messages',
   (q) => q.as('message'), // alias to 'message'
-).select('name', 'message');
+).select('name', { message: 'message.*' });
 
 // result has the following type:
 const ok: {
@@ -404,14 +408,14 @@ const ok: {
 }[] = result;
 ```
 
-`message` can be aliased in the `select` as well as with simple `join`:
+`message` can be aliased withing the `select` as well as in case of a simple `join`:
 
 ```ts
 // join by relation name
 const result = await User.joinLateral(
   'messages',
   (q) => q.as('message'), // alias to 'message'
-).select('name', { msg: 'message' });
+).select('name', { msg: 'message.*' });
 
 // result has the following type:
 const ok: {

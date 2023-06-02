@@ -268,7 +268,7 @@ describe('hasAndBelongsToMany', () => {
       const q = db.user
         .joinLateral('chats', (q) => q.as('c').where({ Title: 'one' }))
         .where({ 'c.Title': 'two' })
-        .select('Name', { chat: 'c' });
+        .select('Name', { chat: 'c.*' });
 
       assertType<Awaited<typeof q>, { Name: string; chat: Chat }[]>();
 

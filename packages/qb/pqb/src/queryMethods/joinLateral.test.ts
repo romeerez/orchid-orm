@@ -65,7 +65,7 @@ describe('joinLateral', () => {
 
     const q = User.joinLateral(Message.as('m'), (q) =>
       q.on('authorId', 'id').order({ createdAt: 'DESC' }),
-    ).select('id', 'm');
+    ).select('id', 'm.*');
 
     assertType<Awaited<typeof q>, { id: number; m: MessageRecord }[]>();
 
@@ -122,7 +122,10 @@ describe('joinLateral', () => {
   });
 
   it('should make joined table object nullable for leftJoinLateral', () => {
-    const q = User.leftJoinLateral(Message.as('m'), (q) => q).select('id', 'm');
+    const q = User.leftJoinLateral(Message.as('m'), (q) => q).select(
+      'id',
+      'm.*',
+    );
 
     assertType<Awaited<typeof q>, { id: number; m: MessageRecord | null }[]>();
 

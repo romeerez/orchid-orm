@@ -42,76 +42,74 @@ It is a [good practice](https://github.com/goldbergyoni/nodebestpractices/blob/m
 
 If it's more suitable to get the `undefined` value instead of throwing, use `takeOptional`, `findOptional`, `findByOptional`, `getOptional` instead.
 
-## take
+## take, takeOptional
 
 [//]: # 'has JSDoc'
 
 Takes a single record, adds `LIMIT 1`.
-Throws when not found.
+
+`take` throws a `NotFoundError` when not found, and `takeOptional` returns `undefined`.
 
 ```ts
-const result: TableType = await db.table.where({ key: 'value' }).take();
-```
+const taken: TableType = await db.table.where({ key: 'value' }).take();
 
-## takeOptional
-
-[//]: # 'has JSDoc'
-
-Takes a single record, adds `LIMIT 1`.
-Returns `undefined` when not found.
-
-```ts
-const result: TableType | undefined = await db.table
+const takenOptional: TableType | undefined = await db.table
   .where({ key: 'value' })
   .takeOptional();
 ```
 
-## find
+## find, findOptional
 
 [//]: # 'has JSDoc'
 
 Find a single record by the primary key (id), adds `LIMIT 1`.
-Throws when not found.
+
+`find` throws a `NotFoundError` when not found, and `findOptional` returns `undefined`.
 
 ```ts
-const result: TableType = await db.table.find(123);
+const found: TableType = await db.table.find(123);
+
+const foundOptional: TableType | undefined = await db.table.find(123);
 ```
 
-## findOptional
-
-[//]: # 'has JSDoc'
-
-Find a single record by the primary key (id), adds `LIMIT 1`.
-Returns `undefined` when not found.
-
-```ts
-const result: TableType | undefined = await db.table.find(123);
-```
-
-## findBy
+## findBy, findByOptional
 
 [//]: # 'has JSDoc'
 
 The same as `where(conditions).take()`, it will filter records and add a `LIMIT 1`.
-Throws when not found.
+
+`findBy` throws a `NotFoundError` when not found, and `findByOptional` returns `undefined`.
 
 ```ts
-const result: TableType = await db.table.findBy({
+const found: TableType = await db.table.findBy({
+  key: 'value',
+});
+
+const foundOptional: TableType | undefined = await db.table.findByOptional({
   key: 'value',
 });
 ```
 
-## findByOptional
+## get, getOptional
 
 [//]: # 'has JSDoc'
 
-The same as `where(conditions).takeOptional()`, it will filter records and add a `LIMIT 1`.
-Returns `undefined` when not found.
+`.get` returns a single value, adds `LIMIT 1` to the query, and accepts a column name or a raw expression.
+
+`get` throws a `NotFoundError` when not found, and `getOptional` returns `undefined`.
 
 ```ts
-const result: TableType | undefined = await db.table.findByOptional({
-  key: 'value',
-});
+import { NumberColumn } from 'pqb';
+
+const firstName: string = await db.table.get('name');
+
+const rawResult: number = await db.table.get(
+  db.table.sql((t) => t.integer())`1 + 1`,
+);
+
+const firstNameOptional: string | undefined = await db.table.getOptional(
+  'name',
+);
 ```
 
 ## rows
@@ -142,33 +140,6 @@ rows.forEach((row) => {
 ```ts
 const ids = await db.table.pluck('id');
 // ids are an array of all users' id like [1, 2, 3]
-```
-
-## get
-
-[//]: # 'has JSDoc'
-
-`.get` returns a single value, it will add `LIMIT 1` to the query, and accepts a column name or a raw expression.
-It will throw `NotFoundError` when not found.
-
-```ts
-import { NumberColumn } from 'pqb';
-
-const firstName: string = await db.table.get('name');
-
-const rawResult: number = await db.table.get(
-  db.table.sql((t) => t.integer())`1 + 1`,
-);
-```
-
-## getOptional
-
-[//]: # 'has JSDoc'
-
-`.getOptional` returns a single value or undefined when not found:
-
-```ts
-const firstName: string | undefined = await db.table.getOptional('name');
 ```
 
 ## exec

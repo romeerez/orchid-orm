@@ -11,7 +11,7 @@ import {
   PluckResultColumnType,
 } from '../columns';
 import { pushQueryArray } from '../queryDataUtils';
-import { JoinedParsers, SelectItem, SelectQueryData } from '../sql';
+import { SelectItem, SelectQueryData } from '../sql';
 import { isRequiredRelationKey, Relation } from '../relations';
 import { QueryResult } from '../adapter';
 import { UnknownColumn } from '../columns/unknown';
@@ -225,8 +225,12 @@ const subQueryResult: QueryResult = {
 };
 
 // add parsers when selecting a full joined table by name or alias
-const addParsersForSelectJoined = (q: Query, arg: string, as = arg) => {
-  const parsers = (q.query.joinedParsers as JoinedParsers)[arg];
+const addParsersForSelectJoined = (
+  q: Query,
+  arg: string,
+  as: string | getValueKey = arg,
+) => {
+  const parsers = q.query.joinedParsers?.[arg];
   if (parsers) {
     setParserToQuery(q.query, as, (item) => {
       subQueryResult.rows = [item];
@@ -265,31 +269,11 @@ export const addParserForSelectItem = <T extends Query>(
         });
       }
     }
-    return arg;
   } else {
-    if (q.query.joinedShapes?.[arg]) {
-      addParsersForSelectJoined(q, arg, key);
-    } else {
-      const index = arg.indexOf('.');
-      if (index !== -1) {
-        const table = arg.slice(0, index);
-        const column = arg.slice(index + 1);
-
-        if (table === as) {
-          const parser = q.query.parsers?.[column];
-          if (parser) setParserToQuery(q.query, key, parser);
-        } else {
-          const parser = q.query.joinedParsers?.[table]?.[column];
-          if (parser) setParserToQuery(q.query, key, parser);
-        }
-      } else {
-        const parser = q.query.parsers?.[arg];
-        if (parser) setParserToQuery(q.query, key, parser);
-      }
-    }
-
-    return arg;
+    setParserForStringArg(q, arg, as, key);
   }
+
+  return arg;
 };
 
 // process select argument: add parsers, join relations when needed
@@ -300,12 +284,8 @@ export const processSelectArg = <T extends Query>(
   columnAs?: string | getValueKey,
 ): SelectItem => {
   if (typeof arg === 'string') {
-    if (q.query.joinedShapes?.[arg]) {
-      addParsersForSelectJoined(q, arg);
-      return arg;
-    } else {
-      return processSelectColumnArg(q, arg, as, columnAs);
-    }
+    setParserForStringArg(q, arg, as, columnAs);
+    return arg;
   }
 
   const selectAs: Record<string, string | Query | RawExpression> = {};
@@ -377,29 +357,34 @@ export const processSelectArg = <T extends Query>(
 
 // process string select arg
 // adds a column parser for a column
-const processSelectColumnArg = <T extends Query>(
-  q: T,
+// when table.* string is provided, sets a parser for a joined table
+const setParserForStringArg = (
+  q: Query,
   arg: string,
-  as?: string,
+  as: string | getValueKey | undefined,
   columnAs?: string | getValueKey,
-): SelectItem => {
+): void => {
   const index = arg.indexOf('.');
   if (index !== -1) {
     const table = arg.slice(0, index);
     const column = arg.slice(index + 1);
 
-    if (table === as) {
-      const parser = q.query.parsers?.[column];
-      if (parser) setParserToQuery(q.query, columnAs || column, parser);
+    // 'table.*' is selecting a full joined record
+    if (column === '*') {
+      addParsersForSelectJoined(q, table, columnAs);
     } else {
-      const parser = q.query.joinedParsers?.[table]?.[column];
-      if (parser) setParserToQuery(q.query, columnAs || column, parser);
+      if (table === as) {
+        const parser = q.query.parsers?.[column];
+        if (parser) setParserToQuery(q.query, columnAs || column, parser);
+      } else {
+        const parser = q.query.joinedParsers?.[table]?.[column];
+        if (parser) setParserToQuery(q.query, columnAs || column, parser);
+      }
     }
   } else {
     const parser = q.query.parsers?.[arg];
     if (parser) setParserToQuery(q.query, columnAs || arg, parser);
   }
-  return arg;
 };
 
 // is mapping result of a query into a columns shape
