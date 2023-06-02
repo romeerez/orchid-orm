@@ -1,5 +1,11 @@
 # pqb
 
+## 0.12.0
+
+### Minor Changes
+
+- 96f2cef: Disallow selecting joined tables by only their names, allow selecting them as `table.*`
+
 ## 0.11.35
 
 ### Patch Changes

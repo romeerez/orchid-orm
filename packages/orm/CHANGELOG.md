@@ -1,5 +1,16 @@
 # orchid-orm
 
+## 1.10.0
+
+### Minor Changes
+
+- 96f2cef: Disallow selecting joined tables by only their names, allow selecting them as `table.*`
+
+### Patch Changes
+
+- Updated dependencies [96f2cef]
+  - pqb@0.12.0
+
 ## 1.9.43
 
 ### Patch Changes
