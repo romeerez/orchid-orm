@@ -6,11 +6,12 @@ import {
   HasManyRelation,
   HasOneRelation,
   Relation,
+  RelationQueryBase,
 } from '../relations';
 import { WhereArg, WhereResult } from './where';
 import { CreateData } from './create';
 import { queryMethodByReturnType } from './then';
-import { UpdateQueryData } from '../sql';
+import { JsonItem, QueryData, UpdateQueryData } from '../sql';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
 import {
@@ -21,9 +22,19 @@ import {
   StringKey,
   raw,
   QueryThen,
+  isObjectEmpty,
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
+import { JsonModifiers } from './json';
 
+// Type of argument for `update` and `updateOrThrow`
+//
+// It maps the `inputType` of a table into object with column values.
+// The column value may be a specific value, or raw SQL, or a query returning a single value,
+// or a callback with a relation query that is returning a single value,
+// or a callback with JSON methods.
+//
+// It enables all forms of relation operations such as nested `create`, `connect`, etc.
 export type UpdateData<T extends Query> = {
   [K in keyof T['inputType']]?: UpdateColumn<T, K>;
 } & (T['relations'] extends Record<string, Relation>
@@ -42,16 +53,35 @@ export type UpdateData<T extends Query> = {
     __raw?: never; // forbid RawExpression argument
   };
 
-type UpdateColumn<
-  T extends Query,
-  Key extends keyof T['inputType'],
-  SubQuery = {
-    [K in keyof Query]: K extends 'then'
-      ? QueryThen<T['inputType'][Key]>
-      : Query[K];
-  },
-> = T['inputType'][Key] | RawExpression | SubQuery | ((q: T) => SubQuery);
+// Type of available variants to provide for a specific column when updating.
+// The column value may be a specific value, or raw SQL, or a query returning a single value,
+// or a callback with a relation query that is returning a single value,
+// or a callback with JSON methods.
+type UpdateColumn<T extends Query, Key extends keyof T['inputType']> =
+  | T['inputType'][Key]
+  | RawExpression
+  | {
+      [K in keyof Query]: K extends 'then'
+        ? QueryThen<T['inputType'][Key]>
+        : Query[K];
+    }
+  | ((
+      q: {
+        [K in keyof JsonModifiers]: K extends 'selectable'
+          ? T['selectable']
+          : T[K];
+      } & { [K in keyof T['relations']]: T[K] },
+    ) => JsonItem | RelationQueryBase);
 
+// `belongsTo` relation data available for update. It supports:
+// - `disconnect` to nullify a foreign key for the relation
+// - `set` to update the foreign key with a relation primary key found by conditions
+// - `delete` to delete the related record, nullify the foreign key
+// - `update` to update the related record
+// - `create` to create the related record
+//
+// Only for records that updates a single record:
+// - `upsert` to update or create the related record
 type UpdateBelongsToData<T extends Query, Rel extends BelongsToRelation> =
   | { disconnect: boolean }
   | { set: WhereArg<Rel['table']> }
@@ -71,6 +101,15 @@ type UpdateBelongsToData<T extends Query, Rel extends BelongsToRelation> =
           };
         });
 
+// `hasOne` relation data available for update. It supports:
+// - `disconnect` to nullify a foreign key of the related record
+// - `delete` to delete the related record
+// - `update` to update the related record
+//
+// Only for records that updates a single record:
+// - `set` to update the foreign key of related record found by condition
+// - `upsert` to update or create the related record
+// - `create` to create a related record
 type UpdateHasOneData<T extends Query, Rel extends HasOneRelation> =
   | { disconnect: boolean }
   | { delete: boolean }
@@ -91,6 +130,14 @@ type UpdateHasOneData<T extends Query, Rel extends HasOneRelation> =
               create: CreateData<Rel['nestedCreateQuery']>;
             });
 
+// `hasMany` relation data available for update. It supports:
+// - `disconnect` to nullify foreign keys of the related records
+// - `delete` to delete related record found by conditions
+// - `update` to update related records found by conditions with a provided data
+//
+// Only for records that updates a single record:
+// - `set` to update foreign keys of related records found by conditions
+// - `create` to create related records
 type UpdateHasManyData<T extends Query, Rel extends HasManyRelation> = {
   disconnect?: MaybeArray<WhereArg<Rel['table']>>;
   delete?: MaybeArray<WhereArg<Rel['table']>>;
@@ -105,6 +152,12 @@ type UpdateHasManyData<T extends Query, Rel extends HasManyRelation> = {
       create?: CreateData<Rel['nestedCreateQuery']>[];
     });
 
+// `hasAndBelongsToMany` relation data available for update. It supports:
+// - `disconnect` to delete join table records for related records found by conditions
+// - `set` to create join table records for related records found by conditions
+// - `delete` to delete join table records and related records found by conditions
+// - `update` to update related records found by conditions with a provided data
+// - `create` to create related records and a join table records
 type UpdateHasAndBelongsToManyData<Rel extends HasAndBelongsToManyRelation> = {
   disconnect?: MaybeArray<WhereArg<Rel['table']>>;
   set?: MaybeArray<WhereArg<Rel['table']>>;
@@ -116,22 +169,32 @@ type UpdateHasAndBelongsToManyData<Rel extends HasAndBelongsToManyRelation> = {
   create?: CreateData<Rel['nestedCreateQuery']>[];
 };
 
+// Type of argument for `update`.
+// not available when there are no conditions on the query.
 type UpdateArg<T extends Query> = T['meta']['hasWhere'] extends true
   ? UpdateData<T>
   : never;
 
+// Type of argument for `updateRaw`.
+// not available when there are no conditions on the query.
 type UpdateRawArgs<T extends Query> = T['meta']['hasWhere'] extends true
   ? [sql: RawExpression] | [TemplateStringsArray, ...unknown[]]
   : never;
 
+// `update` and `updateOrThrow` methods output type.
+// Unless something was explicitly selected on the query, it's returning the count of updated records.
 type UpdateResult<T extends Query> = T['meta']['hasSelect'] extends true
   ? T
   : SetQueryReturnsRowCount<T>;
 
+// `increment` and `decrement` methods argument type.
+// Accepts a column name to change, or an object with column names and number values to increment or decrement with.
 type ChangeCountArg<T extends Query> =
   | keyof T['shape']
   | Partial<Record<keyof T['shape'], number>>;
 
+// Context object for `update` logic used internally.
+// It's being used by relations logic in the ORM.
 export type UpdateCtx = {
   willSetKeys?: true;
   returnTypeAll?: true;
@@ -140,6 +203,8 @@ export type UpdateCtx = {
   updateData?: Record<string, unknown>;
 };
 
+// apply `increment` or a `decrement`,
+// mutates the `queryData` of a query.
 const applyCountChange = <T extends Query>(
   self: T,
   op: string,
@@ -161,10 +226,17 @@ const applyCountChange = <T extends Query>(
   return self as unknown as UpdateResult<T>;
 };
 
-const checkIfUpdateIsEmpty = (q: UpdateQueryData) => {
-  return !q.updateData?.some((item) => isRaw(item) || Object.keys(item).length);
+// check if there is nothing to update for the table.
+//
+// It may happen when user is using `update` to only update relations,
+// and there are no columns to update in the table of this query.
+const checkIfUpdateIsEmpty = (q: QueryData) => {
+  return !(q as UpdateQueryData).updateData?.some(
+    (item) => isRaw(item) || !isObjectEmpty(item),
+  );
 };
 
+// sets query type, `returnType`, casts type from Query to UpdateResult
 const update = <T extends Query>(q: T): UpdateResult<T> => {
   const { query } = q;
   query.type = 'update';
@@ -232,7 +304,10 @@ export class Update {
    *   column3: db.otherTable.get('someColumn'),
    *
    *   // select a single value from a related record
-   *   column4: (q) => q.relatedTable.get('someColumn'),
+   *   fromRelation: (q) => q.relatedTable.get('someColumn'),
+   *
+   *   // set a new value to the `.foo.bar` path into a JSON column
+   *   jsonColumn: (q) => q.jsonSet('jsonColumn', ['foo', 'bar'], 'new value'),
    * });
    * ```
    *
@@ -284,7 +359,7 @@ export class Update {
       }
     }
 
-    if (!ctx.willSetKeys && checkIfUpdateIsEmpty(query as UpdateQueryData)) {
+    if (!ctx.willSetKeys && checkIfUpdateIsEmpty(query)) {
       delete query.type;
     }
 
@@ -425,7 +500,6 @@ export class Update {
     const q = this.clone() as T;
     return q._updateOrThrow(arg);
   }
-
   _updateOrThrow<T extends Query>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
     this.query.throwOnNotFound = true;
     return this._update(arg);
@@ -459,7 +533,6 @@ export class Update {
   ): UpdateResult<T> {
     return this.clone()._increment(data) as unknown as UpdateResult<T>;
   }
-
   _increment<T extends Query>(
     this: T,
     data: ChangeCountArg<T>,
@@ -495,7 +568,6 @@ export class Update {
   ): UpdateResult<T> {
     return this.clone()._decrement(data) as unknown as UpdateResult<T>;
   }
-
   _decrement<T extends Query>(
     this: T,
     data: ChangeCountArg<T>,

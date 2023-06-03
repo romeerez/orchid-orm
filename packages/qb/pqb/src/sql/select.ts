@@ -25,7 +25,7 @@ const jsonColumnOrMethodToSql = (
     : jsonToSql(table, column, values, quotedAs);
 };
 
-const jsonToSql = (
+export const jsonToSql = (
   table: Query,
   item: JsonItem,
   values: unknown[],

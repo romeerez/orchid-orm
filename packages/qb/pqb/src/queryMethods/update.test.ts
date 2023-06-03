@@ -5,10 +5,14 @@ import {
   SnakeRecord,
   snakeSelectAll,
   User,
+  Profile,
   userData,
   UserRecord,
 } from '../test-utils/test-utils';
 import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
+import { HasOneRelation, RelationQuery } from '../relations';
+import { addQueryOn } from './join';
+import { Query } from '../query';
 
 describe('update', () => {
   useTestDatabase();
@@ -478,8 +482,22 @@ describe('update', () => {
   });
 
   it('should update column with a sub query callback', async () => {
-    const q = User.where().update({
-      name: (q) => (q.baseQuery as typeof q).get('name'),
+    const profile = Object.assign(Object.create(Profile), {
+      joinQuery(fromQuery: Query, toQuery: Query) {
+        return addQueryOn(toQuery, fromQuery, toQuery, 'userId', 'id');
+      },
+    });
+    profile.baseQuery = profile;
+
+    const user = Object.assign(User, {
+      profile,
+    }) as unknown as typeof User & {
+      relations: { profile: HasOneRelation };
+      profile: RelationQuery<'profile', never, never, typeof Profile>;
+    };
+
+    const q = user.where().update({
+      name: (q) => q.profile.get('bio'),
     });
 
     expectSql(
@@ -487,7 +505,12 @@ describe('update', () => {
       `
         UPDATE "user"
         SET
-          "name" = (SELECT "user"."name" FROM "user" LIMIT 1),
+          "name" = (
+            SELECT "profile"."bio"
+            FROM "profile"
+            WHERE "profile"."userId" = "user"."id"
+            LIMIT 1
+          ),
           "updatedAt" = now()
       `,
     );

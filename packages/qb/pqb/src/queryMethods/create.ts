@@ -30,7 +30,7 @@ import {
 // Type of argument for `create`, `createMany`, optional argument for `createFrom`,
 // `defaults` use a Partial of it.
 //
-// It maps `inputType` of the table into object to accept corresponding type,
+// It maps `inputType` of the table into object to accept a corresponding type,
 // or raw SQL per column, or a sub-query for a column.
 //
 // It allows to omit `belongsTo` foreign keys when a `belongsTo` record is provided by a relation name.

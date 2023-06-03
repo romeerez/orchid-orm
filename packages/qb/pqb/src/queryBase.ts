@@ -1,4 +1,4 @@
-import { Query, SelectableBase, WithDataBase } from './query';
+import { Query, QueryReturnType, SelectableBase, WithDataBase } from './query';
 import { QueryData } from './sql';
 import {
   ColumnsShapeBase,
@@ -25,4 +25,5 @@ export abstract class QueryBase implements QueryBaseCommon {
   baseQuery!: Query;
   internal!: QueryInternal;
   meta!: QueryMetaBase;
+  returnType!: QueryReturnType;
 }

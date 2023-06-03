@@ -415,6 +415,11 @@ If `.select` and `.take`, `.find`, or similar were specified before the update i
 
 For a column value you can provide a specific value, raw SQL, a query object that returns a single value, or a callback with a sub-query.
 
+The callback is allowed to select a single value from a relation (see `fromRelation` column below),
+or to use a [jsonSet](/guide/advanced-queries.html#jsonset),
+[jsonInsert](/guide/advanced-queries.html#jsoninsert),
+and [jsonRemove](/guide/advanced-queries.html#jsonremove) for a JSON column (see `jsonColumn` below).
+
 ```ts
 // returns number of updated records by default
 const updatedCount = await db.table
@@ -448,7 +453,10 @@ await db.table.where({ ...conditions }).update({
   column3: db.otherTable.get('someColumn'),
 
   // select a single value from a related record
-  column4: (q) => q.relatedTable.get('someColumn'),
+  fromRelation: (q) => q.relatedTable.get('someColumn'),
+
+  // set a new value to the `.foo.bar` path into a JSON column
+  jsonColumn: (q) => q.jsonSet('jsonColumn', ['foo', 'bar'], 'new value'),
 });
 ```
 

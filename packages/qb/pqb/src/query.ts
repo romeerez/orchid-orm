@@ -59,7 +59,6 @@ export type Query = QueryCommon &
     query: QueryData;
     result: ColumnsShapeBase;
     selectable: SelectableBase;
-    returnType: QueryReturnType;
     then: QueryThen<unknown>;
     catch: QueryCatch<unknown>;
     windows: EmptyObject;
@@ -136,7 +135,7 @@ export type GetQueryResult<
   : never;
 
 export type AddQuerySelect<
-  T extends Pick<Query, 'result' | 'then' | 'returnType' | 'meta'>,
+  T extends Pick<Query, 'result' | 'meta' | 'returnType'>,
   Result extends ColumnsShapeBase,
   Data = GetQueryResult<T['returnType'], Result>,
 > = T['meta']['hasSelect'] extends true
@@ -144,7 +143,7 @@ export type AddQuerySelect<
   : SetSelect<T, Result, Data>;
 
 type MergeSelect<
-  T extends Pick<Query, 'result' | 'then' | 'returnType' | 'meta'>,
+  T extends Pick<Query, 'result'>,
   Result extends ColumnsShapeBase,
   Data,
   Merged extends ColumnsShapeBase = {
@@ -161,7 +160,7 @@ type MergeSelect<
 };
 
 type SetSelect<
-  T extends Pick<Query, 'result' | 'then' | 'returnType' | 'meta'>,
+  T extends Pick<Query, 'result' | 'meta'>,
   Result extends ColumnsShapeBase,
   Data,
 > = {
@@ -313,7 +312,7 @@ export type SetQueryTableAlias<
 export type SetQueryWith<
   T extends Query,
   WithData extends Record<string, WithDataItem>,
-> = Omit<T, 'withData'> & { withData: WithData };
+> = { [K in keyof T]: K extends 'withData' ? WithData : T[K] };
 
 export type AddQueryWith<
   T extends Query,

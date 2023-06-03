@@ -2,6 +2,8 @@
 
 ## with
 
+[//]: # 'has JSDoc'
+
 Add Common Table Expression (CTE) to the query.
 
 ```ts
@@ -67,6 +69,8 @@ db.table
 
 ## withSchema
 
+[//]: # 'has JSDoc'
+
 Specifies the schema to be used as a prefix of a table name.
 
 Though this method can be used to set the schema right when building the query,
@@ -84,7 +88,10 @@ SELECT "user"."id" FROM "customSchema"."user"
 
 ## union, unionAll, intersect, intersectAll, except, exceptAll
 
-Creates a union query, taking an array or a list of callbacks, builders, or raw statements to build the union statement, with optional boolean `wrap`. If the `wrap` parameter is true, the queries will be individually wrapped in parentheses.
+[//]: # 'has JSDoc'
+
+Creates a union query, taking an array or a list of callbacks, builders, or raw statements to build the union statement, with optional boolean `wrap`.
+If the `wrap` parameter is true, the queries will be individually wrapped in parentheses.
 
 ```ts
 SomeTable.select('id', 'name').union(
@@ -94,14 +101,15 @@ SomeTable.select('id', 'name').union(
   ],
   true, // optional wrap parameter
 );
-// Other methods takes the same arguments,
-// they are different by SQL keyword:
-// .unionAll(...)
-// .intersect(...)
-// .intersectAll(...)
-// .except(...)
-// .exceptAll(...)
 ```
+
+Other methods takes the same arguments, they are different by SQL keyword:
+
+- `unionAll` - `union` that allows duplicated rows
+- `intersect` - get only rows that are present in all queries
+- `intersectAll` - `intersect` that allows duplicated rows
+- `except` - get only rows that are in the first query but not in the second
+- `exceptAll` - `except` that allows duplicated rows
 
 ## window functions
 
@@ -127,6 +135,8 @@ type AggregateOptions = {
 
 ### selectRowNumber
 
+[//]: # 'has JSDoc'
+
 Selects the` row_number` window function.
 
 Returns the number of the current row within its partition, counting from 1.
@@ -141,6 +151,8 @@ const result = await db.table.select('id').selectRowNumber({
 ```
 
 ### selectRank
+
+[//]: # 'has JSDoc'
 
 Selects the` rank` window function.
 
@@ -157,6 +169,8 @@ const result = await db.table.select('id').selectRank({
 
 ### selectDenseRank
 
+[//]: # 'has JSDoc'
+
 Selects the` dense_rank` window function.
 
 Returns the rank of the current row, without gaps; this function effectively counts peer groups.
@@ -171,6 +185,8 @@ const result = await db.table.select('id').selectDenseRank({
 ```
 
 ### selectPercentRank
+
+[//]: # 'has JSDoc'
 
 Selects the `percent_rank` window function.
 
@@ -187,6 +203,8 @@ const result = await db.table.select('id').selectPercentRank({
 
 ### selectCumeDist
 
+[//]: # 'has JSDoc'
+
 Selects the `cume_dist` window function.
 
 Returns the cumulative distribution, that is (number of partition rows preceding or peers with current row) / (total partition rows). The value thus ranges from 1/N to 1.
@@ -201,6 +219,8 @@ const result = await db.table.select('id').selectCumeDist({
 ```
 
 ## columnInfo
+
+[//]: # 'has JSDoc'
 
 Returns an object with the column info about the current table, or an individual column if one is passed, returning an object with the following keys:
 
@@ -220,6 +240,8 @@ const singleColumnInfo = await db.table.columnInfo('name');
 ```
 
 ## copy
+
+[//]: # 'has JSDoc'
 
 `copy` is a method to invoke a `COPY` SQL statement, it can copy from or to a file or a program.
 
@@ -264,7 +286,22 @@ await db.table.copy({
 });
 ```
 
+## json
+
+[//]: # 'has JSDoc'
+
+Wraps the query in a way to select a single JSON string.
+So that JSON encoding is done on a database side, and the application doesn't have to turn a response to a JSON.
+It may be better for performance in some cases.
+
+```ts
+// json is a JSON string that you can directly send as a response.
+const json = await db.table.select('id', 'name').json();
+```
+
 ## jsonPathQuery
+
+[//]: # 'has JSDoc'
 
 Selects a value from JSON data using a JSON path.
 
@@ -300,8 +337,12 @@ db.table.jsonPathQuery(
 
 ## jsonSet
 
+[//]: # 'has JSDoc'
+
 Return a JSON value/object/array where a given value is set at the given path.
 The path is an array of keys to access the value.
+
+Can be used in [update](/guide/create-update-delete.html#update) callback.
 
 ```ts
 const result = await db.table.jsonSet('data', ['name'], 'new value').take();
@@ -320,7 +361,11 @@ await db.table.jsonSet('data', ['name'], 'new value', {
 
 ## jsonInsert
 
+[//]: # 'has JSDoc'
+
 Return a JSON value/object/array where a given value is inserted at the given JSON path. Value can be a single value or JSON object. If a value exists at the given path, the value is not replaced.
+
+Can be used in [update](/guide/create-update-delete.html#update) callback.
 
 ```ts
 // imagine user has data = { tags: ['two'] }
@@ -337,7 +382,7 @@ Optionally takes parameters of type `{ as?: string, insertAfter?: boolean }`
 const result = await db.table
   .jsonInsert('data', ['tags', 0], 'two', {
     as: 'alias', // select as an alias
-    insertAfter: true, // insert after specified position
+    insertAfter: true, // insert after the specified position
   })
   .take();
 
@@ -347,7 +392,11 @@ expect(result.alias).toEqual({ tags: ['one', 'two'] });
 
 ## jsonRemove
 
+[//]: # 'has JSDoc'
+
 Return a JSON value/object/array where a given value is removed at the given JSON path.
+
+Can be used in [update](/guide/create-update-delete.html#update) callback.
 
 ```ts
 // imagine a user has data = { tags: ['one', 'two'] }

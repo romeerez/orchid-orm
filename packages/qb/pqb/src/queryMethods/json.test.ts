@@ -12,9 +12,13 @@ describe('json methods', () => {
 
   describe('json', () => {
     it('wraps a query with json functions', () => {
-      const q = User.all();
+      const query = User.all();
+      const q = query.where({ id: 1 }).json();
+
+      assertType<Awaited<typeof q>, string | undefined>();
+
       expectSql(
-        q.where({ id: 1 }).json().toSql(),
+        q.toSql(),
         `
           SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
           FROM (
@@ -24,13 +28,18 @@ describe('json methods', () => {
         `,
         [1],
       );
-      expectQueryNotMutated(q);
+
+      expectQueryNotMutated(query);
     });
 
     it('supports `take`', () => {
-      const q = User.all();
+      const query = User.all();
+      const q = query.where({ id: 1 }).take().json();
+
+      assertType<Awaited<typeof q>, string | undefined>();
+
       expectSql(
-        q.where({ id: 1 }).take().json().toSql(),
+        q.toSql(),
         `
           SELECT row_to_json("t".*)
           FROM (
@@ -41,11 +50,12 @@ describe('json methods', () => {
         `,
         [1],
       );
-      expectQueryNotMutated(q);
+
+      expectQueryNotMutated(query);
     });
   });
 
-  describe('processing and selecting json data', () => {
+  describe('manipulating json data', () => {
     beforeEach(async () => {
       await User.create({
         ...userData,
@@ -150,6 +160,23 @@ describe('json methods', () => {
 
         expectQueryNotMutated(q);
       });
+
+      it('should work inside `update` callback', () => {
+        const q = User.where().update({
+          data: (q) => q.jsonSet('data', ['name'], 'new name'),
+        });
+
+        expectSql(
+          q.toSql(),
+          `
+            UPDATE "user"
+            SET
+              "data" = jsonb_set("user"."data", '{name}', $1),
+              "updatedAt" = now()
+          `,
+          ['"new name"'],
+        );
+      });
     });
 
     describe('jsonInsert', () => {
@@ -247,6 +274,23 @@ describe('json methods', () => {
 
         expectQueryNotMutated(q);
       });
+
+      it('should work inside `update` callback', () => {
+        const q = User.where().update({
+          data: (q) => q.jsonInsert('data', ['tags', 0], 'tag'),
+        });
+
+        expectSql(
+          q.toSql(),
+          `
+            UPDATE "user"
+            SET
+              "data" = jsonb_insert("user"."data", '{tags, 0}', $1),
+              "updatedAt" = now()
+          `,
+          ['"tag"'],
+        );
+      });
     });
 
     describe('jsonRemove', () => {
@@ -334,6 +378,22 @@ describe('json methods', () => {
         >();
 
         expectQueryNotMutated(q);
+      });
+
+      it('should work inside `update` callback', () => {
+        const q = User.where().update({
+          data: (q) => q.jsonRemove('data', ['tags', 0]),
+        });
+
+        expectSql(
+          q.toSql(),
+          `
+            UPDATE "user"
+            SET
+              "data" = "user"."data" #- '{tags, 0}',
+              "updatedAt" = now()
+          `,
+        );
       });
     });
 

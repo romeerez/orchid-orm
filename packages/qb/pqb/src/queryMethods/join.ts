@@ -5,6 +5,7 @@ import {
   SelectableBase,
   WithDataBase,
   WithDataItem,
+  QueryReturnType,
 } from '../query';
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
 import { WhereQueryBuilder } from './where';
@@ -213,6 +214,7 @@ type JoinWithArgToQuery<
   withData: WithDataBase;
   meta: QueryMetaBase;
   internal: QueryInternal;
+  returnType: QueryReturnType;
 };
 
 type JoinArgToQuery<

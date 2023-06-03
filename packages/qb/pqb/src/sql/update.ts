@@ -12,6 +12,8 @@ import {
 import { isRaw, pushOrNewArray } from 'orchid-core';
 import { Db } from '../db';
 import { joinSubQuery, resolveSubQueryCallback } from '../utils';
+import { JsonItem } from './types';
+import { jsonToSql } from './select';
 
 export const pushUpdateSql = (
   ctx: ToSqlCtx,
@@ -29,7 +31,7 @@ export const pushUpdateSql = (
   ctx.sql.push('SET');
 
   const set: string[] = [];
-  processData(ctx, table, set, query.updateData);
+  processData(ctx, table, set, query.updateData, quotedAs);
   ctx.sql.push(set.join(', '));
 
   pushWhereStatementSql(ctx, table, query, quotedAs);
@@ -41,6 +43,7 @@ const processData = (
   table: Query,
   set: string[],
   data: UpdateQueryDataItem[],
+  quotedAs?: string,
 ) => {
   let append: UpdateQueryDataItem[] | undefined;
   const QueryClass = ctx.queryBuilder.constructor as Db;
@@ -65,13 +68,14 @@ const processData = (
             QueryClass,
             key,
             value,
+            quotedAs,
           )}`,
         );
       }
     }
   }
 
-  if (append) processData(ctx, table, set, append);
+  if (append) processData(ctx, table, set, append, quotedAs);
 };
 
 const processValue = (
@@ -80,9 +84,13 @@ const processValue = (
   QueryClass: Db,
   key: string,
   value: UpdateQueryDataObject[string],
+  quotedAs?: string,
 ) => {
   if (typeof value === 'function') {
     value = resolveSubQueryCallback(table, value as (q: Query) => Query);
+    if ((value as JsonItem).__json) {
+      return jsonToSql(table, value as JsonItem, values, quotedAs);
+    }
   }
 
   if (value && typeof value === 'object') {

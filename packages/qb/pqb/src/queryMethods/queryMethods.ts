@@ -27,7 +27,7 @@ import { From } from './from';
 import { Join, OnQueryBuilder } from './join';
 import { With } from './with';
 import { Union } from './union';
-import { Json } from './json';
+import { JsonModifiers, JsonMethods } from './json';
 import { Create } from './create';
 import { Update } from './update';
 import { Delete } from './delete';
@@ -124,7 +124,8 @@ export interface QueryMethods
     Join,
     With,
     Union,
-    Json,
+    Omit<JsonModifiers, 'result'>,
+    JsonMethods,
     Create,
     Update,
     Delete,
@@ -386,6 +387,24 @@ export class QueryMethods {
     return addWhere(this, args).takeOptional();
   }
 
+  /**
+   * Specifies the schema to be used as a prefix of a table name.
+   *
+   * Though this method can be used to set the schema right when building the query,
+   * it's better to specify schema when calling `db(table, () => columns, { schema: string })`
+   *
+   * ```ts
+   * db.table.withSchema('customSchema').select('id');
+   * ```
+   *
+   * Resulting SQL:
+   *
+   * ```sql
+   * SELECT "user"."id" FROM "customSchema"."user"
+   * ```
+   *
+   * @param schema - a name of the database schema to use
+   */
   withSchema<T extends Query>(this: T, schema: string): T {
     return this.clone()._withSchema(schema);
   }
@@ -543,7 +562,8 @@ applyMixins(QueryMethods, [
   OnQueryBuilder,
   With,
   Union,
-  Json,
+  JsonModifiers,
+  JsonMethods,
   Create,
   Update,
   Delete,
