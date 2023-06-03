@@ -1,5 +1,11 @@
 # pqb
 
+## 0.12.1
+
+### Patch Changes
+
+- 35c437e: Support json methods in the `update` column callback (#105)
+
 ## 0.12.0
 
 ### Minor Changes
