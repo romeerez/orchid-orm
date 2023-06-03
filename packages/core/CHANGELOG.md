@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.4.14
+
+### Patch Changes
+
+- d16ab35: Add `tranform` method to transform query results (#93)
+
 ## 0.4.13
 
 ### Patch Changes

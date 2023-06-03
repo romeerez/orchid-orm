@@ -1,5 +1,13 @@
 # pqb
 
+## 0.12.2
+
+### Patch Changes
+
+- d16ab35: Add `tranform` method to transform query results (#93)
+- Updated dependencies [d16ab35]
+  - orchid-core@0.4.14
+
 ## 0.12.1
 
 ### Patch Changes
