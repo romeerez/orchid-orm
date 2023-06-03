@@ -35,6 +35,8 @@ Mutating methods started with `_` are used internally, however, their use is not
 
 ## NotFoundError handling
 
+[//]: # 'has JSDoc'
+
 When we search for a single record, and it is not found, it can either throw an error, or return `undefined`.
 
 Unlike other database libraries, `Orchid ORM` decided to throw errors by default when using methods `take`, `find`, `findBy`, `get` and the record is not found.
@@ -165,6 +167,8 @@ const records = db.table
 ```
 
 ## raw sql
+
+[//]: # 'has JSDoc'
 
 When there is a need to use a piece of raw SQL, use the `sql` method.
 
@@ -343,6 +347,8 @@ const deletedFull = await db.table.selectAll().where(conditions).delete();
 
 ## distinct
 
+[//]: # 'has JSDoc'
+
 Adds a `DISTINCT` keyword to `SELECT`:
 
 ```ts
@@ -358,6 +364,8 @@ db.table.distinct('name', db.table.sql`raw sql`).select('id', 'name');
 
 ## as
 
+[//]: # 'has JSDoc'
+
 Sets table alias:
 
 ```ts
@@ -368,6 +376,8 @@ db.table.join(Profile.as('p'), 'p.userId', 'user.id');
 ```
 
 ## from
+
+[//]: # 'has JSDoc'
 
 Set the `FROM` value, by default the table name is used.
 
@@ -396,6 +406,8 @@ db.table.from(Otherdb.table.select('foo', 'bar'), {
 
 ## offset
 
+[//]: # 'has JSDoc'
+
 Adds an offset clause to the query.
 
 ```ts
@@ -404,6 +416,8 @@ db.table.offset(10);
 
 ## limit
 
+[//]: # 'has JSDoc'
+
 Adds a limit clause to the query.
 
 ```ts
@@ -411,6 +425,8 @@ db.table.limit(10);
 ```
 
 ## truncate
+
+[//]: # 'has JSDoc'
 
 Truncates the specified table.
 
@@ -427,13 +443,17 @@ await db.table.truncate({ cascade: true });
 
 ## clone
 
+[//]: # 'has JSDoc'
+
 Clones the current query chain, useful for re-using partial query snippets in other queries without mutating the original.
 
 Used under the hood, and not really needed on the app side.
 
 ## group
 
-The `GROUP BY` SQL statement, it is accepting column names or raw expressions.
+[//]: # 'has JSDoc'
+
+For the `GROUP BY` SQL statement, it is accepting column names or raw expressions.
 
 `group` is useful when aggregating values.
 
@@ -445,6 +465,8 @@ const results = Product.select('category')
 ```
 
 ## order
+
+[//]: # 'has JSDoc'
 
 Adds an order by clause to the query.
 
@@ -653,6 +675,58 @@ db.table.havingOr({ count: 1 }, { count: 2 });
 ```sql
 SELECT * FROM "table"
 HAVING count(*) = 1 OR count(*) = 2
+```
+
+## transform
+
+[//]: # 'has JSDoc'
+
+Transform the result of the query right after loading it.
+
+`transform` method should be called in the last order, other methods can't be chained after calling it.
+
+The [hooks](/guide/hooks.html) that are going to run after the query will receive the query result **before** transferring.
+
+Consider the following example of a cursor-based pagination by `id`:
+
+```ts
+const lastId: number | undefined = req.query.cursor;
+
+type Result = {
+  nodes: { id: number; text: string }[];
+  cursor?: number;
+};
+
+// result is only for demo, it will be inferred
+const posts: Result = await db.post
+  .select('id', 'text')
+  .where({ id: { lt: lastId } })
+  .order({ id: 'DESC' })
+  .limit(100)
+  .transform((nodes) => ({ nodes, cursor: nodes.at(-1)?.id }));
+```
+
+You can also use the `tranform` on a nested sub-queries:
+
+```ts
+type Result = {
+  nodes: {
+    id: number;
+    text: string;
+    comments: { nodes: { id: number; text: string }[]; cursor?: number };
+  }[];
+  cursor?: number;
+};
+
+const postsWithComments: Result = await db.post
+  .select('id', 'text')
+  .select({
+    comments: (q) =>
+      q.comments
+        .select('id', 'text')
+        .transform((nodes) => ({ nodes, cursor: nodes.at(-1)?.id })),
+  })
+  .transform((nodes) => ({ nodes, cursor: nodes.at(-1)?.id }));
 ```
 
 ## log

@@ -71,13 +71,40 @@ type FromQueryResult<
 };
 
 export class From {
+  /**
+   * Set the `FROM` value, by default the table name is used.
+   *
+   * ```ts
+   * // accepts sub-query:
+   * db.table.from(Otherdb.table.select('foo', 'bar'));
+   *
+   * // accepts raw sql by template literal:
+   * const value = 123;
+   * db.table.from`value = ${value}`;
+   *
+   * // accepts raw sql:
+   * db.table.from(db.table.sql`value = ${value}`);
+   *
+   * // accepts alias of `WITH` expression:
+   * q.with('foo', Otherdb.table.select('id', 'name')).from('foo');
+   * ```
+   *
+   * Optionally takes a second argument of type `{ only?: boolean }`, (see `FROM ONLY` in Postgres docs, this is related to table inheritance).
+   *
+   * ```ts
+   * db.table.from(Otherdb.table.select('foo', 'bar'), {
+   *   only: true,
+   * });
+   * ```
+   *
+   * @param args - query, raw SQL, name of CTE table, or a template string
+   */
   from<T extends Query, Args extends FromArgs<T>>(
     this: T,
     ...args: Args
   ): FromResult<T, Args> {
     return this.clone()._from(...args) as FromResult<T, Args>;
   }
-
   _from<T extends Query, Args extends FromArgs<T>>(
     this: T,
     ...args: Args

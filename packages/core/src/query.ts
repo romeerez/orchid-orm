@@ -86,3 +86,22 @@ export const overrideParserInQuery = (
       : parser;
   } else query.parsers = { [key]: parser } as ColumnsParsers;
 };
+
+/**
+ * See `transform` query method.
+ * This helper applies all transform functions to a result.
+ *
+ * @param fns - array of transform functions, can be undefined
+ * @param result - query result to transform
+ */
+export const applyTransforms = (
+  fns: ((input: unknown) => unknown)[] | undefined,
+  result: unknown,
+): unknown => {
+  if (fns) {
+    for (const fn of fns) {
+      result = fn(result);
+    }
+  }
+  return result;
+};

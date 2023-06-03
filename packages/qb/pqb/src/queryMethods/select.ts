@@ -16,6 +16,7 @@ import { isRequiredRelationKey, Relation } from '../relations';
 import { QueryResult } from '../adapter';
 import { UnknownColumn } from '../columns/unknown';
 import {
+  applyTransforms,
   ColumnsShapeBase,
   ColumnTypeBase,
   EmptyObject,
@@ -50,9 +51,9 @@ type SelectAsArg<T extends QueryBase> = Record<string, SelectAsValue<T>>;
 type SelectAsValue<T extends QueryBase> =
   | StringKey<keyof T['selectable']>
   | RawExpression
-  | ((q: T) => Query)
+  | ((q: T) => QueryBase)
   | ((q: T) => RawExpression)
-  | ((q: T) => Query | RawExpression);
+  | ((q: T) => QueryBase | RawExpression);
 
 // tuple for the result of selected by objects args
 // the first element is shape of selected data
@@ -143,7 +144,7 @@ type SelectAsResult<
   Result extends SelectObjectResultTuple,
   Shape = Result[0],
   AddSelectable extends SelectableBase = {
-    [K in keyof Arg]: Arg[K] extends ((q: T) => infer R extends Query)
+    [K in keyof Arg]: Arg[K] extends ((q: T) => infer R extends QueryBase)
       ? // turn union of objects into intersection
         // https://stackoverflow.com/questions/66445084/intersection-of-an-objects-value-types-in-typescript
         (x: {
@@ -178,14 +179,14 @@ type SelectAsValueResult<
   : Arg extends RawExpression
   ? Arg['__column']
   : Arg extends (q: T) => infer R
-  ? R extends Query
+  ? R extends QueryBase
     ? SelectSubQueryResult<R>
     : R extends RawExpression
     ? R['__column']
-    : R extends Query | RawExpression
+    : R extends QueryBase | RawExpression
     ?
         | SelectSubQueryResult<Exclude<R, RawExpression>>
-        | Exclude<R, Query>['__column']
+        | Exclude<R, QueryBase>['__column']
     : never
   : never;
 
@@ -195,7 +196,7 @@ type SelectAsValueResult<
 // query that returns 'pluck' becomes a column with array type of specific value type
 // query that returns a single record becomes an object column, possibly nullable
 type SelectSubQueryResult<
-  Arg extends Query & { [isRequiredRelationKey]?: boolean },
+  Arg extends QueryBase & { [isRequiredRelationKey]?: boolean },
 > = QueryReturnsAll<Arg['returnType']> extends true
   ? ArrayOfColumnsObjects<Arg['result']>
   : Arg['returnType'] extends 'valueOrThrow'
@@ -253,11 +254,11 @@ export const addParserForSelectItem = <T extends Query>(
   if (typeof arg === 'object') {
     if (isRaw(arg)) {
       addParserForRawExpression(q, key, arg);
-    } else {
-      const { parsers } = arg.query;
-      if (parsers) {
+    } else if (arg.query.parsers) {
+      const { query } = arg;
+      if (query.parsers || query.transform) {
         setParserToQuery(q.query, key, (item) => {
-          const t = arg.query.returnType || 'all';
+          const t = query.returnType || 'all';
           subQueryResult.rows =
             t === 'value' || t === 'valueOrThrow'
               ? [[item]]
@@ -265,7 +266,10 @@ export const addParserForSelectItem = <T extends Query>(
               ? [item]
               : (item as unknown[]);
 
-          return arg.query.handleResult(arg, subQueryResult, true);
+          return applyTransforms(
+            query.transform,
+            query.handleResult(arg, subQueryResult, true),
+          );
         });
       }
     }

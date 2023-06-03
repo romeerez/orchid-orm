@@ -57,6 +57,7 @@ import {
 import { AsMethods } from './as';
 import { QueryBase } from '../queryBase';
 import { OrchidOrmInternalError } from '../errors';
+import { TransformMethods } from './transform';
 
 // argument of the window method
 // it is an object where keys are name of windows
@@ -143,7 +144,8 @@ export interface QueryMethods
     QueryGet,
     MergeQueryMethods,
     RawSqlMethods,
-    CopyMethods {}
+    CopyMethods,
+    TransformMethods {}
 
 export class QueryMethods {
   windows!: EmptyObject;
@@ -268,6 +270,22 @@ export class QueryMethods {
     return toSql(this, options);
   }
 
+  /**
+   * Adds a `DISTINCT` keyword to `SELECT`:
+   *
+   * ```ts
+   * db.table.distinct().select('name');
+   * ```
+   *
+   * Can accept column names or raw expressions to place it to `DISTINCT ON (...)`:
+   *
+   * ```ts
+   * // Distinct on the name and raw SQL
+   * db.table.distinct('name', db.table.sql`raw sql`).select('id', 'name');
+   * ```
+   *
+   * @param columns - column names or a raw SQL
+   */
   distinct<T extends Query>(this: T, ...columns: Expression<T>[]): T {
     return this.clone()._distinct(...columns);
   }
@@ -413,6 +431,20 @@ export class QueryMethods {
     return this;
   }
 
+  /**
+   * For the `GROUP BY` SQL statement, it is accepting column names or raw expressions.
+   *
+   * `group` is useful when aggregating values.
+   *
+   * ```ts
+   * // Select the category and sum of prices grouped by the category
+   * const results = Product.select('category')
+   *   .selectSum('price', { as: 'sumPrice' })
+   *   .group('category');
+   * ```
+   *
+   * @param columns - column names or a raw SQL
+   */
   group<T extends Query>(this: T, ...columns: Expression<T>[]): T {
     return this.clone()._group(...columns);
   }
@@ -450,6 +482,46 @@ export class QueryMethods {
     ) as unknown as SetQueryTableAlias<Q, As>;
   }
 
+  /**
+   * Adds an order by clause to the query.
+   *
+   * Takes one or more arguments, each argument can be a column name, an object, or a raw expression.
+   *
+   * ```ts
+   * db.table.order('id', 'name'); // ASC by default
+   *
+   * db.table.order({
+   *   id: 'ASC', // or DESC
+   *
+   *   // to set nulls order:
+   *   name: 'ASC NULLS FIRST',
+   *   age: 'DESC NULLS LAST',
+   * });
+   *
+   * // order by raw SQL expression:
+   * db.table.order`raw sql`;
+   * // or
+   * db.table.order(db.table.sql`raw sql`);
+   * ```
+   *
+   * `order` can refer to the values returned from `select` sub-queries (unlike `where` which cannot).
+   * So you can select a count of related records and order by it.
+   *
+   * For example, `comment` has many `likes`.
+   * We are selecting few columns of `comment`, selecting `likesCount` by a sub-query in a select, and ordering comments by likes count:
+   *
+   * ```ts
+   * db.comment
+   *   .select('title', 'content', {
+   *     likesCount: (q) => q.likes.count(),
+   *   })
+   *   .order({
+   *     likesCount: 'DESC',
+   *   });
+   * ```
+   *
+   * @param args - column name(s), raw SQL, or an object with column names and sort directions.
+   */
   order<T extends Query>(this: T, ...args: OrderArgs<T>): T {
     return this.clone()._order(...args);
   }
@@ -460,6 +532,15 @@ export class QueryMethods {
     return pushQueryArray(this, 'order', args);
   }
 
+  /**
+   * Adds a limit clause to the query.
+   *
+   * ```ts
+   * db.table.limit(10);
+   * ```
+   *
+   * @param arg - limit number
+   */
   limit<T extends Query>(this: T, arg: number | undefined): T {
     return this.clone()._limit(arg);
   }
@@ -468,6 +549,15 @@ export class QueryMethods {
     return this;
   }
 
+  /**
+   * Adds an offset clause to the query.
+   *
+   * ```ts
+   * db.table.offset(10);
+   * ```
+   *
+   * @param arg - offset number
+   */
   offset<T extends Query>(this: T, arg: number | undefined): T {
     return this.clone()._offset(arg);
   }
@@ -486,6 +576,22 @@ export class QueryMethods {
     return q as unknown as SetQueryReturnsColumn<T, BooleanColumn>;
   }
 
+  /**
+   * Truncates the specified table.
+   *
+   * ```ts
+   * // simply truncate
+   * await db.table.truncate();
+   *
+   * // restart autoincrementing columns:
+   * await db.table.truncate({ restartIdentity: true });
+   *
+   * // truncate also dependant tables:
+   * await db.table.truncate({ cascade: true });
+   * ```
+   *
+   * @param options - truncate options, may have `cascade: true` and `restartIdentity: true`
+   */
   truncate<T extends Query>(
     this: T,
     options?: { restartIdentity?: boolean; cascade?: boolean },
@@ -582,4 +688,5 @@ applyMixins(QueryMethods, [
   MergeQueryMethods,
   RawSqlMethods,
   CopyMethods,
+  TransformMethods,
 ]);

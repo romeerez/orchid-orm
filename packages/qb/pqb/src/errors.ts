@@ -5,6 +5,14 @@ export abstract class OrchidOrmError extends Error {
   abstract query: Query;
 }
 
+/**
+ * When we search for a single record, and it is not found, it can either throw an error, or return `undefined`.
+ *
+ * Unlike other database libraries, `Orchid ORM` decided to throw errors by default when using methods `take`, `find`, `findBy`, `get` and the record is not found.
+ * It is a [good practice](https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/errorhandling/centralizedhandling.md) to catch common errors in a centralized place (see [global error handling](https://orchid-orm.netlify.app/guide/error-handling.html#global-error-handling)), and this allows for a more concise code.
+ *
+ * If it's more suitable to get the `undefined` value instead of throwing, use `takeOptional`, `findOptional`, `findByOptional`, `getOptional` instead.
+ */
 export class NotFoundError extends OrchidOrmError {
   constructor(public query: Query, message = 'Record is not found') {
     super(message);

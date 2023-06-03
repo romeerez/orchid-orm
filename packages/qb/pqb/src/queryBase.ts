@@ -10,6 +10,11 @@ import { RelationsBase } from './relations';
 import { getClonedQueryData } from './utils';
 
 export abstract class QueryBase implements QueryBaseCommon {
+  /**
+   * Clones the current query chain, useful for re-using partial query snippets in other queries without mutating the original.
+   *
+   * Used under the hood, and not really needed on the app side.
+   */
   clone<T extends QueryBase>(this: T): T {
     const cloned = Object.create(this.baseQuery);
     cloned.query = getClonedQueryData(this.query);

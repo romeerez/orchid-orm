@@ -87,6 +87,8 @@ const then = async (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   reject?: (error: any) => any,
 ): Promise<unknown> => {
+  const { query } = q;
+
   let sql: (Sql & { name?: string }) | undefined;
   let logData: unknown | undefined;
 
@@ -96,57 +98,61 @@ const then = async (
   try {
     let beforeHooks: BeforeHook[] | undefined;
     let afterHooks: AfterHook[] | undefined;
-    if (q.query.type === 'insert') {
-      beforeHooks = q.query.beforeCreate;
-      afterHooks = q.query.afterCreate;
-    } else if (q.query.type === 'update') {
-      beforeHooks = q.query.beforeUpdate;
-      afterHooks = q.query.afterUpdate;
-    } else if (q.query.type === 'delete') {
-      beforeHooks = q.query.beforeDelete;
-      afterHooks = q.query.afterDelete;
+    if (query.type === 'insert') {
+      beforeHooks = query.beforeCreate;
+      afterHooks = query.afterCreate;
+    } else if (query.type === 'update') {
+      beforeHooks = query.beforeUpdate;
+      afterHooks = query.afterUpdate;
+    } else if (query.type === 'delete') {
+      beforeHooks = query.beforeDelete;
+      afterHooks = query.afterDelete;
     }
 
-    if (beforeHooks || q.query.beforeQuery) {
+    if (beforeHooks || query.beforeQuery) {
       await Promise.all(
-        getHooks(beforeHooks, q.query.beforeQuery).map((cb) => cb(q)),
+        getHooks(beforeHooks, query.beforeQuery).map((cb) => cb(q)),
       );
     }
 
     sql = q.toSql();
 
-    if (q.query.autoPreparedStatements) {
+    if (query.autoPreparedStatements) {
       sql.name =
         queriesNames[sql.text] ||
         (queriesNames[sql.text] = (nameI++).toString(36));
     }
 
-    if (q.query.log) {
-      logData = q.query.log.beforeQuery(sql);
+    if (query.log) {
+      logData = query.log.beforeQuery(sql);
     }
 
     const queryResult = (await adapter[
-      queryMethodByReturnType[q.query.returnType || 'all'] as 'query'
+      queryMethodByReturnType[query.returnType || 'all'] as 'query'
     ](sql)) as QueryResult;
 
-    if (q.query.patchResult) {
-      await q.query.patchResult(queryResult);
+    if (query.patchResult) {
+      await query.patchResult(queryResult);
     }
 
-    if (q.query.log) {
-      q.query.log.afterQuery(sql, logData);
+    if (query.log) {
+      query.log.afterQuery(sql, logData);
       // set sql to be undefined to prevent logging on error in case if afterHooks throws
       sql = undefined;
     }
 
-    const result = q.query.handleResult(q, queryResult);
+    let result = query.handleResult(q, queryResult);
 
-    if (afterHooks || q.query.afterQuery) {
+    if (afterHooks || query.afterQuery) {
       await Promise.all(
-        getHooks(q.query.afterQuery, afterHooks).map((query) =>
-          query(q, result),
-        ),
+        getHooks(query.afterQuery, afterHooks).map((query) => query(q, result)),
       );
+    }
+
+    if (query.transform) {
+      for (const fn of query.transform) {
+        result = fn(result);
+      }
     }
 
     return resolve?.(result);
@@ -163,8 +169,8 @@ const then = async (
       }
     }
 
-    if (q.query.log && sql && logData) {
-      q.query.log.onError(error as Error, sql, logData);
+    if (query.log && sql && logData) {
+      query.log.onError(error as Error, sql, logData);
     }
     return reject?.(error);
   }

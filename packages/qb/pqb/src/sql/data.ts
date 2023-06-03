@@ -71,6 +71,7 @@ export type CommonQueryData = {
   logger: QueryLogger;
   autoPreparedStatements?: boolean;
   [toSqlCacheKey]?: Sql;
+  transform?: ((input: unknown) => unknown)[];
 };
 
 export type SelectQueryData = CommonQueryData & {

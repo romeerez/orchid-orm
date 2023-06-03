@@ -44,6 +44,106 @@ type RawArgs<CT extends ColumnTypesBase, C extends ColumnType> =
   | [sql: string, values?: Record<string, unknown>];
 
 export class RawSqlMethods {
+  /**
+   * When there is a need to use a piece of raw SQL, use the `sql` method.
+   *
+   * To select with a raw SQL, need to specify a column type as a first argument, so the TS could use it to guess the result type of the query:
+   *
+   * ```ts
+   * const result: { num: number }[] = await db.table.select({
+   *   num: db.table.sql((t) => t.integer())`
+   *     random() * 100
+   *   `,
+   * });
+   * ```
+   *
+   * Other than for select, the column type can be omitted:
+   *
+   * ```ts
+   * await db.table.where(db.table.sql`
+   *   "someValue" = random() * 100
+   * `);
+   * ```
+   *
+   * Interpolating values in template literals is completely safe:
+   *
+   * ```ts
+   * // get value from user-provided params
+   * const { value } = req.params;
+   *
+   * // SQL injection is prevented by a library, this is safe:
+   * await db.table.where(db.table.sql`
+   *   column = ${value}
+   * `);
+   * ```
+   *
+   * SQL can be passed with a simple string, it's important to note that this is not safe to interpolate values in it.
+   *
+   * ```ts
+   * // no interpolation is okay
+   * await db.table.where(db.table.sql({ raw: 'column = random() * 100' }));
+   *
+   * // get value from user-provided params
+   * const { value } = req.params;
+   *
+   * // this is NOT safe, SQL injection is possible:
+   * await db.table.where(db.table.sql({ raw: `column = random() * ${value}` }));
+   * ```
+   *
+   * To inject values into `raw` SQL strings, define it with `$` in the string and provide `values` object.
+   *
+   * Use `$$` to provide column or/and table name. Column names will be quoted so don't quote them manually.
+   *
+   * ```ts
+   * // get value from user-provided params
+   * const { value } = req.params;
+   *
+   * // this is SAFE, SQL injection are prevented:
+   * await db.table.where(
+   *   db.table.sql({
+   *     values: {
+   *       column: 'someTable.someColumn', // or simply 'column'
+   *       one: value,
+   *       two: 123,
+   *     },
+   *     raw: '$$column = random() * $value',
+   *   }),
+   * );
+   * ```
+   *
+   * Summarizing:
+   *
+   * ```ts
+   * // simplest form:
+   * db.table`key = ${value}`;
+   *
+   * // with column type for select:
+   * db.table((t) => t.boolean())`key = ${value}`;
+   *
+   * // raw SQL string, not allowed to interpolate:
+   * db.table({ raw: 'random()' });
+   *
+   * // with values:
+   * db.table({
+   *   values: {
+   *     column: 'columnName',
+   *     one: 1,
+   *     two: 2,
+   *   },
+   *   raw: '$$columnName = $one + $two',
+   * });
+   *
+   * // with column type for select:
+   * db.table((t) => t.decimal(), { raw: 'random()' });
+   *
+   * // combine values and template literal:
+   * db.table({ values: { one: 1, two: 2 } })`
+   *   ($one + $two) / $one
+   * `;
+   * ```
+   *
+   * @param args - template string or a specific options
+   */
   sql<T extends Query, Args extends SqlArgs<T>>(
     this: T,
     ...args: Args
