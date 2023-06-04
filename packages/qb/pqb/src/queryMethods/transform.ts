@@ -56,7 +56,7 @@ export class TransformMethods {
    *   .transform((nodes) => ({ nodes, cursor: nodes.at(-1)?.id }));
    * ```
    *
-   * You can also use the `tranform` on a nested sub-queries:
+   * You can also use the `tranform` on nested sub-queries:
    *
    * ```ts
    * type Result = {
