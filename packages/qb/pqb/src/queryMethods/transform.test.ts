@@ -1,5 +1,5 @@
 import { User, userData } from '../test-utils/test-utils';
-import { assertType, useTestDatabase } from 'test-utils';
+import { assertType, testDb, useTestDatabase } from 'test-utils';
 
 describe('transform', () => {
   useTestDatabase();
@@ -53,6 +53,48 @@ describe('transform', () => {
           nodes: {
             name: userData.name,
             createdAt: expect.any(Date),
+          },
+          cursor: 1,
+        },
+      },
+    ]);
+  });
+
+  it('should transform relation that does not have parsers', async () => {
+    const User = testDb('user', (t) => ({
+      id: t.identity().primaryKey(),
+      name: t.text(),
+      password: t.text(),
+    }));
+
+    await User.count().create(userData);
+
+    const q = User.select('id', {
+      users: () =>
+        User.select('name', 'password')
+          .take()
+          .transform((nodes) => ({
+            nodes,
+            cursor: 1,
+          })),
+    });
+
+    assertType<
+      Awaited<typeof q>,
+      {
+        id: number;
+        users: { nodes: { name: string; password: string }; cursor: number };
+      }[]
+    >();
+
+    const res = await q;
+    expect(res).toEqual([
+      {
+        id: expect.any(Number),
+        users: {
+          nodes: {
+            name: userData.name,
+            password: userData.password,
           },
           cursor: 1,
         },

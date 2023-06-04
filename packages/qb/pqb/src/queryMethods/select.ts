@@ -254,7 +254,7 @@ export const addParserForSelectItem = <T extends Query>(
   if (typeof arg === 'object') {
     if (isRaw(arg)) {
       addParserForRawExpression(q, key, arg);
-    } else if (arg.query.parsers) {
+    } else {
       const { query } = arg;
       if (query.parsers || query.transform) {
         setParserToQuery(q.query, key, (item) => {
