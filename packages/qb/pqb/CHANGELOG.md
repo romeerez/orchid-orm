@@ -1,5 +1,11 @@
 # pqb
 
+## 0.12.3
+
+### Patch Changes
+
+- c2d3eb0: Fix `transform` function for relations that does not have column parsers (#93)
+
 ## 0.12.2
 
 ### Patch Changes
