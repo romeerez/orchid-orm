@@ -1,0 +1,9 @@
+version: '3'
+services:
+  mysql:
+    image: 'mysql/mysql-server'
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: orchid-orm
+    ports:
+      - '3306:3306'

@@ -6,8 +6,18 @@
   "author": "Roman K",
   "scripts": {
     "check": "turbo run check",
+    "types": "turbo run types",
     "test:ci": "turbo run test:ci --cache-dir=.turbo",
-    "publish:ci": "changeset tag && pnpm publish -r"
+    "publish:ci": "changeset tag && pnpm publish -r",
+    "db": "pnpm --filter rake-db db",
+    "core": "pnpm --filter orchid-core",
+    "orm": "pnpm --filter orchid-orm",
+    "myqb": "pnpm --filter myqb",
+    "pqb": "pnpm --filter pqb",
+    "rake-db": "pnpm --filter rake-db",
+    "schema-to-zod": "pnpm --filter orchid-orm-schema-to-zod",
+    "test-factory": "pnpm --filter orchid-orm-test-factory",
+    "test-utils": "pnpm --filter test-utils"
   },
   "devDependencies": {
     "turbo": "^1.8.8",
