@@ -1,5 +1,5 @@
 import { Query, QueryReturnsAll, SetQueryReturnsRowCount } from '../query';
-import { pushQueryValue } from '../queryDataUtils';
+import { pushQueryValue, throwIfNoWhere } from '../queryDataUtils';
 import {
   BelongsToRelation,
   HasAndBelongsToManyRelation,
@@ -244,6 +244,8 @@ const update = <T extends Query>(q: T): UpdateResult<T> => {
   if (!query.select) {
     query.returnType = 'rowCount';
   }
+
+  throwIfNoWhere(q, 'update');
 
   return q as unknown as UpdateResult<T>;
 };

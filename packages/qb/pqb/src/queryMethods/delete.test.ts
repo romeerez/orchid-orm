@@ -14,7 +14,7 @@ describe('delete', () => {
 
   it('should prevent deleting all with TS error', () => {
     // @ts-expect-error update should have where condition or forceAll flag
-    User.delete();
+    expect(() => User.delete()).toThrow('Dangerous delete without conditions');
   });
 
   it('should allow deleting all with empty where', () => {

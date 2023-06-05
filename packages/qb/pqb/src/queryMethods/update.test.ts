@@ -33,9 +33,11 @@ describe('update', () => {
     expectQueryNotMutated(q);
   });
 
-  it('should prevent from updating without conditions with TS error', () => {
+  it('should prevent from updating without conditions with TS and runtime error', () => {
     // @ts-expect-error update should have where condition or forceAll flag
-    User.update({ name: 'new name' });
+    expect(() => User.update({ name: 'new name' })).toThrow(
+      'Dangerous update without conditions',
+    );
   });
 
   it('should let update all with empty where', () => {

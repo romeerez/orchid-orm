@@ -1,4 +1,5 @@
 import { Query, SetQueryReturnsRowCount } from '../query';
+import { throwIfNoWhere } from '../queryDataUtils';
 
 export type DeleteMethodsNames = 'del' | '_del' | 'delete' | '_delete';
 
@@ -18,6 +19,8 @@ const _del = <T extends Query>(q: T): DeleteResult<T> => {
   if (!q.query.select) {
     q.query.returnType = 'rowCount';
   }
+
+  throwIfNoWhere(q, 'delete');
 
   q.query.type = 'delete';
   return q as unknown as DeleteResult<T>;

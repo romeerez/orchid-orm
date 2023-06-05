@@ -6,7 +6,7 @@ import { QueryBase } from '../queryBase';
 // A function type to transfer query result with.
 // `input` type is inferred from a query `catch` method,
 // it is a result of the query before transform.
-type TransformFn<T extends Query> = (
+export type QueryTransformFn<T extends Query> = (
   input: T['catch'] extends QueryCatch<infer Data> ? Data : never,
 ) => unknown;
 
@@ -14,9 +14,9 @@ type TransformFn<T extends Query> = (
 // Changes the `returnType` to `valueOrThrow`,
 // because it's always returning a single value - the result of the transform function.
 // Changes the query result to a type returned by the transform function.
-type QueryTransform<
+export type QueryTransform<
   T extends QueryBase,
-  Fn extends TransformFn<Query>,
+  Fn extends QueryTransformFn<Query>,
   Data = ReturnType<Fn>,
 > = {
   [K in keyof QueryBase]: K extends 'returnType'
@@ -81,13 +81,13 @@ export class TransformMethods {
    *
    * @param fn - function to transform query result with
    */
-  transform<T extends Query, Fn extends TransformFn<T>>(
+  transform<T extends Query, Fn extends QueryTransformFn<T>>(
     this: T,
     fn: Fn,
   ): QueryTransform<T, Fn> {
     return this.clone()._transform(fn);
   }
-  _transform<T extends Query, Fn extends TransformFn<T>>(
+  _transform<T extends Query, Fn extends QueryTransformFn<T>>(
     this: T,
     fn: Fn,
   ): QueryTransform<T, Fn> {
