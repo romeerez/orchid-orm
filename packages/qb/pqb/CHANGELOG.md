@@ -1,5 +1,11 @@
 # pqb
 
+## 0.12.4
+
+### Patch Changes
+
+- 3116713: Throw runtime error when updating/deleting without where (#102). Export more query types (#93).
+
 ## 0.12.3
 
 ### Patch Changes
