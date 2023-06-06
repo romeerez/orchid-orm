@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.10.5
+
+### Patch Changes
+
+- 0bc5919: Fix querying a relation which is absent and not required (#110)
+
 ## 1.10.4
 
 ### Patch Changes
