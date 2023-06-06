@@ -126,12 +126,6 @@ export const makeHasOneMethod = (
   relationName: string,
   query: Query,
 ): RelationData => {
-  if (relation.options.required) {
-    query._take();
-  } else {
-    query._takeOptional();
-  }
-
   if ('through' in relation.options) {
     const { through, source } = relation.options;
 

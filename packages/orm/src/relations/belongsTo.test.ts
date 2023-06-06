@@ -1281,4 +1281,80 @@ describe('belongsTo', () => {
       });
     });
   });
+
+  describe('not required belongsTo', () => {
+    class UserTable extends BaseTable {
+      readonly table = 'user';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        Name: t.name('name').text(),
+        Password: t.name('password').text(),
+      }));
+    }
+
+    class ProfileTable extends BaseTable {
+      readonly table = 'profile';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        UserId: t.name('userId').integer().nullable(),
+      }));
+
+      relations = {
+        user: this.belongsTo(() => UserTable, {
+          primaryKey: 'Id',
+          foreignKey: 'UserId',
+        }),
+      };
+    }
+
+    const local = orchidORM(
+      {
+        db: db.$queryBuilder,
+      },
+      {
+        user: UserTable,
+        profile: ProfileTable,
+      },
+    );
+
+    it('should query related record and get `undefined`', async () => {
+      const userQuery = local.user.takeOptional();
+
+      assertType<
+        typeof local.profile.user,
+        RelationQuery<
+          'user',
+          { UserId: number | null },
+          never,
+          typeof userQuery,
+          false
+        >
+      >();
+
+      const user = await local.profile.user({ UserId: 123 });
+      assertType<
+        typeof user,
+        { Id: number; Name: string; Password: string } | undefined
+      >();
+
+      expect(user).toBe(undefined);
+    });
+
+    it('should be selectable', async () => {
+      const id = await local.profile
+        .get('Id')
+        .create({ ...profileData, UserId: null });
+
+      const result = await local.profile.select('Id', {
+        user: (q) => q.user,
+      });
+
+      expect(result).toEqual([
+        {
+          Id: id,
+          user: null,
+        },
+      ]);
+    });
+  });
 });

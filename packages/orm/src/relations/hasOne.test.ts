@@ -11,6 +11,7 @@ import {
   profileSelectAll,
   userSelectAll,
   useTestORM,
+  messageData,
 } from '../test-utils/test-utils';
 import { RelationQuery } from 'pqb';
 import { orchidORM } from '../orm';
@@ -1375,6 +1376,77 @@ describe('hasOne', () => {
       });
     });
   });
+
+  describe('not required hasOne', () => {
+    class UserTable extends BaseTable {
+      readonly table = 'user';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        Name: t.name('name').text(),
+        Password: t.name('password').text(),
+      }));
+
+      relations = {
+        profile: this.hasOne(() => ProfileTable, {
+          primaryKey: 'Id',
+          foreignKey: 'UserId',
+        }),
+      };
+    }
+
+    class ProfileTable extends BaseTable {
+      readonly table = 'profile';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        UserId: t.name('userId').integer(),
+      }));
+    }
+
+    const local = orchidORM(
+      {
+        db: db.$queryBuilder,
+      },
+      {
+        user: UserTable,
+        profile: ProfileTable,
+      },
+    );
+
+    it('should query related record and get an `undefined`', async () => {
+      const profileQuery = local.profile.takeOptional();
+
+      assertType<
+        typeof local.user.profile,
+        RelationQuery<
+          'profile',
+          { Id: number },
+          'UserId',
+          typeof profileQuery,
+          false,
+          true,
+          true
+        >
+      >();
+
+      const profile = await local.user.profile({ Id: 123 });
+      expect(profile).toBe(undefined);
+    });
+
+    it('should be selectable', async () => {
+      const id = await local.user.get('Id').create(userData);
+
+      const result = await local.user.select('Id', {
+        profile: (q) => q.profile,
+      });
+
+      expect(result).toEqual([
+        {
+          Id: id,
+          profile: null,
+        },
+      ]);
+    });
+  });
 });
 
 describe('hasOne through', () => {
@@ -1911,6 +1983,101 @@ describe('hasOne through', () => {
         `,
         ['bio'],
       );
+    });
+  });
+
+  describe('not required hasOne through', () => {
+    class UserTable extends BaseTable {
+      readonly table = 'user';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        Name: t.name('name').text(),
+        Password: t.name('password').text(),
+      }));
+
+      relations = {
+        profile: this.hasOne(() => ProfileTable, {
+          primaryKey: 'Id',
+          foreignKey: 'UserId',
+        }),
+      };
+    }
+
+    class ProfileTable extends BaseTable {
+      readonly table = 'profile';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        UserId: t.name('userId').integer().nullable(),
+      }));
+    }
+
+    class MessageTable extends BaseTable {
+      readonly table = 'message';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        ChatId: t.name('chatId').integer(),
+        AuthorId: t.name('authorId').integer().nullable(),
+        Text: t.name('text').text(),
+      }));
+
+      relations = {
+        user: this.belongsTo(() => UserTable, {
+          primaryKey: 'Id',
+          foreignKey: 'AuthorId',
+        }),
+
+        profile: this.hasOne(() => ProfileTable, {
+          through: 'user',
+          source: 'profile',
+        }),
+      };
+    }
+
+    const local = orchidORM(
+      {
+        db: db.$queryBuilder,
+      },
+      {
+        user: UserTable,
+        profile: ProfileTable,
+        message: MessageTable,
+      },
+    );
+
+    it('should query related record and get an `undefined`', async () => {
+      const profileQuery = local.profile.takeOptional();
+
+      assertType<
+        typeof local.message.profile,
+        RelationQuery<
+          'profile',
+          { AuthorId: number },
+          'Id',
+          typeof profileQuery,
+          false
+        >
+      >;
+
+      const profile = await local.message.profile({ AuthorId: 123 });
+      expect(profile).toBe(undefined);
+    });
+
+    it('should be selectable', async () => {
+      const ChatId = await db.chat.get('IdOfChat').create(chatData);
+      const id = await local.message
+        .get('Id')
+        .create({ ...messageData, ChatId });
+
+      const result = await local.message.select('Id', {
+        profile: (q) => q.profile,
+      });
+
+      expect(result).toEqual([
+        {
+          Id: id,
+          profile: null,
+        },
+      ]);
     });
   });
 });

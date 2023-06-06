@@ -302,7 +302,12 @@ const applyRelation = (
   }
 
   if (data.returns === 'one') {
-    query._take();
+    if (relation.options.required) {
+      query._take();
+    } else {
+      query._takeOptional();
+    }
+
     query.query.returnsOne = true;
   }
 

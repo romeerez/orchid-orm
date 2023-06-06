@@ -137,7 +137,7 @@ export const makeBelongsToMethod = (
   return {
     returns: 'one',
     method: (params: Record<string, unknown>) => {
-      return query.findBy({ [primaryKey]: params[foreignKey] });
+      return query.where({ [primaryKey]: params[foreignKey] });
     },
     virtualColumn: new BelongsToVirtualColumn(relationName, state),
     joinQuery(fromQuery, toQuery) {
