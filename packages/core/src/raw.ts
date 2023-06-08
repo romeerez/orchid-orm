@@ -1,18 +1,23 @@
 import { ColumnTypeBase } from './columns/columnType';
 
+export type TemplateLiteralArgs = [
+  strings: TemplateStringsArray,
+  ...values: unknown[],
+];
+
 export type Sql = {
   text: string;
   values: unknown[];
 };
 
 export type RawExpression<C extends ColumnTypeBase = ColumnTypeBase> = {
-  __raw: string | [TemplateStringsArray, ...unknown[]];
+  __raw: string | TemplateLiteralArgs;
   __values?: Record<string, unknown> | false;
   __column: C;
 };
 
 export const raw = (
-  sql: string | [TemplateStringsArray, ...unknown[]],
+  sql: string | TemplateLiteralArgs,
   values?: Record<string, unknown> | false,
 ): RawExpression =>
   ({

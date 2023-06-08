@@ -1,6 +1,10 @@
 import { Query } from '../query';
 import { ColumnType } from '../columns';
-import { ColumnTypesBase, RawExpression } from 'orchid-core';
+import {
+  ColumnTypesBase,
+  RawExpression,
+  TemplateLiteralArgs,
+} from 'orchid-core';
 
 type SqlArgs<T extends Query> = SqlColumnArgs<T> | SqlNoColumnArgs;
 
@@ -18,11 +22,6 @@ type SqlNoColumnArgs =
 type Values = Record<string, unknown>;
 
 type ColumnFn<T extends Query> = (types: T['columnTypes']) => ColumnType;
-
-type TemplateLiteralArgs = [
-  strings: TemplateStringsArray,
-  ...values: unknown[],
-];
 
 type SqlFn<C extends ColumnType> = (
   ...args: TemplateLiteralArgs

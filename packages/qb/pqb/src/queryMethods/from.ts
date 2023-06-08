@@ -8,7 +8,14 @@ import {
 } from '../query';
 import { SelectQueryData } from '../sql';
 import { AliasOrTable } from '../utils';
-import { isRaw, QueryCatch, QueryThen, raw, RawExpression } from 'orchid-core';
+import {
+  isRaw,
+  QueryCatch,
+  QueryThen,
+  raw,
+  RawExpression,
+  TemplateLiteralArgs,
+} from 'orchid-core';
 import { getShapeFromSelect } from './select';
 
 export type FromArgs<T extends Query> =
@@ -19,7 +26,7 @@ export type FromArgs<T extends Query> =
         | Exclude<keyof T['withData'], symbol | number>,
       second?: { only?: boolean },
     ]
-  | [TemplateStringsArray, ...unknown[]];
+  | TemplateLiteralArgs;
 
 export type FromResult<
   T extends Query,
@@ -110,9 +117,10 @@ export class From {
     ...args: Args
   ): FromResult<T, Args> {
     if (Array.isArray(args[0])) {
-      return this._from(
-        raw(args as [TemplateStringsArray, ...unknown[]]),
-      ) as FromResult<T, Args>;
+      return this._from(raw(args as TemplateLiteralArgs)) as FromResult<
+        T,
+        Args
+      >;
     }
 
     if (typeof args[0] === 'string') {
