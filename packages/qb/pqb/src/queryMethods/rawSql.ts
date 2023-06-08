@@ -4,6 +4,7 @@ import {
   ColumnTypesBase,
   RawExpression,
   TemplateLiteralArgs,
+  raw,
 } from 'orchid-core';
 
 type SqlArgs<T extends Query> = SqlColumnArgs<T> | SqlNoColumnArgs;
@@ -151,24 +152,16 @@ export class RawSqlMethods {
 
     if (typeof arg === 'object') {
       if (Array.isArray(arg)) {
-        return {
-          __raw: args,
-        } as unknown as SqlResult<T, Args>;
+        return raw(args as TemplateLiteralArgs) as SqlResult<T, Args>;
       }
 
       const obj = arg as { raw?: string; values?: Values };
       if (obj.raw) {
-        return {
-          __raw: obj.raw,
-          __values: obj.values,
-        } as unknown as SqlResult<T, Args>;
+        return raw(obj.raw, obj.values) as SqlResult<T, Args>;
       }
 
       return ((...args: unknown[]) => {
-        return {
-          __raw: args,
-          __values: obj.values,
-        } as unknown as RawExpression;
+        return raw(args as TemplateLiteralArgs, obj.values);
       }) as SqlResult<T, Args>;
     }
 
@@ -176,19 +169,11 @@ export class RawSqlMethods {
     const second = args[1] as { raw?: string; values?: Values } | undefined;
 
     if (second?.raw) {
-      return {
-        __column: column,
-        __raw: second.raw,
-        __values: second.values,
-      } as unknown as SqlResult<T, Args>;
+      return raw(second.raw, second.values, column) as SqlResult<T, Args>;
     }
 
     return ((...args: unknown[]) => {
-      return {
-        __column: column,
-        __raw: args,
-        __values: second?.values,
-      } as unknown as RawExpression;
+      return raw(args as TemplateLiteralArgs, second?.values, column);
     }) as SqlResult<T, Args>;
   }
 
@@ -200,16 +185,9 @@ export class RawSqlMethods {
     ...args: RawArgs<T['columnTypes'], C>
   ): RawExpression<C> {
     if (typeof args[0] === 'string') {
-      return {
-        __raw: args[0],
-        __values: args[1],
-      } as RawExpression<C>;
+      return raw<C>(args[0], args[1] as Record<string, unknown> | undefined);
     } else {
-      return {
-        __column: args[0](this.columnTypes),
-        __raw: args[1],
-        __values: args[2],
-      } as RawExpression<C>;
+      return raw<C>(args[1] as string, args[2], args[0](this.columnTypes));
     }
   }
 }

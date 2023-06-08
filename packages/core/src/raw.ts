@@ -16,14 +16,15 @@ export type RawExpression<C extends ColumnTypeBase = ColumnTypeBase> = {
   __column: C;
 };
 
-export const raw = (
+export const raw = <C extends ColumnTypeBase = ColumnTypeBase>(
   sql: string | TemplateLiteralArgs,
   values?: Record<string, unknown> | false,
-): RawExpression =>
-  ({
-    __raw: sql,
-    __values: values,
-  } as RawExpression);
+  column?: C,
+): RawExpression<C> => ({
+  __raw: sql,
+  __values: values,
+  __column: column as C,
+});
 
 export const isRaw = (obj: object): obj is RawExpression => '__raw' in obj;
 
