@@ -1,7 +1,7 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/typescript-node
 {
-	"name": "Node.js & TypeScript",
+	"name": "Orchid",
 	"dockerComposeFile": "docker-compose.yml",
 	"service": "app",
 	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
@@ -20,5 +20,12 @@
 		"POSTGRES_HOST_AUTH_METHOD": "trust",
 		"MYSQL_ROOT_PASSWORD": "root",
 		"MYSQL_DATABASE": "orchid-orm"
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"GitHub.vscode-pull-request-github"
+			]
+		}
 	}
 }
