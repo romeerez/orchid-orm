@@ -95,6 +95,8 @@ For an isolated dev environment that automatically starts postgres on launch for
 1. For the repo, paste `git@github.com:romeerez/orchid-orm.git` if you're using ssh.
 1. Click `Create a new volume...` and name it `orchid` and the folder name as `orchid`.
 
+Note: You will need the remote containers extension which is already included in the official Microsoft release: `vscode:extension/ms-vscode-remote.remote-containers` Some Linux distros have packages of VSCode do not have the extension.
+
 ## Committing changes
 
 Run `pnpm changeset` to choose packages to add a changelog to:
