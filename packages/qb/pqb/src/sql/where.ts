@@ -205,64 +205,55 @@ const processWhere = (
           `${prefix}EXISTS (SELECT 1 FROM ${target} WHERE ${conditions} LIMIT 1)`,
         );
       }
-    } else if (
-      typeof value === 'object' &&
-      value &&
-      value.constructor === Object
-    ) {
-      if (isRaw(value)) {
+    } else if (typeof value === 'object' && value && isRaw(value)) {
+      ands.push(
+        `${prefix}${revealColumnToSql(
+          query,
+          query.shape,
+          key,
+          quotedAs,
+        )} = ${getRaw(value, ctx.values)}`,
+      );
+    } else if (typeof value === 'object' && value?.constructor === Object) {
+      let column = query.shape[key];
+      let quotedColumn: string | undefined;
+      if (column) {
+        quotedColumn = qc(column.data.name || key, quotedAs);
+      } else if (!column) {
+        const index = key.indexOf('.');
+        if (index !== -1) {
+          const joinedTable = key.slice(0, index);
+          const joinedColumn = key.slice(index + 1);
+          column = query.joinedShapes?.[joinedTable]?.[
+            joinedColumn
+          ] as typeof column;
+          quotedColumn = qc(column?.data.name || joinedColumn, q(joinedTable));
+        } else {
+          quotedColumn = undefined;
+        }
+
+        if (!column || !quotedColumn) {
+          // TODO: custom error classes
+          throw new Error(`Unknown column ${key} provided to condition`);
+        }
+      }
+
+      for (const op in value) {
+        const operator = column.operators[op];
+        if (!operator) {
+          // TODO: custom error classes
+          throw new Error(`Unknown operator ${op} provided to condition`);
+        }
+
+        if (value[op as keyof typeof value] === undefined) continue;
+
         ands.push(
-          `${prefix}${revealColumnToSql(
-            query,
-            query.shape,
-            key,
-            quotedAs,
-          )} = ${getRaw(value, ctx.values)}`,
+          `${prefix}${operator(
+            quotedColumn as string,
+            value[op as keyof typeof value],
+            ctx.values,
+          )}`,
         );
-      } else {
-        let column = query.shape[key];
-        let quotedColumn: string | undefined;
-        if (column) {
-          quotedColumn = qc(column.data.name || key, quotedAs);
-        } else if (!column) {
-          const index = key.indexOf('.');
-          if (index !== -1) {
-            const joinedTable = key.slice(0, index);
-            const joinedColumn = key.slice(index + 1);
-            column = query.joinedShapes?.[joinedTable]?.[
-              joinedColumn
-            ] as typeof column;
-            quotedColumn = qc(
-              column?.data.name || joinedColumn,
-              q(joinedTable),
-            );
-          } else {
-            quotedColumn = undefined;
-          }
-
-          if (!column || !quotedColumn) {
-            // TODO: custom error classes
-            throw new Error(`Unknown column ${key} provided to condition`);
-          }
-        }
-
-        for (const op in value) {
-          const operator = column.operators[op];
-          if (!operator) {
-            // TODO: custom error classes
-            throw new Error(`Unknown operator ${op} provided to condition`);
-          }
-
-          if (value[op as keyof typeof value] === undefined) continue;
-
-          ands.push(
-            `${prefix}${operator(
-              quotedColumn as string,
-              value[op as keyof typeof value],
-              ctx.values,
-            )}`,
-          );
-        }
       }
     } else {
       ands.push(

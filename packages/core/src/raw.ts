@@ -10,23 +10,37 @@ export type Sql = {
   values: unknown[];
 };
 
-export type RawExpression<C extends ColumnTypeBase = ColumnTypeBase> = {
-  __raw: string | TemplateLiteralArgs;
-  __values?: Record<string, unknown> | false;
-  __column: C;
-};
+export class RawExpression<C extends ColumnTypeBase = ColumnTypeBase> {
+  constructor(
+    readonly __raw: string | TemplateLiteralArgs,
+    readonly __values?: Record<string, unknown> | false,
+    readonly __column: C = undefined as unknown as C,
+  ) {}
+
+  /**
+   * Static-cast untyped raw expression to the provided type.
+   *
+   * ```ts
+   * db.sql`data->>'field'`.castTo<string>()
+   * ```
+   */
+  castTo<T extends C['type']>(): RawExpression<
+    ColumnTypeBase<T, C['operators'], C['inputType'], C['data']>
+  > {
+    return this as RawExpression<
+      ColumnTypeBase<T, C['operators'], C['inputType'], C['data']>
+    >;
+  }
+}
 
 export const raw = <C extends ColumnTypeBase = ColumnTypeBase>(
   sql: string | TemplateLiteralArgs,
   values?: Record<string, unknown> | false,
   column?: C,
-): RawExpression<C> => ({
-  __raw: sql,
-  __values: values,
-  __column: column as C,
-});
+) => new RawExpression<C>(sql, values, column);
 
-export const isRaw = (obj: object): obj is RawExpression => '__raw' in obj;
+export const isRaw = (obj: object): obj is RawExpression =>
+  obj instanceof RawExpression;
 
 export const getRawSql = (raw: RawExpression) => {
   return raw.__raw;

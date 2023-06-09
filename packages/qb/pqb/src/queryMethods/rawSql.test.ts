@@ -1,6 +1,6 @@
 import { User } from '../test-utils/test-utils';
 import { ColumnType, IntegerColumn } from '../columns';
-import { expectSql, testAdapter } from 'test-utils';
+import { assertType, expectSql, testAdapter, testDb } from 'test-utils';
 import { createDb } from '../db';
 
 describe('raw sql', () => {
@@ -196,5 +196,62 @@ describe('raw sql', () => {
     const q = User.where(User.sql({ raw: `a = $a`, values: { a: 1, b: 'b' } }));
 
     expect(() => q.toSql()).toThrow('Query variable `b` is unused');
+  });
+
+  it.only('should return unknown without type cast', () => {
+    const q = testDb.select({ test: testDb.sql({ raw: 'simple sql' }) }).take();
+
+    assertType<Awaited<typeof q>, { test: unknown }>();
+  });
+
+  it.only('should type cast a simple string', () => {
+    const q = testDb
+      .select({ test: testDb.sql({ raw: 'simple sql' }).castTo<string>() })
+      .take();
+
+    assertType<Awaited<typeof q>, { test: string }>();
+  });
+
+  it.only('should type cast a template literal', () => {
+    const q = testDb
+      .select({ test: testDb.sql`one = ${1}`.castTo<string>() })
+      .take();
+
+    assertType<Awaited<typeof q>, { test: string }>();
+  });
+
+  it.only('should allow type casting a column to the same type', () => {
+    const q = testDb
+      .select({
+        test: testDb.sql((t) => t.string(1, 10))`one = ${1}`.castTo<string>(),
+      })
+      .take();
+
+    assertType<Awaited<typeof q>, { test: string }>();
+  });
+
+  it.only('should type cast a column to a narrowing type', () => {
+    type Fish = 'Salmon' | 'Tuna' | 'Trout';
+    const q = testDb
+      .select({
+        test: testDb.sql((t) => t.string(1, 10))`one = ${1}`.castTo<Fish>(),
+      })
+      .take();
+
+    assertType<Awaited<typeof q>, { test: Fish }>();
+  });
+
+  it.only('should type cast to a complex type', () => {
+    type Type = { name: string; active: boolean };
+    const q = testDb
+      .select({ test: testDb.sql`one = ${1}`.castTo<Type>() })
+      .take();
+
+    assertType<Awaited<typeof q>, { test: Type }>();
+  });
+
+  it.only('should disallow incompatible type cast', () => {
+    // @ts-expect-error should prevent casting IntegerColumn result to string
+    User.sql((t) => t.integer())`one = ${1}`.castTo<string>();
   });
 });
