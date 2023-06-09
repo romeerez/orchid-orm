@@ -91,7 +91,7 @@ pnpm orm t belongsTo.test
 
 For an isolated dev environment that automatically starts postgres on launch for you:
 
-1. `F1` in VScode and start typing `Dev Containers: Clone Repository in Named Container Volume` to run the commmand.
+1. `F1` in VScode and start typing `Dev Containers: Clone Repository in Named Container Volume` to run the command.
 1. For the repo, paste `git@github.com:romeerez/orchid-orm.git` if you're using ssh.
 1. Click `Create a new volume...` and name it `orchid` and the folder name as `orchid`.
 
