@@ -23,6 +23,7 @@ import {
   raw,
   QueryThen,
   isObjectEmpty,
+  TemplateLiteralArgs,
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
 import { JsonModifiers } from './json';
@@ -178,7 +179,7 @@ type UpdateArg<T extends Query> = T['meta']['hasWhere'] extends true
 // Type of argument for `updateRaw`.
 // not available when there are no conditions on the query.
 type UpdateRawArgs<T extends Query> = T['meta']['hasWhere'] extends true
-  ? [sql: RawExpression] | [TemplateStringsArray, ...unknown[]]
+  ? [sql: RawExpression] | TemplateLiteralArgs
   : never;
 
 // `update` and `updateOrThrow` methods output type.
@@ -464,7 +465,7 @@ export class Update {
     ...args: UpdateRawArgs<T>
   ): UpdateResult<T> {
     if (Array.isArray(args[0])) {
-      const sql = raw(args as [TemplateStringsArray, ...unknown[]]);
+      const sql = raw(args as TemplateLiteralArgs);
       return (this as T & { meta: { hasWhere: true } })._updateRaw(sql);
     }
 

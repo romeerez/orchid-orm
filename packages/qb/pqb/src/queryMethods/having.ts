@@ -8,7 +8,7 @@ import {
 } from '../sql';
 import { pushQueryArray } from '../queryDataUtils';
 import { Aggregate1ArgumentTypes, AggregateOptions } from './aggregate';
-import { isRaw, raw, RawExpression } from 'orchid-core';
+import { isRaw, raw, RawExpression, TemplateLiteralArgs } from 'orchid-core';
 
 type HavingArgObject<
   T extends Query,
@@ -30,7 +30,7 @@ export type HavingArg<T extends Query = Query> =
 
 export type HavingArgs<T extends Query> =
   | [...args: HavingArg<T>[]]
-  | [TemplateStringsArray, ...unknown[]];
+  | TemplateLiteralArgs;
 
 const processHavingArg = <T extends Query>(arg: HavingArg<T>): HavingItem => {
   if ('baseQuery' in arg || isRaw(arg)) {
@@ -81,7 +81,7 @@ const processHavingArgs = <T extends Query>(
   processArg: (arg: HavingArg<T>) => HavingItem | HavingItem[],
 ): (HavingItem | HavingItem[])[] => {
   if (Array.isArray(args[0])) {
-    return [processArg(raw(args as [TemplateStringsArray, ...unknown[]]))];
+    return [processArg(raw(args as TemplateLiteralArgs))];
   } else {
     return args.map((arg) => processArg(arg as HavingArg<T>));
   }

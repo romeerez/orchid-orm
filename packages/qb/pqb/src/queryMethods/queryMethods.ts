@@ -53,6 +53,7 @@ import {
   Sql,
   QueryThen,
   ColumnsShapeBase,
+  TemplateLiteralArgs,
 } from 'orchid-core';
 import { AsMethods } from './as';
 import { QueryBase } from '../queryBase';
@@ -96,13 +97,11 @@ export type OrderArg<
     }
   | RawExpression;
 
-export type OrderArgs<T extends Query> =
-  | OrderArg<T>[]
-  | [TemplateStringsArray, ...unknown[]];
+export type OrderArgs<T extends Query> = OrderArg<T>[] | TemplateLiteralArgs;
 
 type FindArgs<T extends Query> =
   | [T['shape'][T['singlePrimaryKey']]['type'] | RawExpression]
-  | [TemplateStringsArray, ...unknown[]];
+  | TemplateLiteralArgs;
 
 type QueryHelper<T extends Query, Args extends unknown[], Result> = <
   Q extends {
@@ -315,7 +314,7 @@ export class QueryMethods {
   ): SetQueryReturnsOne<WhereResult<T>> {
     const [value] = args;
     if (Array.isArray(value)) {
-      return this._find(raw(args as [TemplateStringsArray, ...unknown[]]));
+      return this._find(raw(args as TemplateLiteralArgs));
     }
 
     if (value === null || value === undefined) {
@@ -527,7 +526,7 @@ export class QueryMethods {
   }
   _order<T extends Query>(this: T, ...args: OrderArgs<T>): T {
     if (Array.isArray(args[0])) {
-      return this._order(raw(args as [TemplateStringsArray, ...unknown[]]));
+      return this._order(raw(args as TemplateLiteralArgs));
     }
     return pushQueryArray(this, 'order', args);
   }

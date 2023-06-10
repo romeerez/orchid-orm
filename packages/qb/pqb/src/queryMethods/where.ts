@@ -8,6 +8,7 @@ import {
   MaybeArray,
   emptyObject,
   raw,
+  TemplateLiteralArgs,
 } from 'orchid-core';
 import { getIsJoinSubQuery } from '../sql/join';
 import { getShapeFromSelect } from './select';
@@ -38,7 +39,7 @@ export type WhereArg<T extends QueryBase> =
 
 export type WhereArgs<T extends QueryBase> =
   | WhereArg<T>[]
-  | [TemplateStringsArray, ...unknown[]];
+  | TemplateLiteralArgs;
 
 export type WhereInColumn<T extends QueryBase> =
   | keyof T['selectable']
@@ -81,7 +82,7 @@ export const addWhere = <T extends Where>(
     return pushQueryValue(
       q,
       'and',
-      raw(args as [TemplateStringsArray, ...unknown[]]),
+      raw(args as TemplateLiteralArgs),
     ) as unknown as WhereResult<T>;
   }
   return pushQueryArray(q, 'and', args) as unknown as WhereResult<T>;
@@ -93,7 +94,7 @@ export const addWhereNot = <T extends QueryBase>(
 ): WhereResult<T> => {
   if (Array.isArray(args[0])) {
     return pushQueryValue(q, 'and', {
-      NOT: raw(args as [TemplateStringsArray, ...unknown[]]),
+      NOT: raw(args as TemplateLiteralArgs),
     }) as unknown as WhereResult<T>;
   }
   return pushQueryValue(q, 'and', {

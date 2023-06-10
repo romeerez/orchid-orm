@@ -57,6 +57,7 @@ import {
   raw,
   RawExpression,
   setDefaultNowFn,
+  TemplateLiteralArgs,
   toArray,
 } from 'orchid-core';
 import { ArrayColumn } from './array';
@@ -172,18 +173,16 @@ function sql(sql: string): RawExpression;
 function sql(values: Record<string, unknown>, sql: string): RawExpression;
 function sql(
   values: Record<string, unknown>,
-): (...sql: [TemplateStringsArray, ...unknown[]]) => RawExpression;
+): (...sql: TemplateLiteralArgs) => RawExpression;
 function sql(
   ...args:
     | [sql: TemplateStringsArray, ...values: unknown[]]
     | [sql: string]
     | [values: Record<string, unknown>, sql?: string]
-):
-  | ((...sql: [TemplateStringsArray, ...unknown[]]) => RawExpression)
-  | RawExpression {
+): ((...sql: TemplateLiteralArgs) => RawExpression) | RawExpression {
   const arg = args[0];
   if (Array.isArray(arg)) {
-    return raw(args as [TemplateStringsArray, ...unknown[]]);
+    return raw(args as TemplateLiteralArgs);
   }
 
   if (typeof args[0] === 'string') {
