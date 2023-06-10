@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+      args:
+        # Update 'VARIANT' to pick a version of Python: 3, 3.10, 3.9, 3.8, 3.7, 3.6
+        # Append -bullseye or -buster to pin to an OS version.
+        # Use -bullseye variants on local arm64/Apple Silicon.
+        VARIANT: 20-bullseye
+        # Optional Node.js version to install
+        NODE_VERSION: 'lts/*'
+    volumes:
+      - ../..:/workspaces:cached
+    # Runs app on the same network as the database container, allows "forwardPorts" in devcontainer.json function.
+    network_mode: service:postgres
+    # Overrides default command so things don't shut down after the process ends.
+    command: sleep infinity
+
+  postgres:
+    image: postgres:latest
+    # restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: orchid-orm
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - '5432:5432'
+      - '3306:3306'
+      - '5433:5433'
+
+  # MySQL Does not work without changing configs.  Left here for posterity after hours lost.
+  # mysql:
+  #   image: 'mysql/mysql-server'
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: root
+  #     MYSQL_DATABASE: orchid-orm
+  #     MYSQL_USER: root
+  #   network_mode: service:postgres
+
+  pgadmin:
+    image: dpage/pgadmin4
+    volumes:
+      - pgAdmin-data:/var/lib/pgadmin
+      - pgAdmin-user-data:/user-data
+    environment:
+      PGADMIN_DEFAULT_EMAIL: foo@foo.com
+      PGADMIN_DEFAULT_PASSWORD: '1234'
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+      PGADMIN_LISTEN_PORT: 5433
+    network_mode: service:postgres
+
+volumes:
+  postgres-data: {}
+  pgAdmin-data: {}
+  pgAdmin-user-data: {}
