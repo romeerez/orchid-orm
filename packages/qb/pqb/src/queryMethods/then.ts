@@ -132,7 +132,7 @@ const then = async (
     ](sql)) as QueryResult;
 
     if (query.patchResult) {
-      await query.patchResult(queryResult);
+      await query.patchResult(q, queryResult);
     }
 
     if (query.log) {

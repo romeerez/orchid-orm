@@ -379,7 +379,7 @@ export class Update {
           });
         }
 
-        query.patchResult = async (queryResult) => {
+        query.patchResult = async (_, queryResult) => {
           await Promise.all(queries.map((fn) => fn(queryResult)));
 
           if (ctx.updateData) {

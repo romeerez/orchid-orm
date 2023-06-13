@@ -42,6 +42,19 @@ describe('upsertOrCreate', () => {
       expect(user.name).toBe('created');
     });
 
+    it('should create record and return a single value', async () => {
+      const id = await User.find(1)
+        .upsert({
+          update: {},
+          create: userData,
+        })
+        .get('id');
+
+      assertType<typeof id, number>();
+
+      expect(id).toEqual(expect.any(Number));
+    });
+
     it('should create record if not exists with a data from a callback', async () => {
       const user = await User.selectAll()
         .find(123)

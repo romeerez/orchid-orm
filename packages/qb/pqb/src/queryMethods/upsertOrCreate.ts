@@ -131,13 +131,13 @@ export class QueryUpsertOrCreate {
       return created ? result : handleResult(q, r, s);
     };
 
-    this.query.patchResult = async (queryResult) => {
+    this.query.patchResult = async (q, queryResult) => {
       if (queryResult.rowCount === 0) {
         if (typeof data === 'function') {
           data = data();
         }
 
-        const inner = (this as Query).create(data as CreateData<Query>);
+        const inner = q.create(data as CreateData<Query>);
         const { handleResult } = inner.query;
         inner.query.handleResult = (q, r, s) => {
           queryResult = r;

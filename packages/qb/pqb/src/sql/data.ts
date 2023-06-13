@@ -41,7 +41,7 @@ export type JoinOverrides = Record<string, string>;
 export type CommonQueryData = {
   adapter: Adapter;
   shape: ColumnsShapeBase;
-  patchResult?(queryResult: QueryResult): Promise<void>;
+  patchResult?(q: Query, queryResult: QueryResult): Promise<void>;
   handleResult(q: Query, result: QueryResult, isSubQuery?: true): unknown;
   returnType: QueryReturnType;
   [relationQueryKey]?: RelationQueryData;
