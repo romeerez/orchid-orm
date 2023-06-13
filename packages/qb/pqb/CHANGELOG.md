@@ -1,5 +1,11 @@
 # pqb
 
+## 0.12.5
+
+### Patch Changes
+
+- cbc1121: Fix `upsert` to return value when created when the query is changed with `get` (#121)
+
 ## 0.12.4
 
 ### Patch Changes
