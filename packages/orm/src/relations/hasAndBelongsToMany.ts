@@ -1,12 +1,12 @@
 import { RelationData, RelationThunkBase } from './relations';
-import { Table } from '../table';
+import { Table } from '../baseTable';
 import {
   ColumnType,
   CreateCtx,
   getQueryAs,
   HasAndBelongsToManyRelation,
   NotFoundError,
-  pushQueryValue,
+  OrchidOrmInternalError,
   Query,
   QueryBase,
   toSqlCacheKey,
@@ -77,10 +77,9 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn {
     );
   }
 
-  update(q: Query, ctx: UpdateCtx, set: Record<string, unknown>) {
+  update(q: Query, _: UpdateCtx, set: Record<string, unknown>) {
     hasRelationHandleUpdate(
       q,
-      ctx,
       set,
       this.key,
       this.state.primaryKey,
@@ -177,26 +176,31 @@ export const makeHasAndBelongsToManyMethod = (
     modifyRelatedQuery(relationQuery) {
       const ref = {} as { query: Query };
 
-      pushQueryValue(
-        relationQuery,
-        'afterCreate',
-        async (_: Query, result: Record<string, unknown>) => {
-          const fromQuery = ref.query.clone();
-          fromQuery.query.select = [{ selectAs: { [fk]: pk } }];
-
-          const createdCount = await subQuery.count()._createFrom(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            fromQuery as any,
-            {
-              [afk]: result[apk],
-            } as never,
+      relationQuery._afterCreate([], async (result: unknown[]) => {
+        if (result.length > 1) {
+          // TODO: currently this relies on `INSERT ... SELECT` that works only for 1 record
+          // consider using `WITH` to reuse id of main table for multiple related ids
+          throw new OrchidOrmInternalError(
+            relationQuery,
+            'Creating multiple `hasAndBelongsToMany` records is not yet supported',
           );
+        }
 
-          if (createdCount === 0) {
-            throw new NotFoundError(fromQuery);
-          }
-        },
-      );
+        const fromQuery = ref.query.clone();
+        fromQuery.query.select = [{ selectAs: { [fk]: pk } }];
+
+        const createdCount = await subQuery.count()._createFrom(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          fromQuery as any,
+          {
+            [afk]: (result[0] as Record<string, unknown>)[apk],
+          } as never,
+        );
+
+        if (createdCount === 0) {
+          throw new NotFoundError(fromQuery);
+        }
+      });
 
       return (q) => {
         ref.query = q;

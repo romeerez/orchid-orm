@@ -1,6 +1,6 @@
 import { BelongsTo, BelongsToInfo, makeBelongsToMethod } from './belongsTo';
 import { HasOne, HasOneInfo, makeHasOneMethod } from './hasOne';
-import { DbTable, Table, TableClass } from '../table';
+import { DbTable, Table, TableClass } from '../baseTable';
 import { OrchidORM } from '../orm';
 import {
   Query,

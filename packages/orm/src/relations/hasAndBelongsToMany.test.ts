@@ -1,4 +1,4 @@
-import { RelationQuery, TransactionAdapter } from 'pqb';
+import { Db, RelationQuery, TransactionAdapter } from 'pqb';
 import {
   Chat,
   chatData,
@@ -700,6 +700,7 @@ describe('hasAndBelongsToMany', () => {
       describe('relation callbacks', () => {
         const { beforeCreate, afterCreate, resetMocks } = useRelationCallback(
           db.user.relations.chats,
+          ['IdOfChat'],
         );
 
         const data = {
@@ -712,8 +713,11 @@ describe('hasAndBelongsToMany', () => {
         it('should invoke callbacks', async () => {
           await db.user.create(data);
 
+          const ids = await db.chat.select('IdOfChat');
+
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toBeCalledWith(ids, expect.any(Db));
         });
 
         it('should invoke callbacks in a batch create', async () => {
@@ -721,8 +725,11 @@ describe('hasAndBelongsToMany', () => {
 
           await db.user.createMany([data, data]);
 
+          const ids = await db.chat.select('IdOfChat');
+
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toBeCalledWith(ids, expect.any(Db));
         });
       });
     });
@@ -1024,6 +1031,7 @@ describe('hasAndBelongsToMany', () => {
       describe('relation callbacks', () => {
         const { beforeCreate, afterCreate, resetMocks } = useRelationCallback(
           db.user.relations.chats,
+          ['IdOfChat'],
         );
 
         const data = {
@@ -1045,8 +1053,11 @@ describe('hasAndBelongsToMany', () => {
         it('should invoke callbacks', async () => {
           await db.user.create(data);
 
+          const ids = await db.chat.select('IdOfChat');
+
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toBeCalledWith(ids, expect.any(Db));
         });
 
         it('should invoke callbacks in a batch create', async () => {
@@ -1054,8 +1065,11 @@ describe('hasAndBelongsToMany', () => {
 
           await db.user.createMany([data, data]);
 
+          const ids = await db.chat.select('IdOfChat');
+
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toBeCalledWith(ids, expect.any(Db));
         });
       });
     });
@@ -1190,6 +1204,7 @@ describe('hasAndBelongsToMany', () => {
       describe('relation callbacks', () => {
         const { beforeDelete, afterDelete, resetMocks } = useRelationCallback(
           db.user.relations.chats,
+          ['IdOfChat'],
         );
 
         const data = {
@@ -1209,16 +1224,19 @@ describe('hasAndBelongsToMany', () => {
             },
           });
 
+          const ids = await db.chat.select('IdOfChat');
+
           await db.user.find(id).update(data);
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
+          expect(afterDelete).toBeCalledWith(ids, expect.any(Db));
         });
 
         it('should invoke callbacks in a batch update', async () => {
           resetMocks();
 
-          const ids = await db.user.pluck('Id').createMany([
+          const UserIds = await db.user.pluck('Id').createMany([
             {
               ...userData,
               chats: {
@@ -1239,10 +1257,13 @@ describe('hasAndBelongsToMany', () => {
             },
           ]);
 
-          await db.user.where({ Id: { in: ids } }).update(data);
+          const ids = await db.chat.select('IdOfChat');
+
+          await db.user.where({ Id: { in: UserIds } }).update(data);
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
+          expect(afterDelete).toBeCalledWith([ids[0], ids[2]], expect.any(Db));
         });
       });
     });
@@ -1310,6 +1331,7 @@ describe('hasAndBelongsToMany', () => {
       describe('relation callbacks', () => {
         const { beforeUpdate, afterUpdate, resetMocks } = useRelationCallback(
           db.user.relations.chats,
+          ['IdOfChat'],
         );
 
         const data = {
@@ -1331,8 +1353,11 @@ describe('hasAndBelongsToMany', () => {
 
           await db.user.find(id).update(data);
 
+          const IdOfChat = await db.chat.get('IdOfChat');
+
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toBeCalledWith([{ IdOfChat }], expect.any(Db));
         });
 
         it('should invoke callbacks in a batch update', async () => {
@@ -1355,8 +1380,14 @@ describe('hasAndBelongsToMany', () => {
 
           await db.user.find(id).update(data);
 
+          const ids = await db.chat.pluck('IdOfChat');
+
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toBeCalledWith(
+            [{ IdOfChat: ids[0] }, { IdOfChat: ids[1] }],
+            expect.any(Db),
+          );
         });
       });
     });
@@ -1419,6 +1450,7 @@ describe('hasAndBelongsToMany', () => {
       describe('relation callbacks', () => {
         const { beforeCreate, afterCreate, resetMocks } = useRelationCallback(
           db.user.relations.chats,
+          ['IdOfChat'],
         );
 
         const data = {
@@ -1432,21 +1464,31 @@ describe('hasAndBelongsToMany', () => {
 
           await db.user.find(id).update(data);
 
+          const ids = await db.chat.pluck('IdOfChat');
+
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toBeCalledWith(
+            [{ IdOfChat: ids[0] }, { IdOfChat: ids[1] }],
+            expect.any(Db),
+          );
         });
 
         it('should invoke callbacks in a batch update', async () => {
-          const ids = await db.user
+          const userIds = await db.user
             .pluck('Id')
             .createMany([userData, userData]);
 
           resetMocks();
 
-          await db.user.where({ Id: { in: ids } }).update(data);
+          await db.user.where({ Id: { in: userIds } }).update(data);
+
+          const ids = await db.chat.select('IdOfChat');
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
+          expect(ids).toHaveLength(2);
+          expect(afterCreate).toBeCalledWith(ids, expect.any(Db));
         });
       });
     });

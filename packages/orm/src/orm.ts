@@ -9,13 +9,14 @@ import {
   FromResult,
   NoPrimaryKeyOption,
   Query,
+  QueryData,
   QueryLogOptions,
 } from 'pqb';
-import { addTableHooks, DbTable, Table, TableClasses } from './table';
+import { DbTable, Table, TableClasses } from './baseTable';
 import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { AdapterBase } from 'orchid-core';
+import { TransactionState } from 'orchid-core';
 
 export type OrchidORM<T extends TableClasses = TableClasses> = {
   [K in keyof T]: DbTable<T[K]>;
@@ -58,7 +59,7 @@ export const orchidORM = <T extends TableClasses>(
   } else {
     adapter = 'adapter' in options ? options.adapter : new Adapter(options);
 
-    transactionStorage = new AsyncLocalStorage<AdapterBase>();
+    transactionStorage = new AsyncLocalStorage<TransactionState>();
 
     qb = new Db(
       adapter,
@@ -113,12 +114,23 @@ export const orchidORM = <T extends TableClasses>(
     (dbTable as unknown as { filePath: string }).filePath = table.filePath;
     (dbTable as unknown as { name: string }).name = table.constructor.name;
 
-    if (table.hooks) addTableHooks(dbTable, table.hooks);
-
     (result as Record<string, unknown>)[key] = dbTable;
   }
 
   applyRelations(qb, tableInstances, result);
+
+  for (const key in tables) {
+    const table = tableInstances[key] as unknown as {
+      init?(orm: unknown): void;
+      query: QueryData;
+    };
+
+    if (table.init) {
+      table.init(result);
+      // assign before and after hooks from table.query to the table base query
+      Object.assign(result[key].baseQuery.query, table.query);
+    }
+  }
 
   return result as unknown as OrchidORM<T>;
 };

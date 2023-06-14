@@ -1,5 +1,5 @@
 import { WindowDeclaration } from './types';
-import { q, rawOrRevealColumnToSql } from './common';
+import { q, rawOrColumnToSql } from './common';
 import { orderByToSql } from './orderBy';
 import { getRaw } from './rawSql';
 import { isRaw, RawExpression } from 'orchid-core';
@@ -22,15 +22,10 @@ export const windowToSql = (
             Array.isArray(window.partitionBy)
               ? window.partitionBy
                   .map((partitionBy) =>
-                    rawOrRevealColumnToSql(data, partitionBy, values, quotedAs),
+                    rawOrColumnToSql(data, partitionBy, values, quotedAs),
                   )
                   .join(', ')
-              : rawOrRevealColumnToSql(
-                  data,
-                  window.partitionBy,
-                  values,
-                  quotedAs,
-                )
+              : rawOrColumnToSql(data, window.partitionBy, values, quotedAs)
           }`,
         );
       }

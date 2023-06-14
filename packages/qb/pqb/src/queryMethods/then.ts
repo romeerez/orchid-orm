@@ -1,15 +1,22 @@
 import { Query, QueryReturnType } from '../query';
 import { NotFoundError, QueryError } from '../errors';
 import { QueryArraysResult, QueryResult } from '../adapter';
-import { CommonQueryData } from '../sql';
-import { AfterHook, BeforeHook } from './hooks';
+import {
+  CommonQueryData,
+  QueryAfterHook,
+  QueryBeforeHook,
+  QueryHookSelect,
+} from '../sql';
 import pg from 'pg';
 import {
   AdapterBase,
+  callWithThis,
   ColumnParser,
   ColumnsParsers,
+  emptyArray,
   getValueKey,
   Sql,
+  TransactionState,
 } from 'orchid-core';
 
 export const queryMethodByReturnType: Record<
@@ -48,40 +55,85 @@ export class Then {
 
 export const handleResult: CommonQueryData['handleResult'] = (
   q,
+  returnType,
   result: QueryResult,
   isSubQuery?: true,
 ) => {
-  return parseResult(
-    q,
-    q.query.parsers,
-    q.query.returnType || 'all',
-    result,
-    isSubQuery,
-  );
+  return parseResult(q, q.query.parsers, returnType, result, isSubQuery);
 };
 
 function maybeWrappedThen(this: Query, resolve?: Resolve, reject?: Reject) {
-  const adapter = this.internal.transactionStorage.getStore();
-  if (this.query.wrapInTransaction && !adapter) {
+  const { query } = this;
+
+  let beforeHooks: QueryBeforeHook[] | undefined;
+  let afterHooks: QueryAfterHook[] | undefined;
+  let afterCommitHooks: QueryAfterHook[] | undefined;
+  if (query.type) {
+    if (query.type === 'insert') {
+      beforeHooks = query.beforeCreate;
+      afterHooks = query.afterCreate;
+      afterCommitHooks = query.afterCreateCommit;
+    } else if (query.type === 'update') {
+      beforeHooks = query.beforeUpdate;
+      afterHooks = query.afterUpdate;
+      afterCommitHooks = query.afterUpdateCommit;
+    } else if (query.type === 'delete') {
+      beforeHooks = query.beforeDelete;
+      afterHooks = query.afterDelete;
+      afterCommitHooks = query.afterDeleteCommit;
+    }
+  }
+
+  const trx = this.internal.transactionStorage.getStore();
+  if ((query.wrapInTransaction || afterHooks?.length) && !trx) {
     return this.transaction(
       () =>
         new Promise((resolve, reject) => {
-          const adapter =
-            this.internal.transactionStorage.getStore() as AdapterBase;
-          return then(this, adapter, resolve, reject);
+          const trx =
+            this.internal.transactionStorage.getStore() as TransactionState;
+          return then(
+            this,
+            trx.adapter,
+            trx,
+            beforeHooks,
+            afterHooks,
+            afterCommitHooks,
+            resolve,
+            reject,
+          );
         }),
     ).then(resolve, reject);
   } else {
-    return then(this, adapter || this.query.adapter, resolve, reject);
+    return then(
+      this,
+      trx?.adapter || this.query.adapter,
+      trx,
+      beforeHooks,
+      afterHooks,
+      afterCommitHooks,
+      resolve,
+      reject,
+    );
   }
 }
 
 const queriesNames: Record<string, string> = {};
 let nameI = 0;
 
+const callAfterHook = function (
+  this: [result: unknown[], q: Query],
+  cb: QueryAfterHook,
+): Promise<unknown> | unknown {
+  return cb(this[0], this[1]);
+};
+
 const then = async (
   q: Query,
   adapter: AdapterBase,
+  trx?: TransactionState,
+  beforeHooks?: QueryBeforeHook[],
+  afterHooks?: QueryAfterHook[],
+  afterCommitHooks?: QueryAfterHook[],
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   resolve?: (result: any) => any,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -96,26 +148,17 @@ const then = async (
   const localError = queryError;
 
   try {
-    let beforeHooks: BeforeHook[] | undefined;
-    let afterHooks: AfterHook[] | undefined;
-    if (query.type === 'insert') {
-      beforeHooks = query.beforeCreate;
-      afterHooks = query.afterCreate;
-    } else if (query.type === 'update') {
-      beforeHooks = query.beforeUpdate;
-      afterHooks = query.afterUpdate;
-    } else if (query.type === 'delete') {
-      beforeHooks = query.beforeDelete;
-      afterHooks = query.afterDelete;
-    }
-
-    if (beforeHooks || query.beforeQuery) {
+    if (beforeHooks || query.before) {
       await Promise.all(
-        getHooks(beforeHooks, query.beforeQuery).map((cb) => cb(q)),
+        [...(beforeHooks || emptyArray), ...(query.before || emptyArray)].map(
+          callWithThis,
+          q,
+        ),
       );
     }
 
     sql = q.toSql();
+    const { hookSelect } = sql;
 
     if (query.autoPreparedStatements) {
       sql.name =
@@ -127,8 +170,11 @@ const then = async (
       logData = query.log.beforeQuery(sql);
     }
 
+    const { returnType = 'all' } = query;
+    const returns = hookSelect ? 'all' : returnType;
+
     const queryResult = (await adapter[
-      queryMethodByReturnType[query.returnType || 'all'] as 'query'
+      hookSelect ? 'query' : (queryMethodByReturnType[returnType] as 'query')
     ](sql)) as QueryResult;
 
     if (query.patchResult) {
@@ -141,12 +187,39 @@ const then = async (
       sql = undefined;
     }
 
-    let result = query.handleResult(q, queryResult);
+    let result = query.handleResult(q, returns, queryResult);
 
-    if (afterHooks || query.afterQuery) {
-      await Promise.all(
-        getHooks(query.afterQuery, afterHooks).map((query) => query(q, result)),
-      );
+    if (afterHooks || afterCommitHooks || query.after) {
+      if ((result as unknown[]).length) {
+        if (afterHooks || query.after) {
+          const args = [result, q];
+          await Promise.all(
+            [...(afterHooks || emptyArray), ...(query.after || emptyArray)].map(
+              callAfterHook,
+              args,
+            ),
+          );
+        }
+
+        // afterCommitHooks are executed later after transaction commit,
+        // or, if we don't have transaction, they are executed intentionally after other after hooks
+        if (afterCommitHooks && trx) {
+          (trx.afterCommit ??= []).push(
+            result as unknown[],
+            q,
+            afterCommitHooks,
+          );
+        } else if (afterCommitHooks) {
+          const args = [result, q];
+          await Promise.all(afterCommitHooks.map(callAfterHook, args));
+        }
+      } else if (query.after) {
+        const args = [result, q];
+        await Promise.all(query.after.map(callAfterHook, args));
+      }
+
+      if (hookSelect)
+        result = filterResult(q, returnType, queryResult, hookSelect, result);
     }
 
     if (query.transform) {
@@ -305,11 +378,80 @@ const parseValue = (value: unknown, parsers?: ColumnsParsers) => {
   return parser ? parser(value) : value;
 };
 
-const getHooks = <T extends BeforeHook[] | AfterHook[]>(
-  first?: T,
-  second?: T,
-): T => {
-  return (
-    first && second ? [...first, ...second] : first ? first : second
-  ) as T;
+const filterResult = (
+  q: Query,
+  returnType: QueryReturnType,
+  queryResult: QueryResult,
+  hookSelect: QueryHookSelect,
+  result: unknown,
+): unknown => {
+  if (returnType === 'all') {
+    const pick = getSelectPick(queryResult, hookSelect);
+    return (result as unknown[]).map((full) => {
+      const filtered: Record<string, unknown> = {};
+      for (const key of pick) {
+        filtered[key] = (full as Record<string, unknown>)[key];
+      }
+      return filtered;
+    });
+  }
+
+  if (returnType === 'oneOrThrow' || returnType === 'one') {
+    const row = (result as unknown[])[0];
+    if (!row) {
+      if (returnType === 'oneOrThrow') throw new NotFoundError(q);
+      return undefined;
+    } else {
+      result = {};
+      for (const key in row) {
+        if (!hookSelect.includes(key)) {
+          (result as Record<string, unknown>)[key] = (
+            row as Record<string, unknown>
+          )[key];
+        }
+      }
+      return result;
+    }
+  }
+
+  if (returnType === 'value') {
+    return (result as Record<string, unknown>[])[0]?.[
+      queryResult.fields[0].name
+    ];
+  }
+
+  if (returnType === 'valueOrThrow') {
+    const row = (result as Record<string, unknown>[])[0];
+    if (!row) throw new NotFoundError(q);
+    return row[queryResult.fields[0].name];
+  }
+
+  if (returnType === 'rowCount') {
+    return queryResult.rowCount;
+  }
+
+  if (returnType === 'pluck') {
+    const key = queryResult.fields[0].name;
+    return (result as Record<string, unknown>[]).map((row) => row[key]);
+  }
+
+  if (returnType === 'rows') {
+    const pick = getSelectPick(queryResult, hookSelect);
+    return (result as unknown[]).map((full) =>
+      pick.map((key) => (full as Record<string, unknown>)[key]),
+    );
+  }
+
+  return;
+};
+
+const getSelectPick = (
+  queryResult: QueryResult,
+  hookSelect: QueryHookSelect,
+): string[] => {
+  const pick: string[] = [];
+  for (const field of queryResult.fields) {
+    if (!hookSelect.includes(field.name)) pick.push(field.name);
+  }
+  return pick;
 };

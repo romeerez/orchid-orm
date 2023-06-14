@@ -1,4 +1,4 @@
-import { rawOrRevealColumnToSql } from './common';
+import { rawOrColumnToSql } from './common';
 import { ToSqlCtx } from './toSql';
 import { SelectQueryData } from './data';
 import { QueryBase } from '../queryBase';
@@ -13,7 +13,7 @@ export const pushDistinctSql = (
 
   if (distinct.length) {
     const columns = distinct?.map((item) =>
-      rawOrRevealColumnToSql(table.query, item, ctx.values, quotedAs),
+      rawOrColumnToSql(table.query, item, ctx.values, quotedAs),
     );
     ctx.sql.push(`ON (${columns?.join(', ') || ''})`);
   }

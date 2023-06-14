@@ -1,10 +1,5 @@
 import { Query, QueryReturnType } from '../query';
-import {
-  AfterHook,
-  BeforeHook,
-  QueryLogger,
-  QueryLogObject,
-} from '../queryMethods';
+import { QueryLogger, QueryLogObject } from '../queryMethods';
 import { Adapter, QueryResult } from '../adapter';
 import { RelationQueryData, relationQueryKey } from '../relations';
 import { ColumnsShape } from '../columns';
@@ -34,15 +29,31 @@ import {
 } from 'orchid-core';
 import { QueryBase } from '../queryBase';
 
+// Column shapes of joined tables. Used to select, filter, order by the columns of joined tables.
 export type JoinedShapes = Record<string, ColumnsShapeBase>;
+// Column parsers of joined tables. Used to parse the columns when selecting the column of joined tables.
 export type JoinedParsers = Record<string, ColumnsParsers>;
+// Keep track of joined table names.
+// When joining the same table second time, this allows to add a numeric suffix to avoid name collisions.
 export type JoinOverrides = Record<string, string>;
+
+export type QueryBeforeHook = (query: Query) => void | Promise<void>;
+export type QueryAfterHook<Data = unknown> = (
+  data: Data,
+  query: Query,
+) => void | Promise<void>;
+export type QueryHookSelect = string[];
 
 export type CommonQueryData = {
   adapter: Adapter;
   shape: ColumnsShapeBase;
   patchResult?(q: Query, queryResult: QueryResult): Promise<void>;
-  handleResult(q: Query, result: QueryResult, isSubQuery?: true): unknown;
+  handleResult(
+    q: Query,
+    returnType: QueryReturnType,
+    result: QueryResult,
+    isSubQuery?: true,
+  ): unknown;
   returnType: QueryReturnType;
   [relationQueryKey]?: RelationQueryData;
   wrapInTransaction?: boolean;
@@ -65,12 +76,43 @@ export type CommonQueryData = {
   parsers?: ColumnsParsers;
   notFoundDefault?: unknown;
   defaults?: Record<string, unknown>;
-  beforeQuery?: BeforeHook[];
-  afterQuery?: AfterHook[];
+  // run functions before any query
+  before?: QueryBeforeHook[];
+  // run functions after any query
+  after?: QueryAfterHook[];
+  // run functions before create
+  beforeCreate?: QueryBeforeHook[];
+  // run functions after create in transaction
+  afterCreate?: QueryAfterHook[];
+  // run functions after create commit
+  afterCreateCommit?: QueryAfterHook[];
+  // additional select for afterCreate hooks
+  afterCreateSelect?: QueryHookSelect;
+  // run functions before update
+  beforeUpdate?: QueryBeforeHook[];
+  // run functions after update in transaction
+  afterUpdate?: QueryAfterHook[];
+  // run functions after update commit
+  afterUpdateCommit?: QueryAfterHook[];
+  // additional select for afterUpdate hooks
+  afterUpdateSelect?: QueryHookSelect;
+  // run functions before delete
+  beforeDelete?: QueryBeforeHook[];
+  // run functions after delete in transaction
+  afterDelete?: QueryAfterHook[];
+  // run functions after delete commit
+  afterDeleteCommit?: QueryAfterHook[];
+  // additional select for afterDelete hooks
+  afterDeleteSelect?: QueryHookSelect;
+  // log settings
   log?: QueryLogObject;
+  // logger with `log`, `warn`, `error`
   logger: QueryLogger;
+  // convert query into prepared statement automatically as an optimization
   autoPreparedStatements?: boolean;
+  // cache `toSql` output
   [toSqlCacheKey]?: Sql;
+  // functions to transform query result after loading data
   transform?: ((input: unknown) => unknown)[];
 };
 
@@ -119,8 +161,6 @@ export type InsertQueryData = CommonQueryData & {
         expr?: OnConflictItem;
         update?: OnConflictMergeUpdate;
       };
-  beforeCreate?: BeforeHook[];
-  afterCreate?: AfterHook[];
 };
 
 export type UpdateQueryDataObject = Record<
@@ -140,15 +180,11 @@ export type UpdateQueryDataItem =
 export type UpdateQueryData = CommonQueryData & {
   type: 'update';
   updateData: UpdateQueryDataItem[];
-  beforeUpdate?: BeforeHook[];
-  afterUpdate?: AfterHook[];
 };
 
 export type DeleteQueryData = CommonQueryData & {
   type: 'delete';
   join?: JoinItem[];
-  beforeDelete?: BeforeHook[];
-  afterDelete?: AfterHook[];
 };
 
 export type TruncateQueryData = CommonQueryData & {
@@ -199,39 +235,56 @@ export type QueryData =
   | CopyQueryData;
 
 export const cloneQueryArrays = (q: QueryData) => {
-  if (q.with) q.with = q.with?.slice(0);
-  if (q.select) q.select = q.select?.slice(0);
-  if (q.and) q.and = q.and?.slice(0);
-  if (q.or) q.or = q.or?.slice(0);
-  if (q.beforeQuery) q.beforeQuery = q.beforeQuery?.slice(0);
-  if (q.afterQuery) q.afterQuery = q.afterQuery?.slice(0);
+  if (q.with) q.with = q.with.slice(0);
+  if (q.select) q.select = q.select.slice(0);
+  if (q.and) q.and = q.and.slice(0);
+  if (q.or) q.or = q.or.slice(0);
+  if (q.before) q.before = q.before.slice(0);
+  if (q.after) q.after = q.after.slice(0);
 
   // may have data for updating timestamps on any kind of query
-  (q as UpdateQueryData).updateData = (q as UpdateQueryData).updateData?.slice(
-    0,
-  );
+  if ((q as UpdateQueryData).updateData) {
+    (q as UpdateQueryData).updateData = (q as UpdateQueryData).updateData.slice(
+      0,
+    );
+  }
 
   if (q.type === undefined) {
-    if (q.distinct) q.distinct = q.distinct?.slice(0);
-    if (q.join) q.join = q.join?.slice(0);
-    if (q.group) q.group = q.group?.slice(0);
-    if (q.having) q.having = q.having?.slice(0);
-    if (q.havingOr) q.havingOr = q.havingOr?.slice(0);
-    if (q.window) q.window = q.window?.slice(0);
-    if (q.union) q.union = q.union?.slice(0);
-    if (q.order) q.order = q.order?.slice(0);
+    if (q.distinct) q.distinct = q.distinct.slice(0);
+    if (q.join) q.join = q.join.slice(0);
+    if (q.group) q.group = q.group.slice(0);
+    if (q.having) q.having = q.having.slice(0);
+    if (q.havingOr) q.havingOr = q.havingOr.slice(0);
+    if (q.window) q.window = q.window.slice(0);
+    if (q.union) q.union = q.union.slice(0);
+    if (q.order) q.order = q.order.slice(0);
   } else if (q.type === 'insert') {
-    q.columns = q.columns?.slice(0);
+    q.columns = q.columns.slice(0);
     q.values = Array.isArray(q.values) ? q.values.slice(0) : q.values;
-    if (q.using) q.using = q.using?.slice(0);
-    if (q.join) q.join = q.join?.slice(0);
-    if (q.beforeCreate) q.beforeCreate = q.beforeCreate?.slice(0);
-    if (q.afterCreate) q.afterCreate = q.afterCreate?.slice(0);
+    if (q.using) q.using = q.using.slice(0);
+    if (q.join) q.join = q.join.slice(0);
+    if (q.beforeCreate) q.beforeCreate = q.beforeCreate.slice(0);
+    if (q.afterCreate) {
+      q.afterCreate = q.afterCreate.slice(0);
+      if (q.afterCreateSelect) {
+        q.afterCreateSelect = q.afterCreateSelect.slice(0);
+      }
+    }
   } else if (q.type === 'update') {
-    if (q.beforeUpdate) q.beforeUpdate = q.beforeUpdate?.slice(0);
-    if (q.afterUpdate) q.afterUpdate = q.afterUpdate?.slice(0);
+    if (q.beforeUpdate) q.beforeUpdate = q.beforeUpdate.slice(0);
+    if (q.afterUpdate) {
+      q.afterUpdate = q.afterUpdate.slice(0);
+      if (q.afterUpdateSelect) {
+        q.afterUpdateSelect = q.afterUpdateSelect.slice(0);
+      }
+    }
   } else if (q.type === 'delete') {
-    if (q.beforeDelete) q.beforeDelete = q.beforeDelete?.slice(0);
-    if (q.afterDelete) q.afterDelete = q.afterDelete?.slice(0);
+    if (q.beforeDelete) q.beforeDelete = q.beforeDelete.slice(0);
+    if (q.afterDelete) {
+      q.afterDelete = q.afterDelete.slice(0);
+      if (q.afterDeleteSelect) {
+        q.afterDeleteSelect = q.afterDeleteSelect.slice(0);
+      }
+    }
   }
 };

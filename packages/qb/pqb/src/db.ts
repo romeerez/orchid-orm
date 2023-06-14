@@ -29,11 +29,11 @@ import {
   SinglePrimaryKey,
   snakeCaseKey,
   toSnakeCase,
-  AdapterBase,
   Sql,
   QueryThen,
   QueryCatch,
   ColumnsParsers,
+  TransactionState,
 } from 'orchid-core';
 import { q } from './sql/common';
 import { inspect } from 'util';
@@ -128,7 +128,7 @@ export class Db<
     public table: Table = undefined as Table,
     public shape: Shape = anyShape as Shape,
     public columnTypes: CT,
-    transactionStorage: AsyncLocalStorage<AdapterBase>,
+    transactionStorage: AsyncLocalStorage<TransactionState>,
     options: DbTableOptions,
   ) {
     const tableData = getTableData();
@@ -304,7 +304,7 @@ export const createDb = <CT extends ColumnTypesBase>({
     (ct as { [snakeCaseKey]?: boolean })[snakeCaseKey] = true;
   }
 
-  const transactionStorage = new AsyncLocalStorage<AdapterBase>();
+  const transactionStorage = new AsyncLocalStorage<TransactionState>();
 
   const qb = new Db(
     adapter,

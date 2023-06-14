@@ -1,4 +1,4 @@
-export * from './table';
+export * from './baseTable';
 export * from './orm';
 export * from './repo';
 export {

@@ -1,5 +1,5 @@
 import { Query, queryTypeWithLimitOne } from '../query';
-import { addValue, q, revealColumnToSql } from './common';
+import { addValue, q, columnToSql } from './common';
 import { JoinItem } from './types';
 import { pushDistinctSql } from './distinct';
 import { pushSelectSql } from './select';
@@ -83,18 +83,27 @@ export const makeSql = (table: Query, options?: ToSqlOptionsInternal): Sql => {
     const quotedAs = q(query.as || table.table);
 
     if (query.type === 'insert') {
-      pushInsertSql(ctx, table, query, q(table.table));
-      return { text: sql.join(' '), values };
+      return {
+        hookSelect: pushInsertSql(ctx, table, query, q(table.table)),
+        text: sql.join(' '),
+        values,
+      };
     }
 
     if (query.type === 'update') {
-      pushUpdateSql(ctx, table, query, quotedAs);
-      return { text: sql.join(' '), values };
+      return {
+        hookSelect: pushUpdateSql(ctx, table, query, quotedAs),
+        text: sql.join(' '),
+        values,
+      };
     }
 
     if (query.type === 'delete') {
-      pushDeleteSql(ctx, table, query, quotedAs);
-      return { text: sql.join(' '), values };
+      return {
+        hookSelect: pushDeleteSql(ctx, table, query, quotedAs),
+        text: sql.join(' '),
+        values,
+      };
     }
 
     if (query.type === 'copy') {
@@ -135,12 +144,7 @@ export const makeSql = (table: Query, options?: ToSqlOptionsInternal): Sql => {
     const group = query.group.map((item) =>
       typeof item === 'object' && isRaw(item)
         ? getRaw(item, values)
-        : revealColumnToSql(
-            table.query,
-            table.query.shape,
-            item as string,
-            quotedAs,
-          ),
+        : columnToSql(table.query, table.query.shape, item as string, quotedAs),
     );
     sql.push(`GROUP BY ${group.join(', ')}`);
   }

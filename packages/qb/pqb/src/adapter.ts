@@ -8,6 +8,9 @@ export type TypeParsers = Record<number, (input: string) => unknown>;
 export type QueryResult<T extends QueryResultRow = any> = {
   rowCount: number;
   rows: T[];
+  fields: {
+    name: string;
+  }[];
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -4,7 +4,7 @@ import {
   RelationThunkBase,
   RelationThunks,
 } from './relations';
-import { Table } from '../table';
+import { Table } from '../baseTable';
 import {
   addQueryOn,
   getQueryAs,
@@ -111,10 +111,15 @@ class HasManyVirtualColumn extends VirtualColumn {
     );
   }
 
-  update(q: Query, ctx: UpdateCtx, set: Record<string, unknown>) {
+  update(q: Query, _: UpdateCtx, set: Record<string, unknown>) {
+    const params = set[this.key] as NestedUpdateManyItems;
+    if ((params.set || params.create) && isQueryReturnsAll(q)) {
+      const key = params.set ? 'set' : 'create';
+      throw new Error(`\`${key}\` option is not allowed in a batch update`);
+    }
+
     hasRelationHandleUpdate(
       q,
-      ctx,
       set,
       this.key,
       this.state.primaryKey,
@@ -337,12 +342,7 @@ const nestedInsert = ({ query, primaryKey, foreignKey }: State) => {
 };
 
 const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
-  return (async (q, data, params) => {
-    if ((params.set || params.create) && isQueryReturnsAll(q)) {
-      const key = params.set ? 'set' : 'create';
-      throw new Error(`\`${key}\` option is not allowed in a batch update`);
-    }
-
+  return (async (_, data, params) => {
     const t = query.clone();
     if (params.create) {
       await t._count()._createMany(
