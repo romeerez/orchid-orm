@@ -1,8 +1,10 @@
 import url from 'url';
 import path from 'node:path';
 
+// Exclude non-string types from array key.
 export type StringKey<K extends PropertyKey> = Exclude<K, symbol | number>;
 
+// Array contains `true` type.
 export type SomeIsTrue<T extends unknown[]> = T extends [
   infer Head,
   ...infer Tail,
@@ -12,24 +14,29 @@ export type SomeIsTrue<T extends unknown[]> = T extends [
     : SomeIsTrue<Tail>
   : false;
 
+// It may be a value or an array of such values.
 export type MaybeArray<T> = T | T[];
 
+// Make some object properties optional.
 export type SetOptional<T, K extends PropertyKey> = Omit<T, K> & {
   [P in K]?: P extends keyof T ? T[P] : never;
 };
 
-// Converts union to overloaded function
+// Converts union to overloaded function.
 type OptionalPropertyNames<T> = {
   // eslint-disable-next-line @typescript-eslint/ban-types
   [K in keyof T]-?: {} extends { [P in K]: T[K] } ? K : never;
 }[keyof T];
 
+// Spread properties of two objects, if only one of properties is optional it becomes required.
 type SpreadProperties<L, R, K extends keyof L & keyof R> = {
   [P in K]: L[P] | Exclude<R[P], undefined>;
 };
 
+// Copied from type-fest, not clear what it does.
 type Id<T> = T extends infer U ? { [K in keyof U]: U[K] } : never;
 
+// Combine two object into a single.
 type SpreadTwo<L, R> = Id<
   Pick<L, Exclude<keyof L, keyof R>> &
     Pick<R, Exclude<keyof R, OptionalPropertyNames<R>>> &
@@ -37,6 +44,9 @@ type SpreadTwo<L, R> = Id<
     SpreadProperties<L, R, OptionalPropertyNames<R> & keyof L>
 >;
 
+/**
+ * Merge an array of object types into a single combined object.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Spread<A extends readonly [...any]> = A extends [
   infer L,
@@ -45,8 +55,8 @@ export type Spread<A extends readonly [...any]> = A extends [
   ? SpreadTwo<L, Spread<R>>
   : unknown;
 
-// simple merge two objects
-// when they have common keys, the value of the second object will be used
+// Simple merge two objects.
+// When they have common keys, the value of the second object will be used.
 export type MergeObjects<
   A extends Record<string, unknown>,
   B extends Record<string, unknown>,
@@ -58,21 +68,17 @@ export type MergeObjects<
     : never;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type FilterTuple<T extends readonly any[], E> = T extends [
-  infer F,
-  ...infer R,
-]
-  ? [F] extends [E]
-    ? [F, ...FilterTuple<R, E>]
-    : FilterTuple<R, E>
-  : [];
-
+// Use a default string if the first argument string is undefined.
 export type CoalesceString<
   Left extends string | undefined,
   Right extends string,
 > = Left extends undefined ? Right : Left;
 
+/**
+ * Merge methods from multiple class into another class.
+ * @param derivedCtor - target class to merge methods into
+ * @param constructors - classes to merge methods from
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function applyMixins(derivedCtor: any, constructors: any[]) {
   constructors.forEach((baseCtor) => {
@@ -87,23 +93,42 @@ export function applyMixins(derivedCtor: any, constructors: any[]) {
   });
 }
 
+/**
+ * Join array of strings with '', ignoring empty strings, false, undefined.
+ * @param strings - array of strings, or false, or undefined
+ */
 export const joinTruthy = (...strings: (string | false | undefined)[]) => {
   return strings.filter((string) => string).join('');
 };
 
+/**
+ * When array is passed, it is returned as is, otherwise, returns a new array with the provided value.
+ * @param item - array or a value to turn into array
+ */
 export const toArray = <T>(item: T) =>
   (Array.isArray(item) ? item : [item]) as unknown as T extends unknown[]
     ? T
     : [T];
 
+// Shared doing nothing function
 export const noop = () => {};
 
+// Type of empty object
 export type EmptyObject = typeof emptyObject;
+// Shared empty object to avoid unnecessary allocations
 export const emptyObject = {};
 
+// Type of empty array
 export type EmptyTuple = [];
+// Shared empty array to avoid unnecessary allocations
 export const emptyArray = [];
 
+/**
+ * Push value into array in the object if it's defined, or set a new array with a single value into the object.
+ * @param obj - object that can contain the array by the key
+ * @param key - key to access array in the object
+ * @param value - value to push into the array
+ */
 export const pushOrNewArrayToObject = <
   Obj extends EmptyObject,
   Key extends keyof Obj,
@@ -118,6 +143,11 @@ export const pushOrNewArrayToObject = <
   else (obj[key] as unknown as unknown[]) = [value];
 };
 
+/**
+ * Push value into array if it's defined, or return a new array with a single value.
+ * @param arr - array to push into, or `undefined`
+ * @param value - value to push into the array
+ */
 export const pushOrNewArray = <Arr extends unknown[]>(
   arr: Arr | undefined,
   value: Arr[number],
@@ -130,29 +160,50 @@ export const pushOrNewArray = <Arr extends unknown[]>(
   }
 };
 
+/**
+ * For code generation: quote a string with a single quote, escape characters.
+ * @param s - string to quote
+ */
 export const singleQuote = (s: string) => {
   return `'${s.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;
 };
 
+/**
+ * For code generation: quote string with a backtick, escape characters.
+ * @param s - string to quote
+ */
 export const backtickQuote = (s: string) => {
   return `\`${s.replaceAll('\\', '\\\\').replaceAll('`', '\\`')}\``;
 };
 
+/**
+ * For code generation: stringify array of strings using a single quote.
+ * @param arr
+ */
 export const singleQuoteArray = (arr: string[]) => {
   return `[${arr.map(singleQuote).join(', ')}]`;
 };
 
-export const quoteObjectKey = (s: string) => {
-  return /[A-z_]\w*/.test(s) ? s : singleQuote(s);
+/**
+ * For code generation: some strings must be quoted when used as an object key.
+ * This function quotes the strings when needed.
+ * @param key - object key to quote
+ */
+export const quoteObjectKey = (key: string) => {
+  return /[A-z_]\w*/.test(key) ? key : singleQuote(key);
 };
 
-export const isObjectEmpty = (obj: object) => {
-  for (const key in obj) {
-    if (obj[key as keyof typeof obj] !== undefined) return false;
-  }
-  return true;
-};
+/**
+ * Check if the object has no values that are not `undefined`.
+ * @param obj
+ */
+export const isObjectEmpty = (obj: object) => !objectHasValues(obj);
 
+/**
+ * Check if the object has at least one value that is not `undefined`.
+ * Nulls counts.
+ * @param obj - any object
+ */
 export const objectHasValues = (obj?: object) => {
   if (!obj) return false;
   for (const key in obj) {
@@ -161,12 +212,22 @@ export const objectHasValues = (obj?: object) => {
   return false;
 };
 
+/**
+ * If we simply log file path as it is, it may be not clickable in the terminal.
+ * On Windows, it is clickable as it is, so it is returned as is.
+ * On Linux (at least in my JetBrains editor terminal) it's transformed to URL format to be clickable.
+ * @param path - file path
+ */
 export const pathToLog = (path: string) => {
   return process.platform === 'win32'
     ? path
     : url.pathToFileURL(path).toString();
 };
 
+/**
+ * Translate a string to camelCase
+ * @param str - string to translate
+ */
 export const toCamelCase = (str: string) => {
   return str
     .replace(/^_+/g, '')
@@ -174,16 +235,29 @@ export const toCamelCase = (str: string) => {
     .replace(/_+$/g, '');
 };
 
+/**
+ * Translate a string to a PascalCase
+ * @param str - string to translate
+ */
 export const toPascalCase = (str: string) => {
   const camel = toCamelCase(str);
   return camel[0].toUpperCase() + camel.slice(1);
 };
 
+/**
+ * Translate a string to a snake_case.
+ * @param str - string to translate
+ */
 export const toSnakeCase = (str: string) => {
   return str.replace(/[A-Z]/g, (a) => `_${a.toLowerCase()}`);
 };
 
-// undefined and empty object are considered to be equal
+/**
+ * Compare two values deeply.
+ * undefined and empty object are considered to be equal.
+ * @param a - any value
+ * @param b - any value
+ */
 export const deepCompare = (a: unknown, b: unknown): boolean => {
   if (a === b) return true;
 
@@ -224,6 +298,11 @@ export const deepCompare = (a: unknown, b: unknown): boolean => {
   return true;
 };
 
+/**
+ * Returns a relative path to use as an `import` source to import one file from another.
+ * @param from - TS file where we want to place the `import`
+ * @param to - TS file that we're importing
+ */
 export const getImportPath = (from: string, to: string) => {
   const rel = path
     .relative(path.dirname(from), to)
@@ -236,6 +315,10 @@ export const getImportPath = (from: string, to: string) => {
   return importPath.replace(/\.[tj]s$/, '');
 };
 
+/**
+ * Get a file path of the function which called the function which called this `getCallerFilePath`.
+ * Determines file path by error stack trace, skips any paths that are located in `node_modules`.
+ */
 export const getCallerFilePath = (): string | undefined => {
   let stack: NodeJS.CallSite[] | undefined;
   const original = Error.prepareStackTrace;
@@ -272,4 +355,16 @@ export const getCallerFilePath = (): string | undefined => {
   }
 
   return;
+};
+
+/**
+ * Call function passing `this` as an argument,
+ * micro-optimization for `map` and `forEach` to not define temporary inline function
+ * ```ts
+ * arrayOfFns.map(callWithThis, argument)
+ * ```
+ * @param cb
+ */
+export const callWithThis = function <T, R>(this: T, cb: (arg: T) => R): R {
+  return cb(this);
 };

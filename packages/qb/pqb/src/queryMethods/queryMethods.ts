@@ -138,7 +138,7 @@ export interface QueryMethods
     Window,
     Then,
     QueryLog,
-    QueryHooks,
+    Omit<QueryHooks, 'result'>,
     QueryUpsertOrCreate,
     QueryGet,
     MergeQueryMethods,

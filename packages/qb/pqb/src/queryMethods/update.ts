@@ -10,7 +10,6 @@ import {
 } from '../relations';
 import { WhereArg, WhereResult } from './where';
 import { CreateData } from './create';
-import { queryMethodByReturnType } from './then';
 import { JsonItem, QueryData, UpdateQueryData } from '../sql';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
@@ -19,10 +18,10 @@ import {
   RawExpression,
   EmptyObject,
   MaybeArray,
-  StringKey,
   raw,
   QueryThen,
   isObjectEmpty,
+  callWithThis,
   TemplateLiteralArgs,
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
@@ -198,8 +197,6 @@ type ChangeCountArg<T extends Query> =
 // It's being used by relations logic in the ORM.
 export type UpdateCtx = {
   willSetKeys?: true;
-  returnTypeAll?: true;
-  resultAll: Record<string, unknown>[];
   queries?: ((queryResult: QueryResult) => Promise<void>)[];
   updateData?: Record<string, unknown>;
 };
@@ -337,11 +334,7 @@ export class Update {
 
     const { shape } = this.query;
 
-    const originalReturnType = query.returnType || 'all';
-
-    const ctx: UpdateCtx = {
-      resultAll: undefined as unknown as Record<string, unknown>[],
-    };
+    const ctx: UpdateCtx = {};
 
     for (const key in arg) {
       const item = shape[key];
@@ -367,67 +360,30 @@ export class Update {
     }
 
     const { queries } = ctx;
-    if (queries || ctx.returnTypeAll) {
-      query.returnType = 'all';
+    if (queries) {
+      query.patchResult = async (_, queryResult) => {
+        await Promise.all(queries.map(callWithThis, queryResult));
 
-      if (queries) {
-        if (!query.select?.includes('*')) {
-          this.primaryKeys.forEach((key) => {
-            if (!query.select?.includes(key)) {
-              this._select(key as StringKey<keyof T['selectable']>);
-            }
-          });
-        }
+        if (ctx.updateData) {
+          const t = this.baseQuery.clone();
+          const keys = this.primaryKeys;
 
-        query.patchResult = async (_, queryResult) => {
-          await Promise.all(queries.map((fn) => fn(queryResult)));
-
-          if (ctx.updateData) {
-            const t = this.baseQuery.clone();
-            const keys = this.primaryKeys;
-            (
-              t._whereIn as unknown as (
-                keys: string[],
-                values: unknown[][],
-              ) => Query
-            )(
-              keys,
-              queryResult.rows.map((item) => keys.map((key) => item[key])),
-            );
-
-            await (t as WhereResult<Query>)._update(ctx.updateData);
-
-            for (const row of queryResult.rows) {
-              Object.assign(row, ctx.updateData);
-            }
-          }
-        };
-      }
-
-      const { handleResult } = query;
-      query.handleResult = (q, queryResult, s) => {
-        // handleResult is mutating queryResult.rows
-        // we're using twice here: first, for ctx.resultAll that's used in relations
-        // and second time to parse result that user is expecting, so the rows are cloned
-        const originalRows = queryResult.rows;
-        queryResult.rows = [...originalRows];
-        ctx.resultAll = handleResult(q, queryResult) as Record<
-          string,
-          unknown
-        >[];
-
-        if (queryMethodByReturnType[originalReturnType] === 'arrays') {
-          originalRows.forEach(
-            (row, i) =>
-              ((originalRows as unknown as unknown[][])[i] =
-                Object.values(row)),
+          (
+            t._whereIn as unknown as (
+              keys: string[],
+              values: unknown[][],
+            ) => Query
+          )(
+            keys,
+            queryResult.rows.map((item) => keys.map((key) => item[key])),
           );
+
+          await (t as WhereResult<Query>)._update(ctx.updateData);
+
+          for (const row of queryResult.rows) {
+            Object.assign(row, ctx.updateData);
+          }
         }
-
-        q.query.returnType = originalReturnType;
-
-        queryResult.rows = originalRows;
-        return handleResult(q, queryResult, s);
       };
     }
 

@@ -1,6 +1,13 @@
 import { Query } from '../query';
-import { emptyArray, emptyObject, Sql } from 'orchid-core';
-import { TransactionAdapter } from '../adapter';
+import {
+  AdapterBase,
+  AfterCommitHook,
+  emptyArray,
+  emptyObject,
+  QueryCommon,
+  Sql,
+  TransactionState,
+} from 'orchid-core';
 
 const commitSql = {
   text: 'COMMIT',
@@ -57,20 +64,24 @@ export class Transaction {
     const log = this.query.log;
     let logData: unknown | undefined;
 
-    const trx =
-      this.internal.transactionStorage.getStore() as TransactionAdapter & {
-        transactionId: number;
-      };
+    let trx = this.internal.transactionStorage.getStore();
     const transactionId = trx ? trx.transactionId + 1 : 0;
 
-    const callback = (adapter: TransactionAdapter) => {
+    const callback = (adapter: AdapterBase) => {
       if (log) log.afterQuery(sql, logData);
       if (log) logData = log.beforeQuery(commitSql);
 
-      (adapter as unknown as { transactionId: number }).transactionId =
-        transactionId;
+      if (trx) {
+        trx.transactionId = transactionId;
+        return fn();
+      }
 
-      return trx ? fn() : this.internal.transactionStorage.run(adapter, fn);
+      trx = {
+        adapter,
+        transactionId,
+      };
+
+      return this.internal.transactionStorage.run(trx, fn);
     };
 
     if (!trx) {
@@ -87,36 +98,53 @@ export class Transaction {
       }`;
       if (log) logData = log.beforeQuery(sql);
 
-      const t = this.query.adapter.transaction(sql, callback);
+      try {
+        const result = await this.query.adapter.transaction(sql, callback);
 
-      if (log) {
-        t.then(
-          () => log.afterQuery(commitSql, logData),
-          () => log.afterQuery(rollbackSql, logData),
-        );
+        if (log) log.afterQuery(commitSql, logData);
+
+        // trx was defined in the callback above
+        const { afterCommit } = trx as unknown as TransactionState;
+        if (afterCommit) {
+          const promises = [];
+          for (let i = 0, len = afterCommit.length; i < len; i += 2) {
+            const q = afterCommit[i] as QueryCommon;
+            const result = afterCommit[i + 1] as unknown[];
+            for (const fn of afterCommit[i + 2] as AfterCommitHook[]) {
+              promises.push(fn(result, q));
+            }
+          }
+          await Promise.all(promises);
+        }
+
+        return result;
+      } catch (err) {
+        if (log) log.afterQuery(rollbackSql, logData);
+
+        throw err;
       }
-
-      return t;
     } else {
       try {
         sql.text = `SAVEPOINT "${transactionId}"`;
         if (log) logData = log.beforeQuery(sql);
-        await trx.query(sql);
+
+        const { adapter } = trx;
+        await adapter.query(sql);
 
         let result;
         try {
-          result = await callback(trx);
+          result = await callback(adapter);
         } catch (err) {
           sql.text = `ROLLBACK TO SAVEPOINT "${transactionId}"`;
           if (log) logData = log.beforeQuery(sql);
-          await trx.query(sql);
+          await adapter.query(sql);
           if (log) log.afterQuery(sql, logData);
           throw err;
         }
 
         sql.text = `RELEASE SAVEPOINT "${transactionId}"`;
         if (log) logData = log.beforeQuery(sql);
-        await trx.query(sql);
+        await adapter.query(sql);
         if (log) log.afterQuery(sql, logData);
 
         return result;

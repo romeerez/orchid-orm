@@ -325,8 +325,8 @@ describe('merge queries', () => {
       q2.query.notFoundDefault = 2;
       q1.query.defaults = { a: 1 };
       q2.query.defaults = { b: 2 };
-      q1.query.beforeQuery = [() => {}];
-      q2.query.beforeQuery = [() => {}];
+      q1.query.before = [() => {}];
+      q2.query.before = [() => {}];
       q1.query.log = logParamToLogObject(console, true);
       q2.query.log = logParamToLogObject(console, true);
       q1.query.logger = { log() {}, error() {}, warn() {} };
@@ -377,6 +377,10 @@ describe('merge queries', () => {
       i2.onConflict = { type: 'merge' };
       i1.beforeCreate = [() => {}];
       i2.beforeCreate = [() => {}];
+      i1.afterCreate = [() => {}];
+      i2.afterCreate = [() => {}];
+      i1.afterCreateSelect = ['one'];
+      i2.afterCreateSelect = ['two'];
 
       const u1 = q1.query as unknown as UpdateQueryData;
       const u2 = q2.query as unknown as UpdateQueryData;
@@ -384,11 +388,19 @@ describe('merge queries', () => {
       u2.updateData = [{ name: 'name' }];
       u1.beforeUpdate = [() => {}];
       u2.beforeUpdate = [() => {}];
+      i1.afterUpdate = [() => {}];
+      i2.afterUpdate = [() => {}];
+      i1.afterUpdateSelect = ['one'];
+      i2.afterUpdateSelect = ['two'];
 
       const d1 = q1.query as unknown as DeleteQueryData;
       const d2 = q2.query as unknown as DeleteQueryData;
       d1.beforeDelete = [() => {}];
       d2.beforeDelete = [() => {}];
+      i1.afterDelete = [() => {}];
+      i2.afterDelete = [() => {}];
+      i1.afterDeleteSelect = ['one'];
+      i2.afterDeleteSelect = ['two'];
 
       const t1 = q1.query as unknown as TruncateQueryData;
       const t2 = q2.query as unknown as TruncateQueryData;
@@ -426,10 +438,7 @@ describe('merge queries', () => {
         ...q1.query.defaults,
         ...q2.query.defaults,
       });
-      expect(q.beforeQuery).toEqual([
-        ...q1.query.beforeQuery,
-        ...q2.query.beforeQuery,
-      ]);
+      expect(q.before).toEqual([...q1.query.before, ...q2.query.before]);
       expect(q.log).toBe(q2.query.log);
       expect(q.logger).toBe(q2.query.logger);
       expect(q.type).toBe(q2.query.type);
@@ -462,13 +471,19 @@ describe('merge queries', () => {
       expect(i.join).toEqual([...i1.join, ...i2.join]);
       expect(i.onConflict).toEqual(i2.onConflict);
       expect(i.beforeCreate).toEqual([...i1.beforeCreate, ...i2.beforeCreate]);
+      expect(i.afterCreate).toEqual([...i1.afterCreate, ...i2.afterCreate]);
+      expect(i.afterCreateSelect).toEqual(['one', 'two']);
 
       const u = q as UpdateQueryData;
       expect(u.updateData).toEqual([...u1.updateData, ...u2.updateData]);
       expect(u.beforeUpdate).toEqual([...u1.beforeUpdate, ...u2.beforeUpdate]);
+      expect(i.afterUpdate).toEqual([...i1.afterUpdate, ...i2.afterUpdate]);
+      expect(i.afterUpdateSelect).toEqual(['one', 'two']);
 
       const d = q as DeleteQueryData;
       expect(d.beforeDelete).toEqual([...d1.beforeDelete, ...d2.beforeDelete]);
+      expect(i.afterDelete).toEqual([...i1.afterDelete, ...i2.afterDelete]);
+      expect(i.afterDeleteSelect).toEqual(['one', 'two']);
 
       const t = q as TruncateQueryData;
       expect(t.restartIdentity).toBe(t2.restartIdentity);

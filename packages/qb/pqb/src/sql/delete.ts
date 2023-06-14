@@ -4,14 +4,14 @@ import { pushReturningSql } from './insert';
 import { processJoinItem } from './join';
 import { ToSqlCtx } from './toSql';
 import { q } from './common';
-import { DeleteQueryData } from './data';
+import { DeleteQueryData, QueryHookSelect } from './data';
 
 export const pushDeleteSql = (
   ctx: ToSqlCtx,
   table: Query,
   query: DeleteQueryData,
   quotedAs: string,
-) => {
+): QueryHookSelect | undefined => {
   const from = q(table.table as string);
   ctx.sql.push(`DELETE FROM ${from}`);
 
@@ -49,5 +49,5 @@ export const pushDeleteSql = (
     }
   }
 
-  pushReturningSql(ctx, table, query, quotedAs);
+  return pushReturningSql(ctx, table, query, quotedAs, query.afterDeleteSelect);
 };

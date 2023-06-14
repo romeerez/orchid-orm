@@ -127,8 +127,8 @@ export class QueryUpsertOrCreate {
     const { handleResult } = this.query;
     let result: unknown;
     let created = false;
-    this.query.handleResult = (q, r, s) => {
-      return created ? result : handleResult(q, r, s);
+    this.query.handleResult = (q, t, r, s) => {
+      return created ? result : handleResult(q, t, r, s);
     };
 
     this.query.patchResult = async (q, queryResult) => {
@@ -139,9 +139,9 @@ export class QueryUpsertOrCreate {
 
         const inner = q.create(data as CreateData<Query>);
         const { handleResult } = inner.query;
-        inner.query.handleResult = (q, r, s) => {
+        inner.query.handleResult = (q, t, r, s) => {
           queryResult = r;
-          const res = handleResult(q, r, s);
+          const res = handleResult(q, t, r, s);
           result = res;
           return res;
         };

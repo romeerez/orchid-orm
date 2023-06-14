@@ -1,12 +1,7 @@
 import { JsonItem, SelectFunctionItem, SelectItem } from './types';
 import { getRaw } from './rawSql';
 import { Query } from '../query';
-import {
-  addValue,
-  q,
-  revealColumnToSql,
-  revealColumnToSqlWithAs,
-} from './common';
+import { addValue, q, columnToSql, columnToSqlWithAs } from './common';
 import { aggregateToSql } from './aggregate';
 import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
 import { makeSql, ToSqlCtx } from './toSql';
@@ -21,7 +16,7 @@ const jsonColumnOrMethodToSql = (
   quotedAs?: string,
 ) => {
   return typeof column === 'string'
-    ? revealColumnToSql(table.query, table.query.shape, column, quotedAs)
+    ? columnToSql(table.query, table.query.shape, column, quotedAs)
     : jsonToSql(table, column, values, quotedAs);
 };
 
@@ -96,7 +91,7 @@ export const selectToSql = (
         list.push(
           item === '*'
             ? selectAllSql(table, query, quotedAs)
-            : revealColumnToSqlWithAs(table.query, item, quotedAs, true),
+            : columnToSqlWithAs(table.query, item, quotedAs, true),
         );
       } else {
         if ('selectAs' in item) {
@@ -111,7 +106,7 @@ export const selectToSql = (
               }
             } else {
               list.push(
-                `${revealColumnToSql(
+                `${columnToSql(
                   table.query,
                   table.query.shape,
                   value as string,

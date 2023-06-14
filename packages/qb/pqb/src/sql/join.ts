@@ -2,8 +2,8 @@ import {
   ColumnNamesShape,
   q,
   quoteSchemaAndTable,
-  rawOrRevealColumnToSql,
-  revealColumnToSql,
+  rawOrColumnToSql,
+  columnToSql,
 } from './common';
 import { JoinItem, SimpleJoinItem } from './types';
 import { Query, QueryWithTable } from '../query';
@@ -275,13 +275,13 @@ const getConditionsFor3Or4LengthItem = (
   const op = maybeRightColumn ? opOrRightColumn : '=';
   const rightColumn = maybeRightColumn ? maybeRightColumn : opOrRightColumn;
 
-  return `${rawOrRevealColumnToSql(
+  return `${rawOrColumnToSql(
     query,
     leftColumn,
     values,
     target,
     joinShape,
-  )} ${op} ${rawOrRevealColumnToSql(
+  )} ${op} ${rawOrColumnToSql(
     query,
     rightColumn,
     values,
@@ -310,12 +310,13 @@ const getObjectOrRawConditions = (
       const value = data[key];
 
       pairs.push(
-        `${revealColumnToSql(
+        `${columnToSql(query, joinShape, key, joinAs)} = ${rawOrColumnToSql(
           query,
-          joinShape,
-          key,
-          joinAs,
-        )} = ${rawOrRevealColumnToSql(query, value, values, quotedAs, shape)}`,
+          value,
+          values,
+          quotedAs,
+          shape,
+        )}`,
       );
     }
 

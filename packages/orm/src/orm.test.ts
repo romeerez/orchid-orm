@@ -1,7 +1,7 @@
 import { orchidORM } from './orm';
 import { BaseTable, db, useTestORM } from './test-utils/test-utils';
 import { assertType, expectSql } from 'test-utils';
-import { TableType } from './table';
+import { TableType } from './baseTable';
 
 describe('orm', () => {
   useTestORM();

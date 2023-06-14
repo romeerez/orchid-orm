@@ -1,7 +1,6 @@
 import {
   Query,
   QueryReturnsAll,
-  QueryReturnType,
   queryTypeWithLimitOne,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
@@ -15,8 +14,6 @@ import {
 } from '../relations';
 import { InsertQueryData, OnConflictItem, OnConflictMergeUpdate } from '../sql';
 import { WhereArg } from './where';
-import { queryMethodByReturnType } from './then';
-import { NotFoundError } from '../errors';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
 import {
@@ -238,7 +235,6 @@ type OnConflictArg<T extends Query> =
   | RawExpression;
 
 export type CreateCtx = {
-  requiredReturning: Record<string, boolean>;
   columns: Map<string, number>;
   returnTypeAll?: true;
   resultAll: Record<string, unknown>[];
@@ -248,12 +244,13 @@ type Encoder = (input: unknown) => unknown;
 
 const handleSelect = (q: Query) => {
   const select = q.query.select?.[0];
-  const isCount =
-    typeof select === 'object' &&
-    'function' in select &&
-    select.function === 'count';
 
-  if (isCount) {
+  if (
+    q.query.returnType === 'void' ||
+    (typeof select === 'object' &&
+      'function' in select &&
+      select.function === 'count')
+  ) {
     q.query.select = undefined;
   } else if (!q.query.select) {
     q.query.select = ['*'];
@@ -279,30 +276,9 @@ const processCreateItem = (
 };
 
 const createCtx = (): CreateCtx => ({
-  requiredReturning: {},
   columns: new Map(),
   resultAll: undefined as unknown as Record<string, unknown>[],
 });
-
-const getSingleReturnType = (q: Query) => {
-  const { select, returnType = 'all' } = q.query;
-  if (select) {
-    return returnType === 'all' ? 'one' : returnType;
-  } else {
-    return 'rowCount';
-  }
-};
-
-const getManyReturnType = (q: Query) => {
-  const { select, returnType } = q.query;
-  if (select) {
-    return returnType === 'one' || returnType === 'oneOrThrow'
-      ? 'all'
-      : returnType;
-  } else {
-    return 'rowCount';
-  }
-};
 
 const mapColumnValues = (
   columns: string[],
@@ -365,11 +341,9 @@ const insert = (
     columns: string[];
     values: InsertQueryData['values'];
   },
-  returnType: QueryReturnType,
-  ctx?: CreateCtx,
+  many?: boolean,
 ) => {
   const q = self as Query & { query: InsertQueryData };
-  const returning = q.query.select;
 
   delete q.query.and;
   delete q.query.or;
@@ -378,62 +352,16 @@ const insert = (
   q.query.columns = columns;
   q.query.values = values;
 
-  if (!ctx) {
-    q.query.returnType = returnType;
-    return q;
-  }
+  const { select, returnType = 'all' } = q.query;
 
-  if (
-    returnType === 'oneOrThrow' ||
-    (values as { from?: Query }).from?.query.returnType === 'oneOrThrow'
-  ) {
-    const { handleResult } = q.query;
-    q.query.handleResult = (q, r, s) => {
-      if (r.rowCount === 0) {
-        throw new NotFoundError(q);
-      }
-      return handleResult(q, r, s);
-    };
-  }
-
-  const requiredColumns = Object.keys(ctx.requiredReturning);
-  if (requiredColumns.length && !returning?.includes('*')) {
-    if (!returning) {
-      q.query.select = requiredColumns;
-    } else {
-      q.query.select = [
-        ...new Set([...(returning as string[]), ...requiredColumns]),
-      ];
-    }
-  }
-
-  if (ctx.returnTypeAll) {
-    q.query.returnType = 'all';
-    const { handleResult } = q.query;
-    q.query.handleResult = (q, queryResult, s) => {
-      // handleResult is mutating queryResult.rows
-      // we're using twice here: first, for ctx.resultAll that's used in relations
-      // and second time to parse result that user is expecting, so the rows are cloned
-      const originalRows = queryResult.rows;
-      queryResult.rows = [...originalRows];
-      ctx.resultAll = handleResult(q, queryResult, s) as Record<
-        string,
-        unknown
-      >[];
-
-      if (queryMethodByReturnType[returnType] === 'arrays') {
-        originalRows.forEach(
-          (row, i) =>
-            ((originalRows as unknown as unknown[][])[i] = Object.values(row)),
-        );
-      }
-
-      q.query.returnType = returnType;
-      queryResult.rows = originalRows;
-      return handleResult(q, queryResult, s);
-    };
-  } else {
-    q.query.returnType = returnType;
+  if (!select) {
+    if (returnType !== 'void') q.query.returnType = 'rowCount';
+  } else if (many) {
+    if (returnType === 'one' || returnType === 'oneOrThrow')
+      q.query.returnType = 'all';
+  } else if (returnType === 'all') {
+    q.query.returnType =
+      'from' in values ? values.from.query.returnType : 'one';
   }
 
   return q;
@@ -485,12 +413,10 @@ const createFromQuery = <
 
   const columns = getFromSelectColumns(from, obj, many);
 
-  return insert(
-    q,
-    { columns, values: { from, values: obj?.values } },
-    getSingleReturnType(q),
-    ctx,
-  ) as Many extends true ? CreateManyResult<T> : CreateResult<T>;
+  return insert(q, {
+    columns,
+    values: { from, values: obj?.values },
+  }) as Many extends true ? CreateManyResult<T> : CreateResult<T>;
 };
 
 export type CreateMethodsNames =
@@ -545,7 +471,7 @@ export class Create {
       obj.values = values;
     }
 
-    return insert(this, obj, getSingleReturnType(this), ctx) as CreateResult<T>;
+    return insert(this, obj) as CreateResult<T>;
   }
 
   /**
@@ -579,8 +505,7 @@ export class Create {
     return insert(
       this,
       handleManyData(this, data, ctx),
-      getManyReturnType(this),
-      ctx,
+      true,
     ) as CreateManyResult<T>;
   }
 
@@ -617,7 +542,6 @@ export class Create {
     return insert(
       this,
       args[0] as { columns: string[]; values: RawExpression },
-      getSingleReturnType(this),
     ) as CreateResult<T>;
   }
 
@@ -654,7 +578,6 @@ export class Create {
     return insert(
       this,
       args[0] as { columns: string[]; values: RawExpression[] },
-      getSingleReturnType(this),
     ) as CreateManyResult<T>;
   }
 

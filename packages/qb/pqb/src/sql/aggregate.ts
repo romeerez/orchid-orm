@@ -1,5 +1,5 @@
 import { AggregateItem } from './types';
-import { addValue, rawOrRevealColumnToSql, q } from './common';
+import { addValue, rawOrColumnToSql, q } from './common';
 import { getRaw } from './rawSql';
 import { windowToSql } from './window';
 import { pushOrderBySql } from './orderBy';
@@ -25,7 +25,7 @@ export const aggregateToSql = (
   if (typeof item.arg === 'object') {
     if (Array.isArray(item.arg)) {
       sql.push(
-        `${rawOrRevealColumnToSql(
+        `${rawOrColumnToSql(
           table.query,
           item.arg[0],
           ctx.values,
@@ -39,7 +39,7 @@ export const aggregateToSql = (
       for (const key in item.arg) {
         args.push(
           // ::text is needed to bypass "could not determine data type of parameter" postgres error
-          `${addValue(ctx.values, key)}::text, ${rawOrRevealColumnToSql(
+          `${addValue(ctx.values, key)}::text, ${rawOrColumnToSql(
             table.query,
             item.arg[key as keyof typeof item.arg] as unknown as Expression,
             ctx.values,
@@ -50,9 +50,7 @@ export const aggregateToSql = (
       sql.push(args.join(', '));
     }
   } else if (item.arg) {
-    sql.push(
-      rawOrRevealColumnToSql(table.query, item.arg, ctx.values, quotedAs),
-    );
+    sql.push(rawOrColumnToSql(table.query, item.arg, ctx.values, quotedAs));
   }
 
   if (options.withinGroup) sql.push(') WITHIN GROUP (');

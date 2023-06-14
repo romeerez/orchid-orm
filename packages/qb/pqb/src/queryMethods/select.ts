@@ -19,6 +19,7 @@ import {
   applyTransforms,
   ColumnsShapeBase,
   ColumnTypeBase,
+  emptyArray,
   EmptyObject,
   getValueKey,
   isRaw,
@@ -222,7 +223,8 @@ export const addParserForRawExpression = (
 const subQueryResult: QueryResult = {
   // sub query can't return a rowCount, use -1 as for impossible case
   rowCount: -1,
-  rows: [],
+  rows: emptyArray,
+  fields: emptyArray,
 };
 
 // add parsers when selecting a full joined table by name or alias
@@ -235,11 +237,7 @@ const addParsersForSelectJoined = (
   if (parsers) {
     setParserToQuery(q.query, as, (item) => {
       subQueryResult.rows = [item];
-      const type = q.query.returnType;
-      q.query.returnType = 'one';
-      const res = q.query.handleResult(q, subQueryResult, true);
-      q.query.returnType = type;
-      return res;
+      return q.query.handleResult(q, 'one', subQueryResult, true);
     });
   }
 };
@@ -268,7 +266,7 @@ export const addParserForSelectItem = <T extends Query>(
 
           return applyTransforms(
             query.transform,
-            query.handleResult(arg, subQueryResult, true),
+            query.handleResult(arg, t, subQueryResult, true),
           );
         });
       }

@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { AdapterBase } from './adapter';
 import { EmptyObject } from './utils';
+import { TransactionState } from './adapter';
 
 // query metadata that is stored only on TS side, not available in runtime
 export type QueryMetaBase = {
@@ -19,7 +19,7 @@ export type QueryInternal = {
     columns: ({ column: string } | { expression: string })[];
     options: { unique?: boolean };
   }[];
-  transactionStorage: AsyncLocalStorage<AdapterBase>;
+  transactionStorage: AsyncLocalStorage<TransactionState>;
 };
 
 // It is a generic interface that covers any query:

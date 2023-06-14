@@ -1,5 +1,5 @@
 import { OrderItem } from './types';
-import { revealColumnToSql } from './common';
+import { columnToSql } from './common';
 import { ToSqlCtx } from './toSql';
 import { getRaw } from './rawSql';
 import { QueryData, SelectQueryData } from './data';
@@ -25,7 +25,7 @@ export const orderByToSql = (
   quotedAs?: string,
 ) => {
   if (typeof order === 'string') {
-    return `${revealColumnToSql(data, data.shape, order, quotedAs)} ASC`;
+    return `${columnToSql(data, data.shape, order, quotedAs)} ASC`;
   }
 
   if (isRaw(order)) {
@@ -35,7 +35,7 @@ export const orderByToSql = (
   const sql: string[] = [];
   for (const key in order) {
     const value = order[key];
-    sql.push(`${revealColumnToSql(data, data.shape, key, quotedAs)} ${value}`);
+    sql.push(`${columnToSql(data, data.shape, key, quotedAs)} ${value}`);
   }
   return sql.join(', ');
 };

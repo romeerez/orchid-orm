@@ -1,4 +1,4 @@
-import { Table } from '../table';
+import { Table } from '../baseTable';
 import {
   addQueryOn,
   BelongsToRelation,
@@ -231,13 +231,13 @@ const nestedInsert = ({ query, primaryKey }: State) => {
     let createdI = 0;
     let connectedI = 0;
     connectOrCreatedI = 0;
-    return data.map((item) =>
-      item.connectOrCreate
+    return data.map((item) => {
+      return item.connectOrCreate
         ? connectOrCreated[connectOrCreatedI++] || created[createdI++]
         : item.connect
         ? connected[connectedI++]
-        : created[createdI++],
-    ) as Record<string, unknown>[];
+        : created[createdI++];
+    }) as Record<string, unknown>[];
   }) as BelongsToNestedInsert;
 };
 
@@ -247,7 +247,7 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
       throw new Error('`upsert` option is not allowed in a batch update');
     }
 
-    let idForDelete: unknown;
+    let idsForDelete: unknown;
 
     q._beforeUpdate(async (q) => {
       if (params.disconnect) {
@@ -264,7 +264,7 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
       } else if (params.delete) {
         const selectQuery = q.clone();
         selectQuery.query.type = undefined;
-        idForDelete = await selectQuery._getOptional(foreignKey);
+        idsForDelete = await selectQuery._pluck(foreignKey);
         update[foreignKey] = null;
       }
     });
@@ -297,21 +297,21 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
         }
       });
     } else if (params.delete || params.update) {
-      q._afterQuery(async (_, data) => {
+      q._afterUpdate([], async (data) => {
         const id = params.delete
-          ? idForDelete
+          ? { in: idsForDelete }
           : Array.isArray(data)
           ? data.length === 0
             ? null
             : {
                 in: data
-                  .map((item) => item[foreignKey])
+                  .map((item) => (item as Record<string, unknown>)[foreignKey])
                   .filter((id) => id !== null),
               }
           : (data as Record<string, unknown>)[foreignKey];
 
         if (id !== undefined && id !== null) {
-          const t = query.findBy({
+          const t = query.where({
             [primaryKey]: id,
           });
 

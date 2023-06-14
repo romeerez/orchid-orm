@@ -685,7 +685,7 @@ Transform the result of the query right after loading it.
 
 `transform` method should be called in the last order, other methods can't be chained after calling it.
 
-The [hooks](/guide/hooks.html) that are going to run after the query will receive the query result **before** transferring.
+The [hooks](/guide/hooks.html) that are going to run after the query will receive the query result **before** transformation.
 
 Consider the following example of a cursor-based pagination by `id`:
 

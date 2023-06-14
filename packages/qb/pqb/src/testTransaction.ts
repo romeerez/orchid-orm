@@ -46,9 +46,10 @@ export const testTransaction = {
             const trx = transactionStorage.getStore();
             db.internal.transactionStorage.getStore = () => trx;
             if (trx) {
-              adapter.query = trx.query.bind(trx);
-              adapter.arrays = trx.arrays.bind(trx);
-              adapter.transaction = trx.transaction.bind(trx);
+              const t = trx.adapter;
+              adapter.query = t.query.bind(t);
+              adapter.arrays = t.arrays.bind(t);
+              adapter.transaction = t.transaction.bind(t);
             }
             data.reject = rej;
           });

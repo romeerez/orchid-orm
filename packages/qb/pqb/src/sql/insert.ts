@@ -1,12 +1,12 @@
-import { addValue } from './common';
+import { addValue, ownColumnToSql } from './common';
 import { pushWhereStatementSql } from './where';
 import { Query } from '../query';
 import { selectToSql } from './select';
 import { makeSql, ToSqlCtx } from './toSql';
 import { pushQueryValue } from '../queryDataUtils';
 import { getRaw } from './rawSql';
-import { InsertQueryData, QueryData } from './data';
-import { isRaw, raw, RawExpression } from 'orchid-core';
+import { InsertQueryData, QueryData, QueryHookSelect } from './data';
+import { emptyArray, isRaw, raw, RawExpression } from 'orchid-core';
 import { ColumnData } from '../columns';
 import { joinSubQuery, resolveSubQueryCallback } from '../utils';
 import { Db } from '../db';
@@ -19,7 +19,7 @@ export const pushInsertSql = (
   q: Query,
   query: InsertQueryData,
   quotedAs: string,
-) => {
+): QueryHookSelect | undefined => {
   const { shape } = q.query;
 
   const { columns } = query;
@@ -196,7 +196,7 @@ export const pushInsertSql = (
   }
 
   pushWhereStatementSql(ctx, q, query, quotedAs);
-  pushReturningSql(ctx, q, query, quotedAs);
+  return pushReturningSql(ctx, q, query, quotedAs, query.afterCreateSelect);
 };
 
 const encodeRow = (
@@ -229,11 +229,52 @@ const encodeRow = (
 
 export const pushReturningSql = (
   ctx: ToSqlCtx,
-  table: Query,
-  query: QueryData,
+  q: Query,
+  data: QueryData,
   quotedAs: string,
-) => {
-  if (query.select) {
-    ctx.sql.push(`RETURNING ${selectToSql(ctx, table, query, quotedAs)}`);
+  hookSelect?: QueryHookSelect,
+): QueryHookSelect | undefined => {
+  const { select } = data;
+  if (!hookSelect?.length && !select) return;
+
+  let selected: string | undefined;
+  let hookFiltered: string[] | undefined;
+  if (select) {
+    selected = selectToSql(ctx, q, data, quotedAs);
+    if (hookSelect) {
+      if (select.includes('*')) {
+        hookFiltered = emptyArray;
+      } else {
+        hookFiltered = [];
+        for (const column of hookSelect) {
+          if (
+            !hookFiltered.includes(column) &&
+            !select?.includes(column) &&
+            !select?.includes(`${quotedAs}.${column}`)
+          ) {
+            hookFiltered.push(column);
+          }
+        }
+      }
+    }
+  } else {
+    hookFiltered = [];
+    for (const column of hookSelect as string[]) {
+      if (!hookFiltered.includes(column)) hookFiltered.push(column);
+    }
   }
+
+  ctx.sql.push('RETURNING');
+  if (hookFiltered?.length) {
+    if (selected) ctx.sql.push(`${selected},`);
+    ctx.sql.push(
+      hookFiltered
+        .map((column) => ownColumnToSql(data, column, quotedAs))
+        .join(', '),
+    );
+  } else {
+    ctx.sql.push(selected as string);
+  }
+
+  return hookFiltered;
 };

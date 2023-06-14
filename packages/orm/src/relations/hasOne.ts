@@ -13,7 +13,7 @@ import {
   WhereArg,
   WhereResult,
 } from 'pqb';
-import { Table } from '../table';
+import { Table } from '../baseTable';
 import {
   RelationData,
   RelationInfo,
@@ -108,10 +108,18 @@ class HasOneVirtualColumn extends VirtualColumn {
     );
   }
 
-  update(q: Query, ctx: UpdateCtx, set: Record<string, unknown>) {
+  update(q: Query, _: UpdateCtx, set: Record<string, unknown>) {
+    const params = set[this.key] as NestedUpdateOneItem;
+    if (
+      (params.set || params.create || params.upsert) &&
+      isQueryReturnsAll(q)
+    ) {
+      const key = params.set ? 'set' : params.create ? 'create' : 'upsert';
+      throw new Error(`\`${key}\` option is not allowed in a batch update`);
+    }
+
     hasRelationHandleUpdate(
       q,
-      ctx,
       set,
       this.key,
       this.state.primaryKey,
@@ -295,15 +303,7 @@ const nestedInsert = ({ query, primaryKey, foreignKey }: State) => {
 };
 
 const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
-  return (async (q, data, params) => {
-    if (
-      (params.set || params.create || params.upsert) &&
-      isQueryReturnsAll(q)
-    ) {
-      const key = params.set ? 'set' : params.create ? 'create' : 'upsert';
-      throw new Error(`\`${key}\` option is not allowed in a batch update`);
-    }
-
+  return (async (_, data, params) => {
     const t = query.clone();
     const ids = data.map((item) => item[primaryKey]);
     const currentRelationsQuery = t.where({

@@ -1,18 +1,21 @@
 import {
-  addQueryHook,
   AfterHook,
-  AfterHookKey,
-  BeforeHook,
-  BeforeHookKey,
   ColumnsShape,
   columnTypes as defaultColumnTypes,
   Db,
   DefaultColumnTypes,
   getColumnTypes,
   Query,
+  QueryAfterHook,
+  QueryBase,
+  QueryBeforeHook,
+  QueryData,
+  QueryHooks,
 } from 'pqb';
 import {
+  applyMixins,
   ColumnShapeOutput,
+  ColumnsShapeBase,
   ColumnTypesBase,
   getCallerFilePath,
   snakeCaseKey,
@@ -68,7 +71,6 @@ type ScopeFn<Related extends TableClass, Scope extends Query> = (
 export type Table = {
   table: string;
   columns: ColumnsConfig;
-  hooks?: TableHooks;
   schema?: string;
   columnTypes: ColumnTypesBase;
   noPrimaryKey?: boolean;
@@ -77,20 +79,6 @@ export type Table = {
 
 // get the type of table columns
 export type TableType<T extends Pick<Table, 'columns'>> = T['columns']['type'];
-
-export type TableHooks = { [K in BeforeHookKey]?: BeforeHook } & {
-  [K in AfterHookKey]?: AfterHook;
-};
-
-export const addTableHooks = (table: Query, hooks: TableHooks) => {
-  for (const key in hooks) {
-    addQueryHook(
-      table.baseQuery,
-      key as BeforeHookKey,
-      hooks[key as BeforeHookKey] as BeforeHook,
-    );
-  }
-};
 
 // base table constructor
 export const createBaseTable = <CT extends ColumnTypesBase>(
@@ -136,6 +124,17 @@ export const createBaseTable = <CT extends ColumnTypesBase>(
   );
 };
 
+type BeforeHookMethod = <T extends Table>(cb: QueryBeforeHook) => T;
+type AfterHookMethod = <T extends Table>(cb: QueryAfterHook) => T;
+type AfterSelectableHookMethod = <
+  T extends Table,
+  S extends (keyof T['columns']['shape'])[],
+>(
+  this: T,
+  select: S,
+  cb: AfterHook<S, T['columns']['shape']>,
+) => T;
+
 const create = <CT extends ColumnTypesBase>(
   columnTypes: CT,
   filePath: string,
@@ -154,15 +153,16 @@ const create = <CT extends ColumnTypesBase>(
     noPrimaryKey?: boolean;
     snakeCase = snakeCase;
     columnTypes: CT;
-    filePath!: string;
-
-    callbacks?: TableHooks;
-    setHooks(callbacks: TableHooks): TableHooks {
-      return callbacks;
-    }
+    query: QueryData = {} as QueryData;
+    declare filePath: string;
+    declare result: ColumnsShapeBase;
 
     constructor() {
       this.columnTypes = columnTypes;
+    }
+
+    clone<T extends QueryBase>(this: T): T {
+      return this;
     }
 
     setColumns<T extends ColumnsShape>(
@@ -298,7 +298,24 @@ const create = <CT extends ColumnTypesBase>(
         options,
       };
     }
+
+    declare beforeQuery: BeforeHookMethod;
+    declare afterQuery: AfterHookMethod;
+    declare beforeCreate: BeforeHookMethod;
+    declare afterCreate: AfterSelectableHookMethod;
+    declare afterCreateCommit: AfterSelectableHookMethod;
+    declare beforeUpdate: BeforeHookMethod;
+    declare afterUpdate: AfterSelectableHookMethod;
+    declare afterUpdateCommit: AfterSelectableHookMethod;
+    declare beforeSave: BeforeHookMethod;
+    declare afterSave: AfterSelectableHookMethod;
+    declare afterSaveCommit: AfterSelectableHookMethod;
+    declare beforeDelete: BeforeHookMethod;
+    declare afterDelete: AfterSelectableHookMethod;
+    declare afterDeleteCommit: AfterSelectableHookMethod;
   };
+
+  applyMixins(base, [QueryHooks]);
 
   base.prototype.columnTypes = columnTypes;
 

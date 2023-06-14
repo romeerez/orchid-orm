@@ -1,4 +1,4 @@
-import { createBaseTable, TableType } from '../table';
+import { createBaseTable, TableType } from '../baseTable';
 import { tableToZod } from 'orchid-orm-schema-to-zod';
 import { now, testAdapter, testColumnTypes } from 'test-utils';
 import { orchidORM } from '../orm';
@@ -285,7 +285,10 @@ export const messageData = {
   createdAt: now,
 };
 
-export const useRelationCallback = (rel: { query: Query }) => {
+export const useRelationCallback = <T extends Query>(
+  rel: { query: T },
+  select: (keyof T['shape'])[],
+) => {
   const beforeCreate = jest.fn();
   const afterCreate = jest.fn();
   const beforeUpdate = jest.fn();
@@ -298,19 +301,25 @@ export const useRelationCallback = (rel: { query: Query }) => {
   beforeAll(() => {
     q.beforeCreate = [beforeCreate];
     q.afterCreate = [afterCreate];
+    q.afterCreateSelect = select;
     q.beforeUpdate = [beforeUpdate];
     q.afterUpdate = [afterUpdate];
+    q.afterUpdateSelect = select;
     q.beforeDelete = [beforeDelete];
     q.afterDelete = [afterDelete];
+    q.afterDeleteSelect = select;
   });
 
   afterAll(() => {
     delete q.beforeCreate;
     delete q.afterCreate;
+    delete q.afterCreateSelect;
     delete q.beforeUpdate;
     delete q.afterUpdate;
+    delete q.afterUpdateSelect;
     delete q.beforeDelete;
     delete q.afterDelete;
+    delete q.afterDeleteSelect;
   });
 
   return {

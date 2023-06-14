@@ -1,4 +1,4 @@
-import { addTableHooks, createBaseTable } from './table';
+import { createBaseTable } from './baseTable';
 import { orchidORM } from './orm';
 import { ColumnType, Operators } from 'pqb';
 import { BaseTable, db, userData, useTestORM } from './test-utils/test-utils';
@@ -19,7 +19,7 @@ jest.mock('orchid-core', () => {
   };
 });
 
-describe('table', () => {
+describe('baseTable', () => {
   useTestORM();
 
   it('should have `exportAs`', () => {
@@ -249,87 +249,85 @@ describe('table', () => {
   });
 
   describe('hooks', () => {
-    it('should save hooks defined in the table into the baseQuery', async () => {
-      const hooks = {
+    it('should set hooks in the init', async () => {
+      const fns = {
         beforeQuery: () => {},
         afterQuery: () => {},
         beforeCreate: () => {},
         afterCreate: () => {},
+        afterCreateCommit: () => {},
         beforeUpdate: () => {},
         afterUpdate: () => {},
+        afterUpdateCommit: () => {},
         beforeDelete: () => {},
         afterDelete: () => {},
+        afterDeleteCommit: () => {},
         beforeSave: () => {},
         afterSave: () => {},
+        afterSaveCommit: () => {},
       };
+
+      let initArg: unknown | undefined;
 
       class Table extends BaseTable {
         readonly table = 'table';
         columns = this.setColumns((t) => ({
           id: t.identity().primaryKey(),
+          one: t.text(),
+          two: t.text(),
+          three: t.text(),
+          four: t.text(),
+          five: t.text(),
+          six: t.text(),
+          seven: t.text(),
+          eight: t.text(),
         }));
 
-        hooks = this.setHooks(hooks);
+        init(orm: typeof db) {
+          this.beforeQuery(fns.beforeQuery);
+          this.beforeCreate(fns.beforeCreate);
+          this.beforeUpdate(fns.beforeUpdate);
+          this.beforeDelete(fns.beforeDelete);
+          this.beforeSave(fns.beforeSave);
+          this.afterQuery(fns.afterQuery);
+          this.afterCreate(['one'], fns.afterCreate);
+          this.afterCreateCommit(['two'], fns.afterCreateCommit);
+          this.afterUpdate(['three'], fns.afterUpdate);
+          this.afterUpdateCommit(['four'], fns.afterUpdateCommit);
+          this.afterDelete(['five'], fns.afterDelete);
+          this.afterDeleteCommit(['six'], fns.afterDeleteCommit);
+          this.afterSave(['seven'], fns.afterSave);
+          this.afterSaveCommit(['eight'], fns.afterSaveCommit);
+
+          initArg = orm;
+        }
       }
 
-      const { table } = orchidORM(
+      const db = orchidORM(
         { adapter: testAdapter },
         {
           table: Table,
+          chair: Table,
         },
       );
 
-      expect(table.baseQuery.query).toMatchObject({
-        beforeQuery: [hooks.beforeQuery],
-        afterQuery: [hooks.afterQuery],
-        beforeCreate: [hooks.beforeCreate, hooks.beforeSave],
-        afterCreate: [hooks.afterCreate, hooks.afterSave],
-        beforeUpdate: [hooks.beforeUpdate, hooks.beforeSave],
-        afterUpdate: [hooks.afterUpdate, hooks.afterSave],
-        beforeDelete: [hooks.beforeDelete],
-        afterDelete: [hooks.afterDelete],
-      });
-    });
+      expect(initArg).toBe(db);
 
-    it('should save provided hooks into the baseQuery by using addTableHooks', async () => {
-      const hooks = {
-        beforeQuery: () => {},
-        afterQuery: () => {},
-        beforeCreate: () => {},
-        afterCreate: () => {},
-        beforeUpdate: () => {},
-        afterUpdate: () => {},
-        beforeDelete: () => {},
-        afterDelete: () => {},
-        beforeSave: () => {},
-        afterSave: () => {},
-      };
-
-      class Table extends BaseTable {
-        readonly table = 'table';
-        columns = this.setColumns((t) => ({
-          id: t.identity().primaryKey(),
-        }));
-      }
-
-      const { table } = orchidORM(
-        { adapter: testAdapter },
-        {
-          table: Table,
-        },
-      );
-
-      addTableHooks(table, hooks);
-
-      expect(table.baseQuery.query).toMatchObject({
-        beforeQuery: [hooks.beforeQuery],
-        afterQuery: [hooks.afterQuery],
-        beforeCreate: [hooks.beforeCreate, hooks.beforeSave],
-        afterCreate: [hooks.afterCreate, hooks.afterSave],
-        beforeUpdate: [hooks.beforeUpdate, hooks.beforeSave],
-        afterUpdate: [hooks.afterUpdate, hooks.afterSave],
-        beforeDelete: [hooks.beforeDelete],
-        afterDelete: [hooks.afterDelete],
+      expect(db.table.baseQuery.query).toMatchObject({
+        before: [fns.beforeQuery],
+        after: [fns.afterQuery],
+        beforeCreate: [fns.beforeCreate, fns.beforeSave],
+        afterCreate: [fns.afterCreate, fns.afterSave],
+        afterCreateCommit: [fns.afterCreateCommit, fns.afterSaveCommit],
+        afterCreateSelect: ['one', 'two', 'seven', 'eight'],
+        beforeUpdate: [fns.beforeUpdate, fns.beforeSave],
+        afterUpdate: [fns.afterUpdate, fns.afterSave],
+        afterUpdateCommit: [fns.afterUpdateCommit, fns.afterSaveCommit],
+        afterUpdateSelect: ['three', 'four', 'seven', 'eight'],
+        beforeDelete: [fns.beforeDelete],
+        afterDelete: [fns.afterDelete],
+        afterDeleteCommit: [fns.afterDeleteCommit],
+        afterDeleteSelect: ['five', 'six'],
       });
     });
   });

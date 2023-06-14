@@ -1,10 +1,8 @@
 import {
   CreateCtx,
-  pushQueryValue,
   Query,
   QueryBase,
   Relation,
-  UpdateCtx,
   UpdateData,
   WhereArg,
 } from 'pqb';
@@ -103,27 +101,23 @@ export const hasRelationHandleCreate = (
   }
 
   q.query.wrapInTransaction = true;
-  ctx.returnTypeAll = true;
-  ctx.requiredReturning[primaryKey] = true;
 
   const relationData = [values];
   store.hasRelation[key] = relationData;
 
-  pushQueryValue(q, 'afterCreate', async (q: Query) => {
-    const { resultAll } = ctx;
-    return (nestedInsert as HasOneNestedInsert)(
+  q._afterCreate([primaryKey], (rows, q) =>
+    (nestedInsert as HasOneNestedInsert)(
       q,
       relationData.map(([rowIndex, data]) => [
-        resultAll[rowIndex],
+        rows[rowIndex],
         data as NestedInsertOneItem,
       ]),
-    );
-  });
+    ),
+  );
 };
 
 export const hasRelationHandleUpdate = (
   q: Query,
-  ctx: UpdateCtx,
   set: Record<string, unknown>,
   key: string,
   primaryKey: string,
@@ -150,12 +144,11 @@ export const hasRelationHandleUpdate = (
   }
 
   q.query.wrapInTransaction = true;
-  ctx.returnTypeAll = true;
 
-  pushQueryValue(q, 'afterUpdate', (q: Query) => {
+  q._afterUpdate(q.primaryKeys, (rows, q) => {
     return (nestedUpdate as HasOneNestedUpdate)(
       q,
-      ctx.resultAll,
+      rows,
       value as NestedUpdateOneItem,
     );
   });

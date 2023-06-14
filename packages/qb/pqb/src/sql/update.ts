@@ -5,6 +5,7 @@ import { pushWhereStatementSql } from './where';
 import { ToSqlCtx } from './toSql';
 import { getRaw } from './rawSql';
 import {
+  QueryHookSelect,
   UpdateQueryData,
   UpdateQueryDataItem,
   UpdateQueryDataObject,
@@ -20,7 +21,7 @@ export const pushUpdateSql = (
   table: Query,
   query: UpdateQueryData,
   quotedAs: string,
-) => {
+): QueryHookSelect | undefined => {
   const quotedTable = quoteSchemaAndTable(query.schema, table.table as string);
   ctx.sql.push(`UPDATE ${quotedTable}`);
 
@@ -35,7 +36,7 @@ export const pushUpdateSql = (
   ctx.sql.push(set.join(', '));
 
   pushWhereStatementSql(ctx, table, query, quotedAs);
-  pushReturningSql(ctx, table, query, quotedAs);
+  return pushReturningSql(ctx, table, query, quotedAs, query.afterUpdateSelect);
 };
 
 const processData = (
