@@ -172,7 +172,7 @@ const records = db.table
 
 When there is a need to use a piece of raw SQL, use the `sql` method.
 
-To select with a raw SQL, need to specify a column type as a first argument, so the TS could use it to guess the result type of the query:
+To select with a raw SQL, need to specify a column type as a first argument, so the TS could use it to infer the result type of the query:
 
 ```ts
 const result: { num: number }[] = await db.table.select({
@@ -240,29 +240,29 @@ Summarizing:
 
 ```ts
 // simplest form:
-db.table`key = ${value}`;
+db.table.sql`key = ${value}`;
 
 // with column type for select:
-db.table((t) => t.boolean())`key = ${value}`;
+db.table.sql((t) => t.boolean())`key = ${value}`;
 
 // raw SQL string, not allowed to interpolate:
-db.table({ raw: 'random()' });
+db.table.sql({ raw: 'random()' });
 
 // with values:
-db.table({
+db.table.sql({
+  raw: '$$columnName = $one + $two',
   values: {
-    column: 'columnName',
+    columnName: 'column',
     one: 1,
     two: 2,
   },
-  raw: '$$columnName = $one + $two',
 });
 
 // with column type for select:
-db.table((t) => t.decimal(), { raw: 'random()' });
+db.table.sql((t) => t.decimal(), { raw: 'random()' });
 
 // combine values and template literal:
-db.table({ values: { one: 1, two: 2 } })`
+db.table.sql({ values: { one: 1, two: 2 } })`
   ($one + $two) / $one
 `;
 ```
