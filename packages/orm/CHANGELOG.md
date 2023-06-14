@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.11.0
+
+### Minor Changes
+
+- 78b65c4: Add query hooks that can select data, run inside transaction, and after commit (#83)
+
+### Patch Changes
+
+- Updated dependencies [78b65c4]
+  - pqb@0.13.0
+  - orchid-core@0.5.0
+
 ## 1.10.6
 
 ### Patch Changes
