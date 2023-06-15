@@ -66,7 +66,9 @@ const log = jest.fn();
 const options = { databaseURL: 'file:path' };
 
 class BaseTable {
-  static filePath = 'path';
+  static getFilePath() {
+    return 'path';
+  }
   static exportAs = 'BaseTable';
   columnTypes!: DefaultColumnTypes;
   snakeCase?: boolean;

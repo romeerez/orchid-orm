@@ -10,9 +10,10 @@ jest.mock('fs/promises', () => ({
 }));
 
 const log = jest.fn();
+const baseFilePath = path.resolve('baseTable.ts');
 const params = {
   baseTable: {
-    filePath: path.resolve('baseTable.ts'),
+    getFilePath: () => baseFilePath,
     exportAs: 'CustomName',
   },
   logger: {
@@ -31,13 +32,16 @@ describe('createBaseTableFile', () => {
 
     await createBaseTableFile(params);
 
-    expect(fs.mkdir).toBeCalledWith(path.dirname(params.baseTable.filePath), {
-      recursive: true,
-    });
+    expect(fs.mkdir).toBeCalledWith(
+      path.dirname(params.baseTable.getFilePath()),
+      {
+        recursive: true,
+      },
+    );
 
     expect(fs.writeFile).toBeCalled();
     expect(log).toBeCalledWith(
-      `Created ${pathToLog(params.baseTable.filePath)}`,
+      `Created ${pathToLog(params.baseTable.getFilePath())}`,
     );
   });
 
@@ -49,7 +53,7 @@ describe('createBaseTableFile', () => {
     await createBaseTableFile(params);
 
     expect(fs.writeFile).toBeCalledWith(
-      params.baseTable.filePath,
+      params.baseTable.getFilePath(),
       `import { createBaseTable } from 'orchid-orm';
 
 export const ${params.baseTable.exportAs} = createBaseTable();

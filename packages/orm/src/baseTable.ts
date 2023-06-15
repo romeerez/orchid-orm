@@ -18,6 +18,7 @@ import {
   ColumnsShapeBase,
   ColumnTypesBase,
   getCallerFilePath,
+  getStackTrace,
   snakeCaseKey,
   StringKey,
   toSnakeCase,
@@ -33,7 +34,7 @@ export type TableClasses = Record<string, TableClass>;
 
 // convert table instance type to queryable interface
 // processes relations to a type that's understandable by `pqb`
-// add ORM table specific metadata like `definedAt`, `db`, `filePath`
+// add ORM table specific metadata like `definedAt`, `db`, `getFilePath`
 export type TableToDb<T extends Table> = Db<
   T['table'],
   T['columns']['shape'],
@@ -49,7 +50,7 @@ export type TableToDb<T extends Table> = Db<
       : Query['relations']
     : Query['relations'],
   T['columnTypes']
-> & { definedAs: string; db: OrchidORM; filePath: string; name: string };
+> & { definedAs: string; db: OrchidORM; getFilePath(): string; name: string };
 
 // convert a table class type into queryable interface
 // add relation methods
@@ -108,16 +109,10 @@ export const createBaseTable = <CT extends ColumnTypesBase>(
       ? columnTypes(defaultColumnTypes)
       : columnTypes || defaultColumnTypes;
 
-  filePath ??= getCallerFilePath();
-  if (!filePath) {
-    throw new Error(
-      `Failed to determine file path of a base table. Please set the \`filePath\` option of \`createBaseTable\` manually.`,
-    );
-  }
-
   return create(
     ct as ColumnTypesBase extends CT ? DefaultColumnTypes : CT,
-    filePath,
+    // stack is needed only if filePath wasn't given
+    filePath || getStackTrace(),
     snakeCase,
     nowSQL,
     exportAs,
@@ -137,48 +132,59 @@ type AfterSelectableHookMethod = <
 
 const create = <CT extends ColumnTypesBase>(
   columnTypes: CT,
-  filePath: string,
+  filePathOrStack?: string | NodeJS.CallSite[],
   snakeCase?: boolean,
   nowSQL?: string,
   exportAs = 'BaseTable',
 ) => {
+  let filePath: string | undefined;
+
   const base = class BaseTable {
-    static filePath = filePath;
     static nowSQL = nowSQL;
     static exportAs = exportAs;
+    static getFilePath(): string {
+      if (filePath) return filePath;
+      if (typeof filePathOrStack === 'string')
+        return (filePath = filePathOrStack);
+
+      filePath = getCallerFilePath(filePathOrStack);
+      if (filePath) return filePath;
+
+      throw new Error(
+        `Failed to determine file path of a base table. Please set the \`filePath\` option of \`createBaseTable\` manually.`,
+      );
+    }
 
     table!: string;
     columns!: ColumnsConfig;
     schema?: string;
     noPrimaryKey?: boolean;
     snakeCase = snakeCase;
-    columnTypes: CT;
+    columnTypes = columnTypes;
     query: QueryData = {} as QueryData;
     declare filePath: string;
     declare result: ColumnsShapeBase;
-
-    constructor() {
-      this.columnTypes = columnTypes;
-    }
 
     clone<T extends QueryBase>(this: T): T {
       return this;
     }
 
+    getFilePath() {
+      if (this.filePath) return this.filePath;
+      if (typeof filePathOrStack === 'string')
+        return (this.filePath = filePathOrStack);
+
+      const filePath = getCallerFilePath(filePathOrStack);
+      if (filePath) return (this.filePath = filePath);
+
+      throw new Error(
+        `Failed to determine file path for table ${this.constructor.name}. Please set \`filePath\` property manually`,
+      );
+    }
+
     setColumns<T extends ColumnsShape>(
       fn: (t: CT) => T,
     ): { shape: T; type: ColumnShapeOutput<T> } {
-      if (!this.filePath) {
-        const filePath = getCallerFilePath();
-        if (!filePath) {
-          throw new Error(
-            `Failed to determine file path for table ${this.constructor.name}. Please set \`filePath\` property manually`,
-          );
-        }
-
-        this.filePath = filePath;
-      }
-
       (columnTypes as { [snakeCaseKey]?: boolean })[snakeCaseKey] =
         this.snakeCase;
 

@@ -19,7 +19,7 @@ type Db = DbResult<DefaultColumnTypes>;
 
 type BaseTable<CT extends ColumnTypesBase> = {
   exportAs: string;
-  filePath: string;
+  getFilePath(): string;
   nowSQL?: string;
 
   new (): {
@@ -72,7 +72,7 @@ export type AppCodeUpdaterParams = {
   basePath: string;
   cache: object;
   logger: QueryLogOptions['logger'];
-  baseTable: { filePath: string; exportAs: string };
+  baseTable: { getFilePath(): string; exportAs: string };
   import(path: string): Promise<unknown>;
 };
 

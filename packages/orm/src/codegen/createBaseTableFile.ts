@@ -11,11 +11,12 @@ export const createBaseTableFile = async ({
   baseTable,
   logger,
 }: CreateBaseTableFileParams) => {
-  await fs.mkdir(path.dirname(baseTable.filePath), { recursive: true });
+  const filePath = baseTable.getFilePath();
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
 
   await fs
     .writeFile(
-      baseTable.filePath,
+      filePath,
       `import { createBaseTable } from 'orchid-orm';
 
 export const ${baseTable.exportAs} = createBaseTable();
@@ -25,7 +26,7 @@ export const ${baseTable.exportAs} = createBaseTable();
       },
     )
     .then(() => {
-      logger?.log(`Created ${pathToLog(baseTable.filePath)}`);
+      logger?.log(`Created ${pathToLog(filePath)}`);
     })
     .catch((err) => {
       if (err.code === 'EEXIST') return;

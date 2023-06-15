@@ -31,7 +31,7 @@ const params: AppCodeUpdaterConfig = {
 };
 
 const baseTable = {
-  filePath: 'baseTable.ts',
+  getFilePath: () => 'baseTable.ts',
   exportAs: 'BaseTable',
 };
 

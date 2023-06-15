@@ -33,16 +33,18 @@ describe('baseTable', () => {
     expect(base.exportAs).toBe('custom');
   });
 
-  it('should have a filePath to indicate where is it defined', () => {
-    expect(BaseTable.filePath).toBe(
+  it('should have a getFilePath method to return a path where the baseTable is defined', () => {
+    expect(BaseTable.getFilePath()).toBe(
       path.join(__dirname, 'test-utils', 'test-tables.ts'),
     );
   });
 
-  it('should throw if cannot determine file path', () => {
+  it('should throw if cannot determine file path and calling `getFilePath', () => {
     asMock(getCallerFilePath).mockReturnValueOnce(undefined);
 
-    expect(() => createBaseTable()).toThrow('Failed to determine file path');
+    expect(() => createBaseTable().getFilePath()).toThrow(
+      'Failed to determine file path',
+    );
   });
 
   describe('overriding column types', () => {

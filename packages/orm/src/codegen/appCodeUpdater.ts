@@ -17,7 +17,7 @@ export type AppCodeUpdaterConfig = {
 };
 
 export type BaseTableParam = {
-  filePath: string;
+  getFilePath(): string;
   exportAs: string;
 };
 

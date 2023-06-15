@@ -316,20 +316,29 @@ export const getImportPath = (from: string, to: string) => {
 };
 
 /**
- * Get a file path of the function which called the function which called this `getCallerFilePath`.
- * Determines file path by error stack trace, skips any paths that are located in `node_modules`.
+ * Get stack trace to collect info about who called the function
  */
-export const getCallerFilePath = (): string | undefined => {
+export const getStackTrace = (): NodeJS.CallSite[] | undefined => {
   let stack: NodeJS.CallSite[] | undefined;
   const original = Error.prepareStackTrace;
   Error.prepareStackTrace = (_, s) => (stack = s);
   new Error().stack;
   Error.prepareStackTrace = original;
+  return stack;
+};
 
+/**
+ * Get a file path of the function which called the function which called this `getCallerFilePath`.
+ * Determines file path by error stack trace, skips any paths that are located in `node_modules`.
+ * @param stack - optionally provide an existing stack trace
+ */
+export const getCallerFilePath = (
+  stack = getStackTrace(),
+): string | undefined => {
   if (stack) {
-    const libFile = stack[1]?.getFileName();
+    const libFile = stack[2]?.getFileName();
     const libDir = libFile && path.dirname(libFile);
-    for (let i = 2; i < stack.length; i++) {
+    for (let i = 3; i < stack.length; i++) {
       const item = stack[i];
       let file = item.getFileName();
       if (

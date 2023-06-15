@@ -30,7 +30,10 @@ export const createTable = async ({
 }) => {
   const key = toCamelCase(ast.name);
   const tablePath = params.tablePath(key);
-  const baseTablePath = getImportPath(tablePath, params.baseTable.filePath);
+  const baseTablePath = getImportPath(
+    tablePath,
+    params.baseTable.getFilePath(),
+  );
   const className = `${toPascalCase(ast.name)}Table`;
 
   tables[ast.name] = {
