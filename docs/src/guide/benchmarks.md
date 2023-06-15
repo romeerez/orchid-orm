@@ -4,7 +4,7 @@ import Chart from '../.vitepress/theme/components/Chart.vue'
 const queryAllData = {
   labels: ['Orchid ORM', 'Prisma', 'Sequelize', 'Kysely', 'Knex'],
   datasets: [{
-    data: [635, 1295, 1156, 787, 826],
+    data: [2696, 2298, 1161, 1745, 1693],
     backgroundColor: [
       '#b469ff',
       '#5a67d8',
@@ -18,7 +18,7 @@ const queryAllData = {
 const nestedSelectData = {
   labels: ['Orchid ORM', 'Prisma', 'Sequelize'],
   datasets: [{
-    data: [726, 1560, 3225],
+    data: [1218, 734, 135],
     backgroundColor: [
       '#b469ff',
       '#5a67d8',
@@ -30,7 +30,7 @@ const nestedSelectData = {
 const simpleInsertData = {
   labels: ['Orchid ORM', 'Prisma', 'Sequelize', 'Kysely', 'Knex'],
   datasets: [{
-    data: [896, 1836, 1440, 1158, 1639],
+    data: [9224, 4893, 3931, 9930, 9460],
     backgroundColor: [
       '#b469ff',
       '#5a67d8',
@@ -42,9 +42,9 @@ const simpleInsertData = {
 }
 
 const nestedInsertData = {
-  labels: ['Orchid ORM', 'Prisma', 'Sequelize'],
+  labels: ['Orchid ORM', 'Prisma'],
   datasets: [{
-    data: [815, 2604, 1605],
+    data: [2205, 1523],
     backgroundColor: [
       '#b469ff',
       '#5a67d8',
@@ -56,37 +56,41 @@ const nestedInsertData = {
 
 # Benchmarks
 
-In following benchmarks I'm comparing time elapsed on queries with different ORMs and query builders.
-
-All queries are running sequentially.
-
-Y-axis represents milliseconds - the lower is better.
-
-All tests are done locally on a laptop with Intel Core i7 10 Gen of U-series, Manjaro Linux.
-
+The following benchmarks measure operations per second for different ORMs and query builders.
 All the code with instruction is in the [repo here](https://github.com/romeerez/orchid-orm-examples/tree/main/packages/benchmarks).
 
-:::warning
-Treat these benchmarks as approximate and outdated (captured in Feb 2023), Orchid ORM and competitors changed since then.
+Contestants:
 
-Better benchmarks with a use of isolated Docker instances per ORM, with ops/s instead of ms results, are to be done yet.
-:::
+- **Orchid ORM** v1.11.0
+- **Prisma** v4.15.0
+- **Sequelize** v6.32.0
+- **Knex** v2.4.2
+- **Kysely** v0.25.0
 
-Tested against `Prisma` and `Sequelize`, which are probably the most popular node.js ORMs.
+The connection pool is set to have size 10 for every ORM.
+Benchmark is running 10 parallel queries for 10 seconds to calculate the average ops/s metric.
 
-`kysely` included out of curiosity, it was interesting how it handles more complex cases. Didn't figure out how to make nested select or insert with `kysely` though.
+The results are from my laptop with Intel Core i7 10 Gen of U-series, 16 GB RAM, Manjaro Linux.
 
-`knex` as well is included for simple cases, but doing nested selects and inserts is too complex with it.
+To ensure that nothing is cached on a database side between different ORMs, each ORM operates with a separate database.
 
 ## Load all records from a single table
 
-Measuring a simple query which loads all records from the table with 10 columns, 1000 times.
+Measuring a simple query which loads all records from the table with 10 columns and 100 records.
+
+**ops/s**: higher is better
 
 <Chart :chartData='queryAllData' />
 
 ## Load nested relation records
 
-Measuring a query with nested select, query is performed 500 times.
+For this test,
+we create 30 users,
+1 post per each user (post belongs to user),
+5 tags per each post (post has and belongs to many tags via a table in between),
+10 comments per each post (columns, comment belongs to post and to a user).
+
+And we want to fetch all posts with all the records they are connected to: post author, tags, comments, and authors of comments.
 
 Here is code for `Orchid ORM`:
 
@@ -101,46 +105,79 @@ await db.post
           author: (q) => q.author.select('id', 'firstName', 'lastName'),
         })
         .order({ createdAt: 'DESC' })
-        .limit(commentsPerPost),
+        .limit(10),
   })
   .order({ createdAt: 'DESC' });
 ```
 
-This query is selecting all posts with specific columns, author of post with its columns, post tags, last 3 comments of the post, each comment includes its author's data.
-
 The queries of `Prisma` and `Sequelize` are fetching the same data, except that they don't allow to pick resulting field names like `lastComments`, so the result must be mapped on a JS side.
+
+`Orchid ORM` is loading all the data with a single query, utilizing `JOIN LATERAL` which performs well for this task.
+
+`Prisma` is loading every relation via a separate query, and as the test is performing locally, the roundtrips between database and node.js don't affect the performance much.
+
+`Sequelize` is loading data in a strange way with the use of `UNION ALL` statements, making the query not efficient.
+
+`Kysely` and `Knex` are skipped as it's not trivial to use them for such case.
+
+**ops/s**: higher is better
 
 <Chart :chartData='nestedSelectData' />
 
 ## Simple insert
 
-Insert data to a table with 7 columns not counting autogenerated by the database. Run query 1000 times.
+Insert 7-columns large record.
 
-All ORMs give more or less consistent numbers, except Prisma: for the first attempt it showed 2.1s, second attempt 1.3s, third attempt 1.8s.
-
-That's a mystery why Knex is slower here than the others.
+**ops/s**: higher is better
 
 <Chart :chartData='simpleInsertData' />
 
 ## Nested insert
 
-Insert post with comments and with tags, 1000 times.
+Insert post with 3 comments and with 5 tags. Tags are connected to posts via a table in between.
 
-Sequelize is only inserting posts, because I didn't figure out how it is possible to insert related records all at once.
+Here is code for `Orchid ORM`:
+
+```ts
+const tagNames = ['one', 'two', 'three', 'four', 'five'];
+
+const postData = {
+  userId: 1,
+  title: 'Post title',
+  description: 'Post description',
+};
+
+const commentData = {
+  userId: 1,
+  text: 'Comment text',
+};
+
+await db.post.count().create({
+  ...postData,
+  comments: {
+    create: [commentData, commentData, commentData],
+  },
+  postTags: {
+    create: tagNames.map((tagName) => ({ tagName })),
+  },
+});
+```
+
+`Prisma` is the only competitor here as it is hardly possible with Sequelize, and the relations aren't managed by query builders.
+
+**ops/s**: higher is better
 
 <Chart :chartData='nestedInsertData' />
 
 ## Why Orchid ORM performs faster
 
-`Orchid ORM` is build with performance in mind, it aims to perform as few queries as possible to load as much as possible.
-It does no mapping unless necessary.
+`Orchid ORM` is micro-optimized where possible, and performs fewer queries to achieve goals.
 
-`Prisma` is based upon Rust server, communication between node.js and the Rust server is implemented inefficiently,
-so it is slower in some benchmarks than the others.
+`Prisma` is based upon Rust server, communication between node.js and the Rust server is implemented inefficiently, loads relations in separate queries.
+Though, it was drastically optimized in the last few month.
 
-`Sequelize` is generating gigantic inefficient SQL queries when it tries to load relations,
-it is slower in tests with selecting relations.
+`Sequelize` is generating gigantic inefficient SQL queries when it tries to load relations.
 
 Some ORMs like `Sequelize`, `TypeORM`, `MikroORM` are performing mapping to a class instance:
-first data is loaded from db, then they construct class instances with the data.
-And when you need to return JSON response to client, need to serialize these class instances to plain objects first.
+first data is loaded from db, then they construct class instances with the data, performing some logic when instantiating.
+And later the classes needs to be converted back to simple JS objects before encoding to JSON for response.
