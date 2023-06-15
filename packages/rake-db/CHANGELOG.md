@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.8.47
+
+### Patch Changes
+
+- 695f390: Internal change: change filePath property of BaseTable and extended tables to the getFilePath method
+- Updated dependencies [695f390]
+  - orchid-core@0.5.1
+  - pqb@0.13.1
+
 ## 2.8.46
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.5.1
+
+### Patch Changes
+
+- 695f390: Internal change: change filePath property of BaseTable and extended tables to the getFilePath method
+
 ## 0.5.0
 
 ### Minor Changes
