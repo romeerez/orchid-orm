@@ -336,14 +336,23 @@ export const getCallerFilePath = (
   stack = getStackTrace(),
 ): string | undefined => {
   if (stack) {
-    const libFile = stack[2]?.getFileName();
+    // file name of this file in orchid-core
+    const coreLibFile = stack[0]?.getFileName();
+    let i = 1;
+    if (stack[1]?.getFileName() === coreLibFile) {
+      i++;
+    }
+    // other orchid library that called the function in this file
+    const libFile = stack[i]?.getFileName();
     const libDir = libFile && path.dirname(libFile);
-    for (let i = 3; i < stack.length; i++) {
+    for (; i < stack.length; i++) {
       const item = stack[i];
       let file = item.getFileName();
       if (
         !file ||
+        // skip files in the caller orchid library
         path.dirname(file) === libDir ||
+        // skip any files in the node_modules
         /\bnode_modules\b/.test(file)
       ) {
         continue;
