@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.11.3
+
+### Patch Changes
+
+- 754d962: Add `import` function to `rakeDb` in the project init
+
 ## 1.11.2
 
 ### Patch Changes
