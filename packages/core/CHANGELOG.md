@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.5.2
+
+### Patch Changes
+
+- a7baab8: Fix `getCallerFilePath` to correctly find out a caller library path
+
 ## 0.5.1
 
 ### Patch Changes
