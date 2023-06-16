@@ -1,5 +1,5 @@
-<svg width="139.1" height="20" viewBox="0 0 1391 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="test coverage: 92.69%">
-  <title>test coverage: 92.69%</title>
+<svg width="139.1" height="20" viewBox="0 0 1391 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="test coverage: 92.64%">
+  <title>test coverage: 92.64%</title>
   <linearGradient id="a" x2="0" y2="100%">
     <stop offset="0" stop-opacity=".1" stop-color="#EEE"/>
     <stop offset="1" stop-opacity=".1"/>
@@ -13,8 +13,8 @@
   <g aria-hidden="true" fill="#fff" text-anchor="start" font-family="Verdana,DejaVu Sans,sans-serif" font-size="110">
     <text x="60" y="148" textLength="751" fill="#000" opacity="0.25">test coverage</text>
     <text x="50" y="138" textLength="751">test coverage</text>
-    <text x="906" y="148" textLength="440" fill="#000" opacity="0.25">92.69%</text>
-    <text x="896" y="138" textLength="440">92.69%</text>
+    <text x="906" y="148" textLength="440" fill="#000" opacity="0.25">92.64%</text>
+    <text x="896" y="138" textLength="440">92.64%</text>
   </g>
   
 </svg>
