@@ -123,17 +123,6 @@ Note the double-dash at the end - it is needed.
 
 If, during init script, you opted for `swc` compiler - it's no longer needed, remove `swc` from dependencies and from `tsconfig.json`.
 
-To use `vite` you also need to add the following line to `dbScript.ts`:
-
-```ts
-// src/db/dbScript.ts
-
-export const change = rakeDb(config.database, {
-  // add this line:
-  import: (path: string) => import(path),
-});
-```
-
 ## structure
 
 Consider the created structure:

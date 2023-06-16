@@ -462,6 +462,7 @@ export const change = rakeDb(${
       await seed();
     },
   },
+  import: (path) => import(path),
 });
 `,
   );
