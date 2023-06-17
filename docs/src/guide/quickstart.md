@@ -95,31 +95,13 @@ After running the script, check if the package.json file looks well, and install
 }
 ```
 
-## ES modules
-
 Note the `db` script: it is for running migrations, and it's being launched with `ts-node`.
 
-If you'd like to use `ts-node` in ES modules mode (it works, but outputs experimental warning), change the script to:
+## ES modules
 
-```json
-{
-  "scripts": {
-    "db": "node --loader ts-node/esm src/db/dbScript.ts"
-  }
-}
-```
+Some npm packages don't support `commonjs` and require a special setup for ES modules.
 
-If you'd like to use `vite-node` instead, which works in ES modules mode by default, install `vite-node` and change the script to:
-
-```json
-{
-  "scripts": {
-    "db": "vite-node src/db/dbScript.ts --"
-  }
-}
-```
-
-Note the double-dash at the end - it is needed.
+In such case, we suggest to configure the project with `vite-node`, follow [these instructions](https://github.com/romeerez/orchid-orm-examples/tree/main/packages/express-esm).
 
 If, during init script, you opted for `swc` compiler - it's no longer needed, remove `swc` from dependencies and from `tsconfig.json`.
 
