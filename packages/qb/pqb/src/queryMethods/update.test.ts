@@ -40,8 +40,8 @@ describe('update', () => {
     );
   });
 
-  it('should let update all with empty where', () => {
-    User.where().update({ name: 'new name' });
+  it('should let update all records after using `all` method', () => {
+    User.all().update({ name: 'new name' });
   });
 
   it('should update record with raw sql, returning updated rows count', async () => {
@@ -66,7 +66,7 @@ describe('update', () => {
   });
 
   it('should accept template string for `updateRaw`', () => {
-    const q = User.where().updateRaw`name = ${'name'}`;
+    const q = User.all().updateRaw`name = ${'name'}`;
     expectSql(
       q.toSql(),
       `
@@ -468,7 +468,7 @@ describe('update', () => {
   });
 
   it('should update column with a sub query result', () => {
-    const q = User.where().update({
+    const q = User.all().update({
       name: User.get('name'),
     });
 
@@ -498,7 +498,7 @@ describe('update', () => {
       profile: RelationQuery<'profile', never, never, typeof Profile>;
     };
 
-    const q = user.where().update({
+    const q = user.all().update({
       name: (q) => q.profile.get('bio'),
     });
 

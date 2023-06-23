@@ -162,7 +162,7 @@ describe('json methods', () => {
       });
 
       it('should work inside `update` callback', () => {
-        const q = User.where().update({
+        const q = User.all().update({
           data: (q) => q.jsonSet('data', ['name'], 'new name'),
         });
 
@@ -276,7 +276,7 @@ describe('json methods', () => {
       });
 
       it('should work inside `update` callback', () => {
-        const q = User.where().update({
+        const q = User.all().update({
           data: (q) => q.jsonInsert('data', ['tags', 0], 'tag'),
         });
 
@@ -381,7 +381,7 @@ describe('json methods', () => {
       });
 
       it('should work inside `update` callback', () => {
-        const q = User.where().update({
+        const q = User.all().update({
           data: (q) => q.jsonRemove('data', ['tags', 0]),
         });
 

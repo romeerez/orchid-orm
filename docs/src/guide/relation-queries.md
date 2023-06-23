@@ -313,8 +313,7 @@ This is supported for all kinds of relations only except `belongsTo`.
 
 ```ts
 // delete all books of the author
-// `delete` method requires where statement, empty where is here as a sanity check
-await db.author.find(1).books.where().delete();
+await db.author.find(1).books.all().delete();
 
 // delete specific books of specific authors
 await db.author

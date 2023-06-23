@@ -237,8 +237,8 @@ export abstract class Where extends QueryBase {
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
-  ): T;
-  whereIn<T extends Where>(this: T, arg: WhereInArg<T>): T;
+  ): WhereResult<T>;
+  whereIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
   whereIn<T extends Where>(
     this: T,
     arg: unknown | unknown[],

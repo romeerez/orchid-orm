@@ -49,7 +49,6 @@ import {
   RawExpression,
   raw,
   applyMixins,
-  EmptyObject,
   Sql,
   QueryThen,
   ColumnsShapeBase,
@@ -147,9 +146,6 @@ export interface QueryMethods
     TransformMethods {}
 
 export class QueryMethods {
-  windows!: EmptyObject;
-  baseQuery!: Query;
-
   /**
    * `.all` is a default behavior, that returns an array of objects:
    *
@@ -164,6 +160,7 @@ export class QueryMethods {
   }
   _all<T extends Query>(this: T): SetQueryReturnsAll<T> {
     this.query.returnType = 'all';
+    this.query.and ??= [];
     return this as unknown as SetQueryReturnsAll<T>;
   }
 
@@ -265,6 +262,31 @@ export class QueryMethods {
     return this as unknown as SetQueryReturnsVoid<T>;
   }
 
+  /**
+   * Call `toSql` on a query to get an object with a `text` SQL string and a `values` array of binding values:
+   *
+   * ```ts
+   * const sql = db.table.select('id', 'name').where({ name: 'name' }).toSql();
+   *
+   * expect(sql.text).toBe(
+   *   'SELECT "table"."id", "table"."name" FROM "table" WHERE "table"."name" = $1',
+   * );
+   * expect(sql.values).toEqual(['name']);
+   * ```
+   *
+   * `toSql` is called internally when awaiting a query.
+   *
+   * It is caching the result. Not mutating query methods are resetting the cache, but need to be careful with mutating methods that start with `_` - they won't reset the cache, which may lead to unwanted results.
+   *
+   * `toSql` optionally accepts such parameters:
+   *
+   * ```ts
+   * type ToSqlOptions = {
+   *   clearCache?: true;
+   *   values?: [];
+   * };
+   * ```
+   */
   toSql(this: Query, options?: ToSqlOptions): Sql {
     return toSql(this, options);
   }

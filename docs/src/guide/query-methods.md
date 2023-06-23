@@ -824,6 +824,8 @@ await selectFollowing(db.user.select('id', 'name'), currentUser);
 
 ## toSql
 
+[//]: # 'has JSDoc'
+
 Call `toSql` on a query to get an object with a `text` SQL string and a `values` array of binding values:
 
 ```ts

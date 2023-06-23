@@ -395,7 +395,7 @@ describe('hasOne', () => {
       });
 
       it('should be selectable for update', () => {
-        const q = db.profile.where().update({
+        const q = db.profile.all().update({
           Bio: (q) => q.user.get('Name'),
         });
 

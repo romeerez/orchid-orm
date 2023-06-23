@@ -4,6 +4,7 @@ import {
   OnQueryBuilder,
   QueryMethods,
   WhereQueryBuilder,
+  WhereResult,
 } from './queryMethods';
 import { QueryData } from './sql';
 import { ColumnsShape, ColumnType } from './columns';
@@ -189,7 +190,12 @@ export type SetQueryReturns<
     : T[K];
 };
 
-export type SetQueryReturnsAll<T extends Query> = SetQueryReturns<T, 'all'>;
+// Change the query type to return multiple object records.
+// It wraps the query with `WhereResult` to allow updating and deleting all records when the `all` method is used.
+export type SetQueryReturnsAll<T extends Query> = SetQueryReturns<
+  WhereResult<T>,
+  'all'
+>;
 
 export type SetQueryReturnsOneOptional<T extends Query> = SetQueryReturns<
   T,

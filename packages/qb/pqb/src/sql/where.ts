@@ -50,7 +50,7 @@ export const whereToSql = (
   not?: boolean,
 ): string | undefined => {
   if (query.or) {
-    const ors = query.and ? [query.and, ...query.or] : query.or;
+    const ors = query.and?.length ? [query.and, ...query.or] : query.or;
     return ors
       .map((and) => processAnds(and, ctx, table, query, quotedAs, not))
       .join(' OR ');

@@ -52,10 +52,10 @@ export class Delete {
    * Need to provide `.where`, `.findBy`, or `.find` conditions before calling `.delete`.
    * To prevent accidental deletion of all records, deleting without where will result in TypeScript and a runtime error.
    *
-   * To delete all records without conditions add an empty `where`:
+   * Use `all()` to delete ALL records without conditions:
    *
    * ```ts
-   * await db.table.where().delete();
+   * await db.table.all().delete();
    * ```
    *
    * ```ts
@@ -85,7 +85,7 @@ export class Delete {
    *
    * ```ts
    * // delete all users who have corresponding profile records:
-   * db.table.join(Profile, 'profile.userId', 'user.id').where().delete();
+   * db.table.join(Profile, 'profile.userId', 'user.id').all().delete();
    * ```
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

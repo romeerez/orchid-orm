@@ -9,9 +9,12 @@ import { QueryBase } from '../queryBase';
 export const checkIfASimpleQuery = (q: Query) => {
   if (
     (q.query.returnType && q.query.returnType !== 'all') ||
-    q.internal.columnsForSelectAll
+    q.internal.columnsForSelectAll ||
+    q.query.and?.length ||
+    q.query.or?.length
   )
     return false;
+
   const keys = Object.keys(q.query) as (keyof SelectQueryData)[];
   return !keys.some((key) => queryKeysOfNotSimpleQuery.includes(key));
 };
@@ -20,8 +23,6 @@ const queryKeysOfNotSimpleQuery: (keyof SelectQueryData)[] = [
   'with',
   'as',
   'from',
-  'and',
-  'or',
   'select',
   'distinct',
   'fromOnly',

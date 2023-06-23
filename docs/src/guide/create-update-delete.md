@@ -403,10 +403,10 @@ Place `.select`, `.selectAll`, or `.get` before `.update` to specify returning c
 You need to provide `.where`, `.findBy`, or `.find` conditions before calling `.update`.
 To ensure that the whole table won't be updated by accident, updating without where conditions will result in TypeScript and runtime errors.
 
-If you need to update ALL records, use `where` method without arguments:
+Use `all()` to update ALL records without conditions:
 
 ```ts
-await db.table.where().update({ name: 'new name' });
+await db.table.all().update({ name: 'new name' });
 ```
 
 If `.select` and `.where` were specified before the update it will return an array of updated records.
@@ -624,10 +624,10 @@ Place `.select`, `.selectAll`, or `.get` before `.delete` to specify returning c
 Need to provide `.where`, `.findBy`, or `.find` conditions before calling `.delete`.
 To prevent accidental deletion of all records, deleting without where will result in TypeScript and a runtime error.
 
-To delete all records without conditions add an empty `where`:
+Use `all()` to delete ALL records without conditions:
 
 ```ts
-await db.table.where().delete();
+await db.table.all().delete();
 ```
 
 ```ts
@@ -657,5 +657,5 @@ const deletedUsersFull = await db.table
 
 ```ts
 // delete all users who have corresponding profile records:
-db.table.join(Profile, 'profile.userId', 'user.id').where().delete();
+db.table.join(Profile, 'profile.userId', 'user.id').all().delete();
 ```

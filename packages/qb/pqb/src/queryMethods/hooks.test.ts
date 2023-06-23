@@ -97,7 +97,7 @@ describe('hooks', () => {
   describe('afterUpdate', () => {
     it('should run inside transaction', async () => {
       const fn = jest.fn();
-      const q = User.afterUpdate([], fn).where().update({});
+      const q = User.afterUpdate([], fn).all().update({});
       ignoreTestTransactionOnce(q);
 
       q.transaction = jest.fn(() => Promise.resolve());
@@ -166,7 +166,7 @@ describe('hooks', () => {
   describe('beforeDelete', () => {
     it('should run inside transaction', async () => {
       const fn = jest.fn();
-      const q = User.afterDelete([], fn).where().delete();
+      const q = User.afterDelete([], fn).all().delete();
       ignoreTestTransactionOnce(q);
 
       q.transaction = jest.fn(() => Promise.resolve());
@@ -204,7 +204,7 @@ describe('hooks', () => {
     const q = User.select('id')
       .afterUpdate(['id', 'name'], noop)
       .afterUpdate(['id', 'name', 'password'], noop)
-      .where()
+      .all()
       .update({ name: 'new name' });
 
     expectSql(

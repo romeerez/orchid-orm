@@ -259,10 +259,10 @@ export class Update {
    * You need to provide `.where`, `.findBy`, or `.find` conditions before calling `.update`.
    * To ensure that the whole table won't be updated by accident, updating without where conditions will result in TypeScript and runtime errors.
    *
-   * If you need to update ALL records, use `where` method without arguments:
+   * Use `all()` to update ALL records without conditions:
    *
    * ```ts
-   * await db.table.where().update({ name: 'new name' });
+   * await db.table.all().update({ name: 'new name' });
    * ```
    *
    * If `.select` and `.where` were specified before the update it will return an array of updated records.

@@ -146,12 +146,13 @@ describe('createRepo', () => {
       },
     });
 
-    it('should define methods which are available only after .where, .find, or similar', () => {
+    it('should define methods which are available only after all, .where, .find, or similar', () => {
       // @ts-expect-error should prevent using method on query without where conditions
       repo.one();
       // @ts-expect-error should prevent using method on query without where conditions
       repo.take().one();
 
+      repo.all().one();
       repo.where().one();
       repo.find(1).one();
     });
@@ -168,14 +169,14 @@ describe('createRepo', () => {
       },
     });
 
-    it('should define methods which are available only after .where, .find, or similar', () => {
+    it('should define methods which are available only after .all, .where, .find, or similar', () => {
       // @ts-expect-error should prevent using method on query without where conditions
       repo.one();
       // @ts-expect-error should prevent using method on query without where conditions
       repo.take().one();
 
       // @ts-expect-error should prevent using method on query which returns multiple
-      repo.where().one();
+      repo.all().one();
 
       repo.find(1).one();
     });

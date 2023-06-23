@@ -17,8 +17,8 @@ describe('delete', () => {
     expect(() => User.delete()).toThrow('Dangerous delete without conditions');
   });
 
-  it('should allow deleting all with empty where', () => {
-    User.where().delete();
+  it('should allow deleting all records after using `all` method', () => {
+    User.all().delete();
   });
 
   it('should be aliased as `del`', () => {
@@ -98,7 +98,7 @@ describe('delete', () => {
   });
 
   it('should delete records, returning all named columns', () => {
-    const query = Snake.selectAll().where().delete();
+    const query = Snake.selectAll().all().delete();
     expectSql(
       query.toSql(),
       `
@@ -124,7 +124,7 @@ describe('delete', () => {
   });
 
   it('should delete records, returning specified named columns', () => {
-    const query = Snake.select('snakeName', 'tailLength').where().delete();
+    const query = Snake.select('snakeName', 'tailLength').all().delete();
     expectSql(
       query.toSql(),
       `
