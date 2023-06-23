@@ -1,5 +1,11 @@
 # pqb
 
+## 0.13.3
+
+### Patch Changes
+
+- 81ebb5d: Allow calling update and delete for all records after `all` method
+
 ## 0.13.2
 
 ### Patch Changes
