@@ -55,6 +55,19 @@ const domain: RakeDbAst.Domain = {
   check: raw('VALUE = 42'),
 };
 
+const collation: RakeDbAst.Collation = {
+  type: 'collation',
+  action: 'create',
+  schema: 'schema',
+  name: 'collationName',
+  locale: 'locale',
+  lcCollate: 'lcCollate',
+  lcCType: 'lcCType',
+  provider: 'provider',
+  deterministic: true,
+  version: '123',
+};
+
 const foreignKey: RakeDbAst.Constraint & { references: TableData.References } =
   {
     type: 'constraint',
@@ -463,6 +476,29 @@ change(async (db) => {
     collation: 'C',
     default: db.sql({"raw":"123"}),
     check: db.sql({"raw":"VALUE = 42"}),
+  });
+});
+`,
+      );
+    });
+  });
+
+  describe('collation', () => {
+    it('should add collation', () => {
+      const result = astToMigration(config, [collation]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createCollation('schema.collationName', {
+    locale: 'locale',
+    lcCollate: 'lcCollate',
+    lcCType: 'lcCType',
+    provider: 'provider',
+    deterministic: true,
+    version: '123',
   });
 });
 `,

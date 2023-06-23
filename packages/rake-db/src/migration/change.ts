@@ -1,10 +1,10 @@
-import { Migration } from './migration';
+import { DbMigration } from './migration';
 import { ColumnTypesBase } from 'orchid-core';
 
 let currentChanges: ChangeCallback[] = [];
 
 export type ChangeCallback<CT extends ColumnTypesBase = ColumnTypesBase> = (
-  db: Migration<CT>,
+  db: DbMigration<CT>,
   up: boolean,
 ) => Promise<void>;
 

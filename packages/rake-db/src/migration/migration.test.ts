@@ -505,6 +505,67 @@ describe('migration', () => {
     });
   });
 
+  describe('createCollation and dropCollation', () => {
+    const testUpAndDown = makeTestUpAndDown('createCollation', 'dropCollation');
+
+    it('should push ast', async () => {
+      await testUpAndDown(
+        (action) => db[action]('name', { locale: 'locale' }),
+        () => expect(db.migratedAsts.length).toBe(1),
+        () => expect(db.migratedAsts.length).toBe(1),
+      );
+    });
+
+    it(`should create and drop collation with options`, async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('schema.collation', {
+            locale: 'en-u-kn-true',
+            lcCollate: 'C',
+            lcCType: 'C',
+            provider: 'icu',
+            deterministic: true,
+            version: '123',
+            createIfNotExists: true,
+            dropIfExists: true,
+            cascade: true,
+          }),
+        () =>
+          expectSql(`
+            CREATE COLLATION IF NOT EXISTS "schema"."collation" (
+              locale = 'en-u-kn-true',
+              lc_collate = 'C',
+              lc_ctype = 'C',
+              provider = icu,
+              deterministic = true,
+              version = '123'
+            )
+          `),
+        () =>
+          expectSql(`
+            DROP COLLATION IF EXISTS "schema"."collation" CASCADE
+          `),
+      );
+    });
+
+    it(`should create and drop collation from existing`, async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('schema.collation', {
+            fromExisting: 'schema.other',
+          }),
+        () =>
+          expectSql(`
+            CREATE COLLATION "schema"."collation" FROM "schema"."other"
+          `),
+        () =>
+          expectSql(`
+            DROP COLLATION "schema"."collation"
+          `),
+      );
+    });
+  });
+
   describe('tableExists', () => {
     it('should return boolean', async () => {
       queryMock.mockResolvedValueOnce({ rowCount: 1 });

@@ -43,6 +43,7 @@ type Data = {
   extensions: DbStructure.Extension[];
   enums: DbStructure.Enum[];
   domains: DbStructure.Domain[];
+  collations: DbStructure.Collation[];
 };
 
 type Domains = Record<string, ColumnType>;
@@ -73,6 +74,15 @@ export const structureToAst = async (
       type: 'schema',
       action: 'create',
       name,
+    });
+  }
+
+  for (const it of data.collations) {
+    ast.push({
+      type: 'collation',
+      action: 'create',
+      ...it,
+      schema: it.schema === ctx.currentSchema ? undefined : it.schema,
     });
   }
 
@@ -210,6 +220,7 @@ const getData = async (db: DbStructure): Promise<Data> => {
     extensions,
     enums,
     domains,
+    collations,
   ] = await Promise.all([
     db.getStructure(),
     db.getConstraints(),
@@ -217,6 +228,7 @@ const getData = async (db: DbStructure): Promise<Data> => {
     db.getExtensions(),
     db.getEnums(),
     db.getDomains(),
+    db.getCollations(),
   ]);
 
   return {
@@ -228,6 +240,7 @@ const getData = async (db: DbStructure): Promise<Data> => {
     extensions,
     enums,
     domains,
+    collations,
   };
 };
 

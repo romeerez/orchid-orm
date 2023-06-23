@@ -11,6 +11,7 @@ import { ColumnComment } from './migration';
 import {
   getSchemaAndTableFromName,
   joinColumns,
+  quoteNameFromString,
   quoteWithSchema,
 } from '../common';
 
@@ -40,7 +41,7 @@ export const columnToSql = (
   }
 
   if (item.data.collate) {
-    line.push(`COLLATE ${quote(item.data.collate)}`);
+    line.push(`COLLATE ${quoteNameFromString(item.data.collate)}`);
   }
 
   if (item.data.identity) {
@@ -283,7 +284,7 @@ export const indexesToQuery = (
       ];
 
       if (column.collate) {
-        columnSql.push(`COLLATE '${column.collate}'`);
+        columnSql.push(`COLLATE ${quoteNameFromString(column.collate)}`);
       }
 
       if (column.opclass) {

@@ -18,6 +18,7 @@ describe('dbStructure', () => {
       db.getExtensions(),
       db.getEnums(),
       db.getDomains(),
+      db.getCollations(),
     ]);
   });
 });

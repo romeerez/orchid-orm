@@ -1,4 +1,4 @@
-import { MigrationBase } from './migration';
+import { Migration } from './migration';
 import {
   ColumnTypesBase,
   raw,
@@ -10,7 +10,7 @@ import { RakeDbAst } from '../ast';
 import { getRaw } from 'pqb';
 
 export const createView = async <CT extends ColumnTypesBase>(
-  migration: MigrationBase<CT>,
+  migration: Migration<CT>,
   up: boolean,
   name: string,
   options: RakeDbAst.ViewOptions,

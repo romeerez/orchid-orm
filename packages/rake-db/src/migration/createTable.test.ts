@@ -119,7 +119,7 @@ describe('create and drop table', () => {
             varcharWithLength: t.varchar(20),
             decimalWithPrecisionAndScale: t.decimal(10, 5),
             columnWithCompression: t.text().compression('compression'),
-            columnWithCollate: t.text().collate('utf-8'),
+            columnWithCollate: t.text().collate('schema.collation'),
           })),
         () => {
           expectSql(
@@ -132,7 +132,7 @@ describe('create and drop table', () => {
               "varcharWithLength" varchar(20) NOT NULL,
               "decimalWithPrecisionAndScale" decimal(10, 5) NOT NULL,
               "columnWithCompression" text COMPRESSION compression NOT NULL,
-              "columnWithCollate" text COLLATE 'utf-8' NOT NULL
+              "columnWithCollate" text COLLATE "schema"."collation" NOT NULL
             )
           `,
           );
@@ -309,7 +309,7 @@ describe('create and drop table', () => {
               unique: true,
               nullsNotDistinct: true,
               using: 'gin',
-              collate: 'utf-8',
+              collate: 'schema.collation',
               opclass: 'opclass',
               order: 'ASC',
               include: 'id',
@@ -332,7 +332,7 @@ describe('create and drop table', () => {
               CREATE UNIQUE INDEX "indexName"
                 ON "table"
                 USING gin
-                ("withIndex" COLLATE 'utf-8' opclass ASC)
+                ("withIndex" COLLATE "schema"."collation" opclass ASC)
                 INCLUDE ("id")
                 NULLS NOT DISTINCT
                 WITH (fillfactor = 70)

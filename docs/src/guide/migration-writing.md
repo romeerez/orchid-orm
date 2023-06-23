@@ -78,6 +78,8 @@ change(async (db, up) => {
 
 ## createTable, dropTable
 
+[//]: # 'has JSDoc'
+
 `createTable` accepts a string for a table name, optional options, and a callback to specify columns.
 
 `dropTable` accepts the same arguments, it will drop the table when migrating and create a table when rolling back.
@@ -142,6 +144,8 @@ change(async (db, up) => {
 ```
 
 ## changeTable
+
+[//]: # 'has JSDoc'
 
 `changeTable` accepts a table name, optional options, and a special callback with column changes.
 
@@ -365,6 +369,8 @@ change(async (db) => {
 
 ## renameTable
 
+[//]: # 'has JSDoc'
+
 Rename a table:
 
 ```ts
@@ -376,6 +382,8 @@ change(async (db) => {
 ```
 
 ## addColumn, dropColumn
+
+[//]: # 'has JSDoc'
 
 Add a column to the table on migrating, and remove it on rollback.
 
@@ -392,6 +400,8 @@ change(async (db) => {
 ```
 
 ## addIndex, dropIndex
+
+[//]: # 'has JSDoc'
 
 Add an index to the table on migrating, and remove it on rollback.
 
@@ -415,9 +425,22 @@ change(async (db) => {
 
 ## addForeignKey, dropForeignKey
 
+[//]: # 'has JSDoc'
+
 Add a foreign key to a table on migrating, and remove it on rollback.
 
 `dropForeignKey` takes the same arguments, removes the foreign key on migrate, and adds it on rollback.
+
+Arguments:
+
+- table name
+- column names in the table
+- other table name
+- column names in the other table
+- options:
+  - `name`: constraint name
+  - `match`: 'FULL', 'PARTIAL', or 'SIMPLE'
+  - `onUpdate` and `onDelete`: 'NO ACTION', 'RESTRICT', 'CASCADE', 'SET NULL', or 'SET DEFAULT'
 
 The first argument is the table name, other arguments are the same as in [composite foreign key](#composite-foreign-key).
 
@@ -442,11 +465,14 @@ change(async (db) => {
 
 ## addPrimaryKey, dropPrimaryKey
 
+[//]: # 'has JSDoc'
+
 Add a primary key to a table on migrate, and remove it on rollback.
 
 `dropPrimaryKey` takes the same arguments, removes the primary key on migrate, and adds it on rollback.
 
-The first argument is the table name, other arguments are the same as in [composite primary key](#composite-primary-key).
+First argument is a table name, second argument is an array of columns.
+The optional third argument may have a name for the primary key constraint.
 
 ```ts
 import { change } from '../dbScript';
@@ -460,6 +486,8 @@ change(async (db) => {
 
 ## addCheck, dropCheck
 
+[//]: # 'has JSDoc'
+
 Add or drop a check for multiple columns.
 
 ```ts
@@ -470,7 +498,9 @@ change(async (db) => {
 });
 ```
 
-## addCheck, dropCheck
+## addConstraint, dropConstraint
+
+[//]: # 'has JSDoc'
 
 Add or drop a constraint with check and a foreign key references.
 
@@ -490,6 +520,8 @@ change(async (db) => {
 
 ## renameColumn
 
+[//]: # 'has JSDoc'
+
 Rename a column:
 
 ```ts
@@ -502,7 +534,9 @@ change(async (db) => {
 
 ## createEnum, dropEnum
 
-`createEnum` creates a enum on migrate, drops it on rollback.
+[//]: # 'has JSDoc'
+
+`createEnum` creates an enum on migrate, drops it on rollback.
 
 `dropEnum` does the opposite.
 
@@ -525,6 +559,8 @@ change(async (db) => {
 
 ## createSchema, dropSchema
 
+[//]: # 'has JSDoc'
+
 `createSchema` creates a database schema, and removes it on rollback.
 
 `dropSchema` takes the same arguments, removes schema on migration, and adds it on rollback.
@@ -539,6 +575,8 @@ change(async (db) => {
 
 ## createExtension, dropExtension
 
+[//]: # 'has JSDoc'
+
 `createExtension` creates a database extension, and removes it on rollback.
 
 `dropExtension` takes the same arguments, removes the extension on migrate, and adds it on rollback.
@@ -552,6 +590,8 @@ change(async (db) => {
 ```
 
 ## createDomain, dropDomain
+
+[//]: # 'has JSDoc'
 
 Domain is a custom database type that allows to predefine a `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
 
@@ -579,7 +619,73 @@ change(async (db) => {
 });
 ```
 
+## createCollation, dropCollation
+
+[//]: # 'has JSDoc'
+
+Create and drop a database collation, (see [Postgres docs](https://www.postgresql.org/docs/current/sql-createcollation.html)).
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createCollation('myCollation', {
+    // This is a shortcut for setting lcCollate and lcCType at once.
+    locale: 'en-u-kn-true',
+
+    // set `lcType` and `lcCType` only if the `locale` is not set.
+    // lcType: 'C',
+    // lcCType: 'C',
+
+    // provider can be 'icu' or 'libc'. 'libc' is a default.
+    provider: 'icu',
+
+    // true by default, false is only supported with 'icu' provider.
+    deterministic: true,
+
+    // Is intended to by used by `pg_upgrade`. Normally, it should be omitted.
+    version: '1.2.3',
+
+    // For `CREATE IF NOT EXISTS` when creating.
+    createIfNotExists: true,
+
+    // For `DROP IF EXISTS` when dropping.
+    dropIfExists: true,
+
+    // For `DROP ... CASCADE` when dropping.
+    cascase: true,
+  });
+});
+```
+
+Instead of specifying the collation options, you can specify a collation to copy options from.
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createCollation('myCollation', {
+    fromExisting: 'otherCollation',
+  });
+});
+```
+
+To create a collation withing a specific database schema, prepend it to the collation name:
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createCollation('schemaName.myCollation', {
+    // `fromExisting` also can accept a collation name with a schema.
+    fromExisting: 'schemaName.otherCollation',
+  });
+});
+```
+
 ## createView, dropView
+
+[//]: # 'has JSDoc'
 
 Create and drop database views.
 
@@ -640,6 +746,8 @@ change(async (db) => {
 
 ## tableExists
 
+[//]: # 'has JSDoc'
+
 Returns boolean to know if table exists:
 
 ```ts
@@ -653,6 +761,8 @@ change(async (db) => {
 ```
 
 ## columnExists
+
+[//]: # 'has JSDoc'
 
 Returns boolean to know if a column exists:
 
@@ -669,6 +779,8 @@ change(async (db) => {
 ```
 
 ## constraintExists
+
+[//]: # 'has JSDoc'
 
 Returns boolean to know if constraint exists:
 

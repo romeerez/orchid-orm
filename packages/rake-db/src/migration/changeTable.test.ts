@@ -309,12 +309,12 @@ describe('changeTable', () => {
       await testUpAndDown(
         (action) =>
           db.changeTable('table', (t) => ({
-            columnWithCollate: t[action](t.text().collate('utf-8')),
+            columnWithCollate: t[action](t.text().collate('schema.collation')),
           })),
         () =>
           expectSql(`
             ALTER TABLE "table"
-              ADD COLUMN "columnWithCollate" text COLLATE 'utf-8' NOT NULL
+              ADD COLUMN "columnWithCollate" text COLLATE "schema"."collation" NOT NULL
           `),
         () =>
           expectSql(`
@@ -430,7 +430,7 @@ describe('changeTable', () => {
                   unique: true,
                   nullsNotDistinct: true,
                   using: 'gin',
-                  collate: 'utf-8',
+                  collate: 'schema.collation',
                   opclass: 'opclass',
                   order: 'ASC',
                   include: 'id',
@@ -447,7 +447,7 @@ describe('changeTable', () => {
               toLine(`
                 CREATE UNIQUE INDEX "indexName"
                   ON "table"
-                  USING gin ("withIndex" COLLATE 'utf-8' opclass ASC)
+                  USING gin ("withIndex" COLLATE "schema"."collation" opclass ASC)
                   INCLUDE ("id")
                   NULLS NOT DISTINCT
                   WITH (fillfactor = 70)
@@ -1198,19 +1198,19 @@ describe('changeTable', () => {
         () =>
           db.changeTable('table', (t) => ({
             changeCollate: t.change(
-              t.text().collate('de_DE'),
-              t.text().collate('fr_FR'),
+              t.text().collate('one.two'),
+              t.text().collate('three.four'),
             ),
           })),
         () =>
           expectSql(`
             ALTER TABLE "table"
-              ALTER COLUMN "changeCollate" TYPE text COLLATE 'fr_FR'
+              ALTER COLUMN "changeCollate" TYPE text COLLATE "three"."four"
         `),
         () =>
           expectSql(`
             ALTER TABLE "table"
-              ALTER COLUMN "changeCollate" TYPE text COLLATE 'de_DE'
+              ALTER COLUMN "changeCollate" TYPE text COLLATE "one"."two"
         `),
       );
     });
@@ -1775,7 +1775,7 @@ describe('changeTable', () => {
               addIndexWithOptions: t.change(
                 t.integer(),
                 t.integer().index({
-                  collate: 'collate',
+                  collate: 'schema.collation',
                   opclass: 'opclass',
                   order: 'order',
                   unique: true,
@@ -1795,7 +1795,7 @@ describe('changeTable', () => {
               toLine(`
                 CREATE UNIQUE INDEX "table_addIndexWithOptions_idx"
                   ON "table"
-                  USING using ("addIndexWithOptions" COLLATE 'collate' opclass order)
+                  USING using ("addIndexWithOptions" COLLATE "schema"."collation" opclass order)
                   INCLUDE ("a", "b")
                   NULLS NOT DISTINCT
                   WITH (with)
@@ -1834,7 +1834,7 @@ describe('changeTable', () => {
               removeIndex: t.change(t.integer().index(), t.integer()),
               removeIndexWithOptions: t.change(
                 t.integer().index({
-                  collate: 'collate',
+                  collate: 'schema.collation',
                   opclass: 'opclass',
                   order: 'order',
                   unique: true,
@@ -1860,7 +1860,7 @@ describe('changeTable', () => {
               toLine(`
                 CREATE UNIQUE INDEX "table_removeIndexWithOptions_idx"
                   ON "table"
-                  USING using ("removeIndexWithOptions" COLLATE 'collate' opclass order)
+                  USING using ("removeIndexWithOptions" COLLATE "schema"."collation" opclass order)
                   INCLUDE ("a", "b")
                   NULLS NOT DISTINCT
                   WITH (with)
@@ -1894,7 +1894,7 @@ describe('changeTable', () => {
               changeIndex: t.change(
                 t.integer().index({
                   name: 'from',
-                  collate: 'from',
+                  collate: 'schema.from',
                   opclass: 'from',
                   order: 'from',
                   unique: false,
@@ -1908,7 +1908,7 @@ describe('changeTable', () => {
                 }),
                 t.integer().index({
                   name: 'to',
-                  collate: 'to',
+                  collate: 'schema.to',
                   opclass: 'to',
                   order: 'to',
                   unique: true,
@@ -1928,7 +1928,7 @@ describe('changeTable', () => {
               toLine(`
                 CREATE UNIQUE INDEX "to"
                   ON "table"
-                  USING to ("changeIndex" COLLATE 'to' to to)
+                  USING to ("changeIndex" COLLATE "schema"."to" to to)
                   INCLUDE ("c", "d")
                   NULLS NOT DISTINCT
                   WITH (to)
@@ -1942,7 +1942,7 @@ describe('changeTable', () => {
               toLine(`
                 CREATE INDEX "from"
                   ON "table"
-                  USING from ("changeIndex" COLLATE 'from' from from)
+                  USING from ("changeIndex" COLLATE "schema"."from" from from)
                   INCLUDE ("a", "b")
                   WITH (from)
                   TABLESPACE from

@@ -147,6 +147,15 @@ export const domain: DbStructure.Domain = {
   isArray: false,
 };
 
+export const collation: DbStructure.Collation = {
+  schema: 'public',
+  name: 'collation',
+  provider: 'icu',
+  deterministic: true,
+  locale: 'locale',
+  version: '123',
+};
+
 export const view: DbStructure.View = {
   schemaName: 'custom',
   name: 'view',

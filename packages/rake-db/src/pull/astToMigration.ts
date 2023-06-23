@@ -42,6 +42,9 @@ export const astToMigration = <CT extends ColumnTypesBase>(
     } else if (item.type === 'domain' && item.action === 'create') {
       if (first.length) first.push([]);
       first.push(...createDomain(item));
+    } else if (item.type === 'collation' && item.action === 'create') {
+      if (first.length) first.push([]);
+      first.push(...createCollation(item));
     } else if (item.type === 'table' && item.action === 'create') {
       tablesAndViews.push(createTable(config, item));
     } else if (item.type === 'view' && item.action === 'create') {
@@ -132,6 +135,22 @@ const createDomain = (ast: RakeDbAst.Domain) => {
 
   addCode(code, ');');
   return code;
+};
+
+const createCollation = (ast: RakeDbAst.Collation): Code[] => {
+  const params: string[] = [];
+  if (ast.locale) params.push(`locale: '${ast.locale}',`);
+  if (ast.lcCollate) params.push(`lcCollate: '${ast.lcCollate}',`);
+  if (ast.lcCType) params.push(`lcCType: '${ast.lcCType}',`);
+  if (ast.provider) params.push(`provider: '${ast.provider}',`);
+  if (ast.deterministic) params.push(`deterministic: ${ast.deterministic},`);
+  if (ast.version) params.push(`version: '${ast.version}',`);
+
+  return [
+    `await db.createCollation(${quoteSchemaTable(ast)}, {`,
+    params,
+    '});',
+  ];
 };
 
 const createTable = <CT extends ColumnTypesBase>(

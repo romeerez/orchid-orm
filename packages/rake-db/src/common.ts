@@ -382,6 +382,11 @@ export const getSchemaAndTableFromName = (
     : [undefined, name];
 };
 
+export const quoteNameFromString = (string: string) => {
+  const [schema, name] = getSchemaAndTableFromName(string);
+  return quoteWithSchema({ schema, name });
+};
+
 export const quoteSchemaTable = ({
   schema,
   name,

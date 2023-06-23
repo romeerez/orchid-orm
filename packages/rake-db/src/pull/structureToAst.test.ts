@@ -33,6 +33,7 @@ import {
   domain,
   identityColumn,
   view,
+  collation,
 } from './pull.test-utils';
 
 const adapter = new Adapter({ databaseURL: 'file:path' });
@@ -1136,6 +1137,40 @@ describe('structureToAst', () => {
       db.getDomains = async () => [domain];
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Domain];
+
+      expect(ast.schema).toBe('public');
+    });
+  });
+
+  describe('collation', () => {
+    it('should add collation', async () => {
+      const db = new DbStructure(adapter);
+      db.getCollations = async () => [
+        {
+          ...collation,
+          schema: 'custom',
+          lcCollate: 'C',
+          lcCType: 'C',
+        },
+      ];
+
+      const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Collation];
+
+      expect(ast).toEqual({
+        type: 'collation',
+        action: 'create',
+        ...collation,
+        schema: undefined,
+        lcCollate: 'C',
+        lcCType: 'C',
+      });
+    });
+
+    it('should not ignore schema if it not current schema', async () => {
+      const db = new DbStructure(adapter);
+      db.getCollations = async () => [collation];
+
+      const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Collation];
 
       expect(ast.schema).toBe('public');
     });

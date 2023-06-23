@@ -140,6 +140,17 @@ export namespace DbStructure {
     default?: string;
     check?: string;
   };
+
+  export type Collation = {
+    schema: string;
+    name: string;
+    provider: string;
+    deterministic: boolean;
+    lcCollate?: string;
+    lcCType?: string;
+    locale?: string;
+    version?: string;
+  };
 }
 
 const filterSchema = (table: string) =>
@@ -542,7 +553,7 @@ GROUP BY n.nspname, t.typname`,
     return rows;
   }
 
-  async getDomains() {
+  async getDomains(): Promise<DbStructure.Domain[]> {
     const { rows } = await this.db.query<DbStructure.Domain>(`SELECT
   n.nspname AS "schemaName",
   d.typname AS "name",
@@ -572,6 +583,24 @@ JOIN pg_catalog.pg_type t
 JOIN pg_catalog.pg_namespace s ON s.oid = t.typnamespace
 LEFT JOIN pg_catalog.pg_constraint c ON c.contypid = d.oid
 WHERE d.typtype = 'd' AND ${filterSchema('n.nspname')}`);
+
+    return rows;
+  }
+
+  async getCollations(): Promise<DbStructure.Collation[]> {
+    const { rows } = await this.db.query<DbStructure.Collation>(`SELECT
+  nspname "schema",
+  collname "name",
+  CASE WHEN collprovider = 'i' THEN 'icu' WHEN collprovider = 'c' THEN 'libc' ELSE collprovider::text END "provider",
+  collisdeterministic "deterministic",
+  collcollate "lcCollate",
+  collctype "lcCType",
+  colliculocale "locale",
+  collversion "version"
+FROM pg_collation
+JOIN pg_namespace n on pg_collation.collnamespace = n.oid
+WHERE ${filterSchema('n.nspname')}
+    `);
 
     return rows;
   }

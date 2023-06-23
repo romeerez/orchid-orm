@@ -17,6 +17,7 @@ export type RakeDbAst =
   | RakeDbAst.Extension
   | RakeDbAst.Enum
   | RakeDbAst.Domain
+  | RakeDbAst.Collation
   | RakeDbAst.Constraint
   | RakeDbAst.View;
 
@@ -131,6 +132,45 @@ export namespace RakeDbAst {
     collation?: string;
     default?: RawExpression;
     check?: RawExpression;
+    cascade?: boolean;
+  };
+
+  // Database collation.
+  export type Collation = {
+    // Type of RakeDb.AST for the collation.
+    type: 'collation';
+    // Create or drop the collation.
+    action: 'create' | 'drop';
+    // Specify a schema to create collation in.
+    schema?: string;
+    // Name of the collation.
+    name: string;
+    // This is a shortcut for setting lcCollate and lcCType at once. If you specify this, you cannot specify either of those parameters.
+    locale?: string;
+    // Use the specified operating system locale for the lcCollate locale category.
+    lcCollate?: string;
+    // Use the specified operating system locale for the lcCType locale category.
+    lcCType?: string;
+    // Specifies the provider to use for locale services associated with this collation. Possible values are: icu, libc. libc is the default. The available choices depend on the operating system and build options.
+    provider?: string;
+    // Specifies whether the collation should use deterministic comparisons.
+    // The default is true.
+    // A deterministic comparison considers strings that are not byte-wise equal to be unequal even if they are considered logically equal by the comparison.
+    // PostgreSQL breaks ties using a byte-wise comparison.
+    // Comparison that is not deterministic can make the collation be, say, case- or accent-insensitive.
+    // For that, you need to choose an appropriate LC_COLLATE setting and set the collation to not deterministic here.
+    // Nondeterministic collations are only supported with the ICU provider.
+    deterministic?: boolean;
+    // Normally, it should be omitted.
+    // This option is intended to be used by pg_upgrade for copying the version from an existing installation.
+    version?: string;
+    // The name of an existing collation to copy. The new collation will have the same properties as the existing one, but it will be an independent object.
+    fromExisting?: string;
+    // Create only if exists, ignore otherwise.
+    createIfNotExists?: boolean;
+    // Drop only if exists, throws error otherwise.
+    dropIfExists?: boolean;
+    // Add CASCADE when dropping a collation.
     cascade?: boolean;
   };
 

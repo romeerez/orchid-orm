@@ -25,13 +25,14 @@ import {
   ChangeTableOptions,
   ColumnComment,
   DropMode,
-  MigrationBase,
+  Migration,
   MigrationColumnTypes,
 } from './migration';
 import { RakeDbAst } from '../ast';
 import {
   getSchemaAndTableFromName,
   makePopulateEnumQuery,
+  quoteNameFromString,
   quoteWithSchema,
 } from '../common';
 import {
@@ -261,7 +262,7 @@ export type TableChangeData = Record<
 >;
 
 export const changeTable = async <CT extends ColumnTypesBase>(
-  migration: MigrationBase<CT>,
+  migration: Migration<CT>,
   up: boolean,
   tableName: string,
   options: ChangeTableOptions,
@@ -490,7 +491,7 @@ const astToQueries = (
 
         alterTable.push(
           `ALTER COLUMN "${name}" TYPE ${type}${
-            to.collate ? ` COLLATE ${quote(to.collate)}` : ''
+            to.collate ? ` COLLATE ${quoteNameFromString(to.collate)}` : ''
           }${item.using ? ` USING ${getRaw(item.using, values)}` : ''}`,
         );
       }

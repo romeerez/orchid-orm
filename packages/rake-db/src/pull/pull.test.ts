@@ -4,6 +4,7 @@ import { AppCodeUpdater, processRakeDbConfig, RakeDbConfig } from '../common';
 import { makeFileTimeStamp, writeMigrationFile } from '../commands/generate';
 import {
   check,
+  collation,
   column,
   createdAtColumn,
   domain,
@@ -47,6 +48,9 @@ db.getStructure = async () => ({ schemas, tables, views: [] });
 
 let domains: DbStructure.Domain[] = [];
 db.getDomains = async () => domains;
+
+let collations: DbStructure.Collation[] = [];
+db.getCollations = async () => collations;
 
 let enums: DbStructure.Enum[] = [];
 db.getEnums = async () => enums;
@@ -98,6 +102,7 @@ describe('pull', () => {
   beforeEach(() => {
     schemas = [];
     domains = [];
+    collations = [];
     tables = [];
     enums = [];
     constraints = [];
@@ -137,6 +142,13 @@ describe('pull', () => {
       {
         ...domain,
         schemaName: 'schema',
+      },
+    ];
+
+    collations = [
+      {
+        ...collation,
+        schema: 'schema',
       },
     ];
 
@@ -281,6 +293,13 @@ change(async (db) => {
   await db.createSchema('schema1');
   await db.createSchema('schema2');
 
+  await db.createCollation('schema.collation', {
+    locale: 'locale',
+    provider: 'icu',
+    deterministic: true,
+    version: '123',
+  });
+
   await db.createDomain('schema.domain', (t) => t.integer());
 });
 
@@ -337,7 +356,7 @@ change(async (db) => {
     );
 
     // 5 = 2 schemas + 1 domain + 2 tables
-    expect(appCodeUpdater.process).toBeCalledTimes(5);
+    expect(appCodeUpdater.process).toBeCalledTimes(6);
     expect(appCodeUpdater.afterAll).toBeCalledTimes(1);
 
     expect(warn).toBeCalledWith(`Found unsupported types:

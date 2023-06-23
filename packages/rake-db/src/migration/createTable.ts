@@ -12,8 +12,8 @@ import {
 import {
   ColumnComment,
   ColumnsShapeCallback,
+  DbMigration,
   Migration,
-  MigrationBase,
   TableOptions,
 } from './migration';
 import {
@@ -54,7 +54,7 @@ export const createTable = async <
   Table extends string,
   Shape extends ColumnsShape,
 >(
-  migration: MigrationBase<CT>,
+  migration: Migration<CT>,
   up: boolean,
   tableName: Table,
   options: TableOptions,
@@ -94,10 +94,14 @@ export const createTable = async <
 
   return {
     get table(): Db<Table, Shape> {
-      return (table ??= (migration as unknown as Migration)(tableName, shape, {
-        noPrimaryKey: options.noPrimaryKey ? 'ignore' : undefined,
-        snakeCase: options.snakeCase,
-      }) as unknown as Db<Table, Shape>);
+      return (table ??= (migration as unknown as DbMigration)(
+        tableName,
+        shape,
+        {
+          noPrimaryKey: options.noPrimaryKey ? 'ignore' : undefined,
+          snakeCase: options.snakeCase,
+        },
+      ) as unknown as Db<Table, Shape>);
     },
   };
 };

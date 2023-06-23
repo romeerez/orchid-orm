@@ -1,10 +1,10 @@
-import { createMigrationInterface, Migration } from './migration/migration';
+import { createMigrationInterface, DbMigration } from './migration/migration';
 import { columnTypes, QueryLogger, TransactionAdapter } from 'pqb';
 import { MaybeArray, noop, toArray } from 'orchid-core';
 import { migrationConfigDefaults, RakeDbConfig } from './common';
 import { join } from 'path';
 
-let db: Migration | undefined;
+let db: DbMigration | undefined;
 
 export const testMigrationsPath = 'migrations-path';
 
