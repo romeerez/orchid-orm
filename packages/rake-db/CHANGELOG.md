@@ -1,5 +1,12 @@
 # rake-db
 
+## 2.8.49
+
+### Patch Changes
+
+- 3e52bce: Add `createCollation` and `dropCollation` migration methods.
+  Fix bug when specifying a collation for the column.
+
 ## 2.8.48
 
 ### Patch Changes
