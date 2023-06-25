@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.12.0
+
+### Minor Changes
+
+- b178ee7: Change type and behavior of raw SQL methods for the better
+
+### Patch Changes
+
+- Updated dependencies [b178ee7]
+  - pqb@0.14.0
+  - orchid-core@0.6.0
+
 ## 1.11.4
 
 ### Patch Changes

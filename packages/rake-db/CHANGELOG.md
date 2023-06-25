@@ -1,5 +1,17 @@
 # rake-db
 
+## 2.9.0
+
+### Minor Changes
+
+- b178ee7: Change type and behavior of raw SQL methods for the better
+
+### Patch Changes
+
+- Updated dependencies [b178ee7]
+  - pqb@0.14.0
+  - orchid-core@0.6.0
+
 ## 2.8.50
 
 ### Patch Changes

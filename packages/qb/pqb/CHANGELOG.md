@@ -1,5 +1,16 @@
 # pqb
 
+## 0.14.0
+
+### Minor Changes
+
+- b178ee7: Change type and behavior of raw SQL methods for the better
+
+### Patch Changes
+
+- Updated dependencies [b178ee7]
+  - orchid-core@0.6.0
+
 ## 0.13.3
 
 ### Patch Changes

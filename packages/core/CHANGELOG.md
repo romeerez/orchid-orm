@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.6.0
+
+### Minor Changes
+
+- b178ee7: Change type and behavior of raw SQL methods for the better
+
 ## 0.5.2
 
 ### Patch Changes
