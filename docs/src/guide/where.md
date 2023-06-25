@@ -259,7 +259,7 @@ It supports sub query which should return records with columns of the same type:
 db.table.whereIn(['id', 'name'], OtherTable.select('id', 'name'));
 ```
 
-It supports raw query:
+It supports raw SQL expression:
 
 ```ts
 db.table.whereIn(['id', 'name'], db.table.sql`((1, 'one'), (2, 'two'))`);
@@ -295,7 +295,7 @@ const exists: boolean = await db.table.where(...conditions).exists();
 
 Different types of columns support different sets of operators.
 
-All column operators can take a value of the same type as the column, a sub-query, or a raw expression:
+All column operators can take a value of the same type as the column, a sub-query, or a raw SQL expression:
 
 ```ts
 db.table.where({
@@ -306,7 +306,7 @@ db.table.where({
     // lower than the value returned by sub-query
     lt: OtherTable.select('someNumber').take(),
 
-    // raw expression produces WHERE "numericColumn" < "otherColumn" + 10
+    // raw SQL expression produces WHERE "numericColumn" < "otherColumn" + 10
     lt: db.table.sql`"otherColumn" + 10`,
   },
 });
@@ -336,7 +336,7 @@ db.table.where({
 
 `in` is for the `IN` operator to check if the column value is included in a list of values.
 
-Takes an array of the same type as a column, a sub-query that returns a list of values, or a raw expression that returns a list.
+Takes an array of the same type as a column, a sub-query that returns a list of values, or a raw SQL expression that returns a list.
 
 ```ts
 db.table.where({
@@ -384,7 +384,7 @@ db.table.where({
 
 `between` also works with numeric, dates, and time columns, it takes an array of two elements.
 
-Both elements can be of the same type as a column, a sub-query, or a raw query.
+Both elements can be of the same type as a column, a sub-query, or a raw SQL expression.
 
 ```ts
 db.table.where({
@@ -392,7 +392,7 @@ db.table.where({
     // simple values
     between: [1, 10],
 
-    // sub-query and raw expression
+    // sub-query and raw SQL expression
     between: [OtherTable.select('column').take(), db.table.sql`2 + 2`],
   },
 });
@@ -404,7 +404,7 @@ For `text`, `char`, `varchar`, and `json` columns.
 
 `json` is stored as text, so it has text operators. Use the `jsonb` type for JSON operators.
 
-Takes a string, or sub-query returning string, or raw expression as well as other operators.
+Takes a string, or sub-query returning string, or raw SQL expression as well as other operators.
 
 ```ts
 db.table.where({
@@ -431,7 +431,7 @@ For the `jsonb` column, note that the `json` type has text operators instead.
 
 `jsonPath` operator: compare a column value under a given JSON path with the provided value.
 
-Value can be of any type to compare with JSON value, or it can be a sub-query or a raw expression.
+Value can be of any type to compare with JSON value, or it can be a sub-query or a raw SQL expression.
 
 ```ts
 db.table.where({
@@ -449,7 +449,7 @@ db.table.where({
 
 For instance, it is true if the column has JSON `{ "a": 1, "b": 2 }` and provided value is `{ "a": 1 }`.
 
-Takes the value of any type, or sub query which returns a single value, or a raw expression.
+Takes the value of any type, or sub query which returns a single value, or a raw SQL expression.
 
 ```ts
 db.table.where({
@@ -463,7 +463,7 @@ db.table.where({
 
 For instance, it is true if the column has JSON `{ "a": 1 }` and provided value is `{ "a": 1, "b": 2 }`.
 
-Takes the value of any type, or sub query which returns a single value, or a raw expression.
+Takes the value of any type, or sub query which returns a single value, or a raw SQL expression.
 
 ```ts
 db.table.where({

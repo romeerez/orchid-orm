@@ -12,7 +12,7 @@ import { WhereQueryBuilder } from './where';
 import { Relation, RelationsBase } from '../relations';
 import { QueryData } from '../sql';
 import {
-  RawExpression,
+  Expression,
   StringKey,
   QueryInternal,
   EmptyTuple,
@@ -62,34 +62,34 @@ type JoinSelectable<Q extends Query> =
 type JoinQueryArgs<T extends QueryBase, Q extends Query> =
   | [
       conditions:
-        | Record<JoinSelectable<Q>, Selectable<T> | RawExpression>
-        | RawExpression
+        | Record<JoinSelectable<Q>, Selectable<T> | Expression>
+        | Expression
         | true,
     ]
   | [
-      leftColumn: JoinSelectable<Q> | RawExpression,
-      rightColumn: Selectable<T> | RawExpression,
+      leftColumn: JoinSelectable<Q> | Expression,
+      rightColumn: Selectable<T> | Expression,
     ]
   | [
-      leftColumn: JoinSelectable<Q> | RawExpression,
+      leftColumn: JoinSelectable<Q> | Expression,
       op: string,
-      rightColumn: Selectable<T> | RawExpression,
+      rightColumn: Selectable<T> | Expression,
     ];
 
 type JoinWithArgs<T extends QueryBase, W extends keyof T['withData']> =
   | [
       conditions:
-        | Record<WithSelectable<T, W>, Selectable<T> | RawExpression>
-        | RawExpression,
+        | Record<WithSelectable<T, W>, Selectable<T> | Expression>
+        | Expression,
     ]
   | [
-      leftColumn: WithSelectable<T, W> | RawExpression,
-      rightColumn: Selectable<T> | RawExpression,
+      leftColumn: WithSelectable<T, W> | Expression,
+      rightColumn: Selectable<T> | Expression,
     ]
   | [
-      leftColumn: WithSelectable<T, W> | RawExpression,
+      leftColumn: WithSelectable<T, W> | Expression,
       op: string,
-      rightColumn: Selectable<T> | RawExpression,
+      rightColumn: Selectable<T> | Expression,
     ];
 
 export type JoinResult<

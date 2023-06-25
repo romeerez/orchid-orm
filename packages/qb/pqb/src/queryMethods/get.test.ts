@@ -48,7 +48,7 @@ describe('get', () => {
     });
 
     it('should select raw and return a single value', async () => {
-      const q = User.get(testDb.sql((t) => t.integer())`count(*)::int`);
+      const q = User.get(testDb.sql`count(*)::int`.type((t) => t.integer()));
 
       const result = await q;
 
@@ -113,7 +113,9 @@ describe('get', () => {
     });
 
     it('should select raw and return a single value when exists', async () => {
-      const q = User.getOptional(testDb.sql((t) => t.integer())`count(*)::int`);
+      const q = User.getOptional(
+        testDb.sql`count(*)::int`.type((t) => t.integer()),
+      );
 
       const result = await q;
 

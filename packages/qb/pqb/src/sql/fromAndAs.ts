@@ -1,10 +1,9 @@
 import { quoteSchemaAndTable } from './common';
 import { checkIfASimpleQuery } from './types';
 import { makeSql, ToSqlCtx } from './toSql';
-import { getRaw } from './rawSql';
 import { SelectQueryData } from './data';
-import { isRaw } from 'orchid-core';
 import { QueryBase } from '../queryBase';
+import { isExpression } from 'orchid-core';
 
 export const pushFromAndAs = (
   ctx: ToSqlCtx,
@@ -31,8 +30,8 @@ const getFrom = (
   if (query.from) {
     const { from } = query;
     if (typeof from === 'object') {
-      if (isRaw(from)) {
-        return getRaw(from, values);
+      if (isExpression(from)) {
+        return from.toSQL(values);
       }
 
       if (!from.table) {

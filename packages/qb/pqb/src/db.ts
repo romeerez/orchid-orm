@@ -73,7 +73,7 @@ export interface Db<
   CT extends ColumnTypesBase = DefaultColumnTypes,
   Data = Pick<ColumnShapeOutput<Shape>, DefaultSelectColumns<Shape>[number]>[],
 > extends DbBase<Adapter, Table, Shape, CT>,
-    QueryMethods {
+    QueryMethods<CT> {
   new (
     adapter: Adapter,
     queryBuilder: Db<Table, Shape, Relations, CT>,

@@ -5,7 +5,7 @@ import { createDb } from '../db';
 import { columnTypes } from './columnTypes';
 import { IntegerColumn } from './number';
 import { columnCode } from './code';
-import { Code, raw } from 'orchid-core';
+import { Code } from 'orchid-core';
 import {
   assertType,
   expectSql,
@@ -13,6 +13,7 @@ import {
   testDb,
   useTestDatabase,
 } from 'test-utils';
+import { raw } from '../sql/rawSql';
 
 describe('column type', () => {
   useTestDatabase();
@@ -303,9 +304,9 @@ describe('column type', () => {
         `t.column().default('hello')`,
       );
 
-      expect(column.default(raw('sql', { key: 'value' })).toCode('t')).toBe(
-        `t.column().default(t.sql({"values":{"key":"value"},"raw":"sql"}))`,
-      );
+      expect(
+        column.default(raw`sql`.values({ key: 'value' })).toCode('t'),
+      ).toBe(`t.column().default(t.sql\`sql\`.values({"key":"value"}))`);
     });
   });
 

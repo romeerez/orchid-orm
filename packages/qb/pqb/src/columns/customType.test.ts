@@ -4,12 +4,12 @@ import { assertType, testDb } from 'test-utils';
 describe('custom type column', () => {
   it('should output value of `as` type', () => {
     const string = testDb.get(
-      testDb.sql((t) => t.type('name').as(t.text()))`sql`,
+      testDb.sql`sql`.type((t) => t.type('name').as(t.text())),
     );
     assertType<Awaited<typeof string>, string>();
 
     const number = testDb.get(
-      testDb.sql((t) => t.type('name').as(t.integer()))`sql`,
+      testDb.sql`sql`.type((t) => t.type('name').as(t.integer())),
     );
     assertType<Awaited<typeof number>, number>();
   });

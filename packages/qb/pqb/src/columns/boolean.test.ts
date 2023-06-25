@@ -6,7 +6,7 @@ describe('boolean column', () => {
 
   it('should output boolean', async () => {
     const result = await testDb.get(
-      testDb.sql(() => new BooleanColumn())`true`,
+      testDb.sql`true`.type(() => new BooleanColumn()),
     );
     expect(result).toBe(true);
 

@@ -1,68 +1,69 @@
-import { Query } from '../query';
-import { ColumnType } from '../columns';
-import {
-  ColumnTypesBase,
-  RawExpression,
-  TemplateLiteralArgs,
-  raw,
-} from 'orchid-core';
+import { ColumnTypesBase, ColumnTypeBase, RawSQLArgs } from 'orchid-core';
+import { raw, RawSQL } from '../sql/rawSql';
 
-type SqlArgs<T extends Query> = SqlColumnArgs<T> | SqlNoColumnArgs;
-
-type SqlColumnArgs<T extends Query> =
-  | [column: ColumnFn<T>, params?: { raw?: string; values?: Values }];
-
-type SqlColumnArgsWithSQL<T extends Query> =
-  | [column: ColumnFn<T>, params: { raw: string }];
-
-type SqlNoColumnArgs =
-  | [params: { raw: string; values?: Values }]
-  | [params: { values: Values }]
-  | TemplateLiteralArgs;
-
-type Values = Record<string, unknown>;
-
-type ColumnFn<T extends Query> = (types: T['columnTypes']) => ColumnType;
-
-type SqlFn<C extends ColumnType> = (
-  ...args: TemplateLiteralArgs
-) => RawExpression<C>;
-
-type SqlResult<
-  T extends Query,
-  Args extends SqlArgs<T>,
-> = Args extends SqlColumnArgs<T>
-  ? Args extends SqlColumnArgsWithSQL<T>
-    ? RawExpression<ReturnType<Args[0]>>
-    : SqlFn<ReturnType<Args[0]>>
-  : Args extends [{ raw: string }] | TemplateLiteralArgs
-  ? RawExpression
-  : SqlFn<ColumnType>;
-
-type RawArgs<CT extends ColumnTypesBase, C extends ColumnType> =
-  | [column: (types: CT) => C, sql: string, values?: Record<string, unknown>]
-  | [sql: string, values?: Record<string, unknown>];
-
-export class RawSqlMethods {
+export class RawSqlMethods<CT extends ColumnTypesBase> {
   /**
-   * When there is a need to use a piece of raw SQL, use the `sql` method.
+   * When there is a need to use a piece of raw SQL, use the `sql` method from tables, or a `raw` function imported from `orchid-orm`.
    *
-   * To select with a raw SQL, need to specify a column type as a first argument, so the TS could use it to guess the result type of the query:
+   * When selecting a raw SQL, specify a resulting type with `<generic>` syntax:
    *
    * ```ts
    * const result: { num: number }[] = await db.table.select({
-   *   num: db.table.sql((t) => t.integer())`
+   *   num: db.table.sql<number>`
    *     random() * 100
    *   `,
    * });
    * ```
    *
-   * Other than for select, the column type can be omitted:
+   * In a situation when you want the result to be parsed, such as when returning a timestamp that you want to be parsed into a `Date` object, provide a column type in such a way:
+   *
+   * This example assumes that the `timestamp` column was overridden with `asDate` as shown in [Override column types](/guide/columns-overview#override-column-types).
+   *
+   * ```ts
+   * const result: { timestamp: Date }[] = await db.table.select({
+   *   timestamp: db.table.sql`now()`.type((t) => t.timestamp()),
+   * });
+   * ```
+   *
+   * In some cases such as when using [from](/guide/orm-and-query-builder.html#from), setting column type via callback allows for special `where` operations:
+   *
+   * ```ts
+   * const subQuery = db.someTable.select({
+   *   sum: (q) => q.sql`$a + $b`.type((t) => t.decimal()).values({ a: 1, b: 2 }),
+   * });
+   *
+   * // `gt`, `gte`, `min`, `lt`, `lte`, `max` in `where`
+   * // are allowed only for numeric columns:
+   * const result = await db.$from(subQuery).where({ sum: { gte: 5 } });
+   * ```
+   *
+   * ```ts
+   * db.$from(Otherdb.table.select('foo', 'bar'));
+   * ```
+   *
+   * `where` and other methods don't need the return type, so it can be omitted:
    *
    * ```ts
    * await db.table.where(db.table.sql`
    *   "someValue" = random() * 100
    * `);
+   * ```
+   *
+   * Instead of `sql` method, you can use `raw` function from `orchid-orm` (or `pqb`) to do the same.
+   * The only difference, `raw` function don't have access to the overridden column types.
+   *
+   * ```ts
+   * import { raw } from 'orchid-orm';
+   *
+   * await db.table.where(raw`
+   *   "someValue" = random() * 100
+   * `);
+   *
+   * await db.table.select({
+   *   // it is a default `timestamp` column,
+   *   // if you have overriden it with `asDate` or `asNumber` it won't be parsed properly:
+   *   now: raw`now()`.type((t) => t.timestamp()),
+   * });
    * ```
    *
    * Interpolating values in template literals is completely safe:
@@ -90,7 +91,7 @@ export class RawSqlMethods {
    * await db.table.where(db.table.sql({ raw: `column = random() * ${value}` }));
    * ```
    *
-   * To inject values into `raw` SQL strings, define it with `$` in the string and provide `values` object.
+   * To inject values into `raw` SQL strings, denote it with `$` in the string and provide `values` object.
    *
    * Use `$$` to provide column or/and table name. Column names will be quoted so don't quote them manually.
    *
@@ -100,13 +101,10 @@ export class RawSqlMethods {
    *
    * // this is SAFE, SQL injection are prevented:
    * await db.table.where(
-   *   db.table.sql({
-   *     values: {
-   *       column: 'someTable.someColumn', // or simply 'column'
-   *       one: value,
-   *       two: 123,
-   *     },
-   *     raw: '$$column = random() * $value',
+   *   db.table.sql({ raw: '$$column = random() * $value' }).values({
+   *     column: 'someTable.someColumn', // or simply 'column'
+   *     one: value,
+   *     two: 123,
    *   }),
    * );
    * ```
@@ -115,79 +113,42 @@ export class RawSqlMethods {
    *
    * ```ts
    * // simplest form:
-   * db.table`key = ${value}`;
+   * db.table.sql`key = ${value}`;
+   *
+   * // with resulting type:
+   * db.table.sql<boolean>`key = ${value}`;
    *
    * // with column type for select:
-   * db.table((t) => t.boolean())`key = ${value}`;
+   * db.table.sql`key = ${value}`.type((t) => t.boolean());
    *
    * // raw SQL string, not allowed to interpolate:
-   * db.table({ raw: 'random()' });
+   * db.table.sql({ raw: 'random()' });
+   *
+   * // with resulting type:
+   * db.table.sql<number>({ raw: 'random()' });
    *
    * // with values:
-   * db.table({
-   *   values: {
-   *     column: 'columnName',
-   *     one: 1,
-   *     two: 2,
-   *   },
-   *   raw: '$$columnName = $one + $two',
+   * db.table.sql({ raw: '$$columnName = $one + $two' }).values({
+   *   columnName: 'column',
+   *   one: 1,
+   *   two: 2,
    * });
    *
-   * // with column type for select:
-   * db.table((t) => t.decimal(), { raw: 'random()' });
-   *
-   * // combine values and template literal:
-   * db.table({ values: { one: 1, two: 2 } })`
-   *   ($one + $two) / $one
-   * `;
+   * // combine template literal, column type, and values:
+   * db.table.sql`($one + $two) / $one`
+   *   .type((t) => t.numeric())
+   *   .values({ one: 1, two: 2 });
    * ```
    *
-   * @param args - template string or a specific options
+   * @param args - template literal or an object { raw: string }
+   * @return object that has `type` and `values` methods
    */
-  sql<T extends Query, Args extends SqlArgs<T>>(
-    this: T,
-    ...args: Args
-  ): SqlResult<T, Args> {
-    const arg = args[0];
-
-    if (typeof arg === 'object') {
-      if (Array.isArray(arg)) {
-        return raw(args as TemplateLiteralArgs) as SqlResult<T, Args>;
-      }
-
-      const obj = arg as { raw?: string; values?: Values };
-      if (obj.raw) {
-        return raw(obj.raw, obj.values) as SqlResult<T, Args>;
-      }
-
-      return ((...args: unknown[]) => {
-        return raw(args as TemplateLiteralArgs, obj.values);
-      }) as SqlResult<T, Args>;
-    }
-
-    const column = (arg as ColumnFn<T>)(this.columnTypes);
-    const second = args[1] as { raw?: string; values?: Values } | undefined;
-
-    if (second?.raw) {
-      return raw(second.raw, second.values, column) as SqlResult<T, Args>;
-    }
-
-    return ((...args: unknown[]) => {
-      return raw(args as TemplateLiteralArgs, second?.values, column);
-    }) as SqlResult<T, Args>;
-  }
-
-  /**
-   * @deprecated use `sql` method instead, `raw` will be removed
-   */
-  raw<T extends Query, C extends ColumnType>(
-    this: T,
-    ...args: RawArgs<T['columnTypes'], C>
-  ): RawExpression<C> {
-    if (typeof args[0] === 'string') {
-      return raw<C>(args[0], args[1] as Record<string, unknown> | undefined);
-    } else {
-      return raw<C>(args[1] as string, args[2], args[0](this.columnTypes));
-    }
+  sql<T = unknown>(
+    this: { columnTypes: CT },
+    ...args: RawSQLArgs
+  ): RawSQL<ColumnTypeBase<T>, CT> {
+    const sql = raw<T>(...args) as unknown as RawSQL<ColumnTypeBase<T>, CT>;
+    sql.columnTypes = this.columnTypes;
+    return sql;
   }
 }

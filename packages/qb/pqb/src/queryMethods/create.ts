@@ -17,7 +17,7 @@ import { WhereArg } from './where';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
 import {
-  RawExpression,
+  Expression,
   EmptyObject,
   SetOptional,
   StringKey,
@@ -197,14 +197,14 @@ type CreateManyResult<T extends Query> = T extends { isCount: true }
 // Contains array of columns and a raw SQL for values.
 type CreateRawData<T extends Query> = {
   columns: (keyof T['shape'])[];
-  values: RawExpression;
+  values: Expression;
 };
 
 // `createManyRaw` method argument.
 // Contains array of columns and an array of raw SQL for values.
 type CreateManyRawData<T extends Query> = {
   columns: (keyof T['shape'])[];
-  values: RawExpression[];
+  values: Expression[];
 };
 
 type RawRequiredColumns<T extends Query> = {
@@ -232,7 +232,7 @@ type CreateRawArgs<
 type OnConflictArg<T extends Query> =
   | keyof T['shape']
   | (keyof T['shape'])[]
-  | RawExpression;
+  | Expression;
 
 export type CreateCtx = {
   columns: Map<string, number>;
@@ -541,7 +541,7 @@ export class Create {
     handleSelect(this);
     return insert(
       this,
-      args[0] as { columns: string[]; values: RawExpression },
+      args[0] as { columns: string[]; values: Expression },
     ) as CreateResult<T>;
   }
 
@@ -577,7 +577,7 @@ export class Create {
     handleSelect(this);
     return insert(
       this,
-      args[0] as { columns: string[]; values: RawExpression[] },
+      args[0] as { columns: string[]; values: Expression[] },
     ) as CreateManyResult<T>;
   }
 
@@ -911,7 +911,7 @@ export class OnConflictQueryBuilder<
       | keyof T['shape']
       | (keyof T['shape'])[]
       | Partial<T['inputType']>
-      | RawExpression,
+      | Expression,
   ): T {
     (this.query.query as InsertQueryData).onConflict = {
       type: 'merge',

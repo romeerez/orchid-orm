@@ -1,19 +1,18 @@
 import { WindowDeclaration } from './types';
 import { q, rawOrColumnToSql } from './common';
 import { orderByToSql } from './orderBy';
-import { getRaw } from './rawSql';
-import { isRaw, RawExpression } from 'orchid-core';
 import { QueryData } from './data';
+import { Expression, isExpression } from 'orchid-core';
 
 export const windowToSql = (
   data: QueryData,
-  window: string | WindowDeclaration | RawExpression,
+  window: string | WindowDeclaration | Expression,
   values: unknown[],
   quotedAs?: string,
 ) => {
   if (typeof window === 'object') {
-    if (isRaw(window)) {
-      return `(${getRaw(window, values)})`;
+    if (isExpression(window)) {
+      return `(${window.toSQL(values)})`;
     } else {
       const sql: string[] = [];
       if (window.partitionBy) {

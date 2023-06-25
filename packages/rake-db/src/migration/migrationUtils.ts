@@ -1,8 +1,8 @@
-import { ColumnType, getRaw, quote, TableData } from 'pqb';
+import { ColumnType, quote, TableData } from 'pqb';
 import {
   ForeignKeyTable,
-  isRaw,
-  RawExpression,
+  isRawSQL,
+  RawSQLBase,
   Sql,
   toArray,
   toSnakeCase,
@@ -62,9 +62,9 @@ export const columnToSql = (
     if (
       typeof item.data.default === 'object' &&
       item.data.default &&
-      isRaw(item.data.default)
+      isRawSQL(item.data.default)
     ) {
-      line.push(`DEFAULT ${getRaw(item.data.default, values)}`);
+      line.push(`DEFAULT ${item.data.default.toSQL(values)}`);
     } else {
       line.push(`DEFAULT ${quote(item.data.default)}`);
     }
@@ -191,8 +191,8 @@ export const constraintToSql = (
   return sql.join(' ');
 };
 
-const checkToSql = (check: RawExpression, values: unknown[]) => {
-  return `CHECK (${getRaw(check, values)})`;
+const checkToSql = (check: RawSQLBase, values: unknown[]) => {
+  return `CHECK (${check.toSQL(values)})`;
 };
 
 const foreignKeyToSql = (item: TableData.References, snakeCase?: boolean) => {
@@ -323,11 +323,7 @@ export const indexesToQuery = (
     if (options.where) {
       sql.push(
         `WHERE ${
-          typeof options.where === 'object' &&
-          options.where &&
-          isRaw(options.where)
-            ? getRaw(options.where, values)
-            : options.where
+          isRawSQL(options.where) ? options.where.toSQL(values) : options.where
         }`,
       );
     }

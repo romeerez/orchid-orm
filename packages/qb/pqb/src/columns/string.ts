@@ -9,10 +9,10 @@ import {
   BaseStringData,
   stringDataToCode,
   PrimaryKeyColumn,
-  raw,
-  RawExpression,
+  Expression,
 } from 'orchid-core';
 import { columnCode } from './code';
+import { RawSQL } from '../sql/rawSql';
 
 export type StringColumn = ColumnType<string, typeof Operators.text>;
 
@@ -332,7 +332,8 @@ export class TsQueryColumn extends ColumnType<string, typeof Operators.text> {
   }
 }
 
-const uuidDefault = raw('gen_random_uuid()');
+const uuidDefaultSQL = 'gen_random_uuid()';
+const uuidDefault = new RawSQL(uuidDefaultSQL);
 
 // uuid stores Universally Unique Identifiers (UUID)
 export class UUIDColumn extends ColumnType<string, typeof Operators.text> {
@@ -351,8 +352,8 @@ export class UUIDColumn extends ColumnType<string, typeof Operators.text> {
       this,
       t,
       `uuid()`,
-      typeof data.default === 'object' &&
-        (data.default as RawExpression).__raw === uuidDefault.__raw
+      data.default instanceof Expression &&
+        data.default.toSQL([]) === uuidDefaultSQL
         ? { ...data, default: undefined }
         : data,
     );

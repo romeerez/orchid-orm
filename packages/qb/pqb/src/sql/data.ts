@@ -17,15 +17,15 @@ import {
   WindowItem,
   WithItem,
 } from './types';
-import { Expression } from '../utils';
+import { SelectableOrExpression } from '../utils';
 import {
-  RawExpression,
   ColumnsShapeBase,
   ColumnTypeBase,
   MaybeArray,
   Sql,
   getValueKey,
   ColumnsParsers,
+  Expression,
 } from 'orchid-core';
 import { QueryBase } from '../queryBase';
 
@@ -69,10 +69,10 @@ export type CommonQueryData = {
   schema?: string;
   select?: SelectItem[];
   as?: string;
-  from?: string | Query | RawExpression;
+  from?: string | Query | Expression;
   and?: WhereItem[];
   or?: WhereItem[][];
-  coalesceValue?: unknown | RawExpression;
+  coalesceValue?: unknown | Expression;
   parsers?: ColumnsParsers;
   notFoundDefault?: unknown;
   defaults?: Record<string, unknown>;
@@ -118,10 +118,10 @@ export type CommonQueryData = {
 
 export type SelectQueryData = CommonQueryData & {
   type: undefined;
-  distinct?: Expression[];
+  distinct?: SelectableOrExpression[];
   fromOnly?: boolean;
   join?: JoinItem[];
-  group?: (string | RawExpression)[];
+  group?: (string | Expression)[];
   having?: HavingItem[];
   havingOr?: HavingItem[][];
   window?: WindowItem[];
@@ -132,7 +132,7 @@ export type SelectQueryData = CommonQueryData & {
   offset?: number;
   for?: {
     type: 'UPDATE' | 'NO KEY UPDATE' | 'SHARE' | 'KEY SHARE';
-    tableNames?: string[] | RawExpression;
+    tableNames?: string[] | Expression;
     mode?: 'NO WAIT' | 'SKIP LOCKED';
   };
   // column type for query with 'value' or 'valueOrThrow' return type
@@ -144,7 +144,7 @@ export type InsertQueryData = CommonQueryData & {
   columns: string[];
   values:
     | unknown[][]
-    | MaybeArray<RawExpression>
+    | MaybeArray<Expression>
     | {
         from: Query;
         values?: unknown[][];
@@ -165,7 +165,7 @@ export type InsertQueryData = CommonQueryData & {
 
 export type UpdateQueryDataObject = Record<
   string,
-  RawExpression | { op: string; arg: unknown } | unknown
+  Expression | { op: string; arg: unknown } | unknown
 >;
 
 export type UpdatedAtDataInjector = (
@@ -174,7 +174,7 @@ export type UpdatedAtDataInjector = (
 
 export type UpdateQueryDataItem =
   | UpdateQueryDataObject
-  | RawExpression
+  | Expression
   | UpdatedAtDataInjector;
 
 export type UpdateQueryData = CommonQueryData & {

@@ -1,4 +1,19 @@
-import { ColumnTypeBase } from './columns/columnType';
+import { ColumnTypeBase, ColumnTypesBase } from './columns/columnType';
+import { EmptyObject } from './utils';
+
+// Base class for the raw SQL and other classes that can produce SQL
+export abstract class Expression<T extends ColumnTypeBase = ColumnTypeBase> {
+  // `_type` contains an instance of a column type.
+  // Starts with underscore to allow having `type` method
+  abstract _type: T;
+
+  // Produce SQL string, push query variables into given `values` array.
+  abstract toSQL(values: unknown[]): string;
+}
+
+// Check if the unknown thing is an Expression
+export const isExpression = (arg: unknown): arg is Expression =>
+  arg instanceof Expression;
 
 // Object representing SQL query.
 // Constructed by `toSql`, passed to adapter.query and adapter.array
@@ -7,48 +22,76 @@ export type TemplateLiteralArgs = [
   ...values: unknown[],
 ];
 
-export type Sql = {
-  // SQL string
-  text: string;
-  // bind values passed along with SQL string
-  values: unknown[];
-  // additional columns to select for `after` hooks
-  hookSelect?: string[];
-};
+// Argument type for `sql` function
+export type RawSQLArgs = TemplateLiteralArgs | [{ raw: string }];
 
-// Object representing raw SQL to pass it to various query methods
-export type RawExpression<C extends ColumnTypeBase = ColumnTypeBase> = {
-  __raw: string | TemplateLiteralArgs;
-  __values?: Record<string, unknown> | false;
-  __column: C;
-};
+// Base class for raw SQL
+export abstract class RawSQLBase<
+  T extends ColumnTypeBase = ColumnTypeBase,
+  CT extends ColumnTypesBase = EmptyObject,
+> extends Expression<T> {
+  // Column type instance, it is assigned directly to the prototype of RawSQL class.
+  declare _type: T;
 
-/**
- * Construct raw SQL to pass it to various query methods
- * @param sql - SQL string or a template string
- * @param values - bind values for a query
- * @param column - optionally provide a resulting column type
- */
-export const raw = <C extends ColumnTypeBase = ColumnTypeBase>(
-  sql: string | TemplateLiteralArgs,
-  values?: Record<string, unknown> | false,
-  column?: C,
-): RawExpression<C> => ({
-  __raw: sql,
-  __values: values,
-  __column: column as C,
-});
+  // Column types are stored to be passed to the `type` callback.
+  abstract columnTypes: CT;
 
-/**
- * Check if the object is a raw SQL
- * @param obj - any object
- */
-export const isRaw = (obj: object): obj is RawExpression => '__raw' in obj;
+  // Produce SQL string, push query variables into given `values` array.
+  abstract toSQL(values: unknown[]): string;
 
-/**
- * Get raw SQL string or a template from raw SQL object
- * @param raw
- */
-export const getRawSql = (raw: RawExpression) => {
-  return raw.__raw;
-};
+  constructor(
+    public _sql: string | TemplateLiteralArgs,
+    public _values?: Record<string, unknown> | false,
+  ) {
+    super();
+  }
+
+  // Define the resulting column type for the raw SQL.
+  type<Self extends RawSQLBase, C extends ColumnTypeBase>(
+    this: Self,
+    fn: (types: Self['columnTypes']) => C,
+  ): Omit<Self, '_type'> & { _type: C } {
+    this._type = fn(this.columnTypes);
+    return this as unknown as Omit<Self, '_type'> & { _type: C };
+  }
+
+  // Attach query variables to the raw SQL.
+  values<Self extends RawSQLBase>(
+    this: Self,
+    values: Record<string, unknown>,
+  ): Self {
+    this._values = values;
+    return this;
+  }
+
+  // Convert raw SQL to code for a code generator.
+  toCode(t: string): string {
+    const { _sql: sql, _values: values } = this;
+    let code = `${t}.sql`;
+
+    if (typeof sql === 'string') {
+      code += `({ raw: '${sql.replace(/'/g, "\\'")}' })`;
+    } else {
+      code += '`';
+
+      const parts = sql[0];
+      let i = 0;
+      for (let last = parts.length - 1; i < last; i++) {
+        code += parts[i] + `\${${sql[i + 1]}}`;
+      }
+      code += parts[i];
+
+      code += '`';
+    }
+
+    if (values) {
+      code += `.values(${JSON.stringify(values)})`;
+    }
+
+    return code;
+  }
+}
+
+// Check if something is a raw SQL.
+export const isRawSQL = (arg: unknown): arg is RawSQLBase =>
+  arg instanceof RawSQLBase;

@@ -1,4 +1,32 @@
-import { columnDefaultArgumentToCode, raw } from 'orchid-core';
+import {
+  columnDefaultArgumentToCode,
+  ColumnTypeBase,
+  emptyObject,
+  EmptyObject,
+  RawSQLBase,
+} from 'orchid-core';
+
+class UnknownColumn extends ColumnTypeBase {
+  dataType = 'unknown';
+  operators = emptyObject;
+
+  toCode() {
+    return 'mock code';
+  }
+
+  toSQL() {
+    return 'mock sql';
+  }
+}
+
+class RawSQL extends RawSQLBase {
+  columnTypes!: EmptyObject;
+  _type = UnknownColumn as unknown as ColumnTypeBase;
+
+  toSQL(): string {
+    return 'mock sql';
+  }
+}
 
 describe('columnDefaultArgumentToCode', () => {
   it('should handle string', () => {
@@ -13,8 +41,11 @@ describe('columnDefaultArgumentToCode', () => {
 
   it('should handle raw SQL', () => {
     expect(
-      columnDefaultArgumentToCode('t', raw('sql = $key', { key: 'value' })),
-    ).toBe(`t.sql({"values":{"key":"value"},"raw":"sql = $key"})`);
+      columnDefaultArgumentToCode(
+        't',
+        new RawSQL('sql = $key', { key: 'value' }),
+      ),
+    ).toBe(`t.sql({ raw: 'sql = $key' }).values({"key":"value"})`);
   });
 
   it('should stringify function', () => {

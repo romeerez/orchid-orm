@@ -4,8 +4,8 @@ import { AddQueryWith, Query } from '../query';
 import { Db } from '../db';
 import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
 import {
-  isRaw,
-  RawExpression,
+  isExpression,
+  Expression,
   ColumnShapeOutput,
   emptyObject,
   ColumnsShapeBase,
@@ -24,8 +24,8 @@ type WithArgsOptions = {
 // First argument is an alias for the CTE query,
 // other arguments may be a column shape, query object, or a raw SQL.
 type WithArgs =
-  | [string, ColumnsShapeBase, RawExpression]
-  | [string, WithArgsOptions, ColumnsShapeBase, RawExpression]
+  | [string, ColumnsShapeBase, Expression]
+  | [string, WithArgsOptions, ColumnsShapeBase, Expression]
   | [string, Query | ((qb: Db) => Query)]
   | [string, WithArgsOptions, Query | ((qb: Db) => Query)];
 
@@ -143,21 +143,21 @@ export class With {
     Shape extends ColumnsShapeBase = WithShape<Args>,
   >(this: T, ...args: Args): WithResult<T, Args, Shape> {
     let options =
-      (args.length === 3 && !isRaw(args[2])) || args.length === 4
+      (args.length === 3 && !isExpression(args[2])) || args.length === 4
         ? (args[1] as WithArgsOptions | WithOptions)
         : undefined;
 
     const last = args[args.length - 1] as
       | Query
       | ((qb: Db) => Query)
-      | RawExpression;
+      | Expression;
 
     const query = typeof last === 'function' ? last(this.queryBuilder) : last;
 
     const shape =
       args.length === 4
         ? (args[2] as ColumnsShapeBase)
-        : isRaw(query)
+        : isExpression(query)
         ? args[1]
         : query.query.shape;
 

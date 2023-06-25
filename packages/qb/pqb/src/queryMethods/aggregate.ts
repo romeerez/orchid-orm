@@ -10,7 +10,7 @@ import {
 } from '../columns';
 import {
   BooleanExpression,
-  Expression,
+  SelectableOrExpression,
   ExpressionOutput,
   NumberExpression,
   StringExpression,
@@ -19,7 +19,6 @@ import { OrderArg, WindowArgDeclaration } from './queryMethods';
 import { WhereArg } from './where';
 import { SelectItem, SelectQueryData } from '../sql';
 import {
-  raw,
   CoalesceString,
   ColumnTypeBase,
   NullableColumn,
@@ -27,12 +26,10 @@ import {
   setParserToQuery,
 } from 'orchid-core';
 
-const allColumns = raw('*');
-
 export type AggregateArg<T extends Query> =
-  | Expression<T>
-  | Record<string, Expression<T>>
-  | [Expression<T>, string];
+  | SelectableOrExpression<T>
+  | Record<string, SelectableOrExpression<T>>
+  | [SelectableOrExpression<T>, string];
 
 export type AggregateOptions<
   T extends Query = Query,
@@ -54,19 +51,19 @@ export type Aggregate1ArgumentTypes<
   T extends Query = Query,
   C extends ColumnTypeBase = ColumnTypeBase,
 > = {
-  count: Expression<T, C>;
+  count: SelectableOrExpression<T, C>;
   avg: NumberExpression<T, C>;
-  min: Expression<T, C>;
-  max: Expression<T, C>;
+  min: SelectableOrExpression<T, C>;
+  max: SelectableOrExpression<T, C>;
   sum: NumberExpression<T, C>;
   bitAnd: NumberExpression<T, C>;
   bitOr: NumberExpression<T, C>;
   boolAnd: BooleanExpression<T, C>;
   boolOr: BooleanExpression<T, C>;
   every: BooleanExpression<T, C>;
-  jsonAgg: Expression<T, C>;
-  jsonbAgg: Expression<T, C>;
-  xmlAgg: Expression<T, C>;
+  jsonAgg: SelectableOrExpression<T, C>;
+  jsonbAgg: SelectableOrExpression<T, C>;
+  xmlAgg: SelectableOrExpression<T, C>;
 };
 
 export const aggregate1FunctionNames = {
@@ -230,7 +227,7 @@ export class Aggregate {
   ): SelectAgg<T, 'count', As, NumberColumn> {
     return this._selectAgg(
       aggregate1FunctionNames.count,
-      arg === '*' ? allColumns : arg,
+      arg,
       options,
       parseIntColumn,
     );
@@ -254,7 +251,7 @@ export class Aggregate {
 
   selectAvg<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'avg', As, NullableColumn<NumberColumn>> {
     return this.clone()._selectAvg(arg, options);
@@ -262,7 +259,7 @@ export class Aggregate {
 
   _selectAvg<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'avg', As, NullableColumn<NumberColumn>> {
     return this._selectAgg(
@@ -291,7 +288,7 @@ export class Aggregate {
 
   selectMin<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'min', As, NullableColumn<NumberColumn>> {
     return this.clone()._selectMin(arg, options);
@@ -299,7 +296,7 @@ export class Aggregate {
 
   _selectMin<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'min', As, NullableColumn<NumberColumn>> {
     return this._selectAgg(
@@ -328,7 +325,7 @@ export class Aggregate {
 
   selectMax<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'max', As, NullableColumn<NumberColumn>> {
     return this.clone()._selectMax(arg, options);
@@ -336,7 +333,7 @@ export class Aggregate {
 
   _selectMax<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'max', As, NullableColumn<NumberColumn>> {
     return this._selectAgg(
@@ -365,7 +362,7 @@ export class Aggregate {
 
   selectSum<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'sum', As, NullableColumn<NumberColumn>> {
     return this.clone()._selectSum(arg, options);
@@ -373,7 +370,7 @@ export class Aggregate {
 
   _selectSum<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'sum', As, NullableColumn<NumberColumn>> {
     return this._selectAgg(
@@ -404,7 +401,7 @@ export class Aggregate {
 
   selectBitAnd<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'bit_and', As, NullableColumn<NumberColumn>> {
     return this.clone()._selectBitAnd(arg, options);
@@ -412,7 +409,7 @@ export class Aggregate {
 
   _selectBitAnd<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'bit_and', As, NullableColumn<NumberColumn>> {
     return this._selectAgg(aggregate1FunctionNames.bitAnd, arg, options);
@@ -438,7 +435,7 @@ export class Aggregate {
 
   selectBitOr<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'bit_or', As, NullableColumn<NumberColumn>> {
     return this.clone()._selectBitOr(arg, options);
@@ -446,7 +443,7 @@ export class Aggregate {
 
   _selectBitOr<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'bit_or', As, NullableColumn<NumberColumn>> {
     return this._selectAgg(aggregate1FunctionNames.bitOr, arg, options);
@@ -472,7 +469,7 @@ export class Aggregate {
 
   selectBoolAnd<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'bool_and', As, NullableColumn<BooleanColumn>> {
     return this.clone()._selectBoolAnd(arg, options);
@@ -480,7 +477,7 @@ export class Aggregate {
 
   _selectBoolAnd<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'bool_and', As, NullableColumn<BooleanColumn>> {
     return this._selectAgg(aggregate1FunctionNames.boolAnd, arg, options);
@@ -506,7 +503,7 @@ export class Aggregate {
 
   selectBoolOr<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'bool_or', As, NullableColumn<BooleanColumn>> {
     return this.clone()._selectBoolOr(arg, options);
@@ -514,7 +511,7 @@ export class Aggregate {
 
   _selectBoolOr<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'bool_or', As, NullableColumn<BooleanColumn>> {
     return this._selectAgg(aggregate1FunctionNames.boolOr, arg, options);
@@ -540,7 +537,7 @@ export class Aggregate {
 
   selectEvery<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'every', As, NullableColumn<BooleanColumn>> {
     return this.clone()._selectEvery(arg, options);
@@ -548,7 +545,7 @@ export class Aggregate {
 
   _selectEvery<T extends Query, As extends string | undefined = undefined>(
     this: T,
-    arg: Expression<T>,
+    arg: SelectableOrExpression<T>,
     options?: AggregateOptions<T, As>,
   ): SelectAgg<T, 'every', As, NullableColumn<BooleanColumn>> {
     return this._selectAgg(aggregate1FunctionNames.every, arg, options);
@@ -710,7 +707,10 @@ export class Aggregate {
     return this._selectAgg(aggregate1FunctionNames.xmlAgg, arg, options);
   }
 
-  jsonObjectAgg<T extends Query, Obj extends Record<string, Expression<T>>>(
+  jsonObjectAgg<
+    T extends Query,
+    Obj extends Record<string, SelectableOrExpression<T>>,
+  >(
     this: T,
     obj: Obj,
     options?: AggregateOptions<T>,
@@ -723,7 +723,10 @@ export class Aggregate {
     return this.clone()._jsonObjectAgg(obj, options);
   }
 
-  _jsonObjectAgg<T extends Query, Obj extends Record<string, Expression<T>>>(
+  _jsonObjectAgg<
+    T extends Query,
+    Obj extends Record<string, SelectableOrExpression<T>>,
+  >(
     this: T,
     obj: Obj,
     options?: AggregateOptions<T>,
@@ -743,7 +746,7 @@ export class Aggregate {
 
   selectJsonObjectAgg<
     T extends Query,
-    Obj extends Record<string, Expression<T>>,
+    Obj extends Record<string, SelectableOrExpression<T>>,
     As extends string | undefined = undefined,
   >(
     this: T,
@@ -762,7 +765,7 @@ export class Aggregate {
 
   _selectJsonObjectAgg<
     T extends Query,
-    Obj extends Record<string, Expression<T>>,
+    Obj extends Record<string, SelectableOrExpression<T>>,
     As extends string | undefined = undefined,
   >(
     this: T,
@@ -779,7 +782,10 @@ export class Aggregate {
     return this._selectAgg('json_object_agg', obj, options);
   }
 
-  jsonbObjectAgg<T extends Query, Obj extends Record<string, Expression<T>>>(
+  jsonbObjectAgg<
+    T extends Query,
+    Obj extends Record<string, SelectableOrExpression<T>>,
+  >(
     this: T,
     obj: Obj,
     options?: AggregateOptions<T>,
@@ -792,7 +798,10 @@ export class Aggregate {
     return this.clone()._jsonbObjectAgg(obj, options);
   }
 
-  _jsonbObjectAgg<T extends Query, Obj extends Record<string, Expression<T>>>(
+  _jsonbObjectAgg<
+    T extends Query,
+    Obj extends Record<string, SelectableOrExpression<T>>,
+  >(
     this: T,
     obj: Obj,
     options?: AggregateOptions<T>,
@@ -812,7 +821,7 @@ export class Aggregate {
 
   selectJsonbObjectAgg<
     T extends Query,
-    Obj extends Record<string, Expression<T>>,
+    Obj extends Record<string, SelectableOrExpression<T>>,
     As extends string | undefined = undefined,
   >(
     this: T,
@@ -831,7 +840,7 @@ export class Aggregate {
 
   _selectJsonbObjectAgg<
     T extends Query,
-    Obj extends Record<string, Expression<T>>,
+    Obj extends Record<string, SelectableOrExpression<T>>,
     As extends string | undefined = undefined,
   >(
     this: T,

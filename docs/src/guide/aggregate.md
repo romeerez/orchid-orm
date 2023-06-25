@@ -254,7 +254,7 @@ const record = db.table
 
 ## jsonObjectAgg, selectJsonObjectAgg, jsonbObjectAgg, selectJsonbObjectAgg
 
-It does the construction of JSON objects, keys are provided strings and values can be table columns or raw expressions, and returns `object` or `null`.
+It does the construction of JSON objects, keys are provided strings and values can be table columns or raw SQL expressions, and returns `object` or `null`.
 
 `jsonObjectAgg` is different from `jsonbObjectAgg` by internal representation in the database, possibly one of them will work a bit faster.
 

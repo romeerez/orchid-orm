@@ -11,11 +11,11 @@ import {
   PrimaryKeyColumn,
   pushColumnData,
   QueryCommon,
-  raw,
   setColumnData,
   ValidationContext,
 } from 'orchid-core';
 import { TableData } from './columnTypes';
+import { RawSQL } from '../sql/rawSql';
 
 export type ColumnData = ColumnDataBase & {
   maxChars?: number;
@@ -103,7 +103,7 @@ const knownDefaults: Record<string, string> = {
 export const simplifyColumnDefault = (value?: string) => {
   if (typeof value === 'string') {
     const lower = value.toLowerCase();
-    return raw(knownDefaults[lower] || value);
+    return new RawSQL(knownDefaults[lower] || value);
   }
   return;
 };

@@ -115,7 +115,7 @@ describe('with', () => {
     options.forEach((options) => {
       const args: Parameters<typeof q.with> = [
         'withAlias',
-        (qb) => qb.select({ one: testDb.sql((t) => t.integer())`1` }),
+        (qb) => qb.select({ one: testDb.sql`1`.type((t) => t.integer()) }),
       ];
 
       if (options) {

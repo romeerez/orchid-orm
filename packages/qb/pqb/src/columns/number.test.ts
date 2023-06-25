@@ -42,7 +42,7 @@ describe('number columns', () => {
   describe('smallint', () => {
     it('should output number', async () => {
       const result = await testDb.get(
-        testDb.sql(() => t.smallint())`1::smallint`,
+        testDb.sql`1::smallint`.type(() => t.smallint()),
       );
       expect(result).toBe(1);
 
@@ -69,7 +69,7 @@ describe('number columns', () => {
   describe('integer', () => {
     it('should output number', async () => {
       const result = await testDb.get(
-        testDb.sql(() => t.integer())`1::integer`,
+        testDb.sql`1::integer`.type(() => t.integer()),
       );
       expect(result).toBe(1);
 
@@ -91,7 +91,9 @@ describe('number columns', () => {
 
   describe('bigint', () => {
     it('should output string', async () => {
-      const result = await testDb.get(testDb.sql(() => t.bigint())`1::bigint`);
+      const result = await testDb.get(
+        testDb.sql`1::bigint`.type(() => t.bigint()),
+      );
       expect(result).toBe('1');
 
       assertType<typeof result, string>();
@@ -135,7 +137,7 @@ describe('number columns', () => {
   describe('decimal', () => {
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.sql(() => t.decimal())`1::decimal`,
+        testDb.sql`1::decimal`.type(() => t.decimal()),
       );
       expect(result).toBe('1');
 
@@ -151,7 +153,7 @@ describe('number columns', () => {
 
   describe('real', () => {
     it('should output number', async () => {
-      const result = await testDb.get(testDb.sql(() => t.real())`1::real`);
+      const result = await testDb.get(testDb.sql`1::real`.type(() => t.real()));
       expect(result).toBe(1);
 
       assertType<typeof result, number>();
@@ -167,7 +169,7 @@ describe('number columns', () => {
   describe('doublePrecision', () => {
     it('should output number', async () => {
       const result = await testDb.get(
-        testDb.sql(() => t.doublePrecision())`1::double precision`,
+        testDb.sql`1::double precision`.type(() => t.doublePrecision()),
       );
       expect(result).toBe(1);
 
@@ -182,7 +184,7 @@ describe('number columns', () => {
   describe('smallSerial', () => {
     it('should output number', async () => {
       const result = await testDb.get(
-        testDb.sql(() => t.smallSerial())`1::smallint`,
+        testDb.sql`1::smallint`.type(() => t.smallSerial()),
       );
       expect(result).toBe(1);
 
@@ -198,7 +200,9 @@ describe('number columns', () => {
 
   describe('serial', () => {
     it('should output number', async () => {
-      const result = await testDb.get(testDb.sql(() => t.serial())`1::integer`);
+      const result = await testDb.get(
+        testDb.sql`1::integer`.type(() => t.serial()),
+      );
       expect(result).toBe(1);
 
       assertType<typeof result, number>();
@@ -214,7 +218,7 @@ describe('number columns', () => {
   describe('bigSerial', () => {
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.sql(() => t.bigSerial())`1::bigint`,
+        testDb.sql`1::bigint`.type(() => t.bigSerial()),
       );
       expect(result).toBe('1');
 

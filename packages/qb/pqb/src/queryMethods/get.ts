@@ -9,14 +9,14 @@ import { addParserForRawExpression, processSelectArg } from './select';
 import {
   ColumnTypeBase,
   getValueKey,
-  RawExpression,
+  Expression,
   StringKey,
 } from 'orchid-core';
 import { SelectQueryData } from '../sql';
 import { QueryBase } from '../queryBase';
 
 // `get` method argument, accepts a string for a column name or a raw SQL
-export type GetArg<T extends QueryBase> = GetStringArg<T> | RawExpression;
+export type GetArg<T extends QueryBase> = GetStringArg<T> | Expression;
 
 export type GetStringArg<T extends QueryBase> = StringKey<
   keyof T['selectable']
@@ -28,8 +28,8 @@ type GetResult<
   Arg extends GetArg<T>,
 > = Arg extends GetStringArg<T>
   ? SetQueryReturnsValue<T, Arg>
-  : Arg extends RawExpression
-  ? SetQueryReturnsColumn<T, Arg['__column']>
+  : Arg extends Expression
+  ? SetQueryReturnsColumn<T, Arg['_type']>
   : never;
 
 type GetResultOptional<
@@ -37,8 +37,8 @@ type GetResultOptional<
   Arg extends GetArg<T>,
 > = Arg extends GetStringArg<T>
   ? SetQueryReturnsValueOptional<T, Arg>
-  : Arg extends RawExpression
-  ? SetQueryReturnsColumnOptional<T, Arg['__column']>
+  : Arg extends Expression
+  ? SetQueryReturnsColumnOptional<T, Arg['_type']>
   : never;
 
 // mutate the query to get a single value
@@ -76,12 +76,12 @@ const _get = <
       processSelectArg(
         q,
         q.query.as || q.table,
-        arg as unknown as Exclude<GetArg<T>, RawExpression>,
+        arg as unknown as Exclude<GetArg<T>, Expression>,
         getValueKey,
       ),
     ];
   } else {
-    (q.query as SelectQueryData)[getValueKey] = arg.__column;
+    (q.query as SelectQueryData)[getValueKey] = arg._type;
     addParserForRawExpression(q, getValueKey, arg);
     q.query.select = [arg];
   }

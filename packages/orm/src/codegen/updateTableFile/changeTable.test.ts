@@ -7,9 +7,9 @@ import {
   updateTableFileParams,
 } from '../testUtils';
 import { updateTableFile } from './updateTableFile';
-import { columnTypes, newTableData, TableData } from 'pqb';
+import { columnTypes, newTableData, TableData, raw } from 'pqb';
 import { RakeDbAst } from 'rake-db';
-import { pathToLog, raw } from 'orchid-core';
+import { pathToLog } from 'orchid-core';
 
 jest.mock('fs/promises', () => ({
   mkdir: jest.fn(),
@@ -737,7 +737,7 @@ describe('updateTableFile', () => {
             add: {
               constraints: [
                 {
-                  check: raw('sql'),
+                  check: raw({ raw: 'sql' }),
                 },
               ],
             },
@@ -746,7 +746,7 @@ describe('updateTableFile', () => {
 
         testWritten(
           template(`
-  ...t.check(t.sql({"raw":"sql"})),
+  ...t.check(t.sql({ raw: 'sql' })),
         `),
         );
       });
@@ -765,14 +765,14 @@ describe('updateTableFile', () => {
             drop: {
               constraints: [
                 {
-                  check: raw('from'),
+                  check: raw({ raw: 'from' }),
                 },
               ],
             },
             add: {
               constraints: [
                 {
-                  check: raw('to'),
+                  check: raw({ raw: 'to' }),
                 },
               ],
             },
@@ -781,7 +781,7 @@ describe('updateTableFile', () => {
 
         testWritten(
           template(`
-  ...t.check(t.sql({"raw":"to"})),
+  ...t.check(t.sql({ raw: 'to' })),
         `),
         );
       });
@@ -802,7 +802,7 @@ describe('updateTableFile', () => {
         });
 
         testWritten(
-          template(`name: t.text(1, 10).check(t.sql({"raw":"check"})),`),
+          template(`name: t.text(1, 10).check(t.sql({ raw: 'check' })),`),
         );
       });
 
@@ -823,13 +823,13 @@ describe('updateTableFile', () => {
                 type: 'change',
                 from: {},
                 to: {
-                  check: raw('add check'),
+                  check: raw({ raw: 'add check' }),
                 },
               },
               remove: {
                 type: 'change',
                 from: {
-                  check: raw('remove check'),
+                  check: raw({ raw: 'remove check' }),
                 },
                 to: {},
               },
@@ -839,7 +839,7 @@ describe('updateTableFile', () => {
 
         testWritten(
           template(`
-    add: t.text().check(t.sql({"raw":"add check"})),
+    add: t.text().check(t.sql({ raw: 'add check' })),
     remove: t.text(),
 `),
         );
@@ -859,7 +859,7 @@ describe('updateTableFile', () => {
             constraints: [
               {
                 name: 'name',
-                check: raw('sql'),
+                check: raw({ raw: 'sql' }),
                 references: {
                   columns: ['a', 'b'],
                   fnOrTable: 'table',
@@ -886,7 +886,7 @@ describe('updateTableFile', () => {
           match: 'SIMPLE',
         },
       ],
-      check: t.sql({"raw":"sql"}),
+      check: t.sql({ raw: 'sql' }),
     }),
         `),
       );
@@ -918,7 +918,7 @@ describe('updateTableFile', () => {
             constraints: [
               {
                 name: 'name',
-                check: raw('sql'),
+                check: raw({ raw: 'sql' }),
                 references: {
                   columns: ['a', 'b'],
                   fnOrTable: 'table',
@@ -934,7 +934,7 @@ describe('updateTableFile', () => {
             constraints: [
               {
                 name: 'updated',
-                check: raw('updated'),
+                check: raw({ raw: 'updated' }),
                 references: {
                   columns: ['e', 'f'],
                   fnOrTable: 'updated',
@@ -961,7 +961,7 @@ describe('updateTableFile', () => {
           match: 'FULL',
         },
       ],
-      check: t.sql({"raw":"updated"}),
+      check: t.sql({ raw: 'updated' }),
     }),
       `),
       );

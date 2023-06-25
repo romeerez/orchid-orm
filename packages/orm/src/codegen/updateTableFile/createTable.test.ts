@@ -8,8 +8,8 @@ import {
 } from '../testUtils';
 import { dirname } from 'path';
 import fs from 'fs/promises';
-import { columnTypes } from 'pqb';
-import { pathToLog, raw } from 'orchid-core';
+import { columnTypes, raw } from 'pqb';
+import { pathToLog } from 'orchid-core';
 
 jest.mock('fs/promises', () => ({
   readFile: jest.fn(),
@@ -127,7 +127,7 @@ describe('createTable', () => {
             },
           },
           {
-            check: raw('check'),
+            check: raw({ raw: 'check' }),
           },
           {
             name: 'constraint',
@@ -136,7 +136,7 @@ describe('createTable', () => {
               fnOrTable: 'fooBar',
               foreignColumns: ['three', 'four'],
             },
-            check: raw('check'),
+            check: raw({ raw: 'check' }),
           },
         ],
       },
@@ -160,7 +160,7 @@ describe('createTable', () => {
         name: 'foreignKeyName',
       },
     ),
-    ...t.check(t.sql({"raw":"check"})),
+    ...t.check(t.sql({ raw: 'check' })),
     ...t.constraint({
       name: 'constraint',
       references: [
@@ -168,7 +168,7 @@ describe('createTable', () => {
         'fooBar',
         ['three', 'four'],
       ],
-      check: t.sql({"raw":"check"}),
+      check: t.sql({ raw: 'check' }),
     }),
   }`,
       }),

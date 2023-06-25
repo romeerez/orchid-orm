@@ -18,10 +18,10 @@ import {
   ColumnTypeBase,
   ColumnTypesBase,
   EmptyObject,
+  Expression,
   QueryCatch,
   QueryCommon,
   QueryThen,
-  RawExpression,
   Spread,
   StringKey,
 } from 'orchid-core';
@@ -46,7 +46,7 @@ export type WithDataItem = { table: string; shape: ColumnsShapeBase };
 export type WithDataBase = Record<never, WithDataItem>;
 
 export type Query = QueryCommon &
-  QueryMethods & {
+  QueryMethods<ColumnTypesBase> & {
     queryBuilder: Db;
     columnTypes: ColumnTypesBase;
     whereQueryBuilder: typeof WhereQueryBuilder;
@@ -211,11 +211,11 @@ export type SetQueryReturnsRows<T extends Query> = SetQueryReturns<T, 'rows'>;
 
 export type SetQueryReturnsPluck<
   T extends Query,
-  S extends keyof T['selectable'] | RawExpression,
+  S extends keyof T['selectable'] | Expression,
   C extends ColumnTypeBase = S extends keyof T['selectable']
     ? T['selectable'][S]['column']
-    : S extends RawExpression
-    ? S['__column']
+    : S extends Expression
+    ? S['_type']
     : never,
 > = Omit<T, 'result' | 'returnType' | 'then' | 'catch'> & {
   meta: {

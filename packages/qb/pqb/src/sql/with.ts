@@ -1,8 +1,7 @@
 import { q } from './common';
 import { makeSql, ToSqlCtx } from './toSql';
-import { getRaw } from './rawSql';
 import { QueryData } from './data';
-import { isRaw } from 'orchid-core';
+import { isExpression } from 'orchid-core';
 
 export const pushWithSql = (
   ctx: ToSqlCtx,
@@ -17,8 +16,8 @@ export const pushWithSql = (
         const [name, options, query] = withItem;
 
         let inner: string;
-        if (isRaw(query)) {
-          inner = getRaw(query, ctx.values);
+        if (isExpression(query)) {
+          inner = query.toSQL(ctx.values);
         } else {
           inner = makeSql(query, { values: ctx.values }).text;
         }

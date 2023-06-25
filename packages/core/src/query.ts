@@ -2,6 +2,17 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { EmptyObject } from './utils';
 import { TransactionState } from './adapter';
 
+// Output type of the `toSQL` method of query objects.
+// This will be passed to database adapter to perform query.
+export type Sql = {
+  // SQL string
+  text: string;
+  // bind values passed along with SQL string
+  values: unknown[];
+  // additional columns to select for `after` hooks
+  hookSelect?: string[];
+};
+
 // query metadata that is stored only on TS side, not available in runtime
 export type QueryMetaBase = {
   as?: string;

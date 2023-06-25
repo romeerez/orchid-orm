@@ -54,11 +54,10 @@ import {
   makeTimestampsHelpers,
   MaybeArray,
   name,
-  raw,
-  RawExpression,
   setDefaultNowFn,
   TemplateLiteralArgs,
   toArray,
+  RawSQLBase,
 } from 'orchid-core';
 import { ArrayColumn } from './array';
 import {
@@ -71,6 +70,7 @@ import {
 import { makeRegexToFindInSql } from '../utils';
 import { ColumnsShape } from './columnsSchema';
 import { CustomTypeColumn, DomainColumn } from './customType';
+import { RawSQL } from '../sql/rawSql';
 
 export type ColumnTypes = typeof columnTypes;
 
@@ -99,7 +99,7 @@ export namespace TableData {
     dropMode?: DropMode;
   };
 
-  export type Check = RawExpression;
+  export type Check = RawSQLBase;
 
   export type References = {
     columns: string[];
@@ -168,32 +168,32 @@ function text(min: number, max: number) {
   return new TextColumn(min, max);
 }
 
-function sql(sql: TemplateStringsArray, ...values: unknown[]): RawExpression;
-function sql(sql: string): RawExpression;
-function sql(values: Record<string, unknown>, sql: string): RawExpression;
+function sql(sql: TemplateStringsArray, ...values: unknown[]): RawSQLBase;
+function sql(sql: string): RawSQLBase;
+function sql(values: Record<string, unknown>, sql: string): RawSQLBase;
 function sql(
   values: Record<string, unknown>,
-): (...sql: TemplateLiteralArgs) => RawExpression;
+): (...sql: TemplateLiteralArgs) => RawSQLBase;
 function sql(
   ...args:
     | [sql: TemplateStringsArray, ...values: unknown[]]
     | [sql: string]
     | [values: Record<string, unknown>, sql?: string]
-): ((...sql: TemplateLiteralArgs) => RawExpression) | RawExpression {
+): ((...sql: TemplateLiteralArgs) => RawSQLBase) | RawSQLBase {
   const arg = args[0];
   if (Array.isArray(arg)) {
-    return raw(args as TemplateLiteralArgs);
+    return new RawSQL(args as TemplateLiteralArgs);
   }
 
   if (typeof args[0] === 'string') {
-    return raw(args[0] as string);
+    return new RawSQL(args[0] as string);
   }
 
   if (args[1] !== undefined) {
-    return raw(args[1] as string, arg as Record<string, unknown>);
+    return new RawSQL(args[1] as string, arg as Record<string, unknown>);
   }
 
-  return (...args) => raw(args, arg as Record<string, unknown>);
+  return (...args) => new RawSQL(args, arg as Record<string, unknown>);
 }
 
 export type DefaultColumnTypes = typeof columnTypes;
@@ -408,7 +408,7 @@ export const columnTypes = {
       foreignColumns: Columns,
       options?: ForeignKeyOptions,
     ];
-    check?: RawExpression;
+    check?: RawSQLBase;
     dropMode?: DropMode;
   }): EmptyObject {
     (tableData.constraints ??= []).push({
@@ -454,7 +454,7 @@ export const columnTypes = {
     return emptyObject;
   },
 
-  check(check: RawExpression): EmptyObject {
+  check(check: RawSQLBase): EmptyObject {
     (tableData.constraints ??= []).push({
       check,
     });
@@ -468,3 +468,5 @@ export const columnTypes = {
     '"updated_at"',
   ),
 };
+
+RawSQL.prototype.columnTypes = columnTypes;

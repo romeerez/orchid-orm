@@ -62,7 +62,11 @@ export const handleResult: CommonQueryData['handleResult'] = (
   return parseResult(q, q.query.parsers, returnType, result, isSubQuery);
 };
 
-function maybeWrappedThen(this: Query, resolve?: Resolve, reject?: Reject) {
+function maybeWrappedThen(
+  this: Query,
+  resolve?: Resolve,
+  reject?: Reject,
+): Promise<unknown> {
   const { query } = this;
 
   let beforeHooks: QueryBeforeHook[] | undefined;

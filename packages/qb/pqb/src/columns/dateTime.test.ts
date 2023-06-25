@@ -31,7 +31,7 @@ describe('date time columns', () => {
   describe('date', () => {
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.sql(() => new DateColumn())`'1999-01-08'::date`,
+        testDb.sql`'1999-01-08'::date`.type(() => new DateColumn()),
       );
       expect(result).toBe('1999-01-08');
 
@@ -61,7 +61,9 @@ describe('date time columns', () => {
 
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.sql(() => t.timestampNoTZ())`'1999-01-08 04:05:06'::timestamp`,
+        testDb.sql`'1999-01-08 04:05:06'::timestamp`.type(() =>
+          t.timestampNoTZ(),
+        ),
       );
       expect(result).toBe('1999-01-08 04:05:06');
 
@@ -97,9 +99,9 @@ describe('date time columns', () => {
 
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.sql(
+        testDb.sql`'1999-01-08 04:05:06 +0'::timestamptz AT TIME ZONE 'UTC'`.type(
           () => new TimestampTZColumn(),
-        )`'1999-01-08 04:05:06 +0'::timestamptz AT TIME ZONE 'UTC'`,
+        ),
       );
       expect(result).toBe('1999-01-08 04:05:06');
 
@@ -131,7 +133,7 @@ describe('date time columns', () => {
   describe('time', () => {
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.sql(() => new TimeColumn())`'12:00'::time`,
+        testDb.sql`'12:00'::time`.type(() => new TimeColumn()),
       );
       expect(result).toBe('12:00:00');
 
@@ -160,9 +162,9 @@ describe('date time columns', () => {
   describe('interval', () => {
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.sql(
+        testDb.sql`'1 year 2 months 3 days 4 hours 5 minutes 6 seconds'::interval`.type(
           () => new IntervalColumn(),
-        )`'1 year 2 months 3 days 4 hours 5 minutes 6 seconds'::interval`,
+        ),
       );
       expect(result).toEqual({
         years: 1,

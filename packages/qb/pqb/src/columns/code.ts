@@ -8,24 +8,21 @@ import {
   columnErrorMessagesToCode,
   ColumnsShapeBase,
   ColumnTypeBase,
-  isRaw,
   objectHasValues,
   quoteObjectKey,
-  RawExpression,
-  rawToCode,
   singleQuote,
   singleQuoteArray,
   toArray,
+  RawSQLBase,
 } from 'orchid-core';
 
 const isDefaultTimeStamp = (item: ColumnTypeBase) => {
   if (item.dataType !== 'timestamptz') return false;
 
   const def = item.data.default;
-  if (!def || !isRaw(def)) return false;
+  if (!(def instanceof RawSQLBase)) return false;
 
-  const sql = typeof def.__raw === 'string' ? def.__raw : def.__raw[0][0];
-  return sql.startsWith('now()');
+  return typeof def._sql === 'string' && def._sql.startsWith('now()');
 };
 
 const combineCodeElements = (input: Code): Code => {
@@ -222,7 +219,7 @@ export const constraintToCode = (
       '),',
     ];
   } else if (kind === 'check' && item.check) {
-    return [`...${t}.check(${rawToCode(t, item.check)}),`];
+    return [`...${t}.check(${item.check.toCode(t)}),`];
   } else {
     return [`...${t}.constraint({`, constraintPropsToCode(t, item), '}),'];
   }
@@ -247,7 +244,7 @@ export const constraintPropsToCode = (
   }
 
   if (item.check) {
-    props.push(`check: ${rawToCode(t, item.check)},`);
+    props.push(`check: ${item.check.toCode(t)},`);
   }
 
   return props;
@@ -379,8 +376,8 @@ export const columnIndexesToCode = (
   return code;
 };
 
-export const columnCheckToCode = (t: string, check: RawExpression): string => {
-  return `.check(${rawToCode(t, check)})`;
+export const columnCheckToCode = (t: string, check: RawSQLBase): string => {
+  return `.check(${check.toCode(t)})`;
 };
 
 export const identityToCode = (

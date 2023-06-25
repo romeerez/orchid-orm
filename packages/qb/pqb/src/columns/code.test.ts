@@ -1,6 +1,7 @@
 import { columnsShapeToCode } from './code';
 import { columnTypes } from './columnTypes';
-import { codeToString, raw } from 'orchid-core';
+import { codeToString } from 'orchid-core';
+import { raw } from '../sql/rawSql';
 
 const t = columnTypes;
 
@@ -237,7 +238,7 @@ bool: t.boolean(),
                     foreignColumns: ['twoId'],
                     options: {},
                   },
-                  check: raw('sql'),
+                  check: raw`sql`,
                 },
               ],
             },
@@ -252,7 +253,7 @@ bool: t.boolean(),
     'table',
     ['twoId'],
   ],
-  check: t.sql({"raw":"sql"}),
+  check: t.sql\`sql\`,
 }),
 `.trim(),
           );
@@ -379,7 +380,7 @@ bool: t.boolean(),
               ...tableData,
               constraints: [
                 {
-                  check: raw('sql'),
+                  check: raw`sql`,
                 },
               ],
             },
@@ -387,7 +388,7 @@ bool: t.boolean(),
           );
 
           expect(codeToString(code, '', '  ')).toBe(
-            `...t.check(t.sql({"raw":"sql"})),`.trim(),
+            `...t.check(t.sql\`sql\`),`.trim(),
           );
         });
       });

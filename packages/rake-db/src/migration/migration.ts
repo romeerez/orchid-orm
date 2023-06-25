@@ -12,17 +12,16 @@ import {
   DbResult,
   EnumColumn,
   quote,
-  getRaw,
   Adapter,
   DefaultColumnTypes,
+  raw,
 } from 'pqb';
 import {
   ColumnTypesBase,
   emptyObject,
   MaybeArray,
   QueryInput,
-  raw,
-  RawExpression,
+  RawSQLBase,
   singleQuote,
   Sql,
 } from 'orchid-core';
@@ -115,7 +114,7 @@ type ConstraintArg = {
     options: Omit<ForeignKeyOptions, 'name' | 'dropMode'>,
   ];
   // Database check raw SQL
-  check?: RawExpression;
+  check?: RawSQLBase;
   // Drop mode to use when dropping the constraint
   dropMode?: DropMode;
 };
@@ -637,7 +636,7 @@ export class Migration<CT extends ColumnTypesBase> {
    * @param tableName - name of the table to add the check into
    * @param check - raw SQL for the check
    */
-  addCheck(tableName: string, check: RawExpression): Promise<void> {
+  addCheck(tableName: string, check: RawSQLBase): Promise<void> {
     return addCheck(this, this.up, tableName, check);
   }
 
@@ -647,7 +646,7 @@ export class Migration<CT extends ColumnTypesBase> {
    * @param tableName - name of the table to add the check into
    * @param check - raw SQL for the check
    */
-  dropCheck(tableName: string, check: RawExpression): Promise<void> {
+  dropCheck(tableName: string, check: RawSQLBase): Promise<void> {
     return addCheck(this, !this.up, tableName, check);
   }
 
@@ -1037,7 +1036,7 @@ export class Migration<CT extends ColumnTypesBase> {
   createView(
     name: string,
     options: RakeDbAst.ViewOptions,
-    sql: string | RawExpression,
+    sql: string | RawSQLBase,
   ): Promise<void>;
   /**
    * See {@link createView}
@@ -1045,7 +1044,7 @@ export class Migration<CT extends ColumnTypesBase> {
    * @param name - name of the view
    * @param sql - SQL to create the view with
    */
-  createView(name: string, sql: string | RawExpression): Promise<void>;
+  createView(name: string, sql: string | RawSQLBase): Promise<void>;
   createView(name: string, ...args: unknown[]): Promise<void> {
     const [options, sql] = args.length === 2 ? args : [emptyObject, args[0]];
 
@@ -1054,7 +1053,7 @@ export class Migration<CT extends ColumnTypesBase> {
       this.up,
       name,
       options as RakeDbAst.ViewOptions,
-      sql as string | RawExpression,
+      sql as string | RawSQLBase,
     );
   }
 
@@ -1068,7 +1067,7 @@ export class Migration<CT extends ColumnTypesBase> {
   dropView(
     name: string,
     options: RakeDbAst.ViewOptions,
-    sql: string | RawExpression,
+    sql: string | RawSQLBase,
   ): Promise<void>;
   /**
    * Drop the view, create it on rollback. See {@link createView}.
@@ -1076,7 +1075,7 @@ export class Migration<CT extends ColumnTypesBase> {
    * @param name - name of the view
    * @param sql - SQL to create the view with
    */
-  dropView(name: string, sql: string | RawExpression): Promise<void>;
+  dropView(name: string, sql: string | RawSQLBase): Promise<void>;
   dropView(name: string, ...args: unknown[]): Promise<void> {
     const [options, sql] = args.length === 2 ? args : [emptyObject, args[0]];
 
@@ -1085,7 +1084,7 @@ export class Migration<CT extends ColumnTypesBase> {
       !this.up,
       name,
       options as RakeDbAst.ViewOptions,
-      sql as string | RawExpression,
+      sql as string | RawSQLBase,
     );
   }
 
@@ -1264,7 +1263,7 @@ const addCheck = <CT extends ColumnTypesBase>(
   migration: Migration<CT>,
   up: boolean,
   tableName: string,
-  check: RawExpression,
+  check: RawSQLBase,
 ): Promise<void> => {
   return changeTable(migration, up, tableName, {}, (t) => ({
     ...t.add(t.check(check)),
@@ -1417,11 +1416,11 @@ COLLATION ${singleQuote(ast.collation)}`
     }${
       ast.default
         ? `
-DEFAULT ${getRaw(ast.default, values)}`
+DEFAULT ${ast.default.toSQL(values)}`
         : ''
     }${ast.notNull || ast.check ? '\n' : ''}${[
       ast.notNull && 'NOT NULL',
-      ast.check && `CHECK ${getRaw(ast.check, values)}`,
+      ast.check && `CHECK ${ast.check.toSQL(values)}`,
     ]
       .filter(Boolean)
       .join(' ')}`;

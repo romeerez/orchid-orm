@@ -40,7 +40,7 @@ db.someTable.where({
   jsonColumn: {
     // first element is JSON path,
     // second is a compare operator,
-    // third value can be of any type, or a subquery, or a raw query
+    // third value can be of any type, or a subquery, or a raw SQL query
     jsonPath: ['$.name', '=', value],
 
     // check if the JSON value in the column is a superset of the provided value

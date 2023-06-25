@@ -11,8 +11,6 @@ To perform relation queries, related tables currently must be in a single databa
 
 Relations support only a single column for primary and foreign key.
 
-Support for `JOIN LATERAL` is in the plans, it will enable an interesting optimization of joining and selecting relations.
-
 Cannot select record with relations in the `create`, `update`, and `delete` queries.
 
 No helpful methods available for `PostGis`, full text search, trigram search. Need to use raw SQL pieces for this.

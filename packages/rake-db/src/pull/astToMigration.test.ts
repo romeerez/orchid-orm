@@ -1,8 +1,7 @@
 import { astToMigration } from './astToMigration';
-import { columnTypes, EnumColumn, TableData, UUIDColumn } from 'pqb';
+import { columnTypes, EnumColumn, raw, TableData, UUIDColumn } from 'pqb';
 import { RakeDbAst } from '../ast';
 import { processRakeDbConfig } from '../common';
-import { raw } from 'orchid-core';
 
 const template = (content: string) => `import { change } from '../dbScript';
 
@@ -51,8 +50,8 @@ const domain: RakeDbAst.Domain = {
   baseType: columnTypes.integer(),
   notNull: true,
   collation: 'C',
-  default: raw('123'),
-  check: raw('VALUE = 42'),
+  default: raw({ raw: '123' }),
+  check: raw({ raw: 'VALUE = 42' }),
 };
 
 const collation: RakeDbAst.Collation = {
@@ -85,7 +84,7 @@ const check: RakeDbAst.Constraint & { check: TableData.Check } = {
   type: 'constraint',
   action: 'create',
   tableName: 'table',
-  check: raw('sql'),
+  check: raw({ raw: 'sql' }),
 };
 
 const config = processRakeDbConfig({
@@ -100,7 +99,7 @@ const view: RakeDbAst.View = {
   shape: {
     id: columnTypes.integer(),
   },
-  sql: raw('sql'),
+  sql: raw({ raw: 'sql' }),
   options: {
     recursive: true,
     with: {
@@ -369,7 +368,7 @@ change(async (db) => {
         {
           ...table,
           shape: {
-            id: table.shape.id.check(raw('column > 10')),
+            id: table.shape.id.check(raw({ raw: 'column > 10' })),
           },
         },
       ]);
@@ -380,7 +379,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable('schema.table', (t) => ({
-    id: t.identity().primaryKey().check(t.sql({"raw":"column > 10"})),
+    id: t.identity().primaryKey().check(t.sql({ raw: 'column > 10' })),
   }));
 });
 `,
@@ -393,7 +392,7 @@ change(async (db) => {
           ...table,
           constraints: [
             {
-              check: raw('sql'),
+              check: raw({ raw: 'sql' }),
             },
           ],
         },
@@ -406,7 +405,7 @@ change(async (db) => {
 change(async (db) => {
   await db.createTable('schema.table', (t) => ({
     id: t.identity().primaryKey(),
-    ...t.check(t.sql({"raw":"sql"})),
+    ...t.check(t.sql({ raw: 'sql' })),
   }));
 });
 `,
@@ -418,7 +417,7 @@ change(async (db) => {
 
       expectResult(
         result,
-        template(`  await db.addCheck('table', t.sql({"raw":"sql"}));`),
+        template(`  await db.addCheck('table', t.sql({ raw: 'sql' }));`),
       );
     });
   });
@@ -430,7 +429,7 @@ change(async (db) => {
           ...foreignKey,
           tableSchema: 'custom',
           name: 'constraint',
-          check: raw('sql'),
+          check: raw({ raw: 'sql' }),
           references: {
             ...foreignKey.references,
             options: {
@@ -456,7 +455,7 @@ change(async (db) => {
         onDelete: 'CASCADE',
       },
     ],
-    check: t.sql({"raw":"sql"}),
+    check: t.sql({ raw: 'sql' }),
   });`),
       );
     });
@@ -474,8 +473,8 @@ change(async (db) => {
   await db.createDomain('schema.domainName', (t) => t.integer(), {
     notNull: true,
     collation: 'C',
-    default: db.sql({"raw":"123"}),
-    check: db.sql({"raw":"VALUE = 42"}),
+    default: db.sql({ raw: '123' }),
+    check: db.sql({ raw: 'VALUE = 42' }),
   });
 });
 `,
@@ -570,7 +569,7 @@ change(async (db) => {
 
     it('should create view with sql values', () => {
       const result = astToMigration(config, [
-        { ...view, sql: raw('$a', { a: 1 }) },
+        { ...view, sql: raw({ raw: '$a' }).values({ a: 1 }) },
       ]);
 
       expectResult(
@@ -583,7 +582,7 @@ change(async (db) => {
     checkOption: 'LOCAL',
     securityBarrier: true,
     securityInvoker: true,
-  }, db.sql({"values":{"a":1},"raw":"$a"}));
+  }, db.sql({ raw: '$a' }).values({"a":1}));
 });
 `,
       );

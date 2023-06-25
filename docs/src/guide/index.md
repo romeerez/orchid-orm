@@ -47,6 +47,7 @@ If all the ORMs feel limiting and messy, you may want to try using query builder
 With raw SQL it is much harder and error-prone to write dynamic queries, when the query structure depends on user parameters it may result in a messy SQL parts concatenation.
 
 Query-builder is not aware of relations between tables, so each time when querying posts with comments you have to write a join query explicitly, and there may be 3, 4, or 10 levels of joins.
+To create or update related records you need to do that with separate queries and wrap them into a transaction.
 An ORM does that for you.
 
 Other ORMs take different ways of defining models:

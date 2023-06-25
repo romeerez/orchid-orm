@@ -1,9 +1,8 @@
 import { OrderItem } from './types';
 import { columnToSql } from './common';
 import { ToSqlCtx } from './toSql';
-import { getRaw } from './rawSql';
 import { QueryData, SelectQueryData } from './data';
-import { isRaw } from 'orchid-core';
+import { isExpression } from 'orchid-core';
 
 export const pushOrderBySql = (
   ctx: ToSqlCtx,
@@ -28,8 +27,8 @@ export const orderByToSql = (
     return `${columnToSql(data, data.shape, order, quotedAs)} ASC`;
   }
 
-  if (isRaw(order)) {
-    return getRaw(order, values);
+  if (isExpression(order)) {
+    return order.toSQL(values);
   }
 
   const sql: string[] = [];

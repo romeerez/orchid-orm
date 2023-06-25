@@ -1,5 +1,4 @@
-import { Sql } from './raw';
-import { QueryCommon } from './query';
+import { QueryCommon, Sql } from './query';
 
 // Input type of adapter query methods.
 export type QueryInput = string | { text: string; values?: unknown[] };

@@ -1,7 +1,6 @@
 import { Query } from '../query';
 import { addValue } from '../sql/common';
-import { getRaw } from '../sql/rawSql';
-import { createOperator, isRaw, RawExpression } from 'orchid-core';
+import { createOperator, Expression, isExpression } from 'orchid-core';
 
 const quoteValue = (
   arg: unknown,
@@ -17,8 +16,8 @@ const quoteValue = (
       return `(${(arg as Query).toSql({ values }).text})`;
     }
 
-    if (isRaw(arg)) {
-      return getRaw(arg, values);
+    if (isExpression(arg)) {
+      return arg.toSQL(values);
     }
   }
 
@@ -27,71 +26,71 @@ const quoteValue = (
 
 const all = {
   equals: <T>() =>
-    createOperator<T | Query | RawExpression>((key, value, values) =>
+    createOperator<T | Query | Expression>((key, value, values) =>
       value === null
         ? `${key} IS NULL`
         : `${key} = ${quoteValue(value, values)}`,
     ),
   not: <T>() =>
-    createOperator<T | Query | RawExpression>((key, value, values) =>
+    createOperator<T | Query | Expression>((key, value, values) =>
       value === null
         ? `${key} IS NOT NULL`
         : `${key} <> ${quoteValue(value, values)}`,
     ),
   in: <T>() =>
-    createOperator<T[] | Query | RawExpression>(
+    createOperator<T[] | Query | Expression>(
       (key, value, values) => `${key} IN ${quoteValue(value, values)}`,
     ),
   notIn: <T>() =>
-    createOperator<T[] | Query | RawExpression>(
+    createOperator<T[] | Query | Expression>(
       (key, value, values) => `NOT ${key} IN ${quoteValue(value, values)}`,
     ),
   lt: <T>() =>
-    createOperator<T | Query | RawExpression>(
+    createOperator<T | Query | Expression>(
       (key, value, values) => `${key} < ${quoteValue(value, values)}`,
     ),
   lte: <T>() =>
-    createOperator<T | Query | RawExpression>(
+    createOperator<T | Query | Expression>(
       (key, value, values) => `${key} <= ${quoteValue(value, values)}`,
     ),
   gt: <T>() =>
-    createOperator<T | Query | RawExpression>(
+    createOperator<T | Query | Expression>(
       (key, value, values) => `${key} > ${quoteValue(value, values)}`,
     ),
   gte: <T>() =>
-    createOperator<T | Query | RawExpression>(
+    createOperator<T | Query | Expression>(
       (key, value, values) => `${key} >= ${quoteValue(value, values)}`,
     ),
   contains: <T>() =>
-    createOperator<T | Query | RawExpression>(
+    createOperator<T | Query | Expression>(
       (key, value, values) =>
         `${key} ILIKE '%' || ${quoteValue(value, values)} || '%'`,
     ),
   containsSensitive: <T>() =>
-    createOperator<T | Query | RawExpression>(
+    createOperator<T | Query | Expression>(
       (key, value, values) =>
         `${key} LIKE '%' || ${quoteValue(value, values)} || '%'`,
     ),
   startsWith: <T>() =>
-    createOperator<T | Query | RawExpression>(
+    createOperator<T | Query | Expression>(
       (key, value, values) =>
         `${key} ILIKE ${quoteValue(value, values)} || '%'`,
     ),
   startsWithSensitive: <T>() =>
-    createOperator<T | Query | RawExpression>(
+    createOperator<T | Query | Expression>(
       (key, value, values) => `${key} LIKE ${quoteValue(value, values)} || '%'`,
     ),
   endsWith: <T>() =>
-    createOperator<T | Query | RawExpression>(
+    createOperator<T | Query | Expression>(
       (key, value, values) =>
         `${key} ILIKE '%' || ${quoteValue(value, values)}`,
     ),
   endsWithSensitive: <T>() =>
-    createOperator<T | Query | RawExpression>(
+    createOperator<T | Query | Expression>(
       (key, value, values) => `${key} LIKE '%' || ${quoteValue(value, values)}`,
     ),
   between: <T>() =>
-    createOperator<[T | Query | RawExpression, T | Query | RawExpression]>(
+    createOperator<[T | Query | Expression, T | Query | Expression]>(
       (key, [from, to], values) =>
         `${key} BETWEEN ${quoteValue(from, values)} AND ${quoteValue(
           to,
@@ -99,9 +98,7 @@ const all = {
         )}`,
     ),
   jsonPath: <T>() =>
-    createOperator<
-      [path: string, op: string, value: T | Query | RawExpression]
-    >(
+    createOperator<[path: string, op: string, value: T | Query | Expression]>(
       (key, [path, op, value], values) =>
         `jsonb_path_query_first(${key}, '${path}') #>> '{}' ${op} ${quoteValue(
           value,
@@ -110,11 +107,11 @@ const all = {
         )}`,
     ),
   jsonSupersetOf: <T>() =>
-    createOperator<T | Query | RawExpression>(
+    createOperator<T | Query | Expression>(
       (key, value, values) => `${key} @> ${quoteValue(value, values, true)}`,
     ),
   jsonSubsetOf: <T>() =>
-    createOperator<T | Query | RawExpression>(
+    createOperator<T | Query | Expression>(
       (key, value, values) => `${key} <@ ${quoteValue(value, values, true)}`,
     ),
 };

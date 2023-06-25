@@ -1,20 +1,14 @@
 import { Migration } from './migration';
-import {
-  ColumnTypesBase,
-  raw,
-  RawExpression,
-  singleQuote,
-  Sql,
-} from 'orchid-core';
+import { ColumnTypesBase, RawSQLBase, singleQuote, Sql } from 'orchid-core';
 import { RakeDbAst } from '../ast';
-import { getRaw } from 'pqb';
+import { raw } from 'pqb';
 
 export const createView = async <CT extends ColumnTypesBase>(
   migration: Migration<CT>,
   up: boolean,
   name: string,
   options: RakeDbAst.ViewOptions,
-  sql: string | RawExpression,
+  sql: string | RawSQLBase,
 ): Promise<void> => {
   const ast = makeAst(up, name, options, sql);
   const query = astToQuery(ast);
@@ -28,10 +22,10 @@ const makeAst = (
   up: boolean,
   name: string,
   options: RakeDbAst.ViewOptions,
-  sql: string | RawExpression,
+  sql: string | RawSQLBase,
 ): RakeDbAst.View => {
   if (typeof sql === 'string') {
-    sql = raw(sql);
+    sql = raw({ raw: sql });
   }
 
   return {
@@ -73,7 +67,7 @@ const astToQuery = (ast: RakeDbAst.View): Sql => {
       sql.push(`WITH ( ${list.join(', ')} )`);
     }
 
-    sql.push(`AS (${getRaw(ast.sql, values)})`);
+    sql.push(`AS (${ast.sql.toSQL(values)})`);
   } else {
     sql.push('DROP VIEW');
 

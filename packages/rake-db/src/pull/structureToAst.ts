@@ -14,10 +14,11 @@ import {
   ForeignKeyOptions,
   getConstraintKind,
   instantiateColumn,
+  raw,
   simplifyColumnDefault,
   TableData,
 } from 'pqb';
-import { raw, singleQuote, toCamelCase, toSnakeCase } from 'orchid-core';
+import { singleQuote, toCamelCase, toSnakeCase } from 'orchid-core';
 import { getConstraintName, getIndexName } from '../migration/migrationUtils';
 
 const matchMap: Record<string, undefined | ForeignKeyMatch> = {
@@ -160,7 +161,7 @@ export const structureToAst = async (
       notNull: it.notNull,
       collation: it.collation,
       default: simplifyColumnDefault(it.default),
-      check: it.check ? raw(it.check) : undefined,
+      check: it.check ? raw({ raw: it.check }) : undefined,
     });
   }
 
@@ -376,7 +377,7 @@ const pushTableAst = (
                 },
               }
             : undefined,
-          check: check ? raw(check.expression) : undefined,
+          check: check ? raw({ raw: check.expression }) : undefined,
         };
 
         const name =
@@ -508,7 +509,7 @@ const constraintToAst = (
   }
 
   if (check) {
-    result.check = raw(check.expression);
+    result.check = raw({ raw: check.expression });
   }
 
   if (item.name && item.name !== getConstraintName(item.tableName, result)) {
@@ -571,7 +572,7 @@ const viewToAst = (
     schema: view.schemaName === ctx.currentSchema ? undefined : view.schemaName,
     name: view.name,
     shape,
-    sql: raw(view.sql),
+    sql: raw({ raw: view.sql }),
     options,
   };
 };
@@ -657,7 +658,7 @@ const makeColumnsShape = (
 
     const check = checks?.[item.name];
     if (check) {
-      column.data.check = raw(check);
+      column.data.check = raw({ raw: check });
     }
 
     const camelCaseName = toCamelCase(item.name);

@@ -13,16 +13,17 @@ describe('raw sql', () => {
       },
     });
 
-    const sql = db.sql((t) => t.type(), { raw: 'sql' });
+    const sql = db.sql`sql`.type((t) => t.type());
 
-    expect(sql.__column).toBe(type);
+    expect(sql._type).toBe(type);
   });
 
   it('should handle a simple string', () => {
     const sql = User.sql({ raw: 'simple sql' });
 
     expect(sql).toEqual({
-      __raw: 'simple sql',
+      _sql: 'simple sql',
+      columnTypes: User.columnTypes,
     });
 
     expectSql(
@@ -34,15 +35,18 @@ describe('raw sql', () => {
   it('should handle values, and a simple string', () => {
     const sql = User.sql({
       raw: '$$_CoLuMn = $VaLuE123',
-      values: { _CoLuMn: 'name', VaLuE123: 'value' },
+    }).values({
+      _CoLuMn: 'name',
+      VaLuE123: 'value',
     });
 
     expect(sql).toEqual({
-      __raw: '$$_CoLuMn = $VaLuE123',
-      __values: {
+      _sql: '$$_CoLuMn = $VaLuE123',
+      _values: {
         _CoLuMn: 'name',
         VaLuE123: 'value',
       },
+      columnTypes: User.columnTypes,
     });
 
     expectSql(
@@ -53,22 +57,24 @@ describe('raw sql', () => {
   });
 
   it('should handle values and a template string', () => {
-    const sql = User.sql({ values: { value: 'value' } })`value = $value`;
+    const sql = User.sql`value = $value`.values({ value: 'value' });
 
     expect(sql).toEqual({
-      __raw: [['value = $value']],
-      __values: {
+      _sql: [['value = $value']],
+      _values: {
         value: 'value',
       },
+      columnTypes: User.columnTypes,
     });
   });
 
   it('should handle a column and a simple string', () => {
-    const sql = User.sql((t) => t.integer(), { raw: 'simple sql' });
+    const sql = User.sql({ raw: 'simple sql' }).type((t) => t.integer());
 
     expect(sql).toEqual({
-      __column: expect.any(IntegerColumn),
-      __raw: 'simple sql',
+      _type: expect.any(IntegerColumn),
+      _sql: 'simple sql',
+      columnTypes: User.columnTypes,
     });
 
     expectSql(
@@ -78,18 +84,20 @@ describe('raw sql', () => {
   });
 
   it('should handle a column, values, and a simple string', () => {
-    const sql = User.sql((t) => t.integer(), {
+    const sql = User.sql({
       raw: '$$column = $value',
-      values: { column: 'name', value: 'value' },
-    });
+    })
+      .type((t) => t.integer())
+      .values({ column: 'name', value: 'value' });
 
     expect(sql).toEqual({
-      __column: expect.any(IntegerColumn),
-      __raw: '$$column = $value',
-      __values: {
+      _type: expect.any(IntegerColumn),
+      _sql: '$$column = $value',
+      _values: {
         column: 'name',
         value: 'value',
       },
+      columnTypes: User.columnTypes,
     });
 
     expectSql(
@@ -103,7 +111,8 @@ describe('raw sql', () => {
     const sql = User.sql`one ${1} two ${true} three ${'string'} four`;
 
     expect(sql).toEqual({
-      __raw: [['one ', ' two ', ' three ', ' four'], 1, true, 'string'],
+      _sql: [['one ', ' two ', ' three ', ' four'], 1, true, 'string'],
+      columnTypes: User.columnTypes,
     });
 
     expectSql(
@@ -114,13 +123,14 @@ describe('raw sql', () => {
   });
 
   it('should handle column and a template literal', () => {
-    const sql = User.sql((t) =>
-      t.integer(),
-    )`one ${1} two ${true} three ${'string'} four`;
+    const sql = User.sql`one ${1} two ${true} three ${'string'} four`.type(
+      (t) => t.integer(),
+    );
 
     expect(sql).toEqual({
-      __column: expect.any(IntegerColumn),
-      __raw: [['one ', ' two ', ' three ', ' four'], 1, true, 'string'],
+      _type: expect.any(IntegerColumn),
+      _sql: [['one ', ' two ', ' three ', ' four'], 1, true, 'string'],
+      columnTypes: User.columnTypes,
     });
 
     expectSql(
@@ -131,16 +141,17 @@ describe('raw sql', () => {
   });
 
   it('should handle column, values, and a template literal', () => {
-    const sql = User.sql((t) => t.integer(), {
-      values: { 1: 'value' },
-    })`value = $1 AND ${true}`;
+    const sql = User.sql`value = $1 AND ${true}`
+      .type((t) => t.integer())
+      .values({ 1: 'value' });
 
     expect(sql).toEqual({
-      __column: expect.any(IntegerColumn),
-      __raw: [['value = $1 AND ', ''], true],
-      __values: {
+      _type: expect.any(IntegerColumn),
+      _sql: [['value = $1 AND ', ''], true],
+      _values: {
         1: 'value',
       },
+      columnTypes: User.columnTypes,
     });
 
     expectSql(
@@ -151,13 +162,14 @@ describe('raw sql', () => {
   });
 
   it('should quote columns with tables', () => {
-    const sql = User.sql({ raw: '$$column', values: { column: 'user.name' } });
+    const sql = User.sql({ raw: '$$column' }).values({ column: 'user.name' });
 
     expect(sql).toEqual({
-      __raw: '$$column',
-      __values: {
+      _sql: '$$column',
+      _values: {
         column: 'user.name',
       },
+      columnTypes: User.columnTypes,
     });
 
     expectSql(
@@ -170,10 +182,9 @@ describe('raw sql', () => {
     const query = User.where(
       User.sql({
         raw: `foo = $foo AND bar = '$bar''$bar' AND baz = $baz`,
-        values: {
-          foo: 1,
-          baz: true,
-        },
+      }).values({
+        foo: 1,
+        baz: true,
       }),
     );
 
@@ -186,14 +197,14 @@ describe('raw sql', () => {
 
   it('should throw when variable in the query is not provided', () => {
     const q = User.where(
-      User.sql({ raw: `a = $a AND b = $b`, values: { a: 1 } }),
+      User.sql({ raw: `a = $a AND b = $b` }).values({ a: 1 }),
     );
 
     expect(() => q.toSql()).toThrow('Query variable `b` is not provided');
   });
 
   it('should throw when variable in the object is not used by the query', () => {
-    const q = User.where(User.sql({ raw: `a = $a`, values: { a: 1, b: 'b' } }));
+    const q = User.where(User.sql({ raw: `a = $a` }).values({ a: 1, b: 'b' }));
 
     expect(() => q.toSql()).toThrow('Query variable `b` is unused');
   });

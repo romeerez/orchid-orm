@@ -3,14 +3,13 @@ import { addValue, quoteSchemaAndTable } from './common';
 import { pushReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
 import { ToSqlCtx } from './toSql';
-import { getRaw } from './rawSql';
 import {
   QueryHookSelect,
   UpdateQueryData,
   UpdateQueryDataItem,
   UpdateQueryDataObject,
 } from './data';
-import { isRaw, pushOrNewArray } from 'orchid-core';
+import { isExpression, pushOrNewArray } from 'orchid-core';
 import { Db } from '../db';
 import { joinSubQuery, resolveSubQueryCallback } from '../utils';
 import { JsonItem } from './types';
@@ -54,8 +53,8 @@ const processData = (
     if (typeof item === 'function') {
       const result = item(data);
       if (result) append = pushOrNewArray(append, result);
-    } else if (isRaw(item)) {
-      set.push(getRaw(item, values));
+    } else if (isExpression(item)) {
+      set.push(item.toSQL(values));
     } else {
       const shape = table.query.shape;
       for (const key in item) {
@@ -95,8 +94,8 @@ const processValue = (
   }
 
   if (value && typeof value === 'object') {
-    if (isRaw(value)) {
-      return getRaw(value, values);
+    if (isExpression(value)) {
+      return value.toSQL(values);
     } else if (value instanceof QueryClass) {
       return `(${joinSubQuery(table, value as Query).toSql({ values }).text})`;
     } else if ('op' in value && 'arg' in value) {

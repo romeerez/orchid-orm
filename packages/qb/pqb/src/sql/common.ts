@@ -1,5 +1,4 @@
-import { getRaw } from './rawSql';
-import { Expression } from '../utils';
+import { SelectableOrExpression } from '../utils';
 import { QueryData } from './data';
 
 export type ColumnNamesShape = Record<string, { data: { name?: string } }>;
@@ -111,7 +110,7 @@ export const ownColumnToSql = (
 
 export const rawOrColumnToSql = (
   data: Pick<QueryData, 'shape' | 'joinedShapes'>,
-  expr: Expression,
+  expr: SelectableOrExpression,
   values: unknown[],
   quotedAs: string | undefined,
   shape: ColumnNamesShape = data.shape,
@@ -119,7 +118,7 @@ export const rawOrColumnToSql = (
 ) => {
   return typeof expr === 'string'
     ? columnToSql(data, shape, expr, quotedAs, select)
-    : getRaw(expr, values);
+    : expr.toSQL(values);
 };
 
 export const quoteSchemaAndTable = (

@@ -9,21 +9,18 @@ import {
 import { SelectQueryData } from '../sql';
 import { AliasOrTable } from '../utils';
 import {
-  isRaw,
   QueryCatch,
   QueryThen,
-  raw,
-  RawExpression,
+  Expression,
   TemplateLiteralArgs,
+  isExpression,
 } from 'orchid-core';
 import { getShapeFromSelect } from './select';
+import { RawSQL } from '../sql/rawSql';
 
 export type FromArgs<T extends Query> =
   | [
-      first:
-        | Query
-        | RawExpression
-        | Exclude<keyof T['withData'], symbol | number>,
+      first: Query | Expression | Exclude<keyof T['withData'], symbol | number>,
       second?: { only?: boolean },
     ]
   | TemplateLiteralArgs;
@@ -117,7 +114,7 @@ export class From {
     ...args: Args
   ): FromResult<T, Args> {
     if (Array.isArray(args[0])) {
-      return this._from(raw(args as TemplateLiteralArgs)) as FromResult<
+      return this._from(new RawSQL(args as TemplateLiteralArgs)) as FromResult<
         T,
         Args
       >;
@@ -125,7 +122,7 @@ export class From {
 
     if (typeof args[0] === 'string') {
       this.query.as ||= args[0];
-    } else if (!isRaw(args[0] as RawExpression)) {
+    } else if (!isExpression(args[0])) {
       const q = args[0] as Query;
       this.query.as ||= q.query.as || q.table || 't';
       this.query.shape = getShapeFromSelect(args[0] as Query, true);

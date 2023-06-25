@@ -1,28 +1,28 @@
-import { getRawSql, isRaw, raw, RawExpression } from '../raw';
 import {
   ColumnTypeBase,
+  ColumnTypesBase,
   ColumnWithDefault,
   getDefaultNowFn,
 } from './columnType';
 import { pushOrNewArrayToObject } from '../utils';
 import { snakeCaseKey } from './types';
+import { isRawSQL, RawSQLBase } from '../raw';
 
 type Timestamps<T extends ColumnTypeBase> = {
-  createdAt: ColumnWithDefault<T, RawExpression>;
-  updatedAt: ColumnWithDefault<T, RawExpression>;
+  createdAt: ColumnWithDefault<T, RawSQLBase>;
+  updatedAt: ColumnWithDefault<T, RawSQLBase>;
 };
 
 const makeInjector =
-  (updatedAtRegex: RegExp, updateUpdatedAtItem: RawExpression, key: string) =>
-  (data: (RawExpression | Record<string, unknown> | (() => void))[]) => {
+  (updatedAtRegex: RegExp, updateUpdatedAtItem: RawSQLBase, key: string) =>
+  (data: (RawSQLBase | Record<string, unknown> | (() => void))[]) => {
     const alreadyUpdatesUpdatedAt = data.some((item) => {
-      if (isRaw(item)) {
+      if (isRawSQL(item)) {
         updatedAtRegex.lastIndex = 0;
-        const sql = getRawSql(item);
         return updatedAtRegex.test(
-          typeof sql === 'string'
-            ? sql
-            : (sql[0] as unknown as string[]).join(''),
+          typeof item._sql === 'string'
+            ? item._sql
+            : (item._sql[0] as unknown as string[]).join(''),
         );
       } else {
         return typeof item !== 'function' && item[key];
@@ -31,6 +31,15 @@ const makeInjector =
 
     return alreadyUpdatesUpdatedAt ? undefined : updateUpdatedAtItem;
   };
+
+class SimpleRawSQL extends RawSQLBase {
+  columnTypes!: ColumnTypesBase;
+  toSQL(): string {
+    return this._sql as string;
+  }
+}
+
+const raw = (sql: string) => new SimpleRawSQL(sql);
 
 export const makeTimestampsHelpers = (
   updatedAtRegex: RegExp,
@@ -41,7 +50,7 @@ export const makeTimestampsHelpers = (
   const addHookForUpdate = (now: string) => (q: unknown) => {
     const updatedAtInjector = makeInjector(
       updatedAtRegex,
-      raw(`${quotedUpdatedAt} = ${now}`),
+      new SimpleRawSQL(`${quotedUpdatedAt} = ${now}`),
       'updatedAt',
     );
 

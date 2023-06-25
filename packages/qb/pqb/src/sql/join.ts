@@ -10,23 +10,22 @@ import { Query, QueryWithTable } from '../query';
 import { whereToSql } from './where';
 import { Relation } from '../relations';
 import { ToSqlCtx } from './toSql';
-import { getRaw } from './rawSql';
 import { JoinedShapes, QueryData, SelectQueryData } from './data';
-import { isRaw, RawExpression } from 'orchid-core';
 import { pushQueryArray } from '../queryDataUtils';
 import { QueryBase } from '../queryBase';
+import { Expression, isExpression } from 'orchid-core';
 
 type ItemOf3Or4Length =
   | [
       _: unknown,
-      leftColumn: string | RawExpression,
-      rightColumn: string | RawExpression,
+      leftColumn: string | Expression,
+      rightColumn: string | Expression,
     ]
   | [
       _: unknown,
-      leftColumn: string | RawExpression,
+      leftColumn: string | Expression,
       op: string,
-      rightColumn?: string | RawExpression,
+      rightColumn?: string | Expression,
     ];
 
 export const processJoinItem = (
@@ -292,7 +291,7 @@ const getConditionsFor3Or4LengthItem = (
 
 const getObjectOrRawConditions = (
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
-  data: Record<string, string | RawExpression> | RawExpression | true,
+  data: Record<string, string | Expression> | Expression | true,
   values: unknown[],
   quotedAs: string | undefined,
   joinAs: string,
@@ -300,8 +299,8 @@ const getObjectOrRawConditions = (
 ): string => {
   if (data === true) {
     return 'true';
-  } else if (isRaw(data)) {
-    return getRaw(data, values);
+  } else if (isExpression(data)) {
+    return data.toSQL(values);
   } else {
     const pairs: string[] = [];
     const shape = query.shape;

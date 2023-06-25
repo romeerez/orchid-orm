@@ -3,17 +3,17 @@ import { ColumnOperators, QueryData } from '../sql';
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { JoinArgs, JoinCallback, JoinFirstArg } from './join';
 import {
-  RawExpression,
+  Expression,
   ColumnsShapeBase,
   MaybeArray,
   emptyObject,
-  raw,
   TemplateLiteralArgs,
 } from 'orchid-core';
 import { getIsJoinSubQuery } from '../sql/join';
 import { getShapeFromSelect } from './select';
 import { ColumnsShape } from '../columns';
 import { QueryBase } from '../queryBase';
+import { RawSQL } from '../sql/rawSql';
 
 export type WhereArg<T extends QueryBase> =
   | (Omit<
@@ -22,7 +22,7 @@ export type WhereArg<T extends QueryBase> =
           | T['selectable'][K]['column']['type']
           | null
           | ColumnOperators<T['selectable'], K>
-          | RawExpression;
+          | Expression;
       },
       'NOT' | 'OR' | 'IN' | 'EXISTS'
     > & {
@@ -30,11 +30,11 @@ export type WhereArg<T extends QueryBase> =
       OR?: MaybeArray<WhereArg<T>>[];
       IN?: MaybeArray<{
         columns: (keyof T['selectable'])[];
-        values: unknown[][] | Query | RawExpression;
+        values: unknown[][] | Query | Expression;
       }>;
     })
   | QueryBase
-  | RawExpression
+  | Expression
   | ((q: WhereQueryBuilder<T>) => WhereQueryBuilder);
 
 export type WhereArgs<T extends QueryBase> =
@@ -49,7 +49,7 @@ export type WhereInValues<
   T extends QueryBase,
   Column extends WhereInColumn<T>,
 > = Column extends keyof T['selectable']
-  ? T['selectable'][Column]['column']['type'][] | Query | RawExpression
+  ? T['selectable'][Column]['column']['type'][] | Query | Expression
   :
       | ({
           [I in keyof Column]: Column[I] extends keyof T['selectable']
@@ -59,7 +59,7 @@ export type WhereInValues<
           length: Column extends { length: number } ? Column['length'] : never;
         })[]
       | Query
-      | RawExpression;
+      | Expression;
 
 export type WhereResult<T extends QueryBase> = T & {
   meta: {
@@ -71,7 +71,7 @@ export type WhereInArg<T extends Pick<Query, 'selectable'>> = {
   [K in keyof T['selectable']]?:
     | T['selectable'][K]['column']['type'][]
     | Query
-    | RawExpression;
+    | Expression;
 };
 
 export const addWhere = <T extends Where>(
@@ -82,7 +82,7 @@ export const addWhere = <T extends Where>(
     return pushQueryValue(
       q,
       'and',
-      raw(args as TemplateLiteralArgs),
+      new RawSQL(args as TemplateLiteralArgs),
     ) as unknown as WhereResult<T>;
   }
   return pushQueryArray(q, 'and', args) as unknown as WhereResult<T>;
@@ -94,7 +94,7 @@ export const addWhereNot = <T extends QueryBase>(
 ): WhereResult<T> => {
   if (Array.isArray(args[0])) {
     return pushQueryValue(q, 'and', {
-      NOT: raw(args as TemplateLiteralArgs),
+      NOT: new RawSQL(args as TemplateLiteralArgs),
     }) as unknown as WhereResult<T>;
   }
   return pushQueryValue(q, 'and', {
@@ -128,7 +128,7 @@ export const addWhereIn = <T extends QueryBase>(
   q: T,
   and: boolean,
   arg: unknown,
-  values: unknown[] | unknown[][] | Query | RawExpression | undefined,
+  values: unknown[] | unknown[][] | Query | Expression | undefined,
   not?: boolean,
 ): WhereResult<T> => {
   const op = not ? 'notIn' : 'in';
@@ -242,7 +242,7 @@ export abstract class Where extends QueryBase {
   whereIn<T extends Where>(
     this: T,
     arg: unknown | unknown[],
-    values?: unknown[] | unknown[][] | Query | RawExpression,
+    values?: unknown[] | unknown[][] | Query | Expression,
   ): WhereResult<T> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return this.clone()._whereIn(
@@ -260,7 +260,7 @@ export abstract class Where extends QueryBase {
   _whereIn<T extends Where>(
     this: T,
     arg: unknown,
-    values?: unknown[] | unknown[][] | Query | RawExpression,
+    values?: unknown[] | unknown[][] | Query | Expression,
   ): WhereResult<T> {
     return addWhereIn(this, true, arg, values);
   }
@@ -274,7 +274,7 @@ export abstract class Where extends QueryBase {
   orWhereIn<T extends Where>(
     this: T,
     arg: unknown | unknown[],
-    values?: unknown[] | unknown[][] | Query | RawExpression,
+    values?: unknown[] | unknown[][] | Query | Expression,
   ): WhereResult<T> {
     return this.clone()._orWhereIn(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -293,7 +293,7 @@ export abstract class Where extends QueryBase {
   _orWhereIn<T extends Where>(
     this: T,
     arg: unknown,
-    values?: unknown[] | unknown[][] | Query | RawExpression,
+    values?: unknown[] | unknown[][] | Query | Expression,
   ): WhereResult<T> {
     return addWhereIn(this, false, arg, values);
   }
@@ -307,7 +307,7 @@ export abstract class Where extends QueryBase {
   whereNotIn<T extends Where>(
     this: T,
     arg: unknown | unknown[],
-    values?: unknown[] | unknown[][] | Query | RawExpression,
+    values?: unknown[] | unknown[][] | Query | Expression,
   ): WhereResult<T> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return this.clone()._whereNotIn(arg as any, values as any);
@@ -322,7 +322,7 @@ export abstract class Where extends QueryBase {
   _whereNotIn<T extends Where>(
     this: T,
     arg: unknown,
-    values?: unknown[] | unknown[][] | Query | RawExpression,
+    values?: unknown[] | unknown[][] | Query | Expression,
   ): WhereResult<T> {
     return addWhereIn(this, true, arg, values, true);
   }
@@ -336,7 +336,7 @@ export abstract class Where extends QueryBase {
   orWhereNotIn<T extends Where>(
     this: T,
     arg: unknown | unknown[],
-    values?: unknown[] | unknown[][] | Query | RawExpression,
+    values?: unknown[] | unknown[][] | Query | Expression,
   ): WhereResult<T> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return this.clone()._orWhereNotIn(arg as any, values as any);
@@ -351,7 +351,7 @@ export abstract class Where extends QueryBase {
   _orWhereNotIn<T extends Where>(
     this: T,
     arg: unknown,
-    values?: unknown[] | unknown[][] | Query | RawExpression,
+    values?: unknown[] | unknown[][] | Query | Expression,
   ): WhereResult<T> {
     return addWhereIn(this, false, arg, values, true);
   }

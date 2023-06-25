@@ -1,13 +1,13 @@
 import { JsonItem, SelectFunctionItem, SelectItem } from './types';
-import { getRaw } from './rawSql';
+import { RawSQL } from './rawSql';
 import { Query } from '../query';
 import { addValue, q, columnToSql, columnToSqlWithAs } from './common';
 import { aggregateToSql } from './aggregate';
 import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
 import { makeSql, ToSqlCtx } from './toSql';
 import { SelectQueryData } from './data';
-import { Expression } from '../utils';
-import { isRaw, raw } from 'orchid-core';
+import { SelectableOrExpression } from '../utils';
+import { isExpression } from 'orchid-core';
 
 const jsonColumnOrMethodToSql = (
   table: Query,
@@ -95,12 +95,15 @@ export const selectToSql = (
         );
       } else {
         if ('selectAs' in item) {
-          const obj = item.selectAs as Record<string, Expression | Query>;
+          const obj = item.selectAs as Record<
+            string,
+            SelectableOrExpression | Query
+          >;
           for (const as in obj) {
             const value = obj[as];
             if (typeof value === 'object' || typeof value === 'function') {
-              if (isRaw(value)) {
-                list.push(`${getRaw(value, ctx.values)} AS ${q(as)}`);
+              if (isExpression(value)) {
+                list.push(`${value.toSQL(ctx.values)} AS ${q(as)}`);
               } else {
                 pushSubQuerySql(value as Query, as, ctx.values, list);
               }
@@ -122,8 +125,8 @@ export const selectToSql = (
               item.__json[1],
             )}`,
           );
-        } else if (isRaw(item)) {
-          const sql = getRaw(item, ctx.values);
+        } else if (isExpression(item)) {
+          const sql = item.toSQL(ctx.values);
           list.push(ctx.aliasValue ? `${sql} r` : sql);
         } else if ('arguments' in item) {
           list.push(
@@ -209,7 +212,7 @@ const pushSubQuerySql = (
       const cloned = query.clone();
       cloned.query.select = [{ selectAs: { c: first } }] as SelectItem[];
       query = cloned._wrap(cloned.baseQuery.clone()) as unknown as typeof query;
-      query._getOptional(raw(`COALESCE(json_agg("c"), '[]')`));
+      query._getOptional(new RawSQL(`COALESCE(json_agg("c"), '[]')`));
       break;
     }
     case 'value':
@@ -233,12 +236,8 @@ const coalesce = (query: Query, values: unknown[], sql: string) => {
   const { coalesceValue } = query.query;
   if (coalesceValue !== undefined) {
     let value;
-    if (
-      typeof coalesceValue === 'object' &&
-      coalesceValue &&
-      isRaw(coalesceValue)
-    ) {
-      value = getRaw(coalesceValue, values);
+    if (isExpression(coalesceValue)) {
+      value = coalesceValue.toSQL(values);
     } else {
       values.push(coalesceValue);
       value = `$${values.length}`;

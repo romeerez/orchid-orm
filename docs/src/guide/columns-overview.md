@@ -29,7 +29,7 @@ await db.table.create({
 
 All column types support the following operators in `where` conditions:
 
-value can be of the same type as the column, a sub-query, or a raw expression (using the `raw` function):
+value can be of the same type as the column, a sub-query, or a raw SQL (using `sql` or `raw` function):
 
 ```ts
 db.someTable.where({
@@ -179,7 +179,9 @@ however, for the specific case of overriding timestamp, there are predefined sho
 export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
     ...t,
-    // or use `.asDate()` to work with Date objects
+    // Parse timestamps into `Date` objects:
+    timestamp: () => t.timestamp().asDate(),
+    // Or, parse timestamps into numbers:
     timestamp: () => t.timestamp().asNumber(),
   }),
 });

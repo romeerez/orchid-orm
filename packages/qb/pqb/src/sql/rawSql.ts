@@ -1,72 +1,106 @@
-import { RawExpression } from 'orchid-core';
+import {
+  ColumnTypeBase,
+  ColumnTypesBase,
+  RawSQLArgs,
+  RawSQLBase,
+  TemplateLiteralArgs,
+} from 'orchid-core';
+import { DefaultColumnTypes } from '../columns';
 
 const used: string[] = [];
 const literalValues: number[] = [];
-export const getRaw = (raw: RawExpression, valuesArray: unknown[]) => {
-  let sql;
-  const isLiteral = typeof raw.__raw !== 'string';
-  const values = raw.__values as Record<string, unknown>;
 
-  if (isLiteral) {
-    sql = '';
-    const values = raw.__raw;
-    const parts = values[0];
-    literalValues.length = 0;
+export class RawSQL<
+  T extends ColumnTypeBase,
+  CT extends ColumnTypesBase = DefaultColumnTypes,
+> extends RawSQLBase<T> {
+  declare columnTypes: CT;
 
-    let i = 0;
-    for (let last = parts.length - 1; i < last; i++) {
-      valuesArray.push(values[i + 1]);
-      sql += parts[i];
-
-      if (values) literalValues.push(sql.length);
-
-      sql += `$${valuesArray.length}`;
-    }
-    sql += parts[i];
-  } else {
-    sql = raw.__raw as string;
+  constructor(
+    sql: string | TemplateLiteralArgs,
+    values?: Record<string, unknown> | false,
+    type?: T,
+  ) {
+    super(sql, values);
+    if (type) this._type = type;
   }
 
-  if (!values) {
-    return sql;
-  }
+  toSQL(values: unknown[]): string {
+    let sql;
+    const isTemplate = typeof this._sql !== 'string';
+    const data = this._values as Record<string, unknown>;
 
-  const arr = sql.split("'");
-  const len = arr.length;
-  used.length = 0;
-  for (let i = 0; i < len; i += 2) {
-    arr[i] = arr[i].replace(/\$\$?(\w+)/g, (match, key, i) => {
-      if (isLiteral && literalValues.includes(i)) return match;
+    if (isTemplate) {
+      sql = '';
+      const template = this._sql;
+      const parts = template[0];
+      literalValues.length = 0;
 
-      const value = values[key];
-      if (value === undefined) {
-        throw new Error(`Query variable \`${key}\` is not provided`);
+      let i = 0;
+      for (let last = parts.length - 1; i < last; i++) {
+        values.push(template[i + 1]);
+        sql += parts[i];
+
+        if (template) literalValues.push(sql.length);
+
+        sql += `$${values.length}`;
       }
+      sql += parts[i];
+    } else {
+      sql = this._sql as string;
+    }
 
-      used.push(key);
+    if (!data) {
+      return sql;
+    }
 
-      if (match.length - key.length === 2) {
-        if (typeof value !== 'string') {
-          throw new Error(
-            `Expected string value for $$${key} SQL keyword, got ${typeof value}`,
-          );
+    const arr = sql.split("'");
+    const len = arr.length;
+    used.length = 0;
+    for (let i = 0; i < len; i += 2) {
+      arr[i] = arr[i].replace(/\$\$?(\w+)/g, (match, key, i) => {
+        if (isTemplate && literalValues.includes(i)) return match;
+
+        const value = data[key];
+        if (value === undefined) {
+          throw new Error(`Query variable \`${key}\` is not provided`);
         }
 
-        return `"${value.replace('"', '""').replace('.', '"."')}"`;
-      }
+        used.push(key);
 
-      valuesArray.push(value);
-      return `$${valuesArray.length}`;
-    });
-  }
+        if (match.length - key.length === 2) {
+          if (typeof value !== 'string') {
+            throw new Error(
+              `Expected string value for $$${key} SQL keyword, got ${typeof value}`,
+            );
+          }
 
-  if (used.length > 0 && used.length < Object.keys(values).length) {
-    for (const key in values) {
-      if (!used.includes(key)) {
-        throw new Error(`Query variable \`${key}\` is unused`);
+          return `"${value.replace('"', '""').replace('.', '"."')}"`;
+        }
+
+        values.push(value);
+        return `$${values.length}`;
+      });
+    }
+
+    if (used.length > 0 && used.length < Object.keys(data).length) {
+      for (const key in data) {
+        if (!used.includes(key)) {
+          throw new Error(`Query variable \`${key}\` is unused`);
+        }
       }
     }
-  }
 
-  return arr.join("'");
+    return arr.join("'");
+  }
+}
+
+export const raw = <T = unknown>(
+  ...args: RawSQLArgs
+): RawSQL<ColumnTypeBase<T>> => {
+  return new RawSQL<ColumnTypeBase<T>>(
+    typeof args[0].raw === 'string'
+      ? args[0].raw
+      : (args as TemplateLiteralArgs),
+  );
 };

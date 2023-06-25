@@ -32,7 +32,7 @@ import {
   deepCompare,
   pathToLog,
   quoteObjectKey,
-  RawExpression,
+  RawSQLBase,
   singleQuote,
   toCamelCase,
   toPascalCase,
@@ -406,7 +406,7 @@ const getColumnMethodArgs = (
   }
 
   if (key === 'check') {
-    return [columnCheckToCode(t, value as RawExpression)];
+    return [columnCheckToCode(t, value as RawSQLBase)];
   }
 
   if (key === 'identity') {
@@ -550,7 +550,7 @@ const dropMatchingCheck = (
     const { check } = item;
     if (!check) continue;
 
-    if (check.__raw === sql) {
+    if (check._sql === sql) {
       removeProp(context, prop, i);
     }
   }
@@ -627,7 +627,7 @@ const dropMatchingConstraint = (
 
   for (const item of items) {
     if (existing.name !== item.name) continue;
-    if (existing.check !== item.check?.__raw) continue;
+    if (existing.check !== item.check?._sql) continue;
     if (
       (existing.references || item.references) &&
       !compareReferences(existing.references, item.references)

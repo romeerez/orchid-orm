@@ -4,7 +4,7 @@ import { assignMethodsToClass } from './utils';
 import {
   numberTypeMethods,
   Code,
-  RawExpression,
+  Expression,
   joinTruthy,
   BaseNumberData,
   numberDataToCode,
@@ -23,7 +23,7 @@ export type NumberColumnData = BaseNumberData & {
 };
 
 export type SerialColumnData = NumberColumnData & {
-  default: RawExpression;
+  default: Expression;
 };
 
 type NumberMethods = typeof numberTypeMethods;
@@ -116,7 +116,7 @@ const intToCode = (column: ColumnType, t: string): Code => {
 
 export type IdentityColumn<T extends ColumnTypeBase> = ColumnWithDefault<
   T,
-  RawExpression
+  Expression
 >;
 
 // signed two-byte integer

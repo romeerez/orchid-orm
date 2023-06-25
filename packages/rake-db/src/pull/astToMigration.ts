@@ -16,9 +16,8 @@ import {
   Code,
   codeToString,
   ColumnTypesBase,
-  isRaw,
+  isRawSQL,
   quoteObjectKey,
-  rawToCode,
   singleQuote,
 } from 'orchid-core';
 import { quoteSchemaTable, RakeDbConfig } from '../common';
@@ -125,8 +124,8 @@ const createDomain = (ast: RakeDbAst.Domain) => {
     const props: Code[] = [];
     if (ast.notNull) props.push(`notNull: true,`);
     if (ast.collation) props.push(`collation: ${singleQuote(ast.collation)},`);
-    if (ast.default) props.push(`default: ${rawToCode('db', ast.default)},`);
-    if (ast.check) props.push(`check: ${rawToCode('db', ast.check)},`);
+    if (ast.default) props.push(`default: ${ast.default.toCode('db')},`);
+    if (ast.check) props.push(`check: ${ast.check.toCode('db')},`);
 
     addCode(code, ', {');
     code.push(props);
@@ -222,8 +221,8 @@ const isTimestamp = (
     !column.data.isNullable &&
     def &&
     typeof def === 'object' &&
-    isRaw(def) &&
-    def.__raw === 'now()'
+    isRawSQL(def) &&
+    def._sql === 'now()'
   );
 };
 
@@ -279,7 +278,7 @@ const createConstraint = (item: RakeDbAst.Constraint): Code => {
   }
 
   if (kind === 'check' && item.check) {
-    return [`await db.addCheck(${table}, ${rawToCode('t', item.check)});`];
+    return [`await db.addCheck(${table}, ${item.check.toCode('t')});`];
   }
 
   return [
@@ -309,8 +308,8 @@ const createView = (ast: RakeDbAst.View) => {
 
   addCode(code, ', ');
 
-  if (!ast.sql.__values) {
-    const raw = ast.sql.__raw;
+  if (!ast.sql._values) {
+    const raw = ast.sql._sql;
     let sql;
     if (typeof raw === 'string') {
       sql = raw;
@@ -326,7 +325,7 @@ const createView = (ast: RakeDbAst.View) => {
 
     addCode(code, backtickQuote(sql));
   } else {
-    addCode(code, rawToCode('db', ast.sql));
+    addCode(code, ast.sql.toCode('db'));
   }
 
   addCode(code, ');');

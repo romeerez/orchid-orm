@@ -135,7 +135,7 @@ describe('queryMethods', () => {
     });
 
     it('should support raw expression', async () => {
-      const result = await User.pluck(testDb.sql((t) => t.integer())`123`);
+      const result = await User.pluck(testDb.sql`123`.type((t) => t.integer()));
 
       expect(result).toEqual([123, 123, 123]);
 
@@ -301,7 +301,7 @@ describe('queryMethods', () => {
 
     it('should accept raw sql', () => {
       const q = User.all();
-      const query = q.find(testDb.sql({ values: { a: 1, b: 2 } })`$a + $b`);
+      const query = q.find(testDb.sql`$a + $b`.values({ a: 1, b: 2 }));
 
       assertType<Awaited<typeof query>, UserRecord>();
 
@@ -377,9 +377,7 @@ describe('queryMethods', () => {
 
     it('should accept raw sql', () => {
       const q = User.all();
-      const query = q.findOptional(
-        testDb.sql({ values: { a: 1, b: 2 } })`$a + $b`,
-      );
+      const query = q.findOptional(testDb.sql`$a + $b`.values({ a: 1, b: 2 }));
 
       assertType<Awaited<typeof query>, UserRecord | undefined>();
 

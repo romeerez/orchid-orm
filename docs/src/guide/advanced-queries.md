@@ -27,7 +27,7 @@ type WithOptions = {
   notMaterialized?: true;
 };
 
-// accepts columns shape and a raw expression:
+// accepts columns shape and a raw SQL expression:
 db.table.with(
   'alias',
   {
@@ -90,7 +90,7 @@ SELECT "user"."id" FROM "customSchema"."user"
 
 [//]: # 'has JSDoc'
 
-Creates a union query, taking an array or a list of callbacks, builders, or raw statements to build the union statement, with optional boolean `wrap`.
+Creates a union query, taking an array or a list of callbacks, builders, or raw SQL statements to build the union statement, with optional boolean `wrap`.
 If the `wrap` parameter is true, the queries will be individually wrapped in parentheses.
 
 ```ts

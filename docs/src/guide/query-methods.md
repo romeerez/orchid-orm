@@ -96,7 +96,7 @@ const foundOptional: TableType | undefined = await db.table.findByOptional({
 
 [//]: # 'has JSDoc'
 
-`.get` returns a single value, adds `LIMIT 1` to the query, and accepts a column name or a raw expression.
+`.get` returns a single value, adds `LIMIT 1` to the query, and accepts a column name or a raw SQL expression.
 
 `get` throws a `NotFoundError` when not found, and `getOptional` returns `undefined`.
 
@@ -170,24 +170,67 @@ const records = db.table
 
 [//]: # 'has JSDoc'
 
-When there is a need to use a piece of raw SQL, use the `sql` method.
+When there is a need to use a piece of raw SQL, use the `sql` method from tables, or a `raw` function imported from `orchid-orm`.
 
-To select with a raw SQL, need to specify a column type as a first argument, so the TS could use it to infer the result type of the query:
+When selecting a raw SQL, specify a resulting type with `<generic>` syntax:
 
 ```ts
 const result: { num: number }[] = await db.table.select({
-  num: db.table.sql((t) => t.integer())`
+  num: db.table.sql<number>`
     random() * 100
   `,
 });
 ```
 
-Other than for select, the column type can be omitted:
+In a situation when you want the result to be parsed, such as when returning a timestamp that you want to be parsed into a `Date` object, provide a column type in such a way:
+
+This example assumes that the `timestamp` column was overridden with `asDate` as shown in [Override column types](/guide/columns-overview#override-column-types).
+
+```ts
+const result: { timestamp: Date }[] = await db.table.select({
+  timestamp: db.table.sql`now()`.type((t) => t.timestamp()),
+});
+```
+
+In some cases such as when using [from](/guide/orm-and-query-builder.html#from), setting column type via callback allows for special `where` operations:
+
+```ts
+const subQuery = db.someTable.select({
+  sum: (q) => q.sql`$a + $b`.type((t) => t.decimal()).values({ a: 1, b: 2 }),
+});
+
+// `gt`, `gte`, `min`, `lt`, `lte`, `max` in `where`
+// are allowed only for numeric columns:
+const result = await db.$from(subQuery).where({ sum: { gte: 5 } });
+```
+
+```ts
+db.$from(Otherdb.table.select('foo', 'bar'));
+```
+
+`where` and other methods don't need the return type, so it can be omitted:
 
 ```ts
 await db.table.where(db.table.sql`
   "someValue" = random() * 100
 `);
+```
+
+Instead of `sql` method, you can use `raw` function from `orchid-orm` (or `pqb`) to do the same.
+The only difference, `raw` function don't have access to the overridden column types.
+
+```ts
+import { raw } from 'orchid-orm';
+
+await db.table.where(raw`
+  "someValue" = random() * 100
+`);
+
+await db.table.select({
+  // it is a default `timestamp` column,
+  // if you have overriden it with `asDate` or `asNumber` it won't be parsed properly:
+  now: raw`now()`.type((t) => t.timestamp()),
+});
 ```
 
 Interpolating values in template literals is completely safe:
@@ -215,7 +258,7 @@ const { value } = req.params;
 await db.table.where(db.table.sql({ raw: `column = random() * ${value}` }));
 ```
 
-To inject values into `raw` SQL strings, define it with `$` in the string and provide `values` object.
+To inject values into `raw` SQL strings, denote it with `$` in the string and provide `values` object.
 
 Use `$$` to provide column or/and table name. Column names will be quoted so don't quote them manually.
 
@@ -225,13 +268,10 @@ const { value } = req.params;
 
 // this is SAFE, SQL injection are prevented:
 await db.table.where(
-  db.table.sql({
-    values: {
-      column: 'someTable.someColumn', // or simply 'column'
-      one: value,
-      two: 123,
-    },
-    raw: '$$column = random() * $value',
+  db.table.sql({ raw: '$$column = random() * $value' }).values({
+    column: 'someTable.someColumn', // or simply 'column'
+    one: value,
+    two: 123,
   }),
 );
 ```
@@ -242,29 +282,29 @@ Summarizing:
 // simplest form:
 db.table.sql`key = ${value}`;
 
+// with resulting type:
+db.table.sql<boolean>`key = ${value}`;
+
 // with column type for select:
-db.table.sql((t) => t.boolean())`key = ${value}`;
+db.table.sql`key = ${value}`.type((t) => t.boolean());
 
 // raw SQL string, not allowed to interpolate:
 db.table.sql({ raw: 'random()' });
 
+// with resulting type:
+db.table.sql<number>({ raw: 'random()' });
+
 // with values:
-db.table.sql({
-  raw: '$$columnName = $one + $two',
-  values: {
-    columnName: 'column',
-    one: 1,
-    two: 2,
-  },
+db.table.sql({ raw: '$$columnName = $one + $two' }).values({
+  columnName: 'column',
+  one: 1,
+  two: 2,
 });
 
-// with column type for select:
-db.table.sql((t) => t.decimal(), { raw: 'random()' });
-
-// combine values and template literal:
-db.table.sql({ values: { one: 1, two: 2 } })`
-  ($one + $two) / $one
-`;
+// combine template literal, column type, and values:
+db.table.sql`($one + $two) / $one`
+  .type((t) => t.numeric())
+  .values({ one: 1, two: 2 });
 ```
 
 ## select
@@ -273,7 +313,7 @@ db.table.sql({ values: { one: 1, two: 2 } })`
 
 Takes a list of columns to be selected, and by default, the query builder will select all columns of the table.
 
-Pass an object to select columns with aliases. Keys of the object are column aliases, value can be a column name, sub-query, or raw expression.
+Pass an object to select columns with aliases. Keys of the object are column aliases, value can be a column name, sub-query, or raw SQL expression.
 
 ```ts
 // select columns of the table:
@@ -293,14 +333,19 @@ db.table.select({
   subQueryResult: Otherdb.table.select('column').take(),
 });
 
-// select raw SQL value, the first argument of `raw` is a column type, it is used for return type of the query
+// select raw SQL value, specify the returning type via <generic> syntax:
 db.table.select({
-  raw: db.table.sql((t) => t.integer())`1 + 2`,
+  raw: db.table.sql<number>`1 + 2`,
+});
+
+// select raw SQL value, the resulting type can be set by providing a column type in such way:
+db.table.select({
+  raw: db.table.sql`1 + 2`.type((t) => t.integer()),
 });
 
 // same raw SQL query as above, but raw value is returned from a callback
 db.table.select({
-  raw: (q) => q.sql((t) => t.integer())`1 + 2`,
+  raw: (q) => q.sql`1 + 2`.type((t) => t.integer()),
 });
 ```
 
@@ -355,7 +400,7 @@ Adds a `DISTINCT` keyword to `SELECT`:
 db.table.distinct().select('name');
 ```
 
-Can accept column names or raw expressions to place it to `DISTINCT ON (...)`:
+Can accept column names or raw SQL expressions to place it to `DISTINCT ON (...)`:
 
 ```ts
 // Distinct on the name and raw SQL
@@ -385,11 +430,11 @@ Set the `FROM` value, by default the table name is used.
 // accepts sub-query:
 db.table.from(Otherdb.table.select('foo', 'bar'));
 
-// accepts raw sql by template literal:
+// accepts raw SQL by template literal:
 const value = 123;
 db.table.from`value = ${value}`;
 
-// accepts raw sql:
+// accepts raw SQL:
 db.table.from(db.table.sql`value = ${value}`);
 
 // accepts alias of `WITH` expression:
@@ -453,7 +498,7 @@ Used under the hood, and not really needed on the app side.
 
 [//]: # 'has JSDoc'
 
-For the `GROUP BY` SQL statement, it is accepting column names or raw expressions.
+For the `GROUP BY` SQL statement, it is accepting column names or raw SQL expressions.
 
 `group` is useful when aggregating values.
 
@@ -470,7 +515,7 @@ const results = Product.select('category')
 
 Adds an order by clause to the query.
 
-Takes one or more arguments, each argument can be a column name, an object, or a raw expression.
+Takes one or more arguments, each argument can be a column name, an object, or a raw SQL expression.
 
 ```ts
 db.table.order('id', 'name'); // ASC by default

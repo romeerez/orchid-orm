@@ -14,11 +14,10 @@ import { JsonItem, QueryData, UpdateQueryData } from '../sql';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
 import {
-  isRaw,
-  RawExpression,
+  isExpression,
+  Expression,
   EmptyObject,
   MaybeArray,
-  raw,
   QueryThen,
   isObjectEmpty,
   callWithThis,
@@ -26,6 +25,7 @@ import {
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
 import { JsonModifiers } from './json';
+import { RawSQL } from '../sql/rawSql';
 
 // Type of argument for `update` and `updateOrThrow`
 //
@@ -50,7 +50,7 @@ export type UpdateData<T extends Query> = {
         : never;
     }
   : EmptyObject) & {
-    __raw?: never; // forbid RawExpression argument
+    __raw?: never; // forbid Expression argument
   };
 
 // Type of available variants to provide for a specific column when updating.
@@ -59,7 +59,7 @@ export type UpdateData<T extends Query> = {
 // or a callback with JSON methods.
 type UpdateColumn<T extends Query, Key extends keyof T['inputType']> =
   | T['inputType'][Key]
-  | RawExpression
+  | Expression
   | {
       [K in keyof Query]: K extends 'then'
         ? QueryThen<T['inputType'][Key]>
@@ -178,7 +178,7 @@ type UpdateArg<T extends Query> = T['meta']['hasWhere'] extends true
 // Type of argument for `updateRaw`.
 // not available when there are no conditions on the query.
 type UpdateRawArgs<T extends Query> = T['meta']['hasWhere'] extends true
-  ? [sql: RawExpression] | TemplateLiteralArgs
+  ? [sql: Expression] | TemplateLiteralArgs
   : never;
 
 // `update` and `updateOrThrow` methods output type.
@@ -230,7 +230,7 @@ const applyCountChange = <T extends Query>(
 // and there are no columns to update in the table of this query.
 const checkIfUpdateIsEmpty = (q: QueryData) => {
   return !(q as UpdateQueryData).updateData?.some(
-    (item) => isRaw(item) || !isObjectEmpty(item),
+    (item) => isExpression(item) || !isObjectEmpty(item),
   );
 };
 
@@ -347,7 +347,7 @@ export class Update {
         const value = set[key];
         if (
           typeof value !== 'function' &&
-          (typeof value !== 'object' || !value || !isRaw(value))
+          (typeof value !== 'object' || !value || !isExpression(value))
         ) {
           const encode = shape[key].encodeFn;
           if (encode) set[key] = encode(value);
@@ -421,7 +421,7 @@ export class Update {
     ...args: UpdateRawArgs<T>
   ): UpdateResult<T> {
     if (Array.isArray(args[0])) {
-      const sql = raw(args as TemplateLiteralArgs);
+      const sql = new RawSQL(args as TemplateLiteralArgs);
       return (this as T & { meta: { hasWhere: true } })._updateRaw(sql);
     }
 

@@ -7,8 +7,9 @@ import {
 import { pushQueryValue } from '../queryDataUtils';
 import { ColumnType, StringColumn } from '../columns';
 import { JsonItem, SelectQueryData } from '../sql';
-import { raw, StringKey, ColumnTypeBase } from 'orchid-core';
+import { StringKey, ColumnTypeBase } from 'orchid-core';
 import { QueryBase } from '../queryBase';
+import { RawSQL } from '../sql/rawSql';
 
 // union of column names that have a `jsonb` type
 type JsonColumnName<T extends QueryBase> = StringKey<
@@ -396,7 +397,7 @@ export abstract class JsonMethods {
     const q = this._wrap(this.baseQuery.clone()) as unknown as T;
     // json_agg is used instead of jsonb_agg because it is 2x faster, according to my benchmarks
     q._getOptional(
-      raw(
+      new RawSQL(
         queryTypeWithLimitOne[this.query.returnType]
           ? `row_to_json("t".*)`
           : coalesce !== false

@@ -11,9 +11,8 @@ import { addValue, q, qc, columnToSql } from './common';
 import { getQueryAs } from '../utils';
 import { processJoinItem } from './join';
 import { makeSql, ToSqlCtx } from './toSql';
-import { getRaw } from './rawSql';
 import { JoinedShapes, QueryData } from './data';
-import { isRaw, RawExpression, MaybeArray, toArray } from 'orchid-core';
+import { Expression, isExpression, MaybeArray, toArray } from 'orchid-core';
 import { QueryBase } from '../queryBase';
 
 export const pushWhereStatementSql = (
@@ -107,8 +106,8 @@ const processWhere = (
     return;
   }
 
-  if (isRaw(data)) {
-    ands.push(`${prefix}(${getRaw(data, ctx.values)})`);
+  if (isExpression(data)) {
+    ands.push(`${prefix}(${data.toSQL(ctx.values)})`);
     return;
   }
 
@@ -192,19 +191,15 @@ const processWhere = (
           `${prefix}EXISTS (SELECT 1 FROM ${target} WHERE ${conditions} LIMIT 1)`,
         );
       }
-    } else if (
-      typeof value === 'object' &&
-      value &&
-      value.constructor === Object
-    ) {
-      if (isRaw(value)) {
+    } else if (typeof value === 'object' && value && !(value instanceof Date)) {
+      if (isExpression(value)) {
         ands.push(
           `${prefix}${columnToSql(
             query,
             query.shape,
             key,
             quotedAs,
-          )} = ${getRaw(value, ctx.values)}`,
+          )} = ${value.toSQL(ctx.values)}`,
         );
       } else {
         let column = query.shape[key];
@@ -273,7 +268,7 @@ const pushIn = (
   values: unknown[],
   arg: {
     columns: string[];
-    values: unknown[][] | Query | RawExpression;
+    values: unknown[][] | Query | Expression;
   },
 ) => {
   let value: string;
@@ -286,8 +281,8 @@ const pushIn = (
       .join(', ')}`;
 
     if (arg.columns.length > 1) value = `(${value})`;
-  } else if (isRaw(arg.values)) {
-    value = getRaw(arg.values, values);
+  } else if (isExpression(arg.values)) {
+    value = arg.values.toSQL(values);
   } else {
     const sql = makeSql(arg.values, { values });
     value = `(${sql.text})`;

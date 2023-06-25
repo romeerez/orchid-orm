@@ -1,6 +1,6 @@
 import { BaseOperators, Operator } from './operators';
 import { Code } from './code';
-import { RawExpression } from '../raw';
+import { RawSQLBase } from '../raw';
 import { SetOptional, SomeIsTrue, StringKey } from '../utils';
 import { JSONTypeAny } from './json';
 import { QueryCommon } from '../query';
@@ -23,7 +23,7 @@ export type ColumnShapeOutput<Shape extends ColumnsShapeBase> = {
 export type PrimaryKeyColumn<T extends ColumnTypeBase> = Omit<T, 'data'> & {
   data: Omit<T['data'], 'isPrimaryKey' | 'default'> & {
     isPrimaryKey: true;
-    default: RawExpression;
+    default: RawSQLBase;
   };
 };
 
@@ -206,7 +206,7 @@ export type ColumnDataBase = {
   modifyQuery?: (q: QueryCommon) => void;
 
   // raw database check expression
-  check?: RawExpression;
+  check?: RawSQLBase;
 
   // if the column is of domain or other user-defined type
   isOfCustomType?: boolean;
@@ -334,7 +334,7 @@ export abstract class ColumnTypeBase<
    */
   default<
     T extends ColumnTypeBase,
-    Value extends T['type'] | null | RawExpression | (() => T['type']),
+    Value extends T['type'] | null | RawSQLBase | (() => T['type']),
   >(this: T, value: Value): ColumnWithDefault<T, Value> {
     return setColumnData(
       this,
@@ -359,7 +359,7 @@ export abstract class ColumnTypeBase<
    *
    * @param value - raw SQL expression
    */
-  check<T extends ColumnTypeBase>(this: T, value: RawExpression): T {
+  check<T extends ColumnTypeBase>(this: T, value: RawSQLBase): T {
     return setColumnData(this, 'check', value);
   }
 

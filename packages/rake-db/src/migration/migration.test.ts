@@ -6,7 +6,7 @@ import {
   resetDb,
   toLine,
 } from '../rake-db.test-utils';
-import { raw } from 'orchid-core';
+import { raw } from 'pqb';
 
 const db = getDb();
 
@@ -227,7 +227,7 @@ describe('migration', () => {
 
     it('should use changeTable to add and drop a check', async () => {
       await testUpAndDown(
-        (action) => db[action]('table', raw('check')),
+        (action) => db[action]('table', raw({ raw: 'check' })),
         () =>
           expectSql(`
             ALTER TABLE "table"
@@ -260,7 +260,7 @@ describe('migration', () => {
                 onDelete: 'CASCADE',
               },
             ],
-            check: raw('check'),
+            check: raw({ raw: 'check' }),
             dropMode: 'CASCADE',
           }),
         () =>

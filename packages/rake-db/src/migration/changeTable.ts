@@ -4,7 +4,6 @@ import {
   getTableData,
   TableData,
   quote,
-  getRaw,
   EnumColumn,
   UnknownColumn,
   columnTypes,
@@ -12,13 +11,13 @@ import {
 import {
   EmptyObject,
   emptyObject,
-  RawExpression,
-  isRaw,
   ColumnTypesBase,
   snakeCaseKey,
   toSnakeCase,
   deepCompare,
   consumeColumnName,
+  RawSQLBase,
+  isRawSQL,
 } from 'orchid-core';
 import {
   ChangeTableCallback,
@@ -173,8 +172,8 @@ const addOrDrop = (
 type Change = RakeDbAst.ChangeTableItem.Change & ChangeOptions;
 
 type ChangeOptions = {
-  usingUp?: RawExpression;
-  usingDown?: RawExpression;
+  usingUp?: RawSQLBase;
+  usingDown?: RawSQLBase;
 };
 
 const columnTypeToColumnChange = (
@@ -225,7 +224,7 @@ const tableChangeMethods = {
       ...options,
     };
   },
-  default(value: unknown | RawExpression): Change {
+  default(value: unknown | RawSQLBase): Change {
     return { type: 'change', from: { default: null }, to: { default: value } };
   },
   nullable(): Change {
@@ -492,7 +491,7 @@ const astToQueries = (
         alterTable.push(
           `ALTER COLUMN "${name}" TYPE ${type}${
             to.collate ? ` COLLATE ${quoteNameFromString(to.collate)}` : ''
-          }${item.using ? ` USING ${getRaw(item.using, values)}` : ''}`,
+          }${item.using ? ` USING ${item.using.toSQL(values)}` : ''}`,
         );
       }
 
@@ -509,8 +508,8 @@ const astToQueries = (
 
       if (from.default !== to.default) {
         const value =
-          typeof to.default === 'object' && to.default && isRaw(to.default)
-            ? getRaw(to.default, values)
+          typeof to.default === 'object' && to.default && isRawSQL(to.default)
+            ? to.default.toSQL(values)
             : quote(to.default);
 
         const expr =
@@ -540,8 +539,7 @@ const astToQueries = (
         }
         if (to.check) {
           alterTable.push(
-            `ADD CONSTRAINT "${checkName}"\n    CHECK (${getRaw(
-              to.check,
+            `ADD CONSTRAINT "${checkName}"\n    CHECK (${to.check.toSQL(
               values,
             )})`,
           );

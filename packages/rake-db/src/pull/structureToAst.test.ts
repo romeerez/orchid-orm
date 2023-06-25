@@ -8,13 +8,13 @@ import {
   DomainColumn,
   EnumColumn,
   IntegerColumn,
+  raw,
   SerialColumn,
   SmallSerialColumn,
   TextColumn,
   TimestampTZColumn,
   VarCharColumn,
 } from 'pqb';
-import { isRaw, raw, RawExpression } from 'orchid-core';
 import { structureToAst, StructureToAstCtx } from './structureToAst';
 import { RakeDbAst } from '../ast';
 import { getIndexName } from '../migration/migrationUtils';
@@ -35,6 +35,7 @@ import {
   view,
   collation,
 } from './pull.test-utils';
+import { isRawSQL, RawSQLBase } from 'orchid-core';
 
 const adapter = new Adapter({ databaseURL: 'file:path' });
 const query = jest.fn().mockImplementation(() => ({ rows: [] }));
@@ -234,7 +235,9 @@ describe('structureToAst', () => {
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
-      expect(ast.shape.column.data.check).toEqual(raw(check.check.expression));
+      expect(ast.shape.column.data.check).toEqual(
+        raw({ raw: check.check.expression }),
+      );
     });
 
     it('should support column of custom type', async () => {
@@ -297,8 +300,8 @@ describe('structureToAst', () => {
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
       const { default: def } = ast.shape.timestamp.data;
-      expect(def && typeof def === 'object' && isRaw(def)).toBe(true);
-      expect((def as RawExpression).__raw).toBe('now()');
+      expect(def && typeof def === 'object' && isRawSQL(def)).toBe(true);
+      expect((def as RawSQLBase)._sql).toBe('now()');
     });
 
     it('should replace current_timestamp and transaction_timestamp() with now() in timestamp default', async () => {
@@ -320,11 +323,9 @@ describe('structureToAst', () => {
 
       const [ast] = (await structureToAst(ctx, db)) as [RakeDbAst.Table];
 
-      expect((ast.shape.one.data.default as RawExpression).__raw).toBe('now()');
-      expect((ast.shape.two.data.default as RawExpression).__raw).toBe('now()');
-      expect((ast.shape.three.data.default as RawExpression).__raw).toBe(
-        'now()',
-      );
+      expect((ast.shape.one.data.default as RawSQLBase)._sql).toBe('now()');
+      expect((ast.shape.two.data.default as RawSQLBase)._sql).toBe('now()');
+      expect((ast.shape.three.data.default as RawSQLBase)._sql).toBe('now()');
     });
 
     describe('serial column', () => {
@@ -1036,7 +1037,7 @@ describe('structureToAst', () => {
               onDelete: 'CASCADE',
             },
           },
-          check: raw('check'),
+          check: raw({ raw: 'check' }),
         },
       ]);
     });
@@ -1127,8 +1128,8 @@ describe('structureToAst', () => {
         baseType: expect.any(IntegerColumn),
         notNull: true,
         collation: 'C',
-        default: raw('123'),
-        check: raw('VALUE = 42'),
+        default: raw({ raw: '123' }),
+        check: raw({ raw: 'VALUE = 42' }),
       });
     });
 

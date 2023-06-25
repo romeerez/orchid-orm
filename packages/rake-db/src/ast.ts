@@ -6,8 +6,8 @@ import {
   SingleColumnIndexOptions,
   TableData,
 } from 'pqb';
-import { RawExpression } from 'orchid-core';
 import { DropMode } from './migration/migration';
+import { RawSQLBase } from 'orchid-core';
 
 export type RakeDbAst =
   | RakeDbAst.Table
@@ -60,7 +60,7 @@ export namespace RakeDbAst {
       name?: string;
       from: ColumnChange;
       to: ColumnChange;
-      using?: RawExpression;
+      using?: RawSQLBase;
     };
 
     export type Rename = {
@@ -73,12 +73,12 @@ export namespace RakeDbAst {
     column?: ColumnType;
     type?: string;
     collate?: string;
-    default?: unknown | RawExpression;
+    default?: unknown | RawSQLBase;
     nullable?: boolean;
     comment?: string | null;
     compression?: string;
     primaryKey?: boolean;
-    check?: RawExpression;
+    check?: RawSQLBase;
     foreignKeys?: ({
       table: string;
       columns: string[];
@@ -130,8 +130,8 @@ export namespace RakeDbAst {
     baseType: ColumnType;
     notNull?: boolean;
     collation?: string;
-    default?: RawExpression;
-    check?: RawExpression;
+    default?: RawSQLBase;
+    check?: RawSQLBase;
     cascade?: boolean;
   };
 
@@ -192,7 +192,7 @@ export namespace RakeDbAst {
     schema?: string;
     name: string;
     shape: ColumnsShape;
-    sql: RawExpression;
+    sql: RawSQLBase;
     options: ViewOptions;
   };
 

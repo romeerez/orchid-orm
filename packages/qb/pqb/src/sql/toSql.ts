@@ -15,10 +15,9 @@ import { pushDeleteSql } from './delete';
 import { pushTruncateSql } from './truncate';
 import { pushColumnInfoSql } from './columnInfo';
 import { pushOrderBySql } from './orderBy';
-import { getRaw } from './rawSql';
 import { QueryData } from './data';
 import { pushCopySql } from './copy';
-import { isRaw, Sql } from 'orchid-core';
+import { isExpression, Sql } from 'orchid-core';
 import { Db } from '../db';
 
 export type ToSqlCtx = {
@@ -142,8 +141,8 @@ export const makeSql = (table: Query, options?: ToSqlOptionsInternal): Sql => {
 
   if (query.group) {
     const group = query.group.map((item) =>
-      typeof item === 'object' && isRaw(item)
-        ? getRaw(item, values)
+      isExpression(item)
+        ? item.toSQL(values)
         : columnToSql(table.query, table.query.shape, item as string, quotedAs),
     );
     sql.push(`GROUP BY ${group.join(', ')}`);
@@ -168,8 +167,8 @@ export const makeSql = (table: Query, options?: ToSqlOptionsInternal): Sql => {
   if (query.union) {
     query.union.forEach((item) => {
       let itemSql: string;
-      if (isRaw(item.arg)) {
-        itemSql = getRaw(item.arg, values);
+      if (isExpression(item.arg)) {
+        itemSql = item.arg.toSQL(values);
       } else {
         const argSql = makeSql(item.arg, { values });
         itemSql = argSql.text;
@@ -198,11 +197,12 @@ export const makeSql = (table: Query, options?: ToSqlOptionsInternal): Sql => {
     sql.push('FOR', query.for.type);
     const { tableNames } = query.for;
     if (tableNames) {
-      if (isRaw(tableNames)) {
-        sql.push('OF', getRaw(tableNames, values));
-      } else {
-        sql.push('OF', tableNames.map(q).join(', '));
-      }
+      sql.push(
+        'OF',
+        isExpression(tableNames)
+          ? tableNames.toSQL(values)
+          : tableNames.map(q).join(', '),
+      );
     }
     if (query.for.mode) sql.push(query.for.mode);
   }

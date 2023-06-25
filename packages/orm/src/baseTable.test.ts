@@ -73,9 +73,9 @@ describe('baseTable', () => {
         },
       );
 
-      const value = user.sql((t) => t.type())``;
+      const value = user.sql``.type((t) => t.type());
 
-      expect(value.__column).toBe(type);
+      expect(value._type).toBe(type);
     });
 
     it('should return date as string by default', async () => {

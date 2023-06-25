@@ -1,6 +1,5 @@
 import { singleQuote, toArray } from '../utils';
 import { ColumnChain, ColumnDataBase } from './columnType';
-import { isRaw, RawExpression } from '../raw';
 import {
   arrayMethodNames,
   ArrayMethodsData,
@@ -13,9 +12,16 @@ import {
   numberMethodNames,
   stringMethodNames,
 } from './columnDataTypes';
+import { isRawSQL } from '../raw';
 
+// Type for composing code pieces for the code generation
 export type Code = string | Code[];
 
+/**
+ * Push code: this will append a code string to the last code array element when possible.
+ * @param code - array of code to push into
+ * @param add - code to push
+ */
 export const addCode = (code: Code[], add: Code) => {
   if (typeof add === 'object') {
     code.push(add);
@@ -29,6 +35,13 @@ export const addCode = (code: Code[], add: Code) => {
   }
 };
 
+/**
+ * Turn column validations chain into code
+ *
+ * @param chain - column validation chain
+ * @param t - column types variable name
+ * @param code - append the chain code into the existing code
+ */
 export const columnChainToCode = (
   chain: ColumnChain,
   t: string,
@@ -61,6 +74,13 @@ export const columnChainToCode = (
     : result;
 };
 
+/**
+ * Convert the code item into string.
+ *
+ * @param code - code item
+ * @param tabs - each new line will be prefixed with the tabs. Each element of the code represents a new line
+ * @param shift - array elements of the given code will be shifted with this sting
+ */
 export const codeToString = (
   code: Code,
   tabs: string,
@@ -80,12 +100,18 @@ export const codeToString = (
   return lines.length ? lines.join('\n') : '';
 };
 
+/**
+ * Convert a column default value into code string.
+ *
+ * @param t - column types variable name
+ * @param value - column default
+ */
 export const columnDefaultArgumentToCode = (
   t: string,
   value: unknown,
 ): string => {
-  if (typeof value === 'object' && value && isRaw(value)) {
-    return rawToCode(t, value);
+  if (typeof value === 'object' && value && isRawSQL(value)) {
+    return value.toCode(t);
   } else if (typeof value === 'function') {
     return value.toString();
   } else if (typeof value === 'string') {
@@ -95,40 +121,13 @@ export const columnDefaultArgumentToCode = (
   }
 };
 
-export const rawToCode = (t: string, raw: RawExpression): string => {
-  const sql = raw.__raw;
-  const values = raw.__values;
-
-  let code = `${t}.sql`;
-
-  if (typeof sql === 'string' || values) code += '(';
-
-  if (values || typeof sql === 'string') {
-    const obj: { values?: Record<string, unknown> | false; raw?: string } = {
-      values,
-    };
-    if (typeof sql === 'string') obj.raw = sql;
-    code += `${JSON.stringify(obj)}`;
-  }
-
-  if (typeof sql === 'string' || values) code += ')';
-
-  if (typeof sql !== 'string') {
-    code += '`';
-
-    const parts = sql[0];
-    let i = 0;
-    for (let last = parts.length - 1; i < last; i++) {
-      code += parts[i] + `\${${sql[i + 1]}}`;
-    }
-    code += parts[i];
-
-    code += '`';
-  }
-
-  return code;
-};
-
+/**
+ * Build a function that will generate a code for a specific column type.
+ *
+ * @param methodNames - array of column method names to convert to code
+ * @param skip - allows skipping some methods
+ * @param aliases - provide aliases for specific methods
+ */
 export const columnMethodsToCode = <T extends ColumnDataBase>(
   methodNames: (keyof T)[],
   skip?: Record<string, true>,
@@ -148,6 +147,13 @@ export const columnMethodsToCode = <T extends ColumnDataBase>(
   };
 };
 
+/**
+ * Converts a single column method into code
+ *
+ * @param data - column `data` object that has info about applied methods
+ * @param key - name of the method
+ * @param name - optional alias for this method
+ */
 const columnMethodToCode = <T extends ColumnDataBase, K extends keyof T>(
   data: T,
   key: K,
@@ -194,24 +200,36 @@ const columnMethodToCode = <T extends ColumnDataBase, K extends keyof T>(
   return `.${name}(${params})`;
 };
 
+// Function to encode string column methods
 export const stringDataToCode =
   columnMethodsToCode<BaseStringData>(stringMethodNames);
 
+// Function to encode numeric column methods.
+// `int` method is skipped because it's defined by the column type itself.
+// Alias `lte` and `gte` to `max` and `min` for readability.
 export const numberDataToCode = columnMethodsToCode<BaseNumberData>(
   numberMethodNames,
   { int: true },
   { lte: 'max', gte: 'min' },
 );
 
+// Function to encode date column methods
 export const dateDataToCode =
   columnMethodsToCode<DateColumnData>(dateMethodNames);
 
+// Function to encode array column methods
 export const arrayDataToCode =
   columnMethodsToCode<ArrayMethodsData>(arrayMethodNames);
 
+// Function to encode JSON type `set` column methods
 export const dataOfSetToCode =
   columnMethodsToCode<MethodsDataOfSet>(methodNamesOfSet);
 
+/**
+ * Converts column type and JSON type custom errors into code
+ *
+ * @param errors - custom error messages
+ */
 export const columnErrorMessagesToCode = (
   errors: Record<string, string>,
 ): Code => {

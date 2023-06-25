@@ -1,5 +1,5 @@
 import { Query } from '../query';
-import { isRaw } from 'orchid-core';
+import { isExpression } from 'orchid-core';
 
 export type ClearStatement =
   | 'with'
@@ -28,7 +28,7 @@ export class Clear {
       } else if (clear === 'counters') {
         if ('type' in this.query && this.query.type === 'update') {
           this.query.updateData = this.query.updateData.filter((item) => {
-            if (!isRaw(item) && typeof item !== 'function') {
+            if (!isExpression(item) && typeof item !== 'function') {
               let removed = false;
               for (const key in item) {
                 const value = item[key] as Record<string, unknown>;

@@ -1637,7 +1637,7 @@ export const listArticlesRoute = routeHandler(
               ? // if currentUserId is defined, return exists query
                 q.favorites.where({ userId: currentUserId }).exists()
               : // if no currentUserId, return raw 'false' SQL of boolean type
-                q.sql((t) => t.boolean())`false`,
+                q.sql`false`.type((t) => t.boolean()),
           author: (q) =>
             q.author.select('username', {
               // we load the following similar to the favorited above

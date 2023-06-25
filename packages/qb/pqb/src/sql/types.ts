@@ -1,8 +1,8 @@
 import { Query, QueryWithTable, SelectableBase } from '../query';
 import { RelationQuery } from '../relations';
-import { Expression } from '../utils';
+import { SelectableOrExpression } from '../utils';
 import { SelectQueryData } from './data';
-import { ColumnTypeBase, MaybeArray, RawExpression } from 'orchid-core';
+import { ColumnTypeBase, Expression, MaybeArray } from 'orchid-core';
 import { QueryBase } from '../queryBase';
 
 // used in `from` logic to decide if convert query to sql or just write table name
@@ -41,7 +41,7 @@ const queryKeysOfNotSimpleQuery: (keyof SelectQueryData)[] = [
 export type WithItem = [
   as: string,
   options: WithOptions,
-  query: Query | RawExpression,
+  query: Query | Expression,
 ];
 
 export type WithOptions = {
@@ -102,10 +102,10 @@ export type SelectItem =
   | string
   | RelationQuery
   | AggregateItem
-  | { selectAs: Record<string, string | Query | RawExpression> }
+  | { selectAs: Record<string, string | Query | Expression> }
   | SelectFunctionItem
   | JsonItem
-  | RawExpression;
+  | Expression;
 
 export type SelectFunctionItem = {
   function: string;
@@ -122,21 +122,21 @@ export type SimpleJoinItem = {
     | [
         arg: string | QueryWithTable,
         conditions:
-          | Record<string, string | RawExpression>
-          | RawExpression
+          | Record<string, string | Expression>
+          | Expression
           | ((q: unknown) => QueryBase)
           | true,
       ]
     | [
         arg: string | QueryWithTable,
-        leftColumn: string | RawExpression,
-        rightColumn: string | RawExpression,
+        leftColumn: string | Expression,
+        rightColumn: string | Expression,
       ]
     | [
         arg: string | QueryWithTable,
-        leftColumn: string | RawExpression,
+        leftColumn: string | Expression,
         op: string,
-        rightColumn: string | RawExpression,
+        rightColumn: string | Expression,
       ];
   // available only for QueryWithTable as first argument
   isSubQuery: boolean;
@@ -148,9 +148,7 @@ export type WhereItem =
   | (Omit<
       Record<
         string,
-        | unknown
-        | Record<string, unknown | Query | RawExpression>
-        | RawExpression
+        unknown | Record<string, unknown | Query | Expression> | Expression
       >,
       'NOT' | 'AND' | 'OR' | 'IN' | 'EXISTS' | 'ON' | 'ON_JSON_PATH_EQUALS'
     > & {
@@ -163,11 +161,11 @@ export type WhereItem =
     })
   | ((q: unknown) => QueryBase)
   | Query
-  | RawExpression;
+  | Expression;
 
 export type WhereInItem = {
   columns: string[];
-  values: unknown[][] | Query | RawExpression;
+  values: unknown[][] | Query | Expression;
 };
 
 export type WhereJsonPathEqualsItem = [
@@ -202,12 +200,12 @@ export type AggregateItemOptions = {
 
 export type SortDir = 'ASC' | 'DESC' | 'ASC NULLS FIRST' | 'DESC NULLS LAST';
 
-export type OrderItem = string | Record<string, SortDir> | RawExpression;
+export type OrderItem = string | Record<string, SortDir> | Expression;
 
 export type AggregateItemArg =
-  | Expression
-  | Record<string, Expression>
-  | [Expression, string];
+  | SelectableOrExpression
+  | Record<string, SelectableOrExpression>
+  | [SelectableOrExpression, string];
 
 export type AggregateItem = {
   function: string;
@@ -229,16 +227,16 @@ export type HavingItem =
   | Record<string, HavingItemObject>
   | { count?: number | HavingItemObject }
   | Query
-  | RawExpression;
+  | Expression;
 
-export type WindowItem = Record<string, WindowDeclaration | RawExpression>;
+export type WindowItem = Record<string, WindowDeclaration | Expression>;
 
 export type WindowDeclaration = {
-  partitionBy?: Expression | Expression[];
+  partitionBy?: SelectableOrExpression | SelectableOrExpression[];
   order?: OrderItem;
 };
 
-export type UnionItem = Query | RawExpression;
+export type UnionItem = Query | Expression;
 
 export type UnionKind =
   | 'UNION'
@@ -248,10 +246,10 @@ export type UnionKind =
   | 'EXCEPT'
   | 'EXCEPT ALL';
 
-export type OnConflictItem = string | string[] | RawExpression;
+export type OnConflictItem = string | string[] | Expression;
 
 export type OnConflictMergeUpdate =
   | string
   | string[]
   | Record<string, unknown>
-  | RawExpression;
+  | Expression;

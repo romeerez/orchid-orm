@@ -1,6 +1,6 @@
 import { Query } from '../query';
 import { pushQueryArray } from '../queryDataUtils';
-import { RawExpression } from 'orchid-core';
+import { Expression } from 'orchid-core';
 
 // argument of `union`-like query methods.
 // it supports query objects with the same result as in the previous query,
@@ -9,7 +9,7 @@ export type UnionArg<T extends Query> =
   | (Omit<Query, 'result'> & {
       result: { [K in keyof T['result']]: Pick<T['result'][K], 'dataType'> };
     })
-  | RawExpression;
+  | Expression;
 
 export class Union {
   /**

@@ -4,12 +4,12 @@ import { Query } from '../query';
 import { selectToSql } from './select';
 import { makeSql, ToSqlCtx } from './toSql';
 import { pushQueryValue } from '../queryDataUtils';
-import { getRaw } from './rawSql';
 import { InsertQueryData, QueryData, QueryHookSelect } from './data';
-import { emptyArray, isRaw, raw, RawExpression } from 'orchid-core';
+import { emptyArray, Expression, isExpression } from 'orchid-core';
 import { ColumnData } from '../columns';
 import { joinSubQuery, resolveSubQueryCallback } from '../utils';
 import { Db } from '../db';
+import { RawSQL } from './rawSql';
 
 // reuse array for the columns list
 const quotedColumns: string[] = [];
@@ -63,13 +63,13 @@ export const pushInsertSql = (
       pushQueryValue(
         q,
         'select',
-        raw(encodeRow(ctx, q, QueryClass, v[0], runtimeDefaults), false),
+        new RawSQL(encodeRow(ctx, q, QueryClass, v[0], runtimeDefaults), false),
       );
     }
 
     ctx.sql.push(makeSql(q, { values: ctx.values }).text);
-  } else if (isRaw(values)) {
-    let valuesSql = getRaw(values, ctx.values);
+  } else if (isExpression(values)) {
+    let valuesSql = values.toSQL(ctx.values);
 
     if (runtimeDefaults) {
       valuesSql += `, ${runtimeDefaults
@@ -78,24 +78,24 @@ export const pushInsertSql = (
     }
 
     ctx.sql.push(`VALUES (${valuesSql})`);
-  } else if (isRaw(values[0])) {
+  } else if (isExpression(values[0])) {
     let sql;
 
     if (runtimeDefaults) {
       const { values: v } = ctx;
-      sql = (values as RawExpression[])
+      sql = (values as Expression[])
         .map(
           (raw) =>
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            `(${getRaw(raw, v)}, ${runtimeDefaults!
+            `(${raw.toSQL(v)}, ${runtimeDefaults!
               .map((fn) => addValue(v, fn()))
               .join(', ')})`,
         )
         .join(', ');
     } else {
       const { values: v } = ctx;
-      sql = (values as RawExpression[])
-        .map((raw) => `(${getRaw(raw, v)})`)
+      sql = (values as Expression[])
+        .map((raw) => `(${raw.toSQL(v)})`)
         .join(', ');
     }
 
@@ -128,7 +128,7 @@ export const pushInsertSql = (
           )})`,
         );
       } else {
-        ctx.sql.push(getRaw(expr, ctx.values));
+        ctx.sql.push(expr.toSQL(ctx.values));
       }
     } else if (type === 'merge') {
       // TODO: optimize, unique columns could be stored in Query.internal
@@ -171,8 +171,8 @@ export const pushInsertSql = (
             const name = shape[item]?.data.name || item;
             return sql + (i ? ', ' : '') + `"${name}" = excluded."${name}"`;
           }, '');
-        } else if (isRaw(update)) {
-          set = getRaw(update, ctx.values);
+        } else if (isExpression(update)) {
+          set = update.toSQL(ctx.values);
         } else {
           const arr: string[] = [];
           for (const key in update) {

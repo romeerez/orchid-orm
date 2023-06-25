@@ -272,7 +272,7 @@ db.user.join(db.message, {
   // with table names:
   'message.userId': 'user.id',
 
-  // value can be a raw expression:
+  // value can be a raw SQL expression:
   text: db.user.sql`lower("user"."name")`,
 });
 ```

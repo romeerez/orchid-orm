@@ -6,4 +6,5 @@ export {
   OrchidOrmError,
   OrchidOrmInternalError,
   testTransaction,
+  raw,
 } from 'pqb';

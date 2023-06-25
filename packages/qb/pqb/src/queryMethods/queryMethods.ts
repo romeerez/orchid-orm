@@ -9,7 +9,7 @@ import {
   SetQueryReturnsVoid,
   SetQueryTableAlias,
 } from '../query';
-import { Expression } from '../utils';
+import { SelectableOrExpression } from '../utils';
 import {
   SelectItem,
   SelectQueryData,
@@ -46,30 +46,31 @@ import { MergeQuery, MergeQueryMethods } from './merge';
 import { RawSqlMethods } from './rawSql';
 import { CopyMethods } from './copy';
 import {
-  RawExpression,
-  raw,
   applyMixins,
   Sql,
   QueryThen,
   ColumnsShapeBase,
   TemplateLiteralArgs,
+  ColumnTypesBase,
+  Expression,
 } from 'orchid-core';
 import { AsMethods } from './as';
 import { QueryBase } from '../queryBase';
 import { OrchidOrmInternalError } from '../errors';
 import { TransformMethods } from './transform';
+import { RawSQL } from '../sql/rawSql';
 
 // argument of the window method
 // it is an object where keys are name of windows
 // and values can be a window options or a raw SQL
 export type WindowArg<T extends Query> = Record<
   string,
-  WindowArgDeclaration<T> | RawExpression
+  WindowArgDeclaration<T> | Expression
 >;
 
 // SQL window options to specify partitionBy and order of the window
 export type WindowArgDeclaration<T extends Query = Query> = {
-  partitionBy?: Expression<T> | Expression<T>[];
+  partitionBy?: SelectableOrExpression<T> | SelectableOrExpression<T>[];
   order?: OrderArg<T>;
 };
 
@@ -94,12 +95,12 @@ export type OrderArg<
   | {
       [K in Key]?: SortDir;
     }
-  | RawExpression;
+  | Expression;
 
 export type OrderArgs<T extends Query> = OrderArg<T>[] | TemplateLiteralArgs;
 
 type FindArgs<T extends Query> =
-  | [T['shape'][T['singlePrimaryKey']]['type'] | RawExpression]
+  | [T['shape'][T['singlePrimaryKey']]['type'] | Expression]
   | TemplateLiteralArgs;
 
 type QueryHelper<T extends Query, Args extends unknown[], Result> = <
@@ -115,7 +116,7 @@ type QueryHelper<T extends Query, Args extends unknown[], Result> = <
   ...args: Args
 ) => Result extends Query ? MergeQuery<Q, Result> : Result;
 
-export interface QueryMethods
+export interface QueryMethods<CT extends ColumnTypesBase>
   extends Omit<AsMethods, 'result'>,
     Aggregate,
     Select,
@@ -141,11 +142,11 @@ export interface QueryMethods
     QueryUpsertOrCreate,
     QueryGet,
     MergeQueryMethods,
-    RawSqlMethods,
+    RawSqlMethods<CT>,
     CopyMethods,
     TransformMethods {}
 
-export class QueryMethods {
+export class QueryMethods<CT extends ColumnTypesBase> {
   /**
    * `.all` is a default behavior, that returns an array of objects:
    *
@@ -231,13 +232,13 @@ export class QueryMethods {
    * ```
    * @param select - column name or a raw SQL
    */
-  pluck<T extends Query, S extends Expression<T>>(
+  pluck<T extends Query, S extends SelectableOrExpression<T>>(
     this: T,
     select: S,
   ): SetQueryReturnsPluck<T, S> {
     return this.clone()._pluck(select);
   }
-  _pluck<T extends Query, S extends Expression<T>>(
+  _pluck<T extends Query, S extends SelectableOrExpression<T>>(
     this: T,
     select: S,
   ): SetQueryReturnsPluck<T, S> {
@@ -307,10 +308,16 @@ export class QueryMethods {
    *
    * @param columns - column names or a raw SQL
    */
-  distinct<T extends Query>(this: T, ...columns: Expression<T>[]): T {
+  distinct<T extends Query>(
+    this: T,
+    ...columns: SelectableOrExpression<T>[]
+  ): T {
     return this.clone()._distinct(...columns);
   }
-  _distinct<T extends Query>(this: T, ...columns: Expression<T>[]): T {
+  _distinct<T extends Query>(
+    this: T,
+    ...columns: SelectableOrExpression<T>[]
+  ): T {
     return pushQueryArray(this, 'distinct', columns as string[]);
   }
 
@@ -336,7 +343,7 @@ export class QueryMethods {
   ): SetQueryReturnsOne<WhereResult<T>> {
     const [value] = args;
     if (Array.isArray(value)) {
-      return this._find(raw(args as TemplateLiteralArgs));
+      return this._find(new RawSQL(args as TemplateLiteralArgs));
     }
 
     if (value === null || value === undefined) {
@@ -466,10 +473,10 @@ export class QueryMethods {
    *
    * @param columns - column names or a raw SQL
    */
-  group<T extends Query>(this: T, ...columns: Expression<T>[]): T {
+  group<T extends Query>(this: T, ...columns: SelectableOrExpression<T>[]): T {
     return this.clone()._group(...columns);
   }
-  _group<T extends Query>(this: T, ...columns: Expression<T>[]): T {
+  _group<T extends Query>(this: T, ...columns: SelectableOrExpression<T>[]): T {
     return pushQueryArray(this, 'group', columns);
   }
 
@@ -548,7 +555,7 @@ export class QueryMethods {
   }
   _order<T extends Query>(this: T, ...args: OrderArgs<T>): T {
     if (Array.isArray(args[0])) {
-      return this._order(raw(args as TemplateLiteralArgs));
+      return this._order(new RawSQL(args as TemplateLiteralArgs));
     }
     return pushQueryArray(this, 'order', args);
   }
@@ -591,9 +598,9 @@ export class QueryMethods {
     return this.clone()._exists();
   }
   _exists<T extends Query>(this: T): SetQueryReturnsColumn<T, BooleanColumn> {
-    const q = this._getOptional(raw('true'));
+    const q = this._getOptional(new RawSQL('true'));
     q.query.notFoundDefault = false;
-    q.query.coalesceValue = raw('false');
+    q.query.coalesceValue = new RawSQL('false');
     return q as unknown as SetQueryReturnsColumn<T, BooleanColumn>;
   }
 

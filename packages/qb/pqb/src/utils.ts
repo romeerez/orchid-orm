@@ -1,12 +1,8 @@
 import { cloneQueryArrays, QueryData, toSqlCacheKey } from './sql';
 import type { Query, Selectable } from './query';
-import type {
-  RawExpression,
-  ColumnOutput,
-  ColumnTypeBase,
-  StringKey,
-} from 'orchid-core';
+import type { ColumnOutput, ColumnTypeBase, StringKey } from 'orchid-core';
 import { BaseRelation } from './relations';
+import { Expression } from 'orchid-core';
 
 export type AliasOrTable<T extends Pick<Query, 'table' | 'meta'>> =
   T['meta']['as'] extends string
@@ -15,10 +11,10 @@ export type AliasOrTable<T extends Pick<Query, 'table' | 'meta'>> =
     ? T['table']
     : never;
 
-export type Expression<
+export type SelectableOrExpression<
   T extends Query = Query,
   C extends ColumnTypeBase = ColumnTypeBase,
-> = StringKey<keyof T['selectable']> | RawExpression<C>;
+> = '*' | StringKey<keyof T['selectable']> | Expression<C>;
 
 export type ExpressionOfType<T extends Query, C extends ColumnTypeBase, Type> =
   | {
@@ -28,7 +24,7 @@ export type ExpressionOfType<T extends Query, C extends ColumnTypeBase, Type> =
         ? K
         : never;
     }[Selectable<T>]
-  | RawExpression<C>;
+  | Expression<C>;
 
 export type NumberExpression<
   T extends Query,
@@ -47,10 +43,10 @@ export type BooleanExpression<
 
 export type ExpressionOutput<
   T extends Query,
-  Expr extends Expression<T>,
+  Expr extends SelectableOrExpression<T>,
 > = Expr extends keyof T['selectable']
   ? T['selectable'][Expr]['column']
-  : Expr extends RawExpression<infer ColumnTypeBase>
+  : Expr extends Expression<infer ColumnTypeBase>
   ? ColumnTypeBase
   : never;
 

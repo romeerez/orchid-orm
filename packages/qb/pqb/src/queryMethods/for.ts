@@ -1,6 +1,6 @@
 import { Query } from '../query';
 import { SelectQueryData } from '../sql';
-import { RawExpression } from 'orchid-core';
+import { Expression } from 'orchid-core';
 
 type ForQueryBuilder<Q extends Query> = Q & {
   noWait<T extends ForQueryBuilder<Q>>(this: T): T;
@@ -12,7 +12,7 @@ type ForQueryBuilder<Q extends Query> = Q & {
 const forQueryBuilder = <T extends Query>(
   q: T,
   type: Exclude<SelectQueryData['for'], undefined>['type'],
-  tableNames?: string[] | RawExpression,
+  tableNames?: string[] | Expression,
 ) => {
   (q.query as SelectQueryData).for = { type, tableNames };
   q.baseQuery = Object.create(q.baseQuery);
@@ -43,56 +43,56 @@ const forQueryBuilder = <T extends Query>(
 export class For {
   forUpdate<T extends Query>(
     this: T,
-    tableNames?: string[] | RawExpression,
+    tableNames?: string[] | Expression,
   ): ForQueryBuilder<T> {
     return this.clone()._forUpdate(tableNames);
   }
 
   _forUpdate<T extends Query>(
     this: T,
-    tableNames?: string[] | RawExpression,
+    tableNames?: string[] | Expression,
   ): ForQueryBuilder<T> {
     return forQueryBuilder(this, 'UPDATE', tableNames);
   }
 
   forNoKeyUpdate<T extends Query>(
     this: T,
-    tableNames?: string[] | RawExpression,
+    tableNames?: string[] | Expression,
   ): ForQueryBuilder<T> {
     return this.clone()._forNoKeyUpdate(tableNames);
   }
 
   _forNoKeyUpdate<T extends Query>(
     this: T,
-    tableNames?: string[] | RawExpression,
+    tableNames?: string[] | Expression,
   ): ForQueryBuilder<T> {
     return forQueryBuilder(this, 'NO KEY UPDATE', tableNames);
   }
 
   forShare<T extends Query>(
     this: T,
-    tableNames?: string[] | RawExpression,
+    tableNames?: string[] | Expression,
   ): ForQueryBuilder<T> {
     return this.clone()._forShare(tableNames);
   }
 
   _forShare<T extends Query>(
     this: T,
-    tableNames?: string[] | RawExpression,
+    tableNames?: string[] | Expression,
   ): ForQueryBuilder<T> {
     return forQueryBuilder(this, 'SHARE', tableNames);
   }
 
   forKeyShare<T extends Query>(
     this: T,
-    tableNames?: string[] | RawExpression,
+    tableNames?: string[] | Expression,
   ): ForQueryBuilder<T> {
     return this.clone()._forKeyShare(tableNames);
   }
 
   _forKeyShare<T extends Query>(
     this: T,
-    tableNames?: string[] | RawExpression,
+    tableNames?: string[] | Expression,
   ): ForQueryBuilder<T> {
     return forQueryBuilder(this, 'KEY SHARE', tableNames);
   }

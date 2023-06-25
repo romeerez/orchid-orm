@@ -20,7 +20,7 @@ const objects: { id: number }[] = await db.table
   .select('id')
   .createMany([one, two]);
 
-// returns an array of objects as well for raw values:
+// returns an array of objects as well for raw SQL values:
 const objects2: { id: number }[] = await db.table.select('id').createRaw({
   columns: ['name', 'password'],
   values: db.table.sql`'Joe', 'asdfqwer'`,
@@ -72,7 +72,7 @@ const manyRecords = await db.table.createMany([
 
 [//]: # 'has JSDoc'
 
-`createRaw` is for creating one record with a raw expression.
+`createRaw` is for creating one record with a raw SQL expression.
 
 Provided SQL will be wrapped into parens for a single `VALUES` record.
 
@@ -91,7 +91,7 @@ const oneRecord = await db.table.createRaw({
 
 [//]: # 'has JSDoc'
 
-`createRaw` is for creating many record with raw expressions.
+`createRaw` is for creating many record with raw SQL expressions.
 
 Takes array of SQL expressions, each of them will be wrapped into parens for `VALUES` records.
 
@@ -213,7 +213,7 @@ db.table.create(data).onConfict('email');
 // array of columns:
 db.table.create(data).onConfict(['email', 'name']);
 
-// raw expression:
+// raw SQL expression:
 db.table.create(data).onConfict(db.table.sql`(email) where condition`);
 ```
 
@@ -358,7 +358,7 @@ db.table
   .where({ updatedAt: { lt: timestamp } });
 ```
 
-`.merge` also accepts raw expression:
+`.merge` also accepts raw SQL expression:
 
 ```ts
 db.table
@@ -473,7 +473,7 @@ db.table.findBy({ id: 1 }).update({
 
 [//]: # 'has JSDoc'
 
-`updateRaw` is for updating records with raw expression.
+`updateRaw` is for updating records with raw SQL expression.
 
 The behavior is the same as a regular `update` method has:
 `find` or `where` must precede calling this method,

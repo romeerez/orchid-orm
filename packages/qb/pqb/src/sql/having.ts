@@ -1,10 +1,9 @@
 import { AggregateItemOptions, HavingItem } from './types';
-import { getRaw } from './rawSql';
 import { aggregateToSql } from './aggregate';
 import { addValue, q } from './common';
 import { ToSqlCtx } from './toSql';
 import { SelectQueryData } from './data';
-import { Operator, isRaw, RawExpression, emptyObject } from 'orchid-core';
+import { Operator, emptyObject, isExpression, Expression } from 'orchid-core';
 import { QueryBase } from '../queryBase';
 
 const aggregateOptionNames: (keyof AggregateItemOptions)[] = [
@@ -55,13 +54,13 @@ export const havingToSql = (
         return;
       }
 
-      if (isRaw(item)) {
-        ands.push(getRaw(item, ctx.values));
+      if (isExpression(item)) {
+        ands.push(item.toSQL(ctx.values));
         return;
       }
 
       for (const key in item) {
-        const columns = item[key as keyof Exclude<HavingItem, RawExpression>];
+        const columns = item[key as keyof Exclude<HavingItem, Expression>];
         if (typeof columns === 'object') {
           for (const column in columns) {
             const valueOrOptions = columns[column as keyof typeof columns];

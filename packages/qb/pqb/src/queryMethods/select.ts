@@ -14,27 +14,26 @@ import { pushQueryArray } from '../queryDataUtils';
 import { SelectItem, SelectQueryData } from '../sql';
 import { isRequiredRelationKey, Relation } from '../relations';
 import { QueryResult } from '../adapter';
-import { UnknownColumn } from '../columns/unknown';
 import {
   applyTransforms,
   ColumnsShapeBase,
   ColumnTypeBase,
   emptyArray,
   EmptyObject,
+  Expression,
   getValueKey,
-  isRaw,
+  isExpression,
   NullableColumn,
   QueryCatch,
   QueryThen,
-  raw,
-  RawExpression,
   setColumnData,
   setParserToQuery,
   StringKey,
 } from 'orchid-core';
 import { QueryBase } from '../queryBase';
 import { _joinLateral } from './_join';
-import { resolveSubQueryCallback } from '../utils';
+import { resolveSubQueryCallback, SelectableOrExpression } from '../utils';
+import { RawSQL } from '../sql/rawSql';
 
 // .select method argument
 export type SelectArg<T extends QueryBase> =
@@ -51,10 +50,10 @@ type SelectAsArg<T extends QueryBase> = Record<string, SelectAsValue<T>>;
 // can be column, raw, or a function returning query or raw
 type SelectAsValue<T extends QueryBase> =
   | StringKey<keyof T['selectable']>
-  | RawExpression
+  | Expression
   | ((q: T) => QueryBase)
-  | ((q: T) => RawExpression)
-  | ((q: T) => QueryBase | RawExpression);
+  | ((q: T) => Expression)
+  | ((q: T) => QueryBase | Expression);
 
 // tuple for the result of selected by objects args
 // the first element is shape of selected data
@@ -177,17 +176,17 @@ type SelectAsValueResult<
   Arg extends SelectAsValue<T>,
 > = Arg extends keyof T['selectable']
   ? T['selectable'][Arg]['column']
-  : Arg extends RawExpression
-  ? Arg['__column']
+  : Arg extends Expression
+  ? Arg['_type']
   : Arg extends (q: T) => infer R
   ? R extends QueryBase
     ? SelectSubQueryResult<R>
-    : R extends RawExpression
-    ? R['__column']
-    : R extends QueryBase | RawExpression
+    : R extends Expression
+    ? R['_type']
+    : R extends QueryBase | Expression
     ?
-        | SelectSubQueryResult<Exclude<R, RawExpression>>
-        | Exclude<R, QueryBase>['__column']
+        | SelectSubQueryResult<Exclude<R, Expression>>
+        | Exclude<R, QueryBase>['_type']
     : never
   : never;
 
@@ -213,10 +212,9 @@ type SelectSubQueryResult<
 export const addParserForRawExpression = (
   q: Query,
   key: string | getValueKey,
-  raw: RawExpression,
+  raw: Expression,
 ) => {
-  const parser = raw.__column?.parseFn;
-  if (parser) setParserToQuery(q.query, key, parser);
+  if (raw._type.parseFn) setParserToQuery(q.query, key, raw._type.parseFn);
 };
 
 // these are used as a wrapper to pass sub query result to `parseRecord`
@@ -247,10 +245,10 @@ export const addParserForSelectItem = <T extends Query>(
   q: T,
   as: string | getValueKey | undefined,
   key: string,
-  arg: StringKey<keyof T['selectable']> | RawExpression | Query,
-): string | RawExpression | Query => {
+  arg: SelectableOrExpression<T> | Query,
+): string | Expression | Query => {
   if (typeof arg === 'object') {
-    if (isRaw(arg)) {
+    if (isExpression(arg)) {
       addParserForRawExpression(q, key, arg);
     } else {
       const { query } = arg;
@@ -290,7 +288,7 @@ export const processSelectArg = <T extends Query>(
     return arg;
   }
 
-  const selectAs: Record<string, string | Query | RawExpression> = {};
+  const selectAs: Record<string, string | Query | Expression> = {};
 
   for (const key in arg as SelectAsArg<T>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -299,19 +297,19 @@ export const processSelectArg = <T extends Query>(
     if (typeof value === 'function') {
       value = resolveSubQueryCallback(q, value);
 
-      if (!isRaw(value) && value.joinQuery) {
+      if (!isExpression(value) && value.joinQuery) {
         value = value.joinQuery(q, value);
 
         let query;
         const returnType = value.query.returnType;
         if (!returnType || returnType === 'all') {
           query = value.json(false);
-          value.query.coalesceValue = raw("'[]'");
+          value.query.coalesceValue = new RawSQL("'[]'");
         } else if (returnType === 'pluck') {
           query = value
             .wrap(value.baseQuery.clone())
             ._jsonAgg(value.query.select[0]);
-          value.query.coalesceValue = raw("'[]'");
+          value.query.coalesceValue = new RawSQL("'[]'");
         } else {
           if (
             (returnType === 'value' || returnType === 'valueOrThrow') &&
@@ -430,8 +428,8 @@ export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
               isSubQuery,
               key,
             );
-          } else if (isRaw(it)) {
-            result[key] = it.__column || new UnknownColumn();
+          } else if (isExpression(it)) {
+            result[key] = it._type;
           } else {
             const { returnType } = it.query;
             if (returnType === 'value' || returnType === 'valueOrThrow') {

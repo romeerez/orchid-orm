@@ -9,7 +9,7 @@ describe('errors', () => {
     let err: Error | undefined;
 
     try {
-      await User.select({ column: testDb.sql((t) => t.boolean())`koko` });
+      await User.select({ column: testDb.sql`koko`.type((t) => t.boolean()) });
     } catch (error) {
       err = error as Error;
     }
