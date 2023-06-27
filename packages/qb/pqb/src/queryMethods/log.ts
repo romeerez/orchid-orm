@@ -118,7 +118,7 @@ export class QueryLog {
   }
 
   _log<T extends Query>(this: T, log = true): T {
-    this.query.log = logParamToLogObject(this.query.logger, log);
+    this.q.log = logParamToLogObject(this.q.logger, log);
     return this;
   }
 }

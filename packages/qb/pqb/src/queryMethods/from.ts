@@ -121,22 +121,22 @@ export class From {
     }
 
     if (typeof args[0] === 'string') {
-      this.query.as ||= args[0];
+      this.q.as ||= args[0];
     } else if (!isExpression(args[0])) {
       const q = args[0] as Query;
-      this.query.as ||= q.query.as || q.table || 't';
-      this.query.shape = getShapeFromSelect(args[0] as Query, true);
-      this.query.parsers = q.query.parsers;
+      this.q.as ||= q.q.as || q.table || 't';
+      this.q.shape = getShapeFromSelect(args[0] as Query, true);
+      this.q.parsers = q.q.parsers;
     } else {
-      this.query.as ||= 't';
+      this.q.as ||= 't';
     }
 
     const options = args[1] as { only?: boolean } | undefined;
     if (options?.only) {
-      (this.query as SelectQueryData).fromOnly = options.only;
+      (this.q as SelectQueryData).fromOnly = options.only;
     }
 
-    this.query.from = args[0] as Query;
+    this.q.from = args[0] as Query;
 
     return this as unknown as FromResult<T, Args>;
   }

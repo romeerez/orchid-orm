@@ -121,25 +121,25 @@ export class QueryUpsertOrCreate {
     this: T,
     data: UpsertCreateArg<T>,
   ): UpsertResult<T> {
-    this.query.returnType = 'one';
-    this.query.wrapInTransaction = true;
+    this.q.returnType = 'one';
+    this.q.wrapInTransaction = true;
 
-    const { handleResult } = this.query;
+    const { handleResult } = this.q;
     let result: unknown;
     let created = false;
-    this.query.handleResult = (q, t, r, s) => {
+    this.q.handleResult = (q, t, r, s) => {
       return created ? result : handleResult(q, t, r, s);
     };
 
-    this.query.patchResult = async (q, queryResult) => {
+    this.q.patchResult = async (q, queryResult) => {
       if (queryResult.rowCount === 0) {
         if (typeof data === 'function') {
           data = data();
         }
 
         const inner = q.create(data as CreateData<Query>);
-        const { handleResult } = inner.query;
-        inner.query.handleResult = (q, t, r, s) => {
+        const { handleResult } = inner.q;
+        inner.q.handleResult = (q, t, r, s) => {
           queryResult = r;
           const res = handleResult(q, t, r, s);
           result = res;

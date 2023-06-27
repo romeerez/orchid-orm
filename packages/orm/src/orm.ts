@@ -53,7 +53,7 @@ export const orchidORM = <T extends TableClasses>(
   let transactionStorage;
   let qb: Query;
   if ('db' in options) {
-    adapter = options.db.query.adapter;
+    adapter = options.db.q.adapter;
     transactionStorage = options.db.internal.transactionStorage;
     qb = options.db.queryBuilder;
   } else {
@@ -122,13 +122,13 @@ export const orchidORM = <T extends TableClasses>(
   for (const key in tables) {
     const table = tableInstances[key] as unknown as {
       init?(orm: unknown): void;
-      query: QueryData;
+      q: QueryData;
     };
 
     if (table.init) {
       table.init(result);
       // assign before and after hooks from table.query to the table base query
-      Object.assign(result[key].baseQuery.query, table.query);
+      Object.assign(result[key].baseQuery.q, table.q);
     }
   }
 

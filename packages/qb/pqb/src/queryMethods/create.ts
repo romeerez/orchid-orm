@@ -249,17 +249,17 @@ export type CreateCtx = {
 type Encoder = (input: unknown) => unknown;
 
 const handleSelect = (q: Query) => {
-  const select = q.query.select?.[0];
+  const select = q.q.select?.[0];
 
   if (
-    q.query.returnType === 'void' ||
+    q.q.returnType === 'void' ||
     (typeof select === 'object' &&
       'function' in select &&
       select.function === 'count')
   ) {
-    q.query.select = undefined;
-  } else if (!q.query.select) {
-    q.query.select = ['*'];
+    q.q.select = undefined;
+  } else if (!q.q.select) {
+    q.q.select = ['*'];
   }
 };
 
@@ -270,7 +270,7 @@ const processCreateItem = (
   ctx: CreateCtx,
   encoders: Record<string, Encoder>,
 ) => {
-  const { shape } = q.query;
+  const { shape } = q.q;
   for (const key in item) {
     if (shape[key] instanceof VirtualColumn) {
       (shape[key] as VirtualColumn).create?.(q, ctx, item, rowIndex);
@@ -298,7 +298,7 @@ const mapColumnValues = (
 
 const handleOneData = (q: Query, data: CreateData<Query>, ctx: CreateCtx) => {
   const encoders: Record<string, Encoder> = {};
-  const defaults = q.query.defaults;
+  const defaults = q.q.defaults;
 
   if (defaults) {
     data = { ...defaults, ...data };
@@ -318,7 +318,7 @@ const handleManyData = (
   ctx: CreateCtx,
 ) => {
   const encoders: Record<string, Encoder> = {};
-  const defaults = q.query.defaults;
+  const defaults = q.q.defaults;
 
   if (defaults) {
     data = data.map((item) => ({ ...defaults, ...item }));
@@ -350,28 +350,28 @@ const insert = (
   kind: CreateKind,
   many?: boolean,
 ) => {
-  const { query } = self as { query: InsertQueryData };
+  const { q } = self as { q: InsertQueryData };
 
-  delete query.and;
-  delete query.or;
+  delete q.and;
+  delete q.or;
 
-  query.type = 'insert';
-  query.columns = columns;
-  query.values = values;
+  q.type = 'insert';
+  q.columns = columns;
+  q.values = values;
 
   // query kind may be already set by in the ORM
   // so that author.books.create(data) will actually perform the `from` kind of create
-  if (!query.kind) query.kind = kind;
+  if (!q.kind) q.kind = kind;
 
-  const { select, returnType = 'all' } = query;
+  const { select, returnType = 'all' } = q;
 
   if (!select) {
-    if (returnType !== 'void') query.returnType = 'rowCount';
+    if (returnType !== 'void') q.returnType = 'rowCount';
   } else if (many) {
     if (returnType === 'one' || returnType === 'oneOrThrow')
-      query.returnType = 'all';
+      q.returnType = 'all';
   } else if (returnType === 'all') {
-    query.returnType = 'from' in values ? values.from.query.returnType : 'one';
+    q.returnType = 'from' in values ? values.from.q.returnType : 'one';
   }
 
   return self;
@@ -382,14 +382,14 @@ const getFromSelectColumns = (
   obj?: { columns: string[] },
   many?: boolean,
 ) => {
-  if (!many && !queryTypeWithLimitOne[from.query.returnType]) {
+  if (!many && !queryTypeWithLimitOne[from.q.returnType]) {
     throw new Error(
       'Cannot create based on a query which returns multiple records',
     );
   }
 
   const queryColumns: string[] = [];
-  from.query.select?.forEach((item) => {
+  from.q.select?.forEach((item) => {
     if (typeof item === 'string') {
       const index = item.indexOf('.');
       queryColumns.push(index === -1 ? item : item.slice(index + 1));
@@ -478,7 +478,7 @@ export class Create {
       values: InsertQueryData['values'];
     };
 
-    const values = (this.query as InsertQueryData).values;
+    const values = (this.q as InsertQueryData).values;
     if (values && 'from' in values) {
       obj.columns = getFromSelectColumns(values.from, obj);
       values.values = obj.values as unknown[][];
@@ -721,7 +721,7 @@ export class Create {
     this: T,
     data: Data,
   ): T & { meta: { defaults: Record<keyof Data, true> } } {
-    this.query.defaults = data;
+    this.q.defaults = data;
     return this as T & { meta: { defaults: Record<keyof Data, true> } };
   }
 
@@ -813,7 +813,7 @@ export class OnConflictQueryBuilder<
    * ```
    */
   ignore(): T {
-    (this.query.query as InsertQueryData).onConflict = {
+    (this.query.q as InsertQueryData).onConflict = {
       type: 'ignore',
       expr: this.onConflict as OnConflictItem,
     };
@@ -931,7 +931,7 @@ export class OnConflictQueryBuilder<
       | Partial<T['inputType']>
       | Expression,
   ): T {
-    (this.query.query as InsertQueryData).onConflict = {
+    (this.query.q as InsertQueryData).onConflict = {
       type: 'merge',
       expr: this.onConflict as OnConflictItem,
       update: update as OnConflictMergeUpdate,

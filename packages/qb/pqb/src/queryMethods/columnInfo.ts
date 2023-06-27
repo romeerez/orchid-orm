@@ -61,14 +61,14 @@ export class ColumnInfoMethods {
     T extends Query,
     Column extends keyof T['shape'] | undefined = undefined,
   >(this: T, column?: Column): SetQueryReturnsColumnInfo<T, Column> {
-    this.query.type = 'columnInfo';
-    this.query.returnType = 'all';
+    this.q.type = 'columnInfo';
+    this.q.returnType = 'all';
 
     if (column) {
-      (this.query as ColumnInfoQueryData).column = column as string;
+      (this.q as ColumnInfoQueryData).column = column as string;
     }
 
-    this.query.handleResult = (_, _t, result) => {
+    this.q.handleResult = (_, _t, result) => {
       if (column) {
         return rowToColumnInfo(result.rows[0]);
       } else {

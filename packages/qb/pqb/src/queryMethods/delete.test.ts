@@ -24,8 +24,8 @@ describe('delete', () => {
   it('should be aliased as `del`', () => {
     const a = User.where({ id: 1 }).delete();
     const b = User.where({ id: 1 }).del();
-    expect((a.query as DeleteQueryData).type).toBeTruthy();
-    expect(a.query).toEqual(b.query);
+    expect((a.q as DeleteQueryData).type).toBeTruthy();
+    expect(a.q).toEqual(b.q);
   });
 
   it('should delete records, returning value', async () => {

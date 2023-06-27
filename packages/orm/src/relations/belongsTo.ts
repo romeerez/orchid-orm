@@ -100,7 +100,7 @@ class BelongsToVirtualColumn extends VirtualColumn {
 
     const relationData = [values];
     store.belongsTo[key] = relationData;
-    q.query.wrapInTransaction = true;
+    q.q.wrapInTransaction = true;
 
     pushQueryValue(q, 'beforeCreate', async (q: Query) => {
       const inserted = await this.nestedInsert(
@@ -108,7 +108,7 @@ class BelongsToVirtualColumn extends VirtualColumn {
         relationData.map(([, , data]) => data as NestedInsertOneItem),
       );
 
-      const { values } = q.query as InsertQueryData;
+      const { values } = q.q as InsertQueryData;
       relationData.forEach(([rowIndex, columnIndex], index) => {
         (values as unknown[][])[rowIndex][columnIndex] =
           inserted[index][primaryKey];
@@ -117,7 +117,7 @@ class BelongsToVirtualColumn extends VirtualColumn {
   }
 
   update(q: Query, ctx: UpdateCtx, set: Record<string, unknown>) {
-    q.query.wrapInTransaction = true;
+    q.q.wrapInTransaction = true;
 
     const data = set[this.key] as NestedUpdateOneItem;
     if (this.nestedUpdate(q, set, data, ctx)) {
@@ -263,7 +263,7 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
         update[foreignKey] = await query.get(primaryKey)._create(params.create);
       } else if (params.delete) {
         const selectQuery = q.clone();
-        selectQuery.query.type = undefined;
+        selectQuery.q.type = undefined;
         idsForDelete = await selectQuery._pluck(foreignKey);
         update[foreignKey] = null;
       }
@@ -271,10 +271,7 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
 
     const { upsert } = params;
     if (upsert || params.update || params.delete) {
-      if (
-        !q.query.select?.includes('*') &&
-        !q.query.select?.includes(foreignKey)
-      ) {
+      if (!q.q.select?.includes('*') && !q.q.select?.includes(foreignKey)) {
         q._select(foreignKey);
       }
     }

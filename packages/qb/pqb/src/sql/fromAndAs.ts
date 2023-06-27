@@ -45,7 +45,7 @@ const getFrom = (
         return `(${sql.text})`;
       }
 
-      return quoteSchemaAndTable(from.query.schema, from.table);
+      return quoteSchemaAndTable(from.q.schema, from.table);
     }
 
     return quoteSchemaAndTable(query.schema, from);

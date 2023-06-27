@@ -308,11 +308,11 @@ const applyRelation = (
       query._takeOptional();
     }
 
-    query.query.returnsOne = true;
+    query.q.returnsOne = true;
   }
 
   if (data.virtualColumn) {
-    dbTable.shape[relationName] = dbTable.query.shape[relationName] =
+    dbTable.shape[relationName] = dbTable.q.shape[relationName] =
       data.virtualColumn;
   }
 
@@ -326,7 +326,7 @@ const applyRelation = (
       return originalJoin.apply(this, args);
     } else {
       const q = this.clone();
-      q.query.innerJoinLateral = true;
+      q.q.innerJoinLateral = true;
       return q;
     }
   };
@@ -368,12 +368,12 @@ const makeRelationQuery = (
             (q) => data.reverseJoin(this, toTable) as unknown as typeof q,
           );
 
-      query.query.joinedShapes = {
-        [getQueryAs(this)]: this.query.shape,
-        ...this.query.joinedShapes,
+      query.q.joinedShapes = {
+        [getQueryAs(this)]: this.q.shape,
+        ...this.q.joinedShapes,
       };
 
-      query.query[relationQueryKey] = {
+      query.q[relationQueryKey] = {
         relationName,
         sourceQuery: this,
         relationQuery: toTable,

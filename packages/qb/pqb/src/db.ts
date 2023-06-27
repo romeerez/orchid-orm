@@ -85,7 +85,7 @@ export interface Db<
   whereQueryBuilder: Query['whereQueryBuilder'];
   onQueryBuilder: Query['onQueryBuilder'];
   primaryKeys: Query['primaryKeys'];
-  query: QueryData;
+  q: QueryData;
   selectable: SelectableFromShape<Shape, Table>;
   returnType: Query['returnType'];
   then: QueryThen<Data>;
@@ -181,7 +181,7 @@ export class Db<
       this.internal.columnsForSelectAll = list;
     }
 
-    this.query = {
+    this.q = {
       adapter,
       shape: shape as ColumnsShapeBase,
       handleResult,
@@ -192,7 +192,7 @@ export class Db<
     } as QueryData;
 
     if (options?.schema) {
-      this.query.schema = options.schema;
+      this.q.schema = options.schema;
     }
 
     this.primaryKeys = Object.keys(shape).filter(
@@ -232,8 +232,8 @@ export class Db<
     this.toSql = defaultSelect
       ? function <T extends Query>(this: T, options?: ToSqlOptions): Sql {
           const q = this.clone();
-          if (!(q.query as SelectQueryData).select) {
-            (q.query as SelectQueryData).select = defaultSelect as string[];
+          if (!(q.q as SelectQueryData).select) {
+            (q.q as SelectQueryData).select = defaultSelect as string[];
           }
           return toSql.call(q, options);
         }

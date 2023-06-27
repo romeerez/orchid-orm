@@ -47,7 +47,7 @@ export const havingToSql = (
         const sql = havingToSql(
           ctx,
           query,
-          query.query as SelectQueryData,
+          query.q as SelectQueryData,
           query.table && q(query.table),
         );
         if (sql.length) ands.push(`(${sql})`);
@@ -75,7 +75,7 @@ export const havingToSql = (
                     op as keyof AggregateItemOptions,
                   )
                 ) {
-                  const operator = table.query.shape[column].operators[
+                  const operator = table.q.shape[column].operators[
                     op
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   ] as Operator<any>;

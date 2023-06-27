@@ -296,7 +296,7 @@ export const useRelationCallback = <T extends Query>(
   const beforeDelete = jest.fn();
   const afterDelete = jest.fn();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const q = rel.query.query as any;
+  const q = rel.query.q as any;
 
   beforeAll(() => {
     q.beforeCreate = [beforeCreate];

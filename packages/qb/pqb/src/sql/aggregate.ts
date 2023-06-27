@@ -25,7 +25,7 @@ export const aggregateToSql = (
     if (Array.isArray(item.arg)) {
       sql.push(
         `${rawOrColumnToSql(
-          table.query,
+          table.q,
           item.arg[0],
           ctx.values,
           quotedAs,
@@ -39,7 +39,7 @@ export const aggregateToSql = (
         args.push(
           // ::text is needed to bypass "could not determine data type of parameter" postgres error
           `${addValue(ctx.values, key)}::text, ${rawOrColumnToSql(
-            table.query,
+            table.q,
             item.arg[
               key as keyof typeof item.arg
             ] as unknown as SelectableOrExpression,
@@ -54,14 +54,14 @@ export const aggregateToSql = (
     sql.push(
       item.arg === '*'
         ? '*'
-        : rawOrColumnToSql(table.query, item.arg, ctx.values, quotedAs),
+        : rawOrColumnToSql(table.q, item.arg, ctx.values, quotedAs),
     );
   }
 
   if (options.withinGroup) sql.push(') WITHIN GROUP (');
   else if (options.order) sql.push(' ');
 
-  if (options.order) pushOrderBySql(ctx, table.query, quotedAs, options.order);
+  if (options.order) pushOrderBySql(ctx, table.q, quotedAs, options.order);
 
   sql.push(')');
 
@@ -72,8 +72,8 @@ export const aggregateToSql = (
       {
         and: options.filter ? [options.filter] : undefined,
         or: options.filterOr?.map((item) => [item]),
-        shape: table.query.shape,
-        joinedShapes: table.query.joinedShapes,
+        shape: table.q.shape,
+        joinedShapes: table.q.joinedShapes,
       },
       quotedAs,
     );
@@ -84,7 +84,7 @@ export const aggregateToSql = (
 
   if (options.over) {
     sql.push(
-      ` OVER ${windowToSql(table.query, options.over, ctx.values, quotedAs)}`,
+      ` OVER ${windowToSql(table.q, options.over, ctx.values, quotedAs)}`,
     );
   }
 

@@ -208,7 +208,7 @@ const applyCountChange = <T extends Query>(
   op: string,
   data: ChangeCountArg<T>,
 ) => {
-  self.query.type = 'update';
+  self.q.type = 'update';
 
   let map: Record<string, { op: string; arg: number }>;
   if (typeof data === 'object') {
@@ -236,11 +236,10 @@ const checkIfUpdateIsEmpty = (q: QueryData) => {
 
 // sets query type, `returnType`, casts type from Query to UpdateResult
 const update = <T extends Query>(q: T): UpdateResult<T> => {
-  const { query } = q;
-  query.type = 'update';
+  q.q.type = 'update';
 
-  if (!query.select) {
-    query.returnType = 'rowCount';
+  if (!q.q.select) {
+    q.q.returnType = 'rowCount';
   }
 
   throwIfNoWhere(q, 'update');
@@ -327,12 +326,12 @@ export class Update {
     return q._update(arg);
   }
   _update<T extends Query>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
-    const { query } = this;
+    const { q } = this;
 
     const set: Record<string, unknown> = { ...arg };
     pushQueryValue(this, 'updateData', set);
 
-    const { shape } = this.query;
+    const { shape } = q;
 
     const ctx: UpdateCtx = {};
 
@@ -355,13 +354,13 @@ export class Update {
       }
     }
 
-    if (!ctx.willSetKeys && checkIfUpdateIsEmpty(query)) {
-      delete query.type;
+    if (!ctx.willSetKeys && checkIfUpdateIsEmpty(q)) {
+      delete q.type;
     }
 
     const { queries } = ctx;
     if (queries) {
-      query.patchResult = async (_, queryResult) => {
+      q.patchResult = async (_, queryResult) => {
         await Promise.all(queries.map(callWithThis, queryResult));
 
         if (ctx.updateData) {
@@ -460,7 +459,7 @@ export class Update {
     return q._updateOrThrow(arg);
   }
   _updateOrThrow<T extends Query>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
-    this.query.throwOnNotFound = true;
+    this.q.throwOnNotFound = true;
     return this._update(arg);
   }
 

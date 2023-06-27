@@ -56,7 +56,7 @@ const processData = (
     } else if (isExpression(item)) {
       set.push(item.toSQL(values));
     } else {
-      const shape = table.query.shape;
+      const shape = table.q.shape;
       for (const key in item) {
         const value = item[key];
         if (value === undefined) continue;
@@ -99,7 +99,7 @@ const processValue = (
     } else if (value instanceof QueryClass) {
       return `(${joinSubQuery(table, value as Query).toSql({ values }).text})`;
     } else if ('op' in value && 'arg' in value) {
-      return `"${table.query.shape[key].data.name || key}" ${
+      return `"${table.q.shape[key].data.name || key}" ${
         (value as { op: string }).op
       } ${addValue(values, (value as { arg: unknown }).arg)}`;
     }

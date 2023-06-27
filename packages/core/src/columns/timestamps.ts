@@ -55,7 +55,7 @@ export const makeTimestampsHelpers = (
     );
 
     pushOrNewArrayToObject(
-      (q as { query: Record<string, (typeof updatedAtInjector)[]> }).query,
+      (q as { q: Record<string, (typeof updatedAtInjector)[]> }).q,
       'updateData',
       updatedAtInjector,
     );
@@ -69,7 +69,7 @@ export const makeTimestampsHelpers = (
     );
 
     pushOrNewArrayToObject(
-      (q as { query: Record<string, (typeof updatedAtInjectorSnake)[]> }).query,
+      (q as { q: Record<string, (typeof updatedAtInjectorSnake)[]> }).q,
       'updateData',
       updatedAtInjectorSnake,
     );

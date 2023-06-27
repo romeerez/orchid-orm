@@ -14,7 +14,7 @@ const forQueryBuilder = <T extends Query>(
   type: Exclude<SelectQueryData['for'], undefined>['type'],
   tableNames?: string[] | Expression,
 ) => {
-  (q.query as SelectQueryData).for = { type, tableNames };
+  (q.q as SelectQueryData).for = { type, tableNames };
   q.baseQuery = Object.create(q.baseQuery);
   q.baseQuery.baseQuery = q.baseQuery;
 
@@ -23,7 +23,7 @@ const forQueryBuilder = <T extends Query>(
       return this.clone()._noWait();
     },
     _noWait<T extends ForQueryBuilder<Query>>(this: T): T {
-      const q = this.query as SelectQueryData | undefined;
+      const q = this.q as SelectQueryData | undefined;
       if (q?.for) q.for.mode = 'NO WAIT';
       return this;
     },
@@ -31,7 +31,7 @@ const forQueryBuilder = <T extends Query>(
       return this.clone()._skipLocked();
     },
     _skipLocked<T extends ForQueryBuilder<Query>>(this: T): T {
-      const q = this.query as SelectQueryData | undefined;
+      const q = this.q as SelectQueryData | undefined;
       if (q?.for) q.for.mode = 'SKIP LOCKED';
       return this;
     },

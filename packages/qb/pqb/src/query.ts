@@ -57,7 +57,7 @@ export type Query = QueryCommon &
     primaryKeys: string[];
     type: Record<string, unknown>;
     inputType: Record<string, unknown>;
-    query: QueryData;
+    q: QueryData;
     result: ColumnsShapeBase;
     selectable: SelectableBase;
     then: QueryThen<unknown>;
@@ -98,7 +98,7 @@ export const queryTypeWithLimitOne = {
 } as Record<QueryReturnType, true | undefined>;
 
 export const isQueryReturnsAll = (q: Query) =>
-  !q.query.returnType || q.query.returnType === 'all';
+  !q.q.returnType || q.q.returnType === 'all';
 
 export type QueryReturnsAll<T extends QueryReturnType> = (
   QueryReturnType extends T ? 'all' : T

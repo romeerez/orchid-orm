@@ -129,7 +129,7 @@ describe('db', () => {
       const db = createDb({ adapter: testAdapter });
 
       const table = db('table');
-      expect(table.query.autoPreparedStatements).toBe(false);
+      expect(table.q.autoPreparedStatements).toBe(false);
     });
   });
 

@@ -21,7 +21,7 @@ export const pushColumnInfoSql = (
     ctx.sql.push(
       `AND column_name = ${addValue(
         ctx.values,
-        table.query.shape[query.column]?.data.name || query.column,
+        table.q.shape[query.column]?.data.name || query.column,
       )}`,
     );
   }

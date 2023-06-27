@@ -10,7 +10,7 @@ describe('query log', () => {
   it('should not have `log` query object by default', () => {
     const db = createDb(testDbOptions);
 
-    expect(db('user').query.log).toBe(undefined);
+    expect(db('user').q.log).toBe(undefined);
   });
 
   it('should set `log` query object when configuring db instance', () => {
@@ -19,21 +19,21 @@ describe('query log', () => {
       log: true,
     });
 
-    expect(db('user').query.log).toBeTruthy();
+    expect(db('user').q.log).toBeTruthy();
   });
 
   it('should set `log` query object for a table', () => {
     const db = createDb(testDbOptions);
     const table = db('user', undefined, { log: true });
 
-    expect(table.query.log).toBeTruthy();
+    expect(table.q.log).toBeTruthy();
   });
 
   it('should set `log` query object with query method', () => {
     const db = createDb(testDbOptions);
     const table = db('user');
 
-    expect(table.log().query.log).toBeTruthy();
+    expect(table.log().q.log).toBeTruthy();
   });
 
   it('should log elapsed time, sql and binding values', async () => {

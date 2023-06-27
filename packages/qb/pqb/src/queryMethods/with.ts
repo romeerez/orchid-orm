@@ -159,7 +159,7 @@ export class With {
         ? (args[2] as ColumnsShapeBase)
         : isExpression(query)
         ? args[1]
-        : query.query.shape;
+        : query.q.shape;
 
     if (options?.columns === true) {
       options = {

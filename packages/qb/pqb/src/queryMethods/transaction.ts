@@ -61,7 +61,7 @@ export class Transaction {
       values: emptyArray,
     } as unknown as Sql;
 
-    const log = this.query.log;
+    const log = this.q.log;
     let logData: unknown | undefined;
 
     let trx = this.internal.transactionStorage.getStore();
@@ -99,7 +99,7 @@ export class Transaction {
       if (log) logData = log.beforeQuery(sql);
 
       try {
-        const result = await this.query.adapter.transaction(sql, callback);
+        const result = await this.q.adapter.transaction(sql, callback);
 
         if (log) log.afterQuery(commitSql, logData);
 

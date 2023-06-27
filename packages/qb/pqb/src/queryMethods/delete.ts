@@ -16,13 +16,13 @@ const del = <T extends Query>(self: T): DeleteResult<T> => {
 };
 
 const _del = <T extends Query>(q: T): DeleteResult<T> => {
-  if (!q.query.select) {
-    q.query.returnType = 'rowCount';
+  if (!q.q.select) {
+    q.q.returnType = 'rowCount';
   }
 
   throwIfNoWhere(q, 'delete');
 
-  q.query.type = 'delete';
+  q.q.type = 'delete';
   return q as unknown as DeleteResult<T>;
 };
 

@@ -100,7 +100,7 @@ describe('with', () => {
           .toSql(),
         getExpectedWithSql(
           'SELECT * FROM "user"',
-          Object.keys(User.query.shape),
+          Object.keys(User.q.shape),
           options,
         ),
       );

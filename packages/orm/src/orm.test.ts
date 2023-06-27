@@ -83,6 +83,6 @@ describe('orm', () => {
       },
     );
 
-    expect(local.user.query.autoPreparedStatements).toBe(true);
+    expect(local.user.q.autoPreparedStatements).toBe(true);
   });
 });

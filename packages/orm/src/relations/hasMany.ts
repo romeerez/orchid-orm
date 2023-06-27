@@ -214,8 +214,8 @@ export const makeHasManyMethod = (
     modifyRelatedQuery(relationQuery) {
       return (query) => {
         const fromQuery = query.clone();
-        fromQuery.query.select = fromQuerySelect;
-        const q = relationQuery.query as InsertQueryData;
+        fromQuery.q.select = fromQuerySelect;
+        const q = relationQuery.q as InsertQueryData;
         q.kind = 'from';
         q.values = { from: fromQuery };
       };
@@ -353,7 +353,7 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
           [foreignKey]: data[0][primaryKey],
         })),
       );
-      delete t.query[toSqlCacheKey];
+      delete t.q[toSqlCacheKey];
     }
 
     if (params.disconnect || params.set) {
@@ -369,7 +369,7 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
         ._update({ [foreignKey]: null });
 
       if (params.set) {
-        delete t.query[toSqlCacheKey];
+        delete t.q[toSqlCacheKey];
         await t
           .where<Query>(
             Array.isArray(params.set)
@@ -383,7 +383,7 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
     }
 
     if (params.delete || params.update) {
-      delete t.query[toSqlCacheKey];
+      delete t.q[toSqlCacheKey];
       const q = t._where(
         getWhereForNestedUpdate(
           data,

@@ -51,10 +51,10 @@ const _get = <
   returnType: R,
   arg: Arg,
 ): R extends 'value' ? GetResultOptional<T, Arg> : GetResult<T, Arg> => {
-  q.query.returnType = returnType;
+  q.q.returnType = returnType;
 
   if (typeof arg === 'string') {
-    let type = q.query.shape[arg] as ColumnTypeBase | undefined;
+    let type = q.q.shape[arg] as ColumnTypeBase | undefined;
     if (type) {
     } else {
       const index = arg.indexOf('.');
@@ -62,28 +62,28 @@ const _get = <
         const table = arg.slice(0, index);
         const column = arg.slice(index + 1);
 
-        if (table === (q.query.as || q.table)) {
-          type = q.query.shape[column];
+        if (table === (q.q.as || q.table)) {
+          type = q.q.shape[column];
         } else {
-          type = q.query.joinedShapes?.[table]?.[column];
+          type = q.q.joinedShapes?.[table]?.[column];
         }
       }
     }
 
-    (q.query as SelectQueryData)[getValueKey] = type;
+    (q.q as SelectQueryData)[getValueKey] = type;
 
-    q.query.select = [
+    q.q.select = [
       processSelectArg(
         q,
-        q.query.as || q.table,
+        q.q.as || q.table,
         arg as unknown as Exclude<GetArg<T>, Expression>,
         getValueKey,
       ),
     ];
   } else {
-    (q.query as SelectQueryData)[getValueKey] = arg._type;
+    (q.q as SelectQueryData)[getValueKey] = arg._type;
     addParserForRawExpression(q, getValueKey, arg);
-    q.query.select = [arg];
+    q.q.select = [arg];
   }
 
   return q as unknown as GetResult<T, Arg> & GetResultOptional<T, Arg>;

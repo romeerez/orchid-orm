@@ -24,7 +24,7 @@ export abstract class AsMethods extends QueryBase {
     this: T,
     as: As,
   ): SetQueryTableAlias<T, As> {
-    this.query.as = as;
+    this.q.as = as;
     return this as unknown as SetQueryTableAlias<T, As>;
   }
 }

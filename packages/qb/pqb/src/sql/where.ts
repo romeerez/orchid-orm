@@ -88,18 +88,13 @@ const processWhere = (
 
   if (typeof data === 'function') {
     const qb = data(new ctx.queryBuilder.whereQueryBuilder(table, query));
-    pushWhereToSql(ands, ctx, qb, qb.query, quotedAs, not);
+    pushWhereToSql(ands, ctx, qb, qb.q, quotedAs, not);
     return;
   }
 
   if ('prototype' in data || 'baseQuery' in data) {
     const query = data as Query;
-    const sql = whereToSql(
-      ctx,
-      query,
-      query.query,
-      query.table && q(query.table),
-    );
+    const sql = whereToSql(ctx, query, query.q, query.table && q(query.table));
     if (sql) {
       ands.push(`${prefix}(${sql})`);
     }

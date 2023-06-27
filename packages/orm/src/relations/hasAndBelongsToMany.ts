@@ -122,8 +122,8 @@ export const makeHasAndBelongsToManyMethod = (
     [fk]: removeColumnName(table.shape[pk]),
     [afk]: removeColumnName(query.shape[apk]),
   };
-  baseQuery.query = {
-    ...baseQuery.query,
+  baseQuery.q = {
+    ...baseQuery.q,
     shape: baseQuery.shape,
   };
   const subQuery = Object.create(baseQuery);
@@ -158,10 +158,9 @@ export const makeHasAndBelongsToManyMethod = (
           ._on(associationForeignKeyFull, `${getQueryAs(toQuery)}.${apk}`)
           ._on(foreignKeyFull, `${getQueryAs(fromQuery)}.${pk}`),
       );
-      join.query.joinedShapes = {
-        ...join.query.joinedShapes,
-        [(fromQuery.query.as || fromQuery.table) as string]:
-          fromQuery.query.shape,
+      join.q.joinedShapes = {
+        ...join.q.joinedShapes,
+        [(fromQuery.q.as || fromQuery.table) as string]: fromQuery.q.shape,
       };
       return join;
     },
@@ -174,7 +173,7 @@ export const makeHasAndBelongsToManyMethod = (
     },
     primaryKey: pk,
     modifyRelatedQuery(relationQuery) {
-      const ref = {} as { query: Query };
+      const ref = {} as { q: Query };
 
       relationQuery._afterCreate([], async (result: unknown[]) => {
         if (result.length > 1) {
@@ -186,8 +185,8 @@ export const makeHasAndBelongsToManyMethod = (
           );
         }
 
-        const fromQuery = ref.query.clone();
-        fromQuery.query.select = [{ selectAs: { [fk]: pk } }];
+        const fromQuery = ref.q.clone();
+        fromQuery.q.select = [{ selectAs: { [fk]: pk } }];
 
         const createdCount = await subQuery.count()._createFrom(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -203,7 +202,7 @@ export const makeHasAndBelongsToManyMethod = (
       });
 
       return (q) => {
-        ref.query = q;
+        ref.q = q;
       };
     },
   };
@@ -470,7 +469,7 @@ const nestedUpdate = (state: State) => {
     if (params.set) {
       const j = queryJoinTable(state, data);
       await j._delete();
-      delete j.query[toSqlCacheKey];
+      delete j.q[toSqlCacheKey];
 
       const ids = await queryRelatedTable(
         state.relatedTableQuery,

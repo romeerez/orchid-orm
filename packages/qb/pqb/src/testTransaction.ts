@@ -28,7 +28,7 @@ export const testTransaction = {
     const db = argToDb(arg);
     const { transactionStorage } = db.internal;
     const { getStore } = transactionStorage;
-    const adapter = db.baseQuery.query as Record<string, unknown>;
+    const adapter = db.baseQuery.q as Record<string, unknown>;
     const data: TrxData = {
       adapter: {
         query: adapter.query,
@@ -69,7 +69,7 @@ export const testTransaction = {
     const data = (db.internal as unknown as Internal)[trxForTest]?.pop();
     if (data) {
       data.reject?.(new Rollback());
-      Object.assign(db.baseQuery.query.adapter, data.adapter);
+      Object.assign(db.baseQuery.q.adapter, data.adapter);
       return data.promise;
     }
     return;
@@ -78,7 +78,7 @@ export const testTransaction = {
     const db = argToDb(arg);
     await this.rollback(db);
     if ((db.internal as unknown as Internal)[trxForTest]?.length === 0) {
-      return db.query.adapter.close();
+      return db.q.adapter.close();
     }
   },
 };

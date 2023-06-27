@@ -315,7 +315,7 @@ describe('baseTable', () => {
 
       expect(initArg).toBe(db);
 
-      expect(db.table.baseQuery.query).toMatchObject({
+      expect(db.table.baseQuery.q).toMatchObject({
         before: [fns.beforeQuery],
         after: [fns.afterQuery],
         beforeCreate: [fns.beforeCreate, fns.beforeSave],

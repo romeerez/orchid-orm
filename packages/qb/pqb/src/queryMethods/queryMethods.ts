@@ -160,8 +160,8 @@ export class QueryMethods<CT extends ColumnTypesBase> {
     return this.clone()._all();
   }
   _all<T extends Query>(this: T): SetQueryReturnsAll<T> {
-    this.query.returnType = 'all';
-    this.query.and ??= [];
+    this.q.returnType = 'all';
+    this.q.and ??= [];
     return this as unknown as SetQueryReturnsAll<T>;
   }
 
@@ -177,7 +177,7 @@ export class QueryMethods<CT extends ColumnTypesBase> {
     return this.clone()._take();
   }
   _take<T extends Query>(this: T): SetQueryReturnsOne<T> {
-    this.query.returnType = 'oneOrThrow';
+    this.q.returnType = 'oneOrThrow';
     return this as unknown as SetQueryReturnsOne<T>;
   }
 
@@ -195,7 +195,7 @@ export class QueryMethods<CT extends ColumnTypesBase> {
     return this.clone()._takeOptional();
   }
   _takeOptional<T extends Query>(this: T): SetQueryReturnsOneOptional<T> {
-    this.query.returnType = 'one';
+    this.q.returnType = 'one';
     return this as unknown as SetQueryReturnsOneOptional<T>;
   }
 
@@ -219,7 +219,7 @@ export class QueryMethods<CT extends ColumnTypesBase> {
     return this.clone()._rows();
   }
   _rows<T extends Query>(this: T): SetQueryReturnsRows<T> {
-    this.query.returnType = 'rows';
+    this.q.returnType = 'rows';
     return this as unknown as SetQueryReturnsRows<T>;
   }
 
@@ -242,9 +242,9 @@ export class QueryMethods<CT extends ColumnTypesBase> {
     this: T,
     select: S,
   ): SetQueryReturnsPluck<T, S> {
-    this.query.returnType = 'pluck';
-    (this.query as SelectQueryData).select = [select as SelectItem];
-    addParserForSelectItem(this, this.query.as || this.table, 'pluck', select);
+    this.q.returnType = 'pluck';
+    (this.q as SelectQueryData).select = [select as SelectItem];
+    addParserForSelectItem(this, this.q.as || this.table, 'pluck', select);
     return this as unknown as SetQueryReturnsPluck<T, S>;
   }
 
@@ -259,7 +259,7 @@ export class QueryMethods<CT extends ColumnTypesBase> {
     return this.clone()._exec();
   }
   _exec<T extends Query>(this: T): SetQueryReturnsVoid<T> {
-    this.query.returnType = 'void';
+    this.q.returnType = 'void';
     return this as unknown as SetQueryReturnsVoid<T>;
   }
 
@@ -455,7 +455,7 @@ export class QueryMethods<CT extends ColumnTypesBase> {
     return this.clone()._withSchema(schema);
   }
   _withSchema<T extends Query>(this: T, schema: string): T {
-    this.query.schema = schema;
+    this.q.schema = schema;
     return this;
   }
 
@@ -573,7 +573,7 @@ export class QueryMethods<CT extends ColumnTypesBase> {
     return this.clone()._limit(arg);
   }
   _limit<T extends Query>(this: T, arg: number | undefined): T {
-    (this.query as SelectQueryData).limit = arg;
+    (this.q as SelectQueryData).limit = arg;
     return this;
   }
 
@@ -590,7 +590,7 @@ export class QueryMethods<CT extends ColumnTypesBase> {
     return this.clone()._offset(arg);
   }
   _offset<T extends Query>(this: T, arg: number | undefined): T {
-    (this.query as SelectQueryData).offset = arg;
+    (this.q as SelectQueryData).offset = arg;
     return this;
   }
 
@@ -599,8 +599,8 @@ export class QueryMethods<CT extends ColumnTypesBase> {
   }
   _exists<T extends Query>(this: T): SetQueryReturnsColumn<T, BooleanColumn> {
     const q = this._getOptional(new RawSQL('true'));
-    q.query.notFoundDefault = false;
-    q.query.coalesceValue = new RawSQL('false');
+    q.q.notFoundDefault = false;
+    q.q.coalesceValue = new RawSQL('false');
     return q as unknown as SetQueryReturnsColumn<T, BooleanColumn>;
   }
 
@@ -630,7 +630,7 @@ export class QueryMethods<CT extends ColumnTypesBase> {
     this: T,
     options?: { restartIdentity?: boolean; cascade?: boolean },
   ): SetQueryReturnsVoid<T> {
-    const q = this.query as TruncateQueryData;
+    const q = this.q as TruncateQueryData;
     q.type = 'truncate';
     if (options?.restartIdentity) {
       q.restartIdentity = true;

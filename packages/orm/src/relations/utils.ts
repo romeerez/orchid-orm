@@ -100,7 +100,7 @@ export const hasRelationHandleCreate = (
     return;
   }
 
-  q.query.wrapInTransaction = true;
+  q.q.wrapInTransaction = true;
 
   const relationData = [values];
   store.hasRelation[key] = relationData;
@@ -139,11 +139,11 @@ export const hasRelationHandleUpdate = (
   )
     return;
 
-  if (!q.query.select?.includes('*') && !q.query.select?.includes(primaryKey)) {
+  if (!q.q.select?.includes('*') && !q.q.select?.includes(primaryKey)) {
     q._select(primaryKey);
   }
 
-  q.query.wrapInTransaction = true;
+  q.q.wrapInTransaction = true;
 
   q._afterUpdate(q.primaryKeys, (rows, q) => {
     return (nestedUpdate as HasOneNestedUpdate)(

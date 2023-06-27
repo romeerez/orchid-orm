@@ -161,7 +161,7 @@ const create = <CT extends ColumnTypesBase>(
     noPrimaryKey?: boolean;
     snakeCase = snakeCase;
     columnTypes = columnTypes;
-    query: QueryData = {} as QueryData;
+    q: QueryData = {} as QueryData;
     declare filePath: string;
     declare result: ColumnsShapeBase;
 

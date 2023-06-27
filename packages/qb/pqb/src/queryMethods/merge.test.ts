@@ -299,51 +299,51 @@ describe('merge queries', () => {
       const q1 = User.clone();
       const q2 = User.clone();
 
-      q1.query.shape = {
+      q1.q.shape = {
         number: new IntegerColumn(),
       };
-      q2.query.shape = {
+      q2.q.shape = {
         string: new TextColumn(),
       };
-      q1.query.wrapInTransaction = false;
-      q2.query.wrapInTransaction = true;
-      q1.query.throwOnNotFound = false;
-      q2.query.throwOnNotFound = true;
-      q1.query.withShapes = { a: { id: new IntegerColumn() } };
-      q2.query.withShapes = { b: { name: new TextColumn() } };
-      q1.query.schema = 'a';
-      q2.query.schema = 'b';
-      q1.query.as = 'a';
-      q2.query.as = 'b';
-      q1.query.from = testDb.sql`a`;
-      q2.query.from = testDb.sql`b`;
-      q1.query.coalesceValue = 'a';
-      q2.query.coalesceValue = 'b';
-      q1.query.parsers = { [getValueKey]: (x) => x, a: (x) => x };
-      q2.query.parsers = { [getValueKey]: (x) => x, b: (x) => x };
-      q1.query.notFoundDefault = 1;
-      q2.query.notFoundDefault = 2;
-      q1.query.defaults = { a: 1 };
-      q2.query.defaults = { b: 2 };
-      q1.query.before = [() => {}];
-      q2.query.before = [() => {}];
-      q1.query.log = logParamToLogObject(console, true);
-      q2.query.log = logParamToLogObject(console, true);
-      q1.query.logger = { log() {}, error() {}, warn() {} };
-      q2.query.logger = console;
-      q1.query.type = 'update';
-      q2.query.type = 'insert';
+      q1.q.wrapInTransaction = false;
+      q2.q.wrapInTransaction = true;
+      q1.q.throwOnNotFound = false;
+      q2.q.throwOnNotFound = true;
+      q1.q.withShapes = { a: { id: new IntegerColumn() } };
+      q2.q.withShapes = { b: { name: new TextColumn() } };
+      q1.q.schema = 'a';
+      q2.q.schema = 'b';
+      q1.q.as = 'a';
+      q2.q.as = 'b';
+      q1.q.from = testDb.sql`a`;
+      q2.q.from = testDb.sql`b`;
+      q1.q.coalesceValue = 'a';
+      q2.q.coalesceValue = 'b';
+      q1.q.parsers = { [getValueKey]: (x) => x, a: (x) => x };
+      q2.q.parsers = { [getValueKey]: (x) => x, b: (x) => x };
+      q1.q.notFoundDefault = 1;
+      q2.q.notFoundDefault = 2;
+      q1.q.defaults = { a: 1 };
+      q2.q.defaults = { b: 2 };
+      q1.q.before = [() => {}];
+      q2.q.before = [() => {}];
+      q1.q.log = logParamToLogObject(console, true);
+      q2.q.log = logParamToLogObject(console, true);
+      q1.q.logger = { log() {}, error() {}, warn() {} };
+      q2.q.logger = console;
+      q1.q.type = 'update';
+      q2.q.type = 'insert';
 
-      const s1 = q1.query as unknown as SelectQueryData;
-      const s2 = q2.query as unknown as SelectQueryData;
+      const s1 = q1.q as unknown as SelectQueryData;
+      const s2 = q2.q as unknown as SelectQueryData;
       s1.distinct = ['id'];
       s2.distinct = ['name'];
       s1.fromOnly = false;
       s2.fromOnly = true;
-      s1.joinedShapes = { a: q1.query.shape };
-      s2.joinedShapes = { b: q2.query.shape };
-      s1.joinedParsers = { a: q1.query.parsers };
-      s2.joinedParsers = { b: q2.query.parsers };
+      s1.joinedShapes = { a: q1.q.shape };
+      s2.joinedShapes = { b: q2.q.shape };
+      s1.joinedParsers = { a: q1.q.parsers };
+      s2.joinedParsers = { b: q2.q.parsers };
       s1.group = ['a'];
       s2.group = ['b'];
       s1.having = [{ a: { a: 1 } }];
@@ -363,8 +363,8 @@ describe('merge queries', () => {
       s1[getValueKey] = new IntegerColumn();
       s2[getValueKey] = new TextColumn();
 
-      const i1 = q1.query as unknown as InsertQueryData;
-      const i2 = q2.query as unknown as InsertQueryData;
+      const i1 = q1.q as unknown as InsertQueryData;
+      const i2 = q2.q as unknown as InsertQueryData;
       i1.columns = ['id'];
       i2.columns = ['name'];
       i1.values = [[1]];
@@ -382,8 +382,8 @@ describe('merge queries', () => {
       i1.afterCreateSelect = ['one'];
       i2.afterCreateSelect = ['two'];
 
-      const u1 = q1.query as unknown as UpdateQueryData;
-      const u2 = q2.query as unknown as UpdateQueryData;
+      const u1 = q1.q as unknown as UpdateQueryData;
+      const u2 = q2.q as unknown as UpdateQueryData;
       u1.updateData = [{ id: 1 }];
       u2.updateData = [{ name: 'name' }];
       u1.beforeUpdate = [() => {}];
@@ -393,8 +393,8 @@ describe('merge queries', () => {
       i1.afterUpdateSelect = ['one'];
       i2.afterUpdateSelect = ['two'];
 
-      const d1 = q1.query as unknown as DeleteQueryData;
-      const d2 = q2.query as unknown as DeleteQueryData;
+      const d1 = q1.q as unknown as DeleteQueryData;
+      const d2 = q2.q as unknown as DeleteQueryData;
       d1.beforeDelete = [() => {}];
       d2.beforeDelete = [() => {}];
       i1.afterDelete = [() => {}];
@@ -402,46 +402,46 @@ describe('merge queries', () => {
       i1.afterDeleteSelect = ['one'];
       i2.afterDeleteSelect = ['two'];
 
-      const t1 = q1.query as unknown as TruncateQueryData;
-      const t2 = q2.query as unknown as TruncateQueryData;
+      const t1 = q1.q as unknown as TruncateQueryData;
+      const t2 = q2.q as unknown as TruncateQueryData;
       t1.restartIdentity = false;
       t2.restartIdentity = true;
       t1.cascade = false;
       t2.cascade = true;
 
-      const c1 = q1.query as unknown as ColumnInfoQueryData;
-      const c2 = q2.query as unknown as ColumnInfoQueryData;
+      const c1 = q1.q as unknown as ColumnInfoQueryData;
+      const c2 = q2.q as unknown as ColumnInfoQueryData;
       c1.column = 'id';
       c2.column = 'name';
 
-      const { query: q } = q1.merge(q2);
+      const { q } = q1.merge(q2);
       expect(q.shape).toEqual({
-        number: q1.query.shape.number,
-        string: q2.query.shape.string,
+        number: q1.q.shape.number,
+        string: q2.q.shape.string,
       });
       expect(q.wrapInTransaction).toBe(true);
       expect(q.throwOnNotFound).toBe(true);
       expect(q.withShapes).toEqual({
-        ...q1.query.withShapes,
-        ...q2.query.withShapes,
+        ...q1.q.withShapes,
+        ...q2.q.withShapes,
       });
       expect(q.schema).toBe('b');
       expect(q.as).toBe('b');
       expect(q.from).toEqual(testDb.sql`b`);
       expect(q.coalesceValue).toBe('b');
       expect(q.parsers).toEqual({
-        ...q1.query.parsers,
-        ...q2.query.parsers,
+        ...q1.q.parsers,
+        ...q2.q.parsers,
       });
       expect(q.notFoundDefault).toBe(2);
       expect(q.defaults).toEqual({
-        ...q1.query.defaults,
-        ...q2.query.defaults,
+        ...q1.q.defaults,
+        ...q2.q.defaults,
       });
-      expect(q.before).toEqual([...q1.query.before, ...q2.query.before]);
-      expect(q.log).toBe(q2.query.log);
-      expect(q.logger).toBe(q2.query.logger);
-      expect(q.type).toBe(q2.query.type);
+      expect(q.before).toEqual([...q1.q.before, ...q2.q.before]);
+      expect(q.log).toBe(q2.q.log);
+      expect(q.logger).toBe(q2.q.logger);
+      expect(q.type).toBe(q2.q.type);
 
       const s = q as SelectQueryData;
       expect(s.distinct).toEqual([...s1.distinct, ...s2.distinct]);

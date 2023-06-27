@@ -11,10 +11,10 @@ describe('transaction', () => {
     const result = await testDb.transaction(async () => {
       const {
         rows: [{ a }],
-      } = await testDb.query.adapter.query('SELECT 1 AS a');
+      } = await testDb.q.adapter.query('SELECT 1 AS a');
       const {
         rows: [{ b }],
-      } = await testDb.query.adapter.query('SELECT 2 AS b');
+      } = await testDb.q.adapter.query('SELECT 2 AS b');
       return a + b;
     });
 

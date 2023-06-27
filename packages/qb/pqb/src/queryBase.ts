@@ -17,11 +17,11 @@ export abstract class QueryBase implements QueryBaseCommon {
    */
   clone<T extends QueryBase>(this: T): T {
     const cloned = Object.create(this.baseQuery);
-    cloned.query = getClonedQueryData(this.query);
+    cloned.q = getClonedQueryData(this.q);
     return cloned;
   }
   abstract result: ColumnsShapeBase;
-  query = {} as QueryData;
+  q = {} as QueryData;
   table?: string;
   selectable!: SelectableBase;
   shape!: ColumnsShapeBase;

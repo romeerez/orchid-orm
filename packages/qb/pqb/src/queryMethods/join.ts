@@ -201,7 +201,7 @@ type JoinWithArgToQuery<
     };
   },
 > = {
-  query: QueryData;
+  q: QueryData;
   table: With['table'];
   clone<T extends QueryBase>(this: T): T;
   selectable: Selectable & {
@@ -462,8 +462,8 @@ export const addQueryOn = <T extends QueryBase>(
   setQueryObjectValue(
     cloned,
     'joinedShapes',
-    (joinFrom.query.as || joinFrom.table) as string,
-    joinFrom.query.shape,
+    (joinFrom.q.as || joinFrom.table) as string,
+    joinFrom.q.shape,
   );
   return pushQueryOn(cloned, joinFrom, joinTo, ...args);
 };
@@ -501,21 +501,21 @@ export class OnQueryBuilder<
     joinTo: QueryBase,
   ) {
     super(q, data);
-    this.query.joinTo = joinTo;
+    this.q.joinTo = joinTo;
   }
 
   on<T extends OnQueryBuilder>(this: T, ...args: OnArgs<T>): T {
     return this.clone()._on(...args);
   }
   _on<T extends OnQueryBuilder>(this: T, ...args: OnArgs<T>): T {
-    return pushQueryOn(this, this.query.joinTo as QueryBase, this, ...args);
+    return pushQueryOn(this, this.q.joinTo as QueryBase, this, ...args);
   }
 
   orOn<T extends OnQueryBuilder>(this: T, ...args: OnArgs<T>): T {
     return this.clone()._orOn(...args);
   }
   _orOn<T extends OnQueryBuilder>(this: T, ...args: OnArgs<T>): T {
-    return pushQueryOrOn(this, this.query.joinTo as QueryBase, this, ...args);
+    return pushQueryOrOn(this, this.q.joinTo as QueryBase, this, ...args);
   }
 
   onJsonPathEquals<T extends OnQueryBuilder>(

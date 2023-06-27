@@ -118,7 +118,7 @@ export abstract class JsonModifiers extends QueryBase {
             ? column
             : (column as JsonItem).__json[1]),
         typeof column === 'string'
-          ? this.query.shape[column]
+          ? this.q.shape[column]
           : (column as JsonItem).__json[2],
         column,
         path,
@@ -204,7 +204,7 @@ export abstract class JsonModifiers extends QueryBase {
             ? column
             : (column as JsonItem).__json[1]),
         typeof column === 'string'
-          ? this.query.shape[column]
+          ? this.q.shape[column]
           : (column as JsonItem).__json[2],
         column,
         path,
@@ -275,7 +275,7 @@ export abstract class JsonModifiers extends QueryBase {
             ? column
             : (column as JsonItem).__json[1]),
         typeof column === 'string'
-          ? this.query.shape[column]
+          ? this.q.shape[column]
           : (column as JsonItem).__json[2],
         column,
         path,
@@ -398,7 +398,7 @@ export abstract class JsonMethods {
     // json_agg is used instead of jsonb_agg because it is 2x faster, according to my benchmarks
     q._getOptional(
       new RawSQL(
-        queryTypeWithLimitOne[this.query.returnType]
+        queryTypeWithLimitOne[this.q.returnType]
           ? `row_to_json("t".*)`
           : coalesce !== false
           ? `COALESCE(json_agg(row_to_json("t".*)), '[]')`
@@ -407,7 +407,7 @@ export abstract class JsonMethods {
     );
 
     // to skip LIMIT 1
-    (q.query as SelectQueryData).returnsOne = true;
+    (q.q as SelectQueryData).returnsOne = true;
 
     return q as unknown as SetQueryReturnsColumnOptional<T, StringColumn>;
   }

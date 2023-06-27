@@ -129,10 +129,10 @@ const parseIntOrNullColumn = new IntegerColumn().parse((input) =>
 const get = <T extends Query, Column extends ColumnType>(
   q: Query,
 ): SetQueryReturnsColumn<T, Column> => {
-  q.query.returnType = 'valueOrThrow';
-  (q.query as SelectQueryData).returnsOne = true;
+  q.q.returnType = 'valueOrThrow';
+  (q.q as SelectQueryData).returnsOne = true;
 
-  const select = q.query.select as SelectItem[];
+  const select = q.q.select as SelectItem[];
   if (select.length > 1) {
     select[0] = select[select.length - 1];
     select.length = 1;
@@ -180,15 +180,11 @@ export class Aggregate {
     );
 
     if (columnType?.parseFn) {
-      (this.query as SelectQueryData)[getValueKey] = columnType;
+      (this.q as SelectQueryData)[getValueKey] = columnType;
 
-      setParserToQuery(this.query, getValueKey, columnType.parseFn);
+      setParserToQuery(this.q, getValueKey, columnType.parseFn);
 
-      setParserToQuery(
-        this.query,
-        options?.as || functionName,
-        columnType.parseFn,
-      );
+      setParserToQuery(this.q, options?.as || functionName, columnType.parseFn);
     }
 
     return this as unknown as SelectAgg<T, Func, As, Value>;

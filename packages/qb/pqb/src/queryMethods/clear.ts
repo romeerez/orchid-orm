@@ -23,11 +23,11 @@ export class Clear {
   _clear<T extends Query>(this: T, ...clears: ClearStatement[]): T {
     clears.forEach((clear) => {
       if (clear === 'where') {
-        delete this.query.and;
-        delete this.query.or;
+        delete this.q.and;
+        delete this.q.or;
       } else if (clear === 'counters') {
-        if ('type' in this.query && this.query.type === 'update') {
-          this.query.updateData = this.query.updateData.filter((item) => {
+        if ('type' in this.q && this.q.type === 'update') {
+          this.q.updateData = this.q.updateData.filter((item) => {
             if (!isExpression(item) && typeof item !== 'function') {
               let removed = false;
               for (const key in item) {
@@ -49,7 +49,7 @@ export class Clear {
           });
         }
       } else {
-        delete (this.query as Record<string, unknown>)[clear];
+        delete (this.q as Record<string, unknown>)[clear];
       }
     });
     return this;

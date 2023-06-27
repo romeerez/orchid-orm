@@ -60,8 +60,8 @@ export class MergeQueryMethods {
     return this.clone()._merge(q);
   }
   _merge<T extends Query, Q extends Query>(this: T, q: Q): MergeQuery<T, Q> {
-    const a = this.query as Record<string, unknown>;
-    const b = q.query as Record<string, unknown>;
+    const a = this.q as Record<string, unknown>;
+    const b = q.q as Record<string, unknown>;
 
     for (const key in b) {
       const value = b[key];

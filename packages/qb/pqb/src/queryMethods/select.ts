@@ -214,7 +214,7 @@ export const addParserForRawExpression = (
   key: string | getValueKey,
   raw: Expression,
 ) => {
-  if (raw._type.parseFn) setParserToQuery(q.query, key, raw._type.parseFn);
+  if (raw._type.parseFn) setParserToQuery(q.q, key, raw._type.parseFn);
 };
 
 // these are used as a wrapper to pass sub query result to `parseRecord`
@@ -231,11 +231,11 @@ const addParsersForSelectJoined = (
   arg: string,
   as: string | getValueKey = arg,
 ) => {
-  const parsers = q.query.joinedParsers?.[arg];
+  const parsers = q.q.joinedParsers?.[arg];
   if (parsers) {
-    setParserToQuery(q.query, as, (item) => {
+    setParserToQuery(q.q, as, (item) => {
       subQueryResult.rows = [item];
-      return q.query.handleResult(q, 'one', subQueryResult, true);
+      return q.q.handleResult(q, 'one', subQueryResult, true);
     });
   }
 };
@@ -251,9 +251,9 @@ export const addParserForSelectItem = <T extends Query>(
     if (isExpression(arg)) {
       addParserForRawExpression(q, key, arg);
     } else {
-      const { query } = arg;
+      const { q: query } = arg;
       if (query.parsers || query.transform) {
-        setParserToQuery(q.query, key, (item) => {
+        setParserToQuery(q.q, key, (item) => {
           const t = query.returnType || 'all';
           subQueryResult.rows =
             t === 'value' || t === 'valueOrThrow'
@@ -301,23 +301,23 @@ export const processSelectArg = <T extends Query>(
         value = value.joinQuery(q, value);
 
         let query;
-        const returnType = value.query.returnType;
+        const returnType = value.q.returnType;
         if (!returnType || returnType === 'all') {
           query = value.json(false);
-          value.query.coalesceValue = new RawSQL("'[]'");
+          value.q.coalesceValue = new RawSQL("'[]'");
         } else if (returnType === 'pluck') {
           query = value
             .wrap(value.baseQuery.clone())
-            ._jsonAgg(value.query.select[0]);
-          value.query.coalesceValue = new RawSQL("'[]'");
+            ._jsonAgg(value.q.select[0]);
+          value.q.coalesceValue = new RawSQL("'[]'");
         } else {
           if (
             (returnType === 'value' || returnType === 'valueOrThrow') &&
-            value.query.select
+            value.q.select
           ) {
-            if (typeof value.query.select[0] === 'string') {
-              value.query.select[0] = {
-                selectAs: { r: value.query.select[0] },
+            if (typeof value.q.select[0] === 'string') {
+              value.q.select[0] = {
+                selectAs: { r: value.q.select[0] },
               };
             }
           }
@@ -328,20 +328,20 @@ export const processSelectArg = <T extends Query>(
         let asOverride = key;
 
         let suffix: string | number = '';
-        if (value.query.joinedShapes?.[key]) {
+        if (value.q.joinedShapes?.[key]) {
           suffix = 2;
-          const joinOverrides = (q.query.joinOverrides ??= {});
+          const joinOverrides = (q.q.joinOverrides ??= {});
           while (joinOverrides[(asOverride = `${key}${suffix}`)]) {
             suffix++;
           }
           joinOverrides[key] = asOverride;
         }
 
-        value.query.joinedForSelect = asOverride;
+        value.q.joinedForSelect = asOverride;
 
         _joinLateral(
           q,
-          value.query.innerJoinLateral ? 'JOIN' : 'LEFT JOIN',
+          value.q.innerJoinLateral ? 'JOIN' : 'LEFT JOIN',
           query,
           (q) => q,
           key,
@@ -374,16 +374,16 @@ const setParserForStringArg = (
       addParsersForSelectJoined(q, table, columnAs);
     } else {
       if (table === as) {
-        const parser = q.query.parsers?.[column];
-        if (parser) setParserToQuery(q.query, columnAs || column, parser);
+        const parser = q.q.parsers?.[column];
+        if (parser) setParserToQuery(q.q, columnAs || column, parser);
       } else {
-        const parser = q.query.joinedParsers?.[table]?.[column];
-        if (parser) setParserToQuery(q.query, columnAs || column, parser);
+        const parser = q.q.joinedParsers?.[table]?.[column];
+        if (parser) setParserToQuery(q.q, columnAs || column, parser);
       }
     }
   } else {
-    const parser = q.query.parsers?.[arg];
-    if (parser) setParserToQuery(q.query, columnAs || arg, parser);
+    const parser = q.q.parsers?.[arg];
+    if (parser) setParserToQuery(q.q, columnAs || arg, parser);
   }
 };
 
@@ -394,7 +394,7 @@ const setParserForStringArg = (
 // so that outside of the sub-query the columns are named with app-side names,
 // while db column names are encapsulated inside the sub-query
 export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
-  const query = q.query as SelectQueryData;
+  const query = q.q as SelectQueryData;
   const { select, shape } = query;
   let result: ColumnsShapeBase;
   if (!select) {
@@ -431,9 +431,9 @@ export const getShapeFromSelect = (q: QueryBase, isSubQuery?: boolean) => {
           } else if (isExpression(it)) {
             result[key] = it._type;
           } else {
-            const { returnType } = it.query;
+            const { returnType } = it.q;
             if (returnType === 'value' || returnType === 'valueOrThrow') {
-              const type = (it.query as SelectQueryData)[getValueKey];
+              const type = (it.q as SelectQueryData)[getValueKey];
               if (type) result[key] = type;
             } else {
               result[key] = new JSONTextColumn();
@@ -467,7 +467,7 @@ const addColumnToShapeFromSelect = (
   if (index !== -1) {
     const table = arg.slice(0, index);
     const column = arg.slice(index + 1);
-    if (table === (q.query.as || q.table)) {
+    if (table === (q.q.as || q.table)) {
       result[key || column] = shape[column];
     } else {
       const it = query.joinedShapes?.[table]?.[column];
@@ -561,7 +561,7 @@ export class Select {
       return this as unknown as SelectResult<T, K>;
     }
 
-    const as = this.query.as || this.table;
+    const as = this.q.as || this.table;
     const selectArgs = args.map((item) => processSelectArg(this, as, item));
 
     return pushQueryArray(
@@ -592,7 +592,7 @@ export class Select {
   }
 
   _selectAll<T extends Query>(this: T): SelectResult<T, ['*']> {
-    this.query.select = ['*'];
+    this.q.select = ['*'];
     return this as unknown as SelectResult<T, ['*']>;
   }
 }

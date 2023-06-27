@@ -91,7 +91,7 @@ export const createRepo = <T extends Query, Methods extends MethodsBase<T>>(
     const proto = Object.create(q.baseQuery);
     proto.baseQuery = proto;
     const result = Object.create(proto);
-    result.query = getClonedQueryData(q.query);
+    result.q = getClonedQueryData(q.q);
 
     if (plainMethods) {
       Object.assign(proto.baseQuery, plainMethods);

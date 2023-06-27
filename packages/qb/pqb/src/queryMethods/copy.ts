@@ -54,7 +54,7 @@ export class CopyMethods {
     return this.clone()._copy(arg);
   }
   _copy<T extends Query>(this: T, arg: CopyArg<T>) {
-    Object.assign(this.query, {
+    Object.assign(this.q, {
       type: 'copy',
       copy: arg,
     });

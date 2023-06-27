@@ -16,7 +16,7 @@ const jsonColumnOrMethodToSql = (
   quotedAs?: string,
 ) => {
   return typeof column === 'string'
-    ? columnToSql(table.query, table.query.shape, column, quotedAs)
+    ? columnToSql(table.q, table.q.shape, column, quotedAs)
     : jsonToSql(table, column, values, quotedAs);
 };
 
@@ -91,7 +91,7 @@ export const selectToSql = (
         list.push(
           item === '*'
             ? selectAllSql(table, query, quotedAs)
-            : columnToSqlWithAs(table.query, item, quotedAs, true),
+            : columnToSqlWithAs(table.q, item, quotedAs, true),
         );
       } else {
         if ('selectAs' in item) {
@@ -110,8 +110,8 @@ export const selectToSql = (
             } else {
               list.push(
                 `${columnToSql(
-                  table.query,
-                  table.query.shape,
+                  table.q,
+                  table.q.shape,
                   value as string,
                   quotedAs,
                   true,
@@ -167,21 +167,21 @@ const pushSubQuerySql = (
   values: unknown[],
   list: string[],
 ) => {
-  const { returnType = 'all' } = query.query;
+  const { returnType = 'all' } = query.q;
 
-  if (query.query.joinedForSelect) {
+  if (query.q.joinedForSelect) {
     let sql;
     switch (returnType) {
       case 'one':
       case 'oneOrThrow':
-        sql = `row_to_json("${query.query.joinedForSelect}".*)`;
+        sql = `row_to_json("${query.q.joinedForSelect}".*)`;
         break;
       case 'all':
       case 'pluck':
       case 'value':
       case 'valueOrThrow':
       case 'rows':
-        sql = `"${query.query.joinedForSelect}".r`;
+        sql = `"${query.q.joinedForSelect}".r`;
         break;
       case 'rowCount':
       case 'void':
@@ -200,7 +200,7 @@ const pushSubQuerySql = (
       query = query._json() as unknown as typeof query;
       break;
     case 'pluck': {
-      const { select } = query.query;
+      const { select } = query.q;
       const first = select?.[0];
       if (!select || !first) {
         throw new OrchidOrmInternalError(
@@ -210,7 +210,7 @@ const pushSubQuerySql = (
       }
 
       const cloned = query.clone();
-      cloned.query.select = [{ selectAs: { c: first } }] as SelectItem[];
+      cloned.q.select = [{ selectAs: { c: first } }] as SelectItem[];
       query = cloned._wrap(cloned.baseQuery.clone()) as unknown as typeof query;
       query._getOptional(new RawSQL(`COALESCE(json_agg("c"), '[]')`));
       break;
@@ -233,7 +233,7 @@ const pushSubQuerySql = (
 };
 
 const coalesce = (query: Query, values: unknown[], sql: string) => {
-  const { coalesceValue } = query.query;
+  const { coalesceValue } = query.q;
   if (coalesceValue !== undefined) {
     let value;
     if (isExpression(coalesceValue)) {

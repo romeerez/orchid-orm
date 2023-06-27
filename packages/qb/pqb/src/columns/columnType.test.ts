@@ -189,7 +189,7 @@ describe('column type', () => {
       it('should parse all columns', async () => {
         expect((await User.all())[0].createdAt instanceof Date).toBe(true);
         expect((await User.take()).createdAt instanceof Date).toBe(true);
-        const idx = Object.keys(User.query.shape).indexOf('createdAt');
+        const idx = Object.keys(User.q.shape).indexOf('createdAt');
         expect((await User.rows())[0][idx] instanceof Date).toBe(true);
       });
     });

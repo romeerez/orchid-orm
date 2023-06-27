@@ -49,7 +49,7 @@ export const processJoinItem = (
       } = (table.relations as Record<string, Relation>)[first];
 
       const jq = joinQuery(table, toQuery);
-      const { query: j } = jq;
+      const { q: j } = jq;
 
       const tableName = (
         typeof j.from === 'string' ? j.from : jq.table
@@ -68,7 +68,7 @@ export const processJoinItem = (
         joinedShapes: {
           ...query.joinedShapes,
           ...j.joinedShapes,
-          [(table.query.as || table.table) as string]: table.shape,
+          [(table.q.as || table.table) as string]: table.shape,
         },
         and: j.and ? [...j.and] : [],
         or: j.or ? [...j.or] : [],
@@ -77,7 +77,7 @@ export const processJoinItem = (
       if (args[1]) {
         const arg = (args[1] as (q: unknown) => QueryBase)(
           new ctx.queryBuilder.onQueryBuilder(jq, j, table),
-        ).query;
+        ).q;
 
         if (arg.and) queryData.and.push(...arg.and);
         if (arg.or) queryData.or.push(...arg.or);
@@ -99,7 +99,7 @@ export const processJoinItem = (
       );
     }
   } else {
-    const joinQuery = first.query;
+    const joinQuery = first.q;
 
     const quotedFrom =
       typeof joinQuery.from === 'string' ? q(joinQuery.from) : undefined;
@@ -147,7 +147,7 @@ export const processJoinItem = (
           joinedShapes: {
             ...query.joinedShapes,
             ...joinQuery.joinedShapes,
-            [(table.query.as || table.table) as string]: table.query.shape,
+            [(table.q.as || table.table) as string]: table.q.shape,
           },
         },
         joinAs,
@@ -181,20 +181,20 @@ const processArgs = (
     if (typeof arg === 'function') {
       const joinedShapes = {
         ...query.joinedShapes,
-        [(table.query.as || table.table) as string]: table.shape,
+        [(table.q.as || table.table) as string]: table.shape,
       };
 
       let q: QueryBase;
       let data;
       if (typeof first === 'string') {
         const name = first;
-        const query = table.query;
+        const query = table.q;
         const shape = query.withShapes?.[name];
         if (!shape) {
           throw new Error('Cannot get shape of `with` statement');
         }
         q = Object.create(table);
-        q.query = {
+        q.q = {
           type: undefined,
           shape,
           adapter: query.adapter,
@@ -208,11 +208,14 @@ const processArgs = (
 
         if (first.joinQueryAfterCallback) {
           let base = q.baseQuery;
-          if (q.query.as) {
-            base = base.as(q.query.as);
+          if (q.q.as) {
+            base = base.as(q.q.as);
           }
 
-          const { query } = first.joinQueryAfterCallback(table as Query, base);
+          const { q: query } = first.joinQueryAfterCallback(
+            table as Query,
+            base,
+          );
           if (query.and) {
             pushQueryArray(q, 'and', query.and);
           }
@@ -222,21 +225,21 @@ const processArgs = (
         }
 
         data = {
-          ...first.query,
-          joinedShapes: { ...first.query.joinedShapes, ...joinedShapes },
+          ...first.q,
+          joinedShapes: { ...first.q.joinedShapes, ...joinedShapes },
         };
       }
 
       const jq = arg(new ctx.queryBuilder.onQueryBuilder(q, data, table));
 
-      if (jq.query.joinedShapes !== joinedShapes) {
-        jq.query.joinedShapes = {
-          ...jq.query.joinedShapes,
+      if (jq.q.joinedShapes !== joinedShapes) {
+        jq.q.joinedShapes = {
+          ...jq.q.joinedShapes,
           ...joinedShapes,
         };
       }
 
-      return whereToSql(ctx, jq, jq.query, joinAs);
+      return whereToSql(ctx, jq, jq.q, joinAs);
     } else {
       return getObjectOrRawConditions(
         query,

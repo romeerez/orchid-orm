@@ -27,7 +27,7 @@ const selectWindowFunction = <
   });
 
   if (parse) {
-    setParserToQuery(self.query, options.as || functionName, parse);
+    setParserToQuery(self.q, options.as || functionName, parse);
   }
 
   return self as unknown as SelectAgg<T, Func, As, Value>;

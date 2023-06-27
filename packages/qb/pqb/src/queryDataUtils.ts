@@ -11,17 +11,15 @@ import { Query } from './query';
  * @param key - key to get the array
  * @param value - array with values
  */
-export const pushQueryArray = <T extends { query: QueryData }>(
+export const pushQueryArray = <T extends { q: QueryData }>(
   q: T,
   key: string,
   value: unknown,
 ): T => {
-  if (!q.query[key as keyof typeof q.query])
-    (q.query as Record<string, unknown>)[key] = value;
+  if (!q.q[key as keyof typeof q.q])
+    (q.q as Record<string, unknown>)[key] = value;
   else
-    (q.query[key as keyof typeof q.query] as unknown[]).push(
-      ...(value as unknown[]),
-    );
+    (q.q[key as keyof typeof q.q] as unknown[]).push(...(value as unknown[]));
   return q as T;
 };
 
@@ -32,13 +30,13 @@ export const pushQueryArray = <T extends { query: QueryData }>(
  * @param key - key to get the array
  * @param value - new element to push
  */
-export const pushQueryValue = <T extends { query: QueryData }>(
+export const pushQueryValue = <T extends { q: QueryData }>(
   q: T,
   key: string,
   value: unknown,
 ): T => {
   pushOrNewArrayToObject(
-    q.query as unknown as Record<string, unknown[]>,
+    q.q as unknown as Record<string, unknown[]>,
     key,
     value,
   );
@@ -53,20 +51,19 @@ export const pushQueryValue = <T extends { query: QueryData }>(
  * @param key - object key to set the value into
  * @param value - value to set by the key
  */
-export const setQueryObjectValue = <T extends { query: QueryData }>(
+export const setQueryObjectValue = <T extends { q: QueryData }>(
   q: T,
   object: string,
   key: string,
   value: unknown,
 ): T => {
-  if (!q.query[object as keyof typeof q.query])
-    (q.query as unknown as Record<string, Record<string, unknown>>)[object] = {
+  if (!q.q[object as keyof typeof q.q])
+    (q.q as unknown as Record<string, Record<string, unknown>>)[object] = {
       [key]: value,
     };
   else
-    (q.query as unknown as Record<string, Record<string, unknown>>)[object][
-      key
-    ] = value;
+    (q.q as unknown as Record<string, Record<string, unknown>>)[object][key] =
+      value;
   return q as unknown as T;
 };
 
@@ -77,7 +74,7 @@ export const setQueryObjectValue = <T extends { query: QueryData }>(
  * @param method - 'update' or 'delete'
  */
 export const throwIfNoWhere = (q: Query, method: string) => {
-  if (!q.query.or && !q.query.and) {
+  if (!q.q.or && !q.q.and) {
     throw new OrchidOrmInternalError(
       q,
       `Dangerous ${method} without conditions`,

@@ -59,7 +59,7 @@ export const handleResult: CommonQueryData['handleResult'] = (
   result: QueryResult,
   isSubQuery?: true,
 ) => {
-  return parseResult(q, q.query.parsers, returnType, result, isSubQuery);
+  return parseResult(q, q.q.parsers, returnType, result, isSubQuery);
 };
 
 function maybeWrappedThen(
@@ -67,29 +67,29 @@ function maybeWrappedThen(
   resolve?: Resolve,
   reject?: Reject,
 ): Promise<unknown> {
-  const { query } = this;
+  const { q } = this;
 
   let beforeHooks: QueryBeforeHook[] | undefined;
   let afterHooks: QueryAfterHook[] | undefined;
   let afterCommitHooks: QueryAfterHook[] | undefined;
-  if (query.type) {
-    if (query.type === 'insert') {
-      beforeHooks = query.beforeCreate;
-      afterHooks = query.afterCreate;
-      afterCommitHooks = query.afterCreateCommit;
-    } else if (query.type === 'update') {
-      beforeHooks = query.beforeUpdate;
-      afterHooks = query.afterUpdate;
-      afterCommitHooks = query.afterUpdateCommit;
-    } else if (query.type === 'delete') {
-      beforeHooks = query.beforeDelete;
-      afterHooks = query.afterDelete;
-      afterCommitHooks = query.afterDeleteCommit;
+  if (q.type) {
+    if (q.type === 'insert') {
+      beforeHooks = q.beforeCreate;
+      afterHooks = q.afterCreate;
+      afterCommitHooks = q.afterCreateCommit;
+    } else if (q.type === 'update') {
+      beforeHooks = q.beforeUpdate;
+      afterHooks = q.afterUpdate;
+      afterCommitHooks = q.afterUpdateCommit;
+    } else if (q.type === 'delete') {
+      beforeHooks = q.beforeDelete;
+      afterHooks = q.afterDelete;
+      afterCommitHooks = q.afterDeleteCommit;
     }
   }
 
   const trx = this.internal.transactionStorage.getStore();
-  if ((query.wrapInTransaction || afterHooks) && !trx) {
+  if ((q.wrapInTransaction || afterHooks) && !trx) {
     return this.transaction(
       () =>
         new Promise((resolve, reject) => {
@@ -110,7 +110,7 @@ function maybeWrappedThen(
   } else {
     return then(
       this,
-      trx?.adapter || this.query.adapter,
+      trx?.adapter || this.q.adapter,
       trx,
       beforeHooks,
       afterHooks,
@@ -143,7 +143,7 @@ const then = async (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   reject?: (error: any) => any,
 ): Promise<unknown> => {
-  const { query } = q;
+  const { q: query } = q;
 
   let sql: (Sql & { name?: string }) | undefined;
   let logData: unknown | undefined;
@@ -286,7 +286,7 @@ export const parseResult = (
 ): unknown => {
   switch (returnType) {
     case 'all': {
-      if (q.query.throwOnNotFound && result.rows.length === 0)
+      if (q.q.throwOnNotFound && result.rows.length === 0)
         throw new NotFoundError(q);
 
       const { rows } = result;
@@ -331,7 +331,7 @@ export const parseResult = (
       const value = result.rows[0]?.[0];
       return value !== undefined
         ? parseValue(value, parsers)
-        : q.query.notFoundDefault;
+        : q.q.notFoundDefault;
     }
     case 'valueOrThrow': {
       const value = result.rows[0]?.[0];
@@ -339,7 +339,7 @@ export const parseResult = (
       return parseValue(value, parsers);
     }
     case 'rowCount': {
-      if (q.query.throwOnNotFound && result.rowCount === 0) {
+      if (q.q.throwOnNotFound && result.rowCount === 0) {
         throw new NotFoundError(q);
       }
       return result.rowCount;

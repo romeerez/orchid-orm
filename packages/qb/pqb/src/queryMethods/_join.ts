@@ -47,12 +47,12 @@ export const _join = <
   const first = args[0];
 
   if (typeof first === 'object') {
-    isSubQuery = getIsJoinSubQuery(first.query, first.baseQuery.query);
+    isSubQuery = getIsJoinSubQuery(first.q, first.baseQuery.q);
 
-    joinKey = first.query.as || first.table;
+    joinKey = first.q.as || first.table;
     if (joinKey) {
       shape = getShapeFromSelect(first, isSubQuery);
-      parsers = first.query.parsers;
+      parsers = first.q.parsers;
 
       if (isSubQuery) {
         args[0] = first.clone() as Arg;
@@ -65,9 +65,9 @@ export const _join = <
     const relation = (q.relations as Record<string, Relation>)[joinKey];
     if (relation) {
       shape = getShapeFromSelect(relation.query);
-      parsers = relation.query.query.parsers;
+      parsers = relation.query.q.parsers;
     } else {
-      shape = q.query.withShapes?.[joinKey];
+      shape = q.q.withShapes?.[joinKey];
       if (shape) {
         // clone the shape to mutate it below, in other cases the shape is newly created
         if (!require) shape = { ...shape };
@@ -114,13 +114,13 @@ export const _joinLateral = <
     if (relation) {
       arg = relation.query as Arg;
     } else {
-      const shape = q.query.withShapes?.[arg];
+      const shape = q.q.withShapes?.[arg];
       if (shape) {
         const t = Object.create(q.queryBuilder);
         t.table = arg;
         t.shape = shape;
-        t.query = {
-          ...t.query,
+        t.q = {
+          ...t.q,
           shape,
         };
         t.baseQuery = t;
@@ -130,19 +130,19 @@ export const _joinLateral = <
   }
 
   const query = arg as Query;
-  query.query.joinTo = q;
-  (query.query.joinedShapes ??= {})[getQueryAs(q)] = q.query.shape;
+  query.q.joinTo = q;
+  (query.q.joinedShapes ??= {})[getQueryAs(q)] = q.q.shape;
   let result = cb(query as never);
 
   if (relation) {
     result = relation.joinQuery(q, result as unknown as Query) as unknown as R;
   }
 
-  const joinKey = as || result.query.as || result.table;
+  const joinKey = as || result.q.as || result.table;
   if (joinKey) {
     const shape = getShapeFromSelect(result, true);
     setQueryObjectValue(q, 'joinedShapes', joinKey, shape);
-    setQueryObjectValue(q, 'joinedParsers', joinKey, result.query.parsers);
+    setQueryObjectValue(q, 'joinedParsers', joinKey, result.q.parsers);
   }
 
   return pushQueryValue(q, 'join', [

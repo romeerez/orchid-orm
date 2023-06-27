@@ -42,13 +42,13 @@ type ToSqlOptionsInternal = ToSqlOptions & {
 
 export const toSql = (table: Query, options?: ToSqlOptions): Sql => {
   return (
-    (!options?.clearCache && table.query[toSqlCacheKey]) ||
-    (table.query[toSqlCacheKey] = makeSql(table, options))
+    (!options?.clearCache && table.q[toSqlCacheKey]) ||
+    (table.q[toSqlCacheKey] = makeSql(table, options))
   );
 };
 
 export const makeSql = (table: Query, options?: ToSqlOptionsInternal): Sql => {
-  const query = table.query;
+  const query = table.q;
   const sql: string[] = [];
   const values = options?.values || [];
   const ctx: ToSqlCtx = {
@@ -143,7 +143,7 @@ export const makeSql = (table: Query, options?: ToSqlOptionsInternal): Sql => {
     const group = query.group.map((item) =>
       isExpression(item)
         ? item.toSQL(values)
-        : columnToSql(table.query, table.query.shape, item as string, quotedAs),
+        : columnToSql(table.q, table.q.shape, item as string, quotedAs),
     );
     sql.push(`GROUP BY ${group.join(', ')}`);
   }

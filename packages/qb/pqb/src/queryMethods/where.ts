@@ -167,7 +167,7 @@ const existsArgs = (args: [JoinFirstArg<Query>, ...JoinArgs<Query, Query>]) => {
 
   let isSubQuery;
   if (typeof q === 'object') {
-    isSubQuery = getIsJoinSubQuery(q.query, q.baseQuery.query);
+    isSubQuery = getIsJoinSubQuery(q.q, q.baseQuery.q);
     if (isSubQuery) {
       args[0] = q.clone();
       args[0].shape = getShapeFromSelect(q, true) as ColumnsShape;
@@ -493,13 +493,13 @@ export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
     this.internal = q.internal;
     this.table = typeof q === 'object' ? q.table : q;
     this.shape = shape;
-    this.query = {
+    this.q = {
       shape: shape as ColumnsShapeBase,
       joinedShapes,
     } as QueryData;
     this.baseQuery = this as unknown as Query;
-    if (typeof q === 'object' && q.query.as) {
-      this.query.as = q.query.as;
+    if (typeof q === 'object' && q.q.as) {
+      this.q.as = q.q.as;
     }
   }
 }

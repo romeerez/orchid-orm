@@ -8,14 +8,14 @@ import { QueryBase } from '../queryBase';
 // used in `from` logic to decide if convert query to sql or just write table name
 export const checkIfASimpleQuery = (q: Query) => {
   if (
-    (q.query.returnType && q.query.returnType !== 'all') ||
+    (q.q.returnType && q.q.returnType !== 'all') ||
     q.internal.columnsForSelectAll ||
-    q.query.and?.length ||
-    q.query.or?.length
+    q.q.and?.length ||
+    q.q.or?.length
   )
     return false;
 
-  const keys = Object.keys(q.query) as (keyof SelectQueryData)[];
+  const keys = Object.keys(q.q) as (keyof SelectQueryData)[];
   return !keys.some((key) => queryKeysOfNotSimpleQuery.includes(key));
 };
 
@@ -183,9 +183,7 @@ export type WhereOnItem = {
     | [leftFullColumn: string, op: string, rightFullColumn: string];
 };
 
-export type WhereOnJoinItem =
-  | { table?: string; query: { as?: string } }
-  | string;
+export type WhereOnJoinItem = { table?: string; q: { as?: string } } | string;
 
 export type AggregateItemOptions = {
   as?: string;
