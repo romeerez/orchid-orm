@@ -9,10 +9,11 @@ import {
   userData,
   UserRecord,
 } from '../test-utils/test-utils';
-import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
+import { assertType, expectSql, useTestDatabase } from 'test-utils';
 import { HasOneRelation, RelationQuery } from '../relations';
 import { addQueryOn } from './join';
 import { Query } from '../query';
+import { raw } from '../sql/rawSql';
 
 describe('update', () => {
   useTestDatabase();
@@ -48,7 +49,7 @@ describe('update', () => {
     const count = 2;
     const users = await User.select('id').createMany([userData, userData]);
 
-    const query = User.or(...users).updateRaw(testDb.sql`name = 'name'`);
+    const query = User.or(...users).updateRaw(raw`name = 'name'`);
     expectSql(
       query.toSql(),
       `
@@ -421,7 +422,7 @@ describe('update', () => {
 
   it('should support raw sql as a value', () => {
     const query = User.where({ id: 1 }).update({
-      name: testDb.sql`'raw sql'`,
+      name: raw`'raw sql'`,
     });
     expectSql(
       query.toSql(),

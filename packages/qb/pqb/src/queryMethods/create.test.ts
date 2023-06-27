@@ -13,6 +13,7 @@ import {
 } from '../test-utils/test-utils';
 import { OnConflictQueryBuilder } from './create';
 import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
+import { raw } from '../sql/rawSql';
 
 const RuntimeDefaultTable = testDb('user', (t) => ({
   id: t.serial().primaryKey(),
@@ -29,7 +30,7 @@ describe('create functions', () => {
 
       const query = q.createRaw({
         columns: ['name', 'password'],
-        values: testDb.sql`raw sql`,
+        values: raw`raw sql`,
       });
 
       expectSql(
@@ -49,7 +50,7 @@ describe('create functions', () => {
     it('should add runtime default', () => {
       const q = RuntimeDefaultTable.createRaw({
         columns: ['password'],
-        values: testDb.sql`'password'`,
+        values: raw`'password'`,
       });
 
       expectSql(
@@ -66,7 +67,7 @@ describe('create functions', () => {
     it('should create with raw sql and list of columns with names', () => {
       const query = Snake.createRaw({
         columns: ['snakeName', 'tailLength'],
-        values: testDb.sql`raw sql`,
+        values: raw`raw sql`,
       });
       expectSql(
         query.toSql(),
@@ -85,7 +86,7 @@ describe('create functions', () => {
 
       const query = q.createManyRaw({
         columns: ['name', 'password'],
-        values: [testDb.sql`sql1`, testDb.sql`sql2`],
+        values: [raw`sql1`, raw`sql2`],
       });
       expectSql(
         query.toSql(),
@@ -104,7 +105,7 @@ describe('create functions', () => {
     it('should add runtime default', () => {
       const q = RuntimeDefaultTable.createManyRaw({
         columns: ['password'],
-        values: [testDb.sql`'pw1'`, testDb.sql`'pw2'`],
+        values: [raw`'pw1'`, raw`'pw2'`],
       });
 
       expectSql(
@@ -121,7 +122,7 @@ describe('create functions', () => {
     it('should create with raw sql and list of columns with names', () => {
       const query = Snake.createManyRaw({
         columns: ['snakeName', 'tailLength'],
-        values: [testDb.sql`sql1`, testDb.sql`sql2`],
+        values: [raw`sql1`, raw`sql2`],
       });
       expectSql(
         query.toSql(),
@@ -135,6 +136,25 @@ describe('create functions', () => {
   });
 
   describe('create', () => {
+    it('should create one record with raw SQL for a column value', async () => {
+      const q = User.create({
+        name: userData.name,
+        password: raw`'password'`,
+      });
+
+      assertType<Awaited<typeof q>, UserRecord>();
+
+      expectSql(
+        q.toSql(),
+        `
+          INSERT INTO "user"("name", "password")
+          VALUES ($1, 'password')
+          RETURNING *
+        `,
+        [userData.name],
+      );
+    });
+
     it('should create one record, returning record', async () => {
       const q = User.all();
 
@@ -360,6 +380,31 @@ describe('create functions', () => {
   });
 
   describe('createMany', () => {
+    it('should create many records with raw SQL for a column value', async () => {
+      const q = User.createMany([
+        {
+          name: userData.name,
+          password: raw`'password'`,
+        },
+        {
+          name: raw`'name'`,
+          password: userData.password,
+        },
+      ]);
+
+      assertType<Awaited<typeof q>, UserRecord[]>();
+
+      expectSql(
+        q.toSql(),
+        `
+          INSERT INTO "user"("name", "password")
+          VALUES ($1, 'password'), ('name', $2)
+          RETURNING *
+        `,
+        [userData.name, userData.password],
+      );
+    });
+
     it('should create many records, returning inserted count', async () => {
       const q = User.all();
 
@@ -559,12 +604,12 @@ describe('create functions', () => {
       );
     });
 
-    it('should create record from select', () => {
+    it('should create record from select with additional data', () => {
       const chat = Chat.find(1).select({ chatId: 'idOfChat' });
 
       const query = Message.createFrom(chat, {
         authorId: 1,
-        text: 'text',
+        text: raw`'text'`,
       });
 
       assertType<Awaited<typeof query>, MessageRecord>();
@@ -573,13 +618,13 @@ describe('create functions', () => {
         query.toSql(),
         `
           INSERT INTO "message"("chatId", "authorId", "text")
-          SELECT "chat"."idOfChat" AS "chatId", $1, $2
+          SELECT "chat"."idOfChat" AS "chatId", $1, 'text'
           FROM "chat"
-          WHERE "chat"."idOfChat" = $3
+          WHERE "chat"."idOfChat" = $2
           LIMIT 1
           RETURNING *
         `,
-        [1, 'text', 1],
+        [1, 1],
       );
     });
 
@@ -827,7 +872,7 @@ describe('create functions', () => {
         const query = q
           .count()
           .create(userData)
-          .onConflict(testDb.sql`raw query`)
+          .onConflict(raw`raw query`)
           .ignore();
         expectSql(
           query.toSql(),
@@ -1009,8 +1054,8 @@ describe('create functions', () => {
         const query = q
           .count()
           .create(userData)
-          .onConflict(testDb.sql`on conflict raw`)
-          .merge(testDb.sql`merge raw`);
+          .onConflict(raw`on conflict raw`)
+          .merge(raw`merge raw`);
 
         expectSql(
           query.toSql(),

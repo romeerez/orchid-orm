@@ -20,9 +20,7 @@ export const pushInsertSql = (
   query: InsertQueryData,
   quotedAs: string,
 ): QueryHookSelect | undefined => {
-  const { shape } = q.query;
-
-  const { columns } = query;
+  const { columns, shape } = query;
   quotedColumns.length = columns.length;
   for (let i = 0, len = columns.length; i < len; i++) {
     quotedColumns[i] = `"${shape[columns[i]]?.data.name || columns[i]}"`;
@@ -55,8 +53,52 @@ export const pushInsertSql = (
 
   const QueryClass = ctx.queryBuilder.constructor as Db;
 
-  if ('from' in values) {
-    const { from, values: v } = values;
+  if (query.kind === 'object') {
+    ctx.sql.push(
+      `VALUES ${(values as unknown[][]).reduce(
+        (sql, row, i) =>
+          sql +
+          (i ? ', ' : '') +
+          `(${encodeRow(ctx, q, QueryClass, row, runtimeDefaults)})`,
+        '',
+      )}`,
+    );
+  } else if (query.kind === 'raw') {
+    if (isExpression(values)) {
+      let valuesSql = values.toSQL(ctx.values);
+
+      if (runtimeDefaults) {
+        valuesSql += `, ${runtimeDefaults
+          .map((fn) => addValue(ctx.values, fn()))
+          .join(', ')}`;
+      }
+
+      ctx.sql.push(`VALUES (${valuesSql})`);
+    } else {
+      let sql;
+
+      if (runtimeDefaults) {
+        const { values: v } = ctx;
+        sql = (values as Expression[])
+          .map(
+            (raw) =>
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              `(${raw.toSQL(v)}, ${runtimeDefaults!
+                .map((fn) => addValue(v, fn()))
+                .join(', ')})`,
+          )
+          .join(', ');
+      } else {
+        const { values: v } = ctx;
+        sql = (values as Expression[])
+          .map((raw) => `(${raw.toSQL(v)})`)
+          .join(', ');
+      }
+
+      ctx.sql.push(`VALUES ${sql}`);
+    }
+  } else {
+    const { from, values: v } = values as { from: Query; values?: unknown[][] };
     const q = from.clone();
 
     if (v) {
@@ -68,48 +110,6 @@ export const pushInsertSql = (
     }
 
     ctx.sql.push(makeSql(q, { values: ctx.values }).text);
-  } else if (isExpression(values)) {
-    let valuesSql = values.toSQL(ctx.values);
-
-    if (runtimeDefaults) {
-      valuesSql += `, ${runtimeDefaults
-        .map((fn) => addValue(ctx.values, fn()))
-        .join(', ')}`;
-    }
-
-    ctx.sql.push(`VALUES (${valuesSql})`);
-  } else if (isExpression(values[0])) {
-    let sql;
-
-    if (runtimeDefaults) {
-      const { values: v } = ctx;
-      sql = (values as Expression[])
-        .map(
-          (raw) =>
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            `(${raw.toSQL(v)}, ${runtimeDefaults!
-              .map((fn) => addValue(v, fn()))
-              .join(', ')})`,
-        )
-        .join(', ');
-    } else {
-      const { values: v } = ctx;
-      sql = (values as Expression[])
-        .map((raw) => `(${raw.toSQL(v)})`)
-        .join(', ');
-    }
-
-    ctx.sql.push(`VALUES ${sql}`);
-  } else {
-    ctx.sql.push(
-      `VALUES ${(values as unknown[][]).reduce(
-        (sql, row, i) =>
-          sql +
-          (i ? ', ' : '') +
-          `(${encodeRow(ctx, q, QueryClass, row, runtimeDefaults)})`,
-        '',
-      )}`,
-    );
   }
 
   if (query.onConflict) {
@@ -211,8 +211,12 @@ const encodeRow = (
       value = resolveSubQueryCallback(q, value as (q: Query) => Query);
     }
 
-    if (value && typeof value === 'object' && value instanceof QueryClass) {
-      return `(${joinSubQuery(q, value as Query).toSql(ctx).text})`;
+    if (value && typeof value === 'object') {
+      if (value instanceof Expression) {
+        return value.toSQL(ctx.values);
+      } else if (value instanceof QueryClass) {
+        return `(${joinSubQuery(q, value as Query).toSql(ctx).text})`;
+      }
     }
 
     return value === undefined ? 'DEFAULT' : addValue(ctx.values, value);

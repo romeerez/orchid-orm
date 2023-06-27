@@ -215,7 +215,9 @@ export const makeHasManyMethod = (
       return (query) => {
         const fromQuery = query.clone();
         fromQuery.query.select = fromQuerySelect;
-        (relationQuery.query as InsertQueryData).values = { from: fromQuery };
+        const q = relationQuery.query as InsertQueryData;
+        q.kind = 'from';
+        q.values = { from: fromQuery };
       };
     },
   };

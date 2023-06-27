@@ -12,7 +12,12 @@ import {
   HasOneRelation,
   RelationsBase,
 } from '../relations';
-import { InsertQueryData, OnConflictItem, OnConflictMergeUpdate } from '../sql';
+import {
+  CreateKind,
+  InsertQueryData,
+  OnConflictItem,
+  OnConflictMergeUpdate,
+} from '../sql';
 import { WhereArg } from './where';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
@@ -47,6 +52,7 @@ export type CreateData<
 
 // Type of available variants to provide for a specific column when creating
 type CreateColumn<T extends Query, Key extends keyof T['inputType']> =
+  | Expression
   | T['inputType'][Key]
   | {
       [K in keyof Query]: K extends 'then'
@@ -265,14 +271,14 @@ const processCreateItem = (
   encoders: Record<string, Encoder>,
 ) => {
   const { shape } = q.query;
-  Object.keys(item).forEach((key) => {
+  for (const key in item) {
     if (shape[key] instanceof VirtualColumn) {
       (shape[key] as VirtualColumn).create?.(q, ctx, item, rowIndex);
     } else if (!ctx.columns.has(key) && (shape[key] || shape === anyShape)) {
       ctx.columns.set(key, ctx.columns.size);
       encoders[key] = shape[key]?.encodeFn as Encoder;
     }
-  });
+  }
 };
 
 const createCtx = (): CreateCtx => ({
@@ -341,30 +347,34 @@ const insert = (
     columns: string[];
     values: InsertQueryData['values'];
   },
+  kind: CreateKind,
   many?: boolean,
 ) => {
-  const q = self as Query & { query: InsertQueryData };
+  const { query } = self as { query: InsertQueryData };
 
-  delete q.query.and;
-  delete q.query.or;
+  delete query.and;
+  delete query.or;
 
-  q.query.type = 'insert';
-  q.query.columns = columns;
-  q.query.values = values;
+  query.type = 'insert';
+  query.columns = columns;
+  query.values = values;
 
-  const { select, returnType = 'all' } = q.query;
+  // query kind may be already set by in the ORM
+  // so that author.books.create(data) will actually perform the `from` kind of create
+  if (!query.kind) query.kind = kind;
+
+  const { select, returnType = 'all' } = query;
 
   if (!select) {
-    if (returnType !== 'void') q.query.returnType = 'rowCount';
+    if (returnType !== 'void') query.returnType = 'rowCount';
   } else if (many) {
     if (returnType === 'one' || returnType === 'oneOrThrow')
-      q.query.returnType = 'all';
+      query.returnType = 'all';
   } else if (returnType === 'all') {
-    q.query.returnType =
-      'from' in values ? values.from.query.returnType : 'one';
+    query.returnType = 'from' in values ? values.from.query.returnType : 'one';
   }
 
-  return q;
+  return self;
 };
 
 const getFromSelectColumns = (
@@ -413,10 +423,14 @@ const createFromQuery = <
 
   const columns = getFromSelectColumns(from, obj, many);
 
-  return insert(q, {
-    columns,
-    values: { from, values: obj?.values },
-  }) as Many extends true ? CreateManyResult<T> : CreateResult<T>;
+  return insert(
+    q,
+    {
+      columns,
+      values: { from, values: obj?.values },
+    },
+    'from',
+  ) as Many extends true ? CreateManyResult<T> : CreateResult<T>;
 };
 
 export type CreateMethodsNames =
@@ -471,7 +485,7 @@ export class Create {
       obj.values = values;
     }
 
-    return insert(this, obj) as CreateResult<T>;
+    return insert(this, obj, 'object') as CreateResult<T>;
   }
 
   /**
@@ -505,6 +519,7 @@ export class Create {
     return insert(
       this,
       handleManyData(this, data, ctx),
+      'object',
       true,
     ) as CreateManyResult<T>;
   }
@@ -542,6 +557,7 @@ export class Create {
     return insert(
       this,
       args[0] as { columns: string[]; values: Expression },
+      'raw',
     ) as CreateResult<T>;
   }
 
@@ -578,6 +594,8 @@ export class Create {
     return insert(
       this,
       args[0] as { columns: string[]; values: Expression[] },
+      'raw',
+      true,
     ) as CreateManyResult<T>;
   }
 

@@ -139,8 +139,11 @@ export type SelectQueryData = CommonQueryData & {
   [getValueKey]?: ColumnTypeBase;
 };
 
+export type CreateKind = 'object' | 'raw' | 'from';
+
 export type InsertQueryData = CommonQueryData & {
   type: 'insert';
+  kind: CreateKind;
   columns: string[];
   values:
     | unknown[][]
