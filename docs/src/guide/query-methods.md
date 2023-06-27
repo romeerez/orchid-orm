@@ -268,10 +268,13 @@ const { value } = req.params;
 
 // this is SAFE, SQL injection are prevented:
 await db.table.where(
-  db.table.sql({ raw: '$$column = random() * $value' }).values({
-    column: 'someTable.someColumn', // or simply 'column'
-    one: value,
-    two: 123,
+  db.table.sql({
+    raw: '$$column = random() * $value',
+    values: {
+      column: 'someTable.someColumn', // or simply 'column'
+      one: value,
+      two: 123,
+    },
   }),
 );
 ```
@@ -288,6 +291,11 @@ db.table.sql<boolean>`key = ${value}`;
 // with column type for select:
 db.table.sql`key = ${value}`.type((t) => t.boolean());
 
+// with column name:
+db.table.sql`$$columnName = ${value}`.values({
+  columnName: 'column',
+});
+
 // raw SQL string, not allowed to interpolate:
 db.table.sql({ raw: 'random()' });
 
@@ -295,10 +303,13 @@ db.table.sql({ raw: 'random()' });
 db.table.sql<number>({ raw: 'random()' });
 
 // with values:
-db.table.sql({ raw: '$$columnName = $one + $two' }).values({
-  columnName: 'column',
-  one: 1,
-  two: 2,
+db.table.sql({
+  raw: '$$columnName = $one + $two',
+  values: {
+    columnName: 'column',
+    one: 1,
+    two: 2,
+  },
 });
 
 // combine template literal, column type, and values:

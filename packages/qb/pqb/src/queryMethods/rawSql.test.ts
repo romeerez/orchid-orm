@@ -56,6 +56,16 @@ describe('raw sql', () => {
     );
   });
 
+  it('should handle raw sql and values in single parameter', () => {
+    const sql = User.sql({ raw: 'column = $value', values: { value: 'foo' } });
+
+    expect(sql).toEqual({
+      _sql: 'column = $value',
+      _values: { value: 'foo' },
+      columnTypes: User.columnTypes,
+    });
+  });
+
   it('should handle values and a template string', () => {
     const sql = User.sql`value = $value`.values({ value: 'value' });
 
