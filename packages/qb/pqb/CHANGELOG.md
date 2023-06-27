@@ -1,5 +1,13 @@
 # pqb
 
+## 0.14.3
+
+### Patch Changes
+
+- ccc5e2aa: Allow raw sql and values in a single parameter.
+- Updated dependencies [ccc5e2aa]
+  - orchid-core@0.6.2
+
 ## 0.14.2
 
 ### Patch Changes

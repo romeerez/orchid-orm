@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.6.2
+
+### Patch Changes
+
+- ccc5e2aa: Allow raw sql and values in a single parameter.
+
 ## 0.6.1
 
 ### Patch Changes
