@@ -41,6 +41,7 @@ const after = <T extends QueryBase, S extends HookSelect<T>>(
 export abstract class QueryHooks extends QueryBase {
   /**
    * Run the function before any kind of query.
+   *
    * @param cb - function to call, first argument is a query object
    */
   beforeQuery<T extends QueryHooks>(this: T, cb: QueryBeforeHook): T {
@@ -54,6 +55,7 @@ export abstract class QueryHooks extends QueryBase {
    * Run the function after any kind of query.
    * Enforces wrapping the query into a transaction.
    * The function will run after the query is succeeded, but before the transaction commit.
+   *
    * @param cb - function to call, first argument is the query result of type `unknown`, second argument is a query object
    */
   afterQuery<T extends QueryHooks>(this: T, cb: QueryAfterHook): T {
@@ -65,6 +67,7 @@ export abstract class QueryHooks extends QueryBase {
 
   /**
    * Run the function before a `create` kind of query.
+   *
    * @param cb - function to call, first argument is a query object
    */
   beforeCreate<T extends QueryHooks>(this: T, cb: QueryBeforeHook): T {
@@ -79,6 +82,8 @@ export abstract class QueryHooks extends QueryBase {
    * Enforces wrapping the query into a transaction.
    * The function will run after the query is succeeded, but before the transaction commit.
    * Queries inside the function will run in the same transaction as the target query.
+   *
+   * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
   afterCreate<T extends QueryHooks, S extends HookSelect<T>>(
@@ -99,6 +104,8 @@ export abstract class QueryHooks extends QueryBase {
   /**
    * Run the function after transaction for a `create` kind of query will be committed.
    * If the query wasn't wrapped in a transaction, will run after the query.
+   *
+   * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
   afterCreateCommit<T extends QueryHooks, S extends HookSelect<T>>(
@@ -118,6 +125,7 @@ export abstract class QueryHooks extends QueryBase {
 
   /**
    * Run the function before an `update` kind of query.
+   *
    * @param cb - function to call, first argument is a query object
    */
   beforeUpdate<T extends QueryHooks>(this: T, cb: QueryBeforeHook): T {
@@ -133,6 +141,8 @@ export abstract class QueryHooks extends QueryBase {
    * The function will run after the query is succeeded, but before the transaction commit.
    * Queries inside the function will run in the same transaction as the target query.
    * If no records were updated, the hook *won't* run.
+   *
+   * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
   afterUpdate<T extends QueryHooks, S extends HookSelect<T>>(
@@ -154,6 +164,8 @@ export abstract class QueryHooks extends QueryBase {
    * Run the function after transaction for an `update` kind of query will be committed.
    * If the query wasn't wrapped in a transaction, will run after the query.
    * If no records were updated, the hook *won't* run.
+   *
+   * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
   afterUpdateCommit<T extends QueryHooks, S extends HookSelect<T>>(
@@ -173,6 +185,7 @@ export abstract class QueryHooks extends QueryBase {
 
   /**
    * Run the function before a `create` or an `update` kind of query.
+   *
    * @param cb - function to call, first argument is a query object
    */
   beforeSave<T extends QueryHooks>(this: T, cb: QueryBeforeHook): T {
@@ -188,6 +201,8 @@ export abstract class QueryHooks extends QueryBase {
    * The function will run after the query is succeeded, but before the transaction commit.
    * Queries inside the function will run in the same transaction as the target query.
    * For the `update` query, if no records were updated, the hook *won't* run.
+   *
+   * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
   afterSave<T extends QueryHooks, S extends HookSelect<T>>(
@@ -209,6 +224,8 @@ export abstract class QueryHooks extends QueryBase {
    * Run the function after transaction for a `create` or an `update` kind of query will be committed.
    * If the query wasn't wrapped in a transaction, will run after the query.
    * For the `update` query, if no records were updated, the hook *won't* run.
+   *
+   * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
   afterSaveCommit<T extends QueryHooks, S extends HookSelect<T>>(
@@ -234,6 +251,7 @@ export abstract class QueryHooks extends QueryBase {
 
   /**
    * Run the function before a `delete` kind of query.
+   *
    * @param cb - function to call, first argument is a query object
    */
   beforeDelete<T extends QueryHooks>(this: T, cb: QueryBeforeHook): T {
@@ -249,6 +267,8 @@ export abstract class QueryHooks extends QueryBase {
    * The function will run after the query is succeeded, but before the transaction commit.
    * Queries inside the function will run in the same transaction as the target query.
    * If no records were deleted, the hook *won't* run.
+   *
+   * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
   afterDelete<T extends QueryHooks, S extends HookSelect<T>>(
@@ -270,6 +290,8 @@ export abstract class QueryHooks extends QueryBase {
    * Run the function after transaction for a `delete` kind of query will be committed.
    * If the query wasn't wrapped in a transaction, will run after the query.
    * If no records were deleted, the hook *won't* run.
+   *
+   * @param select - list of columns to select for the hook
    * @param cb - function to call, first argument is the query result with selected columns, second argument is a query object
    */
   afterDeleteCommit<T extends QueryHooks, S extends HookSelect<T>>(

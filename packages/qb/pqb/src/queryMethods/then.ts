@@ -89,7 +89,7 @@ function maybeWrappedThen(
   }
 
   const trx = this.internal.transactionStorage.getStore();
-  if ((query.wrapInTransaction || afterHooks?.length) && !trx) {
+  if ((query.wrapInTransaction || afterHooks) && !trx) {
     return this.transaction(
       () =>
         new Promise((resolve, reject) => {
@@ -194,7 +194,7 @@ const then = async (
     let result = query.handleResult(q, returns, queryResult);
 
     if (afterHooks || afterCommitHooks || query.after) {
-      if ((result as unknown[]).length) {
+      if (queryResult.rowCount) {
         if (afterHooks || query.after) {
           const args = [result, q];
           await Promise.all(

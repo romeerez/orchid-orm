@@ -235,7 +235,7 @@ export const pushReturningSql = (
   hookSelect?: QueryHookSelect,
 ): QueryHookSelect | undefined => {
   const { select } = data;
-  if (!hookSelect?.length && !select) return;
+  if (!hookSelect?.length && !select) return hookSelect;
 
   let selected: string | undefined;
   let hookFiltered: string[] | undefined;
