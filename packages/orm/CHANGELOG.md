@@ -1,5 +1,19 @@
 # orchid-orm
 
+## 1.12.2
+
+### Patch Changes
+
+- 52fe89e5: Rename query data structure from `query` to `q` to use the `query` for different purpose
+- d5dd3bd6: Allow creating records with some columns defined using a raw SQL
+- 1e0e7e7a: Add `$query` and `$queryArrays` fn to the ORM, add `query` and `queryArrays` to `pqb` db.
+- Updated dependencies [7a201dfc]
+- Updated dependencies [52fe89e5]
+- Updated dependencies [d5dd3bd6]
+- Updated dependencies [1e0e7e7a]
+  - pqb@0.14.2
+  - orchid-core@0.6.1
+
 ## 1.12.1
 
 ### Patch Changes

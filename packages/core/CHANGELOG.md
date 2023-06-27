@@ -1,5 +1,13 @@
 # orchid-core
 
+## 0.6.1
+
+### Patch Changes
+
+- 7a201dfc: Expose `client` object of the database adapter in the transaction object (#133)
+- 52fe89e5: Rename query data structure from `query` to `q` to use the `query` for different purpose
+- 1e0e7e7a: Add `$query` and `$queryArrays` fn to the ORM, add `query` and `queryArrays` to `pqb` db.
+
 ## 0.6.0
 
 ### Minor Changes
