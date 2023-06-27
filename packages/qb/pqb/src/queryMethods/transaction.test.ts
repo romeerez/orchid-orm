@@ -11,10 +11,10 @@ describe('transaction', () => {
     const result = await testDb.transaction(async () => {
       const {
         rows: [{ a }],
-      } = await testDb.q.adapter.query('SELECT 1 AS a');
+      } = await testDb.query`SELECT 1 AS a`;
       const {
         rows: [{ b }],
-      } = await testDb.q.adapter.query('SELECT 2 AS b');
+      } = await testDb.query`SELECT 2 AS b`;
       return a + b;
     });
 
@@ -129,5 +129,14 @@ describe('transaction', () => {
       'ROLLBACK TO SAVEPOINT "1"',
       'ROLLBACK',
     ]);
+  });
+
+  it('should expose a `client` object of the database adapter', async () => {
+    let client: unknown;
+    await testDb.transaction(async () => {
+      client = testDb.internal.transactionStorage.getStore()?.adapter.client;
+    });
+
+    expect(client).toBeInstanceOf(Client);
   });
 });

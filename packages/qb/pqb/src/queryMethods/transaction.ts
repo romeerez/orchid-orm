@@ -1,11 +1,11 @@
 import { Query } from '../query';
 import {
-  AdapterBase,
   AfterCommitHook,
   emptyArray,
   emptyObject,
   QueryCommon,
   Sql,
+  TransactionAdapterBase,
   TransactionState,
 } from 'orchid-core';
 
@@ -67,7 +67,7 @@ export class Transaction {
     let trx = this.internal.transactionStorage.getStore();
     const transactionId = trx ? trx.transactionId + 1 : 0;
 
-    const callback = (adapter: AdapterBase) => {
+    const callback = (adapter: TransactionAdapterBase) => {
       if (log) log.afterQuery(sql, logData);
       if (log) logData = log.beforeQuery(commitSql);
 

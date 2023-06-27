@@ -20,10 +20,12 @@ export type AdapterBase = {
   close(): Promise<void>;
 };
 
+export type TransactionAdapterBase = AdapterBase & { client: unknown };
+
 // Wrapper type for transactions.
 export type TransactionState = {
   // Database adapter that is connected to a currently running transaction.
-  adapter: AdapterBase;
+  adapter: TransactionAdapterBase;
   // Number of transaction nesting.
   // Top transaction has id = 0, transaction inside of transaction will have id = 1, and so on.
   transactionId: number;
