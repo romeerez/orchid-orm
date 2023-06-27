@@ -9,6 +9,7 @@ import {
   testDbOptions,
   useTestDatabase,
 } from 'test-utils';
+import { TransactionState } from 'orchid-core';
 
 describe('db connection', () => {
   it('should be able to open connection after closing it', async () => {
@@ -271,6 +272,82 @@ describe('db', () => {
           FROM "table"
         `,
       );
+    });
+  });
+
+  describe('query methods', () => {
+    const sql = 'SELECT 1 AS one';
+
+    it('should perform a query', async () => {
+      const query = jest.spyOn(testDb.adapter, 'query');
+      const original = testDb.internal.transactionStorage.getStore;
+      testDb.internal.transactionStorage.getStore = jest.fn(() => undefined);
+
+      const result = await testDb.query({ raw: sql });
+
+      expect(result.rows).toEqual([{ one: 1 }]);
+      expect(query).toBeCalledWith({ text: sql });
+
+      testDb.internal.transactionStorage.getStore = original;
+    });
+
+    it('should perform a query with a template string', async () => {
+      const query = jest.spyOn(testDb.adapter, 'query');
+      const original = testDb.internal.transactionStorage.getStore;
+      testDb.internal.transactionStorage.getStore = jest.fn(() => undefined);
+
+      const result = await testDb.query`SELECT 1 AS one`;
+
+      expect(result.rows).toEqual([{ one: 1 }]);
+      expect(query).toBeCalledWith({ text: sql, values: [] });
+
+      testDb.internal.transactionStorage.getStore = original;
+    });
+
+    it('should perform a query in a transaction', async () => {
+      const store = testDb.internal.transactionStorage.getStore();
+      const query = jest.spyOn((store as TransactionState).adapter, 'query');
+
+      const result = await testDb.query({ raw: sql });
+
+      expect(result.rows).toEqual([{ one: 1 }]);
+      expect(query).toBeCalledWith({ text: sql });
+    });
+
+    it('should query arrays', async () => {
+      const query = jest.spyOn(testDb.adapter, 'arrays');
+      const original = testDb.internal.transactionStorage.getStore;
+      testDb.internal.transactionStorage.getStore = jest.fn(() => undefined);
+
+      const result = await testDb.queryArrays({ raw: sql });
+
+      expect(result.rows).toEqual([[1]]);
+      expect(query).toBeCalledWith({ text: sql });
+
+      testDb.internal.transactionStorage.getStore = original;
+    });
+
+    it('should query arrays with a template string', async () => {
+      const query = jest.spyOn(testDb.adapter, 'arrays');
+      const original = testDb.internal.transactionStorage.getStore;
+      testDb.internal.transactionStorage.getStore = jest.fn(() => undefined);
+
+      const result = await testDb.queryArrays`SELECT 1 AS one`;
+
+      expect(result.rows).toEqual([[1]]);
+      expect(query).toBeCalledWith({ text: sql, values: [] });
+
+      testDb.internal.transactionStorage.getStore = original;
+    });
+
+    it('should query arrays in a transaction', async () => {
+      const store = testDb.internal.transactionStorage.getStore();
+      const query = jest.spyOn((store as TransactionState).adapter, 'arrays');
+
+      const result = await testDb.queryArrays({ raw: sql });
+
+      expect(result.rows).toEqual([[1]]);
+      expect(query).toBeCalledWith({ text: sql });
     });
   });
 });

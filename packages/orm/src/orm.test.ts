@@ -85,4 +85,22 @@ describe('orm', () => {
 
     expect(local.user.q.autoPreparedStatements).toBe(true);
   });
+
+  describe('query methods', () => {
+    it('should perform a query with the $query method', async () => {
+      const spy = jest.spyOn(db.$queryBuilder, 'query');
+
+      await db.$query`SELECT 1`;
+
+      expect(spy).toBeCalledWith`SELECT 1`;
+    });
+
+    it('should query arrays with the $queryArrays method', async () => {
+      const spy = jest.spyOn(db.$queryBuilder, 'queryArrays');
+
+      await db.$queryArrays`SELECT 1`;
+
+      expect(spy).toBeCalledWith`SELECT 1`;
+    });
+  });
 });

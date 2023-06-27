@@ -16,7 +16,7 @@ import { DbTable, Table, TableClasses } from './baseTable';
 import { applyRelations } from './relations/relations';
 import { transaction } from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { TransactionState } from 'orchid-core';
+import { SQLQueryArgs, TransactionState } from 'orchid-core';
 
 export type OrchidORM<T extends TableClasses = TableClasses> = {
   [K in keyof T]: DbTable<T[K]>;
@@ -24,6 +24,63 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
   $transaction: typeof transaction;
   $adapter: Adapter;
   $queryBuilder: Db;
+  /**
+   * Use `$query` to perform raw SQL queries.
+   *
+   * ```ts
+   * const value = 1;
+   *
+   * // it is safe to interpolate inside the backticks (``):
+   * const result = await db.$query<{ one: number }>`SELECT ${value} AS one`;
+   * // data is inside `rows` array:
+   * result.rows[0].one;
+   * ```
+   *
+   * If the query is executing inside a transaction, it will use the transaction connection automatically.
+   *
+   * ```ts
+   * await db.transaction(async () => {
+   *   // both queries will execute in the same transaction
+   *   await db.$query`SELECT 1`;
+   *   await db.$query`SELECT 2`;
+   * });
+   * ```
+   *
+   * Alternatively, support a simple SQL string, with optional `values`:
+   *
+   * Note that the values is a simple array, and the SQL is referring to the values with `$1`, `$2` and so on.
+   *
+   * ```ts
+   * const value = 1;
+   *
+   * // it is NOT safe to interpolate inside a simple string, use `values` to pass the values.
+   * const result = await db.$query<{ one: number }>({
+   *   raw: 'SELECT $1 AS one',
+   *   values: [value],
+   * });
+   * // data is inside `rows` array:
+   * result.rows[0].one;
+   * ```
+   *
+   * @param args - SQL template literal, or an object { raw: string, values?: unknown[] }
+   */
+  $query: Db['query'];
+  /**
+   * The same as the {@link $query}, but returns an array of arrays instead of objects:
+   *
+   * ```ts
+   * const value = 1;
+   *
+   * // it is safe to interpolate inside the backticks (``):
+   * const result = await db.$queryArrays<[number]>`SELECT ${value} AS one`;
+   * // `rows` is an array of arrays:
+   * const row = result.rows[0];
+   * row[0]; // our value
+   * ```
+   *
+   * @param args - SQL template literal, or an object { raw: string, values?: unknown[] }
+   */
+  $queryArrays: Db['queryArrays'];
   $from<Args extends FromArgs<Query>>(...args: Args): FromResult<Query, Args>;
   $close(): Promise<void>;
 };
@@ -51,7 +108,7 @@ export const orchidORM = <T extends TableClasses>(
 
   let adapter: Adapter;
   let transactionStorage;
-  let qb: Query;
+  let qb: Db;
   if ('db' in options) {
     adapter = options.db.q.adapter;
     transactionStorage = options.db.internal.transactionStorage;
@@ -69,7 +126,7 @@ export const orchidORM = <T extends TableClasses>(
       columnTypes,
       transactionStorage,
       commonOptions,
-    );
+    ) as unknown as Db;
     qb.queryBuilder = qb as unknown as Db;
   }
 
@@ -77,6 +134,8 @@ export const orchidORM = <T extends TableClasses>(
     $transaction: transaction,
     $adapter: adapter,
     $queryBuilder: qb,
+    $query: (...args: SQLQueryArgs) => qb.query(...args),
+    $queryArrays: (...args: SQLQueryArgs) => qb.queryArrays(...args),
     $from: (...args: FromArgs<Query>) => qb.from(...args),
     $close: () => adapter.close(),
   } as unknown as OrchidORM;

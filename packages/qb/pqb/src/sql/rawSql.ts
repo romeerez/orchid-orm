@@ -10,6 +10,26 @@ import { DefaultColumnTypes } from '../columns';
 const used: string[] = [];
 const literalValues: number[] = [];
 
+export const templateLiteralToSQL = (
+  template: TemplateLiteralArgs,
+  values: unknown[],
+): string => {
+  let sql = '';
+  const parts = template[0];
+  literalValues.length = 0;
+
+  let i = 0;
+  for (let last = parts.length - 1; i < last; i++) {
+    values.push(template[i + 1]);
+    sql += parts[i];
+
+    if (template) literalValues.push(sql.length);
+
+    sql += `$${values.length}`;
+  }
+  return sql + parts[i];
+};
+
 export class RawSQL<
   T extends ColumnTypeBase,
   CT extends ColumnTypesBase = DefaultColumnTypes,
@@ -31,21 +51,7 @@ export class RawSQL<
     const data = this._values as Record<string, unknown>;
 
     if (isTemplate) {
-      sql = '';
-      const template = this._sql;
-      const parts = template[0];
-      literalValues.length = 0;
-
-      let i = 0;
-      for (let last = parts.length - 1; i < last; i++) {
-        values.push(template[i + 1]);
-        sql += parts[i];
-
-        if (template) literalValues.push(sql.length);
-
-        sql += `$${values.length}`;
-      }
-      sql += parts[i];
+      sql = templateLiteralToSQL(this._sql as TemplateLiteralArgs, values);
     } else {
       sql = this._sql as string;
     }

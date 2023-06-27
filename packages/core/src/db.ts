@@ -8,6 +8,11 @@ import {
   SinglePrimaryKey,
 } from './columns/columnType';
 import { QueryInternal } from './query';
+import { TemplateLiteralArgs } from './raw';
+
+export type SQLQueryArgs =
+  | TemplateLiteralArgs
+  | [{ raw: string; values?: unknown[] }];
 
 export type DbBase<
   Adapter extends AdapterBase,
@@ -29,4 +34,6 @@ export type DbBase<
   inputType: ColumnShapeInput<Shape>;
   result: Result;
   internal: QueryInternal;
+  query(...args: SQLQueryArgs): Promise<unknown>;
+  queryArrays(...args: SQLQueryArgs): Promise<unknown>;
 };

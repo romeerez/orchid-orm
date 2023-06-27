@@ -83,8 +83,7 @@ export class Adapter implements AdapterBase {
     this.pool = new pg.Pool(config);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  query<T extends QueryResultRow = any>(
+  query<T extends QueryResultRow = QueryResultRow>(
     query: QueryInput,
     types?: TypeParsers,
   ): Promise<QueryResult<T>> {

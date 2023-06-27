@@ -8,7 +8,12 @@ import {
   QueryLogOptions,
 } from './queryMethods';
 import { QueryData, SelectQueryData, ToSqlOptions } from './sql';
-import { AdapterOptions, Adapter } from './adapter';
+import {
+  AdapterOptions,
+  Adapter,
+  QueryResult,
+  QueryArraysResult,
+} from './adapter';
 import {
   ColumnsShape,
   getColumnTypes,
@@ -34,10 +39,16 @@ import {
   QueryCatch,
   ColumnsParsers,
   TransactionState,
+  QueryResultRow,
+  QueryInput,
+  TemplateLiteralArgs,
+  QueryInternal,
+  SQLQueryArgs,
 } from 'orchid-core';
 import { q } from './sql/common';
 import { inspect } from 'util';
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { templateLiteralToSQL } from './sql/rawSql';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
@@ -256,7 +267,97 @@ export class Db<
   [inspect.custom]() {
     return `QueryObject<${this.table}>`;
   }
+
+  /**
+   * Use `query` to perform raw SQL queries.
+   *
+   * ```ts
+   * const value = 1;
+   *
+   * // it is safe to interpolate inside the backticks (``):
+   * const result = await db.query<{ one: number }>`SELECT ${value} AS one`;
+   * // data is inside `rows` array:
+   * result.rows[0].one;
+   * ```
+   *
+   * If the query is executing inside a transaction, it will use the transaction connection automatically.
+   *
+   * ```ts
+   * await db.transaction(async () => {
+   *   // both queries will execute in the same transaction
+   *   await db.query`SELECT 1`;
+   *   await db.query`SELECT 2`;
+   * });
+   * ```
+   *
+   * Alternatively, support a simple SQL string, with optional `values`:
+   *
+   * Note that the values is a simple array, and the SQL is referring to the values with `$1`, `$2` and so on.
+   *
+   * ```ts
+   * const value = 1;
+   *
+   * // it is NOT safe to interpolate inside a simple string, use `values` to pass the values.
+   * const result = await db.query<{ one: number }>({
+   *   raw: 'SELECT $1 AS one',
+   *   values: [value],
+   * });
+   * // data is inside `rows` array:
+   * result.rows[0].one;
+   * ```
+   *
+   * @param args - SQL template literal, or an object { raw: string, values?: unknown[] }
+   */
+  query<T extends QueryResultRow = QueryResultRow>(
+    ...args: SQLQueryArgs
+  ): Promise<QueryResult<T>> {
+    return performQuery<QueryResult<T>>(this, args, 'query');
+  }
+
+  /**
+   * The same as the {@link query}, but returns an array of arrays instead of objects:
+   *
+   * ```ts
+   * const value = 1;
+   *
+   * // it is safe to interpolate inside the backticks (``):
+   * const result = await db.queryArrays<[number]>`SELECT ${value} AS one`;
+   * // `rows` is an array of arrays:
+   * const row = result.rows[0];
+   * row[0]; // our value
+   * ```
+   *
+   * @param args - SQL template literal, or an object { raw: string, values?: unknown[] }
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  queryArrays<R extends any[] = any[]>(
+    ...args: SQLQueryArgs
+  ): Promise<QueryArraysResult<R>> {
+    return performQuery<QueryArraysResult<R>>(this, args, 'arrays');
+  }
 }
+
+const performQuery = <Result>(
+  q: { internal: QueryInternal; adapter: Adapter },
+  args: SQLQueryArgs,
+  method: 'query' | 'arrays',
+): Promise<Result> => {
+  const trx = q.internal.transactionStorage.getStore();
+  let input: QueryInput;
+  if (typeof args[0].raw === 'string') {
+    input = { text: args[0].raw, values: args[0].values as unknown[] };
+  } else {
+    const values: unknown[] = [];
+    input = {
+      text: templateLiteralToSQL(args as TemplateLiteralArgs, values),
+      values,
+    };
+  }
+
+  return (trx?.adapter || q.adapter)[method as 'query'](
+    input,
+  ) as Promise<Result>;
+};
 
 applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
@@ -338,10 +439,10 @@ export const createDb = <CT extends ColumnTypesBase>({
   );
 
   // Set all methods from prototype to the db instance (needed for transaction at least):
-  Object.getOwnPropertyNames(Db.prototype).forEach((name) => {
+  for (const name of Object.getOwnPropertyNames(Db.prototype)) {
     (db as unknown as Record<string, unknown>)[name] =
       Db.prototype[name as keyof typeof Db.prototype];
-  });
+  }
 
   return db as unknown as DbResult<CT>;
 };

@@ -436,6 +436,59 @@ const db2 = orchidORM(
 );
 ```
 
+## $query
+
+Use `$query` to perform raw SQL queries.
+
+```ts
+const value = 1;
+
+// it is safe to interpolate inside the backticks (``):
+const result = await db.$query<{ one: number }>`SELECT ${value} AS one`;
+// data is inside `rows` array:
+result.rows[0].one;
+```
+
+If the query is executing inside a transaction, it will use the transaction connection automatically.
+
+```ts
+await db.$transaction(async () => {
+  // both queries will execute in the same transaction
+  await db.$query`SELECT 1`;
+  await db.$query`SELECT 2`;
+});
+```
+
+Alternatively, support a simple SQL string, with optional `values`:
+
+Note that the values is a simple array, and the SQL is referring to the values with `$1`, `$2` and so on.
+
+```ts
+const value = 1;
+
+// it is NOT safe to interpolate inside a simple string, use `values` to pass the values.
+const result = await db.$query<{ one: number }>({
+  raw: 'SELECT $1 AS one',
+  values: [value],
+});
+// data is inside `rows` array:
+result.rows[0].one;
+```
+
+## $queryArrays
+
+The same as the `$query`, but returns an array of arrays instead of objects:
+
+```ts
+const value = 1;
+
+// it is safe to interpolate inside the backticks (``):
+const result = await db.$queryArrays<[number]>`SELECT ${value} AS one`;
+// `rows` is an array of arrays:
+const row = result.rows[0];
+row[0]; // our value
+```
+
 ## $from
 
 Use `$from` to build a queries around sub queries similar to the following:
