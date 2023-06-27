@@ -1,5 +1,11 @@
 # pqb
 
+## 0.14.1
+
+### Patch Changes
+
+- 3b1bf602: Fix after hooks to call the function even if select is empty
+
 ## 0.14.0
 
 ### Minor Changes
