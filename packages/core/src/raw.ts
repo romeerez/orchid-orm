@@ -22,8 +22,17 @@ export type TemplateLiteralArgs = [
   ...values: unknown[],
 ];
 
-// Argument type for `sql` function
-export type RawSQLArgs = TemplateLiteralArgs | [{ raw: string }];
+export const isTemplateLiteralArgs = (
+  args: unknown[],
+): args is TemplateLiteralArgs =>
+  Array.isArray(args[0]) && 'raw' in args[0] && Array.isArray(args[0].raw);
+
+// Argument type for `sql` function.
+export type RawSQLArgs =
+  | TemplateLiteralArgs
+  | [{ raw: string; values?: RawSQLValues }];
+
+export type RawSQLValues = Record<string, unknown>;
 
 // Base class for raw SQL
 export abstract class RawSQLBase<
@@ -41,7 +50,7 @@ export abstract class RawSQLBase<
 
   constructor(
     public _sql: string | TemplateLiteralArgs,
-    public _values?: Record<string, unknown> | false,
+    public _values?: RawSQLValues,
   ) {
     super();
   }
@@ -56,10 +65,7 @@ export abstract class RawSQLBase<
   }
 
   // Attach query variables to the raw SQL.
-  values<Self extends RawSQLBase>(
-    this: Self,
-    values: Record<string, unknown>,
-  ): Self {
+  values<Self extends RawSQLBase>(this: Self, values: RawSQLValues): Self {
     this._values = values;
     return this;
   }

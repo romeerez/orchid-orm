@@ -3,7 +3,9 @@ import {
   ColumnTypesBase,
   RawSQLArgs,
   RawSQLBase,
+  RawSQLValues,
   TemplateLiteralArgs,
+  isTemplateLiteralArgs,
 } from 'orchid-core';
 import { DefaultColumnTypes } from '../columns';
 
@@ -18,7 +20,7 @@ export class RawSQL<
 
   constructor(
     sql: string | TemplateLiteralArgs,
-    values?: Record<string, unknown> | false,
+    values?: RawSQLValues,
     type?: T,
   ) {
     super(sql, values);
@@ -28,7 +30,6 @@ export class RawSQL<
   toSQL(values: unknown[]): string {
     let sql;
     const isTemplate = typeof this._sql !== 'string';
-    const data = this._values as Record<string, unknown>;
 
     if (isTemplate) {
       sql = '';
@@ -50,6 +51,7 @@ export class RawSQL<
       sql = this._sql as string;
     }
 
+    const data = this._values;
     if (!data) {
       return sql;
     }
@@ -97,10 +99,7 @@ export class RawSQL<
 
 export const raw = <T = unknown>(
   ...args: RawSQLArgs
-): RawSQL<ColumnTypeBase<T>> => {
-  return new RawSQL<ColumnTypeBase<T>>(
-    typeof args[0].raw === 'string'
-      ? args[0].raw
-      : (args as TemplateLiteralArgs),
-  );
-};
+): RawSQL<ColumnTypeBase<T>> =>
+  isTemplateLiteralArgs(args)
+    ? new RawSQL(args)
+    : new RawSQL(args[0].raw, args[0].values);

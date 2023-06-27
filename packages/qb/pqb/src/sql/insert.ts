@@ -63,7 +63,7 @@ export const pushInsertSql = (
       pushQueryValue(
         q,
         'select',
-        new RawSQL(encodeRow(ctx, q, QueryClass, v[0], runtimeDefaults), false),
+        new RawSQL(encodeRow(ctx, q, QueryClass, v[0], runtimeDefaults)),
       );
     }
 
