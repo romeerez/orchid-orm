@@ -1,5 +1,16 @@
 # pqb
 
+## 0.15.0
+
+### Minor Changes
+
+- 1b3e98a5: Upgrade aggregate and window functions, having clause
+
+### Patch Changes
+
+- Updated dependencies [1b3e98a5]
+  - orchid-core@0.7.0
+
 ## 0.14.3
 
 ### Patch Changes

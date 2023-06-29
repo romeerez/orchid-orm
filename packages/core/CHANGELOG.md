@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.7.0
+
+### Minor Changes
+
+- 1b3e98a5: Upgrade aggregate and window functions, having clause
+
 ## 0.6.2
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # rake-db
 
+## 2.10.0
+
+### Minor Changes
+
+- 1b3e98a5: Upgrade aggregate and window functions, having clause
+
+### Patch Changes
+
+- Updated dependencies [1b3e98a5]
+  - pqb@0.15.0
+  - orchid-core@0.7.0
+
 ## 2.9.3
 
 ### Patch Changes

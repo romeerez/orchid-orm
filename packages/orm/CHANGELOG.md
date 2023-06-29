@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.13.0
+
+### Minor Changes
+
+- 1b3e98a5: Upgrade aggregate and window functions, having clause
+
+### Patch Changes
+
+- Updated dependencies [1b3e98a5]
+  - pqb@0.15.0
+  - orchid-core@0.7.0
+
 ## 1.12.3
 
 ### Patch Changes
