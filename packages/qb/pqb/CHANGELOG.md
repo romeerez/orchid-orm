@@ -1,5 +1,11 @@
 # pqb
 
+## 0.15.1
+
+### Patch Changes
+
+- d43af0b2: Add logging to db.query, fix missing logging on a query error (#137)
+
 ## 0.15.0
 
 ### Minor Changes
