@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.10.2
+
+### Patch Changes
+
+- 2d860221: Add support for generated columns and for the full text search
+- Updated dependencies [2d860221]
+  - pqb@0.15.2
+  - orchid-core@0.7.1
+
 ## 2.10.1
 
 ### Patch Changes

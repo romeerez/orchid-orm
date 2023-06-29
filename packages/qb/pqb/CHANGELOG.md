@@ -1,5 +1,13 @@
 # pqb
 
+## 0.15.2
+
+### Patch Changes
+
+- 2d860221: Add support for generated columns and for the full text search
+- Updated dependencies [2d860221]
+  - orchid-core@0.7.1
+
 ## 0.15.1
 
 ### Patch Changes

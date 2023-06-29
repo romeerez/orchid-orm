@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.7.1
+
+### Patch Changes
+
+- 2d860221: Add support for generated columns and for the full text search
+
 ## 0.7.0
 
 ### Minor Changes
