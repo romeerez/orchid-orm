@@ -13,7 +13,7 @@ export const pushDistinctSql = (
 
   if (distinct.length) {
     const columns = distinct?.map((item) =>
-      rawOrColumnToSql(table.q, item, ctx.values, quotedAs),
+      rawOrColumnToSql(ctx, table.q, item, quotedAs),
     );
     ctx.sql.push(`ON (${columns?.join(', ') || ''})`);
   }

@@ -1,4 +1,4 @@
-import { QueryCommon, Sql } from './query';
+import { QueryBaseCommon, Sql } from './query';
 
 // Input type of adapter query methods.
 export type QueryInput = string | { text: string; values?: unknown[] };
@@ -39,11 +39,11 @@ export type TransactionState = {
  */
 export type TransactionAfterCommitHook =
   | unknown[]
-  | QueryCommon
+  | QueryBaseCommon
   | AfterCommitHook[];
 
 // Function to call after transaction commit.
 export type AfterCommitHook = (
   data: unknown[],
-  q: QueryCommon,
+  q: QueryBaseCommon,
 ) => void | Promise<void>;

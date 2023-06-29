@@ -8,7 +8,10 @@ export abstract class Expression<T extends ColumnTypeBase = ColumnTypeBase> {
   abstract _type: T;
 
   // Produce SQL string, push query variables into given `values` array.
-  abstract toSQL(values: unknown[]): string;
+  abstract toSQL(
+    ctx: { values: unknown[] },
+    quotedAs: string | undefined,
+  ): string;
 }
 
 // Check if the unknown thing is an Expression
@@ -46,7 +49,7 @@ export abstract class RawSQLBase<
   abstract columnTypes: CT;
 
   // Produce SQL string, push query variables into given `values` array.
-  abstract toSQL(values: unknown[]): string;
+  abstract toSQL(ctx: { values: unknown[] }): string;
 
   constructor(
     public _sql: string | TemplateLiteralArgs,

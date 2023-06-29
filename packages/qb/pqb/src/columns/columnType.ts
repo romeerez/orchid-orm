@@ -1,7 +1,6 @@
 import { ColumnsShape } from './columnsSchema';
 import { Query } from '../query';
 import {
-  BaseOperators,
   ColumnDataBase,
   ColumnNameOfTable,
   ColumnTypeBase,
@@ -10,12 +9,13 @@ import {
   MessageParam,
   PrimaryKeyColumn,
   pushColumnData,
-  QueryCommon,
+  QueryBaseCommon,
   setColumnData,
   ValidationContext,
 } from 'orchid-core';
 import { TableData } from './columnTypes';
 import { RawSQL } from '../sql/rawSql';
+import { BaseOperators } from './operators';
 
 export type ColumnData = ColumnDataBase & {
   maxChars?: number;
@@ -201,7 +201,11 @@ export abstract class ColumnType<
   }
 
   modifyQuery<T extends ColumnType>(this: T, cb: (q: Query) => void): T {
-    return setColumnData(this, 'modifyQuery', cb as (q: QueryCommon) => void);
+    return setColumnData(
+      this,
+      'modifyQuery',
+      cb as (q: QueryBaseCommon) => void,
+    );
   }
 
   transform<T extends ColumnType, Transformed>(

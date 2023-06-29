@@ -14,6 +14,7 @@ import { makeSql, ToSqlCtx } from './toSql';
 import { JoinedShapes, QueryData } from './data';
 import { Expression, isExpression, MaybeArray, toArray } from 'orchid-core';
 import { QueryBase } from '../queryBase';
+import { Operator } from '../columns/operators';
 
 export const pushWhereStatementSql = (
   ctx: ToSqlCtx,
@@ -102,7 +103,7 @@ const processWhere = (
   }
 
   if (isExpression(data)) {
-    ands.push(`${prefix}(${data.toSQL(ctx.values)})`);
+    ands.push(`${prefix}(${data.toSQL(ctx, quotedAs)})`);
     return;
   }
 
@@ -166,7 +167,7 @@ const processWhere = (
       }
     } else if (key === 'IN') {
       toArray(value as MaybeArray<WhereInItem>).forEach((item) => {
-        pushIn(query, ands, prefix, quotedAs, ctx.values, item);
+        pushIn(ctx, query, ands, prefix, quotedAs, item);
       });
     } else if (key === 'EXISTS') {
       const joinItems = (
@@ -194,7 +195,7 @@ const processWhere = (
             query.shape,
             key,
             quotedAs,
-          )} = ${value.toSQL(ctx.values)}`,
+          )} = ${value.toSQL(ctx, quotedAs)}`,
         );
       } else {
         let column = query.shape[key];
@@ -233,10 +234,11 @@ const processWhere = (
           if (value[op as keyof typeof value] === undefined) continue;
 
           ands.push(
-            `${prefix}${operator(
+            `${prefix}${(operator as unknown as Operator<unknown>)(
               quotedColumn as string,
               value[op as keyof typeof value],
-              ctx.values,
+              ctx,
+              quotedAs,
             )}`,
           );
         }
@@ -256,11 +258,11 @@ const getJoinItemSource = (joinItem: WhereOnJoinItem) => {
 };
 
 const pushIn = (
+  ctx: ToSqlCtx,
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   ands: string[],
   prefix: string,
   quotedAs: string | undefined,
-  values: unknown[],
   arg: {
     columns: string[];
     values: unknown[][] | Query | Expression;
@@ -271,15 +273,16 @@ const pushIn = (
   if (Array.isArray(arg.values)) {
     value = `${arg.values
       .map(
-        (arr) => `(${arr.map((value) => addValue(values, value)).join(', ')})`,
+        (arr) =>
+          `(${arr.map((value) => addValue(ctx.values, value)).join(', ')})`,
       )
       .join(', ')}`;
 
     if (arg.columns.length > 1) value = `(${value})`;
   } else if (isExpression(arg.values)) {
-    value = arg.values.toSQL(values);
+    value = arg.values.toSQL(ctx, quotedAs);
   } else {
-    const sql = makeSql(arg.values, { values });
+    const sql = makeSql(arg.values, ctx);
     value = `(${sql.text})`;
   }
 

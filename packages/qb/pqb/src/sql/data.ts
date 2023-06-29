@@ -123,7 +123,6 @@ export type SelectQueryData = CommonQueryData & {
   join?: JoinItem[];
   group?: (string | Expression)[];
   having?: HavingItem[];
-  havingOr?: HavingItem[][];
   window?: WindowItem[];
   union?: { arg: UnionItem; kind: UnionKind; wrap?: boolean }[];
   order?: OrderItem[];
@@ -257,7 +256,6 @@ export const cloneQueryArrays = (q: QueryData) => {
     if (q.join) q.join = q.join.slice(0);
     if (q.group) q.group = q.group.slice(0);
     if (q.having) q.having = q.having.slice(0);
-    if (q.havingOr) q.havingOr = q.havingOr.slice(0);
     if (q.window) q.window = q.window.slice(0);
     if (q.union) q.union = q.union.slice(0);
     if (q.order) q.order = q.order.slice(0);

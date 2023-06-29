@@ -24,5 +24,4 @@ export * from './union';
 export * from './update';
 export * from './upsertOrCreate';
 export * from './where';
-export * from './window';
 export * from './with';

@@ -65,12 +65,11 @@ change(async (db, up) => {
       { name: 'French', code: 'fr' },
     ]);
 
-    // use db.adapter.query to perform raw SQL queries
-    // the query function is the same as in node-postgres library
-    const { rows } = await db.adapter.query({
-      text: 'SELECT * FROM languages WHERE name = $1',
-      values: ['Ukrainian'],
-    });
+    // use db.query to perform raw SQL queries
+    const language = 'Ukrainian';
+    const { rows } = await db.query`
+      SELECT * FROM languages WHERE name = ${language}
+    `;
     console.log(rows);
   }
 });

@@ -17,12 +17,12 @@ export const pushWithSql = (
 
         let inner: string;
         if (isExpression(query)) {
-          inner = query.toSQL(ctx.values);
+          inner = query.toSQL(ctx, `"${name}"`);
         } else {
-          inner = makeSql(query, { values: ctx.values }).text;
+          inner = makeSql(query, ctx).text;
         }
 
-        return `${options.recursive ? 'RECURSIVE ' : ''}${q(name)}${
+        return `${options.recursive ? 'RECURSIVE ' : ''}"${name}"${
           options.columns ? `(${options.columns.map(q).join(', ')})` : ''
         } AS ${
           options.materialized

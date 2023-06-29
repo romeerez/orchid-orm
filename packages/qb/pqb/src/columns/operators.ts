@@ -1,118 +1,149 @@
 import { Query } from '../query';
 import { addValue } from '../sql/common';
-import { createOperator, Expression, isExpression } from 'orchid-core';
+import {
+  Expression,
+  isExpression,
+  ColumnOperatorBase,
+  ColumnOperatorFnBase,
+  ColumnTypeBase,
+} from 'orchid-core';
+import { ToSqlCtx } from '../sql';
+
+type Fn<T> = ColumnOperatorFnBase<T, ToSqlCtx>;
+
+export type Operator<T> = ColumnOperatorBase<T, ToSqlCtx>;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type BaseOperators = Record<string, Operator<any>>;
+
+export const createOperator = <T>(fn: Fn<T>): Operator<T> => {
+  return Object.assign(fn, { type: undefined as unknown as T });
+};
 
 const quoteValue = (
   arg: unknown,
-  values: unknown[],
+  ctx: ToSqlCtx,
+  quotedAs: string | undefined,
   jsonArray?: boolean,
 ): string => {
   if (arg && typeof arg === 'object') {
     if (!jsonArray && Array.isArray(arg)) {
-      return `(${arg.map((value) => addValue(values, value)).join(', ')})`;
+      return `(${arg.map((value) => addValue(ctx.values, value)).join(', ')})`;
     }
 
     if ('toSql' in arg) {
-      return `(${(arg as Query).toSql({ values }).text})`;
+      return `(${(arg as Query).toSql({ values: ctx.values }).text})`;
     }
 
     if (isExpression(arg)) {
-      return arg.toSQL(values);
+      return arg.toSQL(ctx, quotedAs);
     }
   }
 
-  return addValue(values, arg);
+  return addValue(ctx.values, arg);
 };
 
 const all = {
   equals: <T>() =>
-    createOperator<T | Query | Expression>((key, value, values) =>
+    createOperator<T | Query | Expression>((key, value, ctx, quotedAs) =>
       value === null
         ? `${key} IS NULL`
-        : `${key} = ${quoteValue(value, values)}`,
+        : `${key} = ${quoteValue(value, ctx, quotedAs)}`,
     ),
   not: <T>() =>
-    createOperator<T | Query | Expression>((key, value, values) =>
+    createOperator<T | Query | Expression>((key, value, ctx, quotedAs) =>
       value === null
         ? `${key} IS NOT NULL`
-        : `${key} <> ${quoteValue(value, values)}`,
+        : `${key} <> ${quoteValue(value, ctx, quotedAs)}`,
     ),
   in: <T>() =>
     createOperator<T[] | Query | Expression>(
-      (key, value, values) => `${key} IN ${quoteValue(value, values)}`,
+      (key, value, ctx, quotedAs) =>
+        `${key} IN ${quoteValue(value, ctx, quotedAs)}`,
     ),
   notIn: <T>() =>
     createOperator<T[] | Query | Expression>(
-      (key, value, values) => `NOT ${key} IN ${quoteValue(value, values)}`,
+      (key, value, ctx, quotedAs) =>
+        `NOT ${key} IN ${quoteValue(value, ctx, quotedAs)}`,
     ),
   lt: <T>() =>
     createOperator<T | Query | Expression>(
-      (key, value, values) => `${key} < ${quoteValue(value, values)}`,
+      (key, value, ctx, quotedAs) =>
+        `${key} < ${quoteValue(value, ctx, quotedAs)}`,
     ),
   lte: <T>() =>
     createOperator<T | Query | Expression>(
-      (key, value, values) => `${key} <= ${quoteValue(value, values)}`,
+      (key, value, ctx, quotedAs) =>
+        `${key} <= ${quoteValue(value, ctx, quotedAs)}`,
     ),
   gt: <T>() =>
     createOperator<T | Query | Expression>(
-      (key, value, values) => `${key} > ${quoteValue(value, values)}`,
+      (key, value, ctx, quotedAs) =>
+        `${key} > ${quoteValue(value, ctx, quotedAs)}`,
     ),
   gte: <T>() =>
     createOperator<T | Query | Expression>(
-      (key, value, values) => `${key} >= ${quoteValue(value, values)}`,
+      (key, value, ctx, quotedAs) =>
+        `${key} >= ${quoteValue(value, ctx, quotedAs)}`,
     ),
   contains: <T>() =>
     createOperator<T | Query | Expression>(
-      (key, value, values) =>
-        `${key} ILIKE '%' || ${quoteValue(value, values)} || '%'`,
+      (key, value, ctx, quotedAs) =>
+        `${key} ILIKE '%' || ${quoteValue(value, ctx, quotedAs)} || '%'`,
     ),
   containsSensitive: <T>() =>
     createOperator<T | Query | Expression>(
-      (key, value, values) =>
-        `${key} LIKE '%' || ${quoteValue(value, values)} || '%'`,
+      (key, value, ctx, quotedAs) =>
+        `${key} LIKE '%' || ${quoteValue(value, ctx, quotedAs)} || '%'`,
     ),
   startsWith: <T>() =>
     createOperator<T | Query | Expression>(
-      (key, value, values) =>
-        `${key} ILIKE ${quoteValue(value, values)} || '%'`,
+      (key, value, ctx, quotedAs) =>
+        `${key} ILIKE ${quoteValue(value, ctx, quotedAs)} || '%'`,
     ),
   startsWithSensitive: <T>() =>
     createOperator<T | Query | Expression>(
-      (key, value, values) => `${key} LIKE ${quoteValue(value, values)} || '%'`,
+      (key, value, ctx, quotedAs) =>
+        `${key} LIKE ${quoteValue(value, ctx, quotedAs)} || '%'`,
     ),
   endsWith: <T>() =>
     createOperator<T | Query | Expression>(
-      (key, value, values) =>
-        `${key} ILIKE '%' || ${quoteValue(value, values)}`,
+      (key, value, ctx, quotedAs) =>
+        `${key} ILIKE '%' || ${quoteValue(value, ctx, quotedAs)}`,
     ),
   endsWithSensitive: <T>() =>
     createOperator<T | Query | Expression>(
-      (key, value, values) => `${key} LIKE '%' || ${quoteValue(value, values)}`,
+      (key, value, ctx, quotedAs) =>
+        `${key} LIKE '%' || ${quoteValue(value, ctx, quotedAs)}`,
     ),
   between: <T>() =>
     createOperator<[T | Query | Expression, T | Query | Expression]>(
-      (key, [from, to], values) =>
-        `${key} BETWEEN ${quoteValue(from, values)} AND ${quoteValue(
+      (key, [from, to], ctx, quotedAs) =>
+        `${key} BETWEEN ${quoteValue(from, ctx, quotedAs)} AND ${quoteValue(
           to,
-          values,
+          ctx,
+          quotedAs,
         )}`,
     ),
   jsonPath: <T>() =>
     createOperator<[path: string, op: string, value: T | Query | Expression]>(
-      (key, [path, op, value], values) =>
+      (key, [path, op, value], ctx, quotedAs) =>
         `jsonb_path_query_first(${key}, '${path}') #>> '{}' ${op} ${quoteValue(
           value,
-          values,
+          ctx,
+          quotedAs,
           true,
         )}`,
     ),
   jsonSupersetOf: <T>() =>
     createOperator<T | Query | Expression>(
-      (key, value, values) => `${key} @> ${quoteValue(value, values, true)}`,
+      (key, value, ctx, quotedAs) =>
+        `${key} @> ${quoteValue(value, ctx, quotedAs, true)}`,
     ),
   jsonSubsetOf: <T>() =>
     createOperator<T | Query | Expression>(
-      (key, value, values) => `${key} <@ ${quoteValue(value, values, true)}`,
+      (key, value, ctx, quotedAs) =>
+        `${key} <@ ${quoteValue(value, ctx, quotedAs, true)}`,
     ),
 };
 
@@ -121,6 +152,17 @@ const base = <T>() => ({
   not: all.not<T>(),
   in: all.in<T>(),
   notIn: all.notIn<T>(),
+});
+
+const boolean = () => ({
+  ...base<boolean>(),
+  and: createOperator<Expression<ColumnTypeBase<boolean | null>>>(
+    (key, value, ctx, quotedAs) => `${key} AND ${value.toSQL(ctx, quotedAs)}`,
+  ),
+  or: createOperator<Expression<ColumnTypeBase<boolean | null>>>(
+    (key, value, ctx, quotedAs) =>
+      `(${key}) OR (${value.toSQL(ctx, quotedAs)})`,
+  ),
 });
 
 const numeric = <T>() => ({
@@ -152,7 +194,7 @@ const json = <T>() => ({
 export const Operators = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   any: base<any>(),
-  boolean: base<boolean>(),
+  boolean: boolean(),
   number: numeric<number>(),
   date: numeric<Date>(),
   time: numeric<Date>(),

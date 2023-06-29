@@ -196,7 +196,10 @@ describe('relations', () => {
 
   it('should support join() when selecting relation for an INNER join', () => {
     const q = db.user.select({
-      profile: (q) => q.profile.join(),
+      profile: (q) => {
+        // console.log(Object.keys(q.profile.q.joinedShapes));
+        return q.profile.join();
+      },
     });
 
     assertType<Awaited<typeof q>, { profile: Profile }[]>();

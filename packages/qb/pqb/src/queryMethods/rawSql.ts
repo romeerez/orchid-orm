@@ -2,6 +2,8 @@ import { ColumnTypesBase, ColumnTypeBase, RawSQLArgs } from 'orchid-core';
 import { raw, RawSQL } from '../sql/rawSql';
 
 export class RawSqlMethods<CT extends ColumnTypesBase> {
+  columnTypes!: CT;
+
   /**
    * When there is a need to use a piece of raw SQL, use the `sql` method from tables, or a `raw` function imported from `orchid-orm`.
    *

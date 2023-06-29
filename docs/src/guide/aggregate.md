@@ -1,14 +1,11 @@
 # Aggregate functions
 
-Various aggregate functions are supported (count, min, max, string_agg, etc) and it's possible to call a custom aggregate function.
+Various aggregate functions are supported (count, min, max, string_agg, etc.) and it's possible to call a custom aggregate function.
 
-Each of the functions can accept such options:
+Each aggregate function is accepting such options:
 
 ```ts
 type AggregateOptions = {
-  // set select alias
-  as?: string;
-
   // add DISTINCT inside of function call
   distinct?: boolean;
 
@@ -27,297 +24,332 @@ type AggregateOptions = {
   // defines OVER clause.
   // Can be the name of a window defined by calling the .window() method,
   // or object the same as the .window() method takes to define a window.
-  over?: WindowName | WindowArg;
+  over?: WindowName | OverOptions;
 };
 ```
 
-## count, selectCount
-
-Performs count, returns number:
+Calling aggregate function on a table will return a simple value:
 
 ```ts
-// count all:
-const number = db.table.count();
+const result: number = await db.table.count();
+```
 
-// count where a column is not NULL:
+All functions described here can be called inside a `select` callback to select an aggregated value:
+
+```ts
+// avg can be null in case when no records
+const result: { count: number; avg: number | null }[] = await db.table.select({
+  count: (q) => q.count(),
+  avg: (q) => q.avg('price'),
+});
+```
+
+## fn
+
+`fn` allows to call an arbitrary SQL function.
+
+For example, calling `sqrt` function to get a square root from some numeric column:
+
+```ts
+const q = await User.select({
+  sqrt: (q) => q.fn<number>('sqrt', ['numericColumn']),
+}).take();
+
+q.sqrt; // has type `number` just as provided
+```
+
+If this is an aggregate function, you can specify aggregation options via third parameter.
+
+Forth parameter is for runtime column type. When specified, allows to chain the function with the column operators:
+
+```ts
+const q = await User.select({
+  // chain `sqrt("numericColumn")` with the "greater than 5"
+  sqrtIsGreaterThan5: (q) =>
+    q.fn('sqrt', ['numericColumn'], {}, (t) => t.float()).gt(5),
+}).take();
+
+// Return type is boolean | null
+// todo: it should be just boolean if the column is not nullable, but for now it's always nullable
+q.sqrtIsGreaterThan5;
+```
+
+## count
+
+[//]: # 'has JSDoc'
+
+Count records with the `count` function:
+
+```ts
+// count all records:
+const result: number = await db.table.count();
+
+// count records where a column is not NULL:
 db.table.count('name');
 
 // see options above:
 db.table.count('*', aggregateOptions);
+
+// select counts of people grouped by city
+db.people
+  .select('city', {
+    population: (q) => q.count(),
+  })
+  .group('city');
 ```
 
-`selectCount` supports the same parameters as `count`, used with `group`.
+## min
 
-Select count among other fields:
+[//]: # 'has JSDoc'
 
-```ts
-// record contains both id and count
-const record = db.table.select('id').selectCount().group('id').take();
-```
-
-## min, selectMin
-
-Gets the minimum value for the specified column, returns number or `null`.
+Get the minimum value for the specified numeric column, returns number or `null` if there are no records.
 
 ```ts
-const numberOrNull = db.table.min('numericColumn', aggregateOptions);
-```
+const result: number | null = await db.table.min(
+  'numericColumn',
+  aggregateOptions,
+);
 
-`selectMin` supports the same parameters as `min`, used with `group`.
-
-Select min among other fields:
-
-```ts
-// record contains both id and min
-const record = db.table
-  .select('id')
-  .selectMin('numericColumn')
-  .group('id')
+// select min product price grouped by product category
+db.product
+  .select('category', {
+    minPrice: (q) => q.min('price'),
+  })
+  .group('category')
   .take();
 ```
 
-## max, selectMax
+## max
 
-Gets the maximum value for the specified column, returns number or `null`.
+[//]: # 'has JSDoc'
 
-```ts
-const numberOrNull = db.table.max('numericColumn', aggregateOptions);
-```
-
-`selectMax` supports the same parameters as `max`, used with `group`.
-
-Select max among other fields:
+Gets the maximum value for the specified numeric column, returns number or `null` if there are no records.
 
 ```ts
-// record contains both id and max
-const record = db.table
-  .select('id')
-  .selectMax('numericColumn')
-  .group('id')
+const result: number | null = await db.table.max(
+  'numericColumn',
+  aggregateOptions,
+);
+
+// select max product price grouped by product category
+db.product
+  .select('category', {
+    maxPrice: (q) => q.max('price'),
+  })
+  .group('category')
   .take();
 ```
 
-## sum, selectSum
+## sum
 
-Retrieve the sum of the values of a given column, returns number or `null`.
+[//]: # 'has JSDoc'
 
-```ts
-const numberOrNull = db.table.sum('numericColumn', aggregateOptions);
-```
-
-`selectSum` supports the same parameters as `sum`, used with `group`.
-
-Select sum among other fields:
+Retrieve the sum of the values of a given numeric column, returns number or `null` if there are no records.
 
 ```ts
-// record contains both id and sum
-const record = db.table
-  .select('id')
-  .selectSum('numericColumn')
-  .group('id')
-  .take();
+const result: number | null = await db.table.sum(
+  'numericColumn',
+  aggregateOptions,
+);
+
+// select sum of employee salaries grouped by years
+db.employee
+  .select('year', {
+    yearlySalaries: (q) => q.sum('salary'),
+  })
+  .group('year');
 ```
 
-## avg, selectAvg
+## avg
 
-Retrieve the average of the values, and returns a number or `null`.
+[//]: # 'has JSDoc'
+
+Retrieve the average value of a numeric column, it returns a number or `null` if there are no records.
 
 ```ts
-const numberOrNull = db.table.avg('numericColumn', aggregateOptions);
+const result: number | null = db.table.avg('numericColumn', aggregateOptions);
+
+// select average movies ratings
+db.movie
+  .select('title', {
+    averageRating: (q) => q.avg('rating'),
+  })
+  .group('title');
 ```
 
-`selectAvg` supports the same parameters as `avg`, used with `group`.
+## bitAnd
 
-Select avg among other fields:
+[//]: # 'has JSDoc'
+
+Bitwise `and` aggregation, returns `number` or `null` if there are no records.
 
 ```ts
-// record contains both id and avg
-const record = db.table
-  .select('id')
-  .selectAvg('numericColumn')
-  .group('id')
-  .take();
+const result: number | null = db.table.bitAnd(
+  'numericColumn',
+  aggregateOptions,
+);
+
+// select grouped `bitAnd`
+db.table
+  .select('someColumn', {
+    bitAnd: (q) => q.bitAnd('numericColumn'),
+  })
+  .group('someColumn');
 ```
 
-## bitAnd, selectBitAnd
+## bitOr
 
-Bitwise and aggregation, return `number` or `null`
+[//]: # 'has JSDoc'
+
+Bitwise `or` aggregation, returns `number` or `null` if there are no records.
 
 ```ts
-const numberOrNull = db.table.bitAnd('numericColumn', aggregateOptions);
+const result: number | null = db.table.bitOr('numericColumn', aggregateOptions);
+
+// select grouped `bitOr`
+db.table
+  .select('someColumn', {
+    bitOr: (q) => q.bitOr('numericColumn'),
+  })
+  .group('someColumn');
 ```
 
-`selectBitAnd` supports the same parameters as `bitAnd`, used with `group`.
+## boolAnd
 
-Select bit and among other fields:
+[//]: # 'has JSDoc'
+
+Aggregate booleans with `and` logic, it returns `boolean` or `null` if there are no records.
 
 ```ts
-// record contains both id and bit and
-const record = db.table
-  .select('id')
-  .selectBitAnd('numericColumn')
-  .group('id')
-  .take();
+const result: boolean | null = db.table.boolAnd(
+  'booleanColumn',
+  aggregateOptions,
+);
+
+// select grouped `boolAnd`
+db.table
+  .select('someColumn', {
+    boolAnd: (q) => q.boolAnd('booleanColumn'),
+  })
+  .group('someColumn');
 ```
 
-## bitOr, selectBitOr
+## boolOr
 
-Bitwise or aggregation returns `number` or `null`
+[//]: # 'has JSDoc'
+
+Aggregate booleans with `or` logic, it returns `boolean` or `null` if there are no records.
 
 ```ts
-const numberOrNull = db.table.bitOr('numericColumn', aggregateOptions);
+const result: boolean | null = db.table.boolOr(
+  'booleanColumn',
+  aggregateOptions,
+);
+
+// select grouped `boolOr`
+db.table
+  .select('someColumn', {
+    boolOr: (q) => q.boolOr('booleanColumn'),
+  })
+  .group('someColumn');
 ```
 
-`selectBitOr` supports the same parameters as `bitOr`, used with `group`.
+## every
 
-Select bit or among other fields:
-
-```ts
-// record contains both id and bit or
-const record = db.table
-  .select('id')
-  .selectBitOr('numericColumn')
-  .group('id')
-  .take();
-```
-
-## boolAnd, selectBoolAnd
-
-Aggregate booleans with and logic returns `boolean` or `null`
-
-```ts
-const booleanOrNull = db.table.boolAnd('booleanColumn', aggregateOptions);
-```
-
-`selectBoolAnd` supports the same parameters as `boolAnd`, used with `group`.
-
-Select bool and among other fields:
-
-```ts
-// record contains both id and bool and
-const record = db.table
-  .select('id')
-  .selectBoolAnd('booleanColumn')
-  .group('id')
-  .take();
-```
-
-## boolOr, selectBoolOr
-
-Aggregate booleans with or logic returns `boolean` or `null`
-
-```ts
-const booleanOrNull = db.table.boolOr('booleanColumn', aggregateOptions);
-```
-
-`selectBoolOr` supports the same parameters as `boolOr`, used with `group`.
-
-Select bool or among other fields:
-
-```ts
-// record contains both id and bool or
-const record = db.table
-  .select('id')
-  .selectBoolOr('booleanColumn')
-  .group('id')
-  .take();
-```
-
-## every, selectEvery
+[//]: # 'has JSDoc'
 
 Equivalent to `boolAnd`.
 
-## jsonAgg, selectJsonAgg, jsonbAgg, selectJsonbAgg
+## jsonAgg and jsonbAgg
 
-Aggregate values into an array return array column values or `null`.
+[//]: # 'has JSDoc'
 
-`jsonAgg` is different from `jsonbAgg` by internal representation in the database, possibly one of them will work a bit faster.
+Aggregate values into an array by using `json_agg`. Returns array of values or `null` if there are no records.
 
-```ts
-// ids have type number[] | null
-const idsOrNull = db.table.jsonAgg('id', aggregateOptions);
-
-// names have type string[] | null
-const namesOrNull = db.table.jsonbAgg('name', aggregateOptions);
-```
-
-`selectJsonAgg` supports the same parameters as `jsonAgg`, used with `group`.
+`jsonAgg` is working a bit faster, `jsonbAgg` is better only when applying JSON operations in SQL.
 
 ```ts
-// record contains both id and ids
-const record = db.table
-  .select('id')
-  .selectJsonAgg('id', { as: 'ids' })
-  .group('id')
-  .take();
+const idsOrNull: number[] | null = db.table.jsonAgg('id', aggregateOptions);
+
+const namesOrNull: string[] | null = db.table.jsonbAgg(
+  'name',
+  aggregateOptions,
+);
+
+// select grouped `jsonAgg`
+db.table
+  .select('someColumn', {
+    jsonAgg: (q) => q.jsonAgg('anyColumn'),
+  })
+  .group('someColumn');
 ```
 
-## jsonObjectAgg, selectJsonObjectAgg, jsonbObjectAgg, selectJsonbObjectAgg
+## jsonObjectAgg and jsonbObjectAgg
 
-It does the construction of JSON objects, keys are provided strings and values can be table columns or raw SQL expressions, and returns `object` or `null`.
+[//]: # 'has JSDoc'
 
-`jsonObjectAgg` is different from `jsonbObjectAgg` by internal representation in the database, possibly one of them will work a bit faster.
+It does the construction of JSON objects, keys are provided strings and values can be table columns or raw SQL expressions, and returns `object` or `null` if no records.
+
+`jsonObjectAgg` is different from `jsonbObjectAgg` by internal representation in the database, `jsonObjectAgg` is a bit faster as it constructs a simple string.
 
 ```ts
 import { TextColumn } from './string';
 
-// object have type { nameAlias: string, foo: string } | null
-const object = db.table.jsonAgg(
+// object has type { nameAlias: string, foo: string } | null
+const object = await db.table.jsonObjectAgg(
   {
+    // select a column with alias
     nameAlias: 'name',
-    foo: db.table.sql((t) => t.text(3, 100))`"bar" || "baz"`,
+    // select raw SQL with alias
+    foo: db.table.sql<string>`"bar" || "baz"`,
   },
   aggregateOptions,
 );
+
+// select aggregated object
+db.table.select('id', {
+  object: (q) =>
+    q.jsonObjectAgg({
+      nameAlias: 'name',
+      foo: db.table.sql<string>`"bar" || "baz"`,
+    }),
+});
 ```
 
-`selectJsonObjectAgg` supports the same parameters as `jsonObjectAgg`, used with `group`.
+## stringAgg
+
+[//]: # 'has JSDoc'
+
+Select joined strings, it returns a string or `null` if no records.
 
 ```ts
-// record contains both id and object
-const record = db.table
-  .select('id')
-  .selectJsonObjectAgg({ nameAlias: 'name' }, { as: 'object' })
-  .group('id')
-  .take();
+const result: string | null = db.table.stringAgg(
+  'name',
+  ', ',
+  aggregateOptions,
+);
+
+// select joined strings grouped by some column
+db.table
+  .select('someColumn', {
+    joinedNames: (q) => q.stringAgg('name', ', '),
+  })
+  .group('someColumn');
 ```
 
-## stringAgg, selectStringAgg
+## xmlAgg
 
-It performs the joining of a string using a delimiter and returns `string` or `null`.
+[//]: # 'has JSDoc'
 
-```ts
-const stringOrNull = db.table.stringAgg('name', ', ', aggregateOptions);
-```
-
-`selectStringAgg` supports the same parameters as `stringAgg`, used with `group`.
+Concatenates `xml` columns, returns a `string` or `null` if no records.
 
 ```ts
-// record contains both id and names
-const record = db.table
-  .select('id')
-  .selectStringAgg('name', ', ', aggregateOptions)
-  .group('id')
-  .take();
-```
+const xml: string | null = await db.table.xmlAgg('xmlColumn', aggregateOptions);
 
-## xmlAgg, selectXmlAgg
-
-No one uses XML nowadays, this method is here for collection.
-
-The argument is a column of XML type, that returns a `string` or `null`.
-
-```ts
-// xml is of type string | null
-const xml = await LegacyTable.xmlAgg('xmlColumn', aggregateOptions);
-```
-
-`selectXmlAgg` supports the same parameters as `xmlAgg`, used with `group`.
-
-```ts
-// record contains both id and xmlData
-const record = LegacyTable.select('id')
-  .selectJsonAgg('xmlColumn', { as: 'xmlData' })
-  .group('id')
-  .take();
+// select joined XMLs grouped by some column
+db.table
+  .select('someColumn', {
+    joinedXMLs: (q) => q.xmlAgg('xml'),
+  })
+  .group('someColumn');
 ```

@@ -28,6 +28,7 @@ import {
   StringKey,
   QueryThen,
 } from 'orchid-core';
+import { isSelectingCount } from './aggregate';
 
 // Type of argument for `create`, `createMany`, optional argument for `createFrom`,
 // `defaults` use a Partial of it.
@@ -249,14 +250,7 @@ export type CreateCtx = {
 type Encoder = (input: unknown) => unknown;
 
 const handleSelect = (q: Query) => {
-  const select = q.q.select?.[0];
-
-  if (
-    q.q.returnType === 'void' ||
-    (typeof select === 'object' &&
-      'function' in select &&
-      select.function === 'count')
-  ) {
+  if (q.q.returnType === 'void' || isSelectingCount(q)) {
     q.q.select = undefined;
   } else if (!q.q.select) {
     q.q.select = ['*'];

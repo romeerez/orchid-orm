@@ -1,10 +1,13 @@
-type Fn<T> = (key: string, value: T, values: unknown[]) => string;
+export type ColumnOperatorFnBase<T, Ctx> = (
+  key: string,
+  value: T,
+  ctx: Ctx,
+  quotedAs: string | undefined,
+) => string;
 
-export type Operator<T> = Fn<T> & { type: T };
+export type ColumnOperatorBase<T, Ctx> = ColumnOperatorFnBase<T, Ctx> & {
+  type: T;
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type BaseOperators = Record<string, Operator<any>>;
-
-export const createOperator = <T>(fn: Fn<T>) => {
-  return Object.assign(fn, { type: undefined as unknown as T });
-};
+export type BaseOperators = Record<string, ColumnOperatorBase<any, any>>;

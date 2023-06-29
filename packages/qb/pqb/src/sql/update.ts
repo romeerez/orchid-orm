@@ -47,14 +47,13 @@ const processData = (
 ) => {
   let append: UpdateQueryDataItem[] | undefined;
   const QueryClass = ctx.queryBuilder.constructor as Db;
-  const { values } = ctx;
 
   for (const item of data) {
     if (typeof item === 'function') {
       const result = item(data);
       if (result) append = pushOrNewArray(append, result);
     } else if (isExpression(item)) {
-      set.push(item.toSQL(values));
+      set.push(item.toSQL(ctx, quotedAs));
     } else {
       const shape = table.q.shape;
       for (const key in item) {
@@ -63,8 +62,8 @@ const processData = (
 
         set.push(
           `"${shape[key].data.name || key}" = ${processValue(
+            ctx,
             table,
-            values,
             QueryClass,
             key,
             value,
@@ -79,8 +78,8 @@ const processData = (
 };
 
 const processValue = (
+  ctx: ToSqlCtx,
   table: Query,
-  values: unknown[],
   QueryClass: Db,
   key: string,
   value: UpdateQueryDataObject[string],
@@ -89,21 +88,21 @@ const processValue = (
   if (typeof value === 'function') {
     value = resolveSubQueryCallback(table, value as (q: Query) => Query);
     if ((value as JsonItem).__json) {
-      return jsonToSql(table, value as JsonItem, values, quotedAs);
+      return jsonToSql(table, value as JsonItem, ctx.values, quotedAs);
     }
   }
 
   if (value && typeof value === 'object') {
     if (isExpression(value)) {
-      return value.toSQL(values);
+      return value.toSQL(ctx, quotedAs);
     } else if (value instanceof QueryClass) {
-      return `(${joinSubQuery(table, value as Query).toSql({ values }).text})`;
+      return `(${joinSubQuery(table, value as Query).toSql(ctx).text})`;
     } else if ('op' in value && 'arg' in value) {
       return `"${table.q.shape[key].data.name || key}" ${
         (value as { op: string }).op
-      } ${addValue(values, (value as { arg: unknown }).arg)}`;
+      } ${addValue(ctx.values, (value as { arg: unknown }).arg)}`;
     }
   }
 
-  return addValue(values, value);
+  return addValue(ctx.values, value);
 };

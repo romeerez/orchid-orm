@@ -254,9 +254,9 @@ t.boolean(); // -> boolean
 Create the enum database type:
 
 ```ts
-await db.adapter.query(`
+await db.query`
   CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');
-`);
+`;
 ```
 
 Define enum, first argument is the name of an enum in the database, second is an array of possible values:

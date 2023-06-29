@@ -21,7 +21,7 @@ import {
 import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
 import { Then } from './then';
 import { BooleanColumn } from '../columns';
-import { Aggregate } from './aggregate';
+import { AggregateMethods } from './aggregate';
 import { addParserForSelectItem, Select } from './select';
 import { From } from './from';
 import { Join, OnQueryBuilder } from './join';
@@ -37,7 +37,6 @@ import { ColumnInfoMethods } from './columnInfo';
 import { addWhere, Where, WhereArg, WhereResult } from './where';
 import { Clear } from './clear';
 import { Having } from './having';
-import { Window } from './window';
 import { QueryLog } from './log';
 import { QueryHooks } from './hooks';
 import { QueryUpsertOrCreate } from './upsertOrCreate';
@@ -118,7 +117,7 @@ type QueryHelper<T extends Query, Args extends unknown[], Result> = <
 
 export interface QueryMethods<CT extends ColumnTypesBase>
   extends Omit<AsMethods, 'result'>,
-    Aggregate,
+    AggregateMethods,
     Select,
     From,
     Join,
@@ -135,7 +134,6 @@ export interface QueryMethods<CT extends ColumnTypesBase>
     Omit<Where, 'result'>,
     Clear,
     Having,
-    Window,
     Then,
     QueryLog,
     Omit<QueryHooks, 'result'>,
@@ -480,6 +478,32 @@ export class QueryMethods<CT extends ColumnTypesBase> {
     return pushQueryArray(this, 'group', columns);
   }
 
+  /**
+   * Add a window with `window` and use it later by its name for aggregate or window functions:
+   *
+   * ```ts
+   * db.table
+   *   // define window `windowName`
+   *   .window({
+   *     windowName: {
+   *       partitionBy: 'someColumn',
+   *       order: {
+   *         id: 'DESC',
+   *       },
+   *     },
+   *   })
+   *   .select({
+   *     avg: (q) =>
+   *       // calculate average price over the window
+   *       q.avg('price', {
+   *         // use window by its name
+   *         over: 'windowName',
+   *       }),
+   *   });
+   * ```
+   *
+   * @param arg - window config
+   */
   window<T extends Query, W extends WindowArg<T>>(
     this: T,
     arg: W,
@@ -689,7 +713,7 @@ export class QueryMethods<CT extends ColumnTypesBase> {
 applyMixins(QueryMethods, [
   QueryBase,
   AsMethods,
-  Aggregate,
+  AggregateMethods,
   Select,
   From,
   Join,
@@ -707,7 +731,6 @@ applyMixins(QueryMethods, [
   Where,
   Clear,
   Having,
-  Window,
   Then,
   QueryLog,
   QueryHooks,

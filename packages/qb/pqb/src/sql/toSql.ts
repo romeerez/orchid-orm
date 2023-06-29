@@ -142,22 +142,20 @@ export const makeSql = (table: Query, options?: ToSqlOptionsInternal): Sql => {
   if (query.group) {
     const group = query.group.map((item) =>
       isExpression(item)
-        ? item.toSQL(values)
+        ? item.toSQL(ctx, quotedAs)
         : columnToSql(table.q, table.q.shape, item as string, quotedAs),
     );
     sql.push(`GROUP BY ${group.join(', ')}`);
   }
 
-  if (query.having || query.havingOr) {
-    pushHavingSql(ctx, table, query, quotedAs);
-  }
+  if (query.having) pushHavingSql(ctx, query, quotedAs);
 
   if (query.window) {
     const window: string[] = [];
     query.window.forEach((item) => {
       for (const key in item) {
         window.push(
-          `${q(key)} AS ${windowToSql(query, item[key], values, quotedAs)}`,
+          `${q(key)} AS ${windowToSql(ctx, query, item[key], quotedAs)}`,
         );
       }
     });
@@ -168,7 +166,7 @@ export const makeSql = (table: Query, options?: ToSqlOptionsInternal): Sql => {
     query.union.forEach((item) => {
       let itemSql: string;
       if (isExpression(item.arg)) {
-        itemSql = item.arg.toSQL(values);
+        itemSql = item.arg.toSQL(ctx, quotedAs);
       } else {
         const argSql = makeSql(item.arg, { values });
         itemSql = argSql.text;
@@ -200,7 +198,7 @@ export const makeSql = (table: Query, options?: ToSqlOptionsInternal): Sql => {
       sql.push(
         'OF',
         isExpression(tableNames)
-          ? tableNames.toSQL(values)
+          ? tableNames.toSQL(ctx, quotedAs)
           : tableNames.map(q).join(', '),
       );
     }

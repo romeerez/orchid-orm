@@ -2,7 +2,12 @@ import { Query, QueryWithTable, SelectableBase } from '../query';
 import { RelationQuery } from '../relations';
 import { SelectableOrExpression } from '../utils';
 import { SelectQueryData } from './data';
-import { ColumnTypeBase, Expression, MaybeArray } from 'orchid-core';
+import {
+  ColumnTypeBase,
+  Expression,
+  MaybeArray,
+  TemplateLiteralArgs,
+} from 'orchid-core';
 import { QueryBase } from '../queryBase';
 
 // used in `from` logic to decide if convert query to sql or just write table name
@@ -29,7 +34,6 @@ const queryKeysOfNotSimpleQuery: (keyof SelectQueryData)[] = [
   'join',
   'group',
   'having',
-  'havingOr',
   'window',
   'union',
   'order',
@@ -101,17 +105,9 @@ export type JsonItem<
 export type SelectItem =
   | string
   | RelationQuery
-  | AggregateItem
   | { selectAs: Record<string, string | Query | Expression> }
-  | SelectFunctionItem
   | JsonItem
   | Expression;
-
-export type SelectFunctionItem = {
-  function: string;
-  arguments: SelectItem[];
-  as?: string;
-};
 
 export type JoinItem = SimpleJoinItem | JoinLateralItem;
 
@@ -185,31 +181,9 @@ export type WhereOnItem = {
 
 export type WhereOnJoinItem = { table?: string; q: { as?: string } } | string;
 
-export type AggregateItemOptions = {
-  as?: string;
-  distinct?: boolean;
-  order?: OrderItem[];
-  filter?: WhereItem;
-  filterOr?: WhereItem[];
-  withinGroup?: boolean;
-  over?: string;
-  window?: WindowItem;
-};
-
 export type SortDir = 'ASC' | 'DESC' | 'ASC NULLS FIRST' | 'DESC NULLS LAST';
 
 export type OrderItem = string | Record<string, SortDir> | Expression;
-
-export type AggregateItemArg =
-  | SelectableOrExpression
-  | Record<string, SelectableOrExpression>
-  | [SelectableOrExpression, string];
-
-export type AggregateItem = {
-  function: string;
-  arg?: AggregateItemArg;
-  options: AggregateItemOptions;
-};
 
 export type ColumnOperators<
   S extends SelectableBase,
@@ -219,13 +193,7 @@ export type ColumnOperators<
     | S[Column]['column']['operators'][O]['type'];
 };
 
-type HavingItemObject = Record<string, unknown>;
-
-export type HavingItem =
-  | Record<string, HavingItemObject>
-  | { count?: number | HavingItemObject }
-  | Query
-  | Expression;
+export type HavingItem = TemplateLiteralArgs | Expression[];
 
 export type WindowItem = Record<string, WindowDeclaration | Expression>;
 

@@ -13,11 +13,7 @@ describe('clear', () => {
       .join(Message, 'authorId', 'id')
       .group('id')
       .order('id')
-      .having({
-        count: {
-          id: 5,
-        },
-      })
+      .having((q) => q.count().equals(1))
       .limit(10)
       .offset(10);
 

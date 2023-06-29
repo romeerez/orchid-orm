@@ -1416,11 +1416,11 @@ COLLATION ${singleQuote(ast.collation)}`
     }${
       ast.default
         ? `
-DEFAULT ${ast.default.toSQL(values)}`
+DEFAULT ${ast.default.toSQL({ values })}`
         : ''
     }${ast.notNull || ast.check ? '\n' : ''}${[
       ast.notNull && 'NOT NULL',
-      ast.check && `CHECK ${ast.check.toSQL(values)}`,
+      ast.check && `CHECK ${ast.check.toSQL({ values })}`,
     ]
       .filter(Boolean)
       .join(' ')}`;

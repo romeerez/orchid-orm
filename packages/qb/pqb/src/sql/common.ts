@@ -1,5 +1,6 @@
 import { SelectableOrExpression } from '../utils';
 import { QueryData } from './data';
+import { ToSqlCtx } from './toSql';
 
 export type ColumnNamesShape = Record<string, { data: { name?: string } }>;
 
@@ -7,7 +8,7 @@ export const q = (sql: string) => `"${sql}"`;
 
 // quote column with table or as
 export const qc = (column: string, quotedAs?: string) =>
-  quotedAs ? `${quotedAs}.${q(column)}` : column;
+  quotedAs ? `${quotedAs}."${column}"` : column;
 
 const getJoinedColumnName = (
   data: Pick<QueryData, 'joinedShapes'>,
@@ -50,9 +51,9 @@ export const columnToSql = (
   } else if (!select && data.joinedShapes?.[column]) {
     return select ? `row_to_json("${column}".*)` : `"${column}".r`;
   } else if (quotedAs && shape[column]) {
-    return `${quotedAs}.${q(shape[column].data.name || column)}`;
+    return `${quotedAs}."${shape[column].data.name || column}"`;
   } else {
-    return q(shape[column]?.data.name || column);
+    return `"${shape[column]?.data.name || column}"`;
   }
 };
 
@@ -103,29 +104,29 @@ export const ownColumnToSql = (
   quotedAs?: string,
 ) => {
   const name = data.shape[column]?.data.name;
-  return `${quotedAs ? `${quotedAs}.` : ''}${q(name || column)}${
-    name && name !== column ? ` AS ${q(column)}` : ''
+  return `${quotedAs ? `${quotedAs}.` : ''}"${name || column}"${
+    name && name !== column ? ` AS "${column}"` : ''
   }`;
 };
 
 export const rawOrColumnToSql = (
+  ctx: ToSqlCtx,
   data: Pick<QueryData, 'shape' | 'joinedShapes'>,
   expr: SelectableOrExpression,
-  values: unknown[],
   quotedAs: string | undefined,
   shape: ColumnNamesShape = data.shape,
   select?: true,
 ) => {
   return typeof expr === 'string'
     ? columnToSql(data, shape, expr, quotedAs, select)
-    : expr.toSQL(values);
+    : expr.toSQL(ctx, quotedAs);
 };
 
 export const quoteSchemaAndTable = (
   schema: string | undefined,
   table: string,
 ) => {
-  return schema ? `${q(schema)}.${q(table)}` : q(table);
+  return schema ? `"${schema}"."${table}"` : `"${table}"`;
 };
 
 export const addValue = (values: unknown[], value: unknown) => {

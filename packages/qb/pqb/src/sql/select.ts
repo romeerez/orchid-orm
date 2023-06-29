@@ -1,13 +1,13 @@
-import { JsonItem, SelectFunctionItem, SelectItem } from './types';
+import { JsonItem, SelectItem } from './types';
 import { RawSQL } from './rawSql';
 import { Query } from '../query';
 import { addValue, q, columnToSql, columnToSqlWithAs } from './common';
-import { aggregateToSql } from './aggregate';
 import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
 import { makeSql, ToSqlCtx } from './toSql';
 import { SelectQueryData } from './data';
 import { SelectableOrExpression } from '../utils';
 import { isExpression } from 'orchid-core';
+import { QueryBase } from '../queryBase';
 
 const jsonColumnOrMethodToSql = (
   table: Query,
@@ -103,9 +103,9 @@ export const selectToSql = (
             const value = obj[as];
             if (typeof value === 'object' || typeof value === 'function') {
               if (isExpression(value)) {
-                list.push(`${value.toSQL(ctx.values)} AS ${q(as)}`);
+                list.push(`${value.toSQL(ctx, quotedAs)} AS ${q(as)}`);
               } else {
-                pushSubQuerySql(value as Query, as, ctx.values, list);
+                pushSubQuerySql(ctx, value as Query, as, list, quotedAs);
               }
             } else {
               list.push(
@@ -126,19 +126,7 @@ export const selectToSql = (
             )}`,
           );
         } else if (isExpression(item)) {
-          const sql = item.toSQL(ctx.values);
-          list.push(ctx.aliasValue ? `${sql} r` : sql);
-        } else if ('arguments' in item) {
-          list.push(
-            `${(item as SelectFunctionItem).function}(${selectToSql(
-              ctx,
-              table,
-              { select: item.arguments },
-              quotedAs,
-            )})${item.as ? ` AS ${q((item as { as: string }).as)}` : ''}`,
-          );
-        } else {
-          const sql = aggregateToSql(ctx, table, item, quotedAs);
+          const sql = item.toSQL(ctx, quotedAs);
           list.push(ctx.aliasValue ? `${sql} r` : sql);
         }
       }
@@ -150,7 +138,7 @@ export const selectToSql = (
 };
 
 export const selectAllSql = (
-  table: Query,
+  table: QueryBase,
   query: Pick<SelectQueryData, 'join'>,
   quotedAs?: string,
 ) => {
@@ -162,10 +150,11 @@ export const selectAllSql = (
 };
 
 const pushSubQuerySql = (
+  ctx: ToSqlCtx,
   query: Query,
   as: string,
-  values: unknown[],
   list: string[],
+  quotedAs?: string,
 ) => {
   const { returnType = 'all' } = query.q;
 
@@ -189,7 +178,7 @@ const pushSubQuerySql = (
       default:
         throw new UnhandledTypeError(query, returnType);
     }
-    if (sql) list.push(`${coalesce(query, values, sql)} ${q(as)}`);
+    if (sql) list.push(`${coalesce(ctx, query, sql, quotedAs)} ${q(as)}`);
     return;
   }
 
@@ -226,22 +215,23 @@ const pushSubQuerySql = (
   }
 
   list.push(
-    `${coalesce(query, values, `(${makeSql(query, { values }).text})`)} AS ${q(
+    `${coalesce(ctx, query, `(${makeSql(query, ctx).text})`, quotedAs)} AS ${q(
       as,
     )}`,
   );
 };
 
-const coalesce = (query: Query, values: unknown[], sql: string) => {
+const coalesce = (
+  ctx: ToSqlCtx,
+  query: Query,
+  sql: string,
+  quotedAs?: string,
+) => {
   const { coalesceValue } = query.q;
   if (coalesceValue !== undefined) {
-    let value;
-    if (isExpression(coalesceValue)) {
-      value = coalesceValue.toSQL(values);
-    } else {
-      values.push(coalesceValue);
-      value = `$${values.length}`;
-    }
+    const value = isExpression(coalesceValue)
+      ? coalesceValue.toSQL(ctx, quotedAs)
+      : addValue(ctx.values, coalesceValue);
     return `COALESCE(${sql}, ${value})`;
   }
 

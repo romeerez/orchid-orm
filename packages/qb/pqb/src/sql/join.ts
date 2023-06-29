@@ -242,9 +242,9 @@ const processArgs = (
       return whereToSql(ctx, jq, jq.q, joinAs);
     } else {
       return getObjectOrRawConditions(
+        ctx,
         query,
         arg,
-        ctx.values,
         quotedAs,
         joinAs,
         joinShape,
@@ -252,9 +252,9 @@ const processArgs = (
     }
   } else if (args.length >= 3) {
     return getConditionsFor3Or4LengthItem(
+      ctx,
       query,
       joinAs,
-      ctx.values,
       quotedAs,
       args as ItemOf3Or4Length,
       joinShape,
@@ -265,9 +265,9 @@ const processArgs = (
 };
 
 const getConditionsFor3Or4LengthItem = (
+  ctx: ToSqlCtx,
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   target: string,
-  values: unknown[],
   quotedAs: string | undefined,
   args: ItemOf3Or4Length,
   joinShape: ColumnNamesShape,
@@ -278,24 +278,18 @@ const getConditionsFor3Or4LengthItem = (
   const rightColumn = maybeRightColumn ? maybeRightColumn : opOrRightColumn;
 
   return `${rawOrColumnToSql(
+    ctx,
     query,
     leftColumn,
-    values,
     target,
     joinShape,
-  )} ${op} ${rawOrColumnToSql(
-    query,
-    rightColumn,
-    values,
-    quotedAs,
-    query.shape,
-  )}`;
+  )} ${op} ${rawOrColumnToSql(ctx, query, rightColumn, quotedAs, query.shape)}`;
 };
 
 const getObjectOrRawConditions = (
+  ctx: ToSqlCtx,
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   data: Record<string, string | Expression> | Expression | true,
-  values: unknown[],
   quotedAs: string | undefined,
   joinAs: string,
   joinShape: ColumnNamesShape,
@@ -303,7 +297,7 @@ const getObjectOrRawConditions = (
   if (data === true) {
     return 'true';
   } else if (isExpression(data)) {
-    return data.toSQL(values);
+    return data.toSQL(ctx, quotedAs);
   } else {
     const pairs: string[] = [];
     const shape = query.shape;
@@ -313,9 +307,9 @@ const getObjectOrRawConditions = (
 
       pairs.push(
         `${columnToSql(query, joinShape, key, joinAs)} = ${rawOrColumnToSql(
+          ctx,
           query,
           value,
-          values,
           quotedAs,
           shape,
         )}`,

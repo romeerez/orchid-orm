@@ -11,5 +11,6 @@ export * from './queryDataUtils';
 export * from './errors';
 export * from './relations';
 export * from './columns/operators';
-export { QueryBase } from './queryBase';
-export { testTransaction } from './testTransaction';
+export * from './common/fn';
+export * from './queryBase';
+export * from './testTransaction';

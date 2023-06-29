@@ -47,7 +47,7 @@ export class RawSQL<
     if (type) this._type = type;
   }
 
-  toSQL(values: unknown[]): string {
+  toSQL({ values }: { values: unknown[] }): string {
     let sql;
     const isTemplate = typeof this._sql !== 'string';
 

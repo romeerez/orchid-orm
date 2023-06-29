@@ -605,12 +605,15 @@ describe('queryMethods', () => {
               },
             },
           })
-          .selectAvg('id', {
-            over: 'w',
+          .select({
+            avg: (q) =>
+              q.avg('id', {
+                over: 'w',
+              }),
           })
           .toSql(),
         `
-          SELECT avg("user"."id") OVER "w" FROM "user"
+          SELECT avg("user"."id") OVER "w" AS "avg" FROM "user"
           WINDOW "w" AS (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
         `,
       );
@@ -625,12 +628,12 @@ describe('queryMethods', () => {
             tailLength: 'DESC',
           },
         },
-      }).selectAvg('tailLength', { over: 'w' });
+      }).select({ avg: (q) => q.avg('tailLength', { over: 'w' }) });
 
       expectSql(
         q.toSql(),
         `
-          SELECT avg("snake"."tail_length") OVER "w" FROM "snake"
+          SELECT avg("snake"."tail_length") OVER "w" AS "avg" FROM "snake"
           WINDOW "w" AS (PARTITION BY "snake"."snake_name" ORDER BY "snake"."tail_length" DESC)
         `,
       );
@@ -643,12 +646,15 @@ describe('queryMethods', () => {
       expectSql(
         q
           .window({ w: testDb.sql({ raw: windowSql }) })
-          .selectAvg('id', {
-            over: 'w',
+          .select({
+            avg: (q) =>
+              q.avg('id', {
+                over: 'w',
+              }),
           })
           .toSql(),
         `
-        SELECT avg("user"."id") OVER "w" FROM "user"
+        SELECT avg("user"."id") OVER "w" AS "avg" FROM "user"
         WINDOW "w" AS (PARTITION BY id ORDER BY name DESC)
       `,
       );

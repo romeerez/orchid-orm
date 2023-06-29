@@ -59,12 +59,8 @@ export const columnToSql = (
   }
 
   if (item.data.default !== undefined) {
-    if (
-      typeof item.data.default === 'object' &&
-      item.data.default &&
-      isRawSQL(item.data.default)
-    ) {
-      line.push(`DEFAULT ${item.data.default.toSQL(values)}`);
+    if (isRawSQL(item.data.default)) {
+      line.push(`DEFAULT ${item.data.default.toSQL({ values })}`);
     } else {
       line.push(`DEFAULT ${quote(item.data.default)}`);
     }
@@ -192,7 +188,7 @@ export const constraintToSql = (
 };
 
 const checkToSql = (check: RawSQLBase, values: unknown[]) => {
-  return `CHECK (${check.toSQL(values)})`;
+  return `CHECK (${check.toSQL({ values })})`;
 };
 
 const foreignKeyToSql = (item: TableData.References, snakeCase?: boolean) => {
@@ -323,7 +319,9 @@ export const indexesToQuery = (
     if (options.where) {
       sql.push(
         `WHERE ${
-          isRawSQL(options.where) ? options.where.toSQL(values) : options.where
+          isRawSQL(options.where)
+            ? options.where.toSQL({ values })
+            : options.where
         }`,
       );
     }

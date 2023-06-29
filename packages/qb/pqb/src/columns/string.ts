@@ -9,7 +9,7 @@ import {
   BaseStringData,
   stringDataToCode,
   PrimaryKeyColumn,
-  Expression,
+  RawSQLBase,
 } from 'orchid-core';
 import { columnCode } from './code';
 import { RawSQL } from '../sql/rawSql';
@@ -352,8 +352,7 @@ export class UUIDColumn extends ColumnType<string, typeof Operators.text> {
       this,
       t,
       `uuid()`,
-      data.default instanceof Expression &&
-        data.default.toSQL([]) === uuidDefaultSQL
+      data.default instanceof RawSQLBase && data.default._sql === uuidDefaultSQL
         ? { ...data, default: undefined }
         : data,
     );

@@ -12,15 +12,15 @@ export const pushOrderBySql = (
 ) => {
   ctx.sql.push(
     `ORDER BY ${order
-      .map((item) => orderByToSql(data, item, ctx.values, quotedAs))
+      .map((item) => orderByToSql(ctx, data, item, quotedAs))
       .join(', ')}`,
   );
 };
 
 export const orderByToSql = (
+  ctx: ToSqlCtx,
   data: QueryData,
   order: OrderItem,
-  values: unknown[],
   quotedAs?: string,
 ) => {
   if (typeof order === 'string') {
@@ -28,7 +28,7 @@ export const orderByToSql = (
   }
 
   if (isExpression(order)) {
-    return order.toSQL(values);
+    return order.toSQL(ctx, quotedAs);
   }
 
   const sql: string[] = [];

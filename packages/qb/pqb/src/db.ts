@@ -92,6 +92,7 @@ export interface Db<
     shape?: Shape,
     options?: DbTableOptions,
   ): this;
+  internal: Query['internal'];
   queryBuilder: Db;
   whereQueryBuilder: Query['whereQueryBuilder'];
   onQueryBuilder: Query['onQueryBuilder'];

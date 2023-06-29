@@ -72,6 +72,10 @@ export default {
             link: '/guide/aggregate',
           },
           {
+            text: 'Window functions',
+            link: '/guide/window',
+          },
+          {
             text: 'Advanced methods',
             link: '/guide/advanced-queries',
           },

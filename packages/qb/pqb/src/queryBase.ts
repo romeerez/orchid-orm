@@ -8,6 +8,7 @@ import {
 } from 'orchid-core';
 import { RelationsBase } from './relations';
 import { getClonedQueryData } from './utils';
+import { SelectQueryBuilder } from './queryMethods';
 
 export abstract class QueryBase implements QueryBaseCommon {
   /**
@@ -28,7 +29,9 @@ export abstract class QueryBase implements QueryBaseCommon {
   relations!: RelationsBase;
   withData!: WithDataBase;
   baseQuery!: Query;
-  internal!: QueryInternal;
+  internal!: QueryInternal & {
+    selectQueryBuilder?: SelectQueryBuilder<Query>;
+  };
   meta!: QueryMetaBase;
   returnType!: QueryReturnType;
 }

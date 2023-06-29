@@ -50,8 +50,14 @@ db.table.where({ id: 1 }, otherQuery);
 
 ```ts
 db.table.where`a = b`;
+
 // or
 db.table.where(db.table.sql`a = b`);
+
+// or
+import { raw } from 'orchid-orm';
+
+db.table.where(raw`a = b`);
 ```
 
 `.where` can accept a callback with a specific query builder containing all "where" methods such as `.where`, `.or`, `.whereNot`, `.whereIn`, `.whereExists`:

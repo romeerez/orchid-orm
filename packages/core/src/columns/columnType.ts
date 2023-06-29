@@ -1,9 +1,9 @@
-import { BaseOperators, Operator } from './operators';
 import { Code } from './code';
 import { RawSQLBase } from '../raw';
 import { SetOptional, SomeIsTrue, StringKey } from '../utils';
 import { JSONTypeAny } from './json';
-import { QueryCommon } from '../query';
+import { QueryBaseCommon } from '../query';
+import { BaseOperators, ColumnOperatorBase } from './operators';
 
 // output type of the column
 export type ColumnOutput<T extends ColumnTypeBase> = T['type'];
@@ -40,7 +40,8 @@ export type NullableColumn<T extends ColumnTypeBase> = Omit<
   operators: {
     // allow `null` in .where({ column: { equals: null } }) and the same for `not`
     [K in keyof T['operators']]: K extends 'equals' | 'not'
-      ? Operator<T['type'] | null>
+      ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ColumnOperatorBase<T['type'] | null, any>
       : T['operators'][K];
   };
 };
@@ -93,7 +94,7 @@ export type ColumnShapeInput<Shape extends ColumnsShapeBase> = SetOptional<
 >;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyColumnType = ColumnTypeBase<any, Record<string, Operator<any>>>;
+export type AnyColumnType = ColumnTypeBase<any>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/ban-types
 export type AnyColumnTypeCreator = (...args: any) => AnyColumnType | {};
@@ -203,7 +204,7 @@ export type ColumnDataBase = {
 
   // hook for modifying base query object of the table
   // used for automatic updating of `updatedAt`
-  modifyQuery?: (q: QueryCommon) => void;
+  modifyQuery?: (q: QueryBaseCommon) => void;
 
   // raw database check expression
   check?: RawSQLBase;

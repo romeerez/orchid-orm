@@ -491,7 +491,7 @@ const astToQueries = (
         alterTable.push(
           `ALTER COLUMN "${name}" TYPE ${type}${
             to.collate ? ` COLLATE ${quoteNameFromString(to.collate)}` : ''
-          }${item.using ? ` USING ${item.using.toSQL(values)}` : ''}`,
+          }${item.using ? ` USING ${item.using.toSQL({ values })}` : ''}`,
         );
       }
 
@@ -509,7 +509,7 @@ const astToQueries = (
       if (from.default !== to.default) {
         const value =
           typeof to.default === 'object' && to.default && isRawSQL(to.default)
-            ? to.default.toSQL(values)
+            ? to.default.toSQL({ values })
             : quote(to.default);
 
         const expr =
@@ -539,9 +539,9 @@ const astToQueries = (
         }
         if (to.check) {
           alterTable.push(
-            `ADD CONSTRAINT "${checkName}"\n    CHECK (${to.check.toSQL(
+            `ADD CONSTRAINT "${checkName}"\n    CHECK (${to.check.toSQL({
               values,
-            )})`,
+            })})`,
           );
         }
       }

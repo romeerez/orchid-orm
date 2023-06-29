@@ -12,6 +12,7 @@ import {
 } from '../sql';
 import { assertType, expectSql, testDb } from 'test-utils';
 import { getValueKey } from 'orchid-core';
+import { SelectAggMethods } from './aggregate';
 
 describe('merge queries', () => {
   describe('select', () => {
@@ -346,10 +347,13 @@ describe('merge queries', () => {
       s2.joinedParsers = { b: q2.q.parsers };
       s1.group = ['a'];
       s2.group = ['b'];
-      s1.having = [{ a: { a: 1 } }];
-      s2.having = [{ b: { b: 2 } }];
-      s1.havingOr = [[{ a: { a: 1 } }]];
-      s2.havingOr = [[{ b: { b: 2 } }]];
+
+      const agg = new SelectAggMethods();
+      const sum = [agg.sum('id' as never).gt(1)];
+      const avg = [agg.avg('id' as never).lt(10)];
+      s1.having = [sum];
+      s2.having = [avg];
+
       s1.union = [{ arg: testDb.sql`a`, kind: 'UNION' }];
       s2.union = [{ arg: testDb.sql`b`, kind: 'EXCEPT' }];
       s1.order = [{ id: 'ASC' }];
@@ -455,8 +459,7 @@ describe('merge queries', () => {
         ...s2.joinedParsers,
       });
       expect(s.group).toEqual([...s1.group, ...s2.group]);
-      expect(s.having).toEqual([...s1.having, ...s2.having]);
-      expect(s.havingOr).toEqual([...s1.havingOr, ...s2.havingOr]);
+      expect(s.having).toEqual([sum, avg]);
       expect(s.union).toEqual([...s1.union, ...s2.union]);
       expect(s.order).toEqual([...s1.order, ...s2.order]);
       expect(s.limit).toEqual(s2.limit);

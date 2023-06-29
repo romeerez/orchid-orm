@@ -14,7 +14,7 @@ export const pushFromAndAs = (
   ctx.sql.push('FROM');
   if (query.fromOnly) ctx.sql.push('ONLY');
 
-  const from = getFrom(table, query, ctx.values);
+  const from = getFrom(ctx, table, query, quotedAs);
   ctx.sql.push(from);
 
   if (query.as && quotedAs && quotedAs !== from) {
@@ -23,25 +23,26 @@ export const pushFromAndAs = (
 };
 
 const getFrom = (
+  ctx: ToSqlCtx,
   table: QueryBase,
   query: SelectQueryData,
-  values: unknown[],
+  quotedAs?: string,
 ) => {
   if (query.from) {
     const { from } = query;
     if (typeof from === 'object') {
       if (isExpression(from)) {
-        return from.toSQL(values);
+        return from.toSQL(ctx, quotedAs);
       }
 
       if (!from.table) {
-        const sql = makeSql(from, { values });
+        const sql = makeSql(from, ctx);
         return `(${sql.text})`;
       }
 
       // if query contains more than just schema return (SELECT ...)
       if (!checkIfASimpleQuery(from)) {
-        const sql = makeSql(from, { values });
+        const sql = makeSql(from, ctx);
         return `(${sql.text})`;
       }
 

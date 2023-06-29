@@ -32,11 +32,16 @@ import {
 } from 'orchid-core';
 import { QueryBase } from '../queryBase';
 import { _joinLateral } from './_join';
-import { resolveSubQueryCallback, SelectableOrExpression } from '../utils';
+import {
+  getClonedQueryData,
+  resolveSubQueryCallback,
+  SelectableOrExpression,
+} from '../utils';
 import { RawSQL } from '../sql/rawSql';
+import { SelectAggMethods } from './aggregate';
 
 // .select method argument
-export type SelectArg<T extends QueryBase> =
+export type SelectArg<T extends Query> =
   | '*'
   | StringKey<keyof T['selectable']>
   | SelectAsArg<T>;
@@ -44,16 +49,30 @@ export type SelectArg<T extends QueryBase> =
 // .select method object argument
 // key is alias for selected item,
 // value can be a column, raw, or a function returning query or raw
-type SelectAsArg<T extends QueryBase> = Record<string, SelectAsValue<T>>;
+type SelectAsArg<T extends Query> = Record<string, SelectAsValue<T>>;
 
 // .select method object argument value
 // can be column, raw, or a function returning query or raw
-type SelectAsValue<T extends QueryBase> =
+type SelectAsValue<T extends Query, SB = SelectQueryBuilder<T>> =
   | StringKey<keyof T['selectable']>
   | Expression
-  | ((q: T) => QueryBase)
-  | ((q: T) => Expression)
-  | ((q: T) => QueryBase | Expression);
+  | ((q: SB) => QueryBase)
+  | ((q: SB) => Expression)
+  | ((q: SB) => QueryBase | Expression);
+
+export type SelectQueryBuilder<T extends Query, Agg = SelectAggMethods<T>> = {
+  [K in
+    | keyof Agg
+    | 'columnTypes'
+    | 'sql'
+    | keyof T['relations']]: K extends keyof Agg
+    ? Agg[K]
+    : K extends 'columnTypes' | 'sql'
+    ? T[K]
+    : K extends keyof T
+    ? T[K]
+    : never;
+};
 
 // tuple for the result of selected by objects args
 // the first element is shape of selected data
@@ -144,7 +163,7 @@ type SelectAsResult<
   Result extends SelectObjectResultTuple,
   Shape = Result[0],
   AddSelectable extends SelectableBase = {
-    [K in keyof Arg]: Arg[K] extends ((q: T) => infer R extends QueryBase)
+    [K in keyof Arg]: Arg[K] extends ((q: never) => infer R extends QueryBase)
       ? // turn union of objects into intersection
         // https://stackoverflow.com/questions/66445084/intersection-of-an-objects-value-types-in-typescript
         (x: {
@@ -178,7 +197,7 @@ type SelectAsValueResult<
   ? T['selectable'][Arg]['column']
   : Arg extends Expression
   ? Arg['_type']
-  : Arg extends (q: T) => infer R
+  : Arg extends (q: SelectQueryBuilder<T>) => infer R
   ? R extends QueryBase
     ? SelectSubQueryResult<R>
     : R extends Expression
@@ -276,6 +295,27 @@ export const addParserForSelectItem = <T extends Query>(
   return arg;
 };
 
+const selectAggMethods = {} as SelectAggMethods;
+for (const key of Object.getOwnPropertyNames(SelectAggMethods.prototype)) {
+  (selectAggMethods as unknown as Record<string, unknown>)[key] =
+    SelectAggMethods.prototype[key as keyof SelectAggMethods];
+}
+
+export const getSelectQueryBuilder = <T extends Query>(
+  q: T,
+): SelectAggMethods<T> => {
+  // Memoize query builder assigning agg methods to a cloned base query
+  const qb = (q.internal.selectQueryBuilder ??= Object.assign(
+    Object.create(q.baseQuery),
+    selectAggMethods,
+  ));
+
+  // clone query builder for each invocation so that query data won't persist between calls
+  const cloned = Object.create(qb);
+  cloned.q = getClonedQueryData(q.q);
+  return cloned;
+};
+
 // process select argument: add parsers, join relations when needed
 export const processSelectArg = <T extends Query>(
   q: T,
@@ -295,7 +335,9 @@ export const processSelectArg = <T extends Query>(
     let value = (arg as SelectAsArg<T>)[key] as any;
 
     if (typeof value === 'function') {
-      value = resolveSubQueryCallback(q, value);
+      const qb = getSelectQueryBuilder(q);
+
+      value = resolveSubQueryCallback(qb as unknown as Query, value);
 
       if (!isExpression(value) && value.joinQuery) {
         value = value.joinQuery(q, value);
@@ -315,6 +357,7 @@ export const processSelectArg = <T extends Query>(
             (returnType === 'value' || returnType === 'valueOrThrow') &&
             value.q.select
           ) {
+            // todo: investigate what is this for
             if (typeof value.q.select[0] === 'string') {
               value.q.select[0] = {
                 selectAs: { r: value.q.select[0] },

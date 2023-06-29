@@ -3,11 +3,11 @@ import {
   AfterCommitHook,
   emptyArray,
   emptyObject,
-  QueryCommon,
   Sql,
   TransactionAdapterBase,
   TransactionState,
 } from 'orchid-core';
+import { QueryBase } from '../queryBase';
 
 const commitSql = {
   text: 'COMMIT',
@@ -108,7 +108,7 @@ export class Transaction {
         if (afterCommit) {
           const promises = [];
           for (let i = 0, len = afterCommit.length; i < len; i += 2) {
-            const q = afterCommit[i] as QueryCommon;
+            const q = afterCommit[i] as QueryBase;
             const result = afterCommit[i + 1] as unknown[];
             for (const fn of afterCommit[i + 2] as AfterCommitHook[]) {
               promises.push(fn(result, q));

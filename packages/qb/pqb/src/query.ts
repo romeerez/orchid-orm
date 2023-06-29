@@ -20,7 +20,6 @@ import {
   EmptyObject,
   Expression,
   QueryCatch,
-  QueryCommon,
   QueryThen,
   Spread,
   StringKey,
@@ -45,7 +44,7 @@ export type SelectableFromShape<
 export type WithDataItem = { table: string; shape: ColumnsShapeBase };
 export type WithDataBase = Record<never, WithDataItem>;
 
-export type Query = QueryCommon &
+export type Query = QueryBase &
   QueryMethods<ColumnTypesBase> & {
     queryBuilder: Db;
     columnTypes: ColumnTypesBase;
@@ -76,6 +75,21 @@ export type Query = QueryCommon &
   };
 
 export type Selectable<T extends QueryBase> = StringKey<keyof T['selectable']>;
+
+export type SelectableOfType<T extends QueryBase, Type> = StringKey<
+  {
+    [K in keyof T['selectable']]: T['selectable'][K]['column']['type'] extends Type | null
+      ? K
+      : never;
+  }[keyof T['selectable']]
+>;
+
+export type SelectableOrExpressionOfType<
+  T extends Query,
+  C extends ColumnTypeBase,
+> =
+  | SelectableOfType<T, C['type']>
+  | Expression<ColumnTypeBase<C['type'] | null>>;
 
 export type QueryWithTable = Query & { table: string };
 

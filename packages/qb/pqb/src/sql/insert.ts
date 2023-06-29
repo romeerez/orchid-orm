@@ -59,13 +59,13 @@ export const pushInsertSql = (
         (sql, row, i) =>
           sql +
           (i ? ', ' : '') +
-          `(${encodeRow(ctx, q, QueryClass, row, runtimeDefaults)})`,
+          `(${encodeRow(ctx, q, QueryClass, row, runtimeDefaults, quotedAs)})`,
         '',
       )}`,
     );
   } else if (query.kind === 'raw') {
     if (isExpression(values)) {
-      let valuesSql = values.toSQL(ctx.values);
+      let valuesSql = values.toSQL(ctx, quotedAs);
 
       if (runtimeDefaults) {
         valuesSql += `, ${runtimeDefaults
@@ -83,15 +83,14 @@ export const pushInsertSql = (
           .map(
             (raw) =>
               // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              `(${raw.toSQL(v)}, ${runtimeDefaults!
+              `(${raw.toSQL(ctx, quotedAs)}, ${runtimeDefaults!
                 .map((fn) => addValue(v, fn()))
                 .join(', ')})`,
           )
           .join(', ');
       } else {
-        const { values: v } = ctx;
         sql = (values as Expression[])
-          .map((raw) => `(${raw.toSQL(v)})`)
+          .map((raw) => `(${raw.toSQL(ctx, quotedAs)})`)
           .join(', ');
       }
 
@@ -105,7 +104,9 @@ export const pushInsertSql = (
       pushQueryValue(
         q,
         'select',
-        new RawSQL(encodeRow(ctx, q, QueryClass, v[0], runtimeDefaults)),
+        new RawSQL(
+          encodeRow(ctx, q, QueryClass, v[0], runtimeDefaults, quotedAs),
+        ),
       );
     }
 
@@ -128,7 +129,7 @@ export const pushInsertSql = (
           )})`,
         );
       } else {
-        ctx.sql.push(expr.toSQL(ctx.values));
+        ctx.sql.push(expr.toSQL(ctx, quotedAs));
       }
     } else if (type === 'merge') {
       // TODO: optimize, unique columns could be stored in Query.internal
@@ -172,7 +173,7 @@ export const pushInsertSql = (
             return sql + (i ? ', ' : '') + `"${name}" = excluded."${name}"`;
           }, '');
         } else if (isExpression(update)) {
-          set = update.toSQL(ctx.values);
+          set = update.toSQL(ctx, quotedAs);
         } else {
           const arr: string[] = [];
           for (const key in update) {
@@ -205,6 +206,7 @@ const encodeRow = (
   QueryClass: Db,
   row: unknown[],
   runtimeDefaults?: (() => unknown)[],
+  quotedAs?: string,
 ) => {
   const arr = row.map((value) => {
     if (typeof value === 'function') {
@@ -213,7 +215,7 @@ const encodeRow = (
 
     if (value && typeof value === 'object') {
       if (value instanceof Expression) {
-        return value.toSQL(ctx.values);
+        return value.toSQL(ctx, quotedAs);
       } else if (value instanceof QueryClass) {
         return `(${joinSubQuery(q, value as Query).toSql(ctx).text})`;
       }

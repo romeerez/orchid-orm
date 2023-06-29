@@ -617,7 +617,7 @@ describe('select', () => {
     it('should support conditional query or raw expression', async () => {
       const condition = true;
       const q = User.select({
-        key: (q) => (condition ? q.exists() : raw<boolean>`false`),
+        key: () => (condition ? User.exists() : raw<boolean>`false`),
       });
 
       assertType<Awaited<typeof q>, { key: boolean }[]>();
@@ -922,7 +922,7 @@ describe('select', () => {
 
       it('should parse subquery single value', async () => {
         const q = User.select({
-          count: () => User.count(),
+          count: (q) => q.count(),
         });
 
         assertType<Awaited<typeof q>, { count: number }[]>();

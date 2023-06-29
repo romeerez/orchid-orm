@@ -67,7 +67,7 @@ const astToQuery = (ast: RakeDbAst.View): Sql => {
       sql.push(`WITH ( ${list.join(', ')} )`);
     }
 
-    sql.push(`AS (${ast.sql.toSQL(values)})`);
+    sql.push(`AS (${ast.sql.toSQL({ values })})`);
   } else {
     sql.push('DROP VIEW');
 

@@ -44,7 +44,7 @@ It is a [good practice](https://github.com/goldbergyoni/nodebestpractices/blob/m
 
 If it's more suitable to get the `undefined` value instead of throwing, use `takeOptional`, `findOptional`, `findByOptional`, `getOptional` instead.
 
-## take, takeOptional
+## take and takeOptional
 
 [//]: # 'has JSDoc'
 
@@ -60,7 +60,7 @@ const takenOptional: TableType | undefined = await db.table
   .takeOptional();
 ```
 
-## find, findOptional
+## find and findOptional
 
 [//]: # 'has JSDoc'
 
@@ -74,7 +74,7 @@ const found: TableType = await db.table.find(123);
 const foundOptional: TableType | undefined = await db.table.find(123);
 ```
 
-## findBy, findByOptional
+## findBy and findByOptional
 
 [//]: # 'has JSDoc'
 
@@ -92,7 +92,7 @@ const foundOptional: TableType | undefined = await db.table.findByOptional({
 });
 ```
 
-## get, getOptional
+## get and getOptional
 
 [//]: # 'has JSDoc'
 
@@ -561,176 +561,66 @@ db.comment
   });
 ```
 
-## having, havingOr
+## having
 
-Adds a `HAVING` clause to the query.
+Build a `HAVING` clause to the query to filter records by results of [aggregate functions](#aggregate-functions).
 
-`.having` takes aggregate function names as keys, see all functions in [aggregate functions](#aggregate-functions) section.
-
-If the value of a function is a primitive, it's treated as `*`:
+The argument of `having` is a function where you call the aggregate function and compare it with some value by using [column operators](/guide/where.html#column-operators).
 
 ```ts
-db.table.having({
-  count: 5,
-});
+db.table.having((q) => q.count().gte(10));
+// HAVING count(*) >= 10
 ```
 
-```sql
-SELECT * FROM "table"
-HAVING count(*) = 5
-```
-
-If the value of the function is an object, the key is a column name to pass to the function and the value is for the equality check:
+Alternatively, it accepts a raw SQL template:
 
 ```ts
-db.table.having({
-  count: {
-    id: 5,
-  },
-});
+db.table.having`count(*) >= ${10}`;
 ```
 
-```sql
-SELECT * FROM "table"
-HAVING count(id) = 5
-```
-
-The value of a function can be an object
-where keys are column operators (see [column operators](#column-operators) section for full list)
-and values are values to compare with.
+Multiple having conditions will be combined with `AND`:
 
 ```ts
-db.table.having({
-  sum: {
-    price: {
-      gt: 10,
-      lt: 20,
-    },
-  },
-});
+db.table.having(
+  (q) => q.sum('column').gt(5),
+  (q) => q.avg('column').lt(10),
+);
+// HAVING sum(column) > 5 AND avg(column) < 10
 ```
 
-```sql
-SELECT * FROM "table"
-HAVING sum(price) > 10 AND sum(price) < 20
-```
-
-The `distinct` option is for the `DISTINCT` keyword in the aggregation function:
+After applying a comparison, `or` and `and` methods become available:
 
 ```ts
-//
-db.table.having({
-  count: {
-    column: {
-      equals: 10,
+db.table.having((q) =>
+  q.sum('column').equals(5).or(q.min('column').gt(1), q.max('column').lt(10)),
+);
+// HAVING (sum(column) = 5) OR (min(column) > 1 AND max(column) < 10)
+```
+
+`or` method is also available on the `q` query builder:
+
+```ts
+db.table.having((q) => q.or(q.min('column').gt(1), q.max('column').lt(10)));
+// HAVING (min(column) > 1) OR (max(column) < 10)
+```
+
+Aggregate functions are exactly the same functions described in [aggregate functions](#aggregate-functions), they can accept aggregation options:
+
+```ts
+db.table.having((q) =>
+  q
+    .count('id', {
       distinct: true,
-    },
-  },
-});
+      order: { createdAt: 'DESC', filter: { someColumn: { not: null } } },
+    })
+    .gte(10),
+);
 ```
 
-```sql
-SELECT * FROM "table"
-HAVING count(DISTINCT column) = 10
-```
-
-The `order` option is for `ORDER` in the aggregation function, see [order](#order) for value spec.
+Arguments of the aggregate function and of the comparison can be raw SQL:
 
 ```ts
-db.table.having({
-  count: {
-    column: {
-      equals: 10,
-      order: {
-        id: 'ASC',
-      },
-    },
-  },
-});
-```
-
-```sql
-SELECT * FROM "table"
-HAVING count(column ORDER BY id ASC) = 10
-```
-
-`filter` is for the `FILTER` clause to apply to the aggregation function.
-
-`filterOr` is for `OR` logic in the filter, it takes an array of conditions.
-
-```ts
-db.table.having({
-  count: {
-    column: {
-      equals: 10,
-      filter: {
-        id: {
-          lt: 10,
-        },
-      },
-      filterOr: [
-        {
-          id: {
-            equals: 15,
-          },
-        },
-        {
-          id: {
-            gt: 20,
-          },
-        },
-      ],
-    },
-  },
-});
-```
-
-```sql
-SELECT * FROM "table"
-HAVING count(column) FILTER (
-         WHERE id < 10 OR id = 15 OR id > 20
-       ) = 10
-```
-
-The `withinGroup` option is for the `WITHIN GROUP` SQL statement.
-
-```ts
-db.table.having({
-  count: {
-    column: {
-      equals: 10,
-      withingGroup: true,
-      order: {
-        name: 'ASC',
-      },
-    },
-  },
-});
-```
-
-```sql
-SELECT * FROM "table"
-HAVING count(column) WITHIN GROUP (ORDER name ASC) = 10
-```
-
-The `.having` method supports raw SQL:
-
-```ts
-db.table.having`raw SQL`;
-
-// or
-db.table.having(db.table.sql`raw SQL`);
-```
-
-`.havingOr` takes the same arguments as `.having`, but joins them with `OR`:
-
-```ts
-db.table.havingOr({ count: 1 }, { count: 2 });
-```
-
-```sql
-SELECT * FROM "table"
-HAVING count(*) = 1 OR count(*) = 2
+db.table.having((q) => q.count(q.sql('coalesce(one, two)')).gte(q.sql`2 + 2`));
 ```
 
 ## transform
