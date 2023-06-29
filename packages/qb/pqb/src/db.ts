@@ -40,7 +40,6 @@ import {
   ColumnsParsers,
   TransactionState,
   QueryResultRow,
-  QueryInput,
   TemplateLiteralArgs,
   QueryInternal,
   SQLQueryArgs,
@@ -338,26 +337,42 @@ export class Db<
   }
 }
 
-const performQuery = <Result>(
-  q: { internal: QueryInternal; adapter: Adapter },
+const performQuery = async <Result>(
+  q: { internal: QueryInternal; adapter: Adapter; q: QueryData },
   args: SQLQueryArgs,
   method: 'query' | 'arrays',
 ): Promise<Result> => {
   const trx = q.internal.transactionStorage.getStore();
-  let input: QueryInput;
+  let sql: Sql;
   if (typeof args[0].raw === 'string') {
-    input = { text: args[0].raw, values: args[0].values as unknown[] };
+    sql = { text: args[0].raw, values: args[0].values as unknown[] };
   } else {
     const values: unknown[] = [];
-    input = {
+    sql = {
       text: templateLiteralToSQL(args as TemplateLiteralArgs, values),
       values,
     };
   }
 
-  return (trx?.adapter || q.adapter)[method as 'query'](
-    input,
-  ) as Promise<Result>;
+  const { log } = q.q;
+  let logData: unknown | undefined;
+  if (log) logData = log.beforeQuery(sql);
+
+  try {
+    const result = (await (trx?.adapter || q.adapter)[method as 'query'](
+      sql,
+    )) as Promise<Result>;
+
+    if (log) log.afterQuery(sql, logData);
+
+    return result;
+  } catch (err) {
+    if (log) {
+      log.onError(err as Error, sql, logData);
+    }
+
+    throw err;
+  }
 };
 
 applyMixins(Db, [QueryMethods]);

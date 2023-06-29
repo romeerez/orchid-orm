@@ -246,7 +246,7 @@ const then = async (
       }
     }
 
-    if (query.log && sql && logData) {
+    if (query.log && sql) {
       query.log.onError(error as Error, sql, logData);
     }
     return reject?.(error);

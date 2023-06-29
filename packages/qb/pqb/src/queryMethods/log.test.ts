@@ -4,8 +4,22 @@ import { logColors } from './log';
 import { noop } from 'orchid-core';
 import { testAdapter, testDbOptions, useTestDatabase } from 'test-utils';
 
+const hrtime = jest.spyOn(process, 'hrtime');
+hrtime.mockReturnValue([0, 0]);
+hrtime.mockReturnValue([1, 1000000]);
+
+const logger = {
+  log: jest.fn(),
+  error: jest.fn(),
+  warn: noop,
+};
+
 describe('query log', () => {
   useTestDatabase();
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
   it('should not have `log` query object by default', () => {
     const db = createDb(testDbOptions);
@@ -37,16 +51,6 @@ describe('query log', () => {
   });
 
   it('should log elapsed time, sql and binding values', async () => {
-    const hrtime = jest.spyOn(process, 'hrtime');
-    hrtime.mockReturnValueOnce([0, 0]);
-    hrtime.mockReturnValueOnce([1, 1000000]);
-
-    const logger = {
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: noop,
-    };
-
     const db = createDb({
       adapter: testAdapter,
       log: true,
@@ -67,16 +71,6 @@ describe('query log', () => {
   });
 
   it('should log elapsed time, sql and binding values without colors', async () => {
-    const hrtime = jest.spyOn(process, 'hrtime');
-    hrtime.mockReturnValueOnce([0, 0]);
-    hrtime.mockReturnValueOnce([1, 1000000]);
-
-    const logger = {
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: noop,
-    };
-
     const db = createDb({
       adapter: testAdapter,
       log: { colors: false },
@@ -92,17 +86,19 @@ describe('query log', () => {
     ]);
   });
 
+  it('should log when using db.query', async () => {
+    const db = createDb({
+      adapter: testAdapter,
+      log: { colors: false },
+      logger,
+    });
+
+    await db.query`SELECT 1`;
+
+    expect(logger.log.mock.calls).toEqual([[`(1s 1.0ms) SELECT 1`]]);
+  });
+
   it('should log in red in case of error', async () => {
-    const hrtime = jest.spyOn(process, 'hrtime');
-    hrtime.mockReturnValueOnce([0, 0]);
-    hrtime.mockReturnValueOnce([1, 1000000]);
-
-    const logger = {
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: noop,
-    };
-
     const db = createDb({ adapter: testAdapter, log: true, logger });
 
     await db('user').where({ wrongColumn: 'value' }).then(noop, noop);
@@ -119,16 +115,6 @@ describe('query log', () => {
   });
 
   it('should log in red in case of error without colors', async () => {
-    const hrtime = jest.spyOn(process, 'hrtime');
-    hrtime.mockReturnValueOnce([0, 0]);
-    hrtime.mockReturnValueOnce([1, 1000000]);
-
-    const logger = {
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: noop,
-    };
-
     const db = createDb({
       adapter: testAdapter,
       log: { colors: false },
@@ -144,17 +130,21 @@ describe('query log', () => {
     ]);
   });
 
+  it('should log when using db.query', async () => {
+    const db = createDb({
+      adapter: testAdapter,
+      log: { colors: false },
+      logger,
+    });
+
+    await db.query`SELECT something`.then(noop, noop);
+
+    expect(logger.error.mock.calls).toEqual([
+      [`(1s 1.0ms) SELECT something Error: column "something" does not exist`],
+    ]);
+  });
+
   it('should log successful transaction', async () => {
-    const hrtime = jest.spyOn(process, 'hrtime');
-    hrtime.mockReturnValue([0, 0]);
-    hrtime.mockReturnValue([1, 1000000]);
-
-    const logger = {
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: noop,
-    };
-
     const db = createDb({
       adapter: testAdapter,
       log: { colors: false },
@@ -173,16 +163,6 @@ describe('query log', () => {
   });
 
   it('should log failed transaction', async () => {
-    const hrtime = jest.spyOn(process, 'hrtime');
-    hrtime.mockReturnValue([0, 0]);
-    hrtime.mockReturnValue([1, 1000000]);
-
-    const logger = {
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: noop,
-    };
-
     const db = createDb({
       adapter: testAdapter,
       log: { colors: false },
