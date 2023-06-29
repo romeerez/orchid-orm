@@ -1,7 +1,8 @@
-import { OrderItem } from './types';
-import { columnToSql } from './common';
+import { OrderItem, OrderTsQueryConfig, SortDir } from './types';
+import { addValue, columnToSql } from './common';
 import { ToSqlCtx } from './toSql';
 import { QueryData, SelectQueryData } from './data';
+import { emptyObject } from 'orchid-core';
 import { isExpression } from 'orchid-core';
 
 export const pushOrderBySql = (
@@ -24,7 +25,7 @@ export const orderByToSql = (
   quotedAs?: string,
 ) => {
   if (typeof order === 'string') {
-    return `${columnToSql(data, data.shape, order, quotedAs)} ASC`;
+    return addOrder(ctx, data, order, quotedAs);
   }
 
   if (isExpression(order)) {
@@ -34,7 +35,32 @@ export const orderByToSql = (
   const sql: string[] = [];
   for (const key in order) {
     const value = order[key];
-    sql.push(`${columnToSql(data, data.shape, key, quotedAs)} ${value}`);
+    sql.push(addOrder(ctx, data, key, quotedAs, value as SortDir));
   }
   return sql.join(', ');
+};
+
+const addOrder = (
+  ctx: ToSqlCtx,
+  data: QueryData,
+  column: string,
+  quotedAs?: string,
+  dir?: SortDir | OrderTsQueryConfig,
+): string => {
+  if (data.sources?.[column]) {
+    const search = data.sources[column];
+    const order: OrderTsQueryConfig =
+      dir ||
+      (!search.order || search.order === true ? emptyObject : search.order);
+
+    return `${order.coverDensity ? 'ts_rank_cd' : 'ts_rank'}(${
+      order.weights ? `${addValue(ctx.values, `{${order.weights}}`)}, ` : ''
+    }${search.vectorSQL}, "${column}"${
+      order.normalization !== undefined
+        ? `, ${addValue(ctx.values, order.normalization)}`
+        : ''
+    }) ${order.dir || 'DESC'}`;
+  }
+
+  return `${columnToSql(data, data.shape, column, quotedAs)} ${dir || 'ASC'}`;
 };

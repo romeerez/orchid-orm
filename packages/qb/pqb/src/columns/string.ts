@@ -9,10 +9,14 @@ import {
   BaseStringData,
   stringDataToCode,
   PrimaryKeyColumn,
+  TemplateLiteralArgs,
+  getDefaultLanguage,
   RawSQLBase,
+  RawSQLArgs,
 } from 'orchid-core';
 import { columnCode } from './code';
 import { RawSQL } from '../sql/rawSql';
+import { SearchWeight } from '../sql';
 
 export type StringColumn = ColumnType<string, typeof Operators.text>;
 
@@ -121,6 +125,8 @@ const textColumnToCode = (
 
 // text	variable unlimited length
 export class TextColumn extends TextBaseColumn {
+  static instance = new TextColumn();
+
   dataType = 'text' as const;
   declare data: TextColumnData & { minArg?: number; maxArg?: number };
 
@@ -314,12 +320,84 @@ export class BitVaryingColumn<
   }
 }
 
+type TsVectorGeneratedColumns = string[] | Record<string, SearchWeight>;
+
 // A tsvector value is a sorted list of distinct lexemes
 export class TsVectorColumn extends ColumnType<string, typeof Operators.text> {
   dataType = 'tsvector' as const;
   operators = Operators.text;
+
+  constructor(public defaultLanguage = getDefaultLanguage()) {
+    super();
+  }
+
   toCode(t: string): Code {
     return columnCode(this, t, `tsvector()`);
+  }
+
+  /**
+   * For `tsvector` column type, it can also accept language (optional) and columns:
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.createTable('post', (t) => ({
+   *     id: t.id(),
+   *     title: t.text(),
+   *     body: t.text(),
+   *     // join title and body into a single ts_vector
+   *     generatedTsVector: t.tsvector().generated(['title', 'body']).searchIndex(),
+   *     // with language:
+   *     spanishTsVector: t
+   *       .tsvector()
+   *       .generated('spanish', ['title', 'body'])
+   *       .searchIndex(),
+   *   }));
+   * });
+   * ```
+   *
+   * @param args
+   */
+  generated<T extends ColumnType>(
+    this: T,
+    ...args:
+      | RawSQLArgs
+      | [language: string, columns: TsVectorGeneratedColumns]
+      | [columns: TsVectorGeneratedColumns]
+  ): T {
+    const first = args[0];
+    if (typeof first === 'string' || !('raw' in first)) {
+      const target = typeof first === 'string' ? (args[1] as string[]) : first;
+
+      let sql;
+      if (Array.isArray(target)) {
+        const columns =
+          target.length === 1
+            ? `"${target[0]}"`
+            : target
+                .map((column) => `coalesce("${column}", '')`)
+                .join(` || ' ' || `);
+
+        sql = `to_tsvector('${
+          typeof first === 'string'
+            ? first
+            : (this as unknown as TsVectorColumn).defaultLanguage
+        }', ${columns})`;
+      } else {
+        for (const key in target) {
+          sql =
+            (sql ? sql + ' || ' : '') +
+            `setweight(to_tsvector(coalesce("${key}", '')), '${target[key]}')`;
+        }
+      }
+
+      const arr = [sql] as string[] & { raw: string[] };
+      arr.raw = arr;
+      args = [arr] as unknown as TemplateLiteralArgs;
+    }
+
+    return super.generated(...(args as TemplateLiteralArgs)) as unknown as T;
   }
 }
 

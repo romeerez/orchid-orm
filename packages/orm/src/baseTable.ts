@@ -70,12 +70,20 @@ type ScopeFn<Related extends TableClass, Scope extends Query> = (
 
 // type of table instance created by a table class
 export type Table = {
+  // table name
   table: string;
+  // columns shape and the record type
   columns: ColumnsConfig;
+  // database schema containing this table
   schema?: string;
+  // column types defined in base table to use in `setColumns`
   columnTypes: ColumnTypesBase;
+  // suppress no primary key warning
   noPrimaryKey?: boolean;
+  // path to file where the table is defined
   filePath: string;
+  // default language for the full text search
+  language?: string;
 };
 
 // get the type of table columns
@@ -89,6 +97,7 @@ export const createBaseTable = <CT extends ColumnTypesBase>(
     filePath,
     nowSQL,
     exportAs,
+    language,
   }: {
     // concrete column types or a callback for overriding standard column types
     // this types will be used in tables to define their columns
@@ -102,6 +111,8 @@ export const createBaseTable = <CT extends ColumnTypesBase>(
     nowSQL?: string;
     // export name of the base table, by default it is BaseTable
     exportAs?: string;
+    // default language for the full text search
+    language?: string;
   } = { columnTypes: defaultColumnTypes as unknown as CT },
 ) => {
   const ct =
@@ -116,6 +127,7 @@ export const createBaseTable = <CT extends ColumnTypesBase>(
     snakeCase,
     nowSQL,
     exportAs,
+    language,
   );
 };
 
@@ -136,6 +148,7 @@ const create = <CT extends ColumnTypesBase>(
   snakeCase?: boolean,
   nowSQL?: string,
   exportAs = 'BaseTable',
+  language?: string,
 ) => {
   let filePath: string | undefined;
 
@@ -162,6 +175,7 @@ const create = <CT extends ColumnTypesBase>(
     snakeCase = snakeCase;
     columnTypes = columnTypes;
     q: QueryData = {} as QueryData;
+    language = language;
     declare filePath: string;
     declare result: ColumnsShapeBase;
 
@@ -188,7 +202,7 @@ const create = <CT extends ColumnTypesBase>(
       (columnTypes as { [snakeCaseKey]?: boolean })[snakeCaseKey] =
         this.snakeCase;
 
-      const shape = getColumnTypes(columnTypes, fn, nowSQL);
+      const shape = getColumnTypes(columnTypes, fn, nowSQL, this.language);
 
       if (this.snakeCase) {
         for (const key in shape) {

@@ -47,6 +47,19 @@ describe('baseTable', () => {
     );
   });
 
+  it('should set the default language to the table query', () => {
+    const Base = createBaseTable({ language: 'Ukrainian' });
+    class Table extends Base {
+      table = 'table';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+      }));
+    }
+    const orm = orchidORM({ adapter: testAdapter }, { table: Table });
+
+    expect(orm.table.q.language).toBe('Ukrainian');
+  });
+
   describe('overriding column types', () => {
     it('should have .sql with overridden types', () => {
       class Type extends ColumnType {

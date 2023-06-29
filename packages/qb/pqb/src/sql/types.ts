@@ -109,6 +109,56 @@ export type SelectItem =
   | JsonItem
   | Expression;
 
+export type OrderTsQueryConfig =
+  | true
+  | {
+      coverDensity?: boolean;
+      weights?: number[];
+      normalization?: number;
+      dir?: SortDir;
+    };
+
+export type QuerySourceItem = {
+  queryAs: string;
+  as?: string;
+  textSQL?: MaybeArray<string>;
+  langSQL?: string;
+  vectorSQL?: string;
+  order?: OrderTsQueryConfig;
+} & (
+  | {
+      language?: string;
+    }
+  | {
+      languageColumn: string;
+    }
+) &
+  (
+    | {
+        text: string | Expression;
+      }
+    | {
+        in: MaybeArray<string> | Record<string, SearchWeight>;
+      }
+    | {
+        vector: string;
+      }
+  ) &
+  (
+    | {
+        query: string | Expression;
+      }
+    | {
+        plainQuery: string | Expression;
+      }
+    | {
+        phraseQuery: string | Expression;
+      }
+    | {
+        tsQuery: string | Expression;
+      }
+  );
+
 export type JoinItem = SimpleJoinItem | JoinLateralItem;
 
 export type SimpleJoinItem = {
@@ -154,6 +204,7 @@ export type WhereItem =
       IN?: MaybeArray<WhereInItem>;
       EXISTS?: MaybeArray<SimpleJoinItem['args']>;
       ON?: WhereOnItem | WhereJsonPathEqualsItem;
+      SEARCH?: MaybeArray<WhereSearchItem>;
     })
   | ((q: unknown) => QueryBase)
   | Query
@@ -180,6 +231,13 @@ export type WhereOnItem = {
 };
 
 export type WhereOnJoinItem = { table?: string; q: { as?: string } } | string;
+
+export type SearchWeight = 'A' | 'B' | 'C' | 'D';
+
+export type WhereSearchItem = {
+  as: string;
+  vectorSQL: string;
+};
 
 export type SortDir = 'ASC' | 'DESC' | 'ASC NULLS FIRST' | 'DESC NULLS LAST';
 

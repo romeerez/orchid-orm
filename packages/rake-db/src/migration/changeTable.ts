@@ -18,6 +18,7 @@ import {
   consumeColumnName,
   RawSQLBase,
   isRawSQL,
+  setDefaultLanguage,
 } from 'orchid-core';
 import {
   ChangeTableCallback,
@@ -267,14 +268,17 @@ export const changeTable = async <CT extends ColumnTypesBase>(
   options: ChangeTableOptions,
   fn?: ChangeTableCallback<CT>,
 ): Promise<void> => {
+  const snakeCase =
+    'snakeCase' in options ? options.snakeCase : migration.options.snakeCase;
+  const language =
+    'language' in options ? options.language : migration.options.language;
+
+  setDefaultLanguage(language);
   resetTableData();
   resetChangeTableData();
 
   const tableChanger = Object.create(migration.columnTypes) as TableChanger<CT>;
   Object.assign(tableChanger, tableChangeMethods);
-
-  const snakeCase =
-    'snakeCase' in options ? options.snakeCase : migration.options.snakeCase;
 
   (tableChanger as { [snakeCaseKey]?: boolean })[snakeCaseKey] = snakeCase;
 
@@ -282,7 +286,7 @@ export const changeTable = async <CT extends ColumnTypesBase>(
 
   const ast = makeAst(up, tableName, changeData, changeTableData, options);
 
-  const queries = astToQueries(ast, snakeCase);
+  const queries = astToQueries(ast, snakeCase, language);
   for (const query of queries) {
     const result = await migration.adapter.arrays(query);
     query.then?.(result);
@@ -357,6 +361,7 @@ type PrimaryKeys = {
 const astToQueries = (
   ast: RakeDbAst.ChangeTable,
   snakeCase?: boolean,
+  language?: string,
 ): TableQuery[] => {
   const queries: TableQuery[] = [];
 
@@ -716,8 +721,8 @@ const astToQueries = (
     });
   }
 
-  queries.push(...indexesToQuery(false, ast, dropIndexes));
-  queries.push(...indexesToQuery(true, ast, addIndexes));
+  queries.push(...indexesToQuery(false, ast, dropIndexes, language));
+  queries.push(...indexesToQuery(true, ast, addIndexes, language));
   queries.push(...commentsToQuery(ast, comments));
 
   return queries;

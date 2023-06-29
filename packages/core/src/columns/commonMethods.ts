@@ -138,9 +138,6 @@ export const stringTypeMethods = () => ({
     value: Value,
     params?: MessageParam,
   ) {
-    if (Array.isArray(value)) {
-      throw new Error('wtf');
-    }
     return setDataValue(this, 'regex', value, params);
   },
 

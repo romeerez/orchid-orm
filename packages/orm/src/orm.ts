@@ -153,6 +153,7 @@ export const orchidORM = <T extends TableClasses>(
     const options: DbTableOptions = {
       ...commonOptions,
       schema: table.schema,
+      language: table.language,
     };
 
     if (table.noPrimaryKey) options.noPrimaryKey = 'ignore';

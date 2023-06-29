@@ -55,6 +55,45 @@ change(async (db) => {
 });
 ```
 
+## generated
+
+[//]: # 'has JSDoc in columnType'
+
+Define a generated column. `generated` accepts a raw SQL.
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    two: t.integer().generated`1 + 1`,
+  }));
+});
+```
+
+[//]: # 'has JSDoc in columns/string'
+
+For `tsvector` column type, it can also accept language (optional) and columns:
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createTable('post', (t) => ({
+    id: t.id(),
+    title: t.text(),
+    body: t.text(),
+    // join title and body into a single ts_vector
+    generatedTsVector: t.tsvector().generated(['title', 'body']).searchIndex(),
+    // with language:
+    spanishTsVector: t
+      .tsvector()
+      .generated('spanish', ['title', 'body'])
+      .searchIndex(),
+  }));
+});
+```
+
 ## primaryKey
 
 Mark the column as a primary key. This column type becomes an argument of the `.find` method.
@@ -230,6 +269,54 @@ type IndexOptions = {
   // mode is for dropping the index
   mode?: 'CASCADE' | 'RESTRICT';
 };
+```
+
+## searchIndex
+
+[//]: # 'has JSDoc'
+
+`searchIndex` is designed for full text search.
+
+It can accept the same options as a regular `index`, but it is `USING GIN` by default, and it is concatenating columns into a `tsvector`.
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    id: t.identity().primaryKey(),
+    title: t.string(),
+    body: t.string(),
+    ...t.searchIndex(['title', 'body']),
+  }));
+});
+```
+
+Produces the following index ('english' is a default language, see [full text search](/guide/text-search.html#language) for changing it):
+
+```sql
+CREATE INDEX "table_title_body_idx" ON "table" USING GIN (to_tsvector('english', concat_ws(' ', "title", "body")))
+```
+
+Also, it works well with a generated `tsvector` column:
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createTable('table', (t) => ({
+    id: t.identity().primaryKey(),
+    title: t.string(),
+    body: t.string(),
+    generatedTsVector: t.tsvector().generated(['title', 'body']).searchIndex(),
+  }));
+});
+```
+
+Produces the following index:
+
+```sql
+CREATE INDEX "table_generatedTsVector_idx" ON "table" USING GIN ("generatedTsVector")
 ```
 
 ## unique

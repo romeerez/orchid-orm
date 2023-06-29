@@ -54,6 +54,7 @@ import {
   makeTimestampsHelpers,
   MaybeArray,
   name,
+  setDefaultLanguage,
   setDefaultNowFn,
   TemplateLiteralArgs,
   toArray,
@@ -156,9 +157,11 @@ export const getColumnTypes = <
   types: CT,
   fn: (t: CT) => Shape,
   nowSQL: string | undefined,
+  language: string | undefined,
   data: TableData = newTableData(),
 ) => {
   if (nowSQL) setDefaultNowFn(nowSQL);
+  if (language) setDefaultLanguage(language);
 
   resetTableData(data);
   return fn(types);
@@ -373,18 +376,19 @@ export const columnTypes = {
 
   unique(
     columns: MaybeArray<string | IndexColumnOptions>,
-    options: IndexOptions = {},
+    options?: IndexOptions,
   ) {
-    const index = {
-      columns: toArray(columns).map((column) =>
-        typeof column === 'string' ? { column } : column,
-      ),
-      options: { ...options, unique: true },
-    };
+    return this.index(columns, { ...options, unique: true });
+  },
 
-    (tableData.indexes ??= []).push(index);
-
-    return emptyObject;
+  /**
+   * See {@link ColumnType.searchIndex}
+   */
+  searchIndex(
+    columns: MaybeArray<string | IndexColumnOptions>,
+    options?: IndexOptions,
+  ) {
+    return this.index(columns, { ...options, tsVector: true });
   },
 
   constraint<

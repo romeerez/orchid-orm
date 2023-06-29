@@ -62,6 +62,8 @@ export const createTable = async <
 ): Promise<CreateTableResult<Table, Shape>> => {
   const snakeCase =
     'snakeCase' in options ? options.snakeCase : migration.options.snakeCase;
+  const language =
+    'language' in options ? options.language : migration.options.language;
 
   const types = Object.assign(
     Object.create(migration.columnTypes),
@@ -69,7 +71,12 @@ export const createTable = async <
   );
   types[snakeCaseKey] = snakeCase;
 
-  const shape = getColumnTypes(types, fn, migration.options.baseTable?.nowSQL);
+  const shape = getColumnTypes(
+    types,
+    fn,
+    migration.options.baseTable?.nowSQL,
+    language,
+  );
   const tableData = getTableData();
   const ast = makeAst(
     up,
@@ -82,7 +89,7 @@ export const createTable = async <
 
   validatePrimaryKey(ast);
 
-  const queries = astToQueries(ast, snakeCase);
+  const queries = astToQueries(ast, snakeCase, language);
   for (const { then, ...query } of queries) {
     const result = await migration.adapter.arrays(query);
     then?.(result);
@@ -171,6 +178,7 @@ const validatePrimaryKey = (ast: RakeDbAst.Table) => {
 const astToQueries = (
   ast: RakeDbAst.Table,
   snakeCase?: boolean,
+  language?: string,
 ): TableQuery[] => {
   const queries: TableQuery[] = [];
   const { shape } = ast;
@@ -258,7 +266,7 @@ const astToQueries = (
       text: `CREATE TABLE ${quoteWithSchema(ast)} (${lines.join(',')}\n)`,
       values,
     },
-    ...indexesToQuery(true, ast, indexes),
+    ...indexesToQuery(true, ast, indexes, language),
     ...commentsToQuery(ast, comments),
   );
 

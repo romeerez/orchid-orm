@@ -11,6 +11,7 @@ import {
 } from '../query';
 import { SelectableOrExpression } from '../utils';
 import {
+  OrderTsQueryConfig,
   SelectItem,
   SelectQueryData,
   SortDir,
@@ -35,6 +36,7 @@ import { Transaction } from './transaction';
 import { For } from './for';
 import { ColumnInfoMethods } from './columnInfo';
 import { addWhere, Where, WhereArg, WhereResult } from './where';
+import { SearchMethods } from './search';
 import { Clear } from './clear';
 import { Having } from './having';
 import { QueryLog } from './log';
@@ -80,6 +82,9 @@ type WindowResult<T extends Query, W extends WindowArg<T>> = T & {
 
 export type OrderArg<
   T extends Query,
+  TsQuery extends PropertyKey = string | undefined extends T['meta']['tsQuery']
+    ? never
+    : Exclude<T['meta']['tsQuery'], undefined>,
   Key extends PropertyKey =
     | keyof T['selectable']
     | {
@@ -88,11 +93,12 @@ export type OrderArg<
           | 'object'
           ? never
           : K;
-      }[keyof T['result']],
+      }[keyof T['result']]
+    | TsQuery,
 > =
   | Key
   | {
-      [K in Key]?: SortDir;
+      [K in Key]?: K extends TsQuery ? OrderTsQueryConfig : SortDir;
     }
   | Expression;
 
@@ -132,6 +138,7 @@ export interface QueryMethods<CT extends ColumnTypesBase>
     For,
     ColumnInfoMethods,
     Omit<Where, 'result'>,
+    SearchMethods,
     Clear,
     Having,
     Then,
@@ -729,6 +736,7 @@ applyMixins(QueryMethods, [
   For,
   ColumnInfoMethods,
   Where,
+  SearchMethods,
   Clear,
   Having,
   Then,

@@ -10,12 +10,15 @@ import {
   PrimaryKeyColumn,
   pushColumnData,
   QueryBaseCommon,
+  RawSQLArgs,
+  RawSQLBase,
   setColumnData,
   ValidationContext,
 } from 'orchid-core';
 import { TableData } from './columnTypes';
-import { RawSQL } from '../sql/rawSql';
+import { raw, RawSQL } from '../sql/rawSql';
 import { BaseOperators } from './operators';
+import { SearchWeight } from '../sql';
 
 export type ColumnData = ColumnDataBase & {
   maxChars?: number;
@@ -29,6 +32,8 @@ export type ColumnData = ColumnDataBase & {
   compression?: string;
   foreignKeys?: ForeignKey<string, string[]>[];
   identity?: TableData.Identity;
+  // raw SQL for a generated column
+  generated?: RawSQLBase;
 };
 
 export type ForeignKeyMatch = 'FULL' | 'PARTIAL' | 'SIMPLE';
@@ -70,6 +75,8 @@ export type IndexColumnOptions = (
   collate?: string;
   opclass?: string;
   order?: string;
+  // weight for a column in a search index
+  weight?: SearchWeight;
 };
 
 export type IndexOptions = {
@@ -82,6 +89,12 @@ export type IndexOptions = {
   tablespace?: string;
   where?: string;
   dropMode?: 'CASCADE' | 'RESTRICT';
+  // set the language for the tsVector, 'english' is a default
+  language?: string | RawSQLBase;
+  // set the column with language for the tsVector
+  languageColumn?: string;
+  // create a tsVector index
+  tsVector?: boolean;
 };
 
 export type SingleColumnIndexOptions = IndexColumnOptions & IndexOptions;
@@ -177,6 +190,63 @@ export abstract class ColumnType<
     return pushColumnData(this, 'indexes', options);
   }
 
+  /**
+   * `searchIndex` is designed for full text search.
+   *
+   * It can accept the same options as a regular `index`, but it is `USING GIN` by default, and it is concatenating columns into a `tsvector`.
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.createTable('table', (t) => ({
+   *     id: t.identity().primaryKey(),
+   *     title: t.string(),
+   *     body: t.string(),
+   *     ...t.searchIndex(['title', 'body']),
+   *   }));
+   * });
+   * ```
+   *
+   * Produces the following index ('english' is a default language, see [full text search](/guide/text-search.html#language) for changing it):
+   *
+   * ```sql
+   * CREATE INDEX "table_title_body_idx" ON "table" USING GIN (to_tsvector('english', concat_ws(' ', "title", "body")))
+   * ```
+   *
+   * Also, it works well with a generated `tsvector` column:
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.createTable('table', (t) => ({
+   *     id: t.identity().primaryKey(),
+   *     title: t.string(),
+   *     body: t.string(),
+   *     generatedTsVector: t.tsvector().generated(['title', 'body']).searchIndex(),
+   *   }));
+   * });
+   * ```
+   *
+   * Produces the following index:
+   *
+   * ```sql
+   * CREATE INDEX "table_generatedTsVector_idx" ON "table" USING GIN ("generatedTsVector")
+   * ```
+   *
+   * @param options - index options
+   */
+  searchIndex<T extends ColumnType>(
+    this: T,
+    options?: Omit<SingleColumnIndexOptions, 'tsVector'>,
+  ): T {
+    return pushColumnData(this, 'indexes', {
+      ...options,
+      ...(this.dataType === 'tsvector' ? { using: 'GIN' } : { tsVector: true }),
+    });
+  }
+
   unique<T extends ColumnType>(
     this: T,
     options: Omit<SingleColumnIndexOptions, 'column' | 'unique'> = {},
@@ -255,5 +325,24 @@ export abstract class ColumnType<
     const cloned = Object.create(this);
     cloned.chain = [...this.chain, ['superRefine', check]];
     return cloned as T & { type: RefinedOutput };
+  }
+
+  /**
+   * Define a generated column. `generated` accepts a raw SQL.
+   *
+   * ```ts
+   * import { change } from '../dbScript';
+   *
+   * change(async (db) => {
+   *   await db.createTable('table', (t) => ({
+   *     two: t.integer().generated`1 + 1`,
+   *   }));
+   * });
+   * ```
+   *
+   * @param args - raw SQL
+   */
+  generated<T extends ColumnType>(this: T, ...args: RawSQLArgs): T {
+    return setColumnData(this, 'generated', raw(...args));
   }
 }

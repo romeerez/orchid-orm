@@ -149,6 +149,17 @@ It requires `min` and `max`, but can be [overridden](/guide/columns-overview.htm
 t.citext(min: number, max: number) // -> string
 ```
 
+## tsvector
+
+For full text search: define a generated column for a text vector.
+
+See [generated](/guide/migration-column-methods.html#enum) migration method.
+
+```ts
+// generate a `ts_vector` from other text columns
+t.tsvector().generated(['title', 'body']).searchIndex();
+```
+
 ## binary
 
 The bytea data type allows storage of binary strings, it is returned as a node.js Buffer object.

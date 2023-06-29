@@ -79,6 +79,14 @@ export const snakeSelectAllWithTable = snakeAllColumns
   .map((item) => `"snake".${item}`)
   .join(', ');
 
+export const Post = testDb('post', (t) => ({
+  id: t.identity().primaryKey(),
+  title: t.text(),
+  body: t.text(),
+  generatedTsVector: t.tsvector().generated(['title', 'text']).searchIndex(),
+  ...t.timestamps(),
+}));
+
 export const expectQueryNotMutated = (q: Query) => {
   expectSql(q.toSql(), `SELECT * FROM "${q.table}"`);
 };

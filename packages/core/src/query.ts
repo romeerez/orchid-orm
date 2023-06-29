@@ -15,10 +15,17 @@ export type Sql = {
 
 // query metadata that is stored only on TS side, not available in runtime
 export type QueryMetaBase = {
+  // table alias
   as?: string;
+  // return type of `create`, `update`, `delete` depends on whether the query has select
   hasSelect?: true;
+  // `update` and `delete` require the query to have `where`.
+  // Calling `.all()` is also setting `hasWhere` to true.
   hasWhere?: true;
+  // Additional default values for `create`. Columns of the `defaults` become optional in `create`.
   defaults: EmptyObject;
+  // Union of available full text search aliases to use in `headline` and in `order`.
+  tsQuery?: string;
 };
 
 // static query data that is defined only once when the table instance is instantiated

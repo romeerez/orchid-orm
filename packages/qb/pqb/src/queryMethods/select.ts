@@ -295,11 +295,16 @@ export const addParserForSelectItem = <T extends Query>(
   return arg;
 };
 
-const selectAggMethods = {} as SelectAggMethods;
-for (const key of Object.getOwnPropertyNames(SelectAggMethods.prototype)) {
-  (selectAggMethods as unknown as Record<string, unknown>)[key] =
-    SelectAggMethods.prototype[key as keyof SelectAggMethods];
-}
+let selectAggMethods: SelectAggMethods | undefined;
+const getSelectAggMethods = () => {
+  if (selectAggMethods) return selectAggMethods;
+  selectAggMethods = {} as SelectAggMethods;
+  for (const key of Object.getOwnPropertyNames(SelectAggMethods.prototype)) {
+    (selectAggMethods as unknown as Record<string, unknown>)[key] =
+      SelectAggMethods.prototype[key as keyof SelectAggMethods];
+  }
+  return selectAggMethods;
+};
 
 export const getSelectQueryBuilder = <T extends Query>(
   q: T,
@@ -307,7 +312,7 @@ export const getSelectQueryBuilder = <T extends Query>(
   // Memoize query builder assigning agg methods to a cloned base query
   const qb = (q.internal.selectQueryBuilder ??= Object.assign(
     Object.create(q.baseQuery),
-    selectAggMethods,
+    getSelectAggMethods(),
   ));
 
   // clone query builder for each invocation so that query data won't persist between calls
@@ -370,13 +375,15 @@ export const processSelectArg = <T extends Query>(
 
         let asOverride = key;
 
-        let suffix: string | number = '';
         if (value.q.joinedShapes?.[key]) {
-          suffix = 2;
+          let suffix = 2;
           const joinOverrides = (q.q.joinOverrides ??= {});
           while (joinOverrides[(asOverride = `${key}${suffix}`)]) {
             suffix++;
           }
+          // aliases points to a table in a query
+          joinOverrides[asOverride] = asOverride;
+          // table name points to an alias
           joinOverrides[key] = asOverride;
         }
 

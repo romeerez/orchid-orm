@@ -74,6 +74,8 @@ export type DbTableOptions = {
   autoPreparedStatements?: boolean;
   noPrimaryKey?: NoPrimaryKeyOption;
   snakeCase?: boolean;
+  // default language for the full text search
+  language?: string;
 } & QueryLogOptions;
 
 export interface Db<
@@ -200,6 +202,7 @@ export class Db<
       log: logParamToLogObject(logger, options.log),
       autoPreparedStatements: options.autoPreparedStatements ?? false,
       parsers: hasParsers ? parsers : undefined,
+      language: options.language,
     } as QueryData;
 
     if (options?.schema) {
@@ -444,7 +447,9 @@ export const createDb = <CT extends ColumnTypesBase>({
         adapter,
         qb as unknown as Db,
         table as Table,
-        typeof shape === 'function' ? getColumnTypes(ct, shape, nowSQL) : shape,
+        typeof shape === 'function'
+          ? getColumnTypes(ct, shape, nowSQL, options?.language)
+          : shape,
         ct,
         transactionStorage,
         { ...commonOptions, ...options },

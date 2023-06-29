@@ -27,6 +27,8 @@ export class FnExpression<
   Q extends Query,
   T extends ColumnTypeBase,
 > extends Expression<T> {
+  _mods: unknown[] = [];
+
   constructor(
     public q: Q,
     public fn: string,
@@ -39,6 +41,14 @@ export class FnExpression<
     public _type: T,
   ) {
     super();
+  }
+
+  modifySQL(sql: string, ctx: ToSqlCtx, quotedAs?: string) {
+    const mods = this._mods;
+    for (let i = 0, len = mods.length; i < len; i += 2) {
+      sql = (mods[i] as Operator<unknown>)(sql, mods[i + 1], ctx, quotedAs);
+    }
+    return sql;
   }
 
   toSQL(ctx: ToSqlCtx, quotedAs?: string): string {
@@ -132,31 +142,16 @@ export type ColumnExpression<
   ) => ColumnExpression<BooleanNullable>;
 };
 
-type FnClass = {
-  new (
-    q: Query,
-    fn: string,
-    args: unknown[],
-    options: unknown,
-    type: ColumnTypeBase,
-  ): ColumnExpression<ColumnTypeBase>;
-};
-
-const makeColumnFnClass = <T extends ColumnType>(column: T): FnClass => {
-  let { _fnClass } = column.constructor as unknown as { _fnClass: FnClass };
+export const makeColumnFnClass = <T extends ColumnType>(
+  column: T,
+): typeof FnExpression => {
+  let { _fnClass } = column.constructor as unknown as {
+    _fnClass: FnExpression<Query, ColumnTypeBase>;
+  };
   if (!_fnClass) {
     class ColumnFn extends FnExpression<Query, T> {
-      _mods: unknown[] = [];
-
       toSQL(ctx: ToSqlCtx, quotedAs?: string): string {
-        let sql = super.toSQL(ctx, quotedAs);
-
-        const mods = this._mods;
-        for (let i = 0, len = mods.length; i < len; i += 2) {
-          sql = (mods[i] as Operator<unknown>)(sql, mods[i + 1], ctx, quotedAs);
-        }
-
-        return sql;
+        return super.modifySQL(super.toSQL(ctx, quotedAs), ctx, quotedAs);
       }
     }
 
@@ -184,11 +179,17 @@ const makeColumnFnClass = <T extends ColumnType>(column: T): FnClass => {
       };
     }
 
-    (column.constructor as unknown as { _fnClass: FnClass })._fnClass =
-      _fnClass = ColumnFn as unknown as FnClass;
+    (
+      column.constructor as unknown as {
+        _fnClass: FnExpression<Query, ColumnTypeBase>;
+      }
+    )._fnClass = _fnClass = ColumnFn as unknown as FnExpression<
+      Query,
+      ColumnTypeBase
+    >;
   }
 
-  return _fnClass;
+  return _fnClass as unknown as typeof FnExpression;
 };
 
 export type FnExpressionArg<Q extends Query> =

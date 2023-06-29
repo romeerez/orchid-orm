@@ -1,12 +1,16 @@
 import { Query } from '../query';
 import { ColumnOperators, QueryData } from '../sql';
-import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
+import {
+  pushQueryArray,
+  pushQueryValue,
+  setQueryObjectValue,
+} from '../queryDataUtils';
 import { JoinArgs, JoinCallback, JoinFirstArg } from './join';
 import {
-  Expression,
   ColumnsShapeBase,
-  MaybeArray,
   emptyObject,
+  Expression,
+  MaybeArray,
   TemplateLiteralArgs,
 } from 'orchid-core';
 import { getIsJoinSubQuery } from '../sql/join';
@@ -14,25 +18,35 @@ import { getShapeFromSelect } from './select';
 import { ColumnsShape } from '../columns';
 import { QueryBase } from '../queryBase';
 import { RawSQL } from '../sql/rawSql';
+import { saveSearchAlias, SearchArg } from './search';
 
 export type WhereArg<T extends QueryBase> =
-  | (Omit<
-      {
-        [K in keyof T['selectable']]?:
-          | T['selectable'][K]['column']['type']
-          | null
-          | ColumnOperators<T['selectable'], K>
-          | Expression;
-      },
-      'NOT' | 'OR' | 'IN' | 'EXISTS'
-    > & {
-      NOT?: MaybeArray<WhereArg<T>>;
-      OR?: MaybeArray<WhereArg<T>>[];
-      IN?: MaybeArray<{
-        columns: (keyof T['selectable'])[];
-        values: unknown[][] | Query | Expression;
-      }>;
-    })
+  | {
+      [K in
+        | keyof T['selectable']
+        | 'NOT'
+        | 'OR'
+        | 'IN'
+        | 'EXISTS'
+        | 'SEARCH']?: K extends 'NOT'
+        ? MaybeArray<WhereArg<T>>
+        : K extends 'OR'
+        ? MaybeArray<WhereArg<T>>[]
+        : K extends 'IN'
+        ? MaybeArray<{
+            columns: (keyof T['selectable'])[];
+            values: unknown[][] | Query | Expression;
+          }>
+        : K extends 'SEARCH'
+        ? MaybeArray<SearchArg<T, never>>
+        : K extends keyof T['selectable']
+        ?
+            | T['selectable'][K]['column']['type']
+            | null
+            | ColumnOperators<T['selectable'], K>
+            | Expression
+        : never;
+    }
   | QueryBase
   | Expression
   | ((q: WhereQueryBuilder<T>) => WhereQueryBuilder);
@@ -74,7 +88,58 @@ export type WhereInArg<T extends Pick<Query, 'selectable'>> = {
     | Expression;
 };
 
-export const addWhere = <T extends Where>(
+const processArg = <T extends QueryBase>(
+  q: T,
+  arg: WhereArg<T>,
+): WhereArg<T> => {
+  if ((arg as { NOT: WhereArg<T> }).NOT) {
+    return {
+      ...arg,
+      NOT: processArg(q, (arg as { NOT: WhereArg<T> }).NOT),
+    } as WhereArg<T>;
+  }
+
+  if ((arg as { SEARCH: SearchArg<T, never> }).SEARCH) {
+    let { SEARCH } = arg as {
+      SEARCH: SearchArg<T, string>;
+    };
+
+    if (!SEARCH.as) {
+      const as = saveSearchAlias(q, '@q');
+
+      SEARCH = {
+        ...SEARCH,
+        as,
+      };
+
+      arg = { ...arg, SEARCH } as WhereArg<T>;
+    }
+
+    setQueryObjectValue(q, 'sources', SEARCH.as as string, SEARCH);
+    if (SEARCH.order) {
+      pushQueryValue(q, 'order', SEARCH.as);
+    }
+  }
+
+  return arg;
+};
+
+const processArgs = <T extends QueryBase>(
+  q: T,
+  args: WhereArg<T>[],
+): WhereArg<T>[] => {
+  for (let i = args.length - 1; i >= 0; i--) {
+    if (
+      (args[i] as { SEARCH: SearchArg<T, never> }).SEARCH ||
+      (args[i] as { NOT: WhereArg<T> }).NOT
+    ) {
+      args[i] = processArg(q, args[i]);
+    }
+  }
+  return args;
+};
+
+export const addWhere = <T extends QueryBase>(
   q: T,
   args: WhereArgs<T>,
 ): WhereResult<T> => {
@@ -85,7 +150,12 @@ export const addWhere = <T extends Where>(
       new RawSQL(args as TemplateLiteralArgs),
     ) as unknown as WhereResult<T>;
   }
-  return pushQueryArray(q, 'and', args) as unknown as WhereResult<T>;
+
+  return pushQueryArray(
+    q,
+    'and',
+    processArgs(q, args as WhereArg<T>[]),
+  ) as unknown as WhereResult<T>;
 };
 
 export const addWhereNot = <T extends QueryBase>(
@@ -98,7 +168,7 @@ export const addWhereNot = <T extends QueryBase>(
     }) as unknown as WhereResult<T>;
   }
   return pushQueryValue(q, 'and', {
-    NOT: args,
+    NOT: processArgs(q, args as WhereArg<T>[]),
   }) as unknown as WhereResult<T>;
 };
 
@@ -109,7 +179,7 @@ export const addOr = <T extends QueryBase>(
   return pushQueryArray(
     q,
     'or',
-    args.map((item) => [item]),
+    args.map((item) => [processArg(q, item)]),
   ) as unknown as WhereResult<T>;
 };
 
@@ -120,7 +190,7 @@ export const addOrNot = <T extends QueryBase>(
   return pushQueryArray(
     q,
     'or',
-    args.map((item) => [{ NOT: item }]),
+    args.map((item) => [{ NOT: processArg(q, item) }]),
   ) as unknown as WhereResult<T>;
 };
 

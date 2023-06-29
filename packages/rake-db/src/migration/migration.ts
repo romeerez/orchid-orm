@@ -50,6 +50,7 @@ export type TableOptions = {
   noPrimaryKey?: boolean;
   // Translate columns name into snake case
   snakeCase?: boolean;
+  language?: string;
 };
 
 // Simplified text column type that doesn't require `min` and `max` arguments.
@@ -75,6 +76,7 @@ export type ColumnsShapeCallback<
 // Options for changing a table
 export type ChangeTableOptions = {
   snakeCase?: boolean;
+  language?: string;
   comment?: string | [string, string] | null;
 };
 

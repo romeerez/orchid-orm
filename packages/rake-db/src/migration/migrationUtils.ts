@@ -46,6 +46,10 @@ export const columnToSql = (
 
   if (item.data.identity) {
     line.push(identityToSql(item.data.identity));
+  } else if (item.data.generated) {
+    line.push(
+      `GENERATED ALWAYS AS (${item.data.generated.toSQL({ values })}) STORED`,
+    );
   }
 
   if (item.data.isPrimaryKey && !hasMultiplePrimaryKeys) {
@@ -245,6 +249,7 @@ export const indexesToQuery = (
   up: boolean,
   { schema, name }: { schema?: string; name: string },
   indexes: TableData.Index[],
+  language?: string,
 ): Sql[] => {
   return indexes.map(({ columns, options }) => {
     const indexName = options.name || getIndexName(name, columns);
@@ -268,13 +273,26 @@ export const indexesToQuery = (
 
     sql.push(`INDEX "${indexName}" ON ${quoteWithSchema({ schema, name })}`);
 
-    if (options.using) {
-      sql.push(`USING ${options.using}`);
+    const using = options.using || (options.tsVector && 'GIN');
+    if (using) {
+      sql.push(`USING ${using}`);
     }
 
     const columnsSql: string[] = [];
 
-    columns.forEach((column) => {
+    const lang =
+      options.tsVector && options.languageColumn
+        ? `"${options.languageColumn}"`
+        : options.language
+        ? typeof options.language === 'string'
+          ? `'${options.language}'`
+          : options.language.toSQL({ values })
+        : `'${language || 'english'}'`;
+
+    let hasWeight =
+      options.tsVector && columns.some((column) => !!column.weight);
+
+    for (const column of columns) {
       const columnSql: string[] = [
         'column' in column ? `"${column.column}"` : `(${column.expression})`,
       ];
@@ -291,10 +309,28 @@ export const indexesToQuery = (
         columnSql.push(column.order);
       }
 
-      columnsSql.push(columnSql.join(' '));
-    });
+      let sql = columnSql.join(' ');
 
-    sql.push(`(${columnsSql.join(', ')})`);
+      if (hasWeight) {
+        sql = `to_tsvector(${lang}, coalesce(${sql}, ''))`;
+
+        if (column.weight) {
+          hasWeight = true;
+          sql = `setweight(${sql}, '${column.weight}')`;
+        }
+      }
+
+      columnsSql.push(sql);
+    }
+
+    let columnList = columnsSql.join(hasWeight ? ' || ' : ', ');
+
+    if (!hasWeight && options.tsVector) {
+      if (columnsSql.length > 1) columnList = `concat_ws(' ', ${columnList})`;
+      columnList = `to_tsvector(${lang}, ${columnList})`;
+    }
+
+    sql.push(`(${columnList})`);
 
     if (options.include) {
       sql.push(

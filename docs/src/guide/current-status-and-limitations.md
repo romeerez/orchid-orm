@@ -13,7 +13,7 @@ Relations support only a single column for primary and foreign key.
 
 Cannot select record with relations in the `create`, `update`, and `delete` queries.
 
-No helpful methods available for `PostGis`, full text search, trigram search. Need to use raw SQL pieces for this.
+No helpful methods available for `PostGis`, trigram search. Need to use raw SQL pieces for this.
 
 Range database types, composite custom types aren't supported.
 

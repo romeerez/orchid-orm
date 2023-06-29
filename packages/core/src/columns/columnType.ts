@@ -259,6 +259,15 @@ export const resetDefaultNowFn = () => {
   currentNowFn = defaultNowFn;
 };
 
+// default language for full text search
+let defaultLanguage = 'english';
+// set default language for full text search
+export const setDefaultLanguage = (lang?: string) => {
+  defaultLanguage = lang || 'english';
+};
+// get default language for full text search
+export const getDefaultLanguage = () => defaultLanguage;
+
 // base column type
 export abstract class ColumnTypeBase<
   Type = unknown,

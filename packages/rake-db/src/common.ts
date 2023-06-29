@@ -25,6 +25,7 @@ type BaseTable<CT extends ColumnTypesBase> = {
   new (): {
     columnTypes: CT;
     snakeCase?: boolean;
+    language?: string;
   };
 };
 
@@ -48,6 +49,7 @@ export type RakeDbConfig<CT extends ColumnTypesBase = DefaultColumnTypes> = {
   recurrentPath: string;
   migrationsTable: string;
   snakeCase: boolean;
+  language?: string;
   commands: Record<
     string,
     (
@@ -150,6 +152,7 @@ export const processRakeDbConfig = <CT extends ColumnTypesBase>(
     const proto = config.baseTable?.prototype;
     result.columnTypes = proto.columnTypes || defaultColumnTypes;
     if (proto.snakeCase) result.snakeCase = true;
+    if (proto.language) result.language = proto.language;
   } else {
     result.columnTypes = (('columnTypes' in config &&
       (typeof config.columnTypes === 'function'

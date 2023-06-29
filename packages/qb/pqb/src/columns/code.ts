@@ -180,7 +180,7 @@ export const indexToCode = (index: TableData.Index, t: string): Code[] => {
 
       options.push(
         `${key}: ${
-          typeof value === 'object'
+          Array.isArray(value)
             ? singleQuoteArray(value)
             : typeof value === 'string'
             ? singleQuote(value)

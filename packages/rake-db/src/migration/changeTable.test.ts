@@ -843,6 +843,296 @@ describe('changeTable', () => {
       });
     });
 
+    describe('search index', () => {
+      beforeEach(() => {
+        delete db.options.language;
+      });
+
+      it('should add a search index for a single column', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              ...t[action](t.searchIndex('text')),
+            })),
+          () =>
+            expectSql(`
+              CREATE INDEX "table_text_idx" ON "table" USING GIN (to_tsvector('english', "text"))
+            `),
+          () =>
+            expectSql(`
+              DROP INDEX "table_text_idx"
+            `),
+        );
+      });
+
+      it('should handle an index for search with english by default', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              ...t[action](t.searchIndex(['title', 'text'])),
+            })),
+          () =>
+            expectSql(`
+              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector('english', concat_ws(' ', "title", "text")))
+            `),
+          () =>
+            expectSql(`
+              DROP INDEX "table_title_text_idx"
+            `),
+        );
+      });
+
+      it('should handle an index for search with a custom default language', async () => {
+        db.options.language = 'Ukrainian';
+
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              ...t[action](t.searchIndex(['title', 'text'])),
+            })),
+          () =>
+            expectSql(`
+              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector('Ukrainian', concat_ws(' ', "title", "text")))
+            `),
+          () =>
+            expectSql(`
+              DROP INDEX "table_title_text_idx"
+            `),
+        );
+      });
+
+      it('should support an index for search with a custom default language set in the table options', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', { language: 'Ukrainian' }, (t) => ({
+              ...t[action](t.searchIndex(['title', 'text'])),
+            })),
+          () =>
+            expectSql(`
+              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector('Ukrainian', concat_ws(' ', "title", "text")))
+            `),
+          () =>
+            expectSql(`
+              DROP INDEX "table_title_text_idx"
+            `),
+        );
+      });
+
+      it('should support an index for search with a custom default language set in the index options', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              ...t[action](
+                t.searchIndex(['title', 'text'], { language: 'Ukrainian' }),
+              ),
+            })),
+          () =>
+            expectSql(`
+              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector('Ukrainian', concat_ws(' ', "title", "text")))
+            `),
+          () =>
+            expectSql(`
+              DROP INDEX "table_title_text_idx"
+            `),
+        );
+      });
+
+      it('should use a language from a column', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              ...t[action](
+                t.searchIndex(['title', 'text'], { languageColumn: 'lang' }),
+              ),
+            })),
+          () =>
+            expectSql(`
+              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector("lang", concat_ws(' ', "title", "text")))
+            `),
+          () =>
+            expectSql(`
+              DROP INDEX "table_title_text_idx"
+            `),
+        );
+      });
+
+      it('should use a language from a raw SQL', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              ...t[action](
+                t.searchIndex(['title', 'text'], { language: db.sql`'lang'` }),
+              ),
+            })),
+          () =>
+            expectSql(`
+              CREATE INDEX "table_title_text_idx" ON "table" USING GIN (to_tsvector('lang', concat_ws(' ', "title", "text")))
+            `),
+          () =>
+            expectSql(`
+              DROP INDEX "table_title_text_idx"
+            `),
+        );
+      });
+
+      it('should set weights on columns', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              ...t[action](
+                t.searchIndex([
+                  { column: 'title', weight: 'A' },
+                  { column: 'text', weight: 'B' },
+                ]),
+              ),
+            })),
+          () =>
+            expectSql(
+              toLine(`
+                CREATE INDEX "table_title_text_idx" ON "table" USING GIN
+                  (setweight(to_tsvector('english', coalesce("title", '')), 'A') ||
+                   setweight(to_tsvector('english', coalesce("text", '')), 'B'))
+              `),
+            ),
+          () =>
+            expectSql(`
+              DROP INDEX "table_title_text_idx"
+            `),
+        );
+      });
+
+      it('should index a generated column', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              generated: t[action](
+                t.tsvector().generated(['title', 'text']).searchIndex(),
+              ),
+            })),
+          () =>
+            expectSql([
+              `
+                ALTER TABLE "table"
+                ADD COLUMN "generated" tsvector GENERATED ALWAYS AS (to_tsvector('english', coalesce("title", '') || ' ' || coalesce("text", ''))) STORED NOT NULL
+              `,
+              `
+                CREATE INDEX "table_generated_idx" ON "table" USING GIN ("generated")
+              `,
+            ]),
+          () =>
+            expectSql([
+              `
+                ALTER TABLE "table"
+                DROP COLUMN "generated"
+              `,
+              `
+                DROP INDEX "table_generated_idx"
+              `,
+            ]),
+        );
+      });
+
+      it('should index a generated column with weights', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              generated: t[action](
+                t.tsvector().generated({ title: 'A', text: 'B' }).searchIndex(),
+              ),
+            })),
+          () =>
+            expectSql([
+              `
+                ALTER TABLE "table"
+                ADD COLUMN "generated" tsvector GENERATED ALWAYS AS (setweight(to_tsvector(coalesce("title", '')), 'A') || setweight(to_tsvector(coalesce("text", '')), 'B')) STORED NOT NULL
+              `,
+              `
+                CREATE INDEX "table_generated_idx" ON "table" USING GIN ("generated")
+              `,
+            ]),
+          () =>
+            expectSql([
+              `
+                ALTER TABLE "table"
+                DROP COLUMN "generated"
+              `,
+              `
+                DROP INDEX "table_generated_idx"
+              `,
+            ]),
+        );
+      });
+
+      it('should index a generated column with a configured default language', async () => {
+        db.options.language = 'Ukrainian';
+
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              generated: t[action](
+                t.tsvector().generated(['title', 'text']).searchIndex(),
+              ),
+            })),
+          () =>
+            expectSql([
+              `
+                ALTER TABLE "table"
+                ADD COLUMN "generated" tsvector GENERATED ALWAYS AS (to_tsvector('Ukrainian', coalesce("title", '') || ' ' || coalesce("text", ''))) STORED NOT NULL
+              `,
+              `
+                CREATE INDEX "table_generated_idx" ON "table" USING GIN ("generated")
+              `,
+            ]),
+          () =>
+            expectSql([
+              `
+                ALTER TABLE "table"
+                DROP COLUMN "generated"
+              `,
+              `
+                DROP INDEX "table_generated_idx"
+              `,
+            ]),
+        );
+      });
+
+      it('should index a generated column with a custom default language', async () => {
+        db.options.language = 'Ukrainian';
+
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              generated: t[action](
+                t
+                  .tsvector()
+                  .generated('Ukrainian', ['title', 'text'])
+                  .searchIndex(),
+              ),
+            })),
+          () =>
+            expectSql([
+              `
+                ALTER TABLE "table"
+                ADD COLUMN "generated" tsvector GENERATED ALWAYS AS (to_tsvector('Ukrainian', coalesce("title", '') || ' ' || coalesce("text", ''))) STORED NOT NULL
+              `,
+              `
+                CREATE INDEX "table_generated_idx" ON "table" USING GIN ("generated")
+              `,
+            ]),
+          () =>
+            expectSql([
+              `
+                ALTER TABLE "table"
+                DROP COLUMN "generated"
+              `,
+              `
+                DROP INDEX "table_generated_idx"
+              `,
+            ]),
+        );
+      });
+    });
+
     describe('foreign key', () => {
       it('should handle composite foreign key', async () => {
         await testUpAndDown(

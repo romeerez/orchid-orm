@@ -117,9 +117,6 @@ const make = makeColumnFn as <T extends ColumnType, Q extends Query>(
 
 // Methods that are available inside `select({ (qb) => *here* })` callback
 export class SelectAggMethods<T extends Query = Query> {
-  // Store original query for the select query builder
-  _qbFor!: Query;
-
   /**
    * `fn` allows to call an arbitrary SQL function.
    *

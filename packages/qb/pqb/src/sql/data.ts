@@ -10,6 +10,7 @@ import {
   OnConflictItem,
   OnConflictMergeUpdate,
   OrderItem,
+  QuerySourceItem,
   SelectItem,
   UnionItem,
   UnionKind,
@@ -70,6 +71,7 @@ export type CommonQueryData = {
   select?: SelectItem[];
   as?: string;
   from?: string | Query | Expression;
+  sources?: Record<string, QuerySourceItem>;
   and?: WhereItem[];
   or?: WhereItem[][];
   coalesceValue?: unknown | Expression;
@@ -114,6 +116,8 @@ export type CommonQueryData = {
   [toSqlCacheKey]?: Sql;
   // functions to transform query result after loading data
   transform?: ((input: unknown) => unknown)[];
+  // default language for the full text search
+  language?: string;
 };
 
 export type SelectQueryData = CommonQueryData & {
@@ -243,6 +247,7 @@ export const cloneQueryArrays = (q: QueryData) => {
   if (q.or) q.or = q.or.slice(0);
   if (q.before) q.before = q.before.slice(0);
   if (q.after) q.after = q.after.slice(0);
+  if (q.joinedShapes) q.joinedShapes = { ...q.joinedShapes };
 
   // may have data for updating timestamps on any kind of query
   if ((q as UpdateQueryData).updateData) {

@@ -76,6 +76,10 @@ export default {
             link: '/guide/window',
           },
           {
+            text: 'Full text search',
+            link: '/guide/text-search',
+          },
+          {
             text: 'Advanced methods',
             link: '/guide/advanced-queries',
           },

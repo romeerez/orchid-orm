@@ -6,6 +6,7 @@ import {
   WhereJsonPathEqualsItem,
   WhereOnItem,
   WhereOnJoinItem,
+  WhereSearchItem,
 } from './types';
 import { addValue, q, qc, columnToSql } from './common';
 import { getQueryAs } from '../utils';
@@ -80,7 +81,7 @@ const processWhere = (
   ands: string[],
   ctx: ToSqlCtx,
   table: QueryBase,
-  query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
+  query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes' | 'language'>,
   data: WhereItem,
   quotedAs?: string,
   not?: boolean,
@@ -187,6 +188,9 @@ const processWhere = (
           `${prefix}EXISTS (SELECT 1 FROM ${target} WHERE ${conditions} LIMIT 1)`,
         );
       }
+    } else if (key === 'SEARCH') {
+      const search = value as WhereSearchItem;
+      ands.push(`${prefix}${search.vectorSQL} @@ "${search.as}"`);
     } else if (typeof value === 'object' && value && !(value instanceof Date)) {
       if (isExpression(value)) {
         ands.push(
