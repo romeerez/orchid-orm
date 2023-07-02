@@ -1,5 +1,16 @@
 # pqb
 
+## 0.16.0
+
+### Minor Changes
+
+- b7a2d035: Remove JSON types that doesn't make sense for JSON, such as `date`, `map`, `set`
+
+### Patch Changes
+
+- Updated dependencies [b7a2d035]
+  - orchid-core@0.8.0
+
 ## 0.15.2
 
 ### Patch Changes

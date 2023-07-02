@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.8.0
+
+### Minor Changes
+
+- b7a2d035: Remove JSON types that doesn't make sense for JSON, such as `date`, `map`, `set`
+
 ## 0.7.1
 
 ### Patch Changes
