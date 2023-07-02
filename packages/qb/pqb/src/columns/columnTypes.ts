@@ -43,14 +43,13 @@ import {
 } from './dateTime';
 import { BooleanColumn } from './boolean';
 import { EnumColumn } from './enum';
-import { JSONColumn, JSONTextColumn, JSONTypes } from './json';
+import { JSONColumn, JSONTextColumn } from './json';
 import {
   ColumnNameOfTable,
   ColumnTypesBase,
   EmptyObject,
   emptyObject,
   ForeignKeyTable,
-  JSONTypeAny,
   makeTimestampsHelpers,
   MaybeArray,
   name,
@@ -59,6 +58,9 @@ import {
   TemplateLiteralArgs,
   toArray,
   RawSQLBase,
+  JSONType,
+  JSONTypes,
+  JSONUnknown,
 } from 'orchid-core';
 import { ArrayColumn } from './array';
 import {
@@ -338,7 +340,9 @@ export const columnTypes = {
   xml() {
     return new XMLColumn();
   },
-  json<Type extends JSONTypeAny>(schemaOrFn: Type | ((j: JSONTypes) => Type)) {
+  json<Type extends JSONType = JSONUnknown>(
+    schemaOrFn?: Type | ((j: JSONTypes) => Type),
+  ) {
     return new JSONColumn(schemaOrFn);
   },
   jsonText() {

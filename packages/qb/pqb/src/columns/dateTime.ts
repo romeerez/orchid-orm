@@ -1,6 +1,7 @@
 import { ColumnData, ColumnType } from './columnType';
 import { Operators } from './operators';
 import {
+  assignMethodsToClass,
   Code,
   DateColumnData,
   dateDataToCode,
@@ -10,7 +11,6 @@ import {
   joinTruthy,
   ParseColumn,
 } from 'orchid-core';
-import { assignMethodsToClass } from './utils';
 import { IntegerColumn } from './number';
 import { columnCode } from './code';
 

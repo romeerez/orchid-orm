@@ -1,18 +1,18 @@
 import { ColumnData, ColumnType } from './columnType';
 import { Operators } from './operators';
 import { NumberBaseColumn } from './number';
-import { assignMethodsToClass } from './utils';
 import {
   stringTypeMethods,
   Code,
   joinTruthy,
-  BaseStringData,
+  StringTypeData,
   stringDataToCode,
   PrimaryKeyColumn,
   TemplateLiteralArgs,
   getDefaultLanguage,
   RawSQLBase,
   RawSQLArgs,
+  assignMethodsToClass,
 } from 'orchid-core';
 import { columnCode } from './code';
 import { RawSQL } from '../sql/rawSql';
@@ -20,10 +20,9 @@ import { SearchWeight } from '../sql';
 
 export type StringColumn = ColumnType<string, typeof Operators.text>;
 
-export type TextColumnData = BaseStringData;
+export type TextColumnData = StringTypeData;
 
-type TextMethods = typeof textMethods;
-const textMethods = stringTypeMethods();
+type TextMethods = typeof stringTypeMethods;
 
 export interface TextBaseColumn
   extends ColumnType<string, typeof Operators.text>,
@@ -37,7 +36,7 @@ export abstract class TextBaseColumn extends ColumnType<
   operators = Operators.text;
 }
 
-assignMethodsToClass(TextBaseColumn, textMethods);
+assignMethodsToClass(TextBaseColumn, stringTypeMethods);
 
 export abstract class LimitedTextBaseColumn<
   Limit extends number | undefined = undefined,

@@ -1,114 +1,92 @@
-import { constructType, JSONType, Primitive, toCode } from './typeBase';
-import { JSONObject, JSONObjectShape } from './object';
-import { JSONLiteral } from './literal';
+import { JSONPrimitive, JSONType } from './jsonType';
+import {
+  JSONObject,
+  JSONObjectOutput,
+  JSONObjectShape,
+  UnknownKeysParam,
+} from './object';
+import { jsonTypeToCode } from './code';
+import { Code } from '../code';
+import { setDataValue } from '../commonMethods';
 import { singleQuote } from '../../utils';
 
-// JSON type for the union of objects, where object type is determined by a specific key
-export interface JSONDiscriminatedUnion<
-  Discriminator extends string,
-  DiscriminatorValue extends Primitive,
-  Options extends JSONDiscriminatedObject<Discriminator, DiscriminatorValue>[],
-> extends JSONType<Options[number]['type'], 'discriminatedUnion'> {
-  discriminator: Discriminator;
-  discriminatorValue: DiscriminatorValue;
-  options: Map<DiscriminatorValue, Options[number]>;
-  _options: Options;
-  // WON'T DO: gave up on deepPartial type
-  // deepPartial(): JSONDiscriminatedUnion<
-  //   Discriminator,
-  //   {
-  //     [Index in keyof Types]: {
-  //       [K in keyof Types[Index]['shape']]: K extends Discriminator
-  //         ? Types[Index]['shape'][K]
-  //         : JSONOptional<Types[Index]['shape'][K]>;
-  //     } extends JSONObject<Record<Discriminator, JSONLiteral<Primitive>>>
-  //       ? JSONObject<
-  //           {
-  //             [K in keyof Types[Index]['shape']]: K extends Discriminator
-  //               ? Types[Index]['shape'][K]
-  //               : JSONOptional<Types[Index]['shape'][K]>;
-  //           },
-  //           Types[Index]['unknownKeys'],
-  //           Types[Index]['catchAllType']
-  //         >
-  //       : Types[Index];
-  //   } & {
-  //     length: Types['length'];
-  //   }
-  // >;
-}
+// Argument of the discriminated union is a tuple to map it properly later when converting to validation schema.
+export type JSONDiscriminatedUnionArg<Discriminator extends string> = [
+  JSONDiscriminatedObject<Discriminator>,
+  JSONDiscriminatedObject<Discriminator>,
+  ...JSONDiscriminatedObject<Discriminator>[],
+];
 
-// type for a single object in a discriminated union
-export type JSONDiscriminatedObject<
-  Discriminator extends string,
-  DiscriminatorValue extends Primitive,
-> = JSONObject<
-  { [K in Discriminator]: JSONLiteral<DiscriminatorValue> } & JSONObjectShape,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  any
+// Object type for the discriminated union.
+// It must have a special key with a JSON primitive value to use it to differentiate this object from others.
+export type JSONDiscriminatedObject<Discriminator extends string> = JSONObject<
+  { [K in Discriminator]: JSONType } & JSONObjectShape,
+  UnknownKeysParam
 >;
 
-// Discriminated union constructor
-export const discriminatedUnion = <
-  Discriminator extends string,
-  DiscriminatorValue extends Primitive,
-  Types extends [
-    JSONDiscriminatedObject<Discriminator, DiscriminatorValue>,
-    JSONDiscriminatedObject<Discriminator, DiscriminatorValue>,
-    ...JSONDiscriminatedObject<Discriminator, DiscriminatorValue>[],
-  ],
->(
-  discriminator: Discriminator,
-  options: Types,
-): JSONDiscriminatedUnion<Discriminator, DiscriminatorValue, Types> => {
-  const optionsMap: Map<DiscriminatorValue, Types[number]> = new Map();
+// Mark all nested objects in the discriminated union as partial
+type DeepPartial<
+  D extends string,
+  Types extends JSONDiscriminatedUnionArg<D>,
+> = JSONDiscriminatedUnion<
+  D,
+  {
+    [I in keyof Types]: DPObject<D, Types[I]> extends JSONDiscriminatedObject<D>
+      ? DPObject<D, Types[I]>
+      : never;
+  }
+>;
 
-  options.forEach((option) => {
-    const discriminatorValue = option.shape[discriminator].value;
-    optionsMap.set(discriminatorValue as DiscriminatorValue, option);
-  });
-
-  return constructType<
-    JSONDiscriminatedUnion<Discriminator, DiscriminatorValue, Types>
-  >({
-    dataType: 'discriminatedUnion',
-    discriminator,
-    discriminatorValue: undefined as unknown as DiscriminatorValue,
-    options: optionsMap,
-    _options: undefined as unknown as Types,
-    toCode(
-      this: JSONDiscriminatedUnion<
-        string,
-        Primitive,
-        JSONDiscriminatedObject<Discriminator, DiscriminatorValue>[]
-      >,
-      t: string,
-    ) {
-      return toCode(this, t, [
-        `${t}.discriminatedUnion(${singleQuote(this.discriminator)}, [`,
-        options.flatMap((option) => option.toCode(t)),
-        '])',
-      ]);
-    },
-    deepPartial(
-      this: JSONDiscriminatedUnion<Discriminator, DiscriminatorValue, Types>,
-    ) {
-      const newOptionsMap: Map<DiscriminatorValue, Types[number]> = new Map();
-
-      optionsMap.forEach((option, key) => {
-        const partial =
-          option.deepPartial() as unknown as JSONDiscriminatedObject<
-            Discriminator,
-            DiscriminatorValue
-          >;
-        partial.shape[discriminator] = option.shape[discriminator];
-        newOptionsMap.set(key, partial);
-      });
-
-      return {
-        ...this,
-        options: newOptionsMap,
-      };
-    },
-  });
+// Apply deep partial for a single object of the discriminated union
+type DPObject<
+  D extends string,
+  T extends JSONDiscriminatedObject<D>,
+  DP extends JSONObjectShape = ReturnType<T['deepPartial']>['data']['shape'],
+  Shape extends JSONObjectShape = {
+    [K in keyof DP]: K extends D ? T['data']['shape'][D] : DP[K];
+  },
+> = {
+  [K in keyof T]: K extends 'data'
+    ? {
+        [K in keyof T['data']]: K extends 'shape' ? Shape : T['data'][K];
+      }
+    : K extends 'type'
+    ? JSONObjectOutput<Shape, T['data']['catchAll']>
+    : T[K];
 };
+
+// JSON type for the union of objects, where object type is determined by a specific key
+export class JSONDiscriminatedUnion<
+  Discriminator extends string,
+  Types extends JSONDiscriminatedUnionArg<Discriminator>,
+> extends JSONType<
+  Types[number]['type'],
+  {
+    discriminator: Discriminator;
+    options: Map<JSONPrimitive, Types[number]>;
+    types: Types;
+  }
+> {
+  declare kind: 'discriminatedUnion';
+
+  constructor(discriminator: Discriminator, types: Types) {
+    super();
+    this.data.discriminator = discriminator;
+    this.data.types = types;
+  }
+
+  toCode(t: string): Code {
+    return jsonTypeToCode(this, t, [
+      `${t}.discriminatedUnion(${singleQuote(this.data.discriminator)}, [`,
+      this.data.types.flatMap((type) => type.toCode(t)),
+      '])',
+    ]);
+  }
+
+  deepPartial(): DeepPartial<Discriminator, Types> {
+    return setDataValue(this, 'types', {}) as unknown as DeepPartial<
+      Discriminator,
+      Types
+    >;
+  }
+}

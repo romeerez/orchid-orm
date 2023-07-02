@@ -1,20 +1,27 @@
-import { array } from './array';
-import { scalarTypes } from './scalarTypes';
+import { jsonTypes } from './jsonTypes';
+import { assertType } from 'test-utils';
 
-const { string } = scalarTypes;
+const { array, string } = jsonTypes;
 
 describe('array', () => {
   it('should have toCode', () => {
-    expect(array(string()).toCode('t')).toBe('t.string().array()');
+    const stringArray = array(string());
+    assertType<(typeof stringArray)['type'], string[]>();
+    expect(stringArray.toCode('t')).toBe('t.string().array()');
 
+    const optionalStringArray = array(string().optional());
+    assertType<(typeof optionalStringArray)['type'], (string | undefined)[]>();
     expect(
-      array(string()).deepPartial().nonEmpty('nonEmpty message').toCode('t'),
+      optionalStringArray
+        .deepPartial()
+        .nonEmpty('nonEmpty message')
+        .toCode('t'),
     ).toBe(
       `t.string().optional().array().nonEmpty('nonEmpty message').deepPartial()`,
     );
 
     expect(
-      array(string())
+      stringArray
         .min(1, 'min message')
         .max(10, 'max message')
         .length(15, 'length message')

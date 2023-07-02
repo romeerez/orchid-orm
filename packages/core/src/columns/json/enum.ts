@@ -1,36 +1,26 @@
-import { constructType, JSONType, toCode } from './typeBase';
-import { singleQuoteArray } from '../../utils';
-
 // JSON enum type that consists of strings
-export interface JSONEnum<
-  U extends string = string,
-  T extends [U, ...U[]] = [U],
-> extends JSONType<T[number], 'enum'> {
-  enum: { [k in T[number]]: k };
-  options: T;
-}
+import { Code } from '../code';
+import { singleQuoteArray } from '../../utils';
+import { JSONType } from './jsonType';
+import { jsonTypeToCode } from './code';
 
-// convert array to JSON enum type
-export const arrayToEnum = <U extends string, T extends [U, ...U[]]>(
-  items: T,
-) => {
-  const obj = {} as { [k in T[number]]: k };
-  for (const item of items) {
-    obj[item] = item;
+// JSON enum type consisting of string literals
+export class JSONEnum<U extends string, T extends [U, ...U[]]> extends JSONType<
+  T[number],
+  { options: T }
+> {
+  declare kind: 'enum';
+
+  constructor(options: T) {
+    super();
+    this.data.options = options;
   }
-  return obj;
-};
 
-// JSON enum type constructor
-export const enumType = <U extends string, T extends [U, ...U[]]>(
-  options: T,
-) => {
-  return constructType<JSONEnum<U, T>>({
-    dataType: 'enum',
-    enum: arrayToEnum(options),
-    options,
-    toCode(this: JSONEnum<U, T>, t: string) {
-      return toCode(this, t, `${t}.enum(${singleQuoteArray(this.options)})`);
-    },
-  });
-};
+  toCode(t: string): Code {
+    return jsonTypeToCode(
+      this,
+      t,
+      `${t}.enum(${singleQuoteArray(this.data.options)})`,
+    );
+  }
+}

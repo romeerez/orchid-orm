@@ -1,40 +1,36 @@
-import { constructType, JSONType, JSONTypeAny, toCode } from './typeBase';
+import { JSONType } from './jsonType';
+import { jsonTypeToCode } from './code';
+import { addCode, Code } from '../code';
 import { toArray } from '../../utils';
-import { addCode } from '../code';
 
 // intersection of two JSON types
-export type JSONIntersection<
-  Left extends JSONTypeAny,
-  Right extends JSONTypeAny,
-> = JSONType<Left['type'] & Right['type'], 'intersection'> & {
-  left: Left;
-  right: Right;
-};
+export class JSONIntersection<
+  Left extends JSONType,
+  Right extends JSONType,
+> extends JSONType<Left['type'] & Right['type'], { left: Left; right: Right }> {
+  declare kind: 'intersection';
 
-// constructor of JSON type intersection
-export const intersection = <
-  Left extends JSONTypeAny,
-  Right extends JSONTypeAny,
->(
-  left: Left,
-  right: Right,
-) => {
-  return constructType<JSONIntersection<Left, Right>>({
-    dataType: 'intersection',
-    left,
-    right,
-    toCode(this: JSONIntersection<Left, Right>, t: string) {
-      const code = [...toArray(this.left.toCode(t))];
-      addCode(code, '.and(');
-      const right = this.right.toCode(t);
-      if (typeof right === 'string') {
-        addCode(code, right);
-      } else {
-        code.push(right);
-      }
-      addCode(code, ')');
+  constructor(left: Left, right: Right) {
+    super();
+    this.data.left = left;
+    this.data.right = right;
+  }
 
-      return toCode(this, t, code);
-    },
-  });
+  toCode(t: string): Code {
+    const code = [...toArray(this.data.left.toCode(t))];
+    addCode(code, '.and(');
+    const right = this.data.right.toCode(t);
+    if (typeof right === 'string') {
+      addCode(code, right);
+    } else {
+      code.push(right);
+    }
+    addCode(code, ')');
+
+    return jsonTypeToCode(this, t, code);
+  }
+}
+
+JSONType.prototype.and = function (type) {
+  return new JSONIntersection(this, type);
 };

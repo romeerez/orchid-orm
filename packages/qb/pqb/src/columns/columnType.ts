@@ -6,7 +6,7 @@ import {
   ColumnTypeBase,
   ForeignKeyTable,
   MaybeArray,
-  MessageParam,
+  ErrorMessage,
   PrimaryKeyColumn,
   pushColumnData,
   QueryBaseCommon,
@@ -300,7 +300,7 @@ export abstract class ColumnType<
   refine<T extends ColumnType, RefinedOutput extends T['type']>(
     this: T,
     check: (arg: T['type']) => unknown,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ): T & { type: RefinedOutput } {
     const cloned = Object.create(this);
     cloned.chain = [...this.chain, ['refine', check, cloned]];

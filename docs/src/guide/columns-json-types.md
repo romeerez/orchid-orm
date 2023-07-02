@@ -2,18 +2,18 @@
 
 Postgres supports two types of JSON: `json` is for storing JSON strings as they were saved, and `jsonb` is stored in binary format and allows additional methods.
 
-For `json` use `t.jsonText()`:
-
 ```ts
 export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
-    data: t.jsonText(), // -> JSON string
+    json: t.jsonText(), // -> JSON string
+    jsonB: t.json(), // -> JSON binary
   }));
 }
 ```
 
-For `jsonb` use `t.json((t) => jsonSchema)` - it takes a schema, and adds additional methods for querying:
+`json` type accepts a callback which defines a schema for [validation](/guide/columns-validation-methods).
+When the schema is not provided, it is of type `unknown` by default.
 
 ```ts
 export class Table extends BaseTable {
@@ -33,7 +33,7 @@ export class Table extends BaseTable {
 
 Error messages described in [validation docs](/guide/columns-validation-methods.html#errors) are working in the same way for nested JSON schemas.
 
-Text type columns support the following `where` operators:
+`json` columns support the following `where` operators:
 
 ```ts
 db.someTable.where({
@@ -62,16 +62,11 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     data: t.json((t) =>
       t.object({
-        number: t.number(), // -> number
-        nan: t.nan(), // -> number, for a NaN value
-        string: t.string(), // -> string
-        literal: t.literal('value'), // -> type of literal
-        boolean: t.boolean(), // -> boolean
-        bigint: t.bigint(), // -> bigint
-        null: t.null(), // -> null
-        date: t.date(), // -> Date
-        never: t.never(), // -> never
-        any: t.any(), // -> any
+        number: t.number(),
+        string: t.string(),
+        literal: t.literal('value'),
+        boolean: t.boolean(),
+        null: t.null(),
         unknown: t.unknown(), // -> unknown
       }),
     ),
@@ -79,7 +74,7 @@ export class Table extends BaseTable {
 }
 ```
 
-`number` and `bigint` types can be chained with the the same methods as numeric columns:
+`number` type can be chained with the the same methods as numeric columns:
 
 ```ts
 export class Table extends BaseTable {
@@ -147,7 +142,7 @@ export class Table extends BaseTable {
 
 ## optional, nullable and nullish
 
-By default, all types are required. Append `.optional()` so the value may omit from the object:
+By default, all types are required. Append `.optional()` so the value may be omitted from the object:
 
 ```ts
 export class Table extends BaseTable {
@@ -162,7 +157,7 @@ export class Table extends BaseTable {
 }
 ```
 
-To require optional value back:
+It's possible to undo the `optional` with `required`:
 
 ```ts
 export class Table extends BaseTable {
@@ -177,7 +172,7 @@ export class Table extends BaseTable {
 }
 ```
 
-Allow `null` value:
+To allow a `null` value use the `nullable`:
 
 ```ts
 export class Table extends BaseTable {
@@ -192,7 +187,7 @@ export class Table extends BaseTable {
 }
 ```
 
-Turn back to non-nullable:
+Undo the `nullable` with `notNullable`:
 
 ```ts
 export class Table extends BaseTable {
@@ -222,7 +217,7 @@ export class Table extends BaseTable {
 }
 ```
 
-Turn back to required and non-nullable:
+Disallow `null` and `undefined` values with `notNullish`:
 
 ```ts
 export class Table extends BaseTable {
@@ -230,7 +225,7 @@ export class Table extends BaseTable {
   columns = this.setColumns((t) => ({
     data: t.json((t) =>
       t.object({
-        nonNullishNumber: t.number().nullish().nonNullish(),
+        nonNullishNumber: t.number().nullish().notNullish(),
       }),
     ),
   }));
@@ -239,7 +234,8 @@ export class Table extends BaseTable {
 
 ## default
 
-Set a default value that will be returned in case input is `null` or `undefined`. If the function is provided, it will be called on each validation to use the returned value.
+Set a default value to be used during the **validation** if the input is `null` or `undefined`.
+If the function is provided, it will be called on each validation to use the returned value.
 
 ```ts
 export class Table extends BaseTable {
@@ -255,7 +251,9 @@ export class Table extends BaseTable {
 }
 ```
 
-## or, union
+## or and union
+
+Make a union (`oneType | otherType`) of several types by using `or` or `union`:
 
 ```ts
 export class Table extends BaseTable {
@@ -275,6 +273,8 @@ export class Table extends BaseTable {
 ```
 
 ## and, intersection
+
+Make an intersection (`oneType & otherType`) of several types by using `and` or `intersection`:
 
 ```ts
 export class Table extends BaseTable {
@@ -319,7 +319,7 @@ export class Table extends BaseTable {
 
 ## transform
 
-Specify a function to transform values.
+Specify a function to transform values during the **validation**.
 For example, reverse a string:
 
 ```ts
@@ -801,61 +801,6 @@ export class Table extends BaseTable {
             t.object({ type: t.literal('b'), b: t.string() }),
           ])
           .parse({ type: 'a', a: 'abc' }),
-      }),
-    ),
-  }));
-}
-```
-
-### maps
-
-For JS `Map` type which can use any type of keys to access values:
-
-```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    data: t.json((t) =>
-      t.object({
-        map: t.map(t.string(), t.number()),
-      }),
-    ),
-  }));
-}
-```
-
-### sets
-
-For the JS `Set` type which holds a unique set of elements:
-
-```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    data: t.json((t) =>
-      t.object({
-        set: t.set(t.number()),
-      }),
-    ),
-  }));
-}
-```
-
-## instanceof
-
-You can use t.instanceof to check that the input is an instance of a class. This is useful to validate inputs against classes that are exported from third-party libraries.
-
-```ts
-class Test {
-  name: string;
-}
-
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    data: t.json((t) =>
-      t.object({
-        object: t.instanceof(Test),
       }),
     ),
   }));

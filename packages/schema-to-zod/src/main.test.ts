@@ -6,17 +6,15 @@ import {
   DateColumn,
   DomainColumn,
   IntegerColumn,
-  jsonTypes,
   TextColumn,
   VirtualColumn,
 } from 'pqb';
 import {
   JSONType,
-  JSONTypeAny,
-  JSONDate,
   JSONNumber,
   JSONString,
   JSONArray,
+  jsonTypes,
 } from 'orchid-core';
 import { columnToZod, instanceToZod, tableToZod } from './index';
 import { z } from 'zod';
@@ -32,8 +30,8 @@ const t = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const columnOrJsonToZod = (type: any): z.ZodTypeAny => {
   return type instanceof ColumnType
-    ? columnToZod(type)
-    : columnToZod(t.json(() => type));
+    ? (columnToZod(type) as z.ZodTypeAny)
+    : (columnToZod(t.json(() => type)) as z.ZodTypeAny);
 };
 
 const testTypeMethod = (
@@ -509,7 +507,7 @@ describe('schema to zod', () => {
     z.ZodDate
   >();
 
-  const testDateMethods = (type: DateColumn | JSONDate) => {
+  const testDateMethods = (type: DateColumn) => {
     const now = new Date();
 
     expect(() =>
@@ -742,7 +740,7 @@ describe('schema to zod', () => {
   });
 
   const testArrayMethods = (
-    type: ArrayColumn<ColumnType> | JSONArray<JSONTypeAny>,
+    type: ArrayColumn<ColumnType> | JSONArray<JSONType>,
   ) => {
     testTypeMethod(
       type,
@@ -830,28 +828,6 @@ describe('schema to zod', () => {
   });
 
   describe('json', () => {
-    describe('any', () => {
-      it('should parse to any', () => {
-        const schema = columnToZod(t.json((t) => t.any()));
-
-        assertType<typeof schema, z.ZodTypeAny>();
-
-        expect(schema.parse(123)).toBe(123);
-      });
-    });
-
-    describe('bigint', () => {
-      it('should validate bigint and parse to string', () => {
-        const schema = columnToZod(t.json((t) => t.bigint()));
-
-        assertType<typeof schema, z.ZodString>();
-
-        expect(schema.parse('123')).toBe('123');
-
-        expect(() => schema.parse('kokoko')).toThrow('Failed to parse bigint');
-      });
-    });
-
     describe('boolean', () => {
       it('should parse boolean', () => {
         const schema = columnToZod(t.json((t) => t.boolean()));
@@ -862,47 +838,6 @@ describe('schema to zod', () => {
 
         expect(() => schema.parse(123)).toThrow(
           'Expected boolean, received number',
-        );
-      });
-    });
-
-    describe('date', () => {
-      it('should parse a Date', () => {
-        const schema = columnToZod(t.json((t) => t.date()));
-
-        assertType<typeof schema, z.ZodDate>();
-
-        const date = new Date(2000, 0, 1);
-        expect(schema.parse(date).getTime()).toBe(date.getTime());
-
-        expect(() => schema.parse(new Date('koko'))).toThrow('Invalid date');
-
-        testDateMethods(jsonTypes.date());
-      });
-    });
-
-    describe('nan', () => {
-      it('should parse a NaN', () => {
-        const schema = columnToZod(t.json((t) => t.nan()));
-
-        assertType<typeof schema, z.ZodNaN>();
-
-        expect(schema.parse(NaN)).toBe(NaN);
-
-        expect(() => schema.parse(123)).toThrow(
-          'Expected nan, received number',
-        );
-      });
-    });
-
-    describe('never', () => {
-      it('should parse a never', () => {
-        const schema = columnToZod(t.json((t) => t.never()));
-
-        assertType<typeof schema, z.ZodNever>();
-
-        expect(() => schema.parse(123)).toThrow(
-          'Expected never, received number',
         );
       });
     });
@@ -995,19 +930,6 @@ describe('schema to zod', () => {
       });
     });
 
-    describe('instanceOf', () => {
-      it('should parse instance of', () => {
-        const schema = columnToZod(t.json((t) => t.instanceOf(Date)));
-
-        assertType<typeof schema, z.ZodType<Date, z.ZodTypeDef, Date>>();
-
-        const date = new Date();
-        expect(schema.parse(date)).toBe(date);
-
-        expect(() => schema.parse({})).toThrow('Input not instance of Date');
-      });
-    });
-
     describe('literal', () => {
       it('should parse literal', () => {
         const schema = columnToZod(t.json((t) => t.literal('string')));
@@ -1017,84 +939,6 @@ describe('schema to zod', () => {
         expect(schema.parse('string')).toBe('string');
 
         expect(() => schema.parse('koko')).toThrow('Invalid literal value');
-      });
-    });
-
-    describe('map', () => {
-      it('should parse map', () => {
-        const schema = columnToZod(
-          t.json((t) => t.map(t.string(), t.number())),
-        );
-
-        assertType<typeof schema, z.ZodMap<z.ZodString, z.ZodNumber>>();
-
-        const map = new Map();
-        map.set('key', 123);
-        expect(schema.parse(map)).toEqual(map);
-
-        map.set(123, 'key');
-        expect(() => schema.parse(map)).toThrow(
-          'Expected number, received string',
-        );
-      });
-    });
-
-    describe('set', () => {
-      it('should parse set', () => {
-        const schema = columnToZod(t.json((t) => t.set(t.number())));
-
-        assertType<typeof schema, z.ZodSet<z.ZodNumber>>();
-
-        const set = new Set();
-        set.add(1);
-        expect(schema.parse(set)).toEqual(set);
-
-        set.add('string');
-        expect(() => schema.parse(set)).toThrow(
-          'Expected number, received string',
-        );
-
-        const type = jsonTypes.set(jsonTypes.number());
-
-        expect(() => columnOrJsonToZod(type.min(1)).parse(new Set())).toThrow(
-          'Invalid input',
-        );
-
-        expect(() =>
-          columnOrJsonToZod(type.min(1, 'custom')).parse(new Set()),
-        ).toThrow('custom');
-
-        expect(() =>
-          columnOrJsonToZod(type.max(1)).parse(new Set([1, 2])),
-        ).toThrow('Invalid input');
-
-        expect(() =>
-          columnOrJsonToZod(type.max(1, 'custom')).parse(new Set([1, 2])),
-        ).toThrow('custom');
-
-        expect(() => columnOrJsonToZod(type.size(1)).parse(new Set())).toThrow(
-          'Invalid input',
-        );
-
-        expect(() =>
-          columnOrJsonToZod(type.size(1, 'custom')).parse(new Set()),
-        ).toThrow('custom');
-
-        expect(() =>
-          columnOrJsonToZod(type.size(1)).parse(new Set([1, 2])),
-        ).toThrow('Invalid input');
-
-        expect(() =>
-          columnOrJsonToZod(type.size(1, 'custom')).parse(new Set([1, 2])),
-        ).toThrow('custom');
-
-        expect(() =>
-          columnOrJsonToZod(type.nonEmpty()).parse(new Set()),
-        ).toThrow('Invalid input');
-
-        expect(() =>
-          columnOrJsonToZod(type.nonEmpty('custom')).parse(new Set()),
-        ).toThrow('custom');
       });
     });
 
@@ -1132,7 +976,7 @@ describe('schema to zod', () => {
 
       it('should parse rest elements', () => {
         const schema = columnToZod(
-          t.json((t) => t.tuple([t.number()]).rest(t.string())),
+          t.json((t) => t.tuple([t.number()], t.string())),
         );
 
         assertType<typeof schema, z.ZodTuple<[z.ZodNumber], z.ZodString>>();
@@ -1147,7 +991,7 @@ describe('schema to zod', () => {
 
     describe('nullable', () => {
       it('should parse nullable', () => {
-        const schema = columnToZod(t.json((t) => t.nullable(t.number())));
+        const schema = columnToZod(t.json((t) => t.number().nullable()));
 
         assertType<typeof schema, z.ZodNullable<z.ZodNumber>>();
 
@@ -1157,7 +1001,7 @@ describe('schema to zod', () => {
 
     describe('nullish', () => {
       it('should parse nullish', () => {
-        const schema = columnToZod(t.json((t) => t.nullish(t.number())));
+        const schema = columnToZod(t.json((t) => t.number().nullish()));
 
         assertType<typeof schema, z.ZodNullable<z.ZodOptional<z.ZodNumber>>>();
 
@@ -1168,7 +1012,7 @@ describe('schema to zod', () => {
 
     describe('optional', () => {
       it('should parse optional', () => {
-        const schema = columnToZod(t.json((t) => t.optional(t.number())));
+        const schema = columnToZod(t.json((t) => t.number().optional()));
 
         assertType<typeof schema, z.ZodOptional<z.ZodNumber>>();
 
@@ -1308,7 +1152,7 @@ describe('schema to zod', () => {
     describe('union', () => {
       it('should parse union', () => {
         const schema = columnToZod(
-          t.json((t) => t.union([t.number(), t.string()])),
+          t.json((t) => t.union(t.number(), t.string())),
         );
 
         assertType<typeof schema, z.ZodUnion<[z.ZodNumber, z.ZodString]>>();
@@ -1336,8 +1180,8 @@ describe('schema to zod', () => {
           z.ZodDiscriminatedUnion<
             'type',
             [
-              z.ZodObject<{ type: z.ZodLiteral<'a'>; a: z.ZodString }>,
-              z.ZodObject<{ type: z.ZodLiteral<'b'>; b: z.ZodNumber }>,
+              z.ZodObject<{ type: z.ZodLiteral<'a'>; a: z.ZodString }, 'strip'>,
+              z.ZodObject<{ type: z.ZodLiteral<'b'>; b: z.ZodNumber }, 'strip'>,
             ]
           >
         >();

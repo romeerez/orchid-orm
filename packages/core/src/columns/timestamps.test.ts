@@ -1,6 +1,6 @@
 import { createDb } from 'pqb';
 import { expectSql, now, testDb, useTestDatabase } from 'test-utils';
-import { setDefaultNowFn } from 'orchid-core';
+import { setDefaultNowFn } from './columnType';
 
 // now() should be customizable: https://github.com/romeerez/orchid-orm/issues/71
 setDefaultNowFn('custom_now()');

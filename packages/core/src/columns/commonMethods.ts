@@ -1,11 +1,13 @@
-import { BaseStringData } from './columnDataTypes';
+import { StringTypeData } from './columnDataTypes';
 
-export type MessageParam =
+// Parameter of column types to customize an error message.
+export type ErrorMessage =
   | string
   | {
       message?: string;
     };
 
+// Clone a column or a JSON type and set the value in its data.
 export const setDataValue = <
   T extends { data: object },
   Key extends string,
@@ -14,7 +16,7 @@ export const setDataValue = <
   item: T,
   key: Key,
   value: Value,
-  params?: MessageParam,
+  params?: ErrorMessage,
 ) => {
   const cloned = Object.create(item);
   cloned.data = { ...item.data, [key]: value };
@@ -29,256 +31,264 @@ export const setDataValue = <
   };
 };
 
-function min<T extends { data: { min?: number } }, Value extends number>(
-  this: T,
-  value: Value,
-  params?: MessageParam,
-) {
-  return setDataValue(this, 'min', value, params);
-}
-
-function max<T extends { data: { max?: number } }, Value extends number>(
-  this: T,
-  value: Value,
-  params?: MessageParam,
-) {
-  return setDataValue(this, 'max', value, params);
-}
-
-function length<T extends { data: { length?: number } }, Value extends number>(
-  this: T,
-  value: Value,
-  params?: MessageParam,
-) {
-  return setDataValue(this, 'length', value, params);
-}
-
-function size<T extends { data: { size?: number } }, Value extends number>(
-  this: T,
-  value: Value,
-  params?: MessageParam,
-) {
-  return setDataValue(this, 'size', value, params);
-}
-
-export type NonEmptyBase = { data: { min?: number; nonEmpty?: boolean } };
-export type NonEmptyResult<T extends NonEmptyBase> = Omit<T, 'data'> & {
-  data: Omit<T['data'], 'min'> & { min: 1; isNonEmpty: true };
+// Data for array column and JSON type
+export type ArrayTypeData<Item> = {
+  item: Item;
+  min?: number;
+  max?: number;
+  length?: number;
+  nonEmpty?: boolean;
 };
 
-function nonEmpty<T extends NonEmptyBase>(
-  this: T,
-  params?: MessageParam,
-): NonEmptyResult<T> {
-  const cloned = setDataValue(this, 'min', 1, params);
-  cloned.data.nonEmpty = true;
-  return cloned as NonEmptyResult<T>;
-}
+// To require array or string data in methods
+type HasArrayData = { data: Omit<ArrayTypeData<unknown>, 'item'> };
 
-export type ArrayMethods = typeof arrayMethods;
-
-export const arrayMethods = {
-  min,
-  max,
-  length,
-  nonEmpty,
+// Validation methods for array column and JSON type
+export type ArrayTypeMethods = typeof arrayTypeMethods;
+export const arrayTypeMethods = {
+  // Require a minimum length (inclusive)
+  min<T extends HasArrayData>(this: T, value: number, params?: ErrorMessage) {
+    return setDataValue(this, 'min', value, params);
+  },
+  // Require a maximum length (inclusive)
+  max<T extends HasArrayData>(this: T, value: number, params?: ErrorMessage) {
+    return setDataValue(this, 'max', value, params);
+  },
+  // Require a specific length
+  length<T extends HasArrayData>(
+    this: T,
+    value: number,
+    params?: ErrorMessage,
+  ) {
+    return setDataValue(this, 'length', value, params);
+  },
+  // Require a value to be non-empty
+  nonEmpty<T extends HasArrayData>(this: T, params?: ErrorMessage) {
+    const cloned = setDataValue(this, 'min', 1, params);
+    cloned.data.nonEmpty = true;
+    return cloned;
+  },
 };
 
-export type SetMethods = typeof setMethods;
+// Validation methods for string column and JSON type
+export type StringTypeMethods = typeof stringTypeMethods;
+export const stringTypeMethods = {
+  ...arrayTypeMethods,
 
-export const setMethods = {
-  min,
-  max,
-  size,
-  nonEmpty,
-};
-
-export const stringTypeMethods = () => ({
-  ...arrayMethods,
-
+  // Check a value to be a valid email
   email<T extends { data: { email?: boolean } }>(
     this: T,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(this, 'email', true, params);
   },
 
-  url<T extends { data: { url?: boolean } }>(this: T, params?: MessageParam) {
+  // Check a value to be a valid url
+  url<T extends { data: { url?: boolean } }>(this: T, params?: ErrorMessage) {
     return setDataValue(this, 'url', true, params);
   },
 
+  // Check a value to be an emoji
   emoji<T extends { data: { emoji?: boolean } }>(
     this: T,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(this, 'emoji', true, params);
   },
 
-  uuid<T extends { data: { uuid?: boolean } }>(this: T, params?: MessageParam) {
+  // Check a value to be a valid uuid
+  uuid<T extends { data: { uuid?: boolean } }>(this: T, params?: ErrorMessage) {
     return setDataValue(this, 'uuid', true, params);
   },
 
-  cuid<T extends { data: { cuid?: boolean } }>(this: T, params?: MessageParam) {
+  // Check a value to be a valid cuid
+  cuid<T extends { data: { cuid?: boolean } }>(this: T, params?: ErrorMessage) {
     return setDataValue(this, 'cuid', true, params);
   },
 
+  // Check a value to be a valid cuid2
   cuid2<T extends { data: { cuid2?: boolean } }>(
     this: T,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(this, 'cuid2', true, params);
   },
 
-  ulid<T extends { data: { ulid?: boolean } }>(this: T, params?: MessageParam) {
+  // Check a value to be a valid ulid
+  ulid<T extends { data: { ulid?: boolean } }>(this: T, params?: ErrorMessage) {
     return setDataValue(this, 'ulid', true, params);
   },
 
-  regex<T extends { data: { regex?: RegExp } }, Value extends RegExp>(
+  // Validate the value over the given regular expression
+  regex<T extends { data: { regex?: RegExp } }>(
     this: T,
-    value: Value,
-    params?: MessageParam,
+    value: RegExp,
+    params?: ErrorMessage,
   ) {
     return setDataValue(this, 'regex', value, params);
   },
 
+  // Check a value to include a given string
   includes<T extends { data: { includes?: string } }, Value extends string>(
     this: T,
     value: Value,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(this, 'includes', value, params);
   },
 
+  // Check a value to start with a given string
   startsWith<T extends { data: { startsWith?: string } }, Value extends string>(
     this: T,
     value: Value,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(this, 'startsWith', value, params);
   },
 
+  // Check a value to end with a given string
   endsWith<T extends { data: { endsWith?: string } }, Value extends string>(
     this: T,
     value: Value,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(this, 'endsWith', value, params);
   },
 
-  datetime<T extends { data: { datetime?: BaseStringData['datetime'] } }>(
+  // Check a value have a valid datetime string
+  datetime<T extends { data: { datetime?: StringTypeData['datetime'] } }>(
     this: T,
-    params: BaseStringData['datetime'] & Exclude<MessageParam, string> = {},
+    params: StringTypeData['datetime'] & Exclude<ErrorMessage, string> = {},
   ) {
     return setDataValue(this, 'datetime', params, params);
   },
 
-  ip<T extends { data: { ip?: BaseStringData['ip'] } }>(
+  // Check a value to be a valid ip address
+  ip<T extends { data: { ip?: StringTypeData['ip'] } }>(
     this: T,
-    params: BaseStringData['ip'] & Exclude<MessageParam, string> = {},
+    params: StringTypeData['ip'] & Exclude<ErrorMessage, string> = {},
   ) {
     return setDataValue(this, 'ip', params, params);
   },
 
-  trim<T extends { data: { trim?: boolean } }>(this: T, params?: MessageParam) {
+  // Trim the value during a validation
+  trim<T extends { data: { trim?: boolean } }>(this: T, params?: ErrorMessage) {
     return setDataValue(this, 'trim', true, params);
   },
 
+  // Transform value to a lower case during a validation
   toLowerCase<T extends { data: { toLowerCase?: boolean } }>(
     this: T,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(this, 'toLowerCase', true, params);
   },
 
+  // Transform value to an upper case during a validation
   toUpperCase<T extends { data: { toUpperCase?: boolean } }>(
     this: T,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(this, 'toUpperCase', true, params);
   },
-});
+};
 
+// Data for numeric columns and JSON type
+export type NumberTypeData = {
+  lt?: number;
+  lte?: number;
+  gt?: number;
+  step?: number;
+  int?: boolean;
+  finite?: boolean;
+  safe?: boolean;
+};
+
+// To require number data in methods
+type HasNumberData = { data: NumberTypeData };
+
+// Validation methods for numeric columns and JSON type
+export type NumberTypeMethods = typeof numberTypeMethods;
 export const numberTypeMethods = {
-  lt<T extends { data: { lt?: number } }, Value extends number>(
+  // Require a value to be lower than a given number
+  lt<T extends HasNumberData, Value extends number>(
     this: T,
     value: Value,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(this, 'lt', value, params);
   },
 
-  lte<T extends { data: { lte?: number } }, Value extends number>(
+  // Require a value to be lower than or equal to a given number (the same as `max`)
+  lte<T extends HasNumberData, Value extends number>(
     this: T,
     value: Value,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(this, 'lte', value, params);
   },
 
-  max<T extends { data: { lte?: number } }, Value extends number>(
+  // Require a value to be lower than or equal to a given number
+  max<T extends HasNumberData, Value extends number>(
     this: T,
     value: Value,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(this, 'lte', value, params);
   },
 
-  gt<T extends { data: { gt?: number } }, Value extends number>(
+  // Require a value to be greater than a given number
+  gt<T extends HasNumberData, Value extends number>(
     this: T,
     value: Value,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(this, 'gt', value, params);
   },
 
-  gte<T extends { data: { gte?: number } }, Value extends number>(
+  // Require a value to be greater than or equal to a given number (the same as `min`)
+  gte<T extends HasNumberData, Value extends number>(
     this: T,
     value: Value,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(this, 'gte', value, params);
   },
 
-  min<T extends { data: { gte?: number } }, Value extends number>(
+  // Require a value to be greater than or equal to a given number
+  min<T extends HasNumberData, Value extends number>(
     this: T,
     value: Value,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(this, 'gte', value, params);
   },
 
-  positive<T extends { data: { gt?: number } }>(
-    this: T,
-    params?: MessageParam,
-  ) {
+  // Require a value to be greater than 0
+  positive<T extends HasNumberData>(this: T, params?: ErrorMessage) {
     return setDataValue(this, 'gt', 0, params);
   },
 
-  nonNegative<T extends { data: { gte?: number } }>(
-    this: T,
-    params?: MessageParam,
-  ) {
+  // Require a value to be greater than or equal to 0
+  nonNegative<T extends HasNumberData>(this: T, params?: ErrorMessage) {
     return setDataValue(this, 'gte', 0, params);
   },
 
-  negative<T extends { data: { lt?: number } }>(
-    this: T,
-    params?: MessageParam,
-  ) {
+  // Require a value to be lower than 0
+  negative<T extends HasNumberData>(this: T, params?: ErrorMessage) {
     return setDataValue(this, 'lt', 0, params);
   },
 
-  nonPositive<T extends { data: { lte?: number } }>(
-    this: T,
-    params?: MessageParam,
-  ) {
+  // Require a value to be lower than or equal to 0
+  nonPositive<T extends HasNumberData>(this: T, params?: ErrorMessage) {
     return setDataValue(this, 'lte', 0, params);
   },
 
-  multipleOf<T extends { data: { step?: number } }, Value extends number>(
+  // Require a value to be a multiple of a given number (the same as `step`)
+  multipleOf<T extends HasNumberData, Value extends number>(
     this: T,
     value: Value,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(
       this,
@@ -288,10 +298,11 @@ export const numberTypeMethods = {
     );
   },
 
-  step<T extends { data: { step?: number } }, Value extends number>(
+  // Require a value to be a multiple of a given number
+  step<T extends HasNumberData, Value extends number>(
     this: T,
     value: Value,
-    params?: MessageParam,
+    params?: ErrorMessage,
   ) {
     return setDataValue(
       this,
@@ -301,28 +312,30 @@ export const numberTypeMethods = {
     );
   },
 
-  int<T extends { data: { int?: boolean } }>(this: T, params?: MessageParam) {
+  // Require a value to be an integer
+  int<T extends HasNumberData>(this: T, params?: ErrorMessage) {
     return setDataValue(this, 'int', true, params);
   },
 
-  finite<T extends { data: { finite?: boolean } }>(
-    this: T,
-    params?: MessageParam,
-  ) {
+  // Exclude `Infinity` from being a valid value
+  finite<T extends HasNumberData>(this: T, params?: ErrorMessage) {
     return setDataValue(this, 'finite', true, params);
   },
 
-  safe<T extends { data: { safe?: boolean } }>(this: T, params?: MessageParam) {
+  // Require the value to be less than or equal to Number.MAX_SAFE_INTEGER
+  safe<T extends HasNumberData>(this: T, params?: ErrorMessage) {
     return setDataValue(this, 'safe', true, params);
   },
 };
 
+// Validation methods for date and timestamp columns
 export type DateTypeMethods = typeof dateTypeMethods;
 export const dateTypeMethods = {
-  min<T extends { data: { min?: Date } }, Value extends Date>(
+  // Require a value to be greater than or equal to a given Date object
+  min<T extends { data: { min?: Date } }>(
     this: T,
-    value: Value,
-    params?: MessageParam,
+    value: Date,
+    params?: ErrorMessage,
   ) {
     return setDataValue(
       this,
@@ -332,10 +345,11 @@ export const dateTypeMethods = {
     );
   },
 
-  max<T extends { data: { max?: Date } }, Value extends Date>(
+  // Require a value to be lower than or equal to a given Date object
+  max<T extends { data: { max?: Date } }>(
     this: T,
-    value: Value,
-    params?: MessageParam,
+    value: Date,
+    params?: ErrorMessage,
   ) {
     return setDataValue(
       this,

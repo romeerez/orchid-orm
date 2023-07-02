@@ -1,9 +1,9 @@
 import { Code } from './code';
 import { RawSQLBase } from '../raw';
 import { SetOptional, SomeIsTrue, StringKey } from '../utils';
-import { JSONTypeAny } from './json';
 import { QueryBaseCommon } from '../query';
 import { BaseOperators, ColumnOperatorBase } from './operators';
+import { JSONType } from './json/jsonType';
 
 // output type of the column
 export type ColumnOutput<T extends ColumnTypeBase> = T['type'];
@@ -219,8 +219,8 @@ export type ColumnDataBase = {
 // chain of column refinements and transformations
 export type ColumnChain = (
   | ['transform', (input: unknown, ctx: ValidationContext) => unknown]
-  | ['to', (input: unknown) => JSONTypeAny | undefined, JSONTypeAny]
-  | ['refine', (input: unknown) => unknown, ColumnTypeBase | JSONTypeAny]
+  | ['to', (input: unknown) => JSONType | undefined, JSONType]
+  | ['refine', (input: unknown) => unknown, ColumnTypeBase | JSONType]
   | ['superRefine', (input: unknown, ctx: ValidationContext) => unknown]
 )[];
 

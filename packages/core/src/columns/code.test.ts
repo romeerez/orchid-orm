@@ -1,10 +1,7 @@
-import {
-  columnDefaultArgumentToCode,
-  ColumnTypeBase,
-  emptyObject,
-  EmptyObject,
-  RawSQLBase,
-} from 'orchid-core';
+import { columnDefaultArgumentToCode } from './code';
+import { ColumnTypeBase } from './columnType';
+import { emptyObject, EmptyObject } from '../utils';
+import { RawSQLBase } from '../raw';
 
 class UnknownColumn extends ColumnTypeBase {
   dataType = 'unknown';

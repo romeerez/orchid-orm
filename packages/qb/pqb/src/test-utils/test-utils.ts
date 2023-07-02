@@ -50,7 +50,7 @@ export const Message = testDb('message', (t) => ({
   chatId: t.integer().foreignKey('chat', 'id'),
   authorId: t.integer().foreignKey('user', 'id'),
   text: t.text(),
-  meta: t.json((t) => t.any()).nullable(),
+  meta: t.json().nullable(),
   ...t.timestamps(),
 }));
 
@@ -59,10 +59,7 @@ export const Snake = testDb('snake', (t) => ({
   snakeId: t.name('snake_id').identity().primaryKey(),
   snakeName: t.name('snake_name').text(),
   tailLength: t.name('tail_length').integer(),
-  snakeData: t
-    .name('snake_data')
-    .json((j) => j.any())
-    .nullable(),
+  snakeData: t.name('snake_data').json().nullable(),
   ...t.timestampsSnakeCase(),
 }));
 

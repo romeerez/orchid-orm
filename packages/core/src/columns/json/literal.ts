@@ -1,25 +1,26 @@
-import { constructType, JSONType, Primitive, toCode } from './typeBase';
+import { JSONPrimitive, JSONType } from './jsonType';
+import { Code } from '../code';
 import { singleQuote } from '../../utils';
+import { jsonTypeToCode } from './code';
 
-// JSON literal type
-export interface JSONLiteral<T extends Primitive>
-  extends JSONType<T, 'literal'> {
-  value: Primitive;
+// JSON literal type. Supports string, number, boolean, or null.
+export class JSONLiteral<T extends JSONPrimitive> extends JSONType<
+  T,
+  { value: T }
+> {
+  declare kind: 'literal';
+
+  constructor(value: T) {
+    super();
+    this.data.value = value;
+  }
+
+  toCode(t: string): Code {
+    const { value } = this.data;
+    return jsonTypeToCode(
+      this,
+      t,
+      `${t}.literal(${typeof value === 'string' ? singleQuote(value) : value})`,
+    );
+  }
 }
-
-// constructor of JSON literal type
-export const literal = <T extends Primitive>(value: T) =>
-  constructType<JSONLiteral<T>>({
-    dataType: 'literal',
-    value,
-    toCode(this: JSONLiteral<T>, t: string) {
-      const { value } = this;
-      return toCode(
-        this,
-        t,
-        `${t}.literal(${
-          typeof value === 'string' ? singleQuote(value) : value
-        })`,
-      );
-    },
-  });

@@ -1,4 +1,6 @@
-import { nativeEnum } from './nativeEnum';
+import { jsonTypes } from './jsonTypes';
+
+const { nativeEnum } = jsonTypes;
 
 describe('nativeEnum', () => {
   it('should have toCode', () => {

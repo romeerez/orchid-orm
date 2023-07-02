@@ -4,11 +4,9 @@ import {
   arrayMethodNames,
   ArrayMethodsData,
   BaseNumberData,
-  BaseStringData,
+  StringTypeData,
   DateColumnData,
   dateMethodNames,
-  methodNamesOfSet,
-  MethodsDataOfSet,
   numberMethodNames,
   stringMethodNames,
 } from './columnDataTypes';
@@ -202,14 +200,14 @@ const columnMethodToCode = <T extends ColumnDataBase, K extends keyof T>(
 
 // Function to encode string column methods
 export const stringDataToCode =
-  columnMethodsToCode<BaseStringData>(stringMethodNames);
+  columnMethodsToCode<StringTypeData>(stringMethodNames);
 
 // Function to encode numeric column methods.
 // `int` method is skipped because it's defined by the column type itself.
 // Alias `lte` and `gte` to `max` and `min` for readability.
 export const numberDataToCode = columnMethodsToCode<BaseNumberData>(
   numberMethodNames,
-  { int: true },
+  undefined,
   { lte: 'max', gte: 'min' },
 );
 
@@ -220,10 +218,6 @@ export const dateDataToCode =
 // Function to encode array column methods
 export const arrayDataToCode =
   columnMethodsToCode<ArrayMethodsData>(arrayMethodNames);
-
-// Function to encode JSON type `set` column methods
-export const dataOfSetToCode =
-  columnMethodsToCode<MethodsDataOfSet>(methodNamesOfSet);
 
 /**
  * Converts column type and JSON type custom errors into code

@@ -1,14 +1,8 @@
-import { constructType, JSONType, toCode } from './typeBase';
+import { JSONType } from './jsonType';
+import { jsonTypeToCode } from './code';
+import { Code } from '../code';
 
-// JSON type for native TS Enum
-export interface JSONNativeEnum<T extends EnumLike>
-  extends JSONType<T[keyof T], 'nativeEnum'> {
-  dataType: 'nativeEnum';
-  enum: T;
-  options: (number | string)[];
-}
-
-// type for native enum
+// type for native enum argument
 export type EnumLike = { [k: string]: string | number; [nu: number]: string };
 
 // Filter native enum values: filter out number values, filter out duplicates
@@ -22,16 +16,22 @@ export const getValidEnumValues = (obj: EnumLike) => {
   return values;
 };
 
-// constructor for JSON native enum type
-export const nativeEnum = <T extends EnumLike>(givenEnum: T) => {
-  const options = getValidEnumValues(givenEnum);
+// JSON type that accepts a native TS enum
+export class JSONNativeEnum<T extends EnumLike> extends JSONType<
+  T[keyof T],
+  { enum: T; options: (number | string)[] }
+> {
+  declare kind: 'nativeEnum';
 
-  return constructType<JSONNativeEnum<T>>({
-    dataType: 'nativeEnum',
-    enum: givenEnum,
-    options,
-    toCode(this: JSONNativeEnum<T>, t: string) {
-      return toCode(this, t, `${t}.nativeEnum(enum)`);
-    },
-  });
-};
+  constructor(type: T) {
+    super();
+    this.data.enum = type;
+    this.data.options = getValidEnumValues(type);
+  }
+
+  // It's not possible to generate code with an actual enum name, so this outputs simply "enum".
+  // User will have to update it later manually.
+  toCode(t: string): Code {
+    return jsonTypeToCode(this, t, `${t}.nativeEnum(enum)`);
+  }
+}

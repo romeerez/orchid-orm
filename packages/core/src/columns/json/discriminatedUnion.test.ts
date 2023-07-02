@@ -1,29 +1,42 @@
-import { scalarTypes } from './scalarTypes';
-import { discriminatedUnion } from './discriminatedUnion';
-import { object } from './object';
-import { literal } from './literal';
+import { jsonTypes } from './jsonTypes';
+import { assertType } from 'test-utils';
 
-describe('discriminatedUnion', () => {
+const { discriminatedUnion, literal, object, string, number } = jsonTypes;
+
+describe('json discriminated union', () => {
+  const type = discriminatedUnion('type', [
+    object({
+      type: literal('one'),
+      a: string(),
+    }),
+    object({
+      type: literal('two'),
+      b: number(),
+    }),
+  ]);
+
+  assertType<
+    (typeof type)['type'],
+    { type: 'one'; a: string } | { type: 'two'; b: number }
+  >();
+
+  const dp = type.deepPartial();
+  assertType<
+    (typeof dp)['type'],
+    { type: 'one'; a?: string } | { type: 'two'; b?: number }
+  >();
+
   it('should have toCode', () => {
-    expect(
-      discriminatedUnion('type', [
-        object({
-          type: literal('one'),
-          a: scalarTypes.string(),
-        }),
-        object({
-          type: literal('two'),
-          b: scalarTypes.number(),
-        }),
-      ]).toCode('t'),
-    ).toEqual([
+    expect(type.toCode('t')).toEqual([
       `t.discriminatedUnion('type', [`,
       [
         't.object({',
-        [`type: t.literal('one'),`, `a: t.string(),`],
+        [`type: t.literal('one'),`],
+        [`a: t.string(),`],
         '})',
         't.object({',
-        [`type: t.literal('two'),`, `b: t.number(),`],
+        [`type: t.literal('two'),`],
+        [`b: t.number(),`],
         '})',
       ],
       '])',

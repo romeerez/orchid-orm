@@ -6,7 +6,7 @@ change(async (db) => {
     name: t.text(),
     password: t.text(),
     picture: t.text().nullable(),
-    data: t.json((t) => t.any()).nullable(),
+    data: t.json().nullable(),
     age: t.integer().nullable(),
     active: t.boolean().nullable(),
     ...t.timestamps(),

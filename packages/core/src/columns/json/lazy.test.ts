@@ -1,17 +1,23 @@
-import { lazy } from './lazy';
-import { scalarTypes } from './scalarTypes';
+import { jsonTypes } from './jsonTypes';
+
+const { lazy, object, string } = jsonTypes;
 
 describe('lazy', () => {
   it('should have toCode', () => {
-    expect(lazy(() => scalarTypes.string()).toCode('t')).toEqual([
+    expect(lazy(() => string()).toCode('t')).toEqual([
       't.lazy(() => ',
       ['t.string()'],
       ')',
     ]);
+
     expect(
-      lazy(() => scalarTypes.string())
+      lazy(() => object({ key: string() }))
         .deepPartial()
         .toCode('t'),
-    ).toEqual(['t.lazy(() => ', ['t.string().optional()'], ').deepPartial()']);
+    ).toEqual([
+      't.lazy(() => ',
+      ['t.object({', ['key: t.string().optional(),'], '})'],
+      ').deepPartial()',
+    ]);
   });
 });

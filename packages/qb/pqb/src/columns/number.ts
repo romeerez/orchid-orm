@@ -1,6 +1,5 @@
 import { Operators } from './operators';
 import { ColumnData, ColumnType } from './columnType';
-import { assignMethodsToClass } from './utils';
 import {
   numberTypeMethods,
   Code,
@@ -12,6 +11,8 @@ import {
   addCode,
   ColumnWithDefault,
   ColumnTypeBase,
+  NumberTypeMethods,
+  assignMethodsToClass,
 } from 'orchid-core';
 import { columnCode, identityToCode } from './code';
 import type { TableData } from './columnTypes';
@@ -26,11 +27,9 @@ export type SerialColumnData = NumberColumnData & {
   default: Expression;
 };
 
-type NumberMethods = typeof numberTypeMethods;
-
 export interface NumberBaseColumn
   extends ColumnType<number, typeof Operators.number>,
-    NumberMethods {}
+    NumberTypeMethods {}
 
 export abstract class NumberBaseColumn extends ColumnType<
   number,
@@ -100,6 +99,8 @@ export class DecimalBaseColumn<
   }
 }
 
+const skipNumberMethods = { int: true } as const;
+
 const intToCode = (column: ColumnType, t: string): Code => {
   let code: Code[];
 
@@ -109,7 +110,7 @@ const intToCode = (column: ColumnType, t: string): Code => {
     code = [`${column.dataType}()`];
   }
 
-  addCode(code, numberDataToCode(column.data));
+  addCode(code, numberDataToCode(column.data, skipNumberMethods));
 
   return columnCode(column, t, code);
 };
@@ -205,7 +206,11 @@ export class SmallSerialColumn extends IntegerBaseColumn {
   }
 
   toCode(t: string): Code {
-    return columnCode(this, t, `smallSerial()${numberDataToCode(this.data)}`);
+    return columnCode(
+      this,
+      t,
+      `smallSerial()${numberDataToCode(this.data, skipNumberMethods)}`,
+    );
   }
 }
 
@@ -225,7 +230,11 @@ export class SerialColumn extends IntegerBaseColumn {
   }
 
   toCode(t: string): Code {
-    return columnCode(this, t, `serial()${numberDataToCode(this.data)}`);
+    return columnCode(
+      this,
+      t,
+      `serial()${numberDataToCode(this.data, skipNumberMethods)}`,
+    );
   }
 }
 

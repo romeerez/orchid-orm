@@ -1,54 +1,49 @@
-import { constructType, JSONType, JSONTypeAny, toCode } from './typeBase';
-import { JSONNumber, JSONString, scalarTypes } from './scalarTypes';
+import { JSONNumber, JSONString } from './scalarTypes';
+import { JSONDeepPartial, JSONType } from './jsonType';
+import { Code } from '../code';
+import { jsonTypeToCode } from './code';
 
-export interface JSONRecord<
-  Key extends JSONRecordKeyType,
-  Value extends JSONTypeAny,
-> extends JSONType<Record<Key['type'], Value['type']>, 'record'> {
-  keyType: Key;
-  valueType: Value;
-  deepPartial(): JSONRecord<Key, ReturnType<Value['deepPartial']>>;
-}
+// JSON record type. Supports string or number JSON type for a key type, any JSON type for the value.
+// String key is a default.
+export class JSONRecord<
+  Key extends JSONString | JSONNumber,
+  Value extends JSONType,
+> extends JSONType<
+  Record<Key['type'], Value['type']>,
+  {
+    key: Key;
+    value: Value;
+  }
+> {
+  declare kind: 'record';
 
-export type JSONRecordKeyType = JSONType<string | number, 'string' | 'number'>;
-type Args<Key extends JSONRecordKeyType, Value extends JSONTypeAny> =
-  | Args2<Key, Value>
-  | Args1<Key>;
+  constructor(...args: [value: Value] | [key: Key, value: Value]) {
+    super();
+    if (args.length === 1) {
+      this.data.key = new JSONString() as Key;
+      this.data.value = args[0];
+    } else {
+      this.data.key = args[0];
+      this.data.value = args[1];
+    }
+  }
 
-type Args2<Key extends JSONRecordKeyType, Value extends JSONTypeAny> = [
-  key: Key,
-  value: Value,
-];
-type Args1<Value extends JSONTypeAny> = [value: Value];
+  toCode(t: string): Code {
+    return jsonTypeToCode(
+      this,
+      t,
+      `${t}.record(${
+        this.data.key instanceof JSONString
+          ? this.data.value.toCode(t)
+          : `${this.data.key.toCode(t)}, ${this.data.value.toCode(t)}`
+      })`,
+    );
+  }
 
-export function record<
-  KeyType extends JSONString | JSONNumber,
-  ValueType extends JSONTypeAny,
->(...args: Args<KeyType, ValueType>): JSONRecord<KeyType, ValueType> {
-  const [keyType, valueType] = (
-    args.length === 1 ? [scalarTypes.string(), args[0]] : args
-  ) as Args2<KeyType, ValueType>;
-
-  return constructType<JSONRecord<KeyType, ValueType>>({
-    dataType: 'record',
-    keyType,
-    valueType,
-    toCode(this: JSONRecord<KeyType, ValueType>, t: string) {
-      return toCode(
-        this,
-        t,
-        `${t}.record(${
-          args.length === 1
-            ? this.valueType.toCode(t)
-            : `${this.keyType.toCode(t)}, ${this.valueType.toCode(t)}`
-        })`,
-      );
-    },
-    deepPartial(this: JSONRecord<KeyType, ValueType>) {
-      return {
-        ...this,
-        valueType: this.valueType.deepPartial(),
-      };
-    },
-  });
+  deepPartial(): JSONRecord<Key, JSONDeepPartial<Value>> {
+    return new JSONRecord(
+      this.data.key,
+      this.data.value.deepPartial(),
+    ) as JSONRecord<Key, JSONDeepPartial<Value>>;
+  }
 }

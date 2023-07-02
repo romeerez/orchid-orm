@@ -1,17 +1,28 @@
-import { tuple } from './tuple';
-import { scalarTypes } from './scalarTypes';
+import { jsonTypes } from './jsonTypes';
+import { assertType } from 'test-utils';
 
-describe('tuple', () => {
-  it('should have toCode', () => {
-    expect(
-      tuple([scalarTypes.string(), scalarTypes.number()]).toCode('t'),
-    ).toBe('t.tuple([t.string(), t.number()])');
+const { tuple, string, number, boolean } = jsonTypes;
 
-    expect(
-      tuple(
-        [scalarTypes.string(), scalarTypes.number()],
-        scalarTypes.boolean(),
-      ).toCode('t'),
-    ).toBe('t.tuple([t.string(), t.number()], t.boolean())');
+describe('json tuple', () => {
+  describe('without rest', () => {
+    it('should have toCode', () => {
+      const type = tuple([string(), number()]);
+
+      assertType<(typeof type)['type'], [string, number]>();
+
+      expect(type.toCode('t')).toBe('t.tuple([t.string(), t.number()])');
+    });
+  });
+
+  describe('with rest', () => {
+    it('should have toCode', () => {
+      const type = tuple([string(), number()], boolean());
+
+      assertType<(typeof type)['type'], [string, number, ...boolean[]]>();
+
+      expect(type.toCode('t')).toBe(
+        't.tuple([t.string(), t.number()], t.boolean())',
+      );
+    });
   });
 });

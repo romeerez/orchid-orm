@@ -5,10 +5,7 @@ change(async (db) => {
     snakeId: t.name('snake_id').identity().primaryKey(),
     snake_name: t.text(),
     tailLength: t.name('tail_length').integer(),
-    snakeData: t
-      .name('snake_data')
-      .json((t) => t.any())
-      .nullable(),
+    snakeData: t.name('snake_data').json().nullable(),
     ...t.timestampsSnakeCase(),
   }));
 });

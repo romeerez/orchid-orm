@@ -1,49 +1,44 @@
-import { scalarTypes } from './scalarTypes';
+import { jsonTypes } from './jsonTypes';
+import { assertType } from 'test-utils';
 
-describe('scalarTypes', () => {
-  describe('any', () => {
-    it('should have toCode', () => {
-      expect(scalarTypes.any().toCode('t')).toBe('t.any()');
-    });
-  });
+describe('scalar types', () => {
+  describe('unknown', () => {
+    const type = jsonTypes.unknown();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    assertType<(typeof type)['type'], unknown>();
 
-  describe('bigint', () => {
     it('should have toCode', () => {
-      expect(scalarTypes.bigint().toCode('t')).toBe('t.bigint()');
+      expect(type.toCode('t')).toBe('t.unknown()');
     });
   });
 
   describe('boolean', () => {
-    it('should have toCode', () => {
-      expect(scalarTypes.boolean().toCode('t')).toBe('t.boolean()');
-    });
-  });
+    const type = jsonTypes.boolean();
+    assertType<(typeof type)['type'], boolean>();
 
-  describe('nan', () => {
     it('should have toCode', () => {
-      expect(scalarTypes.nan().toCode('t')).toBe('t.nan()');
-    });
-  });
-
-  describe('never', () => {
-    it('should have toCode', () => {
-      expect(scalarTypes.never().toCode('t')).toBe('t.never()');
+      expect(type.toCode('t')).toBe('t.boolean()');
     });
   });
 
   describe('null', () => {
+    const type = jsonTypes.null();
+    assertType<(typeof type)['type'], null>();
+
     it('should have toCode', () => {
-      expect(scalarTypes.null().toCode('t')).toBe('t.null()');
+      expect(type.toCode('t')).toBe('t.null()');
     });
   });
 
   describe('number', () => {
+    const type = jsonTypes.number();
+    assertType<(typeof type)['type'], number>();
+
     it('should have toCode', () => {
-      expect(scalarTypes.number().toCode('t')).toBe('t.number()');
+      expect(type.toCode('t')).toBe('t.number()');
 
       expect(
-        scalarTypes
-          .number()
+        type
           .gt(1, 'gt message')
           .gte(2, 'gte message')
           .lt(3, 'lt message')
@@ -62,8 +57,7 @@ describe('scalarTypes', () => {
       );
 
       expect(
-        scalarTypes
-          .number()
+        type
           .positive('positive message')
           .nonNegative('nonNegative message')
           .negative('negative message')
@@ -78,8 +72,7 @@ describe('scalarTypes', () => {
       );
 
       expect(
-        scalarTypes
-          .number()
+        type
           .min(1, 'min message')
           .max(2, 'max message')
           .step(3, 'step message')
@@ -90,37 +83,20 @@ describe('scalarTypes', () => {
     });
   });
 
-  describe('date', () => {
-    it('should have toCode', () => {
-      expect(scalarTypes.date().toCode('t')).toBe('t.date()');
-
-      const now = new Date();
-      const s = now.toISOString();
-      expect(
-        scalarTypes
-          .date()
-          .min(now, 'min message')
-          .max(now, 'max message')
-          .toCode('t'),
-      ).toBe(
-        `t.date()` +
-          `.min(new Date('${s}'), 'min message')` +
-          `.max(new Date('${s}'), 'max message')`,
-      );
-    });
-  });
-
   describe('string', () => {
+    const type = jsonTypes.string();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    assertType<(typeof type)['type'], string>();
+
     it('should have toCode', () => {
-      expect(scalarTypes.string().toCode('t')).toBe('t.string()');
+      expect(type.toCode('t')).toBe('t.string()');
+
+      expect(type.nonEmpty('nonEmpty message').toCode('t')).toBe(
+        "t.string().nonEmpty('nonEmpty message')",
+      );
 
       expect(
-        scalarTypes.string().nonEmpty('nonEmpty message').toCode('t'),
-      ).toBe("t.string().nonEmpty('nonEmpty message')");
-
-      expect(
-        scalarTypes
-          .string()
+        type
           .min(1, 'min message')
           .max(10, 'max message')
           .length(15, 'length message')
@@ -163,12 +139,6 @@ describe('scalarTypes', () => {
           '.toLowerCase()' +
           '.toUpperCase()',
       );
-    });
-  });
-
-  describe('unknown', () => {
-    it('should have toCode', () => {
-      expect(scalarTypes.unknown().toCode('t')).toBe('t.unknown()');
     });
   });
 });

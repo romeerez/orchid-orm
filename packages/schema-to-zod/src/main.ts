@@ -10,31 +10,30 @@ import {
   VirtualColumn,
 } from 'pqb';
 import {
-  JSONTypeAny,
-  Primitive,
   JSONArray,
   JSONEnum,
-  JSONInstanceOf,
   JSONLiteral,
-  JSONMap,
   EnumLike,
   JSONNativeEnum,
-  JSONDate,
   JSONNumber,
   JSONString,
-  JSONSet,
   JSONTuple,
   JSONObject,
   UnknownKeysParam,
-  JSONDiscriminatedObject,
   JSONDiscriminatedUnion,
   JSONRecord,
-  JSONRecordKeyType,
   JSONIntersection,
   JSONUnion,
   JSONLazy,
   EmptyObject,
   ColumnTypeBase,
+  JSONType,
+  JSONBoolean,
+  JSONNull,
+  JSONUnknown,
+  JSONTupleItems,
+  JSONObjectShape,
+  JSONDiscriminatedUnionArg,
 } from 'orchid-core';
 import { z, ZodErrorMap, ZodTypeAny } from 'zod';
 import { Buffer } from 'node:buffer';
@@ -110,112 +109,114 @@ type SchemaToZod<
   ? typeof interval
   : D extends 'boolean'
   ? z.ZodBoolean
-  : T extends EnumColumn<string, infer U>
-  ? z.ZodEnum<U>
-  : T extends ArrayColumn<infer U>
-  ? z.ZodArray<SchemaToZod<U>>
-  : T extends JSONColumn
+  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  T extends EnumColumn<any, any>
+  ? z.ZodEnum<T['options']>
+  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  T extends ArrayColumn<any>
+  ? z.ZodArray<SchemaToZod<T['data']['item']>>
+  : T extends JSONColumn<JSONType>
   ? JsonToZod<T['data']['schema']>
   : T extends VirtualColumn
   ? z.ZodNever
   : never;
 
-type JsonToZod<T extends JSONTypeAny, D = T['dataType']> = T extends {
-  types: [JSONTypeAny, JSONTypeAny, ...JSONTypeAny[]];
+declare module 'orchid-core' {
+  interface JSONType {
+    zod: z.ZodTypeAny;
+  }
+
+  interface JSONUnknown {
+    zod: z.ZodUnknown;
+  }
+
+  interface JSONBoolean {
+    zod: z.ZodBoolean;
+  }
+
+  interface JSONNull {
+    zod: z.ZodNull;
+  }
+
+  interface JSONNumber {
+    zod: z.ZodNumber;
+  }
+
+  interface JSONString {
+    zod: z.ZodString;
+  }
 }
-  ? z.ZodUnion<MapJsonTuple<T['types']>>
-  : T['data'] extends {
-      nullable: true;
-    }
-  ? T['data'] extends { optional: true }
-    ? z.ZodNullable<
-        z.ZodOptional<
-          JsonToZod<
-            Omit<T, 'data'> & { data: Omit<T['data'], 'nullable' | 'optional'> }
-          >
-        >
+
+type JsonToZod<T extends JSONType> = T['data']['nullable'] extends true
+  ? z.ZodNullable<JsonNotNullableToZod<T>>
+  : JsonNotNullableToZod<T>;
+
+type JsonNotNullableToZod<T extends JSONType> =
+  T['data']['optional'] extends true
+    ? z.ZodOptional<JsonNotOptionalToZod<T>>
+    : JsonNotOptionalToZod<T>;
+
+type JsonNotOptionalToZod<T extends JSONType> =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  T extends JSONUnion<any>
+    ? z.ZodUnion<MapUnionArgs<T['data']['types']>>
+    : T extends JSONArray<JSONType>
+    ? z.ZodArray<JsonToZod<T['data']['item']>>
+    : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    T extends JSONEnum<any, any>
+    ? z.ZodEnum<T['data']['options']>
+    : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    T extends JSONLiteral<any>
+    ? z.ZodLiteral<T['data']['value']>
+    : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    T extends JSONNativeEnum<any>
+    ? z.ZodNativeEnum<T['data']['enum']>
+    : T extends JSONTuple<JSONTupleItems, JSONType | undefined>
+    ? z.ZodTuple<
+        MapJsonTuple<T['data']['items']>,
+        T['data']['rest'] extends JSONType ? JsonToZod<T['data']['rest']> : null
       >
-    : z.ZodNullable<
-        JsonToZod<Omit<T, 'data'> & { data: Omit<T['data'], 'nullable'> }>
+    : T extends JSONObject<JSONObjectShape, UnknownKeysParam>
+    ? z.ZodObject<
+        { [K in keyof T['data']['shape']]: JsonToZod<T['data']['shape'][K]> },
+        T['data']['unknownKeys'],
+        JsonToZod<T['data']['catchAll']>
       >
-  : T['data'] extends { optional: true }
-  ? z.ZodOptional<
-      JsonToZod<Omit<T, 'data'> & { data: Omit<T['data'], 'optional'> }>
-    >
-  : D extends 'bigint'
-  ? z.ZodString
-  : D extends 'boolean'
-  ? z.ZodBoolean
-  : D extends 'date'
-  ? z.ZodDate
-  : D extends 'nan'
-  ? z.ZodNaN
-  : D extends 'never'
-  ? z.ZodNever
-  : D extends 'null'
-  ? z.ZodNull
-  : D extends 'number'
-  ? z.ZodNumber
-  : D extends 'string'
-  ? z.ZodString
-  : D extends 'unknown'
-  ? z.ZodUnknown
-  : T extends JSONArray<infer U>
-  ? z.ZodArray<JsonToZod<U>>
-  : T extends JSONEnum<string, infer U>
-  ? z.ZodEnum<U>
-  : T extends JSONInstanceOf<infer U>
-  ? z.ZodType<InstanceType<U>, z.ZodTypeDef, InstanceType<U>>
-  : T extends JSONLiteral<infer U>
-  ? z.ZodLiteral<U>
-  : T extends JSONMap<infer K, infer V>
-  ? z.ZodMap<JsonToZod<K>, JsonToZod<V>>
-  : T extends JSONSet<infer U>
-  ? z.ZodSet<JsonToZod<U>>
-  : T extends JSONNativeEnum<infer U>
-  ? z.ZodNativeEnum<U>
-  : T extends JSONTuple<infer U, infer R>
-  ? z.ZodTuple<MapJsonTuple<U>, R extends JSONTypeAny ? JsonToZod<R> : null>
-  : T extends JSONObject<Record<string, JSONTypeAny>, UnknownKeysParam>
-  ? z.ZodObject<
-      { [K in keyof T['shape']]: JsonToZod<T['shape'][K]> },
-      T['unknownKeys'],
-      JsonToZod<T['catchAllType']>
-    >
-  : T extends JSONRecord<JSONRecordKeyType, JSONTypeAny>
-  ? z.ZodRecord<
-      JsonToZod<T['keyType']> extends z.ZodType<
-        string | number | symbol,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        any
+    : T extends JSONRecord<JSONString | JSONNumber, JSONType>
+    ? T['data']['key'] extends JSONString
+      ? z.ZodRecord<z.ZodString, JsonToZod<T['data']['value']>>
+      : z.ZodRecord<z.ZodNumber, JsonToZod<T['data']['value']>>
+    : T extends JSONIntersection<JSONType, JSONType>
+    ? z.ZodIntersection<
+        JsonToZod<T['data']['left']>,
+        JsonToZod<T['data']['right']>
       >
-        ? JsonToZod<T['keyType']>
-        : never,
-      JsonToZod<T['valueType']>
-    >
-  : T extends JSONIntersection<JSONTypeAny, JSONTypeAny>
-  ? z.ZodIntersection<JsonToZod<T['left']>, JsonToZod<T['right']>>
-  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  T extends JSONDiscriminatedUnion<string, Primitive, any>
-  ? MapDiscriminatedUnion<T>
-  : D extends 'any'
-  ? z.ZodTypeAny
-  : z.ZodType<T['type']>;
+    : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    T extends JSONDiscriminatedUnion<string, any>
+    ? MapDiscriminatedUnion<T>
+    : T['zod'];
 
 export type MapDiscriminatedUnion<
-  T extends JSONDiscriminatedUnion<string, Primitive, any>,
-  Options = MapJsonTuple<T['_options']>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  T extends JSONDiscriminatedUnion<string, any>,
+  Options = MapJsonTuple<T['data']['types']>,
 > = z.ZodDiscriminatedUnion<
-  T['discriminator'],
-  Options extends z.ZodDiscriminatedUnionOption<T['discriminator']>[]
+  T['data']['discriminator'],
+  Options extends z.ZodDiscriminatedUnionOption<T['data']['discriminator']>[]
     ? Options
     : never
 >;
 
+type MapUnionArgs<T extends unknown[]> = T extends [
+  infer F extends JSONType,
+  infer S extends JSONType,
+  ...infer Tail,
+]
+  ? [JsonToZod<F>, JsonToZod<S>, ...MapJsonTuple<Tail>]
+  : never;
+
 type MapJsonTuple<T extends unknown[]> = T extends [infer Head, ...infer Tail]
-  ? [Head extends JSONTypeAny ? JsonToZod<Head> : never, ...MapJsonTuple<Tail>]
+  ? [Head extends JSONType ? JsonToZod<Head> : never, ...MapJsonTuple<Tail>]
   : [];
 
 export type TableToZod<
@@ -261,10 +262,10 @@ export const columnToZod = <T extends ColumnType>(
   return converter(column) as SchemaToZod<T>;
 };
 
-const typeHandler = <Type extends ColumnType | JSONTypeAny>(
+const typeHandler = <Type extends ColumnType | JSONType>(
   fn: (column: Type, errors?: Record<string, string>) => z.ZodTypeAny,
 ) => {
-  return (column: ColumnType | JSONTypeAny) => {
+  return (column: ColumnType | JSONType): z.ZodTypeAny => {
     let type = fn(column as Type, column.data.errors);
 
     const { errors } = column.data;
@@ -282,17 +283,21 @@ const typeHandler = <Type extends ColumnType | JSONTypeAny>(
       return { message: invalid_type_error ?? ctx.defaultError };
     }) as ZodErrorMap;
 
-    column.chain.forEach((item) => {
-      if (item[0] === 'transform') {
-        type = type.transform(item[1]);
-      } else if (item[0] === 'to') {
-        type = z.preprocess(item[1], itemToZod(item[2]));
-      } else if (item[0] === 'refine') {
-        type = type.refine(item[1], { message: errors?.refine });
-      } else if (item[0] === 'superRefine') {
-        type = type.superRefine(item[1]);
+    const chain =
+      column instanceof ColumnType ? column.chain : column.data.chain;
+    if (chain) {
+      for (const item of chain) {
+        if (item[0] === 'transform') {
+          type = type.transform(item[1]);
+        } else if (item[0] === 'to') {
+          type = z.preprocess(item[1], itemToZod(item[2]));
+        } else if (item[0] === 'refine') {
+          type = type.refine(item[1], { message: errors?.refine });
+        } else if (item[0] === 'superRefine') {
+          type = type.superRefine(item[1]);
+        }
       }
-    });
+    }
 
     if (
       ('nullable' in column.data && column.data.nullable) ||
@@ -427,7 +432,7 @@ const handleBuffer = typeHandler(() => {
 });
 
 const dateParams = ['min', 'max'];
-const handleDate = typeHandler((column: DateColumn | JSONDate, errors) => {
+const handleDate = typeHandler((column: DateColumn, errors) => {
   let type = z.date();
   dateParams.forEach((key) => {
     const value = (column.data as Record<string, unknown>)[key];
@@ -468,12 +473,20 @@ const handleInterval = typeHandler(() => interval);
 
 const handleBoolean = typeHandler(() => z.boolean());
 
-const handleEnum = typeHandler((column: EnumColumn | JSONEnum) => {
-  const enumColumn = column as
-    | EnumColumn<string, [string, ...string[]]>
-    | JSONEnum<string, [string, ...string[]]>;
-  return z.enum(enumColumn.options);
-});
+const handleEnum = typeHandler(
+  (column: EnumColumn | JSONEnum<string, [string, ...string[]]>) => {
+    const enumColumn = column as
+      | EnumColumn<string, [string, ...string[]]>
+      | JSONEnum<string, [string, ...string[]]>;
+
+    const options =
+      enumColumn instanceof EnumColumn
+        ? enumColumn.options
+        : enumColumn.data.options;
+
+    return z.enum(options);
+  },
+);
 
 const handleBitString = typeHandler((_, errors) => {
   return z.string().regex(/[10]/g, { message: errors?.invalidType });
@@ -485,12 +498,12 @@ const handleUUID = typeHandler((_, errors) => {
 
 const arrayParams = ['min', 'max', 'length'];
 const handleArray = typeHandler(
-  (array: ArrayColumn<ColumnType> | JSONArray<JSONTypeAny>, errors) => {
+  (array: ArrayColumn<ColumnType> | JSONArray<JSONType>, errors) => {
     let type: z.ZodArray<z.ZodTypeAny>;
-    if ('element' in array) {
-      type = z.array(jsonItemToZod(array.element));
-    } else {
+    if (array instanceof ColumnType) {
       type = z.array(columnToZod(array.data.item));
+    } else {
+      type = z.array(jsonItemToZod(array.data.item));
     }
 
     arrayParams.forEach((key) => {
@@ -510,13 +523,45 @@ const handleJson = typeHandler((column: JSONColumn) => {
   return jsonItemToZod(type);
 });
 
-const jsonItemToZod = (type: JSONTypeAny) => {
-  const converter = jsonConverters[type.dataType];
-  if (!converter) throw new Error(`Cannot parse column ${type.dataType}`);
-  return converter(type);
+const jsonItemToZod = (type: JSONType): z.ZodTypeAny => {
+  if (type instanceof JSONUnknown) {
+    return handleUnknown(type);
+  } else if (type instanceof JSONBoolean) {
+    return handleBoolean(type);
+  } else if (type instanceof JSONNull) {
+    return handleNull(type);
+  } else if (type instanceof JSONNumber) {
+    return handleNumber(type);
+  } else if (type instanceof JSONString) {
+    return handleString(type);
+  } else if (type instanceof JSONArray) {
+    return handleArray(type);
+  } else if (type instanceof JSONObject) {
+    return handleObject(type);
+  } else if (type instanceof JSONLiteral) {
+    return handleLiteral(type);
+  } else if (type instanceof JSONDiscriminatedUnion) {
+    return handleDiscriminatedUnion(type);
+  } else if (type instanceof JSONEnum) {
+    return handleEnum(type);
+  } else if (type instanceof JSONIntersection) {
+    return handleIntersection(type);
+  } else if (type instanceof JSONLazy) {
+    return handleLazy(type);
+  } else if (type instanceof JSONNativeEnum) {
+    return handleNativeEnum(type);
+  } else if (type instanceof JSONRecord) {
+    return handleRecord(type);
+  } else if (type instanceof JSONTuple) {
+    return handleTuple(type);
+  } else if (type instanceof JSONUnion) {
+    return handleUnion(type);
+  } else {
+    throw new Error(`Cannot parse column ${type.constructor.name}`);
+  }
 };
 
-const itemToZod = (item: ColumnType | JSONTypeAny) => {
+const itemToZod = (item: ColumnType | JSONType) => {
   return item instanceof ColumnType ? columnToZod(item) : jsonItemToZod(item);
 };
 
@@ -565,74 +610,48 @@ const converters: Record<string, (column: ColumnType) => z.ZodType> = {
   jsonb: handleJson,
 };
 
-const handleAny = typeHandler(() => z.any());
-
-const handleNaN = typeHandler(() => z.nan());
-
 const handleNever = typeHandler(() => z.never());
 
 const handleNull = typeHandler(() => z.null());
 
 const handleUnknown = typeHandler(() => z.unknown());
 
-const handleInstanceOf = typeHandler(
-  (type: JSONInstanceOf<new () => EmptyObject>) => z.instanceof(type.class),
-);
-
-const handleLiteral = typeHandler((type: JSONTypeAny) => {
-  return z.literal((type as JSONLiteral<string>).value);
+const handleLiteral = typeHandler((type: JSONType) => {
+  return z.literal((type as JSONLiteral<string>).data.value);
 });
 
-const handleMap = typeHandler((type: JSONMap<JSONTypeAny, JSONTypeAny>) => {
-  const { keyType, valueType } = type;
-  return z.map(jsonItemToZod(keyType), jsonItemToZod(valueType));
+const handleNativeEnum = typeHandler((type: JSONType) => {
+  return z.nativeEnum((type as JSONNativeEnum<EnumLike>).data.enum);
 });
 
-const setParams = ['min', 'max', 'size'];
-const handleSet = typeHandler((column: JSONSet<JSONTypeAny>, errors) => {
-  const { valueType } = column;
-  let type = z.set(jsonItemToZod(valueType));
-  setParams.forEach((key) => {
-    const value = (column.data as Record<string, unknown>)[key];
-    if (value !== undefined) {
-      type = type[key as 'min'](value as number, { message: errors?.[key] });
-    }
-  });
-  return type;
-});
-
-const handleNativeEnum = typeHandler((type: JSONTypeAny) => {
-  return z.nativeEnum((type as JSONNativeEnum<EnumLike>).enum);
-});
-
-const handleTuple = typeHandler((column: JSONTuple) => {
+const handleTuple = typeHandler((column: JSONTuple<JSONTupleItems>) => {
   let type: z.ZodTuple<[], ZodTypeAny | null> = z.tuple(
-    column.items.map((item) => jsonItemToZod(item)) as [],
+    column.data.items.map((item) => jsonItemToZod(item)) as [],
   );
-  if (column.restType) {
-    type = type.rest(jsonItemToZod(column.restType));
+  if (column.data.rest) {
+    type = type.rest(jsonItemToZod(column.data.rest));
   }
   return type;
 });
 
 const handleObject = typeHandler(
-  (type: JSONObject<Record<string, JSONTypeAny>, UnknownKeysParam>, errors) => {
+  (type: JSONObject<Record<string, JSONType>, UnknownKeysParam>, errors) => {
     const shape: Record<string, z.ZodTypeAny> = {};
-    for (const key in type.shape) {
-      shape[key] = jsonItemToZod(type.shape[key]);
+    for (const key in type.data.shape) {
+      shape[key] = jsonItemToZod(type.data.shape[key]);
     }
 
     let object: z.ZodObject<z.ZodRawShape, UnknownKeysParam, z.ZodTypeAny> =
       z.object(shape);
 
-    if (type.unknownKeys === 'passthrough') {
+    if (type.data.unknownKeys === 'passthrough') {
       object = object.passthrough();
-    } else if (type.unknownKeys === 'strict') {
+    } else if (type.data.unknownKeys === 'strict') {
       object = object.strict(errors?.strict);
     }
 
-    if (type.catchAllType) {
-      object = object.catchall(jsonItemToZod(type.catchAllType));
+    if (type.data.catchAll) {
+      object = object.catchall(jsonItemToZod(type.data.catchAll));
     }
 
     return object;
@@ -640,67 +659,40 @@ const handleObject = typeHandler(
 );
 
 const handleRecord = typeHandler(
-  (type: JSONRecord<JSONRecordKeyType, JSONTypeAny>) => {
-    return z.record(jsonItemToZod(type.keyType), jsonItemToZod(type.valueType));
-  },
-);
-
-const handleUnion = typeHandler(
-  (type: JSONUnion<[JSONTypeAny, JSONTypeAny, ...JSONTypeAny[]]>) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return z.union(type.types.map(jsonItemToZod) as any);
-  },
-);
-
-const handleIntersection = typeHandler(
-  (type: JSONIntersection<JSONTypeAny, JSONTypeAny>) => {
-    return z.intersection(jsonItemToZod(type.left), jsonItemToZod(type.right));
-  },
-);
-
-const handleDiscriminatedUnion = typeHandler(
-  (
-    type: JSONDiscriminatedUnion<
-      string,
-      Primitive,
-      JSONDiscriminatedObject<string, Primitive>[]
-    >,
-  ) => {
-    return z.discriminatedUnion(
-      type.discriminator,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      [...type.options.values()].map(jsonItemToZod) as any,
+  (type: JSONRecord<JSONString | JSONNumber, JSONType>) => {
+    return z.record(
+      jsonItemToZod(type.data.key),
+      jsonItemToZod(type.data.value),
     );
   },
 );
 
-const handleLazy = typeHandler((type: JSONLazy<JSONTypeAny>) => {
-  return z.lazy(() => jsonItemToZod(type.getter()));
-});
+const handleUnion = typeHandler(
+  (type: JSONUnion<[JSONType, JSONType, ...JSONType[]]>) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return z.union(type.data.types.map(jsonItemToZod) as any);
+  },
+);
 
-const jsonConverters: Record<string, (type: JSONTypeAny) => z.ZodType> = {
-  any: handleAny,
-  bigint: handleBigInt,
-  boolean: handleBoolean,
-  date: handleDate,
-  nan: handleNaN,
-  never: handleNever,
-  null: handleNull,
-  number: handleNumber,
-  string: handleString,
-  unknown: handleUnknown,
-  array: handleArray,
-  enum: handleEnum,
-  instanceOf: handleInstanceOf,
-  literal: handleLiteral,
-  map: handleMap,
-  set: handleSet,
-  nativeEnum: handleNativeEnum,
-  tuple: handleTuple,
-  object: handleObject,
-  record: handleRecord,
-  union: handleUnion,
-  intersection: handleIntersection,
-  discriminatedUnion: handleDiscriminatedUnion,
-  lazy: handleLazy,
-};
+const handleIntersection = typeHandler(
+  (type: JSONIntersection<JSONType, JSONType>) => {
+    return z.intersection(
+      jsonItemToZod(type.data.left),
+      jsonItemToZod(type.data.right),
+    );
+  },
+);
+
+const handleDiscriminatedUnion = typeHandler(
+  (type: JSONDiscriminatedUnion<string, JSONDiscriminatedUnionArg<string>>) => {
+    return z.discriminatedUnion(
+      type.data.discriminator,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      [...type.data.types].map(jsonItemToZod) as any,
+    );
+  },
+);
+
+const handleLazy = typeHandler((type: JSONLazy<JSONType>) => {
+  return z.lazy(() => jsonItemToZod(type.getType()));
+});

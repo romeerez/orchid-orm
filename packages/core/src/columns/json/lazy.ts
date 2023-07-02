@@ -1,47 +1,38 @@
-import {
-  constructType,
-  JSONType,
-  JSONTypeAny,
-  JSONTypeData,
-  toCode,
-} from './typeBase';
+import { JSONDeepPartial, JSONType } from './jsonType';
+import { Code } from '../code';
 import { toArray } from '../../utils';
+import { jsonTypeToCode } from './code';
 
-// JSON type wrapper for recursive cases
-export interface JSONLazy<T extends JSONTypeAny>
-  extends JSONType<T['type'], 'lazy'> {
-  data: JSONTypeData & {
-    isDeepPartial?: boolean;
-  };
-  typeCache?: T;
-  getter(): T;
-  deepPartial(): JSONLazy<ReturnType<T['deepPartial']>>;
+// JSON type wrapper for recursive types
+export class JSONLazy<T extends JSONType> extends JSONType<
+  T['type'],
+  { fn: () => T; type?: T }
+> {
+  declare kind: 'lazy';
+
+  constructor(fn: () => T) {
+    super();
+    this.data.fn = fn;
+  }
+
+  // get the JSON type from a function provided to a `lazy`, it's being memoized.
+  getType(): T {
+    return (this.data.type ??= this.data.fn());
+  }
+
+  toCode(t: string): Code {
+    return jsonTypeToCode(this, t, [
+      `${t}.lazy(() => `,
+      toArray(this.getType().toCode(t)),
+      ')',
+    ]);
+  }
+
+  deepPartial(): JSONLazy<JSONDeepPartial<T>> {
+    const type = new JSONLazy(() => this.data.fn().deepPartial()) as JSONLazy<
+      JSONDeepPartial<T>
+    >;
+    type.data.isDeepPartial = true;
+    return type;
+  }
 }
-
-// constructor of lazy JSON type
-export const lazy = <T extends JSONTypeAny>(fn: () => T): JSONLazy<T> => {
-  return constructType<JSONLazy<T>>({
-    dataType: 'lazy',
-    getter() {
-      return this.typeCache || (this.typeCache = fn());
-    },
-    toCode(this: JSONLazy<T>, t: string) {
-      return toCode(this, t, [
-        `${t}.lazy(() => `,
-        toArray(this.getter().toCode(t)),
-        ')',
-      ]);
-    },
-    deepPartial(this: JSONLazy<T>) {
-      return {
-        ...this,
-        data: {
-          ...this.data,
-          isDeepPartial: true,
-        },
-        typeCache: undefined,
-        getter: () => this.getter().deepPartial(),
-      };
-    },
-  });
-};

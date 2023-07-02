@@ -1,9 +1,12 @@
-import { enumType } from './enum';
+import { jsonTypes } from './jsonTypes';
+import { assertType } from 'test-utils';
 
-describe('enum', () => {
+describe('json enum', () => {
   it('should have toCode', () => {
-    expect(enumType(['a', 'b', 'c']).toCode('t')).toBe(
-      `t.enum(['a', 'b', 'c'])`,
-    );
+    const type = jsonTypes.enum(['a', 'b', 'c']);
+
+    assertType<(typeof type)['type'], 'a' | 'b' | 'c'>();
+
+    expect(type.toCode('t')).toBe(`t.enum(['a', 'b', 'c'])`);
   });
 });

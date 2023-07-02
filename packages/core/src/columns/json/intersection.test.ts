@@ -1,19 +1,19 @@
-import { intersection } from './intersection';
-import { object } from './object';
-import { scalarTypes } from './scalarTypes';
+import { jsonTypes } from './jsonTypes';
+import { assertType } from 'test-utils';
 
-describe('intersection', () => {
+const { intersection, object, string, number } = jsonTypes;
+
+describe('json intersection', () => {
+  const type = intersection(object({ a: string() }), object({ b: number() }));
+
+  assertType<(typeof type)['type'], { a: string; b: number }>();
+
   it('should have toCode', () => {
-    expect(
-      intersection(
-        object({ name: scalarTypes.string() }),
-        object({ age: scalarTypes.number() }),
-      ).toCode('t'),
-    ).toEqual([
+    expect(type.toCode('t')).toEqual([
       't.object({',
-      ['name: t.string(),'],
+      ['a: t.string(),'],
       '}).and(',
-      ['t.object({', ['age: t.number(),'], '})'],
+      ['t.object({', ['b: t.number(),'], '})'],
       ')',
     ]);
   });

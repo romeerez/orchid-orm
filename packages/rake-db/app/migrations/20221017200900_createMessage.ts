@@ -6,7 +6,7 @@ change(async (db) => {
     chatId: t.integer().foreignKey('chat', 'idOfChat').index(),
     authorId: t.integer().foreignKey('user', 'id').nullable().index(),
     text: t.text(),
-    meta: t.json((t) => t.any()).nullable(),
+    meta: t.json().nullable(),
     ...t.timestamps(),
   }));
 });

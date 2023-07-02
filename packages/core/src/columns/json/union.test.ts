@@ -1,10 +1,20 @@
-import { union } from './union';
-import { scalarTypes } from './scalarTypes';
+import { jsonTypes } from './jsonTypes';
+import { assertType } from 'test-utils';
 
-describe('union', () => {
+const { union, object, string, number } = jsonTypes;
+
+describe('json union', () => {
   it('should have toCode', () => {
-    expect(
-      union([scalarTypes.string(), scalarTypes.number()]).toCode('t'),
-    ).toEqual('t.string().or(t.number())');
+    const type = union(string(), number());
+
+    assertType<(typeof type)['type'], string | number>();
+
+    expect(type.toCode('t')).toBe('t.string().or(t.number())');
+  });
+
+  it('should have deepPartial', () => {
+    const type = union(object({ key: string() }), number()).deepPartial();
+
+    assertType<(typeof type)['type'], { key?: string } | number>();
   });
 });

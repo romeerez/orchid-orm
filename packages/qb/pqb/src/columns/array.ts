@@ -1,13 +1,13 @@
 import { ColumnData, ColumnType } from './columnType';
 import { Operators } from './operators';
-import { assignMethodsToClass } from './utils';
 import {
-  arrayMethods,
+  arrayTypeMethods,
   addCode,
   Code,
   ColumnTypeBase,
   ArrayMethodsData,
   arrayDataToCode,
+  assignMethodsToClass,
 } from 'orchid-core';
 import { columnCode } from './code';
 
@@ -16,7 +16,7 @@ export type ArrayData<Item extends ColumnTypeBase> = ColumnData &
     item: Item;
   };
 
-type ArrayMethods = typeof arrayMethods;
+type ArrayMethods = typeof arrayTypeMethods;
 
 export interface ArrayColumn<Item extends ColumnTypeBase>
   extends ColumnType<Item['type'][], typeof Operators.array>,
@@ -131,7 +131,7 @@ const parseArray = (
   return pos;
 };
 
-assignMethodsToClass(ArrayColumn, arrayMethods);
+assignMethodsToClass(ArrayColumn, arrayTypeMethods);
 
 const pushEntry = (
   input: string,

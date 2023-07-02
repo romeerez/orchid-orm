@@ -1,70 +1,61 @@
-import {
-  constructType,
-  DeepPartial,
-  JSONType,
-  JSONTypeAny,
-  toCode,
-} from './typeBase';
+import { JSONDeepPartial, JSONType } from './jsonType';
+import { jsonTypeToCode } from './code';
+import { Code } from '../code';
 
-export interface JSONTuple<
-  T extends JSONTupleItems | [] = JSONTupleItems,
-  Rest extends JSONTypeAny | null = null,
-> extends JSONType<OutputTypeOfTupleWithRest<T, Rest>, 'tuple'> {
-  items: T;
-  restType: Rest;
-  rest<Rest extends JSONTypeAny | null>(rest: Rest): JSONTuple<T, Rest>;
-  deepPartial(): {
-    [k in keyof T]: T[k] extends JSONTypeAny ? DeepPartial<T[k]> : never;
-  } extends infer PI
-    ? PI extends JSONTupleItems
-      ? JSONTuple<PI>
-      : never
-    : never;
-}
+// Argument type for JSON tuple: requires at least one element.
+export type JSONTupleItems = [JSONType, ...JSONType[]];
 
-export type JSONTupleItems = [JSONTypeAny, ...JSONTypeAny[]];
-export type AssertArray<T> = T extends unknown[] ? T : never;
-export type OutputTypeOfTuple<T extends JSONTupleItems | []> = AssertArray<{
-  [k in keyof T]: T[k] extends JSONTypeAny ? T[k]['type'] : never;
-}>;
-export type OutputTypeOfTupleWithRest<
-  T extends JSONTupleItems | [],
-  Rest extends JSONTypeAny | null = null,
-> = Rest extends JSONTypeAny
-  ? [...OutputTypeOfTuple<T>, ...Rest['type'][]]
-  : OutputTypeOfTuple<T>;
-
-export const tuple = <
-  T extends JSONTupleItems | [],
-  Rest extends JSONTypeAny | null = null,
->(
-  items: T,
-  rest: Rest = null as Rest,
-) => {
-  return constructType<JSONTuple<T, Rest>>({
-    dataType: 'tuple',
-    items,
-    restType: rest,
-    toCode(this: JSONTuple<T, Rest>, t: string) {
-      return toCode(
-        this,
-        t,
-        `${t}.tuple([${this.items.map((item) => item.toCode(t)).join(', ')}]${
-          this.restType ? `, ${this.restType.toCode(t)}` : ''
-        })`,
-      );
-    },
-    rest<Rest extends JSONTypeAny | null>(rest: Rest): JSONTuple<T, Rest> {
-      return {
-        ...this,
-        restType: rest,
-      } as unknown as JSONTuple<T, Rest>;
-    },
-    deepPartial(this: JSONTuple<T>) {
-      return {
-        ...this,
-        items: this.items.map((item) => item.deepPartial()),
-      };
-    },
-  });
+// Output of the JSON tuple type.
+type JSONTupleOutput<T extends JSONTupleItems> = {
+  [K in keyof T]: T[K]['type'];
 };
+
+// Map JSON tuple items into deep partial items.
+type DeepPartialItems<T extends JSONTupleItems> = {
+  [K in keyof T]: JSONDeepPartial<T[K]>;
+};
+
+// JSON tuple type: at least one element is required, optionally provide a type for the rest elements.
+export class JSONTuple<
+  T extends JSONTupleItems,
+  Rest extends JSONType | undefined = undefined,
+> extends JSONType<
+  Rest extends JSONType
+    ? [...JSONTupleOutput<T>, ...Rest['type'][]]
+    : JSONTupleOutput<T>,
+  {
+    items: T;
+    rest: Rest;
+  }
+> {
+  declare kind: 'tuple';
+
+  constructor(items: T, rest?: Rest) {
+    super();
+    this.data.items = items;
+    this.data.rest = rest as Rest;
+  }
+
+  toCode(t: string): Code {
+    return jsonTypeToCode(
+      this,
+      t,
+      `${t}.tuple([${this.data.items
+        .map((type) => type.toCode(t))
+        .join(', ')}]${this.data.rest ? `, ${this.data.rest.toCode(t)}` : ''})`,
+    );
+  }
+
+  deepPartial(): JSONTuple<
+    DeepPartialItems<T> extends JSONTupleItems ? DeepPartialItems<T> : never,
+    Rest extends JSONType ? JSONDeepPartial<Rest> : undefined
+  > {
+    return new JSONTuple(
+      this.data.items.map((type) => type.deepPartial()) as JSONTupleItems,
+      this.data.rest?.deepPartial(),
+    ) as JSONTuple<
+      DeepPartialItems<T> extends JSONTupleItems ? DeepPartialItems<T> : never,
+      Rest extends JSONType ? JSONDeepPartial<Rest> : undefined
+    >;
+  }
+}
