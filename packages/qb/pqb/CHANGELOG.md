@@ -1,5 +1,11 @@
 # pqb
 
+## 0.16.1
+
+### Patch Changes
+
+- 0ef20d80: Support subquery for a `where` column (#104)
+
 ## 0.16.0
 
 ### Minor Changes
