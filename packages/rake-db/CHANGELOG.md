@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.4
+
+### Patch Changes
+
+- 3735f9dd: rake-db: drop column default before setting a new one when chaning column type
+
 ## 2.10.3
 
 ### Patch Changes
