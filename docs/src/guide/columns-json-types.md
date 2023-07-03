@@ -67,14 +67,14 @@ export class Table extends BaseTable {
         literal: t.literal('value'),
         boolean: t.boolean(),
         null: t.null(),
-        unknown: t.unknown(), // -> unknown
+        unknown: t.unknown(),
       }),
     ),
   }));
 }
 ```
 
-`number` type can be chained with the the same methods as numeric columns:
+`number` type can be chained with the same methods as numeric columns:
 
 ```ts
 export class Table extends BaseTable {

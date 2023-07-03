@@ -1505,71 +1505,99 @@ describe('changeTable', () => {
       );
     });
 
-    it('should change column default', async () => {
-      await testUpAndDown(
-        () =>
-          db.changeTable('table', (t) => ({
-            changeDefault: t.change(
-              t.default('from'),
-              t.default(t.sql("'to'")),
-            ),
-          })),
-        () =>
-          expectSql(`
+    describe('change default', () => {
+      it('should change column default', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              changeDefault: t.change(
+                t.default('from'),
+                t.default(t.sql("'to'")),
+              ),
+            })),
+          () =>
+            expectSql(`
             ALTER TABLE "table"
               ALTER COLUMN "changeDefault" SET DEFAULT 'to'
           `),
-        () =>
-          expectSql(`
+          () =>
+            expectSql(`
             ALTER TABLE "table"
               ALTER COLUMN "changeDefault" SET DEFAULT 'from'
           `),
-      );
-    });
+        );
+      });
 
-    it('should change column default with custom name', async () => {
-      await testUpAndDown(
-        () =>
-          db.changeTable('table', (t) => ({
-            changeDefault: t
-              .name('name')
-              .change(t.default('from'), t.default(t.sql("'to'"))),
-          })),
-        () =>
-          expectSql(`
+      it('should change column default with custom name', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              changeDefault: t
+                .name('name')
+                .change(t.default('from'), t.default(t.sql("'to'"))),
+            })),
+          () =>
+            expectSql(`
             ALTER TABLE "table"
               ALTER COLUMN "name" SET DEFAULT 'to'
           `),
-        () =>
-          expectSql(`
+          () =>
+            expectSql(`
             ALTER TABLE "table"
               ALTER COLUMN "name" SET DEFAULT 'from'
           `),
-      );
-    });
+        );
+      });
 
-    it('should change column default in snakeCase mode', async () => {
-      db.options.snakeCase = true;
+      it('should change column default in snakeCase mode', async () => {
+        db.options.snakeCase = true;
 
-      await testUpAndDown(
-        () =>
-          db.changeTable('table', (t) => ({
-            changeDefault: t.change(
-              t.default('from'),
-              t.default(t.sql("'to'")),
-            ),
-          })),
-        () =>
-          expectSql(`
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              changeDefault: t.change(
+                t.default('from'),
+                t.default(t.sql("'to'")),
+              ),
+            })),
+          () =>
+            expectSql(`
             ALTER TABLE "table"
               ALTER COLUMN "change_default" SET DEFAULT 'to'
           `),
-        () =>
-          expectSql(`
+          () =>
+            expectSql(`
             ALTER TABLE "table"
               ALTER COLUMN "change_default" SET DEFAULT 'from'
           `),
-      );
+        );
+      });
+
+      it('should drop column default when changing column type before setting new default', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              column: t.change(
+                t.string().default('default'),
+                t.integer().default(123),
+              ),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+              ALTER COLUMN "column" TYPE integer,
+              ALTER COLUMN "column" DROP DEFAULT,
+              ALTER COLUMN "column" SET DEFAULT 123
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+              ALTER COLUMN "column" TYPE text,
+              ALTER COLUMN "column" DROP DEFAULT,
+              ALTER COLUMN "column" SET DEFAULT 'default'
+            `),
+        );
+      });
     });
 
     it('should change column null', async () => {

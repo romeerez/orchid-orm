@@ -487,7 +487,10 @@ const astToQueries = (
       const { from, to } = item;
       const name = getChangeColumnName(item, key, snakeCase);
 
+      let changeType = false;
       if (to.type && (from.type !== to.type || from.collate !== to.collate)) {
+        changeType = true;
+
         const type =
           !to.column || to.column.data.isOfCustomType
             ? `"${to.type}"`
@@ -513,9 +516,18 @@ const astToQueries = (
 
       if (from.default !== to.default) {
         const value =
-          typeof to.default === 'object' && to.default && isRawSQL(to.default)
+          to.default === undefined
+            ? undefined
+            : typeof to.default === 'object' &&
+              to.default &&
+              isRawSQL(to.default)
             ? to.default.toSQL({ values })
             : quote(to.default);
+
+        // when changing type, need to first drop an existing default before setting a new one
+        if (changeType && value !== undefined) {
+          alterTable.push(`ALTER COLUMN "${name}" DROP DEFAULT`);
+        }
 
         const expr =
           value === undefined ? 'DROP DEFAULT' : `SET DEFAULT ${value}`;
