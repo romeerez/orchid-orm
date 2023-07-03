@@ -228,23 +228,29 @@ const processWhere = (
           }
         }
 
-        for (const op in value) {
-          const operator = column.operators[op];
-          if (!operator) {
-            // TODO: custom error classes
-            throw new Error(`Unknown operator ${op} provided to condition`);
-          }
-
-          if (value[op as keyof typeof value] === undefined) continue;
-
+        if (value instanceof ctx.queryBuilder.constructor) {
           ands.push(
-            `${prefix}${(operator as unknown as Operator<unknown>)(
-              quotedColumn as string,
-              value[op as keyof typeof value],
-              ctx,
-              quotedAs,
-            )}`,
+            `${prefix}${quotedColumn} = (${(value as Query).toSql(ctx).text})`,
           );
+        } else {
+          for (const op in value) {
+            const operator = column.operators[op];
+            if (!operator) {
+              // TODO: custom error classes
+              throw new Error(`Unknown operator ${op} provided to condition`);
+            }
+
+            if (value[op as keyof typeof value] === undefined) continue;
+
+            ands.push(
+              `${prefix}${(operator as unknown as Operator<unknown>)(
+                quotedColumn as string,
+                value[op as keyof typeof value],
+                ctx,
+                quotedAs,
+              )}`,
+            );
+          }
         }
       }
     } else {

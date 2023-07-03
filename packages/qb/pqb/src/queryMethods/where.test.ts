@@ -58,6 +58,19 @@ describe('where', () => {
     expectSql(q.toSql(), `SELECT * FROM "user"`);
   });
 
+  it('should allow filtering by a sub query', () => {
+    const q = User.where({ id: User.get('id') });
+
+    expectSql(
+      q.toSql(),
+      `
+        SELECT *
+        FROM "user"
+        WHERE "user"."id" = (SELECT "user"."id" FROM "user" LIMIT 1)
+      `,
+    );
+  });
+
   testWhere((cb) => cb(User.all()).toSql(), `SELECT * FROM "user" WHERE`, {
     model: User,
     pkey: 'id',

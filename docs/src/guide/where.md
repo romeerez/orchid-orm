@@ -2,6 +2,8 @@
 
 ## where
 
+[//]: # 'has JSDoc'
+
 Constructing `WHERE` conditions:
 
 ```ts
@@ -37,7 +39,16 @@ const loadRecords = async (params: Params) => {
 };
 ```
 
-`.where` can accept other queries and merge their conditions:
+It supports a sub-query that is selecting a single value to compare it with a column:
+
+```ts
+db.table.where({
+  // compare `someColumn` in one table with the `column` value returned from another query.
+  someColumn: db.otherTable.where(...conditions).get('column'),
+});
+```
+
+`where` can accept other queries and merge their conditions:
 
 ```ts
 const otherQuery = db.table.where({ name: 'John' });
@@ -46,7 +57,7 @@ db.table.where({ id: 1 }, otherQuery);
 // this will produce WHERE "table"."id" = 1 AND "table"."name' = 'John'
 ```
 
-`.where` supports raw SQL:
+`where` supports raw SQL:
 
 ```ts
 db.table.where`a = b`;
@@ -60,7 +71,7 @@ import { raw } from 'orchid-orm';
 db.table.where(raw`a = b`);
 ```
 
-`.where` can accept a callback with a specific query builder containing all "where" methods such as `.where`, `.or`, `.whereNot`, `.whereIn`, `.whereExists`:
+`where` can accept a callback with a specific query builder containing all "where" methods such as `where`, `or`, `whereNot`, `whereIn`, `whereExists`:
 
 ```ts
 db.table.where((q) =>
@@ -72,7 +83,7 @@ db.table.where((q) =>
 );
 ```
 
-`.where` can accept multiple arguments, conditions are joined with `AND`:
+`where` can accept multiple arguments, conditions are joined with `AND`:
 
 ```ts
 db.table.where(
@@ -84,7 +95,7 @@ db.table.where(
 
 ### where special keys
 
-The object passed to `.where` can contain special keys, each of the keys corresponds to its own method and takes the same value as the type of argument of the method.
+The object passed to `where` can contain special keys, each of the keys corresponds to its own method and takes the same value as the type of argument of the method.
 
 For example:
 
@@ -142,162 +153,11 @@ db.table.where({
 });
 ```
 
-## and
-
-`.and` is an alias for `.where` to make it closer to SQL:
-
-```ts
-db.table.where({ id: 1 }).and({ name: 'John' });
-```
-
-## or
-
-`.or` is accepting the same arguments as `.where`, joining arguments with `OR`.
-
-Columns in single arguments are still joined with `AND`.
-
-The database is processing `AND` before `OR`, so this should be intuitively clear.
-
-```ts
-db.table.or({ id: 1, color: 'red' }, { id: 2, color: 'blue' });
-```
-
-This query will produce such SQL (simplified):
-
-```sql
-SELECT * FROM "table"
-WHERE id = 1 AND color = 'red'
-   OR id = 2 AND color = 'blue'
-```
-
-## find
-
-The `find` method is available only for tables which has exactly one primary key.
-And also it can accept raw SQL template literal, then the primary key is not required.
-
-Find record by id, throw [NotFoundError](/guide/error-handling.html) if not found:
-
-```ts
-await db.table.find(1);
-```
-
-```ts
-await db.user.find`
-  age = ${age} AND
-  name = ${name}
-`;
-```
-
-## findOptional
-
-Find record by id, returns `undefined` when not found:
-
-```ts
-await db.table.findOptional(1);
-```
-
-## findBy
-
-`.findBy` Takes the same arguments as `.where` and returns a single record, throwing `NotFoundError` if not found.
-
-```ts
-db.table.findBy(...conditions);
-// is equivalent to:
-db.table.where(...conditions).take();
-```
-
-## findByOptional
-
-`.findByOptional` Takes the same arguments as `.where` and returns a single record, returns `undefined` when not found:
-
-```ts
-db.table.findByOptional(...conditions);
-// is equivalent to:
-db.table.where(...conditions).takeOptional();
-```
-
-## whereNot
-
-`.whereNot` takes the same arguments as `.where` and prepends them with `NOT` in SQL
-
-```ts
-// find records of different colors than red
-db.table.whereNot({ color: 'red' });
-```
-
-## andNot
-
-`.andNot` is an alias for `.whereNot`
-
-## orNot
-
-`.orNot` takes the same arguments as `.or`, and prepends each condition with `NOT` just as `.whereNot` does.
-
-## whereIn, orWhereIn, whereNotIn, orWhereNotIn
-
-`.whereIn` and related methods are for the `IN` operator to check for inclusion in a list of values.
-
-`.orWhereIn` acts as `.or`, `.whereNotIn` acts as `.whereNot`, and `.orWhereNotIn` acts as `.orNot`.
-
-When used with a single column it works equivalent to the `in` column operator:
-
-```ts
-db.table.whereIn('column', [1, 2, 3]);
-// the same as:
-db.table.where({ column: [1, 2, 3] });
-```
-
-`.whereIn` can support a tuple of columns, that's what the `in` operator cannot support:
-
-```ts
-db.table.whereIn(
-  ['id', 'name'],
-  [
-    [1, 'Alice'],
-    [2, 'Bob'],
-  ],
-);
-```
-
-It supports sub query which should return records with columns of the same type:
-
-```ts
-db.table.whereIn(['id', 'name'], OtherTable.select('id', 'name'));
-```
-
-It supports raw SQL expression:
-
-```ts
-db.table.whereIn(['id', 'name'], db.table.sql`((1, 'one'), (2, 'two'))`);
-```
-
-## whereExists, orWhereExists, whereNotExists, orWhereNotExists
-
-`.whereExists` and related methods are for support of the `WHERE EXISTS (query)` clause.
-
-This method is accepting the same arguments as `.join`, see the [join](#join) section for more details.
-
-`.orWhereExists` acts as `.or`, `.whereNotExists` acts as `.whereNot`, and `.orWhereNotExists` acts as `.orNot`.
-
-```ts
-User.whereExists(Account, 'account.id', 'user.id');
-
-User.whereExists(Account, (q) => q.on('account.id', '=', 'user.id'));
-```
-
-## exists
-
-Use `.exists()` to check if there is at least one record-matching condition.
-
-It will discard previous `.select` statements if any. Returns a boolean.
-
-```ts
-const exists: boolean = await db.table.where(...conditions).exists();
-```
-
 ## column operators
 
-`.where` argument can take an object where the key is the name of the operator and the value is its argument.
+[//]: # 'has JSDoc'
+
+`where` argument can take an object where the key is the name of the operator and the value is its argument.
 
 Different types of columns support different sets of operators.
 
@@ -477,4 +337,253 @@ db.table.where({
     jsonSupersetOf: { a: 1 },
   },
 });
+```
+
+## and
+
+[//]: # 'has JSDoc'
+
+`and` is an alias for `where` to make it look closer to SQL:
+
+```ts
+db.table.where({ id: 1 }).and({ name: 'John' });
+```
+
+## or
+
+[//]: # 'has JSDoc'
+
+`or` is accepting the same arguments as `where`, joining arguments with `OR`.
+
+Columns in single arguments are still joined with `AND`.
+
+The database is processing `AND` before `OR`, so this should be intuitively clear.
+
+```ts
+db.table.or({ id: 1, color: 'red' }, { id: 2, color: 'blue' });
+```
+
+This query will produce such SQL (simplified):
+
+```sql
+SELECT * FROM "table"
+WHERE id = 1 AND color = 'red'
+   OR id = 2 AND color = 'blue'
+```
+
+## find
+
+[//]: # 'has JSDoc'
+
+The `find` method is available only for tables which has exactly one primary key.
+And also it can accept raw SQL template literal, then the primary key is not required.
+
+Find record by id, throw [NotFoundError](/guide/error-handling.html) if not found:
+
+```ts
+await db.table.find(1);
+```
+
+```ts
+await db.user.find`
+  age = ${age} AND
+  name = ${name}
+`;
+```
+
+## findOptional
+
+[//]: # 'has JSDoc'
+
+Find a single record by the primary key (id), adds `LIMIT 1`, can accept a raw SQL.
+Returns `undefined` when not found.
+
+```ts
+const result: TableType | undefined = await db.table.find(123);
+```
+
+## findBy
+
+[//]: # 'has JSDoc'
+
+The same as `where(conditions).take()`, it will filter records and add a `LIMIT 1`.
+Throws `NotFoundError` if not found.
+
+```ts
+const result: TableType = await db.table.findBy({ key: 'value' });
+// is equivalent to:
+db.table.where({ key: 'value' }).take();
+```
+
+## findByOptional
+
+[//]: # 'has JSDoc'
+
+The same as `where(conditions).takeOptional()`, it will filter records and add a `LIMIT 1`.
+Returns `undefined` when not found.
+
+```ts
+const result: TableType | undefined = await db.table.findByOptional({
+  key: 'value',
+});
+```
+
+## whereNot
+
+[//]: # 'has JSDoc'
+
+`whereNot` takes the same arguments as `where` and prepends them with `NOT` in SQL
+
+```ts
+// find records of different colors than red
+db.table.whereNot({ color: 'red' });
+```
+
+## andNot
+
+[//]: # 'has JSDoc'
+
+`andNot` is an alias for `whereNot`.
+
+## orNot
+
+[//]: # 'has JSDoc'
+
+`orNot` takes the same arguments as `or`, and prepends each condition with `NOT` just as `whereNot` does.
+
+## whereIn
+
+[//]: # 'has JSDoc'
+
+`whereIn` and related methods are for the `IN` operator to check for inclusion in a list of values.
+
+When used with a single column it works equivalent to the `in` column operator:
+
+```ts
+db.table.whereIn('column', [1, 2, 3]);
+// the same as:
+db.table.where({ column: [1, 2, 3] });
+```
+
+`whereIn` can support a tuple of columns, that's what the `in` operator cannot support:
+
+```ts
+db.table.whereIn(
+  ['id', 'name'],
+  [
+    [1, 'Alice'],
+    [2, 'Bob'],
+  ],
+);
+```
+
+It supports sub query which should return records with columns of the same type:
+
+```ts
+db.table.whereIn(['id', 'name'], OtherTable.select('id', 'name'));
+```
+
+It supports raw SQL expression:
+
+```ts
+db.table.whereIn(['id', 'name'], db.table.sql`((1, 'one'), (2, 'two'))`);
+```
+
+## orWhereIn
+
+[//]: # 'has JSDoc'
+
+Takes the same arguments as `whereIn`.
+Add a `WHERE IN` condition prefixed with `OR` to the query:
+
+```ts
+db.table.whereIn('a', [1, 2, 3]).orWhereIn('b', ['one', 'two']);
+```
+
+## whereNotIn
+
+[//]: # 'has JSDoc'
+
+Acts as `whereIn`, but negates the condition with `NOT`:
+
+```ts
+db.table.whereNotIn('color', ['red', 'green', 'blue']);
+```
+
+## orWhereNotIn
+
+[//]: # 'has JSDoc'
+
+Acts as `whereIn`, but prepends `OR` to the condition and negates it with `NOT`:
+
+```ts
+db.table.whereNotIn('a', [1, 2, 3]).orWhereNoIn('b', ['one', 'two']);
+```
+
+## whereExists
+
+[//]: # 'has JSDoc'
+
+`whereExists` is for support of the `WHERE EXISTS (query)` clause.
+
+This method is accepting the same arguments as `join`, see the [join](#join) section for more details.
+
+```ts
+// find users who have accounts
+// find by a relation name if it's defined
+db.user.whereExists('account');
+
+// find using a table and a join conditions
+db.user.whereExists(db.account, 'account.id', 'user.id');
+
+// find using a query builder in a callback:
+db.user.whereExists(db.account, (q) => q.on('account.id', '=', 'user.id'));
+```
+
+## orWhereExists
+
+[//]: # 'has JSDoc'
+
+Acts as `whereExists`, but prepends the condition with `OR`:
+
+```ts
+// find users who have an account or a profile,
+// imagine that the user has both `account` and `profile` relations defined.
+db.user.whereExist('account').orWhereExists('profile');
+```
+
+## whereNotExists
+
+[//]: # 'has JSDoc'
+
+Acts as `whereExists`, but negates the condition with `NOT`:
+
+```ts
+// find users who don't have an account,
+// image that the user `belongsTo` or `hasOne` account.
+db.user.whereNotExist('account');
+```
+
+## orWhereNotExists
+
+[//]: # 'has JSDoc'
+
+Acts as `whereExists`, but prepends the condition with `OR` and negates it with `NOT`:
+
+```ts
+// find users who don't have an account OR who don't have a profile
+// imagine that the user has both `account` and `profile` relations defined.
+db.user.whereNotExists('account').orWhereNotExists('profile');
+```
+
+## exists
+
+[//]: # 'has JSDoc'
+
+Use `exists()` to check if there is at least one record-matching condition.
+
+It will discard previous `select` statements if any. Returns a boolean.
+
+```ts
+const exists: boolean = await db.table.where(...conditions).exists();
 ```

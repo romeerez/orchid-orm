@@ -10,8 +10,7 @@ import {
 } from 'orchid-core';
 import { OrderTsQueryConfig, SearchWeight, ToSqlCtx } from '../sql';
 import { QueryBase } from '../queryBase';
-import { setQueryObjectValue } from '../queryDataUtils';
-import { WhereArg } from './where';
+import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
 import { getSearchLang, getSearchText } from '../sql/fromAndAs';
 import { OrchidOrmInternalError } from '../errors';
 import { addValue, columnToSql } from '../sql/common';
@@ -422,7 +421,21 @@ export class SearchMethods {
     this: T,
     arg: SearchArg<T, As>,
   ): WhereSearchResult<T, As> {
-    return this._where({ SEARCH: arg } as WhereArg<T>) as WhereSearchResult<
+    if (!arg.as) {
+      const as = saveSearchAlias(this, '@q') as As;
+
+      arg = {
+        ...arg,
+        as,
+      };
+    }
+
+    setQueryObjectValue(this, 'sources', arg.as as string, arg);
+    if (arg.order) {
+      pushQueryValue(this, 'order', arg.as);
+    }
+
+    return pushQueryValue(this, 'and', { SEARCH: arg }) as WhereSearchResult<
       T,
       As
     >;

@@ -327,14 +327,23 @@ export class QueryMethods<CT extends ColumnTypesBase> {
   }
 
   /**
-   * Find a single record by the primary key (id), adds `LIMIT 1`.
-   * Throws when not found.
+   * The `find` method is available only for tables which has exactly one primary key.
+   * And also it can accept raw SQL template literal, then the primary key is not required.
+   *
+   * Find record by id, throw [NotFoundError](/guide/error-handling.html) if not found:
    *
    * ```ts
-   * const result: TableType = await db.table.find(123);
+   * await db.table.find(1);
    * ```
    *
-   * @param args - primary key value to find by
+   * ```ts
+   * await db.user.find`
+   *   age = ${age} AND
+   *   name = ${name}
+   * `;
+   * ```
+   *
+   * @param args - primary key value to find by, or a raw SQL
    */
   find<T extends Query>(
     this: T,
@@ -364,14 +373,14 @@ export class QueryMethods<CT extends ColumnTypesBase> {
   }
 
   /**
-   * Find a single record by the primary key (id), adds `LIMIT 1`.
+   * Find a single record by the primary key (id), adds `LIMIT 1`, can accept a raw SQL.
    * Returns `undefined` when not found.
    *
    * ```ts
    * const result: TableType | undefined = await db.table.find(123);
    * ```
    *
-   * @param args - primary key value to find by
+   * @param args - primary key value to find by, or a raw SQL
    */
   findOptional<T extends Query>(
     this: T,
@@ -390,12 +399,12 @@ export class QueryMethods<CT extends ColumnTypesBase> {
 
   /**
    * The same as `where(conditions).take()`, it will filter records and add a `LIMIT 1`.
-   * Throws when not found.
+   * Throws `NotFoundError` if not found.
    *
    * ```ts
-   * const result: TableType = await db.table.findBy({
-   *   key: 'value',
-   * });
+   * const result: TableType = await db.table.findBy({ key: 'value' });
+   * // is equivalent to:
+   * db.table.where({ key: 'value' }).take()
    * ```
    *
    * @param args - `where` conditions
@@ -625,6 +634,15 @@ export class QueryMethods<CT extends ColumnTypesBase> {
     return this;
   }
 
+  /**
+   * Use `exists()` to check if there is at least one record-matching condition.
+   *
+   * It will discard previous `select` statements if any. Returns a boolean.
+   *
+   * ```ts
+   * const exists: boolean = await db.table.where(...conditions).exists();
+   * ```
+   */
   exists<T extends Query>(this: T): SetQueryReturnsColumn<T, BooleanColumn> {
     return this.clone()._exists();
   }
