@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.8.1
+
+### Patch Changes
+
+- d1dad50d: Accept RawSQL object in db.query (#138)
+
 ## 0.8.0
 
 ### Minor Changes

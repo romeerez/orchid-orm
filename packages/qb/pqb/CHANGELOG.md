@@ -1,5 +1,13 @@
 # pqb
 
+## 0.16.2
+
+### Patch Changes
+
+- d1dad50d: Accept RawSQL object in db.query (#138)
+- Updated dependencies [d1dad50d]
+  - orchid-core@0.8.1
+
 ## 0.16.1
 
 ### Patch Changes
