@@ -10,6 +10,7 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { TransactionState } from 'orchid-core';
+import { raw } from './sql/rawSql';
 
 describe('db connection', () => {
   it('should be able to open connection after closing it', async () => {
@@ -283,10 +284,10 @@ describe('db', () => {
       const original = testDb.internal.transactionStorage.getStore;
       testDb.internal.transactionStorage.getStore = jest.fn(() => undefined);
 
-      const result = await testDb.query({ raw: sql });
+      const result = await testDb.query(raw({ raw: sql }));
 
       expect(result.rows).toEqual([{ one: 1 }]);
-      expect(query).toBeCalledWith({ text: sql });
+      expect(query).toBeCalledWith({ text: sql, values: [] });
 
       testDb.internal.transactionStorage.getStore = original;
     });
@@ -308,10 +309,10 @@ describe('db', () => {
       const store = testDb.internal.transactionStorage.getStore();
       const query = jest.spyOn((store as TransactionState).adapter, 'query');
 
-      const result = await testDb.query({ raw: sql });
+      const result = await testDb.query(raw({ raw: sql }));
 
       expect(result.rows).toEqual([{ one: 1 }]);
-      expect(query).toBeCalledWith({ text: sql });
+      expect(query).toBeCalledWith({ text: sql, values: [] });
     });
 
     it('should query arrays', async () => {
@@ -319,10 +320,10 @@ describe('db', () => {
       const original = testDb.internal.transactionStorage.getStore;
       testDb.internal.transactionStorage.getStore = jest.fn(() => undefined);
 
-      const result = await testDb.queryArrays({ raw: sql });
+      const result = await testDb.queryArrays(raw({ raw: sql }));
 
       expect(result.rows).toEqual([[1]]);
-      expect(query).toBeCalledWith({ text: sql });
+      expect(query).toBeCalledWith({ text: sql, values: [] });
 
       testDb.internal.transactionStorage.getStore = original;
     });
@@ -344,10 +345,10 @@ describe('db', () => {
       const store = testDb.internal.transactionStorage.getStore();
       const query = jest.spyOn((store as TransactionState).adapter, 'arrays');
 
-      const result = await testDb.queryArrays({ raw: sql });
+      const result = await testDb.queryArrays(raw({ raw: sql }));
 
       expect(result.rows).toEqual([[1]]);
-      expect(query).toBeCalledWith({ text: sql });
+      expect(query).toBeCalledWith({ text: sql, values: [] });
     });
   });
 });

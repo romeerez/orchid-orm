@@ -43,6 +43,7 @@ import {
   TemplateLiteralArgs,
   QueryInternal,
   SQLQueryArgs,
+  isRawSQL,
 } from 'orchid-core';
 import { q } from './sql/common';
 import { inspect } from 'util';
@@ -347,8 +348,12 @@ const performQuery = async <Result>(
 ): Promise<Result> => {
   const trx = q.internal.transactionStorage.getStore();
   let sql: Sql;
-  if (typeof args[0].raw === 'string') {
-    sql = { text: args[0].raw, values: args[0].values as unknown[] };
+  if (isRawSQL(args[0])) {
+    const values: unknown[] = [];
+    sql = {
+      text: args[0].toSQL({ values }),
+      values,
+    };
   } else {
     const values: unknown[] = [];
     sql = {

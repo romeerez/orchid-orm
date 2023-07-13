@@ -8,11 +8,9 @@ import {
   SinglePrimaryKey,
 } from './columns/columnType';
 import { QueryInternal } from './query';
-import { TemplateLiteralArgs } from './raw';
+import { RawSQLBase, TemplateLiteralArgs } from './raw';
 
-export type SQLQueryArgs =
-  | TemplateLiteralArgs
-  | [{ raw: string; values?: unknown[] }];
+export type SQLQueryArgs = TemplateLiteralArgs | [RawSQLBase];
 
 export type DbBase<
   Adapter extends AdapterBase,

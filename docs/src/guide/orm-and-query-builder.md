@@ -459,18 +459,21 @@ await db.$transaction(async () => {
 });
 ```
 
-Alternatively, support a simple SQL string, with optional `values`:
-
-Note that the values is a simple array, and the SQL is referring to the values with `$1`, `$2` and so on.
+Alternatively, provide a raw SQL object created with [raw](/guide/query-methods.html#raw-sql) function:
 
 ```ts
-const value = 1;
+import { raw } from 'orchid-orm';
 
 // it is NOT safe to interpolate inside a simple string, use `values` to pass the values.
-const result = await db.$query<{ one: number }>({
-  raw: 'SELECT $1 AS one',
-  values: [value],
-});
+const result = await db.$query<{ one: number }>(
+  raw({
+    raw: 'SELECT $value AS one',
+    values: {
+      value: 123,
+    },
+  }),
+);
+
 // data is inside `rows` array:
 result.rows[0].one;
 ```
