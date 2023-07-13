@@ -15,6 +15,8 @@ export type Sql = {
 
 // query metadata that is stored only on TS side, not available in runtime
 export type QueryMetaBase = {
+  // kind of a query: select, update, create, etc.
+  kind: string;
   // table alias
   as?: string;
   // return type of `create`, `update`, `delete` depends on whether the query has select

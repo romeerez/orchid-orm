@@ -130,6 +130,9 @@ export type RelationQuery<
         }),
 > = ((params: Params) => Q) &
   Q & {
+    meta: {
+      hasWhere: true;
+    };
     // INNER JOIN the current relation instead of the default OUTER behavior
     join<T extends Query>(this: T): T;
   };

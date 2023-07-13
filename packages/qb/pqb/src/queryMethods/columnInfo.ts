@@ -1,5 +1,28 @@
-import { Query, SetQueryReturnsColumnInfo } from '../query';
+import { Query, SetQueryKind } from '../query';
 import { ColumnInfoQueryData } from '../sql';
+import { ColumnType } from '../columns';
+import { QueryCatch, QueryThen } from 'orchid-core';
+
+/**
+ * Result type for `columnInfo` method.
+ * Sets query kind to 'columnInfo', returns a single value (may return undefined),
+ * the value is a {@link ColumnInfo} object or a Record with keys for column names and ColumnInfo objects as values.
+ **/
+export type SetQueryReturnsColumnInfo<
+  T extends Query,
+  Column extends keyof T['shape'] | undefined,
+  Result = Column extends keyof T['shape']
+    ? ColumnInfo
+    : Record<keyof T['shape'], ColumnInfo>,
+> = Omit<
+  SetQueryKind<T, 'columnInfo'>,
+  'result' | 'returnType' | 'then' | 'catch'
+> & {
+  result: { value: ColumnType<Result> };
+  returnType: 'value';
+  then: QueryThen<Result>;
+  catch: QueryCatch<Result>;
+};
 
 // column info pulled from a database
 export type ColumnInfo = {

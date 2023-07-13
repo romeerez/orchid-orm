@@ -1,4 +1,4 @@
-import { Query, SetQueryReturnsRowCount } from '../query';
+import { Query, SetQueryKind, SetQueryReturnsRowCount } from '../query';
 import { throwIfNoWhere } from '../queryDataUtils';
 
 export type DeleteMethodsNames = 'del' | '_del' | 'delete' | '_delete';
@@ -8,8 +8,8 @@ type DeleteArgs<T extends Query> = T['meta']['hasWhere'] extends true
   : [never];
 
 type DeleteResult<T extends Query> = T['meta']['hasSelect'] extends true
-  ? T
-  : SetQueryReturnsRowCount<T>;
+  ? SetQueryKind<T, 'delete'>
+  : SetQueryReturnsRowCount<SetQueryKind<T, 'delete'>>;
 
 const del = <T extends Query>(self: T): DeleteResult<T> => {
   return _del(self.clone()) as unknown as DeleteResult<T>;
@@ -45,11 +45,11 @@ export class Delete {
    *
    * This method deletes one or more rows, based on other conditions specified in the query.
    *
-   * By default, `.delete` will return a count of deleted records.
+   * By default, `delete` will return a count of deleted records.
    *
-   * Place `.select`, `.selectAll`, or `.get` before `.delete` to specify returning columns.
+   * Place `select`, `selectAll`, or `get` before `delete` to specify returning columns.
    *
-   * Need to provide `.where`, `.findBy`, or `.find` conditions before calling `.delete`.
+   * Need to provide `where`, `findBy`, or `find` conditions before calling `delete`.
    * To prevent accidental deletion of all records, deleting without where will result in TypeScript and a runtime error.
    *
    * Use `all()` to delete ALL records without conditions:
@@ -81,7 +81,7 @@ export class Delete {
    *   .delete();
    * ```
    *
-   * `.delete` supports joining, under the hood the join is transformed to `USING` and `WHERE` statements:
+   * `delete` supports joining, under the hood the join is transformed to `USING` and `WHERE` statements:
    *
    * ```ts
    * // delete all users who have corresponding profile records:

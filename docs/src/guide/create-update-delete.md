@@ -6,7 +6,7 @@ By default, all create methods will return a full record.
 
 `create*` methods require columns that are not nullable and don't have a default.
 
-Place `.select`, or `.get` before `.create` to specify returning columns:
+Place `select`, or `get` before `create` to specify returning columns:
 
 ```ts
 // to return only `id`, use get('id')
@@ -163,15 +163,15 @@ const manyRecords = await db.table.createManyFrom(
 
 [//]: # 'has JSDoc'
 
-`.orCreate` creates a record only if it was not found by conditions.
+`orCreate` creates a record only if it was not found by conditions.
 
 It will implicitly wrap queries in a transaction if it was not wrapped yet.
 
-`.find` or `.findBy` must precede `.orCreate`.
+`find` or `findBy` must precede `orCreate`.
 
 It is accepting the same argument as `create` commands.
 
-By default, it is not returning columns, place `.get`, `.select`, or `.selectAll` before `.orCreate` to specify returning columns.
+By default, it is not returning columns, place `get`, `select`, or `selectAll` before `orCreate` to specify returning columns.
 
 ```ts
 const user = await User.selectAll().find({ email: 'some@email.com' }).orCreate({
@@ -244,7 +244,7 @@ See the documentation on the .ignore() and .merge() methods for more details.
 
 [//]: # 'has JSDoc'
 
-Available only after `.onConflict`.
+Available only after `onConflict`.
 
 Modifies a create query, and causes it to be silently dropped without an error if a conflict occurs.
 
@@ -266,7 +266,7 @@ db.table
 
 [//]: # 'has JSDoc'
 
-Available only after `.onConflict`.
+Available only after `onConflict`.
 
 Modifies a create query, to turn it into an 'upsert' operation.
 
@@ -358,7 +358,7 @@ db.table
   .where({ updatedAt: { lt: timestamp } });
 ```
 
-`.merge` also accepts raw SQL expression:
+`merge` also accepts raw SQL expression:
 
 ```ts
 db.table
@@ -371,9 +371,9 @@ db.table
 
 [//]: # 'has JSDoc'
 
-`.defaults` allows setting values that will be used later in `.create`.
+`defaults` allows setting values that will be used later in `create`.
 
-Columns provided in `.defaults` are marked as optional in the following `.create`. `defaults`
+Columns provided in `defaults` are marked as optional in the following `create`. `defaults`
 
 Default data is the same as in [create](#create) and [createMany](#createMany),
 so you can provide a raw SQL, or a query.
@@ -394,13 +394,13 @@ db.table
 
 [//]: # 'has JSDoc'
 
-`.update` takes an object with columns and values to update records.
+`update` takes an object with columns and values to update records.
 
-By default, `.update` will return a count of updated records.
+By default, `update` will return a count of updated records.
 
-Place `.select`, `.selectAll`, or `.get` before `.update` to specify returning columns.
+Place `select`, `selectAll`, or `get` before `update` to specify returning columns.
 
-You need to provide `.where`, `.findBy`, or `.find` conditions before calling `.update`.
+You need to provide `where`, `findBy`, or `find` conditions before calling `update`.
 To ensure that the whole table won't be updated by accident, updating without where conditions will result in TypeScript and runtime errors.
 
 Use `all()` to update ALL records without conditions:
@@ -409,9 +409,9 @@ Use `all()` to update ALL records without conditions:
 await db.table.all().update({ name: 'new name' });
 ```
 
-If `.select` and `.where` were specified before the update it will return an array of updated records.
+If `select` and `where` were specified before the update it will return an array of updated records.
 
-If `.select` and `.take`, `.find`, or similar were specified before the update it will return one updated record.
+If `select` and `take`, `find`, or similar were specified before the update it will return one updated record.
 
 For a column value you can provide a specific value, raw SQL, a query object that returns a single value, or a callback with a sub-query.
 
@@ -459,6 +459,65 @@ await db.table.where({ ...conditions }).update({
   jsonColumn: (q) => q.jsonSet('jsonColumn', ['foo', 'bar'], 'new value'),
 });
 ```
+
+### sub-queries
+
+In addition to sub-queries that are simply selecting a single value, it's supported to update a column with a result of the provided `create`, `update`, or `delete` sub-query.
+
+```ts
+await db.table.where({ ...conditions }).update({
+  // `column` will be set to a value of the `otherColumn` of the created record.
+  column: db.otherTable.get('otherColumn').create({ ...data }),
+
+  // `column2` will be set to a value of the `otherColumn` of the updated record.
+  column2: db.otherTable
+    .get('otherColumn')
+    .findBy({ ...conditions })
+    .update({ key: 'value' }),
+
+  // `column3` will be set to a value of the `otherColumn` of the deleted record.
+  column3: db.otherTable
+    .get('otherColumn')
+    .findBy({ ...conditions })
+    .delete(),
+});
+```
+
+This is achieved by defining a `WITH` clause under the hood, it produces such a query:
+
+```sql
+WITH q AS (
+  INSERT INTO "otherTable"(col1, col2, col3)
+  VALUES ('val1', 'val2', 'val3')
+  RETURNING "otherTable"."selectedColumn"
+)
+UPDATE "table"
+SET "column" = (SELECT * FROM "q")
+```
+
+The query is atomic, and if the sub-query fails, or the update part fails, or if multiple rows are returned from a sub-query, no changes will persist in the database.
+
+Though it's possible to select a single value from a callback for the column to update:
+
+```ts
+await db.table.find(1).update({
+  // update column `one` with the value of column `two` of the related record.
+  one: (q) => q.relatedTable.get('two'),
+});
+```
+
+It is **not** supported to use `create`, `update`, or `delete` kinds of sub-query on related tables:
+
+```ts
+await db.table.find(1).update({
+  // TS error, this is not allowed:
+  one: (q) => q.relatedTable.get('two').create({ ...data }),
+});
+```
+
+It is not supported because query inside `WITH` cannot reference the table in `UPDATE`.
+
+### null and undefined
 
 `null` value will set a column to `NULL`, but the `undefined` value will be ignored:
 
@@ -521,17 +580,17 @@ try {
 
 [//]: # 'has JSDoc'
 
-`.upsert` tries to update one record, and it will perform create in case a record was not found.
+`upsert` tries to update one record, and it will perform create in case a record was not found.
 
 It will implicitly wrap queries in a transaction if it was not wrapped yet.
 
-`.find` or `.findBy` must precede `.upsert` because it does not work with multiple updates.
+`find` or `findBy` must precede `upsert` because it does not work with multiple updates.
 
 In case more than one row was updated, it will throw `MoreThanOneRowError` and the transaction will be rolled back.
 
 `update` and `create` properties are accepting the same type of objects as the `update` and `create` commands.
 
-Not returning a value by default, place `.select` or `.selectAll` before `.upsert` to specify returning columns.
+Not returning a value by default, place `select` or `selectAll` before `upsert` to specify returning columns.
 
 ```ts
 const user = await User.selectAll()
@@ -617,11 +676,11 @@ It is aliased to `del` because `delete` is a reserved word in JavaScript.
 
 This method deletes one or more rows, based on other conditions specified in the query.
 
-By default, `.delete` will return a count of deleted records.
+By default, `delete` will return a count of deleted records.
 
-Place `.select`, `.selectAll`, or `.get` before `.delete` to specify returning columns.
+Place `select`, `selectAll`, or `get` before `delete` to specify returning columns.
 
-Need to provide `.where`, `.findBy`, or `.find` conditions before calling `.delete`.
+Need to provide `where`, `findBy`, or `find` conditions before calling `delete`.
 To prevent accidental deletion of all records, deleting without where will result in TypeScript and a runtime error.
 
 Use `all()` to delete ALL records without conditions:
@@ -653,7 +712,7 @@ const deletedUsersFull = await db.table
   .delete();
 ```
 
-`.delete` supports joining, under the hood the join is transformed to `USING` and `WHERE` statements:
+`delete` supports joining, under the hood the join is transformed to `USING` and `WHERE` statements:
 
 ```ts
 // delete all users who have corresponding profile records:

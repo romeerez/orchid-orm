@@ -1,8 +1,11 @@
-import { Query } from '../query';
+import { Query, SetQueryKind } from '../query';
 import { CopyOptions } from '../sql';
 
 // argument of the `copy` function can accept various options
 type CopyArg<T extends Query> = CopyOptions<keyof T['shape']>;
+
+// Result type for the `copy` method, simply setting a query kind.
+type CopyResult<T extends Query> = SetQueryKind<T, 'copy'>;
 
 export class CopyMethods {
   /**
@@ -50,14 +53,14 @@ export class CopyMethods {
    * ```
    * @param arg - object with copy options
    */
-  copy<T extends Query>(this: T, arg: CopyArg<T>): T {
+  copy<T extends Query>(this: T, arg: CopyArg<T>): CopyResult<T> {
     return this.clone()._copy(arg);
   }
-  _copy<T extends Query>(this: T, arg: CopyArg<T>) {
+  _copy<T extends Query>(this: T, arg: CopyArg<T>): CopyResult<T> {
     Object.assign(this.q, {
       type: 'copy',
       copy: arg,
     });
-    return this;
+    return this as CopyResult<T>;
   }
 }

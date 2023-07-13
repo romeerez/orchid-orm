@@ -116,6 +116,7 @@ export interface Db<
   ) => QueryError<this>;
   isSubQuery: false;
   meta: {
+    kind: 'select';
     defaults: Record<
       {
         [K in keyof Shape]: undefined extends Shape[K]['data']['default']

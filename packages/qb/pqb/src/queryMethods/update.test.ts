@@ -10,7 +10,7 @@ import {
   UserRecord,
 } from '../test-utils/test-utils';
 import { assertType, expectSql, useTestDatabase } from 'test-utils';
-import { HasOneRelation, RelationQuery } from '../relations';
+import { BelongsToRelation, RelationQuery } from '../relations';
 import { addQueryOn } from './join';
 import { Query } from '../query';
 import { raw } from '../sql/rawSql';
@@ -405,6 +405,7 @@ describe('update', () => {
       password: undefined,
       data: null,
     });
+
     expectSql(
       query.toSql(),
       `
@@ -424,6 +425,7 @@ describe('update', () => {
     const query = User.where({ id: 1 }).update({
       name: raw`'raw sql'`,
     });
+
     expectSql(
       query.toSql(),
       `
@@ -441,6 +443,7 @@ describe('update', () => {
     const { id } = await User.select('id').create(userData);
 
     const query = User.selectAll().findBy({ id }).update(update);
+
     expectSql(
       query.toSql(),
       `
@@ -484,39 +487,136 @@ describe('update', () => {
     );
   });
 
-  it('should update column with a sub query callback', async () => {
-    const profile = Object.assign(Object.create(Profile), {
-      joinQuery(fromQuery: Query, toQuery: Query) {
-        return addQueryOn(toQuery, fromQuery, toQuery, 'userId', 'id');
-      },
-    });
-    profile.baseQuery = profile;
-
-    const user = Object.assign(User, {
-      profile,
-    }) as unknown as typeof User & {
-      relations: { profile: HasOneRelation };
-      profile: RelationQuery<'profile', never, never, typeof Profile>;
-    };
-
-    const q = user.all().update({
-      name: (q) => q.profile.get('bio'),
+  it('should update column with a result of a sub query that performs update', () => {
+    const q = User.find(1).update({
+      name: User.find(2).get('name').update({ name: 'new name' }),
     });
 
     expectSql(
       q.toSql(),
       `
+        WITH "q" AS (
+          UPDATE "user"
+             SET "name" = $1,
+                 "updatedAt" = now()
+          WHERE "user"."id" = $2
+          RETURNING "user"."name"
+        )
         UPDATE "user"
+           SET "name" = (SELECT * FROM "q"),
+               "updatedAt" = now()
+        WHERE "user"."id" = $3
+      `,
+      ['new name', 2, 1],
+    );
+  });
+
+  it('should update column with a result of a sub query that performs create', () => {
+    const q = User.find(1).update({
+      name: User.get('name').create(userData),
+    });
+
+    expectSql(
+      q.toSql(),
+      `
+        WITH "q" AS (
+          INSERT INTO "user"("name", "password")
+          VALUES ($1, $2)
+          RETURNING "user"."name"
+        )
+        UPDATE "user"
+           SET "name" = (SELECT * FROM "q"),
+               "updatedAt" = now()
+        WHERE "user"."id" = $3
+      `,
+      [userData.name, userData.password, 1],
+    );
+  });
+
+  it('should update column with a result of a sub query that performs delete', () => {
+    const q = User.find(1).update({
+      name: User.find(2).get('name').delete(),
+    });
+
+    expectSql(
+      q.toSql(),
+      `
+        WITH "q" AS (
+          DELETE FROM "user"
+          WHERE "user"."id" = $1
+          RETURNING "user"."name"
+        )
+        UPDATE "user"
+           SET "name" = (SELECT * FROM "q"),
+               "updatedAt" = now()
+        WHERE "user"."id" = $2
+      `,
+      [2, 1],
+    );
+  });
+
+  describe('update with relation query', () => {
+    const user = Object.assign(Object.create(User), {
+      joinQuery(fromQuery: Query, toQuery: Query) {
+        return addQueryOn(toQuery, fromQuery, toQuery, 'id', 'userId');
+      },
+    });
+    user.baseQuery = user;
+
+    const profile = Object.assign(Profile, {
+      user,
+    }) as unknown as typeof Profile & {
+      relations: { user: BelongsToRelation };
+      user: RelationQuery<'user', never, never, typeof User>;
+    };
+
+    it('should update column with a sub query callback', () => {
+      const q = profile.all().update({
+        userId: (q) => q.user.get('id'),
+      });
+
+      expectSql(
+        q.toSql(),
+        `
+        UPDATE "profile"
         SET
-          "name" = (
-            SELECT "profile"."bio"
-            FROM "profile"
-            WHERE "profile"."userId" = "user"."id"
+          "userId" = (
+            SELECT "user"."id"
+            FROM "user"
+            WHERE "user"."id" = "profile"."userId"
             LIMIT 1
           ),
           "updatedAt" = now()
       `,
-    );
+      );
+    });
+
+    it('should forbid updating a column with a result of relation query that performs update', () => {
+      expect(() =>
+        profile.all().update({
+          // @ts-expect-error sub query must be of kind 'select'
+          bio: (q) => q.user.get('name').find(1).update({ name: 'new name' }),
+        }),
+      ).toThrow();
+    });
+
+    it('should forbid updating a column with a result of relation query that performs create', () => {
+      expect(() =>
+        profile.all().update({
+          // @ts-expect-error sub query must be of kind 'select'
+          bio: (q) => q.user.get('name').create(userData),
+        }),
+      ).toThrow();
+    });
+
+    it('should forbid updating a column with a result of relation query that performs delete', () => {
+      expect(() =>
+        profile.all().update({
+          // @ts-expect-error sub query must be of kind 'select'
+          bio: (q) => q.user.get('name').find(1).delete(),
+        }),
+      ).toThrow();
+    });
   });
 
   describe('updateOrThrow', () => {

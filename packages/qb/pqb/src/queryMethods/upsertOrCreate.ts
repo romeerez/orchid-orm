@@ -1,4 +1,9 @@
-import { Query, SetQueryReturnsOne, SetQueryReturnsVoid } from '../query';
+import {
+  Query,
+  SetQueryKind,
+  SetQueryReturnsOne,
+  SetQueryReturnsVoid,
+} from '../query';
 import { UpdateData } from './update';
 import { CreateData } from './create';
 import { WhereResult } from './where';
@@ -15,8 +20,8 @@ export type UpsertData<T extends Query> = {
 };
 
 export type UpsertResult<T extends Query> = T['meta']['hasSelect'] extends true
-  ? SetQueryReturnsOne<T>
-  : SetQueryReturnsVoid<T>;
+  ? SetQueryReturnsOne<SetQueryKind<T, 'upsert'>>
+  : SetQueryReturnsVoid<SetQueryKind<T, 'upsert'>>;
 
 export type UpsertThis = WhereResult<Query> & {
   returnType: 'one' | 'oneOrThrow';
@@ -24,17 +29,17 @@ export type UpsertThis = WhereResult<Query> & {
 
 export class QueryUpsertOrCreate {
   /**
-   * `.upsert` tries to update one record, and it will perform create in case a record was not found.
+   * `upsert` tries to update one record, and it will perform create in case a record was not found.
    *
    * It will implicitly wrap queries in a transaction if it was not wrapped yet.
    *
-   * `.find` or `.findBy` must precede `.upsert` because it does not work with multiple updates.
+   * `find` or `findBy` must precede `upsert` because it does not work with multiple updates.
    *
    * In case more than one row was updated, it will throw `MoreThanOneRowError` and the transaction will be rolled back.
    *
    * `update` and `create` properties are accepting the same type of objects as the `update` and `create` commands.
    *
-   * Not returning a value by default, place `.select` or `.selectAll` before `.upsert` to specify returning columns.
+   * Not returning a value by default, place `select` or `selectAll` before `upsert` to specify returning columns.
    *
    * ```ts
    * const user = await User.selectAll()
@@ -80,15 +85,15 @@ export class QueryUpsertOrCreate {
   }
 
   /**
-   * `.orCreate` creates a record only if it was not found by conditions.
+   * `orCreate` creates a record only if it was not found by conditions.
    *
    * It will implicitly wrap queries in a transaction if it was not wrapped yet.
    *
-   * `.find` or `.findBy` must precede `.orCreate`.
+   * `find` or `findBy` must precede `orCreate`.
    *
    * It is accepting the same argument as `create` commands.
    *
-   * By default, it is not returning columns, place `.get`, `.select`, or `.selectAll` before `.orCreate` to specify returning columns.
+   * By default, it is not returning columns, place `get`, `select`, or `selectAll` before `orCreate` to specify returning columns.
    *
    * ```ts
    * const user = await User.selectAll().find({ email: 'some@email.com' }).orCreate({

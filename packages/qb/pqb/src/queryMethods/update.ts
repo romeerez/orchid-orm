@@ -1,5 +1,14 @@
-import { Query, QueryReturnsAll, SetQueryReturnsRowCount } from '../query';
-import { pushQueryValue, throwIfNoWhere } from '../queryDataUtils';
+import {
+  Query,
+  QueryReturnsAll,
+  SetQueryKind,
+  SetQueryReturnsRowCount,
+} from '../query';
+import {
+  pushQueryValue,
+  saveSearchAlias,
+  throwIfNoWhere,
+} from '../queryDataUtils';
 import {
   BelongsToRelation,
   HasAndBelongsToManyRelation,
@@ -12,7 +21,7 @@ import { WhereArg, WhereResult } from './where';
 import { CreateData } from './create';
 import { JsonItem, QueryData, UpdateQueryData } from '../sql';
 import { VirtualColumn } from '../columns';
-import { anyShape } from '../db';
+import { anyShape, Db } from '../db';
 import {
   isExpression,
   Expression,
@@ -22,10 +31,13 @@ import {
   isObjectEmpty,
   callWithThis,
   TemplateLiteralArgs,
+  emptyObject,
 } from 'orchid-core';
 import { QueryResult } from '../adapter';
 import { JsonModifiers } from './json';
 import { RawSQL } from '../sql/rawSql';
+import { resolveSubQueryCallback } from '../utils';
+import { OrchidOrmInternalError } from '../errors';
 
 // Type of argument for `update` and `updateOrThrow`
 //
@@ -71,7 +83,7 @@ type UpdateColumn<T extends Query, Key extends keyof T['inputType']> =
           ? T['selectable']
           : T[K];
       } & { [K in keyof T['relations']]: T[K] },
-    ) => JsonItem | RelationQueryBase);
+    ) => JsonItem | (RelationQueryBase & { meta: { kind: 'select' } }));
 
 // `belongsTo` relation data available for update. It supports:
 // - `disconnect` to nullify a foreign key for the relation
@@ -184,8 +196,8 @@ type UpdateRawArgs<T extends Query> = T['meta']['hasWhere'] extends true
 // `update` and `updateOrThrow` methods output type.
 // Unless something was explicitly selected on the query, it's returning the count of updated records.
 type UpdateResult<T extends Query> = T['meta']['hasSelect'] extends true
-  ? T
-  : SetQueryReturnsRowCount<T>;
+  ? SetQueryKind<T, 'update'>
+  : SetQueryReturnsRowCount<SetQueryKind<T, 'update'>>;
 
 // `increment` and `decrement` methods argument type.
 // Accepts a column name to change, or an object with column names and number values to increment or decrement with.
@@ -249,13 +261,13 @@ const update = <T extends Query>(q: T): UpdateResult<T> => {
 
 export class Update {
   /**
-   * `.update` takes an object with columns and values to update records.
+   * `update` takes an object with columns and values to update records.
    *
-   * By default, `.update` will return a count of updated records.
+   * By default, `update` will return a count of updated records.
    *
-   * Place `.select`, `.selectAll`, or `.get` before `.update` to specify returning columns.
+   * Place `select`, `selectAll`, or `get` before `update` to specify returning columns.
    *
-   * You need to provide `.where`, `.findBy`, or `.find` conditions before calling `.update`.
+   * You need to provide `where`, `findBy`, or `find` conditions before calling `update`.
    * To ensure that the whole table won't be updated by accident, updating without where conditions will result in TypeScript and runtime errors.
    *
    * Use `all()` to update ALL records without conditions:
@@ -264,11 +276,16 @@ export class Update {
    * await db.table.all().update({ name: 'new name' });
    * ```
    *
-   * If `.select` and `.where` were specified before the update it will return an array of updated records.
+   * If `select` and `where` were specified before the update it will return an array of updated records.
    *
-   * If `.select` and `.take`, `.find`, or similar were specified before the update it will return one updated record.
+   * If `select` and `take`, `find`, or similar were specified before the update it will return one updated record.
    *
    * For a column value you can provide a specific value, raw SQL, a query object that returns a single value, or a callback with a sub-query.
+   *
+   * The callback is allowed to select a single value from a relation (see `fromRelation` column below),
+   * or to use a [jsonSet](/guide/advanced-queries.html#jsonset),
+   * [jsonInsert](/guide/advanced-queries.html#jsoninsert),
+   * and [jsonRemove](/guide/advanced-queries.html#jsonremove) for a JSON column (see `jsonColumn` below).
    *
    * ```ts
    * // returns number of updated records by default
@@ -310,6 +327,65 @@ export class Update {
    * });
    * ```
    *
+   * ### sub-queries
+   *
+   * In addition to sub-queries that are simply selecting a single value, it's supported to update a column with a result of the provided `create`, `update`, or `delete` sub-query.
+   *
+   * ```ts
+   * await db.table.where({ ...conditions }).update({
+   *   // `column` will be set to a value of the `otherColumn` of the created record.
+   *   column: db.otherTable.get('otherColumn').create({ ...data }),
+   *
+   *   // `column2` will be set to a value of the `otherColumn` of the updated record.
+   *   column2: db.otherTable
+   *     .get('otherColumn')
+   *     .findBy({ ...conditions })
+   *     .update({ key: 'value' }),
+   *
+   *   // `column3` will be set to a value of the `otherColumn` of the deleted record.
+   *   column3: db.otherTable
+   *     .get('otherColumn')
+   *     .findBy({ ...conditions })
+   *     .delete(),
+   * });
+   * ```
+   *
+   * This is achieved by defining a `WITH` clause under the hood, it produces such a query:
+   *
+   * ```sql
+   * WITH q AS (
+   *   INSERT INTO "otherTable"(col1, col2, col3)
+   *   VALUES ('val1', 'val2', 'val3')
+   *   RETURNING "otherTable"."selectedColumn"
+   * )
+   * UPDATE "table"
+   * SET "column" = (SELECT * FROM "q")
+   * ```
+   *
+   * The query is atomic, and if the sub-query fails, or the update part fails, or if multiple rows are returned from a sub-query, no changes will persist in the database.
+   *
+   * Though it's possible to select a single value from a callback for the column to update:
+   *
+   * ```ts
+   * await db.table.find(1).update({
+   *   // update column `one` with the value of column `two` of the related record.
+   *   one: (q) => q.relatedTable.get('two'),
+   * })
+   * ```
+   *
+   * It is **not** supported to use `create`, `update`, or `delete` kinds of sub-query on related tables:
+   *
+   * ```ts
+   * await db.table.find(1).update({
+   *   // TS error, this is not allowed:
+   *   one: (q) => q.relatedTable.get('two').create({ ...data }),
+   * })
+   * ```
+   *
+   * It is not supported because query inside `WITH` cannot reference the table in `UPDATE`.
+   *
+   * ### null and undefined
+   *
    * `null` value will set a column to `NULL`, but the `undefined` value will be ignored:
    *
    * ```ts
@@ -343,13 +419,29 @@ export class Update {
       } else if (!shape[key] && shape !== anyShape) {
         delete set[key];
       } else {
-        const value = set[key];
-        if (
-          typeof value !== 'function' &&
-          (typeof value !== 'object' || !value || !isExpression(value))
-        ) {
+        let value = set[key];
+        if (typeof value === 'function') {
+          value = resolveSubQueryCallback(this, value as (q: Query) => Query);
+          if (value instanceof Db && value.q.type) {
+            throw new OrchidOrmInternalError(
+              value,
+              `Only the selecting queries are allowed inside callback of update, ${value.q.type} is given instead.`,
+            );
+          }
+
+          set[key] = value;
+        }
+
+        if (!isExpression(value)) {
           const encode = shape[key].encodeFn;
           if (encode) set[key] = encode(value);
+
+          if (value instanceof Db && value.q.type) {
+            const as = saveSearchAlias(this, 'q', 'withShapes');
+            pushQueryValue(this, 'with', [as, emptyObject, value]);
+
+            set[key] = new RawSQL(`(SELECT * FROM "${as}")`);
+          }
         }
       }
     }

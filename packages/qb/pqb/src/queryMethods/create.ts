@@ -2,6 +2,7 @@ import {
   Query,
   QueryReturnsAll,
   queryTypeWithLimitOne,
+  SetQueryKind,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
 } from '../query';
@@ -185,20 +186,20 @@ type CreateHasManyData<
 // - If the query returns multiple, forces it to return one record.
 // - otherwise, query result remains as is.
 type CreateResult<T extends Query> = T extends { isCount: true }
-  ? T
+  ? SetQueryKind<T, 'create'>
   : QueryReturnsAll<T['returnType']> extends true
-  ? SetQueryReturnsOne<T>
-  : T;
+  ? SetQueryReturnsOne<SetQueryKind<T, 'create'>>
+  : SetQueryKind<T, 'create'>;
 
 // `createMany` method output type
 // - if `count` method is preceding `create`, will return 0 or 1 if created.
 // - If the query returns a single record, forces it to return multiple.
 // - otherwise, query result remains as is.
 type CreateManyResult<T extends Query> = T extends { isCount: true }
-  ? T
+  ? SetQueryKind<T, 'create'>
   : T['returnType'] extends 'one' | 'oneOrThrow'
-  ? SetQueryReturnsAll<T>
-  : T;
+  ? SetQueryReturnsAll<SetQueryKind<T, 'create'>>
+  : SetQueryKind<T, 'create'>;
 
 // `createRaw` method argument.
 // Contains array of columns and a raw SQL for values.
@@ -214,6 +215,7 @@ type CreateManyRawData<T extends Query> = {
   values: Expression[];
 };
 
+// Record<(column name), true> where the column doesn't have a default and it is not nullable.
 type RawRequiredColumns<T extends Query> = {
   [K in keyof T['inputType'] as K extends keyof T['meta']['defaults']
     ? never
@@ -224,6 +226,8 @@ type RawRequiredColumns<T extends Query> = {
     : K]: true;
 };
 
+// Arguments of `createRaw` and `createManyRaw`.
+// TS error if not all required columns are specified.
 type CreateRawArgs<
   T extends Query,
   Arg extends { columns: (keyof T['shape'])[] },
@@ -236,6 +240,10 @@ type CreateRawArgs<
       >}`,
     ];
 
+// Argument of `onConflict`, can be:
+// - a column name
+// - an array of column names
+// - raw or other kind of Expression
 type OnConflictArg<T extends Query> =
   | keyof T['shape']
   | (keyof T['shape'])[]
@@ -680,9 +688,9 @@ export class Create {
   }
 
   /**
-   * `.defaults` allows setting values that will be used later in `.create`.
+   * `defaults` allows setting values that will be used later in `create`.
    *
-   * Columns provided in `.defaults` are marked as optional in the following `.create`.
+   * Columns provided in `defaults` are marked as optional in the following `create`.
    *
    * Default data is the same as in [create](#create) and [createMany](#createMany),
    * so you can provide a raw SQL, or a query with a query.
@@ -788,7 +796,7 @@ export class OnConflictQueryBuilder<
   constructor(private query: T, private onConflict: Arg) {}
 
   /**
-   * Available only after `.onConflict`.
+   * Available only after `onConflict`.
    *
    * Modifies a create query, and causes it to be silently dropped without an error if a conflict occurs.
    *
@@ -815,7 +823,7 @@ export class OnConflictQueryBuilder<
   }
 
   /**
-   * Available only after `.onConflict`.
+   * Available only after `onConflict`.
    *
    * Modifies a create query, to turn it into an 'upsert' operation.
    *
@@ -907,7 +915,7 @@ export class OnConflictQueryBuilder<
    *   .where({ updatedAt: { lt: timestamp } });
    * ```
    *
-   * `.merge` also accepts raw expression:
+   * `merge` also accepts raw expression:
    *
    * ```ts
    * db.table

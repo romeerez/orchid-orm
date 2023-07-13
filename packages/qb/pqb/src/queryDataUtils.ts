@@ -1,7 +1,8 @@
 import { QueryData } from './sql';
-import { pushOrNewArrayToObject } from 'orchid-core';
+import { emptyObject, pushOrNewArrayToObject } from 'orchid-core';
 import { OrchidOrmInternalError } from './errors';
 import { Query } from './query';
+import { QueryBase } from './queryBase';
 
 /**
  * Push all elements of given array into the array in the query data,
@@ -80,4 +81,24 @@ export const throwIfNoWhere = (q: Query, method: string): void => {
       `Dangerous ${method} without conditions`,
     );
   }
+};
+
+// Pick an alias for a search query to reference it later in WHERE, in ORDER BY, in headline.
+// If the alias is taken, it tries "@q", "@q1", "@q2" and so on.
+export const saveSearchAlias = (
+  q: QueryBase,
+  as: string,
+  key: 'joinedShapes' | 'withShapes',
+): string => {
+  const shapes = q.q[key];
+  if (shapes?.[as]) {
+    let suffix = 2;
+    while (shapes[(as = `${as}${suffix}`)]) {
+      suffix++;
+    }
+  }
+
+  setQueryObjectValue(q, key, as, emptyObject);
+
+  return as;
 };

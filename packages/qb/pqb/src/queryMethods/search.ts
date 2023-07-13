@@ -2,15 +2,14 @@ import { Query, SelectableOrExpressionOfType } from '../query';
 import { ColumnExpression, makeColumnFnClass } from '../common/fn';
 import { TextColumn } from '../columns';
 import { SelectAggMethods } from './aggregate';
-import {
-  ColumnTypeBase,
-  emptyObject,
-  Expression,
-  MaybeArray,
-} from 'orchid-core';
+import { ColumnTypeBase, Expression, MaybeArray } from 'orchid-core';
 import { OrderTsQueryConfig, SearchWeight, ToSqlCtx } from '../sql';
 import { QueryBase } from '../queryBase';
-import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
+import {
+  pushQueryValue,
+  saveSearchAlias,
+  setQueryObjectValue,
+} from '../queryDataUtils';
 import { getSearchLang, getSearchText } from '../sql/fromAndAs';
 import { OrchidOrmInternalError } from '../errors';
 import { addValue, columnToSql } from '../sql/common';
@@ -160,22 +159,6 @@ export type SearchArg<T extends QueryBase, As extends string> = {
 // query type after `search`: this is collecting search aliases in `meta.tsQuery`
 export type WhereSearchResult<T extends QueryBase, As extends string> = T & {
   meta: { tsQuery: string extends As ? never : As };
-};
-
-// Pick an alias for a search query to reference it later in WHERE, in ORDER BY, in headline.
-// If the alias is taken, it tries "@q", "@q1", "@q2" and so on.
-export const saveSearchAlias = (q: QueryBase, as: string): string => {
-  const { joinedShapes } = q.q;
-  if (joinedShapes?.[as]) {
-    let suffix = 2;
-    while (joinedShapes[(as = `@q${suffix}`)]) {
-      suffix++;
-    }
-  }
-
-  setQueryObjectValue(q, 'joinedShapes', as, emptyObject);
-
-  return as;
 };
 
 SelectAggMethods.prototype.headline = function (this: Query, search, params) {
@@ -422,7 +405,7 @@ export class SearchMethods {
     arg: SearchArg<T, As>,
   ): WhereSearchResult<T, As> {
     if (!arg.as) {
-      const as = saveSearchAlias(this, '@q') as As;
+      const as = saveSearchAlias(this, '@q', 'joinedShapes') as As;
 
       arg = {
         ...arg,

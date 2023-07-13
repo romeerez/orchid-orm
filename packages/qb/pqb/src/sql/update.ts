@@ -11,7 +11,7 @@ import {
 } from './data';
 import { isExpression, pushOrNewArray } from 'orchid-core';
 import { Db } from '../db';
-import { joinSubQuery, resolveSubQueryCallback } from '../utils';
+import { joinSubQuery } from '../utils';
 import { JsonItem } from './types';
 import { jsonToSql } from './select';
 
@@ -85,15 +85,10 @@ const processValue = (
   value: UpdateQueryDataObject[string],
   quotedAs?: string,
 ) => {
-  if (typeof value === 'function') {
-    value = resolveSubQueryCallback(table, value as (q: Query) => Query);
+  if (value && typeof value === 'object') {
     if ((value as JsonItem).__json) {
       return jsonToSql(table, value as JsonItem, ctx.values, quotedAs);
-    }
-  }
-
-  if (value && typeof value === 'object') {
-    if (isExpression(value)) {
+    } else if (isExpression(value)) {
       return value.toSQL(ctx, quotedAs);
     } else if (value instanceof QueryClass) {
       return `(${joinSubQuery(table, value as Query).toSql(ctx).text})`;

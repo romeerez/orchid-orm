@@ -1,5 +1,6 @@
 import {
   Query,
+  SetQueryKind,
   SetQueryReturnsAll,
   SetQueryReturnsColumn,
   SetQueryReturnsOne,
@@ -120,6 +121,12 @@ type QueryHelper<T extends Query, Args extends unknown[], Result> = <
   q: Q,
   ...args: Args
 ) => Result extends Query ? MergeQuery<Q, Result> : Result;
+
+// Result of `truncate` method: query has kind 'truncate' and returns nothing.
+type TruncateResult<T extends Query> = SetQueryKind<
+  SetQueryReturnsVoid<T>,
+  'truncate'
+>;
 
 export interface QueryMethods<CT extends ColumnTypesBase>
   extends Omit<AsMethods, 'result'>,
@@ -672,13 +679,13 @@ export class QueryMethods<CT extends ColumnTypesBase> {
   truncate<T extends Query>(
     this: T,
     options?: { restartIdentity?: boolean; cascade?: boolean },
-  ): SetQueryReturnsVoid<T> {
+  ): TruncateResult<T> {
     return this.clone()._truncate(options);
   }
   _truncate<T extends Query>(
     this: T,
     options?: { restartIdentity?: boolean; cascade?: boolean },
-  ): SetQueryReturnsVoid<T> {
+  ): TruncateResult<T> {
     const q = this.q as TruncateQueryData;
     q.type = 'truncate';
     if (options?.restartIdentity) {
@@ -687,7 +694,7 @@ export class QueryMethods<CT extends ColumnTypesBase> {
     if (options?.cascade) {
       q.cascade = true;
     }
-    return this._exec();
+    return this._exec() as TruncateResult<T>;
   }
 
   /**

@@ -1,5 +1,4 @@
 import {
-  ColumnInfo,
   GetStringArg,
   OnQueryBuilder,
   QueryMethods,
@@ -293,17 +292,13 @@ export type SetQueryReturnsRowCount<T extends Query> = SetQueryReturns<
 
 export type SetQueryReturnsVoid<T extends Query> = SetQueryReturns<T, 'void'>;
 
-export type SetQueryReturnsColumnInfo<
-  T extends Query,
-  Column extends keyof T['shape'] | undefined,
-  Result = Column extends keyof T['shape']
-    ? ColumnInfo
-    : Record<keyof T['shape'], ColumnInfo>,
-> = Omit<T, 'result' | 'returnType' | 'then' | 'catch'> & {
-  result: { value: ColumnType<Result> };
-  returnType: 'value';
-  then: QueryThen<Result>;
-  catch: QueryCatch<Result>;
+// Set the kind of the query, can be 'select', 'update', 'create', etc.
+export type SetQueryKind<T extends Query, Kind extends string> = {
+  [K in keyof T]: K extends 'meta'
+    ? {
+        [K in keyof T['meta']]: K extends 'kind' ? Kind : T['meta'][K];
+      }
+    : T[K];
 };
 
 export type SetQueryTableAlias<
