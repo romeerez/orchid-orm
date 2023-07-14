@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.8.2
+
+### Patch Changes
+
+- a9e48cd8: Support `create`, `update`, `delete` sub-queries in update (#139)
+
 ## 0.8.1
 
 ### Patch Changes

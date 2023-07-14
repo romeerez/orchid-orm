@@ -1,5 +1,13 @@
 # pqb
 
+## 0.16.3
+
+### Patch Changes
+
+- a9e48cd8: Support `create`, `update`, `delete` sub-queries in update (#139)
+- Updated dependencies [a9e48cd8]
+  - orchid-core@0.8.2
+
 ## 0.16.2
 
 ### Patch Changes
