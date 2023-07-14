@@ -63,15 +63,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-turbo-
 
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
 
       - name: Setup pnpm config
         run: pnpm config set store-dir $PNPM_CACHE_FOLDER
