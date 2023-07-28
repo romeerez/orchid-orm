@@ -24,14 +24,16 @@ const makeInjector =
   (data: (RawSQLBase | Record<string, unknown> | (() => void))[]) => {
     const alreadyUpdatesUpdatedAt = data.some((item) => {
       if (isRawSQL(item)) {
-        updatedAtRegex.lastIndex = 0;
-        return updatedAtRegex.test(
+        const matches = updatedAtRegex.test(
           typeof item._sql === 'string'
             ? item._sql
             : (item._sql[0] as unknown as string[]).join(''),
         );
+        updatedAtRegex.lastIndex = 0;
+        return matches;
       } else {
-        return typeof item !== 'function' && item[key];
+        const exists = typeof item !== 'function' && item[key];
+        return exists;
       }
     });
 
@@ -81,7 +83,7 @@ export const makeTimestampsHelpers = (
     const updatedAtInjectorSnake = makeInjector(
       updatedAtRegexSnake,
       raw(`${quotedUpdatedAtSnakeCase} = ${now}`),
-      'updated_at',
+      'updatedAt',
     );
 
     // push a function to the query to search for existing timestamp and add a new timestamp value if it's not set in the update.

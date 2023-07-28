@@ -95,5 +95,29 @@ describe('timestamps methods', () => {
       expect(table.shape.createdAt.data.name).toBe('created_at');
       expect(table.shape.updatedAt.data.name).toBe('updated_at');
     });
+
+    it('should not update updated_at column when updating snakeCase table with `updated_at = `', () => {
+      const db = createDb({
+        databaseURL: process.env.PG_URL,
+        snakeCase: true,
+      });
+
+      const table = db('snake', (t) => ({
+        id: t.serial().primaryKey(),
+        ...t.timestampsSnakeCase(),
+      }));
+
+      const q = table.where().update({ updatedAt : now });
+
+      expectSql(
+        q.toSql(),
+        `
+            UPDATE "snake"
+            SET "updated_at" = $1
+        `,
+        [now],
+      );
+    });
+
   });
 });
