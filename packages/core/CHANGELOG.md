@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.9.0
+
+### Minor Changes
+
+- ed4ab58c: Fixed issue where trying to set updatedAt on a table with snakecase resulted in error (#144)
+
 ## 0.8.2
 
 ### Patch Changes
