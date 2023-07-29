@@ -130,17 +130,17 @@ export type GetQueryResult<
   ? ColumnShapeOutput<Result>
   : ReturnType extends 'value'
   ? Result extends { value: ColumnType }
-    ? Result['value']['type'] | undefined
+    ? Result['value']['outputType'] | undefined
     : never
   : ReturnType extends 'valueOrThrow'
   ? Result extends { value: ColumnType }
-    ? Result['value']['type']
+    ? Result['value']['outputType']
     : never
   : ReturnType extends 'rows'
   ? ColumnShapeOutput<Result>[keyof Result][][]
   : ReturnType extends 'pluck'
   ? Result extends { pluck: ColumnType }
-    ? Result['pluck']['type'][]
+    ? Result['pluck']['outputType'][]
     : never
   : ReturnType extends 'rowCount'
   ? number
@@ -236,8 +236,8 @@ export type SetQueryReturnsPluck<
   };
   result: { pluck: C };
   returnType: 'pluck';
-  then: QueryThen<C['type'][]>;
-  catch: QueryCatch<C['type'][]>;
+  then: QueryThen<C['outputType'][]>;
+  catch: QueryCatch<C['outputType'][]>;
 };
 
 export type SetQueryReturnsValueOptional<
@@ -269,8 +269,8 @@ export type SetQueryReturnsColumn<
   Column extends ColumnTypeBase,
   ReturnType extends 'value' | 'valueOrThrow' = 'valueOrThrow',
   Data = ReturnType extends 'value'
-    ? Column['type'] | undefined
-    : Column['type'],
+    ? Column['outputType'] | undefined
+    : Column['outputType'],
 > = {
   [K in keyof T]: K extends 'meta'
     ? T['meta'] & { hasSelect: true }

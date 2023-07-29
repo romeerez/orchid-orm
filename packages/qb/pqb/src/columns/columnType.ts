@@ -138,7 +138,16 @@ export abstract class ColumnType<
   Type = unknown,
   Ops extends BaseOperators = BaseOperators,
   InputType = Type,
-> extends ColumnTypeBase<Type, Ops, InputType, ColumnData> {
+  OutputType = Type,
+  QueryType = Type,
+> extends ColumnTypeBase<
+  Type,
+  Ops,
+  InputType,
+  OutputType,
+  QueryType,
+  ColumnData
+> {
   primaryKey<T extends ColumnType>(this: T): PrimaryKeyColumn<T> {
     return setColumnData(
       this,
@@ -258,7 +267,7 @@ export abstract class ColumnType<
     return setColumnData(this, 'comment', comment);
   }
 
-  validationDefault<T extends ColumnType>(this: T, value: T['type']): T {
+  validationDefault<T extends ColumnType>(this: T, value: T['inputType']): T {
     return setColumnData(this, 'validationDefault', value as unknown);
   }
 
@@ -280,16 +289,16 @@ export abstract class ColumnType<
 
   transform<T extends ColumnType, Transformed>(
     this: T,
-    fn: (input: T['type'], ctx: ValidationContext) => Transformed,
-  ): Omit<T, 'type'> & { type: Transformed } {
+    fn: (input: T['inputType'], ctx: ValidationContext) => Transformed,
+  ): Omit<T, 'inputType'> & { inputType: Transformed } {
     const cloned = Object.create(this);
     cloned.chain = [...this.chain, ['transform', fn]];
-    return cloned as Omit<T, 'type'> & { type: Transformed };
+    return cloned as Omit<T, 'inputType'> & { inputType: Transformed };
   }
 
   to<T extends ColumnType, ToType extends ColumnType>(
     this: T,
-    fn: (input: T['type']) => ToType['type'] | undefined,
+    fn: (input: T['inputType']) => ToType['inputType'] | undefined,
     type: ToType,
   ): ToType {
     const cloned = Object.create(this);
@@ -297,9 +306,9 @@ export abstract class ColumnType<
     return cloned as ToType;
   }
 
-  refine<T extends ColumnType, RefinedOutput extends T['type']>(
+  refine<T extends ColumnType, RefinedOutput extends T['inputType']>(
     this: T,
-    check: (arg: T['type']) => unknown,
+    check: (arg: T['inputType']) => unknown,
     params?: ErrorMessage,
   ): T & { type: RefinedOutput } {
     const cloned = Object.create(this);
@@ -318,9 +327,9 @@ export abstract class ColumnType<
     return cloned as T & { type: RefinedOutput };
   }
 
-  superRefine<T extends ColumnType, RefinedOutput extends T['type']>(
+  superRefine<T extends ColumnType, RefinedOutput extends T['inputType']>(
     this: T,
-    check: (arg: T['type'], ctx: ValidationContext) => unknown,
+    check: (arg: T['inputType'], ctx: ValidationContext) => unknown,
   ): T & { type: RefinedOutput } {
     const cloned = Object.create(this);
     cloned.chain = [...this.chain, ['superRefine', check]];

@@ -5,10 +5,10 @@ import { QueryBaseCommon } from '../query';
 import { BaseOperators, ColumnOperatorBase } from './operators';
 import { JSONType } from './json/jsonType';
 
-// output type of the column
-export type ColumnOutput<T extends ColumnTypeBase> = T['type'];
+// allowed type for creating and updating, it is processed by `encode` function when it's defined.
+export type ColumnOutput<T extends ColumnTypeBase> = T['outputType'];
 
-// input type of the column
+// type returned from a database and processed by `parse` function when it's defined.
 export type ColumnInput<T extends ColumnTypeBase> = T['inputType'];
 
 // base type of object with columns
@@ -30,10 +30,12 @@ export type PrimaryKeyColumn<T extends ColumnTypeBase> = Omit<T, 'data'> & {
 // marks the column as a nullable, adds `null` type to `type` and `inputType`
 export type NullableColumn<T extends ColumnTypeBase> = Omit<
   T,
-  'type' | 'inputType' | 'data' | 'operators'
+  'type' | 'inputType' | 'outputType' | 'queryType' | 'data' | 'operators'
 > & {
   type: T['type'] | null;
   inputType: T['inputType'] | null;
+  outputType: T['outputType'] | null;
+  queryType: T['outputType'] | null;
   data: Omit<T['data'], 'isNullable'> & {
     isNullable: true;
   };
@@ -53,7 +55,7 @@ export type EncodeColumn<T extends ColumnTypeBase, Input> = {
 
 // change the output type of the column
 export type ParseColumn<T extends ColumnTypeBase, Output> = {
-  [K in keyof T]: K extends 'type' ? Output : T[K];
+  [K in keyof T]: K extends 'outputType' ? Output : T[K];
 };
 
 // adds default type to the column
@@ -273,6 +275,8 @@ export abstract class ColumnTypeBase<
   Type = unknown,
   Ops extends BaseOperators = BaseOperators,
   InputType = Type,
+  OutputType = Type,
+  QueryType = Type,
   Data extends ColumnDataBase = ColumnDataBase,
 > {
   // name of the type in a database
@@ -287,11 +291,17 @@ export abstract class ColumnTypeBase<
   // format the column into the database type
   abstract toSQL(): string;
 
-  // output type
+  // type returned from a database before parsing
   type!: Type;
 
-  // input type
+  // allowed type for creating and updating, it is processed by `encode` function when it's defined.
   inputType!: InputType;
+
+  // type returned from a database and processed by `parse` function when it's defined.
+  outputType!: OutputType;
+
+  // allowed type to use in `where` and other query methods, it is **not** processed by the ORM, only by a database driver.
+  queryType!: QueryType;
 
   // data of the column that specifies column characteristics and validations
   data: Data;
@@ -344,7 +354,7 @@ export abstract class ColumnTypeBase<
    */
   default<
     T extends ColumnTypeBase,
-    Value extends T['type'] | null | RawSQLBase | (() => T['type']),
+    Value extends T['type'] | null | RawSQLBase | (() => T['inputType']),
   >(this: T, value: Value): ColumnWithDefault<T, Value> {
     return setColumnData(
       this,
@@ -490,7 +500,12 @@ export abstract class ColumnTypeBase<
    */
   as<
     T extends ColumnTypeBase,
-    C extends ColumnTypeBase<T['type'], BaseOperators, T['inputType']>,
+    C extends ColumnTypeBase<
+      unknown,
+      BaseOperators,
+      T['inputType'],
+      T['outputType']
+    >,
   >(this: T, column: C): C {
     return setColumnData(this, 'as', column) as unknown as C;
   }

@@ -96,7 +96,7 @@ describe('timestamps methods', () => {
       expect(table.shape.updatedAt.data.name).toBe('updated_at');
     });
 
-    it('should not update updated_at column when updating snakeCase table with `updated_at = `', () => {
+    it('should not update updated_at column when updating snakeCase table with `updatedAt` provided in object', () => {
       const db = createDb({
         databaseURL: process.env.PG_URL,
         snakeCase: true,
@@ -107,17 +107,16 @@ describe('timestamps methods', () => {
         ...t.timestampsSnakeCase(),
       }));
 
-      const q = table.where().update({ updatedAt : now });
+      const q = table.where().update({ updatedAt: now });
 
       expectSql(
         q.toSql(),
         `
-            UPDATE "snake"
-            SET "updated_at" = $1
+          UPDATE "snake"
+          SET "updated_at" = $1
         `,
         [now],
       );
     });
-
   });
 });

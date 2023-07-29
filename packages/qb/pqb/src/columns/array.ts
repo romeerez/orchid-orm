@@ -19,12 +19,21 @@ export type ArrayData<Item extends ColumnTypeBase> = ColumnData &
 type ArrayMethods = typeof arrayTypeMethods;
 
 export interface ArrayColumn<Item extends ColumnTypeBase>
-  extends ColumnType<Item['type'][], typeof Operators.array>,
+  extends ColumnType<
+      Item['type'][],
+      typeof Operators.array,
+      Item['inputType'][],
+      Item['outputType'][],
+      Item['queryType'][]
+    >,
     ArrayMethods {}
 
 export class ArrayColumn<Item extends ColumnTypeBase> extends ColumnType<
   Item['type'][],
-  typeof Operators.array
+  typeof Operators.array,
+  Item['inputType'][],
+  Item['outputType'][],
+  Item['queryType'][]
 > {
   dataType = 'array' as const;
   operators = Operators.array;

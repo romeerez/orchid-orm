@@ -106,7 +106,7 @@ export type OrderArg<
 export type OrderArgs<T extends Query> = OrderArg<T>[] | TemplateLiteralArgs;
 
 type FindArgs<T extends Query> =
-  | [T['shape'][T['singlePrimaryKey']]['type'] | Expression]
+  | [T['shape'][T['singlePrimaryKey']]['queryType'] | Expression]
   | TemplateLiteralArgs;
 
 type QueryHelper<T extends Query, Args extends unknown[], Result> = <

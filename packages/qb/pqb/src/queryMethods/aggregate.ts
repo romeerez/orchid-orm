@@ -36,6 +36,7 @@ import {
   makeColumnFn,
   Over,
 } from '../common/fn';
+import { BaseOperators } from '../columns/operators';
 
 // Helper function to check if we're selecting a count on this query.
 // Used in `create` to not return a full record after `count()` method.
@@ -78,8 +79,16 @@ type NullableJSONAgg<
 type NullableJSONObject<
   T extends Query,
   Obj extends Record<string, SelectableOrExpression<T>>,
+  Outputs extends Record<string, ColumnTypeBase> = {
+    [K in keyof Obj]: ExpressionOutput<T, Obj[K]>;
+  },
 > = NullableColumn<
-  ColumnType<{ [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'] }>
+  ColumnType<
+    { [K in keyof Outputs]: Outputs[K]['type'] },
+    BaseOperators,
+    { [K in keyof Outputs]: Outputs[K]['inputType'] },
+    { [K in keyof Outputs]: Outputs[K]['outputType'] }
+  >
 >;
 
 const jsonColumn = new JSONTextColumn().nullable();

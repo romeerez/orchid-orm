@@ -10,7 +10,7 @@ describe('aggregate', () => {
   useTestDatabase();
 
   describe('agg', () => {
-    it('should select aggregating function', () => {
+    it('should select aggregating function', async () => {
       const q = User.select({
         count: (q) => q.fn('count', ['*'], {}, (t) => t.integer()).gt(5),
       }).take();

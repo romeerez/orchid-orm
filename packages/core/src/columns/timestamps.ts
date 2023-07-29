@@ -24,16 +24,14 @@ const makeInjector =
   (data: (RawSQLBase | Record<string, unknown> | (() => void))[]) => {
     const alreadyUpdatesUpdatedAt = data.some((item) => {
       if (isRawSQL(item)) {
-        const matches = updatedAtRegex.test(
+        updatedAtRegex.lastIndex = 0;
+        return updatedAtRegex.test(
           typeof item._sql === 'string'
             ? item._sql
             : (item._sql[0] as unknown as string[]).join(''),
         );
-        updatedAtRegex.lastIndex = 0;
-        return matches;
       } else {
-        const exists = typeof item !== 'function' && item[key];
-        return exists;
+        return typeof item !== 'function' && item[key];
       }
     });
 

@@ -159,7 +159,17 @@ describe('column type', () => {
       const fn = () => 123;
       const withEncode = column.parse(fn);
       expect(withEncode.parseFn).toBe(fn);
-      assertType<typeof withEncode.type, number>();
+      assertType<typeof withEncode.outputType, number>();
+    });
+
+    it('should not override the type to search records with', () => {
+      const table = testDb('table', (t) => ({
+        id: t.serial().primaryKey(),
+        column: t.text().parse(parseInt),
+      }));
+
+      const q = table.findBy({ column: 'text' });
+      assertType<Awaited<typeof q>, { id: number; column: number }>();
     });
 
     it('should have toCode', () => {

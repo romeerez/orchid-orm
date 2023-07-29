@@ -8,7 +8,7 @@ export type AfterHook<
   Select extends PropertyKey[],
   Shape extends ColumnsShapeBase,
   Selected extends ColumnsShapeBase = Pick<Shape, StringKey<Select[number]>>,
-  Item = { [K in keyof Selected]: Selected[K]['type'] },
+  Item = { [K in keyof Selected]: Selected[K]['outputType'] },
 > = QueryAfterHook<Item[]>;
 
 // Hook argument for selecting columns: array of column names of the table.

@@ -8,7 +8,10 @@ export abstract class ColumnsObject<
   Shape extends ColumnsShapeBase,
 > extends ColumnType<
   { [K in keyof Shape]: Shape[K]['type'] },
-  typeof Operators.any
+  typeof Operators.any,
+  { [K in keyof Shape]: Shape[K]['inputType'] },
+  { [K in keyof Shape]: Shape[K]['outputType'] },
+  { [K in keyof Shape]: Shape[K]['queryType'] }
 > {
   dataType = 'object' as const;
   operators = Operators.any;
@@ -22,7 +25,10 @@ export abstract class ArrayOfColumnsObjects<
   Shape extends ColumnsShapeBase,
 > extends ColumnType<
   { [K in keyof Shape]: Shape[K]['type'] }[],
-  typeof Operators.any
+  typeof Operators.any,
+  { [K in keyof Shape]: Shape[K]['inputType'] }[],
+  { [K in keyof Shape]: Shape[K]['outputType'] }[],
+  { [K in keyof Shape]: Shape[K]['queryType'] }[]
 > {
   dataType = 'array' as const;
   operators = Operators.any;
@@ -34,4 +40,10 @@ export abstract class ArrayOfColumnsObjects<
 
 export abstract class PluckResultColumnType<
   C extends ColumnTypeBase,
-> extends ColumnTypeBase<C['type'][], typeof Operators.any> {}
+> extends ColumnTypeBase<
+  C['type'][],
+  typeof Operators.any,
+  C['inputType'][],
+  C['outputType'][],
+  C['queryType'][]
+> {}

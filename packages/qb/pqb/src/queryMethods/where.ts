@@ -46,7 +46,7 @@ export type WhereArg<T extends QueryBase> =
           }>
         : K extends keyof T['selectable']
         ?
-            | T['selectable'][K]['column']['type']
+            | T['selectable'][K]['column']['queryType']
             | null
             | ColumnOperators<T['selectable'], K>
             | Expression
@@ -73,11 +73,11 @@ export type WhereInValues<
   T extends QueryBase,
   Column extends WhereInColumn<T>,
 > = Column extends keyof T['selectable']
-  ? T['selectable'][Column]['column']['type'][] | Query | Expression
+  ? T['selectable'][Column]['column']['queryType'][] | Query | Expression
   :
       | ({
           [I in keyof Column]: Column[I] extends keyof T['selectable']
-            ? T['selectable'][Column[I]]['column']['type']
+            ? T['selectable'][Column[I]]['column']['queryType']
             : never;
         } & {
           length: Column extends { length: number } ? Column['length'] : never;
@@ -89,7 +89,7 @@ export type WhereInValues<
 // Each key is a column name, value is array of column values, or a query returning single column, or a raw SQL expression.
 export type WhereInArg<T extends Pick<Query, 'selectable'>> = {
   [K in keyof T['selectable']]?:
-    | T['selectable'][K]['column']['type'][]
+    | T['selectable'][K]['column']['queryType'][]
     | Query
     | Expression;
 };

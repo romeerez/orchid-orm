@@ -16,7 +16,13 @@ import { columnCode } from './code';
 
 // common interface for Date and DateTime columns
 export interface DateBaseColumn
-  extends ColumnType<string, typeof Operators.date, string | number | Date>,
+  extends ColumnType<
+      string,
+      typeof Operators.date,
+      string | number | Date,
+      string,
+      string | number | Date
+    >,
     DateTypeMethods {}
 
 // encode string, number, or Date to a Date object,
@@ -39,6 +45,8 @@ const parseToDate = (value: unknown) =>
 export abstract class DateBaseColumn extends ColumnType<
   string,
   typeof Operators.date,
+  string | number | Date,
+  string,
   string | number | Date
 > {
   declare data: DateColumnData;
