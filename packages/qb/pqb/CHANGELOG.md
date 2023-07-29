@@ -1,5 +1,13 @@
 # pqb
 
+## 0.16.5
+
+### Patch Changes
+
+- 23558c67: Support parsing a column into a different type, while letting to filter by an original type (#140)
+- Updated dependencies [23558c67]
+  - orchid-core@0.9.1
+
 ## 0.16.4
 
 ### Patch Changes

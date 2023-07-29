@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.9.1
+
+### Patch Changes
+
+- 23558c67: Support parsing a column into a different type, while letting to filter by an original type (#140)
+
 ## 0.9.0
 
 ### Minor Changes
