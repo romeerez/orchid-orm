@@ -7,10 +7,10 @@ import {
   isQueryReturnsAll,
   JoinCallback,
   Query,
-  QueryBase,
   UpdateCtx,
   VirtualColumn,
   WhereArg,
+  WhereQueryBase,
   WhereResult,
 } from 'pqb';
 import { Table } from '../baseTable';
@@ -230,11 +230,11 @@ const nestedInsert = ({ query, primaryKey, foreignKey }: State) => {
         Record<string, unknown>,
         (
           | {
-              connect: WhereArg<QueryBase>;
+              connect: WhereArg<WhereQueryBase>;
             }
           | {
               connectOrCreate: {
-                where: WhereArg<QueryBase>;
+                where: WhereArg<WhereQueryBase>;
                 create: Record<string, unknown>;
               };
             }
@@ -280,7 +280,7 @@ const nestedInsert = ({ query, primaryKey, foreignKey }: State) => {
           | { create: Record<string, unknown> }
           | {
               connectOrCreate: {
-                where: WhereArg<QueryBase>;
+                where: WhereArg<WhereQueryBase>;
                 create: Record<string, unknown>;
               };
             }

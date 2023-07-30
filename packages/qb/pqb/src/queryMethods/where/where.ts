@@ -1,19 +1,20 @@
-import { Query } from '../query';
-import { ColumnOperators, QueryData } from '../sql';
-import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
-import { JoinArgs, JoinCallback, JoinFirstArg } from './join';
+import { Query } from '../../query';
+import { ColumnOperators } from '../../sql';
+import { pushQueryArray, pushQueryValue } from '../../queryDataUtils';
+import { JoinArgs, JoinCallback, JoinFirstArg } from '../join/join';
 import {
-  ColumnsShapeBase,
-  emptyObject,
+  applyMixins,
   Expression,
   MaybeArray,
   TemplateLiteralArgs,
 } from 'orchid-core';
-import { getIsJoinSubQuery } from '../sql/join';
-import { getShapeFromSelect } from './select';
-import { ColumnsShape } from '../columns';
-import { QueryBase } from '../queryBase';
-import { RawSQL } from '../sql/rawSql';
+import { getIsJoinSubQuery } from '../../sql/join';
+import { getShapeFromSelect } from '../select';
+import { BooleanNullable, ColumnsShape } from '../../columns';
+import { QueryBase } from '../../queryBase';
+import { RawSQL } from '../../sql/rawSql';
+import { ColumnExpression } from '../../common/fn';
+import { RelationSubQueries } from '../../relations';
 
 /*
 Argument of `where`:
@@ -28,7 +29,7 @@ Argument of `where`:
   - raw SQL: q.where({ num: q.raw`sql` })
   - sub query returning a single column: q.where({ num: db.someTable.where(...).get('column') })
  */
-export type WhereArg<T extends QueryBase> =
+export type WhereArg<T extends WhereQueryBase> =
   | {
       [K in
         | keyof T['selectable']
@@ -55,10 +56,26 @@ export type WhereArg<T extends QueryBase> =
     }
   | QueryBase
   | Expression
-  | ((q: WhereQueryBuilder<T>) => WhereQueryBuilder);
+  | ((
+      q: WhereQueryBuilder<T>,
+    ) => QueryBase | ColumnExpression<BooleanNullable>);
+
+/**
+ * Callback argument of `where`.
+ * It has `where` methods (`where`, `whereNot`, `whereExists`, etc.),
+ * and it has relations that you can aggregate and use a boolean comparison with, such as:
+ * ```ts
+ * db.table.where((q) => q.relation.count().equals(10))
+ * ```
+ */
+export type WhereQueryBuilder<T extends WhereQueryBase> = Pick<
+  T,
+  keyof WhereQueryBase
+> &
+  RelationSubQueries<T>;
 
 // One or more of {@link WhereArg} or a string template for raw SQL.
-export type WhereArgs<T extends QueryBase> =
+export type WhereArgs<T extends WhereQueryBase> =
   | WhereArg<T>[]
   | TemplateLiteralArgs;
 
@@ -107,7 +124,7 @@ export type WhereResult<T extends QueryBase> = T & {
  * @param q - query object to add the data to
  * @param args - `where` arguments, may be a template literal
  */
-export const addWhere = <T extends QueryBase>(
+export const addWhere = <T extends WhereQueryBase>(
   q: T,
   args: WhereArgs<T>,
 ): WhereResult<T> => {
@@ -128,7 +145,7 @@ export const addWhere = <T extends QueryBase>(
  * @param q - query object to add the data to
  * @param args - `where` arguments, may be a template literal
  */
-export const addWhereNot = <T extends QueryBase>(
+export const addWhereNot = <T extends WhereQueryBase>(
   q: T,
   args: WhereArgs<T>,
 ): WhereResult<T> => {
@@ -148,7 +165,7 @@ export const addWhereNot = <T extends QueryBase>(
  * @param q - query object to add the data to
  * @param args - `where` arguments, may be a template literal
  */
-export const addOr = <T extends QueryBase>(
+export const addOr = <T extends WhereQueryBase>(
   q: T,
   args: WhereArg<T>[],
 ): WhereResult<T> => {
@@ -165,7 +182,7 @@ export const addOr = <T extends QueryBase>(
  * @param q - query object to add the data to
  * @param args - `where` arguments, may be a template literal
  */
-export const addOrNot = <T extends QueryBase>(
+export const addOrNot = <T extends WhereQueryBase>(
   q: T,
   args: WhereArg<T>[],
 ): WhereResult<T> => {
@@ -250,7 +267,7 @@ const existsArgs = (args: [JoinFirstArg<Query>, ...JoinArgs<Query, Query>]) => {
   } as never;
 };
 
-export abstract class Where extends QueryBase {
+export abstract class Where {
   /**
    * Constructing `WHERE` conditions:
    *
@@ -341,7 +358,47 @@ export abstract class Where extends QueryBase {
    * );
    * ```
    *
-   * ### where special keys
+   * ## where sub query
+   *
+   * `where` handles a special callback where you can query a relation to get some value and filter by that value.
+   *
+   * It is useful for a faceted search. For instance, posts have tags, and we want to find all posts that have all the given tags.
+   *
+   * ```ts
+   * const givenTags = ['typescript', 'node.js'];
+   *
+   * const posts = await db.post.where(
+   *   (post) =>
+   *     post.tags // query tags of the post
+   *       .whereIn('tagName', givenTags) // where name of the tag is inside array
+   *       .count() // count how many such tags were found
+   *       .equals(wantedTags.length), // the count must be exactly the length of array
+   *   // if the post has ony `typescript` tag but not the `node.js` it will be omitted
+   * );
+   * ```
+   *
+   * This will produce an efficient SQL query:
+   *
+   * ```sql
+   * SELECT * FROM "post"
+   * WHERE (
+   *   SELECT count(*) = 3
+   *   FROM "tag" AS "tags"
+   *   WHERE "tag"."tagName" IN ('typescript', 'node.js')
+   *     -- join tags to the post via "postTag" table
+   *     AND EXISTS (
+   *       SELECT 1 FROM "postTag"
+   *       WHERE "postTag"."postId" = "post"."id"
+   *         AND "postTag"."tagId" = "tag"."id"
+   *     )
+   * )
+   * ```
+   *
+   * In the example above we use `count()`, you can also use any other aggregate method instead, such as `min`, `max`, `avg`.
+   *
+   * The `count()` is chained with `equals` to check for a strict equality, any other operation is also allowed, such as `not`, `lt`, `gt`.
+   *
+   * ## where special keys
    *
    * The object passed to `where` can contain special keys, each of the keys corresponds to its own method and takes the same value as the type of argument of the method.
    *
@@ -361,7 +418,7 @@ export abstract class Where extends QueryBase {
    * });
    * ```
    *
-   * Using methods instead of this is a shorter and cleaner way, but in some cases, such object keys way may be more convenient.
+   * Using methods `whereNot`, `or`, `whereIn` instead of this is a shorter and cleaner way, but in some cases, such object keys way may be more convenient.
    *
    * ```ts
    * db.table.where({
@@ -410,6 +467,8 @@ export abstract class Where extends QueryBase {
    * All column operators can take a value of the same type as the column, a sub-query, or a raw SQL expression:
    *
    * ```ts
+   * import { sql } from 'orchid-orm';
+   *
    * db.table.where({
    *   numericColumn: {
    *     // lower than 5
@@ -419,7 +478,7 @@ export abstract class Where extends QueryBase {
    *     lt: OtherTable.select('someNumber').take(),
    *
    *     // raw SQL expression produces WHERE "numericColumn" < "otherColumn" + 10
-   *     lt: db.table.sql`"otherColumn" + 10`,
+   *     lt: sql`"otherColumn" + 10`,
    *   },
    * });
    * ```
@@ -430,15 +489,15 @@ export abstract class Where extends QueryBase {
    *
    * ```ts
    * db.table.where({
-   *   // this will fail because an object with operators is expected
+   *  // when searching for an exact same JSON value, this won't work:
    *   jsonColumn: someObject,
    *
-   *   // use this instead:
+   *   // use `{ equals: ... }` instead:
    *   jsonColumn: { equals: someObject },
    * });
    * ```
    *
-   * `not` is `!=` (or `<>`) not equal operator:
+   * `not` is `!=` (aka `<>`) not equal operator:
    *
    * ```ts
    * db.table.where({
@@ -587,10 +646,16 @@ export abstract class Where extends QueryBase {
    *
    * @param args - {@link WhereArgs}
    */
-  where<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
+  where<T extends WhereQueryBase>(
+    this: T,
+    ...args: WhereArgs<T>
+  ): WhereResult<T> {
     return this.clone()._where(...args);
   }
-  _where<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
+  _where<T extends WhereQueryBase>(
+    this: T,
+    ...args: WhereArgs<T>
+  ): WhereResult<T> {
     return addWhere(this, args);
   }
 
@@ -604,10 +669,16 @@ export abstract class Where extends QueryBase {
    *
    * @param args - {@link WhereArgs}
    */
-  whereNot<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
+  whereNot<T extends WhereQueryBase>(
+    this: T,
+    ...args: WhereArgs<T>
+  ): WhereResult<T> {
     return this.clone()._whereNot(...args);
   }
-  _whereNot<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
+  _whereNot<T extends WhereQueryBase>(
+    this: T,
+    ...args: WhereArgs<T>
+  ): WhereResult<T> {
     return addWhereNot(this, args);
   }
 
@@ -620,10 +691,16 @@ export abstract class Where extends QueryBase {
    *
    * @param args - {@link WhereArgs}
    */
-  and<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
+  and<T extends WhereQueryBase>(
+    this: T,
+    ...args: WhereArgs<T>
+  ): WhereResult<T> {
     return this.where(...args);
   }
-  _and<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
+  _and<T extends WhereQueryBase>(
+    this: T,
+    ...args: WhereArgs<T>
+  ): WhereResult<T> {
     return this._where(...args);
   }
 
@@ -632,10 +709,16 @@ export abstract class Where extends QueryBase {
    *
    * @param args - {@link WhereArgs}
    */
-  andNot<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
+  andNot<T extends WhereQueryBase>(
+    this: T,
+    ...args: WhereArgs<T>
+  ): WhereResult<T> {
     return this.whereNot(...args);
   }
-  _andNot<T extends Where>(this: T, ...args: WhereArgs<T>): WhereResult<T> {
+  _andNot<T extends WhereQueryBase>(
+    this: T,
+    ...args: WhereArgs<T>
+  ): WhereResult<T> {
     return this._whereNot(...args);
   }
 
@@ -660,10 +743,16 @@ export abstract class Where extends QueryBase {
    *
    * @param args - {@link WhereArgs} will be joined with `OR`
    */
-  or<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
+  or<T extends WhereQueryBase>(
+    this: T,
+    ...args: WhereArg<T>[]
+  ): WhereResult<T> {
     return this.clone()._or(...args);
   }
-  _or<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
+  _or<T extends WhereQueryBase>(
+    this: T,
+    ...args: WhereArg<T>[]
+  ): WhereResult<T> {
     return addOr(this, args);
   }
 
@@ -672,10 +761,16 @@ export abstract class Where extends QueryBase {
    *
    * @param args - {@link WhereArgs} will be prefixed with `NOT` and joined with `OR`
    */
-  orNot<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
+  orNot<T extends WhereQueryBase>(
+    this: T,
+    ...args: WhereArg<T>[]
+  ): WhereResult<T> {
     return this.clone()._orNot(...args);
   }
-  _orNot<T extends Where>(this: T, ...args: WhereArg<T>[]): WhereResult<T> {
+  _orNot<T extends WhereQueryBase>(
+    this: T,
+    ...args: WhereArg<T>[]
+  ): WhereResult<T> {
     return addOrNot(this, args);
   }
 
@@ -717,7 +812,7 @@ export abstract class Where extends QueryBase {
    * @param column - one column name, or array of column names
    * @param values - array of values, or a query to load values, or a raw SQL. Tuple of such values in case of multiple columns.
    */
-  whereIn<T extends Where, Column extends WhereInColumn<T>>(
+  whereIn<T extends WhereQueryBase, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
@@ -727,8 +822,11 @@ export abstract class Where extends QueryBase {
    *
    * @param arg - object where keys are column names, and values are an array of column values, or a query returning column values, or a raw SQL.
    */
-  whereIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
-  whereIn<T extends Where>(
+  whereIn<T extends WhereQueryBase>(
+    this: T,
+    arg: WhereInArg<T>,
+  ): WhereResult<T>;
+  whereIn<T extends WhereQueryBase>(
     this: T,
     arg: unknown | unknown[],
     values?: unknown[] | unknown[][] | Query | Expression,
@@ -739,13 +837,16 @@ export abstract class Where extends QueryBase {
       values as any,
     ) as unknown as WhereResult<T>;
   }
-  _whereIn<T extends Where, Column extends WhereInColumn<T>>(
+  _whereIn<T extends WhereQueryBase, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
   ): WhereResult<T>;
-  _whereIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
-  _whereIn<T extends Where>(
+  _whereIn<T extends WhereQueryBase>(
+    this: T,
+    arg: WhereInArg<T>,
+  ): WhereResult<T>;
+  _whereIn<T extends WhereQueryBase>(
     this: T,
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | Expression,
@@ -764,7 +865,7 @@ export abstract class Where extends QueryBase {
    * @param column - one column name, or array of column names
    * @param values - array of values, or a query to load values, or a raw SQL. Tuple of such values in case of multiple columns.
    */
-  orWhereIn<T extends Where, Column extends WhereInColumn<T>>(
+  orWhereIn<T extends WhereQueryBase, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
@@ -774,8 +875,11 @@ export abstract class Where extends QueryBase {
    *
    * @param arg - object where keys are column names, and values are an array of column values, or a query returning column values, or a raw SQL.
    */
-  orWhereIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
-  orWhereIn<T extends Where>(
+  orWhereIn<T extends WhereQueryBase>(
+    this: T,
+    arg: WhereInArg<T>,
+  ): WhereResult<T>;
+  orWhereIn<T extends WhereQueryBase>(
     this: T,
     arg: unknown | unknown[],
     values?: unknown[] | unknown[][] | Query | Expression,
@@ -787,13 +891,16 @@ export abstract class Where extends QueryBase {
       values as any,
     ) as unknown as WhereResult<T>;
   }
-  _orWhereIn<T extends Where, Column extends WhereInColumn<T>>(
+  _orWhereIn<T extends WhereQueryBase, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
   ): WhereResult<T>;
-  _orWhereIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
-  _orWhereIn<T extends Where>(
+  _orWhereIn<T extends WhereQueryBase>(
+    this: T,
+    arg: WhereInArg<T>,
+  ): WhereResult<T>;
+  _orWhereIn<T extends WhereQueryBase>(
     this: T,
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | Expression,
@@ -811,7 +918,7 @@ export abstract class Where extends QueryBase {
    * @param column - one column name, or array of column names
    * @param values - array of values, or a query to load values, or a raw SQL. Tuple of such values in case of multiple columns.
    */
-  whereNotIn<T extends Where, Column extends WhereInColumn<T>>(
+  whereNotIn<T extends WhereQueryBase, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
@@ -821,8 +928,11 @@ export abstract class Where extends QueryBase {
    *
    * @param arg - object where keys are column names, and values are an array of column values, or a query returning column values, or a raw SQL.
    */
-  whereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
-  whereNotIn<T extends Where>(
+  whereNotIn<T extends WhereQueryBase>(
+    this: T,
+    arg: WhereInArg<T>,
+  ): WhereResult<T>;
+  whereNotIn<T extends WhereQueryBase>(
     this: T,
     arg: unknown | unknown[],
     values?: unknown[] | unknown[][] | Query | Expression,
@@ -830,13 +940,16 @@ export abstract class Where extends QueryBase {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return this.clone()._whereNotIn(arg as any, values as any);
   }
-  _whereNotIn<T extends Where, Column extends WhereInColumn<T>>(
+  _whereNotIn<T extends WhereQueryBase, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
   ): WhereResult<T>;
-  _whereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
-  _whereNotIn<T extends Where>(
+  _whereNotIn<T extends WhereQueryBase>(
+    this: T,
+    arg: WhereInArg<T>,
+  ): WhereResult<T>;
+  _whereNotIn<T extends WhereQueryBase>(
     this: T,
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | Expression,
@@ -854,7 +967,7 @@ export abstract class Where extends QueryBase {
    * @param column - one column name, or array of column names
    * @param values - array of values, or a query to load values, or a raw SQL. Tuple of such values in case of multiple columns.
    */
-  orWhereNotIn<T extends Where, Column extends WhereInColumn<T>>(
+  orWhereNotIn<T extends WhereQueryBase, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
@@ -864,8 +977,11 @@ export abstract class Where extends QueryBase {
    *
    * @param arg - object where keys are column names, and values are an array of column values, or a query returning column values, or a raw SQL.
    */
-  orWhereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
-  orWhereNotIn<T extends Where>(
+  orWhereNotIn<T extends WhereQueryBase>(
+    this: T,
+    arg: WhereInArg<T>,
+  ): WhereResult<T>;
+  orWhereNotIn<T extends WhereQueryBase>(
     this: T,
     arg: unknown | unknown[],
     values?: unknown[] | unknown[][] | Query | Expression,
@@ -873,13 +989,16 @@ export abstract class Where extends QueryBase {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return this.clone()._orWhereNotIn(arg as any, values as any);
   }
-  _orWhereNotIn<T extends Where, Column extends WhereInColumn<T>>(
+  _orWhereNotIn<T extends WhereQueryBase, Column extends WhereInColumn<T>>(
     this: T,
     column: Column,
     values: WhereInValues<T, Column>,
   ): WhereResult<T>;
-  _orWhereNotIn<T extends Where>(this: T, arg: WhereInArg<T>): WhereResult<T>;
-  _orWhereNotIn<T extends Where>(
+  _orWhereNotIn<T extends WhereQueryBase>(
+    this: T,
+    arg: WhereInArg<T>,
+  ): WhereResult<T>;
+  _orWhereNotIn<T extends WhereQueryBase>(
     this: T,
     arg: unknown,
     values?: unknown[] | unknown[][] | Query | Expression,
@@ -907,7 +1026,7 @@ export abstract class Where extends QueryBase {
    * @param arg - relation name, or a query object, or a `with` table alias, or a callback returning a query object.
    * @param args - no arguments needed when the first argument is a relation name, or conditions to join the table with.
    */
-  whereExists<T extends Where, Arg extends JoinFirstArg<T>>(
+  whereExists<T extends WhereQueryBase, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     ...args: JoinArgs<T, Arg>
@@ -918,27 +1037,27 @@ export abstract class Where extends QueryBase {
    * @param arg - relation name, or a query object, or a `with` table alias, or a callback returning a query object.
    * @param cb - callback with a query builder to join the table.
    */
-  whereExists<T extends Where, Arg extends JoinFirstArg<T>>(
+  whereExists<T extends WhereQueryBase, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  whereExists(arg: any, ...args: any) {
+  whereExists(this: WhereQueryBase, arg: any, ...args: any) {
     return this.clone()._whereExists(arg, ...args);
   }
-  _whereExists<T extends Where, Arg extends JoinFirstArg<T>>(
+  _whereExists<T extends WhereQueryBase, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     ...args: JoinArgs<T, Arg>
   ): WhereResult<T>;
-  _whereExists<T extends Where, Arg extends JoinFirstArg<T>>(
+  _whereExists<T extends WhereQueryBase, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _whereExists(this: Where, ...args: any) {
+  _whereExists(this: WhereQueryBase, ...args: any) {
     return this._where(existsArgs(args));
   }
 
@@ -955,7 +1074,7 @@ export abstract class Where extends QueryBase {
    * @param args - no arguments needed when the first argument is a relation name, or conditions to join the table with.
    */
   orWhereExists<
-    T extends Where,
+    T extends WhereQueryBase,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
@@ -965,27 +1084,27 @@ export abstract class Where extends QueryBase {
    * @param arg - relation name, or a query object, or a `with` table alias, or a callback returning a query object.
    * @param cb - callback with a query builder to join the table.
    */
-  orWhereExists<T extends Where, Arg extends JoinFirstArg<T>>(
+  orWhereExists<T extends WhereQueryBase, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  orWhereExists(arg: any, ...args: any) {
+  orWhereExists(this: WhereQueryBase, arg: any, ...args: any) {
     return this.clone()._orWhereExists(arg, ...args);
   }
   _orWhereExists<
-    T extends Where,
+    T extends WhereQueryBase,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
-  _orWhereExists<T extends Where, Arg extends JoinFirstArg<T>>(
+  _orWhereExists<T extends WhereQueryBase, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _orWhereExists(this: Where, ...args: any) {
+  _orWhereExists(this: WhereQueryBase, ...args: any) {
     return this._or(existsArgs(args));
   }
 
@@ -1002,7 +1121,7 @@ export abstract class Where extends QueryBase {
    * @param args - no arguments needed when the first argument is a relation name, or conditions to join the table with.
    */
   whereNotExists<
-    T extends Where,
+    T extends WhereQueryBase,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
@@ -1012,27 +1131,27 @@ export abstract class Where extends QueryBase {
    * @param arg - relation name, or a query object, or a `with` table alias, or a callback returning a query object.
    * @param cb - callback with a query builder to join the table.
    */
-  whereNotExists<T extends Where, Arg extends JoinFirstArg<T>>(
+  whereNotExists<T extends WhereQueryBase, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  whereNotExists(arg: any, ...args: any) {
+  whereNotExists(this: WhereQueryBase, arg: any, ...args: any) {
     return this.clone()._whereNotExists(arg, ...args);
   }
   _whereNotExists<
-    T extends Where,
+    T extends WhereQueryBase,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
-  _whereNotExists<T extends Where, Arg extends JoinFirstArg<T>>(
+  _whereNotExists<T extends WhereQueryBase, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _whereNotExists(this: Where, ...args: any) {
+  _whereNotExists(this: WhereQueryBase, ...args: any) {
     return this._whereNot(existsArgs(args));
   }
 
@@ -1049,7 +1168,7 @@ export abstract class Where extends QueryBase {
    * @param args - no arguments needed when the first argument is a relation name, or conditions to join the table with.
    */
   orWhereNotExists<
-    T extends Where,
+    T extends WhereQueryBase,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
@@ -1059,58 +1178,33 @@ export abstract class Where extends QueryBase {
    * @param arg - relation name, or a query object, or a `with` table alias, or a callback returning a query object.
    * @param cb - callback with a query builder to join the table.
    */
-  orWhereNotExists<T extends Where, Arg extends JoinFirstArg<T>>(
+  orWhereNotExists<T extends WhereQueryBase, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  orWhereNotExists(arg: any, ...args: any) {
+  orWhereNotExists(this: WhereQueryBase, arg: any, ...args: any) {
     return this.clone()._orWhereNotExists(arg, ...args);
   }
   _orWhereNotExists<
-    T extends Where,
+    T extends WhereQueryBase,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(this: T, arg: Arg, ...args: Args): WhereResult<T>;
-  _orWhereNotExists<T extends Where, Arg extends JoinFirstArg<T>>(
+  _orWhereNotExists<T extends WhereQueryBase, Arg extends JoinFirstArg<T>>(
     this: T,
     arg: Arg,
     cb: JoinCallback<T, Arg>,
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _orWhereNotExists(this: Where, ...args: any) {
+  _orWhereNotExists(this: WhereQueryBase, ...args: any) {
     return this._orNot(existsArgs(args));
   }
 }
 
-export class WhereQueryBuilder<Q extends QueryBase = QueryBase>
-  extends Where
-  implements QueryBase
-{
-  declare selectable: Q['selectable'];
-  declare relations: Q['relations'];
-  declare result: Q['result'];
-  shape: Q['shape'];
-  baseQuery: Query;
-  withData = emptyObject;
-  internal: Q['internal'];
-
-  constructor(
-    q: QueryBase,
-    { shape, joinedShapes }: Pick<QueryData, 'shape' | 'joinedShapes'>,
-  ) {
-    super();
-    this.internal = q.internal;
-    this.table = typeof q === 'object' ? q.table : q;
-    this.shape = shape;
-    this.q = {
-      shape: shape as ColumnsShapeBase,
-      joinedShapes,
-    } as QueryData;
-    this.baseQuery = this as unknown as Query;
-    if (typeof q === 'object' && q.q.as) {
-      this.q.as = q.q.as;
-    }
-  }
-}
+// Query builder class that only has Where methods.
+// Used for `where` callback argument, and for callback argument of `join`.
+export interface WhereQueryBase extends Where, QueryBase {}
+export abstract class WhereQueryBase extends QueryBase {}
+applyMixins(WhereQueryBase, [Where]);

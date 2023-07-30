@@ -19,7 +19,7 @@ import {
   OnConflictItem,
   OnConflictMergeUpdate,
 } from '../sql';
-import { WhereArg } from './where';
+import { WhereArg } from './where/where';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
 import {

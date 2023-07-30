@@ -8,11 +8,11 @@ import {
   NotFoundError,
   OrchidOrmInternalError,
   Query,
-  QueryBase,
   toSqlCacheKey,
   UpdateCtx,
   VirtualColumn,
   WhereArg,
+  WhereQueryBase,
   WhereResult,
 } from 'pqb';
 import { MaybeArray } from 'orchid-core';
@@ -271,7 +271,7 @@ const nestedInsert = ({
       ): item is [
         selfData: Record<string, unknown>,
         relationData: {
-          connect: WhereArg<QueryBase>[];
+          connect: WhereArg<WhereQueryBase>[];
         },
       ] => Boolean(item[1].connect),
     );
@@ -298,7 +298,7 @@ const nestedInsert = ({
         Record<string, unknown>,
         {
           connectOrCreate: {
-            where: WhereArg<QueryBase>;
+            where: WhereArg<WhereQueryBase>;
             create: Record<string, unknown>;
           }[];
         },
@@ -327,7 +327,7 @@ const nestedInsert = ({
         {
           create?: Record<string, unknown>[];
           connectOrCreate?: {
-            where: WhereArg<QueryBase>;
+            where: WhereArg<WhereQueryBase>;
             create: Record<string, unknown>;
           }[];
         },

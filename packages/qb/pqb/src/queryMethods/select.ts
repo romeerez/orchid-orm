@@ -31,14 +31,11 @@ import {
   StringKey,
 } from 'orchid-core';
 import { QueryBase } from '../queryBase';
-import { _joinLateral } from './_join';
-import {
-  getClonedQueryData,
-  resolveSubQueryCallback,
-  SelectableOrExpression,
-} from '../utils';
+import { _joinLateral } from './join/_join';
+import { resolveSubQueryCallback, SelectableOrExpression } from '../utils';
 import { RawSQL } from '../sql/rawSql';
 import { SelectAggMethods } from './aggregate';
+import { getSubQueryBuilder } from '../subQueryBuilder';
 
 // .select method argument
 export type SelectArg<T extends Query> =
@@ -65,10 +62,9 @@ export type SelectQueryBuilder<T extends Query, Agg = SelectAggMethods<T>> = {
     | keyof Agg
     | 'columnTypes'
     | 'sql'
+    | 'baseQuery'
     | keyof T['relations']]: K extends keyof Agg
     ? Agg[K]
-    : K extends 'columnTypes' | 'sql'
-    ? T[K]
     : K extends keyof T
     ? T[K]
     : never;
@@ -295,32 +291,6 @@ export const addParserForSelectItem = <T extends Query>(
   return arg;
 };
 
-let selectAggMethods: SelectAggMethods | undefined;
-const getSelectAggMethods = () => {
-  if (selectAggMethods) return selectAggMethods;
-  selectAggMethods = {} as SelectAggMethods;
-  for (const key of Object.getOwnPropertyNames(SelectAggMethods.prototype)) {
-    (selectAggMethods as unknown as Record<string, unknown>)[key] =
-      SelectAggMethods.prototype[key as keyof SelectAggMethods];
-  }
-  return selectAggMethods;
-};
-
-export const getSelectQueryBuilder = <T extends Query>(
-  q: T,
-): SelectAggMethods<T> => {
-  // Memoize query builder assigning agg methods to a cloned base query
-  const qb = (q.internal.selectQueryBuilder ??= Object.assign(
-    Object.create(q.baseQuery),
-    getSelectAggMethods(),
-  ));
-
-  // clone query builder for each invocation so that query data won't persist between calls
-  const cloned = Object.create(qb);
-  cloned.q = getClonedQueryData(q.q);
-  return cloned;
-};
-
 // process select argument: add parsers, join relations when needed
 export const processSelectArg = <T extends Query>(
   q: T,
@@ -340,7 +310,7 @@ export const processSelectArg = <T extends Query>(
     let value = (arg as SelectAsArg<T>)[key] as any;
 
     if (typeof value === 'function') {
-      const qb = getSelectQueryBuilder(q);
+      const qb = getSubQueryBuilder(q);
 
       value = resolveSubQueryCallback(qb as unknown as Query, value);
 

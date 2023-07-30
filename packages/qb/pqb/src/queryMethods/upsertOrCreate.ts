@@ -6,7 +6,7 @@ import {
 } from '../query';
 import { UpdateData } from './update';
 import { CreateData } from './create';
-import { WhereResult } from './where';
+import { WhereResult } from './where/where';
 import { MoreThanOneRowError } from '../errors';
 import { isObjectEmpty } from 'orchid-core';
 

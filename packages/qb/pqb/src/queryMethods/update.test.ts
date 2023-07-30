@@ -11,7 +11,7 @@ import {
 } from '../test-utils/test-utils';
 import { assertType, expectSql, useTestDatabase } from 'test-utils';
 import { BelongsToRelation, RelationQuery } from '../relations';
-import { addQueryOn } from './join';
+import { addQueryOn } from './join/join';
 import { Query } from '../query';
 import { raw } from '../sql/rawSql';
 

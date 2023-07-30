@@ -23,7 +23,6 @@ import { SelectQueryData } from '../sql';
 import {
   ColumnTypeBase,
   emptyArray,
-  Expression,
   getValueKey,
   NullableColumn,
   setParserToQuery,
@@ -173,19 +172,6 @@ export class SelectAggMethods<T extends Query = Query> {
       args,
       options,
     ) as unknown as ColumnExpression<C>;
-  }
-
-  /**
-   * Combine two boolean expressions with `OR`.
-   *
-   * @param left - boolean expression such as `max('column').gt(10)`
-   * @param right - other boolean expression or a raw SQL
-   */
-  or(
-    left: ColumnExpression<BooleanNullable>,
-    right: Expression<BooleanNullable>,
-  ): ColumnExpression<BooleanNullable> {
-    return left.or(right);
   }
 
   /**

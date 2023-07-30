@@ -93,7 +93,51 @@ db.table.where(
 );
 ```
 
-### where special keys
+## where sub query
+
+[//]: # 'has JSDoc'
+
+`where` handles a special callback where you can query a relation to get some value and filter by that value.
+
+It is useful for a faceted search. For instance, posts have tags, and we want to find all posts that have all the given tags.
+
+```ts
+const givenTags = ['typescript', 'node.js'];
+
+const posts = await db.post.where(
+  (post) =>
+    post.tags // query tags of the post
+      .whereIn('tagName', givenTags) // where name of the tag is inside array
+      .count() // count how many such tags were found
+      .equals(wantedTags.length), // the count must be exactly the length of array
+  // if the post has ony `typescript` tag but not the `node.js` it will be omitted
+);
+```
+
+This will produce an efficient SQL query:
+
+```sql
+SELECT * FROM "post"
+WHERE (
+  SELECT count(*) = 3
+  FROM "tag" AS "tags"
+  WHERE "tag"."tagName" IN ('typescript', 'node.js')
+    -- join tags to the post via "postTag" table
+    AND EXISTS (
+      SELECT 1 FROM "postTag"
+      WHERE "postTag"."postId" = "post"."id"
+        AND "postTag"."tagId" = "tag"."id"
+    )
+)
+```
+
+In the example above we use `count()`, you can also use any other [aggregate method](/guide/aggregate.htm) instead, such as [min](/guide/aggregate.html#min), [max](/guide/aggregate.html#max), [avg](/guide/aggregate.html#avg).
+
+The `count()` is chained with `equals` to check for a strict equality, any other [operation](#column-operators) is also allowed, such as `not`, `lt`, `gt`.
+
+## where special keys
+
+[//]: # 'has JSDoc'
 
 The object passed to `where` can contain special keys, each of the keys corresponds to its own method and takes the same value as the type of argument of the method.
 
@@ -113,7 +157,7 @@ db.table.where({
 });
 ```
 
-Using methods instead of this is a shorter and cleaner way, but in some cases, such object keys way may be more convenient.
+Using methods [whereNot](#whereNot), [or](#or), [whereIn](#wherein) instead of this is a shorter and cleaner way, but in some cases, such object keys way may be more convenient.
 
 ```ts
 db.table.where({
@@ -164,6 +208,8 @@ Different types of columns support different sets of operators.
 All column operators can take a value of the same type as the column, a sub-query, or a raw SQL expression:
 
 ```ts
+import { sql } from 'orchid-orm';
+
 db.table.where({
   numericColumn: {
     // lower than 5
@@ -173,7 +219,7 @@ db.table.where({
     lt: OtherTable.select('someNumber').take(),
 
     // raw SQL expression produces WHERE "numericColumn" < "otherColumn" + 10
-    lt: db.table.sql`"otherColumn" + 10`,
+    lt: sql`"otherColumn" + 10`,
   },
 });
 ```
@@ -184,15 +230,15 @@ db.table.where({
 
 ```ts
 db.table.where({
-  // this will fail because an object with operators is expected
+  // when searching for an exact same JSON value, this won't work:
   jsonColumn: someObject,
 
-  // use this instead:
+  // use `{ equals: ... }` instead:
   jsonColumn: { equals: someObject },
 });
 ```
 
-`not` is `!=` (or `<>`) not equal operator:
+`not` is `!=` (aka `<>`) not equal operator:
 
 ```ts
 db.table.where({

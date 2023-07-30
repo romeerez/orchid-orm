@@ -1493,4 +1493,30 @@ describe('hasAndBelongsToMany', () => {
       });
     });
   });
+
+  it('should be supported in a `where` callback', () => {
+    const q = db.user.where((q) =>
+      q.chats.whereIn('Title', ['a', 'b']).count().equals(10),
+    );
+
+    expectSql(
+      q.toSql(),
+      `
+        SELECT ${userSelectAll} FROM "user" WHERE (
+          SELECT count(*) = $1
+          FROM "chat" AS "chats"
+          WHERE
+            EXISTS (
+              SELECT 1
+              FROM "chatUser"
+              WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                AND "chatUser"."userId" = "user"."id"
+              LIMIT 1
+            )
+            AND "chats"."title" IN ($2, $3)
+        )
+      `,
+      [10, 'a', 'b'],
+    );
+  });
 });

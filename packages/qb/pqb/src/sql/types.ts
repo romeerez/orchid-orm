@@ -9,6 +9,7 @@ import {
   TemplateLiteralArgs,
 } from 'orchid-core';
 import { QueryBase } from '../queryBase';
+import { FnExpression } from '../common/fn';
 
 // used in `from` logic to decide if convert query to sql or just write table name
 export const checkIfASimpleQuery = (q: Query) => {
@@ -206,7 +207,7 @@ export type WhereItem =
       ON?: WhereOnItem | WhereJsonPathEqualsItem;
       SEARCH?: MaybeArray<WhereSearchItem>;
     })
-  | ((q: unknown) => QueryBase)
+  | ((q: unknown) => QueryBase | FnExpression<Query, ColumnTypeBase>)
   | Query
   | Expression;
 

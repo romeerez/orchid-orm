@@ -4,9 +4,10 @@ import {
   Snake,
   snakeSelectAll,
   User,
-} from '../test-utils/test-utils';
+} from '../../test-utils/test-utils';
 import { testWhere, testWhereExists } from './testWhere';
-import { expectSql } from 'test-utils';
+import { expectSql, testDb } from 'test-utils';
+import { HasManyRelation, RelationQuery } from '../../relations';
 
 describe('and', () => {
   const [where, _where] = [User.where, User._where];
@@ -153,5 +154,45 @@ describe('where joined named columns', () => {
     fkey: 'snake.tailLength',
     text: 'snake.snakeName',
     selectFrom: `SELECT "user".* FROM "user" JOIN "snake" ON "snake"."tail_length" = "user"."id"`,
+  });
+});
+
+describe('where sub query', () => {
+  it('should handle boolean operator on aggregate sub query', () => {
+    const messageRelation = Object.assign(Object.create(Message), {
+      joinQuery() {
+        return Message;
+      },
+    });
+    messageRelation.baseQuery = messageRelation;
+
+    const User = testDb('user', (t) => ({
+      id: t.identity().primaryKey(),
+    }));
+
+    const UserWithRelation = Object.assign(User, {
+      relations: {
+        messages: messageRelation,
+      },
+      messages: messageRelation,
+    }) as unknown as typeof User & {
+      relations: { messages: HasManyRelation };
+      messages: RelationQuery<'messages', never, never, typeof Message>;
+    };
+
+    const q = UserWithRelation.where((q) =>
+      q.messages.whereIn('text', ['a', 'b', 'c']).count().equals(10),
+    );
+
+    expectSql(
+      q.toSql(),
+      `
+        SELECT * FROM "user" WHERE (
+          SELECT count(*) = $1 FROM "message"
+          WHERE "message"."text" IN ($2, $3, $4)
+        )
+      `,
+      [10, 'a', 'b', 'c'],
+    );
   });
 });

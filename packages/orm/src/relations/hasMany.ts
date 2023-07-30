@@ -12,7 +12,6 @@ import {
   CreateData,
   JoinCallback,
   Query,
-  QueryBase,
   toSqlCacheKey,
   WhereArg,
   WhereResult,
@@ -21,6 +20,7 @@ import {
   VirtualColumn,
   CreateCtx,
   UpdateCtx,
+  WhereQueryBase,
 } from 'pqb';
 import { MaybeArray } from 'orchid-core';
 import {
@@ -225,7 +225,7 @@ export const makeHasManyMethod = (
 
 const getWhereForNestedUpdate = (
   data: Record<string, unknown>[],
-  params: MaybeArray<WhereArg<QueryBase>> | undefined,
+  params: MaybeArray<WhereArg<WhereQueryBase>> | undefined,
   primaryKey: string,
   foreignKey: string,
 ) => {
@@ -249,7 +249,7 @@ const nestedInsert = ({ query, primaryKey, foreignKey }: State) => {
         item,
       ): item is [
         Record<string, unknown>,
-        { connect: WhereArg<QueryBase>[] },
+        { connect: WhereArg<WhereQueryBase>[] },
       ] => Boolean(item[1].connect),
     );
 
@@ -272,7 +272,7 @@ const nestedInsert = ({ query, primaryKey, foreignKey }: State) => {
         Record<string, unknown>,
         {
           connectOrCreate: {
-            where: WhereArg<QueryBase>;
+            where: WhereArg<WhereQueryBase>;
             create: Record<string, unknown>;
           }[];
         },
@@ -305,7 +305,7 @@ const nestedInsert = ({ query, primaryKey, foreignKey }: State) => {
         {
           create?: Record<string, unknown>[];
           connectOrCreate?: {
-            where: WhereArg<QueryBase>;
+            where: WhereArg<WhereQueryBase>;
             create: Record<string, unknown>;
           }[];
         },

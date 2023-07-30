@@ -81,24 +81,4 @@ describe('having', () => {
       [1, 10, 2, 9],
     );
   });
-
-  it('should support top-level `or`', () => {
-    const q = User.having((q) =>
-      q.or(
-        q.min('id').gt(1).and(q.max('id').lt(10)),
-        q.sum('id').gte(2).and(q.avg('id').lte(9)),
-      ),
-    );
-
-    expectSql(
-      q.toSql(),
-      `
-        SELECT *
-        FROM "user"
-        HAVING (min("user"."id") > $1 AND max("user"."id") < $2)
-            OR (sum("user"."id") >= $3 AND avg("user"."id") <= $4)
-      `,
-      [1, 10, 2, 9],
-    );
-  });
 });

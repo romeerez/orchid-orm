@@ -2,6 +2,8 @@ import {
   GetStringArg,
   OnQueryBuilder,
   QueryMethods,
+  SelectQueryBuilder,
+  WhereQueryBase,
   WhereQueryBuilder,
   WhereResult,
 } from './queryMethods';
@@ -45,9 +47,12 @@ export type WithDataBase = Record<never, WithDataItem>;
 
 export type Query = QueryBase &
   QueryMethods<ColumnTypesBase> & {
+    internal: {
+      selectQueryBuilder?: SelectQueryBuilder<Query>;
+      getWhereQueryBuilder(q: QueryData): WhereQueryBuilder<WhereQueryBase>;
+    };
     queryBuilder: Db;
     columnTypes: ColumnTypesBase;
-    whereQueryBuilder: typeof WhereQueryBuilder;
     onQueryBuilder: typeof OnQueryBuilder;
     table?: string;
     shape: ColumnsShape;
@@ -293,6 +298,7 @@ export type SetQueryReturnsRowCount<T extends Query> = SetQueryReturns<
 export type SetQueryReturnsVoid<T extends Query> = SetQueryReturns<T, 'void'>;
 
 // Set the kind of the query, can be 'select', 'update', 'create', etc.
+// `update` method is using the kind of query to allow only 'select' as a callback return for a column.
 export type SetQueryKind<T extends Query, Kind extends string> = {
   [K in keyof T]: K extends 'meta'
     ? {

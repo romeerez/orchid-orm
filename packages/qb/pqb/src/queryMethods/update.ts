@@ -17,7 +17,7 @@ import {
   Relation,
   RelationQueryBase,
 } from '../relations';
-import { WhereArg, WhereResult } from './where';
+import { WhereArg, WhereResult } from './where/where';
 import { CreateData } from './create';
 import { JsonItem, QueryData, UpdateQueryData } from '../sql';
 import { VirtualColumn } from '../columns';

@@ -358,6 +358,7 @@ const makeRelationQuery = (
   q: Query,
 ) => {
   Object.defineProperty(table, relationName, {
+    configurable: true,
     get() {
       const toTable = q.clone();
 
@@ -388,6 +389,11 @@ const makeRelationQuery = (
           return (query as unknown as Record<string, unknown>)[prop as string];
         },
       }) as unknown as RelationQuery;
+    },
+    set(value) {
+      Object.defineProperty(this, relationName, {
+        value,
+      });
     },
   });
 };

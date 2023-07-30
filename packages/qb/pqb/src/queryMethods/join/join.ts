@@ -6,11 +6,11 @@ import {
   WithDataBase,
   WithDataItem,
   QueryReturnType,
-} from '../query';
-import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
-import { WhereQueryBuilder } from './where';
-import { Relation, RelationsBase } from '../relations';
-import { QueryData } from '../sql';
+} from '../../query';
+import { pushQueryValue, setQueryObjectValue } from '../../queryDataUtils';
+import { WhereQueryBase } from '../where/where';
+import { Relation, RelationsBase } from '../../relations';
+import { QueryData } from '../../sql';
 import {
   Expression,
   StringKey,
@@ -21,12 +21,15 @@ import {
   ColumnsShapeBase,
   QueryThen,
   QueryCatch,
+  emptyObject,
 } from 'orchid-core';
 import { _join, _joinLateral } from './_join';
-import { AliasOrTable } from '../utils';
-import { ColumnsObject } from '../columns';
-import { QueryBase } from '../queryBase';
+import { AliasOrTable } from '../../utils';
+import { ColumnsObject } from '../../columns';
+import { QueryBase } from '../../queryBase';
 
+// Type of column names of a `with` table, to use to join a `with` table by these columns.
+// Union of `with` column names that may be prefixed with a `with` table name.
 type WithSelectable<
   T extends QueryBase,
   W extends keyof T['withData'],
@@ -38,12 +41,20 @@ type WithSelectable<
         >}`
   : never;
 
+/**
+ * The first argument of all `join` and `joinLateral` methods.
+ * See argument of {@link Join.join}.
+ */
 export type JoinFirstArg<T extends QueryBase> =
   | Query
   | keyof T['relations']
   | keyof T['withData']
   | ((q: Pick<T, keyof T['relations']>) => Query);
 
+/**
+ * Arguments of `join` methods (not `joinLateral`).
+ * See {@link Join.join}
+ */
 export type JoinArgs<
   T extends QueryBase,
   Arg extends JoinFirstArg<T>,
@@ -55,10 +66,25 @@ export type JoinArgs<
   ? JoinWithArgs<T, Arg>
   : never;
 
+/**
+ * Column names of the joined table that can be used to join.
+ * Derived from 'result', not from 'shape',
+ * because if the joined table has a specific selection, it will be wrapped like:
+ * ```sql
+ * JOIN (SELECT something FROM joined) joined ON joined.something = ...
+ * ```
+ * And the selection becomes available to use in the `ON` and to select from the joined table.
+ */
 type JoinSelectable<Q extends Query> =
   | keyof Q['result']
   | `${AliasOrTable<Q>}.${StringKey<keyof Q['result']>}`;
 
+// Available arguments when joining a query object. Can be:
+// - an object where keys are columns of the joined table and values are columns of the main table or a raw SQL.
+// - raw SQL expression
+// - `true` to join without conditions
+// - pair of columns, first is of the joined table, second is of main table
+// - string tuple of a column of a joined table, operator string such as '=' or '!=', and a column of the main table
 type JoinQueryArgs<T extends QueryBase, Q extends Query> =
   | [
       conditions:
@@ -76,6 +102,11 @@ type JoinQueryArgs<T extends QueryBase, Q extends Query> =
       rightColumn: Selectable<T> | Expression,
     ];
 
+// Available arguments when joining a `with` table. Can be:
+// - an object where keys are columns of the `with` table and values are columns of the main table or a raw SQL
+// - raw SQL expression
+// - pair of columns, first is of the `with` table, second is of main table
+// - string tuple of a column of a `with` table, operator string such as '=' or '!=', and a column of the main table
 type JoinWithArgs<T extends QueryBase, W extends keyof T['withData']> =
   | [
       conditions:
@@ -92,6 +123,15 @@ type JoinWithArgs<T extends QueryBase, W extends keyof T['withData']> =
       rightColumn: Selectable<T> | Expression,
     ];
 
+/**
+ * Result of all `join` methods, not `joinLateral`.
+ * Adds joined table columns from its 'result' to the 'selectable' of the query.
+ *
+ * @param T - query type to join to
+ * @param Arg - first arg of join, see {@link JoinFirstArg}
+ * @param RequireJoined - when false, joined table shape will be mapped to make all columns optional
+ * @param RequireMain - when false, main table shape will be mapped to make all columns optional (for right and full join)
+ */
 export type JoinResult<
   T extends Query,
   Arg extends JoinFirstArg<T>,
@@ -112,7 +152,7 @@ export type JoinResult<
         ? {
             table: T['withData'][Arg]['table'];
             result: T['withData'][Arg]['shape'];
-            meta: QueryMetaBase;
+            meta: QueryBase['meta'];
           }
         : never
       : never
@@ -126,19 +166,24 @@ export type JoinResult<
   ? JoinAddSelectable<T, Selectable>
   : JoinOptionalMain<T, Selectable>;
 
+/**
+ * Result of all `joinLateral` methods.
+ * Adds joined table columns from its 'result' to the 'selectable' of the query.
+ *
+ * @param T - query type to join to
+ * @param Arg - first arg of join, see {@link JoinFirstArg}
+ * @param RequireJoined - when false, joined table shape will be mapped to make all columns optional
+ */
 export type JoinLateralResult<
   T extends Query,
   R extends QueryBase,
   RequireJoined extends boolean,
-  RequireMain extends boolean,
   Selectable extends SelectableBase = JoinResultSelectable<
     R,
     RequireJoined,
     { meta: QueryMetaBase }
   >,
-> = RequireMain extends true
-  ? JoinAddSelectable<T, Selectable>
-  : JoinOptionalMain<T, Selectable>;
+> = JoinAddSelectable<T, Selectable>;
 
 type JoinResultSelectable<
   J extends Pick<Query, 'result' | 'table' | 'meta'>,
@@ -212,7 +257,7 @@ type JoinWithArgToQuery<
   baseQuery: Query;
   relations: RelationsBase;
   withData: WithDataBase;
-  meta: QueryMetaBase;
+  meta: QueryBase['meta'];
   internal: QueryInternal;
   returnType: QueryReturnType;
 };
@@ -244,6 +289,12 @@ export type JoinLateralCallback<
 > = (q: Q & OnQueryBuilder<T, Q>) => R;
 
 export class Join {
+  /**
+   * TODO: write docs
+   *
+   * @param arg - can be a query object, a name of a relation, a name of `with` table, or a callback to join a relation
+   * @param args - arguments depend on the first argument, it can be object with columns, list of columns, `true` literal.
+   */
   join<
     T extends Query,
     Arg extends JoinFirstArg<T>,
@@ -368,8 +419,8 @@ export class Join {
     this: T,
     arg: Arg,
     cb: JoinLateralCallback<T, Arg, R>,
-  ): JoinLateralResult<T, R, true, true> {
-    return _joinLateral<T, Arg, R, true, true>(this.clone(), 'JOIN', arg, cb);
+  ): JoinLateralResult<T, R, true> {
+    return _joinLateral<T, Arg, R, true>(this.clone(), 'JOIN', arg, cb);
   }
   _joinLateral<
     T extends Query,
@@ -379,8 +430,8 @@ export class Join {
     this: T,
     arg: Arg,
     cb: JoinLateralCallback<T, Arg, R>,
-  ): JoinLateralResult<T, R, true, true> {
-    return _joinLateral<T, Arg, R, true, true>(this, 'JOIN', arg, cb);
+  ): JoinLateralResult<T, R, true> {
+    return _joinLateral<T, Arg, R, true>(this, 'JOIN', arg, cb);
   }
 
   leftJoinLateral<
@@ -391,13 +442,8 @@ export class Join {
     this: T,
     arg: Arg,
     cb: JoinLateralCallback<T, Arg, R>,
-  ): JoinLateralResult<T, R, false, true> {
-    return _joinLateral<T, Arg, R, false, true>(
-      this.clone(),
-      'LEFT JOIN',
-      arg,
-      cb,
-    );
+  ): JoinLateralResult<T, R, false> {
+    return _joinLateral<T, Arg, R, false>(this.clone(), 'LEFT JOIN', arg, cb);
   }
   _leftJoinLateral<
     T extends Query,
@@ -407,8 +453,8 @@ export class Join {
     this: T,
     arg: Arg,
     cb: JoinLateralCallback<T, Arg, R>,
-  ): JoinLateralResult<T, R, false, true> {
-    return _joinLateral<T, Arg, R, false, true>(this, 'LEFT JOIN', arg, cb);
+  ): JoinLateralResult<T, R, false> {
+    return _joinLateral<T, Arg, R, false>(this, 'LEFT JOIN', arg, cb);
   }
 }
 
@@ -485,22 +531,34 @@ type OnJsonPathEqualsArgs<T extends QueryBase> = [
 ];
 
 export class OnQueryBuilder<
-    S extends QueryBase = QueryBase,
-    J extends QueryBase = QueryBase,
-  >
-  extends WhereQueryBuilder<
-    J & {
-      selectable: Omit<S['selectable'], keyof S['shape']>;
-    }
-  >
-  implements QueryBase
-{
+  S extends QueryBase = QueryBase,
+  J extends QueryBase = QueryBase,
+> extends WhereQueryBase {
+  declare selectable: J['selectable'] & Omit<S['selectable'], keyof S['shape']>;
+  declare relations: J['relations'];
+  declare result: J['result'];
+  shape: J['shape'];
+  baseQuery: Query;
+  withData = emptyObject;
+  internal: QueryInternal;
+
   constructor(
     q: QueryBase,
-    data: Pick<QueryData, 'shape' | 'joinedShapes'>,
+    { shape, joinedShapes }: Pick<QueryData, 'shape' | 'joinedShapes'>,
     joinTo: QueryBase,
   ) {
-    super(q, data);
+    super();
+    this.internal = q.internal;
+    this.table = typeof q === 'object' ? q.table : q;
+    this.shape = shape;
+    this.q = {
+      shape: shape as ColumnsShapeBase,
+      joinedShapes,
+    } as QueryData;
+    this.baseQuery = this as unknown as Query;
+    if (typeof q === 'object' && q.q.as) {
+      this.q.as = q.q.as;
+    }
     this.q.joinTo = joinTo;
   }
 

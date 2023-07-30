@@ -1518,6 +1518,25 @@ describe('hasOne', () => {
       ]);
     });
   });
+
+  it('should be supported in a `where` callback', () => {
+    const q = db.user.where((q) =>
+      q.profile.whereIn('Bio', ['a', 'b']).count().equals(1),
+    );
+
+    expectSql(
+      q.toSql(),
+      `
+        SELECT ${userSelectAll} FROM "user" WHERE (
+          SELECT count(*) = $1
+          FROM "profile"
+          WHERE "profile"."userId" = "user"."id"
+            AND "profile"."bio" IN ($2, $3)
+        )
+      `,
+      [1, 'a', 'b'],
+    );
+  });
 });
 
 describe('hasOne through', () => {
@@ -2150,5 +2169,31 @@ describe('hasOne through', () => {
         },
       ]);
     });
+  });
+
+  it('should be supported in a `where` callback', () => {
+    const q = db.message.where((q) =>
+      q.profile.whereIn('Bio', ['a', 'b']).count().equals(1),
+    );
+
+    expectSql(
+      q.toSql(),
+      `
+        SELECT ${messageSelectAll} FROM "message" WHERE (
+          SELECT count(*) = $1
+          FROM "profile"
+          WHERE
+            EXISTS (
+              SELECT 1
+              FROM "user"
+              WHERE "profile"."userId" = "user"."id"
+                AND "user"."id" = "message"."authorId"
+              LIMIT 1
+            )
+            AND "profile"."bio" IN ($2, $3)
+        )
+      `,
+      [1, 'a', 'b'],
+    );
   });
 });

@@ -1418,4 +1418,23 @@ describe('belongsTo', () => {
       ]);
     });
   });
+
+  it('should be supported in a `where` callback', () => {
+    const q = db.profile.where((q) =>
+      q.user.whereIn('Name', ['a', 'b']).count().equals(1),
+    );
+
+    expectSql(
+      q.toSql(),
+      `
+        SELECT ${profileSelectAll} FROM "profile" WHERE (
+          SELECT count(*) = $1
+          FROM "user"
+          WHERE "user"."id" = "profile"."userId"
+            AND "user"."name" IN ($2, $3)
+        )
+      `,
+      [1, 'a', 'b'],
+    );
+  });
 });

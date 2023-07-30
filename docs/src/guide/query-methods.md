@@ -563,6 +563,8 @@ db.comment
 
 ## having
 
+[//]: # 'has JSDoc'
+
 Build a `HAVING` clause to the query to filter records by results of [aggregate functions](#aggregate-functions).
 
 The argument of `having` is a function where you call the aggregate function and compare it with some value by using [column operators](/guide/where.html#column-operators).
@@ -595,13 +597,6 @@ db.table.having((q) =>
   q.sum('column').equals(5).or(q.min('column').gt(1), q.max('column').lt(10)),
 );
 // HAVING (sum(column) = 5) OR (min(column) > 1 AND max(column) < 10)
-```
-
-`or` method is also available on the `q` query builder:
-
-```ts
-db.table.having((q) => q.or(q.min('column').gt(1), q.max('column').lt(10)));
-// HAVING (min(column) > 1) OR (max(column) < 10)
 ```
 
 Aggregate functions are exactly the same functions described in [aggregate functions](#aggregate-functions), they can accept aggregation options:

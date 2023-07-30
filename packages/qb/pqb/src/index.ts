@@ -14,3 +14,4 @@ export * from './columns/operators';
 export * from './common/fn';
 export * from './queryBase';
 export * from './testTransaction';
+export * from './subQueryBuilder';

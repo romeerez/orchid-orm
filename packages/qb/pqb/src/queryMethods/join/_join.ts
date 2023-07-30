@@ -1,9 +1,9 @@
-import { Query } from '../query';
+import { Query } from '../../query';
 import { ColumnsParsers, ColumnsShapeBase } from 'orchid-core';
-import { getIsJoinSubQuery } from '../sql/join';
-import { getShapeFromSelect } from './select';
-import { Relation } from '../relations';
-import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
+import { getIsJoinSubQuery } from '../../sql/join';
+import { getShapeFromSelect } from '../select';
+import { Relation } from '../../relations';
+import { pushQueryValue, setQueryObjectValue } from '../../queryDataUtils';
 import {
   JoinArgs,
   JoinCallback,
@@ -12,10 +12,21 @@ import {
   JoinLateralResult,
   JoinResult,
 } from './join';
-import { ColumnsShape } from '../columns';
-import { getQueryAs } from '../utils';
-import { QueryBase } from '../queryBase';
+import { ColumnsShape } from '../../columns';
+import { getQueryAs } from '../../utils';
+import { QueryBase } from '../../queryBase';
 
+/**
+ * Generic function to construct all JOIN queries.
+ * Adds a shape of the joined table into `joinedShapes`.
+ * Adds column parsers of the joined table into `joinedParsers`.
+ * Adds join data into `join` of the query data.
+ *
+ * @param q - query object to join to
+ * @param require - true for INNER kind of JOIN
+ * @param type - SQL of the JOIN kind: JOIN, LEFT JOIN, RIGHT JOIN, etc.
+ * @param args - join arguments to join a query, or `with` table, or a callback returning a query, etc.
+ */
 export const _join = <
   T extends Query,
   Arg extends JoinFirstArg<T>,
@@ -95,19 +106,30 @@ export const _join = <
   }) as unknown as JoinResult<T, Arg, RequireJoined, RequireMain>;
 };
 
+/**
+ * Generic function to construct all JOIN LATERAL queries.
+ * Adds a shape of the joined table into `joinedShapes`.
+ * Adds column parsers of the joined table into `joinedParsers`.
+ * Adds join data into `join` of the query data.
+ *
+ * @param q - query object to join to
+ * @param type - SQL of the JOIN kind: JOIN or LEFT JOIN
+ * @param arg - join target: a query, or a relation name, or a `with` table name, or a callback returning a query.
+ * @param cb - callback where you can use `on` to join by columns, select needed data from the joined table, add where conditions, etc.
+ * @param as - alias of the joined table, it is set the join lateral happens when selecting a relation in `select`
+ */
 export const _joinLateral = <
   T extends Query,
   Arg extends JoinFirstArg<T>,
   R extends QueryBase,
   RequireJoined extends boolean,
-  RequireMain extends boolean,
 >(
   q: T,
   type: string,
   arg: Arg,
   cb: JoinLateralCallback<T, Arg, R>,
   as?: string,
-): JoinLateralResult<T, R, RequireJoined, RequireMain> => {
+): JoinLateralResult<T, R, RequireJoined> => {
   let relation: Relation | undefined;
   if (typeof arg === 'string') {
     relation = (q.relations as Record<string, Relation>)[arg];
@@ -149,5 +171,5 @@ export const _joinLateral = <
     type,
     result,
     as || getQueryAs(result),
-  ]) as JoinLateralResult<T, R, RequireJoined, RequireMain>;
+  ]) as JoinLateralResult<T, R, RequireJoined>;
 };

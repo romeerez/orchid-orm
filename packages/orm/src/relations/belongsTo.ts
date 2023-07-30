@@ -7,11 +7,11 @@ import {
   isQueryReturnsAll,
   pushQueryValue,
   Query,
-  QueryBase,
   QueryResult,
   UpdateCtx,
   VirtualColumn,
   WhereArg,
+  WhereQueryBase,
   WhereResult,
 } from 'pqb';
 import { RelationData, RelationThunkBase } from './relations';
@@ -157,7 +157,7 @@ const nestedInsert = ({ query, primaryKey }: State) => {
         item,
       ): item is {
         connectOrCreate: {
-          where: WhereArg<QueryBase>;
+          where: WhereArg<WhereQueryBase>;
           create: Record<string, unknown>;
         };
       } => Boolean(item.connectOrCreate),
@@ -186,7 +186,7 @@ const nestedInsert = ({ query, primaryKey }: State) => {
           }
         | {
             connectOrCreate: {
-              where: WhereArg<QueryBase>;
+              where: WhereArg<WhereQueryBase>;
               create: Record<string, unknown>;
             };
           } => {
@@ -215,7 +215,7 @@ const nestedInsert = ({ query, primaryKey }: State) => {
       (
         item,
       ): item is {
-        connect: WhereArg<QueryBase>;
+        connect: WhereArg<WhereQueryBase>;
       } => Boolean(item.connect),
     );
 

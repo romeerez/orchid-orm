@@ -5,10 +5,10 @@ import {
   snakeSelectAll,
   snakeSelectAllWithTable,
   User,
-} from '../test-utils/test-utils';
+} from '../../test-utils/test-utils';
 import { OnQueryBuilder } from './join';
 import { _join } from './_join';
-import { testWhere, testWhereExists } from './testWhere';
+import { testWhere, testWhereExists } from '../where/testWhere';
 import { testJoin } from './testJoin';
 import { asMock, expectSql } from 'test-utils';
 

@@ -2,10 +2,10 @@ import { Query, SelectableFromShape } from './query';
 import {
   QueryMethods,
   handleResult,
-  WhereQueryBuilder,
   OnQueryBuilder,
   logParamToLogObject,
   QueryLogOptions,
+  WhereQueryBuilder,
 } from './queryMethods';
 import { QueryData, SelectQueryData, ToSqlOptions } from './sql';
 import {
@@ -49,6 +49,9 @@ import { q } from './sql/common';
 import { inspect } from 'util';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { templateLiteralToSQL } from './sql/rawSql';
+import { getSubQueryBuilder, SubQueryBuilder } from './subQueryBuilder';
+import { getClonedQueryData } from './utils';
+import { Relation } from './relations';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
@@ -96,7 +99,6 @@ export interface Db<
   ): this;
   internal: Query['internal'];
   queryBuilder: Db;
-  whereQueryBuilder: Query['whereQueryBuilder'];
   onQueryBuilder: Query['onQueryBuilder'];
   primaryKeys: Query['primaryKeys'];
   q: QueryData;
@@ -147,7 +149,38 @@ export class Db<
     options: DbTableOptions,
   ) {
     const tableData = getTableData();
-    this.internal = { ...tableData, transactionStorage };
+
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this;
+
+    let whereQueryBuilder: WhereQueryBuilder<Query> | undefined;
+    this.internal = {
+      ...tableData,
+      transactionStorage,
+      getWhereQueryBuilder(q: QueryData) {
+        if (!whereQueryBuilder) {
+          whereQueryBuilder = Object.create(self) as WhereQueryBuilder<Query>;
+          whereQueryBuilder.baseQuery = whereQueryBuilder as Query;
+
+          for (const key in self.relations) {
+            const rel = self.relations[key] as Relation;
+
+            (
+              whereQueryBuilder as unknown as Record<
+                string,
+                SubQueryBuilder<Query>
+              >
+            )[key] = getSubQueryBuilder(rel.joinQuery(self, rel.query));
+          }
+        }
+
+        const qb = Object.create(whereQueryBuilder);
+        qb.q = getClonedQueryData(q);
+        qb.q.and = qb.q.or = undefined;
+
+        return qb;
+      },
+    };
     this.baseQuery = this as Query;
 
     const logger = options.logger || console;
@@ -260,8 +293,6 @@ export class Db<
 
     modifyQuery?.forEach((cb) => cb(this));
 
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self = this;
     this.error = class extends QueryError {
       constructor(message?: string) {
         super(self, message);
@@ -386,7 +417,6 @@ const performQuery = async <Result>(
 
 applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
-Db.prototype.whereQueryBuilder = WhereQueryBuilder;
 Db.prototype.onQueryBuilder = OnQueryBuilder;
 
 export type DbResult<CT extends ColumnTypesBase> = Db<

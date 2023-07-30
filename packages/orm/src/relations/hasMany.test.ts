@@ -1843,6 +1843,25 @@ describe('hasMany', () => {
       });
     });
   });
+
+  it('should be supported in a `where` callback', () => {
+    const q = db.user.where((q) =>
+      q.messages.whereIn('Text', ['a', 'b']).count().equals(10),
+    );
+
+    expectSql(
+      q.toSql(),
+      `
+          SELECT ${userSelectAll} FROM "user" WHERE (
+            SELECT count(*) = $1
+            FROM "message" AS "messages"
+            WHERE "messages"."authorId" = "user"."id"
+              AND "messages"."text" IN ($2, $3)
+          )
+        `,
+      [10, 'a', 'b'],
+    );
+  });
 });
 
 describe('hasMany through', () => {
@@ -2527,6 +2546,39 @@ describe('hasMany through', () => {
         `,
       );
     });
+
+    it('should be supported in a `where` callback', () => {
+      const q = db.profile.where((q) =>
+        q.chats.whereIn('Title', ['a', 'b']).count().equals(10),
+      );
+
+      expectSql(
+        q.toSql(),
+        `
+          SELECT ${profileSelectAll} FROM "profile" WHERE (
+            SELECT count(*) = $1
+            FROM "chat" AS "chats"
+            WHERE
+              EXISTS (
+                SELECT 1
+                FROM "user"
+                WHERE
+                  EXISTS (
+                    SELECT 1
+                    FROM "chatUser"
+                    WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                      AND "chatUser"."userId" = "user"."id"
+                    LIMIT 1
+                  )
+                  AND "user"."id" = "profile"."userId"
+                LIMIT 1
+              )
+              AND "chats"."title" IN ($2, $3)
+          )
+        `,
+        [10, 'a', 'b'],
+      );
+    });
   });
 
   describe('through hasOne', () => {
@@ -3051,6 +3103,38 @@ describe('hasMany through', () => {
           `,
         );
       });
+    });
+
+    it('should be supported in a `where` callback', () => {
+      const q = db.chat.where((q) =>
+        q.profiles.whereIn('Bio', ['a', 'b']).count().equals(10),
+      );
+
+      expectSql(
+        q.toSql(),
+        `
+            SELECT ${chatSelectAll} FROM "chat" WHERE (
+              SELECT count(*) = $1
+              FROM "profile" AS "profiles"
+              WHERE
+                EXISTS (
+                  SELECT 1
+                  FROM "user" AS "users"
+                  WHERE "profiles"."userId" = "users"."id"
+                    AND EXISTS (
+                      SELECT 1
+                      FROM "chatUser"
+                      WHERE "chatUser"."userId" = "users"."id"
+                        AND "chatUser"."chatId" = "chat"."idOfChat"
+                      LIMIT 1
+                    )
+                  LIMIT 1
+                )
+                AND "profiles"."bio" IN ($2, $3)
+            )
+          `,
+        [10, 'a', 'b'],
+      );
     });
   });
 });

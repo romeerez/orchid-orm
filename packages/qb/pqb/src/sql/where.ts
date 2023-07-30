@@ -13,13 +13,19 @@ import { getQueryAs } from '../utils';
 import { processJoinItem } from './join';
 import { makeSql, ToSqlCtx } from './toSql';
 import { JoinedShapes, QueryData } from './data';
-import { Expression, isExpression, MaybeArray, toArray } from 'orchid-core';
-import { QueryBase } from '../queryBase';
+import {
+  ColumnTypeBase,
+  Expression,
+  isExpression,
+  MaybeArray,
+  toArray,
+} from 'orchid-core';
 import { Operator } from '../columns/operators';
+import { FnExpression } from '../common/fn';
 
 export const pushWhereStatementSql = (
   ctx: ToSqlCtx,
-  table: QueryBase,
+  table: Query,
   query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   quotedAs?: string,
 ) => {
@@ -32,7 +38,7 @@ export const pushWhereStatementSql = (
 export const pushWhereToSql = (
   sql: string[],
   ctx: ToSqlCtx,
-  table: QueryBase,
+  table: Query,
   query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   quotedAs?: string,
   not?: boolean,
@@ -45,7 +51,7 @@ export const pushWhereToSql = (
 
 export const whereToSql = (
   ctx: ToSqlCtx,
-  table: QueryBase,
+  table: Query,
   query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   quotedAs?: string,
   not?: boolean,
@@ -65,22 +71,22 @@ export const whereToSql = (
 const processAnds = (
   and: WhereItem[],
   ctx: ToSqlCtx,
-  table: QueryBase,
+  table: Query,
   query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   quotedAs?: string,
   not?: boolean,
 ): string => {
   const ands: string[] = [];
-  and.forEach((data) =>
-    processWhere(ands, ctx, table, query, data, quotedAs, not),
-  );
+  for (const data of and) {
+    processWhere(ands, ctx, table, query, data, quotedAs, not);
+  }
   return ands.join(' AND ');
 };
 
 const processWhere = (
   ands: string[],
   ctx: ToSqlCtx,
-  table: QueryBase,
+  table: Query,
   query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes' | 'language'>,
   data: WhereItem,
   quotedAs?: string,
@@ -89,8 +95,16 @@ const processWhere = (
   const prefix = not ? 'NOT ' : '';
 
   if (typeof data === 'function') {
-    const qb = data(new ctx.queryBuilder.whereQueryBuilder(table, query));
-    pushWhereToSql(ands, ctx, qb, qb.q, quotedAs, not);
+    const qb = table.internal.getWhereQueryBuilder(query as QueryData);
+    const res = data(qb);
+    if ('q' in res.q) {
+      const q = res.q.clone();
+      q.q.select = [res as FnExpression<Query, ColumnTypeBase>];
+      ands.push(`${prefix}(${makeSql(q, ctx).text})`);
+    } else {
+      pushWhereToSql(ands, ctx, res as Query, res.q, quotedAs, not);
+    }
+
     return;
   }
 

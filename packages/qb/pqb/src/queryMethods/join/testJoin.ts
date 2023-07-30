@@ -1,6 +1,6 @@
-import { Query } from '../query';
+import { Query } from '../../query';
 import { addQueryOn } from './join';
-import { columnSqlForTest } from './testWhere';
+import { columnSqlForTest } from '../where/testWhere';
 import { expectSql, testDb } from 'test-utils';
 
 export const testJoin = ({
@@ -215,7 +215,7 @@ export const testJoin = ({
   });
 
   describe('relation', () => {
-    const withRelation = joinTo as Query & {
+    const withRelation = Object.create(joinTo) as Query & {
       relations: {
         as: {
           key: 'as';
@@ -224,6 +224,7 @@ export const testJoin = ({
         };
       };
     };
+    withRelation.baseQuery = Object.create(withRelation.baseQuery);
 
     beforeAll(() => {
       Object.assign(withRelation.baseQuery, {

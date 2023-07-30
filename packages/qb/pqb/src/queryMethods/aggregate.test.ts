@@ -240,14 +240,14 @@ describe('aggregate', () => {
     });
   });
 
-  // ${'min'}    | ${'min'}
-  // ${'max'}    | ${'max'}
-  // ${'sum'}    | ${'sum'}
-  // ${'bitAnd'} | ${'bit_and'}
-  // ${'bitOr'}  | ${'bit_or'}
   describe.each`
-    method   | functionName
-    ${'avg'} | ${'avg'}
+    method      | functionName
+    ${'avg'}    | ${'avg'}
+    ${'min'}    | ${'min'}
+    ${'max'}    | ${'max'}
+    ${'sum'}    | ${'sum'}
+    ${'bitAnd'} | ${'bit_and'}
+    ${'bitOr'}  | ${'bit_or'}
   `('$method', ({ method }) => {
     it('should return null when no records', async () => {
       const value = await User[method as 'avg']('id');

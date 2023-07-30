@@ -1,10 +1,10 @@
 import {
   CreateCtx,
   Query,
-  QueryBase,
   Relation,
   UpdateData,
   WhereArg,
+  WhereQueryBase,
 } from 'pqb';
 import { MaybeArray } from 'orchid-core';
 import { HasOneNestedInsert, HasOneNestedUpdate } from './hasOne';
@@ -12,18 +12,18 @@ import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
 
 export type NestedInsertOneItem = {
   create?: Record<string, unknown>;
-  connect?: WhereArg<QueryBase>;
+  connect?: WhereArg<WhereQueryBase>;
   connectOrCreate?: {
-    where: WhereArg<QueryBase>;
+    where: WhereArg<WhereQueryBase>;
     create: Record<string, unknown>;
   };
 };
 
 export type NestedInsertManyItems = {
   create?: Record<string, unknown>[];
-  connect?: WhereArg<QueryBase>[];
+  connect?: WhereArg<WhereQueryBase>[];
   connectOrCreate?: {
-    where: WhereArg<QueryBase>;
+    where: WhereArg<WhereQueryBase>;
     create: Record<string, unknown>;
   }[];
 };
@@ -32,7 +32,7 @@ export type NestedInsertItem = NestedInsertOneItem | NestedInsertManyItems;
 
 export type NestedUpdateOneItem = {
   disconnect?: boolean;
-  set?: WhereArg<QueryBase>;
+  set?: WhereArg<WhereQueryBase>;
   delete?: boolean;
   update?: UpdateData<Query>;
   upsert?: {
@@ -43,11 +43,11 @@ export type NestedUpdateOneItem = {
 };
 
 export type NestedUpdateManyItems = {
-  disconnect?: MaybeArray<WhereArg<QueryBase>>;
-  set?: MaybeArray<WhereArg<QueryBase>>;
-  delete?: MaybeArray<WhereArg<QueryBase>>;
+  disconnect?: MaybeArray<WhereArg<WhereQueryBase>>;
+  set?: MaybeArray<WhereArg<WhereQueryBase>>;
+  delete?: MaybeArray<WhereArg<WhereQueryBase>>;
   update?: {
-    where: MaybeArray<WhereArg<QueryBase>>;
+    where: MaybeArray<WhereArg<WhereQueryBase>>;
     data: UpdateData<Query>;
   };
   create: Record<string, unknown>[];

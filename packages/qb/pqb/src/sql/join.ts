@@ -239,7 +239,7 @@ const processArgs = (
         };
       }
 
-      return whereToSql(ctx, jq, jq.q, joinAs);
+      return whereToSql(ctx, jq as Query, jq.q, joinAs);
     } else {
       return getObjectOrRawConditions(
         ctx,
