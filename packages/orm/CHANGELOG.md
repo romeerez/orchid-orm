@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.13.9
+
+### Patch Changes
+
+- 52196f7d: Support searching by aggregated value in a `where` callback (#122)
+- Updated dependencies [52196f7d]
+  - pqb@0.16.6
+
 ## 1.13.8
 
 ### Patch Changes

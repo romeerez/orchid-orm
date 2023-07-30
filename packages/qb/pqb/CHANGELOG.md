@@ -1,5 +1,11 @@
 # pqb
 
+## 0.16.6
+
+### Patch Changes
+
+- 52196f7d: Support searching by aggregated value in a `where` callback (#122)
+
 ## 0.16.5
 
 ### Patch Changes
