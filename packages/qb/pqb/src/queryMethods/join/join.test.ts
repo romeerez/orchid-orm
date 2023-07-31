@@ -97,7 +97,7 @@ describe('join callback with query builder', () => {
         .join(Message, (q) =>
           q.on('message.authorId', 'user.id').orOn('message.text', 'user.name'),
         )
-        .toSql(),
+        .toSQL(),
       expectedSql,
     );
 
@@ -108,7 +108,7 @@ describe('join callback with query builder', () => {
             .on('message.authorId', '=', 'user.id')
             .orOn('message.text', '=', 'user.name'),
         )
-        .toSql(),
+        .toSQL(),
       expectedSql,
     );
 
@@ -128,7 +128,7 @@ describe('join callback with query builder', () => {
         q
           .on('user.name', 'snake.snakeName')
           .orOn('user.id', 'snake.tailLength'),
-      ).toSql(),
+      ).toSQL(),
       expectedSql,
     );
 
@@ -137,7 +137,7 @@ describe('join callback with query builder', () => {
         q
           .on('user.name', '=', 'snake.snakeName')
           .orOn('user.id', '=', 'snake.tailLength'),
-      ).toSql(),
+      ).toSQL(),
       expectedSql,
     );
   });
@@ -155,7 +155,7 @@ describe('join callback with query builder', () => {
         q
           .on('snake.snakeName', 'user.name')
           .orOn('snake.tailLength', 'user.id'),
-      ).toSql(),
+      ).toSQL(),
       reverseSql,
     );
 
@@ -164,7 +164,7 @@ describe('join callback with query builder', () => {
         q
           .on('snake.snakeName', '=', 'user.name')
           .orOn('snake.tailLength', '=', 'user.id'),
-      ).toSql(),
+      ).toSQL(),
       reverseSql,
     );
   });
@@ -173,7 +173,7 @@ describe('join callback with query builder', () => {
     expectSql(
       User.join(User.as('otherUser'), (q) =>
         q.onJsonPathEquals('user.data', '$.name', 'otherUser.data', '$.name'),
-      ).toSql(),
+      ).toSQL(),
       `
         SELECT "user".* FROM "user"
         JOIN "user" AS "otherUser"
@@ -192,7 +192,7 @@ describe('join callback with query builder', () => {
           'otherSnake.snakeData',
           '$.name',
         ),
-      ).toSql(),
+      ).toSQL(),
       `
         SELECT ${snakeSelectAllWithTable} FROM "snake"
         JOIN "snake" AS "otherSnake"
@@ -212,7 +212,7 @@ describe('join callback with query builder', () => {
         where = q.where;
         _where = q._where;
         return q;
-      }).toSql();
+      }).toSQL();
       beforeEach(() => {
         query.where = jest.fn();
         query._where = jest.fn();
@@ -242,7 +242,7 @@ describe('join callback with query builder', () => {
         whereNot = q.whereNot;
         _whereNot = q._whereNot;
         return q;
-      }).toSql();
+      }).toSQL();
       beforeEach(() => {
         query.whereNot = jest.fn();
         query._whereNot = jest.fn();
@@ -270,7 +270,7 @@ describe('join callback with query builder', () => {
       it('should use main table column in .where', () => {
         const q = User.join(Message, (q) => q.where({ 'user.name': 'name' }));
 
-        expectSql(q.toSql(), sql + `"user"."name" = $1`, ['name']);
+        expectSql(q.toSQL(), sql + `"user"."name" = $1`, ['name']);
       });
 
       it('should support named column of main table in .where', () => {
@@ -278,7 +278,7 @@ describe('join callback with query builder', () => {
           q.where({ 'snake.snakeName': 'name' }),
         );
 
-        expectSql(q.toSql(), snakeSql + `"snake"."snake_name" = $1`, ['name']);
+        expectSql(q.toSQL(), snakeSql + `"snake"."snake_name" = $1`, ['name']);
       });
 
       it('should use main table column in .whereNot', () => {
@@ -286,7 +286,7 @@ describe('join callback with query builder', () => {
           q.whereNot({ 'user.name': 'name' }),
         );
 
-        expectSql(q.toSql(), sql + `NOT "user"."name" = $1`, ['name']);
+        expectSql(q.toSQL(), sql + `NOT "user"."name" = $1`, ['name']);
       });
 
       it('should use named main table column in .whereNot', () => {
@@ -294,7 +294,7 @@ describe('join callback with query builder', () => {
           q.whereNot({ 'snake.snakeName': 'name' }),
         );
 
-        expectSql(q.toSql(), snakeSql + `NOT "snake"."snake_name" = $1`, [
+        expectSql(q.toSQL(), snakeSql + `NOT "snake"."snake_name" = $1`, [
           'name',
         ]);
       });
@@ -304,7 +304,7 @@ describe('join callback with query builder', () => {
           q.or({ 'user.name': 'name' }, { 'user.age': 20 }),
         );
 
-        expectSql(q.toSql(), sql + `"user"."name" = $1 OR "user"."age" = $2`, [
+        expectSql(q.toSQL(), sql + `"user"."name" = $1 OR "user"."age" = $2`, [
           'name',
           20,
         ]);
@@ -316,7 +316,7 @@ describe('join callback with query builder', () => {
         );
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           snakeSql + `"snake"."snake_name" = $1 OR "snake"."tail_length" = $2`,
           ['name', 20],
         );
@@ -328,7 +328,7 @@ describe('join callback with query builder', () => {
         );
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           sql + `NOT "user"."name" = $1 OR NOT "user"."age" = $2`,
           ['name', 20],
         );
@@ -340,7 +340,7 @@ describe('join callback with query builder', () => {
         );
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           snakeSql +
             `NOT "snake"."snake_name" = $1 OR NOT "snake"."tail_length" = $2`,
           ['name', 20],
@@ -350,7 +350,7 @@ describe('join callback with query builder', () => {
       it('should use main table column in .whereIn', () => {
         const q = User.join(Message, (q) => q.whereIn('user.name', ['name']));
 
-        expectSql(q.toSql(), sql + `"user"."name" IN ($1)`, ['name']);
+        expectSql(q.toSQL(), sql + `"user"."name" IN ($1)`, ['name']);
       });
 
       it('should use named main table column in .whereIn', () => {
@@ -358,7 +358,7 @@ describe('join callback with query builder', () => {
           q.whereIn('snake.snakeName', ['name']),
         );
 
-        expectSql(q.toSql(), snakeSql + `"snake"."snake_name" IN ($1)`, [
+        expectSql(q.toSQL(), snakeSql + `"snake"."snake_name" IN ($1)`, [
           'name',
         ]);
       });
@@ -369,7 +369,7 @@ describe('join callback with query builder', () => {
         );
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           sql + `"user"."age" = $1 OR "user"."name" IN ($2)`,
           [20, 'name'],
         );
@@ -383,7 +383,7 @@ describe('join callback with query builder', () => {
         );
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           snakeSql +
             `"snake"."tail_length" = $1 OR "snake"."snake_name" IN ($2)`,
           [20, 'name'],
@@ -395,7 +395,7 @@ describe('join callback with query builder', () => {
           q.whereNotIn('user.name', ['name']),
         );
 
-        expectSql(q.toSql(), sql + `NOT "user"."name" IN ($1)`, ['name']);
+        expectSql(q.toSQL(), sql + `NOT "user"."name" IN ($1)`, ['name']);
       });
 
       it('should use named main table column in .whereNotIn', () => {
@@ -403,7 +403,7 @@ describe('join callback with query builder', () => {
           q.whereNotIn('snake.snakeName', ['name']),
         );
 
-        expectSql(q.toSql(), snakeSql + `NOT "snake"."snake_name" IN ($1)`, [
+        expectSql(q.toSQL(), snakeSql + `NOT "snake"."snake_name" IN ($1)`, [
           'name',
         ]);
       });
@@ -414,7 +414,7 @@ describe('join callback with query builder', () => {
         );
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           sql + `"user"."age" = $1 OR NOT "user"."name" IN ($2)`,
           [20, 'name'],
         );
@@ -428,7 +428,7 @@ describe('join callback with query builder', () => {
         );
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           snakeSql +
             `"snake"."tail_length" = $1 OR NOT "snake"."snake_name" IN ($2)`,
           [20, 'name'],
@@ -460,7 +460,7 @@ describe('join callback with query builder', () => {
           });
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           `
             SELECT
               "t"."messageId" AS "messageId",
@@ -501,7 +501,7 @@ describe('join callback with query builder', () => {
           });
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           `
             SELECT
               "t"."snakeName" AS "name",
@@ -524,7 +524,7 @@ describe('join callback with query builder', () => {
     });
 
     testWhere(
-      (cb) => Message.join(User, cb as never).toSql(),
+      (cb) => Message.join(User, cb as never).toSQL(),
       `SELECT "message".* FROM "message" JOIN "user" ON`,
       {
         model: User,
@@ -543,7 +543,7 @@ describe('join callback with query builder', () => {
     });
 
     testWhere(
-      (cb) => Snake.join(User, cb as never).toSql(),
+      (cb) => Snake.join(User, cb as never).toSQL(),
       `SELECT ${snakeSelectAllWithTable} FROM "snake" JOIN "user" ON`,
       {
         model: User,
@@ -562,7 +562,7 @@ describe('join callback with query builder', () => {
     });
 
     testWhere(
-      (cb) => User.join(Snake, cb as never).toSql(),
+      (cb) => User.join(Snake, cb as never).toSQL(),
       `SELECT "user".* FROM "user" JOIN "snake" ON`,
       {
         model: Snake,

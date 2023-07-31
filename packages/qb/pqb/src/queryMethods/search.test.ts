@@ -10,7 +10,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", to_tsquery($1, $3) "@q"
         WHERE to_tsvector($1, $2) @@ "@q"
@@ -26,7 +26,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", to_tsquery($1, 'cat' || '&' || $3) "@q"
         WHERE to_tsvector($1, 'a fat cat' || $2) @@ "@q"
@@ -42,7 +42,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", plainto_tsquery($1, $3) "@q"
         WHERE to_tsvector($1, $2) @@ "@q"
@@ -58,7 +58,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", plainto_tsquery($1, 'plain query') "@q"
         WHERE to_tsvector($1, $2) @@ "@q"
@@ -74,7 +74,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", phraseto_tsquery($1, $3) "@q"
         WHERE to_tsvector($1, $2) @@ "@q"
@@ -90,7 +90,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", phraseto_tsquery($1, 'the cats ate the ' || $3) "@q"
         WHERE to_tsvector($1, $2) @@ "@q"
@@ -106,7 +106,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", websearch_to_tsquery($1, $3) "@q"
         WHERE to_tsvector($1, $2) @@ "@q"
@@ -122,7 +122,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", websearch_to_tsquery($1, 'the cats ate the ' || $3) "@q"
         WHERE to_tsvector($1, $2) @@ "@q"
@@ -139,7 +139,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", to_tsquery($1, $3) "@q"
         WHERE to_tsvector($1, $2) @@ "@q"
@@ -156,7 +156,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", to_tsquery("post"."title", $1) "@q"
         WHERE to_tsvector("post"."title", concat_ws(' ', "post"."title", "post"."body")) @@ "@q"
@@ -173,7 +173,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", to_tsquery('lang', $1) "@q"
         WHERE to_tsvector('lang', concat_ws(' ', "post"."title", "post"."body")) @@ "@q"
@@ -189,7 +189,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", to_tsquery($1, $2) "@q"
         WHERE to_tsvector($1, "post"."body") @@ "@q"
@@ -205,7 +205,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", to_tsquery($1, $2) "@q"
         WHERE to_tsvector($1, concat_ws(' ', "post"."title", "post"."body")) @@ "@q"
@@ -221,7 +221,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", to_tsquery($1, $2) "@q"
         WHERE "post"."generatedTsVector" @@ "@q"
@@ -240,7 +240,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT *
         FROM "post", to_tsquery($1, $4) "@q"
@@ -261,7 +261,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", to_tsquery($1, $3) "@q", to_tsquery($4, $6) "@q2"
         WHERE to_tsvector($1, $2) @@ "@q" AND to_tsvector($4, $5) @@ "@q2"
@@ -278,7 +278,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", to_tsquery($1, $3) "@q"
         WHERE to_tsvector($1, $2) @@ "@q"
@@ -301,7 +301,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", to_tsquery($1, $3) "@q"
         WHERE to_tsvector($1, $2) @@ "@q"
@@ -326,7 +326,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "post", to_tsquery($1, $3) "s"
         WHERE to_tsvector($1, $2) @@ "s"
@@ -346,7 +346,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT ts_headline($1, $2, "s", $3) AS "headline"
         FROM "post", to_tsquery($1, $4) "s"
@@ -366,7 +366,7 @@ describe('search', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT ts_headline($1, $2, "s", 'MaxWords=' || $3) AS "headline"
         FROM "post", to_tsquery($1, $4) "s"

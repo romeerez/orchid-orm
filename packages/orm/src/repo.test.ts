@@ -77,7 +77,7 @@ describe('createRepo', () => {
       assertType<Awaited<typeof q>, { id: number; name: string }>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "someTable"."id", "someTable"."name"
           FROM "someTable"
@@ -99,7 +99,7 @@ describe('createRepo', () => {
       >();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT
             "otherTable"."id",

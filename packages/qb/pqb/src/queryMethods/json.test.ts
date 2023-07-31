@@ -18,7 +18,7 @@ describe('json methods', () => {
       assertType<Awaited<typeof q>, string | undefined>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT COALESCE(json_agg(row_to_json("t".*)), '[]')
           FROM (
@@ -39,7 +39,7 @@ describe('json methods', () => {
       assertType<Awaited<typeof q>, string | undefined>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT row_to_json("t".*)
           FROM (
@@ -69,7 +69,7 @@ describe('json methods', () => {
 
         const query = q.jsonSet('data', ['name'], 'new value');
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT jsonb_set("user"."data", '{name}', $1) AS "data"
             FROM "user"
@@ -91,7 +91,7 @@ describe('json methods', () => {
       it('should select json for named column with updated property', () => {
         const q = Snake.jsonSet('snakeData', ['name'], 'new value');
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           `
             SELECT jsonb_set("snake"."snake_data", '{name}', $1) AS "snakeData"
             FROM "snake"
@@ -108,7 +108,7 @@ describe('json methods', () => {
           createIfMissing: true,
         });
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT jsonb_set("user"."data", '{name}', $1, true) AS "alias"
             FROM "user"
@@ -136,7 +136,7 @@ describe('json methods', () => {
           'new value',
         );
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT jsonb_set(
               jsonb_insert("user"."data", '{tags, 0}', $1),
@@ -167,7 +167,7 @@ describe('json methods', () => {
         });
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           `
             UPDATE "user"
             SET
@@ -185,7 +185,7 @@ describe('json methods', () => {
 
         const query = q.jsonInsert('data', ['tags', 0], 'two');
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT jsonb_insert("user"."data", '{tags, 0}', $1) AS "data"
             FROM "user"
@@ -208,7 +208,7 @@ describe('json methods', () => {
         const q = Snake.jsonInsert('snakeData', ['tags', 0], 'two');
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           `
             SELECT jsonb_insert("snake"."snake_data", '{tags, 0}', $1) AS "snakeData"
             FROM "snake"
@@ -225,7 +225,7 @@ describe('json methods', () => {
           insertAfter: true,
         });
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT jsonb_insert("user"."data", '{tags, 0}', $1, true) AS "alias"
             FROM "user"
@@ -253,7 +253,7 @@ describe('json methods', () => {
           'tag',
         );
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT jsonb_insert(
               jsonb_set("user"."data", '{tags}', $1),
@@ -281,7 +281,7 @@ describe('json methods', () => {
         });
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           `
             UPDATE "user"
             SET
@@ -299,7 +299,7 @@ describe('json methods', () => {
 
         const query = q.jsonRemove('data', ['tags', 0]);
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT "user"."data" #- '{tags, 0}' AS "data"
             FROM "user"
@@ -321,7 +321,7 @@ describe('json methods', () => {
         const q = Snake.jsonRemove('snakeData', ['tags', 0]);
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           `
             SELECT "snake"."snake_data" #- '{tags, 0}' AS "snakeData"
             FROM "snake"
@@ -334,7 +334,7 @@ describe('json methods', () => {
 
         const query = q.jsonRemove('data', ['tags', 0], { as: 'alias' });
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT "user"."data" #- '{tags, 0}' AS "alias"
             FROM "user"
@@ -360,7 +360,7 @@ describe('json methods', () => {
           0,
         ]);
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT 
               jsonb_set("user"."data", '{tags}', $1) #- '{tags, 0}' AS "data"
@@ -386,7 +386,7 @@ describe('json methods', () => {
         });
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           `
             UPDATE "user"
             SET
@@ -408,7 +408,7 @@ describe('json methods', () => {
           'name',
         );
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT jsonb_path_query("user"."data", $1) AS "name"
             FROM "user"
@@ -433,7 +433,7 @@ describe('json methods', () => {
         );
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           `
             SELECT jsonb_path_query("snake"."snake_data", $1) AS "name"
             FROM "snake"
@@ -456,7 +456,7 @@ describe('json methods', () => {
           },
         );
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT jsonb_path_query("user"."data", $1, $2, true) AS "name"
             FROM "user"
@@ -477,7 +477,7 @@ describe('json methods', () => {
           'tags',
         );
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT 
               jsonb_path_query(

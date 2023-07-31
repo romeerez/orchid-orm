@@ -2,7 +2,7 @@ import { Query } from '../query';
 import { addValue, quoteSchemaAndTable } from './common';
 import { pushReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
-import { ToSqlCtx } from './toSql';
+import { ToSQLCtx } from './toSQL';
 import {
   QueryHookSelect,
   UpdateQueryData,
@@ -16,7 +16,7 @@ import { JsonItem } from './types';
 import { jsonToSql } from './select';
 
 export const pushUpdateSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: Query,
   query: UpdateQueryData,
   quotedAs: string,
@@ -39,7 +39,7 @@ export const pushUpdateSql = (
 };
 
 const processData = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: Query,
   set: string[],
   data: UpdateQueryDataItem[],
@@ -78,7 +78,7 @@ const processData = (
 };
 
 const processValue = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: Query,
   QueryClass: Db,
   key: string,
@@ -91,7 +91,7 @@ const processValue = (
     } else if (isExpression(value)) {
       return value.toSQL(ctx, quotedAs);
     } else if (value instanceof QueryClass) {
-      return `(${joinSubQuery(table, value as Query).toSql(ctx).text})`;
+      return `(${joinSubQuery(table, value as Query).toSQL(ctx).text})`;
     } else if ('op' in value && 'arg' in value) {
       return `"${table.q.shape[key].data.name || key}" ${
         (value as { op: string }).op

@@ -1,10 +1,10 @@
 import { addValue } from './common';
-import { ToSqlCtx } from './toSql';
+import { ToSQLCtx } from './toSQL';
 import { ColumnInfoQueryData } from './data';
 import { Query } from '../query';
 
 export const pushColumnInfoSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: Query,
   query: ColumnInfoQueryData,
 ) => {

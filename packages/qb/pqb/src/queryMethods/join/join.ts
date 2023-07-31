@@ -185,6 +185,17 @@ export type JoinLateralResult<
   >,
 > = JoinAddSelectable<T, Selectable>;
 
+/**
+ * Build `selectable` type for joined table.
+ *
+ * When `RequireJoined` parameter is false,
+ * the result type of the joined table will be mapped to make all columns optional.
+ *
+ * Callback may override the joined table alias.
+ *
+ * The resulting selectable receives all joined table columns prefixed with the table name or alias,
+ * and a star prefixed with the table name or alias to select all joined columns.
+ */
 type JoinResultSelectable<
   J extends Pick<Query, 'result' | 'table' | 'meta'>,
   RequireJoined extends boolean,
@@ -209,10 +220,13 @@ type JoinResultSelectable<
   };
 };
 
+// Replace the 'selectable' of the query with the given selectable.
 type JoinAddSelectable<T extends Query, Selectable extends SelectableBase> = {
   [K in keyof T]: K extends 'selectable' ? T['selectable'] & Selectable : T[K];
 };
 
+// Map `selectable` of the query to make all columns optional, and add the given `Selectable` to it.
+// Derive and apply a new query result type, where all columns become optional.
 type JoinOptionalMain<
   T extends Query,
   Selectable extends SelectableBase,
@@ -237,6 +251,10 @@ type JoinOptionalMain<
     : T[K];
 };
 
+/**
+ * Map the `with` table first argument of `join` or `joinLateral` to a query type.
+ * Constructs `selectable` based on `with` table shape, and adds generic types to conform the `QueryBase` type.
+ */
 type JoinWithArgToQuery<
   With extends WithDataItem,
   Selectable extends SelectableBase = {
@@ -262,6 +280,13 @@ type JoinWithArgToQuery<
   returnType: QueryReturnType;
 };
 
+/**
+ * Map the first argument of `join` or `joinLateral` to a query type.
+ *
+ * `with` table arg is mapped into `QueryBase`,
+ * query arg is returned as is,
+ * relation name is replaced with a relation table.
+ */
 type JoinArgToQuery<
   T extends QueryBase,
   Arg extends JoinFirstArg<T>,
@@ -277,10 +302,29 @@ type JoinArgToQuery<
     : never
   : never;
 
+/**
+ * Type of the `join` callback (not `joinLateral`).
+ *
+ * Receives a query builder that can access columns of both the main and the joined table.
+ *
+ * The query builder is limited to `or` and `where` methods only.
+ *
+ * Callback must return a query builder.
+ */
 export type JoinCallback<T extends QueryBase, Arg extends JoinFirstArg<T>> = (
   q: OnQueryBuilder<T, JoinArgToQuery<T, Arg>>,
 ) => OnQueryBuilder;
 
+/**
+ * Type of the `joinLateral`.
+ *
+ * Receives a query builder that can access columns of both the main and the joined table.
+ *
+ * Query builder inside callback is the query derived from the `joinLateral` first argument,
+ * all query methods are allowed, `on` methods are available.
+ *
+ * The callback must return a query object. Its resulting type will become a type of the joined table.
+ */
 export type JoinLateralCallback<
   T extends QueryBase,
   Arg extends JoinFirstArg<T>,

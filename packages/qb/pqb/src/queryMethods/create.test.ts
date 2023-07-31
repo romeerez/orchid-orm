@@ -34,7 +34,7 @@ describe('create functions', () => {
       });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           INSERT INTO "user"("name", "password")
           VALUES (raw sql)
@@ -54,7 +54,7 @@ describe('create functions', () => {
       });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           INSERT INTO "user"("password", "name")
           VALUES ('password', $1)
@@ -70,7 +70,7 @@ describe('create functions', () => {
         values: raw`raw sql`,
       });
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           INSERT INTO "snake"("snake_name", "tail_length")
           VALUES (raw sql)
@@ -89,7 +89,7 @@ describe('create functions', () => {
         values: [raw`sql1`, raw`sql2`],
       });
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           INSERT INTO "user"("name", "password")
           VALUES (sql1), (sql2)
@@ -109,7 +109,7 @@ describe('create functions', () => {
       });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           INSERT INTO "user"("password", "name")
           VALUES ('pw1', $1), ('pw2', $2)
@@ -125,7 +125,7 @@ describe('create functions', () => {
         values: [raw`sql1`, raw`sql2`],
       });
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           INSERT INTO "snake"("snake_name", "tail_length")
           VALUES (sql1), (sql2)
@@ -145,7 +145,7 @@ describe('create functions', () => {
       assertType<Awaited<typeof q>, UserRecord>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           INSERT INTO "user"("name", "password")
           VALUES ($1, 'password')
@@ -160,7 +160,7 @@ describe('create functions', () => {
 
       const query = q.create(userData);
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         INSERT INTO "user"("name", "password")
         VALUES ($1, $2)
@@ -184,7 +184,7 @@ describe('create functions', () => {
       const query = Snake.create(snakeData);
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           INSERT INTO "snake"("snake_name", "tail_length")
           VALUES ($1, $2)
@@ -207,7 +207,7 @@ describe('create functions', () => {
 
       const query = q.get('id').create(userData);
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         INSERT INTO "user"("name", "password")
         VALUES ($1, $2)
@@ -227,7 +227,7 @@ describe('create functions', () => {
     it('should create one record, returning value from named column', async () => {
       const query = Snake.get('snakeName').create(snakeData);
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           INSERT INTO "snake"("snake_name", "tail_length")
           VALUES ($1, $2)
@@ -247,7 +247,7 @@ describe('create functions', () => {
 
       const query = q.select('id', 'name').create(userData);
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         INSERT INTO "user"("name", "password")
         VALUES ($1, $2)
@@ -269,7 +269,7 @@ describe('create functions', () => {
     it('should create one record, returning named columns', async () => {
       const query = Snake.select('snakeName', 'tailLength').create(snakeData);
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           INSERT INTO "snake"("snake_name", "tail_length")
           VALUES ($1, $2)
@@ -292,7 +292,7 @@ describe('create functions', () => {
 
       const query = q.count().create(userData);
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         INSERT INTO "user"("name", "password")
         VALUES ($1, $2)
@@ -317,7 +317,7 @@ describe('create functions', () => {
       });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           INSERT INTO "user"("name", "password")
           VALUES ($1, $2)
@@ -335,7 +335,7 @@ describe('create functions', () => {
       } as unknown as UserRecord);
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           INSERT INTO "user"("name", "password")
           VALUES ($1, $2)
@@ -351,7 +351,7 @@ describe('create functions', () => {
       });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           INSERT INTO "user"("password", "name")
           VALUES ($1, $2)
@@ -368,7 +368,7 @@ describe('create functions', () => {
       });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           INSERT INTO "user"("name", "password")
           VALUES ((SELECT "user"."name" FROM "user" LIMIT 1), $1)
@@ -395,7 +395,7 @@ describe('create functions', () => {
       assertType<Awaited<typeof q>, UserRecord[]>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           INSERT INTO "user"("name", "password")
           VALUES ($1, 'password'), ('name', $2)
@@ -419,7 +419,7 @@ describe('create functions', () => {
       const query = q.count().createMany(arr);
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         INSERT INTO "user"("name", "password", "picture")
         VALUES
@@ -456,7 +456,7 @@ describe('create functions', () => {
       const query = q.select('id', 'name').createMany(arr);
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         INSERT INTO "user"("name", "password", "picture")
         VALUES
@@ -492,7 +492,7 @@ describe('create functions', () => {
       const query = q.createMany(arr);
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         INSERT INTO "user"("name", "password", "picture")
         VALUES
@@ -529,7 +529,7 @@ describe('create functions', () => {
       ]);
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           INSERT INTO "user"("password", "name")
           VALUES ($1, $2), ($3, $4)
@@ -554,7 +554,7 @@ describe('create functions', () => {
       ] as unknown as UserRecord[]);
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           INSERT INTO "user"("name", "password")
           VALUES ($1, $2), ($3, $4)
@@ -573,7 +573,7 @@ describe('create functions', () => {
       ]);
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           INSERT INTO "user"("name", "password")
           VALUES ((SELECT "user"."name" FROM "user" LIMIT 1), $1)
@@ -591,7 +591,7 @@ describe('create functions', () => {
       assertType<Awaited<typeof q>, MessageRecord>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           INSERT INTO "message"("chatId")
           SELECT "chat"."idOfChat" AS "chatId"
@@ -615,7 +615,7 @@ describe('create functions', () => {
       assertType<Awaited<typeof query>, MessageRecord>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           INSERT INTO "message"("chatId", "authorId", "text")
           SELECT "chat"."idOfChat" AS "chatId", $1, 'text'
@@ -638,7 +638,7 @@ describe('create functions', () => {
       assertType<Awaited<typeof query>, SnakeRecord>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           INSERT INTO "snake"("snake_name", "tail_length")
           SELECT "user"."name" AS "snakeName", $1
@@ -660,7 +660,7 @@ describe('create functions', () => {
       );
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           INSERT INTO "user"("password", "id", "name")
           SELECT "user"."password", $1, $2
@@ -698,7 +698,7 @@ describe('create functions', () => {
       assertType<Awaited<typeof query>, MessageRecord[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           INSERT INTO "message"("chatId")
           SELECT "chat"."idOfChat" AS "chatId"
@@ -718,7 +718,7 @@ describe('create functions', () => {
       assertType<Awaited<typeof query>, SnakeRecord[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           INSERT INTO "snake"("snake_name")
           SELECT "user"."name" AS "snakeName"
@@ -761,7 +761,7 @@ describe('create functions', () => {
         .where({ name: 'where name' });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
             INSERT INTO "user"("name", "password")
             VALUES ($1, $2)
@@ -781,7 +781,7 @@ describe('create functions', () => {
 
         const query = q.count().create(userData).onConflict().ignore();
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "user"("name", "password")
             VALUES ($1, $2)
@@ -798,7 +798,7 @@ describe('create functions', () => {
 
         const query = q.count().create(userData).onConflict('id').ignore();
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "user"("name", "password")
             VALUES ($1, $2)
@@ -817,7 +817,7 @@ describe('create functions', () => {
           .ignore();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "snake"("snake_name", "tail_length")
             VALUES ($1, $2)
@@ -837,7 +837,7 @@ describe('create functions', () => {
           .ignore();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "user"("name", "password")
             VALUES ($1, $2)
@@ -856,7 +856,7 @@ describe('create functions', () => {
           .ignore();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "snake"("snake_name", "tail_length")
             VALUES ($1, $2)
@@ -875,7 +875,7 @@ describe('create functions', () => {
           .onConflict(raw`raw query`)
           .ignore();
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "user"("name", "password")
             VALUES ($1, $2)
@@ -906,7 +906,7 @@ describe('create functions', () => {
           .onConflict()
           .merge();
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "user"("name", "password", "age")
             VALUES ($1, $2, $3)
@@ -931,7 +931,7 @@ describe('create functions', () => {
           .onConflict('name')
           .merge('name');
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "user"("name", "password")
             VALUES ($1, $2)
@@ -951,7 +951,7 @@ describe('create functions', () => {
           .merge('snakeName');
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "snake"("snake_name", "tail_length")
             VALUES ($1, $2)
@@ -972,7 +972,7 @@ describe('create functions', () => {
           .merge(['name', 'password']);
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "user"("name", "password")
             VALUES ($1, $2)
@@ -994,7 +994,7 @@ describe('create functions', () => {
           .merge(['snakeName', 'tailLength']);
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "snake"("snake_name", "tail_length")
             VALUES ($1, $2)
@@ -1017,7 +1017,7 @@ describe('create functions', () => {
           .merge({ name: 'new name' });
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "user"("name", "password")
             VALUES ($1, $2)
@@ -1037,7 +1037,7 @@ describe('create functions', () => {
           .merge({ snakeName: 'new name' });
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "snake"("snake_name", "tail_length")
             VALUES ($1, $2)
@@ -1058,7 +1058,7 @@ describe('create functions', () => {
           .merge(raw`merge raw`);
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "user"("name", "password")
             VALUES ($1, $2)

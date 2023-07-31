@@ -85,7 +85,7 @@ export const Post = testDb('post', (t) => ({
 }));
 
 export const expectQueryNotMutated = (q: Query) => {
-  expectSql(q.toSql(), `SELECT * FROM "${q.table}"`);
+  expectSql(q.toSQL(), `SELECT * FROM "${q.table}"`);
 };
 
 export const insert = async <

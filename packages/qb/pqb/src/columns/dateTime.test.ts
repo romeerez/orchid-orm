@@ -213,7 +213,7 @@ describe('date time columns', () => {
       });
 
       expectSql(
-        createQuery.toSql(),
+        createQuery.toSQL(),
         `
           INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
           VALUES ($1, $2, $3, $4)
@@ -239,7 +239,7 @@ describe('date time columns', () => {
       });
 
       expectSql(
-        updateQuery.toSql(),
+        updateQuery.toSQL(),
         `
           UPDATE "user"
           SET "createdAt" = $1, "updatedAt" = $2
@@ -279,7 +279,7 @@ describe('date time columns', () => {
       });
 
       expectSql(
-        createQuery.toSql(),
+        createQuery.toSQL(),
         `
           INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
           VALUES ($1, $2, $3, $4)
@@ -305,7 +305,7 @@ describe('date time columns', () => {
       });
 
       expectSql(
-        updateQuery.toSql(),
+        updateQuery.toSQL(),
         `
           UPDATE "user"
           SET "createdAt" = $1, "updatedAt" = $2

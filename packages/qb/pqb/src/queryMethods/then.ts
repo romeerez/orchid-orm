@@ -161,7 +161,7 @@ const then = async (
       );
     }
 
-    sql = q.toSql();
+    sql = q.toSQL();
     const { hookSelect } = sql;
 
     if (query.autoPreparedStatements) {

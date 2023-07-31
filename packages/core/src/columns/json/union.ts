@@ -56,6 +56,7 @@ export class JSONUnion<T extends JSONUnionArgs> extends JSONType<
   }
 }
 
+// Make `or` method available on any JSON type.
 JSONType.prototype.or = function (...types) {
   return new JSONUnion(this, ...types);
 };

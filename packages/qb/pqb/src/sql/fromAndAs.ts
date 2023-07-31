@@ -1,12 +1,12 @@
 import { addValue, columnToSql, quoteSchemaAndTable } from './common';
 import { checkIfASimpleQuery, QuerySourceItem } from './types';
-import { makeSql, ToSqlCtx } from './toSql';
+import { makeSQL, ToSQLCtx } from './toSQL';
 import { QueryData, SelectQueryData } from './data';
 import { QueryBase } from '../queryBase';
 import { isExpression, isRawSQL, MaybeArray } from 'orchid-core';
 
 export const pushFromAndAs = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: QueryBase,
   data: SelectQueryData,
   quotedAs?: string,
@@ -58,7 +58,7 @@ export const pushFromAndAs = (
 };
 
 const getFrom = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: QueryBase,
   query: SelectQueryData,
   quotedAs?: string,
@@ -71,13 +71,13 @@ const getFrom = (
       }
 
       if (!from.table) {
-        const sql = makeSql(from, ctx);
+        const sql = makeSQL(from, ctx);
         return `(${sql.text})`;
       }
 
       // if query contains more than just schema return (SELECT ...)
       if (!checkIfASimpleQuery(from)) {
-        const sql = makeSql(from, ctx);
+        const sql = makeSQL(from, ctx);
         return `(${sql.text})`;
       }
 
@@ -91,7 +91,7 @@ const getFrom = (
 };
 
 export const getSearchLang = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   data: QueryData,
   source: QuerySourceItem,
   quotedAs?: string,
@@ -105,7 +105,7 @@ export const getSearchLang = (
 };
 
 export const getSearchText = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   data: QueryData,
   source: QuerySourceItem,
   quotedAs?: string,
@@ -147,7 +147,7 @@ export const getSearchText = (
 };
 
 const getTsVector = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   data: QueryData,
   lang: string,
   source: QuerySourceItem,

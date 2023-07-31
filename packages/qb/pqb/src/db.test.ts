@@ -59,7 +59,7 @@ describe('db', () => {
 
     const query = table.select('id', 'name').where({ foo: 'bar' });
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         SELECT "table"."id", "table"."name" FROM "table"
         WHERE "table"."foo" = $1
@@ -227,7 +227,7 @@ describe('db', () => {
       );
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT
             "table"."camelCase",
@@ -263,7 +263,7 @@ describe('db', () => {
       );
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT
             "table"."camelCase",

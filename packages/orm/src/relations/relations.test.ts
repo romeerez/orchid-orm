@@ -21,7 +21,7 @@ describe('relations', () => {
     });
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         SELECT
           row_to_json("profile".*) "profile",
@@ -109,7 +109,7 @@ describe('relations', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT
           "message"."createdAt",
@@ -156,7 +156,7 @@ describe('relations', () => {
     assertType<Awaited<typeof q>, { messagesCount: number }[]>();
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT "messagesCount".r "messagesCount"
         FROM "user"
@@ -180,7 +180,7 @@ describe('relations', () => {
     assertType<Awaited<typeof q>, { bio: string | null }[]>();
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT "bio".r "bio"
         FROM "user"
@@ -205,7 +205,7 @@ describe('relations', () => {
     assertType<Awaited<typeof q>, { profile: Profile }[]>();
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT row_to_json("profile".*) "profile"
         FROM "user"

@@ -1,9 +1,9 @@
 import { quoteSchemaAndTable } from './common';
-import { ToSqlCtx } from './toSql';
+import { ToSQLCtx } from './toSQL';
 import { TruncateQueryData } from './data';
 
 export const pushTruncateSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: string,
   query: TruncateQueryData,
 ) => {

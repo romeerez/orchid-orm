@@ -19,7 +19,7 @@ export const isExpression = (arg: unknown): arg is Expression =>
   arg instanceof Expression;
 
 // Object representing SQL query.
-// Constructed by `toSql`, passed to adapter.query and adapter.array
+// Constructed by `toSQL`, passed to adapter.query and adapter.array
 export type TemplateLiteralArgs = [
   strings: TemplateStringsArray,
   ...values: unknown[],

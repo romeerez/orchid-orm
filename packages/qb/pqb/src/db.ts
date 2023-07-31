@@ -7,7 +7,7 @@ import {
   QueryLogOptions,
   WhereQueryBuilder,
 } from './queryMethods';
-import { QueryData, SelectQueryData, ToSqlOptions } from './sql';
+import { QueryData, SelectQueryData, ToSQLOptions } from './sql';
 import {
   AdapterOptions,
   Adapter,
@@ -266,7 +266,7 @@ export class Db<
     const columns = Object.keys(
       shape,
     ) as unknown as (keyof ColumnShapeOutput<Shape>)[];
-    const { toSql } = this;
+    const { toSQL } = this;
 
     this.columns = columns as (keyof ColumnShapeOutput<Shape>)[];
     this.defaultSelectColumns = columns.filter(
@@ -278,15 +278,15 @@ export class Db<
         ? undefined
         : this.defaultSelectColumns;
 
-    this.toSql = defaultSelect
-      ? function <T extends Query>(this: T, options?: ToSqlOptions): Sql {
+    this.toSQL = defaultSelect
+      ? function <T extends Query>(this: T, options?: ToSQLOptions): Sql {
           const q = this.clone();
           if (!(q.q as SelectQueryData).select) {
             (q.q as SelectQueryData).select = defaultSelect as string[];
           }
-          return toSql.call(q, options);
+          return toSQL.call(q, options);
         }
-      : toSql;
+      : toSQL;
 
     this.relations = {} as Relations;
     this.relationsQueries = {};

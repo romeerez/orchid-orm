@@ -763,14 +763,14 @@ const selectFollowing = db.user.makeHelper((q, currentUser: { id: number }) => {
 await selectFollowing(db.user.select('id', 'name'), currentUser);
 ```
 
-## toSql
+## toSQL
 
 [//]: # 'has JSDoc'
 
-Call `toSql` on a query to get an object with a `text` SQL string and a `values` array of binding values:
+Call `toSQL` on a query to get an object with a `text` SQL string and a `values` array of binding values:
 
 ```ts
-const sql = db.table.select('id', 'name').where({ name: 'name' }).toSql();
+const sql = db.table.select('id', 'name').where({ name: 'name' }).toSQL();
 
 expect(sql.text).toBe(
   'SELECT "table"."id", "table"."name" FROM "table" WHERE "table"."name" = $1',
@@ -778,11 +778,11 @@ expect(sql.text).toBe(
 expect(sql.values).toEqual(['name']);
 ```
 
-`toSql` is called internally when awaiting a query.
+`toSQL` is called internally when awaiting a query.
 
 It is caching the result. Not mutating query methods are resetting the cache, but need to be careful with mutating methods that start with `_` - they won't reset the cache, which may lead to unwanted results.
 
-`toSql` optionally accepts such parameters:
+`toSQL` optionally accepts such parameters:
 
 ```ts
 type ToSqlOptions = {

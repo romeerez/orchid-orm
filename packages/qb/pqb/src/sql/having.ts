@@ -1,10 +1,10 @@
-import { ToSqlCtx } from './toSql';
+import { ToSQLCtx } from './toSQL';
 import { SelectQueryData } from './data';
 import { templateLiteralToSQL } from './rawSql';
 import { Expression, TemplateLiteralArgs } from 'orchid-core';
 
 export const pushHavingSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   query: SelectQueryData,
   quotedAs?: string,
 ) => {
@@ -13,7 +13,7 @@ export const pushHavingSql = (
 };
 
 export const havingToSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   query: SelectQueryData,
   quotedAs?: string,
 ): string | undefined => {

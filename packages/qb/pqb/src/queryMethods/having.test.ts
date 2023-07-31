@@ -6,7 +6,7 @@ describe('having', () => {
     const q = User.having`count(*) = ${5}`;
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT *
         FROM "user"
@@ -20,7 +20,7 @@ describe('having', () => {
     const q = User.having((q) => q.count().equals(5));
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT *
         FROM "user"
@@ -37,7 +37,7 @@ describe('having', () => {
     );
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT *
         FROM "user"
@@ -51,7 +51,7 @@ describe('having', () => {
     const q = User.having((q) => q.min('id').gt(1).and(q.max('id').lt(10)));
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT *
         FROM "user"
@@ -71,7 +71,7 @@ describe('having', () => {
     );
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT *
         FROM "user"

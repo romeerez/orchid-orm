@@ -27,7 +27,7 @@ describe('raw sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSql(),
+      User.where(sql).toSQL(),
       `SELECT * FROM "user" WHERE (simple sql)`,
     );
   });
@@ -50,7 +50,7 @@ describe('raw sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSql(),
+      User.where(sql).toSQL(),
       `SELECT * FROM "user" WHERE ("name" = $1)`,
       ['value'],
     );
@@ -88,7 +88,7 @@ describe('raw sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSql(),
+      User.where(sql).toSQL(),
       `SELECT * FROM "user" WHERE (simple sql)`,
     );
   });
@@ -111,7 +111,7 @@ describe('raw sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSql(),
+      User.where(sql).toSQL(),
       `SELECT * FROM "user" WHERE ("name" = $1)`,
       ['value'],
     );
@@ -126,7 +126,7 @@ describe('raw sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSql(),
+      User.where(sql).toSQL(),
       `SELECT * FROM "user" WHERE (one $1 two $2 three $3 four)`,
       [1, true, 'string'],
     );
@@ -144,7 +144,7 @@ describe('raw sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSql(),
+      User.where(sql).toSQL(),
       `SELECT * FROM "user" WHERE (one $1 two $2 three $3 four)`,
       [1, true, 'string'],
     );
@@ -165,7 +165,7 @@ describe('raw sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSql(),
+      User.where(sql).toSQL(),
       `SELECT * FROM "user" WHERE (value = $2 AND $1)`,
       [true, 'value'],
     );
@@ -183,7 +183,7 @@ describe('raw sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSql(),
+      User.where(sql).toSQL(),
       `SELECT * FROM "user" WHERE ("user"."name")`,
     );
   });
@@ -199,7 +199,7 @@ describe('raw sql', () => {
     );
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `SELECT * FROM "user" WHERE (foo = $1 AND bar = '$bar''$bar' AND baz = $2)`,
       [1, true],
     );
@@ -210,12 +210,12 @@ describe('raw sql', () => {
       User.sql({ raw: `a = $a AND b = $b` }).values({ a: 1 }),
     );
 
-    expect(() => q.toSql()).toThrow('Query variable `b` is not provided');
+    expect(() => q.toSQL()).toThrow('Query variable `b` is not provided');
   });
 
   it('should throw when variable in the object is not used by the query', () => {
     const q = User.where(User.sql({ raw: `a = $a` }).values({ a: 1, b: 'b' }));
 
-    expect(() => q.toSql()).toThrow('Query variable `b` is unused');
+    expect(() => q.toSQL()).toThrow('Query variable `b` is unused');
   });
 });

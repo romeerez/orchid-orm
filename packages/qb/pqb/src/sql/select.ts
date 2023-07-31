@@ -3,7 +3,7 @@ import { RawSQL } from './rawSql';
 import { Query } from '../query';
 import { addValue, q, columnToSql, columnToSqlWithAs } from './common';
 import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
-import { makeSql, ToSqlCtx } from './toSql';
+import { makeSQL, ToSQLCtx } from './toSQL';
 import { SelectQueryData } from './data';
 import { SelectableOrExpression } from '../utils';
 import { isExpression } from 'orchid-core';
@@ -70,7 +70,7 @@ export const jsonToSql = (
 };
 
 export const pushSelectSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: Query,
   query: Pick<SelectQueryData, 'select' | 'join'>,
   quotedAs?: string,
@@ -79,7 +79,7 @@ export const pushSelectSql = (
 };
 
 export const selectToSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: Query,
   query: Pick<SelectQueryData, 'select' | 'join'>,
   quotedAs?: string,
@@ -150,7 +150,7 @@ export const selectAllSql = (
 };
 
 const pushSubQuerySql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   query: Query,
   as: string,
   list: string[],
@@ -215,14 +215,14 @@ const pushSubQuerySql = (
   }
 
   list.push(
-    `${coalesce(ctx, query, `(${makeSql(query, ctx).text})`, quotedAs)} AS ${q(
+    `${coalesce(ctx, query, `(${makeSQL(query, ctx).text})`, quotedAs)} AS ${q(
       as,
     )}`,
   );
 };
 
 const coalesce = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   query: Query,
   sql: string,
   quotedAs?: string,

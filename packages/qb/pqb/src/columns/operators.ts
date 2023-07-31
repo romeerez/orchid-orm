@@ -7,11 +7,11 @@ import {
   ColumnOperatorFnBase,
   ColumnTypeBase,
 } from 'orchid-core';
-import { ToSqlCtx } from '../sql';
+import { ToSQLCtx } from '../sql';
 
-type Fn<T> = ColumnOperatorFnBase<T, ToSqlCtx>;
+type Fn<T> = ColumnOperatorFnBase<T, ToSQLCtx>;
 
-export type Operator<T> = ColumnOperatorBase<T, ToSqlCtx>;
+export type Operator<T> = ColumnOperatorBase<T, ToSQLCtx>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type BaseOperators = Record<string, Operator<any>>;
@@ -22,7 +22,7 @@ export const createOperator = <T>(fn: Fn<T>): Operator<T> => {
 
 const quoteValue = (
   arg: unknown,
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   quotedAs: string | undefined,
   jsonArray?: boolean,
 ): string => {
@@ -31,12 +31,12 @@ const quoteValue = (
       return `(${arg.map((value) => addValue(ctx.values, value)).join(', ')})`;
     }
 
-    if ('toSql' in arg) {
-      return `(${(arg as Query).toSql({ values: ctx.values }).text})`;
-    }
-
     if (isExpression(arg)) {
       return arg.toSQL(ctx, quotedAs);
+    }
+
+    if ('toSQL' in arg) {
+      return `(${(arg as Query).toSQL({ values: ctx.values }).text})`;
     }
   }
 

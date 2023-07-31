@@ -9,7 +9,7 @@ describe('from', () => {
   it('should accept raw parameter', () => {
     const q = User.all();
     expectSql(
-      q.from`(SELECT * FROM profile)`.as('t').toSql(),
+      q.from`(SELECT * FROM profile)`.as('t').toSQL(),
       `SELECT * FROM (SELECT * FROM profile) AS "t"`,
     );
     expectQueryNotMutated(q);
@@ -18,7 +18,7 @@ describe('from', () => {
   it('should accept query parameter', () => {
     const q = User.all();
     expectSql(
-      q.select('name').from(User.select('name')).toSql(),
+      q.select('name').from(User.select('name')).toSQL(),
       'SELECT "user"."name" FROM (SELECT "user"."name" FROM "user") AS "user"',
     );
     expectQueryNotMutated(q);
@@ -27,7 +27,7 @@ describe('from', () => {
   it('should not insert sub query and alias if provided query is simple', () => {
     const q = User.all();
     expectSql(
-      User.select('name').from(User).toSql(),
+      User.select('name').from(User).toSQL(),
       'SELECT "user"."name" FROM "user"',
     );
     expectQueryNotMutated(q);
@@ -35,7 +35,7 @@ describe('from', () => {
 
   it('should add ONLY keyword when `only` parameter is provided', () => {
     expectSql(
-      User.select('id').from(User, { only: true }).toSql(),
+      User.select('id').from(User, { only: true }).toSQL(),
       'SELECT "user"."id" FROM ONLY "user"',
     );
   });
@@ -60,7 +60,7 @@ describe('from', () => {
       >();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `SELECT * FROM (
         SELECT
           "user"."createdAt",

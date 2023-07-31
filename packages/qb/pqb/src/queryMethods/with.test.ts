@@ -71,7 +71,7 @@ describe('with', () => {
         q
           .with(...args)
           .from('withAlias')
-          .toSql(),
+          .toSQL(),
         getExpectedWithSql(
           `(VALUES (1, 'two')) t(one, two)`,
           ['one', 'two'],
@@ -97,7 +97,7 @@ describe('with', () => {
         q
           .with(...args)
           .from('withAlias')
-          .toSql(),
+          .toSQL(),
         getExpectedWithSql(
           'SELECT * FROM "user"',
           Object.keys(User.q.shape),
@@ -126,7 +126,7 @@ describe('with', () => {
         q
           .with(...args)
           .from('withAlias')
-          .toSql(),
+          .toSQL(),
         getExpectedWithSql(
           `SELECT 1 AS "one"`,
           // columns: true will produce empty columns list because there is no way to get it from query builder result
@@ -146,25 +146,25 @@ describe('with', () => {
       .with('withAlias', User.all())
       .join('withAlias', 'id', '=', 'user.id')
       .select('withAlias.id')
-      .toSql();
+      .toSQL();
 
     const received2 = q
       .with('withAlias', User.all())
       .join('withAlias', 'withAlias.id', '=', 'user.id')
       .select('withAlias.id')
-      .toSql();
+      .toSQL();
 
     const received3 = q
       .with('withAlias', User.all())
       .join('withAlias', testDb.sql`"withAlias"."id" = "user"."id"`)
       .select('withAlias.id')
-      .toSql();
+      .toSQL();
 
     const received4 = q
       .with('withAlias', User.all())
       .join('withAlias', (qb) => qb.on('withAlias.id', '=', 'user.id'))
       .select('withAlias.id')
-      .toSql();
+      .toSQL();
 
     const expected = `
       WITH "withAlias" AS (
@@ -195,7 +195,7 @@ describe('with', () => {
     >();
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         WITH "withAlias" AS (
           SELECT *
@@ -218,7 +218,7 @@ describe('with', () => {
     const q = User.all();
 
     expectSql(
-      q.with('withAlias', User.all()).from('withAlias').select('id').toSql(),
+      q.with('withAlias', User.all()).from('withAlias').select('id').toSQL(),
       `
         WITH "withAlias" AS (
           SELECT * FROM "user"
@@ -236,7 +236,7 @@ describe('with', () => {
       .select('snakeName', 'w.tailLength');
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         WITH "w" AS (
           SELECT "snake"."snake_name" AS "snakeName", "snake"."tail_length" AS "tailLength"

@@ -95,7 +95,7 @@ describe('column type', () => {
 
       const q = User.all();
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT
             "user"."id",
@@ -114,7 +114,7 @@ describe('column type', () => {
 
       const q = User.select('id', 'name', 'password');
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT
             "user"."id",
@@ -274,7 +274,7 @@ describe('column type', () => {
       });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           INSERT INTO "user"("name", "password", "createdAt", "updatedAt")
           VALUES ($1, $2, $3, $4)
@@ -295,7 +295,7 @@ describe('column type', () => {
       });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           UPDATE "user"
           SET "createdAt" = $1, "updatedAt" = $2

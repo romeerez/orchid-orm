@@ -16,7 +16,7 @@ import { expectSql, testDb } from 'test-utils';
       const wrapped = query.wrap(User.select('id'));
 
       expectSql(
-        wrapped.toSql(),
+        wrapped.toSQL(),
         `
           SELECT "t"."id" FROM (
             SELECT "user"."id" FROM "user"
@@ -37,7 +37,7 @@ import { expectSql, testDb } from 'test-utils';
       const q = User.select('id');
       q[`_${what}` as '_union']([testDb.sql`SELECT 1`]);
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."id" FROM "user"
           ${upper}
@@ -46,7 +46,7 @@ import { expectSql, testDb } from 'test-utils';
       );
       q[`_${what}All` as '_unionAll']([testDb.sql`SELECT 2`], true);
       expectSql(
-        q.toSql({ clearCache: true }),
+        q.toSQL({ clearCache: true }),
         `
         SELECT "user"."id" FROM "user"
         ${upper}

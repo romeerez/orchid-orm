@@ -126,7 +126,7 @@ describe('number columns', () => {
 
       const q = table.create({});
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           INSERT INTO "table"("one") VALUES (DEFAULT) RETURNING *
         `,

@@ -31,6 +31,7 @@ export class JSONIntersection<
   }
 }
 
+// Make `and` method available on any JSON type.
 JSONType.prototype.and = function (type) {
   return new JSONIntersection(this, type);
 };

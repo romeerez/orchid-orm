@@ -30,7 +30,7 @@ describe('copy', () => {
         [method as 'from']: 'path-to-file',
       });
 
-      expectSql(q.toSql(), `COPY "user" ${sql} 'path-to-file'`);
+      expectSql(q.toSQL(), `COPY "user" ${sql} 'path-to-file'`);
     });
 
     it(`should copy ${method} with options`, () => {
@@ -40,7 +40,7 @@ describe('copy', () => {
       });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
         COPY "user"("name", "password")
         ${sql} PROGRAM 'program'
@@ -68,7 +68,7 @@ describe('copy', () => {
       });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `COPY "snake"("snake_name", "tail_length") ${sql} 'path-to-file'`,
       );
     });

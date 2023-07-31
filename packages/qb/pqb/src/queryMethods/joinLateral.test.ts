@@ -34,7 +34,7 @@ describe('joinLateral', () => {
     assertType<Awaited<typeof q>, { id: number; createdAt: Date }[]>();
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT "user"."id", "m"."createdAt"
         FROM "user"
@@ -70,7 +70,7 @@ describe('joinLateral', () => {
     assertType<Awaited<typeof q>, { id: number; m: MessageRecord }[]>();
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT "user"."id", row_to_json("m".*) "m"
         FROM "user"
@@ -109,7 +109,7 @@ describe('joinLateral', () => {
     assertType<Awaited<typeof q>, { id: number; text: string | null }[]>();
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT "user"."id", "m"."text"
         FROM "user"
@@ -130,7 +130,7 @@ describe('joinLateral', () => {
     assertType<Awaited<typeof q>, { id: number; m: MessageRecord | null }[]>();
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT "user"."id", row_to_json("m".*) "m"
         FROM "user"

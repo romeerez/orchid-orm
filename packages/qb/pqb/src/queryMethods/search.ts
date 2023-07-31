@@ -3,7 +3,7 @@ import { ColumnExpression, makeColumnFnClass } from '../common/fn';
 import { TextColumn } from '../columns';
 import { SelectAggMethods } from './aggregate';
 import { ColumnTypeBase, Expression, MaybeArray } from 'orchid-core';
-import { OrderTsQueryConfig, SearchWeight, ToSqlCtx } from '../sql';
+import { OrderTsQueryConfig, SearchWeight, ToSQLCtx } from '../sql';
 import { QueryBase } from '../queryBase';
 import {
   pushQueryValue,
@@ -174,7 +174,7 @@ SelectAggMethods.prototype.headline = function (this: Query, search, params) {
 
   const column = TextColumn.instance;
   class Headline extends makeColumnFnClass(column)<Query, ColumnTypeBase> {
-    toSQL(ctx: ToSqlCtx, quotedAs: string | undefined): string {
+    toSQL(ctx: ToSQLCtx, quotedAs: string | undefined): string {
       const lang = getSearchLang(ctx, q, data, quotedAs);
 
       const text = params?.text

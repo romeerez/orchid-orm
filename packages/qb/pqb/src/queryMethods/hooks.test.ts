@@ -67,7 +67,7 @@ describe('hooks', () => {
       const q = User.afterCreate(['id'], fn).select('name').create(userData);
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           INSERT INTO "user"("name", "password")
           VALUES ($1, $2)
@@ -208,7 +208,7 @@ describe('hooks', () => {
       .update({ name: 'new name' });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         UPDATE "user"
         SET "name" = $1, "updatedAt" = now()

@@ -51,7 +51,7 @@ describe('update', () => {
 
     const query = User.or(...users).updateRaw(raw`name = 'name'`);
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         UPDATE "user"
         SET name = 'name', "updatedAt" = now()
@@ -69,7 +69,7 @@ describe('update', () => {
   it('should accept template string for `updateRaw`', () => {
     const q = User.all().updateRaw`name = ${'name'}`;
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         UPDATE "user"
         SET name = $1, "updatedAt" = now()
@@ -83,7 +83,7 @@ describe('update', () => {
 
     const query = User.where({ id }).update(update);
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         UPDATE "user"
         SET "name" = $1,
@@ -109,7 +109,7 @@ describe('update', () => {
     const q = Snake.find(id).update(snakeUpdate);
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         UPDATE "snake"
         SET "snake_name" = $1,
@@ -134,7 +134,7 @@ describe('update', () => {
 
     const query = User.find(id).get('id').update(update);
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         UPDATE "user"
         SET "name" = $1,
@@ -161,7 +161,7 @@ describe('update', () => {
     const q = Snake.find(id).get('snakeId').update(snakeUpdate);
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         UPDATE "snake"
         SET "snake_name" = $1,
@@ -188,7 +188,7 @@ describe('update', () => {
     const query = User.select('id', 'name').find(id).update(update);
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         UPDATE "user"
         SET "name" = $1,
@@ -215,7 +215,7 @@ describe('update', () => {
       .update(snakeUpdate);
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         UPDATE "snake"
         SET "snake_name" = $1,
@@ -242,7 +242,7 @@ describe('update', () => {
     const query = User.selectAll().find(id).update(update);
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         UPDATE "user"
         SET "name" = $1,
@@ -267,7 +267,7 @@ describe('update', () => {
     const q = Snake.selectAll().find(id).update(snakeUpdate);
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         UPDATE "snake"
         SET "snake_name" = $1,
@@ -294,7 +294,7 @@ describe('update', () => {
       .update(update);
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         UPDATE "user"
         SET "name" = $1,
@@ -321,7 +321,7 @@ describe('update', () => {
       .update(snakeUpdate);
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         UPDATE "snake"
         SET "snake_name" = $1,
@@ -351,7 +351,7 @@ describe('update', () => {
       .update(update);
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         UPDATE "user"
         SET "name" = $1,
@@ -380,7 +380,7 @@ describe('update', () => {
       .update(snakeUpdate);
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         UPDATE "snake"
         SET "snake_name" = $1,
@@ -407,7 +407,7 @@ describe('update', () => {
     });
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         UPDATE "user"
         SET "name" = $1,
@@ -427,7 +427,7 @@ describe('update', () => {
     });
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         UPDATE "user"
         SET "name" = 'raw sql', "updatedAt" = now()
@@ -445,7 +445,7 @@ describe('update', () => {
     const query = User.selectAll().findBy({ id }).update(update);
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         UPDATE "user"
         SET "name" = $1,
@@ -477,7 +477,7 @@ describe('update', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         UPDATE "user"
         SET
@@ -493,7 +493,7 @@ describe('update', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         WITH "q" AS (
           UPDATE "user"
@@ -517,7 +517,7 @@ describe('update', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         WITH "q" AS (
           INSERT INTO "user"("name", "password")
@@ -539,7 +539,7 @@ describe('update', () => {
     });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         WITH "q" AS (
           DELETE FROM "user"
@@ -576,7 +576,7 @@ describe('update', () => {
       });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
         UPDATE "profile"
         SET
@@ -640,7 +640,7 @@ describe('update', () => {
     } as unknown as UserRecord);
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         UPDATE "user"
         SET "name" = $1, "updatedAt" = now()
@@ -660,7 +660,7 @@ describe('update', () => {
     it('should increment column by 1', () => {
       const query = User.increment('age');
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           UPDATE "user"
           SET "age" = "age" + $1,
@@ -673,7 +673,7 @@ describe('update', () => {
     it('should increment column by provided amount', () => {
       const query = User.increment({ age: 3 });
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           UPDATE "user"
           SET "age" = "age" + $1,
@@ -686,7 +686,7 @@ describe('update', () => {
     it('should support returning', () => {
       const query = User.select('id').increment({ age: 3 });
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           UPDATE "user"
           SET "age" = "age" + $1,
@@ -703,7 +703,7 @@ describe('update', () => {
       const q = Snake.select('snakeId').increment({ tailLength: 3 });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           UPDATE "snake"
           SET "tail_length" = "tail_length" + $1,
@@ -721,7 +721,7 @@ describe('update', () => {
     it('should decrement column by 1', () => {
       const query = User.decrement('age');
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           UPDATE "user"
           SET "age" = "age" - $1,
@@ -734,7 +734,7 @@ describe('update', () => {
     it('should decrement column by provided amount', () => {
       const query = User.decrement({ age: 3 });
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           UPDATE "user"
           SET "age" = "age" - $1,
@@ -747,7 +747,7 @@ describe('update', () => {
     it('should support returning', () => {
       const query = User.select('id').decrement({ age: 3 });
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           UPDATE "user"
           SET "age" = "age" - $1,
@@ -764,7 +764,7 @@ describe('update', () => {
       const q = Snake.select('snakeId').decrement({ tailLength: 3 });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           UPDATE "snake"
           SET "tail_length" = "tail_length" - $1,
@@ -788,7 +788,7 @@ describe('update', () => {
         .decrement('age');
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           UPDATE "user"
           SET "name" = $1,

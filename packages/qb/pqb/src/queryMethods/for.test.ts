@@ -12,7 +12,7 @@ describe('for', () => {
     it(`should set FOR ${sql} expression`, () => {
       const q = User.all();
       expectSql(
-        q[method as 'forUpdate']().toSql(),
+        q[method as 'forUpdate']().toSQL(),
         `SELECT * FROM "user" FOR ${sql}`,
       );
       expectQueryNotMutated(q);
@@ -21,7 +21,7 @@ describe('for', () => {
     it('should accept tables', () => {
       const q = User.all();
       expectSql(
-        q[method as 'forUpdate'](['a', 'b']).toSql(),
+        q[method as 'forUpdate'](['a', 'b']).toSQL(),
         `SELECT * FROM "user" FOR ${sql} OF "a", "b"`,
       );
       expectQueryNotMutated(q);
@@ -30,7 +30,7 @@ describe('for', () => {
     it('should accept raw sql', () => {
       const q = User.all();
       expectSql(
-        q[method as 'forUpdate'](User.sql`raw sql`).toSql(),
+        q[method as 'forUpdate'](User.sql`raw sql`).toSQL(),
         `SELECT * FROM "user" FOR ${sql} OF raw sql`,
       );
       expectQueryNotMutated(q);
@@ -39,7 +39,7 @@ describe('for', () => {
     it('should set NO WAIT mode', () => {
       const q = User.all();
       expectSql(
-        q[method as 'forUpdate']().noWait().toSql(),
+        q[method as 'forUpdate']().noWait().toSQL(),
         `SELECT * FROM "user" FOR ${sql} NO WAIT`,
       );
       expectQueryNotMutated(q);
@@ -48,7 +48,7 @@ describe('for', () => {
     it('should set SKIP LOCKED mode', () => {
       const q = User.all();
       expectSql(
-        q[method as 'forUpdate']().skipLocked().toSql(),
+        q[method as 'forUpdate']().skipLocked().toSQL(),
         `SELECT * FROM "user" FOR ${sql} SKIP LOCKED`,
       );
       expectQueryNotMutated(q);

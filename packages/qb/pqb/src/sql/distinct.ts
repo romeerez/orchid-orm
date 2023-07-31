@@ -1,10 +1,10 @@
 import { rawOrColumnToSql } from './common';
-import { ToSqlCtx } from './toSql';
+import { ToSQLCtx } from './toSQL';
 import { SelectQueryData } from './data';
 import { QueryBase } from '../queryBase';
 
 export const pushDistinctSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: QueryBase,
   distinct: Exclude<SelectQueryData['distinct'], undefined>,
   quotedAs?: string,

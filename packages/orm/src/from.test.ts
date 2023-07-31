@@ -30,7 +30,7 @@ describe('orm', () => {
     >();
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `SELECT * FROM (
         SELECT
           "user"."createdAt",

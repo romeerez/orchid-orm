@@ -59,7 +59,7 @@ describe('orm', () => {
     const query = local.user.select('id', 'name').where({ id: { gt: 0 } });
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         SELECT "user"."id", "user"."name"
         FROM "user"

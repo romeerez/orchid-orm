@@ -9,7 +9,7 @@ describe('columnInfo', () => {
 
     const query = q.columnInfo();
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `SELECT * FROM information_schema.columns WHERE table_name = $1 AND table_catalog = current_database() AND table_schema = current_schema()`,
       ['user'],
     );
@@ -30,7 +30,7 @@ describe('columnInfo', () => {
 
     const query = q.columnInfo('name');
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `SELECT * FROM information_schema.columns WHERE table_name = $1 AND table_catalog = current_database() AND table_schema = current_schema() AND column_name = $2`,
       ['user', 'name'],
     );
@@ -49,7 +49,7 @@ describe('columnInfo', () => {
   it('should return info about column with custom name', async () => {
     const query = Snake.columnInfo('snakeName');
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `SELECT * FROM information_schema.columns WHERE table_name = $1 AND table_catalog = current_database() AND table_schema = current_schema() AND column_name = $2`,
       ['snake', 'snake_name'],
     );

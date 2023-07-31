@@ -56,14 +56,14 @@ describe('andNot', () => {
 describe('where', () => {
   it('should ignore undefined values', () => {
     const q = User.where({ name: undefined });
-    expectSql(q.toSql(), `SELECT * FROM "user"`);
+    expectSql(q.toSQL(), `SELECT * FROM "user"`);
   });
 
   it('should allow filtering by a sub query', () => {
     const q = User.where({ id: User.get('id') });
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT *
         FROM "user"
@@ -72,7 +72,7 @@ describe('where', () => {
     );
   });
 
-  testWhere((cb) => cb(User.all()).toSql(), `SELECT * FROM "user" WHERE`, {
+  testWhere((cb) => cb(User.all()).toSQL(), `SELECT * FROM "user" WHERE`, {
     model: User,
     pkey: 'id',
     nullable: 'picture',
@@ -90,7 +90,7 @@ describe('where', () => {
 
 describe('where with named columns', () => {
   testWhere(
-    (cb) => cb(Snake.all()).toSql(),
+    (cb) => cb(Snake.all()).toSQL(),
     `SELECT ${snakeSelectAll} FROM "snake" WHERE`,
     {
       model: Snake,
@@ -111,7 +111,7 @@ describe('where with named columns', () => {
 
 describe('where joined columns', () => {
   testWhere(
-    (cb) => cb(User.join(Message, (q) => q.on('authorId', 'id'))).toSql(),
+    (cb) => cb(User.join(Message, (q) => q.on('authorId', 'id'))).toSQL(),
     `SELECT "user".* FROM "user" JOIN "message" ON "message"."authorId" = "user"."id" WHERE `,
     {
       model: User,
@@ -135,7 +135,7 @@ describe('where joined columns', () => {
 
 describe('where joined named columns', () => {
   testWhere(
-    (cb) => cb(User.join(Snake, (q) => q.on('tailLength', 'user.id'))).toSql(),
+    (cb) => cb(User.join(Snake, (q) => q.on('tailLength', 'user.id'))).toSQL(),
     `SELECT "user".* FROM "user" JOIN "snake" ON "snake"."tail_length" = "user"."id" WHERE `,
     {
       model: User,
@@ -185,7 +185,7 @@ describe('where sub query', () => {
     );
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT * FROM "user" WHERE (
           SELECT count(*) = $1 FROM "message"

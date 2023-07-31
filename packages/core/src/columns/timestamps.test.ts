@@ -18,7 +18,7 @@ describe('timestamps methods', () => {
       const q = table.where().update({});
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           UPDATE "user"
           SET "updatedAt" = (custom_now())
@@ -30,7 +30,7 @@ describe('timestamps methods', () => {
       const q = table.where().update({ updatedAt: now });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
         UPDATE "user"
         SET "updatedAt" = $1
@@ -45,7 +45,7 @@ describe('timestamps methods', () => {
         .updateRaw(testDb.sql`name = $name`.values({ name: 'name' }));
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
         UPDATE "user"
         SET name = $1, "updatedAt" = (custom_now())
@@ -58,7 +58,7 @@ describe('timestamps methods', () => {
       const q = table.where().updateRaw(testDb.sql`"createdAt" = "updatedAt"`);
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
         UPDATE "user"
         SET "createdAt" = "updatedAt", "updatedAt" = (custom_now())
@@ -72,7 +72,7 @@ describe('timestamps methods', () => {
         .updateRaw(testDb.sql`"updatedAt" = $time`.values({ time: now }));
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
         UPDATE "user"
         SET "updatedAt" = $1
@@ -110,7 +110,7 @@ describe('timestamps methods', () => {
       const q = table.where().update({ updatedAt: now });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           UPDATE "snake"
           SET "updated_at" = $1

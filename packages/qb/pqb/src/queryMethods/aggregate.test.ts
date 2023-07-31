@@ -18,7 +18,7 @@ describe('aggregate', () => {
       assertType<Awaited<typeof q>, { count: boolean | null }>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT count(*) > $1 AS "count" FROM "user" LIMIT 1
         `,
@@ -37,7 +37,7 @@ describe('aggregate', () => {
       assertType<Awaited<typeof q>, { count: boolean | null }>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT count(coalesce(one, two)) > 2 + 2 AS "count" FROM "user" LIMIT 1
         `,
@@ -47,40 +47,40 @@ describe('aggregate', () => {
 
   describe('aggregate options', () => {
     it('should work without options', async () => {
-      expectSql(User.count('*').toSql(), 'SELECT count(*) FROM "user"');
+      expectSql(User.count('*').toSQL(), 'SELECT count(*) FROM "user"');
     });
 
     it('should support a column with name', () => {
       expectSql(
-        Snake.count('snakeName').toSql(),
+        Snake.count('snakeName').toSQL(),
         'SELECT count("snake"."snake_name") FROM "snake"',
       );
     });
 
     it('should support distinct option', () => {
       expectSql(
-        User.count('name', { distinct: true }).toSql(),
+        User.count('name', { distinct: true }).toSQL(),
         'SELECT count(DISTINCT "user"."name") FROM "user"',
       );
     });
 
     it('should support order', () => {
       expectSql(
-        User.count('name', { order: { name: 'DESC' } }).toSql(),
+        User.count('name', { order: { name: 'DESC' } }).toSQL(),
         'SELECT count("user"."name" ORDER BY "user"."name" DESC) FROM "user"',
       );
     });
 
     it('should support order by column with name', () => {
       expectSql(
-        Snake.count('snakeName', { order: { snakeName: 'DESC' } }).toSql(),
+        Snake.count('snakeName', { order: { snakeName: 'DESC' } }).toSQL(),
         'SELECT count("snake"."snake_name" ORDER BY "snake"."snake_name" DESC) FROM "snake"',
       );
     });
 
     it('should support filter', () => {
       expectSql(
-        User.count('name', { filter: { age: { not: null } } }).toSql(),
+        User.count('name', { filter: { age: { not: null } } }).toSQL(),
         'SELECT count("user"."name") FILTER (WHERE "user"."age" IS NOT NULL) FROM "user"',
       );
     });
@@ -89,7 +89,7 @@ describe('aggregate', () => {
       expectSql(
         Snake.count('snakeName', {
           filter: { snakeName: { not: 'Bob' } },
-        }).toSql(),
+        }).toSQL(),
         'SELECT count("snake"."snake_name") FILTER (WHERE "snake"."snake_name" <> $1) FROM "snake"',
         ['Bob'],
       );
@@ -105,7 +105,7 @@ describe('aggregate', () => {
                 id: 'DESC',
               },
             },
-          }).toSql(),
+          }).toSQL(),
           `
             SELECT count("user"."name") OVER (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
             FROM "user"
@@ -122,7 +122,7 @@ describe('aggregate', () => {
                 snakeName: 'DESC',
               },
             },
-          }).toSql(),
+          }).toSQL(),
           `
             SELECT count("snake"."snake_name") OVER (PARTITION BY "snake"."snake_name" ORDER BY "snake"."snake_name" DESC)
             FROM "snake"
@@ -139,7 +139,7 @@ describe('aggregate', () => {
                 id: 'DESC',
               },
             },
-          }).toSql(),
+          }).toSQL(),
           `
             SELECT count("user"."name") OVER (PARTITION BY "user"."id", "user"."name" ORDER BY "user"."id" DESC)
             FROM "user"
@@ -156,7 +156,7 @@ describe('aggregate', () => {
                 tailLength: 'DESC',
               },
             },
-          }).toSql(),
+          }).toSQL(),
           `
             SELECT count("snake"."snake_name") OVER (PARTITION BY "snake"."snake_name", "snake"."tail_length" ORDER BY "snake"."tail_length" DESC)
             FROM "snake"
@@ -177,7 +177,7 @@ describe('aggregate', () => {
               id: 'DESC',
             },
           },
-        }).toSql(),
+        }).toSQL(),
         `
           SELECT
             count(DISTINCT "user"."name" ORDER BY "user"."name" DESC)
@@ -198,7 +198,7 @@ describe('aggregate', () => {
           order: { name: 'DESC' },
           filter: { age: { not: null } },
           withinGroup: true,
-        }).toSql(),
+        }).toSQL(),
         `
           SELECT count("user"."name")
           WITHIN GROUP (ORDER BY "user"."name" DESC)
@@ -226,7 +226,7 @@ describe('aggregate', () => {
         }).take();
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           `
             SELECT count(*) AS "count" FROM "user" LIMIT 1
           `,
@@ -431,16 +431,16 @@ describe('aggregate', () => {
       const q = User.clone();
 
       const expectedSql = getSql('"user"."name"');
-      expectSql(q[method as 'count']('name').toSql(), expectedSql);
+      expectSql(q[method as 'count']('name').toSQL(), expectedSql);
       expectQueryNotMutated(q);
 
       q[`_${method}` as `_count`]('name');
-      expectSql(q.toSql({ clearCache: true }), expectedSql);
+      expectSql(q.toSQL({ clearCache: true }), expectedSql);
     });
 
     it('should support raw sql parameter', () => {
       const q = User.all();
-      expectSql(q[method as 'count'](testDb.sql`name`).toSql(), getSql('name'));
+      expectSql(q[method as 'count'](testDb.sql`name`).toSQL(), getSql('name'));
       expectQueryNotMutated(q);
     });
 
@@ -448,7 +448,7 @@ describe('aggregate', () => {
       const q = User.all();
       const expectedSql = getSql('"user"."name"', 'count');
       expectSql(
-        q.select({ count: (q) => q[method as 'count']('name') }).toSql(),
+        q.select({ count: (q) => q[method as 'count']('name') }).toSQL(),
         expectedSql,
       );
       expectQueryNotMutated(q);
@@ -462,7 +462,7 @@ describe('aggregate', () => {
           .select({
             count: (q) => q[method as 'count'](testDb.sql`name`),
           })
-          .toSql(),
+          .toSQL(),
         expectedSql,
       );
       expectQueryNotMutated(q);
@@ -520,14 +520,14 @@ describe('aggregate', () => {
       const q = User.clone();
       const expectedSql = `SELECT ${functionName}($1::text, "user"."name") FROM "user"`;
       expectSql(
-        q[method as 'jsonObjectAgg']({ alias: 'name' }).toSql(),
+        q[method as 'jsonObjectAgg']({ alias: 'name' }).toSQL(),
         expectedSql,
         ['alias'],
       );
       expectQueryNotMutated(q);
 
       q[`_${method}` as '_jsonObjectAgg']({ alias: 'name' });
-      expectSql(q.toSql({ clearCache: true }), expectedSql, ['alias']);
+      expectSql(q.toSQL({ clearCache: true }), expectedSql, ['alias']);
     });
 
     it('should support raw sql parameter', () => {
@@ -535,7 +535,7 @@ describe('aggregate', () => {
       expectSql(
         q[method as 'jsonObjectAgg']({
           alias: testDb.sql`name`,
-        }).toSql(),
+        }).toSQL(),
         `SELECT ${functionName}($1::text, name) FROM "user"`,
         ['alias'],
       );
@@ -550,7 +550,7 @@ describe('aggregate', () => {
           .select({
             result: (q) => q[method as 'jsonObjectAgg']({ alias: 'name' }),
           })
-          .toSql(),
+          .toSQL(),
         expectedSql,
         ['alias'],
       );
@@ -566,7 +566,7 @@ describe('aggregate', () => {
             result: (q) =>
               q[method as 'jsonObjectAgg']({ alias: testDb.sql`name` }),
           })
-          .toSql(),
+          .toSQL(),
         expectedSql,
         ['alias'],
       );
@@ -620,17 +620,17 @@ describe('aggregate', () => {
     it('makes stringAgg query', () => {
       const q = User.clone();
       const expectedSql = `SELECT string_agg("user"."name", $1) FROM "user"`;
-      expectSql(q.stringAgg('name', ' & ').toSql(), expectedSql, [' & ']);
+      expectSql(q.stringAgg('name', ' & ').toSQL(), expectedSql, [' & ']);
       expectQueryNotMutated(q);
 
       q._stringAgg('name', ' & ');
-      expectSql(q.toSql({ clearCache: true }), expectedSql, [' & ']);
+      expectSql(q.toSQL({ clearCache: true }), expectedSql, [' & ']);
     });
 
     it('should support raw sql parameter', async () => {
       const q = User.all();
       expectSql(
-        q.stringAgg(testDb.sql`name`, ' & ').toSql(),
+        q.stringAgg(testDb.sql`name`, ' & ').toSQL(),
         `SELECT string_agg(name, $1) FROM "user"`,
         [' & '],
       );
@@ -640,14 +640,14 @@ describe('aggregate', () => {
     it(`.stringAgg should select aggregated value`, () => {
       const q = User.all();
       const expectedSql = `SELECT string_agg("user"."name", $1) FROM "user"`;
-      expectSql(q.stringAgg('name', ' & ').toSql(), expectedSql, [' & ']);
+      expectSql(q.stringAgg('name', ' & ').toSQL(), expectedSql, [' & ']);
       expectQueryNotMutated(q);
     });
 
     it(`.stringAgg supports raw sql`, () => {
       const q = User.all();
       const expectedSql = `SELECT string_agg(name, $1) FROM "user"`;
-      expectSql(q.stringAgg(testDb.sql`name`, ' & ').toSql(), expectedSql, [
+      expectSql(q.stringAgg(testDb.sql`name`, ' & ').toSQL(), expectedSql, [
         ' & ',
       ]);
       expectQueryNotMutated(q);
@@ -686,7 +686,7 @@ describe('aggregate', () => {
         assertType<typeof value, { result: number | null }[]>();
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           `
             SELECT ${functionName}() OVER (
               PARTITION BY "user"."age"

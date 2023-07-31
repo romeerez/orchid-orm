@@ -31,7 +31,7 @@ describe('clear', () => {
           'limit',
           'offset',
         )
-        .toSql(),
+        .toSQL(),
       `SELECT * FROM "user"`,
     );
   });
@@ -47,7 +47,7 @@ describe('clear', () => {
         .update({ name: 'new name' })
         .increment('age')
         .clear('counters')
-        .toSql(),
+        .toSQL(),
       expectedSql,
       expectedValues,
     );
@@ -57,7 +57,7 @@ describe('clear', () => {
         .update({ name: 'new name' })
         .decrement('age')
         .clear('counters')
-        .toSql(),
+        .toSQL(),
       expectedSql,
       expectedValues,
     );

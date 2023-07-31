@@ -11,7 +11,7 @@ import {
 import { addValue, q, qc, columnToSql } from './common';
 import { getQueryAs } from '../utils';
 import { processJoinItem } from './join';
-import { makeSql, ToSqlCtx } from './toSql';
+import { makeSQL, ToSQLCtx } from './toSQL';
 import { JoinedShapes, QueryData } from './data';
 import {
   ColumnTypeBase,
@@ -24,7 +24,7 @@ import { Operator } from '../columns/operators';
 import { FnExpression } from '../common/fn';
 
 export const pushWhereStatementSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: Query,
   query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   quotedAs?: string,
@@ -37,7 +37,7 @@ export const pushWhereStatementSql = (
 
 export const pushWhereToSql = (
   sql: string[],
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: Query,
   query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   quotedAs?: string,
@@ -50,7 +50,7 @@ export const pushWhereToSql = (
 };
 
 export const whereToSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: Query,
   query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   quotedAs?: string,
@@ -70,7 +70,7 @@ export const whereToSql = (
 
 const processAnds = (
   and: WhereItem[],
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: Query,
   query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes'>,
   quotedAs?: string,
@@ -85,7 +85,7 @@ const processAnds = (
 
 const processWhere = (
   ands: string[],
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: Query,
   query: Pick<QueryData, 'and' | 'or' | 'shape' | 'joinedShapes' | 'language'>,
   data: WhereItem,
@@ -100,7 +100,7 @@ const processWhere = (
     if ('q' in res.q) {
       const q = res.q.clone();
       q.q.select = [res as FnExpression<Query, ColumnTypeBase>];
-      ands.push(`${prefix}(${makeSql(q, ctx).text})`);
+      ands.push(`${prefix}(${makeSQL(q, ctx).text})`);
     } else {
       pushWhereToSql(ands, ctx, res as Query, res.q, quotedAs, not);
     }
@@ -244,7 +244,7 @@ const processWhere = (
 
         if (value instanceof ctx.queryBuilder.constructor) {
           ands.push(
-            `${prefix}${quotedColumn} = (${(value as Query).toSql(ctx).text})`,
+            `${prefix}${quotedColumn} = (${(value as Query).toSQL(ctx).text})`,
           );
         } else {
           for (const op in value) {
@@ -282,7 +282,7 @@ const getJoinItemSource = (joinItem: WhereOnJoinItem) => {
 };
 
 const pushIn = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   ands: string[],
   prefix: string,
@@ -306,7 +306,7 @@ const pushIn = (
   } else if (isExpression(arg.values)) {
     value = arg.values.toSQL(ctx, quotedAs);
   } else {
-    const sql = makeSql(arg.values, ctx);
+    const sql = makeSQL(arg.values, ctx);
     value = `(${sql.text})`;
   }
 

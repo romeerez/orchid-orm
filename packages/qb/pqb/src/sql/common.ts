@@ -1,6 +1,6 @@
 import { SelectableOrExpression } from '../utils';
 import { QueryData } from './data';
-import { ToSqlCtx } from './toSql';
+import { ToSQLCtx } from './toSQL';
 
 export type ColumnNamesShape = Record<string, { data: { name?: string } }>;
 
@@ -110,7 +110,7 @@ export const ownColumnToSql = (
 };
 
 export const rawOrColumnToSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   data: Pick<QueryData, 'shape' | 'joinedShapes'>,
   expr: SelectableOrExpression,
   quotedAs: string | undefined,

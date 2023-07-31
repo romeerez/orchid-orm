@@ -20,7 +20,7 @@ import { pushCopySql } from './copy';
 import { isExpression, Sql } from 'orchid-core';
 import { Db } from '../db';
 
-export type ToSqlCtx = {
+export type ToSQLCtx = {
   queryBuilder: Db;
   sql: string[];
   values: unknown[];
@@ -28,30 +28,30 @@ export type ToSqlCtx = {
   aliasValue?: true;
 };
 
-export type toSqlCacheKey = typeof toSqlCacheKey;
-export const toSqlCacheKey = Symbol('toSqlCache');
+export type toSQLCacheKey = typeof toSQLCacheKey;
+export const toSQLCacheKey = Symbol('toSQLCache');
 
-export type ToSqlOptions = {
+export type ToSQLOptions = {
   clearCache?: boolean;
   values?: unknown[];
 };
 
-type ToSqlOptionsInternal = ToSqlOptions & {
+type ToSqlOptionsInternal = ToSQLOptions & {
   aliasValue?: true;
 };
 
-export const toSql = (table: Query, options?: ToSqlOptions): Sql => {
+export const toSQL = (table: Query, options?: ToSQLOptions): Sql => {
   return (
-    (!options?.clearCache && table.q[toSqlCacheKey]) ||
-    (table.q[toSqlCacheKey] = makeSql(table, options))
+    (!options?.clearCache && table.q[toSQLCacheKey]) ||
+    (table.q[toSQLCacheKey] = makeSQL(table, options))
   );
 };
 
-export const makeSql = (table: Query, options?: ToSqlOptionsInternal): Sql => {
+export const makeSQL = (table: Query, options?: ToSqlOptionsInternal): Sql => {
   const query = table.q;
   const sql: string[] = [];
   const values = options?.values || [];
-  const ctx: ToSqlCtx = {
+  const ctx: ToSQLCtx = {
     queryBuilder: table.queryBuilder,
     sql,
     values,
@@ -168,7 +168,7 @@ export const makeSql = (table: Query, options?: ToSqlOptionsInternal): Sql => {
       if (isExpression(item.arg)) {
         itemSql = item.arg.toSQL(ctx, quotedAs);
       } else {
-        const argSql = makeSql(item.arg, { values });
+        const argSql = makeSQL(item.arg, { values });
         itemSql = argSql.text;
       }
       sql.push(`${item.kind} ${item.wrap ? `(${itemSql})` : itemSql}`);

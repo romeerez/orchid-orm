@@ -3,7 +3,7 @@ import { QueryLogger, QueryLogObject } from '../queryMethods';
 import { Adapter, QueryResult } from '../adapter';
 import { RelationQueryData, relationQueryKey } from '../relations';
 import { ColumnsShape } from '../columns';
-import { toSqlCacheKey } from './toSql';
+import { toSQLCacheKey } from './toSQL';
 import {
   HavingItem,
   JoinItem,
@@ -112,8 +112,8 @@ export type CommonQueryData = {
   logger: QueryLogger;
   // convert query into prepared statement automatically as an optimization
   autoPreparedStatements?: boolean;
-  // cache `toSql` output
-  [toSqlCacheKey]?: Sql;
+  // cache `toSQL` output
+  [toSQLCacheKey]?: Sql;
   // functions to transform query result after loading data
   transform?: ((input: unknown) => unknown)[];
   // default language for the full text search

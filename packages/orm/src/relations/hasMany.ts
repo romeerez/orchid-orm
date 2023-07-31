@@ -12,7 +12,7 @@ import {
   CreateData,
   JoinCallback,
   Query,
-  toSqlCacheKey,
+  toSQLCacheKey,
   WhereArg,
   WhereResult,
   InsertQueryData,
@@ -353,7 +353,7 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
           [foreignKey]: data[0][primaryKey],
         })),
       );
-      delete t.q[toSqlCacheKey];
+      delete t.q[toSQLCacheKey];
     }
 
     if (params.disconnect || params.set) {
@@ -369,7 +369,7 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
         ._update({ [foreignKey]: null });
 
       if (params.set) {
-        delete t.q[toSqlCacheKey];
+        delete t.q[toSQLCacheKey];
         await t
           .where<Query>(
             Array.isArray(params.set)
@@ -383,7 +383,7 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
     }
 
     if (params.delete || params.update) {
-      delete t.q[toSqlCacheKey];
+      delete t.q[toSQLCacheKey];
       const q = t._where(
         getWhereForNestedUpdate(
           data,

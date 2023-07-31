@@ -1,10 +1,10 @@
 import { q } from './common';
-import { makeSql, ToSqlCtx } from './toSql';
+import { makeSQL, ToSQLCtx } from './toSQL';
 import { QueryData } from './data';
 import { isExpression } from 'orchid-core';
 
 export const pushWithSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   withData: Exclude<QueryData['with'], undefined>,
 ) => {
   if (!withData.length) return;
@@ -19,7 +19,7 @@ export const pushWithSql = (
         if (isExpression(query)) {
           inner = query.toSQL(ctx, `"${name}"`);
         } else {
-          inner = makeSql(query, ctx).text;
+          inner = makeSQL(query, ctx).text;
         }
 
         return `${options.recursive ? 'RECURSIVE ' : ''}"${name}"${

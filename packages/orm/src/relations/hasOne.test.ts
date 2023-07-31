@@ -45,7 +45,7 @@ describe('hasOne', () => {
       const query = db.user.profile(user);
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         SELECT ${profileSelectAll} FROM "profile"
         WHERE "profile"."userId" = $1
@@ -64,7 +64,7 @@ describe('hasOne', () => {
         .profile.where({ Bio: 'bio' });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT ${profileSelectAll} FROM "profile"
           WHERE EXISTS (
@@ -90,7 +90,7 @@ describe('hasOne', () => {
       });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         INSERT INTO "profile"("userId", "bio", "updatedAt", "createdAt")
         VALUES ($1, $2, $3, $4)
@@ -117,7 +117,7 @@ describe('hasOne', () => {
         });
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "profile"("userId", "bio")
             SELECT "user"."id" AS "UserId", $1
@@ -164,7 +164,7 @@ describe('hasOne', () => {
           .delete();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             DELETE FROM "profile"
             WHERE EXISTS (
@@ -184,7 +184,7 @@ describe('hasOne', () => {
       expectSql(
         db.user.relations.profile
           .joinQuery(db.user.as('u'), db.profile.as('p'))
-          .toSql(),
+          .toSQL(),
         `
           SELECT ${profileSelectAll} FROM "profile" AS "p"
           WHERE "p"."userId" = "u"."id"
@@ -194,7 +194,7 @@ describe('hasOne', () => {
 
     it('should be supported in whereExists', () => {
       expectSql(
-        db.user.as('u').whereExists('profile').toSql(),
+        db.user.as('u').whereExists('profile').toSQL(),
         `
         SELECT ${userSelectAll} FROM "user" AS "u"
         WHERE EXISTS (
@@ -209,7 +209,7 @@ describe('hasOne', () => {
         db.user
           .as('u')
           .whereExists('profile', (q) => q.where({ Bio: 'bio' }))
-          .toSql(),
+          .toSQL(),
         `
         SELECT ${userSelectAll} FROM "user" AS "u"
         WHERE EXISTS (
@@ -235,7 +235,7 @@ describe('hasOne', () => {
       >();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         SELECT "u"."name" AS "Name", "profile"."bio" AS "Bio"
         FROM "user" AS "u"
@@ -262,7 +262,7 @@ describe('hasOne', () => {
       >();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         SELECT "u"."name" AS "Name", "p"."bio" AS "Bio"
         FROM "user" AS "u"
@@ -284,7 +284,7 @@ describe('hasOne', () => {
       assertType<Awaited<typeof q>, { Name: string; p: Profile }[]>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."name" AS "Name", row_to_json("p".*) "p"
           FROM "user"
@@ -311,7 +311,7 @@ describe('hasOne', () => {
         assertType<Awaited<typeof query>, { Id: number; profile: Profile }[]>();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT
               "u"."id" AS "Id",
@@ -340,7 +340,7 @@ describe('hasOne', () => {
         >();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT
               "u"."id" AS "Id",
@@ -369,7 +369,7 @@ describe('hasOne', () => {
         });
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           `
             SELECT row_to_json("profile".*) "profile"
             FROM "user"
@@ -400,7 +400,7 @@ describe('hasOne', () => {
         });
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           `
             UPDATE "profile"
             SET
@@ -1525,7 +1525,7 @@ describe('hasOne', () => {
     );
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT ${userSelectAll} FROM "user" WHERE (
           SELECT count(*) = $1
@@ -1737,7 +1737,7 @@ describe('hasOne through', () => {
 
     const query = db.message.profile({ AuthorId: 1 });
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         SELECT ${profileSelectAll} FROM "profile"
         WHERE EXISTS (
@@ -1757,7 +1757,7 @@ describe('hasOne through', () => {
       .profile.where({ Bio: 'bio' });
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         SELECT ${profileSelectAll} FROM "profile"
         WHERE EXISTS (
@@ -1789,7 +1789,7 @@ describe('hasOne through', () => {
       .delete();
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         DELETE FROM "profile"
         WHERE EXISTS (
@@ -1813,7 +1813,7 @@ describe('hasOne through', () => {
     expectSql(
       db.message.relations.profile
         .joinQuery(db.message.as('m'), db.profile.as('p'))
-        .toSql(),
+        .toSQL(),
       `
         SELECT ${profileSelectAll} FROM "profile" AS "p"
         WHERE EXISTS (
@@ -1828,7 +1828,7 @@ describe('hasOne through', () => {
 
   it('should be supported in whereExists', () => {
     expectSql(
-      db.message.whereExists('profile').toSql(),
+      db.message.whereExists('profile').toSQL(),
       `
         SELECT ${messageSelectAll} FROM "message"
         WHERE EXISTS (
@@ -1848,7 +1848,7 @@ describe('hasOne through', () => {
       db.message
         .as('m')
         .whereExists('profile', (q) => q.where({ Bio: 'bio' }))
-        .toSql(),
+        .toSQL(),
       `
         SELECT ${messageSelectAll} FROM "message" AS "m"
         WHERE EXISTS (
@@ -1876,7 +1876,7 @@ describe('hasOne through', () => {
     assertType<Awaited<typeof query>, { Text: string; Bio: string | null }[]>();
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         SELECT "m"."text" AS "Text", "profile"."bio" AS "Bio"
         FROM "message" AS "m"
@@ -1905,7 +1905,7 @@ describe('hasOne through', () => {
     assertType<Awaited<typeof query>, { Text: string; Bio: string | null }[]>();
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         SELECT "m"."text" AS "Text", "p"."bio" AS "Bio"
         FROM "message" AS "m"
@@ -1932,7 +1932,7 @@ describe('hasOne through', () => {
     assertType<Awaited<typeof q>, { Text: string; p: Profile }[]>();
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT "message"."text" AS "Text", row_to_json("p".*) "p"
         FROM "message"
@@ -1963,7 +1963,7 @@ describe('hasOne through', () => {
       assertType<Awaited<typeof query>, { Id: number; profile: Profile }[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT
             "m"."id" AS "Id",
@@ -1995,7 +1995,7 @@ describe('hasOne through', () => {
       >();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT
             "m"."id" AS "Id",
@@ -2029,7 +2029,7 @@ describe('hasOne through', () => {
       });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT row_to_json("profile".*) "profile"
           FROM "message"
@@ -2177,7 +2177,7 @@ describe('hasOne through', () => {
     );
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT ${messageSelectAll} FROM "message" WHERE (
           SELECT count(*) = $1

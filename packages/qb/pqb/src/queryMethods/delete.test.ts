@@ -34,7 +34,7 @@ describe('delete', () => {
 
     const query = q.find(id).get('id').delete();
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         DELETE FROM "user" WHERE "user"."id" = $1
         RETURNING "user"."id"
@@ -53,7 +53,7 @@ describe('delete', () => {
   it('should delete records, returning named column', async () => {
     const query = Snake.findBy({ snakeName: 'name' }).get('snakeName').delete();
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         DELETE FROM "snake" WHERE "snake"."snake_name" = $1
         RETURNING "snake"."snake_name" AS "snakeName"
@@ -72,7 +72,7 @@ describe('delete', () => {
     const q = User.all();
 
     const query = q.where({ id: { gte: 1 } }).delete();
-    expectSql(query.toSql(), 'DELETE FROM "user" WHERE "user"."id" >= $1', [1]);
+    expectSql(query.toSQL(), 'DELETE FROM "user" WHERE "user"."id" >= $1', [1]);
 
     const result = await query;
     expect(result).toBe(rowsCount);
@@ -87,7 +87,7 @@ describe('delete', () => {
 
     const query = q.selectAll().where({ id: 1 }).delete();
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `DELETE FROM "user" WHERE "user"."id" = $1 RETURNING *`,
       [1],
     );
@@ -100,7 +100,7 @@ describe('delete', () => {
   it('should delete records, returning all named columns', () => {
     const query = Snake.selectAll().all().delete();
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         DELETE FROM "snake"
         RETURNING ${snakeSelectAll}
@@ -113,7 +113,7 @@ describe('delete', () => {
 
     const query = q.select('id', 'name').where({ id: 1 }).delete();
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `DELETE FROM "user" WHERE "user"."id" = $1 RETURNING "user"."id", "user"."name"`,
       [1],
     );
@@ -126,7 +126,7 @@ describe('delete', () => {
   it('should delete records, returning specified named columns', () => {
     const query = Snake.select('snakeName', 'tailLength').all().delete();
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         DELETE FROM "snake"
         RETURNING
@@ -146,7 +146,7 @@ describe('delete', () => {
       .delete();
 
     expectSql(
-      query.toSql(),
+      query.toSQL(),
       `
         DELETE FROM "user"
         USING "profile"

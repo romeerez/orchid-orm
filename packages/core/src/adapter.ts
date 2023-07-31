@@ -11,15 +11,25 @@ export type QueryResultRow = Record<string, any>;
 
 // Interface of a database adapter to use for different databases.
 export type AdapterBase = {
+  // make a query to get rows as objects
   query(query: QueryInput): Promise<unknown>;
+  // make a query to get rows as array of column values
   arrays(query: QueryInput): Promise<unknown>;
+  /**
+   * Run a transaction
+   *
+   * @param begin - SQL for `BEGIN`, it may be a `SAVEPOINT` instead of `BEGIN`
+   * @param cb - callback will be called with a db client with a dedicated connection.
+   */
   transaction(
     begin: Sql,
     cb: (adapter: AdapterBase) => Promise<unknown>,
   ): Promise<unknown>;
+  // close connection
   close(): Promise<void>;
 };
 
+// Database adapter type for transaction that contains a connected db client.
 export type TransactionAdapterBase = AdapterBase & { client: unknown };
 
 // Wrapper type for transactions.

@@ -31,7 +31,7 @@ export const testJoin = ({
   values?: unknown[];
 }) => {
   const join = method as unknown as 'join';
-  const initialSql = joinTo.toSql().text;
+  const initialSql = joinTo.toSQL().text;
 
   const table = joinTo.table as string;
   const [pkeySql] = columnSqlForTest(joinTo, pkey);
@@ -77,30 +77,30 @@ export const testJoin = ({
 
   it('should accept left column and right column', () => {
     expectSql(
-      joinTo[join](joinTarget, fkey, pkey).toSql(),
+      joinTo[join](joinTarget, fkey, pkey).toSQL(),
       sql(`"${joinTable}"`, `${fkeySql} = ${pkeySql}`),
       values,
     );
     expectSql(
-      joinTo[join](joinTarget.as('as'), fkey, pkey).toSql(),
+      joinTo[join](joinTarget.as('as'), fkey, pkey).toSQL(),
       sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
-    expect(joinTo.toSql().text).toBe(initialSql);
+    expect(joinTo.toSQL().text).toBe(initialSql);
   });
 
   it('should accept left column, op and right column', () => {
     expectSql(
-      joinTo[join](joinTarget, fkey, '=', pkey).toSql(),
+      joinTo[join](joinTarget, fkey, '=', pkey).toSQL(),
       sql(`"${joinTable}"`, `${fkeySql} = ${pkeySql}`),
       values,
     );
     expectSql(
-      joinTo[join](joinTarget.as('as'), fkey, '=', pkey).toSql(),
+      joinTo[join](joinTarget.as('as'), fkey, '=', pkey).toSQL(),
       sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
-    expect(joinTo.toSql().text).toBe(initialSql);
+    expect(joinTo.toSQL().text).toBe(initialSql);
   });
 
   it('should accept raw and raw', () => {
@@ -109,7 +109,7 @@ export const testJoin = ({
         joinTarget,
         testDb.sql({ raw: `${fkeySql}` }),
         testDb.sql({ raw: `${pkeySql}` }),
-      ).toSql(),
+      ).toSQL(),
       sql(`"${joinTable}"`, `${fkeySql} = ${pkeySql}`),
       values,
     );
@@ -118,11 +118,11 @@ export const testJoin = ({
         joinTarget.as('as'),
         testDb.sql({ raw: `${asFkeySql}` }),
         testDb.sql({ raw: `${pkeySql}` }),
-      ).toSql(),
+      ).toSQL(),
       sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
-    expect(joinTo.toSql().text).toBe(initialSql);
+    expect(joinTo.toSQL().text).toBe(initialSql);
   });
 
   it('should accept raw, op and raw', () => {
@@ -132,7 +132,7 @@ export const testJoin = ({
         testDb.sql({ raw: `${fkeySql}` }),
         '=',
         testDb.sql({ raw: `${pkeySql}` }),
-      ).toSql(),
+      ).toSQL(),
       sql(`"${joinTable}"`, `${fkeySql} = ${pkeySql}`),
       values,
     );
@@ -142,43 +142,43 @@ export const testJoin = ({
         testDb.sql({ raw: `${asFkeySql}` }),
         '=',
         testDb.sql({ raw: `${pkeySql}` }),
-      ).toSql(),
+      ).toSQL(),
       sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
-    expect(joinTo.toSql().text).toBe(initialSql);
+    expect(joinTo.toSQL().text).toBe(initialSql);
   });
 
   it('should accept object of columns', () => {
     expectSql(
-      joinTo[join](joinTarget, { [fkey]: pkey }).toSql(),
+      joinTo[join](joinTarget, { [fkey]: pkey }).toSQL(),
       sql(`"${joinTable}"`, `${fkeySql} = ${pkeySql}`),
       values,
     );
     expectSql(
-      joinTo[join](joinTarget.as('as'), { [fkey]: pkey }).toSql(),
+      joinTo[join](joinTarget.as('as'), { [fkey]: pkey }).toSQL(),
       sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
-    expect(joinTo.toSql().text).toBe(initialSql);
+    expect(joinTo.toSQL().text).toBe(initialSql);
   });
 
   it('should accept object of columns with raw value', () => {
     expectSql(
       joinTo[join](joinTarget, {
         [fkey]: testDb.sql({ raw: `${pkeySql}` }),
-      }).toSql(),
+      }).toSQL(),
       sql(`"${joinTable}"`, `${fkeySql} = ${pkeySql}`),
       values,
     );
     expectSql(
       joinTo[join](joinTarget.as('as'), {
         [fkey]: testDb.sql({ raw: `${pkeySql}` }),
-      }).toSql(),
+      }).toSQL(),
       sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
-    expect(joinTo.toSql().text).toBe(initialSql);
+    expect(joinTo.toSQL().text).toBe(initialSql);
   });
 
   it('should accept raw sql', () => {
@@ -186,7 +186,7 @@ export const testJoin = ({
       joinTo[join](
         joinTarget,
         testDb.sql({ raw: `"${fkeySql}" = "${table}".${pkey}` }),
-      ).toSql(),
+      ).toSQL(),
       sql(`"${joinTable}"`, `"${fkeySql}" = "${table}".${pkey}`),
       values,
     );
@@ -194,18 +194,18 @@ export const testJoin = ({
       joinTo[join](
         joinTarget.as('as'),
         testDb.sql({ raw: `"${fkeySql}" = "${table}".${pkey}` }),
-      ).toSql(),
+      ).toSQL(),
       sql(`"${joinTable}" AS "as"`, `"${fkeySql}" = "${table}".${pkey}`),
       values,
     );
-    expect(joinTo.toSql().text).toBe(initialSql);
+    expect(joinTo.toSQL().text).toBe(initialSql);
   });
 
   it('should use conditions from provided query', () => {
     expectSql(
       joinTo[join](joinTarget, (q) =>
         q.on(fkey, pkey).where({ [text]: 'text' }),
-      ).toSql(),
+      ).toSQL(),
       sql(
         `"${joinTable}"`,
         `${fkeySql} = ${pkeySql} AND ${textSql} = $${values.length + 1}`,
@@ -243,7 +243,7 @@ export const testJoin = ({
 
     it('should join relation', () => {
       expectSql(
-        withRelation[join]('as').toSql(),
+        withRelation[join]('as').toSQL(),
         sql(`"${joinTable}" AS "as"`, `${asFkeySql} = ${pkeySql}`),
         values,
       );
@@ -256,7 +256,7 @@ export const testJoin = ({
             q.where({
               [`as.${text}`]: 'text',
             }),
-          ).toSql(),
+          ).toSQL(),
           sql(
             `"${joinTable}" AS "as"`,
             `${asFkeySql} = ${pkeySql} AND ${asTextSql} = $${
@@ -294,7 +294,7 @@ export const testJoin = ({
           });
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           makeSql({
             select: `SELECT "as"."one" AS "id", "as"."two" AS "text" FROM "${table}"`,
             target: `

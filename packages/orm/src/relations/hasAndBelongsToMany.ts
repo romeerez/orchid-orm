@@ -8,7 +8,7 @@ import {
   NotFoundError,
   OrchidOrmInternalError,
   Query,
-  toSqlCacheKey,
+  toSQLCacheKey,
   UpdateCtx,
   VirtualColumn,
   WhereArg,
@@ -469,7 +469,7 @@ const nestedUpdate = (state: State) => {
     if (params.set) {
       const j = queryJoinTable(state, data);
       await j._delete();
-      delete j.q[toSqlCacheKey];
+      delete j.q[toSQLCacheKey];
 
       const ids = await queryRelatedTable(
         state.relatedTableQuery,

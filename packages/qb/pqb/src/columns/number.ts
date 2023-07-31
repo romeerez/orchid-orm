@@ -243,7 +243,7 @@ export class BigSerialColumn extends NumberAsStringBaseColumn {
   dataType = 'bigint' as const;
   declare data: SerialColumnData;
 
-  toSql() {
+  toSQL() {
     return 'bigserial';
   }
 

@@ -57,6 +57,7 @@ export class JSONArray<
 
 assignMethodsToClass(JSONArray, arrayTypeMethods);
 
+// Make `array` method available on any JSON type.
 JSONType.prototype.array = function () {
   return new JSONArray(this);
 };

@@ -2,7 +2,7 @@ import { addValue, ownColumnToSql } from './common';
 import { pushWhereStatementSql } from './where';
 import { Query } from '../query';
 import { selectToSql } from './select';
-import { makeSql, ToSqlCtx } from './toSql';
+import { makeSQL, ToSQLCtx } from './toSQL';
 import { pushQueryValue } from '../queryDataUtils';
 import { InsertQueryData, QueryData, QueryHookSelect } from './data';
 import { emptyArray, Expression, isExpression } from 'orchid-core';
@@ -15,7 +15,7 @@ import { RawSQL } from './rawSql';
 const quotedColumns: string[] = [];
 
 export const pushInsertSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   q: Query,
   query: InsertQueryData,
   quotedAs: string,
@@ -110,7 +110,7 @@ export const pushInsertSql = (
       );
     }
 
-    ctx.sql.push(makeSql(q, { values: ctx.values }).text);
+    ctx.sql.push(makeSQL(q, { values: ctx.values }).text);
   }
 
   if (query.onConflict) {
@@ -201,7 +201,7 @@ export const pushInsertSql = (
 };
 
 const encodeRow = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   q: Query,
   QueryClass: Db,
   row: unknown[],
@@ -217,7 +217,7 @@ const encodeRow = (
       if (value instanceof Expression) {
         return value.toSQL(ctx, quotedAs);
       } else if (value instanceof QueryClass) {
-        return `(${joinSubQuery(q, value as Query).toSql(ctx).text})`;
+        return `(${joinSubQuery(q, value as Query).toSQL(ctx).text})`;
       }
     }
 
@@ -234,7 +234,7 @@ const encodeRow = (
 };
 
 export const pushReturningSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   q: Query,
   data: QueryData,
   quotedAs: string,

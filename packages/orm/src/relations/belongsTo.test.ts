@@ -38,7 +38,7 @@ describe('belongsTo', () => {
       const query = db.profile.user(profile);
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         SELECT ${userSelectAll} FROM "user"
         WHERE "user"."id" = $1
@@ -59,7 +59,7 @@ describe('belongsTo', () => {
       assertType<Awaited<typeof query>, User>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT ${userSelectAll} FROM "user"
           WHERE EXISTS (
@@ -86,7 +86,7 @@ describe('belongsTo', () => {
       expectSql(
         db.profile.relations.user
           .joinQuery(db.profile.as('p'), db.user.as('u'))
-          .toSql(),
+          .toSQL(),
         `
           SELECT ${userSelectAll} FROM "user" AS "u"
           WHERE "u"."id" = "p"."userId"
@@ -96,7 +96,7 @@ describe('belongsTo', () => {
 
     it('should be supported in whereExists', () => {
       expectSql(
-        db.profile.whereExists('user').toSql(),
+        db.profile.whereExists('user').toSQL(),
         `
           SELECT ${profileSelectAll} FROM "profile"
           WHERE EXISTS (
@@ -111,7 +111,7 @@ describe('belongsTo', () => {
         db.profile
           .as('p')
           .whereExists('user', (q) => q.where({ Name: 'name' }))
-          .toSql(),
+          .toSQL(),
         `
         SELECT ${profileSelectAll} FROM "profile" AS "p"
         WHERE EXISTS (
@@ -132,7 +132,7 @@ describe('belongsTo', () => {
           .whereExists('user', (q) =>
             q.whereExists('profile', (q) => q.where({ Bio: 'bio' })),
           )
-          .toSql(),
+          .toSQL(),
         `
           SELECT ${messageSelectAll} FROM "message" AS "m"
           WHERE EXISTS (
@@ -163,7 +163,7 @@ describe('belongsTo', () => {
       >();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         SELECT "p"."bio" AS "Bio", "user"."name" AS "Name"
         FROM "profile" AS "p"
@@ -188,7 +188,7 @@ describe('belongsTo', () => {
       >();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         SELECT "p"."bio" AS "Bio", "u"."name" AS "Name"
         FROM "profile" AS "p"
@@ -208,7 +208,7 @@ describe('belongsTo', () => {
       assertType<Awaited<typeof q>, { Bio: string | null; u: User }[]>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "profile"."bio" AS "Bio", row_to_json("u".*) "u"
           FROM "profile"
@@ -238,7 +238,7 @@ describe('belongsTo', () => {
         >();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT
               "p"."id" AS "Id",
@@ -264,7 +264,7 @@ describe('belongsTo', () => {
         assertType<Awaited<typeof query>, { Id: number; hasUser: boolean }[]>();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT
               "p"."id" AS "Id",
@@ -293,7 +293,7 @@ describe('belongsTo', () => {
         });
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           `
             SELECT row_to_json("user".*) "user"
             FROM "profile"
@@ -503,7 +503,7 @@ describe('belongsTo', () => {
           });
 
           expectSql(
-            q.toSql(),
+            q.toSQL(),
             `
               INSERT INTO "profile"("id", "userId", "bio")
               VALUES ($1, $2, $3)
@@ -1425,7 +1425,7 @@ describe('belongsTo', () => {
     );
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT ${profileSelectAll} FROM "profile" WHERE (
           SELECT count(*) = $1

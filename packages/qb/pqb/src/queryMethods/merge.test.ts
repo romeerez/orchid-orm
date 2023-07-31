@@ -21,7 +21,7 @@ describe('merge queries', () => {
 
       assertType<Awaited<typeof q>, { id: number }[]>();
 
-      expectSql(q.toSql(), `SELECT "user"."id" FROM "user"`);
+      expectSql(q.toSQL(), `SELECT "user"."id" FROM "user"`);
     });
 
     it('should merge selects when both have it', () => {
@@ -29,7 +29,7 @@ describe('merge queries', () => {
 
       assertType<Awaited<typeof q>, { id: number; name: string }[]>();
 
-      expectSql(q.toSql(), `SELECT "user"."id", "user"."name" FROM "user"`);
+      expectSql(q.toSQL(), `SELECT "user"."id", "user"."name" FROM "user"`);
     });
   });
 
@@ -45,7 +45,7 @@ describe('merge queries', () => {
 
       assertType<typeof q.returnType, 'oneOrThrow'>();
 
-      expectSql(q.toSql(), `SELECT * FROM "user" LIMIT 1`);
+      expectSql(q.toSQL(), `SELECT * FROM "user" LIMIT 1`);
     });
 
     it('should prefer right return type', () => {
@@ -53,7 +53,7 @@ describe('merge queries', () => {
 
       assertType<typeof q.returnType, 'all'>();
 
-      expectSql(q.toSql(), `SELECT * FROM "user"`);
+      expectSql(q.toSQL(), `SELECT * FROM "user"`);
     });
   });
 
@@ -63,7 +63,7 @@ describe('merge queries', () => {
 
       assertType<(typeof q)['meta']['hasWhere'], true>();
 
-      expectSql(q.toSql(), `SELECT * FROM "user" WHERE "user"."id" = $1`, [1]);
+      expectSql(q.toSQL(), `SELECT * FROM "user" WHERE "user"."id" = $1`, [1]);
     });
 
     it('should merge where when both have it', () => {
@@ -74,7 +74,7 @@ describe('merge queries', () => {
       assertType<(typeof q)['meta']['hasWhere'], true>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT * FROM "user"
           WHERE "user"."id" = $1 AND "user"."name" = $2 AND "user"."id" = $3
@@ -93,7 +93,7 @@ describe('merge queries', () => {
       assertType<typeof q.selectable, typeof joined.selectable>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user".* FROM "user"
           JOIN "message" ON "message"."authorId" = "user"."id"
@@ -109,7 +109,7 @@ describe('merge queries', () => {
       assertType<typeof q.selectable, typeof joined.selectable>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user".* FROM "user"
           JOIN "message" ON "message"."authorId" = "user"."id"
@@ -129,7 +129,7 @@ describe('merge queries', () => {
       >();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user".* FROM "user"
           JOIN "message" ON "message"."authorId" = "user"."id"
@@ -150,7 +150,7 @@ describe('merge queries', () => {
       assertType<typeof q.windows, { w: true }>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT * FROM "user"
           WINDOW "w" AS (PARTITION BY "user"."id")
@@ -170,7 +170,7 @@ describe('merge queries', () => {
       assertType<typeof q.windows, { w: true }>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT * FROM "user"
           WINDOW "w" AS (PARTITION BY "user"."id")
@@ -194,7 +194,7 @@ describe('merge queries', () => {
       assertType<typeof q.windows, { a: true; b: true }>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT * FROM "user"
           WINDOW "a" AS (PARTITION BY "user"."id"),
@@ -222,7 +222,7 @@ describe('merge queries', () => {
       >();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           WITH "withAlias" AS (
             SELECT "user"."id" FROM "user"
@@ -249,7 +249,7 @@ describe('merge queries', () => {
       >();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           WITH "withAlias" AS (
             SELECT "user"."id" FROM "user"
@@ -282,7 +282,7 @@ describe('merge queries', () => {
       >();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           WITH "a" AS (
             SELECT "user"."id" FROM "user"

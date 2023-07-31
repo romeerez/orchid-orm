@@ -3,10 +3,10 @@ import { rawOrColumnToSql } from './common';
 import { orderByToSql } from './orderBy';
 import { QueryData } from './data';
 import { Expression, isExpression } from 'orchid-core';
-import { ToSqlCtx } from './toSql';
+import { ToSQLCtx } from './toSQL';
 
 export const windowToSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   data: QueryData,
   window: string | WindowDeclaration | Expression,
   quotedAs?: string,

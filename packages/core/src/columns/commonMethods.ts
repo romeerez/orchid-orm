@@ -328,8 +328,10 @@ export const numberTypeMethods = {
   },
 };
 
-// Validation methods for date and timestamp columns
+// Type of validation methods for date and timestamp columns
 export type DateTypeMethods = typeof dateTypeMethods;
+
+// Validation methods for date and timestamp columns
 export const dateTypeMethods = {
   // Require a value to be greater than or equal to a given Date object
   min<T extends { data: { min?: Date } }>(

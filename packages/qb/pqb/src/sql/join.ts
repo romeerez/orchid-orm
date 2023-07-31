@@ -9,7 +9,7 @@ import { JoinItem, SimpleJoinItem } from './types';
 import { Query, QueryWithTable } from '../query';
 import { whereToSql } from './where';
 import { Relation } from '../relations';
-import { ToSqlCtx } from './toSql';
+import { ToSQLCtx } from './toSQL';
 import { JoinedShapes, QueryData, SelectQueryData } from './data';
 import { pushQueryArray } from '../queryDataUtils';
 import { QueryBase } from '../queryBase';
@@ -29,7 +29,7 @@ type ItemOf3Or4Length =
     ];
 
 export const processJoinItem = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: QueryBase,
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   item: Pick<SimpleJoinItem, 'args' | 'isSubQuery'>,
@@ -113,7 +113,7 @@ export const processJoinItem = (
 
     const joinedShape = first.shape;
     if (item.isSubQuery) {
-      const subQuery = first.toSql({
+      const subQuery = first.toSQL({
         values: ctx.values,
       });
 
@@ -164,7 +164,7 @@ export const processJoinItem = (
 
 const processArgs = (
   args: SimpleJoinItem['args'],
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: QueryBase,
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   first:
@@ -265,7 +265,7 @@ const processArgs = (
 };
 
 const getConditionsFor3Or4LengthItem = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   target: string,
   quotedAs: string | undefined,
@@ -287,7 +287,7 @@ const getConditionsFor3Or4LengthItem = (
 };
 
 const getObjectOrRawConditions = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   query: Pick<QueryData, 'shape' | 'joinedShapes'>,
   data: Record<string, string | Expression> | Expression | true,
   quotedAs: string | undefined,
@@ -321,7 +321,7 @@ const getObjectOrRawConditions = (
 };
 
 export const pushJoinSql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: QueryBase,
   query: QueryData & {
     join: JoinItem[];
@@ -335,7 +335,7 @@ export const pushJoinSql = (
       ctx.aliasValue = true;
       const as = item[2];
       ctx.sql.push(
-        `${item[0]} LATERAL (${q.toSql(ctx).text}) "${
+        `${item[0]} LATERAL (${q.toSQL(ctx).text}) "${
           query.joinOverrides?.[as] || as
         }" ON true`,
       );

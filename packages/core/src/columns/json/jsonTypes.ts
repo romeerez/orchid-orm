@@ -21,7 +21,10 @@ import { JSONRecord } from './record';
 import { JSONTuple, JSONTupleItems } from './tuple';
 import { JSONUnion, JSONUnionArgs } from './union';
 
+// The type of all available JSON type constructors.
 export type JSONTypes = typeof jsonTypes;
+
+// Object with all available JSON type constructors, is passed as an argument into `json(t => ...)` column.
 export const jsonTypes = {
   unknown: () => new JSONUnknown(),
   boolean: () => new JSONBoolean(),

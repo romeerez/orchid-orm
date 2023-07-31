@@ -1,7 +1,7 @@
 import { Query } from '../query';
 import { ColumnTypeBase, emptyObject, Expression, toArray } from 'orchid-core';
 import { SelectableOrExpression } from '../utils';
-import { OrderItem, ToSqlCtx, WhereItem } from '../sql';
+import { OrderItem, ToSQLCtx, WhereItem } from '../sql';
 import { addValue, columnToSql, rawOrColumnToSql } from '../sql/common';
 import { pushOrderBySql } from '../sql/orderBy';
 import { whereToSql } from '../sql/where';
@@ -43,7 +43,7 @@ export class FnExpression<
     super();
   }
 
-  modifySQL(sql: string, ctx: ToSqlCtx, quotedAs?: string) {
+  modifySQL(sql: string, ctx: ToSQLCtx, quotedAs?: string) {
     const mods = this._mods;
     for (let i = 0, len = mods.length; i < len; i += 2) {
       sql = (mods[i] as Operator<unknown>)(sql, mods[i + 1], ctx, quotedAs);
@@ -51,7 +51,7 @@ export class FnExpression<
     return sql;
   }
 
-  toSQL(ctx: ToSqlCtx, quotedAs?: string): string {
+  toSQL(ctx: ToSQLCtx, quotedAs?: string): string {
     const sql: string[] = [`${this.fn}(`];
 
     const { values } = ctx;
@@ -150,7 +150,7 @@ export const makeColumnFnClass = <T extends ColumnType>(
   };
   if (!_fnClass) {
     class ColumnFn extends FnExpression<Query, T> {
-      toSQL(ctx: ToSqlCtx, quotedAs?: string): string {
+      toSQL(ctx: ToSQLCtx, quotedAs?: string): string {
         return super.modifySQL(super.toSQL(ctx, quotedAs), ctx, quotedAs);
       }
     }

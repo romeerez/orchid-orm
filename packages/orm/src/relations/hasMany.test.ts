@@ -51,7 +51,7 @@ describe('hasMany', () => {
       const query = db.user.messages(user);
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         SELECT ${messageSelectAll} FROM "message" AS "messages"
         WHERE "messages"."authorId" = $1
@@ -70,7 +70,7 @@ describe('hasMany', () => {
         .messages.where({ Text: 'text' });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT ${messageSelectAll} FROM "message" AS "messages"
           WHERE EXISTS (
@@ -93,7 +93,7 @@ describe('hasMany', () => {
       });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           INSERT INTO "message"("authorId", "chatId", "text")
           VALUES ($1, $2, $3)
@@ -109,7 +109,7 @@ describe('hasMany', () => {
         });
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             INSERT INTO "message"("chatId", "text")
             SELECT "chat"."idOfChat" AS "ChatId", $1
@@ -155,7 +155,7 @@ describe('hasMany', () => {
         .delete();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           DELETE FROM "message" AS "messages"
           WHERE EXISTS (
@@ -174,7 +174,7 @@ describe('hasMany', () => {
       expectSql(
         db.user.relations.messages
           .joinQuery(db.user.as('u'), db.message.as('m'))
-          .toSql(),
+          .toSQL(),
         `
         SELECT ${messageSelectAll} FROM "message" AS "m"
         WHERE "m"."authorId" = "u"."id"
@@ -184,7 +184,7 @@ describe('hasMany', () => {
 
     it('should be supported in whereExists', () => {
       expectSql(
-        db.user.whereExists('messages').toSql(),
+        db.user.whereExists('messages').toSQL(),
         `
         SELECT ${userSelectAll} FROM "user"
         WHERE EXISTS (
@@ -199,7 +199,7 @@ describe('hasMany', () => {
         db.user
           .as('u')
           .whereExists('messages', (q) => q.where({ Text: 'text' }))
-          .toSql(),
+          .toSQL(),
         `
         SELECT ${userSelectAll} FROM "user" AS "u"
         WHERE EXISTS (
@@ -222,7 +222,7 @@ describe('hasMany', () => {
       assertType<Awaited<typeof query>, { Name: string; Text: string }[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         SELECT "u"."name" AS "Name", "messages"."text" AS "Text"
         FROM "user" AS "u"
@@ -246,7 +246,7 @@ describe('hasMany', () => {
       assertType<Awaited<typeof query>, { Name: string; Text: string }[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         SELECT "u"."name" AS "Name", "m"."text" AS "Text"
         FROM "user" AS "u"
@@ -268,7 +268,7 @@ describe('hasMany', () => {
       assertType<Awaited<typeof q>, { Name: string; message: Message }[]>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."name" AS "Name", row_to_json("m".*) AS "message"
           FROM "user"
@@ -320,7 +320,7 @@ describe('hasMany', () => {
         >();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT
               "u"."id" AS "Id",
@@ -352,7 +352,7 @@ describe('hasMany', () => {
       >();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT
             "u"."id" AS "Id",
@@ -375,7 +375,7 @@ describe('hasMany', () => {
       assertType<Awaited<typeof query>, { Id: number; texts: string[] }[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT
             "u"."id" AS "Id",
@@ -404,7 +404,7 @@ describe('hasMany', () => {
       >();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT
             "u"."id" AS "Id",
@@ -432,7 +432,7 @@ describe('hasMany', () => {
       });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT COALESCE("messages".r, '[]') "messages"
           FROM "user"
@@ -1850,7 +1850,7 @@ describe('hasMany', () => {
     );
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
           SELECT ${userSelectAll} FROM "user" WHERE (
             SELECT count(*) = $1
@@ -2051,7 +2051,7 @@ describe('hasMany through', () => {
 
       const query = db.profile.chats({ UserId: 1 });
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         SELECT ${chatSelectAll} FROM "chat" AS "chats"
         WHERE EXISTS (
@@ -2076,7 +2076,7 @@ describe('hasMany through', () => {
         .chats.where({ Title: 'title' });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT ${chatSelectAll} FROM "chat" AS "chats"
           WHERE EXISTS (
@@ -2114,7 +2114,7 @@ describe('hasMany through', () => {
           .delete();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
           DELETE FROM "chat" AS "chats"
           WHERE EXISTS (
@@ -2144,7 +2144,7 @@ describe('hasMany through', () => {
       expectSql(
         db.profile.relations.chats
           .joinQuery(db.profile.as('p'), db.chat.as('c'))
-          .toSql(),
+          .toSQL(),
         `
           SELECT ${chatSelectAll} FROM "chat" AS "c"
           WHERE EXISTS (
@@ -2164,7 +2164,7 @@ describe('hasMany through', () => {
 
     it('should be supported in whereExists', () => {
       expectSql(
-        db.profile.whereExists('chats').toSql(),
+        db.profile.whereExists('chats').toSQL(),
         `
         SELECT ${profileSelectAll} FROM "profile"
         WHERE EXISTS (
@@ -2189,7 +2189,7 @@ describe('hasMany through', () => {
         db.profile
           .as('p')
           .whereExists('chats', (q) => q.where({ Title: 'title' }))
-          .toSql(),
+          .toSQL(),
         `
         SELECT ${profileSelectAll} FROM "profile" AS "p"
         WHERE EXISTS (
@@ -2225,7 +2225,7 @@ describe('hasMany through', () => {
       >();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT "p"."bio" AS "Bio", "chats"."title" AS "Title"
           FROM "profile" AS "p"
@@ -2264,7 +2264,7 @@ describe('hasMany through', () => {
       >();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT "p"."bio" AS "Bio", "c"."title" AS "Title"
           FROM "profile" AS "p"
@@ -2296,7 +2296,7 @@ describe('hasMany through', () => {
       assertType<Awaited<typeof q>, { Bio: string | null; chat: Chat }[]>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "profile"."bio" AS "Bio", row_to_json("c".*) AS "chat"
           FROM "profile"
@@ -2334,7 +2334,7 @@ describe('hasMany through', () => {
         assertType<Awaited<typeof query>, { Id: number; chats: Chat[] }[]>();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT
               "p"."id" AS "Id",
@@ -2373,7 +2373,7 @@ describe('hasMany through', () => {
       assertType<Awaited<typeof query>, { Id: number; chatsCount: number }[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT
             "p"."id" AS "Id",
@@ -2406,7 +2406,7 @@ describe('hasMany through', () => {
       assertType<Awaited<typeof query>, { Id: number; titles: string[] }[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT
             "p"."id" AS "Id",
@@ -2442,7 +2442,7 @@ describe('hasMany through', () => {
       assertType<Awaited<typeof query>, { Id: number; hasChats: boolean }[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT
             "p"."id" AS "Id",
@@ -2480,7 +2480,7 @@ describe('hasMany through', () => {
       });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT COALESCE("chats".r, '[]') "chats"
           FROM "profile"
@@ -2553,7 +2553,7 @@ describe('hasMany through', () => {
       );
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT ${profileSelectAll} FROM "profile" WHERE (
             SELECT count(*) = $1
@@ -2600,7 +2600,7 @@ describe('hasMany through', () => {
 
       const query = db.chat.profiles({ IdOfChat: 1 });
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT ${profileSelectAll} FROM "profile" AS "profiles"
           WHERE EXISTS (
@@ -2625,7 +2625,7 @@ describe('hasMany through', () => {
         .profiles.where({ Bio: 'bio' });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT ${profileSelectAll} FROM "profile" AS "profiles"
           WHERE EXISTS (
@@ -2662,7 +2662,7 @@ describe('hasMany through', () => {
         .delete();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           DELETE FROM "profile" AS "profiles"
           WHERE EXISTS (
@@ -2691,7 +2691,7 @@ describe('hasMany through', () => {
       expectSql(
         db.chat.relations.profiles
           .joinQuery(db.chat.as('c'), db.profile.as('p'))
-          .toSql(),
+          .toSQL(),
         `
           SELECT ${profileSelectAll} FROM "profile" AS "p"
           WHERE EXISTS (
@@ -2711,7 +2711,7 @@ describe('hasMany through', () => {
 
     it('should be supported in whereExists', () => {
       expectSql(
-        db.chat.whereExists('profiles').toSql(),
+        db.chat.whereExists('profiles').toSQL(),
         `
           SELECT ${chatSelectAll} FROM "chat"
           WHERE EXISTS (
@@ -2736,7 +2736,7 @@ describe('hasMany through', () => {
         db.chat
           .as('c')
           .whereExists('profiles', (q) => q.where({ Bio: 'bio' }))
-          .toSql(),
+          .toSQL(),
         `
           SELECT ${chatSelectAll} FROM "chat" AS "c"
           WHERE EXISTS (
@@ -2772,7 +2772,7 @@ describe('hasMany through', () => {
       >();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT "c"."title" AS "Title", "profiles"."bio" AS "Bio"
           FROM "chat" AS "c"
@@ -2809,7 +2809,7 @@ describe('hasMany through', () => {
       >();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT "c"."title" AS "Title", "p"."bio" AS "Bio"
           FROM "chat" AS "c"
@@ -2841,7 +2841,7 @@ describe('hasMany through', () => {
       assertType<Awaited<typeof q>, { Title: string; profile: Profile }[]>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "chat"."title" AS "Title", row_to_json("p".*) AS "profile"
           FROM "chat"
@@ -2881,7 +2881,7 @@ describe('hasMany through', () => {
         >();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT
               "c"."idOfChat" AS "IdOfChat",
@@ -2922,7 +2922,7 @@ describe('hasMany through', () => {
         >();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT
               "c"."idOfChat" AS "IdOfChat",
@@ -2959,7 +2959,7 @@ describe('hasMany through', () => {
         >();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT
               "c"."idOfChat" AS "IdOfChat",
@@ -2998,7 +2998,7 @@ describe('hasMany through', () => {
         >();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT
               "c"."idOfChat" AS "IdOfChat",
@@ -3037,7 +3037,7 @@ describe('hasMany through', () => {
         });
 
         expectSql(
-          q.toSql(),
+          q.toSQL(),
           `
             SELECT COALESCE("profiles".r, '[]') "profiles"
             FROM "chat"
@@ -3111,7 +3111,7 @@ describe('hasMany through', () => {
       );
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
             SELECT ${chatSelectAll} FROM "chat" WHERE (
               SELECT count(*) = $1

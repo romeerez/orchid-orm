@@ -17,7 +17,7 @@ describe('get', () => {
       expect(result).toBe(id);
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."id"
           FROM "user"
@@ -38,7 +38,7 @@ describe('get', () => {
       expect(result).toBe(snakeName);
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "snake"."snake_name" AS "snakeName"
           FROM "snake"
@@ -57,7 +57,7 @@ describe('get', () => {
       expect(result).toBe(0);
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT count(*)::int FROM "user" LIMIT 1
         `,
@@ -82,7 +82,7 @@ describe('get', () => {
       expect(result).toBe(id);
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."id"
           FROM "user"
@@ -103,7 +103,7 @@ describe('get', () => {
       expect(result).toBe(snakeName);
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "snake"."snake_name" AS "snakeName"
           FROM "snake"
@@ -124,7 +124,7 @@ describe('get', () => {
       expect(result).toBe(0);
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT count(*)::int
           FROM "user"
@@ -143,7 +143,7 @@ describe('get', () => {
       expect(result).toBe(undefined);
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."id"
           FROM "user"

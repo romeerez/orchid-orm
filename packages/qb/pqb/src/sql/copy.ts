@@ -1,4 +1,4 @@
-import { ToSqlCtx } from './toSql';
+import { ToSQLCtx } from './toSQL';
 import { CopyQueryData } from './data';
 import { Query } from '../query';
 import { q } from './common';
@@ -6,7 +6,7 @@ import { quoteString } from '../quote';
 import { pushWhereStatementSql } from './where';
 
 export const pushCopySql = (
-  ctx: ToSqlCtx,
+  ctx: ToSQLCtx,
   table: Query,
   query: CopyQueryData,
   quotedAs?: string,

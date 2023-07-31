@@ -44,7 +44,7 @@ describe('hasAndBelongsToMany', () => {
       const query = db.user.chats(user);
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         SELECT ${chatSelectAll} FROM "chat" AS "chats"
         WHERE EXISTS (
@@ -68,7 +68,7 @@ describe('hasAndBelongsToMany', () => {
         .chats.where({ Title: 'title' });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT ${chatSelectAll} FROM "chat" AS "chats"
           WHERE EXISTS (
@@ -127,7 +127,7 @@ describe('hasAndBelongsToMany', () => {
         .delete();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           DELETE FROM "chat" AS "chats"
           WHERE EXISTS (
@@ -151,7 +151,7 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         db.user.relations.chats
           .joinQuery(db.user.as('u'), db.chat.as('c'))
-          .toSql(),
+          .toSQL(),
         `
           SELECT ${chatSelectAll} FROM "chat" AS "c"
           WHERE EXISTS (
@@ -166,7 +166,7 @@ describe('hasAndBelongsToMany', () => {
 
     it('should be supported in whereExists', () => {
       expectSql(
-        db.user.whereExists('chats').toSql(),
+        db.user.whereExists('chats').toSQL(),
         `
           SELECT ${userSelectAll} FROM "user"
           WHERE EXISTS (
@@ -186,7 +186,7 @@ describe('hasAndBelongsToMany', () => {
         db.user
           .as('u')
           .whereExists('chats', (q) => q.where({ Title: 'title' }))
-          .toSql(),
+          .toSQL(),
         `
         SELECT ${userSelectAll} FROM "user" AS "u"
         WHERE EXISTS (
@@ -215,7 +215,7 @@ describe('hasAndBelongsToMany', () => {
       assertType<Awaited<typeof query>, { Name: string; Title: string }[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         SELECT "u"."name" AS "Name", "chats"."title" AS "Title"
         FROM "user" AS "u"
@@ -246,7 +246,7 @@ describe('hasAndBelongsToMany', () => {
       assertType<Awaited<typeof query>, { Name: string; Title: string }[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
         SELECT "u"."name" AS "Name", "c"."title" AS "Title"
         FROM "user" AS "u"
@@ -273,7 +273,7 @@ describe('hasAndBelongsToMany', () => {
       assertType<Awaited<typeof q>, { Name: string; chat: Chat }[]>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."name" AS "Name", row_to_json("c".*) AS "chat"
           FROM "user"
@@ -308,7 +308,7 @@ describe('hasAndBelongsToMany', () => {
         >();
 
         expectSql(
-          query.toSql(),
+          query.toSQL(),
           `
             SELECT
               "u"."id" AS "Id",
@@ -344,7 +344,7 @@ describe('hasAndBelongsToMany', () => {
       assertType<Awaited<typeof query>, { Id: number; chatsCount: number }[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT
             "u"."id" AS "Id",
@@ -372,7 +372,7 @@ describe('hasAndBelongsToMany', () => {
       assertType<Awaited<typeof query>, { Id: number; titles: string[] }[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT
             "u"."id" AS "Id",
@@ -403,7 +403,7 @@ describe('hasAndBelongsToMany', () => {
       assertType<Awaited<typeof query>, { Id: number; hasChats: boolean }[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT
             "u"."id" AS "Id",
@@ -436,7 +436,7 @@ describe('hasAndBelongsToMany', () => {
       });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT COALESCE("chats".r, '[]') "chats"
           FROM "user"
@@ -1500,7 +1500,7 @@ describe('hasAndBelongsToMany', () => {
     );
 
     expectSql(
-      q.toSql(),
+      q.toSQL(),
       `
         SELECT ${userSelectAll} FROM "user" WHERE (
           SELECT count(*) = $1

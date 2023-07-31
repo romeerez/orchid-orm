@@ -60,7 +60,7 @@ describe('select', () => {
       expect(getShapeFromSelect(query)).toEqual(User.shape);
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT "user".* FROM "user"
           JOIN "message" ON "message"."authorId" = "user"."id"
@@ -72,7 +72,7 @@ describe('select', () => {
       const q = Snake.join(Message, 'authorId', 'tailLength').select('*');
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT ${snakeSelectAllWithTable} FROM "snake"
           JOIN "message" ON "message"."authorId" = "snake"."tail_length"
@@ -87,7 +87,7 @@ describe('select', () => {
       assertType<Awaited<typeof q>, UserRecord[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT * FROM "user"
         `,
@@ -105,7 +105,7 @@ describe('select', () => {
       assertType<Awaited<typeof query>, Pick<UserRecord, 'id' | 'name'>[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT "user"."id", "user"."name" FROM "user"
         `,
@@ -123,7 +123,7 @@ describe('select', () => {
       const q = Snake.select('snakeName', 'tailLength');
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "snake"."snake_name" AS "snakeName", "snake"."tail_length" AS "tailLength"
           FROM "snake"
@@ -138,7 +138,7 @@ describe('select', () => {
       assertType<Awaited<typeof query>, Pick<UserRecord, 'id' | 'name'>[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT "user"."id", "user"."name" FROM "user"
         `,
@@ -156,7 +156,7 @@ describe('select', () => {
       const q = Snake.select('snake.snakeName', 'snake.tailLength');
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "snake"."snake_name" AS "snakeName", "snake"."tail_length" AS "tailLength"
           FROM "snake"
@@ -173,7 +173,7 @@ describe('select', () => {
       assertType<Awaited<typeof query>, { id: number; userId: number }[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT "user"."id", "profile"."userId" FROM "user"
           JOIN "profile" ON "profile"."userId" = "user"."id"
@@ -197,7 +197,7 @@ describe('select', () => {
       assertType<Awaited<typeof q>, { id: number; userId: number | null }[]>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."id", "profile"."userId" FROM "user"
           LEFT JOIN "profile" ON "profile"."userId" = "user"."id"
@@ -212,7 +212,7 @@ describe('select', () => {
       );
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."id", "snake"."snake_name" AS "snakeName"
           FROM "user"
@@ -230,7 +230,7 @@ describe('select', () => {
       assertType<Awaited<typeof query>, { id: number; userId: number }[]>();
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT "user"."id", "p"."userId" FROM "user"
           JOIN "profile" AS "p" ON "p"."userId" = "user"."id"
@@ -252,7 +252,7 @@ describe('select', () => {
       );
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."id", "s"."snake_name" AS "snakeName"
           FROM "user"
@@ -273,7 +273,7 @@ describe('select', () => {
       assertType<Awaited<typeof q>, { p: ProfileRecord }[]>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT row_to_json("p".*) "p"
           FROM "user"
@@ -311,7 +311,7 @@ describe('select', () => {
       assertType<Awaited<typeof q>, { profile: ProfileRecord }[]>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT row_to_json("p".*) AS "profile"
           FROM "user"
@@ -345,7 +345,7 @@ describe('select', () => {
       assertType<Awaited<typeof q>, { p: ProfileRecord | null }[]>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT row_to_json("p".*) "p"
           FROM "user"
@@ -377,7 +377,7 @@ describe('select', () => {
       assertType<Awaited<typeof q>, { profile: ProfileRecord | null }[]>();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT row_to_json("p".*) AS "profile"
           FROM "user"
@@ -411,7 +411,7 @@ describe('select', () => {
       >();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."name", row_to_json("p".*) "p"
           FROM "user"
@@ -432,7 +432,7 @@ describe('select', () => {
       >();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."name", row_to_json("p".*) AS "profile"
           FROM "user"
@@ -453,7 +453,7 @@ describe('select', () => {
       >();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."name", row_to_json("p".*) "p"
           FROM "user"
@@ -474,7 +474,7 @@ describe('select', () => {
       >();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."name", row_to_json("p".*) AS "profile"
           FROM "user"
@@ -550,7 +550,7 @@ describe('select', () => {
       });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT "user"."id" AS "aliasedId", "user"."name" AS "aliasedName"
           FROM "user"
@@ -563,7 +563,7 @@ describe('select', () => {
       const q = Snake.select({ name: 'snakeName', length: 'tailLength' });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "snake"."snake_name" AS "name", "snake"."tail_length" AS "length"
           FROM "snake"
@@ -590,7 +590,7 @@ describe('select', () => {
       });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT "user"."id" AS "aliasedId", "user"."name" AS "aliasedName"
           FROM "user"
@@ -606,7 +606,7 @@ describe('select', () => {
       });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "snake"."snake_name" AS "name", "snake"."tail_length" AS "length"
           FROM "snake"
@@ -641,7 +641,7 @@ describe('select', () => {
       });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT "user"."id" AS "aliasedId", "profile"."userId" AS "aliasedUserId"
           FROM "user"
@@ -658,7 +658,7 @@ describe('select', () => {
       });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."id" AS "userId", "snake"."tail_length" AS "length"
           FROM "user"
@@ -685,7 +685,7 @@ describe('select', () => {
       });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT "user"."id" AS "aliasedId", "p"."userId" AS "aliasedUserId"
           FROM "user"
@@ -702,7 +702,7 @@ describe('select', () => {
       });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT "user"."id" AS "userId", "s"."tail_length" AS "length"
           FROM "user"
@@ -722,7 +722,7 @@ describe('select', () => {
       });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT 1 AS "one" FROM "user"
         `,
@@ -742,7 +742,7 @@ describe('select', () => {
       });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT 1 AS "one" FROM "user"
         `,
@@ -760,7 +760,7 @@ describe('select', () => {
       });
 
       expectSql(
-        query.toSql(),
+        query.toSQL(),
         `
           SELECT
             (
@@ -777,7 +777,7 @@ describe('select', () => {
       const q = Snake.select({ subquery: () => Snake.all() });
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT
             (
@@ -801,14 +801,14 @@ describe('select', () => {
 
       expect(getShapeFromSelect(query)).toEqual(User.shape);
 
-      expectSql(query.toSql(), `SELECT * FROM "user"`);
+      expectSql(query.toSQL(), `SELECT * FROM "user"`);
     });
 
     it('should select all named columns', () => {
       const q = Snake.select('snakeName').selectAll();
 
       expectSql(
-        q.toSql(),
+        q.toSQL(),
         `
           SELECT ${snakeSelectAll} FROM "snake"
         `,
