@@ -1,5 +1,11 @@
 # orchid-core
 
+## 0.10.0
+
+### Minor Changes
+
+- 83cf51c2: Rename `toSql` to `toSQL`
+
 ## 0.9.1
 
 ### Patch Changes

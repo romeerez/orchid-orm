@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.14.0
+
+### Minor Changes
+
+- 83cf51c2: Rename `toSql` to `toSQL`
+
+### Patch Changes
+
+- Updated dependencies [83cf51c2]
+  - pqb@0.17.0
+  - orchid-core@0.10.0
+
 ## 1.13.9
 
 ### Patch Changes

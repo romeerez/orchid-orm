@@ -1,5 +1,16 @@
 # pqb
 
+## 0.17.0
+
+### Minor Changes
+
+- 83cf51c2: Rename `toSql` to `toSQL`
+
+### Patch Changes
+
+- Updated dependencies [83cf51c2]
+  - orchid-core@0.10.0
+
 ## 0.16.6
 
 ### Patch Changes
