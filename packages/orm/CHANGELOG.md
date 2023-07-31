@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.14.1
+
+### Patch Changes
+
+- ff06f0a6: Refactor relations types
+- Updated dependencies [ff06f0a6]
+  - pqb@0.17.1
+
 ## 1.14.0
 
 ### Minor Changes

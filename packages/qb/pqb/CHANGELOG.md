@@ -1,5 +1,11 @@
 # pqb
 
+## 0.17.1
+
+### Patch Changes
+
+- ff06f0a6: Refactor relations types
+
 ## 0.17.0
 
 ### Minor Changes
