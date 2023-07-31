@@ -1,34 +1,79 @@
-import { RelationData, RelationThunkBase } from './relations';
-import { Table } from '../baseTable';
+import {
+  RelationCommonOptions,
+  RelationData,
+  RelationThunkBase,
+  RelationToManyDataForCreate,
+} from './relations';
+import { DbTable, Table, TableClass } from '../baseTable';
 import {
   ColumnType,
   CreateCtx,
+  CreateData,
   getQueryAs,
-  HasAndBelongsToManyRelation,
   NotFoundError,
   OrchidOrmInternalError,
   Query,
+  QueryWithTable,
+  SetQueryTableAlias,
   toSQLCacheKey,
   UpdateCtx,
+  UpdateData,
   VirtualColumn,
   WhereArg,
   WhereQueryBase,
   WhereResult,
 } from 'pqb';
-import { MaybeArray } from 'orchid-core';
+import { EmptyObject, MaybeArray } from 'orchid-core';
 import { hasRelationHandleCreate, hasRelationHandleUpdate } from './utils';
 import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
 
 export interface HasAndBelongsToMany extends RelationThunkBase {
   type: 'hasAndBelongsToMany';
   returns: 'many';
-  options: HasAndBelongsToManyRelation['options'];
+  options: RelationCommonOptions & {
+    primaryKey: string;
+    foreignKey: string;
+    associationPrimaryKey: string;
+    associationForeignKey: string;
+    joinTable: string;
+  };
 }
 
 export type HasAndBelongsToManyInfo<
   T extends Table,
   Relation extends HasAndBelongsToMany,
+  K extends string,
+  TC extends TableClass = ReturnType<Relation['fn']>,
+  Q extends QueryWithTable = SetQueryTableAlias<DbTable<TC>, K>,
 > = {
+  table: Q;
+  query: Q;
+  joinQuery(fromQuery: Query, toQuery: Query): Query;
+  one: false;
+  required: Relation['options']['required'] extends true ? true : false;
+  omitForeignKeyInCreate: never;
+  dataForCreate: RelationToManyDataForCreate<{
+    nestedCreateQuery: Q;
+    table: Q;
+  }>;
+  // `hasAndBelongsToMany` relation data available for update. It supports:
+  // - `disconnect` to delete join table records for related records found by conditions
+  // - `set` to create join table records for related records found by conditions
+  // - `delete` to delete join table records and related records found by conditions
+  // - `update` to update related records found by conditions with a provided data
+  // - `create` to create related records and a join table records
+  dataForUpdate: {
+    disconnect?: MaybeArray<WhereArg<Q>>;
+    set?: MaybeArray<WhereArg<Q>>;
+    delete?: MaybeArray<WhereArg<Q>>;
+    update?: {
+      where: MaybeArray<WhereArg<Q>>;
+      data: UpdateData<Q>;
+    };
+    create?: CreateData<Q>[];
+  };
+  dataForUpdateOne: EmptyObject;
+
   params: Record<
     Relation['options']['primaryKey'],
     T['columns']['shape'][Relation['options']['primaryKey']]['type']
@@ -171,7 +216,6 @@ export const makeHasAndBelongsToManyMethod = (
           ._on(foreignKeyFull, `${getQueryAs(fromQuery)}.${pk}`),
       );
     },
-    primaryKey: pk,
     modifyRelatedQuery(relationQuery) {
       const ref = {} as { q: Query };
 

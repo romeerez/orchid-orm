@@ -2,7 +2,7 @@ import { Query } from '../../query';
 import { ColumnsParsers, ColumnsShapeBase } from 'orchid-core';
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
-import { Relation } from '../../relations';
+import { RelationQueryBase } from '../../relations';
 import { pushQueryValue, setQueryObjectValue } from '../../queryDataUtils';
 import {
   JoinArgs,
@@ -45,9 +45,7 @@ export const _join = <
   let isSubQuery = false;
 
   if (typeof args[0] === 'function') {
-    args[0] = (args[0] as (q: Record<string, Query>) => Arg)(
-      q.relationsQueries,
-    );
+    args[0] = (args[0] as (q: Record<string, Query>) => Arg)(q.relations);
     (
       args[0] as unknown as { joinQueryAfterCallback: unknown }
     ).joinQueryAfterCallback = (
@@ -73,10 +71,10 @@ export const _join = <
   } else {
     joinKey = first as string;
 
-    const relation = (q.relations as Record<string, Relation>)[joinKey];
+    const relation = q.relations[joinKey];
     if (relation) {
-      shape = getShapeFromSelect(relation.query);
-      parsers = relation.query.q.parsers;
+      shape = getShapeFromSelect(relation.relationConfig.query);
+      parsers = relation.relationConfig.query.q.parsers;
     } else {
       shape = q.q.withShapes?.[joinKey];
       if (shape) {
@@ -130,11 +128,11 @@ export const _joinLateral = <
   cb: JoinLateralCallback<T, Arg, R>,
   as?: string,
 ): JoinLateralResult<T, R, RequireJoined> => {
-  let relation: Relation | undefined;
+  let relation: RelationQueryBase | undefined;
   if (typeof arg === 'string') {
-    relation = (q.relations as Record<string, Relation>)[arg];
+    relation = q.relations[arg];
     if (relation) {
-      arg = relation.query as Arg;
+      arg = relation.relationConfig.query as Arg;
     } else {
       const shape = q.q.withShapes?.[arg];
       if (shape) {
@@ -157,7 +155,10 @@ export const _joinLateral = <
   let result = cb(query as never);
 
   if (relation) {
-    result = relation.joinQuery(q, result as unknown as Query) as unknown as R;
+    result = relation.relationConfig.joinQuery(
+      q,
+      result as unknown as Query,
+    ) as unknown as R;
   }
 
   const joinKey = as || result.q.as || result.table;

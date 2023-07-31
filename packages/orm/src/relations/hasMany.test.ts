@@ -1,4 +1,4 @@
-import { Db, RelationQuery } from 'pqb';
+import { Db } from 'pqb';
 import {
   Chat,
   Message,
@@ -24,21 +24,6 @@ describe('hasMany', () => {
 
   describe('querying', () => {
     it('should have method to query related data', async () => {
-      const messagesQuery = db.message.all();
-
-      assertType<
-        typeof db.user.messages,
-        RelationQuery<
-          'messages',
-          { Id: number },
-          'AuthorId',
-          typeof messagesQuery,
-          false,
-          true,
-          true
-        >
-      >();
-
       const userId = await db.user.get('Id').create(userData);
       const ChatId = await db.chat.get('IdOfChat').create(chatData);
 
@@ -172,7 +157,7 @@ describe('hasMany', () => {
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.user.relations.messages
+        db.user.relations.messages.relationConfig
           .joinQuery(db.user.as('u'), db.message.as('m'))
           .toSQL(),
         `
@@ -2034,21 +2019,6 @@ describe('hasMany through', () => {
 
   describe('through hasMany', () => {
     it('should have method to query related data', async () => {
-      const chatsQuery = db.chat.all();
-
-      assertType<
-        typeof db.profile.chats,
-        RelationQuery<
-          'chats',
-          { UserId: number | null },
-          never,
-          typeof chatsQuery,
-          false,
-          false,
-          true
-        >
-      >();
-
       const query = db.profile.chats({ UserId: 1 });
       expectSql(
         query.toSQL(),
@@ -2142,7 +2112,7 @@ describe('hasMany through', () => {
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.profile.relations.chats
+        db.profile.relations.chats.relationConfig
           .joinQuery(db.profile.as('p'), db.chat.as('c'))
           .toSQL(),
         `
@@ -2583,21 +2553,6 @@ describe('hasMany through', () => {
 
   describe('through hasOne', () => {
     it('should have method to query related data', () => {
-      const profilesQuery = db.profile.all();
-
-      assertType<
-        typeof db.chat.profiles,
-        RelationQuery<
-          'profiles',
-          { IdOfChat: number },
-          never,
-          typeof profilesQuery,
-          false,
-          false,
-          true
-        >
-      >();
-
       const query = db.chat.profiles({ IdOfChat: 1 });
       expectSql(
         query.toSQL(),
@@ -2689,7 +2644,7 @@ describe('hasMany through', () => {
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.chat.relations.profiles
+        db.chat.relations.profiles.relationConfig
           .joinQuery(db.chat.as('c'), db.profile.as('p'))
           .toSQL(),
         `

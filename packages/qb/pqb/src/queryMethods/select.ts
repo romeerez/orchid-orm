@@ -12,7 +12,6 @@ import {
 } from '../columns';
 import { pushQueryArray } from '../queryDataUtils';
 import { SelectItem, SelectQueryData } from '../sql';
-import { isRequiredRelationKey, Relation } from '../relations';
 import { QueryResult } from '../adapter';
 import {
   applyTransforms,
@@ -210,15 +209,15 @@ type SelectAsValueResult<
 // query that returns a single value becomes a column of that value
 // query that returns 'pluck' becomes a column with array type of specific value type
 // query that returns a single record becomes an object column, possibly nullable
-type SelectSubQueryResult<
-  Arg extends QueryBase & { [isRequiredRelationKey]?: boolean },
-> = QueryReturnsAll<Arg['returnType']> extends true
+type SelectSubQueryResult<Arg extends QueryBase> = QueryReturnsAll<
+  Arg['returnType']
+> extends true
   ? ArrayOfColumnsObjects<Arg['result']>
   : Arg['returnType'] extends 'valueOrThrow'
   ? Arg['result']['value']
   : Arg['returnType'] extends 'pluck'
   ? PluckResultColumnType<Arg['result']['pluck']>
-  : Arg[isRequiredRelationKey] extends true
+  : Arg extends { relationConfig: { required: true } }
   ? ColumnsObject<Arg['result']>
   : NullableColumn<ColumnsObject<Arg['result']>>;
 
@@ -478,7 +477,7 @@ const addColumnToShapeFromSelect = (
   isSubQuery?: boolean,
   key?: string,
 ) => {
-  if ((q.relations as Record<string, Relation>)[arg]) {
+  if (q.relations[arg] as unknown as boolean) {
     result[key || arg] = new JSONTextColumn();
     return;
   }

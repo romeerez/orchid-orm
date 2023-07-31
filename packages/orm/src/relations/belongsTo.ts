@@ -1,33 +1,82 @@
-import { Table } from '../baseTable';
+import { DbTable, Table } from '../baseTable';
 import {
   addQueryOn,
-  BelongsToRelation,
   CreateCtx,
+  CreateData,
   InsertQueryData,
   isQueryReturnsAll,
   pushQueryValue,
   Query,
   QueryResult,
+  QueryWithTable,
+  SetQueryTableAlias,
   UpdateCtx,
+  UpdateData,
   VirtualColumn,
   WhereArg,
   WhereQueryBase,
   WhereResult,
 } from 'pqb';
-import { RelationData, RelationThunkBase } from './relations';
+import {
+  RelationCommonOptions,
+  RelationData,
+  RelationThunkBase,
+  RelationToOneDataForCreate,
+} from './relations';
 import { NestedInsertOneItem, NestedUpdateOneItem } from './utils';
 
 export interface BelongsTo extends RelationThunkBase {
   type: 'belongsTo';
   returns: 'one';
-  options: BelongsToRelation['options'];
+  options: RelationCommonOptions & {
+    primaryKey: string;
+    foreignKey: string;
+  };
 }
 
 export type BelongsToInfo<
   T extends Table,
   Relation extends BelongsTo,
+  K extends string,
   FK extends string = Relation['options']['foreignKey'],
+  Q extends QueryWithTable = SetQueryTableAlias<
+    DbTable<ReturnType<Relation['fn']>>,
+    K
+  >,
 > = {
+  table: Q;
+  query: Q;
+  joinQuery(fromQuery: Query, toQuery: Query): Query;
+  one: true;
+  required: Relation['options']['required'] extends true ? true : false;
+  omitForeignKeyInCreate: FK;
+  dataForCreate: RelationToOneDataForCreate<{
+    nestedCreateQuery: Q;
+    table: Q;
+  }>;
+  // `belongsTo` relation data available for update. It supports:
+  // - `disconnect` to nullify a foreign key for the relation
+  // - `set` to update the foreign key with a relation primary key found by conditions
+  // - `delete` to delete the related record, nullify the foreign key
+  // - `update` to update the related record
+  // - `create` to create the related record
+  dataForUpdate:
+    | { disconnect: boolean }
+    | { set: WhereArg<Q> }
+    | { delete: boolean }
+    | { update: UpdateData<Q> }
+    | {
+        create: CreateData<Q>;
+      };
+  // Only for records that updates a single record:
+  // - `upsert` to update or create the related record
+  dataForUpdateOne: {
+    upsert: {
+      update: UpdateData<Q>;
+      create: CreateData<Q> | (() => CreateData<Q>);
+    };
+  };
+
   params: Record<FK, T['columns']['shape'][FK]['type']>;
   populate: never;
   chainedCreate: false;
@@ -146,7 +195,6 @@ export const makeBelongsToMethod = (
     reverseJoin(fromQuery, toQuery) {
       return addQueryOn(fromQuery, toQuery, fromQuery, foreignKey, primaryKey);
     },
-    primaryKey,
   };
 };
 

@@ -8,13 +8,15 @@ import {
   SetQueryReturnsAll,
   SetQueryReturnsOne,
   SetQueryReturnsOneOptional,
-  BaseRelation,
-  relationQueryKey,
+  RelationConfigBase,
   VirtualColumn,
-  SetQueryTableAlias,
   getQueryAs,
+  WhereArg,
+  CreateData,
+  QueryWithTable,
+  RelationsBase,
 } from 'pqb';
-import { EmptyObject, StringKey } from 'orchid-core';
+import { EmptyObject } from 'orchid-core';
 import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
 import {
   HasAndBelongsToMany,
@@ -23,11 +25,57 @@ import {
 } from './hasAndBelongsToMany';
 import { getSourceRelation, getThroughRelation } from './utils';
 
+export type RelationCommonOptions = {
+  scope?(q: QueryWithTable): QueryWithTable;
+  required?: boolean;
+};
+
+// `belongsTo` and `hasOne` relation data available for create. It supports:
+// - `create` to create a related record
+// - `connect` to find existing record and use its primary key
+// - `connectOrCreate` to first try connecting to an existing record, and create it if not found
+export type RelationToOneDataForCreate<
+  Rel extends { nestedCreateQuery: Query; table: Query },
+> =
+  | {
+      create: CreateData<Rel['nestedCreateQuery']>;
+      connect?: never;
+      connectOrCreate?: never;
+    }
+  | {
+      create?: never;
+      connect: WhereArg<Rel['table']>;
+      connectOrCreate?: never;
+    }
+  | {
+      create?: never;
+      connect?: never;
+      connectOrCreate: {
+        where: WhereArg<Rel['table']>;
+        create: CreateData<Rel['nestedCreateQuery']>;
+      };
+    };
+
+// `hasMany` and `hasAndBelongsToMany` relation data available for create. It supports:
+// - `create` to create related records
+// - `connect` to find existing records by `where` conditions and update their foreign keys with the new id
+// - `connectOrCreate` to first try finding records by `where` conditions, and create them if not found
+export type RelationToManyDataForCreate<
+  Rel extends { nestedCreateQuery: Query; table: Query },
+> = {
+  create?: CreateData<Rel['nestedCreateQuery']>[];
+  connect?: WhereArg<Rel['table']>[];
+  connectOrCreate?: {
+    where: WhereArg<Rel['table']>;
+    create: CreateData<Rel['nestedCreateQuery']>;
+  }[];
+};
+
 export interface RelationThunkBase {
   type: string;
   returns: 'one' | 'many';
   fn(): TableClass;
-  options: BaseRelation['options'];
+  options: RelationCommonOptions;
 }
 
 export type RelationThunk = BelongsTo | HasOne | HasMany | HasAndBelongsToMany;
@@ -40,54 +88,35 @@ export type RelationData = {
   virtualColumn?: VirtualColumn;
   joinQuery(fromQuery: Query, toQuery: Query): Query;
   reverseJoin(fromQuery: Query, toQuery: Query): Query;
-  primaryKey: string;
   modifyRelatedQuery?(relatedQuery: Query): (query: Query) => void;
-};
-
-export type Relation<
-  T extends Table,
-  Relations extends RelationThunks,
-  K extends StringKey<keyof Relations>,
-  M extends Query = SetQueryTableAlias<
-    DbTable<ReturnType<Relations[K]['fn']>>,
-    K
-  >,
-  Info extends RelationInfo = RelationInfo<T, Relations, Relations[K]>,
-> = {
-  type: Relations[K]['type'];
-  returns: Relations[K]['returns'];
-  key: K;
-  table: M;
-  query: M;
-  joinQuery(fromQuery: Query, toQuery: Query): Query;
-  defaults: Info['populate'];
-  nestedCreateQuery: [Info['populate']] extends [never]
-    ? M
-    : M & {
-        meta: { defaults: Record<Info['populate'], true> };
-      };
-  primaryKey: string;
-  options: Relations[K]['options'];
 };
 
 export type RelationScopeOrTable<Relation extends RelationThunkBase> =
   Relation['options']['scope'] extends (q: Query) => Query
     ? ReturnType<Relation['options']['scope']>
-    : DbTable<ReturnType<Relation['fn']>>;
+    : RelationQueryFromFn<Relation>;
 
-export type RelationInfo<
+type RelationQueryFromFn<
+  Relation extends RelationThunkBase,
+  TC extends TableClass = ReturnType<Relation['fn']>,
+  Q extends Query = DbTable<TC>,
+> = Q;
+
+export type RelationConfig<
   T extends Table = Table,
   Relations extends RelationThunks = RelationThunks,
   Relation extends RelationThunk = RelationThunk,
-> = Relation extends BelongsTo
-  ? BelongsToInfo<T, Relation>
-  : Relation extends HasOne
-  ? HasOneInfo<T, Relations, Relation>
-  : Relation extends HasMany
-  ? HasManyInfo<T, Relations, Relation>
-  : Relation extends HasAndBelongsToMany
-  ? HasAndBelongsToManyInfo<T, Relation>
-  : never;
+  K extends string = string,
+  Result extends RelationConfigBase = Relation extends BelongsTo
+    ? BelongsToInfo<T, Relation, K>
+    : Relation extends HasOne
+    ? HasOneInfo<T, Relations, Relation, K>
+    : Relation extends HasMany
+    ? HasManyInfo<T, Relations, Relation, K>
+    : Relation extends HasAndBelongsToMany
+    ? HasAndBelongsToManyInfo<T, Relation, K>
+    : never,
+> = Result;
 
 export type MapRelation<
   T extends Table,
@@ -95,34 +124,23 @@ export type MapRelation<
   RelationName extends keyof Relations,
   Relation extends RelationThunk = Relations[RelationName],
   RelatedQuery extends Query = RelationScopeOrTable<Relation>,
-  Info extends {
-    params: Record<string, unknown>;
-    populate: string;
-    chainedCreate: boolean;
-    chainedDelete: boolean;
-  } = RelationInfo<T, Relations, Relation>,
+  Config extends RelationConfigBase = RelationConfig<T, Relations, Relation>,
 > = RelationQuery<
   RelationName,
-  Info['params'],
-  Info['populate'],
-  Relation['returns'] extends 'one'
-    ? Relation['options']['required'] extends true
+  Config,
+  Config['one'] extends true
+    ? Config['required'] extends true
       ? SetQueryReturnsOne<RelatedQuery>
       : SetQueryReturnsOneOptional<RelatedQuery>
-    : SetQueryReturnsAll<RelatedQuery>,
-  Relation['options']['required'] extends boolean
-    ? Relation['options']['required']
-    : false,
-  Info['chainedCreate'],
-  Info['chainedDelete']
+    : SetQueryReturnsAll<RelatedQuery>
 >;
 
-export type MapRelations<T extends Table> = 'relations' extends keyof T
-  ? T['relations'] extends RelationThunks
-    ? {
-        [K in keyof T['relations']]: MapRelation<T, T['relations'], K>;
-      }
-    : EmptyObject
+export type MapRelations<T extends Table> = T extends {
+  relations: RelationThunks;
+}
+  ? {
+      [K in keyof T['relations']]: MapRelation<T, T['relations'], K>;
+    }
   : EmptyObject;
 
 type ApplyRelationData = {
@@ -222,9 +240,8 @@ export const applyRelations = (
           through: string;
           source: string;
         };
-        const throughRel = table.relations[
-          through as never
-        ] as unknown as BaseRelation;
+        const throughRel = (table.relations as RelationsBase)[through]
+          ?.relationConfig;
 
         if (through && !throughRel) {
           message += `: cannot find \`${through}\` relation required by the \`through\` option`;
@@ -331,17 +348,13 @@ const applyRelation = (
     }
   };
 
-  (dbTable.relations as Record<string, unknown>)[relationName] = {
-    type,
-    key: relationName,
+  baseQuery.relationConfig = {
     table: otherDbTable,
     query,
     joinQuery: data.joinQuery,
-    primaryKey: data.primaryKey,
-    options: relation.options,
   };
 
-  dbTable.relationsQueries[relationName] = query;
+  (dbTable.relations as Record<string, unknown>)[relationName] = query;
 
   const tableRelations = delayedRelations.get(dbTable);
   if (!tableRelations) return;
@@ -372,13 +385,6 @@ const makeRelationQuery = (
       query.q.joinedShapes = {
         [getQueryAs(this)]: this.q.shape,
         ...this.q.joinedShapes,
-      };
-
-      query.q[relationQueryKey] = {
-        relationName,
-        sourceQuery: this,
-        relationQuery: toTable,
-        joinQuery: data.joinQuery,
       };
 
       const setQuery = data.modifyRelatedQuery?.(query);

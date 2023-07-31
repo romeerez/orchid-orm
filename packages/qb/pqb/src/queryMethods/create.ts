@@ -6,29 +6,16 @@ import {
   SetQueryReturnsAll,
   SetQueryReturnsOne,
 } from '../query';
-import {
-  BelongsToRelation,
-  HasAndBelongsToManyRelation,
-  HasManyRelation,
-  HasOneRelation,
-  RelationsBase,
-} from '../relations';
+import { RelationConfigBase, RelationsBase } from '../relations';
 import {
   CreateKind,
   InsertQueryData,
   OnConflictItem,
   OnConflictMergeUpdate,
 } from '../sql';
-import { WhereArg } from './where/where';
 import { VirtualColumn } from '../columns';
 import { anyShape } from '../db';
-import {
-  Expression,
-  EmptyObject,
-  SetOptional,
-  StringKey,
-  QueryThen,
-} from 'orchid-core';
+import { Expression, SetOptional, StringKey, QueryThen } from 'orchid-core';
 import { isSelectingCount } from './aggregate';
 
 // Type of argument for `create`, `createMany`, optional argument for `createFrom`,
@@ -50,7 +37,7 @@ export type CreateData<
   >,
 > = [keyof T['relations']] extends [never]
   ? Data
-  : OmitBelongsToForeignKeys<T['relations'], Data> & CreateRelationData<T>;
+  : OmitForeignKeysForRelations<T['relations'], Data> & CreateRelationsData<T>;
 
 // Type of available variants to provide for a specific column when creating
 type CreateColumn<T extends Query, Key extends keyof T['inputType']> =
@@ -62,40 +49,43 @@ type CreateColumn<T extends Query, Key extends keyof T['inputType']> =
         : Query[K];
     };
 
-// Omit `belongsTo` foreign keys to be able to create records
-// with `db.book.create({ authorId: 123 })`
-// or with `db.book.create({ author: authorData })`
-type OmitBelongsToForeignKeys<R extends RelationsBase, Data> = Omit<
+/**
+ * Omit `belongsTo` foreign keys, see {@link BaseRelation.omitForeignKeyInCreate}.
+ */
+type OmitForeignKeysForRelations<R extends RelationsBase, Data> = Omit<
   Data,
   {
-    [K in keyof R]: R[K] extends BelongsToRelation
-      ? R[K]['options']['foreignKey']
-      : never;
+    [K in keyof R]: R[K]['relationConfig']['omitForeignKeyInCreate'];
   }[keyof R]
 >;
 
 // Adds relation operations such as nested `create`, `connect`, and others to use when creating
-type CreateRelationData<T extends Query> = {
-  [K in keyof T['relations']]: T['relations'][K] extends BelongsToRelation
-    ? CreateBelongsToData<T, K, T['relations'][K]>
-    : T['relations'][K] extends HasOneRelation
-    ? CreateHasOneData<T, K, T['relations'][K]>
-    : T['relations'][K] extends HasManyRelation | HasAndBelongsToManyRelation
-    ? CreateHasManyData<T, K, T['relations'][K]>
-    : EmptyObject;
+type CreateRelationsData<T extends Query> = {
+  [K in keyof T['relations']]: CreateRelationData<
+    T,
+    K,
+    T['relations'][K]['relationConfig']
+  >;
 }[keyof T['relations']];
 
-// `belongsTo` relation data available for create. It supports:
-// - `create` to create a related record
-// - `connect` to find existing record and use its primary key
-// - `connectOrCreate` to first try connecting to an existing record, and create it if not found
-type CreateBelongsToData<
+// Adds relation operations for a single relation
+type CreateRelationData<
   T extends Query,
-  Key extends keyof T['relations'],
-  Rel extends BelongsToRelation,
+  K extends PropertyKey,
+  R extends RelationConfigBase,
+> = [R['omitForeignKeyInCreate']] extends [never]
+  ? CreateRelationDataWithoutFKeys<K, R>
+  : CreateRelationDataWithFKeys<T, K, R>;
+
+// Adds relation operations for a relation that has 'omitForeignKeyInCreate'.
+// Resulting type will be like { someId: type } | { some: Relation['dataForCreate'] }
+type CreateRelationDataWithFKeys<
+  T extends Query,
+  K extends PropertyKey,
+  R extends RelationConfigBase,
   FKeys = {
-    [K in Rel['options']['foreignKey']]: Rel['options']['foreignKey'] extends keyof T['inputType']
-      ? T['inputType'][Rel['options']['foreignKey']]
+    [K in R['omitForeignKeyInCreate']]: R['omitForeignKeyInCreate'] extends keyof T['inputType']
+      ? T['inputType'][R['omitForeignKeyInCreate']]
       : never;
   },
 > =
@@ -104,82 +94,13 @@ type CreateBelongsToData<
         ? { [L in K]?: FKeys[L] }
         : { [L in K]: FKeys[L] };
     }[keyof FKeys]
-  | {
-      [K in Key]:
-        | {
-            create: CreateData<Rel['nestedCreateQuery']>;
-            connect?: never;
-            connectOrCreate?: never;
-          }
-        | {
-            create?: never;
-            connect: WhereArg<Rel['table']>;
-            connectOrCreate?: never;
-          }
-        | {
-            create?: never;
-            connect?: never;
-            connectOrCreate: {
-              where: WhereArg<Rel['table']>;
-              create: CreateData<Rel['nestedCreateQuery']>;
-            };
-          };
-    };
+  | { [Key in K]: R['dataForCreate'] };
 
-// `hasOne` relation data available for create. It supports:
-// - `create` to create a related record
-// - `connect` to find existing record and update its foreign key with the new id
-// - `connectOrCreate` to first try connecting to an existing record, and create it if not found
-type CreateHasOneData<
-  T extends Query,
-  Key extends keyof T['relations'],
-  Rel extends HasOneRelation,
-> = 'through' extends Rel['options']
-  ? // eslint-disable-next-line @typescript-eslint/ban-types
-    {}
-  : {
-      [K in Key]?:
-        | {
-            create: CreateData<Rel['nestedCreateQuery']>;
-            connect?: never;
-            connectOrCreate?: never;
-          }
-        | {
-            create?: never;
-            connect: WhereArg<Rel['table']>;
-            connectOrCreate?: never;
-          }
-        | {
-            create?: never;
-            connect?: never;
-            connectOrCreate: {
-              where?: WhereArg<Rel['table']>;
-              create?: CreateData<Rel['nestedCreateQuery']>;
-            };
-          };
-    };
-
-// `hasMany` and `hasAndBelongsToMany` relation data available for create. It supports:
-// - `create` to create related records
-// - `connect` to find existing records by `where` conditions and update their foreign keys with the new id
-// - `connectOrCreate` to first try finding records by `where` conditions, and create them if not found
-type CreateHasManyData<
-  T extends Query,
-  Key extends keyof T['relations'],
-  Rel extends HasManyRelation | HasAndBelongsToManyRelation,
-> = 'through' extends Rel['options']
-  ? // eslint-disable-next-line @typescript-eslint/ban-types
-    {}
-  : {
-      [K in Key]?: {
-        create?: CreateData<Rel['nestedCreateQuery']>[];
-        connect?: WhereArg<Rel['table']>[];
-        connectOrCreate?: {
-          where: WhereArg<Rel['table']>;
-          create: CreateData<Rel['nestedCreateQuery']>;
-        }[];
-      };
-    };
+// Adds relation operations for a relation that has no 'omitForeignKeyInCreate'.
+type CreateRelationDataWithoutFKeys<
+  K extends PropertyKey,
+  R extends RelationConfigBase,
+> = { [Key in K]?: R['dataForCreate'] };
 
 // `create` method output type
 // - if `count` method is preceding `create`, will return 0 or 1 if created.

@@ -1,4 +1,4 @@
-import { Db, RelationQuery } from 'pqb';
+import { Db } from 'pqb';
 import {
   BaseTable,
   chatData,
@@ -21,14 +21,6 @@ describe('belongsTo', () => {
 
   describe('querying', () => {
     it('should have method to query related data', async () => {
-      const userQuery = db.user.take();
-      type UserQuery = typeof userQuery;
-
-      assertType<
-        typeof db.profile.user,
-        RelationQuery<'user', { UserId: number | null }, never, UserQuery, true>
-      >();
-
       const UserId = await db.user.get('Id').create(userData);
       const profileId = await db.profile
         .get('Id')
@@ -84,7 +76,7 @@ describe('belongsTo', () => {
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.profile.relations.user
+        db.profile.relations.user.relationConfig
           .joinQuery(db.profile.as('p'), db.user.as('u'))
           .toSQL(),
         `
@@ -366,6 +358,9 @@ describe('belongsTo', () => {
 
     describe('nested create', () => {
       it('should support create', async () => {
+        db.message.relations.chat;
+        db.message.relations.user;
+
         const {
           Id: messageId,
           ChatId,
@@ -1379,19 +1374,6 @@ describe('belongsTo', () => {
     );
 
     it('should query related record and get `undefined`', async () => {
-      const userQuery = local.user.takeOptional();
-
-      assertType<
-        typeof local.profile.user,
-        RelationQuery<
-          'user',
-          { UserId: number | null },
-          never,
-          typeof userQuery,
-          false
-        >
-      >();
-
       const user = await local.profile.user({ UserId: 123 });
       assertType<
         typeof user,

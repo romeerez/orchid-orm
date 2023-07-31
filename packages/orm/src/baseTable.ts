@@ -11,6 +11,8 @@ import {
   QueryBeforeHook,
   QueryData,
   QueryHooks,
+  QueryWithTable,
+  RelationQueryBase,
 } from 'pqb';
 import {
   applyMixins,
@@ -20,10 +22,9 @@ import {
   getCallerFilePath,
   getStackTrace,
   snakeCaseKey,
-  StringKey,
   toSnakeCase,
 } from 'orchid-core';
-import { MapRelations, Relation, RelationThunks } from './relations/relations';
+import { MapRelations } from './relations/relations';
 import { OrchidORM } from './orm';
 
 // type of table class itself
@@ -35,27 +36,25 @@ export type TableClasses = Record<string, TableClass>;
 // convert table instance type to queryable interface
 // processes relations to a type that's understandable by `pqb`
 // add ORM table specific metadata like `definedAt`, `db`, `getFilePath`
-export type TableToDb<T extends Table> = Db<
-  T['table'],
-  T['columns']['shape'],
-  'relations' extends keyof T
-    ? T['relations'] extends RelationThunks
-      ? {
-          [K in StringKey<keyof T['relations']>]: Relation<
-            T,
-            T['relations'],
-            K
-          >;
-        }
-      : Query['relations']
-    : Query['relations'],
-  T['columnTypes']
-> & { definedAs: string; db: OrchidORM; getFilePath(): string; name: string };
+export type TableToDb<
+  T extends Table,
+  RelationQueries extends Record<string, RelationQueryBase>,
+> = Db<T['table'], T['columns']['shape'], RelationQueries, T['columnTypes']> & {
+  definedAs: string;
+  db: OrchidORM;
+  getFilePath(): string;
+  name: string;
+};
 
 // convert a table class type into queryable interface
 // add relation methods
-export type DbTable<T extends TableClass> = TableToDb<InstanceType<T>> &
-  Omit<MapRelations<InstanceType<T>>, keyof Query>;
+export type DbTable<
+  TC extends TableClass,
+  T extends Table = InstanceType<TC>,
+  RelationQueries extends Record<string, RelationQueryBase> = MapRelations<T>,
+  Q extends QueryWithTable = TableToDb<T, RelationQueries>,
+  Result extends QueryWithTable = Q & RelationQueries,
+> = Result;
 
 // `columns` property of table has a shape and an output type of the columns
 type ColumnsConfig = {

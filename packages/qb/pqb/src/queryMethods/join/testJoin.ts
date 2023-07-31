@@ -2,6 +2,7 @@ import { Query } from '../../query';
 import { addQueryOn } from './join';
 import { columnSqlForTest } from '../where/testWhere';
 import { expectSql, testDb } from 'test-utils';
+import { RelationQueryBase } from '../../relations';
 
 export const testJoin = ({
   method,
@@ -217,11 +218,7 @@ export const testJoin = ({
   describe('relation', () => {
     const withRelation = Object.create(joinTo) as Query & {
       relations: {
-        as: {
-          key: 'as';
-          query: typeof joinTarget;
-          joinQuery(fromQuery: Query, toQuery: Query): Query;
-        };
+        as: RelationQueryBase;
       };
     };
     withRelation.baseQuery = Object.create(withRelation.baseQuery);
@@ -230,11 +227,12 @@ export const testJoin = ({
       Object.assign(withRelation.baseQuery, {
         relations: {
           as: {
-            key: 'as',
-            query: joinTarget,
-            joinQuery(fromQuery: Query, toQuery: Query) {
-              const rel = toQuery.as('as');
-              return addQueryOn(rel, fromQuery, rel, fkey, pkey);
+            relationConfig: {
+              query: joinTarget,
+              joinQuery(fromQuery: Query, toQuery: Query) {
+                const rel = toQuery.as('as');
+                return addQueryOn(rel, fromQuery, rel, fkey, pkey);
+              },
             },
           },
         },

@@ -7,7 +7,7 @@ import {
 } from '../../test-utils/test-utils';
 import { testWhere, testWhereExists } from './testWhere';
 import { expectSql, testDb } from 'test-utils';
-import { HasManyRelation, RelationQuery } from '../../relations';
+import { RelationQueryBase } from '../../relations';
 
 describe('and', () => {
   const [where, _where] = [User.where, User._where];
@@ -160,8 +160,10 @@ describe('where joined named columns', () => {
 describe('where sub query', () => {
   it('should handle boolean operator on aggregate sub query', () => {
     const messageRelation = Object.assign(Object.create(Message), {
-      joinQuery() {
-        return Message;
+      relationConfig: {
+        joinQuery() {
+          return Message;
+        },
       },
     });
     messageRelation.baseQuery = messageRelation;
@@ -176,8 +178,8 @@ describe('where sub query', () => {
       },
       messages: messageRelation,
     }) as unknown as typeof User & {
-      relations: { messages: HasManyRelation };
-      messages: RelationQuery<'messages', never, never, typeof Message>;
+      relations: { messages: RelationQueryBase };
+      messages: RelationQueryBase;
     };
 
     const q = UserWithRelation.where((q) =>

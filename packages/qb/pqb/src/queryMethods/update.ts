@@ -9,16 +9,8 @@ import {
   saveSearchAlias,
   throwIfNoWhere,
 } from '../queryDataUtils';
-import {
-  BelongsToRelation,
-  HasAndBelongsToManyRelation,
-  HasManyRelation,
-  HasOneRelation,
-  Relation,
-  RelationQueryBase,
-} from '../relations';
-import { WhereArg, WhereResult } from './where/where';
-import { CreateData } from './create';
+import { RelationConfigBase, RelationQueryBase } from '../relations';
+import { WhereResult } from './where/where';
 import { JsonItem, QueryData, UpdateQueryData } from '../sql';
 import { VirtualColumn } from '../columns';
 import { anyShape, Db } from '../db';
@@ -26,7 +18,6 @@ import {
   isExpression,
   Expression,
   EmptyObject,
-  MaybeArray,
   QueryThen,
   isObjectEmpty,
   callWithThis,
@@ -49,21 +40,12 @@ import { OrchidOrmInternalError } from '../errors';
 // It enables all forms of relation operations such as nested `create`, `connect`, etc.
 export type UpdateData<T extends Query> = {
   [K in keyof T['inputType']]?: UpdateColumn<T, K>;
-} & (T['relations'] extends Record<string, Relation>
-  ? {
-      [K in keyof T['relations']]?: T['relations'][K] extends BelongsToRelation
-        ? UpdateBelongsToData<T, T['relations'][K]>
-        : T['relations'][K] extends HasOneRelation
-        ? UpdateHasOneData<T, T['relations'][K]>
-        : T['relations'][K] extends HasManyRelation
-        ? UpdateHasManyData<T, T['relations'][K]>
-        : T['relations'][K] extends HasAndBelongsToManyRelation
-        ? UpdateHasAndBelongsToManyData<T['relations'][K]>
-        : never;
-    }
-  : EmptyObject) & {
-    __raw?: never; // forbid Expression argument
-  };
+} & {
+  [K in keyof T['relations']]?: UpdateRelationData<
+    T,
+    T['relations'][K]['relationConfig']
+  >;
+};
 
 // Type of available variants to provide for a specific column when updating.
 // The column value may be a specific value, or raw SQL, or a query returning a single value,
@@ -82,104 +64,23 @@ type UpdateColumn<T extends Query, Key extends keyof T['inputType']> =
         [K in keyof JsonModifiers]: K extends 'selectable'
           ? T['selectable']
           : T[K];
-      } & { [K in keyof T['relations']]: T[K] },
+      } & T['relations'],
     ) => JsonItem | (RelationQueryBase & { meta: { kind: 'select' } }));
 
-// `belongsTo` relation data available for update. It supports:
-// - `disconnect` to nullify a foreign key for the relation
-// - `set` to update the foreign key with a relation primary key found by conditions
-// - `delete` to delete the related record, nullify the foreign key
-// - `update` to update the related record
-// - `create` to create the related record
-//
-// Only for records that updates a single record:
-// - `upsert` to update or create the related record
-type UpdateBelongsToData<T extends Query, Rel extends BelongsToRelation> =
-  | { disconnect: boolean }
-  | { set: WhereArg<Rel['table']> }
-  | { delete: boolean }
-  | { update: UpdateData<Rel['table']> }
-  | {
-      create: CreateData<Rel['nestedCreateQuery']>;
-    }
-  | (QueryReturnsAll<T['returnType']> extends true
-      ? never
-      : {
-          upsert: {
-            update: UpdateData<Rel['table']>;
-            create:
-              | CreateData<Rel['nestedCreateQuery']>
-              | (() => CreateData<Rel['nestedCreateQuery']>);
-          };
-        });
-
-// `hasOne` relation data available for update. It supports:
-// - `disconnect` to nullify a foreign key of the related record
-// - `delete` to delete the related record
-// - `update` to update the related record
-//
-// Only for records that updates a single record:
-// - `set` to update the foreign key of related record found by condition
-// - `upsert` to update or create the related record
-// - `create` to create a related record
-type UpdateHasOneData<T extends Query, Rel extends HasOneRelation> =
-  | { disconnect: boolean }
-  | { delete: boolean }
-  | { update: UpdateData<Rel['table']> }
-  | (QueryReturnsAll<T['returnType']> extends true
-      ? never
-      :
-          | { set: WhereArg<Rel['table']> }
-          | {
-              upsert: {
-                update: UpdateData<Rel['table']>;
-                create:
-                  | CreateData<Rel['nestedCreateQuery']>
-                  | (() => CreateData<Rel['nestedCreateQuery']>);
-              };
-            }
-          | {
-              create: CreateData<Rel['nestedCreateQuery']>;
-            });
-
-// `hasMany` relation data available for update. It supports:
-// - `disconnect` to nullify foreign keys of the related records
-// - `delete` to delete related record found by conditions
-// - `update` to update related records found by conditions with a provided data
-//
-// Only for records that updates a single record:
-// - `set` to update foreign keys of related records found by conditions
-// - `create` to create related records
-type UpdateHasManyData<T extends Query, Rel extends HasManyRelation> = {
-  disconnect?: MaybeArray<WhereArg<Rel['table']>>;
-  delete?: MaybeArray<WhereArg<Rel['table']>>;
-  update?: {
-    where: MaybeArray<WhereArg<Rel['table']>>;
-    data: UpdateData<Rel['table']>;
-  };
-} & (QueryReturnsAll<T['returnType']> extends true
-  ? EmptyObject
-  : {
-      set?: MaybeArray<WhereArg<Rel['table']>>;
-      create?: CreateData<Rel['nestedCreateQuery']>[];
-    });
-
-// `hasAndBelongsToMany` relation data available for update. It supports:
-// - `disconnect` to delete join table records for related records found by conditions
-// - `set` to create join table records for related records found by conditions
-// - `delete` to delete join table records and related records found by conditions
-// - `update` to update related records found by conditions with a provided data
-// - `create` to create related records and a join table records
-type UpdateHasAndBelongsToManyData<Rel extends HasAndBelongsToManyRelation> = {
-  disconnect?: MaybeArray<WhereArg<Rel['table']>>;
-  set?: MaybeArray<WhereArg<Rel['table']>>;
-  delete?: MaybeArray<WhereArg<Rel['table']>>;
-  update?: {
-    where: MaybeArray<WhereArg<Rel['table']>>;
-    data: UpdateData<Rel['table']>;
-  };
-  create?: CreateData<Rel['nestedCreateQuery']>[];
-};
+// Add relation operations to the update argument.
+type UpdateRelationData<
+  T extends Query,
+  Rel extends RelationConfigBase,
+> = Rel['one'] extends true
+  ?
+      | Rel['dataForUpdate']
+      | (QueryReturnsAll<T['returnType']> extends true
+          ? never
+          : Rel['dataForUpdateOne'])
+  : Rel['dataForUpdate'] &
+      (QueryReturnsAll<T['returnType']> extends true
+        ? EmptyObject
+        : Rel['dataForUpdateOne']);
 
 // Type of argument for `update`.
 // not available when there are no conditions on the query.
@@ -469,7 +370,9 @@ export class Update {
             queryResult.rows.map((item) => keys.map((key) => item[key])),
           );
 
-          await (t as WhereResult<Query>)._update(ctx.updateData);
+          await (t as WhereResult<Query>)._update(
+            ctx.updateData as UpdateData<WhereResult<Query>>,
+          );
 
           for (const row of queryResult.rows) {
             Object.assign(row, ctx.updateData);

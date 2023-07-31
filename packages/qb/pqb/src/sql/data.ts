@@ -1,7 +1,6 @@
 import { Query, QueryReturnType } from '../query';
 import { QueryLogger, QueryLogObject } from '../queryMethods';
 import { Adapter, QueryResult } from '../adapter';
-import { RelationQueryData, relationQueryKey } from '../relations';
 import { ColumnsShape } from '../columns';
 import { toSQLCacheKey } from './toSQL';
 import {
@@ -56,7 +55,6 @@ export type CommonQueryData = {
     isSubQuery?: true,
   ): unknown;
   returnType: QueryReturnType;
-  [relationQueryKey]?: RelationQueryData;
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
   with?: WithItem[];

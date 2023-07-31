@@ -1,7 +1,7 @@
 import {
   CreateCtx,
   Query,
-  Relation,
+  RelationConfigBase,
   UpdateData,
   WhereArg,
   WhereQueryBase,
@@ -55,15 +55,18 @@ export type NestedUpdateManyItems = {
 
 export type NestedUpdateItem = NestedUpdateOneItem | NestedUpdateManyItems;
 
-export const getThroughRelation = (table: Query, through: string) => {
-  return (table.relations as Record<string, Relation>)[through];
+export const getThroughRelation = (
+  table: Query,
+  through: string,
+): RelationConfigBase => {
+  return table.relations[through]?.relationConfig;
 };
 
 export const getSourceRelation = (
-  throughRelation: Relation,
+  throughRelation: RelationConfigBase,
   source: string,
-) => {
-  return (throughRelation.table.relations as Record<string, Relation>)[source];
+): RelationConfigBase => {
+  return throughRelation.table.relations[source]?.relationConfig;
 };
 
 export const hasRelationHandleCreate = (

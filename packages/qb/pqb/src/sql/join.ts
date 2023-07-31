@@ -8,7 +8,6 @@ import {
 import { JoinItem, SimpleJoinItem } from './types';
 import { Query, QueryWithTable } from '../query';
 import { whereToSql } from './where';
-import { Relation } from '../relations';
 import { ToSQLCtx } from './toSQL';
 import { JoinedShapes, QueryData, SelectQueryData } from './data';
 import { pushQueryArray } from '../queryDataUtils';
@@ -42,11 +41,8 @@ export const processJoinItem = (
   const [first] = args;
   if (typeof first === 'string') {
     if (first in table.relations) {
-      const {
-        key,
-        query: toQuery,
-        joinQuery,
-      } = (table.relations as Record<string, Relation>)[first];
+      const { query: toQuery, joinQuery } =
+        table.relations[first].relationConfig;
 
       const jq = joinQuery(table, toQuery);
       const { q: j } = jq;
@@ -57,7 +53,7 @@ export const processJoinItem = (
 
       target = quoteSchemaAndTable(j.schema, tableName);
 
-      const as = j.as || key;
+      const as = j.as || first;
       const joinAs = q(as as string);
       if (as !== tableName) {
         target += ` AS ${joinAs}`;

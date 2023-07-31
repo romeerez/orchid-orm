@@ -44,6 +44,7 @@ import {
   QueryInternal,
   SQLQueryArgs,
   isRawSQL,
+  EmptyObject,
 } from 'orchid-core';
 import { q } from './sql/common';
 import { inspect } from 'util';
@@ -51,7 +52,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { templateLiteralToSQL } from './sql/rawSql';
 import { getSubQueryBuilder, SubQueryBuilder } from './subQueryBuilder';
 import { getClonedQueryData } from './utils';
-import { Relation } from './relations';
+import { RelationQueryBase, RelationsBase } from './relations';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
@@ -85,7 +86,7 @@ export type DbTableOptions = {
 export interface Db<
   Table extends string | undefined = undefined,
   Shape extends ColumnsShape = Record<string, never>,
-  Relations extends Query['relations'] = Query['relations'],
+  Relations extends RelationsBase = EmptyObject,
   CT extends ColumnTypesBase = DefaultColumnTypes,
   Data = Pick<ColumnShapeOutput<Shape>, DefaultSelectColumns<Shape>[number]>[],
 > extends DbBase<Adapter, Table, Shape, CT>,
@@ -109,7 +110,6 @@ export interface Db<
   windows: Query['windows'];
   defaultSelectColumns: DefaultSelectColumns<Shape>;
   relations: Relations;
-  relationsQueries: Record<string, Query>;
   withData: Query['withData'];
   error: new (
     message: string,
@@ -135,7 +135,7 @@ export const anyShape = {} as Record<string, ColumnType>;
 export class Db<
   Table extends string | undefined = undefined,
   Shape extends ColumnsShape = Record<string, never>,
-  Relations extends Query['relations'] = Query['relations'],
+  Relations extends RelationsBase = EmptyObject,
   CT extends ColumnTypesBase = DefaultColumnTypes,
 > implements Query
 {
@@ -160,17 +160,19 @@ export class Db<
       getWhereQueryBuilder(q: QueryData) {
         if (!whereQueryBuilder) {
           whereQueryBuilder = Object.create(self) as WhereQueryBuilder<Query>;
-          whereQueryBuilder.baseQuery = whereQueryBuilder as Query;
+          whereQueryBuilder.baseQuery = whereQueryBuilder as unknown as Query;
 
           for (const key in self.relations) {
-            const rel = self.relations[key] as Relation;
+            const rel = self.relations[key] as RelationQueryBase;
 
             (
               whereQueryBuilder as unknown as Record<
                 string,
                 SubQueryBuilder<Query>
               >
-            )[key] = getSubQueryBuilder(rel.joinQuery(self, rel.query));
+            )[key] = getSubQueryBuilder(
+              rel.relationConfig.joinQuery(self, rel.relationConfig.query),
+            );
           }
         }
 
@@ -289,7 +291,6 @@ export class Db<
       : toSQL;
 
     this.relations = {} as Relations;
-    this.relationsQueries = {};
 
     modifyQuery?.forEach((cb) => cb(this));
 
@@ -422,7 +423,7 @@ Db.prototype.onQueryBuilder = OnQueryBuilder;
 export type DbResult<CT extends ColumnTypesBase> = Db<
   string,
   Record<string, never>,
-  Query['relations'],
+  EmptyObject,
   ColumnTypesBase extends CT ? DefaultColumnTypes : CT
 > & {
   <Table extends string, Shape extends ColumnsShape = ColumnsShape>(
@@ -431,7 +432,7 @@ export type DbResult<CT extends ColumnTypesBase> = Db<
       | ((t: ColumnTypesBase extends CT ? DefaultColumnTypes : CT) => Shape)
       | Shape,
     options?: DbTableOptions,
-  ): Db<Table, Shape>;
+  ): Db<Table, Shape, EmptyObject>;
 
   adapter: Adapter;
   close: Adapter['close'];
@@ -478,8 +479,8 @@ export const createDb = <CT extends ColumnTypesBase>({
       table: Table,
       shape?: ((t: CT) => Shape) | Shape,
       options?: DbTableOptions,
-    ): Db<Table, Shape, Query['relations'], CT> => {
-      return new Db<Table, Shape, Query['relations'], CT>(
+    ): Db<Table, Shape, EmptyObject, CT> => {
+      return new Db<Table, Shape, EmptyObject, CT>(
         adapter,
         qb as unknown as Db,
         table as Table,

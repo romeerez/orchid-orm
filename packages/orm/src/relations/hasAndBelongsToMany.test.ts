@@ -1,4 +1,4 @@
-import { Db, RelationQuery, TransactionAdapter } from 'pqb';
+import { Db, TransactionAdapter } from 'pqb';
 import {
   Chat,
   chatData,
@@ -18,21 +18,6 @@ describe('hasAndBelongsToMany', () => {
 
   describe('querying', () => {
     it('should have method to query related data', async () => {
-      const chatsQuery = db.chat.all();
-
-      assertType<
-        typeof db.user.chats,
-        RelationQuery<
-          'chats',
-          { Id: number },
-          never,
-          typeof chatsQuery,
-          false,
-          true,
-          true
-        >
-      >();
-
       const userId = await db.user.get('Id').create({
         ...userData,
         chats: {
@@ -149,7 +134,7 @@ describe('hasAndBelongsToMany', () => {
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.user.relations.chats
+        db.user.relations.chats.relationConfig
           .joinQuery(db.user.as('u'), db.chat.as('c'))
           .toSQL(),
         `

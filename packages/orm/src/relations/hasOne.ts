@@ -1,24 +1,29 @@
 import {
   addQueryOn,
   CreateCtx,
+  CreateData,
   getQueryAs,
-  HasOneRelation,
   InsertQueryData,
   isQueryReturnsAll,
   JoinCallback,
   Query,
+  QueryWithTable,
+  SetQueryTableAlias,
   UpdateCtx,
+  UpdateData,
   VirtualColumn,
   WhereArg,
   WhereQueryBase,
   WhereResult,
 } from 'pqb';
-import { Table } from '../baseTable';
+import { DbTable, Table, TableClass } from '../baseTable';
 import {
+  RelationCommonOptions,
   RelationData,
-  RelationInfo,
+  RelationConfig,
   RelationThunkBase,
   RelationThunks,
+  RelationToOneDataForCreate,
 } from './relations';
 import {
   getSourceRelation,
@@ -28,33 +33,92 @@ import {
   NestedInsertOneItem,
   NestedUpdateOneItem,
 } from './utils';
+import { EmptyObject } from 'orchid-core';
 
 export interface HasOne extends RelationThunkBase {
   type: 'hasOne';
   returns: 'one';
-  options: HasOneRelation['options'];
+  options:
+    | RelationCommonOptions &
+        (
+          | {
+              primaryKey: string;
+              foreignKey: string;
+            }
+          | {
+              through: string;
+              source: string;
+            }
+        );
 }
 
 export type HasOneInfo<
   T extends Table,
   Relations extends RelationThunks,
   Relation extends HasOne,
+  K extends string,
+  Populate extends string = Relation['options'] extends { foreignKey: string }
+    ? Relation['options']['foreignKey']
+    : never,
+  TC extends TableClass = ReturnType<Relation['fn']>,
+  Q extends QueryWithTable = SetQueryTableAlias<DbTable<TC>, K>,
+  NestedCreateQuery extends Query = [Populate] extends [never]
+    ? Q
+    : Q & {
+        meta: { defaults: Record<Populate, true> };
+      },
 > = {
+  table: Q;
+  query: Q;
+  joinQuery(fromQuery: Query, toQuery: Query): Query;
+  one: true;
+  required: Relation['options']['required'] extends true ? true : false;
+  omitForeignKeyInCreate: never;
+  dataForCreate: Relation['options'] extends { through: string }
+    ? EmptyObject
+    : RelationToOneDataForCreate<{
+        nestedCreateQuery: NestedCreateQuery;
+        table: Q;
+      }>;
+  // `hasOne` relation data available for update. It supports:
+  // - `disconnect` to nullify a foreign key of the related record
+  // - `delete` to delete the related record
+  // - `update` to update the related record
+  dataForUpdate:
+    | { disconnect: boolean }
+    | { delete: boolean }
+    | { update: UpdateData<Q> };
+  // Only for records that updates a single record:
+  // - `set` to update the foreign key of related record found by condition
+  // - `upsert` to update or create the related record
+  // - `create` to create a related record
+  dataForUpdateOne:
+    | { set: WhereArg<Q> }
+    | {
+        upsert: {
+          update: UpdateData<Q>;
+          create:
+            | CreateData<NestedCreateQuery>
+            | (() => CreateData<NestedCreateQuery>);
+        };
+      }
+    | {
+        create: CreateData<NestedCreateQuery>;
+      };
+
   params: Relation['options'] extends { primaryKey: string }
     ? Record<
         Relation['options']['primaryKey'],
         T['columns']['shape'][Relation['options']['primaryKey']]['type']
       >
     : Relation['options'] extends { through: string }
-    ? RelationInfo<
+    ? RelationConfig<
         T,
         Relations,
         Relations[Relation['options']['through']]
       >['params']
     : never;
-  populate: Relation['options'] extends { foreignKey: string }
-    ? Relation['options']['foreignKey']
-    : never;
+  populate: Populate;
   chainedCreate: Relation['options'] extends { primaryKey: string }
     ? true
     : false;
@@ -186,7 +250,6 @@ export const makeHasOneMethod = (
           }) as unknown as JoinCallback<Query, Query>,
         );
       },
-      primaryKey: sourceRelation.primaryKey,
     };
   }
 
@@ -208,7 +271,6 @@ export const makeHasOneMethod = (
     reverseJoin(fromQuery, toQuery) {
       return addQueryOn(fromQuery, toQuery, fromQuery, primaryKey, foreignKey);
     },
-    primaryKey,
     modifyRelatedQuery(relationQuery) {
       return (query) => {
         const fromQuery = query.clone();
@@ -256,14 +318,14 @@ const nestedInsert = ({ query, primaryKey, foreignKey }: State) => {
                     hasWhere: true;
                   };
                 }
-              )._updateOrThrow(data)
+              )._updateOrThrow(data as UpdateData<WhereResult<Query>>)
             : (
                 t.where(item.connectOrCreate.where) as Omit<Query, 'meta'> & {
                   meta: Omit<Query['meta'], 'hasSelect' | 'hasWhere'> & {
                     hasWhere: true;
                   };
                 }
-              )._update(data);
+              )._update(data as UpdateData<WhereResult<Query>>);
         }),
       );
     } else {
@@ -313,7 +375,9 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
     });
 
     if (params.create || params.disconnect || params.set) {
-      await currentRelationsQuery._update({ [foreignKey]: null });
+      await currentRelationsQuery._update({ [foreignKey]: null } as UpdateData<
+        WhereResult<Query>
+      >);
 
       if (params.create) {
         await t._count()._create({
@@ -324,7 +388,9 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
       if (params.set) {
         await t
           ._where<Query>(params.set)
-          ._update({ [foreignKey]: data[0][primaryKey] });
+          ._update({ [foreignKey]: data[0][primaryKey] } as UpdateData<
+            WhereResult<Query>
+          >);
       }
     } else if (params.update) {
       await currentRelationsQuery._update<WhereResult<Query>>(params.update);

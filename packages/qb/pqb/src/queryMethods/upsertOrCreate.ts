@@ -79,7 +79,9 @@ export class QueryUpsertOrCreate {
 
   _upsert<T extends UpsertThis>(this: T, data: UpsertData<T>): UpsertResult<T> {
     if (!isObjectEmpty(data.update)) {
-      this._update<WhereResult<Query>>(data.update);
+      this._update<WhereResult<Query>>(
+        data.update as UpdateData<WhereResult<Query>>,
+      );
     }
     return this._orCreate(data.create);
   }

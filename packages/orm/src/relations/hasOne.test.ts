@@ -13,7 +13,7 @@ import {
   useTestORM,
   messageData,
 } from '../test-utils/test-utils';
-import { Db, RelationQuery } from 'pqb';
+import { Db } from 'pqb';
 import { orchidORM } from '../orm';
 import { assertType, expectSql } from 'test-utils';
 
@@ -22,21 +22,6 @@ useTestORM();
 describe('hasOne', () => {
   describe('querying', () => {
     it('should have method to query related data', async () => {
-      const profileQuery = db.profile.take();
-
-      assertType<
-        typeof db.user.profile,
-        RelationQuery<
-          'profile',
-          { Id: number },
-          'UserId',
-          typeof profileQuery,
-          true,
-          true,
-          true
-        >
-      >();
-
       const UserId = await db.user.get('Id').create(userData);
 
       await db.profile.create({ ...profileData, UserId });
@@ -182,7 +167,7 @@ describe('hasOne', () => {
 
     it('should have proper joinQuery', () => {
       expectSql(
-        db.user.relations.profile
+        db.user.relations.profile.relationConfig
           .joinQuery(db.user.as('u'), db.profile.as('p'))
           .toSQL(),
         `
@@ -1484,21 +1469,6 @@ describe('hasOne', () => {
     );
 
     it('should query related record and get an `undefined`', async () => {
-      const profileQuery = local.profile.takeOptional();
-
-      assertType<
-        typeof local.user.profile,
-        RelationQuery<
-          'profile',
-          { Id: number },
-          'UserId',
-          typeof profileQuery,
-          false,
-          true,
-          true
-        >
-      >();
-
       const profile = await local.user.profile({ Id: 123 });
       expect(profile).toBe(undefined);
     });
@@ -1720,21 +1690,6 @@ describe('hasOne through', () => {
   });
 
   it('should have method to query related data', async () => {
-    const profileQuery = db.profile.take();
-
-    assertType<
-      typeof db.message.profile,
-      RelationQuery<
-        'profile',
-        { AuthorId: number | null },
-        never,
-        typeof profileQuery,
-        true,
-        false,
-        true
-      >
-    >();
-
     const query = db.message.profile({ AuthorId: 1 });
     expectSql(
       query.toSQL(),
@@ -1811,7 +1766,7 @@ describe('hasOne through', () => {
 
   it('should have proper joinQuery', () => {
     expectSql(
-      db.message.relations.profile
+      db.message.relations.profile.relationConfig
         .joinQuery(db.message.as('m'), db.profile.as('p'))
         .toSQL(),
       `
@@ -2135,19 +2090,6 @@ describe('hasOne through', () => {
     );
 
     it('should query related record and get an `undefined`', async () => {
-      const profileQuery = local.profile.takeOptional();
-
-      assertType<
-        typeof local.message.profile,
-        RelationQuery<
-          'profile',
-          { AuthorId: number },
-          'Id',
-          typeof profileQuery,
-          false
-        >
-      >;
-
       const profile = await local.message.profile({ AuthorId: 123 });
       expect(profile).toBe(undefined);
     });

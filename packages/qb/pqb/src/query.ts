@@ -11,7 +11,7 @@ import { QueryData } from './sql';
 import { ColumnsShape, ColumnType } from './columns';
 import { AliasOrTable } from './utils';
 import { Db } from './db';
-import { RelationQueryBase, RelationsBase } from './relations';
+import { RelationsBase } from './relations';
 import { QueryError, QueryErrorName } from './errors';
 import {
   ColumnShapeOutput,
@@ -68,7 +68,6 @@ export type Query = QueryBase &
     windows: EmptyObject;
     defaultSelectColumns: string[];
     relations: RelationsBase;
-    relationsQueries: Record<string, Query>;
     withData: WithDataBase;
     error: new (
       message: string,
@@ -258,7 +257,7 @@ export type SetQueryReturnsValue<
   T,
   Arg extends keyof T['selectable']
     ? T['selectable'][Arg]['column']
-    : Arg extends RelationQueryBase
+    : Arg extends Query
     ? Arg['result']['value']
     : never,
   ReturnType

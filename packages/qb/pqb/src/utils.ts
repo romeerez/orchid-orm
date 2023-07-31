@@ -1,7 +1,7 @@
 import { cloneQueryArrays, QueryData, toSQLCacheKey } from './sql';
 import type { Query } from './query';
 import type { ColumnTypeBase, StringKey } from 'orchid-core';
-import { BaseRelation } from './relations';
+import { RelationQuery } from './relations';
 import { Expression } from 'orchid-core';
 import { QueryBase } from './queryBase';
 
@@ -70,7 +70,7 @@ export const resolveSubQueryCallback = (
  * @param sub - sub-query query object
  */
 export const joinSubQuery = (q: Query, sub: Query): Query => {
-  if (!('joinQuery' in sub)) return sub;
+  if (!('relationConfig' in sub)) return sub;
 
-  return (sub as unknown as BaseRelation).joinQuery(q, sub);
+  return (sub as unknown as RelationQuery).relationConfig.joinQuery(q, sub);
 };

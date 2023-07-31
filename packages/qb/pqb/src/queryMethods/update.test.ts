@@ -10,7 +10,7 @@ import {
   UserRecord,
 } from '../test-utils/test-utils';
 import { assertType, expectSql, useTestDatabase } from 'test-utils';
-import { BelongsToRelation, RelationQuery } from '../relations';
+import { RelationConfigBase, RelationQuery } from '../relations';
 import { addQueryOn } from './join/join';
 import { Query } from '../query';
 import { raw } from '../sql/rawSql';
@@ -557,8 +557,10 @@ describe('update', () => {
 
   describe('update with relation query', () => {
     const user = Object.assign(Object.create(User), {
-      joinQuery(fromQuery: Query, toQuery: Query) {
-        return addQueryOn(toQuery, fromQuery, toQuery, 'id', 'userId');
+      relationConfig: {
+        joinQuery(fromQuery: Query, toQuery: Query) {
+          return addQueryOn(toQuery, fromQuery, toQuery, 'id', 'userId');
+        },
       },
     });
     user.baseQuery = user;
@@ -566,8 +568,10 @@ describe('update', () => {
     const profile = Object.assign(Profile, {
       user,
     }) as unknown as typeof Profile & {
-      relations: { user: BelongsToRelation };
-      user: RelationQuery<'user', never, never, typeof User>;
+      relations: {
+        user: RelationQuery<'user', RelationConfigBase, typeof User>;
+      };
+      user: RelationQuery<'user', RelationConfigBase, typeof User>;
     };
 
     it('should update column with a sub query callback', () => {

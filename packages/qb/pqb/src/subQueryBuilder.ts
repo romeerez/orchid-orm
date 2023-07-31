@@ -44,7 +44,7 @@ export const getSubQueryBuilder = <T extends Query>(
       Object.create(q.baseQuery),
       getSelectAggMethods(),
     ) as SelectQueryBuilder<Query>;
-    qb.baseQuery = qb as unknown as Query;
+    qb.baseQuery = qb as never;
     q.internal.selectQueryBuilder = qb;
   }
 

@@ -9,7 +9,7 @@ import {
 } from '../../query';
 import { pushQueryValue, setQueryObjectValue } from '../../queryDataUtils';
 import { WhereQueryBase } from '../where/where';
-import { Relation, RelationsBase } from '../../relations';
+import { RelationsBase } from '../../relations';
 import { QueryData } from '../../sql';
 import {
   Expression,
@@ -49,7 +49,7 @@ export type JoinFirstArg<T extends QueryBase> =
   | Query
   | keyof T['relations']
   | keyof T['withData']
-  | ((q: Pick<T, keyof T['relations']>) => Query);
+  | ((q: T['relations']) => Query);
 
 /**
  * Arguments of `join` methods (not `joinLateral`).
@@ -142,19 +142,17 @@ export type JoinResult<
   },
   J extends Pick<Query, 'result' | 'table' | 'meta'> = Arg extends Query
     ? Arg
-    : T['relations'] extends Record<string, Relation>
-    ? Arg extends keyof T['relations']
-      ? T['relations'][Arg]['table']
-      : Arg extends (q: never) => Query
-      ? ReturnType<Arg>
-      : Arg extends keyof T['withData']
-      ? T['withData'][Arg] extends WithDataItem
-        ? {
-            table: T['withData'][Arg]['table'];
-            result: T['withData'][Arg]['shape'];
-            meta: QueryBase['meta'];
-          }
-        : never
+    : Arg extends keyof T['relations']
+    ? T['relations'][Arg]['relationConfig']['table']
+    : Arg extends (q: never) => Query
+    ? ReturnType<Arg>
+    : Arg extends keyof T['withData']
+    ? T['withData'][Arg] extends WithDataItem
+      ? {
+          table: T['withData'][Arg]['table'];
+          result: T['withData'][Arg]['shape'];
+          meta: QueryBase['meta'];
+        }
       : never
     : never,
   Selectable extends SelectableBase = JoinResultSelectable<
@@ -297,9 +295,7 @@ type JoinArgToQuery<
   : Arg extends Query
   ? Arg
   : Arg extends keyof T['relations']
-  ? T['relations'][Arg] extends Relation
-    ? T['relations'][Arg]['table']
-    : never
+  ? T['relations'][Arg]['relationConfig']['table']
   : never;
 
 /**
