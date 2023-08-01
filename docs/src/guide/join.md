@@ -2,6 +2,8 @@
 
 ## Select relation
 
+[//]: # 'has JSDoc'
+
 Before joining a table, consider if selecting a relation is enough for your case:
 
 ```ts
@@ -56,6 +58,8 @@ db.post.select('*', {
 
 # Joins
 
+[//]: # 'has JSDoc'
+
 `join` methods allows to join other tables, relations by name, [with](/guide/advanced-queries#with) statements, sub queries.
 
 All the `join` methods accept the same arguments, but returning type is different because with `join` it's guaranteed to load joined table, and with `leftJoin` the joined table columns may be `NULL` when no matching record was found.
@@ -97,11 +101,15 @@ export class MessageTable extends BaseTable {
 
 ## join
 
+[//]: # 'has JSDoc'
+
 `join` is a method for SQL `JOIN`, which is equivalent to `INNER JOIN`, `LEFT INNERT JOIN`.
 
 When no matching record is found, it will skip records of the main table.
 
 ### join relation
+
+[//]: # 'has JSDoc'
 
 When relations are defined between the tables, you can join them by a relation name.
 Joined table can be references from `where` and `select` by a relation name.
@@ -145,6 +153,8 @@ const result = await db.user.join(
 
 ### Selecting full joined records
 
+[//]: # 'has JSDoc'
+
 `select` supports selecting a full record of a previously joined table by passing a table name with `.*` at the end:
 
 ```ts
@@ -187,6 +197,8 @@ Because it's a one-to-many relation, one user has many messages, the user data w
 | user 1 | `{ id: 3, text: 'message 3' }` |
 
 ### join table
+
+[//]: # 'has JSDoc'
 
 If relation wasn't defined, provide a `db.table` instance and specify columns for the join.
 Joined table can be references from `where` and `select` by a table name.
@@ -362,6 +374,8 @@ JOIN (
 
 ## joinLateral
 
+[//]: # 'has JSDoc'
+
 `joinLateral` allows joining a table with a sub-query that can reference the main table of current query and the other joined tables.
 
 Regular `JOIN` also can have a sub-query in its definition, but it cannot reference other tables of this query.
@@ -427,6 +441,8 @@ const ok: {
 
 ## leftJoin
 
+[//]: # 'has JSDoc'
+
 `leftJoin` is a method for SQL `LEFT JOIN`, which is equivalent to `OUTER JOIN`, `LEFT OUTER JOIN`.
 
 When no matching record is found, it will fill joined table columns with `NULL` values in the result rows.
@@ -449,6 +465,8 @@ const ok: { name: string; text: string | null }[] = result;
 
 ## leftJoinLateral
 
+[//]: # 'has JSDoc'
+
 The same as `joinLateral`, but when no records found for the join it will result in `null`:
 
 ```ts
@@ -461,6 +479,8 @@ const ok: { name: string; text: string | null }[] = result;
 ```
 
 ## rightJoin
+
+[//]: # 'has JSDoc'
 
 `rightJoin` is a method for SQL `RIGHT JOIN`, which is equivalent to `RIGHT OUTER JOIN`.
 
@@ -480,6 +500,8 @@ const ok: { name: string | null; text: string }[] = result;
 ```
 
 ## fullJoin
+
+[//]: # 'has JSDoc'
 
 `fullJoin` is a method for SQL `FULL JOIN`, which is equivalent to `FULL OUTER JOIN`.
 

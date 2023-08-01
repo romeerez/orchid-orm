@@ -698,6 +698,58 @@ export class QueryMethods<CT extends ColumnTypesBase> {
   }
 
   /**
+   * `modify` allows modifying the query with your function:
+   *
+   * ```ts
+   * const doSomethingWithQuery = (q: typeof db.table) => {
+   *   // can use all query methods
+   *   return q.select('name').where({ active: true }).order({ createdAt: 'DESC' });
+   * };
+   *
+   * const record = await db.table.select('id').modify(doSomethingWithQuery).find(1);
+   *
+   * record.id; // id was selected before `modify`
+   * record.name; // name was selected by the function
+   * ```
+   *
+   * It's possible to apply different `select`s inside the function, and then the result type will be a union of all possibilities:
+   *
+   * Use this sparingly as it complicates dealing with the result.
+   *
+   * ```ts
+   * const doSomethingWithQuery = (q: typeof db.table) => {
+   *   if (Math.random() > 0.5) {
+   *     return q.select('one');
+   *   } else {
+   *     return q.select('two');
+   *   }
+   * };
+   *
+   * const record = await db.table.modify(doSomethingWithQuery).find(1);
+   *
+   * // TS error: we don't know for sure if the `one` was selected.
+   * record.one;
+   *
+   * // use `in` operator to disambiguate the result type
+   * if ('one' in record) {
+   *   record.one;
+   * } else {
+   *   record.two;
+   * }
+   * ```
+   *
+   * @param fn - function to modify the query with. The result type will be merged with the main query as if the `merge` method was used.
+   */
+  modify<T extends Query, Arg extends Query & { table: T['table'] }, Result>(
+    this: T,
+    fn: (q: Arg) => Result,
+  ): Result extends Query ? MergeQuery<T, Result> : Result {
+    return fn(this as unknown as Arg) as Result extends Query
+      ? MergeQuery<T, Result>
+      : Result;
+  }
+
+  /**
    * Use `makeHelper` to make a query helper - a function where you can modify the query, and reuse this function across different places.
    *
    * ```ts

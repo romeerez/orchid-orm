@@ -861,4 +861,53 @@ describe('queryMethods', () => {
       assertType<Awaited<typeof q>, { id: number; name: string }[]>();
     });
   });
+
+  describe('modify', () => {
+    it('should modify a query', () => {
+      const modifier = (q: typeof User) =>
+        q.select('name').where({ name: 'name' });
+
+      const q = User.select('id').modify(modifier);
+
+      assertType<Awaited<typeof q>, { id: number; name: string }[]>();
+      assertType<typeof q.meta.hasWhere, true>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."id", "user"."name"
+          FROM "user"
+          WHERE "user"."name" = $1
+        `,
+        ['name'],
+      );
+    });
+
+    it('should be able to return a union type of query', async () => {
+      const param = true;
+
+      const modifier = (q: typeof User) => {
+        if (param) {
+          return q.select('name');
+        } else {
+          return q.select('age');
+        }
+      };
+
+      const q = User.select('id').modify(modifier);
+
+      assertType<
+        Awaited<typeof q>,
+        { id: number; name: string }[] | { id: number; age: number | null }[]
+      >();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."id", "user"."name"
+          FROM "user"
+        `,
+      );
+    });
+  });
 });
