@@ -1,5 +1,11 @@
 # pqb
 
+## 0.17.2
+
+### Patch Changes
+
+- 607ca901: Add `modify` method to transform a query with a function (#107)
+
 ## 0.17.1
 
 ### Patch Changes
