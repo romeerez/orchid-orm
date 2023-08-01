@@ -288,7 +288,9 @@ export class Migration<CT extends ColumnTypesBase> {
   ): Promise<any> {
     const options =
       !cbOrOptions || typeof cbOrOptions === 'function' ? {} : cbOrOptions;
-    const fn = (cb || cbOrOptions) as ColumnsShapeCallback<CT, Shape>;
+    const fn = (
+      typeof cbOrOptions === 'function' ? cbOrOptions : cb
+    ) as ColumnsShapeCallback<CT, Shape>;
 
     return createTable(this, this.up, tableName, options, fn);
   }
@@ -323,7 +325,9 @@ export class Migration<CT extends ColumnTypesBase> {
   ): Promise<any> {
     const options =
       !cbOrOptions || typeof cbOrOptions === 'function' ? {} : cbOrOptions;
-    const fn = (cb || cbOrOptions) as ColumnsShapeCallback<CT, Shape>;
+    const fn = (
+      typeof cbOrOptions === 'function' ? cbOrOptions : cb
+    ) as ColumnsShapeCallback<CT, Shape>;
 
     return createTable(this, !this.up, tableName, options, fn);
   }
