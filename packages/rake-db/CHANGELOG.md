@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.15
+
+### Patch Changes
+
+- 352b58b4: rake-db: fix create and drop the table with options but without columns
+
 ## 2.10.14
 
 ### Patch Changes
