@@ -34,7 +34,7 @@ import {
 import { RakeDbAst } from '../ast';
 import { tableMethods } from './tableMethods';
 import { NoPrimaryKey } from '../errors';
-import { ColumnTypesBase, snakeCaseKey } from 'orchid-core';
+import { ColumnTypesBase, emptyObject, snakeCaseKey } from 'orchid-core';
 
 export type TableQuery = {
   text: string;
@@ -58,7 +58,7 @@ export const createTable = async <
   up: boolean,
   tableName: Table,
   options: TableOptions,
-  fn: ColumnsShapeCallback<CT, Shape>,
+  fn?: ColumnsShapeCallback<CT, Shape>,
 ): Promise<CreateTableResult<Table, Shape>> => {
   const snakeCase =
     'snakeCase' in options ? options.snakeCase : migration.options.snakeCase;
@@ -71,12 +71,10 @@ export const createTable = async <
   );
   types[snakeCaseKey] = snakeCase;
 
-  const shape = getColumnTypes(
-    types,
-    fn,
-    migration.options.baseTable?.nowSQL,
-    language,
-  );
+  const shape = !fn
+    ? emptyObject
+    : getColumnTypes(types, fn, migration.options.baseTable?.nowSQL, language);
+
   const tableData = getTableData();
   const ast = makeAst(
     up,
@@ -87,7 +85,7 @@ export const createTable = async <
     migration.options.noPrimaryKey,
   );
 
-  validatePrimaryKey(ast);
+  fn && validatePrimaryKey(ast);
 
   const queries = astToQueries(ast, snakeCase, language);
   for (const { then, ...query } of queries) {
@@ -192,9 +190,9 @@ const astToQueries = (
 
   if (ast.action === 'drop') {
     queries.push({
-      text: `DROP TABLE ${quoteWithSchema(ast)}${
-        ast.dropMode ? ` ${ast.dropMode}` : ''
-      }`,
+      text: `DROP TABLE${
+        ast.dropIfExists ? ' IF EXISTS' : ''
+      } ${quoteWithSchema(ast)}${ast.dropMode ? ` ${ast.dropMode}` : ''}`,
     });
     return queries;
   }
@@ -263,7 +261,9 @@ const astToQueries = (
 
   queries.push(
     {
-      text: `CREATE TABLE ${quoteWithSchema(ast)} (${lines.join(',')}\n)`,
+      text: `CREATE TABLE${
+        ast.createIfNotExists ? ' IF NOT EXISTS' : ''
+      } ${quoteWithSchema(ast)} (${lines.join(',')}\n)`,
       values,
     },
     ...indexesToQuery(true, ast, indexes, language),

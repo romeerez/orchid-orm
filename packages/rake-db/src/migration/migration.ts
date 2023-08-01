@@ -42,6 +42,10 @@ export type DropMode = 'CASCADE' | 'RESTRICT';
 
 // Options for creating a table.
 export type TableOptions = {
+  // create the table only if it not exists already
+  createIfNotExists?: boolean;
+  // drop the table only if it exists
+  dropIfExists?: boolean;
   // Drop mode to use when dropping the table.
   dropMode?: DropMode;
   // Create a table with a database comment on it.
@@ -190,6 +194,8 @@ export class Migration<CT extends ColumnTypesBase> {
    *
    * `dropTable` accepts the same arguments, it will drop the table when migrating and create a table when rolling back.
    *
+   * To create an empty table, the callback with columns may be omitted.
+   *
    * When creating a table within a specific schema, write the table name with schema name: `'schemaName.tableName'`.
    *
    * Returns object `{ table: TableInterface }` that allows to insert records right after creating a table.
@@ -198,6 +204,12 @@ export class Migration<CT extends ColumnTypesBase> {
    *
    * ```ts
    * type TableOptions = {
+   *   // create the table only if it not exists already
+   *   createIfNotExists?: boolean;
+   *
+   *   // drop the table only if it exists
+   *   dropIfExists?: boolean;
+   *
    *   // used when reverting a `createTable`
    *   dropMode?: 'CASCADE' | 'RESTRICT';
    *
@@ -254,27 +266,28 @@ export class Migration<CT extends ColumnTypesBase> {
    */
   createTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
-    fn: ColumnsShapeCallback<CT, Shape>,
+    fn?: ColumnsShapeCallback<CT, Shape>,
   ): Promise<CreateTableResult<Table, Shape>>;
   /**
    * See {@link createTable}
    *
    * @param tableName - name of the table to create
-   * @param options - create table options
+   * @param options - {@link TableOptions}
    * @param fn - create table callback
    */
   createTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
     options: TableOptions,
-    fn: ColumnsShapeCallback<CT, Shape>,
+    fn?: ColumnsShapeCallback<CT, Shape>,
   ): Promise<CreateTableResult<Table, Shape>>;
   createTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
-    cbOrOptions: ColumnsShapeCallback<CT, Shape> | TableOptions,
+    cbOrOptions?: ColumnsShapeCallback<CT, Shape> | TableOptions,
     cb?: ColumnsShapeCallback<CT, Shape>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
-    const options = typeof cbOrOptions === 'function' ? {} : cbOrOptions;
+    const options =
+      !cbOrOptions || typeof cbOrOptions === 'function' ? {} : cbOrOptions;
     const fn = (cb || cbOrOptions) as ColumnsShapeCallback<CT, Shape>;
 
     return createTable(this, this.up, tableName, options, fn);
@@ -288,27 +301,28 @@ export class Migration<CT extends ColumnTypesBase> {
    */
   dropTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
-    fn: ColumnsShapeCallback<CT, Shape>,
+    fn?: ColumnsShapeCallback<CT, Shape>,
   ): Promise<CreateTableResult<Table, Shape>>;
   /**
    * Drop the table, create it on rollback. See {@link createTable}.
    *
    * @param tableName - name of the table to drop
-   * @param options - create table options
+   * @param options - {@link TableOptions}
    * @param fn - create table callback
    */
   dropTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
     options: TableOptions,
-    fn: ColumnsShapeCallback<CT, Shape>,
+    fn?: ColumnsShapeCallback<CT, Shape>,
   ): Promise<CreateTableResult<Table, Shape>>;
   dropTable<Table extends string, Shape extends ColumnsShape>(
     tableName: Table,
-    cbOrOptions: ColumnsShapeCallback<CT, Shape> | TableOptions,
+    cbOrOptions?: ColumnsShapeCallback<CT, Shape> | TableOptions,
     cb?: ColumnsShapeCallback<CT, Shape>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
-    const options = typeof cbOrOptions === 'function' ? {} : cbOrOptions;
+    const options =
+      !cbOrOptions || typeof cbOrOptions === 'function' ? {} : cbOrOptions;
     const fn = (cb || cbOrOptions) as ColumnsShapeCallback<CT, Shape>;
 
     return createTable(this, !this.up, tableName, options, fn);

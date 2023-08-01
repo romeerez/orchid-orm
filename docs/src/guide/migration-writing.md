@@ -83,6 +83,8 @@ change(async (db, up) => {
 
 `dropTable` accepts the same arguments, it will drop the table when migrating and create a table when rolling back.
 
+To create an empty table, the callback with columns may be omitted.
+
 When creating a table within a specific schema, write the table name with schema name: `'schemaName.tableName'`.
 
 Returns object `{ table: TableInterface }` that allows to insert records right after creating a table.
@@ -91,6 +93,12 @@ Options are:
 
 ```ts
 type TableOptions = {
+  // create the table only if it not exists already
+  createIfNotExists?: boolean;
+
+  // drop the table only if it exists
+  dropIfExists?: boolean;
+
   // used when reverting a `createTable`
   dropMode?: 'CASCADE' | 'RESTRICT';
 

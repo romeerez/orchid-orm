@@ -29,6 +29,8 @@ export namespace RakeDbAst {
     name: string;
     shape: ColumnsShape;
     noPrimaryKey: NoPrimaryKeyOption;
+    createIfNotExists?: boolean;
+    dropIfExists?: boolean;
     dropMode?: DropMode;
     comment?: string;
   } & TableData;
