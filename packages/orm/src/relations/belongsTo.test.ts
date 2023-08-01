@@ -58,7 +58,6 @@ describe('belongsTo', () => {
               SELECT 1 FROM "profile"
               WHERE "profile"."bio" = $1
                 AND "profile"."userId" = "user"."id"
-              LIMIT 1
             )
             AND "user"."name" = $2
         `,
@@ -94,7 +93,6 @@ describe('belongsTo', () => {
           WHERE EXISTS (
             SELECT 1 FROM "user"
             WHERE "user"."id" = "profile"."userId"
-            LIMIT 1
           )
         `,
       );
@@ -110,7 +108,6 @@ describe('belongsTo', () => {
           SELECT 1 FROM "user"
           WHERE "user"."id" = "p"."userId"
             AND "user"."name" = $1
-          LIMIT 1
         )
       `,
         ['name'],
@@ -134,9 +131,7 @@ describe('belongsTo', () => {
                 SELECT 1 FROM "profile"
                 WHERE "profile"."userId" = "user"."id"
                   AND "profile"."bio" = $1
-                LIMIT 1
               )
-            LIMIT 1
           )
         `,
         ['bio'],

@@ -199,7 +199,7 @@ const processWhere = (
         );
 
         ands.push(
-          `${prefix}EXISTS (SELECT 1 FROM ${target} WHERE ${conditions} LIMIT 1)`,
+          `${prefix}EXISTS (SELECT 1 FROM ${target} WHERE ${conditions})`,
         );
       }
     } else if (key === 'SEARCH') {

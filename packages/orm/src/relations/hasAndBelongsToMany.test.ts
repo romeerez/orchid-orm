@@ -36,7 +36,6 @@ describe('hasAndBelongsToMany', () => {
           SELECT 1 FROM "chatUser"
           WHERE "chatUser"."chatId" = "chats"."idOfChat"
             AND "chatUser"."userId" = $1
-          LIMIT 1
         )
       `,
         [userId],
@@ -63,9 +62,7 @@ describe('hasAndBelongsToMany', () => {
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."chatId" = "chats"."idOfChat"
                     AND "chatUser"."userId" = "user"."id"
-                  LIMIT 1
                 )
-              LIMIT 1
             )
             AND "chats"."title" = $2
         `,
@@ -122,9 +119,7 @@ describe('hasAndBelongsToMany', () => {
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."chatId" = "chats"."idOfChat"
                     AND "chatUser"."userId" = "user"."id"
-                  LIMIT 1
                 )
-              LIMIT 1
             )
             AND "chats"."title" = $2
         `,
@@ -143,7 +138,6 @@ describe('hasAndBelongsToMany', () => {
             SELECT 1 FROM "chatUser"
             WHERE "chatUser"."chatId" = "c"."idOfChat"
               AND "chatUser"."userId" = "u"."id"
-            LIMIT 1
           )
         `,
       );
@@ -160,9 +154,7 @@ describe('hasAndBelongsToMany', () => {
               SELECT 1 FROM "chatUser"
               WHERE "chatUser"."chatId" = "chats"."idOfChat"
                 AND "chatUser"."userId" = "user"."id"
-              LIMIT 1
             )
-            LIMIT 1
           )
         `,
       );
@@ -181,10 +173,8 @@ describe('hasAndBelongsToMany', () => {
               SELECT 1 FROM "chatUser"
               WHERE "chatUser"."chatId" = "chats"."idOfChat"
                 AND "chatUser"."userId" = "u"."id"
-              LIMIT 1
             )
             AND "chats"."title" = $1
-          LIMIT 1
         )
       `,
         ['title'],
@@ -209,7 +199,6 @@ describe('hasAndBelongsToMany', () => {
             SELECT 1 FROM "chatUser"
             WHERE "chatUser"."chatId" = "chats"."idOfChat"
               AND "chatUser"."userId" = "u"."id"
-            LIMIT 1
           )
           AND "chats"."title" = $1
       `,
@@ -242,7 +231,6 @@ describe('hasAndBelongsToMany', () => {
             SELECT 1 FROM "chatUser"
             WHERE "chatUser"."chatId" = "c"."idOfChat"
               AND "chatUser"."userId" = "u"."id"
-            LIMIT 1
           )
       `,
         ['title', now],
@@ -271,7 +259,6 @@ describe('hasAndBelongsToMany', () => {
                 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "c"."idOfChat"
                   AND "chatUser"."userId" = "user"."id"
-                LIMIT 1
               )
           ) "c" ON true
           WHERE "c"."Title" = $2
@@ -311,7 +298,6 @@ describe('hasAndBelongsToMany', () => {
                     SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."chatId" = "chats"."idOfChat"
                       AND "chatUser"."userId" = "u"."id"
-                    LIMIT 1
                   )
               ) AS "t"
             ) "chats" ON true
@@ -342,7 +328,6 @@ describe('hasAndBelongsToMany', () => {
               SELECT 1 FROM "chatUser"
               WHERE "chatUser"."chatId" = "chats"."idOfChat"
                 AND "chatUser"."userId" = "u"."id"
-              LIMIT 1
             )
           ) "chatsCount" ON true
         `,
@@ -372,7 +357,6 @@ describe('hasAndBelongsToMany', () => {
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "chats"."idOfChat"
                   AND "chatUser"."userId" = "u"."id"
-                LIMIT 1
               )
             ) AS "t"
           ) "titles" ON true
@@ -401,7 +385,6 @@ describe('hasAndBelongsToMany', () => {
               SELECT 1 FROM "chatUser"
               WHERE "chatUser"."chatId" = "chats"."idOfChat"
                 AND "chatUser"."userId" = "u"."id"
-              LIMIT 1
             )
             LIMIT 1
           ) "hasChats" ON true
@@ -445,7 +428,6 @@ describe('hasAndBelongsToMany', () => {
                         FROM "chatUser"
                         WHERE "chatUser"."chatId" = "chats"."idOfChat"
                           AND "chatUser"."userId" = "users"."id"
-                        LIMIT 1
                       )
                     ) AS "t"
                   ) "chats2" ON true
@@ -454,7 +436,6 @@ describe('hasAndBelongsToMany', () => {
                     FROM "chatUser"
                     WHERE "chatUser"."userId" = "users"."id"
                       AND "chatUser"."chatId" = "chats"."idOfChat"
-                    LIMIT 1
                   )
                 ) AS "t"
               ) "users" ON true
@@ -463,7 +444,6 @@ describe('hasAndBelongsToMany', () => {
                 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "chats"."idOfChat"
                   AND "chatUser"."userId" = "user"."id"
-                LIMIT 1
               )
             ) AS "t"
           ) "chats" ON true
@@ -1496,7 +1476,6 @@ describe('hasAndBelongsToMany', () => {
               FROM "chatUser"
               WHERE "chatUser"."chatId" = "chats"."idOfChat"
                 AND "chatUser"."userId" = "user"."id"
-              LIMIT 1
             )
             AND "chats"."title" IN ($2, $3)
         )

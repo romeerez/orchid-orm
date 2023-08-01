@@ -58,11 +58,11 @@ describe('hasMany', () => {
         query.toSQL(),
         `
           SELECT ${messageSelectAll} FROM "message" AS "messages"
-          WHERE EXISTS (
+          WHERE
+            EXISTS (
               SELECT 1 FROM "user"
               WHERE "user"."name" = $1
                 AND "user"."id" = "messages"."authorId"
-              LIMIT 1
             )
             AND "messages"."text" = $2
         `,
@@ -147,7 +147,6 @@ describe('hasMany', () => {
               SELECT 1 FROM "chat"
               WHERE "chat"."title" = $1
                 AND "chat"."idOfChat" = "messages"."chatId"
-              LIMIT 1
             )
             AND "messages"."text" = $2
         `,
@@ -175,7 +174,6 @@ describe('hasMany', () => {
         WHERE EXISTS (
           SELECT 1 FROM "message" AS "messages"
           WHERE "messages"."authorId" = "user"."id"
-          LIMIT 1
         )
       `,
       );
@@ -191,7 +189,6 @@ describe('hasMany', () => {
           SELECT 1 FROM "message" AS "messages"
           WHERE "messages"."authorId" = "u"."id"
             AND "messages"."text" = $1
-          LIMIT 1
         )
       `,
         ['text'],
@@ -2030,10 +2027,8 @@ describe('hasMany through', () => {
             SELECT 1 FROM "chatUser"
             WHERE "chatUser"."chatId" = "chats"."idOfChat"
               AND "chatUser"."userId" = "user"."id"
-            LIMIT 1
           )
           AND "user"."id" = $1
-          LIMIT 1
         )
       `,
         [1],
@@ -2058,12 +2053,9 @@ describe('hasMany through', () => {
                     SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."chatId" = "chats"."idOfChat"
                       AND "chatUser"."userId" = "user"."id"
-                    LIMIT 1
                   )
                   AND "user"."id" = "profile"."userId"
-                LIMIT 1
               )
-            LIMIT 1
           )
           AND "chats"."title" = $2
         `,
@@ -2096,12 +2088,9 @@ describe('hasMany through', () => {
                       SELECT 1 FROM "chatUser"
                       WHERE "chatUser"."chatId" = "chats"."idOfChat"
                         AND "chatUser"."userId" = "user"."id"
-                      LIMIT 1
                     )
                     AND "user"."id" = "profile"."userId"
-                  LIMIT 1
                 )
-              LIMIT 1
             )
             AND "chats"."title" = $2
         `,
@@ -2123,10 +2112,8 @@ describe('hasMany through', () => {
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "c"."idOfChat"
                   AND "chatUser"."userId" = "user"."id"
-                LIMIT 1
               )
               AND "user"."id" = "p"."userId"
-            LIMIT 1
           )
         `,
       );
@@ -2145,12 +2132,9 @@ describe('hasMany through', () => {
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "chats"."idOfChat"
                   AND "chatUser"."userId" = "user"."id"
-                LIMIT 1
               )
               AND "user"."id" = "profile"."userId"
-            LIMIT 1
           )
-          LIMIT 1
         )
       `,
       );
@@ -2170,13 +2154,10 @@ describe('hasMany through', () => {
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "chats"."idOfChat"
                   AND "chatUser"."userId" = "user"."id"
-                LIMIT 1
               )
               AND "user"."id" = "p"."userId"
-            LIMIT 1
           )
           AND "chats"."title" = $1
-          LIMIT 1
         )
       `,
         ['title'],
@@ -2206,10 +2187,8 @@ describe('hasMany through', () => {
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."chatId" = "chats"."idOfChat"
                     AND "chatUser"."userId" = "user"."id"
-                  LIMIT 1
                 )
                 AND "user"."id" = "p"."userId"
-              LIMIT 1
             )
             AND "chats"."title" = $1
         `,
@@ -2247,10 +2226,8 @@ describe('hasMany through', () => {
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."chatId" = "c"."idOfChat"
                     AND "chatUser"."userId" = "user"."id"
-                  LIMIT 1
                 )
                 AND "user"."id" = "p"."userId"
-              LIMIT 1
             )
         `,
         ['title', now],
@@ -2283,10 +2260,8 @@ describe('hasMany through', () => {
                     FROM "chatUser"
                     WHERE "chatUser"."chatId" = "c"."idOfChat"
                       AND "chatUser"."userId" = "user"."id"
-                    LIMIT 1
                   )
                   AND "user"."id" = "profile"."userId"
-                LIMIT 1
               )
           ) "c" ON true
           WHERE "c"."Title" = $2
@@ -2322,10 +2297,8 @@ describe('hasMany through', () => {
                       SELECT 1 FROM "chatUser"
                       WHERE "chatUser"."chatId" = "chats"."idOfChat"
                         AND "chatUser"."userId" = "user"."id"
-                      LIMIT 1
                     )
                   AND "user"."id" = "p"."userId"
-                  LIMIT 1
                 )
               ) AS "t"  
             ) "chats" ON true
@@ -2358,10 +2331,8 @@ describe('hasMany through', () => {
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "chats"."idOfChat"
                   AND "chatUser"."userId" = "user"."id"
-                LIMIT 1
               )
               AND "user"."id" = "p"."userId"
-              LIMIT 1
             )
           ) "chatsCount" ON true
         `,
@@ -2393,10 +2364,8 @@ describe('hasMany through', () => {
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."chatId" = "chats"."idOfChat"
                     AND "chatUser"."userId" = "user"."id"
-                  LIMIT 1
                 )
                 AND "user"."id" = "p"."userId"
-                LIMIT 1
               )
             ) AS "t"
           ) "titles" ON true
@@ -2427,10 +2396,8 @@ describe('hasMany through', () => {
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."chatId" = "chats"."idOfChat"
                     AND "chatUser"."userId" = "user"."id"
-                  LIMIT 1
               )
               AND "user"."id" = "p"."userId"
-              LIMIT 1
             )
             LIMIT 1
           ) "hasChats" ON true
@@ -2472,15 +2439,14 @@ describe('hasMany through', () => {
                       WHERE EXISTS (
                         SELECT 1
                         FROM "user"
-                        WHERE EXISTS (
+                        WHERE
+                          EXISTS (
                             SELECT 1
                             FROM "chatUser"
                             WHERE "chatUser"."chatId" = "chats"."idOfChat"
                               AND "chatUser"."userId" = "user"."id"
-                            LIMIT 1
                           )
                           AND "user"."id" = "profiles"."userId"
-                        LIMIT 1
                       )
                     ) AS "t"
                   ) "chats2" ON true
@@ -2493,9 +2459,7 @@ describe('hasMany through', () => {
                         FROM "chatUser"
                         WHERE "chatUser"."userId" = "users"."id"
                           AND "chatUser"."chatId" = "chats"."idOfChat"
-                        LIMIT 1
                       )
-                    LIMIT 1
                   )
                 ) AS "t"
               ) "profiles" ON true
@@ -2507,9 +2471,7 @@ describe('hasMany through', () => {
                   FROM "chatUser"
                   WHERE "chatUser"."chatId" = "chats"."idOfChat"
                     AND "chatUser"."userId" = "user"."id"
-                  LIMIT 1
                 ) AND "user"."id" = "profile"."userId"
-                LIMIT 1
               )
             ) AS "t"
           ) "chats" ON true
@@ -2538,10 +2500,8 @@ describe('hasMany through', () => {
                     FROM "chatUser"
                     WHERE "chatUser"."chatId" = "chats"."idOfChat"
                       AND "chatUser"."userId" = "user"."id"
-                    LIMIT 1
                   )
                   AND "user"."id" = "profile"."userId"
-                LIMIT 1
               )
               AND "chats"."title" IN ($2, $3)
           )
@@ -2565,9 +2525,7 @@ describe('hasMany through', () => {
               SELECT 1 FROM "chatUser"
               WHERE "chatUser"."userId" = "users"."id"
                 AND "chatUser"."chatId" = $1
-              LIMIT 1
             )
-            LIMIT 1
           )
         `,
         [1],
@@ -2593,11 +2551,8 @@ describe('hasMany through', () => {
                     SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."userId" = "users"."id"
                       AND "chatUser"."chatId" = "chat"."idOfChat"
-                    LIMIT 1
                   )
-                LIMIT 1
               )
-            LIMIT 1
           )
           AND "profiles"."bio" = $2
         `,
@@ -2630,11 +2585,8 @@ describe('hasMany through', () => {
                       SELECT 1 FROM "chatUser"
                       WHERE "chatUser"."userId" = "users"."id"
                         AND "chatUser"."chatId" = "chat"."idOfChat"
-                      LIMIT 1
                     )
-                  LIMIT 1
                 )
-              LIMIT 1
             )
             AND "profiles"."bio" = $2
         `,
@@ -2656,9 +2608,7 @@ describe('hasMany through', () => {
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."userId" = "users"."id"
                   AND "chatUser"."chatId" = "c"."idOfChat"
-                LIMIT 1
               )
-            LIMIT 1
           )
         `,
       );
@@ -2678,11 +2628,8 @@ describe('hasMany through', () => {
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."userId" = "users"."id"
                     AND "chatUser"."chatId" = "chat"."idOfChat"
-                  LIMIT 1
                 )
-              LIMIT 1
             )
-            LIMIT 1
           )
         `,
       );
@@ -2703,12 +2650,9 @@ describe('hasMany through', () => {
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."userId" = "users"."id"
                     AND "chatUser"."chatId" = "c"."idOfChat"
-                  LIMIT 1
                 )
-              LIMIT 1
             )
             AND "profiles"."bio" = $1
-            LIMIT 1
           )
         `,
         ['bio'],
@@ -2739,9 +2683,7 @@ describe('hasMany through', () => {
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."userId" = "users"."id"
                     AND "chatUser"."chatId" = "c"."idOfChat"
-                  LIMIT 1
                 )
-              LIMIT 1
             )
             AND "profiles"."bio" = $1
         `,
@@ -2778,9 +2720,7 @@ describe('hasMany through', () => {
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."userId" = "users"."id"
                     AND "chatUser"."chatId" = "c"."idOfChat"
-                  LIMIT 1
                 )
-              LIMIT 1
             )
         `,
         ['bio', 123],
@@ -2813,9 +2753,7 @@ describe('hasMany through', () => {
                     FROM "chatUser"
                     WHERE "chatUser"."userId" = "users"."id"
                       AND "chatUser"."chatId" = "chat"."idOfChat"
-                    LIMIT 1
                   )
-                LIMIT 1
               )
           ) "p" ON true
           WHERE "p"."Bio" = $2
@@ -2855,9 +2793,7 @@ describe('hasMany through', () => {
                                 SELECT 1 FROM "chatUser"
                                 WHERE "chatUser"."userId" = "users"."id"
                                   AND "chatUser"."chatId" = "c"."idOfChat"
-                                LIMIT 1
                             )
-                        LIMIT 1
                     )
               ) AS "t"
             ) "profiles" ON true
@@ -2893,9 +2829,7 @@ describe('hasMany through', () => {
                     SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."userId" = "users"."id"
                       AND "chatUser"."chatId" = "c"."idOfChat"
-                    LIMIT 1
                   )
-                LIMIT 1
               )
             ) "profilesCount" ON true
           `,
@@ -2932,9 +2866,7 @@ describe('hasMany through', () => {
                       SELECT 1 FROM "chatUser"
                       WHERE "chatUser"."userId" = "users"."id"
                         AND "chatUser"."chatId" = "c"."idOfChat"
-                      LIMIT 1
                     )
-                  LIMIT 1
                 )
               ) AS "t"
             ) "bios" ON true
@@ -2970,9 +2902,7 @@ describe('hasMany through', () => {
                     SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."userId" = "users"."id"
                       AND "chatUser"."chatId" = "c"."idOfChat"
-                    LIMIT 1
                   )
-                LIMIT 1
               )
               LIMIT 1
             ) "hasProfiles" ON true
@@ -3020,9 +2950,7 @@ describe('hasMany through', () => {
                             FROM "chatUser"
                             WHERE "chatUser"."userId" = "users"."id"
                               AND "chatUser"."chatId" = "chats"."idOfChat"
-                            LIMIT 1
                           )
-                        LIMIT 1
                       )
                     ) AS "t"
                   ) "profiles2" ON true
@@ -3034,9 +2962,7 @@ describe('hasMany through', () => {
                       FROM "chatUser"
                       WHERE "chatUser"."chatId" = "chats"."idOfChat"
                         AND "chatUser"."userId" = "user"."id"
-                      LIMIT 1
                     ) AND "user"."id" = "profiles"."userId"
-                    LIMIT 1
                   )
                 ) AS "t"
               ) "chats" ON true
@@ -3049,9 +2975,7 @@ describe('hasMany through', () => {
                       FROM "chatUser"
                       WHERE "chatUser"."userId" = "users"."id"
                         AND "chatUser"."chatId" = "chat"."idOfChat"
-                      LIMIT 1
                     )
-                  LIMIT 1
                 )
               ) AS "t"
             ) "profiles" ON true
@@ -3081,9 +3005,7 @@ describe('hasMany through', () => {
                       FROM "chatUser"
                       WHERE "chatUser"."userId" = "users"."id"
                         AND "chatUser"."chatId" = "chat"."idOfChat"
-                      LIMIT 1
                     )
-                  LIMIT 1
                 )
                 AND "profiles"."bio" IN ($2, $3)
             )

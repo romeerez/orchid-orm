@@ -247,7 +247,7 @@ export const testWhere = (
         `
           ${startSql}
           NOT ${pkeySql} IN ($1, $2, $3)
-          AND NOT EXISTS (SELECT 1 FROM "${table}" WHERE ${pkeySql} = ${pkeySql} LIMIT 1)
+          AND NOT EXISTS (SELECT 1 FROM "${table}" WHERE ${pkeySql} = ${pkeySql})
         `,
         [1, 2, 3],
       );

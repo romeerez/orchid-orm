@@ -1087,6 +1087,7 @@ export const addQueryOn = <T extends QueryBase>(
   return pushQueryOn(cloned, joinFrom, joinTo, ...args);
 };
 
+// To join record based on a value inside their json columns
 type OnJsonPathEqualsArgs<T extends QueryBase> = [
   leftColumn: keyof T['selectable'],
   leftPath: string,
@@ -1094,6 +1095,7 @@ type OnJsonPathEqualsArgs<T extends QueryBase> = [
   rightPath: string,
 ];
 
+// Query builder with `or` methods that is passed to the `join` and `joinLateral` callbacks.
 export class OnQueryBuilder<
   S extends QueryBase = QueryBase,
   J extends QueryBase = QueryBase,

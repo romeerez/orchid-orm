@@ -62,7 +62,7 @@ export const testJoin = ({
         where && addWhere && or ? 'AND ' : ''
       }${addWhere && or ? `${addWhere} ` : ''}${
         or ? `${or} ` : ''
-      }EXISTS ( SELECT 1 FROM ${target} WHERE ${conditions} LIMIT 1 )${
+      }EXISTS ( SELECT 1 FROM ${target} WHERE ${conditions})${
         addWhere && !or ? ` AND ${addWhere}` : ''
       }`;
     } else {
