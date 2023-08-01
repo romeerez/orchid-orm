@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.10.14
+
+### Patch Changes
+
+- 3b63faac: rake-db: add `createIfNotExists` and `dropIfExists` to table options; allow creating empty table
+- Updated dependencies [3b63faac]
+  - pqb@0.17.3
+
 ## 2.10.13
 
 ### Patch Changes

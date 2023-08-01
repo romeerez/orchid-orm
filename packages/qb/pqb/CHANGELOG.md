@@ -1,5 +1,11 @@
 # pqb
 
+## 0.17.3
+
+### Patch Changes
+
+- 3b63faac: Remove `LIMIT 1` SQL from `WHERE EXISTS` as it makes no difference here
+
 ## 0.17.2
 
 ### Patch Changes

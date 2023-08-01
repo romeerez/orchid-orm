@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.14.3
+
+### Patch Changes
+
+- 3b63faac: Remove `LIMIT 1` SQL from `WHERE EXISTS` as it makes no difference here
+- Updated dependencies [3b63faac]
+  - pqb@0.17.3
+
 ## 1.14.2
 
 ### Patch Changes
