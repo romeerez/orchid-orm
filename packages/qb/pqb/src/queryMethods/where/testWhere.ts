@@ -1,4 +1,4 @@
-import { Query } from '../../query';
+import { Query } from '../../query/query';
 import { testJoin } from '../join/testJoin';
 import { Sql } from 'orchid-core';
 import { expectSql, testDb } from 'test-utils';

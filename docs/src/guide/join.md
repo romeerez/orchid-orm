@@ -349,7 +349,7 @@ JOIN "message"
  AND "user"."id" IN (4, 5, 6)
 ```
 
-The join argument can be a query with `select`, `where`, and other methods. In such case, it will be handled as a sub query:
+The join argument can be a query with `select`, `where`, and other methods. In such a case, it will be handled as a sub query:
 
 ```ts
 db.user.join(
@@ -518,4 +518,17 @@ const result = await db.user
 
 // all columns can be null
 const ok: { name: string | null; text: string | null }[] = result;
+```
+
+## onJsonPathEquals
+
+[//]: # 'has JSDoc'
+
+Use `onJsonPathEquals` to join record based on a field of their JSON column:
+
+```ts
+db.table.join(db.otherTable, (q) =>
+  // '$.key' is a JSON path
+  q.onJsonPathEquals('otherTable.data', '$.key', 'table.data', '$.key'),
+);
 ```

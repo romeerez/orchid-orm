@@ -6,12 +6,12 @@ import {
   columnToSql,
 } from './common';
 import { JoinItem, SimpleJoinItem } from './types';
-import { Query, QueryWithTable } from '../query';
+import { Query, QueryWithTable } from '../query/query';
 import { whereToSql } from './where';
 import { ToSQLCtx } from './toSQL';
 import { JoinedShapes, QueryData, SelectQueryData } from './data';
-import { pushQueryArray } from '../queryDataUtils';
-import { QueryBase } from '../queryBase';
+import { pushQueryArray } from '../query/queryUtils';
+import { QueryBase } from '../query/queryBase';
 import { Expression, isExpression } from 'orchid-core';
 
 type ItemOf3Or4Length =

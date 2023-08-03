@@ -1,9 +1,9 @@
-import { Query } from '../../query';
+import { Query } from '../../query/query';
 import { ColumnsParsers, ColumnsShapeBase } from 'orchid-core';
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
 import { RelationQueryBase } from '../../relations';
-import { pushQueryValue, setQueryObjectValue } from '../../queryDataUtils';
+import { pushQueryValue, setQueryObjectValue } from '../../query/queryUtils';
 import {
   JoinArgs,
   JoinCallback,
@@ -13,8 +13,8 @@ import {
   JoinResult,
 } from './join';
 import { ColumnsShape } from '../../columns';
-import { getQueryAs } from '../../utils';
-import { QueryBase } from '../../queryBase';
+import { getQueryAs } from '../../common/utils';
+import { QueryBase } from '../../query/queryBase';
 
 /**
  * Generic function to construct all JOIN queries.

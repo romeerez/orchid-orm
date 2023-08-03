@@ -1,5 +1,5 @@
-import { Query, SetQueryKind, SetQueryReturnsRowCount } from '../query';
-import { throwIfNoWhere } from '../queryDataUtils';
+import { Query, SetQueryKind, SetQueryReturnsRowCount } from '../query/query';
+import { throwIfNoWhere } from '../query/queryUtils';
 
 export type DeleteMethodsNames = 'del' | '_del' | 'delete' | '_delete';
 

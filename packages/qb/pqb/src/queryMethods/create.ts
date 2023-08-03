@@ -5,7 +5,7 @@ import {
   SetQueryKind,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
-} from '../query';
+} from '../query/query';
 import { RelationConfigBase, RelationsBase } from '../relations';
 import {
   CreateKind,
@@ -14,7 +14,7 @@ import {
   OnConflictMergeUpdate,
 } from '../sql';
 import { VirtualColumn } from '../columns';
-import { anyShape } from '../db';
+import { anyShape } from '../query/db';
 import { Expression, SetOptional, StringKey, QueryThen } from 'orchid-core';
 import { isSelectingCount } from './aggregate';
 

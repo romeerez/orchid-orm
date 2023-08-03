@@ -1,4 +1,4 @@
-import { Query } from '../query';
+import { Query } from '../query/query';
 import { isExpression } from 'orchid-core';
 
 export type ClearStatement =

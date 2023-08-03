@@ -1,8 +1,8 @@
-import { Query } from '../query';
+import { Query } from '../query/query';
 import { SelectAggMethods } from './aggregate';
 import { ColumnTypeBase, Expression, TemplateLiteralArgs } from 'orchid-core';
-import { pushQueryValue } from '../queryDataUtils';
-import { getSubQueryBuilder } from '../subQueryBuilder';
+import { pushQueryValue } from '../query/queryUtils';
+import { getSubQueryBuilder } from '../query/subQueryBuilder';
 
 // Arguments of `having`:
 // can be a SQL template literal or one or multiple callbacks returning a boolean expression.

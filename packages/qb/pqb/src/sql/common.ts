@@ -1,4 +1,4 @@
-import { SelectableOrExpression } from '../utils';
+import { SelectableOrExpression } from '../common/utils';
 import { QueryData } from './data';
 import { ToSQLCtx } from './toSQL';
 

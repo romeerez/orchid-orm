@@ -1,4 +1,4 @@
-import { Query, SetQueryKind } from '../query';
+import { Query, SetQueryKind } from '../query/query';
 import { CopyOptions } from '../sql';
 
 // argument of the `copy` function can accept various options

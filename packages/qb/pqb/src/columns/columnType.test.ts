@@ -1,7 +1,7 @@
 import { ColumnType, instantiateColumn } from './columnType';
 import { Operators } from './operators';
 import { User, userData } from '../test-utils/test-utils';
-import { createDb } from '../db';
+import { createDb } from '../query/db';
 import { columnTypes } from './columnTypes';
 import { IntegerColumn } from './number';
 import { columnCode } from './code';

@@ -1,4 +1,4 @@
-import { Query } from '../query';
+import { Query } from '../query/query';
 import { pushWhereStatementSql } from './where';
 import { pushReturningSql } from './insert';
 import { processJoinItem } from './join';

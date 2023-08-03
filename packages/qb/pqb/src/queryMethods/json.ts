@@ -3,12 +3,12 @@ import {
   Query,
   queryTypeWithLimitOne,
   SetQueryReturnsColumnOptional,
-} from '../query';
-import { pushQueryValue } from '../queryDataUtils';
+} from '../query/query';
+import { pushQueryValue } from '../query/queryUtils';
 import { ColumnType, StringColumn } from '../columns';
 import { JsonItem, SelectQueryData } from '../sql';
 import { StringKey, ColumnTypeBase } from 'orchid-core';
-import { QueryBase } from '../queryBase';
+import { QueryBase } from '../query/queryBase';
 import { RawSQL } from '../sql/rawSql';
 
 // union of column names that have a `jsonb` type

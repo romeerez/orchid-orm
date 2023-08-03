@@ -1,4 +1,4 @@
-import { Query, SetQueryKind } from '../query';
+import { Query, SetQueryKind } from '../query/query';
 import { ColumnInfoQueryData } from '../sql';
 import { ColumnType } from '../columns';
 import { QueryCatch, QueryThen } from 'orchid-core';

@@ -6,8 +6,8 @@ import {
   WithDataBase,
   WithDataItem,
   QueryReturnType,
-} from '../../query';
-import { pushQueryValue, setQueryObjectValue } from '../../queryDataUtils';
+} from '../../query/query';
+import { pushQueryValue, setQueryObjectValue } from '../../query/queryUtils';
 import { WhereQueryBase } from '../where/where';
 import { RelationsBase } from '../../relations';
 import { QueryData } from '../../sql';
@@ -24,9 +24,9 @@ import {
   emptyObject,
 } from 'orchid-core';
 import { _join, _joinLateral } from './_join';
-import { AliasOrTable } from '../../utils';
+import { AliasOrTable } from '../../common/utils';
 import { ColumnsObject } from '../../columns';
-import { QueryBase } from '../../queryBase';
+import { QueryBase } from '../../query/queryBase';
 
 // Type of column names of a `with` table, to use to join a `with` table by these columns.
 // Union of `with` column names that may be prefixed with a `with` table name.
@@ -1128,6 +1128,25 @@ export class OnQueryBuilder<
     this.q.joinTo = joinTo;
   }
 
+  /**
+   * Use `on` to specify columns to join records.
+   *
+   * ```ts
+   * q
+   *   // left column is the db.message column, right column is the db.user column
+   *   .on('userId', 'id')
+   *   // table names can be provided:
+   *   .on('message.userId', 'user.id')
+   *   // operator can be specified:
+   *   .on('userId', '!=', 'id')
+   *   // operator can be specified with table names as well:
+   *   .on('message.userId', '!=', 'user.id')
+   *   // `.orOn` takes the same arguments as `.on` and acts like `.or`:
+   *   .on('userId', 'id') // where message.userId = user.id
+   * ```
+   *
+   * @param args - columns to join with
+   */
   on<T extends OnQueryBuilder>(this: T, ...args: OnArgs<T>): T {
     return this.clone()._on(...args);
   }
@@ -1135,6 +1154,11 @@ export class OnQueryBuilder<
     return pushQueryOn(this, this.q.joinTo as QueryBase, this, ...args);
   }
 
+  /**
+   * Works as {@link on}, but the added conditions will be separated from previous with `OR`.
+   *
+   * @param args - columns to join with
+   */
   orOn<T extends OnQueryBuilder>(this: T, ...args: OnArgs<T>): T {
     return this.clone()._orOn(...args);
   }
@@ -1142,6 +1166,18 @@ export class OnQueryBuilder<
     return pushQueryOrOn(this, this.q.joinTo as QueryBase, this, ...args);
   }
 
+  /**
+   * Use `onJsonPathEquals` to join record based on a field of their JSON column:
+   *
+   * ```ts
+   * db.table.join(db.otherTable, (q) =>
+   *   // '$.key' is a JSON path
+   *   q.onJsonPathEquals('otherTable.data', '$.key', 'table.data', '$.key'),
+   * );
+   * ```
+   *
+   * @param args - columns and JSON paths to join with.
+   */
   onJsonPathEquals<T extends OnQueryBuilder>(
     this: T,
     ...args: OnJsonPathEqualsArgs<T>

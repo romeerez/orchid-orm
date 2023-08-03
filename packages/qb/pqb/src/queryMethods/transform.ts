@@ -1,7 +1,7 @@
-import { Query } from '../query';
+import { Query } from '../query/query';
 import { ColumnTypeBase, QueryCatch, QueryThen } from 'orchid-core';
-import { pushQueryValue } from '../queryDataUtils';
-import { QueryBase } from '../queryBase';
+import { pushQueryValue } from '../query/queryUtils';
+import { QueryBase } from '../query/queryBase';
 
 // A function type to transfer query result with.
 // `input` type is inferred from a query `catch` method,

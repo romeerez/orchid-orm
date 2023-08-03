@@ -1,6 +1,6 @@
-import { Query } from '../../query';
+import { Query } from '../../query/query';
 import { ColumnOperators } from '../../sql';
-import { pushQueryArray, pushQueryValue } from '../../queryDataUtils';
+import { pushQueryArray, pushQueryValue } from '../../query/queryUtils';
 import { JoinArgs, JoinCallback, JoinFirstArg } from '../join/join';
 import {
   applyMixins,
@@ -11,7 +11,7 @@ import {
 import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select';
 import { BooleanNullable, ColumnsShape } from '../../columns';
-import { QueryBase } from '../../queryBase';
+import { QueryBase } from '../../query/queryBase';
 import { RawSQL } from '../../sql/rawSql';
 import { ColumnExpression } from '../../common/fn';
 import { RelationSubQueries } from '../../relations';

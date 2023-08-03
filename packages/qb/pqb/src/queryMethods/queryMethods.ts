@@ -9,8 +9,8 @@ import {
   SetQueryReturnsRows,
   SetQueryReturnsVoid,
   SetQueryTableAlias,
-} from '../query';
-import { SelectableOrExpression } from '../utils';
+} from '../query/query';
+import { SelectableOrExpression } from '../common/utils';
 import {
   OrderTsQueryConfig,
   SelectItem,
@@ -20,7 +20,11 @@ import {
   ToSQLOptions,
   TruncateQueryData,
 } from '../sql';
-import { pushQueryArray, pushQueryValue } from '../queryDataUtils';
+import {
+  extendQuery,
+  pushQueryArray,
+  pushQueryValue,
+} from '../query/queryUtils';
 import { Then } from './then';
 import { BooleanColumn } from '../columns';
 import { AggregateMethods } from './aggregate';
@@ -57,10 +61,11 @@ import {
   Expression,
 } from 'orchid-core';
 import { AsMethods } from './as';
-import { QueryBase } from '../queryBase';
+import { QueryBase } from '../query/queryBase';
 import { OrchidOrmInternalError } from '../errors';
 import { TransformMethods } from './transform';
 import { RawSQL } from '../sql/rawSql';
+import { noneMethods } from './none';
 
 // argument of the window method
 // it is an object where keys are name of windows
@@ -695,6 +700,29 @@ export class QueryMethods<CT extends ColumnTypesBase> {
       q.cascade = true;
     }
     return this._exec() as TruncateResult<T>;
+  }
+
+  /**
+   * `none` will resolve the query into an empty result, without executing a database query.
+   *
+   * ```ts
+   * await db.table.none(); // -> empty array
+   * await db.table.findOptional(123).none(); // -> undefined
+   * await db.table.find(123).none(); // throws NotFoundError
+   * ```
+   *
+   * [create](/guide/create-update-delete.html#create) chained with `count`, [update](/guide/create-update-delete.html#update), and [delete](/guide/create-update-delete.html#del-delete) are returning a count of affected records.
+   *
+   * When they are called with `none`, query does not execute and 0 is returned.
+   *
+   * ```ts
+   * await db.table.count().create(data); // -> 0
+   * await db.table.all().update(data); // -> 0
+   * await db.table.all().delete(); // -> 0
+   * ```
+   */
+  none<T extends Query>(this: T): T {
+    return extendQuery(this, noneMethods);
   }
 
   /**

@@ -1,7 +1,7 @@
 import { addValue } from './common';
 import { ToSQLCtx } from './toSQL';
 import { ColumnInfoQueryData } from './data';
-import { Query } from '../query';
+import { Query } from '../query/query';
 
 export const pushColumnInfoSql = (
   ctx: ToSQLCtx,

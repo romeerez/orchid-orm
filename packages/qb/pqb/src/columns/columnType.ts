@@ -1,5 +1,5 @@
 import { ColumnsShape } from './columnsSchema';
-import { Query } from '../query';
+import { Query } from '../query/query';
 import {
   ColumnDataBase,
   ColumnNameOfTable,

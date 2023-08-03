@@ -70,7 +70,7 @@ import {
   IndexOptions,
   ForeignKeyOptions,
 } from './columnType';
-import { makeRegexToFindInSql } from '../utils';
+import { makeRegexToFindInSql } from '../common/utils';
 import { ColumnsShape } from './columnsSchema';
 import { CustomTypeColumn, DomainColumn } from './customType';
 import { RawSQL } from '../sql/rawSql';

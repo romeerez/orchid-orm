@@ -1,13 +1,13 @@
 import { Query, QueryReturnType, SelectableBase, WithDataBase } from './query';
-import { QueryData } from './sql';
+import { QueryData } from '../sql';
 import {
   ColumnsShapeBase,
   QueryBaseCommon,
   QueryInternal,
   QueryMetaBase,
 } from 'orchid-core';
-import { RelationsBase } from './relations';
-import { getClonedQueryData } from './utils';
+import { RelationsBase } from '../relations';
+import { getClonedQueryData } from '../common/utils';
 
 export abstract class QueryBase implements QueryBaseCommon {
   /**

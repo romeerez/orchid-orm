@@ -1,6 +1,6 @@
-import { User, userData } from './test-utils/test-utils';
+import { User, userData } from '../test-utils/test-utils';
 import { createDb } from './db';
-import { QueryLogger } from './queryMethods';
+import { QueryLogger } from '../queryMethods';
 import {
   assertType,
   expectSql,
@@ -10,7 +10,7 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { TransactionState } from 'orchid-core';
-import { raw } from './sql/rawSql';
+import { raw } from '../sql/rawSql';
 
 describe('db connection', () => {
   it('should be able to open connection after closing it', async () => {

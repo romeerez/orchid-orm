@@ -1,13 +1,13 @@
 import { JsonItem, SelectItem } from './types';
 import { RawSQL } from './rawSql';
-import { Query } from '../query';
+import { Query } from '../query/query';
 import { addValue, q, columnToSql, columnToSqlWithAs } from './common';
 import { OrchidOrmInternalError, UnhandledTypeError } from '../errors';
 import { makeSQL, ToSQLCtx } from './toSQL';
 import { SelectQueryData } from './data';
-import { SelectableOrExpression } from '../utils';
+import { SelectableOrExpression } from '../common/utils';
 import { isExpression } from 'orchid-core';
-import { QueryBase } from '../queryBase';
+import { QueryBase } from '../query/queryBase';
 
 const jsonColumnOrMethodToSql = (
   table: Query,

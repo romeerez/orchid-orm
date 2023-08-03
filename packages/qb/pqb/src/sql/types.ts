@@ -1,6 +1,6 @@
-import { Query, QueryWithTable, SelectableBase } from '../query';
+import { Query, QueryWithTable, SelectableBase } from '../query/query';
 import { RelationQuery } from '../relations';
-import { SelectableOrExpression } from '../utils';
+import { SelectableOrExpression } from '../common/utils';
 import { SelectQueryData } from './data';
 import {
   ColumnTypeBase,
@@ -8,7 +8,7 @@ import {
   MaybeArray,
   TemplateLiteralArgs,
 } from 'orchid-core';
-import { QueryBase } from '../queryBase';
+import { QueryBase } from '../query/queryBase';
 import { FnExpression } from '../common/fn';
 
 // used in `from` logic to decide if convert query to sql or just write table name

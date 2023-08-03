@@ -6,14 +6,14 @@ import {
   logParamToLogObject,
   QueryLogOptions,
   WhereQueryBuilder,
-} from './queryMethods';
-import { QueryData, SelectQueryData, ToSQLOptions } from './sql';
+} from '../queryMethods';
+import { QueryData, SelectQueryData, ToSQLOptions } from '../sql';
 import {
   AdapterOptions,
   Adapter,
   QueryResult,
   QueryArraysResult,
-} from './adapter';
+} from '../adapter';
 import {
   ColumnsShape,
   getColumnTypes,
@@ -21,8 +21,8 @@ import {
   getTableData,
   DefaultColumnTypes,
   columnTypes,
-} from './columns';
-import { QueryError, QueryErrorName } from './errors';
+} from '../columns';
+import { QueryError, QueryErrorName } from '../errors';
 import {
   DbBase,
   ColumnsShapeBase,
@@ -46,13 +46,13 @@ import {
   isRawSQL,
   EmptyObject,
 } from 'orchid-core';
-import { q } from './sql/common';
+import { q } from '../sql/common';
 import { inspect } from 'util';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { templateLiteralToSQL } from './sql/rawSql';
+import { templateLiteralToSQL } from '../sql/rawSql';
 import { getSubQueryBuilder, SubQueryBuilder } from './subQueryBuilder';
-import { getClonedQueryData } from './utils';
-import { RelationQueryBase, RelationsBase } from './relations';
+import { getClonedQueryData } from '../common/utils';
+import { RelationQueryBase, RelationsBase } from '../relations';
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 

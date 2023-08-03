@@ -1,4 +1,4 @@
-import { Query } from '../query';
+import { Query } from '../query/query';
 import { addValue, quoteSchemaAndTable } from './common';
 import { pushReturningSql } from './insert';
 import { pushWhereStatementSql } from './where';
@@ -10,8 +10,8 @@ import {
   UpdateQueryDataObject,
 } from './data';
 import { isExpression, pushOrNewArray } from 'orchid-core';
-import { Db } from '../db';
-import { joinSubQuery } from '../utils';
+import { Db } from '../query/db';
+import { joinSubQuery } from '../common/utils';
 import { JsonItem } from './types';
 import { jsonToSql } from './select';
 

@@ -1,6 +1,6 @@
 import { Query } from './query';
-import { SelectAggMethods, SelectQueryBuilder } from './queryMethods';
-import { getClonedQueryData } from './utils';
+import { SelectAggMethods, SelectQueryBuilder } from '../queryMethods';
+import { getClonedQueryData } from '../common/utils';
 
 /**
  * Used to build relation sub queries where agg methods such as `count` can be chained with column operators such as `gt`, `lt`.

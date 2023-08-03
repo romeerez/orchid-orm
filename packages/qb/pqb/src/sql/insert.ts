@@ -1,14 +1,14 @@
 import { addValue, ownColumnToSql } from './common';
 import { pushWhereStatementSql } from './where';
-import { Query } from '../query';
+import { Query } from '../query/query';
 import { selectToSql } from './select';
 import { makeSQL, ToSQLCtx } from './toSQL';
-import { pushQueryValue } from '../queryDataUtils';
+import { pushQueryValue } from '../query/queryUtils';
 import { InsertQueryData, QueryData, QueryHookSelect } from './data';
 import { emptyArray, Expression, isExpression } from 'orchid-core';
 import { ColumnData } from '../columns';
-import { joinSubQuery, resolveSubQueryCallback } from '../utils';
-import { Db } from '../db';
+import { joinSubQuery, resolveSubQueryCallback } from '../common/utils';
+import { Db } from '../query/db';
 import { RawSQL } from './rawSql';
 
 // reuse array for the columns list

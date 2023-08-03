@@ -1,6 +1,6 @@
 import { ToSQLCtx } from './toSQL';
 import { CopyQueryData } from './data';
-import { Query } from '../query';
+import { Query } from '../query/query';
 import { q } from './common';
 import { quoteString } from '../quote';
 import { pushWhereStatementSql } from './where';

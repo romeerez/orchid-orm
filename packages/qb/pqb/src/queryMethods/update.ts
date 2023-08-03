@@ -3,17 +3,17 @@ import {
   QueryReturnsAll,
   SetQueryKind,
   SetQueryReturnsRowCount,
-} from '../query';
+} from '../query/query';
 import {
   pushQueryValue,
   saveSearchAlias,
   throwIfNoWhere,
-} from '../queryDataUtils';
+} from '../query/queryUtils';
 import { RelationConfigBase, RelationQueryBase } from '../relations';
 import { WhereResult } from './where/where';
 import { JsonItem, QueryData, UpdateQueryData } from '../sql';
 import { VirtualColumn } from '../columns';
-import { anyShape, Db } from '../db';
+import { anyShape, Db } from '../query/db';
 import {
   isExpression,
   Expression,
@@ -27,7 +27,7 @@ import {
 import { QueryResult } from '../adapter';
 import { JsonModifiers } from './json';
 import { RawSQL } from '../sql/rawSql';
-import { resolveSubQueryCallback } from '../utils';
+import { resolveSubQueryCallback } from '../common/utils';
 import { OrchidOrmInternalError } from '../errors';
 
 // Type of argument for `update` and `updateOrThrow`

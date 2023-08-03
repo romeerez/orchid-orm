@@ -1,5 +1,5 @@
-import { SetQueryTableAlias } from '../query';
-import { QueryBase } from '../queryBase';
+import { SetQueryTableAlias } from '../query/query';
+import { QueryBase } from '../query/queryBase';
 
 export abstract class AsMethods extends QueryBase {
   /**

@@ -2,7 +2,7 @@ import {
   Query,
   SelectableOrExpressionOfType,
   SetQueryReturnsColumn,
-} from '../query';
+} from '../query/query';
 import {
   ArrayColumn,
   BooleanColumn,
@@ -18,7 +18,7 @@ import {
   UnknownColumn,
   XMLColumn,
 } from '../columns';
-import { ExpressionOutput, SelectableOrExpression } from '../utils';
+import { ExpressionOutput, SelectableOrExpression } from '../common/utils';
 import { SelectQueryData } from '../sql';
 import {
   ColumnTypeBase,

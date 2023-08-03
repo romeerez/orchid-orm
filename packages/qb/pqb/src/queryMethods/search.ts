@@ -1,15 +1,15 @@
-import { Query, SelectableOrExpressionOfType } from '../query';
+import { Query, SelectableOrExpressionOfType } from '../query/query';
 import { ColumnExpression, makeColumnFnClass } from '../common/fn';
 import { TextColumn } from '../columns';
 import { SelectAggMethods } from './aggregate';
 import { ColumnTypeBase, Expression, MaybeArray } from 'orchid-core';
 import { OrderTsQueryConfig, SearchWeight, ToSQLCtx } from '../sql';
-import { QueryBase } from '../queryBase';
+import { QueryBase } from '../query/queryBase';
 import {
   pushQueryValue,
   saveSearchAlias,
   setQueryObjectValue,
-} from '../queryDataUtils';
+} from '../query/queryUtils';
 import { getSearchLang, getSearchText } from '../sql/fromAndAs';
 import { OrchidOrmInternalError } from '../errors';
 import { addValue, columnToSql } from '../sql/common';

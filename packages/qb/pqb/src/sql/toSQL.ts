@@ -1,4 +1,4 @@
-import { Query, queryTypeWithLimitOne } from '../query';
+import { Query, queryTypeWithLimitOne } from '../query/query';
 import { addValue, q, columnToSql } from './common';
 import { JoinItem } from './types';
 import { pushDistinctSql } from './distinct';
@@ -18,7 +18,7 @@ import { pushOrderBySql } from './orderBy';
 import { QueryData } from './data';
 import { pushCopySql } from './copy';
 import { isExpression, Sql } from 'orchid-core';
-import { Db } from '../db';
+import { Db } from '../query/db';
 
 export type ToSQLCtx = {
   queryBuilder: Db;

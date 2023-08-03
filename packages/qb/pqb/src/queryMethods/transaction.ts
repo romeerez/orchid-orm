@@ -1,4 +1,4 @@
-import { Query } from '../query';
+import { Query } from '../query/query';
 import {
   AfterCommitHook,
   emptyArray,
@@ -7,7 +7,7 @@ import {
   TransactionAdapterBase,
   TransactionState,
 } from 'orchid-core';
-import { QueryBase } from '../queryBase';
+import { QueryBase } from '../query/queryBase';
 
 const commitSql = {
   text: 'COMMIT',

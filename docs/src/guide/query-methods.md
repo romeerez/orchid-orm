@@ -166,6 +166,28 @@ const records = db.table
   .all();
 ```
 
+## none
+
+[//]: # 'has JSDoc'
+
+`none` will resolve the query into an empty result, without executing a database query.
+
+```ts
+await db.table.none(); // -> empty array
+await db.table.findOptional(123).none(); // -> undefined
+await db.table.find(123).none(); // throws NotFoundError
+```
+
+[create](/guide/create-update-delete.html#create) chained with `count`, [update](/guide/create-update-delete.html#update), and [delete](/guide/create-update-delete.html#del-delete) are returning a count of affected records.
+
+When they are called with `none`, query does not execute and 0 is returned.
+
+```ts
+await db.table.count().create(data); // -> 0
+await db.table.all().update(data); // -> 0
+await db.table.all().delete(); // -> 0
+```
+
 ## raw sql
 
 [//]: # 'has JSDoc'

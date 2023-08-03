@@ -1,7 +1,7 @@
 import { User } from '../test-utils/test-utils';
 import { ColumnType, IntegerColumn } from '../columns';
 import { expectSql, testAdapter } from 'test-utils';
-import { createDb } from '../db';
+import { createDb } from '../query/db';
 
 describe('raw sql', () => {
   it('should use column types in callback from a db instance', () => {

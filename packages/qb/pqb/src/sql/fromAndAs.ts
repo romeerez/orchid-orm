@@ -2,7 +2,7 @@ import { addValue, columnToSql, quoteSchemaAndTable } from './common';
 import { checkIfASimpleQuery, QuerySourceItem } from './types';
 import { makeSQL, ToSQLCtx } from './toSQL';
 import { QueryData, SelectQueryData } from './data';
-import { QueryBase } from '../queryBase';
+import { QueryBase } from '../query/queryBase';
 import { isExpression, isRawSQL, MaybeArray } from 'orchid-core';
 
 export const pushFromAndAs = (

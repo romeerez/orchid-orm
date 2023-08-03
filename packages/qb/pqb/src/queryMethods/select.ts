@@ -3,14 +3,14 @@ import {
   Query,
   QueryReturnsAll,
   SelectableBase,
-} from '../query';
+} from '../query/query';
 import {
   ArrayOfColumnsObjects,
   ColumnsObject,
   JSONTextColumn,
   PluckResultColumnType,
 } from '../columns';
-import { pushQueryArray } from '../queryDataUtils';
+import { pushQueryArray } from '../query/queryUtils';
 import { SelectItem, SelectQueryData } from '../sql';
 import { QueryResult } from '../adapter';
 import {
@@ -29,12 +29,15 @@ import {
   setParserToQuery,
   StringKey,
 } from 'orchid-core';
-import { QueryBase } from '../queryBase';
+import { QueryBase } from '../query/queryBase';
 import { _joinLateral } from './join/_join';
-import { resolveSubQueryCallback, SelectableOrExpression } from '../utils';
+import {
+  resolveSubQueryCallback,
+  SelectableOrExpression,
+} from '../common/utils';
 import { RawSQL } from '../sql/rawSql';
 import { SelectAggMethods } from './aggregate';
-import { getSubQueryBuilder } from '../subQueryBuilder';
+import { getSubQueryBuilder } from '../query/subQueryBuilder';
 
 // .select method argument
 export type SelectArg<T extends Query> =

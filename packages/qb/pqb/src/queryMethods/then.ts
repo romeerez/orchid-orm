@@ -1,4 +1,4 @@
-import { Query, QueryReturnType } from '../query';
+import { Query, QueryReturnType } from '../query/query';
 import { NotFoundError, QueryError } from '../errors';
 import { QueryArraysResult, QueryResult } from '../adapter';
 import {
@@ -45,6 +45,12 @@ export class Then {
   get then() {
     queryError = new Error();
     return maybeWrappedThen;
+  }
+
+  set then(value) {
+    Object.defineProperty(this, 'then', {
+      value,
+    });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,7 +1,7 @@
 import { rawOrColumnToSql } from './common';
 import { ToSQLCtx } from './toSQL';
 import { SelectQueryData } from './data';
-import { QueryBase } from '../queryBase';
+import { QueryBase } from '../query/queryBase';
 
 export const pushDistinctSql = (
   ctx: ToSQLCtx,

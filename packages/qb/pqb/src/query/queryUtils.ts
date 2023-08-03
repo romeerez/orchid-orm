@@ -1,8 +1,9 @@
-import { QueryData } from './sql';
+import { QueryData } from '../sql';
 import { emptyObject, pushOrNewArrayToObject } from 'orchid-core';
-import { OrchidOrmInternalError } from './errors';
+import { OrchidOrmInternalError } from '../errors';
 import { Query } from './query';
 import { QueryBase } from './queryBase';
+import { getClonedQueryData } from '../common/utils';
 
 /**
  * Push all elements of given array into the array in the query data,
@@ -101,4 +102,29 @@ export const saveSearchAlias = (
   setQueryObjectValue(q, key, as, emptyObject);
 
   return as;
+};
+
+/**
+ * Extend query prototype with new methods.
+ * The query and its data are cloned (with Object.create).
+ *
+ * @param q - query object to extend from
+ * @param methods - methods to add
+ */
+export const extendQuery = <
+  T extends Query,
+  Methods extends Record<string, unknown>,
+>(
+  q: T,
+  methods: Methods,
+): T & Methods => {
+  const base = Object.create(q.baseQuery);
+  base.baseQuery = base;
+
+  Object.assign(base, methods);
+
+  const cloned = Object.create(base);
+  cloned.q = getClonedQueryData(q.q);
+
+  return cloned as T & Methods;
 };

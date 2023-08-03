@@ -172,12 +172,12 @@ describe('join callback with query builder', () => {
   it('should have .onJsonPathEquals method', () => {
     expectSql(
       User.join(User.as('otherUser'), (q) =>
-        q.onJsonPathEquals('user.data', '$.name', 'otherUser.data', '$.name'),
+        q.onJsonPathEquals('otherUser.data', '$.name', 'user.data', '$.name'),
       ).toSQL(),
       `
         SELECT "user".* FROM "user"
         JOIN "user" AS "otherUser"
-          ON jsonb_path_query_first("user"."data", $1) = jsonb_path_query_first("otherUser"."data", $2)
+          ON jsonb_path_query_first("otherUser"."data", $1) = jsonb_path_query_first("user"."data", $2)
       `,
       ['$.name', '$.name'],
     );
@@ -187,16 +187,16 @@ describe('join callback with query builder', () => {
     expectSql(
       Snake.join(Snake.as('otherSnake'), (q) =>
         q.onJsonPathEquals(
-          'snake.snakeData',
-          '$.name',
           'otherSnake.snakeData',
+          '$.name',
+          'snake.snakeData',
           '$.name',
         ),
       ).toSQL(),
       `
         SELECT ${snakeSelectAllWithTable} FROM "snake"
         JOIN "snake" AS "otherSnake"
-          ON jsonb_path_query_first("snake"."snake_data", $1) = jsonb_path_query_first("otherSnake"."snake_data", $2)
+          ON jsonb_path_query_first("otherSnake"."snake_data", $1) = jsonb_path_query_first("snake"."snake_data", $2)
       `,
       ['$.name', '$.name'],
     );

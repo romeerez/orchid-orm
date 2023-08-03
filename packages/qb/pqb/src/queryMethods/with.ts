@@ -1,8 +1,8 @@
 import { WithOptions } from '../sql';
 import { ColumnTypes } from '../columns';
-import { AddQueryWith, Query } from '../query';
-import { Db } from '../db';
-import { pushQueryValue, setQueryObjectValue } from '../queryDataUtils';
+import { AddQueryWith, Query } from '../query/query';
+import { Db } from '../query/db';
+import { pushQueryValue, setQueryObjectValue } from '../query/queryUtils';
 import {
   isExpression,
   Expression,

@@ -6,7 +6,7 @@ import {
   MessageRecord,
   User,
   userData,
-} from '../test-utils/test-utils';
+} from '../../test-utils/test-utils';
 import { assertType, expectSql, useTestDatabase } from 'test-utils';
 
 const insertUserAndMessage = async () => {

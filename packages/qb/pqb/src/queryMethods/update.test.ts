@@ -12,7 +12,7 @@ import {
 import { assertType, expectSql, useTestDatabase } from 'test-utils';
 import { RelationConfigBase, RelationQuery } from '../relations';
 import { addQueryOn } from './join/join';
-import { Query } from '../query';
+import { Query } from '../query/query';
 import { raw } from '../sql/rawSql';
 
 describe('update', () => {

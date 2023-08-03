@@ -1,4 +1,4 @@
-import { Query, QueryReturnType, GetQueryResult } from '../query';
+import { Query, QueryReturnType, GetQueryResult } from '../query/query';
 import { SelectQueryData } from '../sql';
 import {
   ColumnsShapeBase,

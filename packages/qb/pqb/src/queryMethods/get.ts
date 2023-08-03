@@ -4,7 +4,7 @@ import {
   SetQueryReturnsColumnOptional,
   SetQueryReturnsValue,
   SetQueryReturnsValueOptional,
-} from '../query';
+} from '../query/query';
 import { addParserForRawExpression, processSelectArg } from './select';
 import {
   ColumnTypeBase,
@@ -13,7 +13,7 @@ import {
   StringKey,
 } from 'orchid-core';
 import { SelectQueryData } from '../sql';
-import { QueryBase } from '../queryBase';
+import { QueryBase } from '../query/queryBase';
 
 // `get` method argument, accepts a string for a column name or a raw SQL
 export type GetArg<T extends QueryBase> = GetStringArg<T> | Expression;

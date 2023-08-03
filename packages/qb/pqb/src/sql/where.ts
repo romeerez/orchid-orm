@@ -1,4 +1,4 @@
-import { Query } from '../query';
+import { Query } from '../query/query';
 import {
   SimpleJoinItem,
   WhereInItem,
@@ -9,7 +9,7 @@ import {
   WhereSearchItem,
 } from './types';
 import { addValue, q, qc, columnToSql } from './common';
-import { getQueryAs } from '../utils';
+import { getQueryAs } from '../common/utils';
 import { processJoinItem } from './join';
 import { makeSQL, ToSQLCtx } from './toSQL';
 import { JoinedShapes, QueryData } from './data';

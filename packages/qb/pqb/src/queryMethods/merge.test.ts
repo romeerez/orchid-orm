@@ -1,5 +1,5 @@
 import { Message, Profile, User } from '../test-utils/test-utils';
-import { QueryReturnType } from '../query';
+import { QueryReturnType } from '../query/query';
 import { IntegerColumn, TextColumn } from '../columns';
 import { logParamToLogObject } from './log';
 import {

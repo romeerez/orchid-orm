@@ -1,5 +1,5 @@
 import { ColumnsShape } from './columns';
-import { Query } from './query';
+import { Query } from './query/query';
 
 export abstract class OrchidOrmError extends Error {
   abstract query: Query;

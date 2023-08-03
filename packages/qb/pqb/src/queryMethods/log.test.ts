@@ -1,4 +1,4 @@
-import { createDb } from '../db';
+import { createDb } from '../query/db';
 import { userData } from '../test-utils/test-utils';
 import { logColors } from './log';
 import { noop } from 'orchid-core';

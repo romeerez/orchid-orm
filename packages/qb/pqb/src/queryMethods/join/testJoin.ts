@@ -1,4 +1,4 @@
-import { Query } from '../../query';
+import { Query } from '../../query/query';
 import { addQueryOn } from './join';
 import { columnSqlForTest } from '../where/testWhere';
 import { expectSql, testDb } from 'test-utils';

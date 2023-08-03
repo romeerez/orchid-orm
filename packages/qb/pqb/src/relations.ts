@@ -1,8 +1,8 @@
-import { Query, QueryWithTable } from './query';
+import { Query, QueryWithTable } from './query/query';
 import { CreateMethodsNames, DeleteMethodsNames } from './queryMethods';
 import { EmptyObject, StringKey } from 'orchid-core';
-import { QueryBase } from './queryBase';
-import { SubQueryBuilder } from './subQueryBuilder';
+import { QueryBase } from './query/queryBase';
+import { SubQueryBuilder } from './query/subQueryBuilder';
 
 export type RelationConfigBase = {
   table: QueryWithTable;

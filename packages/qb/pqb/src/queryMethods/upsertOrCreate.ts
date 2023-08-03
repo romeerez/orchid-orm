@@ -3,7 +3,7 @@ import {
   SetQueryKind,
   SetQueryReturnsOne,
   SetQueryReturnsVoid,
-} from '../query';
+} from '../query/query';
 import { UpdateData } from './update';
 import { CreateData } from './create';
 import { WhereResult } from './where/where';

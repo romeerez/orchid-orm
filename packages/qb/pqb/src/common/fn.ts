@@ -1,6 +1,6 @@
-import { Query } from '../query';
+import { Query } from '../query/query';
 import { ColumnTypeBase, emptyObject, Expression, toArray } from 'orchid-core';
-import { SelectableOrExpression } from '../utils';
+import { SelectableOrExpression } from './utils';
 import { OrderItem, ToSQLCtx, WhereItem } from '../sql';
 import { addValue, columnToSql, rawOrColumnToSql } from '../sql/common';
 import { pushOrderBySql } from '../sql/orderBy';

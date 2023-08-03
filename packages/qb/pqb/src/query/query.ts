@@ -6,13 +6,13 @@ import {
   WhereQueryBase,
   WhereQueryBuilder,
   WhereResult,
-} from './queryMethods';
-import { QueryData } from './sql';
-import { ColumnsShape, ColumnType } from './columns';
-import { AliasOrTable } from './utils';
+} from '../queryMethods';
+import { QueryData } from '../sql';
+import { ColumnsShape, ColumnType } from '../columns';
+import { AliasOrTable } from '../common/utils';
 import { Db } from './db';
-import { RelationsBase } from './relations';
-import { QueryError, QueryErrorName } from './errors';
+import { RelationsBase } from '../relations';
+import { QueryError, QueryErrorName } from '../errors';
 import {
   ColumnShapeOutput,
   ColumnsShapeBase,

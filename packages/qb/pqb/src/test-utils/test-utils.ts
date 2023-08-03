@@ -1,4 +1,4 @@
-import { Query } from '../query';
+import { Query } from '../query/query';
 import { quote } from '../quote';
 import { expectSql, testDb, testDbClient } from 'test-utils';
 

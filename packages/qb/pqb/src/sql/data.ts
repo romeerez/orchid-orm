@@ -1,4 +1,4 @@
-import { Query, QueryReturnType } from '../query';
+import { Query, QueryReturnType } from '../query/query';
 import { QueryLogger, QueryLogObject } from '../queryMethods';
 import { Adapter, QueryResult } from '../adapter';
 import { ColumnsShape } from '../columns';
@@ -17,7 +17,7 @@ import {
   WindowItem,
   WithItem,
 } from './types';
-import { SelectableOrExpression } from '../utils';
+import { SelectableOrExpression } from '../common/utils';
 import {
   ColumnsShapeBase,
   ColumnTypeBase,
@@ -27,7 +27,7 @@ import {
   ColumnsParsers,
   Expression,
 } from 'orchid-core';
-import { QueryBase } from '../queryBase';
+import { QueryBase } from '../query/queryBase';
 
 // Column shapes of joined tables. Used to select, filter, order by the columns of joined tables.
 export type JoinedShapes = Record<string, ColumnsShapeBase>;

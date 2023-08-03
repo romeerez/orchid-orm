@@ -3,7 +3,7 @@ import { expectSql, testDb, useTestDatabase } from 'test-utils';
 import { NotFoundError } from '../errors';
 import { noop, TransactionState } from 'orchid-core';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { Query } from '../query';
+import { Query } from '../query/query';
 
 // make query ignore the transaction that is injected by `useTestDatabase`
 const ignoreTestTransactionOnce = (q: Query) => {

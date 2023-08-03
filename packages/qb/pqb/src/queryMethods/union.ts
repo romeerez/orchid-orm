@@ -1,5 +1,5 @@
-import { Query } from '../query';
-import { pushQueryArray } from '../queryDataUtils';
+import { Query } from '../query/query';
+import { pushQueryArray } from '../query/queryUtils';
 import { Expression } from 'orchid-core';
 
 // argument of `union`-like query methods.

@@ -5,9 +5,9 @@ import {
   SelectableFromShape,
   SetQueryTableAlias,
   WithDataItem,
-} from '../query';
+} from '../query/query';
 import { SelectQueryData } from '../sql';
-import { AliasOrTable } from '../utils';
+import { AliasOrTable } from '../common/utils';
 import {
   QueryCatch,
   QueryThen,
