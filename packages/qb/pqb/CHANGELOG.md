@@ -1,5 +1,11 @@
 # pqb
 
+## 0.17.4
+
+### Patch Changes
+
+- d5011e31: Add `none` method (#111)
+
 ## 0.17.3
 
 ### Patch Changes
