@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.20
+
+### Patch Changes
+
+- 5dcbaf93: Add the `pull` command to help output of rake-db
+
 ## 2.10.19
 
 ### Patch Changes
