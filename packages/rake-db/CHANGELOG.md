@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.18
+
+### Patch Changes
+
+- 12e88c30: Support creating a databaase without specifying a user
+
 ## 2.10.17
 
 ### Patch Changes
