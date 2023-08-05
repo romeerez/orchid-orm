@@ -926,13 +926,13 @@ export class UserTable extends BaseTable {
 
   relations = {
     follows: this.hasMany(() => UserFollowTable, {
-      primaryKey: 'id',
-      foreignKey: 'followingId',
+      columns: ['id'],
+      references: ['followingId'],
     }),
 
     followings: this.hasMany(() => UserFollowTable, {
-      primaryKey: 'id',
-      foreignKey: 'followerId',
+      columns: ['id'],
+      references: ['followerId'],
     }),
   };
 }
@@ -1195,8 +1195,8 @@ export class TagTable extends BaseTable {
 
   relations = {
     articleTags: this.hasMany(() => ArticleTagTable, {
-      primaryKey: 'id',
-      foreignKey: 'tagId',
+      columns: ['id'],
+      references: ['tagId'],
     }),
   };
 }
@@ -1226,8 +1226,8 @@ export class ArticleTagTable extends BaseTable {
   relations = {
     // this `tag` relation name is used in the article table `tags` relation in the `source` option
     tag: this.belongsTo(() => TagTable, {
-      primaryKey: 'id',
-      foreignKey: 'tagId',
+      columns: ['tagId'],
+      references: ['id'],
     }),
   };
 }
@@ -1276,18 +1276,18 @@ export class ArticleTable extends BaseTable {
 
   relations = {
     author: this.belongsTo(() => UserTable, {
-      primaryKey: 'id',
-      foreignKey: 'userId',
+      columns: ['userId'],
+      references: ['id'],
     }),
 
     favorites: this.hasMany(() => ArticleFavoriteTable, {
-      primaryKey: 'id',
-      foreignKey: 'articleId',
+      columns: ['id'],
+      references: ['articleId'],
     }),
 
     articleTags: this.hasMany(() => ArticleTagTable, {
-      primaryKey: 'id',
-      foreignKey: 'articleId',
+      columns: ['id'],
+      references: ['articleId'],
     }),
 
     tags: this.hasMany(() => TagTable, {

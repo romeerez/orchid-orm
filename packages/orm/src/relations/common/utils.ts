@@ -1,32 +1,48 @@
 import {
   CreateCtx,
+  getQueryAs,
+  JoinCallback,
+  pushQueryOn,
   Query,
   RelationConfigBase,
+  setQueryObjectValue,
   UpdateData,
   WhereArg,
   WhereQueryBase,
 } from 'pqb';
 import { MaybeArray } from 'orchid-core';
-import { HasOneNestedInsert, HasOneNestedUpdate } from './hasOne';
-import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
+import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
+import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
 
 export type NestedInsertOneItem = {
-  create?: Record<string, unknown>;
-  connect?: WhereArg<WhereQueryBase>;
-  connectOrCreate?: {
-    where: WhereArg<WhereQueryBase>;
-    create: Record<string, unknown>;
-  };
+  create?: NestedInsertOneItemCreate;
+  connect?: NestedInsertOneItemConnect;
+  connectOrCreate?: NestedInsertOneItemConnectOrCreate;
+};
+
+export type NestedInsertOneItemCreate = Record<string, unknown>;
+
+export type NestedInsertOneItemConnect = WhereArg<WhereQueryBase>;
+
+export type NestedInsertOneItemConnectOrCreate = {
+  where: WhereArg<WhereQueryBase>;
+  create: Record<string, unknown>;
 };
 
 export type NestedInsertManyItems = {
-  create?: Record<string, unknown>[];
-  connect?: WhereArg<WhereQueryBase>[];
-  connectOrCreate?: {
-    where: WhereArg<WhereQueryBase>;
-    create: Record<string, unknown>;
-  }[];
+  create?: NestedInsertManyCreate;
+  connect?: NestedInsertManyConnect;
+  connectOrCreate?: NestedInsertManyConnectOrCreate;
 };
+
+export type NestedInsertManyCreate = Record<string, unknown>[];
+
+export type NestedInsertManyConnect = WhereArg<WhereQueryBase>[];
+
+export type NestedInsertManyConnectOrCreate = {
+  where: WhereArg<WhereQueryBase>;
+  create: Record<string, unknown>;
+}[];
 
 export type NestedInsertItem = NestedInsertOneItem | NestedInsertManyItems;
 
@@ -75,7 +91,7 @@ export const hasRelationHandleCreate = (
   item: Record<string, unknown>,
   rowIndex: number,
   key: string,
-  primaryKey: string,
+  primaryKeys: string[],
   nestedInsert: HasOneNestedInsert | HasManyNestedInsert,
 ) => {
   const value = item[key] as NestedInsertItem;
@@ -108,7 +124,7 @@ export const hasRelationHandleCreate = (
   const relationData = [values];
   store.hasRelation[key] = relationData;
 
-  q._afterCreate([primaryKey], (rows, q) =>
+  q._afterCreate(primaryKeys, (rows, q) =>
     (nestedInsert as HasOneNestedInsert)(
       q,
       relationData.map(([rowIndex, data]) => [
@@ -123,7 +139,7 @@ export const hasRelationHandleUpdate = (
   q: Query,
   set: Record<string, unknown>,
   key: string,
-  primaryKey: string,
+  primaryKeys: string[],
   nestedUpdate: HasOneNestedUpdate | HasManyNestedUpdate,
 ) => {
   const value = set[key] as NestedUpdateItem;
@@ -142,9 +158,7 @@ export const hasRelationHandleUpdate = (
   )
     return;
 
-  if (!q.q.select?.includes('*') && !q.q.select?.includes(primaryKey)) {
-    q._select(primaryKey);
-  }
+  selectIfNotSelected(q, primaryKeys);
 
   q.q.wrapInTransaction = true;
 
@@ -156,3 +170,67 @@ export const hasRelationHandleUpdate = (
     );
   });
 };
+
+export const selectIfNotSelected = (q: Query, columns: string[]) => {
+  const select = q.q.select || [];
+  if (!select.includes('*')) {
+    for (const column of columns) {
+      if (!select.includes(column)) {
+        select.push(column);
+      }
+    }
+    q.q.select = select;
+  }
+};
+
+export const relationWhere =
+  (len: number, keys: string[], valueKeys: string[]) =>
+  (params: Record<string, unknown>) => {
+    const obj: Record<string, unknown> = {};
+    for (let i = 0; i < len; i++) {
+      obj[keys[i]] = params[valueKeys[i]];
+    }
+    return obj;
+  };
+
+export function joinHasThrough(
+  q: Query,
+  fromQuery: Query,
+  toQuery: Query,
+  throughRelation: RelationConfigBase,
+  sourceRelation: RelationConfigBase,
+): Query {
+  return q.whereExists<Query, Query>(
+    throughRelation.joinQuery(fromQuery, throughRelation.query),
+    (() => {
+      const as = getQueryAs(toQuery);
+      return sourceRelation.joinQuery(
+        throughRelation.query,
+        sourceRelation.query.as(as),
+      );
+    }) as unknown as JoinCallback<Query, Query>,
+  );
+}
+
+export function joinHasRelation(
+  fromQuery: Query,
+  toQuery: Query,
+  primaryKeys: string[],
+  foreignKeys: string[],
+  len: number,
+) {
+  const q = toQuery.clone();
+
+  setQueryObjectValue(
+    q,
+    'joinedShapes',
+    (fromQuery.q.as || fromQuery.table) as string,
+    fromQuery.q.shape,
+  );
+
+  for (let i = 0; i < len; i++) {
+    pushQueryOn(q, fromQuery, toQuery, foreignKeys[i], primaryKeys[i]);
+  }
+
+  return q;
+}

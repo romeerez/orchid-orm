@@ -30,13 +30,13 @@ describe('transaction', () => {
     ).toEqual([
       'BEGIN',
       line(`
-        INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO "user"("name", "userKey", "password", "updatedAt", "createdAt")
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING ${userSelectAll}
       `),
       line(`
-        INSERT INTO "profile"("bio", "updatedAt", "createdAt")
-        VALUES ($1, $2, $3)
+        INSERT INTO "profile"("bio", "profileKey", "updatedAt", "createdAt")
+        VALUES ($1, $2, $3, $4)
         RETURNING ${profileSelectAll}
       `),
       'ROLLBACK',

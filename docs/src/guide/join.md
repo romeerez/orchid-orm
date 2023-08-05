@@ -76,8 +76,8 @@ export class UserTable extends BaseTable {
 
   relations = {
     messages: this.hasMany(() => MessageTable, {
-      primaryKey: 'id',
-      foreignKey: 'userId',
+      columns: ['id'],
+      references: ['userId'],
     }),
   };
 }
@@ -86,14 +86,15 @@ export class MessageTable extends BaseTable {
   readonly table = 'message';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
+    userId: t.integer(),
     text: t.text(),
     ...t.timestamps(),
   }));
 
   relations = {
     user: this.belongsTo(() => UserTable, {
-      primaryKey: 'id',
-      foreignKey: 'userId',
+      columns: ['userId'],
+      references: ['id'],
     }),
   };
 }

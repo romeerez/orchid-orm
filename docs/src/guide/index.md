@@ -77,8 +77,8 @@ export class UserTable extends BaseTable {
     // there are also belongsTo, hasMany, hasAndBelongsToMany
     profile: this.hasOne(() => ProfileTable, {
       required: true,
-      primaryKey: 'id',
-      foreignKey: 'userId',
+      columns: ['id'],
+      references: ['userId'],
     }),
   };
 }

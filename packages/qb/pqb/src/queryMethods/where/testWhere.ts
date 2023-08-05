@@ -528,6 +528,27 @@ export const testWhere = (
     });
 
     describe('tuple', () => {
+      it('should handle single value', () => {
+        expectSql(
+          [
+            buildSql((q) =>
+              q.where({
+                IN: {
+                  columns: [pkey],
+                  values: [[1], [2]],
+                },
+              }),
+            ),
+            buildSql((q) => q.whereIn([pkey], [[1], [2]])),
+          ],
+          `
+              ${startSql}
+              ${pkeySql} IN ($1, $2)
+            `,
+          [1, 2],
+        );
+      });
+
       it('should handle values', () => {
         expectSql(
           [

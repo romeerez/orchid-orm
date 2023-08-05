@@ -288,6 +288,7 @@ describe('select', () => {
         {
           p: {
             id: expect.any(Number),
+            profileKey: null,
             userId: expect.any(Number),
             bio: profileData.bio,
             createdAt: expect.any(Date),
@@ -326,6 +327,7 @@ describe('select', () => {
         {
           profile: {
             id: expect.any(Number),
+            profileKey: null,
             userId: expect.any(Number),
             bio: profileData.bio,
             createdAt: expect.any(Date),
@@ -358,6 +360,7 @@ describe('select', () => {
         {
           p: {
             id: expect.any(Number),
+            profileKey: null,
             userId: expect.any(Number),
             bio: profileData.bio,
             createdAt: expect.any(Date),
@@ -390,6 +393,7 @@ describe('select', () => {
         {
           profile: {
             id: expect.any(Number),
+            profileKey: null,
             userId: expect.any(Number),
             bio: profileData.bio,
             createdAt: expect.any(Date),

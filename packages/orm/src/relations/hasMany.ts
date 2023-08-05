@@ -1,5 +1,4 @@
 import {
-  RelationCommonOptions,
   RelationData,
   RelationConfig,
   RelationThunkBase,
@@ -8,8 +7,6 @@ import {
 } from './relations';
 import { DbTable, Table, TableClass } from '../baseTable';
 import {
-  addQueryOn,
-  getQueryAs,
   CreateData,
   JoinCallback,
   Query,
@@ -26,44 +23,52 @@ import {
   UpdateData,
   QueryWithTable,
 } from 'pqb';
-import { EmptyObject, MaybeArray } from 'orchid-core';
+import { EmptyObject, MaybeArray, toArray } from 'orchid-core';
 import {
   getSourceRelation,
   getThroughRelation,
   hasRelationHandleCreate,
   hasRelationHandleUpdate,
+  joinHasRelation,
+  joinHasThrough,
+  NestedInsertManyConnect,
+  NestedInsertManyConnectOrCreate,
   NestedInsertManyItems,
   NestedUpdateManyItems,
-} from './utils';
+} from './common/utils';
+import { HasOneOptions } from './hasOne';
+import {
+  RelationKeysOptions,
+  RelationRefsOptions,
+  RelationThroughOptions,
+} from './common/options';
 
-export interface HasMany extends RelationThunkBase {
+export type HasMany = RelationThunkBase & {
   type: 'hasMany';
-  returns: 'many';
-  options:
-    | RelationCommonOptions &
-        (
-          | {
-              primaryKey: string;
-              foreignKey: string;
-            }
-          | {
-              through: string;
-              source: string;
-            }
-        );
-}
+  options: HasManyOptions;
+};
+
+export type HasManyOptions<
+  Self extends Table = Table,
+  Related extends TableClass = TableClass,
+  Scope extends Query = Query,
+  Through extends string = string,
+  Source extends string = string,
+> = HasOneOptions<Self, Related, Scope, Through, Source>;
 
 export type HasManyInfo<
   T extends Table,
   Relations extends RelationThunks,
   Relation extends HasMany,
   K extends string,
-  Populate extends string = Relation['options'] extends { foreignKey: string }
+  Populate extends string = Relation['options'] extends RelationRefsOptions
+    ? Relation['options']['references'][number]
+    : Relation['options'] extends RelationKeysOptions
     ? Relation['options']['foreignKey']
     : never,
   TC extends TableClass = ReturnType<Relation['fn']>,
   Q extends QueryWithTable = SetQueryTableAlias<DbTable<TC>, K>,
-  NestedCreateQuery extends Query = [Populate] extends [never]
+  NestedCreateQuery extends Query = Relation['options'] extends RelationThroughOptions
     ? Q
     : Q & {
         meta: { defaults: Record<Populate, true> };
@@ -75,7 +80,7 @@ export type HasManyInfo<
   one: false;
   required: Relation['options']['required'] extends true ? true : false;
   omitForeignKeyInCreate: never;
-  dataForCreate: Relation['options'] extends { through: string }
+  dataForCreate: Relation['options'] extends RelationThroughOptions
     ? EmptyObject
     : RelationToManyDataForCreate<{
         nestedCreateQuery: NestedCreateQuery;
@@ -101,12 +106,16 @@ export type HasManyInfo<
     create?: CreateData<NestedCreateQuery>[];
   };
 
-  params: Relation['options'] extends { primaryKey: string }
+  params: Relation['options'] extends RelationRefsOptions
+    ? {
+        [K in Relation['options']['columns'][number]]: T['columns']['shape'][K]['type'];
+      }
+    : Relation['options'] extends RelationKeysOptions
     ? Record<
         Relation['options']['primaryKey'],
         T['columns']['shape'][Relation['options']['primaryKey']]['type']
       >
-    : Relation['options'] extends { through: string }
+    : Relation['options'] extends RelationThroughOptions
     ? RelationConfig<
         T,
         Relations,
@@ -114,16 +123,16 @@ export type HasManyInfo<
       >['params']
     : never;
   populate: Populate;
-  chainedCreate: Relation['options'] extends { primaryKey: string }
-    ? true
-    : false;
+  chainedCreate: Relation['options'] extends RelationThroughOptions
+    ? false
+    : true;
   chainedDelete: true;
 };
 
 type State = {
   query: Query;
-  primaryKey: string;
-  foreignKey: string;
+  primaryKeys: string[];
+  foreignKeys: string[];
 };
 
 export type HasManyNestedUpdate = (
@@ -162,7 +171,7 @@ class HasManyVirtualColumn extends VirtualColumn {
       item,
       rowIndex,
       this.key,
-      this.state.primaryKey,
+      this.state.primaryKeys,
       this.nestedInsert,
     );
   }
@@ -178,7 +187,7 @@ class HasManyVirtualColumn extends VirtualColumn {
       q,
       set,
       this.key,
-      this.state.primaryKey,
+      this.state.primaryKeys,
       this.nestedUpdate,
     );
   }
@@ -221,49 +230,61 @@ export const makeHasManyMethod = (
         );
       },
       joinQuery(fromQuery, toQuery) {
-        return toQuery.whereExists<Query, Query>(
-          throughRelation.joinQuery(fromQuery, throughRelation.query),
-          (() => {
-            const as = getQueryAs(toQuery);
-            return sourceRelation.joinQuery(
-              throughRelation.query,
-              sourceRelation.query.as(as),
-            );
-          }) as unknown as JoinCallback<Query, Query>,
+        return joinHasThrough(
+          toQuery,
+          fromQuery,
+          toQuery,
+          throughRelation,
+          sourceRelation,
         );
       },
       reverseJoin(fromQuery, toQuery) {
-        return fromQuery.whereExists<Query, Query>(
-          throughRelation.joinQuery(fromQuery, throughRelation.query),
-          (() => {
-            const as = getQueryAs(toQuery);
-            return sourceRelation.joinQuery(
-              throughRelation.query,
-              sourceRelation.query.as(as),
-            );
-          }) as unknown as JoinCallback<Query, Query>,
+        return joinHasThrough(
+          fromQuery,
+          fromQuery,
+          toQuery,
+          throughRelation,
+          sourceRelation,
         );
       },
     };
   }
 
-  const { primaryKey, foreignKey } = relation.options;
-  const state: State = { query, primaryKey, foreignKey };
+  const primaryKeys =
+    'columns' in relation.options
+      ? relation.options.columns
+      : [relation.options.primaryKey];
 
-  const fromQuerySelect = [{ selectAs: { [foreignKey]: primaryKey } }];
+  const foreignKeys =
+    'columns' in relation.options
+      ? relation.options.references
+      : [relation.options.foreignKey];
+
+  const state: State = { query, primaryKeys, foreignKeys };
+  const len = primaryKeys.length;
+
+  const reversedOn: Record<string, string> = {};
+  for (let i = 0; i < len; i++) {
+    reversedOn[foreignKeys[i]] = primaryKeys[i];
+  }
+
+  const fromQuerySelect = [{ selectAs: reversedOn }];
 
   return {
     returns: 'many',
     method: (params: Record<string, unknown>) => {
-      const values = { [foreignKey]: params[primaryKey] };
+      const values: Record<string, unknown> = {};
+      for (let i = 0; i < len; i++) {
+        values[foreignKeys[i]] = params[primaryKeys[i]];
+      }
       return query.where(values)._defaults(values);
     },
     virtualColumn: new HasManyVirtualColumn(relationName, state),
     joinQuery(fromQuery, toQuery) {
-      return addQueryOn(toQuery, fromQuery, toQuery, foreignKey, primaryKey);
+      return joinHasRelation(fromQuery, toQuery, primaryKeys, foreignKeys, len);
     },
     reverseJoin(fromQuery, toQuery) {
-      return addQueryOn(fromQuery, toQuery, fromQuery, primaryKey, foreignKey);
+      return joinHasRelation(toQuery, fromQuery, foreignKeys, primaryKeys, len);
     },
     modifyRelatedQuery(relationQuery) {
       return (query) => {
@@ -278,152 +299,189 @@ export const makeHasManyMethod = (
 };
 
 const getWhereForNestedUpdate = (
+  t: Query,
   data: Record<string, unknown>[],
   params: MaybeArray<WhereArg<WhereQueryBase>> | undefined,
-  primaryKey: string,
-  foreignKey: string,
-) => {
-  const where: WhereArg<Query> = {
-    [foreignKey]: { in: data.map((item) => item[primaryKey]) },
-  };
-  if (params) {
-    if (Array.isArray(params)) {
-      where.OR = params;
-    } else {
-      Object.assign(where, params);
-    }
-  }
-  return where;
+  primaryKeys: string[],
+  foreignKeys: string[],
+): WhereResult<Query> => {
+  return t.where({
+    IN: {
+      columns: foreignKeys,
+      values: data.map((item) => primaryKeys.map((key) => item[key])),
+    },
+    OR: params ? toArray(params) : undefined,
+  });
 };
 
-const nestedInsert = ({ query, primaryKey, foreignKey }: State) => {
-  return (async (_, data) => {
-    const connect = data.filter(
-      (
-        item,
-      ): item is [
-        Record<string, unknown>,
-        { connect: WhereArg<WhereQueryBase>[] },
-      ] => Boolean(item[1].connect),
-    );
+const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
+  const len = primaryKeys.length;
 
+  return (async (_, data) => {
     const t = query.clone();
 
-    if (connect.length) {
-      await Promise.all(
-        connect.flatMap(([selfData, { connect }]) =>
-          t.or<Query>(...connect)._updateOrThrow({
-            [foreignKey]: selfData[primaryKey],
-          } as UpdateData<WhereResult<Query>>),
-        ),
-      );
+    // array to store specific items will be reused
+    const items: unknown[] = [];
+    for (const item of data) {
+      if (item[1].connect) {
+        items.push(item);
+      }
     }
 
-    const connectOrCreate = data.filter(
-      (
-        item,
-      ): item is [
-        Record<string, unknown>,
-        {
-          connectOrCreate: {
-            where: WhereArg<WhereQueryBase>;
-            create: Record<string, unknown>;
-          }[];
-        },
-      ] => Boolean(item[1].connectOrCreate),
-    );
+    if (items.length) {
+      for (let i = 0, len = items.length; i < len; i++) {
+        const [selfData, { connect }] = items[i] as [
+          Record<string, unknown>,
+          { connect: NestedInsertManyConnect },
+        ];
+
+        const obj: Record<string, unknown> = {};
+        for (let i = 0; i < len; i++) {
+          obj[foreignKeys[i]] = selfData[primaryKeys[i]];
+        }
+
+        items[i] = t
+          .or<Query>(...connect)
+          ._updateOrThrow(obj as UpdateData<WhereResult<Query>>);
+      }
+
+      await Promise.all(items);
+    }
+
+    items.length = 0;
+    for (const item of data) {
+      if (item[1].connectOrCreate) {
+        items.push(item);
+      }
+    }
 
     let connected: number[];
-    if (connectOrCreate.length) {
-      connected = await Promise.all(
-        connectOrCreate.flatMap(([selfData, { connectOrCreate }]) =>
-          connectOrCreate.map((item) =>
+    if (items.length) {
+      const queries: Query[] = [];
+      for (let i = 0, len = items.length; i < len; i++) {
+        const [selfData, { connectOrCreate }] = items[i] as [
+          Record<string, unknown>,
+          { connectOrCreate: NestedInsertManyConnectOrCreate },
+        ];
+
+        for (const item of connectOrCreate) {
+          const obj: Record<string, unknown> = {};
+          for (let i = 0; i < len; i++) {
+            obj[foreignKeys[i]] = selfData[primaryKeys[i]];
+          }
+
+          queries.push(
             (
               t.where(item.where) as WhereResult<Query & { hasSelect: false }>
-            )._update({
-              [foreignKey]: selfData[primaryKey],
-            } as UpdateData<WhereResult<Query>>),
-          ),
-        ),
-      );
+            )._update(obj as UpdateData<WhereResult<Query>>),
+          );
+        }
+      }
+
+      connected = (await Promise.all(queries)) as number[];
     } else {
       connected = [];
     }
 
     let connectedI = 0;
-    const create = data.filter(
-      (
-        item,
-      ): item is [
-        Record<string, unknown>,
-        {
-          create?: Record<string, unknown>[];
-          connectOrCreate?: {
-            where: WhereArg<WhereQueryBase>;
-            create: Record<string, unknown>;
-          }[];
-        },
-      ] => {
-        if (item[1].connectOrCreate) {
-          const length = item[1].connectOrCreate.length;
-          connectedI += length;
-          for (let i = length; i > 0; i--) {
-            if (connected[connectedI - i] === 0) return true;
+    items.length = 0;
+    for (const item of data) {
+      if (item[1].connectOrCreate) {
+        const length = item[1].connectOrCreate.length;
+        connectedI += length;
+        for (let i = length; i > 0; i--) {
+          if (connected[connectedI - i] === 0) {
+            items.push(item);
+            break;
           }
         }
-        return Boolean(item[1].create);
-      },
-    );
+      } else if (item[1].create) {
+        items.push(item);
+      }
+    }
 
     connectedI = 0;
-    if (create.length) {
-      await t._createMany(
-        create.flatMap(([selfData, { create = [], connectOrCreate = [] }]) => {
-          return [
-            ...create.map((item) => ({
-              [foreignKey]: selfData[primaryKey],
+    if (items.length) {
+      const records: Record<string, unknown>[] = [];
+
+      for (const [selfData, { create, connectOrCreate }] of items as [
+        Record<string, unknown>,
+        NestedInsertManyItems,
+      ][]) {
+        const obj: Record<string, unknown> = {};
+        for (let i = 0; i < len; i++) {
+          obj[foreignKeys[i]] = selfData[primaryKeys[i]];
+        }
+
+        if (create) {
+          for (const item of create) {
+            records.push({
               ...item,
-            })),
-            ...connectOrCreate
-              .filter(() => connected[connectedI++] === 0)
-              .map((item) => ({
-                [foreignKey]: selfData[primaryKey],
+              ...obj,
+            });
+          }
+        }
+
+        if (connectOrCreate) {
+          for (const item of connectOrCreate) {
+            if (connected[connectedI++] === 0) {
+              records.push({
                 ...item.create,
-              })),
-          ];
-        }) as CreateData<Query>[],
-      );
+                ...obj,
+              });
+            }
+          }
+        }
+      }
+
+      await t._createMany(records);
     }
   }) as HasManyNestedInsert;
 };
 
-const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
+const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
+  const len = primaryKeys.length;
+
   return (async (_, data, params) => {
     const t = query.clone();
     if (params.create) {
+      const obj: Record<string, unknown> = {};
+      for (let i = 0; i < len; i++) {
+        obj[foreignKeys[i]] = data[0][primaryKeys[i]];
+      }
+
       await t._count()._createMany(
         params.create.map((create) => ({
           ...create,
-          [foreignKey]: data[0][primaryKey],
+          ...obj,
         })),
       );
+
       delete t.q[toSQLCacheKey];
     }
 
     if (params.disconnect || params.set) {
-      await t
-        .where<Query>(
-          getWhereForNestedUpdate(
-            data,
-            params.disconnect,
-            primaryKey,
-            foreignKey,
-          ),
-        )
-        ._update({ [foreignKey]: null } as UpdateData<WhereResult<Query>>);
+      const obj: Record<string, unknown> = {};
+      for (const foreignKey of foreignKeys) {
+        obj[foreignKey] = null;
+      }
+
+      await getWhereForNestedUpdate(
+        t,
+        data,
+        params.disconnect,
+        primaryKeys,
+        foreignKeys,
+      )._update(obj as UpdateData<WhereResult<Query>>);
 
       if (params.set) {
         delete t.q[toSQLCacheKey];
+
+        const obj: Record<string, unknown> = {};
+        for (let i = 0; i < len; i++) {
+          obj[foreignKeys[i]] = data[0][primaryKeys[i]];
+        }
+
         await t
           .where<Query>(
             Array.isArray(params.set)
@@ -432,21 +490,19 @@ const nestedUpdate = ({ query, primaryKey, foreignKey }: State) => {
                 }
               : params.set,
           )
-          ._update({ [foreignKey]: data[0][primaryKey] } as UpdateData<
-            WhereResult<Query>
-          >);
+          ._update(obj as UpdateData<WhereResult<Query>>);
       }
     }
 
     if (params.delete || params.update) {
       delete t.q[toSQLCacheKey];
-      const q = t._where(
-        getWhereForNestedUpdate(
-          data,
-          params.delete || params.update?.where,
-          primaryKey,
-          foreignKey,
-        ),
+
+      const q = getWhereForNestedUpdate(
+        t,
+        data,
+        params.delete || params.update?.where,
+        primaryKeys,
+        foreignKeys,
       );
 
       if (params.delete) {

@@ -34,8 +34,9 @@ describe('belongsTo', () => {
         `
         SELECT ${userSelectAll} FROM "user"
         WHERE "user"."id" = $1
+          AND "user"."userKey" = $2
       `,
-        [UserId],
+        [UserId, 'key'],
       );
 
       const user = await query;
@@ -58,6 +59,7 @@ describe('belongsTo', () => {
               SELECT 1 FROM "profile"
               WHERE "profile"."bio" = $1
                 AND "profile"."userId" = "user"."id"
+                AND "profile"."profileKey" = "user"."userKey"
             )
             AND "user"."name" = $2
         `,
@@ -81,6 +83,7 @@ describe('belongsTo', () => {
         `
           SELECT ${userSelectAll} FROM "user" AS "u"
           WHERE "u"."id" = "p"."userId"
+            AND "u"."userKey" = "p"."profileKey"
         `,
       );
     });
@@ -93,6 +96,7 @@ describe('belongsTo', () => {
           WHERE EXISTS (
             SELECT 1 FROM "user"
             WHERE "user"."id" = "profile"."userId"
+              AND "user"."userKey" = "profile"."profileKey"
           )
         `,
       );
@@ -107,6 +111,7 @@ describe('belongsTo', () => {
         WHERE EXISTS (
           SELECT 1 FROM "user"
           WHERE "user"."id" = "p"."userId"
+            AND "user"."userKey" = "p"."profileKey"
             AND "user"."name" = $1
         )
       `,
@@ -127,9 +132,11 @@ describe('belongsTo', () => {
           WHERE EXISTS (
             SELECT 1 FROM "user"
             WHERE "user"."id" = "m"."authorId"
+              AND "user"."userKey" = "m"."messageKey"
               AND EXISTS (
                 SELECT 1 FROM "profile"
                 WHERE "profile"."userId" = "user"."id"
+                  AND "profile"."profileKey" = "user"."userKey"
                   AND "profile"."bio" = $1
               )
           )
@@ -154,7 +161,10 @@ describe('belongsTo', () => {
         `
         SELECT "p"."bio" AS "Bio", "user"."name" AS "Name"
         FROM "profile" AS "p"
-        JOIN "user" ON "user"."id" = "p"."userId" AND "user"."name" = $1
+        JOIN "user"
+          ON "user"."id" = "p"."userId"
+         AND "user"."userKey" = "p"."profileKey"
+         AND "user"."name" = $1
       `,
         ['name'],
       );
@@ -180,7 +190,10 @@ describe('belongsTo', () => {
         SELECT "p"."bio" AS "Bio", "u"."name" AS "Name"
         FROM "profile" AS "p"
         JOIN "user" AS "u"
-          ON "u"."name" = $1 AND "u"."age" = $2 AND "u"."id" = "p"."userId"
+          ON "u"."name" = $1
+         AND "u"."age" = $2
+         AND "u"."id" = "p"."userId"
+         AND "u"."userKey" = "p"."profileKey"
       `,
         ['name', 20],
       );
@@ -202,7 +215,9 @@ describe('belongsTo', () => {
           JOIN LATERAL (
             SELECT ${userSelectAll}
             FROM "user" AS "u"
-            WHERE "u"."name" = $1 AND "u"."id" = "profile"."userId"
+            WHERE "u"."name" = $1 
+              AND "u"."id" = "profile"."userId"
+              AND "u"."userKey" = "profile"."profileKey"
           ) "u" ON true
           WHERE "u"."Name" = $2
         `,
@@ -236,6 +251,7 @@ describe('belongsTo', () => {
               FROM "user"
               WHERE "user"."name" = $1
                 AND "user"."id" = "p"."userId"
+                AND "user"."userKey" = "p"."profileKey"
             ) "user" ON true
             ORDER BY "user"."Name" ASC
           `,
@@ -261,6 +277,7 @@ describe('belongsTo', () => {
               SELECT true r
               FROM "user"
               WHERE "user"."id" = "p"."userId"
+                AND "user"."userKey" = "p"."profileKey"
             ) "hasUser" ON true
           `,
         );
@@ -294,10 +311,14 @@ describe('belongsTo', () => {
                   SELECT ${userSelectAll}
                   FROM "user"
                   WHERE "user"."id" = "profile"."userId"
+                    AND "user"."userKey" = "profile"."profileKey"
                 ) "user2" ON true
-                WHERE "user2"."Name" = $1 AND "profile"."userId" = "user"."id"
+                WHERE "user2"."Name" = $1
+                  AND "profile"."userId" = "user"."id"
+                  AND "profile"."profileKey" = "user"."userKey"
               ) "profile2" ON true
               WHERE "user"."id" = "profile"."userId"
+                AND "user"."userKey" = "profile"."profileKey"
             ) "user" ON true
           `,
           ['name'],
@@ -453,6 +474,7 @@ describe('belongsTo', () => {
             readonly table = 'user';
             columns = this.setColumns((t) => ({
               Id: t.name('id').identity().primaryKey(),
+              UserKey: t.name('userKey').text(),
             }));
           }
 
@@ -460,6 +482,7 @@ describe('belongsTo', () => {
             readonly table = 'profile';
             columns = this.setColumns((t) => ({
               Id: t.name('id').identity().primaryKey(),
+              ProfileKey: t.name('profileKey').text(),
               UserId: t
                 .name('userId')
                 .integer()
@@ -472,8 +495,8 @@ describe('belongsTo', () => {
             relations = {
               user: this.belongsTo(() => UserTable, {
                 required: true,
-                primaryKey: 'Id',
-                foreignKey: 'UserId',
+                columns: ['UserId', 'ProfileKey'],
+                references: ['Id', 'UserKey'],
               }),
             };
           }
@@ -530,7 +553,7 @@ describe('belongsTo', () => {
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toBeCalledWith(
-            [{ IdOfChat: expect.any(Number) }],
+            [{ IdOfChat: expect.any(Number), ChatKey: 'key' }],
             expect.any(Db),
           );
         });
@@ -544,8 +567,8 @@ describe('belongsTo', () => {
           expect(afterCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toBeCalledWith(
             [
-              { IdOfChat: expect.any(Number) },
-              { IdOfChat: expect.any(Number) },
+              { IdOfChat: expect.any(Number), ChatKey: 'key' },
+              { IdOfChat: expect.any(Number), ChatKey: 'key' },
             ],
             expect.any(Db),
           );
@@ -769,7 +792,7 @@ describe('belongsTo', () => {
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toBeCalledWith(
-            [{ IdOfChat: expect.any(Number) }],
+            [{ IdOfChat: expect.any(Number), ChatKey: 'key' }],
             expect.any(Db),
           );
         });
@@ -783,8 +806,8 @@ describe('belongsTo', () => {
           expect(afterCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toBeCalledWith(
             [
-              { IdOfChat: expect.any(Number) },
-              { IdOfChat: expect.any(Number) },
+              { IdOfChat: expect.any(Number), ChatKey: 'key' },
+              { IdOfChat: expect.any(Number), ChatKey: 'key' },
             ],
             expect.any(Db),
           );
@@ -1242,7 +1265,7 @@ describe('belongsTo', () => {
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toBeCalledWith(
-            [{ Id: expect.any(Number) }],
+            [{ Id: expect.any(Number), UserKey: 'key' }],
             expect.any(Db),
           );
         });
@@ -1308,7 +1331,7 @@ describe('belongsTo', () => {
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toBeCalledWith(
-            [{ Id: expect.any(Number) }],
+            [{ Id: expect.any(Number), UserKey: 'key' }],
             expect.any(Db),
           );
         });
@@ -1325,7 +1348,7 @@ describe('belongsTo', () => {
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toBeCalledWith(
-            [{ Id: expect.any(Number) }],
+            [{ Id: expect.any(Number), UserKey: 'key' }],
             expect.any(Db),
           );
         });
@@ -1408,6 +1431,7 @@ describe('belongsTo', () => {
           SELECT count(*) = $1
           FROM "user"
           WHERE "user"."id" = "profile"."userId"
+            AND "user"."userKey" = "profile"."profileKey"
             AND "user"."name" IN ($2, $3)
         )
       `,

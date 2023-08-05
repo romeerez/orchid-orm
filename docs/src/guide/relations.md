@@ -22,8 +22,8 @@ export class UserTable extends BaseTable {
   relations = {
     profile: this.hasOne(() => ProfileTable, {
       required: true,
-      primaryKey: 'id',
-      foreignKey: 'userId',
+      columns: ['id'],
+      references: ['userId'],
     }),
   };
 }
@@ -46,8 +46,8 @@ export class ProfileTable extends BaseTable {
   relations = {
     profile: this.belongsTo(() => UserTable, {
       required: true,
-      primaryKey: 'id',
-      foreignKey: 'userId',
+      columns: ['userId'],
+      references: ['id'],
     }),
   };
 }
@@ -86,10 +86,10 @@ export class BookTable extends BaseTable {
     author: this.belongsTo(() => AuthorTable, {
       // required is affecting on TS type of returned record
       required: true,
-      // primaryKey is a column of Author to connect with
-      primaryKey: 'id',
-      // foreignKey is a column of Book to use
-      foreignKey: 'authorId',
+      // columns of this table for the connection
+      columns: ['authorId'],
+      // columns of the related table to connect with
+      references: ['id'],
     }),
   };
 }
@@ -120,10 +120,11 @@ export class SupplierTable extends BaseTable {
     account: this.hasOne(() => AccountTable, {
       // required is affecting on TS type of returned record
       required: true,
-      // primaryKey is a column of Supplier to use
-      primaryKey: 'id',
-      // foreignKey is a column of Account to connect with
-      foreignKey: 'supplierId',
+      // the same as in belongsTo:
+      // columns of this table for the connection
+      columns: ['id'],
+      // columns of the related table to connect with
+      references: ['supplierId'],
     }),
   };
 }
@@ -164,15 +165,15 @@ export class SupplierTable extends BaseTable {
   relations = {
     account: this.hasOne(() => AccountTable, {
       required: true,
-      primaryKey: 'id',
-      foreignKey: 'supplierId',
+      columns: ['id'],
+      references: ['supplierId'],
     }),
 
     accountHistory: this.hasOne(() => AccountTable, {
       required: true,
-      // previously defined relation name
+      // a previously defined relation name
       through: 'account',
-      // name of relation in Account table
+      // name of a relation in the Account table
       source: 'accountHistory',
     }),
   };
@@ -191,8 +192,8 @@ export class AccountTable extends BaseTable {
   relations = {
     accountHistory: this.hasOne(() => AccountHistoryTable, {
       required: true,
-      primaryKey: 'id',
-      foreignKey: 'accountId',
+      columns: ['id'],
+      references: ['accountId'],
     }),
   };
 }
@@ -210,8 +211,8 @@ export class AccountHistoryTable extends BaseTable {
   relations = {
     account: this.belongsTo(() => AccountTable, {
       required: true,
-      primaryKey: 'id',
-      foreignKey: 'accountId',
+      columns: ['accountId'],
+      references: ['id'],
     }),
   };
 }
@@ -239,10 +240,10 @@ export class AuthorTable extends BaseTable {
 
   relations = {
     books: this.hasMany(() => BookTable, {
-      // primaryKey is a column of Author to use
-      primaryKey: 'id',
-      // foreignKey is a column of Book to connect with
-      foreignKey: 'authorId',
+      // columns of this table to use for connection
+      columns: ['id'],
+      // columns of the related table to connect with
+      references: ['authorId'],
     }),
   };
 }
@@ -282,10 +283,10 @@ export class PhysicianTable extends BaseTable {
 
   relations = {
     appointments: this.hasMany(() => AppointmentTable, {
-      // primaryKey is a column of Physicians to use
-      primaryKey: 'id',
-      // foreignKey is a column of Appointment to connect with
-      foreignKey: 'authorId',
+      // columns of this table to use for connection
+      columns: ['id'],
+      // columns of the related table to connect with
+      references: ['authorId'],
     }),
 
     patients: this.hasMany(() => PatienTable, {
@@ -311,13 +312,13 @@ export class AppointmentTable extends BaseTable {
 
   relations = {
     physician: this.belongsTo(() => PhysicianTable, {
-      primaryKey: 'id',
-      foreignKey: 'physycianId',
+      columns: ['physycianId'],
+      references: ['id'],
     }),
 
     patient: this.belongsTo(() => PatientTable, {
-      primaryKey: 'id',
-      foreignKey: 'patientId',
+      columns: ['patientId'],
+      references: ['id'],
     }),
   };
 }
@@ -332,8 +333,8 @@ export class PatientTable extends BaseTable {
 
   relations = {
     appointments: this.hasMany(() => AppointmentTable, {
-      primaryKey: 'id',
-      foreignKey: 'patientId',
+      columns: ['id'],
+      references: ['patientId'],
     }),
 
     physicians: this.hasMany(() => PhysicianTable, {
@@ -367,16 +368,18 @@ export class PostTable extends BaseTable {
 
   relations = {
     tags: this.hasAndBelongsToMany(() => TagTable, {
-      // primaryKey is a column of this table
-      primaryKey: 'id',
-      // foreignKey is a column of joinTable to connect with this table
-      foreignKey: 'postId',
-      // associationPrimaryKey is a primaryKey of a related table
-      associationPrimaryKey: 'id',
-      // associationForeignKey is a column of joinTable to connect with related table
-      associationForeignKey: 'tagId',
-      // joinTable is a connection table between this and related tables
-      joinTable: 'postTag',
+      // columns of this table to connect with the middle table
+      columns: ['id'],
+      // columns of the middle table to connect the columns to
+      references: ['postId'],
+      through: {
+        // name of the middle table
+        table: 'postTag',
+        // columns of the middle table to connect to the related table
+        columns: ['tagId'],
+        // columns of the related table to connect the middle table to
+        references: ['id'],
+      },
     }),
   };
 }
@@ -391,11 +394,13 @@ export class TagTable extends BaseTable {
 
   relations = {
     posts: this.hasAndBelongsToMany(() => PostTable, {
-      primaryKey: 'id',
-      foreignKey: 'tagId',
-      associationPrimaryKey: 'id',
-      associationForeignKey: 'postId',
-      joinTable: 'postTag',
+      columns: ['id'],
+      references: ['tagId'],
+      through: {
+        table: 'postTag',
+        columns: ['postId'],
+        references: ['id'],
+      },
     }),
   };
 }

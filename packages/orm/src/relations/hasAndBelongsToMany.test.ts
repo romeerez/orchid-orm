@@ -35,10 +35,12 @@ describe('hasAndBelongsToMany', () => {
         WHERE EXISTS (
           SELECT 1 FROM "chatUser"
           WHERE "chatUser"."chatId" = "chats"."idOfChat"
+            AND "chatUser"."chatKey" = "chats"."chatKey"
             AND "chatUser"."userId" = $1
+            AND "chatUser"."userKey" = $2
         )
       `,
-        [userId],
+        [userId, 'key'],
       );
 
       const messages = await query;
@@ -61,7 +63,9 @@ describe('hasAndBelongsToMany', () => {
                 AND EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                    AND "chatUser"."chatKey" = "chats"."chatKey"
                     AND "chatUser"."userId" = "user"."id"
+                    AND "chatUser"."userKey" = "user"."userKey"
                 )
             )
             AND "chats"."title" = $2
@@ -76,6 +80,7 @@ describe('hasAndBelongsToMany', () => {
 
         const chat = await db.user.find(user.Id).chats.create({
           Title: 'title',
+          ChatKey: 'key',
         });
 
         expect(chat.Title).toBe('title');
@@ -86,6 +91,7 @@ describe('hasAndBelongsToMany', () => {
       it('should throw not found when not found even when searching with findOptional', async () => {
         const query = db.user.findOptional(1).chats.create({
           Title: 'title',
+          ChatKey: 'key',
         });
 
         await expect(() => query).rejects.toThrow('Record is not found');
@@ -95,6 +101,7 @@ describe('hasAndBelongsToMany', () => {
         await expect(() =>
           db.user.chats.create({
             Title: 'title',
+            ChatKey: 'key',
           }),
         ).rejects.toThrow(
           'Cannot create based on a query which returns multiple records',
@@ -118,7 +125,9 @@ describe('hasAndBelongsToMany', () => {
                 AND EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                    AND "chatUser"."chatKey" = "chats"."chatKey"
                     AND "chatUser"."userId" = "user"."id"
+                    AND "chatUser"."userKey" = "user"."userKey"
                 )
             )
             AND "chats"."title" = $2
@@ -137,7 +146,9 @@ describe('hasAndBelongsToMany', () => {
           WHERE EXISTS (
             SELECT 1 FROM "chatUser"
             WHERE "chatUser"."chatId" = "c"."idOfChat"
+              AND "chatUser"."chatKey" = "c"."chatKey"
               AND "chatUser"."userId" = "u"."id"
+              AND "chatUser"."userKey" = "u"."userKey"
           )
         `,
       );
@@ -153,7 +164,9 @@ describe('hasAndBelongsToMany', () => {
             WHERE EXISTS (
               SELECT 1 FROM "chatUser"
               WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                AND "chatUser"."chatKey" = "chats"."chatKey"
                 AND "chatUser"."userId" = "user"."id"
+                AND "chatUser"."userKey" = "user"."userKey"
             )
           )
         `,
@@ -172,7 +185,9 @@ describe('hasAndBelongsToMany', () => {
             EXISTS (
               SELECT 1 FROM "chatUser"
               WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                AND "chatUser"."chatKey" = "chats"."chatKey"
                 AND "chatUser"."userId" = "u"."id"
+                AND "chatUser"."userKey" = "u"."userKey"
             )
             AND "chats"."title" = $1
         )
@@ -198,7 +213,9 @@ describe('hasAndBelongsToMany', () => {
           ON EXISTS (
             SELECT 1 FROM "chatUser"
             WHERE "chatUser"."chatId" = "chats"."idOfChat"
+              AND "chatUser"."chatKey" = "chats"."chatKey"
               AND "chatUser"."userId" = "u"."id"
+              AND "chatUser"."userKey" = "u"."userKey"
           )
           AND "chats"."title" = $1
       `,
@@ -230,7 +247,9 @@ describe('hasAndBelongsToMany', () => {
           AND EXISTS (
             SELECT 1 FROM "chatUser"
             WHERE "chatUser"."chatId" = "c"."idOfChat"
+              AND "chatUser"."chatKey" = "c"."chatKey"
               AND "chatUser"."userId" = "u"."id"
+              AND "chatUser"."userKey" = "u"."userKey"
           )
       `,
         ['title', now],
@@ -258,7 +277,9 @@ describe('hasAndBelongsToMany', () => {
                 SELECT 1
                 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "c"."idOfChat"
+                  AND "chatUser"."chatKey" = "c"."chatKey"
                   AND "chatUser"."userId" = "user"."id"
+                  AND "chatUser"."userKey" = "user"."userKey"
               )
           ) "c" ON true
           WHERE "c"."Title" = $2
@@ -297,7 +318,9 @@ describe('hasAndBelongsToMany', () => {
                   AND EXISTS (
                     SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                      AND "chatUser"."chatKey" = "chats"."chatKey"
                       AND "chatUser"."userId" = "u"."id"
+                      AND "chatUser"."userKey" = "u"."userKey"
                   )
               ) AS "t"
             ) "chats" ON true
@@ -327,7 +350,9 @@ describe('hasAndBelongsToMany', () => {
             WHERE EXISTS (
               SELECT 1 FROM "chatUser"
               WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                AND "chatUser"."chatKey" = "chats"."chatKey"
                 AND "chatUser"."userId" = "u"."id"
+                AND "chatUser"."userKey" = "u"."userKey"
             )
           ) "chatsCount" ON true
         `,
@@ -356,7 +381,9 @@ describe('hasAndBelongsToMany', () => {
               WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                  AND "chatUser"."chatKey" = "chats"."chatKey"
                   AND "chatUser"."userId" = "u"."id"
+                  AND "chatUser"."userKey" = "u"."userKey"
               )
             ) AS "t"
           ) "titles" ON true
@@ -384,7 +411,9 @@ describe('hasAndBelongsToMany', () => {
             WHERE EXISTS (
               SELECT 1 FROM "chatUser"
               WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                AND "chatUser"."chatKey" = "chats"."chatKey"
                 AND "chatUser"."userId" = "u"."id"
+                AND "chatUser"."userKey" = "u"."userKey"
             )
             LIMIT 1
           ) "hasChats" ON true
@@ -427,7 +456,9 @@ describe('hasAndBelongsToMany', () => {
                         SELECT 1
                         FROM "chatUser"
                         WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                          AND "chatUser"."chatKey" = "chats"."chatKey"
                           AND "chatUser"."userId" = "users"."id"
+                          AND "chatUser"."userKey" = "users"."userKey"
                       )
                     ) AS "t"
                   ) "chats2" ON true
@@ -435,7 +466,9 @@ describe('hasAndBelongsToMany', () => {
                     SELECT 1
                     FROM "chatUser"
                     WHERE "chatUser"."userId" = "users"."id"
+                      AND "chatUser"."userKey" = "users"."userKey"
                       AND "chatUser"."chatId" = "chats"."idOfChat"
+                      AND "chatUser"."chatKey" = "chats"."chatKey"
                   )
                 ) AS "t"
               ) "users" ON true
@@ -443,7 +476,9 @@ describe('hasAndBelongsToMany', () => {
                 SELECT 1
                 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                  AND "chatUser"."chatKey" = "chats"."chatKey"
                   AND "chatUser"."userId" = "user"."id"
+                  AND "chatUser"."userKey" = "user"."userKey"
               )
             ) AS "t"
           ) "chats" ON true
@@ -491,7 +526,7 @@ describe('hasAndBelongsToMany', () => {
 
     describe('nested create', () => {
       it('should support create', async () => {
-        const query = db.user.select('Id').create({
+        const query = db.user.select('Id', 'UserKey').create({
           ...userData,
           Name: 'user 1',
           chats: {
@@ -526,30 +561,39 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createUserSql as Sql,
           `
-          INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
-          VALUES ($1, $2, $3, $4)
-          RETURNING "user"."id" AS "Id"
+          INSERT INTO "user"("name", "userKey", "password", "updatedAt", "createdAt")
+          VALUES ($1, $2, $3, $4, $5)
+          RETURNING "user"."id" AS "Id", "user"."userKey" AS "UserKey"
         `,
-          ['user 1', 'password', now, now],
+          ['user 1', 'key', 'password', now, now],
         );
 
         expectSql(
           createChatsSql as Sql,
           `
-          INSERT INTO "chat"("title", "updatedAt", "createdAt")
-          VALUES ($1, $2, $3), ($4, $5, $6)
-          RETURNING "chat"."idOfChat" AS "IdOfChat"
+          INSERT INTO "chat"("title", "chatKey", "updatedAt", "createdAt")
+          VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
+          RETURNING "chat"."idOfChat" AS "IdOfChat", "chat"."chatKey" AS "ChatKey"
         `,
-          ['chat 1', now, now, 'chat 2', now, now],
+          ['chat 1', 'key', now, now, 'chat 2', 'key', now, now],
         );
 
         expectSql(
           createChatUserSql as Sql,
           `
-          INSERT INTO "chatUser"("userId", "chatId")
-          VALUES ($1, $2), ($3, $4)
+          INSERT INTO "chatUser"("userId", "userKey", "chatId", "chatKey")
+          VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
         `,
-          [user.Id, chatIds[0], user.Id, chatIds[1]],
+          [
+            user.Id,
+            'key',
+            chatIds[0],
+            'key',
+            user.Id,
+            'key',
+            chatIds[1],
+            'key',
+          ],
         );
       });
 
@@ -604,31 +648,46 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createUserSql as Sql,
           `
-          INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
-          VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
-          RETURNING "user"."id" AS "Id"
+          INSERT INTO "user"("name", "userKey", "password", "updatedAt", "createdAt")
+          VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10)
+          RETURNING "user"."id" AS "Id", "user"."userKey" AS "UserKey"
         `,
-          ['user 1', 'password', now, now, 'user 2', 'password', now, now],
+          [
+            'user 1',
+            'key',
+            'password',
+            now,
+            now,
+            'user 2',
+            'key',
+            'password',
+            now,
+            now,
+          ],
         );
 
         expectSql(
           createChatsSql as Sql,
           `
-          INSERT INTO "chat"("title", "updatedAt", "createdAt")
-          VALUES ($1, $2, $3), ($4, $5, $6), ($7, $8, $9), ($10, $11, $12)
-          RETURNING "chat"."idOfChat" AS "IdOfChat"
+          INSERT INTO "chat"("title", "chatKey", "updatedAt", "createdAt")
+          VALUES ($1, $2, $3, $4), ($5, $6, $7, $8), ($9, $10, $11, $12), ($13, $14, $15, $16)
+          RETURNING "chat"."idOfChat" AS "IdOfChat", "chat"."chatKey" AS "ChatKey"
         `,
           [
             'chat 1',
+            'key',
             now,
             now,
             'chat 2',
+            'key',
             now,
             now,
             'chat 3',
+            'key',
             now,
             now,
             'chat 4',
+            'key',
             now,
             now,
           ],
@@ -637,18 +696,26 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatUserSql as Sql,
           `
-          INSERT INTO "chatUser"("userId", "chatId")
-          VALUES ($1, $2), ($3, $4), ($5, $6), ($7, $8)
+          INSERT INTO "chatUser"("userId", "userKey", "chatId", "chatKey")
+          VALUES ($1, $2, $3, $4), ($5, $6, $7, $8), ($9, $10, $11, $12), ($13, $14, $15, $16)
         `,
           [
             users[0].Id,
+            'key',
             chatIds[0],
+            'key',
             users[0].Id,
+            'key',
             chatIds[1],
+            'key',
             users[1].Id,
+            'key',
             chatIds[2],
+            'key',
             users[1].Id,
+            'key',
             chatIds[3],
+            'key',
           ],
         );
       });
@@ -678,7 +745,7 @@ describe('hasAndBelongsToMany', () => {
         it('should invoke callbacks', async () => {
           await db.user.create(data);
 
-          const ids = await db.chat.select('IdOfChat');
+          const ids = await db.chat.select('IdOfChat', 'ChatKey');
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -690,7 +757,7 @@ describe('hasAndBelongsToMany', () => {
 
           await db.user.createMany([data, data]);
 
-          const ids = await db.chat.select('IdOfChat');
+          const ids = await db.chat.select('IdOfChat', 'ChatKey');
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -706,7 +773,7 @@ describe('hasAndBelongsToMany', () => {
           { ...chatData, Title: 'chat 2' },
         ]);
 
-        const query = db.user.select('Id').create({
+        const query = db.user.select('Id', 'UserKey').create({
           ...userData,
           Name: 'user 1',
           chats: {
@@ -739,11 +806,11 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createUserSql as Sql,
           `
-          INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
-          VALUES ($1, $2, $3, $4)
-          RETURNING "user"."id" AS "Id"
+          INSERT INTO "user"("name", "userKey", "password", "updatedAt", "createdAt")
+          VALUES ($1, $2, $3, $4, $5)
+          RETURNING "user"."id" AS "Id", "user"."userKey" AS "UserKey"
         `,
-          ['user 1', 'password', now, now],
+          ['user 1', 'key', 'password', now, now],
         );
 
         expect(findChatsSql.length).toBe(2);
@@ -751,7 +818,7 @@ describe('hasAndBelongsToMany', () => {
           expectSql(
             sql as Sql,
             `
-            SELECT "chats"."idOfChat" AS "IdOfChat"
+            SELECT "chats"."idOfChat" AS "IdOfChat", "chats"."chatKey" AS "ChatKey"
             FROM "chat" AS "chats"
             WHERE "chats"."title" = $1
             LIMIT 1
@@ -763,10 +830,19 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatUserSql as Sql,
           `
-          INSERT INTO "chatUser"("userId", "chatId")
-          VALUES ($1, $2), ($3, $4)
+          INSERT INTO "chatUser"("userId", "userKey", "chatId", "chatKey")
+          VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
         `,
-          [user.Id, chatIds[0], user.Id, chatIds[1]],
+          [
+            user.Id,
+            'key',
+            chatIds[0],
+            'key',
+            user.Id,
+            'key',
+            chatIds[1],
+            'key',
+          ],
         );
       });
 
@@ -824,11 +900,22 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createUserSql as Sql,
           `
-          INSERT INTO "user"("name", "password", "updatedAt", "createdAt")
-          VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
-          RETURNING "user"."id" AS "Id"
+          INSERT INTO "user"("name", "userKey", "password", "updatedAt", "createdAt")
+          VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10)
+          RETURNING "user"."id" AS "Id", "user"."userKey" AS "UserKey"
         `,
-          ['user 1', 'password', now, now, 'user 2', 'password', now, now],
+          [
+            'user 1',
+            'key',
+            'password',
+            now,
+            now,
+            'user 2',
+            'key',
+            'password',
+            now,
+            now,
+          ],
         );
 
         expect(findChatsSql.length).toBe(4);
@@ -836,7 +923,7 @@ describe('hasAndBelongsToMany', () => {
           expectSql(
             sql as Sql,
             `
-            SELECT "chats"."idOfChat" AS "IdOfChat"
+            SELECT "chats"."idOfChat" AS "IdOfChat", "chats"."chatKey" AS "ChatKey"
             FROM "chat" AS "chats"
             WHERE "chats"."title" = $1
             LIMIT 1
@@ -848,18 +935,26 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatUserSql as Sql,
           `
-          INSERT INTO "chatUser"("userId", "chatId")
-          VALUES ($1, $2), ($3, $4), ($5, $6), ($7, $8)
+          INSERT INTO "chatUser"("userId", "userKey", "chatId", "chatKey")
+          VALUES ($1, $2, $3, $4), ($5, $6, $7, $8), ($9, $10, $11, $12), ($13, $14, $15, $16)
         `,
           [
             users[0].Id,
+            'key',
             chatIds[0],
+            'key',
             users[0].Id,
+            'key',
             chatIds[1],
+            'key',
             users[1].Id,
+            'key',
             chatIds[2],
+            'key',
             users[1].Id,
+            'key',
             chatIds[3],
+            'key',
           ],
         );
       });
@@ -1018,7 +1113,7 @@ describe('hasAndBelongsToMany', () => {
         it('should invoke callbacks', async () => {
           await db.user.create(data);
 
-          const ids = await db.chat.select('IdOfChat');
+          const ids = await db.chat.select('IdOfChat', 'ChatKey');
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -1030,7 +1125,7 @@ describe('hasAndBelongsToMany', () => {
 
           await db.user.createMany([data, data]);
 
-          const ids = await db.chat.select('IdOfChat');
+          const ids = await db.chat.select('IdOfChat', 'ChatKey');
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -1061,7 +1156,7 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        const chats = await db.user.chats({ Id: userId });
+        const chats = await db.user.chats({ Id: userId, UserKey: 'key' });
         expect(chats.length).toBe(1);
         expect(chats[0].Title).toEqual('chat 3');
       });
@@ -1080,7 +1175,9 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        const chats = await db.user.chats({ Id }).pluck('Title');
+        const chats = await db.user
+          .chats({ Id, UserKey: 'key' })
+          .pluck('Title');
         expect(chats).toEqual(['chat 1']);
       });
     });
@@ -1109,7 +1206,7 @@ describe('hasAndBelongsToMany', () => {
         });
 
         const chats = await db.user
-          .chats({ Id })
+          .chats({ Id, UserKey: 'key' })
           .select('Title')
           .order('Title');
         expect(chats).toEqual([{ Title: 'chat 2' }, { Title: 'chat 3' }]);
@@ -1144,7 +1241,9 @@ describe('hasAndBelongsToMany', () => {
 
         expect(await db.chat.count()).toBe(2);
 
-        const chats = await db.user.chats({ Id }).select('Title');
+        const chats = await db.user
+          .chats({ Id, UserKey: 'key' })
+          .select('Title');
         expect(chats).toEqual([{ Title: 'chat 3' }]);
       });
 
@@ -1162,7 +1261,9 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        const chats = await db.user.chats({ Id }).pluck('Title');
+        const chats = await db.user
+          .chats({ Id, UserKey: 'key' })
+          .pluck('Title');
         expect(chats).toEqual(['chat 1']);
       });
 
@@ -1289,7 +1390,9 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        const chats = await db.user.chats({ Id }).pluck('Title');
+        const chats = await db.user
+          .chats({ Id, UserKey: 'key' })
+          .pluck('Title');
         expect(chats).toEqual(['chat 1']);
       });
 
@@ -1379,7 +1482,7 @@ describe('hasAndBelongsToMany', () => {
         });
 
         const firstUserChats = await db.user
-          .chats({ Id: userIds[0] })
+          .chats({ Id: userIds[0], UserKey: 'key' })
           .order('Title');
         expect(firstUserChats.map((chat) => chat.Title)).toEqual([
           'created 1',
@@ -1387,7 +1490,7 @@ describe('hasAndBelongsToMany', () => {
         ]);
 
         const secondUserChats = await db.user
-          .chats({ Id: userIds[1] })
+          .chats({ Id: userIds[1], UserKey: 'key' })
           .order('Title');
         expect(secondUserChats.map((chat) => chat.Title)).toEqual([
           'created 1',
@@ -1408,7 +1511,7 @@ describe('hasAndBelongsToMany', () => {
           },
         });
 
-        const chats = await db.user.chats({ Id });
+        const chats = await db.user.chats({ Id, UserKey: 'key' });
         expect(chats).toEqual([]);
       });
 
@@ -1429,14 +1532,11 @@ describe('hasAndBelongsToMany', () => {
 
           await db.user.find(id).update(data);
 
-          const ids = await db.chat.pluck('IdOfChat');
+          const ids = await db.chat.select('IdOfChat', 'ChatKey');
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith(
-            [{ IdOfChat: ids[0] }, { IdOfChat: ids[1] }],
-            expect.any(Db),
-          );
+          expect(afterCreate).toBeCalledWith(ids, expect.any(Db));
         });
 
         it('should invoke callbacks in a batch update', async () => {
@@ -1448,7 +1548,7 @@ describe('hasAndBelongsToMany', () => {
 
           await db.user.where({ Id: { in: userIds } }).update(data);
 
-          const ids = await db.chat.select('IdOfChat');
+          const ids = await db.chat.select('IdOfChat', 'ChatKey');
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -1475,7 +1575,9 @@ describe('hasAndBelongsToMany', () => {
               SELECT 1
               FROM "chatUser"
               WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                AND "chatUser"."chatKey" = "chats"."chatKey"
                 AND "chatUser"."userId" = "user"."id"
+                AND "chatUser"."userKey" = "user"."userKey"
             )
             AND "chats"."title" IN ($2, $3)
         )

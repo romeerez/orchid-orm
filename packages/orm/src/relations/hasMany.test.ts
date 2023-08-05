@@ -40,8 +40,9 @@ describe('hasMany', () => {
         `
         SELECT ${messageSelectAll} FROM "message" AS "messages"
         WHERE "messages"."authorId" = $1
+          AND "messages"."messageKey" = $2
       `,
-        [userId],
+        [userId, 'key'],
       );
 
       const messages = await query;
@@ -63,6 +64,7 @@ describe('hasMany', () => {
               SELECT 1 FROM "user"
               WHERE "user"."name" = $1
                 AND "user"."id" = "messages"."authorId"
+                AND "user"."userKey" = "messages"."messageKey"
             )
             AND "messages"."text" = $2
         `,
@@ -71,7 +73,7 @@ describe('hasMany', () => {
     });
 
     it('should have create with defaults of provided id', () => {
-      const user = { Id: 1 };
+      const user = { Id: 1, UserKey: 'key' };
       const query = db.user.messages(user).count().create({
         ChatId: 2,
         Text: 'text',
@@ -80,10 +82,10 @@ describe('hasMany', () => {
       expectSql(
         query.toSQL(),
         `
-          INSERT INTO "message"("authorId", "chatId", "text")
-          VALUES ($1, $2, $3)
+          INSERT INTO "message"("authorId", "messageKey", "chatId", "text")
+          VALUES ($1, $2, $3, $4)
         `,
-        [1, 2, 'text'],
+        [1, 'key', 2, 'text'],
       );
     });
 
@@ -96,8 +98,8 @@ describe('hasMany', () => {
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "message"("chatId", "text")
-            SELECT "chat"."idOfChat" AS "ChatId", $1
+            INSERT INTO "message"("chatId", "messageKey", "text")
+            SELECT "chat"."idOfChat" AS "ChatId", "chat"."chatKey" AS "MessageKey", $1
             FROM "chat"
             WHERE "chat"."idOfChat" = $2
             LIMIT 1
@@ -147,6 +149,7 @@ describe('hasMany', () => {
               SELECT 1 FROM "chat"
               WHERE "chat"."title" = $1
                 AND "chat"."idOfChat" = "messages"."chatId"
+                AND "chat"."chatKey" = "messages"."messageKey"
             )
             AND "messages"."text" = $2
         `,
@@ -162,6 +165,7 @@ describe('hasMany', () => {
         `
         SELECT ${messageSelectAll} FROM "message" AS "m"
         WHERE "m"."authorId" = "u"."id"
+          AND "m"."messageKey" = "u"."userKey"
       `,
       );
     });
@@ -174,6 +178,7 @@ describe('hasMany', () => {
         WHERE EXISTS (
           SELECT 1 FROM "message" AS "messages"
           WHERE "messages"."authorId" = "user"."id"
+            AND "messages"."messageKey" = "user"."userKey"
         )
       `,
       );
@@ -188,6 +193,7 @@ describe('hasMany', () => {
         WHERE EXISTS (
           SELECT 1 FROM "message" AS "messages"
           WHERE "messages"."authorId" = "u"."id"
+            AND "messages"."messageKey" = "u"."userKey"
             AND "messages"."text" = $1
         )
       `,
@@ -210,7 +216,8 @@ describe('hasMany', () => {
         FROM "user" AS "u"
         JOIN "message" AS "messages"
           ON "messages"."authorId" = "u"."id"
-          AND "messages"."text" = $1
+         AND "messages"."messageKey" = "u"."userKey"
+         AND "messages"."text" = $1
       `,
         ['text'],
       );
@@ -236,6 +243,7 @@ describe('hasMany', () => {
           ON "m"."text" = $1
          AND "m"."chatId" = $2
          AND "m"."authorId" = "u"."id"
+         AND "m"."messageKey" = "u"."userKey"
       `,
         ['text', 123],
       );
@@ -257,7 +265,9 @@ describe('hasMany', () => {
           JOIN LATERAL (
             SELECT ${messageSelectAll}
             FROM "message" AS "m"
-            WHERE "m"."text" = $1 AND "m"."authorId" = "user"."id"
+            WHERE "m"."text" = $1
+              AND "m"."authorId" = "user"."id"
+              AND "m"."messageKey" = "user"."userKey"
           ) "m" ON true
           WHERE "m"."Text" = $2
         `,
@@ -315,6 +325,7 @@ describe('hasMany', () => {
                 FROM "message" AS "messages"
                 WHERE "messages"."text" = $1
                   AND "messages"."authorId" = "u"."id"
+                  AND "messages"."messageKey" = "u"."userKey"
               ) AS "t"
             ) "messages" ON true
           `,
@@ -344,6 +355,7 @@ describe('hasMany', () => {
             SELECT count(*) r
             FROM "message" AS "messages"
             WHERE "messages"."authorId" = "u"."id"
+              AND "messages"."messageKey" = "u"."userKey"
           ) "messagesCount" ON true
         `,
       );
@@ -369,6 +381,7 @@ describe('hasMany', () => {
               SELECT "messages"."text" AS "Text"
               FROM "message" AS "messages"
               WHERE "messages"."authorId" = "u"."id"
+                AND "messages"."messageKey" = "u"."userKey"
             ) AS "t"
           ) "texts" ON true
         `,
@@ -396,6 +409,7 @@ describe('hasMany', () => {
             SELECT true r
             FROM "message" AS "messages"
             WHERE "messages"."authorId" = "u"."id"
+              AND "messages"."messageKey" = "u"."userKey"
             LIMIT 1
           ) "hasMessages" ON true
         `,
@@ -432,11 +446,14 @@ describe('hasMany', () => {
                     SELECT ${messageSelectAll}
                     FROM "message" AS "messages"
                     WHERE "messages"."authorId" = "user"."id"
+                      AND "messages"."messageKey" = "user"."userKey"
                   ) AS "t"
                 ) "messages2" ON true
                 WHERE "user"."id" = "messages"."authorId"
+                  AND "user"."userKey" = "messages"."messageKey"
               ) "user2" ON true
               WHERE "messages"."authorId" = "user"."id"
+                AND "messages"."messageKey" = "user"."userKey"
             ) AS "t"
           ) "messages" ON true
         `,
@@ -1415,7 +1432,9 @@ describe('hasMany', () => {
 
         expect(await db.message.count()).toBe(1);
 
-        const messages = await db.user.messages({ Id }).select('Text');
+        const messages = await db.user
+          .messages({ Id, UserKey: 'key' })
+          .select('Text');
         expect(messages).toEqual([{ Text: 'message 3' }]);
       });
 
@@ -1449,7 +1468,7 @@ describe('hasMany', () => {
         expect(await db.message.count()).toBe(1);
 
         const messages = await db.user
-          .messages({ Id: userIds[1] })
+          .messages({ Id: userIds[1], UserKey: 'key' })
           .select('Text');
         expect(messages).toEqual([{ Text: 'message 3' }]);
       });
@@ -1470,7 +1489,9 @@ describe('hasMany', () => {
           },
         });
 
-        const messages = await db.user.messages({ Id }).pluck('Text');
+        const messages = await db.user
+          .messages({ Id, UserKey: 'key' })
+          .pluck('Text');
         expect(messages).toEqual(['message 1']);
       });
 
@@ -1588,7 +1609,7 @@ describe('hasMany', () => {
         });
 
         const messages = await db.user
-          .messages({ Id })
+          .messages({ Id, UserKey: 'key' })
           .order('Id')
           .pluck('Text');
         expect(messages).toEqual(['updated', 'message 2', 'updated']);
@@ -1653,7 +1674,9 @@ describe('hasMany', () => {
           },
         });
 
-        const messages = await db.user.messages({ Id }).pluck('Text');
+        const messages = await db.user
+          .messages({ Id, UserKey: 'key' })
+          .pluck('Text');
         expect(messages).toEqual(['message 1']);
       });
 
@@ -1793,7 +1816,7 @@ describe('hasMany', () => {
           },
         });
 
-        const messages = await db.user.messages({ Id });
+        const messages = await db.user.messages({ Id, UserKey: 'key' });
         expect(messages.length).toEqual(0);
       });
 
@@ -1838,6 +1861,7 @@ describe('hasMany', () => {
             SELECT count(*) = $1
             FROM "message" AS "messages"
             WHERE "messages"."authorId" = "user"."id"
+              AND "messages"."messageKey" = "user"."userKey"
               AND "messages"."text" IN ($2, $3)
           )
         `,
@@ -2016,7 +2040,7 @@ describe('hasMany through', () => {
 
   describe('through hasMany', () => {
     it('should have method to query related data', async () => {
-      const query = db.profile.chats({ UserId: 1 });
+      const query = db.profile.chats({ UserId: 1, ProfileKey: 'key' });
       expectSql(
         query.toSQL(),
         `
@@ -2026,12 +2050,15 @@ describe('hasMany through', () => {
           WHERE EXISTS (
             SELECT 1 FROM "chatUser"
             WHERE "chatUser"."chatId" = "chats"."idOfChat"
+              AND "chatUser"."chatKey" = "chats"."chatKey"
               AND "chatUser"."userId" = "user"."id"
+              AND "chatUser"."userKey" = "user"."userKey"
           )
           AND "user"."id" = $1
+          AND "user"."userKey" = $2
         )
       `,
-        [1],
+        [1, 'key'],
       );
     });
 
@@ -2052,9 +2079,12 @@ describe('hasMany through', () => {
                 WHERE EXISTS (
                     SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                      AND "chatUser"."chatKey" = "chats"."chatKey"
                       AND "chatUser"."userId" = "user"."id"
+                  AND "chatUser"."userKey" = "user"."userKey"
                   )
                   AND "user"."id" = "profile"."userId"
+                  AND "user"."userKey" = "profile"."profileKey"
               )
           )
           AND "chats"."title" = $2
@@ -2087,9 +2117,12 @@ describe('hasMany through', () => {
                   WHERE EXISTS (
                       SELECT 1 FROM "chatUser"
                       WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                        AND "chatUser"."chatKey" = "chats"."chatKey"
                         AND "chatUser"."userId" = "user"."id"
+                    AND "chatUser"."userKey" = "user"."userKey"
                     )
                     AND "user"."id" = "profile"."userId"
+                    AND "user"."userKey" = "profile"."profileKey"
                 )
             )
             AND "chats"."title" = $2
@@ -2111,9 +2144,12 @@ describe('hasMany through', () => {
             WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "c"."idOfChat"
+                      AND "chatUser"."chatKey" = "c"."chatKey"
                   AND "chatUser"."userId" = "user"."id"
+              AND "chatUser"."userKey" = "user"."userKey"
               )
               AND "user"."id" = "p"."userId"
+            AND "user"."userKey" = "p"."profileKey"
           )
         `,
       );
@@ -2131,9 +2167,12 @@ describe('hasMany through', () => {
             WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                  AND "chatUser"."chatKey" = "chats"."chatKey"
                   AND "chatUser"."userId" = "user"."id"
+              AND "chatUser"."userKey" = "user"."userKey"
               )
               AND "user"."id" = "profile"."userId"
+              AND "user"."userKey" = "profile"."profileKey"
           )
         )
       `,
@@ -2153,9 +2192,12 @@ describe('hasMany through', () => {
             WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                  AND "chatUser"."chatKey" = "chats"."chatKey"
                   AND "chatUser"."userId" = "user"."id"
+              AND "chatUser"."userKey" = "user"."userKey"
               )
               AND "user"."id" = "p"."userId"
+            AND "user"."userKey" = "p"."profileKey"
           )
           AND "chats"."title" = $1
         )
@@ -2186,9 +2228,12 @@ describe('hasMany through', () => {
               WHERE EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                    AND "chatUser"."chatKey" = "chats"."chatKey"
                     AND "chatUser"."userId" = "user"."id"
+                AND "chatUser"."userKey" = "user"."userKey"
                 )
                 AND "user"."id" = "p"."userId"
+              AND "user"."userKey" = "p"."profileKey"
             )
             AND "chats"."title" = $1
         `,
@@ -2225,9 +2270,12 @@ describe('hasMany through', () => {
               WHERE EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."chatId" = "c"."idOfChat"
+                        AND "chatUser"."chatKey" = "c"."chatKey"
                     AND "chatUser"."userId" = "user"."id"
+                AND "chatUser"."userKey" = "user"."userKey"
                 )
                 AND "user"."id" = "p"."userId"
+              AND "user"."userKey" = "p"."profileKey"
             )
         `,
         ['title', now],
@@ -2259,9 +2307,12 @@ describe('hasMany through', () => {
                     SELECT 1
                     FROM "chatUser"
                     WHERE "chatUser"."chatId" = "c"."idOfChat"
+                          AND "chatUser"."chatKey" = "c"."chatKey"
                       AND "chatUser"."userId" = "user"."id"
+                    AND "chatUser"."userKey" = "user"."userKey"
                   )
                   AND "user"."id" = "profile"."userId"
+                  AND "user"."userKey" = "profile"."profileKey"
               )
           ) "c" ON true
           WHERE "c"."Title" = $2
@@ -2296,9 +2347,12 @@ describe('hasMany through', () => {
                     WHERE EXISTS (
                       SELECT 1 FROM "chatUser"
                       WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                        AND "chatUser"."chatKey" = "chats"."chatKey"
                         AND "chatUser"."userId" = "user"."id"
+                      AND "chatUser"."userKey" = "user"."userKey"
                     )
                   AND "user"."id" = "p"."userId"
+                    AND "user"."userKey" = "p"."profileKey"
                 )
               ) AS "t"  
             ) "chats" ON true
@@ -2330,9 +2384,12 @@ describe('hasMany through', () => {
               WHERE EXISTS (
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                  AND "chatUser"."chatKey" = "chats"."chatKey"
                   AND "chatUser"."userId" = "user"."id"
+                AND "chatUser"."userKey" = "user"."userKey"
               )
               AND "user"."id" = "p"."userId"
+              AND "user"."userKey" = "p"."profileKey"
             )
           ) "chatsCount" ON true
         `,
@@ -2363,9 +2420,12 @@ describe('hasMany through', () => {
                 WHERE EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                    AND "chatUser"."chatKey" = "chats"."chatKey"
                     AND "chatUser"."userId" = "user"."id"
+                  AND "chatUser"."userKey" = "user"."userKey"
                 )
                 AND "user"."id" = "p"."userId"
+                AND "user"."userKey" = "p"."profileKey"
               )
             ) AS "t"
           ) "titles" ON true
@@ -2395,9 +2455,12 @@ describe('hasMany through', () => {
                 WHERE EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                    AND "chatUser"."chatKey" = "chats"."chatKey"
                     AND "chatUser"."userId" = "user"."id"
+                  AND "chatUser"."userKey" = "user"."userKey"
               )
               AND "user"."id" = "p"."userId"
+              AND "user"."userKey" = "p"."profileKey"
             )
             LIMIT 1
           ) "hasChats" ON true
@@ -2444,9 +2507,12 @@ describe('hasMany through', () => {
                             SELECT 1
                             FROM "chatUser"
                             WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                              AND "chatUser"."chatKey" = "chats"."chatKey"
                               AND "chatUser"."userId" = "user"."id"
+                            AND "chatUser"."userKey" = "user"."userKey"
                           )
                           AND "user"."id" = "profiles"."userId"
+                          AND "user"."userKey" = "profiles"."profileKey"
                       )
                     ) AS "t"
                   ) "chats2" ON true
@@ -2454,11 +2520,14 @@ describe('hasMany through', () => {
                     SELECT 1
                     FROM "user" AS "users"
                     WHERE "profiles"."userId" = "users"."id"
+                      AND "profiles"."profileKey" = "users"."userKey"
                       AND EXISTS (
                         SELECT 1
                         FROM "chatUser"
                         WHERE "chatUser"."userId" = "users"."id"
+                          AND "chatUser"."userKey" = "users"."userKey"
                           AND "chatUser"."chatId" = "chats"."idOfChat"
+                        AND "chatUser"."chatKey" = "chats"."chatKey"
                       )
                   )
                 ) AS "t"
@@ -2470,8 +2539,11 @@ describe('hasMany through', () => {
                   SELECT 1
                   FROM "chatUser"
                   WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                    AND "chatUser"."chatKey" = "chats"."chatKey"
                     AND "chatUser"."userId" = "user"."id"
+                  AND "chatUser"."userKey" = "user"."userKey"
                 ) AND "user"."id" = "profile"."userId"
+                  AND "user"."userKey" = "profile"."profileKey"
               )
             ) AS "t"
           ) "chats" ON true
@@ -2499,9 +2571,12 @@ describe('hasMany through', () => {
                     SELECT 1
                     FROM "chatUser"
                     WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                      AND "chatUser"."chatKey" = "chats"."chatKey"
                       AND "chatUser"."userId" = "user"."id"
+                    AND "chatUser"."userKey" = "user"."userKey"
                   )
                   AND "user"."id" = "profile"."userId"
+                  AND "user"."userKey" = "profile"."profileKey"
               )
               AND "chats"."title" IN ($2, $3)
           )
@@ -2513,7 +2588,7 @@ describe('hasMany through', () => {
 
   describe('through hasOne', () => {
     it('should have method to query related data', () => {
-      const query = db.chat.profiles({ IdOfChat: 1 });
+      const query = db.chat.profiles({ IdOfChat: 1, ChatKey: 'key' });
       expectSql(
         query.toSQL(),
         `
@@ -2521,14 +2596,17 @@ describe('hasMany through', () => {
           WHERE EXISTS (
             SELECT 1 FROM "user" AS "users"
             WHERE "profiles"."userId" = "users"."id"
+              AND "profiles"."profileKey" = "users"."userKey"
             AND EXISTS (
               SELECT 1 FROM "chatUser"
               WHERE "chatUser"."userId" = "users"."id"
+                AND "chatUser"."userKey" = "users"."userKey"
                 AND "chatUser"."chatId" = $1
+                AND "chatUser"."chatKey" = $2
             )
           )
         `,
-        [1],
+        [1, 'key'],
       );
     });
 
@@ -2547,10 +2625,13 @@ describe('hasMany through', () => {
               AND EXISTS (
                 SELECT 1 FROM "user" AS "users"
                 WHERE "profiles"."userId" = "users"."id"
+                  AND "profiles"."profileKey" = "users"."userKey"
                   AND EXISTS (
                     SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."userId" = "users"."id"
+                      AND "chatUser"."userKey" = "users"."userKey"
                       AND "chatUser"."chatId" = "chat"."idOfChat"
+                    AND "chatUser"."chatKey" = "chat"."chatKey"
                   )
               )
           )
@@ -2581,10 +2662,13 @@ describe('hasMany through', () => {
                 AND EXISTS (
                   SELECT 1 FROM "user" AS "users"
                   WHERE "profiles"."userId" = "users"."id"
+                    AND "profiles"."profileKey" = "users"."userKey"
                     AND EXISTS (
                       SELECT 1 FROM "chatUser"
                       WHERE "chatUser"."userId" = "users"."id"
+                        AND "chatUser"."userKey" = "users"."userKey"
                         AND "chatUser"."chatId" = "chat"."idOfChat"
+                      AND "chatUser"."chatKey" = "chat"."chatKey"
                     )
                 )
             )
@@ -2604,10 +2688,13 @@ describe('hasMany through', () => {
           WHERE EXISTS (
             SELECT 1 FROM "user" AS "users"
             WHERE "p"."userId" = "users"."id"
+              AND "p"."profileKey" = "users"."userKey"
               AND EXISTS (
                 SELECT 1 FROM "chatUser"
                 WHERE "chatUser"."userId" = "users"."id"
+                  AND "chatUser"."userKey" = "users"."userKey"
                   AND "chatUser"."chatId" = "c"."idOfChat"
+                    AND "chatUser"."chatKey" = "c"."chatKey"
               )
           )
         `,
@@ -2624,10 +2711,13 @@ describe('hasMany through', () => {
             WHERE EXISTS (
               SELECT 1 FROM "user" AS "users"
               WHERE "profiles"."userId" = "users"."id"
+                AND "profiles"."profileKey" = "users"."userKey"
                 AND EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."userId" = "users"."id"
+                    AND "chatUser"."userKey" = "users"."userKey"
                     AND "chatUser"."chatId" = "chat"."idOfChat"
+                  AND "chatUser"."chatKey" = "chat"."chatKey"
                 )
             )
           )
@@ -2646,10 +2736,13 @@ describe('hasMany through', () => {
             WHERE EXISTS (
               SELECT 1 FROM "user" AS "users"
               WHERE "profiles"."userId" = "users"."id"
+                AND "profiles"."profileKey" = "users"."userKey"
                 AND EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."userId" = "users"."id"
+                    AND "chatUser"."userKey" = "users"."userKey"
                     AND "chatUser"."chatId" = "c"."idOfChat"
+                      AND "chatUser"."chatKey" = "c"."chatKey"
                 )
             )
             AND "profiles"."bio" = $1
@@ -2679,10 +2772,13 @@ describe('hasMany through', () => {
             ON EXISTS (
               SELECT 1 FROM "user" AS "users"
               WHERE "profiles"."userId" = "users"."id"
+                AND "profiles"."profileKey" = "users"."userKey"
                 AND EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."userId" = "users"."id"
+                    AND "chatUser"."userKey" = "users"."userKey"
                     AND "chatUser"."chatId" = "c"."idOfChat"
+                      AND "chatUser"."chatKey" = "c"."chatKey"
                 )
             )
             AND "profiles"."bio" = $1
@@ -2716,10 +2812,13 @@ describe('hasMany through', () => {
             AND EXISTS (
               SELECT 1 FROM "user" AS "users"
               WHERE "p"."userId" = "users"."id"
+                AND "p"."profileKey" = "users"."userKey"
                 AND EXISTS (
                   SELECT 1 FROM "chatUser"
                   WHERE "chatUser"."userId" = "users"."id"
+                    AND "chatUser"."userKey" = "users"."userKey"
                     AND "chatUser"."chatId" = "c"."idOfChat"
+                      AND "chatUser"."chatKey" = "c"."chatKey"
                 )
             )
         `,
@@ -2748,11 +2847,14 @@ describe('hasMany through', () => {
                 SELECT 1
                 FROM "user" AS "users"
                 WHERE "p"."userId" = "users"."id"
+                  AND "p"."profileKey" = "users"."userKey"
                   AND EXISTS (
                     SELECT 1
                     FROM "chatUser"
                     WHERE "chatUser"."userId" = "users"."id"
+                      AND "chatUser"."userKey" = "users"."userKey"
                       AND "chatUser"."chatId" = "chat"."idOfChat"
+                    AND "chatUser"."chatKey" = "chat"."chatKey"
                   )
               )
           ) "p" ON true
@@ -2787,14 +2889,17 @@ describe('hasMany through', () => {
                 FROM "profile" AS "profiles"
                 WHERE "profiles"."bio" = $1
                   AND EXISTS (
-                        SELECT 1 FROM "user" AS "users"
-                        WHERE "profiles"."userId" = "users"."id"
-                          AND EXISTS (
-                                SELECT 1 FROM "chatUser"
-                                WHERE "chatUser"."userId" = "users"."id"
-                                  AND "chatUser"."chatId" = "c"."idOfChat"
-                            )
-                    )
+                    SELECT 1 FROM "user" AS "users"
+                    WHERE "profiles"."userId" = "users"."id"
+                      AND "profiles"."profileKey" = "users"."userKey"
+                      AND EXISTS (
+                        SELECT 1 FROM "chatUser"
+                        WHERE "chatUser"."userId" = "users"."id"
+                          AND "chatUser"."userKey" = "users"."userKey"
+                          AND "chatUser"."chatId" = "c"."idOfChat"
+                          AND "chatUser"."chatKey" = "c"."chatKey"
+                      )
+                  )
               ) AS "t"
             ) "profiles" ON true
           `,
@@ -2825,10 +2930,13 @@ describe('hasMany through', () => {
               WHERE EXISTS (
                 SELECT 1 FROM "user" AS "users"
                 WHERE "profiles"."userId" = "users"."id"
+                  AND "profiles"."profileKey" = "users"."userKey"
                   AND EXISTS (
                     SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."userId" = "users"."id"
+                      AND "chatUser"."userKey" = "users"."userKey"
                       AND "chatUser"."chatId" = "c"."idOfChat"
+                      AND "chatUser"."chatKey" = "c"."chatKey"
                   )
               )
             ) "profilesCount" ON true
@@ -2862,10 +2970,13 @@ describe('hasMany through', () => {
                 WHERE EXISTS (
                   SELECT 1 FROM "user" AS "users"
                   WHERE "profiles"."userId" = "users"."id"
+                    AND "profiles"."profileKey" = "users"."userKey"
                   AND EXISTS (
                       SELECT 1 FROM "chatUser"
                       WHERE "chatUser"."userId" = "users"."id"
+                        AND "chatUser"."userKey" = "users"."userKey"
                         AND "chatUser"."chatId" = "c"."idOfChat"
+                        AND "chatUser"."chatKey" = "c"."chatKey"
                     )
                 )
               ) AS "t"
@@ -2898,10 +3009,13 @@ describe('hasMany through', () => {
                 SELECT 1
                 FROM "user" AS "users"
                 WHERE "profiles"."userId" = "users"."id"
+                  AND "profiles"."profileKey" = "users"."userKey"
                   AND EXISTS (
                     SELECT 1 FROM "chatUser"
                     WHERE "chatUser"."userId" = "users"."id"
+                      AND "chatUser"."userKey" = "users"."userKey"
                       AND "chatUser"."chatId" = "c"."idOfChat"
+                        AND "chatUser"."chatKey" = "c"."chatKey"
                   )
               )
               LIMIT 1
@@ -2945,11 +3059,14 @@ describe('hasMany through', () => {
                           SELECT 1
                           FROM "user" AS "users"
                           WHERE "profiles"."userId" = "users"."id"
+                            AND "profiles"."profileKey" = "users"."userKey"
                           AND EXISTS (
                             SELECT 1
                             FROM "chatUser"
                             WHERE "chatUser"."userId" = "users"."id"
+                              AND "chatUser"."userKey" = "users"."userKey"
                               AND "chatUser"."chatId" = "chats"."idOfChat"
+                            AND "chatUser"."chatKey" = "chats"."chatKey"
                           )
                       )
                     ) AS "t"
@@ -2957,12 +3074,17 @@ describe('hasMany through', () => {
                   WHERE EXISTS (
                     SELECT 1
                     FROM "user"
-                    WHERE EXISTS (
-                      SELECT 1
-                      FROM "chatUser"
-                      WHERE "chatUser"."chatId" = "chats"."idOfChat"
-                        AND "chatUser"."userId" = "user"."id"
-                    ) AND "user"."id" = "profiles"."userId"
+                    WHERE
+                      EXISTS (
+                        SELECT 1
+                        FROM "chatUser"
+                        WHERE "chatUser"."chatId" = "chats"."idOfChat"
+                          AND "chatUser"."chatKey" = "chats"."chatKey"
+                          AND "chatUser"."userId" = "user"."id"
+                          AND "chatUser"."userKey" = "user"."userKey"
+                      )
+                      AND "user"."id" = "profiles"."userId"
+                      AND "user"."userKey" = "profiles"."profileKey"
                   )
                 ) AS "t"
               ) "chats" ON true
@@ -2970,11 +3092,14 @@ describe('hasMany through', () => {
                   SELECT 1
                   FROM "user" AS "users"
                   WHERE "profiles"."userId" = "users"."id"
+                    AND "profiles"."profileKey" = "users"."userKey"
                     AND EXISTS (
                       SELECT 1
                       FROM "chatUser"
                       WHERE "chatUser"."userId" = "users"."id"
+                        AND "chatUser"."userKey" = "users"."userKey"
                         AND "chatUser"."chatId" = "chat"."idOfChat"
+                        AND "chatUser"."chatKey" = "chat"."chatKey"
                     )
                 )
               ) AS "t"
@@ -3000,11 +3125,14 @@ describe('hasMany through', () => {
                   SELECT 1
                   FROM "user" AS "users"
                   WHERE "profiles"."userId" = "users"."id"
+                    AND "profiles"."profileKey" = "users"."userKey"
                     AND EXISTS (
                       SELECT 1
                       FROM "chatUser"
                       WHERE "chatUser"."userId" = "users"."id"
+                        AND "chatUser"."userKey" = "users"."userKey"
                         AND "chatUser"."chatId" = "chat"."idOfChat"
+                        AND "chatUser"."chatKey" = "chat"."chatKey"
                     )
                 )
                 AND "profiles"."bio" IN ($2, $3)

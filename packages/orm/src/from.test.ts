@@ -41,6 +41,7 @@ describe('orm', () => {
           SELECT count(*) r
           FROM "message" AS "messages"
           WHERE "messages"."authorId" = "user"."id"
+            AND "messages"."messageKey" = "user"."userKey"
         ) "messagesCount" ON true
       ) AS "user"
       WHERE "user"."messagesCount" >= $1`,

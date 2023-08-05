@@ -31,6 +31,7 @@ describe('relations', () => {
           SELECT ${profileSelectAll} FROM "profile"
           WHERE "profile"."bio" = $1
             AND "profile"."userId" = "user"."id"
+            AND "profile"."profileKey" = "user"."userKey"
         ) "profile" ON true
         LEFT JOIN LATERAL (
           SELECT json_agg(row_to_json("t".*)) r
@@ -38,6 +39,7 @@ describe('relations', () => {
             SELECT ${messageSelectAll} FROM "message" AS "messages"
             WHERE "messages"."text" = $2
               AND "messages"."authorId" = "user"."id"
+              AND "messages"."messageKey" = "user"."userKey"
           ) AS "t"
         ) "messages" ON true
       `,
@@ -124,9 +126,12 @@ describe('relations', () => {
             SELECT
               "p"."createdAt"
             FROM "profile" AS "p"
-            WHERE "p"."bio" = $1 AND "p"."userId" = "user"."id"
+            WHERE "p"."bio" = $1
+              AND "p"."userId" = "user"."id"
+              AND "p"."profileKey" = "user"."userKey"
           ) "userProfile" ON true
           WHERE "user"."id" = "message"."authorId"
+            AND "user"."userKey" = "message"."messageKey"
         ) "chatUser" ON true
       `,
       ['bio'],
@@ -164,6 +169,7 @@ describe('relations', () => {
           SELECT count(*) r
           FROM "message" AS "messages"
           WHERE "messages"."authorId" = "user"."id"
+            AND "messages"."messageKey" = "user"."userKey"
         ) "messagesCount" ON true
         ORDER BY "messagesCount".r DESC
       `,
@@ -188,6 +194,7 @@ describe('relations', () => {
           SELECT "profile"."bio" AS "r"
           FROM "profile"
           WHERE "profile"."userId" = "user"."id"
+            AND "profile"."profileKey" = "user"."userKey"
         ) "bio" ON true
         ORDER BY "bio".r DESC
       `,
@@ -213,6 +220,7 @@ describe('relations', () => {
           SELECT ${profileSelectAll}
           FROM "profile"
           WHERE "profile"."userId" = "user"."id"
+            AND "profile"."profileKey" = "user"."userKey"
         ) "profile" ON true
       `,
     );

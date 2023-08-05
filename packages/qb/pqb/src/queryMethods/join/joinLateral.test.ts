@@ -89,6 +89,7 @@ describe('joinLateral', () => {
         id: expect.any(Number),
         m: {
           id: expect.any(Number),
+          messageKey: null,
           authorId: expect.any(Number),
           chatId: expect.any(Number),
           meta: null,

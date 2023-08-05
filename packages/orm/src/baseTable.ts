@@ -26,6 +26,10 @@ import {
 } from 'orchid-core';
 import { MapRelations } from './relations/relations';
 import { OrchidORM } from './orm';
+import { BelongsToOptions } from './relations/belongsTo';
+import { HasOneOptions } from './relations/hasOne';
+import { HasManyOptions } from './relations/hasMany';
+import { HasAndBelongsToManyOptions } from './relations/hasAndBelongsToMany';
 
 // type of table class itself
 export type TableClass<T extends Table = Table> = new () => T;
@@ -63,7 +67,7 @@ type ColumnsConfig = {
 };
 
 // callback with a query of relation, to use as a default scope
-type ScopeFn<Related extends TableClass, Scope extends Query> = (
+export type ScopeFn<Related extends TableClass, Scope extends Query> = (
   q: DbTable<Related>,
 ) => Scope;
 
@@ -225,16 +229,10 @@ const create = <CT extends ColumnTypesBase>(
       Self extends this,
       Related extends TableClass,
       Scope extends Query,
-      Options extends {
-        primaryKey: keyof InstanceType<Related>['columns']['shape'];
-        foreignKey: keyof Self['columns']['shape'];
-        scope?: ScopeFn<Related, Scope>;
-        required?: boolean;
-      },
+      Options extends BelongsToOptions<Self, Related, Scope>,
     >(this: Self, fn: () => Related, options: Options) {
       return {
         type: 'belongsTo' as const,
-        returns: 'one' as const,
         fn,
         options,
       };
@@ -246,23 +244,10 @@ const create = <CT extends ColumnTypesBase>(
       Scope extends Query,
       Through extends string,
       Source extends string,
-      Options extends (
-        | {
-            primaryKey: keyof Self['columns']['shape'];
-            foreignKey: keyof InstanceType<Related>['columns']['shape'];
-          }
-        | {
-            through: Through;
-            source: Source;
-          }
-      ) & {
-        scope?: ScopeFn<Related, Scope>;
-        required?: boolean;
-      },
+      Options extends HasOneOptions<Self, Related, Scope, Through, Source>,
     >(this: Self, fn: () => Related, options: Options) {
       return {
         type: 'hasOne' as const,
-        returns: 'one' as const,
         fn,
         options,
       };
@@ -274,23 +259,10 @@ const create = <CT extends ColumnTypesBase>(
       Scope extends Query,
       Through extends string,
       Source extends string,
-      Options extends (
-        | {
-            primaryKey: keyof Self['columns']['shape'];
-            foreignKey: keyof InstanceType<Related>['columns']['shape'];
-          }
-        | {
-            through: Through;
-            source: Source;
-          }
-      ) & {
-        scope?: ScopeFn<Related, Scope>;
-        required?: boolean;
-      },
+      Options extends HasManyOptions<Self, Related, Scope, Through, Source>,
     >(this: Self, fn: () => Related, options: Options) {
       return {
         type: 'hasMany' as const,
-        returns: 'many' as const,
         fn,
         options,
       };
@@ -300,19 +272,10 @@ const create = <CT extends ColumnTypesBase>(
       Self extends this,
       Related extends TableClass,
       Scope extends Query,
-      Options extends {
-        primaryKey: keyof Self['columns']['shape'];
-        associationPrimaryKey: keyof InstanceType<Related>['columns']['shape'];
-        foreignKey: string;
-        associationForeignKey: string;
-        joinTable: string;
-        scope?: ScopeFn<Related, Scope>;
-        required?: boolean;
-      },
+      Options extends HasAndBelongsToManyOptions<Self, Related, Scope>,
     >(this: Self, fn: () => Related, options: Options) {
       return {
         type: 'hasAndBelongsToMany' as const,
-        returns: 'many' as const,
         fn,
         options,
       };

@@ -14,6 +14,7 @@ export class UserTable extends BaseTable {
   columns = this.setColumns((t) => ({
     Id: t.name('id').identity().primaryKey(),
     Name: t.name('name').text(),
+    UserKey: t.name('userKey').text(),
     Password: t.name('password').text(),
     Picture: t.name('picture').text().nullable(),
     Data: t
@@ -33,21 +34,23 @@ export class UserTable extends BaseTable {
   relations = {
     profile: this.hasOne(() => ProfileTable, {
       required: true,
-      primaryKey: 'Id',
-      foreignKey: 'UserId',
+      columns: ['Id', 'UserKey'],
+      references: ['UserId', 'ProfileKey'],
     }),
 
     messages: this.hasMany(() => MessageTable, {
-      primaryKey: 'Id',
-      foreignKey: 'AuthorId',
+      columns: ['Id', 'UserKey'],
+      references: ['AuthorId', 'MessageKey'],
     }),
 
     chats: this.hasAndBelongsToMany(() => ChatTable, {
-      primaryKey: 'Id',
-      foreignKey: 'userId',
-      associationPrimaryKey: 'IdOfChat',
-      associationForeignKey: 'chatId',
-      joinTable: 'chatUser',
+      columns: ['Id', 'UserKey'],
+      references: ['userId', 'userKey'],
+      through: {
+        table: 'chatUser',
+        columns: ['chatId', 'chatKey'],
+        references: ['IdOfChat', 'ChatKey'],
+      },
     }),
   };
 }
@@ -58,6 +61,7 @@ export class ProfileTable extends BaseTable {
   readonly table = 'profile';
   columns = this.setColumns((t) => ({
     Id: t.name('id').identity().primaryKey(),
+    ProfileKey: t.name('profileKey').text(),
     UserId: t
       .name('userId')
       .integer()
@@ -70,8 +74,8 @@ export class ProfileTable extends BaseTable {
   relations = {
     user: this.belongsTo(() => UserTable, {
       required: true,
-      primaryKey: 'Id',
-      foreignKey: 'UserId',
+      columns: ['UserId', 'ProfileKey'],
+      references: ['Id', 'UserKey'],
     }),
 
     chats: this.hasMany(() => ChatTable, {
@@ -93,17 +97,20 @@ export class ChatTable extends BaseTable {
   columns = this.setColumns((t) => ({
     // a different id name to better test has and belongs to many
     IdOfChat: t.name('idOfChat').identity().primaryKey(),
+    ChatKey: t.name('chatKey').text(),
     Title: t.name('title').text(),
     ...t.timestamps(),
   }));
 
   relations = {
     users: this.hasAndBelongsToMany(() => UserTable, {
-      primaryKey: 'IdOfChat',
-      foreignKey: 'chatId',
-      associationPrimaryKey: 'Id',
-      associationForeignKey: 'userId',
-      joinTable: 'chatUser',
+      columns: ['IdOfChat', 'ChatKey'],
+      references: ['chatId', 'chatKey'],
+      through: {
+        table: 'chatUser',
+        columns: ['userId', 'userKey'],
+        references: ['Id', 'UserKey'],
+      },
     }),
 
     profiles: this.hasMany(() => ProfileTable, {
@@ -112,8 +119,8 @@ export class ChatTable extends BaseTable {
     }),
 
     messages: this.hasMany(() => MessageTable, {
-      primaryKey: 'IdOfChat',
-      foreignKey: 'ChatId',
+      columns: ['IdOfChat', 'ChatKey'],
+      references: ['ChatId', 'MessageKey'],
     }),
   };
 }
@@ -124,6 +131,7 @@ export class MessageTable extends BaseTable {
   readonly table = 'message';
   columns = this.setColumns((t) => ({
     Id: t.name('id').identity().primaryKey(),
+    MessageKey: t.name('messageKey').text(),
     ChatId: t
       .name('chatId')
       .integer()
@@ -139,13 +147,13 @@ export class MessageTable extends BaseTable {
 
   relations = {
     user: this.belongsTo(() => UserTable, {
-      primaryKey: 'Id',
-      foreignKey: 'AuthorId',
+      columns: ['AuthorId', 'MessageKey'],
+      references: ['Id', 'UserKey'],
     }),
 
     chat: this.belongsTo(() => ChatTable, {
-      primaryKey: 'IdOfChat',
-      foreignKey: 'ChatId',
+      columns: ['ChatId', 'MessageKey'],
+      references: ['IdOfChat', 'ChatKey'],
     }),
 
     profile: this.hasOne(() => ProfileTable, {
@@ -172,8 +180,8 @@ export class PostTable extends BaseTable {
 
   relations = {
     postTags: this.hasMany(() => PostTagTable, {
-      primaryKey: 'Id',
-      foreignKey: 'PostId',
+      columns: ['Id'],
+      references: ['PostId'],
     }),
   };
 }
@@ -196,8 +204,8 @@ export class PostTagTable extends BaseTable {
 
   relations = {
     tag: this.belongsTo(() => TagTable, {
-      primaryKey: 'Tag',
-      foreignKey: 'Tag',
+      columns: ['Tag'],
+      references: ['Tag'],
     }),
   };
 }
@@ -262,6 +270,7 @@ export const chatSelectAll = db.chat.internal.columnsForSelectAll!.join(', ');
 
 export const userData = {
   Name: 'name',
+  UserKey: 'key',
   Password: 'password',
   updatedAt: now,
   createdAt: now,
@@ -269,18 +278,21 @@ export const userData = {
 
 export const profileData = {
   Bio: 'bio',
+  ProfileKey: 'key',
   updatedAt: now,
   createdAt: now,
 };
 
 export const chatData = {
-  Title: 'chat',
+  Title: 'title',
+  ChatKey: 'key',
   updatedAt: now,
   createdAt: now,
 };
 
 export const messageData = {
   Text: 'text',
+  MessageKey: 'key',
   updatedAt: now,
   createdAt: now,
 };

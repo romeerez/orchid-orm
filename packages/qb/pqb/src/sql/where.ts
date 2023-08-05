@@ -292,17 +292,24 @@ const pushIn = (
     values: unknown[][] | Query | Expression;
   },
 ) => {
+  // if there are multiple columns, make `(col1, col2) IN ((1, 2), (3, 4))`,
+  // otherwise, make `col IN (1, 2, 3)`
+  const multiple = arg.columns.length > 1;
+
   let value: string;
 
   if (Array.isArray(arg.values)) {
     value = `${arg.values
       .map(
-        (arr) =>
-          `(${arr.map((value) => addValue(ctx.values, value)).join(', ')})`,
+        multiple
+          ? (arr) =>
+              `(${arr.map((value) => addValue(ctx.values, value)).join(', ')})`
+          : (arr) =>
+              `${arr.map((value) => addValue(ctx.values, value)).join(', ')}`,
       )
       .join(', ')}`;
 
-    if (arg.columns.length > 1) value = `(${value})`;
+    value = `(${value})`;
   } else if (isExpression(arg.values)) {
     value = arg.values.toSQL(ctx, quotedAs);
   } else {
@@ -315,8 +322,6 @@ const pushIn = (
     .join(', ');
 
   ands.push(
-    `${prefix}${
-      arg.columns.length > 1 ? `(${columnsSql})` : columnsSql
-    } IN ${value}`,
+    `${prefix}${multiple ? `(${columnsSql})` : columnsSql} IN ${value}`,
   );
 };

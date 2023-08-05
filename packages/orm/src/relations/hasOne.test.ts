@@ -34,8 +34,9 @@ describe('hasOne', () => {
         `
         SELECT ${profileSelectAll} FROM "profile"
         WHERE "profile"."userId" = $1
+          AND "profile"."profileKey" = $2
       `,
-        [UserId],
+        [UserId, 'key'],
       );
 
       const profile = await query;
@@ -56,6 +57,7 @@ describe('hasOne', () => {
               SELECT 1 FROM "user"
               WHERE "user"."name" = $1
                 AND "user"."id" = "profile"."userId"
+            AND "user"."userKey" = "profile"."profileKey"
             )
             AND "profile"."bio" = $2
         `,
@@ -64,7 +66,7 @@ describe('hasOne', () => {
     });
 
     it('should have create with defaults of provided id', () => {
-      const user = { Id: 1 };
+      const user = { Id: 1, UserKey: 'key' };
       const now = new Date();
 
       const query = db.user.profile(user).count().create({
@@ -76,17 +78,17 @@ describe('hasOne', () => {
       expectSql(
         query.toSQL(),
         `
-        INSERT INTO "profile"("userId", "bio", "updatedAt", "createdAt")
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO "profile"("userId", "profileKey", "bio", "updatedAt", "createdAt")
+        VALUES ($1, $2, $3, $4, $5)
       `,
-        [1, 'bio', now, now],
+        [1, 'key', 'bio', now, now],
       );
     });
 
     it('can create after calling method', async () => {
       const Id = await db.user.get('Id').create(userData);
       const now = new Date();
-      await db.user.profile({ Id }).create({
+      await db.user.profile({ Id, UserKey: 'key' }).create({
         UserId: Id,
         Bio: 'bio',
         updatedAt: now,
@@ -103,8 +105,8 @@ describe('hasOne', () => {
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "profile"("userId", "bio")
-            SELECT "user"."id" AS "UserId", $1
+            INSERT INTO "profile"("userId", "profileKey", "bio")
+            SELECT "user"."id" AS "UserId", "user"."userKey" AS "ProfileKey", $1
             FROM "user"
             WHERE "user"."id" = $2
             LIMIT 1
@@ -155,6 +157,7 @@ describe('hasOne', () => {
                 SELECT 1 FROM "user"
                 WHERE "user"."name" = $1
                   AND "user"."id" = "profile"."userId"
+              AND "user"."userKey" = "profile"."profileKey"
               )
               AND "profile"."bio" = $2
           `,
@@ -171,6 +174,7 @@ describe('hasOne', () => {
         `
           SELECT ${profileSelectAll} FROM "profile" AS "p"
           WHERE "p"."userId" = "u"."id"
+            AND "p"."profileKey" = "u"."userKey"
         `,
       );
     });
@@ -183,6 +187,7 @@ describe('hasOne', () => {
         WHERE EXISTS (
           SELECT 1 FROM "profile"
           WHERE "profile"."userId" = "u"."id"
+          AND "profile"."profileKey" = "u"."userKey"
         )
       `,
       );
@@ -197,6 +202,7 @@ describe('hasOne', () => {
         WHERE EXISTS (
           SELECT 1 FROM "profile"
           WHERE "profile"."userId" = "u"."id"
+            AND "profile"."profileKey" = "u"."userKey"
             AND "profile"."bio" = $1
         )
       `,
@@ -222,6 +228,7 @@ describe('hasOne', () => {
         FROM "user" AS "u"
         JOIN "profile"
           ON "profile"."userId" = "u"."id"
+               AND "profile"."profileKey" = "u"."userKey"
          AND "profile"."bio" = $1
       `,
         ['bio'],
@@ -248,9 +255,10 @@ describe('hasOne', () => {
         SELECT "u"."name" AS "Name", "p"."bio" AS "Bio"
         FROM "user" AS "u"
         JOIN "profile" AS "p"
-         ON "p"."bio" = $1
-         AND "p"."userId" = $2
-         AND "p"."userId" = "u"."id"
+          ON "p"."bio" = $1
+          AND "p"."userId" = $2
+          AND "p"."userId" = "u"."id"
+          AND "p"."profileKey" = "u"."userKey"
       `,
         ['bio', 123],
       );
@@ -272,7 +280,9 @@ describe('hasOne', () => {
           JOIN LATERAL (
             SELECT ${profileSelectAll}
             FROM "profile" AS "p"
-            WHERE "p"."bio" = $1 AND "p"."userId" = "user"."id"
+            WHERE "p"."bio" = $1
+              AND "p"."userId" = "user"."id"
+              AND "p"."profileKey" = "user"."userKey"
           ) "p" ON true
           WHERE "p"."Bio" = $2
         `,
@@ -303,6 +313,7 @@ describe('hasOne', () => {
               FROM "profile"
               WHERE "profile"."bio" = $1
                 AND "profile"."userId" = "u"."id"
+                AND "profile"."profileKey" = "u"."userKey"
             ) "profile" ON true
             ORDER BY "profile"."Bio" ASC
           `,
@@ -331,6 +342,7 @@ describe('hasOne', () => {
               SELECT true r
               FROM "profile"
               WHERE "profile"."userId" = "u"."id"
+              AND "profile"."profileKey" = "u"."userKey"
             ) "hasProfile" ON true
           `,
         );
@@ -364,11 +376,14 @@ describe('hasOne', () => {
                   SELECT ${profileSelectAll}
                   FROM "profile"
                   WHERE "profile"."userId" = "user"."id"
+                    AND "profile"."profileKey" = "user"."userKey"
                 ) "profile2" ON true
                 WHERE "profile2"."Bio" = $1
                   AND "user"."id" = "profile"."userId"
+                  AND "user"."userKey" = "profile"."profileKey"
               ) "user2" ON true
               WHERE "profile"."userId" = "user"."id"
+                AND "profile"."profileKey" = "user"."userKey"
             ) "profile" ON true
           `,
           ['bio'],
@@ -389,6 +404,7 @@ describe('hasOne', () => {
                 SELECT "user"."name" AS "Name"
                 FROM "user"
                 WHERE "user"."id" = "profile"."userId"
+                  AND "user"."userKey" = "profile"."profileKey"
               ),
               "updatedAt" = now()
           `,
@@ -1045,7 +1061,7 @@ describe('hasOne', () => {
             .create({ ...userData, profile: { create: profileData } });
 
           const { Id: profileId } = await db.user
-            .profile({ Id })
+            .profile({ Id, UserKey: 'key' })
             .select('Id')
             .take();
 
@@ -1137,7 +1153,7 @@ describe('hasOne', () => {
             },
           });
 
-          const profile = await db.user.profile({ Id }).take();
+          const profile = await db.user.profile({ Id, UserKey: 'key' }).take();
           expect(profile.Bio).toBe('updated');
         });
 
@@ -1322,7 +1338,7 @@ describe('hasOne', () => {
             expect(beforeUpdate).toHaveBeenCalledTimes(1);
             expect(afterUpdate).toHaveBeenCalledTimes(1);
             expect(afterUpdate).toBeCalledWith(
-              [{ Id, UserId }],
+              [{ Id, UserId, ProfileKey: 'key' }],
               expect.any(Db),
             );
           });
@@ -1359,7 +1375,7 @@ describe('hasOne', () => {
             .create({ ...userData, profile: { create: profileData } });
 
           const previousProfileId = await db.user
-            .profile({ Id: userId })
+            .profile({ Id: userId, UserKey: 'key' })
             .get('Id');
 
           const updated = await db.user
@@ -1497,6 +1513,7 @@ describe('hasOne', () => {
           SELECT count(*) = $1
           FROM "profile"
           WHERE "profile"."userId" = "user"."id"
+            AND "profile"."profileKey" = "user"."userKey"
             AND "profile"."bio" IN ($2, $3)
         )
       `,
@@ -1686,7 +1703,7 @@ describe('hasOne through', () => {
   });
 
   it('should have method to query related data', async () => {
-    const query = db.message.profile({ AuthorId: 1 });
+    const query = db.message.profile({ AuthorId: 1, MessageKey: 'key' });
     expectSql(
       query.toSQL(),
       `
@@ -1694,10 +1711,12 @@ describe('hasOne through', () => {
         WHERE EXISTS (
           SELECT 1 FROM "user"
           WHERE "profile"."userId" = "user"."id"
+            AND "profile"."profileKey" = "user"."userKey"
             AND "user"."id" = $1
+            AND "user"."userKey" = $2
         )
       `,
-      [1],
+      [1, 'key'],
     );
   });
 
@@ -1716,7 +1735,9 @@ describe('hasOne through', () => {
               AND EXISTS (
                 SELECT 1 FROM "user"
                 WHERE "profile"."userId" = "user"."id"
+                  AND "profile"."profileKey" = "user"."userKey"
                   AND "user"."id" = "message"."authorId"
+                AND "user"."userKey" = "message"."messageKey"
               )
           )
           AND "profile"."bio" = $2
@@ -1746,7 +1767,9 @@ describe('hasOne through', () => {
               AND EXISTS (
                 SELECT 1 FROM "user"
                 WHERE "profile"."userId" = "user"."id"
+                  AND "profile"."profileKey" = "user"."userKey"
                   AND "user"."id" = "message"."authorId"
+                AND "user"."userKey" = "message"."messageKey"
               )
           )
           AND "profile"."bio" = $2
@@ -1765,7 +1788,9 @@ describe('hasOne through', () => {
         WHERE EXISTS (
           SELECT 1 FROM "user"
           WHERE "p"."userId" = "user"."id"
+            AND "p"."profileKey" = "user"."userKey"
             AND "user"."id" = "m"."authorId"
+            AND "user"."userKey" = "m"."messageKey"
         )
       `,
     );
@@ -1781,7 +1806,9 @@ describe('hasOne through', () => {
           WHERE EXISTS (
             SELECT 1 FROM "user"
             WHERE "profile"."userId" = "user"."id"
+              AND "profile"."profileKey" = "user"."userKey"
               AND "user"."id" = "message"."authorId"
+              AND "user"."userKey" = "message"."messageKey"
           )
         )
       `,
@@ -1799,7 +1826,9 @@ describe('hasOne through', () => {
           WHERE EXISTS (
             SELECT 1 FROM "user"
             WHERE "profile"."userId" = "user"."id"
+              AND "profile"."profileKey" = "user"."userKey"
               AND "user"."id" = "m"."authorId"
+              AND "user"."userKey" = "m"."messageKey"
           )
           AND "profile"."bio" = $1
         )
@@ -1825,7 +1854,9 @@ describe('hasOne through', () => {
           ON EXISTS (
             SELECT 1 FROM "user"
             WHERE "profile"."userId" = "user"."id"
+              AND "profile"."profileKey" = "user"."userKey"
               AND "user"."id" = "m"."authorId"
+              AND "user"."userKey" = "m"."messageKey"
           )
           AND "profile"."bio" = $1
       `,
@@ -1855,7 +1886,9 @@ describe('hasOne through', () => {
          AND EXISTS (
             SELECT 1 FROM "user"
             WHERE "p"."userId" = "user"."id"
+              AND "p"."profileKey" = "user"."userKey"
               AND "user"."id" = "m"."authorId"
+              AND "user"."userKey" = "m"."messageKey"
           )
       `,
       ['bio', 123],
@@ -1883,7 +1916,9 @@ describe('hasOne through', () => {
             SELECT 1
             FROM "user"
             WHERE "p"."userId" = "user"."id"
+              AND "p"."profileKey" = "user"."userKey"
               AND "user"."id" = "message"."authorId"
+              AND "user"."userKey" = "message"."messageKey"
           )
         ) "p" ON true
         WHERE "p"."Bio" = $2
@@ -1913,7 +1948,9 @@ describe('hasOne through', () => {
               AND EXISTS (
                 SELECT 1 FROM "user"
                 WHERE "profile"."userId" = "user"."id"
-                AND "user"."id" = "m"."authorId"
+                  AND "profile"."profileKey" = "user"."userKey"
+                  AND "user"."id" = "m"."authorId"
+                  AND "user"."userKey" = "m"."messageKey"
               )
           ) "profile" ON true
         `,
@@ -1944,7 +1981,9 @@ describe('hasOne through', () => {
             WHERE EXISTS (
               SELECT 1 FROM "user"
               WHERE "profile"."userId" = "user"."id"
-              AND "user"."id" = "m"."authorId"
+                AND "profile"."profileKey" = "user"."userKey"
+                AND "user"."id" = "m"."authorId"
+                AND "user"."userKey" = "m"."messageKey"
             )
           ) "hasProfile" ON true
         `,
@@ -1984,7 +2023,9 @@ describe('hasOne through', () => {
                     SELECT 1
                     FROM "user"
                     WHERE "profile"."userId" = "user"."id"
+                      AND "profile"."profileKey" = "user"."userKey"
                       AND "user"."id" = "messages"."authorId"
+                      AND "user"."userKey" = "messages"."messageKey"
                   )
                 ) "profile2" ON true
                 WHERE "profile2"."Bio" = $1
@@ -1992,7 +2033,9 @@ describe('hasOne through', () => {
                     SELECT 1
                     FROM "user"
                     WHERE "messages"."authorId" = "user"."id"
+                      AND "messages"."messageKey" = "user"."userKey"
                       AND "user"."id" = "profile"."userId"
+                      AND "user"."userKey" = "profile"."profileKey"
                   )
               ) AS "t"
             ) "messages" ON true
@@ -2000,7 +2043,9 @@ describe('hasOne through', () => {
               SELECT 1
               FROM "user"
               WHERE "profile"."userId" = "user"."id"
+                AND "profile"."profileKey" = "user"."userKey"
                 AND "user"."id" = "message"."authorId"
+                AND "user"."userKey" = "message"."messageKey"
             )
           ) "profile" ON true
         `,
@@ -2107,7 +2152,9 @@ describe('hasOne through', () => {
               SELECT 1
               FROM "user"
               WHERE "profile"."userId" = "user"."id"
+                AND "profile"."profileKey" = "user"."userKey"
                 AND "user"."id" = "message"."authorId"
+                AND "user"."userKey" = "message"."messageKey"
             )
             AND "profile"."bio" IN ($2, $3)
         )

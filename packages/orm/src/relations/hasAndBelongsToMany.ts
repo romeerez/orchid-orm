@@ -1,11 +1,11 @@
 import {
-  RelationCommonOptions,
   RelationData,
   RelationThunkBase,
   RelationToManyDataForCreate,
 } from './relations';
 import { DbTable, Table, TableClass } from '../baseTable';
 import {
+  ColumnsShape,
   ColumnType,
   CreateCtx,
   CreateData,
@@ -20,24 +20,47 @@ import {
   UpdateData,
   VirtualColumn,
   WhereArg,
-  WhereQueryBase,
   WhereResult,
 } from 'pqb';
 import { EmptyObject, MaybeArray } from 'orchid-core';
-import { hasRelationHandleCreate, hasRelationHandleUpdate } from './utils';
+import {
+  hasRelationHandleCreate,
+  hasRelationHandleUpdate,
+  NestedInsertManyConnect,
+  NestedInsertManyConnectOrCreate,
+  NestedInsertManyItems,
+} from './common/utils';
 import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
+import { RelationCommonOptions } from './common/options';
 
-export interface HasAndBelongsToMany extends RelationThunkBase {
+export type HasAndBelongsToMany = RelationThunkBase & {
   type: 'hasAndBelongsToMany';
-  returns: 'many';
-  options: RelationCommonOptions & {
-    primaryKey: string;
-    foreignKey: string;
-    associationPrimaryKey: string;
-    associationForeignKey: string;
-    joinTable: string;
-  };
-}
+  options: HasAndBelongsToManyOptions;
+};
+
+export type HasAndBelongsToManyOptions<
+  Self extends Table = Table,
+  Related extends TableClass = TableClass,
+  Scope extends Query = Query,
+> = RelationCommonOptions<Related, Scope> &
+  (
+    | {
+        columns: (keyof Self['columns']['shape'])[];
+        references: string[];
+        through: {
+          table: string;
+          columns: string[];
+          references: (keyof InstanceType<Related>['columns']['shape'])[];
+        };
+      }
+    | {
+        primaryKey: keyof Self['columns']['shape'];
+        foreignKey: string;
+        joinTable: string;
+        associationPrimaryKey: string;
+        associationForeignKey: keyof InstanceType<Related>['columns']['shape'];
+      }
+  );
 
 export type HasAndBelongsToManyInfo<
   T extends Table,
@@ -74,10 +97,16 @@ export type HasAndBelongsToManyInfo<
   };
   dataForUpdateOne: EmptyObject;
 
-  params: Record<
-    Relation['options']['primaryKey'],
-    T['columns']['shape'][Relation['options']['primaryKey']]['type']
-  >;
+  params: Relation['options'] extends { columns: string[] }
+    ? {
+        [K in Relation['options']['columns'][number]]: T['columns']['shape'][K]['type'];
+      }
+    : Relation['options'] extends { primaryKey: string }
+    ? Record<
+        Relation['options']['primaryKey'],
+        T['columns']['shape'][Relation['options']['primaryKey']]['type']
+      >
+    : never;
   populate: never;
   chainedCreate: true;
   chainedDelete: true;
@@ -86,13 +115,13 @@ export type HasAndBelongsToManyInfo<
 type State = {
   relatedTableQuery: Query;
   joinTableQuery: Query;
-  primaryKey: string;
-  foreignKey: string;
-  associationPrimaryKey: string;
-  associationForeignKey: string;
-  foreignKeyFull: string;
-  associationPrimaryKeyFull: string;
-  associationForeignKeyFull: string;
+  primaryKeys: string[];
+  foreignKeys: string[];
+  throughForeignKeys: string[];
+  throughPrimaryKeys: string[];
+  foreignKeysFull: string[];
+  throughForeignKeysFull: string[];
+  throughPrimaryKeysFull: string[];
 };
 
 class HasAndBelongsToManyVirtualColumn extends VirtualColumn {
@@ -117,7 +146,7 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn {
       item,
       rowIndex,
       this.key,
-      this.state.primaryKey,
+      this.state.primaryKeys,
       this.nestedInsert,
     );
   }
@@ -127,7 +156,7 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn {
       q,
       set,
       this.key,
-      this.state.primaryKey,
+      this.state.primaryKeys,
       this.nestedUpdate,
     );
   }
@@ -148,25 +177,55 @@ export const makeHasAndBelongsToManyMethod = (
   relationName: string,
   query: Query,
 ): RelationData => {
-  const {
-    primaryKey: pk,
-    foreignKey: fk,
-    associationPrimaryKey: apk,
-    associationForeignKey: afk,
-    joinTable,
-  } = relation.options;
+  let primaryKeys: string[];
+  let foreignKeys: string[];
+  let joinTable: string;
+  let throughForeignKeys: string[];
+  let throughPrimaryKeys: string[];
 
-  const foreignKeyFull = `${joinTable}.${fk}`;
-  const associationForeignKeyFull = `${joinTable}.${afk}`;
-  const associationPrimaryKeyFull = `${getQueryAs(query)}.${apk}`;
+  const { options } = relation;
+  if ('columns' in options) {
+    primaryKeys = options.columns;
+    foreignKeys = options.references;
+    joinTable = options.through.table;
+    throughForeignKeys = options.through.columns;
+    throughPrimaryKeys = options.through.references;
+  } else {
+    primaryKeys = [options.primaryKey];
+    foreignKeys = [options.foreignKey];
+    joinTable = options.joinTable;
+    throughForeignKeys = [options.associationForeignKey];
+    throughPrimaryKeys = [options.associationPrimaryKey];
+  }
+
+  const foreignKeysFull = foreignKeys.map((key) => `${joinTable}.${key}`);
+  const throughForeignKeysFull = throughForeignKeys.map(
+    (key) => `${joinTable}.${key}`,
+  );
+
+  const foreignTable = getQueryAs(query);
+  const throughPrimaryKeysFull = throughPrimaryKeys.map(
+    (key) => `${foreignTable}.${key}`,
+  );
+
+  const len = primaryKeys.length;
+  const throughLen = throughPrimaryKeys.length;
 
   const baseQuery = Object.create(qb.baseQuery);
   baseQuery.baseQuery = baseQuery;
   baseQuery.table = joinTable;
-  baseQuery.shape = {
-    [fk]: removeColumnName(table.shape[pk]),
-    [afk]: removeColumnName(query.shape[apk]),
-  };
+
+  const shape: ColumnsShape = {};
+  for (let i = 0; i < len; i++) {
+    shape[foreignKeys[i]] = removeColumnName(table.shape[primaryKeys[i]]);
+  }
+  for (let i = 0; i < throughLen; i++) {
+    shape[throughForeignKeys[i]] = removeColumnName(
+      query.shape[throughPrimaryKeys[i]],
+    );
+  }
+
+  baseQuery.shape = shape;
   baseQuery.q = {
     ...baseQuery.q,
     shape: baseQuery.shape,
@@ -176,45 +235,75 @@ export const makeHasAndBelongsToManyMethod = (
   const state: State = {
     relatedTableQuery: query,
     joinTableQuery: subQuery,
-    primaryKey: pk,
-    foreignKey: fk,
-    associationPrimaryKey: apk,
-    associationForeignKey: afk,
-    foreignKeyFull,
-    associationForeignKeyFull,
-    associationPrimaryKeyFull,
+    primaryKeys,
+    foreignKeys,
+    throughForeignKeys,
+    throughPrimaryKeys,
+    foreignKeysFull,
+    throughForeignKeysFull,
+    throughPrimaryKeysFull,
   };
+
+  const joinQuery = (toQuery: Query, tableAs: string, foreignAs: string) => {
+    return toQuery.whereExists(subQuery, (q) => {
+      for (let i = 0; i < throughLen; i++) {
+        q._on(
+          throughForeignKeysFull[i],
+          `${foreignAs}.${throughPrimaryKeys[i]}`,
+        );
+      }
+
+      for (let i = 0; i < len; i++) {
+        q._on(foreignKeysFull[i], `${tableAs}.${primaryKeys[i]}`);
+      }
+
+      return q;
+    });
+  };
+
+  const obj: Record<string, string> = {};
+  for (let i = 0; i < len; i++) {
+    obj[foreignKeys[i]] = primaryKeys[i];
+  }
+  const selectPrimaryKeysAsForeignKeys = [{ selectAs: obj }];
 
   return {
     returns: 'many',
     method(params: Record<string, unknown>) {
-      return query.whereExists(subQuery, (q) =>
-        q.on(associationForeignKeyFull, associationPrimaryKeyFull).where({
-          [foreignKeyFull]: params[pk],
-        }),
-      );
+      return query.whereExists(subQuery, (q) => {
+        q = q.clone();
+
+        const where: Record<string, unknown> = {};
+        for (let i = 0; i < len; i++) {
+          where[foreignKeysFull[i]] = params[primaryKeys[i]];
+        }
+
+        for (let i = 0; i < throughLen; i++) {
+          q._on(throughForeignKeysFull[i], throughPrimaryKeysFull[i]);
+        }
+
+        return q._where(where);
+      });
     },
     virtualColumn: new HasAndBelongsToManyVirtualColumn(relationName, state),
     // joinQuery can be a property of RelationQuery and be used by whereExists and other stuff which needs it
     // and the chained query itself may be a query around this joinQuery
     joinQuery(fromQuery, toQuery) {
-      const join = toQuery.whereExists(subQuery, (q) =>
-        q
-          ._on(associationForeignKeyFull, `${getQueryAs(toQuery)}.${apk}`)
-          ._on(foreignKeyFull, `${getQueryAs(fromQuery)}.${pk}`),
+      const join = joinQuery(
+        toQuery,
+        getQueryAs(fromQuery),
+        getQueryAs(toQuery),
       );
+
       join.q.joinedShapes = {
         ...join.q.joinedShapes,
         [(fromQuery.q.as || fromQuery.table) as string]: fromQuery.q.shape,
       };
+
       return join;
     },
     reverseJoin(fromQuery, toQuery) {
-      return fromQuery.whereExists(subQuery, (q) =>
-        q
-          ._on(associationForeignKeyFull, `${getQueryAs(toQuery)}.${apk}`)
-          ._on(foreignKeyFull, `${getQueryAs(fromQuery)}.${pk}`),
-      );
+      return joinQuery(fromQuery, getQueryAs(fromQuery), getQueryAs(toQuery));
     },
     modifyRelatedQuery(relationQuery) {
       const ref = {} as { q: Query };
@@ -230,15 +319,18 @@ export const makeHasAndBelongsToManyMethod = (
         }
 
         const fromQuery = ref.q.clone();
-        fromQuery.q.select = [{ selectAs: { [fk]: pk } }];
+        fromQuery.q.select = selectPrimaryKeysAsForeignKeys;
 
-        const createdCount = await subQuery.count()._createFrom(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          fromQuery as any,
-          {
-            [afk]: (result[0] as Record<string, unknown>)[apk],
-          } as never,
-        );
+        const data: Record<string, unknown> = {};
+        for (let i = 0; i < throughLen; i++) {
+          data[throughForeignKeys[i]] = (result[0] as Record<string, unknown>)[
+            throughPrimaryKeys[i]
+          ];
+        }
+
+        const createdCount = await subQuery
+          .count()
+          ._createFrom(fromQuery, data);
 
         if (createdCount === 0) {
           throw new NotFoundError(fromQuery);
@@ -257,149 +349,180 @@ const queryJoinTable = (
   data: Record<string, unknown>[],
   conditions?: MaybeArray<WhereArg<Query>>,
 ) => {
-  const t = state.joinTableQuery.clone();
-  const where: WhereArg<Query> = {
-    [state.foreignKey]: { in: data.map((item) => item[state.primaryKey]) },
-  };
+  const t = state.joinTableQuery.where({
+    IN: {
+      columns: state.foreignKeys,
+      values: data.map((item) => state.primaryKeys.map((key) => item[key])),
+    },
+  });
 
   if (conditions) {
-    where[state.associationForeignKey] = {
-      in: state.relatedTableQuery
-        .where<Query>(
-          Array.isArray(conditions) ? { OR: conditions } : conditions,
-        )
-        ._select(state.associationPrimaryKey),
-    };
+    t._where({
+      IN: {
+        columns: state.throughForeignKeys,
+        values: state.relatedTableQuery
+          .where(conditionsToWhereArg(conditions))
+          ._select(...state.throughPrimaryKeys),
+      },
+    });
   }
 
-  return t._where(where);
+  return t;
 };
 
-const queryRelatedTable = (
-  query: Query,
+const conditionsToWhereArg = (
   conditions: MaybeArray<WhereArg<Query>>,
-) => {
-  return query.where<Query>(
-    Array.isArray(conditions) ? { OR: conditions } : conditions,
-  );
-};
+): WhereArg<Query> =>
+  Array.isArray(conditions) ? { OR: conditions } : conditions;
 
 const insertToJoinTable = (
   state: State,
   joinTableTransaction: Query,
   data: Record<string, unknown>[],
-  ids: unknown[],
+  idsRows: unknown[][],
 ) => {
-  return joinTableTransaction._count()._createMany(
-    data.flatMap((item) =>
-      ids.map((id) => ({
-        [state.foreignKey]: item[state.primaryKey],
-        [state.associationForeignKey]: id,
-      })),
-    ),
-  );
+  const len = state.primaryKeys.length;
+  const throughLen = state.throughPrimaryKeys.length;
+
+  const records: Record<string, unknown>[] = [];
+  for (const item of data) {
+    const obj: Record<string, unknown> = {};
+    for (let i = 0; i < len; i++) {
+      obj[state.foreignKeys[i]] = item[state.primaryKeys[i]];
+    }
+
+    for (const ids of idsRows) {
+      const record = { ...obj };
+      for (let i = 0; i < throughLen; i++) {
+        record[state.throughForeignKeys[i]] = ids[i];
+      }
+      records.push(record);
+    }
+  }
+
+  return joinTableTransaction._count()._createMany(records);
 };
 
 const nestedInsert = ({
   relatedTableQuery,
   joinTableQuery,
-  primaryKey,
-  foreignKey,
-  associationPrimaryKey,
-  associationForeignKey,
+  primaryKeys,
+  foreignKeys,
+  throughPrimaryKeys,
+  throughForeignKeys,
 }: State) => {
-  return (async (_, data) => {
-    const connect = data.filter(
-      (
-        item,
-      ): item is [
-        selfData: Record<string, unknown>,
-        relationData: {
-          connect: WhereArg<WhereQueryBase>[];
-        },
-      ] => Boolean(item[1].connect),
-    );
+  const len = primaryKeys.length;
+  const throughLen = primaryKeys.length;
 
+  return (async (_, data) => {
     const t = relatedTableQuery.clone();
 
+    // array to store specific items will be reused
+    const items: unknown[] = [];
+    for (const item of data) {
+      if (item[1].connect) {
+        items.push(item);
+      }
+    }
+
     let connected: Record<string, unknown>[];
-    if (connect.length) {
-      connected = (await Promise.all(
-        connect.flatMap(([, { connect }]) =>
-          connect.map((item) =>
-            t.select(associationPrimaryKey)._findBy(item)._take(),
-          ),
-        ),
-      )) as Record<string, unknown[]>[];
+    if (items.length) {
+      const queries: Query[] = [];
+
+      for (const [, { connect }] of items as [
+        unknown,
+        { connect: NestedInsertManyConnect },
+      ][]) {
+        for (const item of connect) {
+          queries.push(
+            t
+              .select(...throughPrimaryKeys)
+              ._findBy(item)
+              ._take(),
+          );
+        }
+      }
+
+      connected = (await Promise.all(queries)) as Record<string, unknown[]>[];
     } else {
       connected = [];
     }
 
-    const connectOrCreate = data.filter(
-      (
-        item,
-      ): item is [
-        Record<string, unknown>,
-        {
-          connectOrCreate: {
-            where: WhereArg<WhereQueryBase>;
-            create: Record<string, unknown>;
-          }[];
-        },
-      ] => Boolean(item[1].connectOrCreate),
-    );
+    items.length = 0;
+    for (const item of data) {
+      if (item[1].connectOrCreate) {
+        items.push(item);
+      }
+    }
 
     let connectOrCreated: (Record<string, unknown> | undefined)[];
-    if (connectOrCreate.length) {
-      connectOrCreated = await Promise.all(
-        connectOrCreate.flatMap(([, { connectOrCreate }]) =>
-          connectOrCreate.map((item) =>
-            t.select(associationPrimaryKey)._findBy(item.where)._takeOptional(),
-          ),
-        ),
-      );
+    if (items.length) {
+      const queries: Query[] = [];
+
+      for (const [, { connectOrCreate }] of items as [
+        unknown,
+        { connectOrCreate: NestedInsertManyConnectOrCreate },
+      ][]) {
+        for (const item of connectOrCreate) {
+          queries.push(
+            t
+              .select(...throughPrimaryKeys)
+              ._findBy(item.where)
+              ._takeOptional(),
+          );
+        }
+      }
+
+      connectOrCreated = (await Promise.all(queries)) as Record<
+        string,
+        unknown
+      >[];
     } else {
       connectOrCreated = [];
     }
 
     let connectOrCreateI = 0;
-    const create = data.filter(
-      (
-        item,
-      ): item is [
-        Record<string, unknown>,
-        {
-          create?: Record<string, unknown>[];
-          connectOrCreate?: {
-            where: WhereArg<WhereQueryBase>;
-            create: Record<string, unknown>;
-          }[];
-        },
-      ] => {
-        if (item[1].connectOrCreate) {
-          const length = item[1].connectOrCreate.length;
-          connectOrCreateI += length;
-          for (let i = length; i > 0; i--) {
-            if (!connectOrCreated[connectOrCreateI - i]) return true;
+    items.length = 0;
+    for (const item of data) {
+      if (item[1].connectOrCreate) {
+        const length = item[1].connectOrCreate.length;
+        connectOrCreateI += length;
+        for (let i = length; i > 0; i--) {
+          if (!connectOrCreated[connectOrCreateI - i]) {
+            items.push(item);
+            break;
           }
         }
-        return Boolean(item[1].create);
-      },
-    );
+      } else if (item[1].create) {
+        items.push(item);
+      }
+    }
 
     connectOrCreateI = 0;
     let created: Record<string, unknown>[];
-    if (create.length) {
+    if (items.length) {
+      const records: Record<string, unknown>[] = [];
+
+      for (const [, { create, connectOrCreate }] of items as [
+        unknown,
+        NestedInsertManyItems,
+      ][]) {
+        if (create) {
+          records.push(...create);
+        }
+
+        if (connectOrCreate) {
+          for (const item of connectOrCreate) {
+            if (!connectOrCreated[connectOrCreateI++]) {
+              records.push(item.create);
+            }
+          }
+        }
+      }
+
       created = (await t
-        .select(associationPrimaryKey)
-        ._createMany(
-          create.flatMap(([, { create = [], connectOrCreate = [] }]) => [
-            ...create,
-            ...connectOrCreate
-              .filter(() => !connectOrCreated[connectOrCreateI++])
-              .map((item) => item.create),
-          ]),
-        )) as Record<string, unknown>[];
+        .select(...throughPrimaryKeys)
+        ._createMany(records)) as Record<string, unknown>[];
     } else {
       created = [];
     }
@@ -412,18 +535,20 @@ const nestedInsert = ({
     let createI = 0;
     let connectI = 0;
     connectOrCreateI = 0;
-    data.forEach(([, data], index) => {
-      if (data.create || data.connectOrCreate) {
-        if (data.create) {
-          const len = data.create.length;
+    for (let index = 0, len = data.length; index < len; index++) {
+      const item = data[index][1] as NestedInsertManyItems;
+
+      if (item.create || item.connectOrCreate) {
+        if (item.create) {
+          const len = item.create.length;
           allKeys[index][1] = created.slice(createI, createI + len);
           createI += len;
         }
-        if (data.connectOrCreate) {
+        if (item.connectOrCreate) {
           const arr: Record<string, unknown>[] = [];
           allKeys[index][1] = arr;
 
-          const len = data.connectOrCreate.length;
+          const len = item.connectOrCreate.length;
           for (let i = 0; i < len; i++) {
             const item = connectOrCreated[connectOrCreateI++];
             if (item) {
@@ -435,65 +560,88 @@ const nestedInsert = ({
         }
       }
 
-      if (data.connect) {
-        const len = data.connect.length;
+      if (item.connect) {
+        const len = item.connect.length;
         allKeys[index][1] = connected.slice(connectI, connectI + len);
         connectI += len;
       }
-    });
+    }
 
-    await joinTableQuery.count()._createMany(
-      allKeys.flatMap(([selfData, relationKeys]) => {
-        const selfKey = selfData[primaryKey];
-        return relationKeys.map((relationData) => ({
-          [foreignKey]: selfKey,
-          [associationForeignKey]: relationData[associationPrimaryKey],
-        }));
-      }),
-    );
+    const records: Record<string, unknown>[] = [];
+    for (const [selfData, relationKeys] of allKeys) {
+      const obj: Record<string, unknown> = {};
+      for (let i = 0; i < len; i++) {
+        obj[foreignKeys[i]] = selfData[primaryKeys[i]];
+      }
+
+      for (const relationData of relationKeys) {
+        const record = { ...obj };
+
+        for (let i = 0; i < throughLen; i++) {
+          record[throughForeignKeys[i]] = relationData[throughPrimaryKeys[i]];
+        }
+
+        records.push(record);
+      }
+    }
+
+    await joinTableQuery.count()._createMany(records);
   }) as HasManyNestedInsert;
 };
 
 const nestedUpdate = (state: State) => {
+  const len = state.primaryKeys.length;
+  const throughLen = state.throughPrimaryKeys.length;
+
   return (async (_, data, params) => {
     if (params.create) {
-      const ids = await state.relatedTableQuery
-        .pluck(state.associationPrimaryKey)
+      const idsRows: unknown[][] = await state.relatedTableQuery
+        .select(...state.throughPrimaryKeys)
+        ._rows()
         ._createMany(params.create);
 
-      await state.joinTableQuery.createMany(
-        data.flatMap((item) =>
-          ids.map((id) => ({
-            [state.foreignKey]: item[state.primaryKey],
-            [state.associationForeignKey]: id,
-          })),
-        ),
-      );
+      const records: Record<string, unknown>[] = [];
+      for (const item of data) {
+        const obj: Record<string, unknown> = {};
+        for (let i = 0; i < len; i++) {
+          obj[state.foreignKeys[i]] = item[state.primaryKeys[i]];
+        }
+
+        for (const ids of idsRows) {
+          const record = { ...obj };
+
+          for (let i = 0; i < throughLen; i++) {
+            record[state.throughForeignKeys[i]] = ids[i];
+          }
+
+          records.push(record);
+        }
+      }
+
+      await state.joinTableQuery.createMany(records);
     }
 
     if (params.update) {
-      await (
-        state.relatedTableQuery
-          .whereExists(state.joinTableQuery, (q) =>
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (q as any)
-              ._on(
-                state.associationForeignKeyFull,
-                state.associationPrimaryKeyFull,
-              )
-              ._where({
-                IN: {
-                  columns: [state.foreignKeyFull],
-                  values: [data.map((item) => item[state.primaryKey])],
-                },
-              }),
-          )
-          ._where(
-            Array.isArray(params.update.where)
-              ? { OR: params.update.where }
-              : params.update.where,
-          ) as WhereResult<Query>
-      )._update<WhereResult<Query>>(params.update.data);
+      await state.relatedTableQuery
+        .whereExists(state.joinTableQuery, (q) => {
+          for (let i = 0; i < throughLen; i++) {
+            q._on(
+              state.throughForeignKeysFull[i],
+              state.throughPrimaryKeysFull[i],
+            );
+          }
+
+          return q._where({
+            IN: {
+              columns: state.foreignKeysFull,
+              values: data.map((item) =>
+                state.primaryKeys.map((key) => item[key]),
+              ),
+            },
+          });
+        })
+        ._where(conditionsToWhereArg(params.update.where))
+        ._update<WhereResult<Query>>(params.update.data);
     }
 
     if (params.disconnect) {
@@ -503,11 +651,19 @@ const nestedUpdate = (state: State) => {
     if (params.delete) {
       const j = queryJoinTable(state, data, params.delete);
 
-      const ids = await j._pluck(state.associationForeignKey)._delete();
+      const idsRows = await j
+        ._select(...state.throughForeignKeys)
+        ._rows()
+        ._delete();
 
-      await queryRelatedTable(state.relatedTableQuery, {
-        [state.associationPrimaryKey]: { in: ids },
-      })._delete();
+      await state.relatedTableQuery
+        .where({
+          IN: {
+            columns: state.throughPrimaryKeys,
+            values: idsRows,
+          },
+        })
+        ._delete();
     }
 
     if (params.set) {
@@ -515,12 +671,12 @@ const nestedUpdate = (state: State) => {
       await j._delete();
       delete j.q[toSQLCacheKey];
 
-      const ids = await queryRelatedTable(
-        state.relatedTableQuery,
-        params.set,
-      )._pluck(state.associationPrimaryKey);
+      const idsRows = await state.relatedTableQuery
+        .where(conditionsToWhereArg(params.set))
+        ._select(...state.throughPrimaryKeys)
+        ._rows();
 
-      await insertToJoinTable(state, j, data, ids);
+      await insertToJoinTable(state, j, data, idsRows);
     }
   }) as HasManyNestedUpdate;
 };

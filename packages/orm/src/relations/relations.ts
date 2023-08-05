@@ -3,18 +3,17 @@ import { HasOne, HasOneInfo, makeHasOneMethod } from './hasOne';
 import { DbTable, Table, TableClass } from '../baseTable';
 import { OrchidORM } from '../orm';
 import {
+  CreateData,
+  getQueryAs,
   Query,
+  RelationConfigBase,
   RelationQuery,
+  RelationsBase,
   SetQueryReturnsAll,
   SetQueryReturnsOne,
   SetQueryReturnsOneOptional,
-  RelationConfigBase,
   VirtualColumn,
-  getQueryAs,
   WhereArg,
-  CreateData,
-  QueryWithTable,
-  RelationsBase,
 } from 'pqb';
 import { EmptyObject } from 'orchid-core';
 import { HasMany, HasManyInfo, makeHasManyMethod } from './hasMany';
@@ -23,12 +22,8 @@ import {
   HasAndBelongsToManyInfo,
   makeHasAndBelongsToManyMethod,
 } from './hasAndBelongsToMany';
-import { getSourceRelation, getThroughRelation } from './utils';
-
-export type RelationCommonOptions = {
-  scope?(q: QueryWithTable): QueryWithTable;
-  required?: boolean;
-};
+import { getSourceRelation, getThroughRelation } from './common/utils';
+import { RelationCommonOptions } from './common/options';
 
 // `belongsTo` and `hasOne` relation data available for create. It supports:
 // - `create` to create a related record
@@ -73,7 +68,6 @@ export type RelationToManyDataForCreate<
 
 export interface RelationThunkBase {
   type: string;
-  returns: 'one' | 'many';
   fn(): TableClass;
   options: RelationCommonOptions;
 }
