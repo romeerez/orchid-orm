@@ -1,5 +1,11 @@
 # pqb
 
+## 0.17.5
+
+### Patch Changes
+
+- f92e76ed: Support relations connected by multiple columns
+
 ## 0.17.4
 
 ### Patch Changes

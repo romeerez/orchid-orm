@@ -1,5 +1,16 @@
 # orchid-orm
 
+## 1.15.0
+
+### Minor Changes
+
+- f92e76ed: Support relations connected by multiple columns
+
+### Patch Changes
+
+- Updated dependencies [f92e76ed]
+  - pqb@0.17.5
+
 ## 1.14.4
 
 ### Patch Changes

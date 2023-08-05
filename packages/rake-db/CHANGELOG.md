@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.10.17
+
+### Patch Changes
+
+- f92e76ed: Support relations connected by multiple columns
+- Updated dependencies [f92e76ed]
+  - pqb@0.17.5
+
 ## 2.10.16
 
 ### Patch Changes
