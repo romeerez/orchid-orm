@@ -35,6 +35,20 @@ describe('createOrDrop', () => {
   });
 
   describe('createDb', () => {
+    it('should create a database without a specified user', async () => {
+      queryMock.mockResolvedValueOnce(undefined);
+
+      await createDb({ ...options, user: undefined }, config);
+
+      expect(queryMock.mock.calls).toEqual([[`CREATE DATABASE "dbname"`]]);
+
+      expect(logMock.mock.calls).toEqual([
+        [`Database dbname successfully created`],
+      ]);
+
+      expect(createSchemaMigrations).toHaveBeenCalled();
+    });
+
     it('should create database when user is an admin', async () => {
       queryMock.mockResolvedValueOnce(undefined);
 

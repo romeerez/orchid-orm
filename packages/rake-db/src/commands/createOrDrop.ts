@@ -131,7 +131,7 @@ export const createDb = async <CT extends ColumnTypesBase>(
   for (const options of toArray(arg)) {
     await createOrDrop(options, options, config, {
       sql({ database, user }) {
-        return `CREATE DATABASE "${database}" OWNER "${user}"`;
+        return `CREATE DATABASE "${database}"${user ? ` OWNER "${user}"` : ''}`;
       },
       successMessage({ database }) {
         return `Database ${database} successfully created`;
