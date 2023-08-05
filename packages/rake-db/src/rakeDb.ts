@@ -83,6 +83,7 @@ Commands:
   create                  create databases
   drop                    drop databases
   reset                   drop, create and migrate databases
+  pull                    generate a combined migration for an existing database
   new                     create new migration file, see below
   migrate                 migrate pending migrations, run recurrent
   up                      migrate pending migrations, don't run recurrent
