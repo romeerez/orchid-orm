@@ -2490,9 +2490,11 @@ It is not possible to use one method from another due to some TS limitations, so
 ```ts
 // src/app/article/article.repo.ts
 
+import { SelectQueryBuilder } from 'pqb';
+
 // define selectFavorite as a standalone function to use in multiple methods:
 const selectFavorited = (currentUserId: number | undefined) => {
-  return (q: typeof db.article) =>
+  return (q: SelectQueryBuilder<typeof db.article>) =>
     currentUserId
       ? q.favorites.where({ userId: currentUserId }).exists()
       : q.sql((t) => t.boolean())`false`;
