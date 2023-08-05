@@ -130,7 +130,6 @@ const setupPackageJson = async (config: InitConfig) => {
     getLatestPackageVersion('dotenv', 'dependencies'),
     getLatestPackageVersion('orchid-orm', 'dependencies'),
     getLatestPackageVersion('pqb', 'dependencies'),
-    getLatestPackageVersion('pg', 'dependencies'),
     config.addSchemaToZod &&
       getLatestPackageVersion('orchid-orm-schema-to-zod', 'dependencies'),
     getLatestPackageVersion('rake-db', 'devDependencies'),

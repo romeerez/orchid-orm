@@ -1,6 +1,6 @@
 import { Query } from '../query/query';
 import { quote } from '../quote';
-import { expectSql, testDb, testDbClient } from 'test-utils';
+import { expectSql, testDb } from 'test-utils';
 
 export type UserRecord = (typeof User)['type'];
 export const User = testDb('user', (t) => ({
@@ -95,7 +95,7 @@ export const insert = async <
   record: T,
 ): Promise<T> => {
   const columns = Object.keys(record);
-  const result = await testDbClient.query<{ id: number }>(
+  const result = await testDb.adapter.query<{ id: number }>(
     `INSERT INTO "${table}"(${columns
       .map((column) => `"${column}"`)
       .join(', ')}) VALUES (${columns

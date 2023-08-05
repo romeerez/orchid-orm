@@ -51,7 +51,8 @@
   "license": "ISC",
   "dependencies": {
     "orchid-core": "workspace:*",
-    "pg": "^8.6.0"
+    "pg": ">=8",
+    "@types/pg": ">=8"
   },
   "devDependencies": {
     "test-utils": "workspace:*"

@@ -145,8 +145,7 @@ describe('initOrchidORM', () => {
   "dependencies": {
     "dotenv": "^1.2.3",
     "orchid-orm": "^1.2.3",
-    "pqb": "^1.2.3",
-    "pg": "^1.2.3"${
+    "pqb": "^1.2.3"${
       schemaToZod
         ? `,
     "orchid-orm-schema-to-zod": "^1.2.3"`
@@ -279,7 +278,6 @@ describe('initOrchidORM', () => {
     "dotenv": "^1.2.3",
     "orchid-orm": "^1.2.3",
     "pqb": "^1.2.3",
-    "pg": "^1.2.3",
     "orchid-orm-schema-to-zod": "^1.2.3"
   },
   "devDependencies": {

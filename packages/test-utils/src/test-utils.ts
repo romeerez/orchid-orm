@@ -1,4 +1,3 @@
-import { Client } from 'pg';
 import {
   Adapter,
   columnTypes,
@@ -10,10 +9,6 @@ import { MaybeArray, toArray } from 'orchid-core';
 export const testDbOptions = {
   databaseURL: process.env.PG_URL,
 };
-
-export const testDbClient = new Client({
-  connectionString: testDbOptions.databaseURL,
-});
 
 export const testAdapter = new Adapter(testDbOptions);
 
