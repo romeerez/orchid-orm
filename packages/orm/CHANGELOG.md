@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.15.1
+
+### Patch Changes
+
+- 1688e82b: Add a dependency on "pg" and "@types/pg"
+- Updated dependencies [1688e82b]
+  - pqb@0.17.6
+  - orchid-core@0.10.0
+
 ## 1.15.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # test-utils
 
+## 0.0.3
+
+### Patch Changes
+
+- 1688e82b: Add a dependency on "pg" and "@types/pg"
+
 ## 0.0.2
 
 ### Patch Changes

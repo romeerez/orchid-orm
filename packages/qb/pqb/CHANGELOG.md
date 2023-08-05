@@ -1,5 +1,12 @@
 # pqb
 
+## 0.17.6
+
+### Patch Changes
+
+- 1688e82b: Add a dependency on "pg" and "@types/pg"
+  - orchid-core@0.10.0
+
 ## 0.17.5
 
 ### Patch Changes
