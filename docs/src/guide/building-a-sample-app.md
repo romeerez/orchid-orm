@@ -419,7 +419,7 @@ Check `src/app/tables/user.table.ts` - it should have the following content:
 // src/app/tables/user.ts
 import { BaseTable } from '../../lib/baseTable';
 
-export class User extends BaseTable {
+export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
@@ -437,12 +437,16 @@ Let it be in `src/app/user/user.table.ts`.
 
 There is an entry in `src/db.ts` for `UserTable`, it was also added automatically by running migration.
 
-Modify the table file to have exported validation schema, add validations to columns:
+The columns of tables can serve as a validation schema.
+We can define that the `username` column is of `text` type, set a minimum and maximum length to it,
+and the table definition becomes our source of knowledge for how to validate data.
+To define once and use in various controllers.
+
+Here we add a `max` validation to the `username`, `email` validation to the `email`, and `min` validation to the `password` columns:
 
 ```ts
 // src/app/user/user.table.ts
 import { BaseTable } from '../../lib/baseTable';
-import { tableToZod } from 'orchid-orm-schema-to-zod';
 
 export class UserTable extends BaseTable {
   readonly table = 'user';
@@ -457,9 +461,6 @@ export class UserTable extends BaseTable {
     ...t.timestamps(),
   }));
 }
-
-// will be used later to validate the parameters
-export const userSchema = tableToZod(UserTable);
 ```
 
 Consider the `email` column:
@@ -631,7 +632,7 @@ No matter how it is implemented, it should serve the purposes of:
 
 - request query, body, and route params must be validated properly
 - validated query, body, and params should have proper types
-- it is nice to have response validation in the dev/test environment, so you won't leak sensitive data by accident, and no need to write tedious tests for this
+- it is nice to have response validation in the dev/test environment, so you won't leak sensitive data by accident, and no need to write tedious tests to ensure that the response has correct types and shape.
 
 Usually, out-of-the-box validation utility fails to satisfy all 3 points,
 I'm using a custom utility `routeHandler` to validate parameters and results by using `zod` schemas, [here is the source](https://github.com/romeerez/orchid-orm-examples/blob/main/packages/blog-api/src/lib/routeHandler.ts#L13).
@@ -642,36 +643,66 @@ Main point here is that we have `Zod` schemas derived from `Orchid` table classe
 Simple express.js example:
 
 ```ts
-import { userSchema } from './user.table';
+import { UserTable } from './user.table';
 
 app.patch('/users/:id', (req, res) => {
-  // picking id from userSchema, it could be an integer or uuid,
+  // picking id from UserTable.schema(), it could be an integer or uuid,
   // we don't have to know that in the controller
-  const { id } = userSchema.pick({ id: true }).parse(req.params);
+  const { id } = UserTable.schema().pick({ id: true }).parse(req.params);
 
-  // parsing req.body by using userSchema
-  const data = userSchema.omit({ id: true }).parse(req.body);
+  // parsing req.body by using UserTable.schema()
+  const data = UserTable.schema().omit({ id: true }).parse(req.body);
 
   // using id and data to update user
 });
 ```
 
-From our API spec, we can see that both the registration and login endpoint returns the same shape of data: user object and token,
-and it makes sense to reuse the response validator for them. Let's place it in the `user.dto.ts` file (dto stands for Data Transfer Object):
+To validate the incoming data of requests, and responds we are sending to user,
+let's create `user.dto.ts` file (dto stands for Data Transfer Object) with all the validation schemas:
 
 ```ts
 // src/user/user.dto.ts
 import { z } from 'zod';
-import { userSchema } from './user.table';
+import { UserTable } from './user.table';
 
-export const authDto = z.object({
-  user: userSchema.pick({
+// input data to register user
+export const userRegisterDTO = UserTable.schema().pick({
+  username: true,
+  email: true,
+  password: true,
+});
+
+// input data to login
+export const userLoginDTO = UserTable.schema().pick({
+  email: true,
+  password: true,
+});
+
+// response data of register and login endpoints
+export const authDTO = z.object({
+  user: UserTable.schema().pick({
     id: true,
     username: true,
     email: true,
   }),
   token: z.string(),
 });
+
+// parameters to follow a user by username
+export const usernameDTO = UserTable.schema().pick({
+  username: true,
+});
+
+// will be used later in `articleDTO` for the article author object
+export const userDTO = UserTable.schema()
+  .pick({
+    username: true,
+  })
+  .and(
+    z.object({
+      following: z.boolean(),
+    }),
+  );
 ```
 
 And, finally, we can write the registering endpoint itself:
@@ -683,18 +714,13 @@ import { routeHandler } from '../../lib/routeHandler';
 import { db } from '../../db';
 import { encryptPassword } from '../../lib/password';
 import { createToken } from '../../lib/jwt';
-import { userSchema } from './user.table';
 import { ApiError } from '../../lib/errors';
-import { authDto } from './user.dto';
+import { userRegisterDTO, authDTO } from './user.dto';
 
 export const registerUserRoute = routeHandler(
   {
-    body: userSchema.pick({
-      username: true,
-      email: true,
-      password: true,
-    }),
-    result: authDto,
+    body: userRegisterDTO,
+    result: authDTO,
   },
   async (req) => {
     try {
@@ -821,11 +847,8 @@ Controller code:
 
 export const loginUser = routeHandler(
   {
-    body: userSchema.pick({
-      email: true,
-      password: true,
-    }),
-    result: authDto,
+    body: userLoginDTO,
+    result: authDTO,
   },
   async (req) => {
     const user = await db.user
@@ -1018,9 +1041,7 @@ Follow user controller:
 
 export const followUserRoute = routeHandler(
   {
-    params: userSchema.pick({
-      username: true,
-    }),
+    params: usernameDTO,
   },
   async (req) => {
     const userId = getCurrentUserId(req);
@@ -1061,9 +1082,7 @@ Unfollow user controller:
 
 export const unfollowUserRoute = routeHandler(
   {
-    params: userSchema.pick({
-      username: true,
-    }),
+    params: usernameDTO,
   },
   async (req) => {
     const userId = getCurrentUserId(req);
@@ -1182,7 +1201,6 @@ Tag table:
 ```ts
 // src/app/tag/tag.table.ts
 import { BaseTable } from '../../lib/baseTable';
-import { tableToZod } from 'orchid-orm-schema-to-zod';
 import { ArticleTagTable } from './articleTag.table';
 
 export class TagTable extends BaseTable {
@@ -1200,8 +1218,6 @@ export class TagTable extends BaseTable {
     }),
   };
 }
-
-export const tagSchema = tableToZod(TagTable);
 ```
 
 The tag table has no relations in the example above, but only because they're not needed in future queries.
@@ -1258,7 +1274,6 @@ import { UserTable } from '../user/user.table';
 import { ArticleTagTable } from './articleTag.table';
 import { TagTable } from '../tag/tag.table';
 import { ArticleFavoriteTable } from './articleFavorite.table';
-import { tableToZod } from 'orchid-orm-schema-to-zod';
 
 export class ArticleTable extends BaseTable {
   readonly table = 'article';
@@ -1296,8 +1311,6 @@ export class ArticleTable extends BaseTable {
     }),
   };
 }
-
-export const articleSchema = tableToZod(ArticleTable);
 ```
 
 Make sure all tables are linked in `db.ts`.
@@ -1555,16 +1568,17 @@ export const expectUnauthorized = (res: {
 };
 ```
 
-Define the `articleDto` schema, it will be used for response in `GET /articles`, `PATCH /articles/:id`, `POST /articles`,
+Define the `articleDTO` schema, it will be used for response in `GET /articles`, `PATCH /articles/:id`, `POST /articles`,
 so better to have it separately:
 
 ```ts
 // src/app/article/article.dto.ts
-import { articleSchema } from './article.table';
-import { userSchema } from '../user/user.table';
+import { userDTO } from '../user/user.table';
 import { z } from 'zod';
 
-export const articleDto = articleSchema
+const tagListDTO = TagTable.schema().shape.name.array();
+
+export const articleDTO = ArticleTable.schema()
   .pick({
     slug: true,
     title: true,
@@ -1575,17 +1589,9 @@ export const articleDto = articleSchema
   })
   .and(
     z.object({
-      tags: z.string().array(),
+      tags: tagListDTO,
       favorited: z.boolean(),
-      author: userSchema
-        .pick({
-          username: true,
-        })
-        .and(
-          z.object({
-            following: z.boolean(),
-          }),
-        ),
+      author: userDTO,
     }),
   );
 ```
@@ -1598,7 +1604,7 @@ import { db } from '../../db';
 import { getOptionalCurrentUserId } from '../user/user.service';
 import { z } from 'zod';
 import { UnauthorizedError } from '../../lib/errors';
-import { articleDto } from './article.dto';
+import { articleDTO } from './article.dto';
 
 export const listArticlesRoute = routeHandler(
   {
@@ -1614,7 +1620,7 @@ export const listArticlesRoute = routeHandler(
         .preprocess((s) => parseInt(s as string), z.number().min(0))
         .optional(),
     }),
-    result: articleDto.array(),
+    result: articleDTO.array(),
   },
   (req) => {
     // currentUserId will be an id for authorized, undefined for not authorized
@@ -1716,54 +1722,6 @@ There are similar capabilities in `Objection.js` and `Openrecord`, but they aren
 Let's start from the article's `author` field: querying author includes some nuances specific to the user table,
 better to keep such queries encapsulated inside the related feature folder.
 
-Extract author object from `articleDto` into own `userDto`:
-
-```ts
-// src/app/article/article.dto.ts
-import { userDto } from '../user/user.dto';
-
-export const articleDto = articleSchema
-  .pick({
-    slug: true,
-    title: true,
-    favoritesCount: true,
-    createdAt: true,
-    updatedAt: true,
-  })
-  .and(
-    z.object({
-      tags: z.string().array(),
-      favorited: z.boolean(),
-      // move this part to the user.dto
-      // author: userSchema
-      //   .pick({
-      //     username: true,
-      //   })
-      //   .and(
-      //     z.object({
-      //       following: z.boolean(),
-      //     })
-      //   ),
-      author: userDto,
-    }),
-  );
-```
-
-```ts
-// src/app/user/user.dto.ts
-import { userSchema } from './user.table';
-
-export const userDto = userSchema
-  .pick({
-    username: true,
-  })
-  .and(
-    z.object({
-      following: z.boolean(),
-    }),
-  );
-```
-
 Create a new file `user.repo.ts` with the content:
 
 ```ts
@@ -1773,7 +1731,7 @@ import { db } from '../../db';
 
 export const userRepo = createRepo(db.user, {
   queryMethods: {
-    selectDto(q, currentUserId: number | undefined) {
+    selectDTO(q, currentUserId: number | undefined) {
       return q.select('username', {
         following: currentUserId
           ? (q) => q.follows.where({ followerId: currentUserId }).exists()
@@ -1797,7 +1755,7 @@ export const listArticlesRoute = routeHandler(
       // ...snip
       {
         // ...snip
-        author: (q) => userRepo(q.author).selectDto(currentUserId),
+        author: (q) => userRepo(q.author).selectDTO(currentUserId),
       },
     );
 
@@ -1806,14 +1764,14 @@ export const listArticlesRoute = routeHandler(
 );
 ```
 
-Note that in the `user.repo.ts` the `selectDto` has two arguments: first is a user query, and second is `currentUserId`.
+Note that in the `user.repo.ts` the `selectDTO` has two arguments: first is a user query, and second is `currentUserId`.
 
 The first argument is injected automatically, so in the controller, we are only passing the rest of the arguments.
 An editor can be confused by this and print a warning, but TypeScript understands it well,
 if you put a string instead of `currentUserId` TS will show an error.
 
 Later we will load the same article fields in other endpoints,
-and it makes sense for both readability and re-usability to move articles\` select into `articleRepo.selectDto`:
+and it makes sense for both readability and re-usability to move the common selection of articles into `articleRepo.selectDTO`:
 
 ```ts
 // src/app/article/article.repo.ts
@@ -1823,7 +1781,7 @@ import { userRepo } from '../user/user.repo';
 
 export const articleRepo = createRepo(db.article, {
   queryMethods: {
-    selectDto(q, currentUserId: number | undefined) {
+    selectDTO(q, currentUserId: number | undefined) {
       return q.select(
         'slug',
         'title',
@@ -1836,7 +1794,7 @@ export const articleRepo = createRepo(db.article, {
           favorited: currentUserId
             ? (q) => q.favorites.where({ userId: currentUserId }).exists()
             : q.sql((t) => t.boolean())`false`,
-          author: (q) => userRepo(q.author).selectDto(currentUserId),
+          author: (q) => userRepo(q.author).selectDTO(currentUserId),
         },
       );
     },
@@ -1844,9 +1802,9 @@ export const articleRepo = createRepo(db.article, {
 });
 ```
 
-When using the repo in a subquery, as we did for the `author` field, need to wrap a subquery into a repo like `userRepo(q.user).selectDto(...)`.
+When using the repo in a subquery, as we did for the `author` field, need to wrap a subquery into a repo like `userRepo(q.user).selectDTO(...)`.
 
-But if the repo is not inside of the subquery, you can use the repo object directly to build queries:
+But if the repo is not inside the subquery, you can use the repo object directly to build queries:
 
 ```ts
 // src/article/article.controller.ts
@@ -1858,7 +1816,7 @@ export const listArticlesRoute = routeHandler(
     const currentUserId = getOptionalCurrentUserId(req);
 
     let query = articleRepo
-      .selectDto(currentUserId)
+      .selectDTO(currentUserId)
       .order({
         createdAt: 'DESC',
       })
@@ -1880,7 +1838,7 @@ import { userRepo } from '../user/user.repo';
 
 export const articleRepo = createRepo(db.article, {
   queryMethods: {
-    selectDto(q, currentUserId: number | undefined) {
+    selectDTO(q, currentUserId: number | undefined) {
       return q.select(
         'slug',
         'title',
@@ -1893,7 +1851,7 @@ export const articleRepo = createRepo(db.article, {
           favorited: currentUserId
             ? (q) => q.favorites.where({ userId: currentUserId }).exists()
             : q.sql((t) => t.boolean())`false`,
-          author: (q) => userRepo(q.author).selectDto(currentUserId),
+          author: (q) => userRepo(q.author).selectDTO(currentUserId),
         },
       );
     },
@@ -1929,7 +1887,7 @@ export const listArticlesRoute = routeHandler(
     const currentUserId = getOptionalCurrentUserId(req);
 
     let query = articleRepo
-      .selectDto(currentUserId)
+      .selectDTO(currentUserId)
       .order({
         createdAt: 'DESC',
       })
@@ -1991,7 +1949,7 @@ describe('article controller', () => {
       }),
     );
 
-    it('should create article without tags, return articleDto', async () => {
+    it('should create article without tags, return articleDTO', async () => {
       const currentUser = await factory.user.create();
 
       const res = await testRequest.as(currentUser).post('/articles', {
@@ -2004,7 +1962,7 @@ describe('article controller', () => {
       expect(data.author.username).toBe(currentUser.username);
     });
 
-    it('should create article and tags, should connect existing tags, return articleDto', async () => {
+    it('should create article and tags, should connect existing tags, return articleDTO', async () => {
       const currentUser = await factory.user.create();
       const tagId = await db.tag.get('id').create({ name: 'one' });
 
@@ -2043,17 +2001,24 @@ describe('article controller', () => {
 Implementation of the controller:
 
 ```ts
+// src/app/article/article.dto.ts
+
+export const articleCreateDTO = ArticleTable.schema()
+  .pick({
+    slug: true,
+    title: true,
+    body: true,
+  })
+  .extend({
+    tags: tagListDTO,
+  });
+
+// src/app/article/article.controller.ts
+
 export const createArticleRoute = routeHandler(
   {
-    body: articleSchema
-      .pick({
-        slug: true,
-        title: true,
-        body: true,
-      })
-      .extend({
-        tags: tagSchema.shape.name.array(),
-      }),
+    body: articleCreateDTO,
+    result: articleDTO,
   },
   (req) => {
     const currentUserId = getCurrentUserId(req);
@@ -2078,7 +2043,7 @@ export const createArticleRoute = routeHandler(
         },
       });
 
-      return articleRepo.selectDto(currentUserId).find(articleId);
+      return articleRepo.selectDTO(currentUserId).find(articleId);
     });
   },
 );
@@ -2201,26 +2166,26 @@ describe('article controller', () => {
 });
 ```
 
-Controller:
+Implementation:
 
 ```ts
+// src/app/article/article.dto.ts
+
+export const articleUpdateDTO = articleCreateDTO
+  .extend({
+    favorite: z.boolean(),
+  })
+  .partial();
+
+export const articleSlugDTO = ArticleTable.schema().pick({ slug: true });
+
+// src/app/article/article.controller.ts
+
 export const updateArticleRoute = routeHandler(
   {
-    body: articleSchema
-      .pick({
-        slug: true,
-        title: true,
-        body: true,
-      })
-      .extend({
-        tags: tagSchema.shape.name.array(),
-        favorite: z.boolean(),
-      })
-      .partial(),
-    params: z.object({
-      slug: articleSchema.shape.slug,
-    }),
-    result: articleDto,
+    body: articleUpdateDTO,
+    params: articleSlugDTO,
+    result: articleDTO,
   },
   (req) => {
     const currentUserId = getCurrentUserId(req);
@@ -2247,7 +2212,7 @@ export const updateArticleRoute = routeHandler(
         // updateTags is a repo method, see below
         .updateTags(article.tags, tags);
 
-      return await articleRepo.selectDto(currentUserId).find(article.id);
+      return await articleRepo.selectDTO(currentUserId).find(article.id);
     });
   },
 );
@@ -2502,7 +2467,7 @@ const selectFavorited = (currentUserId: number | undefined) => {
 
 export const articleRepo = createRepo(db.article, {
   queryMethods: {
-    selectDto(q, currentUserId: number | undefined) {
+    selectDTO(q, currentUserId: number | undefined) {
       return q.select(
         'slug',
         'title',
@@ -2514,7 +2479,7 @@ export const articleRepo = createRepo(db.article, {
           tags: (q) => q.tags.order('name').pluck('name'),
           // use selectFavorited from above
           favorited: selectFavorited(currentUserId),
-          author: (q) => userRepo(q.author).selectDto(currentUserId),
+          author: (q) => userRepo(q.author).selectDTO(currentUserId),
         },
       );
     },
@@ -2535,9 +2500,7 @@ export const toggleArticleFavoriteRoute = routeHandler(
     body: z.object({
       favorite: z.boolean(),
     }),
-    params: z.object({
-      slug: articleSchema.shape.slug,
-    }),
+    params: articleSlugDTO,
   },
   async (req) => {
     const currentUserId = getCurrentUserId(req);
@@ -2665,9 +2628,7 @@ Controller code:
 
 export const deleteArticleRoute = routeHandler(
   {
-    params: z.object({
-      slug: articleSchema.shape.slug,
-    }),
+    params: articleSlugDTO,
   },
   async (req) => {
     const currentUserId = getCurrentUserId(req);

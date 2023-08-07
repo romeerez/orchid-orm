@@ -449,6 +449,25 @@ export const BaseTable = createBaseTable({
 `);
     });
 
+    it('should create base table with zod schema provider if it is in config', async () => {
+      await initOrchidORM({ ...config, addSchemaToZod: true });
+
+      const [, content] = asMock(fs.writeFile).mock.calls.find(
+        ([to]) => to === baseTablePath,
+      );
+      expect(content).toBe(`import { createBaseTable } from 'orchid-orm';
+import { zodSchemaProvider } from 'orchid-orm-schema-to-zod';
+
+export const BaseTable = createBaseTable({
+  columnTypes: (t) => ({
+    ...t,
+    text: (min = 0, max = Infinity) => t.text(min, max),
+  }),
+  schemaProvider: zodSchemaProvider,
+});
+`);
+    });
+
     it('should create base table with timestamp as date', async () => {
       await initOrchidORM({
         ...config,
@@ -547,7 +566,6 @@ export class PostTable extends BaseTable {
       await initOrchidORM({
         ...config,
         demoTables: true,
-        addSchemaToZod: true,
       });
 
       const [, content] = asMock(fs.writeFile).mock.calls.find(
@@ -556,7 +574,6 @@ export class PostTable extends BaseTable {
       expect(content).toBe(`import { TableType } from 'orchid-orm';
 import { BaseTable } from '../baseTable';
 import { CommentTable } from './comment.table';
-import { tableToZod } from 'orchid-orm-schema-to-zod';
 
 export type Post = TableType<PostTable>;
 export class PostTable extends BaseTable {
@@ -575,8 +592,6 @@ export class PostTable extends BaseTable {
     }),
   };
 }
-
-export const postSchema = tableToZod(PostTable);
 `);
     });
 
@@ -629,7 +644,6 @@ export class CommentTable extends BaseTable {
       expect(content).toBe(`import { TableType } from 'orchid-orm';
 import { BaseTable } from '../baseTable';
 import { PostTable } from './post.table';
-import { tableToZod } from 'orchid-orm-schema-to-zod';
 
 export type Comment = TableType<CommentTable>;
 export class CommentTable extends BaseTable {
@@ -651,8 +665,6 @@ export class CommentTable extends BaseTable {
     }),
   };
 }
-
-export const commentSchema = tableToZod(CommentTable);
 `);
     });
   });

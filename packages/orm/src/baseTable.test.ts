@@ -1,6 +1,6 @@
-import { createBaseTable } from './baseTable';
+import { createBaseTable, Table } from './baseTable';
 import { orchidORM } from './orm';
-import { ColumnType, Operators } from 'pqb';
+import { ColumnType, columnTypes, Operators } from 'pqb';
 import { BaseTable, db, userData, useTestORM } from './test-utils/test-utils';
 import path from 'path';
 import { asMock } from './codegen/testUtils';
@@ -58,6 +58,25 @@ describe('baseTable', () => {
     const orm = orchidORM({ adapter: testAdapter }, { table: Table });
 
     expect(orm.table.q.language).toBe('Ukrainian');
+  });
+
+  describe('setColumns', () => {
+    it('should store columns in the prototype of the table', () => {
+      const shape = {
+        id: columnTypes.identity().primaryKey(),
+      };
+
+      class SomeTable extends BaseTable {
+        readonly table = 'some';
+        columns = this.setColumns(() => shape);
+      }
+
+      new SomeTable();
+
+      expect(SomeTable.prototype.columns).toEqual({
+        shape,
+      });
+    });
   });
 
   describe('overriding column types', () => {
@@ -344,6 +363,40 @@ describe('baseTable', () => {
         afterDeleteCommit: [fns.afterDeleteCommit],
         afterDeleteSelect: ['five', 'six'],
       });
+    });
+  });
+
+  describe('schemaProvider', () => {
+    const schemaProviderFn = jest.fn(() => ({}));
+
+    const BaseTable = createBaseTable({
+      schemaProvider<T extends Table>(this: {
+        new (): T;
+      }): T['columns']['type'] {
+        return schemaProviderFn() as never;
+      },
+    });
+
+    class SomeTable extends BaseTable {
+      readonly table = 'some';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+        name: t.text(1, 2),
+      }));
+    }
+
+    it('should infer and transform types of the table columns', () => {
+      const schema = SomeTable.schema();
+
+      assertType<typeof schema, { id: number; name: string }>();
+    });
+
+    it('should be memoized', () => {
+      const schema1 = SomeTable.schema();
+      const schema2 = SomeTable.schema();
+
+      expect(schema1).toBe(schema2);
+      expect(schemaProviderFn).toBeCalledTimes(1);
     });
   });
 });

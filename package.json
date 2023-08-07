@@ -7,6 +7,7 @@
   "scripts": {
     "check": "turbo run check",
     "types": "turbo run types",
+    "build": "turbo run build",
     "test:ci": "turbo run test:ci --cache-dir=.turbo",
     "publish:ci": "changeset tag && pnpm publish -r",
     "db": "pnpm --filter rake-db db",

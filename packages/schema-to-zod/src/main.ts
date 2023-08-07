@@ -219,23 +219,15 @@ type MapJsonTuple<T extends unknown[]> = T extends [infer Head, ...infer Tail]
   ? [Head extends JSONType ? JsonToZod<Head> : never, ...MapJsonTuple<Tail>]
   : [];
 
-export type TableToZod<
-  T extends new () => { columns: { shape: ColumnsShape } },
-> = InstanceToZod<InstanceType<T>['columns']>;
+type Columns = { shape: ColumnsShape };
+type Table = { columns: Columns };
+type TableClass<T extends Table> = { new (): T };
 
-export const tableToZod = <
-  T extends new () => { columns: { shape: ColumnsShape } },
->(
-  table: T,
-): TableToZod<T> => {
-  return instanceToZod(new table().columns) as unknown as TableToZod<T>;
-};
-
-export type InstanceToZod<T extends { shape: ColumnsShape }> = z.ZodObject<{
+export type InstanceToZod<T extends Columns> = z.ZodObject<{
   [K in keyof T['shape']]: SchemaToZod<T['shape'][K]>;
 }>;
 
-export const instanceToZod = <T extends { shape: ColumnsShape }>({
+export const instanceToZod = <T extends Columns>({
   shape,
 }: T): InstanceToZod<T> => {
   const result = {} as z.ZodRawShape;
@@ -245,7 +237,16 @@ export const instanceToZod = <T extends { shape: ColumnsShape }>({
       result[key as keyof typeof result] = columnToZod(column);
     }
   }
+
   return z.object(result) as InstanceToZod<T>;
+};
+
+export const zodSchemaProvider = function <T extends Table>(
+  this: TableClass<T>,
+): InstanceToZod<T['columns']> {
+  return instanceToZod(this.prototype.columns) as unknown as InstanceToZod<
+    T['columns']
+  >;
 };
 
 export const columnToZod = <T extends ColumnType>(

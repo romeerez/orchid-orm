@@ -16,7 +16,12 @@ import {
   JSONArray,
   jsonTypes,
 } from 'orchid-core';
-import { columnToZod, instanceToZod, tableToZod } from './index';
+import {
+  columnToZod,
+  InstanceToZod,
+  instanceToZod,
+  zodSchemaProvider,
+} from './index';
 import { z } from 'zod';
 import { Buffer } from 'node:buffer';
 import { assertType } from 'test-utils';
@@ -51,31 +56,34 @@ const testTypeMethod = (
   ).toThrow('custom');
 };
 
-describe('table to zod', () => {
-  it('should convert a table to a zod validation schema', () => {
-    const table = class Table {
-      columns = {
-        shape: {
-          id: t.serial().primaryKey(),
-          name: t.text().nullable(),
-        },
-      };
+describe('zodSchemaProvider', () => {
+  it('should create a schema for the table', () => {
+    const columns = {
+      shape: {
+        id: t.serial().primaryKey(),
+        name: t.text(),
+      },
     };
 
-    const result = tableToZod(table);
+    class Table {
+      static schema = zodSchemaProvider;
+      columns = columns;
+    }
+    Table.prototype.columns = columns;
+
+    const schema = Table.schema();
 
     assertType<
-      typeof result,
-      z.ZodObject<{ id: z.ZodNumber; name: z.ZodNullable<z.ZodString> }>
+      typeof schema,
+      z.ZodObject<{ id: z.ZodNumber; name: z.ZodString }>
     >();
 
-    expect(result.parse({ id: 1, name: 'name' })).toEqual({
+    expect(schema.parse({ id: 1, name: 'name' })).toEqual({
       id: 1,
-
       name: 'name',
     });
 
-    expect(() => result.parse({ id: '1' })).toThrow(
+    expect(() => schema.parse({ id: '1' })).toThrow(
       'Expected number, received string',
     );
   });
@@ -86,22 +94,23 @@ describe('instance to zod', () => {
     const item = {
       shape: {
         id: t.serial().primaryKey(),
-        name: t.text().nullable(),
+        name: t.text(),
       },
     };
 
-    const result = instanceToZod(item);
+    const schema: InstanceToZod<typeof item> = instanceToZod(item);
+
     assertType<
-      typeof result,
-      z.ZodObject<{ id: z.ZodNumber; name: z.ZodNullable<z.ZodString> }>
+      typeof schema,
+      z.ZodObject<{ id: z.ZodNumber; name: z.ZodString }>
     >();
 
-    expect(result.parse({ id: 1, name: 'name' })).toEqual({
+    expect(schema.parse({ id: 1, name: 'name' })).toEqual({
       id: 1,
       name: 'name',
     });
 
-    expect(() => result.parse({ id: '1' })).toThrow(
+    expect(() => schema.parse({ id: '1' })).toThrow(
       'Expected number, received string',
     );
   });

@@ -17,48 +17,53 @@ Install a package:
 npm i orchid-orm-schema-to-zod
 ```
 
-Use the `tableToZod` utility to get a validation schema from a table class:
+Set `schemaProvider` of the `BaseTable` to `zodSchemaProvider`:
 
 ```ts
-import { tableToZod } from 'orchid-orm-schema-to-zod';
-import { BaseTable } from './baseTable';
+import { createBaseTable } from 'orchid-orm';
+import { zodSchemaProvider } from 'orchid-orm-schema-to-zod';
 
-export class SomeTable extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    name: t.text(3, 100),
-  }));
-}
-
-export const SomeTableSchema = tableToZod(SomeTable);
+export const BaseTable = createBaseTable({
+  schemaProvider: zodSchemaProvider,
+});
 ```
 
-Later in the code which is receiving user input, you can use this schema for validation:
+`schema` method became available for all table classes.
+In the code which is receiving input from client, you can use table schemas for validation:
 
 ```ts
-import { Request } from 'express'; // express is for example
-import { SomeTableSchema } from './some.table';
+// we want to validate params which are sent from client:
+const params = req.body;
 
-// id is omitted because it's not needed in the update:
-const updateSomeItemSchema = SomeTableSchema.omit('id');
+// validate params with the `parse` method:
+const validated = SomeTable.schema().parse(params);
 
-export const updateSomeItemController = (req: Request) => {
-  // dataForUpdate has a proper TS type and it is validated
-  const dataForUpdate = updateSomeItemSchema.parse(req.body);
-  // ...do something with dataForUpdate
-};
+// the schema is a Zod schema, it can be extended with `pick`, `omit`, `and`, `merge`, `extend` and other methods:
+const extendedSchema = SomeTable.schema()
+  .pick({
+    name: true,
+  })
+  .extend({
+    additional: z.number(),
+  });
 ```
+
+The schema of table is memoized when calling `schema()`, so calling it multiple times doesn't have a performance penalty.
 
 ## errors
 
 `errors` allows to specify two following validation messages:
 
 ```ts
-t.text().errors({
-  required: 'This column is required',
-  invalidType: 'This column must be an integer',
-});
+class SomeTable extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    textColumn: t.text().errors({
+      required: 'This column is required',
+      invalidType: 'This column must be an integer',
+    }),
+  }));
+}
 ```
 
 It will be converted into `Zod`'s messages:
@@ -73,16 +78,21 @@ z.string({
 Each validation method can accept an error message as a string:
 
 ```ts
-t.text().min(5, 'Must be 5 or more characters long');
-t.text().max(5, 'Must be 5 or fewer characters long');
-t.text().length(5, 'Must be exactly 5 characters long');
-t.text().email('Invalid email address');
-t.text().url('Invalid url');
-t.text().emoji('Contains non-emoji characters');
-t.text().uuid('Invalid UUID');
-t.text().includes('tuna', 'Must include tuna');
-t.text().startsWith('https://', 'Must provide secure URL');
-t.text().endsWith('.com', 'Only .com domains allowed');
+class SomeTable extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    notTooShortText: t.text().min(5, 'Must be 5 or more characters long'),
+    notTooLongText: t.text().max(5, 'Must be 5 or fewer characters long'),
+    fiveCharsText: t.text().length(5, 'Must be exactly 5 characters long'),
+    email: t.text().email('Invalid email address'),
+    url: t.text().url('Invalid url'),
+    emojiText: t.text().emoji('Contains non-emoji characters'),
+    uuid: t.text().uuid('Invalid UUID'),
+    aboutTuna: t.text().includes('tuna', 'Must include tuna'),
+    httpsLink: t.text().startsWith('https://', 'Must provide secure URL'),
+    dotComLink: t.text().endsWith('.com', 'Only .com domains allowed'),
+  }));
+}
 ```
 
 Except for `text().datetime()` and `text().ip()`:
@@ -90,26 +100,38 @@ Except for `text().datetime()` and `text().ip()`:
 these methods can have their own parameters, so the error message is passed in object.
 
 ```ts
-t.text().datetime({ message: 'Invalid datetime string! Must be UTC.' });
-t.text().ip({ message: 'Invalid IP address' });
+class SomeTable extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    stringDate: t
+      .text()
+      .datetime({ message: 'Invalid datetime string! Must be UTC.' }),
+    ipAddress: t.text().ip({ message: 'Invalid IP address' }),
+  }));
+}
 ```
 
 Error messages are supported for a JSON schema as well:
 
 ```ts
-t.json((j) =>
-  j.object({
-    one: j
-      .string()
-      .errors({ required: 'One is required' })
-      .min(5, 'Must be 5 or more characters long'),
-    two: j
-      .string()
-      .errors({ invalidType: 'Two should be a string' })
-      .max(5, 'Must be 5 or fewer characters long'),
-    three: j.string().length(5, 'Must be exactly 5 characters long'),
-  }),
-);
+class SomeTable extends BaseTable {
+  readonly table = 'table';
+  columns = this.setColumns((t) => ({
+    data: t.json((j) =>
+      j.object({
+        one: j
+          .string()
+          .errors({ required: 'One is required' })
+          .min(5, 'Must be 5 or more characters long'),
+        two: j
+          .string()
+          .errors({ invalidType: 'Two should be a string' })
+          .max(5, 'Must be 5 or fewer characters long'),
+        three: j.string().length(5, 'Must be exactly 5 characters long'),
+      }),
+    ),
+  }));
+}
 ```
 
 ## validationDefault

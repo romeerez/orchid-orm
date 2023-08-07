@@ -92,50 +92,13 @@ export type Table = {
 // get the type of table columns
 export type TableType<T extends Pick<Table, 'columns'>> = T['columns']['type'];
 
-// base table constructor
-export const createBaseTable = <CT extends ColumnTypesBase>(
-  {
-    columnTypes,
-    snakeCase,
-    filePath,
-    nowSQL,
-    exportAs,
-    language,
-  }: {
-    // concrete column types or a callback for overriding standard column types
-    // this types will be used in tables to define their columns
-    columnTypes?: CT | ((t: DefaultColumnTypes) => CT);
-    // when set to true, all columns will be translated to `snake_case` when querying database
-    snakeCase?: boolean;
-    // if for some unknown reason you see error that file path for a table can't be guessed automatically,
-    // provide it manually via `filePath`
-    filePath?: string;
-    // if `now()` for some reason doesn't suite your timestamps, provide a custom SQL for it
-    nowSQL?: string;
-    // export name of the base table, by default it is BaseTable
-    exportAs?: string;
-    // default language for the full text search
-    language?: string;
-  } = { columnTypes: defaultColumnTypes as unknown as CT },
-) => {
-  const ct =
-    typeof columnTypes === 'function'
-      ? columnTypes(defaultColumnTypes)
-      : columnTypes || defaultColumnTypes;
-
-  return create(
-    ct as ColumnTypesBase extends CT ? DefaultColumnTypes : CT,
-    // stack is needed only if filePath wasn't given
-    filePath || getStackTrace(),
-    snakeCase,
-    nowSQL,
-    exportAs,
-    language,
-  );
-};
-
+// type of before hook function for the table
 type BeforeHookMethod = <T extends Table>(cb: QueryBeforeHook) => T;
+
+// type of after hook function for the table
 type AfterHookMethod = <T extends Table>(cb: QueryAfterHook) => T;
+
+// type of after hook function that allows selecting columns for the table
 type AfterSelectableHookMethod = <
   T extends Table,
   S extends (keyof T['columns']['shape'])[],
@@ -145,23 +108,70 @@ type AfterSelectableHookMethod = <
   cb: AfterHook<S, T['columns']['shape']>,
 ) => T;
 
-const create = <CT extends ColumnTypesBase>(
-  columnTypes: CT,
-  filePathOrStack?: string | NodeJS.CallSite[],
-  snakeCase?: boolean,
-  nowSQL?: string,
+// Couldn't manage it to work otherwise than specifying any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SchemaProviderBase = any;
+
+// base table constructor
+export const createBaseTable = <
+  ColumnTypes extends ColumnTypesBase,
+  SchemaProvider extends SchemaProviderBase,
+>({
+  columnTypes: columnTypesArg,
+  snakeCase,
+  filePath: filePathArg,
+  nowSQL,
   exportAs = 'BaseTable',
-  language?: string,
-) => {
+  language,
+  schemaProvider: schemaProviderArg,
+}: {
+  // concrete column types or a callback for overriding standard column types
+  // this types will be used in tables to define their columns
+  columnTypes?: ColumnTypes | ((t: DefaultColumnTypes) => ColumnTypes);
+  // when set to true, all columns will be translated to `snake_case` when querying database
+  snakeCase?: boolean;
+  // if for some unknown reason you see error that file path for a table can't be guessed automatically,
+  // provide it manually via `filePath`
+  filePath?: string;
+  // if `now()` for some reason doesn't suite your timestamps, provide a custom SQL for it
+  nowSQL?: string;
+  // export name of the base table, by default it is BaseTable
+  exportAs?: string;
+  // default language for the full text search
+  language?: string;
+  // a function to prepare a validation schema based on table's columns,
+  // it will be available as `TableClass.schema()` method.
+  schemaProvider?: SchemaProvider;
+} = {}) => {
+  type CT = ColumnTypesBase extends ColumnTypes
+    ? DefaultColumnTypes
+    : ColumnTypes;
+
+  const columnTypes = (
+    typeof columnTypesArg === 'function'
+      ? columnTypesArg(defaultColumnTypes)
+      : columnTypesArg || defaultColumnTypes
+  ) as CT;
+
+  // stack is needed only if filePath wasn't given
+  const filePathOrStack = filePathArg || getStackTrace();
+
   let filePath: string | undefined;
+
+  function schemaProvider(this: Table) {
+    const schema = (schemaProviderArg as () => unknown).call(this);
+    (this as unknown as { schema: () => unknown }).schema = () => schema;
+    return schema;
+  }
 
   const base = class BaseTable {
     static nowSQL = nowSQL;
     static exportAs = exportAs;
     static getFilePath(): string {
       if (filePath) return filePath;
-      if (typeof filePathOrStack === 'string')
+      if (typeof filePathOrStack === 'string') {
         return (filePath = filePathOrStack);
+      }
 
       filePath = getCallerFilePath(filePathOrStack);
       if (filePath) return filePath;
@@ -181,6 +191,8 @@ const create = <CT extends ColumnTypesBase>(
     language = language;
     declare filePath: string;
     declare result: ColumnsShapeBase;
+
+    static schema = schemaProvider as SchemaProvider;
 
     clone<T extends QueryBase>(this: T): T {
       return this;
@@ -219,10 +231,12 @@ const create = <CT extends ColumnTypesBase>(
         }
       }
 
-      return {
+      // Memoize columns in the prototype of class.
+      // It is accessed in schema-to-tod.
+      return (this.constructor.prototype.columns = {
         shape,
         type: undefined as unknown as ColumnShapeOutput<T>,
-      };
+      });
     }
 
     belongsTo<
@@ -299,7 +313,7 @@ const create = <CT extends ColumnTypesBase>(
 
   applyMixins(base, [QueryHooks]);
 
-  base.prototype.columnTypes = columnTypes;
+  base.prototype.columnTypes = columnTypes as typeof base.prototype.columnTypes;
 
   return base;
 };

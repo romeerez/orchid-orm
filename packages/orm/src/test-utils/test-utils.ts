@@ -1,5 +1,4 @@
 import { createBaseTable, TableType } from '../baseTable';
-import { tableToZod } from 'orchid-orm-schema-to-zod';
 import { now, testAdapter, testColumnTypes } from 'test-utils';
 import { orchidORM } from '../orm';
 import { Query, testTransaction } from 'pqb';
@@ -54,7 +53,6 @@ export class UserTable extends BaseTable {
     }),
   };
 }
-export const UserSchema = tableToZod(UserTable);
 
 export type Profile = TableType<ProfileTable>;
 export class ProfileTable extends BaseTable {
@@ -89,7 +87,6 @@ export class ProfileTable extends BaseTable {
     }),
   };
 }
-export const ProfileSchema = tableToZod(ProfileTable);
 
 export type Chat = TableType<ChatTable>;
 export class ChatTable extends BaseTable {
@@ -124,7 +121,6 @@ export class ChatTable extends BaseTable {
     }),
   };
 }
-export const ChatSchema = tableToZod(ChatTable);
 
 export type Message = TableType<MessageTable>;
 export class MessageTable extends BaseTable {
@@ -163,7 +159,6 @@ export class MessageTable extends BaseTable {
     }),
   };
 }
-export const MessageSchema = tableToZod(MessageTable);
 
 export type Post = TableType<PostTable>;
 export class PostTable extends BaseTable {
@@ -185,7 +180,6 @@ export class PostTable extends BaseTable {
     }),
   };
 }
-export const PostSchema = tableToZod(PostTable);
 
 export type PostTag = TableType<PostTagTable>;
 export class PostTagTable extends BaseTable {
@@ -209,7 +203,6 @@ export class PostTagTable extends BaseTable {
     }),
   };
 }
-export const PostTagSchema = tableToZod(PostTagTable);
 
 export type Tag = TableType<TagTable>;
 export class TagTable extends BaseTable {

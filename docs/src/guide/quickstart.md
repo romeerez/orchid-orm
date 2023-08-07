@@ -148,8 +148,9 @@ In case of using hosted database, it's already created by provided, but if you d
 npm run db create
 ```
 
-By default, camelCase naming is used for columns in a database.
-If you prefer snake_case, set `snakeCase: true` option in `src/db/dbScript.ts` and `src/db/baseTable.ts`:
+By default, `camelCase` naming is used for columns in a database.
+If you prefer to have snake_case in the database (it will be `camelCase` on the app side anyway),
+set `snakeCase: true` option in `src/db/baseTable.ts`:
 
 ```ts
 // src/db/baseTable.ts
@@ -157,15 +158,6 @@ If you prefer snake_case, set `snakeCase: true` option in `src/db/dbScript.ts` a
 export const BaseTable = createBaseTable({
   snakeCase: true,
   // ...snip
-});
-```
-
-```ts
-// src/db/dbScript.ts
-
-export const change = rakeDb(config.database, {
-  snakeCase: true,
-  // ...other options
 });
 ```
 

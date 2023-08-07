@@ -263,7 +263,11 @@ const setupGitIgnore = async (config: InitConfig) => {
 const setupBaseTable = async (config: InitConfig, dirPath: string) => {
   const filePath = join(dirPath, 'baseTable.ts');
 
-  let content = `import { createBaseTable } from 'orchid-orm';
+  let content = `import { createBaseTable } from 'orchid-orm';${
+    config.addSchemaToZod
+      ? `\nimport { zodSchemaProvider } from 'orchid-orm-schema-to-zod';`
+      : ''
+  }
 
 export const BaseTable = createBaseTable({
   columnTypes: (t) => ({
@@ -280,7 +284,12 @@ export const BaseTable = createBaseTable({
   }
 
   content += `
-  }),
+  }),${
+    config.addSchemaToZod
+      ? `
+  schemaProvider: zodSchemaProvider,`
+      : ''
+  }
 });
 `;
 
@@ -298,11 +307,7 @@ const setupTables = async (config: InitConfig, dirPath: string) => {
     `import { TableType } from 'orchid-orm';
 import { BaseTable } from '../baseTable';
 import { CommentTable } from './comment.table';
-${
-  config.addSchemaToZod
-    ? `import { tableToZod } from 'orchid-orm-schema-to-zod';\n`
-    : ''
-}
+
 export type Post = TableType<PostTable>;
 export class PostTable extends BaseTable {
   readonly table = 'post';
@@ -320,11 +325,7 @@ export class PostTable extends BaseTable {
     }),
   };
 }
-${
-  config.addSchemaToZod
-    ? `\nexport const postSchema = tableToZod(PostTable);\n`
-    : ''
-}`,
+`,
   );
 
   await fs.writeFile(
@@ -332,11 +333,7 @@ ${
     `import { TableType } from 'orchid-orm';
 import { BaseTable } from '../baseTable';
 import { PostTable } from './post.table';
-${
-  config.addSchemaToZod
-    ? `import { tableToZod } from 'orchid-orm-schema-to-zod';\n`
-    : ''
-}
+
 export type Comment = TableType<CommentTable>;
 export class CommentTable extends BaseTable {
   readonly table = 'comment';
@@ -357,11 +354,7 @@ export class CommentTable extends BaseTable {
     }),
   };
 }
-${
-  config.addSchemaToZod
-    ? `\nexport const commentSchema = tableToZod(CommentTable);\n`
-    : ''
-}`,
+`,
   );
 };
 
