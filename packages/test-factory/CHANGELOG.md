@@ -1,5 +1,17 @@
 # orchid-orm-test-factory
 
+## 0.3.124
+
+### Patch Changes
+
+- 435ec9c1: Add Selectable, Insertable, Updateable, Queryable utility types. Remove TableType.
+- Updated dependencies [435ec9c1]
+- Updated dependencies [0b6625a0]
+  - orchid-orm@1.16.0
+  - orchid-orm-schema-to-zod@0.4.0
+  - pqb@0.17.8
+  - orchid-core@0.10.1
+
 ## 0.3.123
 
 ### Patch Changes

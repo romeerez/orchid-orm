@@ -1,5 +1,13 @@
 # pqb
 
+## 0.17.8
+
+### Patch Changes
+
+- 435ec9c1: Add Selectable, Insertable, Updateable, Queryable utility types. Remove TableType.
+- Updated dependencies [435ec9c1]
+  - orchid-core@0.10.1
+
 ## 0.17.7
 
 ### Patch Changes

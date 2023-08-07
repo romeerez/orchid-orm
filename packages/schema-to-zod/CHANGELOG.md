@@ -1,5 +1,18 @@
 # orchid-orm-schema-to-zod
 
+## 0.4.0
+
+### Minor Changes
+
+- 0b6625a0: Replace `tableToZod` utility with `schemaProvider` config in the `BaseTable`
+
+### Patch Changes
+
+- 435ec9c1: Add Selectable, Insertable, Updateable, Queryable utility types. Remove TableType.
+- Updated dependencies [435ec9c1]
+  - pqb@0.17.8
+  - orchid-core@0.10.1
+
 ## 0.3.106
 
 ### Patch Changes

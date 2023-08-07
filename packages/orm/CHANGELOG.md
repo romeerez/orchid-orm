@@ -1,5 +1,18 @@
 # orchid-orm
 
+## 1.16.0
+
+### Minor Changes
+
+- 435ec9c1: Add Selectable, Insertable, Updateable, Queryable utility types. Remove TableType.
+
+### Patch Changes
+
+- 0b6625a0: Replace `tableToZod` utility with `schemaProvider` config in the `BaseTable`
+- Updated dependencies [435ec9c1]
+  - pqb@0.17.8
+  - orchid-core@0.10.1
+
 ## 1.15.2
 
 ### Patch Changes
