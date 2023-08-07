@@ -16,7 +16,9 @@ import {
 } from 'pqb';
 import {
   applyMixins,
+  ColumnShapeInput,
   ColumnShapeOutput,
+  ColumnShapeQueryType,
   ColumnsShapeBase,
   ColumnTypesBase,
   getCallerFilePath,
@@ -43,7 +45,7 @@ export type TableClasses = Record<string, TableClass>;
 export type TableToDb<
   T extends Table,
   RelationQueries extends Record<string, RelationQueryBase>,
-> = Db<T['table'], T['columns']['shape'], RelationQueries, T['columnTypes']> & {
+> = Db<T['table'], T['columns'], RelationQueries, T['columnTypes']> & {
   definedAs: string;
   db: OrchidORM;
   getFilePath(): string;
@@ -61,11 +63,6 @@ export type DbTable<
 > = Result;
 
 // `columns` property of table has a shape and an output type of the columns
-type ColumnsConfig = {
-  shape: ColumnsShape;
-  type: unknown;
-};
-
 // callback with a query of relation, to use as a default scope
 export type ScopeFn<Related extends TableClass, Scope extends Query> = (
   q: DbTable<Related>,
@@ -76,7 +73,7 @@ export type Table = {
   // table name
   table: string;
   // columns shape and the record type
-  columns: ColumnsConfig;
+  columns: ColumnsShape;
   // database schema containing this table
   schema?: string;
   // column types defined in base table to use in `setColumns`
@@ -89,8 +86,19 @@ export type Table = {
   language?: string;
 };
 
-// get the type of table columns
-export type TableType<T extends Pick<Table, 'columns'>> = T['columns']['type'];
+// Object type that's allowed in `where` and similar methods of the table.
+export type Queryable<T extends Table> = Partial<
+  ColumnShapeQueryType<T['columns']>
+>;
+
+// Object type of table's record that's returned from database and is parsed.
+export type Selectable<T extends Table> = ColumnShapeOutput<T['columns']>;
+
+// Object type that conforms `create` method of the table.
+export type Insertable<T extends Table> = ColumnShapeInput<T['columns']>;
+
+// Object type that conforms `update` method of the table.
+export type Updateable<T extends Table> = Partial<Insertable<T>>;
 
 // type of before hook function for the table
 type BeforeHookMethod = <T extends Table>(cb: QueryBeforeHook) => T;
@@ -101,11 +109,11 @@ type AfterHookMethod = <T extends Table>(cb: QueryAfterHook) => T;
 // type of after hook function that allows selecting columns for the table
 type AfterSelectableHookMethod = <
   T extends Table,
-  S extends (keyof T['columns']['shape'])[],
+  S extends (keyof T['columns'])[],
 >(
   this: T,
   select: S,
-  cb: AfterHook<S, T['columns']['shape']>,
+  cb: AfterHook<S, T['columns']>,
 ) => T;
 
 // Couldn't manage it to work otherwise than specifying any
@@ -182,7 +190,7 @@ export const createBaseTable = <
     }
 
     table!: string;
-    columns!: ColumnsConfig;
+    columns!: ColumnsShape;
     schema?: string;
     noPrimaryKey?: boolean;
     snakeCase = snakeCase;
@@ -211,9 +219,7 @@ export const createBaseTable = <
       );
     }
 
-    setColumns<T extends ColumnsShape>(
-      fn: (t: CT) => T,
-    ): { shape: T; type: ColumnShapeOutput<T> } {
+    setColumns<T extends ColumnsShape>(fn: (t: CT) => T): T {
       (columnTypes as { [snakeCaseKey]?: boolean })[snakeCaseKey] =
         this.snakeCase;
 
@@ -233,10 +239,7 @@ export const createBaseTable = <
 
       // Memoize columns in the prototype of class.
       // It is accessed in schema-to-tod.
-      return (this.constructor.prototype.columns = {
-        shape,
-        type: undefined as unknown as ColumnShapeOutput<T>,
-      });
+      return (this.constructor.prototype.columns = shape);
     }
 
     belongsTo<

@@ -43,7 +43,7 @@ describe('column type', () => {
     it('should have toCode', () => {
       class Table {
         readonly table = 'table';
-        columns = { shape: { column: new IntegerColumn() } };
+        columns = { column: new IntegerColumn() };
       }
 
       expect(column.foreignKey(() => Table, 'column').toCode('t')).toBe(

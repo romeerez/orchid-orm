@@ -45,20 +45,20 @@ export type HasAndBelongsToManyOptions<
 > = RelationCommonOptions<Related, Scope> &
   (
     | {
-        columns: (keyof Self['columns']['shape'])[];
+        columns: (keyof Self['columns'])[];
         references: string[];
         through: {
           table: string;
           columns: string[];
-          references: (keyof InstanceType<Related>['columns']['shape'])[];
+          references: (keyof InstanceType<Related>['columns'])[];
         };
       }
     | {
-        primaryKey: keyof Self['columns']['shape'];
+        primaryKey: keyof Self['columns'];
         foreignKey: string;
         joinTable: string;
         associationPrimaryKey: string;
-        associationForeignKey: keyof InstanceType<Related>['columns']['shape'];
+        associationForeignKey: keyof InstanceType<Related>['columns'];
       }
   );
 
@@ -99,12 +99,12 @@ export type HasAndBelongsToManyInfo<
 
   params: Relation['options'] extends { columns: string[] }
     ? {
-        [K in Relation['options']['columns'][number]]: T['columns']['shape'][K]['type'];
+        [K in Relation['options']['columns'][number]]: T['columns'][K]['type'];
       }
     : Relation['options'] extends { primaryKey: string }
     ? Record<
         Relation['options']['primaryKey'],
-        T['columns']['shape'][Relation['options']['primaryKey']]['type']
+        T['columns'][Relation['options']['primaryKey']]['type']
       >
     : never;
   populate: never;

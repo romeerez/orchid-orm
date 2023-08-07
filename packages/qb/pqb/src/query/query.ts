@@ -58,7 +58,6 @@ export type Query = QueryBase &
     shape: ColumnsShape;
     singlePrimaryKey: string;
     primaryKeys: string[];
-    type: Record<string, unknown>;
     inputType: Record<string, unknown>;
     q: QueryData;
     result: ColumnsShapeBase;
@@ -76,8 +75,6 @@ export type Query = QueryBase &
     ) => QueryError;
     isSubQuery: boolean;
   };
-
-export type Selectable<T extends QueryBase> = StringKey<keyof T['selectable']>;
 
 export type SelectableOfType<T extends QueryBase, Type> = StringKey<
   {

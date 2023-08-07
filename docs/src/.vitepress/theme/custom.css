@@ -10,6 +10,7 @@
   --vp-button-brand-hover-border: #8f53ea;
   --vp-button-brand-active-border: #5345da;
   --vp-layout-max-width: 1540px;
+  --vp-c-text-code: var(--vp-c-indigo-light);
 }
 
 html:not(.dark) {
@@ -18,7 +19,7 @@ html:not(.dark) {
 }
 
 html.dark {
-  --vp-c-text-1: rgba(216, 212, 221, 0.87);
+  --vp-c-text-1: rgba(199, 195, 205, 0.87);
 }
 
 html .content-container {

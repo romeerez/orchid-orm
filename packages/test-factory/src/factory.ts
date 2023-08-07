@@ -7,7 +7,7 @@ import {
   Query,
   TextBaseColumn,
 } from 'pqb';
-import { EmptyObject } from 'orchid-core';
+import { ColumnShapeOutput, EmptyObject } from 'orchid-core';
 import { instanceToZod, InstanceToZod } from 'orchid-orm-schema-to-zod';
 import { generateMock } from '@anatine/zod-mock';
 
@@ -68,14 +68,17 @@ type BuildResult<T extends TestFactory, Data extends BuildArg<T>> = Result<
 type CreateArg<T extends TestFactory> = CreateData<
   Omit<T['table'], 'inputType'> & {
     inputType: {
-      [K in keyof T['table']['type']]?:
-        | T['table']['type'][K]
-        | ((sequence: number) => T['table']['type'][K]);
+      [K in keyof T['table']['inputType']]?:
+        | T['table']['inputType'][K]
+        | ((sequence: number) => T['table']['inputType'][K]);
     };
   }
 >;
 
-type CreateResult<T extends TestFactory> = Result<T, T['table']['type']>;
+type CreateResult<T extends TestFactory> = Result<
+  T,
+  ColumnShapeOutput<T['table']['shape']>
+>;
 
 const omit = <T, Keys extends Record<string, unknown>>(
   obj: T,
@@ -434,7 +437,7 @@ const nowString = new Date().toISOString();
 export const tableFactory = <T extends Query>(
   table: T,
   options?: FactoryOptions,
-): TestFactory<T, InstanceToZod<T>, T['type']> => {
+): TestFactory<T, InstanceToZod<T>, ColumnShapeOutput<T['shape']>> => {
   const schema = instanceToZod(table);
 
   const data: Record<string, unknown> = {};
@@ -496,7 +499,7 @@ export const tableFactory = <T extends Query>(
     }
   }
 
-  return new TestFactory<T, InstanceToZod<T>, T['type']>(
+  return new TestFactory<T, InstanceToZod<T>, ColumnShapeOutput<T['shape']>>(
     table,
     schema,
     uniqueFields,
@@ -507,7 +510,7 @@ export const tableFactory = <T extends Query>(
 
 type ORMFactory<T> = {
   [K in keyof T]: T[K] extends Query & { definedAs: string }
-    ? TestFactory<T[K], InstanceToZod<T[K]>, T[K]['type']>
+    ? TestFactory<T[K], InstanceToZod<T[K]>, ColumnShapeOutput<T[K]['shape']>>
     : never;
 };
 

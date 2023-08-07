@@ -57,8 +57,8 @@ export type HasOneOptions<
 > = RelationCommonOptions<Related, Scope> &
   (
     | RelationHasOptions<
-        keyof Self['columns']['shape'],
-        keyof InstanceType<Related>['columns']['shape']
+        keyof Self['columns'],
+        keyof InstanceType<Related>['columns']
       >
     | RelationThroughOptions<Through, Source>
   );
@@ -121,12 +121,12 @@ export type HasOneInfo<
 
   params: Relation['options'] extends RelationRefsOptions
     ? {
-        [K in Relation['options']['columns'][number]]: T['columns']['shape'][K]['type'];
+        [K in Relation['options']['columns'][number]]: T['columns'][K]['type'];
       }
     : Relation['options'] extends RelationKeysOptions
     ? Record<
         Relation['options']['primaryKey'],
-        T['columns']['shape'][Relation['options']['primaryKey']]['type']
+        T['columns'][Relation['options']['primaryKey']]['type']
       >
     : Relation['options'] extends RelationThroughOptions
     ? RelationConfig<

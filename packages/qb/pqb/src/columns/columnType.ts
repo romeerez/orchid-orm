@@ -47,7 +47,7 @@ export type ForeignKeyAction =
 
 export type ForeignKey<Table extends string, Columns extends string[]> = (
   | {
-      fn(): new () => { table: Table; columns: { shape: ColumnsShape } };
+      fn(): new () => { table: Table; columns: ColumnsShape };
     }
   | {
       table: Table;

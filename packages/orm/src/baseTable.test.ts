@@ -1,6 +1,13 @@
-import { createBaseTable, Table } from './baseTable';
+import {
+  createBaseTable,
+  Insertable,
+  Queryable,
+  Selectable,
+  Table,
+  Updateable,
+} from './baseTable';
 import { orchidORM } from './orm';
-import { ColumnType, columnTypes, Operators } from 'pqb';
+import { ColumnType, columnTypes, Operators, TextColumn } from 'pqb';
 import { BaseTable, db, userData, useTestORM } from './test-utils/test-utils';
 import path from 'path';
 import { asMock } from './codegen/testUtils';
@@ -73,9 +80,7 @@ describe('baseTable', () => {
 
       new SomeTable();
 
-      expect(SomeTable.prototype.columns).toEqual({
-        shape,
-      });
+      expect(SomeTable.prototype.columns).toEqual(shape);
     });
   });
 
@@ -370,9 +375,7 @@ describe('baseTable', () => {
     const schemaProviderFn = jest.fn(() => ({}));
 
     const BaseTable = createBaseTable({
-      schemaProvider<T extends Table>(this: {
-        new (): T;
-      }): T['columns']['type'] {
+      schemaProvider<T extends Table>(this: { new (): T }): Selectable<T> {
         return schemaProviderFn() as never;
       },
     });
@@ -397,6 +400,66 @@ describe('baseTable', () => {
 
       expect(schema1).toBe(schema2);
       expect(schemaProviderFn).toBeCalledTimes(1);
+    });
+  });
+
+  describe('Queryable', () => {
+    it('should have a partial shape of column `queryType`', () => {
+      class SomeTable extends BaseTable {
+        columns = this.setColumns((t) => ({
+          foo: t.text() as unknown as Omit<TextColumn, 'queryType'> & {
+            queryType: number;
+          },
+        }));
+      }
+
+      assertType<Queryable<SomeTable>, { foo?: number }>();
+    });
+  });
+
+  describe('Selectable', () => {
+    it('should have a columns shape type returned from database and parsed', () => {
+      class SomeTable extends BaseTable {
+        columns = this.setColumns((t) => ({
+          foo: t.text().parse(() => true),
+        }));
+      }
+
+      assertType<Selectable<SomeTable>, { foo: boolean }>();
+    });
+  });
+
+  describe('Insertable', () => {
+    it('should have a columns shape where columns with defaults are optional', () => {
+      class SomeTable extends BaseTable {
+        columns = this.setColumns((t) => ({
+          id: t.identity().primaryKey(),
+          optional: t.text().default('text'),
+          required: t.boolean(),
+        }));
+      }
+
+      assertType<
+        Insertable<SomeTable>,
+        { id?: number; optional?: string; required: boolean }
+      >();
+    });
+  });
+
+  describe('Updateable', () => {
+    it('should be a partial Insertable', () => {
+      class SomeTable extends BaseTable {
+        columns = this.setColumns((t) => ({
+          id: t.identity().primaryKey(),
+          optional: t.text().default('text'),
+          required: t.boolean(),
+        }));
+      }
+
+      assertType<
+        Updateable<SomeTable>,
+        { id?: number; optional?: string; required?: boolean }
+      >();
     });
   });
 });

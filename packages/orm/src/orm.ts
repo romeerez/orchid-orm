@@ -163,7 +163,7 @@ export const orchidORM = <T extends TableClasses>(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       qb as any,
       table.table,
-      table.columns.shape,
+      table.columns,
       table.columnTypes,
       transactionStorage,
       options,

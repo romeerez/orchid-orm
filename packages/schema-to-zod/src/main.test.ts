@@ -59,10 +59,8 @@ const testTypeMethod = (
 describe('zodSchemaProvider', () => {
   it('should create a schema for the table', () => {
     const columns = {
-      shape: {
-        id: t.serial().primaryKey(),
-        name: t.text(),
-      },
+      id: t.serial().primaryKey(),
+      name: t.text(),
     };
 
     class Table {

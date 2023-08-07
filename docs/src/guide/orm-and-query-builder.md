@@ -109,12 +109,15 @@ Tables are defined as classes `table` and `columns` required properties:
 Note that the `table` property is marked as `readonly`, this is needed for TypeScript to check the usage of the table in queries.
 
 ```ts
-import { TableType } from 'orchid-orm';
+import { Selectable, Insertable, Updateable } from 'orchid-orm';
 // import BaseTable from a file from the previous step:
 import { BaseTable } from './baseTable';
 
-// export type of User object:
-export type User = TableType<UserTable>;
+// export types of User for various use-cases:
+export type User = Selectable<UserTable>;
+export type NewUser = Insertable<UserTable>;
+export type UserUpdate = Updateable<UserTable>;
+
 export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
@@ -170,6 +173,27 @@ export class SnakeCaseTable extends BaseTable {
     snakeColumn: t.text(),
   }));
 }
+```
+
+## table utility types
+
+Utility types available for tables:
+
+- `Selectable`: record type returned from a database and parsed with [column parsers](/guide/common-column-methods.html#parse).
+  For instance, when using `asDate` for a [timestamp](/guide/columns-types.html#date-and-time) column, `Selectable` will have `Date` type for this column.
+- `Insertable`: type of object you can create a new record with.
+  Column type may be changed by [encode](/guide/common-column-methods.html#encode) function. `Insertable` type for timestamp column is a union `string | number | Date`.
+- `Updateable`: the same as `Insertable` but all fields are optional.
+- `Queryable`: disregarding if [parse](/guide/common-column-methods.html#parse) or [encode](/guide/common-column-methods.html#encode) functions are specified for the column,
+  types that are accepted by `where` and other query methods remains the same. Use this type to accept data to query the table with.
+
+```ts
+import { Selectable, Insertable, Updateable, Queryable } from 'orchid-orm';
+
+export type User = Selectable<UserTable>;
+export type NewUser = Insertable<UserTable>;
+export type UserUpdate = Updateable<UserTable>;
+export type UserQueryable = Queryable<UserTable>;
 ```
 
 ## createDb

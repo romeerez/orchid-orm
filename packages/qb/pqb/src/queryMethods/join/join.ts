@@ -1,7 +1,6 @@
 import {
   Query,
   GetQueryResult,
-  Selectable,
   SelectableBase,
   WithDataBase,
   WithDataItem,
@@ -88,18 +87,18 @@ type JoinSelectable<Q extends Query> =
 type JoinQueryArgs<T extends QueryBase, Q extends Query> =
   | [
       conditions:
-        | Record<JoinSelectable<Q>, Selectable<T> | Expression>
+        | Record<JoinSelectable<Q>, keyof T['selectable'] | Expression>
         | Expression
         | true,
     ]
   | [
       leftColumn: JoinSelectable<Q> | Expression,
-      rightColumn: Selectable<T> | Expression,
+      rightColumn: keyof T['selectable'] | Expression,
     ]
   | [
       leftColumn: JoinSelectable<Q> | Expression,
       op: string,
-      rightColumn: Selectable<T> | Expression,
+      rightColumn: keyof T['selectable'] | Expression,
     ];
 
 // Available arguments when joining a `with` table. Can be:
@@ -110,17 +109,17 @@ type JoinQueryArgs<T extends QueryBase, Q extends Query> =
 type JoinWithArgs<T extends QueryBase, W extends keyof T['withData']> =
   | [
       conditions:
-        | Record<WithSelectable<T, W>, Selectable<T> | Expression>
+        | Record<WithSelectable<T, W>, keyof T['selectable'] | Expression>
         | Expression,
     ]
   | [
       leftColumn: WithSelectable<T, W> | Expression,
-      rightColumn: Selectable<T> | Expression,
+      rightColumn: keyof T['selectable'] | Expression,
     ]
   | [
       leftColumn: WithSelectable<T, W> | Expression,
       op: string,
-      rightColumn: Selectable<T> | Expression,
+      rightColumn: keyof T['selectable'] | Expression,
     ];
 
 /**

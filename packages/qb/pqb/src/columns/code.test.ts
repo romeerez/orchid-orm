@@ -264,7 +264,7 @@ bool: t.boolean(),
         it('should add foreignKeys', () => {
           class Table {
             table = 'table';
-            columns = { shape: {} };
+            columns = {};
           }
 
           const code = columnsShapeToCode(

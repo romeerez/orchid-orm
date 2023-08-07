@@ -1,4 +1,4 @@
-import { createBaseTable, TableType } from '../baseTable';
+import { createBaseTable, Selectable } from '../baseTable';
 import { now, testAdapter, testColumnTypes } from 'test-utils';
 import { orchidORM } from '../orm';
 import { Query, testTransaction } from 'pqb';
@@ -7,7 +7,7 @@ export const BaseTable = createBaseTable({
   columnTypes: testColumnTypes,
 });
 
-export type User = TableType<UserTable>;
+export type User = Selectable<UserTable>;
 export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
@@ -54,7 +54,7 @@ export class UserTable extends BaseTable {
   };
 }
 
-export type Profile = TableType<ProfileTable>;
+export type Profile = Selectable<ProfileTable>;
 export class ProfileTable extends BaseTable {
   readonly table = 'profile';
   columns = this.setColumns((t) => ({
@@ -88,7 +88,7 @@ export class ProfileTable extends BaseTable {
   };
 }
 
-export type Chat = TableType<ChatTable>;
+export type Chat = Selectable<ChatTable>;
 export class ChatTable extends BaseTable {
   readonly table = 'chat';
   columns = this.setColumns((t) => ({
@@ -122,7 +122,7 @@ export class ChatTable extends BaseTable {
   };
 }
 
-export type Message = TableType<MessageTable>;
+export type Message = Selectable<MessageTable>;
 export class MessageTable extends BaseTable {
   readonly table = 'message';
   columns = this.setColumns((t) => ({
@@ -160,7 +160,7 @@ export class MessageTable extends BaseTable {
   };
 }
 
-export type Post = TableType<PostTable>;
+export type Post = Selectable<PostTable>;
 export class PostTable extends BaseTable {
   readonly table = 'post';
   columns = this.setColumns((t) => ({
@@ -181,7 +181,7 @@ export class PostTable extends BaseTable {
   };
 }
 
-export type PostTag = TableType<PostTagTable>;
+export type PostTag = Selectable<PostTagTable>;
 export class PostTagTable extends BaseTable {
   readonly table = 'postTag';
   columns = this.setColumns((t) => ({
@@ -204,7 +204,7 @@ export class PostTagTable extends BaseTable {
   };
 }
 
-export type Tag = TableType<TagTable>;
+export type Tag = Selectable<TagTable>;
 export class TagTable extends BaseTable {
   readonly table = 'tag';
   columns = this.setColumns((t) => ({

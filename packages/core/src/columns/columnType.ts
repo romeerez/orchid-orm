@@ -5,19 +5,35 @@ import { QueryBaseCommon } from '../query';
 import { BaseOperators, ColumnOperatorBase } from './operators';
 import { JSONType } from './json/jsonType';
 
-// allowed type for creating and updating, it is processed by `encode` function when it's defined.
-export type ColumnOutput<T extends ColumnTypeBase> = T['outputType'];
-
 // type returned from a database and processed by `parse` function when it's defined.
 export type ColumnInput<T extends ColumnTypeBase> = T['inputType'];
 
-// base type of object with columns
-export type ColumnsShapeBase = Record<string, ColumnTypeBase>;
+// get columns object type where nullable columns or columns with a default are optional
+export type ColumnShapeInput<Shape extends ColumnsShapeBase> = SetOptional<
+  {
+    [K in keyof Shape]: ColumnInput<Shape[K]>;
+  },
+  OptionalColumnsForInput<Shape>
+>;
 
-// output of base shape of columns
+// allowed type for creating and updating, it is processed by `encode` function when it's defined.
+export type ColumnOutput<T extends ColumnTypeBase> = T['outputType'];
+
+// output of a shape of columns
 export type ColumnShapeOutput<Shape extends ColumnsShapeBase> = {
   [K in keyof Shape]: ColumnOutput<Shape[K]>;
 };
+
+// type of the column to use in `where` and other query methods.
+export type ColumnQueryType<T extends ColumnTypeBase> = T['queryType'];
+
+// type of columns shape to use in `where` and other query methods
+export type ColumnShapeQueryType<Shape extends ColumnsShapeBase> = {
+  [K in keyof Shape]: Shape[K]['queryType'];
+};
+
+// base type of object with columns
+export type ColumnsShapeBase = Record<string, ColumnTypeBase>;
 
 // marks the column as a primary
 export type PrimaryKeyColumn<T extends ColumnTypeBase> = Omit<T, 'data'> & {
@@ -87,14 +103,6 @@ type OptionalColumnsForInput<Shape extends ColumnsShapeBase> = {
     : never;
 }[keyof Shape];
 
-// get columns object type where nullable columns or columns with a default are optional
-export type ColumnShapeInput<Shape extends ColumnsShapeBase> = SetOptional<
-  {
-    [K in keyof Shape]: ColumnInput<Shape[K]>;
-  },
-  OptionalColumnsForInput<Shape>
->;
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyColumnType = ColumnTypeBase<any>;
 
@@ -142,12 +150,12 @@ export type DefaultSelectColumns<S extends ColumnsShapeBase> = {
 export type ForeignKeyTable = new () => {
   schema?: string;
   table: string;
-  columns: { shape: ColumnsShapeBase };
+  columns: ColumnsShapeBase;
 };
 
 // string union of available column names of the table
 export type ColumnNameOfTable<Table extends ForeignKeyTable> = StringKey<
-  keyof InstanceType<Table>['columns']['shape']
+  keyof InstanceType<Table>['columns']
 >;
 
 // clone column type and set data to it

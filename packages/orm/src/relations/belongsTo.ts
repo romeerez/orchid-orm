@@ -51,10 +51,10 @@ export type BelongsToOptions<
   Scope extends Query = Query,
 > = RelationCommonOptions<Related, Scope> &
   RelationRefsOrKeysOptions<
-    keyof Self['columns']['shape'],
-    keyof InstanceType<Related>['columns']['shape'],
-    keyof InstanceType<Related>['columns']['shape'],
-    keyof Self['columns']['shape']
+    keyof Self['columns'],
+    keyof InstanceType<Related>['columns'],
+    keyof InstanceType<Related>['columns'],
+    keyof Self['columns']
   >;
 
 export type BelongsToInfo<
@@ -104,7 +104,7 @@ export type BelongsToInfo<
     };
   };
 
-  params: { [K in FK]: T['columns']['shape'][FK]['type'] };
+  params: { [K in FK]: T['columns'][FK]['type'] };
   populate: never;
   chainedCreate: false;
   chainedDelete: false;

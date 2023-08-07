@@ -41,7 +41,7 @@ const change = (
 
 class Table {
   readonly table = 'foo_bar';
-  columns = { shape: {} };
+  columns = {};
 }
 
 const template = (

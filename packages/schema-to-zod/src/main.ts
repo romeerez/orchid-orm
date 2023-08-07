@@ -220,7 +220,7 @@ type MapJsonTuple<T extends unknown[]> = T extends [infer Head, ...infer Tail]
   : [];
 
 type Columns = { shape: ColumnsShape };
-type Table = { columns: Columns };
+type Table = { columns: ColumnsShape };
 type TableClass<T extends Table> = { new (): T };
 
 export type InstanceToZod<T extends Columns> = z.ZodObject<{
@@ -243,10 +243,12 @@ export const instanceToZod = <T extends Columns>({
 
 export const zodSchemaProvider = function <T extends Table>(
   this: TableClass<T>,
-): InstanceToZod<T['columns']> {
-  return instanceToZod(this.prototype.columns) as unknown as InstanceToZod<
-    T['columns']
-  >;
+): InstanceToZod<{ shape: T['columns'] }> {
+  return instanceToZod({
+    shape: this.prototype.columns,
+  }) as unknown as InstanceToZod<{
+    shape: T['columns'];
+  }>;
 };
 
 export const columnToZod = <T extends ColumnType>(

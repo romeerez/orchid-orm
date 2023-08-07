@@ -1,12 +1,12 @@
 import { orchidORM } from './orm';
 import { BaseTable, db, useTestORM } from './test-utils/test-utils';
 import { assertType, expectSql } from 'test-utils';
-import { TableType } from './baseTable';
+import { Selectable } from './baseTable';
 
 describe('orm', () => {
   useTestORM();
 
-  type User = TableType<UserTable>;
+  type User = Selectable<UserTable>;
   class UserTable extends BaseTable {
     readonly table = 'user';
     filePath = 'orm.test.ts';
