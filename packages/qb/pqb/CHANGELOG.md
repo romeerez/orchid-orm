@@ -1,5 +1,11 @@
 # pqb
 
+## 0.17.7
+
+### Patch Changes
+
+- 634613ad: Allow multiple use of `testTransaction`
+
 ## 0.17.6
 
 ### Patch Changes
