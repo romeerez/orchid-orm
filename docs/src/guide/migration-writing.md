@@ -234,6 +234,19 @@ change(async (db) => {
 });
 ```
 
+`t.add` in `changeTable` may be omitted:
+
+```ts
+import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    // add column when migrating up, drop it when mirating down
+    column: t.text(),
+  }));
+});
+```
+
 ## change
 
 Takes an array of two columns (or checks).

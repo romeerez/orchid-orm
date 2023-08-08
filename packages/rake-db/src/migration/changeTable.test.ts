@@ -41,7 +41,7 @@ describe('changeTable', () => {
     await testUpAndDown(
       () =>
         db.changeTable('schema.table', (t) => ({
-          id: t.add(t.uuid().primaryKey()),
+          id: t.uuid().primaryKey(),
         })),
       () =>
         expectSql(`

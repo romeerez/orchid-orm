@@ -19,6 +19,7 @@ import {
   RawSQLBase,
   isRawSQL,
   setDefaultLanguage,
+  ColumnTypeBase,
 } from 'orchid-core';
 import {
   ChangeTableCallback,
@@ -306,7 +307,11 @@ const makeAst = (
 
   const shape: Record<string, RakeDbAst.ChangeTableItem> = {};
   for (const key in changeData) {
-    const item = changeData[key];
+    let item = changeData[key];
+    if (item instanceof ColumnTypeBase) {
+      item = add(item);
+    }
+
     if ('type' in item) {
       if (up) {
         shape[key] =
