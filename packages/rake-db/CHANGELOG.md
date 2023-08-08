@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.23
+
+### Patch Changes
+
+- a02a86bb: Allow omitting `t.add` in `changeTable`
+
 ## 2.10.22
 
 ### Patch Changes
