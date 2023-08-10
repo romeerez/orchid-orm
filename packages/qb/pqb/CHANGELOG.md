@@ -1,5 +1,11 @@
 # pqb
 
+## 0.17.9
+
+### Patch Changes
+
+- 64a2e733: Fix update of JSON column with a sub query after using decrement (#142)
+
 ## 0.17.8
 
 ### Patch Changes
