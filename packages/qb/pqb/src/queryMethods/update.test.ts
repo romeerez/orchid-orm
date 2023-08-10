@@ -789,7 +789,10 @@ describe('update', () => {
         .update({ name: 'name' })
         .increment('id')
         .update({ password: 'password' })
-        .decrement('age');
+        .decrement('age')
+        .update({
+          data: (q) => q.jsonInsert('data', [0], 'data'),
+        });
 
       expectSql(
         query.toSQL(),
@@ -799,11 +802,12 @@ describe('update', () => {
               "id" = "id" + $2,
               "password" = $3,
               "age" = "age" - $4,
+              "data" = jsonb_insert("user"."data", '{0}', $5),
               "updatedAt" = now()
-          WHERE "user"."id" = $5
+          WHERE "user"."id" = $6
           RETURNING "user"."id"
         `,
-        ['name', 1, 'password', 1, 1],
+        ['name', 1, 'password', 1, '"data"', 1],
       );
     });
   });

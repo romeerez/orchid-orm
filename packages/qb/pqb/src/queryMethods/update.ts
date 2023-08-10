@@ -322,11 +322,14 @@ export class Update {
       } else {
         let value = set[key];
         if (typeof value === 'function') {
-          value = resolveSubQueryCallback(this, value as (q: Query) => Query);
+          value = resolveSubQueryCallback(
+            this.baseQuery,
+            value as (q: Query) => Query,
+          );
           if (value instanceof Db && value.q.type) {
             throw new OrchidOrmInternalError(
               value,
-              `Only the selecting queries are allowed inside callback of update, ${value.q.type} is given instead.`,
+              `Only selecting queries are allowed inside callback of update, ${value.q.type} is given instead.`,
             );
           }
 
