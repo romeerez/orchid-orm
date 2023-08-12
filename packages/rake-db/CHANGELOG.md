@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.27
+
+### Patch Changes
+
+- cc626464: Throw error when calling rake-db script without suffix
+
 ## 2.10.26
 
 ### Patch Changes
