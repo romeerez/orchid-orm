@@ -20,11 +20,17 @@ import { readdir } from 'fs/promises';
 import path from 'path';
 import { asMock } from 'test-utils';
 import { testConfig } from './rake-db.test-utils';
+import { getCallerFilePath } from 'orchid-core';
 
 jest.mock('prompts', () => jest.fn());
 
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(),
+}));
+
+jest.mock('orchid-core', () => ({
+  ...jest.requireActual('../../core/src'),
+  getCallerFilePath: jest.fn(),
 }));
 
 const config = testConfig;
@@ -63,6 +69,23 @@ describe('common', () => {
         }),
       ).toThrow(
         '`baseTable` option is required in `rakeDb` for `appCodeUpdater`',
+      );
+    });
+
+    it(`should throw when no basePath and can't get it automatically`, () => {
+      asMock(getCallerFilePath).mockReturnValueOnce(undefined);
+
+      expect(() => processRakeDbConfig({})).toThrow(
+        'Failed to determine path to db script. Please set basePath option of rakeDb',
+      );
+    });
+
+    // https://github.com/romeerez/orchid-orm/issues/157: when calling rakeDb script with vite-node without .ts suffix
+    it(`should throw when no basePath and can't get it automatically`, () => {
+      asMock(getCallerFilePath).mockReturnValueOnce('some-path');
+
+      expect(() => processRakeDbConfig({})).toThrow(
+        'Add a .ts suffix to the "some-path" when calling it',
       );
     });
   });

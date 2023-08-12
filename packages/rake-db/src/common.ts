@@ -138,6 +138,13 @@ export const processRakeDbConfig = <CT extends ColumnTypesBase>(
       );
     }
 
+    const ext = path.extname(filePath);
+    if (ext !== '.ts' && ext !== '.js' && ext !== '.mjs') {
+      throw new Error(
+        `Add a .ts suffix to the "${path.basename(filePath)}" when calling it`,
+      );
+    }
+
     result.basePath = path.dirname(filePath);
     result.dbScript = path.basename(filePath);
   }
@@ -386,9 +393,9 @@ export const getMigrations = async <CT extends ColumnTypesBase>(
   });
 };
 
-function checkExt(path: string): void {
-  const ext = path.slice(-3);
-  if (ext !== '.ts' && ext !== '.js') {
+function checkExt(filePath: string): void {
+  const ext = path.extname(filePath);
+  if (ext !== '.ts' && ext !== '.js' && ext !== '.mjs') {
     throw new Error(
       `Only .ts and .js files are supported for migration, received: ${path}`,
     );
