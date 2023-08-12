@@ -47,7 +47,7 @@ import {
   EmptyObject,
 } from 'orchid-core';
 import { q } from '../sql/common';
-import { inspect } from 'util';
+import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { templateLiteralToSQL } from '../sql/rawSql';
 import { getSubQueryBuilder, SubQueryBuilder } from './subQueryBuilder';

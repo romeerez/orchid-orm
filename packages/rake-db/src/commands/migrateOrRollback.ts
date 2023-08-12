@@ -12,14 +12,13 @@ import {
   pathToLog,
   toArray,
 } from 'orchid-core';
-import { getMigrationFiles, MigrationFile, RakeDbConfig } from '../common';
+import { getMigrations, MigrationItem, RakeDbConfig } from '../common';
 import {
   ChangeCallback,
   clearChanges,
   getCurrentChanges,
 } from '../migration/change';
 import { createMigrationInterface } from '../migration/migration';
-import * as url from 'url';
 import {
   getMigratedVersionsMap,
   removeMigratedVersion,
@@ -35,7 +34,7 @@ export const migrateOrRollback = async <CT extends ColumnTypesBase>(
   up: boolean,
 ): Promise<void> => {
   config = { ...config };
-  const files = await getMigrationFiles(config, up);
+  const files = await getMigrations(config, up);
 
   let count = up ? Infinity : 1;
   let argI = 0;
@@ -123,7 +122,7 @@ const begin = {
 const processMigration = async <CT extends ColumnTypesBase>(
   db: Adapter,
   up: boolean,
-  file: MigrationFile,
+  file: MigrationItem,
   config: RakeDbConfig<CT>,
   options: AdapterOptions,
   appCodeUpdaterCache: object,
@@ -133,16 +132,7 @@ const processMigration = async <CT extends ColumnTypesBase>(
 
     let changes = changeCache[file.path];
     if (!changes) {
-      try {
-        await config.import(file.path);
-      } catch (err) {
-        // throw if unknown error
-        if ((err as { code: string }).code !== 'ERR_UNSUPPORTED_ESM_URL_SCHEME')
-          throw err;
-
-        // this error happens on windows in ESM mode, try import transformed url
-        await config.import(url.pathToFileURL(file.path).pathname);
-      }
+      await file.change();
       changes = getCurrentChanges();
       changeCache[file.path] = changes;
     }

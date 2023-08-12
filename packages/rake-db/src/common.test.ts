@@ -3,7 +3,7 @@ import {
   getDatabaseAndUserFromOptions,
   getFirstWordAndRest,
   processRakeDbConfig,
-  getMigrationFiles,
+  getMigrations,
   getTextAfterTo,
   joinColumns,
   joinWords,
@@ -270,47 +270,74 @@ describe('common', () => {
     });
   });
 
-  describe('getMigrationFiles', () => {
-    it('should return files with versions', async () => {
+  describe('getMigrations', () => {
+    it('should return migrations from a specified directory path', async () => {
       const version = '12345678901234';
       const files = [`${version}_a.ts`, `${version}_b.ts`, `${version}_c.ts`];
       (readdir as jest.Mock).mockReturnValueOnce(files);
 
-      const result = await getMigrationFiles(config, true);
+      const result = await getMigrations(config, true);
       expect(result).toEqual(
         files.map((file) => ({
           path: path.resolve(config.migrationsPath, file),
           version,
+          change: expect.any(Function),
         })),
       );
+    });
+
+    it('should return migrations from an object with migrations', async () => {
+      const version = '12345678901234';
+
+      const fn1 = async () => {};
+      const fn2 = async () => {};
+
+      const migrations = {
+        [`${version}_a.ts`]: fn1,
+        [`${version}_b.ts`]: fn2,
+      };
+
+      const result = await getMigrations({ ...config, migrations }, true);
+      expect(result).toEqual([
+        {
+          path: path.resolve(__dirname, `${version}_a.ts`),
+          version,
+          change: fn1,
+        },
+        {
+          path: path.resolve(__dirname, `${version}_b.ts`),
+          version,
+          change: fn2,
+        },
+      ]);
     });
 
     it('should return empty array on error', async () => {
       (readdir as jest.Mock).mockRejectedValue(new Error());
 
-      const result = await getMigrationFiles(config, true);
+      const result = await getMigrations(config, true);
       expect(result).toEqual([]);
     });
 
     it('should skip files (or dirs) without extension', async () => {
       (readdir as jest.Mock).mockRejectedValue(['dir']);
 
-      const result = await getMigrationFiles(config, true);
+      const result = await getMigrations(config, true);
       expect(result).toEqual([]);
     });
 
-    it('should throw if file is not a .ts file', async () => {
-      (readdir as jest.Mock).mockReturnValueOnce(['file.js']);
+    it('should throw if file is not a .ts or .js file', async () => {
+      (readdir as jest.Mock).mockReturnValueOnce(['file.c']);
 
-      await expect(getMigrationFiles(config, true)).rejects.toThrow(
-        'Only .ts files are supported',
+      await expect(getMigrations(config, true)).rejects.toThrow(
+        'Only .ts and .js files are supported',
       );
     });
 
     it('should throw on improper version', async () => {
       (readdir as jest.Mock).mockReturnValueOnce(['1234567890_file.ts']);
 
-      await expect(getMigrationFiles(config, true)).rejects.toThrow(
+      await expect(getMigrations(config, true)).rejects.toThrow(
         'Migration file name should start with 14 digit version',
       );
     });

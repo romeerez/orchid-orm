@@ -79,9 +79,12 @@ import { BaseTable } from './baseTable';
 
 export const change = rakeDb(config.database, {
   // relative path to the current file:
-  migrationsPath: '../migrations',
+  migrationsPath: './migrations',
   // it also can be an absolute path:
   // migrationsPath: path.resolve(__dirname, 'migrations'),
+
+  // This is needed only if you use a bundler such as Vite:
+  migrations: import.meta.glob('./migrations/*.ts'),
 
   // column type overrides and snakeCase option will be taken from the BaseTable:
   baseTable: BaseTable,
@@ -90,7 +93,7 @@ export const change = rakeDb(config.database, {
   // baseTable is required when setting appCodeUpdater
   appCodeUpdater: appCodeUpdater({
     // paths are relative to the current file
-    tablePath: (tableName) => `../tables/${tableName}.table.ts`,
+    tablePath: (tableName) => `./tables/${tableName}.table.ts`,
     ormPath: './db.ts',
   }),
 
@@ -127,6 +130,10 @@ npm run db new createSomeTable
 pnpm db new createSomeTable
 yarn db new createSomeTable
 ```
+
+## Vite
+
+See [this instruction](https://github.com/romeerez/orchid-orm-examples/tree/main/packages/express-esm) in case you're using [Vite](https://vitejs.dev/).
 
 ## ReferenceError: require is not defined
 

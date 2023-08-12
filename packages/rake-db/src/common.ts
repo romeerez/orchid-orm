@@ -14,6 +14,7 @@ import { readdir } from 'fs/promises';
 import { RakeDbAst } from './ast';
 import prompts from 'prompts';
 import { TableQuery } from './migration/createTable';
+import { pathToFileURL } from 'url';
 
 type Db = DbResult<DefaultColumnTypes>;
 
@@ -46,6 +47,7 @@ export type RakeDbConfig<CT extends ColumnTypesBase = DefaultColumnTypes> = {
   basePath: string;
   dbScript: string;
   migrationsPath: string;
+  migrations?: ModuleExportsRecord;
   recurrentPath: string;
   migrationsTable: string;
   snakeCase: boolean;
@@ -58,16 +60,18 @@ export type RakeDbConfig<CT extends ColumnTypesBase = DefaultColumnTypes> = {
       args: string[],
     ) => Promise<void>
   >;
-  import(path: string): Promise<unknown>;
   noPrimaryKey?: NoPrimaryKeyOption;
   baseTable?: BaseTable<CT>;
   appCodeUpdater?: AppCodeUpdater;
   useCodeUpdater?: boolean;
+  import(path: string): Promise<unknown>;
   beforeMigrate?(db: Db): Promise<void>;
   afterMigrate?(db: Db): Promise<void>;
   beforeRollback?(db: Db): Promise<void>;
   afterRollback?(db: Db): Promise<void>;
 } & QueryLogOptions;
+
+export type ModuleExportsRecord = Record<string, () => Promise<unknown>>;
 
 export type AppCodeUpdaterParams = {
   options: AdapterOptions;
@@ -109,8 +113,9 @@ export const processRakeDbConfig = <CT extends ColumnTypesBase>(
   config: InputRakeDbConfig<CT>,
 ): RakeDbConfig<CT> => {
   const result = { ...migrationConfigDefaults, ...config } as RakeDbConfig<CT>;
-  if (!result.recurrentPath)
+  if (!result.recurrentPath) {
     result.recurrentPath = path.join(result.migrationsPath, 'recurrent');
+  }
 
   if (
     config.appCodeUpdater &&
@@ -137,14 +142,14 @@ export const processRakeDbConfig = <CT extends ColumnTypesBase>(
     result.dbScript = path.basename(filePath);
   }
 
-  if (!path.isAbsolute(result.migrationsPath)) {
+  if ('migrationsPath' in result && !path.isAbsolute(result.migrationsPath)) {
     result.migrationsPath = path.resolve(
       result.basePath,
       result.migrationsPath,
     );
   }
 
-  if (!path.isAbsolute(result.recurrentPath)) {
+  if ('recurrentPath' in result && !path.isAbsolute(result.recurrentPath)) {
     result.recurrentPath = path.resolve(result.basePath, result.recurrentPath);
   }
 
@@ -319,16 +324,32 @@ export const getTextAfterFrom = (input: string): string | undefined => {
   return getTextAfterRegExp(input, /(From|-from|_from)[A-Z-_]/, 4);
 };
 
-export type MigrationFile = {
+export type MigrationItem = {
   path: string;
   version: string;
+  change(): Promise<unknown>;
 };
 
-export const getMigrationFiles = async <CT extends ColumnTypesBase>(
+export const getMigrations = async <CT extends ColumnTypesBase>(
   config: RakeDbConfig<CT>,
   up: boolean,
-): Promise<MigrationFile[]> => {
-  const { migrationsPath } = config;
+): Promise<MigrationItem[]> => {
+  if ('migrations' in config) {
+    const result: MigrationItem[] = [];
+
+    const { migrations, basePath } = config;
+    for (const key in migrations) {
+      result.push({
+        path: path.resolve(basePath, key),
+        version: getVersion(path.basename(key)),
+        change: migrations[key],
+      });
+    }
+
+    return result;
+  }
+
+  const { migrationsPath, import: imp } = config;
 
   let files: string[];
   try {
@@ -337,29 +358,53 @@ export const getMigrationFiles = async <CT extends ColumnTypesBase>(
     return [];
   }
 
-  const sort = up ? sortAsc : sortDesc;
-  return sort(files.filter((file) => path.basename(file).includes('.'))).map(
-    (file) => {
-      if (!file.endsWith('.ts')) {
-        throw new Error(
-          `Only .ts files are supported for migration, received: ${file}`,
-        );
-      }
+  files = files.filter((file) => path.basename(file).includes('.'));
+  files = (up ? sortAsc : sortDesc)(files);
 
-      const timestampMatch = file.match(/^(\d{14})\D/);
-      if (!timestampMatch) {
-        throw new Error(
-          `Migration file name should start with 14 digit version, received ${file}`,
-        );
-      }
+  return files.map((file) => {
+    checkExt(file);
 
-      return {
-        path: path.resolve(migrationsPath, file),
-        version: timestampMatch[1],
-      };
-    },
-  );
+    const filePath = path.resolve(migrationsPath, file);
+    return {
+      path: filePath,
+      version: getVersion(file),
+      async change() {
+        try {
+          await imp(filePath);
+        } catch (err) {
+          // throw if unknown error
+          if (
+            (err as { code: string }).code !== 'ERR_UNSUPPORTED_ESM_URL_SCHEME'
+          )
+            throw err;
+
+          // this error happens on windows in ESM mode, try import transformed url
+          await imp(pathToFileURL(filePath).pathname);
+        }
+      },
+    };
+  });
 };
+
+function checkExt(path: string): void {
+  const ext = path.slice(-3);
+  if (ext !== '.ts' && ext !== '.js') {
+    throw new Error(
+      `Only .ts and .js files are supported for migration, received: ${path}`,
+    );
+  }
+}
+
+function getVersion(path: string): string {
+  const timestampMatch = path.match(/^(\d{14})\D/);
+  if (!timestampMatch) {
+    throw new Error(
+      `Migration file name should start with 14 digit version, received ${path}`,
+    );
+  }
+
+  return timestampMatch[1];
+}
 
 export const sortAsc = (arr: string[]) => arr.sort();
 

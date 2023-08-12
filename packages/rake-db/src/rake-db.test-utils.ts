@@ -8,7 +8,10 @@ let db: DbMigration | undefined;
 
 export const testMigrationsPath = 'migrations-path';
 
-export const testConfig: RakeDbConfig & { logger: QueryLogger } = {
+export const testConfig: RakeDbConfig & {
+  logger: QueryLogger;
+  migrationsPath: string;
+} = {
   ...migrationConfigDefaults,
   basePath: __dirname,
   dbScript: 'dbScript.ts',

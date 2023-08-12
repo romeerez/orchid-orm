@@ -1,7 +1,7 @@
 import { changeCache, migrate, redo, rollback } from './migrateOrRollback';
 import {
   createSchemaMigrations,
-  getMigrationFiles,
+  getMigrations,
   AppCodeUpdater,
 } from '../common';
 import { Adapter, DefaultColumnTypes, TransactionAdapter } from 'pqb';
@@ -13,17 +13,17 @@ import { testConfig } from '../rake-db.test-utils';
 
 jest.mock('../common', () => ({
   ...jest.requireActual('../common'),
-  getMigrationFiles: jest.fn(),
+  getMigrations: jest.fn(),
   createSchemaMigrations: jest.fn(),
 }));
 
 const options = { databaseURL: 'postgres://user@localhost/dbname' };
 
 const files = [
-  { path: 'file1', version: '1' },
-  { path: 'file2', version: '2' },
-  { path: 'file3', version: '3' },
-  { path: 'file4', version: '4' },
+  { path: 'file1', version: '1', change: jest.fn() },
+  { path: 'file2', version: '2', change: jest.fn() },
+  { path: 'file3', version: '3', change: jest.fn() },
+  { path: 'file4', version: '4', change: jest.fn() },
 ];
 
 const getMigratedVersionsArrayMock = jest.fn();
@@ -41,11 +41,7 @@ const transactionQueryMock = jest.fn();
 TransactionAdapter.prototype.query = transactionQueryMock;
 TransactionAdapter.prototype.arrays = transactionQueryMock;
 
-const importMock = jest.fn();
-const config = {
-  ...testConfig,
-  import: importMock,
-};
+const config = testConfig;
 
 const change = (fn: ChangeCallback<DefaultColumnTypes>) => {
   pushChange(fn as unknown as ChangeCallback);
@@ -60,7 +56,7 @@ const createTableCallback = () => {
 };
 
 let migrationFiles: { path: string; version: string }[] = [];
-asMock(getMigrationFiles).mockImplementation((_, up) =>
+asMock(getMigrations).mockImplementation((_, up) =>
   up ? migrationFiles : [...migrationFiles].reverse(),
 );
 
@@ -77,7 +73,6 @@ const appCodeUpdater: AppCodeUpdater = {
 describe('migrateOrRollback', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    importMock.mockImplementation(() => undefined);
     for (const key in changeCache) {
       delete changeCache[key];
     }
@@ -96,13 +91,18 @@ describe('migrateOrRollback', () => {
 
       await migrate(options, conf, []);
 
-      expect(getMigrationFiles).toBeCalledWith(conf, true);
+      expect(getMigrations).toBeCalledWith(conf, true);
 
       expect(conf.beforeMigrate).toBeCalled();
       expect(conf.afterMigrate).toBeCalled();
 
-      expect(importMock).toBeCalledWith('file2');
-      expect(importMock).toBeCalledWith('file3');
+      files.forEach((file, i) => {
+        if (i === 1 || i === 2) {
+          expect(file.change).toBeCalled();
+        } else {
+          expect(file.change).not.toBeCalled();
+        }
+      });
 
       expect(transactionQueryMock).toBeCalledWith(
         `INSERT INTO "schemaMigrations" VALUES ('2')`,
@@ -126,9 +126,13 @@ describe('migrateOrRollback', () => {
 
       await migrate(options, config, []);
 
-      expect(getMigrationFiles).toBeCalledWith(config, true);
+      expect(getMigrations).toBeCalledWith(config, true);
       expect(createSchemaMigrations).toBeCalled();
-      expect(importMock).not.toBeCalled();
+
+      for (const file of files) {
+        expect(file.change).not.toBeCalled();
+      }
+
       expect(transactionQueryMock).not.toBeCalled();
       expect(config.logger?.log).not.toBeCalled();
     });
@@ -136,7 +140,7 @@ describe('migrateOrRollback', () => {
     it('should call appCodeUpdater only for the first db options', async () => {
       migrationFiles = [files[0]];
       migratedVersions = [];
-      importMock.mockImplementationOnce(createTableCallback);
+      files[0].change.mockImplementationOnce(createTableCallback);
 
       await migrate(
         [options, options],
@@ -151,7 +155,7 @@ describe('migrateOrRollback', () => {
     it('should not call appCodeUpdater when useCodeUpdater is set to false in config', async () => {
       migrationFiles = [files[0]];
       migratedVersions = [];
-      importMock.mockImplementation(createTableCallback);
+      files[0].change.mockImplementation(createTableCallback);
 
       await migrate(
         options,
@@ -166,7 +170,7 @@ describe('migrateOrRollback', () => {
     it('should not call appCodeUpdater when having argument --code false', async () => {
       migrationFiles = [files[0]];
       migratedVersions = [];
-      importMock.mockImplementation(createTableCallback);
+      files[0].change.mockImplementation(createTableCallback);
 
       await migrate(
         options,
@@ -181,7 +185,7 @@ describe('migrateOrRollback', () => {
     it('should call appCodeUpdater when having argument --code', async () => {
       migrationFiles = [files[0]];
       migratedVersions = [];
-      importMock.mockImplementation(createTableCallback);
+      files[0].change.mockImplementation(createTableCallback);
 
       await migrate(
         options,
@@ -198,7 +202,7 @@ describe('migrateOrRollback', () => {
       migratedVersions = [];
 
       const called: string[] = [];
-      importMock.mockImplementation(() => {
+      files[0].change.mockImplementation(() => {
         change(async () => {
           called.push('one');
         });
@@ -228,10 +232,15 @@ describe('migrateOrRollback', () => {
       expect(conf.beforeRollback).toBeCalled();
       expect(conf.afterRollback).toBeCalled();
 
-      expect(getMigrationFiles).toBeCalledWith(conf, false);
+      expect(getMigrations).toBeCalledWith(conf, false);
 
-      expect(importMock).toBeCalledTimes(1);
-      expect(importMock).toBeCalledWith('file2');
+      files.forEach((file, i) => {
+        if (i === 1) {
+          expect(file.change).toBeCalled();
+        } else {
+          expect(file.change).not.toBeCalled();
+        }
+      });
 
       expect(transactionQueryMock).toBeCalledTimes(1);
       expect(transactionQueryMock).toBeCalledWith(
@@ -251,9 +260,13 @@ describe('migrateOrRollback', () => {
 
       await rollback(options, config, []);
 
-      expect(getMigrationFiles).toBeCalledWith(config, false);
+      expect(getMigrations).toBeCalledWith(config, false);
       expect(createSchemaMigrations).toBeCalled();
-      expect(importMock).not.toBeCalled();
+
+      for (const file of files) {
+        expect(file.change).not.toBeCalled();
+      }
+
       expect(transactionQueryMock).not.toBeCalled();
       expect(config.logger?.log).not.toBeCalled();
     });
@@ -263,7 +276,7 @@ describe('migrateOrRollback', () => {
       migratedVersions = [files[0].version];
 
       const called: string[] = [];
-      importMock.mockImplementation(() => {
+      files[0].change.mockImplementation(() => {
         change(async () => {
           called.push('one');
         });
@@ -304,12 +317,14 @@ describe('migrateOrRollback', () => {
       };
 
       const ranMigrations: [string, boolean][] = [];
-      importMock.mockImplementation((path) => {
-        change(async (db, up) => {
-          ranMigrations.push([path, up]);
-          db.migratedAsts.push(true as unknown as RakeDbAst);
+      for (const file of files) {
+        file.change.mockImplementationOnce(() => {
+          change(async (db, up) => {
+            ranMigrations.push([file.path, up]);
+            db.migratedAsts.push(true as unknown as RakeDbAst);
+          });
         });
-      });
+      }
 
       const queries: string[] = [];
       transactionQueryMock.mockImplementation((q) => queries.push(q));
@@ -323,9 +338,9 @@ describe('migrateOrRollback', () => {
         'afterMigrate',
       ]);
 
-      expect(getMigrationFiles).toBeCalledTimes(2);
-      expect(getMigrationFiles).toBeCalledWith(expect.any(Object), false);
-      expect(getMigrationFiles).toBeCalledWith(expect.any(Object), true);
+      expect(getMigrations).toBeCalledTimes(2);
+      expect(getMigrations).toBeCalledWith(expect.any(Object), false);
+      expect(getMigrations).toBeCalledWith(expect.any(Object), true);
 
       expect(ranMigrations).toEqual([
         ['file3', false],
