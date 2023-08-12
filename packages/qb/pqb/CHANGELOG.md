@@ -1,5 +1,11 @@
 # pqb
 
+## 0.17.10
+
+### Patch Changes
+
+- 73b2beb8: Support a list of migrations in `rakeDb` to use for bundling (#155)
+
 ## 0.17.9
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.10.26
+
+### Patch Changes
+
+- 73b2beb8: Support a list of migrations in `rakeDb` to use for bundling (#155)
+- Updated dependencies [73b2beb8]
+  - pqb@0.17.10
+
 ## 2.10.25
 
 ### Patch Changes
