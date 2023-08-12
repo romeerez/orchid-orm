@@ -198,7 +198,7 @@ describe('common', () => {
     });
 
     it('should inform if table already exists', async () => {
-      mockedQuery.mockRejectedValue({ code: '42P07' });
+      mockedQuery.mockRejectedValueOnce({ code: '42P07' });
 
       await createSchemaMigrations(db, config);
 
@@ -209,6 +209,44 @@ describe('common', () => {
       expect(asMock(testConfig.logger.log).mock.calls).toEqual([
         ['Versions table exists'],
       ]);
+    });
+
+    it('should create a custom schema if config has a schema other than public', async () => {
+      db.schema = 'custom';
+
+      await createSchemaMigrations(db, config);
+
+      expect(mockedQuery.mock.calls).toEqual([
+        [`CREATE SCHEMA "custom"`],
+        [`CREATE TABLE "schemaMigrations" ( version TEXT NOT NULL )`],
+      ]);
+
+      expect(asMock(testConfig.logger.log).mock.calls).toEqual([
+        ['Created schema custom'],
+        ['Created versions table'],
+      ]);
+
+      db.schema = undefined;
+    });
+
+    it('should be fine when the custom schema already exists', async () => {
+      mockedQuery.mockRejectedValueOnce({ code: '42P06' });
+      mockedQuery.mockResolvedValue(null);
+
+      db.schema = 'custom';
+
+      await createSchemaMigrations(db, config);
+
+      expect(mockedQuery.mock.calls).toEqual([
+        [`CREATE SCHEMA "custom"`],
+        [`CREATE TABLE "schemaMigrations" ( version TEXT NOT NULL )`],
+      ]);
+
+      expect(asMock(testConfig.logger.log).mock.calls).toEqual([
+        ['Created versions table'],
+      ]);
+
+      db.schema = undefined;
     });
   });
 

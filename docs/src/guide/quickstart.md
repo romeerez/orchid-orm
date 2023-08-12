@@ -134,9 +134,17 @@ Consider the created structure:
 
 Change database credentials in the `.env` file:
 
+```sh
+DATABASE_URL=postgres://user:password@localhost:5432/dbname?ssl=true|false
+
+# If you'd like to have a separate database for tests
+DATABASE_TEST_URL=postgres://user:password@localhost:5432/dbname-test?ssl=true|false
 ```
-DATABASE_URL=postgres://user:password@localhost:5432/dbname?ssl=false
-DATABASE_TEST_URL=postgres://user:password@localhost:5432/dbname-test?ssl=false
+
+`public` database schema is used by default, you can change it by appending URL parameter `schema`:
+
+```sh
+DATABASE_URL=postgres://user:password@localhost:5432/dbname?schema=customSchemaName
 ```
 
 If you're using a hosted database, change `ssl` to true in the above config.

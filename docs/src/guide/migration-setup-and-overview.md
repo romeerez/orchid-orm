@@ -46,6 +46,8 @@ Export database options:
 
 In this example, `dotenv` is used and configured to first get env variables from `.env.local` and then to get them from the `.env` file.
 
+`DATABASE_URL` contains db credentials, also you can specify a db schema and ssl mode in it, see [database setup](/guide/quickstart.html#database-setup).
+
 ```ts
 // db/config.ts
 
@@ -57,8 +59,6 @@ config();
 
 const database = {
   databaseURL: process.env.DATABASE_URL,
-  // ssl option can be set here or as a URL parameter on databaseURL
-  ssl: true,
 };
 if (!database.databaseURL) throw new Error('DATABASE_URL is missing in .env');
 
@@ -82,7 +82,7 @@ export const change = rakeDb(config.database, {
   migrationsPath: '../migrations',
   // it also can be an absolute path:
   // migrationsPath: path.resolve(__dirname, 'migrations'),
-  
+
   // column type overrides and snakeCase option will be taken from the BaseTable:
   baseTable: BaseTable,
 
@@ -181,7 +181,7 @@ type MigrationConfig = {
 
   // path to migrations directory
   migrationsPath?: string;
-  
+
   // path to recurrent migrations directory
   // migrationsPath + '/recurrent' is the default
   recurrentPath?: string;

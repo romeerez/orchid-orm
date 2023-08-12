@@ -253,6 +253,18 @@ export const createSchemaMigrations = async (
   db: Adapter,
   config: Pick<RakeDbConfig, 'migrationsTable' | 'logger'>,
 ) => {
+  const { schema } = db;
+  if (schema && schema !== 'public') {
+    try {
+      await db.query(`CREATE SCHEMA "${schema}"`);
+      config.logger?.log(`Created schema ${schema}`);
+    } catch (err) {
+      if ((err as { code: string }).code !== '42P06') {
+        throw err;
+      }
+    }
+  }
+
   try {
     await db.query(
       `CREATE TABLE ${quoteWithSchema({

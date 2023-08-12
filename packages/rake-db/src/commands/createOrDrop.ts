@@ -104,22 +104,6 @@ const createOrDrop = async (
 
   const db = new Adapter(options);
 
-  const { schema } = db;
-  if (schema) {
-    db.schema = undefined;
-    try {
-      await db.query(`CREATE SCHEMA "${schema}"`);
-      config.logger?.log(`Created schema ${schema}`);
-    } catch (err) {
-      if ((err as { code: string }).code === '42P06') {
-        config.logger?.log(`Schema ${schema} already exists`);
-      } else {
-        throw err;
-      }
-    }
-    db.schema = schema;
-  }
-
   await createSchemaMigrations(db, config);
   await db.close();
 };

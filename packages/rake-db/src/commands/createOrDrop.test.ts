@@ -129,37 +129,6 @@ describe('createOrDrop', () => {
       ]);
       expect(createSchemaMigrations).toHaveBeenCalled();
     });
-
-    it('should create schema if connection has custom schema', async () => {
-      queryMock.mockResolvedValue(undefined);
-
-      await createDb({ ...options, schema: 'custom' }, config);
-
-      expect(queryMock.mock.calls).toEqual([
-        [`CREATE DATABASE "dbname" OWNER "user"`],
-        [`CREATE SCHEMA "custom"`],
-      ]);
-      expect(logMock.mock.calls).toEqual([
-        [`Database dbname successfully created`],
-        [`Created schema custom`],
-      ]);
-    });
-
-    it('should create schema if connection has custom schema', async () => {
-      queryMock.mockResolvedValueOnce(undefined);
-      queryMock.mockRejectedValueOnce({ code: '42P06' });
-
-      await createDb({ ...options, schema: 'custom' }, config);
-
-      expect(queryMock.mock.calls).toEqual([
-        [`CREATE DATABASE "dbname" OWNER "user"`],
-        [`CREATE SCHEMA "custom"`],
-      ]);
-      expect(logMock.mock.calls).toEqual([
-        [`Database dbname successfully created`],
-        [`Schema custom already exists`],
-      ]);
-    });
   });
 
   describe('dropDb', () => {
