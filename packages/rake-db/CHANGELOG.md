@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.10.25
+
+### Patch Changes
+
+- 61991b5b: Automatically create a db schema if not exists in `db migrate` command
+
 ## 2.10.24
 
 ### Patch Changes
