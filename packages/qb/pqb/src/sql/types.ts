@@ -249,7 +249,7 @@ export type ColumnOperators<
   Column extends keyof S,
 > = {
   [O in keyof S[Column]['column']['operators']]?:
-    | S[Column]['column']['operators'][O]['type'];
+    | S[Column]['column']['operators'][O]['_opType'];
 };
 
 export type HavingItem = TemplateLiteralArgs | Expression[];

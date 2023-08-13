@@ -1,15 +1,7 @@
-// Base type for column operator function.
-// `orchid-core` doesn't know the concrete type of Ctx (ToSqlCtx), so it's a generic
-export type ColumnOperatorFnBase<T, Ctx> = (
-  key: string,
-  value: T,
-  ctx: Ctx,
-  quotedAs: string | undefined,
-) => string;
-
-// Base type for column operator.
-export type ColumnOperatorBase<T, Ctx> = ColumnOperatorFnBase<T, Ctx> & {
-  type: T;
+export type ColumnOperatorBase<Value, Ctx> = {
+  (): void;
+  _opType: Value;
+  _op: (key: string, value: Value, ctx: Ctx, quotedAs?: string) => string;
 };
 
 // Base type for the object with column operators.

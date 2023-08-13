@@ -1,4 +1,3 @@
-import { Operators } from './operators';
 import { ColumnData, ColumnType } from './columnType';
 import {
   numberTypeMethods,
@@ -16,6 +15,7 @@ import {
 } from 'orchid-core';
 import { columnCode, identityToCode } from './code';
 import type { TableData } from './columnTypes';
+import { Operators } from './operators';
 
 export type NumberColumn = ColumnType<number, typeof Operators.number>;
 

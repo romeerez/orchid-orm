@@ -1,7 +1,7 @@
 import { ColumnType } from './columnType';
-import { Operators } from './operators';
 import { Query } from '../query/query';
 import { CreateCtx, UpdateCtx } from '../queryMethods';
+import { Operators } from './operators';
 
 export abstract class VirtualColumn extends ColumnType<
   unknown,

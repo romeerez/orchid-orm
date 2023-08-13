@@ -46,7 +46,12 @@ export class FnExpression<
   modifySQL(sql: string, ctx: ToSQLCtx, quotedAs?: string) {
     const mods = this._mods;
     for (let i = 0, len = mods.length; i < len; i += 2) {
-      sql = (mods[i] as Operator<unknown>)(sql, mods[i + 1], ctx, quotedAs);
+      sql = (mods[i] as Operator<unknown>['_op'])(
+        sql,
+        mods[i + 1],
+        ctx,
+        quotedAs,
+      );
     }
     return sql;
   }
@@ -138,7 +143,7 @@ export type ColumnExpression<
   Ops extends BaseOperators = C['operators'],
 > = Expression<C> & {
   [K in keyof Ops]: (
-    arg: Parameters<Ops[K]>[1],
+    arg: Ops[K]['_opType'],
   ) => ColumnExpression<BooleanNullable>;
 };
 
@@ -164,7 +169,7 @@ export const makeColumnFnClass = <T extends ColumnType>(
           (column: ColumnFn, value: unknown) => unknown
         >
       )[key] = function (this: ColumnFn, value: unknown) {
-        this._mods.push(op, value);
+        this._mods.push(op._op, value);
         const bool = BooleanColumn.instance;
         const boolClass = makeColumnFnClass(bool);
         const expr = new boolClass(

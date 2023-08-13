@@ -1,5 +1,4 @@
 import { ColumnData, ColumnType } from './columnType';
-import { Operators } from './operators';
 import { NumberBaseColumn } from './number';
 import {
   stringTypeMethods,
@@ -18,6 +17,7 @@ import {
 import { columnCode } from './code';
 import { RawSQL } from '../sql/rawSql';
 import { SearchWeight } from '../sql';
+import { Operators } from './operators';
 
 export type StringColumn = ColumnType<string, typeof Operators.text>;
 

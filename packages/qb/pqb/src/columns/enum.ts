@@ -1,7 +1,7 @@
 import { ColumnType } from './columnType';
-import { Operators } from './operators';
 import { columnCode } from './code';
 import { Code } from 'orchid-core';
+import { Operators } from './operators';
 
 export class EnumColumn<
   U extends string = string,

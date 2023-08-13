@@ -20,8 +20,8 @@ import {
   MaybeArray,
   toArray,
 } from 'orchid-core';
-import { Operator } from '../columns/operators';
 import { FnExpression } from '../common/fn';
+import { Operator } from '../columns/operators';
 
 export const pushWhereStatementSql = (
   ctx: ToSQLCtx,
@@ -257,7 +257,7 @@ const processWhere = (
             if (value[op as keyof typeof value] === undefined) continue;
 
             ands.push(
-              `${prefix}${(operator as unknown as Operator<unknown>)(
+              `${prefix}${(operator as unknown as Operator<unknown>)._op(
                 quotedColumn as string,
                 value[op as keyof typeof value],
                 ctx,
