@@ -36,15 +36,14 @@ import {
   Over,
 } from '../common/fn';
 import { BaseOperators } from '../columns/operators';
+import { extendQuery } from '../query/queryUtils';
 
 // Helper function to check if we're selecting a count on this query.
 // Used in `create` to not return a full record after `count()` method.
 export const isSelectingCount = (q: Query) => {
-  const select = q.q.select?.[0];
+  const { expr } = q.q;
   return (
-    select instanceof FnExpression &&
-    select.fn === 'count' &&
-    select.args[0] === '*'
+    expr instanceof FnExpression && expr.fn === 'count' && expr.args[0] === '*'
   );
 };
 
@@ -723,18 +722,30 @@ export class AggregateMethods {
     this: T,
     arg: SelectableOrExpression<T> = '*',
     options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NumberColumn> & { isCount: true } {
-    return this.clone()._count(arg, options);
-  }
-  _count<T extends Query>(
-    this: T,
-    arg: SelectableOrExpression<T> = '*',
-    options?: AggregateOptions<T>,
-  ): SetQueryReturnsColumn<T, NumberColumn> & { isCount: true } {
-    return get(
-      this,
-      fns.count.call(this, arg, options),
-    ) as unknown as SetQueryReturnsColumn<T, NumberColumn> & { isCount: true };
+  ): SetQueryReturnsColumn<T, NumberColumn> & {
+    isCount: true;
+  } & NumberColumn['operators'] {
+    const type = int;
+    const q = extendQuery(this, type.operators);
+
+    q.q.returnType = 'valueOrThrow';
+    (q.q as SelectQueryData).returnsOne = true;
+    (q.q as SelectQueryData)[getValueKey] = type;
+    q.q.expr = new FnExpression<Query, ColumnTypeBase>(
+      q,
+      'count',
+      [arg],
+      options as AggregateOptions<Query> | undefined,
+      type,
+    );
+
+    if (type.parseFn) {
+      setParserToQuery(q.q, getValueKey, type.parseFn);
+    }
+
+    return q as SetQueryReturnsColumn<T, NumberColumn> & {
+      isCount: true;
+    } & NumberColumn['operators'];
   }
 
   /**

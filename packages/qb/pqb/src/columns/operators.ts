@@ -1,10 +1,12 @@
-import { Query } from '../query/query';
+import { Query, SetQueryReturnsColumn } from '../query/query';
 import { ToSQLCtx } from '../sql';
 import { addValue } from '../sql/common';
 import { ColumnTypeBase, Expression, isExpression } from 'orchid-core';
+import { FnExpression } from '../common/fn';
+import { BooleanColumn } from './boolean';
 
-export type Operator<Value> = {
-  (): void;
+export type Operator<Value, Column extends ColumnTypeBase = ColumnTypeBase> = {
+  <T extends Query>(this: T, arg: Value): SetQueryReturnsColumn<T, Column>;
   _opType: Value;
   _op: (key: string, value: Value, ctx: ToSQLCtx, quotedAs?: string) => string;
 };
@@ -17,9 +19,10 @@ const make = <Value = any>(
   _op: (key: string, value: Value, ctx: ToSQLCtx, quotedAs?: string) => string,
 ): Operator<Value> => {
   return Object.assign(
-    function () {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return {} as any;
+    function (this: Query, value: Value) {
+      const expr = this.q.expr as FnExpression;
+      expr._mods.push(_op, value);
+      return this;
     },
     {
       _op,
@@ -144,10 +147,10 @@ const ops = {
 };
 
 type Base<Value> = {
-  equals: Operator<Value | Query | Expression>;
-  not: Operator<Value | Query | Expression>;
-  in: Operator<Value[] | Query | Expression>;
-  notIn: Operator<Value[] | Query | Expression>;
+  equals: Operator<Value | Query | Expression, BooleanColumn>;
+  not: Operator<Value | Query | Expression, BooleanColumn>;
+  in: Operator<Value[] | Query | Expression, BooleanColumn>;
+  notIn: Operator<Value[] | Query | Expression, BooleanColumn>;
 };
 
 const base: Base<unknown> = {
@@ -157,21 +160,26 @@ const base: Base<unknown> = {
   notIn: ops.notIn,
 };
 
+type Bool = Base<boolean> & {
+  and: Operator<Expression<ColumnTypeBase<boolean | null>>, BooleanColumn>;
+  or: Operator<Expression<ColumnTypeBase<boolean | null>>, BooleanColumn>;
+};
+
 const boolean = {
   ...base,
   and: ops.and,
   or: ops.or,
-} as Base<boolean> & {
-  and: Operator<Expression<ColumnTypeBase<boolean | null>>>;
-  or: Operator<Expression<ColumnTypeBase<boolean | null>>>;
-};
+} as Bool;
 
 type Numeric<Value> = Base<Value> & {
-  lt: Operator<Value | Query | Expression>;
-  lte: Operator<Value | Query | Expression>;
-  gt: Operator<Value | Query | Expression>;
-  gte: Operator<Value | Query | Expression>;
-  between: Operator<[Value | Query | Expression, Value | Query | Expression]>;
+  lt: Operator<Value | Query | Expression, BooleanColumn>;
+  lte: Operator<Value | Query | Expression, BooleanColumn>;
+  gt: Operator<Value | Query | Expression, BooleanColumn>;
+  gte: Operator<Value | Query | Expression, BooleanColumn>;
+  between: Operator<
+    [Value | Query | Expression, Value | Query | Expression],
+    BooleanColumn
+  >;
 };
 
 const numeric = {
@@ -183,6 +191,15 @@ const numeric = {
   between: ops.between,
 };
 
+type Text = Base<string> & {
+  contains: Operator<string | Query | Expression, BooleanColumn>;
+  containsSensitive: Operator<string | Query | Expression, BooleanColumn>;
+  startsWith: Operator<string | Query | Expression, BooleanColumn>;
+  startsWithSensitive: Operator<string | Query | Expression, BooleanColumn>;
+  endsWith: Operator<string | Query | Expression, BooleanColumn>;
+  endsWithSensitive: Operator<string | Query | Expression, BooleanColumn>;
+};
+
 const text = {
   ...base,
   contains: ops.contains,
@@ -191,22 +208,18 @@ const text = {
   startsWithSensitive: ops.startsWithSensitive,
   endsWith: ops.endsWith,
   endsWithSensitive: ops.endsWithSensitive,
-} as Base<string> & {
-  contains: Operator<string | Query | Expression>;
-  containsSensitive: Operator<string | Query | Expression>;
-  startsWith: Operator<string | Query | Expression>;
-  startsWithSensitive: Operator<string | Query | Expression>;
-  endsWith: Operator<string | Query | Expression>;
-  endsWithSensitive: Operator<string | Query | Expression>;
+} as Text;
+
+type Json = Base<unknown> & {
+  jsonPath: Operator<
+    [path: string, op: string, value: unknown | Query | Expression],
+    BooleanColumn
+  >;
+  jsonSupersetOf: Operator<unknown | Query | Expression, BooleanColumn>;
+  jsonSubsetOf: Operator<unknown | Query | Expression, BooleanColumn>;
 };
 
-const json: Base<unknown> & {
-  jsonPath: Operator<
-    [path: string, op: string, value: unknown | Query | Expression]
-  >;
-  jsonSupersetOf: Operator<unknown | Query | Expression>;
-  jsonSubsetOf: Operator<unknown | Query | Expression>;
-} = {
+const json: Json = {
   ...base,
   jsonPath: ops.jsonPath,
   jsonSupersetOf: ops.jsonSupersetOf,
@@ -214,14 +227,23 @@ const json: Base<unknown> & {
 };
 
 export const Operators = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  any: base as Base<any>,
+  any: base,
   boolean,
-  number: numeric as Numeric<number>,
-  date: base as Numeric<Date>,
-  time: base as Numeric<Date>,
+  number: numeric,
+  date: base,
+  time: base,
   text,
   json,
+  array: base,
+} as {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  array: base as Base<any>,
+  any: Base<any>;
+  boolean: Bool;
+  number: Numeric<number>;
+  date: Numeric<number>;
+  time: Numeric<number>;
+  text: Text;
+  json: Json;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  array: Base<any>;
 };

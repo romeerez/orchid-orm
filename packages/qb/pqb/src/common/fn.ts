@@ -24,8 +24,8 @@ export type Over<T extends Query> =
   | WindowArgDeclaration<T>;
 
 export class FnExpression<
-  Q extends Query,
-  T extends ColumnTypeBase,
+  Q extends Query = Query,
+  T extends ColumnTypeBase = ColumnTypeBase,
 > extends Expression<T> {
   _mods: unknown[] = [];
 
@@ -134,7 +134,7 @@ export class FnExpression<
       );
     }
 
-    return sql.join('');
+    return this.modifySQL(sql.join(''), ctx, quotedAs);
   }
 }
 
@@ -156,7 +156,7 @@ export const makeColumnFnClass = <T extends ColumnType>(
   if (!_fnClass) {
     class ColumnFn extends FnExpression<Query, T> {
       toSQL(ctx: ToSQLCtx, quotedAs?: string): string {
-        return super.modifySQL(super.toSQL(ctx, quotedAs), ctx, quotedAs);
+        return super.toSQL(ctx, quotedAs);
       }
     }
 

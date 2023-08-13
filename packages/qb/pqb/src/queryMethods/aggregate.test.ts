@@ -9,6 +9,22 @@ import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
 describe('aggregate', () => {
   useTestDatabase();
 
+  describe('chaining with operators', () => {
+    it('should allow to chain agg method with operators', () => {
+      const q = User.count().gt(3);
+
+      assertType<Awaited<typeof q>, boolean>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT count(*) > $1 FROM "user"
+        `,
+        [3],
+      );
+    });
+  });
+
   describe('agg', () => {
     it('should select aggregating function', async () => {
       const q = User.select({
@@ -430,12 +446,14 @@ describe('aggregate', () => {
     it(`should perform ${method} query for a column`, () => {
       const q = User.clone();
 
-      const expectedSql = getSql('"user"."name"');
-      expectSql(q[method as 'count']('name').toSQL(), expectedSql);
+      const expectedSql = getSql('"user"."id"');
+      expectSql(q[method as 'avg']('id').toSQL(), expectedSql);
       expectQueryNotMutated(q);
 
-      q[`_${method}` as `_count`]('name');
-      expectSql(q.toSQL({ clearCache: true }), expectedSql);
+      if (method !== 'count') {
+        q[`_${method}` as `_avg`]('id');
+        expectSql(q.toSQL({ clearCache: true }), expectedSql);
+      }
     });
 
     it('should support raw sql parameter', () => {

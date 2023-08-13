@@ -1,5 +1,6 @@
 export type ColumnOperatorBase<Value, Ctx> = {
-  (): void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (this: any, arg: Value): any;
   _opType: Value;
   _op: (key: string, value: Value, ctx: Ctx, quotedAs?: string) => string;
 };

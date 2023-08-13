@@ -120,7 +120,11 @@ export const makeSQL = (table: Query, options?: ToSqlOptionsInternal): Sql => {
     pushDistinctSql(ctx, table, query.distinct, quotedAs);
   }
 
-  pushSelectSql(ctx, table, query, quotedAs);
+  if (query.expr) {
+    sql.push(query.expr.toSQL(ctx, quotedAs));
+  } else {
+    pushSelectSql(ctx, table, query, quotedAs);
+  }
 
   if (table.table || query.from) {
     pushFromAndAs(ctx, table, query, quotedAs);
