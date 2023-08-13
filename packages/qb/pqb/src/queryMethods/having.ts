@@ -12,7 +12,7 @@ type HavingArgs<T extends Query> = TemplateLiteralArgs | HavingArgFn<T>[];
 // the same query builder as in `select` is passed in, boolean expression is expected to be returned.
 type HavingArgFn<T extends Query> = (
   q: SelectAggMethods<T>,
-) => Expression<ColumnTypeBase<boolean | null>>;
+) => Query | Expression<ColumnTypeBase<boolean | null>>;
 
 export class Having {
   /**
@@ -80,7 +80,11 @@ export class Having {
       data = args;
     } else {
       const qb = getSubQueryBuilder(this);
-      data = args.map((arg) => (arg as HavingArgFn<T>)(qb));
+      data = args.map((arg) => {
+        const q = (arg as HavingArgFn<T>)(qb);
+        // TODO: remove condition
+        return 'q' in q ? q.q.expr || q : q;
+      });
     }
     return pushQueryValue(this, 'having', data);
   }

@@ -13,13 +13,7 @@ import { getQueryAs } from '../common/utils';
 import { processJoinItem } from './join';
 import { makeSQL, ToSQLCtx } from './toSQL';
 import { JoinedShapes, QueryData } from './data';
-import {
-  ColumnTypeBase,
-  Expression,
-  isExpression,
-  MaybeArray,
-  toArray,
-} from 'orchid-core';
+import { Expression, isExpression, MaybeArray, toArray } from 'orchid-core';
 import { FnExpression } from '../common/fn';
 import { Operator } from '../columns/operators';
 
@@ -96,10 +90,12 @@ const processWhere = (
 
   if (typeof data === 'function') {
     const qb = table.internal.getWhereQueryBuilder(query as QueryData);
-    const res = data(qb);
+    let res = data(qb);
+    if ('expr' in res.q && res.q.expr) res = res.q.expr;
+
     if ('q' in res.q) {
       const q = res.q.clone();
-      q.q.select = [res as FnExpression<Query, ColumnTypeBase>];
+      q.q.select = [res as FnExpression];
       ands.push(`${prefix}(${makeSQL(q, ctx).text})`);
     } else {
       pushWhereToSql(ands, ctx, res as Query, res.q, quotedAs, not);

@@ -201,7 +201,13 @@ export class SelectAggMethods<T extends Query = Query> {
     arg: SelectableOrExpression<T> = '*',
     options?: AggregateOptions<T>,
   ): ColumnExpression<IntegerColumn> {
-    return make(int, this, 'count', [arg], options);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    return AggregateMethods.prototype.count.call(
+      this,
+      arg,
+      options as unknown as AggregateOptions<Query>,
+    ) as unknown as ColumnExpression<IntegerColumn>;
   }
 
   /**
@@ -728,6 +734,7 @@ export class AggregateMethods {
     const type = int;
     const q = extendQuery(this, type.operators);
 
+    q.isSubQuery = this.isSubQuery;
     q.q.returnType = 'valueOrThrow';
     (q.q as SelectQueryData).returnsOne = true;
     (q.q as SelectQueryData)[getValueKey] = type;
