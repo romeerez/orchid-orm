@@ -1,5 +1,11 @@
 # pqb
 
+## 0.18.0
+
+### Minor Changes
+
+- ec43e167: Rename `or` to `orWhere` and remove `and`
+
 ## 0.17.10
 
 ### Patch Changes

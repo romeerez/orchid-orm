@@ -1,5 +1,16 @@
 # orchid-orm
 
+## 1.17.0
+
+### Minor Changes
+
+- ec43e167: Rename `or` to `orWhere` and remove `and`
+
+### Patch Changes
+
+- Updated dependencies [ec43e167]
+  - pqb@0.18.0
+
 ## 1.16.2
 
 ### Patch Changes
