@@ -6,7 +6,6 @@ import {
   snakeSelectAllWithTable,
   User,
 } from '../../test-utils/test-utils';
-import { OnQueryBuilder } from './join';
 import { _join } from './_join';
 import { testWhere, testWhereExists } from '../where/testWhere';
 import { testJoin } from './testJoin';
@@ -203,66 +202,6 @@ describe('join callback with query builder', () => {
   });
 
   describe('where methods', () => {
-    describe('and', () => {
-      let query: OnQueryBuilder;
-      let where: OnQueryBuilder['where'];
-      let _where: OnQueryBuilder['_where'];
-      User.join(Message, (q) => {
-        query = q;
-        where = q.where;
-        _where = q._where;
-        return q;
-      }).toSQL();
-      beforeEach(() => {
-        query.where = jest.fn();
-        query._where = jest.fn();
-      });
-      afterAll(() => {
-        query.where = where;
-        query._where = _where;
-      });
-
-      it('is alias for where', () => {
-        query.and({});
-        expect(query.where).toBeCalled();
-      });
-
-      it('has modifier', () => {
-        query._and({});
-        expect(query._where).toBeCalled();
-      });
-    });
-
-    describe('andNot', () => {
-      let query: OnQueryBuilder;
-      let whereNot: OnQueryBuilder['whereNot'];
-      let _whereNot: OnQueryBuilder['_whereNot'];
-      User.join(Message, (q) => {
-        query = q;
-        whereNot = q.whereNot;
-        _whereNot = q._whereNot;
-        return q;
-      }).toSQL();
-      beforeEach(() => {
-        query.whereNot = jest.fn();
-        query._whereNot = jest.fn();
-      });
-      afterAll(() => {
-        query.whereNot = whereNot;
-        query._whereNot = _whereNot;
-      });
-
-      it('is alias for where', () => {
-        query.andNot({});
-        expect(query.whereNot).toBeCalled();
-      });
-
-      it('has modifier', () => {
-        query._andNot({});
-        expect(query._whereNot).toBeCalled();
-      });
-    });
-
     describe('using main table columns', () => {
       const sql = `SELECT "user".* FROM "user" JOIN "message" ON `;
       const snakeSql = `SELECT ${snakeSelectAllWithTable} FROM "snake" JOIN "user" ON `;
@@ -301,7 +240,7 @@ describe('join callback with query builder', () => {
 
       it('should use main table column in .or', () => {
         const q = User.join(Message, (q) =>
-          q.or({ 'user.name': 'name' }, { 'user.age': 20 }),
+          q.orWhere({ 'user.name': 'name' }, { 'user.age': 20 }),
         );
 
         expectSql(q.toSQL(), sql + `"user"."name" = $1 OR "user"."age" = $2`, [
@@ -312,7 +251,7 @@ describe('join callback with query builder', () => {
 
       it('should use named main table column in .or', () => {
         const q = Snake.join(User, (q) =>
-          q.or({ 'snake.snakeName': 'name' }, { 'snake.tailLength': 20 }),
+          q.orWhere({ 'snake.snakeName': 'name' }, { 'snake.tailLength': 20 }),
         );
 
         expectSql(
@@ -322,9 +261,9 @@ describe('join callback with query builder', () => {
         );
       });
 
-      it('should use main table column in .orNot', () => {
+      it('should use main table column in .orWhereNot', () => {
         const q = User.join(Message, (q) =>
-          q.orNot({ 'user.name': 'name' }, { 'user.age': 20 }),
+          q.orWhereNot({ 'user.name': 'name' }, { 'user.age': 20 }),
         );
 
         expectSql(
@@ -334,9 +273,12 @@ describe('join callback with query builder', () => {
         );
       });
 
-      it('should use named main table column in .orNot', () => {
+      it('should use named main table column in .orWhereNot', () => {
         const q = Snake.join(User, (q) =>
-          q.orNot({ 'snake.snakeName': 'name' }, { 'snake.tailLength': 20 }),
+          q.orWhereNot(
+            { 'snake.snakeName': 'name' },
+            { 'snake.tailLength': 20 },
+          ),
         );
 
         expectSql(

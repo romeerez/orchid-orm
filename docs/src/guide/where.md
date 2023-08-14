@@ -25,6 +25,16 @@ db.table.where({
 });
 ```
 
+Multiple `where`s are joined with `AND`:
+
+```ts
+db.table.where({ foo: 'foo' }).where({ bar: 'bar' });
+```
+
+```sql
+SELECT * FROM table WHERE foo = 'foo' AND bar = 'bar'
+```
+
 `undefined` values are ignored, so you can supply a partial object with conditions:
 
 ```ts
@@ -71,13 +81,13 @@ import { raw } from 'orchid-orm';
 db.table.where(raw`a = b`);
 ```
 
-`where` can accept a callback with a specific query builder containing all "where" methods such as `where`, `or`, `whereNot`, `whereIn`, `whereExists`:
+`where` can accept a callback with a specific query builder containing all "where" methods such as `where`, `orWhere`, `whereNot`, `whereIn`, `whereExists`:
 
 ```ts
 db.table.where((q) =>
   q
     .where({ name: 'Name' })
-    .or({ id: 1 }, { id: 2 })
+    .orWhere({ id: 1 }, { id: 2 })
     .whereIn('letter', ['a', 'b', 'c'])
     .whereExists(Message, 'authorId', 'id'),
 );
@@ -157,7 +167,7 @@ db.table.where({
 });
 ```
 
-Using methods [whereNot](#whereNot), [or](#or), [whereIn](#wherein) instead of this is a shorter and cleaner way, but in some cases, such object keys way may be more convenient.
+Using methods [whereNot](#whereNot), [orWhere](#orWhere), [whereIn](#wherein) instead of this is a shorter and cleaner way, but in some cases, such object keys way may be more convenient.
 
 ```ts
 db.table.where({
@@ -166,7 +176,7 @@ db.table.where({
   // can be an array:
   NOT: [{ id: 1 }, { id: 2 }],
 
-  // see .or
+  // see .orWhere
   OR: [{ name: 'a' }, { name: 'b' }],
   // can be an array:
   // this will give id = 1 AND id = 2 OR id = 3 AND id = 4
@@ -385,28 +395,20 @@ db.table.where({
 });
 ```
 
-## and
+## orWhere
 
 [//]: # 'has JSDoc'
 
-`and` is an alias for `where` to make it look closer to SQL:
-
-```ts
-db.table.where({ id: 1 }).and({ name: 'John' });
-```
-
-## or
-
-[//]: # 'has JSDoc'
-
-`or` is accepting the same arguments as `where`, joining arguments with `OR`.
+`orWhere` is accepting the same arguments as `where`, joining arguments with `OR`.
 
 Columns in single arguments are still joined with `AND`.
 
 The database is processing `AND` before `OR`, so this should be intuitively clear.
 
 ```ts
-db.table.or({ id: 1, color: 'red' }, { id: 2, color: 'blue' });
+db.table.where({ id: 1, color: 'red' }).orWhere({ id: 2, color: 'blue' });
+// equivalent:
+db.table.orWhere({ id: 1, color: 'red' }, { id: 2, color: 'blue' });
 ```
 
 This query will produce such SQL (simplified):
@@ -491,11 +493,11 @@ db.table.whereNot({ color: 'red' });
 
 `andNot` is an alias for `whereNot`.
 
-## orNot
+## orWhereNot
 
 [//]: # 'has JSDoc'
 
-`orNot` takes the same arguments as `or`, and prepends each condition with `NOT` just as `whereNot` does.
+`orWhereNot` takes the same arguments as `orWhere`, and prepends each condition with `NOT` just as `whereNot` does.
 
 ## whereIn
 

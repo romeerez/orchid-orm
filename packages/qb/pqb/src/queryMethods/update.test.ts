@@ -49,7 +49,7 @@ describe('update', () => {
     const count = 2;
     const users = await User.select('id').createMany([userData, userData]);
 
-    const query = User.or(...users).updateRaw(raw`name = 'name'`);
+    const query = User.orWhere(...users).updateRaw(raw`name = 'name'`);
     expectSql(
       query.toSQL(),
       `

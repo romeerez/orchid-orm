@@ -9,50 +9,6 @@ import { testWhere, testWhereExists } from './testWhere';
 import { expectSql, testDb } from 'test-utils';
 import { RelationQueryBase } from '../../relations';
 
-describe('and', () => {
-  const [where, _where] = [User.where, User._where];
-  beforeEach(() => {
-    User.where = jest.fn();
-    User._where = jest.fn();
-  });
-  afterAll(() => {
-    User.where = where;
-    User._where = _where;
-  });
-
-  it('is alias for where', () => {
-    User.and({});
-    expect(User.where).toBeCalled();
-  });
-
-  it('has modifier', () => {
-    User._and({});
-    expect(User._where).toBeCalled();
-  });
-});
-
-describe('andNot', () => {
-  const [whereNot, _whereNot] = [User.whereNot, User._whereNot];
-  beforeEach(() => {
-    User.whereNot = jest.fn();
-    User._whereNot = jest.fn();
-  });
-  afterAll(() => {
-    User.whereNot = whereNot;
-    User._whereNot = _whereNot;
-  });
-
-  it('is alias for where', () => {
-    User.andNot({});
-    expect(User.whereNot).toBeCalled();
-  });
-
-  it('has modifier', () => {
-    User._andNot({});
-    expect(User._whereNot).toBeCalled();
-  });
-});
-
 describe('where', () => {
   it('should ignore undefined values', () => {
     const q = User.where({ name: undefined });

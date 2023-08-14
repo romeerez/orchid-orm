@@ -71,7 +71,7 @@ export const testWhere = (
           buildSql((q) =>
             q.where(
               { [pkey]: 1 },
-              q.or({ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }),
+              q.orWhere({ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }),
             ),
           ),
         ],
@@ -163,7 +163,7 @@ export const testWhere = (
           buildSql((q) =>
             q.whereNot(
               { [pkey]: 1 },
-              q.or({ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }),
+              q.orWhere({ [pkey]: 2 }, { [pkey]: 3, [text]: 'n' }),
             ),
           ),
         ],
@@ -269,7 +269,7 @@ export const testWhere = (
       expectSql(
         [
           buildSql((q) => q.where({ OR: [{ [pkey]: 1 }, { [text]: 'ko' }] })),
-          buildSql((q) => q.or({ [pkey]: 1 }, { [text]: 'ko' })),
+          buildSql((q) => q.orWhere({ [pkey]: 1 }, { [text]: 'ko' })),
         ],
         `
             ${startSql}
@@ -286,14 +286,14 @@ export const testWhere = (
             q.where({
               OR: [
                 { [pkey]: 1 },
-                columnsOf.where({ [pkey]: 2 }).and({ [text]: 'n' }),
+                columnsOf.where({ [pkey]: 2 }).where({ [text]: 'n' }),
               ],
             }),
           ),
           buildSql((q) =>
-            q.or(
+            q.orWhere(
               { [pkey]: 1 },
-              columnsOf.where({ [pkey]: 2 }).and({ [text]: 'n' }),
+              columnsOf.where({ [pkey]: 2 }).where({ [text]: 'n' }),
             ),
           ),
         ],
@@ -317,7 +317,10 @@ export const testWhere = (
             }),
           ),
           buildSql((q) =>
-            q.or({ [pkey]: testDb.sql`1 + 2` }, { [text]: testDb.sql`2 + 3` }),
+            q.orWhere(
+              { [pkey]: testDb.sql`1 + 2` },
+              { [text]: testDb.sql`2 + 3` },
+            ),
           ),
         ],
         `
@@ -328,7 +331,7 @@ export const testWhere = (
     });
   });
 
-  describe('orNot', () => {
+  describe('orWhereNot', () => {
     it('should join conditions with or', () => {
       expectSql(
         [
@@ -337,7 +340,7 @@ export const testWhere = (
               OR: [{ NOT: { [pkey]: 1 } }, { NOT: { [text]: 'ko' } }],
             }),
           ),
-          buildSql((q) => q.orNot({ [pkey]: 1 }, { [text]: 'ko' })),
+          buildSql((q) => q.orWhereNot({ [pkey]: 1 }, { [text]: 'ko' })),
         ],
         `
             ${startSql}
@@ -354,16 +357,16 @@ export const testWhere = (
             q.where({
               OR: [
                 { NOT: { [pkey]: 1 } },
-                { NOT: columnsOf.where({ [pkey]: 2 }).and({ [text]: 'n' }) },
+                { NOT: columnsOf.where({ [pkey]: 2 }).where({ [text]: 'n' }) },
               ],
             }),
           ),
           buildSql((q) =>
-            q.orNot(
+            q.orWhereNot(
               {
                 [pkey]: 1,
               },
-              columnsOf.where({ [pkey]: 2 }).and({ [text]: 'n' }),
+              columnsOf.where({ [pkey]: 2 }).where({ [text]: 'n' }),
             ),
           ),
         ],
@@ -387,7 +390,7 @@ export const testWhere = (
             }),
           ),
           buildSql((q) =>
-            q.orNot(
+            q.orWhereNot(
               { [pkey]: testDb.sql`1 + 2` },
               { [text]: testDb.sql`2 + 3` },
             ),

@@ -290,11 +290,21 @@ export abstract class Where {
    * });
    * ```
    *
+   * Multiple `where`s are joined with `AND`:
+   *
+   * ```ts
+   * db.table.where({ foo: 'foo' }).where({ bar: 'bar' });
+   * ```
+   *
+   * ```sql
+   * SELECT * FROM table WHERE foo = 'foo' AND bar = 'bar'
+   * ```
+   *
    * `undefined` values are ignored, so you can supply a partial object with conditions:
    *
    * ```ts
    * type Params = {
-   *   // allow providing exact age, or lower or greate than
+   *   // allow providing exact age, or lower or greater than
    *   age?: number | { lt?: number; gt?: number };
    * };
    *
@@ -336,13 +346,13 @@ export abstract class Where {
    * db.table.where(raw`a = b`);
    * ```
    *
-   * `where` can accept a callback with a specific query builder containing all "where" methods such as `where`, `or`, `whereNot`, `whereIn`, `whereExists`:
+   * `where` can accept a callback with a specific query builder containing all "where" methods such as `where`, `orWhere`, `whereNot`, `whereIn`, `whereExists`:
    *
    * ```ts
    * db.table.where((q) =>
    *   q
    *     .where({ name: 'Name' })
-   *     .or({ id: 1 }, { id: 2 })
+   *     .orWhere({ id: 1 }, { id: 2 })
    *     .whereIn('letter', ['a', 'b', 'c'])
    *     .whereExists(Message, 'authorId', 'id'),
    * );
@@ -418,7 +428,7 @@ export abstract class Where {
    * });
    * ```
    *
-   * Using methods `whereNot`, `or`, `whereIn` instead of this is a shorter and cleaner way, but in some cases, such object keys way may be more convenient.
+   * Using methods `whereNot`, `orWhere`, `whereIn` instead of this is a shorter and cleaner way, but in some cases, such object keys way may be more convenient.
    *
    * ```ts
    * db.table.where({
@@ -427,7 +437,7 @@ export abstract class Where {
    *   // can be an array:
    *   NOT: [{ id: 1 }, { id: 2 }],
    *
-   *   // see .or
+   *   // see .orWhere
    *   OR: [{ name: 'a' }, { name: 'b' }],
    *   // can be an array:
    *   // this will give id = 1 AND id = 2 OR id = 3 AND id = 4
@@ -683,54 +693,16 @@ export abstract class Where {
   }
 
   /**
-   * `and` is an alias for {@link where} to make it look closer to SQL:
-   *
-   * ```ts
-   * db.table.where({ id: 1 }).and({ name: 'John' });
-   * ```
-   *
-   * @param args - {@link WhereArgs}
-   */
-  and<T extends WhereQueryBase>(
-    this: T,
-    ...args: WhereArgs<T>
-  ): WhereResult<T> {
-    return this.where(...args);
-  }
-  _and<T extends WhereQueryBase>(
-    this: T,
-    ...args: WhereArgs<T>
-  ): WhereResult<T> {
-    return this._where(...args);
-  }
-
-  /**
-   * `andNot` is an alias for `whereNot`.
-   *
-   * @param args - {@link WhereArgs}
-   */
-  andNot<T extends WhereQueryBase>(
-    this: T,
-    ...args: WhereArgs<T>
-  ): WhereResult<T> {
-    return this.whereNot(...args);
-  }
-  _andNot<T extends WhereQueryBase>(
-    this: T,
-    ...args: WhereArgs<T>
-  ): WhereResult<T> {
-    return this._whereNot(...args);
-  }
-
-  /**
-   * `or` is accepting the same arguments as {@link where}, joining arguments with `OR`.
+   * `orWhere` is accepting the same arguments as {@link where}, joining arguments with `OR`.
    *
    * Columns in single arguments are still joined with `AND`.
    *
    * The database is processing `AND` before `OR`, so this should be intuitively clear.
    *
    * ```ts
-   * db.table.or({ id: 1, color: 'red' }, { id: 2, color: 'blue' });
+   * db.table.where({ id: 1, color: 'red' }).orWhere({ id: 2, color: 'blue' });
+   * // equivalent:
+   * db.table.orWhere({ id: 1, color: 'red' }, { id: 2, color: 'blue' });
    * ```
    *
    * This query will produce such SQL (simplified):
@@ -743,13 +715,13 @@ export abstract class Where {
    *
    * @param args - {@link WhereArgs} will be joined with `OR`
    */
-  or<T extends WhereQueryBase>(
+  orWhere<T extends WhereQueryBase>(
     this: T,
     ...args: WhereArg<T>[]
   ): WhereResult<T> {
-    return this.clone()._or(...args);
+    return this.clone()._orWhere(...args);
   }
-  _or<T extends WhereQueryBase>(
+  _orWhere<T extends WhereQueryBase>(
     this: T,
     ...args: WhereArg<T>[]
   ): WhereResult<T> {
@@ -757,17 +729,17 @@ export abstract class Where {
   }
 
   /**
-   * `orNot` takes the same arguments as {@link or}, and prepends each condition with `NOT` just as {@link whereNot} does.
+   * `orWhereNot` takes the same arguments as {@link orWhere}, and prepends each condition with `NOT` just as {@link whereNot} does.
    *
    * @param args - {@link WhereArgs} will be prefixed with `NOT` and joined with `OR`
    */
-  orNot<T extends WhereQueryBase>(
+  orWhereNot<T extends WhereQueryBase>(
     this: T,
     ...args: WhereArg<T>[]
   ): WhereResult<T> {
-    return this.clone()._orNot(...args);
+    return this.clone()._orWhereNot(...args);
   }
-  _orNot<T extends WhereQueryBase>(
+  _orWhereNot<T extends WhereQueryBase>(
     this: T,
     ...args: WhereArg<T>[]
   ): WhereResult<T> {
@@ -1105,7 +1077,7 @@ export abstract class Where {
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _orWhereExists(this: WhereQueryBase, ...args: any) {
-    return this._or(existsArgs(args));
+    return this._orWhere(existsArgs(args));
   }
 
   /**
@@ -1199,7 +1171,7 @@ export abstract class Where {
   ): WhereResult<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _orWhereNotExists(this: WhereQueryBase, ...args: any) {
-    return this._orNot(existsArgs(args));
+    return this._orWhereNot(existsArgs(args));
   }
 }
 

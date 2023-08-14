@@ -341,7 +341,7 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
         }
 
         items[i] = t
-          .or<Query>(...connect)
+          .orWhere<Query>(...connect)
           ._updateOrThrow(obj as UpdateData<WhereResult<Query>>);
       }
 

@@ -8,7 +8,7 @@ describe('clear', () => {
     const query = User.with('withAlias', User.all())
       .select('id', { as: 'name' })
       .where({ id: 1 })
-      .or({ id: 2 })
+      .orWhere({ id: 2 })
       .union([inner])
       .join(Message, 'authorId', 'id')
       .group('id')
